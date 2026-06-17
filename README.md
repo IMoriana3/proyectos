@@ -1,48 +1,28 @@
-# Panel de Proyectos
+# Panel de Proyectos — Factiun
 
-Centro de control de mis herramientas web: una página que lista cada proyecto
-(estado, objetivo, accesos) y abre su documentación completa con índice navegable.
+> Centro de control de las herramientas web de seguidores solares Factiun: lista cada app (estado, objetivo, accesos) y abre su documentación con índice navegable.
 
-**En línea:** https://imoriana3.github.io/proyectos/  *(tras activar GitHub Pages)*
+## Qué es
+Una página única (`index.html`) que lista los proyectos desde el array `PROJECTS` y muestra, por tarjeta, estado / objetivo / stack / accesos (deploy, repo, documentación, descargable). El motor Markdown va **incrustado** (sin CDN): el botón **Documentación** carga `docs/<docId>.md` o un `docUrl` remoto (README del repo).
 
-## Estructura
+## Funcionalidades
+- Tarjetas por proyecto con estado (Producción / En desarrollo / Demo / Pausado / Deprecado), búsqueda, filtros y orden.
+- Documentación embebida: `docId` → `docs/<docId>.md`, o `docUrl` → README del repo.
+- Enlaces limpios a cada app (`https://imoriana3.github.io/<repo>/`) y a su repositorio.
 
-```
-index.html                       El panel (página principal)
-docs/                            Un README por proyecto, en Markdown
-  cobertura-zigbee.md
-assets/                          Descargables que enlaza el panel (campo `download`)
-  README.md                      (suelta aquí tus ZIP, p. ej. ElBurgo-Cobertura-Zigbee.zip)
-prompts/
-  generar-documentacion.md       Prompt para generar la doc de una app con Claude
-.nojekyll                        Sirve los archivos tal cual (sin Jekyll)
-```
+## Uso
+- **Editar el panel**: toca solo el array `PROJECTS` en `index.html` (name, status, objetivo, stack, url, repo, docUrl/docId, download…).
+- **Doc local**: crea `docs/<docId>.md` y pon ese `docId` en la entrada.
+- **Descargable**: deja el ZIP en `assets/` y apunta el campo `download`.
 
-## Cómo funciona
+## Stack
+HTML/CSS/JS sin framework (un único `index.html`) · motor Markdown (marked) incrustado · GitHub Pages.
 
-- El panel lee la lista de proyectos del array `PROJECTS` dentro de `index.html`.
-- El botón **Documentación** de cada tarjeta carga `docs/<docId>.md` y lo muestra.
-  El motor Markdown va incrustado en `index.html` (no depende de ningún CDN).
-- Regla simple: el `docId` de un proyecto **es** el nombre de su archivo en `docs/`.
+## Despliegue (URL)
+GitHub Pages: https://imoriana3.github.io/proyectos/ · Source: *Deploy from a branch* → `main` / `/ (root)`. `.nojekyll` incluido. En local, sírvelo por HTTP (`python -m http.server`) para que carguen los `docs/*.md`.
 
-## Añadir un proyecto
+## Notas
+- Estructura: `index.html` · `docs/` (un README por proyecto) · `assets/` (descargables) · `prompts/` (prompt de documentación).
+- El `docId` de un proyecto **es** el nombre de su archivo en `docs/`.
 
-1. Añade una entrada al array `PROJECTS` en `index.html`.
-2. Si tiene documentación: crea `docs/<docId>.md` y pon ese `docId` en la entrada.
-   Para generar el README, usa `prompts/generar-documentacion.md` en el chat de esa app.
-3. Si la herramienta tiene un paquete descargable, déjalo en `assets/` y apunta el
-   campo `download` a su ruta (p. ej. `assets/mi-herramienta.zip`).
-
-## Desplegar (GitHub Pages)
-
-Settings → Pages → Source: **Deploy from a branch** → rama `main`, carpeta `/ (root)`.
-En ~1 minuto queda publicado en la URL de arriba. Cada `git push` lo actualiza.
-
-## Probar en local
-
-Por seguridad, los navegadores **no** cargan los `docs/*.md` con doble clic (`file://`).
-Sírvelo por HTTP:
-
-```
-python -m http.server      # luego abre http://localhost:8000
-```
+*Factiun · proyecto interno.*

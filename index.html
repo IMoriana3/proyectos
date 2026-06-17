@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panel de Proyectos</title>
+<meta name="theme-color" content="#0B0F14">
+<link rel="icon" href="favicon.svg">
+<title>Panel de Proyectos — Factiun</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -423,7 +425,7 @@ const PROJECTS = [
     status: "live",
     objetivo: "PWA de checklists de obra para plantas FV: control de construcción, calidad, punchlist, mapa y dashboard.",
     stack: "HTML · Firebase (Auth/Firestore) · GitHub Pages",
-    url: "https://imoriana3.github.io/checklist-solar-v2",
+    url: "https://imoriana3.github.io/checklist-solar-v2/",
     repo: "https://github.com/imoriana3/checklist-solar-v2",
     updated: "2026-06-16",
     version: "v2.8",
@@ -447,7 +449,7 @@ const PROJECTS = [
     status: "live",
     objetivo: "Generador de informes FV en el navegador para Edificio Gorraiz: réplica del PDF aprobado de 5 páginas con comparativa de periodos.",
     stack: "HTML · Chart.js · jsPDF · GitHub Pages",
-    url: "https://imoriana3.github.io/gorraiz-dashboard",
+    url: "https://imoriana3.github.io/gorraiz-dashboard/",
     repo: "https://github.com/imoriana3/gorraiz-dashboard",
     updated: "2026-05-20",
     version: "",
@@ -468,12 +470,12 @@ const PROJECTS = [
     status: "live",
     objetivo: "Visor offline para casar 18.190 puntos topográficos con 2.289 IDs de seguidor (Acciona, Aragón) mediante flujo de coste mínimo.",
     stack: "HTML offline · datos NetworkX (min-cost flow)",
-    url: "https://imoriana3.github.io/Visor-San-Jose/",
-    repo: "https://github.com/imoriana3/Visor-San-Jose",
+    url: "https://imoriana3.github.io/visor-san-jose/",
+    repo: "https://github.com/imoriana3/visor-san-jose",
     updated: "2026-06-16",
     version: "",
     docId: "",
-    docUrl: "https://raw.githubusercontent.com/imoriana3/Visor-San-Jose/main/README.md",
+    docUrl: "https://raw.githubusercontent.com/imoriana3/visor-san-jose/main/README.md",
     download: "",
     uso: [
       "Visor autocontenido y offline: coloreado de grafo, filtros por NCU, asignación click-to-assign y export CSV.",
@@ -489,15 +491,15 @@ const PROJECTS = [
     status: "build",
     objetivo: "Gemelo digital del sistema TCU/seguidor de Factiun con geometría física precisa y control predictivo probabilístico.",
     stack: "HTML · 3D · FastAPI · WebSocket · Docker",
-    url: "https://imoriana3.github.io/Gemelo-digital",
-    repo: "https://github.com/imoriana3/Gemelo-digital",
+    url: "https://imoriana3.github.io/gemelo-digital/",
+    repo: "https://github.com/imoriana3/gemelo-digital",
     updated: "2026-06-14",
     version: "",
     docId: "",
-    docUrl: "https://raw.githubusercontent.com/imoriana3/Gemelo-digital/main/README.md",
+    docUrl: "https://raw.githubusercontent.com/imoriana3/gemelo-digital/main/README.md",
     download: "",
     uso: [
-      "Fichero: dtwin-seguidor-tcu.html.",
+      "Fichero: index.html.",
       "Geometría 1V bífila físicamente precisa, detalle 3D del armario TCU SUNNER.",
       "Simulación LiFePO4 con backtracking."
     ],
@@ -510,12 +512,12 @@ const PROJECTS = [
     ]
   },
   {
-    name: "SCADA El Burgo (NCU)",
+    name: "Tracker SCADA · El Burgo",
     status: "build",
     objetivo: "SCADA en tiempo real para instalaciones de seguidores NCU (proyecto El Burgo).",
     stack: "SCADA · Modbus TCP · tiempo real",
     url: "",                                                  // no hay deploy
-    repo: "https://github.com/IMoriana3/SCADA",       // privado: te funciona a ti
+    repo: "https://github.com/imoriana3/scada",       // privado: te funciona a ti
     updated: "2026-06-10",
     version: "",
     docId: "",
@@ -538,15 +540,15 @@ const PROJECTS = [
     status: "demo",
     objetivo: "PWA para emplazamiento de equipos (NCU/TCU/HSU/repetidor) sobre la geometría real de la planta.",
     stack: "HTML · PWA",
-    url: "https://imoriana3.github.io/Siting/demo-siting.html",
-    repo: "https://github.com/IMoriana3/Siting",
+    url: "https://imoriana3.github.io/siting/",
+    repo: "https://github.com/imoriana3/siting",
     updated: "2026-06-16",
     version: "",
     docId: "",
-    docUrl: "https://raw.githubusercontent.com/imoriana3/Siting/main/README.md",
+    docUrl: "https://raw.githubusercontent.com/imoriana3/siting/main/README.md",
     download: "",
     uso: [
-      "Fichero: demo-siting.html.",
+      "Fichero: index.html.",
       "Geometría real de seguidores de El Burgo I desde plantillas Excel.",
       "Coordenadas de motores FUV I/II importadas desde CSV."
     ],
@@ -560,8 +562,8 @@ const PROJECTS = [
     status: "build",
     objetivo: "Mide y visualiza la cobertura de la red Zigbee ya desplegada en El Burgo I (NCU-1) sobre satélite: señal, nodos sin respuesta, fiabilidad, saltos y criticidad de cada TCU.",
     stack: "HTML · Leaflet · PowerShell (RCI/telnet) · CSV",
-    url: "https://imoriana3.github.io/Cobertura-Zigbee/cobertura_maquina_tiempo.html",
-    repo: "https://github.com/IMoriana3/Cobertura-Zigbee",
+    url: "https://imoriana3.github.io/cobertura-zigbee/",
+    repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-06-16",
     version: "",
     docId: "cobertura-zigbee",
@@ -569,7 +571,7 @@ const PROJECTS = [
     uso: [
       "Paquete autocontenido (ZIP): 2 recolectores PowerShell + visor HTML + coordenadas. No instala nada en campo ni en el PC.",
       "Recolectores: RSSI/estado por RCI (HTTP) y rutas/saltos por telnet; autodescubren los nodos (solo cambias la IP del gateway).",
-      "Visor cobertura_maquina_tiempo.html: mapa satélite + línea de tiempo + colorear por RSSI/Estado/ACK/Saltos/Criticidad.",
+      "Visor index.html: mapa satélite + línea de tiempo + colorear por RSSI/Estado/ACK/Saltos/Criticidad.",
       "Documentación completa en el botón Documentación."
     ],
     pendientes: [
