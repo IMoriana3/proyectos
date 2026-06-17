@@ -583,6 +583,29 @@ const PROJECTS = [
       { date:"2026-06-16", ver:"", note:"Versión máquina del tiempo: colorear por RSSI/Estado/ACK/Saltos/Criticidad y recolector de rutas por telnet." },
       { date:"2026-06-16", ver:"", note:"Visor inicial con Leaflet incrustado." }
     ]
+  },
+  {
+    name: "Cartera de plantas",
+    status: "build",
+    objetivo: "Base de datos y dashboard interno de los proyectos de seguidores adjudicados: KPIs, gráficas, mapa mundi y tabla editable con login.",
+    stack: "HTML · Supabase (Postgres + Auth + RLS) · Chart.js · Leaflet",
+    url: "",                                                  // interno · requiere login
+    repo: "https://github.com/imoriana3/factiun-cartera",     // privado
+    updated: "2026-06-17",
+    version: "",
+    docId: "",
+    download: "",
+    uso: [
+      "Acceso con login (email + contraseña). Datos en Supabase con reglas de seguridad (RLS).",
+      "KPIs, gráficas (estado/país/promotor/Top 10) y mapa por país; tabla con todas las columnas, filtros y CRUD (añadir/editar/borrar).",
+      "No incluye la hoja de IPs/credenciales del Excel."
+    ],
+    pendientes: [
+      { done:false, text:"Hospedarla con login (Cloudflare Pages/Access) y poner la URL." }
+    ],
+    historial: [
+      { date:"2026-06-17", ver:"", note:"Cartera de 22 plantas adjudicadas, editable, sobre Supabase (dashboard + mapa)." }
+    ]
   }
 ];
 
