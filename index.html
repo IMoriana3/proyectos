@@ -585,6 +585,32 @@ const PROJECTS = [
     ]
   },
   {
+    name: "Cobertura RF · Seguidores FV",
+    status: "build",
+    objetivo: "Modelo físico de propagación Zigbee 2.4 GHz (XBee RR) entre TCU y NCU: un motor, tres usos — siting predictivo, diagnóstico de malla real (predicho vs. medido → grafo → SPOF) y render 3D del enlace bifila.",
+    stack: "HTML · Canvas 3D · Python (NumPy/NetworkX) · JS",
+    url: "https://imoriana3.github.io/cobertura-rf-fv/",
+    repo: "https://github.com/imoriana3/cobertura-rf-fv",
+    updated: "2026-06-18",
+    version: "",
+    docId: "cobertura-rf",
+    download: "",
+    uso: [
+      "Render index.html (sin dependencias): geometría bifila parametrizable y enlace coloreado por margen real en dB; abre en navegador o GitHub Pages.",
+      "Física: FSPL + dos rayos (Fresnel) + difracción multiobstáculo (Deygout, ITU-R P.526) + margen log-normal calibrable → RSSI predicho, margen y probabilidad de enlace.",
+      "Diagnóstico Python: coords + RSSI medido → calibra sesgo, construye la malla (NetworkX), detecta SPOF y nodo dominador, escribe GeoJSON.",
+      "Adaptador El Burgo: routes + log → RSSI por enlace + topología observada (elburgo_real_rssi.csv / elburgo_real.geojson incluidos como dataset real)."
+    ],
+    pendientes: [
+      { done:false, text:"Crear el repo cobertura-rf-fv y subir las carpetas python/, web/ y assets/." },
+      { done:false, text:"Calibrar con el dataset completo de El Burgo I (de momento, sesgo global contra RSSI medido)." },
+      { done:false, text:"Validar el núcleo físico contra ray tracing." }
+    ],
+    historial: [
+      { date:"2026-06-18", ver:"", note:"Alta en el panel: render 3D + núcleo físico + diagnóstico y dataset real de El Burgo." }
+    ]
+  },
+  {
     name: "Cartera de plantas",
     status: "build",
     objetivo: "Base de datos y dashboard interno de los proyectos de seguidores adjudicados: KPIs, gráficas, mapa mundi y tabla editable con login.",
