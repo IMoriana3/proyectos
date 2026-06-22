@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0B0F14">
+<link rel="icon" href="favicon.svg">
+<title>Cartera técnica · Plantas — Factiun</title>
+<!-- sin fuentes de Google: offline (fuentes del sistema) -->
+<script src="lib/xlsx.full.min.js"></script><!-- SheetJS LOCAL (sin CDN): importar/exportar Excel offline -->
+<style>
+:root{
+  --void:#0B0F14; --panel:#121922; --panel-2:#0F151D; --panel-hi:#18222D;
+  --line:#23303D; --line-soft:#1A2530; --text:#E7EEF4; --muted:#8093A4; --muted-2:#5E6F7E;
+  --live:#36D399; --build:#F6A623; --demo:#54A6FF; --idle:#6A7B8B; --dead:#D0594F;
+  --accent:#36D399; --radius:14px; --radius-sm:9px;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --display:'Space Grotesk','IBM Plex Sans',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--void);color:var(--text);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column;
+  font-variant-numeric:tabular-nums}
+
+/* cabecera */
+.bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 18px;background:var(--panel-2);
+  border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+.bar .back{color:var(--muted);text-decoration:none;font:600 13px/1 var(--sans);padding:7px 11px;
+  border:1px solid var(--line);border-radius:10px;white-space:nowrap}
+.bar .back:hover{color:var(--text);border-color:var(--accent)}
+.bar h1{font:700 17px/1.1 var(--display);letter-spacing:.01em}
+.bar .sub{color:var(--muted);font-size:12.5px;margin-right:auto}
+.bar .brand{color:var(--accent);font:700 14px/1 var(--display);letter-spacing:.04em}
+.bar #offBtn{background:#1a2330;color:#9bb0c6;border:1px solid var(--line);border-radius:8px;
+  padding:5px 10px;font:inherit;font-size:12px;cursor:pointer}
+
+/* barra de herramientas */
+.tools{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:10px 18px;background:var(--panel-2);
+  border-bottom:1px solid var(--line);position:sticky;top:52px;z-index:25}
+.tools input[type=search],.tools select.flt{background:var(--panel);color:var(--text);border:1px solid var(--line);
+  border-radius:9px;padding:7px 10px;font:inherit;font-size:13px}
+.tools input[type=search]{min-width:230px}
+.tools .btn{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:9px;
+  padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.tools .btn:hover{border-color:var(--accent);color:#fff}
+.tools .btn.accent{background:rgba(54,211,153,.12);border-color:var(--accent);color:var(--accent)}
+.tools .btn.warn:hover{border-color:var(--dead);color:#ffb4ad}
+.tools .sp{flex:1}
+.tools .saved{color:var(--muted);font-size:12px;white-space:nowrap}
+.tools .saved b{color:var(--live)}
+
+/* tabla */
+.wrap{flex:1;overflow:auto;padding:0}
+table{border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:12.5px;width:max-content;min-width:100%}
+th,td{border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);padding:0;
+  white-space:nowrap;background:var(--void)}
+thead th{position:sticky;top:0;z-index:10;background:var(--panel-hi);vertical-align:bottom;
+  padding:5px 8px 6px;text-align:left;border-bottom:1px solid var(--line)}
+thead th .grp{font:700 9.5px/1.2 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--accent);
+  margin-bottom:3px;opacity:.92}
+thead th .lbl{font:600 11px/1.2 var(--sans);color:var(--text)}
+th.gstart,td.gstart{border-left:2px solid var(--line)}
+/* columnas fijas (Nº + Proyecto) */
+.stick{position:sticky;left:0;z-index:12}
+.stick2{position:sticky;left:76px;z-index:12}
+thead th.stick,thead th.stick2{z-index:22}
+tbody td.stick,tbody td.stick2,tfoot td.stick,tfoot td.stick2{background:var(--panel-2)}
+tbody tr:hover td.stick,tbody tr:hover td.stick2{background:#16202b}
+
+/* celdas editables */
+td input,td select{width:100%;background:transparent;color:var(--text);border:none;outline:none;
+  font:inherit;font-size:12.5px;padding:6px 8px;font-variant-numeric:tabular-nums}
+td input::placeholder{color:var(--muted-2)}
+td input:focus,td select:focus{background:var(--panel-hi);box-shadow:inset 0 0 0 1.5px var(--accent);border-radius:6px}
+td select{cursor:pointer;-webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 13px) 52%,calc(100% - 8px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:22px}
+td select option{background:var(--panel);color:var(--text)}
+tbody tr:hover td{background:#10171f}
+td.c-check{text-align:center}
+td.c-check input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin:5px auto;display:block}
+/* estado PEM coloreado */
+td.estado-live select{color:var(--live)} td.estado-build select{color:var(--build)} td.estado-idle select{color:var(--muted)}
+/* botón borrar fila (en la celda Proyecto) */
+td.stick2{position:sticky}
+td.stick2 .cellwrap{position:relative}
+.del{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:5px;
+  border:1px solid var(--line);background:var(--panel);color:var(--muted-2);cursor:pointer;font-size:11px;line-height:1;
+  display:none;align-items:center;justify-content:center;padding:0}
+tbody tr:hover .del{display:flex}
+.del:hover{border-color:var(--dead);color:#ffb4ad}
+td.stick2 input{padding-right:24px}
+/* totales */
+tfoot td{position:sticky;bottom:0;z-index:10;background:var(--panel-hi);border-top:1px solid var(--line);
+  font:700 12px/1 var(--sans);padding:8px;color:var(--text)}
+tfoot td.lbl-tot{color:var(--accent);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.foot{padding:12px 18px;color:var(--muted-2);font-size:12px;border-top:1px solid var(--line);background:var(--panel-2)}
+.foot code{color:var(--muted);background:var(--panel);padding:1px 5px;border-radius:5px;font-family:var(--mono)}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+@media(max-width:760px){.bar .sub{display:none}.tools input[type=search]{min-width:150px}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="back" href="index.html">← Panel</a>
+  <h1>Cartera técnica</h1>
+  <span class="sub">Plantas fotovoltaicas · trackers</span>
+  <button id="offBtn" title="Modo sin conexión: cero llamadas externas"></button>
+  <span class="brand">Factiun</span>
+</header>
+
+<div class="tools">
+  <input id="q" type="search" placeholder="Buscar planta, país, promotor, EPC…" autocomplete="off">
+  <select id="fEstado" class="flt"><option value="">Estado · todos</option></select>
+  <select id="fPais" class="flt"><option value="">País · todos</option></select>
+  <button class="btn accent" id="addBtn">+ Añadir planta</button>
+  <span class="sp"></span>
+  <span class="saved" id="saved"></span>
+  <button class="btn" id="impBtn" title="Cargar desde un Excel con el mismo formato">⬆ Importar Excel</button>
+  <button class="btn" id="xlsBtn">⬇ Exportar Excel</button>
+  <button class="btn" id="csvBtn">⬇ CSV</button>
+  <button class="btn warn" id="resetBtn" title="Volver a los datos del Excel original">↺ Restaurar</button>
+  <input type="file" id="impFile" accept=".xlsx,.xls" style="display:none">
+</div>
+
+<div class="wrap">
+  <table id="t">
+    <colgroup id="cg"></colgroup>
+    <thead id="th"></thead>
+    <tbody id="tb"></tbody>
+    <tfoot id="tf"></tfoot>
+  </table>
+  <div class="empty" id="empty" style="display:none">Sin resultados para el filtro actual.</div>
+</div>
+
+<div class="foot">
+  Tabla editable y <b>offline</b>: los cambios se guardan en este navegador (<code>localStorage</code>). Las columnas con
+  fondo de flecha son <b>desplegables</b> (validación del Excel). Usa <b>Exportar Excel</b> para llevarte el fichero, o
+  <b>Importar</b> para refrescar desde tu hoja. Cero llamadas externas.
+</div>
+
+<script>
+/* ===== datos sembrados desde Plantas_fotovoltaicas_trackers.xlsx (hoja "Datos") ===== */
+const SEED = [{"num": 24002, "proyecto": "El Burgo I", "emplazamiento": "Zaragoza", "provincia": "Zaragoza", "pais": "España", "promotor": "EIG", "epc": "Xamai Global", "responsable": "Factiun", "pac": 11, "pdc": 13.95856, "modulista": "JA Solar", "modulo": "JAM66D45-585-610-LB", "wmod": 605, "cantidad": 23072, "string": 28, "pitch": 6, "tecnologia": "Bifacial", "inversor": "String", "invfab": "Sungrow", "invmodelo": "SG350HX", "trk_total": 215, "trk_bi": 215, "trk_mono": 0, "concentradores": 2, "ncu_eth": 1, "ncu_fo": 1, "anem_total": 4, "anem_vel": 0, "anem_us": 4, "sensor_nieve": 1, "alim_rsu": "Selfpowered", "alim_tcu": "Stringpowered", "panel_fv": "-", "panel_modelo": "-", "bateria_tcu": "6Ah", "repetidores": 0, "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": true, "site": true, "escaneo": true, "offset": true, "hot": true, "estado_pem": "En marcha", "garantia": false}, {"num": 24007, "proyecto": "Fayón", "emplazamiento": "Fayón", "provincia": "Zaragoza", "pais": "España", "promotor": "Bombeatec", "epc": "Sorigues", "responsable": "Factiun", "pac": 1.4, "pdc": 1.25664, "modulista": "Longi", "modulo": "LR7-72HGD-595M", "wmod": 595, "cantidad": 2112, "string": "24/27", "pitch": 6, "tecnologia": "Bifacial", "inversor": "String", "invfab": "Sungrow", "invmodelo": "SG350HX", "trk_total": 24, "trk_bi": 24, "trk_mono": 0, "concentradores": 1, "ncu_eth": 1, "ncu_fo": 0, "anem_total": 1, "anem_vel": 0, "anem_us": 1, "sensor_nieve": 0, "alim_rsu": "Selfpowered", "alim_tcu": "Selfpowered", "panel_fv": "-", "panel_modelo": "-", "bateria_tcu": "6Ah", "repetidores": 0, "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": true, "site": true, "escaneo": true, "offset": true, "hot": true, "estado_pem": "En marcha", "garantia": true, "inicio_pem": "2025-02-20", "final_pem": "2025-02-20", "duracion_pem": 1, "acceso": "No"}, {"num": 24019, "proyecto": "San José", "emplazamiento": "La Joya", "provincia": "Arequipa", "pais": "Perú", "promotor": "Acciona", "epc": "Acciona", "responsable": "Factiun", "pdc": 177.984, "modulista": "JA Solar", "modulo": "JAM66D45-585-610-LB", "cantidad": 288000, "string": 32, "pitch": 6.198, "tecnologia": "Bifacial", "inversor": "Central", "trk_total": 2288, "trk_bi": 2288, "trk_mono": 0, "concentradores": 21, "ncu_eth": 18, "ncu_fo": 3, "anem_total": 8, "anem_vel": 0, "anem_us": 8, "sensor_nieve": 0, "alim_rsu": "Selfpowered", "alim_tcu": "Selfpowered", "panel_fv": "45W", "bateria_tcu": "6Ah", "repetidores": 11, "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": 24021, "proyecto": "Túnez", "emplazamiento": "El Hamma", "provincia": "Gabes", "pais": "Túnez", "promotor": "Bombeatec", "epc": "Zwinenergy", "responsable": "Factiun", "pdc": 0.9408, "modulista": "Phono", "wmod": 700, "cantidad": 1344, "pitch": 6, "tecnologia": "Bifacial", "inversor": "String", "trk_total": 19, "trk_bi": 19, "trk_mono": 0, "concentradores": 1, "ncu_eth": 1, "ncu_fo": 0, "anem_total": 1, "anem_vel": 0, "anem_us": 1, "sensor_nieve": 0, "alim_rsu": "Selfpowered", "alim_tcu": "Selfpowered", "panel_fv": "45W", "bateria_tcu": "6Ah", "repetidores": 0, "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": true, "site": true, "escaneo": true, "offset": true, "hot": true, "estado_pem": "En marcha", "garantia": false, "inicio_pem": "2026-06-02", "final_pem": "2026-10-02", "duracion_pem": 3, "acceso": "No"}, {"num": 24025, "proyecto": "Ayora", "emplazamiento": "Jarafuel", "provincia": "Valencia", "pais": "España", "epc": "Grupo Zaragozá", "responsable": "Factiun", "pdc": 52.52296, "modulista": "Risen", "modulo": "RSM132-8-695-720BNDG", "wmod": 710, "cantidad": 73976, "pitch": 6, "tecnologia": "Bifacial", "inversor": "String", "invfab": "Huawei", "trk_total": 754, "trk_bi": 754, "trk_mono": 0, "concentradores": 16, "ncu_eth": 11, "ncu_fo": 5, "anem_total": 8, "anem_vel": 0, "anem_us": 8, "sensor_nieve": 2, "alim_rsu": "AC", "alim_tcu": "Stringpowered", "panel_fv": "-", "bateria_tcu": "6Ah", "repetidores": 5, "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": true, "site": true, "escaneo": true, "offset": true, "hot": false, "estado_pem": "En proceso", "garantia": false}, {"num": 25032, "proyecto": "Trani", "emplazamiento": "Barletta", "provincia": "Apulia", "pais": "Italia", "epc": "Comunitá Energetichá", "responsable": "Factiun", "pdc": 0.87108, "modulista": "Trina", "wmod": 610, "cantidad": 1428, "string": "42/14", "pitch": 6, "trk_total": 19, "trk_bi": 19, "trk_mono": 0, "concentradores": 1, "ncu_eth": 1, "ncu_fo": 0, "anem_total": 1, "anem_vel": 0, "anem_us": 1, "alim_rsu": "Selfpowered", "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": 24030, "proyecto": "Bagnarelli", "emplazamiento": "Lucera", "provincia": "Foggia", "pais": "Italia", "epc": "Grupo Zaragozá", "responsable": "Factiun", "pdc": 0.92016, "modulista": "Risen", "modulo": "RSM132-8-695-720BNDG", "wmod": 710, "cantidad": 1296, "pitch": 5.5, "tecnologia": "Bifacial", "inversor": "String", "invfab": "Huawei", "trk_total": 17, "trk_bi": 17, "trk_mono": 0, "concentradores": 1, "ncu_eth": 1, "ncu_fo": 0, "anem_total": 2, "anem_vel": 0, "anem_us": 2, "sensor_nieve": 0, "alim_rsu": "Selfpowered", "alim_tcu": "Stringpowered", "panel_fv": "-", "panel_modelo": "-", "bateria_tcu": "6Ah", "repetidores": 0, "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": true, "site": true, "escaneo": true, "offset": true, "hot": true, "estado_pem": "En marcha", "garantia": false, "inicio_pem": "2025-09-23", "final_pem": "2025-09-25", "duracion_pem": 3, "acceso": "Si"}, {"num": 25019, "proyecto": "Paramo", "emplazamiento": "Villamañán", "provincia": "León", "pais": "España", "promotor": "ITACyL", "epc": "Sice", "responsable": "Factiun", "pdc": 0, "modulista": "Hanersun", "modulo": "HN21RN-66HT 605-630", "cantidad": 18528, "string": "24/23", "pitch": 7, "tecnologia": "Bifacial", "inversor": "String", "trk_total": 396, "trk_bi": 0, "trk_mono": 396, "concentradores": 4, "ncu_eth": 4, "ncu_fo": 0, "anem_total": 3, "anem_vel": 0, "anem_us": 3, "sensor_nieve": 0, "alim_rsu": "Selfpowered", "alim_tcu": "Selfpowered", "panel_fv": "45W", "bateria_tcu": "6Ah", "repetidores": 0, "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": 25082, "proyecto": "El polvorin + Higueras", "emplazamiento": "Polvorin + Higueras", "provincia": "Badajoz", "pais": "España", "epc": "Smart Renowables", "responsable": "Factiun", "pdc": 9.15616, "modulista": "Luxen Solar", "modulo": "Luxpower Series N6 685-710", "wmod": 710, "cantidad": 12896, "string": "31\n16+15\n8+8+8+7\n5+5+4+4\n3+3+3+4\n24+23*3", "pitch": 4.5, "tecnologia": "Bifacial", "trk_total": 119, "trk_bi": 117, "trk_mono": 2, "concentradores": 2, "ncu_eth": 1, "ncu_fo": 1, "anem_total": 2, "anem_vel": 0, "anem_us": 2, "sensor_nieve": 0, "alim_rsu": "Selfpowered", "alim_tcu": "Selfpowered", "panel_fv": "45W", "bateria_tcu": "6Ah", "repetidores": 0, "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": 25120, "proyecto": "Monteodorisio", "emplazamiento": "Monteodorisio", "provincia": "Chieti", "pais": "Italia", "epc": "Comunitá Energetichá", "responsable": "Factiun", "pdc": 0.86478, "modulista": "Trina", "modulo": "TSM-NEG21C.20 685-710", "wmod": 710, "cantidad": 1218, "string": "14/7", "pitch": 6, "tecnologia": "Bifacial", "trk_total": 30, "trk_bi": 18, "trk_mono": 12, "concentradores": 1, "ncu_eth": 0, "ncu_fo": 1, "anem_total": 1, "anem_vel": 0, "anem_us": 1, "sensor_nieve": 0, "alim_rsu": "Selfpowered", "alim_tcu": "Stringpowered", "panel_fv": "-", "panel_modelo": "-", "bateria_tcu": "6Ah", "repetidores": 0, "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": 25131, "proyecto": "Galatina", "emplazamiento": "Galatina", "provincia": "Lecce", "pais": "Italia", "epc": "Comunitá Energetichá", "responsable": "Factiun", "pdc": 0.92008, "wmod": 620, "cantidad": 1484, "string": "28/14/7", "pitch": 5.9, "trk_total": 18, "trk_bi": 16, "trk_mono": 2, "concentradores": 1, "ncu_eth": 1, "ncu_fo": 0, "anem_total": 1, "anem_vel": 0, "anem_us": 1, "sensor_nieve": 0, "alim_rsu": "Selfpowered", "alim_tcu": "Stringpowered", "panel_fv": "-", "panel_modelo": "-", "bateria_tcu": "6Ah", "repetidores": 0, "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": 25200, "proyecto": "Ercolino", "emplazamiento": "Ercolino", "provincia": "Pescara", "pais": "Italia", "epc": "Sun city", "responsable": "Factiun", "pdc": 5.01984, "modulista": "TW solar", "modulo": "TWMNF-66HD705~725W(B33-29&20)", "wmod": 720, "cantidad": 6972, "string": 28, "pitch": 6, "tecnologia": "Bifacial", "trk_total": 128, "trk_bi": 121, "trk_mono": 7, "concentradores": 2, "ncu_eth": 0, "ncu_fo": 2, "anem_total": 2, "anem_vel": 0, "anem_us": 2, "sensor_nieve": 1, "alim_rsu": "Selfpowered", "alim_tcu": "Agri Selfpowered", "panel_fv": "45W", "bateria_tcu": "6Ah", "repetidores": 0, "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": 26102, "proyecto": "Jabalí ", "emplazamiento": "Cáceres", "provincia": "Cáceres", "pais": "España", "epc": "SolarTree", "responsable": "Factiun", "pdc": 6.3504, "modulista": "Jinko", "wmod": 720, "cantidad": 8820, "string": "28/21/14", "pitch": 6.25, "tecnologia": "Bifacial", "trk_total": 104, "trk_bi": 101, "trk_mono": 3, "concentradores": 2, "ncu_eth": 2, "ncu_fo": 0, "anem_total": 2, "anem_vel": 0, "anem_us": 2, "sensor_nieve": 1, "alim_rsu": "Selfpowered", "alim_tcu": "Selfpowered", "panel_fv": "45W", "bateria_tcu": "6Ah", "repetidores": 0, "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": 26103, "proyecto": "Piñuelas ", "emplazamiento": "Cáceres", "provincia": "Cáceres", "pais": "España", "epc": "SolarTree", "responsable": "Factiun", "pdc": 6.3504, "modulista": "Jinko", "wmod": 720, "cantidad": 8820, "string": "28/21/14", "pitch": "5,5/5,7/6", "tecnologia": "Bifacial", "trk_total": 93, "trk_bi": 91, "trk_mono": 2, "concentradores": 1, "ncu_eth": 1, "ncu_fo": 0, "anem_total": 2, "anem_vel": 0, "anem_us": 2, "sensor_nieve": 1, "alim_rsu": "Selfpowered", "alim_tcu": "Selfpowered", "panel_fv": "45W", "bateria_tcu": "6Ah", "repetidores": 0, "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": 25004, "proyecto": "Benante", "pais": "Italia", "epc": "Acciona", "responsable": "Factiun", "alim_rsu": "Selfpowered", "alim_tcu": "Selfpowered", "panel_fv": "45W", "bateria_tcu": "6Ah", "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": "25004.2", "proyecto": "Panbianco", "pais": "Italia", "epc": "Acciona", "responsable": "Factiun", "alim_rsu": "Selfpowered", "alim_tcu": "Selfpowered", "panel_fv": "45W", "bateria_tcu": "6Ah", "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": 26009, "proyecto": "Valle de Moinhos", "pais": "Portugal", "epc": "CJR", "responsable": "Factiun", "alim_rsu": "Selfpowered", "alim_tcu": "Selfpowered", "panel_fv": "45W", "bateria_tcu": "6Ah", "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": 24029, "proyecto": "La Latina 2", "pais": "Italia", "epc": "Grupo Zaragozá", "responsable": "Factiun", "alim_tcu": "Stringpowered", "panel_fv": "-", "panel_modelo": "-", "bateria_tcu": "6Ah", "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": 26126.1, "proyecto": "Tolocha I", "pais": "España", "epc": "Zelestra", "responsable": "Factiun", "alim_rsu": "Selfpowered", "alim_tcu": "Selfpowered", "panel_fv": "45W", "bateria_tcu": "6Ah", "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": "26126.2", "proyecto": "Sedeis VI", "pais": "España", "epc": "Zelestra", "responsable": "Factiun", "alim_rsu": "Selfpowered", "alim_tcu": "Selfpowered", "panel_fv": "45W", "bateria_tcu": "6Ah", "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": 26322, "proyecto": "Túnez", "pais": "Túnez", "promotor": "Bombeatec", "responsable": "Factiun", "alim_rsu": "Selfpowered", "alim_tcu": "Selfpowered", "panel_fv": "45W", "bateria_tcu": "6Ah", "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}, {"num": 24024, "proyecto": "Alconadre", "pais": "España", "promotor": "Bombeatec", "responsable": "Factiun", "alim_rsu": "Selfpowered", "alim_tcu": "Selfpowered", "panel_fv": "45W", "bateria_tcu": "6Ah", "sist_control": "Sunner", "comunicaciones": "Zigbee", "cold": false, "site": false, "escaneo": false, "offset": false, "hot": false, "estado_pem": "Sin comenzar", "garantia": false}];
+
+/* ===== esquema: orden de columnas (== formato del Excel) ===== */
+const KEYS=['num','proyecto','emplazamiento','provincia','pais','promotor','epc','responsable','pac','pdc','modulista','modulo','wmod','cantidad','string','pitch','tecnologia','inversor','invfab','invmodelo','trk_total','trk_bi','trk_mono','concentradores','ncu_eth','ncu_fo','anem_total','anem_vel','anem_us','sensor_nieve','alim_rsu','alim_tcu','panel_fv','panel_modelo','bateria_tcu','repetidores','sist_control','comunicaciones','cold','site','escaneo','offset','hot','estado_pem','garantia','inicio_pem','final_pem','duracion_pem','acceso'];
+/* cabeceras tal cual el Excel (para importar/exportar 1:1, incluye los dos "Modelo") */
+const XLSH=['Nº','Proyecto','Emplazamiento','Provincia/Estado','País','Promotor','EPC','Responsable','Potencia AC (MW)','Potencia DC (MW)','Modulista','Módulo','Potencia','Cantidad','String','Pitch','Tecnología','Inversor','Fabricante','Modelo','Total trackers','Trackers bifila','Trackers monofila','Concentradores','NCUs ethernet','NCUs FO','Total anemómetros','Anemómetros veleta','Anemómetros US','Sensor nieve','Alimentación RSUs','Alimentación TCUs','Panel FV','Modelo','Batería TCU','Repetidores','Sistema control','Comunicaciones','Cold commissioning','Site','Escaneo','Offset','Hot commissioning','Estado PEM','Garantía','Inicio PEM','Final PEM','Duración PEM','Acceso remoto'];
+
+const TEC=['Monofacial','Bifacial'], INV=['String','Central','Mixto'],
+      A_RSU=['AC','Selfpowered'], A_TCU=['AC','Selfpowered','Stringpowered','Agri Selfpowered'],
+      PFV=['-','30W','45W','60W'], BAT=['-','3Ah','6Ah','8Ah'], CTRL=['Sunner','P4Q'],
+      EST=['Sin comenzar','En proceso','En marcha'], ACC=['Sí','No'];
+
+const COL={
+  num:{label:'Nº',type:'text',w:76}, proyecto:{label:'Proyecto',type:'text',w:160},
+  emplazamiento:{label:'Emplazamiento',type:'text',w:130}, provincia:{label:'Provincia/Estado',type:'text',w:120},
+  pais:{label:'País',type:'text',w:92}, promotor:{label:'Promotor',type:'text',w:112},
+  epc:{label:'EPC',type:'text',w:120}, responsable:{label:'Responsable',type:'text',w:104},
+  pac:{label:'Pot. AC (MW)',type:'num',w:88}, pdc:{label:'Pot. DC (MW)',type:'num',w:88},
+  modulista:{label:'Modulista',type:'text',w:104}, modulo:{label:'Módulo',type:'text',w:170},
+  wmod:{label:'Pot. (W)',type:'num',w:70}, cantidad:{label:'Cantidad',type:'num',w:84},
+  string:{label:'String',type:'text',w:88}, pitch:{label:'Pitch',type:'text',w:74},
+  tecnologia:{label:'Tecnología',type:'select',opts:TEC,w:118},
+  inversor:{label:'Inversor',type:'select',opts:INV,w:96}, invfab:{label:'Fabricante',type:'text',w:104},
+  invmodelo:{label:'Modelo',type:'text',w:104},
+  trk_total:{label:'Total',type:'num',w:66}, trk_bi:{label:'Bífila',type:'num',w:66}, trk_mono:{label:'Monofila',type:'num',w:74},
+  concentradores:{label:'Concentr.',type:'num',w:82}, ncu_eth:{label:'NCU eth',type:'num',w:74}, ncu_fo:{label:'NCU FO',type:'num',w:72},
+  anem_total:{label:'Anemóm.',type:'num',w:80}, anem_vel:{label:'Veleta',type:'num',w:64}, anem_us:{label:'US',type:'num',w:54},
+  sensor_nieve:{label:'S. nieve',type:'num',w:72},
+  alim_rsu:{label:'Alim. RSU',type:'select',opts:A_RSU,w:124}, alim_tcu:{label:'Alim. TCU',type:'select',opts:A_TCU,w:148},
+  panel_fv:{label:'Panel FV',type:'select',opts:PFV,w:92}, panel_modelo:{label:'Modelo panel',type:'text',w:112},
+  bateria_tcu:{label:'Batería TCU',type:'select',opts:BAT,w:112}, repetidores:{label:'Repetid.',type:'num',w:76},
+  sist_control:{label:'Sist. control',type:'select',opts:CTRL,w:112}, comunicaciones:{label:'Comms',type:'text',w:90},
+  cold:{label:'Cold comm.',type:'check',w:78}, site:{label:'Site',type:'check',w:54}, escaneo:{label:'Escaneo',type:'check',w:72},
+  offset:{label:'Offset',type:'check',w:64}, hot:{label:'Hot comm.',type:'check',w:78},
+  estado_pem:{label:'Estado PEM',type:'select',opts:EST,w:132}, garantia:{label:'Garantía',type:'check',w:74},
+  inicio_pem:{label:'Inicio PEM',type:'date',w:134}, final_pem:{label:'Final PEM',type:'date',w:134},
+  duracion_pem:{label:'Duración',type:'num',w:76}, acceso:{label:'Acceso remoto',type:'select',opts:ACC,w:120}
+};
+const GROUPS=[
+  {g:'Identificación',cols:['num','proyecto','emplazamiento','provincia','pais','promotor','epc','responsable']},
+  {g:'Potencia',cols:['pac','pdc']},
+  {g:'Módulo',cols:['modulista','modulo','wmod','cantidad','string','pitch','tecnologia']},
+  {g:'Inversor',cols:['inversor','invfab','invmodelo']},
+  {g:'Trackers',cols:['trk_total','trk_bi','trk_mono']},
+  {g:'Control y comms',cols:['concentradores','ncu_eth','ncu_fo','sist_control','comunicaciones','repetidores']},
+  {g:'Sensores',cols:['anem_total','anem_vel','anem_us','sensor_nieve']},
+  {g:'Alimentación / TCU',cols:['alim_rsu','alim_tcu','panel_fv','panel_modelo','bateria_tcu']},
+  {g:'PEM',cols:['cold','site','escaneo','offset','hot','estado_pem','garantia','inicio_pem','final_pem','duracion_pem','acceso']}
+];
+const CHECKS=new Set(['cold','site','escaneo','offset','hot','garantia']);
+const GSTART=new Set(GROUPS.map(gr=>gr.cols[0]));   // primera col de cada grupo -> separador
+const GNAME={}; GROUPS.forEach(gr=>GNAME[gr.cols[0]]=gr.g);
+const ESTCLASS={'En marcha':'live','En proceso':'build','Sin comenzar':'idle'};
+
+/* ===== estado ===== */
+const LSK='cartera_tabla';
+let DATA=load();
+function load(){ try{var s=localStorage.getItem(LSK); if(s){var a=JSON.parse(s); if(Array.isArray(a))return a;}}catch(e){}
+  return JSON.parse(JSON.stringify(SEED)); }
+function save(){ try{localStorage.setItem(LSK,JSON.stringify(DATA)); flagSaved();}catch(e){} }
+let _sv; function flagSaved(){ var el=document.getElementById('saved'); el.innerHTML='<b>✓</b> guardado';
+  clearTimeout(_sv); _sv=setTimeout(function(){el.textContent='';},1400); }
+
+/* ===== util ===== */
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const escA=s=>esc(s).replace(/"/g,'&quot;').replace(/\r?\n/g,' / ');
+const $=id=>document.getElementById(id);
+
+/* ===== render ===== */
+function colgroupHTML(){
+  return KEYS.map(k=>`<col style="width:${COL[k].w}px">`).join('');
+}
+function headHTML(){
+  var h='<tr>';
+  KEYS.forEach(k=>{
+    var c=COL[k]; var cls=[]; if(k==='num')cls.push('stick'); if(k==='proyecto')cls.push('stick2'); if(GSTART.has(k))cls.push('gstart');
+    h+=`<th class="${cls.join(' ')}">${GNAME[k]?`<div class="grp">${esc(GNAME[k])}</div>`:''}<div class="lbl">${esc(c.label)}</div></th>`;
+  });
+  return h+'</tr>';
+}
+function cellHTML(i,k){
+  var c=COL[k], v=DATA[i][k];
+  var cls=['c-'+(c.type==='check'?'check':c.type==='select'?'sel':'inp')];
+  if(k==='num')cls.push('stick'); if(k==='proyecto')cls.push('stick2'); if(GSTART.has(k))cls.push('gstart');
+  if(c.type==='check'){
+    return `<td class="${cls.join(' ')}"><input type="checkbox" data-i="${i}" data-k="${k}" ${v?'checked':''}></td>`;
+  }
+  if(c.type==='select'){
+    var vv=(v==null?'':String(v)); var opts=c.opts.slice(); if(vv&&opts.indexOf(vv)<0)opts.unshift(vv);
+    if(k==='estado_pem')cls.push('estado-'+(ESTCLASS[vv]||'idle'));
+    var o='<option value=""></option>'+opts.map(x=>`<option ${x===vv?'selected':''}>${esc(x)}</option>`).join('');
+    return `<td class="${cls.join(' ')}"><select data-i="${i}" data-k="${k}">${o}</select></td>`;
+  }
+  var t=c.type==='num'?'number':(c.type==='date'?'date':'text');
+  var val=(v==null?'':String(v));
+  if(k==='proyecto'){
+    return `<td class="${cls.join(' ')}"><div class="cellwrap"><input type="${t}" data-i="${i}" data-k="${k}" value="${escA(val)}" title="${escA(val)}"><button class="del" data-del="${i}" title="Eliminar fila">✕</button></div></td>`;
+  }
+  return `<td class="${cls.join(' ')}"><input type="${t}" data-i="${i}" data-k="${k}" value="${escA(val)}"${c.type==='text'?` title="${escA(val)}"`:''}></td>`;
+}
+function passFilter(rec){
+  var q=($('q').value||'').trim().toLowerCase();
+  var fe=$('fEstado').value, fp=$('fPais').value;
+  if(fe && (rec.estado_pem||'')!==fe) return false;
+  if(fp && (rec.pais||'')!==fp) return false;
+  if(q){ var hay=['proyecto','emplazamiento','provincia','pais','promotor','epc','modulista','modulo','num']
+      .some(k=>String(rec[k]==null?'':rec[k]).toLowerCase().indexOf(q)>=0); if(!hay)return false; }
+  return true;
+}
+function render(){
+  $('cg').innerHTML=colgroupHTML();
+  $('th').innerHTML=headHTML();
+  var idx=DATA.map((_,i)=>i).filter(i=>passFilter(DATA[i]));
+  $('tb').innerHTML=idx.map(i=>'<tr>'+KEYS.map(k=>cellHTML(i,k)).join('')+'</tr>').join('');
+  $('empty').style.display=idx.length?'none':'block';
+  footTotals(idx);
+}
+function num(v){ var n=parseFloat(String(v==null?'':v).replace(',','.')); return isFinite(n)?n:0; }
+function footTotals(idx){
+  var n=idx.length, pac=0,pdc=0,trk=0;
+  idx.forEach(i=>{pac+=num(DATA[i].pac);pdc+=num(DATA[i].pdc);trk+=num(DATA[i].trk_total);});
+  var tot={};
+  tot.proyecto=`${n} planta${n===1?'':'s'}`;
+  tot.pac=pac?pac.toFixed(1):''; tot.pdc=pdc?pdc.toFixed(1):''; tot.trk_total=trk?String(trk):'';
+  var h='<tr>'+KEYS.map(k=>{
+    var cls=[]; if(k==='num')cls.push('stick'); if(k==='proyecto')cls.push('stick2'); if(GSTART.has(k))cls.push('gstart');
+    if(k==='num'){cls.push('lbl-tot'); return `<td class="${cls.join(' ')}">Σ</td>`;}
+    return `<td class="${cls.join(' ')}">${tot[k]?esc(tot[k]):''}</td>`;
+  }).join('')+'</tr>';
+  $('tf').innerHTML=h;
+}
+
+/* ===== edición (delegada) ===== */
+$('tb').addEventListener('input',function(e){
+  var t=e.target, i=t.getAttribute('data-i'), k=t.getAttribute('data-k'); if(i==null||k==null)return;
+  i=+i;
+  if(t.type==='checkbox'){ DATA[i][k]=t.checked; }
+  else { DATA[i][k]=t.value; }
+  if(t.tagName==='INPUT'&&COL[k].type==='text')t.title=t.value;
+  save();
+});
+$('tb').addEventListener('change',function(e){
+  var t=e.target, k=t.getAttribute('data-k'); if(k!=='estado_pem')return;
+  var td=t.closest('td'); td.className=td.className.replace(/estado-\w+/,'').trim()+' estado-'+(ESTCLASS[t.value]||'idle');
+});
+$('tb').addEventListener('click',function(e){
+  var b=e.target.closest('.del'); if(!b)return;
+  var i=+b.getAttribute('data-del'); var nm=DATA[i].proyecto||DATA[i].num||'(sin nombre)';
+  if(confirm('¿Eliminar la planta "'+nm+'" de la tabla?')){ DATA.splice(i,1); save(); render(); }
+});
+
+/* ===== filtros ===== */
+['q','fEstado','fPais'].forEach(id=>$(id).addEventListener('input',render));
+function fillFilters(){
+  $('fEstado').innerHTML='<option value="">Estado · todos</option>'+EST.map(s=>`<option>${s}</option>`).join('');
+  var paises=Array.from(new Set(DATA.map(r=>r.pais).filter(Boolean))).sort();
+  $('fPais').innerHTML='<option value="">País · todos</option>'+paises.map(s=>`<option>${esc(s)}</option>`).join('');
+}
+
+/* ===== añadir / restaurar ===== */
+$('addBtn').onclick=function(){
+  var r={}; KEYS.forEach(k=>{ r[k]=CHECKS.has(k)?false:''; });
+  r.responsable='Factiun'; r.comunicaciones='Zigbee'; r.sist_control='Sunner'; r.estado_pem='Sin comenzar';
+  DATA.push(r); save(); fillFilters(); render();
+  var w=document.querySelector('.wrap'); w.scrollTop=w.scrollHeight;
+};
+$('resetBtn').onclick=function(){
+  if(!confirm('¿Restaurar los datos originales del Excel? Se perderán los cambios guardados en este navegador.'))return;
+  DATA=JSON.parse(JSON.stringify(SEED)); save(); fillFilters(); render();
+};
+
+/* ===== exportar ===== */
+function rowsAoA(){
+  var aoa=[XLSH.slice()];
+  DATA.forEach(r=>{ aoa.push(KEYS.map(k=>{ var v=r[k]; if(CHECKS.has(k))return v?'x':''; return v==null?'':v; })); });
+  return aoa;
+}
+$('xlsBtn').onclick=function(){
+  var ws=XLSX.utils.aoa_to_sheet(rowsAoA());
+  ws['!cols']=KEYS.map(k=>({wch:Math.max(8,Math.round(COL[k].w/7))}));
+  var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Datos');
+  XLSX.writeFile(wb,'Cartera_plantas_'+stamp()+'.xlsx');
+};
+$('csvBtn').onclick=function(){
+  var aoa=rowsAoA();
+  var csv=aoa.map(row=>row.map(c=>{ c=String(c==null?'':c); return /[";\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c; }).join(';')).join('\r\n');
+  dl(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}),'Cartera_plantas_'+stamp()+'.csv');
+};
+function stamp(){var d=new Date();return d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2);}
+function dl(blob,name){var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
+
+/* ===== importar (mismo formato; mapeo por posición de columna) ===== */
+$('impBtn').onclick=()=>$('impFile').click();
+$('impFile').onchange=function(e){
+  var f=e.target.files[0]; if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(ev){
+    try{
+      var wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});
+      var ws=wb.Sheets['Datos']||wb.Sheets[wb.SheetNames[0]];
+      var aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+      var out=[];
+      for(var r=1;r<aoa.length;r++){
+        var row=aoa[r]; if(!row)continue;
+        if(row[1]==null||String(row[1]).trim()==='')continue;   // sin Proyecto -> fin
+        var rec={};
+        KEYS.forEach((k,ci)=>{
+          var v=row[ci];
+          if(CHECKS.has(k)){ rec[k]=!!(v&&String(v).trim().toLowerCase().match(/^(x|s[ií]|1|true|yes)$/)); }
+          else if(v instanceof Date){ rec[k]=v.toISOString().slice(0,10); }
+          else if(v!=null&&v!==''){ rec[k]=v; }
+        });
+        out.push(rec);
+      }
+      if(!out.length){ alert('No se han encontrado filas en la hoja "Datos".'); return; }
+      if(!confirm('Importar '+out.length+' plantas desde "'+f.name+'"?\nSustituye la tabla actual de este navegador.'))return;
+      DATA=out; save(); fillFilters(); render();
+    }catch(err){ alert('No se pudo leer el Excel: '+(err&&err.message||err)); }
+    $('impFile').value='';
+  };
+  rd.readAsArrayBuffer(f);
+};
+
+/* ===== offline toggle (clave compartida con el resto de la suite) ===== */
+var OFFLINE=(function(){try{var s=localStorage.getItem('cobertura_offline');return s===null?!navigator.onLine:s==='1';}catch(e){return !navigator.onLine;}})();
+(function(){var b=$('offBtn');if(!b)return;b.textContent=OFFLINE?'⛌ Sin conexión':'◑ Online';b.style.color=OFFLINE?'#F6A623':'#9bb0c6';
+  b.onclick=function(){try{localStorage.setItem('cobertura_offline',OFFLINE?'0':'1');}catch(e){}location.reload();};})();
+
+/* ===== arranque ===== */
+fillFilters(); render();
+</script>
+</body>
+</html>

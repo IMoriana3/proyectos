@@ -208,6 +208,10 @@ body{
 .sec-title{font-family:var(--display);font-size:.8rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:4px 0 15px;display:flex;align-items:center;gap:12px}
 .sec-title::after{content:"";flex:1;height:1px;background:var(--line-soft)}
 .sec-title .cnt{font-family:var(--mono);color:var(--muted-2);letter-spacing:.04em;font-weight:500}
+.sec-title::after{order:5}
+.sec-title .tabla-link{order:9;font-family:var(--sans);font-size:.78rem;font-weight:600;letter-spacing:.02em;text-transform:none;
+  color:var(--accent);text-decoration:none;border:1px solid #2a4d40;background:rgba(54,211,153,.10);padding:6px 12px;border-radius:9px;white-space:nowrap}
+.sec-title .tabla-link:hover{background:rgba(54,211,153,.18);border-color:var(--accent);color:#fff}
 .plants{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;margin-bottom:34px}
 .pcard{padding:17px 17px 16px}
 .pcard .phead{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
@@ -366,7 +370,7 @@ body{
 <main class="wrap">
 
   <section class="plants-sec">
-    <h2 class="sec-title">Proyectos · plantas <span class="cnt" id="plants-cnt"></span></h2>
+    <h2 class="sec-title">Proyectos · plantas <span class="cnt" id="plants-cnt"></span><a class="tabla-link" href="cartera-tabla.html" title="Ficha técnica de todas las plantas (editable, con desplegables)">▦ Cartera técnica</a></h2>
     <div class="plants" id="plants"></div>
   </section>
 
