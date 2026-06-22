@@ -368,11 +368,11 @@ body{
 <main class="wrap">
 
   <section class="plants-sec">
-    <h2 class="sec-title">Plantas <span class="cnt" id="plants-cnt"></span></h2>
+    <h2 class="sec-title">Proyectos · plantas <span class="cnt" id="plants-cnt"></span></h2>
     <div class="plants" id="plants"></div>
   </section>
 
-  <h2 class="sec-title">Herramientas</h2>
+  <h2 class="sec-title">Herramientas · crear nuevo</h2>
   <div class="controls">
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -440,6 +440,42 @@ body{
    PROYECTOS  —  edita SOLO este array para mantener el panel al día.
    ===================================================================== */
 const PROJECTS = [
+  {
+    name: "Nuevo Siting",
+    status: "live",
+    objetivo: "Crea el siting de comunicaciones de una planta nueva: sube los seguidores (CSV/Excel, plantilla incluida) y autoubica NCUs, RSU y gateways.",
+    stack: "HTML · Canvas · min-cost flow",
+    url: "https://imoriana3.github.io/siting/",
+    repo: "https://github.com/imoriana3/siting",
+    updated: "2026-06-22",
+    version: "",
+    docId: "",
+    docUrl: "",
+    uso: [
+      "Sube los seguidores en CSV (lat,lng o x,y; opcional power_block, id) o el Excel del proyecto. Hay botón de plantilla.",
+      "Ajusta alcance y capacidades; autoubica NCUs/RSU/GW y exporta la asignación TCU→NCU→GW."
+    ],
+    pendientes: [],
+    historial: [ { date:"2026-06-22", ver:"", note:"Plantilla de creación en la cartera (Siting en blanco)." } ]
+  },
+  {
+    name: "Nuevo mapa de cobertura",
+    status: "build",
+    objetivo: "Genera el 2D/3D de cobertura de una planta nueva a partir de su layout (DWG/CSV, o el export del Siting).",
+    stack: "HTML · Three.js · satélite + DEM",
+    url: "",
+    repo: "https://github.com/imoriana3/cobertura-zigbee",
+    updated: "2026-06-22",
+    version: "",
+    docId: "",
+    docUrl: "",
+    uso: [
+      "Hoy: pásame el DWG/CSV de la planta y genero su layout (como se hizo con San José).",
+      "En construcción: generador self-service (CSV / export del Siting → layout → 2D/3D)."
+    ],
+    pendientes: [ { done:false, text:"Generador self-service CSV/Siting → layout de cobertura" } ],
+    historial: [ { date:"2026-06-22", ver:"", note:"Plantilla de creación en la cartera." } ]
+  },
   {
     name: "Checklist Solar v2",
     status: "live",
