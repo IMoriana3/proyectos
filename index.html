@@ -460,21 +460,21 @@ const PROJECTS = [
   },
   {
     name: "Nuevo mapa de cobertura",
-    status: "build",
-    objetivo: "Genera el 2D/3D de cobertura de una planta nueva a partir de su layout (DWG/CSV, o el export del Siting).",
+    status: "live",
+    objetivo: "Genera el 2D/3D de cobertura de una planta nueva: sube un CSV de seguidores (lat,lng) y lo previsualizas al momento. Self-service.",
     stack: "HTML · Three.js · satélite + DEM",
-    url: "",
+    url: "https://imoriana3.github.io/cobertura-zigbee/nuevo.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-06-22",
     version: "",
     docId: "",
     docUrl: "",
     uso: [
-      "Hoy: pásame el DWG/CSV de la planta y genero su layout (como se hizo con San José).",
-      "En construcción: generador self-service (CSV / export del Siting → layout → 2D/3D)."
+      "Sube el CSV de seguidores (lat,lng; opcional id, tipo, ncu, gw). Hay plantilla.",
+      "Previsualiza el mapa en 3D/2D al instante; descarga el layout.json para dejarlo fijo en la cartera."
     ],
-    pendientes: [ { done:false, text:"Generador self-service CSV/Siting → layout de cobertura" } ],
-    historial: [ { date:"2026-06-22", ver:"", note:"Plantilla de creación en la cartera." } ]
+    pendientes: [ { done:false, text:"Importar NCUs/meteo y leer el export del Siting" } ],
+    historial: [ { date:"2026-06-22", ver:"", note:"Generador self-service CSV → layout + previsualización 3D/2D." } ]
   },
   {
     name: "Checklist Solar v2",
