@@ -206,6 +206,19 @@ body{
 .btn.off{color:var(--muted-2);background:transparent;cursor:not-allowed;border-style:dashed;border-color:var(--line-soft)}
 .btn.off:hover{border-color:var(--line-soft);color:var(--muted-2)}
 
+/* ---------- PLANTAS (cartera por planta) ---------- */
+.sec-title{font-family:var(--display);font-size:.8rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:4px 0 15px;display:flex;align-items:center;gap:12px}
+.sec-title::after{content:"";flex:1;height:1px;background:var(--line-soft)}
+.sec-title .cnt{font-family:var(--mono);color:var(--muted-2);letter-spacing:.04em;font-weight:500}
+.plants{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;margin-bottom:34px}
+.pcard{padding:17px 17px 16px}
+.pcard .phead{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.pcard .name{margin:0 0 3px}
+.pcode{font-family:var(--mono);font-size:.74rem;color:var(--muted-2);letter-spacing:.04em;flex:none}
+.pviews{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.pviews .btn{font-size:.73rem}
+.pviews .btn.off::after{content:" · no disp.";opacity:.65;font-weight:400}
+
 /* ---------- DETAIL (expanded) ---------- */
 .detail{border-top:1px solid var(--line-soft);padding:16px 18px 18px;background:var(--panel-2)}
 .detail[hidden]{display:none}
@@ -353,6 +366,13 @@ body{
 </header>
 
 <main class="wrap">
+
+  <section class="plants-sec">
+    <h2 class="sec-title">Plantas <span class="cnt" id="plants-cnt"></span></h2>
+    <div class="plants" id="plants"></div>
+  </section>
+
+  <h2 class="sec-title">Herramientas</h2>
   <div class="controls">
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -637,6 +657,47 @@ const PROJECTS = [
 ];
 
 /* =====================================================================
+   PLANTAS — cada planta con sus vistas. Pon la URL si existe; null = no disponible.
+   Vistas "core" (siting, modelo3d, cobertura) salen siempre (en gris si null).
+   Vistas extra (plano, visor, scada) solo salen si tienen URL.
+   ===================================================================== */
+const SITE = "https://imoriana3.github.io/";
+const PLANTS = [
+  { name:"El Burgo I", code:"23003", loc:"Zaragoza · España", views:{
+      siting:    SITE+"siting/?planta=burgo",
+      modelo3d:  SITE+"cobertura-zigbee/terreno.html?planta=elburgo",
+      cobertura: SITE+"cobertura-zigbee/index.html",
+      plano:     SITE+"cobertura-zigbee/plano.html?planta=elburgo",
+  }},
+  { name:"Ayora", code:"24025", loc:"Valencia · España", views:{
+      siting:    SITE+"siting/?planta=ayora",
+      modelo3d:  SITE+"cobertura-zigbee/terreno.html?planta=ayora",
+      cobertura: null,
+      plano:     SITE+"cobertura-zigbee/plano.html?planta=ayora",
+  }},
+  { name:"San José", code:"24019", loc:"Arequipa · Perú", views:{
+      siting:    SITE+"siting/?planta=sanjose",
+      modelo3d:  SITE+"cobertura-zigbee/terreno.html?planta=sanjose",
+      cobertura: null,
+      plano:     SITE+"cobertura-zigbee/plano.html?planta=sanjose",
+      visor:     SITE+"visor-san-jose/",
+  }},
+  { name:"Páramo", code:"25019", loc:"España", views:{
+      siting:    SITE+"siting/?planta=paramo",
+      modelo3d:  null,
+      cobertura: null,
+  }},
+];
+const PLANT_VIEWS = [
+  { key:"siting",    label:"2D Siting",    core:true  },
+  { key:"modelo3d",  label:"3D",           core:true  },
+  { key:"cobertura", label:"2D Cobertura", core:true  },
+  { key:"plano",     label:"Plano 2D",     core:false },
+  { key:"visor",     label:"Visor",        core:false },
+  { key:"scada",     label:"SCADA",        core:false },
+];
+
+/* =====================================================================
    Lógica del panel — no requiere edición para el uso normal.
    ===================================================================== */
 const STATUS = {
@@ -827,6 +888,27 @@ $sort.onchange = e => { state.sort = e.target.value; renderGrid(); };
 function tick(){ const d=new Date(); const p=n=>String(n).padStart(2,"0"); document.getElementById("clock").textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; }
 tick(); setInterval(tick,1000);
 
+/* ---------- PLANTAS ---------- */
+function plantCardHTML(pl){
+  const arrow='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 17 17 7M9 7h8v8"/></svg>';
+  const btns = PLANT_VIEWS.map(v=>{
+    const url = pl.views[v.key];
+    if(url) return `<a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">${v.label} ${arrow}</a>`;
+    if(v.core) return `<span class="btn off" title="${esc(v.label)} no disponible para ${esc(pl.name)}">${v.label}</span>`;
+    return "";
+  }).join("");
+  return `<article class="card pcard" style="--c:var(--demo)">
+    <div class="phead"><h3 class="name">${esc(pl.name)}</h3><span class="pcode">${esc(pl.code)}</span></div>
+    <p class="obj">${esc(pl.loc)}</p>
+    <div class="pviews">${btns}</div>
+  </article>`;
+}
+function renderPlants(){
+  const el=document.getElementById("plants"); if(el) el.innerHTML = PLANTS.map(plantCardHTML).join("");
+  const c=document.getElementById("plants-cnt"); if(c) c.textContent = "· "+PLANTS.length;
+}
+
+renderPlants();
 renderGauges();
 renderChips();
 renderGrid();
