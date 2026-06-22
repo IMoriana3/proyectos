@@ -201,7 +201,21 @@ const LSK='cartera_tabla';
 let DATA=load();
 function load(){ try{var s=localStorage.getItem(LSK); if(s){var a=JSON.parse(s); if(Array.isArray(a))return a;}}catch(e){}
   return JSON.parse(JSON.stringify(SEED)); }
-function save(){ try{localStorage.setItem(LSK,JSON.stringify(DATA)); flagSaved();}catch(e){} }
+function save(){ try{localStorage.setItem(LSK,JSON.stringify(DATA)); publishSpecs(); flagSaved();}catch(e){} }
+/* FUENTE ÚNICA: publica un resumen normalizado por CÓDIGO de planta en una clave
+   compartida del mismo origen (localStorage 'factiun_plantas'), para que los visores
+   (3D cobertura, etc.) lean de aquí los módulos/string, trackers, pitch… Sin servidor,
+   sin red: imoriana3.github.io es un único origen, así que el localStorage es común. */
+function firstInt(v){var m=String(v==null?'':v).match(/\d+/);return m?parseInt(m[0],10):null;}
+function publishSpecs(){
+  try{ var map={};
+    DATA.forEach(function(r){ var cod=r.num; if(cod==null||String(cod).trim()==='')return;
+      map[String(cod)]={cod:cod,nombre:r.proyecto||'',mods:firstInt(r.string),pitch:(r.pitch==null?'':String(r.pitch)),
+        trk_total:num(r.trk_total),trk_bi:num(r.trk_bi),trk_mono:num(r.trk_mono),cantidad:num(r.cantidad),
+        ncu_eth:num(r.ncu_eth),ncu_fo:num(r.ncu_fo),estado_pem:r.estado_pem||'',pais:r.pais||''}; });
+    localStorage.setItem('factiun_plantas',JSON.stringify(map));
+  }catch(e){}
+}
 let _sv; function flagSaved(){ var el=document.getElementById('saved'); el.innerHTML='<b>✓</b> guardado';
   clearTimeout(_sv); _sv=setTimeout(function(){el.textContent='';},1400); }
 
@@ -371,7 +385,7 @@ var OFFLINE=(function(){try{var s=localStorage.getItem('cobertura_offline');retu
   b.onclick=function(){try{localStorage.setItem('cobertura_offline',OFFLINE?'0':'1');}catch(e){}location.reload();};})();
 
 /* ===== arranque ===== */
-fillFilters(); render();
+fillFilters(); render(); publishSpecs();
 </script>
 </body>
 </html>
