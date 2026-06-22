@@ -697,6 +697,12 @@ const PLANT_VIEWS = [
   { key:"scada",     label:"SCADA",        core:false },
 ];
 
+/* Módulos que YA viven en una planta (sección Plantas): no se repiten abajo en Herramientas */
+const PLANT_MODULES = new Set([
+  "Visor San José", "Tracker SCADA · El Burgo", "Demo Siting", "Cobertura Zigbee · El Burgo"
+]);
+const TOOLS = PROJECTS.filter(p => !PLANT_MODULES.has(p.name));   // Herramientas = solo lo genérico (no de planta)
+
 /* =====================================================================
    Lógica del panel — no requiere edición para el uso normal.
    ===================================================================== */
@@ -723,7 +729,7 @@ const hasDoc = p => !!(p.docUrl || p.docId);
 
 function countByStatus(){
   const c = {}; ORDER.forEach(k=>c[k]=0);
-  PROJECTS.forEach(p=>{ if(c[p.status]!==undefined) c[p.status]++; });
+  TOOLS.forEach(p=>{ if(c[p.status]!==undefined) c[p.status]++; });
   return c;
 }
 function renderGauges(){
@@ -734,7 +740,7 @@ function renderGauges(){
 }
 function renderChips(){
   const c = countByStatus();
-  const items = [`<button class="chip ${state.filter==='all'?'on':''}" data-k="all">Todos · ${PROJECTS.length}</button>`]
+  const items = [`<button class="chip ${state.filter==='all'?'on':''}" data-k="all">Todos · ${TOOLS.length}</button>`]
     .concat(ORDER.filter(k=>c[k]>0).map(k=>`<button class="chip ${state.filter===k?'on':''}" data-k="${k}">${STATUS[k].label} · ${c[k]}</button>`));
   $chips.innerHTML = items.join("");
   $chips.querySelectorAll(".chip").forEach(b=> b.onclick = ()=> setFilter(b.dataset.k));
@@ -743,7 +749,7 @@ function setFilter(k){ state.filter = k; renderChips(); renderGauges(); renderGr
 
 function filtered(){
   const q = state.q.trim().toLowerCase();
-  let list = PROJECTS.filter(p=>{
+  let list = TOOLS.filter(p=>{
     if(state.filter!=="all" && p.status!==state.filter) return false;
     if(!q) return true;
     return [p.name,p.objetivo,p.stack].join(" ").toLowerCase().includes(q);
