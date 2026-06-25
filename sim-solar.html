@@ -109,7 +109,13 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
     <h2><span class="ic">⚡</span> Producción <span style="margin-left:auto;font:400 11px var(--mono);color:var(--muted)">fija vs tracker</span></h2>
     <div class="grid">
       <div>
-        <div class="field"><label>Montaje</label><select id="kind"><option value="tracker">Tracker (1 eje, backtracking)</option><option value="fixed">Fija</option></select></div>
+        <div class="two">
+          <div class="field"><label>Montaje</label><select id="kind"><option value="tracker">Tracker (1 eje)</option><option value="fixed">Fija</option></select></div>
+          <div class="field"><label>Modo</label><select id="mode"><option value="rapida">Rápida (PVWatts)</option><option value="bancable">Bancable (P50)</option></select></div>
+        </div>
+        <div class="field"><label>Módulo CEC <span style="color:var(--muted-2);font-weight:400">· motor</span></label>
+          <input id="modcec" list="modlist" placeholder="busca: JA Solar, Longi, Trina…" autocomplete="off">
+          <datalist id="modlist"></datalist></div>
         <div class="two">
           <div class="field"><label>Módulo Pmpp (W)</label><input id="pmpp" type="number" value="605"></div>
           <div class="field"><label>Nº módulos</label><input id="nmod" type="number" value="23072"></div>
@@ -122,10 +128,28 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
           <div class="field"><label>Inclinación °</label><input id="tilt" type="number" value="30"></div>
           <div class="field"><label>Azimut °</label><input id="azi" type="number" value="180"></div>
         </div>
-        <button class="btn" id="simBtn">▶ Simular producción</button>
+        <details style="margin:2px 0 12px"><summary style="cursor:pointer;font-size:12px;color:var(--muted);font-weight:600">Economía (LCOE / NPV / IRR)</summary>
+          <div class="two" style="margin-top:9px">
+            <div class="field"><label>Capex €/kW</label><input id="capex" type="number" value="600"></div>
+            <div class="field"><label>Opex €/kW·año</label><input id="opex" type="number" value="12"></div>
+          </div>
+          <div class="two">
+            <div class="field"><label>Precio €/MWh</label><input id="price" type="number" value="55"></div>
+            <div class="field"><label>Descuento %</label><input id="disc" type="number" step="0.1" value="6"></div>
+          </div>
+          <div class="two">
+            <div class="field"><label>Vida (años)</label><input id="life" type="number" value="30"></div>
+            <div class="field" style="display:flex;align-items:flex-end"><label style="display:flex;align-items:center;gap:7px;font-weight:400;color:var(--muted);margin:0 0 9px"><input type="checkbox" id="econOn"> calcular al simular</label></div>
+          </div>
+        </details>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="simBtn" style="flex:1">▶ Simular</button>
+          <button class="btn ghost" id="demBtn" style="flex:none" title="Relieve del emplazamiento (motor, online)">⛰ Relieve</button>
+        </div>
       </div>
       <div>
         <div id="prodOut"></div>
+        <div id="demOut" style="margin-top:10px"></div>
       </div>
     </div>
   </div>
@@ -245,37 +269,110 @@ async function detectEngine(){
 }
 function setEngine(on,txt){var el=$('engine');el.className='engine '+(on?'on':'off');$('engineTxt').textContent=txt;}
 
+function engineOffMsg(){
+  return '<div class="engmsg"><b>El motor SolarGPT no está conectado.</b><br>'+
+    'La producción real (TMY, CEC, térmico, pérdidas) corre en el motor Python, en tu máquina/LAN — así el dato no sale de tu red.<br><br>'+
+    'Arráncalo:<br><code>cd server &amp;&amp; ./run.sh</code><br>'+
+    '(repo SolarGPT; escucha en <code>127.0.0.1:8765</code>). Luego recarga.</div>'+
+    '<p class="note">Mientras tanto, la <b>geometría solar</b> de arriba funciona offline.</p>';
+}
+var MOD=null;   // parámetros del módulo CEC elegido (de /modules)
+
 async function simulate(){
-  var out=$('prodOut');
-  var lat=+$('lat').value,lon=+$('lon').value,kind=$('kind').value;
-  if(!ENGINE){
-    out.innerHTML='<div class="engmsg"><b>El motor SolarGPT no está conectado.</b><br>'+
-      'La producción "bancable" (TMY, CEC, térmico, pérdidas) corre en el motor Python, en tu máquina/LAN — así el dato no sale de tu red.<br><br>'+
-      'Arráncalo:<br><code>cd server &amp;&amp; ./run.sh</code><br>'+
-      '(en el repo SolarGPT; escucha en <code>127.0.0.1:8765</code>). Luego recarga esta ficha.</div>'+
-      '<p class="note">Mientras tanto, la <b>geometría solar</b> de arriba sí funciona (modelo de navegador, offline).</p>';
-    return;
-  }
+  var out=$('prodOut'); $('demOut').innerHTML='';
+  var lat=+$('lat').value,lon=+$('lon').value,kind=$('kind').value,mode=$('mode').value;
+  if(!ENGINE){ out.innerHTML=engineOffMsg(); return; }
   out.innerHTML='<p class="note">Simulando en el motor…</p>';
-  var sys=(kind==='fixed')?{tilt_deg:+$('tilt').value,azimuth_deg:+$('azi').value}
-                          :{max_angle_deg:+$('maxang').value,gcr:+$('gcr').value,backtrack:true};
-  var body={lat:lat,lon:lon,kind:kind,system:sys,
-    module:{pmpp_w:+$('pmpp').value,n_modules:+$('nmod').value,power_model:'pvwatts'},
-    losses:{soiling_pct:2.0,mismatch_pct:2.0},
-    meteo_mode:'openmeteo'};
   try{
-    var r=await fetch(ENGINE+'/generation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-    if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,180));}
-    var j=await r.json();
+    var j, foot;
+    if(mode==='bancable'){
+      var body={lat:lat,lon:lon,policy:'pvlib',strict:false,meteo_mode:'openmeteo',
+        tracker:{max_angle:+$('maxang').value,gcr:+$('gcr').value,backtrack:true}};
+      var r=await fetch(ENGINE+'/bankable',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+      if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,180));}
+      j=await r.json();
+      out.innerHTML='<div class="readout">'+
+        card('POA P50',j.e_poa_kwh_m2!=null?Math.round(j.e_poa_kwh_m2):'—','kWh/m²·año')+
+        card('Política',j.policy_name||'—','')+
+        card('QA',j.qa_all_passed===true?'✓ pasa':(j.qa_all_passed===false?'✗ falla':'—'),'gates')+
+        card('θ tracker',j.theta_out_summary?(Math.round(j.theta_out_summary.min)+'…'+Math.round(j.theta_out_summary.max)):'—','°')+
+        '</div><p class="note">Pipeline <b>bancable</b> · '+(kind==='fixed'?'(evalúa eje tracker)':'tracker')+'. Para fija usa modo Rápida.</p>';
+      return;
+    }
+    var sys=(kind==='fixed')?{tilt_deg:+$('tilt').value,azimuth_deg:+$('azi').value}
+                            :{max_angle_deg:+$('maxang').value,gcr:+$('gcr').value,backtrack:true};
+    var body2={lat:lat,lon:lon,kind:kind,system:sys,module:moduleSpec(),
+      losses:{soiling_pct:2.0,mismatch_pct:2.0},meteo_mode:'openmeteo'};
+    var r2=await fetch(ENGINE+'/generation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body2)});
+    if(!r2.ok){var t2=await r2.text();throw new Error('HTTP '+r2.status+' · '+t2.slice(0,180));}
+    j=await r2.json();
     out.innerHTML='<div class="readout">'+
       card('Producción AC',j.annual_ac_kwh!=null?(j.annual_ac_kwh/1e6).toFixed(2):'—','GWh/año')+
       card('Yield',j.yield_kwh_kwp_y!=null?Math.round(j.yield_kwh_kwp_y):'—','kWh/kWp')+
       card('PR',j.pr_net!=null?(j.pr_net*100).toFixed(1):'—','%')+
       card('POA',j.poa_annual_kwh_m2!=null?Math.round(j.poa_annual_kwh_m2):'—','kWh/m²')+
-      '</div><p class="note">Motor SolarGPT · meteo openmeteo · '+(j.meteo_rows||'?')+' filas. '+
-      'Para air-gapped, el motor admite meteo inline (tu CSV).</p>';
+      '</div><p class="note">Motor SolarGPT · '+(MOD?'módulo CEC <b>'+MOD._name+'</b> · ':'')+'meteo openmeteo · '+(j.meteo_rows||'?')+' filas.</p>';
+    if($('econOn').checked && j.yield_kwh_kwp_y) await runEconomy(j.yield_kwh_kwp_y, out);
   }catch(e){ out.innerHTML='<div class="engmsg">No se pudo simular: '+(e&&e.message||e)+'</div>'; }
 }
+
+function moduleSpec(){
+  var m={pmpp_w:+$('pmpp').value,n_modules:+$('nmod').value,power_model:'pvwatts'};
+  return m;   // Pmpp del módulo CEC ya queda volcado en #pmpp; el single-diode CEC se podrá activar luego
+}
+
+async function runEconomy(yieldKwhKwp,out){
+  try{
+    var ei={capex_eur_per_kw:+$('capex').value,opex_eur_per_kw_year:+$('opex').value,
+      price_eur_per_mwh:+$('price').value,discount_rate:(+$('disc').value)/100,lifetime_years:+$('life').value};
+    var r=await fetch(ENGINE+'/economy',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({inputs:ei,energy_kwh_kwp_y:yieldKwhKwp})});
+    if(!r.ok)return; var e=await r.json();
+    out.innerHTML+='<div class="readout" style="margin-top:8px">'+
+      card('LCOE',e.lcoe_eur_per_mwh!=null?Math.round(e.lcoe_eur_per_mwh):'—','€/MWh')+
+      card('IRR',e.irr_pct!=null?(+e.irr_pct).toFixed(1):'—','%')+
+      card('NPV',e.npv_eur_per_kw!=null?Math.round(e.npv_eur_per_kw):'—','€/kW')+
+      '</div>';
+  }catch(_){}
+}
+
+async function relieve(){
+  var d=$('demOut');
+  if(!ENGINE){ d.innerHTML='<p class="note">El relieve necesita el motor (y conexión para el DEM).</p>'; return; }
+  d.innerHTML='<p class="note">Consultando relieve…</p>';
+  try{
+    var r=await fetch(ENGINE+'/dem',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({lat:+$('lat').value,lon:+$('lon').value,n:48})});
+    if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,140));}
+    var j=await r.json(), smax=Math.max(j.slope_ns_max_deg||0,j.slope_ew_max_deg||0);
+    d.innerHTML='<div class="readout">'+
+      card('Cota','['+Math.round(j.elev_min)+'–'+Math.round(j.elev_max)+']','m · Δ'+Math.round(j.elev_range))+
+      card('Pendiente media',j.slope_mean_deg!=null?(+j.slope_mean_deg).toFixed(1):'—','°')+
+      card('Pendiente máx',smax?smax.toFixed(1):'—','°')+
+      '</div><p class="note">DEM '+(j.source||'?')+' · '+(j.n||'?')+'×'+(j.n||'?')+' (estilo S.P.A.C.E).</p>';
+  }catch(e){ d.innerHTML='<div class="engmsg">No se pudo obtener el relieve: '+(e&&e.message||e)+'</div>'; }
+}
+
+/* búsqueda de módulo CEC contra /modules */
+var _modT;
+$('modcec').addEventListener('input',function(){
+  clearTimeout(_modT); MOD=null; var q=this.value.trim();
+  if(!ENGINE||q.length<2)return;
+  _modT=setTimeout(async function(){
+    try{var r=await fetch(ENGINE+'/modules?limit=12&q='+encodeURIComponent(q));if(!r.ok)return;
+      var j=await r.json();
+      $('modlist').innerHTML=(j.modules||[]).map(function(n){return '<option value="'+String(n).replace(/"/g,'&quot;')+'">';}).join('');
+    }catch(e){}
+  },260);
+});
+$('modcec').addEventListener('change',async function(){
+  var n=this.value.trim(); if(!ENGINE||!n)return;
+  try{var r=await fetch(ENGINE+'/modules?name='+encodeURIComponent(n));if(!r.ok)return;
+    var j=await r.json(), p=j.params||{}; var pm=p.STC||p.PTC||p.Pmpp;
+    if(pm){$('pmpp').value=Math.round(pm);}
+    MOD=p; MOD._name=j.name||n;
+  }catch(e){}
+});
 
 /* ===================== wiring ===================== */
 $('plant').onchange=function(){var v=this.value;if(!v)return;var p=v.split(',');$('lat').value=p[0];$('lon').value=p[1];drawSky();};
@@ -283,6 +380,7 @@ $('kind').onchange=function(){var trk=this.value==='tracker';$('trkParams').styl
 ['lat','lon','date','tz','obj'].forEach(function(id){$(id).addEventListener('input',drawSky);});
 $('hour').addEventListener('input',drawSky);
 $('simBtn').onclick=simulate;
+$('demBtn').onclick=relieve;
 window.addEventListener('resize',drawSky);
 drawSky();
 detectEngine();
