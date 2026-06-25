@@ -73,12 +73,8 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
     <!-- ENTRADAS -->
     <div class="card">
       <h2><span class="ic">☉</span> Emplazamiento</h2>
-      <div class="field"><label>Planta (prefijar coordenadas)</label>
-        <select id="plant"><option value="">— manual —</option>
-          <option value="41.65,-0.9,El Burgo I">El Burgo I (Zaragoza)</option>
-          <option value="39.07,-1.05,Ayora">Ayora (Valencia)</option>
-          <option value="-16.55,-71.86,San José">San José (Arequipa, PE)</option>
-        </select></div>
+      <div class="field"><label>Planta (de la cartera)</label>
+        <select id="plant"><option value="">— manual —</option></select></div>
       <div class="two">
         <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="41.65"></div>
         <div class="field"><label>Longitud °</label><input id="lon" type="number" step="0.0001" value="-0.9"></div>
@@ -336,20 +332,39 @@ async function runEconomy(yieldKwhKwp,out){
   }catch(_){}
 }
 
+function elevColor(t){ // cota normalizada [0,1] → rampa tipo terreno (índigo→azul→verde→ocre→rojo)
+  var stops=[[0,44,26,77],[.25,42,111,151],[.5,42,157,143],[.7,233,196,106],[.85,231,111,81],[1,214,40,40]];
+  for(var i=1;i<stops.length;i++){if(t<=stops[i][0]){var a=stops[i-1],b=stops[i],f=(t-a[0])/(b[0]-a[0]);
+    return [Math.round(a[1]+(b[1]-a[1])*f),Math.round(a[2]+(b[2]-a[2])*f),Math.round(a[3]+(b[3]-a[3])*f)];}}
+  return [214,40,40];
+}
+function drawDemGrid(grid){
+  if(!grid||!grid.length)return; var ny=grid.length,nx=grid[0].length,mn=1e9,mx=-1e9,x,y;
+  for(y=0;y<ny;y++)for(x=0;x<nx;x++){var v=grid[y][x];if(v==null||isNaN(v))continue;if(v<mn)mn=v;if(v>mx)mx=v;}
+  var rng=(mx-mn)||1, cv=$('demcv'); if(!cv)return; cv.width=nx;cv.height=ny;
+  var c2=cv.getContext('2d'),img=c2.createImageData(nx,ny);
+  for(y=0;y<ny;y++)for(x=0;x<nx;x++){var w=grid[y][x],o=(y*nx+x)*4;
+    if(w==null||isNaN(w)){img.data[o+3]=0;continue;}
+    var c=elevColor((w-mn)/rng);img.data[o]=c[0];img.data[o+1]=c[1];img.data[o+2]=c[2];img.data[o+3]=255;}
+  c2.putImageData(img,0,0);
+}
 async function relieve(){
   var d=$('demOut');
   if(!ENGINE){ d.innerHTML='<p class="note">El relieve necesita el motor (y conexión para el DEM).</p>'; return; }
   d.innerHTML='<p class="note">Consultando relieve…</p>';
   try{
     var r=await fetch(ENGINE+'/dem',{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({lat:+$('lat').value,lon:+$('lon').value,n:48})});
+      body:JSON.stringify({lat:+$('lat').value,lon:+$('lon').value,n:64,grid:true})});
     if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,140));}
     var j=await r.json(), smax=Math.max(j.slope_ns_max_deg||0,j.slope_ew_max_deg||0);
     d.innerHTML='<div class="readout">'+
       card('Cota','['+Math.round(j.elev_min)+'–'+Math.round(j.elev_max)+']','m · Δ'+Math.round(j.elev_range))+
       card('Pendiente media',j.slope_mean_deg!=null?(+j.slope_mean_deg).toFixed(1):'—','°')+
       card('Pendiente máx',smax?smax.toFixed(1):'—','°')+
-      '</div><p class="note">DEM '+(j.source||'?')+' · '+(j.n||'?')+'×'+(j.n||'?')+' (estilo S.P.A.C.E).</p>';
+      '</div>'+
+      (j.elev_grid?'<canvas id="demcv" style="width:100%;height:auto;image-rendering:pixelated;border:1px solid var(--line-soft);border-radius:8px;margin-top:8px"></canvas>':'')+
+      '<p class="note">DEM '+(j.source||'?')+' · '+(j.n||'?')+'×'+(j.n||'?')+' · heatmap de cota (estilo S.P.A.C.E).</p>';
+    if(j.elev_grid)drawDemGrid(j.elev_grid);
   }catch(e){ d.innerHTML='<div class="engmsg">No se pudo obtener el relieve: '+(e&&e.message||e)+'</div>'; }
 }
 
@@ -375,13 +390,31 @@ $('modcec').addEventListener('change',async function(){
 });
 
 /* ===================== wiring ===================== */
-$('plant').onchange=function(){var v=this.value;if(!v)return;var p=v.split(',');$('lat').value=p[0];$('lon').value=p[1];drawSky();};
+/* plantas de la cartera (factiun_plantas en localStorage compartido) */
+var PLANTS={};
+var COORDS_FALLBACK={'24002':[41.57634,-0.79814],'24025':[39.11821,-1.15985],'24019':[-16.59577,-71.80644]};
+function loadPlants(){
+  try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
+  var opts='<option value="">— manual —</option>';
+  Object.keys(PLANTS).sort().forEach(function(cod){var p=PLANTS[cod];opts+='<option value="'+cod+'">'+((p&&p.nombre)||'?')+' · '+cod+'</option>';});
+  $('plant').innerHTML=opts;
+}
+function pickPlant(cod){
+  var p=PLANTS[cod]; if(!p)return;
+  var c=(p.lat!=null&&p.lon!=null)?[p.lat,p.lon]:COORDS_FALLBACK[cod];
+  if(c){$('lat').value=c[0];$('lon').value=c[1];}
+  if(p.wmod)$('pmpp').value=Math.round(p.wmod);
+  if(p.cantidad)$('nmod').value=Math.round(p.cantidad);
+  drawSky();
+}
+$('plant').onchange=function(){if(this.value)pickPlant(this.value);};
 $('kind').onchange=function(){var trk=this.value==='tracker';$('trkParams').style.display=trk?'':'none';$('fixParams').style.display=trk?'none':'';};
 ['lat','lon','date','tz','obj'].forEach(function(id){$(id).addEventListener('input',drawSky);});
 $('hour').addEventListener('input',drawSky);
 $('simBtn').onclick=simulate;
 $('demBtn').onclick=relieve;
 window.addEventListener('resize',drawSky);
+loadPlants();
 drawSky();
 detectEngine();
 </script>
