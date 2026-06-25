@@ -80,6 +80,9 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
     <div class="field"><label>Azimut panel °</label><input id="az" type="number" value="0"></div>
     <label class="chk"><input type="checkbox" id="bifila" checked> Bifila (estructuras emparejadas)</label>
     <button class="btn" id="genBtn">▶ Generar implantación</button>
+    <button class="btn" id="loadBtn" style="margin-top:8px;background:var(--panel-2);color:var(--text);border-color:var(--line)">⬆ Cargar GeoJSON (del notebook)</button>
+    <input type="file" id="geoFile" accept=".geojson,.json" style="display:none">
+    <p class="note">¿SolarGPT en Colab? Clic en el indicador del motor (arriba) para pegar la URL del túnel, o usa <b>Cargar GeoJSON</b> con el fichero que exporte el notebook.</p>
   </div>
 
   <div class="card">
@@ -107,14 +110,21 @@ $('plant').onchange=function(){var cod=this.value;if(!cod)return;var p=PLANTS[co
   if(c){$('lat').value=c[0];$('lon').value=c[1];}
   if(p.pitch&&!isNaN(parseFloat(p.pitch)))$('pitch').value=parseFloat(p.pitch);};
 
-/* ===== motor ===== */
-var ENGINE=null, PORTS=[8765,8000,9000];
+/* ===== motor (local o remoto vía túnel de Colab) ===== */
+var ENGINE=null;
+function engineUrls(){var u=[];try{var s=localStorage.getItem('factiun_engine_url');if(s)u.push(s.replace(/\/+$/,''));}catch(e){}[8765,8000,9000].forEach(function(p){u.push('http://127.0.0.1:'+p);});return u;}
 async function detectEngine(){
-  for(var i=0;i<PORTS.length;i++){var url='http://127.0.0.1:'+PORTS[i];
-    try{var r=await fetch(url+'/health',{cache:'no-store'});if(r.ok){var j=await r.json();if(j&&j.ok){ENGINE=url;setEngine(true,'motor SolarGPT ✓');return;}}}catch(e){}}
-  setEngine(false,'motor no conectado');
+  var urls=engineUrls();
+  for(var i=0;i<urls.length;i++){
+    try{var r=await fetch(urls[i]+'/health',{cache:'no-store'});if(r.ok){var j=await r.json();if(j&&j.ok){ENGINE=urls[i];setEngine(true,'motor ✓ '+(/127\.0\.0\.1|localhost/.test(urls[i])?'(local)':'(remoto)'));return;}}}catch(e){}}
+  setEngine(false,'motor no conectado · clic para fijar URL');
 }
 function setEngine(on,txt){$('engine').className='engine '+(on?'on':'off');$('engineTxt').textContent=txt;}
+$('engine').style.cursor='pointer'; $('engine').title='Clic: fijar la URL del motor (p. ej. el túnel de Colab)';
+$('engine').onclick=function(){var cur='';try{cur=localStorage.getItem('factiun_engine_url')||'';}catch(e){}
+  var u=prompt('URL del motor SolarGPT.\nColab: pega aquí el túnel (https://xxx.trycloudflare.com).\nVacío = solo local (127.0.0.1).',cur);
+  if(u===null)return; try{if(u.trim())localStorage.setItem('factiun_engine_url',u.trim());else localStorage.removeItem('factiun_engine_url');}catch(e){}
+  ENGINE=null;setEngine(false,'reconectando…');detectEngine();};
 
 /* ===== render GeoJSON genérico (Polygon/MultiPolygon/LineString) ===== */
 function drawGeo(fc){
@@ -169,6 +179,15 @@ async function generate(){
 }
 
 $('genBtn').onclick=generate;
+/* cargar un GeoJSON exportado por el notebook (camino sin servidor para Colab) */
+$('loadBtn').onclick=function(){$('geoFile').click();};
+$('geoFile').onchange=function(e){var f=e.target.files[0];if(!f)return;var rd=new FileReader();
+  rd.onload=function(ev){try{var gj=JSON.parse(ev.target.result),fc=gj.geojson||gj,st=gj.stats||{};
+    $('stats').innerHTML=st.kWp?('<div class="readout">'+ro('Potencia',(st.kWp/1000).toFixed(2),'MWp')+ro(st.trackers?'Trackers':'Estructuras',(st.trackers||st.structures||0),'')+ro('Filas',st.rows||0,'')+'</div>'):'';
+    var ok=drawGeo(fc);
+    $('foot').innerHTML=ok?('GeoJSON cargado de <b>'+f.name+'</b> · '+((fc.features||[]).length)+' features.'):'<div class="engmsg">El fichero no tiene geometría dibujable.</div>';
+  }catch(err){$('foot').innerHTML='<div class="engmsg">No se pudo leer el GeoJSON: '+(err&&err.message||err)+'</div>';}};
+  rd.readAsText(f);$('geoFile').value='';};
 loadPlants();
 detectEngine();
 </script>

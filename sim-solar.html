@@ -254,16 +254,22 @@ function updateReadout(g,hm){
 }
 function card(k,v,s){return '<div class="ro"><div class="k">'+k+'</div><div class="v">'+v+(s?' <small>'+s+'</small>':'')+'</div></div>';}
 
-/* ===================== MOTOR SOLARGPT (puente local) ===================== */
-var ENGINE=null, ENGINE_PORTS=[8765,8000,9000];
+/* ===================== MOTOR SOLARGPT (local o remoto vía túnel de Colab) ===================== */
+var ENGINE=null;
+function engineUrls(){var u=[];try{var s=localStorage.getItem('factiun_engine_url');if(s)u.push(s.replace(/\/+$/,''));}catch(e){}[8765,8000,9000].forEach(function(p){u.push('http://127.0.0.1:'+p);});return u;}
 async function detectEngine(){
-  for(var i=0;i<ENGINE_PORTS.length;i++){
-    var url='http://127.0.0.1:'+ENGINE_PORTS[i];
-    try{var r=await fetch(url+'/health',{cache:'no-store'});if(r.ok){var j=await r.json();if(j&&j.ok){ENGINE=url;setEngine(true,'motor SolarGPT ✓ (pvlib '+(j.pvlib||'?')+')');return;}}}catch(e){}
+  var urls=engineUrls();
+  for(var i=0;i<urls.length;i++){
+    try{var r=await fetch(urls[i]+'/health',{cache:'no-store'});if(r.ok){var j=await r.json();if(j&&j.ok){ENGINE=urls[i];setEngine(true,'motor ✓ '+(/127\.0\.0\.1|localhost/.test(urls[i])?'(local)':'(remoto)'));return;}}}catch(e){}
   }
-  setEngine(false,'motor no conectado');
+  setEngine(false,'motor no conectado · clic para URL');
 }
 function setEngine(on,txt){var el=$('engine');el.className='engine '+(on?'on':'off');$('engineTxt').textContent=txt;}
+$('engine').style.cursor='pointer'; $('engine').title='Clic: fijar la URL del motor (p. ej. el túnel de Colab)';
+$('engine').onclick=function(){var cur='';try{cur=localStorage.getItem('factiun_engine_url')||'';}catch(e){}
+  var u=prompt('URL del motor SolarGPT.\nColab: pega el túnel (https://xxx.trycloudflare.com).\nVacío = solo local.',cur);
+  if(u===null)return; try{if(u.trim())localStorage.setItem('factiun_engine_url',u.trim());else localStorage.removeItem('factiun_engine_url');}catch(e){}
+  ENGINE=null;setEngine(false,'reconectando…');detectEngine();};
 
 function engineOffMsg(){
   return '<div class="engmsg"><b>El motor SolarGPT no está conectado.</b><br>'+
