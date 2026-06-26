@@ -82,6 +82,7 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
     <button class="btn" id="genBtn">▶ Generar implantación</button>
     <button class="btn" id="loadBtn" style="margin-top:8px;background:var(--panel-2);color:var(--text);border-color:var(--line)">⬆ Cargar GeoJSON (del notebook)</button>
     <input type="file" id="geoFile" accept=".geojson,.json" style="display:none">
+    <button class="btn" id="d3Btn" style="margin-top:8px;display:none">🧊 Ver en 3D →</button>
     <p class="note">¿SolarGPT en Colab? Clic en el indicador del motor (arriba) para pegar la URL del túnel, o usa <b>Cargar GeoJSON</b> con el fichero que exporte el notebook.</p>
   </div>
 
@@ -173,11 +174,35 @@ async function generate(){
       ro('Fill',st.fill_factor!=null?(st.fill_factor*100).toFixed(0):'—','%')+
       '</div>';
     var ok=drawGeo(j.geojson);
+    if(ok){LAST_FC=j.geojson;LAST_CENTER=[lat,lon];LAST_MODS=(st.mods_per_string||st.mods_per_struct||28);$('d3Btn').style.display='';}
     $('foot').innerHTML=ok?('Implantación dibujada · '+(j.n_structures||st.structures||0)+' estructuras · pitch '+cfg.pitch_m+' m.')
                          :('<div class="engmsg">El motor no devolvió geometría dibujable'+(j.geojson_error?(' ('+j.geojson_error+')'):'')+'. Stats arriba.</div>');
   }catch(e){ $('foot').innerHTML='<div class="engmsg">No se pudo generar: '+(e&&e.message||e)+'</div>'; }
 }
 
+/* ===== llevar el layout generado al 3D de cobertura (planta 'custom', localStorage compartido) ===== */
+var LAST_FC=null,LAST_CENTER=null,LAST_MODS=28;
+function geoToCobertura(fc,clat,clon,mods){
+  var mLon=111320*Math.cos(clat*Math.PI/180),mLat=110540,trk=[];
+  (fc.features||[]).forEach(function(f,idx){var g=f.geometry;if(!g)return;
+    var rings=g.type==='Polygon'?[g.coordinates[0]]:(g.type==='MultiPolygon'?g.coordinates.map(function(p){return p[0];}):null);
+    if(!rings)return;
+    rings.forEach(function(r){if(!r||r.length<3)return;var sx=0,sy=0,k=0,longest=0,ang=0;
+      for(var i=0;i<r.length-1;i++){sx+=r[i][0];sy+=r[i][1];k++;
+        var dE=(r[i+1][0]-r[i][0])*mLon,dN=(r[i+1][1]-r[i][1])*mLat,L=Math.hypot(dE,dN);
+        if(L>longest){longest=L;ang=Math.atan2(dE,dN);}}                       // bearing del eje largo (vs Norte)
+      if(!k)return;var plon=sx/k,plat=sy/k;
+      trk.push({x:(plon-clon)*mLon,n:(plat-clat)*mLat,rot:ang*180/Math.PI,t:'completo',id:'L'+(idx+1)});});
+  });
+  return {title:'Layout generado',crs:'gen',clat:clat,clon:clon,cE:0,cN:0,mods:mods,trackers:trk,ncus:[],meteo:[],reps:[],inverters:[]};
+}
+$('d3Btn').onclick=function(){
+  if(!LAST_FC||!LAST_CENTER)return;
+  var lay=geoToCobertura(LAST_FC,LAST_CENTER[0],LAST_CENTER[1],LAST_MODS||28);
+  if(!lay.trackers.length){$('foot').innerHTML='<div class="engmsg">No pude extraer trackers de la geometría para el 3D.</div>';return;}
+  try{localStorage.setItem('cobertura_layout',JSON.stringify(lay));}catch(e){}
+  window.open('../cobertura-zigbee/terreno.html?planta=custom','_blank');
+};
 $('genBtn').onclick=generate;
 /* cargar un GeoJSON exportado por el notebook (camino sin servidor para Colab) */
 $('loadBtn').onclick=function(){$('geoFile').click();};
@@ -185,6 +210,7 @@ $('geoFile').onchange=function(e){var f=e.target.files[0];if(!f)return;var rd=ne
   rd.onload=function(ev){try{var gj=JSON.parse(ev.target.result),fc=gj.geojson||gj,st=gj.stats||{};
     $('stats').innerHTML=st.kWp?('<div class="readout">'+ro('Potencia',(st.kWp/1000).toFixed(2),'MWp')+ro(st.trackers?'Trackers':'Estructuras',(st.trackers||st.structures||0),'')+ro('Filas',st.rows||0,'')+'</div>'):'';
     var ok=drawGeo(fc);
+    if(ok){LAST_FC=fc;LAST_CENTER=[+$('lat').value,+$('lon').value];LAST_MODS=(st.mods_per_string||28);$('d3Btn').style.display='';}
     $('foot').innerHTML=ok?('GeoJSON cargado de <b>'+f.name+'</b> · '+((fc.features||[]).length)+' features.'):'<div class="engmsg">El fichero no tiene geometría dibujable.</div>';
   }catch(err){$('foot').innerHTML='<div class="engmsg">No se pudo leer el GeoJSON: '+(err&&err.message||err)+'</div>';}};
   rd.readAsText(f);$('geoFile').value='';};
