@@ -150,21 +150,39 @@ const KEYS=['num','proyecto','emplazamiento','provincia','pais','promotor','epc'
 const XLSH=['Nº','Proyecto','Emplazamiento','Provincia/Estado','País','Promotor','EPC','Responsable','Potencia AC (MW)','Potencia DC (MW)','Modulista','Módulo','Potencia','Cantidad','String','Pitch','Tecnología','Inversor','Fabricante','Modelo','Total trackers','Trackers bifila','Trackers monofila','Concentradores','NCUs ethernet','NCUs FO','Total anemómetros','Anemómetros veleta','Anemómetros US','Sensor nieve','Alimentación RSUs','Alimentación TCUs','Panel FV','Modelo','Batería TCU','Repetidores','Sistema control','Comunicaciones','Cold commissioning','Site','Escaneo','Offset','Hot commissioning','Estado PEM','Garantía','Inicio PEM','Final PEM','Duración PEM','Acceso remoto','Latitud','Longitud'];
 
 const TEC=['Monofacial','Bifacial'], INV=['String','Central','Mixto'],
-      A_RSU=['AC','Selfpowered'], A_TCU=['AC','Selfpowered','Stringpowered','Agri Selfpowered'],
-      PFV=['-','30W','45W','60W'], BAT=['-','3Ah','6Ah','8Ah'], CTRL=['Sunner','P4Q'],
-      EST=['Sin comenzar','En proceso','En marcha'], ACC=['Sí','No'];
+      A_RSU=['AC','Selfpowered'], A_TCU=['AC','AC batería','AC batería LT','Selfpowered','Stringpowered','Stringpowered LT','SPP+'],
+      PFV=['NA','30W','45W','60W'], BAT=['NA','3Ah','6Ah'], CTRL=['Sunner','P4Q','TracknCO','AiTracker'],
+      EST=['Sin comenzar','En proceso','En marcha'], ACC=['Sí','No'],
+      FASE=['Sin empezar','En proceso','Terminado'];   // fases PEM (cold/site/escaneo/offset/hot): antes checkbox sí/no
+const FKEYS=['cold','site','escaneo','offset','hot'];
+function migrateFases(a){a.forEach(function(r){FKEYS.forEach(function(k){var v=r[k];
+  if(v===true)r[k]='Terminado';else if(v===false||v==null||v==='')r[k]='Sin empezar';
+  else{var s=String(v).trim().toLowerCase();
+    if(/^(x|s[ií]|1|true|yes|terminado)$/.test(s))r[k]='Terminado';
+    else if(/proceso/.test(s))r[k]='En proceso';
+    else if(FASE.indexOf(r[k])<0)r[k]='Sin empezar';}});});return a;}
+/* combos (desplegable + texto libre, como la validación del Excel): semilla curada; se les suman
+   los valores ya presentes en la columna, así crecen solos al importar/crear plantas */
+const COMBO_SEED={
+  pais:['España','Portugal','Italia','Perú','Túnez'],
+  modulista:['JA Solar','Longi','Risen','Trina','Jinko','Phono','Hanersun','Luxen Solar','TW solar'],
+  invfab:['Sungrow','Huawei','SMA','Power Electronics','Ingeteam'],
+  comunicaciones:['Zigbee','RS485'],
+  responsable:['Factiun'],
+  promotor:[], epc:[]
+};
 
 const COL={
   num:{label:'Nº',type:'text',w:76}, proyecto:{label:'Proyecto',type:'text',w:160},
   emplazamiento:{label:'Emplazamiento',type:'text',w:130}, provincia:{label:'Provincia/Estado',type:'text',w:120},
-  pais:{label:'País',type:'text',w:92}, promotor:{label:'Promotor',type:'text',w:112},
-  epc:{label:'EPC',type:'text',w:120}, responsable:{label:'Responsable',type:'text',w:104},
+  pais:{label:'País',type:'combo',w:92}, promotor:{label:'Promotor',type:'combo',w:112},
+  epc:{label:'EPC',type:'combo',w:120}, responsable:{label:'Responsable',type:'combo',w:104},
   pac:{label:'Pot. AC (MW)',type:'num',w:88}, pdc:{label:'Pot. DC (MW)',type:'num',w:88},
-  modulista:{label:'Modulista',type:'text',w:104}, modulo:{label:'Módulo',type:'text',w:170},
+  modulista:{label:'Modulista',type:'combo',w:104}, modulo:{label:'Módulo',type:'text',w:170},
   wmod:{label:'Pot. (W)',type:'num',w:70}, cantidad:{label:'Cantidad',type:'num',w:84},
   string:{label:'String',type:'text',w:88}, pitch:{label:'Pitch',type:'text',w:74},
   tecnologia:{label:'Tecnología',type:'select',opts:TEC,w:118},
-  inversor:{label:'Inversor',type:'select',opts:INV,w:96}, invfab:{label:'Fabricante',type:'text',w:104},
+  inversor:{label:'Inversor',type:'select',opts:INV,w:96}, invfab:{label:'Fabricante',type:'combo',w:104},
   invmodelo:{label:'Modelo',type:'text',w:104},
   trk_total:{label:'Total',type:'num',w:66}, trk_bi:{label:'Bífila',type:'num',w:66}, trk_mono:{label:'Monofila',type:'num',w:74},
   concentradores:{label:'Concentr.',type:'num',w:82}, ncu_eth:{label:'NCU eth',type:'num',w:74}, ncu_fo:{label:'NCU FO',type:'num',w:72},
@@ -173,9 +191,9 @@ const COL={
   alim_rsu:{label:'Alim. RSU',type:'select',opts:A_RSU,w:124}, alim_tcu:{label:'Alim. TCU',type:'select',opts:A_TCU,w:148},
   panel_fv:{label:'Panel FV',type:'select',opts:PFV,w:92}, panel_modelo:{label:'Modelo panel',type:'text',w:112},
   bateria_tcu:{label:'Batería TCU',type:'select',opts:BAT,w:112}, repetidores:{label:'Repetid.',type:'num',w:76},
-  sist_control:{label:'Sist. control',type:'select',opts:CTRL,w:112}, comunicaciones:{label:'Comms',type:'text',w:90},
-  cold:{label:'Cold comm.',type:'check',w:78}, site:{label:'Site',type:'check',w:54}, escaneo:{label:'Escaneo',type:'check',w:72},
-  offset:{label:'Offset',type:'check',w:64}, hot:{label:'Hot comm.',type:'check',w:78},
+  sist_control:{label:'Sist. control',type:'select',opts:CTRL,w:112}, comunicaciones:{label:'Comms',type:'combo',w:90},
+  cold:{label:'Cold comm.',type:'select',opts:FASE,w:112}, site:{label:'Site',type:'select',opts:FASE,w:112}, escaneo:{label:'Escaneo',type:'select',opts:FASE,w:112},
+  offset:{label:'Offset',type:'select',opts:FASE,w:112}, hot:{label:'Hot comm.',type:'select',opts:FASE,w:112},
   estado_pem:{label:'Estado PEM',type:'select',opts:EST,w:132}, garantia:{label:'Garantía',type:'check',w:74},
   inicio_pem:{label:'Inicio PEM',type:'date',w:134}, final_pem:{label:'Final PEM',type:'date',w:134},
   duracion_pem:{label:'Duración',type:'num',w:76}, acceso:{label:'Acceso remoto',type:'select',opts:ACC,w:120},
@@ -193,7 +211,7 @@ const GROUPS=[
   {g:'PEM',cols:['cold','site','escaneo','offset','hot','estado_pem','garantia','inicio_pem','final_pem','duracion_pem','acceso']},
   {g:'Ubicación',cols:['lat','lon']}
 ];
-const CHECKS=new Set(['cold','site','escaneo','offset','hot','garantia']);
+const CHECKS=new Set(['garantia']);   // fases PEM ya no son checkbox: desplegable Sin empezar/En proceso/Terminado
 const GSTART=new Set(GROUPS.map(gr=>gr.cols[0]));   // primera col de cada grupo -> separador
 const GNAME={}; GROUPS.forEach(gr=>GNAME[gr.cols[0]]=gr.g);
 const ESTCLASS={'En marcha':'live','En proceso':'build','Sin comenzar':'idle'};
@@ -201,8 +219,8 @@ const ESTCLASS={'En marcha':'live','En proceso':'build','Sin comenzar':'idle'};
 /* ===== estado ===== */
 const LSK='cartera_tabla';
 let DATA=load();
-function load(){ try{var s=localStorage.getItem(LSK); if(s){var a=JSON.parse(s); if(Array.isArray(a))return a;}}catch(e){}
-  return JSON.parse(JSON.stringify(SEED)); }
+function load(){ try{var s=localStorage.getItem(LSK); if(s){var a=JSON.parse(s); if(Array.isArray(a))return migrateFases(a);}}catch(e){}
+  return migrateFases(JSON.parse(JSON.stringify(SEED))); }
 function save(){ try{localStorage.setItem(LSK,JSON.stringify(DATA)); publishSpecs(); flagSaved();}catch(e){} }
 /* FUENTE ÚNICA: publica un resumen normalizado por CÓDIGO de planta en una clave
    compartida del mismo origen (localStorage 'factiun_plantas'), para que los visores
@@ -257,7 +275,15 @@ function cellHTML(i,k){
   if(k==='proyecto'){
     return `<td class="${cls.join(' ')}"><div class="cellwrap"><input type="${t}" data-i="${i}" data-k="${k}" value="${escA(val)}" title="${escA(val)}"><button class="del" data-del="${i}" title="Eliminar fila">✕</button></div></td>`;
   }
-  return `<td class="${cls.join(' ')}"><input type="${t}" data-i="${i}" data-k="${k}" value="${escA(val)}"${c.type==='text'?` title="${escA(val)}"`:''}></td>`;
+  var dl=c.type==='combo'?` list="dl-${k}"`:'';   // combo: desplegable (datalist) + texto libre, como la validación del Excel
+  return `<td class="${cls.join(' ')}"><input type="${t}" data-i="${i}" data-k="${k}"${dl} value="${escA(val)}"${(c.type==='text'||c.type==='combo')?` title="${escA(val)}"`:''}></td>`;
+}
+function datalistsHTML(){   // opciones de cada combo: semilla curada ∪ valores presentes en la columna (crece solo)
+  return Object.keys(COMBO_SEED).map(function(k){
+    var set={};(COMBO_SEED[k]||[]).forEach(function(v){set[v]=1;});
+    DATA.forEach(function(r){var v=r[k];if(v!=null&&String(v).trim()!=='')set[String(v).trim()]=1;});
+    return `<datalist id="dl-${k}">`+Object.keys(set).sort().map(function(v){return `<option value="${escA(v)}"></option>`;}).join('')+'</datalist>';
+  }).join('');
 }
 function passFilter(rec){
   var q=($('q').value||'').trim().toLowerCase();
@@ -273,6 +299,8 @@ function render(){
   $('th').innerHTML=headHTML();
   var idx=DATA.map((_,i)=>i).filter(i=>passFilter(DATA[i]));
   $('tb').innerHTML=idx.map(i=>'<tr>'+KEYS.map(k=>cellHTML(i,k)).join('')+'</tr>').join('');
+  var dlh=document.getElementById('dlhost');if(!dlh){dlh=document.createElement('div');dlh.id='dlhost';document.body.appendChild(dlh);}
+  dlh.innerHTML=datalistsHTML();   // datalists de los combos (fuera de la tabla; ids estables dl-<col>)
   $('empty').style.display=idx.length?'none':'block';
   footTotals(idx);
 }
@@ -297,7 +325,7 @@ $('tb').addEventListener('input',function(e){
   i=+i;
   if(t.type==='checkbox'){ DATA[i][k]=t.checked; }
   else { DATA[i][k]=t.value; }
-  if(t.tagName==='INPUT'&&COL[k].type==='text')t.title=t.value;
+  if(t.tagName==='INPUT'&&(COL[k].type==='text'||COL[k].type==='combo'))t.title=t.value;
   save();
 });
 $('tb').addEventListener('change',function(e){
@@ -322,12 +350,13 @@ function fillFilters(){
 $('addBtn').onclick=function(){
   var r={}; KEYS.forEach(k=>{ r[k]=CHECKS.has(k)?false:''; });
   r.responsable='Factiun'; r.comunicaciones='Zigbee'; r.sist_control='Sunner'; r.estado_pem='Sin comenzar';
+  FKEYS.forEach(k=>r[k]='Sin empezar');
   DATA.push(r); save(); fillFilters(); render();
   var w=document.querySelector('.wrap'); w.scrollTop=w.scrollHeight;
 };
 $('resetBtn').onclick=function(){
   if(!confirm('¿Restaurar los datos originales del Excel? Se perderán los cambios guardados en este navegador.'))return;
-  DATA=JSON.parse(JSON.stringify(SEED)); save(); fillFilters(); render();
+  DATA=migrateFases(JSON.parse(JSON.stringify(SEED))); save(); fillFilters(); render();
 };
 
 /* ===== exportar ===== */
@@ -375,7 +404,7 @@ $('impFile').onchange=function(e){
       }
       if(!out.length){ alert('No se han encontrado filas en la hoja "Datos".'); return; }
       if(!confirm('Importar '+out.length+' plantas desde "'+f.name+'"?\nSustituye la tabla actual de este navegador.'))return;
-      DATA=out; save(); fillFilters(); render();
+      DATA=migrateFases(out); save(); fillFilters(); render();   // Excels antiguos: 'x' en las fases → Terminado
     }catch(err){ alert('No se pudo leer el Excel: '+(err&&err.message||err)); }
     $('impFile').value='';
   };
