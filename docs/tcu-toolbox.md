@@ -15,6 +15,17 @@ El complemento de **escritura** del SCADA: el SCADA es solo-lectura a propósito
 
 Antes de ir a planta, re-descarga la carpeta (o solo `plantas/<planta>.json`) si ha cambiado la topología: se regenera automáticamente desde `config/plants.yml` del SCADA en cada cambio (GitHub Actions).
 
+## Cómo se "alimenta" de plantas
+
+No hay que meterle nada a mano: **el ZIP ya baja alimentado**. Los JSON de plantas viven dentro del repo (`tools/tcu-toolbox/plantas/`) y un workflow los regenera y commitea cada vez que cambia `config/plants.yml` — así que cada descarga lleva la topología al día.
+
+Para refrescar **solo las plantas** sin re-bajar el ZIP entero, descarga el fichero suelto y suéltalo en la carpeta `plantas/` del portátil (o impórtalo con el botón **Cargar...** de la herramienta):
+
+- El Burgo I: <https://raw.githubusercontent.com/IMoriana3/scada/main/tools/tcu-toolbox/plantas/elburgo.json> (clic derecho → *Guardar como…*)
+- Futuras plantas: mismo patrón, `plantas/<id_planta>.json` en el repo `scada`.
+
+También se admite un CSV editable desde Excel (`Planta;NCU;IP;Puerto;TCU_ini;TCU_fin`, separado por `;`) para apaños en campo sin tocar la plataforma.
+
 > Prueba de estreno recomendada: planta 4.60, filtro `tilt`, lectura del registro 41111 sobre las 44 TCUs — el resumen de discrepancias dice en dos clics si la tanda quedó homogénea.
 
 ## Qué hace
