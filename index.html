@@ -708,13 +708,37 @@ const PROJECTS = [
     uso: [
       "Acceso con login (email + contraseña). Datos en Supabase con reglas de seguridad (RLS).",
       "KPIs, gráficas (estado/país/promotor/Top 10) y mapa por país; tabla con todas las columnas, filtros y CRUD (añadir/editar/borrar).",
-      "No incluye la hoja de IPs/credenciales del Excel."
+      "La hoja de IPs/credenciales del Excel vive aparte, en Topología de plantas (misma app y mismo login; botón Topología → en la cabecera)."
     ],
     pendientes: [
       { done:false, text:"Hospedarla con login (Cloudflare Pages/Access) y poner la URL." }
     ],
     historial: [
       { date:"2026-06-17", ver:"", note:"Cartera de 22 plantas adjudicadas, editable, sobre Supabase (dashboard + mapa)." }
+    ]
+  },
+  {
+    name: "IPs de plantas",
+    status: "live",
+    objetivo: "La hoja de IPs del Excel como tabla editable con login: NCUs, IPs, gateways, esclavos, versiones de firmware y accesos remotos por planta. Exporta los ficheros de plantas de la TCU Toolbox.",
+    stack: "HTML · Supabase (Postgres + Auth + RLS)",
+    url: "https://factiun-cartera.imoriana3.workers.dev/ips.html",   // interno · requiere login (mismo que la cartera)
+    repo: "https://github.com/imoriana3/factiun-cartera",     // privado
+    updated: "2026-08-05",
+    version: "",
+    docId: "ips",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Acceso con la misma cuenta que la Cartera (Supabase, RLS). Una fila por NCU; contraseñas enmascaradas en la tabla (se ven al editar).",
+      "Editar aquí es la fuente de verdad de la topología: buscar, filtrar por planta, añadir/editar/borrar NCUs.",
+      "⬇ JSON toolbox / ⬇ CSV toolbox: descargan los ficheros de plantas para la TCU Toolbox (solo topología, nunca credenciales) — a la carpeta plantas/ del portátil o al botón Cargar... de la herramienta."
+    ],
+    pendientes: [
+      { done:false, text:"Confirmar la TCU 109 de Burgo I NCU2: el Excel dice esclavos 46-107, pero los .bat de Sunner incluían la 109." }
+    ],
+    historial: [
+      { date:"2026-08-05", ver:"", note:"Tabla sembrada desde el Excel maestro (42 NCUs, 6 plantas) con exportes JSON/CSV para la TCU Toolbox." }
     ]
   }
 ];
