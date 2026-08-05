@@ -1,16 +1,21 @@
 # TCU Toolbox — configuración y diagnóstico de TCUs Sunner (offline)
 
-Herramienta de campo para O&M: escribe, lee, respalda y diagnostica los TCU de los seguidores a través del gateway Modbus TCP de la NCU. **100 % offline**: un `.ps1` + un `.bat`, sin instalar nada (PowerShell viene con Windows), sin red fuera de la LAN de planta. Vive en el repo `scada`, carpeta [`tools/tcu-toolbox/`](https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox).
+> Herramienta de campo para O&M: escribe, lee, respalda y diagnostica los TCU de los seguidores a través del gateway Modbus TCP de la NCU. **100 % offline**: un `.ps1` + un `.bat`, sin instalar nada ni salir de la LAN de planta.
 
-Es el complemento de **escritura** del SCADA: el SCADA es solo-lectura a propósito; cuando hay que *cambiar* algo en un TCU (configuración, reloj, NVM) se usa esta toolbox desde el portátil conectado a la LAN de planta.
+## Qué es
 
-## Cómo llegar a ella
+El complemento de **escritura** del SCADA: el SCADA es solo-lectura a propósito; cuando hay que *cambiar* algo en un TCU (configuración, reloj, NVM) se usa esta toolbox desde el portátil conectado a la LAN de planta. Vive en el repo `scada`, carpeta [`tools/tcu-toolbox/`](https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox); PowerShell viene con Windows, así que no requiere instalación ni permisos de administrador.
+
+## Uso
 
 1. **Descargar**: botón *Descargar* de la tarjeta (ZIP del repo `scada`) o `git clone`.
 2. Copiar la carpeta `tools/tcu-toolbox/` al portátil de campo — los ficheros de plantas van dentro (`plantas/`).
 3. Doble clic en `TCU_Toolbox.bat`. No requiere admin ni internet.
+4. Elegir planta en el desplegable — las entradas **"(auto)"** cubren la NCU completa y resuelven solas el puerto de cada TCU — y trabajar con las pestañas.
 
 Antes de ir a planta, re-descarga la carpeta (o solo `plantas/<planta>.json`) si ha cambiado la topología: se regenera automáticamente desde `config/plants.yml` del SCADA en cada cambio (GitHub Actions).
+
+> Prueba de estreno recomendada: planta 4.60, filtro `tilt`, lectura del registro 41111 sobre las 44 TCUs — el resumen de discrepancias dice en dos clics si la tanda quedó homogénea.
 
 ## Qué hace
 
