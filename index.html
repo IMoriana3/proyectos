@@ -594,6 +594,30 @@ const PROJECTS = [
     ]
   },
   {
+    name: "TCU Toolbox · campo",
+    status: "live",
+    objetivo: "Herramienta offline (PowerShell) para configurar, diagnosticar y respaldar TCUs Sunner vía el gateway Modbus de la NCU. Complemento de escritura del SCADA (que es solo-lectura).",
+    stack: "PowerShell · Modbus TCP · offline",
+    url: "",                                                  // no hay deploy: se ejecuta en el portátil de campo
+    repo: "https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox",
+    updated: "2026-08-05",
+    version: "2.3",
+    docId: "tcu-toolbox",
+    download: "https://github.com/IMoriana3/scada/archive/refs/heads/main.zip",
+    uso: [
+      "Descarga el ZIP (botón de arriba) o clona el repo scada, y copia tools/tcu-toolbox/ al portátil de campo.",
+      "Doble clic en TCU_Toolbox.bat (sin instalar nada). Las entradas \"(auto)\" resuelven solas el puerto de cada TCU.",
+      "Las plantas viajan en plantas/<planta>.json (o CSV), regeneradas automáticamente desde config/plants.yml del SCADA."
+    ],
+    pendientes: [
+      { done:false, text:"Confirmar en planta la TCU 109 de NCU2 (GW 504) y el auto-borrado de los bits de reloj en 40007." }
+    ],
+    historial: [
+      { date:"2026-08-05", ver:"2.3", note:"NCU completa con puerto automático, CSV de plantas y TCU 109 (fusión con la versión de campo)." },
+      { date:"2026-08-04", ver:"2.1", note:"Mapa v6.1 completo, diagnóstico con alarmas en texto, reloj, identidad, backups y filtro de variables." }
+    ]
+  },
+  {
     name: "Demo Siting",
     status: "demo",
     objetivo: "PWA para emplazamiento de equipos (NCU/TCU/HSU/repetidor) sobre la geometría real de la planta.",
