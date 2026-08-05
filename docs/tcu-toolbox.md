@@ -8,7 +8,7 @@ El complemento de **escritura** del SCADA: el SCADA es solo-lectura a propósito
 
 ## Uso
 
-1. **Descargar**: botón *Descargar* de la tarjeta (ZIP del repo `scada`) o `git clone`.
+1. **Descargar**: botón *Descargar* de la tarjeta → release con `TCU_Toolbox_vX.Y.zip` (la versión va en el nombre del fichero) — o `git clone` del repo `scada`.
 2. Copiar la carpeta `tools/tcu-toolbox/` al portátil de campo — los ficheros de plantas van dentro (`plantas/`).
 3. Doble clic en `TCU_Toolbox.bat`. No requiere admin ni internet.
 4. Elegir planta en el desplegable — las entradas **"(auto)"** cubren la NCU completa y resuelven solas el puerto de cada TCU — y trabajar con las pestañas.
@@ -32,10 +32,11 @@ También se admite un CSV editable desde Excel (`Planta;NCU;IP;Puerto;TCU_ini;TC
 
 | Pestaña | Función |
 |---|---|
-| **Escribir** | Todo el mapa 4xxxx con verificación, reintentos, presets JSON, backup-como-preset y NVM. Filtro de variables. Doble confirmación en registros de comando. |
+| **Escribir** | Todo el mapa 4xxxx con verificación, reintentos, presets JSON, backup-como-preset y NVM. Filtro de variables. **CSV por TCU** (valores distintos por seguidor). Doble confirmación en registros de comando. |
 | **Leer variable** | Una variable en un rango de TCUs con resumen de discrepancias. |
-| **Volcar TCU** | Backup completo (CSV/JSON con metadatos) y comparación contra un backup anterior. |
+| **Volcar TCU** | Backup completo (CSV/JSON con metadatos), comparación contra un backup anterior y **BACKUP NCU** masivo (un JSON por TCU). |
 | **Diagnóstico** | Salud `OK/AVISO/ALARMA/OFFLINE` por rango, mismo criterio que el SCADA, alarmas decodificadas bit a bit en texto. |
+| **Flota** | **Auditoría** de un rango contra un preset de referencia (solo desviaciones) e **inventario** (FW, serie, MAC) con aviso de firmwares mezclados. |
 | **Utilidades** | Sincronizar reloj con el PC e identificación (FW, nº de serie, MAC Xbee, fabricación). |
 
 ## Sin error de puerto
@@ -48,6 +49,6 @@ Un fichero por planta en `plantas/` (JSON generado por la plataforma, o CSV `Pla
 
 ## Mapa y versión
 
-Mapa de registros **SUNNER TCU Modbus Map v6.1 (FW v1.4.3)**. Versión actual de la toolbox: **2.3**. Pruebas: 75 casos contra un servidor Modbus TCP simulado.
+Mapa de registros **SUNNER TCU Modbus Map v6.1 (FW v1.4.3)**. Versión actual de la toolbox: **2.4**. Pruebas: 86 casos contra un servidor Modbus TCP simulado.
 
 **Pendiente de confirmar en campo**: la TCU 109 de NCU2 responde por el 504, y el auto-borrado de los bits 0/1 de 40007 al sincronizar el reloj.
