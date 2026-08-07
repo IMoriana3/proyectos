@@ -600,20 +600,26 @@ const PROJECTS = [
     stack: "PowerShell · Modbus TCP · offline",
     url: "",                                                  // no hay deploy: se ejecuta en el portátil de campo
     repo: "https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox",
-    updated: "2026-08-05",
-    version: "2.3",
+    updated: "2026-08-07",
+    version: "11.4",
     docId: "tcu-toolbox",
     docUrl: "",
     download: "https://github.com/IMoriana3/scada/releases/latest",   // ZIP con la version en el nombre (TCU_Toolbox_vX.Y.zip)
+    release: "IMoriana3/scada",                                      // version y fecha en vivo: ver refrescarReleases()
     uso: [
-      "Descarga el ZIP desde la release (botón de arriba): el fichero lleva la versión en el nombre (TCU_Toolbox_v2.4.zip). Copia la carpeta tcu-toolbox al portátil de campo.",
+      "Descarga el ZIP desde la release (botón Paquete): el fichero lleva la versión en el nombre (TCU_Toolbox_v11.4.zip). Copia la carpeta tcu-toolbox al portátil de campo.",
       "Doble clic en TCU_Toolbox.bat (sin instalar nada). Las entradas \"(auto)\" resuelven solas el puerto de cada TCU.",
-      "Las plantas viajan en plantas/<planta>.json (o CSV), regeneradas automáticamente desde config/plants.yml del SCADA."
+      "Las plantas viajan en plantas/<planta>.json (o CSV) — se exportan desde la página IPs de esta misma plataforma, o se regeneran desde el Excel maestro."
     ],
     pendientes: [
-      { done:false, text:"Confirmar en planta la TCU 109 de NCU2 (GW 504) y el auto-borrado de los bits de reloj en 40007." }
+      { done:false, text:"Confirmar en planta la TCU 109 de NCU2 (GW 504) y el auto-borrado de los bits de reloj en 40007." },
+      { done:false, text:"Comprobar contra una NCU real el bloque largo de 50 registros por TCU (50000+): la sección de carga está en el mapa R7.1 pero sin verificar." },
+      { done:false, text:"Sin forma documentada de borrar las alarmas memorizadas (Alarms2) desde la NCU: el 40007 bit 13 solo cubre la de motor." }
     ],
     historial: [
+      { date:"2026-08-07", ver:"11.4", note:"LEER CARGA: el equipo dice si está cargando (estado del cargador y sus alarmas, bloque largo de la NCU) en vez de deducirlo de las corrientes." },
+      { date:"2026-08-06", ver:"11.3", note:"Pestaña Baterías (SoC, SoH, tensiones, corrientes y temperaturas en una tabla) y el panel también en modo directo." },
+      { date:"2026-08-06", ver:"11.0", note:"Las alarmas del bloque de la NCU se decodifican con SU tabla de bits, no con la de la TCU: eran mapas distintos." },
       { date:"2026-08-05", ver:"2.3", note:"NCU completa con puerto automático, CSV de plantas y TCU 109 (fusión con la versión de campo)." },
       { date:"2026-08-04", ver:"2.1", note:"Mapa v6.1 completo, diagnóstico con alarmas en texto, reloj, identidad, backups y filtro de variables." }
     ]
@@ -901,6 +907,56 @@ function renderGrid(){
   });
 }
 
+/* ---------- VERSION Y FECHA EN VIVO DESDE LA RELEASE ----------
+   'version' y 'updated' de cada ficha se escribían a mano, y nadie los tocaba
+   al publicar: la toolbox decía 2.3 / 5-ago con el ZIP ya por la 11.4. Los
+   proyectos con  release: "owner/repo"  los leen de la ultima release de
+   GitHub. Repos publicos: sin token.
+
+   Si la API falla (sin internet, 403 por limite, repo sin releases) se queda
+   el valor escrito a mano, que por eso sigue siendo el real del dia que se
+   escribio y no un placeholder.
+
+   Cache de 6 h en localStorage: la API sin autenticar da 60 peticiones/hora
+   por IP, y recargar la pagina no debe gastarlas. */
+const REL_TTL = 6 * 3600 * 1000;
+
+function relCache(repo){
+  try{
+    const r = JSON.parse(localStorage.getItem("rel:"+repo) || "null");
+    return (r && r.ver && (Date.now() - r.t) < REL_TTL) ? r : null;
+  }catch(e){ return null; }
+}
+async function releaseDe(repo){
+  const c = relCache(repo);
+  if(c) return c;
+  const res = await fetch("https://api.github.com/repos/"+repo+"/releases/latest",
+                          {headers:{"Accept":"application/vnd.github+json"}});
+  if(!res.ok) throw new Error("HTTP "+res.status);
+  const j = await res.json();
+  // el tag es toolbox-v11.4 -> 11.4 ; tambien vale v2.4 o 2.4 a secas
+  const r = { t: Date.now(),
+              ver: String(j.tag_name || "").replace(/^.*?v(?=\d)/, ""),
+              fecha: String(j.published_at || "").slice(0,10) };
+  if(!r.ver || !r.fecha) throw new Error("release sin tag o sin fecha");
+  try{ localStorage.setItem("rel:"+repo, JSON.stringify(r)); }catch(e){}
+  return r;
+}
+async function refrescarReleases(){
+  const conRelease = TOOLS.filter(p => p.release);
+  if(!conRelease.length) return;
+  let algo = false;
+  await Promise.all(conRelease.map(async p => {
+    try{
+      const r = await releaseDe(p.release);
+      if(r.ver !== p.version || r.fecha !== p.updated){
+        p.version = r.ver; p.updated = r.fecha; algo = true;
+      }
+    }catch(e){ /* se queda lo escrito a mano */ }
+  }));
+  if(algo) renderGrid();   // 'act.' ordena las tarjetas: hay que repintar la rejilla entera
+}
+
 /* ---------- DOC READER ---------- */
 const $reader = document.getElementById("reader");
 const $readerWrap = document.getElementById("reader-wrap");
@@ -1005,6 +1061,7 @@ renderPlants();
 renderGauges();
 renderChips();
 renderGrid();
+refrescarReleases();   // no bloquea el pintado: si tarda o falla, la ficha ya esta puesta
 </script>
 </body>
 </html>
