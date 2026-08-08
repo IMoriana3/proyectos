@@ -782,19 +782,18 @@ const SITE = "https://imoriana3.github.io/";
 const PLANTS = [
   { name:"El Burgo I", code:"23003", loc:"Zaragoza · España", views:{
       siting:     SITE+"siting/?planta=burgo",
-      topo_int:   SITE+"cobertura-zigbee/terreno.html?planta=elburgo",
+      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=elburgo",
       cobertura:  SITE+"cobertura-zigbee/index.html",
   }},
   { name:"Ayora", code:"24025", loc:"Valencia · España", views:{
       siting:     SITE+"siting/?planta=ayora",
-      topo_int:   SITE+"cobertura-zigbee/terreno.html?planta=ayora",
-      topo_cli_z: SITE+"cobertura-zigbee/topografico.html",
+      topo3d:     SITE+"cobertura-zigbee/topografico.html",
       cobertura:  SITE+"cobertura-zigbee/plano.html?planta=ayora",
       asbuilt:    SITE+"visores/ayora/",
   }},
   { name:"San José", code:"24019", loc:"Arequipa · Perú", views:{
       siting:     SITE+"siting/?planta=sanjose",
-      topo_int:   SITE+"cobertura-zigbee/terreno.html?planta=sanjose",
+      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=sanjose",
       cobertura:  SITE+"cobertura-zigbee/plano.html?planta=sanjose",
       asignacion: SITE+"visores/san-jose/",
   }},
@@ -803,17 +802,16 @@ const PLANTS = [
   }},
 ];
 /* Vistas de planta.
-   La topografía 3D tiene DOS ejes independientes -> 4 combinaciones, un botón por cada
-   una que exista en la planta:
+   La topografía 3D tiene DOS ejes independientes -> 4 combinaciones:
      terreno   : de internet (DEM) | levantamiento de cliente
      trackers  : paralelos al terreno | con sus cotas Z medidas
+   Un SOLO botón por planta, que abre su variante principal; las demás se eligen con el
+   selector de dentro de la página. Cuatro botones en la tarjeta se hacían inmanejables
+   en móvil, y el selector interno es el control que quedará al fusionar las escenas.
    "core" = capacidad que toda planta debería tener; sale en gris cuando falta. */
 const PLANT_VIEWS = [
   { key:"siting",     label:"Siting",            core:true  },
-  { key:"topo_int",   label:"3D · internet",     core:true  },
-  { key:"topo_int_z", label:"3D · internet + Z", core:false },
-  { key:"topo_cli",   label:"3D · cliente",      core:false },
-  { key:"topo_cli_z", label:"3D · cliente + Z",  core:false },
+  { key:"topo3d",     label:"3D",                core:true  },
   { key:"cobertura",  label:"Cobertura",         core:true  },
   { key:"asignacion", label:"Asignación",        core:false },
   { key:"asbuilt",    label:"As-built",          core:false },
