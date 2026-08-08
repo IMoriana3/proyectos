@@ -781,41 +781,43 @@ const PROJECTS = [
 const SITE = "https://imoriana3.github.io/";
 const PLANTS = [
   { name:"El Burgo I", code:"23003", loc:"Zaragoza · España", views:{
-      siting:    SITE+"siting/?planta=burgo",
-      modelo3d:  SITE+"cobertura-zigbee/terreno.html?planta=elburgo",
-      cobertura: SITE+"cobertura-zigbee/index.html",
-      plano:     SITE+"cobertura-zigbee/plano.html?planta=elburgo",
+      siting:     SITE+"siting/?planta=burgo",
+      topo_int:   SITE+"cobertura-zigbee/terreno.html?planta=elburgo",
+      cobertura:  SITE+"cobertura-zigbee/index.html",
   }},
   { name:"Ayora", code:"24025", loc:"Valencia · España", views:{
-      siting:    SITE+"siting/?planta=ayora",
-      modelo3d:  SITE+"cobertura-zigbee/terreno.html?planta=ayora",
-      cobertura: null,
-      plano:     SITE+"cobertura-zigbee/plano.html?planta=ayora",
-      visor:     SITE+"visores/ayora/",
+      siting:     SITE+"siting/?planta=ayora",
+      topo_int:   SITE+"cobertura-zigbee/terreno.html?planta=ayora",
+      cobertura:  SITE+"cobertura-zigbee/plano.html?planta=ayora",
+      asbuilt:    SITE+"visores/ayora/",
   }},
   { name:"San José", code:"24019", loc:"Arequipa · Perú", views:{
-      siting:    SITE+"siting/?planta=sanjose",
-      modelo3d:  SITE+"cobertura-zigbee/terreno.html?planta=sanjose",
-      cobertura: null,
-      plano:     SITE+"cobertura-zigbee/plano.html?planta=sanjose",
-      visor:     SITE+"visores/san-jose/",
+      siting:     SITE+"siting/?planta=sanjose",
+      topo_int:   SITE+"cobertura-zigbee/terreno.html?planta=sanjose",
+      cobertura:  SITE+"cobertura-zigbee/plano.html?planta=sanjose",
+      asignacion: SITE+"visores/san-jose/",
   }},
   { name:"Páramo", code:"25019", loc:"España", views:{
-      siting:    SITE+"siting/?planta=paramo",
-      modelo3d:  null,
-      cobertura: null,
+      siting:     SITE+"siting/?planta=paramo",
   }},
 ];
+/* Vistas de planta.
+   La topografía 3D tiene DOS ejes independientes -> 4 combinaciones, un botón por cada
+   una que exista en la planta:
+     terreno   : de internet (DEM) | levantamiento de cliente
+     trackers  : paralelos al terreno | con sus cotas Z medidas
+   "core" = capacidad que toda planta debería tener; sale en gris cuando falta. */
 const PLANT_VIEWS = [
-  { key:"siting",    label:"2D Siting",    core:true  },
-  { key:"modelo3d",  label:"3D",           core:true  },
-  { key:"cobertura", label:"2D Cobertura", core:true  },
-  { key:"plano",     label:"Plano 2D",     core:false },
-  { key:"topo3d",    label:"3D topográfico", core:false },
-  { key:"visor",     label:"Visor",        core:false },
-  { key:"scada",     label:"SCADA",        core:false },
+  { key:"siting",     label:"Siting",            core:true  },
+  { key:"topo_int",   label:"3D · internet",     core:true  },
+  { key:"topo_int_z", label:"3D · internet + Z", core:false },
+  { key:"topo_cli",   label:"3D · cliente",      core:false },
+  { key:"topo_cli_z", label:"3D · cliente + Z",  core:false },
+  { key:"cobertura",  label:"Cobertura",         core:true  },
+  { key:"asignacion", label:"Asignación",        core:false },
+  { key:"asbuilt",    label:"As-built",          core:false },
+  { key:"scada",      label:"SCADA",             core:false },
 ];
-
 /* Módulos que YA viven en una planta (sección Plantas): no se repiten abajo en Herramientas */
 const PLANT_MODULES = new Set([
   "Visor San José", "Visor Ayora", "Tracker SCADA · El Burgo", "Demo Siting", "Cobertura Zigbee · El Burgo"
