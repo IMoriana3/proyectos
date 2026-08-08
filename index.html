@@ -528,12 +528,12 @@ const PROJECTS = [
     status: "live",
     objetivo: "Visor offline para casar 18.190 puntos topográficos con 2.289 IDs de seguidor (Acciona, La Joya (Arequipa)) mediante flujo de coste mínimo.",
     stack: "HTML offline · datos NetworkX (min-cost flow)",
-    url: "https://imoriana3.github.io/visor-san-jose/",
-    repo: "https://github.com/imoriana3/visor-san-jose",
+    url: "https://imoriana3.github.io/visores/san-jose/",
+    repo: "https://github.com/imoriana3/visores",
     updated: "2026-06-16",
     version: "",
     docId: "",
-    docUrl: "https://raw.githubusercontent.com/imoriana3/visor-san-jose/main/README.md",
+    docUrl: "https://raw.githubusercontent.com/imoriana3/visores/main/san-jose/README.md",
     download: "",
     uso: [
       "Visor autocontenido y offline: coloreado de grafo, filtros por NCU, asignación click-to-assign y export CSV.",
@@ -542,6 +542,30 @@ const PROJECTS = [
     pendientes: [],
     historial: [
       { date:"2026-04-30", ver:"", note:"Entregado: visor con asignación y exportación." }
+    ]
+  },
+  {
+    name: "Visor Ayora",
+    status: "live",
+    objetivo: "Geometría as-built de los 754 seguidores bifila de Ayora a partir de 3.069 puntos de levantamiento, y los parámetros de backtracking corregido por terreno que se cargan en la TCU.",
+    stack: "HTML offline · Plotly · levantamiento topográfico",
+    url: "https://imoriana3.github.io/visores/ayora/",
+    repo: "https://github.com/imoriana3/visores",
+    updated: "2026-08-08",
+    version: "",
+    docId: "",
+    docUrl: "https://raw.githubusercontent.com/imoriana3/visores/main/ayora/README.md",
+    download: "",
+    uso: [
+      "Cuatro vistas: backtracking 3D, articuladas, as-built frente a proyecto y puntos del levantamiento.",
+      "Exporta la tabla de configuración de las TCU: pendiente y azimut por cada lado de cada tracker."
+    ],
+    pendientes: [
+      { done:false, text:"Confirmar la referencia de la cota del .cdt (constante módulo-replanteo de 0,829 m)." },
+      { done:false, text:"Sector PD-442…527: contrastar si el .cdt es una revisión de rasante anterior." }
+    ],
+    historial: [
+      { date:"2026-08-08", ver:"", note:"Entregado: geometría as-built y vectores de backtracking para las 754 TCU." }
     ]
   },
   {
@@ -767,13 +791,14 @@ const PLANTS = [
       modelo3d:  SITE+"cobertura-zigbee/terreno.html?planta=ayora",
       cobertura: null,
       plano:     SITE+"cobertura-zigbee/plano.html?planta=ayora",
+      visor:     SITE+"visores/ayora/",
   }},
   { name:"San José", code:"24019", loc:"Arequipa · Perú", views:{
       siting:    SITE+"siting/?planta=sanjose",
       modelo3d:  SITE+"cobertura-zigbee/terreno.html?planta=sanjose",
       cobertura: null,
       plano:     SITE+"cobertura-zigbee/plano.html?planta=sanjose",
-      visor:     SITE+"visor-san-jose/",
+      visor:     SITE+"visores/san-jose/",
   }},
   { name:"Páramo", code:"25019", loc:"España", views:{
       siting:    SITE+"siting/?planta=paramo",
@@ -786,13 +811,14 @@ const PLANT_VIEWS = [
   { key:"modelo3d",  label:"3D",           core:true  },
   { key:"cobertura", label:"2D Cobertura", core:true  },
   { key:"plano",     label:"Plano 2D",     core:false },
+  { key:"topo3d",    label:"3D topográfico", core:false },
   { key:"visor",     label:"Visor",        core:false },
   { key:"scada",     label:"SCADA",        core:false },
 ];
 
 /* Módulos que YA viven en una planta (sección Plantas): no se repiten abajo en Herramientas */
 const PLANT_MODULES = new Set([
-  "Visor San José", "Tracker SCADA · El Burgo", "Demo Siting", "Cobertura Zigbee · El Burgo"
+  "Visor San José", "Visor Ayora", "Tracker SCADA · El Burgo", "Demo Siting", "Cobertura Zigbee · El Burgo"
 ]);
 const TOOLS = PROJECTS.filter(p => !PLANT_MODULES.has(p.name));   // Herramientas = solo lo genérico (no de planta)
 
