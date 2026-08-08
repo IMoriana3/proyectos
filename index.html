@@ -545,6 +545,30 @@ const PROJECTS = [
     ]
   },
   {
+    name: "Visor Ayora",
+    status: "live",
+    objetivo: "Geometría as-built de los 754 seguidores bifila de Ayora a partir de 3.069 puntos de levantamiento, y los parámetros de backtracking corregido por terreno que se cargan en la TCU.",
+    stack: "HTML offline · Plotly · levantamiento topográfico",
+    url: "https://imoriana3.github.io/visor-ayora/",
+    repo: "https://github.com/imoriana3/visor-ayora",
+    updated: "2026-08-08",
+    version: "",
+    docId: "",
+    docUrl: "https://raw.githubusercontent.com/imoriana3/visor-ayora/main/README.md",
+    download: "",
+    uso: [
+      "Cuatro vistas: backtracking 3D, articuladas, as-built frente a proyecto y puntos del levantamiento.",
+      "Exporta la tabla de configuración de las TCU: pendiente y azimut por cada lado de cada tracker."
+    ],
+    pendientes: [
+      { done:false, text:"Confirmar la referencia de la cota del .cdt (constante módulo-replanteo de 0,829 m)." },
+      { done:false, text:"Sector PD-442…527: contrastar si el .cdt es una revisión de rasante anterior." }
+    ],
+    historial: [
+      { date:"2026-08-08", ver:"", note:"Entregado: geometría as-built y vectores de backtracking para las 754 TCU." }
+    ]
+  },
+  {
     name: "Gemelo Digital TCU",
     status: "build",
     objetivo: "Gemelo digital del sistema TCU/seguidor de Factiun con geometría física precisa y control predictivo probabilístico.",
@@ -767,6 +791,8 @@ const PLANTS = [
       modelo3d:  SITE+"cobertura-zigbee/terreno.html?planta=ayora",
       cobertura: null,
       plano:     SITE+"cobertura-zigbee/plano.html?planta=ayora",
+      topo3d:    SITE+"cobertura-zigbee/topografico.html",
+      visor:     SITE+"visor-ayora/",
   }},
   { name:"San José", code:"24019", loc:"Arequipa · Perú", views:{
       siting:    SITE+"siting/?planta=sanjose",
@@ -786,13 +812,14 @@ const PLANT_VIEWS = [
   { key:"modelo3d",  label:"3D",           core:true  },
   { key:"cobertura", label:"2D Cobertura", core:true  },
   { key:"plano",     label:"Plano 2D",     core:false },
+  { key:"topo3d",    label:"3D topográfico", core:false },
   { key:"visor",     label:"Visor",        core:false },
   { key:"scada",     label:"SCADA",        core:false },
 ];
 
 /* Módulos que YA viven en una planta (sección Plantas): no se repiten abajo en Herramientas */
 const PLANT_MODULES = new Set([
-  "Visor San José", "Tracker SCADA · El Burgo", "Demo Siting", "Cobertura Zigbee · El Burgo"
+  "Visor San José", "Visor Ayora", "Tracker SCADA · El Burgo", "Demo Siting", "Cobertura Zigbee · El Burgo"
 ]);
 const TOOLS = PROJECTS.filter(p => !PLANT_MODULES.has(p.name));   // Herramientas = solo lo genérico (no de planta)
 
