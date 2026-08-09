@@ -443,6 +443,24 @@ body{
    ===================================================================== */
 const PROJECTS = [
   {
+    name: "Mapa Modbus NCU · HSU · TCU",
+    status: "live",
+    objetivo: "Ficha interactiva del mapa Modbus del sistema de seguidores: registros de NCU, HSU y TCU con dirección absoluta por unidad, decodificador en vivo de valores crudos (bits, f32, alarmas) y descarga de la configuración de pendientes BT3D por TCU (Ayora y San José, del levantamiento).",
+    stack: "HTML · sin dependencias",
+    url: "https://imoriana3.github.io/cobertura-zigbee/modbus.html",
+    repo: "https://github.com/imoriana3/cobertura-zigbee",
+    updated: "2026-08-09",
+    version: "R7",
+    docId: "",
+    docUrl: "",
+    uso: [
+      "Elige el dispositivo (TCU / NCU / HSU / HSU ext / Alarmas) y el número de unidad: las direcciones absolutas se recalculan (base + (id−1)·stride + offset).",
+      "Pincha cualquier registro y pega un valor crudo (decimal o 0x…) para decodificarlo: bits, conversión de unidad (mV, K×10→°C, rad→°) y alarmas por nombre.",
+      "El buscador filtra por nombre, dirección o bit (p. ej. 30513, soc, wind).",
+      "Abajo: descarga de config_tcu_sunner de Ayora (754) y San José (2.186) con pendiente E/O, vector y azimut por tracker."
+    ]
+  },
+  {
     name: "Nuevo Siting",
     status: "live",
     objetivo: "Crea el siting de comunicaciones de una planta nueva: sube los seguidores (CSV/Excel, plantilla incluida) y autoubica NCUs, RSU y gateways.",
