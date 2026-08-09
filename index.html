@@ -766,6 +766,25 @@ const PROJECTS = [
     ]
   },
   {
+    name: "Seguimiento PEM",
+    status: "live",
+    objetivo: "El cuaderno de puesta en marcha por planta: diagnósticos de la TCU Toolbox, comisionado, inventarios y auditorías de campo, con diff contra la visita anterior, plano de planta y panel de alertas del agente.",
+    stack: "HTML · Supabase (Postgres + Auth + RLS)",
+    url: "https://factiun-cartera.imoriana3.workers.dev/seguimiento-pem.html",   // interno · requiere login (mismo que la cartera)
+    repo: "https://github.com/imoriana3/factiun-cartera",     // privado
+    updated: "2026-08-09",
+    version: "",
+    docId: "",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Acceso con la misma cuenta que la Cartera (Supabase, RLS).",
+      "Sube los JSON que exporta la TCU Toolbox o usa SINCRONIZAR desde la propia toolbox: el agente sube el diagnóstico él mismo.",
+      "Filtra por planta y tipo (diagnóstico / PEM / inventario / auditoría) y compara contra el registro anterior del mismo tipo (diff).",
+      "Antes se llamaba «Histórico» (historico.html): la URL vieja redirige a la nueva."
+    ]
+  },
+  {
     name: "IPs de plantas",
     status: "live",
     objetivo: "La hoja de IPs del Excel como tabla editable con login: NCUs, IPs, gateways, esclavos, versiones de firmware y accesos remotos por planta. Exporta los ficheros de plantas de la TCU Toolbox.",
