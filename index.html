@@ -766,6 +766,30 @@ const PROJECTS = [
     ]
   },
   {
+    name: "SCADA de planta",
+    status: "live",
+    objetivo: "La sala de control de la planta en operación: cabecera con identidad y disponibilidad, sinóptico sobre plano, curva de seguimiento solar del día contra las posiciones reales, flota (salud, SoC, alarmas, modos) y salto al gemelo 3D con cada tracker a su tilt reportado.",
+    stack: "HTML · Supabase · Chart.js · gemelo 3D (cobertura-zigbee)",
+    url: "https://factiun-cartera.imoriana3.workers.dev/scada.html",   // interno · mismo login que la cartera
+    repo: "https://github.com/imoriana3/factiun-cartera",     // privado
+    updated: "2026-08-10",
+    version: "",
+    docId: "",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Mismo login que la Cartera. Abre directamente en modo sala de control (pestañas Sinóptico · Seguimiento · Flota · Tendencias).",
+      "Comparte motor y datos con Seguimiento PEM, pero sin las secciones de puesta en marcha: esto es operación.",
+      "El botón 🧊 SCADA 3D abre el gemelo con el último diagnóstico: módulos pintados por estado y ficha por tracker al hacer clic."
+    ],
+    pendientes: [
+      { done:false, text:"Telemetría en régimen (collector cada N min) para que la disponibilidad sea continua, no por visitas." }
+    ],
+    historial: [
+      { date:"2026-08-10", ver:"", note:"Separado del Seguimiento PEM: entrada propia scada.html en modo sala de control." }
+    ]
+  },
+  {
     name: "Seguimiento PEM",
     status: "live",
     objetivo: "El cuaderno de puesta en marcha por planta: diagnósticos de la TCU Toolbox, comisionado, inventarios y auditorías de campo, con diff contra la visita anterior, plano de planta y panel de alertas del agente.",
