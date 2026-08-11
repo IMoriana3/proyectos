@@ -396,46 +396,15 @@ $('modcec').addEventListener('change',async function(){
 });
 
 /* ===================== wiring ===================== */
-/* plantas de la cartera — FUENTE ÚNICA: la cartera maestra (Supabase), por REST
-   con la anon key (sin login). Fallback a la copia local si el RLS lo bloquea o
-   no hay red. Mismo criterio que layout.html: una sola cartera con coords. */
+/* plantas de la cartera (factiun_plantas en localStorage compartido) */
 var PLANTS={};
 var COORDS_FALLBACK={'24002':[41.57634,-0.79814],'24025':[39.11821,-1.15985],'24019':[-16.59577,-71.80644]};
-var SB_URL="https://icqiwmbbeoeswbcbgflc.supabase.co";
-var SB_KEY="sb_publishable_lOmQfLA1rv7Jg0N3vjzcOA_qnbatn2p";
-try{var _sbc=JSON.parse(localStorage.getItem('sb_cfg')||'{}');if(_sbc.url&&_sbc.key){SB_URL=_sbc.url;SB_KEY=_sbc.key;}}catch(e){}
-function renderPlantOptions(){
+function loadPlants(){
+  try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
   var opts='<option value="">— manual —</option>';
   Object.keys(PLANTS).sort().forEach(function(cod){var p=PLANTS[cod];opts+='<option value="'+cod+'">'+((p&&p.nombre)||'?')+' · '+cod+'</option>';});
   $('plant').innerHTML=opts;
 }
-function loadPlantsLocal(){
-  try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
-  renderPlantOptions();
-}
-function loadPlantsSupabase(){
-  try{
-    var u=SB_URL.replace(/\/+$/,'')+'/rest/v1/plantas?select=*';   // * evita 400 por columnas inexistentes
-    fetch(u,{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},cache:'no-store'})
-      .then(function(r){return r.ok?r.json():null;})
-      .then(function(rows){
-        if(!rows||!rows.length)return;
-        var map={};
-        rows.forEach(function(p){ if(p.code==null||String(p.code).trim()==='')return;
-          var ln=(p.lng!=null&&p.lng!=='')?p.lng:p.lon;
-          map[String(p.code)]={nombre:p.proyecto||'',
-            lat:(p.lat===''||p.lat==null)?null:+p.lat,
-            lon:(ln===''||ln==null)?null:+ln,
-            pitch:(p.pitch==null?'':String(p.pitch)),
-            wmod:(p.wmod===''||p.wmod==null)?null:+p.wmod,
-            mods:(function(){var m=String(p.string==null?'':p.string).match(/\d+/);return m?+m[0]:null;})()};
-        });
-        if(Object.keys(map).length){ PLANTS=map; renderPlantOptions(); }
-      })
-      .catch(function(){});
-  }catch(e){}
-}
-function loadPlants(){ loadPlantsLocal(); loadPlantsSupabase(); }
 function pickPlant(cod){
   var p=PLANTS[cod]; if(!p)return;
   var c=(p.lat!=null&&p.lon!=null)?[p.lat,p.lon]:COORDS_FALLBACK[cod];
