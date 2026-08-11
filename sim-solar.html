@@ -89,7 +89,7 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
 
     <!-- GEOMETRÍA SOLAR -->
     <div class="card">
-      <h2><span class="ic">◔</span> Geometría solar <span style="margin-left:auto;font:400 11px var(--mono);color:var(--muted)">elevación vs hora local</span></h2>
+      <h2><span class="ic">◔</span> Geometría solar <span style="margin-left:auto;font:400 11px var(--mono);color:var(--muted)">elevación y sombra · hora local</span></h2>
       <canvas id="sky" width="700" height="280"></canvas>
       <div class="slider-row">
         <span style="font-size:12px;color:var(--muted)">Hora</span>
@@ -206,7 +206,10 @@ function dayCurve(lat,lon,dateStr,tzOff){
   var pts=[],peak={el:-99,min:0},rise=null,set=null,prev=null;
   for(var m=0;m<=1440;m+=4){
     var g=solarGeom(localToUTCms(dateStr,m,tzOff),lat,lon);
-    pts.push({m:m,el:g.elevation,az:g.azimuth});
+    /* sh = sombra POR METRO de altura del objeto (1/tan de la elevación). Se guarda así, y no
+       la sombra ya multiplicada, para que la serie no dependa de la altura: cambiar el campo
+       'obj' reescala el dibujo sin recalcular la geometría solar del día entero. */
+    pts.push({m:m,el:g.elevation,az:g.azimuth,sh:g.elevation>0?1/Math.tan(g.elevation*RAD):null});
     if(g.elevation>peak.el){peak.el=g.elevation;peak.min=m;peak.az=g.azimuth;}
     if(prev){ if(prev.el<0&&g.elevation>=0)rise=m; if(prev.el>=0&&g.elevation<0)set=m; }
     prev={el:g.elevation};
@@ -216,10 +219,25 @@ function dayCurve(lat,lon,dateStr,tzOff){
 function hhmm(min){if(min==null)return '—';min=((min%1440)+1440)%1440;var h=Math.floor(min/60),mm=Math.round(min%60);if(mm===60){mm=0;h++;}return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm;}
 
 var CUR=null;
+var C_SOL='#F6A623', C_SOMBRA='#A78BFA';   // separación CVD entre ambas: ΔE 30,4 protan · 16,9 tritan
+
+/* TECHO de la serie de sombra, en metros. Es DERIVADO, no un dato de proyecto: se toma la sombra a
+   10° de elevación (5,67 × la altura) y se redondea al alza a un valor legible. Si ese techo no
+   dejara sitio ni al mínimo del día (sol muy bajo todo el día, invierno en latitud alta), se sube
+   hasta que el mínimo quepa con un 25 % de holgura — si no, la serie saldría entera recortada. */
+function techoSombra(obj,peakEl){
+  var v=obj/Math.tan(10*RAD);
+  if(peakEl>0.5)v=Math.max(v,1.25*obj/Math.tan(peakEl*RAD));
+  var e=Math.pow(10,Math.floor(Math.log10(v))),m=v/e,pasos=[1,1.5,2,2.5,3,4,5,6,8,10];
+  for(var i=0;i<pasos.length;i++)if(m<=pasos[i]+1e-9)return pasos[i]*e;
+  return 10*e;
+}
+function fmtM(v){return String(v>=10?Math.round(v):Math.round(v*10)/10);}
+
 function drawSky(){
   var lat=+$('lat').value,lon=+$('lon').value,tz=+$('tz').value,date=$('date').value;
   CUR=dayCurve(lat,lon,date,tz);
-  var cv=$('sky'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height,padL=34,padB=22,padT=10,padR=8;
+  var cv=$('sky'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height,padL=34,padB=22,padT=10,padR=40;   // padR deja sitio al eje de sombra
   ctx.clearRect(0,0,W,H);
   var x0=padL,x1=W-padR,y0=H-padB,y1=padT, gx=function(m){return x0+(m/1440)*(x1-x0);}, gy=function(el){return y0-(Math.max(0,el)/90)*(y0-y1);};
   // rejilla
@@ -229,15 +247,73 @@ function drawSky(){
   // curva de elevación
   ctx.beginPath();var started=false;
   CUR.pts.forEach(function(p){var xx=gx(p.m),yy=gy(p.el);if(!started){ctx.moveTo(xx,yy);started=true;}else ctx.lineTo(xx,yy);});
-  ctx.strokeStyle='#F6A623';ctx.lineWidth=2;ctx.stroke();
+  ctx.strokeStyle=C_SOL;ctx.lineWidth=2;ctx.stroke();
   // relleno bajo curva
   ctx.lineTo(gx(1440),y0);ctx.lineTo(gx(0),y0);ctx.closePath();ctx.fillStyle='rgba(246,166,35,.10)';ctx.fill();
   // orto / ocaso
   ctx.fillStyle='#36D399';
   [CUR.rise,CUR.set].forEach(function(m){if(m!=null){var xx=gx(m);ctx.fillRect(xx-1,y1,2,y0-y1);}});
-  // punto en la hora seleccionada
+
   var hm=+$('hour').value, g=solarGeom(localToUTCms(date,hm,tz),lat,lon);
+
+  /* ---- SERIE DE SOMBRA, eje propio a la derecha en metros -------------------------------------
+     La sombra es altura/tan(elevación) y se dispara con el sol bajo: 3 m de objeto a 1° de
+     elevación son 172 m. Dibujada a escala libre aplastaría la curva del sol contra el eje, así
+     que van tres medidas: (a) SOLO entre orto y ocaso, (b) el eje se corta en un TECHO derivado
+     de la altura del objeto, y (c) el tramo que se sale del techo va DISCONTINUO apoyado en él,
+     para que se lea como un recorte y no como una meseta real de la sombra.
+     Es un segundo eje y por tanto NO es comparable en altura con la curva del sol: cada eje va
+     rotulado del color de su serie justo para que no se lean como una sola escala. */
+  var obj=+$('obj').value, techo=null;
+  if(obj>0&&CUR.peak.el>0){
+    techo=techoSombra(obj,CUR.peak.el);
+    var gs=function(v){return y0-(Math.min(v,techo)/techo)*(y0-y1);};
+    // eje derecho: marcas cortas y rótulos, SIN rejilla propia (la rejilla es del eje de elevación)
+    ctx.font='10px ui-monospace,monospace';ctx.textAlign='left';
+    for(var k=0;k<=4;k++){
+      var vm=techo*k/4,ym=gs(vm);
+      ctx.strokeStyle=C_SOMBRA;ctx.globalAlpha=.5;ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x1,ym);ctx.lineTo(x1+4,ym);ctx.stroke();ctx.globalAlpha=1;
+      ctx.fillStyle=C_SOMBRA;ctx.fillText(fmtM(vm),x1+7,ym+3);
+    }
+    ctx.fillStyle=C_SOMBRA;ctx.globalAlpha=.7;ctx.fillText('m',x1+7,y1-1);ctx.globalAlpha=1;
+    // la curva: se parte en tramos según entre o salga del techo, para cambiar de trazo sin huecos
+    ctx.lineWidth=2;ctx.strokeStyle=C_SOMBRA;
+    var modo=null,abierto=false;
+    CUR.pts.forEach(function(p){
+      if(!(p.el>0)||p.sh==null){if(abierto){ctx.stroke();abierto=false;modo=null;}return;}
+      var sm=obj*p.sh,fuera=sm>techo,xx=gx(p.m),yy=gs(sm);
+      if(modo!==fuera){
+        if(abierto){ctx.lineTo(xx,yy);ctx.stroke();}      // cierra el tramo anterior en este punto
+        ctx.setLineDash(fuera?[4,3]:[]);                  // el trazo nuevo estrena estilo
+        ctx.beginPath();ctx.moveTo(xx,yy);abierto=true;modo=fuera;
+      }else ctx.lineTo(xx,yy);
+    });
+    if(abierto)ctx.stroke();
+    ctx.setLineDash([]);
+    // punto de la hora del deslizador sobre la serie (el mismo valor que da la tarjeta)
+    if(g.elevation>0.05){
+      ctx.beginPath();ctx.arc(gx(hm),gs(obj/Math.tan(g.elevation*RAD)),4,0,7);
+      ctx.fillStyle=C_SOMBRA;ctx.fill();ctx.strokeStyle='#0B0F14';ctx.lineWidth=2;ctx.stroke();
+    }
+  }
+
+  // punto en la hora seleccionada
   if(g.elevation>0){var xx=gx(hm),yy=gy(g.elevation);ctx.beginPath();ctx.arc(xx,yy,5,0,7);ctx.fillStyle='#54A6FF';ctx.fill();ctx.strokeStyle='#0B0F14';ctx.lineWidth=2;ctx.stroke();}
+
+  /* leyenda: con dos series la identidad no puede ir solo por color. Lleva fondo propio porque
+     con el sol bajo la sombra se dispara justo por aquí (esquina superior izquierda, poco
+     después del orto) y sin él la curva pisaba el texto. */
+  ctx.font='10px ui-monospace,monospace';ctx.textAlign='left';
+  var lx=x0+8,ly=y1+11,lineas=['elevación · eje izq. (°)'];
+  if(techo!=null)lineas.push('sombra de '+obj+' m · eje dcho. (m)');
+  var lw=0;lineas.forEach(function(t){lw=Math.max(lw,ctx.measureText(t).width);});
+  ctx.fillStyle='rgba(15,21,29,.88)';ctx.fillRect(lx-6,ly-12,lw+27,lineas.length*15+3);
+  ctx.strokeStyle='#1A2530';ctx.lineWidth=1;ctx.strokeRect(lx-6,ly-12,lw+27,lineas.length*15+3);
+  lineas.forEach(function(t,i){
+    ctx.fillStyle=i?C_SOMBRA:C_SOL;ctx.fillRect(lx,ly-4+i*15,10,2);
+    ctx.fillStyle='#8093A4';ctx.fillText(t,lx+15,ly+i*15);
+  });
   updateReadout(g,hm);
 }
 function updateReadout(g,hm){
