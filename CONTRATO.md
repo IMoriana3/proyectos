@@ -120,6 +120,14 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
   patrón, cambiadlo por `git rebase origin/main` o un merge normal. Nosotros ya lo hemos cambiado.
 
 
+- **[Proyectos → Backtracking] Hemos añadido la tarjeta de planta de Túnez (24021).** Cae en vuestro
+  ámbito (`PLANTS` y sus enlaces de vista), así que lo avisamos aquí como manda el reparto. El
+  usuario reportó que Túnez no tenía tarjeta en el Panel. Va con **`views:{}` a propósito**: no hay
+  `tunez_layout.json` en cobertura-zigbee ni escenario en siting, así que las cinco vistas salen
+  **en gris** — que es justo para lo que está el `core:true`. Cuando generéis alguna, rellenadla.
+  De paso, su `cantidad` en la cartera pasa de 1.344 a **1.064** módulos (confirmado por el usuario;
+  el plano topográfico daba 1.067 y el dato malo era el de la cartera).
+
 ## Registro de cambios
 
 | fecha | sesión | cambio |
