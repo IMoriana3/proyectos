@@ -443,24 +443,6 @@ body{
    ===================================================================== */
 const PROJECTS = [
   {
-    name: "Mapa Modbus NCU · HSU · TCU",
-    status: "live",
-    objetivo: "Ficha interactiva del mapa Modbus del sistema de seguidores: registros de NCU, HSU y TCU con dirección absoluta por unidad, decodificador en vivo de valores crudos (bits, f32, alarmas) y descarga de la configuración de pendientes BT3D por TCU (Ayora y San José, del levantamiento).",
-    stack: "HTML · sin dependencias",
-    url: "https://imoriana3.github.io/cobertura-zigbee/modbus.html",
-    repo: "https://github.com/imoriana3/cobertura-zigbee",
-    updated: "2026-08-09",
-    version: "R7",
-    docId: "",
-    docUrl: "",
-    uso: [
-      "Elige el dispositivo (TCU / NCU / HSU / HSU ext / Alarmas) y el número de unidad: las direcciones absolutas se recalculan (base + (id−1)·stride + offset).",
-      "Pincha cualquier registro y pega un valor crudo (decimal o 0x…) para decodificarlo: bits, conversión de unidad (mV, K×10→°C, rad→°) y alarmas por nombre.",
-      "El buscador filtra por nombre, dirección o bit (p. ej. 30513, soc, wind).",
-      "Abajo: descarga de config_tcu_sunner de Ayora (754) y San José (2.186) con pendiente E/O, vector y azimut por tracker."
-    ]
-  },
-  {
     name: "Nuevo Siting",
     status: "live",
     objetivo: "Crea el siting de comunicaciones de una planta nueva: sube los seguidores (CSV/Excel, plantilla incluida) y autoubica NCUs, RSU y gateways.",
@@ -546,12 +528,12 @@ const PROJECTS = [
     status: "live",
     objetivo: "Visor offline para casar 18.190 puntos topográficos con 2.289 IDs de seguidor (Acciona, La Joya (Arequipa)) mediante flujo de coste mínimo.",
     stack: "HTML offline · datos NetworkX (min-cost flow)",
-    url: "https://imoriana3.github.io/visores/san-jose/",
-    repo: "https://github.com/imoriana3/visores",
+    url: "https://imoriana3.github.io/visor-san-jose/",
+    repo: "https://github.com/imoriana3/visor-san-jose",
     updated: "2026-06-16",
     version: "",
     docId: "",
-    docUrl: "https://raw.githubusercontent.com/imoriana3/visores/main/san-jose/README.md",
+    docUrl: "https://raw.githubusercontent.com/imoriana3/visor-san-jose/main/README.md",
     download: "",
     uso: [
       "Visor autocontenido y offline: coloreado de grafo, filtros por NCU, asignación click-to-assign y export CSV.",
@@ -560,30 +542,6 @@ const PROJECTS = [
     pendientes: [],
     historial: [
       { date:"2026-04-30", ver:"", note:"Entregado: visor con asignación y exportación." }
-    ]
-  },
-  {
-    name: "Visor Ayora",
-    status: "live",
-    objetivo: "Geometría as-built de los 754 seguidores bifila de Ayora a partir de 3.069 puntos de levantamiento, y los parámetros de backtracking corregido por terreno que se cargan en la TCU.",
-    stack: "HTML offline · Plotly · levantamiento topográfico",
-    url: "https://imoriana3.github.io/visores/ayora/",
-    repo: "https://github.com/imoriana3/visores",
-    updated: "2026-08-08",
-    version: "",
-    docId: "",
-    docUrl: "https://raw.githubusercontent.com/imoriana3/visores/main/ayora/README.md",
-    download: "",
-    uso: [
-      "Cuatro vistas: backtracking 3D, articuladas, as-built frente a proyecto y puntos del levantamiento.",
-      "Exporta la tabla de configuración de las TCU: pendiente y azimut por cada lado de cada tracker."
-    ],
-    pendientes: [
-      { done:false, text:"Confirmar la referencia de la cota del .cdt (constante módulo-replanteo de 0,829 m)." },
-      { done:false, text:"Sector PD-442…527: contrastar si el .cdt es una revisión de rasante anterior." }
-    ],
-    historial: [
-      { date:"2026-08-08", ver:"", note:"Entregado: geometría as-built y vectores de backtracking para las 754 TCU." }
     ]
   },
   {
@@ -633,37 +591,6 @@ const PROJECTS = [
     ],
     historial: [
       { date:"2026-06-10", ver:"", note:"Detectado mismatch de firmware Modbus en puerto 503." }
-    ]
-  },
-  {
-    name: "TCU Toolbox · campo",
-    status: "live",
-    objetivo: "Herramienta offline (PowerShell) para configurar, diagnosticar y respaldar TCUs Sunner vía el gateway Modbus de la NCU. Complemento de escritura del SCADA (que es solo-lectura).",
-    stack: "PowerShell · Modbus TCP · offline",
-    url: "",                                                  // no hay deploy: se ejecuta en el portátil de campo
-    repo: "https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox",
-    updated: "2026-08-07",
-    version: "11.4",
-    docId: "tcu-toolbox",
-    docUrl: "",
-    download: "https://github.com/IMoriana3/scada/releases/latest",   // ZIP con la version en el nombre (TCU_Toolbox_vX.Y.zip)
-    release: "IMoriana3/scada",                                      // version y fecha en vivo: ver refrescarReleases()
-    uso: [
-      "Descarga el ZIP desde la release (botón Paquete): el fichero lleva la versión en el nombre (TCU_Toolbox_v11.4.zip). Copia la carpeta tcu-toolbox al portátil de campo.",
-      "Doble clic en TCU_Toolbox.bat (sin instalar nada). Las entradas \"(auto)\" resuelven solas el puerto de cada TCU.",
-      "Las plantas viajan en plantas/<planta>.json (o CSV) — se exportan desde la página IPs de esta misma plataforma, o se regeneran desde el Excel maestro."
-    ],
-    pendientes: [
-      { done:false, text:"Confirmar en planta la TCU 109 de NCU2 (GW 504) y el auto-borrado de los bits de reloj en 40007." },
-      { done:false, text:"Comprobar contra una NCU real el bloque largo de 50 registros por TCU (50000+): la sección de carga está en el mapa R7.1 pero sin verificar." },
-      { done:false, text:"Sin forma documentada de borrar las alarmas memorizadas (Alarms2) desde la NCU: el 40007 bit 13 solo cubre la de motor." }
-    ],
-    historial: [
-      { date:"2026-08-07", ver:"11.4", note:"LEER CARGA: el equipo dice si está cargando (estado del cargador y sus alarmas, bloque largo de la NCU) en vez de deducirlo de las corrientes." },
-      { date:"2026-08-06", ver:"11.3", note:"Pestaña Baterías (SoC, SoH, tensiones, corrientes y temperaturas en una tabla) y el panel también en modo directo." },
-      { date:"2026-08-06", ver:"11.0", note:"Las alarmas del bloque de la NCU se decodifican con SU tabla de bits, no con la de la TCU: eran mapas distintos." },
-      { date:"2026-08-05", ver:"2.3", note:"NCU completa con puerto automático, CSV de plantas y TCU 109 (fusión con la versión de campo)." },
-      { date:"2026-08-04", ver:"2.1", note:"Mapa v6.1 completo, diagnóstico con alarmas en texto, reloj, identidad, backups y filtro de variables." }
     ]
   },
   {
@@ -756,80 +683,13 @@ const PROJECTS = [
     uso: [
       "Acceso con login (email + contraseña). Datos en Supabase con reglas de seguridad (RLS).",
       "KPIs, gráficas (estado/país/promotor/Top 10) y mapa por país; tabla con todas las columnas, filtros y CRUD (añadir/editar/borrar).",
-      "La hoja de IPs/credenciales del Excel vive aparte, en Topología de plantas (misma app y mismo login; botón Topología → en la cabecera)."
+      "No incluye la hoja de IPs/credenciales del Excel."
     ],
     pendientes: [
       { done:false, text:"Hospedarla con login (Cloudflare Pages/Access) y poner la URL." }
     ],
     historial: [
       { date:"2026-06-17", ver:"", note:"Cartera de 22 plantas adjudicadas, editable, sobre Supabase (dashboard + mapa)." }
-    ]
-  },
-  {
-    name: "SCADA de planta",
-    status: "live",
-    objetivo: "La sala de control de la planta en operación: cabecera con identidad y disponibilidad, sinóptico sobre plano, curva de seguimiento solar del día contra las posiciones reales, flota (salud, SoC, alarmas, modos) y salto al gemelo 3D con cada tracker a su tilt reportado.",
-    stack: "HTML · Supabase · Chart.js · gemelo 3D (cobertura-zigbee)",
-    url: "https://factiun-cartera.imoriana3.workers.dev/scada.html",   // interno · mismo login que la cartera
-    repo: "https://github.com/imoriana3/factiun-cartera",     // privado
-    updated: "2026-08-10",
-    version: "",
-    docId: "",
-    docUrl: "",
-    download: "",
-    uso: [
-      "Mismo login que la Cartera. Abre directamente en modo sala de control (pestañas Sinóptico · Seguimiento · Flota · Tendencias).",
-      "Comparte motor y datos con Seguimiento PEM, pero sin las secciones de puesta en marcha: esto es operación.",
-      "El botón 🧊 SCADA 3D abre el gemelo con el último diagnóstico: módulos pintados por estado y ficha por tracker al hacer clic."
-    ],
-    pendientes: [
-      { done:false, text:"Telemetría en régimen (collector cada N min) para que la disponibilidad sea continua, no por visitas." }
-    ],
-    historial: [
-      { date:"2026-08-10", ver:"", note:"Separado del Seguimiento PEM: entrada propia scada.html en modo sala de control." }
-    ]
-  },
-  {
-    name: "Seguimiento PEM",
-    status: "live",
-    objetivo: "El cuaderno de puesta en marcha por planta: diagnósticos de la TCU Toolbox, comisionado, inventarios y auditorías de campo, con diff contra la visita anterior, plano de planta y panel de alertas del agente.",
-    stack: "HTML · Supabase (Postgres + Auth + RLS)",
-    url: "https://factiun-cartera.imoriana3.workers.dev/seguimiento-pem.html",   // interno · requiere login (mismo que la cartera)
-    repo: "https://github.com/imoriana3/factiun-cartera",     // privado
-    updated: "2026-08-09",
-    version: "",
-    docId: "",
-    docUrl: "",
-    download: "",
-    uso: [
-      "Acceso con la misma cuenta que la Cartera (Supabase, RLS).",
-      "Sube los JSON que exporta la TCU Toolbox o usa SINCRONIZAR desde la propia toolbox: el agente sube el diagnóstico él mismo.",
-      "Filtra por planta y tipo (diagnóstico / PEM / inventario / auditoría) y compara contra el registro anterior del mismo tipo (diff).",
-      "Antes se llamaba «Histórico» (historico.html): la URL vieja redirige a la nueva."
-    ]
-  },
-  {
-    name: "IPs de plantas",
-    status: "live",
-    objetivo: "La hoja de IPs del Excel como tabla editable con login: NCUs, IPs, gateways, esclavos, versiones de firmware y accesos remotos por planta. Exporta los ficheros de plantas de la TCU Toolbox.",
-    stack: "HTML · Supabase (Postgres + Auth + RLS)",
-    url: "https://factiun-cartera.imoriana3.workers.dev/ips.html",   // interno · requiere login (mismo que la cartera)
-    repo: "https://github.com/imoriana3/factiun-cartera",     // privado
-    updated: "2026-08-05",
-    version: "",
-    docId: "ips",
-    docUrl: "",
-    download: "",
-    uso: [
-      "Acceso con la misma cuenta que la Cartera (Supabase, RLS). Una fila por NCU; contraseñas enmascaradas en la tabla (se ven al editar).",
-      "Editar aquí es la fuente de verdad de la topología: buscar, filtrar por planta, añadir/editar/borrar NCUs.",
-      "⬇ JSON toolbox / ⬇ CSV toolbox: descargan los ficheros de plantas para la TCU Toolbox (solo topología, nunca credenciales) — a la carpeta plantas/ del portátil o al botón Cargar... de la herramienta."
-    ],
-    pendientes: [
-      { done:false, text:"Confirmar la TCU 109 de Burgo I NCU2: el Excel dice esclavos 46-107, pero los .bat de Sunner incluían la 109." }
-    ],
-    historial: [
-      { date:"2026-08-05", ver:"", note:"Tabla sembrada desde el Excel maestro (42 NCUs, 6 plantas) con exportes JSON/CSV para la TCU Toolbox." }
     ]
   }
 ];
@@ -842,21 +702,23 @@ const PROJECTS = [
 const SITE = "https://imoriana3.github.io/";
 const PLANTS = [
   { name:"El Burgo I", code:"23003", loc:"Zaragoza · España", views:{
-      siting:     SITE+"siting/?planta=burgo",
-      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=elburgo",
-      cobertura:  SITE+"cobertura-zigbee/index.html",
+      siting:    SITE+"siting/?planta=burgo",
+      modelo3d:  SITE+"cobertura-zigbee/terreno.html?planta=elburgo",
+      cobertura: SITE+"cobertura-zigbee/index.html",
+      plano:     SITE+"cobertura-zigbee/plano.html?planta=elburgo",
   }},
   { name:"Ayora", code:"24025", loc:"Valencia · España", views:{
-      siting:     SITE+"siting/?planta=ayora",
-      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=ayora&cotas=levantamiento&bt=cons",
-      cobertura:  SITE+"cobertura-zigbee/plano.html?planta=ayora",
-      asbuilt:    SITE+"visores/ayora/",
+      siting:    SITE+"siting/?planta=ayora",
+      modelo3d:  SITE+"cobertura-zigbee/terreno.html?planta=ayora",
+      cobertura: null,
+      plano:     SITE+"cobertura-zigbee/plano.html?planta=ayora",
   }},
   { name:"San José", code:"24019", loc:"Arequipa · Perú", views:{
-      siting:     SITE+"siting/?planta=sanjose",
-      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=sanjose&cotas=levantamiento&bt=cons",
-      cobertura:  SITE+"cobertura-zigbee/plano.html?planta=sanjose",
-      asbuilt:    SITE+"visores/san-jose/",
+      siting:    SITE+"siting/?planta=sanjose",
+      modelo3d:  SITE+"cobertura-zigbee/terreno.html?planta=sanjose",
+      cobertura: null,
+      plano:     SITE+"cobertura-zigbee/plano.html?planta=sanjose",
+      visor:     SITE+"visor-san-jose/",
   }},
   { name:"Fayón", code:"24007", loc:"Zaragoza · España", views:{
       siting:    null,
@@ -865,27 +727,23 @@ const PLANTS = [
       plano:     SITE+"cobertura-zigbee/plano.html?planta=fayon",
   }},
   { name:"Páramo", code:"25019", loc:"España", views:{
-      siting:     SITE+"siting/?planta=paramo",
+      siting:    SITE+"siting/?planta=paramo",
+      modelo3d:  null,
+      cobertura: null,
   }},
 ];
-/* Vistas de planta.
-   La topografía 3D tiene DOS ejes independientes -> 4 combinaciones:
-     terreno   : de internet (DEM) | levantamiento de cliente
-     trackers  : paralelos al terreno | con sus cotas Z medidas
-   Un SOLO botón por planta, que abre su variante principal; las demás se eligen con el
-   selector de dentro de la página. Cuatro botones en la tarjeta se hacían inmanejables
-   en móvil, y el selector interno es el control que quedará al fusionar las escenas.
-   "core" = capacidad que toda planta debería tener; sale en gris cuando falta. */
 const PLANT_VIEWS = [
-  { key:"siting",     label:"Siting",            core:true  },
-  { key:"topo3d",     label:"3D",                core:true  },
-  { key:"cobertura",  label:"Cobertura",         core:true  },
-  { key:"asbuilt",    label:"As-built módulos",  core:false },
-  { key:"scada",      label:"SCADA",             core:false },
+  { key:"siting",    label:"2D Siting",    core:true  },
+  { key:"modelo3d",  label:"3D",           core:true  },
+  { key:"cobertura", label:"2D Cobertura", core:true  },
+  { key:"plano",     label:"Plano 2D",     core:false },
+  { key:"visor",     label:"Visor",        core:false },
+  { key:"scada",     label:"SCADA",        core:false },
 ];
+
 /* Módulos que YA viven en una planta (sección Plantas): no se repiten abajo en Herramientas */
 const PLANT_MODULES = new Set([
-  "Visor San José", "Visor Ayora", "Tracker SCADA · El Burgo", "Demo Siting", "Cobertura Zigbee · El Burgo"
+  "Visor San José", "Tracker SCADA · El Burgo", "Demo Siting", "Cobertura Zigbee · El Burgo"
 ]);
 const TOOLS = PROJECTS.filter(p => !PLANT_MODULES.has(p.name));   // Herramientas = solo lo genérico (no de planta)
 
@@ -1000,56 +858,6 @@ function renderGrid(){
   });
 }
 
-/* ---------- VERSION Y FECHA EN VIVO DESDE LA RELEASE ----------
-   'version' y 'updated' de cada ficha se escribían a mano, y nadie los tocaba
-   al publicar: la toolbox decía 2.3 / 5-ago con el ZIP ya por la 11.4. Los
-   proyectos con  release: "owner/repo"  los leen de la ultima release de
-   GitHub. Repos publicos: sin token.
-
-   Si la API falla (sin internet, 403 por limite, repo sin releases) se queda
-   el valor escrito a mano, que por eso sigue siendo el real del dia que se
-   escribio y no un placeholder.
-
-   Cache de 6 h en localStorage: la API sin autenticar da 60 peticiones/hora
-   por IP, y recargar la pagina no debe gastarlas. */
-const REL_TTL = 6 * 3600 * 1000;
-
-function relCache(repo){
-  try{
-    const r = JSON.parse(localStorage.getItem("rel:"+repo) || "null");
-    return (r && r.ver && (Date.now() - r.t) < REL_TTL) ? r : null;
-  }catch(e){ return null; }
-}
-async function releaseDe(repo){
-  const c = relCache(repo);
-  if(c) return c;
-  const res = await fetch("https://api.github.com/repos/"+repo+"/releases/latest",
-                          {headers:{"Accept":"application/vnd.github+json"}});
-  if(!res.ok) throw new Error("HTTP "+res.status);
-  const j = await res.json();
-  // el tag es toolbox-v11.4 -> 11.4 ; tambien vale v2.4 o 2.4 a secas
-  const r = { t: Date.now(),
-              ver: String(j.tag_name || "").replace(/^.*?v(?=\d)/, ""),
-              fecha: String(j.published_at || "").slice(0,10) };
-  if(!r.ver || !r.fecha) throw new Error("release sin tag o sin fecha");
-  try{ localStorage.setItem("rel:"+repo, JSON.stringify(r)); }catch(e){}
-  return r;
-}
-async function refrescarReleases(){
-  const conRelease = TOOLS.filter(p => p.release);
-  if(!conRelease.length) return;
-  let algo = false;
-  await Promise.all(conRelease.map(async p => {
-    try{
-      const r = await releaseDe(p.release);
-      if(r.ver !== p.version || r.fecha !== p.updated){
-        p.version = r.ver; p.updated = r.fecha; algo = true;
-      }
-    }catch(e){ /* se queda lo escrito a mano */ }
-  }));
-  if(algo) renderGrid();   // 'act.' ordena las tarjetas: hay que repintar la rejilla entera
-}
-
 /* ---------- DOC READER ---------- */
 const $reader = document.getElementById("reader");
 const $readerWrap = document.getElementById("reader-wrap");
@@ -1154,7 +962,6 @@ renderPlants();
 renderGauges();
 renderChips();
 renderGrid();
-refrescarReleases();   // no bloquea el pintado: si tarda o falla, la ficha ya esta puesta
 </script>
 </body>
 </html>
