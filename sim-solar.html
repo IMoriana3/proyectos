@@ -250,7 +250,22 @@ function updateReadout(g,hm){
     card('Azimut',g.azimuth.toFixed(1),'° '+compass(g.azimuth))+
     card('Pico solar',CUR.peak.el.toFixed(1),'° · '+hhmm(CUR.peak.min))+
     card('Orto / ocaso',hhmm(CUR.rise),'→ '+hhmm(CUR.set))+
-    card('Sombra obj.',shadow,sdir?('hacia '+sdir):'');
+    card('Sombra obj.',shadow,sdir?('hacia '+sdir):'')+avisoTZ();
+}
+/* AVISO DE HUSO: el cálculo solar es correcto, pero si el UTC no casa con la longitud el día entero sale
+   corrido y la gráfica se vuelve absurda (mediodía a las 18:48, ocaso pasada medianoche envolviendo por el
+   borde). Pasaba al meter coordenadas de otro país dejando el UTC de España. No se toca el valor del
+   usuario (España va en CET pese a estar en longitud ~0): solo se avisa y se sugiere el geográfico. */
+function avisoTZ(){
+  var lon=+$('lon').value, tz=+$('tz').value;                 // se leen del DOM: en draw() 'lon' queda fuera de alcance aquí
+  if(!isFinite(lon)||!isFinite(tz))return '';
+  var geo=Math.round(lon/15), desf=tz-geo;                    // horas que se desplaza el día respecto al sol
+  if(Math.abs(desf)<3)return '';
+  return '<div class="ro" style="border-color:#F6A623;grid-column:1/-1">'+
+    '<div class="k" style="color:#F6A623">⚠ Huso horario incoherente con la longitud</div>'+
+    '<div class="v" style="font-size:15px">El día sale corrido <b>'+(desf>0?'+':'')+desf.toFixed(1)+' h</b>'+
+    ' <small>· para longitud '+lon.toFixed(2)+'° el huso solar es ≈ UTC'+(geo>=0?'+':'')+geo+
+    ' (tienes UTC'+(tz>=0?'+':'')+tz+')</small></div></div>';
 }
 function card(k,v,s){return '<div class="ro"><div class="k">'+k+'</div><div class="v">'+v+(s?' <small>'+s+'</small>':'')+'</div></div>';}
 
