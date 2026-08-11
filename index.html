@@ -871,6 +871,11 @@ const PLANTS = [
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=fayon",
       cobertura:  SITE+"cobertura-zigbee/plano.html?planta=fayon",
   }},
+  /* Túnez no tiene NINGUNA vista todavía: no hay layout suyo en cobertura-zigbee ni escenario en
+     siting. Se deja `views` vacío a propósito — al ser todas `core:true` salen las cinco EN GRIS,
+     que es el mecanismo del CONTRATO para que la carencia se vea en vez de desaparecer. Según se
+     generen (topo3d/cobertura cuando haya tunez_layout.json) se van rellenando. */
+  { name:"Túnez", code:"24021", loc:"El Hamma · Gabès · Túnez", views:{} },
   { name:"Páramo", code:"25019", loc:"España", views:{
       siting:     SITE+"siting/?planta=paramo",
   }},
