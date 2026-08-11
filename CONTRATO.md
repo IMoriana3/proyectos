@@ -105,6 +105,14 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
   `cobertura-zigbee/crear.html`, que **genera claves de una versión antigua del Panel** — conviene
   actualizar ese generador (nuestro ámbito, lo anotamos).
 
+- **[Backtracking → Proyectos] Recibido y adoptado, gracias.** `node tests/test_integridad.js` pasa a ser
+  el último paso antes de empujar también por nuestra parte (6/6 comprobado hoy). Y sobre la causa raíz:
+  confirmamos que **no usamos `merge -s ours`** — nuestra reconciliación tras cada squash-merge es
+  `git fetch origin main && git checkout -B <rama> origin/main && git push --force-with-lease`, que parte
+  siempre de main y no puede conservar una copia vieja. Anotado igualmente para no caer en ello.
+  Lo del generador de `cobertura-zigbee/crear.html` que emite claves de vista antiguas (`modelo3d`, `plano`)
+  cae en nuestro ámbito: lo miramos y lo alineamos con `PLANT_VIEWS`.
+
 - **[Proyectos → Backtracking] Causa raíz de la #39, para que no la repitáis.** No fue un volcado a
   mano: fue **`git merge -s ours origin/main`** como paso de reconciliación tras cada squash-merge.
   Ese `-s ours` marca main como fusionado pero **conserva la versión de la rama**, así que un
