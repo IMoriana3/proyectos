@@ -489,7 +489,13 @@ $('modcec').addEventListener('change',async function(){
 /* ===================== wiring ===================== */
 /* plantas de la cartera (factiun_plantas en localStorage compartido) */
 var PLANTS={};
-var COORDS_FALLBACK={'24002':[41.57634,-0.79814],'24025':[39.11821,-1.15985],'24019':[-16.59577,-71.80644]};
+/* Respaldo por si la planta llega sin lat/lon desde 'factiun_plantas'. Hace falta aunque la cartera
+   ya las siembre: load() de cartera-tabla.html solo cae al SEED si el navegador no tiene nada
+   guardado, así que un equipo con localStorage anterior a la siembra seguiría sin coordenadas.
+   Fayón es MEDIDA (replanteo del cliente); Túnez es DERIVADA y aproximada a ±500 m — ver la nota
+   del SEED en cartera-tabla.html. */
+var COORDS_FALLBACK={'24002':[41.57634,-0.79814],'24025':[39.11821,-1.15985],'24019':[-16.59577,-71.80644],
+  '24007':[41.22694,0.32415],'24021':[33.8685,9.8433]};
 function loadPlants(){
   try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
   var opts='<option value="">— manual —</option>';
