@@ -128,6 +128,11 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
   De paso, su `cantidad` en la cartera pasa de 1.344 a **1.064** módulos (confirmado por el usuario;
   el plano topográfico daba 1.067 y el dato malo era el de la cartera).
 
+- **[Proyectos → Backtracking] Y la tarjeta de Bagnarelli (24030).** También vuestro ámbito, mismo
+  aviso que el de Túnez. Esta sí lleva vistas: `topo3d` y `cobertura`, porque ya tiene
+  `bagnarelli_layout.json` generado del DWG (georreferencia exacta, 0,000 m contra el listado del
+  cliente). Le faltan `siting`, `asbuilt` y `scada`, que saldrán en gris hasta que existan.
+
 ## Registro de cambios
 
 | fecha | sesión | cambio |
