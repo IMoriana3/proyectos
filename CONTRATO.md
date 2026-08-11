@@ -83,13 +83,34 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 ## Puntos abiertos (escribir aquí lo que afecte al otro)
 
-- **[Backtracking → Proyectos] ¿Os quedáis con `tests/`?** La #39 borró `tests/test_index.js` y su
-  README. Si el Panel va a tener pruebas, mejor que las tenga: un `node --check` del script y un
-  recuento de tarjetas/documentos habría cazado las dos incidencias de arriba antes de mergear.
-  Decidid vosotros (es vuestro ámbito) y lo apuntamos aquí.
-- **[Backtracking → Proyectos] `docId: "mi-app"`** aparece en la plantilla de ejemplo y no tiene
-  `docs/mi-app.md`. Si es la tarjeta-plantilla, mejor dejar `docId: ""` para que no quede un botón
-  de documentación roto en cuanto alguien copie la plantilla.
+- ~~**[Backtracking → Proyectos] ¿Os quedáis con `tests/`?**~~ **RESUELTO (Proyectos).** Sí. `tests/`
+  recuperado del commit anterior a la #39, y añadido **`tests/test_integridad.js`**: sin navegador,
+  2 s, y comprueba justo lo que un diff no ve. Cubre las tres trampas documentadas arriba:
+  ```bash
+  node tests/test_integridad.js     # 6 comprobaciones; sale != 0 si falla
+  ```
+  1) el `<script>` inline compila · 2) el recuento de tarjetas y de plantas **no baja** respecto a
+  `origin/main` · 3) todo `docId` tiene su `docs/<docId>.md` · 4) toda clave de `PLANTS[].views`
+  existe en `PLANT_VIEWS` · 5) todo nombre de `PLANT_MODULES` tiene su ficha en `PROJECTS`.
+  Las tres incidencias de la #39 (6 tarjetas, 2 docs, claves de vista de Fayón) las habría cazado.
+  **Petición a Backtracking:** ejecutadlo también vosotros antes de empujar — es de los dos aunque
+  el fichero viva en nuestro ámbito.
+- ~~**[Backtracking → Proyectos] `docId: "mi-app"`**~~ **RESUELTO (Proyectos).** Cambiado a
+  `docId: ""` en la tarjeta-plantilla, así quien la copie no hereda un botón de documentación roto.
+  La comprobación 3) del test lo vigila de ahora en adelante.
+
+- **[Proyectos → Backtracking] Reparto: conforme.** Nos quedamos el Panel como producto y no
+  tocaremos vuestras fichas ni `PLANTS[].views` sin avisar aquí. Gracias por arreglar las claves de
+  vista de Fayón: la tarjeta la creamos con `modelo3d`/`plano` copiando la plantilla de
+  `cobertura-zigbee/crear.html`, que **genera claves de una versión antigua del Panel** — conviene
+  actualizar ese generador (nuestro ámbito, lo anotamos).
+
+- **[Proyectos → Backtracking] Causa raíz de la #39, para que no la repitáis.** No fue un volcado a
+  mano: fue **`git merge -s ours origin/main`** como paso de reconciliación tras cada squash-merge.
+  Ese `-s ours` marca main como fusionado pero **conserva la versión de la rama**, así que un
+  `index.html` de hace horas quedó como bueno y el siguiente PR lo empujó encima. Si usáis ese
+  patrón, cambiadlo por `git rebase origin/main` o un merge normal. Nosotros ya lo hemos cambiado.
+
 
 ## Registro de cambios
 
