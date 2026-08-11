@@ -612,27 +612,30 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Tracker SCADA · El Burgo",
+    name: "Agente y collector · PC de planta",
     status: "build",
-    objetivo: "SCADA en tiempo real para instalaciones de seguidores NCU (proyecto El Burgo).",
-    stack: "SCADA · Modbus TCP · tiempo real",
-    url: "",                                                  // no hay deploy
+    objetivo: "El lado que vive DENTRO de la planta: agente HTTP de solo lectura sobre Modbus (TCU_Agente.ps1) y collector, que son los que alimentan de datos al SCADA web y a la toolbox. Aquí vive también el CONTRATO entre las dos partes.",
+    stack: "PowerShell · Modbus TCP · Cloudflare Tunnel · Supabase",
+    url: "",                                                  // no hay deploy: corre en el PC de planta
     repo: "https://github.com/imoriana3/scada",       // privado: te funciona a ti
-    updated: "2026-06-10",
-    version: "",
+    updated: "2026-08-11",
+    version: "3.2",
     docId: "scada",
     download: "",
     uso: [
-      "Comunicación Modbus por el puerto 503.",
-      "Bloqueante actual: desajuste de firmware con la NCU-02 antigua."
+      "Solo lectura Modbus (FC03) con token en cabecera; las escrituras van gated y auditadas.",
+      "Trabajos largos troceados (/trabajo/inventario por TCU, /trabajo/diagnostico por NCU) para no chocar con el corte de ~100 s de Cloudflare.",
+      "El diagnóstico sube SIEMPRE la flota declarada completa: lo que no se pudo leer viaja como SIN LECTURA, no desaparece.",
+      "CONTRATO.md fija el interfaz con la web (tablas de Supabase, formatos y puntos abiertos)."
     ],
     pendientes: [
-      { done:false, text:"Identificar la versión de firmware de la NCU-02." },
-      { done:false, text:"Obtener el mapa de registros correspondiente." },
+      { done:false, text:"Telemetría en régimen: subir cada 5-15 min para que el SCADA pase de DIFERIDO a EN VIVO." },
       { done:false, text:"Hacer PÚBLICO el repo (sanear antes: IPs de El Burgo, túnel 100.65.0.5, nº proyecto y mapa Modbus de Factiun)." }
     ],
     historial: [
-      { date:"2026-06-10", ver:"", note:"Detectado mismatch de firmware Modbus en puerto 503." }
+      { date:"2026-08-11", ver:"3.2", note:"Repetidores numerados por planta (antes colisionaban entre NCUs). Aviso: la topología con varios tramos hay que parsearla entera." },
+      { date:"2026-08-10", ver:"3.1", note:"Diagnóstico por trozos (una NCU cada vez) y flota completa con SIN LECTURA." },
+      { date:"2026-06-10", ver:"", note:"Detectado mismatch de firmware Modbus en puerto 503 (El Burgo, NCU-02)." }
     ]
   },
   {
@@ -840,29 +843,33 @@ const PROJECTS = [
    Vistas extra (plano, visor, scada) solo salen si tienen URL.
    ===================================================================== */
 const SITE = "https://imoriana3.github.io/";
+/* La Cartera y el SCADA no viven en GitHub Pages: van tras el login del worker */
+const CARTERA = "https://factiun-cartera.imoriana3.workers.dev/";
 const PLANTS = [
   { name:"El Burgo I", code:"23003", loc:"Zaragoza · España", views:{
       siting:     SITE+"siting/?planta=burgo",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=elburgo",
       cobertura:  SITE+"cobertura-zigbee/index.html",
+      scada:      CARTERA+"scada.html?planta=el%20burgo%20i",
   }},
   { name:"Ayora", code:"24025", loc:"Valencia · España", views:{
       siting:     SITE+"siting/?planta=ayora",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=ayora&cotas=levantamiento&bt=cons",
       cobertura:  SITE+"cobertura-zigbee/plano.html?planta=ayora",
       asbuilt:    SITE+"visores/ayora/",
+      scada:      CARTERA+"scada.html?planta=ayora",
   }},
   { name:"San José", code:"24019", loc:"Arequipa · Perú", views:{
       siting:     SITE+"siting/?planta=sanjose",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=sanjose&cotas=levantamiento&bt=cons",
       cobertura:  SITE+"cobertura-zigbee/plano.html?planta=sanjose",
       asbuilt:    SITE+"visores/san-jose/",
+      scada:      CARTERA+"scada.html?planta=san%20jos%C3%A9",
   }},
   { name:"Fayón", code:"24007", loc:"Zaragoza · España", views:{
-      siting:    SITE+"siting/?planta=fayon",
-      modelo3d:  SITE+"cobertura-zigbee/terreno.html?planta=fayon",
-      cobertura: null,
-      plano:     SITE+"cobertura-zigbee/plano.html?planta=fayon",
+      siting:     SITE+"siting/?planta=fayon",
+      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=fayon",
+      cobertura:  SITE+"cobertura-zigbee/plano.html?planta=fayon",
   }},
   { name:"Páramo", code:"25019", loc:"España", views:{
       siting:     SITE+"siting/?planta=paramo",
@@ -881,11 +888,11 @@ const PLANT_VIEWS = [
   { key:"topo3d",     label:"3D",                core:true  },
   { key:"cobertura",  label:"Cobertura",         core:true  },
   { key:"asbuilt",    label:"As-built módulos",  core:false },
-  { key:"scada",      label:"SCADA",             core:false },
+  { key:"scada",      label:"SCADA",             core:true  },   // toda planta en operación debería tener sala de control
 ];
 /* Módulos que YA viven en una planta (sección Plantas): no se repiten abajo en Herramientas */
 const PLANT_MODULES = new Set([
-  "Visor San José", "Visor Ayora", "Tracker SCADA · El Burgo", "Demo Siting", "Cobertura Zigbee · El Burgo"
+  "Visor San José", "Visor Ayora", "Demo Siting", "Cobertura Zigbee · El Burgo"
 ]);
 const TOOLS = PROJECTS.filter(p => !PLANT_MODULES.has(p.name));   // Herramientas = solo lo genérico (no de planta)
 
