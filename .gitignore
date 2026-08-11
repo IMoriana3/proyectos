@@ -1,0 +1,5 @@
+# Playwright y compañía se instalan solo para probar el Panel en headless:
+# son 19 MB de herramienta, no del proyecto. El Panel es HTML plano y no
+# necesita build ni dependencias para publicarse.
+node_modules/
+package-lock.json
