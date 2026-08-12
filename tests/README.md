@@ -13,8 +13,16 @@ Comprueban además lo de siempre: que las tarjetas se pintan, que el detalle abr
 historial, que el botón *Paquete* apunta a `releases/latest` y que el panel de
 documentación carga el markdown de `docs/`.
 
+`test_pwa.js` cubre la **app instalable**: manifest válido con iconos que existen de verdad
+(un icono 404 la deja no-instalable sin avisar), service worker activo con su scope, armazón
+precacheado, botón *Instalar app*, y que **sin red** el panel sigue abriendo y pintando. Incluye la
+regresión que salió al escribirlo: el SW **no** debe recargar la página la primera vez que toma el
+control.
+
 ```bash
 npm install playwright                     # el navegador ya está en /opt/pw-browsers
 python3 -m http.server 8099                # servir el repo (en otra terminal)
 node tests/test_index.js                   # 13 comprobaciones
+node tests/test_pwa.js                     # 21 comprobaciones (PWA)
+node tests/test_integridad.js              # 6 comprobaciones, sin navegador
 ```

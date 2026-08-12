@@ -18,6 +18,19 @@ Una página única (`index.html`) que lista los proyectos desde el array `PROJEC
 ## Stack
 HTML/CSS/JS sin framework (un único `index.html`) · motor Markdown (marked) incrustado · GitHub Pages.
 
+## App instalable (PWA)
+El Panel se **instala** como aplicación (escritorio y móvil) y **abre sin red**.
+
+- `manifest.webmanifest` — nombre, iconos (`assets/icon-*.png`), `display: standalone` y
+  **`scope: "/"`**: así, una vez instalada, los visores que viven en otras rutas del mismo dominio
+  (`imoriana3.github.io/<repo>/`) se abren **dentro** de la app. Lo que está en `*.workers.dev` es
+  otro origen y sale al navegador. Incluye accesos directos (Cartera técnica, Layout, Sol).
+- `sw.js` — service worker: precachea el armazón (las cuatro páginas + iconos), **red primero** para
+  el HTML (para que las versiones de release no se congelen) y caché-con-refresco para `docs/` y
+  `assets/`. La API de GitHub **no se cachea**. Publicar cambios = subir el número de `CACHE`.
+- Instalar: botón **Instalar app** de la barra (Chrome/Edge/Android) · en iPhone, *Compartir →
+  Añadir a pantalla de inicio*. Cuando hay versión nueva sale un aviso y decide el usuario.
+
 ## Despliegue (URL)
 GitHub Pages: https://imoriana3.github.io/proyectos/ · Source: *Deploy from a branch* → `main` / `/ (root)`. `.nojekyll` incluido. En local, sírvelo por HTTP (`python -m http.server`) para que carguen los `docs/*.md`.
 

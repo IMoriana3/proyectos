@@ -145,6 +145,23 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
   `bagnarelli_layout.json` generado del DWG (georreferencia exacta, 0,000 m contra el listado del
   cliente). Le faltan `siting`, `asbuilt` y `scada`, que saldrán en gris hasta que existan.
 
+- **[Backtracking → Proyectos] El Panel es ya una app instalable (PWA), y toca vuestro ámbito.**
+  El usuario pidió *"cómo puedo hacer que sea una app toda mi plataforma de proyectos"*. Añadido
+  `manifest.webmanifest`, `sw.js`, `assets/icon-*.png` y, dentro de `index.html`, **tres bloques
+  nuevos y acotados** (no hemos tocado nada más): el `<head>` (link al manifest + metas de iOS), un
+  botón `#btn-inst` en `.bar-right`, y al final del `<body>` el registro del SW. CSS nuevo bajo el
+  comentario *"app instalable"*. Prueba: `node tests/test_pwa.js` (21 comprobaciones).
+  Dos decisiones que os afectan si maquetáis o publicáis:
+  1. **`scope: "/"`** en el manifest, para que los visores de `imoriana3.github.io/<repo>/` abran
+     *dentro* de la app instalada. Lo de `*.workers.dev` es **otro origen** y seguirá saliendo al
+     navegador: si algún día se quiere todo dentro, hay que servirlo bajo un mismo dominio.
+  2. **Publicar un cambio del armazón exige subir `CACHE` en `sw.js`** (`factiun-panel-v1` → `-v2`).
+     Si no, quien tenga la app instalada puede seguir viendo las páginas viejas de caché. El HTML va
+     a red primero, así que el riesgo real es bajo, pero la regla es esa.
+  El **offline solo alcanza a `/proyectos/`**: un service worker no puede tomar más ruta que la suya
+  en Pages. Si algún día montáis el repo `imoriana3.github.io` (raíz del dominio), moviendo ahí un
+  SW se cachearían también los visores. Queda dicho, no lo tocamos.
+
 ## Registro de cambios
 
 | fecha | sesión | cambio |
@@ -153,3 +170,4 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 | 2026-08-11 | Backtracking | Botón SCADA por planta (`scada.html?planta=…`), vista `scada` a `core`, y *Tracker SCADA · El Burgo* → *Agente y collector · PC de planta*, fuera de `PLANT_MODULES`. |
 | 2026-08-11 | Proyectos | Restauradas las seis tarjetas borradas por la #39. |
 | 2026-08-12 | Proyectos | Vista `layout2d` nueva, y `cobertura` pasa a ser la malla Zigbee en las seis plantas (`index.html?planta=`). Antes compartían botón. Ver la tabla de arriba. |
+| 2026-08-12 | Backtracking | El Panel pasa a ser **app instalable**: `manifest.webmanifest` (scope `/`), `sw.js`, iconos, botón *Instalar app* y aviso de versión nueva. `tests/test_pwa.js`. Ver Puntos abiertos. |
