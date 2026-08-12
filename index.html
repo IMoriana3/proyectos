@@ -848,42 +848,48 @@ const CARTERA = "https://factiun-cartera.imoriana3.workers.dev/";
 const PLANTS = [
   { name:"El Burgo I", code:"23003", loc:"Zaragoza · España", views:{
       siting:     SITE+"siting/?planta=burgo",
+      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=elburgo",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=elburgo",
-      cobertura:  SITE+"cobertura-zigbee/index.html",
+      cobertura:  SITE+"cobertura-zigbee/index.html?planta=elburgo",
       scada:      CARTERA+"scada.html?planta=el%20burgo%20i",
   }},
   { name:"Ayora", code:"24025", loc:"Valencia · España", views:{
       siting:     SITE+"siting/?planta=ayora",
+      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=ayora",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=ayora&cotas=levantamiento&bt=cons",
-      cobertura:  SITE+"cobertura-zigbee/plano.html?planta=ayora",
+      cobertura:  SITE+"cobertura-zigbee/index.html?planta=ayora",
       asbuilt:    SITE+"visores/asbuilt/?planta=ayora",
       scada:      CARTERA+"scada.html?planta=ayora",
   }},
   { name:"San José", code:"24019", loc:"Arequipa · Perú", views:{
       siting:     SITE+"siting/?planta=sanjose",
+      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=sanjose",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=sanjose&cotas=levantamiento&bt=cons",
-      cobertura:  SITE+"cobertura-zigbee/plano.html?planta=sanjose",
+      cobertura:  SITE+"cobertura-zigbee/index.html?planta=sanjose",
       asbuilt:    SITE+"visores/asbuilt/?planta=sanjose",
       scada:      CARTERA+"scada.html?planta=san%20jos%C3%A9",
   }},
   { name:"Fayón", code:"24007", loc:"Zaragoza · España", views:{
       siting:     SITE+"siting/?planta=fayon",
+      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=fayon",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=fayon",
-      cobertura:  SITE+"cobertura-zigbee/plano.html?planta=fayon",
+      cobertura:  SITE+"cobertura-zigbee/index.html?planta=fayon",
   }},
   /* Túnez no tiene NINGUNA vista todavía: no hay layout suyo en cobertura-zigbee ni escenario en
-     siting. Se deja `views` vacío a propósito — al ser todas `core:true` salen las cinco EN GRIS,
+     siting. Se deja `views` vacío a propósito — al ser casi todas `core:true` salen EN GRIS,
      que es el mecanismo del CONTRATO para que la carencia se vea en vez de desaparecer. Según se
      generen (topo3d/cobertura cuando haya tunez_layout.json) se van rellenando. */
   { name:"Túnez", code:"24021", loc:"El Hamma · Gabès · Túnez", views:{} },
   { name:"Bagnarelli", code:"24030", loc:"Lucera · Foggia · Italia", views:{
+      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=bagnarelli",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=bagnarelli",
-      cobertura:  SITE+"cobertura-zigbee/plano.html?planta=bagnarelli",
+      cobertura:  SITE+"cobertura-zigbee/index.html?planta=bagnarelli",
   }},
   { name:"Páramo", code:"25019", loc:"Villamañán · León · España", views:{
       siting:     SITE+"siting/?planta=paramo",
+      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=paramo",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=paramo",
-      cobertura:  SITE+"cobertura-zigbee/plano.html?planta=paramo",
+      cobertura:  SITE+"cobertura-zigbee/index.html?planta=paramo",
   }},
 ];
 /* Vistas de planta.
@@ -894,8 +900,15 @@ const PLANTS = [
    selector de dentro de la página. Cuatro botones en la tarjeta se hacían inmanejables
    en móvil, y el selector interno es el control que quedará al fusionar las escenas.
    "core" = capacidad que toda planta debería tener; sale en gris cuando falta. */
+/* "Layout 2D" y "Cobertura" son DOS cosas y hasta ahora compartían botón: `cobertura` abría la
+   malla Zigbee en El Burgo y el plano 2D en el resto, que no tiene nada que ver. Separadas:
+     Layout 2D  plano.html   el plano de la planta sobre el satélite (seguidores, NCUs, meteo,
+                             color eléctrico, pile reveal, inversores). Las seis con layout.
+     Cobertura  index.html   la malla Zigbee. Multiplanta desde el PR #349: la planta que aún no
+                             tenga histórico de enlaces abre igual, con su mapa, y lo dice. */
 const PLANT_VIEWS = [
   { key:"siting",     label:"Siting",            core:true  },
+  { key:"layout2d",   label:"Layout 2D",         core:true  },
   { key:"topo3d",     label:"3D",                core:true  },
   { key:"cobertura",  label:"Cobertura",         core:true  },
   { key:"asbuilt",    label:"As-built módulos",  core:false },
