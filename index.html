@@ -875,11 +875,13 @@ const PLANTS = [
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=fayon",
       cobertura:  SITE+"cobertura-zigbee/index.html?planta=fayon",
   }},
-  /* Túnez no tiene NINGUNA vista todavía: no hay layout suyo en cobertura-zigbee ni escenario en
-     siting. Se deja `views` vacío a propósito — al ser casi todas `core:true` salen EN GRIS,
-     que es el mecanismo del CONTRATO para que la carencia se vea en vez de desaparecer. Según se
-     generen (topo3d/cobertura cuando haya tunez_layout.json) se van rellenando. */
-  { name:"Túnez", code:"24021", loc:"El Hamma · Gabès · Túnez", views:{} },
+  /* Túnez ya tiene layout (IMPLENTATION_TOPOGRAPHE.dwg + su listado de coordenadas): 19 seguidores
+     2V14 bífilos, 1.064 módulos. Sigue sin escenario en siting, así que esa vista queda en gris. */
+  { name:"Túnez", code:"24021", loc:"El Hamma · Gabès · Túnez", views:{
+      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=tunez",
+      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=tunez",
+      cobertura:  SITE+"cobertura-zigbee/index.html?planta=tunez",
+  }},
   { name:"Bagnarelli", code:"24030", loc:"Lucera · Foggia · Italia", views:{
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=bagnarelli",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=bagnarelli",
