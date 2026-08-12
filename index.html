@@ -72,7 +72,7 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 
-.wrap{max-width:1600px;margin:0 auto;padding:0 22px}
+.wrap{max-width:min(2100px,94vw);margin:0 auto;padding:0 22px}
 
 /* ---------- HEADER / STATUS BAR ---------- */
 .bar{
@@ -161,7 +161,7 @@ body{
 .sort select:focus{border-color:var(--accent)}
 
 /* ---------- GRID ---------- */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;padding-bottom:40px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;padding-bottom:40px;align-items:start}
 
 .card{
   position:relative;background:linear-gradient(180deg,var(--panel),var(--panel-2));
@@ -212,18 +212,26 @@ body{
 .sec-title .tabla-link{order:9;font-family:var(--sans);font-size:.78rem;font-weight:600;letter-spacing:.02em;text-transform:none;
   color:var(--accent);text-decoration:none;border:1px solid #2a4d40;background:rgba(54,211,153,.10);padding:6px 12px;border-radius:9px;white-space:nowrap}
 .sec-title .tabla-link:hover{background:rgba(54,211,153,.18);border-color:var(--accent);color:#fff}
-.plants{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;margin-bottom:34px}
+.plants{display:grid;grid-template-columns:repeat(auto-fill,minmax(276px,1fr));gap:14px;margin-bottom:28px;align-items:start}
 .pcard{padding:17px 17px 16px}
-.pcard .phead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.pcard .phead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .pcard .name{margin:0 0 3px}
 /* El número de proyecto DELANTE y legible: es la clave por la que se ordenan las tarjetas y es
    como se nombra a la planta en la casa. Estaba en gris pequeño en la esquina derecha, donde no
    se leía. Sigue en monoespaciada, que es lo que hace que se escaneen en columna. */
-.pcode{font-family:var(--mono);font-size:.95rem;font-weight:700;color:var(--accent);letter-spacing:.02em;flex:none}
-.pcard .pdc{font-family:var(--mono);font-size:.78rem;font-weight:600;color:var(--muted);letter-spacing:.02em;white-space:nowrap}
-.pviews{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-.pviews .btn{font-size:.73rem}
-.pviews .btn.off::after{content:" · no disp.";opacity:.65;font-weight:400}
+.pcode{font-family:var(--mono);font-size:.88rem;font-weight:700;color:var(--accent);letter-spacing:0;flex:none}
+/* La potencia, con el mismo cuerpo pequeño que el resto y sin partir: si la cabecera se va a dos
+   líneas, esa tarjeta crece 33 px y rompe la altura uniforme de toda la fila. */
+.pcard .pdc{font-family:var(--mono);font-size:.72rem;font-weight:600;color:var(--muted);letter-spacing:0;white-space:nowrap}
+.pcard .name{font-size:1rem;white-space:nowrap}
+/* Rejilla de 3 columnas en vez de flujo libre: con seis vistas salen SIEMPRE dos filas, midan lo
+   que midan las etiquetas. Con flex-wrap, a unas plantas les cabían en dos y a otras no, y las
+   tarjetas de una misma fila salían de alturas distintas. */
+.pviews{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:12px}
+.pviews .btn{font-size:.72rem;padding:5px 6px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Sin sufijo: el " · no disp." doblaba el ancho del botón gris y recortado a " ·" quedaba un punto
+   colgando. El borde discontinuo y el color apagado ya dicen que no está, y el title lo explica. */
+.pviews .btn.off{opacity:.55}
 
 /* ---------- DETAIL (expanded) ---------- */
 .detail{border-top:1px solid var(--line-soft);padding:16px 18px 18px;background:var(--panel-2)}
@@ -924,7 +932,7 @@ const PLANT_VIEWS = [
   { key:"layout2d",   label:"Layout 2D",         core:true  },
   { key:"topo3d",     label:"3D",                core:true  },
   { key:"cobertura",  label:"Cobertura",         core:true  },
-  { key:"asbuilt",    label:"As-built módulos",  core:false },
+  { key:"asbuilt",    label:"As-built",          core:false },   // era "As-built módulos": el botón más largo, y es el que partía la fila
   { key:"scada",      label:"SCADA",             core:true  },   // toda planta en operación debería tener sala de control
 ];
 /* Módulos que YA viven en una planta (sección Plantas): no se repiten abajo en Herramientas */
@@ -1195,7 +1203,10 @@ function plantCardHTML(pl){
   const arrow='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 17 17 7M9 7h8v8"/></svg>';
   const btns = PLANT_VIEWS.map(v=>{
     const url = pl.views[v.key];
-    if(url) return `<a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">${v.label} ${arrow}</a>`;
+    /* Sin la flecha: repetida seis veces por tarjeta se comía ~36 px de cada fila, y era lo que
+       hacía que a unas plantas los botones les cupieran en dos filas y a otras no — de ahí que las
+       tarjetas salieran de alturas distintas. Que abre en otra pestaña ya lo dice el title. */
+    if(url) return `<a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener" title="${esc(v.label)} · se abre en otra pestaña">${v.label}</a>`;
     if(v.core) return `<span class="btn off" title="${esc(v.label)} no disponible para ${esc(pl.name)}">${v.label}</span>`;
     return "";
   }).join("");
