@@ -214,9 +214,12 @@ body{
 .sec-title .tabla-link:hover{background:rgba(54,211,153,.18);border-color:var(--accent);color:#fff}
 .plants{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;margin-bottom:34px}
 .pcard{padding:17px 17px 16px}
-.pcard .phead{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.pcard .phead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .pcard .name{margin:0 0 3px}
-.pcode{font-family:var(--mono);font-size:.74rem;color:var(--muted-2);letter-spacing:.04em;flex:none}
+/* El número de proyecto DELANTE y legible: es la clave por la que se ordenan las tarjetas y es
+   como se nombra a la planta en la casa. Estaba en gris pequeño en la esquina derecha, donde no
+   se leía. Sigue en monoespaciada, que es lo que hace que se escaneen en columna. */
+.pcode{font-family:var(--mono);font-size:.95rem;font-weight:700;color:var(--accent);letter-spacing:.02em;flex:none}
 .pcard .pdc{font-family:var(--mono);font-size:.78rem;font-weight:600;color:var(--muted);letter-spacing:.02em;white-space:nowrap}
 .pviews{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .pviews .btn{font-size:.73rem}
@@ -1197,7 +1200,7 @@ function plantCardHTML(pl){
     return "";
   }).join("");
   return `<article class="card pcard" style="--c:var(--demo)">
-    <div class="phead"><h3 class="name">${esc(pl.name)}<span class="pdc">${esc(potenciaDC(pl))}</span></h3><span class="pcode">${esc(pl.code)}</span></div>
+    <div class="phead"><span class="pcode">${esc(pl.code)}</span><h3 class="name">${esc(pl.name)}<span class="pdc">${esc(potenciaDC(pl))}</span></h3></div>
     <p class="obj">${esc(pl.loc)}</p>
     <div class="pviews">${btns}</div>
   </article>`;
