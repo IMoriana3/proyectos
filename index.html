@@ -217,6 +217,7 @@ body{
 .pcard .phead{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .pcard .name{margin:0 0 3px}
 .pcode{font-family:var(--mono);font-size:.74rem;color:var(--muted-2);letter-spacing:.04em;flex:none}
+.pcard .pdc{font-family:var(--mono);font-size:.78rem;font-weight:600;color:var(--muted);letter-spacing:.02em;white-space:nowrap}
 .pviews{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .pviews .btn{font-size:.73rem}
 .pviews .btn.off::after{content:" · no disp.";opacity:.65;font-weight:400}
@@ -846,14 +847,18 @@ const SITE = "https://imoriana3.github.io/";
 /* La Cartera y el SCADA no viven en GitHub Pages: van tras el login del worker */
 const CARTERA = "https://factiun-cartera.imoriana3.workers.dev/";
 const PLANTS = [
-  { name:"El Burgo I", code:"23003", loc:"Zaragoza · España", views:{
+  /* OJO con el número de El Burgo: aquí y en la documentación del SCADA es 23003, pero en la
+     Cartera técnica, en terreno.html y en plano.html es 24002. Los dos conviven en el repositorio
+     desde antes de esta sesión y no se ha tocado ninguno; lo que se hace es enlazarlos con
+     `codCartera` para que la potencia se encuentre. Alguien tiene que decir cuál es el bueno. */
+  { name:"El Burgo I", code:"23003", codCartera:"24002", pdc:13.95856, loc:"Zaragoza · España", views:{
       siting:     SITE+"siting/?planta=burgo",
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=elburgo",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=elburgo",
       cobertura:  SITE+"cobertura-zigbee/index.html?planta=elburgo",
       scada:      CARTERA+"scada.html?planta=el%20burgo%20i",
   }},
-  { name:"Ayora", code:"24025", loc:"Valencia · España", views:{
+  { name:"Ayora", code:"24025", pdc:52.52296, loc:"Valencia · España", views:{
       siting:     SITE+"siting/?planta=ayora",
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=ayora",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=ayora&cotas=levantamiento&bt=cons",
@@ -861,7 +866,7 @@ const PLANTS = [
       asbuilt:    SITE+"visores/asbuilt/?planta=ayora",
       scada:      CARTERA+"scada.html?planta=ayora",
   }},
-  { name:"San José", code:"24019", loc:"Arequipa · Perú", views:{
+  { name:"San José", code:"24019", pdc:177.984, loc:"Arequipa · Perú", views:{
       siting:     SITE+"siting/?planta=sanjose",
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=sanjose",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=sanjose&cotas=levantamiento&bt=cons",
@@ -869,7 +874,7 @@ const PLANTS = [
       asbuilt:    SITE+"visores/asbuilt/?planta=sanjose",
       scada:      CARTERA+"scada.html?planta=san%20jos%C3%A9",
   }},
-  { name:"Fayón", code:"24007", loc:"Zaragoza · España", views:{
+  { name:"Fayón", code:"24007", pdc:1.25664, loc:"Zaragoza · España", views:{
       siting:     SITE+"siting/?planta=fayon",
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=fayon",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=fayon",
@@ -877,19 +882,20 @@ const PLANTS = [
   }},
   /* Túnez ya tiene layout (IMPLENTATION_TOPOGRAPHE.dwg + su listado de coordenadas): 19 seguidores
      2V14 bífilos, 1.064 módulos. Sigue sin escenario en siting, así que esa vista queda en gris. */
-  { name:"Túnez", code:"24021", loc:"El Hamma · Gabès · Túnez", views:{
+  { name:"Túnez", code:"24021", pdc:0.7448, loc:"El Hamma · Gabès · Túnez", views:{
       siting:     SITE+"siting/?planta=tunez",
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=tunez",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=tunez",
       cobertura:  SITE+"cobertura-zigbee/index.html?planta=tunez",
   }},
-  { name:"Bagnarelli", code:"24030", loc:"Lucera · Foggia · Italia", views:{
+  { name:"Bagnarelli", code:"24030", pdc:0.92016, loc:"Lucera · Foggia · Italia", views:{
       siting:     SITE+"siting/?planta=bagnarelli",
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=bagnarelli",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=bagnarelli",
       cobertura:  SITE+"cobertura-zigbee/index.html?planta=bagnarelli",
   }},
-  { name:"Páramo", code:"25019", loc:"Villamañán · León · España", views:{
+  /* Páramo está a 0 en la cartera: aún no tiene la potencia. Sin dato no se pinta nada. */
+  { name:"Páramo", code:"25019", pdc:null, loc:"Villamañán · León · España", views:{
       siting:     SITE+"siting/?planta=paramo",
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=paramo",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=paramo",
@@ -1166,6 +1172,22 @@ function tick(){ const d=new Date(); const p=n=>String(n).padStart(2,"0"); docum
 tick(); setInterval(tick,1000);
 
 /* ---------- PLANTAS ---------- */
+/* POTENCIA DC junto al nombre.
+   El dato manda la Cartera técnica, que lo publica en `factiun_plantas` (mismo origen, localStorage
+   compartido). Si esa página no se ha abierto todavía en este navegador no hay nada que leer, así
+   que cada planta lleva además su `pdc` escrito aquí, copiado de la propia cartera: así la tarjeta
+   dice la potencia desde el primer momento y se pone al día sola en cuanto la cartera publique.
+   Páramo está a 0 en la cartera —no tiene aún el dato— y en ese caso no se pinta nada: un «0 MW»
+   sería peor que no decir nada. */
+const SPECS = (function(){ try{ return JSON.parse(localStorage.getItem('factiun_plantas')||'null')||{}; }catch(e){ return {}; } })();
+function potenciaDC(pl){
+  const viva = SPECS[String(pl.code)] || (pl.codCartera ? SPECS[String(pl.codCartera)] : null);
+  const v = (viva && viva.pdc != null && viva.pdc !== '') ? +viva.pdc : (pl.pdc != null ? +pl.pdc : null);
+  if (v == null || !isFinite(v) || v <= 0) return "";
+  /* Dos decimales hasta 100 MW y entero por encima. Redondear El Burgo a «14» escondía los 13,96
+     que la cartera sí tiene, y a esta escala esa décima es medio megavatio. */
+  return " · " + (v < 100 ? v.toFixed(2).replace(/\.?0+$/,'').replace('.',',') : String(Math.round(v))) + " MWdc";
+}
 function plantCardHTML(pl){
   const arrow='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 17 17 7M9 7h8v8"/></svg>';
   const btns = PLANT_VIEWS.map(v=>{
@@ -1175,13 +1197,16 @@ function plantCardHTML(pl){
     return "";
   }).join("");
   return `<article class="card pcard" style="--c:var(--demo)">
-    <div class="phead"><h3 class="name">${esc(pl.name)}</h3><span class="pcode">${esc(pl.code)}</span></div>
+    <div class="phead"><h3 class="name">${esc(pl.name)}<span class="pdc">${esc(potenciaDC(pl))}</span></h3><span class="pcode">${esc(pl.code)}</span></div>
     <p class="obj">${esc(pl.loc)}</p>
     <div class="pviews">${btns}</div>
   </article>`;
 }
+/* Ordenadas por NÚMERO DE PROYECTO, que es como se las nombra en la casa. El array se deja en su
+   orden histórico —tocarlo es donde se han perdido tarjetas dos veces— y se ordena una copia. */
+const PLANTS_ORD = PLANTS.slice().sort((a,b)=> (parseInt(a.code,10)||0) - (parseInt(b.code,10)||0));
 function renderPlants(){
-  const el=document.getElementById("plants"); if(el) el.innerHTML = PLANTS.map(plantCardHTML).join("");
+  const el=document.getElementById("plants"); if(el) el.innerHTML = PLANTS_ORD.map(plantCardHTML).join("");
   const c=document.getElementById("plants-cnt"); if(c) c.textContent = "· "+PLANTS.length;
 }
 
