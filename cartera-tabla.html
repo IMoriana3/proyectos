@@ -248,6 +248,9 @@ function publishSpecs(){
     DATA.forEach(function(r){ var cod=r.num; if(cod==null||String(cod).trim()==='')return;
       map[String(cod)]={cod:cod,nombre:r.proyecto||'',mods:firstInt(r.string),pitch:(r.pitch==null?'':String(r.pitch)),
         lat:(r.lat===''||r.lat==null)?null:num(r.lat),lon:(r.lon===''||r.lon==null)?null:num(r.lon),wmod:(r.wmod===''||r.wmod==null)?null:num(r.wmod),
+        /* pac/pdc no se publicaban, así que ninguna otra página podía decir la potencia de una
+           planta aunque la cartera la tuviera. El Panel las pinta ya junto al nombre. */
+        pac:num(r.pac),pdc:num(r.pdc),
         trk_total:num(r.trk_total),trk_bi:num(r.trk_bi),trk_mono:num(r.trk_mono),cantidad:num(r.cantidad),
         ncu_eth:num(r.ncu_eth),ncu_fo:num(r.ncu_fo),estado_pem:r.estado_pem||'',pais:r.pais||''}; });
     localStorage.setItem('factiun_plantas',JSON.stringify(map));
