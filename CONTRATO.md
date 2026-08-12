@@ -58,7 +58,19 @@ en las dos listas y en todas las plantas.
 `core:true` = capacidad que toda planta debería tener: si falta, sale **en gris** en vez de
 desaparecer. Eso es lo que hace visible una carencia; `core:false` la esconde del todo.
 
-Claves vigentes: `siting · topo3d · cobertura · asbuilt · scada`.
+Claves vigentes: `siting · layout2d · topo3d · cobertura · asbuilt · scada`.
+
+**`layout2d` y `cobertura` son DOS cosas** y hasta el 12-08 compartían botón bajo la clave
+`cobertura`, que abría la malla Zigbee en El Burgo y el plano 2D en las demás:
+
+| clave | página | qué es |
+|---|---|---|
+| `layout2d` | `cobertura-zigbee/plano.html?planta=` | el plano sobre el satélite: seguidores a su largo real, NCUs, meteo, color eléctrico, pile reveal, inversores |
+| `cobertura` | `cobertura-zigbee/index.html?planta=` | la malla Zigbee: enlaces con RSSI, SPOF, dominadores y máquina del tiempo |
+
+Las dos son **multiplanta** y las dos llevan `?planta=`. La planta que aún no tenga histórico de
+enlaces abre la cobertura igual, con su mapa, y dice qué le falta — así que **no hay que dejar
+`cobertura` vacía** en una planta que tenga layout: se vería en gris como si no existiera.
 
 ### `PLANT_MODULES` — qué NO se repite abajo
 Set de nombres de tarjeta que ya viven en la sección Plantas, para no duplicarlos en Herramientas:
@@ -140,3 +152,4 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 | 2026-08-11 | Backtracking | Creación del contrato. Restaurados `docs/ips.md` y `docs/tcu-toolbox.md`; Fayón con las claves de vista buenas. |
 | 2026-08-11 | Backtracking | Botón SCADA por planta (`scada.html?planta=…`), vista `scada` a `core`, y *Tracker SCADA · El Burgo* → *Agente y collector · PC de planta*, fuera de `PLANT_MODULES`. |
 | 2026-08-11 | Proyectos | Restauradas las seis tarjetas borradas por la #39. |
+| 2026-08-12 | Proyectos | Vista `layout2d` nueva, y `cobertura` pasa a ser la malla Zigbee en las seis plantas (`index.html?planta=`). Antes compartían botón. Ver la tabla de arriba. |
