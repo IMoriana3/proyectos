@@ -6,6 +6,17 @@
 <meta name="theme-color" content="#0B0F14">
 <link rel="icon" href="favicon.svg">
 <title>Panel de Proyectos — Factiun</title>
+
+<!-- App instalable (PWA). El manifest declara scope "/" para que, una vez
+     instalada, los visores que viven en otras rutas del mismo dominio
+     (imoriana3.github.io/<repo>/) se abran DENTRO de la app y no en el
+     navegador. Lo que está en workers.dev es otro origen: eso sí sale fuera. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Factiun">
+<meta name="mobile-web-app-capable" content="yes">
 <!-- sin fuentes de Google: offline. Se usan las del sistema (fallbacks de font-family) -->
 
 <!-- ============================================================= -->
@@ -346,6 +357,24 @@ body{
   .sort{margin-left:0}
 }
 
+/* ---- app instalable: botón de la barra y aviso de versión nueva ---- */
+.inst{display:none;align-items:center;gap:7px;font-family:var(--sans);font-size:.78rem;font-weight:600;
+  color:var(--text);background:var(--panel-hi);border:1px solid var(--line);border-radius:999px;
+  padding:7px 14px;cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s}
+.inst.on{display:inline-flex}
+.inst:hover{border-color:var(--live);color:var(--live)}
+.inst svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.instmsg{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:60;max-width:min(520px,92vw);
+  display:none;gap:14px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:14px 16px;box-shadow:0 18px 40px rgba(0,0,0,.55);font-size:.86rem;line-height:1.55;color:var(--muted)}
+.instmsg.on{display:flex}
+.instmsg strong{display:block;color:var(--text);font-family:var(--display);font-size:.95rem;margin-bottom:3px}
+.instmsg b{color:var(--text)}
+.instmsg button{font-family:var(--sans);font-size:.8rem;font-weight:600;color:var(--void);background:var(--live);
+  border:0;border-radius:8px;padding:8px 13px;cursor:pointer;flex:none}
+.instmsg .x{background:transparent;color:var(--muted-2);border:1px solid var(--line);padding:8px 11px}
+@media (max-width:560px){ .inst span{display:none} .inst{padding:7px 10px} }
+
 @media (prefers-reduced-motion:no-preference){
   .card.s-live .led{animation:breathe 2.4s ease-in-out infinite}
   .online{animation:breathe 2.4s ease-in-out infinite}
@@ -374,6 +403,9 @@ body{
     </div>
     <div class="bar-right">
       <div class="gauges" id="gauges"></div>
+      <button class="inst" id="btn-inst" type="button" title="Instalar el panel como aplicación">
+        <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg><span>Instalar app</span>
+      </button>
       <div class="clock"><small>Hora local</small><span id="clock">--:--:--</span></div>
     </div>
   </div>
@@ -1229,6 +1261,73 @@ renderGauges();
 renderChips();
 renderGrid();
 refrescarReleases();   // no bloquea el pintado: si tarda o falla, la ficha ya esta puesta
+</script>
+
+<!-- ============================ APP INSTALABLE ============================
+     El panel se puede instalar (escritorio y movil) y arranca sin red gracias
+     al service worker. Tres cosas viven aqui:
+       1) registro del SW  2) boton "Instalar app"  3) aviso de version nueva.
+     Nada de esto es imprescindible para el panel: si el navegador no lo
+     soporta (o se sirve por file://) simplemente no aparece.               -->
+<div class="instmsg" id="instmsg"><div id="instmsg-txt"></div><button id="instmsg-ok" type="button">Vale</button><button class="x" id="instmsg-x" type="button">Cerrar</button></div>
+<script>
+(function(){
+  var btn=document.getElementById("btn-inst"), caja=document.getElementById("instmsg"),
+      txt=document.getElementById("instmsg-txt"), ok=document.getElementById("instmsg-ok"),
+      cerrar=document.getElementById("instmsg-x"), prompt=null, accion=null;
+
+  function aviso(html,etiqueta,fn){ txt.innerHTML=html; accion=fn||null;
+    ok.textContent=etiqueta||"Vale"; ok.style.display=fn?"":"none"; caja.classList.add("on"); }
+  ok.onclick=function(){ var f=accion; caja.classList.remove("on"); accion=null; if(f)f(); };
+  cerrar.onclick=function(){ caja.classList.remove("on"); accion=null; };
+
+  var instalada = matchMedia("(display-mode: standalone)").matches ||
+                  matchMedia("(display-mode: window-controls-overlay)").matches ||
+                  navigator.standalone===true;
+
+  // ---- 1) service worker -------------------------------------------------
+  if("serviceWorker" in navigator && (location.protocol==="https:"||location.hostname==="localhost"||location.hostname==="127.0.0.1")){
+    window.addEventListener("load",function(){
+      navigator.serviceWorker.register("sw.js").then(function(reg){
+        // Version nueva publicada: no se cuela sola, se avisa y decide el usuario.
+        reg.addEventListener("updatefound",function(){
+          var w=reg.installing; if(!w)return;
+          w.addEventListener("statechange",function(){
+            if(w.state==="installed"&&navigator.serviceWorker.controller)
+              aviso("<strong>Hay una versión nueva del panel</strong>Se aplica al recargar.","Actualizar",
+                    function(){ w.postMessage("skip-waiting"); });
+          });
+        });
+        setTimeout(function(){ reg.update().catch(function(){}); },3000);
+      }).catch(function(){ /* sin SW el panel funciona igual, solo que sin offline */ });
+      // Recargar SOLO cuando releva a un SW anterior (el usuario le ha dado a
+      // "Actualizar"). En la primera visita el SW toma el control por primera
+      // vez y eso NO es motivo para recargarle la página en las narices.
+      var habia=!!navigator.serviceWorker.controller, recargando=false;
+      navigator.serviceWorker.addEventListener("controllerchange",function(){
+        if(!habia||recargando)return; recargando=true; location.reload();
+      });
+    });
+  }
+
+  // ---- 2) boton instalar -------------------------------------------------
+  if(!btn) return;
+  var iOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+
+  window.addEventListener("beforeinstallprompt",function(e){
+    e.preventDefault(); prompt=e; if(!instalada) btn.classList.add("on");
+  });
+  window.addEventListener("appinstalled",function(){ btn.classList.remove("on"); prompt=null; });
+
+  btn.onclick=function(){
+    if(prompt){ var p=prompt; prompt=null; btn.classList.remove("on"); p.prompt(); return; }
+    aviso(iOS
+      ? "<strong>Instalar en iPhone / iPad</strong>Safari: botón <b>Compartir</b> → <b>Añadir a pantalla de inicio</b>."
+      : "<strong>Instalar el panel</strong>En Chrome/Edge: menú <b>⋮</b> → <b>Instalar</b> (o el icono de instalar en la barra de direcciones).");
+  };
+  // Safari iOS no lanza beforeinstallprompt: el boton se ensena igual con las instrucciones.
+  if(iOS && !instalada) btn.classList.add("on");
+})();
 </script>
 </body>
 </html>
