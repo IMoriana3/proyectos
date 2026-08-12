@@ -837,6 +837,31 @@ const PROJECTS = [
     ]
   },
   {
+    name: "Importar logs de NCU",
+    status: "live",
+    objetivo: "Meter al SCADA los CSV diarios que graba cada NCU en su disco: se arrastran los ficheros y se suben ya destilados — series al paso que se elija, eventos a resolución completa (movimientos del motor, cambios de estado, cortes) y resumen del día. 4,7 MB de CSV quedan en 177 KB.",
+    stack: "HTML · Supabase (tabla telemetria)",
+    url: "https://factiun-cartera.imoriana3.workers.dev/importar-logs.html",   // interno · mismo login que la cartera
+    repo: "https://github.com/imoriana3/factiun-cartera",     // privado
+    updated: "2026-08-12",
+    version: "",
+    docId: "",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Los ficheros se bajan HOY A MANO del webserver de cada NCU. El nombre manda: NCU2_TCU_001_20260812.csv.",
+      "El paso de submuestreo se elige por clase de equipo (60 s por defecto). La página dice lo que ocuparía la planta entera antes de subir nada.",
+      "Se ve en el SCADA, pestaña Telemetría: tabla por días, viento, cobertura del enlace y las curvas de cada equipo."
+    ],
+    pendientes: [
+      { done:false, text:"Bajar los CSV sin ir NCU por NCU: ruta en el agente del PC de planta (pedido a Toolbox en el CONTRATO del repo scada)." },
+      { done:false, text:"Fijar la frecuencia definitiva de cada variable con datos de varios días." }
+    ],
+    historial: [
+      { date:"2026-08-12", ver:"", note:"Primera versión, probada con la NCU2 de El Burgo (73.000 filas de un día)." }
+    ]
+  },
+  {
     name: "Seguimiento PEM",
     status: "live",
     objetivo: "El cuaderno de puesta en marcha por planta: diagnósticos de la TCU Toolbox, comisionado, inventarios y auditorías de campo, con diff contra la visita anterior, plano de planta y panel de alertas del agente.",
