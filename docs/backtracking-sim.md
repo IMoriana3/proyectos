@@ -17,6 +17,9 @@ night-latch, y el POA no es energía AC. Para números de proyecto: notebook §0
 que ejecutan la ruta oficial del core. La regla de la casa aplica: toda simplificación viaja
 **declarada** en la propia página.
 
+> **Justificación óptico-física completa** (régimen de validez, exactitud de la oclusión, penumbra
+> acotada, radiometría, validación): [`backtracking-justificacion-optica.md`](backtracking-justificacion-optica.md)
+
 ## De dónde sale cada fórmula
 
 Nada reinventado: cada pieza espeja una referencia concreta, con su misma semántica.
