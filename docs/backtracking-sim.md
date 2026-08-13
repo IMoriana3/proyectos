@@ -34,6 +34,7 @@ Nada reinventado: cada pieza espeja una referencia concreta, con su misma semán
 | true-3D | `_bt3d_pair_max_magnitude` (bisección 36 iteraciones, borde más alto) + el pipeline de `compute_bt_angles_3d` | margen 0,5° · suelo en la baseline pvlib SOLO donde ella es 3D-safe · deferral EXACTO a baseline con sol rasante (zen ≥ 82°) · **guard de degeneración 2.5D** (|tilt N-S| ≤ 0,5° ⇒ resultado = baseline) |
 | Residual de tangencia | `bt3d_tangent_residual_mm` | mm: >0 hueco · ≈0 tangente · <0 auto-sombra 3D. **El árbitro geométrico**, visible en el HUD |
 | energy-optimal | `compute_bt_angles_energy_optimal` (whitepaper **PVH Backtracking 3D**, «Deeptrack») | θ_c(f)=θ_bt+f·(θ_full−θ_bt), f∈{0,¼,½,¾,1}, MISMA f para todas las filas, argmax del POA de planta **neto del Martinez**; f=0 primero ⇒ el empate lo gana el conservador ⇒ nunca rinde menos que pairwise bajo el mismo evaluador |
+| óptimo libre | extensión propia (no está en el core) | cada **unidad de accionamiento** con SU fracción f_g ∈ rejilla de 9 sobre pairwise→astro; **ascenso coordinado** con evaluación local (filas propias + vecinas) y barridos alternos; arranca en la mejor f común ⇒ **nunca rinde menos que energy-optimal**; interpolar juegos con θ común conserva el θ común ⇒ ejecutable por los motores |
 | Cielo claro | **Ineichen-Perrin** (`pvlib.clearsky.ineichen`) + Kasten-Young 1989 | turbidez Linke configurable (slider 2–7) |
 | Transposición | **Perez 1990** (`allsitescomposite1990`, la misma tabla que usa el core en `compute_bt3d_poa_per_row`) + albedo isotrópico | |
 | Agregación de planta | `compute_bt3d_poa_per_row`: **media del POA por fila** | POA(θ media) ≠ media de POA(θ_r) en terreno irregular — hay un test que exige la agregación correcta |
@@ -50,6 +51,7 @@ Nada reinventado: cada pieza espeja una referencia concreta, con su misma semán
 | **Energy-optimal** | tolera sombra cuando apuntar mejor la paga (argmax POA neto) | en las ventanas de backtracking; fuera de ellas coincide con pairwise |
 | **BT2D plano** | ignora el relieve (pvlib sin pendiente ni tilt), evaluado sobre el terreno real — `bt_audit.theta_bt2d` | un tracker sin configurar: exacto en llano, **sombrea en pendiente** |
 | **Min ground light** | sin sombra + mínima luz al suelo — `compute_bt_angles_min_ground_light` | agrivoltaica inversa: ≈pairwise + décimas por los bordes |
+| **Óptimo libre** | cada accionamiento con su fracción — ascenso coordinado con vista de planta (NCU) | la que responde a «tenemos infinidad de soluciones»: 427 grados de libertad en Ayora; +1,03 % vs pairwise (misma-f daba +0,71 %, techo +0,77 %) |
 
 En terreno **uniforme** global = row = pairwise exactamente (degeneración del core, testeada).
 
@@ -259,6 +261,7 @@ pasan, no te fíes de los números.
 - true-3D: residual ≥ −1 mm (criterio del core) y nunca más plano que una baseline 3D-safe
 - true-3D con tilt N-S 0 ⇒ **exactamente** la baseline pvlib (guard 2.5D)
 - energy-optimal ≥ pairwise bajo el mismo evaluador
+- óptimo libre ≥ energy-optimal y ≥ pairwise (mono/irregular y bifila) — arranca en la mejor f común y solo mejora
 - BT2D plano: = pairwise en llano y SOMBREA en pendiente (evaluado sobre el terreno real)
 - min_ground_light: sin sombra, nunca más plano que pairwise, y no más luz al suelo
 - solape axial: emisor corto delante del largo ⇒ media sombra; sol paralelo al eje ⇒ cobertura cero
@@ -310,6 +313,11 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-13 · v1.6** — **Óptimo libre (NCU)**: novena política, cada unidad de accionamiento con su
+  propia fracción de backtracking por ascenso coordinado (427 grados de libertad en Ayora). En la
+  planta real: +1,03 % vs pairwise frente al +0,71 % del energy-optimal de misma-f (techo de esa
+  familia: +0,77 % con 33 candidatos). Verificación del muestreo anual: 365 días vs 12 representativos
+  difieren ≤ 0,03 pp en los Δ% de todas las políticas. QA 29.
 - **2026-08-13 · v1.5** — plantas reales por bloques con forma real (vanos y pendientes por solape),
   bifila alineada (eje perpendicular), arquitectura TCU/NCU en el panel (chips + filtro) y su sección
   de doc, cámara con reencuadre, residual filtrado a parejas que interactúan. QA 28.
