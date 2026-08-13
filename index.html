@@ -948,10 +948,13 @@ const SITE = "https://imoriana3.github.io/";
 /* La Cartera y el SCADA no viven en GitHub Pages: van tras el login del worker */
 const CARTERA = "https://factiun-cartera.imoriana3.workers.dev/";
 const PLANTS = [
-  /* OJO con el número de El Burgo: aquí y en la documentación del SCADA es 23003, pero en la
-     Cartera técnica, en terreno.html y en plano.html es 24002. Los dos conviven en el repositorio
-     desde antes de esta sesión y no se ha tocado ninguno; lo que se hace es enlazarlos con
-     `codCartera` para que la potencia se encuentre. Alguien tiene que decir cuál es el bueno. */
+  /* El Burgo tiene DOS números y ninguno es una errata: 23003 es el del PROYECTO —el del DWG
+     (XG23003EL_BURGO_Layout_proyecto_v05C) y el del Excel de siting— y 24002 es el de la hoja de
+     cartera. DECIDIDO (2026-08-13): manda el DWG. Se rotula `code` y `codCartera` se queda solo
+     como clave para encontrar su ficha en la cartera (potencias, lat/lon).
+     La equivalencia vive en UN sitio, `cartera-tabla.html` (mapa NPROY), y se reparte a todas las
+     páginas como `nproy` dentro de `factiun_plantas`. Aquí va explícita porque este registro se
+     lee sin la cartera delante. */
   { name:"El Burgo I", code:"23003", codCartera:"24002", pdc:13.95856, loc:"Zaragoza · España", views:{
       siting:     SITE+"siting/?planta=burgo",
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=elburgo",
