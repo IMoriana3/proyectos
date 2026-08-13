@@ -243,10 +243,22 @@ function save(){ try{localStorage.setItem(LSK,JSON.stringify(DATA)); publishSpec
    (3D cobertura, etc.) lean de aquí los módulos/string, trackers, pitch… Sin servidor,
    sin red: imoriana3.github.io es un único origen, así que el localStorage es común. */
 function firstInt(v){var m=String(v==null?'':v).match(/\d+/);return m?parseInt(m[0],10):null;}
+
+/* Nº DE PROYECTO vs Nº DE CARTERA. No son lo mismo y El Burgo lo demuestra: en el DWG
+   (XG23003EL_BURGO_Layout_proyecto_v05C) y en el Excel de siting (Template Burgo I_01) es 23003,
+   y en esta hoja es 24002. Los dos son correctos en su fuente; los de cartera van con año+secuencia
+   y el 23003 es de 2023.
+   DECIDIDO (2026-08-13): manda el DWG. El número que se ROTULA es el de proyecto; el de cartera se
+   queda SOLO como clave de esta hoja (es la que da lat/lon, potencias y demás fichas).
+   Este mapa es el ÚNICO sitio donde vive la equivalencia: publishSpecs() lo reparte como `nproy`
+   dentro de `factiun_plantas`, así que las demás páginas no tienen que repetirlo ni saberlo.
+   Sin entrada aquí, nproy = el propio nº de cartera, que es el caso de todas las demás plantas. */
+const NPROY={'24002':'23003'};
+
 function publishSpecs(){
   try{ var map={};
     DATA.forEach(function(r){ var cod=r.num; if(cod==null||String(cod).trim()==='')return;
-      map[String(cod)]={cod:cod,nombre:r.proyecto||'',mods:firstInt(r.string),pitch:(r.pitch==null?'':String(r.pitch)),
+      map[String(cod)]={cod:cod,nproy:(NPROY[String(cod)]||String(cod)),nombre:r.proyecto||'',mods:firstInt(r.string),pitch:(r.pitch==null?'':String(r.pitch)),
         lat:(r.lat===''||r.lat==null)?null:num(r.lat),lon:(r.lon===''||r.lon==null)?null:num(r.lon),wmod:(r.wmod===''||r.wmod==null)?null:num(r.wmod),
         /* pac/pdc no se publicaban, así que ninguna otra página podía decir la potencia de una
            planta aunque la cartera la tuviera. El Panel las pinta ya junto al nombre. */
