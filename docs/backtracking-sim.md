@@ -313,6 +313,10 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-13 · v1.7** — **ámbito por NCU**: en plantas reales se elige simular la planta entera
+  (por bloques) o el parque de UNA NCU (topología NCU→TCU de `<planta>_layout.json`, orden 1:1 con
+  las cotas, verificado en test; Ayora 16 · San José 21; frontera = bordes, declarado). Encuadre por
+  defecto de plantas «cinta» sobre la banda con más mesas. QA 30.
 - **2026-08-13 · v1.6** — **Óptimo libre (NCU)**: novena política, cada unidad de accionamiento con su
   propia fracción de backtracking por ascenso coordinado (427 grados de libertad en Ayora). En la
   planta real: +1,03 % vs pairwise frente al +0,71 % del energy-optimal de misma-f (techo de esa
