@@ -313,6 +313,10 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-13 · v1.7.1** — bielas bifila solo entre vigas enfrentadas (≤ 1,5 m de desalineación,
+  ≤ 9 m — fuera las diagonales imposibles del render) y **velocidad real del actuador**: el día se
+  simula con la consigna limitada a 0,17 °/s (rampas reales en amanecer/ocaso y cambios de f; en el
+  año a paso 20 min no muerde, omitido y declarado). QA 31.
 - **2026-08-13 · v1.7** — **ámbito por NCU**: en plantas reales se elige simular la planta entera
   (por bloques) o el parque de UNA NCU (topología NCU→TCU de `<planta>_layout.json`, orden 1:1 con
   las cotas, verificado en test; Ayora 16 · San José 21; frontera = bordes, declarado). Encuadre por
