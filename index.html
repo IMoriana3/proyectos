@@ -505,6 +505,33 @@ const PROJECTS = [
     ]
   },
   {
+    name: "Simulador de Backtracking",
+    status: "live",
+    objetivo: "Espejo JS del motor BT3D de SolarGPT (tracker3d.py) para comparar políticas de backtracking sobre terreno irregular: astronómico, global, row, pairwise, true-3D (bisección con residual de tangencia) y energy-optimal (Deeptrack). Corte transversal animado con sombras reales, curvas θ(t), POA por política (Ineichen + Perez + Martinez), tabla del día y estimación anual. Offline, con QA integrada contra ray-cast bruto (17 comprobaciones, también en Node).",
+    stack: "HTML offline · Canvas · pvlib singleaxis (A&M 2020) portado a JS",
+    url: "https://imoriana3.github.io/cobertura-zigbee/backtracking.html",
+    repo: "https://github.com/imoriana3/cobertura-zigbee",
+    updated: "2026-08-13",
+    version: "v1.0",
+    docId: "backtracking-sim",
+    docUrl: "",
+    uso: [
+      "Elige planta (o lat/lon), fecha y geometría; el GCR es derivado (ancho/pitch), como en el core.",
+      "Dibuja el terreno: preset (pendiente, ondulado, valle, aleatorio con semilla) o arrastra los postes en la escena. Pendiente positiva = cae hacia la derecha (convención pvlib).",
+      "Activa políticas y compáralas: slider de hora o ▶ para animar el día; el HUD da θ, sombra, POA y el residual de tangencia (mm) de la fila elegida.",
+      "«Calcular año» estima el POA anual por política (12 días representativos, cielo claro) con la envolvente de mercado del core para la ganancia del energy-optimal.",
+      "«Verificar contra ray-cast bruto» corre la QA de la física en el navegador; en repo: node tools/test_backtracking_sim.mjs."
+    ],
+    pendientes: [
+      { done:false, text:"Cargar pendientes reales por tracker desde config_tcu_sunner_*.csv (Ayora / San José)" },
+      { done:false, text:"Política min_ground_light (agrivoltaica) — está en el core, sin portar" },
+      { done:false, text:"Export CSV de θ(t) por política para la TCU Toolbox" }
+    ],
+    historial: [
+      { date:"2026-08-13", ver:"v1.0", note:"Primera versión: 6 políticas del core, terreno editable, escena+curvas+tablas, QA 17/17 en Node y navegador." }
+    ]
+  },
+  {
     name: "Nuevo Siting",
     status: "live",
     objetivo: "Crea el siting de comunicaciones de una planta nueva: sube los seguidores (CSV/Excel, plantilla incluida) y autoubica NCUs, RSU y gateways.",
