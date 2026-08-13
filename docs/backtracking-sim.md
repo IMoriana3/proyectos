@@ -58,12 +58,52 @@ En terreno **uniforme** global = row = pairwise exactamente (degeneración del c
 - Cotas por fila ↔ pendientes por pareja: `pairsFromElev`/`elevFromPairs`, ida y vuelta exacta (testeado).
 - El **GCR es derivado** (= ancho/pitch), campo de solo lectura — regla del core (§03.T0): no es un input.
 
-## Terreno
+## Terreno — 3D de verdad: este-oeste Y norte-sur
 
-Presets (llano · pendiente constante · ondulado · valle · cresta · aleatorio con semilla reproducible,
-mulberry32) **y edición directa: arrastra el poste de cualquier fila** en la escena. Las pendientes se
-recalculan al vuelo y se acotan a ±30° (más no lo monta ningún tracker). El tilt N-S del eje es global
-(input aparte) y es lo que activa la ventaja del true-3D.
+**Transversal (E-O)**: presets (llano · pendiente constante · ondulado · valle · cresta · aleatorio con
+semilla reproducible, mulberry32) **y edición directa: arrastra el poste de cualquier fila** en la
+escena. Las pendientes se recalculan al vuelo y se acotan a ±30° (más no lo monta ningún tracker).
+
+**Longitudinal (N-S)**: perfil de **tilt del eje POR FILA** — constante · quebrado (dos aguas) ·
+senoidal · aleatorio — con su valor/amplitud. El perfil es derivado siempre de (preset, valor, nº
+filas): no hay estado que se pueda desfasar. La pareja toma la **media de sus dos filas** (el inverso
+exacto de la regla del core en `compute_bt_angles_rowwise`); cada fila conserva su tilt local para su
+orientación y su POA. El tilt N-S es lo que activa la ventaja del true-3D.
+
+## Accionamientos: monofila · bifila rígida · bifila quebrada
+
+Nomenclatura de la casa (CONTRATO de `scada`): **bifila = UN motor mueve DOS filas unidas por el eje de
+transmisión**. El selector cambia la mecánica y el backtracking lo respeta:
+
+| Accionamiento | Motores | θ | Tilt N-S |
+|---|---|---|---|
+| **Monofila** | 1 por fila | independiente por fila | local de cada fila |
+| **Bifila rígida** | 1 por 2 filas | común al grupo | **medio del grupo** — un tubo de transmisión recto no se dobla; en terreno N-S quebrado los paneles quedan desalineados del terreno y el POA lo enseña |
+| **Bifila quebrada** | 1 por 2 filas | común al grupo | **local de cada fila** — el cardan transmite el giro y deja que cada fila siga su terreno |
+
+Con nº impar de filas la última va con motor propio (unidad completa, regla del layout). La escena
+dibuja la transmisión entre los postes del grupo, el motor (cuadrado ámbar) y los cardanes (puntos) en
+la quebrada; el pill de la geometría dice los motores (= `n_motors`, el SSOT de la casa).
+
+**El backtracking de una bifila se resuelve a nivel de ACCIONAMIENTO, no de fila** — y esto lo descubrió
+la propia QA: el min(|θ|) del grupo NO basta. Aplanar una fila mueve su borde hacia el vecino y ensancha
+su perfil, así que rotaciones desiguales pueden sombrear aunque ambas estén por debajo de su ángulo
+pairwise. Y a sol rasante la tangencia vive en **θ ≈ pendiente del par (con signo)** — pvlib alinea el
+panel al plano del terreno — no en θ=0: aplanar hacia cero puede EMPEORAR. Por eso `driveCoupleSafe`:
+
+1. acopla el grupo al min(|θ|) (la regla del acoplado interior del core);
+2. mientras algún par sombree, busca para el grupo EMISOR el ángulo sin sombra **en todo el rango
+   firmado**, eligiendo el más cercano al actual (mínima distorsión de energía);
+3. lo que ni así se evita es **IRREDUCIBLE por el accionamiento** (un motor no puede alinear dos filas a
+   dos pendientes distintas a sol rasante): el residuo se deja a la vista y el Martinez lo cobra — no se
+   maquilla. Es la misma exclusión conceptual que la máscara de reducibilidad del core
+   (`_bt3d_active_mask`).
+
+El refinado usa el criterio de cada política: **pairwise** la tangencia geométrica 2.5D; **true-3D** su
+residual de tangencia 3D (−1 mm, el criterio del core). `astro` y `row` toleran sombra por diseño
+(min(|θ|) simple); `global` ya es un único ángulo. En `energy-optimal` los DOS extremos (pairwise
+acoplado y astro acoplado) llevan el θ común antes de interpolar, así toda candidata es físicamente
+ejecutable por los motores.
 
 ## Supuestos DECLARADOS (los mismos avisos que da la página)
 
@@ -83,7 +123,7 @@ recalculan al vuelo y se acotan a ±30° (más no lo monta ningún tracker). El 
   igual o menor. La página **avisa, nunca corrige**: >8% o ganancia grande en llano = sospecha de
   evaluador, no ventaja. Medido en esta página: llano canónico ≈ **+1,1%** anual (coherente).
 
-## QA — 17 comprobaciones, dos superficies
+## QA — 20 comprobaciones, dos superficies
 
 `node tools/test_backtracking_sim.mjs` (repo `cobertura-zigbee`) extrae el bloque `FÍSICA PURA` del HTML
 y lo ejecuta en Node; el botón de la página corre la **misma** `runPhysicsQA()`. Si tocas la física y no
@@ -96,6 +136,10 @@ pasan, no te fíes de los números.
 - true-3D: residual ≥ −1 mm (criterio del core) y nunca más plano que una baseline 3D-safe
 - true-3D con tilt N-S 0 ⇒ **exactamente** la baseline pvlib (guard 2.5D)
 - energy-optimal ≥ pairwise bajo el mismo evaluador
+- bifila y quebrada: θ COMÚN por grupo y pairwise acoplado sin sombra en N-S quebrado + E-O irregular
+  (hasta zen 80° — más rasante puede ser irreducible, ver Accionamientos)
+- accionamientos degeneran en terreno uniforme: monofila = bifila = quebrada exactos
+- rígida = tilt N-S medio por grupo · quebrada lo conserva · nº de motores correcto (impar incluido)
 - Martinez: escalones exactos, umbral anti-polvo, saturación
 - Ineichen en rango (mediodía verano España), noche a cero, GHI ≡ DNI·cosZ + DHI
 - Perez: β=0 devuelve exactamente la DHI
@@ -118,5 +162,9 @@ pasan, no te fíes de los números.
 
 ## Historial
 
+- **2026-08-13 · v1.1** — 3D N-S + E-O completo y accionamientos: perfil de tilt N-S por fila
+  (constante/quebrado/senoidal/aleatorio), monofila · bifila rígida · bifila quebrada con backtracking
+  a nivel de accionamiento (`driveCoupleSafe`, residuo irreducible a la vista), transmisión/motores/
+  cardanes en la escena, tilt N-S por fila en el HUD. QA 20 comprobaciones.
 - **2026-08-13 · v1.0** — primera versión: 6 políticas, terreno editable, escena + curvas + tablas,
   QA 17/17 en Node y navegador, envolvente de mercado en la tabla anual.
