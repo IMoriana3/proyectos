@@ -45,8 +45,24 @@ Nada reinventado: cada pieza espeja una referencia concreta, con su misma semán
 | **Pairwise** | por pareja; filas interiores adoptan **min(\|θ\|)** de sus dos parejas — `compute_bt_angles` | **sombra cero garantizada** (la canónica; hay un test que lo exige) |
 | **True-3D** | bisección 3D plena (azimut + tilt N-S + pendiente E-O) | solo gana con tilt N-S ≠ 0; con tilt 0 **ES** la baseline (guard 2.5D) |
 | **Energy-optimal** | tolera sombra cuando apuntar mejor la paga (argmax POA neto) | en las ventanas de backtracking; fuera de ellas coincide con pairwise |
+| **BT2D plano** | ignora el relieve (pvlib sin pendiente ni tilt), evaluado sobre el terreno real — `bt_audit.theta_bt2d` | un tracker sin configurar: exacto en llano, **sombrea en pendiente** |
+| **Min ground light** | sin sombra + mínima luz al suelo — `compute_bt_angles_min_ground_light` | agrivoltaica inversa: ≈pairwise + décimas por los bordes |
 
 En terreno **uniforme** global = row = pairwise exactamente (degeneración del core, testeada).
+
+### Inventario contra el notebook (¿falta alguna?)
+
+Contraste hecho contra el repo SolarGPT (2026-08-13):
+
+| Dónde vive en el core | Opciones | En el simulador |
+|---|---|---|
+| Dispatcher oficial `bt3d_policy` (notebook §03.T2 / Streamlit pág. 9) | pairwise · global · row · energy_optimal (alias deeptrack) | ✅ las cuatro |
+| Juez neutral `bt_audit` / `control_compare` (motores de ángulo) | true_tracking · BT2D · BT25D · BT3D | ✅ astronómico · BT2D plano · (BT25D ≡ pairwise/global/row) · true-3D |
+| Modos extra de `tracker3d.py` | `min_ground_light` · touching `geometric_edge_tangent` · `legacy_min_ground_light` (deprecated) | ✅ min ground light · ✅ touching ≡ true-3D (mismo motor) · ✖ deprecated, a propósito |
+| Capas de CONTROL (no son BT) | política de difusa (α continuous), wind/granizo/nieve stow, night-latch, deadband/slew, TCU | ✖ fuera de alcance, declarado (esto simula el backtracking, no el TCU) |
+
+Conclusión: **no falta ninguna política de backtracking**; lo único no portado es el modo legacy
+deprecado y las capas de control, que son otra cosa.
 
 ## Convenciones de signos (las trampas de siempre)
 
@@ -73,9 +89,13 @@ Reglas claras:
   del motor (`shadeRows` + Martinez), nunca del render.
 - El corte 2D sigue ahí como pestaña **«Corte 2D · editor»**: es donde se arrastran los postes.
 - Si THREE o WebGL fallan, la página **degrada sola al corte 2D** (patrón de la casa; testeado).
-- No usa `seguidor.js` (el modelo mecánico de mesa): el simulador es **paramétrico** (ancho/pitch
-  libres, filas abstractas del modelo de fila infinita) y el modelo fija la geometría de mesa real.
-  Si algún día se quiere la mesa de verdad, `Seguidor.instancePlan` está en este mismo repo.
+- Desde v1.3 la escena usa el **modelo real del seguidor** (`seguidor.js`, la fuente única que
+  comparten el gemelo y Cobertura 3D): cada tramo de la implantación es una fila entera construida con
+  `Seguidor.buildBeam` — en bifila la línea motora lleva la viga `west` (motor + TCU) y su pareja la
+  viga **gemela** (`west:false`, accionada por el eje de transmisión, la semántica exacta del modelo).
+  Los tramos cortos usan el tamaño **medio** real de catálogo. `setModsPerStr` ajusta el largo por
+  línea y se restaura al canónico (28) al terminar. Flecha de **Norte** en escena: con azimut de eje
+  ≠ 0 la planta se ve girada. Si el modelo no carga, degrada a cajas paramétricas y, sin WebGL, al 2D.
 
 ## Terreno — 3D de verdad: este-oeste Y norte-sur
 
@@ -88,6 +108,19 @@ senoidal · aleatorio — con su valor/amplitud. El perfil es derivado siempre d
 filas): no hay estado que se pueda desfasar. La pareja toma la **media de sus dos filas** (el inverso
 exacto de la regla del core en `compute_bt_angles_rowwise`); cada fila conserva su tilt local para su
 orientación y su POA. El tilt N-S es lo que activa la ventaja del true-3D.
+
+## Implantación a lo largo del eje (los mil casos reales)
+
+Cada línea puede llevar **varios trackers al norte**: presets alineadas · tresbolillo · **cortos
+delante de largos** (la fila «media» ≈ 0,504·larga, el tipo real de San José) · aleatorio
+(determinista, semilla fija), con filas por línea (1–3) y módulos por ala (8–32, canónico 28).
+
+Y no es solo dibujo — la física lo usa: la sombra transversal se pondera por el **solape axial real**
+entre receptora y emisora, desplazando la emisora por la **deflexión de la sombra a lo largo del eje**
+(Δy = pitch·cos(azRel)/|sin(azRel)|; con sol casi paralelo al eje la sombra no cruza al vecino y la
+cobertura es 0). Un tracker corto delante de uno largo solo sombrea su tramo; los extremos de línea se
+libran; el tresbolillo desplaza la ventana. Exacto para el prisma de sombra. **No** se modela la
+sombra punta-a-punta entre trackers de una misma línea (declarado).
 
 ## Accionamientos: monofila · bifila rígida · bifila quebrada
 
@@ -142,7 +175,13 @@ ejecutable por los motores.
   igual o menor. La página **avisa, nunca corrige**: >8% o ganancia grande en llano = sospecha de
   evaluador, no ventaja. Medido en esta página: llano canónico ≈ **+1,1%** anual (coherente).
 
-## QA — 22 comprobaciones, dos superficies
+## ¿Por qué se elige la política en dos sitios?
+
+Porque son dos preguntas distintas: el panel **Políticas** decide **cuáles se calculan y comparan**
+(curvas, tablas, año); el desplegable **ESCENA** junto al slider decide **cuál se anima** en el 3D/2D
+y en el HUD. Están rotulados para que no se confundan.
+
+## QA — 25 comprobaciones, dos superficies
 
 `node tools/test_backtracking_sim.mjs` (repo `cobertura-zigbee`) extrae el bloque `FÍSICA PURA` del HTML
 y lo ejecuta en Node; el botón de la página corre la **misma** `runPhysicsQA()`. Si tocas la física y no
@@ -155,6 +194,9 @@ pasan, no te fíes de los números.
 - true-3D: residual ≥ −1 mm (criterio del core) y nunca más plano que una baseline 3D-safe
 - true-3D con tilt N-S 0 ⇒ **exactamente** la baseline pvlib (guard 2.5D)
 - energy-optimal ≥ pairwise bajo el mismo evaluador
+- BT2D plano: = pairwise en llano y SOMBREA en pendiente (evaluado sobre el terreno real)
+- min_ground_light: sin sombra, nunca más plano que pairwise, y no más luz al suelo
+- solape axial: emisor corto delante del largo ⇒ media sombra; sol paralelo al eje ⇒ cobertura cero
 - bifila y quebrada: θ COMÚN por grupo y pairwise acoplado sin sombra en N-S quebrado + E-O irregular
   (hasta zen 80° — más rasante puede ser irreducible, ver Accionamientos)
 - accionamientos degeneran en terreno uniforme: monofila = bifila = quebrada exactos
@@ -182,6 +224,10 @@ pasan, no te fíes de los números.
 
 ## Historial
 
+- **2026-08-13 · v1.3** — inventario COMPLETO de políticas (+BT2D plano, +min_ground_light — contraste
+  contra el notebook documentado arriba), implantación a lo largo del eje con solape axial en la
+  física, render con el MODELO real del seguidor (buildBeam west/gemela, tamaño medio), flecha de
+  Norte, selector de escena rotulado. QA 25.
 - **2026-08-13 · v1.2** — escena principal en 3D real (three.js local + OrbitControls, shadow-map,
   terreno heightfield E-O+N-S, postes que delatan a la rígida); el corte 2D queda como pestaña-editor.
   Degradación automática a 2D sin WebGL. QA 22.
