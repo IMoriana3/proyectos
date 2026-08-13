@@ -157,6 +157,33 @@ para una pareja, el ángulo sin sombra que menos luz deja pasar ES el de backtra
 solo en acoplados y bordes, y la equivalencia «más inclinado ⇔ menos luz» se rompe con sol casi
 paralelo al eje — de ahí su gate de luz).
 
+## ¿Dónde vive la inteligencia? TCU vs NCU
+
+Para ejecutar el backtracking hay dos arquitecturas, y el panel de Políticas las etiqueta (chip
+TCU/NCU + filtro):
+
+**TCU (distribuida)** — cada tracker decide con lo que SABE localmente. Y con Sunner eso es
+configurable por tracker: el levantamiento (`config_tcu_sunner_*.csv`, registros BT3D 41098–41104)
+carga en cada TCU la **pendiente y el azimut de CADA lado** (`este_pend_transv/azimut`,
+`oeste_pend_transv/azimut`) más la longitudinal (`pend_long` = su tilt N-S) — e incluso dice quién es
+su `vecina_critica` por lado y si es su hermana de bifila. Con eso una TCU puede ejecutar
+**astronómico, BT2D, row, pairwise y hasta true-3D local**: pairwise es un min de sus DOS restricciones
+de vano, puramente local. Ventaja: robustez — sin comunicaciones el campo sigue haciendo backtracking
+seguro. Límite: no puede optimizar lo que no ve (nada de energy-optimal ni min-ground-light), y la
+config es estática (cambiar estrategia = reconfigurar 754 TCUs).
+
+**NCU (central)** — la NCU calcula la posición de cada tracker y se la envía como consigna. Puede
+ejecutar TODAS las políticas, incluidas las que necesitan la planta entera (energy-optimal: argmax del
+POA de planta; min-ground-light: verificar sombra con los ángulos reales de las vecinas), y cambiar de
+estrategia sin tocar firmware. Su coste es la dependencia de la malla — exactamente lo que mide el
+proyecto de Cobertura Zigbee: RSSI, SPOF, NCU caída ⇒ los trackers necesitan un fallback local.
+
+**En la práctica, defensa en profundidad**: TCU con su BT3D local configurado como suelo de seguridad
++ NCU que sobreescribe con consignas mejores mientras la malla está sana (el patrón TrueCapture). El
+simulador cuantifica lo que compra la inteligencia central: con el filtro «TCU» el techo es pairwise
+(sombra cero); con «NCU» entra energy-optimal y su ganancia (~1 % en llano, 2–6 % en terreno roto —
+la envolvente de mercado de la tabla anual).
+
 ## Accionamientos: monofila · bifila rígida · bifila quebrada
 
 Nomenclatura de la casa (CONTRATO de `scada`): **bifila = UN motor mueve DOS filas unidas por el eje de
@@ -263,8 +290,26 @@ Fecha y velocidad junto al slider: la fecha es el MISMO campo que Emplazamiento 
 animación corre a ×½ / ×1 / ×2,5 / ×6 (minutos simulados por segundo real, con acumulador — no depende
 de los FPS).
 
+## Plantas reales: bloques, solapes y alineación bifila (v1.5)
+
+- La planta se carga por **BLOQUES** (se parte sola por los huecos de x, selector si hay varios) con
+  posiciones de línea REALES (vanos por pareja medidos, calles incluidas) — hasta 80 líneas; la forma
+  es la de verdad, no una loncha rectangular.
+- La pendiente de cada pareja se mide **en el solape norte real** de sus dos líneas (la cota media por
+  línea fabricaba pendientes absurdas con líneas escalonadas: pairwise llegó a marcar 85 % de sombra
+  de artefacto — con el solape, 0,0 %). Sin solape ⇒ no interactúan (cobertura axial 0), y el residual
+  del HUD solo mira parejas que interactúan.
+- **Bifila alineada**: el eje de transmisión es perpendicular a las vigas, así que las dos filas del
+  grupo van ALINEADAS — en presets la gemela copia los tramos de la motora (tresbolillo desplaza
+  grupos, no filas de un grupo); en las plantas reales ya vienen alineadas al centímetro.
+- Cámara con reencuadre automático al cambiar la extensión, y residual de pareja única en los bucles
+  calientes (cargar Ayora pasó de 27 s a ~10-15 s; la mayor parte es energy-optimal sobre 80 líneas).
+
 ## Historial
 
+- **2026-08-13 · v1.5** — plantas reales por bloques con forma real (vanos y pendientes por solape),
+  bifila alineada (eje perpendicular), arquitectura TCU/NCU en el panel (chips + filtro) y su sección
+  de doc, cámara con reencuadre, residual filtrado a parejas que interactúan. QA 28.
 - **2026-08-13 · v1.4** — plantas reales por cotas X,Y,Z (Ayora / San José: banda densa, tilts
   medidos, parejas bifila reales, terreno por poligonal de tramo) + drapeado en presets con aviso de
   postes desproporcionados + preset Bagnarelli ×3 medido + hub 2,0 m (postH del modelo) + fecha y
