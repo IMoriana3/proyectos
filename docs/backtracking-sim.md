@@ -313,6 +313,9 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-13 · v1.8** — el render enseña la física: banda ROJA de sombra CALCULADA sobre cada pala
+  (fracción exacta de shadeRows, por el borde por el que entra) y etiquetas por fila conmutables
+  (θ · % sombra · POA de la política de la ESCENA). Astro sangra rojo; pairwise queda limpio.
 - **2026-08-13 · v1.7.2** — motores y bielas a la cota MEDIDA del tramo (hubAt interpolaba el plano
   de la línea y la ferretería levitaba donde el terreno real se aparta de él).
 - **2026-08-13 · v1.7.1** — bielas bifila solo entre vigas enfrentadas (≤ 1,5 m de desalineación,
