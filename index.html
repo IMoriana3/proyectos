@@ -507,12 +507,12 @@ const PROJECTS = [
   {
     name: "Simulador de Backtracking",
     status: "live",
-    objetivo: "Espejo JS del motor BT3D de SolarGPT (tracker3d.py) para comparar políticas de backtracking sobre terreno 3D (E-O por pareja + tilt N-S por fila): astronómico, global, row, pairwise, true-3D (bisección con residual de tangencia) y energy-optimal (Deeptrack), con los tres accionamientos — monofila, bifila rígida y bifila quebrada (backtracking a nivel de accionamiento, residuo irreducible a la vista). Corte transversal animado con sombras reales, curvas θ(t), POA por política (Ineichen + Perez + Martinez), tabla del día y estimación anual. Offline, con QA integrada contra ray-cast bruto (20 comprobaciones, también en Node).",
-    stack: "HTML offline · Canvas · pvlib singleaxis (A&M 2020) portado a JS",
+    objetivo: "Espejo JS del motor BT3D de SolarGPT (tracker3d.py) para comparar políticas de backtracking sobre terreno 3D (E-O por pareja + tilt N-S por fila), con escena 3D real (three.js, sombras por shadow-map, órbita libre) y corte 2D como editor de terreno: astronómico, global, row, pairwise, true-3D (bisección con residual de tangencia) y energy-optimal (Deeptrack), con los tres accionamientos — monofila, bifila rígida y bifila quebrada (backtracking a nivel de accionamiento, residuo irreducible a la vista). Corte transversal animado con sombras reales, curvas θ(t), POA por política (Ineichen + Perez + Martinez), tabla del día y estimación anual. Offline, con QA integrada contra ray-cast bruto (20 comprobaciones, también en Node).",
+    stack: "HTML offline · Three.js (libs locales) · Canvas · pvlib singleaxis (A&M 2020) portado a JS",
     url: "https://imoriana3.github.io/cobertura-zigbee/backtracking.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-08-13",
-    version: "v1.1",
+    version: "v1.2",
     docId: "backtracking-sim",
     docUrl: "",
     uso: [
@@ -529,6 +529,7 @@ const PROJECTS = [
       { done:false, text:"Export CSV de θ(t) por política para la TCU Toolbox" }
     ],
     historial: [
+      { date:"2026-08-13", ver:"v1.2", note:"Escena principal en 3D real (three.js local, shadow-map, terreno E-O+N-S, transmisión y cardanes); el corte 2D pasa a pestaña-editor. QA 22." },
       { date:"2026-08-13", ver:"v1.1", note:"3D N-S+E-O completo y accionamientos: perfil de tilt N-S por fila, monofila/bifila rígida/bifila quebrada con backtracking a nivel de accionamiento (residuo irreducible a la vista). QA 20." },
       { date:"2026-08-13", ver:"v1.0", note:"Primera versión: 6 políticas del core, terreno editable, escena+curvas+tablas, QA 17/17 en Node y navegador." }
     ]
