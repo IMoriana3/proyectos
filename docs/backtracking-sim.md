@@ -58,6 +58,25 @@ En terreno **uniforme** global = row = pairwise exactamente (degeneración del c
 - Cotas por fila ↔ pendientes por pareja: `pairsFromElev`/`elevFromPairs`, ida y vuelta exacta (testeado).
 - El **GCR es derivado** (= ancho/pitch), campo de solo lectura — regla del core (§03.T0): no es un input.
 
+## Escena 3D (three.js, las libs del repo)
+
+La escena principal es **3D de verdad** — three.js con las **libs locales** de `cobertura-zigbee`
+(`lib/three.min.js` + `lib/OrbitControls.js`, las mismas que `terreno.html`; sin CDN, sigue offline):
+terreno como heightfield con las DOS pendientes (cotas E-O + tilt N-S por fila), filas largas girando
+con la política elegida, transmisión/motor/cardanes por grupo, sol posicionado por az/elevación y
+**sombras por shadow-map** — ahí se VE la deflexión de la sombra a lo largo del eje, que es justo lo
+que separa true-3D del 2.5D. Detalle que delata a la bifila rígida: los postes crecen/encogen cuando
+el tubo (tilt medio del grupo) se separa del terreno real.
+
+Reglas claras:
+- Las sombras del render y el tinte salmón de los paneles son **diagnóstico visual**; los números salen
+  del motor (`shadeRows` + Martinez), nunca del render.
+- El corte 2D sigue ahí como pestaña **«Corte 2D · editor»**: es donde se arrastran los postes.
+- Si THREE o WebGL fallan, la página **degrada sola al corte 2D** (patrón de la casa; testeado).
+- No usa `seguidor.js` (el modelo mecánico de mesa): el simulador es **paramétrico** (ancho/pitch
+  libres, filas abstractas del modelo de fila infinita) y el modelo fija la geometría de mesa real.
+  Si algún día se quiere la mesa de verdad, `Seguidor.instancePlan` está en este mismo repo.
+
 ## Terreno — 3D de verdad: este-oeste Y norte-sur
 
 **Transversal (E-O)**: presets (llano · pendiente constante · ondulado · valle · cresta · aleatorio con
@@ -123,7 +142,7 @@ ejecutable por los motores.
   igual o menor. La página **avisa, nunca corrige**: >8% o ganancia grande en llano = sospecha de
   evaluador, no ventaja. Medido en esta página: llano canónico ≈ **+1,1%** anual (coherente).
 
-## QA — 20 comprobaciones, dos superficies
+## QA — 22 comprobaciones, dos superficies
 
 `node tools/test_backtracking_sim.mjs` (repo `cobertura-zigbee`) extrae el bloque `FÍSICA PURA` del HTML
 y lo ejecuta en Node; el botón de la página corre la **misma** `runPhysicsQA()`. Si tocas la física y no
@@ -145,7 +164,8 @@ pasan, no te fíes de los números.
 - Perez: β=0 devuelve exactamente la DHI
 - cotas ↔ pendientes ida y vuelta exacta · NOAA vs declinación del solsticio · noche → θ=0
 - POA de planta = media por fila (no POA del ángulo medio)
-- estáticos: página offline de verdad; defaults = canónicos del core (6.00 · 2.382 · 0.397 · 55°)
+- estáticos: página offline de verdad; defaults = canónicos del core (6.00 · 2.382 · 0.397 · 55°);
+  la escena 3D usa las libs LOCALES del repo y degrada a 2D si THREE/WebGL fallan
 
 ## Integraciones
 
@@ -162,6 +182,9 @@ pasan, no te fíes de los números.
 
 ## Historial
 
+- **2026-08-13 · v1.2** — escena principal en 3D real (three.js local + OrbitControls, shadow-map,
+  terreno heightfield E-O+N-S, postes que delatan a la rígida); el corte 2D queda como pestaña-editor.
+  Degradación automática a 2D sin WebGL. QA 22.
 - **2026-08-13 · v1.1** — 3D N-S + E-O completo y accionamientos: perfil de tilt N-S por fila
   (constante/quebrado/senoidal/aleatorio), monofila · bifila rígida · bifila quebrada con backtracking
   a nivel de accionamiento (`driveCoupleSafe`, residuo irreducible a la vista), transmisión/motores/
