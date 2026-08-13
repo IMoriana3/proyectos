@@ -313,6 +313,8 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-13 · v1.7.2** — motores y bielas a la cota MEDIDA del tramo (hubAt interpolaba el plano
+  de la línea y la ferretería levitaba donde el terreno real se aparta de él).
 - **2026-08-13 · v1.7.1** — bielas bifila solo entre vigas enfrentadas (≤ 1,5 m de desalineación,
   ≤ 9 m — fuera las diagonales imposibles del render) y **velocidad real del actuador**: el día se
   simula con la consigna limitada a 0,17 °/s (rampas reales en amanecer/ocaso y cambios de f; en el
