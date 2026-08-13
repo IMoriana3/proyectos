@@ -512,7 +512,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/cobertura-zigbee/backtracking.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-08-13",
-    version: "v1.3",
+    version: "v1.4",
     docId: "backtracking-sim",
     docUrl: "",
     uso: [
@@ -524,11 +524,12 @@ const PROJECTS = [
       "«Verificar contra ray-cast bruto» corre la QA de la física en el navegador; en repo: node tools/test_backtracking_sim.mjs."
     ],
     pendientes: [
-      { done:false, text:"Cargar pendientes reales por tracker desde config_tcu_sunner_*.csv (Ayora / San José)" },
+      { done:true, text:"Cargar terreno real de Ayora / San José (hecho v1.4 vía cotas X,Y,Z de extremos de mesa, mejor que el CSV de pendientes)" },
       { done:false, text:"Política min_ground_light (agrivoltaica) — está en el core, sin portar" },
       { done:false, text:"Export CSV de θ(t) por política para la TCU Toolbox" }
     ],
     historial: [
+      { date:"2026-08-13", ver:"v1.4", note:"Plantas reales por cotas X,Y,Z (Ayora/San José), drapeado con aviso de irrealizables, Bagnarelli ×3 medido, fecha+velocidad en el slider, doc de las vecinas imaginarias. QA 27." },
       { date:"2026-08-13", ver:"v1.3", note:"Inventario completo de políticas (+BT2D plano, +min_ground_light), implantación N-S con solape axial en la física, y render con el modelo real del seguidor (buildBeam west/gemela, tamaño medio). QA 25." },
       { date:"2026-08-13", ver:"v1.2", note:"Escena principal en 3D real (three.js local, shadow-map, terreno E-O+N-S, transmisión y cardanes); el corte 2D pasa a pestaña-editor. QA 22." },
       { date:"2026-08-13", ver:"v1.1", note:"3D N-S+E-O completo y accionamientos: perfil de tilt N-S por fila, monofila/bifila rígida/bifila quebrada con backtracking a nivel de accionamiento (residuo irreducible a la vista). QA 20." },

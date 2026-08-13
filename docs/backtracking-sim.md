@@ -122,6 +122,41 @@ cobertura es 0). Un tracker corto delante de uno largo solo sombrea su tramo; lo
 libran; el tresbolillo desplaza la ventana. Exacto para el prisma de sombra. **No** se modela la
 sombra punta-a-punta entre trackers de una misma línea (declarado).
 
+## Plantas reales y drapeado (las dos opciones, juntas)
+
+Dos maneras de posar los trackers en el mundo, y las DOS conviven:
+
+1. **Drapeado** (presets): como los render 3D de la casa — el tramo mantiene el tilt que manda el
+   accionamiento pero se **eleva hasta volar sobre el terreno** en todo su largo (los postes se
+   alargan, que es lo que hace el montaje). Si el drapeado exige postes de más de ~4,5 m, la fila se
+   marca **en rojo** con aviso: límite práctico (típico de la rígida en quiebro N-S fuerte). La física
+   no cambia: usa las pendientes del terreno, como el core (declarado).
+2. **Cotas reales X,Y,Z** (botones ⛰): `ayora_cotas.json` / `sanjose_cotas.json` traen, por cada mesa,
+   sus extremos `n=[n0,n1]` con **cotas medidas** `y=[y0,y1]`. El cargador construye la banda de líneas
+   con más filas: cotas por línea (editables en el 2D), **tilt N-S por línea medido**, tramos reales y
+   las **parejas bifila reales** (con su flag de articulado → rígida/quebrada por mayoría). El terreno
+   y cada tubo siguen el **poligonal real por tramo** (z0→z1 de cada mesa): aquí no hay drapeado que
+   inventar — el montaje ya lo hizo — y los tilts medidos no se promedian por grupo (los fijó la obra;
+   rígida/cardan solo cambia el acople de θ). Azimut de eje ≈ 0 (aprox declarada). El fetch necesita
+   http (Pages); en file:// el navegador lo bloquea y la página lo dice.
+
+Y el preset **⛳ Bagnarelli ×3**: la implantación real de Bagnarelli 24030 medida de su layout
+(6 líneas a pitch 11,0 m exacto, eje a 23,7°, trackers escalonados +4,8 m con sus «medios»),
+replicada ×3 → 18 líneas, 51 trackers. Testeada contra el patrón (51/9 medios/escalón).
+
+## Las vecinas imaginarias (por qué row sombrea y pairwise no)
+
+La fórmula de pvlib asume el campo girando **al unísono**: tus vecinas, en TU mismo ángulo. **Row**
+imagina a sus vecinas como clones de sí misma sobre un terreno promediado que no existe — en terreno
+irregular la ficción falla y aparece la sombra residual. **Pairwise** hace la suposición dos veces
+pero cada vez sobre el hueco real y a su ángulo de tangencia, y el acoplado min(|θ|) garantiza que la
+realidad solo se desvía hacia el lado seguro (vecinas más planas, nunca más empinadas que lo asumido
+en el hueco común). **Min_ground_light** ya no asume: interroga la escena con los ángulos reales de
+todas las filas — por eso rasca las décimas que el acoplado dejó (y por eso su resultado ≈ pairwise:
+para una pareja, el ángulo sin sombra que menos luz deja pasar ES el de backtracking; el margen vive
+solo en acoplados y bordes, y la equivalencia «más inclinado ⇔ menos luz» se rompe con sol casi
+paralelo al eje — de ahí su gate de luz).
+
 ## Accionamientos: monofila · bifila rígida · bifila quebrada
 
 Nomenclatura de la casa (CONTRATO de `scada`): **bifila = UN motor mueve DOS filas unidas por el eje de
@@ -222,8 +257,18 @@ pasan, no te fíes de los números.
 - Política `min_ground_light` (agrivoltaica) — está en el core, no portada.
 - Export CSV de θ(t) por política para alimentar la TCU Toolbox.
 
+## Controles de tiempo
+
+Fecha y velocidad junto al slider: la fecha es el MISMO campo que Emplazamiento (dos vistas), y la
+animación corre a ×½ / ×1 / ×2,5 / ×6 (minutos simulados por segundo real, con acumulador — no depende
+de los FPS).
+
 ## Historial
 
+- **2026-08-13 · v1.4** — plantas reales por cotas X,Y,Z (Ayora / San José: banda densa, tilts
+  medidos, parejas bifila reales, terreno por poligonal de tramo) + drapeado en presets con aviso de
+  postes desproporcionados + preset Bagnarelli ×3 medido + hub 2,0 m (postH del modelo) + fecha y
+  velocidad junto al slider + sección «vecinas imaginarias». QA 27.
 - **2026-08-13 · v1.3** — inventario COMPLETO de políticas (+BT2D plano, +min_ground_light — contraste
   contra el notebook documentado arriba), implantación a lo largo del eje con solape axial en la
   física, render con el MODELO real del seguidor (buildBeam west/gemela, tamaño medio), flecha de
