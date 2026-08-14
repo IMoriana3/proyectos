@@ -313,6 +313,16 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.26.1** — **auditoría, punto 6: GATE de pre-release obligatorio**
+  (`tools/release_gate.mjs`, un comando antes de mergear): (1) sintaxis de cada bloque `<script>`
+  con `node --check` — la lección del paréntesis suelto; (2) batería completa (45); (3) smoke en
+  Chromium real (carga limpia, Ayora real, día computado); (4) invariantes del DAY (θ finito
+  ≤θmáx, sombra∈[0,1], POA finita, 3+ políticas); (5) gate VISUAL semántico — el pacto del rojo
+  como tripwire: en un alba con sombra >2% deben existir píxeles rojos de silueta en el canvas,
+  paneles visibles y escena viva (caza catástrofes tipo «palillos», canvas en blanco o rojo
+  desaparecido, que el ojo del agente ya demostró saltarse). La batería comprueba que el gate
+  existe con sus 5 pasos. QA 45.
+
 - **2026-08-14 · v1.26** — **auditoría, punto 3: umbrales con dato, no con fe**. Barrido de
   sensibilidad de los 4 umbrales heurísticos del contador (Ayora real, año de 12 días, cada
   variante parchea el fuente y repite el año): las PODAS (dirección + alcance 9·h/tan + ventana
