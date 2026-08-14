@@ -313,6 +313,19 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.19** — **el contador es ray-cast 3D a TODAS horas** (la «vía simétrica» sale del
+  cajón, validada): multi-emisora con cotas por tramo a cualquier cénit, poda por alcance y
+  desplazamiento axial (63 s/día → 1,8 s). Cazó la sombra que el registro de pareja no ve (fila 32 de
+  Ayora, 09:00, sol a 24,6°: 18,8% con DNI plena — torsión del terreno mediana 3,4°/p90 5,5°,
+  corroborada por el estudio 2.5D-local independiente). La pieza que faltaba: **Martinez POR ESTACIÓN
+  AXIAL** — la sombra 3D es parcheada y aplicar el bypass al promedio de fila fabricaba un −8% anual
+  espurio; por estación, el cargo simétrico real a pairwise es **−1,32% anual** (2.853,1→2.815,5),
+  en la escala DNV. Optimizadores buscan con el 2.5D rápido (declarado); lo publicado siempre con el
+  ray-cast. Convención de PRESENTACIÓN como la TCU: **θ<0 = este** (factor único, física interna
+  intacta). El rayo crítico **no atraviesa módulos** (recorte al primer impacto con cualquier mesa).
+  Fuera la alfombra del vano; «sombra máx» solo con sol útil (DNI>25). **Anual: pairwise 2.815,5 ·
+  true3d −0,20% · row +0,08% · optimal +1,03% · óptimo libre +1,06%** — supersede v1.18. QA 38.
+
 - **2026-08-14 · v1.18** — **la sombra rasante cruza varias filas — se cuenta Y se pinta entera**:
   el contador de la banda rasante y la silueta roja pasan a MULTI-EMISORA (todas las filas del lado
   del sol dentro del alcance, planos por tramo con cotas reales); la silueta además ya no se
