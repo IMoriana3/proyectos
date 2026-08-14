@@ -313,6 +313,11 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.20.1** — **tresbolillo de verdad en bifila**: alternaba por fila (r%2) pero la
+  gemela copia a la motora — siempre fila PAR ⇒ desplazamiento 0 para todas y el «tresbolillo»
+  salía alineado. La alternancia pasa a ser por unidad de accionamiento (pairStep=2): dentro del
+  grupo alineadas (eje perpendicular), entre grupos media mesa. El test exige ambas cosas. QA 39.
+
 - **2026-08-14 · v1.20** — **el TERRENO que sombrea se cuenta y se pinta**: las «sombras sin rojo»
   que quedaban eran de las lomas — el ray-cast marcha ahora también contra el perfil del terreno
   (sol <25°, declarado) con penetración por estación desde el borde bajo, y las franjas rojas salen
