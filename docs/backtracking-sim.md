@@ -313,6 +313,12 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.11** — banda de sombra como lomo OPACO con volumen (fuera la sierra del
+  aliasing) y proporcional de verdad (mínimo 3% → 0,8%); true-3D arbitrado por el residual en el
+  render (si la tangencia confirma que no hay contacto 3D, no se pinta — medido al alba: 78 parejas
+  con «sombra» 2.5D del 10-16% y residuales +39…+206 mm ⇒ contacto real cero); globo v2 con los
+  REGISTROS de cada vano (pitch · pendiente resultante · azimut del vector, estilo TCU Sunner),
+  residual en mm y veredicto de evitabilidad (evitable / inevitable a este sol / sin contacto 3D).
 - **2026-08-14 · v1.10** — «☀ rayo»: el rayo crítico de la fila seleccionada (por el borde alto del
   emisor, 3D pleno con deflexión axial; marcador verde al suelo / rojo si pincha a la vecina) y el
   HAZ DE LUZ del vano medido — franjas de sombra por unión de las proyecciones de TODAS las filas
