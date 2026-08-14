@@ -562,7 +562,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/cobertura-zigbee/overcast.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-08-14",
-    version: "v1.4",
+    version: "v1.5",
     docId: "overcast-sim",
     docUrl: "",
     uso: [
@@ -583,6 +583,7 @@ const PROJECTS = [
       { done:true, text:"Modo zonal (por NCU): cada NCU decide con su señal local frente a la decisión de planta (hecho v1.1; cuando el core tenga la política zonal, espejarla aquí)" }
     ],
     historial: [
+      { date:"2026-08-14", ver:"v1.5", note:"El render de los cobertura 3D en las plantas reales (Seguidor.instancePlan, contrato spin/static, mesa con color de estado por instancia; terreno/camino/valla/caseta a escala de km) y HONESTIDAD del actuador también en el zonal: la POA por NCU sale del θ ejecutado (deadband 1° + slew 0,17 °/s), con la fontanería verificada por la QA. Preparada como demo de la lógica de difusa. QA 48 en Node." },
       { date:"2026-08-14", ver:"v1.4", note:"Plantas REALES: Ayora (754 · 16 NCUs) y San José (2.289 · 21 NCUs, Arequipa UTC−5). Las zonas del zonal son las NCUs de verdad con el retardo del frente por posición del centroide; planta entera instanciada en 3D girando con el θ de su NCU y teñida por estado; banco de nubes barriendo el frente con la misma cc retardada que la física. QA 47 en Node." },
       { date:"2026-08-14", ver:"v1.3", note:"Render de planta: bifila real (motora + gemela con eje de transmisión), mesas de 64,7 m con postes, pala azulada, ACES, terreno con explanada, camino, valla, caseta, arbustos y niebla. Convención TCU en toda la UI (− = este, stow −5°). Estado «☁ retiene» en ámbar por NCU: la señal viva que el confirm/dwell retiene. QA 45." },
       { date:"2026-08-14", ver:"v1.2", note:"Cielo con la receta de backtracking.html (alba/ocaso rojizos, noche azul marino) agrisado por la cobertura y con el disco solar velado; la pala del 3D persigue la consigna a la velocidad real del actuador (0,17 °/s en tiempo simulado); stow nocturno del proyecto: los trackers duermen a 5° al ESTE (−5° en convención TCU), configurable; slider minutal con el sol al minuto exacto. QA 45 en Node." },
