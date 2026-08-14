@@ -2,6 +2,36 @@
 
 > Inventario del aprendizaje automático ya implementado en los notebooks y el core, auditoría honesta de su madurez, y hoja de ruta priorizada. La conclusión corta: **no falta ML, falta dato real de planta y falta industrializarlo.**
 
+## Lo que ya está construido (v0.1 · 2026-08-14)
+
+La primera pieza de la hoja de ruta ya existe, en dos mitades:
+
+| Pieza | Dónde | Qué es |
+|---|---|---|
+| **`solargpt_ml`** | `SolarGPTfull/solargpt/solargpt_ml/` | Paquete Python: el **anillo operativo** que le faltaba a la casa — dato real, ocho puertas ejecutables y registro de modelos con degradación a la regla. Solo biblioteca estándar |
+| **Consola de IA** | [`ia.html`](../ia.html) de este panel | Espejo JS del anterior, offline y sin dependencias. Mismo patrón que el Simulador de Backtracking con el BT3D del core |
+
+Resuelve dos cosas del diagnóstico de abajo. La **§2.3** (el ML vivía en notebooks y no lo podía llamar nadie): ahora hay un tercer anillo, `core` bankable → `ml` operativo → `research` cuarentena, con la dependencia en un solo sentido y el gate bankable intacto. Y la **P2**: la capa de salud de flota tiene código.
+
+Qué hace hoy: cuatro residuos contra la física canónica —energía de motor, sesgo y dispersión de seguimiento, SOH— comparados **contra los vecinos de NCU y no contra un umbral**, con CUSUM referenciado al arranque de la ventana. Cada seguidor sale con su nivel, su confianza y el motivo en lenguaje de campo.
+
+```bash
+python -m solargpt_ml salud --demo            # flota de ejemplo con averías inyectadas
+python -m solargpt_ml salud --scada http://10.0.0.5:8000
+python -m solargpt_ml modelos                 # registro y estado de las puertas
+```
+
+**Estado honesto: `fleet_health` pasa 5 de 8 puertas, y el registro lo enseña.** Falla G1 y G3 porque falta el back-test contra las sustituciones reales del histórico PEM, y G6 porque diagnostica en vez de decidir. `CALIBRATED = False` viaja en el JSON y la consola lo avisa en cada ejecución: sirve para priorizar una visita, no para afirmar una probabilidad de fallo. **El siguiente paso es P1 + el back-test, no más indicadores.**
+
+Dos defectos de diseño salieron al escribirlo, y los dos tienen su regresión en los tests:
+
+- **La z robusta fabricaba sigmas.** Con vecinos casi idénticos la MAD tiende a cero y una diferencia de 0,01 pp de SOH salía como «3 sigma». Significativo estadísticamente, irrelevante en campo. Se arregla acotando la escala con una **relevancia práctica** declarada por residuo: la diferencia mínima que justifica coger la furgoneta.
+- **La suma ponderada techaba la causa única.** Una batería muriéndose sola, con peso 0,20, no podía cruzar un umbral de 0,25 y salía siempre en verde. Los indicios se combinan ahora por OR ruidoso.
+
+El mismo criterio de relevancia hizo falta en el CUSUM: sobre quince puntos de ruido blanco la suma acumulada cruza las cinco sigmas de vez en cuando por casualidad, y cuatro de veinticuatro seguidores sanos decían «cambió y no ha vuelto».
+
+---
+
 ## Por qué este documento
 
 La plataforma tiene ML repartido en varios sitios y con niveles de madurez muy distintos: modelos oficiales con seis puertas de validación pasadas conviven con prototipos entrenados sobre datos sintéticos. El notebook `SolarGPT_v16_2` ya incluye una **auditoría de IA (2026-04-05)** que clasifica los bloques por madurez; este documento la recoge, la extiende a lo que hay fuera de ese notebook (TrackerGovernor, `factiun_core.rf`, el core) y añade lo que yo haría a continuación.
@@ -123,9 +153,9 @@ Sin esto, los cuatro puntos siguientes no existen. No es un proyecto de ML: es u
 
 > TODO: confirmar la **retención de InfluxDB** en producción. Determina cuántos meses de historia hay realmente y, con ello, si P2 es viable ya o hay que empezar a acumular.
 
-### P2 · Salud de flota y mantenimiento predictivo  ⭐ el que yo haría primero
+### P2 · Salud de flota y mantenimiento predictivo  ✅ v0.1 construida
 
-Es la capa **"Postventa"** que el README de `SolarGPTfull` declara *"aún sin código"*, y el único sitio donde hay dato real **y etiquetas reales**.
+Es la capa **"Postventa"** que el README de `SolarGPTfull` declara *"aún sin código"*, y el único sitio donde hay dato real **y etiquetas reales**. **Implementada en `solargpt_ml.fleet_health`** (ver arriba); lo que sigue describe el diseño y lo que falta para calibrarla.
 
 Modelar el residuo sobre la física que ya tenéis, no entrenar un clasificador a pelo:
 

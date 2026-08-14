@@ -490,6 +490,33 @@ body{
    ===================================================================== */
 const PROJECTS = [
   {
+    name: "Consola de IA · salud de flota",
+    status: "build",
+    objetivo: "Ranking de seguidores a revisar a partir de la telemetría del SCADA: residuos contra la física canónica, comparados entre vecinos de NCU.",
+    stack: "HTML offline sin dependencias · espejo JS de solargpt_ml (Python, solo stdlib)",
+    url: "https://imoriana3.github.io/proyectos/ia.html",
+    repo: "https://github.com/imoriana3/solargptfull",
+    updated: "2026-08-14",
+    version: "v0.1",
+    docId: "ia-ml",
+    download: "",
+    uso: [
+      "Elige fuente: demo con averías inyectadas, la API del SCADA (/salud si el módulo corre en planta, /live si no), o un informe JSON del CLI.",
+      "La tabla ordena por riesgo y cada fila dice POR QUÉ en lenguaje de campo: mecánica, encoder, holgura o batería.",
+      "Clic en un seguidor: residuo día a día frente a la física, con la línea roja donde el CUSUM sitúa el cambio.",
+      "El panel de registro enseña las 8 puertas de cada modelo, incluidas las que NO pasa.",
+      "Desde el módulo: python -m solargpt_ml salud --demo · o --scada URL · o --json informe.json"
+    ],
+    pendientes: [
+      { done:false, text:"Back-test contra las sustituciones de TCU del histórico PEM (cambio de nº de serie): es lo que falta para calibrar y cerrar G1 y G3" },
+      { done:false, text:"Volcado del histórico de InfluxDB a Parquet (P1): /live solo da un instante y sin ventana no hay residuo" },
+      { done:false, text:"Enchufar el artefacto de Value ML v2 al registro para que lo puedan llamar la web y bt_service" }
+    ],
+    historial: [
+      { date:"2026-08-14", ver:"v0.1", note:"Alta: módulo solargpt_ml (anillo operativo: dato real + 8 puertas + registro con degradación a la regla) y esta consola como su espejo JS. Cuatro residuos contra la física canónica; la comparación es contra los VECINOS de NCU, así que un día frío no sale como 108 averías. Dos defectos cazados al escribirlo: la z robusta fabricaba 3σ con vecinos idénticos, y la suma ponderada techaba la causa única (una batería muriéndose sola no llegaba al umbral)." }
+    ]
+  },
+  {
     name: "Mapa Modbus NCU · HSU · TCU",
     status: "live",
     objetivo: "Mapa Modbus completo de NCU, HSU y TCU, con dirección absoluta por unidad y decodificador de valores crudos en vivo.",

@@ -14,7 +14,14 @@
 const { chromium } = require('playwright');
 
 const BASE = process.env.BASE || 'http://localhost:8099';
-const CACHE = 'factiun-panel-v1';        // debe coincidir con sw.js
+// Se LEE de sw.js en vez de copiarse aquí: publicar un cambio del panel es subir
+// el número de CACHE, así que una constante escrita a mano se queda vieja en la
+// siguiente publicación y los 5 checks de precache fallan por la versión, no por
+// el precache. Pasó al añadir ia.html.
+const CACHE = (require('fs')
+  .readFileSync(require('path').join(__dirname, '..', 'sw.js'), 'utf8')
+  .match(/const CACHE = "([^"]+)"/) || [])[1];
+if (!CACHE) { console.error('no encuentro const CACHE en sw.js'); process.exit(1); }
 let ok = 0, ko = 0;
 function check(nombre, valor, esperado) {
   const bien = String(valor) === String(esperado);
