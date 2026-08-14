@@ -563,14 +563,14 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Simulador de Overcast",
+    name: "Simulador de TCU (difusa · viento · backtracking)",
     status: "live",
-    objetivo: "Las 4 políticas de difusa del core en días nublados: cielo pintable o real de Open-Meteo, zonal por NCU, y cuánta POA gana o pierde cada una.",
+    objetivo: "La TCU completa con su jerarquía de mando: stow de viento > tope mecánico > backtracking > política de difusa > astronómico. Cielo pintable o real de Open-Meteo, zonal por NCU, y quién manda en cada minuto.",
     stack: "HTML offline · Three.js (libs locales) + seguidor.js · Canvas · pvlib singleaxis + Ineichen + Perez portados a JS · Open-Meteo (datos, opcional)",
     url: "https://imoriana3.github.io/cobertura-zigbee/overcast.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-08-14",
-    version: "v1.10.1",
+    version: "v1.11.0",
     docId: "overcast-sim",
     docUrl: "",
     uso: [
@@ -578,10 +578,12 @@ const PROJECTS = [
       "Pinta la nubosidad del día arrastrando en la tira (o un preset: overcast, frentes, el escenario del test del core, aleatorio con semilla).",
       "O trae un día REAL: fuente Open-Meteo → «Cargar la fecha» (ERA5 si es antigua, previsión si es reciente) o «En vivo» (hoy, reloj en ahora, refresco cada 10 min). La irradiancia del paso pasa a ser la medida.",
       "Activa políticas y compáralas: ▶ anima el día; el HUD da GHI/DNI/DHI, θ, modo y Δ POA instantánea; la banda violeta marca el modo flat.",
-      "La tabla del día da POA, Δ vs pvlib, % en flat, conmutaciones, recorrido (desgaste) y coste del lazo (decidir tarde + llegar tarde).",
+      "💨 VIENTO: perfil del día (calma / brisa / racheado / temporal / tormenta, o el MEDIDO de Open-Meteo) con los umbrales de la Strategy E — T1 40 km/h stow parcial, T2 60 km/h stow total, y 30′ de calma sostenida para salir. Subir de nivel es inmediato: es seguridad.",
+      "El HUD dice QUIÉN manda en cada minuto (astronómico · backtracking · difusa · stow parcial · STOW VIENTO): es la salida del árbitro, no una etiqueta aparte.",
+      "La tabla del día da POA, Δ vs pvlib, % difusa activa, % en stow, conmutaciones, recorrido (desgaste) y coste del lazo (decidir tarde + llegar tarde).",
       "«Calcular año» pondera 12 días × tres cielos tipo según el clima (seco / atlántico / centroeuropa, editable).",
       "Activa el ZONAL: nº de NCUs y minutos que tarda el frente en cruzar; la escena 3D pinta cada zona con su nube y su θ, y la tabla compara decisión global vs cada-NCU-con-su-señal.",
-      "📋 El DIARIO DE DECISIONES justifica cada movimiento como el SCADA (abanderar/desabanderar): hora, NCU, causa y números — lo narrado ES lo ejecutado (QA bit a bit).",
+      "📋 El DIARIO DE DECISIONES justifica cada movimiento como el SCADA (abanderar/desabanderar): hora, NCU, causa y números — lo narrado ES lo ejecutado (QA bit a bit). Las maniobras de viento entran con la racha medida y el umbral cruzado, en cualquier política.",
       "⬇ 365 días reales (ERA5): el anual con la meteo MEDIDA del emplazamiento, día a día y con el lazo. ✈ Vuelo libre por la planta (WASD + ratón).",
       "⛰ Planta real: CUALQUIERA de la cartera con layout (El Burgo, Fayón, San José, Túnez, Ayora, Bagnarelli monofila a 23,7°, Páramo) — las zonas pasan a ser las NCUs de verdad (lag por centroide), la planta instanciada en 3D teñida por estado (azul track · violeta FLAT · ámbar retiene) y el banco de nubes barriendo el frente.",
       "Convención de signos de la TCU en toda la UI: NEGATIVO = este (stow −5°).",
@@ -593,6 +595,7 @@ const PROJECTS = [
       { done:true, text:"Modo zonal (por NCU): cada NCU decide con su señal local frente a la decisión de planta (hecho v1.1; cuando el core tenga la política zonal, espejarla aquí)" }
     ],
     historial: [
+      { date:"2026-08-14", ver:"v1.11.0", note:"LA UNIÓN: backtracking + viento + difusa bajo un árbitro explícito, la jerarquía del core — stow de viento > tope mecánico > backtracking > difusa > astronómico. El clamp de backtracking va ANTES del stow (al revés, la posición de refugio se recortaba a |θ_n| y no llegaba a ejecutarse con temporal). Stow de viento Strategy E: T1 40 km/h parcial, T2 60 km/h total, subida inmediata y 30′ de calma sostenida para salir, así una racha no saca al tracker y lo vuelve a meter. El HUD dice quién manda cada minuto, el diario narra cada maniobra de viento con su racha y su umbral, «% en stow» en la tabla del día y en la anual, y Open-Meteo trae ya el viento MEDIDO (wind_speed_10m en m/s) — el anual de 365 días pasa también por el árbitro, porque si no la tabla estrella sería otra física que la del día. QA 74: la nueva cubre la PRECEDENCIA (ninguna difusa saca del stow, el refugio se ejecuta, el tope recorta el refugio, sin viento el árbitro es transparente) y el fuzz de 400 configuraciones sortea perfiles de viento — ir al refugio tampoco teletransporta: el slew de 0,17 °/s manda también sobre la seguridad." },
       { date:"2026-08-14", ver:"v1.10.1", note:"Tercera auditoría: el anual de 365 días decidía a 30 min, donde el confirm de la histéresis colapsaba a UNA muestra (cero minutos sostenidos) y el poa_switch degeneraba hacia el flat justo en la tabla que se enseña al cliente — ahora decide a 15 min y el suelo del contador sube a 2 muestras (no-op exacto a 5/10/15). Y la VRAM se fugaba 14,5 MB por reconstrucción con San José: instanceMatrix/instanceColor solo se liberan con el dispose() del InstancedMesh. QA 63." },
       { date:"2026-08-14", ver:"v1.10", note:"Cuatro bugs que destaparon dos auditorías adversariales: la tabla zonal integraba la energía en la rejilla de decisión (cobraba teletransporte mientras la del día cobraba la rampa: dos físicas en la misma pantalla); desmarcar «aplicar el lazo» devolvía 55°/min a la escena (5,4× la spec) — el slew es hierro y ya no se puede apagar, la casilla gobierna solo el deadband; el corte 2D, las mesas de la planta real y la banda de la gráfica seguían rotulando «FLAT» violeta para las cuatro políticas (ahora una sola fuente de verdad da texto Y color, con la política efectiva); y el reloj corría al doble en ×½ porque el slider redondeaba la fracción cada frame. QA 62." },
       { date:"2026-08-14", ver:"v1.9.2", note:"DEPURACIÓN: fuga de texturas en GPU al cambiar de planta (disposeGroup no liberaba los mapas de los materiales), mallas basculantes sin colocar en el primer frame de una planta real, vuelo libre que dejaba los listeners vivos al salir del 3D, y el stow nocturno que no obedecía al tope mecánico (lo cazó un fuzz). Red nueva: fuzz determinista de 400 configuraciones del planeta (latitud, huso, fecha, θmáx, GCR, cielos) exigiendo a la vez nada de NaN, POA ≥ 0, clamp, tope, slew y diario coherente; más una batería de casos límite (polos, hemisferio sur, bisiesto). Barrido de 58 pasos de UI sin un error de JS. QA 60." },
