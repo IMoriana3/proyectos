@@ -313,6 +313,18 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.15** — **evaluador rasante 3D**: con 80°<zen<89,5° el término temp≥1 de pvlib
+  declara «sin sombra» mientras la geometría 3D real sombrea hasta un 27% de módulo (medido en
+  Bagnarelli: azimut de eje 23,7° + tilt N-S; 3D 16-23% donde el 2.5D ve 0-7%). En esa franja
+  shadeRows cuenta con ray-cast 3D sobre tramos finitos para TODAS las políticas — las decisiones de
+  las TCU no cambian; el contador ya no puede mentir. QA doble (34): el 3D reproduce al 2.5D donde el
+  2.5D es exacto y ve lo que el 2.5D no. **Impacto anual en Ayora**: pairwise 2.862,4 → 2.853,0
+  kWh/m²·año (−0,33%, la sombra rasante real que no se contaba) y energy-optimal pasa de +0,71% a
+  **+1,43%** — su argmax, con el contador honesto, esquiva la sombra del alba/ocaso que las TCU con
+  registros no pueden ver: el valor de la inteligencia central se dobla. (El PDF/informe anteriores
+  quedan como foto del evaluador con paridad-core 2.5D, declarado.) Además: sombras del render
+  nítidas (mapa 4096 + frustum ceñido a 140 m siguiendo la cámara) y el rayo crítico corta por la
+  mesa que estás mirando.
 - **2026-08-14 · v1.14** — el corte 2D de plantas reales corta DE VERDAD (cota de cada mesa
   interpolada en la banda con más mesas — el mismo plano de corte del rayo/alfombra/etiquetas —
   en vez de medias de línea); la alfombra del haz cubre el solape axial completo y SIGUE el terreno;
