@@ -313,6 +313,14 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.24** — **«depura todo»**: barrido de auditoría Playwright sobre TODO (5 presets ×
+  accionamientos, las 6 plantas, las 9 políticas, minutal, peor momento, modo sol, rayo, luces,
+  picking) verificando invariantes físicos — θ finito y ≤θmáx, sombra∈[0,1], POA finita, HUD
+  completo, sin excepciones JS: **cero hallazgos**. Y la deuda conocida saldada: la SILUETA usa la
+  misma geometría por tramos que el contador (cota por tramo, plano receptor POR MESA, emisoras por
+  tramo) — el plano único por fila desplazaba el rojo respecto al gris del shadow-map en terreno
+  curvado; verificado en el escenario del reporte: el rojo abraza el gris mesa a mesa. QA 39.
+
 - **2026-08-14 · v1.23** — **el resto de plantas, por LAYOUT**: El Burgo (45 líneas · 215 mesas),
   Páramo (80 · 189) y Fayón (14 · 24) entran como implantación REAL del DWG (líneas, mesas, huecos,
   emplazamiento) sobre terreno PLANO — sin cotas de levantamiento, DECLARADO (Túnez fuera:
