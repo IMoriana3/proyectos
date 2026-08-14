@@ -313,6 +313,12 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.14** — el corte 2D de plantas reales corta DE VERDAD (cota de cada mesa
+  interpolada en la banda con más mesas — el mismo plano de corte del rayo/alfombra/etiquetas —
+  en vez de medias de línea); la alfombra del haz cubre el solape axial completo y SIGUE el terreno;
+  el globo explica el residual negativo con 2.5D limpio («contacto 3D a nivel de línea, la mesa se
+  libra por el solape» / «contacto 3D que el 2.5D no ve — true-3D lo evitaría»: la deflexión axial
+  también juega en contra, la otra mitad del trabajo del true-3D).
 - **2026-08-14 · v1.13** — coherencia por construcción del rayo crítico: criticalRayPair pasa al
   bloque FÍSICA en el marco exacto de shadeFracPair (QA de 200 casos: la frontera dibujada reproduce
   fs con error < 1e-6); el render se ancla a la geometría del montaje y el color del marcador sale
