@@ -751,6 +751,33 @@ const PROJECTS = [
     ]
   },
   {
+    name: "Gestión de Batería TCU",
+    status: "live",
+    objetivo: "Simulador de gestión de la batería LiFePO4 del TCU: balance energético hora a hora sobre meteo real, con winter mode y control con restricción energética (TFM).",
+    stack: "HTML autocontenido · canvas 2D · Open-Meteo",
+    url: "https://imoriana3.github.io/gemelo-digital/bateria.html",
+    repo: "https://github.com/imoriana3/gemelo-digital",
+    updated: "2026-08-14",
+    version: "1.0",
+    docId: "",
+    docUrl: "https://raw.githubusercontent.com/imoriana3/gemelo-digital/main/README.md",
+    download: "",
+    uso: [
+      "Fichero: bateria.html (repo gemelo-digital).",
+      "Meteo: previsión Open-Meteo 3–16 días (GHI + temperatura) o sintética (nubes + día del año) si no hay red.",
+      "Modelo canónico SolarGPT (00.2t + 11.5b): idle/sleep 0,64 W; motor Wh/° = 0,0503 + 0,000845·|θ| (pico 50 W); carga ∝ GHI limitada por C-rate seguro LiFePO4 según temperatura.",
+      "Gestión: winter mode (correcciones gruesas 3°/h) y restricción energética del TFM (SOC crítico → aparcar a 0°; rearme con histéresis).",
+      "Salidas: SOC con vs sin gestión, balance horario carga/base/motor, posición del seguidor y ciclos LFP (EFC, DoD, vida a 80 % SOH)."
+    ],
+    pendientes: [
+      { done:false, text:"Winter mode automático según la previsión (hoy es un interruptor manual)." },
+      { done:false, text:"Contrastar contra la celda 11.5b del notebook con la misma serie meteo." }
+    ],
+    historial: [
+      { date:"2026-08-14", ver:"1.0", note:"Primera versión: balance meteo→SOC, gestión (winter + supervivencia), comparativa sin/con gestión y ciclos LFP." }
+    ]
+  },
+  {
     name: "Agente y collector · PC de planta",
     status: "build",
     objetivo: "El lado que vive dentro de la planta: agente Modbus de solo lectura y collector, que alimentan al SCADA y a la toolbox.",
