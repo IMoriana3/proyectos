@@ -553,6 +553,37 @@ const PROJECTS = [
     ]
   },
   {
+    name: "Simulador de Overcast",
+    status: "live",
+    objetivo: "Espejo JS del módulo canónico de tracking de SolarGPT (tracker.py, schema 2.1.0) para días nublados: las 4 políticas de difusa del core (diffuse_flat, diffuse_limited, diffuse_continuous, diffuse_poa_switch) + baseline pvlib, con la MISMA semántica — Perez 1990 única para todas, clamp de backtracking innegociable, máquina confirm 30' / dwell 90' en minutos absolutos (invariante en resolución) y lazo de control real (deadband 1° + slew 0,17°/s). Cielo del día pintable con presets (incluido el escenario canónico de test_diffuse_policies.py), días REALES de Open-Meteo (histórico ERA5 / previsión) con modo EN VIVO (reloj en ahora, refresco 10 min), escena 3D con el modelo real del seguidor (seguidor.js, sombras por shadow-map, sol por DNI y hemisferio por DHI, nube por zona; sin WebGL cae al corte 2D), modo ZONAL por NCU opcional (un frente cruza la planta y cada NCU decide con su señal local frente a la decisión única de planta — estilo Zonal Diffuse; para continuous zonal ≥ global por construcción, la QA lo exige), curvas irradiancia/θ/POA, tabla del día (Δ POA, % en flat, conmutaciones, recorrido de maniobra, coste del lazo) y estimación anual por mezcla de cielos. El companion del Simulador de BT: aquel responde a «¿a qué ángulo para no sombrear?», este a «¿y cuando no hay sol que sombree?». La doc incluye el ESTUDIO de diffuse tracking: física (Kelly & Gibson, NREL 2022, óptimo anisótropo), competencia con cifras honestas (Nextracker/Array/Soltec/Trina/GameChange/PVH: difuso aislado ~0,4–1,5 % anual, 5–13 % en días cubiertos) y la validación 2026 de la arquitectura confirm/dwell.",
+    stack: "HTML offline · Three.js (libs locales) + seguidor.js · Canvas · pvlib singleaxis + Ineichen + Perez portados a JS · Open-Meteo (datos, opcional)",
+    url: "https://imoriana3.github.io/cobertura-zigbee/overcast.html",
+    repo: "https://github.com/imoriana3/cobertura-zigbee",
+    updated: "2026-08-14",
+    version: "v1.1",
+    docId: "overcast-sim",
+    docUrl: "",
+    uso: [
+      "Elige planta (o lat/lon), fecha y resolución (5/10/15 min); el GCR es derivado (ancho/pitch), como en el core.",
+      "Pinta la nubosidad del día arrastrando en la tira (o un preset: overcast, frentes, el escenario del test del core, aleatorio con semilla).",
+      "O trae un día REAL: fuente Open-Meteo → «Cargar la fecha» (ERA5 si es antigua, previsión si es reciente) o «En vivo» (hoy, reloj en ahora, refresco cada 10 min). La irradiancia del paso pasa a ser la medida.",
+      "Activa políticas y compáralas: ▶ anima el día; el HUD da GHI/DNI/DHI, θ, modo y Δ POA instantánea; la banda violeta marca el modo flat.",
+      "La tabla del día da POA, Δ vs pvlib, % en flat, conmutaciones, recorrido (desgaste) y coste del lazo (decidir tarde + llegar tarde).",
+      "«Calcular año» pondera 12 días × tres cielos tipo según el clima (seco / atlántico / centroeuropa, editable).",
+      "Activa el ZONAL: nº de NCUs y minutos que tarda el frente en cruzar; la escena 3D pinta cada zona con su nube y su θ, y la tabla compara decisión global vs cada-NCU-con-su-señal.",
+      "«Verificar contra el contrato del core» corre la QA de la física en el navegador; en repo: node tools/test_overcast_sim.mjs."
+    ],
+    pendientes: [
+      { done:false, text:"Consigna anisótropa del modo difuso (ángulo óptimo ≠ 0° con circumsolar) como política extra — el core barre α, el óptimo analítico de Solar Energy 2025 daría la forma cerrada" },
+      { done:false, text:"Export CSV de θ(t) por política para la TCU Toolbox" },
+      { done:true, text:"Modo zonal (por NCU): cada NCU decide con su señal local frente a la decisión de planta (hecho v1.1; cuando el core tenga la política zonal, espejarla aquí)" }
+    ],
+    historial: [
+      { date:"2026-08-14", ver:"v1.1", note:"Escena 3D real con el modelo del seguidor de la casa (seguidor.js, sombras, nube por zona, luz solar por DNI y hemisferio por DHI; fallback corte 2D) y ZONAL por NCU: el frente cruza la planta y cada NCU decide con su señal — en el día de frentes, flat global +0,37 % → zonal +1,15 %. QA 30 en página, 43 en Node." },
+      { date:"2026-08-14", ver:"v1.0", note:"Primera versión: las 4 políticas de difusa del core + baseline, escenario canónico del test como preset, Open-Meteo (ERA5/previsión/EN VIVO), lazo deadband+slew con su coste medido, anual por mezcla de cielos. QA 27 en página, 38 en Node. La doc incorpora el estudio de competencia y papers." }
+    ]
+  },
+  {
     name: "Nuevo Siting",
     status: "live",
     objetivo: "Crea el siting de comunicaciones de una planta nueva: sube los seguidores (CSV/Excel, plantilla incluida) y autoubica NCUs, RSU y gateways.",
