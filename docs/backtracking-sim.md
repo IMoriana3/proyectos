@@ -313,6 +313,15 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.17** — **el tiempo enseña el backtracking**: el slider de hora se pinta por
+  tramos desde la física (oscuro = noche · ámbar = horas de BT de la política de la escena, consigna
+  a >0,5° de la posición astronómica con la misma referencia limitada a slew) y el aviso «BT ON» se
+  enciende junto al reloj en esas horas. Sombra del render sin SIERRA: el frustum de sombra fijo de
+  140 m estiraba cada texel 1/sin(elev) por el suelo con sol rasante (~2 m a 2° de elevación — los
+  dientes y la sombra «clavada» que avanzaba a saltos); frustum ANISÓTROPO (alto ceñido a
+  patch·sin(el)+alturas·cos(el), near/far pegados, normalBias) ⇒ texel en centímetros a cualquier
+  hora. «☀ rayo» se apaga al desmarcar (no tenía listener). Cielo rojizo con el sol bajo en luz real
+  + crepúsculo (0…−8°). QA 36.
 - **2026-08-14 · v1.16** — **la sombra pintada es la SILUETA real** (cada mesa emisora proyectada
   por el rayo solar sobre el plano de la receptora, polígono recortado a la mesa — ya no sobresale ni
   exagera anchura), suelo honesto (banda pálida del vano + cintas de sombra inclinadas por fila
