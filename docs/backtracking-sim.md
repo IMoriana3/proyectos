@@ -313,6 +313,17 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.21** — **pacto del rojo**: el último gris-sin-rojo era el CANTO de los módulos
+  (5 cm) — en tangencia el rayo rasante pincha el grosor y el shadow-map pinta bandas de energía ~0
+  que la física (palas sin espesor) no cobra; medido con oráculo independiente (raycast three.js del
+  render): 12,5% uniforme de «canto» con contador exacto en 0,0%. Canto adelgazado ×0,25 solo en
+  esta página ⇒ lo gris que queda es sombra real, con su rojo. **Óptimo libre SIN límites
+  algorítmicos**: rejilla hasta f=−0,5 (más plano que pairwise — con el contador honesto pairwise ya
+  no es sombra-cero por la torsión) + reparación con el contador exacto; límites restantes solo de
+  hardware (±θmáx, slew); energy-optimal fiel al core (f∈[0,1]), declarado. Medido honesto: el anual
+  no se mueve (+1,02%) — la libertad está; búsqueda consciente de torsión anotada como siguiente
+  paso. QA 39.
+
 - **2026-08-14 · v1.20.1** — **tresbolillo de verdad en bifila**: alternaba por fila (r%2) pero la
   gemela copia a la motora — siempre fila PAR ⇒ desplazamiento 0 para todas y el «tresbolillo»
   salía alineado. La alternancia pasa a ser por unidad de accionamiento (pairStep=2): dentro del
