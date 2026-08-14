@@ -1,4 +1,4 @@
-# Simulador de TCU — difusa · viento · backtracking · y estudio del diffuse tracking
+# Simulador de Overcast — Difusa en el navegador · y estudio del diffuse tracking
 
 **Página**: `https://imoriana3.github.io/cobertura-zigbee/overcast.html` · repo `cobertura-zigbee`
 **Un único HTML, física offline, sin dependencias de código.** QA integrada (botón «Verificar contra
@@ -12,11 +12,6 @@ schema 2.1.0) para ver y comparar **las políticas de difusa del core** en días
 cada una minuto a minuto, cuánta POA gana o pierde, cuántas veces conmuta y cuánto maniobra. El
 compañero del [Simulador de Backtracking](backtracking-sim.md): aquel responde a «¿a qué ángulo
 para no sombrear?», este a «¿y cuando no hay sol que sombree?».
-
-Desde v1.11 no simula solo la capa de difusa: simula **la TCU entera**, con las tres capas que
-compiten por el mando y su orden de autoridad. Es lo que convierte la demo en algo que un asset
-manager puede firmar — la pregunta del cliente nunca es «¿cuánto gana la difusa?» sino «¿y qué pasa
-cuando sopla viento a la vez?».
 
 **NO es** el motor bancable: el generador de nubes es sintético (declarado), el POA no es energía
 AC y la estimación anual es una comparativa de políticas, no un P50. Para números de proyecto: el
@@ -60,75 +55,6 @@ overcast con el tracker inclinado; continuous ≥ pvlib **en cada paso**; el pul
 conmuta; el dwell bloquea la re-entrada con la señal viva; los bordes de conmutación caen en el
 mismo instante físico a 5/10/15 min; enter_ratio imposible ⇒ jamás conmuta; ghi_min gigante ⇒
 passthrough; NaN en GHI ⇒ passthrough sin NaN en la salida.
-
-## La jerarquía de mando (el árbitro)
-
-En campo, tres capas piden el ángulo al mismo tiempo y hay que decidir cuál gana. El árbitro
-(`arbitrate()`) resuelve paso a paso con el orden del core (`run_tracker`):
-
-| # | Capa | Por qué manda ahí |
-|---|---|---|
-| 1 | **Stow de viento** | seguridad: gana a todo, incluida la difusa |
-| 2 | **Tope mecánico** ±θmáx | el hierro no negocia |
-| 3 | **Backtracking** (\|θ\| ≤ \|θ_n\|) | la difusa no puede crear sombra entre filas |
-| 4 | **Política de difusa** | optimiza dentro de lo que las tres anteriores permiten |
-| 5 | **Astronómico** (θ_n) | por defecto |
-
-**El orden importa y el core lo dice expreso**: el clamp de backtracking se aplica **antes** que el
-stow. Al revés, la posición de refugio se recorta a \|θ_n\| y el stow **no llega a ejecutarse** —
-justo con temporal, que es cuando importa. La QA lo fija con un test dedicado.
-
-### El stow es el de la casa, no uno genérico
-
-La capa de viento **no se define aquí**. Es la **«Estrategia de Stow»** (tabla 3 del documento), la
-misma que el comprobador de [Seguimiento PEM](seguimiento-pem.md) verifica contra los **logs reales
-de planta** (`STOW_DEF` en `factiun-cartera/seguimiento-pem.html`):
-
-| Parámetro | Valor | Qué es |
-|---|---|---|
-| `pre_kmh` | 40 km/h | entra el **pre-stow** |
-| `stow_kmh` | 60 km/h | entra el **stow** |
-| `pos_deg` | **55°** | la **posición de stow** |
-| `pre_min_deg` | **30°** | en pre-stow, \|θ\| **no puede bajar** de aquí |
-| `salida_min` | 30 min | desde la **última racha** sobre umbral |
-| `nieve_on/off` | 10 / 2 cm | defensa por nieve — **no cubierta aquí** (no hay serie de espesor) |
-| `noche_deg` | 5° este | stow nocturno |
-
-Tres cosas que no son lo que uno supondría, y que vienen de campo:
-
-1. **La posición de stow es 55°, el tope — no plano.** El tracker se pone de canto para descargar
-   la pala; irse a 0° sería ofrecerla entera.
-2. **El pre-stow no es un tope, es una banda 30–55°.** `pre_min_deg` es un **mínimo**: prohíbe
-   exactamente lo que la difusa quiere hacer, bajar a plano.
-3. **Los 30 minutos de salida cuentan desde la última racha**, no desde que el viento afloja. En
-   campo manda además la desactivación de la alarma de la estación (anemómetro de 1 s); la serie
-   submuestreada es cota inferior.
-
-### Lo que esto le hace a la ganancia de difusa
-
-Con la estrategia real, el viento deja de ser un adorno (día canónico, mismo cielo, solo cambia el
-perfil de viento):
-
-| Perfil | Δ difusa vs pvlib | Recorrido | % del día |
-|---|---|---|---|
-| Calma | **+1,23 %** | 180° | 0 % en stow |
-| Racheado | **+0,75 %** | 214° | 48 % en pre-stow |
-| Temporal | **+0,23 %** | 418° | 89 % en stow |
-
-La banda de pre-stow **se come la mitad** de la ganancia de difusa —porque prohíbe justo la maniobra
-que la difusa quiere— y el stow casi toda. Y el **recorrido se duplica** (226° → 418°): ir a 55° y
-volver lo paga el actuador a 0,17 °/s, en desgaste y en tránsito.
-
-Dos consecuencias más que el simulador enseña:
-
-- **Ir al refugio también cuesta tiempo.** El stow no teletransporta: pasa por el mismo actuador. De
-  plano a 55° son ~5,4 minutos.
-- **Al amanecer, el pre-stow sombrea.** La banda empuja al tracker más abierto que el límite de
-  backtracking, y da sombra a la fila de al lado. Es correcto: la seguridad está por encima del
-  backtracking, y ese es el coste.
-
-El HUD dice **quién manda** en cada minuto y el diario narra cada maniobra de viento con la racha
-medida y el umbral cruzado — la misma trazabilidad que el resto de decisiones.
 
 ## El cielo del día
 
