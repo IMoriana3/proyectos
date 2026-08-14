@@ -532,6 +532,7 @@ const PROJECTS = [
       { done:false, text:"Export CSV de θ(t) por política para la TCU Toolbox" }
     ],
     historial: [
+      { date:"2026-08-14", ver:"v1.25", note:"Auditoría 1/6 y 5/6: la malla 6×8 del contador sesgaba el POA anual +0,52% (medido; el error de cuerda decae como 1/MU) — sustituida por cuerda ANALÍTICA exacta (unión de intervalos en cerrado, coste igual o menor); MV=8 justificado con cota (+0,007% vs MV=64). Anual honesto: pairwise 2769,7 · óptimo +0,84%. Oráculos en CI: sin-podas (0,1 pp) y método independiente MU=192. QA 43." },
       { date:"2026-08-14", ver:"v1.24", note:"«Depura todo»: barrido de auditoría (6 plantas × 9 políticas × todos los controles, invariantes físicos) con CERO hallazgos, y la silueta roja pasa a la geometría por TRAMOS del contador — el rojo abraza el gris del shadow-map también en terreno curvado. QA 39." },
       { date:"2026-08-14", ver:"v1.23", note:"El resto de plantas por LAYOUT (El Burgo · Páramo · Fayón — implantación real, terreno plano declarado; Túnez fuera: fija). Pan+zoom en el modo sol ortográfico. Rendimiento: optimizadores a malla de 5 min en el instante y reparación exacta solo con sol <40°. QA 39." },
       { date:"2026-08-14", ver:"v1.22", note:"Vista del sol ORTOGRÁFICA que sigue al sol (toggle, bocarriba): desde el sol no se ve ni una sombra — la prueba visual del contador (un rojo despejado = falso positivo). El adelgazado del canto se revirtió entero tras romper la planta dos veces: el modelo del seguidor no se toca. QA 39." },
