@@ -313,6 +313,20 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.26** — **auditoría, punto 3: umbrales con dato, no con fe**. Barrido de
+  sensibilidad de los 4 umbrales heurísticos del contador (Ayora real, año de 12 días, cada
+  variante parchea el fuente y repite el año): las PODAS (dirección + alcance 9·h/tan + ventana
+  axial) cuestan **0,0000%** — validadas exactas; el gate de reparación del óptimo libre (<40°)
+  cuesta **0,0000%** — validado; la marcha de terreno (4 m + 3 refinos vs 1 m + 6) cuesta
+  **−0,028%** — declarado como cota; y el único MATERIAL: el gate «terreno solo con sol <25°»
+  costaba **−0,34% anual**. El diagnóstico por bandas mostró decaimiento suave sin escalón
+  (−2,9 kWh en 25–30°, −1,9 en 35–40°, −0,6 en 50–55°: en Ayora hay vanos al 36% y las lomas
+  muerden hasta ~60° de sol) — el corte era arbitrario y se RETIRA: terreno contado a toda
+  elevación (la marcha sale barata con sol alto: el rayo supera el cielo en pocos pasos). Anual
+  honesto: pairwise 2760,3 kWh/m²·año (−0,34%: lo que las lomas quitaban sin contarse), true-3D
+  −0,09%, óptimo +0,84%, óptimo libre +0,83%. QA 44 (test del cambio + oráculos actualizados).
+  Gate de release en verde.
+
 - **2026-08-14 · v1.25** — **auditoría, puntos 1 y 5: cuerda ANALÍTICA y oráculos en CI**. El
   estudio de convergencia del muestreo (Ayora real, año de 12 días) midió que la malla 6×8 del
   contador ray-cast SESGABA el POA anual **+0,52%** (subcontaba sombra), y la atribución por ejes
