@@ -189,6 +189,43 @@ simulador cuantifica lo que compra la inteligencia central: con el filtro «TCU�
 (sombra cero); con «NCU» entra energy-optimal y su ganancia (~1 % en llano, 2–6 % en terreno roto —
 la envolvente de mercado de la tabla anual).
 
+## Frontera de módulos: este simulador es MOVIMIENTO; el POA/eléctrico será otro módulo
+
+Decisión de arquitectura (2026-08-14): la misión de este módulo es el **movimiento y el
+apuntamiento** — geometría real, sol, políticas de consigna y límites de hardware. El cálculo POA
+y el modelo eléctrico «oficiales» vivirán en un **módulo energético aparte**; lo que hay aquí
+dentro (Perez/Ineichen + Martinez por estación) es un **evaluador provisional**, acotado y
+declarado, que se sustituirá por el módulo real cuando exista.
+
+**Qué es misión de este módulo** (todo en los niveles fuertes de justificación — literatura,
+construcción o medida):
+- geometría: cotas por tramo, pitch reales, cuerda, implantación (tresbolillo, huecos, mesas);
+- sol NOAA (verificado contra tránsito);
+- apuntamiento: pvlib singleaxis + pairwise/true-3D con residual de tangencia;
+- **sombra geométrica**: el contador de cuerda analítica con sus dos oráculos — se queda aquí
+  aunque el POA se vaya, porque el backtracking ES gestión de sombra: la justificación de una
+  consigna es «con este θ, la sombra geométrica es cero (o esta, pintada en rojo)»;
+- hardware: acoplado bifila (gemela≡motora), clamp ±θmáx, slew del actuador.
+
+**El bucle, y cómo se rompe.** El apuntamiento óptimo necesita al módulo energético para elegir
+(energy-optimal y óptimo libre maximizan POA), y el módulo energético necesita los ángulos para
+calcular. No es circularidad: es el patrón **generador/evaluador** de cualquier optimización —
+este módulo GENERA candidatas ejecutables (rejilla de f, acoplado, clamp, slew: solo posiciones
+que los motores pueden adoptar) y el módulo energético las EVALÚA como función objetivo; se itera
+por instante sobre una rejilla finita y converge. Las políticas geométricas (pairwise, true-3D,
+astro, row) ni siquiera entran al bucle: su consigna es geometría pura, sin energía — igual que
+una TCU real. Solo la inteligencia de NCU (los óptimos) cierra el lazo con el evaluador.
+
+**El contrato del enchufe** (ya implementado — el evaluador se inyecta, no se llama por nombre):
+
+    evaluar(zen, az, T, θ[porFila], irr, doy, albedo) → { plant, rows[], shade[], elec[] }
+
+Es la firma exacta de `poaPlant` en FÍSICA PURA. El día que exista el módulo energético, se
+implementa esta firma con su POA/eléctrico y los optimizadores lo consumen sin tocar una línea
+del movimiento. Las dos únicas constantes de nivel débil que SÍ son de este módulo y esperan
+dato de planta: el buje (2,0 m — mueve la sombra de terreno, que mueve consignas) y el slew
+(0,17 °/s de catálogo Sunner — decide qué consigna es ejecutable).
+
 ## Accionamientos: monofila · bifila rígida · bifila quebrada
 
 Nomenclatura de la casa (CONTRATO de `scada`): **bifila = UN motor mueve DOS filas unidas por el eje de
