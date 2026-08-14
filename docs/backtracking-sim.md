@@ -313,6 +313,19 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.27** — **auditoría, puntos 4 y 2 — la auditoría queda CERRADA (6/6)**.
+  **Punto 4 (torsión)**: la reparación iterada se midió (+0,0003%) y no se adopta; el hallazgo real
+  era otro — bajo el contador exacto el óptimo libre rendía MENOS que el común (2783,2 vs 2783,5:
+  ganaba en la métrica rápida ciega, perdía en la publicada). Arreglo: **elección exacta por
+  instante** (el libre evalúa con el ray-cast su resultado y el del común y se queda el mejor) —
+  libre ≥ común POR CONSTRUCCIÓN. Anual: libre 2785,2 (+0,90%) ≥ óptimo 2783,5 (+0,84%). **Punto 2
+  (hipótesis eléctrica)**: acotada y declarada — granularidad estación≈módulo validada por la
+  convergencia MV (9,3 m→1,2 m: +0,007%); sándwich medido en el año: solo área 2806,0 (cota
+  inferior) · publicado 2760,3 (−1,63% de amplificación eléctrica, al 20% del recorrido) · banda
+  uniforme 2582,0 (−7,98%, el modelo del −8% espurio retirado en v1.19); nota declarativa en la
+  página (strings axiales, bypass ideal, MPPT sin mismatch; pendiente: validación IV/SCADA).
+  Tests: libre ≥ común exacto en 2 regímenes · elec ≥ óptica por fila. QA 47, gate en verde.
+
 - **2026-08-14 · v1.26.1** — **auditoría, punto 6: GATE de pre-release obligatorio**
   (`tools/release_gate.mjs`, un comando antes de mergear): (1) sintaxis de cada bloque `<script>`
   con `node --check` — la lección del paréntesis suelto; (2) batería completa (45); (3) smoke en
