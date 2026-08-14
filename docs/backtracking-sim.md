@@ -313,6 +313,25 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.25** — **auditoría, puntos 1 y 5: cuerda ANALÍTICA y oráculos en CI**. El
+  estudio de convergencia del muestreo (Ayora real, año de 12 días) midió que la malla 6×8 del
+  contador ray-cast SESGABA el POA anual **+0,52%** (subcontaba sombra), y la atribución por ejes
+  señaló al culpable: la cuerda (MU) — a MV fijo, MU 6→48 elimina casi todo el sesgo (2799,7→2774,0
+  kWh/m²·año) mientras refinar solo el eje no mueve nada; el error decae como 1/MU (primer orden:
+  ni 48 muestras convergen del todo). Arreglo de raíz en vez de «más muestras»: el impacto contra
+  cada plano emisor es LINEAL en la coordenada de cuerda u, así que la sombra de cada estación
+  axial es una **unión de intervalos en cerrado** — MU desaparece del modelo (y con él su sesgo) a
+  coste igual o menor (rasante 425 ms vs 431; sol alto 4 ms vs 7). Solo queda MV como
+  discretización: con cuerda analítica, MV=8 queda a **+0,007%** del refinado MV=64 en el anual
+  (≤0,52 pp de media de planta en el peor instante rasante) — default justificado con cota, y una
+  guarda en la batería (MV=8 vs MV=32 ≤0,7 pp) evita regresiones. Anual honesto recalculado:
+  pairwise 2769,7 (−1,07% vs el contador muestreado — lo que el 6×8 no contaba), true-3D −0,09%,
+  óptimo +0,84%, óptimo libre +0,83%. Y los ORÁCULOS pasan a CI: (a) oráculo de PODAS — cuerda
+  analítica reimplementada SIN ninguna poda (todas las emisoras, sin alcance, sin ventana axial),
+  tolerancia 0,1 pp, 4 regímenes (rasante/terreno/torsión/verano); (b) oráculo de MÉTODO —
+  discretización independiente (muestreo bruto MU=192): si la unión de intervalos tuviera una
+  desigualdad mal derivada, falla. QA 43.
+
 - **2026-08-14 · v1.24** — **«depura todo»**: barrido de auditoría Playwright sobre TODO (5 presets ×
   accionamientos, las 6 plantas, las 9 políticas, minutal, peor momento, modo sol, rayo, luces,
   picking) verificando invariantes físicos — θ finito y ≤θmáx, sombra∈[0,1], POA finita, HUD
