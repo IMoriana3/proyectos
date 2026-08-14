@@ -569,7 +569,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/cobertura-zigbee/overcast.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-08-14",
-    version: "v1.8",
+    version: "v1.9",
     docId: "overcast-sim",
     docUrl: "",
     uso: [
@@ -592,6 +592,7 @@ const PROJECTS = [
       { done:true, text:"Modo zonal (por NCU): cada NCU decide con su señal local frente a la decisión de planta (hecho v1.1; cuando el core tenga la política zonal, espejarla aquí)" }
     ],
     historial: [
+      { date:"2026-08-14", ver:"v1.9", note:"El DIARIO narra la política elegida, cada una con SU lógica: flat avisa del chatteo (y de que con el confirm no habría pasado), limited dice qué ángulo RETIENE, continuous la fracción α que elige y el % ganado, poa_switch su confirm/dwell. Cada orden anota además cuándo LLEGA el hierro (0,17 °/s). Y las políticas dejan de rotularse todas «FLAT»: PLANO / RETENIDO / DIFUSA según lo que hace cada una — limited retenía ángulos de hasta 55° etiquetados como planos. QA 57." },
       { date:"2026-08-14", ver:"v1.8", note:"DOS RELOJES: la TCU decide en su ciclo de control y el ACTUADOR rampa AL MINUTO hacia la consigna (0,17 °/s). Antes el lazo solo se evaluaba en la rejilla de decisión, cuyo techo a 10 min es 102° — más que el recorrido del tracker — así que no ataba nunca y un giro de 55° salía hecho «dentro del paso». La POA del día y del anual se integran al minuto sobre el ejecutado: EL TRÁNSITO SE PAGA (0,42 % del año en Midlands, más que la propia ganancia medida). Curva con consigna vs ejecutado, HUD con ↻ °/s y estado GIRANDO por NCU. QA 53." },
       { date:"2026-08-14", ver:"v1.7", note:"DIARIO DE DECISIONES estilo SCADA: cada movimiento justificado con sus números (stow, pulsos rechazados por confirm, entradas/salidas del plano, bloqueos por dwell) — espejo anotado que reproduce bit a bit los flags de la máquina real, un diario por NCU en zonal. Anual con los 365 DÍAS MEDIDOS (ERA5) del emplazamiento a paso 30′ con θ ejecutado. Nubes fBm de los cobertura 3D con sombra al suelo según el sol. BIFILA real en plantas (Ayora 754 unidades = 1.508 filas, eje de transmisión). ✈ Vuelo libre WASD+ratón. QA 49." },
       { date:"2026-08-14", ver:"v1.5", note:"El render de los cobertura 3D en las plantas reales (Seguidor.instancePlan, contrato spin/static, mesa con color de estado por instancia; terreno/camino/valla/caseta a escala de km) y HONESTIDAD del actuador también en el zonal: la POA por NCU sale del θ ejecutado (deadband 1° + slew 0,17 °/s), con la fontanería verificada por la QA. Preparada como demo de la lógica de difusa. QA 48 en Node." },
