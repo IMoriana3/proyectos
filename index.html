@@ -570,7 +570,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/cobertura-zigbee/overcast.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-08-14",
-    version: "v1.10",
+    version: "v1.10.1",
     docId: "overcast-sim",
     docUrl: "",
     uso: [
@@ -593,6 +593,7 @@ const PROJECTS = [
       { done:true, text:"Modo zonal (por NCU): cada NCU decide con su señal local frente a la decisión de planta (hecho v1.1; cuando el core tenga la política zonal, espejarla aquí)" }
     ],
     historial: [
+      { date:"2026-08-14", ver:"v1.10.1", note:"Tercera auditoría: el anual de 365 días decidía a 30 min, donde el confirm de la histéresis colapsaba a UNA muestra (cero minutos sostenidos) y el poa_switch degeneraba hacia el flat justo en la tabla que se enseña al cliente — ahora decide a 15 min y el suelo del contador sube a 2 muestras (no-op exacto a 5/10/15). Y la VRAM se fugaba 14,5 MB por reconstrucción con San José: instanceMatrix/instanceColor solo se liberan con el dispose() del InstancedMesh. QA 63." },
       { date:"2026-08-14", ver:"v1.10", note:"Cuatro bugs que destaparon dos auditorías adversariales: la tabla zonal integraba la energía en la rejilla de decisión (cobraba teletransporte mientras la del día cobraba la rampa: dos físicas en la misma pantalla); desmarcar «aplicar el lazo» devolvía 55°/min a la escena (5,4× la spec) — el slew es hierro y ya no se puede apagar, la casilla gobierna solo el deadband; el corte 2D, las mesas de la planta real y la banda de la gráfica seguían rotulando «FLAT» violeta para las cuatro políticas (ahora una sola fuente de verdad da texto Y color, con la política efectiva); y el reloj corría al doble en ×½ porque el slider redondeaba la fracción cada frame. QA 62." },
       { date:"2026-08-14", ver:"v1.9.2", note:"DEPURACIÓN: fuga de texturas en GPU al cambiar de planta (disposeGroup no liberaba los mapas de los materiales), mallas basculantes sin colocar en el primer frame de una planta real, vuelo libre que dejaba los listeners vivos al salir del 3D, y el stow nocturno que no obedecía al tope mecánico (lo cazó un fuzz). Red nueva: fuzz determinista de 400 configuraciones del planeta (latitud, huso, fecha, θmáx, GCR, cielos) exigiendo a la vez nada de NaN, POA ≥ 0, clamp, tope, slew y diario coherente; más una batería de casos límite (polos, hemisferio sur, bisiesto). Barrido de 58 pasos de UI sin un error de JS. QA 60." },
       { date:"2026-08-14", ver:"v1.9", note:"El DIARIO narra la política elegida, cada una con SU lógica: flat avisa del chatteo (y de que con el confirm no habría pasado), limited dice qué ángulo RETIENE, continuous la fracción α que elige y el % ganado, poa_switch su confirm/dwell. Cada orden anota además cuándo LLEGA el hierro (0,17 °/s). Y las políticas dejan de rotularse todas «FLAT»: PLANO / RETENIDO / DIFUSA según lo que hace cada una — limited retenía ángulos de hasta 55° etiquetados como planos. QA 57." },
