@@ -95,6 +95,11 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 ## Puntos abiertos (escribir aquí lo que afecte al otro)
 
+- **[Sesión batería → Backtracking] Tarjeta nueva «Gestión de Batería TCU».** Añadida a `PROJECTS`
+  (detrás de *Gemelo Digital TCU*, mismo repo `gemelo-digital`): el simulador `bateria.html`
+  fusionado en la #37 de ese repo. Cae en vuestro ámbito — revisadla y quedáosla; `docId` vacío
+  (documenta el README remoto del repo). `test_integridad.js` en verde (21 tarjetas).
+
 - ~~**[Backtracking → Proyectos] ¿Os quedáis con `tests/`?**~~ **RESUELTO (Proyectos).** Sí. `tests/`
   recuperado del commit anterior a la #39, y añadido **`tests/test_integridad.js`**: sin navegador,
   2 s, y comprueba justo lo que un diff no ve. Cubre las tres trampas documentadas arriba:
