@@ -78,19 +78,54 @@ En campo, tres capas piden el ángulo al mismo tiempo y hay que decidir cuál ga
 stow. Al revés, la posición de refugio se recorta a \|θ_n\| y el stow **no llega a ejecutarse** —
 justo con temporal, que es cuando importa. La QA lo fija con un test dedicado.
 
-**Stow de viento («Strategy E» del core)**: T1 = 40 km/h → stow **parcial** (el sector se limita a
-±30°); T2 = 60 km/h → stow **total** (θ = 0°). Subir de nivel es **inmediato** (es seguridad);
-bajar exige **30 minutos seguidos** por debajo del umbral, de modo que una racha aislada no puede
-sacar al tracker de refugio y volver a meterlo. El viento sale del perfil sintético elegido o,
-con día real, del **medido** por Open-Meteo (`wind_speed_10m`, en m/s).
+### El stow es el de la casa, no uno genérico
 
-Dos matices que el simulador enseña y que suelen sorprender:
+La capa de viento **no se define aquí**. Es la **«Estrategia de Stow»** (tabla 3 del documento), la
+misma que el comprobador de [Seguimiento PEM](seguimiento-pem.md) verifica contra los **logs reales
+de planta** (`STOW_DEF` en `factiun-cartera/seguimiento-pem.html`):
 
-- **Ir al refugio también cuesta tiempo.** El stow no teletransporta: la orden pasa por el mismo
-  actuador de 0,17 °/s. Con temporal y el tracker a 55°, llegar a plano son ~5,4 minutos.
-- **El «% en stow» se come la ganancia de difusa.** En un día de temporal, las cuatro políticas
-  convergen: si la planta está en refugio el 89 % del día, no hay política de difusa que decidir.
-  Es la razón por la que la ganancia anual de difusa hay que medirla, no estimarla.
+| Parámetro | Valor | Qué es |
+|---|---|---|
+| `pre_kmh` | 40 km/h | entra el **pre-stow** |
+| `stow_kmh` | 60 km/h | entra el **stow** |
+| `pos_deg` | **55°** | la **posición de stow** |
+| `pre_min_deg` | **30°** | en pre-stow, \|θ\| **no puede bajar** de aquí |
+| `salida_min` | 30 min | desde la **última racha** sobre umbral |
+| `nieve_on/off` | 10 / 2 cm | defensa por nieve — **no cubierta aquí** (no hay serie de espesor) |
+| `noche_deg` | 5° este | stow nocturno |
+
+Tres cosas que no son lo que uno supondría, y que vienen de campo:
+
+1. **La posición de stow es 55°, el tope — no plano.** El tracker se pone de canto para descargar
+   la pala; irse a 0° sería ofrecerla entera.
+2. **El pre-stow no es un tope, es una banda 30–55°.** `pre_min_deg` es un **mínimo**: prohíbe
+   exactamente lo que la difusa quiere hacer, bajar a plano.
+3. **Los 30 minutos de salida cuentan desde la última racha**, no desde que el viento afloja. En
+   campo manda además la desactivación de la alarma de la estación (anemómetro de 1 s); la serie
+   submuestreada es cota inferior.
+
+### Lo que esto le hace a la ganancia de difusa
+
+Con la estrategia real, el viento deja de ser un adorno (día canónico, mismo cielo, solo cambia el
+perfil de viento):
+
+| Perfil | Δ difusa vs pvlib | Recorrido | % del día |
+|---|---|---|---|
+| Calma | **+1,23 %** | 180° | 0 % en stow |
+| Racheado | **+0,75 %** | 214° | 48 % en pre-stow |
+| Temporal | **+0,23 %** | 418° | 89 % en stow |
+
+La banda de pre-stow **se come la mitad** de la ganancia de difusa —porque prohíbe justo la maniobra
+que la difusa quiere— y el stow casi toda. Y el **recorrido se duplica** (226° → 418°): ir a 55° y
+volver lo paga el actuador a 0,17 °/s, en desgaste y en tránsito.
+
+Dos consecuencias más que el simulador enseña:
+
+- **Ir al refugio también cuesta tiempo.** El stow no teletransporta: pasa por el mismo actuador. De
+  plano a 55° son ~5,4 minutos.
+- **Al amanecer, el pre-stow sombrea.** La banda empuja al tracker más abierto que el límite de
+  backtracking, y da sombra a la fila de al lado. Es correcto: la seguridad está por encima del
+  backtracking, y ese es el coste.
 
 El HUD dice **quién manda** en cada minuto y el diario narra cada maniobra de viento con la racha
 medida y el umbral cruzado — la misma trazabilidad que el resto de decisiones.
