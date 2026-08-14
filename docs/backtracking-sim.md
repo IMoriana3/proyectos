@@ -313,6 +313,12 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.10** — «☀ rayo»: el rayo crítico de la fila seleccionada (por el borde alto del
+  emisor, 3D pleno con deflexión axial; marcador verde al suelo / rojo si pincha a la vecina) y el
+  HAZ DE LUZ del vano medido — franjas de sombra por unión de las proyecciones de TODAS las filas
+  del corte y etiqueta «haz X,XX m · YY% del vano». Verificación física: tangencia pairwise ⇒ haz
+  0,00 m (persiana continua); mediodía ⇒ 60% (cuerda 2,38 sobre vano 6). Postes/tubo despreciados
+  (declarado).
 - **2026-08-14 · v1.9** — globo por mesa (pincha y sale fila, θ, tilt, sombra, POA y el peor momento
   de esa fila con salto), botones «⚠ ahora / ⚠ día» (fila con más sombra del instante / peor momento
   del día). Y TRES bugs cazados al estrenarlos: clampSlopes corrompía las parejas de las plantas
