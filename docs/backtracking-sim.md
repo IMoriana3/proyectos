@@ -313,6 +313,10 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.12** — eje de transmisión bifila con calidad de render (barra de acero a la
+  altura del tubo con copas en los extremos, entrando en el slew del modelo; el cubo amarillo solo
+  sin modelo) y banda de sombra a ras del cristal (la elevación anti z-fighting sobraba en la caja
+  opaca — era el «raíl rojo» sobresaliendo).
 - **2026-08-14 · v1.11** — banda de sombra como lomo OPACO con volumen (fuera la sierra del
   aliasing) y proporcional de verdad (mínimo 3% → 0,8%); true-3D arbitrado por el residual en el
   render (si la tangencia confirma que no hay contacto 3D, no se pinta — medido al alba: 78 parejas
