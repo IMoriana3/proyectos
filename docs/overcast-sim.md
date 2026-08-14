@@ -37,6 +37,8 @@ copiadas literales, que backtracking.html** — una física, dos simuladores. Lo
 | Lazo de control | `apply_control_loop` | deadband 1,0° + slew 0,17°/s + tope ±55° (canónicos `CANONICAL_*`) |
 | Nube → irradiancia | escenario de `test_diffuse_policies.py` | GHI = claro·(1−0,70·cc): a cc=1 queda el **30 % del claro, 100 % difuso** — el overcast canónico del test del core. DNI = claro·(1−cc)³ |
 | Meteo real | Open-Meteo (ERA5 / ICON-GFS) | GHI/DNI/DHI y nubosidad **medidas**; radiación horaria = media de la hora precedente → timestamp centrado −30 min |
+| Escena 3D | `seguidor.js` (fuente única del modelo, la misma que el gemelo y backtracking.html) | sombras por shadow-map; sol por DNI, hemisferio por DHI (la difusa ES la luz ambiente); nube por zona; sin WebGL cae al corte 2D |
+| Zonal por NCU | extensión propia (estilo Zonal Diffuse de Nextracker) | el frente cruza la planta con retardo por zona; GLOBAL = un sensor de planta decide un θ común, ZONAL = cada NCU con su señal. Para `continuous`, zonal ≥ global **por construcción** (argmax local paso a paso) — la QA lo exige; para las políticas con histéresis es una medición |
 
 ## Las cinco políticas (mismos nombres que el core)
 
@@ -163,8 +165,10 @@ dic-2024) · Soltigua (MaxRad) · patentes USPTO citadas en el texto.
 
 - Elige planta (o lat/lon), fecha y resolución; el GCR es derivado (ancho/pitch), como en el core.
 - Pinta el cielo o trae un día real de Open-Meteo (histórico/previsión/EN VIVO).
-- Activa políticas y compáralas: escena animada, curvas θ/POA, tabla del día (Δ POA, % en flat,
-  conmutaciones, recorrido, coste del lazo).
+- Activa políticas y compáralas: escena 3D (o corte 2D), curvas θ/POA, tabla del día (Δ POA, % en
+  flat, conmutaciones, recorrido, coste del lazo).
+- Activa el **zonal por NCU**: nº de NCUs y minutos del frente; la escena pinta cada zona con su
+  nube y su θ, y la tabla compara global vs zonal (en el día de frentes: flat +0,37 % → +1,15 %).
 - «Calcular año» estima la ganancia anual por mezcla de cielos (preset de clima editable).
 - «Verificar contra el contrato del core» corre la QA en el navegador; en repo:
   `node tools/test_overcast_sim.mjs`.
