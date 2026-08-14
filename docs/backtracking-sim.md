@@ -313,6 +313,14 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.13** — coherencia por construcción del rayo crítico: criticalRayPair pasa al
+  bloque FÍSICA en el marco exacto de shadeFracPair (QA de 200 casos: la frontera dibujada reproduce
+  fs con error < 1e-6); el render se ancla a la geometría del montaje y el color del marcador sale
+  del mismo número que el HUD (rojo en la pala / verde al suelo / ámbar si el corte 2D cortaría pero
+  el solape axial la libra). Bug cazado: el gating por residual del true-3D miraba la pareja
+  equivocada (índice invertido). Medición nueva: sombra de filas NO adyacentes bajo pairwise en
+  Ayora = 0,0% todo el día (ray-cast bruto multifila — la cadena de tangencias cubre también a las
+  de más allá). QA 33.
 - **2026-08-14 · v1.12** — eje de transmisión bifila con calidad de render (barra de acero a la
   altura del tubo con copas en los extremos, entrando en el slew del modelo; el cubo amarillo solo
   sin modelo) y banda de sombra a ras del cristal (la elevación anti z-fighting sobraba en la caja
