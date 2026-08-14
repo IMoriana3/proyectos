@@ -313,6 +313,22 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.18** — **la sombra rasante cruza varias filas — se cuenta Y se pinta entera**:
+  el contador de la banda rasante y la silueta roja pasan a MULTI-EMISORA (todas las filas del lado
+  del sol dentro del alcance, planos por tramo con cotas reales); la silueta además ya no se
+  descarta entera cuando una esquina del emisor no proyecta (recorte previo al semiespacio que
+  proyecta — el motivo principal de «mesas sombreadas sin rojo»). Verificado: ray-cast completo ≡
+  contador publicado (2,16 % ≡ 2,16 % al alba, 0 discrepancias); horizontales θ=0 tendrían 0,73 %
+  (donde el terreno sube contra el sol más que tan(elev), ni planos se libran). **Paso MINUTAL**
+  honesto: escena y HUD calculan la física exacta del minuto bajo demanda; malla de 5 min para
+  curvas/tablas, declarado. Indicador **BT OFF/ON fijo** + HUD con tarjetas estables; la referencia
+  astro de las horas de BT se acopla como el accionamiento (dos tramos reales en Ayora: 06:41–09:13
+  y 19:04–21:33). **Cúpula de cielo** con degradado por altura real (ocaso naranja con el disco en
+  el horizonte). Audit de espaldas al sol: pairwise/true3d/astro 0 min; energy-optimal 40 min al
+  alba en gemelas bifila (hardware real, el argmax global compensa). Anual re-medido: pairwise
+  2.853,1 · true3d −0,48% · row −0,50% · optimal +0,88% · óptimo libre +1,10% — supersede v1.16.
+  QA 37.
+
 - **2026-08-14 · v1.17** — **el tiempo enseña el backtracking**: el slider de hora se pinta por
   tramos desde la física (oscuro = noche · ámbar = horas de BT de la política de la escena, consigna
   a >0,5° de la posición astronómica con la misma referencia limitada a slew) y el aviso «BT ON» se
