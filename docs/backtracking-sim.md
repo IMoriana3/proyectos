@@ -313,6 +313,17 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.22** — **la vista del sol es ORTOGRÁFICA y sigue al sol**: el teorema del
+  usuario («si yo soy el sol no puedo ver sombras») solo lo cumple una cámara de rayos exactamente
+  paralelos — la perspectiva, por lejos que se ponga, deja paralaje y asomaban rojos imposibles
+  (dos iteraciones: 60 m → teleobjetivo a 900 m → OrthographicCamera dedicada). El modo «👁 sol» es
+  toggle: sigue al sol con el slider/animación, siempre bocarriba, orbit deshabilitado mientras
+  dura, y al salir restaura vista y controles. Verificado: desde el sol, todas las palas iluminadas
+  y CERO sombra visible — queda como prueba del contador (un rojo despejado desde el sol = falso
+  positivo). Por el camino: v1.21.1-3 — el adelgazado del canto rompió la planta dos veces (cuerda
+  aplastada, pivote desplazado) y se REVIRTIÓ entero: el modelo del seguidor (fuente única) no se
+  toca; el artefacto del canto en tangencia queda declarado como límite del render. QA 39.
+
 - **2026-08-14 · v1.21** — **pacto del rojo**: el último gris-sin-rojo era el CANTO de los módulos
   (5 cm) — en tangencia el rayo rasante pincha el grosor y el shadow-map pinta bandas de energía ~0
   que la física (palas sin espesor) no cobra; medido con oráculo independiente (raycast three.js del
