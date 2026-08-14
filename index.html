@@ -753,27 +753,30 @@ const PROJECTS = [
   {
     name: "Gestión de Batería TCU",
     status: "live",
-    objetivo: "Simulador de gestión de la batería LiFePO4 del TCU: balance energético hora a hora sobre meteo real, con winter mode y control con restricción energética (TFM).",
-    stack: "HTML autocontenido · canvas 2D · Open-Meteo",
+    objetivo: "Simulador anual de gestión de la batería LiFePO4 del TCU con la metodología del Battery Availability Study de SUNNER: % tiempo no disponible, % producción perdida y rainflow, en cualquier emplazamiento del mundo.",
+    stack: "HTML autocontenido · canvas 2D · Open-Meteo · CSV PVSyst · Leaflet",
     url: "https://imoriana3.github.io/gemelo-digital/bateria.html",
     repo: "https://github.com/imoriana3/gemelo-digital",
     updated: "2026-08-14",
-    version: "1.0",
+    version: "2.0",
     docId: "",
     docUrl: "https://raw.githubusercontent.com/imoriana3/gemelo-digital/main/README.md",
     download: "",
     uso: [
       "Fichero: bateria.html (repo gemelo-digital).",
-      "Meteo: previsión Open-Meteo 3–16 días (GHI + temperatura) o sintética (nubes + día del año) si no hay red.",
-      "Modelo canónico SolarGPT (00.2t + 11.5b): idle/sleep 0,64 W; motor Wh/° = 0,0503 + 0,000845·|θ| (pico 50 W); carga ∝ GHI limitada por C-rate seguro LiFePO4 según temperatura.",
-      "Gestión: winter mode (correcciones gruesas 3°/h) y restricción energética del TFM (SOC crítico → aparcar a 0°; rearme con histéresis).",
-      "Salidas: SOC con vs sin gestión, balance horario carga/base/motor, posición del seguidor y ciclos LFP (EFC, DoD, vida a 80 % SOH)."
+      "Meteo: año histórico completo de Open-Meteo (desde 2010), previsión 3–16 días, CSV horario de PVSyst (GlobEff/POA, T_Amb, DiffHor y PhiAng, el ángulo real del tracker; el fichero no sale del navegador) o sintética hasta 365 días.",
+      "Emplazamiento: presets de plantas o personalizado (búsqueda OSM + mapa + lat/lon) — cualquier punto del globo.",
+      "Consumo: medición Factiun (Wh/° = 0,0503 + 0,000845·|θ|, canónico; electrónica 0,64 W) o SUNNER en mA medio (2500/3250/4000 @25,6 V).",
+      "Estrategia SOC oficial: objetivo 80 % / crítico 30 % → defensa 55° (no disponible) / carga completa cada 5 días / sin carga bajo 0 °C + C-rate seguro LiFePO4; winter mode opcional.",
+      "Salidas: % tiempo no disponible y % producción perdida (POA defensa vs seguimiento), rainflow (ciclos ≥30/≥60 % DoD), balance mensual con mes crítico, vida a 80 % SOH y comparativa con/sin estrategia."
     ],
     pendientes: [
       { done:false, text:"Winter mode automático según la previsión (hoy es un interruptor manual)." },
-      { done:false, text:"Contrastar contra la celda 11.5b del notebook con la misma serie meteo." }
+      { done:false, text:"Contrastar contra la celda 11.5b del notebook con la misma serie meteo." },
+      { done:false, text:"Multi-año Solcast/Open-Meteo con estadística TMY ± 2σ como en el estudio SUNNER." }
     ],
     historial: [
+      { date:"2026-08-14", ver:"2.0", note:"Año completo: histórico Open-Meteo, CSV PVSyst (PhiAng real), estrategia SOC SUNNER, % inactivo + % producción perdida, rainflow y emplazamientos libres. Validado contra el estudio de Ayora." },
       { date:"2026-08-14", ver:"1.0", note:"Primera versión: balance meteo→SOC, gestión (winter + supervivencia), comparativa sin/con gestión y ciclos LFP." }
     ]
   },
