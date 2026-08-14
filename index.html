@@ -563,7 +563,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/cobertura-zigbee/overcast.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-08-14",
-    version: "v1.5",
+    version: "v1.6",
     docId: "overcast-sim",
     docUrl: "",
     uso: [
@@ -574,6 +574,8 @@ const PROJECTS = [
       "La tabla del día da POA, Δ vs pvlib, % en flat, conmutaciones, recorrido (desgaste) y coste del lazo (decidir tarde + llegar tarde).",
       "«Calcular año» pondera 12 días × tres cielos tipo según el clima (seco / atlántico / centroeuropa, editable).",
       "Activa el ZONAL: nº de NCUs y minutos que tarda el frente en cruzar; la escena 3D pinta cada zona con su nube y su θ, y la tabla compara decisión global vs cada-NCU-con-su-señal.",
+      "📋 El DIARIO DE DECISIONES justifica cada movimiento como el SCADA (abanderar/desabanderar): hora, NCU, causa y números — lo narrado ES lo ejecutado (QA bit a bit).",
+      "⬇ 365 días reales (ERA5): el anual con la meteo MEDIDA del emplazamiento, día a día y con el lazo. ✈ Vuelo libre por la planta (WASD + ratón).",
       "⛰ Ayora real (754 · 16 NCUs) / San José real (2.289 · 21 NCUs): las zonas pasan a ser las NCUs de verdad (lag por centroide), la planta entera instanciada en 3D teñida por estado (azul track · violeta FLAT · ámbar retiene) y el banco de nubes barriendo el frente.",
       "Convención de signos de la TCU en toda la UI: NEGATIVO = este (stow −5°).",
       "«Verificar contra el contrato del core» corre la QA de la física en el navegador; en repo: node tools/test_overcast_sim.mjs."
@@ -584,6 +586,7 @@ const PROJECTS = [
       { done:true, text:"Modo zonal (por NCU): cada NCU decide con su señal local frente a la decisión de planta (hecho v1.1; cuando el core tenga la política zonal, espejarla aquí)" }
     ],
     historial: [
+      { date:"2026-08-14", ver:"v1.6", note:"DIARIO DE DECISIONES estilo SCADA: cada movimiento justificado con sus números (stow, pulsos rechazados por confirm, entradas/salidas del plano, bloqueos por dwell) — espejo anotado que reproduce bit a bit los flags de la máquina real, un diario por NCU en zonal. Anual con los 365 DÍAS MEDIDOS (ERA5) del emplazamiento a paso 30′ con θ ejecutado. Nubes fBm de los cobertura 3D con sombra al suelo según el sol. BIFILA real en plantas (Ayora 754 unidades = 1.508 filas, eje de transmisión). ✈ Vuelo libre WASD+ratón. QA 49." },
       { date:"2026-08-14", ver:"v1.5", note:"El render de los cobertura 3D en las plantas reales (Seguidor.instancePlan, contrato spin/static, mesa con color de estado por instancia; terreno/camino/valla/caseta a escala de km) y HONESTIDAD del actuador también en el zonal: la POA por NCU sale del θ ejecutado (deadband 1° + slew 0,17 °/s), con la fontanería verificada por la QA. Preparada como demo de la lógica de difusa. QA 48 en Node." },
       { date:"2026-08-14", ver:"v1.4", note:"Plantas REALES: Ayora (754 · 16 NCUs) y San José (2.289 · 21 NCUs, Arequipa UTC−5). Las zonas del zonal son las NCUs de verdad con el retardo del frente por posición del centroide; planta entera instanciada en 3D girando con el θ de su NCU y teñida por estado; banco de nubes barriendo el frente con la misma cc retardada que la física. QA 47 en Node." },
       { date:"2026-08-14", ver:"v1.3", note:"Render de planta: bifila real (motora + gemela con eje de transmisión), mesas de 64,7 m con postes, pala azulada, ACES, terreno con explanada, camino, valla, caseta, arbustos y niebla. Convención TCU en toda la UI (− = este, stow −5°). Estado «☁ retiene» en ámbar por NCU: la señal viva que el confirm/dwell retiene. QA 45." },
