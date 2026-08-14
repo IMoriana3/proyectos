@@ -313,6 +313,22 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.16** — **la sombra pintada es la SILUETA real** (cada mesa emisora proyectada
+  por el rayo solar sobre el plano de la receptora, polígono recortado a la mesa — ya no sobresale ni
+  exagera anchura), suelo honesto (banda pálida del vano + cintas de sombra inclinadas por fila
+  siguiendo el terreno real) y **selector de luz** real (amanecer/atardecer rojizos ligados a la
+  elevación solar) / a tope (plana brillante para inspeccionar sombras). Y el **contador honesto se
+  hace bidireccional a medias, con honestidad**: en la banda rasante el ray-cast 3D usa las COTAS
+  REALES POR TRAMO (la extrapolación lineal del tilt axial en líneas de km creaba mesas fantasma a
+  60 m bajo tierra y cobraba sombra masiva falsa); fuera de la banda el 2.5D se filtra con el
+  residual de tangencia (sombra Martinez fantasma con el 3D certificando «sin contacto» ⇒ no se
+  cobra). La vía simétrica (cobrar contactos 3D que el 2.5D no ve a todos los cenit) queda **EN
+  ESTUDIO**, documentada en código: el prototipo sobrecargaba 0,5–1,6% a pleno sol con holguras
+  métricas sin explicación y no se publica física sin validar (su magnitud real medida: 0,15–0,24
+  %/día). Óptimo libre con arranque exacto (argmax de poaPlant) y salvaguarda: por construcción
+  ≥ óptimo común. **Anual honesto (Ayora, 12 días): pairwise 2.852,8 · true3d −0,48% · row −0,50% ·
+  optimal +0,95% · óptimo libre +1,16%** — supersede el +1,43% de v1.15, que mezclaba fantasma 2.5D
+  en la referencia. QA 35.
 - **2026-08-14 · v1.15** — **evaluador rasante 3D**: con 80°<zen<89,5° el término temp≥1 de pvlib
   declara «sin sombra» mientras la geometría 3D real sombrea hasta un 27% de módulo (medido en
   Bagnarelli: azimut de eje 23,7° + tilt N-S; 3D 16-23% donde el 2.5D ve 0-7%). En esa franja
