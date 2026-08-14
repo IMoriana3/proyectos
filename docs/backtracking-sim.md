@@ -313,6 +313,15 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.20** — **el TERRENO que sombrea se cuenta y se pinta**: las «sombras sin rojo»
+  que quedaban eran de las lomas — el ray-cast marcha ahora también contra el perfil del terreno
+  (sol <25°, declarado) con penetración por estación desde el borde bajo, y las franjas rojas salen
+  del propio contador (verificado: loma de 4 m a las 21:10 ⇒ filas a sotavento 20–83% con sus rojos
+  exactos). Rayo crítico RECTO por construcción (borde emisor + dirección real del sol — fuera el
+  codo con eje girado) y anclado a la mesa que PINCHAS. Cámara «👁 sol» (lo no visible desde el sol
+  ES la sombra: prueba visual del contador). Eje de transmisión gris visible. Anual con terreno:
+  pairwise 2.799,7 · true3d −0,18% · row +0,08% · optimal +1,00% · óptimo libre +1,02%. QA 39.
+
 - **2026-08-14 · v1.19** — **el contador es ray-cast 3D a TODAS horas** (la «vía simétrica» sale del
   cajón, validada): multi-emisora con cotas por tramo a cualquier cénit, poda por alcance y
   desplazamiento axial (63 s/día → 1,8 s). Cazó la sombra que el registro de pareja no ve (fila 32 de
