@@ -489,7 +489,7 @@ const PROJECTS = [
   {
     name: "Mapa Modbus NCU · HSU · TCU",
     status: "live",
-    objetivo: "Ficha interactiva del mapa Modbus del sistema de seguidores: registros de NCU, HSU y TCU con dirección absoluta por unidad, decodificador en vivo de valores crudos (bits, f32, alarmas) y descarga de la configuración de pendientes BT3D por TCU (Ayora y San José, del levantamiento).",
+    objetivo: "Mapa Modbus completo de NCU, HSU y TCU, con dirección absoluta por unidad y decodificador de valores crudos en vivo.",
     stack: "HTML · sin dependencias",
     url: "https://imoriana3.github.io/cobertura-zigbee/modbus.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
@@ -507,7 +507,7 @@ const PROJECTS = [
   {
     name: "Simulador de Backtracking",
     status: "live",
-    objetivo: "Espejo JS del motor BT3D de SolarGPT (tracker3d.py) con el inventario COMPLETO de políticas de backtracking del core (BT2D plano, global, row, pairwise, true-3D, min-ground-light, energy-optimal + astronómico) sobre terreno 3D (E-O por pareja + tilt N-S por fila), implantación real a lo largo del eje (cortos delante de largos, tresbolillo — con el solape axial en la física) y escena 3D con el modelo real del seguidor (seguidor.js, sombras por shadow-map): astronómico, global, row, pairwise, true-3D (bisección con residual de tangencia) y energy-optimal (Deeptrack), con los tres accionamientos — monofila, bifila rígida y bifila quebrada (backtracking a nivel de accionamiento, residuo irreducible a la vista). Corte transversal animado con sombras reales, curvas θ(t), POA por política (Ineichen + Perez + Martinez), tabla del día y estimación anual. Offline, con QA integrada contra ray-cast bruto (20 comprobaciones, también en Node).",
+    objetivo: "Espejo JS del motor BT3D de SolarGPT: compara todas las políticas de backtracking del core sobre terreno 3D y los tres accionamientos. Offline.",
     stack: "HTML offline · Three.js (libs locales) · Canvas · pvlib singleaxis (A&M 2020) portado a JS",
     url: "https://imoriana3.github.io/cobertura-zigbee/backtracking.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
@@ -554,7 +554,7 @@ const PROJECTS = [
   {
     name: "Nuevo Siting",
     status: "live",
-    objetivo: "Crea el siting de comunicaciones de una planta nueva: sube los seguidores (CSV/Excel, plantilla incluida) y autoubica NCUs, RSU y gateways.",
+    objetivo: "Crea el siting de comunicaciones de una planta nueva: subes los seguidores y autoubica NCUs, RSU y gateways.",
     stack: "HTML · Canvas · min-cost flow",
     url: "https://imoriana3.github.io/siting/",
     repo: "https://github.com/imoriana3/siting",
@@ -572,7 +572,7 @@ const PROJECTS = [
   {
     name: "Creación de planta",
     status: "live",
-    objetivo: "Da de alta una planta nueva: datos base + implantación (CSV o DXF). Reconoce los bloques de tracker midiendo su geometría (módulos/ala) y previsualiza el 2D/3D. Funciona offline.",
+    objetivo: "Da de alta una planta nueva desde CSV o DXF: reconoce los bloques de tracker midiendo su geometría y previsualiza el 2D/3D. Offline.",
     stack: "HTML offline · UTM↔WGS84 · parser DXF · Three.js",
     url: "https://imoriana3.github.io/cobertura-zigbee/crear.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
@@ -590,7 +590,7 @@ const PROJECTS = [
   {
     name: "Checklist Solar v2",
     status: "live",
-    objetivo: "PWA de checklists de obra para plantas FV: control de construcción, calidad, punchlist, mapa y dashboard.",
+    objetivo: "PWA de checklists de obra para plantas FV: construcción, calidad, punchlist, mapa y dashboard.",
     stack: "HTML · Firebase (Auth/Firestore) · GitHub Pages",
     url: "https://imoriana3.github.io/checklist-solar-v2/",
     repo: "https://github.com/imoriana3/checklist-solar-v2",
@@ -614,7 +614,7 @@ const PROJECTS = [
   {
     name: "Gorraiz Dashboard",
     status: "live",
-    objetivo: "Generador de informes FV en el navegador para Edificio Gorraiz: réplica del PDF aprobado de 5 páginas con comparativa de periodos.",
+    objetivo: "Genera en el navegador el informe FV del Edificio Gorraiz: réplica del PDF aprobado, con comparativa de periodos.",
     stack: "HTML · Chart.js · jsPDF · GitHub Pages",
     url: "https://imoriana3.github.io/gorraiz-dashboard/",
     repo: "https://github.com/imoriana3/gorraiz-dashboard",
@@ -635,7 +635,7 @@ const PROJECTS = [
   {
     name: "Visor San José",
     status: "live",
-    objetivo: "Visor offline para casar 18.190 puntos topográficos con 2.289 IDs de seguidor (Acciona, La Joya (Arequipa)) mediante flujo de coste mínimo.",
+    objetivo: "Casa 18.190 puntos topográficos con los 2.289 seguidores de San José por flujo de coste mínimo. Offline.",
     stack: "HTML offline · datos NetworkX (min-cost flow)",
     url: "https://imoriana3.github.io/visores/asbuilt/?planta=sanjose",
     repo: "https://github.com/imoriana3/visores",
@@ -656,7 +656,7 @@ const PROJECTS = [
   {
     name: "Visor Ayora",
     status: "live",
-    objetivo: "Geometría as-built de los 754 seguidores bifila de Ayora a partir de 3.069 puntos de levantamiento, y los parámetros de backtracking corregido por terreno que se cargan en la TCU.",
+    objetivo: "Geometría as-built de los 754 seguidores de Ayora desde 3.069 puntos de levantamiento, con el backtracking corregido por terreno.",
     stack: "HTML offline · Plotly · levantamiento topográfico",
     url: "https://imoriana3.github.io/visores/asbuilt/?planta=ayora",
     repo: "https://github.com/imoriana3/visores",
@@ -680,7 +680,7 @@ const PROJECTS = [
   {
     name: "Gemelo Digital TCU",
     status: "build",
-    objetivo: "Gemelo digital del sistema TCU/seguidor de Factiun con geometría física precisa y control predictivo probabilístico.",
+    objetivo: "Gemelo digital del seguidor y su TCU, con geometría física real y control predictivo.",
     stack: "HTML · 3D · FastAPI · WebSocket · Docker",
     url: "https://imoriana3.github.io/gemelo-digital/",
     repo: "https://github.com/imoriana3/gemelo-digital",
@@ -705,7 +705,7 @@ const PROJECTS = [
   {
     name: "Agente y collector · PC de planta",
     status: "build",
-    objetivo: "El lado que vive DENTRO de la planta: agente HTTP de solo lectura sobre Modbus (TCU_Agente.ps1) y collector, que son los que alimentan de datos al SCADA web y a la toolbox. Aquí vive también el CONTRATO entre las dos partes.",
+    objetivo: "El lado que vive dentro de la planta: agente Modbus de solo lectura y collector, que alimentan al SCADA y a la toolbox.",
     stack: "PowerShell · Modbus TCP · Cloudflare Tunnel · Supabase",
     url: "",                                                  // no hay deploy: corre en el PC de planta
     repo: "https://github.com/imoriana3/scada",       // privado: te funciona a ti
@@ -732,7 +732,7 @@ const PROJECTS = [
   {
     name: "TCU Toolbox · campo",
     status: "live",
-    objetivo: "Herramienta offline (PowerShell) para configurar, diagnosticar y respaldar TCUs Sunner vía el gateway Modbus de la NCU. Complemento de escritura del SCADA (que es solo-lectura).",
+    objetivo: "Herramienta offline en PowerShell para configurar, diagnosticar y respaldar TCUs Sunner por el gateway Modbus de la NCU.",
     stack: "PowerShell · Modbus TCP · offline",
     url: "",                                                  // no hay deploy: se ejecuta en el portátil de campo
     repo: "https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox",
@@ -763,7 +763,7 @@ const PROJECTS = [
   {
     name: "Demo Siting",
     status: "demo",
-    objetivo: "PWA para emplazamiento de equipos (NCU/TCU/HSU/repetidor) sobre la geometría real de la planta.",
+    objetivo: "PWA para emplazar NCU, TCU, HSU y repetidores sobre la geometría real de la planta.",
     stack: "HTML · PWA",
     url: "https://imoriana3.github.io/siting/",
     repo: "https://github.com/imoriana3/siting",
@@ -785,7 +785,7 @@ const PROJECTS = [
   {
     name: "Cobertura Zigbee · El Burgo",
     status: "build",
-    objetivo: "Mide y visualiza la cobertura de la red Zigbee ya desplegada en El Burgo I (NCU-1) sobre satélite: señal, nodos sin respuesta, fiabilidad, saltos y criticidad de cada TCU.",
+    objetivo: "Mide sobre satélite la cobertura Zigbee ya desplegada: señal, nodos mudos, saltos y criticidad de cada TCU.",
     stack: "HTML · Leaflet · PowerShell (RCI/telnet) · CSV",
     url: "https://imoriana3.github.io/cobertura-zigbee/",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
@@ -813,7 +813,7 @@ const PROJECTS = [
   {
     name: "Cobertura RF · Seguidores FV",
     status: "build",
-    objetivo: "Modelo físico de propagación Zigbee 2.4 GHz (XBee RR) entre TCU y NCU: un motor, tres usos — siting predictivo, diagnóstico de malla real (predicho vs. medido → grafo → SPOF) y render 3D del enlace bifila.",
+    objetivo: "Modelo físico de propagación Zigbee 2,4 GHz entre TCU y NCU: siting predictivo, diagnóstico de la malla real y render 3D del enlace.",
     stack: "HTML · Canvas 3D · Python (NumPy/NetworkX) · JS",
     url: "https://imoriana3.github.io/cobertura-rf-fv/",
     repo: "https://github.com/imoriana3/cobertura-rf-fv",
@@ -839,7 +839,7 @@ const PROJECTS = [
   {
     name: "Cartera de plantas",
     status: "build",
-    objetivo: "Base de datos y dashboard interno de los proyectos de seguidores adjudicados: KPIs, gráficas, mapa mundi y tabla editable con login.",
+    objetivo: "Base de datos y cuadro de mando de los proyectos adjudicados: KPIs, gráficas, mapa mundi y tabla editable.",
     stack: "HTML · Supabase (Postgres + Auth + RLS) · Chart.js · Leaflet",
     url: "https://factiun-cartera.imoriana3.workers.dev",     // interno · requiere login
     repo: "https://github.com/imoriana3/factiun-cartera",     // privado
@@ -862,7 +862,7 @@ const PROJECTS = [
   {
     name: "SCADA de planta",
     status: "live",
-    objetivo: "La sala de control de la planta en operación: cabecera con identidad y disponibilidad, sinóptico sobre plano, curva de seguimiento solar del día contra las posiciones reales, flota (salud, SoC, alarmas, modos) y salto al gemelo 3D con cada tracker a su tilt reportado.",
+    objetivo: "La sala de control de la planta en operación: sinóptico sobre plano, seguimiento del día, flota y salto al gemelo 3D.",
     stack: "HTML · Supabase · Chart.js · gemelo 3D (cobertura-zigbee)",
     url: "https://factiun-cartera.imoriana3.workers.dev/scada.html",   // interno · mismo login que la cartera
     repo: "https://github.com/imoriana3/factiun-cartera",     // privado
@@ -886,7 +886,7 @@ const PROJECTS = [
   {
     name: "Importar logs de NCU",
     status: "live",
-    objetivo: "Meter al SCADA los CSV diarios que graba cada NCU en su disco: se arrastran los ficheros y se suben ya destilados — series al paso que se elija, eventos a resolución completa (movimientos del motor, cambios de estado, cortes) y resumen del día. 4,7 MB de CSV quedan en 177 KB.",
+    objetivo: "Sube al SCADA los CSV diarios de cada NCU ya destilados: series, eventos a resolución completa y resumen. 4,7 MB quedan en 177 KB.",
     stack: "HTML · Supabase (tabla telemetria)",
     url: "https://factiun-cartera.imoriana3.workers.dev/importar-logs.html",   // interno · mismo login que la cartera
     repo: "https://github.com/imoriana3/factiun-cartera",     // privado
@@ -911,7 +911,7 @@ const PROJECTS = [
   {
     name: "Seguimiento PEM",
     status: "live",
-    objetivo: "El cuaderno de puesta en marcha por planta: diagnósticos de la TCU Toolbox, comisionado, inventarios y auditorías de campo, con diff contra la visita anterior, plano de planta y panel de alertas del agente.",
+    objetivo: "El cuaderno de puesta en marcha por planta: diagnósticos, comisionado, inventarios y auditorías, con diff contra la visita anterior.",
     stack: "HTML · Supabase (Postgres + Auth + RLS)",
     url: "https://factiun-cartera.imoriana3.workers.dev/seguimiento-pem.html",   // interno · requiere login (mismo que la cartera)
     repo: "https://github.com/imoriana3/factiun-cartera",     // privado
@@ -930,7 +930,7 @@ const PROJECTS = [
   {
     name: "IPs de plantas",
     status: "live",
-    objetivo: "La hoja de IPs del Excel como tabla editable con login: NCUs, IPs, gateways, esclavos, versiones de firmware y accesos remotos por planta. Exporta los ficheros de plantas de la TCU Toolbox.",
+    objetivo: "La hoja de IPs como tabla editable: NCUs, gateways, esclavos, firmware y accesos remotos por planta.",
     stack: "HTML · Supabase (Postgres + Auth + RLS)",
     url: "https://factiun-cartera.imoriana3.workers.dev/ips.html",   // interno · requiere login (mismo que la cartera)
     repo: "https://github.com/imoriana3/factiun-cartera",     // privado
