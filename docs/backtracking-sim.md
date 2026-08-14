@@ -313,6 +313,16 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.9** — globo por mesa (pincha y sale fila, θ, tilt, sombra, POA y el peor momento
+  de esa fila con salto), botones «⚠ ahora / ⚠ día» (fila con más sombra del instante / peor momento
+  del día). Y TRES bugs cazados al estrenarlos: clampSlopes corrompía las parejas de las plantas
+  reales (capaba medias de línea legítimas entre bandas destresbolilladas ⇒ pendientes de −52° donde
+  el solape mide −0,8° y sombras masivas espurias en el tránsito — con cotas medidas ya no aplica);
+  anglesTrue3d usaba un signo global (el de la última pareja) para todas las filas ⇒ bandazos en el
+  tránsito (ahora signo por fila con la baseline de árbitro + QA de continuidad); y loadRealPlant no
+  fijaba el emplazamiento (Ayora se simulaba con la lat/lon por defecto — ahora clat/clon del layout
+  + altitud de cotas). Los anuales publicados salieron del motor Node (pairDz directo): intactos.
+  QA 32.
 - **2026-08-13 · v1.8** — el render enseña la física: banda ROJA de sombra CALCULADA sobre cada pala
   (fracción exacta de shadeRows, por el borde por el que entra) y etiquetas por fila conmutables
   (θ · % sombra · POA de la política de la ESCENA). Astro sangra rojo; pairwise queda limpio.
