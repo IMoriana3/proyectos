@@ -313,6 +313,16 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-14 · v1.23** — **el resto de plantas, por LAYOUT**: El Burgo (45 líneas · 215 mesas),
+  Páramo (80 · 189) y Fayón (14 · 24) entran como implantación REAL del DWG (líneas, mesas, huecos,
+  emplazamiento) sobre terreno PLANO — sin cotas de levantamiento, DECLARADO (Túnez fuera:
+  instalación fija). **Pan en modo «👁 sol»** (arrastrar mueve el target; la dirección al sol no
+  cambia) — con el zoom ortográfico, cámara de inspección completa. **Rendimiento**: los
+  optimizadores muestran la malla de 5 min en el instante minutal (su búsqueda por minuto hacía
+  lento el slider, declarado) y la reparación exacta del óptimo libre corre solo con sol <40°.
+  De la serie v1.22: disco solar oculto en modo sol y la pegatina roja pegada al cristal (a 0,19 m
+  quedaba 2,5 cm en el aire y en tangencia se veía desde el sol como una raya imposible). QA 39.
+
 - **2026-08-14 · v1.22** — **la vista del sol es ORTOGRÁFICA y sigue al sol**: el teorema del
   usuario («si yo soy el sol no puedo ver sombras») solo lo cumple una cámara de rayos exactamente
   paralelos — la perspectiva, por lejos que se ponga, deja paralaje y asomaban rojos imposibles
