@@ -1,4 +1,4 @@
-# Simulador de Overcast — Difusa en el navegador · y estudio del diffuse tracking
+# Simulador de TCU — difusa · viento · backtracking · y estudio del diffuse tracking
 
 **Página**: `https://imoriana3.github.io/cobertura-zigbee/overcast.html` · repo `cobertura-zigbee`
 **Un único HTML, física offline, sin dependencias de código.** QA integrada (botón «Verificar contra
@@ -12,6 +12,11 @@ schema 2.1.0) para ver y comparar **las políticas de difusa del core** en días
 cada una minuto a minuto, cuánta POA gana o pierde, cuántas veces conmuta y cuánto maniobra. El
 compañero del [Simulador de Backtracking](backtracking-sim.md): aquel responde a «¿a qué ángulo
 para no sombrear?», este a «¿y cuando no hay sol que sombree?».
+
+Desde v1.11 no simula solo la capa de difusa: simula **la TCU entera**, con las tres capas que
+compiten por el mando y su orden de autoridad. Es lo que convierte la demo en algo que un asset
+manager puede firmar — la pregunta del cliente nunca es «¿cuánto gana la difusa?» sino «¿y qué pasa
+cuando sopla viento a la vez?».
 
 **NO es** el motor bancable: el generador de nubes es sintético (declarado), el POA no es energía
 AC y la estimación anual es una comparativa de políticas, no un P50. Para números de proyecto: el
@@ -55,6 +60,40 @@ overcast con el tracker inclinado; continuous ≥ pvlib **en cada paso**; el pul
 conmuta; el dwell bloquea la re-entrada con la señal viva; los bordes de conmutación caen en el
 mismo instante físico a 5/10/15 min; enter_ratio imposible ⇒ jamás conmuta; ghi_min gigante ⇒
 passthrough; NaN en GHI ⇒ passthrough sin NaN en la salida.
+
+## La jerarquía de mando (el árbitro)
+
+En campo, tres capas piden el ángulo al mismo tiempo y hay que decidir cuál gana. El árbitro
+(`arbitrate()`) resuelve paso a paso con el orden del core (`run_tracker`):
+
+| # | Capa | Por qué manda ahí |
+|---|---|---|
+| 1 | **Stow de viento** | seguridad: gana a todo, incluida la difusa |
+| 2 | **Tope mecánico** ±θmáx | el hierro no negocia |
+| 3 | **Backtracking** (\|θ\| ≤ \|θ_n\|) | la difusa no puede crear sombra entre filas |
+| 4 | **Política de difusa** | optimiza dentro de lo que las tres anteriores permiten |
+| 5 | **Astronómico** (θ_n) | por defecto |
+
+**El orden importa y el core lo dice expreso**: el clamp de backtracking se aplica **antes** que el
+stow. Al revés, la posición de refugio se recorta a \|θ_n\| y el stow **no llega a ejecutarse** —
+justo con temporal, que es cuando importa. La QA lo fija con un test dedicado.
+
+**Stow de viento («Strategy E» del core)**: T1 = 40 km/h → stow **parcial** (el sector se limita a
+±30°); T2 = 60 km/h → stow **total** (θ = 0°). Subir de nivel es **inmediato** (es seguridad);
+bajar exige **30 minutos seguidos** por debajo del umbral, de modo que una racha aislada no puede
+sacar al tracker de refugio y volver a meterlo. El viento sale del perfil sintético elegido o,
+con día real, del **medido** por Open-Meteo (`wind_speed_10m`, en m/s).
+
+Dos matices que el simulador enseña y que suelen sorprender:
+
+- **Ir al refugio también cuesta tiempo.** El stow no teletransporta: la orden pasa por el mismo
+  actuador de 0,17 °/s. Con temporal y el tracker a 55°, llegar a plano son ~5,4 minutos.
+- **El «% en stow» se come la ganancia de difusa.** En un día de temporal, las cuatro políticas
+  convergen: si la planta está en refugio el 89 % del día, no hay política de difusa que decidir.
+  Es la razón por la que la ganancia anual de difusa hay que medirla, no estimarla.
+
+El HUD dice **quién manda** en cada minuto y el diario narra cada maniobra de viento con la racha
+medida y el umbral cruzado — la misma trazabilidad que el resto de decisiones.
 
 ## El cielo del día
 
