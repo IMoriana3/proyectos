@@ -560,7 +560,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/cobertura-zigbee/overcast.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-08-14",
-    version: "v1.1",
+    version: "v1.2",
     docId: "overcast-sim",
     docUrl: "",
     uso: [
@@ -579,6 +579,7 @@ const PROJECTS = [
       { done:true, text:"Modo zonal (por NCU): cada NCU decide con su señal local frente a la decisión de planta (hecho v1.1; cuando el core tenga la política zonal, espejarla aquí)" }
     ],
     historial: [
+      { date:"2026-08-14", ver:"v1.2", note:"Cielo con la receta de backtracking.html (alba/ocaso rojizos, noche azul marino) agrisado por la cobertura y con el disco solar velado; la pala del 3D persigue la consigna a la velocidad real del actuador (0,17 °/s en tiempo simulado); stow nocturno del proyecto: los trackers duermen a 5° al ESTE (−5° en convención TCU), configurable; slider minutal con el sol al minuto exacto. QA 45 en Node." },
       { date:"2026-08-14", ver:"v1.1", note:"Escena 3D real con el modelo del seguidor de la casa (seguidor.js, sombras, nube por zona, luz solar por DNI y hemisferio por DHI; fallback corte 2D) y ZONAL por NCU: el frente cruza la planta y cada NCU decide con su señal — en el día de frentes, flat global +0,37 % → zonal +1,15 %. QA 30 en página, 43 en Node." },
       { date:"2026-08-14", ver:"v1.0", note:"Primera versión: las 4 políticas de difusa del core + baseline, escenario canónico del test como preset, Open-Meteo (ERA5/previsión/EN VIVO), lazo deadband+slew con su coste medido, anual por mezcla de cielos. QA 27 en página, 38 en Node. La doc incorpora el estudio de competencia y papers." }
     ]
