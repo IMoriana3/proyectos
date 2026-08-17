@@ -1110,10 +1110,12 @@ const PLANTS = [
   /* EN OFERTA, sin firmar: El Naranjo Dicayagua (República Dominicana). No tiene número de proyecto
      porque el número lo da la cartera al adjudicar, así que la tarjeta lleva el distintivo OFERTA
      en su lugar y se ordena al final. Y no es una planta de seguidores: estructura FIJA a 10°
-     («Generic 3V»), por eso solo tiene Layout 2D — siting, cobertura y SCADA son de TCU/NCU y aquí
-     no hay ninguna. Todo lo que se dice sale del KML de layout y de los planos de oferta. */
+     («Generic 3V»), así que lleva Layout 2D y Topografía 3D —sus 5.493 mesas y el levantamiento
+     propio, 164 curvas de nivel— pero NO siting, cobertura ni SCADA, que son de TCU/NCU y aquí no
+     hay ninguna. Todo lo que se dice sale del KML de layout y de los planos de oferta. */
   { name:"El Naranjo Dicayagua", code:"", oferta:true, pdc:180.8, loc:"Santiago · República Dominicana", views:{
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=dicayagua",
+      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=dicayagua",
   }},
   /* Páramo está a 0 en la cartera: aún no tiene la potencia. Sin dato no se pinta nada. */
   { name:"Páramo", code:"25019", pdc:null, loc:"Villamañán · León · España", views:{
