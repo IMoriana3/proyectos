@@ -234,6 +234,8 @@ body{
    como se nombra a la planta en la casa. Estaba en gris pequeño en la esquina derecha, donde no
    se leía. Sigue en monoespaciada, que es lo que hace que se escaneen en columna. */
 .pcode{font-family:var(--mono);font-size:.88rem;font-weight:700;color:var(--accent);letter-spacing:0;flex:none}
+/* Distintivo de oferta: ámbar, para que no se confunda con un número de proyecto. */
+.pcode.oferta{color:var(--build);border-color:var(--build);letter-spacing:.08em}
 /* La potencia, con el mismo cuerpo pequeño que el resto y sin partir: si la cabecera se va a dos
    líneas, esa tarjeta crece 33 px y rompe la altura uniforme de toda la fila. */
 .pcard .pdc{font-family:var(--mono);font-size:.72rem;font-weight:600;color:var(--muted);letter-spacing:0;white-space:nowrap}
@@ -1105,6 +1107,14 @@ const PLANTS = [
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=bagnarelli",
       cobertura:  SITE+"cobertura-zigbee/index.html?planta=bagnarelli",
   }},
+  /* EN OFERTA, sin firmar: El Naranjo Dicayagua (República Dominicana). No tiene número de proyecto
+     porque el número lo da la cartera al adjudicar, así que la tarjeta lleva el distintivo OFERTA
+     en su lugar y se ordena al final. Y no es una planta de seguidores: estructura FIJA a 10°
+     («Generic 3V»), por eso solo tiene Layout 2D — siting, cobertura y SCADA son de TCU/NCU y aquí
+     no hay ninguna. Todo lo que se dice sale del KML de layout y de los planos de oferta. */
+  { name:"El Naranjo Dicayagua", code:"", oferta:true, pdc:180.8, loc:"Santiago · República Dominicana", views:{
+      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=dicayagua",
+  }},
   /* Páramo está a 0 en la cartera: aún no tiene la potencia. Sin dato no se pinta nada. */
   { name:"Páramo", code:"25019", pdc:null, loc:"Villamañán · León · España", views:{
       siting:     SITE+"siting/?planta=paramo",
@@ -1411,14 +1421,16 @@ function plantCardHTML(pl){
     return "";
   }).join("");
   return `<article class="card pcard" style="--c:var(--demo)">
-    <div class="phead"><span class="pcode">${esc(pl.code)}</span><h3 class="name">${esc(pl.name)}<span class="pdc">${esc(potenciaDC(pl))}</span></h3></div>
+    <div class="phead">${pl.oferta ? '<span class="pcode oferta" title="Proyecto en oferta: aún no está firmado ni tiene número de proyecto">OFERTA</span>' : `<span class="pcode">${esc(pl.code)}</span>`}<h3 class="name">${esc(pl.name)}<span class="pdc">${esc(potenciaDC(pl))}</span></h3></div>
     <p class="obj">${esc(pl.loc)}</p>
     <div class="pviews">${btns}</div>
   </article>`;
 }
 /* Ordenadas por NÚMERO DE PROYECTO, que es como se las nombra en la casa. El array se deja en su
    orden histórico —tocarlo es donde se han perdido tarjetas dos veces— y se ordena una copia. */
-const PLANTS_ORD = PLANTS.slice().sort((a,b)=> (parseInt(a.code,10)||0) - (parseInt(b.code,10)||0));
+/* Las que están EN OFERTA van al final: no tienen número de proyecto —lo da la cartera al
+   adjudicar— y con parseInt("") = NaN → 0 se colaban las primeras, delante de El Burgo. */
+const PLANTS_ORD = PLANTS.slice().sort((a,b)=> (a.oferta?1:0)-(b.oferta?1:0) || (parseInt(a.code,10)||0) - (parseInt(b.code,10)||0));
 function renderPlants(){
   const el=document.getElementById("plants"); if(el) el.innerHTML = PLANTS_ORD.map(plantCardHTML).join("");
   const c=document.getElementById("plants-cnt"); if(c) c.textContent = "· "+PLANTS.length;
