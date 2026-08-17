@@ -1117,6 +1117,20 @@ const PLANTS = [
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=dicayagua",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=dicayagua",
   }},
+  /* BENANTE 25004 y PANBIANCO 25004.2 (Sicilia). Son dos plantas del MISMO emplazamiento, a 1,3 km
+     una de otra y con seguidor idéntico. La cartera las trae sin potencia todavía, así que `pdc` va
+     a null y no se pinta cifra: lo que hay es la implantación de sus DWG de comunicaciones.
+     Sin SCADA ni siting: aún no tienen ni telemetría ni estudio de emplazamiento. */
+  { name:"Benante", code:"25004", pdc:null, loc:"Sicilia · Italia", views:{
+      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=benante",
+      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=benante",
+      cobertura:  SITE+"cobertura-zigbee/index.html?planta=benante",
+  }},
+  { name:"Panbianco", code:"25004.2", pdc:null, loc:"Sicilia · Italia", views:{
+      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=panbianco",
+      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=panbianco",
+      cobertura:  SITE+"cobertura-zigbee/index.html?planta=panbianco",
+  }},
   /* Páramo está a 0 en la cartera: aún no tiene la potencia. Sin dato no se pinta nada. */
   { name:"Páramo", code:"25019", pdc:null, loc:"Villamañán · León · España", views:{
       siting:     SITE+"siting/?planta=paramo",
