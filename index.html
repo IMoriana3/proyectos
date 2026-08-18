@@ -1121,13 +1121,19 @@ const PLANTS = [
   /* BENANTE 25004 y PANBIANCO 25004.2 (Sicilia). Son dos plantas del MISMO emplazamiento, a 1,3 km
      una de otra y con seguidor idéntico. La cartera las trae sin potencia todavía, así que `pdc` va
      a null y no se pinta cifra: lo que hay es la implantación de sus DWG de comunicaciones.
-     Sin SCADA ni siting: aún no tienen ni telemetría ni estudio de emplazamiento. */
+     Ya con SITING: sus datos salen del mismo layout del DWG (gen_siting --destino=ambos).
+     SIN el botón de SCADA, y no por olvido: el que llevan las demás tarjetas apunta al SCADA de la
+     CARTERA (factiun-cartera), que es otra aplicación distinta del SCADA de operación. Las dos
+     plantas SÍ están dadas de alta en el de operación; darlas de alta en el de la cartera es un
+     cambio en ese repo, no aquí. */
   { name:"Benante", code:"25004", pdc:null, loc:"Sicilia · Italia", views:{
+      siting:     SITE+"siting/?planta=benante",
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=benante",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=benante",
       cobertura:  SITE+"cobertura-zigbee/index.html?planta=benante",
   }},
   { name:"Panbianco", code:"25004.2", pdc:null, loc:"Sicilia · Italia", views:{
+      siting:     SITE+"siting/?planta=panbianco",
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=panbianco",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=panbianco",
       cobertura:  SITE+"cobertura-zigbee/index.html?planta=panbianco",
