@@ -167,6 +167,18 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
   en Pages. Si algún día montáis el repo `imoriana3.github.io` (raíz del dominio), moviendo ahí un
   SW se cachearían también los visores. Queda dicho, no lo tocamos.
 
+- **[Proyectos → Backtracking] Ficha nueva «Viento & Abanderamiento» (`sim-viento.html`).** Cae en
+  nuestro ámbito (es hermana de `sim-solar.html`), pero os afecta por dos cosas. Una: **necesita un
+  endpoint nuevo del motor**, `POST /windstow`, que va en la rama
+  `claude/wind-simulator-tracker-xhnbm3` del repo `SolarGPTfull` — hasta que entre en `main`, el
+  cuaderno de Colab (que clona `main`) no lo sirve y la ficha lo dice en pantalla. Dos: por el
+  camino se arreglaron dos rutas del motor que **usan vuestras fichas**: `/generation` con
+  `meteo_mode=openmeteo` importaba una función inexistente, y el default de `/meteo` (`openmeteo`)
+  no era una clave del catálogo del core (`open_meteo`), así que devolvía 502 con la fuente
+  delante. Las dos cargan ya por `load_meteo_cached`, con caché a disco.
+  Tarjeta añadida a `PROJECTS` en `build` (no `live`) precisamente por lo del endpoint;
+  `docs/viento.md` escrito. `node tests/test_integridad.js` en verde (22 tarjetas).
+
 ## Registro de cambios
 
 | fecha | sesión | cambio |
@@ -176,3 +188,6 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 | 2026-08-11 | Proyectos | Restauradas las seis tarjetas borradas por la #39. |
 | 2026-08-12 | Proyectos | Vista `layout2d` nueva, y `cobertura` pasa a ser la malla Zigbee en las seis plantas (`index.html?planta=`). Antes compartían botón. Ver la tabla de arriba. |
 | 2026-08-12 | Backtracking | El Panel pasa a ser **app instalable**: `manifest.webmanifest` (scope `/`), `sw.js`, iconos, botón *Instalar app* y aviso de versión nueva. `tests/test_pwa.js`. Ver Puntos abiertos. |
+| 2026-08-19 | Proyectos | Ficha `sim-viento.html` (abanderamiento por viento) + `docs/viento.md` + acceso directo en la cabecera de Herramientas. Depende de `POST /windstow` en el motor. |
+| 2026-08-19 | Proyectos | `sim-viento.html` v1.1: laboratorio de rachas (fondo sintético o en calma, ráfaga de 3 s, rachas inyectadas con dirección, tormentas al azar) y meteo de cielo claro para probar sin red. |
+| 2026-08-19 | Proyectos | `sim-viento.html` v1.2: campo 3D con los casos en paralelo. Entran en el repo `lib/three.min.js`, `lib/OrbitControls.js` y **`seguidor.js`** (copia idéntica de la fuente única que ya comparten Gemelo Digital y Cobertura 3D: si la tocáis allí, hay que sincronizarla aquí). |

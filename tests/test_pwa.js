@@ -12,9 +12,16 @@
 //   python3 -m http.server 8099       # servir el repo (en otra terminal)
 //   node tests/test_pwa.js
 const { chromium } = require('playwright');
+const fs = require('fs');
+const path = require('path');
 
 const BASE = process.env.BASE || 'http://localhost:8099';
-const CACHE = 'factiun-panel-v1';        // debe coincidir con sw.js
+// El nombre de la cache se LEE de sw.js, no se copia: publicar un cambio del
+// armazon exige subirlo (v1 -> v2), y con el nombre escrito a mano aqui el test
+// se caia entero en cada publicacion, que es justo cuando mas falta hace.
+const SW = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
+const CACHE = (SW.match(/const\s+CACHE\s*=\s*["'`]([^"'`]+)/) || [])[1];
+if (!CACHE) { console.log('FAIL no encuentro el nombre de CACHE en sw.js'); process.exit(1); }
 let ok = 0, ko = 0;
 function check(nombre, valor, esperado) {
   const bien = String(valor) === String(esperado);

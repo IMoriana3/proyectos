@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0B0F14">
+<link rel="icon" href="favicon.svg">
+<title>Viento &amp; Abanderamiento — Factiun</title>
+<!-- sin fuentes de Google: offline (fuentes del sistema) -->
+<style>
+:root{
+  --void:#0B0F14; --panel:#121922; --panel-2:#0F151D; --panel-hi:#18222D;
+  --line:#23303D; --line-soft:#1A2530; --text:#E7EEF4; --muted:#8093A4; --muted-2:#5E6F7E;
+  --live:#36D399; --build:#F6A623; --demo:#54A6FF; --idle:#6A7B8B; --dead:#D0594F;
+  --accent:#36D399; --radius:14px; --radius-sm:9px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --display:'Space Grotesk',system-ui,sans-serif;
+  /* una estrategia = un color, y el mismo en tabla, barras y series */
+  --a1:#F6A623; --a2:#D0594F; --b1:#54A6FF; --b2:#36D399; --base:#8093A4;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--void);color:var(--text);font-family:var(--sans);min-height:100vh;font-variant-numeric:tabular-nums}
+.bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 18px;background:var(--panel-2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+.bar .back{color:var(--muted);text-decoration:none;font:600 13px/1 var(--sans);padding:7px 11px;border:1px solid var(--line);border-radius:10px;white-space:nowrap}
+.bar .back:hover{color:var(--text);border-color:var(--accent)}
+.bar h1{font:700 17px/1.1 var(--display)}
+.bar .sub{color:var(--muted);font-size:12.5px;margin-right:auto}
+.bar .brand{color:var(--accent);font:700 14px/1 var(--display);letter-spacing:.04em}
+.engine{display:flex;align-items:center;gap:7px;font-size:12px;font-family:var(--mono);padding:4px 10px;border:1px solid var(--line);border-radius:20px;background:var(--panel)}
+.engine .led{width:9px;height:9px;border-radius:50%;background:var(--idle)}
+.engine.on .led{background:var(--live);box-shadow:0 0 7px var(--live)}
+.engine.off .led{background:var(--dead)}
+.wrap{max-width:min(1560px,94vw);margin:0 auto;padding:20px 18px 60px}
+.grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.card+.card{margin-top:16px}
+.card h2{font:700 13px/1 var(--display);letter-spacing:.02em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card h2 .ic{color:var(--accent)}
+.card h2 .hint{margin-left:auto;font:400 11px var(--mono);color:var(--muted)}
+.field{margin-bottom:11px}
+.field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.field input,.field select{width:100%;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.btn{background:rgba(54,211,153,.12);color:var(--accent);border:1px solid var(--accent);border-radius:9px;padding:10px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;width:100%}
+.btn:hover{background:rgba(54,211,153,.2);color:#fff}
+.btn:disabled{opacity:.5;cursor:progress}
+.btn.ghost{background:var(--panel-2);color:var(--text);border-color:var(--line)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:6px}
+.ro{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:9px;padding:9px 11px}
+.ro .k{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-family:var(--mono)}
+.ro .v{font:700 17px/1.2 var(--display);margin-top:3px}
+.ro .v small{font-size:12px;color:var(--muted);font-weight:400}
+canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:10px;margin-top:6px}
+.note{font-size:12px;color:var(--muted-2);margin-top:10px;line-height:1.55}
+.note code,.note b{color:var(--muted)}
+.note code{background:var(--panel-2);padding:1px 5px;border-radius:5px;font-family:var(--mono)}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);margin-top:2px}
+.engmsg{background:var(--panel-2);border:1px dashed var(--build);border-radius:9px;padding:11px 13px;font-size:12.5px;line-height:1.55}
+.engmsg code{background:#0b0f14;color:var(--build);padding:1px 6px;border-radius:5px;font-family:var(--mono);font-size:11.5px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+th{font:600 10.5px/1.3 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);text-align:right;vertical-align:bottom}
+th:first-child,td:first-child{text-align:left}
+tbody tr:hover{background:var(--panel-hi)}
+tr.base td{color:var(--muted)}
+tr.win td{background:rgba(54,211,153,.07)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:7px;vertical-align:baseline}
+.strip{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:var(--panel-2);color:var(--muted);border-radius:20px;padding:5px 12px;font:600 12px var(--sans);cursor:pointer}
+.chip.on{color:var(--text);border-color:var(--accent);background:rgba(54,211,153,.10)}
+.chk{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);margin-bottom:7px}
+.chk input{width:auto;accent-color:var(--accent)}
+.scroll{overflow-x:auto}
+.err{border-color:var(--dead);color:var(--text)}
+.lab{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:9px}
+.lab .field{margin-bottom:0}
+.gtbl input,.gtbl select{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:5px 7px;font:inherit;font-size:12px;width:100%}
+.gtbl td{padding:4px 5px}
+.gtbl input[type=number]{max-width:110px}
+.gtbl td:first-child input{min-width:168px}
+.gtbl select{max-width:120px}
+.gtbl td:first-child{text-align:left}
+.gx{background:none;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:4px 9px;cursor:pointer;font:inherit;font-size:12px}
+.gx:hover{border-color:var(--dead);color:var(--dead)}
+.labrow{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.labrow select{flex:1;min-width:180px;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px}
+.labrow .btn{width:auto}
+.warn{background:rgba(246,166,35,.08);border:1px solid var(--build);border-radius:9px;padding:9px 12px;font-size:12px;color:var(--text);line-height:1.5;margin-top:10px}
+.warn b{color:var(--build)}
+#view3d{position:relative;height:470px;border:1px solid var(--line-soft);border-radius:10px;overflow:hidden;background:#06080c}
+#view3d canvas{display:block;width:100%;height:100%;border:0;border-radius:0;margin:0}
+#view3d .hint3d{position:absolute;left:10px;bottom:8px;font:11px var(--mono);color:var(--muted-2);background:rgba(10,15,22,.72);padding:3px 8px;border-radius:6px;pointer-events:none}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:9px;margin-bottom:11px}
+.tile{background:var(--panel-2);border:1px solid var(--line-soft);border-left-width:3px;border-radius:9px;padding:8px 10px}
+.tile .n{font:700 12px/1 var(--display);display:flex;align-items:center;gap:6px}
+.tile .m{font:10px/1.5 var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.tile .p{font:700 16px/1.2 var(--display);margin-top:3px}
+.tile .p small{font-size:11px;color:var(--muted);font-weight:400}
+.tile .d{font-size:11px;margin-top:2px}
+.playrow{display:flex;align-items:center;gap:10px;margin-top:11px;flex-wrap:wrap}
+.playrow input[type=range]{flex:1;min-width:180px;accent-color:var(--accent)}
+.playrow .btn{width:auto;max-width:130px}
+.playrow select{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:inherit;font-size:12.5px}
+.playrow .tl{font-family:var(--mono);font-size:12.5px;color:var(--accent);min-width:120px;text-align:right}
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="back" href="index.html">← Panel</a>
+  <h1>Viento &amp; Abanderamiento</h1>
+  <span class="sub">qué cuesta defender el seguidor</span>
+  <div class="engine" id="engine"><span class="led"></span><span id="engineTxt">motor…</span></div>
+  <span class="brand">Factiun</span>
+</header>
+
+<div class="wrap">
+<div class="grid">
+
+  <!-- ═════════ ENTRADAS ═════════ -->
+  <div>
+    <div class="card">
+      <h2><span class="ic">◉</span> Emplazamiento</h2>
+      <div class="field"><label>Planta</label>
+        <select id="plant"><option value="">— manual —</option></select></div>
+      <div class="two">
+        <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="41.5763"></div>
+        <div class="field"><label>Longitud °</label><input id="lon" type="number" step="0.0001" value="-0.7981"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Año meteo</label><input id="year" type="number" step="1" value="2023"></div>
+        <div class="field"><label>Fuente</label>
+          <select id="source">
+            <option value="openmeteo">Open-Meteo (ERA5)</option>
+            <option value="pvgis">PVGIS horario</option>
+            <option value="nasa">NASA POWER</option>
+            <option value="clearsky">Cielo claro (sin red)</option>
+          </select></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Paso de cálculo</label>
+          <select id="step">
+            <option value="">Horario (el del dato)</option>
+            <option value="30">30 min (interpolado)</option>
+            <option value="15" selected>15 min (interpolado)</option>
+            <option value="10">10 min (interpolado)</option>
+          </select></div>
+        <div class="field"><label>Altura del viento (m)</label><input id="wh" type="number" step="0.5" value="4"></div>
+      </div>
+      <p class="tag">Meteo del motor · viento y dirección horarios</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="ic">⌬</span> Seguidor</h2>
+      <div class="two">
+        <div class="field"><label>Ángulo máx °</label><input id="maxang" type="number" step="1" value="55"></div>
+        <div class="field"><label>GCR</label><input id="gcr" type="number" step="0.001" value="0.397"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Pitch (m)</label><input id="pitch" type="number" step="0.05" value="6"></div>
+        <div class="field"><label>Azimut del eje °</label><input id="axaz" type="number" step="1" value="0"></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="bt" checked> Backtracking</label>
+    </div>
+
+    <div class="card">
+      <h2><span class="ic">⚑</span> Abanderamiento</h2>
+      <div class="two">
+        <div class="field"><label>Umbral 1 (km/h)</label><input id="t1" type="number" step="1" value="40"></div>
+        <div class="field"><label>Umbral 2 (km/h)</label><input id="t2" type="number" step="1" value="60"></div>
+      </div>
+      <div class="three">
+        <div class="field"><label>Parcial mín °</label><input id="pmin" type="number" step="1" value="30"></div>
+        <div class="field"><label>Hold (min)</label><input id="hold" type="number" step="5" value="30"></div>
+        <div class="field"><label>Park (min)</label><input id="park" type="number" step="5" value="30"></div>
+      </div>
+      <div style="margin:12px 0 4px">
+        <label class="chk"><input type="checkbox" class="st" value="A1" checked> <b>A1</b> · cara al viento · 1 umbral</label>
+        <label class="chk"><input type="checkbox" class="st" value="A2" checked> <b>A2</b> · cara al viento · 2 umbrales</label>
+        <label class="chk"><input type="checkbox" class="st" value="B1" checked> <b>B1</b> · cara al sol · 1 umbral</label>
+        <label class="chk"><input type="checkbox" class="st" value="B2" checked> <b>B2</b> · cara al sol · 2 umbrales</label>
+      </div>
+      <button class="btn" id="run">Simular el año</button>
+      <p class="note" id="runNote">La línea base es el mismo seguidor <b>sin abanderar</b>: todo lo que
+        se ve luego es la diferencia contra ella.</p>
+    </div>
+  </div>
+
+  <!-- ═════════ RESULTADOS ═════════ -->
+  <div>
+    <div class="card" id="labCard">
+      <h2><span class="ic">☴</span> Laboratorio de rachas <span class="hint">qué pasaría si…</span></h2>
+      <div class="lab">
+        <div class="field"><label>Viento de fondo</label>
+          <select id="wbase">
+            <option value="meteo">Meteo del emplazamiento</option>
+            <option value="synthetic">Sintético · Weibull + AR(1)</option>
+            <option value="calm">En calma (solo las rachas)</option>
+          </select></div>
+        <div class="field"><label>Weibull k (forma)</label><input id="wk" type="number" step="0.1" min="1" max="4" value="2"></div>
+        <div class="field"><label>Weibull A (m/s)</label><input id="wA" type="number" step="0.5" min="1" max="15" value="6.5"></div>
+        <div class="field"><label>Semilla</label><input id="wseed" type="number" step="1" value="42"></div>
+        <div class="field"><label>Dirección del fondo</label>
+          <select id="wdir"><option value="">— sin dirección —</option></select></div>
+      </div>
+      <div style="margin-top:10px">
+        <label class="chk"><input type="checkbox" id="wgust"> Disparar con la <b>ráfaga de 3 s</b> (Cook/IEC) en vez de con la media</label>
+        <label class="chk"><input type="checkbox" id="wcyc"> Cola ciclónica (~1,5 eventos/año, picos de 40–65 m/s)</label>
+      </div>
+
+      <div class="scroll"><table class="gtbl" id="gtbl"></table></div>
+      <div class="labrow">
+        <select id="gpreset"><option value="">— racha a medida —</option></select>
+        <button class="btn ghost" id="gadd" style="max-width:180px">+ Añadir racha</button>
+      </div>
+
+      <div class="lab" style="margin-top:12px">
+        <div class="field"><label>Tormentas al azar</label><input id="stn" type="number" step="1" min="0" value="0"></div>
+        <div class="field"><label>Pico mín. km/h</label><input id="stp0" type="number" step="5" value="70"></div>
+        <div class="field"><label>Pico máx. km/h</label><input id="stp1" type="number" step="5" value="110"></div>
+        <div class="field"><label>Duración mín. (min)</label><input id="std0" type="number" step="10" value="60"></div>
+        <div class="field"><label>Duración máx. (min)</label><input id="std1" type="number" step="10" value="240"></div>
+        <div class="field"><label>Semilla</label><input id="stseed" type="number" step="1" value="7"></div>
+      </div>
+      <p class="note">Las rachas se superponen por <b>máximo</b>, no se suman: pedir 90 km/h da 90 km/h.
+        La corrección de altura y la escala se aplican al fondo <b>antes</b>, así que el pico que escribes
+        es el que ve la máquina de estados. Nada de esto lleva detrás un cambio de irradiancia, de
+        temperatura ni de dirección: es un banco de pruebas, no un año meteorológico.</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="ic">Σ</span> Resultado del año <span class="hint" id="ctx">—</span></h2>
+      <div id="out"><p class="note">Elige emplazamiento y pulsa <b>Simular el año</b>.</p></div>
+      <canvas id="wind" width="880" height="180" style="display:none"></canvas>
+    </div>
+
+    <div class="card" id="cmpCard" style="display:none">
+      <h2><span class="ic">⚖</span> Comparativa de estrategias <span class="hint">POA · maniobras · tiempo</span></h2>
+      <div class="scroll"><table id="tbl"></table></div>
+      <canvas id="bars" width="880" height="230"></canvas>
+      <p class="note" id="cmpNote"></p>
+    </div>
+
+    <div class="card" id="cv3dCard" style="display:none">
+      <h2><span class="ic">▣</span> Campo 3D <span class="hint" id="c3hint">el mismo instante en cada estrategia</span></h2>
+      <div class="tiles" id="tiles"></div>
+      <div id="view3d"></div>
+      <div class="playrow">
+        <button class="btn ghost" id="play">▶ Reproducir</button>
+        <input type="range" id="tpos" min="0" max="0" step="1" value="0">
+        <span class="tl" id="tlbl">—</span>
+        <select id="tspeed">
+          <option value="2">×1</option><option value="4" selected>×2</option>
+          <option value="8">×4</option><option value="16">×8</option>
+        </select>
+      </div>
+      <p class="note" id="c3note"></p>
+    </div>
+
+    <div class="card" id="detCard" style="display:none">
+      <h2><span class="ic">◷</span> Detalle <span class="hint" id="detHint"></span></h2>
+      <div class="strip" id="strip"></div>
+      <canvas id="monthly" width="880" height="240"></canvas>
+      <canvas id="trace" width="880" height="300"></canvas>
+      <div class="scroll"><table id="evt"></table></div>
+      <p class="note" id="detNote"></p>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Librerías LOCALES (sin CDN, offline) y el MODELO REAL del seguidor: `seguidor.js` es
+     la fuente única que ya comparten el Gemelo Digital y Cobertura 3D, copiada aquí idéntica
+     (mismo md5) como manda su cabecera. Mejorarla allí mejora este campo 3D. -->
+<script src="lib/three.min.js"></script>
+<script src="lib/OrbitControls.js"></script>
+<script src="seguidor.js"></script>
+<script>
+'use strict';
+function $(id){return document.getElementById(id);}
+function fmt(v,d){return (v==null||!isFinite(v))?'—':Number(v).toFixed(d==null?1:d);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+var COL={A1:'#F6A623',A2:'#D0594F',B1:'#54A6FF',B2:'#36D399',BASE:'#8093A4'};
+var MESES=['E','F','M','A','M','J','J','A','S','O','N','D'];
+
+/* ===================== MOTOR SOLARGPT (local o remoto vía túnel de Colab) =====================
+   Mismo contrato que sim-solar.html / layout.html: se prueba la URL guardada y luego los puertos
+   locales. Aquí NO hay modo offline: el abanderamiento es la máquina de estados canónica del
+   core (A1/A2/B1/B2) sobre POA de Perez con sombreado — reimplementarla en JS sería una segunda
+   verdad, y la ficha existe justo para leer la del motor. */
+var ENGINE=null;
+function engineUrls(){var u=[];try{var s=localStorage.getItem('factiun_engine_url');if(s)u.push(s.replace(/\/+$/,''));}catch(e){}[8765,8000,9000].forEach(function(p){u.push('http://127.0.0.1:'+p);});return u;}
+async function detectEngine(){
+  var urls=engineUrls();
+  for(var i=0;i<urls.length;i++){
+    try{var r=await fetch(urls[i]+'/health',{cache:'no-store'});
+      if(r.ok){var j=await r.json();
+        if(j&&j.ok){ENGINE=urls[i];
+          var remoto=!/127\.0\.0\.1|localhost/.test(urls[i]);
+          setEngine(true,'motor ✓ '+(remoto?'(remoto)':'(local)'));
+          if(j.endpoints&&j.endpoints.indexOf('/windstow')<0)
+            setEngine(true,'motor ✓ sin /windstow');
+          return;}}}catch(e){}
+  }
+  setEngine(false,'motor no conectado · clic para URL');
+}
+function setEngine(on,txt){var el=$('engine');el.className='engine '+(on?'on':'off');$('engineTxt').textContent=txt;}
+$('engine').style.cursor='pointer'; $('engine').title='Clic: fijar la URL del motor (p. ej. el túnel de Colab)';
+$('engine').onclick=function(){var cur='';try{cur=localStorage.getItem('factiun_engine_url')||'';}catch(e){}
+  var u=prompt('URL del motor SolarGPT.\nColab: pega el túnel (https://xxx.trycloudflare.com).\nVacío = solo local.',cur);
+  if(u===null)return; try{if(u.trim())localStorage.setItem('factiun_engine_url',u.trim());else localStorage.removeItem('factiun_engine_url');}catch(e){}
+  ENGINE=null;setEngine(false,'reconectando…');detectEngine();};
+
+function engineOffMsg(){
+  return '<div class="engmsg"><b>El motor SolarGPT no está conectado.</b><br>'+
+    'El abanderamiento lo simula el motor Python (estrategias A1/A2/B1/B2 sobre POA de Perez con '+
+    'sombreado), no el navegador. Arráncalo de una de estas dos formas:<br><br>'+
+    '· <b>Colab</b> — cuaderno <code>Factiun_plataforma.ipynb</code> → <i>Ejecutar todo</i>, y pega '+
+    'aquí la URL del túnel (clic en el indicador del motor).<br>'+
+    '· <b>En tu máquina</b> — <code>cd server &amp;&amp; ./run.sh</code> (escucha en <code>127.0.0.1:8765</code>).'+
+    '</div>';
+}
+
+/* ===================== EMPLAZAMIENTOS ===================== */
+/* Las plantas de la cartera llegan por localStorage compartido (`factiun_plantas`, lo siembra
+   cartera-tabla.html). Los presets de abajo son el respaldo: coordenadas de los layouts reales,
+   las mismas que usa el simulador de batería del gemelo. */
+var PRESETS=[
+  {n:'23003 · El Burgo I (Zaragoza, ES)',lat:41.5763,lon:-0.7981},
+  {n:'24007 · Fayón (Zaragoza, ES)',lat:41.2269,lon:0.3242},
+  {n:'24019 · San José (Arequipa, PE)',lat:-16.5958,lon:-71.8064},
+  {n:'24021 · Túnez (Gabès, TN)',lat:33.8792,lon:9.8736},
+  {n:'24025 · Ayora (Valencia, ES)',lat:39.1182,lon:-1.1599},
+  {n:'24030 · Bagnarelli (Apulia, IT)',lat:41.5156,lon:15.2676},
+  {n:'25019 · Páramo (León, ES)',lat:42.3206,lon:-5.5998},
+  {n:'Gorraiz · Navarra (ES)',lat:42.81,lon:-1.58}
+];
+var PLANTS={};
+function loadPlants(){
+  try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
+  var o='<option value="">— manual —</option>';
+  var codes=Object.keys(PLANTS).filter(function(c){var p=PLANTS[c];return p&&p.lat!=null&&p.lon!=null;}).sort();
+  if(codes.length){o+='<optgroup label="Cartera">';
+    codes.forEach(function(c){o+='<option value="c:'+c+'">'+esc((PLANTS[c].nombre||'?')+' · '+c)+'</option>';});
+    o+='</optgroup>';}
+  o+='<optgroup label="Presets">';
+  PRESETS.forEach(function(p,i){o+='<option value="p:'+i+'">'+esc(p.n)+'</option>';});
+  o+='</optgroup>';
+  $('plant').innerHTML=o;
+}
+$('plant').onchange=function(){
+  var v=this.value; if(!v)return;
+  var p=v.slice(0,2)==='c:'?PLANTS[v.slice(2)]:PRESETS[+v.slice(2)];
+  if(!p)return;
+  if(p.lat!=null){$('lat').value=p.lat;$('lon').value=p.lon;}
+  saveCfg();
+};
+
+/* ===================== LABORATORIO DE RACHAS =====================
+   El vocabulario (rachas tipo, bases, formas) lo sirve el motor en
+   /windstow/presets: si allí se añade una racha tipo, aparece aquí sin tocar
+   la ficha. Si el motor es antiguo y no lo tiene, se cae a este mínimo. */
+var PRESETS_G={racha_seca:{label:'Racha seca · 80 km/h · 20 min',peak_kmh:80,duration_min:20,shape:'gauss'},
+               borrasca:{label:'Borrasca · 100 km/h · 3 h',peak_kmh:100,duration_min:180,shape:'plateau'}};
+var GUSTS=[];
+async function loadPresets(){
+  if(!ENGINE)return;
+  try{var r=await fetch(ENGINE+'/windstow/presets',{cache:'no-store'});
+    if(r.ok){var j=await r.json(); if(j&&j.gust_presets)PRESETS_G=j.gust_presets;}}catch(e){}
+  var o='<option value="">— racha a medida —</option>';
+  Object.keys(PRESETS_G).forEach(function(k){o+='<option value="'+k+'">'+esc(PRESETS_G[k].label)+'</option>';});
+  $('gpreset').innerHTML=o;
+}
+/* La dirección importa porque A1/A2 abanderan CARA AL VIENTO: sin ella tumban
+   siempre al mismo lado y la comparación con B (cara al sol) pierde sentido.
+   Convención meteorológica: de dónde VIENE (90 = E, 270 = O). */
+var ROSA=[['','—'],['0','N'],['45','NE'],['90','E'],['135','SE'],['180','S'],['225','SO'],['270','O'],['315','NO']];
+function rosaSelect(attrs,val){
+  return '<select '+attrs+'>'+ROSA.map(function(r){
+    return '<option value="'+r[0]+'"'+((val==null?'':String(val))===r[0]?' selected':'')+'>'+r[1]+'</option>';}).join('')+'</select>';
+}
+function defaultWhen(){
+  var y=+$('year').value||2023;
+  return y+'-07-14T14:00';
+}
+function addGust(preset){
+  var p=PRESETS_G[preset]||{};
+  GUSTS.push({when:defaultWhen(), peak:p.peak_kmh||90, dur:p.duration_min||30,
+              shape:p.shape||'gauss', dir:$('wdir').value, rep:1, every:24});
+  renderGusts(); saveCfg();
+}
+function fillRosa(){
+  $('wdir').innerHTML=ROSA.map(function(r){
+    return '<option value="'+r[0]+'">'+(r[0]===''?'— sin dirección —':r[1]+' ('+r[0]+'°)')+'</option>';}).join('');
+}
+function renderGusts(){
+  if(!GUSTS.length){$('gtbl').innerHTML='<tbody><tr><td colspan="8" style="color:var(--muted-2);font-size:12px;padding:10px 4px">'+
+    'Sin rachas inyectadas: se simula el viento de fondo tal cual.</td></tr></tbody>';return;}
+  var h='<thead><tr><th>Cuándo (UTC)</th><th>Pico km/h</th><th>Duración min</th><th>Forma</th><th>Viene de</th><th>×</th><th>cada h</th><th></th></tr></thead><tbody>';
+  GUSTS.forEach(function(g,i){
+    h+='<tr>'+
+      '<td><input type="datetime-local" data-i="'+i+'" data-f="when" value="'+esc(g.when)+'"></td>'+
+      '<td><input type="number" step="5" data-i="'+i+'" data-f="peak" value="'+g.peak+'"></td>'+
+      '<td><input type="number" step="5" data-i="'+i+'" data-f="dur" value="'+g.dur+'"></td>'+
+      '<td><select data-i="'+i+'" data-f="shape">'+
+        '<option value="gauss"'+(g.shape==='gauss'?' selected':'')+'>Gaussiana</option>'+
+        '<option value="plateau"'+(g.shape==='plateau'?' selected':'')+'>Meseta</option></select></td>'+
+      '<td>'+rosaSelect('data-i="'+i+'" data-f="dir"',g.dir)+'</td>'+
+      '<td><input type="number" step="1" min="1" data-i="'+i+'" data-f="rep" value="'+g.rep+'"></td>'+
+      '<td><input type="number" step="1" min="1" data-i="'+i+'" data-f="every" value="'+g.every+'"></td>'+
+      '<td><button class="gx" data-del="'+i+'">✕</button></td></tr>';
+  });
+  $('gtbl').innerHTML=h+'</tbody>';
+  [].forEach.call($('gtbl').querySelectorAll('input,select'),function(el){
+    el.onchange=function(){var g=GUSTS[+this.dataset.i],f=this.dataset.f;
+      g[f]=(f==='when'||f==='shape'||f==='dir')?this.value:+this.value; saveCfg();};});
+  [].forEach.call($('gtbl').querySelectorAll('[data-del]'),function(b){
+    b.onclick=function(){GUSTS.splice(+this.dataset.del,1);renderGusts();saveCfg();};});
+}
+function scenario(){
+  var base=$('wbase').value, gust=$('wgust').checked, n=+$('stn').value||0;
+  var evs=GUSTS.filter(function(g){return g.peak>0;}).map(function(g){
+    var e={start:g.when, peak_kmh:+g.peak, duration_min:+g.dur, shape:g.shape,
+           repeat:Math.max(1,+g.rep||1), every_hours:Math.max(1,+g.every||24)};
+    if(g.dir!=='' && g.dir!=null)e.dir_deg=+g.dir;
+    return e;});
+  /* Si no hay nada que cambiar, NO se manda escenario: así el caso normal
+     (meteo tal cual) no pasa por el banco de pruebas ni se declara sintético. */
+  if(base==='meteo' && !gust && !evs.length && !n && $('wdir').value==='') return null;
+  var sc={base:base, use_gust:gust, k:+$('wk').value, A:+$('wA').value,
+          seed:+$('wseed').value, cyclone:$('wcyc').checked, events:evs};
+  if($('wdir').value!=='')sc.dir_deg=+$('wdir').value;
+  if(n>0)sc.storms={n:n, peak_kmh:[+$('stp0').value,+$('stp1').value],
+                    duration_min:[+$('std0').value,+$('std1').value], seed:+$('stseed').value};
+  return sc;
+}
+
+/* ===================== ESTADO ===================== */
+var REP=null, SEL=null;
+var IDS=['lat','lon','year','source','step','wh','maxang','gcr','pitch','axaz','t1','t2','pmin','hold','park',
+         'wbase','wk','wA','wseed','wdir','stn','stp0','stp1','std0','std1','stseed'];
+function saveCfg(){
+  try{var c={};IDS.forEach(function(i){c[i]=$(i).value;});
+    c.bt=$('bt').checked; c.wgust=$('wgust').checked; c.wcyc=$('wcyc').checked; c.gusts=GUSTS;
+    c.st=[].slice.call(document.querySelectorAll('.st')).filter(function(e){return e.checked;}).map(function(e){return e.value;});
+    localStorage.setItem('factiun_viento_cfg',JSON.stringify(c));}catch(e){}
+}
+function loadCfg(){
+  try{var c=JSON.parse(localStorage.getItem('factiun_viento_cfg')||'null');if(!c)return;
+    IDS.forEach(function(i){if(c[i]!=null)$(i).value=c[i];});
+    if(c.bt!=null)$('bt').checked=!!c.bt;
+    if(c.wgust!=null)$('wgust').checked=!!c.wgust;
+    if(c.wcyc!=null)$('wcyc').checked=!!c.wcyc;
+    if(Array.isArray(c.gusts))GUSTS=c.gusts;
+    if(c.st)[].forEach.call(document.querySelectorAll('.st'),function(e){e.checked=c.st.indexOf(e.value)>=0;});
+  }catch(e){}
+}
+function strategies(){return [].slice.call(document.querySelectorAll('.st:checked')).map(function(e){return e.value;});}
+
+/* ===================== SIMULACIÓN ===================== */
+async function run(){
+  var out=$('out');
+  if(!ENGINE){out.innerHTML=engineOffMsg();$('cmpCard').style.display='none';$('detCard').style.display='none';return;}
+  var sts=strategies();
+  if(!sts.length){out.innerHTML='<p class="note">Marca al menos una estrategia.</p>';return;}
+  saveCfg();
+  var src=$('source').value, cielo=(src==='clearsky');
+  var body={
+    lat:+$('lat').value, lon:+$('lon').value, year:+$('year').value,
+    meteo_mode:cielo?'clearsky':'canon', source:cielo?'openmeteo':src,
+    name:($('plant').value?$('plant').selectedOptions[0].text:null),
+    strategies:sts,
+    tracker:{max_angle_deg:+$('maxang').value, gcr:+$('gcr').value, pitch_m:+$('pitch').value,
+             axis_azimuth_deg:+$('axaz').value, backtrack:$('bt').checked},
+    threshold_1_kmh:+$('t1').value, threshold_2_kmh:+$('t2').value,
+    partial_stow_min_abs_deg:+$('pmin').value,
+    destow_hold_minutes:+$('hold').value, partial_park_minutes:+$('park').value,
+    wind_height_m:(+$('wh').value>0?+$('wh').value:null),
+    resample_minutes:($('step').value?+$('step').value:null),
+    wind_scenario:scenario(),
+    timeline:{hours:16, max_steps:240},
+    top_events:12, include_trace:true
+  };
+  $('run').disabled=true; $('run').textContent='Simulando…';
+  out.innerHTML='<p class="note">El motor está bajando el año y simulando '+sts.length+
+    ' estrategias más la línea base. La primera vez de cada (sitio, año) tarda: luego va de caché.</p>';
+  try{
+    var r=await fetch(ENGINE+'/windstow',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
+    REP=await r.json();
+    render();
+  }catch(e){
+    out.innerHTML='<div class="engmsg err"><b>No se pudo simular.</b><br>'+esc(e.message)+'</div>';
+    $('cmpCard').style.display='none';$('detCard').style.display='none';
+  }finally{ $('run').disabled=false; $('run').textContent='Simular el año'; }
+}
+
+function ord(){ return Object.keys(REP.cases).sort(); }
+function best(){ // la que menos POA pierde
+  var k=ord(), b=null;
+  k.forEach(function(s){if(b===null||REP.cases[s].poa_delta_kwh_m2>REP.cases[b].poa_delta_kwh_m2)b=s;});
+  return b;
+}
+
+function render(){
+  var m=REP.meteo, w=REP.wind, base=REP.baseline;
+  $('ctx').textContent=(REP.site.name?REP.site.name+' · ':'')+(m.source||'')+' '+(m.year||'')+
+    ' · '+m.rows+' pasos de '+Math.round(m.dt_h*60)+' min';
+  var b=best();
+  $('out').innerHTML='<div class="readout">'+
+    ro('POA sin abanderar',fmt(base.poa_kwh_m2,0),'kWh/m²·año')+
+    ro('Viento p95',fmt(w.p95_ms*3.6,0),'km/h · máx '+fmt(w.max_ms*3.6,0))+
+    ro('Horas &gt; '+fmt(w.threshold_1_kmh,0)+' km/h',fmt(w.hours_over_t1,0),'h · &gt;'+fmt(w.threshold_2_kmh,0)+': '+fmt(w.hours_over_t2,0)+' h')+
+    ro('Horas de sol',fmt(m.daylight_hours,0),'h')+
+    ro('Menos pierde',b||'—',b?fmt(REP.cases[b].poa_delta_pct,2)+' %':'')+
+    '</div>'+
+    '<p class="note">Viento corregido a la altura del seguidor con ley potencial 1/7: '+
+    'factor <b>'+fmt(w.scale_applied,3)+'</b> sobre el dato de 10 m'+
+    (m.resample_minutes?' · meteo interpolada a <b>'+m.resample_minutes+' min</b>':'')+
+    (m.has_wind_direction?'':' · <b>sin dirección de viento en la fuente</b>: A1/A2 resuelven con 180° fijos')+
+    '.</p>';
+  var sc=w.scenario;
+  if(sc){
+    var ap=(sc.events_applied||[]),sk=(sc.events_skipped||[]);
+    $('out').innerHTML+='<div class="warn"><b>Banco de pruebas: esto no es el año medido.</b> '+
+      'Fondo <b>'+esc({meteo:'meteo del emplazamiento',synthetic:'sintético Weibull + AR(1)',calm:'en calma'}[sc.base]||sc.base)+'</b>'+
+      (ap.length?' · <b>'+ap.length+'</b> racha(s) inyectada(s) (máx '+
+        fmt(Math.max.apply(null,ap.map(function(e){return e.peak_kmh;})),0)+' km/h)':'')+
+      (sk.length?' · <b>'+sk.length+'</b> descartada(s): '+esc(sk.map(function(e){return e.why;}).join('; ')):'')+
+      (sc.not_modeled?'<br><span style="color:var(--muted)">'+esc(sc.not_modeled)+'</span>':'')+'</div>';
+  }
+  drawWind(); drawTable(); drawBars();
+  $('cmpCard').style.display='';
+  var k=ord(); SEL=(SEL&&k.indexOf(SEL)>=0)?SEL:b||k[0];
+  $('strip').innerHTML=k.map(function(s){
+    return '<span class="chip'+(s===SEL?' on':'')+'" data-s="'+s+'"><span class="dot" style="background:'+COL[s]+'"></span>'+s+'</span>';}).join('');
+  [].forEach.call($('strip').children,function(c){c.onclick=function(){SEL=this.dataset.s;render();};});
+  $('detCard').style.display='';
+  drawDetail();
+  build3D();
+}
+function ro(k,v,s){return '<div class="ro"><div class="k">'+k+'</div><div class="v">'+v+(s?' <small>'+s+'</small>':'')+'</div></div>';}
+
+/* ---- viento simulado: máximo diario contra los dos umbrales ----
+   Es la comprobación de que lo que se pidió es lo que se simuló: si has metido
+   una racha de 110 km/h el 14 de julio, tiene que verse ahí y por encima de la
+   línea roja. Sin este dibujo, un escenario mal escrito se lee como física. */
+function drawWind(){
+  var d=REP.wind.daily_max_kmh||[]; var cv=$('wind');
+  if(!d.length){cv.style.display='none';return;}
+  cv.style.display='';
+  var x=cv.getContext('2d'),W=cv.width,H=cv.height,L=48,R=16,T=20,B=24;
+  x.clearRect(0,0,W,H);
+  var hi=Math.max(REP.wind.threshold_2_kmh*1.25,Math.max.apply(null,d)*1.08);
+  var gx=function(i){return L+(i/Math.max(1,d.length-1))*(W-L-R);},
+      gy=function(v){return H-B-(v/hi)*(H-B-T);};
+  x.strokeStyle='#1A2530';x.fillStyle='#5E6F7E';x.font='10px ui-monospace,monospace';x.lineWidth=1;
+  for(var i=0;i<=3;i++){var v=hi*i/3,y=gy(v);
+    x.beginPath();x.moveTo(L,y);x.lineTo(W-R,y);x.stroke();
+    x.textAlign='right';x.fillText(Math.round(v),L-6,y+3);}
+  x.beginPath();
+  for(var j=0;j<d.length;j++){var xx=gx(j),yy=gy(d[j]);if(j===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+  x.strokeStyle='#54A6FF';x.lineWidth=1.5;x.stroke();
+  x.lineTo(gx(d.length-1),H-B);x.lineTo(L,H-B);x.closePath();x.fillStyle='rgba(84,166,255,.10)';x.fill();
+  /* Los dos umbrales están cerca (40 y 60 km/h) y con el eje escalado a una
+     racha de 120 caen a pocos píxeles: el de abajo se rotula por debajo de su
+     línea para que los dos textos no se pisen. */
+  [[REP.wind.threshold_1_kmh,'#F6A623',11],[REP.wind.threshold_2_kmh,'#D0594F',-3]].forEach(function(u){
+    var y=gy(u[0]);x.setLineDash([5,4]);x.strokeStyle=u[1];x.lineWidth=1;
+    x.beginPath();x.moveTo(L,y);x.lineTo(W-R,y);x.stroke();x.setLineDash([]);
+    x.fillStyle=u[1];x.textAlign='left';x.fillText(Math.round(u[0])+' km/h',L+3,y+u[2]);});
+  // meses
+  var acc=0,t0=new Date(REP.wind.daily_t0||(REP.meteo.period[0]));
+  x.fillStyle='#5E6F7E';x.textAlign='center';
+  for(var m=0;m<12;m++){
+    var dias=new Date(Date.UTC(t0.getUTCFullYear(),m+1,0)).getUTCDate();
+    x.fillText(MESES[m],gx(acc+dias/2),H-7); acc+=dias;
+  }
+  x.textAlign='left';x.fillStyle='#8093A4';x.fillText('máximo diario de viento (km/h)',L,12);
+}
+
+/* ---- tabla comparativa ---- */
+function drawTable(){
+  var b=best();
+  var h='<thead><tr><th>Estrategia</th><th>POA<br>kWh/m²·año</th><th>Δ POA<br>kWh/m²</th><th>Δ POA<br>%</th>'+
+        '<th>Abanderamientos<br>al año</th><th>de ellos<br>a total</th><th>Horas<br>al año</th>'+
+        '<th>% horas<br>de sol</th><th>Duración<br>media h</th><th>Máx<br>h</th></tr></thead><tbody>';
+  h+='<tr class="base"><td><span class="dot" style="background:'+COL.BASE+'"></span>Sin abanderar (base)</td>'+
+     '<td>'+fmt(REP.baseline.poa_kwh_m2,1)+'</td><td>—</td><td>—</td><td>0</td><td>0</td><td>0</td><td>0,0</td><td>—</td><td>—</td></tr>';
+  ord().forEach(function(s){
+    var c=REP.cases[s];
+    h+='<tr'+(s===b?' class="win"':'')+'><td><span class="dot" style="background:'+COL[s]+'"></span><b>'+s+'</b> · '+
+       esc(c.orientation==='sol'?'cara al sol':'cara al viento')+' · '+c.n_thresholds+(c.n_thresholds>1?' umbrales':' umbral')+'</td>'+
+       '<td>'+fmt(c.poa_kwh_m2,1)+'</td>'+
+       '<td>'+fmt(c.poa_delta_kwh_m2,2)+'</td>'+
+       '<td>'+fmt(c.poa_delta_pct,3)+'</td>'+
+       '<td>'+c.n_events+'</td>'+
+       '<td>'+c.n_events_full+'</td>'+
+       '<td>'+fmt(c.hours_engaged,0)+'</td>'+
+       '<td>'+fmt(c.pct_daylight,2)+'</td>'+
+       '<td>'+fmt(c.duration_h_mean,1)+'</td>'+
+       '<td>'+fmt(c.duration_h_max,0)+'</td></tr>';
+  });
+  $('tbl').innerHTML=h+'</tbody>';
+  var c2=REP.config;
+  $('cmpNote').innerHTML='Un <b>abanderamiento</b> es una racha continua fuera de seguimiento: si el '+
+    'viento baja del umbral unos minutos y vuelve, sigue siendo el mismo (el hold de '+fmt(c2.destow_hold_minutes,0)+
+    ' min cuenta dentro). «A total» son los que llegaron a ±'+fmt(c2.full_stow_deg,0)+'°; el resto se quedaron en el '+
+    'sector parcial (±'+fmt(c2.partial_stow_min_abs_deg,0)+'°). Las horas incluyen el hold, y el % es sobre horas de sol, '+
+    'que es donde la POA se pierde.';
+}
+
+/* ---- barras: Δ POA % por estrategia ---- */
+function drawBars(){
+  var cv=$('bars'),x=cv.getContext('2d'),W=cv.width,H=cv.height,L=54,R=16,T=22,B=52;
+  x.clearRect(0,0,W,H);
+  var k=ord(); if(!k.length)return;
+  var vals=k.map(function(s){return REP.cases[s].poa_delta_pct;});
+  var lo=Math.min(0,Math.min.apply(null,vals)),hi=Math.max(0,Math.max.apply(null,vals));
+  if(hi-lo<1e-6){hi=0.1;lo=-0.1;}
+  var pad=(hi-lo)*0.15; hi+=pad; lo-=pad;
+  var gy=function(v){return H-B-((v-lo)/(hi-lo))*(H-B-T);};
+  x.strokeStyle='#1A2530';x.fillStyle='#5E6F7E';x.font='10px '+'ui-monospace,monospace';x.lineWidth=1;
+  for(var i=0;i<=4;i++){var v=lo+(hi-lo)*i/4,y=gy(v);
+    x.beginPath();x.moveTo(L,y);x.lineTo(W-R,y);x.stroke();
+    x.textAlign='right';x.fillText(v.toFixed(2)+'%',L-6,y+3);}
+  var y0=gy(0);x.strokeStyle='#23303D';x.lineWidth=1.5;x.beginPath();x.moveTo(L,y0);x.lineTo(W-R,y0);x.stroke();
+  var bw=(W-L-R)/k.length;
+  k.forEach(function(s,i){
+    var c=REP.cases[s],v=c.poa_delta_pct,cx=L+bw*i+bw/2,w=Math.min(74,bw*0.5),y=gy(v);
+    x.fillStyle=COL[s];x.fillRect(cx-w/2,Math.min(y,y0),w,Math.abs(y-y0));
+    x.fillStyle='#E7EEF4';x.font='700 12px system-ui,sans-serif';x.textAlign='center';
+    x.fillText(v.toFixed(2)+'%',cx,v<0?y+15:y-6);
+    x.fillStyle='#8093A4';x.font='11px system-ui,sans-serif';
+    x.fillText(s,cx,H-B+16);
+    x.fillStyle='#5E6F7E';x.font='10px ui-monospace,monospace';
+    x.fillText(c.n_events+' abander.',cx,H-B+30);
+    x.fillText(Math.round(c.hours_engaged)+' h',cx,H-B+42);
+  });
+  x.fillStyle='#8093A4';x.font='10px ui-monospace,monospace';x.textAlign='left';
+  x.fillText('Δ POA anual frente a no abanderar',L,13);
+}
+
+/* ---- detalle de una estrategia ---- */
+function drawDetail(){
+  var c=REP.cases[SEL]; if(!c)return;
+  $('detHint').textContent=c.label;
+  drawMonthly(c); drawTrace(c); drawEvents(c);
+  var ep=c.top_events&&c.top_events[0];
+  $('detNote').innerHTML='Arriba, el reparto del año: barras = horas abanderado por mes (eje izq.), '+
+    'línea = POA perdida ese mes (eje dcho.). Abajo, el <b>episodio más caro</b> del año'+
+    (ep?' ('+esc(ep.start.slice(0,16).replace('T',' '))+', '+fmt(ep.hours,1)+' h, ráfaga de '+fmt(ep.wind_max_kmh,0)+' km/h)':'')+
+    ': viento contra umbrales, ángulo seguido frente al abanderado, y la POA de cada uno.';
+}
+
+function drawMonthly(c){
+  var cv=$('monthly'),x=cv.getContext('2d'),W=cv.width,H=cv.height,L=48,R=52,T=22,B=26;
+  x.clearRect(0,0,W,H);
+  var hrs=c.hours_by_month,dl=c.poa_delta_monthly_kwh_m2.map(function(v){return -v;});  // pérdida en positivo
+  var hmax=Math.max(1,Math.max.apply(null,hrs)),dmax=Math.max(0.01,Math.max.apply(null,dl));
+  var dec=dmax<0.5?2:(dmax<5?1:0);
+  var gy=function(v){return H-B-(v/hmax)*(H-B-T);},gd=function(v){return H-B-(v/dmax)*(H-B-T);};
+  x.strokeStyle='#1A2530';x.fillStyle='#5E6F7E';x.font='10px ui-monospace,monospace';x.lineWidth=1;
+  for(var i=0;i<=4;i++){var y=T+(H-B-T)*i/4;
+    x.beginPath();x.moveTo(L,y);x.lineTo(W-R,y);x.stroke();
+    x.textAlign='right';x.fillText(Math.round(hmax*(1-i/4)),L-6,y+3);
+    x.textAlign='left';x.fillStyle='#A78BFA';x.fillText((dmax*(1-i/4)).toFixed(dec),W-R+6,y+3);x.fillStyle='#5E6F7E';}
+  var bw=(W-L-R)/12;
+  for(var m=0;m<12;m++){
+    var cx=L+bw*m+bw/2,y=gy(hrs[m]);
+    x.fillStyle=COL[SEL];x.globalAlpha=.75;x.fillRect(cx-bw*0.3,y,bw*0.6,H-B-y);x.globalAlpha=1;
+    x.fillStyle='#5E6F7E';x.font='10px system-ui,sans-serif';x.textAlign='center';x.fillText(MESES[m],cx,H-8);
+  }
+  x.beginPath();
+  for(var m2=0;m2<12;m2++){var cx2=L+bw*m2+bw/2,y2=gd(Math.max(0,dl[m2]));if(m2===0)x.moveTo(cx2,y2);else x.lineTo(cx2,y2);}
+  x.strokeStyle='#A78BFA';x.lineWidth=2;x.stroke();
+  for(var m3=0;m3<12;m3++){var cx3=L+bw*m3+bw/2,y3=gd(Math.max(0,dl[m3]));
+    x.beginPath();x.arc(cx3,y3,3,0,7);x.fillStyle='#A78BFA';x.fill();}
+  x.font='10px ui-monospace,monospace';x.textAlign='left';
+  x.fillStyle=COL[SEL];x.fillText('horas abanderado (eje izq.)',L,13);
+  x.textAlign='right';x.fillStyle='#A78BFA';x.fillText('POA perdida kWh/m² (eje dcho.)',W-R,13);
+}
+
+function drawTrace(c){
+  var cv=$('trace'),x=cv.getContext('2d'),W=cv.width,H=cv.height,L=52,R=76,T=22,B=30;
+  x.clearRect(0,0,W,H);
+  var tr=c.trace;
+  if(!tr||!tr.t||!tr.t.length){
+    x.fillStyle='#5E6F7E';x.font='12px system-ui,sans-serif';x.textAlign='center';
+    x.fillText('Sin episodios de abanderamiento este año.',W/2,H/2);return;}
+  var n=tr.t.length,gx=function(i){return L+(i/(n-1))*(W-L-R);};
+  /* eje izquierdo compartido por ángulo (°) y viento (km/h) escalados aparte; eje derecho POA */
+  var wk=tr.wind_ms.map(function(v){return v==null?0:v*3.6;});
+  var wmax=Math.max(REP.wind.threshold_2_kmh*1.2,Math.max.apply(null,wk)*1.1);
+  var pmax=Math.max(1,Math.max.apply(null,tr.poa_base.map(function(v){return v||0;}))*1.1);
+  var A=+REP.config.full_stow_deg||55;
+  var gw=function(v){return H-B-(v/wmax)*(H-B-T)/2;}                    // viento: mitad inferior
+  var ga=function(v){return T+((A-v)/(2*A))*((H-B-T)/2);}               // ángulo: mitad superior
+  var gp=function(v){return H-B-(v/pmax)*(H-B-T);};
+  // fondo de los tramos abanderados
+  for(var i=0;i<n;i++){
+    if(tr.mode[i]&&tr.mode[i]!=='IDLE'){
+      x.fillStyle=(tr.mode[i]==='FULL_STOW')?'rgba(208,89,79,.16)':(tr.mode[i]==='PARTIAL_STOW'?'rgba(246,166,35,.13)':'rgba(128,147,164,.10)');
+      x.fillRect(gx(i)-(W-L-R)/(2*(n-1)),T,(W-L-R)/(n-1)+0.6,H-B-T);}
+  }
+  x.strokeStyle='#1A2530';x.lineWidth=1;
+  x.beginPath();x.moveTo(L,T+(H-B-T)/2);x.lineTo(W-R,T+(H-B-T)/2);x.stroke();
+  // umbrales de viento
+  [[REP.wind.threshold_1_kmh,'#F6A623'],[REP.wind.threshold_2_kmh,'#D0594F']].forEach(function(u){
+    var y=gw(u[0]);x.setLineDash([5,4]);x.strokeStyle=u[1];x.beginPath();x.moveTo(L,y);x.lineTo(W-R,y);x.stroke();x.setLineDash([]);
+    x.fillStyle=u[1];x.font='10px ui-monospace,monospace';x.textAlign='left';x.fillText(Math.round(u[0])+' km/h',L+3,y-3);});
+  function line(arr,g,color,dash,wd){
+    x.beginPath();var st=false;
+    for(var i=0;i<n;i++){var v=arr[i];if(v==null){st=false;continue;}
+      var xx=gx(i),yy=g(v);if(!st){x.moveTo(xx,yy);st=true;}else x.lineTo(xx,yy);}
+    x.setLineDash(dash||[]);x.strokeStyle=color;x.lineWidth=wd||2;x.stroke();x.setLineDash([]);
+  }
+  line(wk,gw,'#54A6FF',[],2);
+  line(tr.theta_base,ga,'#5E6F7E',[4,3],1.5);
+  line(tr.theta,ga,COL[SEL],[],2);
+  line(tr.poa_base,gp,'#5E6F7E',[2,3],1);
+  line(tr.poa,gp,'#A78BFA',[],1.5);
+  // ejes
+  /* Dos escalas comparten el eje izquierdo (ángulo arriba, viento abajo) y se tocan justo en la
+     línea media: sin separar los dos rótulos de ahí, «-55°» y el máximo de viento se pisaban. */
+  x.fillStyle='#5E6F7E';x.font='10px ui-monospace,monospace';x.textAlign='right';
+  x.fillText('+'+Math.round(A)+'°',L-6,ga(A)+3); x.fillText('0°',L-6,ga(0)+3);
+  x.fillText('-'+Math.round(A)+'°',L-6,ga(-A)-3);
+  x.fillText(Math.round(wmax)+' km/h',L-6,gw(wmax)+11); x.fillText('0',L-6,gw(0)+3);
+  x.textAlign='left';x.fillStyle='#A78BFA';x.fillText(Math.round(pmax)+' W/m²',W-R+6,gp(pmax)+3);
+  x.fillStyle='#5E6F7E';x.textAlign='left';
+  x.fillText(tr.t[0].slice(0,16).replace('T',' '),L,H-8);
+  x.textAlign='right';x.fillText(tr.t[n-1].slice(0,16).replace('T',' '),W-R,H-8);
+  // leyenda
+  var leg=[['viento','#54A6FF'],['θ seguimiento','#5E6F7E'],['θ '+SEL,COL[SEL]],['POA '+SEL,'#A78BFA']];
+  var lx=L+8,ly=T+11;x.font='10px ui-monospace,monospace';x.textAlign='left';
+  var lw=0;leg.forEach(function(l){lw=Math.max(lw,x.measureText(l[0]).width);});
+  x.fillStyle='rgba(15,21,29,.88)';x.fillRect(lx-6,ly-12,lw+28,leg.length*14+4);
+  x.strokeStyle='#1A2530';x.lineWidth=1;x.strokeRect(lx-6,ly-12,lw+28,leg.length*14+4);
+  leg.forEach(function(l,i){x.fillStyle=l[1];x.fillRect(lx,ly-4+i*14,11,2);
+    x.fillStyle='#8093A4';x.fillText(l[0],lx+16,ly+i*14);});
+}
+
+function drawEvents(c){
+  var ev=c.top_events||[];
+  if(!ev.length){$('evt').innerHTML='';return;}
+  var h='<thead><tr><th>Episodios más caros</th><th>Duración h</th><th>Parcial h</th><th>Total h</th>'+
+        '<th>Ráfaga km/h</th><th>POA perdida<br>kWh/m²</th></tr></thead><tbody>';
+  ev.forEach(function(e){
+    h+='<tr><td>'+esc(e.start.slice(0,16).replace('T',' '))+(e.reached_full?' <span style="color:#D0594F">▲ total</span>':'')+'</td>'+
+       '<td>'+fmt(e.hours,1)+'</td><td>'+fmt(e.hours_partial,1)+'</td><td>'+fmt(e.hours_full,1)+'</td>'+
+       '<td>'+fmt(e.wind_max_kmh,0)+'</td><td>'+fmt(e.poa_lost_kwh_m2,3)+'</td></tr>';
+  });
+  $('evt').innerHTML=h+'</tbody>';
+}
+
+
+/* ===================== CAMPO 3D =====================
+   Ver la POA es ver un número; ver POR QUÉ es ver el seguidor tumbado mientras
+   el de al lado sigue al sol. Esta vista pone los casos EN PARALELO sobre la
+   MISMA ventana de tiempo (`timeline` del motor: un solo viento, un solo sol,
+   un θ por estrategia), así que la comparación es honesta paso a paso.
+
+   El seguidor NO se modela aquí: es `seguidor.js`, la fuente única que ya
+   comparten el Gemelo Digital y Cobertura 3D. Marco del mundo: x = este,
+   y = arriba, z = −norte. El seguidor canónico tiene su tubo en +X local, así
+   que cada uno entra girado 90° para que el eje quede N-S. */
+var TD=null, TL=null, TPOS=0, PLAY=false, RAF=null;
+var NFILAS=2, PITCH=6.0, BLOQUE=34;      // filas por bloque, paso entre filas y entre bloques (m)
+/* El modo se pinta como BRILLO PROPIO sobre la pala azul, no cambiándole el
+   color: si se le mete un rojo oscuro, un seguidor abanderado DE CARA al sol
+   se ve tan apagado como uno abanderado de espaldas, y precisamente esa
+   diferencia de luz recibida es la POA que la ficha está comparando. */
+var MODO_COL={IDLE:0x000000, PARTIAL_STOW:0xF6A623, FULL_STOW:0xD0594F, DESTOW_HOLD:0x8093A4};
+var MODO_INT={IDLE:0, PARTIAL_STOW:.42, FULL_STOW:.5, DESTOW_HOLD:.3};
+var PALA=0x16305e;
+
+function has3D(){return typeof THREE!=='undefined'&&THREE.OrbitControls&&typeof Seguidor!=='undefined';}
+
+function init3D(){
+  if(TD||!has3D())return;
+  var h=$('view3d');
+  try{
+    var rd=new THREE.WebGLRenderer({antialias:true});
+    rd.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    rd.shadowMap.enabled=true; rd.shadowMap.type=THREE.PCFSoftShadowMap;
+    h.appendChild(rd.domElement);
+    var sc=new THREE.Scene(); sc.background=new THREE.Color(0x06080c);
+    sc.add(new THREE.Mesh(new THREE.SphereGeometry(1800,20,24),
+      new THREE.MeshBasicMaterial({color:0x0d1826,side:THREE.BackSide,depthWrite:false})));
+    var cam=new THREE.PerspectiveCamera(42,1.9,0.5,6000);
+    cam.position.set(120,95,150);
+    var ct=new THREE.OrbitControls(cam,rd.domElement);
+    ct.enableDamping=true; ct.dampingFactor=.08; ct.maxPolarAngle=Math.PI*0.49;
+    ct.minDistance=20; ct.maxDistance=900; ct.target.set(0,0,0);
+    var hemi=new THREE.HemisphereLight(0xbcd4ff,0x1a2510,0.5);
+    var sun=new THREE.DirectionalLight(0xffeecc,1.5);
+    sun.castShadow=true; sun.shadow.mapSize.width=2048; sun.shadow.mapSize.height=2048;
+    sun.shadow.bias=-2e-4; sun.shadow.normalBias=0.3;
+    var sc_=sun.shadow.camera; sc_.left=-140; sc_.right=140; sc_.top=120; sc_.bottom=-120; sc_.far=1400;
+    var sunM=new THREE.Mesh(new THREE.SphereGeometry(9,16,16),new THREE.MeshBasicMaterial({color:0xfbbd23}));
+    sc.add(hemi,sun,sun.target,sunM);
+    var suelo=new THREE.Mesh(new THREE.PlaneGeometry(900,600),
+      new THREE.MeshLambertMaterial({color:0x22301c}));
+    suelo.rotation.x=-Math.PI/2; suelo.receiveShadow=true; sc.add(suelo);
+    // flecha de viento: la dirección es DE DÓNDE VIENE, así que apunta hacia el campo
+    var wind=new THREE.Group();
+    var mW=new THREE.MeshBasicMaterial({color:0x54A6FF});
+    var vast=new THREE.Mesh(new THREE.CylinderGeometry(.6,.6,22,10),mW); vast.rotation.z=Math.PI/2; vast.position.x=-11;
+    var pta=new THREE.Mesh(new THREE.ConeGeometry(2.2,7,12),mW); pta.rotation.z=-Math.PI/2; pta.position.x=3.5;
+    wind.add(vast,pta); wind.position.y=26; sc.add(wind);
+    var hint=document.createElement('div'); hint.className='hint3d';
+    hint.textContent='arrastrar: orbitar · rueda: zoom · botón dcho: desplazar';
+    h.appendChild(hint);
+    TD={rd:rd,sc:sc,cam:cam,ct:ct,sun:sun,sunM:sunM,wind:wind,bloques:[],mundo:null};
+    (function loop(){requestAnimationFrame(loop); if(!TD)return;
+      var w=h.clientWidth,hh=h.clientHeight;
+      if(w&&(TD.w!==w||TD.h!==hh)){TD.w=w;TD.h=hh;rd.setSize(w,hh,false);cam.aspect=w/hh;cam.updateProjectionMatrix();}
+      TD.ct.update(); rd.render(sc,cam);})();
+  }catch(e){TD=null;}
+}
+
+/* un seguidor: piezas del modelo canónico, las que bascular colgando de un
+   grupo propio para que mover el ángulo sea mover una rotación y no rehacer nada */
+function seguidor3D(mats){
+  var g=new THREE.Group(), spin=new THREE.Group(); g.add(spin);
+  var parts=Seguidor.parts(THREE,{detail:'mass',size:'largo'});
+  parts.forEach(function(p){
+    if(p.antenna||p.motorLink||p.damperLink)return;          // detalle de TCU: aquí sobra
+    var geo; try{geo=p.geom(THREE);}catch(e){return;}
+    var mesh=new THREE.Mesh(geo,mats[p.mat]||mats.steel);
+    mesh.applyMatrix4(p.m); mesh.castShadow=!!p.cast; mesh.receiveShadow=true;
+    (p.spin?spin:g).add(mesh);
+  });
+  var postH=Seguidor.DIMS.postH||2.0;
+  g.position.y=postH; g.rotation.y=Math.PI/2;                 // tubo local +X → norte (−z)
+  var poste=new THREE.Mesh(new THREE.BoxGeometry(.18,postH,.18),mats.steel);
+  poste.position.y=postH/2; poste.castShadow=true;
+  var wrap=new THREE.Group(); wrap.add(g,poste); wrap.spin=spin;
+  return wrap;
+}
+
+function build3D(){
+  init3D(); if(!TD||!REP||!REP.timeline){$('cv3dCard').style.display='none';return;}
+  TL=REP.timeline;
+  if(TD.mundo){TD.sc.remove(TD.mundo);}
+  var mundo=new THREE.Group(); TD.mundo=mundo; TD.sc.add(mundo); TD.bloques=[];
+  var casos=['BASE'].concat(ord());
+  var x0=-(casos.length-1)*BLOQUE/2;
+  casos.forEach(function(k,bi){
+    var col=(k==='BASE')?COL.BASE:COL[k];
+    var mats=Seguidor.materials(THREE);
+    mats.glass=new THREE.MeshStandardMaterial({color:PALA,roughness:.35,metalness:.25,
+      emissive:new THREE.Color(0x000000),emissiveIntensity:0});
+    var b=new THREE.Group(); b.position.x=x0+bi*BLOQUE;
+    var segs=[];
+    for(var f=0;f<NFILAS;f++){
+      var t=seguidor3D(mats);
+      t.position.x=(f-(NFILAS-1)/2)*PITCH;
+      b.add(t); segs.push(t);
+    }
+    // barra de POA: la altura ES la POA del caso en ese instante; el listón gris
+    // de al lado es la del seguidor sin abanderar, para leer la pérdida sin cuentas
+    var zb=Seguidor.DIMS.span/2+9;
+    var barra=new THREE.Mesh(new THREE.BoxGeometry(1.8,1,1.8),
+      new THREE.MeshStandardMaterial({color:new THREE.Color(col),emissive:new THREE.Color(col),emissiveIntensity:.35,roughness:.5}));
+    // La referencia es un fantasma traslúcido detrás, no un alambre: con
+    // wireframe todas sus aristas competían con las palas y la escena parecía
+    // un plano de piezas en vez de un campo.
+    var ref=new THREE.Mesh(new THREE.BoxGeometry(3.0,1,3.0),
+      new THREE.MeshBasicMaterial({color:0x8093A4,transparent:true,opacity:.22,depthWrite:false}));
+    barra.position.set(-3,0,zb); ref.position.set(-3,0,zb);
+    // Marca del color del caso en el suelo, al sur del bloque: ata cada grupo
+    // de seguidores con su ficha de arriba sin rótulos flotantes en la escena.
+    var marca=new THREE.Mesh(new THREE.BoxGeometry(NFILAS*PITCH+3,.14,3.5),
+      new THREE.MeshBasicMaterial({color:new THREE.Color(col)}));
+    marca.position.set(0,.07,zb+4);
+    var franja=new THREE.Mesh(new THREE.BoxGeometry(NFILAS*PITCH+3,.10,Seguidor.DIMS.span+6),
+      new THREE.MeshBasicMaterial({color:new THREE.Color(col),transparent:true,opacity:.07}));
+    franja.position.y=.05;
+    b.add(barra,ref,marca,franja);
+    mundo.add(b);
+    TD.bloques.push({k:k,g:b,segs:segs,mats:mats,barra:barra,ref:ref});
+  });
+  // Encuadre: el campo crece con el nº de casos, así que la cámara se calcula
+  // en vez de fijarse — con cuatro estrategias y la base, un preset se queda
+  // corto o deja el campo del tamaño de un sello.
+  /* Cámara casi desde el SUR y alta: mirando a lo largo del eje N-S, cada
+     bloque se lee como su propia sección y los ángulos se comparan de un
+     vistazo. Desde una esquina, las palas que miran al este enseñan el dorso y
+     media comparativa se pierde. */
+  var ancho=casos.length*BLOQUE, largo=Seguidor.DIMS.span+20, d=Math.max(ancho,largo)*0.88;
+  TD.cam.position.set(d*0.20,d*0.52,d*0.88);
+  TD.ct.target.set(0,4,0); TD.ct.update();
+  var sh=TD.sun.shadow.camera;
+  sh.left=-ancho*0.6; sh.right=ancho*0.6; sh.top=largo*0.7; sh.bottom=-largo*0.7;
+  sh.updateProjectionMatrix();
+  TD.radio=Math.max(320,d*1.5);
+
+  $('tpos').max=Math.max(0,TL.t.length-1); TPOS=0; $('tpos').value=0;
+  $('c3hint').textContent=TL.window.steps+' pasos de '+TL.window.step_minutes+' min';
+  $('c3note').innerHTML='Ventana <b>común</b> a todos los casos: el mismo viento y el mismo sol para '+
+    'todos, y un θ por estrategia. La barra de cada bloque es su <b>POA en ese instante</b> y el listón '+
+    'gris la del seguidor sin abanderar: la diferencia entre las dos es lo que cuesta la defensa. '+
+    'La pala se tiñe según el modo (ámbar parcial, rojo total, gris el hold de histéresis). '+
+    'El campo es <b>ilustrativo</b> —dos filas por caso, geometría real de '+
+    esc(Seguidor.DIMS.modsPerStr)+' módulos por ala—, pero los ángulos y la POA son los que devuelve el motor.';
+  $('cv3dCard').style.display='';
+  update3D(0);
+}
+
+function update3D(i){
+  if(!TD||!TL)return;
+  i=Math.max(0,Math.min(TL.t.length-1,i|0)); TPOS=i;
+  var el=TL.sun_el[i], az=TL.sun_az[i], R=TD.radio||420;
+  var e=Math.max(el,-4)*Math.PI/180, a=az*Math.PI/180;
+  var dir=new THREE.Vector3(Math.sin(a)*Math.cos(e),Math.sin(e),-Math.cos(a)*Math.cos(e));
+  TD.sun.position.copy(dir.clone().multiplyScalar(R));
+  TD.sunM.position.copy(dir.clone().multiplyScalar(R*0.92));
+  TD.sun.intensity=el>0?1.5:0.02; TD.sunM.visible=el>0;
+  if(TL.wind_dir&&TL.wind_dir[i]!=null&&(TL.wind_ms[i]||0)>0.3){
+    var wa=TL.wind_dir[i]*Math.PI/180;                 // de dónde VIENE
+    var rw=(TD.radio||420)*0.30;
+    TD.wind.position.set(Math.sin(wa)*rw,22,-Math.cos(wa)*rw);
+    /* `wind_dir` es DE DÓNDE VIENE; la flecha tiene que enseñar hacia dónde VA,
+       que es el vector opuesto: (−sin, 0, +cos). Con el giro anterior salía
+       apuntando al revés, o sea contando la historia contraria. */
+    TD.wind.rotation.y=Math.atan2(-Math.cos(wa),-Math.sin(wa));
+    TD.wind.visible=true;
+  }else TD.wind.visible=false;
+  var v=TL.wind_ms[i]||0;
+  TD.wind.scale.setScalar(Math.max(.35,Math.min(2.2,v/12)));
+
+  var pbase=TL.baseline.poa[i]||0;
+  var pmax=1; TD.bloques.forEach(function(b){
+    var p=(b.k==='BASE')?pbase:(TL.cases[b.k].poa[i]||0); pmax=Math.max(pmax,p);});
+  pmax=Math.max(pmax,pbase,200);
+  var tiles='';
+  TD.bloques.forEach(function(b){
+    var th=(b.k==='BASE')?TL.baseline.theta[i]:TL.cases[b.k].theta[i];
+    var p=(b.k==='BASE')?pbase:TL.cases[b.k].poa[i];
+    var modo=(b.k==='BASE')?'SEGUIMIENTO':TL.cases[b.k].mode[i];
+    /* Signo del giro: el seguidor entra rotado +90° sobre Y, así que su +Z local
+       cae al ESTE. Girando +α sobre su eje, la normal de la pala se va a
+       (sin α al este, cos α arriba) — o sea que θ>0 (tilt East de pvlib) es
+       +α. Con el signo cambiado, las palas miraban al lado contrario del sol:
+       la comparativa se veía al revés de lo que decían los números. */
+    b.segs.forEach(function(t){t.spin.rotation.x=(th||0)*Math.PI/180;});
+    b.mats.glass.emissive.setHex(MODO_COL[modo]||0x000000);
+    b.mats.glass.emissiveIntensity=(MODO_INT[modo]!=null?MODO_INT[modo]:0);
+    var hh=Math.max(.4,(p||0)/pmax*18), hr=Math.max(.4,(pbase||0)/pmax*18);
+    b.barra.scale.y=hh; b.barra.position.y=hh/2;
+    b.ref.scale.y=hr;   b.ref.position.y=hr/2;
+    var col=(b.k==='BASE')?COL.BASE:COL[b.k];
+    var d=(b.k==='BASE')?'':(p-pbase);
+    tiles+='<div class="tile" style="border-left-color:'+col+'">'+
+      '<div class="n"><span class="dot" style="background:'+col+'"></span>'+(b.k==='BASE'?'Sin abanderar':b.k)+'</div>'+
+      '<div class="m">'+esc(modo.replace('_',' ').toLowerCase())+' · θ '+fmt(th,1)+'°</div>'+
+      '<div class="p">'+fmt(p,0)+' <small>W/m²</small></div>'+
+      (b.k==='BASE'?'<div class="d" style="color:var(--muted-2)">referencia</div>':
+       '<div class="d" style="color:'+(d<-1?'var(--dead)':(d>1?'var(--live)':'var(--muted-2)'))+'">'+
+       (d>0?'+':'')+fmt(d,0)+' W/m² ('+(pbase>0?fmt(100*d/pbase,1):'—')+' %)</div>')+
+      '</div>';
+  });
+  $('tiles').innerHTML=tiles;
+  $('tpos').value=i;
+  $('tlbl').textContent=TL.t[i].slice(5,16).replace('T',' ')+' · '+fmt(v*3.6,0)+' km/h';
+}
+
+function playToggle(){
+  PLAY=!PLAY; $('play').textContent=PLAY?'❚❚ Pausa':'▶ Reproducir';
+  if(RAF)clearInterval(RAF); RAF=null;
+  if(PLAY)RAF=setInterval(function(){
+    if(!TL){return;}
+    var n=TPOS+1; if(n>=TL.t.length)n=0; update3D(n);
+  },Math.max(40,320/(+$('tspeed').value||4)));
+}
+
+/* ===================== ARRANQUE ===================== */
+IDS.forEach(function(i){$(i).addEventListener('change',saveCfg);});
+$('bt').addEventListener('change',saveCfg);
+[].forEach.call(document.querySelectorAll('.st'),function(e){e.addEventListener('change',saveCfg);});
+$('run').onclick=run;
+$('play').onclick=playToggle;
+$('tpos').oninput=function(){if(PLAY)playToggle();update3D(+this.value);};
+$('gadd').onclick=function(){addGust($('gpreset').value);};
+$('gpreset').onchange=function(){if(this.value){addGust(this.value);this.value='';}};
+['wgust','wcyc'].forEach(function(i){$(i).addEventListener('change',saveCfg);});
+$('wbase').addEventListener('change',function(){saveCfg();});
+window.addEventListener('resize',function(){if(REP){drawWind();drawBars();drawDetail();}});
+fillRosa(); loadCfg(); loadPlants(); renderGusts(); detectEngine().then(loadPresets);
+</script>
+</body>
+</html>
