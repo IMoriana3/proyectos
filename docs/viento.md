@@ -157,3 +157,6 @@ Arrancar el motor, de las dos formas de siempre:
 
 Sin motor la ficha no simula y lo dice: reimplementar las estrategias en JS sería una segunda verdad
 sobre la misma física, que es justo lo que la plataforma evita.
+
+`/windstow` está en `main` del repo del motor desde el 19-08-2026, así que el cuaderno —que clona
+`main`— lo sirve sin nada más que ejecutarlo.

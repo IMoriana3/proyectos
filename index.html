@@ -828,13 +828,13 @@ const PROJECTS = [
   },
   {
     name: "Viento & Abanderamiento",
-    status: "build",
+    status: "live",
     objetivo: "Qué cuesta defender el seguidor: compara las cuatro estrategias canónicas de abanderamiento (A1/A2/B1/B2) contra el mismo seguidor sin abanderar — POA perdida, cuántas veces abandera al año y cuánto tiempo se queda así.",
     stack: "HTML autocontenido · canvas 2D · Three.js + seguidor.js (campo 3D) · motor SolarGPT (POST /windstow)",
     url: "https://imoriana3.github.io/proyectos/sim-viento.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-19",
-    version: "1.2",
+    version: "1.2.1",
     docId: "viento",
     docUrl: "",
     download: "",
@@ -850,12 +850,13 @@ const PROJECTS = [
       "Campo 3D: los casos en paralelo sobre una ventana común (un viento, un sol, un θ por estrategia), con reproducción paso a paso, la POA de cada bloque como barra contra la del seguidor sin abanderar, y el modo pintado sobre la pala. Usa seguidor.js, la misma fuente del modelo que el Gemelo Digital y Cobertura 3D."
     ],
     pendientes: [
-      { done:false, text:"El endpoint /windstow vive en la rama claude/wind-simulator-tracker-xhnbm3 de SolarGPTfull; hasta que entre en main, el cuaderno de Colab (que clona main) no lo sirve." },
+      { done:true, text:"El endpoint /windstow ya está en main de SolarGPTfull (PR #80): el cuaderno de Colab lo sirve sin más." },
       { done:false, text:"Ráfaga medida, no sintetizada: el laboratorio ya dispara con la ráfaga de 3 s de Cook/IEC, pero Open-Meteo sirve ráfaga horaria observada y sería mejor dato que el factor de pico." },
       { done:false, text:"Contrastar el recuento contra el histórico real de abanderamientos del SCADA de El Burgo." },
       { done:false, text:"Coste de motor de cada maniobra (Wh/°) para poner al lado la energía perdida y la gastada, como en el simulador de batería." }
     ],
     historial: [
+      { date:"2026-08-19", ver:"1.2.1", note:"El motor con /windstow entra en main de SolarGPTfull: la ficha pasa a producción." },
       { date:"2026-08-19", ver:"1.2", note:"Campo 3D: los cinco casos reaccionando al mismo viento y al mismo sol sobre una ventana común, con la POA de cada uno como barra contra la línea base." },
       { date:"2026-08-19", ver:"1.1", note:"Laboratorio de rachas: viento de fondo sintético o en calma, ráfaga de 3 s, rachas inyectadas con dirección y tormentas al azar, y meteo de cielo claro para probar sin red." },
       { date:"2026-08-19", ver:"1.0", note:"Primera versión: comparativa A1/A2/B1/B2 contra la base, episodios y horas por modo, reparto mensual y traza del episodio más caro." }
