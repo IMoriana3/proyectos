@@ -18,7 +18,7 @@ Un seguidor que se abandera deja de mirar al sol. Eso tiene un precio, y hasta a
 Y, para que el número se pueda auditar, los **episodios más caros** del año con la traza del peor:
 viento contra umbrales, ángulo de seguimiento frente al ejecutado, y la POA de cada uno.
 
-## Las cuatro estrategias
+## Las estrategias
 
 Son las canónicas del core (`solargpt_core/wind_stow_strategies.py`), cruzando dos ejes:
 
@@ -38,6 +38,71 @@ Son las canónicas del core (`solargpt_core/wind_stow_strategies.py`), cruzando 
 La diferencia de POA entre A y B es el resultado que justifica la ficha: **con el mismo viento y los
 mismos umbrales, tumbar hacia el sol pierde bastante menos que tumbar hacia el viento**, porque en
 media el sector de defensa coincide con el lado del que viene la radiación directa.
+
+### El límite de mediodía (solo B1/B2)
+
+Las estrategias B abanderan «hacia el sol». Cerca del paso por el meridiano eso tiene un problema:
+si el seguidor viene **siguiendo hacia el este** y ya está pegado a la horizontal, seguir al sol lo
+manda a cruzar por el cero justo en ese instante. La regla del cliente es que **en esa franja se
+abandera al oeste**.
+
+En convención del core (θ > 0 = inclinado al este), la franja es θ ∈ [0, +límite], con el límite
+configurable y **10° por defecto**; a 0 la regla no existe. Se aplica igual al parcial que al total,
+y **solo a B1/B2** — en las A el lado lo manda el viento y la pregunta no se plantea. En la máquina
+de dos umbrales el cambio de lado se decide **antes** que el sector y la parada: corregido después,
+el parcial habría aparcado en el lado contrario.
+
+Vive en `wind_stow_strategies._noon_flip` y viaja hasta el motor de POA
+(`compute_tracker_poa_v2(stow_noon_limit_deg=…)`), el informe anual, `/windstow` y esta ficha. Los
+88 casos de la tabla signo × ángulo × límite se carean entre el JS de la ficha y el core.
+
+## El abanderamiento PASIVO
+
+No es una estrategia de control: es una **respuesta mecánica**. En bifila, la fila exterior del
+perímetro a barlovento **se desembraga por carga de viento** —no lo manda la TCU, que se entera
+después si acaso— y cae a su posición límite. La fila interior, apantallada por la de delante, sigue
+en seguimiento **haya el viento que haya**.
+
+Tres cosas que cambian respecto a las otras cuatro:
+
+1. **La planta deja de tener un solo ángulo.** Conviven dos poblaciones —perímetro clavado y resto
+   operando— y cualquier número de planta es una media ponderada, no una serie única.
+2. **El coste no es una maniobra, es un turno.** La fila soltada se queda ahí hasta que el
+   seguimiento vuelve a pasar por ese ángulo: si cae al oeste, hasta el ocaso del mismo día; si cae
+   al este, hasta el amanecer siguiente.
+3. **No hay destow por histéresis.** Que el viento amaine no la levanta. Lo único que la recoge es
+   el reenganche geométrico.
+
+### El nº de trackers es el denominador, no un adorno
+
+**La fila suelta pierde siempre lo mismo; lo que cambia es entre cuántas filas se reparte.**
+
+| trackers (bifila) | filas | fracción del campo condenada |
+|---|---|---|
+| 1 | 2 | **50 %** |
+| 5 | 10 | 10 % |
+| 10 | 20 | **5 %** |
+| 40 | 80 | 1,25 % |
+
+Simular esto con un tracker y reportar el resultado como «lo que cuesta el pasivo» multiplica el
+impacto por diez frente a una planta de diez trackers, **sin que la física haya cambiado nada**. Por
+eso el dato es obligatorio (el motor rechaza el caso sin él), la fracción se **deriva**
+(`wind_stow_passive.fraccion_expuesta`) en vez de teclearse, y la ficha da **los dos números**: lo
+que pierde la fila sola —que no depende del reparto— y lo que pierde la planta.
+
+El default del módulo es el caso degenerado (1 tracker, 50 %) a propósito: quien no declare trackers
+ve el número más pesimista posible en lugar de un 10 % de aspecto razonable.
+
+### Lo que no se modela, dicho
+
+- **La velocidad de suelta es un sustituto declarado de la carga mecánica de desembrague**, no una
+  velocidad medida en ensayo. El par real y su dispersión entre unidades no están.
+- El tiempo de caída tampoco: la fila pasa al límite en un paso.
+- La fila expuesta se supone **siempre la misma y del mismo lado** (dato de proyecto); no rota con el
+  rumbo del viento.
+- En el motor Python la POA de la fila suelta lleva sombreado de **dos poblaciones** (la vecina que
+  le da sombra sigue en seguimiento). El motor del navegador, como el resto de la ficha, transpone
+  sin sombreado entre filas.
 
 ## Qué es «un abanderamiento»
 
@@ -211,7 +276,7 @@ Un reanálisis no ve el relieve local; la HSU sí, porque está dentro de la pla
 Con dato de HSU el análisis deja de ser reanálisis y pasa a ser el sitio. Lo que sigue sin ser es un
 estudio de cargas: aquí no hay presiones, ni momentos, ni verificación de estructura.
 
-## Quién calcula## Quién calcula## Quién calcula
+## Quién calcula
 
 **El navegador, por defecto.** Como `bateria.html` del gemelo o `backtracking.html` de cobertura:
 se abre y funciona, sin levantar nada. Baja el año de Open-Meteo directamente, resuelve la posición

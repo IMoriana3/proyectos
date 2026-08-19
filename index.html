@@ -833,12 +833,12 @@ const PROJECTS = [
   {
     name: "Viento & Abanderamiento",
     status: "live",
-    objetivo: "Qué cuesta defender el seguidor: compara las cuatro estrategias canónicas de abanderamiento (A1/A2/B1/B2) contra el mismo seguidor sin abanderar — POA perdida, cuántas veces abandera al año y cuánto tiempo se queda así.",
+    objetivo: "Qué cuesta defender el seguidor: compara las estrategias canónicas de abanderamiento (A1/A2/B1/B2 y el PASIVO) contra el mismo seguidor sin abanderar — POA perdida, cuántas veces abandera al año y cuánto tiempo se queda así.",
     stack: "HTML autocontenido · física en el navegador · canvas 2D · Three.js + seguidor.js (escena 3D) · estética de overcast/bt3d · motor SolarGPT opcional (POST /windstow)",
     url: "https://imoriana3.github.io/proyectos/sim-viento.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-19",
-    version: "1.8",
+    version: "1.9",
     docId: "viento",
     docUrl: "",
     download: "",
@@ -857,16 +857,21 @@ const PROJECTS = [
       "Viento MEDIDO de la planta: CSV de la HSU (el fichero no sale del navegador; detecta separador y unidades) o el histórico del SCADA por GET /meteo/history. Con eso el análisis deja de ser reanálisis y pasa a ser el sitio.",
       "Escena 3D visible desde que se abre, con dos modos: EN VIVO (viento, dirección, hora y fecha; los seguidores reaccionan al momento con su máquina de estados y su velocidad de giro) y EPISODIO (la ventana común del año tras simular).",
       "Se puede dibujar la comparativa (un bloque por estrategia con el modelo real de seguidor.js) o la PLANTA REAL entera, cargando <planta>_layout.json del repo cobertura-zigbee: El Burgo, Ayora, Páramo, Fayón, Bagnarelli, Túnez y San José.",
-      "El seguidor gira a 0,17 °/s con banda muerta de 1° (lazo de control canónico): ir a ±55° son 5,4 min. Por eso la simulación va a paso MINUTAL — a 15 min la maniobra cabía en un paso y salía como un escalón. Un año son 525.541 pasos y se resuelve en ~4 s."
+      "El seguidor gira a 0,17 °/s con banda muerta de 1° (lazo de control canónico): ir a ±55° son 5,4 min. Por eso la simulación va a paso MINUTAL — a 15 min la maniobra cabía en un paso y salía como un escalón. Un año son 525.541 pasos y se resuelve en ~4 s.",
+      "Límite de mediodía (solo B1/B2, las que abanderan hacia el sol): si el seguidor viene siguiendo hacia el ESTE y ya está pegado a la horizontal (entre 0° y el límite, 10° por defecto y configurable), abandera al OESTE. En las A el lado lo manda el viento y la regla no aplica.",
+      "Abanderamiento PASIVO: la fila de perímetro a barlovento se desembraga por carga —no lo manda la TCU— y cae al límite, mientras la interior sigue en seguimiento haya el viento que haya. Que amaine no la levanta: solo la recoge el seguimiento al volver a pasar por ese ángulo (al oeste, el ocaso del mismo día; al este, el amanecer siguiente).",
+      "El nº de trackers del caso pasivo es OBLIGATORIO porque es el denominador: la fila suelta pierde siempre lo mismo y lo que cambia es entre cuántas filas se reparte. Con un tracker bifila se condena el 50 % del campo y con diez el 5 % — mismo fenómeno, impacto ×10. La tabla da los dos números: la fila sola y la planta."
     ],
     pendientes: [
       { done:true, text:"El endpoint /windstow ya está en main de SolarGPTfull (PR #80): el cuaderno de Colab lo sirve sin más." },
       { done:false, text:"Careo con meteo REAL (no solo cielo claro): hace falta que el motor pueda bajar el año de Open-Meteo — la sesión donde se hizo tenía la red cortada." },
       { done:false, text:"Ráfaga medida, no sintetizada: el laboratorio ya dispara con la ráfaga de 3 s de Cook/IEC, pero Open-Meteo sirve ráfaga horaria observada y sería mejor dato que el factor de pico." },
       { done:false, text:"Contrastar el recuento contra el histórico real de abanderamientos del SCADA de El Burgo." },
-      { done:false, text:"Coste de motor de cada maniobra (Wh/°) para poner al lado la energía perdida y la gastada, como en el simulador de batería." }
+      { done:false, text:"Coste de motor de cada maniobra (Wh/°) para poner al lado la energía perdida y la gastada, como en el simulador de batería." },
+      { done:false, text:"La velocidad de suelta del pasivo es un SUSTITUTO declarado de la carga de desembrague, no una medida: hace falta el par real y su dispersión entre unidades para que el umbral deje de ser un parámetro." }
     ],
     historial: [
+      { date:"2026-08-19", ver:"1.9", note:"Dos reglas nuevas del cliente. LÍMITE DE MEDIODÍA: con el seguidor todavía siguiendo al este y pegado a la horizontal, las estrategias que abanderan hacia el sol (B1/B2) lo hacen al OESTE; el umbral es configurable. ABANDERAMIENTO PASIVO: la fila de perímetro se suelta sola por carga y se queda en el límite hasta que el seguimiento vuelve a pasar por ese ángulo, mientras la interior sigue operando. El nº de trackers pasa a ser dato obligatorio: es el denominador que decide si la pérdida de esa fila es el 50 % del campo o el 5 %." },
       { date:"2026-08-19", ver:"1.8", note:"Análisis de emplazamiento: rosa de vientos por sector y banda (las bandas son los umbrales de la máquina, así que dice de dónde vienen los abanderamientos), simulación multi-año con la dispersión interanual (media ± σ y peor/mejor año) y extremos por Gumbel sobre los máximos anuales. Y el viento MEDIDO de la planta: CSV de la HSU o el histórico del SCADA (GET /meteo/history, añadido para esto)." },
       { date:"2026-08-19", ver:"1.7", note:"El sol se ve: cielo con degradado que responde a su altura (naranja al alba y al ocaso, apagado en el crepúsculo) y disco con halo dimensionado con la escena, como en bt3d. Y el control de tiempo lleva FECHA, no «día del año»." },
       { date:"2026-08-19", ver:"1.6", note:"La escena se ve desde que abres, con el viento en deslizadores y los seguidores moviéndose a 0,17 °/s de verdad; se puede dibujar la PLANTA REAL entera (layouts de cobertura-zigbee) además de la comparativa; y la simulación pasa a paso MINUTAL con el lazo de control canónico." },

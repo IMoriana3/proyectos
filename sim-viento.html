@@ -230,11 +230,39 @@
         <div class="field"><label>Hold (min)</label><input id="hold" type="number" step="5" value="30"></div>
         <div class="field"><label>Park (min)</label><input id="park" type="number" step="5" value="30"></div>
       </div>
+      <div class="field" style="margin-top:10px"><label>Límite de mediodía (°) <span class="sn">solo B1/B2 · 0 lo desactiva</span></label>
+        <input id="noon" type="number" step="1" value="10"></div>
+      <p class="nota">Cuando el seguidor viene siguiendo <b>hacia el este</b> y ya está pegado a
+        la horizontal (entre 0° y el límite), abanderar «hacia el sol» lo mandaría a cruzar por
+        el cero justo en el paso por el meridiano. En esa franja se abandera al <b>oeste</b>.
+        Solo afecta a las estrategias B, que son las que miran al sol; en las A el lado lo manda
+        el viento.</p>
       <div style="margin:12px 0 4px">
         <label class="chk"><input type="checkbox" class="st" value="A1" checked> <b>A1</b> · cara al viento · 1 umbral</label>
         <label class="chk"><input type="checkbox" class="st" value="A2" checked> <b>A2</b> · cara al viento · 2 umbrales</label>
         <label class="chk"><input type="checkbox" class="st" value="B1" checked> <b>B1</b> · cara al sol · 1 umbral</label>
         <label class="chk"><input type="checkbox" class="st" value="B2" checked> <b>B2</b> · cara al sol · 2 umbrales</label>
+      </div>
+
+      <div style="margin:14px 0 4px;border-top:1px solid var(--bd);padding-top:12px">
+        <label class="chk"><input type="checkbox" id="pas"> <b>Pasivo</b> · la fila de perímetro se suelta sola</label>
+      </div>
+      <div id="pasBox" style="display:none">
+        <div class="three">
+          <div class="field"><label>Trackers</label><input id="pasN" type="number" step="1" min="1" value="10"></div>
+          <div class="field"><label>Suelta (km/h)</label><input id="pasV" type="number" step="5" value="90"></div>
+          <div class="field"><label>Lado (°)</label><input id="pasL" type="number" step="5" value="-55"></div>
+        </div>
+        <p class="nota"><b>El nº de trackers no es decorativo: es el denominador.</b> La fila que se
+          suelta pierde siempre lo mismo; lo que cambia es entre cuántas filas se reparte. Con
+          <b>un</b> tracker bifila se condena el 50 % del campo y con <b>diez</b> el 5 % — mismo
+          fenómeno, impacto ×10. Por eso el dato es obligatorio y la fracción se deriva, no se teclea.</p>
+        <p class="nota">No es una estrategia de control: es mecánico. La fila exterior a barlovento
+          se desembraga por carga y cae al límite; la interior sigue en seguimiento <b>haya el viento
+          que haya</b>. Que amaine no la levanta: solo la recoge el seguimiento al volver a pasar por
+          ese ángulo — si cae al oeste, en el ocaso del mismo día; al este, al amanecer siguiente.
+          La velocidad de suelta es un <b>sustituto declarado</b> de la carga de desembrague, no una
+          velocidad medida en ensayo.</p>
       </div>
       <div class="field" style="margin-top:12px"><label>Cálculo</label>
         <select id="calc">
@@ -401,7 +429,7 @@
 function $(id){return document.getElementById(id);}
 function fmt(v,d){return (v==null||!isFinite(v))?'—':Number(v).toFixed(d==null?1:d);}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-var COL={A1:'#fbbd23',A2:'#f87272',B1:'#5aa9ff',B2:'#36d399',BASE:'#9bb0c6'};
+var COL={A1:'#fbbd23',A2:'#f87272',B1:'#5aa9ff',B2:'#36d399',PASIVO:'#c084fc',BASE:'#9bb0c6'};
 var MESES=['E','F','M','A','M','J','J','A','S','O','N','D'];
 
 /* ===================== MOTOR SOLARGPT (local o remoto vía túnel de Colab) =====================
@@ -551,22 +579,35 @@ LOC.poa=function(th,el,az,bh,dh,gh){
    Mismos estados, mismo park-at-boundary y misma histéresis. El signo sale del
    azimut de referencia (el del viento en A, el del sol en B): <180° → +1. */
 LOC.sign=function(az){return (az==null||isNaN(az))?1:(az<180?1:-1);};
-LOC.single=function(thT,ws,az,T,full){
+/* Límite de mediodía — SOLO B1/B2, las que abanderan hacia el sol.
+   Si el seguidor viene siguiendo al ESTE y está ya pegado a la horizontal
+   (θ entre 0 y +límite), abanderar hacia el sol lo mandaría a cruzar por el
+   cero justo cuando el sol pasa por el meridiano. En esa franja se abandera
+   al OESTE. Puerto de `wind_stow_strategies._noon_flip`: mismo criterio,
+   mismo signo, mismo `<= límite`. Con límite 0 la regla no existe. */
+LOC.noonFlip=function(sg,th,lim){
+  if(!(lim>0))return sg;
+  if(sg>0&&th>=0&&th<=lim)return -1;
+  return sg;
+};
+LOC.single=function(thT,ws,az,T,full,noon){
   var n=thT.length,out=new Float64Array(n),mode=new Array(n);
   for(var i=0;i<n;i++){
-    if(ws[i]>T){out[i]=LOC.sign(az[i])*full;mode[i]='FULL_STOW';}
+    if(ws[i]>T){out[i]=LOC.noonFlip(LOC.sign(az[i]),thT[i],noon)*full;mode[i]='FULL_STOW';}
     else{out[i]=thT[i];mode[i]='IDLE';}
   }
   return {theta:out,mode:mode};
 };
-LOC.dual=function(thT,ws,az,T1,T2,pmin,full,dtS,holdMin,parkMin,dead){
+LOC.dual=function(thT,ws,az,T1,T2,pmin,full,dtS,holdMin,parkMin,dead,noon){
   var n=thT.length,out=new Float64Array(n),mode=new Array(n);
   var holdSteps=Math.ceil(holdMin*60/dtS), parkSteps=Math.ceil(parkMin*60/dtS);
   var st='IDLE',hold=0,last=0,park=false,parkLeft=0,parkTh=0,parkSg=0;
   var inSector=function(th,sg,m){return sg>0?(th>=pmin+m):(th<=-(pmin+m));};
   var clipSector=function(th,sg){return sg>0?Math.max(pmin,Math.min(full,th)):Math.max(-full,Math.min(-pmin,th));};
   for(var i=0;i<n;i++){
-    var v=ws[i],th=thT[i],sg=LOC.sign(az[i]),ns,nt;
+    // el flip va ANTES de decidir sector y parada: corregido después,
+    // el parcial habría aparcado en el lado contrario.
+    var v=ws[i],th=thT[i],sg=LOC.noonFlip(LOC.sign(az[i]),th,noon),ns,nt;
     if(v>T2){ ns='FULL_STOW'; nt=sg*full; hold=0; park=false; last=nt; }
     else if(v>T1){
       ns='PARTIAL_STOW';
@@ -591,6 +632,59 @@ LOC.dual=function(thT,ws,az,T1,T2,pmin,full,dtS,holdMin,parkMin,dead){
     out[i]=nt;mode[i]=ns;st=ns;
   }
   return {theta:out,mode:mode};
+};
+
+/* La misma mecánica pasiva, paso a paso, para el modo en vivo. Lo interesante
+   de verlo así: se suelta con la racha y NO vuelve cuando amaina — se queda
+   ahí hasta que el seguimiento pasa por su ángulo, que puede ser horas. */
+LOC.stepperPasivo=function(cfg){
+  var suelta=false, th=0, side=cfg.pSide, tol=cfg.pTol||1, rel=cfg.pRel, full=cfg.full;
+  return {
+    get mode(){return suelta?'FULL_STOW':'IDLE';}, get theta(){return th;},
+    step:function(tgt,ws,dtS){
+      if(suelta&&Math.abs(tgt-side)<=tol)suelta=false;
+      if(!suelta&&ws>rel)suelta=true;
+      if(suelta)th=side;
+      else{var d=tgt-th,m=LOC.SLEW*dtS;if(Math.abs(d)>m)d=(d>0?m:-m);
+           th=Math.max(-full,Math.min(full,th+d));}
+      return {theta:th,mode:suelta?'FULL_STOW':'IDLE'};
+    }
+  };
+};
+
+/* ── ABANDERAMIENTO PASIVO — puerto de solargpt_core.wind_stow_passive ──
+   No es control: es mecánico. La fila exterior a barlovento se desembraga por
+   carga y cae al límite; la interior sigue en seguimiento haya el viento que
+   haya. Dos diferencias que cambian el recuento:
+   · que amaine NO la levanta — solo la recoge el seguimiento al volver a pasar
+     por ese ángulo (al oeste, el ocaso del mismo día; al este, el amanecer del
+     siguiente);
+   · la planta deja de tener un solo ángulo, así que su número es una media
+     ponderada de dos poblaciones. */
+LOC.pasivo=function(thT,ws,release,side,tol,dtS){
+  var n=thT.length,out=new Float64Array(n),mask=new Uint8Array(n),eps=[];
+  var suelta=false,ini=0;
+  for(var i=0;i<n;i++){
+    // ORDEN: primero el reenganche, después la suelta. Al revés, con viento
+    // sostenido la fila se reenganchaba y pasaba un paso entero en
+    // seguimiento antes de soltarse otra vez — en pleno vendaval.
+    if(suelta&&Math.abs(thT[i]-side)<=tol){
+      suelta=false;
+      eps.push({i0:ini,i1:i-1,hours:(i-ini)*dtS/3600});
+    }
+    if(!suelta&&ws[i]>release){suelta=true;ini=i;}
+    if(suelta){out[i]=side;mask[i]=1;}else out[i]=thT[i];
+  }
+  if(suelta)eps.push({i0:ini,i1:n-1,hours:(n-ini)*dtS/3600,sin_reenganche:true});
+  return {theta:out,mask:mask,episodios:eps};
+};
+/* El denominador NO es un parámetro de gusto: sale de la geometría. Una fila
+   de perímetro entre n_trackers × filas_por_tracker filas. Con un tracker
+   bifila es el 50 % del campo; con diez, el 5 %. */
+LOC.fracExpuesta=function(nTrk,fpt,fs){
+  nTrk=Math.max(1,Math.round(nTrk||1)); fpt=Math.max(1,Math.round(fpt||2));
+  fs=Math.max(1,Math.round(fs||1));
+  return Math.min(1,fs/(nTrk*fpt));
 };
 
 /* ── MULTI-AÑO ──
@@ -685,7 +779,7 @@ LOC.stepper=function(kind,cfg){
   return {
     get mode(){return st;}, get theta(){return th;},
     step:function(tgt,ws,az,dtS){
-      var sg=LOC.sign(az), ns, nt;
+      var sg=LOC.noonFlip(LOC.sign(az),tgt,cfg.noon), ns, nt;
       if(kind==='1'){
         if(ws>T1){ns='FULL_STOW';nt=sg*full;}else{ns='IDLE';nt=tgt;}
       }else if(ws>T2){ ns='FULL_STOW'; nt=sg*full; hold=0; park=false; last=nt; }
@@ -1003,9 +1097,12 @@ LOC.run=function(cfg,onStep){
     var eB=kwh(poaB),cases={},series={};
     (cfg.strategies||['A1','A2','B1','B2']).forEach(function(S){
       var az=(S[0]==='A')?wd:azp, R;
-      if(S[1]==='1')R=LOC.single(thB,ws,az,T1,full);
+      // el límite de mediodía es de las B (abanderar hacia el sol); en las A
+      // el lado lo manda el viento y la regla no aplica.
+      var noon=(S[0]==='B')?(+cfg.noon_limit_deg||0):0;
+      if(S[1]==='1')R=LOC.single(thB,ws,az,T1,full,noon);
       else R=LOC.dual(thB,ws,az,T1,T2,cfg.partial_stow_min_abs_deg,full,dtH*3600,
-                      cfg.destow_hold_minutes,cfg.partial_park_minutes,1.0);
+                      cfg.destow_hold_minutes,cfg.partial_park_minutes,1.0,noon);
       // La orden de abanderamiento también la ejecuta el motor a 0,17 °/s: por
       // eso una maniobra a ±55° tarda minutos y la POA cae en rampa, no en escalón.
       R.theta=LOC.control(R.theta,dtH*3600,full,cfg.slew_deg_s,cfg.deadband_deg);
@@ -1059,6 +1156,73 @@ LOC.run=function(cfg,onStep){
       };
       series[S]={theta:R.theta,poa:poa,mode:R.mode,events:evs};
     });
+
+    // ── caso PASIVO ──
+    var PC=cfg.passive;
+    if(PC&&PC.enabled!==false){
+      if(!(+PC.n_trackers>=1))throw new Error(
+        'El caso pasivo necesita el nº de trackers: la pérdida de la fila '+
+        'suelta se reparte entre todas las filas de la planta, así que sin el '+
+        'denominador el resultado no es interpretable (1 tracker bifila = 50 % '+
+        'del campo, 10 trackers = 5 %).');
+      var pRel=(+PC.release_kmh||90)/3.6, pSide=(PC.side_deg==null?-full:+PC.side_deg);
+      var frac=LOC.fracExpuesta(+PC.n_trackers,+PC.filas_por_tracker||2,+PC.filas_sueltas||1);
+      var PR=LOC.pasivo(thB,ws,pRel,pSide,+PC.reengage_tol_deg||1,dtH*3600);
+      // la fila suelta ya está EN el ángulo (cayó, no la movió el motor): el
+      // lazo de control solo manda mientras está embragada, y ahí ya la
+      // recorrió la base.
+      var poaF=new Float64Array(n),poaP=new Float64Array(n),dP=new Float64Array(n);
+      var hRel=0,hRelDay=0,byM=new Array(12).fill(0);
+      for(i=0;i<n;i++){
+        poaF[i]=PR.mask[i]?LOC.poa(pSide,el[i],azs[i],bh[i],M.dhi[i],M.ghi[i]):poaB[i];
+        poaP[i]=(1-frac)*poaB[i]+frac*poaF[i];
+        dP[i]=poaP[i]-poaB[i];
+        if(PR.mask[i]){hRel+=dtH;byM[month[i]]+=dtH;if(el[i]>0)hRelDay+=dtH;}
+      }
+      var eP=kwh(poaP),eF=kwh(poaF);
+      var pEvs=PR.episodios.map(function(e){
+        var wmax=0,lost=0;
+        for(var j=e.i0;j<=e.i1;j++){wmax=Math.max(wmax,ws[j]);lost+=(poaB[j]-poaF[j])*dtH/1000;}
+        return {start:M.t[e.i0].toISOString(),end:M.t[Math.min(e.i1,n-1)].toISOString(),
+          hours:Math.round(e.hours*100)/100,hours_partial:0,hours_full:Math.round(e.hours*100)/100,
+          hours_hold:0,reached_full:true,wind_max_ms:Math.round(wmax*100)/100,
+          wind_max_kmh:Math.round(wmax*3.6*10)/10,poa_lost_kwh_m2:Math.round(lost*1e4)/1e4,
+          month:M.t[e.i0].getUTCMonth()+1,sin_reenganche:!!e.sin_reenganche};});
+      var pDur=pEvs.map(function(e){return e.hours;}).sort(function(a,b){return a-b;});
+      cases.PASIVO={strategy:'PASIVO',
+        label:'Pasivo · fila de perímetro que se desembraga · '+PC.n_trackers+' trackers',
+        n_thresholds:1, orientation:'mecánico', has_hysteresis:false,
+        poa_kwh_m2:Math.round(eP*1000)/1000, poa_delta_kwh_m2:Math.round((eP-eB)*1000)/1000,
+        poa_delta_pct:Math.round((eB?100*(eP-eB)/eB:0)*1e4)/1e4,
+        poa_monthly_kwh_m2:monthly(poaP), poa_delta_monthly_kwh_m2:monthly(dP),
+        // horas de la FILA, no de la planta: la planta nunca abandera entera
+        hours_partial:0, hours_full:Math.round(hRel*100)/100, hours_hold:0,
+        hours_stow:Math.round(hRel*100)/100, hours_engaged:Math.round(hRel*100)/100,
+        hours_stow_daylight:Math.round(hRelDay*100)/100,
+        pct_year:Math.round(1e4*100*hRel/(n*dtH))/1e4,
+        pct_daylight:Math.round(1e4*(dayH?100*hRelDay/dayH:0))/1e4,
+        hours_by_month:byM.map(function(v){return Math.round(v*100)/100;}),
+        events_by_month:(function(){var o=new Array(12).fill(0);pEvs.forEach(function(e){o[e.month-1]++;});return o;})(),
+        n_events:pEvs.length, n_events_full:pEvs.length, n_events_partial_only:0,
+        duration_h_mean:pDur.length?Math.round(1000*pDur.reduce(function(a,b){return a+b;},0)/pDur.length)/1000:0,
+        duration_h_median:pDur.length?pDur[Math.floor(0.5*pDur.length)]:0,
+        duration_h_p95:pDur.length?pDur[Math.min(pDur.length-1,Math.floor(0.95*pDur.length))]:0,
+        duration_h_max:pDur.length?pDur[pDur.length-1]:0,
+        top_events:pEvs.slice().sort(function(a,b){return b.poa_lost_kwh_m2-a.poa_lost_kwh_m2;}).slice(0,cfg.top_events||10),
+        passive:{n_trackers:+PC.n_trackers, filas_por_tracker:+PC.filas_por_tracker||2,
+          filas_sueltas:+PC.filas_sueltas||1, fraccion_expuesta:Math.round(frac*1e6)/1e6,
+          release_ms:Math.round(pRel*100)/100, release_kmh:Math.round(pRel*3.6*10)/10,
+          side_deg:pSide,
+          // la fila sola, sin diluir: el número que NO depende del denominador
+          row_poa_kwh_m2:Math.round(eF*1000)/1000,
+          row_poa_delta_pct:Math.round((eB?100*(eF-eB)/eB:0)*1e4)/1e4,
+          row_hours_released:Math.round(hRel*100)/100,
+          not_modeled:['La velocidad de suelta es un SUSTITUTO declarado de la carga mecánica de desembrague: no es una velocidad medida.',
+            'No se modela la dispersión entre unidades ni el tiempo de caída: la fila pasa al límite en un paso.',
+            'La fila expuesta se supone siempre la misma y del mismo lado; no rota con el rumbo del viento.']}
+      };
+      series.PASIVO={theta:PR.theta,poa:poaF,mode:Array.from(PR.mask,function(v){return v?'FULL_STOW':'IDLE';}),events:pEvs};
+    }
     // ventana común para el campo 3D: el episodio más caro de TODOS los casos
     var peor=null;
     for(var S2 in series)series[S2].events.forEach(function(e){
@@ -1121,6 +1285,8 @@ LOC.run=function(cfg,onStep){
         deadband_deg:(cfg.deadband_deg==null?LOC.DEADBAND:cfg.deadband_deg),
         partial_stow_min_abs_deg:cfg.partial_stow_min_abs_deg,full_stow_deg:full,
         destow_hold_minutes:cfg.destow_hold_minutes,partial_park_minutes:cfg.partial_park_minutes,
+        noon_limit_deg:(+cfg.noon_limit_deg||0),
+        passive:(cfg.passive||null),
         tracker:cfg.tracker},
       baseline:{poa_kwh_m2:Math.round(eB*1000)/1000,poa_monthly_kwh_m2:monthly(poaB)},
       cases:cases, timeline:TLo};
@@ -1252,11 +1418,12 @@ function scenario(){
 
 /* ===================== ESTADO ===================== */
 var REP=null, SEL=null, MULTI=null, HSU=null;
-var IDS=['lat','lon','year','source','step','wh','maxang','gcr','pitch','axaz','t1','t2','pmin','hold','park',
+var IDS=['lat','lon','year','source','step','wh','maxang','gcr','pitch','axaz','t1','t2','pmin','hold','park','noon','pasN','pasV','pasL',
          'wbase','wk','wA','wseed','wdir','stn','stp0','stp1','std0','std1','stseed','escena'];
 function saveCfg(){
   try{var c={};IDS.forEach(function(i){c[i]=$(i).value;});
     c.bt=$('bt').checked; c.wgust=$('wgust').checked; c.wcyc=$('wcyc').checked; c.gusts=GUSTS;
+    c.pas=$('pas').checked;
     c.st=[].slice.call(document.querySelectorAll('.st')).filter(function(e){return e.checked;}).map(function(e){return e.value;});
     localStorage.setItem('factiun_viento_cfg',JSON.stringify(c));}catch(e){}
 }
@@ -1267,6 +1434,7 @@ function loadCfg(){
     if(c.wgust!=null)$('wgust').checked=!!c.wgust;
     if(c.wcyc!=null)$('wcyc').checked=!!c.wcyc;
     if(Array.isArray(c.gusts))GUSTS=c.gusts;
+    if(c.pas!=null){$('pas').checked=!!c.pas;$('pasBox').style.display=c.pas?'':'none';}
     if(c.st)[].forEach.call(document.querySelectorAll('.st'),function(e){e.checked=c.st.indexOf(e.value)>=0;});
   }catch(e){}
 }
@@ -1339,6 +1507,9 @@ async function run(){
     threshold_1_kmh:+$('t1').value, threshold_2_kmh:+$('t2').value,
     partial_stow_min_abs_deg:+$('pmin').value,
     destow_hold_minutes:+$('hold').value, partial_park_minutes:+$('park').value,
+    noon_limit_deg:+$('noon').value,
+    passive:($('pas').checked?{enabled:true, n_trackers:+$('pasN').value,
+             release_kmh:+$('pasV').value, side_deg:+$('pasL').value}:null),
     wind_height_m:(+$('wh').value>0?+$('wh').value:null),
     resample_minutes:($('step').value?+$('step').value:null),
     slew_deg_s:LOC.SLEW, deadband_deg:LOC.DEADBAND,
@@ -1633,7 +1804,11 @@ function drawTable(){
   ord().forEach(function(s){
     var c=REP.cases[s];
     h+='<tr'+(s===b?' class="win"':'')+'><td><span class="dot" style="background:'+COL[s]+'"></span><b>'+s+'</b> · '+
-       esc(c.orientation==='sol'?'cara al sol':'cara al viento')+' · '+c.n_thresholds+(c.n_thresholds>1?' umbrales':' umbral')+'</td>'+
+       esc(c.passive
+             ? 'mecánico · 1 fila de '+(c.passive.n_trackers*c.passive.filas_por_tracker)+
+               ' ('+fmt(100*c.passive.fraccion_expuesta,1)+' % del campo)'
+             : (c.orientation==='sol'?'cara al sol':'cara al viento')+' · '+
+               c.n_thresholds+(c.n_thresholds>1?' umbrales':' umbral'))+'</td>'+
        '<td>'+fmt(c.poa_kwh_m2,1)+'</td>'+
        '<td>'+fmt(c.poa_delta_kwh_m2,2)+'</td>'+
        '<td>'+fmt(c.poa_delta_pct,3)+'</td>'+
@@ -1650,7 +1825,15 @@ function drawTable(){
     'viento baja del umbral unos minutos y vuelve, sigue siendo el mismo (el hold de '+fmt(c2.destow_hold_minutes,0)+
     ' min cuenta dentro). «A total» son los que llegaron a ±'+fmt(c2.full_stow_deg,0)+'°; el resto se quedaron en el '+
     'sector parcial (±'+fmt(c2.partial_stow_min_abs_deg,0)+'°). Las horas incluyen el hold, y el % es sobre horas de sol, '+
-    'que es donde la POA se pierde.';
+    'que es donde la POA se pierde.'+
+    (REP.cases.PASIVO?('<br><br><b>El PASIVO no se lee igual que los otros cuatro.</b> Ahí abandera la '+
+      'planta entera; aquí solo la fila de perímetro, y las horas de la tabla son <b>de esa fila</b>. '+
+      'La POA y su Δ ya vienen repartidos entre las '+
+      (REP.cases.PASIVO.passive.n_trackers*REP.cases.PASIVO.passive.filas_por_tracker)+' filas de los '+
+      REP.cases.PASIVO.passive.n_trackers+' trackers declarados: la fila sola pierde un <b>'+
+      fmt(REP.cases.PASIVO.passive.row_poa_delta_pct,2)+' %</b> y la planta un '+
+      fmt(REP.cases.PASIVO.poa_delta_pct,3)+' %. Cambia el nº de trackers y ese segundo número se '+
+      'mueve proporcionalmente sin que la física haya cambiado nada.'):'');
 }
 
 /* ---- barras: Δ POA % por estrategia ---- */
@@ -1820,11 +2003,14 @@ var ESC=null;     // {kind, bloques[], planta{...}}
 var LIVE=null;    // {t, steppers, base, v, dir}
 
 function has3D(){return typeof THREE!=='undefined'&&THREE.OrbitControls&&typeof Seguidor!=='undefined';}
-function casos(){return ['BASE'].concat(strategies());}
+function vivos(){return strategies().concat($('pas').checked?['PASIVO']:[]);}
+function casos(){return ['BASE'].concat(vivos());}
 function cfgStow(){
   return {full:+$('maxang').value, pmin:+$('pmin').value,
     T1:(+$('t1').value)/3.6, T2:(+$('t2').value)/3.6,
-    holdS:(+$('hold').value)*60, parkS:(+$('park').value)*60, dead:LOC.DEADBAND};
+    holdS:(+$('hold').value)*60, parkS:(+$('park').value)*60, dead:LOC.DEADBAND,
+    noon:+$('noon').value,
+    pas:$('pas').checked, pRel:(+$('pasV').value)/3.6, pSide:+$('pasL').value, pTol:1};
 }
 
 function init3D(){
@@ -2130,7 +2316,12 @@ function tiles(ang,modos,poa,poaBase,dpct){
 function liveInit(){
   var c=cfgStow();
   LIVE={t:0, v:+$('lV').value/3.6, dir:+$('lD').value, run:false, steppers:{}, ang:{}, modos:{}};
-  strategies().forEach(function(S){LIVE.steppers[S]=LOC.stepper(S[1],c);LIVE.ang[S]=0;LIVE.modos[S]='IDLE';});
+  vivos().forEach(function(S){
+    // el límite de mediodía es de las B (abanderan hacia el SOL); en las A el
+    // lado lo manda el viento, así que su stepper va con la regla apagada.
+    LIVE.steppers[S]=(S==='PASIVO')?LOC.stepperPasivo(c)
+                    :LOC.stepper(S[1],Object.assign({},c,{noon:(S[0]==='B'?c.noon:0)}));
+    LIVE.ang[S]=0;LIVE.modos[S]='IDLE';});
   LIVE.ang.BASE=0; LIVE.modos.BASE='SEGUIMIENTO';
   liveLbl();
 }
@@ -2178,9 +2369,10 @@ function liveTick(dtReal){
   LIVE.ang.BASE=Math.max(-full,Math.min(full,LIVE.ang.BASE+dB));
   var poa={}, bh=(P.el>0?900*Math.pow(Math.sin(P.el),1.15):0), dh=bh*0.16;
   poa.BASE=LOC.poa(LIVE.ang.BASE,P.el,P.az,bh,dh,bh+dh);
-  strategies().forEach(function(S){
+  vivos().forEach(function(S){
     var az=(S[0]==='A')?LIVE.dir:P.azp;
-    var r=LIVE.steppers[S].step(tgt,LIVE.v,az,dt);
+    var r=(S==='PASIVO')?LIVE.steppers[S].step(tgt,LIVE.v,dt)
+                        :LIVE.steppers[S].step(tgt,LIVE.v,az,dt);
     LIVE.ang[S]=r.theta; LIVE.modos[S]=r.mode;
     poa[S]=LOC.poa(r.theta,P.el,P.az,bh,dh,bh+dh);
   });
@@ -2330,6 +2522,7 @@ $('lPlay').onclick=function(){
   this.className='btn small'+(LIVE.run?'':' acc');
 };
 $('gadd').onclick=function(){addGust($('gpreset').value);};
+$('pas').onchange=function(){$('pasBox').style.display=this.checked?'':'none';saveCfg();};
 $('gpreset').onchange=function(){if(this.value){addGust(this.value);this.value='';}};
 ['wgust','wcyc'].forEach(function(i){$(i).addEventListener('change',saveCfg);});
 $('wbase').addEventListener('change',function(){saveCfg();});
