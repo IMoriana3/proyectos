@@ -183,7 +183,13 @@ tr.win td{background:rgba(54,211,153,.07)}
         <label class="chk"><input type="checkbox" class="st" value="B1" checked> <b>B1</b> · cara al sol · 1 umbral</label>
         <label class="chk"><input type="checkbox" class="st" value="B2" checked> <b>B2</b> · cara al sol · 2 umbrales</label>
       </div>
+      <div class="field" style="margin-top:12px"><label>Cálculo</label>
+        <select id="calc">
+          <option value="local">En el navegador (no hace falta nada)</option>
+          <option value="engine">Motor SolarGPT (canónico) — requiere el motor</option>
+        </select></div>
       <button class="btn" id="run">Simular el año</button>
+      <button class="btn ghost" id="careoBtn" style="margin-top:8px">Carear con el motor canónico</button>
       <p class="note" id="runNote">La línea base es el mismo seguidor <b>sin abanderar</b>: todo lo que
         se ve luego es la diferencia contra ella.</p>
     </div>
@@ -306,24 +312,456 @@ async function detectEngine(){
             setEngine(true,'motor ✓ sin /windstow');
           return;}}}catch(e){}
   }
-  setEngine(false,'motor no conectado · clic para URL');
+  setEngine(false,'sin motor Python · calcula el navegador');
 }
-function setEngine(on,txt){var el=$('engine');el.className='engine '+(on?'on':'off');$('engineTxt').textContent=txt;}
+function setEngine(on,txt){
+  var el=$('engine');el.className='engine '+(on?'on':'off');$('engineTxt').textContent=txt;
+  // El motor Python es un EXTRA (el número canónico), no un requisito: sin él
+  // la opción existe pero no se puede elegir, y el desplegable lo dice.
+  var o=$('calc')&&$('calc').options[1];
+  if(o){o.disabled=!on;o.textContent='Motor SolarGPT (canónico)'+(on?'':' — requiere el motor');
+    if(!on&&$('calc').value==='engine')$('calc').value='local';}
+}
 $('engine').style.cursor='pointer'; $('engine').title='Clic: fijar la URL del motor (p. ej. el túnel de Colab)';
 $('engine').onclick=function(){var cur='';try{cur=localStorage.getItem('factiun_engine_url')||'';}catch(e){}
   var u=prompt('URL del motor SolarGPT.\nColab: pega el túnel (https://xxx.trycloudflare.com).\nVacío = solo local.',cur);
   if(u===null)return; try{if(u.trim())localStorage.setItem('factiun_engine_url',u.trim());else localStorage.removeItem('factiun_engine_url');}catch(e){}
   ENGINE=null;setEngine(false,'reconectando…');detectEngine();};
 
+var COLAB='https://colab.research.google.com/github/IMoriana3/SolarGPTfull/blob/main/Factiun_plataforma.ipynb';
 function engineOffMsg(){
-  return '<div class="engmsg"><b>El motor SolarGPT no está conectado.</b><br>'+
-    'El abanderamiento lo simula el motor Python (estrategias A1/A2/B1/B2 sobre POA de Perez con '+
-    'sombreado), no el navegador. Arráncalo de una de estas dos formas:<br><br>'+
-    '· <b>Colab</b> — cuaderno <code>Factiun_plataforma.ipynb</code> → <i>Ejecutar todo</i>, y pega '+
-    'aquí la URL del túnel (clic en el indicador del motor).<br>'+
-    '· <b>En tu máquina</b> — <code>cd server &amp;&amp; ./run.sh</code> (escucha en <code>127.0.0.1:8765</code>).'+
+  return '<div class="engmsg"><b>Para simular TU emplazamiento hace falta el motor.</b><br>'+
+    'La física (posición solar, POA de Perez con sombreado entre filas y la máquina de estados del '+
+    'abanderamiento) corre en Python, no en el navegador: la ficha solo pregunta y dibuja. '+
+    'Dos formas de tenerlo, ninguna requiere instalar nada en tu equipo salvo la segunda:<br><br>'+
+    '<b>1 · Colab</b> (lo normal, 2-3 min la primera vez)<br>'+
+    '&nbsp;&nbsp;a. Abre <a href="'+COLAB+'" target="_blank" rel="noopener" style="color:var(--accent)">'+
+    'Factiun_plataforma.ipynb en Colab</a> → menú <i>Entorno de ejecución</i> → <i>Ejecutar todo</i>.<br>'+
+    '&nbsp;&nbsp;b. Al final imprime una URL <code>https://…trycloudflare.com</code>.<br>'+
+    '&nbsp;&nbsp;c. Clic en el indicador <b>«motor»</b> de la barra de arriba y pega esa URL.<br>'+
+    '&nbsp;&nbsp;<span style="color:var(--muted-2)">La URL cambia cada vez que reejecutas el cuaderno.</span><br><br>'+
+    '<b>2 · En tu máquina</b> — <code>cd server &amp;&amp; ./run.sh</code> en el repo del motor '+
+    '(escucha en <code>127.0.0.1:8765</code> y la ficha lo encuentra sola).'+
     '</div>';
 }
+
+function localBanner(){
+  return '<div class="warn" style="margin-bottom:12px;border-color:var(--line);background:var(--panel-2)">'+
+    '<b style="color:var(--muted)">Calculado en el navegador.</b> <span style="color:var(--muted-2)">'+
+    'Posición solar por declinación + ecuación del tiempo, seguimiento con backtracking '+
+    '(Anderson-Mikofski) y transposición <b>isotrópica</b>; las cuatro máquinas de estado son el '+
+    'puerto exacto de las canónicas. Lo que NO lleva y sí lleva el motor Python: Perez, sombreado '+
+    'entre filas, IAM y lazo de control (banda muerta y velocidad de giro). La POA <b>absoluta</b> '+
+    'sale algo distinta; la <b>comparación entre estrategias</b>, que es para lo que está la ficha, '+
+    'aguanta. Con el motor conectado puedes pedir el número canónico o carear los dos.</span></div>';
+}
+
+
+/* ═══════════════════ MOTOR LOCAL (en el navegador) ═══════════════════
+   Como `bateria.html` del gemelo y `backtracking.html` de cobertura: la ficha
+   CALCULA, no depende de que alguien levante un Python. Meteo de Open-Meteo
+   directa desde el navegador, posición solar por declinación + ecuación del
+   tiempo, seguimiento de eje N-S con backtracking (Anderson-Mikofski),
+   transposición isotrópica y las cuatro máquinas de estado de abanderamiento
+   portadas de `solargpt_core.wind_stow_strategies`.
+
+   ESPEJO DECLARADO, no copia: el motor canónico resuelve la POA con Perez,
+   sombreado entre filas, IAM y lazo de control (banda muerta + velocidad de
+   giro); aquí no hay nada de eso. Consecuencia práctica, medida contra el
+   ejemplo congelado: la POA ABSOLUTA difiere unos puntos, y la COMPARACIÓN
+   entre estrategias —que es para lo que existe la ficha— se mueve mucho menos.
+   Con el motor conectado se puede pedir el número canónico y carear los dos.
+
+   Convención de signo: la del core/pvlib, θ>0 = tumbado al ESTE. */
+var LOC={
+  D2R:Math.PI/180,
+  NIGHT:-5.0,            // posición nocturna en convención del core (la misma que compute_tracker_poa_v2)
+  ALBEDO:0.20,
+  OM:'shortwave_radiation,diffuse_radiation,direct_normal_irradiance,temperature_2m,windspeed_10m,winddirection_10m'
+};
+LOC.decl=function(N){return 23.45*Math.sin(2*Math.PI*(284+N)/365)*LOC.D2R;};
+LOC.eot=function(N){var B=2*Math.PI/365*(N-81);return 9.87*Math.sin(2*B)-7.53*Math.cos(B)-1.5*Math.sin(B);};
+/* Devuelve elevación (rad), azimut solar desde el SUR con este negativo (rad)
+   y el azimut en convención pvlib (0=N, 90=E, 180=S, 270=O), que es el que
+   miran las estrategias B. */
+LOC.sun=function(date,latR,lon){
+  var N=Math.floor((date-Date.UTC(date.getUTCFullYear(),0,0))/864e5);
+  var h=date.getUTCHours()+date.getUTCMinutes()/60+date.getUTCSeconds()/3600;
+  var hs=h+lon/15+LOC.eot(N)/60, D=LOC.decl(N), w=(hs-12)*15*LOC.D2R;
+  var sinEl=Math.sin(latR)*Math.sin(D)+Math.cos(latR)*Math.cos(D)*Math.cos(w);
+  var el=Math.asin(Math.max(-1,Math.min(1,sinEl)));
+  var caz=(sinEl*Math.sin(latR)-Math.sin(D))/Math.max(1e-6,Math.cos(el)*Math.cos(latR));
+  var az=Math.acos(Math.max(-1,Math.min(1,caz))); if(w<0)az=-az;
+  return {el:el, az:az, azp:(180+az/LOC.D2R+360)%360};
+};
+/* θ de seguimiento con backtracking. `trackAngleFrom` del gemelo devuelve el
+   ángulo con el este NEGATIVO; el core lo quiere al revés, así que se niega
+   aquí y no en veinte sitios después. */
+LOC.theta=function(el,az,gcr,maxang,bt){
+  if(el<=1e-4)return LOC.NIGHT;
+  var sx=Math.cos(el)*Math.sin(az), sz=Math.sin(el);
+  var R=Math.atan2(sx,sz);
+  if(bt){
+    var t=Math.min(1,(1/gcr)*Math.cos(R));
+    R=R-Math.sign(R)*Math.acos(t);
+  }
+  var deg=-R/LOC.D2R;
+  return Math.max(-maxang,Math.min(maxang,deg));
+};
+/* POA isotrópica en el plano girado θ (convención core: + = este) */
+LOC.poa=function(th,el,az,bh,dh,gh){
+  if(el<=0)return 0;
+  var R=-th*LOC.D2R, sx=Math.cos(el)*Math.sin(az), sz=Math.sin(el);
+  var cosAOI=Math.max(0,sx*Math.sin(R)+sz*Math.cos(R));
+  var rb=cosAOI/Math.max(Math.sin(el),0.087), cb=Math.cos(Math.abs(R));
+  return Math.max(0,bh)*rb+Math.max(0,dh)*(1+cb)/2+LOC.ALBEDO*Math.max(0,gh)*(1-cb)/2;
+};
+
+/* ── Estrategias A1/A2/B1/B2 — puerto de solargpt_core.wind_stow_strategies ──
+   Mismos estados, mismo park-at-boundary y misma histéresis. El signo sale del
+   azimut de referencia (el del viento en A, el del sol en B): <180° → +1. */
+LOC.sign=function(az){return (az==null||isNaN(az))?1:(az<180?1:-1);};
+LOC.single=function(thT,ws,az,T,full){
+  var n=thT.length,out=new Float64Array(n),mode=new Array(n);
+  for(var i=0;i<n;i++){
+    if(ws[i]>T){out[i]=LOC.sign(az[i])*full;mode[i]='FULL_STOW';}
+    else{out[i]=thT[i];mode[i]='IDLE';}
+  }
+  return {theta:out,mode:mode};
+};
+LOC.dual=function(thT,ws,az,T1,T2,pmin,full,dtS,holdMin,parkMin,dead){
+  var n=thT.length,out=new Float64Array(n),mode=new Array(n);
+  var holdSteps=Math.ceil(holdMin*60/dtS), parkSteps=Math.ceil(parkMin*60/dtS);
+  var st='IDLE',hold=0,last=0,park=false,parkLeft=0,parkTh=0,parkSg=0;
+  var inSector=function(th,sg,m){return sg>0?(th>=pmin+m):(th<=-(pmin+m));};
+  var clipSector=function(th,sg){return sg>0?Math.max(pmin,Math.min(full,th)):Math.max(-full,Math.min(-pmin,th));};
+  for(var i=0;i<n;i++){
+    var v=ws[i],th=thT[i],sg=LOC.sign(az[i]),ns,nt;
+    if(v>T2){ ns='FULL_STOW'; nt=sg*full; hold=0; park=false; last=nt; }
+    else if(v>T1){
+      ns='PARTIAL_STOW';
+      var fresh=(st!=='PARTIAL_STOW')||(park&&parkSg!==sg);
+      if(fresh){
+        if(inSector(th,sg,0)){park=false;nt=clipSector(th,sg);}
+        else{park=true;parkLeft=parkSteps;parkTh=sg*pmin;parkSg=sg;nt=parkTh;}
+      }else if(park){
+        if(inSector(th,sg,dead)){park=false;nt=clipSector(th,sg);}
+        else if(parkLeft<=0){park=false;nt=clipSector(th,sg);}
+        else{parkLeft--;nt=parkTh;}
+      }else nt=clipSector(th,sg);
+      hold=0; last=nt;
+    }else{
+      park=false;
+      if(st==='PARTIAL_STOW'||st==='FULL_STOW'){ns='DESTOW_HOLD';hold=holdSteps;nt=last;}
+      else if(st==='DESTOW_HOLD'){
+        hold=Math.max(0,hold-1);
+        if(hold<=0){ns='IDLE';nt=th;}else{ns='DESTOW_HOLD';nt=last;}
+      }else{ns='IDLE';nt=th;}
+    }
+    out[i]=nt;mode[i]=ns;st=ns;
+  }
+  return {theta:out,mode:mode};
+};
+
+/* ── Meteo ── */
+LOC.fetchYear=function(lat,lon,year){
+  var u='https://archive-api.open-meteo.com/v1/archive?latitude='+lat+'&longitude='+lon+
+    '&start_date='+year+'-01-01&end_date='+year+'-12-31&hourly='+LOC.OM+
+    '&windspeed_unit=ms&timezone=UTC';
+  return fetch(u).then(function(r){
+    if(!r.ok)throw new Error('Open-Meteo HTTP '+r.status);return r.json();
+  }).then(function(j){
+    var H=j.hourly; if(!H||!H.time)throw new Error('Open-Meteo sin datos para ese año');
+    var n=H.time.length,o={t:new Array(n),ghi:new Float64Array(n),dhi:new Float64Array(n),
+      dni:new Float64Array(n),temp:new Float64Array(n),ws:new Float64Array(n),wd:new Float64Array(n)};
+    for(var i=0;i<n;i++){
+      o.t[i]=new Date(H.time[i]+'Z');
+      o.ghi[i]=Math.max(0,H.shortwave_radiation[i]||0);
+      o.dhi[i]=Math.max(0,(H.diffuse_radiation&&H.diffuse_radiation[i])||0);
+      o.dni[i]=Math.max(0,(H.direct_normal_irradiance&&H.direct_normal_irradiance[i])||0);
+      o.temp[i]=(H.temperature_2m&&H.temperature_2m[i]!=null)?H.temperature_2m[i]:15;
+      o.ws[i]=(H.windspeed_10m&&H.windspeed_10m[i])||0;
+      o.wd[i]=(H.winddirection_10m&&H.winddirection_10m[i]!=null)?H.winddirection_10m[i]:NaN;
+    }
+    o.source='open_meteo'; return o;
+  });
+};
+/* Cielo claro: sin red, para probar rachas o cuando Open-Meteo no responde.
+   Sin nubes la POA absoluta sale por encima de cualquier año real — va dicho. */
+LOC.clearsky=function(lat,lon,year){
+  var latR=lat*LOC.D2R,t0=Date.UTC(year,0,1),n=8760;
+  var o={t:new Array(n),ghi:new Float64Array(n),dhi:new Float64Array(n),dni:new Float64Array(n),
+         temp:new Float64Array(n),ws:new Float64Array(n),wd:new Float64Array(n),source:'clearsky'};
+  for(var i=0;i<n;i++){
+    var d=new Date(t0+i*3600e3),P=LOC.sun(d,latR,lon);
+    var g=P.el>0?1000*Math.pow(Math.sin(P.el),1.15):0;
+    o.t[i]=d; o.ghi[i]=g; o.dhi[i]=g*0.14; o.dni[i]=P.el>0?(g-g*0.14)/Math.max(Math.sin(P.el),0.087):0;
+    var doy=i/24;
+    o.temp[i]=14+10*Math.sin(2*Math.PI*(doy-105)/365)+5*Math.sin(2*Math.PI*(d.getUTCHours()-9)/24);
+    o.ws[i]=0; o.wd[i]=NaN;
+  }
+  return Promise.resolve(o);
+};
+/* Interpolación a paso fino: la dirección por vector unitario (entre 350° y
+   10° la media aritmética da 180°, el lado contrario). */
+LOC.resample=function(M,stepMin){
+  if(!stepMin||stepMin>=60)return M;
+  var f=Math.round(60/stepMin),n=(M.t.length-1)*f+1;
+  var o={t:new Array(n),source:M.source};
+  ['ghi','dhi','dni','temp','ws'].forEach(function(k){o[k]=new Float64Array(n);});
+  o.wd=new Float64Array(n);
+  for(var i=0;i<n;i++){
+    var a=Math.min(M.t.length-1,Math.floor(i/f)),b=Math.min(M.t.length-1,a+1),u=(i%f)/f;
+    o.t[i]=new Date(M.t[a].getTime()+(i%f)*stepMin*60000);
+    ['ghi','dhi','dni','temp','ws'].forEach(function(k){o[k][i]=M[k][a]*(1-u)+M[k][b]*u;});
+    var wa=M.wd[a],wb=M.wd[b];
+    if(isNaN(wa)||isNaN(wb))o.wd[i]=isNaN(wa)?wb:wa;
+    else{
+      var sx=Math.sin(wa*LOC.D2R)*(1-u)+Math.sin(wb*LOC.D2R)*u;
+      var cx=Math.cos(wa*LOC.D2R)*(1-u)+Math.cos(wb*LOC.D2R)*u;
+      o.wd[i]=(Math.atan2(sx,cx)/LOC.D2R+360)%360;
+    }
+  }
+  return o;
+};
+
+
+/* ── Escenarios de viento (espejo de solargpt_core.wind_scenario) ── */
+LOC.rng=function(seed){var a=(seed>>>0)||1;return function(){a|=0;a=a+0x6D2B79F5|0;
+  var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};};
+LOC.norm=function(r){var u=Math.max(1e-12,r()),v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);};
+/* Weibull + AR(1) ρ=0,85 + modulación diurna y estacional, a paso HORARIO
+   (como el core: el generador razona en horas y luego se reindexa) */
+LOC.windSynth=function(nh,k,A,lat,seed){
+  var r=LOC.rng(seed),u=new Float64Array(nh),z=new Float64Array(nh),RHO=0.85;
+  for(var i=0;i<nh;i++)u[i]=A*Math.pow(-Math.log(Math.max(1e-12,r())),1/k);
+  z[0]=LOC.norm(r)*Math.sqrt(1-RHO*RHO);
+  for(i=1;i<nh;i++)z[i]=RHO*z[i-1]+LOC.norm(r)*Math.sqrt(1-RHO*RHO);
+  // mezcla por rangos: conserva EXACTA la Weibull marginal y añade persistencia
+  var su=Array.from(u).sort(function(a,b){return a-b;});
+  var idx=Array.from(z.keys()).sort(function(a,b){return z[a]-z[b];});
+  var rank=new Int32Array(nh); idx.forEach(function(orig,pos){rank[orig]=pos;});
+  var sgn=(lat>=0)?1:-1,out=new Float64Array(nh);
+  for(i=0;i<nh;i++){
+    var doy=Math.floor(i/24)%365, h=i%24;
+    var diurn=1+0.20*Math.sin((h-6)*Math.PI/12);
+    var seas=1+0.15*sgn*Math.cos((doy-15)*2*Math.PI/365);
+    out[i]=Math.max(0.05,Math.min(80,su[rank[i]]*diurn*seas));
+  }
+  return out;
+};
+/* Ráfaga de 3 s (Cook/IEC), igual que wind_synth.gust_from_hourly */
+LOC.gust=function(ws,seed){
+  var r=LOC.rng(seed),o=new Float64Array(ws.length);
+  for(var i=0;i<ws.length;i++){
+    var u=Math.max(0.5,ws[i]), ti=0.14*(0.75+5.6/u);
+    o[i]=u*(1+3.5*ti*Math.exp(0.10*LOC.norm(r)));
+  }
+  return o;
+};
+LOC.kernel=function(dtMin,dur,shape){
+  var d=Math.max(dur,1e-6);
+  if(shape==='plateau'){var ramp=Math.max(d*0.15,1e-6),half=d/2;
+    return Math.max(0,Math.min(1,(half+ramp-Math.abs(dtMin))/ramp));}
+  var sg=d/2.3548; return Math.exp(-0.5*Math.pow(dtMin/sg,2));
+};
+LOC.scenario=function(M,sc,lat,dtH){
+  var n=M.t.length,ws=Float64Array.from(M.ws),wd=Float64Array.from(M.wd);
+  var meta={base:(sc&&sc.base)||'meteo',events_applied:[],events_skipped:[]},notes=[];
+  if(!sc)return {ws:ws,wd:wd,meta:null};
+  if(sc.base==='calm'){ws=new Float64Array(n);notes.push('fondo en calma (0 m/s): solo se ve lo inyectado');}
+  else if(sc.base==='synthetic'){
+    var nh=Math.ceil(n*dtH)+1, hourly=LOC.windSynth(nh,sc.k||2,sc.A||6.5,lat,sc.seed||42);
+    for(var i=0;i<n;i++)ws[i]=hourly[Math.min(nh-1,Math.floor(i*dtH))];
+    notes.push('NO es viento medido: Weibull(k,A) + AR(1) ρ=0,85 + modulación diurna/estacional');
+    meta.synthetic={k:sc.k||2,A:sc.A||6.5,seed:sc.seed||42};
+  }
+  if(sc.dir_deg!=null&&sc.dir_deg!==''){for(i=0;i<n;i++)wd[i]=+sc.dir_deg;meta.dir_deg=+sc.dir_deg;}
+  if(sc.use_gust){ws=LOC.gust(ws,sc.gust_seed||sc.seed||42);meta.use_gust=true;
+    notes.push('viento convertido a ráfaga de 3 s (Cook/IEC): la serie ya NO es media horaria');}
+  var t0=M.t[0].getTime();
+  var inject=function(when,peak,dur,shape,dir,src){
+    if(when==null||!(peak>0)){meta.events_skipped.push({source:src,why:when==null?'sin instante':'sin pico'});return;}
+    for(var i=0;i<n;i++){
+      var v=peak*LOC.kernel((M.t[i].getTime()-when)/60000,dur,shape);
+      if(v>ws[i]){ws[i]=v; if(dir!=null)wd[i]=((+dir)%360+360)%360;}
+    }
+    meta.events_applied.push({start:new Date(when).toISOString(),peak_kmh:Math.round(peak*3.6*10)/10,
+      duration_min:dur,shape:shape,dir_deg:(dir==null?null:+dir),source:src});
+  };
+  (sc.events||[]).forEach(function(e){
+    var peak=(e.peak_ms!=null)?e.peak_ms:((e.peak_kmh!=null)?e.peak_kmh/3.6:null);
+    var base=e.start?Date.parse(e.start.length<=16?e.start+':00Z':(/Z|[+-]\d\d:?\d\d$/.test(e.start)?e.start:e.start+'Z')):null;
+    if(base==null||isNaN(base))base=null;
+    var rep=Math.max(1,e.repeat||1),every=(e.every_hours||24)*3600e3;
+    for(var i=0;i<rep;i++)inject(base==null?null:base+i*every,peak,e.duration_min||30,
+      (e.shape||'gauss'),(e.dir_deg!=null?e.dir_deg:(sc.dir_deg!==''&&sc.dir_deg!=null?sc.dir_deg:null)),'manual');
+  });
+  if(sc.storms&&sc.storms.n>0){
+    var r=LOC.rng(sc.storms.seed||7),span=M.t[n-1].getTime()-t0;
+    for(var k2=0;k2<sc.storms.n;k2++){
+      var pk=sc.storms.peak_kmh||[70,110],du=sc.storms.duration_min||[60,240];
+      inject(t0+r()*span,(pk[0]+r()*(pk[1]-pk[0]))/3.6,du[0]+r()*(du[1]-du[0]),
+        sc.storms.shape||'gauss',r()*360,'tormenta');
+    }
+    meta.storms={n:sc.storms.n,seed:sc.storms.seed||7};
+  }
+  if(meta.events_applied.length)notes.push(meta.events_applied.length+
+    ' racha(s) inyectada(s) por superposición de máximo: no son un evento meteorológico observado '+
+    'ni llevan detrás cambio de irradiancia, de temperatura ni de dirección');
+  if(meta.events_skipped.length)notes.push(meta.events_skipped.length+' racha(s) descartada(s) por falta de datos');
+  meta.n_events_injected=meta.events_applied.length;
+  meta.not_modeled=notes.join(' · ')||null;
+  return {ws:ws,wd:wd,meta:(sc.base!=='meteo'||meta.events_applied.length||sc.use_gust||sc.dir_deg!=null)?meta:null};
+};
+
+/* ── El informe: MISMO contrato que POST /windstow, para que la ficha entera
+      (tablas, gráficas, campo 3D) no sepa de dónde viene el número ── */
+LOC.run=function(cfg,onStep){
+  var lat=cfg.lat,lon=cfg.lon,latR=lat*LOC.D2R;
+  var cs=(cfg.source==='clearsky'||cfg.meteo_mode==='clearsky');
+  var get=cs?LOC.clearsky(lat,lon,cfg.year):LOC.fetchYear(lat,lon,cfg.year);
+  return get.then(function(M0){
+    var M=LOC.resample(M0,cfg.resample_minutes);
+    var n=M.t.length,dtH=(n>1?(M.t[1]-M.t[0])/3600e3:1);
+    var shear=cfg.wind_height_m>0?Math.pow(cfg.wind_height_m/10,1/7):1;
+    for(var i=0;i<n;i++)M.ws[i]*=shear;
+    var SC=LOC.scenario(M,cfg.wind_scenario,lat,dtH), ws=SC.ws, wd=SC.wd;
+    var T1=cfg.threshold_1_kmh/3.6,T2=cfg.threshold_2_kmh/3.6,full=cfg.tracker.max_angle_deg;
+    // sol, θ de seguimiento y POA de la línea base
+    var el=new Float64Array(n),azs=new Float64Array(n),azp=new Float64Array(n),
+        thB=new Float64Array(n),poaB=new Float64Array(n),bh=new Float64Array(n);
+    for(i=0;i<n;i++){
+      var P=LOC.sun(M.t[i],latR,lon);
+      el[i]=P.el;azs[i]=P.az;azp[i]=P.azp;
+      bh[i]=Math.max(0,M.ghi[i]-M.dhi[i]);
+      thB[i]=LOC.theta(P.el,P.az,cfg.tracker.gcr,full,cfg.tracker.backtrack!==false);
+      poaB[i]=LOC.poa(thB[i],P.el,P.az,bh[i],M.dhi[i],M.ghi[i]);
+    }
+    var kwh=function(a){var s2=0;for(var j=0;j<n;j++)s2+=a[j];return s2*dtH/1000;};
+    var month=new Int8Array(n);for(i=0;i<n;i++)month[i]=M.t[i].getUTCMonth();
+    var monthly=function(a){var o=new Array(12).fill(0);for(var j=0;j<n;j++)o[month[j]]+=a[j];
+      return o.map(function(v){return Math.round(v*dtH/1000*1000)/1000;});};
+    var dayH=0;for(i=0;i<n;i++)if(el[i]>0)dayH+=dtH;
+    var eB=kwh(poaB),cases={},series={};
+    (cfg.strategies||['A1','A2','B1','B2']).forEach(function(S){
+      var az=(S[0]==='A')?wd:azp, R;
+      if(S[1]==='1')R=LOC.single(thB,ws,az,T1,full);
+      else R=LOC.dual(thB,ws,az,T1,T2,cfg.partial_stow_min_abs_deg,full,dtH*3600,
+                      cfg.destow_hold_minutes,cfg.partial_park_minutes,1.0);
+      var poa=new Float64Array(n),d=new Float64Array(n);
+      for(var j=0;j<n;j++){poa[j]=LOC.poa(R.theta[j],el[j],azs[j],bh[j],M.dhi[j],M.ghi[j]);d[j]=poa[j]-poaB[j];}
+      // episodios: racha continua con modo ≠ IDLE (el hold cuenta dentro)
+      var eps=[],cur=null,hp=0,hf=0,hh=0,hd=0;
+      for(j=0;j<n;j++){
+        var m=R.mode[j];
+        if(m==='PARTIAL_STOW')hp+=dtH; if(m==='FULL_STOW')hf+=dtH; if(m==='DESTOW_HOLD')hh+=dtH;
+        if(m!=='IDLE'&&el[j]>0)hd+=dtH;
+        if(m!=='IDLE'){
+          if(!cur)cur={i0:j,hours:0,hp:0,hf:0,hh:0,full:false,wmax:0,lost:0};
+          cur.hours+=dtH;
+          if(m==='PARTIAL_STOW')cur.hp+=dtH; if(m==='FULL_STOW'){cur.hf+=dtH;cur.full=true;} if(m==='DESTOW_HOLD')cur.hh+=dtH;
+          cur.wmax=Math.max(cur.wmax,ws[j]); cur.lost+=(poaB[j]-poa[j])*dtH/1000; cur.i1=j;
+        }else if(cur){eps.push(cur);cur=null;}
+      }
+      if(cur)eps.push(cur);
+      var evs=eps.map(function(e){return {start:M.t[e.i0].toISOString(),end:M.t[e.i1].toISOString(),
+        hours:Math.round(e.hours*100)/100,hours_partial:Math.round(e.hp*100)/100,
+        hours_full:Math.round(e.hf*100)/100,hours_hold:Math.round(e.hh*100)/100,
+        reached_full:e.full,wind_max_ms:Math.round(e.wmax*100)/100,
+        wind_max_kmh:Math.round(e.wmax*3.6*10)/10,poa_lost_kwh_m2:Math.round(e.lost*1e4)/1e4,
+        month:M.t[e.i0].getUTCMonth()+1};});
+      var durs=evs.map(function(e){return e.hours;}).sort(function(a,b){return a-b;});
+      var q=function(p){return durs.length?durs[Math.min(durs.length-1,Math.floor(p*durs.length))]:0;};
+      var eC=kwh(poa),hEng=hp+hf+hh;
+      var byMonth=new Array(12).fill(0),evMonth=new Array(12).fill(0);
+      for(j=0;j<n;j++)if(R.mode[j]!=='IDLE')byMonth[month[j]]+=dtH;
+      evs.forEach(function(e){evMonth[e.month-1]++;});
+      cases[S]={strategy:S,
+        label:(S[0]==='A'?'A':'B')+S[1]+' · cara al '+(S[0]==='A'?'viento':'sol')+' · '+
+              (S[1]==='1'?'1 umbral':'2 umbrales + histéresis '+cfg.destow_hold_minutes+' min'),
+        n_thresholds:+S[1], orientation:(S[0]==='A'?'viento':'sol'), has_hysteresis:(S[1]==='2'),
+        poa_kwh_m2:Math.round(eC*1000)/1000, poa_delta_kwh_m2:Math.round((eC-eB)*1000)/1000,
+        poa_delta_pct:Math.round((eB?100*(eC-eB)/eB:0)*1e4)/1e4,
+        poa_monthly_kwh_m2:monthly(poa), poa_delta_monthly_kwh_m2:monthly(d),
+        hours_partial:Math.round(hp*100)/100, hours_full:Math.round(hf*100)/100,
+        hours_hold:Math.round(hh*100)/100, hours_stow:Math.round((hp+hf)*100)/100,
+        hours_engaged:Math.round(hEng*100)/100, hours_stow_daylight:Math.round(hd*100)/100,
+        pct_year:Math.round(1e4*100*hEng/(n*dtH))/1e4,
+        pct_daylight:Math.round(1e4*(dayH?100*hd/dayH:0))/1e4,
+        hours_by_month:byMonth.map(function(v){return Math.round(v*100)/100;}),
+        events_by_month:evMonth,
+        n_events:evs.length, n_events_full:evs.filter(function(e){return e.reached_full;}).length,
+        n_events_partial_only:evs.filter(function(e){return !e.reached_full;}).length,
+        duration_h_mean:durs.length?Math.round(1000*durs.reduce(function(a,b){return a+b;},0)/durs.length)/1000:0,
+        duration_h_median:q(0.5), duration_h_p95:q(0.95), duration_h_max:durs.length?durs[durs.length-1]:0,
+        top_events:evs.slice().sort(function(a,b){return b.poa_lost_kwh_m2-a.poa_lost_kwh_m2;}).slice(0,cfg.top_events||10)
+      };
+      series[S]={theta:R.theta,poa:poa,mode:R.mode,events:evs};
+    });
+    // ventana común para el campo 3D: el episodio más caro de TODOS los casos
+    var peor=null;
+    for(var S2 in series)series[S2].events.forEach(function(e){
+      if(!peor||e.poa_lost_kwh_m2>peor.poa_lost_kwh_m2)peor=e;});
+    var hrs=(cfg.timeline&&cfg.timeline.hours)||16, maxSteps=(cfg.timeline&&cfg.timeline.max_steps)||240;
+    var t0,t1;
+    if(peor){var pad=Math.max(2,(hrs-peor.hours)/2)*3600e3;
+      t0=Date.parse(peor.start)-pad;t1=Date.parse(peor.end)+pad;}
+    else{var mid=M.t[Math.floor(n/2)];t0=Date.UTC(mid.getUTCFullYear(),mid.getUTCMonth(),mid.getUTCDate());
+      t1=t0+hrs*3600e3;}
+    var sel=[];for(i=0;i<n;i++){var ti=M.t[i].getTime();if(ti>=t0&&ti<=t1)sel.push(i);}
+    if(!sel.length)for(i=0;i<Math.min(n,maxSteps);i++)sel.push(i);
+    var stride=Math.max(1,Math.ceil(sel.length/maxSteps));sel=sel.filter(function(_,j){return j%stride===0;});
+    var pick=function(a,dec){return sel.map(function(j){return Math.round(a[j]*Math.pow(10,dec))/Math.pow(10,dec);});};
+    var TLo={window:{start:M.t[sel[0]].toISOString(),end:M.t[sel[sel.length-1]].toISOString(),
+        steps:sel.length,step_minutes:Math.round(dtH*60*stride*100)/100},
+      t:sel.map(function(j){return M.t[j].toISOString();}),
+      sun_el:sel.map(function(j){return Math.round(el[j]/LOC.D2R*100)/100;}),
+      sun_az:sel.map(function(j){return Math.round(azp[j]*100)/100;}),
+      wind_ms:pick(ws,2), wind_dir:sel.map(function(j){return isNaN(wd[j])?null:Math.round(wd[j]*10)/10;}),
+      baseline:{theta:pick(thB,2),poa:pick(poaB,1)},cases:{}};
+    for(var S3 in series)TLo.cases[S3]={theta:pick(series[S3].theta,2),poa:pick(series[S3].poa,1),
+      mode:sel.map(function(j){return series[S3].mode[j];})};
+    // traza del peor episodio de cada caso, para la gráfica de detalle
+    for(var S4 in cases){
+      var te=cases[S4].top_events[0];
+      if(!te){continue;}
+      var a0=Date.parse(te.start)-6*3600e3,a1=Date.parse(te.end)+6*3600e3,sub=[];
+      for(i=0;i<n;i++){var tt=M.t[i].getTime();if(tt>=a0&&tt<=a1)sub.push(i);}
+      var st2=Math.max(1,Math.ceil(sub.length/300));sub=sub.filter(function(_,j){return j%st2===0;});
+      var pk=function(a,dec){return sub.map(function(j){return Math.round(a[j]*Math.pow(10,dec))/Math.pow(10,dec);});};
+      cases[S4].trace={t:sub.map(function(j){return M.t[j].toISOString();}),wind_ms:pk(ws,2),
+        theta_base:pk(thB,2),theta:pk(series[S4].theta,2),poa_base:pk(poaB,1),poa:pk(series[S4].poa,1),
+        mode:sub.map(function(j){return series[S4].mode[j];})};
+    }
+    var daily=[],dt0=null,dmax=0;
+    for(i=0;i<n;i++){var day=Math.floor((M.t[i].getTime()-M.t[0].getTime())/864e5);
+      if(dt0===null)dt0=day; if(day!==dt0){daily.push(Math.round(dmax*3.6*10)/10);dt0=day;dmax=0;}
+      dmax=Math.max(dmax,ws[i]);}
+    daily.push(Math.round(dmax*3.6*10)/10);
+    var sorted=Array.from(ws).sort(function(a,b){return a-b;});
+    var over=function(T){var h=0;for(var j=0;j<n;j++)if(ws[j]>T)h+=dtH;return h;};
+    return {engine:'navegador · modelo local (isotrópico, sin sombreado ni lazo de control)',
+      local:true,
+      site:{lat:lat,lon:lon,name:cfg.name||null},
+      meteo:{rows:n,dt_h:Math.round(dtH*1e4)/1e4,period:[M.t[0].toISOString(),M.t[n-1].toISOString()],
+        total_hours:Math.round(n*dtH*10)/10,daylight_hours:Math.round(dayH*10)/10,
+        resample_minutes:cfg.resample_minutes||null,source:M.source,year:cfg.year,mode:(cs?'clearsky':'canon'),
+        has_wind_direction:!isNaN(wd[0])},
+      wind:{scale_applied:Math.round(shear*1e4)/1e4,height_m:cfg.wind_height_m||null,
+        mean_ms:Math.round(1000*sorted.reduce(function(a,b){return a+b;},0)/n)/1000,
+        p95_ms:Math.round(sorted[Math.floor(0.95*n)]*1000)/1000,max_ms:Math.round(sorted[n-1]*1000)/1000,
+        hours_over_t1:Math.round(over(T1)*10)/10,hours_over_t2:Math.round(over(T2)*10)/10,
+        threshold_1_ms:T1,threshold_2_ms:T2,
+        threshold_1_kmh:cfg.threshold_1_kmh,threshold_2_kmh:cfg.threshold_2_kmh,
+        daily_max_kmh:daily,daily_t0:M.t[0].toISOString(),scenario:SC.meta},
+      config:{partial_stow_min_abs_deg:cfg.partial_stow_min_abs_deg,full_stow_deg:full,
+        destow_hold_minutes:cfg.destow_hold_minutes,partial_park_minutes:cfg.partial_park_minutes,
+        tracker:cfg.tracker},
+      baseline:{poa_kwh_m2:Math.round(eB*1000)/1000,poa_monthly_kwh_m2:monthly(poaB)},
+      cases:cases, timeline:TLo};
+  });
+};
 
 /* ===================== EMPLAZAMIENTOS ===================== */
 /* Las plantas de la cartera llegan por localStorage compartido (`factiun_plantas`, lo siembra
@@ -364,16 +802,25 @@ $('plant').onchange=function(){
    El vocabulario (rachas tipo, bases, formas) lo sirve el motor en
    /windstow/presets: si allí se añade una racha tipo, aparece aquí sin tocar
    la ficha. Si el motor es antiguo y no lo tiene, se cae a este mínimo. */
-var PRESETS_G={racha_seca:{label:'Racha seca · 80 km/h · 20 min',peak_kmh:80,duration_min:20,shape:'gauss'},
-               borrasca:{label:'Borrasca · 100 km/h · 3 h',peak_kmh:100,duration_min:180,shape:'plateau'}};
+/* Las rachas tipo tienen que estar SIEMPRE: sin motor también se usa el
+   laboratorio, y una lista vacía deja el desplegable muerto. El motor solo
+   las refresca si está conectado. */
+var PRESETS_G={
+  racha_seca:{label:'Racha seca · 80 km/h · 20 min',peak_kmh:80,duration_min:20,shape:'gauss'},
+  borrasca:{label:'Borrasca · 100 km/h · 3 h',peak_kmh:100,duration_min:180,shape:'plateau'},
+  temporal:{label:'Temporal · 120 km/h · 12 h',peak_kmh:120,duration_min:720,shape:'plateau'},
+  umbral_justo:{label:'Justo en el umbral · 62 km/h · 45 min',peak_kmh:62,duration_min:45,shape:'gauss'}
+};
 var GUSTS=[];
-async function loadPresets(){
-  if(!ENGINE)return;
-  try{var r=await fetch(ENGINE+'/windstow/presets',{cache:'no-store'});
-    if(r.ok){var j=await r.json(); if(j&&j.gust_presets)PRESETS_G=j.gust_presets;}}catch(e){}
+function fillPresets(){
   var o='<option value="">— racha a medida —</option>';
   Object.keys(PRESETS_G).forEach(function(k){o+='<option value="'+k+'">'+esc(PRESETS_G[k].label)+'</option>';});
   $('gpreset').innerHTML=o;
+}
+async function loadPresets(){
+  if(!ENGINE)return;
+  try{var r=await fetch(ENGINE+'/windstow/presets',{cache:'no-store'});
+    if(r.ok){var j=await r.json(); if(j&&j.gust_presets){PRESETS_G=j.gust_presets;fillPresets();}}}catch(e){}
 }
 /* La dirección importa porque A1/A2 abanderan CARA AL VIENTO: sin ella tumban
    siempre al mismo lado y la comparación con B (cara al sol) pierde sentido.
@@ -461,10 +908,56 @@ function loadCfg(){
 }
 function strategies(){return [].slice.call(document.querySelectorAll('.st:checked')).map(function(e){return e.value;});}
 
+/* ── CAREO: el modelo del navegador contra el del motor ──
+   `demo-viento.json` es una corrida REAL del motor Python, congelada con el
+   cuerpo exacto de la petición que la produjo. Repetirla aquí con el modelo
+   local y poner los dos números uno al lado del otro es la única forma
+   honesta de decir cuánto se parecen: sin esto, «espejo declarado» es una
+   promesa. No hace falta tener el motor levantado — el resultado ya viene
+   guardado. */
+async function careo(){
+  var out=$('out');
+  out.innerHTML='<p class="note">Careando: repitiendo en el navegador la corrida congelada del motor…</p>';
+  try{
+    var r=await fetch('demo-viento.json',{cache:'no-store'});
+    if(!r.ok)throw new Error('no encuentro demo-viento.json (HTTP '+r.status+')');
+    var E=await r.json();
+    var L=await LOC.run(E.demo.request);
+    var fila=function(k,ve,vl,dec,uni){
+      var d=(ve!=null&&vl!=null)?vl-ve:null;
+      return '<tr><td>'+esc(k)+'</td><td>'+fmt(ve,dec)+'</td><td>'+fmt(vl,dec)+'</td>'+
+        '<td style="color:'+(Math.abs(d||0)<=(dec>2?0.05:2)?'var(--live)':'var(--build)')+'">'+
+        (d>0?'+':'')+fmt(d,dec)+' '+esc(uni||'')+'</td></tr>';
+    };
+    var h='<table><thead><tr><th>Careo con la corrida congelada del motor</th>'+
+      '<th>Motor Python</th><th>Navegador</th><th>Diferencia</th></tr></thead><tbody>';
+    h+=fila('POA sin abanderar (kWh/m²·año)',E.baseline.poa_kwh_m2,L.baseline.poa_kwh_m2,1,'kWh/m²');
+    Object.keys(E.cases).sort().forEach(function(k){
+      h+=fila('Δ POA '+k+' (%)',E.cases[k].poa_delta_pct,L.cases[k].poa_delta_pct,3,'pp');
+    });
+    Object.keys(E.cases).sort().forEach(function(k){
+      h+=fila('Abanderamientos '+k,E.cases[k].n_events,L.cases[k].n_events,0,'');
+    });
+    Object.keys(E.cases).sort().forEach(function(k){
+      h+=fila('Horas abanderado '+k,E.cases[k].hours_engaged,L.cases[k].hours_engaged,0,'h');
+    });
+    out.innerHTML='<div class="scroll">'+h+'</tbody></table></div>'+
+      '<p class="note">Mismo emplazamiento, mismo año, mismo escenario de viento y mismos umbrales: '+
+      'lo único que cambia es <b>quién calcula</b>. La POA absoluta se separa por el modelo de '+
+      'transposición y por lo que el navegador no hace (sombreado, IAM, lazo de control); el '+
+      '<b>recuento de maniobras y las horas</b> deberían coincidir casi exactamente, porque las '+
+      'máquinas de estado son las mismas — si no coinciden, hay un fallo en el puerto y esta tabla '+
+      'es donde se ve.</p>';
+  }catch(e){
+    out.innerHTML='<div class="engmsg err"><b>No se pudo carear.</b><br>'+esc(e.message)+'</div>';
+  }
+}
+
 /* ===================== SIMULACIÓN ===================== */
 async function run(){
   var out=$('out');
-  if(!ENGINE){out.innerHTML=engineOffMsg();$('cmpCard').style.display='none';$('detCard').style.display='none';return;}
+  var usaMotor=($('calc').value==='engine');
+  if(usaMotor&&!ENGINE){ out.innerHTML=engineOffMsg(); return; }
   var sts=strategies();
   if(!sts.length){out.innerHTML='<p class="note">Marca al menos una estrategia.</p>';return;}
   saveCfg();
@@ -486,12 +979,18 @@ async function run(){
     top_events:12, include_trace:true
   };
   $('run').disabled=true; $('run').textContent='Simulando…';
-  out.innerHTML='<p class="note">El motor está bajando el año y simulando '+sts.length+
-    ' estrategias más la línea base. La primera vez de cada (sitio, año) tarda: luego va de caché.</p>';
+  out.innerHTML='<p class="note">'+(usaMotor
+    ? 'El motor está bajando el año y simulando '+sts.length+' estrategias más la línea base.'
+    : 'Bajando el año de Open-Meteo y simulando '+sts.length+' estrategias más la línea base '+
+      'aquí mismo, en el navegador.')+'</p>';
   try{
-    var r=await fetch(ENGINE+'/windstow',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-    if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
-    REP=await r.json();
+    if(usaMotor){
+      var r=await fetch(ENGINE+'/windstow',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+      if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
+      REP=await r.json();
+    }else{
+      REP=await LOC.run(body);
+    }
     render();
   }catch(e){
     out.innerHTML='<div class="engmsg err"><b>No se pudo simular.</b><br>'+esc(e.message)+'</div>';
@@ -511,7 +1010,7 @@ function render(){
   $('ctx').textContent=(REP.site.name?REP.site.name+' · ':'')+(m.source||'')+' '+(m.year||'')+
     ' · '+m.rows+' pasos de '+Math.round(m.dt_h*60)+' min';
   var b=best();
-  $('out').innerHTML='<div class="readout">'+
+  $('out').innerHTML=(REP.local?localBanner():'')+'<div class="readout">'+
     ro('POA sin abanderar',fmt(base.poa_kwh_m2,0),'kWh/m²·año')+
     ro('Viento p95',fmt(w.p95_ms*3.6,0),'km/h · máx '+fmt(w.max_ms*3.6,0))+
     ro('Horas &gt; '+fmt(w.threshold_1_kmh,0)+' km/h',fmt(w.hours_over_t1,0),'h · &gt;'+fmt(w.threshold_2_kmh,0)+': '+fmt(w.hours_over_t2,0)+' h')+
@@ -901,7 +1400,20 @@ function build3D(){
   sh.updateProjectionMatrix();
   TD.radio=Math.max(320,d*1.5);
 
-  $('tpos').max=Math.max(0,TL.t.length-1); TPOS=0; $('tpos').value=0;
+  /* Abrir en el paso 0 dejaba la escena de noche (todo a 0 W/m² y el seguidor
+     en su posición de dormir): parecía que no funcionaba. Se abre en el
+     instante donde MÁS se separan las estrategias de la línea base, que es lo
+     que la vista existe para enseñar. */
+  var i0=0, mejor=-1;
+  for(var i=0;i<TL.t.length;i++){
+    var pb=TL.baseline.poa[i]||0, dmax=0;
+    for(var k in TL.cases)dmax=Math.max(dmax,Math.abs(pb-(TL.cases[k].poa[i]||0)));
+    if(dmax>mejor){mejor=dmax;i0=i;}
+  }
+  if(mejor<=0){                       // ningún abanderamiento en la ventana: al mediodía
+    var sol=-99; for(var j=0;j<TL.t.length;j++)if((TL.sun_el[j]||-99)>sol){sol=TL.sun_el[j];i0=j;}
+  }
+  $('tpos').max=Math.max(0,TL.t.length-1); TPOS=i0; $('tpos').value=i0;
   $('c3hint').textContent=TL.window.steps+' pasos de '+TL.window.step_minutes+' min';
   $('c3note').innerHTML='Ventana <b>común</b> a todos los casos: el mismo viento y el mismo sol para '+
     'todos, y un θ por estrategia. La barra de cada bloque es su <b>POA en ese instante</b> y el listón '+
@@ -910,7 +1422,7 @@ function build3D(){
     'El campo es <b>ilustrativo</b> —dos filas por caso, geometría real de '+
     esc(Seguidor.DIMS.modsPerStr)+' módulos por ala—, pero los ángulos y la POA son los que devuelve el motor.';
   $('cv3dCard').style.display='';
-  update3D(0);
+  update3D(i0);
 }
 
 function update3D(i){
@@ -985,6 +1497,7 @@ IDS.forEach(function(i){$(i).addEventListener('change',saveCfg);});
 $('bt').addEventListener('change',saveCfg);
 [].forEach.call(document.querySelectorAll('.st'),function(e){e.addEventListener('change',saveCfg);});
 $('run').onclick=run;
+$('careoBtn').onclick=careo;
 $('play').onclick=playToggle;
 $('tpos').oninput=function(){if(PLAY)playToggle();update3D(+this.value);};
 $('gadd').onclick=function(){addGust($('gpreset').value);};
@@ -992,7 +1505,7 @@ $('gpreset').onchange=function(){if(this.value){addGust(this.value);this.value='
 ['wgust','wcyc'].forEach(function(i){$(i).addEventListener('change',saveCfg);});
 $('wbase').addEventListener('change',function(){saveCfg();});
 window.addEventListener('resize',function(){if(REP){drawWind();drawBars();drawDetail();}});
-fillRosa(); loadCfg(); loadPlants(); renderGusts(); detectEngine().then(loadPresets);
+fillRosa(); fillPresets(); loadCfg(); loadPlants(); renderGusts(); detectEngine().then(loadPresets);
 </script>
 </body>
 </html>
