@@ -799,6 +799,32 @@ const PROJECTS = [
     ]
   },
   {
+    name: "Medidor de tráfico",
+    status: "live",
+    objetivo: "Cuánto mete el SCADA en la LAN de planta y cuánto sube a la nube cada planta, con el mismo modelo de bytes que cuenta el colector en marcha.",
+    stack: "HTML · sin dependencias · modelo en Python",
+    url: "https://imoriana3.github.io/scada/trafico.html",
+    repo: "https://github.com/imoriana3/scada",
+    updated: "2026-08-19",
+    version: "1.0",
+    docId: "medidor-trafico",
+    download: "",
+    uso: [
+      "Elige el ritmo de polling y la flota entera se recalcula: la factura es lineal con él (a 10 s se triplica, a 5 min se divide por diez).",
+      "Con 30 s ninguna planta pasa de 6 GB/mes y las seis suman ~11. En las pequeñas manda la cabecera HTTP, no el dato.",
+      "Pincha una planta para el reparto por NCU; la calculadora estima una planta que aún no existe (útil antes de contratar el enlace).",
+      "La malla Zigbee sale en ocupación de AIRE por malla, no en megas: son 250 kbps compartidos y es lo que satura. Es un modelo, no una medida.",
+      "Si el stack está levantado, el panel de abajo consulta GET /traffic y pone lo medido al lado de lo estimado."
+    ],
+    pendientes: [
+      { done:false, text:"Calibrar el modelo de la malla con las capturas de Cobertura Zigbee: los saltos reales y el ack_failures del gateway Digi (hoy son parámetros)." },
+      { done:false, text:"Contrastar contra el consumo real del router de planta cuando el colector lleve un mes en régimen." }
+    ],
+    historial: [
+      { date:"2026-08-19", ver:"1.0", note:"Medidor en el colector (serie traffic + GET /traffic), estimador de flota y este visor. El banco exige que la estimación cuadre EXACTAMENTE con lo que contabiliza el driver en un ciclo real." }
+    ]
+  },
+  {
     name: "Agente y collector · PC de planta",
     status: "build",
     objetivo: "El lado que vive dentro de la planta: agente Modbus de solo lectura y collector, que alimentan al SCADA y a la toolbox.",
