@@ -172,15 +172,26 @@
         <div class="field"><label>Longitud °</label><input id="lon" type="number" step="0.0001" value="-0.7981"></div>
       </div>
       <div class="two">
-        <div class="field"><label>Año meteo</label><input id="year" type="number" step="1" value="2023"></div>
-        <div class="field"><label>Fuente</label>
-          <select id="source">
-            <option value="openmeteo">Open-Meteo (ERA5)</option>
-            <option value="pvgis">PVGIS horario</option>
-            <option value="nasa">NASA POWER</option>
-            <option value="clearsky">Cielo claro (sin red)</option>
-          </select></div>
+        <div class="field"><label>Año · desde</label><input id="year" type="number" step="1" value="2023"></div>
+        <div class="field"><label>hasta <span class="sn" style="margin:0" id="nAnos"></span></label>
+          <input id="year1" type="number" step="1" value="2023"></div>
       </div>
+      <div class="field"><label>Fuente del viento</label>
+        <select id="source">
+          <option value="openmeteo">Open-Meteo (ERA5) · reanálisis</option>
+          <option value="hsu">HSU de la planta · CSV</option>
+          <option value="hsuscada">HSU de la planta · SCADA en vivo</option>
+          <option value="pvgis">PVGIS horario</option>
+          <option value="nasa">NASA POWER</option>
+          <option value="clearsky">Cielo claro (sin red)</option>
+        </select></div>
+      <div class="field" id="hsuFile" style="display:none">
+        <label>Fichero de la HSU (no sale del navegador)</label>
+        <input id="csv" type="file" accept=".csv,.txt,.tsv"></div>
+      <div class="field" id="hsuUrl" style="display:none">
+        <label>URL del SCADA · horas</label>
+        <div class="two"><input id="scadaUrl" type="text" placeholder="http://192.168.1.50:8000">
+          <input id="scadaH" type="number" step="24" min="24" max="8760" value="720"></div></div>
       <div class="two">
         <div class="field"><label>Paso de cálculo</label>
           <select id="step">
@@ -339,6 +350,20 @@
       <h2>Σ Resultado del año <span class="sn" id="ctx">—</span></h2>
       <div id="out"><p class="note">Elige emplazamiento y pulsa <b>Simular el año</b>.</p></div>
       <canvas id="wind" width="880" height="180" style="display:none"></canvas>
+    </div>
+
+    <div class="card" id="recCard" style="display:none">
+      <h2>🧭 Recurso de viento <span class="sn" id="recHint"></span></h2>
+      <div class="readout" id="recRo"></div>
+      <div class="cols" style="grid-template-columns:minmax(280px,1fr) 1.4fr;gap:14px;margin-top:12px">
+        <div><canvas id="rosa" width="440" height="440"></canvas>
+          <p class="note" id="rosaNote"></p></div>
+        <div>
+          <div class="scroll"><table id="anosTab"></table></div>
+          <canvas id="extCv" width="620" height="230"></canvas>
+          <p class="note" id="extNote"></p>
+        </div>
+      </div>
     </div>
 
     <div class="card" id="cmpCard" style="display:none">
@@ -568,6 +593,85 @@ LOC.dual=function(thT,ws,az,T1,T2,pmin,full,dtS,holdMin,parkMin,dead){
   return {theta:out,mode:mode};
 };
 
+/* ── MULTI-AÑO ──
+   Un año bueno o malo cambia el resultado y con uno solo no se ve cuánto. Se
+   descarga el periodo entero de una vez y se corre año a año: así sale la
+   dispersión interanual y, con ella, los máximos anuales que alimentan el
+   ajuste de extremos. */
+LOC.runMulti=function(cfg,onPaso){
+  var y0=+cfg.year, y1=+(cfg.year1||cfg.year);
+  var lat=cfg.lat, lon=cfg.lon;
+  var cs=(cfg.source==='clearsky'||cfg.meteo_mode==='clearsky');
+  var pre= cfg.meteoPre ? Promise.resolve(cfg.meteoPre)
+         : cs ? LOC.clearsky(lat,lon,y0) : LOC.fetchYear(lat,lon,y0,y1);
+  return pre.then(function(M){
+    var anos=[],idx={};
+    for(var i=0;i<M.t.length;i++){
+      var y=M.t[i].getUTCFullYear();
+      if(idx[y]==null){idx[y]=[i,i];anos.push(y);}else idx[y][1]=i;
+    }
+    anos.sort();
+    var res=[],maximos=[],p=Promise.resolve();
+    anos.forEach(function(y,k){
+      p=p.then(function(){
+        if(onPaso)onPaso(k+1,anos.length,y);
+        var a=idx[y][0],b=idx[y][1]+1, sub={source:M.source,unidad:M.unidad,tiene_rafaga:M.tiene_rafaga};
+        sub.t=M.t.slice(a,b);
+        ['ghi','dhi','dni','temp','ws','wd'].forEach(function(c){sub[c]=M[c].slice(a,b);});
+        return LOC.run(Object.assign({},cfg,{year:y,meteoPre:sub,
+          timeline:(k===0?cfg.timeline:null), include_trace:(k===0)}));
+      }).then(function(R){
+        res.push({year:y,rep:R});
+        maximos.push(R.wind.max_ms);
+        return null;
+      });
+    });
+    return p.then(function(){return {anos:res,maximos:maximos};});
+  });
+};
+
+/* ── RECURSO DE VIENTO DEL EMPLAZAMIENTO ──
+   Lo que contesta «cómo es este sitio de viento», al margen de qué estrategia
+   se elija: de dónde sopla, cuánto tiempo por encima de cada umbral, cómo
+   varía de un año a otro y qué velocidad cabe esperar cada N años. */
+
+/* 16 sectores × bandas de velocidad. Las bandas no son decorativas: son los
+   umbrales de la máquina, así que la rosa enseña DE DÓNDE vienen los
+   abanderamientos, no solo de dónde sopla el viento. */
+LOC.SECT=16;
+LOC.rosa=function(ws,wd,dtH,t1,t2){
+  var S=LOC.SECT, bandas=[0,t1*0.5,t1,t2,1e9], nb=bandas.length-1;
+  var m=[]; for(var i=0;i<S;i++){m.push(new Float64Array(nb));}
+  var tot=0,sinDir=0;
+  for(var k=0;k<ws.length;k++){
+    var d=wd?wd[k]:NaN;
+    if(isNaN(d)){sinDir+=dtH;continue;}
+    var sec=Math.round(((d%360)+360)%360/(360/S))%S, v=ws[k], b=nb-1;
+    for(var j=0;j<nb;j++)if(v<bandas[j+1]){b=j;break;}
+    m[sec][b]+=dtH; tot+=dtH;
+  }
+  return {sectores:m.map(function(a){return Array.from(a).map(function(v){return Math.round(v*10)/10;});}),
+          bandas:bandas.slice(0,nb).map(function(v,i){return {min_kmh:Math.round(v*3.6),
+            max_kmh:(i===nb-1?null:Math.round(bandas[i+1]*3.6))};}),
+          horas_total:Math.round(tot*10)/10, horas_sin_direccion:Math.round(sinDir*10)/10};
+};
+
+/* Extremos por Gumbel sobre los MÁXIMOS ANUALES, ajustado por momentos
+   (Nsim con σ y μ de la muestra). Con menos de 5 años el ajuste no se
+   devuelve: un Gumbel de tres puntos es un número con pinta de dato. */
+LOC.gumbel=function(maximos){
+  var n=maximos.length; if(n<5)return null;
+  var mu0=maximos.reduce(function(a,b){return a+b;},0)/n;
+  var s2=maximos.reduce(function(a,b){return a+(b-mu0)*(b-mu0);},0)/(n-1);
+  var sd=Math.sqrt(s2);
+  var beta=sd*Math.sqrt(6)/Math.PI, mu=mu0-0.5772*beta;
+  var V=function(T){return mu-beta*Math.log(-Math.log(1-1/T));};
+  return {n_anos:n, mu:Math.round(mu*1000)/1000, beta:Math.round(beta*1000)/1000,
+    media_ms:Math.round(mu0*1000)/1000, sd_ms:Math.round(sd*1000)/1000,
+    retorno:[2,5,10,25,50,100].map(function(T){
+      return {T:T, ms:Math.round(V(T)*100)/100, kmh:Math.round(V(T)*3.6*10)/10};})};
+};
+
 /* ── La misma máquina de estados, paso a paso ──
    El modo en vivo no tiene una serie que recorrer: recibe el viento del
    deslizador ahora mismo. Es la misma lógica que `LOC.dual`/`LOC.single`
@@ -616,9 +720,10 @@ LOC.stepper=function(kind,cfg){
 };
 
 /* ── Meteo ── */
-LOC.fetchYear=function(lat,lon,year){
+LOC.fetchYear=function(lat,lon,year,year1){
+  var y1=year1||year;
   var u='https://archive-api.open-meteo.com/v1/archive?latitude='+lat+'&longitude='+lon+
-    '&start_date='+year+'-01-01&end_date='+year+'-12-31&hourly='+LOC.OM+
+    '&start_date='+year+'-01-01&end_date='+y1+'-12-31&hourly='+LOC.OM+
     '&windspeed_unit=ms&timezone=UTC';
   return fetch(u).then(function(r){
     if(!r.ok)throw new Error('Open-Meteo HTTP '+r.status);return r.json();
@@ -654,6 +759,101 @@ LOC.clearsky=function(lat,lon,year){
   }
   return Promise.resolve(o);
 };
+/* ── HSU: el viento MEDIDO en la planta ──
+   Un reanálisis a 30 km de rejilla no ve el relieve local; la HSU sí, porque
+   está dentro. Se acepta el CSV que exporta el SCADA (o cualquiera con fecha,
+   viento y dirección) y el histórico del propio SCADA si se tiene a mano. El
+   fichero NO sale del navegador. */
+LOC.CSV_ALIAS={
+  t:['time','timestamp','fecha','datetime','date','hora','_time','ts'],
+  ws:['wind_speed','viento','ws','windspeed','velocidad','wind','v_viento','speed'],
+  wd:['wind_direction','wind_dir','direccion','dirección','dir','wd','winddir'],
+  gust:['gust','rafaga','ráfaga','wind_gust','racha'],
+  temp:['temp','temp_air','temperatura','t_amb','tamb','temperature'],
+  ghi:['ghi','irradiancia','irradiance','global','shortwave_radiation']
+};
+LOC.parseCSV=function(txt){
+  var lin=txt.replace(/\r/g,'').split('\n').filter(function(l){return l.trim().length;});
+  if(lin.length<3)throw new Error('el fichero tiene menos de tres líneas');
+  var sep=[',',';','\t'].map(function(c){return {c:c,n:(lin[0].split(c).length)};})
+    .sort(function(a,b){return b.n-a.n;})[0];
+  if(sep.n<2)throw new Error('no encuentro separador (coma, punto y coma o tabulador)');
+  var cab=lin[0].split(sep.c).map(function(x){return x.trim().toLowerCase().replace(/^"|"$/g,'');});
+  var idx={};
+  Object.keys(LOC.CSV_ALIAS).forEach(function(k){
+    idx[k]=cab.findIndex(function(h){
+      return LOC.CSV_ALIAS[k].some(function(a){return h===a||h.indexOf(a)>=0;});});
+  });
+  if(idx.t<0)throw new Error('no encuentro la columna de fecha/hora');
+  if(idx.ws<0)throw new Error('no encuentro la columna de viento');
+  var t=[],ws=[],wd=[],gu=[],tp=[],gh=[];
+  for(var i=1;i<lin.length;i++){
+    var c=lin[i].split(sep.c).map(function(x){return x.trim().replace(/^"|"$/g,'');});
+    var d=new Date(/\d{4}-\d{2}-\d{2}/.test(c[idx.t])?(c[idx.t].length<=16?c[idx.t]+':00Z':
+        (/[zZ]|[+-]\d\d:?\d\d$/.test(c[idx.t])?c[idx.t]:c[idx.t].replace(' ','T')+'Z')):c[idx.t]);
+    if(isNaN(d))continue;
+    var num=function(j){var v=(j>=0?parseFloat(String(c[j]).replace(',','.')):NaN);return isNaN(v)?NaN:v;};
+    t.push(d); ws.push(num(idx.ws)); wd.push(num(idx.wd)); gu.push(num(idx.gust));
+    tp.push(num(idx.temp)); gh.push(num(idx.ghi));
+  }
+  if(t.length<24)throw new Error('solo he podido leer '+t.length+' filas con fecha válida');
+  // orden y unidades: si la mediana pasa de 30, el viento viene en km/h
+  var ord=t.map(function(_,i){return i;}).sort(function(a,b){return t[a]-t[b];});
+  var m=ws.slice().filter(function(v){return isFinite(v);}).sort(function(a,b){return a-b;});
+  var kmh=(m.length&&m[Math.floor(m.length*0.98)]>45);
+  var f=kmh?1/3.6:1;
+  var o={t:[],ghi:new Float64Array(t.length),dhi:new Float64Array(t.length),dni:new Float64Array(t.length),
+         temp:new Float64Array(t.length),ws:new Float64Array(t.length),wd:new Float64Array(t.length),
+         gust:new Float64Array(t.length),source:'hsu',unidad:(kmh?'km/h':'m/s'),
+         tiene_rafaga:gu.some(function(v){return isFinite(v);})};
+  ord.forEach(function(j,k){
+    o.t[k]=t[j];
+    o.ws[k]=isFinite(ws[j])?Math.max(0,ws[j]*f):0;
+    o.wd[k]=isFinite(wd[j])?((wd[j]%360)+360)%360:NaN;
+    o.gust[k]=isFinite(gu[j])?Math.max(0,gu[j]*f):NaN;
+    o.temp[k]=isFinite(tp[j])?tp[j]:15;
+    o.ghi[k]=isFinite(gh[j])?Math.max(0,gh[j]):NaN;
+  });
+  return o;
+};
+/* Si la HSU no trae irradiancia, el sol lo pone el cielo claro: la ficha
+   compara ESTRATEGIAS, y para eso el viento es el dato que manda. Va
+   declarado en pantalla, no en silencio. */
+LOC.completaHSU=function(M,lat,lon){
+  var latR=lat*LOC.D2R, faltaG=true;
+  for(var i=0;i<M.t.length;i++)if(isFinite(M.ghi[i])&&M.ghi[i]>0){faltaG=false;break;}
+  for(i=0;i<M.t.length;i++){
+    var P=LOC.sun(M.t[i],latR,lon), cs=P.el>0?1000*Math.pow(Math.sin(P.el),1.15):0;
+    if(faltaG||!isFinite(M.ghi[i]))M.ghi[i]=cs;
+    M.dhi[i]=M.ghi[i]*0.16;
+    M.dni[i]=P.el>0?(M.ghi[i]-M.dhi[i])/Math.max(Math.sin(P.el),0.087):0;
+  }
+  M.sin_irradiancia=faltaG;
+  return M;
+};
+/* Histórico de las HSU desde el SCADA de planta (necesita GET /meteo/history) */
+LOC.fetchHSU=function(url,horas,hsu){
+  var u=url.replace(/\/+$/,'')+'/meteo/history?hours='+(horas||720)+(hsu?'&hsu='+encodeURIComponent(hsu):'');
+  return fetch(u,{cache:'no-store'}).then(function(r){
+    if(!r.ok)throw new Error('SCADA HTTP '+r.status+' — ¿tiene /meteo/history?');
+    return r.json();
+  }).then(function(j){
+    var S=j.series||j; var t=S.t||S.time||[];
+    if(!t.length)throw new Error('el SCADA no devolvió muestras');
+    var n=t.length,o={t:new Array(n),ghi:new Float64Array(n),dhi:new Float64Array(n),dni:new Float64Array(n),
+      temp:new Float64Array(n),ws:new Float64Array(n),wd:new Float64Array(n),gust:new Float64Array(n),
+      source:'hsu-scada',unidad:'m/s',tiene_rafaga:false};
+    for(var i=0;i<n;i++){
+      o.t[i]=new Date(t[i]);
+      o.ws[i]=Math.max(0,+(S.wind_speed&&S.wind_speed[i])||0);
+      o.wd[i]=(S.wind_direction&&S.wind_direction[i]!=null)?((+S.wind_direction[i]%360)+360)%360:NaN;
+      o.temp[i]=(S.temp_air&&S.temp_air[i]!=null)?+S.temp_air[i]:15;
+      o.ghi[i]=(S.ghi&&S.ghi[i]!=null)?Math.max(0,+S.ghi[i]):NaN;
+    }
+    return o;
+  });
+};
+
 /* Interpolación a paso fino: la dirección por vector unitario (entre 350° y
    10° la media aritmética da 180°, el lado contrario). */
 LOC.resample=function(M,stepMin){
@@ -772,7 +972,9 @@ LOC.scenario=function(M,sc,lat,dtH){
 LOC.run=function(cfg,onStep){
   var lat=cfg.lat,lon=cfg.lon,latR=lat*LOC.D2R;
   var cs=(cfg.source==='clearsky'||cfg.meteo_mode==='clearsky');
-  var get=cs?LOC.clearsky(lat,lon,cfg.year):LOC.fetchYear(lat,lon,cfg.year);
+  var get= cfg.meteoPre ? Promise.resolve(cfg.meteoPre)
+         : cs ? LOC.clearsky(lat,lon,cfg.year)
+         : LOC.fetchYear(lat,lon,cfg.year,cfg.year1);
   return get.then(function(M0){
     var M=LOC.resample(M0,cfg.resample_minutes);
     var n=M.t.length,dtH=(n>1?(M.t[1]-M.t[0])/3600e3:1);
@@ -897,6 +1099,7 @@ LOC.run=function(cfg,onStep){
       if(dt0===null)dt0=day; if(day!==dt0){daily.push(Math.round(dmax*3.6*10)/10);dt0=day;dmax=0;}
       dmax=Math.max(dmax,ws[i]);}
     daily.push(Math.round(dmax*3.6*10)/10);
+    var rosa=LOC.rosa(ws,wd,dtH,T1,T2);
     var sorted=Array.from(ws).sort(function(a,b){return a-b;});
     var over=function(T){var h=0;for(var j=0;j<n;j++)if(ws[j]>T)h+=dtH;return h;};
     return {engine:'navegador · modelo local (isotrópico, sin sombreado ni lazo de control)',
@@ -912,7 +1115,8 @@ LOC.run=function(cfg,onStep){
         hours_over_t1:Math.round(over(T1)*10)/10,hours_over_t2:Math.round(over(T2)*10)/10,
         threshold_1_ms:T1,threshold_2_ms:T2,
         threshold_1_kmh:cfg.threshold_1_kmh,threshold_2_kmh:cfg.threshold_2_kmh,
-        daily_max_kmh:daily,daily_t0:M.t[0].toISOString(),scenario:SC.meta},
+        daily_max_kmh:daily,daily_t0:M.t[0].toISOString(),scenario:SC.meta,
+        rosa:rosa, unidad_origen:M.unidad||null, tiene_rafaga:!!M.tiene_rafaga},
       config:{slew_deg_s:(cfg.slew_deg_s==null?LOC.SLEW:cfg.slew_deg_s),
         deadband_deg:(cfg.deadband_deg==null?LOC.DEADBAND:cfg.deadband_deg),
         partial_stow_min_abs_deg:cfg.partial_stow_min_abs_deg,full_stow_deg:full,
@@ -1047,7 +1251,7 @@ function scenario(){
 }
 
 /* ===================== ESTADO ===================== */
-var REP=null, SEL=null;
+var REP=null, SEL=null, MULTI=null, HSU=null;
 var IDS=['lat','lon','year','source','step','wh','maxang','gcr','pitch','axaz','t1','t2','pmin','hold','park',
          'wbase','wk','wA','wseed','wdir','stn','stp0','stp1','std0','std1','stseed','escena'];
 function saveCfg(){
@@ -1122,8 +1326,11 @@ async function run(){
   if(!sts.length){out.innerHTML='<p class="note">Marca al menos una estrategia.</p>';return;}
   saveCfg();
   var src=$('source').value, cielo=(src==='clearsky');
+  var esHSU=(src==='hsu'||src==='hsuscada');
+  if(src==='hsu'&&!HSU){ out.innerHTML='<div class="engmsg"><b>Falta el fichero de la HSU.</b> '+
+      'Elige un CSV con fecha, viento y —si lo tiene— dirección. No sale del navegador.</div>'; return; }
   var body={
-    lat:+$('lat').value, lon:+$('lon').value, year:+$('year').value,
+    lat:+$('lat').value, lon:+$('lon').value, year:+$('year').value, year1:+$('year1').value,
     meteo_mode:cielo?'clearsky':'canon', source:cielo?'openmeteo':src,
     name:($('plant').value?$('plant').selectedOptions[0].text:null),
     strategies:sts,
@@ -1148,9 +1355,21 @@ async function run(){
     if(usaMotor){
       var r=await fetch(ENGINE+'/windstow',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
-      REP=await r.json();
+      REP=await r.json(); MULTI=null;
     }else{
-      REP=await LOC.run(body);
+      if(src==='hsu')body.meteoPre=LOC.completaHSU(HSU,body.lat,body.lon);
+      else if(src==='hsuscada'){
+        var u=$('scadaUrl').value.trim();
+        if(!u)throw new Error('pon la URL del SCADA de planta');
+        out.innerHTML='<p class="note">Pidiendo el histórico de las HSU al SCADA…</p>';
+        body.meteoPre=LOC.completaHSU(await LOC.fetchHSU(u,+$('scadaH').value),body.lat,body.lon);
+      }
+      var multi=(+$('year1').value>+$('year').value)&&!esHSU;
+      if(multi){
+        MULTI=await LOC.runMulti(body,function(k,n,y){
+          out.innerHTML='<p class="note">Año '+y+' ('+k+' de '+n+')…</p>';});
+        REP=MULTI.anos[0].rep;
+      }else{ MULTI=null; REP=await LOC.run(body); }
     }
     render();
   }catch(e){
@@ -1205,7 +1424,7 @@ function render(){
       'resultado — para ver la máquina moverse, baja los umbrales o mete rachas en el '+
       '<b>laboratorio</b>.</div>';
   }
-  drawWind(); drawTable(); drawBars();
+  drawWind(); drawRecurso(); drawTable(); drawBars();
   $('cmpCard').style.display='';
   var k=ord(); SEL=(SEL&&k.indexOf(SEL)>=0)?SEL:b||k[0];
   $('strip').innerHTML=k.map(function(s){
@@ -1215,6 +1434,154 @@ function render(){
   drawDetail();
   setModo('ep');            // hay episodio: la escena pasa a recorrerlo
 }
+/* ═══════════ RECURSO DE VIENTO DEL EMPLAZAMIENTO ═══════════ */
+var ROSA_COL=['#2a3a50','#5aa9ff','#fbbd23','#f87272'];   // flojo · medio · >T1 · >T2
+function drawRecurso(){
+  var w=REP.wind, rosa=w.rosa;
+  if(!rosa){$('recCard').style.display='none';return;}
+  $('recCard').style.display='';
+  var anos=MULTI?MULTI.anos:null;
+  var G=anos?LOC.gumbel(MULTI.maximos):null;
+  var per=REP.meteo.period||[];
+  var pTxt=per.length===2?(fechaCorta(new Date(per[0]))+' '+new Date(per[0]).getUTCFullYear()+' – '+
+    fechaCorta(new Date(per[1]))+' '+new Date(per[1]).getUTCFullYear()):'';
+  $('recHint').textContent=(anos?anos.length+' años · '+anos[0].year+'–'+anos[anos.length-1].year:pTxt)+
+    ' · '+esc(REP.meteo.source||'');
+  var horasT1=w.hours_over_t1, horasT2=w.hours_over_t2;
+  $('recRo').innerHTML=
+    ro('Viento medio',fmt(w.mean_ms*3.6,1),'km/h')+
+    ro('p95',fmt(w.p95_ms*3.6,0),'km/h')+
+    ro('Máximo del periodo',fmt(w.max_ms*3.6,0),'km/h')+
+    ro('Horas &gt; '+fmt(w.threshold_1_kmh,0),fmt(horasT1,0),'h/año')+
+    ro('Horas &gt; '+fmt(w.threshold_2_kmh,0),fmt(horasT2,0),'h/año')+
+    (G?ro('Viento a 50 años',fmt(G.retorno[4].kmh,0),'km/h · Gumbel'):'');
+  drawRosa(rosa,w);
+  drawAnos(anos);
+  drawExtremos(G);
+}
+/* La rosa reparte las horas por sector y por BANDA de velocidad, y las bandas
+   son los umbrales de la máquina: así no dice solo de dónde sopla, dice de
+   dónde vienen los abanderamientos. */
+function drawRosa(rosa,w){
+  var cv=$('rosa'),x=cv.getContext('2d'),W=cv.width,H=cv.height,cxp=W/2,cyp=H/2+6,R=Math.min(W,H)/2-38;
+  x.clearRect(0,0,W,H);
+  var S=rosa.sectores.length, tot=rosa.sectores.map(function(a){
+    return a.reduce(function(p,q){return p+q;},0);});
+  var max=Math.max.apply(null,tot)||1;
+  /* Cada sector se centra en SU azimut: el sector i mira a i·(360/S) grados
+     desde el norte, y el canvas mide los ángulos desde el este, de ahí el
+     −90°. Con la cuenta anterior los pétalos salían girados medio sector. */
+  var paso=2*Math.PI/S, ancho=paso*0.86, MEDIO=-Math.PI/2;
+  // anillos de referencia
+  x.strokeStyle='#1e2a3a';x.fillStyle='#5c7189';x.font='10px ui-monospace,monospace';x.textAlign='center';
+  [0.25,0.5,0.75,1].forEach(function(f){
+    x.beginPath();x.arc(cxp,cyp,R*f,0,7);x.stroke();
+    x.fillText(Math.round(max*f)+' h',cxp,cyp-R*f-3);
+  });
+  ['N','E','S','O'].forEach(function(t,i){
+    var a=i*Math.PI/2;
+    x.fillStyle='#9bb0c6';x.font='11px system-ui,sans-serif';
+    x.fillText(t,cxp+Math.sin(a)*(R+18),cyp-Math.cos(a)*(R+18)+4);
+  });
+  rosa.sectores.forEach(function(bandas,i){
+    var c=i*paso+MEDIO, a0=c-ancho/2, a1=c+ancho/2, acc=0;
+    bandas.forEach(function(h,b){
+      if(h<=0)return;
+      var r0=R*acc/max, r1=R*(acc+h)/max; acc+=h;
+      x.beginPath();
+      x.arc(cxp,cyp,r1,a0,a1,false);
+      x.arc(cxp,cyp,r0,a1,a0,true);
+      x.closePath(); x.fillStyle=ROSA_COL[b]||'#2a3a50'; x.fill();
+    });
+  });
+  var leg=rosa.bandas.map(function(b,i){
+    return {c:ROSA_COL[i],t:(b.max_kmh==null?'> '+b.min_kmh:b.min_kmh+'–'+b.max_kmh)+' km/h'};});
+  x.textAlign='left';x.font='10px ui-monospace,monospace';
+  leg.forEach(function(l,i){
+    x.fillStyle=l.c;x.fillRect(8,H-14-((leg.length-1-i)*14),10,10);
+    x.fillStyle='#9bb0c6';x.fillText(l.t,23,H-5-((leg.length-1-i)*14));
+  });
+  var peor=0,ip=0;
+  rosa.sectores.forEach(function(b,i){var v=(b[2]||0)+(b[3]||0);if(v>peor){peor=v;ip=i;}});
+  var rumbo=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'][ip];
+  $('rosaNote').innerHTML='Horas por sector y banda. El viento que dispara la defensa '+
+    '(&gt;'+fmt(w.threshold_1_kmh,0)+' km/h) viene sobre todo del <b>'+rumbo+'</b>: '+
+    fmt(peor,0)+' h. Eso es lo que decide si A (cara al viento) y B (cara al sol) coinciden o se '+
+    'pelean, porque el sol recorre el este-oeste y el viento no tiene por qué.'+
+    (rosa.horas_sin_direccion>1?' <b>'+fmt(rosa.horas_sin_direccion,0)+' h sin dirección</b> en el dato.':'');
+}
+/* Dispersión interanual: la pregunta que un solo año no puede contestar. */
+function drawAnos(anos){
+  if(!anos){$('anosTab').innerHTML='<tbody><tr><td class="note" style="border:0">'+
+    'Con un solo año no hay dispersión que enseñar: pon un rango en <b>Año · desde / hasta</b> '+
+    '(p. ej. 2014–2023) y la tabla dirá cuánto cambia el resultado de un año a otro.</td></tr></tbody>';
+    return;}
+  var S=SEL||Object.keys(anos[0].rep.cases)[0];
+  var h='<thead><tr><th>Año</th><th>Viento medio<br>km/h</th><th>Máx<br>km/h</th>'+
+    '<th>h &gt; T1</th><th>Abanderamientos<br>'+esc(S)+'</th><th>Horas<br>'+esc(S)+'</th>'+
+    '<th>Δ POA '+esc(S)+'<br>%</th></tr></thead><tbody>';
+  var col=function(f){return anos.map(f);};
+  var ev=col(function(a){return a.rep.cases[S]?a.rep.cases[S].n_events:0;});
+  var hh=col(function(a){return a.rep.cases[S]?a.rep.cases[S].hours_engaged:0;});
+  var dp=col(function(a){return a.rep.cases[S]?a.rep.cases[S].poa_delta_pct:0;});
+  anos.forEach(function(a,i){
+    h+='<tr><td>'+a.year+'</td><td>'+fmt(a.rep.wind.mean_ms*3.6,1)+'</td><td>'+fmt(a.rep.wind.max_ms*3.6,0)+
+      '</td><td>'+fmt(a.rep.wind.hours_over_t1,0)+'</td><td>'+ev[i]+'</td><td>'+fmt(hh[i],0)+
+      '</td><td>'+fmt(dp[i],3)+'</td></tr>';
+  });
+  var st=function(a){var n=a.length,m=a.reduce(function(p,q){return p+q;},0)/n;
+    var sd=Math.sqrt(a.reduce(function(p,q){return p+(q-m)*(q-m);},0)/Math.max(1,n-1));
+    var o=a.slice().sort(function(p,q){return p-q;});
+    return {m:m,sd:sd,min:o[0],max:o[n-1]};};
+  var e=st(ev),g=st(hh),d=st(dp);
+  h+='<tr class="base"><td><b>media ± σ</b></td><td>—</td><td>—</td><td>—</td>'+
+    '<td>'+fmt(e.m,0)+' ± '+fmt(e.sd,0)+'</td><td>'+fmt(g.m,0)+' ± '+fmt(g.sd,0)+'</td>'+
+    '<td>'+fmt(d.m,3)+' ± '+fmt(d.sd,3)+'</td></tr>'+
+    '<tr class="base"><td><b>peor / mejor año</b></td><td>—</td><td>—</td><td>—</td>'+
+    '<td>'+fmt(e.max,0)+' / '+fmt(e.min,0)+'</td><td>'+fmt(g.max,0)+' / '+fmt(g.min,0)+'</td>'+
+    '<td>'+fmt(d.min,3)+' / '+fmt(d.max,3)+'</td></tr>';
+  $('anosTab').innerHTML=h+'</tbody>';
+}
+/* Extremos: Gumbel sobre los máximos anuales. Con menos de cinco años no se
+   dibuja — un ajuste de tres puntos es un número con pinta de dato. */
+function drawExtremos(G){
+  var cv=$('extCv'),x=cv.getContext('2d'),W=cv.width,H=cv.height;
+  x.clearRect(0,0,W,H);
+  if(!G){
+    cv.style.display='none';
+    $('extNote').innerHTML='<b>Sin extremos</b>: el ajuste de Gumbel necesita al menos cinco máximos '+
+      'anuales. Con 10–20 años sale la velocidad esperable cada 2, 10, 50 o 100 años.';
+    return;
+  }
+  cv.style.display='';
+  var L=54,R=14,T=18,B=30, pts=G.retorno;
+  var xs=pts.map(function(p){return Math.log(p.T);}), ys=pts.map(function(p){return p.kmh;});
+  var x0=Math.min.apply(null,xs),x1=Math.max.apply(null,xs);
+  var y0=Math.min.apply(null,ys)*0.9,y1=Math.max.apply(null,ys)*1.06;
+  var gx=function(v){return L+(v-x0)/(x1-x0)*(W-L-R);},gy=function(v){return H-B-(v-y0)/(y1-y0)*(H-B-T);};
+  x.strokeStyle='#1e2a3a';x.fillStyle='#5c7189';x.font='10px ui-monospace,monospace';
+  for(var i=0;i<=4;i++){var v=y0+(y1-y0)*i/4,yy=gy(v);
+    x.beginPath();x.moveTo(L,yy);x.lineTo(W-R,yy);x.stroke();
+    x.textAlign='right';x.fillText(Math.round(v),L-6,yy+3);}
+  x.beginPath();
+  pts.forEach(function(p,i){var xx=gx(Math.log(p.T)),yy=gy(p.kmh);if(i)x.lineTo(xx,yy);else x.moveTo(xx,yy);});
+  x.strokeStyle='#5aa9ff';x.lineWidth=2;x.stroke();
+  x.textAlign='center';
+  pts.forEach(function(p){
+    var xx=gx(Math.log(p.T)),yy=gy(p.kmh);
+    x.beginPath();x.arc(xx,yy,3.5,0,7);x.fillStyle='#5aa9ff';x.fill();
+    x.fillStyle='#9bb0c6';x.fillText(p.kmh.toFixed(0),xx,yy-9);
+    x.fillStyle='#5c7189';x.fillText(p.T+'a',xx,H-10);
+  });
+  x.textAlign='left';x.fillStyle='#9bb0c6';x.fillText('velocidad esperable (km/h) por periodo de retorno',L,12);
+  $('extNote').innerHTML='Gumbel por momentos sobre <b>'+G.n_anos+' máximos anuales</b> '+
+    '(media '+fmt(G.media_ms*3.6,0)+' km/h, σ '+fmt(G.sd_ms*3.6,0)+'). '+
+    '<b>No es el viento de proyecto.</b> Sale de reanálisis a 10 m y media horaria, no de la norma '+
+    'ni de una torre en el sitio: la velocidad básica de Eurocódigo/ASCE lleva su categoría de '+
+    'terreno, su factor de ráfaga y su periodo de referencia, y esto no los tiene. Sirve para '+
+    'comparar emplazamientos y para saber si los umbrales de 40/60 km/h se quedan cortos aquí.';
+}
+
 function ro(k,v,s){return '<div class="ro"><div class="k">'+k+'</div><div class="v">'+v+(s?' <small>'+s+'</small>':'')+'</div></div>';}
 
 /* ---- viento simulado: máximo diario contra los dos umbrales ----
@@ -1915,6 +2282,35 @@ $('bt').addEventListener('change',saveCfg);
 [].forEach.call(document.querySelectorAll('.st'),function(e){e.addEventListener('change',saveCfg);});
 $('run').onclick=run; $('runM').onclick=run;
 $('careoBtn').onclick=careo;
+$('source').addEventListener('change',function(){
+  $('hsuFile').style.display=(this.value==='hsu')?'':'none';
+  $('hsuUrl').style.display=(this.value==='hsuscada')?'':'none';
+  $('year1').disabled=(this.value==='hsu'||this.value==='hsuscada');
+});
+$('csv').onchange=function(){
+  var f=this.files&&this.files[0]; if(!f)return;
+  var fr=new FileReader();
+  fr.onload=function(){
+    try{
+      HSU=LOC.parseCSV(fr.result);
+      var d0=HSU.t[0],d1=HSU.t[HSU.t.length-1];
+      $('out').innerHTML='<div class="warn"><b>HSU cargada.</b> '+HSU.t.length+' muestras de '+
+        fechaCorta(d0)+' '+d0.getUTCFullYear()+' a '+fechaCorta(d1)+' '+d1.getUTCFullYear()+
+        ' · viento leído en <b>'+HSU.unidad+'</b>'+
+        (HSU.tiene_rafaga?' · trae ráfaga':' · sin ráfaga')+'. Pulsa <b>Simular</b>.</div>';
+    }catch(e){
+      HSU=null;
+      $('out').innerHTML='<div class="engmsg err"><b>No he podido leer ese CSV.</b><br>'+esc(e.message)+
+        '<br><span style="color:var(--muted)">Hace falta una columna de fecha/hora y otra de viento; '+
+        'la dirección y la ráfaga son opcionales. Separador coma, punto y coma o tabulador.</span></div>';
+    }
+  };
+  fr.readAsText(f);
+};
+$('year1').addEventListener('input',function(){
+  var n=+this.value-+$('year').value+1;
+  $('nAnos').textContent=(n>1?n+' años':'');
+});
 document.querySelector('header .sub').onclick=function(){this.classList.toggle('on');};
 $('play').onclick=playToggle;
 $('tpos').oninput=function(){if(PLAY)playToggle();update3D(+this.value);};

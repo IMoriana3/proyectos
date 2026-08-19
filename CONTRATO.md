@@ -194,6 +194,15 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
   `CACHE` sube a **v4**. `test_pwa.js` 21/21 (y ya lee el nombre de la caché de `sw.js`, así que no
   hay que tocarlo al publicar).
 
+- **[Proyectos → Backtracking] `sim-viento.html` necesitaba un endpoint vuestro y va en PR.** Para
+  analizar un emplazamiento con el viento MEDIDO hace falta la serie de las HSU, y `/meteo` solo da
+  la última lectura. Añadido **`GET /meteo/history`** al repo `scada` (rama
+  `claude/wind-simulator-tracker-xhnbm3`): viento, dirección, temperatura y GHI sobre un único eje
+  de tiempos, solo lectura. Dos decisiones del agregado, documentadas en el endpoint y en su README:
+  los escalares van por media de la ventana pero la **dirección se toma como último valor**
+  (promediar rumbos exige media circular), y **sin filtrar `hsu`/`ncu` se mezclan todas las HSU**.
+  Revisadlo vosotros, que el SCADA es vuestro.
+
 ## Registro de cambios
 
 | fecha | sesión | cambio |
@@ -208,3 +217,4 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 | 2026-08-19 | Proyectos | `sim-viento.html` v1.2: campo 3D con los casos en paralelo. Entran en el repo `lib/three.min.js`, `lib/OrbitControls.js` y **`seguidor.js`** (copia idéntica de la fuente única que ya comparten Gemelo Digital y Cobertura 3D: si la tocáis allí, hay que sincronizarla aquí). |
 | 2026-08-19 | Proyectos | SW v4: `docs/*.md` y `.json` a red primero (la Documentación se quedaba una versión atrás) y botón de armazón/actualizar en la barra. |
 | 2026-08-19 | Proyectos | `sim-viento.html` v1.5: adopta la estética de `overcast.html` / `backtracking.html` (tokens, etiquetas mono, `.viz3d`, cúpula de cielo con degradado) y la Escena 3D pasa al primer puesto de los resultados. |
+| 2026-08-19 | Proyectos | `sim-viento.html` v1.8: análisis de emplazamiento (rosa de vientos, multi-año con dispersión, extremos por Gumbel) y viento medido de las HSU (CSV o `GET /meteo/history` del SCADA). |
