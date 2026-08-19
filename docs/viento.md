@@ -119,33 +119,49 @@ estrategias entre sí, nunca en absoluto — la POA sale por encima de cualquier
 
 ## La escena 3D
 
-Va **la primera** de la columna de resultados, donde la ponen `overcast.html` y `backtracking.html`
-—de los que esta ficha toma también los tokens de color, las etiquetas en monoespaciada y el
-tratamiento de la escena: si allí se afina el lenguaje visual, aquí se copia, no se inventa otro.
+Va **la primera** de la columna de resultados y **se ve desde que abres la ficha**, sin simular
+nada: antes solo aparecía al terminar un año entero de cálculo, y hasta entonces no había nada que
+mirar. Toma de `overcast.html` y `backtracking.html` los tokens de color, las etiquetas en
+monoespaciada y el tratamiento de la escena: si allí se afina el lenguaje visual, aquí se copia, no
+se inventa otro.
 
-Ver la POA es ver un número; ver **por qué** es ver el seguidor tumbado mientras el de al lado sigue
-al sol. La ficha pinta los casos en paralelo sobre una **ventana común** del año — un solo viento, un
-solo sol, un θ por estrategia — y se puede recorrer paso a paso o darle a reproducir.
+### Dos modos
 
-- Un bloque por caso (la base sin abanderar y cada estrategia), con su color en la marca del suelo y
-  en la ficha de arriba.
-- La **barra** de cada bloque es su POA en ese instante y el fantasma gris de al lado la del
-  seguidor sin abanderar: la diferencia entre las dos es lo que cuesta la defensa.
-- La pala se **enciende** según el modo (ámbar parcial, rojo total, gris el hold de histéresis) sin
-  perder su color, para que la luz que recibe —que es de lo que va la POA— se siga leyendo.
-- La flecha azul es el viento: nace de donde viene y apunta hacia donde va.
+**En vivo** (el de arranque). El viento sale de los deslizadores —velocidad, dirección, hora y día—
+y los seguidores reaccionan **ahora**, con su máquina de estados y su velocidad de giro real. Es
+para entender la lógica: subes a 45 km/h y ves entrar el parcial, a 65 el total, bajas y ves la
+histéresis retener la posición 30 min. La POA de este modo es de **cielo claro** (no hay meteo
+detrás): sirve para comparar los casos entre sí en el instante que elijas, no para sacar un número
+anual.
 
-Sin ventana, la comparación sería un montaje: cada estrategia enseñaría su peor momento y no el
-mismo. Por eso el motor devuelve un único tramo para todas, centrado por defecto en el episodio más
-caro del año.
+**Episodio**. Tras simular, recorre la ventana común del año — un solo viento, un solo sol, un θ por
+estrategia — centrada en el episodio más caro. Es la que permite comparar sin trampa: sin ventana
+común, cada estrategia enseñaría su peor momento y no el mismo.
 
-El seguidor **no se modela aquí**: es `seguidor.js`, la fuente única que ya comparten el Gemelo
-Digital y Cobertura 3D, copiada idéntica (mismo md5) como manda su cabecera — mejorarla allí mejora
-también este campo. El campo es **ilustrativo** (dos filas por caso, geometría real de 28 módulos por
-ala); los ángulos y la POA son los que devuelve el motor, no los que dibuje el visor. Si el navegador
-no puede con WebGL, la tarjeta simplemente no aparece y el resto de la ficha sigue funcionando.
+### Qué se dibuja
 
-## Quién calcula
+- **Comparativa** — un bloque por caso con el modelo real del seguidor (`seguidor.js`), su barra de
+  POA y el fantasma gris de la línea base. Para mirar de cerca.
+- **Planta real** — el layout de verdad (`<planta>_layout.json` del repo `cobertura-zigbee`, servido
+  por su GitHub Pages): El Burgo, Ayora, Páramo, Fayón, Bagnarelli, Túnez, San José. Se pinta el
+  campo entero con la geometría simplificada a mesa y poste —con 754 o 2.289 seguidores no caben
+  mallas sueltas: van en `InstancedMesh`— y se mueve con la estrategia seleccionada. Al cargarla fija
+  también lat/lon de la planta. Sin red no hay layout, y la ficha lo dice y cae a la comparativa.
+
+## El seguidor se mueve a 0,17 °/s
+
+El eje no teletransporta. La ficha aplica el lazo de control canónico —banda muerta de 1° y
+**0,17 °/s** de velocidad de giro, los mismos de `tracker.apply_control_loop`— tanto al seguimiento
+como a la orden de abanderar. Consecuencia: ir de 0 a ±55° son **5,4 minutos**, y una maniobra
+completa desde el ángulo de seguimiento puede pasar de 10. Eso cambia cuánto tiempo pasa el seguidor
+fuera de seguimiento y cuánta POA se pierde **durante** la maniobra, no solo al final.
+
+Por eso el paso por defecto de la simulación es **minutal**: con 15 min, la maniobra cabía entera
+dentro de un paso y salía como un escalón instantáneo — medido, la misma rampa daba 0 min a paso
+cuarto-horario y 10 min a paso minutal. Un año a 1 min son 525.541 pasos y las cuatro estrategias
+más la base se resuelven en unos **4 segundos** en el navegador.
+
+## Quién calcula## Quién calcula
 
 **El navegador, por defecto.** Como `bateria.html` del gemelo o `backtracking.html` de cobertura:
 se abre y funciona, sin levantar nada. Baja el año de Open-Meteo directamente, resuelve la posición
