@@ -127,7 +127,7 @@ se inventa otro.
 
 ### Dos modos
 
-**En vivo** (el de arranque). El viento sale de los deslizadores —velocidad, dirección, hora y día—
+**En vivo** (el de arranque). El viento sale de los deslizadores —velocidad, dirección, hora y fecha—
 y los seguidores reaccionan **ahora**, con su máquina de estados y su velocidad de giro real. Es
 para entender la lógica: subes a 45 km/h y ves entrar el parcial, a 65 el total, bajas y ves la
 histéresis retener la posición 30 min. La POA de este modo es de **cielo claro** (no hay meteo
@@ -137,6 +137,11 @@ anual.
 **Episodio**. Tras simular, recorre la ventana común del año — un solo viento, un solo sol, un θ por
 estrategia — centrada en el episodio más caro. Es la que permite comparar sin trampa: sin ventana
 común, cada estrategia enseñaría su peor momento y no el mismo.
+
+El **cielo responde al sol**, como en `backtracking.html`: degradado por altura con el cénit oscuro y
+el horizonte encendido, que vira a naranja al alba y al ocaso y se apaga en el crepúsculo; la luz
+pierde fuerza y se va al rojo con el sol bajo. El disco solar va como sprite con halo y se dimensiona
+con la escena — una esfera de radio fijo a 700 m es un píxel, y sin él la escena no dice ni la hora.
 
 ### Qué se dibuja
 
