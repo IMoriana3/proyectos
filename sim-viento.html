@@ -33,7 +33,41 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
 .engine.off .led{background:var(--dead)}
 .wrap{max-width:min(1560px,94vw);margin:0 auto;padding:20px 18px 60px}
 .grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+/* Un hijo de grid nace con `min-width:auto`, o sea que NO se deja encoger por
+   debajo de su contenido: la tabla comparativa (que va con `white-space:nowrap`)
+   estiraba su columna, la columna estiraba la rejilla y la página entera se
+   salía por la derecha en el móvil, con su propio scroll horizontal. El
+   `min-width:0` es lo que deja que el `overflow-x:auto` de `.scroll` haga su
+   trabajo en vez de empujar. */
+.grid>*{min-width:0}
+.card{min-width:0}
+.scroll{max-width:100%}
 @media(max-width:900px){.grid{grid-template-columns:1fr}}
+/* MÓVIL. Dos cosas hacían la ficha incómoda en un teléfono: la cabecera se
+   partía en cinco líneas y comía media pantalla antes del primer campo, y el
+   botón de simular quedaba enterrado tras tres tarjetas de parámetros — había
+   que hacer scroll a ciegas para volver a él. */
+@media(max-width:640px){
+  .bar{padding:8px 12px;gap:8px}
+  .bar h1{font-size:15px}
+  .bar .sub{display:none}
+  .bar .back{padding:6px 9px;font-size:12px}
+  .bar .brand{font-size:12px;order:3}
+  .engine{order:2;margin-left:auto;font-size:11px;padding:3px 8px}
+  .wrap{max-width:100%;padding:14px 12px 92px}
+  .card{padding:13px}
+  .card+.card{margin-top:13px}
+  .three{grid-template-columns:1fr 1fr}
+  .playrow input[type=range]{min-width:110px}
+  .playrow .btn{max-width:112px;padding:9px 10px}
+  .playrow .tl{min-width:0;font-size:11.5px}
+  .runbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;gap:9px;
+    padding:9px 12px calc(9px + env(safe-area-inset-bottom));
+    background:rgba(15,21,29,.94);border-top:1px solid var(--line);backdrop-filter:blur(6px)}
+  .runbar .btn{margin:0}
+  #run.desk{display:none}
+}
+@media(min-width:641px){.runbar{display:none}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
 .card+.card{margin-top:16px}
 .card h2{font:700 13px/1 var(--display);letter-spacing:.02em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
@@ -74,7 +108,7 @@ tr.win td{background:rgba(54,211,153,.07)}
 .chip.on{color:var(--text);border-color:var(--accent);background:rgba(54,211,153,.10)}
 .chk{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);margin-bottom:7px}
 .chk input{width:auto;accent-color:var(--accent)}
-.scroll{overflow-x:auto}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .err{border-color:var(--dead);color:var(--text)}
 .lab{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:9px}
 .lab .field{margin-bottom:0}
@@ -106,6 +140,9 @@ tr.win td{background:rgba(54,211,153,.07)}
 .playrow .btn{width:auto;max-width:130px}
 .playrow select{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:inherit;font-size:12.5px}
 .playrow .tl{font-family:var(--mono);font-size:12.5px;color:var(--accent);min-width:120px;text-align:right}
+/* Al FINAL a propósito: `#view3d` fija su altura arriba y, con la misma
+   especificidad, manda la última regla que aparezca. */
+@media(max-width:640px){#view3d{height:330px}}
 </style>
 </head>
 <body>
@@ -150,7 +187,7 @@ tr.win td{background:rgba(54,211,153,.07)}
           </select></div>
         <div class="field"><label>Altura del viento (m)</label><input id="wh" type="number" step="0.5" value="4"></div>
       </div>
-      <p class="tag">Meteo del motor · viento y dirección horarios</p>
+      <p class="tag" id="meteoTag">Open-Meteo · viento y dirección horarios</p>
     </div>
 
     <div class="card">
@@ -188,7 +225,7 @@ tr.win td{background:rgba(54,211,153,.07)}
           <option value="local">En el navegador (no hace falta nada)</option>
           <option value="engine">Motor SolarGPT (canónico) — requiere el motor</option>
         </select></div>
-      <button class="btn" id="run">Simular el año</button>
+      <button class="btn desk" id="run">Simular el año</button>
       <button class="btn ghost" id="careoBtn" style="margin-top:8px">Carear con el motor canónico</button>
       <p class="note" id="runNote">La línea base es el mismo seguidor <b>sin abanderar</b>: todo lo que
         se ve luego es la diferencia contra ella.</p>
@@ -278,6 +315,10 @@ tr.win td{background:rgba(54,211,153,.07)}
 
 </div>
 </div>
+
+<!-- La acción principal, fija abajo en móvil: enterrada tras tres tarjetas de
+     parámetros obligaba a hacer scroll a ciegas para volver a ella. -->
+<div class="runbar"><button class="btn" id="runM">Simular el año</button></div>
 
 <!-- Librerías LOCALES (sin CDN, offline) y el MODELO REAL del seguidor: `seguidor.js` es
      la fuente única que ya comparten el Gemelo Digital y Cobertura 3D, copiada aquí idéntica
@@ -978,7 +1019,7 @@ async function run(){
     timeline:{hours:16, max_steps:240},
     top_events:12, include_trace:true
   };
-  $('run').disabled=true; $('run').textContent='Simulando…';
+  ['run','runM'].forEach(function(b){$(b).disabled=true;$(b).textContent='Simulando…';});
   out.innerHTML='<p class="note">'+(usaMotor
     ? 'El motor está bajando el año y simulando '+sts.length+' estrategias más la línea base.'
     : 'Bajando el año de Open-Meteo y simulando '+sts.length+' estrategias más la línea base '+
@@ -995,7 +1036,7 @@ async function run(){
   }catch(e){
     out.innerHTML='<div class="engmsg err"><b>No se pudo simular.</b><br>'+esc(e.message)+'</div>';
     $('cmpCard').style.display='none';$('detCard').style.display='none';
-  }finally{ $('run').disabled=false; $('run').textContent='Simular el año'; }
+  }finally{ ['run','runM'].forEach(function(b){$(b).disabled=false;$(b).textContent='Simular el año';}); }
 }
 
 function ord(){ return Object.keys(REP.cases).sort(); }
@@ -1031,6 +1072,18 @@ function render(){
         fmt(Math.max.apply(null,ap.map(function(e){return e.peak_kmh;})),0)+' km/h)':'')+
       (sk.length?' · <b>'+sk.length+'</b> descartada(s): '+esc(sk.map(function(e){return e.why;}).join('; ')):'')+
       (sc.not_modeled?'<br><span style="color:var(--muted)">'+esc(sc.not_modeled)+'</span>':'')+'</div>';
+  }
+  /* Un año sin una sola maniobra deja TODA la ficha plana (deltas a cero, 3D
+     inmóvil) y se lee como que está rota. Es un resultado válido y hay que
+     decirlo con todas las letras, con la salida a mano. */
+  var totalEv=0; ord().forEach(function(k){totalEv+=REP.cases[k].n_events;});
+  if(totalEv===0){
+    $('out').innerHTML+='<div class="warn"><b>Ni un solo abanderamiento en todo el año.</b> '+
+      'Con esta meteo ('+esc(m.source||'')+' '+esc(String(m.year||''))+') y estos umbrales '+
+      '('+fmt(w.threshold_1_kmh,0)+' / '+fmt(w.threshold_2_kmh,0)+' km/h) el viento no llega a '+
+      'disparar: el máximo del año son '+fmt(w.max_ms*3.6,0)+' km/h. No es un fallo, es el '+
+      'resultado — para ver la máquina moverse, baja los umbrales o mete rachas en el '+
+      '<b>laboratorio</b>.</div>';
   }
   drawWind(); drawTable(); drawBars();
   $('cmpCard').style.display='';
@@ -1496,7 +1549,7 @@ function playToggle(){
 IDS.forEach(function(i){$(i).addEventListener('change',saveCfg);});
 $('bt').addEventListener('change',saveCfg);
 [].forEach.call(document.querySelectorAll('.st'),function(e){e.addEventListener('change',saveCfg);});
-$('run').onclick=run;
+$('run').onclick=run; $('runM').onclick=run;
 $('careoBtn').onclick=careo;
 $('play').onclick=playToggle;
 $('tpos').oninput=function(){if(PLAY)playToggle();update3D(+this.value);};
@@ -1504,8 +1557,16 @@ $('gadd').onclick=function(){addGust($('gpreset').value);};
 $('gpreset').onchange=function(){if(this.value){addGust(this.value);this.value='';}};
 ['wgust','wcyc'].forEach(function(i){$(i).addEventListener('change',saveCfg);});
 $('wbase').addEventListener('change',function(){saveCfg();});
+function meteoTag(){
+  var f=$('source').value;
+  $('meteoTag').textContent=(f==='clearsky')
+    ? 'Cielo claro calculado aquí · sin nubes: la POA absoluta sale alta'
+    : ({openmeteo:'Open-Meteo (ERA5)',pvgis:'PVGIS horario',nasa:'NASA POWER'}[f]||f)+
+      ' · viento y dirección horarios';
+}
+$('source').addEventListener('change',meteoTag);
 window.addEventListener('resize',function(){if(REP){drawWind();drawBars();drawDetail();}});
-fillRosa(); fillPresets(); loadCfg(); loadPlants(); renderGusts(); detectEngine().then(loadPresets);
+fillRosa(); fillPresets(); loadCfg(); meteoTag(); loadPlants(); renderGusts(); detectEngine().then(loadPresets);
 </script>
 </body>
 </html>
