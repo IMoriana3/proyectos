@@ -806,12 +806,13 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/scada/trafico.html",
     repo: "https://github.com/imoriana3/scada",
     updated: "2026-08-19",
-    version: "1.0",
+    version: "1.1",
     docId: "medidor-trafico",
     download: "",
     uso: [
       "Elige el ritmo de polling y la flota entera se recalcula: la factura es lineal con él (a 10 s se triplica, a 5 min se divide por diez).",
-      "Con 30 s ninguna planta pasa de 6 GB/mes y las seis suman ~11. En las pequeñas manda la cabecera HTTP, no el dato.",
+      "Con 30 s la planta mayor (San José, 2289 TCU) sube 8 GB/mes y las diez juntas 23. En las pequeñas manda la cabecera HTTP, no el dato.",
+      "Leer y subir son dos ritmos: se puede sondear a 30 s y mandar a la nube solo el minutal (la mitad) o el 5-minutal (una décima parte), con el detalle guardado en planta. OJO: agregar media/mín/máx TRIPLICA los campos y sale más caro que mandar el último valor.",
       "Pincha una planta para el reparto por NCU; la calculadora estima una planta que aún no existe (útil antes de contratar el enlace).",
       "La malla Zigbee sale en ocupación de AIRE por malla, no en megas: son 250 kbps compartidos y es lo que satura. Es un modelo, no una medida.",
       "Si el stack está levantado, el panel de abajo consulta GET /traffic y pone lo medido al lado de lo estimado."
@@ -821,6 +822,7 @@ const PROJECTS = [
       { done:false, text:"Contrastar contra el consumo real del router de planta cuando el colector lleve un mes en régimen." }
     ],
     historial: [
+      { date:"2026-08-19", ver:"1.1", note:"Planes de subida: la cadencia de nube se separa del polling (minutal, 5 min…), con selección de campos y modo último valor / media-mín-máx. Y el inventario pasa a salir del plano del SCADA: el de la toolbox estaba corto — San José tenía 1686 TCU declarados en vez de 2289 y faltaban Páramo, Benante, Panbianco y El Polvorín." },
       { date:"2026-08-19", ver:"1.0", note:"Medidor en el colector (serie traffic + GET /traffic), estimador de flota y este visor. El banco exige que la estimación cuadre EXACTAMENTE con lo que contabiliza el driver en un ciclo real." }
     ]
   },
