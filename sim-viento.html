@@ -91,6 +91,21 @@ tr.win td{background:rgba(54,211,153,.07)}
 .labrow .btn{width:auto}
 .warn{background:rgba(246,166,35,.08);border:1px solid var(--build);border-radius:9px;padding:9px 12px;font-size:12px;color:var(--text);line-height:1.5;margin-top:10px}
 .warn b{color:var(--build)}
+#view3d{position:relative;height:470px;border:1px solid var(--line-soft);border-radius:10px;overflow:hidden;background:#06080c}
+#view3d canvas{display:block;width:100%;height:100%;border:0;border-radius:0;margin:0}
+#view3d .hint3d{position:absolute;left:10px;bottom:8px;font:11px var(--mono);color:var(--muted-2);background:rgba(10,15,22,.72);padding:3px 8px;border-radius:6px;pointer-events:none}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:9px;margin-bottom:11px}
+.tile{background:var(--panel-2);border:1px solid var(--line-soft);border-left-width:3px;border-radius:9px;padding:8px 10px}
+.tile .n{font:700 12px/1 var(--display);display:flex;align-items:center;gap:6px}
+.tile .m{font:10px/1.5 var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.tile .p{font:700 16px/1.2 var(--display);margin-top:3px}
+.tile .p small{font-size:11px;color:var(--muted);font-weight:400}
+.tile .d{font-size:11px;margin-top:2px}
+.playrow{display:flex;align-items:center;gap:10px;margin-top:11px;flex-wrap:wrap}
+.playrow input[type=range]{flex:1;min-width:180px;accent-color:var(--accent)}
+.playrow .btn{width:auto;max-width:130px}
+.playrow select{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:inherit;font-size:12.5px}
+.playrow .tl{font-family:var(--mono);font-size:12.5px;color:var(--accent);min-width:120px;text-align:right}
 </style>
 </head>
 <body>
@@ -229,6 +244,22 @@ tr.win td{background:rgba(54,211,153,.07)}
       <p class="note" id="cmpNote"></p>
     </div>
 
+    <div class="card" id="cv3dCard" style="display:none">
+      <h2><span class="ic">▣</span> Campo 3D <span class="hint" id="c3hint">el mismo instante en cada estrategia</span></h2>
+      <div class="tiles" id="tiles"></div>
+      <div id="view3d"></div>
+      <div class="playrow">
+        <button class="btn ghost" id="play">▶ Reproducir</button>
+        <input type="range" id="tpos" min="0" max="0" step="1" value="0">
+        <span class="tl" id="tlbl">—</span>
+        <select id="tspeed">
+          <option value="2">×1</option><option value="4" selected>×2</option>
+          <option value="8">×4</option><option value="16">×8</option>
+        </select>
+      </div>
+      <p class="note" id="c3note"></p>
+    </div>
+
     <div class="card" id="detCard" style="display:none">
       <h2><span class="ic">◷</span> Detalle <span class="hint" id="detHint"></span></h2>
       <div class="strip" id="strip"></div>
@@ -242,6 +273,12 @@ tr.win td{background:rgba(54,211,153,.07)}
 </div>
 </div>
 
+<!-- Librerías LOCALES (sin CDN, offline) y el MODELO REAL del seguidor: `seguidor.js` es
+     la fuente única que ya comparten el Gemelo Digital y Cobertura 3D, copiada aquí idéntica
+     (mismo md5) como manda su cabecera. Mejorarla allí mejora este campo 3D. -->
+<script src="lib/three.min.js"></script>
+<script src="lib/OrbitControls.js"></script>
+<script src="seguidor.js"></script>
 <script>
 'use strict';
 function $(id){return document.getElementById(id);}
@@ -445,6 +482,7 @@ async function run(){
     wind_height_m:(+$('wh').value>0?+$('wh').value:null),
     resample_minutes:($('step').value?+$('step').value:null),
     wind_scenario:scenario(),
+    timeline:{hours:16, max_steps:240},
     top_events:12, include_trace:true
   };
   $('run').disabled=true; $('run').textContent='Simulando…';
@@ -503,6 +541,7 @@ function render(){
   [].forEach.call($('strip').children,function(c){c.onclick=function(){SEL=this.dataset.s;render();};});
   $('detCard').style.display='';
   drawDetail();
+  build3D();
 }
 function ro(k,v,s){return '<div class="ro"><div class="k">'+k+'</div><div class="v">'+v+(s?' <small>'+s+'</small>':'')+'</div></div>';}
 
@@ -719,11 +758,235 @@ function drawEvents(c){
   $('evt').innerHTML=h+'</tbody>';
 }
 
+
+/* ===================== CAMPO 3D =====================
+   Ver la POA es ver un número; ver POR QUÉ es ver el seguidor tumbado mientras
+   el de al lado sigue al sol. Esta vista pone los casos EN PARALELO sobre la
+   MISMA ventana de tiempo (`timeline` del motor: un solo viento, un solo sol,
+   un θ por estrategia), así que la comparación es honesta paso a paso.
+
+   El seguidor NO se modela aquí: es `seguidor.js`, la fuente única que ya
+   comparten el Gemelo Digital y Cobertura 3D. Marco del mundo: x = este,
+   y = arriba, z = −norte. El seguidor canónico tiene su tubo en +X local, así
+   que cada uno entra girado 90° para que el eje quede N-S. */
+var TD=null, TL=null, TPOS=0, PLAY=false, RAF=null;
+var NFILAS=2, PITCH=6.0, BLOQUE=34;      // filas por bloque, paso entre filas y entre bloques (m)
+/* El modo se pinta como BRILLO PROPIO sobre la pala azul, no cambiándole el
+   color: si se le mete un rojo oscuro, un seguidor abanderado DE CARA al sol
+   se ve tan apagado como uno abanderado de espaldas, y precisamente esa
+   diferencia de luz recibida es la POA que la ficha está comparando. */
+var MODO_COL={IDLE:0x000000, PARTIAL_STOW:0xF6A623, FULL_STOW:0xD0594F, DESTOW_HOLD:0x8093A4};
+var MODO_INT={IDLE:0, PARTIAL_STOW:.42, FULL_STOW:.5, DESTOW_HOLD:.3};
+var PALA=0x16305e;
+
+function has3D(){return typeof THREE!=='undefined'&&THREE.OrbitControls&&typeof Seguidor!=='undefined';}
+
+function init3D(){
+  if(TD||!has3D())return;
+  var h=$('view3d');
+  try{
+    var rd=new THREE.WebGLRenderer({antialias:true});
+    rd.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    rd.shadowMap.enabled=true; rd.shadowMap.type=THREE.PCFSoftShadowMap;
+    h.appendChild(rd.domElement);
+    var sc=new THREE.Scene(); sc.background=new THREE.Color(0x06080c);
+    sc.add(new THREE.Mesh(new THREE.SphereGeometry(1800,20,24),
+      new THREE.MeshBasicMaterial({color:0x0d1826,side:THREE.BackSide,depthWrite:false})));
+    var cam=new THREE.PerspectiveCamera(42,1.9,0.5,6000);
+    cam.position.set(120,95,150);
+    var ct=new THREE.OrbitControls(cam,rd.domElement);
+    ct.enableDamping=true; ct.dampingFactor=.08; ct.maxPolarAngle=Math.PI*0.49;
+    ct.minDistance=20; ct.maxDistance=900; ct.target.set(0,0,0);
+    var hemi=new THREE.HemisphereLight(0xbcd4ff,0x1a2510,0.5);
+    var sun=new THREE.DirectionalLight(0xffeecc,1.5);
+    sun.castShadow=true; sun.shadow.mapSize.width=2048; sun.shadow.mapSize.height=2048;
+    sun.shadow.bias=-2e-4; sun.shadow.normalBias=0.3;
+    var sc_=sun.shadow.camera; sc_.left=-140; sc_.right=140; sc_.top=120; sc_.bottom=-120; sc_.far=1400;
+    var sunM=new THREE.Mesh(new THREE.SphereGeometry(9,16,16),new THREE.MeshBasicMaterial({color:0xfbbd23}));
+    sc.add(hemi,sun,sun.target,sunM);
+    var suelo=new THREE.Mesh(new THREE.PlaneGeometry(900,600),
+      new THREE.MeshLambertMaterial({color:0x22301c}));
+    suelo.rotation.x=-Math.PI/2; suelo.receiveShadow=true; sc.add(suelo);
+    // flecha de viento: la dirección es DE DÓNDE VIENE, así que apunta hacia el campo
+    var wind=new THREE.Group();
+    var mW=new THREE.MeshBasicMaterial({color:0x54A6FF});
+    var vast=new THREE.Mesh(new THREE.CylinderGeometry(.6,.6,22,10),mW); vast.rotation.z=Math.PI/2; vast.position.x=-11;
+    var pta=new THREE.Mesh(new THREE.ConeGeometry(2.2,7,12),mW); pta.rotation.z=-Math.PI/2; pta.position.x=3.5;
+    wind.add(vast,pta); wind.position.y=26; sc.add(wind);
+    var hint=document.createElement('div'); hint.className='hint3d';
+    hint.textContent='arrastrar: orbitar · rueda: zoom · botón dcho: desplazar';
+    h.appendChild(hint);
+    TD={rd:rd,sc:sc,cam:cam,ct:ct,sun:sun,sunM:sunM,wind:wind,bloques:[],mundo:null};
+    (function loop(){requestAnimationFrame(loop); if(!TD)return;
+      var w=h.clientWidth,hh=h.clientHeight;
+      if(w&&(TD.w!==w||TD.h!==hh)){TD.w=w;TD.h=hh;rd.setSize(w,hh,false);cam.aspect=w/hh;cam.updateProjectionMatrix();}
+      TD.ct.update(); rd.render(sc,cam);})();
+  }catch(e){TD=null;}
+}
+
+/* un seguidor: piezas del modelo canónico, las que bascular colgando de un
+   grupo propio para que mover el ángulo sea mover una rotación y no rehacer nada */
+function seguidor3D(mats){
+  var g=new THREE.Group(), spin=new THREE.Group(); g.add(spin);
+  var parts=Seguidor.parts(THREE,{detail:'mass',size:'largo'});
+  parts.forEach(function(p){
+    if(p.antenna||p.motorLink||p.damperLink)return;          // detalle de TCU: aquí sobra
+    var geo; try{geo=p.geom(THREE);}catch(e){return;}
+    var mesh=new THREE.Mesh(geo,mats[p.mat]||mats.steel);
+    mesh.applyMatrix4(p.m); mesh.castShadow=!!p.cast; mesh.receiveShadow=true;
+    (p.spin?spin:g).add(mesh);
+  });
+  var postH=Seguidor.DIMS.postH||2.0;
+  g.position.y=postH; g.rotation.y=Math.PI/2;                 // tubo local +X → norte (−z)
+  var poste=new THREE.Mesh(new THREE.BoxGeometry(.18,postH,.18),mats.steel);
+  poste.position.y=postH/2; poste.castShadow=true;
+  var wrap=new THREE.Group(); wrap.add(g,poste); wrap.spin=spin;
+  return wrap;
+}
+
+function build3D(){
+  init3D(); if(!TD||!REP||!REP.timeline){$('cv3dCard').style.display='none';return;}
+  TL=REP.timeline;
+  if(TD.mundo){TD.sc.remove(TD.mundo);}
+  var mundo=new THREE.Group(); TD.mundo=mundo; TD.sc.add(mundo); TD.bloques=[];
+  var casos=['BASE'].concat(ord());
+  var x0=-(casos.length-1)*BLOQUE/2;
+  casos.forEach(function(k,bi){
+    var col=(k==='BASE')?COL.BASE:COL[k];
+    var mats=Seguidor.materials(THREE);
+    mats.glass=new THREE.MeshStandardMaterial({color:PALA,roughness:.35,metalness:.25,
+      emissive:new THREE.Color(0x000000),emissiveIntensity:0});
+    var b=new THREE.Group(); b.position.x=x0+bi*BLOQUE;
+    var segs=[];
+    for(var f=0;f<NFILAS;f++){
+      var t=seguidor3D(mats);
+      t.position.x=(f-(NFILAS-1)/2)*PITCH;
+      b.add(t); segs.push(t);
+    }
+    // barra de POA: la altura ES la POA del caso en ese instante; el listón gris
+    // de al lado es la del seguidor sin abanderar, para leer la pérdida sin cuentas
+    var zb=Seguidor.DIMS.span/2+9;
+    var barra=new THREE.Mesh(new THREE.BoxGeometry(1.8,1,1.8),
+      new THREE.MeshStandardMaterial({color:new THREE.Color(col),emissive:new THREE.Color(col),emissiveIntensity:.35,roughness:.5}));
+    // La referencia es un fantasma traslúcido detrás, no un alambre: con
+    // wireframe todas sus aristas competían con las palas y la escena parecía
+    // un plano de piezas en vez de un campo.
+    var ref=new THREE.Mesh(new THREE.BoxGeometry(3.0,1,3.0),
+      new THREE.MeshBasicMaterial({color:0x8093A4,transparent:true,opacity:.22,depthWrite:false}));
+    barra.position.set(-3,0,zb); ref.position.set(-3,0,zb);
+    // Marca del color del caso en el suelo, al sur del bloque: ata cada grupo
+    // de seguidores con su ficha de arriba sin rótulos flotantes en la escena.
+    var marca=new THREE.Mesh(new THREE.BoxGeometry(NFILAS*PITCH+3,.14,3.5),
+      new THREE.MeshBasicMaterial({color:new THREE.Color(col)}));
+    marca.position.set(0,.07,zb+4);
+    var franja=new THREE.Mesh(new THREE.BoxGeometry(NFILAS*PITCH+3,.10,Seguidor.DIMS.span+6),
+      new THREE.MeshBasicMaterial({color:new THREE.Color(col),transparent:true,opacity:.07}));
+    franja.position.y=.05;
+    b.add(barra,ref,marca,franja);
+    mundo.add(b);
+    TD.bloques.push({k:k,g:b,segs:segs,mats:mats,barra:barra,ref:ref});
+  });
+  // Encuadre: el campo crece con el nº de casos, así que la cámara se calcula
+  // en vez de fijarse — con cuatro estrategias y la base, un preset se queda
+  // corto o deja el campo del tamaño de un sello.
+  /* Cámara casi desde el SUR y alta: mirando a lo largo del eje N-S, cada
+     bloque se lee como su propia sección y los ángulos se comparan de un
+     vistazo. Desde una esquina, las palas que miran al este enseñan el dorso y
+     media comparativa se pierde. */
+  var ancho=casos.length*BLOQUE, largo=Seguidor.DIMS.span+20, d=Math.max(ancho,largo)*0.88;
+  TD.cam.position.set(d*0.20,d*0.52,d*0.88);
+  TD.ct.target.set(0,4,0); TD.ct.update();
+  var sh=TD.sun.shadow.camera;
+  sh.left=-ancho*0.6; sh.right=ancho*0.6; sh.top=largo*0.7; sh.bottom=-largo*0.7;
+  sh.updateProjectionMatrix();
+  TD.radio=Math.max(320,d*1.5);
+
+  $('tpos').max=Math.max(0,TL.t.length-1); TPOS=0; $('tpos').value=0;
+  $('c3hint').textContent=TL.window.steps+' pasos de '+TL.window.step_minutes+' min';
+  $('c3note').innerHTML='Ventana <b>común</b> a todos los casos: el mismo viento y el mismo sol para '+
+    'todos, y un θ por estrategia. La barra de cada bloque es su <b>POA en ese instante</b> y el listón '+
+    'gris la del seguidor sin abanderar: la diferencia entre las dos es lo que cuesta la defensa. '+
+    'La pala se tiñe según el modo (ámbar parcial, rojo total, gris el hold de histéresis). '+
+    'El campo es <b>ilustrativo</b> —dos filas por caso, geometría real de '+
+    esc(Seguidor.DIMS.modsPerStr)+' módulos por ala—, pero los ángulos y la POA son los que devuelve el motor.';
+  $('cv3dCard').style.display='';
+  update3D(0);
+}
+
+function update3D(i){
+  if(!TD||!TL)return;
+  i=Math.max(0,Math.min(TL.t.length-1,i|0)); TPOS=i;
+  var el=TL.sun_el[i], az=TL.sun_az[i], R=TD.radio||420;
+  var e=Math.max(el,-4)*Math.PI/180, a=az*Math.PI/180;
+  var dir=new THREE.Vector3(Math.sin(a)*Math.cos(e),Math.sin(e),-Math.cos(a)*Math.cos(e));
+  TD.sun.position.copy(dir.clone().multiplyScalar(R));
+  TD.sunM.position.copy(dir.clone().multiplyScalar(R*0.92));
+  TD.sun.intensity=el>0?1.5:0.02; TD.sunM.visible=el>0;
+  if(TL.wind_dir&&TL.wind_dir[i]!=null&&(TL.wind_ms[i]||0)>0.3){
+    var wa=TL.wind_dir[i]*Math.PI/180;                 // de dónde VIENE
+    var rw=(TD.radio||420)*0.30;
+    TD.wind.position.set(Math.sin(wa)*rw,22,-Math.cos(wa)*rw);
+    /* `wind_dir` es DE DÓNDE VIENE; la flecha tiene que enseñar hacia dónde VA,
+       que es el vector opuesto: (−sin, 0, +cos). Con el giro anterior salía
+       apuntando al revés, o sea contando la historia contraria. */
+    TD.wind.rotation.y=Math.atan2(-Math.cos(wa),-Math.sin(wa));
+    TD.wind.visible=true;
+  }else TD.wind.visible=false;
+  var v=TL.wind_ms[i]||0;
+  TD.wind.scale.setScalar(Math.max(.35,Math.min(2.2,v/12)));
+
+  var pbase=TL.baseline.poa[i]||0;
+  var pmax=1; TD.bloques.forEach(function(b){
+    var p=(b.k==='BASE')?pbase:(TL.cases[b.k].poa[i]||0); pmax=Math.max(pmax,p);});
+  pmax=Math.max(pmax,pbase,200);
+  var tiles='';
+  TD.bloques.forEach(function(b){
+    var th=(b.k==='BASE')?TL.baseline.theta[i]:TL.cases[b.k].theta[i];
+    var p=(b.k==='BASE')?pbase:TL.cases[b.k].poa[i];
+    var modo=(b.k==='BASE')?'SEGUIMIENTO':TL.cases[b.k].mode[i];
+    /* Signo del giro: el seguidor entra rotado +90° sobre Y, así que su +Z local
+       cae al ESTE. Girando +α sobre su eje, la normal de la pala se va a
+       (sin α al este, cos α arriba) — o sea que θ>0 (tilt East de pvlib) es
+       +α. Con el signo cambiado, las palas miraban al lado contrario del sol:
+       la comparativa se veía al revés de lo que decían los números. */
+    b.segs.forEach(function(t){t.spin.rotation.x=(th||0)*Math.PI/180;});
+    b.mats.glass.emissive.setHex(MODO_COL[modo]||0x000000);
+    b.mats.glass.emissiveIntensity=(MODO_INT[modo]!=null?MODO_INT[modo]:0);
+    var hh=Math.max(.4,(p||0)/pmax*18), hr=Math.max(.4,(pbase||0)/pmax*18);
+    b.barra.scale.y=hh; b.barra.position.y=hh/2;
+    b.ref.scale.y=hr;   b.ref.position.y=hr/2;
+    var col=(b.k==='BASE')?COL.BASE:COL[b.k];
+    var d=(b.k==='BASE')?'':(p-pbase);
+    tiles+='<div class="tile" style="border-left-color:'+col+'">'+
+      '<div class="n"><span class="dot" style="background:'+col+'"></span>'+(b.k==='BASE'?'Sin abanderar':b.k)+'</div>'+
+      '<div class="m">'+esc(modo.replace('_',' ').toLowerCase())+' · θ '+fmt(th,1)+'°</div>'+
+      '<div class="p">'+fmt(p,0)+' <small>W/m²</small></div>'+
+      (b.k==='BASE'?'<div class="d" style="color:var(--muted-2)">referencia</div>':
+       '<div class="d" style="color:'+(d<-1?'var(--dead)':(d>1?'var(--live)':'var(--muted-2)'))+'">'+
+       (d>0?'+':'')+fmt(d,0)+' W/m² ('+(pbase>0?fmt(100*d/pbase,1):'—')+' %)</div>')+
+      '</div>';
+  });
+  $('tiles').innerHTML=tiles;
+  $('tpos').value=i;
+  $('tlbl').textContent=TL.t[i].slice(5,16).replace('T',' ')+' · '+fmt(v*3.6,0)+' km/h';
+}
+
+function playToggle(){
+  PLAY=!PLAY; $('play').textContent=PLAY?'❚❚ Pausa':'▶ Reproducir';
+  if(RAF)clearInterval(RAF); RAF=null;
+  if(PLAY)RAF=setInterval(function(){
+    if(!TL){return;}
+    var n=TPOS+1; if(n>=TL.t.length)n=0; update3D(n);
+  },Math.max(40,320/(+$('tspeed').value||4)));
+}
+
 /* ===================== ARRANQUE ===================== */
 IDS.forEach(function(i){$(i).addEventListener('change',saveCfg);});
 $('bt').addEventListener('change',saveCfg);
 [].forEach.call(document.querySelectorAll('.st'),function(e){e.addEventListener('change',saveCfg);});
 $('run').onclick=run;
+$('play').onclick=playToggle;
+$('tpos').oninput=function(){if(PLAY)playToggle();update3D(+this.value);};
 $('gadd').onclick=function(){addGust($('gpreset').value);};
 $('gpreset').onchange=function(){if(this.value){addGust(this.value);this.value='';}};
 ['wgust','wcyc'].forEach(function(i){$(i).addEventListener('change',saveCfg);});

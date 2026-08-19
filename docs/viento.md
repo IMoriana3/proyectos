@@ -117,6 +117,30 @@ Para probar sin red hay además una meteo de **cielo claro** (pvlib Ineichen con
 turbidez que trae el paquete): sol sin nubes, temperatura sinusoidal declarada. Sirve para comparar
 estrategias entre sí, nunca en absoluto — la POA sale por encima de cualquier año real.
 
+## El campo 3D
+
+Ver la POA es ver un número; ver **por qué** es ver el seguidor tumbado mientras el de al lado sigue
+al sol. La ficha pinta los casos en paralelo sobre una **ventana común** del año — un solo viento, un
+solo sol, un θ por estrategia — y se puede recorrer paso a paso o darle a reproducir.
+
+- Un bloque por caso (la base sin abanderar y cada estrategia), con su color en la marca del suelo y
+  en la ficha de arriba.
+- La **barra** de cada bloque es su POA en ese instante y el fantasma gris de al lado la del
+  seguidor sin abanderar: la diferencia entre las dos es lo que cuesta la defensa.
+- La pala se **enciende** según el modo (ámbar parcial, rojo total, gris el hold de histéresis) sin
+  perder su color, para que la luz que recibe —que es de lo que va la POA— se siga leyendo.
+- La flecha azul es el viento: nace de donde viene y apunta hacia donde va.
+
+Sin ventana, la comparación sería un montaje: cada estrategia enseñaría su peor momento y no el
+mismo. Por eso el motor devuelve un único tramo para todas, centrado por defecto en el episodio más
+caro del año.
+
+El seguidor **no se modela aquí**: es `seguidor.js`, la fuente única que ya comparten el Gemelo
+Digital y Cobertura 3D, copiada idéntica (mismo md5) como manda su cabecera — mejorarla allí mejora
+también este campo. El campo es **ilustrativo** (dos filas por caso, geometría real de 28 módulos por
+ala); los ángulos y la POA son los que devuelve el motor, no los que dibuje el visor. Si el navegador
+no puede con WebGL, la tarjeta simplemente no aparece y el resto de la ficha sigue funcionando.
+
 ## Cómo corre
 
 La ficha no reimplementa nada: pide `POST /windstow` al motor y dibuja lo que vuelve. El motor

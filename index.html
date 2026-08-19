@@ -830,11 +830,11 @@ const PROJECTS = [
     name: "Viento & Abanderamiento",
     status: "build",
     objetivo: "Qué cuesta defender el seguidor: compara las cuatro estrategias canónicas de abanderamiento (A1/A2/B1/B2) contra el mismo seguidor sin abanderar — POA perdida, cuántas veces abandera al año y cuánto tiempo se queda así.",
-    stack: "HTML autocontenido · canvas 2D · motor SolarGPT (POST /windstow)",
+    stack: "HTML autocontenido · canvas 2D · Three.js + seguidor.js (campo 3D) · motor SolarGPT (POST /windstow)",
     url: "https://imoriana3.github.io/proyectos/sim-viento.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-19",
-    version: "1.1",
+    version: "1.2",
     docId: "viento",
     docUrl: "",
     download: "",
@@ -846,7 +846,8 @@ const PROJECTS = [
       "El viento del reanálisis es a 10 m: la ficha lo corrige a la altura del seguidor con ley potencial 1/7 (a 4 m, factor 0,88).",
       "Paso de cálculo: con dato horario un episodio solo puede durar múltiplos de una hora y la histéresis de 30 min se redondea; interpolar a 15 min deja que la máquina de estados resuelva sus tiempos.",
       "Laboratorio de rachas: viento de fondo real, sintético (Weibull + AR(1) del core, el mismo generador que la página Meteo de Streamlit) o en calma; disparo con ráfaga de 3 s (Cook/IEC); rachas inyectadas con pico, duración, forma, dirección y repetición (más presets y tormentas al azar reproducibles por semilla).",
-      "Meteo de cielo claro (pvlib Ineichen) para probar rachas sin red. La POA sale por encima de cualquier año real: sirve para comparar estrategias entre sí, no en absoluto."
+      "Meteo de cielo claro (pvlib Ineichen) para probar rachas sin red. La POA sale por encima de cualquier año real: sirve para comparar estrategias entre sí, no en absoluto.",
+      "Campo 3D: los casos en paralelo sobre una ventana común (un viento, un sol, un θ por estrategia), con reproducción paso a paso, la POA de cada bloque como barra contra la del seguidor sin abanderar, y el modo pintado sobre la pala. Usa seguidor.js, la misma fuente del modelo que el Gemelo Digital y Cobertura 3D."
     ],
     pendientes: [
       { done:false, text:"El endpoint /windstow vive en la rama claude/wind-simulator-tracker-xhnbm3 de SolarGPTfull; hasta que entre en main, el cuaderno de Colab (que clona main) no lo sirve." },
@@ -855,6 +856,7 @@ const PROJECTS = [
       { done:false, text:"Coste de motor de cada maniobra (Wh/°) para poner al lado la energía perdida y la gastada, como en el simulador de batería." }
     ],
     historial: [
+      { date:"2026-08-19", ver:"1.2", note:"Campo 3D: los cinco casos reaccionando al mismo viento y al mismo sol sobre una ventana común, con la POA de cada uno como barra contra la línea base." },
       { date:"2026-08-19", ver:"1.1", note:"Laboratorio de rachas: viento de fondo sintético o en calma, ráfaga de 3 s, rachas inyectadas con dirección y tormentas al azar, y meteo de cielo claro para probar sin red." },
       { date:"2026-08-19", ver:"1.0", note:"Primera versión: comparativa A1/A2/B1/B2 contra la base, episodios y horas por modo, reparto mensual y traza del episodio más caro." }
     ]
