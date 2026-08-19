@@ -853,7 +853,9 @@ const PROJECTS = [
       "Paso de cálculo: con dato horario un episodio solo puede durar múltiplos de una hora y la histéresis de 30 min se redondea; interpolar a 15 min deja que la máquina de estados resuelva sus tiempos.",
       "Laboratorio de rachas: viento de fondo real, sintético (Weibull + AR(1) del core, el mismo generador que la página Meteo de Streamlit) o en calma; disparo con ráfaga de 3 s (Cook/IEC); rachas inyectadas con pico, duración, forma, dirección y repetición (más presets y tormentas al azar reproducibles por semilla).",
       "Meteo de cielo claro (pvlib Ineichen) para probar rachas sin red. La POA sale por encima de cualquier año real: sirve para comparar estrategias entre sí, no en absoluto.",
-      "Campo 3D: los casos en paralelo sobre una ventana común (un viento, un sol, un θ por estrategia), con reproducción paso a paso, la POA de cada bloque como barra contra la del seguidor sin abanderar, y el modo pintado sobre la pala. Usa seguidor.js, la misma fuente del modelo que el Gemelo Digital y Cobertura 3D."
+      "Escena 3D visible desde que se abre, con dos modos: EN VIVO (viento, dirección, hora y día en deslizadores; los seguidores reaccionan al momento con su máquina de estados y su velocidad de giro) y EPISODIO (la ventana común del año tras simular).",
+      "Se puede dibujar la comparativa (un bloque por estrategia con el modelo real de seguidor.js) o la PLANTA REAL entera, cargando <planta>_layout.json del repo cobertura-zigbee: El Burgo, Ayora, Páramo, Fayón, Bagnarelli, Túnez y San José.",
+      "El seguidor gira a 0,17 °/s con banda muerta de 1° (lazo de control canónico): ir a ±55° son 5,4 min. Por eso la simulación va a paso MINUTAL — a 15 min la maniobra cabía en un paso y salía como un escalón. Un año son 525.541 pasos y se resuelve en ~4 s."
     ],
     pendientes: [
       { done:true, text:"El endpoint /windstow ya está en main de SolarGPTfull (PR #80): el cuaderno de Colab lo sirve sin más." },
