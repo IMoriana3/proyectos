@@ -411,6 +411,10 @@ body{
       <button class="inst" id="btn-inst" type="button" title="Instalar el panel como aplicación">
         <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg><span>Instalar app</span>
       </button>
+      <button class="inst" id="btn-upd" type="button" hidden
+              title="Qué versión del armazón tiene tu navegador. Pulsa para buscar una nueva y aplicarla.">
+        <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg><span id="upd-txt">armazón</span>
+      </button>
       <div class="clock"><small>Hora local</small><span id="clock">--:--:--</span></div>
     </div>
   </div>
@@ -1581,6 +1585,29 @@ refrescarReleases();   // no bloquea el pintado: si tarda o falla, la ficha ya e
           });
         });
         setTimeout(function(){ reg.update().catch(function(){}); },3000);
+
+        /* «No me salen las actualizaciones» es, casi siempre, un armazón viejo
+           cacheado — y hasta ahora no había forma de VERLO ni de forzarlo sin
+           entrar en las herramientas del navegador. Este botón enseña qué
+           versión tiene el navegador y, al pulsarlo, busca una nueva y le cede
+           el relevo. */
+        var bu=document.getElementById("btn-upd"), bt=document.getElementById("upd-txt");
+        if(bu&&window.caches){
+          caches.keys().then(function(ks){
+            var k=ks.filter(function(x){return /^factiun-panel-/.test(x);})[0];
+            if(!k)return;
+            bt.textContent=k.replace("factiun-panel-","armazón ");
+            bu.hidden=false;
+          });
+          bu.onclick=function(){
+            bt.textContent="buscando…";
+            reg.update().then(function(){
+              var w=reg.waiting||reg.installing;
+              if(w){ bt.textContent="aplicando…"; w.postMessage("skip-waiting"); }
+              else { bt.textContent="al día"; location.reload(); }
+            }).catch(function(){ bt.textContent="sin red"; });
+          };
+        }
       }).catch(function(){ /* sin SW el panel funciona igual, solo que sin offline */ });
       // Recargar SOLO cuando releva a un SW anterior (el usuario le ha dado a
       // "Actualizar"). En la primera visita el SW toma el control por primera
