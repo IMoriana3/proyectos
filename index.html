@@ -1138,6 +1138,17 @@ const PLANTS = [
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=panbianco",
       cobertura:  SITE+"cobertura-zigbee/index.html?planta=panbianco",
   }},
+  /* EL POLVORÍN 25082 (Badajoz). Siete tipos de seguidor en vez de dos, y dos de ellos MONOFILARES;
+     el tipo lo da el nombre de bloque del DWG, que es además el reparto de string de la cartera.
+     Sus 12.896 módulos de 710 W son EXACTAMENTE los que declara la cartera, y salen los 9,16 MW.
+     Sin botón de SCADA por lo mismo que Benante y Panbianco: el de las tarjetas apunta al SCADA de
+     la CARTERA, que es otra aplicación. En el de operación sí está dada de alta. */
+  { name:"El Polvorín", code:"25082", pdc:9.15616, loc:"Badajoz · España", views:{
+      siting:     SITE+"siting/?planta=polvorin",
+      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=polvorin",
+      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=polvorin",
+      cobertura:  SITE+"cobertura-zigbee/index.html?planta=polvorin",
+  }},
   /* Páramo está a 0 en la cartera: aún no tiene la potencia. Sin dato no se pinta nada. */
   { name:"Páramo", code:"25019", pdc:null, loc:"Villamañán · León · España", views:{
       siting:     SITE+"siting/?planta=paramo",
