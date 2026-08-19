@@ -179,6 +179,21 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
   Tarjeta añadida a `PROJECTS` en `build` (no `live`) precisamente por lo del endpoint;
   `docs/viento.md` escrito. `node tests/test_integridad.js` en verde (22 tarjetas).
 
+- **[Proyectos → Backtracking] El armazón se ve y se puede forzar.** «No me salen las
+  actualizaciones» resultó ser dos cosas, las dos vuestras de origen (la PWA) y las dos arregladas
+  aquí sin tocar nada más:
+  1. **`docs/*.md` y los `.json` iban de caché con refresco por detrás.** Son justo lo que se
+     reescribe al publicar, así que la *Documentación* de una tarjeta enseñaba la versión anterior
+     en la primera visita tras publicar y solo salía nueva a la segunda. Pasan a **red primero**
+     con la caché de respaldo, como el HTML. Ojo al detalle que había que cuidar: el respaldo
+     `index.html` de `redPrimero` es ahora **solo para navegaciones** — devolvérselo a un `.md`
+     sería servir una página entera donde se espera texto.
+  2. **No había forma de ver qué armazón tenía el navegador** ni de forzar el relevo sin abrir las
+     herramientas del navegador. Hay un botón nuevo en `.bar-right` (`#btn-upd`) que enseña
+     `armazón vN` leyéndolo de `caches.keys()` y, al pulsarlo, hace `reg.update()` y cede el relevo.
+  `CACHE` sube a **v4**. `test_pwa.js` 21/21 (y ya lee el nombre de la caché de `sw.js`, así que no
+  hay que tocarlo al publicar).
+
 ## Registro de cambios
 
 | fecha | sesión | cambio |
@@ -191,3 +206,4 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 | 2026-08-19 | Proyectos | Ficha `sim-viento.html` (abanderamiento por viento) + `docs/viento.md` + acceso directo en la cabecera de Herramientas. Depende de `POST /windstow` en el motor. |
 | 2026-08-19 | Proyectos | `sim-viento.html` v1.1: laboratorio de rachas (fondo sintético o en calma, ráfaga de 3 s, rachas inyectadas con dirección, tormentas al azar) y meteo de cielo claro para probar sin red. |
 | 2026-08-19 | Proyectos | `sim-viento.html` v1.2: campo 3D con los casos en paralelo. Entran en el repo `lib/three.min.js`, `lib/OrbitControls.js` y **`seguidor.js`** (copia idéntica de la fuente única que ya comparten Gemelo Digital y Cobertura 3D: si la tocáis allí, hay que sincronizarla aquí). |
+| 2026-08-19 | Proyectos | SW v4: `docs/*.md` y `.json` a red primero (la Documentación se quedaba una versión atrás) y botón de armazón/actualizar en la barra. |
