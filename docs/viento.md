@@ -166,7 +166,52 @@ dentro de un paso y salía como un escalón instantáneo — medido, la misma ra
 cuarto-horario y 10 min a paso minutal. Un año a 1 min son 525.541 pasos y las cuatro estrategias
 más la base se resuelven en unos **4 segundos** en el navegador.
 
-## Quién calcula## Quién calcula
+## Analizar un emplazamiento
+
+Además de comparar estrategias, la ficha contesta «cómo es este sitio de viento». La tarjeta
+**Recurso de viento** sale con cada simulación.
+
+### Rosa de vientos
+
+Horas por sector (16) y por **banda de velocidad**, y las bandas no son decorativas: son los
+umbrales de la máquina. Así la rosa no dice solo de dónde sopla — dice **de dónde vienen los
+abanderamientos**. Importa porque el sol recorre el este-oeste y el viento no tiene por qué: si el
+que dispara la defensa viene del oeste, A (cara al viento) y B (cara al sol) se pelean por la mañana
+y coinciden por la tarde, y ahí está casi toda la diferencia entre las dos familias.
+
+### Varios años
+
+Poniendo un rango en *Año · desde / hasta* se descarga el periodo entero de una vez y se corre **año
+a año**. Sale la tabla con viento medio, máximo, horas sobre umbral, maniobras, horas abanderado y
+Δ POA de cada año, más **media ± σ** y **peor / mejor año**. Es la pregunta que un solo año no puede
+contestar: cuánto de lo que ves es el sitio y cuánto es que ese año vino raro. Doce años a paso
+cuarto-horario tardan unos 6 s; a paso minutal, del orden de un minuto.
+
+### Viento extremo
+
+Con cinco años o más se ajusta un **Gumbel por momentos sobre los máximos anuales** y se dibuja la
+velocidad esperable a 2, 5, 10, 25, 50 y 100 años.
+
+**No es el viento de proyecto, y la ficha lo dice en pantalla.** Sale de reanálisis a 10 m y media
+horaria, no de la norma ni de una torre en el sitio: la velocidad básica de Eurocódigo o ASCE lleva
+su categoría de terreno, su factor de ráfaga y su periodo de referencia, y esto no los tiene. Sirve
+para comparar emplazamientos entre sí y para ver si los umbrales de 40/60 km/h se quedan cortos aquí.
+
+### Con el viento medido de la planta
+
+Un reanálisis no ve el relieve local; la HSU sí, porque está dentro de la planta. Dos vías:
+
+- **CSV de la HSU** — cualquier fichero con fecha, viento y, si lo tiene, dirección y ráfaga.
+  Detecta el separador y las unidades (si el p98 pasa de 45 asume km/h) y **no sale del navegador**.
+  Si el fichero no trae irradiancia, el sol lo pone el cielo claro y se declara: la ficha compara
+  estrategias, y para eso el dato que manda es el viento.
+- **SCADA de planta en vivo** — `GET /meteo/history` del repo `scada`, añadido para esto: `/meteo`
+  solo daba la última lectura. Se pide la URL del SCADA y las horas.
+
+Con dato de HSU el análisis deja de ser reanálisis y pasa a ser el sitio. Lo que sigue sin ser es un
+estudio de cargas: aquí no hay presiones, ni momentos, ni verificación de estructura.
+
+## Quién calcula## Quién calcula## Quién calcula
 
 **El navegador, por defecto.** Como `bateria.html` del gemelo o `backtracking.html` de cobertura:
 se abre y funciona, sin levantar nada. Baja el año de Open-Meteo directamente, resuelve la posición

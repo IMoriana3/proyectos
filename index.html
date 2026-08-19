@@ -838,7 +838,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/sim-viento.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-19",
-    version: "1.7",
+    version: "1.8",
     docId: "viento",
     docUrl: "",
     download: "",
@@ -853,6 +853,8 @@ const PROJECTS = [
       "Paso de cálculo: con dato horario un episodio solo puede durar múltiplos de una hora y la histéresis de 30 min se redondea; interpolar a 15 min deja que la máquina de estados resuelva sus tiempos.",
       "Laboratorio de rachas: viento de fondo real, sintético (Weibull + AR(1) del core, el mismo generador que la página Meteo de Streamlit) o en calma; disparo con ráfaga de 3 s (Cook/IEC); rachas inyectadas con pico, duración, forma, dirección y repetición (más presets y tormentas al azar reproducibles por semilla).",
       "Meteo de cielo claro (pvlib Ineichen) para probar rachas sin red. La POA sale por encima de cualquier año real: sirve para comparar estrategias entre sí, no en absoluto.",
+      "Recurso de viento del emplazamiento: rosa por sector y banda de velocidad, tabla año a año con media ± σ y peor/mejor año, y viento extremo por Gumbel sobre los máximos anuales (≥5 años). Declarado: no es el viento de proyecto, sale de reanálisis y no de la norma.",
+      "Viento MEDIDO de la planta: CSV de la HSU (el fichero no sale del navegador; detecta separador y unidades) o el histórico del SCADA por GET /meteo/history. Con eso el análisis deja de ser reanálisis y pasa a ser el sitio.",
       "Escena 3D visible desde que se abre, con dos modos: EN VIVO (viento, dirección, hora y fecha; los seguidores reaccionan al momento con su máquina de estados y su velocidad de giro) y EPISODIO (la ventana común del año tras simular).",
       "Se puede dibujar la comparativa (un bloque por estrategia con el modelo real de seguidor.js) o la PLANTA REAL entera, cargando <planta>_layout.json del repo cobertura-zigbee: El Burgo, Ayora, Páramo, Fayón, Bagnarelli, Túnez y San José.",
       "El seguidor gira a 0,17 °/s con banda muerta de 1° (lazo de control canónico): ir a ±55° son 5,4 min. Por eso la simulación va a paso MINUTAL — a 15 min la maniobra cabía en un paso y salía como un escalón. Un año son 525.541 pasos y se resuelve en ~4 s."
@@ -865,6 +867,7 @@ const PROJECTS = [
       { done:false, text:"Coste de motor de cada maniobra (Wh/°) para poner al lado la energía perdida y la gastada, como en el simulador de batería." }
     ],
     historial: [
+      { date:"2026-08-19", ver:"1.8", note:"Análisis de emplazamiento: rosa de vientos por sector y banda (las bandas son los umbrales de la máquina, así que dice de dónde vienen los abanderamientos), simulación multi-año con la dispersión interanual (media ± σ y peor/mejor año) y extremos por Gumbel sobre los máximos anuales. Y el viento MEDIDO de la planta: CSV de la HSU o el histórico del SCADA (GET /meteo/history, añadido para esto)." },
       { date:"2026-08-19", ver:"1.7", note:"El sol se ve: cielo con degradado que responde a su altura (naranja al alba y al ocaso, apagado en el crepúsculo) y disco con halo dimensionado con la escena, como en bt3d. Y el control de tiempo lleva FECHA, no «día del año»." },
       { date:"2026-08-19", ver:"1.6", note:"La escena se ve desde que abres, con el viento en deslizadores y los seguidores moviéndose a 0,17 °/s de verdad; se puede dibujar la PLANTA REAL entera (layouts de cobertura-zigbee) además de la comparativa; y la simulación pasa a paso MINUTAL con el lazo de control canónico." },
       { date:"2026-08-19", ver:"1.5", note:"Estética de la casa: los mismos tokens, etiquetas en mono y escena que overcast.html y backtracking.html, y la Escena 3D sube al primer puesto de la columna de resultados (era la pregunta: «¿y el 3D?» — estaba al final, detrás de todo)." },
