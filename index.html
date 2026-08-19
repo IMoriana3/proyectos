@@ -834,11 +834,11 @@ const PROJECTS = [
     name: "Viento & Abanderamiento",
     status: "live",
     objetivo: "Qué cuesta defender el seguidor: compara las cuatro estrategias canónicas de abanderamiento (A1/A2/B1/B2) contra el mismo seguidor sin abanderar — POA perdida, cuántas veces abandera al año y cuánto tiempo se queda así.",
-    stack: "HTML autocontenido · física en el navegador · canvas 2D · Three.js + seguidor.js (campo 3D) · motor SolarGPT opcional (POST /windstow)",
+    stack: "HTML autocontenido · física en el navegador · canvas 2D · Three.js + seguidor.js (escena 3D) · estética de overcast/bt3d · motor SolarGPT opcional (POST /windstow)",
     url: "https://imoriana3.github.io/proyectos/sim-viento.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-19",
-    version: "1.4.1",
+    version: "1.5",
     docId: "viento",
     docUrl: "",
     download: "",
@@ -863,6 +863,7 @@ const PROJECTS = [
       { done:false, text:"Coste de motor de cada maniobra (Wh/°) para poner al lado la energía perdida y la gastada, como en el simulador de batería." }
     ],
     historial: [
+      { date:"2026-08-19", ver:"1.5", note:"Estética de la casa: los mismos tokens, etiquetas en mono y escena que overcast.html y backtracking.html, y la Escena 3D sube al primer puesto de la columna de resultados (era la pregunta: «¿y el 3D?» — estaba al final, detrás de todo)." },
       { date:"2026-08-19", ver:"1.4.1", note:"Móvil: cabecera compacta (de cinco líneas a dos), botón de simular fijo abajo y se acaba el scroll horizontal que arrastraba la tabla comparativa. Y la etiqueta de meteo dice la fuente de verdad, no «del motor»." },
       { date:"2026-08-19", ver:"1.4", note:"La ficha calcula sola: motor en el navegador (Open-Meteo + backtracking + isotrópica + las cuatro máquinas de estado portadas), con el motor Python como opción canónica y un careo contra una corrida suya congelada — maniobras y horas idénticas, POA a −0,23 %. El 3D abre en el instante donde más se separan las estrategias." },
       { date:"2026-08-19", ver:"1.2.1", note:"El motor con /windstow entra en main de SolarGPTfull: la ficha pasa a producción." },

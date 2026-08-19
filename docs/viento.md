@@ -117,7 +117,11 @@ Para probar sin red hay además una meteo de **cielo claro** (pvlib Ineichen con
 turbidez que trae el paquete): sol sin nubes, temperatura sinusoidal declarada. Sirve para comparar
 estrategias entre sí, nunca en absoluto — la POA sale por encima de cualquier año real.
 
-## El campo 3D
+## La escena 3D
+
+Va **la primera** de la columna de resultados, donde la ponen `overcast.html` y `backtracking.html`
+—de los que esta ficha toma también los tokens de color, las etiquetas en monoespaciada y el
+tratamiento de la escena: si allí se afina el lenguaje visual, aquí se copia, no se inventa otro.
 
 Ver la POA es ver un número; ver **por qué** es ver el seguidor tumbado mientras el de al lado sigue
 al sol. La ficha pinta los casos en paralelo sobre una **ventana común** del año — un solo viento, un
