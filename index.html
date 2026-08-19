@@ -834,7 +834,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/sim-viento.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-19",
-    version: "1.0",
+    version: "1.1",
     docId: "viento",
     docUrl: "",
     download: "",
@@ -844,15 +844,18 @@ const PROJECTS = [
       "Estrategias: A = abandera cara al viento, B = cara al sol; 1 = un umbral (todo o nada), 2 = dos umbrales con sector parcial e histéresis de 30 min. Umbrales por defecto 40 y 60 km/h.",
       "Salidas: POA anual y su delta contra la base (kWh/m², % y mes a mes), abanderamientos al año, horas por modo, % de las horas de sol, y los episodios más caros con la traza del peor.",
       "El viento del reanálisis es a 10 m: la ficha lo corrige a la altura del seguidor con ley potencial 1/7 (a 4 m, factor 0,88).",
-      "Paso de cálculo: con dato horario un episodio solo puede durar múltiplos de una hora y la histéresis de 30 min se redondea; interpolar a 15 min deja que la máquina de estados resuelva sus tiempos."
+      "Paso de cálculo: con dato horario un episodio solo puede durar múltiplos de una hora y la histéresis de 30 min se redondea; interpolar a 15 min deja que la máquina de estados resuelva sus tiempos.",
+      "Laboratorio de rachas: viento de fondo real, sintético (Weibull + AR(1) del core, el mismo generador que la página Meteo de Streamlit) o en calma; disparo con ráfaga de 3 s (Cook/IEC); rachas inyectadas con pico, duración, forma, dirección y repetición (más presets y tormentas al azar reproducibles por semilla).",
+      "Meteo de cielo claro (pvlib Ineichen) para probar rachas sin red. La POA sale por encima de cualquier año real: sirve para comparar estrategias entre sí, no en absoluto."
     ],
     pendientes: [
       { done:false, text:"El endpoint /windstow vive en la rama claude/wind-simulator-tracker-xhnbm3 de SolarGPTfull; hasta que entre en main, el cuaderno de Colab (que clona main) no lo sirve." },
-      { done:false, text:"Ráfaga, no viento medio: los umbrales de la TCU miran la ráfaga y ERA5 da media horaria. Con la ráfaga de Open-Meteo el recuento de episodios subiría." },
+      { done:false, text:"Ráfaga medida, no sintetizada: el laboratorio ya dispara con la ráfaga de 3 s de Cook/IEC, pero Open-Meteo sirve ráfaga horaria observada y sería mejor dato que el factor de pico." },
       { done:false, text:"Contrastar el recuento contra el histórico real de abanderamientos del SCADA de El Burgo." },
       { done:false, text:"Coste de motor de cada maniobra (Wh/°) para poner al lado la energía perdida y la gastada, como en el simulador de batería." }
     ],
     historial: [
+      { date:"2026-08-19", ver:"1.1", note:"Laboratorio de rachas: viento de fondo sintético o en calma, ráfaga de 3 s, rachas inyectadas con dirección y tormentas al azar, y meteo de cielo claro para probar sin red." },
       { date:"2026-08-19", ver:"1.0", note:"Primera versión: comparativa A1/A2/B1/B2 contra la base, episodios y horas por modo, reparto mensual y traza del episodio más caro." }
     ]
   },

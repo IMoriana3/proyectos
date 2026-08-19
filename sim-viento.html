@@ -76,6 +76,21 @@ tr.win td{background:rgba(54,211,153,.07)}
 .chk input{width:auto;accent-color:var(--accent)}
 .scroll{overflow-x:auto}
 .err{border-color:var(--dead);color:var(--text)}
+.lab{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:9px}
+.lab .field{margin-bottom:0}
+.gtbl input,.gtbl select{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:5px 7px;font:inherit;font-size:12px;width:100%}
+.gtbl td{padding:4px 5px}
+.gtbl input[type=number]{max-width:110px}
+.gtbl td:first-child input{min-width:168px}
+.gtbl select{max-width:120px}
+.gtbl td:first-child{text-align:left}
+.gx{background:none;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:4px 9px;cursor:pointer;font:inherit;font-size:12px}
+.gx:hover{border-color:var(--dead);color:var(--dead)}
+.labrow{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.labrow select{flex:1;min-width:180px;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px}
+.labrow .btn{width:auto}
+.warn{background:rgba(246,166,35,.08);border:1px solid var(--build);border-radius:9px;padding:9px 12px;font-size:12px;color:var(--text);line-height:1.5;margin-top:10px}
+.warn b{color:var(--build)}
 </style>
 </head>
 <body>
@@ -107,6 +122,7 @@ tr.win td{background:rgba(54,211,153,.07)}
             <option value="openmeteo">Open-Meteo (ERA5)</option>
             <option value="pvgis">PVGIS horario</option>
             <option value="nasa">NASA POWER</option>
+            <option value="clearsky">Cielo claro (sin red)</option>
           </select></div>
       </div>
       <div class="two">
@@ -160,9 +176,50 @@ tr.win td{background:rgba(54,211,153,.07)}
 
   <!-- ═════════ RESULTADOS ═════════ -->
   <div>
+    <div class="card" id="labCard">
+      <h2><span class="ic">☴</span> Laboratorio de rachas <span class="hint">qué pasaría si…</span></h2>
+      <div class="lab">
+        <div class="field"><label>Viento de fondo</label>
+          <select id="wbase">
+            <option value="meteo">Meteo del emplazamiento</option>
+            <option value="synthetic">Sintético · Weibull + AR(1)</option>
+            <option value="calm">En calma (solo las rachas)</option>
+          </select></div>
+        <div class="field"><label>Weibull k (forma)</label><input id="wk" type="number" step="0.1" min="1" max="4" value="2"></div>
+        <div class="field"><label>Weibull A (m/s)</label><input id="wA" type="number" step="0.5" min="1" max="15" value="6.5"></div>
+        <div class="field"><label>Semilla</label><input id="wseed" type="number" step="1" value="42"></div>
+        <div class="field"><label>Dirección del fondo</label>
+          <select id="wdir"><option value="">— sin dirección —</option></select></div>
+      </div>
+      <div style="margin-top:10px">
+        <label class="chk"><input type="checkbox" id="wgust"> Disparar con la <b>ráfaga de 3 s</b> (Cook/IEC) en vez de con la media</label>
+        <label class="chk"><input type="checkbox" id="wcyc"> Cola ciclónica (~1,5 eventos/año, picos de 40–65 m/s)</label>
+      </div>
+
+      <div class="scroll"><table class="gtbl" id="gtbl"></table></div>
+      <div class="labrow">
+        <select id="gpreset"><option value="">— racha a medida —</option></select>
+        <button class="btn ghost" id="gadd" style="max-width:180px">+ Añadir racha</button>
+      </div>
+
+      <div class="lab" style="margin-top:12px">
+        <div class="field"><label>Tormentas al azar</label><input id="stn" type="number" step="1" min="0" value="0"></div>
+        <div class="field"><label>Pico mín. km/h</label><input id="stp0" type="number" step="5" value="70"></div>
+        <div class="field"><label>Pico máx. km/h</label><input id="stp1" type="number" step="5" value="110"></div>
+        <div class="field"><label>Duración mín. (min)</label><input id="std0" type="number" step="10" value="60"></div>
+        <div class="field"><label>Duración máx. (min)</label><input id="std1" type="number" step="10" value="240"></div>
+        <div class="field"><label>Semilla</label><input id="stseed" type="number" step="1" value="7"></div>
+      </div>
+      <p class="note">Las rachas se superponen por <b>máximo</b>, no se suman: pedir 90 km/h da 90 km/h.
+        La corrección de altura y la escala se aplican al fondo <b>antes</b>, así que el pico que escribes
+        es el que ve la máquina de estados. Nada de esto lleva detrás un cambio de irradiancia, de
+        temperatura ni de dirección: es un banco de pruebas, no un año meteorológico.</p>
+    </div>
+
     <div class="card">
       <h2><span class="ic">Σ</span> Resultado del año <span class="hint" id="ctx">—</span></h2>
       <div id="out"><p class="note">Elige emplazamiento y pulsa <b>Simular el año</b>.</p></div>
+      <canvas id="wind" width="880" height="180" style="display:none"></canvas>
     </div>
 
     <div class="card" id="cmpCard" style="display:none">
@@ -266,12 +323,92 @@ $('plant').onchange=function(){
   saveCfg();
 };
 
+/* ===================== LABORATORIO DE RACHAS =====================
+   El vocabulario (rachas tipo, bases, formas) lo sirve el motor en
+   /windstow/presets: si allí se añade una racha tipo, aparece aquí sin tocar
+   la ficha. Si el motor es antiguo y no lo tiene, se cae a este mínimo. */
+var PRESETS_G={racha_seca:{label:'Racha seca · 80 km/h · 20 min',peak_kmh:80,duration_min:20,shape:'gauss'},
+               borrasca:{label:'Borrasca · 100 km/h · 3 h',peak_kmh:100,duration_min:180,shape:'plateau'}};
+var GUSTS=[];
+async function loadPresets(){
+  if(!ENGINE)return;
+  try{var r=await fetch(ENGINE+'/windstow/presets',{cache:'no-store'});
+    if(r.ok){var j=await r.json(); if(j&&j.gust_presets)PRESETS_G=j.gust_presets;}}catch(e){}
+  var o='<option value="">— racha a medida —</option>';
+  Object.keys(PRESETS_G).forEach(function(k){o+='<option value="'+k+'">'+esc(PRESETS_G[k].label)+'</option>';});
+  $('gpreset').innerHTML=o;
+}
+/* La dirección importa porque A1/A2 abanderan CARA AL VIENTO: sin ella tumban
+   siempre al mismo lado y la comparación con B (cara al sol) pierde sentido.
+   Convención meteorológica: de dónde VIENE (90 = E, 270 = O). */
+var ROSA=[['','—'],['0','N'],['45','NE'],['90','E'],['135','SE'],['180','S'],['225','SO'],['270','O'],['315','NO']];
+function rosaSelect(attrs,val){
+  return '<select '+attrs+'>'+ROSA.map(function(r){
+    return '<option value="'+r[0]+'"'+((val==null?'':String(val))===r[0]?' selected':'')+'>'+r[1]+'</option>';}).join('')+'</select>';
+}
+function defaultWhen(){
+  var y=+$('year').value||2023;
+  return y+'-07-14T14:00';
+}
+function addGust(preset){
+  var p=PRESETS_G[preset]||{};
+  GUSTS.push({when:defaultWhen(), peak:p.peak_kmh||90, dur:p.duration_min||30,
+              shape:p.shape||'gauss', dir:$('wdir').value, rep:1, every:24});
+  renderGusts(); saveCfg();
+}
+function fillRosa(){
+  $('wdir').innerHTML=ROSA.map(function(r){
+    return '<option value="'+r[0]+'">'+(r[0]===''?'— sin dirección —':r[1]+' ('+r[0]+'°)')+'</option>';}).join('');
+}
+function renderGusts(){
+  if(!GUSTS.length){$('gtbl').innerHTML='<tbody><tr><td colspan="8" style="color:var(--muted-2);font-size:12px;padding:10px 4px">'+
+    'Sin rachas inyectadas: se simula el viento de fondo tal cual.</td></tr></tbody>';return;}
+  var h='<thead><tr><th>Cuándo (UTC)</th><th>Pico km/h</th><th>Duración min</th><th>Forma</th><th>Viene de</th><th>×</th><th>cada h</th><th></th></tr></thead><tbody>';
+  GUSTS.forEach(function(g,i){
+    h+='<tr>'+
+      '<td><input type="datetime-local" data-i="'+i+'" data-f="when" value="'+esc(g.when)+'"></td>'+
+      '<td><input type="number" step="5" data-i="'+i+'" data-f="peak" value="'+g.peak+'"></td>'+
+      '<td><input type="number" step="5" data-i="'+i+'" data-f="dur" value="'+g.dur+'"></td>'+
+      '<td><select data-i="'+i+'" data-f="shape">'+
+        '<option value="gauss"'+(g.shape==='gauss'?' selected':'')+'>Gaussiana</option>'+
+        '<option value="plateau"'+(g.shape==='plateau'?' selected':'')+'>Meseta</option></select></td>'+
+      '<td>'+rosaSelect('data-i="'+i+'" data-f="dir"',g.dir)+'</td>'+
+      '<td><input type="number" step="1" min="1" data-i="'+i+'" data-f="rep" value="'+g.rep+'"></td>'+
+      '<td><input type="number" step="1" min="1" data-i="'+i+'" data-f="every" value="'+g.every+'"></td>'+
+      '<td><button class="gx" data-del="'+i+'">✕</button></td></tr>';
+  });
+  $('gtbl').innerHTML=h+'</tbody>';
+  [].forEach.call($('gtbl').querySelectorAll('input,select'),function(el){
+    el.onchange=function(){var g=GUSTS[+this.dataset.i],f=this.dataset.f;
+      g[f]=(f==='when'||f==='shape'||f==='dir')?this.value:+this.value; saveCfg();};});
+  [].forEach.call($('gtbl').querySelectorAll('[data-del]'),function(b){
+    b.onclick=function(){GUSTS.splice(+this.dataset.del,1);renderGusts();saveCfg();};});
+}
+function scenario(){
+  var base=$('wbase').value, gust=$('wgust').checked, n=+$('stn').value||0;
+  var evs=GUSTS.filter(function(g){return g.peak>0;}).map(function(g){
+    var e={start:g.when, peak_kmh:+g.peak, duration_min:+g.dur, shape:g.shape,
+           repeat:Math.max(1,+g.rep||1), every_hours:Math.max(1,+g.every||24)};
+    if(g.dir!=='' && g.dir!=null)e.dir_deg=+g.dir;
+    return e;});
+  /* Si no hay nada que cambiar, NO se manda escenario: así el caso normal
+     (meteo tal cual) no pasa por el banco de pruebas ni se declara sintético. */
+  if(base==='meteo' && !gust && !evs.length && !n && $('wdir').value==='') return null;
+  var sc={base:base, use_gust:gust, k:+$('wk').value, A:+$('wA').value,
+          seed:+$('wseed').value, cyclone:$('wcyc').checked, events:evs};
+  if($('wdir').value!=='')sc.dir_deg=+$('wdir').value;
+  if(n>0)sc.storms={n:n, peak_kmh:[+$('stp0').value,+$('stp1').value],
+                    duration_min:[+$('std0').value,+$('std1').value], seed:+$('stseed').value};
+  return sc;
+}
+
 /* ===================== ESTADO ===================== */
 var REP=null, SEL=null;
-var IDS=['lat','lon','year','source','step','wh','maxang','gcr','pitch','axaz','t1','t2','pmin','hold','park'];
+var IDS=['lat','lon','year','source','step','wh','maxang','gcr','pitch','axaz','t1','t2','pmin','hold','park',
+         'wbase','wk','wA','wseed','wdir','stn','stp0','stp1','std0','std1','stseed'];
 function saveCfg(){
   try{var c={};IDS.forEach(function(i){c[i]=$(i).value;});
-    c.bt=$('bt').checked;
+    c.bt=$('bt').checked; c.wgust=$('wgust').checked; c.wcyc=$('wcyc').checked; c.gusts=GUSTS;
     c.st=[].slice.call(document.querySelectorAll('.st')).filter(function(e){return e.checked;}).map(function(e){return e.value;});
     localStorage.setItem('factiun_viento_cfg',JSON.stringify(c));}catch(e){}
 }
@@ -279,6 +416,9 @@ function loadCfg(){
   try{var c=JSON.parse(localStorage.getItem('factiun_viento_cfg')||'null');if(!c)return;
     IDS.forEach(function(i){if(c[i]!=null)$(i).value=c[i];});
     if(c.bt!=null)$('bt').checked=!!c.bt;
+    if(c.wgust!=null)$('wgust').checked=!!c.wgust;
+    if(c.wcyc!=null)$('wcyc').checked=!!c.wcyc;
+    if(Array.isArray(c.gusts))GUSTS=c.gusts;
     if(c.st)[].forEach.call(document.querySelectorAll('.st'),function(e){e.checked=c.st.indexOf(e.value)>=0;});
   }catch(e){}
 }
@@ -291,9 +431,11 @@ async function run(){
   var sts=strategies();
   if(!sts.length){out.innerHTML='<p class="note">Marca al menos una estrategia.</p>';return;}
   saveCfg();
+  var src=$('source').value, cielo=(src==='clearsky');
   var body={
     lat:+$('lat').value, lon:+$('lon').value, year:+$('year').value,
-    source:$('source').value, name:($('plant').value?$('plant').selectedOptions[0].text:null),
+    meteo_mode:cielo?'clearsky':'canon', source:cielo?'openmeteo':src,
+    name:($('plant').value?$('plant').selectedOptions[0].text:null),
     strategies:sts,
     tracker:{max_angle_deg:+$('maxang').value, gcr:+$('gcr').value, pitch_m:+$('pitch').value,
              axis_azimuth_deg:+$('axaz').value, backtrack:$('bt').checked},
@@ -302,6 +444,7 @@ async function run(){
     destow_hold_minutes:+$('hold').value, partial_park_minutes:+$('park').value,
     wind_height_m:(+$('wh').value>0?+$('wh').value:null),
     resample_minutes:($('step').value?+$('step').value:null),
+    wind_scenario:scenario(),
     top_events:12, include_trace:true
   };
   $('run').disabled=true; $('run').textContent='Simulando…';
@@ -342,7 +485,17 @@ function render(){
     (m.resample_minutes?' · meteo interpolada a <b>'+m.resample_minutes+' min</b>':'')+
     (m.has_wind_direction?'':' · <b>sin dirección de viento en la fuente</b>: A1/A2 resuelven con 180° fijos')+
     '.</p>';
-  drawTable(); drawBars();
+  var sc=w.scenario;
+  if(sc){
+    var ap=(sc.events_applied||[]),sk=(sc.events_skipped||[]);
+    $('out').innerHTML+='<div class="warn"><b>Banco de pruebas: esto no es el año medido.</b> '+
+      'Fondo <b>'+esc({meteo:'meteo del emplazamiento',synthetic:'sintético Weibull + AR(1)',calm:'en calma'}[sc.base]||sc.base)+'</b>'+
+      (ap.length?' · <b>'+ap.length+'</b> racha(s) inyectada(s) (máx '+
+        fmt(Math.max.apply(null,ap.map(function(e){return e.peak_kmh;})),0)+' km/h)':'')+
+      (sk.length?' · <b>'+sk.length+'</b> descartada(s): '+esc(sk.map(function(e){return e.why;}).join('; ')):'')+
+      (sc.not_modeled?'<br><span style="color:var(--muted)">'+esc(sc.not_modeled)+'</span>':'')+'</div>';
+  }
+  drawWind(); drawTable(); drawBars();
   $('cmpCard').style.display='';
   var k=ord(); SEL=(SEL&&k.indexOf(SEL)>=0)?SEL:b||k[0];
   $('strip').innerHTML=k.map(function(s){
@@ -352,6 +505,44 @@ function render(){
   drawDetail();
 }
 function ro(k,v,s){return '<div class="ro"><div class="k">'+k+'</div><div class="v">'+v+(s?' <small>'+s+'</small>':'')+'</div></div>';}
+
+/* ---- viento simulado: máximo diario contra los dos umbrales ----
+   Es la comprobación de que lo que se pidió es lo que se simuló: si has metido
+   una racha de 110 km/h el 14 de julio, tiene que verse ahí y por encima de la
+   línea roja. Sin este dibujo, un escenario mal escrito se lee como física. */
+function drawWind(){
+  var d=REP.wind.daily_max_kmh||[]; var cv=$('wind');
+  if(!d.length){cv.style.display='none';return;}
+  cv.style.display='';
+  var x=cv.getContext('2d'),W=cv.width,H=cv.height,L=48,R=16,T=20,B=24;
+  x.clearRect(0,0,W,H);
+  var hi=Math.max(REP.wind.threshold_2_kmh*1.25,Math.max.apply(null,d)*1.08);
+  var gx=function(i){return L+(i/Math.max(1,d.length-1))*(W-L-R);},
+      gy=function(v){return H-B-(v/hi)*(H-B-T);};
+  x.strokeStyle='#1A2530';x.fillStyle='#5E6F7E';x.font='10px ui-monospace,monospace';x.lineWidth=1;
+  for(var i=0;i<=3;i++){var v=hi*i/3,y=gy(v);
+    x.beginPath();x.moveTo(L,y);x.lineTo(W-R,y);x.stroke();
+    x.textAlign='right';x.fillText(Math.round(v),L-6,y+3);}
+  x.beginPath();
+  for(var j=0;j<d.length;j++){var xx=gx(j),yy=gy(d[j]);if(j===0)x.moveTo(xx,yy);else x.lineTo(xx,yy);}
+  x.strokeStyle='#54A6FF';x.lineWidth=1.5;x.stroke();
+  x.lineTo(gx(d.length-1),H-B);x.lineTo(L,H-B);x.closePath();x.fillStyle='rgba(84,166,255,.10)';x.fill();
+  /* Los dos umbrales están cerca (40 y 60 km/h) y con el eje escalado a una
+     racha de 120 caen a pocos píxeles: el de abajo se rotula por debajo de su
+     línea para que los dos textos no se pisen. */
+  [[REP.wind.threshold_1_kmh,'#F6A623',11],[REP.wind.threshold_2_kmh,'#D0594F',-3]].forEach(function(u){
+    var y=gy(u[0]);x.setLineDash([5,4]);x.strokeStyle=u[1];x.lineWidth=1;
+    x.beginPath();x.moveTo(L,y);x.lineTo(W-R,y);x.stroke();x.setLineDash([]);
+    x.fillStyle=u[1];x.textAlign='left';x.fillText(Math.round(u[0])+' km/h',L+3,y+u[2]);});
+  // meses
+  var acc=0,t0=new Date(REP.wind.daily_t0||(REP.meteo.period[0]));
+  x.fillStyle='#5E6F7E';x.textAlign='center';
+  for(var m=0;m<12;m++){
+    var dias=new Date(Date.UTC(t0.getUTCFullYear(),m+1,0)).getUTCDate();
+    x.fillText(MESES[m],gx(acc+dias/2),H-7); acc+=dias;
+  }
+  x.textAlign='left';x.fillStyle='#8093A4';x.fillText('máximo diario de viento (km/h)',L,12);
+}
 
 /* ---- tabla comparativa ---- */
 function drawTable(){
@@ -533,8 +724,12 @@ IDS.forEach(function(i){$(i).addEventListener('change',saveCfg);});
 $('bt').addEventListener('change',saveCfg);
 [].forEach.call(document.querySelectorAll('.st'),function(e){e.addEventListener('change',saveCfg);});
 $('run').onclick=run;
-window.addEventListener('resize',function(){if(REP){drawBars();drawDetail();}});
-loadCfg(); loadPlants(); detectEngine();
+$('gadd').onclick=function(){addGust($('gpreset').value);};
+$('gpreset').onchange=function(){if(this.value){addGust(this.value);this.value='';}};
+['wgust','wcyc'].forEach(function(i){$(i).addEventListener('change',saveCfg);});
+$('wbase').addEventListener('change',function(){saveCfg();});
+window.addEventListener('resize',function(){if(REP){drawWind();drawBars();drawDetail();}});
+fillRosa(); loadCfg(); loadPlants(); renderGusts(); detectEngine().then(loadPresets);
 </script>
 </body>
 </html>

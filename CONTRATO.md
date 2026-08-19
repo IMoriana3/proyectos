@@ -189,3 +189,4 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 | 2026-08-12 | Proyectos | Vista `layout2d` nueva, y `cobertura` pasa a ser la malla Zigbee en las seis plantas (`index.html?planta=`). Antes compartían botón. Ver la tabla de arriba. |
 | 2026-08-12 | Backtracking | El Panel pasa a ser **app instalable**: `manifest.webmanifest` (scope `/`), `sw.js`, iconos, botón *Instalar app* y aviso de versión nueva. `tests/test_pwa.js`. Ver Puntos abiertos. |
 | 2026-08-19 | Proyectos | Ficha `sim-viento.html` (abanderamiento por viento) + `docs/viento.md` + acceso directo en la cabecera de Herramientas. Depende de `POST /windstow` en el motor. |
+| 2026-08-19 | Proyectos | `sim-viento.html` v1.1: laboratorio de rachas (fondo sintético o en calma, ráfaga de 3 s, rachas inyectadas con dirección, tormentas al azar) y meteo de cielo claro para probar sin red. |

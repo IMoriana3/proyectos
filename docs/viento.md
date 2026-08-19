@@ -69,12 +69,61 @@ que hace comparable el recuento entre estrategias con y sin histéresis.
   sigue siendo horario) pero deja que la máquina de estados resuelva sus propios tiempos. Por eso el
   paso por defecto es 15 min y el usado se imprime en la cabecera del resultado.
 
+## El laboratorio de rachas
+
+El año medido contesta «qué pasó». El laboratorio contesta **«qué pasaría si»**: provoca a la
+máquina de estados con viento que el año real no trae. Tres capas, y el orden importa.
+
+**1 · Viento de fondo**
+
+| opción | qué es |
+|---|---|
+| Meteo del emplazamiento | el año descargado, tal cual (lo normal) |
+| Sintético · Weibull + AR(1) | el generador canónico del core (`wind_synth`, el mismo que usa la página 🌦️ Meteo de Streamlit y el notebook §04.2f): Weibull(k, A) + AR(1) ρ=0,85 para dar persistencia horaria, modulación diurna ±20 % y estacional ±15 %, y cola ciclónica opcional |
+| En calma | cero, para ver una racha aislada sin ruido de fondo |
+
+La persistencia AR(1) no es un adorno: sin autocorrelación los episodios salen troceados en horas
+sueltas y se subestima su duración, que es justo lo que cuesta energía.
+
+**2 · Ráfaga de 3 s**
+
+Con el interruptor de ráfaga, la base pasa por el factor de pico de Cook/IEC
+(`GUST_PEAK_FACTOR = 3,5`, turbulencia de referencia 0,14). Es lo que dispara de verdad una TCU, y
+por eso el recuento que sale del reanálisis a secas es un suelo: en la misma prueba sintética, pasar
+de media horaria a ráfaga multiplica por cuatro los episodios.
+
+**3 · Rachas inyectadas**
+
+Cada racha lleva instante, pico en km/h, duración, forma (**gaussiana**, donde la duración es la
+anchura a media altura, o **meseta** con rampas del 15 %), dirección y repetición. Hay rachas tipo
+servidas por el motor (`GET /windstow/presets`) para no discutir números: racha seca 80 km/h/20 min,
+borrasca 100 km/h/3 h, temporal 120 km/h/12 h, y una «justo en el umbral» de 62 km/h que sirve para
+ver cómo se comporta la histéresis cuando el viento ronda el disparo. Y un generador de **tormentas
+al azar**: N al año, pico y duración por rango, reproducibles por semilla.
+
+Tres cosas que hay que tener claras al leer un resultado del laboratorio:
+
+- Las rachas se superponen **por máximo, no se suman**: pedir 90 km/h da 90 km/h.
+- La corrección de altura y la escala se aplican al fondo **antes** de inyectar, así que el pico que
+  escribes es el que ve la máquina de estados, no un número que el 0,88 rebaje por la espalda.
+- **La dirección viaja con la racha** y manda en los pasos donde la racha domina. Sin ella, A1/A2
+  (que abanderan cara al viento) tumban siempre al mismo lado y su comparación con B pierde sentido.
+
+Nada de esto lleva detrás un cambio de irradiancia, de temperatura ni de dirección de fondo: es un
+banco de pruebas, no un año meteorológico. La ficha lo dice en pantalla cada vez que el escenario
+deja de ser la meteo tal cual, y el motor lo devuelve en `wind.scenario.not_modeled`.
+
+Para probar sin red hay además una meteo de **cielo claro** (pvlib Ineichen con la climatología de
+turbidez que trae el paquete): sol sin nubes, temperatura sinusoidal declarada. Sirve para comparar
+estrategias entre sí, nunca en absoluto — la POA sale por encima de cualquier año real.
+
 ## Cómo corre
 
 La ficha no reimplementa nada: pide `POST /windstow` al motor y dibuja lo que vuelve. El motor
 resuelve la POA con `compute_tracker_poa_v2` (pvlib singleaxis + lazo de control + transposición de
 Perez + sombreado entre filas) y el abanderamiento con la máquina de estados canónica; la
-contabilidad de episodios y horas vive en `solargpt_core/wind_stow_report.py`.
+contabilidad de episodios y horas vive en `solargpt_core/wind_stow_report.py` y el banco de pruebas
+en `solargpt_core/wind_scenario.py`.
 
 Arrancar el motor, de las dos formas de siempre:
 
