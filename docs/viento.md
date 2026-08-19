@@ -141,22 +141,39 @@ también este campo. El campo es **ilustrativo** (dos filas por caso, geometría
 ala); los ángulos y la POA son los que devuelve el motor, no los que dibuje el visor. Si el navegador
 no puede con WebGL, la tarjeta simplemente no aparece y el resto de la ficha sigue funcionando.
 
-## Cómo corre
+## Quién calcula
 
-La ficha no reimplementa nada: pide `POST /windstow` al motor y dibuja lo que vuelve. El motor
-resuelve la POA con `compute_tracker_poa_v2` (pvlib singleaxis + lazo de control + transposición de
-Perez + sombreado entre filas) y el abanderamiento con la máquina de estados canónica; la
-contabilidad de episodios y horas vive en `solargpt_core/wind_stow_report.py` y el banco de pruebas
-en `solargpt_core/wind_scenario.py`.
+**El navegador, por defecto.** Como `bateria.html` del gemelo o `backtracking.html` de cobertura:
+se abre y funciona, sin levantar nada. Baja el año de Open-Meteo directamente, resuelve la posición
+solar (declinación + ecuación del tiempo), el seguimiento con backtracking (Anderson-Mikofski) y la
+POA por transposición **isotrópica**, y aplica las cuatro máquinas de estado, que son el **puerto
+exacto** de `solargpt_core.wind_stow_strategies`.
 
-Arrancar el motor, de las dos formas de siempre:
+**El motor SolarGPT, si lo tienes.** En el desplegable *Cálculo* aparece la opción *Motor SolarGPT
+(canónico)* en cuanto la ficha lo detecta. Ahí la POA sale de `compute_tracker_poa_v2`: Perez,
+sombreado entre filas, IAM y lazo de control (banda muerta y velocidad de giro). Arrancarlo:
+cuaderno `Factiun_plataforma.ipynb` en Colab → *Ejecutar todo* → pegar la URL del túnel en el
+indicador **«motor»** de la barra; o `cd server && ./run.sh` en local.
 
-- **Colab** — cuaderno `Factiun_plataforma.ipynb` → *Ejecutar todo*, y pegar la URL del túnel en el
-  indicador del motor de la ficha.
-- **En tu máquina** — `cd server && ./run.sh` (escucha en `127.0.0.1:8765`).
+### El careo, para no tener que fiarse
 
-Sin motor la ficha no simula y lo dice: reimplementar las estrategias en JS sería una segunda verdad
-sobre la misma física, que es justo lo que la plataforma evita.
+«Espejo declarado» es una promesa hasta que alguien la mide. El repo lleva **`demo-viento.json`**:
+una corrida **real del motor Python**, congelada, con el cuerpo exacto de la petición que la produjo
+guardado dentro. El botón *Carear con el motor canónico* la repite en el navegador y pone los dos
+números uno al lado del otro. No hace falta tener el motor levantado.
 
-`/windstow` está en `main` del repo del motor desde el 19-08-2026, así que el cuaderno —que clona
-`main`— lo sirve sin nada más que ejecutarlo.
+El escenario del careo lleva viento **determinista** a propósito (fondo en calma + doce rachas
+inyectadas de distinto pico, duración, forma y lado): sin números aleatorios, las dos
+implementaciones ven exactamente la misma serie y lo que quede es física, no azar. Resultado hoy:
+
+| | Motor Python | Navegador |
+|---|---|---|
+| POA sin abanderar | 2644,5 kWh/m² | 2638,4 kWh/m² (**−0,23 %**) |
+| Abanderamientos (A1/A2/B1/B2) | 12 / 12 / 12 / 12 | **idénticos** |
+| Horas abanderado | 41,5 / 47,5 h | **idénticas** |
+| Δ POA por estrategia | −0,368 … −0,041 % | dentro de **0,04 pp** |
+
+O sea: **las maniobras y el tiempo salen exactos** —las máquinas de estado son las mismas— y la POA
+absoluta se separa dos décimas por el modelo de transposición. Que es justo el reparto que uno
+querría: la ficha existe para comparar estrategias, y eso es lo que aguanta.
+
