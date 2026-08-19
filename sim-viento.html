@@ -276,8 +276,8 @@
             <input id="lD" type="range" min="0" max="359" step="5" value="270"></div>
           <div class="field"><label>Hora <span id="lHlbl">12:00</span></label>
             <input id="lH" type="range" min="0" max="1439" step="1" value="720"></div>
-          <div class="field"><label>Día del año <span id="lYlbl">172</span></label>
-            <input id="lY" type="range" min="1" max="365" step="1" value="172"></div>
+          <div class="field"><label>Fecha</label>
+            <input id="lDate" type="date" value="2023-06-21"></div>
         </div>
       </div>
 
@@ -1472,12 +1472,10 @@ function init3D(){
     /* CIELO: cúpula con degradado por altura (cénit oscuro → horizonte
        encendido), como el resto de escenas de la casa. */
     var skyCv=document.createElement('canvas'); skyCv.width=4; skyCv.height=256;
-    var sx=skyCv.getContext('2d'), grad=sx.createLinearGradient(0,0,0,256);
-    grad.addColorStop(0,'#070b11'); grad.addColorStop(0.55,'#101a28');
-    grad.addColorStop(0.88,'#1c3350'); grad.addColorStop(1,'#2c4a6b');
-    sx.fillStyle=grad; sx.fillRect(0,0,4,256);
-    sc.add(new THREE.Mesh(new THREE.SphereGeometry(2600,24,32),
-      new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(skyCv),side:THREE.BackSide,depthWrite:false})));
+    var skyTx=new THREE.CanvasTexture(skyCv);
+    var skyMesh=new THREE.Mesh(new THREE.SphereGeometry(2600,24,32),
+      new THREE.MeshBasicMaterial({map:skyTx,side:THREE.BackSide,depthWrite:false,fog:false}));
+    skyMesh.renderOrder=-10; sc.add(skyMesh);
     var cam=new THREE.PerspectiveCamera(42,1.9,0.5,9000);
     cam.position.set(120,95,150);
     var ct=new THREE.OrbitControls(cam,rd.domElement);
@@ -1487,7 +1485,18 @@ function init3D(){
     var sun=new THREE.DirectionalLight(0xffeecc,1.5);
     sun.castShadow=true; sun.shadow.mapSize.width=2048; sun.shadow.mapSize.height=2048;
     sun.shadow.bias=-2e-4; sun.shadow.normalBias=0.3;
-    var sunM=new THREE.Mesh(new THREE.SphereGeometry(9,16,16),new THREE.MeshBasicMaterial({color:0xfbbd23}));
+    /* El SOL tiene que verse: un disco de radio fijo a 700 m es un píxel. Va
+       como sprite con halo (degradado radial) y se dimensiona con la escena,
+       igual que en los 3D de la casa. */
+    var sunCv=document.createElement('canvas'); sunCv.width=sunCv.height=128;
+    var sctx=sunCv.getContext('2d');
+    var sg=sctx.createRadialGradient(64,64,2,64,64,64);
+    sg.addColorStop(0,'rgba(255,246,214,1)'); sg.addColorStop(0.18,'rgba(255,214,110,1)');
+    sg.addColorStop(0.42,'rgba(251,189,35,0.42)'); sg.addColorStop(1,'rgba(251,189,35,0)');
+    sctx.fillStyle=sg; sctx.fillRect(0,0,128,128);
+    var sunM=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(sunCv),
+      depthTest:false,depthWrite:false,transparent:true}));
+    sunM.renderOrder=-5;
     sc.add(hemi,sun,sun.target,sunM);
     /* El suelo se dimensiona con la escena: uno fijo de 4 km dejaba una
        planta de 800 m como un puñado de puntos en mitad de un descampado. */
@@ -1502,7 +1511,8 @@ function init3D(){
     var hint=document.createElement('div'); hint.className='hint3d';
     hint.textContent='arrastrar: orbitar · rueda: zoom · botón dcho: desplazar';
     h.appendChild(hint);
-    TD={rd:rd,sc:sc,cam:cam,ct:ct,sun:sun,sunM:sunM,wind:wind,suelo:suelo,mundo:null,radio:420};
+    TD={rd:rd,sc:sc,cam:cam,ct:ct,sun:sun,sunM:sunM,wind:wind,suelo:suelo,mundo:null,radio:420,
+        hemi:hemi,skyCv:skyCv,skyTx:skyTx,skyKey:''};
     TD.suelo.scale.set(900,600,1);
     var last=performance.now();
     (function loop(now){requestAnimationFrame(loop); if(!TD)return;
@@ -1683,6 +1693,21 @@ function pintaEscena(ang,modos,poa,poaBase){
   }
 }
 
+/* Cielo por degradado de altura, repintado según dónde esté el sol: cénit
+   oscuro y horizonte encendido — naranja al alba y al ocaso, azul pálido a
+   mediodía. Es lo que hace que el sol se LEA aunque el disco sea pequeño; con
+   un cielo plano la escena no dice ni la hora. (Mismo criterio que bt3d.) */
+function setSky(cenit,horiz){
+  var k=cenit.concat(horiz).map(function(v){return Math.round(v*255);}).join(',');
+  if(k===TD.skyKey)return; TD.skyKey=k;
+  var x=TD.skyCv.getContext('2d'), g=x.createLinearGradient(0,0,0,256);
+  var rgb=function(c){return 'rgb('+Math.round(Math.max(0,Math.min(1,c[0]))*255)+','+
+    Math.round(Math.max(0,Math.min(1,c[1]))*255)+','+Math.round(Math.max(0,Math.min(1,c[2]))*255)+')';};
+  g.addColorStop(0,rgb(cenit));
+  g.addColorStop(0.62,rgb([(cenit[0]+horiz[0])/2,(cenit[1]+horiz[1])/2,(cenit[2]+horiz[2])/2]));
+  g.addColorStop(1,rgb(horiz));
+  x.fillStyle=g; x.fillRect(0,0,4,256); TD.skyTx.needsUpdate=true;
+}
 function ponSol(elDeg,azDeg,vms,dirDeg){
   if(!TD)return;
   var R=TD.radio||420, e=Math.max(elDeg,-4)*Math.PI/180, a=azDeg*Math.PI/180;
@@ -1691,7 +1716,22 @@ function ponSol(elDeg,azDeg,vms,dirDeg){
   TD.sun.position.copy(dir.clone().multiplyScalar(R)).add(c);
   TD.sun.target.position.copy(c); TD.sun.target.updateMatrixWorld();
   TD.sunM.position.copy(dir.clone().multiplyScalar(R*0.92)).add(c);
-  TD.sun.intensity=elDeg>0?1.5:0.02; TD.sunM.visible=elDeg>0;
+  var disco=R*0.16; TD.sunM.scale.set(disco,disco,1);
+  var up=Math.min(1,Math.max(0,elDeg/35));
+  if(elDeg>0){
+    var warm=Math.max(0,Math.min(1,(12-elDeg)/12));
+    TD.sun.color.setRGB(1,0.93-0.38*warm,0.80-0.62*warm);
+    TD.sun.intensity=1.45-0.25*warm;
+    if(TD.hemi)TD.hemi.intensity=0.55+0.15*warm;
+    TD.sunM.material.color.setRGB(1,0.95-0.30*warm,0.85-0.55*warm);
+    setSky([0.04+0.09*up,0.07+0.12*up,0.14+0.22*up],
+           [0.20+0.25*up+0.62*warm*(1-0.5*up),0.28+0.30*up+0.20*warm*(1-0.5*up),0.42+0.35*up-0.20*warm]);
+  }else{
+    TD.sun.intensity=0.02; if(TD.hemi)TD.hemi.intensity=0.32;
+    var tw=Math.max(0,(elDeg+8)/8);
+    setSky([0.028,0.038,0.065],[0.05+0.55*tw,0.055+0.19*tw,0.08+0.03*tw]);
+  }
+  TD.sunM.visible=elDeg>-1;
   if(dirDeg!=null&&vms>0.3){
     var wa=dirDeg*Math.PI/180, rw=R*0.30;
     TD.wind.position.set(c.x+Math.sin(wa)*rw,22,c.z-Math.cos(wa)*rw);
@@ -1727,13 +1767,23 @@ function liveInit(){
   LIVE.ang.BASE=0; LIVE.modos.BASE='SEGUIMIENTO';
   liveLbl();
 }
+/* «día 172» no lo lee nadie: la fecha sí. El control es un selector de fecha
+   y el reloj la enseña como se dice en voz alta (21 jun · 12:00). */
+var MESES3=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function fechaLive(){
+  var v=$('lDate').value, p=(v||'2023-06-21').split('-');
+  return new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));
+}
+function fechaCorta(d){return d.getUTCDate()+' '+MESES3[d.getUTCMonth()];}
+function fechaISO(d){
+  return d.getUTCFullYear()+'-'+('0'+(d.getUTCMonth()+1)).slice(-2)+'-'+('0'+d.getUTCDate()).slice(-2);
+}
 function liveLbl(){
-  var v=+$('lV').value,d=+$('lD').value,m=+$('lH').value,y=+$('lY').value;
+  var v=+$('lV').value,d=+$('lD').value,m=+$('lH').value;
   $('lVlbl').textContent=v+' km/h';
   $('lDlbl').textContent=compass(d)+' · '+d+'°';
   $('lHlbl').textContent=hhmm(m);
-  $('lYlbl').textContent=y;
-  $('lClock').textContent='día '+y+' · '+hhmm(m);
+  $('lClock').textContent=fechaCorta(fechaLive())+' · '+hhmm(m);
   if(LIVE){LIVE.v=v/3.6;LIVE.dir=d;}
 }
 function compass(a){var d=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];return d[Math.round(a/22.5)%16];}
@@ -1745,13 +1795,12 @@ function liveTick(dtReal){
   var fac=LIVE.run?(+$('lSpeed').value||300):0, dtS=dtReal*fac;
   if(fac>0){
     var m=+$('lH').value+dtS/60;
-    if(m>=1440){m-=1440;$('lY').value=(+$('lY').value%365)+1;}
+    if(m>=1440){m-=1440; var nd=fechaLive(); nd.setUTCDate(nd.getUTCDate()+1); $('lDate').value=fechaISO(nd);}
     $('lH').value=Math.round(m); liveLbl();
   }
   var lat=+$('lat').value, lon=+$('lon').value, latR=lat*LOC.D2R;
-  var y=+$('lY').value, mi=+$('lH').value;
-  var d0=new Date(Date.UTC(2023,0,1)); d0.setUTCDate(y);
-  var when=new Date(d0.getTime()+mi*60000);
+  var mi=+$('lH').value;
+  var when=new Date(fechaLive().getTime()+mi*60000);
   var P=LOC.sun(when,latR,lon);
   var full=+$('maxang').value, gcr=+$('gcr').value, bt=$('bt').checked;
   var tgt=LOC.theta(P.el,P.az,gcr,full,bt);
@@ -1799,7 +1848,9 @@ function update3D(i){
   pintaEscena(ang,modos,poa,poa.BASE);
   tiles(ang,modos,poa,poa.BASE);
   $('tpos').value=i;
-  $('tlbl').textContent=TL.t[i].slice(5,16).replace('T',' ')+' · '+fmt((TL.wind_ms[i]||0)*3.6,0)+' km/h';
+  var ts=new Date(TL.t[i]);
+  $('tlbl').textContent=fechaCorta(ts)+' · '+hhmm(ts.getUTCHours()*60+ts.getUTCMinutes())+
+    ' · '+fmt((TL.wind_ms[i]||0)*3.6,0)+' km/h';
 }
 function playToggle(){
   PLAY=!PLAY; $('play').textContent=PLAY?'❚❚ Pausa':'▶ Reproducir';
@@ -1874,8 +1925,9 @@ $('mFit').onclick=function(){
   if(!TD||!TD.encuadre)return;
   TD.cam.position.copy(TD.encuadre.pos); TD.ct.target.copy(TD.encuadre.tgt); TD.ct.update();
 };
-['lV','lD','lH','lY'].forEach(function(i){$(i).addEventListener('input',function(){
+['lV','lD','lH','lDate'].forEach(function(i){$(i).addEventListener('input',function(){
   liveLbl(); if(MODO==='live')liveTick(0.001);});});
+$('lDate').addEventListener('change',function(){liveLbl();if(MODO==='live')liveTick(0.001);});
 $('lPlay').onclick=function(){
   if(!LIVE)liveInit();
   LIVE.run=!LIVE.run; this.textContent=LIVE.run?'❚❚ Pausa':'▶ Correr el tiempo';
@@ -1898,6 +1950,8 @@ fillRosa(); fillPresets(); loadCfg(); meteoTag(); loadPlants(); renderGusts();
 /* La escena se monta AL ABRIR, no al terminar de simular: era la pega — el
    render solo aparecía después de un año entero de cálculo, y hasta entonces
    la ficha no enseñaba nada que se moviera. */
+(function(){ /* la fecha en vivo arranca en el solsticio del año elegido */
+  var y=+$('year').value||2023; $('lDate').value=y+'-06-21'; })();
 montaEscena();
 detectEngine().then(loadPresets);
 </script>
