@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0B0F14">
+<link rel="icon" href="favicon.svg">
+<title>Viento &amp; Abanderamiento — Factiun</title>
+<!-- sin fuentes de Google: offline (fuentes del sistema) -->
+<style>
+:root{
+  --void:#0B0F14; --panel:#121922; --panel-2:#0F151D; --panel-hi:#18222D;
+  --line:#23303D; --line-soft:#1A2530; --text:#E7EEF4; --muted:#8093A4; --muted-2:#5E6F7E;
+  --live:#36D399; --build:#F6A623; --demo:#54A6FF; --idle:#6A7B8B; --dead:#D0594F;
+  --accent:#36D399; --radius:14px; --radius-sm:9px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --display:'Space Grotesk',system-ui,sans-serif;
+  /* una estrategia = un color, y el mismo en tabla, barras y series */
+  --a1:#F6A623; --a2:#D0594F; --b1:#54A6FF; --b2:#36D399; --base:#8093A4;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--void);color:var(--text);font-family:var(--sans);min-height:100vh;font-variant-numeric:tabular-nums}
+.bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 18px;background:var(--panel-2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+.bar .back{color:var(--muted);text-decoration:none;font:600 13px/1 var(--sans);padding:7px 11px;border:1px solid var(--line);border-radius:10px;white-space:nowrap}
+.bar .back:hover{color:var(--text);border-color:var(--accent)}
+.bar h1{font:700 17px/1.1 var(--display)}
+.bar .sub{color:var(--muted);font-size:12.5px;margin-right:auto}
+.bar .brand{color:var(--accent);font:700 14px/1 var(--display);letter-spacing:.04em}
+.engine{display:flex;align-items:center;gap:7px;font-size:12px;font-family:var(--mono);padding:4px 10px;border:1px solid var(--line);border-radius:20px;background:var(--panel)}
+.engine .led{width:9px;height:9px;border-radius:50%;background:var(--idle)}
+.engine.on .led{background:var(--live);box-shadow:0 0 7px var(--live)}
+.engine.off .led{background:var(--dead)}
+.wrap{max-width:min(1560px,94vw);margin:0 auto;padding:20px 18px 60px}
+.grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.card+.card{margin-top:16px}
+.card h2{font:700 13px/1 var(--display);letter-spacing:.02em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card h2 .ic{color:var(--accent)}
+.card h2 .hint{margin-left:auto;font:400 11px var(--mono);color:var(--muted)}
+.field{margin-bottom:11px}
+.field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.field input,.field select{width:100%;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.btn{background:rgba(54,211,153,.12);color:var(--accent);border:1px solid var(--accent);border-radius:9px;padding:10px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;width:100%}
+.btn:hover{background:rgba(54,211,153,.2);color:#fff}
+.btn:disabled{opacity:.5;cursor:progress}
+.btn.ghost{background:var(--panel-2);color:var(--text);border-color:var(--line)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:6px}
+.ro{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:9px;padding:9px 11px}
+.ro .k{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-family:var(--mono)}
+.ro .v{font:700 17px/1.2 var(--display);margin-top:3px}
+.ro .v small{font-size:12px;color:var(--muted);font-weight:400}
+canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:10px;margin-top:6px}
+.note{font-size:12px;color:var(--muted-2);margin-top:10px;line-height:1.55}
+.note code,.note b{color:var(--muted)}
+.note code{background:var(--panel-2);padding:1px 5px;border-radius:5px;font-family:var(--mono)}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);margin-top:2px}
+.engmsg{background:var(--panel-2);border:1px dashed var(--build);border-radius:9px;padding:11px 13px;font-size:12.5px;line-height:1.55}
+.engmsg code{background:#0b0f14;color:var(--build);padding:1px 6px;border-radius:5px;font-family:var(--mono);font-size:11.5px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+th{font:600 10.5px/1.3 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);text-align:right;vertical-align:bottom}
+th:first-child,td:first-child{text-align:left}
+tbody tr:hover{background:var(--panel-hi)}
+tr.base td{color:var(--muted)}
+tr.win td{background:rgba(54,211,153,.07)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:7px;vertical-align:baseline}
+.strip{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:var(--panel-2);color:var(--muted);border-radius:20px;padding:5px 12px;font:600 12px var(--sans);cursor:pointer}
+.chip.on{color:var(--text);border-color:var(--accent);background:rgba(54,211,153,.10)}
+.chk{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);margin-bottom:7px}
+.chk input{width:auto;accent-color:var(--accent)}
+.scroll{overflow-x:auto}
+.err{border-color:var(--dead);color:var(--text)}
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="back" href="index.html">← Panel</a>
+  <h1>Viento &amp; Abanderamiento</h1>
+  <span class="sub">qué cuesta defender el seguidor</span>
+  <div class="engine" id="engine"><span class="led"></span><span id="engineTxt">motor…</span></div>
+  <span class="brand">Factiun</span>
+</header>
+
+<div class="wrap">
+<div class="grid">
+
+  <!-- ═════════ ENTRADAS ═════════ -->
+  <div>
+    <div class="card">
+      <h2><span class="ic">◉</span> Emplazamiento</h2>
+      <div class="field"><label>Planta</label>
+        <select id="plant"><option value="">— manual —</option></select></div>
+      <div class="two">
+        <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="41.5763"></div>
+        <div class="field"><label>Longitud °</label><input id="lon" type="number" step="0.0001" value="-0.7981"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Año meteo</label><input id="year" type="number" step="1" value="2023"></div>
+        <div class="field"><label>Fuente</label>
+          <select id="source">
+            <option value="openmeteo">Open-Meteo (ERA5)</option>
+            <option value="pvgis">PVGIS horario</option>
+            <option value="nasa">NASA POWER</option>
+          </select></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Paso de cálculo</label>
+          <select id="step">
+            <option value="">Horario (el del dato)</option>
+            <option value="30">30 min (interpolado)</option>
+            <option value="15" selected>15 min (interpolado)</option>
+            <option value="10">10 min (interpolado)</option>
+          </select></div>
+        <div class="field"><label>Altura del viento (m)</label><input id="wh" type="number" step="0.5" value="4"></div>
+      </div>
+      <p class="tag">Meteo del motor · viento y dirección horarios</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="ic">⌬</span> Seguidor</h2>
+      <div class="two">
+        <div class="field"><label>Ángulo máx °</label><input id="maxang" type="number" step="1" value="55"></div>
+        <div class="field"><label>GCR</label><input id="gcr" type="number" step="0.001" value="0.397"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Pitch (m)</label><input id="pitch" type="number" step="0.05" value="6"></div>
+        <div class="field"><label>Azimut del eje °</label><input id="axaz" type="number" step="1" value="0"></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="bt" checked> Backtracking</label>
+    </div>
+
+    <div class="card">
+      <h2><span class="ic">⚑</span> Abanderamiento</h2>
+      <div class="two">
+        <div class="field"><label>Umbral 1 (km/h)</label><input id="t1" type="number" step="1" value="40"></div>
+        <div class="field"><label>Umbral 2 (km/h)</label><input id="t2" type="number" step="1" value="60"></div>
+      </div>
+      <div class="three">
+        <div class="field"><label>Parcial mín °</label><input id="pmin" type="number" step="1" value="30"></div>
+        <div class="field"><label>Hold (min)</label><input id="hold" type="number" step="5" value="30"></div>
+        <div class="field"><label>Park (min)</label><input id="park" type="number" step="5" value="30"></div>
+      </div>
+      <div style="margin:12px 0 4px">
+        <label class="chk"><input type="checkbox" class="st" value="A1" checked> <b>A1</b> · cara al viento · 1 umbral</label>
+        <label class="chk"><input type="checkbox" class="st" value="A2" checked> <b>A2</b> · cara al viento · 2 umbrales</label>
+        <label class="chk"><input type="checkbox" class="st" value="B1" checked> <b>B1</b> · cara al sol · 1 umbral</label>
+        <label class="chk"><input type="checkbox" class="st" value="B2" checked> <b>B2</b> · cara al sol · 2 umbrales</label>
+      </div>
+      <button class="btn" id="run">Simular el año</button>
+      <p class="note" id="runNote">La línea base es el mismo seguidor <b>sin abanderar</b>: todo lo que
+        se ve luego es la diferencia contra ella.</p>
+    </div>
+  </div>
+
+  <!-- ═════════ RESULTADOS ═════════ -->
+  <div>
+    <div class="card">
+      <h2><span class="ic">Σ</span> Resultado del año <span class="hint" id="ctx">—</span></h2>
+      <div id="out"><p class="note">Elige emplazamiento y pulsa <b>Simular el año</b>.</p></div>
+    </div>
+
+    <div class="card" id="cmpCard" style="display:none">
+      <h2><span class="ic">⚖</span> Comparativa de estrategias <span class="hint">POA · maniobras · tiempo</span></h2>
+      <div class="scroll"><table id="tbl"></table></div>
+      <canvas id="bars" width="880" height="230"></canvas>
+      <p class="note" id="cmpNote"></p>
+    </div>
+
+    <div class="card" id="detCard" style="display:none">
+      <h2><span class="ic">◷</span> Detalle <span class="hint" id="detHint"></span></h2>
+      <div class="strip" id="strip"></div>
+      <canvas id="monthly" width="880" height="240"></canvas>
+      <canvas id="trace" width="880" height="300"></canvas>
+      <div class="scroll"><table id="evt"></table></div>
+      <p class="note" id="detNote"></p>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+'use strict';
+function $(id){return document.getElementById(id);}
+function fmt(v,d){return (v==null||!isFinite(v))?'—':Number(v).toFixed(d==null?1:d);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+var COL={A1:'#F6A623',A2:'#D0594F',B1:'#54A6FF',B2:'#36D399',BASE:'#8093A4'};
+var MESES=['E','F','M','A','M','J','J','A','S','O','N','D'];
+
+/* ===================== MOTOR SOLARGPT (local o remoto vía túnel de Colab) =====================
+   Mismo contrato que sim-solar.html / layout.html: se prueba la URL guardada y luego los puertos
+   locales. Aquí NO hay modo offline: el abanderamiento es la máquina de estados canónica del
+   core (A1/A2/B1/B2) sobre POA de Perez con sombreado — reimplementarla en JS sería una segunda
+   verdad, y la ficha existe justo para leer la del motor. */
+var ENGINE=null;
+function engineUrls(){var u=[];try{var s=localStorage.getItem('factiun_engine_url');if(s)u.push(s.replace(/\/+$/,''));}catch(e){}[8765,8000,9000].forEach(function(p){u.push('http://127.0.0.1:'+p);});return u;}
+async function detectEngine(){
+  var urls=engineUrls();
+  for(var i=0;i<urls.length;i++){
+    try{var r=await fetch(urls[i]+'/health',{cache:'no-store'});
+      if(r.ok){var j=await r.json();
+        if(j&&j.ok){ENGINE=urls[i];
+          var remoto=!/127\.0\.0\.1|localhost/.test(urls[i]);
+          setEngine(true,'motor ✓ '+(remoto?'(remoto)':'(local)'));
+          if(j.endpoints&&j.endpoints.indexOf('/windstow')<0)
+            setEngine(true,'motor ✓ sin /windstow');
+          return;}}}catch(e){}
+  }
+  setEngine(false,'motor no conectado · clic para URL');
+}
+function setEngine(on,txt){var el=$('engine');el.className='engine '+(on?'on':'off');$('engineTxt').textContent=txt;}
+$('engine').style.cursor='pointer'; $('engine').title='Clic: fijar la URL del motor (p. ej. el túnel de Colab)';
+$('engine').onclick=function(){var cur='';try{cur=localStorage.getItem('factiun_engine_url')||'';}catch(e){}
+  var u=prompt('URL del motor SolarGPT.\nColab: pega el túnel (https://xxx.trycloudflare.com).\nVacío = solo local.',cur);
+  if(u===null)return; try{if(u.trim())localStorage.setItem('factiun_engine_url',u.trim());else localStorage.removeItem('factiun_engine_url');}catch(e){}
+  ENGINE=null;setEngine(false,'reconectando…');detectEngine();};
+
+function engineOffMsg(){
+  return '<div class="engmsg"><b>El motor SolarGPT no está conectado.</b><br>'+
+    'El abanderamiento lo simula el motor Python (estrategias A1/A2/B1/B2 sobre POA de Perez con '+
+    'sombreado), no el navegador. Arráncalo de una de estas dos formas:<br><br>'+
+    '· <b>Colab</b> — cuaderno <code>Factiun_plataforma.ipynb</code> → <i>Ejecutar todo</i>, y pega '+
+    'aquí la URL del túnel (clic en el indicador del motor).<br>'+
+    '· <b>En tu máquina</b> — <code>cd server &amp;&amp; ./run.sh</code> (escucha en <code>127.0.0.1:8765</code>).'+
+    '</div>';
+}
+
+/* ===================== EMPLAZAMIENTOS ===================== */
+/* Las plantas de la cartera llegan por localStorage compartido (`factiun_plantas`, lo siembra
+   cartera-tabla.html). Los presets de abajo son el respaldo: coordenadas de los layouts reales,
+   las mismas que usa el simulador de batería del gemelo. */
+var PRESETS=[
+  {n:'23003 · El Burgo I (Zaragoza, ES)',lat:41.5763,lon:-0.7981},
+  {n:'24007 · Fayón (Zaragoza, ES)',lat:41.2269,lon:0.3242},
+  {n:'24019 · San José (Arequipa, PE)',lat:-16.5958,lon:-71.8064},
+  {n:'24021 · Túnez (Gabès, TN)',lat:33.8792,lon:9.8736},
+  {n:'24025 · Ayora (Valencia, ES)',lat:39.1182,lon:-1.1599},
+  {n:'24030 · Bagnarelli (Apulia, IT)',lat:41.5156,lon:15.2676},
+  {n:'25019 · Páramo (León, ES)',lat:42.3206,lon:-5.5998},
+  {n:'Gorraiz · Navarra (ES)',lat:42.81,lon:-1.58}
+];
+var PLANTS={};
+function loadPlants(){
+  try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
+  var o='<option value="">— manual —</option>';
+  var codes=Object.keys(PLANTS).filter(function(c){var p=PLANTS[c];return p&&p.lat!=null&&p.lon!=null;}).sort();
+  if(codes.length){o+='<optgroup label="Cartera">';
+    codes.forEach(function(c){o+='<option value="c:'+c+'">'+esc((PLANTS[c].nombre||'?')+' · '+c)+'</option>';});
+    o+='</optgroup>';}
+  o+='<optgroup label="Presets">';
+  PRESETS.forEach(function(p,i){o+='<option value="p:'+i+'">'+esc(p.n)+'</option>';});
+  o+='</optgroup>';
+  $('plant').innerHTML=o;
+}
+$('plant').onchange=function(){
+  var v=this.value; if(!v)return;
+  var p=v.slice(0,2)==='c:'?PLANTS[v.slice(2)]:PRESETS[+v.slice(2)];
+  if(!p)return;
+  if(p.lat!=null){$('lat').value=p.lat;$('lon').value=p.lon;}
+  saveCfg();
+};
+
+/* ===================== ESTADO ===================== */
+var REP=null, SEL=null;
+var IDS=['lat','lon','year','source','step','wh','maxang','gcr','pitch','axaz','t1','t2','pmin','hold','park'];
+function saveCfg(){
+  try{var c={};IDS.forEach(function(i){c[i]=$(i).value;});
+    c.bt=$('bt').checked;
+    c.st=[].slice.call(document.querySelectorAll('.st')).filter(function(e){return e.checked;}).map(function(e){return e.value;});
+    localStorage.setItem('factiun_viento_cfg',JSON.stringify(c));}catch(e){}
+}
+function loadCfg(){
+  try{var c=JSON.parse(localStorage.getItem('factiun_viento_cfg')||'null');if(!c)return;
+    IDS.forEach(function(i){if(c[i]!=null)$(i).value=c[i];});
+    if(c.bt!=null)$('bt').checked=!!c.bt;
+    if(c.st)[].forEach.call(document.querySelectorAll('.st'),function(e){e.checked=c.st.indexOf(e.value)>=0;});
+  }catch(e){}
+}
+function strategies(){return [].slice.call(document.querySelectorAll('.st:checked')).map(function(e){return e.value;});}
+
+/* ===================== SIMULACIÓN ===================== */
+async function run(){
+  var out=$('out');
+  if(!ENGINE){out.innerHTML=engineOffMsg();$('cmpCard').style.display='none';$('detCard').style.display='none';return;}
+  var sts=strategies();
+  if(!sts.length){out.innerHTML='<p class="note">Marca al menos una estrategia.</p>';return;}
+  saveCfg();
+  var body={
+    lat:+$('lat').value, lon:+$('lon').value, year:+$('year').value,
+    source:$('source').value, name:($('plant').value?$('plant').selectedOptions[0].text:null),
+    strategies:sts,
+    tracker:{max_angle_deg:+$('maxang').value, gcr:+$('gcr').value, pitch_m:+$('pitch').value,
+             axis_azimuth_deg:+$('axaz').value, backtrack:$('bt').checked},
+    threshold_1_kmh:+$('t1').value, threshold_2_kmh:+$('t2').value,
+    partial_stow_min_abs_deg:+$('pmin').value,
+    destow_hold_minutes:+$('hold').value, partial_park_minutes:+$('park').value,
+    wind_height_m:(+$('wh').value>0?+$('wh').value:null),
+    resample_minutes:($('step').value?+$('step').value:null),
+    top_events:12, include_trace:true
+  };
+  $('run').disabled=true; $('run').textContent='Simulando…';
+  out.innerHTML='<p class="note">El motor está bajando el año y simulando '+sts.length+
+    ' estrategias más la línea base. La primera vez de cada (sitio, año) tarda: luego va de caché.</p>';
+  try{
+    var r=await fetch(ENGINE+'/windstow',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
+    REP=await r.json();
+    render();
+  }catch(e){
+    out.innerHTML='<div class="engmsg err"><b>No se pudo simular.</b><br>'+esc(e.message)+'</div>';
+    $('cmpCard').style.display='none';$('detCard').style.display='none';
+  }finally{ $('run').disabled=false; $('run').textContent='Simular el año'; }
+}
+
+function ord(){ return Object.keys(REP.cases).sort(); }
+function best(){ // la que menos POA pierde
+  var k=ord(), b=null;
+  k.forEach(function(s){if(b===null||REP.cases[s].poa_delta_kwh_m2>REP.cases[b].poa_delta_kwh_m2)b=s;});
+  return b;
+}
+
+function render(){
+  var m=REP.meteo, w=REP.wind, base=REP.baseline;
+  $('ctx').textContent=(REP.site.name?REP.site.name+' · ':'')+(m.source||'')+' '+(m.year||'')+
+    ' · '+m.rows+' pasos de '+Math.round(m.dt_h*60)+' min';
+  var b=best();
+  $('out').innerHTML='<div class="readout">'+
+    ro('POA sin abanderar',fmt(base.poa_kwh_m2,0),'kWh/m²·año')+
+    ro('Viento p95',fmt(w.p95_ms*3.6,0),'km/h · máx '+fmt(w.max_ms*3.6,0))+
+    ro('Horas &gt; '+fmt(w.threshold_1_kmh,0)+' km/h',fmt(w.hours_over_t1,0),'h · &gt;'+fmt(w.threshold_2_kmh,0)+': '+fmt(w.hours_over_t2,0)+' h')+
+    ro('Horas de sol',fmt(m.daylight_hours,0),'h')+
+    ro('Menos pierde',b||'—',b?fmt(REP.cases[b].poa_delta_pct,2)+' %':'')+
+    '</div>'+
+    '<p class="note">Viento corregido a la altura del seguidor con ley potencial 1/7: '+
+    'factor <b>'+fmt(w.scale_applied,3)+'</b> sobre el dato de 10 m'+
+    (m.resample_minutes?' · meteo interpolada a <b>'+m.resample_minutes+' min</b>':'')+
+    (m.has_wind_direction?'':' · <b>sin dirección de viento en la fuente</b>: A1/A2 resuelven con 180° fijos')+
+    '.</p>';
+  drawTable(); drawBars();
+  $('cmpCard').style.display='';
+  var k=ord(); SEL=(SEL&&k.indexOf(SEL)>=0)?SEL:b||k[0];
+  $('strip').innerHTML=k.map(function(s){
+    return '<span class="chip'+(s===SEL?' on':'')+'" data-s="'+s+'"><span class="dot" style="background:'+COL[s]+'"></span>'+s+'</span>';}).join('');
+  [].forEach.call($('strip').children,function(c){c.onclick=function(){SEL=this.dataset.s;render();};});
+  $('detCard').style.display='';
+  drawDetail();
+}
+function ro(k,v,s){return '<div class="ro"><div class="k">'+k+'</div><div class="v">'+v+(s?' <small>'+s+'</small>':'')+'</div></div>';}
+
+/* ---- tabla comparativa ---- */
+function drawTable(){
+  var b=best();
+  var h='<thead><tr><th>Estrategia</th><th>POA<br>kWh/m²·año</th><th>Δ POA<br>kWh/m²</th><th>Δ POA<br>%</th>'+
+        '<th>Abanderamientos<br>al año</th><th>de ellos<br>a total</th><th>Horas<br>al año</th>'+
+        '<th>% horas<br>de sol</th><th>Duración<br>media h</th><th>Máx<br>h</th></tr></thead><tbody>';
+  h+='<tr class="base"><td><span class="dot" style="background:'+COL.BASE+'"></span>Sin abanderar (base)</td>'+
+     '<td>'+fmt(REP.baseline.poa_kwh_m2,1)+'</td><td>—</td><td>—</td><td>0</td><td>0</td><td>0</td><td>0,0</td><td>—</td><td>—</td></tr>';
+  ord().forEach(function(s){
+    var c=REP.cases[s];
+    h+='<tr'+(s===b?' class="win"':'')+'><td><span class="dot" style="background:'+COL[s]+'"></span><b>'+s+'</b> · '+
+       esc(c.orientation==='sol'?'cara al sol':'cara al viento')+' · '+c.n_thresholds+(c.n_thresholds>1?' umbrales':' umbral')+'</td>'+
+       '<td>'+fmt(c.poa_kwh_m2,1)+'</td>'+
+       '<td>'+fmt(c.poa_delta_kwh_m2,2)+'</td>'+
+       '<td>'+fmt(c.poa_delta_pct,3)+'</td>'+
+       '<td>'+c.n_events+'</td>'+
+       '<td>'+c.n_events_full+'</td>'+
+       '<td>'+fmt(c.hours_engaged,0)+'</td>'+
+       '<td>'+fmt(c.pct_daylight,2)+'</td>'+
+       '<td>'+fmt(c.duration_h_mean,1)+'</td>'+
+       '<td>'+fmt(c.duration_h_max,0)+'</td></tr>';
+  });
+  $('tbl').innerHTML=h+'</tbody>';
+  var c2=REP.config;
+  $('cmpNote').innerHTML='Un <b>abanderamiento</b> es una racha continua fuera de seguimiento: si el '+
+    'viento baja del umbral unos minutos y vuelve, sigue siendo el mismo (el hold de '+fmt(c2.destow_hold_minutes,0)+
+    ' min cuenta dentro). «A total» son los que llegaron a ±'+fmt(c2.full_stow_deg,0)+'°; el resto se quedaron en el '+
+    'sector parcial (±'+fmt(c2.partial_stow_min_abs_deg,0)+'°). Las horas incluyen el hold, y el % es sobre horas de sol, '+
+    'que es donde la POA se pierde.';
+}
+
+/* ---- barras: Δ POA % por estrategia ---- */
+function drawBars(){
+  var cv=$('bars'),x=cv.getContext('2d'),W=cv.width,H=cv.height,L=54,R=16,T=22,B=52;
+  x.clearRect(0,0,W,H);
+  var k=ord(); if(!k.length)return;
+  var vals=k.map(function(s){return REP.cases[s].poa_delta_pct;});
+  var lo=Math.min(0,Math.min.apply(null,vals)),hi=Math.max(0,Math.max.apply(null,vals));
+  if(hi-lo<1e-6){hi=0.1;lo=-0.1;}
+  var pad=(hi-lo)*0.15; hi+=pad; lo-=pad;
+  var gy=function(v){return H-B-((v-lo)/(hi-lo))*(H-B-T);};
+  x.strokeStyle='#1A2530';x.fillStyle='#5E6F7E';x.font='10px '+'ui-monospace,monospace';x.lineWidth=1;
+  for(var i=0;i<=4;i++){var v=lo+(hi-lo)*i/4,y=gy(v);
+    x.beginPath();x.moveTo(L,y);x.lineTo(W-R,y);x.stroke();
+    x.textAlign='right';x.fillText(v.toFixed(2)+'%',L-6,y+3);}
+  var y0=gy(0);x.strokeStyle='#23303D';x.lineWidth=1.5;x.beginPath();x.moveTo(L,y0);x.lineTo(W-R,y0);x.stroke();
+  var bw=(W-L-R)/k.length;
+  k.forEach(function(s,i){
+    var c=REP.cases[s],v=c.poa_delta_pct,cx=L+bw*i+bw/2,w=Math.min(74,bw*0.5),y=gy(v);
+    x.fillStyle=COL[s];x.fillRect(cx-w/2,Math.min(y,y0),w,Math.abs(y-y0));
+    x.fillStyle='#E7EEF4';x.font='700 12px system-ui,sans-serif';x.textAlign='center';
+    x.fillText(v.toFixed(2)+'%',cx,v<0?y+15:y-6);
+    x.fillStyle='#8093A4';x.font='11px system-ui,sans-serif';
+    x.fillText(s,cx,H-B+16);
+    x.fillStyle='#5E6F7E';x.font='10px ui-monospace,monospace';
+    x.fillText(c.n_events+' abander.',cx,H-B+30);
+    x.fillText(Math.round(c.hours_engaged)+' h',cx,H-B+42);
+  });
+  x.fillStyle='#8093A4';x.font='10px ui-monospace,monospace';x.textAlign='left';
+  x.fillText('Δ POA anual frente a no abanderar',L,13);
+}
+
+/* ---- detalle de una estrategia ---- */
+function drawDetail(){
+  var c=REP.cases[SEL]; if(!c)return;
+  $('detHint').textContent=c.label;
+  drawMonthly(c); drawTrace(c); drawEvents(c);
+  var ep=c.top_events&&c.top_events[0];
+  $('detNote').innerHTML='Arriba, el reparto del año: barras = horas abanderado por mes (eje izq.), '+
+    'línea = POA perdida ese mes (eje dcho.). Abajo, el <b>episodio más caro</b> del año'+
+    (ep?' ('+esc(ep.start.slice(0,16).replace('T',' '))+', '+fmt(ep.hours,1)+' h, ráfaga de '+fmt(ep.wind_max_kmh,0)+' km/h)':'')+
+    ': viento contra umbrales, ángulo seguido frente al abanderado, y la POA de cada uno.';
+}
+
+function drawMonthly(c){
+  var cv=$('monthly'),x=cv.getContext('2d'),W=cv.width,H=cv.height,L=48,R=52,T=22,B=26;
+  x.clearRect(0,0,W,H);
+  var hrs=c.hours_by_month,dl=c.poa_delta_monthly_kwh_m2.map(function(v){return -v;});  // pérdida en positivo
+  var hmax=Math.max(1,Math.max.apply(null,hrs)),dmax=Math.max(0.01,Math.max.apply(null,dl));
+  var dec=dmax<0.5?2:(dmax<5?1:0);
+  var gy=function(v){return H-B-(v/hmax)*(H-B-T);},gd=function(v){return H-B-(v/dmax)*(H-B-T);};
+  x.strokeStyle='#1A2530';x.fillStyle='#5E6F7E';x.font='10px ui-monospace,monospace';x.lineWidth=1;
+  for(var i=0;i<=4;i++){var y=T+(H-B-T)*i/4;
+    x.beginPath();x.moveTo(L,y);x.lineTo(W-R,y);x.stroke();
+    x.textAlign='right';x.fillText(Math.round(hmax*(1-i/4)),L-6,y+3);
+    x.textAlign='left';x.fillStyle='#A78BFA';x.fillText((dmax*(1-i/4)).toFixed(dec),W-R+6,y+3);x.fillStyle='#5E6F7E';}
+  var bw=(W-L-R)/12;
+  for(var m=0;m<12;m++){
+    var cx=L+bw*m+bw/2,y=gy(hrs[m]);
+    x.fillStyle=COL[SEL];x.globalAlpha=.75;x.fillRect(cx-bw*0.3,y,bw*0.6,H-B-y);x.globalAlpha=1;
+    x.fillStyle='#5E6F7E';x.font='10px system-ui,sans-serif';x.textAlign='center';x.fillText(MESES[m],cx,H-8);
+  }
+  x.beginPath();
+  for(var m2=0;m2<12;m2++){var cx2=L+bw*m2+bw/2,y2=gd(Math.max(0,dl[m2]));if(m2===0)x.moveTo(cx2,y2);else x.lineTo(cx2,y2);}
+  x.strokeStyle='#A78BFA';x.lineWidth=2;x.stroke();
+  for(var m3=0;m3<12;m3++){var cx3=L+bw*m3+bw/2,y3=gd(Math.max(0,dl[m3]));
+    x.beginPath();x.arc(cx3,y3,3,0,7);x.fillStyle='#A78BFA';x.fill();}
+  x.font='10px ui-monospace,monospace';x.textAlign='left';
+  x.fillStyle=COL[SEL];x.fillText('horas abanderado (eje izq.)',L,13);
+  x.textAlign='right';x.fillStyle='#A78BFA';x.fillText('POA perdida kWh/m² (eje dcho.)',W-R,13);
+}
+
+function drawTrace(c){
+  var cv=$('trace'),x=cv.getContext('2d'),W=cv.width,H=cv.height,L=52,R=76,T=22,B=30;
+  x.clearRect(0,0,W,H);
+  var tr=c.trace;
+  if(!tr||!tr.t||!tr.t.length){
+    x.fillStyle='#5E6F7E';x.font='12px system-ui,sans-serif';x.textAlign='center';
+    x.fillText('Sin episodios de abanderamiento este año.',W/2,H/2);return;}
+  var n=tr.t.length,gx=function(i){return L+(i/(n-1))*(W-L-R);};
+  /* eje izquierdo compartido por ángulo (°) y viento (km/h) escalados aparte; eje derecho POA */
+  var wk=tr.wind_ms.map(function(v){return v==null?0:v*3.6;});
+  var wmax=Math.max(REP.wind.threshold_2_kmh*1.2,Math.max.apply(null,wk)*1.1);
+  var pmax=Math.max(1,Math.max.apply(null,tr.poa_base.map(function(v){return v||0;}))*1.1);
+  var A=+REP.config.full_stow_deg||55;
+  var gw=function(v){return H-B-(v/wmax)*(H-B-T)/2;}                    // viento: mitad inferior
+  var ga=function(v){return T+((A-v)/(2*A))*((H-B-T)/2);}               // ángulo: mitad superior
+  var gp=function(v){return H-B-(v/pmax)*(H-B-T);};
+  // fondo de los tramos abanderados
+  for(var i=0;i<n;i++){
+    if(tr.mode[i]&&tr.mode[i]!=='IDLE'){
+      x.fillStyle=(tr.mode[i]==='FULL_STOW')?'rgba(208,89,79,.16)':(tr.mode[i]==='PARTIAL_STOW'?'rgba(246,166,35,.13)':'rgba(128,147,164,.10)');
+      x.fillRect(gx(i)-(W-L-R)/(2*(n-1)),T,(W-L-R)/(n-1)+0.6,H-B-T);}
+  }
+  x.strokeStyle='#1A2530';x.lineWidth=1;
+  x.beginPath();x.moveTo(L,T+(H-B-T)/2);x.lineTo(W-R,T+(H-B-T)/2);x.stroke();
+  // umbrales de viento
+  [[REP.wind.threshold_1_kmh,'#F6A623'],[REP.wind.threshold_2_kmh,'#D0594F']].forEach(function(u){
+    var y=gw(u[0]);x.setLineDash([5,4]);x.strokeStyle=u[1];x.beginPath();x.moveTo(L,y);x.lineTo(W-R,y);x.stroke();x.setLineDash([]);
+    x.fillStyle=u[1];x.font='10px ui-monospace,monospace';x.textAlign='left';x.fillText(Math.round(u[0])+' km/h',L+3,y-3);});
+  function line(arr,g,color,dash,wd){
+    x.beginPath();var st=false;
+    for(var i=0;i<n;i++){var v=arr[i];if(v==null){st=false;continue;}
+      var xx=gx(i),yy=g(v);if(!st){x.moveTo(xx,yy);st=true;}else x.lineTo(xx,yy);}
+    x.setLineDash(dash||[]);x.strokeStyle=color;x.lineWidth=wd||2;x.stroke();x.setLineDash([]);
+  }
+  line(wk,gw,'#54A6FF',[],2);
+  line(tr.theta_base,ga,'#5E6F7E',[4,3],1.5);
+  line(tr.theta,ga,COL[SEL],[],2);
+  line(tr.poa_base,gp,'#5E6F7E',[2,3],1);
+  line(tr.poa,gp,'#A78BFA',[],1.5);
+  // ejes
+  /* Dos escalas comparten el eje izquierdo (ángulo arriba, viento abajo) y se tocan justo en la
+     línea media: sin separar los dos rótulos de ahí, «-55°» y el máximo de viento se pisaban. */
+  x.fillStyle='#5E6F7E';x.font='10px ui-monospace,monospace';x.textAlign='right';
+  x.fillText('+'+Math.round(A)+'°',L-6,ga(A)+3); x.fillText('0°',L-6,ga(0)+3);
+  x.fillText('-'+Math.round(A)+'°',L-6,ga(-A)-3);
+  x.fillText(Math.round(wmax)+' km/h',L-6,gw(wmax)+11); x.fillText('0',L-6,gw(0)+3);
+  x.textAlign='left';x.fillStyle='#A78BFA';x.fillText(Math.round(pmax)+' W/m²',W-R+6,gp(pmax)+3);
+  x.fillStyle='#5E6F7E';x.textAlign='left';
+  x.fillText(tr.t[0].slice(0,16).replace('T',' '),L,H-8);
+  x.textAlign='right';x.fillText(tr.t[n-1].slice(0,16).replace('T',' '),W-R,H-8);
+  // leyenda
+  var leg=[['viento','#54A6FF'],['θ seguimiento','#5E6F7E'],['θ '+SEL,COL[SEL]],['POA '+SEL,'#A78BFA']];
+  var lx=L+8,ly=T+11;x.font='10px ui-monospace,monospace';x.textAlign='left';
+  var lw=0;leg.forEach(function(l){lw=Math.max(lw,x.measureText(l[0]).width);});
+  x.fillStyle='rgba(15,21,29,.88)';x.fillRect(lx-6,ly-12,lw+28,leg.length*14+4);
+  x.strokeStyle='#1A2530';x.lineWidth=1;x.strokeRect(lx-6,ly-12,lw+28,leg.length*14+4);
+  leg.forEach(function(l,i){x.fillStyle=l[1];x.fillRect(lx,ly-4+i*14,11,2);
+    x.fillStyle='#8093A4';x.fillText(l[0],lx+16,ly+i*14);});
+}
+
+function drawEvents(c){
+  var ev=c.top_events||[];
+  if(!ev.length){$('evt').innerHTML='';return;}
+  var h='<thead><tr><th>Episodios más caros</th><th>Duración h</th><th>Parcial h</th><th>Total h</th>'+
+        '<th>Ráfaga km/h</th><th>POA perdida<br>kWh/m²</th></tr></thead><tbody>';
+  ev.forEach(function(e){
+    h+='<tr><td>'+esc(e.start.slice(0,16).replace('T',' '))+(e.reached_full?' <span style="color:#D0594F">▲ total</span>':'')+'</td>'+
+       '<td>'+fmt(e.hours,1)+'</td><td>'+fmt(e.hours_partial,1)+'</td><td>'+fmt(e.hours_full,1)+'</td>'+
+       '<td>'+fmt(e.wind_max_kmh,0)+'</td><td>'+fmt(e.poa_lost_kwh_m2,3)+'</td></tr>';
+  });
+  $('evt').innerHTML=h+'</tbody>';
+}
+
+/* ===================== ARRANQUE ===================== */
+IDS.forEach(function(i){$(i).addEventListener('change',saveCfg);});
+$('bt').addEventListener('change',saveCfg);
+[].forEach.call(document.querySelectorAll('.st'),function(e){e.addEventListener('change',saveCfg);});
+$('run').onclick=run;
+window.addEventListener('resize',function(){if(REP){drawBars();drawDetail();}});
+loadCfg(); loadPlants(); detectEngine();
+</script>
+</body>
+</html>

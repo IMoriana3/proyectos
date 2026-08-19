@@ -423,7 +423,7 @@ body{
     <div class="plants" id="plants"></div>
   </section>
 
-  <h2 class="sec-title">Herramientas · crear nuevo<a class="tabla-link" href="layout.html" title="Crear implantación (trackers/mesas) desde una parcela — motor SolarGPT">▦ Layout</a><a class="tabla-link" href="sim-solar.html" title="Geometría solar (elevación/azimut/sombra) y simulación de producción">☉ Sol &amp; Simulación</a></h2>
+  <h2 class="sec-title">Herramientas · crear nuevo<a class="tabla-link" href="layout.html" title="Crear implantación (trackers/mesas) desde una parcela — motor SolarGPT">▦ Layout</a><a class="tabla-link" href="sim-solar.html" title="Geometría solar (elevación/azimut/sombra) y simulación de producción">☉ Sol &amp; Simulación</a><a class="tabla-link" href="sim-viento.html" title="Abanderamiento por viento: POA perdida, cuántas veces y cuánto tiempo">⚑ Viento</a></h2>
   <div class="controls">
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -824,6 +824,36 @@ const PROJECTS = [
     historial: [
       { date:"2026-08-19", ver:"1.1", note:"Planes de subida: la cadencia de nube se separa del polling (minutal, 5 min…), con selección de campos y modo último valor / media-mín-máx. Y el inventario pasa a salir del plano del SCADA: el de la toolbox estaba corto — San José tenía 1686 TCU declarados en vez de 2289 y faltaban Páramo, Benante, Panbianco y El Polvorín." },
       { date:"2026-08-19", ver:"1.0", note:"Medidor en el colector (serie traffic + GET /traffic), estimador de flota y este visor. El banco exige que la estimación cuadre EXACTAMENTE con lo que contabiliza el driver en un ciclo real." }
+    ]
+  },
+  {
+    name: "Viento & Abanderamiento",
+    status: "build",
+    objetivo: "Qué cuesta defender el seguidor: compara las cuatro estrategias canónicas de abanderamiento (A1/A2/B1/B2) contra el mismo seguidor sin abanderar — POA perdida, cuántas veces abandera al año y cuánto tiempo se queda así.",
+    stack: "HTML autocontenido · canvas 2D · motor SolarGPT (POST /windstow)",
+    url: "https://imoriana3.github.io/proyectos/sim-viento.html",
+    repo: "https://github.com/imoriana3/proyectos",
+    updated: "2026-08-19",
+    version: "1.0",
+    docId: "viento",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Fichero: sim-viento.html (este repo). Necesita el motor: cuaderno Factiun_plataforma.ipynb en Colab (pega la URL del túnel en el indicador del motor) o server/run.sh en local.",
+      "Emplazamiento: plantas de la cartera (localStorage compartido) o presets con las coordenadas de los layouts reales; año y fuente meteo (Open-Meteo ERA5, PVGIS, NASA POWER).",
+      "Estrategias: A = abandera cara al viento, B = cara al sol; 1 = un umbral (todo o nada), 2 = dos umbrales con sector parcial e histéresis de 30 min. Umbrales por defecto 40 y 60 km/h.",
+      "Salidas: POA anual y su delta contra la base (kWh/m², % y mes a mes), abanderamientos al año, horas por modo, % de las horas de sol, y los episodios más caros con la traza del peor.",
+      "El viento del reanálisis es a 10 m: la ficha lo corrige a la altura del seguidor con ley potencial 1/7 (a 4 m, factor 0,88).",
+      "Paso de cálculo: con dato horario un episodio solo puede durar múltiplos de una hora y la histéresis de 30 min se redondea; interpolar a 15 min deja que la máquina de estados resuelva sus tiempos."
+    ],
+    pendientes: [
+      { done:false, text:"El endpoint /windstow vive en la rama claude/wind-simulator-tracker-xhnbm3 de SolarGPTfull; hasta que entre en main, el cuaderno de Colab (que clona main) no lo sirve." },
+      { done:false, text:"Ráfaga, no viento medio: los umbrales de la TCU miran la ráfaga y ERA5 da media horaria. Con la ráfaga de Open-Meteo el recuento de episodios subiría." },
+      { done:false, text:"Contrastar el recuento contra el histórico real de abanderamientos del SCADA de El Burgo." },
+      { done:false, text:"Coste de motor de cada maniobra (Wh/°) para poner al lado la energía perdida y la gastada, como en el simulador de batería." }
+    ],
+    historial: [
+      { date:"2026-08-19", ver:"1.0", note:"Primera versión: comparativa A1/A2/B1/B2 contra la base, episodios y horas por modo, reparto mensual y traza del episodio más caro." }
     ]
   },
   {
