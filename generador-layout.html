@@ -175,13 +175,18 @@ canvas.panning{cursor:grabbing}
       </div>
 
       <div id="paneDraw" style="display:none">
-        <p class="note" style="margin-top:0">Clic en el lienzo para ir poniendo vértices; <b>doble clic</b> cierra el polígono. El centro y la escala salen de las cotas de arriba.</p>
+        <p class="note" style="margin-top:0">Clic en el lienzo para ir poniendo vértices; <b>doble clic</b> cierra el polígono. Arrastra para mover el mapa y usa la rueda para acercarte a tu finca.</p>
         <div class="btnrow">
-          <button class="btn ghost small" id="drawStart">✏️ Empezar a dibujar</button>
+          <button class="btn ghost small" id="drawStart">✏️ Dibujar parcela</button>
           <button class="btn ghost small" id="drawClear">🗑️ Limpiar</button>
         </div>
       </div>
+      <div class="btnrow">
+        <button class="btn ghost small" id="exclStart">⛔ Dibujar exclusión</button>
+        <button class="btn ghost small" id="exclClear">🗑️ Quitar exclusiones</button>
+      </div>
       <p class="tag" id="parcelTag">—</p>
+      <p class="note" style="margin-top:2px">Las <b>exclusiones</b> (§02.5c del cuaderno) son zonas donde el motor no coloca: cursos de agua, edificaciones, servidumbres. Se dibujan sobre la ortofoto en cualquiera de los tres modos, y los anillos interiores de un GeoJSON entran como exclusión sin dibujar nada.</p>
     </div>
 
     <div class="card">
@@ -1144,6 +1149,13 @@ if (typeof module !== "undefined" && module.exports) module.exports = LAY;
 "use strict";
 function $(id){return document.getElementById(id);}
 var RES=null, PARCEL=null, HOLES=[], DRAW=null;
+/* EXCLUSIONES dibujadas (§02.5c). Van aparte de HOLES a propósito, porque el
+   motor las trata distinto y eso se ve en el resultado: los agujeros del
+   polígono son BORDE —el setback se mide también contra ellos, como hace el
+   `buffer(-d)` de Shapely— y las exclusiones se restan DESPUÉS del setback,
+   igual que el `excl_utm` del core. Meterlas en el mismo saco daría un área
+   útil distinta de la del cuaderno. */
+var EXCL=[];
 
 /* ═════════════════ BUSCADOR DE EMPLAZAMIENTO ═════════════════
    Mismo componente que `sim-viento.html` (#148), y por las mismas razones: aquí
@@ -1379,13 +1391,17 @@ function tagParcel(){
   var utm=PARCEL.map(function(c){var z=LAY.utmZone(c[0]);return LAY.utmFwd(c[0],c[1],z,c[1]<0);});
   var ha=Math.abs(LAY.ringArea(utm))/1e4;
   var hh=HOLES.reduce(function(a,h){var u=h.map(function(c){var z=LAY.utmZone(c[0]);return LAY.utmFwd(c[0],c[1],z,c[1]<0);});return a+Math.abs(LAY.ringArea(u))/1e4;},0);
-  $('parcelTag').textContent=PARCEL.length+' vértices · '+(ha-hh).toFixed(2)+' ha'+(HOLES.length?(' · '+HOLES.length+' exclusión(es)'):'');
+  var nEx=HOLES.length+EXCL.length;
+  $('parcelTag').textContent=PARCEL.length+' vértices · '+(ha-hh).toFixed(2)+' ha'+
+    (nEx?(' · '+nEx+' exclusión'+(nEx>1?'es':'')):'');
 }
 $('parcelMode').onchange=function(){
   $('paneRect').style.display=this.value==='rect'?'':'none';
   $('paneGeo').style.display=this.value==='geojson'?'':'none';
   $('paneDraw').style.display=this.value==='draw'?'':'none';
+  if(this.value!=='draw'){DRAW=[];drawing=false;pintaBotonesDibujo();}
   if(this.value==='rect'){buildParcel();encaja();draw();}
+  else draw();
   if(this.value==='draw'&&!DRAW){DRAW=[];}
 };
 ['lat','lon','pw','ph','prot'].forEach(function(id){$(id).addEventListener('change',function(){buildParcel();encaja();draw();});});
@@ -1454,8 +1470,13 @@ function canvasToWorld(ev){
 function encaja(){
   var pts=[];
   if(PARCEL)pts=pts.concat(PARCEL);
-  if(DRAW&&DRAW.length)pts=pts.concat(DRAW);
+  // El boceto solo cuenta MIENTRAS se dibuja. Si no, al pasar de «dibujada» a
+  // «por cotas» el encuadre se abría para incluir el polígono viejo y el de
+  // ahora —a cientos de kilómetros uno de otro— y el lienzo pasaba a medir
+  // decenas de km: cualquier cosa dibujada después caía donde no era.
+  if(drawing&&DRAW&&DRAW.length)pts=pts.concat(DRAW);
   (HOLES||[]).forEach(function(h){pts=pts.concat(h);});
+  (EXCL||[]).forEach(function(h){pts=pts.concat(h);});
   var cv=$('cv');
   if(!pts.length){
     VIEW.cx=lon2u(+$('lon').value); VIEW.cy=lat2u(+$('lat').value); VIEW.z=15; return;
@@ -1479,14 +1500,33 @@ function pideRepintar(){
   if(_repintarT)return;
   _repintarT=setTimeout(function(){_repintarT=null;draw();},80);
 }
+/* `crossOrigin` se pide PRIMERO porque sin él el lienzo queda «teñido» y deja de
+   poder leerse (`getImageData` lanza). Pero pedirlo no es gratis: si el servidor
+   no devuelve cabecera CORS, la imagen no carga EN ABSOLUTO — y entonces no hay
+   ortofoto, que es peor que un lienzo que no se puede leer. Así que al fallar se
+   reintenta la MISMA tesela sin `crossOrigin`: se ve la imagen y se marca el
+   lienzo como teñido, que es una consecuencia que solo le importa a las pruebas.
+   Prioridad: que se vea. */
+var LIENZO_TENIDO=false;
 function tesela(z,x,y){
   var k=z+'/'+x+'/'+y, t=TILES[k];
   if(t)return t;
-  t=TILES[k]={img:new Image(),ok:false,fail:false};
-  t.img.crossOrigin='anonymous';        // sin esto el lienzo queda «teñido» y
-  t.img.onload =function(){t.ok=true;  TILE_OK++;  pideRepintar();};  // no se
-  t.img.onerror=function(){t.fail=true;TILE_FAIL++;pideRepintar();};  // puede leer
-  t.img.src=TILE_URL+z+'/'+y+'/'+x;     // Esri va z/y/x, no z/x/y
+  var url=TILE_URL+z+'/'+y+'/'+x;       // Esri va z/y/x, no z/x/y
+  t=TILES[k]={img:new Image(),ok:false,fail:false,reintentada:false};
+  function ok(){t.ok=true;TILE_OK++;pideRepintar();}
+  function mal(){
+    if(!t.reintentada){                 // segundo intento, ya sin CORS
+      t.reintentada=true; LIENZO_TENIDO=true;
+      var img2=new Image();
+      img2.onload=function(){t.img=img2;ok();};
+      img2.onerror=function(){t.fail=true;TILE_FAIL++;pideRepintar();};
+      img2.src=url; return;
+    }
+    t.fail=true;TILE_FAIL++;pideRepintar();
+  }
+  t.img.crossOrigin='anonymous';
+  t.img.onload=ok; t.img.onerror=mal;
+  t.img.src=url;
   return t;
 }
 function pintaOrtofoto(ctx,cv){
@@ -1524,7 +1564,7 @@ function pintaRejilla(ctx,cv){
 function avisoBasemap(hayOrto){
   var el=$('basemapMsg');
   if(!$('orto').checked){el.textContent='ortofoto apagada';return;}
-  if(hayOrto){el.textContent='ortofoto: Esri World Imagery';return;}
+  if(hayOrto){el.textContent='ortofoto: Esri World Imagery'+(LIENZO_TENIDO?' (sin CORS)':'');return;}
   el.textContent=TILE_FAIL
     ? 'sin ortofoto (teselas no accesibles) · retícula de 50 m'
     : 'cargando ortofoto…';
@@ -1566,14 +1606,33 @@ $('zOut').onclick=function(){zoomBoton(-0.75);};
 $('fit').onclick=function(){encaja();draw();};
 $('orto').onchange=function(){draw();};
 
-/* ── dibujo de la parcela sobre el lienzo ── */
-var drawing=false;
-$('drawStart').onclick=function(){drawing=!drawing;DRAW=drawing?[]:DRAW;$('cv').classList.toggle('drawing',drawing);
-  this.textContent=drawing?'⏹ Terminar':'✏️ Empezar a dibujar';
-  $('mapHint').textContent=drawing?'clic: vértice · doble clic: cerrar · arrastra para mover'
-                                  :'arrastra para mover · rueda para acercar';
-  draw();};
-$('drawClear').onclick=function(){DRAW=[];PARCEL=null;draw();tagParcel();};
+/* ── dibujo sobre el lienzo: parcela o exclusión ── */
+var drawing=false, drawDest='parcela';        // 'parcela' | 'exclusion'
+function pintaBotonesDibujo(){
+  $('drawStart').textContent=(drawing&&drawDest==='parcela')?'⏹ Terminar':'✏️ Dibujar parcela';
+  $('exclStart').textContent=(drawing&&drawDest==='exclusion')?'⏹ Terminar':'⛔ Dibujar exclusión';
+  $('cv').classList.toggle('drawing',drawing);
+  $('mapHint').textContent=drawing
+    ?('clic: vértice · doble clic: cerrar '+(drawDest==='exclusion'?'la exclusión':'la parcela')+' · arrastra para mover')
+    :'arrastra para mover · rueda para acercar';
+}
+function empiezaDibujo(dest){
+  if(drawing&&drawDest===dest){cierraDibujo();return;}
+  drawing=true; drawDest=dest; DRAW=[];
+  pintaBotonesDibujo(); draw();
+}
+function cierraDibujo(){
+  if(drawing&&DRAW&&DRAW.length>=3){
+    if(drawDest==='exclusion')EXCL.push(DRAW.slice());
+    else {PARCEL=DRAW.slice();HOLES=[];}
+  }
+  if(drawDest==='exclusion')DRAW=[];
+  drawing=false; pintaBotonesDibujo(); tagParcel(); draw();
+}
+$('drawStart').onclick=function(){empiezaDibujo('parcela');};
+$('exclStart').onclick=function(){empiezaDibujo('exclusion');};
+$('drawClear').onclick=function(){DRAW=[];PARCEL=null;drawing=false;pintaBotonesDibujo();draw();tagParcel();};
+$('exclClear').onclick=function(){EXCL=[];tagParcel();draw();};
 $('cv').addEventListener('click',function(ev){
   if(!drawing)return;
   // Un clic que ha sido ARRASTRE es navegación, no un vértice: sin esto, mover
@@ -1584,16 +1643,11 @@ $('cv').addEventListener('click',function(ev){
   // filtro el último vértice salía repetido tres veces.
   var last=DRAW[DRAW.length-1];
   if(last&&Math.abs(px(last[0],last[1])[0]-px(p[0],p[1])[0])<5&&Math.abs(px(last[0],last[1])[1]-px(p[0],p[1])[1])<5)return;
-  DRAW.push(p);if(DRAW.length>=3){PARCEL=DRAW.slice();HOLES=[];}
+  DRAW.push(p);
+  if(drawDest==='parcela'&&DRAW.length>=3){PARCEL=DRAW.slice();HOLES=[];}
   tagParcel();draw();
 });
-$('cv').addEventListener('dblclick',function(){
-  if(!drawing)return;drawing=false;$('cv').classList.remove('drawing');
-  $('drawStart').textContent='✏️ Empezar a dibujar';
-  $('mapHint').textContent='arrastra para mover · rueda para acercar';
-  if(DRAW&&DRAW.length>=3){PARCEL=DRAW.slice();HOLES=[];}
-  tagParcel();draw();
-});
+$('cv').addEventListener('dblclick',function(){ if(drawing)cierraDibujo(); });
 
 /* ── el repintado ── */
 function draw(){
@@ -1625,6 +1679,7 @@ function draw(){
   }
   ring(PARCEL,'rgba(84,166,255,.10)','#54A6FF',1.6);
   HOLES.forEach(function(h){ring(h,'rgba(208,89,79,.28)','#D0594F',1.2);});
+  EXCL.forEach(function(h){ring(h,'rgba(208,89,79,.34)','#D0594F',1.4,[5,3]);});
   if(RES){
     RES.roads.forEach(function(rd){ring(rd.lonlat,'rgba(246,166,35,.55)','rgba(246,166,35,.9)',0.8);});
     var st=RES.structures;
@@ -1640,10 +1695,11 @@ function draw(){
     }
   }
   if(drawing&&DRAW&&DRAW.length){
-    ctx.strokeStyle='#F6A623';ctx.lineWidth=1.6;ctx.beginPath();
+    var col=(drawDest==='exclusion')?'#D0594F':'#F6A623';
+    ctx.strokeStyle=col;ctx.lineWidth=1.6;ctx.beginPath();
     for(var d=0;d<DRAW.length;d++){var pd=px(DRAW[d][0],DRAW[d][1]);d?ctx.lineTo(pd[0],pd[1]):ctx.moveTo(pd[0],pd[1]);}
     ctx.stroke();
-    DRAW.forEach(function(v){var pv=px(v[0],v[1]);ctx.fillStyle='#F6A623';ctx.beginPath();ctx.arc(pv[0],pv[1],3.5,0,7);ctx.fill();});
+    DRAW.forEach(function(v){var pv=px(v[0],v[1]);ctx.fillStyle=col;ctx.beginPath();ctx.arc(pv[0],pv[1],3.5,0,7);ctx.fill();});
   }
   drawEscala(ctx,cv,hayOrto);
 }
@@ -1763,7 +1819,7 @@ function readCfg(){
   var mods=$('mods').value.split(',').map(function(s){return parseInt(s.trim(),10);}).filter(function(v){return v>0;});
   if(!mods.length)mods=[28];
   return {
-    coords:PARCEL, holes:HOLES, exclusions:[],
+    coords:PARCEL, holes:HOLES, exclusions:EXCL,
     mount:$('mount').value, table:$('table').value, mods:mods.sort(function(a,b){return b-a;}),
     modLen:+$('modLen').value, modWid:+$('modWid').value, moduleWp:+$('modWp').value,
     pitch:+$('pitch').value, setback:+$('setback').value, panelAz:+$('panelAz').value,
@@ -1814,7 +1870,7 @@ async function generarCore(cfg){
     gap_motor:cfg.gapMotor, gap_ns:cfg.gapNs, road_every:cfg.roadEvery, road_w:cfg.roadW,
     road_ns_every:cfg.roadNsEvery, road_ns_w:cfg.roadNsW, layout_mode:cfg.mode,
     align_to_grid:cfg.alignGrid,
-    holes_lonlat:cfg.holes.map(function(h){var r=h.slice();r.push(h[0]);return r;})}, geojson:true};
+    holes_lonlat:cfg.holes.concat(cfg.exclusions).map(function(h){var r=h.slice();r.push(h[0]);return r;})}, geojson:true};
   var r=await fetch(ENGINE+'/layout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   if(!r.ok)throw new Error('HTTP '+r.status+' · '+(await r.text()).slice(0,180));
   var j=await r.json(), st=j.stats||{};
@@ -1933,7 +1989,7 @@ $('d3Btn').onclick=function(){
 };
 
 /* ===== arranque ===== */
-loadPlants();syncAz();buildParcel();encaja();draw();detectEngine();
+loadPlants();syncAz();pintaBotonesDibujo();buildParcel();encaja();draw();detectEngine();
 </script>
 </body>
 </html>

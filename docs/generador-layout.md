@@ -51,6 +51,16 @@ Tres caminos, y los tres acaban en el mismo anillo de coordenadas:
 2. **GeoJSON.** Pegado o cargado de fichero (SIGPAC, Catastro, geojson.io). Coordenadas `[lon, lat]`.
    Los **anillos interiores** entran como exclusión: el motor no coloca ahí, y además respeta el
    setback contra su borde — igual que el `buffer(-d)` de Shapely en el core.
+
+### Exclusiones dibujadas (§02.5c)
+
+Cursos de agua, edificaciones, servidumbres: se dibujan sobre la ortofoto con **⛔ Dibujar
+exclusión**, en cualquiera de los tres modos de parcela, y el motor no coloca mesas ahí.
+
+Van **aparte de los agujeros del GeoJSON**, y no es cosmético: el core también las trata distinto y
+se ve en el número. Los agujeros del polígono son **borde** —el setback se mide también contra
+ellos, como hace `buffer(-d)`— y las exclusiones se restan **después** del setback, igual que el
+`excl_utm` del core. Meterlas en el mismo saco daría un área útil distinta de la del cuaderno.
 3. **Dibujada sobre el lienzo.** Clic por vértice, doble clic para cerrar.
 
 ## El lienzo: ortofoto y navegación
@@ -69,6 +79,13 @@ Esri World Imagery**, y con eso vienen dos consecuencias:
 Si las teselas no llegan —sin red, o bloqueadas por una política de empresa— se **dice** en la
 leyenda y se cae a una **retícula de 50 m**: dibujar a ciegas sin saber por qué es peor que dibujar
 sobre una cuadrícula. La ortofoto se puede apagar con su casilla.
+
+**Las teselas se piden con `crossOrigin`, y si eso falla se reintentan sin él.** No es un detalle:
+con `crossOrigin` puesto, una respuesta sin cabecera CORS no es una imagen que se vea mal, es una
+imagen que **no carga** — y el usuario se queda sin fondo justo cuando lo necesita. El reintento sin
+CORS trae la imagen a costa de «teñir» el lienzo (deja de poder leerse con `getImageData`), que es
+una consecuencia que solo le importa a las pruebas. La prioridad es que se vea, y la leyenda lo
+declara con un «(sin CORS)».
 
 > Esto arregla de paso una regresión que se veía en producción: al poner el **primer** vértice, el
 > encuadre se recalculaba sobre una caja de tamaño cero y la parcela salía de «0,00 ha» con una
