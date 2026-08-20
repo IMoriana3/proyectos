@@ -388,6 +388,21 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-20 · v1.29.2** — **«¿astronómico mejor que pairwise?»**, y la respuesta trajo un fallo.
+  Que astro gane a pairwise es CORRECTO: la descomposición hora a hora enseña que de 09:00 a 18:00
+  las dos son **idénticas** —con sol alto no hace falta backtracking— y que toda la diferencia sale
+  de **las horas de BT**, donde astro capta más beam y más difusa circunsolar de lo que paga en
+  sombra. Y es **robusto al modelo eléctrico**, que es la parte provisional y justo la más sensible
+  a este resultado: gana en las tres cotas del sándwich (solo área +1,29% · publicado +0,40% ·
+  banda uniforme +0,86% en junio; +7,8/+4,9/+4,3% en diciembre). Pero el mismo barrido destapó lo
+  que sí era un fallo: **el energy-optimal salía 0,3% por DEBAJO de astro en diciembre**, imposible
+  porque **f=1 ES astro** y está en su rejilla — la misma clase de error que el veto de v1.29
+  arregló contra pairwise, por el otro extremo (el evaluador de búsqueda es 2.5D y ciego a la
+  estructura). El veto exacto pasa a comparar contra **los dos extremos** de la rejilla, así que el
+  óptimo no puede quedar por debajo de ninguno bajo el contador publicado (diciembre: óptimo +4,95%
+  ≥ astro +4,93%). Invariante `óptimo ≥ max(pairwise, astro)` añadido a la batería y al barrido de
+  auditoría. QA 54.
+
 - **2026-08-20 · v1.29** — **KPIs que distinguen políticas + UNA fuente para la cara colectora**
   (reportado con captura: las nueve políticas mostraban «sombra máx 100%» y los mismos minutos).
   Verificado que era real y no un artefacto de la v1.28: con terreno roto la columna calculada
