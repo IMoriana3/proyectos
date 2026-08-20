@@ -45,6 +45,34 @@ check('el catálogo del JS es el del core (' + clavesJS.length + ')',
   JSON.stringify(clavesJS) === JSON.stringify(fix.core.catalogo.slice().sort()),
   clavesJS.join(',') + ' vs ' + fix.core.catalogo.join(','));
 
+// ── 2b) el TAMAÑO de la estructura, contra `layout_engine.compute_size_from_mods` ──
+// Cifras sacadas del core (mismos argumentos): si la ficha se inventa una
+// fórmula propia para la mesa, el layout de planta y la ficha dejan de hablar
+// del mismo tracker.
+const MOD = { modL: 2.382, modW: 1.134, gapMod: 0.02, gapMot: 0.5,
+              modsStr: 28, nStr: 2, filas: 1 };
+[['1V', 65.0840, 2.3820, 56],
+ ['2V', 65.0840, 4.7640, 112],
+ ['1H', 134.9720, 1.1340, 56],
+ ['2H', 134.9720, 2.2680, 112]].forEach(([tabla, largo, apertura, mods]) => {
+  const T = FIS.tamano({ ...MOD, tabla });
+  check('tamaño ' + tabla + ': largo de fila = ' + largo + ' m',
+    Math.abs(T.largoFila - largo) < 1e-3, T.largoFila.toFixed(4));
+  check('tamaño ' + tabla + ': apertura = ' + apertura + ' m',
+    Math.abs(T.apertura - apertura) < 1e-3, T.apertura.toFixed(4));
+  check('tamaño ' + tabla + ': ' + mods + ' módulos por fila',
+    T.modsFila === mods, String(T.modsFila));
+});
+// el alto de colector SÍ lleva los gaps (convención de la página 8 · Fija)
+check('el alto de colector lleva los gaps y la apertura no (2V)',
+  Math.abs(FIS.tamano({ ...MOD, tabla: '2V' }).altoColector - 4.784) < 1e-6);
+// monofila/bifila NO cambia la mesa: es operativa, no geométrica
+const mono = FIS.tamano({ ...MOD, filas: 1 }), bi = FIS.tamano({ ...MOD, filas: 2 });
+check('bifila no cambia la geometría de la mesa',
+  mono.largoFila === bi.largoFila && mono.apertura === bi.apertura);
+check('bifila SÍ dobla los módulos por tracker (' + mono.modsTracker + ' → ' + bi.modsTracker + ')',
+  bi.modsTracker === mono.modsTracker * 2);
+
 // ── 3) correr el motor del navegador sobre la MISMA meteo ──
 const C = fix.cfg;
 const M = { source: 'careo',
@@ -53,7 +81,12 @@ const M = { source: 'careo',
   dni: Float64Array.from(fix.meteo.dni),
   dhi: Float64Array.from(fix.meteo.dhi) };
 const gcr = C.collector_width_m / C.pitch_m;
-const cfg = { lat: C.lat, lon: C.lon, cw: C.collector_width_m, gcr,
+// El core corre con UNA cota (su `collector_height_m`), que es la APERTURA; la
+// ficha distingue apertura (GCR) de alto de colector (sombreado) y con 1V —lo
+// que hay en el fixture— valen lo mismo. Igualarlas aquí es lo que hace que el
+// careo compare física y no una diferencia de configuración.
+const cfg = { lat: C.lat, lon: C.lon, gcr,
+  apertura: C.collector_width_m, altoColector: C.collector_width_m,
   maxang: C.max_angle_deg, albedo: C.albedo, tilt: C.tilt_deg, tiltEW: 12,
   axTilt: C.axis_tilt_deg, gcrDe: () => gcr };
 const rep = FIS.compara(C.structures, M, cfg);

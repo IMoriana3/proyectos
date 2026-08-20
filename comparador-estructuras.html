@@ -112,16 +112,51 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
     </div>
 
     <div class="card">
+      <h2>▤ Colector <span class="sn">tamaño de la estructura</span></h2>
+      <div class="two">
+        <div class="field"><label>Módulo · largo (m)</label><input id="modL" type="number" step="0.001" value="2.382"></div>
+        <div class="field"><label>Módulo · ancho (m)</label><input id="modW" type="number" step="0.001" value="1.134"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Mesa</label>
+          <select id="tabla">
+            <option value="1V">1V · 1 módulo vertical</option>
+            <option value="2V">2V · 2 verticales</option>
+            <option value="3V">3V · 3 verticales</option>
+            <option value="4V">4V · 4 verticales</option>
+            <option value="1H">1H · 1 horizontal</option>
+            <option value="2H">2H · 2 horizontales</option>
+            <option value="3H">3H · 3 horizontales</option>
+            <option value="4H">4H · 4 horizontales</option>
+          </select></div>
+        <div class="field"><label>Disposición</label>
+          <select id="filas">
+            <option value="1">Monofila · 1 fila</option>
+            <option value="2">Bifila · 2 filas</option>
+          </select></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Módulos por string</label><input id="modsStr" type="number" step="1" value="28"></div>
+        <div class="field"><label>Strings por fila</label><input id="nStr" type="number" step="1" min="1" max="2" value="2"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Gap entre módulos (m)</label><input id="gapMod" type="number" step="0.001" value="0.020"></div>
+        <div class="field"><label>Gap del motor (m)</label><input id="gapMot" type="number" step="0.01" value="0.50"></div>
+      </div>
+      <div id="colRead" class="readout" style="margin-top:4px"></div>
+      <p class="mini" id="colNota"></p>
+    </div>
+
+    <div class="card">
       <h2>▦ Suelo <span class="sn">el mismo para todas</span></h2>
       <div class="two">
         <div class="field"><label>Pitch (m)</label><input id="pitch" type="number" step="0.01" value="6.00"></div>
-        <div class="field"><label>Ancho colector (m)</label><input id="cw" type="number" step="0.001" value="2.382"></div>
+        <div class="field"><label>Ángulo máx °</label><input id="maxang" type="number" value="55"></div>
       </div>
       <div class="two">
-        <div class="field"><label>Ángulo máx °</label><input id="maxang" type="number" value="55"></div>
         <div class="field"><label>Albedo</label><input id="albedo" type="number" step="0.01" value="0.20"></div>
+        <div class="field"><label>&nbsp;</label><p class="mini" id="gcrLbl" style="padding-top:9px">GCR = 0,397</p></div>
       </div>
-      <p class="mini" id="gcrLbl">GCR = 0,397</p>
       <div class="field" style="margin-top:11px"><label>Uso del suelo</label>
         <select id="land">
           <option value="comun">GCR común — aísla la estructura</option>
@@ -290,6 +325,43 @@ FIS.tiltSup=function(thDeg,axTiltDeg){
   return Math.acos(Math.cos(thDeg*FIS.D2R)*Math.cos(Math.abs(axTiltDeg)*FIS.D2R))*FIS.R2D;
 };
 
+/* ── TAMAÑO DE LA ESTRUCTURA — puerto literal de `layout_engine.compute_size_from_mods` ──
+   La misma función que dimensiona los trackers del layout de planta, y por
+   tanto las mismas cifras que §03.F, §03.T0 y la página 6 del Streamlit. El
+   modelo (auditoría 2026-05-18, convención del cliente):
+
+     · `modsStr` son módulos POR STRING, no por estructura entera.
+     · Cada FILA lleva `nStr` strings —por defecto 2, uno a cada lado del
+       motor— separados por el gap del motor. De ahí la fórmula del cliente:
+       MESA = ancho_módulo × N + (N−1) × gap   y   FILA = 2 × MESA + gap_motor.
+     · **Monofila / bifila es una diferencia OPERATIVA, no geométrica**:
+       monofila = 1 fila por tracker; bifila = 2 filas (dos ejes a un pitch de
+       distancia que comparten motor). La MESA mide lo mismo en los dos casos,
+       así que la POA por m² de módulo tampoco cambia — lo que cambia es
+       cuántas filas son «un tracker» para el layout y para el mantenimiento.
+
+   Y una sutileza que hay que respetar, porque está así en su código:
+   la **apertura** (`n × módulo`, SIN los gaps) es la que manda en el GCR
+   —§03.T0: «GCR = aperture/pitch»— mientras que el **alto de colector** CON
+   los gaps es el que la página 8 · Fija le pasa al sombreado. Con 1V —el
+   default— son el mismo número; a partir de 2V se separan, y aquí se
+   publican los dos en vez de elegir uno a escondidas.                        */
+FIS.tamano=function(c){
+  var nStr=Math.max(1,Math.round(c.nStr||1)), mods=Math.max(1,Math.round(c.modsStr||1));
+  var total=mods*nStr;
+  var intra=(mods-1)*nStr, motores=nStr-1;
+  var esV=/V$/i.test(c.tabla||'1V');
+  var n=parseInt((c.tabla||'1V').slice(0,-1),10); if(!isFinite(n)||n<1)n=1;
+  var modCross=esV?c.modL:c.modW;            // el que se apila en cross-axis
+  var modAlong=esV?c.modW:c.modL;            // el que corre a lo largo del eje
+  var apertura=n*modCross;                             // SIN gaps  → GCR
+  var altoColector=apertura+(n-1)*(c.gapMod||0);       // CON gaps  → sombreado
+  var largoFila=total*modAlong+intra*(c.gapMod||0)+motores*(c.gapMot||0);
+  return {apertura:apertura, altoColector:altoColector, largoFila:largoFila,
+          modsFila:total*n, modsTracker:total*n*Math.max(1,Math.round(c.filas||1)),
+          filasTracker:Math.max(1,Math.round(c.filas||1)), n:n, esV:esV};
+};
+
 /* ── θ de seguimiento con backtracking (Anderson-Mikofski) ──
    Con ps ya proyectado, el backtracking es una línea: retroceder lo justo para
    que la fila de al lado no te tape. */
@@ -388,7 +460,11 @@ FIS.spec=function(key){for(var i=0;i<FIS.CATALOGO.length;i++)if(FIS.CATALOGO[i].
    Devuelve kWh/m² de módulo (neta e ideal) y el reparto mensual.            */
 FIS.corre=function(spec,M,cfg,tiltForzado){
   var latR=cfg.lat*FIS.D2R, n=M.t.length;
-  var gcr=cfg.gcrDe(spec), pitch=cfg.cw/gcr;
+  /* GCR y sombreado NO usan la misma cota, y es a propósito (ver FIS.tamano):
+     el GCR sale de la APERTURA —«GCR = aperture/pitch», §03.T0— y el sombreado
+     entre filas del ALTO DE COLECTOR, que es lo que físicamente tapa e incluye
+     los gaps. Con 1V son el mismo número; con 2V ya no. */
+  var gcr=cfg.gcrDe(spec), pitch=cfg.apertura/gcr;
   var dtH=(n>1)?((M.t[1]-M.t[0])/3600000):1;
   var neta=0, ideal=0, mes=new Float64Array(12);
   var tilt=(tiltForzado!=null)?tiltForzado:(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
@@ -410,7 +486,7 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
     var sN=0,sI=0;
     for(var k=0;k<planos.length;k++){
       var t=planos[k];
-      var fsh=spec.sinSombra?0:FIS.shade(P0.ps,t,pitch,cfg.cw);
+      var fsh=spec.sinSombra?0:FIS.shade(P0.ps,t,pitch,cfg.altoColector);
       var P=FIS.poa(P0.ps,P0.rho,t,FIS.tiltSup(t,axT),bh,dh,gh,cfg.albedo,fsh,Math.sin(S.el),e0);
       sN+=P.neta; sI+=P.ideal;
     }
@@ -596,11 +672,18 @@ function pintaEstructuras(){
   }).join('');
 }
 function elegidas(){return [].slice.call(document.querySelectorAll('.st:checked')).map(function(c){return c.value;});}
+function colector(){
+  return FIS.tamano({modL:+$('modL').value, modW:+$('modW').value,
+    tabla:$('tabla').value, modsStr:+$('modsStr').value, nStr:+$('nStr').value,
+    gapMod:+$('gapMod').value, gapMot:+$('gapMot').value, filas:+$('filas').value});
+}
 function cfgActual(){
-  var cw=+$('cw').value, pitch=+$('pitch').value, gcr=(pitch>0?cw/pitch:0.4);
+  var T=colector(), pitch=+$('pitch').value, gcr=(pitch>0?T.apertura/pitch:0.4);
   var real=($('land').value==='real');
   return {
-    lat:+$('lat').value, lon:+$('lon').value, cw:cw, gcr:gcr,
+    lat:+$('lat').value, lon:+$('lon').value,
+    apertura:T.apertura, altoColector:T.altoColector, largoFila:T.largoFila,
+    filasTracker:T.filasTracker, tam:T, gcr:gcr,
     maxang:+$('maxang').value, albedo:+$('albedo').value,
     tilt:+$('tilt').value, tiltEW:12, axTilt:+$('axtilt').value,
     gcrDe:function(spec){
@@ -611,13 +694,23 @@ function cfgActual(){
   };
 }
 function refrescaGeom(){
-  var cw=+$('cw').value,pitch=+$('pitch').value;
-  $('gcrLbl').textContent='GCR = '+fmt(pitch>0?cw/pitch:0,3)+'  (ancho / pitch)';
+  var T=colector(), pitch=+$('pitch').value;
+  $('colRead').innerHTML=
+    ro('Apertura',fmt(T.apertura,3),'m · manda en el GCR')+
+    ro('Alto colector',fmt(T.altoColector,3),'m · con gaps')+
+    ro('Largo de fila',fmt(T.largoFila,2),'m')+
+    ro('Módulos',T.modsTracker,'por tracker'+(T.filasTracker>1?' ('+T.filasTracker+' filas)':''));
+  $('colNota').innerHTML=T.n+(T.esV?' módulo(s) en VERTICAL':' módulo(s) en HORIZONTAL')+
+    ' en cross-axis · fila = '+$('nStr').value+' mesa(s) de '+$('modsStr').value+
+    ' módulos con el motor en medio. <b>Monofila/bifila no cambia la POA</b>: la mesa mide lo '+
+    'mismo y la irradiación es por m² de módulo — cambia cuántas filas son «un tracker».';
+  $('gcrLbl').textContent='GCR = '+fmt(pitch>0?T.apertura/pitch:0,3)+'  (apertura / pitch)';
   $('landLbl').textContent=($('land').value==='real')
     ? 'Fija a GCR '+fmt(FIS.GCR_REAL.fija,2)+' · dos aguas '+fmt(FIS.GCR_REAL.fija_ew,2)+' · seguidores al GCR de arriba. El ranking por suelo puede darse la vuelta.'
     : 'Todas al mismo GCR: la comparación mide seguimiento, no densidad.';
 }
-['cw','pitch'].forEach(function(id){$(id).oninput=refrescaGeom;});
+['pitch','modL','modW','modsStr','nStr','gapMod','gapMot'].forEach(function(id){$(id).oninput=refrescaGeom;});
+['tabla','filas'].forEach(function(id){$(id).onchange=refrescaGeom;});
 $('land').onchange=refrescaGeom;
 
 async function run(){
@@ -632,7 +725,7 @@ async function run(){
   try{
     if(usaMotor){
       var body={lat:cfg.lat,lon:cfg.lon,year:year,meteo_mode:(src==='clearsky'?'clearsky':'canon'),
-        structures:keys, albedo:cfg.albedo, gcr:cfg.gcr, collector_width_m:cfg.cw,
+        structures:keys, albedo:cfg.albedo, gcr:cfg.gcr, collector_width_m:cfg.apertura,
         tilt_deg:cfg.tilt, axis_tilt_deg:cfg.axTilt, max_angle_deg:cfg.maxang,
         gcr_mode:($('land').value==='real'?'tipico':'comun')};
       var r=await fetch(ENGINE+'/structures',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
@@ -998,20 +1091,23 @@ function construyeMundo(){
   var D=Seguidor.DIMS, mats=Seguidor.materials(THREE);
   mats.glass=new THREE.MeshStandardMaterial({color:PALA,roughness:.35,metalness:.25,
     emissive:new THREE.Color(PALA).multiplyScalar(.16)});
-  var largo=D.span;                      // largo de la mesa (a lo largo del tubo)
-  var anchoFija=cfg.cw;                  // el ancho de colector que se teclea arriba
+  /* El bloque se dibuja al TAMAÑO REAL de la estructura configurada: el largo
+     de fila y el alto de colector que salen de `FIS.tamano`, no las cotas por
+     defecto del modelo. Si no, la escena enseñaría una estructura y la tabla
+     calcularía otra. */
+  var largo=cfg.largoFila, anchoFija=cfg.altoColector;
   /* Hueco entre bloques: 16 m, y no es un número bonito. De él sale la
      elevación a la que hay que apagar las sombras (más abajo), y con 10 m se
      apagaban a 13° — justo por encima del momento que la escena existe para
      enseñar: el amanecer de invierno, cuando el backtracking abre el ángulo y
      el que no lo lleva se queda clavado en el tope. Con 16 m aguantan hasta
      8,5° y ese momento se ve. */
-  var sep=Math.max(largo,(NFILAS3D-1)*Math.max(6,cfg.cw/cfg.gcr))+16;
+  var sep=Math.max(largo,(NFILAS3D-1)*Math.max(6,cfg.apertura/cfg.gcr))+16;
   var x0=-(keys.length-1)*sep/2, anchoTot=(keys.length-1)*sep+largo;
 
   keys.forEach(function(k,i){
     var spec=FIS.spec(k); if(!spec)return;
-    var gcr=cfg.gcrDe(spec), pitch=cfg.cw/gcr;
+    var gcr=cfg.gcrDe(spec), pitch=cfg.apertura/gcr;
     var grupo=new THREE.Group(); grupo.position.x=x0+i*sep; MUNDO.add(grupo);
     var filas=[];
     for(var f=0;f<NFILAS3D;f++){
@@ -1033,8 +1129,11 @@ function construyeMundo(){
       grupo.add(uno); filas.push(uno);
     }
     var col='#'+(COL[k]||'#888888').replace('#','');
+    /* El rótulo se acota por el hueco Y por el largo del bloque: con una fila
+       de 68 m (un 2H de 14 módulos por string) el hueco es enorme y el nombre
+       salía más ancho que la propia estructura. */
     var et=etiqueta3D(spec.label.replace('Tracker 1 eje ','').replace(' (dos aguas)',''),
-                      col,sep*0.94);
+                      col,Math.min(sep*0.85,Math.max(12,largo*0.55)));
     et.position.set(0,D.postH+2.4+et.userData.alto,0); grupo.add(et);
     BLOQUES.push({key:k,spec:spec,filas:filas,gcr:gcr,pitch:pitch});
   });
@@ -1150,8 +1249,15 @@ init3D(); construyeMundo(); actualiza3D();
 document.addEventListener('change',function(e){
   if(e.target.classList&&e.target.classList.contains('st')){construyeMundo();actualiza3D();}
 });
-['pitch','cw','land','axtilt','tilt','lat','lon'].forEach(function(id){
-  $(id).addEventListener('change',function(){construyeMundo();actualiza3D();});
+/* Todo lo que cambia la GEOMETRÍA rehace la escena: el tamaño del colector, el
+   suelo y el emplazamiento. (La lista se quedó con un 'cw' que ya no existe al
+   partirlo en apertura/alto de colector, y eso reventaba el arranque entero con
+   un «null.addEventListener» — lo caza el test del 3D con «sin errores de JS».) */
+['pitch','maxang','land','axtilt','tilt','lat','lon',
+ 'modL','modW','tabla','filas','modsStr','nStr','gapMod','gapMot'
+].forEach(function(id){
+  var el=$(id); if(!el)return;
+  el.addEventListener('change',function(){construyeMundo();actualiza3D();});
 });
 $('hora').oninput=actualiza3D;
 $('fecha').onchange=actualiza3D;

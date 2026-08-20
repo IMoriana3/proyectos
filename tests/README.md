@@ -43,7 +43,7 @@ python3 -m http.server 8099                # servir el repo (en otra terminal)
 node tests/test_index.js                   # 13 comprobaciones
 node tests/test_pwa.js                     # 21 comprobaciones (PWA)
 node tests/test_integridad.js              # 6 comprobaciones, sin navegador
-node tests/test_comparador.js              # 27 comprobaciones, careo contra el core
+node tests/test_comparador.js              # 42 comprobaciones, careo contra el core
 node tests/test_comparador_3d.js           # 31 comprobaciones, la escena 3D en Chromium
 node tests/test_viento_ejes.js             # 25 comprobaciones, lienzos y ejes
 ```
