@@ -57,6 +57,27 @@ const SONDA = `(() => {
   await p.waitForTimeout(1200);
 
   check('la escena arranca con WebGL', await p.evaluate(() => !!(window.TD && TD.rd)));
+  // El bloque «Fija · tilt óptimo» se dibujaba con el tilt DE PROYECTO hasta que
+  // comparabas, con el rótulo diciendo «óptimo»: enseñaba 25° bajo un nombre
+  // que promete otra cosa. Ahora se estima con doce días de cielo claro —
+  // instantáneo — y se marca con «≈» hasta que la tabla dé el del año.
+  const est = await p.evaluate(() => {
+    const B = BLOQUES.find(b => b.key === 'fija_optima');
+    const lbl = [...document.querySelectorAll('#escRead .ro')]
+      .find(d => /ÓPTIM/i.test(d.querySelector('.k').textContent));
+    return { estimado: !!(B && B.estimado), tiltProyecto: +document.getElementById('tilt').value,
+             txt: lbl ? lbl.textContent.replace(/\s+/g, ' ') : '',
+             cache: TILT_EST };
+  });
+  check('sin haber comparado, el tilt óptimo se ESTIMA (' + est.cache + '°) en vez de ' +
+    'dibujar el de proyecto (' + est.tiltProyecto + '°)',
+    est.estimado && est.cache > 0 && est.cache !== est.tiltProyecto,
+    JSON.stringify(est));
+  check('y se marca con «≈» y «tilt estimado», que no es lo mismo que el del año',
+    /≈/.test(est.txt) && /estimado/i.test(est.txt), est.txt);
+  check('la estimación es plausible a 37°N (' + est.cache + '°)',
+    est.cache > 15 && est.cache < 45, String(est.cache));
+
   check('se ve desde que se abre, sin comparar nada',
     (await p.evaluate(() => BLOQUES.length)) === 2);
 
@@ -387,6 +408,17 @@ const SONDA = `(() => {
   // ── el catálogo CEC: 16.758 módulos y 4.910 inversores, dentro de la ficha ──
   // Y sobre todo: NO se baja al abrir. Son 2,4 MB + 656 KB, y quien viene a
   // comparar estructuras no tiene por qué pagarlos.
+  // el módulo da el tamaño y el pico de las dos familias, así que elegirlo va
+  // ANTES: si va después, se teclean unas medidas a mano y el catálogo llega
+  // tarde a pisarlas
+  const ordenEq = await p.evaluate(() => {
+    const top = id => document.getElementById(id).getBoundingClientRect().top + window.scrollY;
+    return { sitio: top('sitioQ'), eq: top('eqCard'), fx: top('fxModL'), tk: top('tkModL') };
+  });
+  check('la tarjeta de Equipos va ANTES que los dos configuradores',
+    ordenEq.eq > ordenEq.sitio && ordenEq.eq < ordenEq.fx && ordenEq.eq < ordenEq.tk,
+    JSON.stringify(ordenEq));
+
   check('el catálogo NO se baja al abrir la ficha',
     (await p.evaluate(() => CAT.mod === null && CAT.inv === null)) === true);
   await p.click('#eqCard');

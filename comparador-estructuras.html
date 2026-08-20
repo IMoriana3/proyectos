@@ -163,6 +163,59 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       </div>
     </div>
 
+    <!-- ═════════ EQUIPOS: el catálogo CEC, dentro de la ficha ═════════ -->
+    <div class="card" id="eqCard">
+      <h2>⚙ Equipos <span class="sn" id="eqGob">catálogo CEC</span></h2>
+      <div class="field"><label>Módulo · fabricante</label>
+        <select id="mfMfr"><option value="">— cargando catálogo —</option></select></div>
+      <div class="field"><label>Módulo · buscar</label>
+        <input id="mfQ" type="text" placeholder="p. ej. 610 bifacial, o TOPCon"></div>
+      <label class="chk"><input type="checkbox" id="mfSoloOk" checked>
+        Solo los que <b>encajan</b> con el inversor elegido</label>
+      <div class="field"><label>Módulo</label>
+        <select id="mfPick"><option value="">—</option></select></div>
+      <div id="mfRead" class="readout" style="margin-top:4px"></div>
+      <p class="mini" id="mfNota"></p>
+      <div class="two" style="margin-top:9px">
+        <button class="btn ghost" id="mfAplFx">▤ Usar en la FIJA</button>
+        <button class="btn ghost" id="mfAplTk">▤ Usar en el TRACKER</button>
+      </div>
+      <p class="mini" style="margin-top:7px">El módulo da el <b>tamaño</b> y el <b>pico</b> con los
+        que se configuran las dos familias, por eso va antes que ellas: lo que elijas aquí baja a
+        los configuradores de abajo.</p>
+
+      <h2 style="margin-top:18px">🔌 Inversor <span class="sn" id="invGob"></span></h2>
+      <div class="two">
+        <div class="field"><label>Categoría</label>
+          <select id="ivCat">
+            <option value="">— todas —</option>
+            <option value="micro">micro (&lt;1 kW)</option>
+            <option value="comercial">comercial (≤100 kW)</option>
+            <option value="string" selected>string (100-400 kW)</option>
+            <option value="industrial">industrial (&gt;400 kW)</option>
+          </select></div>
+        <div class="field"><label>Fabricante</label>
+          <select id="ivMfr"><option value="">— todos —</option></select></div>
+      </div>
+      <div class="field"><label>Buscar</label>
+        <input id="ivQ" type="text" placeholder="p. ej. SG350HX"></div>
+      <div class="field"><label>Inversor</label>
+        <select id="ivPick"><option value="">—</option></select></div>
+      <div id="ivRead" class="readout" style="margin-top:4px"></div>
+      <p class="mini" id="ivNota"></p>
+      <p class="mini" style="margin-top:9px"><b>Límites por MPPT</b> — no están en el
+        catálogo CEC y son los que de verdad dimensionan. Sin ellos se usa el
+        <code>Idcmax</code> del CEC, que es un valor DERIVADO (≈Pdco/Vdco): una cota, no la verdad.</p>
+      <div class="two">
+        <div class="field"><label>Nº de MPPT</label><input id="ivNMppt" type="number" step="1" min="1" value="12"></div>
+        <div class="field"><label>I entrada / MPPT (A)</label><input id="ivIMppt" type="number" step="0.1" min="0" value="40"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Isc máx / MPPT (A)</label><input id="ivIscMppt" type="number" step="0.1" min="0" value="60"></div>
+        <div class="field"><label>Strings / MPPT (tope)</label><input id="ivTope" type="number" step="1" min="0" value="4"></div>
+      </div>
+    </div>
+
     <div class="card">
       <h2>▤ Configurador · FIJA <span class="sn" id="fxGob">§03.F</span></h2>
       <div class="two">
@@ -246,56 +299,6 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         </select></div>
       <div id="tkRead" class="readout" style="margin-top:4px"></div>
       <p class="mini" id="tkNota"></p>
-    </div>
-
-    <!-- ═════════ EQUIPOS: el catálogo CEC, dentro de la ficha ═════════ -->
-    <div class="card" id="eqCard">
-      <h2>⚙ Equipos <span class="sn" id="eqGob">catálogo CEC</span></h2>
-      <div class="field"><label>Módulo · fabricante</label>
-        <select id="mfMfr"><option value="">— cargando catálogo —</option></select></div>
-      <div class="field"><label>Módulo · buscar</label>
-        <input id="mfQ" type="text" placeholder="p. ej. 610 bifacial, o TOPCon"></div>
-      <label class="chk"><input type="checkbox" id="mfSoloOk" checked>
-        Solo los que <b>encajan</b> con el inversor elegido</label>
-      <div class="field"><label>Módulo</label>
-        <select id="mfPick"><option value="">—</option></select></div>
-      <div id="mfRead" class="readout" style="margin-top:4px"></div>
-      <p class="mini" id="mfNota"></p>
-      <div class="two" style="margin-top:9px">
-        <button class="btn ghost" id="mfAplFx">▤ Usar en la FIJA</button>
-        <button class="btn ghost" id="mfAplTk">▤ Usar en el TRACKER</button>
-      </div>
-
-      <h2 style="margin-top:18px">🔌 Inversor <span class="sn" id="invGob"></span></h2>
-      <div class="two">
-        <div class="field"><label>Categoría</label>
-          <select id="ivCat">
-            <option value="">— todas —</option>
-            <option value="micro">micro (&lt;1 kW)</option>
-            <option value="comercial">comercial (≤100 kW)</option>
-            <option value="string" selected>string (100-400 kW)</option>
-            <option value="industrial">industrial (&gt;400 kW)</option>
-          </select></div>
-        <div class="field"><label>Fabricante</label>
-          <select id="ivMfr"><option value="">— todos —</option></select></div>
-      </div>
-      <div class="field"><label>Buscar</label>
-        <input id="ivQ" type="text" placeholder="p. ej. SG350HX"></div>
-      <div class="field"><label>Inversor</label>
-        <select id="ivPick"><option value="">—</option></select></div>
-      <div id="ivRead" class="readout" style="margin-top:4px"></div>
-      <p class="mini" id="ivNota"></p>
-      <p class="mini" style="margin-top:9px"><b>Límites por MPPT</b> — no están en el
-        catálogo CEC y son los que de verdad dimensionan. Sin ellos se usa el
-        <code>Idcmax</code> del CEC, que es un valor DERIVADO (≈Pdco/Vdco): una cota, no la verdad.</p>
-      <div class="two">
-        <div class="field"><label>Nº de MPPT</label><input id="ivNMppt" type="number" step="1" min="1" value="12"></div>
-        <div class="field"><label>I entrada / MPPT (A)</label><input id="ivIMppt" type="number" step="0.1" min="0" value="40"></div>
-      </div>
-      <div class="two">
-        <div class="field"><label>Isc máx / MPPT (A)</label><input id="ivIscMppt" type="number" step="0.1" min="0" value="60"></div>
-        <div class="field"><label>Strings / MPPT (tope)</label><input id="ivTope" type="number" step="1" min="0" value="4"></div>
-      </div>
     </div>
 
     <div class="card">
@@ -1008,16 +1011,29 @@ FIS.compara=function(keys,M,cfg){
   keys.forEach(function(k){
     var spec=FIS.spec(k); if(!spec)return;
     var tilt=spec.tiltOpt?FIS.tiltOptimo(M,cfg,spec):null;
+    var tiltSin=spec.tiltOpt
+      ? FIS.tiltOptimo(M,cfg,{fam:spec.fam, tsat:spec.tsat, bt:spec.bt, sinSombra:true})
+      : null;
     var r=FIS.corre(spec,M,cfg,tilt);
     filas.push({key:k, label:spec.label, fam:spec.fam, nota:spec.nota,
       neta:r.neta, ideal:r.ideal, mes:r.mes, gcr:r.gcr, pitch:r.pitch,
       tilt:(spec.fam==='tracker'?null:(tilt!=null?tilt:r.tilt)),
-      tiltOpt:!!spec.tiltOpt,
+      tiltOpt:!!spec.tiltOpt, tiltSinSombra:tiltSin,
       suelo:r.neta*r.gcr,
       transp:ghi>0?((r.neta/ghi-1)*100):NaN,
       sombra:r.ideal>0?((1-r.neta/r.ideal)*100):0});
     if(spec.sinSombra)avisos.push('«'+spec.label+'» corre SIN sombreado entre filas: su POA es un techo. '+spec.nota);
-    if(spec.tiltOpt)avisos.push('«'+spec.label+'»: el tilt óptimo ('+tilt+'°) es el NETO, barrido con sombra. El del cuaderno sale de un barrido de transposición sin sombra y queda 1-3° por encima.');
+    if(spec.tiltOpt){
+      var dif=(tiltSin!=null)?(tiltSin-tilt):0;
+      avisos.push('«'+spec.label+'»: el tilt óptimo ('+tilt+'°) es el NETO, barrido CON sombra entre '+
+        'filas. Sin sombra —que es como lo barre el cuaderno— saldría '+tiltSin+'°'+
+        (dif<=0
+          ? ', o sea que a esta densidad (GCR '+r.gcr.toFixed(3).replace('.',',')+') coinciden: las filas están lo '+
+            'bastante abiertas para que la sombra no castigue a los tilts altos.'
+          : ': '+dif+'° más. La diferencia la pone la DENSIDAD (GCR '+r.gcr.toFixed(3).replace('.',',')+'): cuanto '+
+            'más apretadas las filas, más se tapa a sí misma una fija inclinada, y el óptimo neto '+
+            'baja. No es que los dos motores discrepen — es que responden a preguntas distintas.'));
+    }
   });
   var base=null;
   for(var j=0;j<filas.length;j++)if(filas[j].fam!=='tracker'){base=filas[j];break;}
@@ -1067,6 +1083,28 @@ FIS.clearsky=function(lat,lon,year){
   }
   return Promise.resolve(o);
 };
+/* ── Cielo claro CORTO: doce días típicos ──
+   Para el tilt óptimo de la escena no hace falta el año entero. Doce días —el
+   15 de cada mes, horario— recorren las cuatro estaciones y salen 288 pasos en
+   vez de 8760: el barrido de tilt (22 corridas) es instantáneo en vez de
+   pararle la ficha a alguien con un móvil. Es la misma muestra que usa el
+   fixture del careo por la misma razón.
+
+   Y es una ESTIMACIÓN, no el número: se dibuja para que la escena enseñe lo
+   que estás configurando desde que abres, y la tabla la sustituye por el
+   óptimo del año en cuanto comparas. La escena lo dice con un «≈». */
+FIS.clearskyCorto=function(lat,lon,year){
+  var latR=lat*FIS.D2R, t=[], ghi=[], dhi=[], dni=[];
+  for(var m=0;m<12;m++)for(var h=0;h<24;h++){
+    var d=new Date(Date.UTC(year,m,15,h)), P=FIS.sun(d,latR,lon);
+    var g=P.el>0?1000*Math.pow(Math.sin(P.el),1.15):0;
+    t.push(d); ghi.push(g); dhi.push(g*0.14);
+    dni.push(P.el>0?(g-g*0.14)/Math.max(Math.sin(P.el),0.087):0);
+  }
+  return {t:t, ghi:Float64Array.from(ghi), dhi:Float64Array.from(dhi),
+          dni:Float64Array.from(dni), source:'clearsky-12d'};
+};
+
 /* ═══════════════════ FÍSICA PURA — fin ═══════════════════ */
 
 if(typeof module!=='undefined'&&module.exports)module.exports=FIS;   // para tests/test_comparador.js
@@ -2162,6 +2200,7 @@ function render(){
     '</div>'+
     (REP.avisos||[]).map(function(a){return '<div class="warn" style="margin-top:12px">⚠ '+esc(a)+'</div>';}).join('');
   drawTabla(base); drawMeses(); drawRank();
+  actualiza3D();                 // la escena pasa del tilt estimado al del año
   $('tblCard').style.display='';$('mesCard').style.display='';
 }
 function ro(k,v,s){return '<div class="ro"><div class="k">'+esc(k)+'</div><div class="v">'+esc(v)+(s?' <small>'+esc(s)+'</small>':'')+'</div></div>';}
@@ -2552,6 +2591,7 @@ function construyeMundo(){
   if(!TD)return;
   if(MUNDO){TD.sc.remove(MUNDO); MUNDO.traverse(function(o){if(o.geometry)o.geometry.dispose();});}
   MUNDO=new THREE.Group(); TD.sc.add(MUNDO); BLOQUES=[];
+  TILT_EST=null;              // otra geometría u otro sitio, otro óptimo
   var keys=elegidas(); if(!keys.length)return;
   var cfg=cfgActual();
   var D=Seguidor.DIMS, mats=Seguidor.materials(THREE);
@@ -2697,13 +2737,16 @@ function actualiza3D(){
     }else{
       // Fija monoinclinada: mira al ECUADOR. Filas E-O ⇒ el giro va sobre X.
       var sgn=(cfg.lat>=0?1:-1);
-      var tOpt=(spec.tiltOpt&&REP)?tiltDeRep(B.key):tilt;
+      var estimado=(spec.tiltOpt&&!REP);
+      var tOpt=spec.tiltOpt?(REP?tiltDeRep(B.key):tiltEstimado(cfg,spec)):tilt;
+      B.estimado=estimado;
       B.filas.forEach(function(u){u.spin.rotation.x=sgn*tOpt*FIS.D2R;});
       th=tOpt;
     }
     ro.push(roEsc(spec.label.replace('Tracker 1 eje ','').replace('Fija · ',''),
-      (spec.fam==='tracker'?(elDeg>0?fmt(th,1)+'°':'—'):fmt(th,0)+'°'),
-      spec.fam==='tracker'?'θ':'tilt'));
+      (spec.fam==='tracker'?(elDeg>0?fmt(th,1)+'°':'—')
+                           :(B.estimado?'≈ ':'')+fmt(th,0)+'°'),
+      spec.fam==='tracker'?'θ':(B.estimado?'tilt estimado':'tilt')));
   });
   $('escRead').innerHTML=ro.join('');
 }
@@ -2711,6 +2754,19 @@ function roEsc(k,v,s){return '<div class="ro"><div class="k">'+esc(k)+'</div><di
   esc(v)+(s?' <small>'+esc(s)+'</small>':'')+'</div></div>';}
 /* Si ya se ha comparado, la fija «óptima» se dibuja con SU tilt, no con el de
    proyecto: si no, la escena enseñaría una estructura distinta de la de la tabla. */
+/* El tilt óptimo ESTIMADO de la escena. Se calcula una vez por geometría y
+   emplazamiento —`construyeMundo()` lo invalida— porque `actualiza3D` corre en
+   cada tirón del deslizador de la hora y barrer 22 tilts ahí sería pegarse un
+   tiro en el pie. */
+var TILT_EST=null;
+function tiltEstimado(cfg,spec){
+  if(TILT_EST!=null)return TILT_EST;
+  try{
+    var M=FIS.clearskyCorto(cfg.lat,cfg.lon,+$('year').value||2023);
+    TILT_EST=FIS.tiltOptimo(M,cfg,spec);
+  }catch(e){TILT_EST=cfg.tilt;}
+  return TILT_EST;
+}
 function tiltDeRep(key){
   if(!REP||!REP.filas)return +$('tilt').value;
   for(var i=0;i<REP.filas.length;i++)if(REP.filas[i].key===key&&REP.filas[i].tilt!=null)return REP.filas[i].tilt;

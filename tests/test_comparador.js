@@ -246,6 +246,39 @@ check('el tilt óptimo es plausible a ' + C.lat.toFixed(0) + '°N (' + js.fija_o
 check('el óptimo bate al tilt de proyecto', js.fija_optima.neta >= js.fija_proyecto.neta);
 check('la fija transpone por encima del GHI', js.fija_proyecto.transp > 5);
 
+// ── 6b) EL ÓPTIMO NETO CONTRA EL DE TRANSPOSICIÓN ──
+// El aviso decía «queda 1-3° por encima» como número FIJO. Eso solo vale a GCR
+// flojo: con las filas apretadas un tilt alto se tapa la fila de detrás y el
+// óptimo NETO se desploma. A GCR 0,68 en Sevilla la diferencia es de ONCE
+// grados, y decir «1-3°» ahí se lee como «casi coinciden» cuando no coinciden
+// en absoluto. Ahora el segundo óptimo se calcula y la diferencia se publica.
+check('la fila publica también el óptimo SIN sombra',
+  js.fija_optima.tiltSinSombra != null && js.fija_optima.tiltSinSombra > 0,
+  String(js.fija_optima.tiltSinSombra));
+check('el óptimo neto nunca puede pasarse del de transposición (' +
+  js.fija_optima.tilt + '° ≤ ' + js.fija_optima.tiltSinSombra + '°)',
+  js.fija_optima.tilt <= js.fija_optima.tiltSinSombra);
+check('el aviso da la diferencia MEDIDA, no un «1-3°» de memoria',
+  rep.avisos.some(a => /saldría\s+\d+°/.test(a)) && !rep.avisos.some(a => /1-3°/.test(a)),
+  rep.avisos.find(a => /tilt óptimo/.test(a)) || '(sin aviso)');
+
+// Y la física detrás: apretar las filas TIENE que bajar el óptimo neto, sin
+// mover el de transposición (que no sabe de vecinas).
+const opt = gcr => {
+  const G = { apertura: C.collector_width_m, altoColector: C.collector_width_m,
+              largoFila: 65.084, pitch: C.collector_width_m / gcr, gcr };
+  const c = { ...cfg, geomDe: () => G };
+  const sp = FIS.spec('fija_optima');
+  return { neto: FIS.tiltOptimo(M, c, sp),
+           sinSombra: FIS.tiltOptimo(M, c, { fam: sp.fam, sinSombra: true }) };
+};
+const flojo = opt(0.40), apretado = opt(0.75);
+check('con las filas apretadas el óptimo NETO baja (' + flojo.neto + '° → ' +
+  apretado.neto + '° al pasar de GCR 0,40 a 0,75)', apretado.neto < flojo.neto - 5);
+check('y el de transposición NO se mueve: no sabe que hay vecinas (' +
+  flojo.sinSombra + '° = ' + apretado.sinSombra + '°)',
+  flojo.sinSombra === apretado.sinSombra);
+
 // ── 7) hemisferio sur: la fija tiene que mirar al NORTE ──
 // Si `psFija` no cambiara de signo bajo el ecuador, la fija apuntaría al polo y
 // perdería contra el plano horizontal. Es el guard de esa línea.
