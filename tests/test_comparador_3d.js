@@ -112,6 +112,21 @@ const SONDA = `(() => {
     p10.fija.filas + ' filas · ' + p10.fija.ha.toFixed(2) + ' ha)',
     p10.fija.filas > 0 && p10.fija.ha > 0 &&
     p10.texto.includes(String(p10.fija.filas)));
+  // «¿cómo las pone, una detrás de otra o infinitas? ¿al norte o al este?» —
+  // si hay que preguntarlo, es que no estaba dicho.
+  const campo = await p.evaluate(() => ({
+    read: document.getElementById('picoRead').textContent,
+    nota: document.getElementById('picoNota').textContent }));
+  check('el box publica el CAMPO de cada familia, con sus dos lados',
+    /CAMPO · FIJA/i.test(campo.read) && /CAMPO · TRACKER/i.test(campo.read) &&
+    /E-O × N-S/.test(campo.read), campo.read.slice(-160));
+  check('y dice hacia dónde se apila cada una (la fija al sur, el seguidor al este)',
+    /apilan hacia el .*sur/i.test(campo.nota) && /apilan hacia el .*este/i.test(campo.nota),
+    campo.nota.slice(0, 200));
+  check('y que para la SOMBRA sí son filas infinitas, con lo que eso sobreestima',
+    /fila infinita/i.test(campo.nota) && /sobreestima/i.test(campo.nota),
+    campo.nota.slice(-260));
+
   check('a igualdad de pico los módulos son los MISMOS en las dos familias',
     p10.fija.mods === p10.tk.mods, p10.fija.mods + ' vs ' + p10.tk.mods);
 

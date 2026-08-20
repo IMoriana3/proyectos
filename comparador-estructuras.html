@@ -593,6 +593,12 @@ FIS.planta=function(G,mwp){
   var areaSuelo=filas*G.pitch*G.largoFila;
   return {pedidos:Math.ceil(pedidos), mods:mods, filas:filas,
           trackers:Math.ceil(filas/Math.max(1,G.filasTracker)),
+          /* El campo es un RECTÁNGULO: `filas` filas de `largoFila`, una detrás
+             de otra a `pitch`. `ladoPitch` es el lado en el que se apilan las
+             filas y `ladoFila` el largo de cada una; cuál de los dos es el
+             este-oeste depende de la familia (la fija apila hacia el sur, el
+             seguidor hacia el este) y eso lo pone quien lo pinta. */
+          ladoPitch:filas*G.pitch, ladoFila:G.largoFila,
           mwp:mods*wp/1e6, areaMod:areaMod, ha:areaSuelo/1e4,
           /* densidad de la parcela: MWp por hectárea, el número con el que se
              habla de una implantación antes de mirar ningún kWh */
@@ -1522,7 +1528,11 @@ function pintaPico(c){
     ro('Tracker · estructuras',uds(c.tracker,K),fmt(K.mwp,2)+' MWp montados')+
     ro('Tracker · suelo',fmt(K.ha,2),'ha · '+fmt(K.mwpHa,2)+' MWp/ha')+
     ro('Suelo · fija vs tracker',(F.ha<=K.ha?'−':'+')+fmt(Math.abs(F.ha/K.ha-1)*100,1)+' %',
-       (F.ha<=K.ha?'la fija ocupa menos':'la fija ocupa más'));
+       (F.ha<=K.ha?'la fija ocupa menos':'la fija ocupa más'))+
+    /* La fija apila filas hacia el SUR (la fila corre este-oeste) y el seguidor
+       hacia el ESTE (el eje corre norte-sur): son los dos lados del campo. */
+    ro('Campo · fija',fmt(F.ladoFila,0)+' × '+fmt(F.ladoPitch,0),'m E-O × N-S')+
+    ro('Campo · tracker',fmt(K.ladoPitch,0)+' × '+fmt(K.ladoFila,0),'m E-O × N-S');
   var mismoMod=Math.abs(F.areaMod/K.areaMod-1)<1e-9;
   $('picoNota').innerHTML=
     'A <b>'+fmt(mwp,1)+' MWp</b> hacen falta '+fmt(F.pedidos,0)+' módulos; se redondea a fila entera '+
@@ -1535,8 +1545,16 @@ function pintaPico(c){
       : 'Ojo: las dos familias llevan MÓDULOS DISTINTOS, así que a igualdad de pico los m² de captación '+
         'ya no coinciden ('+fmt(F.areaMod,0)+' contra '+fmt(K.areaMod,0)+' m²) y la energía incidente '+
         'no es la POA escalada por el mismo factor.')+
-    ' El suelo es la huella del campo (filas × pitch × largo de fila): sin viales, sin subestación y '+
-    'sin los retranqueos de la parcela real.';
+    ' <b>Cómo se colocan</b>: en un rectángulo, '+fmt(F.filas,0)+' filas de '+fmt(F.ladoFila,0)+
+    ' m una detrás de otra a su pitch. La <b>fija</b> corre este-oeste y las filas se apilan hacia '+
+    'el <b>sur</b>; el <b>seguidor</b> corre norte-sur (su eje) y las filas se apilan hacia el '+
+    '<b>este</b>. Ni una ni otra son «infinitas» para contar suelo — pero <b>sí</b> para la '+
+    'sombra: el modelo de sombreado es el de fila infinita (cada fila la tapa otra igual a un '+
+    'pitch), así que la primera fila sale sombreada aunque en campo no tenga a nadie delante. '+
+    'Con '+fmt(F.filas,0)+' filas eso sobreestima la pérdida en un '+
+    fmt(100/F.filas,2)+' % — el precio de no modelar bordes. Y el suelo es la huella del campo '+
+    '(filas × pitch × largo de fila): sin viales, sin subestación y sin los retranqueos de la '+
+    'parcela real.';
 }
 function refrescaGeom(){
   var c=cfgActual();
