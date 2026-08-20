@@ -95,6 +95,19 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 ## Puntos abiertos (escribir aquí lo que afecte al otro)
 
+- **[Sesión comparador → las dos] Ficha nueva «Comparador de estructuras»** (`comparador-estructuras.html`
+  + `docs/comparador-estructuras.md` + tarjeta en `PROJECTS` + acceso directo en la cabecera de
+  Herramientas + `tests/test_comparador.js` + `tests/careo-estructuras.json`). Cae del lado del
+  **Panel como producto** (ámbito de *Proyectos*): quedáosla.
+  Tres cosas que conviene saber antes de tocarla:
+  1. **La física vive en el HTML, entre las marcas `FÍSICA PURA`,** y `tests/test_comparador.js` la
+     EXTRAE de ahí para carearla contra `solargpt_core.structure_compare`. Si movéis ese bloque o
+     cambiáis las marcas, el careo deja de encontrarlo (y lo dice, no falla en silencio).
+  2. **Depende de `POST /structures`** en el motor (`server/app.py` de SolarGPTfull, ya en su rama).
+     Sin motor la ficha calcula igual: el endpoint solo da el número canónico.
+  3. **El fixture del careo se regenera a mano** tras un cambio en el core:
+     `python3 tests/gen_careo_estructuras.py --core /ruta/a/SolarGPTfull/solargpt`.
+
 - **[Sesión batería → Backtracking] Tarjeta nueva «Gestión de Batería TCU».** Añadida a `PROJECTS`
   (detrás de *Gemelo Digital TCU*, mismo repo `gemelo-digital`): el simulador `bateria.html`
   fusionado en la #37 de ese repo. Cae en vuestro ámbito — revisadla y quedáosla; `docId` vacío
@@ -214,6 +227,7 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 | 2026-08-12 | Backtracking | El Panel pasa a ser **app instalable**: `manifest.webmanifest` (scope `/`), `sw.js`, iconos, botón *Instalar app* y aviso de versión nueva. `tests/test_pwa.js`. Ver Puntos abiertos. |
 | 2026-08-19 | Proyectos | Ficha `sim-viento.html` (abanderamiento por viento) + `docs/viento.md` + acceso directo en la cabecera de Herramientas. Depende de `POST /windstow` en el motor. |
 | 2026-08-19 | Proyectos | `sim-viento.html` v1.1: laboratorio de rachas (fondo sintético o en calma, ráfaga de 3 s, rachas inyectadas con dirección, tormentas al azar) y meteo de cielo claro para probar sin red. |
+| 2026-08-20 | Comparador | Ficha `comparador-estructuras.html` (fija vs seguidor por POA) + `docs/comparador-estructuras.md` + tarjeta + acceso directo + careo `tests/test_comparador.js` contra el core. `sw.js` a v18 con la página en el armazón. Depende de `POST /structures` en el motor. |
 | 2026-08-19 | Proyectos | `sim-viento.html` v1.2: campo 3D con los casos en paralelo. Entran en el repo `lib/three.min.js`, `lib/OrbitControls.js` y **`seguidor.js`** (copia idéntica de la fuente única que ya comparten Gemelo Digital y Cobertura 3D: si la tocáis allí, hay que sincronizarla aquí). |
 | 2026-08-19 | Proyectos | SW v4: `docs/*.md` y `.json` a red primero (la Documentación se quedaba una versión atrás) y botón de armazón/actualizar en la barra. |
 | 2026-08-19 | Proyectos | `sim-viento.html` v1.5: adopta la estética de `overcast.html` / `backtracking.html` (tokens, etiquetas mono, `.viz3d`, cúpula de cielo con degradado) y la Escena 3D pasa al primer puesto de los resultados. |

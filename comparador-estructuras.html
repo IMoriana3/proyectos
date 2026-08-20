@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0B0F14">
+<link rel="icon" href="favicon.svg">
+<title>Comparador de estructuras — Factiun</title>
+<!-- sin fuentes de Google: offline (fuentes del sistema) -->
+<style>
+:root{
+  --void:#0B0F14; --panel:#121922; --panel-2:#0F151D; --panel-hi:#18222D;
+  --line:#23303D; --line-soft:#1A2530; --text:#E7EEF4; --muted:#8093A4; --muted-2:#5E6F7E;
+  --live:#36D399; --build:#F6A623; --demo:#54A6FF; --idle:#6A7B8B; --dead:#D0594F;
+  --accent:#36D399; --radius:14px; --radius-sm:9px;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --display:'Space Grotesk','IBM Plex Sans',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--void);color:var(--text);font-family:var(--sans);min-height:100vh;font-variant-numeric:tabular-nums}
+.bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 18px;background:var(--panel-2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+.bar .back{color:var(--muted);text-decoration:none;font:600 13px/1 var(--sans);padding:7px 11px;border:1px solid var(--line);border-radius:10px;white-space:nowrap}
+.bar .back:hover{color:var(--text);border-color:var(--accent)}
+.bar h1{font:700 17px/1.1 var(--display)}
+.bar .sub{color:var(--muted);font-size:12.5px;margin-right:auto}
+.bar .brand{color:var(--accent);font:700 14px/1 var(--display);letter-spacing:.04em}
+.engine{display:flex;align-items:center;gap:7px;font-size:12px;font-family:var(--mono);padding:4px 10px;border:1px solid var(--line);border-radius:20px;background:var(--panel)}
+.engine .led{width:9px;height:9px;border-radius:50%;background:var(--idle)}
+.engine.on .led{background:var(--live);box-shadow:0 0 7px var(--live)}
+.engine.off .led{background:var(--dead)}
+.wrap{max-width:min(1560px,94vw);margin:0 auto;padding:20px 18px 60px}
+.grid{display:grid;grid-template-columns:355px 1fr;gap:18px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.card h2{font:700 13px/1 var(--display);letter-spacing:.02em;margin-bottom:13px;display:flex;align-items:center;gap:8px}
+.card h2 .sn{margin-left:auto;font:400 11px var(--mono);color:var(--muted)}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.field input,.field select{width:100%;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.btn{background:rgba(54,211,153,.12);color:var(--accent);border:1px solid var(--accent);border-radius:9px;padding:10px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;width:100%}
+.btn:hover{background:rgba(54,211,153,.2);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.ghost{background:var(--panel-2);color:var(--text);border-color:var(--line)}
+.chk{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);padding:5px 0;cursor:pointer}
+.chk input{accent-color:var(--accent);flex:none}
+.chk .tag{margin-left:auto;font:400 10.5px var(--mono);color:var(--muted-2)}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px}
+.ro{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:9px;padding:9px 11px}
+.ro .k{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-family:var(--mono)}
+.ro .v{font:700 17px/1.2 var(--display);margin-top:3px}
+.ro .v small{font-size:12px;color:var(--muted);font-weight:400}
+canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:10px;margin-top:6px}
+.note{font-size:12px;color:var(--muted-2);margin-top:10px;line-height:1.55}
+.note code,.warn code{color:var(--muted);background:var(--panel-2);padding:1px 5px;border-radius:5px;font-family:var(--mono)}
+.warn{font-size:12.5px;line-height:1.55;border:1px solid var(--build);background:rgba(246,166,35,.08);border-radius:10px;padding:10px 12px;margin-bottom:12px;color:var(--text)}
+.engmsg{font-size:13px;line-height:1.6;border:1px solid var(--line);background:var(--panel-2);border-radius:10px;padding:13px 15px}
+.engmsg.err{border-color:var(--dead)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:7px 9px;text-align:right;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+th{font:600 10.5px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);text-align:right}
+th:first-child,td:first-child{text-align:left}
+tbody tr:hover{background:var(--panel-hi)}
+td .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:7px;vertical-align:middle}
+td.pos{color:var(--live)} td.neg{color:var(--dead)}
+.tbl-wrap{overflow-x:auto}
+.mini{font:400 11px var(--mono);color:var(--muted-2)}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <a class="back" href="index.html">← Panel</a>
+  <h1>Comparador de estructuras</h1>
+  <span class="sub">¿fija o seguidor en <b>este</b> sitio?</span>
+  <span class="engine off" id="engine"><span class="led"></span><span id="engineTxt">detectando motor…</span></span>
+  <span class="brand">FACTIUN</span>
+</div>
+
+<div class="wrap">
+<div class="grid">
+
+  <!-- ═════════ CONTROLES ═════════ -->
+  <div>
+    <div class="card">
+      <h2>☉ Emplazamiento</h2>
+      <div class="field"><label>Planta</label>
+        <select id="plant"><option value="">— coordenadas a mano —</option></select></div>
+      <div class="two">
+        <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="37.3891"></div>
+        <div class="field"><label>Longitud °</label><input id="lon" type="number" step="0.0001" value="-5.9845"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Año</label><input id="year" type="number" value="2023"></div>
+        <div class="field"><label>Meteo</label>
+          <select id="source">
+            <option value="openmeteo">Open-Meteo (ERA5)</option>
+            <option value="clearsky">Cielo claro (sin red)</option>
+          </select></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>▦ Suelo <span class="sn">el mismo para todas</span></h2>
+      <div class="two">
+        <div class="field"><label>Pitch (m)</label><input id="pitch" type="number" step="0.01" value="6.00"></div>
+        <div class="field"><label>Ancho colector (m)</label><input id="cw" type="number" step="0.001" value="2.382"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Ángulo máx °</label><input id="maxang" type="number" value="55"></div>
+        <div class="field"><label>Albedo</label><input id="albedo" type="number" step="0.01" value="0.20"></div>
+      </div>
+      <p class="mini" id="gcrLbl">GCR = 0,397</p>
+      <div class="field" style="margin-top:11px"><label>Uso del suelo</label>
+        <select id="land">
+          <option value="comun">GCR común — aísla la estructura</option>
+          <option value="real">Densidad real de cada tipo — mira la parcela</option>
+        </select></div>
+      <p class="mini" id="landLbl"></p>
+    </div>
+
+    <div class="card">
+      <h2>🏗 Estructuras</h2>
+      <div id="structs"></div>
+      <div class="two" style="margin-top:10px">
+        <div class="field"><label>Tilt de proyecto °</label><input id="tilt" type="number" step="0.5" value="25"></div>
+        <div class="field"><label>Eje inclinado °</label><input id="axtilt" type="number" step="0.5" value="10"></div>
+      </div>
+      <div class="field"><label>Cálculo</label>
+        <select id="calc">
+          <option value="local">En el navegador (no hace falta nada)</option>
+          <option value="engine">Motor SolarGPT (canónico) — requiere el motor</option>
+        </select></div>
+      <button class="btn" id="run">Comparar el año</button>
+      <p class="note">Todas comparten meteo, albedo, motor y —salvo que cambies el uso del
+        suelo— el mismo GCR: lo que se compara es la <b>estructura</b>. Esto es
+        <b>irradiación</b> (kWh/m²), no energía AC ni economía.</p>
+    </div>
+  </div>
+
+  <!-- ═════════ RESULTADOS ═════════ -->
+  <div>
+    <div class="card" id="outCard">
+      <h2>Σ Resultado del año <span class="sn" id="ctx">—</span></h2>
+      <div id="out"><p class="note">Elige estructuras y dale a <b>Comparar el año</b>.</p></div>
+    </div>
+    <div class="card" id="tblCard" style="display:none">
+      <h2>⚖ Comparativa <span class="sn">por m² de módulo y por m² de suelo</span></h2>
+      <div class="tbl-wrap"><table id="tbl"></table></div>
+      <p class="note" id="tblNote"></p>
+    </div>
+    <div class="card" id="mesCard" style="display:none">
+      <h2>▥ Mes a mes <span class="sn">kWh/m² de módulo</span></h2>
+      <canvas id="cvMes" width="1100" height="320"></canvas>
+      <canvas id="cvRank" width="1100" height="250"></canvas>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+"use strict";
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function fmt(v,d){return (v==null||!isFinite(v))?'—':(+v).toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d});}
+
+/* ═══════════════════ FÍSICA PURA — inicio ═══════════════════
+   Todo lo que hay entre estas dos marcas se ejecuta TAL CUAL en Node desde
+   `tests/test_comparador.js`, que lo carea contra `solargpt_core.structure_compare`
+   sobre la misma meteo. Extraer el bloque del HTML REAL (y no tener una copia en
+   un .js de test) es lo que impide que el careo se quede careando una versión
+   vieja mientras la ficha evoluciona — el mismo arnés que `tools/parity_js_core.py`
+   usa con overcast.html.
+
+   QUÉ ES ESTE MOTOR Y QUÉ NO. Es el hermano en JS del canónico: posición solar
+   por declinación + ecuación del tiempo, seguimiento con backtracking
+   (Anderson-Mikofski), sombreado geométrico entre filas y transposición
+   ISOTRÓPICA. El motor Python resuelve la transposición con **Perez** y añade
+   IAM. Consecuencia medida (ver docs/comparador-estructuras.md): la POA
+   ABSOLUTA sale unos puntos por debajo, y el ORDEN entre estructuras —que es
+   para lo que existe la ficha— aguanta. Con el motor conectado se pide el
+   número canónico.
+
+   CONVENCIÓN DE SIGNO, una sola para todo el fichero: la del core/pvlib, θ>0 =
+   tumbado al ESTE. En el plano ⊥ al eje, «derecha» es el ESTE en los seguidores
+   (eje N-S) y el ECUADOR en las fijas (filas E-O); θ>0 baja el borde derecho.
+   Con esa elección, θ = ps apunta al sol en los dos casos, que es lo que hace
+   que la misma función de sombra valga para las dos familias.                */
+var FIS={
+  D2R:Math.PI/180,
+  R2D:180/Math.PI,
+  /* Densidades de mercado por tipo, para el modo «densidad real». Una fija se
+     monta más apretada —no tiene que abrirse para no darse sombra al bascular—
+     así que a suelo igual pone más módulo. Órdenes de magnitud de proyecto, no
+     canónicos; el canónico es el GCR que se teclea arriba. */
+  GCR_REAL:{fija:0.45, fija_ew:0.70, tracker:null}   // null = el común
+};
+
+FIS.decl=function(N){return 23.45*Math.sin(2*Math.PI*(284+N)/365)*FIS.D2R;};
+FIS.eot=function(N){var B=2*Math.PI/365*(N-81);return 9.87*Math.sin(2*B)-7.53*Math.cos(B)-1.5*Math.sin(B);};
+/* Elevación (rad) y azimut desde el SUR con el este NEGATIVO (rad).
+   Puerto literal del de sim-viento.html: misma casa, mismo sol. */
+FIS.sun=function(date,latR,lon){
+  var N=Math.floor((date-Date.UTC(date.getUTCFullYear(),0,0))/864e5);
+  var h=date.getUTCHours()+date.getUTCMinutes()/60+date.getUTCSeconds()/3600;
+  var hs=h+lon/15+FIS.eot(N)/60, D=FIS.decl(N), w=(hs-12)*15*FIS.D2R;
+  var sinEl=Math.sin(latR)*Math.sin(D)+Math.cos(latR)*Math.cos(D)*Math.cos(w);
+  var el=Math.asin(Math.max(-1,Math.min(1,sinEl)));
+  var caz=(sinEl*Math.sin(latR)-Math.sin(D))/Math.max(1e-6,Math.cos(el)*Math.cos(latR));
+  var az=Math.acos(Math.max(-1,Math.min(1,caz))); if(w<0)az=-az;
+  return {el:el, az:az};
+};
+
+/* ── Ángulo solar PROYECTADO sobre el plano ⊥ al eje (grados, desde el cenit) ──
+   Es la única magnitud que necesitan tanto el seguimiento como la sombra, y por
+   eso se calcula una vez. Positivo = sol del lado «derecho» del frame.
+
+   · Seguidores (eje N-S): derecha = ESTE. Por la mañana el sol está al este y
+     ps sale positivo, igual que el θ del core.
+   · Fijas (filas E-O): derecha = ECUADOR (sur en el hemisferio norte). A
+     mediodía ps>0 y la fija, con su tilt positivo, le apunta.
+
+   Cada una devuelve `{ps, rho}`: el ángulo y el MÓDULO de la proyección del
+   vector solar sobre ese plano. El módulo no es un adorno — es lo que hace
+   exacto el coseno del ángulo de incidencia (ver FIS.poa) sin dividir por
+   cos(ps), que con el sol rasante en el eje se va a cero y revienta.          */
+FIS.psTracker=function(el,az){
+  var sx=-Math.cos(el)*Math.sin(az), sz=Math.sin(el);   // este positivo (el core)
+  return {ps:Math.atan2(sx,sz)*FIS.R2D, rho:Math.hypot(sx,sz)};
+};
+FIS.psFija=function(el,az,lat){
+  var sx=Math.cos(el)*Math.cos(az)*(lat>=0?1:-1), sz=Math.sin(el);  // hacia el ecuador
+  return {ps:Math.atan2(sx,sz)*FIS.R2D, rho:Math.hypot(sx,sz)};
+};
+/* Eje INCLINADO (TSAT). El eje sube hacia el ecuador: en el hemisferio norte,
+   hacia el sur. Se lleva el vector solar al marco del eje y se mide allí el
+   mismo ángulo proyectado.
+
+   OJO — esta es la trampa que hay que conocer: en el core, pedir el eje
+   inclinado con `axis_azimuth=180` NO funciona, porque `compute_tracker_poa_v2`
+   auto-corrige todo azimut de eje en [135°,225°] restándole 180° (correcto para
+   un eje HORIZONTAL, donde N-S es N-S; para uno inclinado lo tumba al lado
+   contrario y el TSAT acaba mirando al norte, rindiendo MENOS que el
+   horizontal). El core lo esquiva con `axis_tilt` NEGATIVO y azimut 0. Aquí no
+   hay auto-corrección que esquivar, pero el signo se elige igual —hacia el
+   ecuador— para que las dos superficies contesten lo mismo.                  */
+FIS.psTSAT=function(el,az,axTiltDeg,lat){
+  var T=Math.abs(axTiltDeg)*FIS.D2R;                 // magnitud; el sentido lo pone el marco
+  // Marco [este, ecuador, cenit] con el azimut medido desde el sur, este negativo.
+  var e=-Math.cos(el)*Math.sin(az), q=Math.cos(el)*Math.cos(az)*(lat>=0?1:-1), u=Math.sin(el);
+  // El marco gira T alrededor del eje E-O: su «cenit» se inclina hacia el ecuador,
+  // que es justo lo que hace que el eje mire al ecuador y no al polo.
+  var u2=u*Math.cos(T)+q*Math.sin(T);
+  return {ps:Math.atan2(e,u2)*FIS.R2D, rho:Math.hypot(e,u2)};
+};
+/* Inclinación de la superficie sobre la horizontal (grados) — la que ve el
+   cielo, y por tanto la que manda en el fondo difuso. Con eje horizontal
+   coincide con |θ|; con eje inclinado, no. */
+FIS.tiltSup=function(thDeg,axTiltDeg){
+  if(!axTiltDeg)return Math.abs(thDeg);
+  return Math.acos(Math.cos(thDeg*FIS.D2R)*Math.cos(Math.abs(axTiltDeg)*FIS.D2R))*FIS.R2D;
+};
+
+/* ── θ de seguimiento con backtracking (Anderson-Mikofski) ──
+   Con ps ya proyectado, el backtracking es una línea: retroceder lo justo para
+   que la fila de al lado no te tape. */
+FIS.theta=function(psDeg,gcr,maxang,bt){
+  var R=psDeg*FIS.D2R;
+  if(bt){
+    var t=Math.min(1,(1/gcr)*Math.cos(R));
+    R=R-Math.sign(R)*Math.acos(t);
+  }
+  var deg=R*FIS.R2D;
+  return Math.max(-maxang,Math.min(maxang,deg));
+};
+
+/* ── Fracción sombreada entre dos filas iguales, exacta en el plano ⊥ al eje ──
+   Puerto de `shadeFracPair` del Simulador de Backtracking (cobertura-zigbee),
+   que a su vez replica `pvlib.shading.shaded_fraction1d` y allí está careado
+   contra una fuerza bruta de 200 casos. Aquí las dos filas van al MISMO θ
+   (campo uniforme, sin terreno), que es la hipótesis del camino 2.5D del core.
+
+   Con rayos paralelos, la fracción sombreada es el solape de las proyecciones
+   de los dos segmentos sobre el eje ⊥ al rayo, dividido por la proyección de la
+   fila que recibe la sombra: lineal y exacto para segmentos rectos.           */
+FIS.shade=function(psDeg,thDeg,pitch,cw){
+  if(!isFinite(psDeg)||Math.abs(psDeg)>=89.9)return 0;
+  var hw=cw/2, ps=psDeg*FIS.D2R, th=thDeg*FIS.D2R;
+  var dx=Math.cos(th), dz=-Math.sin(th);             // cuerda: θ>0 ⇒ borde derecho abajo
+  var seg=function(cx){return [[cx-hw*dx,-hw*dz],[cx+hw*dx,hw*dz]];};
+  var up = psDeg>=0? seg(pitch) : seg(0);            // la del lado del sol sombrea
+  var dn = psDeg>=0? seg(0)     : seg(pitch);
+  var u=function(P){return P[0]*Math.cos(ps)-P[1]*Math.sin(ps);};
+  var u1=Math.min(u(up[0]),u(up[1])), u2=Math.max(u(up[0]),u(up[1]));
+  var v1=Math.min(u(dn[0]),u(dn[1])), v2=Math.max(u(dn[0]),u(dn[1]));
+  var w=v2-v1, ov=Math.max(0,Math.min(u2,v2)-Math.max(u1,v1));
+  if(w<1e-9)return ov>0?1:0;                         // receptora de canto al sol
+  return Math.max(0,Math.min(1,ov/w));
+};
+
+/* ── POA en el plano girado θ, con la sombra aplicada SOLO al haz y su halo ──
+   Igual que el core: la difusa no se sombrea en este camino (la del cielo la
+   ve el módulo casi entera aunque la fila de delante tape el sol), y por eso
+   `POA_ideal` (sin sombra) y `POA_neta` salen las dos.
+
+   El coseno del ángulo de incidencia sale exacto de la proyección: la normal
+   del plano no tiene componente a lo largo del eje, así que
+   cos(AOI) = n·s = ρ·cos(ps − θ), con ρ el módulo de la proyección del vector
+   solar sobre el plano ⊥ al eje. Nada de dividir por cos(ps).
+
+   La difusa del cielo NO es isotrópica: va por **Hay-Davies**, que reparte la
+   DHI entre un halo alrededor del sol (índice de anisotropía AI = DNI/E0, que
+   se transpone como el haz) y un fondo isotrópico. Empezó siendo isotrópica y
+   el careo contra el core lo tumbó: con isotrópica el seguidor SIN
+   backtracking perdía contra el que backtrackea, y con Perez —el del core—
+   gana, porque apuntar mejor cobra el halo. Quedaban a 1,1 % y el modelo no
+   los distinguía, así que el ORDEN salía cambiado justo en el par que más se
+   parece. Con el circunsolar dentro, los dos motores ordenan igual.
+   El halo es también la mitad de la diferencia con Perez; lo que queda fuera
+   es el brillo de horizonte y el IAM.                                        */
+FIS.E0=function(date){                               // irradiancia extraterrestre normal
+  var N=Math.floor((date-Date.UTC(date.getUTCFullYear(),0,0))/864e5);
+  return 1367*(1+0.033*Math.cos(2*Math.PI*N/365));
+};
+FIS.poa=function(psDeg,rho,thDeg,tiltSupDeg,bh,dh,gh,albedo,fsh,sinEl,e0){
+  var cosAOI=Math.max(0,rho*Math.cos((psDeg-thDeg)*FIS.D2R));
+  var cb=Math.cos(tiltSupDeg*FIS.D2R);
+  var AI=Math.max(0,Math.min(1,Math.max(0,bh)/Math.max(e0,1)));
+  var Rb=Math.min(20,cosAOI/Math.max(sinEl,0.05));   // acotado: con el sol rasante se dispara
+  var cielo=Math.max(0,dh)*(AI*Rb+(1-AI)*(1+cb)/2);
+  var suelo=albedo*Math.max(0,gh)*(1-cb)/2;
+  var haz=Math.max(0,bh)*cosAOI;                     // bh = DNI
+  // El circunsolar viaja con el haz: si la fila de delante tapa el sol, tapa
+  // también su halo. El fondo isotrópico y el albedo no se sombrean.
+  var dirCirc=haz+Math.max(0,dh)*AI*Rb;
+  var difFondo=Math.max(0,dh)*(1-AI)*(1+cb)/2+suelo;
+  return {neta:dirCirc*(1-fsh)+difFondo, ideal:dirCirc+difFondo};
+};
+
+/* ── Catálogo: mismas claves y mismas etiquetas que `structure_compare.CATALOGO` ── */
+FIS.CATALOGO=[
+  {key:'fija_optima',      label:'Fija · tilt óptimo',              fam:'fija',    tiltOpt:true,
+   nota:'Monoinclinada al ecuador; el tilt sale del barrido anual.'},
+  {key:'fija_proyecto',    label:'Fija · tilt de proyecto',         fam:'fija',
+   nota:'Monoinclinada al ecuador con el tilt que fije el proyecto.'},
+  {key:'fija_ew',          label:'Fija · Este-Oeste (dos aguas)',   fam:'fija_ew', sinSombra:true,
+   nota:'Media de los dos planos (misma superficie). SIN sombreado entre filas: el modelo de fila 1D supone todas las filas igual orientadas y no vale para aguas enfrentadas.'},
+  {key:'tracker_hsat',     label:'Tracker 1 eje N-S · backtracking',fam:'tracker', bt:true,
+   nota:'HSAT canónico: eje horizontal N-S, backtracking activo.'},
+  {key:'tracker_hsat_nobt',label:'Tracker 1 eje N-S · sin backtracking',fam:'tracker', bt:false,
+   nota:'Seguimiento astronómico puro: apunta mejor y se da sombra.'},
+  {key:'tracker_tsat',     label:'Tracker 1 eje inclinado (TSAT)',  fam:'tracker', bt:true, tsat:true,
+   nota:'Eje N-S inclinado hacia el ecuador.'}
+];
+FIS.spec=function(key){for(var i=0;i<FIS.CATALOGO.length;i++)if(FIS.CATALOGO[i].key===key)return FIS.CATALOGO[i];return null;};
+
+/* ── Una estructura sobre el año ──────────────────────────────────────────
+   `M` es la meteo ya descargada {t[],ghi[],dhi[],dni[]}; `cfg` la geometría.
+   Devuelve kWh/m² de módulo (neta e ideal) y el reparto mensual.            */
+FIS.corre=function(spec,M,cfg,tiltForzado){
+  var latR=cfg.lat*FIS.D2R, n=M.t.length;
+  var gcr=cfg.gcrDe(spec), pitch=cfg.cw/gcr;
+  var dtH=(n>1)?((M.t[1]-M.t[0])/3600000):1;
+  var neta=0, ideal=0, mes=new Float64Array(12);
+  var tilt=(tiltForzado!=null)?tiltForzado:(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
+  var axT=(spec.tsat?cfg.axTilt:0);
+  for(var i=0;i<n;i++){
+    var S=FIS.sun(M.t[i],latR,cfg.lon);
+    if(S.el<=0)continue;
+    var bh=M.dni[i], dh=M.dhi[i], gh=M.ghi[i], e0=FIS.E0(M.t[i]), P0, planos;
+    if(spec.fam==='tracker'){
+      P0=spec.tsat?FIS.psTSAT(S.el,S.az,cfg.axTilt,cfg.lat):FIS.psTracker(S.el,S.az);
+      planos=[FIS.theta(P0.ps,gcr,cfg.maxang,spec.bt)];
+    }else if(spec.fam==='fija_ew'){
+      P0=FIS.psTracker(S.el,S.az);                    // aguas al este y al oeste
+      planos=[tilt,-tilt];
+    }else{
+      P0=FIS.psFija(S.el,S.az,cfg.lat);
+      planos=[tilt];
+    }
+    var sN=0,sI=0;
+    for(var k=0;k<planos.length;k++){
+      var t=planos[k];
+      var fsh=spec.sinSombra?0:FIS.shade(P0.ps,t,pitch,cfg.cw);
+      var P=FIS.poa(P0.ps,P0.rho,t,FIS.tiltSup(t,axT),bh,dh,gh,cfg.albedo,fsh,Math.sin(S.el),e0);
+      sN+=P.neta; sI+=P.ideal;
+    }
+    sN/=planos.length; sI/=planos.length;             // dos aguas = misma superficie, media
+    neta+=sN*dtH/1000; ideal+=sI*dtH/1000;
+    mes[M.t[i].getUTCMonth()]+=sN*dtH/1000;
+  }
+  return {neta:neta, ideal:ideal, mes:Array.from(mes), gcr:gcr, pitch:pitch, tilt:(spec.fam==='tracker'?null:tilt)};
+};
+
+/* Tilt óptimo: barrido grueso 0..60 cada 5° y fino ±4° cada 1°, la misma
+   rejilla que `structure_compare._optimal_tilt`. Se barre CON sombra (aquí sale
+   gratis), así que este óptimo es el NETO — el del core sale de un barrido de
+   transposición sin sombra y queda 1-3° por encima. Va declarado en los avisos. */
+FIS.tiltOptimo=function(M,cfg,spec){
+  var mejor=null,best=-1,t;
+  for(t=0;t<=60;t+=5){var e=FIS.corre(spec,M,cfg,t).neta; if(e>best){best=e;mejor=t;}}
+  for(t=Math.max(0,mejor-4);t<=Math.min(90,mejor+4);t+=1){
+    var e2=FIS.corre(spec,M,cfg,t).neta; if(e2>best){best=e2;mejor=t;}
+  }
+  return mejor;
+};
+
+/* ── La comparativa entera ── */
+FIS.compara=function(keys,M,cfg){
+  var filas=[],avisos=[];
+  var ghi=0,dtH=(M.t.length>1)?((M.t[1]-M.t[0])/3600000):1;
+  for(var i=0;i<M.t.length;i++)ghi+=Math.max(0,M.ghi[i])*dtH/1000;
+  keys.forEach(function(k){
+    var spec=FIS.spec(k); if(!spec)return;
+    var tilt=spec.tiltOpt?FIS.tiltOptimo(M,cfg,spec):null;
+    var r=FIS.corre(spec,M,cfg,tilt);
+    filas.push({key:k, label:spec.label, fam:spec.fam, nota:spec.nota,
+      neta:r.neta, ideal:r.ideal, mes:r.mes, gcr:r.gcr, pitch:r.pitch,
+      tilt:(spec.fam==='tracker'?null:(tilt!=null?tilt:r.tilt)),
+      tiltOpt:!!spec.tiltOpt,
+      suelo:r.neta*r.gcr,
+      transp:ghi>0?((r.neta/ghi-1)*100):NaN,
+      sombra:r.ideal>0?((1-r.neta/r.ideal)*100):0});
+    if(spec.sinSombra)avisos.push('«'+spec.label+'» corre SIN sombreado entre filas: su POA es un techo. '+spec.nota);
+    if(spec.tiltOpt)avisos.push('«'+spec.label+'»: el tilt óptimo ('+tilt+'°) es el NETO, barrido con sombra. El del cuaderno sale de un barrido de transposición sin sombra y queda 1-3° por encima.');
+  });
+  var base=null;
+  for(var j=0;j<filas.length;j++)if(filas[j].fam!=='tracker'){base=filas[j];break;}
+  if(!base)base=filas[0];
+  filas.forEach(function(f){f.delta=(base&&base.neta>0)?((f.neta/base.neta-1)*100):0;});
+  var gcrs={}; filas.forEach(function(f){gcrs[Math.round(f.gcr*1e6)]=1;});
+  var comun=Object.keys(gcrs).length<=1;
+  if(!comun)avisos.push('GCR distinto por estructura: la columna «POA módulo» sigue siendo el A/B de la estructura, pero el ranking por m² de SUELO incluye la densidad, no solo el seguimiento.');
+  return {filas:filas, ghi:ghi, base:base?base.key:null, gcrComun:comun, avisos:avisos,
+          pasos:M.t.length, dtH:dtH, fuente:M.source};
+};
+
+/* ── Meteo (puerto literal del de sim-viento.html) ── */
+FIS.OM='shortwave_radiation,diffuse_radiation,direct_normal_irradiance';
+FIS.fetchYear=function(lat,lon,year){
+  var u='https://archive-api.open-meteo.com/v1/archive?latitude='+lat+'&longitude='+lon+
+    '&start_date='+year+'-01-01&end_date='+year+'-12-31&hourly='+FIS.OM+'&timezone=UTC';
+  return fetch(u).then(function(r){
+    if(!r.ok)throw new Error('Open-Meteo HTTP '+r.status);return r.json();
+  }).then(function(j){
+    var H=j.hourly; if(!H||!H.time)throw new Error('Open-Meteo sin datos para ese año');
+    var n=H.time.length,o={t:new Array(n),ghi:new Float64Array(n),dhi:new Float64Array(n),dni:new Float64Array(n)};
+    for(var i=0;i<n;i++){
+      o.t[i]=new Date(H.time[i]+'Z');
+      o.ghi[i]=Math.max(0,H.shortwave_radiation[i]||0);
+      o.dhi[i]=Math.max(0,(H.diffuse_radiation&&H.diffuse_radiation[i])||0);
+      o.dni[i]=Math.max(0,(H.direct_normal_irradiance&&H.direct_normal_irradiance[i])||0);
+    }
+    o.source='open_meteo'; return o;
+  });
+};
+/* Cielo claro: sin red. Sin nubes la POA absoluta sale por encima de cualquier
+   año real — sirve para comparar estructuras entre sí, no en absoluto. */
+FIS.clearsky=function(lat,lon,year){
+  var latR=lat*FIS.D2R,t0=Date.UTC(year,0,1),n=8760;
+  var o={t:new Array(n),ghi:new Float64Array(n),dhi:new Float64Array(n),dni:new Float64Array(n),source:'clearsky'};
+  for(var i=0;i<n;i++){
+    var d=new Date(t0+i*3600e3),P=FIS.sun(d,latR,lon);
+    var g=P.el>0?1000*Math.pow(Math.sin(P.el),1.15):0;
+    o.t[i]=d; o.ghi[i]=g; o.dhi[i]=g*0.14;
+    o.dni[i]=P.el>0?(g-g*0.14)/Math.max(Math.sin(P.el),0.087):0;
+  }
+  return Promise.resolve(o);
+};
+/* ═══════════════════ FÍSICA PURA — fin ═══════════════════ */
+
+if(typeof module!=='undefined'&&module.exports)module.exports=FIS;   // para tests/test_comparador.js
+
+/* ===================== MOTOR SOLARGPT (local o remoto vía túnel de Colab) =====================
+   Mismo contrato que sim-solar.html / sim-viento.html: se prueba la URL guardada
+   y luego los puertos locales. El motor es un EXTRA —el número canónico con
+   Perez e IAM—, nunca un requisito: sin él la ficha calcula igual. */
+var ENGINE=null;
+function engineUrls(){var u=[];try{var s=localStorage.getItem('factiun_engine_url');if(s)u.push(s.replace(/\/+$/,''));}catch(e){}[8765,8000,9000].forEach(function(p){u.push('http://127.0.0.1:'+p);});return u;}
+async function detectEngine(){
+  var urls=engineUrls();
+  for(var i=0;i<urls.length;i++){
+    try{var r=await fetch(urls[i]+'/health',{cache:'no-store'});
+      if(r.ok){var j=await r.json();
+        if(j&&j.ok){ENGINE=urls[i];
+          var remoto=!/127\.0\.0\.1|localhost/.test(urls[i]);
+          var hay=!(j.endpoints&&j.endpoints.indexOf('/structures')<0);
+          setEngine(true,'motor ✓ '+(remoto?'(remoto)':'(local)')+(hay?'':' sin /structures'),hay);
+          return;}}}catch(e){}
+  }
+  setEngine(false,'sin motor Python · calcula el navegador',false);
+}
+function setEngine(on,txt,hayEndpoint){
+  var el=$('engine');el.className='engine '+(on?'on':'off');$('engineTxt').textContent=txt;
+  var o=$('calc')&&$('calc').options[1];
+  if(o){var usable=on&&hayEndpoint!==false;
+    o.disabled=!usable;
+    o.textContent='Motor SolarGPT (canónico)'+(usable?'':(on?' — el motor no trae /structures':' — requiere el motor'));
+    if(!usable&&$('calc').value==='engine')$('calc').value='local';}
+}
+$('engine').style.cursor='pointer'; $('engine').title='Clic: fijar la URL del motor (p. ej. el túnel de Colab)';
+$('engine').onclick=function(){var cur='';try{cur=localStorage.getItem('factiun_engine_url')||'';}catch(e){}
+  var u=prompt('URL del motor SolarGPT.\nColab: pega el túnel (https://xxx.trycloudflare.com).\nVacío = solo local.',cur);
+  if(u===null)return; try{if(u.trim())localStorage.setItem('factiun_engine_url',u.trim());else localStorage.removeItem('factiun_engine_url');}catch(e){}
+  ENGINE=null;setEngine(false,'reconectando…',false);detectEngine();};
+
+var COLAB='https://colab.research.google.com/github/IMoriana3/SolarGPTfull/blob/main/Factiun_plataforma.ipynb';
+function engineOffMsg(){
+  return '<div class="engmsg"><b>El número canónico lo da el motor, y no está conectado.</b><br>'+
+    'La ficha calcula sola (lo tienes en «En el navegador»); el motor añade Perez, IAM y la '+
+    'cadena entera del core. Dos formas de tenerlo:<br><br>'+
+    '<b>1 · Colab</b> (lo normal, 2-3 min la primera vez)<br>'+
+    '&nbsp;&nbsp;a. Abre <a href="'+COLAB+'" target="_blank" rel="noopener" style="color:var(--accent)">'+
+    'Factiun_plataforma.ipynb en Colab</a> → <i>Entorno de ejecución</i> → <i>Ejecutar todo</i>.<br>'+
+    '&nbsp;&nbsp;b. Al final imprime una URL <code>https://…trycloudflare.com</code>.<br>'+
+    '&nbsp;&nbsp;c. Clic en el indicador <b>«motor»</b> de arriba y pega esa URL.<br><br>'+
+    '<b>2 · En tu máquina</b> — <code>cd server &amp;&amp; ./run.sh</code> en el repo del motor.'+
+    '</div>';
+}
+function localBanner(){
+  return '<div class="warn" style="border-color:var(--line);background:var(--panel-2)">'+
+    '<b style="color:var(--muted)">Calculado en el navegador.</b> <span style="color:var(--muted-2)">'+
+    'Posición solar por declinación + ecuación del tiempo, seguimiento con backtracking '+
+    '(Anderson-Mikofski), sombreado geométrico entre filas y transposición de <b>Hay-Davies</b> '+
+    '(circunsolar + fondo isotrópico). Lo que NO lleva y sí lleva el motor Python: <b>Perez</b> '+
+    'e <b>IAM</b>. Careado contra el core sobre doce días típicos: POA absoluta dentro del '+
+    '<b>0,8–2,2 %</b>, Δ% dentro de <b>1,4 pp</b> y el <b>orden entre estructuras idéntico</b> — '+
+    'que es para lo que está la ficha. Con el motor conectado puedes pedir el número canónico.'+
+    '</span></div>';
+}
+
+/* ===================== EMPLAZAMIENTOS (misma cartera que las demás fichas) ===================== */
+var PRESETS=[
+  {cod:'burgo',  n:'El Burgo I',   lat:41.6520, lon:-4.7290},
+  {cod:'ayora',  n:'Ayora',        lat:39.0580, lon:-1.0570},
+  {cod:'paramo', n:'Páramo',       lat:42.3550, lon:-5.5300},
+  {cod:'fayon',  n:'Fayón',        lat:41.2430, lon: 0.3400},
+  {cod:'sanjose',n:'San José',     lat:37.3891, lon:-5.9845},
+  {cod:'assu',   n:'Assú (Brasil)',lat:-5.5800, lon:-36.9100},
+  {cod:'tunez',  n:'Túnez',        lat:35.5000, lon:10.0000}
+];
+function loadPlants(){
+  var sel=$('plant'), extra=[];
+  try{var raw=localStorage.getItem('factiun_cartera'); if(raw){var c=JSON.parse(raw);
+    if(Array.isArray(c))extra=c.filter(function(p){return p&&p.lat!=null&&p.lon!=null;});}}catch(e){}
+  PRESETS.concat(extra).forEach(function(p){
+    var o=document.createElement('option');
+    o.value=(p.cod||p.n); o.textContent=(p.n||p.cod); o.dataset.lat=p.lat; o.dataset.lon=p.lon;
+    sel.appendChild(o);
+  });
+  sel.onchange=function(){var o=this.selectedOptions[0];
+    if(o&&o.dataset.lat){$('lat').value=o.dataset.lat;$('lon').value=o.dataset.lon;}};
+}
+
+/* ===================== UI ===================== */
+var COL={fija_optima:'#54A6FF',fija_proyecto:'#8C7BFF',fija_ew:'#F6A623',
+         tracker_hsat:'#36D399',tracker_hsat_nobt:'#2BB5A0',tracker_tsat:'#E86FB0'};
+var POR_DEFECTO=['fija_optima','tracker_hsat'];
+var REP=null;
+
+function pintaEstructuras(){
+  $('structs').innerHTML=FIS.CATALOGO.map(function(s){
+    return '<label class="chk"><input type="checkbox" class="st" value="'+s.key+'"'+
+      (POR_DEFECTO.indexOf(s.key)>=0?' checked':'')+'> '+
+      '<span class="sw" style="background:'+COL[s.key]+'"></span>'+esc(s.label)+
+      '<span class="tag">'+(s.fam==='tracker'?'seguidor':'fija')+'</span></label>';
+  }).join('');
+}
+function elegidas(){return [].slice.call(document.querySelectorAll('.st:checked')).map(function(c){return c.value;});}
+function cfgActual(){
+  var cw=+$('cw').value, pitch=+$('pitch').value, gcr=(pitch>0?cw/pitch:0.4);
+  var real=($('land').value==='real');
+  return {
+    lat:+$('lat').value, lon:+$('lon').value, cw:cw, gcr:gcr,
+    maxang:+$('maxang').value, albedo:+$('albedo').value,
+    tilt:+$('tilt').value, tiltEW:12, axTilt:+$('axtilt').value,
+    gcrDe:function(spec){
+      if(!real)return gcr;
+      var v=FIS.GCR_REAL[spec.fam];
+      return (v==null)?gcr:v;
+    }
+  };
+}
+function refrescaGeom(){
+  var cw=+$('cw').value,pitch=+$('pitch').value;
+  $('gcrLbl').textContent='GCR = '+fmt(pitch>0?cw/pitch:0,3)+'  (ancho / pitch)';
+  $('landLbl').textContent=($('land').value==='real')
+    ? 'Fija a GCR '+fmt(FIS.GCR_REAL.fija,2)+' · dos aguas '+fmt(FIS.GCR_REAL.fija_ew,2)+' · seguidores al GCR de arriba. El ranking por suelo puede darse la vuelta.'
+    : 'Todas al mismo GCR: la comparación mide seguimiento, no densidad.';
+}
+['cw','pitch'].forEach(function(id){$(id).oninput=refrescaGeom;});
+$('land').onchange=refrescaGeom;
+
+async function run(){
+  var keys=elegidas();
+  if(keys.length<2){$('out').innerHTML='<p class="note">Marca al menos <b>dos</b> estructuras: esto es un comparador.</p>';return;}
+  var usaMotor=($('calc').value==='engine');
+  if(usaMotor&&!ENGINE){$('out').innerHTML=engineOffMsg();return;}
+  var cfg=cfgActual(), year=+$('year').value, src=$('source').value;
+  $('run').disabled=true;$('run').textContent='Comparando…';
+  $('out').innerHTML='<p class="note">'+(usaMotor?'El motor está bajando el año y simulando '+keys.length+' estructuras.'
+    :'Bajando el año y simulando '+keys.length+' estructuras aquí mismo, en el navegador.')+'</p>';
+  try{
+    if(usaMotor){
+      var body={lat:cfg.lat,lon:cfg.lon,year:year,meteo_mode:(src==='clearsky'?'clearsky':'canon'),
+        structures:keys, albedo:cfg.albedo, gcr:cfg.gcr, collector_width_m:cfg.cw,
+        tilt_deg:cfg.tilt, axis_tilt_deg:cfg.axTilt, max_angle_deg:cfg.maxang,
+        gcr_mode:($('land').value==='real'?'tipico':'comun')};
+      var r=await fetch(ENGINE+'/structures',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+      if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
+      REP=await r.json(); REP.local=false;
+    }else{
+      var M=(src==='clearsky')?await FIS.clearsky(cfg.lat,cfg.lon,year)
+                              :await FIS.fetchYear(cfg.lat,cfg.lon,year);
+      REP=FIS.compara(keys,M,cfg); REP.local=true;
+    }
+    render();
+  }catch(e){
+    $('out').innerHTML='<div class="engmsg err"><b>No se pudo comparar.</b><br>'+esc(e.message)+'</div>';
+    $('tblCard').style.display='none';$('mesCard').style.display='none';
+  }finally{$('run').disabled=false;$('run').textContent='Comparar el año';}
+}
+
+function render(){
+  var f=REP.filas, base=null;
+  f.forEach(function(x){if(x.key===REP.base)base=x;});
+  var mejorMod=f.reduce(function(a,b){return b.neta>a.neta?b:a;});
+  var mejorSuelo=f.reduce(function(a,b){return b.suelo>a.suelo?b:a;});
+  $('ctx').textContent=($('plant').value?$('plant').selectedOptions[0].text+' · ':'')+
+    (REP.fuente||'')+' '+$('year').value+' · '+REP.pasos+' pasos de '+Math.round(REP.dtH*60)+' min';
+  $('out').innerHTML=(REP.local?localBanner():'')+'<div class="readout">'+
+    ro('GHI del sitio',fmt(REP.ghi,0),'kWh/m²·año')+
+    ro('Más POA · módulo',mejorMod.label,fmt(mejorMod.neta,0)+' kWh/m²')+
+    ro('Más POA · suelo',mejorSuelo.label,fmt(mejorSuelo.suelo,0)+' kWh/m²')+
+    ro('Referencia',base?base.label:'—','Δ% contra ella')+
+    '</div>'+
+    (REP.avisos||[]).map(function(a){return '<div class="warn" style="margin-top:12px">⚠ '+esc(a)+'</div>';}).join('');
+  drawTabla(base); drawMeses(); drawRank();
+  $('tblCard').style.display='';$('mesCard').style.display='';
+}
+function ro(k,v,s){return '<div class="ro"><div class="k">'+esc(k)+'</div><div class="v">'+esc(v)+(s?' <small>'+esc(s)+'</small>':'')+'</div></div>';}
+
+function drawTabla(base){
+  var f=REP.filas;
+  var h='<thead><tr><th>Estructura</th><th>Tilt °</th><th>GCR</th>'+
+    '<th>POA módulo<br><span class="mini">kWh/m²·año</span></th>'+
+    '<th>POA suelo<br><span class="mini">kWh/m²·año</span></th>'+
+    '<th>Transp. vs GHI</th><th>Pérdida sombra</th><th>Δ% vs '+esc(base?base.label:'ref')+'</th></tr></thead><tbody>';
+  f.forEach(function(x){
+    var cls=x.delta>0?'pos':(x.delta<0?'neg':'');
+    h+='<tr><td><span class="sw" style="background:'+(COL[x.key]||'#888')+'"></span>'+esc(x.label)+'</td>'+
+      '<td>'+(x.tilt==null?'—':fmt(x.tilt,0))+'</td>'+
+      '<td>'+fmt(x.gcr,3)+'</td>'+
+      '<td><b>'+fmt(x.neta,0)+'</b></td>'+
+      '<td>'+fmt(x.suelo,0)+'</td>'+
+      '<td>'+fmt(x.transp,1)+' %</td>'+
+      '<td>'+fmt(x.sombra,2)+' %</td>'+
+      '<td class="'+cls+'">'+(x.delta>0?'+':'')+fmt(x.delta,2)+' %</td></tr>';
+  });
+  $('tbl').innerHTML=h+'</tbody>';
+  $('tblNote').innerHTML='<b>POA módulo</b> es lo que ve el panel; <b>POA suelo</b> = POA × GCR, lo que ve la parcela. '+
+    (REP.gcrComun?'A GCR común el segundo es el primero escalado y no reordena nada — cambia «Uso del suelo» a densidad real para que cada tipo lleve la suya.'
+                 :'Con densidades distintas el orden por suelo ya no tiene por qué coincidir con el de módulo.')+
+    ' Los seguidores van en modo IDEAL: sin abanderamiento, sin banda muerta y sin política de difusa — el coste del control real es otra pregunta (ficha <a href="sim-viento.html" style="color:var(--accent)">Viento</a>).';
+}
+
+/* Barras mensuales agrupadas */
+function drawMeses(){
+  var c=$('cvMes'),g=c.getContext('2d'),W=c.width,H=c.height,f=REP.filas;
+  g.clearRect(0,0,W,H);
+  var L=52,R=14,T=16,B=30,gw=(W-L-R)/12;
+  var max=0; f.forEach(function(x){x.mes.forEach(function(v){if(v>max)max=v;});});
+  if(max<=0)return;
+  g.strokeStyle='#23303D';g.fillStyle='#8093A4';g.font='11px ui-monospace,monospace';
+  for(var k=0;k<=4;k++){
+    var y=T+(H-T-B)*(1-k/4), v=max*k/4;
+    g.beginPath();g.moveTo(L,y);g.lineTo(W-R,y);g.stroke();
+    g.textAlign='right';g.fillText(Math.round(v),L-6,y+4);
+  }
+  var MES=['E','F','M','A','M','J','J','A','S','O','N','D'];
+  var bw=gw*0.82/f.length;
+  for(var m=0;m<12;m++){
+    var x0=L+gw*m+gw*0.09;
+    f.forEach(function(x,i){
+      var hgt=(H-T-B)*(x.mes[m]/max);
+      g.fillStyle=COL[x.key]||'#888';
+      g.fillRect(x0+bw*i,H-B-hgt,bw*0.92,hgt);
+    });
+    g.fillStyle='#8093A4';g.textAlign='center';g.fillText(MES[m],L+gw*m+gw/2,H-B+15);
+  }
+  g.textAlign='left';g.fillStyle='#5E6F7E';g.fillText('kWh/m² de módulo · mes',L,12);
+}
+/* Ranking anual: módulo (sólido) y suelo (rayado) */
+function drawRank(){
+  var c=$('cvRank'),g=c.getContext('2d'),W=c.width,H=c.height,f=REP.filas;
+  g.clearRect(0,0,W,H);
+  var L=250,R=70,T=16,B=22,rowH=(H-T-B)/f.length;
+  var max=0; f.forEach(function(x){max=Math.max(max,x.neta);});
+  if(max<=0)return;
+  g.font='12px system-ui,sans-serif';
+  f.forEach(function(x,i){
+    var y=T+rowH*i, hb=Math.min(15,rowH*0.34);
+    g.fillStyle='#E7EEF4';g.textAlign='right';
+    g.fillText(x.label.length>34?x.label.slice(0,33)+'…':x.label,L-10,y+rowH/2+4);
+    g.fillStyle=COL[x.key]||'#888';
+    g.fillRect(L,y+rowH/2-hb-2,(W-L-R)*(x.neta/max),hb);
+    g.globalAlpha=.45;
+    g.fillRect(L,y+rowH/2+2,(W-L-R)*(x.suelo/max),hb);
+    g.globalAlpha=1;
+    g.fillStyle='#8093A4';g.textAlign='left';
+    g.fillText(fmt(x.neta,0),L+(W-L-R)*(x.neta/max)+6,y+rowH/2-2);
+  });
+  g.fillStyle='#5E6F7E';g.textAlign='left';g.font='11px ui-monospace,monospace';
+  g.fillText('sólido: por m² de módulo   ·   translúcido: por m² de suelo (× GCR)',L,H-6);
+}
+
+/* ===================== ARRANQUE ===================== */
+pintaEstructuras(); loadPlants(); refrescaGeom(); detectEngine();
+$('run').onclick=run;
+</script>
+</body>
+</html>
