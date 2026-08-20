@@ -27,7 +27,8 @@ function saca(firma) {
 const FIRMAS = ['function prep2d(cv){', 'function nicePaso(bruto){',
                 'function niceDec(paso){', 'function niceEje(max,n){',
                 'function niceEjes2(maxA,maxB,n){', 'function niceRango(lo,hi,n){',
-                'function ejesTransmision(nF,pitch,filasPorTrk,esPasivo,hueco){'];
+                'function ejesTransmision(nF,pitch,filasPorTrk,esPasivo,hueco){',
+                'function pasoReproductor(stepMin,factor){'];
 const trozos = FIRMAS.map(saca);
 check('las funciones puras siguen en el HTML', trozos.every(Boolean),
       FIRMAS.filter((f, i) => !trozos[i]).join(', '));
@@ -148,6 +149,34 @@ check('un nº impar de filas no deja media pareja colgando',
 // MUTANTE: si el corte se dibujara entero, la fila parecería seguir enganchada
 check('MUTANTE: un eje sin hueco no pasa por cortado',
       !(ET(6, 6, 2, true, 0)[0].x0 > ET(6, 6, 2, true, 0)[0].xa));
+
+// ── 7) la velocidad del reproductor ES una velocidad ─────────────────────
+// El «×1» de antes no lo era: el bucle iba a 160 ms por paso y cada paso son
+// los minutos de la ventana, así que con paso de 1 min corría a 375× y con
+// paso de 5 min a 1.875×. Un rótulo que dice ×1 sobre algo que va a 375× no
+// es una escala mal calibrada, es un número inventado.
+const PR = ctx.pasoReproductor;
+[[1, 60], [1, 300], [1, 900], [1, 3600], [5, 60], [5, 300], [15, 3600], [30, 60]]
+  .forEach(c => {
+    const [stepMin, f] = c;
+    const r = PR(stepMin, f);
+    // minutos simulados por segundo real que sale DE VERDAD del bucle
+    const simPorSeg = (r.pasos * stepMin) / (r.ms / 1000);
+    const err = Math.abs(simPorSeg - f / 60) / (f / 60);
+    check('paso ' + stepMin + ' min a ×' + f + ' -> ' + r.ms.toFixed(0) + ' ms, ' +
+          r.pasos + ' paso(s) = ×' + (simPorSeg * 60).toFixed(0),
+          err < 0.02 && r.ms >= 50, 'error ' + (err * 100).toFixed(1) + '%');
+  });
+check('nunca baja del suelo de repintado', PR(1, 100000).ms >= 50);
+check('entradas absurdas no dividen por cero',
+      PR(0, 0).ms >= 50 && isFinite(PR(0, 0).ms) && PR(null, null).pasos >= 1);
+// MUTANTE: la cadencia vieja, con su rótulo. Tiene que salir muy lejos de ×1.
+(function () {
+  const msViejo = Math.max(40, 320 / 2);            // «×1» de antes
+  const factorReal = (1 /* min por paso */ * 60) / (msViejo / 1000);
+  check('MUTANTE: el «×1» viejo iba en realidad a ×' + Math.round(factorReal),
+        factorReal > 100);
+})();
 
 console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko)
                 : '\nOK — ' + ok + '/' + ok + ' comprobaciones');
