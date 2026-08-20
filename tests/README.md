@@ -50,7 +50,7 @@ botón que no llama a nadie se lee como «no funciona». Comprueba que genera y 
 mesa en el lienzo, no solo números), que los tres caminos de parcela —cotas, GeoJSON y dibujo a
 mano— acaban en un layout, que el reparto multi-talla sale en pantalla, que en montaje fijo cambia
 el rótulo y se inhabilita bifila, y que las salidas se habilitan solo cuando hay algo que exportar.
-De aquí salió el arreglo del doble clic, que metía el último vértice tres veces.
+Cubre también el **buscador de emplazamiento** —cartera y presets sin red, coordenadas pegadas, y que sin red para el geocodificador se DIGA en vez de devolver una lista vacía— y sus funciones puras sobre la copia real que vive en esa ficha, no sobre la de `sim-viento.html`. De aquí salió el arreglo del doble clic, que metía el último vértice tres veces.
 
 `test_pwa.js` cubre la **app instalable**: manifest válido con iconos que existen de verdad
 (un icono 404 la deja no-instalable sin avisar), service worker activo con su scope, armazón
@@ -75,5 +75,5 @@ node tests/test_comparador_3d.js           # 31 comprobaciones, la escena 3D en 
 node tests/test_viento_ejes.js             # 60 comprobaciones, lienzos, ejes, transmisión y reproductor
 node tests/test_viento_sitio.js            # 47 comprobaciones, emplazamiento y horas locales
 node tests/test_layout.js                  # 119 comprobaciones, careo del generador de layout
-node tests/test_layout_ui.js               # 17 comprobaciones, el generador en Chromium
+node tests/test_layout_ui.js               # 34 comprobaciones, el generador en Chromium
 ```

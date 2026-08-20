@@ -48,6 +48,23 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent)}
 .field .tip{font-size:11px;color:var(--muted-2);margin-top:4px;line-height:1.45}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+/* Buscador de emplazamiento: el desplegable FLOTA sobre lo de abajo, así que la
+   tarjeta no pega un salto cada vez que aparece un resultado. Mismo componente
+   que el de sim-viento.html. */
+.sitiobox{position:relative}
+.sitiores{position:absolute;left:0;right:0;top:100%;z-index:40;margin-top:3px;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:9px;
+  box-shadow:0 12px 28px rgba(0,0,0,.45);max-height:280px;overflow:auto}
+.sitiores .it{padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--line-soft)}
+.sitiores .it:last-child{border-bottom:0}
+.sitiores .it:hover{background:var(--panel-hi)}
+.sitiores .it b{font-weight:600;font-size:12.5px}
+.sitiores .it .co{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);margin-top:2px}
+.sitiores .gr{padding:4px 10px;font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.11em;text-transform:uppercase;color:var(--muted);
+  background:var(--panel-hi);position:sticky;top:0}
+.sitiores .aviso{padding:7px 10px;font-size:11.5px;color:var(--muted-2)}
+.sn{font-family:var(--mono);font-size:10px;color:var(--accent);text-transform:none;letter-spacing:0}
 .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
 .btn{background:rgba(54,211,153,.12);color:var(--accent);border:1px solid var(--accent);border-radius:9px;padding:9px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;width:100%}
 .btn:hover{background:rgba(54,211,153,.2);color:#fff}
@@ -116,8 +133,13 @@ canvas.drawing{cursor:crosshair;border-color:var(--build)}
         </select></div>
 
       <div id="paneRect">
-        <div class="field"><label>Planta (centro, de la cartera)</label>
-          <select id="plant"><option value="">— manual —</option></select></div>
+        <div class="field sitiobox">
+          <label>Emplazamiento <span class="sn" id="sitioSel">manual</span></label>
+          <input id="sitioQ" type="search" autocomplete="off" spellcheck="false"
+                 placeholder="Gabès, Ayora, 24019, o 33.8792, 9.8736…">
+          <div id="sitioRes" class="sitiores" style="display:none"></div>
+          <div class="tip">Cartera y presets primero (van sin red), coordenadas pegadas tal cual, y si no, el geocodificador de Open-Meteo.</div>
+        </div>
         <div class="two">
           <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="41.57634"></div>
           <div class="field"><label>Longitud °</label><input id="lon" type="number" step="0.0001" value="-0.79814"></div>
@@ -1068,19 +1090,189 @@ if (typeof module !== "undefined" && module.exports) module.exports = LAY;
 function $(id){return document.getElementById(id);}
 var RES=null, PARCEL=null, HOLES=[], DRAW=null;
 
-/* ===== plantas de la cartera (factiun_plantas, localStorage compartido) ===== */
-var PLANTS={}, COORDS_FALLBACK={'24002':[41.57634,-0.79814],'24025':[39.11821,-1.15985],'24019':[-16.59577,-71.80644]};
+/* ═════════════════ BUSCADOR DE EMPLAZAMIENTO ═════════════════
+   Mismo componente que `sim-viento.html` (#148), y por las mismas razones: aquí
+   había un desplegable con la cartera, así que implantar en un sitio que aún no
+   es una planta obligaba a teclear lat y lon a mano — y una parcela que todavía
+   no tiene proyecto es JUSTO lo que se dibuja en esta ficha.
+
+   Tres caminos, y el orden importa:
+     1. la CARTERA y los PRESETS, que se filtran al teclear y funcionan SIN RED;
+     2. COORDENADAS pegadas tal cual («41.5763, -0.7981», también con N/S/E/O),
+        que es el camino más corto para quien viene de un DWG;
+     3. el geocodificador de OPEN-METEO, sin clave y ya declarado en la casa.
+
+   Si el geocodificador no contesta se DICE en el propio desplegable, en vez de
+   devolver una lista vacía que se lee como «ese sitio no existe». */
+var PLANTS={};
+var PRESETS=[
+  {n:'23003 · El Burgo I (Zaragoza, ES)',lat:41.5763,lon:-0.7981},
+  {n:'24007 · Fayón (Zaragoza, ES)',lat:41.2269,lon:0.3242},
+  {n:'24019 · San José (Arequipa, PE)',lat:-16.5958,lon:-71.8064},
+  {n:'24021 · Túnez (Gabès, TN)',lat:33.8792,lon:9.8736},
+  {n:'24025 · Ayora (Valencia, ES)',lat:39.1182,lon:-1.1599},
+  {n:'24030 · Bagnarelli (Apulia, IT)',lat:41.5156,lon:15.2676},
+  {n:'25019 · Páramo (León, ES)',lat:42.3206,lon:-5.5998},
+  {n:'Gorraiz · Navarra (ES)',lat:42.81,lon:-1.58}
+];
+
+/* Sin acentos y en minúsculas: «Túnez» y «Tunez», «Gabès» y «Gabes», que es
+   como se teclea de verdad. */
+function normSitio(t){
+  return String(t==null?'':t).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().trim();
+}
+
+/* Coordenadas pegadas: «41.5763, -0.7981», «41,5763 -0,7981», «41.57 N 0.79 W».
+   Devuelve null si no lo son — un texto que no son coordenadas tiene que seguir
+   su camino al buscador, no colarse como un 0,0 en el Golfo de Guinea. */
+function parseCoords(t){
+  var q=String(t||'').trim();
+  var m=q.match(/^\s*(-?\d{1,3}(?:[.,]\d+)?)\s*([NSns])?\s*[, ;]\s*(-?\d{1,3}(?:[.,]\d+)?)\s*([EWOewo])?\s*$/);
+  if(!m)return null;
+  var la=parseFloat(m[1].replace(',','.')), lo=parseFloat(m[3].replace(',','.'));
+  if(!isFinite(la)||!isFinite(lo))return null;
+  if(m[2]&&/[Ss]/.test(m[2]))la=-Math.abs(la);
+  if(m[4]&&/[WOwo]/.test(m[4]))lo=-Math.abs(lo);
+  if(Math.abs(la)>90||Math.abs(lo)>180)return null;
+  return {lat:la,lon:lo};
+}
+
+/* La lista local: cartera primero (es del proyecto) y presets después. */
+function sitiosLocales(){
+  var out=[];
+  Object.keys(PLANTS).sort().forEach(function(c){
+    var p=PLANTS[c];
+    if(!p||p.lat==null||p.lon==null)return;
+    out.push({n:(p.nombre||'?')+' · '+c,lat:+p.lat,lon:+p.lon,src:'Cartera',cod:c,
+              pitch:(p.pitch!=null?parseFloat(p.pitch):null)});
+  });
+  PRESETS.forEach(function(p){out.push({n:p.n,lat:p.lat,lon:p.lon,src:'Presets'});});
+  return out;
+}
+
+/* Filtro por TODAS las palabras, en cualquier orden: «ayora valencia» y
+   «valencia ayora» encuentran lo mismo, y «24019» encuentra por código. */
+function filtraSitios(lista,q){
+  var ws=normSitio(q).split(/\s+/).filter(Boolean);
+  if(!ws.length)return lista.slice(0,12);
+  return lista.filter(function(s){
+    var h=normSitio(s.n+' '+(s.cod||'')+' '+(s.src||''));
+    return ws.every(function(w){return h.indexOf(w)>=0;});
+  }).slice(0,12);
+}
+
+var SITIO=null, _sitioT=null, _sitioAbort=null;
+function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function pintaSitio(){$('sitioSel').textContent=SITIO?SITIO.n:'manual';}
+
+function eligeSitio(s){
+  SITIO=s;
+  if(s&&s.lat!=null){$('lat').value=(+s.lat).toFixed(5);$('lon').value=(+s.lon).toFixed(5);}
+  // El pitch de la planta manda si la cartera lo trae: era lo que hacía el
+  // desplegable viejo y sigue siendo cierto.
+  if(s&&s.pitch&&isFinite(s.pitch))$('pitch').value=s.pitch;
+  $('sitioQ').value=s?s.n:'';
+  $('sitioRes').style.display='none';
+  pintaSitio(); buildParcel(); draw();
+}
+
+function renderSitios(grupos,aviso){
+  var h='';
+  grupos.forEach(function(g){
+    if(!g.items.length)return;
+    h+='<div class="gr">'+esc(g.label)+'</div>';
+    g.items.forEach(function(s,i){
+      h+='<div class="it" data-g="'+esc(g.label)+'" data-i="'+i+'"><b>'+esc(s.n)+'</b>'+
+         '<div class="co">'+(+s.lat).toFixed(4)+', '+(+s.lon).toFixed(4)+
+         (s.det?' · '+esc(s.det):'')+'</div></div>';
+    });
+  });
+  if(aviso)h+='<div class="aviso">'+esc(aviso)+'</div>';
+  if(!h){$('sitioRes').style.display='none';return;}
+  $('sitioRes').innerHTML=h; $('sitioRes').style.display='';
+  var todos={}; grupos.forEach(function(g){todos[g.label]=g.items;});
+  [].forEach.call($('sitioRes').querySelectorAll('.it'),function(el){
+    el.onmousedown=function(ev){ev.preventDefault();
+      eligeSitio(todos[el.dataset.g][+el.dataset.i]);};
+  });
+}
+
+/* El geocodificador de Open-Meteo: sin clave, y el mismo proveedor que ya usan
+   las otras fichas. Se llama con pausa (no en cada tecla) y se puede cancelar,
+   para no dejar una respuesta vieja pisando a una nueva. */
+async function buscaRemoto(q){
+  if(_sitioAbort)_sitioAbort.abort();
+  _sitioAbort=(typeof AbortController!=='undefined')?new AbortController():null;
+  var u='https://geocoding-api.open-meteo.com/v1/search?count=8&language=es&format=json&name='
+        +encodeURIComponent(q);
+  var r=await fetch(u,{cache:'no-store',signal:_sitioAbort?_sitioAbort.signal:undefined});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  var j=await r.json();
+  return (j.results||[]).map(function(x){
+    var det=[x.admin1,x.country].filter(Boolean).join(', ');
+    return {n:x.name+(det?' · '+det:''),lat:x.latitude,lon:x.longitude,
+            det:[(x.elevation!=null?Math.round(x.elevation)+' m':''),x.timezone||''].filter(Boolean).join(' · '),
+            src:'Buscados'};
+  });
+}
+
+function buscaSitio(){
+  var q=$('sitioQ').value;
+  var loc=filtraSitios(sitiosLocales(),q);
+  var co=parseCoords(q);
+  var grupos=[];
+  if(co)grupos.push({label:'Coordenadas',items:[{n:co.lat.toFixed(4)+', '+co.lon.toFixed(4),
+      lat:co.lat,lon:co.lon,det:'tal como las has escrito',src:'Coordenadas'}]});
+  grupos.push({label:'Cartera y presets',items:loc});
+  renderSitios(grupos, q.trim().length>=3?'Buscando en Open-Meteo…':null);
+  if(_sitioT)clearTimeout(_sitioT);
+  if(co||normSitio(q).length<3)return;              // coordenadas: no hace falta red
+  _sitioT=setTimeout(function(){
+    var qv=q;
+    buscaRemoto(q).then(function(rem){
+      if($('sitioQ').value!==qv)return;             // ha seguido escribiendo
+      renderSitios(grupos.concat([{label:'Buscados',items:rem}]),
+                   rem.length?null:'Open-Meteo no encuentra nada con ese nombre.');
+    }).catch(function(e){
+      if($('sitioQ').value!==qv||e.name==='AbortError')return;
+      /* Un desplegable vacío se lee como «ese sitio no existe». Lo que pasa es
+         que no hay red, y eso hay que decirlo: sin ella el buscador sigue
+         valiendo para la cartera y los presets, que van en local. */
+      renderSitios(grupos,'Sin red para buscar fuera: solo cartera y presets.');
+    });
+  },350);
+}
+
 function loadPlants(){
   try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
-  var opts='<option value="">— manual —</option>';
-  Object.keys(PLANTS).sort().forEach(function(cod){var p=PLANTS[cod];opts+='<option value="'+cod+'">'+((p&&p.nombre)||'?')+' · '+cod+'</option>';});
-  $('plant').innerHTML=opts;
+  pintaSitio();
 }
-$('plant').onchange=function(){var cod=this.value;if(!cod)return;var p=PLANTS[cod]||{};
-  var c=(p.lat!=null&&p.lon!=null)?[p.lat,p.lon]:COORDS_FALLBACK[cod];
-  if(c){$('lat').value=c[0];$('lon').value=c[1];}
-  if(p.pitch&&!isNaN(parseFloat(p.pitch)))$('pitch').value=parseFloat(p.pitch);
-  buildParcel();draw();};
+$('sitioQ').addEventListener('input',buscaSitio);
+$('sitioQ').addEventListener('focus',buscaSitio);
+$('sitioQ').addEventListener('blur',function(){
+  setTimeout(function(){$('sitioRes').style.display='none';},120);
+});
+$('sitioQ').addEventListener('keydown',function(ev){
+  if(ev.key==='Escape'){$('sitioRes').style.display='none';return;}
+  if(ev.key!=='Enter')return;
+  ev.preventDefault();
+  var pri=$('sitioRes').querySelector('.it');
+  if(pri)pri.dispatchEvent(new MouseEvent('mousedown'));
+});
+/* Teclear lat/lon a mano sigue valiendo, y entonces el rótulo deja de nombrar un
+   sitio que ya no es: decir «Ayora» sobre unas coordenadas cambiadas a mano
+   sería ponerle nombre de planta a otro emplazamiento — y ese nombre acaba en
+   el fichero que se exporta. */
+['lat','lon'].forEach(function(id){
+  $(id).addEventListener('input',function(){
+    if(!SITIO)return;
+    if(Math.abs(+$('lat').value-SITIO.lat)>1e-4||Math.abs(+$('lon').value-SITIO.lon)>1e-4){
+      SITIO=null;$('sitioQ').value='';pintaSitio();
+    }
+  });
+});
 
 /* ===== motor SolarGPT (opcional): mismo protocolo que el Explorador ===== */
 var ENGINE=null;
@@ -1374,12 +1566,20 @@ function pintar(res,fuente){
 $('genBtn').onclick=generar;
 
 /* ===== salidas ===== */
+/* El fichero se llama como el emplazamiento elegido: tres exports seguidos de
+   tres sitios distintos y todos «layout.geojson» acaban siendo un misterio en
+   la carpeta de descargas. Sin sitio elegido, el nombre de siempre. */
+function nombreSalida(ext){
+  if(!SITIO||!SITIO.n)return 'layout.'+ext;
+  var slug=normSitio(SITIO.n).replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,48);
+  return (slug?'layout-'+slug:'layout')+'.'+ext;
+}
 function bajar(nombre,txt,mime){
   var b=new Blob([txt],{type:mime||'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');
   a.href=u;a.download=nombre;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},2000);
 }
 $('expGeo').onclick=function(){ if(!RES)return;
-  bajar('layout.geojson',JSON.stringify({stats:RES.stats,geojson:LAY.toGeoJSON(RES)},null,1)); };
+  bajar(nombreSalida('geojson'),JSON.stringify({stats:RES.stats,geojson:LAY.toGeoJSON(RES)},null,1)); };
 $('expKml').onclick=function(){ if(!RES)return;
   var k='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Layout Factiun</name>'+
     '<Style id="m"><LineStyle><color>ff99d336</color><width>1</width></LineStyle><PolyStyle><color>7f99d336</color></PolyStyle></Style>'+
@@ -1388,7 +1588,7 @@ $('expKml').onclick=function(){ if(!RES)return;
         r.map(function(c){return c[0].toFixed(8)+','+c[1].toFixed(8)+',0';}).join(' ')+
         '</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>';}).join('')+
     '</Document></kml>';
-  bajar('layout.kml',k,'application/vnd.google-earth.kml+xml'); };
+  bajar(nombreSalida('kml'),k,'application/vnd.google-earth.kml+xml'); };
 $('expDxf').onclick=function(){ if(!RES)return;
   var L=['0','SECTION','2','ENTITIES'];
   RES.structures.forEach(function(s){
@@ -1397,7 +1597,7 @@ $('expDxf').onclick=function(){ if(!RES)return;
     p.forEach(function(c){L.push('10',c[0].toFixed(3),'20',c[1].toFixed(3));});
   });
   L.push('0','ENDSEC','0','EOF');
-  bajar('layout.dxf',L.join('\n'),'application/dxf'); };
+  bajar(nombreSalida('dxf'),L.join('\n'),'application/dxf'); };
 
 /* ===== llevar el layout al 3D de cobertura (misma clave que el Explorador) ===== */
 $('d3Btn').onclick=function(){
