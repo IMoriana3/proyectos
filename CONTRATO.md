@@ -101,7 +101,7 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
   SolarGPT. Cae en vuestro ámbito — revisadla y quedáosla. Lleva `docId: "simulador-tcu"` con su
   `docs/simulador-tcu.md`. `test_integridad.js` en verde (25 tarjetas, 6/6).
 
-**Ya publicado**: `gemelo-digital` está en `main` con el simulador y con los accesos desde el
+  **Ya publicado**: `gemelo-digital` está en `main` con el simulador y con los accesos desde el
   gemelo 3D y desde el estudio de batería, así que la tarjeta va con `status: "live"` y su URL.
 
   Un aviso que os afecta: al fusionar, `main` de `gemelo-digital` había avanzado nueve commits
