@@ -216,6 +216,16 @@
         <div class="field"><label>Pitch (m)</label><input id="pitch" type="number" step="0.05" value="6"></div>
         <div class="field"><label>Azimut del eje °</label><input id="axaz" type="number" step="1" value="0"></div>
       </div>
+      <div class="two">
+        <div class="field"><label>Trackers de la planta</label><input id="nTrk" type="number" step="1" min="1" value="10"></div>
+        <div class="field"><label>Filas por tracker</label>
+          <select id="filasTrk"><option value="2" selected>2 · bifila</option><option value="1">1 · monofila</option></select></div>
+      </div>
+      <p class="nota"><b>Los trackers son de la PLANTA, no de un caso.</b> Todos los bloques del 3D
+        se dibujan con los mismos, para que la comparación sea entre estrategias y no entre tamaños.
+        Y es además el <b>denominador</b> del abanderamiento pasivo: la fila que se suelta pierde
+        siempre lo mismo y lo que cambia es entre cuántas filas se reparte — con un tracker bifila
+        es el 50 % del campo y con diez, el 5 %.</p>
       <label class="chk"><input type="checkbox" id="bt" checked> Backtracking</label>
     </div>
 
@@ -248,15 +258,14 @@
         <label class="chk"><input type="checkbox" id="pas" checked> <b>Pasivo</b> · la fila de perímetro se suelta sola</label>
       </div>
       <div id="pasBox">
-        <div class="three">
-          <div class="field"><label>Trackers</label><input id="pasN" type="number" step="1" min="1" value="10"></div>
+        <div class="two">
           <div class="field"><label>Suelta (km/h)</label><input id="pasV" type="number" step="5" value="90"></div>
           <div class="field"><label>Lado (°)</label><input id="pasL" type="number" step="5" value="-55"></div>
         </div>
-        <p class="nota"><b>El nº de trackers no es decorativo: es el denominador.</b> La fila que se
-          suelta pierde siempre lo mismo; lo que cambia es entre cuántas filas se reparte. Con
-          <b>un</b> tracker bifila se condena el 50 % del campo y con <b>diez</b> el 5 % — mismo
-          fenómeno, impacto ×10. Por eso el dato es obligatorio y la fracción se deriva, no se teclea.</p>
+        <div class="ro" id="pasDenom" style="margin-top:8px;font-size:.8rem"></div>
+        <p class="nota">El <b>denominador</b> sale de los trackers declarados arriba, en
+          <b>Seguidor</b>: es de la planta, no de este caso. La fracción se <b>deriva</b> de la
+          geometría, no se teclea.</p>
         <p class="nota">No es una estrategia de control: es mecánico. La fila exterior a barlovento
           se desembraga por carga y cae al límite; la interior sigue en seguimiento <b>haya el viento
           que haya</b>. Que amaine no la levanta: solo la recoge el seguimiento al volver a pasar por
@@ -1418,7 +1427,7 @@ function scenario(){
 
 /* ===================== ESTADO ===================== */
 var REP=null, SEL=null, MULTI=null, HSU=null;
-var IDS=['lat','lon','year','source','step','wh','maxang','gcr','pitch','axaz','t1','t2','pmin','hold','park','noon','pasN','pasV','pasL',
+var IDS=['lat','lon','year','source','step','wh','maxang','gcr','pitch','axaz','t1','t2','pmin','hold','park','noon','nTrk','filasTrk','pasV','pasL',
          'wbase','wk','wA','wseed','wdir','stn','stp0','stp1','std0','std1','stseed','escena'];
 function saveCfg(){
   try{var c={};IDS.forEach(function(i){c[i]=$(i).value;});
@@ -1513,7 +1522,8 @@ async function run(){
     partial_stow_min_abs_deg:+$('pmin').value,
     destow_hold_minutes:+$('hold').value, partial_park_minutes:+$('park').value,
     noon_limit_deg:+$('noon').value,
-    passive:($('pas').checked?{enabled:true, n_trackers:+$('pasN').value,
+    passive:($('pas').checked?{enabled:true, n_trackers:nTrk(),
+             filas_por_tracker:filasTrk(),
              release_kmh:+$('pasV').value, side_deg:+$('pasL').value}:null),
     wind_height_m:(+$('wh').value>0?+$('wh').value:null),
     resample_minutes:($('step').value?+$('step').value:null),
@@ -2010,6 +2020,18 @@ var LIVE=null;    // {t, steppers, base, v, dir}
 function has3D(){return typeof THREE!=='undefined'&&THREE.OrbitControls&&typeof Seguidor!=='undefined';}
 function vivos(){return strategies().concat($('pas').checked?['PASIVO']:[]);}
 function casos(){return ['BASE'].concat(vivos());}
+/* Los trackers y las filas por tracker son de la PLANTA: los usan todos los
+   bloques del 3D y el denominador del pasivo. Vivían dentro del caso pasivo y
+   eso hacía dos cosas mal a la vez — la escena comparaba tamaños distintos, y
+   un dato de planta parecía un parámetro de una estrategia. */
+function nTrk(){return Math.max(1,Math.round(+$('nTrk').value||1));}
+function filasTrk(){return Math.max(1,Math.round(+$('filasTrk').value||2));}
+function denomPas(){
+  var n=nTrk(), f=filasTrk(), filas=n*f, fr=100/filas;
+  var e=$('pasDenom'); if(!e)return;
+  e.innerHTML='Se suelta <b>1 fila de '+filas+'</b> ('+n+' trackers × '+f+') = '+
+    '<b>'+fmt(fr,2)+' %</b> del campo. Con 1 tracker sería el '+fmt(100/f,0)+' %.';
+}
 function cfgStow(){
   return {full:+$('maxang').value, pmin:+$('pmin').value,
     T1:(+$('t1').value)/3.6, T2:(+$('t2').value)/3.6,
@@ -2172,20 +2194,40 @@ function escenaComparativa(){
      Con un tope, y DICHO: 40 trackers son 80 filas y 480 m de bloque, que no
      se lee. Por encima del tope se dibuja el tope y el rótulo dice «de N», que
      es la diferencia entre recortar y recortar a escondidas. */
-  var TOPE_FILAS_PAS=24;
-  var nTrkPas=Math.max(1,Math.round(+$('pasN').value||1));
-  var filasPas=nTrkPas*2, filasDib=Math.min(filasPas,TOPE_FILAS_PAS);
-  var anchoDe=function(k){return (k==='PASIVO'?filasDib:NFILAS)*PITCH;};
+  /* TODOS los bloques con los MISMOS trackers: la comparación es entre
+     estrategias, no entre tamaños. Y el pasivo se dibuja a su proporción
+     —una fila suelta de todas las que hay— que es lo que hace visible el
+     denominador: con diez trackers bifila, 1 de 20.
+
+     Con tope y DICHO: 40 trackers son 80 filas y 480 m por bloque, que no se
+     lee. Por encima se dibuja el tope y el rótulo dice «de N», que es la
+     diferencia entre recortar y recortar a escondidas. */
+  var TOPE_FILAS=24;
+  var filasReales=nTrk()*filasTrk();
+  var nF=Math.min(filasReales,TOPE_FILAS);
+  var wBloque=nF*PITCH, HUECO=Math.max(18,PITCH*2.5);
+  var largoBloque=Seguidor.DIMS.span;
   var ks=casos(), bloques=[];
-  // los bloques se colocan uno tras otro con su propio ancho, no en una
-  // retícula fija: si no, el del pasivo se metería dentro de sus vecinos.
-  var HUECO=22, anchoTot=0;
-  ks.forEach(function(k){anchoTot+=anchoDe(k);});
-  anchoTot+=HUECO*(ks.length-1);
-  var cursor=-anchoTot/2;
+
+  /* REJILLA, no fila. Seis bloques de veinte filas puestos en línea son ~830 m
+     de ancho por 64 de fondo: en un visor de 440 px eso es una tira ilegible.
+     Se eligen las columnas que dejan la caja más parecida al hueco del visor,
+     probándolas todas — son seis, no hace falta nada más listo. */
+  var aspVis=Math.max(1.2,(TD.w||900)/(TD.h||440));
+  var cols=ks.length, mejor=Infinity;
+  for(var c=1;c<=ks.length;c++){
+    var fil=Math.ceil(ks.length/c);
+    var w=c*wBloque+(c-1)*HUECO, l=fil*largoBloque+(fil-1)*HUECO*1.4;
+    var pena=Math.abs(Math.log((w/l)/aspVis));
+    if(pena<mejor){mejor=pena;cols=c;}
+  }
+  var filsGrid=Math.ceil(ks.length/cols);
+  var anchoTot=cols*wBloque+(cols-1)*HUECO;
+  var largoTot=filsGrid*largoBloque+(filsGrid-1)*HUECO*1.4;
   ks.forEach(function(k,bi){
-    var wBloque=anchoDe(k), xBloque=cursor+wBloque/2;
-    cursor+=wBloque+HUECO;
+    var cx_=bi%cols, cy_=Math.floor(bi/cols);
+    var xBloque=-anchoTot/2+wBloque/2+cx_*(wBloque+HUECO);
+    var zBloque=-largoTot/2+largoBloque/2+cy_*(largoBloque+HUECO*1.4);
     var col=(k==='BASE')?COL.BASE:COL[k];
     var mats=Seguidor.materials(THREE);
     mats.glass=new THREE.MeshStandardMaterial({color:PALA,roughness:.35,metalness:.25,
@@ -2201,8 +2243,8 @@ function escenaComparativa(){
       matsInt.glass=new THREE.MeshStandardMaterial({color:PALA,roughness:.35,metalness:.25,
         emissive:new THREE.Color(0x000000),emissiveIntensity:0});
     }
-    var b=new THREE.Group(); b.position.x=xBloque;
-    var segs=[], nF=esPas?filasDib:NFILAS;
+    var b=new THREE.Group(); b.position.x=xBloque; b.position.z=zBloque;
+    var segs=[];
     for(var f=0;f<nF;f++){
       var t=seguidor3D((esPas&&f>0)?matsInt:mats);
       t.position.x=(f-(nF-1)/2)*PITCH; b.add(t); segs.push(t);
@@ -2234,8 +2276,8 @@ function escenaComparativa(){
     marca.position.set(0,.07,zb+4);
     var txtEti=nombreCaso(k);
     if(esPas){
-      txtEti+=' · 1 de '+filasPas+' filas';
-      if(filasDib<filasPas)txtEti+=' (se dibujan '+filasDib+')';
+      txtEti+=' · 1 de '+filasReales+' filas';
+      if(nF<filasReales)txtEti+=' (se dibujan '+nF+')';
     }
     var eti=etiqueta3D(txtEti,col);
     eti.position.set(0,Seguidor.DIMS.postH+9,0);
@@ -2245,7 +2287,7 @@ function escenaComparativa(){
   /* Cámara casi desde el SUR y no muy alta: mirando a lo largo del eje N-S
      cada bloque se lee como su propia sección, y dejando algo de horizonte
      entra el cielo — desde muy arriba el encuadre era todo suelo. */
-  var ancho=anchoTot, largo=Seguidor.DIMS.span+20, d=Math.max(ancho,largo)*0.88;
+  var ancho=anchoTot, largo=largoTot+20, d=Math.max(ancho,largo)*0.88;
   TD.cam.position.set(d*0.22,d*0.34,d*0.95); TD.ct.target.set(0,8,0); TD.ct.update();
   TD.suelo.position.set(0,0,0); TD.suelo.scale.set(ancho*3.2,largo*4,1);
   TD.encuadre={pos:TD.cam.position.clone(),tgt:TD.ct.target.clone()};
@@ -2655,7 +2697,7 @@ function liveTick(dtReal){
          del 50 % en una planta de diez trackers, que es el error de un orden
          de magnitud que esta tarjeta existe para no cometer. */
       LIVE.poaFila=LOC.poa(r.theta,P.el,P.az,bh,dh,bh+dh);
-      LIVE.fracPas=LOC.fracExpuesta(+$('pasN').value,2,1);
+      LIVE.fracPas=LOC.fracExpuesta(nTrk(),filasTrk(),1);
       poa[S]=(1-LIVE.fracPas)*poa.BASE+LIVE.fracPas*LIVE.poaFila;
     }else poa[S]=LOC.poa(r.theta,P.el,P.az,bh,dh,bh+dh);
   });
@@ -2817,7 +2859,8 @@ $('pas').onchange=function(){
 // enseña— y desde que el bloque se dibuja a su proporción, también cambia
 // cuántas filas hay: hay que REMONTAR, no solo repintar. Los otros dos solo
 // afectan al cálculo.
-$('pasN').addEventListener('change',function(){saveCfg();montaEscena();});
+['nTrk','filasTrk'].forEach(function(i){
+  $(i).addEventListener('change',function(){saveCfg();denomPas();montaEscena();});});
 ['pasV','pasL'].forEach(function(i){
   $(i).addEventListener('change',function(){saveCfg();if(MODO==='live')liveTick(0.001);});});
 $('gpreset').onchange=function(){if(this.value){addGust(this.value);this.value='';}};
@@ -2838,6 +2881,7 @@ fillRosa(); fillPresets(); loadCfg(); meteoTag(); loadPlants(); renderGusts();
    la ficha no enseñaba nada que se moviera. */
 (function(){ /* la fecha en vivo arranca en el solsticio del año elegido */
   var y=+$('year').value||2023; $('lDate').value=y+'-06-21'; })();
+denomPas();
 montaEscena();
 detectEngine().then(loadPresets);
 </script>
