@@ -1,0 +1,307 @@
+{
+ "modulo": {
+  "pmax": 630.0,
+  "voc": 41.5,
+  "vmp": 34.7,
+  "isc": 18.5,
+  "imp": 17.5
+ },
+ "inversor": {
+  "paco": 350000.0,
+  "mppt_low": 500.0,
+  "mppt_high": 1500.0,
+  "vdcmax": 1500.0,
+  "idcmax": 500.0
+ },
+ "mods_por_string": 26,
+ "strings": {
+  "bankable": {
+   "strings_by_power": 26,
+   "strings_by_current": 24,
+   "strings_recommended": 24,
+   "strings_per_mppt": 2,
+   "per_mppt_limits": {
+    "mppt_operating_current": 2,
+    "mppt_short_circuit_current": 3,
+    "mppt_string_count": 4
+   },
+   "binding": "mppt_operating_current",
+   "confidence": "datasheet",
+   "dc_ac_recommended": 1.123,
+   "dc_ac_target": 1.2,
+   "n_mppt": 12,
+   "notes": [
+    "Operación: 40.0 A/MPPT ÷ Imp 17.5 A = 2 strings/MPPT.",
+    "Cortocircuito: 60.0 A/MPPT ÷ Isc 18.5 A = 3 strings/MPPT (protección).",
+    "Tope del datasheet: 4 strings/MPPT.",
+    "Cota Idcmax (500 A, dato CEC derivado ≈ Pdco/Vdco): la configuración pide ≈420 A en operación.",
+    "El factor NEC 690.8 (Isc×1.25) se aplica al CABLEADO y las protecciones (pág. de cables), no al conteo de strings."
+   ],
+   "_entrada": {
+    "n_mppt": 12,
+    "i_mppt_max_a": 40.0,
+    "isc_mppt_max_a": 60.0,
+    "strings_per_mppt_max": 4,
+    "target_dc_ac": 1.2,
+    "imp_module_a": 17.5,
+    "isc_module_a": 18.5,
+    "p_string_w": 16380.0,
+    "paco_w": 350000.0,
+    "idcmax_total_a": 500.0
+   }
+  },
+  "manda_pico": {
+   "strings_by_power": 26,
+   "strings_by_current": 264,
+   "strings_recommended": 26,
+   "strings_per_mppt": 22,
+   "per_mppt_limits": {
+    "mppt_operating_current": 22,
+    "mppt_short_circuit_current": 32,
+    "mppt_string_count": 40
+   },
+   "binding": "power",
+   "confidence": "datasheet",
+   "dc_ac_recommended": 1.217,
+   "dc_ac_target": 1.2,
+   "n_mppt": 12,
+   "notes": [
+    "Operación: 400.0 A/MPPT ÷ Imp 17.5 A = 22 strings/MPPT.",
+    "Cortocircuito: 600.0 A/MPPT ÷ Isc 18.5 A = 32 strings/MPPT (protección).",
+    "Tope del datasheet: 40 strings/MPPT.",
+    "Cota Idcmax (500 A, dato CEC derivado ≈ Pdco/Vdco): la configuración pide ≈4620 A en operación — por encima de la cota; el inversor autolimitaría (clipping), no se rompe.",
+    "El factor NEC 690.8 (Isc×1.25) se aplica al CABLEADO y las protecciones (pág. de cables), no al conteo de strings."
+   ],
+   "_entrada": {
+    "n_mppt": 12,
+    "i_mppt_max_a": 400.0,
+    "isc_mppt_max_a": 600.0,
+    "strings_per_mppt_max": 40,
+    "target_dc_ac": 1.2,
+    "imp_module_a": 17.5,
+    "isc_module_a": 18.5,
+    "p_string_w": 16380.0,
+    "paco_w": 350000.0,
+    "idcmax_total_a": 500.0
+   }
+  },
+  "manda_imppt": {
+   "strings_by_power": 32,
+   "strings_by_current": 6,
+   "strings_recommended": 6,
+   "strings_per_mppt": 1,
+   "per_mppt_limits": {
+    "mppt_operating_current": 1,
+    "mppt_short_circuit_current": 32,
+    "mppt_string_count": 40
+   },
+   "binding": "mppt_operating_current",
+   "confidence": "datasheet",
+   "dc_ac_recommended": 0.281,
+   "dc_ac_target": 1.5,
+   "n_mppt": 6,
+   "notes": [
+    "Operación: 30.0 A/MPPT ÷ Imp 17.5 A = 1 strings/MPPT.",
+    "Cortocircuito: 600.0 A/MPPT ÷ Isc 18.5 A = 32 strings/MPPT (protección).",
+    "Tope del datasheet: 40 strings/MPPT.",
+    "Cota Idcmax (500 A, dato CEC derivado ≈ Pdco/Vdco): la configuración pide ≈105 A en operación.",
+    "El factor NEC 690.8 (Isc×1.25) se aplica al CABLEADO y las protecciones (pág. de cables), no al conteo de strings."
+   ],
+   "_entrada": {
+    "n_mppt": 6,
+    "i_mppt_max_a": 30.0,
+    "isc_mppt_max_a": 600.0,
+    "strings_per_mppt_max": 40,
+    "target_dc_ac": 1.5,
+    "imp_module_a": 17.5,
+    "isc_module_a": 18.5,
+    "p_string_w": 16380.0,
+    "paco_w": 350000.0,
+    "idcmax_total_a": 500.0
+   }
+  },
+  "manda_isc": {
+   "strings_by_power": 32,
+   "strings_by_current": 6,
+   "strings_recommended": 6,
+   "strings_per_mppt": 1,
+   "per_mppt_limits": {
+    "mppt_operating_current": 22,
+    "mppt_short_circuit_current": 1,
+    "mppt_string_count": 40
+   },
+   "binding": "mppt_short_circuit_current",
+   "confidence": "datasheet",
+   "dc_ac_recommended": 0.281,
+   "dc_ac_target": 1.5,
+   "n_mppt": 6,
+   "notes": [
+    "Operación: 400.0 A/MPPT ÷ Imp 17.5 A = 22 strings/MPPT.",
+    "Cortocircuito: 30.0 A/MPPT ÷ Isc 18.5 A = 1 strings/MPPT (protección).",
+    "Tope del datasheet: 40 strings/MPPT.",
+    "Cota Idcmax (500 A, dato CEC derivado ≈ Pdco/Vdco): la configuración pide ≈105 A en operación.",
+    "El factor NEC 690.8 (Isc×1.25) se aplica al CABLEADO y las protecciones (pág. de cables), no al conteo de strings."
+   ],
+   "_entrada": {
+    "n_mppt": 6,
+    "i_mppt_max_a": 400.0,
+    "isc_mppt_max_a": 30.0,
+    "strings_per_mppt_max": 40,
+    "target_dc_ac": 1.5,
+    "imp_module_a": 17.5,
+    "isc_module_a": 18.5,
+    "p_string_w": 16380.0,
+    "paco_w": 350000.0,
+    "idcmax_total_a": 500.0
+   }
+  },
+  "manda_tope": {
+   "strings_by_power": 32,
+   "strings_by_current": 12,
+   "strings_recommended": 12,
+   "strings_per_mppt": 2,
+   "per_mppt_limits": {
+    "mppt_operating_current": 22,
+    "mppt_short_circuit_current": 32,
+    "mppt_string_count": 2
+   },
+   "binding": "mppt_string_count",
+   "confidence": "datasheet",
+   "dc_ac_recommended": 0.562,
+   "dc_ac_target": 1.5,
+   "n_mppt": 6,
+   "notes": [
+    "Operación: 400.0 A/MPPT ÷ Imp 17.5 A = 22 strings/MPPT.",
+    "Cortocircuito: 600.0 A/MPPT ÷ Isc 18.5 A = 32 strings/MPPT (protección).",
+    "Tope del datasheet: 2 strings/MPPT.",
+    "Cota Idcmax (500 A, dato CEC derivado ≈ Pdco/Vdco): la configuración pide ≈210 A en operación.",
+    "El factor NEC 690.8 (Isc×1.25) se aplica al CABLEADO y las protecciones (pág. de cables), no al conteo de strings."
+   ],
+   "_entrada": {
+    "n_mppt": 6,
+    "i_mppt_max_a": 400.0,
+    "isc_mppt_max_a": 600.0,
+    "strings_per_mppt_max": 2,
+    "target_dc_ac": 1.5,
+    "imp_module_a": 17.5,
+    "isc_module_a": 18.5,
+    "p_string_w": 16380.0,
+    "paco_w": 350000.0,
+    "idcmax_total_a": 500.0
+   }
+  },
+  "solo_idcmax": {
+   "strings_by_power": 26,
+   "strings_by_current": 28,
+   "strings_recommended": 26,
+   "strings_per_mppt": 3,
+   "per_mppt_limits": {},
+   "binding": "power",
+   "confidence": "cec_derived",
+   "dc_ac_recommended": 1.217,
+   "dc_ac_target": 1.2,
+   "n_mppt": 12,
+   "notes": [
+    "Sin límites por MPPT en la ficha: se usa Idcmax total (500 A) ÷ Imp 17.5 A. OJO: en el catálogo CEC Idcmax es un valor DERIVADO (≈ Pdco/Vdco), no el límite de entradas del datasheet — es una COTA, no la verdad. Introduce la corriente por MPPT en ⚙️ Equipos para dimensionar fino.",
+    "El factor NEC 690.8 (Isc×1.25) se aplica al CABLEADO y las protecciones (pág. de cables), no al conteo de strings."
+   ],
+   "_entrada": {
+    "n_mppt": 12,
+    "target_dc_ac": 1.2,
+    "imp_module_a": 17.5,
+    "isc_module_a": 18.5,
+    "p_string_w": 16380.0,
+    "paco_w": 350000.0,
+    "idcmax_total_a": 500.0
+   }
+  }
+ },
+ "planta": {
+  "desde_mwp": {
+   "mode_used": "from_mwp",
+   "mwp_actual": 10.0,
+   "n_modules_used": 15886,
+   "n_strings_total": 611,
+   "pnom_dc_kwp": 10008.2,
+   "pnom_ac_kw": 8400.0,
+   "n_inverters": 24,
+   "strings_per_inverter": 26,
+   "dc_ac_ratio": 1.1915,
+   "remainder_modules": 0,
+   "mods_per_string": 26,
+   "wp_module": 630.0,
+   "inv_pnom_ac_kw": 350.0,
+   "dc_ac_target_requested": 1.2,
+   "pnom_ac_max_kw": 8400.0,
+   "pgrid_max_kw": 0.0,
+   "clipping_vs_grid_pct": 0.0,
+   "grid_limited": false,
+   "_entrada": {
+    "mode": "from_mwp",
+    "mwp_target": 10.0,
+    "wp_module": 630.0,
+    "inv_pnom_ac_kw": 350.0,
+    "mods_per_string": 26,
+    "dc_ac_target": 1.2
+   }
+  },
+  "desde_modulos": {
+   "mode_used": "from_modules",
+   "mwp_actual": 9.9918,
+   "n_modules_used": 15860,
+   "n_strings_total": 610,
+   "pnom_dc_kwp": 9991.8,
+   "pnom_ac_kw": 8400.0,
+   "n_inverters": 24,
+   "strings_per_inverter": 26,
+   "dc_ac_ratio": 1.1895,
+   "remainder_modules": 13,
+   "mods_per_string": 26,
+   "wp_module": 630.0,
+   "inv_pnom_ac_kw": 350.0,
+   "dc_ac_target_requested": 1.2,
+   "pnom_ac_max_kw": 8400.0,
+   "pgrid_max_kw": 0.0,
+   "clipping_vs_grid_pct": 0.0,
+   "grid_limited": false,
+   "_entrada": {
+    "mode": "from_modules",
+    "n_modules": 15873,
+    "wp_module": 630.0,
+    "inv_pnom_ac_kw": 350.0,
+    "mods_per_string": 26,
+    "dc_ac_target": 1.2
+   }
+  },
+  "con_red": {
+   "mode_used": "from_mwp",
+   "mwp_actual": 10.0,
+   "n_modules_used": 15886,
+   "n_strings_total": 611,
+   "pnom_dc_kwp": 10008.2,
+   "pnom_ac_kw": 7700.0,
+   "n_inverters": 22,
+   "strings_per_inverter": 28,
+   "dc_ac_ratio": 1.2998,
+   "remainder_modules": 0,
+   "mods_per_string": 26,
+   "wp_module": 630.0,
+   "inv_pnom_ac_kw": 350.0,
+   "dc_ac_target_requested": 1.3,
+   "pnom_ac_max_kw": 8470.0,
+   "pgrid_max_kw": 8000.0,
+   "clipping_vs_grid_pct": 5.55,
+   "grid_limited": true,
+   "_entrada": {
+    "mode": "from_mwp",
+    "mwp_target": 10.0,
+    "wp_module": 630.0,
+    "inv_pnom_ac_kw": 350.0,
+    "inv_pmax_ac_kw": 385.0,
+    "mods_per_string": 26,
+    "dc_ac_target": 1.3,
+    "pgrid_max_mw": 8.0
+   }
+  }
+ }
+}

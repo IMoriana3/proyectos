@@ -77,6 +77,82 @@ Sevilla, 10 MWp, módulo de 660 Wp, fija a pitch 4,50 m y tracker a 6,00 m:
 La fija ocupa un **25 % menos de parcela** para el mismo pico; el TSAT capta un **27 % más** de
 energía sobre esos mismos MWp. Ésa es la comparación, y no se puede leer en una sola columna.
 
+## Equipos: el catálogo CEC, dentro de la ficha
+
+El pico del módulo dejó de ser un número que se teclea a ojo. La ficha lleva el **catálogo CEC
+entero**: 16 758 módulos de la lista 2024 (Pmax ≥ 300 Wp) y 4 910 inversores con sus parámetros
+Sandia. Son los mismos CSV que mantiene el core (`solargpt/data/`), recortados a JSON con
+`tests/gen_catalogo_cec.py` — no se descarga nada de internet ni en la ficha ni en el core.
+
+Se bajan **bajo demanda**, la primera vez que se toca la tarjeta de Equipos: 2,4 MB y 656 KB
+(287 y 90 KB comprimidos por Pages). Quien viene a comparar estructuras no tiene por qué pagarlos,
+y hay un test que lo comprueba.
+
+Del módulo se busca por **fabricante** y por **texto multi-palabra** (todas las palabras tienen que
+estar: «610 bifacial» encuentra el que lleve las dos cosas, no el que lleve cualquiera). Del
+inversor, además, por **categoría** — micro (<1 kW), comercial (≤100 kW), string (100-400 kW),
+industrial (>400 kW): son las bandas del cliente, no una escala inventada aquí.
+
+### Un buscador que no deja elegir parejas imposibles
+
+Por defecto la lista de módulos sale ya filtrada por el inversor elegido: **solo los que encajan**,
+es decir, aquellos cuya ventana de tensión cabe en la del inversor a las temperaturas del proyecto.
+De 16 758 quedan unos 6 700 con un inversor típico. Se puede quitar el filtro, porque a veces lo
+que se quiere es justamente ver *por qué* no cabe — y entonces la ficha lo dice con nombres y
+números, no con un «no válido».
+
+### Tres trampas del catálogo, respetadas
+
+* **`A_c` es área de CÉLULAS**, no del módulo. Deducir el largo con ella da 2,328 m para un módulo
+  de 2,382, así que no se hace: si el catálogo no trae `Length`/`Width` —y la mayoría no las
+  trae— se cae al módulo canónico de la casa (2,382 × 1,134 m) y **va dicho en pantalla**.
+* **`Idcmax` del CEC es un valor DERIVADO** (≈Pdco/Vdco), no el límite de entradas del datasheet.
+  Se usa como **cota** y el resultado se marca con confianza `cec_derived`. Metiendo las corrientes
+  por MPPT del datasheet, la confianza pasa a `datasheet`.
+* **Los duplicados se marcan, no se borran** (dos fabricantes venden el mismo módulo). Van todos y
+  el que busca decide.
+
+## Sizing: la ventana de tensión y los strings
+
+Puerto **literal** de `solargpt_core.string_sizing` y `solargpt_core.plant_config`, las dos
+funciones puras que ya usan el cuaderno (§02.0e) y el Streamlit. La ventana de tensión no estaba en
+el core —vivía dentro de la página 5— y aquí queda por fin como función pura y testeable.
+
+```
+βVmp     = 1,15 · βVoc                         ← convención bankable (IEC 62548)
+Voc_frío = Voc · (1 + βVoc/100 · (T_min − 25))
+Vmp_cal  = Vmp · (1 + βVmp/100 · (T_max − 25))
+N_min    = ceil(MPPT_bajo / Vmp_cal)           ← el módulo caliente tiene que llegar al suelo
+N_maxV   = floor(Vdc_máx  / Voc_frío)          ← el módulo frío no puede pasarse
+N_maxM   = floor(MPPT_alto / Vmp_frío)
+N_max    = min(N_maxV, N_maxM)                 ← manda el más restrictivo, y se DICE cuál
+```
+
+Y los strings, con el criterio del core: manda el **más restrictivo** entre potencia y corriente, y
+la ficha dice **quién** — la potencia (el DC/AC objetivo), la corriente de operación del MPPT, la
+de cortocircuito (protección) o el tope de strings del datasheet. Un número de strings sin saber
+quién lo limita no se puede discutir con nadie.
+
+> El factor **NEC 690.8 (Isc × 1,25) NO entra** en el conteo de strings: dimensiona cableado y
+> protecciones, no la capacidad de entrada del inversor. Aplicarlo recortaba ~22 % de planta sin
+> razón física. Es la decisión declarada del core, y hay un guard que se pone rojo si alguien la
+> revierte.
+
+### El careo es EXACTO, no «se parece»
+
+`node tests/test_sizing.js` — 104 comprobaciones. Aquí no hay dos modelos de transposición
+discutiendo: hay una cuenta de enteros, y un string de más o de menos por MPPT es un unifilar
+equivocado. Se exige cifra a cifra contra una corrida congelada del core, con seis casos elegidos
+para que mande cada vez uno distinto, **más la etiqueta de quién limita y la de confianza**.
+
+Una trampa de portabilidad que no es teórica: `int(round(x))` de Python redondea **al par** en el
+.5 exacto y `Math.round` de JavaScript redondea hacia arriba. Los dos sitios donde el core usa
+`round()` para contar strings caen justo en esa cuenta, así que se porta el redondeo — y se testea.
+
+Y una incoherencia del original que aquí **no** se porta: su gráfico de la ventana pintaba la curva
+de Vmp con γPmax (coeficiente de POTENCIA) mientras el cálculo usaba βVmp. El dibujo y la cuenta no
+coincidían; aquí los dos usan βVmp.
+
 ## El tamaño de la estructura
 
 **Fija y tracker se configuran POR SEPARADO**, cada una con su tarjeta y su pitch — que es como
@@ -320,7 +396,8 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ```bash
 node tests/test_comparador.js       # 53 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
-node tests/test_comparador_3d.js    # 57 comprobaciones · la escena en un Chromium de verdad
+node tests/test_comparador_3d.js    # 68 comprobaciones · escena, equipos y sizing
+node tests/test_sizing.js           # 104 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 
 El test **extrae el bloque `FÍSICA PURA` del HTML real**, no una copia: una copia se quedaría
