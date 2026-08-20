@@ -330,6 +330,31 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       <p class="mini" id="szVentNota"></p>
     </div>
 
+    <!-- ═════════ BARRIDOS ═════════ -->
+    <div class="card" id="barCard">
+      <h2>📈 Barridos <span class="sn" id="barGob">§03.05</span></h2>
+      <div class="tres">
+        <div class="field"><label>Qué se barre</label>
+          <select id="barQue">
+            <option value="pitch:tracker">Pitch del TRACKER</option>
+            <option value="pitch:fija">Pitch de la FIJA</option>
+            <option value="tilt:fija">Tilt de la FIJA</option>
+          </select></div>
+        <div class="field"><label>Desde</label><input id="barMin" type="number" step="0.1" value="4.5"></div>
+        <div class="field"><label>Hasta</label><input id="barMax" type="number" step="0.1" value="9.0"></div>
+      </div>
+      <div class="tres" style="margin-top:9px">
+        <div class="field"><label>Paso</label><input id="barPaso" type="number" step="1" min="1" value="25"></div>
+        <div class="field"><label>&nbsp;</label>
+          <button class="btn" id="barRun">Barrer</button></div>
+        <div class="field"><label>&nbsp;</label>
+          <p class="mini" id="barEstado" style="padding-top:9px">usa la misma meteo que la comparativa</p></div>
+      </div>
+      <div id="barRead" class="readout" style="margin-top:10px"></div>
+      <canvas id="cvBar" width="1100" height="320" style="width:100%;margin-top:10px"></canvas>
+      <p class="mini" id="barNota"></p>
+    </div>
+
     <div class="card" id="outCard">
       <h2>Σ Resultado del año <span class="sn" id="ctx">—</span></h2>
       <div id="out"><p class="note">Elige estructuras y dale a <b>Comparar el año</b>.</p></div>
@@ -805,6 +830,106 @@ FIS.tiltOptimo=function(M,cfg,spec){
     var e2=FIS.corre(spec,M,cfg,t).neta; if(e2>best){best=e2;mejor=t;}
   }
   return mejor;
+};
+
+/* ── BARRIDO DE PITCH ──
+   Puerto de `solargpt_core.pitch_sweep`. Se barre el PITCH en metros, no el
+   GCR: el GCR es derivado (`apertura / pitch`) y el pitch es lo que se replantea
+   en campo.
+
+   Y lo más importante que hay que portar de ahí no es una fórmula, es una
+   NEGATIVA: el core no marca ninguna fila como óptima, y está escrito en sus
+   tests por qué —«en pitch no hay óptimo sin más: más pitch SIEMPRE suma POA y
+   gasta terreno»—. Así que aquí tampoco hay un ganador: hay dos máximos que
+   contestan a dos preguntas distintas (el de POA por m² de MÓDULO y el de
+   densidad por m² de SUELO) y el coste marginal de apretar un metro, que es la
+   pregunta de diseño de verdad.
+
+   Tres cosas del original que NO se portan, y se dicen:
+     · el relativo del core es contra un pitch fijo de 6,00 m aunque quede fuera
+       del rango barrido; aquí es contra el pitch CONFIGURADO, que es desde
+       donde se decide;
+     · su `poa_kwh_m2_y` no divide por años, así que con meteo multi-año sale
+       multiplicada pese al sufijo `_y`. Aquí se barre el mismo año que se
+       compara, y punto;
+     · el tilt se mantiene FIJO a lo largo del barrido (es la convención de
+       §03.F: «quitar 1 m costaría X% con el mismo tilt»). Reoptimizarlo en cada
+       punto contestaría a otra pregunta y va dicho en pantalla.               */
+FIS.pasosPitch=function(min,max,pasoCm){
+  if(!(min>0)||!(max>0))throw new Error('el pitch tiene que ser > 0');
+  if(max<min)throw new Error('el pitch máximo no puede ser menor que el mínimo');
+  if(!(pasoCm>0))throw new Error('el paso tiene que ser > 0');
+  var paso=pasoCm/100, n=Math.round((max-min)/paso)+1, out=[];
+  for(var i=0;i<n;i++){var v=min+i*paso; if(v<=max+1e-9)out.push(+v.toFixed(6));}
+  if(!out.length||out[out.length-1]<max-1e-9)out.push(+max.toFixed(6));
+  return out;
+};
+FIS.barridoPitch=function(spec,M,cfg,o){
+  var pitches=FIS.pasosPitch(o.min,o.max,o.pasoCm);
+  var base=cfg.geomDe(spec), tilt=(o.tilt!=null?o.tilt:null);
+  var puntos=pitches.map(function(p,i){
+    var G={}; for(var k in base)G[k]=base[k];
+    G.pitch=p; G.gcr=(p>0?G.apertura/p:0);
+    var c2={}; for(var k2 in cfg)c2[k2]=cfg[k2];
+    c2.geomDe=function(){return G;};
+    var r=FIS.corre(spec,M,c2,tilt);
+    if(o.progreso)o.progreso(i,pitches.length);
+    return {pitch:p, gcr:G.gcr, poa:r.neta, suelo:r.neta*G.gcr,
+            sombra:r.ideal>0?((1-r.neta/r.ideal)*100):0,
+            /* un GCR > 1 no es un punto malo: es geometría imposible, las filas
+               se solapan. Se marca y no se usa para elegir nada. */
+            imposible:(G.gcr>1)};
+  });
+  var util=puntos.filter(function(q){return !q.imposible;});
+  var maxPoa=null, maxSuelo=null;
+  util.forEach(function(q){
+    if(!maxPoa||q.poa>maxPoa.poa)maxPoa=q;
+    if(!maxSuelo||q.suelo>maxSuelo.suelo)maxSuelo=q;
+  });
+  var interp=function(x,campo){
+    if(!util.length)return NaN;
+    if(x<=util[0].pitch)return util[0][campo];
+    if(x>=util[util.length-1].pitch)return util[util.length-1][campo];
+    for(var i=1;i<util.length;i++){
+      if(util[i].pitch>=x){
+        var a=util[i-1], b=util[i], f=(x-a.pitch)/(b.pitch-a.pitch);
+        return a[campo]+f*(b[campo]-a[campo]);
+      }
+    }
+    return util[util.length-1][campo];
+  };
+  var actual=base.pitch, ref=interp(actual,'poa');
+  puntos.forEach(function(q){q.rel=(ref>0?((q.poa/ref-1)*100):0);});
+  /* El coste de apretar un metro: lo que se pierde de POA por m² de módulo, y
+     lo que se gana de terreno (un metro sobre el pitch actual). */
+  var lo=util.length?util[0].pitch:actual, hi=util.length?util[util.length-1].pitch:actual;
+  var fuera=(actual<lo-1e-9||actual>hi+1e-9);
+  var menos1=Math.max(lo,actual-1);
+  return {puntos:puntos, pitches:pitches, actual:actual, poaActual:ref,
+          maxPoa:maxPoa, maxSuelo:maxSuelo, tilt:tilt, fueraDeRango:fuera,
+          costeM1:(!fuera&&ref>0?((interp(menos1,'poa')/ref-1)*100):NaN),
+          sueloM1:(!fuera&&actual>0?(100*(1-menos1/actual)):NaN),
+          hayImposibles:puntos.some(function(q){return q.imposible;})};
+};
+
+/* ── BARRIDO DE TILT ──
+   El de la fija, y aquí SÍ hay un óptimo: la curva tiene máximo interior. Es la
+   misma rejilla que `poa_report.sweep_tilt_annual` (0..60), pero CON sombra
+   entre filas —aquí sale gratis— así que el óptimo es el NETO y queda 1-3° por
+   debajo del que da el cuaderno con transposición pura. */
+FIS.barridoTilt=function(spec,M,cfg,o){
+  var min=(o&&o.min!=null)?o.min:0, max=(o&&o.max!=null)?o.max:60,
+      paso=(o&&o.paso)?o.paso:2.5, puntos=[];
+  for(var t=min;t<=max+1e-9;t+=paso){
+    var r=FIS.corre(spec,M,cfg,t);
+    puntos.push({tilt:+t.toFixed(3), poa:r.neta,
+                 sombra:r.ideal>0?((1-r.neta/r.ideal)*100):0});
+    if(o&&o.progreso)o.progreso(puntos.length,Math.round((max-min)/paso)+1);
+  }
+  var mejor=puntos[0];
+  puntos.forEach(function(q){if(q.poa>mejor.poa)mejor=q;});
+  puntos.forEach(function(q){q.rel=(mejor.poa>0?((q.poa/mejor.poa-1)*100):0);});
+  return {puntos:puntos, optimo:mejor};
 };
 
 /* ── La comparativa entera ── */
@@ -1474,6 +1599,188 @@ $('szN').addEventListener('input',function(){SZ_N_TOCADO=true;});
   .forEach(function(id){var el=$(id); if(!el)return;
     el.addEventListener('input',refrescaSizing); el.addEventListener('change',refrescaSizing);});
 
+/* ═════════ BARRIDOS ═════════
+   La ficha compara a UNA densidad. El barrido contesta la otra mitad: qué pasa
+   si se aprieta o se abre. Y contesta sin declarar un ganador, porque en pitch
+   no lo hay —más pitch SIEMPRE suma POA por módulo y siempre gasta terreno—:
+   lo que se publica son los DOS máximos, el coste marginal de apretar un metro
+   y, con la potencia pico de arriba, las hectáreas de cada punto. */
+var BAR=null;
+function barSpec(){
+  var q=$('barQue').value.split(':'), fam=q[1];
+  /* Se barre sobre una estructura REAL de la familia, y se prefiere una que
+     esté marcada: así la curva es del mismo bicho que la tabla. */
+  var cands=(fam==='tracker')?['tracker_hsat','tracker_hsat_nobt','tracker_tsat']
+                             :['fija_optima','fija_proyecto'];
+  var marcadas=elegidas(), k=null;
+  cands.some(function(c){if(marcadas.indexOf(c)>=0){k=c;return true;}});
+  return {tipo:q[0], fam:fam, key:k||cands[0]};
+}
+function barDefaults(){
+  var b=barSpec(), c=cfgActual();
+  if(b.tipo==='tilt'){$('barMin').value=0; $('barMax').value=60; $('barPaso').value=2.5;}
+  else{
+    var pitch=(b.fam==='tracker'?c.tracker:c.fija).pitch;
+    $('barMin').value=(Math.max(1,pitch-2)).toFixed(1);
+    $('barMax').value=(pitch+3).toFixed(1);
+    $('barPaso').value=25;
+  }
+  $('barGob').textContent=(b.tipo==='tilt'?'§03.F · tilt':'§03.05 · pitch')+' · '+
+    ((FIS.spec(b.key)||{}).label||'');
+}
+async function barre(){
+  var b=barSpec(), spec=FIS.spec(b.key);
+  if(!spec)return;
+  var cGeo=cfgActual();
+  if(geomMala(cGeo.fija)||geomMala(cGeo.tracker)){
+    $('barNota').innerHTML='<span style="color:var(--dead)">Arregla primero la geometría.</span>';
+    return;
+  }
+  $('barRun').disabled=true; $('barEstado').textContent='bajando la meteo…';
+  try{
+    var year=+$('year').value, src=$('source').value;
+    var M=(src==='clearsky')?await FIS.clearsky(cGeo.lat,cGeo.lon,year)
+                            :await FIS.fetchYear(cGeo.lat,cGeo.lon,year);
+    /* El tilt se congela: es la convención de §03.F («quitar 1 m costaría X %
+       CON EL MISMO TILT»). Reoptimizarlo en cada punto contesta a otra
+       pregunta, y mezclar las dos deja una curva que no significa ninguna. */
+    var tilt=(b.fam==='tracker')?null
+      :(spec.tiltOpt?FIS.tiltOptimo(M,cGeo,spec):cGeo.tilt);
+    var prog=function(i,n){$('barEstado').textContent='barriendo… '+(i+1)+'/'+n;};
+    var res=(b.tipo==='tilt')
+      ? FIS.barridoTilt(spec,M,cGeo,{min:+$('barMin').value,
+          max:+$('barMax').value, paso:+$('barPaso').value, progreso:prog})
+      : FIS.barridoPitch(spec,M,cGeo,{min:+$('barMin').value,
+          max:+$('barMax').value, pasoCm:+$('barPaso').value, tilt:tilt, progreso:prog});
+    res.tipo=b.tipo; res.spec=spec; res.cfg=cGeo; res.tilt=tilt;
+    res.fuente=M.source; BAR=res;
+    pintaBarrido();
+    $('barEstado').textContent=BAR.fuente+' '+year+' · '+BAR.puntos.length+' puntos';
+  }catch(e){
+    $('barNota').innerHTML='<div class="engmsg err"><b>No se pudo barrer.</b><br>'+esc(e.message)+'</div>';
+    $('barEstado').textContent='—';
+  }finally{$('barRun').disabled=false;}
+}
+function pintaBarrido(){
+  if(!BAR){$('barRead').innerHTML=''; return;}
+  var esP=(BAR.tipo==='pitch');
+  if(esP){
+    /* Las hectáreas de cada punto salen de la potencia pico de arriba: es lo
+       que convierte «+2,8 % de POA» en «y 2,1 ha más de parcela». */
+    var mwp=+$('mwp').value, G=BAR.cfg.geomDe(BAR.spec);
+    var ha=function(pitch){
+      var g2={}; for(var k in G)g2[k]=G[k];
+      g2.pitch=pitch;
+      var P=FIS.planta(g2,mwp); return P?P.ha:null;
+    };
+    BAR.puntos.forEach(function(q){q.ha=ha(q.pitch);});
+    var hAct=ha(BAR.actual);
+    $('barRead').innerHTML=
+      ro('Pitch configurado',fmt(BAR.actual,2),'m · '+fmt(BAR.poaActual,0)+' kWh/m²')+
+      ro('Máx POA · módulo',fmt(BAR.maxPoa.pitch,2)+' m',
+         fmt(BAR.maxPoa.poa,0)+' kWh/m² · '+(BAR.maxPoa.rel>0?'+':'')+fmt(BAR.maxPoa.rel,2)+' %')+
+      ro('Máx densidad · suelo',fmt(BAR.maxSuelo.pitch,2)+' m',
+         fmt(BAR.maxSuelo.suelo,0)+' kWh/m² de suelo')+
+      (BAR.fueraDeRango
+        ? ro('Apretar 1 m','—','el pitch configurado cae FUERA del rango barrido')
+        : ro('Apretar 1 m cuesta',fmt(BAR.costeM1,2)+' %','de POA por módulo')+
+          ro('y ahorra',fmt(BAR.sueloM1,0)+' %','de parcela'))+
+      (hAct!=null?ro('Parcela ahí',fmt(hAct,2),'ha a '+fmt(mwp,1)+' MWp'):'');
+    $('barNota').innerHTML=
+      '<b>En pitch no hay un óptimo</b>: más pitch siempre suma POA por m² de módulo y siempre '+
+      'gasta terreno, así que la curva no tiene máximo interior — tiene dos respuestas a dos '+
+      'preguntas distintas. Es la convención del core, que tampoco marca ninguna fila como óptima. '+
+      'El <b>tilt se mantiene fijo</b> a lo largo del barrido ('+
+      (BAR.tilt!=null?fmt(BAR.tilt,0)+'°':'no aplica en seguidor')+'): reoptimizarlo en cada punto '+
+      'contestaría a otra pregunta. Los relativos son contra el <b>pitch configurado</b>, no contra '+
+      'un 6,00 m fijo.'+
+      (BAR.fueraDeRango?' <span style="color:var(--dead)">El pitch configurado ('+
+       fmt(BAR.actual,2)+' m) cae FUERA del rango barrido: sin un punto ahí, el relativo y el '+
+       'coste marginal se calcularían contra un extremo clavado y saldrían 0 — que se leería como '+
+       '«no cuesta nada» cuando lo que pasa es que no se ha barrido ahí. Se dejan en blanco.</span>':'')+
+      (BAR.hayImposibles?' <span style="color:var(--dead)">Los puntos con GCR &gt; 1 salen marcados: '+
+       'la apertura no cabe en el pitch y las filas se solaparían — no son puntos malos, son '+
+       'geometría imposible, y no pueden ganar nada.</span>':'');
+  }else{
+    $('barRead').innerHTML=
+      ro('Tilt óptimo',fmt(BAR.optimo.tilt,1)+'°',
+         fmt(BAR.optimo.poa,0)+' kWh/m² · rejilla de '+fmt(+$('barPaso').value,1)+'°')+
+      ro('Estructura',BAR.spec.label,'con su pitch y su GCR')+
+      ro('Tilt de proyecto',fmt(BAR.cfg.tilt,0)+'°','lo que hay tecleado');
+    $('barNota').innerHTML='Aquí <b>sí</b> hay óptimo: la curva de tilt tiene máximo interior. '+
+      'Y se barre <b>CON sombra entre filas</b> —aquí sale gratis—, así que este óptimo es el NETO '+
+      'y queda 1-3° por debajo del que da el cuaderno con transposición pura. '+
+      'Es el mejor punto <b>de la rejilla</b>: con paso '+fmt(+$('barPaso').value,1)+'° puede caer '+
+      'hasta '+fmt(+$('barPaso').value/2,1)+'° del que da la tabla, que lo busca fino (5° y luego 1°). '+
+      'La curva es plana cerca del máximo — por eso la diferencia de POA es de décimas.';
+  }
+  dibujaBarrido();
+}
+/* Dos ejes: POA por m² de MÓDULO (izquierda) y por m² de SUELO (derecha). Son
+   las dos curvas que van en sentidos contrarios, y dibujarlas en el mismo eje
+   dejaría una de las dos aplastada contra el borde. */
+function dibujaBarrido(){
+  var c=$('cvBar'); if(!c||!BAR)return;
+  var g=c.getContext('2d'), W=c.width, H=c.height, L=62, R=66, T=16, B=30;
+  g.clearRect(0,0,W,H);
+  var P=BAR.puntos, esP=(BAR.tipo==='pitch');
+  var xs=P.map(function(q){return esP?q.pitch:q.tilt;});
+  var x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs);
+  var X=function(v){return L+(x1>x0?(v-x0)/(x1-x0):0.5)*(W-L-R);};
+  var ejes=esP?[['poa','#54A6FF','POA módulo'],['suelo','#F6A623','POA suelo']]
+              :[['poa','#54A6FF','POA módulo']];
+  var lim=ejes.map(function(e){
+    var vs=P.map(function(q){return q[e[0]];});
+    var lo=Math.min.apply(null,vs), hi=Math.max.apply(null,vs), d=(hi-lo)||1;
+    return [lo-d*0.14, hi+d*0.14];
+  });
+  var Y=function(v,k){return H-B-(v-lim[k][0])/(lim[k][1]-lim[k][0])*(H-T-B);};
+  g.font='11px ui-monospace,monospace';
+  if(esP&&BAR.hayImposibles){
+    var ult=null; P.forEach(function(q){if(q.imposible)ult=q;});
+    if(ult){g.fillStyle='rgba(255,90,90,.12)';
+      g.fillRect(L,T,Math.max(0,X(ult.pitch)-L),H-T-B);
+      g.fillStyle='#FF5A5A'; g.fillText('GCR > 1: filas solapadas',L+6,H-B-8);}
+  }
+  ejes.forEach(function(e,k){
+    g.strokeStyle=e[1]; g.lineWidth=2; g.beginPath();
+    P.forEach(function(q,i){var x=X(xs[i]),y=Y(q[e[0]],k); i?g.lineTo(x,y):g.moveTo(x,y);});
+    g.stroke(); g.lineWidth=1; g.fillStyle=e[1];
+    P.forEach(function(q,i){g.beginPath();g.arc(X(xs[i]),Y(q[e[0]],k),2.5,0,6.283);g.fill();});
+    var t=e[2]+' kWh/m²';
+    g.fillText(t,k?W-R-g.measureText(t).width:L,T+11);
+  });
+  var marcas=esP
+    ? [[BAR.actual,'#E7EEF4','configurado'],[BAR.maxPoa.pitch,'#54A6FF','máx módulo'],
+       [BAR.maxSuelo.pitch,'#F6A623','máx suelo']]
+    : [[BAR.cfg.tilt,'#E7EEF4','de proyecto'],[BAR.optimo.tilt,'#36D399','óptimo']];
+  marcas.forEach(function(m,i){
+    if(m[0]==null||!isFinite(m[0]))return;
+    var x=X(Math.min(x1,Math.max(x0,m[0])));
+    g.strokeStyle=m[1]; g.setLineDash([3,3]); g.beginPath();
+    g.moveTo(x,T); g.lineTo(x,H-B); g.stroke(); g.setLineDash([]);
+    var an=g.measureText(m[2]).width;
+    g.fillStyle=m[1]; g.fillText(m[2],(x+an+8>W-R)?x-an-5:x+5,T+30+i*15);
+  });
+  g.strokeStyle='rgba(160,175,190,.35)'; g.beginPath();
+  g.moveTo(L,H-B); g.lineTo(W-R,H-B); g.moveTo(L,T); g.lineTo(L,H-B);
+  if(esP){g.moveTo(W-R,T); g.lineTo(W-R,H-B);} g.stroke();
+  g.fillStyle='#7A8794';
+  [0,0.25,0.5,0.75,1].forEach(function(f){
+    var v=x0+(x1-x0)*f, x=X(v), t=fmt(v,esP?2:0)+(esP?' m':'°');
+    g.fillText(t,x-g.measureText(t).width/2,H-B+15);
+  });
+  ejes.forEach(function(e,k){
+    [0,0.5,1].forEach(function(f){
+      var v=lim[k][0]+(lim[k][1]-lim[k][0])*f;
+      g.fillStyle=e[1]; g.fillText(fmt(v,0),k?W-R+7:8,Y(v,k)+4);
+    });
+  });
+}
+$('barQue').addEventListener('change',function(){BAR=null;$('barRead').innerHTML='';
+  $('barNota').innerHTML=''; dibujaBarrido(); barDefaults();});
+$('barRun').onclick=barre;
+
 async function run(){
   var cGeo=cfgActual();
   if(geomMala(cGeo.fija)||geomMala(cGeo.tracker)){
@@ -2107,7 +2414,7 @@ pintaEstructuras(); loadPlants(); refrescaGeom(); detectEngine();
    estructuras, que es para lo que la ficha existe. */
 ['pointerdown','focusin'].forEach(function(ev){
   $('eqCard').addEventListener(ev,despiertaCatalogo,{once:false});});
-refrescaSizing();
+refrescaSizing(); barDefaults();
 $('run').onclick=run;
 
 /* La escena se ve DESDE QUE SE ABRE, sin haber comparado nada: es la lección

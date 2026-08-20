@@ -77,6 +77,55 @@ Sevilla, 10 MWp, módulo de 660 Wp, fija a pitch 4,50 m y tracker a 6,00 m:
 La fija ocupa un **25 % menos de parcela** para el mismo pico; el TSAT capta un **27 % más** de
 energía sobre esos mismos MWp. Ésa es la comparación, y no se puede leer en una sola columna.
 
+## Barridos
+
+La ficha compara a **una** densidad. El barrido contesta la otra mitad: qué pasa si se aprieta o se
+abre. Es el puerto de `solargpt_core.pitch_sweep` y de `poa_report.sweep_tilt_annual`.
+
+Se barre el **pitch en metros**, no el GCR: el GCR es derivado (`apertura / pitch`) y el pitch es lo
+que se replantea en campo. La rejilla es la misma que `_generate_step_pitches`, extremo forzado
+incluido, y el test la exige punto por punto.
+
+### Lo más importante que se porta no es una fórmula: es una negativa
+
+**En pitch no hay un óptimo.** Más pitch siempre suma POA por m² de módulo y siempre gasta terreno,
+así que la curva no tiene máximo interior — tiene dos respuestas a dos preguntas distintas. El core
+tampoco marca ninguna fila como óptima, y lo dice en sus propios tests. Así que la ficha publica:
+
+* el **máximo de POA por m² de módulo** (el extremo abierto),
+* el **máximo de densidad por m² de suelo** (el extremo apretado),
+* el **coste marginal de apretar un metro** — cuánta POA cuesta y cuánta parcela ahorra, que es la
+  pregunta de diseño de verdad,
+* y, con la potencia pico de arriba, las **hectáreas de cada punto**: es lo que convierte
+  «+2,8 % de POA» en «y 2,1 ha más de parcela».
+
+En Sevilla, tracker a 6,00 m: el máximo de POA cae en 9,00 m (+5,0 %) y el de suelo en 4,00 m.
+Apretar un metro cuesta **−3,2 % de POA por módulo** y ahorra **17 % de parcela**.
+
+El **tilt se mantiene fijo** a lo largo del barrido — es la convención de §03.F («quitar 1 m
+costaría X % *con el mismo tilt*»). Reoptimizarlo en cada punto contesta a otra pregunta, y
+mezclar las dos deja una curva que no significa ninguna. Va dicho en pantalla.
+
+### Tres cosas del original que NO se portan
+
+1. El relativo del core es contra un pitch fijo de **6,00 m**, aunque quede fuera del rango barrido.
+   Aquí es contra el **pitch configurado**, que es desde donde se decide. Y si el pitch configurado
+   cae fuera del rango, el coste marginal **no se publica**: contra un extremo clamado saldría 0, y
+   un 0 ahí se lee como «no cuesta nada» cuando lo que pasa es que no se ha barrido ahí.
+2. Su `poa_kwh_m2_y` no divide por años, así que con meteo multi-año sale multiplicada pese al
+   sufijo `_y`. Aquí se barre el mismo año que se compara.
+3. Un pitch con **GCR > 1** no es un punto malo: es geometría imposible (las filas se solaparían).
+   Sale marcado en rojo y no puede ganar nada.
+
+### El barrido de tilt sí tiene óptimo
+
+Es lo que lo distingue del de pitch, y por eso uno declara ganador y el otro no. Se barre **con
+sombra entre filas** —aquí sale gratis—, así que el óptimo es el **neto** y queda 1-3° por debajo
+del que da el cuaderno con transposición pura. Y es el mejor punto **de la rejilla**: con paso 5°
+puede caer hasta 2,5° del que da la tabla, que lo busca fino (5° y luego 1°). La curva es plana
+cerca del máximo, así que la diferencia de POA es de décimas — pero conviene decirlo o se lee como
+una contradicción donde solo hay resolución.
+
 ## Equipos: el catálogo CEC, dentro de la ficha
 
 El pico del módulo dejó de ser un número que se teclea a ojo. La ficha lleva el **catálogo CEC
@@ -394,9 +443,9 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ## Pruebas
 
 ```bash
-node tests/test_comparador.js       # 53 comprobaciones · careo contra el core, sin navegador
+node tests/test_comparador.js       # 74 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
-node tests/test_comparador_3d.js    # 68 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 80 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 104 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 
