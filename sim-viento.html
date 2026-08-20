@@ -1640,15 +1640,73 @@ async function run(){
    atributo ya no la lleva. */
 function prep2d(cv){
   if(!cv.dataset.h)cv.dataset.h=cv.height;              // altura de diseño
+  if(!cv.dataset.w)cv.dataset.w=cv.width;               // ANCHO de diseño
   var hCss=+cv.dataset.h;
-  var wCss=cv.clientWidth||cv.width;
+  /* `clientWidth` vale 0 mientras la tarjeta está en `display:none`, y el
+     ancho de dibujo caía entonces al de diseño (880) mientras el CSS estira el
+     lienzo al del contenedor: TODO salía estirado en horizontal. Medido contra
+     la captura del usuario: barras de 74 px dibujadas y ~160 px en pantalla,
+     factor 2,16 = 1900/880 — de ahí las letras separadas y las barras gordas.
+     Y el ancho de diseño no se podía releer de `cv.width`, porque tras la
+     primera pasada ahí vive el búfer en píxeles FÍSICOS: cada llamada en
+     oculto multiplicaba el error por el dpr otra vez. Ahora se guarda aparte y
+     se DECLARA (`medido`) que el lienzo no estaba maquetado. */
+  var medido=cv.clientWidth>0;
+  var wCss=medido?cv.clientWidth:+cv.dataset.w;
   var dpr=Math.min(3,window.devicePixelRatio||1);
   var bw=Math.round(wCss*dpr), bh=Math.round(hCss*dpr);
   if(cv.width!==bw||cv.height!==bh){cv.width=bw;cv.height=bh;}
   cv.style.height=hCss+'px';
   var x=cv.getContext('2d');
   x.setTransform(dpr,0,0,dpr,0,0);                      // dibuja en px CSS
-  return {x:x,W:wCss,H:hCss};
+  return {x:x,W:wCss,H:hCss,medido:medido};
+}
+
+/* ── EJES CON PASO REDONDO ──
+   Los rótulos salían de partir el máximo en cuatro, y eso REPITE etiquetas en
+   cuanto el dato es pequeño: con 2 h de máximo la columna de la izquierda decía
+   «2, 2, 1, 1, 0» y con 0,01 kWh/m² la derecha «0.01, 0.01, 0.01, 0.00, 0.00».
+   Un eje que repite etiquetas no está midiendo: dice cuatro veces lo mismo y
+   deja al que mira sin saber cuánto vale una división. El paso se elige de la
+   familia 1/2/5·10^k, que es la que da números que se leen de un vistazo, y
+   los decimales SALEN DEL PASO — no de un 2 fijo ni de la magnitud del dato. */
+function nicePaso(bruto){
+  if(!(bruto>0))return 1;
+  var mag=Math.pow(10,Math.floor(Math.log10(bruto))), r=bruto/mag;
+  return (r<=1?1:r<=2?2:r<=5?5:10)*mag;
+}
+function niceDec(paso){
+  return Math.max(0,Math.min(6,-Math.floor(Math.log10(paso)+1e-9)));
+}
+/* Eje de 0 a `max` con divisiones redondas y el MENOR hueco posible arriba.
+   Forzar cuatro divisiones exactas dejaba el techo hasta al doble del dato
+   —1440 h de máximo daban un eje a 2000— y ahí la barra más alta se queda a
+   media altura sin que nada lo justifique. Se elige el paso y luego las
+   divisiones que hagan falta (`n`), que pueden ser menos de las pedidas. */
+function niceEje(max,n){
+  n=n||4;
+  var paso=nicePaso((max>0?max:1)/n);
+  var k=Math.max(1,Math.ceil((max>0?max:1)/paso-1e-9));
+  return {hi:paso*k,paso:paso,n:k,dec:niceDec(paso)};
+}
+/* Dos ejes que COMPARTEN la rejilla: mismo nº de divisiones, cada uno con su
+   paso redondo. Sin esto, un eje de 3 divisiones y otro de 4 dibujarían
+   rótulos que no caen sobre ninguna línea. */
+function niceEjes2(maxA,maxB,n){
+  var A=niceEje(maxA,n), B=niceEje(maxB,n), k=Math.max(A.n,B.n);
+  A.n=B.n=k; A.hi=A.paso*k; B.hi=B.paso*k;
+  return [A,B];
+}
+/* Eje que tiene que contener el CERO (barras con signo). El nº de divisiones
+   sale del rango, no al revés: forzar cuatro obligaría a un paso no redondo. */
+function niceRango(lo,hi,n){
+  n=n||4;
+  if(!(hi>lo)){hi=(lo||0)+1;}
+  var paso=nicePaso((hi-lo)/n);
+  var a=Math.floor(lo/paso)*paso, b=Math.ceil(hi/paso)*paso;
+  var k=Math.max(1,Math.round((b-a)/paso)), t=[];
+  for(var i=0;i<=k;i++)t.push(a+i*paso);
+  return {lo:a,hi:b,paso:paso,dec:niceDec(paso),ticks:t};
 }
 
 function ord(){ return Object.keys(REP.cases).sort(); }
@@ -1708,13 +1766,15 @@ function render(){
       'resultado — para ver la máquina moverse, baja los umbrales o mete rachas en el '+
       '<b>laboratorio</b>.</div>';
   }
+  // Las tarjetas se enseñan ANTES de dibujar: un lienzo en `display:none` mide
+  // 0 de ancho y sale estirado (ver `prep2d`). Cada dibujo enseña además la
+  // suya, así que esto es cinturón sobre tirantes.
+  $('cmpCard').style.display=''; $('detCard').style.display='';
   drawWind(); drawRecurso(); drawTable(); drawBars(); drawTheta();
-  $('cmpCard').style.display='';
   var k=ord(); SEL=(SEL&&k.indexOf(SEL)>=0)?SEL:b||k[0];
   $('strip').innerHTML=k.map(function(s){
     return '<span class="seg'+(s===SEL?' on':'')+'" data-s="'+s+'"><span class="dot" style="background:'+COL[s]+'"></span>'+s+'</span>';}).join('');
   [].forEach.call($('strip').children,function(c){c.onclick=function(){SEL=this.dataset.s;render();};});
-  $('detCard').style.display='';
   drawDetail();
   setModo('ep');            // hay episodio: la escena pasa a recorrerlo
 }
@@ -1956,13 +2016,19 @@ function drawTable(){
 
 /* ---- barras: Δ POA % por estrategia ---- */
 function drawBars(){
+  // La tarjeta se enseña AQUÍ, antes de medir el lienzo: `render()` la
+  // enseñaba después de dibujar, así que la primera pasada iba contra un
+  // `clientWidth` de 0 y salía estirada. Cada dibujo se hace cargo de su
+  // tarjeta —como ya hacía `drawTheta`— para que el orden de `render()` deje
+  // de ser una dependencia invisible.
+  $('cmpCard').style.display='';
   var cv=$('bars'),_p=prep2d(cv),x=_p.x,W=_p.W,H=_p.H,L=54,R=16,T=22,B=52;
   x.clearRect(0,0,W,H);
   var k=ord(); if(!k.length)return;
   var vals=k.map(function(s){return REP.cases[s].poa_delta_pct;});
   var lo=Math.min(0,Math.min.apply(null,vals)),hi=Math.max(0,Math.max.apply(null,vals));
-  if(hi-lo<1e-6){hi=0.1;lo=-0.1;}
-  var pad=(hi-lo)*0.15; hi+=pad; lo-=pad;
+  if(hi-lo<1e-9){hi=0.1;lo=-0.1;}
+  var ejeB=niceRango(lo,hi); lo=ejeB.lo; hi=ejeB.hi;
   var gy=function(v){return H-B-((v-lo)/(hi-lo))*(H-B-T);};
   /* Los decimales salen de la MAGNITUD, no de un 2 fijo. Con deltas de
      0,003 % —que es lo normal en un año con pocos abanderamientos— toda la
@@ -1970,9 +2036,9 @@ function drawBars(){
      un cero donde hay señal es peor que no poner número. */
   var dec=decDelta();
   x.strokeStyle='#1e2a3a';x.fillStyle='#5c7189';x.font='10px '+'ui-monospace,monospace';x.lineWidth=1;
-  for(var i=0;i<=4;i++){var v=lo+(hi-lo)*i/4,y=gy(v);
+  ejeB.ticks.forEach(function(v){var y=gy(v);
     x.beginPath();x.moveTo(L,y);x.lineTo(W-R,y);x.stroke();
-    x.textAlign='right';x.fillText(v.toFixed(dec)+'%',L-6,y+3);}
+    x.textAlign='right';x.fillText(v.toFixed(ejeB.dec)+'%',L-6,y+3);});
   var y0=gy(0);x.strokeStyle='#2a3a50';x.lineWidth=1.5;x.beginPath();x.moveTo(L,y0);x.lineTo(W-R,y0);x.stroke();
   var bw=(W-L-R)/k.length;
   k.forEach(function(s,i){
@@ -2094,17 +2160,21 @@ function drawDetail(){
 }
 
 function drawMonthly(c){
+  $('detCard').style.display='';
   var cv=$('monthly'),_p=prep2d(cv),x=_p.x,W=_p.W,H=_p.H,L=48,R=52,T=22,B=26;
   x.clearRect(0,0,W,H);
   var hrs=c.hours_by_month,dl=c.poa_delta_monthly_kwh_m2.map(function(v){return -v;});  // pérdida en positivo
-  var hmax=Math.max(1,Math.max.apply(null,hrs)),dmax=Math.max(0.01,Math.max.apply(null,dl));
-  var dec=dmax<0.5?2:(dmax<5?1:0);
+  var _e2=niceEjes2(Math.max.apply(null,hrs),Math.max.apply(null,dl),4),
+      ejeH=_e2[0], ejeD=_e2[1], NDIV=ejeH.n;
+  var hmax=ejeH.hi,dmax=ejeD.hi;
   var gy=function(v){return H-B-(v/hmax)*(H-B-T);},gd=function(v){return H-B-(v/dmax)*(H-B-T);};
   x.strokeStyle='#1e2a3a';x.fillStyle='#5c7189';x.font='10px ui-monospace,monospace';x.lineWidth=1;
-  for(var i=0;i<=4;i++){var y=T+(H-B-T)*i/4;
+  for(var i=0;i<=NDIV;i++){var y=T+(H-B-T)*i/NDIV;
     x.beginPath();x.moveTo(L,y);x.lineTo(W-R,y);x.stroke();
-    x.textAlign='right';x.fillText(Math.round(hmax*(1-i/4)),L-6,y+3);
-    x.textAlign='left';x.fillStyle='#A78BFA';x.fillText((dmax*(1-i/4)).toFixed(dec),W-R+6,y+3);x.fillStyle='#5c7189';}
+    x.textAlign='right';
+    x.fillText((ejeH.paso*(NDIV-i)).toFixed(ejeH.dec),L-6,y+3);
+    x.textAlign='left';x.fillStyle='#A78BFA';
+    x.fillText((ejeD.paso*(NDIV-i)).toFixed(ejeD.dec),W-R+6,y+3);x.fillStyle='#5c7189';}
   var bw=(W-L-R)/12;
   for(var m=0;m<12;m++){
     var cx=L+bw*m+bw/2,y=gy(hrs[m]);
@@ -2122,6 +2192,7 @@ function drawMonthly(c){
 }
 
 function drawTrace(c){
+  $('detCard').style.display='';
   var cv=$('trace'),_p=prep2d(cv),x=_p.x,W=_p.W,H=_p.H,L=52,R=76,T=22,B=30;
   x.clearRect(0,0,W,H);
   var tr=c.trace;
