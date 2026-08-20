@@ -219,7 +219,10 @@ body{
 .btn.off:hover{border-color:var(--line-soft);color:var(--muted-2)}
 
 /* ---------- PLANTAS (cartera por planta) ---------- */
-.sec-title{font-family:var(--display);font-size:.8rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:4px 0 15px;display:flex;align-items:center;gap:12px}
+/* flex-wrap: sin él, en un móvil de 390 px los enlaces «▦ Cartera técnica / ▦ Layout» se salían
+   de la pantalla —el documento medía 460 px de ancho y se iba en scroll horizontal—. Ahora bajan
+   de línea. */
+.sec-title{font-family:var(--display);font-size:.8rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:4px 0 15px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .sec-title::after{content:"";flex:1;height:1px;background:var(--line-soft)}
 .sec-title .cnt{font-family:var(--mono);color:var(--muted-2);letter-spacing:.04em;font-weight:500}
 .sec-title::after{order:5}
@@ -250,10 +253,19 @@ body{
 .pviews .btn.off{opacity:.55}
 
 /* ---------- DETAIL (expanded) ---------- */
-.detail{border-top:1px solid var(--line-soft);padding:16px 18px 18px;background:var(--panel-2)}
+/* LA FICHA ABIERTA OCUPA TODA LA REJILLA. Cerrada es una tarjeta de una columna, pero abierta se
+   quedaba en esos mismos 282 px aunque la pantalla tuviera 2560, y su contenido —URL/repo, uso,
+   pendientes e historial— salía en una tira estrechísima de varias pantallas de alto. Abierta pasa
+   a fila entera y el contenido se reparte en columnas según quepa. */
+.card.open{grid-column:1/-1}
+.detail{border-top:1px solid var(--line-soft);padding:16px 18px 18px;background:var(--panel-2);
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0 26px;align-items:start}
 .detail[hidden]{display:none}
 .dgroup{margin-bottom:15px}
 .dgroup:last-child{margin-bottom:0}
+/* El historial es el bloque largo: si hay sitio de sobra se lleva dos columnas y no estira al resto */
+.detail .dgroup:last-child:nth-child(n+4){grid-column:span 2}
+@media (max-width:1100px){ .detail .dgroup:last-child:nth-child(n+4){grid-column:auto} }
 .dlabel{font-family:var(--mono);font-size:.64rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--muted-2);margin-bottom:8px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-family:var(--mono);font-size:.76rem}
 .kv dt{color:var(--muted-2)}
