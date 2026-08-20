@@ -186,6 +186,7 @@
                placeholder="Ayora, Gabès, 24019, o 41.5763, -0.7981…">
         <div id="sitioRes" class="sitiores" style="display:none"></div>
       </div>
+      <p class="tag" id="tzLbl" title="Todas las horas de la ficha van en la hora del EMPLAZAMIENTO. La física va en UTC.">UTC+0</p>
       <div class="two">
         <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="41.5763"></div>
         <div class="field"><label>Longitud °</label><input id="lon" type="number" step="0.0001" value="-0.7981"></div>
@@ -1395,14 +1396,14 @@ LOC.run=function(cfg,onStep){
    cartera-tabla.html). Los presets de abajo son el respaldo: coordenadas de los layouts reales,
    las mismas que usa el simulador de batería del gemelo. */
 var PRESETS=[
-  {n:'23003 · El Burgo I (Zaragoza, ES)',lat:41.5763,lon:-0.7981},
-  {n:'24007 · Fayón (Zaragoza, ES)',lat:41.2269,lon:0.3242},
-  {n:'24019 · San José (Arequipa, PE)',lat:-16.5958,lon:-71.8064},
-  {n:'24021 · Túnez (Gabès, TN)',lat:33.8792,lon:9.8736},
-  {n:'24025 · Ayora (Valencia, ES)',lat:39.1182,lon:-1.1599},
-  {n:'24030 · Bagnarelli (Apulia, IT)',lat:41.5156,lon:15.2676},
-  {n:'25019 · Páramo (León, ES)',lat:42.3206,lon:-5.5998},
-  {n:'Gorraiz · Navarra (ES)',lat:42.81,lon:-1.58}
+  {n:'23003 · El Burgo I (Zaragoza, ES)',lat:41.5763,lon:-0.7981,tz:'Europe/Madrid'},
+  {n:'24007 · Fayón (Zaragoza, ES)',lat:41.2269,lon:0.3242,tz:'Europe/Madrid'},
+  {n:'24019 · San José (Arequipa, PE)',lat:-16.5958,lon:-71.8064,tz:'America/Lima'},
+  {n:'24021 · Túnez (Gabès, TN)',lat:33.8792,lon:9.8736,tz:'Africa/Tunis'},
+  {n:'24025 · Ayora (Valencia, ES)',lat:39.1182,lon:-1.1599,tz:'Europe/Madrid'},
+  {n:'24030 · Bagnarelli (Apulia, IT)',lat:41.5156,lon:15.2676,tz:'Europe/Rome'},
+  {n:'25019 · Páramo (León, ES)',lat:42.3206,lon:-5.5998,tz:'Europe/Madrid'},
+  {n:'Gorraiz · Navarra (ES)',lat:42.81,lon:-1.58,tz:'Europe/Madrid'}
 ];
 var PLANTS={};
 
@@ -1455,10 +1456,10 @@ function sitiosLocales(){
   Object.keys(PLANTS).sort().forEach(function(c){
     var p=PLANTS[c];
     if(!p||p.lat==null||p.lon==null)return;
-    out.push({n:(p.nombre||'?')+' · '+c,lat:+p.lat,lon:+p.lon,src:'Cartera',cod:c});
+    out.push({n:(p.nombre||'?')+' · '+c,lat:+p.lat,lon:+p.lon,src:'Cartera',cod:c,tz:p.tz||null});
   });
   PRESETS.forEach(function(p){
-    out.push({n:p.n,lat:p.lat,lon:p.lon,src:'Presets'});
+    out.push({n:p.n,lat:p.lat,lon:p.lon,src:'Presets',tz:p.tz||null});
   });
   return out;
 }
@@ -1483,6 +1484,7 @@ function pintaSitio(){
 function eligeSitio(s){
   SITIO=s;
   if(s&&s.lat!=null){$('lat').value=(+s.lat).toFixed(4);$('lon').value=(+s.lon).toFixed(4);}
+  fijaTZ(s&&s.tz,s&&s.lon);
   $('sitioQ').value=s?s.n:'';
   $('sitioRes').style.display='none';
   pintaSitio(); saveCfg();
@@ -1523,7 +1525,8 @@ async function buscaRemoto(q){
   return (j.results||[]).map(function(x){
     var det=[x.admin1,x.country].filter(Boolean).join(', ');
     return {n:x.name+(det?' · '+det:''),lat:x.latitude,lon:x.longitude,
-            det:(x.elevation!=null?Math.round(x.elevation)+' m':''),src:'Buscados'};
+            det:[(x.elevation!=null?Math.round(x.elevation)+' m':''),x.timezone||''].filter(Boolean).join(' · '),
+            src:'Buscados',tz:x.timezone||null};
   });
 }
 
@@ -1533,7 +1536,8 @@ function buscaSitio(){
   var co=parseCoords(q);
   var grupos=[];
   if(co)grupos.push({label:'Coordenadas',items:[{n:co.lat.toFixed(4)+', '+co.lon.toFixed(4),
-      lat:co.lat,lon:co.lon,det:'tal como las has escrito',src:'Coordenadas'}]});
+      lat:co.lat,lon:co.lon,det:'tal como las has escrito · hora derivada de la longitud',
+      src:'Coordenadas',tz:null}]});
   grupos.push({label:'Cartera y presets',items:loc});
   renderSitios(grupos, q.trim().length>=3?'Buscando en Open-Meteo…':null);
   if(_sitioT)clearTimeout(_sitioT);
@@ -1578,6 +1582,7 @@ $('sitioQ').addEventListener('keydown',function(ev){
     if(!SITIO)return;
     if(Math.abs(+$('lat').value-SITIO.lat)>1e-4||Math.abs(+$('lon').value-SITIO.lon)>1e-4){
       SITIO=null;$('sitioQ').value='';pintaSitio();
+      fijaTZ(null,+$('lon').value);   // sin sitio no hay zona: se deriva y se dice
     }
   });
 });
@@ -1631,7 +1636,7 @@ function fillRosa(){
 function renderGusts(){
   if(!GUSTS.length){$('gtbl').innerHTML='<tbody><tr><td colspan="8" style="color:var(--muted-2);font-size:12px;padding:10px 4px">'+
     'Sin rachas inyectadas: se simula el viento de fondo tal cual.</td></tr></tbody>';return;}
-  var h='<thead><tr><th>Cuándo (UTC)</th><th>Pico km/h</th><th>Duración min</th><th>Forma</th><th>Viene de</th><th>×</th><th>cada h</th><th></th></tr></thead><tbody>';
+  var h='<thead><tr><th>Cuándo <span class="sn" style="margin:0">'+esc(tzSigla())+'</span></th><th>Pico km/h</th><th>Duración min</th><th>Forma</th><th>Viene de</th><th>×</th><th>cada h</th><th></th></tr></thead><tbody>';
   GUSTS.forEach(function(g,i){
     h+='<tr>'+
       '<td><input type="datetime-local" data-i="'+i+'" data-f="when" value="'+esc(g.when)+'"></td>'+
@@ -1652,10 +1657,21 @@ function renderGusts(){
   [].forEach.call($('gtbl').querySelectorAll('[data-del]'),function(b){
     b.onclick=function(){GUSTS.splice(+this.dataset.del,1);renderGusts();saveCfg();};});
 }
+/* El instante que se teclea en la tabla de rachas es HORA DEL SITIO —lo dice
+   su cabecera—. Al motor y al modelo del navegador va en UTC, que es como los
+   dos lo entienden, y la conversión se hace AQUÍ, en el borde. No dentro de la
+   física: `LOC` está careado contra el motor Python con `demo-viento.json`, y
+   cambiarle el significado a `start` rompería el careo sin que nada cantase. */
+function localAISO(v){
+  var m=String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if(!m)return v;
+  var pared=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5]);
+  return new Date(U(pared)).toISOString().slice(0,16);
+}
 function scenario(){
   var base=$('wbase').value, gust=$('wgust').checked, n=+$('stn').value||0;
   var evs=GUSTS.filter(function(g){return g.peak>0;}).map(function(g){
-    var e={start:g.when, peak_kmh:+g.peak, duration_min:+g.dur, shape:g.shape,
+    var e={start:localAISO(g.when), peak_kmh:+g.peak, duration_min:+g.dur, shape:g.shape,
            repeat:Math.max(1,+g.rep||1), every_hours:Math.max(1,+g.every||24)};
     if(g.dir!=='' && g.dir!=null)e.dir_deg=+g.dir;
     return e;});
@@ -1935,8 +1951,10 @@ function best(){ // la que menos POA pierde
 
 function render(){
   var m=REP.meteo, w=REP.wind, base=REP.baseline;
+  /* La zona va en el rótulo del contexto: una captura de esta ficha tiene que
+     poder leerse sin preguntar en qué hora están los episodios. */
   $('ctx').textContent=(REP.site.name?REP.site.name+' · ':'')+(m.source||'')+' '+(m.year||'')+
-    ' · '+m.rows+' pasos de '+Math.round(m.dt_h*60)+' min';
+    ' · '+m.rows+' pasos de '+Math.round(m.dt_h*60)+' min · horas en '+tzSigla();
   var b=best();
   $('out').innerHTML=(REP.local?localBanner():'')+'<div class="readout">'+
     ro('POA sin abanderar',fmt(base.poa_kwh_m2,0),'kWh/m²·año')+
@@ -1993,8 +2011,8 @@ function drawRecurso(){
   var anos=MULTI?MULTI.anos:null;
   var G=anos?LOC.gumbel(MULTI.maximos):null;
   var per=REP.meteo.period||[];
-  var pTxt=per.length===2?(fechaCorta(new Date(per[0]))+' '+new Date(per[0]).getUTCFullYear()+' – '+
-    fechaCorta(new Date(per[1]))+' '+new Date(per[1]).getUTCFullYear()):'';
+  var pTxt=per.length===2?(fechaCorta(L(per[0]))+' '+L(per[0]).getUTCFullYear()+' – '+
+    fechaCorta(L(per[1]))+' '+L(per[1]).getUTCFullYear()):'';
   $('recHint').textContent=(anos?anos.length+' años · '+anos[0].year+'–'+anos[anos.length-1].year:pTxt)+
     ' · '+esc(REP.meteo.source||'');
   var horasT1=w.hours_over_t1, horasT2=w.hours_over_t2;
@@ -2299,7 +2317,7 @@ function drawTheta(){
   x.textAlign='center';
   var paso=Math.max(1,Math.round(n/8));
   for(var i2=0;i2<n;i2+=paso){
-    var hh=String(TL.t[i2]).slice(11,16);
+    var hh=horaLocal(TL.t[i2]);            // hora del SITIO, no UTC
     x.beginPath();x.moveTo(gx(i2),T);x.lineTo(gx(i2),H-B);x.strokeStyle='#16202c';x.stroke();
     x.fillStyle='#5c7189';x.fillText(hh,gx(i2),H-B+14);
   }
@@ -2361,7 +2379,7 @@ function drawDetail(){
   var ep=c.top_events&&c.top_events[0];
   $('detNote').innerHTML='Arriba, el reparto del año: barras = horas abanderado por mes (eje izq.), '+
     'línea = POA perdida ese mes (eje dcho.). Abajo, el <b>episodio más caro</b> del año'+
-    (ep?' ('+esc(ep.start.slice(0,16).replace('T',' '))+', '+fmt(ep.hours,1)+' h, ráfaga de '+fmt(ep.wind_max_kmh,0)+' km/h)':'')+
+    (ep?' ('+esc(fechaHoraLocal(ep.start))+', '+fmt(ep.hours,1)+' h, ráfaga de '+fmt(ep.wind_max_kmh,0)+' km/h)':'')+
     ': viento contra umbrales, ángulo seguido frente al abanderado, y la POA de cada uno.';
 }
 
@@ -2464,7 +2482,7 @@ function drawEvents(c){
   var h='<thead><tr><th>Episodios más caros</th><th>Duración h</th><th>Parcial h</th><th>Total h</th>'+
         '<th>Ráfaga km/h</th><th>POA perdida<br>kWh/m²</th></tr></thead><tbody>';
   ev.forEach(function(e){
-    h+='<tr><td>'+esc(e.start.slice(0,16).replace('T',' '))+(e.reached_full?' <span style="color:var(--err)">▲ total</span>':'')+'</td>'+
+    h+='<tr><td>'+esc(fechaHoraLocal(e.start))+(e.reached_full?' <span style="color:var(--err)">▲ total</span>':'')+'</td>'+
        '<td>'+fmt(e.hours,1)+'</td><td>'+fmt(e.hours_partial,1)+'</td><td>'+fmt(e.hours_full,1)+'</td>'+
        '<td>'+fmt(e.wind_max_kmh,0)+'</td><td>'+fmt(e.poa_lost_kwh_m2,3)+'</td></tr>';
   });
@@ -3176,6 +3194,85 @@ function fechaLive(){
   var v=$('lDate').value, p=(v||'2023-06-21').split('-');
   return new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));
 }
+/* ═══════════════════ HORAS LOCALES DEL EMPLAZAMIENTO ═══════════════════
+   LA FÍSICA SE QUEDA EN UTC y no se toca: la posición del sol sale del
+   instante absoluto, la meteo se pide en UTC (`timezone=UTC`) y el informe
+   viaja en ISO. Lo que pasa a hora local es lo que se ENSEÑA y lo que se
+   TECLEA, que es lo único que lee una persona en la planta. Un episodio «a
+   las 15:27» en Arequipa son las 10:27 de allí: la cifra era correcta y la
+   lectura, falsa.
+
+   De dónde sale el desfase, en este orden:
+     1. la ZONA IANA del sitio (los presets la llevan; el geocodificador de
+        Open-Meteo la devuelve). Es la hora del reloj de verdad, con horario
+        de verano incluido, y la resuelve el navegador con `Intl` — sin red.
+     2. si no hay zona, se DERIVA DE LA LONGITUD (15° = 1 h). Eso es hora
+        SOLAR, no civil: en España la diferencia es de una hora en invierno y
+        de dos en verano. Por eso va DICHO donde se lee la hora, en vez de
+        pasar por hora local a secas. */
+var TZ={zona:null,fuente:'UTC',lon:0};
+
+/* Minutos que hay que SUMAR a UTC para tener la hora del sitio en ese
+   instante. Con zona IANA se pregunta al navegador —que sabe de horario de
+   verano— formateando el instante en esa zona y midiendo la diferencia. */
+function tzOffMin(d){
+  var t=(d instanceof Date)?d:new Date(d);
+  if(TZ.zona){
+    try{
+      var f=new Intl.DateTimeFormat('en-US',{timeZone:TZ.zona,hour12:false,
+        year:'numeric',month:'2-digit',day:'2-digit',
+        hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      var q={}; f.formatToParts(t).forEach(function(x){q[x.type]=x.value;});
+      var comoUTC=Date.UTC(+q.year,+q.month-1,(+q.day),(+q.hour)%24,+q.minute,+q.second);
+      return Math.round((comoUTC-t.getTime())/60000);
+    }catch(e){ /* zona desconocida: cae a la longitud, y se dice */ }
+  }
+  return Math.round((+TZ.lon||0)/15)*60;
+}
+
+/* Instante DESPLAZADO para pintarlo: sus `getUTC*` devuelven la hora de
+   pared del sitio. Se hace así, y no con `toLocaleString`, para que todo el
+   código de dibujo siga leyendo con los mismos accesores y no dependa del
+   reloj del navegador de quien mire — la ficha se abre desde Zaragoza y desde
+   Arequipa y tiene que decir lo mismo. */
+function L(d){
+  var t=(d instanceof Date)?d.getTime():Date.parse(d);
+  return new Date(t+tzOffMin(new Date(t))*60000);
+}
+/* El camino de vuelta: una hora de pared del sitio -> instante UTC. El
+   desfase depende del instante, así que se aproxima y se corrige una vez;
+   sin esa segunda pasada, el día del cambio de hora sale desplazado. */
+function U(msPared){
+  var o1=tzOffMin(new Date(msPared));
+  var o2=tzOffMin(new Date(msPared-o1*60000));
+  return msPared-o2*60000;
+}
+function tzSigla(){
+  var o=tzOffMin(new Date()), s=o<0?'-':'+', a=Math.abs(o);
+  return 'UTC'+s+Math.floor(a/60)+(a%60?':'+('0'+(a%60)).slice(-2):'');
+}
+function tzEtiqueta(){
+  return tzSigla()+' · '+(TZ.zona?TZ.zona:'derivada de la longitud (hora SOLAR, sin horario de verano)');
+}
+/* Fija la zona del sitio elegido. Sin zona declarada NO se inventa una: se
+   deriva de la longitud y se dice, porque hora solar y hora civil no son lo
+   mismo y confundirlas es justo el error que esto viene a arreglar. */
+function fijaTZ(zona,lon){
+  TZ.zona=zona||null; TZ.lon=(lon!=null?+lon:+$('lon').value)||0;
+  TZ.fuente=TZ.zona?'IANA':'longitud';
+  var el=$('tzLbl'); if(el)el.textContent=tzEtiqueta();
+  if(typeof liveLbl==='function')liveLbl();
+}
+/* «14 jun 15:27» en hora del sitio, de un ISO en UTC. */
+function fechaHoraLocal(iso){
+  var d=L(iso);
+  return fechaCorta(d)+' '+hhmm(d.getUTCHours()*60+d.getUTCMinutes());
+}
+function horaLocal(iso){
+  var d=L(iso);
+  return hhmm(d.getUTCHours()*60+d.getUTCMinutes());
+}
+
 function fechaCorta(d){return d.getUTCDate()+' '+MESES3[d.getUTCMonth()];}
 function fechaISO(d){
   return d.getUTCFullYear()+'-'+('0'+(d.getUTCMonth()+1)).slice(-2)+'-'+('0'+d.getUTCDate()).slice(-2);
@@ -3208,7 +3305,12 @@ function liveTick(dtReal){
   }
   var lat=+$('lat').value, lon=+$('lon').value, latR=lat*LOC.D2R;
   var mi=LIVE.minF;
-  var when=new Date(fechaLive().getTime()+mi*60000);
+  /* `lDate` y el deslizador de la hora son HORA DEL SITIO —es lo que se lee
+     en el rótulo—, así que para preguntarle al sol hay que volver a UTC. Sin
+     esta vuelta, poner las 12:00 en Arequipa colocaba el sol de las 12:00 UTC,
+     que allí son las 7 de la mañana: el seguidor salía tumbado al este a
+     mediodía y la escena mentía sin que nada cantara. */
+  var when=new Date(U(fechaLive().getTime()+mi*60000));
   var P=LOC.sun(when,latR,lon);
   var full=+$('maxang').value, gcr=+$('gcr').value, bt=$('bt').checked;
   var tgt=LOC.theta(P.el,P.az,gcr,full,bt);
@@ -3277,7 +3379,7 @@ function update3D(i){
   tiles(ang,modos,poa,poa.BASE);
   $('tpos').value=i;
   var ts=new Date(TL.t[i]);
-  $('tlbl').textContent=fechaCorta(ts)+' · '+hhmm(ts.getUTCHours()*60+ts.getUTCMinutes())+
+  $('tlbl').textContent=fechaHoraLocal(ts)+
     ' · '+fmt((TL.wind_ms[i]||0)*3.6,0)+' km/h';
 }
 function playToggle(){
@@ -3362,7 +3464,7 @@ $('csv').onchange=function(){
       HSU=LOC.parseCSV(fr.result);
       var d0=HSU.t[0],d1=HSU.t[HSU.t.length-1];
       $('out').innerHTML='<div class="warn"><b>HSU cargada.</b> '+HSU.t.length+' muestras de '+
-        fechaCorta(d0)+' '+d0.getUTCFullYear()+' a '+fechaCorta(d1)+' '+d1.getUTCFullYear()+
+        fechaCorta(L(d0))+' '+L(d0).getUTCFullYear()+' a '+fechaCorta(L(d1))+' '+L(d1).getUTCFullYear()+
         ' · viento leído en <b>'+HSU.unidad+'</b>'+
         (HSU.tiene_rafaga?' · trae ráfaga':' · sin ráfaga')+'. Pulsa <b>Simular</b>.</div>';
     }catch(e){
@@ -3449,7 +3551,8 @@ window.addEventListener('resize',function(){
     try{drawTheta();}catch(e){}
   },120);
 });
-fillRosa(); fillPresets(); loadCfg(); meteoTag(); loadPlants(); renderGusts();
+fillRosa(); fillPresets(); loadCfg(); meteoTag(); loadPlants();
+fijaTZ(SITIO&&SITIO.tz,+$('lon').value); renderGusts();
 /* La escena se monta AL ABRIR, no al terminar de simular: era la pega — el
    render solo aparecía después de un año entero de cálculo, y hasta entonces
    la ficha no enseñaba nada que se moviera. */
