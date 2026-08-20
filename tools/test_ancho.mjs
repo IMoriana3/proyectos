@@ -1,0 +1,101 @@
+/* ¿APROVECHAN EL ANCHO DE LA PANTALLA? Mide, en píxeles y en una pantalla ancha de verdad, cuánto
+   del ancho usa cada página y cuánto se queda en márgenes muertos. No mira el CSS: mira lo pintado.
+   De cada página informa del contenedor de contenido más ancho y de quién le pone el techo.
+
+       node tools/test_ancho.mjs                      todas, a 1920 y a 2560
+       node tools/test_ancho.mjs --ancho=1920         solo una anchura
+       node tools/test_ancho.mjs --solo=proyectos     solo las páginas de un repo                */
+import { createRequire } from 'node:module';
+const chromium = (() => {
+  for (const d of ['./', '../node_modules/', '../../Cobertura-Zigbee/node_modules/', '../../cobertura-zigbee/node_modules/'])
+    try { const c = createRequire(new URL(d, import.meta.url))('playwright-core').chromium; if (c && c.launch) return c; } catch (e) { }
+  console.error('falta playwright-core: ten al lado el repo cobertura-zigbee'); process.exit(2);
+})();
+const EXE = '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell';
+const RAIZ = '/home/user';
+const arg = n => (process.argv.find(a => a.startsWith('--' + n + '=')) || '').split('=')[1];
+const ANCHOS = arg('ancho') ? [+arg('ancho')] : [1920, 2560];
+const SOLO = arg('solo');
+
+/* Un servidor por repo: las páginas piden ficheros del suyo por ruta relativa. */
+const PAGINAS = [
+  ['proyectos', 8201, ['index.html', 'cartera-tabla.html', 'layout.html', 'sim-solar.html']],
+  ['Cobertura-Zigbee', 8202, ['index.html', 'informe.html', 'modbus.html', 'crear.html', 'nuevo.html', 'topografico.html', 'backtracking.html', 'overcast.html']],
+  ['Siting', 8203, ['index.html']],
+  ['SCADA', 8204, ['index.html']],
+  ['Gemelo-digital', 8205, ['index.html', 'bateria.html', 'juegos/index.html']],
+  ['Visor-San-Jose', 8206, ['index.html', 'san-jose/index.html', 'ayora/index.html', 'asbuilt/index.html']],
+  ['checklist-solar-v2', 8207, ['index.html', 'dashboard.html', 'import.html']],
+  ['gorraiz-dashboard', 8208, ['index.html']],
+].filter(p => !SOLO || p[0].toLowerCase() === SOLO.toLowerCase());
+
+import { spawn } from 'node:child_process';
+const servidores = PAGINAS.map(([repo, puerto]) =>
+  spawn('python3', ['-m', 'http.server', String(puerto), '--directory', RAIZ + '/' + repo], { stdio: 'ignore' }));
+await new Promise(r => setTimeout(r, 1500));
+
+/* Qué se mide: la CAJA QUE OCUPA EL CONTENIDO, de su borde izquierdo pintado al derecho. Medir
+   "el elemento más ancho" engañaba: la cabecera va a todo lo ancho y tapaba que el contenido de
+   debajo se quedaba en la mitad. Se ignora lo fijo (barras flotantes) y lo que no pinta nada. */
+const MIDE = () => {
+  const vw = document.documentElement.clientWidth;
+  let izq = Infinity, der = -Infinity, ancho = null;
+  const pinta = e => {
+    if (e.tagName === 'CANVAS' || e.tagName === 'IMG' || e.tagName === 'SVG' || e.tagName === 'TABLE'
+        || e.tagName === 'INPUT' || e.tagName === 'BUTTON' || e.tagName === 'SELECT') return true;
+    for (const n of e.childNodes) if (n.nodeType === 3 && n.textContent.trim()) return true;
+    return false;
+  };
+  for (const e of document.querySelectorAll('body *')) {
+    const s = getComputedStyle(e);
+    if (s.display === 'none' || s.visibility === 'hidden' || +s.opacity === 0) continue;
+    let fijo = false;
+    for (let p = e; p && p !== document.body; p = p.parentElement)
+      if (getComputedStyle(p).position === 'fixed') { fijo = true; break; }
+    /* Fuera la cabecera, la navegación y el pie: van a todo lo ancho por diseño y tapaban que el
+       CONTENIDO de debajo se quedara en la mitad, que es lo que se quiere ver. */
+    if (fijo || e.closest('header,nav,footer,[role=banner],[role=contentinfo]') || !pinta(e)) continue;
+    const r = e.getBoundingClientRect();
+    if (r.width < 4 || r.height < 4 || r.bottom < 0) continue;
+    if (r.left < izq) izq = r.left;
+    if (r.right > der) { der = r.right; ancho = e; }
+  }
+  const dime = e => e ? (e.tagName.toLowerCase() + (e.id ? '#' + e.id : '')
+    + (e.className && typeof e.className === 'string' ? '.' + e.className.trim().split(/\s+/).slice(0, 2).join('.') : '')) : '(nada)';
+  /* quién le pone el techo al contenido: el primer ancestro con max-width por debajo del hueco */
+  let techo = null;
+  for (let e = ancho; e && e !== document.body; e = e.parentElement) {
+    const mw = getComputedStyle(e).maxWidth;
+    if (mw !== 'none' && parseFloat(mw) < vw - 4) { techo = dime(e) + ' max-width:' + mw; break; }
+  }
+  return { vw, izq: Math.round(izq), der: Math.round(der), usa: Math.round(der - izq),
+    quien: dime(ancho), techo, scroll: document.documentElement.scrollWidth > vw + 1 };
+};
+
+const b = await chromium.launch({ executablePath: EXE, args: ['--use-angle=swiftshader', '--no-sandbox', '--disable-dev-shm-usage'] });
+const flojas = [];
+for (const ancho of ANCHOS) {
+  console.log(`\n=== ${ancho} px de ancho ===`);
+  for (const [repo, puerto, pags] of PAGINAS) {
+    for (const p of pags) {
+      const ctx = await b.newContext({ viewport: { width: ancho, height: 1080 } });
+      await ctx.addInitScript(() => { try { localStorage.cobertura_offline = '1'; } catch (e) { } });
+      const pg = await ctx.newPage();
+      let m = null;
+      try {
+        await pg.goto(`http://localhost:${puerto}/${p}`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await pg.waitForTimeout(2500);
+        m = await pg.evaluate(MIDE);
+      } catch (e) { m = { err: e.message.split('\n')[0] }; }
+      await ctx.close();
+      if (m.err) { console.log(`  ??    ${repo}/${p}  ${m.err}`); continue; }
+      const uso = m.usa / m.vw;
+      const marca = uso >= 0.90 ? 'ok   ' : uso >= 0.75 ? 'justo' : 'FLOJA';
+      if (uso < 0.90) flojas.push({ repo, p, ancho, uso, m });
+      console.log(`  ${marca} ${(repo + '/' + p).padEnd(38)} usa ${String(m.usa).padStart(5)} de ${m.vw} (${(uso * 100).toFixed(0)} %) · margenes ${m.izq}|${m.vw - m.der}  ${m.techo ? '← ' + m.techo : m.quien}${m.scroll ? '  ⚠ scroll horizontal' : ''}`);
+    }
+  }
+}
+await b.close();
+servidores.forEach(s => s.kill());
+console.log('\n' + (flojas.length ? flojas.length + ' medición(es) por debajo del 90 % del ancho' : 'todas por encima del 90 %'));

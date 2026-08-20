@@ -33,7 +33,9 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
    pantalla usaba poco más de la mitad y dejaba cientos de píxeles muertos a cada lado; con solo
    `vw` se pegaría a los bordes en pantallas enormes. El 94vw deja aire y el tope evita la línea
    kilométrica. Mismo criterio que el Panel. */
-.wrap{max-width:min(1560px,94vw);margin:0 auto;padding:20px 18px 60px}
+/* mismo tope que el Panel: a 1560 px fijos se quedaban 215 px muertos a cada lado en una
+   pantalla de 1920, y la escena es justo lo que agradece el ancho */
+.wrap{max-width:min(2560px,94vw);margin:0 auto;padding:20px 18px 60px}
 .grid{display:grid;grid-template-columns:340px 1fr;gap:18px}
 @media(max-width:820px){.grid{grid-template-columns:1fr}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
