@@ -612,6 +612,70 @@ const SONDA = `(() => {
   check('cambiar el emplazamiento avisa de que las temperaturas son las de antes',
     /las de/i.test(inval) && /antes/i.test(inval), inval.slice(0, 160));
 
+  // ── que se NOTE que los botones han hecho algo ──
+  // Cambiaban un campo de 660 a 645 y nada más: con un módulo cuyas medidas
+  // caen en las canónicas, la pantalla no se movía y el botón parecía muerto.
+  const modAntes = await p.evaluate(() => document.getElementById('tkMod').textContent);
+  check('una familia sin módulo del catálogo dice que está tecleado a mano',
+    /a mano/i.test(modAntes), modAntes.slice(0, 120));
+  await p.click('#mfAplFx');
+  await p.waitForTimeout(400);
+  const modTras = await p.evaluate(() => ({
+    fx: document.getElementById('fxMod').textContent,
+    tk: document.getElementById('tkMod').textContent,
+    nombre: MODSEL.name }));
+  check('tras «Usar en la FIJA», la fija DICE qué módulo lleva',
+    modTras.fx.indexOf(modTras.nombre) >= 0 && /Wp/.test(modTras.fx), modTras.fx.slice(0, 140));
+  check('y declara si las medidas son del catálogo o las canónicas',
+    /catálogo|canónicas/i.test(modTras.fx), modTras.fx.slice(0, 140));
+  check('el TRACKER sigue diciendo que el suyo es a mano', /a mano/i.test(modTras.tk),
+    modTras.tk.slice(0, 120));
+  const modMano = await p.evaluate(() => {
+    const e = document.getElementById('fxModL');
+    e.value = '2.100'; e.dispatchEvent(new Event('input', { bubbles: true }));
+    return document.getElementById('fxMod').textContent;
+  });
+  check('tocar las medidas a mano deshace la marca (no se llama «AEG» a otro módulo)',
+    /a mano/i.test(modMano), modMano.slice(0, 120));
+
+  // ── el string del sizing baja a los configuradores ──
+  // «Módulos por string» está en dos sitios y significa lo mismo: si dicen
+  // cosas distintas, hay una fila dibujada que no se puede conectar.
+  const coh = await p.evaluate(() => {
+    const lat = document.getElementById('lat');
+    lat.value = '37.3891'; lat.dispatchEvent(new Event('change', { bubbles: true }));
+    const ml = document.getElementById('fxModL');
+    ml.value = '2.382'; ml.dispatchEvent(new Event('change', { bubbles: true }));
+    [['szTmin', '-10'], ['szTmax', '70']].forEach(([i, v]) => {
+      const e = document.getElementById(i);
+      e.value = v; e.dispatchEvent(new Event('change', { bubbles: true })); });
+    document.getElementById('fxModsStr').value = '28';
+    document.getElementById('fxModsStr').dispatchEvent(new Event('change', { bubbles: true }));
+    return { n: +document.getElementById('szN').value,
+             fx: +document.getElementById('fxModsStr').value,
+             txt: document.getElementById('szCoherencia').textContent };
+  });
+  check('con el configurador y el sizing en desacuerdo, la ficha lo DICE (' +
+    coh.fx + ' vs ' + coh.n + ')', coh.n !== coh.fx && /sizing dice/i.test(coh.txt),
+    coh.txt.slice(0, 180));
+  const tras = await p.evaluate(() => {
+    document.getElementById('szAplFx').click();
+    return { fx: +document.getElementById('fxModsStr').value,
+             n: +document.getElementById('szN').value,
+             txt: document.getElementById('szCoherencia').textContent };
+  });
+  check('el botón baja el string del sizing a la FIJA (' + coh.fx + ' → ' + tras.fx + ')',
+    tras.fx === tras.n, JSON.stringify(tras));
+  const ok2 = await p.evaluate(() => {
+    document.getElementById('szAplTk').click();
+    return { tk: +document.getElementById('tkModsStr').value,
+             fx: +document.getElementById('fxModsStr').value,
+             n: +document.getElementById('szN').value,
+             txt: document.getElementById('szCoherencia').textContent };
+  });
+  check('y al TRACKER', ok2.tk === ok2.n, JSON.stringify(ok2));
+  check('con los dos de acuerdo, lo dice en verde', /✓/.test(ok2.txt), ok2.txt.slice(0, 120));
+
   check('sin errores de JS', errs.length === 0, errs.join(' | '));
   await b.close();
   console.log('\n' + (ko ? 'FALLOS: ' + ko + ' (de ' + (ok + ko) + ')' : 'OK — ' + ok + '/' + ok + ' comprobaciones'));

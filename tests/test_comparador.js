@@ -259,8 +259,19 @@ check('el óptimo neto nunca puede pasarse del de transposición (' +
   js.fija_optima.tilt + '° ≤ ' + js.fija_optima.tiltSinSombra + '°)',
   js.fija_optima.tilt <= js.fija_optima.tiltSinSombra);
 check('el aviso da la diferencia MEDIDA, no un «1-3°» de memoria',
-  rep.avisos.some(a => /saldría\s+\d+°/.test(a)) && !rep.avisos.some(a => /1-3°/.test(a)),
+  rep.avisos.some(a => /sería\s+<b>\d+°/.test(a)) && !rep.avisos.some(a => /1-3°/.test(a)),
   rep.avisos.find(a => /tilt óptimo/.test(a)) || '(sin aviso)');
+// Y en cristiano: el aviso tiene que decir QUÉ es el número antes de cómo se
+// saca. «el NETO, barrido CON sombra» era jerga que no se entiende sola.
+const avTilt = rep.avisos.find(a => /tilt óptimo/.test(a)) || '';
+check('el aviso del tilt no usa jerga («el NETO», «barrido»)',
+  !/\bel NETO\b/.test(avTilt) && !/barrido/i.test(avTilt), avTilt.slice(0, 140));
+check('y dice qué es el número: el que más energía deja en ESTA implantación',
+  /más energía deja/i.test(avTilt) && /sombra que cada fila/i.test(avTilt), avTilt.slice(0, 140));
+// el aviso de la E-O repetía «SIN sombreado entre filas» dos veces en la misma frase
+const avEW = rep.avisos.find(a => /Este-Oeste/.test(a)) || '';
+check('el aviso de la E-O no se repite a sí mismo',
+  (avEW.match(/sombra entre filas|sombreado entre filas/gi) || []).length <= 1, avEW.slice(0, 160));
 
 // Y la física detrás: apretar las filas TIENE que bajar el óptimo neto, sin
 // mover el de transposición (que no sabe de vecinas).
