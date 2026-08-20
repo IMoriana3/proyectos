@@ -160,6 +160,77 @@ C.structures.forEach(k => {
     dDelta < TOL_DELTA, a.delta.toFixed(2) + ' vs ' + b.delta_pct.toFixed(2));
 });
 
+// ── 5b) LOS BARRIDOS ──
+// La rejilla de pitch se exige EXACTA contra la de `pitch_sweep._generate_step_pitches`
+// (son las cifras de `test_pitch_sweep.py` del core): es aritmética, no física.
+const gr = (a, b, c) => FIS.pasosPitch(a, b, c);
+check('rejilla 5,0→6,0 cada 10 cm: 11 puntos exactos',
+  gr(5, 6, 10).length === 11 && Math.abs(gr(5, 6, 10)[5] - 5.5) < 1e-9,
+  gr(5, 6, 10).join(','));
+check('rejilla 5,0→6,0 cada 25 cm: [5, 5.25, 5.5, 5.75, 6]',
+  JSON.stringify(gr(5, 6, 25)) === JSON.stringify([5, 5.25, 5.5, 5.75, 6]),
+  gr(5, 6, 25).join(','));
+check('el extremo se fuerza si el paso no cae justo',
+  gr(5, 6, 40)[gr(5, 6, 40).length - 1] === 6, gr(5, 6, 40).join(','));
+[[[-1, 6, 10], '> 0'], [[5, 6, 0], 'paso'], [[7, 6, 10], 'mínimo']].forEach(([args, txt]) => {
+  let msg = '';
+  try { gr.apply(null, args); } catch (e) { msg = e.message; }
+  check('rejilla imposible (' + args.join(',') + ') se rechaza: «' + txt + '»',
+    msg.indexOf(txt) >= 0, msg || '(no lanzó)');
+});
+
+// Y la FÍSICA del barrido, con las mismas exigencias que el core se pone a sí
+// mismo en `test_pitch_sweep.py`: el GCR baja con el pitch, la POA de módulo
+// sube y la densidad de suelo baja. Si alguna se diera la vuelta, el barrido
+// estaría diciendo lo contrario de lo que la geometría obliga.
+const spTk = FIS.spec('tracker_hsat');
+const bp = FIS.barridoPitch(spTk, M, cfg, { min: 4.5, max: 7.5, pasoCm: 50 });
+check('el barrido da ' + bp.puntos.length + ' puntos (4,5→7,5 cada 50 cm)', bp.puntos.length === 7);
+check('el GCR baja estrictamente con el pitch',
+  bp.puntos.every((q, i) => i === 0 || q.gcr < bp.puntos[i - 1].gcr));
+check('la POA por m² de MÓDULO sube con el pitch (' +
+  bp.puntos[0].poa.toFixed(1) + ' → ' + bp.puntos[6].poa.toFixed(1) + ')',
+  bp.puntos[6].poa > bp.puntos[0].poa);
+check('la densidad por m² de SUELO baja con el pitch (' +
+  bp.puntos[0].suelo.toFixed(1) + ' → ' + bp.puntos[6].suelo.toFixed(1) + ')',
+  bp.puntos[6].suelo < bp.puntos[0].suelo);
+const bpNb = FIS.barridoPitch(FIS.spec('tracker_hsat_nobt'), M, cfg,
+  { min: 4.5, max: 7.5, pasoCm: 50 });
+check('sin backtracking, abrir el pitch QUITA sombra (' + bpNb.puntos[0].sombra.toFixed(2) +
+  ' → ' + bpNb.puntos[6].sombra.toFixed(2) + ' %)',
+  bpNb.puntos[6].sombra < bpNb.puntos[0].sombra - 0.1);
+check('con backtracking la sombra es ~0 a cualquier pitch (por eso existe)',
+  bp.puntos.every(q => q.sombra < 0.5));
+// Los DOS máximos son de dos preguntas distintas, y en pitch caen en extremos
+// opuestos del rango: ésa es toda la razón de no declarar un óptimo único.
+check('el máximo de POA cae en el pitch más abierto (' + bp.maxPoa.pitch + ' m)',
+  bp.maxPoa.pitch === 7.5);
+check('el máximo de suelo cae en el más apretado (' + bp.maxSuelo.pitch + ' m)',
+  bp.maxSuelo.pitch === 4.5);
+check('el relativo vale 0 en el pitch CONFIGURADO, no en un 6,00 fijo',
+  Math.abs(bp.puntos.find(q => Math.abs(q.pitch - bp.actual) < 1e-6).rel) < 1e-9,
+  String(bp.actual));
+check('el coste de apretar 1 m es negativo y el terreno ahorrado positivo (' +
+  bp.costeM1.toFixed(2) + ' % POA / ' + bp.sueloM1.toFixed(0) + ' % suelo)',
+  bp.costeM1 < 0 && bp.sueloM1 > 0);
+// un GCR > 1 no es un punto malo: es geometría imposible, y se marca
+const bpMal = FIS.barridoPitch(spTk, M, cfg, { min: 1.0, max: 3.0, pasoCm: 100 });
+check('los pitches con GCR > 1 se marcan imposibles y no pueden ganar',
+  bpMal.hayImposibles && !bpMal.maxSuelo.imposible && bpMal.maxSuelo.gcr <= 1,
+  JSON.stringify(bpMal.puntos.map(q => [q.pitch, +q.gcr.toFixed(2), q.imposible])));
+
+// El barrido de TILT sí tiene óptimo interior — es lo que lo distingue del de
+// pitch, y por eso uno declara ganador y el otro no.
+const bt = FIS.barridoTilt(FIS.spec('fija_proyecto'), M, cfg, { min: 0, max: 60, paso: 5 });
+check('el barrido de tilt da 13 puntos (0..60 cada 5°)', bt.puntos.length === 13);
+check('el óptimo de tilt es INTERIOR, no un extremo (' + bt.optimo.tilt + '°)',
+  bt.optimo.tilt > 0 && bt.optimo.tilt < 60);
+check('el óptimo del barrido cuadra con FIS.tiltOptimo (±5°)',
+  Math.abs(bt.optimo.tilt - js.fija_optima.tilt) <= 5,
+  bt.optimo.tilt + ' vs ' + js.fija_optima.tilt);
+check('el relativo del tilt es 0 en el óptimo y negativo fuera',
+  Math.abs(bt.optimo.rel) < 1e-9 && bt.puntos.every(q => q.rel <= 1e-9));
+
 // ── 6) la física está viva, no devuelve constantes ──
 check('el backtracking deja la sombra casi a cero (' + js.tracker_hsat.sombra.toFixed(2) + ' %)',
   js.tracker_hsat.sombra < 0.5);
