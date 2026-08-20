@@ -136,6 +136,22 @@ canvas.panning{cursor:grabbing}
 
     <div class="card">
       <h2><span class="ic">▦</span> Parcela</h2>
+      <!-- El emplazamiento va FUERA del modo de parcela: es lo PRIMERO, se defina
+           luego la parcela como se defina. Estaba dentro del panel «por cotas» y
+           al elegir «dibujarla sobre el lienzo» desaparecía — justo cuando más
+           falta hace, porque es lo que te lleva hasta tu finca. -->
+      <div class="field sitiobox">
+        <label>Emplazamiento <span class="sn" id="sitioSel">manual</span></label>
+        <input id="sitioQ" type="search" autocomplete="off" spellcheck="false"
+               placeholder="Gabès, Ayora, 24019, o 33.8792, 9.8736…">
+        <div id="sitioRes" class="sitiores" style="display:none"></div>
+        <div class="tip">Cartera y presets primero (van sin red), coordenadas pegadas tal cual, y si no, el geocodificador de Open-Meteo.</div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="41.57634"></div>
+        <div class="field"><label>Longitud °</label><input id="lon" type="number" step="0.0001" value="-0.79814"></div>
+      </div>
+
       <div class="field"><label>Cómo defines la parcela</label>
         <select id="parcelMode">
           <option value="rect">Rectángulo por centro y cotas</option>
@@ -144,17 +160,6 @@ canvas.panning{cursor:grabbing}
         </select></div>
 
       <div id="paneRect">
-        <div class="field sitiobox">
-          <label>Emplazamiento <span class="sn" id="sitioSel">manual</span></label>
-          <input id="sitioQ" type="search" autocomplete="off" spellcheck="false"
-                 placeholder="Gabès, Ayora, 24019, o 33.8792, 9.8736…">
-          <div id="sitioRes" class="sitiores" style="display:none"></div>
-          <div class="tip">Cartera y presets primero (van sin red), coordenadas pegadas tal cual, y si no, el geocodificador de Open-Meteo.</div>
-        </div>
-        <div class="two">
-          <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="41.57634"></div>
-          <div class="field"><label>Longitud °</label><input id="lon" type="number" step="0.0001" value="-0.79814"></div>
-        </div>
         <div class="two">
           <div class="field"><label>Ancho E-O (m)</label><input id="pw" type="number" step="10" value="600"></div>
           <div class="field"><label>Alto N-S (m)</label><input id="ph" type="number" step="10" value="450"></div>
@@ -175,7 +180,7 @@ canvas.panning{cursor:grabbing}
       </div>
 
       <div id="paneDraw" style="display:none">
-        <p class="note" style="margin-top:0">Clic en el lienzo para ir poniendo vértices; <b>doble clic</b> cierra el polígono. Arrastra para mover el mapa y usa la rueda para acercarte a tu finca.</p>
+        <p class="note" style="margin-top:0">Busca tu emplazamiento arriba, acércate con la rueda hasta ver la finca y pulsa <b>Dibujar parcela</b>: clic por vértice y <b>doble clic</b> para cerrar. Arrastrar mueve el mapa sin poner vértices.</p>
         <div class="btnrow">
           <button class="btn ghost small" id="drawStart">✏️ Dibujar parcela</button>
           <button class="btn ghost small" id="drawClear">🗑️ Limpiar</button>
@@ -1234,6 +1239,14 @@ function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function pintaSitio(){$('sitioSel').textContent=SITIO?SITIO.n:'manual';}
 
+/* Centrar la vista en el sitio elegido SIN tocar lo que haya dibujado. En modo
+   «por cotas» la parcela se mueve con el centro y basta con encajar; en dibujo o
+   GeoJSON la parcela es la que es —puede estar a cientos de km— así que lo que
+   se hace es VOLAR al sitio, que es lo que uno espera al elegirlo. */
+function vuelaASitio(lat,lon){
+  VIEW.cx=lon2u(lon); VIEW.cy=lat2u(lat);
+  if(VIEW.z<16)VIEW.z=16;
+}
 function eligeSitio(s){
   SITIO=s;
   if(s&&s.lat!=null){$('lat').value=(+s.lat).toFixed(5);$('lon').value=(+s.lon).toFixed(5);}
@@ -1242,7 +1255,10 @@ function eligeSitio(s){
   if(s&&s.pitch&&isFinite(s.pitch))$('pitch').value=s.pitch;
   $('sitioQ').value=s?s.n:'';
   $('sitioRes').style.display='none';
-  pintaSitio(); buildParcel(); encaja(); draw();
+  pintaSitio(); buildParcel();
+  if($('parcelMode').value==='rect')encaja();
+  else if(s&&s.lat!=null)vuelaASitio(+s.lat,+s.lon);
+  draw();
 }
 
 function renderSitios(grupos,aviso){
@@ -1392,8 +1408,13 @@ function tagParcel(){
   var ha=Math.abs(LAY.ringArea(utm))/1e4;
   var hh=HOLES.reduce(function(a,h){var u=h.map(function(c){var z=LAY.utmZone(c[0]);return LAY.utmFwd(c[0],c[1],z,c[1]<0);});return a+Math.abs(LAY.ringArea(u))/1e4;},0);
   var nEx=HOLES.length+EXCL.length;
+  // En modo dibujo, sin nada dibujado, la parcela vigente sigue siendo el
+  // rectángulo por cotas: decir «4 vértices · 27,17 ha» a secas justo debajo de
+  // «Dibujar parcela» se lee como que ya la has dibujado tú.
+  var deCotas=($('parcelMode').value==='draw'&&!(DRAW&&DRAW.length>=3));
   $('parcelTag').textContent=PARCEL.length+' vértices · '+(ha-hh).toFixed(2)+' ha'+
-    (nEx?(' · '+nEx+' exclusión'+(nEx>1?'es':'')):'');
+    (nEx?(' · '+nEx+' exclusión'+(nEx>1?'es':'')):'')+
+    (deCotas?' · del rectángulo por cotas':'');
 }
 $('parcelMode').onchange=function(){
   $('paneRect').style.display=this.value==='rect'?'':'none';
@@ -1404,7 +1425,11 @@ $('parcelMode').onchange=function(){
   else draw();
   if(this.value==='draw'&&!DRAW){DRAW=[];}
 };
-['lat','lon','pw','ph','prot'].forEach(function(id){$(id).addEventListener('change',function(){buildParcel();encaja();draw();});});
+['lat','lon','pw','ph','prot'].forEach(function(id){$(id).addEventListener('change',function(){
+  buildParcel();
+  if($('parcelMode').value==='rect')encaja();
+  else if(id==='lat'||id==='lon')vuelaASitio(+$('lat').value,+$('lon').value);
+  draw();});});
 $('geoFileBtn').onclick=function(){$('geoFile').click();};
 $('geoFile').onchange=function(e){var f=e.target.files[0];if(!f)return;var rd=new FileReader();
   rd.onload=function(ev){$('geotxt').value=ev.target.result;applyGeo();};rd.readAsText(f);$('geoFile').value='';};

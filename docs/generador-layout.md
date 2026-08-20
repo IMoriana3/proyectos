@@ -22,6 +22,12 @@ por Wp; no hay meteo, ni sombras, ni energía.
 
 ## Dónde: el buscador de emplazamiento
 
+El emplazamiento es **lo primero**, se defina luego la parcela como se defina: el buscador y las
+coordenadas están fuera del selector de modo. (Estuvieron dentro del panel «por cotas», y al elegir
+«dibujarla sobre el lienzo» desaparecían — justo cuando más falta hacen, porque son lo que te lleva
+hasta tu finca.) Elegir un sitio en modo dibujo o GeoJSON **vuela** allí sin tocar lo que tengas
+dibujado; en modo «por cotas» la parcela se mueve con el centro.
+
 Antes esto era un desplegable con la cartera, así que implantar en un sitio que **todavía no es una
 planta** obligaba a teclear latitud y longitud a mano — y una parcela sin proyecto es justo lo que
 se dibuja aquí. Es el mismo componente que el de [Viento & Abanderamiento](viento.md), con sus tres
