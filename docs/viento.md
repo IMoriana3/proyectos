@@ -280,6 +280,25 @@ solape máximo pasa de 26,4 m a 0,3.
 | Fayón | 55,2 · 46,0 | 16,2 m | 0 |
 | San José | 74,2 · 39,7 · 38,6 · 37,4 | 26,4 m | 0,3 m |
 
+### La sombra no cruza de un bloque a otro
+
+Cada bloque de la comparativa es la **misma planta** con otra estrategia, no seis plantas vecinas.
+Una sombra que salta de uno a otro es un artefacto, y además oscurece justo lo que se compara.
+
+Con una sola luz no hay forma de impedirlo: las capas de three.js filtran contra la **cámara
+principal**, no contra quién proyecta. Así que cada bloque lleva su propia direccional, en su propia
+capa, con la caja de sombras ajustada a él y su propio trozo de suelo — el suelo global no puede
+recibir seis sombras sin recibir también seis veces la luz.
+
+Y el **hueco entre bloques se deriva del alcance de esa caja**, no al revés. La caja tiene que
+contener el bloque desde cualquier rumbo del sol (la semidiagonal), y para que el vecino no entre en
+ella el hueco debe valer al menos lo que la caja sobresale. Eligiendo primero el hueco no hay
+solución: con bloques de 120 m y huecos de 18 **no existe** ninguna caja que contenga el bloque y
+excluya al vecino.
+
+En la escena de PLANTA no aplica: ahí sí hay una sola planta y la sombra entre seguidores es real —
+es la que se mira.
+
 ## El seguidor se mueve a 0,17 °/s
 
 El eje no teletransporta. La ficha aplica el lazo de control canónico —banda muerta de 1° y

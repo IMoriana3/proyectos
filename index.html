@@ -838,7 +838,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/sim-viento.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-19",
-    version: "1.10",
+    version: "1.10.1",
     docId: "viento",
     docUrl: "",
     download: "",
@@ -873,6 +873,7 @@ const PROJECTS = [
       { done:false, text:"La velocidad de suelta del pasivo es un SUSTITUTO declarado de la carga de desembrague, no una medida: hace falta el par real y su dispersión entre unidades para que el umbral deje de ser un parámetro." }
     ],
     historial: [
+      { date:"2026-08-19", ver:"1.10.1", note:"La sombra ya no cruza de un bloque a otro. Cada bloque es la MISMA planta con otra estrategia, no seis plantas vecinas, así que una sombra que salta de uno a otro oscurece justo lo que se está comparando. Con una sola luz no hay forma de impedirlo —las capas de three.js no filtran quién proyecta—, así que cada bloque lleva su propia direccional con la caja de sombras ajustada a él. Y el HUECO entre bloques pasa a derivarse del alcance de esa caja: al revés no hay solución, porque con bloques de 120 m y huecos de 18 no existe ninguna caja que contenga el bloque y excluya al vecino." },
       { date:"2026-08-19", ver:"1.10", note:"Los TRACKERS son de la planta y se declaran una vez, en Seguidor: todos los bloques del 3D se dibujan con los mismos, para que la comparación sea entre estrategias y no entre tamaños. Estaban dentro del caso pasivo, y eso hacía dos cosas mal a la vez — la escena comparaba bloques de tamaño distinto, y un dato de planta parecía parámetro de una estrategia. El pasivo sigue siendo la excepción visible: se suelta UNA fila de todas, que es lo que hace el denominador visible (1 de 20 con diez trackers bifila). Y los bloques pasan a colocarse en REJILLA: seis de veinte filas puestos en línea son 830 m de ancho por 64 de fondo, ilegible en un visor de 440 px; ahora se eligen las columnas que dejan la caja más parecida al hueco del visor." },
       { date:"2026-08-19", ver:"1.9.6", note:"El bloque del pasivo se dibuja a SU PROPORCIÓN. Declarabas 10 trackers y la escena enseñaba uno: una fila suelta contra otra sola es el 50 % del campo, mientras el número de al lado decía 5 %. La imagen contradecía justo lo que la tarjeta existe para enseñar. Ahora el bloque lleva las filas declaradas (1 de 20 con 10 trackers), los bloques se colocan por su ancho real en vez de en una retícula fija, y por encima de 24 filas se dibujan 24 y el rótulo dice «de N»: recortar se puede, recortar a escondidas no." },
       { date:"2026-08-19", ver:"1.9.5", note:"Tres cosas de la escena. (1) Marcar o desmarcar un caso ya REHACE el 3D: antes solo guardaba la configuración, así que activabas «Pasivo» y no pasaba nada hasta recargar — la casilla parecía rota. (2) El suelo terminaba en un borde recto con el cielo detrás y la planta parecía estar sobre una mesa flotando: ahora hay un suelo de horizonte que llega hasta la cúpula y NIEBLA que cose los dos, con su color tomado del horizonte, así que al amanecer la bruma se pone naranja con el cielo. (3) La niebla escala con la escena: con un rango fijo, en la comparativa se comía los seguidores y en Ayora no llegaba al horizonte." },
