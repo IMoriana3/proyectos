@@ -57,6 +57,27 @@ const SONDA = `(() => {
   await p.waitForTimeout(1200);
 
   check('la escena arranca con WebGL', await p.evaluate(() => !!(window.TD && TD.rd)));
+  // El bloque «Fija · tilt óptimo» se dibujaba con el tilt DE PROYECTO hasta que
+  // comparabas, con el rótulo diciendo «óptimo»: enseñaba 25° bajo un nombre
+  // que promete otra cosa. Ahora se estima con doce días de cielo claro —
+  // instantáneo — y se marca con «≈» hasta que la tabla dé el del año.
+  const est = await p.evaluate(() => {
+    const B = BLOQUES.find(b => b.key === 'fija_optima');
+    const lbl = [...document.querySelectorAll('#escRead .ro')]
+      .find(d => /ÓPTIM/i.test(d.querySelector('.k').textContent));
+    return { estimado: !!(B && B.estimado), tiltProyecto: +document.getElementById('tilt').value,
+             txt: lbl ? lbl.textContent.replace(/\s+/g, ' ') : '',
+             cache: TILT_EST };
+  });
+  check('sin haber comparado, el tilt óptimo se ESTIMA (' + est.cache + '°) en vez de ' +
+    'dibujar el de proyecto (' + est.tiltProyecto + '°)',
+    est.estimado && est.cache > 0 && est.cache !== est.tiltProyecto,
+    JSON.stringify(est));
+  check('y se marca con «≈» y «tilt estimado», que no es lo mismo que el del año',
+    /≈/.test(est.txt) && /estimado/i.test(est.txt), est.txt);
+  check('la estimación es plausible a 37°N (' + est.cache + '°)',
+    est.cache > 15 && est.cache < 45, String(est.cache));
+
   check('se ve desde que se abre, sin comparar nada',
     (await p.evaluate(() => BLOQUES.length)) === 2);
 
@@ -387,6 +408,17 @@ const SONDA = `(() => {
   // ── el catálogo CEC: 16.758 módulos y 4.910 inversores, dentro de la ficha ──
   // Y sobre todo: NO se baja al abrir. Son 2,4 MB + 656 KB, y quien viene a
   // comparar estructuras no tiene por qué pagarlos.
+  // el módulo da el tamaño y el pico de las dos familias, así que elegirlo va
+  // ANTES: si va después, se teclean unas medidas a mano y el catálogo llega
+  // tarde a pisarlas
+  const ordenEq = await p.evaluate(() => {
+    const top = id => document.getElementById(id).getBoundingClientRect().top + window.scrollY;
+    return { sitio: top('sitioQ'), eq: top('eqCard'), fx: top('fxModL'), tk: top('tkModL') };
+  });
+  check('la tarjeta de Equipos va ANTES que los dos configuradores',
+    ordenEq.eq > ordenEq.sitio && ordenEq.eq < ordenEq.fx && ordenEq.eq < ordenEq.tk,
+    JSON.stringify(ordenEq));
+
   check('el catálogo NO se baja al abrir la ficha',
     (await p.evaluate(() => CAT.mod === null && CAT.inv === null)) === true);
   await p.click('#eqCard');
@@ -545,6 +577,40 @@ const SONDA = `(() => {
   check('ningún tilt bate al óptimo', bt2.rels.every(r => r <= 1e-9));
   check('y se declara que el óptimo es el de la REJILLA, no el fino',
     /rejilla/i.test(bt2.read), bt2.read.slice(0, 120));
+
+  // ── las temperaturas del emplazamiento ──
+  // El string se dimensiona por los dos extremos térmicos del SITIO. Aquí no
+  // hay red al archivo de Open-Meteo, así que se sustituye la bajada por una
+  // serie conocida: lo que se comprueba es el CABLEADO —que el botón rellena
+  // los dos campos con la convención bankable y lo explica— no la red.
+  const temps = await p.evaluate(async () => {
+    const real = FIS.fetchYear;
+    // 0..100 °C: P0,5 = 0,5 y P99,5 = 99,5, así que célula = 0,5 y 124,5
+    FIS.fetchYear = async () => ({ t: [], ghi: [], dhi: [], dni: [],
+      tair: Array.from({ length: 101 }, (_, i) => i), source: 'stub' });
+    await traeTemps();
+    FIS.fetchYear = real;
+    return { tmin: +document.getElementById('szTmin').value,
+             tmax: +document.getElementById('szTmax').value,
+             nota: document.getElementById('szTempsNota').textContent };
+  });
+  check('el botón trae T mín = P0,5 del aire (' + temps.tmin + ' °C)', temps.tmin === 0.5,
+    String(temps.tmin));
+  check('y T máx = P99,5 + 25 °C de delta de célula (' + temps.tmax + ' °C)',
+    temps.tmax === 124.5, String(temps.tmax));
+  check('y explica de dónde salen (percentiles y delta, no extremos absolutos)',
+    /P0,5/.test(temps.nota) && /P99,5/.test(temps.nota) && /25 °C/.test(temps.nota),
+    temps.nota.slice(0, 200));
+
+  // cambiar de sitio invalida lo traído: seguir enseñando las de antes es peor
+  // que no enseñar nada
+  const inval = await p.evaluate(() => {
+    const e = document.getElementById('lat');
+    e.value = '60.0'; e.dispatchEvent(new Event('change', { bubbles: true }));
+    return document.getElementById('szTempsNota').textContent;
+  });
+  check('cambiar el emplazamiento avisa de que las temperaturas son las de antes',
+    /las de/i.test(inval) && /antes/i.test(inval), inval.slice(0, 160));
 
   check('sin errores de JS', errs.length === 0, errs.join(' | '));
   await b.close();

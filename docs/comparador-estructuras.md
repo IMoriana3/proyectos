@@ -176,6 +176,10 @@ familia dice lo suyo. Hay guards en el test del navegador para que no vuelva.
 
 ## Equipos: el catálogo CEC, dentro de la ficha
 
+La tarjeta va **antes que los dos configuradores**, y no es cosmético: el módulo da el **tamaño** y
+el **pico** con los que se configuran las dos familias. Si fuese después, se teclean unas medidas a
+mano y el catálogo llega tarde a pisarlas.
+
 El pico del módulo dejó de ser un número que se teclea a ojo. La ficha lleva el **catálogo CEC
 entero**: 16 758 módulos de la lista 2024 (Pmax ≥ 300 Wp) y 4 910 inversores con sus parámetros
 Sandia. Son los mismos CSV que mantiene el core (`solargpt/data/`), recortados a JSON con
@@ -234,6 +238,29 @@ quién lo limita no se puede discutir con nadie.
 > protecciones, no la capacidad de entrada del inversor. Aplicarlo recortaba ~22 % de planta sin
 > razón física. Es la decisión declarada del core, y hay un guard que se pone rojo si alguien la
 > revierte.
+
+### Las temperaturas, del emplazamiento
+
+Teclear −10/70 a ojo es dimensionar **otro sitio**. El botón *«Temperaturas del emplazamiento»* las
+baja del archivo de Open-Meteo —el mismo proveedor de la meteo de la ficha— para el año elegido y
+aplica la convención bankable (IEC 62548, la de la página 5 del Streamlit):
+
+```
+T_min de célula = P0,5  del aire del año           ← sin sumar nada
+T_max de célula = P99,5 del aire + 25 °C de delta
+```
+
+Percentiles y no extremos absolutos, porque un pico de una hora no dimensiona una planta. Y en frío
+no se suma delta: el peor caso de Voc es el amanecer despejado, con la célula todavía a la
+temperatura del aire.
+
+Se bajan **siempre de Open-Meteo**, aunque la comparativa vaya en cielo claro: el cielo claro es un
+modelo de irradiancia, no tiene temperatura, y fingir una sería peor que no traerla. Va dicho al
+lado. Y cambiar de emplazamiento o de año **invalida lo traído**: seguir enseñando «Túnez · 2023»
+sobre las temperaturas de otro sitio sería peor que no enseñar nada.
+
+El percentil se interpola linealmente entre las dos muestras que lo rodean, que es lo que hace
+`pandas.Series.quantile` por defecto — o sea, la cifra contra la que se compara.
 
 ### El careo es EXACTO, no «se parece»
 
@@ -380,6 +407,39 @@ modelo **real** de `seguidor.js`, el mismo que pintan el Gemelo Digital y la Cob
    vecino y contamina la comparación—. Con 10 m se apagaban a 13°, justo por encima del amanecer
    de invierno que la escena existe para enseñar; con 16 m aguantan hasta 8,5°.
 
+### El tilt óptimo de la escena, sin simular el año
+
+El bloque «Fija · tilt óptimo» se dibujaba con el **tilt de proyecto** hasta que dabas a *Comparar*,
+con el rótulo diciendo «óptimo»: enseñaba 25° bajo un nombre que promete otra cosa, y para verlo de
+verdad había que simular el año entero.
+
+Ahora se **estima** con doce días de cielo claro —el 15 de cada mes, horario: 288 pasos en vez de
+8 760, así que el barrido de 22 tilts es instantáneo— y se marca con **«≈ 32° · tilt estimado»**.
+En cuanto comparas, la tabla lo sustituye por el óptimo del año y el «≈» desaparece. La estimación
+se cachea y solo se rehace al cambiar la geometría o el emplazamiento, porque `actualiza3D()` corre
+en cada tirón del deslizador de la hora.
+
+Que la estimación es física de verdad se ve al pegar unas coordenadas de Assú (5,6° de latitud
+sur): el óptimo baja a **6°** y la mesa sale casi plana, mirando al norte. Hay un test que lo mide.
+
+### El aviso del tilt óptimo decía un número de memoria
+
+Decía «el del cuaderno queda **1-3°** por encima». Eso solo vale a GCR flojo. Con las filas
+apretadas un tilt alto se tapa la fila de detrás y el óptimo **neto** se desploma: en Sevilla, a
+GCR 0,68, el neto sale **25°** y el de transposición pura **36°** — once grados. Decir «1-3°» ahí
+se lee como «casi coinciden» cuando no coinciden en absoluto.
+
+Ahora el segundo óptimo **se calcula** (mismo barrido, con el sombreado apagado) y el aviso publica
+la diferencia **medida**, con el GCR al que pasa y por qué pasa. No es que los dos motores
+discrepen: es que responden a preguntas distintas.
+
+| GCR | óptimo neto | sin sombra | diferencia |
+|---|---|---|---|
+| 0,40 | 35° | 36° | 1° |
+| 0,53 | 32° | 36° | 4° |
+| 0,68 | 25° | 36° | **11°** |
+| 0,75 | 21° | 36° | 15° |
+
 ### La escena tiene que OBEDECER a los dos configuradores
 
 Un 3D que no se mueve con lo que configuras es peor que no tenerlo: se lee como una prueba visual
@@ -491,11 +551,11 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ## Pruebas
 
 ```bash
-node tests/test_comparador.js       # 74 comprobaciones · careo contra el core, sin navegador
+node tests/test_comparador.js       # 79 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
-node tests/test_comparador_sitio.js # 34 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 87 comprobaciones · escena, equipos y sizing
-node tests/test_sizing.js           # 104 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
+node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
+node tests/test_comparador_3d.js    # 95 comprobaciones · escena, equipos y sizing
+node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 
 El test **extrae el bloque `FÍSICA PURA` del HTML real**, no una copia: una copia se quedaría

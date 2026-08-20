@@ -140,14 +140,20 @@ check('sin texto salen los primeros, no ninguno', ctx.filtraSitios(LISTA, '').le
       sp.getWorldQuaternion(new THREE.Quaternion())).normalize();
     return { lat: +document.getElementById('lat').value,
              lon: +document.getElementById('lon').value,
-             nz: +n.z.toFixed(3),
-             ctxLat: cfgActual().lat };
+             nz: +n.z.toFixed(3), ny: +n.y.toFixed(3),
+             tilt: TILT_EST, ctxLat: cfgActual().lat };
   })()`);
   check('las coordenadas pegadas llegan al formulario (' + sur.lat + ', ' + sur.lon + ')',
     Math.abs(sur.lat + 5.58) < 1e-6 && Math.abs(sur.lon + 36.91) < 1e-6, JSON.stringify(sur));
   check('y a la configuración que usa el motor', Math.abs(sur.ctxLat + 5.58) < 1e-6);
   check('en el hemisferio SUR la fija se dibuja mirando al NORTE (z=' + sur.nz + ')',
-    sur.nz < -0.15, String(sur.nz));
+    sur.nz < -0.02, String(sur.nz));
+  check('y con la inclinación que dice la escena: |z| = sen(' + sur.tilt + '°)',
+    Math.abs(Math.abs(sur.nz) - Math.sin(sur.tilt * Math.PI / 180)) < 0.01,
+    JSON.stringify(sur));
+  check('cerca del ecuador el óptimo es pequeño: la mesa sale casi plana (' +
+    sur.tilt + '°, ny=' + sur.ny + ')', sur.tilt < 20 && sur.ny > 0.9,
+    JSON.stringify(sur));
 
   // tocar lat a mano deja de nombrar un sitio que ya no es
   await p.evaluate(() => { const e = document.getElementById('sitioQ');
