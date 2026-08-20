@@ -21,14 +21,18 @@ const html = fs.readFileSync(path.join(RAIZ, 'sim-viento.html'), 'utf8');
 function saca(firma) {
   const i = html.indexOf(firma);
   if (i < 0) return null;
-  const j = html.indexOf('\n}', i);
+  // `var X=...` es una línea, no un bloque con llave en columna 0
+  const j = firma.startsWith('function') ? html.indexOf('\n}', i) : html.indexOf('\n', i) - 1;
   return j < 0 ? null : html.slice(i, j + 2);
 }
 const FIRMAS = ['function prep2d(cv){', 'function nicePaso(bruto){',
                 'function niceDec(paso){', 'function niceEje(max,n){',
                 'function niceEjes2(maxA,maxB,n){', 'function niceRango(lo,hi,n){',
                 'function ejesTransmision(nF,pitch,filasPorTrk,esPasivo,hueco){',
-                'function pasoReproductor(stepMin,factor){'];
+                'function pasoReproductor(stepMin,factor){',
+                'var FACTORES_REPRO=', 'var REPRO_MAX_S=',
+                'function factorPorDefecto(stepMin,pasos){',
+                'function duracionRepro(stepMin,factor,pasos){'];
 const trozos = FIRMAS.map(saca);
 check('las funciones puras siguen en el HTML', trozos.every(Boolean),
       FIRMAS.filter((f, i) => !trozos[i]).join(', '));
@@ -177,6 +181,34 @@ check('entradas absurdas no dividen por cero',
   check('MUTANTE: el «×1» viejo iba en realidad a ×' + Math.round(factorReal),
         factorReal > 100);
 })();
+
+// ── 8) al abrir, el reproductor tiene que AVANZAR ────────────────────────
+// La ventana se muestrea a 240 pasos como mucho, así que el factor que la hace
+// mirable depende del paso. Un default fijo dejó la reproducción a 800 ms por
+// fotograma con el paso habitual de 4 min —192 s la ventana entera, diez veces
+// más lenta que la versión anterior— y eso se lee como que no avanza.
+const FD = ctx.factorPorDefecto, DR = ctx.duracionRepro;
+[[1, 240], [4, 240], [10, 96], [15, 64], [30, 32], [60, 16]].forEach(c => {
+  const [stepMin, pasos] = c;
+  const f = FD(stepMin, pasos);
+  const seg = DR(stepMin, f, pasos);
+  check('paso ' + stepMin + ' min · ' + pasos + ' pasos -> arranca en ×' + f +
+        ' (' + seg.toFixed(0) + ' s la ventana)',
+        seg <= ctx.REPRO_MAX_S + 0.001 && ctx.FACTORES_REPRO.indexOf(f) >= 0);
+});
+check('el factor elegido es el MÁS LENTO que cabe (no el más rápido a lo bruto)',
+      (function () {
+        const f = FD(4, 240), i = ctx.FACTORES_REPRO.indexOf(f);
+        return i === 0 || DR(4, ctx.FACTORES_REPRO[i - 1], 240) > ctx.REPRO_MAX_S;
+      })());
+// MUTANTE: el default fijo de la versión anterior, sobre la ventana habitual.
+check('MUTANTE: con ×300 fijo la ventana de paso 4 min tardaba ' +
+      Math.round(DR(4, 300, 240)) + ' s',
+      DR(4, 300, 240) > ctx.REPRO_MAX_S * 3);
+// Y no puede pasarse de largo: con paso muy grueso ni el más rápido cabe, y
+// entonces devuelve el tope en vez de undefined.
+check('con paso imposible devuelve el tope declarado',
+      FD(600, 240) === ctx.FACTORES_REPRO[ctx.FACTORES_REPRO.length - 1]);
 
 console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko)
                 : '\nOK — ' + ok + '/' + ok + ' comprobaciones');

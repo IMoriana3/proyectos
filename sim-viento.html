@@ -364,6 +364,7 @@
           <option value="300" selected>×300 · 5 min/s</option>
           <option value="900">×900 · 15 min/s</option>
           <option value="3600">×3600 · 1 h/s</option>
+          <option value="7200">×7200 · 2 h/s</option>
         </select>
       </div>
       <p class="note" id="c3note">Sube el viento y mira: por encima de <b>40 km/h</b> entran en
@@ -3368,7 +3369,15 @@ function build3D(){
   }
   if(mejor<=0){var sol=-99;for(var j=0;j<TL.t.length;j++)if((TL.sun_el[j]||-99)>sol){sol=TL.sun_el[j];i0=j;}}
   TPOS=i0; $('tpos').value=i0;
-  $('c3hint').textContent=TL.window.steps+' pasos de '+TL.window.step_minutes+' min';
+  /* La velocidad de arranque se elige por la ventana, no por un default fijo,
+     y se DICE cuánto dura: sin eso, con meteo de paso grueso el reproductor
+     salía a segundos por fotograma y parecía que no avanzaba. Si el usuario ya
+     ha tocado el selector, manda él. */
+  if(!$('tspeed').dataset.tocado)
+    $('tspeed').value=factorPorDefecto(TL.window.step_minutes,TL.window.steps);
+  $('c3hint').textContent=TL.window.steps+' pasos de '+TL.window.step_minutes+
+    ' min · la ventana entera en '+
+    Math.round(duracionRepro(TL.window.step_minutes,+$('tspeed').value,TL.window.steps))+' s';
   update3D(i0);
 }
 function update3D(i){
@@ -3405,6 +3414,29 @@ function pasoReproductor(stepMin,factor){
   var ms=Math.max(50,msPorPaso);
   return {ms:ms,pasos:Math.max(1,Math.round(ms/msPorPaso))};
 }
+var FACTORES_REPRO=[60,300,900,3600,7200];
+var REPRO_MAX_S=45;
+/* ── QUÉ VELOCIDAD SE OFRECE AL ABRIR ──
+   La ventana está MUESTREADA a 240 pasos como mucho, así que el factor que la
+   hace mirable no es el mismo con paso de 1 min que con paso de 15. Un default
+   fijo dejaba la reproducción a 800 ms por fotograma con el paso habitual de
+   4 min —192 s para la ventana entera, diez veces más lenta que antes— y eso
+   se lee como que NO AVANZA.
+   Se elige el factor más LENTO que reproduzca la ventana entera en menos de
+   `REPRO_MAX_S`, y va dicho en el rótulo: así el número sigue siendo una
+   velocidad de verdad y además arranca en algo que se puede mirar. */
+function factorPorDefecto(stepMin,pasos){
+  var n=(pasos>0?pasos:240);
+  for(var i=0;i<FACTORES_REPRO.length;i++){
+    var c=pasoReproductor(stepMin,FACTORES_REPRO[i]);
+    if((n/c.pasos)*c.ms<=REPRO_MAX_S*1000)return FACTORES_REPRO[i];
+  }
+  return FACTORES_REPRO[FACTORES_REPRO.length-1];
+}
+function duracionRepro(stepMin,factor,pasos){
+  var c=pasoReproductor(stepMin,factor);
+  return ((pasos>0?pasos:240)/c.pasos)*c.ms/1000;
+}
 function playToggle(){
   PLAY=!PLAY; $('play').textContent=PLAY?'❚❚ Pausa':'▶ Reproducir';
   if(RAF)clearInterval(RAF); RAF=null;
@@ -3418,6 +3450,10 @@ function playToggle(){
 /* Cambiar la velocidad con el reproductor en marcha tiene que hacer efecto
    ahora, no al siguiente play: si no, el selector parece roto. */
 $('tspeed').addEventListener('change',function(){
+  this.dataset.tocado='1';            // a partir de aquí manda el usuario
+  if(TL)$('c3hint').textContent=TL.window.steps+' pasos de '+TL.window.step_minutes+
+    ' min · la ventana entera en '+
+    Math.round(duracionRepro(TL.window.step_minutes,+this.value,TL.window.steps))+' s';
   if(PLAY){playToggle();playToggle();}
 });
 
