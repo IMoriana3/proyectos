@@ -189,6 +189,44 @@ simulador cuantifica lo que compra la inteligencia central: con el filtro «TCU�
 (sombra cero); con «NCU» entra energy-optimal y su ganancia (~1 % en llano, 2–6 % en terreno roto —
 la envolvente de mercado de la tabla anual).
 
+## Export de consignas: la tabla de apuntamiento, por seguidor y por minuto
+
+`tools/export_consignas.mjs` saca la consigna de una planta real **seguidor a seguidor**, con las
+claves del CONTRATO de la casa para que se pueda cruzar con lo que el campo hace de verdad:
+
+    node tools/export_consignas.mjs --planta ayora --fecha 2026-06-21 --pol pairwise --paso 5
+
+**Para qué modelo**, que son dos preguntas:
+
+- **Qué modelo genera la consigna.** Por defecto las políticas **geométricas** (pairwise —la
+  canónica de TCU—, true-3D, row, min-ground-light): viven enteras dentro de la misión de este
+  módulo (geometría real + sol + límites de hardware) y **no dependen del evaluador energético
+  provisional**. Los óptimos se exportan igual pero marcados `asesoria=1`: su elección depende del
+  POA/Martinez provisional, así que **son propuesta, no consigna**, hasta que exista el módulo
+  energético y la validación contra SCADA.
+- **Para qué consumidor.** Las claves son las de `diagnostico_tcu` (`scada/CONTRATO.md`): **NCU +
+  TCU**, con el TCU como número dentro de su NCU. Esa fila ya trae del campo lo que el seguidor
+  hace (`Tilt`) y lo que su propia TCU quería (`Objetivo`), así que el CSV se cruza por
+  (planta, ncu, tcu, fecha) y sale el **modo sombra**: lo que mandaríamos nosotros contra lo que la
+  planta hizo — sin tocar un motor.
+
+Columnas: `planta, fecha_local, hora_local, ncu, tcu, tracker, bloque, linea, politica,
+theta_sim_deg, theta_tcu_deg, sombra_fila_pct, sombra_estructura_pct, asesoria`, más un
+`.meta.json` con versión, huso, convenciones y lo declarado. La consigna sale **ya limitada por la
+velocidad del actuador** (slewLimit), y en bifila es la de la línea MOTORA (la gemela va soldada).
+La planta se recorre **por bloques** (se parte sola por los huecos de x): en Ayora, 754 de 754
+seguidores sobre 295 líneas en 2 bloques.
+
+Pendiente de confirmar **con una lectura real**, y declarado en el propio fichero: (a) que el nº de
+TCU del `id` del layout («TK 007-01» → 7) casa con el `TCU` del diagnóstico — comprobación trivial
+el día que haya un volcado; (b) **el signo** — se emiten las dos columnas (`theta_sim_deg` del marco
+interno y `theta_tcu_deg` con la convención θ<0 = este) y cuál casa con el registro `Objetivo` lo
+decide una lectura, no una suposición.
+
+> Trampa que costó 500 seguidores y quedó blindada con test: `plantFromCotas` devuelve `lineX`
+> **recentrado a 0 en cada bloque**; la x cruda es `xFrom + lineX`. Comparar `lineX` con la x del
+> layout dejaba al 70% de la planta sin consigna, y en silencio.
+
 ## Frontera de módulos: este simulador es MOVIMIENTO; el POA/eléctrico será otro módulo
 
 Decisión de arquitectura (2026-08-14): la misión de este módulo es el **movimiento y el

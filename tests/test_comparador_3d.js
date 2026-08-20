@@ -353,6 +353,31 @@ const SONDA = `(() => {
   check('volver a monofila deshace el par', vuelta.filas === mono.filas &&
     vuelta.por === 1 && vuelta.ejes.length === 0, JSON.stringify(vuelta));
 
+  // ── una fija no tiene motor ──
+  // El hueco entre las mesas de una fila es el MISMO parámetro geométrico en
+  // las dos familias, pero no la misma cosa: en un seguidor es el vano del
+  // accionamiento y en una fija es separación estructural. Llamarlo «gap
+  // motor» en la fija era ponerle a una mesa un motor que no tiene.
+  const rotulos = await p.evaluate(() => {
+    const lbl = id => document.querySelector(`label[for="${id}"]`) ||
+      document.getElementById(id).closest('.field').querySelector('label');
+    return { fx: lbl('fxGapMot').textContent, tk: lbl('tkGapMot').textContent,
+             notaFx: document.getElementById('fxNota').textContent,
+             notaTk: document.getElementById('tkNota').textContent,
+             nStrFx: +document.getElementById('fxNStr').value };
+  });
+  check('el gap de la FIJA no se llama «motor» (' + rotulos.fx.trim() + ')',
+    !/motor/i.test(rotulos.fx), rotulos.fx);
+  check('el del TRACKER sí, porque ahí va el accionamiento (' + rotulos.tk.trim() + ')',
+    /motor/i.test(rotulos.tk), rotulos.tk);
+  check('la nota de la FIJA no le pone un motor en medio',
+    !/motor en medio/i.test(rotulos.notaFx), rotulos.notaFx.slice(0, 160));
+  check('y con más de una mesa dice que ese hueco NO es un vano de motor',
+    rotulos.nStrFx <= 1 || /no lleva accionamiento/i.test(rotulos.notaFx),
+    rotulos.notaFx.slice(0, 220));
+  check('la del TRACKER sí nombra el vano del motor',
+    /motor/i.test(rotulos.notaTk), rotulos.notaTk.slice(0, 160));
+
   // guard anti-podredumbre: la lista de campos es única y tiene que existir
   const huerfanos = await p.evaluate(() =>
     CAMPOS_GEOM.filter(i => !document.getElementById(i)));
