@@ -1014,7 +1014,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/comparador-estructuras.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-20",
-    version: "1.17",
+    version: "1.18",
     docId: "comparador-estructuras",
     docUrl: "",
     download: "",
@@ -1059,6 +1059,7 @@ const PROJECTS = [
       { done:false, text:"Enganchar el LCOE (motor /economy) para que al lado del ranking de kWh salga el de €/MWh." }
     ],
     historial: [
+      { date:"2026-08-20", ver:"1.18", note:"Dos mesas por fila es la CONVENCIÓN de la casa, en las dos familias, y de ahí sale la fórmula del largo de fila (FILA = 2 × MESA + hueco). Ahora lo dice, porque un «2» en una casilla editable se lee como «lo que había puesto» y no como una decisión; y si se baja a una mesa por fila, avisa de que lo normal son dos." },
       { date:"2026-08-20", ver:"1.17", note:"«Sobreestima la pérdida un 0,37 %» se leía como 0,37 % de energía, y no lo es: es 1/N, una fila de 271 a la que el modelo de fila infinita le cobra una sombra que no tiene. Ahora se dice así —de las N filas hay UNA sin nadie delante— y se aclara que ese porcentaje es DE LA PÉRDIDA: con la fija a GCR 0,529, 1,324 % modelado contra 1,319 % real, o sea 0,005 puntos de POA. Y la nota de la tabla, que ya sabe cuántas filas hay, publica la sombra corregida de la estructura que más tiene en vez de dejar una regla de tres al lector." },
       { date:"2026-08-20", ver:"1.16", note:"Cómo se colocan las estructuras, que era una pregunta que había que hacer y no debería. Para contar suelo el campo es un rectángulo de N filas una detrás de otra a su pitch —nada infinito— y cada familia se apila en la dirección contraria a como corre su fila: la fija corre este-oeste y apila hacia el SUR, el tracker corre norte-sur (su eje) y apila hacia el ESTE. Los dos lados del campo se publican en el box de la potencia pico (65 × 1.220 m la fija, 1.626 × 65 m el tracker a 10 MWp), que es lo que dice si cabe en la parcela. Para la SOMBRA en cambio sí son infinitas —cada fila la tapa otra idéntica a un pitch—, así que la primera sale sombreada aunque en campo no tenga a nadie delante: con 271 filas es un 0,37 % de sobreestimación, y va dicho." },
       { date:"2026-08-20", ver:"1.15", note:"Que se note lo que hacen los botones, y que el string no viva en dos sitios diciendo cosas distintas. (1) «Usar en la FIJA» cambiaba un campo de 660 a 645 Wp y nada más —con un módulo de medidas canónicas la pantalla no se movía y el botón parecía muerto—: ahora cada familia DICE qué módulo lleva, con su pico, sus medidas y si son del catálogo o las canónicas, y tocarlas a mano deshace la marca. (2) «Módulos por string» está en el sizing y en los configuradores y significa lo mismo; que discrepen es tener una fila dibujada que no se puede conectar. Dos botones lo bajan y, mientras no coincidan, la ficha dice cuántos tiene cada familia y si ése entra siquiera en la ventana de tensión. (3) El aviso del tilt óptimo estaba escrito en jerga («es el NETO, barrido CON sombra»): ahora dice qué es el número antes de cómo se saca. Y dos avisos se quedaban obsoletos en pantalla: el de coherencia tras pulsar el botón y el mismo cuando la ventana se volvía inviable." },

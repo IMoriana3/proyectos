@@ -423,6 +423,23 @@ const SONDA = `(() => {
   check('la del TRACKER sí nombra el vano del motor',
     /motor/i.test(rotulos.notaTk), rotulos.notaTk.slice(0, 160));
 
+  // dos mesas por fila es la convención de la casa, no un valor de relleno: un
+  // 2 en una casilla editable se lee como «lo que había puesto»
+  const conv = await p.evaluate(() => {
+    const set = (i, v) => { const e = document.getElementById(i);
+      e.value = v; e.dispatchEvent(new Event('change', { bubbles: true })); };
+    set('fxNStr', '2');
+    const dos = document.getElementById('fxNota').textContent;
+    set('fxNStr', '1');
+    const una = document.getElementById('fxNota').textContent;
+    set('fxNStr', '2');
+    return { dos, una };
+  });
+  check('con dos mesas por fila, la ficha dice que es la convención de la casa',
+    /convención de la casa/i.test(conv.dos), conv.dos.slice(-160));
+  check('y con una avisa de que lo normal son dos',
+    /lo normal en la casa son dos/i.test(conv.una), conv.una.slice(-160));
+
   // guard anti-podredumbre: la lista de campos es única y tiene que existir
   const huerfanos = await p.evaluate(() =>
     CAMPOS_GEOM.filter(i => !document.getElementById(i)));
