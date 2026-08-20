@@ -45,6 +45,20 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
 .field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .tres{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+/* Buscador de emplazamiento: el desplegable FLOTA sobre lo de abajo, así que
+   la tarjeta no da un salto cada vez que aparece un resultado. */
+.sitiobox{position:relative}
+.sitiores{position:absolute;left:0;right:0;top:100%;z-index:40;margin-top:3px;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:9px;
+  box-shadow:0 12px 28px rgba(0,0,0,.45);max-height:280px;overflow:auto}
+.sitiores .it{padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--line-soft)}
+.sitiores .it:last-child{border-bottom:0}
+.sitiores .it:hover,.sitiores .it.on{background:var(--panel-hi)}
+.sitiores .it b{font-weight:600}
+.sitiores .it .co{font-family:var(--mono);font-size:11px;color:var(--muted-2)}
+.sitiores .gr{padding:4px 10px;font:400 10px var(--mono);letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted);background:var(--panel);position:sticky;top:0}
+.sitiores .aviso{padding:7px 10px;font-size:12px;color:var(--muted-2)}
 @media(max-width:700px){.tres{grid-template-columns:1fr 1fr}}
 .btn{background:rgba(54,211,153,.12);color:var(--accent);border:1px solid var(--accent);border-radius:9px;padding:10px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;width:100%}
 .btn:hover{background:rgba(54,211,153,.2);color:#fff}
@@ -117,8 +131,12 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
   <div>
     <div class="card">
       <h2>☉ Emplazamiento</h2>
-      <div class="field"><label>Planta</label>
-        <select id="plant"><option value="">— coordenadas a mano —</option></select></div>
+      <div class="field sitiobox">
+        <label>Emplazamiento <span class="sn" style="margin:0" id="sitioSel">manual</span></label>
+        <input id="sitioQ" type="search" autocomplete="off" spellcheck="false"
+               placeholder="Ayora, Gabès, 24019, o 37.3891, -5.9845…">
+        <div id="sitioRes" class="sitiores" style="display:none"></div>
+      </div>
       <div class="two">
         <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="37.3891"></div>
         <div class="field"><label>Longitud °</label><input id="lon" type="number" step="0.0001" value="-5.9845"></div>
@@ -1066,24 +1084,202 @@ var PRESETS=[
   {cod:'assu',   n:'Assú (Brasil)',lat:-5.5800, lon:-36.9100},
   {cod:'tunez',  n:'Túnez',        lat:35.5000, lon:10.0000}
 ];
-function loadPlants(){
-  var sel=$('plant'), extra=[];
-  try{var raw=localStorage.getItem('factiun_cartera'); if(raw){var c=JSON.parse(raw);
-    if(Array.isArray(c))extra=c.filter(function(p){return p&&p.lat!=null&&p.lon!=null;});}}catch(e){}
-  PRESETS.concat(extra).forEach(function(p){
-    var o=document.createElement('option');
-    o.value=(p.cod||p.n); o.textContent=(p.n||p.cod); o.dataset.lat=p.lat; o.dataset.lon=p.lon;
-    sel.appendChild(o);
-  });
-  /* Poner `.value` a mano NO dispara 'change', así que elegir emplazamiento
-     movía las coordenadas y dejaba las lecturas y la escena en la latitud
-     anterior: con Assú (hemisferio SUR) la fija se quedaba mirando al sur. */
-  sel.onchange=function(){var o=this.selectedOptions[0];
-    if(!o||!o.dataset.lat)return;
-    $('lat').value=o.dataset.lat; $('lon').value=o.dataset.lon;
-    ['lat','lon'].forEach(function(id){
-      $(id).dispatchEvent(new Event('change',{bubbles:true}));});};
+/* ── BUSCADOR DE EMPLAZAMIENTO ──
+   Antes esto era un desplegable con siete presets: para comparar estructuras
+   en un sitio que no fuese uno de esos siete había que teclear lat y lon a
+   mano. Y la pregunta «¿fija o seguidor AQUÍ?» es justo la que se hace ANTES
+   de tener proyecto, así que el desplegable estorbaba donde más se usa.
+
+   Es el mismo buscador de la ficha de Viento, con sus tres caminos y en este
+   orden:
+     1. la CARTERA y los PRESETS, que se filtran al teclear y funcionan SIN
+        RED — es lo que se busca el 90 % de las veces y no puede depender de
+        que haya internet;
+     2. COORDENADAS pegadas tal cual («37.3891, -5.9845», también con N/S/E/O),
+        que es el camino más corto para quien viene de un DWG o de Maps;
+     3. el geocodificador de OPEN-METEO, el MISMO proveedor del que ya sale la
+        meteo de la ficha — así no se añade una dependencia externa nueva que
+        declarar, ni hace falta clave.
+
+   Si el geocodificador no contesta se DICE en el propio desplegable, en vez de
+   devolver una lista vacía que se lee como «ese sitio no existe».
+
+   De paso se arregla algo que estaba mal desde el principio: esta ficha leía
+   la cartera de `factiun_cartera` y el resto del Panel la publica en
+   `factiun_plantas`. O sea que el comparador NUNCA veía la cartera. Ahora lee
+   la buena, y la vieja se queda como respaldo por si hubiera algo escrito. */
+
+/* Sin acentos y en minúsculas: «Túnez» y «Tunez», «Gabès» y «Gabes», que es
+   como se teclea de verdad. `normalize('NFD')` separa el acento y el rango
+   \u0300-\u036f (las marcas combinantes) lo borra. */
+function normSitio(t){
+  return String(t==null?'':t).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().trim();
 }
+
+/* Coordenadas pegadas: «37.3891, -5.9845», «41,5763 -0,7981», «16.59 S 71.80 W».
+   Devuelve null si no lo son — un texto que no son coordenadas tiene que
+   seguir su camino al buscador, no colarse como un 0,0 en el Golfo de Guinea. */
+function parseCoords(t){
+  var q=String(t||'').trim();
+  var m=q.match(/^\s*(-?\d{1,3}(?:[.,]\d+)?)\s*([NSns])?\s*[, ;]\s*(-?\d{1,3}(?:[.,]\d+)?)\s*([EWOewo])?\s*$/);
+  if(!m)return null;
+  var la=parseFloat(m[1].replace(',','.')), lo=parseFloat(m[3].replace(',','.'));
+  if(!isFinite(la)||!isFinite(lo))return null;
+  if(m[2]&&/[Ss]/.test(m[2]))la=-Math.abs(la);
+  if(m[4]&&/[WOwo]/.test(m[4]))lo=-Math.abs(lo);
+  if(Math.abs(la)>90||Math.abs(lo)>180)return null;
+  return {lat:la,lon:lo};
+}
+
+var PLANTS={};
+/* La lista local: cartera primero (es del proyecto) y presets después. */
+function sitiosLocales(){
+  var out=[];
+  Object.keys(PLANTS).sort().forEach(function(c){
+    var p=PLANTS[c];
+    if(!p||p.lat==null||p.lon==null)return;
+    out.push({n:(p.nombre||p.n||'?')+' · '+c,lat:+p.lat,lon:+p.lon,src:'Cartera',cod:c});
+  });
+  PRESETS.forEach(function(p){
+    out.push({n:p.n,lat:p.lat,lon:p.lon,src:'Presets',cod:p.cod});
+  });
+  return out;
+}
+
+/* Filtro por TODAS las palabras, en cualquier orden: «ayora valencia» y
+   «valencia ayora» encuentran lo mismo, y «24019» encuentra por código. */
+function filtraSitios(lista,q){
+  var ws=normSitio(q).split(/\s+/).filter(Boolean);
+  if(!ws.length)return lista.slice(0,12);
+  return lista.filter(function(s){
+    var h=normSitio(s.n+' '+(s.cod||'')+' '+(s.src||''));
+    return ws.every(function(w){return h.indexOf(w)>=0;});
+  }).slice(0,12);
+}
+
+var SITIO=null, _sitioT=null, _sitioAbort=null;
+function pintaSitio(){$('sitioSel').textContent=SITIO?SITIO.n:'manual';}
+
+/* Elegir un sitio mueve lat/lon Y dispara 'change': poner `.value` a mano no
+   lo dispara, y sin eso las lecturas, el sizing y la escena se quedaban en la
+   latitud anterior — con Assú (hemisferio SUR) la fija seguía mirando al sur. */
+function eligeSitio(s){
+  SITIO=s;
+  if(s&&s.lat!=null){
+    $('lat').value=(+s.lat).toFixed(4); $('lon').value=(+s.lon).toFixed(4);
+    ['lat','lon'].forEach(function(id){
+      $(id).dispatchEvent(new Event('change',{bubbles:true}));});
+  }
+  $('sitioQ').value=s?s.n:'';
+  $('sitioRes').style.display='none';
+  pintaSitio();
+}
+
+function renderSitios(grupos,aviso){
+  var h='';
+  grupos.forEach(function(g){
+    if(!g.items.length)return;
+    h+='<div class="gr">'+esc(g.label)+'</div>';
+    g.items.forEach(function(s,i){
+      h+='<div class="it" data-g="'+esc(g.label)+'" data-i="'+i+'"><b>'+esc(s.n)+'</b>'+
+         '<div class="co">'+(+s.lat).toFixed(4)+', '+(+s.lon).toFixed(4)+
+         (s.det?' · '+esc(s.det):'')+'</div></div>';
+    });
+  });
+  if(aviso)h+='<div class="aviso">'+esc(aviso)+'</div>';
+  if(!h){$('sitioRes').style.display='none';return;}
+  $('sitioRes').innerHTML=h; $('sitioRes').style.display='';
+  var todos={}; grupos.forEach(function(g){todos[g.label]=g.items;});
+  [].forEach.call($('sitioRes').querySelectorAll('.it'),function(el){
+    el.onmousedown=function(ev){ev.preventDefault();
+      eligeSitio(todos[el.dataset.g][+el.dataset.i]);};
+  });
+}
+
+/* El geocodificador de Open-Meteo: mismo proveedor que la meteo, sin clave. Se
+   llama con pausa (no en cada tecla) y se puede cancelar, para no dejar una
+   respuesta vieja pisando a una nueva. */
+async function buscaRemoto(q){
+  if(_sitioAbort)_sitioAbort.abort();
+  _sitioAbort=(typeof AbortController!=='undefined')?new AbortController():null;
+  var u='https://geocoding-api.open-meteo.com/v1/search?count=8&language=es&format=json&name='
+        +encodeURIComponent(q);
+  var r=await fetch(u,{cache:'no-store',signal:_sitioAbort?_sitioAbort.signal:undefined});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  var j=await r.json();
+  return (j.results||[]).map(function(x){
+    var det=[x.admin1,x.country].filter(Boolean).join(', ');
+    return {n:x.name+(det?' · '+det:''),lat:x.latitude,lon:x.longitude,
+            det:[(x.elevation!=null?Math.round(x.elevation)+' m':''),x.timezone||''].filter(Boolean).join(' · '),
+            src:'Buscados'};
+  });
+}
+
+function buscaSitio(){
+  var q=$('sitioQ').value;
+  var loc=filtraSitios(sitiosLocales(),q);
+  var co=parseCoords(q);
+  var grupos=[];
+  if(co)grupos.push({label:'Coordenadas',items:[{n:co.lat.toFixed(4)+', '+co.lon.toFixed(4),
+      lat:co.lat,lon:co.lon,det:'tal como las has escrito',src:'Coordenadas'}]});
+  grupos.push({label:'Cartera y presets',items:loc});
+  var vaABuscar=(!co&&normSitio(q).length>=3);
+  renderSitios(grupos, vaABuscar?'Buscando en Open-Meteo…':null);
+  if(_sitioT)clearTimeout(_sitioT);
+  if(!vaABuscar)return;                             // coordenadas: no hace falta red
+  _sitioT=setTimeout(function(){
+    var qv=q;
+    buscaRemoto(q).then(function(rem){
+      if($('sitioQ').value!==qv)return;             // ha seguido escribiendo
+      renderSitios(grupos.concat([{label:'Buscados',items:rem}]),
+                   rem.length?null:'Open-Meteo no encuentra nada con ese nombre.');
+    }).catch(function(e){
+      if($('sitioQ').value!==qv||e.name==='AbortError')return;
+      /* Un desplegable vacío se lee como «ese sitio no existe». Lo que pasa es
+         que no hay red, y eso hay que decirlo: sin ella el buscador sigue
+         valiendo para la cartera y los presets, que van en local. */
+      renderSitios(grupos,'Sin red para buscar fuera: solo cartera y presets.');
+    });
+  },350);
+}
+
+function loadPlants(){
+  /* `factiun_plantas` es donde el Panel publica la cartera (lo leen layout,
+     sim-solar, el índice y el generador). El `factiun_cartera` de antes no lo
+     escribía nadie. */
+  try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
+  if(!Object.keys(PLANTS).length){
+    try{var raw=localStorage.getItem('factiun_cartera');
+      if(raw){var c=JSON.parse(raw);
+        if(Array.isArray(c))c.forEach(function(p,i){
+          if(p&&p.lat!=null&&p.lon!=null)PLANTS[p.cod||p.n||('p'+i)]=p;});}}catch(e2){}
+  }
+  pintaSitio();
+}
+$('sitioQ').addEventListener('input',buscaSitio);
+$('sitioQ').addEventListener('focus',buscaSitio);
+$('sitioQ').addEventListener('blur',function(){
+  setTimeout(function(){$('sitioRes').style.display='none';},120);
+});
+$('sitioQ').addEventListener('keydown',function(ev){
+  if(ev.key==='Escape'){$('sitioRes').style.display='none';return;}
+  if(ev.key!=='Enter')return;
+  ev.preventDefault();
+  var pri=$('sitioRes').querySelector('.it');
+  if(pri)pri.dispatchEvent(new MouseEvent('mousedown'));
+});
+/* Teclear lat/lon a mano sigue valiendo, y entonces el rótulo deja de nombrar
+   un sitio que ya no es: decir «Ayora» sobre unas coordenadas cambiadas a mano
+   sería poner nombre de planta a otro emplazamiento. */
+['lat','lon'].forEach(function(id){
+  $(id).addEventListener('input',function(){
+    if(!SITIO)return;
+    if(Math.abs(+$('lat').value-SITIO.lat)>1e-4||Math.abs(+$('lon').value-SITIO.lon)>1e-4){
+      SITIO=null; $('sitioQ').value=''; pintaSitio();
+    }
+  });
+});
 
 /* ===================== UI ===================== */
 var COL={fija_optima:'#54A6FF',fija_proyecto:'#8C7BFF',fija_ew:'#F6A623',
@@ -1828,7 +2024,7 @@ function render(){
   f.forEach(function(x){if(x.key===REP.base)base=x;});
   var mejorMod=f.reduce(function(a,b){return b.neta>a.neta?b:a;});
   var mejorSuelo=f.reduce(function(a,b){return b.suelo>a.suelo?b:a;});
-  $('ctx').textContent=($('plant').value?$('plant').selectedOptions[0].text+' · ':'')+
+  $('ctx').textContent=(SITIO?SITIO.n+' · ':'')+
     (REP.fuente||'')+' '+$('year').value+' · '+REP.pasos+' pasos de '+Math.round(REP.dtH*60)+' min';
   $('out').innerHTML=(REP.local?localBanner():'')+'<div class="readout">'+
     ro('GHI del sitio',fmt(REP.ghi,0),'kWh/m²·año')+

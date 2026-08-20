@@ -77,6 +77,39 @@ Sevilla, 10 MWp, módulo de 660 Wp, fija a pitch 4,50 m y tracker a 6,00 m:
 La fija ocupa un **25 % menos de parcela** para el mismo pico; el TSAT capta un **27 % más** de
 energía sobre esos mismos MWp. Ésa es la comparación, y no se puede leer en una sola columna.
 
+## El emplazamiento: buscador, no desplegable
+
+Antes esto era un desplegable con siete presets: para comparar estructuras en un sitio que no fuese
+uno de esos siete había que teclear latitud y longitud a mano. Y «¿fija o seguidor **aquí**?» es
+justo la pregunta que se hace *antes* de tener proyecto, así que el desplegable estorbaba
+precisamente donde más se usa.
+
+Es el mismo buscador que la ficha de Viento, con sus tres caminos y en este orden:
+
+1. la **cartera y los presets**, que se filtran al teclear y funcionan **sin red** — es lo que se
+   busca el 90 % de las veces y no puede depender de que haya internet. Filtra por todas las
+   palabras en cualquier orden, sin acentos («tunez» encuentra «Túnez») y por código;
+2. **coordenadas pegadas** tal cual — `37.3891, -5.9845`, con coma decimal, con `;`, o con N/S/E/O
+   (también la **O** de Oeste) —, que es el camino más corto para quien viene de un DWG o de Maps;
+3. el **geocodificador de Open-Meteo**, el mismo proveedor del que ya sale la meteo de la ficha, así
+   que no añade una dependencia externa nueva ni pide clave.
+
+Si el geocodificador no contesta **se dice en el propio desplegable**: una lista vacía se lee como
+«ese sitio no existe» cuando lo que pasa es que no hay red.
+
+Dos detalles que valen más de lo que parecen:
+
+* elegir un sitio **dispara `change`** en latitud y longitud. Poner `.value` a mano no lo dispara, y
+  sin eso las lecturas, el sizing y la escena se quedaban en la latitud anterior — con Assú
+  (hemisferio **sur**) la fija seguía dibujándose mirando al sur. Hay un test que mide la normal del
+  panel después de pegar unas coordenadas del sur.
+* tocar la latitud a mano **borra el nombre del sitio**: llamar «Túnez» a unas coordenadas cambiadas
+  a mano sería poner nombre de planta a otro emplazamiento.
+
+> De paso queda arreglado algo que estaba mal desde el principio: esta ficha leía la cartera de
+> `factiun_cartera` y el resto del Panel la publica en `factiun_plantas`. O sea que el comparador
+> **nunca** veía la cartera. Ahora lee la buena, y la vieja se queda como respaldo.
+
 ## Barridos
 
 La ficha compara a **una** densidad. El barrido contesta la otra mitad: qué pasa si se aprieta o se
@@ -445,6 +478,7 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ```bash
 node tests/test_comparador.js       # 74 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
+node tests/test_comparador_sitio.js # 34 comprobaciones · el buscador de emplazamiento
 node tests/test_comparador_3d.js    # 80 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 104 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
