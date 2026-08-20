@@ -226,6 +226,7 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         <div class="field"><label>Módulo · pico (Wp)</label><input id="fxWp" type="number" step="5" min="1" value="660"></div>
         <div class="field"><label>&nbsp;</label><p class="mini" id="fxDens" style="padding-top:9px"></p></div>
       </div>
+      <p class="mini" id="fxMod"></p>
       <div class="two">
         <div class="field"><label>Mesa</label>
           <select id="fxTabla">
@@ -266,6 +267,7 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         <div class="field"><label>Módulo · pico (Wp)</label><input id="tkWp" type="number" step="5" min="1" value="660"></div>
         <div class="field"><label>&nbsp;</label><p class="mini" id="tkDens" style="padding-top:9px"></p></div>
       </div>
+      <p class="mini" id="tkMod"></p>
       <div class="two">
         <div class="field"><label>Mesa</label>
           <select id="tkTabla">
@@ -358,7 +360,12 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
           <input id="szRed" type="number" step="0.1" min="0" value="0"></div>
         <div class="field ancho"><label>&nbsp;</label>
           <button class="btn ghost" id="szTemps">🌡 Temperaturas del emplazamiento</button></div>
+        <div class="field ancho"><label>&nbsp;</label>
+          <button class="btn ghost" id="szAplFx">▤ Llevar el string a la FIJA</button></div>
+        <div class="field ancho"><label>&nbsp;</label>
+          <button class="btn ghost" id="szAplTk">▤ Llevar el string al TRACKER</button></div>
       </div>
+      <p class="mini" id="szCoherencia"></p>
       <p class="mini" id="szTempsNota">Las temperaturas de arriba son un default genérico
         (−10 / 70 °C). El string se dimensiona por los dos extremos térmicos del <b>sitio</b>:
         tráelas del emplazamiento.</p>
@@ -837,7 +844,7 @@ FIS.CATALOGO=[
   {key:'fija_proyecto',    label:'Fija · tilt de proyecto',         fam:'fija',
    nota:'Monoinclinada al ecuador con el tilt que fije el proyecto.'},
   {key:'fija_ew',          label:'Fija · Este-Oeste (dos aguas)',   fam:'fija_ew', sinSombra:true,
-   nota:'Media de los dos planos (misma superficie). SIN sombreado entre filas: el modelo de fila 1D supone todas las filas igual orientadas y no vale para aguas enfrentadas.'},
+   nota:'Se promedian los dos planos, que tienen la misma superficie. El modelo de sombra que lleva la ficha supone todas las filas mirando al mismo sitio, y con dos aguas enfrentadas eso no vale — por eso aquí no se aplica.'},
   {key:'tracker_hsat',     label:'Tracker 1 eje N-S · backtracking',fam:'tracker', bt:true,
    nota:'HSAT canónico: eje horizontal N-S, backtracking activo.'},
   {key:'tracker_hsat_nobt',label:'Tracker 1 eje N-S · sin backtracking',fam:'tracker', bt:false,
@@ -1022,17 +1029,21 @@ FIS.compara=function(keys,M,cfg){
       suelo:r.neta*r.gcr,
       transp:ghi>0?((r.neta/ghi-1)*100):NaN,
       sombra:r.ideal>0?((1-r.neta/r.ideal)*100):0});
-    if(spec.sinSombra)avisos.push('«'+spec.label+'» corre SIN sombreado entre filas: su POA es un techo. '+spec.nota);
+    if(spec.sinSombra)avisos.push('«'+spec.label+'» se calcula SIN la sombra entre filas, así que '+
+      'su POA es un <b>techo</b>: en campo saldrá algo menos. '+spec.nota);
     if(spec.tiltOpt){
-      var dif=(tiltSin!=null)?(tiltSin-tilt):0;
-      avisos.push('«'+spec.label+'»: el tilt óptimo ('+tilt+'°) es el NETO, barrido CON sombra entre '+
-        'filas. Sin sombra —que es como lo barre el cuaderno— saldría '+tiltSin+'°'+
+      var dif=(tiltSin!=null)?(tiltSin-tilt):0, gcrTxt=r.gcr.toFixed(3).replace('.',',');
+      avisos.push('«'+spec.label+'»: <b>'+tilt+'°</b> es el ángulo que más energía deja EN ESTA '+
+        'IMPLANTACIÓN, contando la sombra que cada fila le hace a la de detrás.'+
         (dif<=0
-          ? ', o sea que a esta densidad (GCR '+r.gcr.toFixed(3).replace('.',',')+') coinciden: las filas están lo '+
-            'bastante abiertas para que la sombra no castigue a los tilts altos.'
-          : ': '+dif+'° más. La diferencia la pone la DENSIDAD (GCR '+r.gcr.toFixed(3).replace('.',',')+'): cuanto '+
-            'más apretadas las filas, más se tapa a sí misma una fija inclinada, y el óptimo neto '+
-            'baja. No es que los dos motores discrepen — es que responden a preguntas distintas.'));
+          ? ' Si las filas estuvieran solas saldría lo mismo: a esta densidad (GCR '+gcrTxt+') '+
+            'están tan abiertas que la sombra no llega a castigar a los ángulos altos.'
+          : ' Si las filas estuvieran SOLAS —sin vecinas detrás— el mejor ángulo sería <b>'+
+            tiltSin+'°</b>, '+dif+'° más. La diferencia la pone lo apretadas que van (GCR '+
+            gcrTxt+'): cuanto menos hueco entre filas, más castiga la sombra a los ángulos '+
+            'altos, así que compensa tumbar la mesa. El cuaderno publica el de '+tiltSin+'° '+
+            'porque lo calcula sin vecinas: no es que discrepen, es que contestan preguntas '+
+            'distintas.'));
     }
   });
   var base=null;
@@ -1677,16 +1688,47 @@ function eligeModulo(){
 /* Aplicar a una familia: el pico y las dimensiones van al configurador que
    toque, y de paso el βVoc al sizing. Es el enganche que hace que elegir un
    módulo de verdad mueva la comparación de estructuras. */
+var MOD_FAM={fx:null, tk:null};
+function pintaModFam(pfx){
+  var m=MOD_FAM[pfx];
+  if(!m){$(pfx+'Mod').innerHTML='<span style="color:var(--muted-2)">Módulo <b>tecleado a mano</b> '+
+    '— elígelo del catálogo arriba para traer su pico y sus medidas.</span>'; return;}
+  $(pfx+'Mod').innerHTML='<span style="color:var(--accent)">✓ '+esc(m.name)+'</span> · '+
+    fmt(m.wp,0)+' Wp · '+fmt(m.L,3)+' × '+fmt(m.W,3)+' m'+
+    (m.dimDB?' <span style="color:var(--muted-2)">(del catálogo)</span>'
+            :' <span style="color:var(--muted-2)">(medidas canónicas: la CEC no las trae)</span>');
+}
 function aplicaModulo(pfx){
-  if(!MODSEL)return;
+  if(!MODSEL){
+    $(pfx+'Mod').innerHTML='<span style="color:var(--dead)">Elige antes un módulo del catálogo.</span>';
+    return;
+  }
   $(pfx+'Wp').value=MODSEL.wp;
   $(pfx+'ModL').value=MODSEL.L.toFixed(3);
   $(pfx+'ModW').value=MODSEL.W.toFixed(3);
   if(MODSEL.betaPct!=null&&MODSEL.betaPct<0&&MODSEL.betaPct>-0.5)
     $('szBeta').value=MODSEL.betaPct.toFixed(3);
+  MOD_FAM[pfx]={name:MODSEL.name, wp:MODSEL.wp, L:MODSEL.L, W:MODSEL.W, dimDB:MODSEL.dimDB};
+  pintaModFam(pfx);
   refrescaGeom(); construyeMundo(); actualiza3D();
-  $('eqGob').textContent='módulo en '+(pfx==='fx'?'FIJA':'TRACKER');
+  $('eqGob').textContent=(MOD_FAM.fx&&MOD_FAM.tk&&MOD_FAM.fx.name===MOD_FAM.tk.name)
+    ? 'mismo módulo en las dos'
+    : 'fija: '+(MOD_FAM.fx?'catálogo':'a mano')+' · tracker: '+(MOD_FAM.tk?'catálogo':'a mano');
 }
+/* Teclear el módulo a mano deshace la marca: seguir diciendo «AEG 645» sobre
+   unas medidas cambiadas a mano sería ponerle a otro módulo el nombre del que
+   viniste a elegir — el mismo criterio que con el emplazamiento. */
+['fx','tk'].forEach(function(pfx){
+  ['Wp','ModL','ModW'].forEach(function(campo){
+    var el=$(pfx+campo); if(!el)return;
+    el.addEventListener('input',function(){
+      var m=MOD_FAM[pfx]; if(!m)return;
+      if(Math.abs(+$(pfx+'Wp').value-m.wp)>1e-6||
+         Math.abs(+$(pfx+'ModL').value-m.L)>1e-4||
+         Math.abs(+$(pfx+'ModW').value-m.W)>1e-4){MOD_FAM[pfx]=null; pintaModFam(pfx);}
+    });
+  });
+});
 
 /* ── INVERSOR ── */
 var INVSEL=null;
@@ -1734,7 +1776,7 @@ function refrescaSizing(){
   if(!m||!v){
     $('szRead').innerHTML='';
     $('szNota').innerHTML='Elige un <b>módulo</b> y un <b>inversor</b> arriba: el sizing sale de los dos.';
-    pintaVentana(null); return;
+    coherenciaN(null); pintaVentana(null); return;
   }
   var W=FIS.ventana({voc:m.voc, vmp:m.vmp, betaVocPct:+$('szBeta').value,
     tMin:+$('szTmin').value, tMax:+$('szTmax').value,
@@ -1752,7 +1794,7 @@ function refrescaSizing(){
         'Sale con un módulo de menos tensión, con un inversor de ventana más ancha, o si el '+
         'emplazamiento no baja de '+fmt(+$('szTmin').value,0)+' °C.'
       : '<span style="color:var(--dead)">⚠ Faltan datos de tensión del módulo.</span>';
-    pintaVentana(null); return;
+    coherenciaN(null); pintaVentana(null); return;
   }
   /* El N se PROPONE (el máximo que cabe: menos cobre y menos strings para el
      mismo pico) y se deja tocar. Pero fuera de [N_min, N_max] no es una
@@ -1797,6 +1839,7 @@ function refrescaSizing(){
     'no la capacidad de entrada del inversor.'+
     (avisos.length?'<br>'+avisos.join('<br>'):'');
   $('szGob').textContent='§05 · '+n+'×'+fmt(m.wp,0)+' W';
+  coherenciaN(W,n);
   pintaVentana({W:W,n:n,m:m,v:v});
 }
 
@@ -1893,6 +1936,38 @@ $('szN').addEventListener('input',function(){SZ_N_TOCADO=true;});
   .forEach(function(id){var el=$(id); if(!el)return;
     el.addEventListener('input',refrescaSizing); el.addEventListener('change',refrescaSizing);});
 
+/* ── El string del sizing baja a los configuradores ──
+   «Módulos por string» está en dos sitios y significa lo MISMO: en el sizing es
+   lo que cabe entre la tensión máxima del inversor y el suelo de la ventana
+   MPPT, y en el configurador es lo que mide la fila. Que digan cosas distintas
+   es tener una fila dibujada que no se puede conectar — y no lo avisaba nadie.
+   Así que se puede bajar de un botón, y mientras no coincidan se DICE. */
+function aplicaN(pfx){
+  var n=Math.round(+$('szN').value);
+  if(!(n>0))return;
+  $(pfx+'ModsStr').value=n;
+  refrescaGeom(); construyeMundo(); actualiza3D();
+  refrescaSizing();                 // y que el aviso de coherencia se entere
+}
+function coherenciaN(W,n){
+  if(!W){$('szCoherencia').innerHTML=''; return;}
+  var malas=[['fx','FIJA'],['tk','TRACKER']].map(function(par){
+    var v=Math.round(+$(par[0]+'ModsStr').value);
+    if(v===n)return null;
+    var cabe=(v>=W.nMin&&v<=W.nMax);
+    return '<b>'+par[1]+'</b> tiene '+v+(cabe
+      ? ' (entra en la ventana, pero no es el que dice el sizing)'
+      : ' <span style="color:var(--dead)">— y ése NO se puede conectar: fuera de '+
+        W.nMin+'–'+W.nMax+'</span>');
+  }).filter(Boolean);
+  $('szCoherencia').innerHTML=malas.length
+    ? '⚠ El sizing dice <b>'+n+' módulos por string</b> y '+malas.join('; ')+
+      '. Es el MISMO número en los dos sitios: en el sizing es lo que cabe en la ventana de '+
+      'tensión y en el configurador es lo que mide la fila. Bájalo con los botones de arriba.'
+    : '<span style="color:var(--live)">✓ Los dos configuradores llevan los '+n+
+      ' módulos por string que dice el sizing.</span>';
+}
+
 /* ── Traer las temperaturas del emplazamiento ──
    Teclear -10/70 a ojo es dimensionar otro sitio. Se bajan del archivo de
    Open-Meteo —el mismo proveedor de la meteo de la ficha— para el año elegido
@@ -1929,6 +2004,14 @@ async function traeTemps(){
 }
 var SZ_TEMPS=null;
 $('szTemps').onclick=traeTemps;
+$('szAplFx').onclick=function(){aplicaN('fx');};
+$('szAplTk').onclick=function(){aplicaN('tk');};
+/* Cambiar los módulos por string en un configurador también rompe (o arregla)
+   la coherencia, así que el aviso se recalcula desde ahí. */
+['fxModsStr','tkModsStr'].forEach(function(id){
+  var el=$(id); if(!el)return;
+  el.addEventListener('input',refrescaSizing); el.addEventListener('change',refrescaSizing);
+});
 /* Cambiar de sitio o de año invalida lo traído: seguir enseñando «Túnez ·
    2023» sobre las temperaturas de otro emplazamiento sería peor que no
    enseñar nada. */
@@ -2786,6 +2869,7 @@ pintaEstructuras(); loadPlants(); refrescaGeom(); detectEngine();
 ['pointerdown','focusin'].forEach(function(ev){
   $('eqCard').addEventListener(ev,despiertaCatalogo,{once:false});});
 refrescaSizing(); barDefaults(); dibujaBarrido();
+pintaModFam('fx'); pintaModFam('tk');
 $('run').onclick=run;
 
 /* La escena se ve DESDE QUE SE ABRE, sin haber comparado nada: es la lección
