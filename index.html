@@ -804,10 +804,10 @@ const PROJECTS = [
   },
   {
     name: "Simulador de planta TCU",
-    status: "build",
+    status: "live",
     objetivo: "Una planta entera simulada equipo a equipo —NCU, TCUs, HSUs y repetidores— con la jerarquía de control real y el mapa Modbus de los tres dispositivos en vivo. Los números y el algoritmo no son suyos: los lee de SolarGPT.",
     stack: "HTML autocontenido · sin dependencias · API local de SolarGPT (FastAPI)",
-    url: "",
+    url: "https://imoriana3.github.io/gemelo-digital/simulador.html",
     repo: "https://github.com/imoriana3/gemelo-digital",
     updated: "2026-08-20",
     version: "1.0",
@@ -815,7 +815,7 @@ const PROJECTS = [
     docUrl: "",
     download: "",
     uso: [
-      "Fichero: simulador.html (repo gemelo-digital, rama claude/simulador-tcu-24ubzk — pendiente de publicar en main).",
+      "Fichero: simulador.html (repo gemelo-digital). Se llega también desde el gemelo 3D y desde el estudio de batería.",
       "Tres vistas: Planta (la flota con su inclinación real y su salud), Mapa Modbus en vivo y Detalle del equipo.",
       "Jerarquía completa: seta > viento (SP1) > nieve (SP3) > limpieza (SP4) > forzados > batería > manual > auto. El viento manda sobre manual, como el equipo real.",
       "Entradas físicas de verdad: el inclinómetro es ANALÓGICO (desajuste de montaje, offset 41058, deriva térmica, ruido y cuantización a 34,7 pulsos/°) y el lazo se cierra sobre lo que el TCU MIDE — de ahí sale el defecto del ensayo D.1.1. La seta es una línea NC, con antirrebote y ENCLAVADA.",
@@ -828,11 +828,12 @@ const PROJECTS = [
       { done:true,  text:"Inclinómetro analógico y seta binaria enclavada como entradas de hardware, no como reglas." },
       { done:true,  text:"Física y mapa generados de sus fuentes, con cotejo que se niega a escribir si divergen. Cazó el reposo (0,45 vs 0,64 W) y el actuador (0,16 vs 0,17 °/s)." },
       { done:true,  text:"Algoritmo de seguimiento y gestión de batería llamados como API contra el motor local de SolarGPT." },
-      { done:false, text:"Publicarlo: hoy vive en la rama claude/simulador-tcu-24ubzk y no está en main, así que la Pages todavía no lo sirve. Falta también enlazarlo desde el gemelo 3D." },
+      { done:true,  text:"Publicado en main y enlazado desde el gemelo 3D y el estudio de batería." },
       { done:false, text:"Escritura del mapa: lo que el equipo publica está entero, lo que RECIBE no (0/31 comandos del TCU, 0/11 de la HSU, 19/69 configuración). Sin eso la toolbox puede leerlo pero no ejercitarlo." },
       { done:false, text:"Conectar el estudio de batería (bateria.html) y el visor de terreno al mismo puente: son las dos últimas superficies que calculan su seguimiento en el navegador." },
       { done:false, text:"Cotejo automático gemelo ↔ motor: correr el mismo día en los dos y fallar si se separan. Hoy el cotejo cubre las constantes, no el resultado." },
-      { done:false, text:"Curva de motor: la tabla medida I(θ) da +14 % de consumo frente al ajuste lineal. A la espera de la curva medida y de los datos de campo de El Burgo y Ayora." }
+      { done:true,  text:"Curva de motor: la tabla medida I(θ) ya es la canónica y el tope de 50 W queda retirado por ser un envolvente de diseño. El +14 % medido aquí por separado cae dentro del 9-16 % que declara el propio fichero." },
+      { done:false, text:"Validar esa curva en campo: es del banco, no de una planta. Los Wh de motor por día y por TCU de El Burgo y Ayora son lo que dirá si el banco se parece a la realidad." }
     ],
     historial: [
       { date:"2026-08-20", ver:"1.0", note:"Planta completa con jerarquía y Modbus en vivo; inclinómetro y seta como hardware; física y mapa generados con cotejo de cuatro fuentes; algoritmo y batería llamados como API a SolarGPT. 163 comprobaciones." }

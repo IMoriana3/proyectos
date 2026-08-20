@@ -2,7 +2,7 @@
 
 > Una planta entera de seguidores simulada equipo a equipo —NCU, TCUs, HSUs y repetidores— con la jerarquía de control real y el mapa Modbus de los tres dispositivos actualizándose en vivo. Los números y el algoritmo no son suyos: los lee de SolarGPT.
 
-**Visor:** `simulador.html` (repo [`gemelo-digital`](https://github.com/imoriana3/gemelo-digital), rama `claude/simulador-tcu-24ubzk` — pendiente de publicar) · **Código:** `sim/`
+**Visor:** [simulador.html](https://imoriana3.github.io/gemelo-digital/simulador.html) · **Código:** repo [`gemelo-digital`](https://github.com/imoriana3/gemelo-digital), carpeta `sim/`
 
 ## Qué contesta
 

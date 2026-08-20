@@ -101,14 +101,14 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
   SolarGPT. Cae en vuestro ámbito — revisadla y quedáosla. Lleva `docId: "simulador-tcu"` con su
   `docs/simulador-tcu.md`. `test_integridad.js` en verde (25 tarjetas, 6/6).
 
-  Dos avisos que os afectan:
-  1. **`url: ""` a propósito.** El simulador vive todavía en la rama `claude/simulador-tcu-24ubzk`
-     de `gemelo-digital` y **no está en `main`**, así que la Pages no lo sirve. Cuando se publique,
-     la URL será `https://imoriana3.github.io/gemelo-digital/simulador.html` — cambiarla entonces y
-     no antes: una tarjeta con enlace roto es peor que una sin enlace.
-  2. **Nada enlaza hacia él.** El simulador sí enlaza a *Campo 3D* y a *Batería*, pero ni el
-     `index.html` del gemelo ni el Panel llevan hacia él. Al publicarlo conviene añadir el acceso en
-     la cabecera del gemelo 3D, que es de vuestro ámbito.
+**Ya publicado**: `gemelo-digital` está en `main` con el simulador y con los accesos desde el
+  gemelo 3D y desde el estudio de batería, así que la tarjeta va con `status: "live"` y su URL.
+
+  Un aviso que os afecta: al fusionar, `main` de `gemelo-digital` había avanzado nueve commits
+  sobre la física de batería (#43–#51). **Donde nos solapábamos gana lo vuestro**, que es posterior:
+  la curva de motor medida y la retirada del tope de 50 W. Lo que se conserva de esta rama es lo que
+  no se solapa —el abanderamiento por el módulo compartido y `consumoTCU` como único sitio donde se
+  calcula el consumo— reescrito para envolver **vuestros** tres modelos de motor.
 
   Y una nota de arquitectura por si os toca mantenerlo: usa el **mismo motor local** que el
   Comparador de estructuras (`server/app.py` de SolarGPTfull), con dos endpoints propios —
