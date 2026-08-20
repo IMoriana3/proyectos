@@ -387,7 +387,11 @@ FIS.tamano=function(c){
   var largoFila=total*modAlong+intra*(c.gapMod||0)+motores*(c.gapMot||0);
   return {apertura:apertura, altoColector:altoColector, largoFila:largoFila,
           modsFila:total*n, modsTracker:total*n*Math.max(1,Math.round(c.filas||1)),
-          filasTracker:Math.max(1,Math.round(c.filas||1)), n:n, esV:esV};
+          filasTracker:Math.max(1,Math.round(c.filas||1)), n:n, esV:esV,
+          /* Las cotas crudas salen también, porque el modelo 3D del seguidor se
+             GENERA con ellas (seguidor.js las quiere una a una, no el total). */
+          modAlong:modAlong, modCross:modCross, modsStr:mods, nStr:nStr,
+          gapMod:+(c.gapMod||0), gapMot:+(c.gapMot||0)};
 };
 
 /* ── θ de seguimiento con backtracking (Anderson-Mikofski) ──
@@ -682,8 +686,14 @@ function loadPlants(){
     o.value=(p.cod||p.n); o.textContent=(p.n||p.cod); o.dataset.lat=p.lat; o.dataset.lon=p.lon;
     sel.appendChild(o);
   });
+  /* Poner `.value` a mano NO dispara 'change', así que elegir emplazamiento
+     movía las coordenadas y dejaba las lecturas y la escena en la latitud
+     anterior: con Assú (hemisferio SUR) la fija se quedaba mirando al sur. */
   sel.onchange=function(){var o=this.selectedOptions[0];
-    if(o&&o.dataset.lat){$('lat').value=o.dataset.lat;$('lon').value=o.dataset.lon;}};
+    if(!o||!o.dataset.lat)return;
+    $('lat').value=o.dataset.lat; $('lon').value=o.dataset.lon;
+    ['lat','lon'].forEach(function(id){
+      $(id).dispatchEvent(new Event('change',{bubbles:true}));});};
 }
 
 /* ===================== UI ===================== */
@@ -1107,7 +1117,29 @@ function etiqueta3D(txt,col,anchoMax){
    ángulo es mover una rotación y no rehacer nada. El tubo canónico va en +X
    local; girado 90° en Y queda a lo largo de Z (norte-sur), que es como se
    monta un HSAT. */
-function seguidor3D(mats){
+/* ── Las cotas del seguidor, ANTES de generarlo ──
+   `seguidor.js` no dibuja un tracker parametrizado: lo GENERA a partir de sus
+   cotas canónicas (`Seguidor.DIMS`), y por eso `seguidor3D()` salía siempre
+   igual —28 módulos, 1V, 64,7 m— dijeras lo que dijeras en el configurador del
+   tracker. El pitch movía las filas de sitio y ni el módulo, ni la mesa, ni los
+   módulos por string, ni los gaps movían NADA. La fija sí se dibujaba a su
+   tamaño (`mesaFija3D` lo recibe por argumento), así que la escena comparaba
+   un tracker de catálogo contra una fija de verdad.
+   Aquí se le pasan las cotas configuradas y se devuelve el factor de escala a
+   lo largo del eje: el modelo tiene DOS alas con el motor en medio —la
+   topología real, y la de `FIS.tamano` con `nStr` = 2— así que con otro número
+   de strings por fila el largo se ajusta estirando, que es lo honesto: la fila
+   mide lo que dice la tabla aunque el modelo no sepa dibujar tres alas.       */
+function cotasSeguidor(G){
+  var D=Seguidor.DIMS;
+  D.modW=G.modAlong;            // el módulo que corre A LO LARGO del tubo
+  D.modH=G.apertura;            // y el que se apila en cross-axis (1V, 2V…)
+  D.gapMod=G.gapMod; D.gapDrive=G.gapMot;
+  D.pitch=D.modW+D.gapMod;      // paso de módulo: lo usa el mallado de las alas
+  Seguidor.setModsPerStr(G.modsStr);   // recalcula mesa, fila y centro de ala
+  return (D.span>0?G.largoFila/D.span:1);
+}
+function seguidor3D(mats,escalaEje){
   var g=new THREE.Group(), spin=new THREE.Group(); g.add(spin);
   Seguidor.parts(THREE,{detail:'mass',size:'largo'}).forEach(function(p){
     if(p.antenna||p.motorLink||p.damperLink)return;
@@ -1120,6 +1152,10 @@ function seguidor3D(mats){
   g.position.y=postH; g.rotation.y=Math.PI/2;
   var poste=new THREE.Mesh(new THREE.BoxGeometry(.18,postH,.18),mats.steel);
   poste.position.y=postH/2; poste.castShadow=true;
+  /* La escala va en `g` (el grupo del tubo), no en el wrap: así estira la viga,
+     las alas y el vano del motor —lo que de verdad se alarga— y deja el poste
+     con su sección. */
+  if(escalaEje&&Math.abs(escalaEje-1)>1e-6)g.scale.x=escalaEje;
   var wrap=new THREE.Group(); wrap.add(g,poste); wrap.spin=spin;
   return wrap;
 }
@@ -1195,6 +1231,7 @@ function construyeMundo(){
      de fila y el alto de colector que salen de `FIS.tamano`, no las cotas por
      defecto del modelo. Si no, la escena enseñaría una estructura y la tabla
      calcularía otra. */
+  var escTk=cotasSeguidor(cfg.tracker);   // el modelo, a las cotas configuradas
   var largoTk=cfg.tracker.largoFila, largo=Math.max(cfg.fija.largoFila,largoTk);
   /* Hueco entre bloques: 16 m, y no es un número bonito. De él sale la
      elevación a la que hay que apagar las sombras (más abajo), y con 10 m se
@@ -1217,7 +1254,7 @@ function construyeMundo(){
          fija y el tracker se configuran aparte, y si el render los igualara
          estaría enseñando una estructura distinta de la que calcula la tabla. */
       if(spec.fam==='tracker'){
-        uno=seguidor3D(mats); uno.position.x=d;          // filas hacia el ESTE
+        uno=seguidor3D(mats,escTk); uno.position.x=d;    // filas hacia el ESTE
       }else if(spec.fam==='fija_ew'){
         // dos aguas: la mesa lleva DOS paneles enfrentados, y las filas se
         // repiten hacia el este como en el seguidor (las filas corren N-S)
@@ -1354,13 +1391,18 @@ document.addEventListener('change',function(e){
   if(e.target.classList&&e.target.classList.contains('st')){
     refrescaGeom(); construyeMundo(); actualiza3D();}
 });
-/* Todo lo que cambia la GEOMETRÍA rehace la escena: el tamaño del colector, el
-   suelo y el emplazamiento. (La lista se quedó con un 'cw' que ya no existe al
-   partirlo en apertura/alto de colector, y eso reventaba el arranque entero con
-   un «null.addEventListener» — lo caza el test del 3D con «sin errores de JS».) */
-['pitch','maxang','land','axtilt','tilt','lat','lon',
- 'modL','modW','tabla','filas','modsStr','nStr','gapMod','gapMot'
-].forEach(function(id){
+/* Todo lo que cambia la GEOMETRÍA rehace la escena, y la lista es LA MISMA que
+   refresca las lecturas: `CAMPOS_GEOM`. Tenerla duplicada aquí fue exactamente
+   el fallo — al partir la configuración en `fx*`/`tk*` esta copia se quedó con
+   los ids de antes ('pitch','modL','tabla','filas'…), que ya no existen;
+   `if(!el)return` se los tragó en silencio y el 3D dejó de moverse con TODOS
+   los campos de los dos configuradores. Cambiabas el pitch, la mesa o el
+   módulo, las lecturas se actualizaban, la tabla también, y la escena seguía
+   dibujando la geometría del arranque: una ficha enseñando una estructura y
+   calculando otra, que es justo lo que el 3D existe para no hacer.
+   Una lista, un sitio. Se rehace con 'change' y no con 'input' para no
+   reconstruir el mundo en cada tecla. */
+CAMPOS_GEOM.forEach(function(id){
   var el=$(id); if(!el)return;
   el.addEventListener('change',function(){construyeMundo();actualiza3D();});
 });

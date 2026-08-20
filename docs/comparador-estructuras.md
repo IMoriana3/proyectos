@@ -165,6 +165,35 @@ modelo **real** de `seguidor.js`, el mismo que pintan el Gemelo Digital y la Cob
    vecino y contamina la comparación—. Con 10 m se apagaban a 13°, justo por encima del amanecer
    de invierno que la escena existe para enseñar; con 16 m aguantan hasta 8,5°.
 
+### La escena tiene que OBEDECER a los dos configuradores
+
+Un 3D que no se mueve con lo que configuras es peor que no tenerlo: se lee como una prueba visual
+de un número que en realidad no representa. Tres fallos, los tres del mismo tipo —la escena
+enseñando una estructura mientras la tabla calculaba otra—:
+
+1. **La lista de campos que rehacen el mundo se quedó vieja.** Al partir la configuración en dos
+   familias (`fx*` para la fija, `tk*` para el tracker), la lista conservó los ids de antes
+   (`'pitch'`, `'modL'`, `'tabla'`, `'filas'`…), que ya no existen. El `if(!el)return` que la
+   protege de un id ausente se los tragó **en silencio**: cambiabas el pitch, la mesa o el módulo
+   y la escena seguía dibujando la geometría del arranque. Ahora la lista es **una sola**
+   (`CAMPOS_GEOM`), la misma que refresca las lecturas — duplicarla fue exactamente el fallo.
+2. **El modelo del seguidor era de catálogo.** `seguidor.js` no dibuja un tracker parametrizado:
+   lo **genera** a partir de sus cotas canónicas (`Seguidor.DIMS`: 28 módulos, 1V, 64,7 m). Como
+   nadie se las pasaba, el bloque del seguidor salía siempre igual, mientras la fija sí se
+   dibujaba a su tamaño (`mesaFija3D` lo recibe por argumento). Ahora `cotasSeguidor()` le pone el
+   módulo, la apertura, los gaps y los módulos por string antes de generarlo. El modelo tiene dos
+   alas con el motor en medio —la topología real, la de `FIS.tamano` con `nStr = 2`—, así que con
+   otro número de strings por fila el largo se ajusta estirando el tubo: la fila mide lo que dice
+   la tabla aunque el modelo no sepa dibujar tres alas.
+3. **Elegir emplazamiento no refrescaba nada.** Poner `.value` a mano no dispara `change`, así que
+   con Assú (hemisferio **sur**) la fija se quedaba mirando al sur.
+
+Los tests miden la escena **campo por campo**: el pitch de cada familia separando *sus* filas y no
+las de la otra, la mesa 1V→2V doblando la apertura dibujada (2,38 → 4,76 m), los módulos por
+string acortando la fila (65,09 → 32,78 m), el largo dibujado contra el de la lectura (65,09 vs
+65,08 m) y la fija girando al norte al elegir un sitio del hemisferio sur. Más un guard
+anti-podredumbre: ningún id de `CAMPOS_GEOM` puede apuntar a un elemento que no existe.
+
 ### El error que cazó el test del 3D
 
 El primer render tenía el **signo de la basculación cambiado**: por la mañana los seguidores se
@@ -225,9 +254,9 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ## Pruebas
 
 ```bash
-node tests/test_comparador.js       # 27 comprobaciones · careo contra el core, sin navegador
+node tests/test_comparador.js       # 42 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
-node tests/test_comparador_3d.js    # 31 comprobaciones · la escena en un Chromium de verdad
+node tests/test_comparador_3d.js    # 40 comprobaciones · la escena en un Chromium de verdad
 ```
 
 El test **extrae el bloque `FÍSICA PURA` del HTML real**, no una copia: una copia se quedaría

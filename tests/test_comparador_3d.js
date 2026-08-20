@@ -164,6 +164,95 @@ const SONDA = `(() => {
     check('con ' + n + ' bloques cabe todo en el encuadre (' + fit + ' ≤ 1)', fit <= 1.0);
   }
 
+  // ── la escena OBEDECE a los dos configuradores ──
+  // El 3D se quedó mudo: la lista que rehacía el mundo conservaba los ids de
+  // antes de partir la configuración en `fx*`/`tk*` ('pitch','modL','tabla'…),
+  // `if(!el)return` se los tragó en silencio y podías cambiar el pitch, la mesa
+  // o el módulo y ver siempre la geometría del arranque — la ficha enseñando
+  // una estructura y calculando otra, justo lo que el 3D existe para evitar.
+  // Estos checks miden la ESCENA antes y después de tocar cada campo.
+  const MEDIDA = k => `(() => {
+    const B = BLOQUES.find(b => b.key === ${JSON.stringify(k)});
+    if (!B) return null;
+    const caja = new THREE.Box3().setFromObject(B.filas[0]);
+    return { sep: +B.filas[0].position.distanceTo(B.filas[1].position).toFixed(3),
+             pitch: +B.pitch.toFixed(3),
+             dx: +(caja.max.x - caja.min.x).toFixed(2),
+             dz: +(caja.max.z - caja.min.z).toFixed(2),
+             dy: +(caja.max.y - caja.min.y).toFixed(2) };
+  })()`;
+  const pon = async (id, v) => {
+    await p.evaluate(([i, x]) => { const el = document.getElementById(i);
+      el.value = x; el.dispatchEvent(new Event('change', { bubbles: true })); }, [id, String(v)]);
+    await p.waitForTimeout(250);
+  };
+  await p.evaluate(() => { document.getElementById('hora').value = 720; actualiza3D(); });
+
+  const antesFx = await p.evaluate(MEDIDA('fija_proyecto'));
+  await pon('fxPitch', 9.5);
+  const trasPitch = await p.evaluate(MEDIDA('fija_proyecto'));
+  check('el pitch de la FIJA separa las filas en la escena (' +
+    antesFx.sep + ' → ' + trasPitch.sep + ' m)',
+    Math.abs(trasPitch.sep - 9.5) < 0.01 && trasPitch.sep !== antesFx.sep);
+
+  await pon('fxTabla', '2V');
+  const tras2V = await p.evaluate(MEDIDA('fija_proyecto'));
+  check('la mesa de la FIJA (1V → 2V) crece en la escena (' +
+    trasPitch.dz + ' → ' + tras2V.dz + ' m de fondo)', tras2V.dz > trasPitch.dz * 1.6);
+
+  const antesTk = await p.evaluate(MEDIDA('tracker_hsat'));
+  await pon('tkModsStr', 14);
+  const trasTk = await p.evaluate(MEDIDA('tracker_hsat'));
+  check('menos módulos por string acorta el TRACKER en la escena (' +
+    Math.max(antesTk.dx, antesTk.dz) + ' → ' + Math.max(trasTk.dx, trasTk.dz) + ' m)',
+    Math.max(trasTk.dx, trasTk.dz) < Math.max(antesTk.dx, antesTk.dz) * 0.75);
+  check('tocar el configurador de la FIJA no movió al TRACKER',
+    antesTk.pitch === trasTk.pitch);
+
+  // y el largo dibujado ES el de la lectura: el modelo de seguidor.js se genera
+  // con sus propias cotas canónicas, así que si nadie se las pasa la escena
+  // enseña un tracker de catálogo mientras la tabla calcula el configurado.
+  await pon('tkModsStr', 28);
+  const largoTk = await p.evaluate(`(() => {
+    const B = BLOQUES.find(b => b.key === 'tracker_hsat');
+    const c = new THREE.Box3().setFromObject(B.filas[0]);
+    return { escena: +Math.max(c.max.x-c.min.x, c.max.z-c.min.z).toFixed(2),
+             lectura: +cfgActual().tracker.largoFila.toFixed(2) };
+  })()`);
+  check('el TRACKER se dibuja al largo que dice su lectura (' + largoTk.escena +
+    ' vs ' + largoTk.lectura + ' m)', Math.abs(largoTk.escena - largoTk.lectura) < 0.5,
+    JSON.stringify(largoTk));
+
+  const antesAp = await p.evaluate(MEDIDA('tracker_hsat'));
+  await pon('tkTabla', '2V');
+  const trasAp = await p.evaluate(MEDIDA('tracker_hsat'));
+  check('la mesa del TRACKER (1V → 2V) dobla la apertura dibujada (' +
+    antesAp.dx + ' → ' + trasAp.dx + ' m, a mediodía y plano)',
+    Math.abs(trasAp.dx / antesAp.dx - 2) < 0.05 && trasAp.dz === antesAp.dz,
+    JSON.stringify([antesAp, trasAp]));
+  await pon('tkTabla', '1V');
+
+  await pon('tkPitch', 11);
+  const trasTkP = await p.evaluate(MEDIDA('tracker_hsat'));
+  check('el pitch del TRACKER separa SUS filas, no las de la fija (' +
+    trasTkP.sep + ' m)', Math.abs(trasTkP.sep - 11) < 0.01 &&
+    Math.abs((await p.evaluate(MEDIDA('fija_proyecto'))).sep - 9.5) < 0.01);
+
+  // el emplazamiento: `.value` puesto a mano no dispara 'change', así que
+  // elegir Assú (hemisferio SUR) dejaba la fija mirando al sur.
+  await p.evaluate(() => { const s = document.getElementById('plant');
+    s.value = 'assu'; s.dispatchEvent(new Event('change', { bubbles: true })); });
+  await p.waitForTimeout(300);
+  const sur = await p.evaluate(SONDA);
+  check('elegir un emplazamiento del SUR gira la fija al NORTE (z=' +
+    sur.bloques.fija_proyecto.n.z.toFixed(2) + ')', sur.bloques.fija_proyecto.n.z < -0.15);
+
+  // guard anti-podredumbre: la lista de campos es única y tiene que existir
+  const huerfanos = await p.evaluate(() =>
+    CAMPOS_GEOM.filter(i => !document.getElementById(i)));
+  check('ningún campo de geometría apunta a un id que ya no existe',
+    huerfanos.length === 0, huerfanos.join(','));
+
   check('sin errores de JS', errs.length === 0, errs.join(' | '));
   await b.close();
   console.log('\n' + (ko ? 'FALLOS: ' + ko + ' (de ' + (ok + ko) + ')' : 'OK — ' + ok + '/' + ok + ' comprobaciones'));
