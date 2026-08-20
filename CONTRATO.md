@@ -203,9 +203,13 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 - **[Proyectos → Backtracking] Ficha nueva «Viento & Abanderamiento» (`sim-viento.html`).** Cae en
   nuestro ámbito (es hermana de `sim-solar.html`), pero os afecta por dos cosas. Una: **necesita un
-  endpoint nuevo del motor**, `POST /windstow`, que va en la rama
-  `claude/wind-simulator-tracker-xhnbm3` del repo `SolarGPTfull` — hasta que entre en `main`, el
-  cuaderno de Colab (que clona `main`) no lo sirve y la ficha lo dice en pantalla. Dos: por el
+  endpoint nuevo del motor**, `POST /windstow` (+ `GET /windstow/presets`).
+  **Ya está en `main` de `SolarGPTfull`** (`server/app.py`), así que el cuaderno de Colab lo sirve y
+  el aviso de la ficha ya no aplica. *(Actualizado 2026-08-20: esto decía que el endpoint seguía
+  varado en la rama `claude/wind-simulator-tracker-xhnbm3`. Entró en `main` por otro camino y la
+  rama se quedó 41 commits por detrás; comprobado fichero a fichero que no retiene nada que `main`
+  no tenga. Un contrato que describe un estado que ya no existe lo leen otras sesiones como si
+  fuese verdad, así que se corrige aquí en vez de esperar al siguiente cambio grande.)* Dos: por el
   camino se arreglaron dos rutas del motor que **usan vuestras fichas**: `/generation` con
   `meteo_mode=openmeteo` importaba una función inexistente, y el default de `/meteo` (`openmeteo`)
   no era una clave del catálogo del core (`open_meteo`), así que devolvía 502 con la fuente
