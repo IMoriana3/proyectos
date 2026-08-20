@@ -44,6 +44,8 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
 .field input,.field select{width:100%;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px}
 .field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.tres{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+@media(max-width:700px){.tres{grid-template-columns:1fr 1fr}}
 .btn{background:rgba(54,211,153,.12);color:var(--accent);border:1px solid var(--accent);border-radius:9px;padding:10px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;width:100%}
 .btn:hover{background:rgba(54,211,153,.2);color:#fff}
 .btn:disabled{opacity:.5;cursor:default}
@@ -220,6 +222,56 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       <p class="mini" id="tkNota"></p>
     </div>
 
+    <!-- ═════════ EQUIPOS: el catálogo CEC, dentro de la ficha ═════════ -->
+    <div class="card" id="eqCard">
+      <h2>⚙ Equipos <span class="sn" id="eqGob">catálogo CEC</span></h2>
+      <div class="field"><label>Módulo · fabricante</label>
+        <select id="mfMfr"><option value="">— cargando catálogo —</option></select></div>
+      <div class="field"><label>Módulo · buscar</label>
+        <input id="mfQ" type="text" placeholder="p. ej. 610 bifacial, o TOPCon"></div>
+      <label class="chk"><input type="checkbox" id="mfSoloOk" checked>
+        Solo los que <b>encajan</b> con el inversor elegido</label>
+      <div class="field"><label>Módulo</label>
+        <select id="mfPick"><option value="">—</option></select></div>
+      <div id="mfRead" class="readout" style="margin-top:4px"></div>
+      <p class="mini" id="mfNota"></p>
+      <div class="two" style="margin-top:9px">
+        <button class="btn ghost" id="mfAplFx">▤ Usar en la FIJA</button>
+        <button class="btn ghost" id="mfAplTk">▤ Usar en el TRACKER</button>
+      </div>
+
+      <h2 style="margin-top:18px">🔌 Inversor <span class="sn" id="invGob"></span></h2>
+      <div class="two">
+        <div class="field"><label>Categoría</label>
+          <select id="ivCat">
+            <option value="">— todas —</option>
+            <option value="micro">micro (&lt;1 kW)</option>
+            <option value="comercial">comercial (≤100 kW)</option>
+            <option value="string" selected>string (100-400 kW)</option>
+            <option value="industrial">industrial (&gt;400 kW)</option>
+          </select></div>
+        <div class="field"><label>Fabricante</label>
+          <select id="ivMfr"><option value="">— todos —</option></select></div>
+      </div>
+      <div class="field"><label>Buscar</label>
+        <input id="ivQ" type="text" placeholder="p. ej. SG350HX"></div>
+      <div class="field"><label>Inversor</label>
+        <select id="ivPick"><option value="">—</option></select></div>
+      <div id="ivRead" class="readout" style="margin-top:4px"></div>
+      <p class="mini" id="ivNota"></p>
+      <p class="mini" style="margin-top:9px"><b>Límites por MPPT</b> — no están en el
+        catálogo CEC y son los que de verdad dimensionan. Sin ellos se usa el
+        <code>Idcmax</code> del CEC, que es un valor DERIVADO (≈Pdco/Vdco): una cota, no la verdad.</p>
+      <div class="two">
+        <div class="field"><label>Nº de MPPT</label><input id="ivNMppt" type="number" step="1" min="1" value="12"></div>
+        <div class="field"><label>I entrada / MPPT (A)</label><input id="ivIMppt" type="number" step="0.1" min="0" value="40"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Isc máx / MPPT (A)</label><input id="ivIscMppt" type="number" step="0.1" min="0" value="60"></div>
+        <div class="field"><label>Strings / MPPT (tope)</label><input id="ivTope" type="number" step="1" min="0" value="4"></div>
+      </div>
+    </div>
+
     <div class="card">
       <h2>▦ Suelo <span class="sn">cómo se comparan</span></h2>
       <label class="chk"><input type="checkbox" id="igualar"> <b>Igualar el suelo</b>
@@ -259,6 +311,25 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         sol y sobre el mismo suelo. Mueve la hora y mira las <b>sombras entre filas</b>: es lo que
         el backtracking existe para evitar, y lo que la columna «pérdida sombra» de la tabla mide.</p>
     </div>
+    <!-- ═════════ SIZING (columna ancha: la ventana hay que LEERLA) ═════════ -->
+    <div class="card">
+      <h2>📐 Sizing <span class="sn" id="szGob">§05</span></h2>
+      <div class="tres">
+        <div class="field"><label>T mín. célula (°C)</label><input id="szTmin" type="number" step="0.5" value="-10"></div>
+        <div class="field"><label>T máx. célula (°C)</label><input id="szTmax" type="number" step="0.5" value="70"></div>
+        <div class="field"><label>βVoc (%/°C)</label><input id="szBeta" type="number" step="0.001" value="-0.270"></div>
+      </div>
+      <div class="tres" style="margin-top:9px">
+        <div class="field"><label>Módulos por string</label><input id="szN" type="number" step="1" min="1" value="26"></div>
+        <div class="field"><label>DC/AC objetivo</label><input id="szTarget" type="number" step="0.01" min="0.5" max="2" value="1.20"></div>
+        <div class="field"><label>Límite de red (MW)</label><input id="szRed" type="number" step="0.1" min="0" value="0"></div>
+      </div>
+      <div id="szRead" class="readout" style="margin-top:4px"></div>
+      <p class="mini" id="szNota"></p>
+      <canvas id="cvVent" width="1100" height="300" style="width:100%;margin-top:10px"></canvas>
+      <p class="mini" id="szVentNota"></p>
+    </div>
+
     <div class="card" id="outCard">
       <h2>Σ Resultado del año <span class="sn" id="ctx">—</span></h2>
       <div id="out"><p class="note">Elige estructuras y dale a <b>Comparar el año</b>.</p></div>
@@ -460,6 +531,132 @@ FIS.planta=function(G,mwp){
    (no hay IAM, ni temperatura, ni inversor): es la POA multiplicada por los m²
    de módulo que el pico obliga a montar. */
 FIS.incidente=function(poaKwhM2,areaMod){return poaKwhM2*areaMod/1e6;};
+
+/* ── DIMENSIONADO ELÉCTRICO ──
+   Puerto LITERAL de `solargpt_core.string_sizing` y `solargpt_core.plant_config`,
+   las dos funciones puras que ya usan el cuaderno (§02.0e) y el Streamlit
+   (páginas 4 y 5). No se reinterpretan: `tests/test_sizing.js` las carea contra
+   una corrida del core congelada en `tests/careo-sizing.json`, caso a caso y
+   con el mismo `binding` — que es lo que de verdad se lee en pantalla.
+
+   Y una trampa de portabilidad que no es teórica: `int(round(x))` de Python
+   redondea al PAR en el .5 exacto («banker's rounding») y `Math.round` de JS
+   redondea hacia arriba. Los dos sitios donde el core usa `round()` para
+   contar strings caen justo en esa cuenta, así que se porta el redondeo. */
+FIS.roundPy=function(x){
+  var f=Math.floor(x), r=x-f;
+  if(Math.abs(r-0.5)>1e-9)return Math.round(x);
+  return (f%2===0)?f:f+1;               // .5 exacto → al par
+};
+
+/* Constantes de `binding`/`confidence`: son las MISMAS cadenas que devuelve el
+   core, para que el careo compare la etiqueta y no una traducción. */
+FIS.BIND={POWER:'power', OP:'mppt_operating_current', ISC:'mppt_short_circuit_current',
+          TOPE:'mppt_string_count', TOTAL:'inverter_total_current'};
+
+/* ── Strings por MPPT y por inversor ──
+   Manda el MÁS RESTRICTIVO entre potencia y corriente, y se DICE cuál manda:
+   un número de strings sin saber quién lo limita no se puede discutir con
+   nadie. Si hay algún límite por MPPT del datasheet la confianza es
+   `datasheet`; si solo hay `Idcmax` del catálogo CEC es `cec_derived`, porque
+   ese dato es DERIVADO (≈Pdco/Vdco) y es una cota, no la verdad.
+   El factor NEC 690.8 (Isc×1.25) NO entra aquí: dimensiona cableado y
+   protecciones, no la capacidad de entrada del inversor. */
+FIS.strings=function(o){
+  var pos=function(v){v=+v; return (isFinite(v)&&v>0)?v:null;};
+  var imp=pos(o.imp)||0, isc=pos(o.isc)||imp, pStr=pos(o.pString)||0, paco=pos(o.paco)||0;
+  var nMppt=Math.max(1,Math.round(o.nMppt||1)), tgt=+o.target;
+  var porPot=(pStr>0)?FIS.roundPy((paco*tgt)/pStr):0;
+  var iM=pos(o.iMppt), iscM=pos(o.iscMppt), tope=pos(o.topeMppt)?Math.round(o.topeMppt):null,
+      idc=pos(o.idcmax);
+  /* El orden de inserción importa: ante un empate, el core se queda con el
+     PRIMERO (así funciona `min()` sobre un dict en Python). */
+  var lim=[], porMppt, porCorr, manda, conf;
+  if(iM&&imp>0)lim.push([FIS.BIND.OP,Math.floor(iM/imp)]);
+  if(iscM&&isc>0)lim.push([FIS.BIND.ISC,Math.floor(iscM/isc)]);
+  if(tope)lim.push([FIS.BIND.TOPE,tope]);
+  if(lim.length){
+    conf='datasheet';
+    var mejor=lim[0];
+    for(var i=1;i<lim.length;i++)if(lim[i][1]<mejor[1])mejor=lim[i];
+    manda=mejor[0]; porMppt=Math.max(0,mejor[1]); porCorr=porMppt*nMppt;
+  }else if(idc&&imp>0){
+    conf='cec_derived'; manda=FIS.BIND.TOTAL;
+    porCorr=Math.floor(idc/imp); porMppt=Math.ceil(porCorr/nMppt);
+  }else{
+    conf='cec_derived'; manda=FIS.BIND.TOTAL;
+    porCorr=porPot; porMppt=Math.ceil(porCorr/nMppt);
+  }
+  var rec=Math.max(0,Math.min(porPot,porCorr));
+  return {porPotencia:porPot, porCorriente:porCorr, recomendados:rec,
+          porMppt:porMppt, limites:lim,
+          manda:(porPot<=porCorr?FIS.BIND.POWER:manda), confianza:conf,
+          dcac:+((paco>0?rec*pStr/paco:0).toFixed(3)), target:tgt, nMppt:nMppt,
+          /* ni un string entra: es un caso real, no un redondeo */
+          inviable:(lim.length>0&&porMppt===0)};
+};
+
+/* ── La planta entera ──
+   El DC/AC se define contra el NOMINAL del inversor (convención del sector);
+   el techo de inyección lo pone el MÁXIMO del equipo, y por encima manda la
+   red. Son tres números distintos y confundirlos es el error clásico. */
+FIS.plantaElec=function(o){
+  var wp=+o.wp, mps=Math.round(o.modsString), pacKw=+o.invKw, tgt=+o.target;
+  if(!(wp>0)||!(mps>0)||!(pacKw>0))return null;
+  var nStr, nMods, resto, mwp;
+  if(o.modo==='modulos'){
+    var n=Math.round(o.nModulos);
+    nStr=Math.max(1,Math.floor(n/mps)); nMods=nStr*mps; resto=n-nMods;
+    mwp=nMods*wp/1e6;
+  }else{
+    mwp=+o.mwp;
+    nStr=Math.max(1,Math.ceil((mwp*1e6/wp)/mps)); nMods=nStr*mps; resto=0;
+  }
+  var dcKwp=nMods*wp/1000;
+  var strPorInv=Math.max(1,FIS.roundPy(pacKw*tgt*1000/(wp*mps)));
+  var nInv=Math.max(1,Math.ceil(nStr/strPorInv));
+  var acKw=nInv*pacKw;
+  var pmaxU=(+o.invMaxKw>0)?+o.invMaxKw:pacKw;
+  var acMaxKw=nInv*pmaxU, redKw=(+o.redMw||0)*1000;
+  var limitada=(redKw>0&&redKw<acMaxKw);
+  return {mwp:+mwp.toFixed(4), modulos:nMods, strings:nStr, resto:resto,
+          dcKwp:+dcKwp.toFixed(1), acKw:+acKw.toFixed(1), inversores:nInv,
+          stringsPorInv:strPorInv, dcac:+(acKw>0?dcKwp/acKw:0).toFixed(4),
+          acMaxKw:+acMaxKw.toFixed(1), redKw:+redKw.toFixed(1),
+          limitadaPorRed:limitada,
+          clipRedPct:+((limitada&&acMaxKw>0)?100*(1-redKw/acMaxKw):0).toFixed(2)};
+};
+
+/* ── La ventana de tensión ──
+   Ésta NO estaba en el core: vivía dentro de la página 5 del Streamlit, así
+   que aquí queda por fin como función pura y testeable. Convención bankable
+   (IEC 62548): el string se dimensiona por los DOS extremos —Voc en el día más
+   frío contra la tensión máxima del inversor, y Vmp en el más caliente contra
+   el suelo de la ventana MPPT— y el βVmp se toma como 1,15·βVoc.
+
+   Ojo con una incoherencia del original que aquí NO se porta: su GRÁFICO
+   pintaba la curva de Vmp con γPmax (coeficiente de POTENCIA) mientras el
+   cálculo usaba βVmp. El dibujo y la cuenta no coincidían; aquí los dos usan
+   βVmp. */
+FIS.vTemp=function(vStc,coefPctC,tC){return vStc*(1+coefPctC/100*(tC-25));};
+FIS.ventana=function(o){
+  var voc=+o.voc, vmp=+o.vmp, bVoc=+o.betaVocPct, bVmp=(o.betaVmpPct!=null?+o.betaVmpPct:1.15*bVoc);
+  if(!(voc>0)||!(vmp>0))return null;
+  var vocFrio=FIS.vTemp(voc,bVoc,+o.tMin), vmpCal=FIS.vTemp(vmp,bVmp,+o.tMax),
+      vmpFrio=FIS.vTemp(vmp,bVmp,+o.tMin);
+  var nMin=Math.ceil(+o.mpptLow/Math.max(vmpCal,1));
+  var nMaxV=Math.floor(+o.vdcMax/Math.max(vocFrio,1));
+  var nMaxM=Math.floor(+o.mpptHigh/Math.max(vmpFrio,1));
+  var nMax=Math.min(nMaxV,nMaxM);
+  return {vocFrio:vocFrio, vmpCaliente:vmpCal, vmpFrio:vmpFrio,
+          nMin:nMin, nMaxVdc:nMaxV, nMaxMppt:nMaxM, nMax:nMax,
+          /* quién cierra la ventana por arriba: el techo de tensión del
+             inversor o el techo de la ventana de seguimiento */
+          mandaArriba:(nMaxV<=nMaxM?'vdcmax':'mppt_high'),
+          viable:(nMin<=nMax&&nMax>0&&nMin>0), betaVmpPct:bVmp};
+};
+FIS.stringV=function(n,w){return {vocFrio:n*w.vocFrio, vmpCaliente:n*w.vmpCaliente,
+                                  vmpFrio:n*w.vmpFrio};};
 
 /* ── θ de seguimiento con backtracking (Anderson-Mikofski) ──
    Con ps ya proyectado, el backtracking es una línea: retroceder lo justo para
@@ -936,6 +1133,346 @@ CAMPOS_GEOM.forEach(function(id){
   var el=$(id); if(!el)return;
   el.addEventListener('input',refrescaGeom); el.addEventListener('change',refrescaGeom);
 });
+
+/* ═════════ EL CATÁLOGO CEC ═════════
+   Dos JSON en el repo (`data/cec-*.json`), generados desde los MISMOS CSV que
+   usa el core (`tests/gen_catalogo_cec.py`): 16 758 módulos de la lista 2024 y
+   4 910 inversores. Se bajan BAJO DEMANDA —2,4 MB y 656 KB, 287 y 90 KB
+   comprimidos por Pages— la primera vez que hace falta, no al abrir la ficha:
+   el comparador tiene que seguir apareciendo al instante.
+
+   Van como lista de listas y no como objetos: 16 758 objetos con 13 claves
+   cada uno son 3 MB de nombres de campo repetidos. */
+var CAT={mod:null, inv:null, cargando:null};
+function filaObj(cat,f){var o={}; cat.cols.forEach(function(c,i){o[c]=f[i];}); return o;}
+async function cargaCatalogo(){
+  if(CAT.mod&&CAT.inv)return CAT;
+  if(CAT.cargando)return CAT.cargando;
+  CAT.cargando=(async function(){
+    var r=await Promise.all([fetch('data/cec-modulos.json'),fetch('data/cec-inversores.json')]);
+    if(!r[0].ok||!r[1].ok)throw new Error('no se pudo bajar el catálogo CEC');
+    CAT.mod=await r[0].json(); CAT.inv=await r[1].json();
+    return CAT;
+  })();
+  return CAT.cargando;
+}
+/* Filtro multi-palabra: todas las palabras tienen que estar (AND), como en la
+   página de Equipos del Streamlit. Buscar «610 bifacial» tiene que encontrar
+   el que lleve las dos cosas, no el que lleve cualquiera. */
+function filtraTexto(txt,q){
+  var ps=String(q||'').toLowerCase().split(/\s+/).filter(Boolean);
+  if(!ps.length)return true;
+  var t=txt.toLowerCase();
+  return ps.every(function(w){return t.indexOf(w)>=0;});
+}
+/* Las bandas de inversor son la definición del cliente (2026-08-10), no una
+   escala inventada aquí. */
+function catInv(paco){
+  if(paco<1000)return 'micro';
+  if(paco<=100000)return 'comercial';
+  if(paco<=400000)return 'string';
+  return 'industrial';
+}
+function etiqPot(w){
+  if(w<1000)return fmt(w,0)+' W';
+  if(w<100000)return fmt(w/1000,1)+' kW';
+  return fmt(w/1000,0)+' kW';
+}
+function rellenaSelect(sel,opts,valor){
+  sel.innerHTML=opts.map(function(o){
+    return '<option value="'+esc(o[0])+'">'+esc(o[1])+'</option>';}).join('');
+  if(valor!=null)sel.value=valor;
+}
+
+/* ── MÓDULO ── */
+var MODSEL=null;
+function listaModulos(){
+  if(!CAT.mod)return [];
+  var mfr=$('mfMfr').value, q=$('mfQ').value;
+  /* Un buscador que deja elegir parejas imposibles no está ayudando: con el
+     filtro puesto solo salen los módulos cuya ventana de tensión CABE en el
+     inversor elegido a las temperaturas del proyecto. Se puede quitar, porque
+     a veces lo que se quiere es justamente ver por qué no cabe. */
+  var soloOk=$('mfSoloOk').checked&&INVSEL, v=INVSEL;
+  return CAT.mod.filas.filter(function(f){
+    if(!((!mfr||f[1]===mfr)&&filtraTexto(f[0],q)))return false;
+    if(!soloOk)return true;
+    var bp=(f[10]&&f[6])?(f[10]/f[6]*100):-0.27;   // beta_oc V/°C → %/°C
+    var W=FIS.ventana({voc:f[6], vmp:f[7], betaVocPct:bp,
+      tMin:+$('szTmin').value, tMax:+$('szTmax').value,
+      mpptLow:v.mlow, mpptHigh:v.mhigh, vdcMax:v.vdcmax});
+    return !!(W&&W.viable);
+  });
+}
+var WP_CANON=630;        // el módulo canónico de la casa (OFFICIAL_DEFAULTS)
+function pintaModulos(){
+  var l=listaModulos(), tope=400;          // el <select> no es un visor de 16k
+  var vis=l.slice(0,tope);
+  rellenaSelect($('mfPick'), vis.map(function(f){
+    return [f[0],'['+fmt(f[2],0)+' W] '+f[0]];
+  }));
+  /* Preselección: el más cercano al canónico de la casa, no el primero de la
+     lista (que es el de más potencia y suele ser un prototipo de 755 W). */
+  if(vis.length){
+    var mejor=vis[0];
+    vis.forEach(function(f){
+      if(Math.abs(f[2]-WP_CANON)<Math.abs(mejor[2]-WP_CANON))mejor=f;});
+    $('mfPick').value=mejor[0];
+  }
+  $('mfNota').innerHTML=l.length
+    ? fmt(l.length,0)+' módulos'+($('mfSoloOk').checked&&INVSEL?' que encajan con este inversor':'')+
+      (l.length>tope?' — se listan los '+tope+' de más potencia; afina la búsqueda':'')
+    : '<span style="color:var(--dead)">Ningún módulo '+
+      ($('mfSoloOk').checked&&INVSEL?'de los que encajan con este inversor pasa ese filtro — '+
+       'quita «solo los que encajan» para ver por qué no caben.':'con ese filtro.')+'</span>';
+  if(l.length)eligeModulo(); else {MODSEL=null; $('mfRead').innerHTML=''; refrescaSizing();}
+}
+/* La cascada de dimensiones, declarada. El catálogo CEC trae Length/Width solo
+   en una parte de los módulos (el `A_c` que sí trae SIEMPRE es área de CÉLULAS
+   y no sirve para deducir el largo: con él salía 2,328 m para un módulo de
+   2,382). Cuando no están, se cae al módulo canónico de la casa y se DICE. */
+function eligeModulo(){
+  var n=$('mfPick').value, f=null;
+  CAT.mod.filas.some(function(x){if(x[0]===n){f=x;return true;}});
+  if(!f){MODSEL=null; $('mfRead').innerHTML=''; refrescaSizing(); return;}
+  var m=filaObj(CAT.mod,f), hayDim=!!(m.L&&m.W);
+  m.L=hayDim?m.L:2.382; m.W=hayDim?m.W:1.134; m.dimDB=hayDim;
+  /* βVoc en %/°C desde el beta_oc del catálogo, que va en V/°C */
+  m.betaPct=(m.beta&&m.voc)?(m.beta/m.voc*100):null;
+  MODSEL=m;
+  $('mfRead').innerHTML=
+    ro('Pmax',fmt(m.wp,0),'Wp')+
+    ro('Voc · Vmp',fmt(m.voc,1)+' / '+fmt(m.vmp,1),'V')+
+    ro('Isc · Imp',fmt(m.isc,2)+' / '+fmt(m.imp,2),'A')+
+    ro('Tamaño',fmt(m.L,3)+' × '+fmt(m.W,3),'m'+(hayDim?'':' · canónico'))+
+    ro('βVoc',(m.betaPct!=null?fmt(m.betaPct,3):'—'),'%/°C')+
+    ro('Densidad',fmt(m.wp/(m.L*m.W),0),'W/m²');
+  $('mfNota').innerHTML=esc(m.mfr)+' · '+esc(m.tec||'—')+' · '+fmt(m.ns,0)+' células · '+
+    (hayDim
+      ? 'dimensiones <b>del catálogo</b>.'
+      : '<b>sin dimensiones en el catálogo</b>: se usa el módulo canónico de la casa '+
+        '(2,382 × 1,134 m). El área que sí trae la CEC es de CÉLULAS, no del módulo, y '+
+        'deducir el largo con ella da 2,328 m para un módulo de 2,382 — por eso no se hace.');
+  refrescaSizing();
+}
+/* Aplicar a una familia: el pico y las dimensiones van al configurador que
+   toque, y de paso el βVoc al sizing. Es el enganche que hace que elegir un
+   módulo de verdad mueva la comparación de estructuras. */
+function aplicaModulo(pfx){
+  if(!MODSEL)return;
+  $(pfx+'Wp').value=MODSEL.wp;
+  $(pfx+'ModL').value=MODSEL.L.toFixed(3);
+  $(pfx+'ModW').value=MODSEL.W.toFixed(3);
+  if(MODSEL.betaPct!=null&&MODSEL.betaPct<0&&MODSEL.betaPct>-0.5)
+    $('szBeta').value=MODSEL.betaPct.toFixed(3);
+  refrescaGeom(); construyeMundo(); actualiza3D();
+  $('eqGob').textContent='módulo en '+(pfx==='fx'?'FIJA':'TRACKER');
+}
+
+/* ── INVERSOR ── */
+var INVSEL=null;
+function listaInversores(){
+  if(!CAT.inv)return [];
+  var cat=$('ivCat').value, mfr=$('ivMfr').value, q=$('ivQ').value;
+  return CAT.inv.filas.filter(function(f){
+    return (!cat||catInv(f[2])===cat)&&(!mfr||f[1]===mfr)&&filtraTexto(f[0],q);
+  });
+}
+function pintaInversores(){
+  var l=listaInversores(), tope=400;
+  var vis=l.slice(0,tope);
+  rellenaSelect($('ivPick'), vis.map(function(f){
+    return [f[0],'['+etiqPot(f[2])+' · '+fmt(f[5],0)+' V] '+f[0]];
+  }));
+  var pre=null; vis.some(function(f){if(f[0].indexOf('SG350HX')>=0){pre=f[0];return true;}});
+  if(pre)$('ivPick').value=pre;
+  $('ivNota').innerHTML=l.length
+    ? fmt(l.length,0)+' inversores'+(l.length>tope?' — se listan los '+tope+' de más potencia':'')
+    : '<span style="color:var(--dead)">Ningún inversor con ese filtro.</span>';
+  if(l.length)eligeInversor();
+}
+function eligeInversor(){
+  var n=$('ivPick').value, f=null;
+  CAT.inv.filas.some(function(x){if(x[0]===n){f=x;return true;}});
+  if(!f){INVSEL=null; $('ivRead').innerHTML=''; return;}
+  var v=filaObj(CAT.inv,f); INVSEL=v;
+  $('ivRead').innerHTML=
+    ro('Paco',fmt(v.paco/1000,1),'kW AC')+
+    ro('Pdco',fmt(v.pdco/1000,1),'kW DC')+
+    ro('Vdc máx',fmt(v.vdcmax,0),'V')+
+    ro('Ventana MPPT',fmt(v.mlow,0)+'–'+fmt(v.mhigh,0),'V')+
+    ro('Vac',fmt(v.vac,0),'V AC')+
+    ro('η nominal',fmt(v.pdco>0?v.paco/v.pdco*100:0,1),'%');
+  $('invGob').textContent=catInv(v.paco);
+  refrescaSizing();
+}
+
+/* ═════════ SIZING ═════════ */
+var SZ_N_TOCADO=false;   // hasta que alguien lo escriba, el N sigue a la ventana
+function refrescaSizing(){
+  if(!$('szRead'))return;
+  var m=MODSEL, v=INVSEL;
+  if(!m||!v){
+    $('szRead').innerHTML='';
+    $('szNota').innerHTML='Elige un <b>módulo</b> y un <b>inversor</b> arriba: el sizing sale de los dos.';
+    pintaVentana(null); return;
+  }
+  var W=FIS.ventana({voc:m.voc, vmp:m.vmp, betaVocPct:+$('szBeta').value,
+    tMin:+$('szTmin').value, tMax:+$('szTmax').value,
+    mpptLow:v.mlow, mpptHigh:v.mhigh, vdcMax:v.vdcmax});
+  if(!W||!W.viable){
+    $('szRead').innerHTML='';
+    $('szNota').innerHTML=W
+      ? '<span style="color:var(--dead)">⚠ Ningún nº de módulos por string vale con esta pareja: '+
+        'el mínimo que pide el suelo de la ventana MPPT ('+W.nMin+', para llegar a '+fmt(v.mlow,0)+
+        ' V con el módulo caliente) sale POR ENCIMA del máximo que deja '+
+        (W.mandaArriba==='vdcmax'?'la tensión máxima del inversor':'el techo de la ventana MPPT')+
+        ' ('+W.nMax+', para no pasar de '+fmt(W.mandaArriba==='vdcmax'?v.vdcmax:v.mhigh,0)+
+        ' V con el módulo frío).</span> La ventana de este inversor ('+fmt(v.mlow,0)+'–'+
+        fmt(v.mhigh,0)+' V) es demasiado estrecha para un módulo de '+fmt(m.voc,1)+' V de Voc. '+
+        'Sale con un módulo de menos tensión, con un inversor de ventana más ancha, o si el '+
+        'emplazamiento no baja de '+fmt(+$('szTmin').value,0)+' °C.'
+      : '<span style="color:var(--dead)">⚠ Faltan datos de tensión del módulo.</span>';
+    pintaVentana(null); return;
+  }
+  /* El N se PROPONE (el máximo que cabe: menos cobre y menos strings para el
+     mismo pico) y se deja tocar. Pero fuera de [N_min, N_max] no es una
+     opción: es un unifilar que no se puede conectar, así que se recorta. */
+  var n=SZ_N_TOCADO?(Math.round(+$('szN').value)||W.nMax):W.nMax;
+  n=Math.min(W.nMax,Math.max(W.nMin,n));
+  if(+$('szN').value!==n)$('szN').value=n;
+  var S=FIS.stringV(n,W), pStr=n*m.wp;
+  var R=FIS.strings({imp:m.imp, isc:m.isc, pString:pStr, paco:v.paco,
+    target:+$('szTarget').value, nMppt:+$('ivNMppt').value,
+    iMppt:+$('ivIMppt').value, iscMppt:+$('ivIscMppt').value,
+    topeMppt:+$('ivTope').value, idcmax:v.idcmax});
+  var P=FIS.plantaElec({modo:'mwp', mwp:+$('mwp').value, wp:m.wp, modsString:n,
+    invKw:v.paco/1000, target:+$('szTarget').value, redMw:+$('szRed').value});
+  var MANDA={power:'la POTENCIA (DC/AC objetivo)',
+    mppt_operating_current:'la CORRIENTE de operación del MPPT',
+    mppt_short_circuit_current:'la corriente de CORTOCIRCUITO (protección)',
+    mppt_string_count:'el TOPE de strings del datasheet',
+    inverter_total_current:'el Idcmax total del catálogo'};
+  $('szRead').innerHTML=
+    ro('String',n+' módulos','de '+W.nMin+' a '+W.nMax+' posibles')+
+    ro('Voc en frío',fmt(S.vocFrio,0),'V · máx '+fmt(v.vdcmax,0))+
+    ro('Vmp en caliente',fmt(S.vmpCaliente,0),'V · suelo MPPT '+fmt(v.mlow,0))+
+    ro('Strings / MPPT',fmt(R.porMppt,0),R.confianza==='datasheet'?'datasheet':'cota CEC')+
+    ro('Strings / inversor',fmt(R.recomendados,0),'DC/AC '+fmt(R.dcac,3))+
+    (P?ro('Inversores',fmt(P.inversores,0),'a '+fmt(+$('mwp').value,1)+' MWp'):'')+
+    (P?ro('DC/AC de planta',fmt(P.dcac,3),fmt(P.dcKwp/1000,2)+' MWp / '+fmt(P.acKw/1000,2)+' MW AC'):'');
+  var avisos=[];
+  if(R.inviable)avisos.push('<span style="color:var(--dead)">⚠ Ni un string entra en un MPPT '+
+    'con estos límites: revisa la pareja o los módulos por string.</span>');
+  if(R.confianza!=='datasheet')avisos.push('El conteo sale del <code>Idcmax</code> del catálogo, '+
+    'que es un valor DERIVADO (≈Pdco/Vdco): es una <b>cota</b>, no la verdad. Mete la corriente '+
+    'por MPPT del datasheet arriba para dimensionar fino.');
+  if(P&&P.dcac>1.6)avisos.push('DC/AC de '+fmt(P.dcac,2)+': muy alto, el clipping se come una parte '+
+    'seria del año.');
+  if(P&&P.limitadaPorRed)avisos.push('La <b>red</b> limita a '+fmt(P.redKw/1000,1)+' MW contra '+
+    fmt(P.acMaxKw/1000,1)+' MW de techo del equipo: '+fmt(P.clipRedPct,2)+' % recortado por ahí.');
+  $('szNota').innerHTML=
+    'Manda <b>'+(MANDA[R.manda]||R.manda)+'</b> — por potencia salen '+fmt(R.porPotencia,0)+
+    ' strings y por corriente '+fmt(R.porCorriente,0)+', y se queda el menor. '+
+    'El factor NEC 690.8 (Isc×1,25) NO entra en el conteo: dimensiona cableado y protecciones, '+
+    'no la capacidad de entrada del inversor.'+
+    (avisos.length?'<br>'+avisos.join('<br>'):'');
+  $('szGob').textContent='§05 · '+n+'×'+fmt(m.wp,0)+' W';
+  pintaVentana({W:W,n:n,m:m,v:v});
+}
+
+/* La ventana de tensión, dibujada. Y dibujada con βVmp, no con γPmax: el
+   original pintaba la curva de Vmp con el coeficiente de POTENCIA mientras la
+   cuenta usaba el de tensión, así que el dibujo y el número no coincidían. */
+function pintaVentana(d){
+  var c=$('cvVent'); if(!c)return;
+  var g=c.getContext('2d'), W=c.width, H=c.height;
+  g.clearRect(0,0,W,H);
+  if(!d){g.fillStyle='#7A8794'; g.font='12px ui-monospace,monospace';
+    g.fillText('elige módulo e inversor',14,H/2); return;}
+  var L=54,R=14,T=14,B=26, t0=d.W?+$('szTmin').value-5:0, t1=+$('szTmax').value+5;
+  var ymax=Math.max(d.v.vdcmax, d.n*d.W.vocFrio)*1.04;
+  var ymin=Math.min(d.v.mlow, d.n*d.W.vmpCaliente)*0.90;
+  var X=function(t){return L+(t-t0)/(t1-t0)*(W-L-R);};
+  var Y=function(v){return H-B-(v-ymin)/(ymax-ymin)*(H-T-B);};
+  // bandas: lo prohibido por arriba y lo que queda fuera de la ventana MPPT
+  g.fillStyle='rgba(255,90,90,.10)'; g.fillRect(L,T,W-L-R,Y(d.v.vdcmax)-T);
+  g.fillStyle='rgba(54,211,153,.08)'; g.fillRect(L,Y(d.v.mhigh),W-L-R,Y(d.v.mlow)-Y(d.v.mhigh));
+  var topes=[];
+  if(Math.abs(d.v.vdcmax-d.v.mhigh)<1)topes.push([d.v.vdcmax,'#FF5A5A','Vdc máx = MPPT alto']);
+  else topes.push([d.v.vdcmax,'#FF5A5A','Vdc máx'],[d.v.mhigh,'#36D399','MPPT alto']);
+  topes.push([d.v.mlow,'#36D399','MPPT bajo']);
+  g.font='11px ui-monospace,monospace';
+  topes.forEach(function(l){
+    g.strokeStyle=l[1]; g.setLineDash([4,3]); g.beginPath();
+    g.moveTo(L,Y(l[0])); g.lineTo(W-R,Y(l[0])); g.stroke(); g.setLineDash([]);
+    var t=l[2]+' '+fmt(l[0],0)+' V';
+    g.fillStyle=l[1]; g.fillText(t,W-R-g.measureText(t).width-4,Y(l[0])-5);
+  });
+  [['#54A6FF','Voc del string'],['#E86FB0','Vmp del string']].forEach(function(cv,k){
+    var vDe=function(t){return d.n*(k===0?FIS.vTemp(d.m.voc,+$('szBeta').value,t)
+                                         :FIS.vTemp(d.m.vmp,d.W.betaVmpPct,t));};
+    g.strokeStyle=cv[0]; g.lineWidth=2; g.beginPath();
+    for(var i=0;i<=60;i++){
+      var t=t0+(t1-t0)*i/60;
+      i?g.lineTo(X(t),Y(vDe(t))):g.moveTo(X(t),Y(vDe(t)));
+    }
+    g.stroke(); g.lineWidth=1;
+    var tm=t0+(t1-t0)*0.42;
+    g.fillStyle=cv[0]; g.fillText(cv[1]+' · '+fmt(vDe(tm),0)+' V',X(tm),Y(vDe(tm))-7);
+  });
+  g.font='11px ui-monospace,monospace';
+  [[+$('szTmin').value,'T mín'],[+$('szTmax').value,'T máx']].forEach(function(tv){
+    g.strokeStyle='rgba(160,175,190,.45)'; g.beginPath();
+    g.moveTo(X(tv[0]),T); g.lineTo(X(tv[0]),H-B); g.stroke();
+    var t=tv[1]+' '+fmt(tv[0],0)+' °C', x=X(tv[0]), an=g.measureText(t).width;
+    g.fillStyle='#7A8794';
+    // el rótulo se pone al otro lado si no cabe: si no, la T máx se salía
+    g.fillText(t,(x+an+6>W-R)?x-an-4:x+4,H-B+13);
+  });
+  g.strokeStyle='rgba(160,175,190,.35)'; g.beginPath();
+  g.moveTo(L,H-B); g.lineTo(W-R,H-B); g.moveTo(L,T); g.lineTo(L,H-B); g.stroke();
+  g.fillStyle='#7A8794';
+  g.fillText('V del string',6,T+10); g.fillText('°C de célula',L,H-4);
+  $('szVentNota').innerHTML='El string se dimensiona por los DOS extremos: <b>Voc en el día más '+
+    'frío</b> contra la tensión máxima del inversor y <b>Vmp en el más caliente</b> contra el suelo '+
+    'de la ventana MPPT. βVmp se toma como 1,15·βVoc (convención bankable, IEC 62548). '+
+    'Por arriba manda '+(d.W.mandaArriba==='vdcmax'?'la tensión máxima del inversor':'el techo de la ventana MPPT')+'.';
+}
+
+/* Los buscadores se enganchan en cuanto el catálogo está, y el catálogo se
+   pide la primera vez que alguien toca la tarjeta de Equipos — no al abrir. */
+var CATLISTO=false;
+async function despiertaCatalogo(){
+  if(CATLISTO)return; CATLISTO=true;
+  $('mfNota').textContent='bajando el catálogo CEC…';
+  try{ await cargaCatalogo(); }
+  catch(e){ CATLISTO=false;
+    $('mfNota').innerHTML='<span style="color:var(--dead)">No se pudo bajar el catálogo: '+
+      esc(e.message)+'</span>'; return; }
+  var mfrs=function(cat,i){var v={}; cat.filas.forEach(function(f){if(f[i])v[f[i]]=1;});
+    return Object.keys(v).sort();};
+  rellenaSelect($('mfMfr'),[['','— todos ('+fmt(CAT.mod.n,0)+' módulos) —']]
+    .concat(mfrs(CAT.mod,1).map(function(x){return [x,x];})));
+  rellenaSelect($('ivMfr'),[['','— todos ('+fmt(CAT.inv.n,0)+' inversores) —']]
+    .concat(mfrs(CAT.inv,1).map(function(x){return [x,x];})));
+  $('eqGob').textContent=fmt(CAT.mod.n,0)+' módulos · '+fmt(CAT.inv.n,0)+' inversores';
+  /* El inversor primero: la lista de módulos se filtra por SU ventana. */
+  pintaInversores(); pintaModulos();
+}
+['mfMfr','mfQ'].forEach(function(id){
+  $(id).addEventListener('input',pintaModulos); $(id).addEventListener('change',pintaModulos);});
+$('mfPick').addEventListener('change',eligeModulo);
+['ivCat','ivMfr','ivQ'].forEach(function(id){
+  $(id).addEventListener('input',pintaInversores); $(id).addEventListener('change',pintaInversores);});
+$('ivPick').addEventListener('change',function(){eligeInversor(); pintaModulos();});
+$('mfSoloOk').addEventListener('change',pintaModulos);
+$('mfAplFx').onclick=function(){aplicaModulo('fx');};
+$('mfAplTk').onclick=function(){aplicaModulo('tk');};
+$('szN').addEventListener('input',function(){SZ_N_TOCADO=true;});
+['szTmin','szTmax','szBeta','szN','szTarget','szRed','ivNMppt','ivIMppt','ivIscMppt','ivTope','mwp']
+  .forEach(function(id){var el=$(id); if(!el)return;
+    el.addEventListener('input',refrescaSizing); el.addEventListener('change',refrescaSizing);});
 
 async function run(){
   var cGeo=cfgActual();
@@ -1565,6 +2102,12 @@ function avanzaHora(dt){
 
 /* ===================== ARRANQUE ===================== */
 pintaEstructuras(); loadPlants(); refrescaGeom(); detectEngine();
+/* El catálogo se pide la PRIMERA VEZ que alguien toca la tarjeta de Equipos.
+   Bajarlo al abrir sería castigar con 3 MB a quien viene solo a comparar
+   estructuras, que es para lo que la ficha existe. */
+['pointerdown','focusin'].forEach(function(ev){
+  $('eqCard').addEventListener(ev,despiertaCatalogo,{once:false});});
+refrescaSizing();
 $('run').onclick=run;
 
 /* La escena se ve DESDE QUE SE ABRE, sin haber comparado nada: es la lección
