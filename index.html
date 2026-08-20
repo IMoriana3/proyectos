@@ -838,7 +838,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/sim-viento.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-19",
-    version: "1.9.4",
+    version: "1.9.5",
     docId: "viento",
     docUrl: "",
     download: "",
@@ -873,6 +873,7 @@ const PROJECTS = [
       { done:false, text:"La velocidad de suelta del pasivo es un SUSTITUTO declarado de la carga de desembrague, no una medida: hace falta el par real y su dispersión entre unidades para que el umbral deje de ser un parámetro." }
     ],
     historial: [
+      { date:"2026-08-19", ver:"1.9.5", note:"Tres cosas de la escena. (1) Marcar o desmarcar un caso ya REHACE el 3D: antes solo guardaba la configuración, así que activabas «Pasivo» y no pasaba nada hasta recargar — la casilla parecía rota. (2) El suelo terminaba en un borde recto con el cielo detrás y la planta parecía estar sobre una mesa flotando: ahora hay un suelo de horizonte que llega hasta la cúpula y NIEBLA que cose los dos, con su color tomado del horizonte, así que al amanecer la bruma se pone naranja con el cielo. (3) La niebla escala con la escena: con un rango fijo, en la comparativa se comía los seguidores y en Ayora no llegaba al horizonte." },
       { date:"2026-08-19", ver:"1.9.4", note:"El pasivo SE DIBUJA, y se dibuja como es: dos poblaciones. La fila de perímetro cae al límite y se marca como abanderada; la interior sigue en seguimiento y NO se marca — con un material compartido las dos brillaban igual y el caso volvía a parecer un abanderamiento de planta. Cada fila lleva su rótulo (SUELTA / EN SEGUIMIENTO). Y viene encendido por defecto: quien ya tuviera configuración guardada llevaba «apagado» de cuando ese era el default, así que se fuerza una vez y a partir de ahí manda lo que elija." },
       { date:"2026-08-19", ver:"1.9.3", note:"Tres cosas que el usuario vio en la escena. (1) Con el tiempo PARADO los ángulos y la POA seguían cambiando: el lazo de control caía a integrar con el delta del FOTOGRAMA, así que giraba a 0,17 °/s de tiempo real con el reloj congelado — 0,82° de deriva en cinco segundos. Ahora dt es el tiempo SIMULADO transcurrido: parado son cero, y saltar la hora con el tiempo parado sí mueve el seguidor, que antes tampoco lo hacía. (2) Los bloques van ROTULADOS: la cámara mira desde el sur, así que salían en orden inverso al de las tarjetas, y orbitando cualquier orden fijo se invierte. (3) El bloque del pasivo se dibujaba con las dos filas al mismo ángulo, que es justo lo que el pasivo NO es: ahora la de perímetro cae al límite y la interior sigue en seguimiento, y su POA es la de la PLANTA, no la de la fila." },
       { date:"2026-08-19", ver:"1.9.2", note:"BIFILA: un motor mueve DOS filas, y se dibujaba una. La planta salía con la mitad de filas de las que tiene y el doble de pasillo entre ellas. Ahora el nº de filas y su separación salen del layout (mesa.filaZ o filaZ), que además corrige a los otros visores: Páramo es MONOfila (filaZ 0) y Bagnarelli es bifila desde que se corrigió su layout. Oráculo: con el largo y el nº de filas que ahora se dibujan, el recuento de módulos cuadra EXACTO con la cartera en Túnez (1.064), Bagnarelli (1.296) y Páramo (18.528), y con el DWG en Fayón (2.112)." },
