@@ -98,6 +98,8 @@ canvas.panning{cursor:grabbing}
 .deriv .d.warn .v{color:var(--build)}
 .maptools{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
 .maptools .mini{width:auto;padding:5px 10px;font-size:12px}
+.maptools .minisel{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit;font-size:12px}
+.maptools .mini2{margin:0;font-size:11.5px;gap:5px}
 .maptools .maphint{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);margin-left:auto}
 .note{font-size:12px;color:var(--muted-2);margin-top:10px;line-height:1.5}
 .note code{color:var(--muted);background:var(--panel-2);padding:1px 5px;border-radius:5px;font-family:var(--mono)}
@@ -187,8 +189,12 @@ canvas.panning{cursor:grabbing}
         </div>
       </div>
       <div class="btnrow">
-        <button class="btn ghost small" id="exclStart">⛔ Dibujar exclusión</button>
-        <button class="btn ghost small" id="exclClear">🗑️ Quitar exclusiones</button>
+        <button class="btn ghost small" id="exclStart">⛔ Exclusión (área)</button>
+        <button class="btn ghost small" id="lineStart">╱ Exclusión (línea)</button>
+      </div>
+      <div class="two" style="margin-top:8px;align-items:end">
+        <div class="field" style="margin-bottom:0"><label>Buffer de línea (m)</label><input id="lineBuf" type="number" step="0.5" value="5"></div>
+        <div class="field" style="margin-bottom:0"><button class="btn ghost small" id="exclClear" style="padding:8px 10px">🗑️ Quitar exclusiones</button></div>
       </div>
       <p class="tag" id="parcelTag">—</p>
       <p class="note" style="margin-top:2px">Las <b>exclusiones</b> (§02.5c del cuaderno) son zonas donde el motor no coloca: cursos de agua, edificaciones, servidumbres. Se dibujan sobre la ortofoto en cualquiera de los tres modos, y los anillos interiores de un GeoJSON entran como exclusión sin dibujar nada.</p>
@@ -266,6 +272,11 @@ canvas.panning{cursor:grabbing}
           <select id="bifila"><option value="1">Bifila (2 sub-filas)</option><option value="0">Monofila</option></select></div>
       </div>
       <button class="btn" id="genBtn">▶ Generar implantación</button>
+      <div id="prog" style="display:none;margin-top:8px">
+        <div style="height:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:4px;overflow:hidden">
+          <div id="progBar" style="height:100%;width:0;background:var(--accent);transition:width .12s"></div></div>
+        <p class="tag" id="progTxt" style="margin-top:4px">—</p>
+      </div>
       <div class="field" style="margin-top:10px"><label>Cálculo</label>
         <select id="calc"><option value="js">Navegador (motor portado)</option><option value="core" disabled>Motor SolarGPT (canónico)</option></select>
         <div class="tip">El navegador calcula solo; el motor SolarGPT es el número canónico y se activa al detectarlo.</div></div>
@@ -294,6 +305,16 @@ canvas.panning{cursor:grabbing}
         </div>
         <label class="chk"><input type="checkbox" id="alignGrid" checked> Alinear a rejilla global (columnas rectas)</label>
         <label class="chk"><input type="checkbox" id="center" checked> Centrar el bloque en la parcela</label>
+        <label class="chk"><input type="checkbox" id="forceComplete"> Forzar strings completos</label>
+        <p class="note" style="margin-top:0">Descarta las estructuras de talla <b>menor</b> que la principal, que son las que dejan un string a medias. Con talla única no hay nada que descartar. <b>Ojo:</b> en el cuaderno esta casilla hoy no hace nada — el motor la pasa por las llamadas y la mete en la clave de caché, pero no toca la colocación.</p>
+        <label class="chk"><input type="checkbox" id="optAz"> Optimizar azimut (barrido 90–270°)</label>
+        <label class="chk"><input type="checkbox" id="optGrid"> Optimizar ángulo de grid</label>
+        <div class="three" id="gridSweepBox" style="display:none">
+          <div class="field"><label>Desde °</label><input id="gridFrom" type="number" step="5" value="0"></div>
+          <div class="field"><label>Hasta °</label><input id="gridTo" type="number" step="5" value="180"></div>
+          <div class="field"><label>Paso °</label><input id="gridStep" type="number" step="1" value="5"></div>
+        </div>
+        <p class="note" style="margin-top:0">Los barridos son <b>N layouts completos</b>, no una fórmula: 36 ángulos son unos tres segundos. El core hace exactamente lo mismo y se queda con el de más kWp.</p>
       </div>
       </details>
     </div>
@@ -321,6 +342,13 @@ canvas.panning{cursor:grabbing}
         <button class="btn ghost small mini" id="zIn" title="Acercar">+</button>
         <button class="btn ghost small mini" id="zOut" title="Alejar">−</button>
         <button class="btn ghost small mini" id="fit" title="Encajar la parcela en el lienzo">⤢ Encajar</button>
+        <select id="render" class="minisel" title="Cómo se pintan las mesas">
+          <option value="auto">Render: auto</option>
+          <option value="poly">Polígonos</option>
+          <option value="line">Líneas</option>
+        </select>
+        <label class="chk mini2"><input type="checkbox" id="showDisc"> descartadas</label>
+        <label class="chk mini2"><input type="checkbox" id="showAxis"> eje bifila</label>
         <span class="maphint" id="mapHint">arrastra para mover · rueda para acercar</span>
       </div>
       <canvas id="cv" width="1000" height="700"></canvas>
@@ -330,6 +358,7 @@ canvas.panning{cursor:grabbing}
         <span><i style="background:#36D399"></i> mesa</span>
         <span><i style="background:#F6A623"></i> vial</span>
         <span><i style="background:rgba(208,89,79,.35);border:1px solid #D0594F"></i> exclusión</span>
+        <span><i style="background:rgba(128,147,164,.30);border:1px dashed #8093A4"></i> descartada</span>
         <span id="basemapMsg" style="color:var(--muted-2)"></span>
       </div>
       <div class="avisos" id="avisos"></div>
@@ -567,6 +596,20 @@ function solveLin(c, k, lo, hi) {
   var a = (lo - k) / c, b = (hi - k) / c;
   return c > 0 ? [a, b] : [b, a];
 }
+/* Banda de una POLILÍNEA abierta (exclusión lineal con buffer): igual que
+   bandAt pero sin cerrar el anillo — una zanja o una línea eléctrica no es un
+   polígono, y cerrarla inventaría un lado que no existe. */
+function bandAtLine(pts, y, d) {
+  if (d <= 0 || !pts || pts.length < 2) return [];
+  var out = [];
+  for (var i = 0; i + 1 < pts.length; i++) {
+    var p = pts[i], q = pts[i + 1];
+    if (Math.min(p[1], q[1]) - d > y || Math.max(p[1], q[1]) + d < y) continue;
+    var segs = edgeBandAt(p[0], p[1], q[0], q[1], y, d);
+    for (var k = 0; k < segs.length; k++) out.push(segs[k]);
+  }
+  return ivNorm(out);
+}
 function bandAt(rings, y, d) {
   if (d <= 0) return [];
   var out = [];
@@ -698,6 +741,11 @@ function compute(cfg) {
   var extU = ext.map(fwd);
   var holesU = (cfg.holes || []).map(function (h) { return closeRing(h).map(fwd); });
   var exclU  = (cfg.exclusions || []).map(function (h) { return closeRing(h).map(fwd); });
+  // Exclusiones LINEALES: polilínea + buffer (zanjas, líneas eléctricas, caminos
+  // existentes). El core las lleva en `excl_utm_line` y las cuenta aparte.
+  var lineasU = (cfg.exclLines || []).map(function (L) {
+    return { pts: (L.pts || []).map(fwd), buf: Math.max(0, +L.buf || 0) };
+  });
 
   var polyArea = Math.abs(ringArea(extU));
   for (var h = 0; h < holesU.length; h++) polyArea -= Math.abs(ringArea(holesU[h]));
@@ -716,6 +764,7 @@ function compute(cfg) {
   function fromLocal(x, y) { return [ctr[0] + x * _cR + y * _sR, ctr[1] - x * _sR + y * _cR]; }
   var rings = [extU].concat(holesU).map(function (r) { return r.map(toLocal); });
   var exclR = exclU.map(function (r) { return r.map(toLocal); });
+  var lineasR = lineasU.map(function (L) { return { pts: L.pts.map(toLocal), buf: L.buf }; });
 
   /* 3) área útil = interior a distancia ≥ setback del borde, menos exclusiones.
         Se resuelve por línea de barrido; aquí sacamos su bbox y su área. */
@@ -728,7 +777,29 @@ function compute(cfg) {
       if (!iv.length) break;
       iv = ivSub(iv, insideAt([exclR[e]], y));
     }
+    for (var L = 0; L < lineasR.length; L++) {
+      if (!iv.length) break;
+      iv = ivSub(iv, bandAtLine(lineasR[L].pts, y, lineasR[L].buf));
+    }
     return iv;
+  }
+  /* Área que quita cada FUENTE de exclusión, por separado. El core lo estima
+     igual (`estimate_drops_by_source`): área de solape / área por estructura.
+     Contarlas juntas escondería cuál de las tres te está costando el campo. */
+  function areaFuente(tipo) {
+    var a = 0;
+    for (var y = bb[1] + SCAN / 2; y <= bb[3]; y += SCAN) {
+      var base = insideAt(rings, y);
+      if (!base.length) continue;
+      if (setback > 0) base = ivSub(base, bandAt(rings, y, setback));
+      if (!base.length) continue;
+      var quita = [];
+      if (tipo === 'user') for (var e = 0; e < exclR.length; e++) quita = quita.concat(insideAt([exclR[e]], y));
+      else for (var L = 0; L < lineasR.length; L++) quita = quita.concat(bandAtLine(lineasR[L].pts, y, lineasR[L].buf));
+      var inter = ivInter(base, ivNorm(quita));
+      for (var k = 0; k < inter.length; k++) a += (inter[k][1] - inter[k][0]) * SCAN;
+    }
+    return a;
   }
   var SCAN = 0.25, innerArea = 0, ix0 = Infinity, iy0 = Infinity, ix1 = -Infinity, iy1 = -Infinity;
   for (var y = bb[1] + SCAN / 2; y <= bb[3]; y += SCAN) {
@@ -999,6 +1070,35 @@ function compute(cfg) {
     rows = keep;
   }
 
+  /* 6b) Forzar strings completos.
+     AUDITORÍA (2026-08-20): en el core este flag es INERTE — se pasa por las
+     llamadas recursivas y entra en la clave de caché (`fcs`), pero no toca la
+     colocación. Aquí se implementa con el significado que promete su etiqueta:
+     descartar las estructuras de talla MENOR que la principal, que son las que
+     dejan un string a medias. Con talla única no hay nada que descartar. */
+  var fcsDropped = 0;
+  if (cfg.forceComplete && isMulti) {
+    var mMax = sizes[0].modsAct, filt2 = [];
+    for (var fr = 0; fr < rows.length; fr++) {
+      var completos = rows[fr].filter(function (t) { return t.mods >= mMax; });
+      var cortos = rows[fr].filter(function (t) { return t.mods < mMax; });
+      if (cortos.length) { fcsDropped += cortos.length; discarded.push(cortos); }
+      filt2.push(completos);
+    }
+    rows = bifila ? filt2 : filt2.filter(function (r) { return r.length; });
+    // Bifila: si una sub-fila se queda desparejada tras el recorte, cae su pareja
+    if (bifila) {
+      var pares = [];
+      for (var pp2 = 0; pp2 + 1 < rows.length; pp2 += 2) {
+        if (rows[pp2].length && rows[pp2 + 1].length) { pares.push(rows[pp2]); pares.push(rows[pp2 + 1]); }
+        else { fcsDropped += rows[pp2].length + rows[pp2 + 1].length;
+               if (rows[pp2].length) discarded.push(rows[pp2]);
+               if (rows[pp2 + 1].length) discarded.push(rows[pp2 + 1]); }
+      }
+      rows = pares;
+    }
+  }
+
   /* 7) centrar el bloque sin perder estructuras */
   var all = [];
   for (var rr = 0; rr < rows.length; rr++) for (var ss = 0; ss < rows[rr].length; ss++) all.push(rows[rr][ss]);
@@ -1040,6 +1140,12 @@ function compute(cfg) {
              len: s.x1 - s.x0, ap: s.y1 - s.y0,
              cx: (s.x0 + s.x1) / 2, cy: (s.y0 + s.y1) / 2 };
   });
+  var descartadas = [];
+  for (var dq = 0; dq < discarded.length; dq++)
+    for (var dr = 0; dr < discarded[dq].length; dr++) {
+      var sd = discarded[dq][dr], wd = rectWorld(sd);
+      descartadas.push({ utm: wd, lonlat: wd.map(inv), mods: sd.mods });
+    }
   var roads = [];
   for (var rd = 0; rd < roadsEo.length; rd++) {
     var seg = roadsEo[rd].segs;
@@ -1099,12 +1205,23 @@ function compute(cfg) {
     max_structs_row: rowLens.length ? Math.max.apply(null, rowLens) : 0,
     avg_structs_row: rowLens.length ? rowLens.reduce(function (a, b) { return a + b; }, 0) / rowLens.length : 0,
     discarded_structs: discStructs, discarded_rows: discarded.length,
+    force_complete_dropped: fcsDropped,
+    // Desglose por fuente (misma aproximación por área que el core)
+    drop_area_user_m2: exclR.length ? areaFuente('user') : 0,
+    drop_area_line_m2: lineasR.length ? areaFuente('line') : 0,
+    drop_user_poly: 0, drop_line_buffer: 0,   // se rellenan justo abajo
+    n_excl_user: exclR.length, n_excl_line: lineasR.length,
     bifila_trimmed: bifTrimmed, ab_max_dx_m: abMaxDx, pruned_structs: pruned,
     center_shift_m: shift, qa_avisos: avisos,
     qa_geometria_ok: !avisos.some(function (a) { return a.severidad === "fail"; }),
     ms: ((typeof performance !== "undefined" && performance.now) ? performance.now() : 0) - t0
   };
-  return { structures: structures, roads: roads, rows: rows, sizes: sizes,
+  var areaPorEstr = (structW * collH) || 1;
+  stats.drop_user_poly  = Math.round(stats.drop_area_user_m2 / areaPorEstr);
+  stats.drop_line_buffer = Math.round(stats.drop_area_line_m2 / areaPorEstr);
+  if (fcsDropped) aviso('info', 'strings_incompletos_descartados',
+    fcsDropped + ' estructura(s) de talla menor descartadas por «forzar strings completos».');
+  return { structures: structures, descartadas: descartadas, roads: roads, rows: rows, sizes: sizes,
            parcel_utm: extU, holes_utm: holesU, excl_utm: exclU,
            inner_band: innerBand, rot: rot, center: ctr, bbox_inner: [ix0, iy0, ix1, iy1],
            stats: stats, avisos: avisos,
@@ -1112,7 +1229,7 @@ function compute(cfg) {
 }
 
 function emptyResult(cfg, avisos, polyArea, epsg, structW, collH, pitch, mount, eff, t0) {
-  return { structures: [], roads: [], rows: [], sizes: [], parcel_utm: [], holes_utm: [], excl_utm: [],
+  return { structures: [], descartadas: [], roads: [], rows: [], sizes: [], parcel_utm: [], holes_utm: [], excl_utm: [],
            inner_band: [], rot: 0, center: [0, 0], bbox_inner: [0, 0, 0, 0], avisos: avisos,
            stats: { structures: 0, trackers: 0, rows: 0, modules: 0, kWp: 0, GCR: 0,
                     fill_factor: 0, usable_fill: 0, density_kWp_ha: 0, poly_area_m2: polyArea,
@@ -1138,7 +1255,40 @@ function toGeoJSON(res) {
   return { type: "FeatureCollection", features: feats };
 }
 
-return { compute: compute, toGeoJSON: toGeoJSON,
+/* ── Barrido de orientación ──────────────────────────────────────────────
+   Dos cosas que el cuaderno ofrece por separado y que aquí son el mismo motor:
+   «Optimizar azimuth (90–270)» y «Optimizar ángulo de grid» con rango y paso.
+   El core lo hace igual —`optimize_grid_angle` se llama a sí mismo con cada
+   ángulo y se queda con el de más kWp—, y por eso cuesta lo que cuesta: son N
+   layouts completos, no una fórmula. Va en trocitos con `await` entre pasos
+   para que la barra avance y la ficha no se congele. */
+async function barrido(cfg, opts) {
+  var de = +opts.desde, a = +opts.hasta, paso = Math.max(1, +opts.paso || 5);
+  var angulos = [];
+  for (var x = de; x < a; x += paso) angulos.push(((x % 360) + 360) % 360);
+  if (!angulos.length) angulos = [cfg.panelAz];
+  var mejor = null, mejorAng = cfg.panelAz, probados = [];
+  for (var i = 0; i < angulos.length; i++) {
+    var r;
+    try { r = compute(Object.assign({}, cfg, { panelAz: angulos[i] })); }
+    catch (e) { r = null; }
+    var kwp = r ? r.stats.kWp : 0;
+    probados.push({ az: angulos[i], kWp: kwp, structures: r ? r.stats.structures : 0 });
+    if (!mejor || kwp > mejor.stats.kWp) { mejor = r; mejorAng = angulos[i]; }
+    if (opts.onPaso) await opts.onPaso(i + 1, angulos.length, angulos[i], kwp);
+  }
+  if (!mejor) return null;
+  mejor.stats.grid_optimized = true;
+  mejor.stats.grid_angle_deg = mejorAng;
+  mejor.stats.panel_az_deg = mejorAng;
+  mejor.stats.sweep = probados;
+  var base = probados.filter(function (p) { return Math.abs(p.az - cfg.panelAz) < 1e-9; })[0];
+  mejor.stats.grid_angle_gain_pct = (base && base.kWp > 0)
+    ? 100 * (mejor.stats.kWp - base.kWp) / base.kWp : 0;
+  return mejor;
+}
+
+return { compute: compute, barrido: barrido, toGeoJSON: toGeoJSON, bandAtLine: bandAtLine,
          structureDims: structureDims, structureDimsMulti: structureDimsMulti,
          utmFwd: utmFwd, utmInv: utmInv, utmZone: utmZone, utmEpsg: utmEpsg,
          meridianConvergence: meridianConvergence,
@@ -1160,7 +1310,7 @@ var RES=null, PARCEL=null, HOLES=[], DRAW=null;
    `buffer(-d)` de Shapely— y las exclusiones se restan DESPUÉS del setback,
    igual que el `excl_utm` del core. Meterlas en el mismo saco daría un área
    útil distinta de la del cuaderno. */
-var EXCL=[];
+var EXCL=[], EXCL_LINEAS=[];
 
 /* ═════════════════ BUSCADOR DE EMPLAZAMIENTO ═════════════════
    Mismo componente que `sim-viento.html` (#148), y por las mismas razones: aquí
@@ -1407,7 +1557,7 @@ function tagParcel(){
   var utm=PARCEL.map(function(c){var z=LAY.utmZone(c[0]);return LAY.utmFwd(c[0],c[1],z,c[1]<0);});
   var ha=Math.abs(LAY.ringArea(utm))/1e4;
   var hh=HOLES.reduce(function(a,h){var u=h.map(function(c){var z=LAY.utmZone(c[0]);return LAY.utmFwd(c[0],c[1],z,c[1]<0);});return a+Math.abs(LAY.ringArea(u))/1e4;},0);
-  var nEx=HOLES.length+EXCL.length;
+  var nEx=HOLES.length+EXCL.length+EXCL_LINEAS.length;
   // En modo dibujo, sin nada dibujado, la parcela vigente sigue siendo el
   // rectángulo por cotas: decir «4 vértices · 27,17 ha» a secas justo debajo de
   // «Dibujar parcela» se lee como que ya la has dibujado tú.
@@ -1502,6 +1652,7 @@ function encaja(){
   if(drawing&&DRAW&&DRAW.length)pts=pts.concat(DRAW);
   (HOLES||[]).forEach(function(h){pts=pts.concat(h);});
   (EXCL||[]).forEach(function(h){pts=pts.concat(h);});
+  (EXCL_LINEAS||[]).forEach(function(L){pts=pts.concat(L.pts);});
   var cv=$('cv');
   if(!pts.length){
     VIEW.cx=lon2u(+$('lon').value); VIEW.cy=lat2u(+$('lat').value); VIEW.z=15; return;
@@ -1630,15 +1781,19 @@ $('zIn').onclick=function(){zoomBoton(0.75);};
 $('zOut').onclick=function(){zoomBoton(-0.75);};
 $('fit').onclick=function(){encaja();draw();};
 $('orto').onchange=function(){draw();};
+['render','showDisc','showAxis'].forEach(function(id){$(id).onchange=function(){draw();};});
+$('optGrid').onchange=function(){$('gridSweepBox').style.display=this.checked?'':'none';};
 
 /* ── dibujo sobre el lienzo: parcela o exclusión ── */
-var drawing=false, drawDest='parcela';        // 'parcela' | 'exclusion'
+var drawing=false, drawDest='parcela';   // 'parcela' | 'exclusion' | 'linea'
 function pintaBotonesDibujo(){
   $('drawStart').textContent=(drawing&&drawDest==='parcela')?'⏹ Terminar':'✏️ Dibujar parcela';
-  $('exclStart').textContent=(drawing&&drawDest==='exclusion')?'⏹ Terminar':'⛔ Dibujar exclusión';
+  $('exclStart').textContent=(drawing&&drawDest==='exclusion')?'⏹ Terminar':'⛔ Exclusión (área)';
+  $('lineStart').textContent=(drawing&&drawDest==='linea')?'⏹ Terminar':'╱ Exclusión (línea)';
   $('cv').classList.toggle('drawing',drawing);
+  var qué={parcela:'la parcela',exclusion:'la exclusión',linea:'la línea'}[drawDest];
   $('mapHint').textContent=drawing
-    ?('clic: vértice · doble clic: cerrar '+(drawDest==='exclusion'?'la exclusión':'la parcela')+' · arrastra para mover')
+    ?('clic: vértice · doble clic: cerrar '+qué+' · arrastra para mover')
     :'arrastra para mover · rueda para acercar';
 }
 function empiezaDibujo(dest){
@@ -1647,17 +1802,23 @@ function empiezaDibujo(dest){
   pintaBotonesDibujo(); draw();
 }
 function cierraDibujo(){
-  if(drawing&&DRAW&&DRAW.length>=3){
-    if(drawDest==='exclusion')EXCL.push(DRAW.slice());
-    else {PARCEL=DRAW.slice();HOLES=[];}
+  if(drawing&&DRAW){
+    // Una LÍNEA vale con dos puntos: una zanja o una línea eléctrica no es un
+    // polígono, y exigirle tres vértices sería pedirle que se cierre.
+    if(drawDest==='linea'&&DRAW.length>=2)EXCL_LINEAS.push({pts:DRAW.slice(),buf:+$('lineBuf').value||5});
+    else if(DRAW.length>=3){
+      if(drawDest==='exclusion')EXCL.push(DRAW.slice());
+      else {PARCEL=DRAW.slice();HOLES=[];}
+    }
   }
-  if(drawDest==='exclusion')DRAW=[];
+  if(drawDest!=='parcela')DRAW=[];
   drawing=false; pintaBotonesDibujo(); tagParcel(); draw();
 }
 $('drawStart').onclick=function(){empiezaDibujo('parcela');};
 $('exclStart').onclick=function(){empiezaDibujo('exclusion');};
+$('lineStart').onclick=function(){empiezaDibujo('linea');};
 $('drawClear').onclick=function(){DRAW=[];PARCEL=null;drawing=false;pintaBotonesDibujo();draw();tagParcel();};
-$('exclClear').onclick=function(){EXCL=[];tagParcel();draw();};
+$('exclClear').onclick=function(){EXCL=[];EXCL_LINEAS=[];tagParcel();draw();};
 $('cv').addEventListener('click',function(ev){
   if(!drawing)return;
   // Un clic que ha sido ARRASTRE es navegación, no un vértice: sin esto, mover
@@ -1670,6 +1831,7 @@ $('cv').addEventListener('click',function(ev){
   if(last&&Math.abs(px(last[0],last[1])[0]-px(p[0],p[1])[0])<5&&Math.abs(px(last[0],last[1])[1]-px(p[0],p[1])[1])<5)return;
   DRAW.push(p);
   if(drawDest==='parcela'&&DRAW.length>=3){PARCEL=DRAW.slice();HOLES=[];}
+  if(drawDest==='linea'&&DRAW.length>=2)$('mapHint').textContent='doble clic para cerrar la línea ('+DRAW.length+' puntos)';
   tagParcel();draw();
 });
 $('cv').addEventListener('dblclick',function(){ if(drawing)cierraDibujo(); });
@@ -1705,18 +1867,66 @@ function draw(){
   ring(PARCEL,'rgba(84,166,255,.10)','#54A6FF',1.6);
   HOLES.forEach(function(h){ring(h,'rgba(208,89,79,.28)','#D0594F',1.2);});
   EXCL.forEach(function(h){ring(h,'rgba(208,89,79,.34)','#D0594F',1.4,[5,3]);});
+  // Exclusiones de LÍNEA: se pinta el eje y su buffer real, para que se vea lo
+  // que de verdad va a quitar — una línea sola no dice cuánto ancho come.
+  EXCL_LINEAS.forEach(function(L){
+    if(!L.pts||L.pts.length<2)return;
+    var mLat=110540, mLon=111320*Math.cos(L.pts[0][1]*Math.PI/180);
+    var anchoPx=Math.abs(px(L.pts[0][0]+(L.buf/mLon),L.pts[0][1])[0]-px(L.pts[0][0],L.pts[0][1])[0])*2;
+    ctx.strokeStyle='rgba(208,89,79,.30)';ctx.lineWidth=Math.max(anchoPx,1);ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();
+    for(var i=0;i<L.pts.length;i++){var q=px(L.pts[i][0],L.pts[i][1]);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]);}
+    ctx.stroke();
+    ctx.strokeStyle='#D0594F';ctx.lineWidth=1.4;ctx.setLineDash([5,3]);ctx.stroke();ctx.setLineDash([]);
+    ctx.lineCap='butt';
+  });
   if(RES){
     RES.roads.forEach(function(rd){ring(rd.lonlat,'rgba(246,166,35,.55)','rgba(246,166,35,.9)',0.8);});
     var st=RES.structures;
+    // Render: «líneas» pinta cada mesa como un trazo sobre su eje largo. A
+    // partir de unos miles de mesas, los polígonos van a tirones y encima no se
+    // distinguen: la línea es lo que el cuaderno llama «ultra-ligero».
+    var modo=$('render').value;
+    var lineas=(modo==='line')||(modo==='auto'&&st.length>2500);
+    if(RES.descartadas&&RES.descartadas.length&&$('showDisc').checked){
+      ctx.strokeStyle='#8093A4';ctx.lineWidth=0.8;ctx.setLineDash([3,2]);
+      RES.descartadas.forEach(function(d){
+        var q=d.lonlat;ctx.beginPath();
+        for(var k=0;k<q.length;k++){var pp=px(q[k][0],q[k][1]);k?ctx.lineTo(pp[0],pp[1]):ctx.moveTo(pp[0],pp[1]);}
+        ctx.closePath();ctx.fillStyle='rgba(128,147,164,.22)';ctx.fill();ctx.stroke();
+      });
+      ctx.setLineDash([]);
+    }
     ctx.strokeStyle='rgba(11,15,20,.55)';
     for(var i=0;i<st.length;i++){
       var q=st[i].lonlat;
+      var col=(RES.stats.is_multi_size&&st[i].mods!==RES.stats.mods_per_struct)?'#54A6FF':'#36D399';
+      if(lineas){
+        // eje largo del rectángulo = punto medio de dos lados opuestos
+        var a=px((q[0][0]+q[3][0])/2,(q[0][1]+q[3][1])/2), b=px((q[1][0]+q[2][0])/2,(q[1][1]+q[2][1])/2);
+        ctx.strokeStyle=col;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+        continue;
+      }
       ctx.beginPath();
       for(var k=0;k<q.length;k++){var pp=px(q[k][0],q[k][1]);k?ctx.lineTo(pp[0],pp[1]):ctx.moveTo(pp[0],pp[1]);}
       ctx.closePath();
-      ctx.fillStyle=(RES.stats.is_multi_size&&st[i].mods!==RES.stats.mods_per_struct)?'#54A6FF':'#36D399';
-      ctx.fill();
-      if(st.length<3000){ctx.lineWidth=0.4;ctx.stroke();}
+      ctx.fillStyle=col;ctx.fill();
+      if(st.length<3000){ctx.strokeStyle='rgba(11,15,20,.55)';ctx.lineWidth=0.4;ctx.stroke();}
+    }
+    // Eje bifila: la biela que une las dos sub-filas de un mismo tracker. Es lo
+    // que hace VISIBLE que es bifila y no dos monofilas juntas.
+    if($('showAxis').checked&&RES.stats.bifila&&RES.rows&&RES.fromLocal){
+      ctx.strokeStyle='rgba(246,166,35,.85)';ctx.lineWidth=1.1;
+      for(var r0=0;r0+1<RES.rows.length;r0+=2){
+        var A=RES.rows[r0],B=RES.rows[r0+1];
+        var n=Math.min(A.length,B.length);
+        for(var t=0;t<n;t++){
+          var ca=RES.toLonLat(RES.fromLocal((A[t].x0+A[t].x1)/2,(A[t].y0+A[t].y1)/2));
+          var cb=RES.toLonLat(RES.fromLocal((B[t].x0+B[t].x1)/2,(B[t].y0+B[t].y1)/2));
+          var pa=px(ca[0],ca[1]),pb=px(cb[0],cb[1]);
+          ctx.beginPath();ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);ctx.stroke();
+        }
+      }
     }
   }
   if(drawing&&DRAW&&DRAW.length){
@@ -1844,7 +2054,8 @@ function readCfg(){
   var mods=$('mods').value.split(',').map(function(s){return parseInt(s.trim(),10);}).filter(function(v){return v>0;});
   if(!mods.length)mods=[28];
   return {
-    coords:PARCEL, holes:HOLES, exclusions:EXCL,
+    coords:PARCEL, holes:HOLES, exclusions:EXCL, exclLines:EXCL_LINEAS,
+    forceComplete:$('forceComplete').checked,
     mount:$('mount').value, table:$('table').value, mods:mods.sort(function(a,b){return b-a;}),
     modLen:+$('modLen').value, modWid:+$('modWid').value, moduleWp:+$('modWp').value,
     pitch:+$('pitch').value, setback:+$('setback').value, panelAz:+$('panelAz').value,
@@ -1880,6 +2091,7 @@ async function generar(){
   await new Promise(function(r){setTimeout(r,20);});
   try{
     if($('calc').value==='core'&&ENGINE){ await generarCore(cfg); }
+    else if($('optAz').checked||$('optGrid').checked){ await generarBarrido(cfg); }
     else { RES=LAY.compute(cfg); Object.assign(RES.stats,cfg.decl); pintar(RES,'navegador'); }
   }catch(e){
     $('foot').innerHTML='<span style="color:var(--dead)">No se pudo generar: '+(e&&e.message||e)+'</span>';
@@ -1887,6 +2099,31 @@ async function generar(){
   }
   $('genBtn').disabled=false;
 }
+/* Barrido de orientación. La casilla de azimut es el rango 90–270 del cuaderno;
+   la de ángulo de grid, el rango y el paso que se teclean. Si están las dos, el
+   rango explícito manda — es el más específico. */
+async function generarBarrido(cfg){
+  var desde=90,hasta=270,paso=5;
+  if($('optGrid').checked){desde=+$('gridFrom').value;hasta=+$('gridTo').value;paso=+$('gridStep').value||5;}
+  $('prog').style.display='';$('progBar').style.width='0';
+  var t0=Date.now();
+  var mejor=await LAY.barrido(cfg,{desde:desde,hasta:hasta,paso:paso,onPaso:async function(i,n,ang,kwp){
+    $('progBar').style.width=(100*i/n).toFixed(1)+'%';
+    $('progTxt').textContent='barriendo '+ang.toFixed(0)+'° · '+i+'/'+n+' · mejor hasta ahora '+
+      (kwp/1000).toFixed(2)+' MWp';
+    if(i%2===0)await new Promise(function(r){setTimeout(r,0);});   // deja respirar al navegador
+  }});
+  $('prog').style.display='none';
+  if(!mejor){$('foot').innerHTML='<span style="color:var(--dead)">El barrido no encontró ningún layout.</span>';return;}
+  RES=mejor; Object.assign(RES.stats,cfg.decl);
+  // El azimut ganador se escribe en el formulario: si no, la ficha enseñaría un
+  // layout que no se corresponde con lo que dicen sus casillas.
+  $('panelAz').value=RES.stats.grid_angle_deg.toFixed(0);
+  pintar(RES,'navegador · barrido '+Math.round((Date.now()-t0)/100)/10+' s');
+  $('foot').innerHTML+=' · <b>Barrido:</b> mejor azimut '+RES.stats.grid_angle_deg.toFixed(0)+'°'+
+    (RES.stats.grid_angle_gain_pct?(' ('+(RES.stats.grid_angle_gain_pct>=0?'+':'')+RES.stats.grid_angle_gain_pct.toFixed(1)+' % frente al que tenías)'):'')+'.';
+}
+
 async function generarCore(cfg){
   var ring=cfg.coords.slice(); ring.push(cfg.coords[0]);
   var body={cfg:{coords_lonlat:ring, pitch_m:cfg.pitch, panel_az_deg:cfg.panelAz, setback_m:cfg.setback,
@@ -1943,6 +2180,9 @@ function pintar(res,fuente){
   if(st.discarded_structs)extra.push(fmt(st.discarded_structs)+' descartadas');
   if(st.bifila_trimmed)extra.push(fmt(st.bifila_trimmed)+' por emparejado bifila');
   if(st.pruned_structs)extra.push(fmt(st.pruned_structs)+' por poda de filas sueltas');
+  if(st.force_complete_dropped)extra.push(fmt(st.force_complete_dropped)+' por strings incompletos');
+  if(st.drop_user_poly)extra.push('≈'+fmt(st.drop_user_poly)+' por exclusiones de área');
+  if(st.drop_line_buffer)extra.push('≈'+fmt(st.drop_line_buffer)+' por exclusiones de línea');
   if(st.center_shift_m&&(st.center_shift_m[0]||st.center_shift_m[1]))
     extra.push('centrado Δx='+st.center_shift_m[0].toFixed(1)+' m, Δy='+st.center_shift_m[1].toFixed(1)+' m');
   $('foot').innerHTML=st.structures

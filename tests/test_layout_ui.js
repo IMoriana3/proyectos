@@ -43,6 +43,11 @@ const num = s => parseInt(String(s).replace(/[^\d]/g, ''), 10);
 // La caja del lienzo se mide respecto al VIEWPORT: si los `fill` anteriores han
 // movido el scroll y queda medio fuera, los clics calculados con ella caen donde
 // no es y la prueba mide otra cosa. Traerlo a la vista antes de medir.
+// Los avanzados viven en un <details> plegado: sin abrirlo, Playwright espera
+// para siempre a un control que existe pero no se ve.
+const abreAvanzados = page => page.evaluate(() => {
+  document.querySelectorAll('details.adv').forEach(d => { d.open = true; });
+});
 const cajaLienzo = async page => {
   await page.evaluate(() => document.querySelector('#cv').scrollIntoView({ block: 'center' }));
   await page.waitForTimeout(120);
@@ -304,6 +309,68 @@ const cajaLienzo = async page => {
   await generar(page);
   check('y el layout vuelve a lo que era',
     num(await page.textContent('#ro .ro:nth-child(2) .v')) === mesasSinExcl);
+
+  // ── exclusión de LÍNEA con buffer ──
+  await page.click('#lineStart');
+  await page.fill('#lineBuf', '25');
+  const cajaL = await cajaLienzo(page);
+  await page.mouse.click(cajaL.x + cajaL.w * 0.25, cajaL.y + cajaL.h * 0.30);
+  await page.mouse.click(cajaL.x + cajaL.w * 0.75, cajaL.y + cajaL.h * 0.70);
+  await page.mouse.dblclick(cajaL.x + cajaL.w * 0.75, cajaL.y + cajaL.h * 0.70);
+  check('una exclusión de línea se cuenta (dos puntos bastan: no es un polígono)',
+    await page.evaluate(() => EXCL_LINEAS.length === 1 && EXCL_LINEAS[0].pts.length >= 2),
+    JSON.stringify(await page.evaluate(() => EXCL_LINEAS.map(L => L.pts.length))));
+  await generar(page);
+  const mesasLinea = num(await page.textContent('#ro .ro:nth-child(2) .v'));
+  check('y el motor la obedece con su buffer (' + mesasSinExcl + ' → ' + mesasLinea + ')',
+    mesasLinea < mesasSinExcl && mesasLinea > 0);
+  check('el desglose por fuente cuenta la línea aparte',
+    await page.evaluate(() => RES.stats.drop_line_buffer > 0 && RES.stats.drop_area_line_m2 > 0));
+  await page.click('#exclClear');
+  await generar(page);
+
+  // ── render, descartadas y eje bifila ──
+  await page.selectOption('#render', 'line');
+  await page.waitForTimeout(150);
+  check('el render de líneas sigue pintando', await pintado(page) > 3000);
+  await page.selectOption('#render', 'poly');
+  await page.check('#showDisc'); await page.check('#showAxis');
+  await page.waitForTimeout(150);
+  check('con descartadas y eje bifila activados no revienta nada',
+    await pintado(page) > 20000);
+  await page.uncheck('#showDisc'); await page.uncheck('#showAxis');
+
+  // ── forzar strings completos ──
+  await abreAvanzados(page);
+  await page.fill('#mods', '28, 14, 7');
+  await generar(page);
+  const multiTodo = num(await page.textContent('#ro .ro:nth-child(2) .v'));
+  await page.check('#forceComplete');
+  await generar(page);
+  const multiCompletos = num(await page.textContent('#ro .ro:nth-child(2) .v'));
+  check('forzar strings completos quita las tallas cortas (' + multiTodo + ' → ' + multiCompletos + ')',
+    multiCompletos < multiTodo && multiCompletos > 0);
+  check('y solo queda la talla principal',
+    await page.evaluate(() => Object.keys(RES.stats.by_size || {}).length === 1),
+    JSON.stringify(await page.evaluate(() => RES.stats.by_size)));
+  await page.uncheck('#forceComplete');
+  await page.fill('#mods', '28');
+
+  // ── barrido de orientación ──
+  await page.check('#optGrid');
+  await page.fill('#gridFrom', '0'); await page.fill('#gridTo', '90'); await page.fill('#gridStep', '30');
+  await page.evaluate(() => { document.querySelector('#hint').textContent = ''; });
+  await page.click('#genBtn');
+  await page.waitForFunction(() => /barrido/.test(document.querySelector('#hint').textContent),
+    null, { timeout: 60000 });
+  check('el barrido corre y dice cuánto ha tardado',
+    /barrido \d/.test(await page.textContent('#hint')), await page.textContent('#hint'));
+  check('y deja el azimut ganador escrito en el formulario',
+    await page.evaluate(() => Math.abs(+document.querySelector('#panelAz').value - RES.stats.grid_angle_deg) < 1));
+  check('con la traza de todos los ángulos probados',
+    await page.evaluate(() => (RES.stats.sweep || []).length === 3),
+    JSON.stringify(await page.evaluate(() => (RES.stats.sweep || []).map(x => x.az))));
+  await page.uncheck('#optGrid');
 
   // ── pitch imposible: la ficha lo canta ──
   await page.selectOption('#parcelMode', 'rect');

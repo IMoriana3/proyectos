@@ -115,6 +115,48 @@ Los mismos campos, las mismas fórmulas y los mismos avisos que la página **Lay
 alto físico sí suma los gaps entre módulos apilados. Streamlit enseña los dos justo por eso, y aquí
 también.
 
+## Barridos de orientación
+
+Las dos casillas que el cuaderno ofrece por separado —**«Optimizar azimuth (90–270)»** y
+**«Optimizar ángulo de grid»** con su rango y paso— son aquí el mismo motor, igual que en el core
+(`optimize_grid_angle` se llama a sí mismo con cada ángulo y se queda con el de más kWp).
+
+Cuesta lo que cuesta: son **N layouts completos**, no una fórmula. 36 ángulos ≈ 3 s, con barra de
+progreso y cediendo el hilo cada dos pasos para que la ficha no se congele. Al terminar, el azimut
+ganador **se escribe en el formulario** —enseñar un layout que no se corresponde con lo que dicen
+las casillas sería mentir— y el pie dice cuánto se gana frente al que tenías.
+
+## Exclusiones de línea
+
+Zanjas, líneas eléctricas, caminos existentes: no son polígonos y pedirles que se cierren sería
+inventarles un lado. Se dibujan como **polilínea + buffer (m)** —bastan dos puntos— y el motor resta
+la banda exacta alrededor, con la misma matemática del setback. Es el `excl_utm_line` del core.
+
+El desglose por fuente se cuenta **aparte** (área de solape ÷ área por estructura, la misma
+aproximación que `estimate_drops_by_source`): sumarlas escondería cuál de las dos te está costando
+el campo.
+
+## Forzar strings completos
+
+Descarta las estructuras de talla **menor** que la principal, que son las que dejan un string a
+medias. Con talla única no hay nada que descartar; en bifila, si una sub-fila se queda desparejada
+tras el recorte, cae su pareja.
+
+> **Hallazgo de la auditoría (2026-08-20).** En el cuaderno esta casilla **hoy no hace nada**:
+> `force_complete_strings` se pasa por las llamadas recursivas de `compute_layout_v2` y entra en la
+> clave de caché (`fcs`), pero no toca la colocación en ningún punto. Aquí se implementa con el
+> significado que promete su etiqueta, y queda dicho en la propia ficha.
+
+## Cómo se pintan las mesas
+
+- **Render: auto / polígonos / líneas.** A partir de unos miles de mesas los polígonos van a tirones
+  y encima no se distinguen; la línea sobre el eje largo es lo que el cuaderno llama «ultra-ligero».
+  En *auto* se cambia solo por encima de 2.500 mesas.
+- **Mostrar descartadas**: las que el motor tiró, en gris punteado. Ver *dónde* se pierden dice más
+  que el número.
+- **Mostrar eje bifila**: la biela que une las dos sub-filas de un mismo tracker. Es lo que hace
+  visible que es bifila y no dos monofilas juntas.
+
 ## El terreno y sus pendientes
 
 Pendiente N-S y E-O, más el albedo. Con ellas la ficha deriva lo que **sí** es geometría pura:
