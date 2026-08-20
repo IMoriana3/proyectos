@@ -479,6 +479,23 @@ const SONDA = `(() => {
     actual: BAR.actual, coste: BAR.costeM1, ahorro: BAR.sueloM1,
     read: document.getElementById('barRead').textContent,
     nota: document.getElementById('barNota').textContent }));
+  // las unidades del barrido cambian con lo que se barre: el paso del pitch va
+  // en CENTÍMETROS y el del tilt en GRADOS, y un «25» sin unidad se lee mal en
+  // las dos direcciones
+  const uni = await p.evaluate(() => {
+    const leer = () => ['barUniMin', 'barUniMax', 'barUniPaso']
+      .map(i => document.getElementById(i).textContent).join('/');
+    const q = document.getElementById('barQue');
+    q.value = 'pitch:tracker'; q.dispatchEvent(new Event('change', { bubbles: true }));
+    const p1 = leer();
+    q.value = 'tilt:fija'; q.dispatchEvent(new Event('change', { bubbles: true }));
+    const t1 = leer();
+    q.value = 'pitch:tracker'; q.dispatchEvent(new Event('change', { bubbles: true }));
+    return { pitch: p1, tilt: t1 };
+  });
+  check('el barrido de pitch dice m/m/cm', uni.pitch === 'm/m/cm', uni.pitch);
+  check('y el de tilt °/°/°', uni.tilt === '°/°/°', uni.tilt);
+
   check('el barrido de pitch corre en el navegador (' + bar.n + ' puntos)',
     bar.tipo === 'pitch' && bar.n === 11, JSON.stringify([bar.tipo, bar.n]));
   check('la POA por módulo sube monótona con el pitch',
