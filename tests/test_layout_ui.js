@@ -218,6 +218,28 @@ const cajaLienzo = async page => {
   await page.fill('#axis', '0');
   await page.dispatchEvent('#axis', 'change');
 
+  // El buscador es lo PRIMERO y no depende del modo: estaba dentro del panel
+  // «por cotas» y al elegir «dibujarla sobre el lienzo» desaparecía, justo
+  // cuando más falta hace — es lo que te lleva hasta tu finca.
+  for (const modo of ['draw', 'geojson', 'rect']) {
+    await page.selectOption('#parcelMode', modo);
+    check('el buscador sigue a la vista en modo «' + modo + '»',
+      await page.isVisible('#sitioQ') && await page.isVisible('#lat') && await page.isVisible('#lon'));
+  }
+  // Y elegir un sitio en modo dibujo VUELA allí, en vez de reencuadrar sobre
+  // una parcela que puede estar a cientos de kilómetros.
+  await page.selectOption('#parcelMode', 'draw');
+  await page.fill('#sitioQ', 'san jose');
+  await page.waitForSelector('#sitioRes .it', { timeout: 5000 });
+  await page.click('#sitioRes .it');
+  const centro = await page.evaluate(() => ({ lat: u2lat(VIEW.cy), lon: u2lon(VIEW.cx), z: VIEW.z }));
+  check('elegir sitio en modo dibujo lleva la vista allí (' + centro.lat.toFixed(2) + ', ' + centro.lon.toFixed(2) + ')',
+    Math.abs(centro.lat - (-16.5958)) < 0.05 && Math.abs(centro.lon - (-71.8064)) < 0.05 && centro.z >= 16);
+  check('y en modo dibujo sin dibujar nada se dice de dónde sale la parcela',
+    /del rectángulo por cotas/.test(await page.textContent('#parcelTag')),
+    await page.textContent('#parcelTag'));
+  await page.selectOption('#parcelMode', 'rect');
+
   // ── parcela por GeoJSON ──
   await page.selectOption('#parcelMode', 'geojson');
   await page.fill('#geotxt', GEOJSON_PRUEBA);
