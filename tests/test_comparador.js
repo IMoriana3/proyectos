@@ -85,10 +85,14 @@ const gcr = C.collector_width_m / C.pitch_m;
 // ficha distingue apertura (GCR) de alto de colector (sombreado) y con 1V —lo
 // que hay en el fixture— valen lo mismo. Igualarlas aquí es lo que hace que el
 // careo compare física y no una diferencia de configuración.
-const cfg = { lat: C.lat, lon: C.lon, gcr,
-  apertura: C.collector_width_m, altoColector: C.collector_width_m,
+// Fija y tracker se configuran por separado en la ficha; el fixture del core
+// corrió con UNA geometría, así que aquí se le dan las dos iguales — lo que se
+// carea es la física, no una diferencia de configuración.
+const G = { apertura: C.collector_width_m, altoColector: C.collector_width_m,
+            largoFila: 65.084, pitch: C.pitch_m, gcr };
+const cfg = { lat: C.lat, lon: C.lon, gcr, fija: G, tracker: G,
   maxang: C.max_angle_deg, albedo: C.albedo, tilt: C.tilt_deg, tiltEW: 12,
-  axTilt: C.axis_tilt_deg, gcrDe: () => gcr };
+  axTilt: C.axis_tilt_deg, geomDe: () => G };
 const rep = FIS.compara(C.structures, M, cfg);
 const js = {}; rep.filas.forEach(f => { js[f.key] = f; });
 const core = {}; fix.esperado.forEach(f => { core[f.key] = f; });

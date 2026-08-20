@@ -103,6 +103,10 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       </div>
       <div class="two">
         <div class="field"><label>Año</label><input id="year" type="number" value="2023"></div>
+        <div class="field"><label>Albedo</label><input id="albedo" type="number" step="0.01" value="0.20"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>&nbsp;</label><p class="mini" style="padding-top:9px">albedo = del SITIO (§03.0), compartido</p></div>
         <div class="field"><label>Meteo</label>
           <select id="source">
             <option value="openmeteo">Open-Meteo (ERA5)</option>
@@ -112,15 +116,15 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
     </div>
 
     <div class="card">
-      <h2>▤ Colector <span class="sn">tamaño de la estructura</span></h2>
+      <h2>▤ Fija <span class="sn">geometría propia · §03.F</span></h2>
       <div class="two">
-        <div class="field"><label>Módulo · largo (m)</label><input id="modL" type="number" step="0.001" value="2.382"></div>
-        <div class="field"><label>Módulo · ancho (m)</label><input id="modW" type="number" step="0.001" value="1.134"></div>
+        <div class="field"><label>Módulo · largo (m)</label><input id="fxModL" type="number" step="0.001" value="2.382"></div>
+        <div class="field"><label>Módulo · ancho (m)</label><input id="fxModW" type="number" step="0.001" value="1.134"></div>
       </div>
       <div class="two">
         <div class="field"><label>Mesa</label>
-          <select id="tabla">
-            <option value="1V">1V · 1 módulo vertical</option>
+          <select id="fxTabla">
+            <option value="1V" selected>1V · 1 módulo vertical</option>
             <option value="2V">2V · 2 verticales</option>
             <option value="3V">3V · 3 verticales</option>
             <option value="4V">4V · 4 verticales</option>
@@ -129,57 +133,84 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
             <option value="3H">3H · 3 horizontales</option>
             <option value="4H">4H · 4 horizontales</option>
           </select></div>
-        <div class="field"><label>Disposición</label>
-          <select id="filas">
-            <option value="1">Monofila · 1 fila</option>
-            <option value="2">Bifila · 2 filas</option>
-          </select></div>
+        <div class="field"><label>Pitch (m)</label><input id="fxPitch" type="number" step="0.01" value="6.00"></div>
       </div>
       <div class="two">
-        <div class="field"><label>Módulos por string</label><input id="modsStr" type="number" step="1" value="28"></div>
-        <div class="field"><label>Strings por fila</label><input id="nStr" type="number" step="1" min="1" max="2" value="2"></div>
+        <div class="field"><label>Módulos por string</label><input id="fxModsStr" type="number" step="1" value="28"></div>
+        <div class="field"><label>Strings por fila</label><input id="fxNStr" type="number" step="1" min="1" max="2" value="2"></div>
       </div>
       <div class="two">
-        <div class="field"><label>Gap entre módulos (m)</label><input id="gapMod" type="number" step="0.001" value="0.020"></div>
-        <div class="field"><label>Gap del motor (m)</label><input id="gapMot" type="number" step="0.01" value="0.50"></div>
+        <div class="field"><label>Gap módulos (m)</label><input id="fxGapMod" type="number" step="0.001" value="0.020"></div>
+        <div class="field"><label>Gap motor (m)</label><input id="fxGapMot" type="number" step="0.01" value="0.50"></div>
       </div>
-      <div id="colRead" class="readout" style="margin-top:4px"></div>
-      <p class="mini" id="colNota"></p>
+      <div class="two">
+        <div class="field"><label>Tilt de proyecto °</label><input id="tilt" type="number" step="0.5" value="25"></div>
+        <div class="field"><label>Tilt dos aguas °</label><input id="tiltEW" type="number" step="0.5" value="12"></div>
+      </div>
+      <div id="fxRead" class="readout" style="margin-top:4px"></div>
+      <p class="mini" id="fxNota"></p>
     </div>
 
     <div class="card">
-      <h2>▦ Suelo <span class="sn">el mismo para todas</span></h2>
+      <h2>▤ Tracker <span class="sn">geometría propia · §03.T0</span></h2>
       <div class="two">
-        <div class="field"><label>Pitch (m)</label><input id="pitch" type="number" step="0.01" value="6.00"></div>
+        <div class="field"><label>Módulo · largo (m)</label><input id="tkModL" type="number" step="0.001" value="2.382"></div>
+        <div class="field"><label>Módulo · ancho (m)</label><input id="tkModW" type="number" step="0.001" value="1.134"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Mesa</label>
+          <select id="tkTabla">
+            <option value="1V" selected>1V · 1 módulo vertical</option>
+            <option value="2V">2V · 2 verticales</option>
+            <option value="3V">3V · 3 verticales</option>
+            <option value="4V">4V · 4 verticales</option>
+            <option value="1H">1H · 1 horizontal</option>
+            <option value="2H">2H · 2 horizontales</option>
+            <option value="3H">3H · 3 horizontales</option>
+            <option value="4H">4H · 4 horizontales</option>
+          </select></div>
+        <div class="field"><label>Pitch (m)</label><input id="tkPitch" type="number" step="0.01" value="6.00"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Módulos por string</label><input id="tkModsStr" type="number" step="1" value="28"></div>
+        <div class="field"><label>Strings por fila</label><input id="tkNStr" type="number" step="1" min="1" max="2" value="2"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Gap módulos (m)</label><input id="tkGapMod" type="number" step="0.001" value="0.020"></div>
+        <div class="field"><label>Gap motor (m)</label><input id="tkGapMot" type="number" step="0.01" value="0.50"></div>
+      </div>
+      <div class="two">
         <div class="field"><label>Ángulo máx °</label><input id="maxang" type="number" value="55"></div>
+        <div class="field"><label>Eje inclinado °</label><input id="axtilt" type="number" step="0.5" value="10"></div>
       </div>
-      <div class="two">
-        <div class="field"><label>Albedo</label><input id="albedo" type="number" step="0.01" value="0.20"></div>
-        <div class="field"><label>&nbsp;</label><p class="mini" id="gcrLbl" style="padding-top:9px">GCR = 0,397</p></div>
-      </div>
-      <div class="field" style="margin-top:11px"><label>Uso del suelo</label>
-        <select id="land">
-          <option value="comun">GCR común — aísla la estructura</option>
-          <option value="real">Densidad real de cada tipo — mira la parcela</option>
+      <div class="field"><label>Disposición</label>
+        <select id="tkFilas">
+          <option value="1">Monofila · 1 fila por tracker</option>
+          <option value="2">Bifila · 2 filas por tracker</option>
         </select></div>
-      <p class="mini" id="landLbl"></p>
+      <div id="tkRead" class="readout" style="margin-top:4px"></div>
+      <p class="mini" id="tkNota"></p>
+    </div>
+
+    <div class="card">
+      <h2>▦ Suelo <span class="sn">cómo se comparan</span></h2>
+      <label class="chk"><input type="checkbox" id="igualar"> <b>Igualar el suelo</b>
+        <span class="tag">A/B limpio</span></label>
+      <p class="mini" id="igualNota"></p>
     </div>
 
     <div class="card">
       <h2>🏗 Estructuras</h2>
       <div id="structs"></div>
-      <div class="two" style="margin-top:10px">
-        <div class="field"><label>Tilt de proyecto °</label><input id="tilt" type="number" step="0.5" value="25"></div>
-        <div class="field"><label>Eje inclinado °</label><input id="axtilt" type="number" step="0.5" value="10"></div>
-      </div>
       <div class="field"><label>Cálculo</label>
         <select id="calc">
           <option value="local">En el navegador (no hace falta nada)</option>
           <option value="engine">Motor SolarGPT (canónico) — requiere el motor</option>
         </select></div>
       <button class="btn" id="run">Comparar el año</button>
-      <p class="note">Todas comparten meteo, albedo, motor y —salvo que cambies el uso del
-        suelo— el mismo GCR: lo que se compara es la <b>estructura</b>. Esto es
+      <p class="note">Todas comparten meteo, albedo y motor. La <b>geometría</b> va por
+        familia —fija y tracker se configuran arriba por separado, como §03.F y §03.T0—:
+        marca «igualar el suelo» si quieres aislar la estructura de la densidad. Esto es
         <b>irradiación</b> (kWh/m²), no energía AC ni economía.</p>
     </div>
   </div>
@@ -253,11 +284,8 @@ function fmt(v,d){return (v==null||!isFinite(v))?'—':(+v).toLocaleString('es-E
 var FIS={
   D2R:Math.PI/180,
   R2D:180/Math.PI,
-  /* Densidades de mercado por tipo, para el modo «densidad real». Una fija se
-     monta más apretada —no tiene que abrirse para no darse sombra al bascular—
-     así que a suelo igual pone más módulo. Órdenes de magnitud de proyecto, no
-     canónicos; el canónico es el GCR que se teclea arriba. */
-  GCR_REAL:{fija:0.45, fija_ew:0.70, tracker:null}   // null = el común
+  /* La densidad ya no se adivina con órdenes de magnitud de mercado: cada
+     familia trae SU pitch y su mesa, como §03.F y §03.T0, y de ahí sale su GCR. */
 };
 
 FIS.decl=function(N){return 23.45*Math.sin(2*Math.PI*(284+N)/365)*FIS.D2R;};
@@ -460,11 +488,12 @@ FIS.spec=function(key){for(var i=0;i<FIS.CATALOGO.length;i++)if(FIS.CATALOGO[i].
    Devuelve kWh/m² de módulo (neta e ideal) y el reparto mensual.            */
 FIS.corre=function(spec,M,cfg,tiltForzado){
   var latR=cfg.lat*FIS.D2R, n=M.t.length;
-  /* GCR y sombreado NO usan la misma cota, y es a propósito (ver FIS.tamano):
+  /* Cada familia trae SU geometría (fija y tracker se configuran aparte, como
+     §03.F y §03.T0). Y dentro de ella, GCR y sombreado no usan la misma cota:
      el GCR sale de la APERTURA —«GCR = aperture/pitch», §03.T0— y el sombreado
      entre filas del ALTO DE COLECTOR, que es lo que físicamente tapa e incluye
      los gaps. Con 1V son el mismo número; con 2V ya no. */
-  var gcr=cfg.gcrDe(spec), pitch=cfg.apertura/gcr;
+  var G=cfg.geomDe(spec), gcr=G.gcr, pitch=G.pitch;
   var dtH=(n>1)?((M.t[1]-M.t[0])/3600000):1;
   var neta=0, ideal=0, mes=new Float64Array(12);
   var tilt=(tiltForzado!=null)?tiltForzado:(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
@@ -486,7 +515,7 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
     var sN=0,sI=0;
     for(var k=0;k<planos.length;k++){
       var t=planos[k];
-      var fsh=spec.sinSombra?0:FIS.shade(P0.ps,t,pitch,cfg.altoColector);
+      var fsh=spec.sinSombra?0:FIS.shade(P0.ps,t,pitch,G.altoColector);
       var P=FIS.poa(P0.ps,P0.rho,t,FIS.tiltSup(t,axT),bh,dh,gh,cfg.albedo,fsh,Math.sin(S.el),e0);
       sN+=P.neta; sI+=P.ideal;
     }
@@ -671,49 +700,105 @@ function pintaEstructuras(){
       '<span class="tag">'+(s.fam==='tracker'?'seguidor':'fija')+'</span></label>';
   }).join('');
 }
+/* La ficha tiene dos geometrías y el motor las quiere POR ESTRUCTURA: se
+   expande la de cada familia a cada clave marcada. */
+function porEstructura(cfg,keys,campo){
+  var out={};
+  keys.forEach(function(k){var sp=FIS.spec(k); if(sp)out[k]=cfg.geomDe(sp)[campo];});
+  return out;
+}
 function elegidas(){return [].slice.call(document.querySelectorAll('.st:checked')).map(function(c){return c.value;});}
-function colector(){
-  return FIS.tamano({modL:+$('modL').value, modW:+$('modW').value,
-    tabla:$('tabla').value, modsStr:+$('modsStr').value, nStr:+$('nStr').value,
-    gapMod:+$('gapMod').value, gapMot:+$('gapMot').value, filas:+$('filas').value});
+/* ── DOS geometrías, una por familia ──
+   Como en el cuaderno: §03.F tiene su pitch y su mesa (`fix_pitch_m`) y §03.T0
+   los suyos (`trk_pitch_m`, `trk_table_type`), y CLAUDE.md avisa expresamente
+   de que «la FIJA no debe machacar el GCR del tracker». Una fija se monta más
+   apretada que un seguidor —no tiene que abrirse para no darse sombra al
+   bascular—, así que obligarlas al mismo pitch no era neutral: era una
+   hipótesis metida de tapadillo.
+
+   El interruptor «igualar el suelo» sigue estando, porque la otra pregunta
+   también vale: con él, la fija adopta el GCR del tracker (conservando SU
+   apertura, así que lo que se mueve es su pitch) y la comparación aísla la
+   estructura del uso del suelo.                                              */
+function geomFam(pfx){
+  var T=FIS.tamano({modL:+$(pfx+'ModL').value, modW:+$(pfx+'ModW').value,
+    tabla:$(pfx+'Tabla').value, modsStr:+$(pfx+'ModsStr').value,
+    nStr:+$(pfx+'NStr').value, gapMod:+$(pfx+'GapMod').value,
+    gapMot:+$(pfx+'GapMot').value, filas:(pfx==='tk'?+$('tkFilas').value:1)});
+  var pitch=+$(pfx+'Pitch').value;
+  T.pitch=pitch; T.gcr=(pitch>0?T.apertura/pitch:0.4);
+  return T;
+}
+/* Un GCR > 1 significa que la apertura no cabe en el pitch: las filas se
+   solapan. El core lo rechaza con ValueError; aquí no se puede dejar pasar en
+   silencio, porque el resultado sale con toda la pinta de un número (salía un
+   tilt óptimo de 0° y una transposición NEGATIVA, que es la firma de una
+   geometría imposible, no de un mal emplazamiento). */
+function geomMala(G){return !(G.gcr>0&&G.gcr<=1);}
+function avisoGeom(pfx,G){
+  return geomMala(G)
+    ? '<span style="color:var(--dead)">⚠ GCR '+fmt(G.gcr,3)+' — la apertura ('+
+      fmt(G.apertura,3)+' m) no cabe en el pitch ('+fmt(G.pitch,2)+' m): las filas '+
+      'se solaparían. Sube el pitch o baja la mesa.</span>'
+    : '';
 }
 function cfgActual(){
-  var T=colector(), pitch=+$('pitch').value, gcr=(pitch>0?T.apertura/pitch:0.4);
-  var real=($('land').value==='real');
+  var F=geomFam('fx'), K=geomFam('tk');
+  if($('igualar').checked){                 // la fija adopta el GCR del tracker
+    F.gcr=K.gcr; F.pitch=(K.gcr>0?F.apertura/K.gcr:F.pitch);
+  }
   return {
-    lat:+$('lat').value, lon:+$('lon').value,
-    apertura:T.apertura, altoColector:T.altoColector, largoFila:T.largoFila,
-    filasTracker:T.filasTracker, tam:T, gcr:gcr,
-    maxang:+$('maxang').value, albedo:+$('albedo').value,
-    tilt:+$('tilt').value, tiltEW:12, axTilt:+$('axtilt').value,
-    gcrDe:function(spec){
-      if(!real)return gcr;
-      var v=FIS.GCR_REAL[spec.fam];
-      return (v==null)?gcr:v;
-    }
+    lat:+$('lat').value, lon:+$('lon').value, albedo:+$('albedo').value,
+    fija:F, tracker:K, gcr:K.gcr,
+    maxang:+$('maxang').value, tilt:+$('tilt').value, tiltEW:+$('tiltEW').value,
+    axTilt:+$('axtilt').value, igualado:$('igualar').checked,
+    geomDe:function(spec){return spec.fam==='tracker'?K:F;}
   };
 }
-function refrescaGeom(){
-  var T=colector(), pitch=+$('pitch').value;
-  $('colRead').innerHTML=
-    ro('Apertura',fmt(T.apertura,3),'m · manda en el GCR')+
-    ro('Alto colector',fmt(T.altoColector,3),'m · con gaps')+
+function pintaFam(pfx,cfgFam){
+  var T=cfgFam;
+  $(pfx+'Read').innerHTML=
+    ro('Apertura',fmt(T.apertura,3),'m · GCR')+
+    ro('Alto colector',fmt(T.altoColector,3),'m · sombra')+
     ro('Largo de fila',fmt(T.largoFila,2),'m')+
-    ro('Módulos',T.modsTracker,'por tracker'+(T.filasTracker>1?' ('+T.filasTracker+' filas)':''));
-  $('colNota').innerHTML=T.n+(T.esV?' módulo(s) en VERTICAL':' módulo(s) en HORIZONTAL')+
-    ' en cross-axis · fila = '+$('nStr').value+' mesa(s) de '+$('modsStr').value+
-    ' módulos con el motor en medio. <b>Monofila/bifila no cambia la POA</b>: la mesa mide lo '+
-    'mismo y la irradiación es por m² de módulo — cambia cuántas filas son «un tracker».';
-  $('gcrLbl').textContent='GCR = '+fmt(pitch>0?T.apertura/pitch:0,3)+'  (apertura / pitch)';
-  $('landLbl').textContent=($('land').value==='real')
-    ? 'Fija a GCR '+fmt(FIS.GCR_REAL.fija,2)+' · dos aguas '+fmt(FIS.GCR_REAL.fija_ew,2)+' · seguidores al GCR de arriba. El ranking por suelo puede darse la vuelta.'
-    : 'Todas al mismo GCR: la comparación mide seguimiento, no densidad.';
+    ro('GCR',fmt(T.gcr,3),'apertura / pitch');
+  $(pfx+'Nota').innerHTML=avisoGeom(pfx,T)||T.n+(T.esV?' módulo(s) en VERTICAL':' módulo(s) en HORIZONTAL')+
+    ' en cross-axis · fila = '+$(pfx+'NStr').value+' mesa(s) de '+$(pfx+'ModsStr').value+
+    ' módulos con el motor en medio · '+T.modsTracker+' módulos por '+
+    (pfx==='tk'?'tracker'+(T.filasTracker>1?' ('+T.filasTracker+' filas)':''):'estructura')+
+    (pfx==='tk'&&T.filasTracker>1?'. <b>Monofila/bifila no cambia la POA</b>: la mesa mide lo mismo y la irradiación es por m² de módulo.':'.');
 }
-['pitch','modL','modW','modsStr','nStr','gapMod','gapMot'].forEach(function(id){$(id).oninput=refrescaGeom;});
-['tabla','filas'].forEach(function(id){$(id).onchange=refrescaGeom;});
-$('land').onchange=refrescaGeom;
+function refrescaGeom(){
+  var c=cfgActual();
+  pintaFam('fx',c.fija); pintaFam('tk',c.tracker);
+  var malo=avisoGeom('fx',c.fija)||avisoGeom('tk',c.tracker);
+  $('run').disabled=!!malo;
+  var mismo=Math.abs(c.fija.gcr-c.tracker.gcr)<1e-6;
+  if(malo){$('igualNota').innerHTML=malo; return;}
+  $('igualNota').innerHTML=c.igualado
+    ? 'La fija adopta el GCR del tracker (<b>'+fmt(c.tracker.gcr,3)+'</b>): su pitch pasa a '+
+      fmt(c.fija.pitch,2)+' m. Así la comparación mide <b>seguimiento</b>, no densidad.'
+    : (mismo
+       ? 'Cada familia con su geometría — hoy los dos GCR coinciden ('+fmt(c.fija.gcr,3)+'), así que el ranking por suelo no incluye densidad.'
+       : 'Fija a GCR <b>'+fmt(c.fija.gcr,3)+'</b> (pitch '+fmt(c.fija.pitch,2)+' m) · tracker a <b>'+
+         fmt(c.tracker.gcr,3)+'</b> (pitch '+fmt(c.tracker.pitch,2)+' m). La columna «POA módulo» '+
+         'sigue siendo el A/B de la estructura; el ranking por <b>suelo</b> ya incluye la densidad.');
+}
+var CAMPOS_GEOM=['fxModL','fxModW','fxTabla','fxPitch','fxModsStr','fxNStr','fxGapMod','fxGapMot',
+                 'tkModL','tkModW','tkTabla','tkPitch','tkModsStr','tkNStr','tkGapMod','tkGapMot',
+                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon'];
+CAMPOS_GEOM.forEach(function(id){
+  var el=$(id); if(!el)return;
+  el.addEventListener('input',refrescaGeom); el.addEventListener('change',refrescaGeom);
+});
 
 async function run(){
+  var cGeo=cfgActual();
+  if(geomMala(cGeo.fija)||geomMala(cGeo.tracker)){
+    $('out').innerHTML='<div class="engmsg err"><b>Geometría imposible.</b><br>'+
+      (avisoGeom('fx',cGeo.fija)||avisoGeom('tk',cGeo.tracker)).replace(/<[^>]+>/g,'')+
+      '</div>'; return;
+  }
   var keys=elegidas();
   if(keys.length<2){$('out').innerHTML='<p class="note">Marca al menos <b>dos</b> estructuras: esto es un comparador.</p>';return;}
   var usaMotor=($('calc').value==='engine');
@@ -725,9 +810,13 @@ async function run(){
   try{
     if(usaMotor){
       var body={lat:cfg.lat,lon:cfg.lon,year:year,meteo_mode:(src==='clearsky'?'clearsky':'canon'),
-        structures:keys, albedo:cfg.albedo, gcr:cfg.gcr, collector_width_m:cfg.apertura,
-        tilt_deg:cfg.tilt, axis_tilt_deg:cfg.axTilt, max_angle_deg:cfg.maxang,
-        gcr_mode:($('land').value==='real'?'tipico':'comun')};
+        structures:keys, albedo:cfg.albedo,
+        // La ficha lleva DOS geometrías; el motor las recibe por estructura.
+        gcr:cfg.tracker.gcr, collector_width_m:cfg.tracker.apertura,
+        gcr_por_estructura:porEstructura(cfg,keys,'gcr'),
+        pitch_por_estructura:porEstructura(cfg,keys,'pitch'),
+        alto_por_estructura:porEstructura(cfg,keys,'altoColector'),
+        tilt_deg:cfg.tilt, axis_tilt_deg:cfg.axTilt, max_angle_deg:cfg.maxang};
       var r=await fetch(ENGINE+'/structures',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
       REP=await r.json(); REP.local=false;
@@ -781,7 +870,7 @@ function drawTabla(base){
   });
   $('tbl').innerHTML=h+'</tbody>';
   $('tblNote').innerHTML='<b>POA módulo</b> es lo que ve el panel; <b>POA suelo</b> = POA × GCR, lo que ve la parcela. '+
-    (REP.gcrComun?'A GCR común el segundo es el primero escalado y no reordena nada — cambia «Uso del suelo» a densidad real para que cada tipo lleve la suya.'
+    (REP.gcrComun?'Con el mismo GCR el segundo es el primero escalado y no reordena nada — dale a cada familia su pitch arriba para que cada una lleve su densidad.'
                  :'Con densidades distintas el orden por suelo ya no tiene por qué coincidir con el de módulo.')+
     ' Los seguidores van en modo IDEAL: sin abanderamiento, sin banda muerta y sin política de difusa — el coste del control real es otra pregunta (ficha <a href="sim-viento.html" style="color:var(--accent)">Viento</a>).';
 }
@@ -1095,36 +1184,40 @@ function construyeMundo(){
      de fila y el alto de colector que salen de `FIS.tamano`, no las cotas por
      defecto del modelo. Si no, la escena enseñaría una estructura y la tabla
      calcularía otra. */
-  var largo=cfg.largoFila, anchoFija=cfg.altoColector;
+  var largoTk=cfg.tracker.largoFila, largo=Math.max(cfg.fija.largoFila,largoTk);
   /* Hueco entre bloques: 16 m, y no es un número bonito. De él sale la
      elevación a la que hay que apagar las sombras (más abajo), y con 10 m se
      apagaban a 13° — justo por encima del momento que la escena existe para
      enseñar: el amanecer de invierno, cuando el backtracking abre el ángulo y
      el que no lo lleva se queda clavado en el tope. Con 16 m aguantan hasta
      8,5° y ese momento se ve. */
-  var sep=Math.max(largo,(NFILAS3D-1)*Math.max(6,cfg.apertura/cfg.gcr))+16;
+  var sep=Math.max(largo,(NFILAS3D-1)*Math.max(6,cfg.tracker.pitch))+16;
   var x0=-(keys.length-1)*sep/2, anchoTot=(keys.length-1)*sep+largo;
 
   keys.forEach(function(k,i){
     var spec=FIS.spec(k); if(!spec)return;
-    var gcr=cfg.gcrDe(spec), pitch=cfg.apertura/gcr;
+    var G=cfg.geomDe(spec), gcr=G.gcr, pitch=G.pitch;
     var grupo=new THREE.Group(); grupo.position.x=x0+i*sep; MUNDO.add(grupo);
     var filas=[];
     for(var f=0;f<NFILAS3D;f++){
       var d=(f-(NFILAS3D-1)/2)*pitch;
       var uno;
+      /* Cada familia se dibuja con SU largo de fila y SU alto de colector: la
+         fija y el tracker se configuran aparte, y si el render los igualara
+         estaría enseñando una estructura distinta de la que calcula la tabla. */
       if(spec.fam==='tracker'){
         uno=seguidor3D(mats); uno.position.x=d;          // filas hacia el ESTE
       }else if(spec.fam==='fija_ew'){
         // dos aguas: la mesa lleva DOS paneles enfrentados, y las filas se
         // repiten hacia el este como en el seguidor (las filas corren N-S)
         uno=new THREE.Group();
-        var a=mesaFija3D(mats,largo,anchoFija/2), b=mesaFija3D(mats,largo,anchoFija/2);
-        a.position.z=-anchoFija/4; b.position.z=anchoFija/4;
+        var a=mesaFija3D(mats,G.largoFila,G.altoColector/2),
+            b=mesaFija3D(mats,G.largoFila,G.altoColector/2);
+        a.position.z=-G.altoColector/4; b.position.z=G.altoColector/4;
         uno.add(a,b); uno.spinPair=[a.spin,b.spin]; uno.position.x=d;
         uno.rotation.y=Math.PI/2;                        // mesa a lo largo de N-S
       }else{
-        uno=mesaFija3D(mats,largo,anchoFija); uno.position.z=d;   // filas hacia el SUR
+        uno=mesaFija3D(mats,G.largoFila,G.altoColector); uno.position.z=d;  // filas al SUR
       }
       grupo.add(uno); filas.push(uno);
     }
