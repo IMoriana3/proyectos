@@ -115,6 +115,22 @@ Los mismos campos, las mismas fórmulas y los mismos avisos que la página **Lay
 alto físico sí suma los gaps entre módulos apilados. Streamlit enseña los dos justo por eso, y aquí
 también.
 
+## Bifila: si es bifila, es bifila
+
+La sub-fila **B es el espejo en Y de su A**, no una colocación independiente — la «Opción C» del
+cuaderno. Colocarla por su cuenta daba, en multi-talla y en borde irregular, unas X distintas en A y
+en B: el emparejado posterior no casaba, caían huérfanas y el campo salía lleno de **mesas sueltas
+con pinta de monofila**. Espejando, A y B comparten exactamente las mismas X por construcción.
+
+Y al colocar la A se exige que la estructura quepa **también** en la banda de su B (el
+`_DualBandPrep` del core): sin eso, el greedy planta en A una talla que en B no cabe, B la pierde y
+A se queda viuda.
+
+Medido sobre parcela girada 35°, multi-talla y parcela en L: **0 pares descuadrados y Δx = 0 m**.
+
+El **eje de transmisión** (la biela que une las dos sub-filas) se dibuja con su casilla: es lo que
+hace visible que es bifila y no dos monofilas juntas.
+
 ## Barridos de orientación
 
 Las dos casillas que el cuaderno ofrece por separado —**«Optimizar azimuth (90–270)»** y
@@ -174,7 +190,7 @@ números distintos sobre la misma parcela**. Por eso está.
 | | |
 |---|---|
 | **Fuente** | Open-Meteo Elevation (sin clave) o **CSV propio** `lon,lat,z` — el §02.5b-2 del cuaderno |
-| **Resolución** | malla n×n, de 6 a 48 (48×48 = 2.304 puntos = 24 llamadas) |
+| **Resolución** | malla n×n, de 6 a 48. El campo dice lo que cuesta (puntos y llamadas) y, si te pasas, **recorta a la vista** en vez de en silencio |
 | **Margen alrededor** | en metros, sobre el bbox de la parcela |
 | **Pendiente máx. (°)** | las celdas que la pasan se **excluyen**, y se pintan en morado |
 | **Desactivar el filtro** | mide pendientes pero no excluye |
@@ -187,6 +203,11 @@ MDT» las devuelve a mano.
 Las exclusiones por terreno se cuentan **aparte** de las tuyas (`drop_topo_mask` frente a
 `drop_user_poly` y `drop_line_buffer`): saber si el campo lo recorta el terreno o un dibujo tuyo no
 es el mismo problema.
+
+El servicio es gratis y sin clave, así que el trato es ir despacio: las llamadas van **con ritmo**
+(220 ms entre lotes) y un **429 se espera y se reintenta** —respetando el `Retry-After` si viene— en
+vez de insistir. A la cuarta se rinde diciendo que es el límite de peticiones y cuántas llamadas
+suponía tu resolución. Los lotes ya pedidos quedan cacheados.
 
 > **Es otra fuente, no el mismo dato.** El cuaderno usa COP30 vía OpenTopography, que exige clave;
 > Open-Meteo sirve elevación sin clave y con CORS, que es lo que permite pedirla desde el navegador.
@@ -325,7 +346,19 @@ fuera.
 - **DXF** de polilíneas cerradas en coordenadas UTM (capa `MESAS`), para meterlo en el proyecto.
 - **KML** para abrirlo sobre la ortofoto en Google Earth.
 - **Ver en 3D**: escribe la planta `custom` en `localStorage` (`cobertura_layout`) y abre el visor de
-  terreno de `cobertura-zigbee` — el mismo contrato que ya usaba el Explorador.
+  terreno de `cobertura-zigbee`.
+
+  El 3D dibujaba **todo del mismo tamaño y todo «completo»**, porque se le mandaba una talla global y
+  ninguna razón de largo: un campo multi-talla salía uniforme y no se parecía al 2D. El visor sí sabe
+  hacerlo —lee `mesa.tipos[blk].largo` y el `mr` por seguidor, que es como dibuja las tres tallas de
+  Ayora—, lo que faltaba era mandárselo. Ahora va la geometría de mesa completa (`modW`, `modH`,
+  `gapMod`, `gapDrive`, `pasoFila`), **un tipo por talla con su largo real**, y cada tracker con su
+  `mods`, su `mr` y su `t`.
+
+  Un nodo del visor es **un tracker**: las dos mesas que comparten tubo y motor, agrupadas como en
+  `group_mesas_into_trackers`. `filaZ: 0` porque aquí cada fila es su propia línea — en el canónico
+  la geometría bifila es idéntica a la monofila, y «bifila» es qué dos filas comparten motor, no una
+  separación distinta; un `filaZ` ≠ 0 duplicaría filas que ya van una por una.
 
 Los tres ficheros se llaman como el emplazamiento elegido: tres exports seguidos de tres sitios
 distintos y todos `layout.geojson` acaban siendo un misterio en la carpeta de descargas.
