@@ -73,6 +73,45 @@ check('bifila no cambia la geometría de la mesa',
 check('bifila SÍ dobla los módulos por tracker (' + mono.modsTracker + ' → ' + bi.modsTracker + ')',
   bi.modsTracker === mono.modsTracker * 2);
 
+// ── 2c) IGUALDAD DE POTENCIA PICO ──
+// Es el marco de la comparación: mismos MWp, y de ahí salen los módulos, las
+// estructuras y la parcela. Las cifras están calculadas a mano, no copiadas de
+// la propia función — si no, el test solo diría que la función es determinista.
+//   1V, 28 mods/string, 2 strings → 56 módulos por fila; 660 Wp → 36,96 kWp/fila
+//   10 MWp / 660 Wp = 15151,5 → 15152 módulos pedidos → 271 filas (15176 módulos)
+//   suelo = 271 × 6,00 m × 65,084 m = 105 826,6 m² = 10,5827 ha
+const GP = { ...FIS.tamano({ ...MOD, tabla: '1V' }), pitch: 6.0, wp: 660 };
+const P = FIS.planta(GP, 10);
+check('pico: 10 MWp a 660 Wp pide 15152 módulos', P.pedidos === 15152, String(P.pedidos));
+check('pico: se redondea a FILA entera (271 filas de 56)',
+  P.filas === 271 && P.mods === 271 * 56, P.filas + ' / ' + P.mods);
+check('pico: el instalado sube sobre el pedido (10,0162 MWp)',
+  Math.abs(P.mwp - 10.01616) < 1e-4, P.mwp.toFixed(5));
+check('pico: el suelo es filas × pitch × largo (10,5827 ha)',
+  Math.abs(P.ha - 10.58266) < 1e-4, P.ha.toFixed(5));
+check('pico: densidad de parcela ' + P.mwpHa.toFixed(4) + ' MWp/ha',
+  Math.abs(P.mwpHa - P.mwp / P.ha) < 1e-9);
+// más pitch = mismos módulos, mismas filas, MÁS suelo. Es toda la comparación.
+const Pancho = FIS.planta({ ...GP, pitch: 9.0 }, 10);
+check('pico: abrir el pitch no cambia los módulos, solo el suelo',
+  Pancho.mods === P.mods && Math.abs(Pancho.ha / P.ha - 1.5) < 1e-6,
+  Pancho.ha.toFixed(4));
+// bifila: la mesa no cambia, pero son la mitad de seguidores
+const Pbi = FIS.planta({ ...FIS.tamano({ ...MOD, tabla: '1V', filas: 2 }), pitch: 6.0, wp: 660 }, 10);
+check('pico: bifila deja las mismas filas y la mitad de seguidores (' +
+  Pbi.filas + ' / ' + Pbi.trackers + ')',
+  Pbi.filas === P.filas && Pbi.trackers === Math.ceil(P.filas / 2));
+// una mesa 2V dobla los módulos por fila: la mitad de estructuras, mismo pico
+const P2V = FIS.planta({ ...FIS.tamano({ ...MOD, tabla: '2V' }), pitch: 12.0, wp: 660 }, 10);
+check('pico: una mesa 2V necesita la mitad de estructuras (' + P2V.filas + ')',
+  P2V.filas === Math.ceil(15152 / 112), String(P2V.filas));
+// entradas imposibles: null, no un número con pinta de bueno
+check('pico: sin potencia no hay dimensionado', FIS.planta(GP, 0) === null);
+check('pico: sin Wp de módulo no hay dimensionado', FIS.planta({ ...GP, wp: 0 }, 10) === null);
+// la energía incidente es la POA por los m² que el pico obliga a montar
+check('pico: incidente = POA × área / 1e6 (GWh)',
+  Math.abs(FIS.incidente(2000, P.areaMod) - 2000 * P.areaMod / 1e6) < 1e-9);
+
 // ── 3) correr el motor del navegador sobre la MISMA meteo ──
 const C = fix.cfg;
 const M = { source: 'careo',
