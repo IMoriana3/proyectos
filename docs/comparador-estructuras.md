@@ -159,6 +159,17 @@ puede caer hasta 2,5° del que da la tabla, que lo busca fino (5° y luego 1°).
 cerca del máximo, así que la diferencia de POA es de décimas — pero conviene decirlo o se lee como
 una contradicción donde solo hay resolución.
 
+### Una fija no tiene motor
+
+El hueco entre las mesas de una fila es el **mismo parámetro geométrico** en las dos familias —lo
+que separa las `nStr` mesas, y entra igual en la fórmula del largo de fila— pero **no es la misma
+cosa**: en un seguidor es el **vano del accionamiento** (el motor tiene que ir ahí) y en una fija es
+separación estructural y punto. Llamarlo «gap motor» en el configurador de la fija era ponerle a
+una mesa un motor que no tiene.
+
+Ahora la fija lo llama **«gap entre mesas»**, el tracker **«gap del motor»**, y la nota de cada
+familia dice lo suyo. Hay guards en el test del navegador para que no vuelva.
+
 ## Equipos: el catálogo CEC, dentro de la ficha
 
 El pico del módulo dejó de ser un número que se teclea a ojo. La ficha lleva el **catálogo CEC
@@ -479,7 +490,7 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 node tests/test_comparador.js       # 74 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 34 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 80 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 85 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 104 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 

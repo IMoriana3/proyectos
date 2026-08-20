@@ -185,7 +185,7 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       </div>
       <div class="two">
         <div class="field"><label>Gap módulos (m)</label><input id="fxGapMod" type="number" step="0.001" value="0.020"></div>
-        <div class="field"><label>Gap motor (m)</label><input id="fxGapMot" type="number" step="0.01" value="0.50"></div>
+        <div class="field"><label>Gap entre mesas (m)</label><input id="fxGapMot" type="number" step="0.01" value="0.50"></div>
       </div>
       <div class="two">
         <div class="field"><label>Tilt de proyecto °</label><input id="tilt" type="number" step="0.5" value="25"></div>
@@ -225,7 +225,7 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       </div>
       <div class="two">
         <div class="field"><label>Gap módulos (m)</label><input id="tkGapMod" type="number" step="0.001" value="0.020"></div>
-        <div class="field"><label>Gap motor (m)</label><input id="tkGapMot" type="number" step="0.01" value="0.50"></div>
+        <div class="field"><label>Gap del motor (m)</label><input id="tkGapMot" type="number" step="0.01" value="0.50"></div>
       </div>
       <div class="two">
         <div class="field"><label>Ángulo máx °</label><input id="maxang" type="number" value="55"></div>
@@ -1370,11 +1370,16 @@ function pintaFam(pfx,cfgFam){
     ro('Alto colector',fmt(T.altoColector,3),'m · sombra')+
     ro('Largo de fila',fmt(T.largoFila,2),'m')+
     ro('GCR',fmt(T.gcr,3),'apertura / pitch');
+  var nStr=Math.max(1,Math.round(+$(pfx+'NStr').value||1));
+  var hueco=(nStr>1)
+    ? ' separadas por '+(pfx==='tk'?'el vano del <b>motor</b>':'el <b>gap entre mesas</b>')
+    : '';
   $(pfx+'Nota').innerHTML=avisoGeom(pfx,T)||T.n+(T.esV?' módulo(s) en VERTICAL':' módulo(s) en HORIZONTAL')+
-    ' en cross-axis · fila = '+$(pfx+'NStr').value+' mesa(s) de '+$(pfx+'ModsStr').value+
-    ' módulos con el motor en medio · '+T.modsTracker+' módulos por '+
+    ' en cross-axis · fila = '+nStr+' mesa(s) de '+$(pfx+'ModsStr').value+
+    ' módulos'+hueco+' · '+T.modsTracker+' módulos por '+
     (pfx==='tk'?'tracker'+(T.filasTracker>1?' ('+T.filasTracker+' filas)':''):'estructura')+
-    (pfx==='tk'&&T.filasTracker>1?'. <b>Monofila/bifila no cambia la POA</b>: la mesa mide lo mismo y la irradiación es por m² de módulo.':'.');
+    (pfx==='tk'&&T.filasTracker>1?'. <b>Monofila/bifila no cambia la POA</b>: la mesa mide lo mismo y la irradiación es por m² de módulo.':'.')+
+    (pfx==='fx'&&nStr>1?' Una fija no lleva accionamiento: ese hueco es separación estructural, no el vano de un motor — es el mismo número en la fórmula del largo de fila, pero no la misma cosa.':'');
 }
 /* Cada configurador dice, en vivo, a qué estructuras gobierna. Sin esto la
    pantalla tiene dos paneles casi iguales y no se ve cuál manda sobre qué: el
