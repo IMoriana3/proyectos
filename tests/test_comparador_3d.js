@@ -356,6 +356,76 @@ const SONDA = `(() => {
   check('ningún campo de geometría apunta a un id que ya no existe',
     huerfanos.length === 0, huerfanos.join(','));
 
+  // ── el catálogo CEC: 16.758 módulos y 4.910 inversores, dentro de la ficha ──
+  // Y sobre todo: NO se baja al abrir. Son 2,4 MB + 656 KB, y quien viene a
+  // comparar estructuras no tiene por qué pagarlos.
+  check('el catálogo NO se baja al abrir la ficha',
+    (await p.evaluate(() => CAT.mod === null && CAT.inv === null)) === true);
+  await p.click('#eqCard');
+  await p.waitForFunction(() => CAT.mod && CAT.inv, null, { timeout: 90000 });
+  await p.waitForTimeout(500);
+  const cat = await p.evaluate(() => ({
+    mods: CAT.mod.n, invs: CAT.inv.n,
+    colsM: CAT.mod.cols.join(','), colsI: CAT.inv.cols.join(','),
+    mod: MODSEL && { name: MODSEL.name, wp: MODSEL.wp, L: MODSEL.L, W: MODSEL.W },
+    inv: INVSEL && { name: INVSEL.name, paco: INVSEL.paco } }));
+  check('el catálogo trae ' + cat.mods + ' módulos y ' + cat.invs + ' inversores',
+    cat.mods > 16000 && cat.invs > 4000, JSON.stringify([cat.mods, cat.invs]));
+  check('las columnas del catálogo son las que la ficha lee',
+    cat.colsM.startsWith('name,mfr,wp,L,W,ns,voc,vmp,isc,imp,beta,gamma') &&
+    cat.colsI.startsWith('name,mfr,paco,pdco,vdco,vdcmax,idcmax,mlow,mhigh'),
+    cat.colsM + ' | ' + cat.colsI);
+  check('se preselecciona un módulo y un inversor viables (' +
+    (cat.mod && cat.mod.wp) + ' W)', !!(cat.mod && cat.inv && cat.mod.wp > 0));
+
+  // el filtro de compatibilidad: elegir parejas imposibles no es ayudar
+  const compat = await p.evaluate(() => {
+    const con = listaModulos().length;
+    document.getElementById('mfSoloOk').checked = false;
+    const sin = listaModulos().length;
+    document.getElementById('mfSoloOk').checked = true;
+    return { con, sin };
+  });
+  check('«solo los que encajan» deja fuera las parejas imposibles (' +
+    compat.con + ' de ' + compat.sin + ')',
+    compat.con > 0 && compat.con < compat.sin, JSON.stringify(compat));
+
+  // el sizing sale de los dos, y dice QUIÉN limita
+  const sz = await p.evaluate(() => ({
+    n: +document.getElementById('szN').value,
+    txt: document.getElementById('szRead').textContent,
+    nota: document.getElementById('szNota').textContent,
+    W: FIS.ventana({ voc: MODSEL.voc, vmp: MODSEL.vmp,
+      betaVocPct: +document.getElementById('szBeta').value,
+      tMin: +document.getElementById('szTmin').value,
+      tMax: +document.getElementById('szTmax').value,
+      mpptLow: INVSEL.mlow, mpptHigh: INVSEL.mhigh, vdcMax: INVSEL.vdcmax }) }));
+  check('el nº de módulos por string cae DENTRO de la ventana (' +
+    sz.W.nMin + ' ≤ ' + sz.n + ' ≤ ' + sz.W.nMax + ')',
+    sz.n >= sz.W.nMin && sz.n <= sz.W.nMax, JSON.stringify(sz.W));
+  check('el sizing publica strings por MPPT y DC/AC',
+    /Strings \/ MPPT/.test(sz.txt) && /DC\/AC/.test(sz.txt), sz.txt.slice(0, 160));
+  check('y dice QUIÉN limita', /Manda\s+la\s+\w+/i.test(sz.nota), sz.nota.slice(0, 120));
+
+  // elegir un módulo de verdad mueve la comparación de estructuras
+  const antesMod = await p.evaluate(() => ({
+    wp: +document.getElementById('fxWp').value,
+    L: +document.getElementById('fxModL').value }));
+  await p.click('#mfAplFx');
+  await p.waitForTimeout(400);
+  const trasMod = await p.evaluate(() => ({
+    wp: +document.getElementById('fxWp').value,
+    L: +document.getElementById('fxModL').value,
+    tk: +document.getElementById('tkWp').value,
+    modsFija: (() => { const B = BLOQUES.find(b => b.key === 'fija_optima');
+      return B ? +B.filas[0].position.z.toFixed(2) : null; })() }));
+  check('«Usar en la FIJA» trae el pico del módulo del catálogo (' +
+    antesMod.wp + ' → ' + trasMod.wp + ' Wp)', trasMod.wp === cat.mod.wp);
+  check('y sus dimensiones', Math.abs(trasMod.L - cat.mod.L) < 1e-6,
+    trasMod.L + ' vs ' + cat.mod.L);
+  check('sin tocar el TRACKER, que tiene su propio módulo', trasMod.tk !== trasMod.wp ||
+    cat.mod.wp === 660, String(trasMod.tk));
+
   check('sin errores de JS', errs.length === 0, errs.join(' | '));
   await b.close();
   console.log('\n' + (ko ? 'FALLOS: ' + ko + ' (de ' + (ok + ko) + ')' : 'OK — ' + ok + '/' + ok + ' comprobaciones'));
