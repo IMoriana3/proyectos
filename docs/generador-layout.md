@@ -166,6 +166,33 @@ Pendiente N-S y E-O, más el albedo. Con ellas la ficha deriva lo que **sí** es
 - **pitch en planta vs pitch en terreno**: `pitch / cos(cross)`. El proyecto mide uno; el layout
   dibuja el otro.
 
+### El MDT
+
+De toda la auditoría, el filtro de pendiente es **lo único que hace que la ficha y el cuaderno den
+números distintos sobre la misma parcela**. Por eso está.
+
+| | |
+|---|---|
+| **Fuente** | Open-Meteo Elevation (sin clave) o **CSV propio** `lon,lat,z` — el §02.5b-2 del cuaderno |
+| **Resolución** | malla n×n, de 6 a 48 (48×48 = 2.304 puntos = 24 llamadas) |
+| **Margen alrededor** | en metros, sobre el bbox de la parcela |
+| **Pendiente máx. (°)** | las celdas que la pasan se **excluyen**, y se pintan en morado |
+| **Desactivar el filtro** | mide pendientes pero no excluye |
+| **Umbral de fracción** | si el MDT se lleva más del **35 %** de la parcela, se avisa (`_layout_mdt_excl_frac_th_035`) |
+
+Las pendientes medias medidas **sobrescriben** las que teclees y esos campos quedan bloqueados:
+tener dos verdades sobre la misma pendiente es peor que no tener ninguna. La casilla «usar las del
+MDT» las devuelve a mano.
+
+Las exclusiones por terreno se cuentan **aparte** de las tuyas (`drop_topo_mask` frente a
+`drop_user_poly` y `drop_line_buffer`): saber si el campo lo recorta el terreno o un dibujo tuyo no
+es el mismo problema.
+
+> **Es otra fuente, no el mismo dato.** El cuaderno usa COP30 vía OpenTopography, que exige clave;
+> Open-Meteo sirve elevación sin clave y con CORS, que es lo que permite pedirla desde el navegador.
+> Sirve para ver la forma del terreno y filtrar por pendiente — **no para replanteo**. Va dicho en
+> la propia ficha.
+
 Y lo que **no** hace, dicho en pantalla en vez de callado: las pendientes **no entran en la
 colocación**. `compute_layout_v2` tampoco las usa — implanta en planta y no tiene parámetro de
 pendiente. Donde mandan es en el **backtracking** (`cross_axis_slope_deg`, que es lo que consume

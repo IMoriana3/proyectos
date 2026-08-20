@@ -247,6 +247,33 @@ canvas.panning{cursor:grabbing}
       </div>
       <div class="field" id="albedoBox"><label>Albedo del suelo</label><input id="albedoT" type="number" step="0.01" value="0.20"></div>
       <div class="deriv" id="derivTerreno"></div>
+
+      <details class="adv" open><summary>Modelo digital del terreno (MDT)</summary>
+      <div class="body">
+        <div class="two">
+          <div class="field"><label>Fuente</label>
+            <select id="demSrc">
+              <option value="openmeteo">Open-Meteo Elevation (sin clave)</option>
+              <option value="csv">CSV propio (lon,lat,z)</option>
+            </select></div>
+          <div class="field"><label>Resolución (n×n)</label><input id="demN" type="number" step="4" value="24" min="6" max="48"></div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Margen alrededor (m)</label><input id="demMargen" type="number" step="10" value="0"></div>
+          <div class="field"><label>Pendiente máx. (°)</label><input id="slopeMax" type="number" step="0.5" value="20"></div>
+        </div>
+        <label class="chk"><input type="checkbox" id="demOff"> Desactivar el filtro de pendiente (no excluir)</label>
+        <div class="btnrow">
+          <button class="btn ghost small" id="demBtn">⛰ Descargar MDT</button>
+          <button class="btn ghost small" id="demCsvBtn">⬆ Cargar CSV</button>
+        </div>
+        <input type="file" id="demCsv" accept=".csv,.txt" style="display:none">
+        <p class="tag" id="demTag">sin MDT · las pendientes son las que teclees</p>
+        <div class="deriv" id="derivDem" style="display:none"></div>
+        <label class="chk" id="demUseBox" style="display:none"><input type="checkbox" id="demUse" checked> Usar las pendientes medias del MDT (sobrescribe las de arriba)</label>
+        <p class="note" style="margin-top:0">Open-Meteo sirve la elevación sin clave y con CORS, que es lo que permite pedirla desde el navegador; el cuaderno usa COP30 vía OpenTopography, que exige clave. Es otra fuente, no el mismo dato: sirve para <b>ver la forma del terreno y filtrar por pendiente</b>, no para replanteo.</p>
+      </div>
+      </details>
       <p class="note" style="margin-top:8px">Las pendientes <b>no entran en la colocación</b>: <code>compute_layout_v2</code> tampoco las usa — implanta en planta. Donde sí mandan es en el <b>backtracking</b> (<code>cross_axis_slope_deg</code>) y en la sombra entre filas, y por eso viajan con el layout a los exports y al 3D en vez de quedarse aquí.</p>
     </div>
 
@@ -359,6 +386,7 @@ canvas.panning{cursor:grabbing}
         <span><i style="background:#F6A623"></i> vial</span>
         <span><i style="background:rgba(208,89,79,.35);border:1px solid #D0594F"></i> exclusión</span>
         <span><i style="background:rgba(128,147,164,.30);border:1px dashed #8093A4"></i> descartada</span>
+        <span><i style="background:rgba(150,110,220,.30);border:1px solid rgba(150,110,220,.75)"></i> pendiente &gt; máx.</span>
         <span id="basemapMsg" style="color:var(--muted-2)"></span>
       </div>
       <div class="avisos" id="avisos"></div>
@@ -765,6 +793,18 @@ function compute(cfg) {
   var rings = [extU].concat(holesU).map(function (r) { return r.map(toLocal); });
   var exclR = exclU.map(function (r) { return r.map(toLocal); });
   var lineasR = lineasU.map(function (L) { return { pts: L.pts.map(toLocal), buf: L.buf }; });
+  /* Exclusiones por TOPOGRAFÍA: las celdas del MDT que pasan de la pendiente
+     máxima. Llegan como anillos lon/lat y se cuentan aparte de las de usuario y
+     de línea (el core las lleva en `excl_utm_topo`) — saber si el campo lo
+     recorta el terreno o un dibujo tuyo no es el mismo problema.
+     Se indexan por su franja de Y: sin eso, cada línea de barrido recorrería
+     TODAS las celdas malas y una malla de 40×40 dejaría la ficha pastosa. */
+  var topoR = (cfg.exclTopo || []).map(function (h) { return closeRing(h).map(fwd).map(toLocal); });
+  var topoY = topoR.map(function (r) {
+    var y0 = Infinity, y1 = -Infinity;
+    for (var i = 0; i < r.length; i++) { if (r[i][1] < y0) y0 = r[i][1]; if (r[i][1] > y1) y1 = r[i][1]; }
+    return [y0, y1];
+  });
 
   /* 3) área útil = interior a distancia ≥ setback del borde, menos exclusiones.
         Se resuelve por línea de barrido; aquí sacamos su bbox y su área. */
@@ -781,6 +821,11 @@ function compute(cfg) {
       if (!iv.length) break;
       iv = ivSub(iv, bandAtLine(lineasR[L].pts, y, lineasR[L].buf));
     }
+    for (var t = 0; t < topoR.length; t++) {
+      if (!iv.length) break;
+      if (topoY[t][0] > y || topoY[t][1] < y) continue;
+      iv = ivSub(iv, insideAt([topoR[t]], y));
+    }
     return iv;
   }
   /* Área que quita cada FUENTE de exclusión, por separado. El core lo estima
@@ -795,7 +840,11 @@ function compute(cfg) {
       if (!base.length) continue;
       var quita = [];
       if (tipo === 'user') for (var e = 0; e < exclR.length; e++) quita = quita.concat(insideAt([exclR[e]], y));
-      else for (var L = 0; L < lineasR.length; L++) quita = quita.concat(bandAtLine(lineasR[L].pts, y, lineasR[L].buf));
+      else if (tipo === 'line') for (var L = 0; L < lineasR.length; L++) quita = quita.concat(bandAtLine(lineasR[L].pts, y, lineasR[L].buf));
+      else for (var t = 0; t < topoR.length; t++) {
+        if (topoY[t][0] > y || topoY[t][1] < y) continue;
+        quita = quita.concat(insideAt([topoR[t]], y));
+      }
       var inter = ivInter(base, ivNorm(quita));
       for (var k = 0; k < inter.length; k++) a += (inter[k][1] - inter[k][0]) * SCAN;
     }
@@ -1209,8 +1258,9 @@ function compute(cfg) {
     // Desglose por fuente (misma aproximación por área que el core)
     drop_area_user_m2: exclR.length ? areaFuente('user') : 0,
     drop_area_line_m2: lineasR.length ? areaFuente('line') : 0,
-    drop_user_poly: 0, drop_line_buffer: 0,   // se rellenan justo abajo
-    n_excl_user: exclR.length, n_excl_line: lineasR.length,
+    drop_area_topo_m2: topoR.length ? areaFuente('topo') : 0,
+    drop_user_poly: 0, drop_line_buffer: 0, drop_topo_mask: 0,   // se rellenan justo abajo
+    n_excl_user: exclR.length, n_excl_line: lineasR.length, n_excl_topo: topoR.length,
     bifila_trimmed: bifTrimmed, ab_max_dx_m: abMaxDx, pruned_structs: pruned,
     center_shift_m: shift, qa_avisos: avisos,
     qa_geometria_ok: !avisos.some(function (a) { return a.severidad === "fail"; }),
@@ -1219,6 +1269,19 @@ function compute(cfg) {
   var areaPorEstr = (structW * collH) || 1;
   stats.drop_user_poly  = Math.round(stats.drop_area_user_m2 / areaPorEstr);
   stats.drop_line_buffer = Math.round(stats.drop_area_line_m2 / areaPorEstr);
+  stats.drop_topo_mask   = Math.round(stats.drop_area_topo_m2 / areaPorEstr);
+  /* Umbral del cuaderno (`_layout_mdt_excl_frac_th_035` = 0,35): si el MDT te
+     está quitando más de un tercio de la parcela, o la pendiente máxima es
+     demasiado exigente o el emplazamiento no es este. Avisar es lo que separa
+     «el terreno no da» de «el layout ha salido pequeño y no sé por qué». */
+  if (topoR.length && polyArea > 0) {
+    var frac = stats.drop_area_topo_m2 / polyArea;
+    stats.mdt_excl_frac = frac;
+    if (frac > (cfg.mdtFracTh == null ? 0.35 : +cfg.mdtFracTh))
+      aviso('warn', 'mdt_excluye_demasiado',
+        'El filtro de pendiente excluye el ' + (100 * frac).toFixed(0) + ' % de la parcela. ' +
+        'O la pendiente máxima es muy exigente, o el emplazamiento no es este.');
+  }
   if (fcsDropped) aviso('info', 'strings_incompletos_descartados',
     fcsDropped + ' estructura(s) de talla menor descartadas por «forzar strings completos».');
   return { structures: structures, descartadas: descartadas, roads: roads, rows: rows, sizes: sizes,
@@ -1235,7 +1298,8 @@ function emptyResult(cfg, avisos, polyArea, epsg, structW, collH, pitch, mount, 
                     fill_factor: 0, usable_fill: 0, density_kWp_ha: 0, poly_area_m2: polyArea,
                     inner_area_m2: 0, col_area_m2: 0, struct_w_m: structW, mesa_len_m: structW,
                     collector_h_m: collH, pitch_m: pitch, mount_type: mount, panel_az_deg: eff,
-                    epsg: epsg, qa_avisos: avisos, qa_geometria_ok: false, ms: 0 } };
+                    epsg: epsg, qa_avisos: avisos, qa_geometria_ok: false,
+                    drop_topo_mask: 0, drop_user_poly: 0, drop_line_buffer: 0, ms: 0 } };
 }
 
 /* ── GeoJSON: mismo formato que lee el Explorador de layout ──────────── */
@@ -1869,6 +1933,13 @@ function draw(){
   EXCL.forEach(function(h){ring(h,'rgba(208,89,79,.34)','#D0594F',1.4,[5,3]);});
   // Exclusiones de LÍNEA: se pinta el eje y su buffer real, para que se vea lo
   // que de verdad va a quitar — una línea sola no dice cuánto ancho come.
+  // Celdas fuera por pendiente: en morado, para no confundirlas con las
+  // exclusiones que has dibujado tú. Ver DÓNDE recorta el terreno es la mitad
+  // del valor de tener MDT.
+  if(DEM&&!$('demOff').checked){
+    var malas=celdasExcluidas();
+    malas.forEach(function(q){ring(q,'rgba(150,110,220,.28)','rgba(150,110,220,.75)',0.8);});
+  }
   EXCL_LINEAS.forEach(function(L){
     if(!L.pts||L.pts.length<2)return;
     var mLat=110540, mLon=111320*Math.cos(L.pts[0][1]*Math.PI/180);
@@ -2049,12 +2120,159 @@ $('pitchFromGcr').onclick=function(){
     (Math.abs(g-CANON.GCR)<1e-6?' (el GCR canónico del cuaderno).':'.');
 };
 
+/* ═════════════════ MDT: ELEVACIÓN, PENDIENTES Y FILTRO ═════════════════
+   El cuaderno (§02.5b) descarga COP30 por OpenTopography —con clave— y con el
+   MDT hace dos cosas: medir las pendientes medias N-S/E-O y EXCLUIR trackers
+   por encima de una pendiente máxima. Lo segundo es lo único de toda la
+   auditoría que hace que la ficha y el cuaderno den números DISTINTOS sobre la
+   misma parcela, así que es lo que había que traer.
+
+   La fuente aquí es Open-Meteo Elevation: sin clave y con CORS, que es lo que
+   permite pedirla desde el navegador. Es OTRA fuente, no el mismo dato — vale
+   para ver la forma del terreno y filtrar por pendiente, no para replanteo, y
+   así se dice en pantalla. */
+var DEM=null;                 // {lats:[], lons:[], z:[[...]], src:'…'}
+
+function bboxParcela(margen){
+  var pts=(PARCEL||[]).concat.apply([], [[]].concat(HOLES||[]));
+  if(!PARCEL||!PARCEL.length)return null;
+  var la0=1e9,la1=-1e9,lo0=1e9,lo1=-1e9;
+  PARCEL.forEach(function(p){lo0=Math.min(lo0,p[0]);lo1=Math.max(lo1,p[0]);la0=Math.min(la0,p[1]);la1=Math.max(la1,p[1]);});
+  var mLat=110540, mLon=111320*Math.cos(((la0+la1)/2)*Math.PI/180);
+  return [lo0-margen/mLon, la0-margen/mLat, lo1+margen/mLon, la1+margen/mLat];
+}
+
+async function descargaDEM(){
+  var n=Math.max(6,Math.min(48,Math.round(+$('demN').value||24)));
+  var bb=bboxParcela(+$('demMargen').value||0);
+  if(!bb){$('demTag').textContent='define primero la parcela';return;}
+  var lats=[],lons=[];
+  for(var i=0;i<n;i++){lats.push(bb[1]+(bb[3]-bb[1])*i/(n-1));lons.push(bb[0]+(bb[2]-bb[0])*i/(n-1));}
+  var pares=[];
+  for(var r=0;r<n;r++)for(var c=0;c<n;c++)pares.push([lats[r],lons[c]]);
+  $('demTag').innerHTML='<span class="busy">pidiendo '+pares.length+' puntos de elevación…</span>';
+  var z=[], LOTE=100;               // Open-Meteo admite 100 puntos por llamada
+  try{
+    for(var k=0;k<pares.length;k+=LOTE){
+      var trozo=pares.slice(k,k+LOTE);
+      var u='https://api.open-meteo.com/v1/elevation?latitude='+trozo.map(function(p){return p[0].toFixed(6);}).join(',')+
+            '&longitude='+trozo.map(function(p){return p[1].toFixed(6);}).join(',');
+      var rr=await fetch(u,{cache:'no-store'});
+      if(!rr.ok)throw new Error('HTTP '+rr.status);
+      var jj=await rr.json();
+      if(!jj||!jj.elevation)throw new Error('respuesta sin elevación');
+      z=z.concat(jj.elevation);
+      $('demTag').innerHTML='<span class="busy">elevación '+Math.min(k+LOTE,pares.length)+'/'+pares.length+'…</span>';
+    }
+  }catch(e){
+    $('demTag').innerHTML='<span style="color:var(--dead)">No se pudo traer el MDT: '+(e&&e.message||e)+'. Las pendientes siguen siendo las que teclees.</span>';
+    return;
+  }
+  var g=[];
+  for(var r2=0;r2<n;r2++)g.push(z.slice(r2*n,(r2+1)*n));
+  DEM={lats:lats,lons:lons,z:g,src:'Open-Meteo'};
+  aplicaDEM();
+}
+
+/* CSV propio (lon,lat,z) — el §02.5b-2 del cuaderno, que acepta el DEM del
+   usuario como primera fuente de la cascada. Se remuestrea a la malla n×n por
+   vecino más próximo: interpolar un terreno con puntos sueltos inventaría
+   pendientes que nadie ha medido. */
+function demDesdeCSV(txt){
+  var pts=[];
+  txt.split(/\r?\n/).forEach(function(l){
+    var c=l.split(/[;,\t]/).map(function(x){return parseFloat(x);});
+    if(c.length>=3&&isFinite(c[0])&&isFinite(c[1])&&isFinite(c[2]))pts.push(c);
+  });
+  if(pts.length<4)throw new Error('hacen falta al menos 4 filas lon,lat,z');
+  var n=Math.max(6,Math.min(48,Math.round(+$('demN').value||24)));
+  var lo0=Math.min.apply(null,pts.map(function(p){return p[0];})), lo1=Math.max.apply(null,pts.map(function(p){return p[0];}));
+  var la0=Math.min.apply(null,pts.map(function(p){return p[1];})), la1=Math.max.apply(null,pts.map(function(p){return p[1];}));
+  var lats=[],lons=[],g=[];
+  for(var i=0;i<n;i++){lats.push(la0+(la1-la0)*i/(n-1));lons.push(lo0+(lo1-lo0)*i/(n-1));}
+  for(var r=0;r<n;r++){var fila=[];
+    for(var c2=0;c2<n;c2++){var best=null,bd=Infinity;
+      for(var k=0;k<pts.length;k++){var d=(pts[k][0]-lons[c2])*(pts[k][0]-lons[c2])+(pts[k][1]-lats[r])*(pts[k][1]-lats[r]);
+        if(d<bd){bd=d;best=pts[k][2];}}
+      fila.push(best);}
+    g.push(fila);}
+  DEM={lats:lats,lons:lons,z:g,src:'CSV propio ('+pts.length+' puntos)'};
+  aplicaDEM();
+}
+
+/* Pendientes por celda, con las mismas convenciones que el core
+   (`terrain_report._slope_grids`): + hacia el norte y + hacia el este. */
+function pendientesDEM(){
+  if(!DEM)return null;
+  var n=DEM.lats.length, mLat=110540, mLon=111320*Math.cos(((DEM.lats[0]+DEM.lats[n-1])/2)*Math.PI/180);
+  var dy=(DEM.lats[1]-DEM.lats[0])*mLat, dx=(DEM.lons[1]-DEM.lons[0])*mLon;
+  var ns=[],ew=[],sumN=0,sumE=0,k=0,maxS=0;
+  for(var r=0;r<n;r++){var fn=[],fe=[];
+    for(var c=0;c<n;c++){
+      var r0=Math.max(0,r-1),r1=Math.min(n-1,r+1),c0=Math.max(0,c-1),c1=Math.min(n-1,c+1);
+      var gN=(DEM.z[r1][c]-DEM.z[r0][c])/((r1-r0)*dy||1);
+      var gE=(DEM.z[r][c1]-DEM.z[r][c0])/((c1-c0)*dx||1);
+      var aN=Math.atan(gN)*180/Math.PI, aE=Math.atan(gE)*180/Math.PI;
+      fn.push(aN);fe.push(aE);sumN+=aN;sumE+=aE;k++;
+      var tot=Math.atan(Math.hypot(gN,gE))*180/Math.PI;
+      if(tot>maxS)maxS=tot;
+    }
+    ns.push(fn);ew.push(fe);}
+  return {ns:ns,ew:ew,mediaNs:sumN/k,mediaEw:sumE/k,max:maxS,n:n};
+}
+
+/* Celdas por encima de la pendiente máxima → anillos lon/lat que el motor resta
+   como exclusión de TOPOGRAFÍA. */
+function celdasExcluidas(){
+  if(!DEM||$('demOff').checked)return [];
+  var P=pendientesDEM(); if(!P)return [];
+  var lim=+$('slopeMax').value; if(!(lim>0))return [];
+  var n=P.n, dLat=(DEM.lats[1]-DEM.lats[0])/2, dLon=(DEM.lons[1]-DEM.lons[0])/2, out=[];
+  for(var r=0;r<n;r++)for(var c=0;c<n;c++){
+    var tot=Math.hypot(Math.tan(P.ns[r][c]*Math.PI/180),Math.tan(P.ew[r][c]*Math.PI/180));
+    if(Math.atan(tot)*180/Math.PI<=lim)continue;
+    var la=DEM.lats[r],lo=DEM.lons[c];
+    out.push([[lo-dLon,la-dLat],[lo+dLon,la-dLat],[lo+dLon,la+dLat],[lo-dLon,la+dLat]]);
+  }
+  return out;
+}
+
+function aplicaDEM(){
+  var P=pendientesDEM(); if(!P)return;
+  var malas=celdasExcluidas();
+  $('demTag').textContent=DEM.src+' · malla '+P.n+'×'+P.n+' · '+malas.length+' celda(s) por encima de '+(+$('slopeMax').value)+'°';
+  $('derivDem').style.display='';
+  $('derivDem').innerHTML=
+    d('Pendiente N-S',(P.mediaNs>=0?'+':'')+P.mediaNs.toFixed(2),'°')+
+    d('Pendiente E-O',(P.mediaEw>=0?'+':'')+P.mediaEw.toFixed(2),'°')+
+    d('Pendiente máx.',P.max.toFixed(1),'°',P.max>+$('slopeMax').value)+
+    d('Celdas fuera',String(malas.length),'de '+(P.n*P.n));
+  $('demUseBox').style.display='';
+  if($('demUse').checked){
+    $('slopeNs').value=P.mediaNs.toFixed(2);
+    $('slopeEw').value=P.mediaEw.toFixed(2);
+    // Las de arriba pasan a ser DEL MDT: dejarlas editables sería tener dos
+    // verdades sobre la misma pendiente.
+    $('slopeNs').disabled=$('slopeEw').disabled=true;
+  } else { $('slopeNs').disabled=$('slopeEw').disabled=false; }
+  pintaDerivados(); draw();
+}
+$('demBtn').onclick=function(){ if($('demSrc').value==='csv')$('demCsv').click(); else descargaDEM(); };
+$('demCsvBtn').onclick=function(){$('demCsv').click();};
+$('demCsv').onchange=function(e){var f=e.target.files[0];if(!f)return;var rd=new FileReader();
+  rd.onload=function(ev){try{demDesdeCSV(ev.target.result);}catch(err){
+    $('demTag').innerHTML='<span style="color:var(--dead)">CSV no válido: '+(err&&err.message||err)+'</span>';}};
+  rd.readAsText(f);$('demCsv').value='';};
+['slopeMax','demOff'].forEach(function(id){$(id).addEventListener('change',function(){if(DEM)aplicaDEM();});});
+$('demUse').onchange=function(){ if(DEM)aplicaDEM(); else {$('slopeNs').disabled=$('slopeEw').disabled=false;} };
+
 /* ===== generar ===== */
 function readCfg(){
   var mods=$('mods').value.split(',').map(function(s){return parseInt(s.trim(),10);}).filter(function(v){return v>0;});
   if(!mods.length)mods=[28];
   return {
     coords:PARCEL, holes:HOLES, exclusions:EXCL, exclLines:EXCL_LINEAS,
+    exclTopo:celdasExcluidas(), mdtFracTh:0.35,
     forceComplete:$('forceComplete').checked,
     mount:$('mount').value, table:$('table').value, mods:mods.sort(function(a,b){return b-a;}),
     modLen:+$('modLen').value, modWid:+$('modWid').value, moduleWp:+$('modWp').value,
@@ -2175,7 +2393,9 @@ function pintar(res,fuente){
       keys.sort(function(a,b){return b-a;}).map(function(k){
         return '<tr><td>'+k+'</td><td>'+bs[k]+'</td><td>'+(100*bs[k]/st.structures).toFixed(1)+'</td></tr>';}).join('')+'</table>'
     : '';
-  $('hint').textContent=fuente+' · '+(st.ms?Math.round(st.ms)+' ms':'');
+  // Siempre el tiempo, aunque sea 0: con el layout VACÍO el rótulo se quedaba en
+  // «navegador · » y perdía la única señal de que el cálculo había terminado.
+  $('hint').textContent=fuente+' · '+(st.ms!=null?Math.round(st.ms)+' ms':'—');
   var extra=[];
   if(st.discarded_structs)extra.push(fmt(st.discarded_structs)+' descartadas');
   if(st.bifila_trimmed)extra.push(fmt(st.bifila_trimmed)+' por emparejado bifila');
@@ -2183,6 +2403,7 @@ function pintar(res,fuente){
   if(st.force_complete_dropped)extra.push(fmt(st.force_complete_dropped)+' por strings incompletos');
   if(st.drop_user_poly)extra.push('≈'+fmt(st.drop_user_poly)+' por exclusiones de área');
   if(st.drop_line_buffer)extra.push('≈'+fmt(st.drop_line_buffer)+' por exclusiones de línea');
+  if(st.drop_topo_mask)extra.push('≈'+fmt(st.drop_topo_mask)+' por pendiente del MDT');
   if(st.center_shift_m&&(st.center_shift_m[0]||st.center_shift_m[1]))
     extra.push('centrado Δx='+st.center_shift_m[0].toFixed(1)+' m, Δy='+st.center_shift_m[1].toFixed(1)+' m');
   $('foot').innerHTML=st.structures
