@@ -35,6 +35,53 @@ pueden producir distinto (módulo, térmico, inversor, pérdidas) y costar muy d
 Son las mismas claves y las mismas etiquetas que `solargpt_core.structure_compare.CATALOGO`, y el
 careo lo comprueba: si el core añade una y la ficha no, el test se pone rojo.
 
+## El tamaño de la estructura
+
+Se configura igual que en el cuaderno y en Streamlit, y con **las mismas fórmulas**: la tarjeta
+**Colector** es el puerto literal de `solargpt_core.layout_engine.compute_size_from_mods`, la misma
+función que dimensiona los trackers del layout de planta (§03.F, §03.T0 y la página 6 del
+Streamlit). Si la ficha se inventara una fórmula propia, el layout y la ficha dejarían de hablar
+del mismo tracker.
+
+| Entrada | Qué es |
+|---|---|
+| **Módulo · largo / ancho** | Cotas del módulo (2,382 × 1,134 m por defecto — el canónico) |
+| **Mesa** | `1V…4V` / `1H…4H`: módulos en cross-axis y su orientación (V = vertical, H = horizontal) |
+| **Módulos por string** | Módulos **por string**, no por estructura entera |
+| **Strings por fila** | 2 por defecto: uno a cada lado del motor |
+| **Gap entre módulos** · **Gap del motor** | Los dos huecos de la fórmula del cliente |
+| **Disposición** | Monofila (1 fila por tracker) o bifila (2 filas que comparten motor) |
+
+De ahí salen, y se publican en pantalla:
+
+```
+apertura       = n × módulo                        (SIN gaps)   → manda en el GCR
+alto colector  = apertura + (n−1) × gap_módulos    (CON gaps)   → manda en el sombreado
+largo de fila  = total_mods × módulo_along + intra_gaps × gap_mod + motor_gaps × gap_motor
+GCR            = apertura / pitch
+```
+
+Tres cosas que conviene no perder de vista, porque están así en su código:
+
+* **La apertura y el alto de colector NO son lo mismo.** El GCR sale de la apertura —§03.T0:
+  «GCR = aperture/pitch»— y el sombreado entre filas del alto de colector, que es lo que
+  físicamente tapa e incluye los gaps. Con `1V` (el default) coinciden; a partir de `2V` se
+  separan, y la ficha publica los dos en vez de elegir uno a escondidas.
+* **Monofila / bifila es una diferencia OPERATIVA, no geométrica** (`layout_v2`, auditoría
+  2026-05-18): la mesa mide lo mismo en los dos casos, así que **la POA por m² de módulo no
+  cambia**. Lo que cambia es cuántas filas son «un tracker» para el layout y el mantenimiento —
+  y por eso el contador de módulos por tracker sí se dobla.
+* **`Módulos por string` es por string**, no por estructura: la fila lleva 2 strings con el motor
+  en medio. Es la convención del cliente: `MESA = ancho × N + (N−1) × gap` y
+  `FILA = 2 × MESA + gap_motor`.
+
+La escena 3D dibuja el bloque **a ese tamaño**: el largo de fila y el alto de colector que salen de
+aquí, no las cotas por defecto del modelo. Si no, la escena enseñaría una estructura y la tabla
+calcularía otra.
+
+El careo lo vigila con las cifras del core: `1V → 65,084 m de fila y 2,382 m de apertura`,
+`2H → 134,972 m y 2,268 m`, y que bifila no mueva la mesa pero sí doble los módulos.
+
 ## Qué hace legítima la comparación
 
 1. **Misma meteo, mismo albedo, mismo motor.** Se eligen una vez y valen para todas las filas.
