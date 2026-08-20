@@ -26,11 +26,14 @@ const html = fs.readFileSync(path.join(RAIZ, 'sim-viento.html'), 'utf8');
 function saca(firma) {
   const i = html.indexOf(firma);
   if (i < 0) return null;
-  const j = html.indexOf('\n}', i);
+  // `var TZ={...}` es una línea, no un bloque con llave en columna 0
+  const j = firma.startsWith('function') ? html.indexOf('\n}', i) : html.indexOf('\n', i) - 1;
   return j < 0 ? null : html.slice(i, j + 2);
 }
 const FIRMAS = ['function normSitio(t){', 'function parseCoords(t){',
-                'function filtraSitios(lista,q){'];
+                'function filtraSitios(lista,q){', 'var TZ={zona:null',
+                'function tzOffMin(d){', 'function L(d){', 'function U(msPared){',
+                'function tzSigla(){', 'function localAISO(v){'];
 const trozos = FIRMAS.map(saca);
 check('las funciones del buscador siguen en el HTML', trozos.every(Boolean),
       FIRMAS.filter((f, i) => !trozos[i]).join(', '));
@@ -71,6 +74,56 @@ check('las palabras van en cualquier orden',
 check('encuentra por código de planta', ctx.filtraSitios(L, '24019').length === 1);
 check('sin texto enseña la lista', ctx.filtraSitios(L, '').length === 3);
 check('lo que no está no aparece', ctx.filtraSitios(L, 'reikiavik').length === 0);
+
+// ── 1bis) HORAS LOCALES del emplazamiento ────────────────────────────────
+// La física se queda en UTC; lo que pasa a hora del sitio es lo que se enseña
+// y lo que se teclea. Un episodio «a las 15:27» en Arequipa son las 10:27 de
+// allí: la cifra era correcta y la lectura, falsa.
+ctx.TZ.zona = 'Europe/Madrid'; ctx.TZ.lon = -0.8;
+check('Madrid en enero es UTC+1', ctx.tzOffMin(new Date('2023-01-15T12:00:00Z')) === 60);
+check('Madrid en julio es UTC+2 (horario de verano)',
+      ctx.tzOffMin(new Date('2023-07-15T12:00:00Z')) === 120);
+ctx.TZ.zona = 'America/Lima';
+check('Lima es UTC-5 todo el año (allí no hay cambio de hora)',
+      ctx.tzOffMin(new Date('2023-01-15T12:00:00Z')) === -300 &&
+      ctx.tzOffMin(new Date('2023-07-15T12:00:00Z')) === -300);
+(function () {
+  const d = ctx.L('2023-07-15T15:27:00Z');
+  check('15:27Z se lee 10:27 en Arequipa',
+        d.getUTCHours() === 10 && d.getUTCMinutes() === 27,
+        d.getUTCHours() + ':' + d.getUTCMinutes());
+})();
+// La vuelta (hora de pared -> instante) tiene que valer TAMBIÉN los días del
+// cambio de hora: es donde una conversión de una sola pasada se desplaza.
+ctx.TZ.zona = 'Europe/Madrid';
+[['2023-01-15T09:00', 60], ['2023-07-15T09:00', 120],
+ ['2023-03-26T12:00', 120], ['2023-10-29T12:00', 60]].forEach(c => {
+  const m = c[0].match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  const pared = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  const utc = ctx.U(pared);
+  check('ida y vuelta ' + c[0] + ' (desfase ' + ((pared - utc) / 60000) + ' min)',
+        ctx.L(new Date(utc)).getTime() === pared && (pared - utc) / 60000 === c[1]);
+});
+// Sin zona declarada NO se inventa la civil: se deriva de la longitud, que es
+// hora SOLAR, y eso va dicho en pantalla.
+ctx.TZ.zona = null;
+[[-71.8064, -300], [9.8736, 60], [-0.7981, 0]].forEach(c => {
+  ctx.TZ.lon = c[0];
+  check('sin zona, lon ' + c[0] + ' -> ' + (c[1] / 60) + ' h (solar)',
+        ctx.tzOffMin(new Date()) === c[1]);
+});
+check('El Burgo por longitud NO da la hora civil española',
+      (function () { ctx.TZ.lon = -0.7981; return ctx.tzOffMin(new Date()) === 0; })(),
+      'si diera 60 estaría fingiendo saber la zona');
+// El borde de las rachas: se teclea local, al motor va en UTC.
+ctx.TZ.zona = 'Europe/Madrid'; ctx.TZ.lon = -0.8;
+check('racha tecleada 14 jul 14:00 sale 12:00Z',
+      ctx.localAISO('2023-07-14T14:00') === '2023-07-14T12:00',
+      ctx.localAISO('2023-07-14T14:00'));
+check('y en enero, 14:00 sale 13:00Z',
+      ctx.localAISO('2023-01-14T14:00') === '2023-01-14T13:00');
+check('lo que no es fecha se devuelve tal cual',
+      ctx.localAISO('') === '' && ctx.localAISO('xxx') === 'xxx');
 
 // ── 2) la ficha abierta: teclear, elegir, y que cambien las coordenadas ──
 (async () => {
@@ -113,6 +166,28 @@ check('lo que no está no aparece', ctx.filtraSitios(L, 'reikiavik').length === 
   await page.dispatchEvent('#lat', 'input');
   check('cambiar las coordenadas a mano borra el nombre del sitio',
         (await page.$eval('#sitioSel', e => e.textContent)).trim() === 'manual');
+
+  // el rótulo de zona tiene que seguir al sitio elegido
+  await page.fill('#sitioQ', 'san jose');
+  await page.waitForSelector('#sitioRes .it', { timeout: 5000 });
+  await page.click('#sitioRes .it');
+  const tzPe = (await page.$eval('#tzLbl', e => e.textContent)).trim();
+  check('elegir Arequipa pone la zona del sitio (' + tzPe + ')',
+        /UTC-5/.test(tzPe) && /America\/Lima/.test(tzPe));
+  await page.fill('#sitioQ', '41.5763, -0.7981');
+  await page.waitForSelector('#sitioRes .it', { timeout: 5000 });
+  await page.click('#sitioRes .it');
+  const tzCo = (await page.$eval('#tzLbl', e => e.textContent)).trim();
+  check('coordenadas sueltas: se DERIVA de la longitud y se dice (' + tzCo + ')',
+        /longitud/.test(tzCo) && /SOLAR/i.test(tzCo));
+  // La tabla de rachas nace vacía, así que hay que meter una para que salga
+  // la cabecera: comprobarla sobre la tabla vacía habría dado verde sin mirar
+  // nada (el mensaje de «sin rachas» no lleva cabecera).
+  await page.click('#gadd');
+  await page.waitForSelector('#gtbl thead th', { timeout: 5000 });
+  const cab = await page.$eval('#gtbl thead th', e => e.textContent);
+  check('la cabecera de las rachas dice en qué hora se teclea (' + cab.trim() + ')',
+        /Cuándo/.test(cab) && /UTC[+-]/.test(cab));
 
   check('la ficha no lanza errores de JS', errores.length === 0, errores.join(' | '));
   await browser.close();
