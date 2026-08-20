@@ -359,9 +359,11 @@
         <button class="btn small acc" id="play">▶ Reproducir</button>
         <input type="range" id="tpos" min="0" max="0" step="1" value="0">
         <span class="t" id="tlbl">—</span>
-        <select id="tspeed">
-          <option value="2">×1</option><option value="4" selected>×2</option>
-          <option value="8">×4</option><option value="16">×8</option>
+        <select id="tspeed" title="Cuánto tiempo SIMULADO pasa por cada segundo real. La misma escala que el modo «en vivo».">
+          <option value="60">×60 · 1 min/s</option>
+          <option value="300" selected>×300 · 5 min/s</option>
+          <option value="900">×900 · 15 min/s</option>
+          <option value="3600">×3600 · 1 h/s</option>
         </select>
       </div>
       <p class="note" id="c3note">Sube el viento y mira: por encima de <b>40 km/h</b> entran en
@@ -3382,13 +3384,42 @@ function update3D(i){
   $('tlbl').textContent=fechaHoraLocal(ts)+
     ' · '+fmt((TL.wind_ms[i]||0)*3.6,0)+' km/h';
 }
+/* ── CADENCIA DEL REPRODUCTOR ──
+   El «×1» no era una velocidad: el bucle iba a `320/valor` ms por paso, o sea
+   160 ms, y cada paso son los minutos de la ventana. Con paso de 1 min eso son
+   375 veces el tiempo real, y con paso de 5 min, 1.875 — de ahí que incluso en
+   «×1» el día entero pasara volando. Un rótulo que dice ×1 sobre algo que va a
+   375× no es una escala mal calibrada: es un número inventado.
+
+   Ahora el factor es lo que dice: tiempo SIMULADO por segundo real, la misma
+   escala que el modo «en vivo» de la misma tarjeta (que sí la usaba bien). El
+   paso del reloj se deriva de los minutos REALES de la ventana, no de una
+   constante.
+
+   Con un suelo de 50 ms —por debajo, el navegador no repinta y solo se acumula
+   retraso— y avanzando VARIOS pasos por tirón cuando el suelo manda, para que
+   el factor se siga cumpliendo en vez de quedarse corto en silencio. */
+function pasoReproductor(stepMin,factor){
+  var sm=(stepMin>0?+stepMin:1), f=(factor>0?+factor:300);
+  var msPorPaso=sm*60000/f;
+  var ms=Math.max(50,msPorPaso);
+  return {ms:ms,pasos:Math.max(1,Math.round(ms/msPorPaso))};
+}
 function playToggle(){
   PLAY=!PLAY; $('play').textContent=PLAY?'❚❚ Pausa':'▶ Reproducir';
   if(RAF)clearInterval(RAF); RAF=null;
-  if(PLAY)RAF=setInterval(function(){
-    if(!TL)return; var n=TPOS+1; if(n>=TL.t.length)n=0; update3D(n);
-  },Math.max(40,320/(+$('tspeed').value||4)));
+  if(!PLAY)return;
+  var stepMin=(TL&&TL.window&&TL.window.step_minutes)||1;
+  var c=pasoReproductor(stepMin,+$('tspeed').value);
+  RAF=setInterval(function(){
+    if(!TL)return; var n=TPOS+c.pasos; if(n>=TL.t.length)n=0; update3D(n);
+  },c.ms);
 }
+/* Cambiar la velocidad con el reproductor en marcha tiene que hacer efecto
+   ahora, no al siguiente play: si no, el selector parece roto. */
+$('tspeed').addEventListener('change',function(){
+  if(PLAY){playToggle();playToggle();}
+});
 
 /* ═══════════ montaje y cambio de modo ═══════════ */
 async function montaEscena(){

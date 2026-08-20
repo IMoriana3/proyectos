@@ -39,7 +39,9 @@ precacheado, botón *Instalar app*, y que **sin red** el panel sigue abriendo y 
 regresión que salió al escribirlo: el SW **no** debe recargar la página la primera vez que toma el
 control.
 
-`test_viento_ejes.js` cubre las funciones puras de dibujo de **Viento & Abanderamiento**, extraídas del HTML real: que un lienzo todavía en `display:none` se DECLARE sin maquetar y no acumule el dpr en llamadas sucesivas —el fallo que hacía salir la comparativa estirada 2,16× en horizontal—, y que ningún eje repita etiquetas. Los rótulos salían de partir el máximo en cuatro y con datos pequeños eso repite: la columna de horas decía «2, 2, 1, 1, 0» y la de POA perdida «0.01, 0.01, 0.01, 0.00, 0.00». Cubre además la regla del **eje de transmisión** de la escena 3D —qué filas empareja un motor bifila y dónde se corta el eje en el caso pasivo—, que vive en una función pura aparte del dibujo justo para poder ejercitarla sin montar una escena. Con sus dos mutantes: se reproduce el cálculo viejo y el criterio tiene que rechazarlo.
+`test_viento_ejes.js` cubre las funciones puras de dibujo de **Viento & Abanderamiento**, extraídas del HTML real: que un lienzo todavía en `display:none` se DECLARE sin maquetar y no acumule el dpr en llamadas sucesivas —el fallo que hacía salir la comparativa estirada 2,16× en horizontal—, y que ningún eje repita etiquetas. Los rótulos salían de partir el máximo en cuatro y con datos pequeños eso repite: la columna de horas decía «2, 2, 1, 1, 0» y la de POA perdida «0.01, 0.01, 0.01, 0.00, 0.00». Cubre también la **cadencia del reproductor** del episodio: que el «×N» sea de verdad tiempo simulado por segundo real, con su mutante —el «×1» de antes iba a ×375— y con el suelo de repintado, por debajo del cual se avanzan varios pasos por tirón en vez de quedarse corto en silencio.
+
+Cubre además la regla del **eje de transmisión** de la escena 3D —qué filas empareja un motor bifila y dónde se corta el eje en el caso pasivo—, que vive en una función pura aparte del dibujo justo para poder ejercitarla sin montar una escena. Con sus dos mutantes: se reproduce el cálculo viejo y el criterio tiene que rechazarlo.
 
 ```bash
 npm install playwright                     # el navegador ya está en /opt/pw-browsers
@@ -49,6 +51,6 @@ node tests/test_pwa.js                     # 21 comprobaciones (PWA)
 node tests/test_integridad.js              # 6 comprobaciones, sin navegador
 node tests/test_comparador.js              # 42 comprobaciones, careo contra el core
 node tests/test_comparador_3d.js           # 31 comprobaciones, la escena 3D en Chromium
-node tests/test_viento_ejes.js             # 35 comprobaciones, lienzos, ejes y transmisión
+node tests/test_viento_ejes.js             # 46 comprobaciones, lienzos, ejes, transmisión y reproductor
 node tests/test_viento_sitio.js            # 47 comprobaciones, emplazamiento y horas locales
 ```
