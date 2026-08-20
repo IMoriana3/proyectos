@@ -427,7 +427,7 @@ body{
     <div class="plants" id="plants"></div>
   </section>
 
-  <h2 class="sec-title">Herramientas · crear nuevo<a class="tabla-link" href="layout.html" title="Crear implantación (trackers/mesas) desde una parcela — motor SolarGPT">▦ Layout</a><a class="tabla-link" href="sim-solar.html" title="Geometría solar (elevación/azimut/sombra) y simulación de producción">☉ Sol &amp; Simulación</a><a class="tabla-link" href="sim-viento.html" title="Abanderamiento por viento: POA perdida, cuántas veces y cuánto tiempo">⚑ Viento</a><a class="tabla-link" href="comparador-estructuras.html" title="Fija vs seguidor en este sitio: POA por tipo de estructura, por m² de módulo y de suelo">🏗 Estructuras</a></h2>
+  <h2 class="sec-title">Herramientas · crear nuevo<a class="tabla-link" href="generador-layout.html" title="Generador de layout: implantación completa (filas, mesas, trackers) en el navegador">▦ Generador de layout</a><a class="tabla-link" href="layout.html" title="Explorador de layout: dibuja lo que devuelve el motor SolarGPT o un GeoJSON del cuaderno">▦ Explorador</a><a class="tabla-link" href="sim-solar.html" title="Geometría solar (elevación/azimut/sombra) y simulación de producción">☉ Sol &amp; Simulación</a><a class="tabla-link" href="sim-viento.html" title="Abanderamiento por viento: POA perdida, cuántas veces y cuánto tiempo">⚑ Viento</a><a class="tabla-link" href="comparador-estructuras.html" title="Fija vs seguidor en este sitio: POA por tipo de estructura, por m² de módulo y de suelo">🏗 Estructuras</a></h2>
   <div class="controls">
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -942,6 +942,39 @@ const PROJECTS = [
       { date:"2026-08-19", ver:"1.2", note:"Campo 3D: los cinco casos reaccionando al mismo viento y al mismo sol sobre una ventana común, con la POA de cada uno como barra contra la línea base." },
       { date:"2026-08-19", ver:"1.1", note:"Laboratorio de rachas: viento de fondo sintético o en calma, ráfaga de 3 s, rachas inyectadas con dirección y tormentas al azar, y meteo de cielo claro para probar sin red." },
       { date:"2026-08-19", ver:"1.0", note:"Primera versión: comparativa A1/A2/B1/B2 contra la base, episodios y horas por modo, reparto mensual y traza del episodio más caro." }
+    ]
+  },
+  {
+    name: "Generador de layout",
+    status: "build",
+    objetivo: "Dibuja la parcela y saca la implantación: filas, mesas y trackers con el motor canónico del cuaderno (§02.5a) portado al navegador — pitch, setback, multi-talla, bifila, viales y exclusiones — con kWp, GCR y ocupación, y salida a GeoJSON, DXF, KML y al 3D.",
+    stack: "HTML autocontenido · motor de layout en el navegador (UTM + erosión exacta del setback + knapsack multi-talla) · canvas 2D · careo contra solargpt_core.layout_v2",
+    url: "https://imoriana3.github.io/proyectos/generador-layout.html",
+    repo: "https://github.com/imoriana3/proyectos",
+    updated: "2026-08-20",
+    version: "0.1",
+    docId: "generador-layout",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Fichero: generador-layout.html (este repo). GENERA EN EL NAVEGADOR: se abre y calcula sin levantar nada, como sim-viento.html y el comparador. El motor SolarGPT sigue siendo opcional y da el número canónico.",
+      "La parcela entra de tres formas: rectángulo por centro y cotas (lo rápido), GeoJSON pegado o cargado (SIGPAC, Catastro, geojson.io) o dibujada a mano sobre el lienzo. Los agujeros del GeoJSON entran como exclusiones.",
+      "Los parámetros son los del cuaderno §02.5a y los de la página Layout de Streamlit: montaje, tabla 1V-4V/1H-4H, mods/string (una talla o varias «28, 14, 7» para multi-talla), largo y ancho de módulo, pitch, azimut de filas, setback, gaps (módulos, motor, N-S), viales E-O y N-S, bifila, offset de filas y mínimo de estructuras por fila.",
+      "Multi-talla: escribe varias tallas separadas por coma y el motor elige la mayor que entra en cada fila y rellena la cola con las pequeñas (knapsack de 1 cm, el mismo que _knapsack_pack_segment del core).",
+      "Bifila es un concepto de TRACKER: en montaje fijo se ignora y se dice en pantalla, como hace el motor. Empareja filas por solape en X y recorta a conteo PAR de mesas por línea — si es bifila, es bifila.",
+      "Lo que se dice y no se calla: el setback se aplica como erosión exacta del polígono (distancia al borde), no como recorte del rectángulo; y el ángulo del grid corrige la convergencia de meridianos (en UTM el norte de cuadrícula no es el norte verdadero).",
+      "Careo automático contra el core (node tests/test_layout.js, 119 comprobaciones): las mismas nueve parcelas por los dos motores, exigiendo el mismo número de FILAS, mesas y kWp dentro del 2,5 %, área útil dentro del 0,5 % y las fórmulas cerradas (largo de mesa, apertura, largo de fila, GCR de tracker) exactas. Cuatro casos salen clavados y el peor a 1,89 %. El fixture se regenera con python3 tests/gen_careo_layout.py --core /ruta/a/SolarGPTfull/solargpt.",
+      "Y el cableado en Chromium (node tests/test_layout_ui.js, 17 comprobaciones): que genera y PINTA de verdad, que los tres caminos de parcela acaban en layout, y que las salidas se habilitan solo cuando hay algo que exportar. De ahí salió el arreglo del doble clic, que metía el último vértice tres veces.",
+      "Salidas: GeoJSON (el mismo formato que carga el Explorador de layout), DXF de polilíneas, KML para Google Earth y paso directo al 3D de cobertura-zigbee."
+    ],
+    pendientes: [
+      { done:false, text:"Exclusiones dibujadas sobre ortofoto (hoy entran por GeoJSON o dibujadas sobre el lienzo, sin fondo de mapa)." },
+      { done:false, text:"Barrido de ángulo de grid: el core lo tiene (optimize_grid_angle) y aquí todavía no se barre." },
+      { done:false, text:"Relieve: el core filtra por pendiente del MDT y aquí la parcela es plana." },
+      { done:false, text:"Sweep de pitch con la POA del comparador al lado, para decidir densidad y no solo geometría." }
+    ],
+    historial: [
+      { date:"2026-08-20", ver:"0.1", note:"Primera versión: el motor de layout del cuaderno §02.5a corriendo en el navegador — parcela por cotas, GeoJSON o dibujada; multi-talla, bifila, viales y exclusiones; GeoJSON, DXF, KML y paso al 3D. Lo que costó traerlo sin Shapely fue el SETBACK: recortar el bbox miente en cuanto la parcela deja de ser un rectángulo, así que se resuelve como erosión exacta (distancia al borde) sobre cada línea de barrido. La primera versión de esa erosión no recortaba NADA —la banda de cada arista salía escrita sin el término del vértice y se pegaba toda al origen— y el careo lo cazó por el área útil, que salía igual que la parcela. La segunda cosa que costó: la rejilla arranca en el bbox y un borde que se desvía dos centímetros a lo largo de la parcela tiraba la primera mesa de CADA fila; el core lo resuelve comprobando contra poly.buffer(0.05) y aquí igual. Con eso el placement sale exacto contra el core: 1.188 mesas las dos." }
     ]
   },
   {

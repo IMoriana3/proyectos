@@ -33,6 +33,25 @@ Comprueban además lo de siempre: que las tarjetas se pintan, que el detalle abr
 historial, que el botón *Paquete* apunta a `releases/latest` y que el panel de
 documentación carga el markdown de `docs/`.
 
+`test_layout.js` carea la ficha **Generador de layout** contra el core Python sin navegador: extrae el
+bloque `MOTOR DE LAYOUT` del HTML REAL y lo corre sobre las mismas nueve parcelas que corrió
+`solargpt_core.layout_v2.compute_layout_v2` (`careo-layout.json`). Exige el mismo número de **filas**
+(la geometría del campo en un número), las mesas y los kWp dentro del **2,5 %**, el **área útil**
+dentro del 0,5 % —el setback se resuelve aquí como erosión exacta, sin Shapely— y las fórmulas
+cerradas (largo de mesa, apertura, largo de fila, GCR de tracker) **exactas**. La UTM propia se mide
+contra pyproj: por debajo del milímetro. Medido hoy: cuatro casos clavados y el peor a 1,89 %. Con
+tres mutantes: si el setback deja de morder, si la banda de erosión se escribe sin el término del
+vértice —el fallo que hacía que el setback no recortara nada— o si el GCR se calcula sobre otro
+pitch, el careo se pone rojo. El fixture se regenera con
+`python3 tests/gen_careo_layout.py --core /ruta/a/SolarGPTfull/solargpt`.
+
+`test_layout_ui.js` mide lo OTRO del generador: que esté cableado. Un motor perfecto detrás de un
+botón que no llama a nadie se lee como «no funciona». Comprueba que genera y **pinta** (píxeles de
+mesa en el lienzo, no solo números), que los tres caminos de parcela —cotas, GeoJSON y dibujo a
+mano— acaban en un layout, que el reparto multi-talla sale en pantalla, que en montaje fijo cambia
+el rótulo y se inhabilita bifila, y que las salidas se habilitan solo cuando hay algo que exportar.
+De aquí salió el arreglo del doble clic, que metía el último vértice tres veces.
+
 `test_pwa.js` cubre la **app instalable**: manifest válido con iconos que existen de verdad
 (un icono 404 la deja no-instalable sin avisar), service worker activo con su scope, armazón
 precacheado, botón *Instalar app*, y que **sin red** el panel sigue abriendo y pintando. Incluye la
@@ -55,4 +74,6 @@ node tests/test_comparador.js              # 42 comprobaciones, careo contra el 
 node tests/test_comparador_3d.js           # 31 comprobaciones, la escena 3D en Chromium
 node tests/test_viento_ejes.js             # 60 comprobaciones, lienzos, ejes, transmisión y reproductor
 node tests/test_viento_sitio.js            # 47 comprobaciones, emplazamiento y horas locales
+node tests/test_layout.js                  # 119 comprobaciones, careo del generador de layout
+node tests/test_layout_ui.js               # 17 comprobaciones, el generador en Chromium
 ```
