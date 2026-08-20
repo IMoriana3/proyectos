@@ -218,6 +218,35 @@ con la escena — una esfera de radio fijo a 700 m es un píxel, y sin él la es
   mallas sueltas: van en `InstancedMesh`— y se mueve con la estrategia seleccionada. Al cargarla fija
   también lat/lon de la planta. Sin red no hay layout, y la ficha lo dice y cae a la comparativa.
 
+### El tamaño de cada seguidor sale del layout
+
+Las cotas de `seguidor.js` son las de El Burgo: 28 módulos por ala de 1,134 m, 64,73 m de fila.
+Dibujar todas las plantas con ellas no es una aproximación —es otra planta—. En Ayora el módulo es
+un Risen de 1,303 m y el completo mide **74,758 m**; sus medios miden **37,854**. Con la cota fija,
+los completos salían diez metros cortos y **los medios veintisiete de más, metidos dentro del
+seguidor de al lado**.
+
+El largo se toma, por orden de calidad del dato:
+
+1. el **medido en el DWG** (`mesa.tipos[bloque].largo`) — Ayora, Fayón y San José lo traen;
+2. los **módulos por ala** del layout, con `2·(m·modW+(m−1)·gapMod)+gapDrive` — que reproduce al
+   milímetro los `largo` medidos de esas tres, así que no es otra geometría;
+3. la **razón de largo** `mr` del propio seguidor;
+4. el tipo **«Medio»**, que es como lo declara El Burgo (no trae `mr` ni bloques).
+
+Y el visor **comprueba que cabe**: la separación entre seguidores consecutivos del mismo pasillo es
+el largo más la calle, así que si lo dibujado la supera, se están metiendo unos dentro de otros. No
+se recorta —el dato del layout manda— pero se dice en el rótulo. Medido sobre las siete plantas, el
+solape máximo pasa de 26,4 m a 0,3.
+
+| planta | tallas dibujadas (m) | solape antes | ahora |
+|---|---|---|---|
+| El Burgo | 64,7 · 32,6 | 15,7 m | 0 |
+| Ayora | 74,8 · 56,3 · 37,9 | 17,5 m | 0 |
+| Páramo | 55,5 · 53,2 | 2,6 m | 0 |
+| Fayón | 55,2 · 46,0 | 16,2 m | 0 |
+| San José | 74,2 · 39,7 · 38,6 · 37,4 | 26,4 m | 0,3 m |
+
 ## El seguidor se mueve a 0,17 °/s
 
 El eje no teletransporta. La ficha aplica el lazo de control canónico —banda muerta de 1° y

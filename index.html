@@ -838,7 +838,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/sim-viento.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-19",
-    version: "1.9",
+    version: "1.9.1",
     docId: "viento",
     docUrl: "",
     download: "",
@@ -857,6 +857,7 @@ const PROJECTS = [
       "Viento MEDIDO de la planta: CSV de la HSU (el fichero no sale del navegador; detecta separador y unidades) o el histórico del SCADA por GET /meteo/history. Con eso el análisis deja de ser reanálisis y pasa a ser el sitio.",
       "Escena 3D visible desde que se abre, con dos modos: EN VIVO (viento, dirección, hora y fecha; los seguidores reaccionan al momento con su máquina de estados y su velocidad de giro) y EPISODIO (la ventana común del año tras simular).",
       "Se puede dibujar la comparativa (un bloque por estrategia con el modelo real de seguidor.js) o la PLANTA REAL entera, cargando <planta>_layout.json del repo cobertura-zigbee: El Burgo, Ayora, Páramo, Fayón, Bagnarelli, Túnez y San José.",
+      "Cada seguidor se dibuja a SU tamaño, que sale del layout: las cotas medidas en el DWG cuando las hay, si no los módulos por ala, la razón de largo o el tipo «Medio». Ayora tiene tres tallas (74,8 / 56,3 / 37,9 m) y San José cuatro; con una cota fija los medios se metían dentro del vecino. El visor lo comprueba contra la separación real entre seguidores y avisa en el rótulo si lo que dibuja no cabe — no recorta: el dato del layout manda.",
       "El seguidor gira a 0,17 °/s con banda muerta de 1° (lazo de control canónico): ir a ±55° son 5,4 min. Por eso la simulación va a paso MINUTAL — a 15 min la maniobra cabía en un paso y salía como un escalón. Un año son 525.541 pasos y se resuelve en ~4 s.",
       "Límite de mediodía (solo B1/B2, las que abanderan hacia el sol): si el seguidor viene siguiendo hacia el ESTE y ya está pegado a la horizontal (entre 0° y el límite, 10° por defecto y configurable), abandera al OESTE. En las A el lado lo manda el viento y la regla no aplica.",
       "Abanderamiento PASIVO: la fila de perímetro a barlovento se desembraga por carga —no lo manda la TCU— y cae al límite, mientras la interior sigue en seguimiento haya el viento que haya. Que amaine no la levanta: solo la recoge el seguimiento al volver a pasar por ese ángulo (al oeste, el ocaso del mismo día; al este, el amanecer siguiente).",
@@ -871,6 +872,7 @@ const PROJECTS = [
       { done:false, text:"La velocidad de suelta del pasivo es un SUSTITUTO declarado de la carga de desembrague, no una medida: hace falta el par real y su dispersión entre unidades para que el umbral deje de ser un parámetro." }
     ],
     historial: [
+      { date:"2026-08-19", ver:"1.9.1", note:"Los seguidores de la planta real se dibujan a su TAMAÑO, no al del modelo. Se dibujaban todos con las cotas de El Burgo (28 mód/ala, 64,73 m): en Ayora los completos miden 74,758 —módulo Risen de 1,303— y salían diez metros cortos, y los MEDIOS miden 37,854 y salían veintisiete de más, metiéndose dentro del vecino. Ahora el largo sale del layout (cotas medidas en el DWG, mód/ala, razón de largo o el tipo «Medio»), y el visor comprueba contra la separación real entre seguidores si lo que dibuja cabe: solape máximo de las siete plantas, de 26,4 m a 0,3." },
       { date:"2026-08-19", ver:"1.9", note:"Dos reglas nuevas del cliente. LÍMITE DE MEDIODÍA: con el seguidor todavía siguiendo al este y pegado a la horizontal, las estrategias que abanderan hacia el sol (B1/B2) lo hacen al OESTE; el umbral es configurable. ABANDERAMIENTO PASIVO: la fila de perímetro se suelta sola por carga y se queda en el límite hasta que el seguimiento vuelve a pasar por ese ángulo, mientras la interior sigue operando. El nº de trackers pasa a ser dato obligatorio: es el denominador que decide si la pérdida de esa fila es el 50 % del campo o el 5 %." },
       { date:"2026-08-19", ver:"1.8", note:"Análisis de emplazamiento: rosa de vientos por sector y banda (las bandas son los umbrales de la máquina, así que dice de dónde vienen los abanderamientos), simulación multi-año con la dispersión interanual (media ± σ y peor/mejor año) y extremos por Gumbel sobre los máximos anuales. Y el viento MEDIDO de la planta: CSV de la HSU o el histórico del SCADA (GET /meteo/history, añadido para esto)." },
       { date:"2026-08-19", ver:"1.7", note:"El sol se ve: cielo con degradado que responde a su altura (naranja al alba y al ocaso, apagado en el crepúsculo) y disco con halo dimensionado con la escena, como en bt3d. Y el control de tiempo lleva FECHA, no «día del año»." },

@@ -2153,9 +2153,54 @@ async function escenaPlanta(name){
   var j=await r.json(), T=j.trackers||[];
   if(!T.length)throw new Error('el layout no trae seguidores');
   var mundo=new THREE.Group(); TD.sc.add(mundo); TD.mundo=mundo;
-  var D=Seguidor.DIMS, ala=D.strLen, ancho=D.collector_height_m||2.382;
+
+  /* ── EL TAMAÑO ES EL DEL LAYOUT, NO EL DEL MODELO ──
+     Las cotas de `seguidor.js` son las de El Burgo (28 mód/ala de 1,134 m →
+     64,73 m). Dibujar TODAS las plantas con ellas no es una aproximación: en
+     Ayora los seguidores completos miden 74,758 m —módulo Risen de 1,303—
+     así que salían diez metros cortos, y los MEDIOS miden 37,854, así que
+     salían VEINTISIETE metros largos y se metían dentro del de al lado. Es
+     el solape que se ve. Misma cadena que usa terreno.html en
+     cobertura-zigbee, que es donde se resolvió esto. */
+  var D=Seguidor.DIMS, fuenteLargo='cotas por defecto del modelo';
+  if(j.mesa){                       // cotas MEDIDAS en el DWG (Ayora, Fayón, San José)
+    var ME=j.mesa;
+    if(ME.modW!=null)D.modW=+ME.modW; if(ME.modH!=null)D.modH=+ME.modH;
+    if(ME.gapMod!=null)D.gapMod=+ME.gapMod; if(ME.gapDrive!=null)D.gapDrive=+ME.gapDrive;
+    if(ME.filaZ!=null)D.filaZ=+ME.filaZ;
+    D.pitch=D.modW+D.gapMod;
+    fuenteLargo='medido en el DWG (mesa.tipos)';
+  }
+  if(j.modW!=null){D.modW=+j.modW;D.pitch=D.modW+D.gapMod;fuenteLargo='módulo y mód/ala del layout';}
+  if(j.modH!=null)D.modH=+j.modH;
+  if(j.filaZ!=null)D.filaZ=+j.filaZ;
+  if(Seguidor.setModsPerStr&&+j.mods>0){Seguidor.setModsPerStr(+j.mods);
+    if(!j.mesa)fuenteLargo='mód/ala del layout ('+(+j.mods)+') con el módulo '+(j.modW!=null?'del layout':'canónico');}
+  D=Seguidor.DIMS;
+  var ancho=D.collector_height_m||D.modH||2.382;
+
+  /* Largo TOTAL de un seguidor, por orden de calidad del dato:
+     1) el medido en el DWG para su bloque — exacto, y es el que manda;
+     2) su razón de largo `mr` contra el modelo — así los MEDIOS salen medios;
+     3) el modelo. La fórmula 2·(m·modW+(m−1)·gapMod)+gapDrive reproduce al
+        milímetro los `largo` medidos de Ayora, Fayón y San José, así que
+        cuando hay que derivarla no se está inventando otra geometría. */
+  var TIPOS=(j.mesa&&j.mesa.tipos)||null;
+  function largoDe(t){
+    var tp=TIPOS&&t.blk&&TIPOS[t.blk];
+    if(tp&&+tp.largo>0)return +tp.largo;
+    var span=D.span||(2*D.strLen+D.gapDrive);
+    if(+t.mr>0&&+t.mr<=1.0001)return +t.mr*span;
+    // El Burgo no trae `mr` ni bloques: sus medios se declaran en el TIPO
+    // («Medio sin rotula»). Sin esto, sus 18 medios se dibujaban enteros y se
+    // metían 15,7 m dentro del vecino — el mismo solape que el de Ayora, solo
+    // que por otro camino.
+    if(/medio/i.test(t.t||''))return span*(D.medioFactor||0.504);
+    return span;
+  }
   var N=T.length, nInst=N*2;
-  var geoMesa=new THREE.BoxGeometry(ala,0.06,ancho);
+  // geometría UNITARIA en el eje del tubo: cada instancia la escala a su largo
+  var geoMesa=new THREE.BoxGeometry(1,0.06,ancho);
   var matMesa=new THREE.MeshStandardMaterial({color:PALA,roughness:.35,metalness:.25,
     emissive:new THREE.Color(0x000000),emissiveIntensity:0});
   var mesas=new THREE.InstancedMesh(geoMesa,matMesa,nInst);
@@ -2168,7 +2213,9 @@ async function escenaPlanta(name){
   for(var i=0;i<N;i++){
     var t=T[i], x=+t.x||0, nn=+t.n||0, rot=(+t.rot||0)*Math.PI/180;
     xs.push(x); ns.push(nn);
-    base.push({x:x,z:-nn,rot:rot,medio:/medio/i.test(t.t||'')});
+    var largo=largoDe(t), ala=(largo-D.gapDrive)/2;
+    base.push({x:x,z:-nn,rot:rot,medio:/medio/i.test(t.t||''),
+               largo:largo, ala:ala, half:ala/2+D.gapDrive/2});
     dummy.position.set(x,D.postH/2,-nn); dummy.rotation.set(0,0,0); dummy.updateMatrix();
     postes.setMatrixAt(i,dummy.matrix);
   }
@@ -2182,7 +2229,8 @@ async function escenaPlanta(name){
   var minx=Math.min.apply(null,xs), maxx=Math.max.apply(null,xs);
   var minn=Math.min.apply(null,ns), maxn=Math.max.apply(null,ns);
   var cx=(minx+maxx)/2, cz=-(minn+maxn)/2;
-  var w=(maxx-minx)+D.span, l=(maxn-minn)+D.span;
+  var largoMax=base.reduce(function(a,b){return Math.max(a,b.largo);},0)||D.span;
+  var w=(maxx-minx)+largoMax, l=(maxn-minn)+largoMax;
   var ext=Math.max(w,l,60);
   /* Ver la planta ENTERA: con fov 42° hace falta ~1,3·extensión de distancia.
      Se reparte en una órbita baja (se ve el campo, y el cielo por encima). */
@@ -2199,9 +2247,40 @@ async function escenaPlanta(name){
   sh.left=-ext*0.7; sh.right=ext*0.7; sh.top=ext*0.7; sh.bottom=-ext*0.7; sh.far=ext*4+800;
   sh.updateProjectionMatrix();
   TD.radio=Math.max(600,ext*1.4);
+  /* ── ¿CABE LO QUE ESTOY DIBUJANDO? ──
+     El propio layout dice cuánto sitio hay: la separación entre seguidores
+     consecutivos del mismo pasillo es el largo del seguidor más la calle. Si
+     lo que voy a dibujar es MÁS que ese hueco, los seguidores se meten unos
+     dentro de otros y el render está mintiendo. No se recorta —el dato del
+     layout manda— pero se DICE, que es la diferencia entre un render que se
+     puede creer y uno bonito. Solo tiene sentido con la retícula sin girar;
+     con ella girada el agrupado por columna no vale y se declara. */
+  var solape=null;
+  var girada=base.some(function(b){return Math.abs(b.rot)>0.02;});
+  if(!girada){
+    var col={}, peor=0, nPares=0;
+    base.forEach(function(b){var k=b.x.toFixed(1);(col[k]=col[k]||[]).push(b);});
+    Object.keys(col).forEach(function(k){
+      var v=col[k].slice().sort(function(a,b2){return a.z-b2.z;});
+      for(var q=1;q<v.length;q++){
+        var hueco=Math.abs(v[q].z-v[q-1].z);
+        if(hueco>250)continue;                       // cambio de sector, no vecino
+        var pide=(v[q].largo+v[q-1].largo)/2;        // cada uno pone su mitad
+        nPares++;
+        if(pide-hueco>peor)peor=pide-hueco;
+      }
+    });
+    if(nPares>0&&peor>0.5)solape={metros:peor,pares:nPares};
+  }
+  var nota=' · largo '+fuenteLargo;
+  var tallas={}; base.forEach(function(b){tallas[b.largo.toFixed(1)]=1;});
+  var nTallas=Object.keys(tallas).length;
+  if(nTallas>1)nota+=' · '+nTallas+' tallas';
+  if(solape)nota+=' · ⚠ SOLAPAN hasta '+solape.metros.toFixed(1)+' m';
+  else if(girada)nota+=' · retícula girada: no se comprueba el solape';
   ESC={kind:'planta',name:name,mesas:mesas,base:base,dummy:dummy,mat:matMesa,
-       ala:ala,n:N,center:[cx,cz],ext:ext,
-       info:N+' seguidores · '+(j.clat!=null?(+j.clat).toFixed(4)+', '+(+j.clon).toFixed(4):'')};
+       n:N,center:[cx,cz],ext:ext,solape:solape,fuenteLargo:fuenteLargo,
+       info:N+' seguidores · '+(j.clat!=null?(+j.clat).toFixed(4)+', '+(+j.clon).toFixed(4):'')+nota};
   if(j.clat!=null){$('lat').value=(+j.clat).toFixed(4);$('lon').value=(+j.clon).toFixed(4);saveCfg();}
 }
 
@@ -2227,7 +2306,7 @@ function pintaEscena(ang,modos,poa,poaBase){
     // la planta entera se mueve con la estrategia elegida
     var k=(SEL&&ang[SEL]!=null)?SEL:(ang.BASE!=null?'BASE':Object.keys(ang)[0]);
     var t2=(ang[k]||0)*Math.PI/180, modo2=modos[k]||'IDLE';
-    var d=ESC.dummy, half=ESC.ala/2+Seguidor.DIMS.gapDrive/2, i2=0;
+    var d=ESC.dummy, i2=0;
     for(var i=0;i<ESC.n;i++){
       var b2=ESC.base[i];
       for(var w=-1;w<=1;w+=2){
@@ -2235,8 +2314,11 @@ function pintaEscena(ang,modos,poa,poaBase){
         d.rotation.set(0,b2.rot+Math.PI/2,0);
         d.updateMatrix();
         var m=new THREE.Matrix4().makeRotationX(t2);
-        var off=new THREE.Matrix4().makeTranslation(w*half,0,0);
-        d.matrix.multiply(m); d.matrix.multiply(off);
+        // el desplazamiento del ala va ANTES de la escala: si fuese después
+        // lo multiplicaría el largo y las dos alas se separarían de su tubo.
+        var off=new THREE.Matrix4().makeTranslation(w*b2.half,0,0);
+        var sc=new THREE.Matrix4().makeScale(b2.ala,1,1);
+        d.matrix.multiply(m); d.matrix.multiply(off); d.matrix.multiply(sc);
         ESC.mesas.setMatrixAt(i2++,d.matrix);
       }
     }
