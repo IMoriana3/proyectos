@@ -2104,6 +2104,40 @@ function limpiaMundo(){
 }
 
 /* ── Escenario A: la comparativa, un bloque por caso ── */
+/* Rótulo flotante de un bloque. Sin él la escena es adivinanza: la cámara
+   mira desde el sur, así que +X cae a la IZQUIERDA en pantalla y los bloques
+   salen en orden INVERSO al de las tarjetas de arriba — y como se puede
+   orbitar, cualquier orden fijo se puede invertir. Un sprite mira siempre a
+   la cámara, así que el nombre se lee desde donde se mire. */
+function etiqueta3D(txt,col){
+  var cv=document.createElement('canvas'), esc=4;
+  var f=44, pad=16;
+  var cx=cv.getContext('2d'); cx.font='bold '+f+'px ui-monospace,monospace';
+  var w=Math.ceil(cx.measureText(txt).width)+pad*2, h=f+pad*2;
+  cv.width=w*esc/2; cv.height=h*esc/2;
+  cx=cv.getContext('2d'); cx.scale(esc/2,esc/2);
+  cx.fillStyle='rgba(11,15,20,.82)'; cx.strokeStyle=col; cx.lineWidth=3;
+  cx.beginPath();
+  if(cx.roundRect)cx.roundRect(2,2,w-4,h-4,10); else cx.rect(2,2,w-4,h-4);
+  cx.fill(); cx.stroke();
+  cx.font='bold '+f+'px ui-monospace,monospace'; cx.fillStyle=col;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText(txt,w/2,h/2+2);
+  var tex=new THREE.CanvasTexture(cv); tex.minFilter=THREE.LinearFilter;
+  var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,
+    depthTest:false,depthWrite:false}));
+  sp.renderOrder=999;
+  var alto=5.5;
+  sp.scale.set(alto*w/h,alto,1);
+  return sp;
+}
+
+//: Nombre legible de cada caso en la escena. 'PASIVO' se dice entero: en las
+//: tarjetas cabe la sigla, pero en el render un «P» no lo entiende nadie.
+function nombreCaso(k){
+  return k==='BASE'?'SIN ABANDERAR':(k==='PASIVO'?'PASIVO':k);
+}
+
 function escenaComparativa(){
   var mundo=new THREE.Group(); TD.sc.add(mundo); TD.mundo=mundo;
   var ks=casos(), x0=-(ks.length-1)*BLOQUE/2, bloques=[];
@@ -2122,12 +2156,16 @@ function escenaComparativa(){
       new THREE.MeshStandardMaterial({color:new THREE.Color(col),emissive:new THREE.Color(col),emissiveIntensity:.35,roughness:.5}));
     var ref=new THREE.Mesh(new THREE.BoxGeometry(3.0,1,3.0),
       new THREE.MeshBasicMaterial({color:0x9bb0c6,transparent:true,opacity:.22,depthWrite:false}));
-    barra.position.set(-3,0,zb); ref.position.set(-3,0,zb);
+    // la barra va CENTRADA en su bloque: descolgada a un lado se leía como si
+    // fuese del bloque vecino, que es justo lo que no puede pasar aquí.
+    barra.position.set(0,0,zb); ref.position.set(0,0,zb);
     var marca=new THREE.Mesh(new THREE.BoxGeometry(NFILAS*PITCH+3,.14,3.5),
       new THREE.MeshBasicMaterial({color:new THREE.Color(col)}));
     marca.position.set(0,.07,zb+4);
-    b.add(barra,ref,marca); mundo.add(b);
-    bloques.push({k:k,g:b,segs:segs,mats:mats,barra:barra,ref:ref});
+    var eti=etiqueta3D(nombreCaso(k),col);
+    eti.position.set(0,Seguidor.DIMS.postH+9,0);
+    b.add(barra,ref,marca,eti); mundo.add(b);
+    bloques.push({k:k,g:b,segs:segs,mats:mats,barra:barra,ref:ref,eti:eti});
   });
   /* Cámara casi desde el SUR y no muy alta: mirando a lo largo del eje N-S
      cada bloque se lee como su propia sección, y dejando algo de horizonte
@@ -2309,7 +2347,16 @@ function pintaEscena(ang,modos,poa,poaBase){
     ESC.bloques.forEach(function(b){var p=poa&&poa[b.k];if(p>pmax)pmax=p;});
     ESC.bloques.forEach(function(b){
       var th=ang[b.k]||0, modo=modos[b.k]||'IDLE';
-      b.segs.forEach(function(t){t.spin.rotation.x=th*Math.PI/180;});
+      /* El PASIVO no tiene UN ángulo: tiene dos poblaciones. Se suelta la fila
+         de perímetro y la interior sigue en seguimiento haya el viento que
+         haya, así que pintar el bloque entero al mismo ángulo sería dibujar
+         un abanderamiento de planta — que es exactamente lo que el pasivo NO
+         es. La fila 0 es la expuesta (siempre la misma y el mismo lado, dato
+         de proyecto); las demás llevan el ángulo de la base. */
+      var thBase=(ang.BASE!=null?ang.BASE:th);
+      b.segs.forEach(function(t,fi){
+        var thF=(b.k==='PASIVO'&&fi>0)?thBase:th;
+        t.spin.rotation.x=thF*Math.PI/180;});
       b.mats.glass.emissive.setHex(MODO_COL[modo]||0x000000);
       b.mats.glass.emissiveIntensity=(MODO_INT[modo]!=null?MODO_INT[modo]:0);
       if(poa){
@@ -2407,7 +2454,10 @@ function tiles(ang,modos,poa,poaBase,dpct){
     var p=poa?poa[k]:null, d=(poa&&k!=='BASE')?(p-poaBase):null;
     h+='<div class="tile" style="border-left-color:'+col+'">'+
       '<div class="n"><span class="dot" style="background:'+col+'"></span>'+(k==='BASE'?'Sin abanderar':k)+'</div>'+
-      '<div class="m">'+esc((modos[k]||'IDLE').replace('_',' ').toLowerCase())+' · θ '+fmt(ang[k],1)+'°</div>'+
+      '<div class="m">'+esc((modos[k]||'IDLE').replace('_',' ').toLowerCase())+' · θ '+fmt(ang[k],1)+'°'+
+        (k==='PASIVO'&&LIVE&&LIVE.fracPas!=null
+          ? ' <span class="sn" style="margin:0">fila suelta · planta = '+fmt(100*LIVE.fracPas,1)+' % del campo</span>'
+          : '')+'</div>'+
       (p!=null?'<div class="p">'+fmt(p,0)+' <small>W/m²</small></div>':'')+
       (k==='BASE'?'<div class="d" style="color:var(--muted)">referencia</div>':
         (d!=null?'<div class="d" style="color:'+(d<-1?'var(--err)':(d>1?'var(--ok)':'var(--muted)'))+'">'+
@@ -2420,7 +2470,8 @@ function tiles(ang,modos,poa,poaBase,dpct){
 /* ═══════════ MODO EN VIVO ═══════════ */
 function liveInit(){
   var c=cfgStow();
-  LIVE={t:0, v:+$('lV').value/3.6, dir:+$('lD').value, run:false, steppers:{}, ang:{}, modos:{}};
+  LIVE={t:0, v:+$('lV').value/3.6, dir:+$('lD').value, run:false, steppers:{}, ang:{}, modos:{},
+        minF:+$('lH').value, simPrev:null};
   vivos().forEach(function(S){
     // el límite de mediodía es de las B (abanderan hacia el SOL); en las A el
     // lado lo manda el viento, así que su stepper va con la regla apagada.
@@ -2456,19 +2507,36 @@ function hhmm(min){min=((min%1440)+1440)%1440;var h=Math.floor(min/60),mm=Math.r
 function liveTick(dtReal){
   if(!LIVE||!TD||!ESC)return;
   var fac=LIVE.run?(+$('lSpeed').value||300):0, dtS=dtReal*fac;
+  /* El minuto se lleva en FLOTANTE aparte del deslizador. El deslizador solo
+     admite enteros, así que redondear dentro del bucle cuantizaba el reloj a
+     un minuto: a 0,17 °/s eso son saltos de 10° y el giro dejaba de verse
+     como una rampa. Si el usuario mueve el deslizador (salta un minuto o
+     más), su valor manda. */
+  if(LIVE.minF==null||Math.abs(+$('lH').value-LIVE.minF)>=1)LIVE.minF=+$('lH').value;
   if(fac>0){
-    var m=+$('lH').value+dtS/60;
-    if(m>=1440){m-=1440; var nd=fechaLive(); nd.setUTCDate(nd.getUTCDate()+1); $('lDate').value=fechaISO(nd);}
-    $('lH').value=Math.round(m); liveLbl();
+    LIVE.minF+=dtS/60;
+    if(LIVE.minF>=1440){LIVE.minF-=1440; var nd=fechaLive(); nd.setUTCDate(nd.getUTCDate()+1); $('lDate').value=fechaISO(nd);}
+    $('lH').value=Math.round(LIVE.minF); liveLbl();
   }
   var lat=+$('lat').value, lon=+$('lon').value, latR=lat*LOC.D2R;
-  var mi=+$('lH').value;
+  var mi=LIVE.minF;
   var when=new Date(fechaLive().getTime()+mi*60000);
   var P=LOC.sun(when,latR,lon);
   var full=+$('maxang').value, gcr=+$('gcr').value, bt=$('bt').checked;
   var tgt=LOC.theta(P.el,P.az,gcr,full,bt);
-  // la línea base también obedece al lazo de control
-  var dt=Math.max(0.001,dtS||dtReal);
+  /* dt = TIEMPO SIMULADO transcurrido desde el fotograma anterior. Ni más ni
+     menos, y por eso no hay ramas: corriendo son los segundos que ha avanzado
+     el reloj; parado son CERO y nada se mueve; y si el usuario salta la hora
+     o la fecha con el tiempo parado, son los segundos de ese salto, así que el
+     seguidor llega donde le toca sin teletransportarse.
+
+     Antes decía `dtS||dtReal`, y ese `||` convertía «parado» en «avanza a
+     tiempo REAL»: con el reloj congelado el lazo de control seguía integrando
+     a 0,17 °/s fotograma tras fotograma, así que al parar el tiempo los
+     ángulos y la POA seguían cambiando solos. */
+  var simNow=fechaLive().getTime()/1000+mi*60;
+  var dt=(LIVE.simPrev==null)?0:Math.abs(simNow-LIVE.simPrev);
+  LIVE.simPrev=simNow;
   var dB=tgt-LIVE.ang.BASE, maxD=LOC.SLEW*dt;
   if(Math.abs(dB)>maxD)dB=(dB>0?maxD:-maxD);
   LIVE.ang.BASE=Math.max(-full,Math.min(full,LIVE.ang.BASE+dB));
@@ -2479,7 +2547,15 @@ function liveTick(dtReal){
     var r=(S==='PASIVO')?LIVE.steppers[S].step(tgt,LIVE.v,dt)
                         :LIVE.steppers[S].step(tgt,LIVE.v,az,dt);
     LIVE.ang[S]=r.theta; LIVE.modos[S]=r.mode;
-    poa[S]=LOC.poa(r.theta,P.el,P.az,bh,dh,bh+dh);
+    if(S==='PASIVO'){
+      /* La POA del pasivo es la de la PLANTA, no la de la fila suelta: la
+         interior sigue operando. Enseñar la de la fila aquí daría una pérdida
+         del 50 % en una planta de diez trackers, que es el error de un orden
+         de magnitud que esta tarjeta existe para no cometer. */
+      LIVE.poaFila=LOC.poa(r.theta,P.el,P.az,bh,dh,bh+dh);
+      LIVE.fracPas=LOC.fracExpuesta(+$('pasN').value,2,1);
+      poa[S]=(1-LIVE.fracPas)*poa.BASE+LIVE.fracPas*LIVE.poaFila;
+    }else poa[S]=LOC.poa(r.theta,P.el,P.az,bh,dh,bh+dh);
   });
   ponSol(P.el/LOC.D2R,P.azp,LIVE.v,LIVE.dir);
   pintaEscena(LIVE.ang,LIVE.modos,poa,poa.BASE);
