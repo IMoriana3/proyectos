@@ -234,6 +234,23 @@ El largo se toma, por orden de calidad del dato:
 3. la **razón de largo** `mr` del propio seguidor;
 4. el tipo **«Medio»**, que es como lo declara El Burgo (no trae `mr` ni bloques).
 
+### Bifila: un motor mueve DOS filas
+
+El seguidor canónico es **bífilo**: dos filas separadas el paso entre filas —6 m en El Burgo y
+Ayora, 6,25 en Túnez, 5,50 en Bagnarelli— unidas por el eje de transmisión, con **un** motor. Se
+dibujaba **una sola**, así que la planta salía con la mitad de filas de las que tiene y el doble de
+pasillo entre ellas. Con `filaZ` 0 —Páramo, que es monofila— las dos coinciden y sale una, que es lo
+correcto.
+
+El dato sale del layout (`mesa.filaZ`, o `filaZ` en la raíz), no de una lista a mano, y eso corrige
+a los otros visores: `overcast.html` tiene Páramo como bifila y Bagnarelli como monofila, y sus
+propios layouts dicen lo contrario —el de Bagnarelli con el porqué escrito: *«El layout decía filaZ
+0 (una sola fila) y por eso salían monofilares. filaZ = 5,50/2 = 2,75»*.
+
+**El oráculo que cierra tamaño y filas a la vez**: con el largo y el número de filas que se dibujan,
+el recuento de módulos tiene que dar el de la cartera. Da exacto en las cuatro plantas que declaran
+la cifra — Túnez 1.064, Bagnarelli 1.296, Páramo 18.528 y Fayón 2.112.
+
 Y el visor **comprueba que cabe**: la separación entre seguidores consecutivos del mismo pasillo es
 el largo más la calle, así que si lo dibujado la supera, se están metiendo unos dentro de otros. No
 se recorta —el dato del layout manda— pero se dice en el rótulo. Medido sobre las siete plantas, el
