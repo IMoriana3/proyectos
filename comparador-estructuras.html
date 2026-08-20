@@ -67,6 +67,15 @@ td .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:
 td.pos{color:var(--live)} td.neg{color:var(--dead)}
 .tbl-wrap{overflow-x:auto}
 .mini{font:400 11px var(--mono);color:var(--muted-2)}
+#view3d{position:relative;width:100%;height:min(52vh,460px);min-height:300px;border:1px solid var(--line-soft);border-radius:10px;overflow:hidden;background:#0B0F14}
+#view3d canvas{display:block;width:100%;height:100%;border:0;border-radius:0;margin:0}
+.hint3d{position:absolute;left:10px;bottom:9px;font:400 10.5px var(--mono);color:var(--muted-2);background:rgba(11,15,20,.55);padding:3px 8px;border-radius:6px;pointer-events:none}
+.tline{display:flex;align-items:center;gap:10px;margin-top:10px}
+.tline input[type=range]{flex:1;accent-color:var(--accent)}
+.tline input[type=date]{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit;font-size:12.5px}
+.tline .play{width:auto;flex:none;padding:7px 13px}
+.tline .hhmm{font:700 14px var(--mono);color:var(--accent);min-width:52px;text-align:right}
+.sinwebgl{padding:26px 18px;text-align:center;color:var(--muted-2);font-size:13px}
 </style>
 </head>
 <body>
@@ -142,6 +151,20 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
 
   <!-- ═════════ RESULTADOS ═════════ -->
   <div>
+    <div class="card" id="escCard">
+      <h2>Escena <span class="sn" id="escHint">el mismo sol para todas · arrastra para orbitar</span></h2>
+      <div id="view3d"></div>
+      <div class="tline">
+        <input type="date" id="fecha" value="2023-06-21">
+        <button class="btn ghost play" id="play">▶</button>
+        <input type="range" id="hora" min="0" max="1439" step="5" value="720">
+        <span class="hhmm" id="hlbl">12:00</span>
+      </div>
+      <div id="escRead" class="readout" style="margin-top:10px"></div>
+      <p class="note" id="escNote">Cada bloque es una estructura, con su pitch y su GCR, al mismo
+        sol y sobre el mismo suelo. Mueve la hora y mira las <b>sombras entre filas</b>: es lo que
+        el backtracking existe para evitar, y lo que la columna «pérdida sombra» de la tabla mide.</p>
+    </div>
     <div class="card" id="outCard">
       <h2>Σ Resultado del año <span class="sn" id="ctx">—</span></h2>
       <div id="out"><p class="note">Elige estructuras y dale a <b>Comparar el año</b>.</p></div>
@@ -161,6 +184,9 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
 </div>
 </div>
 
+<script src="lib/three.min.js"></script>
+<script src="lib/OrbitControls.js"></script>
+<script src="seguidor.js"></script>
 <script>
 "use strict";
 function $(id){return document.getElementById(id);}
@@ -717,9 +743,419 @@ function drawRank(){
   g.fillText('sólido: por m² de módulo   ·   translúcido: por m² de suelo (× GCR)',L,H-6);
 }
 
+
+/* ═══════════════════════ ESCENA 3D ═══════════════════════
+   Un bloque por estructura, TODOS al mismo sol y sobre el mismo suelo. Es la
+   otra mitad de la tabla: los números dicen cuánta POA pierde cada una y la
+   escena dice POR QUÉ — se ve la fila de delante tapando a la de detrás, se ve
+   el backtracking abriendo el ángulo al amanecer, y se ve que el eje inclinado
+   mira al ecuador.
+
+   Estética: la de la casa (overcast / bt3d / sim-viento), y no de oído —
+   cúpula de cielo con degradado por altura, doble suelo (trabajo + horizonte)
+   cosido con niebla del color del horizonte, y el sol como sprite con halo
+   dimensionado con la escena. El seguidor es el modelo REAL de seguidor.js,
+   el mismo que pintan el Gemelo y la Cobertura 3D.
+
+   Marco del mundo: x = este, y = arriba, z = −norte (el de sim-viento).
+   Convención de giro: la del core, θ>0 = tumbado al ESTE.                   */
+var TD=null, PLAY=false, MUNDO=null, BLOQUES=[];
+var PALA=0x1b3a6b;
+var NFILAS3D=3;              // tres filas: con dos no se ve que la sombra viaja
+var MODS3D=5;                // mesa corta: seis bloques tienen que caber a la vez
+
+function has3D(){return typeof THREE!=='undefined'&&THREE.OrbitControls&&typeof Seguidor!=='undefined';}
+
+function init3D(){
+  if(TD||!has3D())return;
+  var h=$('view3d');
+  try{
+    var rd=new THREE.WebGLRenderer({antialias:true});
+    rd.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    rd.shadowMap.enabled=true; rd.shadowMap.type=THREE.PCFSoftShadowMap;
+    h.appendChild(rd.domElement);
+    var sc=new THREE.Scene(); sc.background=new THREE.Color(0x0b0f14);
+    /* CIELO: cúpula con degradado por altura (cénit oscuro → horizonte
+       encendido). El degradado se repinta con el sol en `setSky`. */
+    var skyCv=document.createElement('canvas'); skyCv.width=4; skyCv.height=256;
+    var skyTx=new THREE.CanvasTexture(skyCv);
+    sc.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(2600,24,32),
+      new THREE.MeshBasicMaterial({map:skyTx,side:THREE.BackSide,depthWrite:false,fog:false})),
+      {renderOrder:-10}));
+    var cam=new THREE.PerspectiveCamera(42,1.9,0.5,9000);
+    cam.position.set(70,52,105);
+    var ct=new THREE.OrbitControls(cam,rd.domElement);
+    ct.enableDamping=true; ct.dampingFactor=.08; ct.maxPolarAngle=Math.PI*0.49;
+    ct.minDistance=12; ct.maxDistance=1200; ct.target.set(0,0,0);
+    var hemi=new THREE.HemisphereLight(0xbcd4ff,0x1a2510,0.5);
+    var sun=new THREE.DirectionalLight(0xffeecc,1.5);
+    sun.castShadow=true; sun.shadow.mapSize.width=2048; sun.shadow.mapSize.height=2048;
+    sun.shadow.bias=-2e-4; sun.shadow.normalBias=0.3;
+    /* El SOL tiene que verse: un disco de radio fijo a 300 m es un píxel. Va
+       como sprite con halo y se dimensiona con la escena. */
+    var sunCv=document.createElement('canvas'); sunCv.width=sunCv.height=128;
+    var sx=sunCv.getContext('2d'), sg=sx.createRadialGradient(64,64,2,64,64,64);
+    sg.addColorStop(0,'rgba(255,246,214,1)'); sg.addColorStop(0.18,'rgba(255,214,110,1)');
+    sg.addColorStop(0.42,'rgba(251,189,35,0.42)'); sg.addColorStop(1,'rgba(251,189,35,0)');
+    sx.fillStyle=sg; sx.fillRect(0,0,128,128);
+    var sunM=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(sunCv),
+      depthTest:false,depthWrite:false,transparent:true}));
+    sunM.renderOrder=-5;
+    sc.add(hemi,sun,sun.target,sunM);
+    /* SUELO en dos piezas, y hacen falta las dos: el de TRABAJO recibe sombras
+       y se dimensiona con la escena; el de HORIZONTE es enorme y llega a la
+       cúpula — sin él, el de trabajo se acaba en un borde RECTO con el cielo
+       detrás y los bloques parecen estar sobre una mesa flotando en el vacío. */
+    var suelo=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
+      new THREE.MeshLambertMaterial({color:0x24301d}));
+    suelo.rotation.x=-Math.PI/2; suelo.receiveShadow=true; sc.add(suelo);
+    var horiz=new THREE.Mesh(new THREE.PlaneGeometry(12000,12000),
+      new THREE.MeshLambertMaterial({color:0x1e2a19}));
+    horiz.rotation.x=-Math.PI/2; horiz.position.y=-1.5; sc.add(horiz);
+    /* La NIEBLA es lo que cose los dos con el cielo: sin ella, por lejos que
+       llegue el suelo siempre hay una línea dura donde acaba. Su color lo
+       repinta `setSky`, así que al amanecer la bruma se pone naranja. */
+    sc.fog=new THREE.Fog(0x0b0f14, 260, 2200);
+    var hint=document.createElement('div'); hint.className='hint3d';
+    hint.textContent='arrastrar: orbitar · rueda: zoom · botón dcho: desplazar';
+    h.appendChild(hint);
+    TD={rd:rd,sc:sc,cam:cam,ct:ct,sun:sun,sunM:sunM,suelo:suelo,horiz:horiz,hemi:hemi,
+        skyCv:skyCv,skyTx:skyTx,skyKey:'',radio:300,elevMinSombra:2};
+    suelo.scale.set(600,420,1);
+    var last=performance.now();
+    (function loop(now){requestAnimationFrame(loop); if(!TD)return;
+      var w=h.clientWidth,hh=h.clientHeight;
+      if(w&&(TD.w!==w||TD.h!==hh)){TD.w=w;TD.h=hh;rd.setSize(w,hh,false);cam.aspect=w/hh;cam.updateProjectionMatrix();}
+      var dt=Math.min(0.1,((now||performance.now())-last)/1000); last=now||performance.now();
+      if(PLAY)avanzaHora(dt);
+      ct.update(); rd.render(sc,cam);})(performance.now());
+  }catch(e){ TD=null; $('view3d').innerHTML='<div class="sinwebgl">Sin WebGL en este navegador: '+
+      'la comparativa numérica funciona igual.</div>'; }
+}
+
+function setSky(cenit,horiz){
+  var k=cenit.concat(horiz).map(function(v){return Math.round(v*255);}).join(',');
+  if(k===TD.skyKey)return; TD.skyKey=k;
+  var x=TD.skyCv.getContext('2d'), g=x.createLinearGradient(0,0,0,256);
+  var rgb=function(c){return 'rgb('+Math.round(Math.max(0,Math.min(1,c[0]))*255)+','+
+    Math.round(Math.max(0,Math.min(1,c[1]))*255)+','+Math.round(Math.max(0,Math.min(1,c[2]))*255)+')';};
+  g.addColorStop(0,rgb(cenit));
+  g.addColorStop(0.62,rgb([(cenit[0]+horiz[0])/2,(cenit[1]+horiz[1])/2,(cenit[2]+horiz[2])/2]));
+  g.addColorStop(1,rgb(horiz));
+  x.fillStyle=g; x.fillRect(0,0,4,256); TD.skyTx.needsUpdate=true;
+  if(TD.sc.fog)TD.sc.fog.color.setRGB(Math.max(0,Math.min(1,horiz[0])),
+    Math.max(0,Math.min(1,horiz[1])),Math.max(0,Math.min(1,horiz[2])));
+  TD.sc.background=TD.sc.fog?TD.sc.fog.color.clone():TD.sc.background;
+  if(TD.horiz){
+    var l=0.35+0.65*Math.min(1,Math.max(0,(cenit[2]-0.14)/0.22));
+    TD.horiz.material.color.setRGB(0.118*l+0.10*horiz[0]*(1-l),
+                                   0.165*l+0.09*horiz[1]*(1-l),
+                                   0.098*l+0.08*horiz[2]*(1-l));
+  }
+}
+function ponSol(elDeg,azDeg){
+  if(!TD)return;
+  var R=TD.radio, e=Math.max(elDeg,-4)*Math.PI/180, a=azDeg*Math.PI/180;
+  var dir=new THREE.Vector3(Math.sin(a)*Math.cos(e),Math.sin(e),-Math.cos(a)*Math.cos(e));
+  var c=TD.ct.target;
+  TD.sun.position.copy(dir.clone().multiplyScalar(R)).add(c);
+  TD.sun.target.position.copy(c); TD.sun.target.updateMatrixWorld();
+  // Con el sol muy bajo la sombra mide cientos de metros y cruza de un bloque a
+  // otro: ahí se apaga, porque a esa altura no informa, contamina.
+  TD.sun.castShadow=(elDeg>TD.elevMinSombra);
+  TD.sunM.position.copy(dir.clone().multiplyScalar(R*0.92)).add(c);
+  var disco=R*0.16; TD.sunM.scale.set(disco,disco,1);
+  var up=Math.min(1,Math.max(0,elDeg/35));
+  if(elDeg>0){
+    var warm=Math.max(0,Math.min(1,(12-elDeg)/12));
+    TD.sun.color.setRGB(1,0.93-0.38*warm,0.80-0.62*warm);
+    TD.sun.intensity=1.45-0.25*warm;
+    TD.hemi.intensity=0.55+0.15*warm;
+    TD.sunM.material.color.setRGB(1,0.95-0.30*warm,0.85-0.55*warm);
+    setSky([0.04+0.09*up,0.07+0.12*up,0.14+0.22*up],
+           [0.20+0.25*up+0.62*warm*(1-0.5*up),0.28+0.30*up+0.20*warm*(1-0.5*up),0.42+0.35*up-0.20*warm]);
+  }else{
+    TD.sun.intensity=0.02; TD.hemi.intensity=0.32;
+    var tw=Math.max(0,(elDeg+8)/8);
+    setSky([0.028,0.038,0.065],[0.05+0.55*tw,0.055+0.19*tw,0.08+0.03*tw]);
+  }
+  TD.sunM.visible=elDeg>-1;
+}
+
+/* Rótulo flotante: la cámara se puede orbitar, así que cualquier orden fijo se
+   puede invertir en pantalla. Un sprite mira siempre a la cámara. */
+function etiqueta3D(txt,col,anchoMax){
+  var cv=document.createElement('canvas'), f=44, pad=16;
+  var cx=cv.getContext('2d'); cx.font='bold '+f+'px ui-monospace,monospace';
+  var w=Math.ceil(cx.measureText(txt).width)+pad*2, h=f+pad*2;
+  cv.width=w*2; cv.height=h*2; cx=cv.getContext('2d'); cx.scale(2,2);
+  cx.fillStyle='rgba(11,15,20,.82)'; cx.strokeStyle=col; cx.lineWidth=3;
+  cx.beginPath(); if(cx.roundRect)cx.roundRect(2,2,w-4,h-4,10); else cx.rect(2,2,w-4,h-4);
+  cx.fill(); cx.stroke();
+  cx.font='bold '+f+'px ui-monospace,monospace'; cx.fillStyle=col;
+  cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText(txt,w/2,h/2+2);
+  var tex=new THREE.CanvasTexture(cv); tex.minFilter=THREE.LinearFilter;
+  var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,
+    depthTest:false,depthWrite:false}));
+  /* El rótulo va en unidades de MUNDO, así que su tamaño escala con la escena:
+     con dos bloques la cámara está cerca y uno de tamaño fijo tapa media
+     pantalla; con seis está lejos y no se lee. Se dimensiona por el ANCHO
+     disponible (el hueco entre bloques) y no por el alto: los nombres no miden
+     lo mismo, y con alto fijo «sin backtracking» se metía encima del vecino. */
+  sp.renderOrder=999;
+  var ancho=Math.min(anchoMax||24,Math.max(9,(anchoMax||24)));
+  var alto=Math.max(1.6,ancho*h/w);
+  sp.scale.set(alto*w/h,alto,1); sp.userData.alto=alto;
+  return sp;
+}
+
+/* ── Un SEGUIDOR con el modelo real de seguidor.js ──
+   Las piezas que bascular cuelgan de un grupo propio (`spin`), así mover el
+   ángulo es mover una rotación y no rehacer nada. El tubo canónico va en +X
+   local; girado 90° en Y queda a lo largo de Z (norte-sur), que es como se
+   monta un HSAT. */
+function seguidor3D(mats){
+  var g=new THREE.Group(), spin=new THREE.Group(); g.add(spin);
+  Seguidor.parts(THREE,{detail:'mass',size:'largo'}).forEach(function(p){
+    if(p.antenna||p.motorLink||p.damperLink)return;
+    var geo; try{geo=p.geom(THREE);}catch(e){return;}
+    var mesh=new THREE.Mesh(geo,mats[p.mat]||mats.steel);
+    mesh.applyMatrix4(p.m); mesh.castShadow=!!p.cast; mesh.receiveShadow=true;
+    (p.spin?spin:g).add(mesh);
+  });
+  var postH=Seguidor.DIMS.postH||2.0;
+  g.position.y=postH; g.rotation.y=Math.PI/2;
+  var poste=new THREE.Mesh(new THREE.BoxGeometry(.18,postH,.18),mats.steel);
+  poste.position.y=postH/2; poste.castShadow=true;
+  var wrap=new THREE.Group(); wrap.add(g,poste); wrap.spin=spin;
+  return wrap;
+}
+
+/* ── Una MESA FIJA: panel sobre dos postes ──
+   No se usa el modelo del seguidor porque una fija no lo es: no tiene tubo de
+   par, ni motor, ni corona. Cotas del módulo y materiales SÍ salen de
+   seguidor.js, que es donde viven — así el panel de la fija y el del seguidor
+   son el mismo objeto con la misma cara. El grupo `spin` existe igual para que
+   el resto del código trate a las dos familias igual.                        */
+function mesaFija3D(mats,largo,ancho){
+  var D=Seguidor.DIMS, wrap=new THREE.Group(), spin=new THREE.Group();
+  var panel=new THREE.Mesh(new THREE.BoxGeometry(largo,0.045,ancho),mats.glass);
+  panel.castShadow=true; panel.receiveShadow=true; spin.add(panel);
+  var viga=new THREE.Mesh(new THREE.BoxGeometry(largo,D.tube*0.7,D.tube*0.7),mats.steel);
+  viga.position.y=-0.13; viga.castShadow=true; spin.add(viga);
+  wrap.add(spin);
+  [-largo/2+0.8, largo/2-0.8].forEach(function(x){
+    var p=new THREE.Mesh(new THREE.BoxGeometry(.16,D.postH,.16),mats.steel);
+    p.position.set(x,D.postH/2,0); p.castShadow=true; wrap.add(p);
+  });
+  spin.position.y=D.postH;
+  wrap.spin=spin;
+  return wrap;
+}
+
+/* ── Encuadre MEDIDO, no calculado a ojo ──
+   La fórmula «distancia = medio ancho / tan(fov/2)» encuadra un objeto plano a
+   la distancia del objetivo, y aquí no vale: los bloques ocupan profundidad
+   (los de delante proyectan más ancho que los del fondo) y los rótulos
+   sobresalen por los lados. Medido, el primer intento se pasaba un 26 % y los
+   bloques de los extremos salían cortados.
+
+   Así que se mide: se proyecta la caja del mundo a coordenadas de pantalla y
+   se corrige la distancia por lo que sobresalga. Dos o tres pasadas convergen,
+   y funciona igual con dos bloques que con seis, con rótulos largos o cortos.
+   El guard vive en tests/test_comparador_3d.js: nada puede quedar fuera. */
+function encuadra(){
+  var MARGEN=0.90;                       // deja aire a los lados
+  for(var it=0; it<4; it++){
+    TD.ct.update(); TD.cam.updateMatrixWorld(); TD.cam.updateProjectionMatrix();
+    var caja=new THREE.Box3().setFromObject(MUNDO);
+    if(!isFinite(caja.min.x))return;
+    var mx=0,my=0,cy=0,n=0;
+    for(var i=0;i<8;i++){
+      var v=new THREE.Vector3(i&1?caja.max.x:caja.min.x, i&2?caja.max.y:caja.min.y,
+                              i&4?caja.max.z:caja.min.z).project(TD.cam);
+      mx=Math.max(mx,Math.abs(v.x)); my=Math.max(my,Math.abs(v.y)); cy+=v.y; n++;
+    }
+    var k=Math.max(mx,my)/MARGEN;
+    if(Math.abs(k-1)<0.02)break;
+    TD.cam.position.multiplyScalar(k);   // acercar o alejar sobre la misma línea
+  }
+}
+
+/* ── El mundo: un bloque por estructura ──
+   Cada bloque lleva NFILAS3D filas al pitch REAL de esa estructura (el de su
+   GCR), y la dirección del pitch depende de la familia: en un seguidor N-S las
+   filas se repiten hacia el ESTE, y en una fija de filas E-O se repiten hacia
+   el SUR. Dibujarlas todas en la misma dirección sería enseñar una sombra que
+   no existe.                                                                  */
+function construyeMundo(){
+  if(!TD)return;
+  if(MUNDO){TD.sc.remove(MUNDO); MUNDO.traverse(function(o){if(o.geometry)o.geometry.dispose();});}
+  MUNDO=new THREE.Group(); TD.sc.add(MUNDO); BLOQUES=[];
+  var keys=elegidas(); if(!keys.length)return;
+  var cfg=cfgActual();
+  Seguidor.setModsPerStr(MODS3D);
+  var D=Seguidor.DIMS, mats=Seguidor.materials(THREE);
+  mats.glass=new THREE.MeshStandardMaterial({color:PALA,roughness:.35,metalness:.25,
+    emissive:new THREE.Color(PALA).multiplyScalar(.16)});
+  var largo=D.span;                      // largo de la mesa (a lo largo del tubo)
+  var anchoFija=cfg.cw;                  // el ancho de colector que se teclea arriba
+  /* Hueco entre bloques: 16 m, y no es un número bonito. De él sale la
+     elevación a la que hay que apagar las sombras (más abajo), y con 10 m se
+     apagaban a 13° — justo por encima del momento que la escena existe para
+     enseñar: el amanecer de invierno, cuando el backtracking abre el ángulo y
+     el que no lo lleva se queda clavado en el tope. Con 16 m aguantan hasta
+     8,5° y ese momento se ve. */
+  var sep=Math.max(largo,(NFILAS3D-1)*Math.max(6,cfg.cw/cfg.gcr))+16;
+  var x0=-(keys.length-1)*sep/2, anchoTot=(keys.length-1)*sep+largo;
+
+  keys.forEach(function(k,i){
+    var spec=FIS.spec(k); if(!spec)return;
+    var gcr=cfg.gcrDe(spec), pitch=cfg.cw/gcr;
+    var grupo=new THREE.Group(); grupo.position.x=x0+i*sep; MUNDO.add(grupo);
+    var filas=[];
+    for(var f=0;f<NFILAS3D;f++){
+      var d=(f-(NFILAS3D-1)/2)*pitch;
+      var uno;
+      if(spec.fam==='tracker'){
+        uno=seguidor3D(mats); uno.position.x=d;          // filas hacia el ESTE
+      }else if(spec.fam==='fija_ew'){
+        // dos aguas: la mesa lleva DOS paneles enfrentados, y las filas se
+        // repiten hacia el este como en el seguidor (las filas corren N-S)
+        uno=new THREE.Group();
+        var a=mesaFija3D(mats,largo,anchoFija/2), b=mesaFija3D(mats,largo,anchoFija/2);
+        a.position.z=-anchoFija/4; b.position.z=anchoFija/4;
+        uno.add(a,b); uno.spinPair=[a.spin,b.spin]; uno.position.x=d;
+        uno.rotation.y=Math.PI/2;                        // mesa a lo largo de N-S
+      }else{
+        uno=mesaFija3D(mats,largo,anchoFija); uno.position.z=d;   // filas hacia el SUR
+      }
+      grupo.add(uno); filas.push(uno);
+    }
+    var col='#'+(COL[k]||'#888888').replace('#','');
+    var et=etiqueta3D(spec.label.replace('Tracker 1 eje ','').replace(' (dos aguas)',''),
+                      col,sep*0.94);
+    et.position.set(0,D.postH+2.4+et.userData.alto,0); grupo.add(et);
+    BLOQUES.push({key:k,spec:spec,filas:filas,gcr:gcr,pitch:pitch});
+  });
+  /* ── ENCUADRE Y SOMBRAS ──
+     Las dos cosas que hay que dimensionar CON la escena, no a ojo:
+
+     · La cámara: un poco alta y desde el SUR, con algo de horizonte a la vista
+       — desde muy arriba el encuadre es todo suelo y desde muy abajo los
+       bloques de detrás se tapan entre ellos.
+     · El frustum de sombra del sol. Esto no es cosmética: una luz direccional
+       de three.js trae una cámara ortográfica de ±5 m, así que con la escena a
+       escala de planta la sombra sencillamente NO SE DIBUJA en ningún sitio.
+       Y esta ficha existe en buena parte para enseñar la sombra entre filas.  */
+  var ancho=anchoTot, largoZ=(NFILAS3D+1)*8+largo;
+  var asp=Math.max(1.2,(TD.w||900)/(TD.h||420));
+  var d=Math.max((ancho*0.58)/(Math.tan(21*Math.PI/180)*asp),largoZ*0.9);
+  TD.suelo.scale.set(ancho*3.2,largoZ*4,1);
+  TD.radio=Math.max(220,d*1.6);
+  TD.cam.position.set(0,d*0.30,d*0.86); TD.ct.target.set(0,4,-largoZ*0.05);
+  encuadra();
+  /* La niebla se dimensiona con la escena. Fija, o se come los bloques cuando
+     son pocos, o deja una línea dura donde acaba el suelo cuando son seis. */
+  if(TD.sc.fog){TD.sc.fog.near=d*0.9; TD.sc.fog.far=d*5.5;}
+  var sh=TD.sun.shadow.camera;
+  sh.left=-ancho*0.62; sh.right=ancho*0.62; sh.top=largoZ*0.9; sh.bottom=-largoZ*0.9;
+  sh.far=Math.max(1500,d*6); sh.updateProjectionMatrix();
+  /* Elevación por debajo de la cual se apagan las sombras, DERIVADA de la
+     geometría y no tecleada: una sombra mide `altura / tan(elev)`, así que la
+     elevación a la que justo alcanza el hueco entre bloques es
+     `atan(altura / hueco)`. Por debajo, la sombra de un bloque cruza al vecino
+     y lo que enseña no es información, es contaminación entre casos. */
+  var alt=D.postH+D.modH/2*Math.sin(55*Math.PI/180);
+  TD.elevMinSombra=Math.atan(alt/Math.max(6,sep-largo))*180/Math.PI*0.8;
+}
+
+/* ── Poner la escena en un INSTANTE ──
+   Los ángulos NO se inventan aquí: salen de las mismas funciones que calculan
+   la tabla (FIS.psTracker/psFija/psTSAT + FIS.theta). Si la escena y la tabla
+   se contradijeran, una de las dos estaría mintiendo.                        */
+function actualiza3D(){
+  if(!TD||!BLOQUES.length)return;
+  var cfg=cfgActual(), fecha=$('fecha').value||'2023-06-21', min=+$('hora').value;
+  var d=new Date(fecha+'T00:00:00Z');
+  // La hora del deslizador es LOCAL SOLAR aproximada: se corrige con la
+  // longitud para que «12:00» caiga cerca del mediodía solar del sitio.
+  var t=new Date(d.getTime()+(min-cfg.lon*4)*60000);
+  var S=FIS.sun(t,cfg.lat*FIS.D2R,cfg.lon);
+  var elDeg=S.el*FIS.R2D, azDeg=(180+S.az*FIS.R2D+360)%360;
+  ponSol(elDeg,azDeg);
+  $('hlbl').textContent=('0'+Math.floor(min/60)).slice(-2)+':'+('0'+(min%60)).slice(-2);
+
+  var ro=[roEsc('Sol',elDeg>0?fmt(elDeg,0)+'°':'bajo el horizonte',
+                elDeg>0?'elev · az '+fmt(azDeg,0)+'°':'')];
+  BLOQUES.forEach(function(B){
+    var th=0, spec=B.spec, tilt=(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
+    if(spec.fam==='tracker'){
+      var P=spec.tsat?FIS.psTSAT(S.el,S.az,cfg.axTilt,cfg.lat):FIS.psTracker(S.el,S.az);
+      th=(elDeg>0)?FIS.theta(P.ps,B.gcr,cfg.maxang,spec.bt):0;
+      B.filas.forEach(function(u){
+        /* SIGNO. El grupo del seguidor entra girado 90° en Y, así que su +X
+           local (el tubo) apunta al NORTE y su +Z local al ESTE. Girar POSITIVO
+           sobre ese +X lleva la normal del panel hacia el este, que es
+           exactamente la convención del core (θ>0 = tumbado al ESTE). Con el
+           signo cambiado, a mediodía no se nota nada —θ≈0— y por la mañana el
+           seguidor mira al oeste: AOI de 106° contra el sol. Lo caza
+           tests/test_comparador_3d.js midiendo la normal a las 8 y a las 17. */
+        u.spin.rotation.x=th*FIS.D2R;
+        // Eje inclinado: el TSAT sube hacia el ecuador. En el hemisferio norte,
+        // hacia el sur (+z del mundo).
+        u.rotation.x=(spec.tsat?(cfg.lat>=0?1:-1)*Math.abs(cfg.axTilt)*FIS.D2R:0);
+      });
+    }else if(spec.fam==='fija_ew'){
+      B.filas.forEach(function(u){
+        u.spinPair[0].rotation.x= tilt*FIS.D2R;
+        u.spinPair[1].rotation.x=-tilt*FIS.D2R;
+      });
+      th=tilt;
+    }else{
+      // Fija monoinclinada: mira al ECUADOR. Filas E-O ⇒ el giro va sobre X.
+      var sgn=(cfg.lat>=0?1:-1);
+      var tOpt=(spec.tiltOpt&&REP)?tiltDeRep(B.key):tilt;
+      B.filas.forEach(function(u){u.spin.rotation.x=sgn*tOpt*FIS.D2R;});
+      th=tOpt;
+    }
+    ro.push(roEsc(spec.label.replace('Tracker 1 eje ','').replace('Fija · ',''),
+      (spec.fam==='tracker'?(elDeg>0?fmt(th,1)+'°':'—'):fmt(th,0)+'°'),
+      spec.fam==='tracker'?'θ':'tilt'));
+  });
+  $('escRead').innerHTML=ro.join('');
+}
+function roEsc(k,v,s){return '<div class="ro"><div class="k">'+esc(k)+'</div><div class="v">'+
+  esc(v)+(s?' <small>'+esc(s)+'</small>':'')+'</div></div>';}
+/* Si ya se ha comparado, la fija «óptima» se dibuja con SU tilt, no con el de
+   proyecto: si no, la escena enseñaría una estructura distinta de la de la tabla. */
+function tiltDeRep(key){
+  if(!REP||!REP.filas)return +$('tilt').value;
+  for(var i=0;i<REP.filas.length;i++)if(REP.filas[i].key===key&&REP.filas[i].tilt!=null)return REP.filas[i].tilt;
+  return +$('tilt').value;
+}
+function avanzaHora(dt){
+  var h=$('hora'), v=(+h.value)+dt*90;      // 90 min de sol por segundo
+  if(v>1439)v-=1440;
+  h.value=Math.round(v); actualiza3D();
+}
+
 /* ===================== ARRANQUE ===================== */
 pintaEstructuras(); loadPlants(); refrescaGeom(); detectEngine();
 $('run').onclick=run;
+
+/* La escena se ve DESDE QUE SE ABRE, sin haber comparado nada: es la lección
+   que dejó la ficha de Viento («¿y el 3D?» — estaba al final, detrás de todo). */
+init3D(); construyeMundo(); actualiza3D();
+document.addEventListener('change',function(e){
+  if(e.target.classList&&e.target.classList.contains('st')){construyeMundo();actualiza3D();}
+});
+['pitch','cw','land','axtilt','tilt','lat','lon'].forEach(function(id){
+  $(id).addEventListener('change',function(){construyeMundo();actualiza3D();});
+});
+$('hora').oninput=actualiza3D;
+$('fecha').onchange=actualiza3D;
+$('play').onclick=function(){PLAY=!PLAY;this.textContent=PLAY?'❚❚':'▶';};
 </script>
 </body>
 </html>

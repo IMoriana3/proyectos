@@ -59,6 +59,52 @@ careo lo comprueba: si el core añade una y la ficha no, el test se pone rojo.
   un barrido de transposición sin sombra y queda 1-3° por encima. También sale como aviso.
 * No hay bifacialidad, ni suciedad, ni terreno: campo plano y monofacial.
 
+## La escena 3D
+
+Un bloque por estructura, **todos al mismo sol y sobre el mismo suelo**, con tres filas al pitch
+real de cada una. Es la otra mitad de la tabla: los números dicen cuánta POA pierde cada
+estructura y la escena dice **por qué**.
+
+Lo que se ve moviendo el deslizador de la hora (y la fecha):
+
+* el seguidor **abriendo el ángulo al amanecer** para no taparse — y el que no lleva backtracking
+  clavado en el tope de ±55° con las filas de delante sombreando a las de detrás. En Sevilla, el
+  21 de diciembre a las 08:20: 22,6° contra 55,0°. Esa imagen es la columna «pérdida sombra».
+* la fija quieta mientras el seguidor gira, y las **dos aguas** mirando a lados opuestos;
+* el **eje inclinado** subiendo hacia el ecuador.
+
+Los ángulos **no se inventan en el render**: salen de las mismas funciones que calculan la tabla
+(`FIS.psTracker` / `psFija` / `psTSAT` + `FIS.theta`). Si la escena y la tabla se contradijeran, una
+de las dos estaría mintiendo — hay un test que compara el tilt dibujado con el de la tabla.
+
+La estética es la de la casa (overcast · bt3d · sim-viento), y no de oído: cúpula de cielo con
+degradado por altura que se repinta con la elevación del sol, doble suelo (uno de trabajo que
+recibe sombras y uno de horizonte que llega hasta la cúpula) cosidos con **niebla del color del
+horizonte** —sin ella el suelo acaba en una línea recta y los bloques parecen estar sobre una mesa
+flotando en el vacío—, y el sol como sprite con halo dimensionado con la escena. El seguidor es el
+modelo **real** de `seguidor.js`, el mismo que pintan el Gemelo Digital y la Cobertura 3D.
+
+### Tres cosas que hubo que dimensionar con la escena, no a ojo
+
+1. **El frustum de sombra.** Una luz direccional de three.js trae una cámara ortográfica de ±5 m:
+   a escala de planta la sombra sencillamente **no se dibuja en ningún sitio**. Y esta ficha
+   existe en buena parte para enseñar la sombra entre filas.
+2. **El encuadre.** La fórmula «distancia = medio ancho / tan(fov/2)» encuadra un objeto plano;
+   aquí los bloques tienen profundidad y los rótulos sobresalen. Medido, se pasaba un **26 %** y
+   cortaba los bloques de los extremos. Ahora `encuadra()` proyecta la caja del mundo a
+   coordenadas de pantalla y corrige la distancia hasta que cabe, con dos bloques o con seis.
+3. **El hueco entre bloques** (16 m). De él sale la elevación a la que se apagan las sombras
+   —una sombra mide `altura / tan(elev)`, así que por debajo de cierta altura cruza al bloque
+   vecino y contamina la comparación—. Con 10 m se apagaban a 13°, justo por encima del amanecer
+   de invierno que la escena existe para enseñar; con 16 m aguantan hasta 8,5°.
+
+### El error que cazó el test del 3D
+
+El primer render tenía el **signo de la basculación cambiado**: por la mañana los seguidores se
+tumbaban al **oeste**, con el sol al este — 106° de ángulo de incidencia, apuntando justo al lado
+contrario. A mediodía no se notaba nada, porque θ≈0. Por eso `tests/test_comparador_3d.js` mide la
+normal del panel **a las 8 y a las 17**, y no solo al mediodía.
+
 ## Los dos motores
 
 La ficha calcula **en el navegador** para poder abrirse en el Panel sin depender de que alguien
@@ -113,6 +159,8 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 
 ```bash
 node tests/test_comparador.js       # 27 comprobaciones · careo contra el core, sin navegador
+python3 -m http.server 8099         # (en otra terminal, para el 3D)
+node tests/test_comparador_3d.js    # 31 comprobaciones · la escena en un Chromium de verdad
 ```
 
 El test **extrae el bloque `FÍSICA PURA` del HTML real**, no una copia: una copia se quedaría
