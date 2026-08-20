@@ -95,10 +95,10 @@ python3 -m http.server 8099                # servir el repo (en otra terminal)
 node tests/test_index.js                   # 13 comprobaciones
 node tests/test_pwa.js                     # 21 comprobaciones (PWA)
 node tests/test_integridad.js              # 6 comprobaciones, sin navegador
-node tests/test_comparador.js              # 74 comprobaciones, careo contra el core y barridos
-node tests/test_comparador_3d.js           # 91 comprobaciones, escena 3D, equipos, sizing y barridos
+node tests/test_comparador.js              # 79 comprobaciones, careo contra el core y barridos
+node tests/test_comparador_3d.js           # 95 comprobaciones, escena 3D, equipos, sizing y barridos
 node tests/test_sizing.js                  # 115 comprobaciones, careo del dimensionado eléctrico
-node tests/test_comparador_sitio.js        # 34 comprobaciones, el buscador de emplazamiento
+node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
 node tests/test_viento_ejes.js             # 64 comprobaciones, lienzos, ejes, transmisión, reproductor y sombras
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
 node tests/test_layout.js                  # 119 comprobaciones, careo del generador de layout
