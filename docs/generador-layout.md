@@ -263,10 +263,10 @@ Son refinamientos de borde: mueven unidades sobre parcelas irregulares, no el or
 
 ## El careo
 
-`node tests/test_layout.js` — 119 comprobaciones, sin navegador.
+`node tests/test_layout.js` — 151 comprobaciones, sin navegador.
 
 Extrae el bloque `MOTOR DE LAYOUT` del `generador-layout.html` **real** (no una copia en un `.js`,
-que se quedaría careando una versión vieja) y lo corre sobre las mismas nueve parcelas que corrió
+que se quedaría careando una versión vieja) y lo corre sobre las mismas doce parcelas que corrió
 `solargpt_core.layout_v2.compute_layout_v2` (`tests/careo-layout.json`).
 
 Lo que se exige, y por qué eso y no la igualdad:
@@ -280,8 +280,18 @@ Lo que se exige, y por qué eso y no la igualdad:
 | GCR de tracker | exacto | `apertura / pitch`. En fija el core lo define por área, así que arrastra la diferencia del conteo |
 | UTM contra pyproj | < 1 mm | Tres órdenes de magnitud menos que el gap entre módulos |
 
-Medido hoy sobre los nueve casos: **cuatro clavados** (parcela girada 35°, parcela en L, setback de
-15 m, hueco central) y el peor a **1,89 %** (montaje fijo 2V). Con mutantes: si el setback deja de
+Medido hoy sobre los doce casos: **tres clavados** (parcela girada 35° bifila, parcela en L
+monofila, setback de 15 m), el peor a **1,89 %** (montaje fijo 2V) y las **filas idénticas en 11 de
+12**.
+
+Tres de los doce son **bifila con multi-talla** —sobre rectángulo girado 35°, sobre parcela en L y
+sobre rectángulo recto—, y están ahí a propósito: es la combinación donde el emparejado A/B se
+rompe, es lo que se vio fallando en planta, y el careo no la cubría. Un banco que solo carea
+rectángulos limpios y monofila no puede cazar lo que el uso real caza a la primera.
+
+Y en **todos** los casos bifila del fixture se mide el invariante sobre los datos: cero pares
+descuadrados, **Δx = 0 m** entre sub-filas y conteo par en todas las líneas. Si alguien vuelve a
+colocar la sub-fila B por su cuenta, esto se pone rojo. Con mutantes: si el setback deja de
 morder, si la banda de erosión se escribe sin el término del vértice, o si el GCR se calcula sobre
 otro pitch, el careo se pone rojo.
 

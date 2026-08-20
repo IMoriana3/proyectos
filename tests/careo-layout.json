@@ -487,6 +487,211 @@
    }
   },
   {
+   "nombre": "rect girado 35° · BIFILA multi-talla 28/14/7",
+   "poly": [
+    [
+     -116.6909,
+     -356.3821
+    ],
+    [
+     374.8003,
+     -12.2363
+    ],
+    [
+     116.6909,
+     356.3821
+    ],
+    [
+     -374.8003,
+     12.2363
+    ]
+   ],
+   "holes": [],
+   "cfg": {
+    "setback_m": 5.0,
+    "mod_len": 2.382,
+    "mod_wid": 1.134,
+    "gap_modules": 0.02,
+    "gap_motor": 0.5,
+    "gap_ns": 0.5,
+    "road_every": 0,
+    "road_w": 4.0,
+    "road_ns_every": 0,
+    "road_ns_w": 4.0,
+    "layout_mode": "aligned",
+    "align_to_grid": true,
+    "min_structs_per_row": 2,
+    "mount_type": "tracker",
+    "table_type": "1V",
+    "mods_per_struct": [
+     28,
+     14,
+     7
+    ],
+    "bifila": true,
+    "pitch_m": 6.0,
+    "panel_az_deg": 90.0
+   },
+   "core": {
+    "structures": 1376.0,
+    "trackers": 688.0,
+    "rows": 120.0,
+    "modules": 35238.0,
+    "kWp": 22199.94,
+    "GCR": 0.397,
+    "fill_factor": 0.35627975882259605,
+    "usable_fill": 0.3705059591288371,
+    "struct_w_m": 32.291999999999994,
+    "collector_h_m": 2.382,
+    "mesa_len_m": 32.291999999999994,
+    "fila_len_m": 65.08399999999999,
+    "poly_area_m2": 271690.0020228862,
+    "inner_area_m2": 261258.0068153905,
+    "col_area_m2": 96797.64839522452,
+    "density_kWp_ha": 817.1055185950478,
+    "mods_per_struct": 28.0
+   }
+  },
+  {
+   "nombre": "parcela en L · BIFILA multi-talla 28/14/7",
+   "poly": [
+    [
+     -300,
+     -225
+    ],
+    [
+     300,
+     -225
+    ],
+    [
+     300,
+     0
+    ],
+    [
+     40,
+     0
+    ],
+    [
+     40,
+     225
+    ],
+    [
+     -300,
+     225
+    ]
+   ],
+   "holes": [],
+   "cfg": {
+    "setback_m": 5.0,
+    "mod_len": 2.382,
+    "mod_wid": 1.134,
+    "gap_modules": 0.02,
+    "gap_motor": 0.5,
+    "gap_ns": 0.5,
+    "road_every": 0,
+    "road_w": 4.0,
+    "road_ns_every": 0,
+    "road_ns_w": 4.0,
+    "layout_mode": "aligned",
+    "align_to_grid": true,
+    "min_structs_per_row": 2,
+    "mount_type": "tracker",
+    "table_type": "1V",
+    "mods_per_struct": [
+     28,
+     14,
+     7
+    ],
+    "bifila": true,
+    "pitch_m": 6.0,
+    "panel_az_deg": 90.0
+   },
+   "core": {
+    "structures": 1104.0,
+    "trackers": 552.0,
+    "rows": 98.0,
+    "modules": 27636.0,
+    "kWp": 17410.68,
+    "GCR": 0.397,
+    "fill_factor": 0.3567005216738345,
+    "usable_fill": 0.37507327866401247,
+    "struct_w_m": 32.291999999999994,
+    "collector_h_m": 2.382,
+    "mesa_len_m": 32.291999999999994,
+    "fila_len_m": 65.08399999999999,
+    "poly_area_m2": 212822.83431797146,
+    "inner_area_m2": 202397.82555485007,
+    "col_area_m2": 75914.01602532447,
+    "density_kWp_ha": 818.083268921571,
+    "mods_per_struct": 28.0
+   }
+  },
+  {
+   "nombre": "rect 600x450 · BIFILA multi-talla 28/14",
+   "poly": [
+    [
+     -300.0,
+     -225.0
+    ],
+    [
+     300.0,
+     -225.0
+    ],
+    [
+     300.0,
+     225.0
+    ],
+    [
+     -300.0,
+     225.0
+    ]
+   ],
+   "holes": [],
+   "cfg": {
+    "setback_m": 5.0,
+    "mod_len": 2.382,
+    "mod_wid": 1.134,
+    "gap_modules": 0.02,
+    "gap_motor": 0.5,
+    "gap_ns": 0.5,
+    "road_every": 0,
+    "road_w": 4.0,
+    "road_ns_every": 0,
+    "road_ns_w": 4.0,
+    "layout_mode": "aligned",
+    "align_to_grid": true,
+    "min_structs_per_row": 2,
+    "mount_type": "tracker",
+    "table_type": "1V",
+    "mods_per_struct": [
+     28,
+     14
+    ],
+    "bifila": true,
+    "pitch_m": 6.0,
+    "panel_az_deg": 90.0
+   },
+   "core": {
+    "structures": 1356.0,
+    "trackers": 678.0,
+    "rows": 98.0,
+    "modules": 35280.0,
+    "kWp": 22226.4,
+    "GCR": 0.397,
+    "fill_factor": 0.3567082015822561,
+    "usable_fill": 0.37094919627459577,
+    "struct_w_m": 32.291999999999994,
+    "collector_h_m": 2.382,
+    "mesa_len_m": 32.291999999999994,
+    "fila_len_m": 65.08399999999999,
+    "poly_area_m2": 271690.00191112864,
+    "inner_area_m2": 261259.63593639282,
+    "col_area_m2": 96914.05196959841,
+    "density_kWp_ha": 818.0794230061651,
+    "mods_per_struct": 28.0
+   }
+  },
+  {
    "nombre": "rect 600x450 · hueco central de 120x120",
    "poly": [
     [
