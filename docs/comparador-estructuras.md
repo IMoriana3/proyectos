@@ -235,6 +235,29 @@ quién lo limita no se puede discutir con nadie.
 > razón física. Es la decisión declarada del core, y hay un guard que se pone rojo si alguien la
 > revierte.
 
+### Las temperaturas, del emplazamiento
+
+Teclear −10/70 a ojo es dimensionar **otro sitio**. El botón *«Temperaturas del emplazamiento»* las
+baja del archivo de Open-Meteo —el mismo proveedor de la meteo de la ficha— para el año elegido y
+aplica la convención bankable (IEC 62548, la de la página 5 del Streamlit):
+
+```
+T_min de célula = P0,5  del aire del año           ← sin sumar nada
+T_max de célula = P99,5 del aire + 25 °C de delta
+```
+
+Percentiles y no extremos absolutos, porque un pico de una hora no dimensiona una planta. Y en frío
+no se suma delta: el peor caso de Voc es el amanecer despejado, con la célula todavía a la
+temperatura del aire.
+
+Se bajan **siempre de Open-Meteo**, aunque la comparativa vaya en cielo claro: el cielo claro es un
+modelo de irradiancia, no tiene temperatura, y fingir una sería peor que no traerla. Va dicho al
+lado. Y cambiar de emplazamiento o de año **invalida lo traído**: seguir enseñando «Túnez · 2023»
+sobre las temperaturas de otro sitio sería peor que no enseñar nada.
+
+El percentil se interpola linealmente entre las dos muestras que lo rodean, que es lo que hace
+`pandas.Series.quantile` por defecto — o sea, la cifra contra la que se compara.
+
 ### El careo es EXACTO, no «se parece»
 
 `node tests/test_sizing.js` — 104 comprobaciones. Aquí no hay dos modelos de transposición
@@ -494,8 +517,8 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 node tests/test_comparador.js       # 74 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 34 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 87 comprobaciones · escena, equipos y sizing
-node tests/test_sizing.js           # 104 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
+node tests/test_comparador_3d.js    # 91 comprobaciones · escena, equipos y sizing
+node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 
 El test **extrae el bloque `FÍSICA PURA` del HTML real**, no una copia: una copia se quedaría

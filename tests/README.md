@@ -96,8 +96,8 @@ node tests/test_index.js                   # 13 comprobaciones
 node tests/test_pwa.js                     # 21 comprobaciones (PWA)
 node tests/test_integridad.js              # 6 comprobaciones, sin navegador
 node tests/test_comparador.js              # 74 comprobaciones, careo contra el core y barridos
-node tests/test_comparador_3d.js           # 87 comprobaciones, escena 3D, equipos, sizing y barridos
-node tests/test_sizing.js                  # 104 comprobaciones, careo del dimensionado eléctrico
+node tests/test_comparador_3d.js           # 91 comprobaciones, escena 3D, equipos, sizing y barridos
+node tests/test_sizing.js                  # 115 comprobaciones, careo del dimensionado eléctrico
 node tests/test_comparador_sitio.js        # 34 comprobaciones, el buscador de emplazamiento
 node tests/test_viento_ejes.js             # 64 comprobaciones, lienzos, ejes, transmisión, reproductor y sombras
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio

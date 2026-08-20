@@ -130,6 +130,47 @@ check('string de 26: Voc en frío = 1173,4 V (bajo los 1500 del inversor)',
 check('string de 26: Vmp en caliente = 785,5 V (por encima del suelo MPPT)',
   Math.abs(S.vmpCaliente - 26 * 30.2107) < 1e-3 && S.vmpCaliente > INV.mppt_low);
 
+// ── 4b) LAS TEMPERATURAS DEL EMPLAZAMIENTO ──
+// El string se dimensiona por los dos extremos térmicos del SITIO, y teclear
+// -10/70 a ojo es dimensionar otro sitio. Convención bankable (IEC 62548), la
+// misma que la página 5 del Streamlit: P0,5 del aire para el frío y P99,5 del
+// aire + 25 °C de delta de célula para el calor.
+//
+// El percentil se interpola linealmente entre las dos muestras que lo rodean,
+// que es lo que hace `pandas.Series.quantile` por defecto — o sea, la cifra
+// contra la que se compara. Las de aquí están calculadas A MANO.
+//   serie 0..100 (101 muestras): i = 100·p
+//   P0,5  → i = 0.5  → 0 + (1-0)·0.5  = 0.5
+//   P99,5 → i = 99.5 → 99 + (100-99)·0.5 = 99.5
+const cien = Array.from({ length: 101 }, (_, i) => i);
+check('percentil 0,5 de 0..100 = 0,5 (interpolado, como pandas)',
+  Math.abs(FIS.percentil(cien, 0.005) - 0.5) < 1e-12, String(FIS.percentil(cien, 0.005)));
+check('percentil 99,5 de 0..100 = 99,5',
+  Math.abs(FIS.percentil(cien, 0.995) - 99.5) < 1e-12, String(FIS.percentil(cien, 0.995)));
+check('la mediana de 0..100 es 50', Math.abs(FIS.percentil(cien, 0.5) - 50) < 1e-12);
+check('el percentil no depende del orden de entrada',
+  Math.abs(FIS.percentil(cien.slice().reverse(), 0.005) - 0.5) < 1e-12);
+check('los NaN no cuentan (una hora sin dato no es 0 °C)',
+  Math.abs(FIS.percentil([NaN, 0, NaN, 100], 0.5) - 50) < 1e-12,
+  String(FIS.percentil([NaN, 0, NaN, 100], 0.5)));
+check('sin ninguna muestra buena devuelve NaN, no un cero con pinta de dato',
+  !isFinite(FIS.percentil([NaN, NaN], 0.5)));
+
+const TP = FIS.tempsProyecto(cien);
+check('T mín de célula = el P0,5 del aire, SIN sumar nada (0,5 °C)',
+  Math.abs(TP.tMin - 0.5) < 1e-9, String(TP.tMin));
+check('T máx de célula = P99,5 del aire + 25 °C de delta (124,5 °C)',
+  Math.abs(TP.tMax - 124.5) < 1e-9, String(TP.tMax));
+check('publica también el aire crudo, para poder discutirlo',
+  TP.aireMin === 0.5 && TP.aireMax === 99.5 && TP.delta === 25, JSON.stringify(TP));
+check('sin temperaturas devuelve null en vez de inventarse un rango',
+  FIS.tempsProyecto([NaN, NaN]) === null);
+// y el resultado entra en la ventana: más frío = menos módulos por string
+const vFrio = FIS.ventana({ voc: MOD.voc, vmp: MOD.vmp, betaVocPct: -0.25,
+  tMin: -20, tMax: 70, mpptLow: INV.mppt_low, mpptHigh: INV.mppt_high, vdcMax: INV.vdcmax });
+check('un emplazamiento más frío recorta el máximo de módulos por string (' +
+  V.nMax + ' → ' + vFrio.nMax + ')', vFrio.nMax < V.nMax);
+
 // ── 5) que la ventana se declare INVIABLE cuando lo es ──
 // Un módulo de mucha tensión con un inversor de poca: el mínimo por MPPT sale
 // por encima del máximo por Vdcmax y no hay ningún N que valga. Devolver un
