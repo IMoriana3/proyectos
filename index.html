@@ -948,7 +948,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/comparador-estructuras.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-20",
-    version: "1.3",
+    version: "1.4",
     docId: "comparador-estructuras",
     docUrl: "",
     download: "",
@@ -978,6 +978,7 @@ const PROJECTS = [
       { done:false, text:"Enganchar el LCOE (motor /economy) para que al lado del ranking de kWh salga el de €/MWh." }
     ],
     historial: [
+      { date:"2026-08-20", ver:"1.4", note:"Los dos configuradores se llaman por su nombre en pantalla —«Configurador · FIJA» y «Configurador · TRACKER»— y cada uno dice EN VIVO a cuántas de las estructuras marcadas gobierna. Estaban ya separados desde 1.3, pero con dos tarjetas casi idénticas y un rótulo tenue no se veía cuál mandaba sobre qué fila de la tabla." },
       { date:"2026-08-20", ver:"1.3", note:"Fija y tracker se configuran POR SEPARADO, cada una con su geometría y su pitch, como §03.F y §03.T0 — el mismo pitch para todas era una hipótesis metida de tapadillo, y CLAUDE.md ya avisaba de que «la FIJA no debe machacar el GCR del tracker». Con la fija apretada a 4,5 m el ranking por m² de suelo se da la vuelta: gana la fija aunque pierda un 19,7 % por módulo. Queda el interruptor «igualar el suelo» para el A/B limpio. Y un GCR > 1 se rechaza en vez de devolver disparates con pinta de número." },
       { date:"2026-08-20", ver:"1.2", note:"El tamaño de la estructura se configura como en el cuaderno y en Streamlit —módulo, mesa 1V…4V/1H…4H, módulos por string, strings por fila, gaps y monofila/bifila— con el puerto literal de layout_engine.compute_size_from_mods, careado contra las cifras del core. De paso queda separado lo que su código ya separaba: la apertura manda en el GCR y el alto de colector (con gaps) en el sombreado. La escena 3D dibuja el bloque a ese tamaño real." },
       { date:"2026-08-20", ver:"1.1", note:"Escena 3D con la estética de la casa: un bloque por estructura al mismo sol, cielo con degradado por altura, doble suelo con niebla del color del horizonte y el seguidor real de seguidor.js. El test del 3D (mide la NORMAL de cada panel contra el sol) cazó el signo de basculación cambiado —por la mañana los seguidores miraban al oeste, 106° de AOI—, que a mediodía no se nota porque θ≈0. Y dos cosas que hubo que dimensionar con la escena: el frustum de sombra (three.js trae ±5 m, así que a escala de planta no se dibujaba ninguna) y el encuadre, que medido se pasaba un 26 % y cortaba los bloques de los extremos." },

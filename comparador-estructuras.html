@@ -116,7 +116,7 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
     </div>
 
     <div class="card">
-      <h2>▤ Fija <span class="sn">geometría propia · §03.F</span></h2>
+      <h2>▤ Configurador · FIJA <span class="sn" id="fxGob">§03.F</span></h2>
       <div class="two">
         <div class="field"><label>Módulo · largo (m)</label><input id="fxModL" type="number" step="0.001" value="2.382"></div>
         <div class="field"><label>Módulo · ancho (m)</label><input id="fxModW" type="number" step="0.001" value="1.134"></div>
@@ -152,7 +152,7 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
     </div>
 
     <div class="card">
-      <h2>▤ Tracker <span class="sn">geometría propia · §03.T0</span></h2>
+      <h2>▤ Configurador · TRACKER <span class="sn" id="tkGob">§03.T0</span></h2>
       <div class="two">
         <div class="field"><label>Módulo · largo (m)</label><input id="tkModL" type="number" step="0.001" value="2.382"></div>
         <div class="field"><label>Módulo · ancho (m)</label><input id="tkModW" type="number" step="0.001" value="1.134"></div>
@@ -768,9 +768,20 @@ function pintaFam(pfx,cfgFam){
     (pfx==='tk'?'tracker'+(T.filasTracker>1?' ('+T.filasTracker+' filas)':''):'estructura')+
     (pfx==='tk'&&T.filasTracker>1?'. <b>Monofila/bifila no cambia la POA</b>: la mesa mide lo mismo y la irradiación es por m² de módulo.':'.');
 }
+/* Cada configurador dice, en vivo, a qué estructuras gobierna. Sin esto la
+   pantalla tiene dos paneles casi iguales y no se ve cuál manda sobre qué: el
+   de la fija mueve tres filas de la tabla y el del tracker las otras tres. */
+function gobierna(fam){
+  var n=elegidas().filter(function(k){
+    var sp=FIS.spec(k); return sp && (fam==='tracker'?sp.fam==='tracker':sp.fam!=='tracker');});
+  return n.length ? n.length+' estructura'+(n.length>1?'s':'')+' marcada'+(n.length>1?'s':'')
+                  : 'ninguna marcada';
+}
 function refrescaGeom(){
   var c=cfgActual();
   pintaFam('fx',c.fija); pintaFam('tk',c.tracker);
+  $('fxGob').textContent='§03.F · '+gobierna('fija');
+  $('tkGob').textContent='§03.T0 · '+gobierna('tracker');
   var malo=avisoGeom('fx',c.fija)||avisoGeom('tk',c.tracker);
   $('run').disabled=!!malo;
   var mismo=Math.abs(c.fija.gcr-c.tracker.gcr)<1e-6;
@@ -1340,7 +1351,8 @@ $('run').onclick=run;
    que dejó la ficha de Viento («¿y el 3D?» — estaba al final, detrás de todo). */
 init3D(); construyeMundo(); actualiza3D();
 document.addEventListener('change',function(e){
-  if(e.target.classList&&e.target.classList.contains('st')){construyeMundo();actualiza3D();}
+  if(e.target.classList&&e.target.classList.contains('st')){
+    refrescaGeom(); construyeMundo(); actualiza3D();}
 });
 /* Todo lo que cambia la GEOMETRÍA rehace la escena: el tamaño del colector, el
    suelo y el emplazamiento. (La lista se quedó con un 'cw' que ya no existe al
