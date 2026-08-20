@@ -388,6 +388,51 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-20 · v1.31** — **la difusa también la tapa la sombra, y el IAM existe: con la óptica
+  completa GANA EL BACKTRACKING.** La v1.30 arregló el parámetro eléctrico; quedaba el otro lado de
+  la comparación, la irradiancia. Faltaban dos términos, y van en sentidos opuestos:
+  **(1) el circunsolar entraba ENTERO.** En Perez 1990 el circunsolar es una fuente **puntual en la
+  posición del sol** —por eso su POA se calcula con el mismo `cos AOI` del haz—, así que **la sombra
+  que tapa el haz lo tapa a él**. Hasta la v1.30 se sumaba sin tocar: energía regalada justo en las
+  horas de backtracking, que es donde el circunsolar más pesa y donde se decide todo. No era una
+  elección de modelo, era una incoherencia interna. Ahora se tapa **en proporción al área sombreada**
+  (óptica pura: sin la amplificación de subcadena, que es electricidad).
+  **(2) faltaba el IAM, y este juega EN CONTRA del backtracking.** ASHRAE `1 − b₀·(1/cos AOI − 1)`
+  con b₀=0,05 al haz y al circunsolar, y ángulos equivalentes de Duffie-Beckman a la isótropa y al
+  albedo. El astronómico apunta al sol (AOI≈0, el vidrio transmite casi todo) y el backtracking se
+  gira **deliberadamente fuera**, así que trabaja oblicuo y refleja más: es el **único sesgo conocido
+  que empuja hacia astro**, y entra igual. Cuesta −1,65% del POA anual de Ayora, que es transmisión
+  que el vidrio nunca dio y le estábamos apuntando al BT.
+  **La respuesta, en banda y no en número** (`tools/banda_astro_bt.mjs`, Ayora 12 días, astro frente
+  a pairwise; − = gana el backtracking):
+
+  | n | b₀ | circunsolar tapado (v1.31) | pesimista (subcadena muerta) | SIN tapar (≤v1.30) |
+  |---|----|---------------------------|------------------------------|--------------------|
+  | 1 | 0    | −2,972% | −3,590% | −1,541% |
+  | 1 | 0,05 | −2,807% | −3,461% | −1,352% |
+  | **2** | 0    | −1,248% | −1,549% | **+0,110%** |
+  | **2** | **0,05** | **−1,005%** | −1,321% | +0,376% |
+  | 3 | 0    | −0,917% | −1,129% | +0,421% |
+  | 3 | 0,05 | −0,653% | −0,875% | +0,707% |
+
+  **Toda la banda del modelo tiene el mismo signo: −3,59% … −0,65%, gana el backtracking.** En Ayora,
+  con la n ya conocida (mesa 1V en retrato, n=2): **−1,55% … −1,01%**. El único punto donde astro
+  ganaba era el circunsolar sin tapar — y esa columna **no es un valor plausible del parámetro, es la
+  ausencia del término**. Comprobación que lo cierra: la celda n=2 · b₀=0 · «sin tapar» da **2705,5
+  kWh/m²·año y +0,110%**, que es **exactamente** el anual publicado en la v1.30 — el techo de la
+  banda ES el modelo viejo, al decimal. Publicado hoy (n=2, b₀=0,05): pairwise **2650,4 kWh/m²·año**,
+  astro **−1,005%**.
+  **Y la tabla del día publica la banda, no solo el número**: cada Δ vs pairwise lleva entre
+  corchetes `[cota baja … cota alta]`, y si la banda **cruza el cero** sale en **ámbar** — el
+  simulador dice «no lo decido» en vez de fingir un ganador con dos decimales.
+  **Lo que sigue fuera, y por tanto qué falta para cerrarlo sin asteriscos**: el **cono real de ~25°**
+  del circunsolar (Perez lo trata puntual; resolverlo suavizaría el bloqueo, y con ese techo la banda
+  sí cruzaría el cero), el **factor de vista** de bóveda bloqueada por la fila de delante, el
+  **mismatch entre módulos en serie** del mismo string, los **puntos calientes y la garantía**, y que
+  todo esto es **cielo claro**. Los dos que más pesan de esa lista —mismatch y puntos calientes—
+  penalizan **a quien deja sombra**, o sea a astro: el signo es robusto, el margen no. QA 62 y gate
+  de pre-release en verde.
+
 - **2026-08-20 · v1.30** — **«pero si fuese así nadie haría backtracking, todo el mundo
   astronómico, ¿no?»** — y la objeción tenía razón: había un fallo de modelado. La v1.29.2 dio por
   bueno que astro ganase a pairwise sin preguntarse por qué entonces la industria entera hace lo
