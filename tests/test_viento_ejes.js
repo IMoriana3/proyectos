@@ -26,7 +26,8 @@ function saca(firma) {
 }
 const FIRMAS = ['function prep2d(cv){', 'function nicePaso(bruto){',
                 'function niceDec(paso){', 'function niceEje(max,n){',
-                'function niceEjes2(maxA,maxB,n){', 'function niceRango(lo,hi,n){'];
+                'function niceEjes2(maxA,maxB,n){', 'function niceRango(lo,hi,n){',
+                'function ejesTransmision(nF,pitch,filasPorTrk,esPasivo,hueco){'];
 const trozos = FIRMAS.map(saca);
 check('las funciones puras siguen en el HTML', trozos.every(Boolean),
       FIRMAS.filter((f, i) => !trozos[i]).join(', '));
@@ -111,6 +112,42 @@ function rotulos(e) {
   check('MUTANTE: el criterio caza el eje sin redondear [' + lab.join(', ') + ']',
         new Set(lab).size !== lab.length);
 })();
+
+// ── 6) el EJE DE TRANSMISIÓN de la escena 3D ─────────────────────────────
+// Bifila es UN motor moviendo DOS filas unidas por este eje. La regla vive
+// aparte del dibujo justo para poder ejercitarla sin montar una escena.
+const ET = ctx.ejesTransmision;
+check('monofila NO lleva eje de transmisión', ET(6, 6, 1, false).length === 0);
+check('bifila empareja las filas de dos en dos', ET(6, 6, 2, false).length === 3);
+check('un nº impar de filas no deja media pareja colgando',
+      ET(5, 6, 2, false).length === 2);
+(function () {
+  const e = ET(6, 6, 2, false);
+  const largos = e.map(v => +(v.xb - v.x0).toFixed(6));
+  check('sin pasivo, todos los ejes miden el pitch [' + largos.join(', ') + ']',
+        largos.every(L => L === 6) && e.every(v => !v.suelto));
+  // los pares no se solapan y cubren filas contiguas
+  const ok = e.every((v, i) => Math.abs((v.xb - v.xa) - 6) < 1e-9)
+          && e.slice(1).every((v, i) => v.xa - e[i].xb === 6);
+  check('cada eje une filas CONTIGUAS y los pares no se pisan', ok,
+        JSON.stringify(e.map(v => [v.xa, v.xb])));
+})();
+(function () {
+  const e = ET(6, 6, 2, true);          // caso PASIVO
+  const sueltos = e.filter(v => v.suelto);
+  check('en el pasivo se corta UN solo eje, el de la fila de perímetro',
+        sueltos.length === 1 && e[0].suelto);
+  check('el corte deja hueco de verdad (' + (sueltos[0].x0 - sueltos[0].xa).toFixed(2) + ' m)',
+        sueltos[0].x0 > sueltos[0].xa && sueltos[0].xb - sueltos[0].x0 < 6);
+  check('los demás ejes del bloque del pasivo siguen enteros',
+        e.slice(1).every(v => Math.abs((v.xb - v.x0) - 6) < 1e-9));
+  // la fila de perímetro es la que el bloque dibuja la primera (x más negativo)
+  const minx = Math.min.apply(null, e.map(v => v.xa));
+  check('el eje cortado es el de la fila de perímetro', sueltos[0].xa === minx);
+})();
+// MUTANTE: si el corte se dibujara entero, la fila parecería seguir enganchada
+check('MUTANTE: un eje sin hueco no pasa por cortado',
+      !(ET(6, 6, 2, true, 0)[0].x0 > ET(6, 6, 2, true, 0)[0].xa));
 
 console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko)
                 : '\nOK — ' + ok + '/' + ok + ' comprobaciones');

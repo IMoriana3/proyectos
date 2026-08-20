@@ -346,7 +346,13 @@
       </div>
       <p class="note" id="c3note">Sube el viento y mira: por encima de <b>40 km/h</b> entran en
         parcial y por encima de <b>60</b> se abanderan del todo. El eje gira a <b>0,17 °/s</b>, así
-        que una maniobra a ±55° tarda minutos — se ve en la rampa, no en un salto.</p>
+        que una maniobra a ±55° tarda minutos — se ve en la rampa, no en un salto.<br>
+        En bifila las filas van de dos en dos sobre el <b>eje de transmisión</b>: un motor las mueve
+        a las dos. En el bloque del <b>pasivo</b> ese eje sale <b>cortado</b> en la fila de
+        perímetro, y ese hueco es el caso entero — lo que la suelta de verdad no es el motor, es el
+        <b>acoplamiento</b>. En monofila cada fila lleva el suyo y no hay eje que dibujar. El
+        detalle mecánico va en la comparativa; las plantas reales se dibujan simplificadas (mesa y
+        poste), que es lo que se lee a kilómetro y medio.</p>
     </div>
 
     <div class="card" id="labCard">
@@ -1709,6 +1715,28 @@ function niceRango(lo,hi,n){
   return {lo:a,hi:b,paso:paso,dec:niceDec(paso),ticks:t};
 }
 
+/* ── Dónde van los ejes de transmisión de un bloque ──
+   Regla pura, aparte del dibujo, para poder ejercitarla sin montar una escena.
+   Bifila = UN motor moviendo DOS filas unidas por este eje, así que las filas
+   se emparejan de dos en dos. En monofila cada fila lleva su motor: no hay eje
+   y la lista sale vacía.
+
+   `suelto` marca el par que contiene la fila de perímetro en el caso PASIVO:
+   ahí el eje se dibuja CORTADO, porque lo que se abre es el acoplamiento y no
+   el motor. Dibujarlo entero diría que la fila sigue enganchada, que es
+   exactamente lo contrario de lo que el caso enseña. */
+function ejesTransmision(nF,pitch,filasPorTrk,esPasivo,hueco){
+  var out=[];
+  if(!(filasPorTrk>=2))return out;                 // monofila: cada fila su motor
+  hueco=(hueco==null?1.1:hueco);
+  for(var pa=0;pa+1<nF;pa+=2){
+    var xa=(pa-(nF-1)/2)*pitch, xb=xa+pitch;
+    var suelto=!!esPasivo&&pa===0;
+    out.push({xa:xa,xb:xb,x0:suelto?xa+hueco:xa,suelto:suelto});
+  }
+  return out;
+}
+
 function ord(){ return Object.keys(REP.cases).sort(); }
 /* Decimales por MAGNITUD, no fijos. Un año con dos abanderamientos deja deltas
    de 0,003 %, y con dos decimales la tabla, el KPI y las barras decían todos
@@ -2529,6 +2557,34 @@ function escenaComparativa(){
       var t=seguidor3D((esPas&&f>0)?matsInt:mats);
       t.position.x=(f-(nF-1)/2)*PITCH; b.add(t); segs.push(t);
     }
+    /* ── EL EJE DE TRANSMISIÓN ──
+       Un tracker bifila es UN motor moviendo DOS filas, y lo que las mueve a
+       la vez es este eje. Sin dibujarlo, dos filas contiguas se leen como dos
+       seguidores independientes — y entonces el caso PASIVO no se entiende:
+       lo que hace que una fila se suelte y la de al lado siga siguiendo no es
+       que tengan motores distintos, es que la de fuera SE DESEMBRAGA de este
+       eje. El eje es la razón de que el caso exista.
+       En monofila cada fila lleva su motor: no hay eje, y no se dibuja. */
+    var yEje=Seguidor.DIMS.postH;
+    var matEje=new THREE.MeshStandardMaterial({color:0x8f9aa6,roughness:.42,metalness:.72});
+    var matEmb=new THREE.MeshStandardMaterial({color:0x2f5fb0,roughness:.40,metalness:.45});
+    ejesTransmision(nF,PITCH,filasTrk(),esPas).forEach(function(e){
+      var largoEje=e.xb-e.x0;
+      var eje=new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,largoEje,14),matEje);
+      eje.rotation.z=Math.PI/2;
+      eje.position.set((e.x0+e.xb)/2,yEje,0);
+      eje.castShadow=true; eje.receiveShadow=true;
+      b.add(eje);
+      // bridas del acoplamiento: se ve DÓNDE engrana, y en la fila suelta se
+      // ven las dos mitades separadas por el hueco.
+      [[e.x0,e.suelto],[e.xb,false],[e.xa,e.suelto]].forEach(function(par){
+        if(par[0]===e.xa&&!e.suelto)return;         // sin hueco no hay media brida
+        var br=new THREE.Mesh(new THREE.CylinderGeometry(0.115,0.115,0.10,14),
+                              par[1]?matEmb:matEje);
+        br.rotation.z=Math.PI/2; br.position.set(par[0],yEje,0); br.castShadow=true;
+        b.add(br);
+      });
+    });
     if(esPas){
       // el rótulo de la fila suelta se pone SOBRE ella, que ahora es una entre
       // muchas y sin señalarla no se distingue
