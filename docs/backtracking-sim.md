@@ -350,6 +350,32 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-20 · v1.28** — **la ESTRUCTURA de la mesa entra en la física**. Reportado con captura
+  («¿por qué sigo viendo alguna sombra?») y resuelto midiendo, no opinando: clasificados por
+  raycast los 4.361 píxeles oscuros del render — **83,5% suelo** (lo que el propio visor del vano
+  mide: «haz 3,11 m = 52% del vano»), **8% módulos al sol con incidencia rasante** (coseno
+  0,03–0,15: negros por Lambert, no sombreados), 0,9% silueta roja y un **0,2% realmente ocluido
+  sin rojo**. Desde el POV del sol, **cero de 4.361**: el teorema aguantaba. Y el residuo no era
+  desfase de la silueta — render y física coinciden EXACTAMENTE (desfase X y axial 0, cota
+  constante con desviación 0) — sino **modelo**: la física ponía el plano del módulo pasando por el
+  eje del tubo, 14 cm por debajo de donde está, y con sol a 0,65° eso desplaza la sombra 12 m.
+  Ahora la mesa se modela como es, con las cotas de `seguidor.js` (no inventadas): **cara colectora
+  en el vidrio** (0,17 m sobre el eje), **laminado de 6 cm** y **viga de torsión cuadrada de 120
+  mm**, los dos como EMISORES; el intervalo de cuerda que tapa una caja convexa se resuelve en
+  cerrado (`boxChordIv`), igual de exacto que la cuerda analítica, y la silueta proyecta las mismas
+  cajas. **El resultado tiene fondo**: como el backtracking se calcula con PLANOS (pvlib), viga y
+  canto dejan un residuo que ninguna consigna cancela — **−0,60% anual en Ayora** (pairwise 2743,6
+  kWh/m²·año) y hasta un tercio de cuerda con sol rasante en pendiente; en llano la viga no alcanza
+  nunca a la vecina (está por debajo de la cara que recibe). El modelo de planos sigue dando CERO
+  exacto (opción `noStruct`), que es como se enuncian ahora los invariantes del core. Anual: true-3D
+  +0,12% · row −0,05% · óptimo +0,53% · óptimo libre +0,66%. Verificación: los dos oráculos
+  replican el modelo por vías independientes (la viga por sección de la caja con el plano de los
+  rayos) y coinciden en **0,000 pp sobre las 107 filas**; `boxChordIv` validado contra barrido fino
+  en 4.000 configuraciones (peor desviación 0,76 mm); y un test nuevo compara las cotas del contador
+  **contra `seguidor.js`** para que no diverjan en silencio. QA 49, gate en verde (el rojo pintado
+  sube de 1.327 a 1.649 px). Declarados fuera: correas, cables, TCU, motor y seccionador — piezas
+  cortas que además no proyectan en el render.
+
 - **2026-08-14 · v1.27** — **auditoría, puntos 4 y 2 — la auditoría queda CERRADA (6/6)**.
   **Punto 4 (torsión)**: la reparación iterada se midió (+0,0003%) y no se adopta; el hallazgo real
   era otro — bajo el contador exacto el óptimo libre rendía MENOS que el común (2783,2 vs 2783,5:
