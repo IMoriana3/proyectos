@@ -3,3 +3,4 @@
 # necesita build ni dependencias para publicarse.
 node_modules/
 package-lock.json
+package.json

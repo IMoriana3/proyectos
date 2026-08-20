@@ -1,6 +1,6 @@
 /* Service worker del Panel de Proyectos.
    Lo que hace y, sobre todo, lo que NO hace:
-   - Precachea el armazón (las cuatro páginas del panel + iconos) para que la app
+   - Precachea el armazón (las cinco páginas del panel + iconos) para que la app
      abra sin red: en obra el móvil va y viene.
    - Navegación/HTML y CONTENIDO EDITORIAL (docs/*.md, los .json de datos): RED
      PRIMERO, con la caché de respaldo si no hay red. Son lo que cambia en cada
@@ -13,7 +13,7 @@
    - api.github.com y demás orígenes: NI SE TOCAN. Sin red fallan igual que ahora,
      que es lo que el panel ya sabe manejar (mantiene lo escrito a mano).
    Al cambiar CACHE se tira la anterior entera: es la forma de publicar cambios. */
-const CACHE = "factiun-panel-v17";
+const CACHE = "factiun-panel-v18";
 
 /* Rutas relativas al scope (/proyectos/ en Pages, / al servirlo en local). */
 const SHELL = [
@@ -23,6 +23,7 @@ const SHELL = [
   "layout.html",
   "sim-solar.html",
   "sim-viento.html",
+  "comparador-estructuras.html",
   "demo-viento.json",
   "manifest.webmanifest",
   "favicon.svg",

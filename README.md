@@ -25,7 +25,7 @@ El Panel se **instala** como aplicación (escritorio y móvil) y **abre sin red*
   **`scope: "/"`**: así, una vez instalada, los visores que viven en otras rutas del mismo dominio
   (`imoriana3.github.io/<repo>/`) se abren **dentro** de la app. Lo que está en `*.workers.dev` es
   otro origen y sale al navegador. Incluye accesos directos (Cartera técnica, Layout, Sol).
-- `sw.js` — service worker: precachea el armazón (las cuatro páginas + iconos), **red primero** para
+- `sw.js` — service worker: precachea el armazón (las cinco páginas + iconos), **red primero** para
   el HTML (para que las versiones de release no se congelen) y caché-con-refresco para `docs/` y
   `assets/`. La API de GitHub **no se cachea**. Publicar cambios = subir el número de `CACHE`.
 - Instalar: botón **Instalar app** de la barra (Chrome/Edge/Android) · en iPhone, *Compartir →
