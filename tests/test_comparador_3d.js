@@ -426,6 +426,81 @@ const SONDA = `(() => {
   check('sin tocar el TRACKER, que tiene su propio módulo', trasMod.tk !== trasMod.wp ||
     cat.mod.wp === 660, String(trasMod.tk));
 
+  // ── los BARRIDOS ──
+  // La ficha compara a UNA densidad; el barrido contesta la otra mitad. Lo que
+  // se comprueba aquí no es que salga una curva bonita, sino que la curva DICE
+  // lo que la geometría obliga y que la ficha no se inventa un ganador donde no
+  // lo hay.
+  await p.evaluate(() => { document.getElementById('source').value = 'clearsky';
+    // los checks de geometría de más arriba dejaron el tracker a pitch 11: se
+    // devuelve a 6 para barrer alrededor de donde está configurado
+    const tp = document.getElementById('tkPitch');
+    tp.value = '6.00'; tp.dispatchEvent(new Event('change', { bubbles: true }));
+    document.getElementById('barMin').value = '4.0';
+    document.getElementById('barMax').value = '9.0';
+    document.getElementById('barPaso').value = '50'; });
+  await p.click('#barRun');
+  await p.waitForFunction(() => window.BAR !== null, null, { timeout: 240000 });
+  await p.waitForTimeout(400);
+  const bar = await p.evaluate(() => ({
+    tipo: BAR.tipo, n: BAR.puntos.length,
+    poas: BAR.puntos.map(q => +q.poa.toFixed(1)),
+    suelos: BAR.puntos.map(q => +q.suelo.toFixed(1)),
+    has: BAR.puntos.map(q => q.ha && +q.ha.toFixed(2)),
+    maxPoa: BAR.maxPoa.pitch, maxSuelo: BAR.maxSuelo.pitch,
+    actual: BAR.actual, coste: BAR.costeM1, ahorro: BAR.sueloM1,
+    read: document.getElementById('barRead').textContent,
+    nota: document.getElementById('barNota').textContent }));
+  check('el barrido de pitch corre en el navegador (' + bar.n + ' puntos)',
+    bar.tipo === 'pitch' && bar.n === 11, JSON.stringify([bar.tipo, bar.n]));
+  check('la POA por módulo sube monótona con el pitch',
+    bar.poas.every((v, i) => i === 0 || v >= bar.poas[i - 1] - 1e-6), bar.poas.join(','));
+  check('la densidad de suelo baja monótona con el pitch',
+    bar.suelos.every((v, i) => i === 0 || v <= bar.suelos[i - 1] + 1e-6), bar.suelos.join(','));
+  check('los dos máximos caen en extremos OPUESTOS (' + bar.maxPoa + ' m / ' +
+    bar.maxSuelo + ' m)', bar.maxPoa === 9 && bar.maxSuelo === 4);
+  check('cada punto trae sus hectáreas a la potencia pico de arriba (' +
+    bar.has[0] + ' → ' + bar.has[bar.has.length - 1] + ' ha)',
+    bar.has.every(h => h > 0) && bar.has[bar.has.length - 1] > bar.has[0]);
+  check('apretar 1 m cuesta POA y ahorra parcela (' + bar.coste.toFixed(2) + ' % / ' +
+    bar.ahorro.toFixed(0) + ' %)', bar.coste < 0 && bar.ahorro > 0);
+  // y si el pitch configurado cae FUERA del rango barrido, el coste marginal no
+  // se publica: contra un extremo clavado saldría 0, que se lee como «gratis»
+  const fuera = await p.evaluate(async () => {
+    document.getElementById('barMin').value = '7.0';
+    document.getElementById('barMax').value = '9.0';
+    await barre();
+    return { fuera: BAR.fueraDeRango, coste: BAR.costeM1,
+             read: document.getElementById('barRead').textContent,
+             nota: document.getElementById('barNota').textContent };
+  });
+  check('con el pitch configurado fuera del rango, el coste marginal no se inventa',
+    fuera.fuera === true && !isFinite(fuera.coste) &&
+    /FUERA del rango/.test(fuera.read + fuera.nota), JSON.stringify(fuera.coste));
+
+  check('la ficha NO declara un óptimo de pitch, y lo dice',
+    /no hay un óptimo/i.test(bar.nota) && !/óptimo de pitch/i.test(bar.read),
+    bar.nota.slice(0, 100));
+  check('y declara que el tilt se mantiene fijo a lo largo del barrido',
+    /tilt se mantiene fijo/i.test(bar.nota));
+
+  // el de tilt SÍ tiene óptimo interior: es lo que lo distingue
+  await p.evaluate(() => { const q = document.getElementById('barQue');
+    q.value = 'tilt:fija'; q.dispatchEvent(new Event('change', { bubbles: true }));
+    document.getElementById('barPaso').value = '10'; });
+  await p.click('#barRun');
+  await p.waitForFunction(() => window.BAR && BAR.tipo === 'tilt', null, { timeout: 240000 });
+  await p.waitForTimeout(400);
+  const bt2 = await p.evaluate(() => ({
+    n: BAR.puntos.length, opt: BAR.optimo.tilt,
+    rels: BAR.puntos.map(q => +q.rel.toFixed(3)),
+    read: document.getElementById('barRead').textContent }));
+  check('el barrido de tilt corre y da óptimo INTERIOR (' + bt2.opt + '°)',
+    bt2.opt > 0 && bt2.opt < 60, JSON.stringify(bt2.opt));
+  check('ningún tilt bate al óptimo', bt2.rels.every(r => r <= 1e-9));
+  check('y se declara que el óptimo es el de la REJILLA, no el fino',
+    /rejilla/i.test(bt2.read), bt2.read.slice(0, 120));
+
   check('sin errores de JS', errs.length === 0, errs.join(' | '));
   await b.close();
   console.log('\n' + (ko ? 'FALLOS: ' + ko + ' (de ' + (ok + ko) + ')' : 'OK — ' + ok + '/' + ok + ' comprobaciones'));
