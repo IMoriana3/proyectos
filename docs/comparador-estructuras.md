@@ -213,6 +213,15 @@ números, no con un «no válido».
 * **Los duplicados se marcan, no se borran** (dos fabricantes venden el mismo módulo). Van todos y
   el que busca decide.
 
+### Que se note que el botón ha hecho algo
+
+«Usar en la FIJA» cambiaba un campo de 660 a 645 Wp y poco más. Con un módulo cuyas medidas caen en
+las canónicas —la mayoría, porque la CEC no publica `Length`/`Width`— la pantalla no se movía y el
+botón parecía muerto. Ahora **cada familia dice qué módulo lleva puesto**, con su pico, sus medidas
+y si vienen del catálogo o son las canónicas. Y tocar las medidas a mano **deshace la marca**:
+llamar «AEG 645» a unas cotas cambiadas a mano sería ponerle a otro módulo el nombre del que
+viniste a elegir — el mismo criterio que con el emplazamiento.
+
 ## Sizing: la ventana de tensión y los strings
 
 Puerto **literal** de `solargpt_core.string_sizing` y `solargpt_core.plant_config`, las dos
@@ -238,6 +247,16 @@ quién lo limita no se puede discutir con nadie.
 > protecciones, no la capacidad de entrada del inversor. Aplicarlo recortaba ~22 % de planta sin
 > razón física. Es la decisión declarada del core, y hay un guard que se pone rojo si alguien la
 > revierte.
+
+### El string del sizing baja a los configuradores
+
+«Módulos por string» está en **dos sitios** y significa lo mismo: en el sizing es lo que cabe entre
+la tensión máxima del inversor y el suelo de la ventana MPPT, y en el configurador es lo que mide la
+fila. Que dijeran cosas distintas era tener **una fila dibujada que no se puede conectar**, y no lo
+avisaba nadie.
+
+Ahora hay dos botones para bajarlo —a la fija, al tracker— y, mientras no coincidan, la ficha lo
+dice: cuántos tiene cada familia, y si ese número **entra siquiera** en la ventana de tensión.
 
 ### Las temperaturas, del emplazamiento
 
@@ -551,10 +570,10 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ## Pruebas
 
 ```bash
-node tests/test_comparador.js       # 79 comprobaciones · careo contra el core, sin navegador
+node tests/test_comparador.js       # 82 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 95 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 104 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 
