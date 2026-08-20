@@ -11,7 +11,7 @@ relee este fichero (rama `main`) antes de tocar `index.html`.
 
 | Sesión | Ámbito en este repo |
 |---|---|
-| **Proyectos** (`session_017eUUJjy61tCaA1MWKsU9DV`) | El Panel como producto: maquetación y estilos, lógica de render/búsqueda/filtros, lector de documentación, `layout.html`, `sim-solar.html`, `cartera-tabla.html`, `docs/` de sus proyectos |
+| **Proyectos** (`session_017eUUJjy61tCaA1MWKsU9DV`) | El Panel como producto: maquetación y estilos, lógica de render/búsqueda/filtros, lector de documentación, `layout.html`, `generador-layout.html`, `sim-solar.html`, `cartera-tabla.html`, `docs/` de sus proyectos |
 | **Backtracking** (`session_012sz2W5bL1abmUhGnFtriFq`) | Las **fichas de sus herramientas** dentro de `PROJECTS` y sus `docs/`: SCADA de planta, Seguimiento PEM, IPs de plantas, Mapa Modbus, TCU Toolbox, Agente y collector, Cobertura Zigbee/RF, Gemelo Digital TCU · y los **enlaces de vista** de `PLANTS` (3D, cobertura, SCADA) |
 
 Los dos pueden leerlo y editarlo todo; se escribe preferentemente en el ámbito propio.

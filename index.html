@@ -427,7 +427,7 @@ body{
     <div class="plants" id="plants"></div>
   </section>
 
-  <h2 class="sec-title">Herramientas · crear nuevo<a class="tabla-link" href="layout.html" title="Crear implantación (trackers/mesas) desde una parcela — motor SolarGPT">▦ Layout</a><a class="tabla-link" href="sim-solar.html" title="Geometría solar (elevación/azimut/sombra) y simulación de producción">☉ Sol &amp; Simulación</a><a class="tabla-link" href="sim-viento.html" title="Abanderamiento por viento: POA perdida, cuántas veces y cuánto tiempo">⚑ Viento</a><a class="tabla-link" href="comparador-estructuras.html" title="Fija vs seguidor en este sitio: POA por tipo de estructura, por m² de módulo y de suelo">🏗 Estructuras</a></h2>
+  <h2 class="sec-title">Herramientas · crear nuevo<a class="tabla-link" href="generador-layout.html" title="Generador de layout: implantación completa (filas, mesas, trackers) en el navegador">▦ Generador de layout</a><a class="tabla-link" href="layout.html" title="Explorador de layout: dibuja lo que devuelve el motor SolarGPT o un GeoJSON del cuaderno">▦ Explorador</a><a class="tabla-link" href="sim-solar.html" title="Geometría solar (elevación/azimut/sombra) y simulación de producción">☉ Sol &amp; Simulación</a><a class="tabla-link" href="sim-viento.html" title="Abanderamiento por viento: POA perdida, cuántas veces y cuánto tiempo">⚑ Viento</a><a class="tabla-link" href="comparador-estructuras.html" title="Fija vs seguidor en este sitio: POA por tipo de estructura, por m² de módulo y de suelo">🏗 Estructuras</a></h2>
   <div class="controls">
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -876,7 +876,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/sim-viento.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-19",
-    version: "1.14.3",
+    version: "1.15",
     docId: "viento",
     docUrl: "",
     download: "",
@@ -911,6 +911,7 @@ const PROJECTS = [
       { done:false, text:"La velocidad de suelta del pasivo es un SUSTITUTO declarado de la carga de desembrague, no una medida: hace falta el par real y su dispersión entre unidades para que el umbral deje de ser un parámetro." }
     ],
     historial: [
+      { date:"2026-08-20", ver:"1.15", note:"Tres cosas de la escena. LA CAJA DE SOMBRAS NO PODÍA DEPENDER DEL RUMBO DEL SOL: estaba dimensionada con el ancho y el largo del MUNDO, pero sus ejes son los de la LUZ y giran con ella, y lo que queda fuera ni proyecta ni recibe sombra — de ahí que unos bloques salieran sombreados y los de al lado no, por el encuadre y no por la física. Medido sobre la escena real barriendo 612 direcciones de sol: el 78 % dejaba geometría fuera, hasta 103 m. Ahora la caja se dimensiona con la ESFERA que contiene la escena, que es lo único que no gira, y cubre las 612. LAS VELOCIDADES DEL REPRODUCTOR SALEN DE LA VENTANA: no hay tiempo continuo, la ventana viene muestreada, así que con paso de 4 min un ×60 avanzaba una muestra cada cuatro segundos y parecía parado. Las opciones se construyen ahora con la ventana delante y en la unidad que importa —cuánto tarda en reproducirse entera— con suelo de un paso por segundo. Y EL LABORATORIO TIENE SALIDA: metías rachas y no había nada que dijera cómo llegaban al 3D. Ahora lleva su propio botón de simular y dice qué se va a inyectar." },
       { date:"2026-08-20", ver:"1.14.3", note:"EL REPRODUCTOR SE QUEDABA CLAVADO Y DE GOLPE SALTABA HORAS. La causa no era la velocidad: era que iba en un setInterval. Cuando un fotograma tarda más que el intervalo —y aquí lo tarda, la comparativa son seis bloques de veinte seguidores con el modelo real más el panel de tarjetas rehecho en HTML— el navegador ENCOLA las llamadas pendientes y luego las ejecuta seguidas: la escena se queda parada y después se come de un tirón todo lo que debía haber pintado. Medido: con fotogramas de 167 ms y un intervalo de 67, dos llamadas y media encoladas por fotograma. Ahora va en el MISMO bucle de fotogramas que el modo «en vivo» —que nunca tuvo este problema, por eso mismo— con un acumulador: se avanza el tiempo real transcurrido, así que un fotograma lento se paga con un salto de ese fotograma y no con veinte pendientes, y volver de otra pestaña tampoco teletransporta. Y el panel de tarjetas se repinta uno de cada seis, como en vivo: se rehace en HTML entero y a 60 fotogramas por segundo era la parte más cara y la que menos se nota." },
       { date:"2026-08-20", ver:"1.14.2", note:"ARREGLO del arreglo anterior: el reproductor arrancaba tan lento que parecía no avanzar. Al pasar el factor a ser una velocidad de verdad se dejó ×300 fijo por defecto, y la ventana está MUESTREADA a 240 pasos como mucho: con el paso habitual de 4 min eso son 800 ms por fotograma y 192 s la ventana entera, diez veces más lenta que la versión anterior. El factor era honesto y el default, malo. Ahora la velocidad de arranque se elige POR LA VENTANA —el factor más lento que la reproduzca entera en menos de 45 s— y el rótulo dice cuánto dura, así que el número sigue siendo una velocidad de verdad y además arranca en algo que se puede mirar. Con el paso habitual sale ×3600, 16 s la ventana. Se añade ×7200 para meteo de paso grueso, y en cuanto tocas el selector manda tu elección." },
       { date:"2026-08-20", ver:"1.14.1", note:"EL «×1» DEL REPRODUCTOR NO ERA UNA VELOCIDAD. El bucle iba a 160 ms por paso y cada paso son los minutos de la ventana, así que con paso de 1 min corría a 375 veces el tiempo real y con paso de 5 min a 1.875: de ahí que el episodio pasara volando incluso en el ajuste más lento. Un rótulo que dice ×1 sobre algo que va a ×375 no es una escala mal calibrada, es un número inventado. Ahora el factor es lo que dice —tiempo simulado por segundo real— y usa la MISMA escala que el modo «en vivo» de la misma tarjeta, que sí la tenía bien: ×60 (1 min/s), ×300 (5 min/s), ×900 (15 min/s) y ×3600 (1 h/s), por defecto ×300. La cadencia se deriva de los minutos REALES de la ventana, con suelo de 50 ms —por debajo el navegador no repinta y solo acumula retraso— y avanzando varios pasos por tirón cuando el suelo manda, para que el factor se siga cumpliendo en vez de quedarse corto en silencio. Y cambiar la velocidad con el reproductor en marcha hace efecto ya, no al siguiente play." },
@@ -942,6 +943,41 @@ const PROJECTS = [
       { date:"2026-08-19", ver:"1.2", note:"Campo 3D: los cinco casos reaccionando al mismo viento y al mismo sol sobre una ventana común, con la POA de cada uno como barra contra la línea base." },
       { date:"2026-08-19", ver:"1.1", note:"Laboratorio de rachas: viento de fondo sintético o en calma, ráfaga de 3 s, rachas inyectadas con dirección y tormentas al azar, y meteo de cielo claro para probar sin red." },
       { date:"2026-08-19", ver:"1.0", note:"Primera versión: comparativa A1/A2/B1/B2 contra la base, episodios y horas por modo, reparto mensual y traza del episodio más caro." }
+    ]
+  },
+  {
+    name: "Generador de layout",
+    status: "build",
+    objetivo: "Dibuja la parcela y saca la implantación: filas, mesas y trackers con el motor canónico del cuaderno (§02.5a) portado al navegador — pitch, setback, multi-talla, bifila, viales y exclusiones — con kWp, GCR y ocupación, y salida a GeoJSON, DXF, KML y al 3D.",
+    stack: "HTML autocontenido · motor de layout en el navegador (UTM + erosión exacta del setback + knapsack multi-talla) · canvas 2D · careo contra solargpt_core.layout_v2",
+    url: "https://imoriana3.github.io/proyectos/generador-layout.html",
+    repo: "https://github.com/imoriana3/proyectos",
+    updated: "2026-08-20",
+    version: "0.2",
+    docId: "generador-layout",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Fichero: generador-layout.html (este repo). GENERA EN EL NAVEGADOR: se abre y calcula sin levantar nada, como sim-viento.html y el comparador. El motor SolarGPT sigue siendo opcional y da el número canónico.",
+      "El emplazamiento se BUSCA: cartera y presets sin red (sin acentos y en cualquier orden), coordenadas pegadas tal cual —también con N/S/E/O— y el geocodificador de Open-Meteo. Es el mismo buscador de la ficha de Viento. Tocar lat/lon a mano suelta el nombre, que es el que acaba en el fichero exportado.",
+      "La parcela entra de tres formas: rectángulo por centro y cotas (lo rápido), GeoJSON pegado o cargado (SIGPAC, Catastro, geojson.io) o dibujada a mano sobre el lienzo. Los agujeros del GeoJSON entran como exclusiones.",
+      "Los parámetros son los del cuaderno §02.5a y los de la página Layout de Streamlit: montaje, tabla 1V-4V/1H-4H, mods/string (una talla o varias «28, 14, 7» para multi-talla), largo y ancho de módulo, pitch, azimut de filas, setback, gaps (módulos, motor, N-S), viales E-O y N-S, bifila, offset de filas y mínimo de estructuras por fila.",
+      "Multi-talla: escribe varias tallas separadas por coma y el motor elige la mayor que entra en cada fila y rellena la cola con las pequeñas (knapsack de 1 cm, el mismo que _knapsack_pack_segment del core).",
+      "Bifila es un concepto de TRACKER: en montaje fijo se ignora y se dice en pantalla, como hace el motor. Empareja filas por solape en X y recorta a conteo PAR de mesas por línea — si es bifila, es bifila.",
+      "Lo que se dice y no se calla: el setback se aplica como erosión exacta del polígono (distancia al borde), no como recorte del rectángulo; y el ángulo del grid corrige la convergencia de meridianos (en UTM el norte de cuadrícula no es el norte verdadero).",
+      "Careo automático contra el core (node tests/test_layout.js, 119 comprobaciones): las mismas nueve parcelas por los dos motores, exigiendo el mismo número de FILAS, mesas y kWp dentro del 2,5 %, área útil dentro del 0,5 % y las fórmulas cerradas (largo de mesa, apertura, largo de fila, GCR de tracker) exactas. Cuatro casos salen clavados y el peor a 1,89 %. El fixture se regenera con python3 tests/gen_careo_layout.py --core /ruta/a/SolarGPTfull/solargpt.",
+      "Y el cableado en Chromium (node tests/test_layout_ui.js, 34 comprobaciones): que genera y PINTA de verdad, que los tres caminos de parcela acaban en layout, y que las salidas se habilitan solo cuando hay algo que exportar. De ahí salió el arreglo del doble clic, que metía el último vértice tres veces.",
+      "Salidas: GeoJSON (el mismo formato que carga el Explorador de layout), DXF de polilíneas, KML para Google Earth y paso directo al 3D de cobertura-zigbee."
+    ],
+    pendientes: [
+      { done:false, text:"Exclusiones dibujadas sobre ortofoto (hoy entran por GeoJSON o dibujadas sobre el lienzo, sin fondo de mapa)." },
+      { done:false, text:"Barrido de ángulo de grid: el core lo tiene (optimize_grid_angle) y aquí todavía no se barre." },
+      { done:false, text:"Relieve: el core filtra por pendiente del MDT y aquí la parcela es plana." },
+      { done:false, text:"Sweep de pitch con la POA del comparador al lado, para decidir densidad y no solo geometría." }
+    ],
+    historial: [
+      { date:"2026-08-20", ver:"0.2", note:"El emplazamiento se BUSCA. Había un desplegable con la cartera, así que implantar en un sitio que todavía no es una planta obligaba a teclear latitud y longitud a mano — y una parcela sin proyecto es JUSTO lo que se dibuja aquí. Entra el mismo buscador de la ficha de Viento, con sus tres caminos y en el mismo orden: cartera y presets (filtran al teclear y van SIN RED, que es lo que se busca el 90 % de las veces, sin acentos y en cualquier orden), coordenadas pegadas tal cual —el camino corto para quien viene de un DWG— y el geocodificador de Open-Meteo. Dos reglas que no son adorno: un texto que NO son coordenadas sigue su camino al buscador en vez de colarse como un 0,0 en el Golfo de Guinea, y si el geocodificador no contesta se DICE en el desplegable, porque una lista vacía se lee como «ese sitio no existe» cuando lo que pasa es que no hay internet. Tocar lat/lon a mano suelta el nombre: decir «Ayora» sobre otras coordenadas sería ponerle nombre de planta a otro emplazamiento, y ese nombre acaba en el fichero que se exporta." },
+      { date:"2026-08-20", ver:"0.1", note:"Primera versión: el motor de layout del cuaderno §02.5a corriendo en el navegador — parcela por cotas, GeoJSON o dibujada; multi-talla, bifila, viales y exclusiones; GeoJSON, DXF, KML y paso al 3D. Lo que costó traerlo sin Shapely fue el SETBACK: recortar el bbox miente en cuanto la parcela deja de ser un rectángulo, así que se resuelve como erosión exacta (distancia al borde) sobre cada línea de barrido. La primera versión de esa erosión no recortaba NADA —la banda de cada arista salía escrita sin el término del vértice y se pegaba toda al origen— y el careo lo cazó por el área útil, que salía igual que la parcela. La segunda cosa que costó: la rejilla arranca en el bbox y un borde que se desvía dos centímetros a lo largo de la parcela tiraba la primera mesa de CADA fila; el core lo resuelve comprobando contra poly.buffer(0.05) y aquí igual. Con eso el placement sale exacto contra el core: 1.188 mesas las dos." }
     ]
   },
   {

@@ -189,6 +189,32 @@ check('lo que no es fecha se devuelve tal cual',
   check('la cabecera de las rachas dice en qué hora se teclea (' + cab.trim() + ')',
         /Cuándo/.test(cab) && /UTC[+-]/.test(cab));
 
+  // El laboratorio tenía las rachas y ninguna salida: se metían y no había
+  // nada que dijera cómo llegaban al 3D (el botón de simular está arriba del
+  // todo y no se ve desde ahí). Un banco de pruebas sin botón de «probar» es
+  // media herramienta.
+  check('el laboratorio tiene su propio botón de simular',
+        await page.$('#labRun') !== null);
+  // (arriba ya se añadió una racha para comprobar la cabecera)
+  const pista1 = (await page.$eval('#labHint', e => e.textContent)).trim();
+  check('y dice qué va a inyectar (' + pista1 + ')', /1 racha/.test(pista1));
+  await page.click('#gadd');
+  await page.waitForFunction(() =>
+    /2 rachas/.test(document.getElementById('labHint').textContent), { timeout: 5000 });
+  check('el aviso sigue a la tabla al añadir otra',
+        /2 rachas/.test(await page.$eval('#labHint', e => e.textContent)));
+  // y con la tabla vacía lo dice, en vez de callarse
+  // borrar RE-DIBUJA la tabla, así que los handles viejos quedan muertos: se
+  // vuelve a preguntar por el primero en cada vuelta.
+  for (let g = 0; g < 10; g++) {
+    const b = await page.$('#gtbl [data-del]');
+    if (!b) break;
+    await b.click();
+  }
+  const pista0 = (await page.$eval('#labHint', e => e.textContent)).trim();
+  check('sin rachas dice que no hay nada que inyectar (' + pista0 + ')',
+        /no hay nada que inyectar/.test(pista0));
+
   check('la ficha no lanza errores de JS', errores.length === 0, errores.join(' | '));
   await browser.close();
   console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko)
