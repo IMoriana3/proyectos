@@ -804,10 +804,10 @@ const PROJECTS = [
   },
   {
     name: "Simulador de planta TCU",
-    status: "build",
+    status: "live",
     objetivo: "Una planta entera simulada equipo a equipo —NCU, TCUs, HSUs y repetidores— con la jerarquía de control real y el mapa Modbus de los tres dispositivos en vivo. Los números y el algoritmo no son suyos: los lee de SolarGPT.",
     stack: "HTML autocontenido · sin dependencias · API local de SolarGPT (FastAPI)",
-    url: "",
+    url: "https://imoriana3.github.io/gemelo-digital/simulador.html",
     repo: "https://github.com/imoriana3/gemelo-digital",
     updated: "2026-08-20",
     version: "1.0",
@@ -815,7 +815,7 @@ const PROJECTS = [
     docUrl: "",
     download: "",
     uso: [
-      "Fichero: simulador.html (repo gemelo-digital, rama claude/simulador-tcu-24ubzk — pendiente de publicar en main).",
+      "Fichero: simulador.html (repo gemelo-digital). Se llega también desde el gemelo 3D y desde el estudio de batería.",
       "Tres vistas: Planta (la flota con su inclinación real y su salud), Mapa Modbus en vivo y Detalle del equipo.",
       "Jerarquía completa: seta > viento (SP1) > nieve (SP3) > limpieza (SP4) > forzados > batería > manual > auto. El viento manda sobre manual, como el equipo real.",
       "Entradas físicas de verdad: el inclinómetro es ANALÓGICO (desajuste de montaje, offset 41058, deriva térmica, ruido y cuantización a 34,7 pulsos/°) y el lazo se cierra sobre lo que el TCU MIDE — de ahí sale el defecto del ensayo D.1.1. La seta es una línea NC, con antirrebote y ENCLAVADA.",
@@ -828,11 +828,12 @@ const PROJECTS = [
       { done:true,  text:"Inclinómetro analógico y seta binaria enclavada como entradas de hardware, no como reglas." },
       { done:true,  text:"Física y mapa generados de sus fuentes, con cotejo que se niega a escribir si divergen. Cazó el reposo (0,45 vs 0,64 W) y el actuador (0,16 vs 0,17 °/s)." },
       { done:true,  text:"Algoritmo de seguimiento y gestión de batería llamados como API contra el motor local de SolarGPT." },
-      { done:false, text:"Publicarlo: hoy vive en la rama claude/simulador-tcu-24ubzk y no está en main, así que la Pages todavía no lo sirve. Falta también enlazarlo desde el gemelo 3D." },
+      { done:true,  text:"Publicado en main y enlazado desde el gemelo 3D y el estudio de batería." },
       { done:false, text:"Escritura del mapa: lo que el equipo publica está entero, lo que RECIBE no (0/31 comandos del TCU, 0/11 de la HSU, 19/69 configuración). Sin eso la toolbox puede leerlo pero no ejercitarlo." },
       { done:false, text:"Conectar el estudio de batería (bateria.html) y el visor de terreno al mismo puente: son las dos últimas superficies que calculan su seguimiento en el navegador." },
       { done:false, text:"Cotejo automático gemelo ↔ motor: correr el mismo día en los dos y fallar si se separan. Hoy el cotejo cubre las constantes, no el resultado." },
-      { done:false, text:"Curva de motor: la tabla medida I(θ) da +14 % de consumo frente al ajuste lineal. A la espera de la curva medida y de los datos de campo de El Burgo y Ayora." }
+      { done:true,  text:"Curva de motor: la tabla medida I(θ) ya es la canónica y el tope de 50 W queda retirado por ser un envolvente de diseño. El +14 % medido aquí por separado cae dentro del 9-16 % que declara el propio fichero." },
+      { done:false, text:"Validar esa curva en campo: es del banco, no de una planta. Los Wh de motor por día y por TCU de El Burgo y Ayora son lo que dirá si el banco se parece a la realidad." }
     ],
     historial: [
       { date:"2026-08-20", ver:"1.0", note:"Planta completa con jerarquía y Modbus en vivo; inclinómetro y seta como hardware; física y mapa generados con cotejo de cuatro fuentes; algoritmo y batería llamados como API a SolarGPT. 163 comprobaciones." }
@@ -874,7 +875,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/sim-viento.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-19",
-    version: "1.11.2",
+    version: "1.12",
     docId: "viento",
     docUrl: "",
     download: "",
@@ -909,6 +910,7 @@ const PROJECTS = [
       { done:false, text:"La velocidad de suelta del pasivo es un SUSTITUTO declarado de la carga de desembrague, no una medida: hace falta el par real y su dispersión entre unidades para que el umbral deje de ser un parámetro." }
     ],
     historial: [
+      { date:"2026-08-20", ver:"1.12", note:"SE VE EL EJE DE TRANSMISIÓN. Un tracker bifila es UN motor moviendo DOS filas, y lo que las mueve a la vez es ese eje; sin dibujarlo, dos filas contiguas se leían como dos seguidores independientes y el caso PASIVO no se entendía — lo que hace que una fila se suelte y la de al lado siga siguiendo no es que tengan motores distintos, es que la de fuera se DESEMBRAGA del eje. En el bloque del pasivo el eje sale cortado en la fila de perímetro, con la brida del acoplamiento marcada en azul a los dos lados del hueco: ese hueco no es decoración, es el desembrague, y dibujar el eje entero diría que la fila sigue enganchada. En monofila cada fila lleva su motor, así que no hay eje y no se dibuja." },
       { date:"2026-08-20", ver:"1.11.2", note:"La comparativa salía ESTIRADA en horizontal —letras separadas, barras gordas— y los ejes repetían etiquetas. Dos causas. Una: el lienzo se dibujaba con su tarjeta todavía en display:none, donde mide 0 de ancho, así que el dibujo se hacía a los 880 px de diseño y el CSS lo estiraba al ancho real; medido contra la captura, barras de 74 px dibujadas y unos 160 en pantalla, factor 2,16 = 1900/880. Ahora cada gráfica enseña su tarjeta antes de medirse, el ancho de diseño se guarda aparte (tras la primera pasada el atributo width ya es el búfer en píxeles físicos, así que cada llamada en oculto multiplicaba el error otra vez) y el motor DECLARA cuándo el lienzo no estaba maquetado. Y dos: los rótulos de los ejes salían de partir el máximo en cuatro, que con datos pequeños repite etiquetas — la columna de horas decía «2, 2, 1, 1, 0» y la de POA perdida «0.01, 0.01, 0.01, 0.00, 0.00». Un eje que repite etiquetas no está midiendo: ahora el paso sale de la familia 1/2/5·10^k, los decimales del paso, y el techo se ajusta al dato en vez de dejarlo a media altura." },
       { date:"2026-08-20", ver:"1.11.1", note:"ARREGLO, y de los que borran el resultado sin decirlo: con «al lado del que sopla» la POA de la fila suelta salía NaN. El lado pasa a ser una SERIE en ese modo, y se estaba transponiendo ESE parámetro en vez del ángulo en el que la fila se quedó — un array donde iba un número, así que cada paso con la fila suelta valía NaN y los kWh detrás también. Ahora se transpone `PR.theta`, que es lo que la fila realmente hace. Y el reenganche pasa a mirar el CRUCE por el ángulo, no solo la cercanía: con un lado intermedio —los −40° que permite el campo «Lado (°)»— y paso grueso el seguimiento pasaba entre dos muestras sin que ninguna cayera dentro de la tolerancia y la fila se quedaba suelta para siempre. Medido sobre 72 h a 30 min: 71 h clavada antes, 8,5 h ahora. Con ±55° no se veía porque θ satura ahí y la distancia mínima es exactamente 0. Es el mismo criterio que ya tenía el motor del cuaderno." },
       { date:"2026-08-19", ver:"1.11", note:"Dos cosas. GRÁFICA DE θ, la misma que la de overcast: dónde está cada seguidor en cada momento, todas las estrategias juntas sobre la ventana común, con trazo fino la CONSIGNA (el escalón que manda la máquina de estados) y grueso lo EJECUTADO a 0,17 °/s — esa rampa es la razón de que la POA caiga poco a poco y no de golpe, y con una sola línea no se ve. Y el pasivo gana la opción de caer HACIA EL LADO DEL QUE SOPLA, además del lado fijo de montaje: el signo lo pone el rumbo en el instante de la suelta y ya no cambia, porque una vez desembragada la fila está apoyada en su tope. Sin meteo con dirección se avisa y se usa el fijo, que un lado que no varía no es «seguir al viento»." },
