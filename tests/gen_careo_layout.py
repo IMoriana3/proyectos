@@ -61,6 +61,18 @@ CASOS = [
     {"nombre": "parcela en L · tracker monofila",
      "poly": _L, "cfg": {"mount_type": "tracker", "table_type": "1V",
       "mods_per_struct": 28, "bifila": False, "pitch_m": 6.0, "panel_az_deg": 90.0}},
+    # Los casos REALES de uso: bifila con multi-talla sobre bordes que no son
+    # rectos. Es donde el emparejado A/B se rompe si la sub-fila B no espeja a
+    # la A, y es justo lo que se vio en planta.
+    {"nombre": "rect girado 35° · BIFILA multi-talla 28/14/7",
+     "poly": _rect(600, 450, 35), "cfg": {"mount_type": "tracker", "table_type": "1V",
+      "mods_per_struct": [28, 14, 7], "bifila": True, "pitch_m": 6.0, "panel_az_deg": 90.0}},
+    {"nombre": "parcela en L · BIFILA multi-talla 28/14/7",
+     "poly": _L, "cfg": {"mount_type": "tracker", "table_type": "1V",
+      "mods_per_struct": [28, 14, 7], "bifila": True, "pitch_m": 6.0, "panel_az_deg": 90.0}},
+    {"nombre": "rect 600x450 · BIFILA multi-talla 28/14",
+     "poly": _rect(600, 450), "cfg": {"mount_type": "tracker", "table_type": "1V",
+      "mods_per_struct": [28, 14], "bifila": True, "pitch_m": 6.0, "panel_az_deg": 90.0}},
     {"nombre": "rect 600x450 · hueco central de 120x120",
      "poly": _rect(600, 450), "holes": [_rect(120, 120)],
      "cfg": {"mount_type": "tracker", "table_type": "1V",

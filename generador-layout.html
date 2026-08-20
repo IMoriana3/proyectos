@@ -272,7 +272,8 @@ canvas.panning{cursor:grabbing}
               <option value="openmeteo">Open-Meteo Elevation (sin clave)</option>
               <option value="csv">CSV propio (lon,lat,z)</option>
             </select></div>
-          <div class="field"><label>Resolución (n×n)</label><input id="demN" type="number" step="4" value="24" min="6" max="48"></div>
+          <div class="field"><label>Resolución (n×n)</label><input id="demN" type="number" step="4" value="24" min="6" max="48">
+            <div class="tip" id="demCoste">—</div></div>
         </div>
         <div class="two">
           <div class="field"><label>Margen alrededor (m)</label><input id="demMargen" type="number" step="10" value="0"></div>
@@ -932,9 +933,20 @@ function compute(cfg) {
   // dos centímetros a lo largo de la parcela tira la PRIMERA mesa de cada fila
   // —la rejilla arranca en el bbox— y se pierde un tracker por fila.
   var FIT_TOL = 0.05;
-  function fits(segs, a, b) {
+  function cabeEn(segs, a, b) {
     for (var i = 0; i < segs.length; i++) if (a >= segs[i][0] - FIT_TOL && b <= segs[i][1] + FIT_TOL) return true;
     return false;
+  }
+  /* BIFILA, banda doble (`_DualBandPrep` del core). Al colocar la sub-fila A de
+     un tracker bifila se exige que la estructura quepa TAMBIÉN en la banda de su
+     sub-fila B. Sin esto, el greedy planta en A una talla que en B no cabe, la B
+     la pierde y la A se queda viuda: mesas sueltas que se leen como monofilas.
+     Es la mitad del arreglo; la otra mitad es el espejo de más abajo. */
+  var _segsB = null;
+  function fits(segs, a, b) {
+    if (!cabeEn(segs, a, b)) return false;
+    if (_segsB && !cabeEn(_segsB, a, b)) return false;
+    return true;
   }
 
   // Colocación de una fila (una talla). Port de place_row_aligned/adaptive.
@@ -1053,6 +1065,7 @@ function compute(cfg) {
   function rowModules(row) { var m = 0; for (var i = 0; i < row.length; i++) m += row[i].mods; return m; }
 
   var rows = [], discarded = [], roadsEo = [], ri = 0;
+  var subA = null, subAY = 0;          // última sub-fila A colocada (bifila)
   var roadQ = [];
   if (cfg.roadEvery > 0) {
     var estRows = Math.max(0, Math.floor((iy1 - iy0) / pitch));
@@ -1069,7 +1082,28 @@ function compute(cfg) {
     var offIdx = bifila ? Math.floor(ri / 2) : ri;
     var offX = (cfg.rowOffset === "half" && offIdx % 2 === 1) ? stepMotor / 2 : 0;
     var segs = rowSegs(yy);
-    var row = segs.length ? (isMulti ? placeMulti(segs, yy, offX) : placeSingle(segs, yy, offX, base)) : [];
+    var esA = bifila && ri % 2 === 0, esB = bifila && ri % 2 === 1;
+    _segsB = esA ? rowSegs(yy + pitch) : null;
+    var row;
+    if (esB && subA) {
+      /* OPCIÓN C del cuaderno: la sub-fila B es el ESPEJO en Y de su A, no una
+         colocación independiente. Colocarla por su cuenta —que es lo que hacía
+         esto— daba en borde irregular y en multi-talla unas X distintas en A y
+         en B: el emparejado posterior no casaba, caían huérfanas y el campo
+         salía lleno de mesas sueltas con pinta de monofila. Espejando, A y B
+         comparten EXACTAMENTE las mismas X por construcción. */
+      var dy = yy - subAY;
+      row = [];
+      for (var m2 = 0; m2 < subA.length; m2++) {
+        var t2 = subA[m2];
+        if (!cabeEn(segs, t2.x0, t2.x1)) continue;
+        row.push({ x0: t2.x0, x1: t2.x1, y0: t2.y0 + dy, y1: t2.y1 + dy, mods: t2.mods });
+      }
+    } else {
+      row = segs.length ? (isMulti ? placeMulti(segs, yy, offX) : placeSingle(segs, yy, offX, base)) : [];
+    }
+    _segsB = null;
+    if (esA) { subA = row; subAY = yy; }
     for (var q3 = 0; q3 < row.length; q3++) row[q3].row = ri;
     if (bifila) rows.push(row);                        // paridad ri: A=2k, B=2k+1
     else if (rowModules(row) >= minLineModules) rows.push(row);
@@ -2267,6 +2301,25 @@ $('kmlFile').onchange=async function(e){
    para ver la forma del terreno y filtrar por pendiente, no para replanteo, y
    así se dice en pantalla. */
 var DEM=null;                 // {lats:[], lons:[], z:[[...]], src:'…'}
+var DEM_N_MIN=6, DEM_N_MAX=48, DEM_LOTE=100;   // 100 puntos por llamada (Open-Meteo)
+
+/* La resolución se recortaba EN SILENCIO: se podía teclear 300, la ficha
+   calculaba con 48 y nadie lo decía — y de paso se iban 24 llamadas seguidas al
+   servicio, que contesta 429. Ahora el recorte se escribe en el propio campo y
+   al lado va lo que cuesta: puntos y llamadas. */
+function demNValida(){
+  var n=Math.round(+$('demN').value||24);
+  var c=Math.max(DEM_N_MIN,Math.min(DEM_N_MAX,n));
+  if(c!==n)$('demN').value=c;
+  return {n:c,recortada:c!==n,pedida:n};
+}
+function pintaCosteDem(){
+  var v=demNValida(), pts=v.n*v.n, llamadas=Math.ceil(pts/DEM_LOTE);
+  $('demCoste').textContent=pts+' puntos · '+llamadas+' llamada'+(llamadas>1?'s':'')+
+    (v.recortada?(' · recortado de '+v.pedida+' (máx. '+DEM_N_MAX+')'):'');
+}
+$('demN').addEventListener('input',pintaCosteDem);
+$('demN').addEventListener('change',pintaCosteDem);
 
 function bboxParcela(margen){
   var pts=(PARCEL||[]).concat.apply([], [[]].concat(HOLES||[]));
@@ -2278,32 +2331,59 @@ function bboxParcela(margen){
   return [lo0-margen/mLon, la0-margen/mLat, lo1+margen/mLon, la1+margen/mLat];
 }
 
+var _demCache={};
+async function unLote(trozo,intento){
+  var u='https://api.open-meteo.com/v1/elevation?latitude='+trozo.map(function(p){return p[0].toFixed(6);}).join(',')+
+        '&longitude='+trozo.map(function(p){return p[1].toFixed(6);}).join(',');
+  if(_demCache[u])return _demCache[u];
+  var rr=await fetch(u,{cache:'no-store'});
+  if(rr.status===429||rr.status>=500){
+    // 429 = demasiadas peticiones. El servicio es gratis y sin clave: el trato
+    // es ir despacio, no insistir. Espera lo que él diga (Retry-After) o el
+    // doble cada vez, y a la cuarta se rinde diciendo POR QUÉ.
+    if(intento>=4)throw new Error(rr.status===429
+      ? 'límite de peticiones de Open-Meteo (HTTP 429). Baja la resolución o espera un minuto.'
+      : 'el servicio de elevación falla (HTTP '+rr.status+')');
+    var espera=(+rr.headers.get('retry-after')||0)*1000 || (900*Math.pow(2,intento));
+    $('demTag').innerHTML='<span class="busy">el servicio pide calma ('+rr.status+'): reintento en '+
+      Math.round(espera/100)/10+' s…</span>';
+    await new Promise(function(r){setTimeout(r,espera);});
+    return unLote(trozo,intento+1);
+  }
+  if(!rr.ok)throw new Error('HTTP '+rr.status);
+  var jj=await rr.json();
+  if(!jj||!jj.elevation)throw new Error('respuesta sin elevación');
+  _demCache[u]=jj.elevation;
+  return jj.elevation;
+}
 async function descargaDEM(){
-  var n=Math.max(6,Math.min(48,Math.round(+$('demN').value||24)));
+  var v=demNValida(), n=v.n;
+  if(v.recortada)pintaCosteDem();
   var bb=bboxParcela(+$('demMargen').value||0);
   if(!bb){$('demTag').textContent='define primero la parcela';return;}
   var lats=[],lons=[];
   for(var i=0;i<n;i++){lats.push(bb[1]+(bb[3]-bb[1])*i/(n-1));lons.push(bb[0]+(bb[2]-bb[0])*i/(n-1));}
   var pares=[];
   for(var r=0;r<n;r++)for(var c=0;c<n;c++)pares.push([lats[r],lons[c]]);
-  $('demTag').innerHTML='<span class="busy">pidiendo '+pares.length+' puntos de elevación…</span>';
-  var z=[], LOTE=100;               // Open-Meteo admite 100 puntos por llamada
+  var llamadas=Math.ceil(pares.length/DEM_LOTE);
+  $('demBtn').disabled=true;
+  $('demTag').innerHTML='<span class="busy">'+pares.length+' puntos en '+llamadas+' llamada(s)'+
+    (v.recortada?(' — resolución recortada a '+n+', el máximo'):'')+'…</span>';
+  var z=[];
   try{
-    for(var k=0;k<pares.length;k+=LOTE){
-      var trozo=pares.slice(k,k+LOTE);
-      var u='https://api.open-meteo.com/v1/elevation?latitude='+trozo.map(function(p){return p[0].toFixed(6);}).join(',')+
-            '&longitude='+trozo.map(function(p){return p[1].toFixed(6);}).join(',');
-      var rr=await fetch(u,{cache:'no-store'});
-      if(!rr.ok)throw new Error('HTTP '+rr.status);
-      var jj=await rr.json();
-      if(!jj||!jj.elevation)throw new Error('respuesta sin elevación');
-      z=z.concat(jj.elevation);
-      $('demTag').innerHTML='<span class="busy">elevación '+Math.min(k+LOTE,pares.length)+'/'+pares.length+'…</span>';
+    for(var k=0;k<pares.length;k+=DEM_LOTE){
+      if(k>0)await new Promise(function(r){setTimeout(r,220);});   // ritmo, no ráfaga
+      z=z.concat(await unLote(pares.slice(k,k+DEM_LOTE),0));
+      $('demTag').innerHTML='<span class="busy">elevación '+Math.min(k+DEM_LOTE,pares.length)+'/'+pares.length+'…</span>';
     }
   }catch(e){
-    $('demTag').innerHTML='<span style="color:var(--dead)">No se pudo traer el MDT: '+(e&&e.message||e)+'. Las pendientes siguen siendo las que teclees.</span>';
+    $('demBtn').disabled=false;
+    $('demTag').innerHTML='<span style="color:var(--dead)">No se pudo traer el MDT: '+esc(e&&e.message||e)+
+      '</span><br><span style="color:var(--muted-2)">Las pendientes siguen siendo las que teclees.'+
+      (/429/.test(String(e&&e.message))?' Con '+n+'×'+n+' son '+llamadas+' llamadas: prueba con 16 o 24.':'')+'</span>';
     return;
   }
+  $('demBtn').disabled=false;
   var g=[];
   for(var r2=0;r2<n;r2++)g.push(z.slice(r2*n,(r2+1)*n));
   DEM={lats:lats,lons:lons,z:g,src:'Open-Meteo'};
@@ -2321,7 +2401,7 @@ function demDesdeCSV(txt){
     if(c.length>=3&&isFinite(c[0])&&isFinite(c[1])&&isFinite(c[2]))pts.push(c);
   });
   if(pts.length<4)throw new Error('hacen falta al menos 4 filas lon,lat,z');
-  var n=Math.max(6,Math.min(48,Math.round(+$('demN').value||24)));
+  var n=demNValida().n;
   var lo0=Math.min.apply(null,pts.map(function(p){return p[0];})), lo1=Math.max.apply(null,pts.map(function(p){return p[0];}));
   var la0=Math.min.apply(null,pts.map(function(p){return p[1];})), la1=Math.max.apply(null,pts.map(function(p){return p[1];}));
   var lats=[],lons=[],g=[];
@@ -2822,30 +2902,85 @@ $('expDxf').onclick=function(){ if(!RES)return;
 /* ===== llevar el layout al 3D de cobertura (misma clave que el Explorador) ===== */
 $('d3Btn').onclick=function(){
   if(!RES||!RES.structures.length)return;
-  var st=RES.stats, c0=RES.structures[0].lonlat[0];
-  var clat=0,clon=0,n=0;
-  RES.structures.forEach(function(s){s.lonlat.forEach(function(p){clon+=p[0];clat+=p[1];n++;});});
-  clon/=n;clat/=n;
-  var mLon=111320*Math.cos(clat*Math.PI/180),mLat=110540;
-  var trk=RES.structures.map(function(s,i){
-    var sx=0,sy=0,longest=0,ang=0;
-    for(var k=0;k<s.lonlat.length;k++){
-      var a=s.lonlat[k],b=s.lonlat[(k+1)%s.lonlat.length];
-      sx+=a[0];sy+=a[1];
-      var dE=(b[0]-a[0])*mLon,dN=(b[1]-a[1])*mLat,Lg=Math.hypot(dE,dN);
-      if(Lg>longest){longest=Lg;ang=Math.atan2(dE,dN);}
-    }
-    var plon=sx/s.lonlat.length,plat=sy/s.lonlat.length;
-    return {x:(plon-clon)*mLon,n:(plat-clat)*mLat,rot:ang*180/Math.PI,t:'completo',id:'L'+(i+1)};
+  var st=RES.stats;
+  /* El 3D dibujaba TODO del mismo tamaño y todo «completo»: se le mandaba una
+     sola talla global y ninguna razón de largo, así que un campo multi-talla
+     salía uniforme y no se parecía al 2D. El visor sí sabe hacerlo — lee
+     `mesa.tipos[blk].largo` y el `mr` por seguidor (Ayora tiene tres tallas) —,
+     lo que faltaba era mandárselo.
+
+     Un nodo del visor = UN tracker = las dos mesas que comparten tubo y motor.
+     `filaZ: 0` porque aquí cada fila es su propia línea: en el canónico la
+     geometría bifila es IDÉNTICA a la monofila (pitch entre todas las filas) y
+     lo de «bifila» es qué dos filas comparten motor, no una separación distinta.
+     Poner un filaZ ≠ 0 duplicaría filas que ya van una por una. */
+  var mLatC=110540, clat=0, clon=0, np=0;
+  RES.structures.forEach(function(x){x.lonlat.forEach(function(p){clon+=p[0];clat+=p[1];np++;});});
+  clat/=np; clon/=np;
+  var mLonC=111320*Math.cos(clat*Math.PI/180);
+
+  // Tallas presentes → un tipo de mesa por talla, con su largo real
+  var tallas={}, largoMax=0;
+  RES.structures.forEach(function(x){
+    var k='T'+x.mods, L=+x.len.toFixed(3);
+    if(!tallas[k]||L>tallas[k].largo)tallas[k]={modsAla:x.mods,largo:L};
+    if(L>largoMax)largoMax=L;
   });
-  var lay={title:'Layout generado',crs:'gen',clat:clat,clon:clon,cE:0,cN:0,
-           mods:st.mods_per_struct||28,trackers:trk,ncus:[],meteo:[],reps:[],inverters:[]};
-  try{localStorage.setItem('cobertura_layout',JSON.stringify(lay));}catch(e){}
+
+  // Agrupar mesas en trackers: dentro de una fila, dos mesas seguidas separadas
+  // por el gap del MOTOR son un tracker; si el hueco es el de entre trackers,
+  // empieza otro. Es `group_mesas_into_trackers` del core.
+  var porFila={};
+  RES.structures.forEach(function(x){ (porFila[x.row]=porFila[x.row]||[]).push(x); });
+  var trk=[], nEnteros=0, nSueltas=0;
+  Object.keys(porFila).forEach(function(f){
+    var fila=porFila[f].slice().sort(function(a,b){
+      return (a.cx!=null&&b.cx!=null)?(a.cx-b.cx):0;});
+    var grupo=[];
+    function cierra(){
+      if(!grupo.length)return;
+      var la=0,lo=0,k=0,largo=0,ang=0,mods=0;
+      grupo.forEach(function(g){
+        g.lonlat.forEach(function(p){lo+=p[0];la+=p[1];k++;});
+        mods=g.mods;
+        var q=g.lonlat, ejeA=[(q[0][0]+q[3][0])/2,(q[0][1]+q[3][1])/2], ejeB=[(q[1][0]+q[2][0])/2,(q[1][1]+q[2][1])/2];
+        var dE=(ejeB[0]-ejeA[0])*mLonC, dN=(ejeB[1]-ejeA[1])*mLatC, L=Math.hypot(dE,dN);
+        if(L>largo){largo=L;ang=Math.atan2(dE,dN)*180/Math.PI;}
+      });
+      var mr=largoMax>0?Math.min(1,(grupo[0].len)/largoMax):1;
+      if(grupo.length===2)nEnteros++; else nSueltas++;
+      trk.push({x:(lo/k-clon)*mLonC, n:(la/k-clat)*mLatC, rot:ang,
+                t:(mr<0.999?'medio':'completo'), id:'M'+(trk.length+1),
+                mods:mods, mr:+mr.toFixed(4), blk:'T'+mods});
+      grupo=[];
+    }
+    for(var i=0;i<fila.length;i++){
+      if(!grupo.length){grupo.push(fila[i]);continue;}
+      var prev=grupo[grupo.length-1];
+      var hueco=Math.abs(fila[i].cx-prev.cx)-(fila[i].len+prev.len)/2;
+      if(grupo.length<2&&hueco<=(st.gap_motor_m||0.5)+0.2)grupo.push(fila[i]);
+      else {cierra();grupo.push(fila[i]);}
+    }
+    cierra();
+  });
+
+  var lay={plant:'custom', title:'Layout generado'+(SITIO&&SITIO.n?(' · '+SITIO.n):''),
+    crs:'gen', clat:clat, clon:clon, cE:0, cN:0,
+    fija:(st.mount_type==='fija'),
+    mods:st.mods_per_struct||28,
+    mesa:{modW:st.mod_wid_m, modH:st.mod_len_m, gapMod:st.gap_modules_m,
+          gapDrive:st.gap_motor_m, pasoFila:st.pitch_m, filaZ:0, tipos:tallas},
+    trackers:trk, ncus:[], meteo:[], reps:[], inverters:[]};
+  try{localStorage.setItem('cobertura_layout',JSON.stringify(lay));}catch(e){
+    $('foot').innerHTML='<span style="color:var(--dead)">El layout no cabe en localStorage ('+
+      fmt(trk.length)+' trackers). Baja el tamaño de la parcela o exporta a GeoJSON.</span>';return;}
+  $('foot').innerHTML='Al 3D: <b>'+fmt(trk.length)+'</b> trackers ('+nEnteros+' de dos mesas'+
+    (nSueltas?(', '+nSueltas+' sueltas'):'')+') y '+Object.keys(tallas).length+' talla(s) con su largo real.';
   window.open('../cobertura-zigbee/terreno.html?planta=custom','_blank');
 };
 
 /* ===== arranque ===== */
-loadPlants();syncAz();pintaBotonesDibujo();buildParcel();encaja();draw();detectEngine();
+loadPlants();syncAz();pintaBotonesDibujo();pintaCosteDem();buildParcel();encaja();draw();detectEngine();
 </script>
 </body>
 </html>

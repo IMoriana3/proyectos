@@ -87,6 +87,14 @@ function correr(caso, over) {
   });
 }
 const dpct = (a, b) => (b ? Math.abs(100 * (a - b) / b) : (a ? Infinity : 0));
+// Los casos se buscan por NOMBRE, no por índice: insertar un caso nuevo en el
+// fixture desplazaba los índices fijos y las comprobaciones cruzadas pasaban a
+// comparar cosas distintas sin decirlo.
+const caso = frag => {
+  const i = fix.casos.findIndex(c => c.nombre.indexOf(frag) >= 0);
+  if (i < 0) throw new Error('no hay caso «' + frag + '» en el fixture');
+  return i;
+};
 
 const js = [];
 for (const caso of fix.casos) {
@@ -119,16 +127,16 @@ for (const caso of fix.casos) {
 }
 
 // ── 4) señales de que la geometría está viva ──
-const caso0 = fix.casos[0];
+const caso0 = fix.casos[caso('tracker bifila 1V/28')];
 const sinSetback = correr(caso0, { setback_m: 0 });
 check('el setback MUERDE: sin él el área útil sube',
-  sinSetback.stats.inner_area_m2 > js[0].stats.inner_area_m2 * 1.02,
-  sinSetback.stats.inner_area_m2.toFixed(0) + ' vs ' + js[0].stats.inner_area_m2.toFixed(0));
+  sinSetback.stats.inner_area_m2 > js[caso('tracker bifila 1V/28')].stats.inner_area_m2 * 1.02,
+  sinSetback.stats.inner_area_m2.toFixed(0) + ' vs ' + js[caso('tracker bifila 1V/28')].stats.inner_area_m2.toFixed(0));
 check('sin setback el área útil es la de la parcela (< 0,5 %)',
   dpct(sinSetback.stats.inner_area_m2, sinSetback.stats.poly_area_m2) < 0.5);
 const setbackGrande = correr(caso0, { setback_m: 40 });
 check('un setback de 40 m quita mesas',
-  setbackGrande.stats.structures < js[0].stats.structures);
+  setbackGrande.stats.structures < js[caso('tracker bifila 1V/28')].stats.structures);
 
 // La erosión, contra su definición: un cuadrado de 100×100 erosionado 5 m mide
 // 90×90. Es lo que un `buffer(-5)` de Shapely devuelve, y lo que caza el mutante
@@ -149,40 +157,42 @@ check('MUTANTE: con la banda incompleta la erosión NO cierra (el careo se pone 
           - LAY.ivSub(LAY.insideAt([cuadrado], 25), bandaMutante)[0][0]) - 90) > 1);
 
 // GCR de tracker = apertura / pitch, y el mutante que lo calcula sobre otro pitch
-const gcrCaso = js[0].stats;
+const gcrCaso = js[caso('tracker bifila 1V/28')].stats;
 check('GCR de tracker = apertura / pitch',
   Math.abs(gcrCaso.GCR - gcrCaso.collector_h_m / gcrCaso.pitch_m) < 1e-9);
 check('MUTANTE: GCR sobre el pitch equivocado se sale de tolerancia',
   dpct(gcrCaso.collector_h_m / (gcrCaso.pitch_m + 1), caso0.core.GCR) > 0.5);
 
 // Bifila: si es bifila, es bifila — conteo PAR de mesas por línea
-const bif = js[0];
+const bif = js[caso('tracker bifila 1V/28')];
 check('bifila: toda línea tiene un número PAR de mesas',
   bif.rows.every(r => r.length % 2 === 0), bif.rows.map(r => r.length).filter(n => n % 2).join(','));
 check('bifila: las sub-filas A y B quedan alineadas en X (Δx ≈ 0)',
   bif.stats.ab_max_dx_m < 0.01, String(bif.stats.ab_max_dx_m));
 
 // Montaje fijo: bifila se ignora y se DICE
-const fija = correr(fix.casos[3], { bifila: true });
+const fija = correr(fix.casos[caso('fija 2V/20')], { bifila: true });
 check('en montaje fijo bifila se ignora', fija.stats.bifila === false);
 check('y se dice en pantalla (aviso)',
   fija.avisos.some(a => a.codigo === 'bifila_ignorada_en_fija'));
 
 // Multi-talla: aparecen tallas menores rellenando la cola
-const multi = js[4].stats;
+const multi = js[caso('multi-talla 28/14/7')].stats;
 check('multi-talla: el reparto usa más de una talla',
   Object.keys(multi.by_size || {}).length > 1, JSON.stringify(multi.by_size));
 check('multi-talla coloca más módulos que la talla única',
-  multi.modules > js[1].stats.modules, multi.modules + ' vs ' + js[1].stats.modules);
+  multi.modules > js[caso('tracker monofila')].stats.modules,
+  multi.modules + ' vs ' + js[caso('tracker monofila')].stats.modules);
 
 // El hueco quita mesas donde está
-const conHueco = js[7].stats, sinHueco = js[1].stats;
+const conHueco = js[caso('hueco central')].stats, sinHueco = js[caso('tracker monofila')].stats;
 check('un hueco en la parcela quita mesas', conHueco.structures < sinHueco.structures,
   conHueco.structures + ' vs ' + sinHueco.structures);
 
 // Vial: el mismo campo con vial cada 5 filas tiene MENOS filas
-check('el vial E-O se come filas', js[5].stats.rows < js[1].stats.rows,
-  js[5].stats.rows + ' vs ' + js[1].stats.rows);
+check('el vial E-O se come filas',
+  js[caso('vial E-O')].stats.rows < js[caso('tracker monofila')].stats.rows,
+  js[caso('vial E-O')].stats.rows + ' vs ' + js[caso('tracker monofila')].stats.rows);
 
 // Pitch por debajo de la apertura: el motor lo canta, no lo calla
 const pitchMalo = correr(caso0, { pitch_m: 1.5 });
@@ -195,7 +205,7 @@ check('viales centrados: total=11 cada 5 → [4,7]', JSON.stringify(LAY.centered
 check('viales centrados: total=16 cada 5 → [4,8,12]', JSON.stringify(LAY.centeredRoadPositions(16, 5)) === '[4,8,12]');
 
 // GeoJSON: una feature por mesa, anillo cerrado
-const gj = LAY.toGeoJSON(js[0]);
+const gj = LAY.toGeoJSON(js[caso('tracker bifila 1V/28')]);
 check('el GeoJSON trae una feature por mesa (más los viales)',
   gj.features.filter(f => f.properties.tipo === 'mesa').length === js[0].stats.structures);
 check('los anillos del GeoJSON están cerrados',
@@ -203,6 +213,24 @@ check('los anillos del GeoJSON están cerrados',
     const r = f.geometry.coordinates[0];
     return r[0][0] === r[r.length - 1][0] && r[0][1] === r[r.length - 1][1];
   }));
+
+// El invariante que costó arreglar en el cuaderno, medido en TODOS los casos
+// bifila del fixture: cada línea con conteo par y las sub-filas A/B con las
+// MISMAS X. Si la B vuelve a colocarse por su cuenta, esto se pone rojo.
+fix.casos.forEach((c, i) => {
+  if (!c.cfg.bifila) return;
+  const r = js[i];
+  let malos = 0, dxmax = 0, pares = 0;
+  for (let k = 0; k + 1 < r.rows.length; k += 2) {
+    const A = r.rows[k], B = r.rows[k + 1]; pares++;
+    if (A.length !== B.length) { malos++; continue; }
+    const xa = A.map(t => (t.x0 + t.x1) / 2).sort((p, q) => p - q);
+    const xb = B.map(t => (t.x0 + t.x1) / 2).sort((p, q) => p - q);
+    for (let z = 0; z < xa.length; z++) dxmax = Math.max(dxmax, Math.abs(xa[z] - xb[z]));
+  }
+  check(c.nombre + ' · si es bifila, ES bifila (' + pares + ' pares, Δx ' + dxmax.toFixed(4) + ' m)',
+    malos === 0 && dxmax < 1e-9 && r.rows.every(f => f.length % 2 === 0));
+});
 
 console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
 process.exit(ko ? 1 : 0);
