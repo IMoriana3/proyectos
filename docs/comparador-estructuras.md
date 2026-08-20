@@ -236,6 +236,23 @@ string acortando la fila (65,09 → 32,78 m), el largo dibujado contra el de la 
 65,08 m) y la fija girando al norte al elegir un sitio del hemisferio sur. Más un guard
 anti-podredumbre: ningún id de `CAMPOS_GEOM` puede apuntar a un elemento que no existe.
 
+### Bifila: dos filas que son un seguidor
+
+Monofila y bifila **no cambian la mesa** —es una diferencia operativa, no geométrica, y por eso la
+POA por m² de módulo es exactamente la misma—, pero sí cambian **qué es «un seguidor»**: en bifila
+son dos filas a un pitch de distancia movidas por el **mismo accionamiento**.
+
+En la escena eso no se puede dejar implícito, porque sin dibujarlo dos filas de una bifila y dos
+monofilas se ven idénticas: justo la distinción que la palabra nombra. Así que un bloque de
+seguidores bifila dibuja **cuatro filas —dos seguidores enteros, no tres— con la transmisión
+compartida** (barra a la altura del tubo, acoplamiento en cada eje y el motor en medio) cruzando de
+una fila a la otra. Entre los dos seguidores, en cambio, **no hay barra**: esas dos filas están al
+mismo pitch pero no son el mismo tracker, y ésa es toda la diferencia. El rótulo del bloque lo dice
+también (`N-S · backtracking · bifila`).
+
+Con tres filas el par no se vería como par —quedaría un seguidor entero y medio—, y por eso el
+bloque pasa a cuatro cuando hay bifila. La fija nunca se agrupa, aunque el tracker sea bifila.
+
 ### El error que cazó el test del 3D
 
 El primer render tenía el **signo de la basculación cambiado**: por la mañana los seguidores se
@@ -303,7 +320,7 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ```bash
 node tests/test_comparador.js       # 53 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
-node tests/test_comparador_3d.js    # 50 comprobaciones · la escena en un Chromium de verdad
+node tests/test_comparador_3d.js    # 57 comprobaciones · la escena en un Chromium de verdad
 ```
 
 El test **extrae el bloque `FÍSICA PURA` del HTML real**, no una copia: una copia se quedaría
