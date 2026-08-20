@@ -17,6 +17,14 @@ de 2,5 pp y la POA absoluta dentro del 8 %. Incluye un mutante: si se invierte e
 inclinado, el careo tiene que ponerse rojo. El fixture se regenera con
 `python3 tests/gen_careo_estructuras.py --core /ruta/a/SolarGPTfull/solargpt`.
 
+`test_comparador_3d.js` mide la ORIENTACIÓN real de cada panel en la escena (la normal, sacada de
+la matriz del grupo que bascula) y la contrasta con dónde está el sol: un 3D bonito que apunte mal
+es peor que no tenerlo, porque se lee como una prueba visual de un número que contradice. Cazó el
+signo de basculación cambiado —por la mañana los seguidores miraban al oeste, 106° de AOI— que a
+mediodía no se nota porque θ≈0; por eso mide a las 8 y a las 17. Comprueba también que el sol
+proyecta sombra de verdad (una luz direccional trae un frustum de ±5 m) y que nada queda fuera de
+cuadro con dos, cuatro o seis bloques.
+
 Comprueban además lo de siempre: que las tarjetas se pintan, que el detalle abre con su
 historial, que el botón *Paquete* apunta a `releases/latest` y que el panel de
 documentación carga el markdown de `docs/`.
@@ -34,4 +42,5 @@ node tests/test_index.js                   # 13 comprobaciones
 node tests/test_pwa.js                     # 21 comprobaciones (PWA)
 node tests/test_integridad.js              # 6 comprobaciones, sin navegador
 node tests/test_comparador.js              # 27 comprobaciones, careo contra el core
+node tests/test_comparador_3d.js           # 31 comprobaciones, la escena 3D en Chromium
 ```
