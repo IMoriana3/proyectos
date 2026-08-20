@@ -838,7 +838,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/sim-viento.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-19",
-    version: "1.10.4",
+    version: "1.11",
     docId: "viento",
     docUrl: "",
     download: "",
@@ -873,6 +873,7 @@ const PROJECTS = [
       { done:false, text:"La velocidad de suelta del pasivo es un SUSTITUTO declarado de la carga de desembrague, no una medida: hace falta el par real y su dispersión entre unidades para que el umbral deje de ser un parámetro." }
     ],
     historial: [
+      { date:"2026-08-19", ver:"1.11", note:"Dos cosas. GRÁFICA DE θ, la misma que la de overcast: dónde está cada seguidor en cada momento, todas las estrategias juntas sobre la ventana común, con trazo fino la CONSIGNA (el escalón que manda la máquina de estados) y grueso lo EJECUTADO a 0,17 °/s — esa rampa es la razón de que la POA caiga poco a poco y no de golpe, y con una sola línea no se ve. Y el pasivo gana la opción de caer HACIA EL LADO DEL QUE SOPLA, además del lado fijo de montaje: el signo lo pone el rumbo en el instante de la suelta y ya no cambia, porque una vez desembragada la fila está apoyada en su tope. Sin meteo con dirección se avisa y se usa el fijo, que un lado que no varía no es «seguir al viento»." },
       { date:"2026-08-19", ver:"1.10.4", note:"Las gráficas dejan de verse pixeladas. Los seis lienzos nacían con 880 px de ancho fijo y el CSS los estira al del contenedor —unos 1.200—, así que se dibujaban a 880 y se escalaban; en una pantalla HiDPI, además, con dos píxeles físicos por cada uno de CSS. Ahora el búfer se ajusta a ancho real × densidad y el contexto se escala, de modo que todo el código de dibujo sigue trabajando en píxeles CSS sin enterarse. Y al cambiar el tamaño se REDIBUJA en vez de estirar (con pausa, que resize dispara decenas de veces), incluida la rosa de vientos, que se quedaba fuera." },
       { date:"2026-08-19", ver:"1.10.3", note:"ARREGLO: la escena salía amarilla y lavada y parpadeaba. La causa era el intento de la 1.10.1 de dar una luz a cada bloque: en three.js las capas de una LUZ se prueban contra la cámara, no contra los objetos, así que las siete direccionales iluminaban todo — siete veces la exposición, y con luz cálida eso es ese amarillo. El parpadeo era el z-fighting de las parcelas contra el suelo. Se vuelve a una sola luz. Lo que impide que la sombra cruce de un bloque a otro es la GEOMETRÍA: el hueco ya se deriva del alcance de la sombra, y por debajo de la elevación a la que una sombra alcanzaría ese hueco —calculada, no tecleada— se apagan, porque ahí no informan, contaminan." },
       { date:"2026-08-19", ver:"1.10.2", note:"Los decimales salen de la MAGNITUD del dato, no de un 2 fijo. Con deltas de 0,003 % —lo normal en un año con pocos abanderamientos— la tabla, el KPI y las barras decían todos «0,00 %»: el número no redondeaba el dato, lo borraba, y un cero donde hay señal es peor que no poner número. Un solo criterio para los tres, así que las cifras siguen siendo comparables. Y la columna «de ellos a total» pasa a decir «de ellos a ±55°», que es lo que significa: cuántos abanderamientos llegaron al límite mecánico y cuántos se quedaron en el sector parcial." },
