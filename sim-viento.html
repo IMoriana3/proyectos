@@ -1565,6 +1565,17 @@ async function run(){
 }
 
 function ord(){ return Object.keys(REP.cases).sort(); }
+/* Decimales por MAGNITUD, no fijos. Un año con dos abanderamientos deja deltas
+   de 0,003 %, y con dos decimales la tabla, el KPI y las barras decían todos
+   «0,00 %»: el número no redondeaba el dato, lo borraba. Se elige una sola vez
+   para todos los casos, así que las cifras siguen siendo comparables entre sí. */
+function decPct(vals){
+  var m=0; (vals||[]).forEach(function(v){m=Math.max(m,Math.abs(+v||0));});
+  return Math.max(2,Math.min(5,Math.ceil(-Math.log10(m||1))+1));
+}
+function decDelta(){
+  return decPct(ord().map(function(s){return REP.cases[s].poa_delta_pct;}));
+}
 function best(){ // la que menos POA pierde
   var k=ord(), b=null;
   k.forEach(function(s){if(b===null||REP.cases[s].poa_delta_kwh_m2>REP.cases[b].poa_delta_kwh_m2)b=s;});
@@ -1581,7 +1592,7 @@ function render(){
     ro('Viento p95',fmt(w.p95_ms*3.6,0),'km/h · máx '+fmt(w.max_ms*3.6,0))+
     ro('Horas &gt; '+fmt(w.threshold_1_kmh,0)+' km/h',fmt(w.hours_over_t1,0),'h · &gt;'+fmt(w.threshold_2_kmh,0)+': '+fmt(w.hours_over_t2,0)+' h')+
     ro('Horas de sol',fmt(m.daylight_hours,0),'h')+
-    ro('Menos pierde',b||'—',b?fmt(REP.cases[b].poa_delta_pct,2)+' %':'')+
+    ro('Menos pierde',b||'—',b?fmt(REP.cases[b].poa_delta_pct,decDelta())+' %':'')+
     '</div>'+
     '<p class="note">Viento corregido a la altura del seguidor con ley potencial 1/7: '+
     'factor <b>'+fmt(w.scale_applied,3)+'</b> sobre el dato de 10 m'+
@@ -1812,7 +1823,12 @@ function drawWind(){
 function drawTable(){
   var b=best();
   var h='<thead><tr><th>Estrategia</th><th>POA<br>kWh/m²·año</th><th>Δ POA<br>kWh/m²</th><th>Δ POA<br>%</th>'+
-        '<th>Abanderamientos<br>al año</th><th>de ellos<br>a total</th><th>Horas<br>al año</th>'+
+        '<th title="Racha continua fuera de seguimiento. El hold de histéresis cuenta dentro: '+
+        'si el viento baja del umbral unos minutos y vuelve, sigue siendo el mismo.">'+
+        'Abanderamientos<br>al año</th>'+
+        '<th title="De esos abanderamientos, cuántos llegaron al límite mecánico. El resto se '+
+        'quedaron en el sector parcial, sin tumbarse del todo.">de ellos<br>a ±55°</th>'+
+        '<th>Horas<br>al año</th>'+
         '<th>% horas<br>de sol</th><th>Duración<br>media h</th><th>Máx<br>h</th></tr></thead><tbody>';
   h+='<tr class="base"><td><span class="dot" style="background:'+COL.BASE+'"></span>Sin abanderar (base)</td>'+
      '<td>'+fmt(REP.baseline.poa_kwh_m2,1)+'</td><td>—</td><td>—</td><td>0</td><td>0</td><td>0</td><td>0,0</td><td>—</td><td>—</td></tr>';
@@ -1826,7 +1842,7 @@ function drawTable(){
                c.n_thresholds+(c.n_thresholds>1?' umbrales':' umbral'))+'</td>'+
        '<td>'+fmt(c.poa_kwh_m2,1)+'</td>'+
        '<td>'+fmt(c.poa_delta_kwh_m2,2)+'</td>'+
-       '<td>'+fmt(c.poa_delta_pct,3)+'</td>'+
+       '<td>'+fmt(c.poa_delta_pct,decDelta())+'</td>'+
        '<td>'+c.n_events+'</td>'+
        '<td>'+c.n_events_full+'</td>'+
        '<td>'+fmt(c.hours_engaged,0)+'</td>'+
@@ -1861,17 +1877,22 @@ function drawBars(){
   if(hi-lo<1e-6){hi=0.1;lo=-0.1;}
   var pad=(hi-lo)*0.15; hi+=pad; lo-=pad;
   var gy=function(v){return H-B-((v-lo)/(hi-lo))*(H-B-T);};
+  /* Los decimales salen de la MAGNITUD, no de un 2 fijo. Con deltas de
+     0,003 % —que es lo normal en un año con pocos abanderamientos— toda la
+     gráfica se leía «0.00%»: el número no redondeaba el dato, lo borraba, y
+     un cero donde hay señal es peor que no poner número. */
+  var dec=decDelta();
   x.strokeStyle='#1e2a3a';x.fillStyle='#5c7189';x.font='10px '+'ui-monospace,monospace';x.lineWidth=1;
   for(var i=0;i<=4;i++){var v=lo+(hi-lo)*i/4,y=gy(v);
     x.beginPath();x.moveTo(L,y);x.lineTo(W-R,y);x.stroke();
-    x.textAlign='right';x.fillText(v.toFixed(2)+'%',L-6,y+3);}
+    x.textAlign='right';x.fillText(v.toFixed(dec)+'%',L-6,y+3);}
   var y0=gy(0);x.strokeStyle='#2a3a50';x.lineWidth=1.5;x.beginPath();x.moveTo(L,y0);x.lineTo(W-R,y0);x.stroke();
   var bw=(W-L-R)/k.length;
   k.forEach(function(s,i){
     var c=REP.cases[s],v=c.poa_delta_pct,cx=L+bw*i+bw/2,w=Math.min(74,bw*0.5),y=gy(v);
     x.fillStyle=COL[s];x.fillRect(cx-w/2,Math.min(y,y0),w,Math.abs(y-y0));
     x.fillStyle='#eaf4ff';x.font='700 12px system-ui,sans-serif';x.textAlign='center';
-    x.fillText(v.toFixed(2)+'%',cx,v<0?y+15:y-6);
+    x.fillText(v.toFixed(dec)+'%',cx,v<0?y+15:y-6);
     x.fillStyle='#9bb0c6';x.font='11px system-ui,sans-serif';
     x.fillText(s,cx,H-B+16);
     x.fillStyle='#5c7189';x.font='10px ui-monospace,monospace';
