@@ -285,10 +285,12 @@ solape máximo pasa de 26,4 m a 0,3.
 Cada bloque de la comparativa es la **misma planta** con otra estrategia, no seis plantas vecinas.
 Una sombra que salta de uno a otro es un artefacto, y además oscurece justo lo que se compara.
 
-Con una sola luz no hay forma de impedirlo: las capas de three.js filtran contra la **cámara
-principal**, no contra quién proyecta. Así que cada bloque lleva su propia direccional, en su propia
-capa, con la caja de sombras ajustada a él y su propio trozo de suelo — el suelo global no puede
-recibir seis sombras sin recibir también seis veces la luz.
+**Lo que no funciona, y queda escrito porque se intentó**: dar una luz a cada bloque. En three.js
+las capas de una **luz** se prueban contra la **cámara**, no contra los objetos, así que seis luces
+en seis capas iluminan las seis lo mismo — siete direccionales sumadas dan siete veces la exposición
+y la escena sale amarilla y lavada. Las capas sirven para apagar una luz entera, no para repartirla.
+
+Lo que sí lo impide es la **geometría**.
 
 Y el **hueco entre bloques se deriva del alcance de esa caja**, no al revés. La caja tiene que
 contener el bloque desde cualquier rumbo del sol (la semidiagonal), y para que el vecino no entre en

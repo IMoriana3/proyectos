@@ -2115,7 +2115,8 @@ function init3D(){
     suelo.rotation.x=-Math.PI/2; suelo.receiveShadow=true; sc.add(suelo);
     var horiz=new THREE.Mesh(new THREE.PlaneGeometry(12000,12000),
       new THREE.MeshLambertMaterial({color:0x1e2a19}));
-    horiz.rotation.x=-Math.PI/2; horiz.position.y=-0.05; sc.add(horiz);
+    // −1,5 m y no −5 cm: a mil metros de distancia cinco centímetros z-pelean
+    horiz.rotation.x=-Math.PI/2; horiz.position.y=-1.5; sc.add(horiz);
     /* Y la NIEBLA es lo que cose los dos con el cielo: sin ella, por lejos que
        llegue el suelo siempre hay una línea dura donde acaba. Su color se
        repinta con el del horizonte en `setSky`, así que al amanecer la bruma
@@ -2165,12 +2166,6 @@ function seguidor3D(mats){
 function limpiaMundo(){
   if(TD&&TD.mundo){TD.sc.remove(TD.mundo);
     TD.mundo.traverse(function(o){if(o.geometry)o.geometry.dispose();});}
-  // las luces por bloque no cuelgan del mundo (necesitan su `target` suelto),
-  // así que se retiran a mano o se acumulan en cada remontaje
-  if(TD&&TD.soles){TD.soles.forEach(function(x){
-    TD.sc.remove(x.luz); TD.sc.remove(x.luz.target);
-    if(x.luz.shadow&&x.luz.shadow.map)x.luz.shadow.map.dispose();
-  }); TD.soles=null;}
   if(TD)TD.mundo=null;
 }
 
@@ -2243,7 +2238,7 @@ function escenaComparativa(){
      contenga el bloque y excluya al vecino. */
   var rSombra=0.5*Math.hypot(wBloque,largoBloque)+3;
   var HX=Math.max(18,rSombra-wBloque/2+6), HZ=Math.max(18,rSombra-largoBloque/2+6);
-  var ks=casos(), bloques=[], soles=[];
+  var ks=casos(), bloques=[];
 
   /* REJILLA, no fila. Seis bloques de veinte filas puestos en línea son ~830 m
      de ancho por 64 de fondo: en un visor de 440 px eso es una tira ilegible.
@@ -2319,43 +2314,21 @@ function escenaComparativa(){
     eti.position.set(0,Seguidor.DIMS.postH+9,0);
     b.add(barra,ref,marca,eti); mundo.add(b);
 
-    /* ── UNA LUZ POR BLOQUE, Y SU SOMBRA NO SALE DE ÉL ──
-       Cada bloque es la MISMA planta con otra estrategia, no seis plantas
-       vecinas: una sombra que cruza de uno a otro es un artefacto que además
-       oscurece justo lo que se está comparando.
+    /* NO hay una luz por bloque, y conviene que quede escrito por qué: se
+       intentó (v1.10.1) y en three.js NO FUNCIONA. Las capas de una luz se
+       prueban contra la CÁMARA, no contra los objetos, así que seis luces en
+       seis capas iluminan las seis lo mismo: siete direccionales sumadas daban
+       siete veces la exposición y la escena salía amarilla y lavada, con
+       parpadeo por el z-fighting de las parcelas contra el suelo.
 
-       Con una sola luz no hay forma de impedirlo —las capas de three.js no
-       filtran quién PROYECTA, el filtro va contra la cámara principal— así que
-       cada bloque lleva su propia direccional, en su propia capa, con la
-       cámara de sombras ajustada a su caja. Lo que cae fuera de esa caja
-       simplemente no se dibuja: la sombra queda recortada al bloque por
-       construcción, no por dejar hueco suficiente (que a sol bajo no llega
-       nunca).
-
-       Y su propio trozo de suelo, por lo mismo: el suelo global no puede
-       recibir seis sombras sin recibir también seis veces la luz. */
-    var CAPA=1+bi;
-    b.traverse(function(o){o.layers.set(CAPA);});
-    var luz=new THREE.DirectionalLight(0xffeecc,1.5);
-    luz.castShadow=true; luz.shadow.mapSize.width=1024; luz.shadow.mapSize.height=1024;
-    luz.shadow.bias=-2e-4; luz.shadow.normalBias=0.3;
-    luz.layers.set(CAPA); luz.target.position.set(xBloque,0,zBloque);
-    var rB=rSombra;
-    var shB=luz.shadow.camera;
-    shB.left=-rB; shB.right=rB; shB.top=rB; shB.bottom=-rB;
-    shB.near=1; shB.far=4000; shB.updateProjectionMatrix();
-    TD.sc.add(luz,luz.target);
-    var parcela=new THREE.Mesh(
-      new THREE.PlaneGeometry(wBloque+HX*0.9,largoBloque+HZ*0.9),
-      new THREE.MeshLambertMaterial({color:0x24301d}));
-    parcela.rotation.x=-Math.PI/2; parcela.position.set(xBloque,0.02,zBloque);
-    parcela.receiveShadow=true; parcela.layers.set(CAPA); TD.sc.add(parcela);
-    mundo.add(parcela);
-    soles.push({luz:luz,cx:xBloque,cz:zBloque,r:rB});
+       Lo que sí impide que la sombra cruce es la GEOMETRÍA: el hueco entre
+       bloques se deriva del alcance de la sombra (ver arriba), así que por
+       encima de la elevación declarada no llega al vecino. Por debajo se
+       apagan, que es lo honesto: a esa altura de sol la sombra mediría
+       cientos de metros y no hay hueco que valga. */
 
     bloques.push({k:k,g:b,segs:segs,mats:mats,matsInt:matsInt,barra:barra,ref:ref,eti:eti});
   });
-  TD.soles=soles;
   /* Cámara casi desde el SUR y no muy alta: mirando a lo largo del eje N-S
      cada bloque se lee como su propia sección, y dejando algo de horizonte
      entra el cielo — desde muy arriba el encuadre era todo suelo. */
@@ -2363,11 +2336,18 @@ function escenaComparativa(){
   TD.cam.position.set(d*0.22,d*0.34,d*0.95); TD.ct.target.set(0,8,0); TD.ct.update();
   TD.suelo.position.set(0,0,0); TD.suelo.scale.set(ancho*3.2,largo*4,1);
   TD.encuadre={pos:TD.cam.position.clone(),tgt:TD.ct.target.clone()};
-  /* El sol GLOBAL deja de proyectar aquí: las sombras las ponen las luces por
-     bloque. Se queda para iluminar el suelo lejano y el cielo, en la capa 0,
-     con la misma intensidad, para que la parcela de cada bloque y el suelo de
-     alrededor no se vean como dos verdes distintos. */
-  TD.sun.castShadow=false; TD.sun.layers.set(0);
+  TD.sun.layers.enableAll();
+  var sh=TD.sun.shadow.camera;
+  sh.left=-ancho*0.6; sh.right=ancho*0.6; sh.top=largo*0.8; sh.bottom=-largo*0.8;
+  sh.far=Math.max(2000,d*6); sh.updateProjectionMatrix();
+  /* Elevación por debajo de la cual se apagan las sombras en la comparativa,
+     DERIVADA del hueco y de la altura del seguidor, no tecleada: una sombra
+     mide `altura / tan(elev)`, así que la elevación a la que justo alcanza el
+     hueco es `atan(altura / hueco)`. Con un 80 % del hueco como margen. A 5°
+     la sombra mide 34 m y cruzaría al vecino por mucho hueco que se deje: ahí
+     lo que enseñaría no es información, es contaminación entre casos. */
+  var altSeg=Seguidor.DIMS.postH+Seguidor.DIMS.modH/2*Math.sin(55*Math.PI/180);
+  TD.elevMinSombra=Math.atan(altSeg/(HX*0.8))*180/Math.PI;
   TD.radio=Math.max(320,d*1.5);
   /* La niebla escala con la escena o no sirve: con un rango fijo, en la
      comparativa (200 m) se come los seguidores y en Ayora (2,5 km) no llega
@@ -2492,9 +2472,9 @@ async function escenaPlanta(name){
   TD.ct.maxDistance=Math.max(1500,ext*3);
   TD.suelo.position.set(cx,0,cz); TD.suelo.scale.set(ext*4,ext*4,1);
   TD.encuadre={pos:TD.cam.position.clone(),tgt:TD.ct.target.clone()};
-  /* Aquí sí hay UNA planta, así que el sol global vuelve a proyectar: entre
-     seguidores de la misma planta la sombra es real y es la que se mira. */
-  TD.sun.castShadow=true; TD.sun.layers.enableAll();
+  /* Aquí hay UNA planta, así que la sombra entre seguidores es real y es la
+     que se mira: no se apaga a ninguna hora. */
+  TD.sun.castShadow=true; TD.sun.layers.enableAll(); TD.elevMinSombra=null;
   var sh=TD.sun.shadow.camera;
   sh.left=-ext*0.7; sh.right=ext*0.7; sh.top=ext*0.7; sh.bottom=-ext*0.7; sh.far=ext*4+800;
   sh.updateProjectionMatrix();
@@ -2642,14 +2622,9 @@ function ponSol(elDeg,azDeg,vms,dirDeg){
   var c=TD.ct.target;
   TD.sun.position.copy(dir.clone().multiplyScalar(R)).add(c);
   TD.sun.target.position.copy(c); TD.sun.target.updateMatrixWorld();
-  // cada luz de bloque va sobre SU bloque, no sobre el centro de la escena:
-  // con una posición común, la caja de sombras de los bloques de los extremos
-  // se quedaba fuera y su sombra desaparecía a media tarde.
-  if(TD.soles)TD.soles.forEach(function(x){
-    var cb=new THREE.Vector3(x.cx,0,x.cz);
-    x.luz.position.copy(dir.clone().multiplyScalar(x.r*3)).add(cb);
-    x.luz.target.position.copy(cb); x.luz.target.updateMatrixWorld();
-  });
+  // Con el sol muy bajo la sombra mide cientos de metros y cruza de un bloque
+  // a otro: ahí se apaga, porque a esa altura no informa, contamina.
+  if(TD.elevMinSombra!=null)TD.sun.castShadow=(elDeg>TD.elevMinSombra);
   TD.sunM.position.copy(dir.clone().multiplyScalar(R*0.92)).add(c);
   var disco=R*0.16; TD.sunM.scale.set(disco,disco,1);
   var up=Math.min(1,Math.max(0,elDeg/35));
@@ -2657,15 +2632,12 @@ function ponSol(elDeg,azDeg,vms,dirDeg){
     var warm=Math.max(0,Math.min(1,(12-elDeg)/12));
     TD.sun.color.setRGB(1,0.93-0.38*warm,0.80-0.62*warm);
     TD.sun.intensity=1.45-0.25*warm;
-    if(TD.soles)TD.soles.forEach(function(x){
-      x.luz.color.copy(TD.sun.color); x.luz.intensity=TD.sun.intensity;});
     if(TD.hemi)TD.hemi.intensity=0.55+0.15*warm;
     TD.sunM.material.color.setRGB(1,0.95-0.30*warm,0.85-0.55*warm);
     setSky([0.04+0.09*up,0.07+0.12*up,0.14+0.22*up],
            [0.20+0.25*up+0.62*warm*(1-0.5*up),0.28+0.30*up+0.20*warm*(1-0.5*up),0.42+0.35*up-0.20*warm]);
   }else{
     TD.sun.intensity=0.02; if(TD.hemi)TD.hemi.intensity=0.32;
-    if(TD.soles)TD.soles.forEach(function(x){x.luz.intensity=0.02;});
     var tw=Math.max(0,(elDeg+8)/8);
     setSky([0.028,0.038,0.065],[0.05+0.55*tw,0.055+0.19*tw,0.08+0.03*tw]);
   }
