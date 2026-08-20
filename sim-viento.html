@@ -694,7 +694,16 @@ LOC.pasivo=function(thT,ws,release,side,tol,dtS){
     // ORDEN: primero el reenganche, después la suelta. Al revés, con viento
     // sostenido la fila se reenganchaba y pasaba un paso entero en
     // seguimiento antes de soltarse otra vez — en pleno vendaval.
-    if(suelta&&Math.abs(thT[i]-lado)<=tol){
+    // Reenganche por CRUCE, no solo por proximidad. Con `tol` fijo a 1° y el
+    // paso de θ escalando con dt, a paso grueso el seguimiento PASA por el
+    // ángulo entre dos muestras sin que ninguna caiga dentro de la tolerancia
+    // y la fila se queda suelta para siempre. Con el lado por defecto no se
+    // ve, porque θ SATURA en ±55 y la distancia mínima es exactamente 0; con
+    // un lado intermedio —que es lo que permite el campo «Lado (°)»— salían
+    // 5× las horas sin avisar. Mismo criterio que
+    // `wind_stow_passive.apply_passive_release`.
+    var cruza=(i>0&&suelta&&(thT[i-1]-lado)*(thT[i]-lado)<=0);
+    if(suelta&&(cruza||Math.abs(thT[i]-lado)<=tol)){
       suelta=false;
       eps.push({i0:ini,i1:i-1,hours:(i-ini)*dtS/3600,lado:lado});
     }
@@ -1228,7 +1237,13 @@ LOC.run=function(cfg,onStep){
       var poaF=new Float64Array(n),poaP=new Float64Array(n),dP=new Float64Array(n);
       var hRel=0,hRelDay=0,byM=new Array(12).fill(0);
       for(i=0;i<n;i++){
-        poaF[i]=PR.mask[i]?LOC.poa(pSide,el[i],azs[i],bh[i],M.dhi[i],M.ghi[i]):poaB[i];
+        // El ángulo es `PR.theta[i]`, el CONGELADO en la suelta, no `pSide`:
+        // con «al lado del que sopla» pSide es una SERIE, y pasar un
+        // Float64Array donde va un número da `-arr*D2R` = NaN — o sea POA
+        // NaN en cada paso con la fila suelta, y kWh NaN detrás. Además
+        // `PR.theta` es lo que la fila realmente hace, que es lo que hay
+        // que transponer.
+        poaF[i]=PR.mask[i]?LOC.poa(PR.theta[i],el[i],azs[i],bh[i],M.dhi[i],M.ghi[i]):poaB[i];
         poaP[i]=(1-frac)*poaB[i]+frac*poaF[i];
         dP[i]=poaP[i]-poaB[i];
         if(PR.mask[i]){hRel+=dtH;byM[month[i]]+=dtH;if(el[i]>0)hRelDay+=dtH;}
