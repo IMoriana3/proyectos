@@ -350,6 +350,41 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-20 · v1.29** — **KPIs que distinguen políticas + UNA fuente para la cara colectora**
+  (reportado con captura: las nueve políticas mostraban «sombra máx 100%» y los mismos minutos).
+  Verificado que era real y no un artefacto de la v1.28: con terreno roto la columna calculada
+  SOLO con planos también da 99–100%, porque en terreno roto siempre hay un minuto de sol bajo con
+  una fila entera tapada; el máximo de una fila respondía a «¿hay terreno roto?», no a «¿qué
+  política gestiona mejor la sombra?». Sustituidas por: **sombra media de planta ponderada por la
+  DNI** del instante (dice cuánta sombra te comes DONDE HAY ENERGÍA) y **minutos con sombra media
+  >1%**; y la pérdida Martinez se desglosa entre paréntesis con **la parte estructural** —la que
+  ninguna consigna evita— aprovechando que el contador ya sabe separar planos de hierro
+  (`out.pl`, cuesta una segunda unión de intervalos sobre los mismos datos). En Ayora las columnas
+  ya separan: pairwise 2,48% vs óptimos 4,56–4,75%; en llano, 0 minutos vs 160.
+  **Y la auditoría encontró lo gordo**: la v1.28 metió la cara colectora (0,17 m) A FUEGO en el
+  contador 3D mientras el corte 2D, el rayo crítico, el vano y `shadeFracPair` seguían usando el
+  campo «Offset sup–eje», que valía **0** — dos verdades para el mismo número, con el visor del
+  vano midiendo el haz desde 17 cm más abajo (a sol rasante, metros de error). Unificado: el campo
+  pasa a llamarse **«cara sup–eje»** con el valor real 0,17 (de `seguidor.js`: 0,14 de cara sobre
+  el tubo + medio canto) y **el contador 3D lo lee de ahí** (`T.z0`); si lo cambias, cambian todos.
+  Comprobado que el invariante de planos sigue dando **0,000% exacto** con la cara a 0,17 (llano,
+  pendiente uniforme y ondulado). Corregidos también los textos que ya no eran ciertos («pairwise
+  garantiza sombra cero» → cero **entre planos**; la estructura deja residuo). Nuevo
+  `tools/audit_sweep.mjs`: barrido de invariantes (θ, sombra∈[0,1], planos≤total, Martinez≥óptica,
+  POA=media por fila, acoplado bifila, slew, óptimo≥pairwise, libre≥óptimo, degeneraciones) sobre
+  10 configuraciones × 9 políticas × días de invierno/verano/equinoccio. Rendimiento medido:
+  el contador con estructura cuesta ×1,4–1,9 respecto a v1.27 (poda exacta de cajas que quedan
+  detrás del plano receptor, unión hoisted y salto de la segunda unión cuando no hay estructura).
+  **Y el barrido cazó un segundo fallo**: el energy-optimal rendía MENOS que pairwise bajo el
+  contador exacto en llano (23239,9 vs 23302,7 el 21-jun) — el evaluador de búsqueda es 2.5D y
+  devuelve cero sombra por encima de zen 87, así que elegía f=1 creyendo que salía gratis. Veto
+  con el contador exacto acotado al sol bajo (donde el rápido es ciego): optimal ≥ pairwise por
+  construcción, el mismo arreglo que la v1.27 hizo para el óptimo libre y que a `anglesOptimal`
+  se le quedó pendiente. Anual: óptimo +0,54% · libre +0,66%. Resultado del barrido tras los
+  arreglos: **9.720 comprobaciones de política-instante, sin hallazgos**; y el barrido de interfaz
+  (6 plantas, 9 políticas, slider minutal, rayo, POV del sol) sin errores de consola ni hallazgos,
+  con la QA de la página en 24/24. QA 53.
+
 - **2026-08-20 · v1.28** — **la ESTRUCTURA de la mesa entra en la física**. Reportado con captura
   («¿por qué sigo viendo alguna sombra?») y resuelto midiendo, no opinando: clasificados por
   raycast los 4.361 píxeles oscuros del render — **83,5% suelo** (lo que el propio visor del vano
