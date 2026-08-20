@@ -359,13 +359,7 @@
         <button class="btn small acc" id="play">▶ Reproducir</button>
         <input type="range" id="tpos" min="0" max="0" step="1" value="0">
         <span class="t" id="tlbl">—</span>
-        <select id="tspeed" title="Cuánto tiempo SIMULADO pasa por cada segundo real. La misma escala que el modo «en vivo».">
-          <option value="60">×60 · 1 min/s</option>
-          <option value="300" selected>×300 · 5 min/s</option>
-          <option value="900">×900 · 15 min/s</option>
-          <option value="3600">×3600 · 1 h/s</option>
-          <option value="7200">×7200 · 2 h/s</option>
-        </select>
+        <select id="tspeed" title="Cuánto tarda en reproducirse la ventana entera. Las opciones salen del PASO de la ventana: por debajo de un paso por segundo la escena se queda congelada entre muestra y muestra."></select>
       </div>
       <p class="note" id="c3note">Sube el viento y mira: por encima de <b>40 km/h</b> entran en
         parcial y por encima de <b>60</b> se abanderan del todo. El eje gira a <b>0,17 °/s</b>, así
@@ -412,6 +406,14 @@
         <div class="field"><label>Duración máx. (min)</label><input id="std1" type="number" step="10" value="240"></div>
         <div class="field"><label>Semilla</label><input id="stseed" type="number" step="1" value="7"></div>
       </div>
+      <div class="labrow" style="margin-top:12px;align-items:center;gap:10px">
+        <button class="btn acc" id="labRun">▶ Simular el año con estas rachas</button>
+        <span class="sn" id="labHint" style="margin:0"></span>
+      </div>
+      <p class="note">Las rachas no entran solas: <b>se aplican al simular el año</b>. Al terminar, la
+        escena 3D salta al modo <b>Episodio</b> sobre la ventana del abanderamiento <b>más caro</b> del
+        año — que con rachas metidas suele ser una de ellas—, así que ahí es donde se ven. Si quieres
+        mirar una racha concreta, ponla sola (o súbele el pico) y será la que gane la ventana.</p>
       <p class="note">Las rachas se superponen por <b>máximo</b>, no se suman: pedir 90 km/h da 90 km/h.
         La corrección de altura y la escala se aplican al fondo <b>antes</b>, así que el pico que escribes
         es el que ve la máquina de estados. Nada de esto lleva detrás un cambio de irradiancia, de
@@ -1638,7 +1640,8 @@ function fillRosa(){
 }
 function renderGusts(){
   if(!GUSTS.length){$('gtbl').innerHTML='<tbody><tr><td colspan="8" style="color:var(--muted-2);font-size:12px;padding:10px 4px">'+
-    'Sin rachas inyectadas: se simula el viento de fondo tal cual.</td></tr></tbody>';return;}
+    'Sin rachas inyectadas: se simula el viento de fondo tal cual.</td></tr></tbody>';
+    if(typeof labHint==='function')labHint();return;}
   var h='<thead><tr><th>Cuándo <span class="sn" style="margin:0">'+esc(tzSigla())+'</span></th><th>Pico km/h</th><th>Duración min</th><th>Forma</th><th>Viene de</th><th>×</th><th>cada h</th><th></th></tr></thead><tbody>';
   GUSTS.forEach(function(g,i){
     h+='<tr>'+
@@ -1654,6 +1657,7 @@ function renderGusts(){
       '<td><button class="gx" data-del="'+i+'">✕</button></td></tr>';
   });
   $('gtbl').innerHTML=h+'</tbody>';
+  if(typeof labHint==='function')labHint();
   [].forEach.call($('gtbl').querySelectorAll('input,select'),function(el){
     el.onchange=function(){var g=GUSTS[+this.dataset.i],f=this.dataset.f;
       g[f]=(f==='when'||f==='shape'||f==='dir')?this.value:+this.value; saveCfg();};});
@@ -2619,6 +2623,20 @@ function init3D(){
   }catch(e){TD=null;}
 }
 
+/* Cambiar `mapSize` no basta: el mapa ya creado se sigue usando hasta que se
+   tira. Y se pide solo lo que la GPU admite — un tamaño por encima de
+   `maxTextureSize` deja la escena SIN sombras, que es peor que una sombra
+   basta. */
+function mapaSombra(px){
+  if(!TD||!TD.sun)return;
+  var max=(TD.rd&&TD.rd.capabilities&&TD.rd.capabilities.maxTextureSize)||2048;
+  var n=Math.min(px,max);
+  var sh=TD.sun.shadow;
+  if(sh.mapSize.width===n)return;
+  sh.mapSize.width=sh.mapSize.height=n;
+  if(sh.map){sh.map.dispose();sh.map=null;}
+}
+
 /* un seguidor con el modelo real: las piezas que bascular cuelgan de un grupo
    propio, así mover el ángulo es mover una rotación y no rehacer nada */
 function seguidor3D(mats){
@@ -2841,9 +2859,30 @@ function escenaComparativa(){
   TD.suelo.position.set(0,0,0); TD.suelo.scale.set(ancho*3.2,largo*4,1);
   TD.encuadre={pos:TD.cam.position.clone(),tgt:TD.ct.target.clone()};
   TD.sun.layers.enableAll();
+  TD.radio=Math.max(320,d*1.5);
+  /* ── LA CAJA DE SOMBRAS NO PUEDE DEPENDER DEL RUMBO DEL SOL ──
+     Estaba dimensionada con el ancho y el largo del MUNDO (±ancho·0,6 por
+     ±largo·0,8), pero los ejes de esa caja son los de la LUZ y giran con ella:
+     lo que a mediodía cubre el ancho, con el sol al este cubre otra cosa. Y lo
+     que se queda fuera de la caja no proyecta NI RECIBE sombra, así que unos
+     bloques salían sombreados y los de al lado no — por el encuadre de la
+     sombra, no por la física, que es justo lo que esta tarjeta no puede hacer.
+     Medido sobre la escena real (396 × 175 m) barriendo 216 direcciones de sol
+     (elevación 5-85°, azimut cada 15°): en el 73 % de ellas había geometría
+     FUERA de la caja, y hasta 103 m fuera en el peor caso.
+     Lo que no depende del rumbo es la ESFERA que contiene la escena: una caja
+     cuadrada de su radio la cubre desde cualquier dirección, y es la misma
+     idea que ya usa `rSombra` para separar bloques. */
+  var Rsom=0.5*Math.hypot(anchoTot+largoBloque,largoTot+largoBloque)+8;
   var sh=TD.sun.shadow.camera;
-  sh.left=-ancho*0.6; sh.right=ancho*0.6; sh.top=largo*0.8; sh.bottom=-largo*0.8;
-  sh.far=Math.max(2000,d*6); sh.updateProjectionMatrix();
+  sh.left=-Rsom; sh.right=Rsom; sh.top=Rsom; sh.bottom=-Rsom;
+  sh.near=Math.max(1,TD.radio-Rsom*1.25); sh.far=TD.radio+Rsom*1.25;
+  sh.updateProjectionMatrix();
+  /* La caja ha crecido, así que el mismo mapa de sombras reparte menos texels
+     por metro. Se sube a 4096 SI la GPU lo admite —es la escena que se mira de
+     cerca— y si no, se queda como estaba: una sombra basta pero completa es
+     mejor que una fina que solo cubre media escena. */
+  mapaSombra(4096);
   /* Elevación por debajo de la cual se apagan las sombras en la comparativa,
      DERIVADA del hueco y de la altura del seguidor, no tecleada: una sombra
      mide `altura / tan(elev)`, así que la elevación a la que justo alcanza el
@@ -2852,7 +2891,6 @@ function escenaComparativa(){
      lo que enseñaría no es información, es contaminación entre casos. */
   var altSeg=Seguidor.DIMS.postH+Seguidor.DIMS.modH/2*Math.sin(55*Math.PI/180);
   TD.elevMinSombra=Math.atan(altSeg/(HX*0.8))*180/Math.PI;
-  TD.radio=Math.max(320,d*1.5);
   /* La niebla escala con la escena o no sirve: con un rango fijo, en la
      comparativa (200 m) se come los seguidores y en Ayora (2,5 km) no llega
      al horizonte y vuelve a verse el borde del suelo. */
@@ -2979,10 +3017,17 @@ async function escenaPlanta(name){
   /* Aquí hay UNA planta, así que la sombra entre seguidores es real y es la
      que se mira: no se apaga a ninguna hora. */
   TD.sun.castShadow=true; TD.sun.layers.enableAll(); TD.elevMinSombra=null;
-  var sh=TD.sun.shadow.camera;
-  sh.left=-ext*0.7; sh.right=ext*0.7; sh.top=ext*0.7; sh.bottom=-ext*0.7; sh.far=ext*4+800;
-  sh.updateProjectionMatrix();
   TD.radio=Math.max(600,ext*1.4);
+  /* Misma regla que en la comparativa: la caja se dimensiona con la ESFERA que
+     contiene la planta, que es lo único que no gira con el sol. Aquí el error
+     era menor —±ext·0,7 contra un radio de hasta ext·0,707— pero era del mismo
+     signo y con la retícula girada se notaba. */
+  var Rsom=0.5*Math.hypot(w+largoMax,l+largoMax)+8;
+  var sh=TD.sun.shadow.camera;
+  sh.left=-Rsom; sh.right=Rsom; sh.top=Rsom; sh.bottom=-Rsom;
+  sh.near=Math.max(1,TD.radio-Rsom*1.25); sh.far=TD.radio+Rsom*1.25;
+  sh.updateProjectionMatrix();
+  mapaSombra(2048);      // la planta se mira de lejos: no hace falta más
   /* La niebla escala con la escena o no sirve: con un rango fijo, en la
      comparativa (200 m) se come los seguidores y en Ayora (2,5 km) no llega
      al horizonte y vuelve a verse el borde del suelo. */
@@ -3373,8 +3418,15 @@ function build3D(){
      y se DICE cuánto dura: sin eso, con meteo de paso grueso el reproductor
      salía a segundos por fotograma y parecía que no avanzaba. Si el usuario ya
      ha tocado el selector, manda él. */
-  if(!$('tspeed').dataset.tocado)
-    $('tspeed').value=factorPorDefecto(TL.window.step_minutes,TL.window.steps);
+  var _prev=+$('tspeed').value||0;
+  var _ops=opcionesRepro(TL.window.step_minutes,TL.window.steps);
+  $('tspeed').innerHTML=_ops.map(function(o){
+    return '<option value="'+o.factor+'">'+Math.round(o.seg)+' s · ×'+o.factor+'</option>';
+  }).join('');
+  var _def=factorPorDefecto(TL.window.step_minutes,TL.window.steps);
+  // si el usuario ya eligió y esa velocidad sigue existiendo, manda él
+  $('tspeed').value=($('tspeed').dataset.tocado&&_ops.some(function(o){return o.factor===_prev;}))
+    ? _prev : _def;
   $('c3hint').textContent=TL.window.steps+' pasos de '+TL.window.step_minutes+
     ' min · la ventana entera en '+
     Math.round(duracionRepro(TL.window.step_minutes,+$('tspeed').value,TL.window.steps))+' s';
@@ -3449,8 +3501,19 @@ function pasosPorSegundo(stepMin,factor){
 function duracionRepro(stepMin,factor,pasos){
   return (pasos>0?pasos:240)/pasosPorSegundo(stepMin,factor);
 }
-var FACTORES_REPRO=[60,300,900,3600,7200];
-var REPRO_MAX_S=45;
+/* ── LAS VELOCIDADES SALEN DE LA VENTANA, NO DE UNA LISTA FIJA ──
+   El reproductor no tiene tiempo continuo: la ventana viene MUESTREADA (240
+   pasos como mucho), así que con el paso habitual de 4 min un ×60 avanza una
+   muestra cada CUATRO SEGUNDOS y la escena se ve congelada. Ofrecer ×60 ahí es
+   ofrecer algo que parece roto — y es lo que pasó.
+
+   Así que la lista se construye con la ventana delante, y en la unidad que de
+   verdad importa aquí: cuánto tarda en reproducirse ENTERA. El suelo es un
+   paso por segundo; por debajo no hay animación que ver, hay una diapositiva.
+   El ×N sigue saliendo al lado porque es la velocidad de verdad. */
+var DURACIONES_REPRO=[60,30,15,8];        // segundos que dura la ventana entera
+var REPRO_MIN_PASOS_S=1;                  // por debajo, congelada
+var REPRO_DEF_S=30;
 /* ── QUÉ VELOCIDAD SE OFRECE AL ABRIR ──
    La ventana está MUESTREADA a 240 pasos como mucho, así que el factor que la
    hace mirable no es el mismo con paso de 1 min que con paso de 15. Un default
@@ -3460,10 +3523,25 @@ var REPRO_MAX_S=45;
    Se elige el factor más LENTO que reproduzca la ventana entera en menos de
    `REPRO_MAX_S`, y va dicho en el rótulo: así el número sigue siendo una
    velocidad de verdad y además arranca en algo que se puede mirar. */
+/* Opciones para ESTA ventana: {segundos que dura, factor ×N, pasos/s}. Se
+   descarta la que no llegue al suelo de un paso por segundo, y si NINGUNA
+   llega —ventana muy corta— se deja la más rápida, que es la única que anima. */
+function opcionesRepro(stepMin,pasos){
+  var n=(pasos>0?pasos:240), sm=(stepMin>0?+stepMin:1), out=[];
+  DURACIONES_REPRO.forEach(function(seg){
+    var pps=n/seg;
+    if(pps>=REPRO_MIN_PASOS_S)out.push({seg:seg,factor:Math.round(pps*sm*60),pps:pps});
+  });
+  if(!out.length){
+    var seg=Math.max(1,n/REPRO_MIN_PASOS_S);
+    out.push({seg:seg,factor:Math.round(REPRO_MIN_PASOS_S*sm*60),pps:REPRO_MIN_PASOS_S});
+  }
+  return out;
+}
 function factorPorDefecto(stepMin,pasos){
-  for(var i=0;i<FACTORES_REPRO.length;i++)
-    if(duracionRepro(stepMin,FACTORES_REPRO[i],pasos)<=REPRO_MAX_S)return FACTORES_REPRO[i];
-  return FACTORES_REPRO[FACTORES_REPRO.length-1];
+  var o=opcionesRepro(stepMin,pasos), el=o[0];
+  o.forEach(function(x){if(Math.abs(x.seg-REPRO_DEF_S)<Math.abs(el.seg-REPRO_DEF_S))el=x;});
+  return el.factor;
 }
 
 function playToggle(){
@@ -3540,6 +3618,23 @@ $('bt').addEventListener('change',saveCfg);
 [].forEach.call(document.querySelectorAll('.st'),function(e){
   e.addEventListener('change',function(){saveCfg();montaEscena();});});
 $('run').onclick=run; $('runM').onclick=run;
+/* El laboratorio estaba sin salida: se metían rachas y no había nada que
+   dijera cómo llegaban al 3D. La respuesta era «pulsa Simular el año», que
+   está arriba del todo y no se ve desde aquí. */
+$('labRun').onclick=function(){$('run').click();};
+function labHint(){
+  var n=GUSTS.filter(function(g){return g.peak>0;}).length;
+  var st=+$('stn').value||0;
+  var t=[];
+  if(n)t.push(n+' racha'+(n>1?'s':''));
+  if(st)t.push(st+' tormenta'+(st>1?'s':'')+' al azar');
+  if($('wbase').value!=='meteo')t.push('fondo '+$('wbase').value);
+  if($('wgust').checked)t.push('ráfaga de 3 s');
+  $('labHint').textContent=t.length?('se inyectarán: '+t.join(' · ')):
+    'ahora mismo no hay nada que inyectar: se simularía la meteo tal cual';
+}
+['stn','wbase','wgust','wcyc'].forEach(function(i){
+  $(i).addEventListener('change',labHint);});
 $('careoBtn').onclick=careo;
 $('source').addEventListener('change',function(){
   $('hsuFile').style.display=(this.value==='hsu')?'':'none';

@@ -31,9 +31,10 @@ const FIRMAS = ['function prep2d(cv){', 'function nicePaso(bruto){',
                 'function ejesTransmision(nF,pitch,filasPorTrk,esPasivo,hueco){',
                 'function pasosPorSegundo(stepMin,factor){',
                 'function duracionRepro(stepMin,factor,pasos){',
-                'var FACTORES_REPRO=', 'var REPRO_MAX_S=',
-                'function factorPorDefecto(stepMin,pasos){',
-                'function avancePasos(acc,dtReal,factor,stepMin){'];
+                                'function factorPorDefecto(stepMin,pasos){',
+                'function opcionesRepro(stepMin,pasos){',
+                'function avancePasos(acc,dtReal,factor,stepMin){',
+                'var DURACIONES_REPRO=', 'var REPRO_MIN_PASOS_S=', 'var REPRO_DEF_S='];
 const trozos = FIRMAS.map(saca);
 check('las funciones puras siguen en el HTML', trozos.every(Boolean),
       FIRMAS.filter((f, i) => !trozos[i]).join(', '));
@@ -224,33 +225,87 @@ check('el resto se guarda para el fotograma siguiente',
 check('MUTANTE: con intervalo fijo de 67 ms y fotogramas de 167 ms se encolan ' +
       (167 / 67).toFixed(1) + ' llamadas por fotograma', 167 / 67 > 2);
 
-// ── 8) al abrir, el reproductor tiene que AVANZAR ────────────────────────
-// La ventana se muestrea a 240 pasos como mucho, así que el factor que la hace
-// mirable depende del paso. Un default fijo dejó la reproducción a 800 ms por
-// fotograma con el paso habitual de 4 min —192 s la ventana entera, diez veces
-// más lenta que la versión anterior— y eso se lee como que no avanza.
-const FD = ctx.factorPorDefecto;
-[[1, 240], [4, 240], [10, 96], [15, 64], [30, 32], [60, 16]].forEach(c => {
-  const [stepMin, pasos] = c;
-  const f = FD(stepMin, pasos);
-  const seg = DR(stepMin, f, pasos);
-  check('paso ' + stepMin + ' min · ' + pasos + ' pasos -> arranca en ×' + f +
-        ' (' + seg.toFixed(0) + ' s la ventana)',
-        seg <= ctx.REPRO_MAX_S + 0.001 && ctx.FACTORES_REPRO.indexOf(f) >= 0);
-});
-check('el factor elegido es el MÁS LENTO que cabe (no el más rápido a lo bruto)',
+// ── 8) ninguna velocidad ofrecida deja la escena congelada ───────────────
+// El reproductor NO tiene tiempo continuo: la ventana viene muestreada a 240
+// pasos como mucho, así que con paso de 4 min un ×60 avanza una muestra cada
+// CUATRO SEGUNDOS. Ofrecer esa velocidad es ofrecer algo que parece roto — y
+// es exactamente lo que se vio. Las opciones se construyen con la ventana
+// delante y en la unidad que importa: cuánto tarda en reproducirse entera.
+const OP = ctx.opcionesRepro, FD = ctx.factorPorDefecto;
+[[4, 240], [1, 240], [10, 96], [15, 64], [30, 32], [60, 16], [4, 20], [1, 6]]
+  .forEach(c => {
+    const [stepMin, pasos] = c;
+    const ops = OP(stepMin, pasos);
+    const lentas = ops.filter(o => pasos / o.seg < ctx.REPRO_MIN_PASOS_S);
+    check('paso ' + stepMin + ' min · ' + pasos + ' pasos -> ' + ops.length +
+          ' opciones, la más lenta a ' + (pasos / ops[0].seg).toFixed(1) + ' pasos/s',
+          ops.length >= 1 && lentas.length === 0,
+          ops.map(o => o.seg + 's ×' + o.factor).join(' '));
+  });
+check('el factor de cada opción es el ×N honesto',
+      OP(4, 240).every(o => Math.abs(o.factor - (240 / o.seg) * 4 * 60) < 1));
+check('el default es el más cercano a los ' + ctx.REPRO_DEF_S + ' s',
       (function () {
-        const f = FD(4, 240), i = ctx.FACTORES_REPRO.indexOf(f);
-        return i === 0 || DR(4, ctx.FACTORES_REPRO[i - 1], 240) > ctx.REPRO_MAX_S;
+        const ops = OP(4, 240), f = FD(4, 240);
+        const el = ops.find(o => o.factor === f);
+        return !!el && ops.every(o =>
+          Math.abs(o.seg - ctx.REPRO_DEF_S) >= Math.abs(el.seg - ctx.REPRO_DEF_S));
       })());
-// MUTANTE: el default fijo de la versión anterior, sobre la ventana habitual.
-check('MUTANTE: con ×300 fijo la ventana de paso 4 min tardaba ' +
-      Math.round(DR(4, 300, 240)) + ' s',
-      DR(4, 300, 240) > ctx.REPRO_MAX_S * 3);
-// Y no puede pasarse de largo: con paso muy grueso ni el más rápido cabe, y
-// entonces devuelve el tope en vez de undefined.
-check('con paso imposible devuelve el tope declarado',
-      FD(600, 240) === ctx.FACTORES_REPRO[ctx.FACTORES_REPRO.length - 1]);
+// MUTANTE: la lista fija anterior, sobre la ventana habitual.
+(function () {
+  const stepMin = 4, pasos = 240;
+  const pps = 60 / 60 / stepMin;                    // el ×60 que se ofrecía
+  check('MUTANTE: el ×60 fijo avanzaba una muestra cada ' + (1 / pps).toFixed(0) +
+        ' s con paso de ' + stepMin + ' min', 1 / pps >= 4);
+})();
+
+// ── 9) la caja de sombras no puede depender del RUMBO del sol ────────────
+// Estaba dimensionada con el ancho y el largo del MUNDO, pero sus ejes son los
+// de la LUZ y giran con ella. Lo que queda fuera no proyecta ni recibe sombra,
+// así que unos bloques salían sombreados y los de al lado no — por el encuadre
+// de la sombra, no por la física. Se reproduce aquí lo que hace three.js.
+(function () {
+  const V = (x, y, z) => ({ x, y, z });
+  const sub = (a, b) => V(a.x - b.x, a.y - b.y, a.z - b.z);
+  const cross = (a, b) => V(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+  const dot = (a, b) => a.x * b.x + a.y * b.y + a.z * b.z;
+  const norm = a => { const m = Math.hypot(a.x, a.y, a.z) || 1; return V(a.x / m, a.y / m, a.z / m); };
+  // escena real de la comparativa: 6 casos, 10 trackers bifila
+  const anchoTot = 396, largoTot = 174.8, largoBloque = 65, alto = 6;
+  const d = Math.max(anchoTot, largoTot + 20) * 0.88, R = Math.max(320, d * 1.5);
+  const esq = [];
+  for (let sx = -1; sx <= 1; sx += 2) for (let sy = 0; sy <= 1; sy++) for (let sz = -1; sz <= 1; sz += 2)
+    esq.push(V(sx * (anchoTot / 2 + largoBloque / 2), sy * alto, sz * (largoTot / 2 + largoBloque / 2)));
+  function barre(lx, ly, near, far) {
+    let fuera = 0, total = 0, peor = 0;
+    for (let el = 5; el <= 85; el += 5) for (let az = 0; az < 360; az += 10) {
+      const e = el * Math.PI / 180, a = az * Math.PI / 180;
+      const dir = V(Math.sin(a) * Math.cos(e), Math.sin(e), -Math.cos(a) * Math.cos(e));
+      const tgt = V(0, 8, 0);
+      const pos = V(tgt.x + dir.x * R, tgt.y + dir.y * R, tgt.z + dir.z * R);
+      const zA = norm(sub(pos, tgt)), xA = norm(cross(V(0, 1, 0), zA)), yA = cross(zA, xA);
+      let malo = false;
+      esq.forEach(p => {
+        const r = sub(p, pos), px = dot(r, xA), py = dot(r, yA), pd = -dot(r, zA);
+        if (Math.abs(px) > lx || Math.abs(py) > ly || pd < near || pd > far) {
+          malo = true; peor = Math.max(peor, Math.max(Math.abs(px) - lx, Math.abs(py) - ly));
+        }
+      });
+      total++; if (malo) fuera++;
+    }
+    return { fuera, total, peor };
+  }
+  const Rsom = 0.5 * Math.hypot(anchoTot + largoBloque, largoTot + largoBloque) + 8;
+  const ok = barre(Rsom, Rsom, Math.max(1, R - Rsom * 1.25), R + Rsom * 1.25);
+  check('la caja por ESFERA cubre la escena desde las ' + ok.total +
+        ' direcciones del sol', ok.fuera === 0, ok.fuera + ' fuera, peor ' + ok.peor.toFixed(0) + ' m');
+  // MUTANTE: la caja anterior, dimensionada con ancho y largo del mundo.
+  const mal = barre(anchoTot * 0.6, (largoTot + 20) * 0.8, 0.5, Math.max(2000, d * 6));
+  check('MUTANTE: la caja por ancho/largo dejaba fuera el ' +
+        Math.round(100 * mal.fuera / mal.total) + ' % de las direcciones',
+        mal.fuera > mal.total * 0.5 && mal.peor > 50,
+        mal.fuera + '/' + mal.total + ', peor ' + mal.peor.toFixed(0) + ' m');
+})();
 
 console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko)
                 : '\nOK — ' + ok + '/' + ok + ' comprobaciones');
