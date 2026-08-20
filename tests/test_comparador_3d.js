@@ -66,6 +66,45 @@ const SONDA = `(() => {
   check('un bloque por estructura marcada',
     (await p.evaluate(() => BLOQUES.length)) === 6);
 
+  // ── el box de la potencia pico: ARRIBA DEL TODO ──
+  // La comparación es a igualdad de MWp, así que el pico no es un campo más
+  // escondido entre la geometría: es el marco, y va antes que nada.
+  const orden = await p.evaluate(() => {
+    const ids = ['picoCard', 'plant', 'fxModL', 'tkModL', 'tbl'];
+    const pos = {}; ids.forEach(i => {
+      const el = document.getElementById(i);
+      pos[i] = el ? el.getBoundingClientRect().top + window.scrollY : null; });
+    return pos;
+  });
+  check('el box de la potencia pico existe', orden.picoCard !== null);
+  check('está por encima del emplazamiento y de los dos configuradores',
+    orden.picoCard < orden.plant && orden.picoCard < orden.fxModL &&
+    orden.picoCard < orden.tkModL, JSON.stringify(orden));
+
+  const pico = async () => p.evaluate(`(() => {
+    const c = cfgActual(), mwp = +document.getElementById('mwp').value;
+    return { mwp, fija: FIS.planta(c.fija, mwp), tk: FIS.planta(c.tracker, mwp),
+             texto: document.getElementById('picoRead').textContent };
+  })()`);
+  const p10 = await pico();
+  check('a 10 MWp el box dice cuántas estructuras y cuánta parcela (' +
+    p10.fija.filas + ' filas · ' + p10.fija.ha.toFixed(2) + ' ha)',
+    p10.fija.filas > 0 && p10.fija.ha > 0 &&
+    p10.texto.includes(String(p10.fija.filas)));
+  check('a igualdad de pico los módulos son los MISMOS en las dos familias',
+    p10.fija.mods === p10.tk.mods, p10.fija.mods + ' vs ' + p10.tk.mods);
+
+  await p.evaluate(() => { const e = document.getElementById('mwp');
+    e.value = '20'; e.dispatchEvent(new Event('change', { bubbles: true })); });
+  await p.waitForTimeout(250);
+  const p20 = await pico();
+  check('doblar el pico dobla las estructuras (' + p10.fija.filas + ' → ' +
+    p20.fija.filas + ')', Math.abs(p20.fija.filas / p10.fija.filas - 2) < 0.02);
+  check('y el box lo dice en pantalla', p20.texto.includes(String(p20.fija.filas)));
+  await p.evaluate(() => { const e = document.getElementById('mwp');
+    e.value = '10'; e.dispatchEvent(new Event('change', { bubbles: true })); });
+  await p.waitForTimeout(250);
+
   const enHora = async (min) => {
     await p.evaluate(m => { document.getElementById('hora').value = m; actualiza3D(); }, min);
     await p.waitForTimeout(250);
@@ -141,6 +180,29 @@ const SONDA = `(() => {
     coherente.escena + '° vs ' + coherente.tabla + '°)',
     Math.abs(coherente.escena - coherente.tabla) < 1.01,
     JSON.stringify(coherente));
+
+  // ── la tabla trae el dimensionado a igualdad de pico ──
+  const tabla = await p.evaluate(`(() => {
+    const th = [...document.querySelectorAll('#tbl thead th')].map(t => t.textContent);
+    const fila = [...document.querySelectorAll('#tbl tbody tr')].find(
+      tr => /óptim/i.test(tr.cells[0].textContent));
+    const q = REP.pico && REP.pico.por['fija_optima'];
+    return { th, celdas: [...fila.cells].map(c => c.textContent.trim()),
+             ha: q ? +q.ha.toFixed(2) : null, filas: q ? q.filas : null,
+             mwp: REP.pico ? REP.pico.mwp : null };
+  })()`);
+  check('la tabla tiene columna de estructuras, suelo (ha) e incidente',
+    tabla.th.some(t => /Estructuras/.test(t)) && tabla.th.some(t => /Suelo/.test(t)) &&
+    tabla.th.some(t => /Incidente/.test(t)), tabla.th.join(' | '));
+  check('el suelo de la tabla es el del dimensionado (' + tabla.ha + ' ha)',
+    tabla.celdas.some(c => c === tabla.ha.toFixed(2).replace('.', ',') ||
+                           c === String(tabla.ha) || c.includes(String(tabla.ha))),
+    JSON.stringify(tabla.celdas));
+  check('el dimensionado se congela con la corrida (' + tabla.mwp + ' MWp)',
+    tabla.mwp === 10 && tabla.filas > 0);
+  const resumen = await p.evaluate(() => document.getElementById('out').textContent);
+  check('el resumen corona a la que menos suelo pide a igualdad de pico',
+    /Menos suelo/.test(resumen) && /ha/.test(resumen), resumen.slice(0, 200));
 
   // ── el encuadre: nada puede quedar fuera de cuadro ──
   // El primer intento (distancia por fórmula) se pasaba un 26 % y cortaba los

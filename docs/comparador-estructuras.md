@@ -35,6 +35,48 @@ pueden producir distinto (módulo, térmico, inversor, pérdidas) y costar muy d
 Son las mismas claves y las mismas etiquetas que `solargpt_core.structure_compare.CATALOGO`, y el
 careo lo comprueba: si el core añade una y la ficha no, el test se pone rojo.
 
+## Igualdad de potencia pico
+
+Arriba del todo, antes que nada, va la **potencia pico de la planta** (MWp). Es el marco de toda la
+comparación: comparar por POA por m² contesta «cuál apunta mejor», pero una planta no se proyecta
+por m² de módulo — se proyecta por **MWp**, y a igualdad de pico cada estructura pide un número
+distinto de estructuras y una parcela distinta.
+
+El pico del **módulo** (Wp) va en cada configurador, no arriba: el pico lo pone el módulo, no la
+estructura. De ahí sale todo lo demás:
+
+```
+módulos pedidos = MWp × 10⁶ / Wp
+filas           = ceil(módulos pedidos / módulos por fila)      ← fila ENTERA, no media mesa
+módulos         = filas × módulos por fila
+suelo           = filas × pitch × largo de fila
+incidente (GWh) = POA (kWh/m²) × m² de módulo / 10⁶
+```
+
+Dos cosas que se publican en vez de esconderse: el redondeo a fila entera **sube** el pico
+instalado sobre el pedido (10,00 → 10,02 MWp con 660 Wp y 56 módulos por fila), y el suelo es la
+**huella del campo** —filas × pitch × largo de fila—, sin viales, sin subestación y sin los
+retranqueos de la parcela real.
+
+### La trampa, dicha en voz alta
+
+**El pico dimensiona, no reordena.** Con el mismo módulo en las dos familias, a igualdad de pico
+los m² de captación son *idénticos*: el orden por POA de módulo no se mueve ni un decimal y la
+energía incidente es la POA escalada por el mismo factor. Lo que cambia —y mucho— es el **suelo** y
+**cuántas estructuras** hay que montar. Si las dos familias llevan módulos distintos, la ficha lo
+avisa y deja de prometer esa equivalencia.
+
+Sevilla, 10 MWp, módulo de 660 Wp, fija a pitch 4,50 m y tracker a 6,00 m:
+
+| | Estructuras | Suelo | MWp/ha | POA módulo | Incidente |
+|---|---|---|---|---|---|
+| Fija · tilt óptimo | 271 filas | **7,94 ha** | 1,26 | 2373 kWh/m² | 97,3 GWh/año |
+| Tracker N-S · backtracking | 271 filas | 10,58 ha | 0,95 | 2840 kWh/m² | 116,4 GWh/año |
+| Tracker de eje inclinado | 271 filas | 10,58 ha | 0,95 | **3011 kWh/m²** | **123,4 GWh/año** |
+
+La fija ocupa un **25 % menos de parcela** para el mismo pico; el TSAT capta un **27 % más** de
+energía sobre esos mismos MWp. Ésa es la comparación, y no se puede leer en una sola columna.
+
 ## El tamaño de la estructura
 
 **Fija y tracker se configuran POR SEPARADO**, cada una con su tarjeta y su pitch — que es como
@@ -226,6 +268,11 @@ ordenar, no para dar un anual bancable — para el anual, el número canónico.
 > orden salía cambiado justo en el par que más se parece. Con Hay-Davies dentro, los dos motores
 > ordenan igual. Es el ejemplo de para qué sirve el careo.
 
+El **dimensionado a igualdad de pico** no es de ninguno de los dos motores: es aritmética de la
+ficha (`FIS.planta`), y sale igual vengan las POA del navegador o del core. Se congela **con la
+corrida**, así que si luego tocas el pitch la tabla que estás mirando sigue siendo coherente
+consigo misma hasta que vuelvas a comparar.
+
 ### Conectar el motor
 
 1. **Colab** (lo normal): abre `Factiun_plataforma.ipynb` → *Entorno de ejecución* → *Ejecutar
@@ -254,9 +301,9 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ## Pruebas
 
 ```bash
-node tests/test_comparador.js       # 42 comprobaciones · careo contra el core, sin navegador
+node tests/test_comparador.js       # 53 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
-node tests/test_comparador_3d.js    # 40 comprobaciones · la escena en un Chromium de verdad
+node tests/test_comparador_3d.js    # 50 comprobaciones · la escena en un Chromium de verdad
 ```
 
 El test **extrae el bloque `FÍSICA PURA` del HTML real**, no una copia: una copia se quedaría

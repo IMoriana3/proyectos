@@ -32,6 +32,10 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
 .wrap{max-width:min(1560px,94vw);margin:0 auto;padding:20px 18px 60px}
 .grid{display:grid;grid-template-columns:355px 1fr;gap:18px;align-items:start}
 @media(max-width:900px){.grid{grid-template-columns:1fr}}
+.picoRow{display:grid;grid-template-columns:250px 1fr;gap:16px;align-items:start}
+@media(max-width:900px){.picoRow{grid-template-columns:1fr}}
+#picoCard{border-color:var(--accent)}
+#picoCard .v{color:var(--accent)}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
 .card h2{font:700 13px/1 var(--display);letter-spacing:.02em;margin-bottom:13px;display:flex;align-items:center;gap:8px}
 .card h2 .sn{margin-left:auto;font:400 11px var(--mono);color:var(--muted)}
@@ -89,6 +93,22 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
 </div>
 
 <div class="wrap">
+
+<!-- ═════════ IGUALDAD DE POTENCIA PICO ═════════ -->
+<div class="card" id="picoCard">
+  <h2>⚡ Igualdad de potencia pico <span class="sn" id="picoGob">§03.P</span></h2>
+  <div class="picoRow">
+    <div>
+      <div class="field"><label>Potencia pico de la planta (MWp)</label>
+        <input id="mwp" type="number" step="0.1" min="0" value="10"></div>
+      <p class="mini" style="margin-top:7px">La potencia del módulo va en cada configurador:
+        el pico lo fija el MÓDULO, no la estructura.</p>
+    </div>
+    <div id="picoRead" class="readout"></div>
+  </div>
+  <p class="mini" id="picoNota" style="margin-top:11px"></p>
+</div>
+
 <div class="grid">
 
   <!-- ═════════ CONTROLES ═════════ -->
@@ -122,6 +142,10 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         <div class="field"><label>Módulo · ancho (m)</label><input id="fxModW" type="number" step="0.001" value="1.134"></div>
       </div>
       <div class="two">
+        <div class="field"><label>Módulo · pico (Wp)</label><input id="fxWp" type="number" step="5" min="1" value="660"></div>
+        <div class="field"><label>&nbsp;</label><p class="mini" id="fxDens" style="padding-top:9px"></p></div>
+      </div>
+      <div class="two">
         <div class="field"><label>Mesa</label>
           <select id="fxTabla">
             <option value="1V" selected>1V · 1 módulo vertical</option>
@@ -133,7 +157,7 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
             <option value="3H">3H · 3 horizontales</option>
             <option value="4H">4H · 4 horizontales</option>
           </select></div>
-        <div class="field"><label>Pitch (m)</label><input id="fxPitch" type="number" step="0.01" value="6.00"></div>
+        <div class="field"><label>Pitch (m)</label><input id="fxPitch" type="number" step="0.01" value="4.50"></div>
       </div>
       <div class="two">
         <div class="field"><label>Módulos por string</label><input id="fxModsStr" type="number" step="1" value="28"></div>
@@ -156,6 +180,10 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       <div class="two">
         <div class="field"><label>Módulo · largo (m)</label><input id="tkModL" type="number" step="0.001" value="2.382"></div>
         <div class="field"><label>Módulo · ancho (m)</label><input id="tkModW" type="number" step="0.001" value="1.134"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Módulo · pico (Wp)</label><input id="tkWp" type="number" step="5" min="1" value="660"></div>
+        <div class="field"><label>&nbsp;</label><p class="mini" id="tkDens" style="padding-top:9px"></p></div>
       </div>
       <div class="two">
         <div class="field"><label>Mesa</label>
@@ -393,6 +421,45 @@ FIS.tamano=function(c){
           modAlong:modAlong, modCross:modCross, modsStr:mods, nStr:nStr,
           gapMod:+(c.gapMod||0), gapMot:+(c.gapMot||0)};
 };
+
+/* ── IGUALDAD DE POTENCIA PICO ──
+   Comparar por POA por m² contesta «cuál apunta mejor». Pero una planta no se
+   proyecta por m² de módulo: se proyecta por MWp. A igualdad de pico cada
+   estructura necesita los MISMOS módulos —el pico lo pone el módulo, no la
+   estructura— y en cambio un número DISTINTO de estructuras y una superficie de
+   parcela distinta. Eso es lo que se firma.
+
+   Y hay que decir la trampa en voz alta, porque si no la comparación promete
+   algo que no da: con el MISMO módulo en las dos familias, el área de captación
+   a igualdad de pico es IDÉNTICA, así que el orden por POA de módulo no se mueve
+   ni un decimal y la energía incidente es la POA escalada. **El pico no
+   reordena: DIMENSIONA.** Lo que cambia —y mucho— es el suelo y cuántas
+   estructuras hay que montar.
+
+   Dos cosas que se publican en vez de esconderse:
+     · se redondea a FILA ENTERA hacia arriba (no se monta media mesa), así que
+       el pico instalado sube un poco sobre el pedido;
+     · el suelo es `filas × pitch × largo de fila`: la huella del campo, sin
+       viales, sin subestación y sin los retranqueos de la parcela real.        */
+FIS.planta=function(G,mwp){
+  var wp=+G.wp;
+  if(!(mwp>0)||!(wp>0)||!(G.modsFila>0)||!(G.pitch>0))return null;
+  var pedidos=mwp*1e6/wp;
+  var filas=Math.max(1,Math.ceil(pedidos/G.modsFila));
+  var mods=filas*G.modsFila;
+  var areaMod=mods*G.modAlong*G.modCross;
+  var areaSuelo=filas*G.pitch*G.largoFila;
+  return {pedidos:Math.ceil(pedidos), mods:mods, filas:filas,
+          trackers:Math.ceil(filas/Math.max(1,G.filasTracker)),
+          mwp:mods*wp/1e6, areaMod:areaMod, ha:areaSuelo/1e4,
+          /* densidad de la parcela: MWp por hectárea, el número con el que se
+             habla de una implantación antes de mirar ningún kWh */
+          mwpHa:(mods*wp/1e6)/(areaSuelo/1e4)};
+};
+/* Energía INCIDENTE en el año sobre todo el campo, en GWh. No es producción
+   (no hay IAM, ni temperatura, ni inversor): es la POA multiplicada por los m²
+   de módulo que el pico obliga a montar. */
+FIS.incidente=function(poaKwhM2,areaMod){return poaKwhM2*areaMod/1e6;};
 
 /* ── θ de seguimiento con backtracking (Anderson-Mikofski) ──
    Con ps ya proyectado, el backtracking es una línea: retroceder lo justo para
@@ -717,6 +784,18 @@ function porEstructura(cfg,keys,campo){
   keys.forEach(function(k){var sp=FIS.spec(k); if(sp)out[k]=cfg.geomDe(sp)[campo];});
   return out;
 }
+/* El dimensionado a igualdad de pico se CONGELA con la corrida: si luego tocas
+   el pitch, la tabla que estás mirando sigue siendo coherente consigo misma
+   hasta que vuelvas a comparar. */
+function picoDe(cfg,keys){
+  var mwp=+$('mwp').value; if(!(mwp>0))return null;
+  var out={mwp:mwp,por:{}}, alguna=false;
+  keys.forEach(function(k){
+    var sp=FIS.spec(k); if(!sp)return;
+    var P=FIS.planta(cfg.geomDe(sp),mwp); if(P){out.por[k]=P; alguna=true;}
+  });
+  return alguna?out:null;
+}
 function elegidas(){return [].slice.call(document.querySelectorAll('.st:checked')).map(function(c){return c.value;});}
 /* ── DOS geometrías, una por familia ──
    Como en el cuaderno: §03.F tiene su pitch y su mesa (`fix_pitch_m`) y §03.T0
@@ -737,6 +816,7 @@ function geomFam(pfx){
     gapMot:+$(pfx+'GapMot').value, filas:(pfx==='tk'?+$('tkFilas').value:1)});
   var pitch=+$(pfx+'Pitch').value;
   T.pitch=pitch; T.gcr=(pitch>0?T.apertura/pitch:0.4);
+  T.wp=+$(pfx+'Wp').value;                 // el pico lo pone el módulo
   return T;
 }
 /* Un GCR > 1 significa que la apertura no cabe en el pitch: las filas se
@@ -787,9 +867,53 @@ function gobierna(fam){
   return n.length ? n.length+' estructura'+(n.length>1?'s':'')+' marcada'+(n.length>1?'s':'')
                   : 'ninguna marcada';
 }
+/* ── El box de arriba, en vivo ──
+   Dimensionado, no simulación: sin haber comparado nada ya se puede ver qué
+   pide cada familia para el MISMO pico. Es la pregunta con la que se empieza un
+   proyecto («10 MWp, ¿cuánta parcela?») y la que hace que el resto de la ficha
+   signifique algo. */
+function pintaPico(c){
+  var mwp=+$('mwp').value;
+  [['fx',c.fija],['tk',c.tracker]].forEach(function(par){
+    var G=par[1], a=G.modAlong*G.modCross;
+    $(par[0]+'Dens').textContent=(a>0&&G.wp>0)?fmt(G.wp/a,0)+' W/m² de módulo':'';
+  });
+  var F=FIS.planta(c.fija,mwp), K=FIS.planta(c.tracker,mwp);
+  $('picoGob').textContent='§03.P'+(mwp>0?' · '+fmt(mwp,1)+' MWp':'');
+  if(!F||!K){
+    $('picoRead').innerHTML='';
+    $('picoNota').innerHTML='<span style="color:var(--dead)">⚠ Hace falta una potencia pico '+
+      'y un pico de módulo mayores que cero: sin eso no hay nada que igualar.</span>';
+    return;
+  }
+  var uds=function(G,P){return G===c.tracker&&G.filasTracker>1
+    ? fmt(P.trackers,0)+' seguidores · '+fmt(P.filas,0)+' filas' : fmt(P.filas,0)+' filas';};
+  $('picoRead').innerHTML=
+    ro('Módulos',fmt(F.mods,0),(F.mods===K.mods?'los mismos en las dos':'fija · '+fmt(K.mods,0)+' el tracker'))+
+    ro('Fija · estructuras',uds(c.fija,F),fmt(F.mwp,2)+' MWp montados')+
+    ro('Fija · suelo',fmt(F.ha,2),'ha · '+fmt(F.mwpHa,2)+' MWp/ha')+
+    ro('Tracker · estructuras',uds(c.tracker,K),fmt(K.mwp,2)+' MWp montados')+
+    ro('Tracker · suelo',fmt(K.ha,2),'ha · '+fmt(K.mwpHa,2)+' MWp/ha')+
+    ro('Suelo · fija vs tracker',(F.ha<=K.ha?'−':'+')+fmt(Math.abs(F.ha/K.ha-1)*100,1)+' %',
+       (F.ha<=K.ha?'la fija ocupa menos':'la fija ocupa más'));
+  var mismoMod=Math.abs(F.areaMod/K.areaMod-1)<1e-9;
+  $('picoNota').innerHTML=
+    'A <b>'+fmt(mwp,1)+' MWp</b> hacen falta '+fmt(F.pedidos,0)+' módulos; se redondea a fila entera '+
+    '(no se monta media mesa), así que se montan '+fmt(F.mods,0)+' y el pico instalado queda en '+
+    fmt(F.mwp,2)+' MWp la fija y '+fmt(K.mwp,2)+' MWp el tracker. '+
+    (mismoMod
+      ? '<b>El pico dimensiona, no reordena</b>: con el mismo módulo en las dos familias los m² de '+
+        'captación son idénticos, así que el orden por POA de módulo no se mueve — lo que cambia es el '+
+        '<b>suelo</b> ('+fmt(F.ha,2)+' ha contra '+fmt(K.ha,2)+' ha) y cuántas estructuras hay que montar.'
+      : 'Ojo: las dos familias llevan MÓDULOS DISTINTOS, así que a igualdad de pico los m² de captación '+
+        'ya no coinciden ('+fmt(F.areaMod,0)+' contra '+fmt(K.areaMod,0)+' m²) y la energía incidente '+
+        'no es la POA escalada por el mismo factor.')+
+    ' El suelo es la huella del campo (filas × pitch × largo de fila): sin viales, sin subestación y '+
+    'sin los retranqueos de la parcela real.';
+}
 function refrescaGeom(){
   var c=cfgActual();
-  pintaFam('fx',c.fija); pintaFam('tk',c.tracker);
+  pintaFam('fx',c.fija); pintaFam('tk',c.tracker); pintaPico(c);
   $('fxGob').textContent='§03.F · '+gobierna('fija');
   $('tkGob').textContent='§03.T0 · '+gobierna('tracker');
   var malo=avisoGeom('fx',c.fija)||avisoGeom('tk',c.tracker);
@@ -805,9 +929,9 @@ function refrescaGeom(){
          fmt(c.tracker.gcr,3)+'</b> (pitch '+fmt(c.tracker.pitch,2)+' m). La columna «POA módulo» '+
          'sigue siendo el A/B de la estructura; el ranking por <b>suelo</b> ya incluye la densidad.');
 }
-var CAMPOS_GEOM=['fxModL','fxModW','fxTabla','fxPitch','fxModsStr','fxNStr','fxGapMod','fxGapMot',
-                 'tkModL','tkModW','tkTabla','tkPitch','tkModsStr','tkNStr','tkGapMod','tkGapMot',
-                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon'];
+var CAMPOS_GEOM=['fxModL','fxModW','fxWp','fxTabla','fxPitch','fxModsStr','fxNStr','fxGapMod','fxGapMot',
+                 'tkModL','tkModW','tkWp','tkTabla','tkPitch','tkModsStr','tkNStr','tkGapMod','tkGapMot',
+                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp'];
 CAMPOS_GEOM.forEach(function(id){
   var el=$(id); if(!el)return;
   el.addEventListener('input',refrescaGeom); el.addEventListener('change',refrescaGeom);
@@ -841,10 +965,12 @@ async function run(){
       var r=await fetch(ENGINE+'/structures',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
       REP=await r.json(); REP.local=false;
+      REP.pico=picoDe(cfg,keys);
     }else{
       var M=(src==='clearsky')?await FIS.clearsky(cfg.lat,cfg.lon,year)
                               :await FIS.fetchYear(cfg.lat,cfg.lon,year);
       REP=FIS.compara(keys,M,cfg); REP.local=true;
+      REP.pico=picoDe(cfg,keys);
     }
     render();
   }catch(e){
@@ -865,6 +991,15 @@ function render(){
     ro('Más POA · módulo',mejorMod.label,fmt(mejorMod.neta,0)+' kWh/m²')+
     ro('Más POA · suelo',mejorSuelo.label,fmt(mejorSuelo.suelo,0)+' kWh/m²')+
     ro('Referencia',base?base.label:'—','Δ% contra ella')+
+    (function(){
+      /* A igualdad de pico la pregunta cambia: ya no es quién capta más por m²
+         sino quién necesita menos parcela para los mismos MWp. */
+      if(!REP.pico)return '';
+      var mej=null;
+      f.forEach(function(x){var q=REP.pico.por[x.key];
+        if(q&&(!mej||q.ha<mej.q.ha))mej={x:x,q:q};});
+      return mej?ro('Menos suelo · '+fmt(REP.pico.mwp,1)+' MWp',mej.x.label,fmt(mej.q.ha,2)+' ha'):'';
+    })()+
     '</div>'+
     (REP.avisos||[]).map(function(a){return '<div class="warn" style="margin-top:12px">⚠ '+esc(a)+'</div>';}).join('');
   drawTabla(base); drawMeses(); drawRank();
@@ -874,9 +1009,13 @@ function ro(k,v,s){return '<div class="ro"><div class="k">'+esc(k)+'</div><div c
 
 function drawTabla(base){
   var f=REP.filas;
+  var P=REP.pico;
   var h='<thead><tr><th>Estructura</th><th>Tilt °</th><th>GCR</th>'+
     '<th>POA módulo<br><span class="mini">kWh/m²·año</span></th>'+
     '<th>POA suelo<br><span class="mini">kWh/m²·año</span></th>'+
+    (P?'<th>Estructuras<br><span class="mini">a '+fmt(P.mwp,1)+' MWp</span></th>'+
+        '<th>Suelo<br><span class="mini">ha</span></th>'+
+        '<th>Incidente<br><span class="mini">GWh/año</span></th>':'')+
     '<th>Transp. vs GHI</th><th>Pérdida sombra</th><th>Δ% vs '+esc(base?base.label:'ref')+'</th></tr></thead><tbody>';
   f.forEach(function(x){
     var cls=x.delta>0?'pos':(x.delta<0?'neg':'');
@@ -885,12 +1024,24 @@ function drawTabla(base){
       '<td>'+fmt(x.gcr,3)+'</td>'+
       '<td><b>'+fmt(x.neta,0)+'</b></td>'+
       '<td>'+fmt(x.suelo,0)+'</td>'+
+      (P?(function(){
+        var q=P.por[x.key];
+        if(!q)return '<td>—</td><td>—</td><td>—</td>';
+        return '<td>'+fmt(q.filas,0)+(q.trackers<q.filas?' <span class="mini">('+fmt(q.trackers,0)+' seg.)</span>':'')+'</td>'+
+               '<td><b>'+fmt(q.ha,2)+'</b></td>'+
+               '<td>'+fmt(FIS.incidente(x.neta,q.areaMod),1)+'</td>';
+      })():'')+
       '<td>'+fmt(x.transp,1)+' %</td>'+
       '<td>'+fmt(x.sombra,2)+' %</td>'+
       '<td class="'+cls+'">'+(x.delta>0?'+':'')+fmt(x.delta,2)+' %</td></tr>';
   });
   $('tbl').innerHTML=h+'</tbody>';
-  $('tblNote').innerHTML='<b>POA módulo</b> es lo que ve el panel; <b>POA suelo</b> = POA × GCR, lo que ve la parcela. '+
+  $('tblNote').innerHTML=(P?'A <b>igualdad de potencia pico</b> ('+fmt(P.mwp,1)+' MWp) cada estructura '+
+      'necesita el mismo número de módulos pero distinto número de estructuras y distinta parcela: '+
+      'ésas son las columnas <b>Estructuras</b> y <b>Suelo</b>. <b>Incidente</b> es la POA por los m² de '+
+      'módulo que el pico obliga a montar — energía que LLEGA, no producida (sin IAM, sin temperatura, '+
+      'sin inversor). Con el mismo módulo en las dos familias el pico no reordena nada: dimensiona. ':'')+
+    '<b>POA módulo</b> es lo que ve el panel; <b>POA suelo</b> = POA × GCR, lo que ve la parcela. '+
     (REP.gcrComun?'Con el mismo GCR el segundo es el primero escalado y no reordena nada — dale a cada familia su pitch arriba para que cada una lleve su densidad.'
                  :'Con densidades distintas el orden por suelo ya no tiene por qué coincidir con el de módulo.')+
     ' Los seguidores van en modo IDEAL: sin abanderamiento, sin banda muerta y sin política de difusa — el coste del control real es otra pregunta (ficha <a href="sim-viento.html" style="color:var(--accent)">Viento</a>).';
