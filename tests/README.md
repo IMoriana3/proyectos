@@ -27,6 +27,8 @@ precacheado, botón *Instalar app*, y que **sin red** el panel sigue abriendo y 
 regresión que salió al escribirlo: el SW **no** debe recargar la página la primera vez que toma el
 control.
 
+`test_viento_ejes.js` cubre las funciones puras de dibujo de **Viento & Abanderamiento**, extraídas del HTML real: que un lienzo todavía en `display:none` se DECLARE sin maquetar y no acumule el dpr en llamadas sucesivas —el fallo que hacía salir la comparativa estirada 2,16× en horizontal—, y que ningún eje repita etiquetas. Los rótulos salían de partir el máximo en cuatro y con datos pequeños eso repite: la columna de horas decía «2, 2, 1, 1, 0» y la de POA perdida «0.01, 0.01, 0.01, 0.00, 0.00». Incluye el mutante: se reproduce el cálculo viejo y el criterio tiene que rechazarlo.
+
 ```bash
 npm install playwright                     # el navegador ya está en /opt/pw-browsers
 python3 -m http.server 8099                # servir el repo (en otra terminal)
@@ -34,4 +36,5 @@ node tests/test_index.js                   # 13 comprobaciones
 node tests/test_pwa.js                     # 21 comprobaciones (PWA)
 node tests/test_integridad.js              # 6 comprobaciones, sin navegador
 node tests/test_comparador.js              # 27 comprobaciones, careo contra el core
+node tests/test_viento_ejes.js             # 25 comprobaciones, lienzos y ejes
 ```
