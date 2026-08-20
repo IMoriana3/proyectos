@@ -25,6 +25,8 @@ mediodía no se nota porque θ≈0; por eso mide a las 8 y a las 17. Comprueba t
 proyecta sombra de verdad (una luz direccional trae un frustum de ±5 m) y que nada queda fuera de
 cuadro con dos, cuatro o seis bloques.
 
+`test_viento_sitio.js` cubre el **buscador de emplazamiento** en dos capas: las funciones puras extraídas del HTML (normalizar sin acentos, leer coordenadas pegadas, filtrar la lista local) y la ficha ABIERTA en Chromium — se teclea, se elige, y las coordenadas del formulario tienen que cambiar. Un buscador que filtra pero no rellena está tan roto como uno que no filtra, y ese es su mutante. La búsqueda REMOTA (geocodificador de Open-Meteo) no se exige, porque el banco tiene que correr sin red; lo que sí se exige es que su ausencia se declare.
+
 Comprueban además lo de siempre: que las tarjetas se pintan, que el detalle abre con su
 historial, que el botón *Paquete* apunta a `releases/latest` y que el panel de
 documentación carga el markdown de `docs/`.
@@ -46,4 +48,5 @@ node tests/test_integridad.js              # 6 comprobaciones, sin navegador
 node tests/test_comparador.js              # 27 comprobaciones, careo contra el core
 node tests/test_comparador_3d.js           # 31 comprobaciones, la escena 3D en Chromium
 node tests/test_viento_ejes.js             # 35 comprobaciones, lienzos, ejes y transmisión
+node tests/test_viento_sitio.js            # 29 comprobaciones, buscador de emplazamiento
 ```

@@ -48,6 +48,21 @@
   .field input,.field select{width:100%;background:var(--bg2);border:1px solid var(--line2);color:var(--tx);border-radius:8px;padding:7px 10px;font:inherit;font-size:.88rem}
   .field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  /* Buscador de emplazamiento: el desplegable flota sobre lo de abajo, así que
+     la tarjeta no da un salto cada vez que aparece un resultado. */
+  .sitiobox{position:relative}
+  .sitiores{position:absolute;left:0;right:0;top:100%;z-index:40;margin-top:3px;
+    background:var(--panel-2);border:1px solid var(--line2);border-radius:9px;
+    box-shadow:0 12px 28px rgba(0,0,0,.45);max-height:280px;overflow:auto}
+  .sitiores .it{padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--line-soft)}
+  .sitiores .it:last-child{border-bottom:0}
+  .sitiores .it:hover,.sitiores .it.on{background:var(--bg2)}
+  .sitiores .it b{font-weight:600}
+  .sitiores .it .co{font-family:var(--mono);font-size:.68rem;color:var(--muted-2)}
+  .sitiores .gr{padding:4px 10px;font-family:var(--mono);font-size:.6rem;
+    letter-spacing:.11em;text-transform:uppercase;color:var(--muted);
+    background:var(--bg2);position:sticky;top:0}
+  .sitiores .aviso{padding:7px 10px;font-size:.78rem;color:var(--muted-2)}
   .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
   .lab{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
   .lab .field{margin-bottom:0}
@@ -165,8 +180,12 @@
   <div>
     <div class="card">
       <h2>☉ Emplazamiento</h2>
-      <div class="field"><label>Planta</label>
-        <select id="plant"><option value="">— manual —</option></select></div>
+      <div class="field sitiobox">
+        <label>Emplazamiento <span class="sn" style="margin:0" id="sitioSel">manual</span></label>
+        <input id="sitioQ" type="search" autocomplete="off" spellcheck="false"
+               placeholder="Ayora, Gabès, 24019, o 41.5763, -0.7981…">
+        <div id="sitioRes" class="sitiores" style="display:none"></div>
+      </div>
       <div class="two">
         <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="41.5763"></div>
         <div class="field"><label>Longitud °</label><input id="lon" type="number" step="0.0001" value="-0.7981"></div>
@@ -1386,25 +1405,182 @@ var PRESETS=[
   {n:'Gorraiz · Navarra (ES)',lat:42.81,lon:-1.58}
 ];
 var PLANTS={};
+
+/* ── BUSCADOR DE EMPLAZAMIENTO ──
+   Antes esto era un desplegable con la cartera y ocho presets, o sea: para
+   simular en un sitio que no fuese uno de esos ocho había que teclear lat y
+   lon a mano. El viento de un emplazamiento es justo lo que se quiere probar
+   ANTES de tener el proyecto, así que el desplegable estorbaba donde más se
+   usa.
+
+   Tres caminos, y el orden importa:
+     1. la CARTERA y los PRESETS, que se filtran al teclear y funcionan SIN
+        RED (es lo que se busca el 90 % de las veces y no puede depender de
+        que haya internet);
+     2. COORDENADAS pegadas tal cual («41.5763, -0.7981», también con N/S/E/O),
+        que es el camino más corto para quien viene de un DWG;
+     3. el geocodificador de OPEN-METEO, el MISMO proveedor del que ya sale el
+        viento — así el buscador no añade una dependencia externa nueva que
+        declarar, ni pide clave.
+
+   Si el geocodificador no contesta se DICE en el propio desplegable, en vez
+   de devolver una lista vacía que se lee como «ese sitio no existe». */
+
+/* Sin acentos y en minúsculas: «Túnez» y «Tunez», «Gabès» y «Gabes», que es
+   como se teclea de verdad. `normalize('NFD')` separa el acento y el rango
+   \u0300-\u036f (las marcas combinantes) lo borra. */
+function normSitio(t){
+  return String(t==null?'':t).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().trim();
+}
+
+/* Coordenadas pegadas: «41.5763, -0.7981», «41,5763 -0,7981», «41.57 N 0.79 W».
+   Devuelve null si no lo son — un texto que no son coordenadas tiene que
+   seguir su camino al buscador, no colarse como un 0,0 en el Golfo de Guinea. */
+function parseCoords(t){
+  var q=String(t||'').trim();
+  var m=q.match(/^\s*(-?\d{1,3}(?:[.,]\d+)?)\s*([NSns])?\s*[, ;]\s*(-?\d{1,3}(?:[.,]\d+)?)\s*([EWOewo])?\s*$/);
+  if(!m)return null;
+  var la=parseFloat(m[1].replace(',','.')), lo=parseFloat(m[3].replace(',','.'));
+  if(!isFinite(la)||!isFinite(lo))return null;
+  if(m[2]&&/[Ss]/.test(m[2]))la=-Math.abs(la);
+  if(m[4]&&/[WOwo]/.test(m[4]))lo=-Math.abs(lo);
+  if(Math.abs(la)>90||Math.abs(lo)>180)return null;
+  return {lat:la,lon:lo};
+}
+
+/* La lista local: cartera primero (es del proyecto) y presets después. */
+function sitiosLocales(){
+  var out=[];
+  Object.keys(PLANTS).sort().forEach(function(c){
+    var p=PLANTS[c];
+    if(!p||p.lat==null||p.lon==null)return;
+    out.push({n:(p.nombre||'?')+' · '+c,lat:+p.lat,lon:+p.lon,src:'Cartera',cod:c});
+  });
+  PRESETS.forEach(function(p){
+    out.push({n:p.n,lat:p.lat,lon:p.lon,src:'Presets'});
+  });
+  return out;
+}
+
+/* Filtro por TODAS las palabras, en cualquier orden: «ayora valencia» y
+   «valencia ayora» encuentran lo mismo, y «24019» encuentra por código. */
+function filtraSitios(lista,q){
+  var ws=normSitio(q).split(/\s+/).filter(Boolean);
+  if(!ws.length)return lista.slice(0,12);
+  return lista.filter(function(s){
+    var h=normSitio(s.n+' '+(s.cod||'')+' '+(s.src||''));
+    return ws.every(function(w){return h.indexOf(w)>=0;});
+  }).slice(0,12);
+}
+
+var SITIO=null, _sitioT=null, _sitioAbort=null;
+
+function pintaSitio(){
+  $('sitioSel').textContent=SITIO?SITIO.n:'manual';
+}
+
+function eligeSitio(s){
+  SITIO=s;
+  if(s&&s.lat!=null){$('lat').value=(+s.lat).toFixed(4);$('lon').value=(+s.lon).toFixed(4);}
+  $('sitioQ').value=s?s.n:'';
+  $('sitioRes').style.display='none';
+  pintaSitio(); saveCfg();
+}
+
+function renderSitios(grupos,aviso){
+  var h='';
+  grupos.forEach(function(g){
+    if(!g.items.length)return;
+    h+='<div class="gr">'+esc(g.label)+'</div>';
+    g.items.forEach(function(s,i){
+      h+='<div class="it" data-g="'+esc(g.label)+'" data-i="'+i+'"><b>'+esc(s.n)+'</b>'+
+         '<div class="co">'+(+s.lat).toFixed(4)+', '+(+s.lon).toFixed(4)+
+         (s.det?' · '+esc(s.det):'')+'</div></div>';
+    });
+  });
+  if(aviso)h+='<div class="aviso">'+esc(aviso)+'</div>';
+  if(!h){$('sitioRes').style.display='none';return;}
+  $('sitioRes').innerHTML=h; $('sitioRes').style.display='';
+  var todos={}; grupos.forEach(function(g){todos[g.label]=g.items;});
+  [].forEach.call($('sitioRes').querySelectorAll('.it'),function(el){
+    el.onmousedown=function(ev){ev.preventDefault();
+      eligeSitio(todos[el.dataset.g][+el.dataset.i]);};
+  });
+}
+
+/* El geocodificador de Open-Meteo: mismo proveedor que el viento, sin clave.
+   Se llama con pausa (no en cada tecla) y se puede cancelar, para no dejar
+   una respuesta vieja pisando a una nueva. */
+async function buscaRemoto(q){
+  if(_sitioAbort)_sitioAbort.abort();
+  _sitioAbort=(typeof AbortController!=='undefined')?new AbortController():null;
+  var u='https://geocoding-api.open-meteo.com/v1/search?count=8&language=es&format=json&name='
+        +encodeURIComponent(q);
+  var r=await fetch(u,{cache:'no-store',signal:_sitioAbort?_sitioAbort.signal:undefined});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  var j=await r.json();
+  return (j.results||[]).map(function(x){
+    var det=[x.admin1,x.country].filter(Boolean).join(', ');
+    return {n:x.name+(det?' · '+det:''),lat:x.latitude,lon:x.longitude,
+            det:(x.elevation!=null?Math.round(x.elevation)+' m':''),src:'Buscados'};
+  });
+}
+
+function buscaSitio(){
+  var q=$('sitioQ').value;
+  var loc=filtraSitios(sitiosLocales(),q);
+  var co=parseCoords(q);
+  var grupos=[];
+  if(co)grupos.push({label:'Coordenadas',items:[{n:co.lat.toFixed(4)+', '+co.lon.toFixed(4),
+      lat:co.lat,lon:co.lon,det:'tal como las has escrito',src:'Coordenadas'}]});
+  grupos.push({label:'Cartera y presets',items:loc});
+  renderSitios(grupos, q.trim().length>=3?'Buscando en Open-Meteo…':null);
+  if(_sitioT)clearTimeout(_sitioT);
+  if(co||normSitio(q).length<3)return;              // coordenadas: no hace falta red
+  _sitioT=setTimeout(function(){
+    var qv=q;
+    buscaRemoto(q).then(function(rem){
+      if($('sitioQ').value!==qv)return;             // ha seguido escribiendo
+      renderSitios(grupos.concat([{label:'Buscados',items:rem}]),
+                   rem.length?null:'Open-Meteo no encuentra nada con ese nombre.');
+    }).catch(function(e){
+      if($('sitioQ').value!==qv||e.name==='AbortError')return;
+      /* Un desplegable vacío se lee como «ese sitio no existe». Lo que pasa
+         es que no hay red, y eso hay que decirlo: sin ella el buscador sigue
+         valiendo para la cartera y los presets, que van en local. */
+      renderSitios(grupos,'Sin red para buscar fuera: solo cartera y presets.');
+    });
+  },350);
+}
+
 function loadPlants(){
   try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
-  var o='<option value="">— manual —</option>';
-  var codes=Object.keys(PLANTS).filter(function(c){var p=PLANTS[c];return p&&p.lat!=null&&p.lon!=null;}).sort();
-  if(codes.length){o+='<optgroup label="Cartera">';
-    codes.forEach(function(c){o+='<option value="c:'+c+'">'+esc((PLANTS[c].nombre||'?')+' · '+c)+'</option>';});
-    o+='</optgroup>';}
-  o+='<optgroup label="Presets">';
-  PRESETS.forEach(function(p,i){o+='<option value="p:'+i+'">'+esc(p.n)+'</option>';});
-  o+='</optgroup>';
-  $('plant').innerHTML=o;
+  pintaSitio();
 }
-$('plant').onchange=function(){
-  var v=this.value; if(!v)return;
-  var p=v.slice(0,2)==='c:'?PLANTS[v.slice(2)]:PRESETS[+v.slice(2)];
-  if(!p)return;
-  if(p.lat!=null){$('lat').value=p.lat;$('lon').value=p.lon;}
-  saveCfg();
-};
+$('sitioQ').addEventListener('input',buscaSitio);
+$('sitioQ').addEventListener('focus',buscaSitio);
+$('sitioQ').addEventListener('blur',function(){
+  setTimeout(function(){$('sitioRes').style.display='none';},120);
+});
+$('sitioQ').addEventListener('keydown',function(ev){
+  if(ev.key==='Escape'){$('sitioRes').style.display='none';return;}
+  if(ev.key!=='Enter')return;
+  ev.preventDefault();
+  var pri=$('sitioRes').querySelector('.it');
+  if(pri)pri.dispatchEvent(new MouseEvent('mousedown'));
+});
+/* Teclear lat/lon a mano sigue valiendo, y entonces el rótulo deja de nombrar
+   un sitio que ya no es: decir «Ayora» sobre unas coordenadas cambiadas a
+   mano sería poner nombre de planta a otro emplazamiento. */
+['lat','lon'].forEach(function(id){
+  $(id).addEventListener('input',function(){
+    if(!SITIO)return;
+    if(Math.abs(+$('lat').value-SITIO.lat)>1e-4||Math.abs(+$('lon').value-SITIO.lon)>1e-4){
+      SITIO=null;$('sitioQ').value='';pintaSitio();
+    }
+  });
+});
 
 /* ===================== LABORATORIO DE RACHAS =====================
    El vocabulario (rachas tipo, bases, formas) lo sirve el motor en
@@ -1502,6 +1678,7 @@ function saveCfg(){
   try{var c={};IDS.forEach(function(i){c[i]=$(i).value;});
     c.bt=$('bt').checked; c.wgust=$('wgust').checked; c.wcyc=$('wcyc').checked; c.gusts=GUSTS;
     c.pas=$('pas').checked; c.pasV2=1;
+    c.sitio=SITIO;   // el rótulo tiene que sobrevivir a recargar
     c.st=[].slice.call(document.querySelectorAll('.st')).filter(function(e){return e.checked;}).map(function(e){return e.value;});
     localStorage.setItem('factiun_viento_cfg',JSON.stringify(c));}catch(e){}
 }
@@ -1512,6 +1689,7 @@ function loadCfg(){
     if(c.wgust!=null)$('wgust').checked=!!c.wgust;
     if(c.wcyc!=null)$('wcyc').checked=!!c.wcyc;
     if(Array.isArray(c.gusts))GUSTS=c.gusts;
+    if(c.sitio&&c.sitio.lat!=null){SITIO=c.sitio;$('sitioQ').value=c.sitio.n||'';}
     /* El pasivo pasa a venir ENCENDIDO (v1.9.4). Quien ya tenga configuración
        guardada lleva `pas:false` de cuando el default era apagado —no porque
        lo apagase— así que el nuevo default no le llegaría nunca. Se fuerza
@@ -1583,7 +1761,7 @@ async function run(){
   var body={
     lat:+$('lat').value, lon:+$('lon').value, year:+$('year').value, year1:+$('year1').value,
     meteo_mode:cielo?'clearsky':'canon', source:cielo?'openmeteo':src,
-    name:($('plant').value?$('plant').selectedOptions[0].text:null),
+    name:(SITIO?SITIO.n:null),
     strategies:sts,
     tracker:{max_angle_deg:+$('maxang').value, gcr:+$('gcr').value, pitch_m:+$('pitch').value,
              axis_azimuth_deg:+$('axaz').value, backtrack:$('bt').checked},
