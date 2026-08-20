@@ -1564,6 +1564,29 @@ async function run(){
   }finally{ ['run','runM'].forEach(function(b){$(b).disabled=false;$(b).textContent='Simular el año';}); }
 }
 
+/* Prepara un lienzo 2D a la resolución REAL a la que se va a ver.
+   Los lienzos nacían con un ancho fijo (880 px) y el CSS los estira al ancho
+   del contenedor —~1.200 en una pantalla normal—, así que se dibujaban a 880 y
+   se escalaban: de ahí el aspecto pixelado y las letras deformes. Y en una
+   pantalla HiDPI se multiplica, porque encima hay dos píxeles físicos por cada
+   uno de CSS.
+   Aquí el búfer se ajusta a `ancho_en_pantalla × densidad` y el contexto se
+   escala, así que TODO el código de dibujo sigue trabajando en píxeles CSS sin
+   enterarse. La altura de diseño se guarda la primera vez, porque después el
+   atributo ya no la lleva. */
+function prep2d(cv){
+  if(!cv.dataset.h)cv.dataset.h=cv.height;              // altura de diseño
+  var hCss=+cv.dataset.h;
+  var wCss=cv.clientWidth||cv.width;
+  var dpr=Math.min(3,window.devicePixelRatio||1);
+  var bw=Math.round(wCss*dpr), bh=Math.round(hCss*dpr);
+  if(cv.width!==bw||cv.height!==bh){cv.width=bw;cv.height=bh;}
+  cv.style.height=hCss+'px';
+  var x=cv.getContext('2d');
+  x.setTransform(dpr,0,0,dpr,0,0);                      // dibuja en px CSS
+  return {x:x,W:wCss,H:hCss};
+}
+
 function ord(){ return Object.keys(REP.cases).sort(); }
 /* Decimales por MAGNITUD, no fijos. Un año con dos abanderamientos deja deltas
    de 0,003 %, y con dos decimales la tabla, el KPI y las barras decían todos
@@ -1660,7 +1683,7 @@ function drawRecurso(){
    son los umbrales de la máquina: así no dice solo de dónde sopla, dice de
    dónde vienen los abanderamientos. */
 function drawRosa(rosa,w){
-  var cv=$('rosa'),x=cv.getContext('2d'),W=cv.width,H=cv.height,cxp=W/2,cyp=H/2+6,R=Math.min(W,H)/2-38;
+  var cv=$('rosa'),_p=prep2d(cv),x=_p.x,W=_p.W,H=_p.H,cxp=W/2,cyp=H/2+6,R=Math.min(W,H)/2-38;
   x.clearRect(0,0,W,H);
   var S=rosa.sectores.length, tot=rosa.sectores.map(function(a){
     return a.reduce(function(p,q){return p+q;},0);});
@@ -1742,7 +1765,7 @@ function drawAnos(anos){
 /* Extremos: Gumbel sobre los máximos anuales. Con menos de cinco años no se
    dibuja — un ajuste de tres puntos es un número con pinta de dato. */
 function drawExtremos(G){
-  var cv=$('extCv'),x=cv.getContext('2d'),W=cv.width,H=cv.height;
+  var cv=$('extCv'),_p=prep2d(cv),x=_p.x,W=_p.W,H=_p.H;
   x.clearRect(0,0,W,H);
   if(!G){
     cv.style.display='none';
@@ -1789,7 +1812,7 @@ function drawWind(){
   var d=REP.wind.daily_max_kmh||[]; var cv=$('wind');
   if(!d.length){cv.style.display='none';return;}
   cv.style.display='';
-  var x=cv.getContext('2d'),W=cv.width,H=cv.height,L=48,R=16,T=20,B=24;
+  var _p=prep2d(cv),x=_p.x,W=_p.W,H=_p.H,L=48,R=16,T=20,B=24;
   x.clearRect(0,0,W,H);
   var hi=Math.max(REP.wind.threshold_2_kmh*1.25,Math.max.apply(null,d)*1.08);
   var gx=function(i){return L+(i/Math.max(1,d.length-1))*(W-L-R);},
@@ -1869,7 +1892,7 @@ function drawTable(){
 
 /* ---- barras: Δ POA % por estrategia ---- */
 function drawBars(){
-  var cv=$('bars'),x=cv.getContext('2d'),W=cv.width,H=cv.height,L=54,R=16,T=22,B=52;
+  var cv=$('bars'),_p=prep2d(cv),x=_p.x,W=_p.W,H=_p.H,L=54,R=16,T=22,B=52;
   x.clearRect(0,0,W,H);
   var k=ord(); if(!k.length)return;
   var vals=k.map(function(s){return REP.cases[s].poa_delta_pct;});
@@ -1916,7 +1939,7 @@ function drawDetail(){
 }
 
 function drawMonthly(c){
-  var cv=$('monthly'),x=cv.getContext('2d'),W=cv.width,H=cv.height,L=48,R=52,T=22,B=26;
+  var cv=$('monthly'),_p=prep2d(cv),x=_p.x,W=_p.W,H=_p.H,L=48,R=52,T=22,B=26;
   x.clearRect(0,0,W,H);
   var hrs=c.hours_by_month,dl=c.poa_delta_monthly_kwh_m2.map(function(v){return -v;});  // pérdida en positivo
   var hmax=Math.max(1,Math.max.apply(null,hrs)),dmax=Math.max(0.01,Math.max.apply(null,dl));
@@ -1944,7 +1967,7 @@ function drawMonthly(c){
 }
 
 function drawTrace(c){
-  var cv=$('trace'),x=cv.getContext('2d'),W=cv.width,H=cv.height,L=52,R=76,T=22,B=30;
+  var cv=$('trace'),_p=prep2d(cv),x=_p.x,W=_p.W,H=_p.H,L=52,R=76,T=22,B=30;
   x.clearRect(0,0,W,H);
   var tr=c.trace;
   if(!tr||!tr.t||!tr.t.length){
@@ -2935,7 +2958,20 @@ function meteoTag(){
       ' · viento y dirección horarios';
 }
 $('source').addEventListener('change',meteoTag);
-window.addEventListener('resize',function(){if(REP){drawWind();drawBars();drawDetail();}});
+/* Al cambiar el tamaño hay que REDIBUJAR, no solo estirar: desde que el búfer
+   se ajusta al ancho real, estirar el lienzo sería volver al pixelado. Con
+   pausa, porque `resize` dispara decenas de veces al arrastrar el borde y cada
+   una redibuja seis lienzos. Y entra `drawRecurso`, que se quedó fuera: la
+   rosa y la curva de extremos se estiraban sin rehacerse. */
+var _reTmr=null;
+window.addEventListener('resize',function(){
+  clearTimeout(_reTmr);
+  _reTmr=setTimeout(function(){
+    if(!REP)return;
+    drawWind(); drawBars(); drawDetail();
+    try{drawRecurso();}catch(e){}
+  },120);
+});
 fillRosa(); fillPresets(); loadCfg(); meteoTag(); loadPlants(); renderGusts();
 /* La escena se monta AL ABRIR, no al terminar de simular: era la pega — el
    render solo aparecía después de un año entero de cálculo, y hasta entonces
