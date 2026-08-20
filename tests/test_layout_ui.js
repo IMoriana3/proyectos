@@ -329,6 +329,82 @@ const cajaLienzo = async page => {
   await page.click('#exclClear');
   await generar(page);
 
+  // ── bifila: si es bifila, es bifila ──
+  // El invariante que costó arreglar en el cuaderno: la sub-fila B es el ESPEJO
+  // de la A, no una colocación independiente. Sin eso, en multi-talla y en borde
+  // irregular las X difieren, el emparejado no casa y el campo sale lleno de
+  // mesas sueltas con pinta de monofila.
+  await page.fill('#prot', '35'); await page.dispatchEvent('#prot', 'change');
+  await page.fill('#mods', '28, 14, 7');
+  await page.selectOption('#bifila', '1');
+  await generar(page);
+  const inv = await page.evaluate(() => {
+    let pares = 0, malos = 0, dxmax = 0;
+    for (let i = 0; i + 1 < RES.rows.length; i += 2) {
+      const A = RES.rows[i], B = RES.rows[i + 1]; pares++;
+      if (A.length !== B.length) { malos++; continue; }
+      const xa = A.map(t => (t.x0 + t.x1) / 2).sort((p, q) => p - q);
+      const xb = B.map(t => (t.x0 + t.x1) / 2).sort((p, q) => p - q);
+      for (let k = 0; k < xa.length; k++) dxmax = Math.max(dxmax, Math.abs(xa[k] - xb[k]));
+    }
+    return { pares, malos, dxmax };
+  });
+  check('bifila multi-talla en parcela girada: ningún par descuadrado (' + inv.pares + ' pares)',
+    inv.malos === 0 && inv.pares > 5, JSON.stringify(inv));
+  check('y las sub-filas A y B comparten X exactamente (Δx = 0)', inv.dxmax < 1e-9, String(inv.dxmax));
+  check('toda línea sigue con conteo PAR de mesas',
+    await page.evaluate(() => RES.rows.every(r => r.length % 2 === 0)));
+
+  // ── el eje de transmisión se DIBUJA ──
+  await page.check('#showAxis');
+  await page.waitForTimeout(200);
+  const ejes = await page.evaluate(() => {
+    // Se cuentan los segmentos que la ficha pinta como eje: mismo criterio que
+    // el dibujo, sobre los datos que tiene delante.
+    if (!RES.stats.bifila || !RES.rows.length) return 0;
+    let n = 0;
+    for (let i = 0; i + 1 < RES.rows.length; i += 2)
+      n += Math.min(RES.rows[i].length, RES.rows[i + 1].length);
+    return n;
+  });
+  check('con bifila hay ejes de transmisión que dibujar (' + ejes + ')', ejes > 50);
+  check('y el lienzo los pinta (más píxeles con el eje que sin él)',
+    await page.evaluate(async () => {
+      const cuenta = () => { const c = document.querySelector('#cv');
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+        let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] > 130 && d[i + 2] < 90) n++;
+        return n; };
+      document.querySelector('#showAxis').checked = false; draw(); const sin = cuenta();
+      document.querySelector('#showAxis').checked = true;  draw(); const con = cuenta();
+      return con > sin + 200;
+    }));
+  await page.uncheck('#showAxis');
+  await page.fill('#prot', '0'); await page.dispatchEvent('#prot', 'change');
+  await page.fill('#mods', '28');
+
+  // ── el 3D recibe lo MISMO que se ve en 2D ──
+  await page.fill('#mods', '28, 14, 7');
+  await generar(page);
+  const RES_mesas = await page.evaluate(() => RES.stats.structures);
+  const alViewer = await page.evaluate(() => {
+    document.querySelector('#d3Btn').click();
+    return JSON.parse(localStorage.getItem('cobertura_layout') || '{}');
+  });
+  check('el 3D recibe la geometría de mesa (ancho, largo, gaps, pitch)',
+    alViewer.mesa && alViewer.mesa.modW > 0 && alViewer.mesa.pasoFila > 0 &&
+    alViewer.mesa.gapDrive != null, JSON.stringify(alViewer.mesa || {}).slice(0, 120));
+  check('con UN TIPO POR TALLA y su largo real, no una talla global',
+    Object.keys(alViewer.mesa.tipos || {}).length > 1,
+    JSON.stringify(alViewer.mesa && alViewer.mesa.tipos));
+  check('y cada tracker con su mods, su razón de largo y su tipo',
+    (alViewer.trackers || []).every(t => t.mods > 0 && t.mr > 0 && t.mr <= 1 && t.blk && t.t) &&
+    alViewer.trackers.some(t => t.mr < 0.999),
+    JSON.stringify((alViewer.trackers || [])[0]));
+  check('los trackers del 3D son PAREJAS de mesas (la mitad que en 2D, ±10 %)',
+    Math.abs(alViewer.trackers.length - RES_mesas / 2) < RES_mesas * 0.1,
+    alViewer.trackers.length + ' vs ' + (RES_mesas / 2));
+  await page.fill('#mods', '28');
+
   // ── render, descartadas y eje bifila ──
   await page.selectOption('#render', 'line');
   await page.waitForTimeout(150);
