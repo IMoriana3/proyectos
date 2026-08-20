@@ -258,10 +258,16 @@
         <label class="chk"><input type="checkbox" id="pas" checked> <b>Pasivo</b> · la fila de perímetro se suelta sola</label>
       </div>
       <div id="pasBox">
-        <div class="two">
+        <div class="three">
           <div class="field"><label>Suelta (km/h)</label><input id="pasV" type="number" step="5" value="90"></div>
+          <div class="field"><label>Cae hacia</label>
+            <select id="pasModo">
+              <option value="fijo" selected>lado fijo de montaje</option>
+              <option value="viento">el lado del que sopla</option>
+            </select></div>
           <div class="field"><label>Lado (°)</label><input id="pasL" type="number" step="5" value="-55"></div>
         </div>
+        <p class="nota" id="pasModoNota"></p>
         <div class="ro" id="pasDenom" style="margin-top:8px;font-size:.8rem"></div>
         <p class="nota">El <b>denominador</b> sale de los trackers declarados arriba, en
           <b>Seguidor</b>: es de la planta, no de este caso. La fracción se <b>deriva</b> de la
@@ -408,6 +414,12 @@
       <div class="scroll"><table id="tbl"></table></div>
       <canvas id="bars" width="880" height="230"></canvas>
       <p class="note" id="cmpNote"></p>
+    </div>
+
+    <div class="card" id="thetaCard" style="display:none">
+      <h2>∠ Dónde está cada seguidor <span class="sn">θ a lo largo de la ventana · consigna vs ejecutado</span></h2>
+      <canvas id="thetaCv" width="880" height="300"></canvas>
+      <p class="note" id="thetaNote"></p>
     </div>
 
     <div class="card" id="detCard" style="display:none">
@@ -670,22 +682,37 @@ LOC.stepperPasivo=function(cfg){
      siguiente);
    · la planta deja de tener un solo ángulo, así que su número es una media
      ponderada de dos poblaciones. */
+/* `side` puede ser un NÚMERO (lado fijo de montaje) o una SERIE, un valor por
+   paso — que es lo que permite «cae hacia el lado del que sopla». En ese caso
+   el lado se decide EN EL INSTANTE DE LA SUELTA y no cambia después: una vez
+   desembragada, la fila está apoyada en su tope y el viento ya no la mueve de
+   ahí. Que rotara con el rumbo sería dibujar una fila que se pasea sola. */
 LOC.pasivo=function(thT,ws,release,side,tol,dtS){
   var n=thT.length,out=new Float64Array(n),mask=new Uint8Array(n),eps=[];
-  var suelta=false,ini=0;
+  var suelta=false,ini=0,lado=0,fijo=(typeof side==='number');
   for(var i=0;i<n;i++){
     // ORDEN: primero el reenganche, después la suelta. Al revés, con viento
     // sostenido la fila se reenganchaba y pasaba un paso entero en
     // seguimiento antes de soltarse otra vez — en pleno vendaval.
-    if(suelta&&Math.abs(thT[i]-side)<=tol){
+    if(suelta&&Math.abs(thT[i]-lado)<=tol){
       suelta=false;
-      eps.push({i0:ini,i1:i-1,hours:(i-ini)*dtS/3600});
+      eps.push({i0:ini,i1:i-1,hours:(i-ini)*dtS/3600,lado:lado});
     }
-    if(!suelta&&ws[i]>release){suelta=true;ini=i;}
-    if(suelta){out[i]=side;mask[i]=1;}else out[i]=thT[i];
+    if(!suelta&&ws[i]>release){
+      suelta=true;ini=i;lado=fijo?side:side[i];
+    }
+    if(suelta){out[i]=lado;mask[i]=1;}else out[i]=thT[i];
   }
-  if(suelta)eps.push({i0:ini,i1:n-1,hours:(n-ini)*dtS/3600,sin_reenganche:true});
+  if(suelta)eps.push({i0:ini,i1:n-1,hours:(n-ini)*dtS/3600,lado:lado,sin_reenganche:true});
   return {theta:out,mask:mask,episodios:eps};
+};
+/* Lado al que cae si sigue al viento: el MISMO criterio de signo que las
+   estrategias A (cara al viento), para que no haya dos reglas de lado en la
+   misma tarjeta. `wd` es de dónde VIENE el viento. */
+LOC.ladoDelViento=function(wd,full){
+  var n=wd.length,o=new Float64Array(n);
+  for(var i=0;i<n;i++)o[i]=LOC.sign(wd[i])*full;
+  return o;
 };
 /* El denominador NO es un parámetro de gusto: sale de la geometría. Una fila
    de perímetro entre n_trackers × filas_por_tracker filas. Con un tracker
@@ -1084,6 +1111,10 @@ LOC.run=function(cfg,onStep){
     var shear=cfg.wind_height_m>0?Math.pow(cfg.wind_height_m/10,1/7):1;
     for(var i=0;i<n;i++)M.ws[i]*=shear;
     var SC=LOC.scenario(M,cfg.wind_scenario,lat,dtH), ws=SC.ws, wd=SC.wd;
+    // ¿hay dirección de VERDAD? Sin ella el motor resuelve con 180° fijos, y un
+    // lado «que sigue al viento» saldría constante: un lado fijo disfrazado.
+    var tieneDir=false;
+    if(wd)for(var iw=0;iw<n;iw++)if(!isNaN(wd[iw])){tieneDir=true;break;}
     var T1=cfg.threshold_1_kmh/3.6,T2=cfg.threshold_2_kmh/3.6,full=cfg.tracker.max_angle_deg;
     // sol, θ de seguimiento y POA de la línea base
     var el=new Float64Array(n),azs=new Float64Array(n),azp=new Float64Array(n),
@@ -1112,8 +1143,12 @@ LOC.run=function(cfg,onStep){
       if(S[1]==='1')R=LOC.single(thB,ws,az,T1,full,noon);
       else R=LOC.dual(thB,ws,az,T1,T2,cfg.partial_stow_min_abs_deg,full,dtH*3600,
                       cfg.destow_hold_minutes,cfg.partial_park_minutes,1.0,noon);
-      // La orden de abanderamiento también la ejecuta el motor a 0,17 °/s: por
-      // eso una maniobra a ±55° tarda minutos y la POA cae en rampa, no en escalón.
+      // La ORDEN se guarda antes de pasar por el lazo. Son dos cosas distintas
+      // y la gráfica de θ enseña las dos: la máquina de estados manda un
+      // escalón y el hierro lo recorre a 0,17 °/s, así que una maniobra a ±55°
+      // tarda minutos. Sin la consigna no se puede ver esa diferencia, que es
+      // justo lo que hace que la POA caiga en rampa y no de golpe.
+      var orden=Float64Array.from(R.theta);
       R.theta=LOC.control(R.theta,dtH*3600,full,cfg.slew_deg_s,cfg.deadband_deg);
       var poa=new Float64Array(n),d=new Float64Array(n);
       for(var j=0;j<n;j++){poa[j]=LOC.poa(R.theta[j],el[j],azs[j],bh[j],M.dhi[j],M.ghi[j]);d[j]=poa[j]-poaB[j];}
@@ -1163,7 +1198,7 @@ LOC.run=function(cfg,onStep){
         duration_h_median:q(0.5), duration_h_p95:q(0.95), duration_h_max:durs.length?durs[durs.length-1]:0,
         top_events:evs.slice().sort(function(a,b){return b.poa_lost_kwh_m2-a.poa_lost_kwh_m2;}).slice(0,cfg.top_events||10)
       };
-      series[S]={theta:R.theta,poa:poa,mode:R.mode,events:evs};
+      series[S]={theta:R.theta,orden:orden,poa:poa,mode:R.mode,events:evs};
     });
 
     // ── caso PASIVO ──
@@ -1174,7 +1209,17 @@ LOC.run=function(cfg,onStep){
         'suelta se reparte entre todas las filas de la planta, así que sin el '+
         'denominador el resultado no es interpretable (1 tracker bifila = 50 % '+
         'del campo, 10 trackers = 5 %).');
-      var pRel=(+PC.release_kmh||90)/3.6, pSide=(PC.side_deg==null?-full:+PC.side_deg);
+      var pRel=(+PC.release_kmh||90)/3.6;
+      /* «El lado del que sopla» necesita dirección de viento. Si la meteo no
+         la trae, el motor la resuelve con 180° fijos y el lado saldría
+         constante: eso no es «sigue al viento», es un lado fijo disfrazado.
+         Así que se DICE y se cae al lado de montaje, en vez de dar por bueno
+         un resultado que parece dinámico y no lo es. */
+      var pSide, sinDir=false;
+      if(PC.side_mode==='viento'){
+        if(tieneDir){ pSide=LOC.ladoDelViento(wd,Math.abs(+PC.side_deg||full)); }
+        else { pSide=(PC.side_deg==null?-full:+PC.side_deg); sinDir=true; }
+      } else pSide=(PC.side_deg==null?-full:+PC.side_deg);
       var frac=LOC.fracExpuesta(+PC.n_trackers,+PC.filas_por_tracker||2,+PC.filas_sueltas||1);
       var PR=LOC.pasivo(thB,ws,pRel,pSide,+PC.reengage_tol_deg||1,dtH*3600);
       // la fila suelta ya está EN el ángulo (cayó, no la movió el motor): el
@@ -1221,7 +1266,9 @@ LOC.run=function(cfg,onStep){
         passive:{n_trackers:+PC.n_trackers, filas_por_tracker:+PC.filas_por_tracker||2,
           filas_sueltas:+PC.filas_sueltas||1, fraccion_expuesta:Math.round(frac*1e6)/1e6,
           release_ms:Math.round(pRel*100)/100, release_kmh:Math.round(pRel*3.6*10)/10,
-          side_deg:pSide,
+          side_deg:(typeof pSide==='number'?pSide:null),
+          side_mode:(PC.side_mode==='viento'&&!sinDir)?'viento':'fijo',
+          side_sin_direccion:sinDir||undefined,
           // la fila sola, sin diluir: el número que NO depende del denominador
           row_poa_kwh_m2:Math.round(eF*1000)/1000,
           row_poa_delta_pct:Math.round((eB?100*(eF-eB)/eB:0)*1e4)/1e4,
@@ -1230,7 +1277,7 @@ LOC.run=function(cfg,onStep){
             'No se modela la dispersión entre unidades ni el tiempo de caída: la fila pasa al límite en un paso.',
             'La fila expuesta se supone siempre la misma y del mismo lado; no rota con el rumbo del viento.']}
       };
-      series.PASIVO={theta:PR.theta,poa:poaF,mode:Array.from(PR.mask,function(v){return v?'FULL_STOW':'IDLE';}),events:pEvs};
+      series.PASIVO={theta:PR.theta,orden:PR.theta,poa:poaF,mode:Array.from(PR.mask,function(v){return v?'FULL_STOW':'IDLE';}),events:pEvs};
     }
     // ventana común para el campo 3D: el episodio más caro de TODOS los casos
     var peor=null;
@@ -1253,7 +1300,8 @@ LOC.run=function(cfg,onStep){
       sun_az:sel.map(function(j){return Math.round(azp[j]*100)/100;}),
       wind_ms:pick(ws,2), wind_dir:sel.map(function(j){return isNaN(wd[j])?null:Math.round(wd[j]*10)/10;}),
       baseline:{theta:pick(thB,2),poa:pick(poaB,1)},cases:{}};
-    for(var S3 in series)TLo.cases[S3]={theta:pick(series[S3].theta,2),poa:pick(series[S3].poa,1),
+    for(var S3 in series)TLo.cases[S3]={theta:pick(series[S3].theta,2),
+      orden:pick(series[S3].orden||series[S3].theta,2),poa:pick(series[S3].poa,1),
       mode:sel.map(function(j){return series[S3].mode[j];})};
     // traza del peor episodio de cada caso, para la gráfica de detalle
     for(var S4 in cases){
@@ -1427,7 +1475,7 @@ function scenario(){
 
 /* ===================== ESTADO ===================== */
 var REP=null, SEL=null, MULTI=null, HSU=null;
-var IDS=['lat','lon','year','source','step','wh','maxang','gcr','pitch','axaz','t1','t2','pmin','hold','park','noon','nTrk','filasTrk','pasV','pasL',
+var IDS=['lat','lon','year','source','step','wh','maxang','gcr','pitch','axaz','t1','t2','pmin','hold','park','noon','nTrk','filasTrk','pasV','pasModo','pasL',
          'wbase','wk','wA','wseed','wdir','stn','stp0','stp1','std0','std1','stseed','escena'];
 function saveCfg(){
   try{var c={};IDS.forEach(function(i){c[i]=$(i).value;});
@@ -1524,7 +1572,8 @@ async function run(){
     noon_limit_deg:+$('noon').value,
     passive:($('pas').checked?{enabled:true, n_trackers:nTrk(),
              filas_por_tracker:filasTrk(),
-             release_kmh:+$('pasV').value, side_deg:+$('pasL').value}:null),
+             release_kmh:+$('pasV').value, side_deg:+$('pasL').value,
+             side_mode:$('pasModo').value}:null),
     wind_height_m:(+$('wh').value>0?+$('wh').value:null),
     resample_minutes:($('step').value?+$('step').value:null),
     slew_deg_s:LOC.SLEW, deadband_deg:LOC.DEADBAND,
@@ -1644,7 +1693,7 @@ function render(){
       'resultado — para ver la máquina moverse, baja los umbrales o mete rachas en el '+
       '<b>laboratorio</b>.</div>';
   }
-  drawWind(); drawRecurso(); drawTable(); drawBars();
+  drawWind(); drawRecurso(); drawTable(); drawBars(); drawTheta();
   $('cmpCard').style.display='';
   var k=ord(); SEL=(SEL&&k.indexOf(SEL)>=0)?SEL:b||k[0];
   $('strip').innerHTML=k.map(function(s){
@@ -1924,6 +1973,97 @@ function drawBars(){
   });
   x.fillStyle='#9bb0c6';x.font='10px ui-monospace,monospace';x.textAlign='left';
   x.fillText('Δ POA anual frente a no abanderar',L,13);
+}
+
+/* ---- θ de cada estrategia a lo largo de la ventana ----
+   La misma lectura que la gráfica de θ de overcast: dónde está cada seguidor en
+   cada momento, todas juntas. Dos trazos por caso, y la diferencia entre ellos
+   es el asunto: FINO Y DISCONTINUO es la consigna —lo que la máquina de estados
+   ORDENA, que es un escalón— y GRUESO es lo que hace el hierro, que va a
+   0,17 °/s y tarda minutos en recorrer una maniobra de ±55°. Esa rampa es la
+   razón de que la POA caiga poco a poco y no de golpe; con una sola línea no se
+   ve, y es lo que este simulador existe para enseñar. */
+function drawTheta(){
+  if(!REP||!REP.timeline){$('thetaCard').style.display='none';return;}
+  $('thetaCard').style.display='';
+  var TL=REP.timeline, cv=$('thetaCv'), _p=prep2d(cv), x=_p.x, W=_p.W, H=_p.H;
+  var L=52,R=18,T=26,B=34;
+  x.clearRect(0,0,W,H);
+  var n=TL.t.length; if(!n)return;
+  var full=(REP.config&&REP.config.full_stow_deg)||55;
+  var pmin=(REP.config&&REP.config.partial_stow_min_abs_deg)||30;
+  var yMax=full+6;
+  var gx=function(i){return L+(W-L-R)*(n<2?0.5:i/(n-1));};
+  var gy=function(v){return T+(H-T-B)*(1-(v+yMax)/(2*yMax));};
+
+  // franjas de NOCHE: sin ellas, los tramos planos del latch parecen avería
+  var elev=TL.sun_el||TL.sun_elev||null;   // el motor lo emite como sun_el
+  if(elev){x.fillStyle='rgba(11,15,20,.55)';
+    for(var i=0;i<n;i++)if(elev[i]<=0)x.fillRect(gx(i),T,(W-L-R)/n+1,H-T-B);}
+
+  // rejilla: 0, ±sector parcial y ±límite, que son los ángulos que decide la máquina
+  x.strokeStyle='#1e2a3a';x.fillStyle='#5c7189';x.font='10px ui-monospace,monospace';x.lineWidth=1;
+  [-full,-pmin,0,pmin,full].forEach(function(g){
+    var y=gy(g);
+    x.beginPath();x.moveTo(L,y);x.lineTo(W-R,y);x.stroke();
+    x.textAlign='right';x.fillText(g+'°',L-6,y+3);
+  });
+  // horas
+  x.textAlign='center';
+  var paso=Math.max(1,Math.round(n/8));
+  for(var i2=0;i2<n;i2+=paso){
+    var hh=String(TL.t[i2]).slice(11,16);
+    x.beginPath();x.moveTo(gx(i2),T);x.lineTo(gx(i2),H-B);x.strokeStyle='#16202c';x.stroke();
+    x.fillStyle='#5c7189';x.fillText(hh,gx(i2),H-B+14);
+  }
+
+  var traza=function(arr,col,ancho,disc){
+    if(!arr)return;
+    x.setLineDash(disc||[]);x.beginPath();x.strokeStyle=col;x.lineWidth=ancho;
+    for(var j=0;j<arr.length;j++){var v=arr[j]; if(v==null)continue;
+      var px=gx(j),py=gy(Math.max(-yMax,Math.min(yMax,v)));
+      j?x.lineTo(px,py):x.moveTo(px,py);}
+    x.stroke();x.setLineDash([]);
+  };
+  // ¿viene la consigna? El motor canónico hoy solo emite el ejecutado, y eso
+  // se DICE en el pie: enseñar un trazo donde el pie promete dos deja al que
+  // mira pensando que las dos curvas coinciden, que es lo contrario del dato.
+  var hayOrden=false;
+  ord().forEach(function(k){var c=TL.cases&&TL.cases[k]; if(c&&c.orden)hayOrden=true;});
+  // la base primero, que es la referencia contra la que se leen las demás
+  traza(TL.baseline&&TL.baseline.theta,COL.BASE,1.6);
+  ord().forEach(function(k){
+    var c=TL.cases&&TL.cases[k]; if(!c)return;
+    traza(c.orden,COL[k],1,[4,3]);     // lo que se ORDENA
+    traza(c.theta,COL[k],2.2);         // lo que se EJECUTA
+  });
+
+  x.fillStyle='#5c7189';x.font='10px ui-monospace,monospace';x.textAlign='left';
+  x.fillText('θ (°) · positivo = inclinado al ESTE (convención del core) · '+
+             'fino ┄ consigna · grueso ▬ ejecutado a 0,17 °/s',L,15);
+
+  var c2=REP.config||{};
+  $('thetaNote').innerHTML=
+    'La ventana es la misma que usa la escena 3D: el <b>episodio más caro del año</b> con '+
+    'margen a los lados, para verlas reaccionar todas al mismo viento en el mismo instante.<br>'+
+    (hayOrden
+      ? 'De cada estrategia hay <b>dos trazos</b>, y la diferencia entre ellos es el asunto: el fino '+
+        'discontinuo es lo que la máquina de estados <b>ORDENA</b> —un escalón— y el grueso lo que '
+      : 'El trazo grueso es lo que ')+
+    'hace el seguidor, que gira a <b>0,17 °/s</b> y tarda '+
+    fmt(2*(+c2.full_stow_deg||55)/0.17/60,1)+' min en cruzar de un límite al otro. Esa rampa es la '+
+    'razón de que la POA caiga poco a poco y no de golpe.<br>'+
+    'Las líneas de la rejilla son los ángulos que <b>decide</b> la máquina: 0°, el sector parcial '+
+    '(±'+fmt(+c2.partial_stow_min_abs_deg||30,0)+'°) y el límite (±'+fmt(+c2.full_stow_deg||55,0)+'°). '+
+    'La gris es el seguidor <b>sin abanderar</b>, que es la referencia contra la que se leen las demás.'+
+    (REP.cases&&REP.cases.PASIVO
+      ? '<br>En el <b>pasivo</b> el trazo fino y el grueso coinciden a propósito: la fila no la mueve '+
+        'el motor, se suelta y CAE — no hay consigna que recorrer.'
+      : '')+
+    (hayOrden ? ''
+      : '<br><b>Falta la consigna.</b> Este resultado viene del motor SolarGPT, que hoy no emite el '+
+        'ángulo ordenado en la ventana común — solo el ejecutado. Así que aquí se ve UN trazo por '+
+        'estrategia, no dos. Con el cálculo en el navegador salen los dos.');
 }
 
 /* ---- detalle de una estrategia ---- */
@@ -2939,6 +3079,22 @@ $('lPlay').onclick=function(){
 $('gadd').onclick=function(){addGust($('gpreset').value);};
 $('pas').onchange=function(){
   $('pasBox').style.display=this.checked?'':'none'; saveCfg(); montaEscena();};
+/* El lado fijo y el lado del viento no son la misma casuística, y conviene que
+   se note al elegir: con el fijo el número manda; con el del viento el número
+   solo dice CUÁNTO se tumba, y el signo lo pone el rumbo. */
+function pasModoUI(){
+  var v=$('pasModo').value, dv=(v==='viento');
+  $('pasL').disabled=false;
+  $('pasModoNota').innerHTML=dv
+    ? 'Cae hacia <b>el lado del que sopla</b>, con el mismo criterio de signo que las estrategias A. '+
+      'El número de al lado solo fija <b>cuánto</b> se tumba (se usa su valor absoluto); el signo lo pone '+
+      'el rumbo del viento <b>en el instante de la suelta</b>, y ya no cambia: una vez desembragada, la '+
+      'fila está apoyada en su tope y el viento no la mueve de ahí. Necesita meteo <b>con dirección</b>; '+
+      'sin ella se avisa y se usa el lado fijo, porque un lado que no varía no es «seguir al viento».'
+    : 'Cae siempre al <b>mismo lado</b>, el de montaje: no depende del rumbo del viento. Es el dato de '+
+      'proyecto por defecto (siempre la misma fila y el mismo lado).';
+}
+$('pasModo').addEventListener('change',function(){saveCfg();pasModoUI();});
 // El nº de trackers cambia el DENOMINADOR —o sea la POA de planta que se
 // enseña— y desde que el bloque se dibuja a su proporción, también cambia
 // cuántas filas hay: hay que REMONTAR, no solo repintar. Los otros dos solo
@@ -2970,6 +3126,7 @@ window.addEventListener('resize',function(){
     if(!REP)return;
     drawWind(); drawBars(); drawDetail();
     try{drawRecurso();}catch(e){}
+    try{drawTheta();}catch(e){}
   },120);
 });
 fillRosa(); fillPresets(); loadCfg(); meteoTag(); loadPlants(); renderGusts();
@@ -2979,6 +3136,7 @@ fillRosa(); fillPresets(); loadCfg(); meteoTag(); loadPlants(); renderGusts();
 (function(){ /* la fecha en vivo arranca en el solsticio del año elegido */
   var y=+$('year').value||2023; $('lDate').value=y+'-06-21'; })();
 denomPas();
+pasModoUI();
 montaEscena();
 detectEngine().then(loadPresets);
 </script>
