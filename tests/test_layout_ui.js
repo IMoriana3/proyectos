@@ -43,6 +43,18 @@ const num = s => parseInt(String(s).replace(/[^\d]/g, ''), 10);
   const page = await browser.newPage();
   const fallos = [];
   page.on('pageerror', e => fallos.push(e.message));
+  // Ortofoto: el banco no puede depender del servidor de teselas de Esri (ni de
+  // que haya red), así que se sirve un PNG propio de 256×256 con la misma forma.
+  // El camino de la ortofoto se ejercita de verdad; lo que no se prueba es Esri.
+  const TESELA = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAADTED8xAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAA' +
+    'IElEQVR4nO3BAQ0AAADCoPdPbQ8HFAAAAAAAAAAAAHwaIAAB1F0m1AAAAABJRU5ErkJggg==', 'base64');
+  let teselasPedidas = 0;
+  await page.route('https://server.arcgisonline.com/**', r => {
+    teselasPedidas++;
+    r.fulfill({ status: 200, contentType: 'image/png',
+                headers: { 'access-control-allow-origin': '*' }, body: TESELA });
+  });
   await page.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
 
   // ── arranque ──
@@ -51,6 +63,44 @@ const num = s => parseInt(String(s).replace(/[^\d]/g, ''), 10);
   check('el emplazamiento arranca en «manual»', (await page.textContent('#sitioSel')).trim() === 'manual');
   check('el azimut de filas se deriva del eje (eje N-S 0° → filas a 90°)',
     await page.inputValue('#panelAz') === '90');
+
+  // ── ortofoto y navegación ──
+  // Esperar al estado FINAL: «cargando ortofoto…» también tiene longitud, y
+  // comprobar contra él es medir la carrera, no el resultado.
+  await page.waitForFunction(() => /Esri World Imagery|sin ortofoto/.test(
+    document.querySelector('#basemapMsg').textContent), null, { timeout: 15000 });
+  check('pide teselas de ortofoto al arrancar', teselasPedidas > 0, String(teselasPedidas));
+  check('y lo dice en la leyenda', /Esri World Imagery/.test(await page.textContent('#basemapMsg')),
+    await page.textContent('#basemapMsg'));
+  // El lienzo debe poder LEERSE: si la tesela entrara sin CORS quedaría «teñido»
+  // y getImageData lanzaría — y con él se caen todas las comprobaciones de pintado.
+  check('el lienzo no queda teñido por las teselas (crossOrigin)',
+    await page.evaluate(() => { try { const c = document.querySelector('#cv');
+      c.getContext('2d').getImageData(0, 0, 2, 2); return true; } catch (e) { return false; } }));
+  const vista0 = await page.evaluate(() => ({ cx: VIEW.cx, cy: VIEW.cy, z: VIEW.z }));
+  // La rueda se despacha donde está el ratón, y arranca en (0,0): sin mover el
+  // puntero al lienzo, el evento no llega y la comprobación mediría nada.
+  const cajaCv = await page.evaluate(() => { const r = document.querySelector('#cv').getBoundingClientRect();
+    return { x: r.x, y: r.y, w: r.width, h: r.height }; });
+  await page.mouse.move(cajaCv.x + cajaCv.w / 2, cajaCv.y + cajaCv.h / 2);
+  await page.mouse.wheel(0, -120);
+  await page.waitForTimeout(120);
+  const vista1 = await page.evaluate(() => ({ cx: VIEW.cx, cy: VIEW.cy, z: VIEW.z }));
+  check('la rueda acerca', vista1.z > vista0.z, vista0.z + ' → ' + vista1.z);
+  const caja0 = await page.evaluate(() => { const r = document.querySelector('#cv').getBoundingClientRect();
+    return { x: r.x, y: r.y, w: r.width, h: r.height }; });
+  await page.mouse.move(caja0.x + caja0.w / 2, caja0.y + caja0.h / 2);
+  await page.mouse.down();
+  await page.mouse.move(caja0.x + caja0.w / 2 + 90, caja0.y + caja0.h / 2 + 40, { steps: 6 });
+  await page.mouse.up();
+  const vista2 = await page.evaluate(() => ({ cx: VIEW.cx, cy: VIEW.cy, z: VIEW.z }));
+  check('arrastrar mueve la vista', Math.abs(vista2.cx - vista1.cx) > 1e-9);
+  await page.click('#fit');
+  check('«Encajar» vuelve a centrar la parcela',
+    Math.abs((await page.evaluate(() => VIEW.cx)) - vista0.cx) < 1e-7);
+  await page.uncheck('#orto');
+  check('apagar la ortofoto se dice', /apagada/.test(await page.textContent('#basemapMsg')));
+  await page.check('#orto');
 
   // ── buscador de emplazamiento ──
   // Sin red: el geocodificador no se exige (este banco tiene que correr sin
@@ -181,6 +231,11 @@ const num = s => parseInt(String(s).replace(/[^\d]/g, ''), 10);
   await page.mouse.dblclick(caja.x + caja.w * 0.25, caja.y + caja.h * 0.75);
   check('la parcela dibujada se cierra con cuatro vértices (el doble clic no los duplica)',
     /^4 vértices/.test(await page.textContent('#parcelTag')), await page.textContent('#parcelTag'));
+  // La regresión que se veía en producción: con el primer vértice el encuadre se
+  // recalculaba sobre una caja de tamaño CERO, y la parcela salía de «0,00 ha»
+  // con una escala de milímetros. La vista ya no se reencuadra al dibujar.
+  check('la parcela dibujada tiene superficie de verdad, no 0,00 ha',
+    !/ 0[.,]00 ha/.test(await page.textContent('#parcelTag')), await page.textContent('#parcelTag'));
   await generar(page);
   check('y también genera sobre ella', num(await page.textContent('#ro .ro:nth-child(2) .v')) > 0);
 

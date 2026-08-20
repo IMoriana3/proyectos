@@ -53,6 +53,60 @@ Tres caminos, y los tres acaban en el mismo anillo de coordenadas:
    setback contra su borde — igual que el `buffer(-d)` de Shapely en el core.
 3. **Dibujada sobre el lienzo.** Clic por vértice, doble clic para cerrar.
 
+## El lienzo: ortofoto y navegación
+
+Dibujar la parcela sobre un fondo negro es dibujar a ciegas — nadie sabe dónde está el linde de su
+finca sin ver el terreno. Igual que el cuaderno y Streamlit, la ficha dibuja sobre la **ortofoto de
+Esri World Imagery**, y con eso vienen dos consecuencias:
+
+- **La vista es Web Mercator.** El encuadre anterior era lon/lat lineal con un `cos(lat)` a mano:
+  suficiente para una parcela, pero las teselas no están en esa proyección y encajarían torcidas —
+  el error crece con la latitud. Con Mercator, la tesela y la parcela hablan el mismo idioma.
+- **Se navega.** Arrastrar mueve, la rueda acerca sobre el cursor, `⤢ Encajar` vuelve a la parcela.
+  Un clic solo pone vértice si **no** ha sido un arrastre: mover el mapa mientras dibujas plantaba
+  antes un vértice en cada parada.
+
+Si las teselas no llegan —sin red, o bloqueadas por una política de empresa— se **dice** en la
+leyenda y se cae a una **retícula de 50 m**: dibujar a ciegas sin saber por qué es peor que dibujar
+sobre una cuadrícula. La ortofoto se puede apagar con su casilla.
+
+> Esto arregla de paso una regresión que se veía en producción: al poner el **primer** vértice, el
+> encuadre se recalculaba sobre una caja de tamaño cero y la parcela salía de «0,00 ha» con una
+> escala de milímetros. La vista ya no se reencuadra mientras dibujas.
+
+## La estructura, como en el cuaderno
+
+Los mismos campos, las mismas fórmulas y los mismos avisos que la página **Layout** de Streamlit
+(§03.F para fija, §03.T para tracker):
+
+| | |
+|---|---|
+| **Derivados, en vivo** | apertura, alto del colector, GCR y módulos por fila |
+| **Tracker** | tilt del eje (TSAT), ángulo máximo, backtracking |
+| **Fija** | tilt fijo, azimut de módulos |
+| **Pitch desde GCR** | `pitch = apertura / GCR`. Con la apertura canónica de 2,382 m, el GCR 0,397 da 6,00 m — las constantes de `solargpt_core.tracker` |
+| **Avisos** | GCR > 0,7 «es alto, se sombrean»; GCR < 0,2 «terreno espacioso, menos potencia por hectárea» |
+
+**Apertura y alto del colector no son lo mismo**, y confundirlos mueve el GCR: la apertura es
+`n × lado del módulo` **sin** gaps (convención de industria, y lo que usa el motor para colocar); el
+alto físico sí suma los gaps entre módulos apilados. Streamlit enseña los dos justo por eso, y aquí
+también.
+
+## El terreno y sus pendientes
+
+Pendiente N-S y E-O, más el albedo. Con ellas la ficha deriva lo que **sí** es geometría pura:
+
+- **cross-axis**: la pendiente que cruza las filas (con filas a lo largo del eje N-S, la E-O).
+- **Δz entre filas**: `pitch · tan(cross)` — el desnivel real entre filas consecutivas.
+- **pitch en planta vs pitch en terreno**: `pitch / cos(cross)`. El proyecto mide uno; el layout
+  dibuja el otro.
+
+Y lo que **no** hace, dicho en pantalla en vez de callado: las pendientes **no entran en la
+colocación**. `compute_layout_v2` tampoco las usa — implanta en planta y no tiene parámetro de
+pendiente. Donde mandan es en el **backtracking** (`cross_axis_slope_deg`, que es lo que consume
+`bt_audit`) y en la sombra entre filas. Por eso viajan con el layout a los exports y al 3D, en vez
+de quedarse muertas en un campo de la pantalla.
+
 ## Los parámetros son los del cuaderno
 
 Los mismos nombres y los mismos defaults que la página **Layout** de Streamlit y que
