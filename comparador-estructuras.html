@@ -45,6 +45,14 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
 .field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .tres{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+/* En la columna ANCHA los campos numéricos se estiraban a media pantalla para
+   meter cuatro cifras. Se acotan a lo que ocupa un número: una fila de celdas
+   pequeñas se lee de un vistazo y deja sitio para la unidad al lado. */
+.campos{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.campos .field{flex:0 0 auto;width:132px;margin-bottom:0}
+.campos .field.ancho{width:210px}
+.campos .field.libre{flex:1 1 160px;width:auto}
+.campos .uni{color:var(--muted);font-weight:400}
 /* Buscador de emplazamiento: el desplegable FLOTA sobre lo de abajo, así que
    la tarjeta no da un salto cada vez que aparece un resultado. */
 .sitiobox{position:relative}
@@ -332,15 +340,19 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
     <!-- ═════════ SIZING (columna ancha: la ventana hay que LEERLA) ═════════ -->
     <div class="card">
       <h2>📐 Sizing <span class="sn" id="szGob">§05</span></h2>
-      <div class="tres">
-        <div class="field"><label>T mín. célula (°C)</label><input id="szTmin" type="number" step="0.5" value="-10"></div>
-        <div class="field"><label>T máx. célula (°C)</label><input id="szTmax" type="number" step="0.5" value="70"></div>
-        <div class="field"><label>βVoc (%/°C)</label><input id="szBeta" type="number" step="0.001" value="-0.270"></div>
-      </div>
-      <div class="tres" style="margin-top:9px">
-        <div class="field"><label>Módulos por string</label><input id="szN" type="number" step="1" min="1" value="26"></div>
-        <div class="field"><label>DC/AC objetivo</label><input id="szTarget" type="number" step="0.01" min="0.5" max="2" value="1.20"></div>
-        <div class="field"><label>Límite de red (MW)</label><input id="szRed" type="number" step="0.1" min="0" value="0"></div>
+      <div class="campos">
+        <div class="field"><label>T mín. célula <span class="uni">°C</span></label>
+          <input id="szTmin" type="number" step="0.5" value="-10"></div>
+        <div class="field"><label>T máx. célula <span class="uni">°C</span></label>
+          <input id="szTmax" type="number" step="0.5" value="70"></div>
+        <div class="field"><label>βVoc <span class="uni">%/°C</span></label>
+          <input id="szBeta" type="number" step="0.001" value="-0.270"></div>
+        <div class="field"><label>Módulos/string <span class="uni">ud</span></label>
+          <input id="szN" type="number" step="1" min="1" value="26"></div>
+        <div class="field"><label>DC/AC objetivo</label>
+          <input id="szTarget" type="number" step="0.01" min="0.5" max="2" value="1.20"></div>
+        <div class="field"><label>Límite de red <span class="uni">MW</span></label>
+          <input id="szRed" type="number" step="0.1" min="0" value="0"></div>
       </div>
       <div id="szRead" class="readout" style="margin-top:4px"></div>
       <p class="mini" id="szNota"></p>
@@ -351,21 +363,22 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
     <!-- ═════════ BARRIDOS ═════════ -->
     <div class="card" id="barCard">
       <h2>📈 Barridos <span class="sn" id="barGob">§03.05</span></h2>
-      <div class="tres">
-        <div class="field"><label>Qué se barre</label>
+      <div class="campos">
+        <div class="field ancho"><label>Qué se barre</label>
           <select id="barQue">
             <option value="pitch:tracker">Pitch del TRACKER</option>
             <option value="pitch:fija">Pitch de la FIJA</option>
             <option value="tilt:fija">Tilt de la FIJA</option>
           </select></div>
-        <div class="field"><label>Desde</label><input id="barMin" type="number" step="0.1" value="4.5"></div>
-        <div class="field"><label>Hasta</label><input id="barMax" type="number" step="0.1" value="9.0"></div>
-      </div>
-      <div class="tres" style="margin-top:9px">
-        <div class="field"><label>Paso</label><input id="barPaso" type="number" step="1" min="1" value="25"></div>
+        <div class="field"><label>Desde <span class="uni" id="barUniMin">m</span></label>
+          <input id="barMin" type="number" step="0.1" value="4.5"></div>
+        <div class="field"><label>Hasta <span class="uni" id="barUniMax">m</span></label>
+          <input id="barMax" type="number" step="0.1" value="9.0"></div>
+        <div class="field"><label>Paso <span class="uni" id="barUniPaso">cm</span></label>
+          <input id="barPaso" type="number" step="1" min="1" value="25"></div>
         <div class="field"><label>&nbsp;</label>
           <button class="btn" id="barRun">Barrer</button></div>
-        <div class="field"><label>&nbsp;</label>
+        <div class="field libre"><label>&nbsp;</label>
           <p class="mini" id="barEstado" style="padding-top:9px">usa la misma meteo que la comparativa</p></div>
       </div>
       <div id="barRead" class="readout" style="margin-top:10px"></div>
@@ -1819,6 +1832,14 @@ function barSpec(){
 }
 function barDefaults(){
   var b=barSpec(), c=cfgActual();
+  /* Las unidades no son decorativas aquí: el paso del pitch va en CENTÍMETROS
+     (25 = 25 cm, como en el core) y el del tilt en GRADOS. Sin decirlo, un 25
+     en la casilla del tilt se lee como 25° cuando es lo que se ha escrito, y
+     un 25 en la del pitch se lee como 25 m. */
+  var uni=(b.tipo==='tilt')?['°','°','°']:['m','m','cm'];
+  $('barUniMin').textContent=uni[0];
+  $('barUniMax').textContent=uni[1];
+  $('barUniPaso').textContent=uni[2];
   if(b.tipo==='tilt'){$('barMin').value=0; $('barMax').value=60; $('barPaso').value=2.5;}
   else{
     var pitch=(b.fam==='tracker'?c.tracker:c.fija).pitch;
@@ -1921,9 +1942,11 @@ function pintaBarrido(){
    las dos curvas que van en sentidos contrarios, y dibujarlas en el mismo eje
    dejaría una de las dos aplastada contra el borde. */
 function dibujaBarrido(){
-  var c=$('cvBar'); if(!c||!BAR)return;
+  var c=$('cvBar'); if(!c)return;
   var g=c.getContext('2d'), W=c.width, H=c.height, L=62, R=66, T=16, B=30;
   g.clearRect(0,0,W,H);
+  if(!BAR){g.fillStyle='#7A8794'; g.font='13px ui-monospace,monospace';
+    g.fillText('dale a «Barrer» para ver la curva',18,H/2); return;}
   var P=BAR.puntos, esP=(BAR.tipo==='pitch');
   var xs=P.map(function(q){return esP?q.pitch:q.tilt;});
   var x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs);
@@ -2615,7 +2638,7 @@ pintaEstructuras(); loadPlants(); refrescaGeom(); detectEngine();
    estructuras, que es para lo que la ficha existe. */
 ['pointerdown','focusin'].forEach(function(ev){
   $('eqCard').addEventListener(ev,despiertaCatalogo,{once:false});});
-refrescaSizing(); barDefaults();
+refrescaSizing(); barDefaults(); dibujaBarrido();
 $('run').onclick=run;
 
 /* La escena se ve DESDE QUE SE ABRE, sin haber comparado nada: es la lección
