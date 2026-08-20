@@ -462,6 +462,29 @@ const cajaLienzo = async page => {
     const t = Math.max(0, Math.min(1, (lat - (LAT0 - 0.002)) / 0.004));
     return 100 + K * (lon - LON0) * t;
   };
+  // PNG terrarium 16×16 con la cota subiendo hacia el este: z = R·256+G+B/256−32768
+  const PNG_TERRENO = (() => {
+    const zlib = require('zlib'), W = 16, H = 16;
+    const cruda = Buffer.alloc(H * (1 + W * 3));
+    for (let y = 0; y < H; y++) {
+      const fila = y * (1 + W * 3); cruda[fila] = 0;
+      for (let x = 0; x < W; x++) {
+        const z = 100 + 300 * (x / (W - 1)) + 32768;      // 100 m a 400 m de oeste a este
+        const R = Math.floor(z / 256), G = Math.floor(z % 256), B = Math.round((z % 1) * 256) % 256;
+        const o = fila + 1 + x * 3; cruda[o] = R; cruda[o + 1] = G; cruda[o + 2] = B;
+      }
+    }
+    const crc = b => { let c = ~0; for (const v of b) { c ^= v;
+      for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xEDB88320 & -(c & 1)); } return ~c >>> 0; };
+    const chunk = (tipo, datos) => { const len = Buffer.alloc(4); len.writeUInt32BE(datos.length);
+      const cuerpo = Buffer.concat([Buffer.from(tipo), datos]);
+      const c = Buffer.alloc(4); c.writeUInt32BE(crc(cuerpo));
+      return Buffer.concat([len, cuerpo, c]); };
+    const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(W, 0); ihdr.writeUInt32BE(H, 4);
+    ihdr[8] = 8; ihdr[9] = 2; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;   // 8 bits, RGB
+    return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+      chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(cruda)), chunk('IEND', Buffer.alloc(0))]);
+  })();
   let peticionesDem = 0;
   await page.route('https://api.open-meteo.com/v1/elevation**', r => {
     peticionesDem++;
@@ -475,12 +498,84 @@ const cajaLienzo = async page => {
   // El terreno sintético está escrito alrededor de El Burgo, así que la parcela
   // tiene que estar ahí: los pasos anteriores dejaron el emplazamiento en San
   // José (Perú) y el mock habría devuelto un llano perfecto.
+  // Teselas de terreno (la fuente por defecto): la cota va CODIFICADA EN EL
+  // COLOR, así que una imagen son 65.536 cotas en una petición. Se sirve un PNG
+  // sintético con la misma rampa que el mock de Open-Meteo.
+  let teselasTerreno = 0;
+  await page.route('https://s3.amazonaws.com/elevation-tiles-prod/**', async r => {
+    teselasTerreno++;
+    // 256×256 con z creciendo hacia el este, codificado terrarium
+    const { createCanvas } = {};   // sin dependencias: se compone el PNG a mano abajo
+    r.fulfill({ status: 200, contentType: 'image/png',
+      headers: { 'access-control-allow-origin': '*' }, body: PNG_TERRENO });
+  });
   await page.selectOption('#parcelMode', 'rect');
   await page.fill('#lat', String(LAT0)); await page.dispatchEvent('#lat', 'change');
   await page.fill('#lon', String(LON0)); await page.dispatchEvent('#lon', 'change');
   await generar(page);
   const mesasSinMdt = num(await page.textContent('#ro .ro:nth-child(2) .v'));
+
+  // Primero la fuente por defecto, contando las peticiones: son 1-4, no 24.
   await page.fill('#demN', '12');
+  await page.click('#demBtn');
+  await page.waitForFunction(() => /malla|No se pud/.test(document.querySelector('#demTag').textContent),
+    null, { timeout: 30000 });
+  check('las teselas de terreno resuelven el MDT en pocas llamadas (' + teselasTerreno + ')',
+    teselasTerreno > 0 && teselasTerreno <= 9, String(teselasTerreno));
+  check('y el rótulo dice de dónde sale',
+    /Teselas de terreno/.test(await page.textContent('#demTag')), await page.textContent('#demTag'));
+  check('con cotas decodificadas del color, no ceros',
+    await page.evaluate(() => DEM && DEM.z.flat().some(v => Math.abs(v) > 1)));
+
+  // La CASCADA, que es el patrón de sources_for_country: si la primera fuente
+  // cae, prueba la siguiente y DICE cuál ha servido. Se tumba la de teselas a
+  // propósito y tiene que salir adelante con Open Topo Data.
+  await page.evaluate(() => { DEM = null; });
+  await page.route('https://s3.amazonaws.com/elevation-tiles-prod/**', r => r.abort());
+  let otdLlamadas = 0;
+  await page.route('https://api.opentopodata.org/**', r => {
+    otdLlamadas++;
+    const u = new URL(r.request().url());
+    const loc = u.searchParams.get('locations').split('|').map(p => p.split(',').map(Number));
+    r.fulfill({ status: 200, contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify({ results: loc.map(([la, lo]) => ({ elevation: zSint(la, lo) })) }) });
+  });
+  await page.selectOption('#demSrc', 'auto');
+  await page.fill('#demN', '12');
+  await page.click('#demBtn');
+  await page.waitForFunction(() => /malla|Ninguna fuente/.test(document.querySelector('#demTag').textContent),
+    null, { timeout: 40000 });
+  check('la cascada cae a la fuente siguiente cuando la primera falla',
+    otdLlamadas > 0 && /Open Topo Data/.test(await page.textContent('#demTag')),
+    await page.textContent('#demTag'));
+  check('y el MDT queda montado igual',
+    await page.evaluate(() => !!DEM && DEM.z.flat().some(v => Math.abs(v) > 1)));
+  // Con todas caídas, lo dice en vez de quedarse a medias
+  await page.route('https://api.opentopodata.org/**', r => r.abort());
+  await page.route('https://api.open-elevation.com/**', r => r.abort());
+  await page.route('https://api.open-meteo.com/v1/elevation**', r => r.abort());
+  await page.evaluate(() => { DEM = null; _demCache = {}; });
+  await page.click('#demBtn');
+  await page.waitForFunction(() => /Ninguna fuente/.test(document.querySelector('#demTag').textContent),
+    null, { timeout: 60000 });
+  check('con todas las fuentes caídas se DICE, con el porqué de cada una',
+    /Ninguna fuente/.test(await page.textContent('#demTag')) &&
+    /Open Topo Data/.test(await page.textContent('#demTag')));
+  // Restaurar para lo que viene
+  await page.unroute('https://api.open-meteo.com/v1/elevation**');
+  await page.route('https://api.open-meteo.com/v1/elevation**', r => {
+    peticionesDem++;
+    const u = new URL(r.request().url());
+    const lats = u.searchParams.get('latitude').split(',').map(Number);
+    const lons = u.searchParams.get('longitude').split(',').map(Number);
+    r.fulfill({ status: 200, contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify({ elevation: lats.map((la, i) => zSint(la, lons[i])) }) });
+  });
+
+  // Y ahora la otra fuente, punto a punto
+  await page.selectOption('#demSrc', 'openmeteo');
   await page.click('#demBtn');
   await page.waitForFunction(() => /malla|No se pudo/.test(document.querySelector('#demTag').textContent),
     null, { timeout: 30000 });
