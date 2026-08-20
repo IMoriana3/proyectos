@@ -91,6 +91,16 @@ check('pico: el suelo es filas × pitch × largo (10,5827 ha)',
   Math.abs(P.ha - 10.58266) < 1e-4, P.ha.toFixed(5));
 check('pico: densidad de parcela ' + P.mwpHa.toFixed(4) + ' MWp/ha',
   Math.abs(P.mwpHa - P.mwp / P.ha) < 1e-9);
+// El campo es un RECTÁNGULO y sus dos lados se publican: es lo que contesta a
+// «¿las pone una detrás de otra o las hace infinitas?». Una detrás de otra —
+// para contar suelo. (Para la SOMBRA sí son infinitas, y eso va dicho aparte.)
+check('el campo publica sus dos lados (' + P.ladoFila.toFixed(2) + ' × ' +
+  P.ladoPitch.toFixed(0) + ' m)',
+  Math.abs(P.ladoFila - 65.084) < 1e-3 && Math.abs(P.ladoPitch - 271 * 6.0) < 1e-6,
+  JSON.stringify([P.ladoFila, P.ladoPitch]));
+check('y el rectángulo cuadra con las hectáreas',
+  Math.abs(P.ladoFila * P.ladoPitch / 1e4 - P.ha) < 1e-9);
+
 // más pitch = mismos módulos, mismas filas, MÁS suelo. Es toda la comparación.
 const Pancho = FIS.planta({ ...GP, pitch: 9.0 }, 10);
 check('pico: abrir el pitch no cambia los módulos, solo el suelo',

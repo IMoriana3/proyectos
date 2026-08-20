@@ -58,6 +58,37 @@ instalado sobre el pedido (10,00 → 10,02 MWp con 660 Wp y 56 módulos por fila
 **huella del campo** —filas × pitch × largo de fila—, sin viales, sin subestación y sin los
 retranqueos de la parcela real.
 
+### Cómo se colocan: una detrás de otra, y hacia dónde
+
+La pregunta que hay que contestar antes de creerse las hectáreas.
+
+**Para contar suelo**, el campo es un **rectángulo**: `filas` filas de `largo de fila`, una detrás
+de otra separadas por su pitch. Nada es infinito. Y cada familia se apila en una dirección distinta,
+porque su fila corre en la otra:
+
+| | la fila corre | las filas se apilan hacia | campo a 10 MWp |
+|---|---|---|---|
+| **Fija** | este-oeste | el **sur** | 65 × 1.220 m |
+| **Tracker** | norte-sur (su eje) | el **este** | 1.626 × 65 m |
+
+Los dos lados se publican en el box, así que se ve de un vistazo si eso cabe en la parcela.
+
+**Para la sombra, en cambio, sí son infinitas.** El modelo de sombreado es el de **fila infinita**:
+cada fila la tapa otra idéntica a un pitch de distancia, en el plano perpendicular al eje. Eso
+tiene dos consecuencias que conviene tener claras:
+
+* la **primera fila sale sombreada** aunque en campo no tenga a nadie delante — con 271 filas eso
+  sobreestima la pérdida en un 0,37 %, y va dicho en pantalla;
+* **no hay efectos de borde por los extremos** de la fila: se supone infinitamente larga, así que
+  la sombra oblicua que se sale por la punta no se modela.
+
+Es la simplificación bankable de siempre (la misma de `pvlib.shading.shaded_fraction1d`, que es lo
+que usa el core), y a escala de planta el error es de décimas. En una implantación de tres filas
+no lo sería.
+
+Y el suelo es la **huella del campo**: sin viales, sin subestación y sin los retranqueos de la
+parcela real. Para eso está el generador de layout.
+
 ### La trampa, dicha en voz alta
 
 **El pico dimensiona, no reordena.** Con el mismo módulo en las dos familias, a igualdad de pico
@@ -570,10 +601,10 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ## Pruebas
 
 ```bash
-node tests/test_comparador.js       # 82 comprobaciones · careo contra el core, sin navegador
+node tests/test_comparador.js       # 84 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 104 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 107 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 
