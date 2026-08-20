@@ -269,7 +269,11 @@ canvas.panning{cursor:grabbing}
         <div class="two">
           <div class="field"><label>Fuente</label>
             <select id="demSrc">
-              <option value="openmeteo">Open-Meteo Elevation (sin clave)</option>
+              <option value="auto">Automática (cascada, como el cuaderno)</option>
+              <option value="terreno">Teselas de terreno (1–4 llamadas)</option>
+              <option value="otd">Open Topo Data · SRTM30 (punto a punto)</option>
+              <option value="openelev">Open-Elevation (punto a punto)</option>
+              <option value="openmeteo">Open-Meteo Elevation (punto a punto)</option>
               <option value="csv">CSV propio (lon,lat,z)</option>
             </select></div>
           <div class="field"><label>Resolución (n×n)</label><input id="demN" type="number" step="4" value="24" min="6" max="48">
@@ -288,10 +292,12 @@ canvas.panning{cursor:grabbing}
         <p class="tag" id="demTag">sin MDT · las pendientes son las que teclees</p>
         <div class="deriv" id="derivDem" style="display:none"></div>
         <label class="chk" id="demUseBox" style="display:none"><input type="checkbox" id="demUse" checked> Usar las pendientes medias del MDT (sobrescribe las de arriba)</label>
-        <p class="note" style="margin-top:0">Open-Meteo sirve la elevación sin clave y con CORS, que es lo que permite pedirla desde el navegador; el cuaderno usa COP30 vía OpenTopography, que exige clave. Es otra fuente, no el mismo dato: sirve para <b>ver la forma del terreno y filtrar por pendiente</b>, no para replanteo.</p>
+        <p class="note" style="margin-top:0">El cuaderno (§02.5b) no tiene <i>una</i> fuente: tiene una <b>cascada por país</b> —<code>detect_country</code> → <code>sources_for_country</code>— y va cayendo a la siguiente cuando una falla. Aquí igual: <b>Automática</b> prueba las de abajo por orden y dice cuál ha servido. Las que van punto a punto (Open Topo Data y Open-Elevation son las mismas que usa el core; Open-Meteo se añadió aquí) comparten el problema del número de llamadas.</p>
+        <p class="note" style="margin-top:0"><b>Lo que aquí NO se puede tener.</b> La cascada del cuaderno incluye fuentes regionales mucho mejores que estos 30 m: <b>IGN MDT05 a 5 m</b> en España, RGE ALTI en Francia, TINITALY a 10 m en Italia, USGS 3DEP a 10 m en EE. UU. Son servicios WCS que devuelven GeoTIFF, y eso no se abre desde un navegador — como tampoco se guarda un token de OpenTopography. Para <b>replanteo</b>, el MDT bueno sigue estando en el cuaderno; esto es para ver la forma del terreno y filtrar por pendiente.</p>
+        <p class="note" style="margin-top:0"><b>Teselas de terreno</b> traen la cota codificada en el color: una imagen de 256×256 son 65.536 cotas en <b>una sola petición</b>, así que una parcela entera cabe en 1-4 llamadas. <b>Open-Meteo</b> va punto a punto (100 por llamada): con 48×48 son 24 seguidas y el servicio corta con un 429 — está bien para mallas pequeñas o como segunda opinión. Ninguna de las dos es el COP30 por OpenTopography del cuaderno, que exige clave: sirven para <b>ver la forma del terreno y filtrar por pendiente</b>, no para replanteo.</p>
       </div>
       </details>
-      <p class="note" style="margin-top:8px">Las pendientes <b>no entran en la colocación</b>: <code>compute_layout_v2</code> tampoco las usa — implanta en planta. Donde sí mandan es en el <b>backtracking</b> (<code>cross_axis_slope_deg</code>) y en la sombra entre filas, y por eso viajan con el layout a los exports y al 3D en vez de quedarse aquí.</p>
+      <p class="note" style="margin-top:8px">Cuidado con qué hace cada cosa. Estas <b>pendientes medias</b> no son un parámetro del motor —<code>compute_layout_v2</code> no las recibe e implanta en planta—, así que por sí solas no mueven ni quitan una mesa: viajan con el layout al <b>backtracking</b> (<code>cross_axis_slope_deg</code>) y a la sombra entre filas. Pero <b>el terreno sí entra en la colocación</b>, por la otra puerta y la misma que en el cuaderno: el <b>filtro de pendiente máxima</b> del MDT excluye las celdas que se pasan, y eso quita mesas.</p>
     </div>
 
     <div class="card">
@@ -2314,10 +2320,18 @@ function demNValida(){
   return {n:c,recortada:c!==n,pedida:n};
 }
 function pintaCosteDem(){
-  var v=demNValida(), pts=v.n*v.n, llamadas=Math.ceil(pts/DEM_LOTE);
-  $('demCoste').textContent=pts+' puntos · '+llamadas+' llamada'+(llamadas>1?'s':'')+
-    (v.recortada?(' · recortado de '+v.pedida+' (máx. '+DEM_N_MAX+')'):'');
+  var v=demNValida(), pts=v.n*v.n;
+  var recorte=(v.recortada?(' · recortado de '+v.pedida+' (máx. '+DEM_N_MAX+')'):'');
+  if($('demSrc').value==='openmeteo'){
+    var ll=Math.ceil(pts/DEM_LOTE);
+    $('demCoste').textContent=pts+' puntos · '+ll+' llamada'+(ll>1?'s':'')+
+      (ll>8?' — son muchas, el servicio corta':'')+recorte;
+  } else if($('demSrc').value==='terreno'){
+    var t=teselasNecesarias();
+    $('demCoste').textContent=pts+' puntos · '+(t?(t.n+' tesela'+(t.n>1?'s':'')+' (z'+t.z+')'):'define la parcela')+recorte;
+  } else $('demCoste').textContent=pts+' puntos · del fichero'+recorte;
 }
+$('demSrc').addEventListener('change',pintaCosteDem);
 $('demN').addEventListener('input',pintaCosteDem);
 $('demN').addEventListener('change',pintaCosteDem);
 
@@ -2329,6 +2343,90 @@ function bboxParcela(margen){
     .forEach(function(p){lo0=Math.min(lo0,p[0]);lo1=Math.max(lo1,p[0]);la0=Math.min(la0,p[1]);la1=Math.max(la1,p[1]);});
   var mLat=110540, mLon=111320*Math.cos(((la0+la1)/2)*Math.PI/180);
   return [lo0-margen/mLon, la0-margen/mLat, lo1+margen/mLon, la1+margen/mLat];
+}
+
+/* ── TESELAS DE TERRENO ───────────────────────────────────────────────────
+   Open-Meteo va punto a punto: 100 por llamada, así que una malla de 48×48 son
+   24 peticiones seguidas y el servicio contesta 429 — con reintento y todo,
+   porque el problema no es el ritmo, es el número. Las teselas de terreno traen
+   la cota CODIFICADA EN EL COLOR de un PNG: una imagen de 256×256 son 65.536
+   cotas en UNA petición, y una parcela entera cabe en 1-4.
+
+   Formato «terrarium» (AWS Open Data, sin clave):  z = (R·256 + G + B/256) − 32768
+
+   Leer el color obliga a `crossOrigin`: sin cabecera CORS el lienzo queda teñido
+   y `getImageData` lanza. Aquí NO hay reintento sin CORS que valga —sin poder
+   leer los píxeles la tesela no sirve de nada—, así que si falla se dice y se
+   ofrece la otra fuente. */
+var TERRENO_URL='https://s3.amazonaws.com/elevation-tiles-prod/terrarium/';
+var TERRENO_Z_MAX=13;      // el dato real ronda los 30 m: pedir más zoom es interpolar
+
+function teselasNecesarias(){
+  var bb=bboxParcela(+$('demMargen').value||0);
+  if(!bb)return null;
+  for(var z=TERRENO_Z_MAX;z>=6;z--){
+    var n2=Math.pow(2,z);
+    var tx0=Math.floor(lon2u(bb[0])*n2), tx1=Math.floor(lon2u(bb[2])*n2);
+    var ty0=Math.floor(lat2u(bb[3])*n2), ty1=Math.floor(lat2u(bb[1])*n2);
+    var n=(tx1-tx0+1)*(ty1-ty0+1);
+    if(n<=9)return {z:z,tx0:tx0,tx1:tx1,ty0:ty0,ty1:ty1,n:n,bb:bb};
+  }
+  return null;
+}
+function cargaTesela(z,x,y){
+  return new Promise(function(res,rej){
+    var img=new Image(); img.crossOrigin='anonymous';
+    img.onload=function(){res(img);};
+    img.onerror=function(){rej(new Error('tesela '+z+'/'+x+'/'+y+' no accesible'));};
+    img.src=TERRENO_URL+z+'/'+x+'/'+y+'.png';
+  });
+}
+async function demDesdeTerreno(enCascada){
+  var t=teselasNecesarias();
+  if(!t){$('demTag').textContent='define primero la parcela';return;}
+  var v=demNValida(), n=v.n;
+  $('demBtn').disabled=true;
+  $('demTag').innerHTML='<span class="busy">'+t.n+' tesela(s) de terreno (z'+t.z+')…</span>';
+  var nx=t.tx1-t.tx0+1, ny=t.ty1-t.ty0+1;
+  var cv=document.createElement('canvas'); cv.width=nx*256; cv.height=ny*256;
+  var ctx=cv.getContext('2d',{willReadFrequently:true});
+  try{
+    for(var ty=t.ty0;ty<=t.ty1;ty++)for(var tx=t.tx0;tx<=t.tx1;tx++){
+      var img=await cargaTesela(t.z,tx,ty);
+      ctx.drawImage(img,(tx-t.tx0)*256,(ty-t.ty0)*256);
+    }
+  }catch(e){
+    $('demBtn').disabled=false;
+    if(enCascada)throw e;
+    $('demTag').innerHTML='<span style="color:var(--dead)">No se pudieron traer las teselas de terreno: '+
+      esc(e.message||e)+'.</span><br><span style="color:var(--muted-2)">Prueba con <b>Open-Meteo</b> en «Fuente» '+
+      '(baja antes la resolución a 16 o 24) o sube un CSV propio.</span>';
+    return;
+  }
+  var datos;
+  try{ datos=ctx.getImageData(0,0,cv.width,cv.height).data; }
+  catch(e){
+    $('demBtn').disabled=false;
+    if(enCascada)throw e;
+    $('demTag').innerHTML='<span style="color:var(--dead)">Las teselas llegan sin cabecera CORS, así que no se '+
+      'puede leer su color (que es donde va la cota).</span><br><span style="color:var(--muted-2)">Usa <b>Open-Meteo</b> o un CSV propio.</span>';
+    return;
+  }
+  var esc2=Math.pow(2,t.z)*256;
+  var lats=[],lons=[],g=[];
+  for(var i=0;i<n;i++){lats.push(t.bb[1]+(t.bb[3]-t.bb[1])*i/(n-1));lons.push(t.bb[0]+(t.bb[2]-t.bb[0])*i/(n-1));}
+  for(var r=0;r<n;r++){var fila=[];
+    for(var c=0;c<n;c++){
+      var gx=Math.round(lon2u(lons[c])*esc2)-t.tx0*256;
+      var gy=Math.round(lat2u(lats[r])*esc2)-t.ty0*256;
+      gx=Math.max(0,Math.min(cv.width-1,gx)); gy=Math.max(0,Math.min(cv.height-1,gy));
+      var o=(gy*cv.width+gx)*4;
+      fila.push(datos[o]*256+datos[o+1]+datos[o+2]/256-32768);
+    }
+    g.push(fila);}
+  $('demBtn').disabled=false;
+  DEM={lats:lats,lons:lons,z:g,src:'Teselas de terreno z'+t.z+' ('+t.n+' llamada'+(t.n>1?'s':'')+')'};
+  aplicaDEM();
 }
 
 var _demCache={};
@@ -2356,7 +2454,8 @@ async function unLote(trozo,intento){
   _demCache[u]=jj.elevation;
   return jj.elevation;
 }
-async function descargaDEM(){
+async function descargaDEM(fuente,enCascada){
+  fuente=fuente||'openmeteo';
   var v=demNValida(), n=v.n;
   if(v.recortada)pintaCosteDem();
   var bb=bboxParcela(+$('demMargen').value||0);
@@ -2373,11 +2472,15 @@ async function descargaDEM(){
   try{
     for(var k=0;k<pares.length;k+=DEM_LOTE){
       if(k>0)await new Promise(function(r){setTimeout(r,220);});   // ritmo, no ráfaga
-      z=z.concat(await unLote(pares.slice(k,k+DEM_LOTE),0));
+      var trozo=pares.slice(k,k+DEM_LOTE);
+      z=z.concat(fuente==='otd'?await loteOtd(trozo)
+                :fuente==='openelev'?await loteOpenElev(trozo)
+                :await unLote(trozo,0));
       $('demTag').innerHTML='<span class="busy">elevación '+Math.min(k+DEM_LOTE,pares.length)+'/'+pares.length+'…</span>';
     }
   }catch(e){
     $('demBtn').disabled=false;
+    if(enCascada)throw e;
     $('demTag').innerHTML='<span style="color:var(--dead)">No se pudo traer el MDT: '+esc(e&&e.message||e)+
       '</span><br><span style="color:var(--muted-2)">Las pendientes siguen siendo las que teclees.'+
       (/429/.test(String(e&&e.message))?' Con '+n+'×'+n+' son '+llamadas+' llamadas: prueba con 16 o 24.':'')+'</span>';
@@ -2386,7 +2489,9 @@ async function descargaDEM(){
   $('demBtn').disabled=false;
   var g=[];
   for(var r2=0;r2<n;r2++)g.push(z.slice(r2*n,(r2+1)*n));
-  DEM={lats:lats,lons:lons,z:g,src:'Open-Meteo'};
+  DEM={lats:lats,lons:lons,z:g,
+       src:{otd:'Open Topo Data SRTM30',openelev:'Open-Elevation',openmeteo:'Open-Meteo'}[fuente]+
+           ' ('+llamadas+' llamada'+(llamadas>1?'s':'')+')'};
   aplicaDEM();
 }
 
@@ -2473,7 +2578,59 @@ function aplicaDEM(){
   } else { $('slopeNs').disabled=$('slopeEw').disabled=false; }
   pintaDerivados(); draw();
 }
-$('demBtn').onclick=function(){ if($('demSrc').value==='csv')$('demCsv').click(); else descargaDEM(); };
+/* ── Open Topo Data y Open-Elevation: las dos fuentes punto-a-punto SIN TOKEN
+   que usa el core (`dl_opentopodata`, `dl_open_elevation`). Se traen para que la
+   cascada de aquí sea la del cuaderno y no una lista inventada. ── */
+async function loteOtd(trozo){
+  var u='https://api.opentopodata.org/v1/srtm30m?locations='+
+        trozo.map(function(p){return p[0].toFixed(6)+','+p[1].toFixed(6);}).join('|');
+  var r=await fetch(u,{cache:'no-store'});
+  if(!r.ok)throw new Error('Open Topo Data HTTP '+r.status);
+  var j=await r.json();
+  if(!j||!j.results)throw new Error('Open Topo Data: respuesta sin resultados');
+  return j.results.map(function(x){return x.elevation;});
+}
+async function loteOpenElev(trozo){
+  var r=await fetch('https://api.open-elevation.com/api/v1/lookup',{method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({locations:trozo.map(function(p){return {latitude:p[0],longitude:p[1]};})})});
+  if(!r.ok)throw new Error('Open-Elevation HTTP '+r.status);
+  var j=await r.json();
+  if(!j||!j.results)throw new Error('Open-Elevation: respuesta sin resultados');
+  return j.results.map(function(x){return x.elevation;});
+}
+
+/* CASCADA. Es el patrón de `sources_for_country`: una lista priorizada y caer a
+   la siguiente cuando una falla. La primera es la de teselas porque resuelve la
+   parcela en 1-4 peticiones; las punto-a-punto van detrás porque con mallas
+   grandes se topan con el límite del servicio, no con su disponibilidad. */
+var CASCADA=[
+  {k:'terreno',  n:'Teselas de terreno'},
+  {k:'otd',      n:'Open Topo Data SRTM30'},
+  {k:'openelev', n:'Open-Elevation'},
+  {k:'openmeteo',n:'Open-Meteo Elevation'}
+];
+async function demCascada(){
+  var fallos=[];
+  for(var i=0;i<CASCADA.length;i++){
+    var f=CASCADA[i];
+    $('demTag').innerHTML='<span class="busy">probando '+esc(f.n)+' ('+(i+1)+'/'+CASCADA.length+')…</span>';
+    try{
+      if(f.k==='terreno')await demDesdeTerreno(true);
+      else await descargaDEM(f.k,true);
+      if(DEM){ $('demTag').textContent=DEM.src+' · '+$('demTag').textContent.replace(/^.*?· /,''); return; }
+    }catch(e){ fallos.push(f.n+': '+(e&&e.message||e)); }
+  }
+  $('demTag').innerHTML='<span style="color:var(--dead)">Ninguna fuente de elevación contestó.</span><br>'+
+    '<span style="color:var(--muted-2)">'+esc(fallos.join(' · '))+'. Puedes subir un CSV propio (lon,lat,z).</span>';
+}
+$('demBtn').onclick=function(){
+  var f=$('demSrc').value;
+  if(f==='csv')$('demCsv').click();
+  else if(f==='auto')demCascada();
+  else if(f==='terreno')demDesdeTerreno();
+  else descargaDEM(f);
+};
 $('demCsvBtn').onclick=function(){$('demCsv').click();};
 $('demCsv').onchange=function(e){var f=e.target.files[0];if(!f)return;var rd=new FileReader();
   rd.onload=function(ev){try{demDesdeCSV(ev.target.result);}catch(err){
