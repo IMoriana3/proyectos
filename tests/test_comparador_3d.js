@@ -309,6 +309,47 @@ const SONDA = `(() => {
   check('elegir un emplazamiento del SUR gira la fija al NORTE (z=' +
     sur.bloques.fija_proyecto.n.z.toFixed(2) + ')', sur.bloques.fija_proyecto.n.z < -0.15);
 
+  // ── bifila: DOS filas que son UN seguidor, con su transmisión ──
+  // Monofila y bifila no cambian la mesa —es operativa, no geométrica— pero sí
+  // cambian qué es «un seguidor». Sin dibujar el accionamiento compartido, dos
+  // filas de una bifila y dos monofilas se ven idénticas: justo la distinción
+  // que la palabra nombra.
+  const bloque = k => p.evaluate(`(() => {
+    const B = BLOQUES.find(b => b.key === ${JSON.stringify(k)});
+    const g = B.filas[0].parent;
+    const ejes = g.children
+      .filter(o => B.filas.indexOf(o) < 0 && o.type === 'Group' && o.children.length === 4)
+      .map(e => { const c = new THREE.Box3().setFromObject(e);
+                  return { x0: +c.min.x.toFixed(2), x1: +c.max.x.toFixed(2) }; })
+      .sort((a, b) => a.x0 - b.x0);
+    return { filas: B.filas.length, por: B.porTracker, pitch: +B.pitch.toFixed(2), ejes };
+  })()`);
+  const mono = await bloque('tracker_hsat');
+  check('en monofila hay ' + mono.filas + ' filas y ninguna transmisión',
+    mono.por === 1 && mono.ejes.length === 0, JSON.stringify(mono));
+
+  await pon('tkFilas', 2);
+  const bi = await bloque('tracker_hsat');
+  check('en bifila el bloque dibuja DOS seguidores enteros (4 filas)',
+    bi.filas === 4 && bi.por === 2, JSON.stringify(bi));
+  check('cada seguidor bifila lleva SU transmisión (' + bi.ejes.length + ')',
+    bi.ejes.length === 2, JSON.stringify(bi.ejes));
+  const luz = bi.ejes.map(e => e.x1 - e.x0);
+  check('la transmisión cruza justo un pitch, de una fila a la otra (' +
+    luz.map(v => v.toFixed(2)).join(' / ') + ' con pitch ' + bi.pitch + ')',
+    luz.every(v => v > bi.pitch * 0.98 && v < bi.pitch * 1.12));
+  // el hueco del medio NO lleva barra: esas dos filas son de seguidores distintos
+  check('entre los dos seguidores no hay transmisión (' +
+    (bi.ejes[1].x0 - bi.ejes[0].x1).toFixed(2) + ' m de hueco)',
+    bi.ejes[1].x0 - bi.ejes[0].x1 > bi.pitch * 0.85);
+  const fj = await bloque('fija_optima');
+  check('la fija no se agrupa aunque el tracker sea bifila',
+    fj.por === 1 && fj.ejes.length === 0 && fj.filas === 3, JSON.stringify(fj));
+  await pon('tkFilas', 1);
+  const vuelta = await bloque('tracker_hsat');
+  check('volver a monofila deshace el par', vuelta.filas === mono.filas &&
+    vuelta.por === 1 && vuelta.ejes.length === 0, JSON.stringify(vuelta));
+
   // guard anti-podredumbre: la lista de campos es única y tiene que existir
   const huerfanos = await p.evaluate(() =>
     CAMPOS_GEOM.filter(i => !document.getElementById(i)));

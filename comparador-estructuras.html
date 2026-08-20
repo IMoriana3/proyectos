@@ -1116,7 +1116,6 @@ function drawRank(){
 var TD=null, PLAY=false, MUNDO=null, BLOQUES=[];
 var PALA=0x1b3a6b;
 var NFILAS3D=3;              // tres filas: con dos no se ve que la sombra viaja
-var MODS3D=5;                // mesa corta: seis bloques tienen que caber a la vez
 
 function has3D(){return typeof THREE!=='undefined'&&THREE.OrbitControls&&typeof Seguidor!=='undefined';}
 
@@ -1362,6 +1361,28 @@ function encuadra(){
   }
 }
 
+/* ── El EJE COMPARTIDO de una bifila ──
+   Monofila y bifila no cambian la mesa —es una diferencia operativa, no
+   geométrica, y por eso la POA por m² de módulo es la misma—, pero sí cambian
+   QUÉ es «un seguidor»: en bifila son DOS filas a un pitch de distancia
+   movidas por el MISMO accionamiento. Sin dibujar esa transmisión, dos filas
+   de una bifila y dos filas de dos monofilas se ven exactamente igual, que es
+   justo la distinción que la palabra «bifila» nombra.
+   La barra va a la altura del tubo y en el centro del eje (z=0, donde está el
+   motor), cruzando de una fila a la otra.                                    */
+function ejeBifila(mats,xa,xb){
+  var D=Seguidor.DIMS, g=new THREE.Group(), L=Math.abs(xb-xa);
+  var barra=new THREE.Mesh(new THREE.BoxGeometry(L,0.16,0.16),mats.silver||mats.steel);
+  barra.position.set((xa+xb)/2,D.postH,0); barra.castShadow=true; g.add(barra);
+  [xa,xb].forEach(function(x){                    // acoplamiento en cada tubo
+    var c=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.30,0.30),mats.motor||mats.steel);
+    c.position.set(x,D.postH,0); c.castShadow=true; g.add(c);
+  });
+  var m=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.48,0.42),mats.motor||mats.steel);
+  m.position.set((xa+xb)/2,D.postH-0.12,0); m.castShadow=true; g.add(m);
+  return g;
+}
+
 /* ── El mundo: un bloque por estructura ──
    Cada bloque lleva NFILAS3D filas al pitch REAL de esa estructura (el de su
    GCR), y la dirección del pitch depende de la familia: en un seguidor N-S las
@@ -1374,7 +1395,6 @@ function construyeMundo(){
   MUNDO=new THREE.Group(); TD.sc.add(MUNDO); BLOQUES=[];
   var keys=elegidas(); if(!keys.length)return;
   var cfg=cfgActual();
-  Seguidor.setModsPerStr(MODS3D);
   var D=Seguidor.DIMS, mats=Seguidor.materials(THREE);
   mats.glass=new THREE.MeshStandardMaterial({color:PALA,roughness:.35,metalness:.25,
     emissive:new THREE.Color(PALA).multiplyScalar(.16)});
@@ -1390,7 +1410,13 @@ function construyeMundo(){
      enseñar: el amanecer de invierno, cuando el backtracking abre el ángulo y
      el que no lo lleva se queda clavado en el tope. Con 16 m aguantan hasta
      8,5° y ese momento se ve. */
-  var sep=Math.max(largo,(NFILAS3D-1)*Math.max(6,cfg.tracker.pitch))+16;
+  /* Cuántas filas lleva un bloque de seguidores: en monofila, NFILAS3D. En
+     bifila hay que dibujar DOS seguidores enteros —cuatro filas— o el par no
+     se ve como par: con tres filas quedaría un seguidor completo y medio. */
+  var porTk=Math.max(1,Math.round(cfg.tracker.filasTracker||1));
+  var nfTk=(porTk>1)?Math.min(6,porTk*2):NFILAS3D;
+  var nfMax=Math.max(NFILAS3D,nfTk);
+  var sep=Math.max(largo,(nfMax-1)*Math.max(6,cfg.tracker.pitch))+16;
   var x0=-(keys.length-1)*sep/2, anchoTot=(keys.length-1)*sep+largo;
 
   keys.forEach(function(k,i){
@@ -1398,8 +1424,9 @@ function construyeMundo(){
     var G=cfg.geomDe(spec), gcr=G.gcr, pitch=G.pitch;
     var grupo=new THREE.Group(); grupo.position.x=x0+i*sep; MUNDO.add(grupo);
     var filas=[];
-    for(var f=0;f<NFILAS3D;f++){
-      var d=(f-(NFILAS3D-1)/2)*pitch;
+    var esTk=(spec.fam==='tracker'), nf=esTk?nfTk:NFILAS3D, agrupa=esTk?porTk:1;
+    for(var f=0;f<nf;f++){
+      var d=(f-(nf-1)/2)*pitch;
       var uno;
       /* Cada familia se dibuja con SU largo de fila y SU alto de colector: la
          fija y el tracker se configuran aparte, y si el render los igualara
@@ -1420,14 +1447,19 @@ function construyeMundo(){
       }
       grupo.add(uno); filas.push(uno);
     }
+    /* En bifila, la transmisión que hace que esas dos filas sean UN seguidor. */
+    if(agrupa>1)for(var t=0;t+agrupa<=nf;t+=agrupa){
+      grupo.add(ejeBifila(mats,(t-(nf-1)/2)*pitch,(t+agrupa-1-(nf-1)/2)*pitch));
+    }
     var col='#'+(COL[k]||'#888888').replace('#','');
     /* El rótulo se acota por el hueco Y por el largo del bloque: con una fila
        de 68 m (un 2H de 14 módulos por string) el hueco es enorme y el nombre
        salía más ancho que la propia estructura. */
-    var et=etiqueta3D(spec.label.replace('Tracker 1 eje ','').replace(' (dos aguas)',''),
+    var et=etiqueta3D(spec.label.replace('Tracker 1 eje ','').replace(' (dos aguas)','')+
+                      (agrupa>1?' · '+(agrupa===2?'bifila':agrupa+' filas'):''),
                       col,Math.min(sep*0.85,Math.max(12,largo*0.55)));
     et.position.set(0,D.postH+2.4+et.userData.alto,0); grupo.add(et);
-    BLOQUES.push({key:k,spec:spec,filas:filas,gcr:gcr,pitch:pitch});
+    BLOQUES.push({key:k,spec:spec,filas:filas,gcr:gcr,pitch:pitch,porTracker:agrupa});
   });
   /* ── ENCUADRE Y SOMBRAS ──
      Las dos cosas que hay que dimensionar CON la escena, no a ojo:
@@ -1439,7 +1471,7 @@ function construyeMundo(){
        de three.js trae una cámara ortográfica de ±5 m, así que con la escena a
        escala de planta la sombra sencillamente NO SE DIBUJA en ningún sitio.
        Y esta ficha existe en buena parte para enseñar la sombra entre filas.  */
-  var ancho=anchoTot, largoZ=(NFILAS3D+1)*8+largo;
+  var ancho=anchoTot, largoZ=(nfMax+1)*8+largo;
   var asp=Math.max(1.2,(TD.w||900)/(TD.h||420));
   var d=Math.max((ancho*0.58)/(Math.tan(21*Math.PI/180)*asp),largoZ*0.9);
   TD.suelo.scale.set(ancho*3.2,largoZ*4,1);
