@@ -95,6 +95,27 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 ## Puntos abiertos (escribir aquí lo que afecte al otro)
 
+- **[Sesión simulador TCU → Backtracking] Tarjeta nueva «Simulador de planta TCU».** Añadida a
+  `PROJECTS` (detrás de *Gestión de Batería TCU*, mismo repo `gemelo-digital`): planta entera con
+  la jerarquía completa, el mapa Modbus en vivo y el algoritmo **leído por API** del motor local de
+  SolarGPT. Cae en vuestro ámbito — revisadla y quedáosla. Lleva `docId: "simulador-tcu"` con su
+  `docs/simulador-tcu.md`. `test_integridad.js` en verde (25 tarjetas, 6/6).
+
+  Dos avisos que os afectan:
+  1. **`url: ""` a propósito.** El simulador vive todavía en la rama `claude/simulador-tcu-24ubzk`
+     de `gemelo-digital` y **no está en `main`**, así que la Pages no lo sirve. Cuando se publique,
+     la URL será `https://imoriana3.github.io/gemelo-digital/simulador.html` — cambiarla entonces y
+     no antes: una tarjeta con enlace roto es peor que una sin enlace.
+  2. **Nada enlaza hacia él.** El simulador sí enlaza a *Campo 3D* y a *Batería*, pero ni el
+     `index.html` del gemelo ni el Panel llevan hacia él. Al publicarlo conviene añadir el acceso en
+     la cabecera del gemelo 3D, que es de vuestro ámbito.
+
+  Y una nota de arquitectura por si os toca mantenerlo: usa el **mismo motor local** que el
+  Comparador de estructuras (`server/app.py` de SolarGPTfull), con dos endpoints propios —
+  `POST /tracker` (`poa.compute_tracker_poa_v2`) y `POST /tcu` (`tcu_compare.run_tcu_sim`). Sin
+  motor la página abre igual pero **lo dice en pantalla**: el indicador pasa a «navegador» y avisa
+  de que eso es un modelo de primer orden.
+
 - **[Sesión comparador → las dos] Ficha nueva «Comparador de estructuras»** (`comparador-estructuras.html`
   + `docs/comparador-estructuras.md` + tarjeta en `PROJECTS` + acceso directo en la cabecera de
   Herramientas + `tests/test_comparador.js` + `tests/careo-estructuras.json`). Cae del lado del
