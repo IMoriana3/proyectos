@@ -37,7 +37,22 @@ careo lo comprueba: si el core añade una y la ficha no, el test se pone rojo.
 
 ## El tamaño de la estructura
 
-Se configura igual que en el cuaderno y en Streamlit, y con **las mismas fórmulas**: la tarjeta
+**Fija y tracker se configuran POR SEPARADO**, cada una con su tarjeta y su pitch — que es como
+se hace de verdad: §03.F tiene su `fix_pitch_m` y su mesa, §03.T0 los suyos (`trk_pitch_m`,
+`trk_table_type`), y CLAUDE.md avisa expresamente de que «la FIJA no debe machacar el GCR del
+tracker». Obligarlas al mismo suelo no era neutral: era una hipótesis metida de tapadillo. Una
+fija se monta más apretada porque no tiene que abrirse para no darse sombra al bascular, y eso
+es justo lo que decide la comparación por hectárea.
+
+El interruptor **«igualar el suelo»** sigue estando, porque la otra pregunta también vale: con él
+la fija adopta el GCR del tracker (conservando su apertura, así que lo que se mueve es su pitch) y
+la comparación aísla la estructura de la densidad.
+
+> Con la fija a pitch 4,5 m (GCR 0,529) y el tracker a 6,0 (GCR 0,397) en Sevilla: por m² de
+> **módulo** gana el tracker (+19,7 %), y por m² de **suelo** gana la fija — 1256 contra 1128
+> kWh/m². Ese vuelco es la razón de que la ficha publique los dos denominadores.
+
+Dentro de cada familia, las cotas salen con **las mismas fórmulas** que el core: la tarjeta
 **Colector** es el puerto literal de `solargpt_core.layout_engine.compute_size_from_mods`, la misma
 función que dimensiona los trackers del layout de planta (§03.F, §03.T0 y la página 6 del
 Streamlit). Si la ficha se inventara una fórmula propia, el layout y la ficha dejarían de hablar
@@ -81,6 +96,11 @@ calcularía otra.
 
 El careo lo vigila con las cifras del core: `1V → 65,084 m de fila y 2,382 m de apertura`,
 `2H → 134,972 m y 2,268 m`, y que bifila no mueva la mesa pero sí doble los módulos.
+
+**Un GCR mayor que 1 se rechaza**, no se calcula: significa que la apertura no cabe en el pitch y
+las filas se solaparían. El core lanza `ValueError` ahí; la ficha lo dice en rojo y desactiva el
+botón. Dejarlo pasar daba un resultado con toda la pinta de un número —tilt óptimo de 0° y
+transposición NEGATIVA—, que es la firma de una geometría imposible, no de un mal emplazamiento.
 
 ## Qué hace legítima la comparación
 
