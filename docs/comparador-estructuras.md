@@ -119,6 +119,10 @@ Se barre el **pitch en metros**, no el GCR: el GCR es derivado (`apertura / pitc
 que se replantea en campo. La rejilla es la misma que `_generate_step_pitches`, extremo forzado
 incluido, y el test la exige punto por punto.
 
+> Las unidades del barrido cambian con lo que se barre, y no es decoración: el **paso del pitch va
+> en centímetros** (25 = 25 cm, como en el core) y el **del tilt en grados**. Un «25» sin unidad se
+> lee mal en las dos direcciones.
+
 ### Lo más importante que se porta no es una fórmula: es una negativa
 
 **En pitch no hay un óptimo.** Más pitch siempre suma POA por m² de módulo y siempre gasta terreno,
@@ -490,7 +494,7 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 node tests/test_comparador.js       # 74 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 34 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 85 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 87 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 104 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 
