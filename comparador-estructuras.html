@@ -353,7 +353,12 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
           <input id="szTarget" type="number" step="0.01" min="0.5" max="2" value="1.20"></div>
         <div class="field"><label>Límite de red <span class="uni">MW</span></label>
           <input id="szRed" type="number" step="0.1" min="0" value="0"></div>
+        <div class="field ancho"><label>&nbsp;</label>
+          <button class="btn ghost" id="szTemps">🌡 Temperaturas del emplazamiento</button></div>
       </div>
+      <p class="mini" id="szTempsNota">Las temperaturas de arriba son un default genérico
+        (−10 / 70 °C). El string se dimensiona por los dos extremos térmicos del <b>sitio</b>:
+        tráelas del emplazamiento.</p>
       <div id="szRead" class="readout" style="margin-top:4px"></div>
       <p class="mini" id="szNota"></p>
       <canvas id="cvVent" width="1100" height="300" style="width:100%;margin-top:10px"></canvas>
@@ -587,6 +592,38 @@ FIS.planta=function(G,mwp){
    (no hay IAM, ni temperatura, ni inversor): es la POA multiplicada por los m²
    de módulo que el pico obliga a montar. */
 FIS.incidente=function(poaKwhM2,areaMod){return poaKwhM2*areaMod/1e6;};
+
+/* ── LAS TEMPERATURAS DEL EMPLAZAMIENTO ──
+   El string se dimensiona por los dos extremos térmicos del SITIO, y teclear
+   -10/70 a ojo es teclear otro sitio. Convención bankable (IEC 62548), la
+   misma que la página 5 del Streamlit:
+
+     T_min de célula = percentil 0,5 de la temperatura del aire del año
+     T_max de célula = percentil 99,5 del aire + 25 °C de delta de célula
+
+   Los percentiles y no los extremos absolutos, porque un pico de una hora en
+   diez años no dimensiona una planta; y el +25 porque la célula no está a la
+   temperatura del aire cuando hay 1000 W/m² encima. En frío no se suma nada:
+   el peor caso de Voc es el amanecer despejado, con la célula ya a la
+   temperatura del aire.
+
+   Interpolación lineal entre las dos muestras que rodean al percentil — es lo
+   que hace `pandas.Series.quantile` por defecto, que es de donde sale la
+   cifra con la que se compara. */
+FIS.percentil=function(arr,p){
+  var v=Array.prototype.slice.call(arr).filter(function(x){return isFinite(x);});
+  if(!v.length)return NaN;
+  v.sort(function(a,b){return a-b;});
+  var i=(v.length-1)*p, lo=Math.floor(i), hi=Math.ceil(i);
+  return (lo===hi)?v[lo]:v[lo]+(v[hi]-v[lo])*(i-lo);
+};
+FIS.tempsProyecto=function(tair){
+  var tmin=FIS.percentil(tair,0.005), tmax=FIS.percentil(tair,0.995);
+  if(!isFinite(tmin)||!isFinite(tmax))return null;
+  return {tMin:+tmin.toFixed(1), tMax:+(tmax+25).toFixed(1),
+          aireMin:+tmin.toFixed(1), aireMax:+tmax.toFixed(1), delta:25,
+          n:tair.length};
+};
 
 /* ── DIMENSIONADO ELÉCTRICO ──
    Puerto LITERAL de `solargpt_core.string_sizing` y `solargpt_core.plant_config`,
@@ -994,7 +1031,7 @@ FIS.compara=function(keys,M,cfg){
 };
 
 /* ── Meteo (puerto literal del de sim-viento.html) ── */
-FIS.OM='shortwave_radiation,diffuse_radiation,direct_normal_irradiance';
+FIS.OM='shortwave_radiation,diffuse_radiation,direct_normal_irradiance,temperature_2m';
 FIS.fetchYear=function(lat,lon,year){
   var u='https://archive-api.open-meteo.com/v1/archive?latitude='+lat+'&longitude='+lon+
     '&start_date='+year+'-01-01&end_date='+year+'-12-31&hourly='+FIS.OM+'&timezone=UTC';
@@ -1002,12 +1039,17 @@ FIS.fetchYear=function(lat,lon,year){
     if(!r.ok)throw new Error('Open-Meteo HTTP '+r.status);return r.json();
   }).then(function(j){
     var H=j.hourly; if(!H||!H.time)throw new Error('Open-Meteo sin datos para ese año');
-    var n=H.time.length,o={t:new Array(n),ghi:new Float64Array(n),dhi:new Float64Array(n),dni:new Float64Array(n)};
+    var n=H.time.length,o={t:new Array(n),ghi:new Float64Array(n),dhi:new Float64Array(n),
+      dni:new Float64Array(n),tair:new Float64Array(n)};
     for(var i=0;i<n;i++){
       o.t[i]=new Date(H.time[i]+'Z');
       o.ghi[i]=Math.max(0,H.shortwave_radiation[i]||0);
       o.dhi[i]=Math.max(0,(H.diffuse_radiation&&H.diffuse_radiation[i])||0);
       o.dni[i]=Math.max(0,(H.direct_normal_irradiance&&H.direct_normal_irradiance[i])||0);
+      /* La temperatura del aire no entra en la POA de esta ficha —aquí se
+         compara IRRADIACIÓN— pero sí dimensiona el string: es de donde salen
+         los dos extremos térmicos del emplazamiento. */
+      o.tair[i]=(H.temperature_2m&&H.temperature_2m[i]!=null)?H.temperature_2m[i]:NaN;
     }
     o.source='open_meteo'; return o;
   });
@@ -1812,6 +1854,55 @@ $('szN').addEventListener('input',function(){SZ_N_TOCADO=true;});
 ['szTmin','szTmax','szBeta','szN','szTarget','szRed','ivNMppt','ivIMppt','ivIscMppt','ivTope','mwp']
   .forEach(function(id){var el=$(id); if(!el)return;
     el.addEventListener('input',refrescaSizing); el.addEventListener('change',refrescaSizing);});
+
+/* ── Traer las temperaturas del emplazamiento ──
+   Teclear -10/70 a ojo es dimensionar otro sitio. Se bajan del archivo de
+   Open-Meteo —el mismo proveedor de la meteo de la ficha— para el año elegido
+   y se aplica la convención bankable (IEC 62548, la de la página 5 del
+   Streamlit): P0,5 del aire para el frío y P99,5 + 25 °C de delta de célula
+   para el calor.
+
+   Se baja SIEMPRE de Open-Meteo aunque la comparativa vaya en cielo claro: el
+   cielo claro es un modelo de irradiancia, no tiene temperatura, y fingir una
+   sería peor que no traerla. Va dicho al lado. */
+async function traeTemps(){
+  var b=$('szTemps'), lat=+$('lat').value, lon=+$('lon').value, year=+$('year').value;
+  b.disabled=true; var antes=b.textContent; b.textContent='bajando…';
+  try{
+    var M=await FIS.fetchYear(lat,lon,year);
+    var T=FIS.tempsProyecto(M.tair);
+    if(!T)throw new Error('Open-Meteo no dio temperatura para ese año');
+    $('szTmin').value=T.tMin; $('szTmax').value=T.tMax;
+    SZ_TEMPS=T; refrescaSizing();
+    $('szTempsNota').innerHTML=
+      '<b>'+esc((SITIO?SITIO.n:fmt(lat,4)+', '+fmt(lon,4)))+'</b> · '+year+' · Open-Meteo: '+
+      'el aire va de <b>'+fmt(T.aireMin,1)+' °C</b> (P0,5) a <b>'+fmt(T.aireMax,1)+' °C</b> (P99,5) '+
+      'en '+fmt(T.n,0)+' horas. La célula en frío se toma igual que el aire —el peor Voc es el '+
+      'amanecer despejado, sin sol encima todavía— y en calor se le suman <b>'+T.delta+' °C</b> de '+
+      'delta de célula. Percentiles y no extremos absolutos: un pico de una hora no dimensiona '+
+      'una planta.'+
+      ($('source').value==='clearsky'
+        ? ' <span style="color:var(--muted)">La comparativa va en cielo claro, que no tiene '+
+          'temperatura: estas cifras salen igualmente del archivo de Open-Meteo.</span>':'');
+  }catch(e){
+    $('szTempsNota').innerHTML='<span style="color:var(--dead)">No se pudieron traer: '+
+      esc(e.message)+'. Se quedan las tecleadas.</span>';
+  }finally{b.disabled=false; b.textContent=antes;}
+}
+var SZ_TEMPS=null;
+$('szTemps').onclick=traeTemps;
+/* Cambiar de sitio o de año invalida lo traído: seguir enseñando «Túnez ·
+   2023» sobre las temperaturas de otro emplazamiento sería peor que no
+   enseñar nada. */
+['lat','lon','year'].forEach(function(id){
+  var el=$(id); if(!el)return;
+  el.addEventListener('change',function(){
+    if(!SZ_TEMPS)return;
+    SZ_TEMPS=null;
+    $('szTempsNota').innerHTML='Has cambiado el emplazamiento o el año: las temperaturas de '+
+      'arriba son las de <b>antes</b>. Vuelve a traerlas.';
+  });
+});
 
 /* ═════════ BARRIDOS ═════════
    La ficha compara a UNA densidad. El barrido contesta la otra mitad: qué pasa
