@@ -1551,8 +1551,11 @@ function pintaPico(c){
     '<b>este</b>. Ni una ni otra son «infinitas» para contar suelo — pero <b>sí</b> para la '+
     'sombra: el modelo de sombreado es el de fila infinita (cada fila la tapa otra igual a un '+
     'pitch), así que la primera fila sale sombreada aunque en campo no tenga a nadie delante. '+
-    'Con '+fmt(F.filas,0)+' filas eso sobreestima la pérdida en un '+
-    fmt(100/F.filas,2)+' % — el precio de no modelar bordes. Y el suelo es la huella del campo '+
+    'De las '+fmt(F.filas,0)+' filas hay <b>una</b> a la que se le cobra una '+
+    'sombra que no tiene, así que la pérdida por sombreado sale <b>1/'+fmt(F.filas,0)+' = '+
+    fmt(100/F.filas,2)+' % más alta</b> de lo que debería. Ojo: ese '+fmt(100/F.filas,2)+
+    ' % es <b>de la pérdida</b>, no de la energía — si la sombra es del 1,3 %, el error son '+
+    fmt(1.3/F.filas,3)+' puntos. Y el suelo es la huella del campo '+
     '(filas × pitch × largo de fila): sin viales, sin subestación y sin los retranqueos de la '+
     'parcela real.';
 }
@@ -2335,7 +2338,17 @@ function drawTabla(base){
       '<td class="'+cls+'">'+(x.delta>0?'+':'')+fmt(x.delta,2)+' %</td></tr>';
   });
   $('tbl').innerHTML=h+'</tbody>';
-  $('tblNote').innerHTML=(P?'A <b>igualdad de potencia pico</b> ('+fmt(P.mwp,1)+' MWp) cada estructura '+
+  /* Con el nº de filas ya sabido, la corrección de borde deja de ser una regla
+     de tres genérica: se puede dar la sombra corregida de la que más tiene. */
+  var peor=null;
+  if(P)f.forEach(function(x){var q=P.por[x.key];
+    if(q&&x.sombra>0.05&&(!peor||x.sombra>peor.x.sombra))peor={x:x,q:q};});
+  $('tblNote').innerHTML=(peor?'La columna <b>pérdida sombra</b> sale del modelo de fila '+
+      'INFINITA, así que le cobra sombra también a la primera fila, que no tiene a nadie '+
+      'delante. Con '+fmt(peor.q.filas,0)+' filas, el '+fmt(peor.x.sombra,2)+' % de «'+
+      esc(peor.x.label)+'» sería en realidad '+fmt(peor.x.sombra*(peor.q.filas-1)/peor.q.filas,2)+
+      ' %: '+fmt(peor.x.sombra/peor.q.filas,3)+' puntos de diferencia. ':'')+
+    (P?'A <b>igualdad de potencia pico</b> ('+fmt(P.mwp,1)+' MWp) cada estructura '+
       'necesita el mismo número de módulos pero distinto número de estructuras y distinta parcela: '+
       'ésas son las columnas <b>Estructuras</b> y <b>Suelo</b>. <b>Incidente</b> es la POA por los m² de '+
       'módulo que el pico obliga a montar — energía que LLEGA, no producida (sin IAM, sin temperatura, '+
