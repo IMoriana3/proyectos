@@ -270,6 +270,55 @@ El fixture se regenera con:
 python3 tests/gen_careo_layout.py --core /ruta/a/SolarGPTfull/solargpt
 ```
 
+## Varias parcelas
+
+El **➕ Añadir parcela** del cuaderno. Una planta rara vez es un solo recinto: se dibuja o se pega
+cada uno, se le pone nombre y el layout se calcula sobre **todos**, sumando.
+
+Cada parcela va **por su cuenta** al motor: implantar sobre la unión daría filas cruzando el hueco
+entre recintos, que es justo lo que no existe. Los resultados se agregan y las áreas y porcentajes
+se recalculan sobre el total (no se promedian, que sería otra cosa). Las exclusiones y el MDT se
+aplican a todas por igual, y el reparto por parcela sale en su tabla.
+
+En multi-parcela **no se dibujan** ni el eje bifila ni la banda de área útil: son por parcela, y
+pintar los de la primera sobre todas mentiría.
+
+## Importar KML / KMZ
+
+El polígono desde Google Earth. **KML** es XML y se lee directo; **KMZ** es un ZIP y se abre con
+`DecompressionStream`, que el navegador ya trae — arrastrar una librería de descompresión a una
+ficha que presume de no tener dependencias no valía la pena.
+
+Un KML con varios polígonos son **varias parcelas**, no una: quedarse con el primero en silencio
+sería tirar la mitad del fichero.
+
+## Civil & exports (§02.5g)
+
+Port de las fórmulas canónicas, no de una versión propia:
+
+| | Fórmula del core |
+|---|---|
+| **Hincas** | `earthworks.pile_setout_table`: equiespaciadas 7 m por el eje, ambos extremos incluidos, con la cota del MDT si lo hay |
+| **Mediciones (BoQ)** | potencia, módulos, mesas, trackers, filas, hincas, metros de tubo de par, superficies y viales |
+| **Terreno PVsyst** | `pvsyst_export.terrain_to_pvsyst_xyz`: `X;Y;Z` en metros locales, origen en el centroide del grid |
+| **COLLADA** | malla de dos triángulos por mesa, ENU en metros, con cota del MDT si lo hay |
+| **Pitch por banda** | `pitch_terrain.pitch_required_on_slope` — la «dynamic distance» de PVX: `p = c·cosθ + c·senθ / (tanα + s)`, con el lado desfavorable `s = −|tan β|` y el sol al límite de 15° |
+
+El XYZ de PVsyst es **terreno**, no layout: sin MDT se **niega** y dice por qué, en vez de escribir
+un plano a cota 0 que se leería como que el terreno es llano.
+
+El pitch por banda **recomienda**: no mueve una sola estructura, y el árbitro sigue siendo el sweep
+de LCOE del cuaderno (§04.4).
+
+## Checklist antes de congelar (§02.5i)
+
+Los ocho puntos del cierre de la página Workflow. Los cinco que la ficha **sabe** se marcan solos:
+dejarte marcar a mano que el MDT está aplicado cuando no lo está sería firmar algo falso. Los tres
+que dependen del cuaderno o de otras fichas salen listados como lo que son — pendientes de mirar
+fuera.
+
+> El checklist **regulatorio** (permisos, EIA, grid code) es otro y vive en §08.R1: no confundirlos.
+
 ## Salidas
 
 - **GeoJSON** en el mismo formato que lee el [Explorador de layout](../layout.html): `{stats, geojson}`.

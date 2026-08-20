@@ -453,6 +453,125 @@ const cajaLienzo = async page => {
     !(await page.evaluate(() => document.querySelector('#slopeEw').disabled)));
   await page.check('#demOff'); await page.dispatchEvent('#demOff', 'change');
 
+  // ── varias parcelas ──
+  // Cada recinto va por su cuenta al motor: implantar sobre la unión daría filas
+  // cruzando el hueco entre parcelas, que es justo lo que no existe.
+  await page.selectOption('#parcelMode', 'rect');
+  await page.fill('#pw', '400'); await page.dispatchEvent('#pw', 'change');
+  await page.fill('#ph', '300'); await page.dispatchEvent('#ph', 'change');
+  await generar(page);
+  const unaSola = num(await page.textContent('#ro .ro:nth-child(2) .v'));
+  await page.fill('#parcelName', 'Recinto norte');
+  await page.click('#parcelAdd');
+  check('la parcela añadida aparece en la lista con su nombre y superficie',
+    /Recinto norte/.test(await page.textContent('#parcelList')) &&
+    /ha/.test(await page.textContent('#parcelList')));
+  // Segunda parcela, desplazada al norte para que no se solapen
+  await page.fill('#lat', String(LAT0 + 0.006)); await page.dispatchEvent('#lat', 'change');
+  await generar(page);
+  const dos = num(await page.textContent('#ro .ro:nth-child(2) .v'));
+  check('con dos parcelas el layout suma (' + unaSola + ' → ' + dos + ')',
+    dos > unaSola * 1.6, unaSola + ' vs ' + dos);
+  check('y el pie las cuenta', /2 parcelas/.test(await page.textContent('#foot')),
+    await page.textContent('#foot'));
+  check('con su reparto por parcela en la tabla',
+    /Reparto por parcela/.test(await page.textContent('#sizes')));
+  await page.evaluate(() => { PARCELAS = []; pintaParcelas(); });
+  await page.fill('#lat', String(LAT0)); await page.dispatchEvent('#lat', 'change');
+  await page.fill('#pw', '600'); await page.dispatchEvent('#pw', 'change');
+  await page.fill('#ph', '450'); await page.dispatchEvent('#ph', 'change');
+
+  // ── importar KML ──
+  const KML = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+<Placemark><name>Finca A</name><Polygon><outerBoundaryIs><LinearRing><coordinates>
+-0.8035,41.5743,0 -0.7928,41.5743,0 -0.7928,41.5784,0 -0.8035,41.5784,0 -0.8035,41.5743,0
+</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>
+<Placemark><name>Finca B</name><Polygon><outerBoundaryIs><LinearRing><coordinates>
+-0.7900,41.5743,0 -0.7850,41.5743,0 -0.7850,41.5784,0 -0.7900,41.5784,0 -0.7900,41.5743,0
+</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>
+</Document></kml>`;
+  await page.setInputFiles('#kmlFile', { name: 'fincas.kml', mimeType: 'application/vnd.google-earth.kml+xml',
+                                          buffer: Buffer.from(KML) });
+  await page.waitForFunction(() => /Importado|No se pudo/.test(document.querySelector('#foot').textContent),
+    null, { timeout: 8000 });
+  check('el KML se importa', /Importado/.test(await page.textContent('#foot')),
+    await page.textContent('#foot'));
+  check('y sus DOS polígonos son dos parcelas, no uno tirado a la basura',
+    /Finca B/.test(await page.textContent('#parcelList')), await page.textContent('#parcelList'));
+  await generar(page);
+  check('y genera sobre las dos', num(await page.textContent('#ro .ro:nth-child(2) .v')) > 100);
+  // Un KML roto se dice
+  await page.setInputFiles('#kmlFile', { name: 'roto.kml', mimeType: 'text/plain',
+                                          buffer: Buffer.from('esto no es kml') });
+  await page.waitForFunction(() => /No se pudo leer el KML/.test(document.querySelector('#foot').textContent),
+    null, { timeout: 8000 });
+  check('un KML roto se dice, no se traga', true);
+  await page.evaluate(() => { PARCELAS = []; pintaParcelas(); });
+  await page.selectOption('#parcelMode', 'rect');
+  await page.fill('#lat', String(LAT0)); await page.dispatchEvent('#lat', 'change');
+
+  // ── civil & exports (§02.5g) ──
+  // Lo que se comprueba es el CONTENIDO de los ficheros, no que el botón exista:
+  // un CSV de hincas con las columnas bien y cero filas se lee como que no hay
+  // nada que replantear.
+  await generar(page);
+  const bajado = async id => {
+    const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('#' + id)]);
+    const st = await dl.createReadStream();
+    let txt = ''; for await (const c of st) txt += c;
+    return { nombre: dl.suggestedFilename(), txt };
+  };
+  const hincas = await bajado('expHincas');
+  const filasH = hincas.txt.trim().split('\n');
+  check('las hincas salen con su cabecera canónica',
+    filasH[0] === 'estructura;hinca;lat;lon;cadena_m;z', filasH[0]);
+  check('y con hincas de verdad (' + (filasH.length - 1) + ')', filasH.length > 100);
+  check('equiespaciadas incluyendo los dos extremos',
+    filasH[1].split(';')[4] === '0', filasH[1]);
+  const boq = await bajado('expBoq');
+  check('las mediciones traen potencia, módulos, mesas e hincas',
+    /Potencia pico/.test(boq.txt) && /Hincas/.test(boq.txt) && /Tubo de par/.test(boq.txt));
+  const dae = await bajado('expDae');
+  check('el COLLADA es XML con su malla',
+    /<COLLADA/.test(dae.txt) && /<triangles count="\d+"/.test(dae.txt) && /\.dae$/.test(dae.nombre));
+  // El XYZ de PVsyst es TERRENO, no layout: con MDT exporta puntos; sin MDT
+  // tiene que NEGARSE y decir por qué, en vez de escribir un plano a cota 0 que
+  // se leería como que el terreno es llano.
+  const xyz = await bajado('expXyz');
+  check('el XYZ de PVsyst sale en X;Y;Z metros locales',
+    xyz.txt.split('\n')[0] === 'X;Y;Z' && xyz.txt.trim().split('\n').length > 100,
+    xyz.txt.split('\n')[0]);
+  await page.evaluate(() => { window._demGuardado = DEM; DEM = null; });
+  await page.click('#expXyz');
+  check('sin MDT se niega y explica por qué',
+    /descarga antes el MDT/.test(await page.textContent('#foot')), await page.textContent('#foot'));
+  await page.evaluate(() => { DEM = window._demGuardado; });
+  // Pitch por banda
+  await page.click('#btnPitchBanda');
+  check('el pitch por banda saca su tabla',
+    /Pitch requerido por banda/.test(await page.textContent('#sizes')));
+  check('con el pitch en llano calculado con la fórmula del core',
+    await page.evaluate(() => {
+      const R = pitchPorBanda(), c = apertura(), th = (+document.querySelector('#maxAng').value) * Math.PI / 180;
+      const esperado = c * Math.cos(th) + c * Math.sin(th) / Math.tan(15 * Math.PI / 180);
+      return Math.abs(R.llano - esperado) < 1e-9;
+    }));
+  check('y una pendiente en contra pide MÁS pitch que en llano',
+    await page.evaluate(() => {
+      const R = pitchPorBanda();
+      return R.bandas.every(b => !isFinite(b.pitch_req) || b.pitch_req >= R.llano - 1e-9);
+    }));
+
+  // ── checklist antes de congelar (§02.5i) ──
+  await page.click('#btnChecklist');
+  const chk = await page.textContent('#sizes');
+  check('el checklist saca los ocho puntos del cuaderno', /Checklist antes de congelar/.test(chk));
+  check('marca solo lo que la ficha SABE (los demás quedan como «mirar fuera»)',
+    /de los que esta ficha sabe/.test(chk) && /§08\.R1/.test(chk));
+  check('y no deja marcar a mano: son casillas calculadas',
+    await page.evaluate(() => document.querySelectorAll('#sizes input').length === 0));
+
   // ── pitch imposible: la ficha lo canta ──
   await page.selectOption('#parcelMode', 'rect');
   await page.fill('#pitch', '1.2'); await generar(page);

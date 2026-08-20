@@ -96,6 +96,13 @@ canvas.panning{cursor:grabbing}
 .deriv .d .v small{font-size:10.5px;color:var(--muted);font-weight:400}
 .deriv .d.warn{border-color:var(--build)}
 .deriv .d.warn .v{color:var(--build)}
+.parcelas{margin-top:9px;display:flex;flex-direction:column;gap:5px}
+.parcelas .pz{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line-soft);
+  border-radius:8px;padding:6px 9px;font-size:12px}
+.parcelas .pz b{font-weight:600}
+.parcelas .pz .ha{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);margin-left:auto}
+.parcelas .pz button{background:none;border:0;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px}
+.parcelas .pz button:hover{color:var(--dead)}
 .maptools{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
 .maptools .mini{width:auto;padding:5px 10px;font-size:12px}
 .maptools .minisel{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit;font-size:12px}
@@ -179,6 +186,10 @@ canvas.panning{cursor:grabbing}
           <button class="btn ghost small" id="geoApplyBtn">✓ Usar este GeoJSON</button>
         </div>
         <input type="file" id="geoFile" accept=".geojson,.json" style="display:none">
+        <div class="btnrow" style="grid-template-columns:1fr">
+          <button class="btn ghost small" id="kmlBtn">🌍 Importar KML / KMZ (Google Earth)</button>
+        </div>
+        <input type="file" id="kmlFile" accept=".kml,.kmz" style="display:none">
       </div>
 
       <div id="paneDraw" style="display:none">
@@ -196,6 +207,11 @@ canvas.panning{cursor:grabbing}
         <div class="field" style="margin-bottom:0"><label>Buffer de línea (m)</label><input id="lineBuf" type="number" step="0.5" value="5"></div>
         <div class="field" style="margin-bottom:0"><button class="btn ghost small" id="exclClear" style="padding:8px 10px">🗑️ Quitar exclusiones</button></div>
       </div>
+      <div class="two" style="margin-top:8px;align-items:end">
+        <div class="field" style="margin-bottom:0"><label>Nombre de la parcela</label><input id="parcelName" type="text" value="Parcela 1"></div>
+        <div class="field" style="margin-bottom:0"><button class="btn ghost small" id="parcelAdd" style="padding:8px 10px">➕ Añadir parcela</button></div>
+      </div>
+      <div id="parcelList" class="parcelas"></div>
       <p class="tag" id="parcelTag">—</p>
       <p class="note" style="margin-top:2px">Las <b>exclusiones</b> (§02.5c del cuaderno) son zonas donde el motor no coloca: cursos de agua, edificaciones, servidumbres. Se dibujan sobre la ortofoto en cualquiera de los tres modos, y los anillos interiores de un GeoJSON entran como exclusión sin dibujar nada.</p>
     </div>
@@ -353,6 +369,15 @@ canvas.panning{cursor:grabbing}
         <button class="btn ghost small" id="expDxf" disabled>DXF</button>
         <button class="btn ghost small" id="expKml" disabled>KML</button>
         <button class="btn ghost small" id="d3Btn" disabled>🧊 Ver en 3D</button>
+      </div>
+      <p class="tag" style="margin-top:10px">Civil (§02.5g)</p>
+      <div class="btnrow">
+        <button class="btn ghost small" id="expHincas" disabled>⛏ Hincas</button>
+        <button class="btn ghost small" id="expBoq" disabled>📋 Mediciones</button>
+        <button class="btn ghost small" id="expXyz" disabled>⛰ Terreno PVsyst</button>
+        <button class="btn ghost small" id="expDae" disabled>🧱 COLLADA</button>
+        <button class="btn ghost small" id="btnPitchBanda" disabled style="grid-column:1/3">↔ Pitch requerido por banda</button>
+        <button class="btn ghost small" id="btnChecklist" style="grid-column:1/3">✔ Checklist antes de congelar (§02.5i)</button>
       </div>
       <p class="note">El GeoJSON sale en el mismo formato que lee el <a href="layout.html" style="color:var(--accent)">Explorador de layout</a> (<code>{stats, geojson}</code>). El 3D abre la planta <code>custom</code> del visor de cobertura.</p>
     </div>
@@ -1334,7 +1359,7 @@ async function barrido(cfg, opts) {
   var mejor = null, mejorAng = cfg.panelAz, probados = [];
   for (var i = 0; i < angulos.length; i++) {
     var r;
-    try { r = compute(Object.assign({}, cfg, { panelAz: angulos[i] })); }
+    try { r = (opts.computa || compute)(Object.assign({}, cfg, { panelAz: angulos[i] })); }
     catch (e) { r = null; }
     var kwp = r ? r.stats.kWp : 0;
     probados.push({ az: angulos[i], kWp: kwp, structures: r ? r.stats.structures : 0 });
@@ -1709,6 +1734,7 @@ function canvasToWorld(ev){
 function encaja(){
   var pts=[];
   if(PARCEL)pts=pts.concat(PARCEL);
+  PARCELAS.forEach(function(p){pts=pts.concat(p.ext);});
   // El boceto solo cuenta MIENTRAS se dibuja. Si no, al pasar de «dibujada» a
   // «por cotas» el encuadre se abría para incluir el polígono viejo y el de
   // ahora —a cientos de kilómetros uno de otro— y el lienzo pasaba a medir
@@ -1928,6 +1954,8 @@ function draw(){
       ctx.fillRect(Math.min(pa[0],pb[0]),Math.min(pa[1],pb[1])-1,Math.abs(pb[0]-pa[0])||1,Math.max(Math.abs(pb[1]-pa[1]),1.6));
     });
   }
+  PARCELAS.forEach(function(p){ring(p.ext,'rgba(84,166,255,.10)','#54A6FF',1.6);
+    (p.holes||[]).forEach(function(h){ring(h,'rgba(208,89,79,.28)','#D0594F',1.2);});});
   ring(PARCEL,'rgba(84,166,255,.10)','#54A6FF',1.6);
   HOLES.forEach(function(h){ring(h,'rgba(208,89,79,.28)','#D0594F',1.2);});
   EXCL.forEach(function(h){ring(h,'rgba(208,89,79,.34)','#D0594F',1.4,[5,3]);});
@@ -2120,6 +2148,113 @@ $('pitchFromGcr').onclick=function(){
     (Math.abs(g-CANON.GCR)<1e-6?' (el GCR canónico del cuaderno).':'.');
 };
 
+/* ═════════════════ VARIAS PARCELAS ═════════════════
+   El «➕ Añadir parcela» del cuaderno. Una planta rara vez es un solo recinto:
+   se dibuja o se pega cada uno, se le pone nombre y el layout se calcula sobre
+   TODOS, sumando. Cada parcela va por su cuenta al motor —implantar sobre la
+   unión daría filas cruzando el hueco entre recintos— y los resultados se
+   agregan; las exclusiones y el MDT se aplican a todas por igual. */
+var PARCELAS=[];       // [{nombre, ext, holes}]
+
+function pintaParcelas(){
+  if(!PARCELAS.length){$('parcelList').innerHTML='';return;}
+  $('parcelList').innerHTML=PARCELAS.map(function(p,i){
+    var utm=p.ext.map(function(c){return LAY.utmFwd(c[0],c[1],LAY.utmZone(c[0]),c[1]<0);});
+    var ha=Math.abs(LAY.ringArea(utm))/1e4;
+    return '<div class="pz"><b>'+esc(p.nombre)+'</b><span class="ha">'+ha.toFixed(2)+' ha</span>'+
+           '<button data-i="'+i+'" title="Quitar">✕</button></div>';
+  }).join('');
+  [].forEach.call($('parcelList').querySelectorAll('button'),function(b){
+    b.onclick=function(){PARCELAS.splice(+b.dataset.i,1);pintaParcelas();tagParcel();encaja();draw();};
+  });
+}
+$('parcelAdd').onclick=function(){
+  buildParcel();
+  if(!PARCEL||PARCEL.length<3){$('foot').innerHTML='<span style="color:var(--build)">Define primero la parcela que quieres añadir.</span>';return;}
+  PARCELAS.push({nombre:($('parcelName').value||('Parcela '+(PARCELAS.length+1))),ext:PARCEL.slice(),holes:HOLES.slice()});
+  $('parcelName').value='Parcela '+(PARCELAS.length+1);
+  pintaParcelas();tagParcel();encaja();draw();
+};
+
+/* ═════════════════ IMPORTAR KML / KMZ ═════════════════
+   El cuaderno importa el polígono desde Google Earth. KML es XML y se lee
+   directo; KMZ es un ZIP, y aquí se abre con `DecompressionStream` —que el
+   navegador ya trae— en vez de arrastrar una librería de descompresión a una
+   ficha que presume de no tener dependencias. */
+function kmlAPoligonos(txt){
+  var doc=new DOMParser().parseFromString(txt,'application/xml');
+  if(doc.querySelector('parsererror'))throw new Error('el KML no es XML válido');
+  var out=[];
+  [].forEach.call(doc.getElementsByTagName('Placemark'),function(pm){
+    var nom=(pm.getElementsByTagName('name')[0]||{}).textContent||'';
+    [].forEach.call(pm.getElementsByTagName('Polygon'),function(pg){
+      var ob=pg.getElementsByTagName('outerBoundaryIs')[0]||pg;
+      var co=(ob.getElementsByTagName('coordinates')[0]||{}).textContent||'';
+      var ext=co.trim().split(/\s+/).map(function(t){var c=t.split(',');return [parseFloat(c[0]),parseFloat(c[1])];})
+              .filter(function(c){return isFinite(c[0])&&isFinite(c[1]);});
+      if(ext.length<3)return;
+      var holes=[];
+      [].forEach.call(pg.getElementsByTagName('innerBoundaryIs'),function(ib){
+        var ci=(ib.getElementsByTagName('coordinates')[0]||{}).textContent||'';
+        var h=ci.trim().split(/\s+/).map(function(t){var c=t.split(',');return [parseFloat(c[0]),parseFloat(c[1])];})
+              .filter(function(c){return isFinite(c[0])&&isFinite(c[1]);});
+        if(h.length>=3)holes.push(h);
+      });
+      out.push({nombre:nom||('Parcela '+(out.length+1)),ext:ext,holes:holes});
+    });
+  });
+  if(!out.length)throw new Error('el KML no trae ningún polígono');
+  return out;
+}
+async function kmzAKml(buf){
+  var dv=new DataView(buf), u8=new Uint8Array(buf);
+  // Directorio central del ZIP, leído desde el final (firma 0x06054b50)
+  var eocd=-1;
+  for(var i=u8.length-22;i>=0&&i>u8.length-66000;i--) if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}
+  if(eocd<0)throw new Error('el KMZ no parece un ZIP');
+  var nEnt=dv.getUint16(eocd+10,true), off=dv.getUint32(eocd+16,true);
+  for(var e=0;e<nEnt;e++){
+    if(dv.getUint32(off,true)!==0x02014b50)throw new Error('directorio del ZIP ilegible');
+    var metodo=dv.getUint16(off+10,true), compSz=dv.getUint32(off+20,true);
+    var nLen=dv.getUint16(off+28,true), xLen=dv.getUint16(off+30,true), cLen=dv.getUint16(off+32,true);
+    var loc=dv.getUint32(off+42,true);
+    var nombre=new TextDecoder().decode(u8.subarray(off+46,off+46+nLen));
+    if(/\.kml$/i.test(nombre)){
+      var lnLen=dv.getUint16(loc+26,true), lxLen=dv.getUint16(loc+28,true);
+      var datos=u8.subarray(loc+30+lnLen+lxLen, loc+30+lnLen+lxLen+compSz);
+      if(metodo===0)return new TextDecoder().decode(datos);
+      if(typeof DecompressionStream==='undefined')
+        throw new Error('este navegador no puede descomprimir el KMZ; descomprímelo y sube el .kml');
+      var ds=new DecompressionStream('deflate-raw');
+      var out=new Response(new Blob([datos]).stream().pipeThrough(ds));
+      return await out.text();
+    }
+    off+=46+nLen+xLen+cLen;
+  }
+  throw new Error('el KMZ no contiene ningún .kml');
+}
+$('kmlBtn').onclick=function(){$('kmlFile').click();};
+$('kmlFile').onchange=async function(e){
+  var f=e.target.files[0]; if(!f)return; $('kmlFile').value='';
+  try{
+    var txt;
+    if(/\.kmz$/i.test(f.name)) txt=await kmzAKml(await f.arrayBuffer());
+    else txt=await f.text();
+    var pol=kmlAPoligonos(txt);
+    PARCEL=pol[0].ext; HOLES=pol[0].holes;
+    // Un KML con varios polígonos son varias parcelas, no una: quedarse con el
+    // primero en silencio sería tirar la mitad del fichero.
+    PARCELAS=pol.slice(1).map(function(p){return {nombre:p.nombre,ext:p.ext,holes:p.holes};});
+    $('parcelMode').value='geojson';
+    $('paneRect').style.display='none';$('paneGeo').style.display='';$('paneDraw').style.display='none';
+    pintaParcelas();tagParcel();encaja();draw();
+    $('foot').innerHTML='Importado <b>'+esc(f.name)+'</b>: '+pol.length+' polígono(s).'+
+      (pol.length>1?' El primero es la parcela activa y el resto se han añadido a la lista.':'');
+  }catch(err){
+    $('foot').innerHTML='<span style="color:var(--dead)">No se pudo leer el KML/KMZ: '+esc(err&&err.message||err)+'</span>';
+  }
+};
+
 /* ═════════════════ MDT: ELEVACIÓN, PENDIENTES Y FILTRO ═════════════════
    El cuaderno (§02.5b) descarga COP30 por OpenTopography —con clave— y con el
    MDT hace dos cosas: medir las pendientes medias N-S/E-O y EXCLUIR trackers
@@ -2137,7 +2272,8 @@ function bboxParcela(margen){
   var pts=(PARCEL||[]).concat.apply([], [[]].concat(HOLES||[]));
   if(!PARCEL||!PARCEL.length)return null;
   var la0=1e9,la1=-1e9,lo0=1e9,lo1=-1e9;
-  PARCEL.forEach(function(p){lo0=Math.min(lo0,p[0]);lo1=Math.max(lo1,p[0]);la0=Math.min(la0,p[1]);la1=Math.max(la1,p[1]);});
+  PARCEL.concat.apply(PARCEL,PARCELAS.map(function(q){return q.ext;}))
+    .forEach(function(p){lo0=Math.min(lo0,p[0]);lo1=Math.max(lo1,p[0]);la0=Math.min(la0,p[1]);la1=Math.max(la1,p[1]);});
   var mLat=110540, mLon=111320*Math.cos(((la0+la1)/2)*Math.PI/180);
   return [lo0-margen/mLon, la0-margen/mLat, lo1+margen/mLon, la1+margen/mLat];
 }
@@ -2310,13 +2446,55 @@ async function generar(){
   try{
     if($('calc').value==='core'&&ENGINE){ await generarCore(cfg); }
     else if($('optAz').checked||$('optGrid').checked){ await generarBarrido(cfg); }
-    else { RES=LAY.compute(cfg); Object.assign(RES.stats,cfg.decl); pintar(RES,'navegador'); }
+    else { RES=computaTodas(cfg); Object.assign(RES.stats,cfg.decl); pintar(RES,'navegador'); }
   }catch(e){
     $('foot').innerHTML='<span style="color:var(--dead)">No se pudo generar: '+(e&&e.message||e)+'</span>';
     $('hint').textContent='error';
   }
   $('genBtn').disabled=false;
 }
+/* Layout sobre TODAS las parcelas. Cada recinto va por su cuenta al motor:
+   implantar sobre la unión daría filas cruzando el hueco entre parcelas, que es
+   justo lo que no existe. Los resultados se suman, y las áreas y los porcentajes
+   se recalculan sobre el total — no se promedian, que sería otra cosa. */
+function computaTodas(cfg){
+  var lista=[{ext:cfg.coords,holes:cfg.holes,nombre:($('parcelName').value||'Parcela 1')}]
+            .concat(PARCELAS.map(function(p){return {ext:p.ext,holes:p.holes,nombre:p.nombre};}));
+  if(lista.length===1)return LAY.compute(cfg);
+  var partes=lista.map(function(p){
+    return LAY.compute(Object.assign({},cfg,{coords:p.ext,holes:p.holes}));
+  });
+  var base=partes[0], R={structures:[],descartadas:[],roads:[],rows:[],sizes:base.sizes,
+    inner_band:[],rot:base.rot,center:base.center,bbox_inner:base.bbox_inner,avisos:[],
+    toLonLat:base.toLonLat,fromLocal:base.fromLocal,partes:[]};
+  var st=Object.assign({},base.stats);
+  ['structures','trackers','strings','rows','modules','kWp','col_area_m2','poly_area_m2',
+   'inner_area_m2','discarded_structs','drop_topo_mask','drop_user_poly','drop_line_buffer','ms']
+   .forEach(function(k){st[k]=0;});
+  st.by_size={};
+  partes.forEach(function(r,i){
+    R.structures=R.structures.concat(r.structures);
+    R.descartadas=R.descartadas.concat(r.descartadas||[]);
+    R.roads=R.roads.concat(r.roads);
+    R.avisos=R.avisos.concat((r.avisos||[]).map(function(a){
+      return Object.assign({},a,{mensaje:'['+lista[i].nombre+'] '+a.mensaje});}));
+    R.partes.push({nombre:lista[i].nombre,kWp:r.stats.kWp,structures:r.stats.structures});
+    ['structures','trackers','strings','rows','modules','kWp','col_area_m2','poly_area_m2',
+     'inner_area_m2','discarded_structs','drop_topo_mask','drop_user_poly','drop_line_buffer','ms']
+     .forEach(function(k){st[k]+=(r.stats[k]||0);});
+    Object.keys(r.stats.by_size||{}).forEach(function(k){st.by_size[k]=(st.by_size[k]||0)+r.stats.by_size[k];});
+  });
+  st.usable_fill=st.inner_area_m2>0?st.col_area_m2/st.inner_area_m2:0;
+  st.fill_factor =st.poly_area_m2>0?st.col_area_m2/st.poly_area_m2:0;
+  st.density_kWp_ha=st.poly_area_m2>0?st.kWp/(st.poly_area_m2/1e4):0;
+  st.n_parcelas=partes.length;
+  R.stats=st;
+  // El eje bifila y la banda del área útil son por parcela: dibujarlos de la
+  // primera sobre todas mentiría, así que en multi-parcela no se dibujan.
+  R.rows=[]; R.inner_band=[];
+  return R;
+}
+
 /* Barrido de orientación. La casilla de azimut es el rango 90–270 del cuaderno;
    la de ángulo de grid, el rango y el paso que se teclean. Si están las dos, el
    rango explícito manda — es el más específico. */
@@ -2325,7 +2503,7 @@ async function generarBarrido(cfg){
   if($('optGrid').checked){desde=+$('gridFrom').value;hasta=+$('gridTo').value;paso=+$('gridStep').value||5;}
   $('prog').style.display='';$('progBar').style.width='0';
   var t0=Date.now();
-  var mejor=await LAY.barrido(cfg,{desde:desde,hasta:hasta,paso:paso,onPaso:async function(i,n,ang,kwp){
+  var mejor=await LAY.barrido(cfg,{desde:desde,hasta:hasta,paso:paso,computa:computaTodas,onPaso:async function(i,n,ang,kwp){
     $('progBar').style.width=(100*i/n).toFixed(1)+'%';
     $('progTxt').textContent='barriendo '+ang.toFixed(0)+'° · '+i+'/'+n+' · mejor hasta ahora '+
       (kwp/1000).toFixed(2)+' MWp';
@@ -2387,12 +2565,17 @@ function pintar(res,fuente){
     return '<div class="aviso '+cls+'"><b>'+(cls==='fail'?'✖':(cls==='warn'?'⚠':'ℹ'))+'</b> '+a.mensaje+'</div>';
   }).join('');
   $('avisos').innerHTML=av;
+  if(res.partes&&res.partes.length>1){
+    $('sizes').innerHTML='<b>Reparto por parcela</b><table><tr><th>Parcela</th><th>Mesas</th><th>MWp</th></tr>'+
+      res.partes.map(function(p){return '<tr><td>'+esc(p.nombre)+'</td><td>'+fmt(p.structures)+'</td><td>'+
+        fmt(p.kWp/1000,2)+'</td></tr>';}).join('')+'</table>';
+  }
   var bs=st.by_size||{},keys=Object.keys(bs);
-  $('sizes').innerHTML=keys.length>1
+  $('sizes').innerHTML=(res.partes&&res.partes.length>1?$('sizes').innerHTML:'')+(keys.length>1
     ? '<b>Reparto por talla</b><table><tr><th>Mods/mesa</th><th>Mesas</th><th>%</th></tr>'+
       keys.sort(function(a,b){return b-a;}).map(function(k){
         return '<tr><td>'+k+'</td><td>'+bs[k]+'</td><td>'+(100*bs[k]/st.structures).toFixed(1)+'</td></tr>';}).join('')+'</table>'
-    : '';
+    : '');
   // Siempre el tiempo, aunque sea 0: con el layout VACÍO el rótulo se quedaba en
   // «navegador · » y perdía la única señal de que el cálculo había terminado.
   $('hint').textContent=fuente+' · '+(st.ms!=null?Math.round(st.ms)+' ms':'—');
@@ -2404,16 +2587,203 @@ function pintar(res,fuente){
   if(st.drop_user_poly)extra.push('≈'+fmt(st.drop_user_poly)+' por exclusiones de área');
   if(st.drop_line_buffer)extra.push('≈'+fmt(st.drop_line_buffer)+' por exclusiones de línea');
   if(st.drop_topo_mask)extra.push('≈'+fmt(st.drop_topo_mask)+' por pendiente del MDT');
+  if(st.n_parcelas>1)extra.push(st.n_parcelas+' parcelas');
   if(st.center_shift_m&&(st.center_shift_m[0]||st.center_shift_m[1]))
     extra.push('centrado Δx='+st.center_shift_m[0].toFixed(1)+' m, Δy='+st.center_shift_m[1].toFixed(1)+' m');
   $('foot').innerHTML=st.structures
     ? ('Implantación de <b>'+fmt(st.structures)+'</b> mesas en <b>'+fmt(st.rows)+'</b> filas · pitch '+st.pitch_m+' m · setback '+st.setback_m+' m · UTM '+(st.epsg||'—')+
        (extra.length?(' · '+extra.join(' · ')):'')+'.')
     : 'No cabe ninguna estructura con estos parámetros.';
-  ['expGeo','expDxf','expKml','d3Btn'].forEach(function(id){$(id).disabled=!st.structures;});
+  ['expGeo','expDxf','expKml','d3Btn','expHincas','expBoq','expXyz','expDae','btnPitchBanda']
+    .forEach(function(id){$(id).disabled=!st.structures;});
   draw();
 }
 $('genBtn').onclick=generar;
+
+/* ═════════════════ CHECKLIST ANTES DE CONGELAR (§02.5i) ═════════════════
+   El cierre de la página Workflow, con los ocho puntos del cuaderno. Cinco los
+   sabe la ficha y se marcan SOLOS —mentiría si te dejase marcar a mano que el
+   MDT está aplicado cuando no lo está—; los tres que dependen de otras fichas o
+   del cuaderno salen listados como lo que son: pendientes de mirar fuera. */
+function checklist(){
+  var st=RES?RES.stats:null;
+  var dibujada=($('parcelMode').value!=='rect')||PARCELAS.length>0;
+  var items=[
+    {ok:dibujada, t:'<b>Parcela real</b> (dibujada, GeoJSON o KML), no el rectángulo por cotas'},
+    {ok:!!DEM&&!$('demOff').checked, t:'<b>MDT descargado</b> y exclusión por pendiente aplicada'},
+    {ok:!!st&&st.qa_geometria_ok&&!!st.structures, t:'<b>QA del layout en verde</b> (sin avisos de fallo)'},
+    {ok:!!st&&(!st.bifila||st.ab_max_dx_m<0.01), t:'<b>Bifila sin huérfanos</b> (Δx entre sub-filas ≈ 0)'},
+    {ok:!!st&&!!st.grid_optimized, t:'<b>Orientación decidida con barrido</b>, no por defecto'},
+    {ok:null, t:'<b>Gate layout ↔ sizing</b> (§06.5 <code>validate_layout_vs_sizing</code>) — en el cuaderno'},
+    {ok:null, t:'<b>Entorno OSM revisado</b> (§02.5h): sombras de invierno aceptadas o excluidas'},
+    {ok:null, t:'<b>Pitch/GCR con sweep de LCOE</b> (§04.4) — el árbitro sigue siendo el cuaderno'}
+  ];
+  var hechos=items.filter(function(i){return i.ok===true;}).length;
+  var propios=items.filter(function(i){return i.ok!==null;}).length;
+  $('sizes').innerHTML='<b>Checklist antes de congelar el layout</b> '+
+    '<span style="color:var(--muted-2)">(§02.5i · '+hechos+'/'+propios+' de los que esta ficha sabe)</span>'+
+    '<div style="margin-top:7px;display:flex;flex-direction:column;gap:4px">'+
+    items.map(function(i){
+      var m=i.ok===true?'<span style="color:var(--live)">✔</span>':
+            (i.ok===false?'<span style="color:var(--build)">☐</span>':'<span style="color:var(--muted-2)">↗</span>');
+      return '<div style="font-size:12px;line-height:1.5">'+m+' '+i.t+'</div>';
+    }).join('')+'</div>'+
+    '<p class="note">Los ✔/☐ los decide la ficha con lo que tiene delante: marcarlos a mano sería '+
+    'firmar que el MDT está aplicado cuando no lo está. Los ↗ dependen del cuaderno o de otras fichas. '+
+    'Y ojo: el checklist REGULATORIO (permisos, EIA, grid code) es otro, y vive en §08.R1.</p>';
+}
+$('btnChecklist').onclick=checklist;
+
+/* ═════════════════ CIVIL & EXPORTS (§02.5g) ═════════════════
+   Port de las fórmulas canónicas, no de una versión propia:
+     · hincas      → `earthworks.pile_setout_table` (equiespaciadas por el eje,
+                     ambos extremos incluidos, con cota del MDT si lo hay)
+     · pitch/banda → `pitch_terrain.pitch_required_on_slope`, la «dynamic
+                     distance» de PVX: p = c·cosθ + c·senθ / (tanα + s), con el
+                     lado desfavorable s = −|tan β|
+     · PVsyst XYZ  → `pvsyst_export.terrain_to_pvsyst_xyz` (X;Y;Z en metros
+                     locales, origen en el centroide del grid)
+   Todo esto RECOMIENDA o describe: no mueve una sola estructura. */
+var PILE_SPACING=7.0, LIMIT_ELEV=15.0;   // los defaults del core
+
+function cotaEn(lat,lon){
+  if(!DEM)return null;
+  var n=DEM.lats.length;
+  var r=Math.round((lat-DEM.lats[0])/((DEM.lats[n-1]-DEM.lats[0])/(n-1)));
+  var c=Math.round((lon-DEM.lons[0])/((DEM.lons[n-1]-DEM.lons[0])/(n-1)));
+  if(r<0||c<0||r>=n||c>=n)return null;
+  return DEM.z[r][c];
+}
+/* Eje largo de una mesa: los puntos medios de sus dos lados cortos. */
+function ejeMesa(q){
+  return [[(q[0][0]+q[3][0])/2,(q[0][1]+q[3][1])/2],[(q[1][0]+q[2][0])/2,(q[1][1]+q[2][1])/2]];
+}
+function tablaHincas(){
+  if(!RES)return [];
+  var out=[];
+  RES.structures.forEach(function(sx,i){
+    var e=ejeMesa(sx.lonlat), la0=(e[0][1]+e[1][1])/2;
+    var kx=110540*Math.cos(la0*Math.PI/180), ky=110540;
+    var L=Math.hypot((e[1][0]-e[0][0])*kx,(e[1][1]-e[0][1])*ky);
+    var n=Math.max(2,Math.floor(L/PILE_SPACING)+1);
+    for(var k=0;k<n;k++){
+      var f=k/(n-1), la=e[0][1]+f*(e[1][1]-e[0][1]), lo=e[0][0]+f*(e[1][0]-e[0][0]);
+      out.push({estructura:'M'+(i+1),hinca:k+1,lat:la,lon:lo,
+                cadena_m:+(f*L).toFixed(2),z:cotaEn(la,lo)});
+    }
+  });
+  return out;
+}
+function pitchPorBanda(){
+  var c=apertura(), th=+$('maxAng').value||55, alpha=LIMIT_ELEV;
+  function req(sl){
+    var s=-Math.abs(Math.tan(sl*Math.PI/180));
+    var den=Math.tan(alpha*Math.PI/180)+s;
+    if(den<=1e-6)return Infinity;
+    return c*Math.cos(th*Math.PI/180)+c*Math.sin(th*Math.PI/180)/den;
+  }
+  var bandas=[];
+  if(DEM){
+    var P=pendientesDEM(), vals=[];
+    for(var r=0;r<P.n;r++)for(var cc=0;cc<P.n;cc++)vals.push(Math.abs(P.ew[r][cc]));
+    vals.sort(function(a,b){return a-b;});
+    // Cinco bandas por percentiles: es lo que hace `terrain_from_dem_result`
+    [0.1,0.3,0.5,0.7,0.9].forEach(function(q){bandas.push(vals[Math.floor(q*(vals.length-1))]);});
+  } else {
+    bandas=[0,Math.abs(+$('slopeEw').value||0)];
+  }
+  var base=+$('pitch').value, llano=req(0);
+  return {llano:llano, base:base, bandas:bandas.map(function(sl,i){
+    var p=req(sl);
+    return {banda:i+1, pendiente:sl, pitch_req:p, delta:p-llano, cabe:isFinite(p)&&p<=base};
+  })};
+}
+function csv(filas,cab){
+  return cab.join(';')+'\n'+filas.map(function(f){
+    return cab.map(function(k){var v=f[k];return v==null?'':(typeof v==='number'?v.toFixed(6).replace(/\.?0+$/,''):v);}).join(';');
+  }).join('\n');
+}
+$('expHincas').onclick=function(){
+  var t=tablaHincas();
+  if(!t.length){$('foot').innerHTML='<span style="color:var(--build)">Genera primero el layout.</span>';return;}
+  bajar(nombreSalida('hincas.csv'),csv(t,['estructura','hinca','lat','lon','cadena_m','z']),'text/csv');
+  $('foot').innerHTML='Replanteo de <b>'+fmt(t.length)+'</b> hincas · '+PILE_SPACING+' m entre hincas'+
+    (DEM?' · con cota del MDT.':' · <b>sin cota</b>: descarga el MDT si la necesitas.');
+};
+$('expBoq').onclick=function(){
+  if(!RES){$('foot').innerHTML='<span style="color:var(--build)">Genera primero el layout.</span>';return;}
+  var st=RES.stats, h=tablaHincas();
+  var tuboM=RES.structures.reduce(function(a,x){return a+x.len;},0);
+  var filas=[
+    {concepto:'Potencia pico',unidad:'kWp',cantidad:st.kWp},
+    {concepto:'Módulos',unidad:'ud',cantidad:st.modules},
+    {concepto:'Mesas',unidad:'ud',cantidad:st.structures},
+    {concepto:'Trackers',unidad:'ud',cantidad:st.trackers},
+    {concepto:'Filas',unidad:'ud',cantidad:st.rows},
+    {concepto:'Hincas',unidad:'ud',cantidad:h.length},
+    {concepto:'Tubo de par (longitud de mesas)',unidad:'m',cantidad:+tuboM.toFixed(1)},
+    {concepto:'Superficie de parcela',unidad:'ha',cantidad:+(st.poly_area_m2/1e4).toFixed(3)},
+    {concepto:'Superficie útil (tras setback y exclusiones)',unidad:'ha',cantidad:+(st.inner_area_m2/1e4).toFixed(3)},
+    {concepto:'Superficie de colector',unidad:'m2',cantidad:+st.col_area_m2.toFixed(1)},
+    {concepto:'Viales',unidad:'ud',cantidad:RES.roads.length}
+  ];
+  bajar(nombreSalida('boq.csv'),csv(filas,['concepto','unidad','cantidad']),'text/csv');
+  $('foot').textContent='Mediciones exportadas: '+filas.length+' conceptos.';
+};
+$('expXyz').onclick=function(){
+  if(!DEM){$('foot').innerHTML='<span style="color:var(--build)">El XYZ de PVsyst es el TERRENO: descarga antes el MDT.</span>';return;}
+  var n=DEM.lats.length, la0=(DEM.lats[0]+DEM.lats[n-1])/2, lo0=(DEM.lons[0]+DEM.lons[n-1])/2;
+  var kx=110540*Math.cos(la0*Math.PI/180), ky=110540, L=['X;Y;Z'];
+  for(var r=0;r<n;r++)for(var c=0;c<n;c++){
+    var z=DEM.z[r][c]; if(!isFinite(z))continue;
+    L.push(((DEM.lons[c]-lo0)*kx).toFixed(2)+';'+((DEM.lats[r]-la0)*ky).toFixed(2)+';'+(+z).toFixed(2));
+  }
+  bajar(nombreSalida('terreno-pvsyst.csv'),L.join('\n'),'text/csv');
+  $('foot').textContent='Terreno para PVsyst: '+(L.length-1)+' puntos X;Y;Z en metros locales.';
+};
+$('expDae').onclick=function(){
+  if(!RES||!RES.structures.length){$('foot').innerHTML='<span style="color:var(--build)">Genera primero el layout.</span>';return;}
+  // COLLADA: una malla con dos triángulos por mesa, en metros locales ENU.
+  var st=RES.structures, la0=0, lo0=0, n=0;
+  st.forEach(function(x){x.lonlat.forEach(function(p){lo0+=p[0];la0+=p[1];n++;});});
+  la0/=n; lo0/=n;
+  var kx=110540*Math.cos(la0*Math.PI/180), ky=110540;
+  var pos=[], idx=[], v=0;
+  st.forEach(function(x){
+    x.lonlat.forEach(function(p){
+      var z=cotaEn(p[1],p[0]); pos.push(((p[0]-lo0)*kx).toFixed(3),((p[1]-la0)*ky).toFixed(3),(z==null?0:z).toFixed(2));
+    });
+    idx.push(v,v+1,v+2, v,v+2,v+3); v+=4;
+  });
+  var dae='<?xml version="1.0" encoding="utf-8"?>\n'+
+   '<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1"><asset><up_axis>Z_UP</up_axis></asset>'+
+   '<library_geometries><geometry id="mesas"><mesh>'+
+   '<source id="p"><float_array id="pa" count="'+pos.length+'">'+pos.join(' ')+'</float_array>'+
+   '<technique_common><accessor source="#pa" count="'+(pos.length/3)+'" stride="3">'+
+   '<param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/></accessor></technique_common></source>'+
+   '<vertices id="vt"><input semantic="POSITION" source="#p"/></vertices>'+
+   '<triangles count="'+(idx.length/3)+'"><input semantic="VERTEX" source="#vt" offset="0"/><p>'+idx.join(' ')+'</p></triangles>'+
+   '</mesh></geometry></library_geometries>'+
+   '<library_visual_scenes><visual_scene id="s"><node><instance_geometry url="#mesas"/></node></visual_scene></library_visual_scenes>'+
+   '<scene><instance_visual_scene url="#s"/></scene></COLLADA>';
+  bajar(nombreSalida('escena.dae'),dae,'model/vnd.collada+xml');
+  $('foot').textContent='Escena COLLADA: '+st.length+' mesas, '+(idx.length/3)+' triángulos'+(DEM?' con cota del MDT.':' en plano.');
+};
+$('btnPitchBanda').onclick=function(){
+  var R=pitchPorBanda();
+  var mal=R.bandas.filter(function(b){return !b.cabe;}).length;
+  $('sizes').innerHTML='<b>Pitch requerido por banda</b> <span style="color:var(--muted-2)">'+
+    '(dynamic distance · apertura '+apertura().toFixed(3)+' m · tilt '+(+$('maxAng').value)+'° · sol a '+LIMIT_ELEV+'°)</span>'+
+    '<table><tr><th>Banda</th><th>Pend. E-O °</th><th>Pitch req. m</th><th>Δ vs llano</th><th>¿cabe con '+(+$('pitch').value)+' m?</th></tr>'+
+    R.bandas.map(function(b){
+      return '<tr><td>'+b.banda+'</td><td>'+b.pendiente.toFixed(2)+'</td><td>'+
+        (isFinite(b.pitch_req)?b.pitch_req.toFixed(2):'∞')+'</td><td>'+
+        (isFinite(b.delta)?((b.delta>=0?'+':'')+b.delta.toFixed(2)):'—')+'</td><td>'+(b.cabe?'sí':'NO')+'</td></tr>';
+    }).join('')+'</table>'+
+    '<p class="note">En llano hacen falta '+R.llano.toFixed(2)+' m. '+
+    (mal?('<b>'+mal+' banda(s) no caben</b> con el pitch actual.'):'Todas caben con el pitch actual.')+
+    ' Esto RECOMIENDA: no mueve ninguna estructura, y el árbitro sigue siendo el barrido de LCOE del cuaderno.</p>';
+};
 
 /* ===== salidas ===== */
 /* El fichero se llama como el emplazamiento elegido: tres exports seguidos de
