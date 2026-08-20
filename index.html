@@ -838,7 +838,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/sim-viento.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-19",
-    version: "1.10.3",
+    version: "1.10.4",
     docId: "viento",
     docUrl: "",
     download: "",
@@ -873,6 +873,7 @@ const PROJECTS = [
       { done:false, text:"La velocidad de suelta del pasivo es un SUSTITUTO declarado de la carga de desembrague, no una medida: hace falta el par real y su dispersión entre unidades para que el umbral deje de ser un parámetro." }
     ],
     historial: [
+      { date:"2026-08-19", ver:"1.10.4", note:"Las gráficas dejan de verse pixeladas. Los seis lienzos nacían con 880 px de ancho fijo y el CSS los estira al del contenedor —unos 1.200—, así que se dibujaban a 880 y se escalaban; en una pantalla HiDPI, además, con dos píxeles físicos por cada uno de CSS. Ahora el búfer se ajusta a ancho real × densidad y el contexto se escala, de modo que todo el código de dibujo sigue trabajando en píxeles CSS sin enterarse. Y al cambiar el tamaño se REDIBUJA en vez de estirar (con pausa, que resize dispara decenas de veces), incluida la rosa de vientos, que se quedaba fuera." },
       { date:"2026-08-19", ver:"1.10.3", note:"ARREGLO: la escena salía amarilla y lavada y parpadeaba. La causa era el intento de la 1.10.1 de dar una luz a cada bloque: en three.js las capas de una LUZ se prueban contra la cámara, no contra los objetos, así que las siete direccionales iluminaban todo — siete veces la exposición, y con luz cálida eso es ese amarillo. El parpadeo era el z-fighting de las parcelas contra el suelo. Se vuelve a una sola luz. Lo que impide que la sombra cruce de un bloque a otro es la GEOMETRÍA: el hueco ya se deriva del alcance de la sombra, y por debajo de la elevación a la que una sombra alcanzaría ese hueco —calculada, no tecleada— se apagan, porque ahí no informan, contaminan." },
       { date:"2026-08-19", ver:"1.10.2", note:"Los decimales salen de la MAGNITUD del dato, no de un 2 fijo. Con deltas de 0,003 % —lo normal en un año con pocos abanderamientos— la tabla, el KPI y las barras decían todos «0,00 %»: el número no redondeaba el dato, lo borraba, y un cero donde hay señal es peor que no poner número. Un solo criterio para los tres, así que las cifras siguen siendo comparables. Y la columna «de ellos a total» pasa a decir «de ellos a ±55°», que es lo que significa: cuántos abanderamientos llegaron al límite mecánico y cuántos se quedaron en el sector parcial." },
       { date:"2026-08-19", ver:"1.10.1", note:"La sombra ya no cruza de un bloque a otro. Cada bloque es la MISMA planta con otra estrategia, no seis plantas vecinas, así que una sombra que salta de uno a otro oscurece justo lo que se está comparando. Con una sola luz no hay forma de impedirlo —las capas de three.js no filtran quién proyecta—, así que cada bloque lleva su propia direccional con la caja de sombras ajustada a él. Y el HUECO entre bloques pasa a derivarse del alcance de esa caja: al revés no hay solución, porque con bloques de 120 m y huecos de 18 no existe ninguna caja que contenga el bloque y excluya al vecino." },
