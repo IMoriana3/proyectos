@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0B0F14">
+<link rel="icon" href="favicon.svg">
+<title>Generador de layout — Factiun</title>
+<!-- sin fuentes de Google: offline (fuentes del sistema) -->
+<style>
+:root{
+  --void:#0B0F14; --panel:#121922; --panel-2:#0F151D; --panel-hi:#18222D;
+  --line:#23303D; --line-soft:#1A2530; --text:#E7EEF4; --muted:#8093A4; --muted-2:#5E6F7E;
+  --live:#36D399; --build:#F6A623; --demo:#54A6FF; --idle:#6A7B8B; --dead:#D0594F;
+  --accent:#36D399; --radius:14px; --radius-sm:9px;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --display:'Space Grotesk','IBM Plex Sans',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--void);color:var(--text);font-family:var(--sans);min-height:100vh;font-variant-numeric:tabular-nums}
+.bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 18px;background:var(--panel-2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+.bar .back{color:var(--muted);text-decoration:none;font:600 13px/1 var(--sans);padding:7px 11px;border:1px solid var(--line);border-radius:10px;white-space:nowrap}
+.bar .back:hover{color:var(--text);border-color:var(--accent)}
+.bar h1{font:700 17px/1.1 var(--display)}
+.bar .sub{color:var(--muted);font-size:12.5px;margin-right:auto}
+.bar .brand{color:var(--accent);font:700 14px/1 var(--display);letter-spacing:.04em}
+.engine{display:flex;align-items:center;gap:7px;font-size:12px;font-family:var(--mono);padding:4px 10px;border:1px solid var(--line);border-radius:20px;background:var(--panel);cursor:pointer}
+.engine .led{width:9px;height:9px;border-radius:50%;background:var(--idle)}
+.engine.on .led{background:var(--live);box-shadow:0 0 7px var(--live)}
+.engine.off .led{background:var(--dead)}
+/* ANCHO: `min(Npx, 94vw)` en vez de un tope fijo. Con el tope a secas, en un monitor de 1920 esta
+   pantalla usaba poco más de la mitad y dejaba cientos de píxeles muertos a cada lado; con solo
+   `vw` se pegaría a los bordes en pantallas enormes. El 94vw deja aire y el tope evita la línea
+   kilométrica. Mismo criterio que el Panel. */
+.wrap{max-width:min(1560px,94vw);margin:0 auto;padding:20px 18px 60px}
+.grid{display:grid;grid-template-columns:352px 1fr;gap:18px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.card h2{font:700 13px/1 var(--display);letter-spacing:.02em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card h2 .ic{color:var(--accent)}
+.card h2 .hint{margin-left:auto;font:400 11px var(--mono);color:var(--muted)}
+.field{margin-bottom:11px}
+.field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.field input,.field select,.field textarea{width:100%;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px}
+.field textarea{font-family:var(--mono);font-size:11.5px;resize:vertical;min-height:78px}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent)}
+.field .tip{font-size:11px;color:var(--muted-2);margin-top:4px;line-height:1.45}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.btn{background:rgba(54,211,153,.12);color:var(--accent);border:1px solid var(--accent);border-radius:9px;padding:9px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;width:100%}
+.btn:hover{background:rgba(54,211,153,.2);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:var(--panel-2);color:var(--text);border-color:var(--line)}
+.btn.ghost:hover{background:var(--panel-hi);color:var(--text);border-color:var(--accent)}
+.btn.small{padding:7px 10px;font-size:12px}
+.btnrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.chk{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);margin:9px 0}
+.chk input{accent-color:var(--accent)}
+details.adv{border-top:1px solid var(--line-soft);margin-top:6px;padding-top:10px}
+details.adv summary{cursor:pointer;font:600 12px var(--sans);color:var(--muted);list-style:none;display:flex;align-items:center;gap:6px}
+details.adv summary::-webkit-details-marker{display:none}
+details.adv summary::before{content:"▸";color:var(--accent);font-size:11px}
+details.adv[open] summary::before{content:"▾"}
+details.adv .body{margin-top:12px}
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:10px}
+.ro{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:9px;padding:9px 11px}
+.ro .k{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-family:var(--mono)}
+.ro .v{font:700 17px/1.2 var(--display);margin-top:3px}
+.ro .v small{font-size:12px;color:var(--muted);font-weight:400}
+canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:10px;margin-top:6px;touch-action:none}
+canvas.drawing{cursor:crosshair;border-color:var(--build)}
+.note{font-size:12px;color:var(--muted-2);margin-top:10px;line-height:1.5}
+.note code{color:var(--muted);background:var(--panel-2);padding:1px 5px;border-radius:5px;font-family:var(--mono)}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);margin-top:2px}
+.avisos{display:flex;flex-direction:column;gap:7px;margin-top:12px}
+.aviso{border-radius:9px;padding:9px 12px;font-size:12.5px;line-height:1.5;background:var(--panel-2);border:1px dashed var(--line)}
+.aviso.warn{border-color:var(--build)}
+.aviso.fail{border-color:var(--dead)}
+.aviso.info{border-color:var(--demo)}
+.aviso b{font-weight:700}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:14px;height:9px;border-radius:2px;display:inline-block}
+.sizes{margin-top:12px;font-size:12px;color:var(--muted)}
+.sizes table{width:100%;border-collapse:collapse;margin-top:6px}
+.sizes th,.sizes td{text-align:right;padding:4px 6px;border-bottom:1px solid var(--line-soft);font-family:var(--mono);font-size:11.5px}
+.sizes th{color:var(--muted-2);font-weight:600;text-transform:uppercase;letter-spacing:.05em;font-size:10px}
+.sizes td:first-child,.sizes th:first-child{text-align:left}
+.busy{color:var(--build);font-family:var(--mono);font-size:12px}
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="back" href="index.html">← Panel</a>
+  <h1>Generador de layout</h1>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador</span>
+  <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
+  <span class="brand">Factiun</span>
+</header>
+
+<div class="wrap">
+<div class="grid">
+
+  <!-- ═══════════ ENTRADAS ═══════════ -->
+  <div class="col">
+
+    <div class="card">
+      <h2><span class="ic">▦</span> Parcela</h2>
+      <div class="field"><label>Cómo defines la parcela</label>
+        <select id="parcelMode">
+          <option value="rect">Rectángulo por centro y cotas</option>
+          <option value="geojson">GeoJSON (SIGPAC · Catastro · geojson.io)</option>
+          <option value="draw">Dibujarla sobre el lienzo</option>
+        </select></div>
+
+      <div id="paneRect">
+        <div class="field"><label>Planta (centro, de la cartera)</label>
+          <select id="plant"><option value="">— manual —</option></select></div>
+        <div class="two">
+          <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="41.57634"></div>
+          <div class="field"><label>Longitud °</label><input id="lon" type="number" step="0.0001" value="-0.79814"></div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Ancho E-O (m)</label><input id="pw" type="number" step="10" value="600"></div>
+          <div class="field"><label>Alto N-S (m)</label><input id="ph" type="number" step="10" value="450"></div>
+        </div>
+        <div class="field"><label>Giro de la parcela (°)</label><input id="prot" type="number" step="1" value="0">
+          <div class="tip">Gira el rectángulo respecto al norte. Con giro ≠ 0 se ve lo que de verdad hace el motor en un borde oblicuo.</div></div>
+      </div>
+
+      <div id="paneGeo" style="display:none">
+        <div class="field"><label>GeoJSON de la parcela (Feature / FeatureCollection · Polygon)</label>
+          <textarea id="geotxt" placeholder='{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[lon,lat],…]]}}'></textarea>
+          <div class="tip">Coords [lon, lat]. Los <b>anillos interiores</b> del polígono entran como exclusiones (huecos): el motor no coloca mesas ahí y además respeta el setback contra su borde.</div></div>
+        <div class="btnrow">
+          <button class="btn ghost small" id="geoFileBtn">⬆ Cargar fichero</button>
+          <button class="btn ghost small" id="geoApplyBtn">✓ Usar este GeoJSON</button>
+        </div>
+        <input type="file" id="geoFile" accept=".geojson,.json" style="display:none">
+      </div>
+
+      <div id="paneDraw" style="display:none">
+        <p class="note" style="margin-top:0">Clic en el lienzo para ir poniendo vértices; <b>doble clic</b> cierra el polígono. El centro y la escala salen de las cotas de arriba.</p>
+        <div class="btnrow">
+          <button class="btn ghost small" id="drawStart">✏️ Empezar a dibujar</button>
+          <button class="btn ghost small" id="drawClear">🗑️ Limpiar</button>
+        </div>
+      </div>
+      <p class="tag" id="parcelTag">—</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="ic">▤</span> Estructura</h2>
+      <div class="two">
+        <div class="field"><label>Montaje</label>
+          <select id="mount"><option value="tracker">Tracker (1 eje)</option><option value="fija">Fija</option></select></div>
+        <div class="field"><label>Tabla</label>
+          <select id="table"><option>1V</option><option>2V</option><option>3V</option><option>4V</option><option>1H</option><option>2H</option><option>3H</option><option>4H</option></select></div>
+      </div>
+      <div class="field"><label>Mods/string — una talla (28) o multi-talla (28, 14, 7)</label>
+        <input id="mods" type="text" value="28">
+        <div class="tip">Con varias tallas el motor coloca la mayor que entra y rellena la cola con las pequeñas. Es el multi-size del cuaderno §02.5a-2.</div></div>
+      <div class="three">
+        <div class="field"><label>Largo mód. (m)</label><input id="modLen" type="number" step="0.001" value="2.382"></div>
+        <div class="field"><label>Ancho mód. (m)</label><input id="modWid" type="number" step="0.001" value="1.134"></div>
+        <div class="field"><label>Wp módulo</label><input id="modWp" type="number" step="5" value="630"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="ic">⇅</span> Implantación</h2>
+      <div class="two">
+        <div class="field"><label>Pitch (m)</label><input id="pitch" type="number" step="0.01" value="6"></div>
+        <div class="field"><label>Setback (m)</label><input id="setback" type="number" step="0.5" value="5"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label id="axisLbl">Azimut del eje °</label><input id="axis" type="number" step="1" value="0"></div>
+        <div class="field"><label>Azimut de filas °</label><input id="panelAz" type="number" step="1" value="90">
+          <div class="tip" id="azTip">Auto desde el eje.</div></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Modo</label>
+          <select id="mode"><option value="aligned">aligned (canónico)</option><option value="adaptive">adaptive</option></select></div>
+        <div class="field"><label>Tipo de tracker</label>
+          <select id="bifila"><option value="1">Bifila (2 sub-filas)</option><option value="0">Monofila</option></select></div>
+      </div>
+      <button class="btn" id="genBtn">▶ Generar implantación</button>
+      <div class="field" style="margin-top:10px"><label>Cálculo</label>
+        <select id="calc"><option value="js">Navegador (motor portado)</option><option value="core" disabled>Motor SolarGPT (canónico)</option></select>
+        <div class="tip">El navegador calcula solo; el motor SolarGPT es el número canónico y se activa al detectarlo.</div></div>
+
+      <details class="adv"><summary>Parámetros avanzados (gaps, viales, rejilla)</summary>
+      <div class="body">
+        <div class="three">
+          <div class="field"><label>Gap mód. (m)</label><input id="gapMod" type="number" step="0.005" value="0.02"></div>
+          <div class="field"><label>Gap motor (m)</label><input id="gapMotor" type="number" step="0.05" value="0.5"></div>
+          <div class="field"><label>Gap N-S (m)</label><input id="gapNs" type="number" step="0.1" value="0.5"></div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Vial ENTRE filas cada N</label><input id="roadEvery" type="number" step="1" value="0"></div>
+          <div class="field"><label>Ancho (m)</label><input id="roadW" type="number" step="0.5" value="4"></div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Vial EN la fila cada N estr.</label><input id="roadNsEvery" type="number" step="1" value="0"></div>
+          <div class="field"><label>Ancho (m)</label><input id="roadNsW" type="number" step="0.5" value="4"></div>
+        </div>
+        <p class="note" style="margin-top:0">Son el <code>road_every</code> y el <code>road_ns_every</code> del cuaderno. Van referidos a las FILAS, no al norte: con filas N-S el vial «entre filas» se dibuja N-S. Se reparten simétricos alrededor del centro de la parcela.</p>
+        <div class="two">
+          <div class="field"><label>Mín. estructuras/fila</label><input id="minStructs" type="number" step="1" value="2">
+            <div class="tip">El cuaderno usa 2. Con 1 se activa la poda mediana-relativa y suele salir PEOR.</div></div>
+          <div class="field"><label>Offset de filas</label>
+            <select id="rowOffset"><option value="none">Sin offset</option><option value="half">Medio paso</option></select></div>
+        </div>
+        <label class="chk"><input type="checkbox" id="alignGrid" checked> Alinear a rejilla global (columnas rectas)</label>
+        <label class="chk"><input type="checkbox" id="center" checked> Centrar el bloque en la parcela</label>
+      </div>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2><span class="ic">⤓</span> Salidas</h2>
+      <div class="btnrow">
+        <button class="btn ghost small" id="expGeo" disabled>GeoJSON</button>
+        <button class="btn ghost small" id="expDxf" disabled>DXF</button>
+        <button class="btn ghost small" id="expKml" disabled>KML</button>
+        <button class="btn ghost small" id="d3Btn" disabled>🧊 Ver en 3D</button>
+      </div>
+      <p class="note">El GeoJSON sale en el mismo formato que lee el <a href="layout.html" style="color:var(--accent)">Explorador de layout</a> (<code>{stats, geojson}</code>). El 3D abre la planta <code>custom</code> del visor de cobertura.</p>
+    </div>
+
+  </div>
+
+  <!-- ═══════════ RESULTADO ═══════════ -->
+  <div class="col">
+    <div class="card">
+      <h2><span class="ic">◫</span> Implantación <span class="hint" id="hint">sin generar</span></h2>
+      <div class="readout" id="ro"></div>
+      <canvas id="cv" width="1000" height="700"></canvas>
+      <div class="legend">
+        <span><i style="background:rgba(84,166,255,.25);border:1px solid #54A6FF"></i> parcela</span>
+        <span><i style="background:rgba(54,211,153,.10);border:1px dashed #36D399"></i> área útil (tras setback)</span>
+        <span><i style="background:#36D399"></i> mesa</span>
+        <span><i style="background:#F6A623"></i> vial</span>
+        <span><i style="background:rgba(208,89,79,.35);border:1px solid #D0594F"></i> exclusión</span>
+      </div>
+      <div class="avisos" id="avisos"></div>
+      <div class="sizes" id="sizes"></div>
+      <p class="note" id="foot">Define la parcela, ajusta los parámetros y pulsa <b>Generar implantación</b>. Todo el cálculo ocurre aquí, en el navegador: no hace falta levantar nada.</p>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ═══════════════════ MOTOR DE LAYOUT — inicio ═══════════════════
+
+   Port al navegador del motor canónico de implantación del cuaderno SolarGPT
+   §02.5a-2 (`solargpt_core.layout_v2.compute_layout_v2` + `layout_engine` +
+   `layout_placement`). Aquí no hay `cfg` global, ni widgets, ni estado: entra un
+   polígono en lon/lat y sale la lista de mesas con sus estadísticas.
+
+   Qué se ha portado, y con qué:
+
+   · UTM. El core usa pyproj; aquí van las series clásicas de Transverse
+     Mercator (WGS84, k0=0.9996). Concuerdan con pyproj dentro de la zona a
+     nivel de milímetro, que es tres órdenes de magnitud menos que el gap entre
+     módulos.
+
+   · SETBACK. El core hace `poly.buffer(-d)` con Shapely. Aquí NO hay Shapely, y
+     recortar el bbox habría sido mentir en cuanto la parcela deja de ser un
+     rectángulo. Lo que se hace es la erosión EXACTA por definición: el área útil
+     es el conjunto de puntos interiores cuya distancia al borde es ≥ setback, y
+     esa condición se resuelve en forma cerrada sobre cada línea de barrido
+     (a cada arista le corresponde un "estadio" —dos discos y un rectángulo—
+     cuya intersección con la línea es un intervalo). Los agujeros del polígono
+     cuentan como borde, igual que en Shapely.
+
+   · FRANJA DE FILA. El core interseca el polígono con un `box(x0,y,x1,y+coll_h)`
+     y saca los tramos conexos. Aquí la franja se muestrea en varias líneas
+     (paso ≤ 0,4 m) y se INTERSECAN sus intervalos: el resultado es el tramo
+     donde cabe la mesa ENTERA de alto, que es justo lo que el core comprueba
+     luego con `contains(rect)`.
+
+   · COLOCACIÓN. Port literal de `place_row_aligned` / `place_row_adaptive` y del
+     greedy multi-talla `place_row_aligned_multi`, con su mirada-adelante ("¿por
+     qué dos de 5 y no uno de 10?") y su segunda pasada de paso fino.
+
+   · BIFILA. Emparejado por cercanía en X (`match_rows_by_x`), espejo de la
+     sub-fila B sobre la A, y recorte a conteo PAR de mesas por línea.
+
+   Qué NO está portado (y por eso se DICE en pantalla, no se calla):
+   relleno por columna y edge-fill, consolidación N-S de trackers contiguos,
+   barrido de ángulo de grid, sweep de Y con exclusiones y filtro por pendiente
+   del MDT. Son refinamientos de borde: mueven unidades sobre parcelas
+   irregulares, no el orden de magnitud. El botón "motor SolarGPT" da el número
+   canónico cuando hace falta cerrar el proyecto.
+   ══════════════════════════════════════════════════════════════ */
+var LAY = (function () {
+"use strict";
+var D2R = Math.PI / 180, R2D = 180 / Math.PI, EPS = 1e-9;
+
+/* ── UTM (WGS84) ─────────────────────────────────────────────────────── */
+var A_WGS = 6378137.0, F_WGS = 1 / 298.257223563, K0 = 0.9996;
+var E2 = F_WGS * (2 - F_WGS), EP2 = E2 / (1 - E2);
+
+function utmZone(lon) { return Math.min(Math.max(Math.floor((lon + 180) / 6) + 1, 1), 60); }
+function utmEpsg(lon, lat) { return (lat >= 0 ? 32600 : 32700) + utmZone(lon); }
+
+function utmFwd(lon, lat, zone, south) {
+  var lon0 = (zone - 1) * 6 - 180 + 3;
+  var phi = lat * D2R, lam = (lon - lon0) * D2R;
+  var s = Math.sin(phi), c = Math.cos(phi), t = Math.tan(phi);
+  var N = A_WGS / Math.sqrt(1 - E2 * s * s), T = t * t, C = EP2 * c * c, Aa = lam * c;
+  var M = A_WGS * ((1 - E2 / 4 - 3 * E2 * E2 / 64 - 5 * E2 * E2 * E2 / 256) * phi
+        - (3 * E2 / 8 + 3 * E2 * E2 / 32 + 45 * E2 * E2 * E2 / 1024) * Math.sin(2 * phi)
+        + (15 * E2 * E2 / 256 + 45 * E2 * E2 * E2 / 1024) * Math.sin(4 * phi)
+        - (35 * E2 * E2 * E2 / 3072) * Math.sin(6 * phi));
+  var x = K0 * N * (Aa + (1 - T + C) * Math.pow(Aa, 3) / 6
+        + (5 - 18 * T + T * T + 72 * C - 58 * EP2) * Math.pow(Aa, 5) / 120) + 500000;
+  var y = K0 * (M + N * t * (Aa * Aa / 2 + (5 - T + 9 * C + 4 * C * C) * Math.pow(Aa, 4) / 24
+        + (61 - 58 * T + T * T + 600 * C - 330 * EP2) * Math.pow(Aa, 6) / 720));
+  if (south) y += 10000000;
+  return [x, y];
+}
+function utmInv(x, y, zone, south) {
+  var lon0 = (zone - 1) * 6 - 180 + 3;
+  if (south) y -= 10000000;
+  var M = y / K0, e1 = (1 - Math.sqrt(1 - E2)) / (1 + Math.sqrt(1 - E2));
+  var mu = M / (A_WGS * (1 - E2 / 4 - 3 * E2 * E2 / 64 - 5 * E2 * E2 * E2 / 256));
+  var phi1 = mu + (3 * e1 / 2 - 27 * Math.pow(e1, 3) / 32) * Math.sin(2 * mu)
+           + (21 * e1 * e1 / 16 - 55 * Math.pow(e1, 4) / 32) * Math.sin(4 * mu)
+           + (151 * Math.pow(e1, 3) / 96) * Math.sin(6 * mu)
+           + (1097 * Math.pow(e1, 4) / 512) * Math.sin(8 * mu);
+  var s = Math.sin(phi1), c = Math.cos(phi1), t = Math.tan(phi1);
+  var N1 = A_WGS / Math.sqrt(1 - E2 * s * s), T1 = t * t, C1 = EP2 * c * c;
+  var R1 = A_WGS * (1 - E2) / Math.pow(1 - E2 * s * s, 1.5), Dd = (x - 500000) / (N1 * K0);
+  var lat = phi1 - (N1 * t / R1) * (Dd * Dd / 2
+          - (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * EP2) * Math.pow(Dd, 4) / 24
+          + (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 252 * EP2 - 3 * C1 * C1) * Math.pow(Dd, 6) / 720);
+  var lon = (Dd - (1 + 2 * T1 + C1) * Math.pow(Dd, 3) / 6
+          + (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * EP2 + 24 * T1 * T1) * Math.pow(Dd, 5) / 120) / c;
+  return [lon0 + lon * R2D, lat * R2D];
+}
+/* γ = atan(tan(Δlon)·sin(lat)) — en UTM el norte de cuadrícula no es el norte
+   verdadero, y sin esta corrección los trackers salen girados en el mapa. */
+function meridianConvergence(lon, lat) {
+  var lon0 = (utmZone(lon) - 1) * 6 - 180 + 3;
+  return Math.atan(Math.tan((lon - lon0) * D2R) * Math.sin(lat * D2R)) * R2D;
+}
+
+/* ── geometría básica ────────────────────────────────────────────────── */
+function ringArea(r) {   // shoelace con signo
+  var s = 0;
+  for (var i = 0, n = r.length; i < n; i++) {
+    var j = (i + 1) % n;
+    s += r[i][0] * r[j][1] - r[j][0] * r[i][1];
+  }
+  return s / 2;
+}
+function ringCentroid(r) {
+  var a = ringArea(r), cx = 0, cy = 0;
+  if (Math.abs(a) < EPS) {                     // degenerado: media de vértices
+    for (var k = 0; k < r.length; k++) { cx += r[k][0]; cy += r[k][1]; }
+    return [cx / r.length, cy / r.length];
+  }
+  for (var i = 0, n = r.length; i < n; i++) {
+    var j = (i + 1) % n, f = r[i][0] * r[j][1] - r[j][0] * r[i][1];
+    cx += (r[i][0] + r[j][0]) * f; cy += (r[i][1] + r[j][1]) * f;
+  }
+  return [cx / (6 * a), cy / (6 * a)];
+}
+function closeRing(r) {                        // sin vértice repetido al final
+  var out = r.slice();
+  if (out.length > 1) {
+    var a = out[0], b = out[out.length - 1];
+    if (Math.abs(a[0] - b[0]) < 1e-9 && Math.abs(a[1] - b[1]) < 1e-9) out.pop();
+  }
+  return out;
+}
+function rotPt(p, ang, ox, oy) {
+  var c = Math.cos(ang * D2R), s = Math.sin(ang * D2R), dx = p[0] - ox, dy = p[1] - oy;
+  return [ox + dx * c - dy * s, oy + dx * s + dy * c];
+}
+function bboxOf(rings) {
+  var b = [Infinity, Infinity, -Infinity, -Infinity];
+  for (var i = 0; i < rings.length; i++) for (var j = 0; j < rings[i].length; j++) {
+    var p = rings[i][j];
+    if (p[0] < b[0]) b[0] = p[0]; if (p[1] < b[1]) b[1] = p[1];
+    if (p[0] > b[2]) b[2] = p[0]; if (p[1] > b[3]) b[3] = p[1];
+  }
+  return b;
+}
+
+/* ── álgebra de intervalos ───────────────────────────────────────────── */
+function ivNorm(iv) {
+  if (!iv.length) return [];
+  iv = iv.slice().sort(function (a, b) { return a[0] - b[0]; });
+  var out = [iv[0].slice()];
+  for (var i = 1; i < iv.length; i++) {
+    var last = out[out.length - 1];
+    if (iv[i][0] <= last[1] + 1e-9) { if (iv[i][1] > last[1]) last[1] = iv[i][1]; }
+    else out.push(iv[i].slice());
+  }
+  return out.filter(function (s) { return s[1] - s[0] > 1e-9; });
+}
+function ivInter(a, b) {
+  var out = [], i = 0, j = 0;
+  while (i < a.length && j < b.length) {
+    var lo = Math.max(a[i][0], b[j][0]), hi = Math.min(a[i][1], b[j][1]);
+    if (hi - lo > 1e-9) out.push([lo, hi]);
+    if (a[i][1] < b[j][1]) i++; else j++;
+  }
+  return out;
+}
+function ivSub(a, b) {
+  if (!b.length) return a.slice();
+  var out = [];
+  for (var i = 0; i < a.length; i++) {
+    var cur = [[a[i][0], a[i][1]]];
+    for (var j = 0; j < b.length; j++) {
+      var nxt = [];
+      for (var k = 0; k < cur.length; k++) {
+        var s = cur[k];
+        if (b[j][1] <= s[0] + 1e-9 || b[j][0] >= s[1] - 1e-9) { nxt.push(s); continue; }
+        if (b[j][0] > s[0] + 1e-9) nxt.push([s[0], b[j][0]]);
+        if (b[j][1] < s[1] - 1e-9) nxt.push([b[j][1], s[1]]);
+      }
+      cur = nxt;
+    }
+    for (var m = 0; m < cur.length; m++) if (cur[m][1] - cur[m][0] > 1e-9) out.push(cur[m]);
+  }
+  return ivNorm(out);
+}
+
+/* Tramos de la recta y = cte que caen DENTRO de los anillos (regla par-impar:
+   exterior + agujeros en la misma bolsa, igual que un Polygon de Shapely). */
+function insideAt(rings, y) {
+  var xs = [];
+  for (var r = 0; r < rings.length; r++) {
+    var ring = rings[r];
+    for (var i = 0, n = ring.length; i < n; i++) {
+      var p = ring[i], q = ring[(i + 1) % n];
+      if ((p[1] > y) !== (q[1] > y)) xs.push(p[0] + (y - p[1]) * (q[0] - p[0]) / (q[1] - p[1]));
+    }
+  }
+  if (xs.length < 2) return [];
+  xs.sort(function (a, b) { return a - b; });
+  var out = [];
+  for (var k = 0; k + 1 < xs.length; k += 2) if (xs[k + 1] - xs[k] > 1e-9) out.push([xs[k], xs[k + 1]]);
+  return out;
+}
+
+/* Franja de la recta y=cte a distancia ≤ d de una arista AB: unión del disco de
+   A, el disco de B y la banda recta. Cerrado, sin muestreo. */
+function edgeBandAt(ax, ay, bx, by, y, d) {
+  var out = [];
+  var dyA = y - ay; if (Math.abs(dyA) <= d) { var wA = Math.sqrt(d * d - dyA * dyA); out.push([ax - wA, ax + wA]); }
+  var dyB = y - by; if (Math.abs(dyB) <= d) { var wB = Math.sqrt(d * d - dyB * dyB); out.push([bx - wB, bx + wB]); }
+  var ex = bx - ax, ey = by - ay, L = Math.hypot(ex, ey);
+  if (L > 1e-12) {
+    var ux = ex / L, uy = ey / L;
+    // s = (x-ax)·ux + (y-ay)·uy ∈ [0,L] ; t = -(x-ax)·uy + (y-ay)·ux ∈ [-d,d]
+    // Ambas, escritas como c·x + k (el término en ax NO se puede olvidar: sin él
+    // la banda de toda arista sale pegada al origen y el setback no recorta nada).
+    var rs = solveLin(ux, dyA * uy - ax * ux, 0, L),
+        rt = solveLin(-uy, dyA * ux + ax * uy, -d, d);
+    if (rs && rt) {
+      var lo = Math.max(rs[0], rt[0]), hi = Math.min(rs[1], rt[1]);
+      if (hi - lo > 1e-9) out.push([lo, hi]);
+    }
+  }
+  return out;
+}
+/* c·x + k ∈ [lo,hi] → rango de x (null si imposible, ±∞ si c≈0 y k cabe) */
+function solveLin(c, k, lo, hi) {
+  if (Math.abs(c) < 1e-12) return (k >= lo - 1e-9 && k <= hi + 1e-9) ? [-Infinity, Infinity] : null;
+  var a = (lo - k) / c, b = (hi - k) / c;
+  return c > 0 ? [a, b] : [b, a];
+}
+function bandAt(rings, y, d) {
+  if (d <= 0) return [];
+  var out = [];
+  for (var r = 0; r < rings.length; r++) {
+    var ring = rings[r];
+    for (var i = 0, n = ring.length; i < n; i++) {
+      var p = ring[i], q = ring[(i + 1) % n];
+      if (Math.min(p[1], q[1]) - d > y || Math.max(p[1], q[1]) + d < y) continue;
+      var segs = edgeBandAt(p[0], p[1], q[0], q[1], y, d);
+      for (var s = 0; s < segs.length; s++) out.push(segs[s]);
+    }
+  }
+  return ivNorm(out);
+}
+
+/* ── talla de la estructura (port de calc_structure_dims) ────────────── */
+function structureDims(tableType, modsPerString, modLen, modWid, gapModules) {
+  var mods = Math.max(1, Math.round(modsPerString));
+  var tt = String(tableType || "1V").toUpperCase();
+  var n = parseInt(tt.slice(0, -1), 10); if (!isFinite(n) || n < 1) n = 1;
+  var intra = mods - 1, structW, collH, modsInH;
+  if (tt.slice(-1) === "V") { collH = n * modLen; structW = mods * modWid + intra * gapModules; modsInH = n; }
+  else                      { collH = n * modWid; structW = mods * modLen + intra * gapModules; modsInH = n; }
+  return { mods: mods, structW: structW, collH: collH, modsAct: mods * modsInH };
+}
+function structureDimsMulti(tableType, modsList, modLen, modWid, gapModules) {
+  var seen = {}, out = [];
+  for (var i = 0; i < modsList.length; i++) {
+    var v = Math.round(modsList[i]);
+    if (!(v > 0) || seen[v]) continue;
+    seen[v] = 1; out.push(structureDims(tableType, v, modLen, modWid, gapModules));
+  }
+  out.sort(function (a, b) { return b.structW - a.structW; });
+  return out;
+}
+
+/* ── viales: posiciones repartidas simétricamente (port de
+      _centered_road_positions) ───────────────────────────────────────── */
+function centeredRoadPositions(total, every) {
+  if (total <= 0 || every <= 0) return [];
+  var nRoads = Math.floor((total - 1) / every);
+  if (nRoads <= 0) return [];
+  var nChunks = nRoads + 1, base = Math.floor(total / nChunks), extras = total % nChunks;
+  var chunks = []; for (var i = 0; i < nChunks; i++) chunks.push(base);
+  for (var e = 0; e < extras; e++) {
+    if (e % 2 === 0) chunks[Math.floor(e / 2)] += 1;
+    else chunks[chunks.length - 1 - Math.floor(e / 2)] += 1;
+  }
+  var pos = [], cum = 0;
+  for (var c = 0; c < chunks.length - 1; c++) { cum += chunks[c]; pos.push(cum); }
+  return pos;
+}
+
+/* ── emparejado bifila por cercanía en X (port de match_rows_by_x) ───── */
+function matchRowsByX(rowA, rowB, tol) {
+  var xc = function (s) { return (s.x0 + s.x1) / 2; };
+  var b = rowB.map(function (s, i) { return { i: i, x: xc(s), s: s }; })
+              .sort(function (p, q) { return p.x - q.x; });
+  var used = {}, pa = [], pb = [], oa = [];
+  var a = rowA.slice().sort(function (p, q) { return xc(p) - xc(q); });
+  for (var k = 0; k < a.length; k++) {
+    var xa = xc(a[k]), best = -1, bestD = tol;
+    for (var j = 0; j < b.length; j++) {
+      if (used[b[j].i]) continue;
+      var d = Math.abs(b[j].x - xa);
+      if (d < bestD) { bestD = d; best = j; }
+      else if (b[j].x - xa > bestD) break;
+    }
+    if (best >= 0) { used[b[best].i] = 1; pa.push(a[k]); pb.push(b[best].s); }
+    else oa.push(a[k]);
+  }
+  var ob = [];
+  for (var m = 0; m < b.length; m++) if (!used[b[m].i]) ob.push(b[m].s);
+  return [pa, pb, oa, ob];
+}
+
+/* ── el motor ────────────────────────────────────────────────────────── */
+function compute(cfg) {
+  var t0 = (typeof performance !== "undefined" && performance.now) ? performance.now() : 0;
+  var avisos = [];
+  function aviso(sev, cod, msg, extra) { avisos.push({ severidad: sev, codigo: cod, mensaje: msg, extra: extra }); }
+
+  var mount      = cfg.mount === "fija" ? "fija" : "tracker";
+  var isTracker  = mount === "tracker";
+  var pitch      = +cfg.pitch;
+  var setback    = Math.max(0, +cfg.setback || 0);
+  var gapModules = +cfg.gapModules;
+  // Paridad con layout_driver: en montaje FIJO no hay motor, así que los gaps
+  // del tracker se colapsan al gap entre módulos.
+  var gapMotor   = isTracker ? +cfg.gapMotor : gapModules;
+  var gapNs      = isTracker ? +cfg.gapNs    : gapModules;
+  var mode       = cfg.mode === "adaptive" ? "adaptive" : "aligned";
+  var minStructs = Math.max(1, Math.round(cfg.minStructs || 1));
+  var moduleWp   = +cfg.moduleWp || 630;
+  var spt        = 2;                       // 2 mesas por tracker (motor en medio)
+
+  // Bifila es un concepto de TRACKER: en fija no hay motor que emparejar filas.
+  var bifila = !!cfg.bifila;
+  if (bifila && !isTracker) {
+    bifila = false;
+    aviso("info", "bifila_ignorada_en_fija",
+      "Montaje FIJO: «bifila» se ignora. Sin motor no hay dos filas que compartan eje, y aplicar la poda de parejas vaciaría el layout.");
+  }
+
+  // Tallas
+  var modsList = Array.isArray(cfg.mods) ? cfg.mods.slice() : [cfg.mods];
+  modsList = modsList.map(function (v) { return Math.round(+v); }).filter(function (v) { return v > 0; });
+  if (!modsList.length) modsList = [28];
+  var sizes = structureDimsMulti(cfg.table, modsList, +cfg.modLen, +cfg.modWid, gapModules);
+  var isMulti = sizes.length > 1;
+  var base = sizes[0], structW = base.structW, collH = base.collH;
+
+  if (pitch < collH - 1e-6) {
+    aviso("fail", "pitch_menor_que_apertura",
+      "El pitch (" + pitch.toFixed(2) + " m) es MENOR que la apertura de la mesa (" + collH.toFixed(3) +
+      " m): las filas se solapan físicamente. El mínimo geométrico es " + collH.toFixed(3) + " m.");
+  }
+
+  /* 1) parcela a UTM */
+  var ext = closeRing(cfg.coords.map(function (c) { return [+c[0], +c[1]]; }));
+  if (ext.length < 3) throw new Error("La parcela necesita al menos 3 vértices.");
+  var mLon = 0, mLat = 0;
+  for (var i = 0; i < ext.length; i++) { mLon += ext[i][0]; mLat += ext[i][1]; }
+  mLon /= ext.length; mLat /= ext.length;
+  var zone = utmZone(mLon), south = mLat < 0, epsg = utmEpsg(mLon, mLat);
+  var fwd = function (c) { return utmFwd(c[0], c[1], zone, south); };
+  var inv = function (p) { return utmInv(p[0], p[1], zone, south); };
+
+  var extU = ext.map(fwd);
+  var holesU = (cfg.holes || []).map(function (h) { return closeRing(h).map(fwd); });
+  var exclU  = (cfg.exclusions || []).map(function (h) { return closeRing(h).map(fwd); });
+
+  var polyArea = Math.abs(ringArea(extU));
+  for (var h = 0; h < holesU.length; h++) polyArea -= Math.abs(ringArea(holesU[h]));
+
+  /* 2) marco girado: filas a lo largo de X */
+  var eff = ((+cfg.panelAz % 360) + 360) % 360;
+  var conv = meridianConvergence(mLon, mLat);
+  var rot = eff - 180 - conv;
+  var ctr = ringCentroid(extU);
+  // El marco girado es LOCAL (origen en el centroide, metros): en UTM absoluto
+  // las coordenadas rondan los 7 dígitos y el doble sólo deja ~1e-4 m de
+  // resolución — más que la tolerancia con la que se comprueba si una mesa cabe,
+  // así que la primera de cada fila se caía por redondeo.
+  var _cR = Math.cos(rot * D2R), _sR = Math.sin(rot * D2R);
+  function toLocal(p) { var dx = p[0] - ctr[0], dy = p[1] - ctr[1]; return [dx * _cR - dy * _sR, dx * _sR + dy * _cR]; }
+  function fromLocal(x, y) { return [ctr[0] + x * _cR + y * _sR, ctr[1] - x * _sR + y * _cR]; }
+  var rings = [extU].concat(holesU).map(function (r) { return r.map(toLocal); });
+  var exclR = exclU.map(function (r) { return r.map(toLocal); });
+
+  /* 3) área útil = interior a distancia ≥ setback del borde, menos exclusiones.
+        Se resuelve por línea de barrido; aquí sacamos su bbox y su área. */
+  var bb = bboxOf(rings);
+  function usableAt(y) {
+    var iv = insideAt(rings, y);
+    if (!iv.length) return [];
+    if (setback > 0) iv = ivSub(iv, bandAt(rings, y, setback));
+    for (var e = 0; e < exclR.length; e++) {
+      if (!iv.length) break;
+      iv = ivSub(iv, insideAt([exclR[e]], y));
+    }
+    return iv;
+  }
+  var SCAN = 0.25, innerArea = 0, ix0 = Infinity, iy0 = Infinity, ix1 = -Infinity, iy1 = -Infinity;
+  for (var y = bb[1] + SCAN / 2; y <= bb[3]; y += SCAN) {
+    var iv = usableAt(y);
+    for (var s = 0; s < iv.length; s++) {
+      innerArea += (iv[s][1] - iv[s][0]) * SCAN;
+      if (iv[s][0] < ix0) ix0 = iv[s][0];
+      if (iv[s][1] > ix1) ix1 = iv[s][1];
+      if (y < iy0) iy0 = y;
+      if (y > iy1) iy1 = y;
+    }
+  }
+  if (!isFinite(ix0) || innerArea < 1) {
+    aviso("fail", "area_util_vacia",
+      "El área útil queda vacía tras el setback" + (exclR.length ? " y las exclusiones" : "") +
+      ". Reduce el setback o revisa la parcela.");
+    return emptyResult(cfg, avisos, polyArea, epsg, structW, collH, pitch, mount, eff, t0);
+  }
+
+  /* 4) barrido de filas */
+  var stepMotor = structW + gapMotor;          // entre las 2 mesas del mismo tracker
+  var stepNs    = structW + gapNs;             // entre trackers consecutivos
+  var trackerSpan = isTracker ? (spt - 1) * stepMotor + structW : structW;
+  var advance     = isTracker ? (spt - 1) * stepMotor + stepNs   : stepMotor;
+
+  // Bandas de vial N-S: se camina X en seco para contar trackers y se reparten
+  // las posiciones simétricamente alrededor del centro.
+  var nsBands = [];
+  if (cfg.roadNsEvery > 0) {
+    var xs = ix0, cnt = 0;
+    while (xs + trackerSpan <= ix1) { cnt++; xs += advance; }
+    var q = centeredRoadPositions(cnt, Math.round(cfg.roadNsEvery));
+    var xw = ix0, idx = 0;
+    while (xw + trackerSpan <= ix1) {
+      if (q.length && idx === q[0]) { nsBands.push([xw, xw + (+cfg.roadNsW)]); xw += (+cfg.roadNsW); q.shift(); continue; }
+      idx++; xw += advance;
+    }
+  }
+  function roadHit(a, b) {
+    for (var r = 0; r < nsBands.length; r++) if (a < nsBands[r][1] - 1e-9 && b > nsBands[r][0] + 1e-9) return nsBands[r];
+    return null;
+  }
+
+  // Tramos donde cabe la mesa ENTERA de alto: se intersecan varias líneas.
+  function rowSegs(yb) {
+    var n = Math.max(2, Math.ceil(collH / 0.4)), acc = null;
+    for (var k = 0; k <= n; k++) {
+      var iv = usableAt(yb + collH * k / n);
+      acc = (acc === null) ? iv : ivInter(acc, iv);
+      if (!acc.length) return [];
+    }
+    return acc;
+  }
+  // Tolerancia de contención: el core comprueba `contains` contra
+  // `poly_r.buffer(0.05)`, 5 cm de holgura. Sin ella, un borde que se desvía
+  // dos centímetros a lo largo de la parcela tira la PRIMERA mesa de cada fila
+  // —la rejilla arranca en el bbox— y se pierde un tracker por fila.
+  var FIT_TOL = 0.05;
+  function fits(segs, a, b) {
+    for (var i = 0; i < segs.length; i++) if (a >= segs[i][0] - FIT_TOL && b <= segs[i][1] + FIT_TOL) return true;
+    return false;
+  }
+
+  // Colocación de una fila (una talla). Port de place_row_aligned/adaptive.
+  function placeSingle(segs, yb, offX, sz) {
+    var sw = sz.structW, sm = sw + gapMotor;
+    var span = isTracker ? (spt - 1) * sm + sw : sw;
+    var adv  = isTracker ? (spt - 1) * sm + (sw + gapNs) : sm;
+    var out = [];
+    function pack(xStart, xEnd) {
+      var res = [], x = xStart, guard = 0;
+      while (x + span <= xEnd + 1e-6 && guard++ < 100000) {
+        var hit = roadHit(x, x + span);
+        if (hit) { x = hit[1]; continue; }
+        var buf = [], ok = true;
+        for (var st = 0; st < (isTracker ? spt : 1); st++) {
+          var xs = x + st * sm;
+          if (!fits(segs, xs, xs + sw)) { ok = false; break; }
+          buf.push({ x0: xs, x1: xs + sw, y0: yb, y1: yb + sz.collH, mods: sz.modsAct });
+        }
+        if (ok) for (var q2 = 0; q2 < buf.length; q2++) res.push(buf[q2]);
+        x += adv;
+      }
+      return res;
+    }
+    if (mode === "aligned") return pack(ix0 + offX, ix1);
+    // adaptive: cada tramo arranca donde más quepa (varias fases)
+    for (var g = 0; g < segs.length; g++) {
+      var s0 = segs[g][0], s1 = segs[g][1];
+      if (cfg.alignGrid) {
+        var base0 = ix0 + offX, kk = Math.ceil((s0 - base0) / adv - 1e-9);
+        out = out.concat(pack(base0 + Math.max(kk, 0) * adv, s1));
+        continue;
+      }
+      var cands = [s0, s0 + offX], room = s1 - span - s0;
+      if (room > 0) cands.push(s1 - span - Math.floor(room / adv) * adv);
+      cands = cands.concat([s0 + adv * 0.25, s0 + adv * 0.5, s0 + adv * 0.75]);
+      var best = null;
+      for (var c = 0; c < cands.length; c++) {
+        if (cands[c] < s0 - 1e-9) continue;
+        var tr = pack(cands[c], s1);
+        if (best === null || tr.length > best.length) best = tr;
+      }
+      if (best) out = out.concat(best);
+    }
+    return out;
+  }
+
+  // Multi-talla: greedy largest-first sobre rejilla común + segunda pasada fina.
+  function placeMulti(segs, yb, offX) {
+    var out = [], minSw = sizes[sizes.length - 1].structW;
+    var fine = Math.max(minSw * 0.1, 0.4), x = ix0 + offX, guard = 0;
+    function trySize(sz, xx) {
+      var sw = sz.structW, sm = sw + gapMotor;
+      var span = isTracker ? (spt - 1) * sm + sw : sw;
+      if (xx + span > ix1 + 1e-6) return null;
+      if (roadHit(xx, xx + span)) return null;
+      var buf = [];
+      for (var st = 0; st < (isTracker ? spt : 1); st++) {
+        var xs = xx + st * sm;
+        if (!fits(segs, xs, xs + sw)) return null;
+        buf.push({ x0: xs, x1: xs + sw, y0: yb, y1: yb + sz.collH, mods: sz.modsAct });
+      }
+      return { buf: buf, span: span, sm: sm };
+    }
+    // ¿bloquearía este corto a un largo que cabe un poco más adelante?
+    function largerAhead(xx, span, sw) {
+      var lookEnd = xx + span + (isTracker ? gapNs : 0);
+      for (var b = 0; b < sizes.length; b++) {
+        if (sizes[b].structW <= sw) continue;
+        var step = Math.max(Math.min(sw * 0.25, 0.5), 0.25), xp = xx + step;
+        while (xp <= lookEnd + 1e-6) { if (trySize(sizes[b], xp)) return true; xp += step; }
+      }
+      return false;
+    }
+    while (x <= ix1 + 1e-6 && guard++ < 200000) {
+      var band = null;
+      for (var r = 0; r < nsBands.length; r++) if (nsBands[r][0] <= x && x < nsBands[r][1]) band = nsBands[r];
+      if (band) { x = band[1]; continue; }
+      var placed = false;
+      for (var i2 = 0; i2 < sizes.length; i2++) {
+        var t = trySize(sizes[i2], x);
+        if (!t) continue;
+        if (i2 > 0 && largerAhead(x, t.span, sizes[i2].structW)) continue;
+        for (var k2 = 0; k2 < t.buf.length; k2++) out.push(t.buf[k2]);
+        x += isTracker ? (t.span + gapNs) : t.sm;
+        placed = true; break;
+      }
+      if (!placed) x += fine;
+    }
+    // segunda pasada: paso fino por los huecos, saltando lo ya ocupado
+    var occ = out.map(function (s) { return [s.x0, s.x1]; }).sort(function (a, b) { return a[0] - b[0]; });
+    var fine2 = Math.max(minSw * 0.2, 0.4); x = ix0 + offX; guard = 0;
+    while (x <= ix1 + 1e-6 && guard++ < 200000) {
+      var jumped = false;
+      for (var o = 0; o < occ.length; o++) if (occ[o][0] - gapNs * 0.5 <= x && x < occ[o][1] + gapNs * 0.5) { x = occ[o][1] + gapNs * 0.5; jumped = true; break; }
+      if (jumped) continue;
+      var placed2 = false;
+      for (var i3 = 0; i3 < sizes.length; i3++) {
+        var t2 = trySize(sizes[i3], x);
+        if (!t2) continue;
+        var clash = false;
+        for (var o2 = 0; o2 < occ.length; o2++) if (x < occ[o2][1] + gapNs * 0.5 && (x + t2.span) > occ[o2][0] - gapNs * 0.5) { clash = true; break; }
+        if (clash) continue;
+        for (var k3 = 0; k3 < t2.buf.length; k3++) out.push(t2.buf[k3]);
+        occ.push([x, x + t2.span]); occ.sort(function (a, b) { return a[0] - b[0]; });
+        x += t2.span + (isTracker ? gapNs : 0);
+        placed2 = true; break;
+      }
+      if (!placed2) x += fine2;
+    }
+    return out;
+  }
+
+  var minSizeMods = sizes[sizes.length - 1].modsAct;
+  var minLineModules = minStructs * minSizeMods;
+  function rowModules(row) { var m = 0; for (var i = 0; i < row.length; i++) m += row[i].mods; return m; }
+
+  var rows = [], discarded = [], roadsEo = [], ri = 0;
+  var roadQ = [];
+  if (cfg.roadEvery > 0) {
+    var estRows = Math.max(0, Math.floor((iy1 - iy0) / pitch));
+    roadQ = centeredRoadPositions(bifila ? Math.floor(estRows / 2) : estRows, Math.round(cfg.roadEvery));
+  }
+  var yy = iy0, guardRows = 0;
+  while (yy + collH <= iy1 + 1e-6 && guardRows++ < 20000) {
+    var trkIdx = bifila ? Math.floor(ri / 2) : ri, trkStart = bifila ? (ri % 2 === 0) : true;
+    if (cfg.roadEvery > 0 && roadQ.length && trkStart && trkIdx === roadQ[0]) {
+      if (yy + (+cfg.roadW) + collH > iy1) break;
+      roadsEo.push({ y0: yy, y1: yy + (+cfg.roadW), segs: rowSegs(yy) });
+      yy += (+cfg.roadW); roadQ.shift();
+    }
+    var offIdx = bifila ? Math.floor(ri / 2) : ri;
+    var offX = (cfg.rowOffset === "half" && offIdx % 2 === 1) ? stepMotor / 2 : 0;
+    var segs = rowSegs(yy);
+    var row = segs.length ? (isMulti ? placeMulti(segs, yy, offX) : placeSingle(segs, yy, offX, base)) : [];
+    for (var q3 = 0; q3 < row.length; q3++) row[q3].row = ri;
+    if (bifila) rows.push(row);                        // paridad ri: A=2k, B=2k+1
+    else if (rowModules(row) >= minLineModules) rows.push(row);
+    else if (row.length) discarded.push(row);
+    yy += pitch; ri++;
+  }
+
+  /* 5) bifila: emparejar A/B, espejar B sobre A y quedarse con las parejas */
+  var bifTrimmed = 0, abMaxDx = 0;
+  if (bifila) {
+    var paired = [], xtol = Math.max(0.35, stepMotor * 0.55);
+    for (var p = 0; p + 1 < rows.length; p += 2) {
+      var ra = rows[p], rb = rows[p + 1];
+      if (!ra.length || !rb.length) {
+        if (ra.length) { bifTrimmed += ra.length; discarded.push(ra); }
+        if (rb.length) { bifTrimmed += rb.length; discarded.push(rb); }
+        continue;
+      }
+      var mm = matchRowsByX(ra, rb, xtol), pa = mm[0], pb = mm[1], oa = mm[2], ob = mm[3];
+      if (oa.length && ob.length) {                    // segundo pase relajado
+        var m2 = matchRowsByX(oa, ob, Math.max(xtol, stepMotor * 0.9));
+        pa = pa.concat(m2[0]); pb = pb.concat(m2[1]); oa = m2[2]; ob = m2[3];
+      }
+      bifTrimmed += oa.length + ob.length;
+      if (oa.length) discarded.push(oa);
+      if (ob.length) discarded.push(ob);
+      if (pa.length && pb.length) {
+        for (var z = 0; z < pa.length; z++) {          // la biela une A y B: mismo X
+          var dx = (pa[z].x0 + pa[z].x1) / 2 - (pb[z].x0 + pb[z].x1) / 2;
+          if (Math.abs(dx) > abMaxDx) abMaxDx = Math.abs(dx);
+          pb[z].x0 += dx; pb[z].x1 += dx;
+        }
+        paired.push(pa); paired.push(pb);
+      } else { bifTrimmed += pa.length + pb.length; if (pa.length) discarded.push(pa); if (pb.length) discarded.push(pb); }
+    }
+    if (rows.length % 2 === 1 && rows[rows.length - 1].length) {
+      bifTrimmed += rows[rows.length - 1].length;
+      discarded.push(rows[rows.length - 1]);
+    }
+    rows = paired;
+    // filtro de módulos por línea DESPUÉS de emparejar (una línea de pocos
+    // trackers GRANDES es válida; solo caen los fragmentos del vértice)
+    if (minLineModules > minSizeMods) {
+      var filt = [];
+      for (var pp = 0; pp + 1 < rows.length; pp += 2) {
+        if (rowModules(rows[pp]) >= minLineModules && rowModules(rows[pp + 1]) >= minLineModules) {
+          filt.push(rows[pp]); filt.push(rows[pp + 1]);
+        } else { bifTrimmed += rows[pp].length + rows[pp + 1].length; discarded.push(rows[pp]); discarded.push(rows[pp + 1]); }
+      }
+      rows = filt;
+    }
+    // «Si es bifila, es bifila»: conteo PAR de mesas por línea, para que toda
+    // mesa complete fila y toda fila tenga pareja.
+    var odd = 0;
+    for (var oi = 0; oi < rows.length; oi++) {
+      if (rows[oi].length % 2 === 1) { discarded.push([rows[oi].pop()]); odd++; }
+    }
+    if (odd) aviso("info", "bifila_recorte_par", odd + " mesa(s) recortada(s) para que toda línea tenga conteo par.");
+  }
+
+  /* 6) poda de filas sueltas — solo con mín. = 1, igual que el cuaderno: con
+        mín. = 2 la poda mediana-relativa está desactivada a propósito. */
+  var pruneFrac = cfg.pruneFrac == null ? 0.30 : +cfg.pruneFrac, pruned = 0;
+  if (pruneFrac > 0 && minStructs <= 1 && rows.length > 2) {
+    var lens = rows.map(function (r) { return r.length; }).filter(function (n) { return n > 0; }).sort(function (a, b) { return a - b; });
+    var med = lens.length ? lens[Math.floor(lens.length / 2)] : 0, thr = pruneFrac * med;
+    var keep = [];
+    for (var kk2 = 0; kk2 < rows.length; kk2++) {
+      if (rows[kk2].length && rows[kk2].length < thr) { pruned += rows[kk2].length; discarded.push(rows[kk2]); }
+      else keep.push(rows[kk2]);
+    }
+    rows = keep;
+  }
+
+  /* 7) centrar el bloque sin perder estructuras */
+  var all = [];
+  for (var rr = 0; rr < rows.length; rr++) for (var ss = 0; ss < rows[rr].length; ss++) all.push(rows[rr][ss]);
+  var shift = [0, 0];
+  if (cfg.center !== false && all.length) {
+    var bx0 = Infinity, bx1 = -Infinity, by0 = Infinity, by1 = -Infinity;
+    for (var a2 = 0; a2 < all.length; a2++) {
+      if (all[a2].x0 < bx0) bx0 = all[a2].x0; if (all[a2].x1 > bx1) bx1 = all[a2].x1;
+      if (all[a2].y0 < by0) by0 = all[a2].y0; if (all[a2].y1 > by1) by1 = all[a2].y1;
+    }
+    var dx0 = ((ix1 - bx1) - (bx0 - ix0)) / 2, dy0 = ((iy1 - by1) - (by0 - iy0)) / 2;
+    shift = trialShift(all, dx0, dy0);
+  }
+  function trialShift(list, dx, dy) {
+    for (var att = 0; att < 4; att++) {
+      var okAll = true, cache = {};
+      for (var i4 = 0; i4 < list.length; i4++) {
+        var s4 = list[i4], key = (s4.y0 + dy).toFixed(3) + "|" + (s4.y1 - s4.y0).toFixed(3);
+        if (!cache[key]) cache[key] = rowSegs(s4.y0 + dy);
+        if (!fits(cache[key], s4.x0 + dx, s4.x1 + dx)) { okAll = false; break; }
+      }
+      if (okAll) {
+        for (var i5 = 0; i5 < list.length; i5++) { list[i5].x0 += dx; list[i5].x1 += dx; list[i5].y0 += dy; list[i5].y1 += dy; }
+        return [dx, dy];
+      }
+      dx /= 2; dy /= 2;
+    }
+    return [0, 0];
+  }
+
+  /* 8) de vuelta al mundo: desgirar, a UTM y a lon/lat */
+  function back(x, y) { return fromLocal(x, y); }
+  function rectWorld(s) {
+    return [back(s.x0, s.y0), back(s.x1, s.y0), back(s.x1, s.y1), back(s.x0, s.y1)];
+  }
+  var structures = all.map(function (s) {
+    var w = rectWorld(s);
+    return { utm: w, lonlat: w.map(inv), mods: s.mods, row: s.row,
+             len: s.x1 - s.x0, ap: s.y1 - s.y0,
+             cx: (s.x0 + s.x1) / 2, cy: (s.y0 + s.y1) / 2 };
+  });
+  var roads = [];
+  for (var rd = 0; rd < roadsEo.length; rd++) {
+    var seg = roadsEo[rd].segs;
+    for (var sg = 0; sg < seg.length; sg++) {
+      var q4 = [[seg[sg][0], roadsEo[rd].y0], [seg[sg][1], roadsEo[rd].y0],
+                [seg[sg][1], roadsEo[rd].y1], [seg[sg][0], roadsEo[rd].y1]].map(function (p) { return back(p[0], p[1]); });
+      roads.push({ utm: q4, lonlat: q4.map(inv), tipo: "eo" });
+    }
+  }
+  for (var nb = 0; nb < nsBands.length; nb++) {
+    var q5 = [[nsBands[nb][0], iy0], [nsBands[nb][1], iy0],
+              [nsBands[nb][1], iy1], [nsBands[nb][0], iy1]].map(function (p) { return back(p[0], p[1]); });
+    roads.push({ utm: q5, lonlat: q5.map(inv), tipo: "ns" });
+  }
+  // contorno del área útil, para dibujarlo: se reconstruye del barrido
+  var innerBand = [];
+  for (var yb2 = bb[1] + SCAN / 2; yb2 <= bb[3]; yb2 += SCAN * 4) {
+    var iv2 = usableAt(yb2);
+    for (var q6 = 0; q6 < iv2.length; q6++)
+      innerBand.push({ y: yb2, x0: iv2[q6][0], x1: iv2[q6][1] });
+  }
+
+  /* 9) estadísticas — mismas fórmulas que el core */
+  var nStructs = structures.length, nMods = 0, colArea = 0;
+  for (var st2 = 0; st2 < structures.length; st2++) { nMods += structures[st2].mods; colArea += structures[st2].len * structures[st2].ap; }
+  var kWp = nMods * (moduleWp / 1000);
+  var nRowsNonEmpty = rows.filter(function (r) { return r.length; }).length;
+  var rowLens = rows.filter(function (r) { return r.length; }).map(function (r) { return r.length; });
+  var discStructs = 0; for (var d2 = 0; d2 < discarded.length; d2++) discStructs += discarded[d2].length;
+  var bySize = {};
+  for (var b2 = 0; b2 < structures.length; b2++) bySize[structures[b2].mods] = (bySize[structures[b2].mods] || 0) + 1;
+
+  var gcr = (isTracker && pitch > 0) ? collH / pitch : (innerArea > 0 ? colArea / innerArea : 0);
+  if (gcr > 0.7) aviso("warn", "gcr_alto", "GCR = " + gcr.toFixed(3) + " es alto: considera aumentar el pitch.");
+  if (!nStructs) aviso("fail", "layout_vacio", "No cabe ninguna estructura. Revisa pitch, mods/string o el tamaño de la parcela.");
+
+  var stats = {
+    epsg: epsg, utm_zone: zone,
+    structures: nStructs, trackers: isTracker ? Math.floor(nStructs / spt) : nStructs,
+    strings: nStructs, rows: nRowsNonEmpty, modules: nMods, kWp: kWp,
+    GCR: gcr, GCR_area: innerArea > 0 ? colArea / innerArea : 0,
+    fill_factor: polyArea > 0 ? colArea / polyArea : 0,
+    usable_fill: innerArea > 0 ? colArea / innerArea : 0,
+    density_kWp_ha: polyArea > 0 ? kWp / (polyArea / 1e4) : 0,
+    poly_area_m2: polyArea, inner_area_m2: innerArea, col_area_m2: colArea,
+    struct_w_m: structW, mesa_len_m: structW, collector_h_m: collH,
+    fila_len_m: isTracker ? 2 * structW + gapMotor : null,
+    mods_per_struct: base.modsAct, mods_per_string: base.modsAct,
+    pitch_m: pitch, pitch_min_geom_m: collH, setback_m: setback,
+    gap_modules_m: gapModules, gap_motor_m: gapMotor, gap_ns_m: gapNs,
+    mod_len_m: +cfg.modLen, mod_wid_m: +cfg.modWid, module_wp: moduleWp,
+    table_type: cfg.table, mount_type: mount, bifila: bifila,
+    is_multi_size: isMulti, by_size: bySize,
+    layout_mode: mode, panel_az_deg: eff, grid_angle_deg: eff,
+    meridian_convergence_deg: conv,
+    min_structs_row: rowLens.length ? Math.min.apply(null, rowLens) : 0,
+    max_structs_row: rowLens.length ? Math.max.apply(null, rowLens) : 0,
+    avg_structs_row: rowLens.length ? rowLens.reduce(function (a, b) { return a + b; }, 0) / rowLens.length : 0,
+    discarded_structs: discStructs, discarded_rows: discarded.length,
+    bifila_trimmed: bifTrimmed, ab_max_dx_m: abMaxDx, pruned_structs: pruned,
+    center_shift_m: shift, qa_avisos: avisos,
+    qa_geometria_ok: !avisos.some(function (a) { return a.severidad === "fail"; }),
+    ms: ((typeof performance !== "undefined" && performance.now) ? performance.now() : 0) - t0
+  };
+  return { structures: structures, roads: roads, rows: rows, sizes: sizes,
+           parcel_utm: extU, holes_utm: holesU, excl_utm: exclU,
+           inner_band: innerBand, rot: rot, center: ctr, bbox_inner: [ix0, iy0, ix1, iy1],
+           stats: stats, avisos: avisos,
+           toLonLat: inv, toUtm: fwd, fromLocal: fromLocal, toLocal: toLocal };
+}
+
+function emptyResult(cfg, avisos, polyArea, epsg, structW, collH, pitch, mount, eff, t0) {
+  return { structures: [], roads: [], rows: [], sizes: [], parcel_utm: [], holes_utm: [], excl_utm: [],
+           inner_band: [], rot: 0, center: [0, 0], bbox_inner: [0, 0, 0, 0], avisos: avisos,
+           stats: { structures: 0, trackers: 0, rows: 0, modules: 0, kWp: 0, GCR: 0,
+                    fill_factor: 0, usable_fill: 0, density_kWp_ha: 0, poly_area_m2: polyArea,
+                    inner_area_m2: 0, col_area_m2: 0, struct_w_m: structW, mesa_len_m: structW,
+                    collector_h_m: collH, pitch_m: pitch, mount_type: mount, panel_az_deg: eff,
+                    epsg: epsg, qa_avisos: avisos, qa_geometria_ok: false, ms: 0 } };
+}
+
+/* ── GeoJSON: mismo formato que lee el Explorador de layout ──────────── */
+function toGeoJSON(res) {
+  var feats = [];
+  for (var i = 0; i < res.structures.length; i++) {
+    var s = res.structures[i], ring = s.lonlat.slice(); ring.push(s.lonlat[0]);
+    feats.push({ type: "Feature", properties: { tipo: "mesa", mods: s.mods, fila: s.row,
+                 largo_m: +s.len.toFixed(3), apertura_m: +s.ap.toFixed(3) },
+                 geometry: { type: "Polygon", coordinates: [ring] } });
+  }
+  for (var r = 0; r < res.roads.length; r++) {
+    var q = res.roads[r].lonlat.slice(); q.push(res.roads[r].lonlat[0]);
+    feats.push({ type: "Feature", properties: { tipo: "vial", orientacion: res.roads[r].tipo },
+                 geometry: { type: "Polygon", coordinates: [q] } });
+  }
+  return { type: "FeatureCollection", features: feats };
+}
+
+return { compute: compute, toGeoJSON: toGeoJSON,
+         structureDims: structureDims, structureDimsMulti: structureDimsMulti,
+         utmFwd: utmFwd, utmInv: utmInv, utmZone: utmZone, utmEpsg: utmEpsg,
+         meridianConvergence: meridianConvergence,
+         insideAt: insideAt, bandAt: bandAt, ivSub: ivSub, ivInter: ivInter, ivNorm: ivNorm,
+         centeredRoadPositions: centeredRoadPositions, matchRowsByX: matchRowsByX,
+         ringArea: ringArea, ringCentroid: ringCentroid };
+})();
+if (typeof module !== "undefined" && module.exports) module.exports = LAY;
+/* ═══════════════════ MOTOR DE LAYOUT — fin ═══════════════════ */
+</script>
+
+<script>
+"use strict";
+function $(id){return document.getElementById(id);}
+var RES=null, PARCEL=null, HOLES=[], DRAW=null;
+
+/* ===== plantas de la cartera (factiun_plantas, localStorage compartido) ===== */
+var PLANTS={}, COORDS_FALLBACK={'24002':[41.57634,-0.79814],'24025':[39.11821,-1.15985],'24019':[-16.59577,-71.80644]};
+function loadPlants(){
+  try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
+  var opts='<option value="">— manual —</option>';
+  Object.keys(PLANTS).sort().forEach(function(cod){var p=PLANTS[cod];opts+='<option value="'+cod+'">'+((p&&p.nombre)||'?')+' · '+cod+'</option>';});
+  $('plant').innerHTML=opts;
+}
+$('plant').onchange=function(){var cod=this.value;if(!cod)return;var p=PLANTS[cod]||{};
+  var c=(p.lat!=null&&p.lon!=null)?[p.lat,p.lon]:COORDS_FALLBACK[cod];
+  if(c){$('lat').value=c[0];$('lon').value=c[1];}
+  if(p.pitch&&!isNaN(parseFloat(p.pitch)))$('pitch').value=parseFloat(p.pitch);
+  buildParcel();draw();};
+
+/* ===== motor SolarGPT (opcional): mismo protocolo que el Explorador ===== */
+var ENGINE=null;
+function engineUrls(){var u=[];try{var s=localStorage.getItem('factiun_engine_url');if(s)u.push(s.replace(/\/+$/,''));}catch(e){}[8765,8000,9000].forEach(function(p){u.push('http://127.0.0.1:'+p);});return u;}
+async function detectEngine(){
+  var urls=engineUrls();
+  for(var i=0;i<urls.length;i++){
+    try{var r=await fetch(urls[i]+'/health',{cache:'no-store'});
+      if(r.ok){var j=await r.json();if(j&&j.ok){ENGINE=urls[i];setEngine(true,'motor ✓ '+(/127\.0\.0\.1|localhost/.test(urls[i])?'(local)':'(remoto)'));
+        $('calc').querySelector('option[value=core]').disabled=false;return;}}}catch(e){}}
+  setEngine(false,'motor no conectado · clic para fijar URL');
+}
+function setEngine(on,txt){$('engine').className='engine '+(on?'on':'off');$('engineTxt').textContent=txt;}
+$('engine').onclick=function(){var cur='';try{cur=localStorage.getItem('factiun_engine_url')||'';}catch(e){}
+  var u=prompt('URL del motor SolarGPT.\nColab: pega aquí el túnel (https://xxx.trycloudflare.com).\nVacío = solo local (127.0.0.1).',cur);
+  if(u===null)return;try{if(u.trim())localStorage.setItem('factiun_engine_url',u.trim());else localStorage.removeItem('factiun_engine_url');}catch(e){}
+  ENGINE=null;setEngine(false,'reconectando…');detectEngine();};
+
+/* ===== parcela ===== */
+function rectParcel(){
+  var lat=+$('lat').value,lon=+$('lon').value,W=+$('pw').value,H=+$('ph').value,rot=(+$('prot').value||0);
+  var mLon=111320*Math.cos(lat*Math.PI/180),mLat=110540,c=Math.cos(rot*Math.PI/180),s=Math.sin(rot*Math.PI/180);
+  return [[-W/2,-H/2],[W/2,-H/2],[W/2,H/2],[-W/2,H/2]].map(function(p){
+    var x=p[0]*c-p[1]*s, y=p[0]*s+p[1]*c;
+    return [lon+x/mLon, lat+y/mLat];
+  });
+}
+function parseGeoJSON(txt){
+  var gj=JSON.parse(txt),g=gj;
+  if(gj.type==='FeatureCollection'){var f=(gj.features||[]).filter(function(x){return x.geometry&&/Polygon/.test(x.geometry.type);})[0];if(!f)throw new Error('sin polígonos');g=f.geometry;}
+  else if(gj.type==='Feature')g=gj.geometry;
+  if(!g||!g.type)throw new Error('geometría ausente');
+  var rings;
+  if(g.type==='Polygon')rings=g.coordinates;
+  else if(g.type==='MultiPolygon')rings=g.coordinates[0];
+  else throw new Error('tipo no soportado: '+g.type);
+  return {ext:rings[0].map(function(c){return [c[0],c[1]];}),
+          holes:rings.slice(1).map(function(r){return r.map(function(c){return [c[0],c[1]];});})};
+}
+function buildParcel(){
+  var m=$('parcelMode').value;
+  if(m==='rect'){PARCEL=rectParcel();HOLES=[];}
+  else if(m==='draw'&&DRAW&&DRAW.length>=3){PARCEL=DRAW.slice();HOLES=[];}
+  else if(m==='geojson'&&PARCEL){/* ya fijada por «Usar este GeoJSON» */}
+  tagParcel();
+}
+function tagParcel(){
+  if(!PARCEL||PARCEL.length<3){$('parcelTag').textContent='parcela sin definir';return;}
+  var utm=PARCEL.map(function(c){var z=LAY.utmZone(c[0]);return LAY.utmFwd(c[0],c[1],z,c[1]<0);});
+  var ha=Math.abs(LAY.ringArea(utm))/1e4;
+  var hh=HOLES.reduce(function(a,h){var u=h.map(function(c){var z=LAY.utmZone(c[0]);return LAY.utmFwd(c[0],c[1],z,c[1]<0);});return a+Math.abs(LAY.ringArea(u))/1e4;},0);
+  $('parcelTag').textContent=PARCEL.length+' vértices · '+(ha-hh).toFixed(2)+' ha'+(HOLES.length?(' · '+HOLES.length+' exclusión(es)'):'');
+}
+$('parcelMode').onchange=function(){
+  $('paneRect').style.display=this.value==='rect'?'':'none';
+  $('paneGeo').style.display=this.value==='geojson'?'':'none';
+  $('paneDraw').style.display=this.value==='draw'?'':'none';
+  if(this.value==='rect'){buildParcel();draw();}
+  if(this.value==='draw'&&!DRAW){DRAW=[];}
+};
+['lat','lon','pw','ph','prot'].forEach(function(id){$(id).addEventListener('change',function(){buildParcel();draw();});});
+$('geoFileBtn').onclick=function(){$('geoFile').click();};
+$('geoFile').onchange=function(e){var f=e.target.files[0];if(!f)return;var rd=new FileReader();
+  rd.onload=function(ev){$('geotxt').value=ev.target.result;applyGeo();};rd.readAsText(f);$('geoFile').value='';};
+$('geoApplyBtn').onclick=applyGeo;
+function applyGeo(){
+  try{var g=parseGeoJSON($('geotxt').value);PARCEL=g.ext;HOLES=g.holes;tagParcel();draw();
+    $('foot').textContent='GeoJSON cargado: '+PARCEL.length+' vértices'+(HOLES.length?(' y '+HOLES.length+' hueco(s) como exclusión'):'')+'. Pulsa Generar.';
+  }catch(err){$('foot').innerHTML='<span style="color:var(--dead)">No se pudo leer el GeoJSON: '+(err&&err.message||err)+'</span>';}
+}
+
+/* ===== dibujo de parcela sobre el lienzo ===== */
+var drawing=false;
+$('drawStart').onclick=function(){drawing=!drawing;DRAW=drawing?[]:DRAW;$('cv').classList.toggle('drawing',drawing);
+  this.textContent=drawing?'⏹ Terminar':'✏️ Empezar a dibujar';draw();};
+$('drawClear').onclick=function(){DRAW=[];PARCEL=null;draw();tagParcel();};
+$('cv').addEventListener('click',function(ev){
+  if(!drawing)return;
+  var p=canvasToWorld(ev);if(!p)return;
+  // El doble clic que cierra el polígono llega TAMBIÉN como dos clics: sin este
+  // filtro el último vértice salía repetido tres veces.
+  var last=DRAW[DRAW.length-1];
+  if(last&&Math.abs(px(last[0],last[1])[0]-px(p[0],p[1])[0])<5&&Math.abs(px(last[0],last[1])[1]-px(p[0],p[1])[1])<5)return;
+  DRAW.push(p);if(DRAW.length>=3){PARCEL=DRAW.slice();HOLES=[];}
+  tagParcel();draw();
+});
+$('cv').addEventListener('dblclick',function(){
+  if(!drawing)return;drawing=false;$('cv').classList.remove('drawing');
+  $('drawStart').textContent='✏️ Empezar a dibujar';
+  if(DRAW&&DRAW.length>=3){PARCEL=DRAW.slice();HOLES=[];}
+  tagParcel();draw();
+});
+
+/* ===== vista del lienzo ===== */
+var VIEW=null;
+function worldBounds(){
+  var pts=[];
+  if(PARCEL)pts=pts.concat(PARCEL);
+  if(DRAW&&DRAW.length)pts=pts.concat(DRAW);
+  if(!pts.length){var lat=+$('lat').value,lon=+$('lon').value;pts=[[lon-0.004,lat-0.003],[lon+0.004,lat+0.003]];}
+  var b=[1e9,1e9,-1e9,-1e9];
+  pts.forEach(function(p){b[0]=Math.min(b[0],p[0]);b[1]=Math.min(b[1],p[1]);b[2]=Math.max(b[2],p[0]);b[3]=Math.max(b[3],p[1]);});
+  return b;
+}
+function setView(){
+  var cv=$('cv'),b=worldBounds(),pad=26;
+  var latc=(b[1]+b[3])/2,kx=Math.cos(latc*Math.PI/180);
+  var bw=Math.max((b[2]-b[0])*kx,1e-7),bh=Math.max(b[3]-b[1],1e-7);
+  var s=Math.min((cv.width-2*pad)/bw,(cv.height-2*pad)/bh);
+  VIEW={b:b,kx:kx,s:s,ox:(cv.width-bw*s)/2,oy:(cv.height-bh*s)/2,H:cv.height};
+}
+function px(lon,lat){return [VIEW.ox+(lon-VIEW.b[0])*VIEW.kx*VIEW.s, VIEW.H-(VIEW.oy+(lat-VIEW.b[1])*VIEW.s)];}
+function canvasToWorld(ev){
+  if(!VIEW)setView();
+  var cv=$('cv'),r=cv.getBoundingClientRect();
+  var cx=(ev.clientX-r.left)*(cv.width/r.width), cy=(ev.clientY-r.top)*(cv.height/r.height);
+  return [VIEW.b[0]+(cx-VIEW.ox)/(VIEW.kx*VIEW.s), VIEW.b[1]+((VIEW.H-cy)-VIEW.oy)/VIEW.s];
+}
+function draw(){
+  var cv=$('cv'),ctx=cv.getContext('2d');setView();
+  ctx.clearRect(0,0,cv.width,cv.height);ctx.fillStyle='#0F151D';ctx.fillRect(0,0,cv.width,cv.height);
+  function ring(pts,fill,stroke,lw,dash){
+    if(!pts||!pts.length)return;
+    ctx.setLineDash(dash||[]);ctx.beginPath();
+    for(var i=0;i<pts.length;i++){var p=px(pts[i][0],pts[i][1]);i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}
+    ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}
+    if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||1;ctx.stroke();}ctx.setLineDash([]);
+  }
+  if(RES&&RES.inner_band&&RES.inner_band.length){          // área útil (tras setback)
+    ctx.fillStyle='rgba(54,211,153,.16)';
+    var invF=RES.toLonLat, C=RES.center, rot=RES.rot;
+    RES.inner_band.forEach(function(bnd){
+      var a=RES.fromLocal(bnd.x0,bnd.y),b=RES.fromLocal(bnd.x1,bnd.y);
+      var pa=px(invF(a)[0],invF(a)[1]),pb=px(invF(b)[0],invF(b)[1]);
+      ctx.fillRect(Math.min(pa[0],pb[0]),Math.min(pa[1],pb[1])-1,Math.abs(pb[0]-pa[0])||1,Math.max(Math.abs(pb[1]-pa[1]),1.6));
+    });
+  }
+  ring(PARCEL,'rgba(84,166,255,.10)','#54A6FF',1.6);
+  HOLES.forEach(function(h){ring(h,'rgba(208,89,79,.28)','#D0594F',1.2);});
+  if(RES){
+    ctx.fillStyle='#F6A623';
+    RES.roads.forEach(function(rd){ring(rd.lonlat,'rgba(246,166,35,.55)','rgba(246,166,35,.9)',0.8);});
+    var s=RES.structures;
+    ctx.strokeStyle='rgba(11,15,20,.55)';
+    for(var i=0;i<s.length;i++){
+      var q=s[i].lonlat;
+      ctx.beginPath();
+      for(var k=0;k<q.length;k++){var p=px(q[k][0],q[k][1]);k?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}
+      ctx.closePath();
+      ctx.fillStyle=(RES.stats.is_multi_size&&s[i].mods!==RES.stats.mods_per_struct)?'#54A6FF':'#36D399';
+      ctx.fill();
+      if(s.length<3000){ctx.lineWidth=0.4;ctx.stroke();}
+    }
+  }
+  if(drawing&&DRAW&&DRAW.length){
+    ctx.strokeStyle='#F6A623';ctx.lineWidth=1.6;ctx.beginPath();
+    for(var d=0;d<DRAW.length;d++){var pp=px(DRAW[d][0],DRAW[d][1]);d?ctx.lineTo(pp[0],pp[1]):ctx.moveTo(pp[0],pp[1]);}
+    ctx.stroke();
+    DRAW.forEach(function(v){var pv=px(v[0],v[1]);ctx.fillStyle='#F6A623';ctx.beginPath();ctx.arc(pv[0],pv[1],3,0,7);ctx.fill();});
+  }
+  drawScale(ctx,cv);
+}
+function drawScale(ctx,cv){
+  if(!VIEW)return;
+  var mPerPx=1/(VIEW.s/110540);                       // grados→m en latitud
+  var target=cv.width*0.18*mPerPx, pow=Math.pow(10,Math.floor(Math.log10(target)));
+  var nice=[1,2,5,10].map(function(f){return f*pow;}).filter(function(v){return v<=target*2;});
+  var L=nice[nice.length-1]||100, w=L/mPerPx;
+  ctx.strokeStyle='#5E6F7E';ctx.fillStyle='#8093A4';ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.moveTo(16,cv.height-18);ctx.lineTo(16+w,cv.height-18);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(16,cv.height-22);ctx.lineTo(16,cv.height-14);ctx.moveTo(16+w,cv.height-22);ctx.lineTo(16+w,cv.height-14);ctx.stroke();
+  ctx.font='11px ui-monospace,monospace';ctx.fillText(L>=1000?(L/1000)+' km':L+' m',16,cv.height-26);
+}
+
+/* ===== azimut de filas derivado del montaje ===== */
+function syncAz(){
+  var tracker=$('mount').value==='tracker';
+  $('axisLbl').textContent=tracker?'Azimut del eje °':'Azimut módulos °';
+  var ax=+$('axis').value;
+  $('panelAz').value=tracker?(((ax+90)%360)+360)%360:(((ax)%360)+360)%360;
+  $('azTip').textContent=tracker
+    ?'Filas a lo largo del eje (eje N-S 0° → filas N-S). Override manual solo para orientaciones especiales.'
+    :'Filas perpendiculares al azimut de módulos (Sur 180° → filas E-O).';
+  $('bifila').disabled=!tracker;
+  if(!tracker)$('bifila').value='0';
+}
+$('mount').onchange=function(){if(this.value==='fija'&&+$('axis').value===0)$('axis').value=180;syncAz();};
+$('axis').onchange=syncAz;
+
+/* ===== generar ===== */
+function readCfg(){
+  var mods=$('mods').value.split(',').map(function(s){return parseInt(s.trim(),10);}).filter(function(v){return v>0;});
+  if(!mods.length)mods=[28];
+  return {
+    coords:PARCEL, holes:HOLES, exclusions:[],
+    mount:$('mount').value, table:$('table').value, mods:mods.sort(function(a,b){return b-a;}),
+    modLen:+$('modLen').value, modWid:+$('modWid').value, moduleWp:+$('modWp').value,
+    pitch:+$('pitch').value, setback:+$('setback').value, panelAz:+$('panelAz').value,
+    bifila:$('bifila').value==='1', gapModules:+$('gapMod').value,
+    gapMotor:+$('gapMotor').value, gapNs:+$('gapNs').value,
+    roadEvery:+$('roadEvery').value, roadW:+$('roadW').value,
+    roadNsEvery:+$('roadNsEvery').value, roadNsW:+$('roadNsW').value,
+    mode:$('mode').value, minStructs:+$('minStructs').value,
+    rowOffset:$('rowOffset').value, alignGrid:$('alignGrid').checked, center:$('center').checked
+  };
+}
+function fmt(v,d){return (v==null||!isFinite(v))?'—':v.toLocaleString('es-ES',{minimumFractionDigits:d||0,maximumFractionDigits:d||0});}
+function ro(k,v,s){return '<div class="ro"><div class="k">'+k+'</div><div class="v">'+v+(s?' <small>'+s+'</small>':'')+'</div></div>';}
+
+async function generar(){
+  buildParcel();
+  if(!PARCEL||PARCEL.length<3){$('foot').innerHTML='<span style="color:var(--build)">Define primero la parcela.</span>';return;}
+  var cfg=readCfg();
+  $('hint').innerHTML='<span class="busy">calculando…</span>';
+  $('genBtn').disabled=true;
+  await new Promise(function(r){setTimeout(r,20);});
+  try{
+    if($('calc').value==='core'&&ENGINE){ await generarCore(cfg); }
+    else { RES=LAY.compute(cfg); pintar(RES,'navegador'); }
+  }catch(e){
+    $('foot').innerHTML='<span style="color:var(--dead)">No se pudo generar: '+(e&&e.message||e)+'</span>';
+    $('hint').textContent='error';
+  }
+  $('genBtn').disabled=false;
+}
+async function generarCore(cfg){
+  var ring=cfg.coords.slice(); ring.push(cfg.coords[0]);
+  var body={cfg:{coords_lonlat:ring, pitch_m:cfg.pitch, panel_az_deg:cfg.panelAz, setback_m:cfg.setback,
+    mount_type:cfg.mount, table_type:cfg.table, mods_per_struct:(cfg.mods.length>1?cfg.mods:cfg.mods[0]),
+    mod_len:cfg.modLen, mod_wid:cfg.modWid, bifila:cfg.bifila, gap_modules:cfg.gapModules,
+    gap_motor:cfg.gapMotor, gap_ns:cfg.gapNs, road_every:cfg.roadEvery, road_w:cfg.roadW,
+    road_ns_every:cfg.roadNsEvery, road_ns_w:cfg.roadNsW, layout_mode:cfg.mode,
+    align_to_grid:cfg.alignGrid,
+    holes_lonlat:cfg.holes.map(function(h){var r=h.slice();r.push(h[0]);return r;})}, geojson:true};
+  var r=await fetch(ENGINE+'/layout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error('HTTP '+r.status+' · '+(await r.text()).slice(0,180));
+  var j=await r.json(), st=j.stats||{};
+  RES=coreToRes(j,st,cfg);
+  pintar(RES,'motor SolarGPT');
+}
+function coreToRes(j,st,cfg){
+  var feats=(j.geojson&&j.geojson.features)||[], structs=[];
+  feats.forEach(function(f){
+    var g=f.geometry;if(!g)return;
+    var polys=g.type==='Polygon'?[g.coordinates[0]]:(g.type==='MultiPolygon'?g.coordinates.map(function(p){return p[0];}):[]);
+    polys.forEach(function(r){ if(r&&r.length>=4) structs.push({lonlat:r.slice(0,4),mods:st.mods_per_struct||0,row:0,len:st.mesa_len_m||0,ap:st.collector_h_m||0}); });
+  });
+  return {structures:structs, roads:[], rows:[], sizes:[], inner_band:[], stats:st, avisos:(st.qa_avisos||[]),
+          toLonLat:function(p){return p;}, center:[0,0], rot:0};
+}
+function pintar(res,fuente){
+  var st=res.stats;
+  $('ro').innerHTML=
+    ro('Potencia',fmt(st.kWp/1000,2),'MWp')+
+    ro(st.mount_type==='fija'?'Estructuras':'Mesas',fmt(st.structures))+
+    (st.mount_type==='fija'?'':ro('Trackers',fmt(st.trackers)))+
+    ro('Filas',fmt(st.rows))+
+    ro('Módulos',fmt(st.modules))+
+    ro('GCR',fmt(st.GCR,3))+
+    ro('Ocupación',fmt(st.usable_fill*100,1),'%')+
+    ro('Densidad',fmt(st.density_kWp_ha/1000,3),'MWp/ha')+
+    ro('Mesa',fmt(st.mesa_len_m,2),'m')+
+    (st.fila_len_m?ro('Fila',fmt(st.fila_len_m,2),'m'):'')+
+    ro('Parcela',fmt(st.poly_area_m2/1e4,2),'ha')+
+    ro('Área útil',fmt(st.inner_area_m2/1e4,2),'ha');
+  var av=(res.avisos||[]).map(function(a){
+    var cls=a.severidad==='fail'?'fail':(a.severidad==='warn'?'warn':'info');
+    return '<div class="aviso '+cls+'"><b>'+(cls==='fail'?'✖':(cls==='warn'?'⚠':'ℹ'))+'</b> '+a.mensaje+'</div>';
+  }).join('');
+  $('avisos').innerHTML=av;
+  var bs=st.by_size||{},keys=Object.keys(bs);
+  $('sizes').innerHTML=keys.length>1
+    ? '<b>Reparto por talla</b><table><tr><th>Mods/mesa</th><th>Mesas</th><th>%</th></tr>'+
+      keys.sort(function(a,b){return b-a;}).map(function(k){
+        return '<tr><td>'+k+'</td><td>'+bs[k]+'</td><td>'+(100*bs[k]/st.structures).toFixed(1)+'</td></tr>';}).join('')+'</table>'
+    : '';
+  $('hint').textContent=fuente+' · '+(st.ms?Math.round(st.ms)+' ms':'');
+  var extra=[];
+  if(st.discarded_structs)extra.push(fmt(st.discarded_structs)+' descartadas');
+  if(st.bifila_trimmed)extra.push(fmt(st.bifila_trimmed)+' por emparejado bifila');
+  if(st.pruned_structs)extra.push(fmt(st.pruned_structs)+' por poda de filas sueltas');
+  if(st.center_shift_m&&(st.center_shift_m[0]||st.center_shift_m[1]))
+    extra.push('centrado Δx='+st.center_shift_m[0].toFixed(1)+' m, Δy='+st.center_shift_m[1].toFixed(1)+' m');
+  $('foot').innerHTML=st.structures
+    ? ('Implantación de <b>'+fmt(st.structures)+'</b> mesas en <b>'+fmt(st.rows)+'</b> filas · pitch '+st.pitch_m+' m · setback '+st.setback_m+' m · UTM '+(st.epsg||'—')+
+       (extra.length?(' · '+extra.join(' · ')):'')+'.')
+    : 'No cabe ninguna estructura con estos parámetros.';
+  ['expGeo','expDxf','expKml','d3Btn'].forEach(function(id){$(id).disabled=!st.structures;});
+  draw();
+}
+$('genBtn').onclick=generar;
+
+/* ===== salidas ===== */
+function bajar(nombre,txt,mime){
+  var b=new Blob([txt],{type:mime||'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');
+  a.href=u;a.download=nombre;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},2000);
+}
+$('expGeo').onclick=function(){ if(!RES)return;
+  bajar('layout.geojson',JSON.stringify({stats:RES.stats,geojson:LAY.toGeoJSON(RES)},null,1)); };
+$('expKml').onclick=function(){ if(!RES)return;
+  var k='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Layout Factiun</name>'+
+    '<Style id="m"><LineStyle><color>ff99d336</color><width>1</width></LineStyle><PolyStyle><color>7f99d336</color></PolyStyle></Style>'+
+    RES.structures.map(function(s){var r=s.lonlat.slice();r.push(s.lonlat[0]);
+      return '<Placemark><styleUrl>#m</styleUrl><Polygon><outerBoundaryIs><LinearRing><coordinates>'+
+        r.map(function(c){return c[0].toFixed(8)+','+c[1].toFixed(8)+',0';}).join(' ')+
+        '</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>';}).join('')+
+    '</Document></kml>';
+  bajar('layout.kml',k,'application/vnd.google-earth.kml+xml'); };
+$('expDxf').onclick=function(){ if(!RES)return;
+  var L=['0','SECTION','2','ENTITIES'];
+  RES.structures.forEach(function(s){
+    var p=s.utm||[];if(!p.length)return;
+    L.push('0','LWPOLYLINE','8','MESAS','90','4','70','1');
+    p.forEach(function(c){L.push('10',c[0].toFixed(3),'20',c[1].toFixed(3));});
+  });
+  L.push('0','ENDSEC','0','EOF');
+  bajar('layout.dxf',L.join('\n'),'application/dxf'); };
+
+/* ===== llevar el layout al 3D de cobertura (misma clave que el Explorador) ===== */
+$('d3Btn').onclick=function(){
+  if(!RES||!RES.structures.length)return;
+  var st=RES.stats, c0=RES.structures[0].lonlat[0];
+  var clat=0,clon=0,n=0;
+  RES.structures.forEach(function(s){s.lonlat.forEach(function(p){clon+=p[0];clat+=p[1];n++;});});
+  clon/=n;clat/=n;
+  var mLon=111320*Math.cos(clat*Math.PI/180),mLat=110540;
+  var trk=RES.structures.map(function(s,i){
+    var sx=0,sy=0,longest=0,ang=0;
+    for(var k=0;k<s.lonlat.length;k++){
+      var a=s.lonlat[k],b=s.lonlat[(k+1)%s.lonlat.length];
+      sx+=a[0];sy+=a[1];
+      var dE=(b[0]-a[0])*mLon,dN=(b[1]-a[1])*mLat,Lg=Math.hypot(dE,dN);
+      if(Lg>longest){longest=Lg;ang=Math.atan2(dE,dN);}
+    }
+    var plon=sx/s.lonlat.length,plat=sy/s.lonlat.length;
+    return {x:(plon-clon)*mLon,n:(plat-clat)*mLat,rot:ang*180/Math.PI,t:'completo',id:'L'+(i+1)};
+  });
+  var lay={title:'Layout generado',crs:'gen',clat:clat,clon:clon,cE:0,cN:0,
+           mods:st.mods_per_struct||28,trackers:trk,ncus:[],meteo:[],reps:[],inverters:[]};
+  try{localStorage.setItem('cobertura_layout',JSON.stringify(lay));}catch(e){}
+  window.open('../cobertura-zigbee/terreno.html?planta=custom','_blank');
+};
+
+/* ===== arranque ===== */
+loadPlants();syncAz();buildParcel();draw();detectEngine();
+</script>
+</body>
+</html>

@@ -1,0 +1,633 @@
+{
+ "lat": 41.57634,
+ "lon": -0.79814,
+ "module_wp": 630.0,
+ "utm_ref": [
+  {
+   "lon": -0.79814,
+   "lat": 41.57634,
+   "epsg": 32630,
+   "x": 683562.8292,
+   "y": 4605080.7629
+  },
+  {
+   "lon": 2.1734,
+   "lat": 41.3851,
+   "epsg": 32631,
+   "x": 430887.5643,
+   "y": 4581837.8534
+  },
+  {
+   "lon": -71.061,
+   "lat": 42.355,
+   "epsg": 32619,
+   "x": 330261.4319,
+   "y": 4691249.9338
+  },
+  {
+   "lon": -71.8064,
+   "lat": -16.5958,
+   "epsg": 32719,
+   "x": 200543.8734,
+   "y": 8163062.828
+  },
+  {
+   "lon": 103.852,
+   "lat": 1.29,
+   "epsg": 32648,
+   "x": 372279.9071,
+   "y": 142612.8101
+  }
+ ],
+ "casos": [
+  {
+   "nombre": "rect 600x450 · tracker bifila 1V/28",
+   "poly": [
+    [
+     -300.0,
+     -225.0
+    ],
+    [
+     300.0,
+     -225.0
+    ],
+    [
+     300.0,
+     225.0
+    ],
+    [
+     -300.0,
+     225.0
+    ]
+   ],
+   "holes": [],
+   "cfg": {
+    "setback_m": 5.0,
+    "mod_len": 2.382,
+    "mod_wid": 1.134,
+    "gap_modules": 0.02,
+    "gap_motor": 0.5,
+    "gap_ns": 0.5,
+    "road_every": 0,
+    "road_w": 4.0,
+    "road_ns_every": 0,
+    "road_ns_w": 4.0,
+    "layout_mode": "aligned",
+    "align_to_grid": true,
+    "min_structs_per_row": 2,
+    "mount_type": "tracker",
+    "table_type": "1V",
+    "mods_per_struct": 28,
+    "bifila": true,
+    "pitch_m": 6.0,
+    "panel_az_deg": 90.0
+   },
+   "core": {
+    "structures": 1164.0,
+    "trackers": 582.0,
+    "rows": 98.0,
+    "modules": 32592.0,
+    "kWp": 20532.96,
+    "GCR": 0.397,
+    "fill_factor": 0.32954598460782153,
+    "usable_fill": 0.3427025719721287,
+    "struct_w_m": 32.291999999999994,
+    "collector_h_m": 2.382,
+    "mesa_len_m": 32.291999999999994,
+    "fila_len_m": 65.08399999999999,
+    "poly_area_m2": 271690.00191112864,
+    "inner_area_m2": 261259.63593639282,
+    "col_area_m2": 89534.3491879038,
+    "density_kWp_ha": 755.7495622056953,
+    "mods_per_struct": 28.0
+   }
+  },
+  {
+   "nombre": "rect 600x450 · tracker monofila",
+   "poly": [
+    [
+     -300.0,
+     -225.0
+    ],
+    [
+     300.0,
+     -225.0
+    ],
+    [
+     300.0,
+     225.0
+    ],
+    [
+     -300.0,
+     225.0
+    ]
+   ],
+   "holes": [],
+   "cfg": {
+    "setback_m": 5.0,
+    "mod_len": 2.382,
+    "mod_wid": 1.134,
+    "gap_modules": 0.02,
+    "gap_motor": 0.5,
+    "gap_ns": 0.5,
+    "road_every": 0,
+    "road_w": 4.0,
+    "road_ns_every": 0,
+    "road_ns_w": 4.0,
+    "layout_mode": "aligned",
+    "align_to_grid": true,
+    "min_structs_per_row": 2,
+    "mount_type": "tracker",
+    "table_type": "1V",
+    "mods_per_struct": 28,
+    "bifila": false,
+    "pitch_m": 6.0,
+    "panel_az_deg": 90.0
+   },
+   "core": {
+    "structures": 1182.0,
+    "trackers": 591.0,
+    "rows": 99.0,
+    "modules": 33096.0,
+    "kWp": 20850.48,
+    "GCR": 0.397,
+    "fill_factor": 0.33464205653507906,
+    "usable_fill": 0.3480020962813218,
+    "struct_w_m": 32.291999999999994,
+    "collector_h_m": 2.382,
+    "mesa_len_m": 32.291999999999994,
+    "fila_len_m": 65.08399999999999,
+    "poly_area_m2": 271690.00191112864,
+    "inner_area_m2": 261259.63593639282,
+    "col_area_m2": 90918.90097955965,
+    "density_kWp_ha": 767.4364111057833,
+    "mods_per_struct": 28.0
+   }
+  },
+  {
+   "nombre": "rect girado 35° · tracker bifila",
+   "poly": [
+    [
+     -116.6909,
+     -356.3821
+    ],
+    [
+     374.8003,
+     -12.2363
+    ],
+    [
+     116.6909,
+     356.3821
+    ],
+    [
+     -374.8003,
+     12.2363
+    ]
+   ],
+   "holes": [],
+   "cfg": {
+    "setback_m": 5.0,
+    "mod_len": 2.382,
+    "mod_wid": 1.134,
+    "gap_modules": 0.02,
+    "gap_motor": 0.5,
+    "gap_ns": 0.5,
+    "road_every": 0,
+    "road_w": 4.0,
+    "road_ns_every": 0,
+    "road_ns_w": 4.0,
+    "layout_mode": "aligned",
+    "align_to_grid": true,
+    "min_structs_per_row": 2,
+    "mount_type": "tracker",
+    "table_type": "1V",
+    "mods_per_struct": 28,
+    "bifila": true,
+    "pitch_m": 6.0,
+    "panel_az_deg": 90.0
+   },
+   "core": {
+    "structures": 1072.0,
+    "trackers": 536.0,
+    "rows": 108.0,
+    "modules": 30016.0,
+    "kWp": 18910.08,
+    "GCR": 0.397,
+    "fill_factor": 0.3034993946387978,
+    "usable_fill": 0.31561808247900247,
+    "struct_w_m": 32.291999999999994,
+    "collector_h_m": 2.382,
+    "mesa_len_m": 32.291999999999994,
+    "fila_len_m": 65.08399999999999,
+    "poly_area_m2": 271690.0020228862,
+    "inner_area_m2": 261258.0068153905,
+    "col_area_m2": 82457.75114335971,
+    "density_kWp_ha": 696.0167786522776,
+    "mods_per_struct": 28.0
+   }
+  },
+  {
+   "nombre": "rect 600x450 · fija 2V/20 pitch 4",
+   "poly": [
+    [
+     -300.0,
+     -225.0
+    ],
+    [
+     300.0,
+     -225.0
+    ],
+    [
+     300.0,
+     225.0
+    ],
+    [
+     -300.0,
+     225.0
+    ]
+   ],
+   "holes": [],
+   "cfg": {
+    "setback_m": 5.0,
+    "mod_len": 2.382,
+    "mod_wid": 1.134,
+    "gap_modules": 0.02,
+    "gap_motor": 0.5,
+    "gap_ns": 0.5,
+    "road_every": 0,
+    "road_w": 4.0,
+    "road_ns_every": 0,
+    "road_ns_w": 4.0,
+    "layout_mode": "aligned",
+    "align_to_grid": true,
+    "min_structs_per_row": 2,
+    "mount_type": "fija",
+    "table_type": "2V",
+    "mods_per_struct": 20,
+    "bifila": false,
+    "pitch_m": 4.0,
+    "panel_az_deg": 180.0
+   },
+   "core": {
+    "structures": 2699.0,
+    "trackers": 1349.0,
+    "rows": 110.0,
+    "modules": 107960.0,
+    "kWp": 68014.8,
+    "GCR": 1.1349105234942278,
+    "fill_factor": 1.0913405281857662,
+    "usable_fill": 1.1349105234942278,
+    "struct_w_m": 23.06,
+    "collector_h_m": 4.764,
+    "mesa_len_m": 23.06,
+    "fila_len_m": null,
+    "poly_area_m2": 271690.00191112864,
+    "inner_area_m2": 261259.63593639282,
+    "col_area_m2": 296506.310188483,
+    "density_kWp_ha": 2503.397236614104,
+    "mods_per_struct": 40.0
+   }
+  },
+  {
+   "nombre": "rect 600x450 · multi-talla 28/14/7",
+   "poly": [
+    [
+     -300.0,
+     -225.0
+    ],
+    [
+     300.0,
+     -225.0
+    ],
+    [
+     300.0,
+     225.0
+    ],
+    [
+     -300.0,
+     225.0
+    ]
+   ],
+   "holes": [],
+   "cfg": {
+    "setback_m": 5.0,
+    "mod_len": 2.382,
+    "mod_wid": 1.134,
+    "gap_modules": 0.02,
+    "gap_motor": 0.5,
+    "gap_ns": 0.5,
+    "road_every": 0,
+    "road_w": 4.0,
+    "road_ns_every": 0,
+    "road_ns_w": 4.0,
+    "layout_mode": "aligned",
+    "align_to_grid": true,
+    "min_structs_per_row": 2,
+    "mount_type": "tracker",
+    "table_type": "1V",
+    "mods_per_struct": [
+     28,
+     14,
+     7
+    ],
+    "bifila": false,
+    "pitch_m": 6.0,
+    "panel_az_deg": 90.0
+   },
+   "core": {
+    "structures": 1378.0,
+    "trackers": 689.0,
+    "rows": 99.0,
+    "modules": 35840.0,
+    "kWp": 22579.2,
+    "GCR": 0.397,
+    "fill_factor": 0.36237015302985603,
+    "usable_fill": 0.37683719192346693,
+    "struct_w_m": 32.291999999999994,
+    "collector_h_m": 2.382,
+    "mesa_len_m": 32.291999999999994,
+    "fila_len_m": 65.08399999999999,
+    "poly_area_m2": 271690.00191112864,
+    "inner_area_m2": 261259.63593639282,
+    "col_area_m2": 98452.34756921756,
+    "density_kWp_ha": 831.0648106729296,
+    "mods_per_struct": 28.0
+   }
+  },
+  {
+   "nombre": "rect 600x450 · vial E-O cada 5 filas",
+   "poly": [
+    [
+     -300.0,
+     -225.0
+    ],
+    [
+     300.0,
+     -225.0
+    ],
+    [
+     300.0,
+     225.0
+    ],
+    [
+     -300.0,
+     225.0
+    ]
+   ],
+   "holes": [],
+   "cfg": {
+    "setback_m": 5.0,
+    "mod_len": 2.382,
+    "mod_wid": 1.134,
+    "gap_modules": 0.02,
+    "gap_motor": 0.5,
+    "gap_ns": 0.5,
+    "road_every": 5,
+    "road_w": 4.0,
+    "road_ns_every": 0,
+    "road_ns_w": 4.0,
+    "layout_mode": "aligned",
+    "align_to_grid": true,
+    "min_structs_per_row": 2,
+    "mount_type": "tracker",
+    "table_type": "1V",
+    "mods_per_struct": 28,
+    "bifila": false,
+    "pitch_m": 6.0,
+    "panel_az_deg": 90.0
+   },
+   "core": {
+    "structures": 1038.0,
+    "trackers": 519.0,
+    "rows": 87.0,
+    "modules": 29064.0,
+    "kWp": 18310.32,
+    "GCR": 0.397,
+    "fill_factor": 0.293873481121138,
+    "usable_fill": 0.30560590181206077,
+    "struct_w_m": 32.291999999999994,
+    "collector_h_m": 2.382,
+    "mesa_len_m": 32.291999999999994,
+    "fila_len_m": 65.08399999999999,
+    "poly_area_m2": 271690.00191112864,
+    "inner_area_m2": 261259.63593639282,
+    "col_area_m2": 79842.486647432,
+    "density_kWp_ha": 673.9416199050788,
+    "mods_per_struct": 28.0
+   }
+  },
+  {
+   "nombre": "parcela en L · tracker monofila",
+   "poly": [
+    [
+     -300,
+     -225
+    ],
+    [
+     300,
+     -225
+    ],
+    [
+     300,
+     0
+    ],
+    [
+     40,
+     0
+    ],
+    [
+     40,
+     225
+    ],
+    [
+     -300,
+     225
+    ]
+   ],
+   "holes": [],
+   "cfg": {
+    "setback_m": 5.0,
+    "mod_len": 2.382,
+    "mod_wid": 1.134,
+    "gap_modules": 0.02,
+    "gap_motor": 0.5,
+    "gap_ns": 0.5,
+    "road_every": 0,
+    "road_w": 4.0,
+    "road_ns_every": 0,
+    "road_ns_w": 4.0,
+    "layout_mode": "aligned",
+    "align_to_grid": true,
+    "min_structs_per_row": 2,
+    "mount_type": "tracker",
+    "table_type": "1V",
+    "mods_per_struct": 28,
+    "bifila": false,
+    "pitch_m": 6.0,
+    "panel_az_deg": 90.0
+   },
+   "core": {
+    "structures": 924.0,
+    "trackers": 462.0,
+    "rows": 99.0,
+    "modules": 25872.0,
+    "kWp": 16299.36,
+    "GCR": 0.397,
+    "fill_factor": 0.3339569217871222,
+    "usable_fill": 0.351158212495615,
+    "struct_w_m": 32.291999999999994,
+    "collector_h_m": 2.382,
+    "mesa_len_m": 32.291999999999994,
+    "fila_len_m": 65.08399999999999,
+    "poly_area_m2": 212822.83431797146,
+    "inner_area_m2": 202397.82555485007,
+    "col_area_m2": 71073.65863484047,
+    "density_kWp_ha": 765.8651879265772,
+    "mods_per_struct": 28.0
+   }
+  },
+  {
+   "nombre": "rect 600x450 · hueco central de 120x120",
+   "poly": [
+    [
+     -300.0,
+     -225.0
+    ],
+    [
+     300.0,
+     -225.0
+    ],
+    [
+     300.0,
+     225.0
+    ],
+    [
+     -300.0,
+     225.0
+    ]
+   ],
+   "holes": [
+    [
+     [
+      -60.0,
+      -60.0
+     ],
+     [
+      60.0,
+      -60.0
+     ],
+     [
+      60.0,
+      60.0
+     ],
+     [
+      -60.0,
+      60.0
+     ]
+    ]
+   ],
+   "cfg": {
+    "setback_m": 5.0,
+    "mod_len": 2.382,
+    "mod_wid": 1.134,
+    "gap_modules": 0.02,
+    "gap_motor": 0.5,
+    "gap_ns": 0.5,
+    "road_every": 0,
+    "road_w": 4.0,
+    "road_ns_every": 0,
+    "road_ns_w": 4.0,
+    "layout_mode": "aligned",
+    "align_to_grid": true,
+    "min_structs_per_row": 2,
+    "mount_type": "tracker",
+    "table_type": "1V",
+    "mods_per_struct": 28,
+    "bifila": false,
+    "pitch_m": 6.0,
+    "panel_az_deg": 90.0
+   },
+   "core": {
+    "structures": 1044.0,
+    "trackers": 522.0,
+    "rows": 98.0,
+    "modules": 29232.0,
+    "kWp": 18416.16,
+    "GCR": 0.397,
+    "fill_factor": 0.3122241251049838,
+    "usable_fill": 0.3287327043537024,
+    "struct_w_m": 32.291999999999994,
+    "collector_h_m": 2.382,
+    "mesa_len_m": 32.291999999999994,
+    "fila_len_m": 65.08399999999999,
+    "poly_area_m2": 257199.8684719177,
+    "inner_area_m2": 244283.5861696247,
+    "col_area_m2": 80304.00391076141,
+    "density_kWp_ha": 716.0252495234369,
+    "mods_per_struct": 28.0
+   }
+  },
+  {
+   "nombre": "rect 300x300 · setback 15 m",
+   "poly": [
+    [
+     -150.0,
+     -150.0
+    ],
+    [
+     150.0,
+     -150.0
+    ],
+    [
+     150.0,
+     150.0
+    ],
+    [
+     -150.0,
+     150.0
+    ]
+   ],
+   "holes": [],
+   "cfg": {
+    "setback_m": 15.0,
+    "mod_len": 2.382,
+    "mod_wid": 1.134,
+    "gap_modules": 0.02,
+    "gap_motor": 0.5,
+    "gap_ns": 0.5,
+    "road_every": 0,
+    "road_w": 4.0,
+    "road_ns_every": 0,
+    "road_ns_w": 4.0,
+    "layout_mode": "aligned",
+    "align_to_grid": true,
+    "min_structs_per_row": 2,
+    "mount_type": "tracker",
+    "table_type": "1V",
+    "mods_per_struct": 14,
+    "bifila": false,
+    "pitch_m": 6.0,
+    "panel_az_deg": 90.0
+   },
+   "core": {
+    "structures": 720.0,
+    "trackers": 360.0,
+    "rows": 45.0,
+    "modules": 10080.0,
+    "kWp": 6350.4,
+    "GCR": 0.397,
+    "fill_factor": 0.3055749409295458,
+    "usable_fill": 0.3769921283516763,
+    "struct_w_m": 16.136,
+    "collector_h_m": 2.382,
+    "mesa_len_m": 16.136,
+    "fila_len_m": 32.772,
+    "poly_area_m2": 90563.3339802392,
+    "inner_area_m2": 73407.06436601987,
+    "col_area_m2": 27673.885431394323,
+    "density_kWp_ha": 701.2109339289175,
+    "mods_per_struct": 14.0
+   }
+  }
+ ]
+}
