@@ -21,14 +21,19 @@ const html = fs.readFileSync(path.join(RAIZ, 'sim-viento.html'), 'utf8');
 function saca(firma) {
   const i = html.indexOf(firma);
   if (i < 0) return null;
-  const j = html.indexOf('\n}', i);
+  // `var X=...` es una línea, no un bloque con llave en columna 0
+  const j = firma.startsWith('function') ? html.indexOf('\n}', i) : html.indexOf('\n', i) - 1;
   return j < 0 ? null : html.slice(i, j + 2);
 }
 const FIRMAS = ['function prep2d(cv){', 'function nicePaso(bruto){',
                 'function niceDec(paso){', 'function niceEje(max,n){',
                 'function niceEjes2(maxA,maxB,n){', 'function niceRango(lo,hi,n){',
                 'function ejesTransmision(nF,pitch,filasPorTrk,esPasivo,hueco){',
-                'function pasoReproductor(stepMin,factor){'];
+                'function pasosPorSegundo(stepMin,factor){',
+                'function duracionRepro(stepMin,factor,pasos){',
+                'var FACTORES_REPRO=', 'var REPRO_MAX_S=',
+                'function factorPorDefecto(stepMin,pasos){',
+                'function avancePasos(acc,dtReal,factor,stepMin){'];
 const trozos = FIRMAS.map(saca);
 check('las funciones puras siguen en el HTML', trozos.every(Boolean),
       FIRMAS.filter((f, i) => !trozos[i]).join(', '));
@@ -151,25 +156,25 @@ check('MUTANTE: un eje sin hueco no pasa por cortado',
       !(ET(6, 6, 2, true, 0)[0].x0 > ET(6, 6, 2, true, 0)[0].xa));
 
 // ── 7) la velocidad del reproductor ES una velocidad ─────────────────────
-// El «×1» de antes no lo era: el bucle iba a 160 ms por paso y cada paso son
-// los minutos de la ventana, así que con paso de 1 min corría a 375× y con
-// paso de 5 min a 1.875×. Un rótulo que dice ×1 sobre algo que va a 375× no
-// es una escala mal calibrada, es un número inventado.
-const PR = ctx.pasoReproductor;
-[[1, 60], [1, 300], [1, 900], [1, 3600], [5, 60], [5, 300], [15, 3600], [30, 60]]
-  .forEach(c => {
-    const [stepMin, f] = c;
-    const r = PR(stepMin, f);
-    // minutos simulados por segundo real que sale DE VERDAD del bucle
-    const simPorSeg = (r.pasos * stepMin) / (r.ms / 1000);
-    const err = Math.abs(simPorSeg - f / 60) / (f / 60);
-    check('paso ' + stepMin + ' min a ×' + f + ' -> ' + r.ms.toFixed(0) + ' ms, ' +
-          r.pasos + ' paso(s) = ×' + (simPorSeg * 60).toFixed(0),
-          err < 0.02 && r.ms >= 50, 'error ' + (err * 100).toFixed(1) + '%');
-  });
-check('nunca baja del suelo de repintado', PR(1, 100000).ms >= 50);
+// El «×1» de la primera versión no lo era: el bucle iba a 160 ms por paso y
+// cada paso son los minutos de la ventana, así que con paso de 1 min corría a
+// 375× y con paso de 5 min a 1.875×. Ahora el avance sale de acumular el
+// tiempo real del bucle de fotogramas, así que el factor se cumple por
+// construcción y lo que se comprueba es la CUENTA.
+const PPS = ctx.pasosPorSegundo, DR = ctx.duracionRepro;
+[[1, 60], [1, 300], [1, 3600], [5, 300], [15, 3600], [30, 60]].forEach(c => {
+  const [stepMin, f] = c;
+  // minutos simulados por segundo real que sale de la cuenta
+  const simPorSeg = PPS(stepMin, f) * stepMin;
+  check('paso ' + stepMin + ' min a ×' + f + ' avanza ' + simPorSeg.toFixed(1) +
+        ' min/s = ×' + Math.round(simPorSeg * 60),
+        Math.abs(simPorSeg * 60 - f) < 1e-9);
+});
+check('la duración de la ventana es pasos / (pasos por segundo)',
+      Math.abs(DR(4, 3600, 240) - 240 / PPS(4, 3600)) < 1e-9 &&
+      Math.abs(DR(4, 3600, 240) - 16) < 1e-9);
 check('entradas absurdas no dividen por cero',
-      PR(0, 0).ms >= 50 && isFinite(PR(0, 0).ms) && PR(null, null).pasos >= 1);
+      isFinite(PPS(0, 0)) && PPS(0, 0) > 0 && isFinite(DR(null, null, null)));
 // MUTANTE: la cadencia vieja, con su rótulo. Tiene que salir muy lejos de ×1.
 (function () {
   const msViejo = Math.max(40, 320 / 2);            // «×1» de antes
@@ -177,6 +182,75 @@ check('entradas absurdas no dividen por cero',
   check('MUTANTE: el «×1» viejo iba en realidad a ×' + Math.round(factorReal),
         factorReal > 100);
 })();
+
+// ── 7bis) el avance no depende de CÓMO venga troceado el tiempo ──────────
+// Es la propiedad que el `setInterval` no tenía y por la que «le costaba
+// cargar y de golpe saltaba horas»: cuando un fotograma tarda más que el
+// intervalo, el navegador ENCOLA las llamadas y luego las ejecuta seguidas.
+// Con acumulador no hay cola: se avanza el tiempo real transcurrido.
+const AV = ctx.avancePasos;
+function corre(dts, factor, stepMin) {
+  let acc = 0, total = 0, mayorSalto = 0;
+  dts.forEach(dt => {
+    const r = AV(acc, dt, factor, stepMin);
+    acc = r.acc; total += r.pasos;
+    mayorSalto = Math.max(mayorSalto, r.pasos);
+  });
+  return { total, mayorSalto };
+}
+(function () {
+  const f = 3600, stepMin = 4;
+  const suave = new Array(600).fill(1 / 60);            // 10 s a 60 fps
+  const atasco = new Array(60).fill(1 / 6);             // 10 s a 6 fps
+  const mixto = [];                                     // 10 s con un parón
+  for (let i = 0; i < 540; i++) mixto.push(1 / 60);
+  mixto.push(1.0);                                      // un fotograma de 1 s
+  const a = corre(suave, f, stepMin), b = corre(atasco, f, stepMin), c = corre(mixto, f, stepMin);
+  check('10 s reales avanzan lo mismo a 60 fps que a 6 fps (' +
+        a.total + ' vs ' + b.total + ' pasos)', Math.abs(a.total - b.total) <= 1);
+  check('y lo mismo con un parón de 1 s en medio (' + c.total + ')',
+        Math.abs(a.total - c.total) <= 1);
+  check('a 60 fps se avanza de uno en uno (mayor salto ' + a.mayorSalto + ')',
+        a.mayorSalto <= 1);
+  check('un parón de 1 s se paga en UN salto, no en veinte fotogramas (' +
+        c.mayorSalto + ' pasos)', c.mayorSalto >= 10 && c.mayorSalto <= 20);
+})();
+check('sin tiempo no se avanza', AV(0, 0, 3600, 4).pasos === 0);
+check('el resto se guarda para el fotograma siguiente',
+      AV(0, 1 / 60, 60, 4).pasos === 0 && AV(0, 1 / 60, 60, 4).acc > 0);
+// MUTANTE: el `setInterval` de antes. Con fotogramas de 167 ms y un intervalo
+// de 67 ms, el navegador encola 2,5 llamadas por fotograma — y esa cola es
+// justo lo que se veía como un salto de horas.
+check('MUTANTE: con intervalo fijo de 67 ms y fotogramas de 167 ms se encolan ' +
+      (167 / 67).toFixed(1) + ' llamadas por fotograma', 167 / 67 > 2);
+
+// ── 8) al abrir, el reproductor tiene que AVANZAR ────────────────────────
+// La ventana se muestrea a 240 pasos como mucho, así que el factor que la hace
+// mirable depende del paso. Un default fijo dejó la reproducción a 800 ms por
+// fotograma con el paso habitual de 4 min —192 s la ventana entera, diez veces
+// más lenta que la versión anterior— y eso se lee como que no avanza.
+const FD = ctx.factorPorDefecto;
+[[1, 240], [4, 240], [10, 96], [15, 64], [30, 32], [60, 16]].forEach(c => {
+  const [stepMin, pasos] = c;
+  const f = FD(stepMin, pasos);
+  const seg = DR(stepMin, f, pasos);
+  check('paso ' + stepMin + ' min · ' + pasos + ' pasos -> arranca en ×' + f +
+        ' (' + seg.toFixed(0) + ' s la ventana)',
+        seg <= ctx.REPRO_MAX_S + 0.001 && ctx.FACTORES_REPRO.indexOf(f) >= 0);
+});
+check('el factor elegido es el MÁS LENTO que cabe (no el más rápido a lo bruto)',
+      (function () {
+        const f = FD(4, 240), i = ctx.FACTORES_REPRO.indexOf(f);
+        return i === 0 || DR(4, ctx.FACTORES_REPRO[i - 1], 240) > ctx.REPRO_MAX_S;
+      })());
+// MUTANTE: el default fijo de la versión anterior, sobre la ventana habitual.
+check('MUTANTE: con ×300 fijo la ventana de paso 4 min tardaba ' +
+      Math.round(DR(4, 300, 240)) + ' s',
+      DR(4, 300, 240) > ctx.REPRO_MAX_S * 3);
+// Y no puede pasarse de largo: con paso muy grueso ni el más rápido cabe, y
+// entonces devuelve el tope en vez de undefined.
+check('con paso imposible devuelve el tope declarado',
+      FD(600, 240) === ctx.FACTORES_REPRO[ctx.FACTORES_REPRO.length - 1]);
 
 console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko)
                 : '\nOK — ' + ok + '/' + ok + ' comprobaciones');

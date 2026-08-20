@@ -364,6 +364,7 @@
           <option value="300" selected>×300 · 5 min/s</option>
           <option value="900">×900 · 15 min/s</option>
           <option value="3600">×3600 · 1 h/s</option>
+          <option value="7200">×7200 · 2 h/s</option>
         </select>
       </div>
       <p class="note" id="c3note">Sube el viento y mira: por encima de <b>40 km/h</b> entran en
@@ -2504,7 +2505,7 @@ function drawEvents(c){
 
    Marco del mundo: x = este, y = arriba, z = −norte. El seguidor canónico
    tiene su tubo en +X local, así que entra girado 90°. */
-var TD=null, TL=null, TPOS=0, PLAY=false, RAF=null, MODO='live';
+var TD=null, TL=null, TPOS=0, PLAY=false, MODO='live';
 var NFILAS=2, PITCH=6.0, BLOQUE=34;
 var MODO_COL={IDLE:0x000000, PARTIAL_STOW:0xfbbd23, FULL_STOW:0xf87272, DESTOW_HOLD:0x9bb0c6};
 var MODO_INT={IDLE:0, PARTIAL_STOW:.42, FULL_STOW:.5, DESTOW_HOLD:.3};
@@ -2613,7 +2614,7 @@ function init3D(){
       var w=h.clientWidth,hh=h.clientHeight;
       if(w&&(TD.w!==w||TD.h!==hh)){TD.w=w;TD.h=hh;rd.setSize(w,hh,false);cam.aspect=w/hh;cam.updateProjectionMatrix();}
       var dt=Math.min(0.1,((now||performance.now())-last)/1000); last=now||performance.now();
-      if(MODO==='live')liveTick(dt);
+      if(MODO==='live')liveTick(dt); else if(MODO==='ep')epTick(dt);
       TD.ct.update(); rd.render(sc,cam);})(performance.now());
   }catch(e){TD=null;}
 }
@@ -3368,57 +3369,115 @@ function build3D(){
   }
   if(mejor<=0){var sol=-99;for(var j=0;j<TL.t.length;j++)if((TL.sun_el[j]||-99)>sol){sol=TL.sun_el[j];i0=j;}}
   TPOS=i0; $('tpos').value=i0;
-  $('c3hint').textContent=TL.window.steps+' pasos de '+TL.window.step_minutes+' min';
+  /* La velocidad de arranque se elige por la ventana, no por un default fijo,
+     y se DICE cuánto dura: sin eso, con meteo de paso grueso el reproductor
+     salía a segundos por fotograma y parecía que no avanzaba. Si el usuario ya
+     ha tocado el selector, manda él. */
+  if(!$('tspeed').dataset.tocado)
+    $('tspeed').value=factorPorDefecto(TL.window.step_minutes,TL.window.steps);
+  $('c3hint').textContent=TL.window.steps+' pasos de '+TL.window.step_minutes+
+    ' min · la ventana entera en '+
+    Math.round(duracionRepro(TL.window.step_minutes,+$('tspeed').value,TL.window.steps))+' s';
   update3D(i0);
 }
-function update3D(i){
+function update3D(i,sinTiles){
   if(!TD||!TL)return;
   i=Math.max(0,Math.min(TL.t.length-1,i|0)); TPOS=i;
   var ang={BASE:TL.baseline.theta[i]}, modos={BASE:'SEGUIMIENTO'}, poa={BASE:TL.baseline.poa[i]};
   for(var k in TL.cases){ang[k]=TL.cases[k].theta[i];modos[k]=TL.cases[k].mode[i];poa[k]=TL.cases[k].poa[i];}
   ponSol(TL.sun_el[i],TL.sun_az[i],TL.wind_ms[i]||0,TL.wind_dir?TL.wind_dir[i]:null);
   pintaEscena(ang,modos,poa,poa.BASE);
-  tiles(ang,modos,poa,poa.BASE);
+  // El panel de tarjetas se REHACE en HTML entero, así que a 60 fotogramas por
+  // segundo es la parte más cara de todo esto y la que menos se nota: el modo
+  // «en vivo» ya lo repinta uno de cada seis y aquí se hace igual.
+  if(!sinTiles)tiles(ang,modos,poa,poa.BASE);
   $('tpos').value=i;
   var ts=new Date(TL.t[i]);
   $('tlbl').textContent=fechaHoraLocal(ts)+
     ' · '+fmt((TL.wind_ms[i]||0)*3.6,0)+' km/h';
 }
-/* ── CADENCIA DEL REPRODUCTOR ──
-   El «×1» no era una velocidad: el bucle iba a `320/valor` ms por paso, o sea
-   160 ms, y cada paso son los minutos de la ventana. Con paso de 1 min eso son
-   375 veces el tiempo real, y con paso de 5 min, 1.875 — de ahí que incluso en
-   «×1» el día entero pasara volando. Un rótulo que dice ×1 sobre algo que va a
-   375× no es una escala mal calibrada: es un número inventado.
+/* ── EL REPRODUCTOR VA EN EL BUCLE DE FOTOGRAMAS ──
+   Iba en un `setInterval`, y ese es el motivo de que «le costara cargar y de
+   golpe saltara horas». Cuando un fotograma tarda MÁS que el intervalo —y
+   aquí lo tarda: la comparativa son seis bloques de veinte seguidores con el
+   modelo real, más el panel de tarjetas rehecho en HTML— el navegador ENCOLA
+   las llamadas pendientes y luego las ejecuta seguidas: la escena se queda
+   clavada y después se come de un tirón todo lo que debía haber pintado.
 
-   Ahora el factor es lo que dice: tiempo SIMULADO por segundo real, la misma
-   escala que el modo «en vivo» de la misma tarjeta (que sí la usaba bien). El
-   paso del reloj se deriva de los minutos REALES de la ventana, no de una
-   constante.
-
-   Con un suelo de 50 ms —por debajo, el navegador no repinta y solo se acumula
-   retraso— y avanzando VARIOS pasos por tirón cuando el suelo manda, para que
-   el factor se siga cumpliendo en vez de quedarse corto en silencio. */
-function pasoReproductor(stepMin,factor){
-  var sm=(stepMin>0?+stepMin:1), f=(factor>0?+factor:300);
-  var msPorPaso=sm*60000/f;
-  var ms=Math.max(50,msPorPaso);
-  return {ms:ms,pasos:Math.max(1,Math.round(ms/msPorPaso))};
+   Con acumulador no hay cola posible. Se avanza el tiempo que ha pasado DE
+   VERDAD desde el fotograma anterior, así que un fotograma lento se traduce
+   en un salto de ESE fotograma y no en veinte pendientes; y el `dt` del bucle
+   ya viene acotado a 0,1 s, así que volver de otra pestaña tampoco
+   teletransporta. Es el mismo patrón que el modo «en vivo», que nunca tuvo
+   este problema por eso mismo. */
+var EPACC=0;
+/* La cuenta, aparte del DOM para poder medirla. Devuelve cuántos pasos toca
+   avanzar y lo que queda pendiente. La propiedad que importa —y la que el
+   `setInterval` no tenía— es que lo avanzado depende SOLO del tiempo real
+   transcurrido, no de en cuántos trozos venga. */
+function avancePasos(acc,dtReal,factor,stepMin){
+  var a=(+acc||0)+(+dtReal||0)*pasosPorSegundo(stepMin,factor);
+  var pasos=Math.floor(a);
+  return {pasos:(pasos>0?pasos:0),acc:a-(pasos>0?pasos:0)};
 }
+function epTick(dtReal){
+  if(!PLAY||!TL||!TL.t||!TL.t.length)return;
+  var r=avancePasos(EPACC,dtReal,+$('tspeed').value,
+                    (TL.window&&TL.window.step_minutes)||1);
+  EPACC=r.acc;
+  if(!r.pasos)return;
+  var n=(TPOS+r.pasos)%TL.t.length;
+  epTick._n=(epTick._n||0)+1;
+  update3D(n,(epTick._n%6)!==0);
+}
+
+/* ── LA VELOCIDAD ES UNA VELOCIDAD ──
+   El «×1» de la primera versión no lo era: el bucle iba a `320/valor` ms por
+   paso —160 ms— y cada paso son los minutos de la VENTANA, no un instante
+   fijo. Con paso de 1 min eso son 375 veces el tiempo real, y con paso de
+   5 min, 1.875. Un rótulo que dice ×1 sobre algo que va a 375× no es una
+   escala mal calibrada: es un número inventado.
+
+   Ahora el factor es tiempo SIMULADO por segundo real, la misma escala que el
+   modo «en vivo» de la misma tarjeta (que sí la usaba bien), y lo CUMPLE por
+   construcción: `epTick` acumula el tiempo real del bucle de fotogramas y
+   avanza los pasos que toquen. No hay una cadencia que vigilar, hay una
+   cuenta. */
+function pasosPorSegundo(stepMin,factor){
+  return ((factor>0?+factor:300)/60)/(stepMin>0?+stepMin:1);
+}
+function duracionRepro(stepMin,factor,pasos){
+  return (pasos>0?pasos:240)/pasosPorSegundo(stepMin,factor);
+}
+var FACTORES_REPRO=[60,300,900,3600,7200];
+var REPRO_MAX_S=45;
+/* ── QUÉ VELOCIDAD SE OFRECE AL ABRIR ──
+   La ventana está MUESTREADA a 240 pasos como mucho, así que el factor que la
+   hace mirable no es el mismo con paso de 1 min que con paso de 15. Un default
+   fijo dejaba la reproducción a 800 ms por fotograma con el paso habitual de
+   4 min —192 s para la ventana entera, diez veces más lenta que antes— y eso
+   se lee como que NO AVANZA.
+   Se elige el factor más LENTO que reproduzca la ventana entera en menos de
+   `REPRO_MAX_S`, y va dicho en el rótulo: así el número sigue siendo una
+   velocidad de verdad y además arranca en algo que se puede mirar. */
+function factorPorDefecto(stepMin,pasos){
+  for(var i=0;i<FACTORES_REPRO.length;i++)
+    if(duracionRepro(stepMin,FACTORES_REPRO[i],pasos)<=REPRO_MAX_S)return FACTORES_REPRO[i];
+  return FACTORES_REPRO[FACTORES_REPRO.length-1];
+}
+
 function playToggle(){
   PLAY=!PLAY; $('play').textContent=PLAY?'❚❚ Pausa':'▶ Reproducir';
-  if(RAF)clearInterval(RAF); RAF=null;
-  if(!PLAY)return;
-  var stepMin=(TL&&TL.window&&TL.window.step_minutes)||1;
-  var c=pasoReproductor(stepMin,+$('tspeed').value);
-  RAF=setInterval(function(){
-    if(!TL)return; var n=TPOS+c.pasos; if(n>=TL.t.length)n=0; update3D(n);
-  },c.ms);
+  EPACC=0;                       // al pausar no se guarda tiempo pendiente
 }
 /* Cambiar la velocidad con el reproductor en marcha tiene que hacer efecto
    ahora, no al siguiente play: si no, el selector parece roto. */
 $('tspeed').addEventListener('change',function(){
-  if(PLAY){playToggle();playToggle();}
+  this.dataset.tocado='1';            // a partir de aquí manda el usuario
+  EPACC=0;
+  if(TL)$('c3hint').textContent=TL.window.steps+' pasos de '+TL.window.step_minutes+
+    ' min · la ventana entera en '+
+    Math.round(duracionRepro(TL.window.step_minutes,+this.value,TL.window.steps))+' s';
 });
 
 /* ═══════════ montaje y cambio de modo ═══════════ */
@@ -3462,7 +3521,7 @@ function setModo(m){
       'casos entre sí en el instante que elijas, no para sacar un número anual: para eso está el otro modo.';
   }
   else{
-    PLAY=false;$('play').textContent='▶ Reproducir';if(RAF)clearInterval(RAF);RAF=null;build3D();
+    PLAY=false;$('play').textContent='▶ Reproducir';EPACC=0;build3D();
     $('c3note').innerHTML='Ventana <b>común</b> a todos los casos: el mismo viento y el mismo sol '+
       'para todos, y un θ por estrategia. La barra de cada bloque es su <b>POA en ese instante</b> y '+
       'el fantasma gris la del seguidor sin abanderar. La pala se tiñe según el modo (ámbar parcial, '+
