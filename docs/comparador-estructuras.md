@@ -198,6 +198,13 @@ puede caer hasta 2,5° del que da la tabla, que lo busca fino (5° y luego 1°).
 cerca del máximo, así que la diferencia de POA es de décimas — pero conviene decirlo o se lee como
 una contradicción donde solo hay resolución.
 
+### Dos mesas por fila, siempre
+
+Es la convención de la casa, en las dos familias: una fila son **dos mesas** con su hueco en medio,
+y de ahí sale la fórmula del largo de fila (`FILA = 2 × MESA + hueco`, la del cliente). El campo se
+puede tocar, pero la ficha lo dice —para que un «2» en una casilla editable no se lea como «lo que
+había puesto»— y avisa si lo bajas a una.
+
 ### Una fija no tiene motor
 
 El hueco entre las mesas de una fila es el **mismo parámetro geométrico** en las dos familias —lo
@@ -608,7 +615,7 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 node tests/test_comparador.js       # 84 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 109 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 111 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 

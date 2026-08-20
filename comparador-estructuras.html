@@ -1484,12 +1484,18 @@ function pintaFam(pfx,cfgFam){
   var hueco=(nStr>1)
     ? ' separadas por '+(pfx==='tk'?'el vano del <b>motor</b>':'el <b>gap entre mesas</b>')
     : '';
+  var conv=(nStr===2)
+    ? ' <span style="color:var(--muted-2)">(dos mesas por fila es la convención de la casa)</span>'
+    : (nStr===1
+       ? ' <span style="color:var(--dead)">Ojo: aquí las filas son de UNA mesa, y lo normal en '+
+         'la casa son dos.</span>'
+       : '');
   $(pfx+'Nota').innerHTML=avisoGeom(pfx,T)||T.n+(T.esV?' módulo(s) en VERTICAL':' módulo(s) en HORIZONTAL')+
     ' en cross-axis · fila = '+nStr+' mesa(s) de '+$(pfx+'ModsStr').value+
     ' módulos'+hueco+' · '+T.modsTracker+' módulos por '+
     (pfx==='tk'?'tracker'+(T.filasTracker>1?' ('+T.filasTracker+' filas)':''):'estructura')+
     (pfx==='tk'&&T.filasTracker>1?'. <b>Monofila/bifila no cambia la POA</b>: la mesa mide lo mismo y la irradiación es por m² de módulo.':'.')+
-    (pfx==='fx'&&nStr>1?' Una fija no lleva accionamiento: ese hueco es separación estructural, no el vano de un motor — es el mismo número en la fórmula del largo de fila, pero no la misma cosa.':'');
+    (pfx==='fx'&&nStr>1?' Una fija no lleva accionamiento: ese hueco es separación estructural, no el vano de un motor — es el mismo número en la fórmula del largo de fila, pero no la misma cosa.':'')+conv;
 }
 /* Cada configurador dice, en vivo, a qué estructuras gobierna. Sin esto la
    pantalla tiene dos paneles casi iguales y no se ve cuál manda sobre qué: el
