@@ -58,7 +58,11 @@ precacheado, botón *Instalar app*, y que **sin red** el panel sigue abriendo y 
 regresión que salió al escribirlo: el SW **no** debe recargar la página la primera vez que toma el
 control.
 
-`test_viento_ejes.js` cubre las funciones puras de dibujo de **Viento & Abanderamiento**, extraídas del HTML real: que un lienzo todavía en `display:none` se DECLARE sin maquetar y no acumule el dpr en llamadas sucesivas —el fallo que hacía salir la comparativa estirada 2,16× en horizontal—, y que ningún eje repita etiquetas. Los rótulos salían de partir el máximo en cuatro y con datos pequeños eso repite: la columna de horas decía «2, 2, 1, 1, 0» y la de POA perdida «0.01, 0.01, 0.01, 0.00, 0.00». Cubre el **acumulador del reproductor**, que es lo que impide que se encolen fotogramas: 10 segundos reales tienen que avanzar lo mismo a 60 fps que a 6, y con un parón de 1 segundo en medio — si dependiera de cómo viene troceado el tiempo, un fotograma lento dejaría veinte llamadas pendientes que se ejecutan seguidas, que es exactamente el «se queda parado y de golpe salta horas». Su mutante cuenta las llamadas que encolaba el `setInterval` anterior.
+`test_viento_ejes.js` cubre las funciones puras de dibujo de **Viento & Abanderamiento**, extraídas del HTML real: que un lienzo todavía en `display:none` se DECLARE sin maquetar y no acumule el dpr en llamadas sucesivas —el fallo que hacía salir la comparativa estirada 2,16× en horizontal—, y que ningún eje repita etiquetas. Los rótulos salían de partir el máximo en cuatro y con datos pequeños eso repite: la columna de horas decía «2, 2, 1, 1, 0» y la de POA perdida «0.01, 0.01, 0.01, 0.00, 0.00». Cubre la **caja de sombras**: se reproduce lo que hace three.js y se barren 612 direcciones de sol exigiendo que ninguna deje geometría fuera. Su mutante es la caja anterior, dimensionada con el ancho y el largo del MUNDO cuando sus ejes son los de la LUZ: dejaba fuera el 78 % de las direcciones, y lo que queda fuera ni proyecta ni recibe sombra — unos bloques salían sombreados y los de al lado no, por el encuadre y no por la física.
+
+Cubre también que **ninguna velocidad ofrecida deje la escena congelada**: la ventana viene muestreada, así que las opciones se construyen con ella delante y ninguna baja de un paso por segundo.
+
+Cubre el **acumulador del reproductor**, que es lo que impide que se encolen fotogramas: 10 segundos reales tienen que avanzar lo mismo a 60 fps que a 6, y con un parón de 1 segundo en medio — si dependiera de cómo viene troceado el tiempo, un fotograma lento dejaría veinte llamadas pendientes que se ejecutan seguidas, que es exactamente el «se queda parado y de golpe salta horas». Su mutante cuenta las llamadas que encolaba el `setInterval` anterior.
 
 Cubre también la **velocidad de arranque** del reproductor: la ventana se muestrea a 240 pasos como mucho, así que el factor que la hace mirable depende del paso de la meteo, y se elige el más lento que la reproduzca entera en menos de 45 s. Su mutante es el default fijo anterior, que con el paso habitual de 4 min dejaba la ventana en 192 s — diez veces más lenta que la versión de antes, que se lee como que no avanza. Y la **cadencia**: que el «×N» sea de verdad tiempo simulado por segundo real, con su mutante —el «×1» de antes iba a ×375— y con el suelo de repintado, por debajo del cual se avanzan varios pasos por tirón en vez de quedarse corto en silencio.
 
@@ -72,8 +76,8 @@ node tests/test_pwa.js                     # 21 comprobaciones (PWA)
 node tests/test_integridad.js              # 6 comprobaciones, sin navegador
 node tests/test_comparador.js              # 42 comprobaciones, careo contra el core
 node tests/test_comparador_3d.js           # 31 comprobaciones, la escena 3D en Chromium
-node tests/test_viento_ejes.js             # 60 comprobaciones, lienzos, ejes, transmisión y reproductor
-node tests/test_viento_sitio.js            # 47 comprobaciones, emplazamiento y horas locales
+node tests/test_viento_ejes.js             # 64 comprobaciones, lienzos, ejes, transmisión, reproductor y sombras
+node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
 node tests/test_layout.js                  # 119 comprobaciones, careo del generador de layout
 node tests/test_layout_ui.js               # 17 comprobaciones, el generador en Chromium
 ```
