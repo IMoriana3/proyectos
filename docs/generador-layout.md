@@ -137,6 +137,12 @@ distintos y todos `layout.geojson` acaban siendo un misterio en la carpeta de de
 
 ## Notas
 
+- **El picker de catastro no está, y no es un olvido.** El cuaderno y Streamlit ofrecen traer la
+  parcela real de los proveedores oficiales (`/parcels` del motor: OSM y Catastro ES por bbox). Aquí
+  no se ha portado porque en la práctica **nunca ha funcionado** (decisión del 2026-08-20). La
+  parcela entra por GeoJSON —que sí se puede exportar a mano desde SIGPAC, Catastro o geojson.io— o
+  dibujada. Si algún día el proveedor es fiable, esto se reabre; mientras tanto, no volver a
+  intentarlo.
 - El motor SolarGPT se detecta solo en `127.0.0.1:8765/8000/9000`, o se le fija la URL con un clic en
   el indicador de la barra (el túnel de Colab). Con él conectado aparece la opción **Motor SolarGPT**
   en el desplegable *Cálculo* y la ficha pide el layout canónico por `POST /layout`.
