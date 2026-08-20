@@ -73,6 +73,16 @@ Tres cosas que cambian respecto a las otras cuatro:
 3. **No hay destow por histéresis.** Que el viento amaine no la levanta. Lo único que la recoge es
    el reenganche geométrico.
 
+### Cómo se ve en la escena
+
+El bloque del pasivo es el único que se dibuja con **dos poblaciones**, porque es lo que es: la fila
+de perímetro cae al límite y se marca como abanderada, y la interior sigue en seguimiento y **no** se
+marca. Cada una lleva su rótulo. Con un material compartido las dos brillaban igual y el caso volvía
+a parecer un abanderamiento de planta — que es justo lo que no es.
+
+Su cifra de POA es la de la **planta**, no la de la fila suelta: enseñar la de la fila daría una
+pérdida del 50 % en una planta de diez trackers.
+
 ### El nº de trackers es el denominador, no un adorno
 
 **La fila suelta pierde siempre lo mismo; lo que cambia es entre cuántas filas se reparte.**

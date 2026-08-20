@@ -245,9 +245,9 @@
       </div>
 
       <div style="margin:14px 0 4px;border-top:1px solid var(--bd);padding-top:12px">
-        <label class="chk"><input type="checkbox" id="pas"> <b>Pasivo</b> · la fila de perímetro se suelta sola</label>
+        <label class="chk"><input type="checkbox" id="pas" checked> <b>Pasivo</b> · la fila de perímetro se suelta sola</label>
       </div>
-      <div id="pasBox" style="display:none">
+      <div id="pasBox">
         <div class="three">
           <div class="field"><label>Trackers</label><input id="pasN" type="number" step="1" min="1" value="10"></div>
           <div class="field"><label>Suelta (km/h)</label><input id="pasV" type="number" step="5" value="90"></div>
@@ -1423,7 +1423,7 @@ var IDS=['lat','lon','year','source','step','wh','maxang','gcr','pitch','axaz','
 function saveCfg(){
   try{var c={};IDS.forEach(function(i){c[i]=$(i).value;});
     c.bt=$('bt').checked; c.wgust=$('wgust').checked; c.wcyc=$('wcyc').checked; c.gusts=GUSTS;
-    c.pas=$('pas').checked;
+    c.pas=$('pas').checked; c.pasV2=1;
     c.st=[].slice.call(document.querySelectorAll('.st')).filter(function(e){return e.checked;}).map(function(e){return e.value;});
     localStorage.setItem('factiun_viento_cfg',JSON.stringify(c));}catch(e){}
 }
@@ -1434,6 +1434,11 @@ function loadCfg(){
     if(c.wgust!=null)$('wgust').checked=!!c.wgust;
     if(c.wcyc!=null)$('wcyc').checked=!!c.wcyc;
     if(Array.isArray(c.gusts))GUSTS=c.gusts;
+    /* El pasivo pasa a venir ENCENDIDO (v1.9.4). Quien ya tenga configuración
+       guardada lleva `pas:false` de cuando el default era apagado —no porque
+       lo apagase— así que el nuevo default no le llegaría nunca. Se fuerza
+       UNA vez y se marca; a partir de ahí manda lo que elija. */
+    if(!c.pasV2){c.pas=true;}
     if(c.pas!=null){$('pas').checked=!!c.pas;$('pasBox').style.display=c.pas?'':'none';}
     if(c.st)[].forEach.call(document.querySelectorAll('.st'),function(e){e.checked=c.st.indexOf(e.value)>=0;});
   }catch(e){}
@@ -2146,10 +2151,30 @@ function escenaComparativa(){
     var mats=Seguidor.materials(THREE);
     mats.glass=new THREE.MeshStandardMaterial({color:PALA,roughness:.35,metalness:.25,
       emissive:new THREE.Color(0x000000),emissiveIntensity:0});
+    /* El bloque del PASIVO necesita DOS juegos de materiales, uno por
+       población: la fila de perímetro se suelta y se marca como abanderada,
+       y la interior sigue en seguimiento y NO se marca. Con un material
+       compartido las dos brillaban igual y el caso volvía a parecer un
+       abanderamiento de planta. */
+    var esPas=(k==='PASIVO'), matsInt=null;
+    if(esPas){
+      matsInt=Seguidor.materials(THREE);
+      matsInt.glass=new THREE.MeshStandardMaterial({color:PALA,roughness:.35,metalness:.25,
+        emissive:new THREE.Color(0x000000),emissiveIntensity:0});
+    }
     var b=new THREE.Group(); b.position.x=x0+bi*BLOQUE;
     var segs=[];
     for(var f=0;f<NFILAS;f++){
-      var t=seguidor3D(mats); t.position.x=(f-(NFILAS-1)/2)*PITCH; b.add(t); segs.push(t);
+      var t=seguidor3D((esPas&&f>0)?matsInt:mats);
+      t.position.x=(f-(NFILAS-1)/2)*PITCH; b.add(t); segs.push(t);
+    }
+    if(esPas){
+      // dos rótulos pequeños: cuál se ha soltado y cuál sigue operando
+      var e1=etiqueta3D('SUELTA','#f87272'), e2=etiqueta3D('EN SEGUIMIENTO','#9bb0c6');
+      e1.scale.multiplyScalar(0.62); e2.scale.multiplyScalar(0.62);
+      e1.position.set(-(NFILAS-1)/2*PITCH,Seguidor.DIMS.postH+4.2,0);
+      e2.position.set(+(NFILAS-1)/2*PITCH,Seguidor.DIMS.postH+4.2,0);
+      b.add(e1,e2);
     }
     var zb=Seguidor.DIMS.span/2+9;
     var barra=new THREE.Mesh(new THREE.BoxGeometry(1.8,1,1.8),
@@ -2165,7 +2190,7 @@ function escenaComparativa(){
     var eti=etiqueta3D(nombreCaso(k),col);
     eti.position.set(0,Seguidor.DIMS.postH+9,0);
     b.add(barra,ref,marca,eti); mundo.add(b);
-    bloques.push({k:k,g:b,segs:segs,mats:mats,barra:barra,ref:ref,eti:eti});
+    bloques.push({k:k,g:b,segs:segs,mats:mats,matsInt:matsInt,barra:barra,ref:ref,eti:eti});
   });
   /* Cámara casi desde el SUR y no muy alta: mirando a lo largo del eje N-S
      cada bloque se lee como su propia sección, y dejando algo de horizonte
@@ -2359,6 +2384,10 @@ function pintaEscena(ang,modos,poa,poaBase){
         t.spin.rotation.x=thF*Math.PI/180;});
       b.mats.glass.emissive.setHex(MODO_COL[modo]||0x000000);
       b.mats.glass.emissiveIntensity=(MODO_INT[modo]!=null?MODO_INT[modo]:0);
+      if(b.matsInt){                       // la fila interior sigue OPERANDO
+        b.matsInt.glass.emissive.setHex(0x000000);
+        b.matsInt.glass.emissiveIntensity=0;
+      }
       if(poa){
         var hh=Math.max(.4,(poa[b.k]||0)/pmax*18), hr=Math.max(.4,(poaBase||0)/pmax*18);
         b.barra.scale.y=hh; b.barra.position.y=hh/2;
