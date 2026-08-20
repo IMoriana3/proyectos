@@ -71,15 +71,18 @@ const aLonLat = pts => pts.map(p => [fix.lon + p[0] / M_LON, fix.lat + p[1] / M_
 function correr(caso, over) {
   const g = Object.assign({}, caso.cfg, over || {});
   return LAY.compute({
-    coords: aLonLat(caso.poly),
-    holes: (caso.holes || []).map(aLonLat),
-    exclusions: [],
+    coords: caso.poly_lonlat ? caso.poly_lonlat : aLonLat(caso.poly),
+    holes: caso.poly_lonlat ? (caso.holes_lonlat || []) : (caso.holes || []).map(aLonLat),
+    exclusions: caso.excl_lonlat || [],
     mount: g.mount_type === 'fija' ? 'fija' : 'tracker',
     table: g.table_type,
     mods: Array.isArray(g.mods_per_struct) ? g.mods_per_struct : [g.mods_per_struct],
     modLen: g.mod_len, modWid: g.mod_wid, moduleWp: fix.module_wp,
     pitch: g.pitch_m, setback: g.setback_m, panelAz: g.panel_az_deg,
-    bifila: g.bifila, gapModules: g.gap_modules, gapMotor: g.gap_motor, gapNs: g.gap_ns,
+    bifila: g.bifila,
+    gapModules: g.gap_modules,
+    gapMotor: g.mount_type === 'fija' ? g.gap_modules : g.gap_motor,
+    gapNs: g.mount_type === 'fija' ? g.gap_modules : g.gap_ns,
     roadEvery: g.road_every, roadW: g.road_w,
     roadNsEvery: g.road_ns_every, roadNsW: g.road_ns_w,
     mode: g.layout_mode, minStructs: g.min_structs_per_row,
@@ -103,11 +106,14 @@ for (const caso of fix.casos) {
   // Con exclusiones el core barre el origen Y (11 offsets simétricos) y se queda
   // con el que más coloca; ese barrido NO está portado, así que la fila de
   // arranque puede diferir en una. Sin exclusiones la cuenta tiene que cuadrar.
-  const tolFilas = (caso.holes && caso.holes.length) ? 1 : 0;
+  const tolFilas = ((caso.holes && caso.holes.length) ||
+                    (caso.holes_lonlat && caso.holes_lonlat.length) ||
+                    (caso.excl_lonlat && caso.excl_lonlat.length)) ? 1 : 0;
   check(n + ' · filas', Math.abs(s.rows - k.rows) <= tolFilas, s.rows + ' vs ' + k.rows);
-  check(n + ' · mesas dentro del 2,5 % (' + s.structures + ' vs ' + k.structures + ', ' +
-        dpct(s.structures, k.structures).toFixed(2) + ' %)', dpct(s.structures, k.structures) <= 2.5);
-  check(n + ' · kWp dentro del 2,5 % (' + dpct(s.kWp, k.kWp).toFixed(2) + ' %)', dpct(s.kWp, k.kWp) <= 2.5);
+  const tolM = caso.tol_mesas_pct || 2.5;
+  check(n + ' · mesas dentro del ' + tolM + ' % (' + s.structures + ' vs ' + k.structures + ', ' +
+        dpct(s.structures, k.structures).toFixed(2) + ' %)', dpct(s.structures, k.structures) <= tolM);
+  check(n + ' · kWp dentro del ' + tolM + ' % (' + dpct(s.kWp, k.kWp).toFixed(2) + ' %)', dpct(s.kWp, k.kWp) <= tolM);
   check(n + ' · área útil dentro del 0,5 % (' + dpct(s.inner_area_m2, k.inner_area_m2).toFixed(3) + ' %)',
         dpct(s.inner_area_m2, k.inner_area_m2) <= 0.5);
   check(n + ' · área de parcela dentro del 0,2 %', dpct(s.poly_area_m2, k.poly_area_m2) <= 0.2,
@@ -119,8 +125,8 @@ for (const caso of fix.casos) {
   // En tracker el GCR es fórmula cerrada (apertura/pitch) y no admite tolerancia.
   // En montaje FIJO el core lo define por ÁREA (colector/útil), así que arrastra
   // la misma diferencia que el conteo de mesas: se le exige lo mismo que a ellas.
-  const tolGcr = (k.fila_len_m ? 0.5 : 2.5);
-  check(n + ' · GCR ' + (k.fila_len_m ? 'exacto' : 'por área, dentro del 2,5 %'),
+  const tolGcr = (k.fila_len_m ? 0.5 : tolM);
+  check(n + ' · GCR ' + (k.fila_len_m ? 'exacto' : 'por área, dentro del ' + tolM + ' %'),
         dpct(s.GCR, k.GCR) < tolGcr, s.GCR.toFixed(4) + ' vs ' + k.GCR.toFixed(4));
   if (k.fila_len_m) check(n + ' · largo de fila (2 mesas + motor) exacto',
     dpct(s.fila_len_m, k.fila_len_m) < 0.01, s.fila_len_m + ' vs ' + k.fila_len_m);
@@ -213,6 +219,54 @@ check('los anillos del GeoJSON están cerrados',
     const r = f.geometry.coordinates[0];
     return r[0][0] === r[r.length - 1][0] && r[0][1] === r[r.length - 1][1];
   }));
+
+// La parcela REAL vigila desde dentro: si alguien borra la semilla de
+// tests/parcelas/ (o el generador deja de leerla), esto se pone rojo y el careo
+// vuelve a ser un banco de rectángulos de laboratorio — que es como se escapó
+// lo de bifila la primera vez.
+check('el fixture incluye al menos una PARCELA REAL de tests/parcelas/',
+  fix.casos.some(c => c.nombre.indexOf('PARCELA REAL') === 0));
+// …y el directorio semilla EXISTE con al menos un .geojson: el check de arriba
+// mira el fixture comiteado, así que borrar la semilla lo dejaba en verde
+// mientras la próxima regeneración perdía la finca en silencio.
+check('y tests/parcelas/ conserva su semilla (.geojson)',
+  (() => { try {
+    return fs.readdirSync(path.join(__dirname, 'parcelas'))
+             .filter(f => /\.geojson$/.test(f)).length >= 1;
+  } catch (e) { return false; } })());
+
+// CONSOLIDACIÓN, la lección que costó aprender dos veces: «dos medios seguidos
+// es mejor UNO entero». En TODOS los casos multi-talla se exige que no queden
+// dos trackers ADYACENTES de la misma talla cuando la talla doble existe.
+// LÍMITE CONOCIDO del invariante: el motor solo funde cuando el doble CABE
+// (banda de la fila, banda de la sub-fila B, viales) y esta reconstrucción no
+// re-comprueba ese encaje. En los casos del fixture toda adyacencia es
+// fundible, así que 0 es lo correcto HOY; si un caso nuevo LEGÍTIMO se pone
+// rojo aquí (la doble no cabía por banda B o vial), el arreglo es afinar el
+// invariante a re-comprobar el encaje — no borrarlo ni excluir el caso.
+fix.casos.forEach((c, i) => {
+  const mps = c.cfg.mods_per_struct;
+  if (!Array.isArray(mps) || mps.length < 2) return;
+  const r = js[i];
+  const gm = (c.cfg.gap_motor || 0.5) + 0.15, gn = (c.cfg.gap_ns || 0.5) + 0.2;
+  let malos = 0;
+  for (const fila of r.rows) {
+    const so = fila.slice().sort((a, b) => a.x0 - b.x0);
+    const gr = []; let cur = [];
+    for (const t of so) {
+      if (cur.length && cur.length < 2 && t.x0 - cur[cur.length - 1].x1 <= gm) cur.push(t);
+      else { if (cur.length) gr.push(cur); cur = [t]; }
+    }
+    if (cur.length) gr.push(cur);
+    for (let k = 0; k + 1 < gr.length; k++) {
+      const a = gr[k], b = gr[k + 1];
+      if (a.length === 2 && b.length === 2 && a[0].mods === b[0].mods &&
+          mps.includes(2 * a[0].mods) && b[0].x0 - a[1].x1 <= gn) malos++;
+    }
+  }
+  check(c.nombre + ' · nunca dos trackers de la misma talla seguidos (existe la doble)',
+    malos === 0, malos + ' adyacencias');
+});
 
 // El invariante que costó arreglar en el cuaderno, medido en TODOS los casos
 // bifila del fixture: cada línea con conteo par y las sub-filas A/B con las

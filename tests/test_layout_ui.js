@@ -80,6 +80,23 @@ const cajaLienzo = async page => {
   check('el emplazamiento arranca en «manual»', (await page.textContent('#sitioSel')).trim() === 'manual');
   check('el azimut de filas se deriva del eje (eje N-S 0° → filas a 90°)',
     await page.inputValue('#panelAz') === '90');
+  // MESA y FILA no son lo mismo: una mesa es UN string y una fila de tracker
+  // son DOS mesas + motor. La casilla decía «Mód./fila: 28» para un 1V/28 —
+  // el string, no la fila (56) — y con multi-talla solo enseñaba la primera.
+  check('los derivados separan Mód./mesa (28) de Mód./fila (56)',
+    /Mód\.\/mesa[\s\S]*28[\s\S]*Mód\.\/fila[\s\S]*56/.test(await page.textContent('#deriv')),
+    (await page.textContent('#deriv')).replace(/\s+/g, ' '));
+  await page.fill('#mods', '28, 14, 7'); await page.dispatchEvent('#mods', 'input');
+  check('y con multi-talla enseñan TODAS las tallas (56·28·14)',
+    /56·28·14/.test(await page.textContent('#deriv')),
+    (await page.textContent('#deriv')).replace(/\s+/g, ' '));
+  await page.selectOption('#mount', 'fija');
+  check('en fija el rótulo es Mód./estructura (no hay fila de dos mesas)',
+    /Mód\.\/estructura/.test(await page.textContent('#deriv')) &&
+    !/Mód\.\/fila/.test(await page.textContent('#deriv')));
+  await page.selectOption('#mount', 'tracker');
+  await page.fill('#axis', '0'); await page.dispatchEvent('#axis', 'change');
+  await page.fill('#mods', '28'); await page.dispatchEvent('#mods', 'input');
 
   // ── ortofoto y navegación ──
   // Esperar al estado FINAL: «cargando ortofoto…» también tiene longitud, y
@@ -248,9 +265,28 @@ const cajaLienzo = async page => {
   // ── parcela por GeoJSON ──
   await page.selectOption('#parcelMode', 'geojson');
   await page.fill('#geotxt', GEOJSON_PRUEBA);
+  // Pausa MAYOR que el debounce del autoguardado (800 ms): pegar y pulsar en el
+  // mismo instante hacía que el guardado diferido del `input` cazara el estado
+  // YA aplicado y el test no midiera el botón — un usuario pega, mira, y pulsa.
+  await page.waitForTimeout(1000);
   await page.click('#geoApplyBtn');
   check('el GeoJSON pegado se reconoce y da su superficie',
     /vértices · [\d,.]+ ha/.test(await page.textContent('#parcelTag')), await page.textContent('#parcelTag'));
+  // Lo que se mide es el COMPORTAMIENTO: pegar un GeoJSON y aplicarlo tiene que
+  // acabar en la sesión sin pasar por Generar. Lo garantizan DOS mecanismos
+  // (el blur del textarea al pulsar dispara `change`, y applyGeo llama a
+  // autoguarda() explícito); el mutante que mata este check quita los dos —
+  // quitar solo el explícito lo deja verde por el blur, y está bien que así sea.
+  // Se mide ANTES de generar (pintar() también guarda, y taparía el camino) y
+  // por CONTENIDO (el lon −0.8035 solo está en el GeoJSON de prueba, no en la
+  // parcela por cotas que la sesión ya traía de los pasos anteriores).
+  check('y la parcela aplicada queda en la sesión autoguardada sin pasar por Generar',
+    await page.waitForFunction(() => {
+      try {
+        const st = JSON.parse(localStorage.getItem('genlayout_sesion') || 'null');
+        return !!(st && st.parcel && st.parcel.some(p => Math.abs(p[0] + 0.8035) < 1e-9));
+      } catch (e) { return false; }
+    }, null, { timeout: 4000 }).then(() => true).catch(() => false));
   await generar(page);
   check('y genera sobre esa parcela', num(await page.textContent('#ro .ro:nth-child(2) .v')) > 500);
 
@@ -382,27 +418,85 @@ const cajaLienzo = async page => {
   await page.fill('#prot', '0'); await page.dispatchEvent('#prot', 'change');
   await page.fill('#mods', '28');
 
-  // ── el 3D recibe lo MISMO que se ve en 2D ──
+  // ── el 3D recibe lo MISMO que se ve en 2D, EN LOS TRES MODOS ──
+  // La semántica del visor: un nodo es UN TRACKER, y con filaZ>0 ese nodo
+  // dibuja DOS filas y el eje de transmisión (Ayora: pasoFila 6, filaZ 3).
+  // «No siempre un nodo = un bifila»: monofila y fija exportan distinto, y
+  // cada modo se comprueba por separado.
   await page.fill('#mods', '28, 14, 7');
+  await page.selectOption('#bifila', '1');
   await generar(page);
-  const RES_mesas = await page.evaluate(() => RES.stats.structures);
-  const alViewer = await page.evaluate(() => {
+  const mesasBif = await page.evaluate(() => RES.stats.structures);
+  const v3bif = await page.evaluate(() => {
     document.querySelector('#d3Btn').click();
     return JSON.parse(localStorage.getItem('cobertura_layout') || '{}');
   });
-  check('el 3D recibe la geometría de mesa (ancho, largo, gaps, pitch)',
-    alViewer.mesa && alViewer.mesa.modW > 0 && alViewer.mesa.pasoFila > 0 &&
-    alViewer.mesa.gapDrive != null, JSON.stringify(alViewer.mesa || {}).slice(0, 120));
-  check('con UN TIPO POR TALLA y su largo real, no una talla global',
-    Object.keys(alViewer.mesa.tipos || {}).length > 1,
-    JSON.stringify(alViewer.mesa && alViewer.mesa.tipos));
-  check('y cada tracker con su mods, su razón de largo y su tipo',
-    (alViewer.trackers || []).every(t => t.mods > 0 && t.mr > 0 && t.mr <= 1 && t.blk && t.t) &&
-    alViewer.trackers.some(t => t.mr < 0.999),
-    JSON.stringify((alViewer.trackers || [])[0]));
-  check('los trackers del 3D son PAREJAS de mesas (la mitad que en 2D, ±10 %)',
-    Math.abs(alViewer.trackers.length - RES_mesas / 2) < RES_mesas * 0.1,
-    alViewer.trackers.length + ' vs ' + (RES_mesas / 2));
+  check('BIFILA → filaZ = pitch/2 (el visor pone las 2 filas y el EJE él solo)',
+    v3bif.mesa && Math.abs(v3bif.mesa.filaZ - v3bif.mesa.pasoFila / 2) < 1e-9,
+    JSON.stringify({ filaZ: v3bif.mesa && v3bif.mesa.filaZ, paso: v3bif.mesa && v3bif.mesa.pasoFila }));
+  check('BIFILA → un nodo por PAREJA A/B: ~mesas/4 (' + v3bif.trackers.length + ' vs ' + mesasBif + ' mesas)',
+    Math.abs(v3bif.trackers.length - mesasBif / 4) <= mesasBif * 0.02);
+  check('con un TIPO por talla y el largo de FILA real (2 mesas + motor)',
+    Object.keys(v3bif.mesa.tipos).length > 1 &&
+    Object.values(v3bif.mesa.tipos).every(t => t.largo > 0 && t.modsAla > 0),
+    JSON.stringify(v3bif.mesa.tipos));
+  check('y cada nodo con su talla, su razón de largo y alguna corta de verdad',
+    v3bif.trackers.every(t => t.mods > 0 && t.mr > 0 && t.mr <= 1 && t.blk) &&
+    v3bif.trackers.some(t => t.mr < 0.999));
+  check('y en tracker `fijas` va vacío (no hay mesas fijas que dibujar)',
+    Array.isArray(v3bif.fijas) && v3bif.fijas.length === 0);
+
+  await page.selectOption('#bifila', '0');
+  await generar(page);
+  const mesasMono = await page.evaluate(() => RES.stats.structures);
+  const v3mono = await page.evaluate(() => {
+    document.querySelector('#d3Btn').click();
+    return JSON.parse(localStorage.getItem('cobertura_layout') || '{}');
+  });
+  check('MONOFILA → filaZ = 0 y un nodo por tracker: ~mesas/2 (' + v3mono.trackers.length + ')',
+    v3mono.mesa.filaZ === 0 && Math.abs(v3mono.trackers.length - mesasMono / 2) <= mesasMono * 0.02);
+
+  await page.selectOption('#mount', 'fija');
+  await generar(page);
+  const estrFija = await page.evaluate(() => RES.stats.structures);
+  const v3fija = await page.evaluate(() => {
+    document.querySelector('#d3Btn').click();
+    return JSON.parse(localStorage.getItem('cobertura_layout') || '{}');
+  });
+  check('FIJA → filaZ = 0 y un nodo POR ESTRUCTURA (' + v3fija.trackers.length + ' vs ' + estrFija + ')',
+    v3fija.mesa.filaZ === 0 &&
+    Math.abs(v3fija.trackers.length - estrFija) <= estrFija * 0.02);
+  // El visor con `fija` NO construye seguidores: corta en terreno.html:961 y el
+  // campo se dibuja desde `fijas` (buildFijasInst) — mandar fija:true con las
+  // mesas solo en `trackers` era un visor VACÍO (hallazgo de la verificación
+  // adversarial, comprobado contra el fuente del visor). `fija` viaja como
+  // {tilt} porque el visor lee LAYOUT.fija.tilt para el rótulo del ángulo.
+  const tiltFija = await page.evaluate(() => +document.querySelector('#fixTilt').value);
+  check('FIJA → el campo viaja en `fijas` (una entrada por estructura, que es lo que el visor dibuja)',
+    Array.isArray(v3fija.fijas) && v3fija.fijas.length === estrFija,
+    (v3fija.fijas || []).length + ' vs ' + estrFija);
+  check('FIJA → fija:{tilt} y cada mesa con su rectángulo desescorzable (p = fondo·cos i ≤ apertura)',
+    v3fija.fija && typeof v3fija.fija === 'object' && v3fija.fija.tilt === tiltFija &&
+    v3fija.fijas.every(f => f.w > 0 && f.p > 0 && f.inclinacion === tiltFija &&
+      f.p <= f.w && isFinite(f.azimut) && f.cols > 0 && f.rows >= 1),
+    JSON.stringify(v3fija.fijas && v3fija.fijas[0]));
+  // Y la TABLA manda en el handoff: con 2V los módulos por ala siguen siendo
+  // los del string (a lo largo del tubo van mods de ancho modWid, apilados en
+  // n filas) y la cuerda del colector se dobla. Mandar mods×n como «módulos
+  // por ala» dibujaba la fila 2V del DOBLE de largo en el visor.
+  await page.selectOption('#table', '2V');
+  await generar(page);
+  const v3dosV = await page.evaluate(() => {
+    document.querySelector('#d3Btn').click();
+    return JSON.parse(localStorage.getItem('cobertura_layout') || '{}');
+  });
+  const dims2v = await page.evaluate(() => ({ modLen: +document.querySelector('#modLen').value }));
+  check('2V → mods por ala = los del string (no ×2) y modH = cuerda del colector (2·módulo)',
+    v3dosV.mods === 28 && Math.abs(v3dosV.mesa.modH - 2 * dims2v.modLen) < 1e-6,
+    JSON.stringify({ mods: v3dosV.mods, modH: v3dosV.mesa.modH }));
+  await page.selectOption('#table', '1V');
+  await page.selectOption('#mount', 'tracker');
+  await page.selectOption('#bifila', '1');
   await page.fill('#mods', '28');
 
   // ── render, descartadas y eje bifila ──
@@ -582,6 +676,26 @@ const cajaLienzo = async page => {
   check('pide la elevación por lotes', peticionesDem > 0, String(peticionesDem));
   check('y monta la malla', /malla 12×12/.test(await page.textContent('#demTag')),
     await page.textContent('#demTag'));
+  // Los CUATRO CUADROS del §02.5b («haz como en el notebook»): satélite,
+  // elevación, pendiente total y excluidas — pintados, no solo presentes.
+  check('salen los cuatro cuadros del MDT',
+    await page.evaluate(() => document.querySelectorAll('#demPaneles canvas').length === 4));
+  check('con sus títulos canónicos',
+    /satelital/i.test(await page.textContent('#demPaneles')) &&
+    /Elevación/.test(await page.textContent('#demPaneles')) &&
+    /Pendiente total/.test(await page.textContent('#demPaneles')) &&
+    /excluidas/i.test(await page.textContent('#demPaneles')),
+    (await page.textContent('#demPaneles')).replace(/\s+/g, ' ').slice(0, 140));
+  check('y pintados de verdad (elevación y pendiente no están en blanco)',
+    await page.evaluate(() => {
+      const cvs = document.querySelectorAll('#demPaneles canvas');
+      const vivos = [...cvs].slice(1, 3).map(c => {
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+        let n = 0; for (let i = 0; i < d.length; i += 40) if (d[i] + d[i + 1] + d[i + 2] > 60) n++;
+        return n;
+      });
+      return vivos.every(v => v > 200);
+    }));
   check('mide las pendientes y las escribe arriba',
     Math.abs(+(await page.inputValue('#slopeEw'))) > 0.5, await page.inputValue('#slopeEw'));
   check('las pendientes pasan a ser del MDT y dejan de ser editables',
@@ -594,6 +708,16 @@ const cajaLienzo = async page => {
   await page.waitForTimeout(200);
   check('bajar la pendiente máxima marca celdas fuera',
     /[1-9]\d* celda/.test(await page.textContent('#demTag')), await page.textContent('#demTag'));
+  // Y DESCARTA SOLA: aplicar el MDT regenera sin volver a pulsar Generar.
+  // «La topografía no descarta ninguna estructura» era esto: descartaba, pero
+  // solo al regenerar a mano.
+  const descartaSolo = await page.waitForFunction(m => {
+    const el = document.querySelectorAll('#ro .ro')[1];
+    if (!el) return false;
+    const v = parseInt(el.querySelector('.v').textContent.replace(/[^\d]/g, ''), 10);
+    return v > 0 && v < m;
+  }, mesasSinMdt, { timeout: 30000 }).then(() => true).catch(() => false);
+  check('y el MDT descarta SOLO, sin volver a pulsar Generar', descartaSolo);
   await generar(page);
   const mesasConMdt = num(await page.textContent('#ro .ro:nth-child(2) .v'));
   check('y el filtro de pendiente QUITA mesas, sin vaciar el campo (' + mesasSinMdt + ' → ' + mesasConMdt + ')',
@@ -743,6 +867,148 @@ const cajaLienzo = async page => {
   check('y no deja marcar a mano: son casillas calculadas',
     await page.evaluate(() => document.querySelectorAll('#sizes input').length === 0));
 
+  // ── módulos dibujados y UN color de mesa ──
+  // «En el 2D dibuja los módulos»: al acercarse salen los separadores reales de
+  // módulo. Y «¿por qué dos colores?»: había verde y azul sin leyenda — ahora
+  // toda mesa es del mismo color y el reparto por talla vive en su tabla.
+  await page.fill('#pw', '120'); await page.dispatchEvent('#pw', 'change');
+  await page.fill('#ph', '90'); await page.dispatchEvent('#ph', 'change');
+  await page.fill('#mods', '28, 14, 7');
+  await generar(page);
+  await page.click('#fit');
+  await page.waitForTimeout(250);
+  const seps = await page.evaluate(() => {
+    const cuenta = () => { const c = document.querySelector('#cv');
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      let n = 0;
+      for (let i = 0; i < d.length; i += 4)
+        if (d[i] < 70 && d[i + 1] > 80 && d[i + 1] < 185 && d[i + 2] < 160) n++;   // verde OSCURO = separador sobre mesa
+      return n; };
+    const cerca = cuenta();
+    VIEW.z -= 4; draw(); const lejos = cuenta(); VIEW.z += 4; draw();
+    return { cerca, lejos };
+  });
+  check('al acercarse se dibujan los separadores de módulo (' + seps.cerca + ' px vs ' + seps.lejos + ' de lejos)',
+    seps.cerca > seps.lejos * 3 && seps.cerca > 400, JSON.stringify(seps));
+  const colorCorta = await page.evaluate(() => {
+    // la mesa MÁS CORTA (talla pequeña): su centro tiene que ser del MISMO verde
+    let corta = RES.structures[0];
+    for (const t of RES.structures) if (t.len < corta.len) corta = t;
+    const c = (corta.lonlat[0].map((v, i) => corta.lonlat.reduce((a, q) => a + q[i], 0) / 4));
+    const pp = px(c[0], c[1]);
+    const d = document.querySelector('#cv').getContext('2d')
+      .getImageData(Math.round(pp[0]) - 1, Math.round(pp[1]) - 1, 3, 3).data;
+    let mejor = [0, 0, 0];
+    for (let i = 0; i < d.length; i += 4) if (d[i + 1] > mejor[1]) mejor = [d[i], d[i + 1], d[i + 2]];
+    return mejor;
+  });
+  check('la mesa corta es del MISMO color que las demás (verde, no azul)',
+    colorCorta[1] > 140 && colorCorta[2] < 200 && colorCorta[2] < colorCorta[1] + 30,
+    'rgb(' + colorCorta.join(',') + ')');
+  await page.fill('#pw', '600'); await page.dispatchEvent('#pw', 'change');
+  await page.fill('#ph', '450'); await page.dispatchEvent('#ph', 'change');
+
+  // ── el export GeoJSON lleva la PARCELA ──
+  // Sin ella, el fichero no podía volver a entrar como caso del careo ni
+  // reabrirse como proyecto: eran mesas flotando sin el recinto que las explica.
+  await generar(page);
+  const geoExp = JSON.parse((await bajado('expGeo')).txt);
+  check('el GeoJSON exportado lleva su feature tipo=parcela',
+    (geoExp.geojson.features || []).some(f => f.properties && f.properties.tipo === 'parcela'));
+
+  // ── sesión: guardar a fichero, cargar en una página LIMPIA ──
+  await page.fill('#prot', '35'); await page.dispatchEvent('#prot', 'change');
+  await page.selectOption('#bifila', '1');
+  await generar(page);
+  const cajaS = await cajaLienzo(page);
+  await page.click('#exclStart');
+  for (const [fx, fy] of [[0.42, 0.42], [0.58, 0.42], [0.58, 0.58], [0.42, 0.58]])
+    await page.mouse.click(cajaS.x + cajaS.w * fx, cajaS.y + cajaS.h * fy);
+  await page.mouse.dblclick(cajaS.x + cajaS.w * 0.42, cajaS.y + cajaS.h * 0.58);
+  await generar(page);
+  const mesasSes = num(await page.textContent('#ro .ro:nth-child(2) .v'));
+  const sesion = await bajado('sesGuardar');
+  check('la sesión se guarda a fichero .json', /sesion\.json$/.test(sesion.nombre), sesion.nombre);
+  const pag5 = await browser.newPage();
+  await pag5.route('https://server.arcgisonline.com/**', r => r.abort());
+  await pag5.route('https://geocoding-api.open-meteo.com/**', r => r.abort());
+  await pag5.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
+  await pag5.evaluate(() => { try { localStorage.removeItem('genlayout_sesion'); } catch (e) {} });
+  await pag5.setInputFiles('#sesFile', { name: 'sesion.json', mimeType: 'application/json',
+                                          buffer: Buffer.from(sesion.txt) });
+  await pag5.waitForFunction(() => /Sesión cargada/.test(document.querySelector('#foot').textContent),
+    null, { timeout: 10000 });
+  check('la página limpia restaura la configuración (giro 35, multi-talla, BIFILA)',
+    await pag5.inputValue('#prot') === '35' &&
+    /28, ?14, ?7/.test(await pag5.inputValue('#mods')) &&
+    await pag5.inputValue('#bifila') === '1');
+  check('y la exclusión dibujada vuelve con ella',
+    await pag5.evaluate(() => EXCL.length === 1));
+  await pag5.evaluate(() => { document.querySelector('#hint').textContent = ''; });
+  await pag5.click('#genBtn');
+  await pag5.waitForFunction(() => /ms/.test(document.querySelector('#hint').textContent),
+    null, { timeout: 30000 });
+  const mesasPag5 = num(await pag5.textContent('#ro .ro:nth-child(2) .v'));
+  check('y al generar sale la MISMA cuenta de mesas (' + mesasPag5 + ' vs ' + mesasSes + ')',
+    mesasPag5 === mesasSes);
+  check('sin monofilas de contrabando: sigue bifila con líneas PARES y Δx = 0',
+    await pag5.evaluate(() => RES.stats.bifila === true &&
+      RES.rows.every(r => r.length % 2 === 0) && RES.stats.ab_max_dx_m < 0.01));
+  await pag5.close();
+
+  // ── sesión: el autoguardado sobrevive a recargar ──
+  await page.waitForTimeout(1100);                       // deja correr el debounce
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => /Sesión anterior restaurada/.test(document.querySelector('#foot').textContent),
+    null, { timeout: 10000 });
+  check('recargar NO pierde el trabajo: sesión restaurada sola',
+    await page.inputValue('#prot') === '35' && await page.evaluate(() => EXCL.length === 1));
+  // «empezar de cero» borra y recarga limpio
+  await page.click('#sesReset');
+  await page.waitForFunction(() => !/restaurada/.test(document.querySelector('#foot').textContent),
+    null, { timeout: 10000 });
+  check('«empezar de cero» arranca de verdad de cero',
+    await page.inputValue('#prot') === '0' && await page.evaluate(() => EXCL.length === 0));
+
+  // ── gate layout ↔ sizing (§06.5) ──
+  await abreAvanzados(page);
+  await generar(page);
+  const gDatos = await page.evaluate(() => ({ s: RES.stats.strings, k: RES.stats.kWp }));
+  await page.evaluate(d => localStorage.setItem('factiun_sizing',
+    JSON.stringify({ n_strings_total: d.s, pnom_kwp: d.k })), gDatos);
+  await page.click('#btnGate');
+  check('gate con sizing coherente → PASS (y se rellena solo de factiun_sizing)',
+    /PASS/.test(await page.textContent('#sizes')), (await page.textContent('#sizes')).slice(0, 90));
+  await page.click('#btnChecklist');
+  check('y el checklist §02.5i lo recoge como PASS',
+    /Gate layout ↔ sizing[\s\S]*PASS/.test(await page.textContent('#sizes')));
+  await page.fill('#gateStrings', String(Math.round(gDatos.s * 1.3)));
+  await page.click('#btnGate');
+  // por el ESTADO, no por /FAIL/: la nota «WARN no es FAIL» contiene la
+  // palabra FAIL en cualquier resultado del gate — la misma trampa del WARN.
+  check('gate con strings un 30 % desviados → FAIL con su mensaje canónico',
+    await page.evaluate(() => GATE && GATE.status === 'FAIL') &&
+    /strings desalineados/.test(await page.textContent('#sizes')));
+  await page.fill('#gateStrings', ''); await page.fill('#gateKwp', '');
+  await page.evaluate(() => localStorage.removeItem('factiun_sizing'));
+  await page.click('#btnGate');
+  // el ESTADO del gate, no una palabra suelta: el propio texto explica «WARN no
+  // es FAIL» y esa frase contiene la palabra FAIL — buscarla a secas era medir
+  // la explicación, no el resultado.
+  check('gate sin datos de sizing → WARN, no FAIL (falta información, no está mal)',
+    await page.evaluate(() => GATE && GATE.status === 'WARN'));
+  // Y en el checklist, WARN es el estado ↗ («depende de otra ficha»), no el ☐
+  // de «mirado y está mal»: desmarcarlo por no tener datos era castigar el
+  // no-haber-mirado igual que el estar-mal.
+  await page.click('#btnChecklist');
+  check('y el checklist recoge el WARN como pendiente (↗), no como desmarcado (☐)',
+    await page.evaluate(() => {
+      // la FILA del gate, no el contenedor (que también contiene el texto):
+      const fila = [...document.querySelectorAll('#sizes div')].filter(d =>
+        /Gate layout/.test(d.textContent) && d.textContent.length < 200).pop();
+      return !!fila && fila.textContent.trim().startsWith('↗');
+    }));
+
   // ── pitch imposible: la ficha lo canta ──
   await page.selectOption('#parcelMode', 'rect');
   await page.fill('#pitch', '1.2'); await generar(page);
@@ -788,6 +1054,38 @@ const cajaLienzo = async page => {
     /retícula de 50 m/.test(await pag3.textContent('#basemapMsg')),
     await pag3.textContent('#basemapMsg'));
   await pag3.close();
+
+  // ── el área útil se VE, también con el grid girado ──
+  // La banda se pintaba con un fillRect entre los dos extremos proyectados de
+  // cada línea de barrido: sin giro son casi horizontales y colaba; con el
+  // azimut girado son diagonales y lo que salía era la caja envolvente de cada
+  // segmento — una neblina que no se leía como área útil (el «¿dónde está el
+  // área útil?» de producción). Ahora son quads en el marco LOCAL, y esto lo
+  // mide en el régimen donde el fillRect mentía: parcela chica con setback
+  // enorme y SIN mesas (así el único verde del lienzo es la banda), sin
+  // ortofoto (fondo determinista) y azimut a 135°.
+  const pag6 = await browser.newPage();
+  await pag6.route('https://server.arcgisonline.com/**', r => r.abort());
+  await pag6.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
+  await pag6.evaluate(() => { document.querySelector('#orto').checked = false; });
+  await pag6.fill('#pw', '100'); await pag6.fill('#ph', '90');
+  await pag6.fill('#setback', '40'); await pag6.fill('#panelAz', '135');
+  await generar(pag6);
+  const util = await pag6.evaluate(() => {
+    const st = RES && RES.stats;
+    const c = document.querySelector('#cv'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    // Verde de la banda: más verde que rojo con margen (el relleno azul de la
+    // parcela solo, g−r ≈ 12, no llega) y sin el azul del trazo del contorno.
+    let verde = 0;
+    for (let i = 0; i < d.length; i += 4)
+      if (d[i + 1] > d[i] + 22 && d[i + 2] < d[i + 1] + 30 && d[i + 1] < 190) verde++;
+    return { mesas: st ? st.structures : -1, banda: (RES.inner_band || []).length, verde };
+  });
+  check('parcela chica + setback 40 m: sin mesas pero con área útil calculada',
+    util.mesas === 0 && util.banda > 0, JSON.stringify(util));
+  check('la banda del área útil SE VE con el grid girado (píxeles verdes sin una sola mesa)',
+    util.verde > 400, util.verde + ' px');
+  await pag6.close();
 
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');

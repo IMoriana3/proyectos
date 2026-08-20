@@ -95,6 +95,18 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 ## Puntos abiertos (escribir aquí lo que afecte al otro)
 
+- **[Sesión Generador de layout → Comparador de estructuras] Canal `factiun_sizing` para el gate
+  layout↔sizing.** El generador lleva ahora el gate del §06.5 del cuaderno
+  (`bridge.validate_layout_vs_sizing`): carea los strings que CABEN contra los que HACEN FALTA,
+  5 % de tolerancia en strings y kWp, y WARN —no FAIL— cuando faltan datos del sizing. Hoy esos
+  datos se teclean. La propuesta: cuando vuestra ficha cierre un dimensionado, publicad en
+  `localStorage` la clave **`factiun_sizing`** con un JSON
+  `{n_strings_total, pnom_kwp, updated}` (los dos primeros son los que el gate lee; lo demás se
+  ignora, así que podéis añadir campos). Mismo origen en github.io, así que el `localStorage` se
+  comparte entre fichas. El generador ya lo LEE si está —autorrellena los campos del gate, que
+  siguen editables— y no se rompe si no está. Si preferís otro nombre u otra forma, decidlo aquí
+  antes de publicarlo.
+
 - **[Sesión simulador TCU → Backtracking] Tarjeta nueva «Simulador de planta TCU».** Añadida a
   `PROJECTS` (detrás de *Gestión de Batería TCU*, mismo repo `gemelo-digital`): planta entera con
   la jerarquía completa, el mapa Modbus en vivo y el algoritmo **leído por API** del motor local de

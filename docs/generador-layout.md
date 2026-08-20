@@ -15,7 +15,7 @@ El motor SolarGPT es opcional y da el número canónico.
 | «¿Cuántas mesas y cuántos MWp caben **en esta parcela**?» | **aquí** |
 | «¿Qué **estructura** monto en este sitio?» (fija vs seguidor) | ficha [Comparador de estructuras](comparador-estructuras.md) |
 | «¿Cuánta **energía** produce lo que cabe?» | ficha Sol & Simulación y §03 del cuaderno |
-| «¿Cómo queda el **terreno** (desmontes, pendientes)?» | `solargpt_core.earthworks` / MDT, todavía no portado |
+| «¿Cómo queda el **terreno** (desmontes, pendientes)?» | el MDT y las hincas, aquí; desmontes y explanación, `solargpt_core.earthworks` en el cuaderno |
 
 Esto es **geometría**: dónde va cada mesa y cuántas son. La potencia sale de multiplicar módulos
 por Wp; no hay meteo, ni sombras, ni energía.
@@ -115,6 +115,12 @@ Los mismos campos, las mismas fórmulas y los mismos avisos que la página **Lay
 alto físico sí suma los gaps entre módulos apilados. Streamlit enseña los dos justo por eso, y aquí
 también.
 
+Y los contadores usan la nomenclatura de la casa: **Mód./mesa** (1 string — 28) y **Mód./fila**
+(2 mesas sobre el mismo tubo — 56). La fila es `2·MESA + gap_motor`, así que su contador **dobla**
+el de la mesa, y en multi-talla se enseñan todas (`56·28·14`). Un «Mód./fila: 28» con talla 28 era
+el contador de la MESA con el rótulo equivocado. En fija no hay motor y el rótulo pasa a
+**Mód./estructura**.
+
 ## Bifila: si es bifila, es bifila
 
 La sub-fila **B es el espejo en Y de su A**, no una colocación independiente — la «Opción C» del
@@ -130,6 +136,23 @@ Medido sobre parcela girada 35°, multi-talla y parcela en L: **0 pares descuadr
 
 El **eje de transmisión** (la biela que une las dos sub-filas) se dibuja con su casilla: es lo que
 hace visible que es bifila y no dos monofilas juntas.
+
+## Consolidación: nunca dos cortos donde cabe un doble
+
+Regla del cliente, la misma que aplica el paso de consolidación N-S de `layout_v2`: **dos trackers
+contiguos de la misma talla se funden en uno de la talla doble** si el catálogo la tiene
+(`2·7 → 14 → 28`, encadenado). Dos cortos seguidos ocupan más suelo que un doble —dos huecos de
+motor en vez de uno— y encima duplican motor y TCU.
+
+Se aplica sobre la sub-fila **A antes del espejo**, así que la B hereda la consolidación por
+construcción y el emparejado no se entera. Y es más estricta que la del core en una cosa: el
+tracker fundido se **recomprueba** contra la banda de su fila, contra la banda de su gemela B y
+contra los viales — fundir dos que cabían en un doble que no cabe sería ganar un motor y perder dos
+mesas.
+
+El careo la mide como invariante en los casos multi-talla: **nunca dos trackers de la misma talla
+seguidos cuando existe la doble**. Es la queja que se repitió en planta («dibuja dos trackers
+cortos seguidos que ocupan más que un medio») convertida en luz roja.
 
 ## Barridos de orientación
 
@@ -171,7 +194,13 @@ tras el recorte, cae su pareja.
 - **Mostrar descartadas**: las que el motor tiró, en gris punteado. Ver *dónde* se pierden dice más
   que el número.
 - **Mostrar eje bifila**: la biela que une las dos sub-filas de un mismo tracker. Es lo que hace
-  visible que es bifila y no dos monofilas juntas.
+  visible que es bifila y no dos monofilas juntas. Va **marcada por defecto**: un eje que hay que
+  acordarse de encender es un eje que no se ve.
+- **Los módulos se dibujan.** Con zoom suficiente (≥ 3 px por módulo) cada mesa enseña sus
+  separadores de módulo y las filas de la tabla (2V, 4H…): una mesa de 28 y una de 14 no se
+  distinguen a ojo por el largo, y contando módulos sí.
+- **Un solo color de mesa.** Las tallas se distinguen por su **largo**, que es real; pintarlas de
+  colores distintos sugería tipos de estructura diferentes donde solo hay largos diferentes.
 
 ## El terreno y sus pendientes
 
@@ -243,6 +272,18 @@ suponía tu resolución. Los lotes ya pedidos quedan cacheados.
 > Sirve para ver la forma del terreno y filtrar por pendiente — **no para replanteo**. Va dicho en
 > la propia ficha.
 
+### Los cuatro cuadros, como en Streamlit
+
+Al aplicar el MDT salen los mismos cuatro paneles que pinta la página Layout
+(`terrain_report.plot_dem_panels`): **imagen satelital**, **elevación** (m), **pendiente total**
+(°, con lo que pasa la máxima en rojo) y **zonas excluidas** (%), los cuatro con la parcela y las
+mesas encima. Un número de exclusión sin mapa no dice DÓNDE te está recortando el campo.
+
+Y aplicar el MDT **regenera el layout solo**: descargar la topografía después de generar dejaba las
+mesas como estaban hasta volver a pulsar Generar — el filtro existía y no descartaba nada, que es
+exactamente como se vio fallar en planta. Si hay un resultado en pantalla, aplicar el MDT lo
+recalcula con las exclusiones puestas.
+
 ### Qué hace cada cosa (que no es lo mismo)
 
 Aquí hay dos cosas distintas y conviene no mezclarlas:
@@ -289,19 +330,20 @@ Dos cosas que conviene saber porque no son intuitivas:
 | `place_row_aligned_multi` | Port literal: greedy largest-first sobre rejilla común, mirada-adelante («¿por qué dos de 5 y no uno de 10?») y segunda pasada de paso fino |
 | `match_rows_by_x` + paridad bifila | Port literal, con el espejo de la sub-fila B sobre la A y el recorte a conteo par |
 | `_centered_road_positions` | Port literal |
+| Consolidación N-S (`layout_v2`) | `consolidaFila`: dos trackers contiguos de la misma talla se funden en la doble si el catálogo la tiene, encadenado, sobre la sub-fila A antes del espejo — y más estricta que el core: el fundido se recomprueba contra la banda de su fila, contra la de su gemela B y contra los viales |
 | `contains` contra `poly_r.buffer(0.05)` | Misma holgura de 5 cm. **No es cosmética**: sin ella, un borde que se desvía dos centímetros a lo largo de la parcela tira la primera mesa de cada fila y se pierde un tracker por fila |
 
 **Lo que NO está portado**, y por eso sale escrito en la propia ficha: relleno por columna y
-edge-fill, consolidación N-S de trackers contiguos, barrido del ángulo de grid
-(`optimize_grid_angle`), barrido del origen Y cuando hay exclusiones y filtro por pendiente del MDT.
-Son refinamientos de borde: mueven unidades sobre parcelas irregulares, no el orden de magnitud.
+edge-fill, y el barrido del origen Y cuando hay exclusiones. Son refinamientos de borde: mueven
+unidades sobre parcelas irregulares, no el orden de magnitud. (La consolidación N-S, el barrido del
+ángulo de grid y el filtro por pendiente del MDT **sí están ya** — cada uno con su sección.)
 
 ## El careo
 
-`node tests/test_layout.js` — 151 comprobaciones, sin navegador.
+`node tests/test_layout.js` — 177 comprobaciones, sin navegador.
 
 Extrae el bloque `MOTOR DE LAYOUT` del `generador-layout.html` **real** (no una copia en un `.js`,
-que se quedaría careando una versión vieja) y lo corre sobre las mismas doce parcelas que corrió
+que se quedaría careando una versión vieja) y lo corre sobre las mismas catorce parcelas que corrió
 `solargpt_core.layout_v2.compute_layout_v2` (`tests/careo-layout.json`).
 
 Lo que se exige, y por qué eso y no la igualdad:
@@ -315,18 +357,25 @@ Lo que se exige, y por qué eso y no la igualdad:
 | GCR de tracker | exacto | `apertura / pitch`. En fija el core lo define por área, así que arrastra la diferencia del conteo |
 | UTM contra pyproj | < 1 mm | Tres órdenes de magnitud menos que el gap entre módulos |
 
-Medido hoy sobre los doce casos: **tres clavados** (parcela girada 35° bifila, parcela en L
-monofila, setback de 15 m), el peor a **1,89 %** (montaje fijo 2V) y las **filas idénticas en 11 de
-12**.
+Medido hoy sobre los catorce casos: **tres clavados** (parcela girada 35° bifila, parcela en L
+monofila, setback de 15 m) y las **filas idénticas en 13 de 14** (el que no, el hueco central,
+dentro del ±1 del barrido de Y no portado). El peor caso dentro de la tolerancia global es el
+montaje fijo 2V, a **1,89 %**; el fijo **multi-talla** sale a **2,59 %** y lleva su tolerancia
+declarada (3 %) con el mecanismo medido en el generador del fixture: la rejilla global del core
+interactúa con la rotación de convergencia y pierde un slot de mesa en la mitad de las filas
+(60 filas de 18 + 50 de 17 sobre un rectángulo uniforme), así que en fijo el port queda **por
+encima** del canónico hasta ~2,6 % — la desviación es optimista y va dicha, no escondida bajo una
+tolerancia global más ancha.
 
-Tres de los doce son **bifila con multi-talla** —sobre rectángulo girado 35°, sobre parcela en L y
+Tres de los catorce son **bifila con multi-talla** —sobre rectángulo girado 35°, sobre parcela en L y
 sobre rectángulo recto—, y están ahí a propósito: es la combinación donde el emparejado A/B se
 rompe, es lo que se vio fallando en planta, y el careo no la cubría. Un banco que solo carea
 rectángulos limpios y monofila no puede cazar lo que el uso real caza a la primera.
 
 Y en **todos** los casos bifila del fixture se mide el invariante sobre los datos: cero pares
 descuadrados, **Δx = 0 m** entre sub-filas y conteo par en todas las líneas. Si alguien vuelve a
-colocar la sub-fila B por su cuenta, esto se pone rojo. Con mutantes: si el setback deja de
+colocar la sub-fila B por su cuenta, esto se pone rojo. Y en los multi-talla se mide el de la
+consolidación: **nunca dos trackers de la misma talla seguidos cuando existe la doble**. Con mutantes: si el setback deja de
 morder, si la banda de erosión se escribe sin el término del vértice, o si el GCR se calcula sobre
 otro pitch, el careo se pone rojo.
 
@@ -335,6 +384,20 @@ El fixture se regenera con:
 ```bash
 python3 tests/gen_careo_layout.py --core /ruta/a/SolarGPTfull/solargpt
 ```
+
+### Parcelas reales en el careo
+
+El último caso es una **finca de verdad**: `tests/parcelas/finca-irregular.geojson`, nueve
+vértices, cóncava. Un careo que solo corre rectángulos sintéticos se cree que el mundo es
+rectangular — y el emparejado bifila, la consolidación y el multi-talla se rompen justo en los
+bordes que los rectángulos no tienen. Medido: **94 filas idénticas** a las del core y las mesas a
+**0,91 %** (1.300 frente a 1.312).
+
+Cualquier GeoJSON **exportado desde la propia ficha** (lleva su feature `tipo: parcela`) se puede
+soltar en `tests/parcelas/` y el generador del fixture lo convierte en caso de careo: la
+configuración por defecto es bifila multi-talla `28/14/7` —el régimen donde todo lo anterior puede
+romperse— y se cambia con `properties.careo`. Ver una parcela fallar en producción y no poder
+convertirla en test era la mitad del problema.
 
 ## Varias parcelas
 
@@ -385,9 +448,44 @@ fuera.
 
 > El checklist **regulatorio** (permisos, EIA, grid code) es otro y vive en §08.R1: no confundirlos.
 
+## La sesión: se guarda sola
+
+Cerrar la pestaña con una parcela dibujada, tres exclusiones y la estructura afinada era perderlo
+todo. Ahora:
+
+- **Autoguardado** en `localStorage` (`genlayout_sesion`), con 800 ms de retardo para no escribir en
+  cada tecla — y también en los gestos de **ratón** (cerrar un dibujo, borrar exclusiones, añadir
+  parcela, elegir sitio), que el primer test cazó fuera del autoguardado: `change`/`input` no
+  disparan al dibujar.
+- Al volver a abrir se **restaura** y el pie lo dice («Sesión anterior restaurada»), con su enlace
+  para empezar de cero. Restaurar respeta el **orden**: primero el montaje, luego el azimut
+  derivado, luego el resto — la lección «pongo bifila y me saca monofilas» también aplica al
+  restaurar, porque montar el formulario en otro orden pisaba la casilla.
+- **Guardar / cargar fichero** (`sesion.json`), para llevar el caso a otro equipo o adjuntarlo al
+  proyecto. El de disco y el automático son la misma foto (`estadoSesion()`), así que no pueden
+  divergir.
+
+## El gate contra el sizing (§06.5)
+
+El puerto de `bridge.validate_layout_vs_sizing`, el candado del cuaderno entre las dos mitades del
+diseño: el layout entrega los strings que **caben** y el sizing pide los que **hacen falta** — y
+hasta ahora nadie los careaba. Mismo contrato que el bridge:
+
+- **strings** y **kWp** dentro del **5 %** → PASS; fuera → FAIL, con los mensajes del bridge
+  («strings desalineados…»).
+- **Sin datos del sizing → WARN, no FAIL**: no haber mirado no es haber mirado y estar mal. El
+  checklist §02.5i consume el resultado (PASS marca, FAIL desmarca, WARN queda pendiente).
+- Los números del sizing se teclean o, si el Comparador de estructuras los publica en
+  `localStorage.factiun_sizing`, se autorrellenan — el canal está **propuesto en el CONTRATO**
+  (Puntos abiertos); hasta que la otra ficha lo publique, se teclean.
+
 ## Salidas
 
-- **GeoJSON** en el mismo formato que lee el [Explorador de layout](../layout.html): `{stats, geojson}`.
+- **GeoJSON** en el mismo formato que lee el [Explorador de layout](../layout.html): `{stats, geojson}` —
+  y con la **parcela** (agujeros como anillos interiores) y las **exclusiones** dentro como features
+  propias (`tipo: parcela / exclusion / exclusion-linea`). Un fichero exportado se puede volver a
+  soltar aquí —o en `tests/parcelas/`, que lo convierte en caso de careo— y reproduce el caso
+  entero, no solo las mesas.
 - **DXF** de polilíneas cerradas en coordenadas UTM (capa `MESAS`), para meterlo en el proyecto.
 - **KML** para abrirlo sobre la ortofoto en Google Earth.
 - **Ver en 3D**: escribe la planta `custom` en `localStorage` (`cobertura_layout`) y abre el visor de
@@ -400,10 +498,35 @@ fuera.
   `gapMod`, `gapDrive`, `pasoFila`), **un tipo por talla con su largo real**, y cada tracker con su
   `mods`, su `mr` y su `t`.
 
-  Un nodo del visor es **un tracker**: las dos mesas que comparten tubo y motor, agrupadas como en
-  `group_mesas_into_trackers`. `filaZ: 0` porque aquí cada fila es su propia línea — en el canónico
-  la geometría bifila es idéntica a la monofila, y «bifila» es qué dos filas comparten motor, no una
-  separación distinta; un `filaZ` ≠ 0 duplicaría filas que ya van una por una.
+  Y lo que es «un nodo» del visor depende del **modo** — no replicarlo era lo que hacía que el 3D
+  dibujara monofilas donde el 2D decía bifila:
+
+  - **Bifila**: un nodo por **par A/B**. El visor dibuja él mismo las dos filas del par, con
+    `mesa.filaZ = pitch/2` (la convención de Ayora: `pasoFila 6 / filaZ 3`) y la transmisión
+    cruzando entre ellas. Mandarle las filas una a una era pedirle monofilas.
+  - **Monofila**: un nodo por fila, `filaZ: 0` — cada tubo es su propia línea y no hay pareja que
+    duplicar.
+  - **Fija**: el campo viaja en **`fijas`** — una entrada por estructura con su rectángulo en
+    planta (`x, n, w, p`), inclinación y azimut, que es el camino por el que el visor dibuja las
+    mesas fijas (el de Dicayagua). Con `fija` el visor **corta** el camino de seguidores, así que
+    mandar `fija: true` con las mesas solo en `trackers` era un visor **vacío** — lo cazó la
+    verificación adversarial contra el fuente del visor, no un test nuestro. `trackers` queda para
+    el encuadre y el recuento, y `fija` viaja como `{tilt}` porque el visor lee `fija.tilt`. El
+    fondo `p` va **escorzado** (`apertura · cos i`): el visor desescorza con `p/cos(i)` y el faldón
+    dibujado sale exactamente la apertura.
+
+  En los tres modos van los `tipos` con su largo real por talla (`2·mesa + gap_motor` en tracker) y
+  el `mr` por seguidor: no siempre un nodo es un bifila — puede ser fija o monofila, y el fichero
+  que se escribe lo dice. Tres detalles más que salieron de carear contra el visor real: la
+  **rotación** de cada nodo se deriva de la **arista más larga** de su rectángulo (el anillo del
+  motor canónico sale de shapely y no comparte orden de esquinas con el del navegador — derivarla de
+  «la esquina 0 y la 3» giraba el campo 90° con el motor conectado); en **multi-parcela** cada nodo
+  es una MESA y su tipo lleva el largo de mesa, no de fila (con el de fila cada mesa se dibujaba el
+  doble de larga y el campo salía solapado), y se avisa de que no hay emparejado bifila; y un
+  tracker **viudo** (una sola mesa superviviente) exporta media fila, no la fila entera. Y la
+  **tabla manda**: con `2V` los módulos por ala siguen siendo los del string (a lo largo del tubo) y
+  `modH` es la cuerda del colector (2 módulos) — mandar `mods × n` dibujaba la fila del doble de
+  largo.
 
 Los tres ficheros se llaman como el emplazamiento elegido: tres exports seguidos de tres sitios
 distintos y todos `layout.geojson` acaban siendo un misterio en la carpeta de descargas.
