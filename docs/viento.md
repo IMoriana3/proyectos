@@ -83,6 +83,12 @@ a parecer un abanderamiento de planta — que es justo lo que no es.
 Su cifra de POA es la de la **planta**, no la de la fila suelta: enseñar la de la fila daría una
 pérdida del 50 % en una planta de diez trackers.
 
+Y el bloque se dibuja **a su proporción**. Los demás casos abanderan la planta entera, así que dos
+filas los cuentan igual de bien; el pasivo no, porque lo que lo define es que se suelta **una de
+todas las que hay**. Dibujada contra otra sola enseñaba el 50 % mientras el número decía el 5 %.
+Con diez trackers el bloque lleva veinte filas y una suelta. Por encima de 24 filas se dibujan 24 y
+el rótulo dice «de N»: recortar se puede, recortar sin decirlo no.
+
 ### El nº de trackers es el denominador, no un adorno
 
 **La fila suelta pierde siempre lo mismo; lo que cambia es entre cuántas filas se reparte.**
