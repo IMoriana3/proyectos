@@ -102,5 +102,5 @@ node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de e
 node tests/test_viento_ejes.js             # 64 comprobaciones, lienzos, ejes, transmisión, reproductor y sombras
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
 node tests/test_layout.js                  # 151 comprobaciones, careo del generador de layout
-node tests/test_layout_ui.js               # 107 comprobaciones, el generador en Chromium
+node tests/test_layout_ui.js               # 113 comprobaciones, el generador en Chromium
 ```

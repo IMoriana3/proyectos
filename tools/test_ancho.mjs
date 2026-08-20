@@ -20,7 +20,7 @@ const SOLO = arg('solo');
 /* Un servidor por repo: las páginas piden ficheros del suyo por ruta relativa. */
 const PAGINAS = [
   ['proyectos', 8201, ['index.html', 'cartera-tabla.html', 'layout.html', 'sim-solar.html']],
-  ['Cobertura-Zigbee', 8202, ['index.html', 'informe.html', 'modbus.html', 'crear.html', 'nuevo.html', 'topografico.html', 'backtracking.html', 'overcast.html']],
+  ['Cobertura-Zigbee', 8202, ['index.html', 'informe.html', 'modbus.html', 'crear.html', 'topografico.html', 'backtracking.html', 'overcast.html']],
   ['Siting', 8203, ['index.html']],
   ['SCADA', 8204, ['index.html']],
   ['Gemelo-digital', 8205, ['index.html', 'bateria.html', 'juegos/index.html']],
@@ -72,6 +72,16 @@ const MIDE = () => {
     quien: dime(ancho), techo, scroll: document.documentElement.scrollWidth > vw + 1 };
 };
 
+/* COLUMNA DE LECTURA A PROPOSITO. Estas tres no aprovechan el ancho porque no deben: se decidio
+   dejarlas asi. Un banco que grita en cada ejecucion por algo ya decidido acaba ignorandose, asi
+   que salen como «adrede» con su motivo y no cuentan como fallo. Quitando la razon de aqui, la
+   pagina vuelve a medirse como las demas. */
+const ADREDE = {
+  'Cobertura-Zigbee/informe.html': 'informe sobre folio blanco, con su @media print: ensancharlo rompe la hoja y estira la prosa',
+  'Cobertura-Zigbee/crear.html': 'asistente de tres pasos en vertical: ponerlos en paralelo cambia como se usa',
+  'checklist-solar-v2/import.html': 'formulario de subir fichero: un input file a 1800 px no mejora nada',
+};
+
 const b = await chromium.launch({ executablePath: EXE, args: ['--use-angle=swiftshader', '--no-sandbox', '--disable-dev-shm-usage'] });
 const flojas = [];
 for (const ancho of ANCHOS) {
@@ -89,10 +99,15 @@ for (const ancho of ANCHOS) {
       } catch (e) { m = { err: e.message.split('\n')[0] }; }
       await ctx.close();
       if (m.err) { console.log(`  ??    ${repo}/${p}  ${m.err}`); continue; }
+      /* Si no se ha medido nada es que la pagina no ha pintado, no que sea estrecha: aqui pasa con
+         las que cargan Firebase por CDN, que este contenedor no deja salir. Se dice, y no cuenta
+         como fallo de ancho, que seria mentir sobre lo que se ha medido. */
+      if (!isFinite(m.usa)) { console.log(`  ??    ${(repo + '/' + p).padEnd(38)} no ha pintado nada (¿dependencia externa bloqueada?)`); continue; }
       const uso = m.usa / m.vw;
-      const marca = uso >= 0.90 ? 'ok   ' : uso >= 0.75 ? 'justo' : 'FLOJA';
-      if (uso < 0.90) flojas.push({ repo, p, ancho, uso, m });
-      console.log(`  ${marca} ${(repo + '/' + p).padEnd(38)} usa ${String(m.usa).padStart(5)} de ${m.vw} (${(uso * 100).toFixed(0)} %) · margenes ${m.izq}|${m.vw - m.der}  ${m.techo ? '← ' + m.techo : m.quien}${m.scroll ? '  ⚠ scroll horizontal' : ''}`);
+      const razon = ADREDE[repo + '/' + p];
+      const marca = razon ? 'adrede' : uso >= 0.90 ? 'ok   ' : uso >= 0.75 ? 'justo' : 'FLOJA';
+      if (uso < 0.90 && !razon) flojas.push({ repo, p, ancho, uso, m });
+      console.log(`  ${marca} ${(repo + '/' + p).padEnd(38)} usa ${String(m.usa).padStart(5)} de ${m.vw} (${(uso * 100).toFixed(0)} %) · margenes ${m.izq}|${m.vw - m.der}  ${m.techo ? '← ' + m.techo : m.quien}${m.scroll ? '  ⚠ scroll horizontal' : ''}${razon ? '\n           adrede: ' + razon : ''}`);
     }
   }
 }

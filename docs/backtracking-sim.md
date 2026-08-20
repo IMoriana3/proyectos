@@ -388,6 +388,54 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-20 · v1.30** — **«pero si fuese así nadie haría backtracking, todo el mundo
+  astronómico, ¿no?»** — y la objeción tenía razón: había un fallo de modelado. La v1.29.2 dio por
+  bueno que astro ganase a pairwise sin preguntarse por qué entonces la industria entera hace lo
+  contrario. El culpable es un solo parámetro del Martinez escalonado, que estaba **mal
+  interpretado**: el campo se llamaba «Diodos bypass» y valía **3** —el número de diodos de un
+  módulo típico—, pero lo que el modelo necesita **no es cuántos diodos tiene el módulo**, sino
+  **cuántas subcadenas atraviesa la sombra al subir por la cuerda**, y eso depende de **cómo esté
+  montado**:
+  · **tumbado** → las subcadenas se apilan cruzando la cuerda y la sombra las mata de una en una: n=3;
+  · **retrato de media célula** → las dos mitades van en paralelo, la de abajo muere y la de arriba
+  sigue: n=2;
+  · **retrato de célula entera** → las tres corren A LO LARGO de la cuerda, la sombra las cruza a la
+  vez y se lleva el módulo entero: n=1.
+  **Ayora es 1V en RETRATO** (módulo de 2,384 m sobre la cuerda, 1,303 de ancho, tipos 1V14/1V21/
+  1V28): estábamos aplicando geometría de módulo TUMBADO a una planta en retrato. Y ese parámetro
+  **decide el signo** de la comparación —medido, astro frente a pairwise, junio / diciembre—:
+  n=3 → **+0,40% / +4,93%**; n=2 → **+0,10% / +3,32%**; n=1 → **−1,76% / −2,80%**, es decir **gana
+  el backtracking**. Con la geometría correcta el mundo vuelve a tener sentido: cuanto más «de
+  golpe» se lleva la sombra el módulo, más cara sale y más paga esquivarla. Hecho: defecto **3 → 2**,
+  campo renombrado a **«Subcadenas en la cuerda»** con el tooltip explicando los tres montajes, y el
+  comentario de `elecLoss` reescrito para que nadie vuelva a leerlo como «diodos». Anual de Ayora
+  recalculado con n=2 (12 días, contador honesto bidireccional): **pairwise 2705,5 kWh/m²·año** (ref)
+  · astro **+0,11%** · óptimo **+0,61%** · libre **+0,82%** — el margen de astro se encoge de un
+  0,4-4,9% estacional a un 0,11% anual, y los óptimos siguen mandando. QA 54.
+  **Lo que sigue sin estar, y por tanto lo que este número aún no puede decidir**: el modelo es **por
+  módulo**, y una planta real pone módulos **en serie** dentro de un string —el mismatch entre
+  módulos desiguales del mismo string no está modelado, y penaliza a quien deja sombra—; no hay
+  **puntos calientes ni garantía** (parte de por qué se hace backtracking es no freír células, no
+  solo kWh); es **cielo claro**; y a sol bajo la difusa circunsolar del modelo es **optimista**,
+  justo en las horas donde se decide todo. Conclusión honesta: el simulador **todavía no cierra**
+  «astro vs BT» —lo acota, y ya avisa en pantalla de que el signo cuelga de este parámetro—; cerrarlo
+  es trabajo del módulo energético.
+
+- **2026-08-20 · v1.29.2** — **«¿astronómico mejor que pairwise?»**, y la respuesta trajo un fallo.
+  Que astro gane a pairwise es CORRECTO: la descomposición hora a hora enseña que de 09:00 a 18:00
+  las dos son **idénticas** —con sol alto no hace falta backtracking— y que toda la diferencia sale
+  de **las horas de BT**, donde astro capta más beam y más difusa circunsolar de lo que paga en
+  sombra. Y es **robusto al modelo eléctrico**, que es la parte provisional y justo la más sensible
+  a este resultado: gana en las tres cotas del sándwich (solo área +1,29% · publicado +0,40% ·
+  banda uniforme +0,86% en junio; +7,8/+4,9/+4,3% en diciembre). Pero el mismo barrido destapó lo
+  que sí era un fallo: **el energy-optimal salía 0,3% por DEBAJO de astro en diciembre**, imposible
+  porque **f=1 ES astro** y está en su rejilla — la misma clase de error que el veto de v1.29
+  arregló contra pairwise, por el otro extremo (el evaluador de búsqueda es 2.5D y ciego a la
+  estructura). El veto exacto pasa a comparar contra **los dos extremos** de la rejilla, así que el
+  óptimo no puede quedar por debajo de ninguno bajo el contador publicado (diciembre: óptimo +4,95%
+  ≥ astro +4,93%). Invariante `óptimo ≥ max(pairwise, astro)` añadido a la batería y al barrido de
+  auditoría. QA 54.
+
 - **2026-08-20 · v1.29** — **KPIs que distinguen políticas + UNA fuente para la cara colectora**
   (reportado con captura: las nueve políticas mostraban «sombra máx 100%» y los mismos minutos).
   Verificado que era real y no un artefacto de la v1.28: con terreno roto la columna calculada

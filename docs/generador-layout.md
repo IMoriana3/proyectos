@@ -189,7 +189,7 @@ números distintos sobre la misma parcela**. Por eso está.
 
 | | |
 |---|---|
-| **Fuente** | Open-Meteo Elevation (sin clave) o **CSV propio** `lon,lat,z` — el §02.5b-2 del cuaderno |
+| **Fuente** | **Teselas de terreno** (por defecto), **Open-Meteo Elevation** o **CSV propio** `lon,lat,z` (el §02.5b-2 del cuaderno) |
 | **Resolución** | malla n×n, de 6 a 48. El campo dice lo que cuesta (puntos y llamadas) y, si te pasas, **recorta a la vista** en vez de en silencio |
 | **Margen alrededor** | en metros, sobre el bbox de la parcela |
 | **Pendiente máx. (°)** | las celdas que la pasan se **excluyen**, y se pintan en morado |
@@ -204,7 +204,36 @@ Las exclusiones por terreno se cuentan **aparte** de las tuyas (`drop_topo_mask`
 `drop_user_poly` y `drop_line_buffer`): saber si el campo lo recorta el terreno o un dibujo tuyo no
 es el mismo problema.
 
-El servicio es gratis y sin clave, así que el trato es ir despacio: las llamadas van **con ritmo**
+**La cascada, que es lo que hace el cuaderno.** §02.5b no tiene *una* fuente: tiene una **lista
+priorizada por país** (`detect_country` → `sources_for_country`) y va cayendo a la siguiente cuando
+una falla. Su primera opción global es Copernicus GLO-30 en AWS **sin token**, y detrás vienen
+OpenTopography (token gratuito), Open Topo Data y Open-Elevation, más las regionales (IGN España y
+Francia, TINITALY, Bhuvan, Topodata, USGS 3DEP).
+
+**Lo que aquí no se puede tener, y conviene saberlo antes de fiarse:** esa cascada incluye fuentes
+regionales muy por encima de los 30 m — **IGN MDT05 a 5 m** en España, RGE ALTI en Francia,
+TINITALY a 10 m en Italia, USGS 3DEP a 10 m en EE. UU. Son servicios WCS que devuelven GeoTIFF, y
+eso no se abre desde un navegador, como tampoco se guarda un token de OpenTopography. Para
+**replanteo**, el MDT bueno sigue estando en el cuaderno.
+
+Aquí se replica el **patrón**, no la lista: desde un navegador no se puede abrir un GeoTIFF de
+COP30 de 100 MB ni guardar un token. La cascada es **teselas de terreno → Open Topo Data →
+Open-Elevation → Open-Meteo**, y dice cuál ha servido. Las dos del medio son exactamente las que el
+core usa sin token (`dl_opentopodata`, `dl_open_elevation`); las teselas van primero porque
+resuelven la parcela en 1-4 peticiones. Si caen todas, se dice **con el porqué de cada una** en vez
+de quedarse a medias.
+
+**Por qué el orden.** Open-Meteo va punto a punto: 100 por llamada, así que una malla de
+48×48 son **24 peticiones seguidas** y el servicio contesta 429 — con reintento y todo, porque el
+problema no es el ritmo, es el número. Las **teselas de terreno** traen la cota codificada en el
+color de un PNG (formato *terrarium*, `z = R·256 + G + B/256 − 32768`): una imagen de 256×256 son
+**65.536 cotas en una petición**, y una parcela entera cabe en 1-4. Por eso son la fuente por
+defecto; Open-Meteo se queda para mallas pequeñas o como segunda opinión.
+
+Leer el color obliga a `crossOrigin`, y aquí **no hay reintento sin CORS que valga**: sin poder leer
+los píxeles la tesela no sirve de nada. Si eso falla, se dice y se ofrece la otra fuente.
+
+Con Open-Meteo, el servicio es gratis y sin clave, así que el trato es ir despacio: las llamadas van **con ritmo**
 (220 ms entre lotes) y un **429 se espera y se reintenta** —respetando el `Retry-After` si viene— en
 vez de insistir. A la cuarta se rinde diciendo que es el límite de peticiones y cuántas llamadas
 suponía tu resolución. Los lotes ya pedidos quedan cacheados.
@@ -214,11 +243,17 @@ suponía tu resolución. Los lotes ya pedidos quedan cacheados.
 > Sirve para ver la forma del terreno y filtrar por pendiente — **no para replanteo**. Va dicho en
 > la propia ficha.
 
-Y lo que **no** hace, dicho en pantalla en vez de callado: las pendientes **no entran en la
-colocación**. `compute_layout_v2` tampoco las usa — implanta en planta y no tiene parámetro de
-pendiente. Donde mandan es en el **backtracking** (`cross_axis_slope_deg`, que es lo que consume
-`bt_audit`) y en la sombra entre filas. Por eso viajan con el layout a los exports y al 3D, en vez
-de quedarse muertas en un campo de la pantalla.
+### Qué hace cada cosa (que no es lo mismo)
+
+Aquí hay dos cosas distintas y conviene no mezclarlas:
+
+- Las **pendientes medias** N-S/E-O **no son un parámetro del motor**: `compute_layout_v2` no las
+  recibe e implanta en planta. Por sí solas no mueven ni quitan una mesa. Lo que hacen es viajar con
+  el layout al **backtracking** (`cross_axis_slope_deg`, lo que consume `bt_audit`) y a la sombra
+  entre filas, en vez de quedarse muertas en un campo de la pantalla.
+- **El terreno sí entra en la colocación**, por la otra puerta y la misma que en el cuaderno: el
+  **filtro de pendiente máxima** del MDT excluye las celdas que se pasan, y eso **quita mesas**. Es
+  el `excl_utm_topo` del core, y se cuenta como fuente propia (`drop_topo_mask`).
 
 ## Los parámetros son los del cuaderno
 
