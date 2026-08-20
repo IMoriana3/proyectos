@@ -77,8 +77,12 @@ Los dos lados se publican en el box, así que se ve de un vistazo si eso cabe en
 cada fila la tapa otra idéntica a un pitch de distancia, en el plano perpendicular al eje. Eso
 tiene dos consecuencias que conviene tener claras:
 
-* la **primera fila sale sombreada** aunque en campo no tenga a nadie delante — con 271 filas eso
-  sobreestima la pérdida en un 0,37 %, y va dicho en pantalla;
+* la **primera fila sale sombreada** aunque en campo no tenga a nadie delante. De N filas hay
+  **una** a la que se le cobra una sombra que no tiene, así que la pérdida por sombreado sale
+  **1/N** más alta de lo que debería: con 271 filas, un 0,37 %. Y ese 0,37 % es **de la pérdida**,
+  no de la energía — con la fija a GCR 0,529 la sombra modelada es 1,324 % y la real 1,319 %:
+  **0,005 puntos**. En el seguidor sin backtracking, que sí tiene sombra de verdad, 9,317 % contra
+  9,282 %. La ficha publica la corregida en la nota de la tabla, con el número de filas ya sabido;
 * **no hay efectos de borde por los extremos** de la fila: se supone infinitamente larga, así que
   la sombra oblicua que se sale por la punta no se modela.
 
@@ -604,7 +608,7 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 node tests/test_comparador.js       # 84 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 107 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 109 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 

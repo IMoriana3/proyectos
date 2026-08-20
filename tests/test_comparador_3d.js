@@ -123,9 +123,11 @@ const SONDA = `(() => {
   check('y dice hacia dónde se apila cada una (la fija al sur, el seguidor al este)',
     /apilan hacia el .*sur/i.test(campo.nota) && /apilan hacia el .*este/i.test(campo.nota),
     campo.nota.slice(0, 200));
-  check('y que para la SOMBRA sí son filas infinitas, con lo que eso sobreestima',
-    /fila infinita/i.test(campo.nota) && /sobreestima/i.test(campo.nota),
-    campo.nota.slice(-260));
+  check('y que para la SOMBRA sí son filas infinitas, con su 1/N',
+    /fila infinita/i.test(campo.nota) && /1\/\d+/.test(campo.nota), campo.nota.slice(-320));
+  check('y aclara que ese % es DE LA PÉRDIDA, no de la energía',
+    /de la p[ée]rdida/i.test(campo.nota) && /no de la energía/i.test(campo.nota),
+    campo.nota.slice(-320));
 
   check('a igualdad de pico los módulos son los MISMOS en las dos familias',
     p10.fija.mods === p10.tk.mods, p10.fija.mods + ' vs ' + p10.tk.mods);
@@ -216,6 +218,13 @@ const SONDA = `(() => {
     coherente.escena + '° vs ' + coherente.tabla + '°)',
     Math.abs(coherente.escena - coherente.tabla) < 1.01,
     JSON.stringify(coherente));
+
+  // y la nota de la tabla, con el nº de filas ya sabido, da la corrección MEDIDA
+  // en vez de una regla de tres genérica
+  const notaTbl = await p.evaluate(() => document.getElementById('tblNote').textContent);
+  check('la nota de la tabla corrige la sombra de borde con cifras',
+    /fila INFINITA/i.test(notaTbl) && /sería en realidad/i.test(notaTbl) &&
+    /puntos de diferencia/i.test(notaTbl), notaTbl.slice(0, 260));
 
   // ── la tabla trae el dimensionado a igualdad de pico ──
   const tabla = await p.evaluate(`(() => {
