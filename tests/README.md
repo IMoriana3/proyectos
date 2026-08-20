@@ -38,6 +38,14 @@ cifras calculadas a mano, y un guard de que el factor NEC 690.8 **no** recorta s
 se regenera con `python3 tests/gen_careo_sizing.py --core /ruta/a/SolarGPTfull/solargpt`, y el
 catálogo CEC con `python3 tests/gen_catalogo_cec.py --core /ruta/a/SolarGPTfull/solargpt`.
 
+`test_comparador_sitio.js` cubre el **buscador de emplazamiento del Comparador** en dos capas: las
+funciones puras extraídas del HTML (normalizar sin acentos, leer coordenadas pegadas, filtrar la
+lista local) y la ficha abierta en Chromium — se teclea, se elige, y las coordenadas del formulario
+tienen que cambiar. Y una tercera cosa que aquí importa más que en Viento: elegir emplazamiento
+tiene que **mover la escena**; el test pega unas coordenadas del hemisferio sur y mide la NORMAL de
+la fija, que debe girarse al norte. También que tocar la latitud a mano borra el nombre del sitio,
+porque llamar «Túnez» a otras coordenadas es poner nombre de planta a otro emplazamiento.
+
 `test_viento_sitio.js` cubre además las **horas locales**: que la zona IANA gane al desfase por longitud, que el horario de verano entre (Madrid UTC+1 en enero y UTC+2 en julio, Lima UTC-5 todo el año), que la vuelta hora-de-pared → instante aguante los **días del cambio de hora** —es donde una conversión de una sola pasada se desplaza—, y que sin zona declarada NO se finja la civil: se deriva de la longitud, que es hora SOLAR, y va dicho. Su mutante —ignorar la zona— tira 11 comprobaciones.
 
 `test_viento_sitio.js` cubre el **buscador de emplazamiento** en dos capas: las funciones puras extraídas del HTML (normalizar sin acentos, leer coordenadas pegadas, filtrar la lista local) y la ficha ABIERTA en Chromium — se teclea, se elige, y las coordenadas del formulario tienen que cambiar. Un buscador que filtra pero no rellena está tan roto como uno que no filtra, y ese es su mutante. La búsqueda REMOTA (geocodificador de Open-Meteo) no se exige, porque el banco tiene que correr sin red; lo que sí se exige es que su ausencia se declare.
@@ -90,6 +98,7 @@ node tests/test_integridad.js              # 6 comprobaciones, sin navegador
 node tests/test_comparador.js              # 74 comprobaciones, careo contra el core y barridos
 node tests/test_comparador_3d.js           # 80 comprobaciones, escena 3D, equipos, sizing y barridos
 node tests/test_sizing.js                  # 104 comprobaciones, careo del dimensionado eléctrico
+node tests/test_comparador_sitio.js        # 34 comprobaciones, el buscador de emplazamiento
 node tests/test_viento_ejes.js             # 64 comprobaciones, lienzos, ejes, transmisión, reproductor y sombras
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
 node tests/test_layout.js                  # 119 comprobaciones, careo del generador de layout

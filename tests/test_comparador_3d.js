@@ -70,7 +70,7 @@ const SONDA = `(() => {
   // La comparación es a igualdad de MWp, así que el pico no es un campo más
   // escondido entre la geometría: es el marco, y va antes que nada.
   const orden = await p.evaluate(() => {
-    const ids = ['picoCard', 'plant', 'fxModL', 'tkModL', 'tbl'];
+    const ids = ['picoCard', 'sitioQ', 'fxModL', 'tkModL', 'tbl'];
     const pos = {}; ids.forEach(i => {
       const el = document.getElementById(i);
       pos[i] = el ? el.getBoundingClientRect().top + window.scrollY : null; });
@@ -78,7 +78,7 @@ const SONDA = `(() => {
   });
   check('el box de la potencia pico existe', orden.picoCard !== null);
   check('está por encima del emplazamiento y de los dos configuradores',
-    orden.picoCard < orden.plant && orden.picoCard < orden.fxModL &&
+    orden.picoCard < orden.sitioQ && orden.picoCard < orden.fxModL &&
     orden.picoCard < orden.tkModL, JSON.stringify(orden));
 
   const pico = async () => p.evaluate(`(() => {
@@ -302,9 +302,12 @@ const SONDA = `(() => {
 
   // el emplazamiento: `.value` puesto a mano no dispara 'change', así que
   // elegir Assú (hemisferio SUR) dejaba la fija mirando al sur.
-  await p.evaluate(() => { const s = document.getElementById('plant');
-    s.value = 'assu'; s.dispatchEvent(new Event('change', { bubbles: true })); });
+  await p.evaluate(() => { const e = document.getElementById('sitioQ');
+    e.value = 'Assú'; e.dispatchEvent(new Event('input', { bubbles: true })); });
   await p.waitForTimeout(300);
+  await p.evaluate(() => document.querySelector('#sitioRes .it')
+    .dispatchEvent(new MouseEvent('mousedown')));
+  await p.waitForTimeout(400);
   const sur = await p.evaluate(SONDA);
   check('elegir un emplazamiento del SUR gira la fija al NORTE (z=' +
     sur.bloques.fija_proyecto.n.z.toFixed(2) + ')', sur.bloques.fija_proyecto.n.z < -0.15);
