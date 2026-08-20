@@ -27,7 +27,7 @@ Respuesta corta, con el polling de 30 s de hoy: **la planta mayor sube 8 GB/mes*
 | Bagnarelli 24030 | 1 | 17 | 5,9 | 5,8 | 0,17 |
 | **Flota** | **66** | **6039** | **1343,6** | **760,7** | **22,8** |
 
-El inventario sale del **plano del propio SCADA** (`index.html`), donde cada TCU declara de qué NCU y de qué gateway cuelga: es el mismo plano que pinta la capa de telemetría, así que lo que sale aquí es lo que se va a pollear de verdad.
+El inventario sale del **plano del propio SCADA** (`index.html`), donde cada TCU declara de qué NCU y de qué gateway cuelga: es el mismo plano que pinta la capa de telemetría, así que lo que sale aquí es lo que se va a pollear de verdad. Para **San José manda el plano — 2289 TCU** (decidido el 2026-08-20); el `config_tcu_sunner_sanjose.csv` lista 2186 configurados y esa diferencia de 103 queda como pregunta para comisionado. El banco fija los diez recuentos contra el rótulo que la propia herramienta enseña en cada botón de planta.
 
 Tres cosas que se leen en la tabla:
 
