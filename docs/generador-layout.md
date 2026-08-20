@@ -20,6 +20,28 @@ El motor SolarGPT es opcional y da el número canónico.
 Esto es **geometría**: dónde va cada mesa y cuántas son. La potencia sale de multiplicar módulos
 por Wp; no hay meteo, ni sombras, ni energía.
 
+## Dónde: el buscador de emplazamiento
+
+Antes esto era un desplegable con la cartera, así que implantar en un sitio que **todavía no es una
+planta** obligaba a teclear latitud y longitud a mano — y una parcela sin proyecto es justo lo que
+se dibuja aquí. Es el mismo componente que el de [Viento & Abanderamiento](viento.md), con sus tres
+caminos y en este orden:
+
+1. **Cartera y presets.** Se filtran al teclear y funcionan **sin red**, que es lo que se busca el
+   90 % de las veces. Sin acentos y en cualquier orden: «tunez» encuentra Gabès, «valencia ayora» y
+   «ayora valencia» encuentran lo mismo, y «24019» encuentra por código. Si la planta trae `pitch`
+   en la cartera, se aplica también.
+2. **Coordenadas pegadas** tal cual: `41.5763, -0.7981`, con coma decimal o con `N/S/E/O`. Es el
+   camino más corto para quien viene de un DWG. Un texto que *no* son coordenadas sigue su camino al
+   buscador en vez de colarse como un `0,0` en el Golfo de Guinea.
+3. **El geocodificador de Open-Meteo**, sin clave y ya declarado en la casa. Si no contesta se
+   **dice** en el propio desplegable: una lista vacía se lee como «ese sitio no existe» cuando lo
+   que pasa es que no hay internet.
+
+Tocar la latitud o la longitud a mano **suelta el nombre**: decir «Ayora» sobre unas coordenadas
+cambiadas sería ponerle nombre de planta a otro emplazamiento — y ese nombre acaba en el fichero que
+se exporta (`layout-24025-ayora-valencia-es.geojson`).
+
 ## Cómo se define la parcela
 
 Tres caminos, y los tres acaban en el mismo anillo de coordenadas:
@@ -110,8 +132,17 @@ python3 tests/gen_careo_layout.py --core /ruta/a/SolarGPTfull/solargpt
 - **Ver en 3D**: escribe la planta `custom` en `localStorage` (`cobertura_layout`) y abre el visor de
   terreno de `cobertura-zigbee` — el mismo contrato que ya usaba el Explorador.
 
+Los tres ficheros se llaman como el emplazamiento elegido: tres exports seguidos de tres sitios
+distintos y todos `layout.geojson` acaban siendo un misterio en la carpeta de descargas.
+
 ## Notas
 
+- **El picker de catastro no está, y no es un olvido.** El cuaderno y Streamlit ofrecen traer la
+  parcela real de los proveedores oficiales (`/parcels` del motor: OSM y Catastro ES por bbox). Aquí
+  no se ha portado porque en la práctica **nunca ha funcionado** (decisión del 2026-08-20). La
+  parcela entra por GeoJSON —que sí se puede exportar a mano desde SIGPAC, Catastro o geojson.io— o
+  dibujada. Si algún día el proveedor es fiable, esto se reabre; mientras tanto, no volver a
+  intentarlo.
 - El motor SolarGPT se detecta solo en `127.0.0.1:8765/8000/9000`, o se le fija la URL con un clic en
   el indicador de la barra (el túnel de Colab). Con él conectado aparece la opción **Motor SolarGPT**
   en el desplegable *Cálculo* y la ficha pide el layout canónico por `POST /layout`.

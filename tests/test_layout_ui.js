@@ -48,8 +48,79 @@ const num = s => parseInt(String(s).replace(/[^\d]/g, ''), 10);
   // ── arranque ──
   check('las salidas arrancan deshabilitadas (no hay nada que exportar)',
     await page.evaluate(() => ['expGeo', 'expDxf', 'expKml', 'd3Btn'].every(i => document.getElementById(i).disabled)));
+  check('el emplazamiento arranca en «manual»', (await page.textContent('#sitioSel')).trim() === 'manual');
   check('el azimut de filas se deriva del eje (eje N-S 0° → filas a 90°)',
     await page.inputValue('#panelAz') === '90');
+
+  // ── buscador de emplazamiento ──
+  // Sin red: el geocodificador no se exige (este banco tiene que correr sin
+  // internet), pero la cartera y los presets sí, y la ausencia de red se
+  // DECLARA en vez de devolver una lista vacía que se lee como «no existe».
+  await page.route('https://geocoding-api.open-meteo.com/**', r => r.abort());
+  await page.click('#sitioQ');
+  await page.fill('#sitioQ', 'gabes');
+  await page.waitForSelector('#sitioRes .it', { timeout: 5000 });
+  check('buscar «gabes» (sin acento) encuentra el preset de Túnez',
+    /Gabès/.test(await page.textContent('#sitioRes')), await page.textContent('#sitioRes'));
+  await page.click('#sitioRes .it');
+  check('elegirlo rellena la latitud', Math.abs(+(await page.inputValue('#lat')) - 33.8792) < 1e-3,
+    await page.inputValue('#lat'));
+  check('y la longitud', Math.abs(+(await page.inputValue('#lon')) - 9.8736) < 1e-3,
+    await page.inputValue('#lon'));
+  check('y el rótulo deja de decir «manual»', /Gabès/.test(await page.textContent('#sitioSel')),
+    await page.textContent('#sitioSel'));
+  check('y la parcela se recentra sobre el sitio elegido',
+    /33\.8/.test(await page.textContent('#parcelTag')) || (await page.textContent('#parcelTag')).indexOf('ha') > 0);
+
+  // Las funciones puras del buscador, sobre la copia REAL que vive en esta
+  // ficha (no la de sim-viento): que un texto que NO son coordenadas no se
+  // cuele como un 0,0 en el Golfo de Guinea es lo que separa un buscador de
+  // una trampa.
+  const puras = await page.evaluate(() => ({
+    tunez: normSitio('Túnez') === 'tunez',
+    coma: JSON.stringify(parseCoords('41,5763 -0,7981')),
+    hemis: JSON.stringify(parseCoords('16.59 S 71.80 W')),
+    noCoords: [parseCoords('Ayora'), parseCoords('600x450'), parseCoords(''),
+               parseCoords('99999, 1')].every(v => v === null),
+    fuera: parseCoords('91, 0') === null,
+    orden: filtraSitios(sitiosLocales(), 'valencia ayora').length
+         === filtraSitios(sitiosLocales(), 'ayora valencia').length
+  }));
+  check('normaliza acentos («Túnez» → «tunez»)', puras.tunez);
+  check('lee coordenadas con coma decimal', puras.coma === '{"lat":41.5763,"lon":-0.7981}', puras.coma);
+  check('lee hemisferios S/W como negativos', puras.hemis === '{"lat":-16.59,"lon":-71.8}', puras.hemis);
+  check('un texto que no son coordenadas NO se cuela como 0,0', puras.noCoords);
+  check('una latitud imposible se rechaza', puras.fuera);
+  check('el filtro no depende del orden de las palabras', puras.orden > 0);
+
+  // Coordenadas pegadas: el camino más corto para quien viene de un DWG
+  await page.fill('#sitioQ', '41.5763, -0.7981');
+  await page.waitForSelector('#sitioRes .gr', { timeout: 5000 });
+  check('unas coordenadas pegadas salen como opción propia',
+    /Coordenadas/.test(await page.textContent('#sitioRes')));
+  await page.click('#sitioRes .it');
+  check('y se aplican', Math.abs(+(await page.inputValue('#lat')) - 41.5763) < 1e-3);
+
+  // Sin red, el buscador lo dice en vez de quedarse mudo
+  await page.fill('#sitioQ', 'reikiavik');
+  // Esperar al estado FINAL, no al «Buscando…» intermedio (350 ms de pausa
+  // antes de llamar, más el fallo de red).
+  await page.waitForFunction(() => /Sin red|no encuentra nada/.test(
+    document.querySelector('#sitioRes').textContent), null, { timeout: 10000 });
+  check('sin red para el geocodificador, se DICE en el desplegable',
+    /Sin red/.test(await page.textContent('#sitioRes')), await page.textContent('#sitioRes'));
+  await page.keyboard.press('Escape');
+
+  // Tocar lat a mano suelta el nombre: decir «Gabès» sobre otras coordenadas
+  // sería ponerle nombre de planta a otro emplazamiento
+  await page.fill('#sitioQ', 'ayora');
+  await page.waitForSelector('#sitioRes .it', { timeout: 5000 });
+  await page.click('#sitioRes .it');
+  check('elegir Ayora deja su nombre puesto', /Ayora/.test(await page.textContent('#sitioSel')));
+  await page.fill('#lat', '40.0000');
+  await page.dispatchEvent('#lat', 'input');
+  check('cambiar la latitud a mano suelta el nombre del sitio',
+    (await page.textContent('#sitioSel')).trim() === 'manual', await page.textContent('#sitioSel'));
 
   // ── rectángulo por cotas ──
   await generar(page);
