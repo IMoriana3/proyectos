@@ -28,21 +28,45 @@ const pintado = page => page.evaluate(() => {
   for (let i = 0; i < d.length; i += 4) if (d[i] > 40 && d[i + 1] > 140 && d[i + 2] < 180) n++;
   return n;
 });
+// Esperar a que el rótulo CAMBIE no vale: dos generaciones iguales dan el mismo
+// texto («navegador · 35 ms») y la espera se queda colgada para siempre. Se
+// borra antes de pulsar, y así lo que se espera es que vuelva a escribirse.
 const generar = async page => {
-  const antes = await page.evaluate(() => document.querySelector('#hint').textContent);
+  await page.evaluate(() => { document.querySelector('#hint').textContent = ''; });
   await page.click('#genBtn');
-  await page.waitForFunction(p => {
+  await page.waitForFunction(() => {
     const t = document.querySelector('#hint').textContent;
-    return t !== p && t.indexOf('calculando') < 0 && (t.indexOf('ms') >= 0 || t.indexOf('error') >= 0);
-  }, antes, { timeout: 30000 });
+    return t.indexOf('calculando') < 0 && (t.indexOf('ms') >= 0 || t.indexOf('error') >= 0);
+  }, null, { timeout: 30000 });
 };
 const num = s => parseInt(String(s).replace(/[^\d]/g, ''), 10);
+// La caja del lienzo se mide respecto al VIEWPORT: si los `fill` anteriores han
+// movido el scroll y queda medio fuera, los clics calculados con ella caen donde
+// no es y la prueba mide otra cosa. Traerlo a la vista antes de medir.
+const cajaLienzo = async page => {
+  await page.evaluate(() => document.querySelector('#cv').scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(120);
+  return page.evaluate(() => { const r = document.querySelector('#cv').getBoundingClientRect();
+    return { x: r.x, y: r.y, w: r.width, h: r.height }; });
+};
 
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
   const page = await browser.newPage();
   const fallos = [];
   page.on('pageerror', e => fallos.push(e.message));
+  // Ortofoto: el banco no puede depender del servidor de teselas de Esri (ni de
+  // que haya red), así que se sirve un PNG propio de 256×256 con la misma forma.
+  // El camino de la ortofoto se ejercita de verdad; lo que no se prueba es Esri.
+  const TESELA = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAADTED8xAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAA' +
+    'IElEQVR4nO3BAQ0AAADCoPdPbQ8HFAAAAAAAAAAAAHwaIAAB1F0m1AAAAABJRU5ErkJggg==', 'base64');
+  let teselasPedidas = 0;
+  await page.route('https://server.arcgisonline.com/**', r => {
+    teselasPedidas++;
+    r.fulfill({ status: 200, contentType: 'image/png',
+                headers: { 'access-control-allow-origin': '*' }, body: TESELA });
+  });
   await page.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
 
   // ── arranque ──
@@ -51,6 +75,43 @@ const num = s => parseInt(String(s).replace(/[^\d]/g, ''), 10);
   check('el emplazamiento arranca en «manual»', (await page.textContent('#sitioSel')).trim() === 'manual');
   check('el azimut de filas se deriva del eje (eje N-S 0° → filas a 90°)',
     await page.inputValue('#panelAz') === '90');
+
+  // ── ortofoto y navegación ──
+  // Esperar al estado FINAL: «cargando ortofoto…» también tiene longitud, y
+  // comprobar contra él es medir la carrera, no el resultado.
+  await page.waitForFunction(() => /Esri World Imagery|sin ortofoto/.test(
+    document.querySelector('#basemapMsg').textContent), null, { timeout: 15000 });
+  check('pide teselas de ortofoto al arrancar', teselasPedidas > 0, String(teselasPedidas));
+  check('y lo dice en la leyenda', /Esri World Imagery/.test(await page.textContent('#basemapMsg')),
+    await page.textContent('#basemapMsg'));
+  // El lienzo debe poder LEERSE: si la tesela entrara sin CORS quedaría «teñido»
+  // y getImageData lanzaría — y con él se caen todas las comprobaciones de pintado.
+  check('el lienzo no queda teñido por las teselas (crossOrigin)',
+    await page.evaluate(() => { try { const c = document.querySelector('#cv');
+      c.getContext('2d').getImageData(0, 0, 2, 2); return true; } catch (e) { return false; } }));
+  check('con CORS no hace falta el reintento sin él', !(await page.evaluate(() => LIENZO_TENIDO)));
+  const vista0 = await page.evaluate(() => ({ cx: VIEW.cx, cy: VIEW.cy, z: VIEW.z }));
+  // La rueda se despacha donde está el ratón, y arranca en (0,0): sin mover el
+  // puntero al lienzo, el evento no llega y la comprobación mediría nada.
+  const cajaCv = await cajaLienzo(page);
+  await page.mouse.move(cajaCv.x + cajaCv.w / 2, cajaCv.y + cajaCv.h / 2);
+  await page.mouse.wheel(0, -120);
+  await page.waitForTimeout(120);
+  const vista1 = await page.evaluate(() => ({ cx: VIEW.cx, cy: VIEW.cy, z: VIEW.z }));
+  check('la rueda acerca', vista1.z > vista0.z, vista0.z + ' → ' + vista1.z);
+  const caja0 = await cajaLienzo(page);
+  await page.mouse.move(caja0.x + caja0.w / 2, caja0.y + caja0.h / 2);
+  await page.mouse.down();
+  await page.mouse.move(caja0.x + caja0.w / 2 + 90, caja0.y + caja0.h / 2 + 40, { steps: 6 });
+  await page.mouse.up();
+  const vista2 = await page.evaluate(() => ({ cx: VIEW.cx, cy: VIEW.cy, z: VIEW.z }));
+  check('arrastrar mueve la vista', Math.abs(vista2.cx - vista1.cx) > 1e-9);
+  await page.click('#fit');
+  check('«Encajar» vuelve a centrar la parcela',
+    Math.abs((await page.evaluate(() => VIEW.cx)) - vista0.cx) < 1e-7);
+  await page.uncheck('#orto');
+  check('apagar la ortofoto se dice', /apagada/.test(await page.textContent('#basemapMsg')));
+  await page.check('#orto');
 
   // ── buscador de emplazamiento ──
   // Sin red: el geocodificador no se exige (este banco tiene que correr sin
@@ -174,15 +235,53 @@ const num = s => parseInt(String(s).replace(/[^\d]/g, ''), 10);
   // ── parcela dibujada a mano ──
   await page.selectOption('#parcelMode', 'draw');
   await page.click('#drawStart');
-  const caja = await page.evaluate(() => { const r = document.querySelector('#cv').getBoundingClientRect();
-    return { x: r.x, y: r.y, w: r.width, h: r.height }; });
+  const caja = await cajaLienzo(page);
   for (const [fx, fy] of [[0.25, 0.25], [0.75, 0.25], [0.75, 0.75], [0.25, 0.75]])
     await page.mouse.click(caja.x + caja.w * fx, caja.y + caja.h * fy);
   await page.mouse.dblclick(caja.x + caja.w * 0.25, caja.y + caja.h * 0.75);
   check('la parcela dibujada se cierra con cuatro vértices (el doble clic no los duplica)',
     /^4 vértices/.test(await page.textContent('#parcelTag')), await page.textContent('#parcelTag'));
+  // La regresión que se veía en producción: con el primer vértice el encuadre se
+  // recalculaba sobre una caja de tamaño CERO, y la parcela salía de «0,00 ha»
+  // con una escala de milímetros. La vista ya no se reencuadra al dibujar.
+  check('la parcela dibujada tiene superficie de verdad, no 0,00 ha',
+    !/ 0[.,]00 ha/.test(await page.textContent('#parcelTag')), await page.textContent('#parcelTag'));
   await generar(page);
   check('y también genera sobre ella', num(await page.textContent('#ro .ro:nth-child(2) .v')) > 0);
+
+  // ── exclusiones dibujadas (§02.5c) ──
+  // Lo que se exige no es que se dibujen, sino que el motor las OBEDEZCA: una
+  // exclusión que se pinta pero no quita mesas es peor que no tenerla, porque
+  // se lee como que el hueco está respetado.
+  await page.selectOption('#parcelMode', 'rect');
+  await page.fill('#prot', '0'); await page.dispatchEvent('#prot', 'change');
+  await generar(page);
+  const mesasSinExcl = num(await page.textContent('#ro .ro:nth-child(2) .v'));
+  const cajaEx = await cajaLienzo(page);
+  await page.click('#exclStart');
+  for (const [fx, fy] of [[0.38, 0.38], [0.62, 0.38], [0.62, 0.62], [0.38, 0.62]])
+    await page.mouse.click(cajaEx.x + cajaEx.w * fx, cajaEx.y + cajaEx.h * fy);
+  await page.mouse.dblclick(cajaEx.x + cajaEx.w * 0.38, cajaEx.y + cajaEx.h * 0.62);
+  check('la exclusión dibujada se cuenta en la parcela',
+    /1 exclusión/.test(await page.textContent('#parcelTag')), await page.textContent('#parcelTag'));
+  await generar(page);
+  const mesasConExcl = num(await page.textContent('#ro .ro:nth-child(2) .v'));
+  check('y el motor la OBEDECE: quita mesas (' + mesasSinExcl + ' → ' + mesasConExcl + ')',
+    mesasConExcl < mesasSinExcl && mesasConExcl > 0);
+  await page.click('#exclClear');
+  check('el encuadre no arrastra el boceto anterior (la exclusión cae DENTRO de la parcela)',
+    await page.evaluate(() => {
+      const e = EXCL[0] || [], p = PARCEL || [];
+      const x = e.map(q => q[0]), y = e.map(q => q[1]);
+      const px_ = p.map(q => q[0]), py = p.map(q => q[1]);
+      return Math.min(...x) >= Math.min(...px_) && Math.max(...x) <= Math.max(...px_) &&
+             Math.min(...y) >= Math.min(...py) && Math.max(...y) <= Math.max(...py);
+    }));
+  check('quitarlas las borra del recuento',
+    !/exclusión/.test(await page.textContent('#parcelTag')), await page.textContent('#parcelTag'));
+  await generar(page);
+  check('y el layout vuelve a lo que era',
+    num(await page.textContent('#ro .ro:nth-child(2) .v')) === mesasSinExcl);
 
   // ── pitch imposible: la ficha lo canta ──
   await page.selectOption('#parcelMode', 'rect');
@@ -191,6 +290,45 @@ const num = s => parseInt(String(s).replace(/[^\d]/g, ''), 10);
     await page.evaluate(() => !!document.querySelector('.aviso.fail')));
 
   check('ningún error de JavaScript en toda la sesión', !fallos.length, fallos.join(' | '));
+
+  // ── la ortofoto, cuando el servidor NO manda cabecera CORS ──
+  // Es el caso que deja al usuario sin fondo: con `crossOrigin` puesto, una
+  // respuesta sin CORS no es una imagen que se ve mal, es una imagen que NO
+  // CARGA. La ficha tiene que reintentar sin él y enseñarla igual.
+  // No se puede simular «respuesta sin ACAO» desde aquí (el enrutador de
+  // Playwright añade CORS por su cuenta), así que se fuerza el MISMO efecto que
+  // ve el navegador cuando falta la cabecera: el primer intento de cada tesela
+  // falla, y solo el reintento —el que va sin `crossOrigin`— llega a cargar.
+  const pag2 = await browser.newPage();
+  const vistas = new Set();
+  await pag2.route('https://server.arcgisonline.com/**', r => {
+    const u = r.request().url();
+    if (!vistas.has(u)) { vistas.add(u); r.abort(); return; }
+    r.fulfill({ status: 200, contentType: 'image/png', body: TESELA });
+  });
+  await pag2.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
+  await pag2.waitForFunction(() => /Esri World Imagery|sin ortofoto/.test(
+    document.querySelector('#basemapMsg').textContent), null, { timeout: 15000 });
+  check('si el primer intento falla, el reintento SIN CORS trae la imagen igual',
+    /Esri World Imagery/.test(await pag2.textContent('#basemapMsg')),
+    await pag2.textContent('#basemapMsg'));
+  check('y se declara que el lienzo ha quedado teñido',
+    (await pag2.evaluate(() => LIENZO_TENIDO)) === true &&
+    /sin CORS/.test(await pag2.textContent('#basemapMsg')),
+    await pag2.textContent('#basemapMsg'));
+  await pag2.close();
+
+  // ── y cuando no hay teselas de ninguna manera ──
+  const pag3 = await browser.newPage();
+  await pag3.route('https://server.arcgisonline.com/**', r => r.abort());
+  await pag3.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
+  await pag3.waitForFunction(() => /sin ortofoto/.test(
+    document.querySelector('#basemapMsg').textContent), null, { timeout: 15000 });
+  check('sin ortofoto se DICE y se cae a la retícula',
+    /retícula de 50 m/.test(await pag3.textContent('#basemapMsg')),
+    await pag3.textContent('#basemapMsg'));
+  await pag3.close();
+
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
   process.exit(ko ? 1 : 0);

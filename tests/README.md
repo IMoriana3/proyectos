@@ -63,7 +63,7 @@ botón que no llama a nadie se lee como «no funciona». Comprueba que genera y 
 mesa en el lienzo, no solo números), que los tres caminos de parcela —cotas, GeoJSON y dibujo a
 mano— acaban en un layout, que el reparto multi-talla sale en pantalla, que en montaje fijo cambia
 el rótulo y se inhabilita bifila, y que las salidas se habilitan solo cuando hay algo que exportar.
-Cubre también el **buscador de emplazamiento** —cartera y presets sin red, coordenadas pegadas, y que sin red para el geocodificador se DIGA en vez de devolver una lista vacía— y sus funciones puras sobre la copia real que vive en esa ficha, no sobre la de `sim-viento.html`. De aquí salió el arreglo del doble clic, que metía el último vértice tres veces.
+Cubre también el **buscador de emplazamiento** —cartera y presets sin red, coordenadas pegadas, y que sin red para el geocodificador se DIGA en vez de devolver una lista vacía— y sus funciones puras sobre la copia real que vive en esa ficha, no sobre la de `sim-viento.html`. Y la **ortofoto**: teselas simuladas (el banco no puede depender del servidor de Esri ni de que haya red), que el lienzo no quede TEÑIDO por ellas —si lo quedara, `getImageData` lanza y se caen todas las comprobaciones de pintado—, y que la rueda, el arrastre y «Encajar» muevan la vista. De aquí salieron tres arreglos: el doble clic metía el último vértice tres veces; cada tesela disparaba un repintado entero del campo; el encuadre se recalculaba con el primer vértice sobre una caja de tamaño cero, que es lo que hacía salir la parcela dibujada a «0,00 ha»; y «Encajar» seguía metiendo el BOCETO anterior, así que al pasar de «dibujada» a «por cotas» la vista se abría para incluir los dos —a cientos de kilómetros uno de otro— y lo que dibujaras después caía a decenas de km de la parcela. Cubre también las **exclusiones** dibujadas, exigiendo no que se pinten sino que el motor las OBEDEZCA: una exclusión que se ve pero no quita mesas es peor que no tenerla.
 
 `test_pwa.js` cubre la **app instalable**: manifest válido con iconos que existen de verdad
 (un icono 404 la deja no-instalable sin avisar), service worker activo con su scope, armazón
@@ -93,5 +93,5 @@ node tests/test_sizing.js                  # 104 comprobaciones, careo del dimen
 node tests/test_viento_ejes.js             # 64 comprobaciones, lienzos, ejes, transmisión, reproductor y sombras
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
 node tests/test_layout.js                  # 119 comprobaciones, careo del generador de layout
-node tests/test_layout_ui.js               # 34 comprobaciones, el generador en Chromium
+node tests/test_layout_ui.js               # 51 comprobaciones, el generador en Chromium
 ```
