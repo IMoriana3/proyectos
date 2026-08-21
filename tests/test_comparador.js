@@ -347,6 +347,32 @@ check('y el de transposición NO se mueve: no sabe que hay vecinas (' +
   flojo.sinSombra + '° = ' + apretado.sinSombra + '°)',
   flojo.sinSombra === apretado.sinSombra);
 
+// ── 6c) LA MISMA PENDIENTE PARA LAS TRES: eso es la igualdad ──
+// El parámetro es UNO, del emplazamiento, y entra en el sombreado de todas las
+// familias por el mismo sitio. Lo que se exige aquí no es que exista el campo
+// sino que MUEVA a las tres: si solo moviera a una, la comparación en igualdad
+// sería mentira aunque el número estuviera puesto.
+const conPend = FIS.compara(['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt'], M,
+  { ...cfg, pend: 12 });
+const sinPend = FIS.compara(['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt'], M,
+  { ...cfg, pend: 0 });
+const porClave = r => Object.fromEntries(r.filas.map(f => [f.key, f]));
+const CP = porClave(conPend), SP = porClave(sinPend);
+['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt'].forEach(k => {
+  check('la pendiente mueve la sombra de ' + k + ' (' + SP[k].sombra.toFixed(2) +
+    ' → ' + CP[k].sombra.toFixed(2) + ' %)',
+    Math.abs(CP[k].sombra - SP[k].sombra) > 0.05,
+    SP[k].sombra.toFixed(3) + ' vs ' + CP[k].sombra.toFixed(3));
+});
+check('y es UN solo parámetro, no uno por familia: las tres cambian a la vez',
+  ['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt']
+    .every(k => CP[k].sombra !== SP[k].sombra));
+// y la POA también, que es lo que decide
+check('con pendiente el ranking se recalcula con TODAS en el mismo terreno',
+  conPend.filas.every(f => isFinite(f.neta) && f.neta > 0) &&
+  Math.abs(CP.tracker_hsat.neta - SP.tracker_hsat.neta) > 0.01,
+  CP.tracker_hsat.neta.toFixed(2) + ' vs ' + SP.tracker_hsat.neta.toFixed(2));
+
 // ── 7) hemisferio sur: la fija tiene que mirar al NORTE ──
 // Si `psFija` no cambiara de signo bajo el ecuador, la fija apuntaría al polo y
 // perdería contra el plano horizontal. Es el guard de esa línea.

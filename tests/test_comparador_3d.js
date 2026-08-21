@@ -506,6 +506,12 @@ const SONDA = `(() => {
   check('y el campo dice el porcentaje y hacia dónde cae',
     /%/.test(pend.ocho.nota) && /más BAJA|más ALTA/.test(pend.ocho.nota),
     pend.ocho.nota);
+  // que la pendiente es UNA y la misma para las tres es el sentido del
+  // parámetro; si no se dice, el terreno subiendo en direcciones distintas se
+  // lee como tres pendientes distintas
+  check('y que es LA MISMA para las tres, que es lo que iguala la comparación',
+    /la misma para las tres/i.test(pend.ocho.nota) &&
+    /iguala la comparación/i.test(pend.ocho.nota), pend.ocho.nota);
 
   check('la cuña de la primera versión no ha vuelto',
     (await p.evaluate(() => typeof taludTSAT === 'undefined')) === true);
