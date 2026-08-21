@@ -29,8 +29,25 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
 .engine .led{width:9px;height:9px;border-radius:50%;background:var(--idle)}
 .engine.on .led{background:var(--live);box-shadow:0 0 7px var(--live)}
 .engine.off .led{background:var(--dead)}
-.wrap{max-width:min(1560px,94vw);margin:0 auto;padding:20px 18px 60px}
+/* Tope de la casa, el mismo que las demas fichas: con 1560 px fijos se usaba el 61 % del ancho
+   en una pantalla de 2560. */
+.wrap{max-width:min(2560px,96vw);margin:0 auto;padding:20px 18px 60px}
 .grid{display:grid;grid-template-columns:355px 1fr;gap:18px;align-items:start}
+/* EL REPARTO. Las seis tarjetas de control iban en una torre de 355 x 3.212 px con los resultados
+   al lado midiendo 1.833: casi 1.400 px de hueco muerto y entre 2,5 y 4,1 pantallas de scroll.
+   Con sitio, los controles fluyen en dos o tres columnas -`columns`, que empaqueta por altura en
+   vez de alinear por filas- y los resultados se quedan con el resto. Ancho FIJO en la banda de
+   controles: las tarjetas estan hechas para 355 px, no para estirarse. */
+.col.ctl > .card{break-inside:avoid}
+@media(min-width:1500px){
+  .grid{grid-template-columns:724px minmax(0,1fr)}
+  .col.ctl{display:block;columns:2;column-gap:14px}
+  .col.ctl > .card{margin-bottom:14px}
+}
+@media(min-width:2100px){
+  .grid{grid-template-columns:1093px minmax(0,1fr)}
+  .col.ctl{columns:3}
+}
 @media(max-width:900px){.grid{grid-template-columns:1fr}}
 .picoRow{display:grid;grid-template-columns:250px 1fr;gap:16px;align-items:start}
 @media(max-width:900px){.picoRow{grid-template-columns:1fr}}
@@ -136,7 +153,7 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
 <div class="grid">
 
   <!-- ═════════ CONTROLES ═════════ -->
-  <div>
+  <div class="col ctl">
     <div class="card">
       <h2>☉ Emplazamiento</h2>
       <div class="field sitiobox">

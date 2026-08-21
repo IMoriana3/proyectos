@@ -19,18 +19,18 @@ const SOLO = arg('solo');
 
 /* Un servidor por repo: las páginas piden ficheros del suyo por ruta relativa. */
 const PAGINAS = [
-  /* La lista se escribio a mano y se quedo corta: generador-layout, comparador-estructuras y
-     sim-viento existian y no se median, y el generador se quedaba en el 61 % del ancho a 2560 sin
-     que nadie se enterara. Si aparece una ficha nueva, va aqui. */
   ['proyectos', 8201, ['index.html', 'cartera-tabla.html', 'layout.html', 'sim-solar.html',
     'generador-layout.html', 'comparador-estructuras.html', 'sim-viento.html']],
-  ['Cobertura-Zigbee', 8202, ['index.html', 'informe.html', 'modbus.html', 'crear.html', 'topografico.html', 'backtracking.html', 'overcast.html']],
+  ['Cobertura-Zigbee', 8202, ['index.html', 'informe.html', 'modbus.html', 'crear.html', 'topografico.html',
+    'backtracking.html', 'overcast.html', 'plano.html', 'terreno.html']],
   ['Siting', 8203, ['index.html']],
-  ['SCADA', 8204, ['index.html']],
-  ['Gemelo-digital', 8205, ['index.html', 'bateria.html', 'juegos/index.html']],
+  ['SCADA', 8204, ['index.html', 'trafico.html']],
+  ['Gemelo-digital', 8205, ['index.html', 'bateria.html', 'simulador.html', 'juegos/index.html']],
   ['Visor-San-Jose', 8206, ['index.html', 'san-jose/index.html', 'ayora/index.html', 'asbuilt/index.html']],
   ['checklist-solar-v2', 8207, ['index.html', 'dashboard.html', 'import.html']],
   ['gorraiz-dashboard', 8208, ['index.html']],
+  ['SolarGPTfull', 8209, ['viewers/dtwin-viewer.html', 'viewers/dtwin-seguidor-tcu.html',
+    'viewers/tcu-detalle-electrico.html', 'siting/demo-siting.html']],
 ].filter(p => !SOLO || p[0].toLowerCase() === SOLO.toLowerCase());
 
 import { spawn } from 'node:child_process';
