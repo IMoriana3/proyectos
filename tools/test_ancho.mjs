@@ -19,19 +19,37 @@ const SOLO = arg('solo');
 
 /* Un servidor por repo: las páginas piden ficheros del suyo por ruta relativa. */
 const PAGINAS = [
-  ['proyectos', 8201, ['index.html', 'cartera-tabla.html', 'layout.html', 'sim-solar.html']],
-  ['Cobertura-Zigbee', 8202, ['index.html', 'informe.html', 'modbus.html', 'crear.html', 'topografico.html', 'backtracking.html', 'overcast.html']],
+  ['proyectos', 8201, ['index.html', 'cartera-tabla.html', 'layout.html', 'sim-solar.html',
+    'generador-layout.html', 'comparador-estructuras.html', 'sim-viento.html']],
+  ['Cobertura-Zigbee', 8202, ['index.html', 'informe.html', 'modbus.html', 'crear.html', 'topografico.html',
+    'backtracking.html', 'overcast.html', 'plano.html', 'terreno.html']],
   ['Siting', 8203, ['index.html']],
-  ['SCADA', 8204, ['index.html']],
-  ['Gemelo-digital', 8205, ['index.html', 'bateria.html', 'juegos/index.html']],
+  ['SCADA', 8204, ['index.html', 'trafico.html']],
+  ['Gemelo-digital', 8205, ['index.html', 'bateria.html', 'simulador.html', 'juegos/index.html']],
   ['Visor-San-Jose', 8206, ['index.html', 'san-jose/index.html', 'ayora/index.html', 'asbuilt/index.html']],
   ['checklist-solar-v2', 8207, ['index.html', 'dashboard.html', 'import.html']],
   ['gorraiz-dashboard', 8208, ['index.html']],
+  ['SolarGPTfull', 8209, ['viewers/dtwin-viewer.html', 'viewers/dtwin-seguidor-tcu.html',
+    'viewers/tcu-detalle-electrico.html', 'siting/demo-siting.html']],
+  ['factiun-cartera', 8210, ['index.html', 'ips.html', 'seguimiento-pem.html', 'scada.html', 'importar-logs.html']],
+  ['cobertura-rf-fv', 8211, ['index.html']],
 ].filter(p => !SOLO || p[0].toLowerCase() === SOLO.toLowerCase());
+
+/* Cada cual clona los repos con el nombre que quiere (Cobertura-Zigbee aquí, cobertura-zigbee en un
+   contenedor): la carpeta se busca sin mirar mayúsculas, y con un alias para el visor, que ni se
+   llama igual. Si aun así no está, se dice y no se levanta un servidor sobre una carpeta vacía. */
+import { readdirSync } from 'node:fs';
+const ALIAS = { 'visor-san-jose': 'visores', 'visores': 'visor-san-jose' };
+const carpeta = nombre => {
+  const quiere = [nombre.toLowerCase(), ALIAS[nombre.toLowerCase()] || ''];
+  const hay = readdirSync(RAIZ).find(d => quiere.includes(d.toLowerCase()));
+  if (!hay) console.error(`no encuentro la carpeta de ${nombre} en ${RAIZ}: sus páginas saldrán como error`);
+  return hay || nombre;
+};
 
 import { spawn } from 'node:child_process';
 const servidores = PAGINAS.map(([repo, puerto]) =>
-  spawn('python3', ['-m', 'http.server', String(puerto), '--directory', RAIZ + '/' + repo], { stdio: 'ignore' }));
+  spawn('python3', ['-m', 'http.server', String(puerto), '--directory', RAIZ + '/' + carpeta(repo)], { stdio: 'ignore' }));
 await new Promise(r => setTimeout(r, 1500));
 
 /* Qué se mide: la CAJA QUE OCUPA EL CONTENIDO, de su borde izquierdo pintado al derecho. Medir
@@ -69,7 +87,8 @@ const MIDE = () => {
     if (mw !== 'none' && parseFloat(mw) < vw - 4) { techo = dime(e) + ' max-width:' + mw; break; }
   }
   return { vw, izq: Math.round(izq), der: Math.round(der), usa: Math.round(der - izq),
-    quien: dime(ancho), techo, scroll: document.documentElement.scrollWidth > vw + 1 };
+    quien: dime(ancho), techo, armazon: !!document.getElementById('login'),
+    scroll: document.documentElement.scrollWidth > vw + 1 };
 };
 
 /* COLUMNA DE LECTURA A PROPOSITO. Estas tres no aprovechan el ancho porque no deben: se decidio
@@ -94,6 +113,12 @@ for (const ancho of ANCHOS) {
       let m = null;
       try {
         await pg.goto(`http://localhost:${puerto}/${p}`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        /* Las herramientas con cuenta (la cartera de Factiun) enseñan sin sesión un formulario de
+           entrada estrecho a propósito, y este navegador nunca tiene sesión. Medir la puerta y
+           cantar «FLOJA» sería mentir, así que se aparta (los ids pesan más que la clase .hidden)
+           y se mide el ARMAZÓN: barra de filtros y tabla pintan a lo ancho del contenedor real.
+           La medición sale marcada con «armazón» para que se sepa qué se ha medido. */
+        await pg.addStyleTag({ content: '#login{display:none!important}#app{display:block!important}#configWarn{display:none!important}' }).catch(() => { });
         await pg.waitForTimeout(2500);
         m = await pg.evaluate(MIDE);
       } catch (e) { m = { err: e.message.split('\n')[0] }; }
@@ -102,12 +127,12 @@ for (const ancho of ANCHOS) {
       /* Si no se ha medido nada es que la pagina no ha pintado, no que sea estrecha: aqui pasa con
          las que cargan Firebase por CDN, que este contenedor no deja salir. Se dice, y no cuenta
          como fallo de ancho, que seria mentir sobre lo que se ha medido. */
-      if (!isFinite(m.usa)) { console.log(`  ??    ${(repo + '/' + p).padEnd(38)} no ha pintado nada (¿dependencia externa bloqueada?)`); continue; }
+      if (!isFinite(m.usa)) { console.log(`  ??    ${(repo + '/' + p).padEnd(38)} ${m.armazon ? 'sin sesión no pinta nada (su panel vive en un modal tras entrar): mídelo entrando a mano' : 'no ha pintado nada (¿dependencia externa bloqueada?)'}`); continue; }
       const uso = m.usa / m.vw;
       const razon = ADREDE[repo + '/' + p];
       const marca = razon ? 'adrede' : uso >= 0.90 ? 'ok   ' : uso >= 0.75 ? 'justo' : 'FLOJA';
       if (uso < 0.90 && !razon) flojas.push({ repo, p, ancho, uso, m });
-      console.log(`  ${marca} ${(repo + '/' + p).padEnd(38)} usa ${String(m.usa).padStart(5)} de ${m.vw} (${(uso * 100).toFixed(0)} %) · margenes ${m.izq}|${m.vw - m.der}  ${m.techo ? '← ' + m.techo : m.quien}${m.scroll ? '  ⚠ scroll horizontal' : ''}${razon ? '\n           adrede: ' + razon : ''}`);
+      console.log(`  ${marca} ${(repo + '/' + p).padEnd(38)} usa ${String(m.usa).padStart(5)} de ${m.vw} (${(uso * 100).toFixed(0)} %) · margenes ${m.izq}|${m.vw - m.der}  ${m.techo ? '← ' + m.techo : m.quien}${m.armazon ? '  · armazón (sin sesión)' : ''}${m.scroll ? '  ⚠ scroll horizontal' : ''}${razon ? '\n           adrede: ' + razon : ''}`);
     }
   }
 }

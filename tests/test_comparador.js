@@ -94,12 +94,32 @@ check('pico: densidad de parcela ' + P.mwpHa.toFixed(4) + ' MWp/ha',
 // El campo es un RECTÁNGULO y sus dos lados se publican: es lo que contesta a
 // «¿las pone una detrás de otra o las hace infinitas?». Una detrás de otra —
 // para contar suelo. (Para la SOMBRA sí son infinitas, y eso va dicho aparte.)
-check('el campo publica sus dos lados (' + P.ladoFila.toFixed(2) + ' × ' +
-  P.ladoPitch.toFixed(0) + ' m)',
-  Math.abs(P.ladoFila - 65.084) < 1e-3 && Math.abs(P.ladoPitch - 271 * 6.0) < 1e-6,
-  JSON.stringify([P.ladoFila, P.ladoPitch]));
-check('y el rectángulo cuadra con las hectáreas',
-  Math.abs(P.ladoFila * P.ladoPitch / 1e4 - P.ha) < 1e-9);
+check('el campo se rompe en bloques hasta quedar CUADRADO (' +
+  Math.round(P.ladoFila) + ' × ' + Math.round(P.ladoPitch) + ' m, ' +
+  P.bloques + '×' + P.filasPorBloque + ')',
+  Math.abs(P.ladoFila / P.ladoPitch - 1) < 0.25,
+  JSON.stringify([P.ladoFila, P.ladoPitch, P.bloques, P.filasPorBloque]));
+check('los bloques cubren todas las filas',
+  P.bloques * P.filasPorBloque >= P.filas &&
+  (P.bloques - 1) * P.filasPorBloque < P.filas,
+  P.bloques + '×' + P.filasPorBloque + ' vs ' + P.filas);
+check('los lados salen de la geometría, no de un ajuste',
+  Math.abs(P.ladoFila - P.bloques * 65.084) < 1e-6 &&
+  Math.abs(P.ladoPitch - P.filasPorBloque * 6.0) < 1e-9);
+// las hectáreas siguen siendo la HUELLA de las filas: el rectángulo que las
+// envuelve es algo mayor porque el último bloque queda incompleto
+check('las hectáreas siguen siendo la huella de las filas, no el rectángulo',
+  Math.abs(P.ha - P.filas * 6.0 * 65.084 / 1e4) < 1e-9 &&
+  P.ladoFila * P.ladoPitch / 1e4 >= P.ha - 1e-9,
+  P.ha.toFixed(4) + ' vs ' + (P.ladoFila * P.ladoPitch / 1e4).toFixed(4));
+// y una tira imposible ya no puede salir: a 100 MWp el lado más largo se queda
+// en el orden del kilómetro, no en diecisiete
+const P100 = FIS.planta(GP, 100);
+check('a 100 MWp el campo sigue siendo cuadrado, no una tira de 17 km (' +
+  Math.round(P100.ladoFila) + ' × ' + Math.round(P100.ladoPitch) + ' m)',
+  Math.max(P100.ladoFila, P100.ladoPitch) < 2000 &&
+  Math.abs(P100.ladoFila / P100.ladoPitch - 1) < 0.25,
+  JSON.stringify([P100.ladoFila, P100.ladoPitch]));
 
 // más pitch = mismos módulos, mismas filas, MÁS suelo. Es toda la comparación.
 const Pancho = FIS.planta({ ...GP, pitch: 9.0 }, 10);
@@ -141,7 +161,7 @@ const G = { apertura: C.collector_width_m, altoColector: C.collector_width_m,
             largoFila: 65.084, pitch: C.pitch_m, gcr };
 const cfg = { lat: C.lat, lon: C.lon, gcr, fija: G, tracker: G,
   maxang: C.max_angle_deg, albedo: C.albedo, tilt: C.tilt_deg, tiltEW: 12,
-  axTilt: C.axis_tilt_deg, geomDe: () => G };
+  axTilt: C.axis_tilt_deg, pend: C.cross_axis_slope_deg, geomDe: () => G };
 const rep = FIS.compara(C.structures, M, cfg);
 const js = {}; rep.filas.forEach(f => { js[f.key] = f; });
 const core = {}; fix.esperado.forEach(f => { core[f.key] = f; });
@@ -209,8 +229,11 @@ const bpNb = FIS.barridoPitch(FIS.spec('tracker_hsat_nobt'), M, cfg,
 check('sin backtracking, abrir el pitch QUITA sombra (' + bpNb.puntos[0].sombra.toFixed(2) +
   ' → ' + bpNb.puntos[6].sombra.toFixed(2) + ' %)',
   bpNb.puntos[6].sombra < bpNb.puntos[0].sombra - 0.1);
-check('con backtracking la sombra es ~0 a cualquier pitch (por eso existe)',
-  bp.puntos.every(q => q.sombra < 0.5));
+const bpLlano = FIS.barridoPitch(spTk, M, { ...cfg, pend: 0 },
+  { min: 4.5, max: 7.5, pasoCm: 50 });
+check('en llano, con backtracking la sombra es ~0 a cualquier pitch (por eso existe)',
+  bpLlano.puntos.every(q => q.sombra < 0.5),
+  bpLlano.puntos.map(q => q.sombra.toFixed(2)).join(','));
 // Los DOS máximos son de dos preguntas distintas, y en pitch caen en extremos
 // opuestos del rango: ésa es toda la razón de no declarar un óptimo único.
 check('el máximo de POA cae en el pitch más abierto (' + bp.maxPoa.pitch + ' m)',
@@ -242,8 +265,19 @@ check('el relativo del tilt es 0 en el óptimo y negativo fuera',
   Math.abs(bt.optimo.rel) < 1e-9 && bt.puntos.every(q => q.rel <= 1e-9));
 
 // ── 6) la física está viva, no devuelve constantes ──
-check('el backtracking deja la sombra casi a cero (' + js.tracker_hsat.sombra.toFixed(2) + ' %)',
-  js.tracker_hsat.sombra < 0.5);
+check('con pendiente (' + C.cross_axis_slope_deg + '°) el backtracking YA NO deja la sombra a ' +
+  'cero (' + js.tracker_hsat.sombra.toFixed(2) + ' %): el ángulo se calcula en llano',
+  js.tracker_hsat.sombra > 0.5);
+check('y esa sombra residual es la que dice el core (' + core.tracker_hsat.sombra_pct.toFixed(2) + ' %)',
+  Math.abs(js.tracker_hsat.sombra - core.tracker_hsat.sombra_pct) < 1.0,
+  js.tracker_hsat.sombra.toFixed(2) + ' vs ' + core.tracker_hsat.sombra_pct.toFixed(2));
+// y en LLANO sí se va a cero, que es la razón de ser del backtracking
+const llano = FIS.compara(['tracker_hsat', 'tracker_hsat_nobt'], M, { ...cfg, pend: 0 });
+const llanoBt = llano.filas.find(f => f.key === 'tracker_hsat');
+check('en terreno LLANO el backtracking sí deja la sombra a cero (' +
+  llanoBt.sombra.toFixed(3) + ' %)', llanoBt.sombra < 0.5, llanoBt.sombra.toFixed(3));
+check('la pendiente EMPEORA el backtracking (' + llanoBt.sombra.toFixed(2) + ' → ' +
+  js.tracker_hsat.sombra.toFixed(2) + ' %)', js.tracker_hsat.sombra > llanoBt.sombra + 0.5);
 check('sin backtracking SÍ hay sombra (' + js.tracker_hsat_nobt.sombra.toFixed(2) + ' %)',
   js.tracker_hsat_nobt.sombra > js.tracker_hsat.sombra + 0.5);
 check('sin backtracking apunta mejor: más POA ideal',
@@ -269,15 +303,28 @@ check('el óptimo neto nunca puede pasarse del de transposición (' +
   js.fija_optima.tilt + '° ≤ ' + js.fija_optima.tiltSinSombra + '°)',
   js.fija_optima.tilt <= js.fija_optima.tiltSinSombra);
 check('el aviso da la diferencia MEDIDA, no un «1-3°» de memoria',
-  rep.avisos.some(a => /sería\s+<b>\d+°/.test(a)) && !rep.avisos.some(a => /1-3°/.test(a)),
+  (rep.avisos.some(a => /serían\s+\d+°/.test(a)) ||
+   rep.avisos.some(a => /saldría lo mismo/.test(a))) &&
+  !rep.avisos.some(a => /1-3°/.test(a)),
   rep.avisos.find(a => /tilt óptimo/.test(a)) || '(sin aviso)');
+// Los avisos salen del bloque de física y se pintan ESCAPADOS —bien escapados,
+// porque llevan etiquetas de estructura—, así que un <b> aquí se ve tal cual.
+check('ningún aviso lleva HTML: se pintan escapados',
+  !rep.avisos.some(a => /<[a-z/]/i.test(a)),
+  rep.avisos.find(a => /<[a-z/]/i.test(a)) || '');
+// y que no se vayan de largo: un aviso de cinco líneas no se lee
+check('los avisos son concisos (el más largo, ' +
+  Math.max.apply(null, rep.avisos.map(a => a.length)) + ' caracteres)',
+  Math.max.apply(null, rep.avisos.map(a => a.length)) < 300,
+  rep.avisos.slice().sort((a, b) => b.length - a.length)[0]);
 // Y en cristiano: el aviso tiene que decir QUÉ es el número antes de cómo se
 // saca. «el NETO, barrido CON sombra» era jerga que no se entiende sola.
 const avTilt = rep.avisos.find(a => /tilt óptimo/.test(a)) || '';
 check('el aviso del tilt no usa jerga («el NETO», «barrido»)',
   !/\bel NETO\b/.test(avTilt) && !/barrido/i.test(avTilt), avTilt.slice(0, 140));
-check('y dice qué es el número: el que más energía deja en ESTA implantación',
-  /más energía deja/i.test(avTilt) && /sombra que cada fila/i.test(avTilt), avTilt.slice(0, 140));
+check('y dice qué es el número: el mejor ángulo AQUÍ, con la sombra contada',
+  /mejor ángulo AQUÍ/i.test(avTilt) && /sombra entre filas contada/i.test(avTilt),
+  avTilt.slice(0, 140));
 // el aviso de la E-O repetía «SIN sombreado entre filas» dos veces en la misma frase
 const avEW = rep.avisos.find(a => /Este-Oeste/.test(a)) || '';
 check('el aviso de la E-O no se repite a sí mismo',
@@ -299,6 +346,32 @@ check('con las filas apretadas el óptimo NETO baja (' + flojo.neto + '° → ' 
 check('y el de transposición NO se mueve: no sabe que hay vecinas (' +
   flojo.sinSombra + '° = ' + apretado.sinSombra + '°)',
   flojo.sinSombra === apretado.sinSombra);
+
+// ── 6c) LA MISMA PENDIENTE PARA LAS TRES: eso es la igualdad ──
+// El parámetro es UNO, del emplazamiento, y entra en el sombreado de todas las
+// familias por el mismo sitio. Lo que se exige aquí no es que exista el campo
+// sino que MUEVA a las tres: si solo moviera a una, la comparación en igualdad
+// sería mentira aunque el número estuviera puesto.
+const conPend = FIS.compara(['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt'], M,
+  { ...cfg, pend: 12 });
+const sinPend = FIS.compara(['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt'], M,
+  { ...cfg, pend: 0 });
+const porClave = r => Object.fromEntries(r.filas.map(f => [f.key, f]));
+const CP = porClave(conPend), SP = porClave(sinPend);
+['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt'].forEach(k => {
+  check('la pendiente mueve la sombra de ' + k + ' (' + SP[k].sombra.toFixed(2) +
+    ' → ' + CP[k].sombra.toFixed(2) + ' %)',
+    Math.abs(CP[k].sombra - SP[k].sombra) > 0.05,
+    SP[k].sombra.toFixed(3) + ' vs ' + CP[k].sombra.toFixed(3));
+});
+check('y es UN solo parámetro, no uno por familia: las tres cambian a la vez',
+  ['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt']
+    .every(k => CP[k].sombra !== SP[k].sombra));
+// y la POA también, que es lo que decide
+check('con pendiente el ranking se recalcula con TODAS en el mismo terreno',
+  conPend.filas.every(f => isFinite(f.neta) && f.neta > 0) &&
+  Math.abs(CP.tracker_hsat.neta - SP.tracker_hsat.neta) > 0.01,
+  CP.tracker_hsat.neta.toFixed(2) + ' vs ' + SP.tracker_hsat.neta.toFixed(2));
 
 // ── 7) hemisferio sur: la fija tiene que mirar al NORTE ──
 // Si `psFija` no cambiara de signo bajo el ecuador, la fija apuntaría al polo y

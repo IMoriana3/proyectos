@@ -58,40 +58,44 @@ instalado sobre el pedido (10,00 → 10,02 MWp con 660 Wp y 56 módulos por fila
 **huella del campo** —filas × pitch × largo de fila—, sin viales, sin subestación y sin los
 retranqueos de la parcela real.
 
-### Cómo se colocan: una detrás de otra, y hacia dónde
+### Cómo se colocan: en bloques, hasta que el campo queda cuadrado
 
 La pregunta que hay que contestar antes de creerse las hectáreas.
 
-**Para contar suelo**, el campo es un **rectángulo**: `filas` filas de `largo de fila`, una detrás
-de otra separadas por su pitch. Nada es infinito. Y cada familia se apila en una dirección distinta,
-porque su fila corre en la otra:
+Un parque **no es una tira**. Alineando las N filas una detrás de otra salían campos imposibles: a
+100 MWp los seguidores daban **17 km de largo por 65 m de ancho**. En campo se rompe en **bloques**
+hasta que el conjunto queda aproximadamente **cuadrado**, que es lo que se busca en una parcela. El
+número de bloques sale de igualar los dos lados (`bloques ≈ √área / largo de fila`), y cada uno
+aporta un largo de fila al lado correspondiente.
 
-| | la fila corre | las filas se apilan hacia | campo a 10 MWp |
+A 100 MWp con el módulo canónico:
+
+| | filas | bloques | campo |
 |---|---|---|---|
-| **Fija** | este-oeste | el **sur** | 65 × 1.220 m |
-| **Tracker** | norte-sur (su eje) | el **este** | 1.626 × 65 m |
+| **Fija** (1V, pitch 4,5) | 2.706 | 14 × 194 filas | **911 × 873 m** |
+| **Tracker** (1V, pitch 6,0) | 2.706 | 16 × 170 filas | **1.020 × 1.041 m** |
 
-Los dos lados se publican en el box, así que se ve de un vistazo si eso cabe en la parcela.
+Y cada familia se apila en la dirección **contraria** a como corre su fila: la **fija** corre
+este-oeste y apila hacia el **sur**; el **tracker** corre norte-sur (su eje) y apila hacia el
+**este**.
 
-**Para la sombra, en cambio, sí son infinitas.** El modelo de sombreado es el de **fila infinita**:
-cada fila la tapa otra idéntica a un pitch de distancia, en el plano perpendicular al eje. Eso
-tiene dos consecuencias que conviene tener claras:
+Las **hectáreas** que se publican siguen siendo la huella de las filas (`filas × pitch × largo de
+fila`). El rectángulo que las envuelve es algo mayor, porque el último bloque queda incompleto — se
+dice en vez de repartirlo. Y no lleva viales, ni subestación, ni los retranqueos de la parcela real:
+para eso está el generador de layout.
+
+**Para la sombra, en cambio, sí son infinitas.** El modelo de sombreado es el de **fila infinita**
+—cada fila la tapa otra idéntica a un pitch, en el plano perpendicular al eje—, que es la
+simplificación de `pvlib.shading.shaded_fraction1d` y por tanto la del core. Dos consecuencias:
 
 * la **primera fila sale sombreada** aunque en campo no tenga a nadie delante. De N filas hay
   **una** a la que se le cobra una sombra que no tiene, así que la pérdida por sombreado sale
-  **1/N** más alta de lo que debería: con 271 filas, un 0,37 %. Y ese 0,37 % es **de la pérdida**,
-  no de la energía — con la fija a GCR 0,529 la sombra modelada es 1,324 % y la real 1,319 %:
-  **0,005 puntos**. En el seguidor sin backtracking, que sí tiene sombra de verdad, 9,317 % contra
-  9,282 %. La ficha publica la corregida en la nota de la tabla, con el número de filas ya sabido;
-* **no hay efectos de borde por los extremos** de la fila: se supone infinitamente larga, así que
-  la sombra oblicua que se sale por la punta no se modela.
+  **1/N** más alta de lo que debería. Y ese porcentaje es **de la pérdida**, no de la energía — con
+  la fija a GCR 0,529 la sombra modelada es 1,324 % y la real 1,319 %: **0,005 puntos**. La ficha
+  publica la corregida en la nota de la tabla, con el número de filas ya sabido;
+* **no hay efectos de borde por los extremos** de la fila, que se supone infinitamente larga.
 
-Es la simplificación bankable de siempre (la misma de `pvlib.shading.shaded_fraction1d`, que es lo
-que usa el core), y a escala de planta el error es de décimas. En una implantación de tres filas
-no lo sería.
-
-Y el suelo es la **huella del campo**: sin viales, sin subestación y sin los retranqueos de la
-parcela real. Para eso está el generador de layout.
+A escala de planta el error es de décimas. En una implantación de tres filas no lo sería.
 
 ### La trampa, dicha en voz alta
 
@@ -468,6 +472,87 @@ modelo **real** de `seguidor.js`, el mismo que pintan el Gemelo Digital y la Cob
    vecino y contamina la comparación—. Con 10 m se apagaban a 13°, justo por encima del amanecer
    de invierno que la escena existe para enseñar; con 16 m aguantan hasta 8,5°.
 
+### El eje inclinado va sobre terreno en pendiente
+
+Un TSAT gira el eje sobre X, así que media fila quedaba **bajo el suelo** y la otra media volando.
+Costó tres versiones dar con la buena:
+
+1. una **cuña** bajo el bloque — se leía como una rampa de hormigón, no como terreno;
+2. el suelo **plano** y la hinca alargada hasta el suelo — peor: un tracker con megasoportes a un
+   lado no es lo que se construye;
+3. **terreno con pendiente**, que es lo que un eje inclinado necesita para existir.
+
+Se hace como en **bt3d**: un *heightfield* subdividido (`PlaneGeometry(w, l, 140, 70)`) con la cota
+de cada vértice y `computeVertexNormals()`. Eso es lo que lo hace leerse como una ladera: una malla
+de dos triángulos tiene una normal por cara y sale con aristas; con las normales recalculadas la luz
+varía de forma continua.
+
+La pendiente aparece **solo donde hace falta** —bajo el bloque del eje inclinado— y se funde con el
+llano a los lados con un suavizado, así que no hay ningún canto. Sube exactamente lo que sube el
+eje (`largo de fila · sen(tilt)`, 11,3 m con 65 m y 10°) y luego **aplana en meseta**, en vez de
+seguir subiendo con el suelo. Sin eje inclinado marcado, el suelo vuelve a ser llano.
+
+Las hincas vuelven a medir lo que miden: **2 m, las mismas que el eje horizontal**. Lo que cambia es
+el terreno, no la estructura.
+
+### La pendiente del emplazamiento, para las tres
+
+`Pendiente ⊥ filas °`, en la tarjeta de Emplazamiento porque es una propiedad del **sitio**. Se
+aplica a las **tres familias** — es lo que hace que la comparación sea en igualdad — y **entra en la
+física**, no solo en el dibujo: va al sombreado entre filas por el mismo sitio por el que entra en
+el core (`cross_axis_slope`, el de `pvlib.shading.shaded_fraction1d`). La fila de al lado deja de
+estar a la misma cota, y con `pend > 0` queda más **baja**.
+
+Cada familia la lleva en **su** dirección, porque cada una apila las filas hacia un lado: la fija
+hacia el sur (pitch N-S) y el seguidor y las dos aguas hacia el este (pitch E-O). El **eje
+inclinado** lleva además la del eje, que corre norte-sur — el «eje inclinado °» de un TSAT *es* la
+pendiente del terreno sobre el que se monta; un eje no se inclina en el aire.
+
+En la escena, las hincas siguen siendo **verticales** y el tilt no cambia: una fija en pendiente no
+se inclina con el terreno, se replantea sobre él. Cada fila se coloca a la cota del terreno bajo
+ella.
+
+#### Es UNA pendiente, la misma para las tres
+
+Eso es lo que iguala la comparación, y hay un test que lo exige: no basta con que el campo exista,
+tiene que **mover a las tres familias**. A 12° en Sevilla:
+
+| | sin pendiente | con 12° |
+|---|---|---|
+| Fija · tilt de proyecto | 0,17 % | **0,00 %** |
+| Tracker N-S · backtracking | 0,00 % | **6,44 %** |
+| Tracker N-S · sin backtracking | 6,37 % | **9,18 %** |
+
+La pendiente **le quita** sombra a la fija —las filas se escalonan y dejan de taparse— y **se la
+pone** al seguidor. O sea que cambia el resultado de la comparación, que es justo para lo que está.
+
+En la escena cada familia la lleva en su dirección de pitch, así que el terreno sube hacia lados
+distintos bajo cada bloque. Eso se lee como «pendientes distintas» y no lo es: es **la misma
+pendiente perpendicular a las filas**, y las filas de cada familia corren hacia otro lado.
+
+#### Lo que destapa: con pendiente, el backtracking deja sombra
+
+El ángulo de backtracking se calcula **en llano**. Con el terreno inclinado, la fila de al lado no
+está donde ese cálculo supone, así que **deja de evitar la sombra**:
+
+| | sombra con backtracking |
+|---|---|
+| terreno llano | **0,00 %** |
+| pendiente 8° | **4,11 %** |
+
+Y no es un artefacto de la ficha: el core da 3,74 % en el mismo caso. El careo se genera ahora con
+**8° de pendiente** precisamente para que el signo y la fórmula no puedan pasar por casualidad — la
+POA queda dentro del 0,8–2,1 % del canónico y los Δ% dentro de 1,4 pp, con el orden idéntico.
+
+### Dónde cae la sombra de cada familia
+
+La fija **sí** proyecta sombra —todas sus mallas la proyectan y el suelo la recibe—, pero mira al
+ecuador y por tanto la tira **hacia el polo**: al fondo desde la cámara por defecto, y detrás de
+sus propias filas. Con seis bloques marcados el encuadre está tan lejos que además mide cuatro
+píxeles. Hay que orbitar al otro lado, o dejar menos estructuras marcadas para que el encuadre se
+acerque. Las del seguidor caen de lado y se ven de frente — de ahí la impresión de que la fija no
+tiene.
+
 ### El tilt óptimo de la escena, sin simular el año
 
 El bloque «Fija · tilt óptimo» se dibujaba con el **tilt de proyecto** hasta que dabas a *Comparar*,
@@ -612,10 +697,10 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ## Pruebas
 
 ```bash
-node tests/test_comparador.js       # 84 comprobaciones · careo contra el core, sin navegador
+node tests/test_comparador.js       # 97 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 111 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 134 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 

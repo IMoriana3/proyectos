@@ -120,9 +120,23 @@ const SONDA = `(() => {
   check('el box publica el CAMPO de cada familia, con sus dos lados',
     /CAMPO · FIJA/i.test(campo.read) && /CAMPO · TRACKER/i.test(campo.read) &&
     /E-O × N-S/.test(campo.read), campo.read.slice(-160));
-  check('y dice hacia dónde se apila cada una (la fija al sur, el seguidor al este)',
-    /apilan hacia el .*sur/i.test(campo.nota) && /apilan hacia el .*este/i.test(campo.nota),
-    campo.nota.slice(0, 200));
+  check('y dice hacia dónde apila cada una (la fija al sur, el seguidor al este)',
+    /apila hacia el .*sur/i.test(campo.nota) && /apila hacia el .*este/i.test(campo.nota),
+    campo.nota.slice(0, 300));
+  // un parque no es una tira: se rompe en bloques hasta quedar cuadrado
+  check('el box dice en cuántos BLOQUES se rompe cada campo',
+    /bloques de \d+ filas/i.test(campo.read), campo.read.slice(-200));
+  check('y la nota dice por qué: para que el campo quede cuadrado',
+    /cuadrado/i.test(campo.nota) && /tiras imposibles/i.test(campo.nota),
+    campo.nota.slice(0, 300));
+  const cuadra = await p.evaluate(() => {
+    const c = cfgActual(), mwp = +document.getElementById('mwp').value;
+    const F = FIS.planta(c.fija, mwp), K = FIS.planta(c.tracker, mwp);
+    return [F.ladoFila / F.ladoPitch, K.ladoFila / K.ladoPitch];
+  });
+  check('y los dos campos salen aproximadamente cuadrados (' +
+    cuadra.map(r => r.toFixed(2)).join(' / ') + ')',
+    cuadra.every(r => Math.abs(r - 1) < 0.25), JSON.stringify(cuadra));
   check('y que para la SOMBRA sí son filas infinitas, con su 1/N',
     /fila infinita/i.test(campo.nota) && /1\/\d+/.test(campo.nota), campo.nota.slice(-320));
   check('y aclara que ese % es DE LA PÉRDIDA, no de la energía',
@@ -197,6 +211,25 @@ const SONDA = `(() => {
     aguas[0] * aguas[1] < 0);
 
   // ── la sombra: sin frustum dimensionado no se dibuja en ningún sitio ──
+  // «La fija no tiene sombra ni en el terreno»: sí la tiene —todas sus mallas
+  // proyectan— pero una fija mira al ecuador y tira la sombra hacia el POLO,
+  // o sea al fondo desde la cámara y detrás de sus propias filas. Se comprueba
+  // que proyecta de verdad, y que la ficha avisa de dónde hay que buscarla.
+  const proy = await p.evaluate(() => {
+    const out = {};
+    BLOQUES.forEach(B => { let c = 0, t = 0;
+      B.filas[0].traverse(o => { if (o.isMesh) { t++; if (o.castShadow) c++; } });
+      out[B.key] = [c, t]; });
+    return { out, suelo: TD.suelo.receiveShadow,
+             nota: document.getElementById('escNote').textContent };
+  });
+  check('todas las mallas de la fija proyectan sombra (' + proy.out.fija_optima.join('/') + ')',
+    proy.out.fija_optima[0] === proy.out.fija_optima[1] && proy.out.fija_optima[0] > 0,
+    JSON.stringify(proy.out));
+  check('y el suelo la recibe', proy.suelo === true);
+  check('la ficha dice que la sombra de la fija cae hacia el polo, al fondo',
+    /hacia el polo/i.test(proy.nota) && /al fondo/i.test(proy.nota), proy.nota.slice(-220));
+
   check('el sol proyecta sombra a mediodía', md.sol.sombra === true);
   check('el frustum de sombra cubre la escena (' + md.sol.frustum.toFixed(0) + ' m)',
     md.sol.frustum > 60);
@@ -356,6 +389,132 @@ const SONDA = `(() => {
   const sur = await p.evaluate(SONDA);
   check('elegir un emplazamiento del SUR gira la fija al NORTE (z=' +
     sur.bloques.fija_proyecto.n.z.toFixed(2) + ')', sur.bloques.fija_proyecto.n.z < -0.15);
+
+  // ── el eje inclinado, sobre TERRENO EN PENDIENTE ──
+  // Dos intentos fallidos antes de esto: una cuña bajo el bloque (se leía como
+  // una rampa de hormigón) y el suelo plano con la hinca alargada (un tracker
+  // con megasoportes a un lado, que no es lo que se construye). Lo que hace
+  // falta es terreno, y se hace como en bt3d: heightfield subdividido con
+  // `computeVertexNormals()`, que es lo que hace que la luz varíe de forma
+  // continua en vez de salir por caras.
+  const rel = await p.evaluate(() => {
+    const cotas = () => { const pos = TD.suelo.geometry.attributes.position;
+      let lo = 1e9, hi = -1e9;
+      for (let i = 0; i < pos.count; i++) { const y = pos.getY(i);
+        lo = Math.min(lo, y); hi = Math.max(hi, y); }
+      return { lo: +lo.toFixed(2), hi: +hi.toFixed(2), n: pos.count }; };
+    const bajo = k => { const B = BLOQUES.find(b => b.key === k); let y = 1e9;
+      B.filas.forEach(u => { y = Math.min(y, new THREE.Box3().setFromObject(u).min.y); });
+      return +y.toFixed(2); };
+    const poste = k => { const B = BLOQUES.find(b => b.key === k); let h = 0;
+      B.filas[0].children.forEach(o => { if (o.isMesh) {
+        const c = new THREE.Box3().setFromObject(o); h = +(c.max.y - c.min.y).toFixed(2); } });
+      return h; };
+    // con TSAT marcado
+    document.querySelectorAll('.st').forEach(c => {
+      c.checked = ['tracker_tsat', 'tracker_hsat'].includes(c.value); });
+    construyeMundo(); actualiza3D();
+    // la pendiente MEDIDA del terreno bajo el bloque del eje inclinado: se
+    // sondea la cota a dos alturas de z en su vertical
+    const gradZ = () => {
+      const B = BLOQUES.find(b => b.key === 'tracker_tsat');
+      const x = B.filas[0].parent.position.x;
+      const h = z => cotaTerreno(x, z, RAMPAS_3D);
+      const dz = 10;
+      return +(Math.atan2(h(-dz) - h(dz), 2 * dz) * 180 / Math.PI).toFixed(2);
+    };
+    const con = { cotas: cotas(), pendMedida: gradZ(),
+                  tsat: bajo('tracker_tsat'), hsat: bajo('tracker_hsat'),
+                  pT: poste('tracker_tsat'), pH: poste('tracker_hsat'),
+                  suave: TD.suelo.geometry.attributes.normal &&
+                         TD.suelo.geometry.attributes.normal.count };
+    // sin TSAT: el suelo tiene que volver a ser llano
+    document.querySelectorAll('.st').forEach(c => { c.checked = c.value === 'tracker_hsat'; });
+    construyeMundo(); actualiza3D();
+    const sin = cotas();
+    const axTilt = +document.getElementById('axtilt').value;
+    const largo = cfgActual().tracker.largoFila;
+    document.querySelectorAll('.st').forEach(c => {
+      c.checked = ['fija_optima', 'fija_proyecto', 'fija_ew',
+                   'tracker_hsat', 'tracker_hsat_nobt', 'tracker_tsat'].includes(c.value); });
+    construyeMundo(); actualiza3D();
+    return { con, sin, axTilt, largo };
+  });
+  check('el suelo lleva relieve donde hay eje inclinado (' + rel.con.cotas.hi + ' m)',
+    rel.con.cotas.hi > 1 && rel.con.cotas.lo === 0, JSON.stringify(rel.con.cotas));
+  check('y la PENDIENTE del terreno bajo el eje inclinado es la del eje (' +
+    rel.con.pendMedida + '° vs ' + rel.axTilt + '°)',
+    Math.abs(Math.abs(rel.con.pendMedida) - rel.axTilt) < 0.6,
+    rel.con.pendMedida + ' vs ' + rel.axTilt);
+  check('es un heightfield, no dos triángulos (' + rel.con.cotas.n + ' vértices)',
+    rel.con.cotas.n > 5000, String(rel.con.cotas.n));
+  check('con las normales recalculadas, que es lo que lo hace parecer terreno',
+    rel.con.suave === rel.con.cotas.n, String(rel.con.suave));
+  check('sin eje inclinado, el suelo vuelve a ser llano',
+    rel.sin.hi === 0 && rel.sin.lo === 0, JSON.stringify(rel.sin));
+  check('el eje inclinado no se hunde (y mínima ' + rel.con.tsat + ' m)',
+    rel.con.tsat >= -0.01, String(rel.con.tsat));
+  check('y NO lleva megasoportes: su hinca mide lo mismo que la del horizontal (' +
+    rel.con.pT + ' vs ' + rel.con.pH + ' m)',
+    Math.abs(rel.con.pT - rel.con.pH) < 0.01, JSON.stringify([rel.con.pT, rel.con.pH]));
+  // «¿por qué solo esa estructura tiene pendiente?» — porque es la única que
+  // la declara. Si hay que preguntarlo, es que no estaba dicho.
+  const porQue = await p.evaluate(() => document.getElementById('escNote').textContent);
+  const plano = porQue.replace(/\s+/g, ' ');
+  check('la escena dice que la pendiente se aplica a las TRES familias',
+    /las TRES familias/i.test(plano) && /en igualdad/i.test(plano), plano.slice(-420));
+  check('y que cada una la lleva en SU dirección',
+    /la fija hacia el sur/i.test(plano) && /hacia el este/i.test(plano), plano.slice(-420));
+  check('y que el eje inclinado lleva además la del eje',
+    /un eje no se inclina en el aire/i.test(plano), plano.slice(-420));
+  check('y que las hincas son verticales: la fija no se inclina con el terreno',
+    /hincas son verticales/i.test(plano) && /se replantea sobre él/i.test(plano),
+    plano.slice(-260));
+
+  // ── la pendiente del emplazamiento, para TODAS ──
+  // Es lo que hace que la comparación sea en igualdad: la misma pendiente ⊥ a
+  // las filas para las tres familias, cada una en SU dirección de pitch.
+  const pend = await p.evaluate(() => {
+    const set = v => { const e = document.getElementById('pend');
+      e.value = String(v); e.dispatchEvent(new Event('change', { bubbles: true })); };
+    const grad = (k, eje) => {
+      const B = BLOQUES.find(b => b.key === k);
+      const x = B.filas[0].parent.position.x;
+      const h = (dx, dz) => cotaTerreno(x + dx, dz, RAMPAS_3D);
+      const d = 8;
+      return eje === 'x' ? +(Math.atan2(h(-d, 0) - h(d, 0), 2 * d) * 180 / Math.PI).toFixed(2)
+                         : +(Math.atan2(h(0, -d) - h(0, d), 2 * d) * 180 / Math.PI).toFixed(2);
+    };
+    document.querySelectorAll('.st').forEach(c => { c.checked = true; });
+    set(0); construyeMundo();
+    const cero = { fijaZ: grad('fija_optima', 'z'), tkX: grad('tracker_hsat', 'x') };
+    set(8); construyeMundo();
+    const ocho = { fijaZ: grad('fija_optima', 'z'), fijaX: grad('fija_optima', 'x'),
+                   tkX: grad('tracker_hsat', 'x'), tkZ: grad('tracker_hsat', 'z'),
+                   nota: document.getElementById('pendNota').textContent };
+    set(0); construyeMundo(); actualiza3D();
+    return { cero, ocho };
+  });
+  check('sin pendiente, el terreno de la fija y del seguidor es llano',
+    pend.cero.fijaZ === 0 && pend.cero.tkX === 0, JSON.stringify(pend.cero));
+  check('con 8°, la FIJA la lleva en su dirección de pitch (N-S): ' + pend.ocho.fijaZ + '°',
+    Math.abs(Math.abs(pend.ocho.fijaZ) - 8) < 0.6 && pend.ocho.fijaX === 0,
+    JSON.stringify(pend.ocho));
+  check('y el SEGUIDOR en la suya (E-O): ' + pend.ocho.tkX + '°',
+    Math.abs(Math.abs(pend.ocho.tkX) - 8) < 0.6 && pend.ocho.tkZ === 0,
+    JSON.stringify(pend.ocho));
+  check('y el campo dice el porcentaje y hacia dónde cae',
+    /%/.test(pend.ocho.nota) && /más BAJA|más ALTA/.test(pend.ocho.nota),
+    pend.ocho.nota);
+  // que la pendiente es UNA y la misma para las tres es el sentido del
+  // parámetro; si no se dice, el terreno subiendo en direcciones distintas se
+  // lee como tres pendientes distintas
+  check('y que es LA MISMA para las tres, que es lo que iguala la comparación',
+    /la misma para las tres/i.test(pend.ocho.nota) &&
+    /iguala la comparación/i.test(pend.ocho.nota), pend.ocho.nota);
+
+  check('la cuña de la primera versión no ha vuelto',
+    (await p.evaluate(() => typeof taludTSAT === 'undefined')) === true);
 
   // ── bifila: DOS filas que son UN seguidor, con su transmisión ──
   // Monofila y bifila no cambian la mesa —es operativa, no geométrica— pero sí

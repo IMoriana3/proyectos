@@ -29,8 +29,25 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
 .engine .led{width:9px;height:9px;border-radius:50%;background:var(--idle)}
 .engine.on .led{background:var(--live);box-shadow:0 0 7px var(--live)}
 .engine.off .led{background:var(--dead)}
-.wrap{max-width:min(1560px,94vw);margin:0 auto;padding:20px 18px 60px}
+/* Tope de la casa, el mismo que las demas fichas: con 1560 px fijos se usaba el 61 % del ancho
+   en una pantalla de 2560. */
+.wrap{max-width:min(2560px,96vw);margin:0 auto;padding:20px 18px 60px}
 .grid{display:grid;grid-template-columns:355px 1fr;gap:18px;align-items:start}
+/* EL REPARTO. Las seis tarjetas de control iban en una torre de 355 x 3.212 px con los resultados
+   al lado midiendo 1.833: casi 1.400 px de hueco muerto y entre 2,5 y 4,1 pantallas de scroll.
+   Con sitio, los controles fluyen en dos o tres columnas -`columns`, que empaqueta por altura en
+   vez de alinear por filas- y los resultados se quedan con el resto. Ancho FIJO en la banda de
+   controles: las tarjetas estan hechas para 355 px, no para estirarse. */
+.col.ctl > .card{break-inside:avoid}
+@media(min-width:1500px){
+  .grid{grid-template-columns:724px minmax(0,1fr)}
+  .col.ctl{display:block;columns:2;column-gap:14px}
+  .col.ctl > .card{margin-bottom:14px}
+}
+@media(min-width:2100px){
+  .grid{grid-template-columns:1093px minmax(0,1fr)}
+  .col.ctl{columns:3}
+}
 @media(max-width:900px){.grid{grid-template-columns:1fr}}
 .picoRow{display:grid;grid-template-columns:250px 1fr;gap:16px;align-items:start}
 @media(max-width:900px){.picoRow{grid-template-columns:1fr}}
@@ -136,7 +153,7 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
 <div class="grid">
 
   <!-- ═════════ CONTROLES ═════════ -->
-  <div>
+  <div class="col ctl">
     <div class="card">
       <h2>☉ Emplazamiento</h2>
       <div class="field sitiobox">
@@ -152,6 +169,12 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       <div class="two">
         <div class="field"><label>Año</label><input id="year" type="number" value="2023"></div>
         <div class="field"><label>Albedo</label><input id="albedo" type="number" step="0.01" value="0.20"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Pendiente ⊥ filas °</label>
+          <input id="pend" type="number" step="0.5" value="0"></div>
+        <div class="field"><label>&nbsp;</label>
+          <p class="mini" style="padding-top:9px" id="pendNota">terreno llano</p></div>
       </div>
       <div class="two">
         <div class="field"><label>&nbsp;</label><p class="mini" style="padding-top:9px">albedo = del SITIO (§03.0), compartido</p></div>
@@ -340,7 +363,18 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       <div id="escRead" class="readout" style="margin-top:10px"></div>
       <p class="note" id="escNote">Cada bloque es una estructura, con su pitch y su GCR, al mismo
         sol y sobre el mismo suelo. Mueve la hora y mira las <b>sombras entre filas</b>: es lo que
-        el backtracking existe para evitar, y lo que la columna «pérdida sombra» de la tabla mide.</p>
+        el backtracking existe para evitar, y lo que la columna «pérdida sombra» de la tabla mide.
+        <b>Las de la fija hay que ir a buscarlas</b>: una fija mira al ecuador, así que tira la
+        sombra hacia el polo — al fondo desde esta vista y detrás de sus propias filas. Órbita
+        hacia el otro lado, o deja marcadas menos estructuras para que el encuadre se acerque.
+        Las del seguidor caen de lado y se ven de frente.
+        <b>El terreno</b>: la <b>pendiente ⊥ filas</b> del emplazamiento se aplica a las TRES
+        familias —es lo que hace que la comparación sea en igualdad— y cada una la lleva en SU
+        dirección, porque cada una apila las filas hacia un lado: la fija hacia el sur, el seguidor
+        y las dos aguas hacia el este. El <b>eje inclinado</b> lleva además la del eje, que corre
+        norte-sur: el «eje inclinado °» de un TSAT <i>es</i> la pendiente del terreno sobre el que
+        se monta — un eje no se inclina en el aire. Las hincas son verticales y el tilt no cambia:
+        una fija en pendiente no se inclina con el terreno, se replantea sobre él.</p>
     </div>
     <!-- ═════════ SIZING (columna ancha: la ventana hay que LEERLA) ═════════ -->
     <div class="card">
@@ -591,14 +625,26 @@ FIS.planta=function(G,mwp){
   var mods=filas*G.modsFila;
   var areaMod=mods*G.modAlong*G.modCross;
   var areaSuelo=filas*G.pitch*G.largoFila;
+  var bloques=Math.max(1,Math.round(Math.sqrt(areaSuelo)/G.largoFila));
+  var filasPorBloque=Math.ceil(filas/bloques);
   return {pedidos:Math.ceil(pedidos), mods:mods, filas:filas,
           trackers:Math.ceil(filas/Math.max(1,G.filasTracker)),
-          /* El campo es un RECTÁNGULO: `filas` filas de `largoFila`, una detrás
-             de otra a `pitch`. `ladoPitch` es el lado en el que se apilan las
-             filas y `ladoFila` el largo de cada una; cuál de los dos es el
-             este-oeste depende de la familia (la fija apila hacia el sur, el
-             seguidor hacia el este) y eso lo pone quien lo pinta. */
-          ladoPitch:filas*G.pitch, ladoFila:G.largoFila,
+          /* UN PARQUE NO ES UNA TIRA. Poniendo las `filas` filas una detrás de
+             otra salían campos imposibles: 100 MWp de seguidores daban 17 km
+             de largo por 65 m de ancho. En campo se rompe en BLOQUES hasta que
+             el conjunto queda aproximadamente cuadrado, que es lo que se busca
+             en una parcela. El nº de bloques sale de igualar los dos lados:
+             lado ≈ √área, y cada bloque aporta un `largoFila` en el lado de la
+             longitud de fila. `ladoFila` es ese lado (bloques × largo de fila)
+             y `ladoPitch` el otro (filas por bloque × pitch); cuál es el
+             este-oeste depende de la familia —la fija apila hacia el sur, el
+             seguidor hacia el este— y eso lo pone quien lo pinta.
+             El área que se publica sigue siendo la HUELLA de las filas: el
+             rectángulo que las envuelve es algo mayor porque el último bloque
+             queda incompleto, y eso se dice en vez de repartirlo. */
+          bloques:bloques, filasPorBloque:filasPorBloque,
+          ladoPitch:filasPorBloque*G.pitch, ladoFila:bloques*G.largoFila,
+          ladoCuadrado:Math.sqrt(areaSuelo),
           mwp:mods*wp/1e6, areaMod:areaMod, ha:areaSuelo/1e4,
           /* densidad de la parcela: MWp por hectárea, el número con el que se
              habla de una implantación antes de mirar ningún kWh */
@@ -789,13 +835,14 @@ FIS.theta=function(psDeg,gcr,maxang,bt){
    Con rayos paralelos, la fracción sombreada es el solape de las proyecciones
    de los dos segmentos sobre el eje ⊥ al rayo, dividido por la proyección de la
    fila que recibe la sombra: lineal y exacto para segmentos rectos.           */
-FIS.shade=function(psDeg,thDeg,pitch,cw){
+FIS.shade=function(psDeg,thDeg,pitch,cw,pendDeg){
   if(!isFinite(psDeg)||Math.abs(psDeg)>=89.9)return 0;
   var hw=cw/2, ps=psDeg*FIS.D2R, th=thDeg*FIS.D2R;
   var dx=Math.cos(th), dz=-Math.sin(th);             // cuerda: θ>0 ⇒ borde derecho abajo
-  var seg=function(cx){return [[cx-hw*dx,-hw*dz],[cx+hw*dx,hw*dz]];};
-  var up = psDeg>=0? seg(pitch) : seg(0);            // la del lado del sol sombrea
-  var dn = psDeg>=0? seg(0)     : seg(pitch);
+  var zR=-pitch*Math.tan((pendDeg||0)*FIS.D2R);      // cota de la fila de al lado
+  var seg=function(cx,cz){return [[cx-hw*dx,cz-hw*dz],[cx+hw*dx,cz+hw*dz]];};
+  var up = psDeg>=0? seg(pitch,zR) : seg(0,0);       // la del lado del sol sombrea
+  var dn = psDeg>=0? seg(0,0)      : seg(pitch,zR);
   var u=function(P){return P[0]*Math.cos(ps)-P[1]*Math.sin(ps);};
   var u1=Math.min(u(up[0]),u(up[1])), u2=Math.max(u(up[0]),u(up[1]));
   var v1=Math.min(u(dn[0]),u(dn[1])), v2=Math.max(u(dn[0]),u(dn[1]));
@@ -850,7 +897,7 @@ FIS.CATALOGO=[
   {key:'fija_proyecto',    label:'Fija · tilt de proyecto',         fam:'fija',
    nota:'Monoinclinada al ecuador con el tilt que fije el proyecto.'},
   {key:'fija_ew',          label:'Fija · Este-Oeste (dos aguas)',   fam:'fija_ew', sinSombra:true,
-   nota:'Se promedian los dos planos, que tienen la misma superficie. El modelo de sombra que lleva la ficha supone todas las filas mirando al mismo sitio, y con dos aguas enfrentadas eso no vale — por eso aquí no se aplica.'},
+   nota:'Se promedian los dos planos, de igual superficie. El modelo de sombra supone todas las filas mirando al mismo sitio, y con aguas enfrentadas no vale.'},
   {key:'tracker_hsat',     label:'Tracker 1 eje N-S · backtracking',fam:'tracker', bt:true,
    nota:'HSAT canónico: eje horizontal N-S, backtracking activo.'},
   {key:'tracker_hsat_nobt',label:'Tracker 1 eje N-S · sin backtracking',fam:'tracker', bt:false,
@@ -892,7 +939,7 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
     var sN=0,sI=0;
     for(var k=0;k<planos.length;k++){
       var t=planos[k];
-      var fsh=spec.sinSombra?0:FIS.shade(P0.ps,t,pitch,G.altoColector);
+      var fsh=spec.sinSombra?0:FIS.shade(P0.ps,t,pitch,G.altoColector,cfg.pend||0);
       var P=FIS.poa(P0.ps,P0.rho,t,FIS.tiltSup(t,axT),bh,dh,gh,cfg.albedo,fsh,Math.sin(S.el),e0);
       sN+=P.neta; sI+=P.ideal;
     }
@@ -1035,21 +1082,17 @@ FIS.compara=function(keys,M,cfg){
       suelo:r.neta*r.gcr,
       transp:ghi>0?((r.neta/ghi-1)*100):NaN,
       sombra:r.ideal>0?((1-r.neta/r.ideal)*100):0});
-    if(spec.sinSombra)avisos.push('«'+spec.label+'» se calcula SIN la sombra entre filas, así que '+
-      'su POA es un <b>techo</b>: en campo saldrá algo menos. '+spec.nota);
+    if(spec.sinSombra)avisos.push('«'+spec.label+'» va SIN sombra entre filas: su POA es un techo, '+
+      'en campo saldrá algo menos. '+spec.nota);
     if(spec.tiltOpt){
       var dif=(tiltSin!=null)?(tiltSin-tilt):0, gcrTxt=r.gcr.toFixed(3).replace('.',',');
-      avisos.push('«'+spec.label+'»: <b>'+tilt+'°</b> es el ángulo que más energía deja EN ESTA '+
-        'IMPLANTACIÓN, contando la sombra que cada fila le hace a la de detrás.'+
-        (dif<=0
-          ? ' Si las filas estuvieran solas saldría lo mismo: a esta densidad (GCR '+gcrTxt+') '+
-            'están tan abiertas que la sombra no llega a castigar a los ángulos altos.'
-          : ' Si las filas estuvieran SOLAS —sin vecinas detrás— el mejor ángulo sería <b>'+
-            tiltSin+'°</b>, '+dif+'° más. La diferencia la pone lo apretadas que van (GCR '+
-            gcrTxt+'): cuanto menos hueco entre filas, más castiga la sombra a los ángulos '+
-            'altos, así que compensa tumbar la mesa. El cuaderno publica el de '+tiltSin+'° '+
-            'porque lo calcula sin vecinas: no es que discrepen, es que contestan preguntas '+
-            'distintas.'));
+      avisos.push('«'+spec.label+'»: '+tilt+'° es el mejor ángulo AQUÍ, con la sombra entre filas '+
+        'contada.'+(dif<=0
+          ? ' Sin vecinas saldría lo mismo: a GCR '+gcrTxt+' las filas van tan abiertas que la '+
+            'sombra no castiga a los ángulos altos.'
+          : ' Sin vecinas serían '+tiltSin+'°, '+dif+'° más: a GCR '+gcrTxt+' cuanto más '+
+            'apretadas, más compensa tumbar la mesa. El cuaderno publica '+tiltSin+'° porque '+
+            'calcula sin vecinas.'));
     }
   });
   var base=null;
@@ -1058,7 +1101,7 @@ FIS.compara=function(keys,M,cfg){
   filas.forEach(function(f){f.delta=(base&&base.neta>0)?((f.neta/base.neta-1)*100):0;});
   var gcrs={}; filas.forEach(function(f){gcrs[Math.round(f.gcr*1e6)]=1;});
   var comun=Object.keys(gcrs).length<=1;
-  if(!comun)avisos.push('GCR distinto por estructura: la columna «POA módulo» sigue siendo el A/B de la estructura, pero el ranking por m² de SUELO incluye la densidad, no solo el seguimiento.');
+  if(!comun)avisos.push('GCR distinto por estructura: «POA módulo» sigue siendo el A/B de la estructura, pero el ranking por m² de SUELO ya incluye la densidad.');
   return {filas:filas, ghi:ghi, base:base?base.key:null, gcrComun:comun, avisos:avisos,
           pasos:M.t.length, dtH:dtH, fuente:M.source};
 };
@@ -1469,6 +1512,7 @@ function cfgActual(){
     lat:+$('lat').value, lon:+$('lon').value, albedo:+$('albedo').value,
     fija:F, tracker:K, gcr:K.gcr,
     maxang:+$('maxang').value, tilt:+$('tilt').value, tiltEW:+$('tiltEW').value,
+    pend:+$('pend').value,
     axTilt:+$('axtilt').value, igualado:$('igualar').checked,
     geomDe:function(spec){return spec.fam==='tracker'?K:F;}
   };
@@ -1537,8 +1581,10 @@ function pintaPico(c){
        (F.ha<=K.ha?'la fija ocupa menos':'la fija ocupa más'))+
     /* La fija apila filas hacia el SUR (la fila corre este-oeste) y el seguidor
        hacia el ESTE (el eje corre norte-sur): son los dos lados del campo. */
-    ro('Campo · fija',fmt(F.ladoFila,0)+' × '+fmt(F.ladoPitch,0),'m E-O × N-S')+
-    ro('Campo · tracker',fmt(K.ladoPitch,0)+' × '+fmt(K.ladoFila,0),'m E-O × N-S');
+    ro('Campo · fija',fmt(F.ladoFila,0)+' × '+fmt(F.ladoPitch,0),
+       'm E-O × N-S · '+fmt(F.bloques,0)+' bloques de '+fmt(F.filasPorBloque,0)+' filas')+
+    ro('Campo · tracker',fmt(K.ladoPitch,0)+' × '+fmt(K.ladoFila,0),
+       'm E-O × N-S · '+fmt(K.bloques,0)+' bloques de '+fmt(K.filasPorBloque,0)+' filas');
   var mismoMod=Math.abs(F.areaMod/K.areaMod-1)<1e-9;
   $('picoNota').innerHTML=
     'A <b>'+fmt(mwp,1)+' MWp</b> hacen falta '+fmt(F.pedidos,0)+' módulos; se redondea a fila entera '+
@@ -1551,22 +1597,35 @@ function pintaPico(c){
       : 'Ojo: las dos familias llevan MÓDULOS DISTINTOS, así que a igualdad de pico los m² de captación '+
         'ya no coinciden ('+fmt(F.areaMod,0)+' contra '+fmt(K.areaMod,0)+' m²) y la energía incidente '+
         'no es la POA escalada por el mismo factor.')+
-    ' <b>Cómo se colocan</b>: en un rectángulo, '+fmt(F.filas,0)+' filas de '+fmt(F.ladoFila,0)+
-    ' m una detrás de otra a su pitch. La <b>fija</b> corre este-oeste y las filas se apilan hacia '+
-    'el <b>sur</b>; el <b>seguidor</b> corre norte-sur (su eje) y las filas se apilan hacia el '+
-    '<b>este</b>. Ni una ni otra son «infinitas» para contar suelo — pero <b>sí</b> para la '+
-    'sombra: el modelo de sombreado es el de fila infinita (cada fila la tapa otra igual a un '+
-    'pitch), así que la primera fila sale sombreada aunque en campo no tenga a nadie delante. '+
+    ' <b>Cómo se colocan</b>: no en una tira, sino en <b>bloques</b> —'+fmt(F.bloques,0)+
+    ' de '+fmt(F.filasPorBloque,0)+' filas la fija, '+fmt(K.bloques,0)+' de '+
+    fmt(K.filasPorBloque,0)+' el tracker— hasta que el campo queda aproximadamente <b>cuadrado</b>, '+
+    'que es lo que se busca en una parcela: alineando las '+fmt(F.filas,0)+' filas una detrás de '+
+    'otra saldrían tiras imposibles. La <b>fija</b> corre este-oeste y apila hacia el <b>sur</b>; '+
+    'el <b>seguidor</b> corre norte-sur (su eje) y apila hacia el <b>este</b>. Ni una ni otra son '+
+    '«infinitas» para contar suelo — pero <b>sí</b> para la sombra: el modelo de sombreado es el '+
+    'de fila infinita (cada fila la tapa otra igual a un pitch), así que la primera fila sale '+
+    'sombreada aunque en campo no tenga a nadie delante. '+
     'De las '+fmt(F.filas,0)+' filas hay <b>una</b> a la que se le cobra una '+
     'sombra que no tiene, así que la pérdida por sombreado sale <b>1/'+fmt(F.filas,0)+' = '+
     fmt(100/F.filas,2)+' % más alta</b> de lo que debería. Ojo: ese '+fmt(100/F.filas,2)+
     ' % es <b>de la pérdida</b>, no de la energía — si la sombra es del 1,3 %, el error son '+
-    fmt(1.3/F.filas,3)+' puntos. Y el suelo es la huella del campo '+
-    '(filas × pitch × largo de fila): sin viales, sin subestación y sin los retranqueos de la '+
+    fmt(1.3/F.filas,3)+' puntos. Y el suelo son las hectáreas que ocupan las FILAS '+
+    '(filas × pitch × largo de fila): el rectángulo que las envuelve es algo mayor porque el '+
+    'último bloque queda incompleto, y no lleva viales, ni subestación, ni los retranqueos de la '+
     'parcela real.';
+}
+function pintaPendiente(c){
+  var p=c.pend||0;
+  $('pendNota').innerHTML=!p
+    ? 'terreno llano · el mismo para las tres'
+    : fmt(Math.abs(Math.tan(p*FIS.D2R)*100),1)+' % · <b>la misma para las tres</b> — la fila de '+
+      'al lado queda '+(p>0?'más BAJA':'más ALTA')+' en las tres familias, y eso es lo que '+
+      'iguala la comparación.';
 }
 function refrescaGeom(){
   var c=cfgActual();
+  pintaPendiente(c);
   pintaFam('fx',c.fija); pintaFam('tk',c.tracker); pintaPico(c);
   $('fxGob').textContent='§03.F · '+gobierna('fija');
   $('tkGob').textContent='§03.T0 · '+gobierna('tracker');
@@ -1585,7 +1644,7 @@ function refrescaGeom(){
 }
 var CAMPOS_GEOM=['fxModL','fxModW','fxWp','fxTabla','fxPitch','fxModsStr','fxNStr','fxGapMod','fxGapMot',
                  'tkModL','tkModW','tkWp','tkTabla','tkPitch','tkModsStr','tkNStr','tkGapMod','tkGapMot',
-                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp'];
+                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend'];
 CAMPOS_GEOM.forEach(function(id){
   var el=$(id); if(!el)return;
   el.addEventListener('input',refrescaGeom); el.addEventListener('change',refrescaGeom);
@@ -2433,6 +2492,7 @@ function drawRank(){
    Convención de giro: la del core, θ>0 = tumbado al ESTE.                   */
 var TD=null, PLAY=false, MUNDO=null, BLOQUES=[];
 var PALA=0x1b3a6b;
+var RAMPAS_3D=[];        // el relieve vigente, para poder medirlo desde fuera
 var NFILAS3D=3;              // tres filas: con dos no se ve que la sombra viaja
 
 function has3D(){return typeof THREE!=='undefined'&&THREE.OrbitControls&&typeof Seguidor!=='undefined';}
@@ -2679,6 +2739,52 @@ function encuadra(){
   }
 }
 
+/* ── EL SUELO, CON RELIEVE ──
+   Un eje inclinado no se monta en llano: se monta sobre terreno EN PENDIENTE.
+   La primera versión le puso una cuña debajo y se leía como una rampa de
+   hormigón; la segunda dejó el suelo plano y le alargó la hinca, que es peor
+   —un tracker con megasoportes a un lado no es lo que se construye—.
+
+   Lo que hace falta es un TERRENO, y se hace como en bt3d: un heightfield
+   subdividido con la cota de cada vértice y `computeVertexNormals()`. Eso es
+   lo que lo hace leerse como una ladera y no como una caja — una malla de dos
+   triángulos tiene una normal por cara y sale con aristas; con 140×70 y las
+   normales recalculadas, la luz varía de forma continua.
+
+   La pendiente solo aparece DONDE hace falta —bajo el bloque del eje
+   inclinado— y se funde con el llano a los lados con un suavizado, así que no
+   hay ningún canto. Los demás bloques siguen sobre el mismo suelo horizontal:
+   la premisa de la escena («todos sobre el mismo suelo») se mantiene, porque
+   lo que se dibuja no es un decorado sino la condición que ESE seguidor
+   necesita para existir. */
+function suave(u){                       // smoothstep, 1 dentro y 0 fuera
+  u=Math.max(0,Math.min(1,u));
+  return 1-u*u*(3-2*u);
+}
+function cotaTerreno(x,z,rampas){
+  var y=0;
+  for(var i=0;i<rampas.length;i++){
+    var r=rampas[i];
+    /* 1 dentro del bloque, y cae a 0 en `fundido` metros a cada lado */
+    var t=suave((Math.abs(x-r.x)-r.medio)/r.fundido);
+    if(t<=0)continue;
+    var dx=x-r.x;
+    var h=r.alza-z*Math.tan(r.az||0)-dx*Math.tan(r.ax||0);
+    y=Math.max(y,t*Math.max(0,Math.min(r.tope,h)));
+  }
+  return y;
+}
+function sueloRelieve(ancho,largoZ,rampas){
+  var geo=new THREE.PlaneGeometry(ancho,largoZ,140,70);
+  geo.rotateX(-Math.PI/2);
+  var pos=geo.attributes.position;
+  for(var i=0;i<pos.count;i++)
+    pos.setY(i,cotaTerreno(pos.getX(i),pos.getZ(i),rampas));
+  pos.needsUpdate=true;
+  geo.computeVertexNormals();
+  return geo;
+}
+
 /* ── El EJE COMPARTIDO de una bifila ──
    Monofila y bifila no cambian la mesa —es una diferencia operativa, no
    geométrica, y por eso la POA por m² de módulo es la misma—, pero sí cambian
@@ -2722,6 +2828,8 @@ function construyeMundo(){
      defecto del modelo. Si no, la escena enseñaría una estructura y la tabla
      calcularía otra. */
   var escTk=cotasSeguidor(cfg.tracker);   // el modelo, a las cotas configuradas
+  var rampas=[]; RAMPAS_3D=rampas;       // el relieve que pide cada bloque
+
   var largoTk=cfg.tracker.largoFila, largo=Math.max(cfg.fija.largoFila,largoTk);
   /* Hueco entre bloques: 16 m, y no es un número bonito. De él sale la
      elevación a la que hay que apagar las sombras (más abajo), y con 10 m se
@@ -2744,6 +2852,21 @@ function construyeMundo(){
     var grupo=new THREE.Group(); grupo.position.x=x0+i*sep; MUNDO.add(grupo);
     var filas=[];
     var esTk=(spec.fam==='tracker'), nf=esTk?nfTk:NFILAS3D, agrupa=esTk?porTk:1;
+    /* El relieve que pide este bloque, EN SU DIRECCIÓN de pitch:
+         · la pendiente ⊥ a las filas va en Z para las fijas (apilan al sur) y
+           en X para los seguidores y las dos aguas (apilan al este);
+         · el eje inclinado lleva ADEMÁS la del eje, que corre en Z.
+       Las filas se colocan luego a la COTA del terreno bajo cada una, con sus
+       hincas verticales y su tilt sin tocar: una fija en pendiente no se
+       inclina con el terreno, se replantea sobre él. */
+    var alEste=(esTk||spec.fam==='fija_ew');
+    var pR=(cfg.pend||0)*FIS.D2R;
+    var aEje=(spec.tsat?(cfg.lat>=0?1:-1)*Math.abs(cfg.axTilt)*FIS.D2R:0);
+    var ejeX=alEste?pR:0, ejeZ=aEje+(alEste?0:pR);
+    var anchoBloque=alEste?((nf-1)*pitch+G.altoColector):G.largoFila;
+    var fondoBloque=alEste?G.largoFila:((nf-1)*pitch+G.altoColector);
+    var alza=Math.abs(fondoBloque/2*Math.tan(ejeZ))+Math.abs(anchoBloque/2*Math.tan(ejeX));
+    var cotaFila=function(dx,dz){return -dx*Math.tan(ejeX)-dz*Math.tan(ejeZ);};
     for(var f=0;f<nf;f++){
       var d=(f-(nf-1)/2)*pitch;
       var uno;
@@ -2751,7 +2874,7 @@ function construyeMundo(){
          fija y el tracker se configuran aparte, y si el render los igualara
          estaría enseñando una estructura distinta de la que calcula la tabla. */
       if(spec.fam==='tracker'){
-        uno=seguidor3D(mats,escTk); uno.position.x=d;    // filas hacia el ESTE
+        uno=seguidor3D(mats,escTk); uno.position.x=d; uno.position.y=cotaFila(d,0);
       }else if(spec.fam==='fija_ew'){
         // dos aguas: la mesa lleva DOS paneles enfrentados, y las filas se
         // repiten hacia el este como en el seguidor (las filas corren N-S)
@@ -2760,15 +2883,28 @@ function construyeMundo(){
             b=mesaFija3D(mats,G.largoFila,G.altoColector/2);
         a.position.z=-G.altoColector/4; b.position.z=G.altoColector/4;
         uno.add(a,b); uno.spinPair=[a.spin,b.spin]; uno.position.x=d;
+        uno.position.y=cotaFila(d,0);
         uno.rotation.y=Math.PI/2;                        // mesa a lo largo de N-S
       }else{
         uno=mesaFija3D(mats,G.largoFila,G.altoColector); uno.position.z=d;  // filas al SUR
+        uno.position.y=cotaFila(0,d);
       }
       grupo.add(uno); filas.push(uno);
     }
     /* En bifila, la transmisión que hace que esas dos filas sean UN seguidor. */
     if(agrupa>1)for(var t=0;t+agrupa<=nf;t+=agrupa){
       grupo.add(ejeBifila(mats,(t-(nf-1)/2)*pitch,(t+agrupa-1-(nf-1)/2)*pitch));
+    }
+    /* Un eje inclinado necesita que el terreno acompañe: se apunta su rampa
+       para que el suelo la lleve, con la misma pendiente que el eje. */
+    if(ejeX||ejeZ){
+      /* El terreno sube lo justo para que el punto más bajo del bloque quede en
+         el cero: sube el suelo con la estructura, no la estructura sola. */
+      var margen=26;
+      rampas.push({x:grupo.position.x, medio:anchoBloque/2+margen, fundido:22,
+                   alza:alza, ax:ejeX, az:ejeZ,
+                   tope:2*alza+2*margen*Math.abs(Math.tan(ejeX||ejeZ))});
+      grupo.position.y=alza;
     }
     var col='#'+(COL[k]||'#888888').replace('#','');
     /* El rótulo se acota por el hueco Y por el largo del bloque: con una fila
@@ -2793,7 +2929,11 @@ function construyeMundo(){
   var ancho=anchoTot, largoZ=(nfMax+1)*8+largo;
   var asp=Math.max(1.2,(TD.w||900)/(TD.h||420));
   var d=Math.max((ancho*0.58)/(Math.tan(21*Math.PI/180)*asp),largoZ*0.9);
-  TD.suelo.scale.set(ancho*3.2,largoZ*4,1);
+  /* El suelo se REGENERA con la escena: lleva el relieve de los ejes
+     inclinados, y escalar un heightfield escalaría también las cotas. */
+  if(TD.suelo.geometry)TD.suelo.geometry.dispose();
+  TD.suelo.geometry=sueloRelieve(ancho*3.2,largoZ*4,rampas);
+  TD.suelo.scale.set(1,1,1); TD.suelo.rotation.set(0,0,0);
   TD.radio=Math.max(220,d*1.6);
   TD.cam.position.set(0,d*0.30,d*0.86); TD.ct.target.set(0,4,-largoZ*0.05);
   encuadra();

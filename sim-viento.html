@@ -364,6 +364,12 @@
           <option value="tunez">Planta real · 24021 Túnez (19 uds)</option>
           <option value="sanjose">Planta real · 24019 San José, Perú (2.289 uds)</option>
         </select></div>
+      <!-- Solo tiene sentido sobre una planta real: la comparativa YA enseña
+           las cinco a la vez, en bloques. -->
+      <label class="chk" id="bandasBox" style="display:none">
+        <input type="checkbox" id="bandas"> Ver <b>todas las estrategias a la vez</b>
+        sobre esta planta, repartida en franjas
+        <span class="sn" style="margin:0" id="bandasNota"></span></label>
       <div class="tiles" id="tiles"></div>
       <div id="view3d" class="viz3d"></div>
 
@@ -2374,6 +2380,49 @@ function niceRango(lo,hi,n){
    ahí el eje se dibuja CORTADO, porque lo que se abre es el acoplamiento y no
    el motor. Dibujarlo entero diría que la fila sigue enganchada, que es
    exactamente lo contrario de lo que el caso enseña. */
+/* ── Reparto de la planta real en FRANJAS, una por estrategia ──
+   Regla pura, aparte del dibujo, para poder ejercitarla sin montar una escena
+   ni bajarse un layout — que es justo lo que no se puede hacer sin red.
+
+   Se reparte por el eje de MAYOR extensión: así cada estrategia se queda con
+   una franja ancha que se puede mirar, en vez de trackers salteados que no se
+   leen. El eje se MIDE, no se elige a ojo, y con la retícula girada sigue
+   valiendo porque se mide sobre las coordenadas ya colocadas.
+
+   `suelto` marca, dentro de la banda del pasivo, los trackers del BORDE por
+   donde entra el reparto: es lo más parecido a «la fila de perímetro» que la
+   geometría real permite sin inventarse un rumbo. El resto de su banda sigue
+   en seguimiento, que es lo que el pasivo es — si se pintara la banda entera
+   al ángulo del pasivo se estaría dibujando un abanderamiento de planta. */
+function repartoBandas(base,ks){
+  var N=base.length, out={banda:new Array(N),centros:[],ejeX:true,suelto:new Array(N)};
+  if(!N||!ks||!ks.length)return out;
+  var xs=base.map(function(b){return b.x;}), zs=base.map(function(b){return b.z;});
+  var minx=Math.min.apply(null,xs), maxx=Math.max.apply(null,xs);
+  var minz=Math.min.apply(null,zs), maxz=Math.max.apply(null,zs);
+  out.ejeX=(maxx-minx)>=(maxz-minz);
+  var co=base.map(function(b){return out.ejeX?b.x:b.z;});
+  var ord=base.map(function(_,i){return i;}).sort(function(a,b){return co[a]-co[b];});
+  ks.forEach(function(_,bi){
+    var i0=Math.floor(bi*N/ks.length), i1=Math.floor((bi+1)*N/ks.length);
+    var sx=0,sz=0,cn=0,borde=Infinity;
+    for(var q=i0;q<i1;q++){
+      var idx=ord[q];
+      out.banda[idx]=bi; sx+=base[idx].x; sz+=base[idx].z; cn++;
+      borde=Math.min(borde,co[idx]);
+    }
+    out.centros.push(cn?{x:sx/cn,z:sz/cn,n:cn,borde:borde}:null);
+  });
+  var iPas=ks.indexOf('PASIVO');
+  for(var q2=0;q2<N;q2++)out.suelto[q2]=false;
+  if(iPas>=0&&out.centros[iPas]){
+    var tol=(out.ejeX?(maxx-minx):(maxz-minz))/Math.max(1,N)*2+0.5;
+    for(var q3=0;q3<N;q3++)
+      out.suelto[q3]=(out.banda[q3]===iPas)&&(co[q3]-out.centros[iPas].borde<=tol);
+  }
+  return out;
+}
+
 function ejesTransmision(nF,pitch,filasPorTrk,esPasivo,hueco){
   var out=[];
   if(!(filasPorTrk>=2))return out;                 // monofila: cada fila su motor
@@ -3512,11 +3561,81 @@ async function escenaPlanta(name){
   if(nTallas>1)nota+=' · '+nTallas+' tallas';
   if(solape)nota+=' · ⚠ SOLAPAN hasta '+solape.metros.toFixed(1)+' m';
   else if(girada)nota+=' · retícula girada: no se comprueba el solape';
+  /* ── LA PLANTA REAL, REPARTIDA POR ESTRATEGIAS ──
+     La comparativa enseña las cinco a la vez pero sobre bloques sintéticos
+     iguales; la planta real enseña la geometría de verdad pero movida por UNA
+     sola. Lo que faltaba es lo de en medio: las cinco a la vez SOBRE el
+     terreno real, que es donde se ve lo que cambia cuando la parcela tiene la
+     forma que tiene.
+
+     Se reparte en FRANJAS CONTIGUAS por el eje de mayor extensión: cada
+     estrategia se queda con una banda ancha que se puede mirar, en vez de
+     trackers salteados que no se leen. El eje se elige midiendo, no a ojo, y
+     con la retícula girada sigue valiendo porque se mide sobre las
+     coordenadas ya colocadas.
+
+     Y VA DICHO EN PANTALLA, porque no es una simulación de nada real: NINGUNA
+     planta corre cinco estrategias a la vez. Es la misma planta pintada cinco
+     veces sobre su propia geometría, para poder carearlas sobre el terreno
+     que tienen. Confundir eso con una planta real sería justo el tipo de
+     imagen que parece un dato. */
+  var _ks = casos(), _rb = repartoBandas(base, _ks);
+
   ESC={kind:'planta',name:name,mesas:mesas,base:base,dummy:dummy,mat:matMesa,
        n:N,center:[cx,cz],ext:ext,solape:solape,fuenteLargo:fuenteLargo,
        bifila:bifila,filaZ:filaZ,nFilas:nFilas,
+       banda:_rb.banda, bandaKs:_ks, bandaCentro:_rb.centros,
+       bandaSuelto:_rb.suelto, bandaEjeX:_rb.ejeX, bandas:false, etiquetas:null,
        info:N+' seguidores · '+(j.clat!=null?(+j.clat).toFixed(4)+', '+(+j.clon).toFixed(4):'')+nota};
   if(j.clat!=null){$('lat').value=(+j.clat).toFixed(4);$('lon').value=(+j.clon).toFixed(4);saveCfg();}
+}
+
+/* ── Rótulos y barras de las bandas de la planta real ──
+   Las mismas dos piezas que la comparativa: el nombre del caso flotando sobre
+   su franja, y su POA en ese instante contra la del seguidor sin abanderar.
+   Sin ellas, cinco franjas de trackers a ángulos distintos son un dibujo
+   bonito del que no se puede sacar un número. */
+function montaBandas(){
+  if(!ESC||ESC.kind!=='planta'||ESC.etiquetas)return;
+  var g=new THREE.Group(), alto=Seguidor.DIMS.postH;
+  var barras=[];
+  ESC.bandaKs.forEach(function(k,bi){
+    var c=ESC.bandaCentro[bi]; if(!c)return;
+    var col=(k==='BASE')?COL.BASE:COL[k];
+    var et=etiqueta3D(nombreCaso(k)+(k==='PASIVO'?' · 1 fila de la banda':''),col);
+    et.scale.multiplyScalar(Math.max(1,ESC.ext/260));
+    et.position.set(c.x,alto+Math.max(9,ESC.ext/28),c.z);
+    g.add(et);
+    var b=new THREE.Mesh(new THREE.BoxGeometry(2.4,1,2.4),
+      new THREE.MeshStandardMaterial({color:new THREE.Color(col),
+        emissive:new THREE.Color(col),emissiveIntensity:.35,roughness:.5}));
+    var r=new THREE.Mesh(new THREE.BoxGeometry(4.0,1,4.0),
+      new THREE.MeshBasicMaterial({color:0x9bb0c6,transparent:true,opacity:.22,
+        depthWrite:false}));
+    var esc=Math.max(1,ESC.ext/240);
+    b.scale.x=b.scale.z=esc; r.scale.x=r.scale.z=esc;
+    b.position.set(c.x,0,c.z); r.position.set(c.x,0,c.z);
+    g.add(b,r); barras.push({barra:b,ref:r,k:k});
+  });
+  TD.mundo.add(g);
+  ESC.etiquetas=g; ESC.barrasBanda=barras;
+}
+function quitaBandas(){
+  if(!ESC||!ESC.etiquetas)return;
+  TD.mundo.remove(ESC.etiquetas);
+  ESC.etiquetas.traverse(function(o){if(o.geometry)o.geometry.dispose();});
+  ESC.etiquetas=null; ESC.barrasBanda=null;
+}
+function pintaBarrasBanda(poa,poaBase){
+  if(!ESC||!ESC.barrasBanda||!poa){return;}
+  var pmax=Math.max(200,poaBase||0);
+  ESC.barrasBanda.forEach(function(b){var p=poa[b.k];if(p>pmax)pmax=p;});
+  var alt=Math.max(6,ESC.ext/22);
+  ESC.barrasBanda.forEach(function(b){
+    var hh=Math.max(.4,(poa[b.k]||0)/pmax*alt), hr=Math.max(.4,(poaBase||0)/pmax*alt);
+    b.barra.scale.y=hh; b.barra.position.y=hh/2;
+    b.ref.scale.y=hr;   b.ref.position.y=hr/2;
+  });
 }
 
 /* aplica los ángulos y los modos a lo que haya montado */
@@ -3551,12 +3670,34 @@ function pintaEscena(ang,modos,poa,poaBase){
       }else{b.barra.visible=false;b.ref.visible=false;}
     });
   }else{
-    // la planta entera se mueve con la estrategia elegida
+    /* Dos modos, y el segundo es el que faltaba:
+       · UNA estrategia — la planta entera se mueve con la elegida, que es lo
+         que hace una planta de verdad;
+       · TODAS a la vez — la planta repartida en franjas, una por estrategia,
+         para carearlas sobre la geometría real. NO es una planta con cinco
+         estrategias: es la misma planta pintada cinco veces, y va dicho. */
+    var band=!!ESC.bandas && ESC.banda;
     var k=(SEL&&ang[SEL]!=null)?SEL:(ang.BASE!=null?'BASE':Object.keys(ang)[0]);
     var t2=(ang[k]||0)*Math.PI/180, modo2=modos[k]||'IDLE';
-    var d=ESC.dummy, i2=0;
+    var thBaseP=(ang.BASE!=null?ang.BASE:0)*Math.PI/180;
+    var d=ESC.dummy, i2=0, colT=(band?new THREE.Color():null);
     for(var i=0;i<ESC.n;i++){
-      var b2=ESC.base[i];
+      var b2=ESC.base[i], tI=t2, modoI=modo2;
+      if(band){
+        var kb=ESC.bandaKs[ESC.banda[i]];
+        // En la banda del pasivo, solo la fila de perímetro está suelta: el
+        // resto sigue en seguimiento haya el viento que haya. Pintar la banda
+        // entera al ángulo del pasivo sería dibujar un abanderamiento de
+        // planta, que es exactamente lo que el pasivo NO es.
+        var esPasI=(kb==='PASIVO' && !ESC.bandaSuelto[i]);
+        tI=(esPasI?thBaseP:(ang[kb]||0)*Math.PI/180);
+        modoI=(esPasI?'IDLE':(modos[kb]||'IDLE'));
+        var hx=MODO_COL[modoI]||0;
+        // Sin emisivo por instancia en three.js: el modo se lee por TINTE de
+        // la mesa. Blanco = operando; el color del modo = abanderando.
+        colT.setHex(hx?hx:0xffffff);
+        if(!hx)colT.setRGB(1,1,1);
+      }
       for(var fq=0;fq<ESC.nFilas;fq++)
       for(var w=-1;w<=1;w+=2){
         d.position.set(b2.x,Seguidor.DIMS.postH,b2.z);
@@ -3566,19 +3707,24 @@ function pintaEscena(ang,modos,poa,poaBase){
         // en el SUELO y cada una bascula sobre su propio tubo. Después del giro,
         // la gemela subiría y bajaría con la inclinación.
         var fz=ESC.bifila?new THREE.Matrix4().makeTranslation(0,0,(fq?1:-1)*ESC.filaZ):null;
-        var m=new THREE.Matrix4().makeRotationX(t2);
+        var m=new THREE.Matrix4().makeRotationX(tI);
         // el desplazamiento del ala va ANTES de la escala: si fuese después
         // lo multiplicaría el largo y las dos alas se separarían de su tubo.
         var off=new THREE.Matrix4().makeTranslation(w*b2.half,0,0);
         var sc=new THREE.Matrix4().makeScale(b2.ala,1,1);
         if(fz)d.matrix.multiply(fz);
         d.matrix.multiply(m); d.matrix.multiply(off); d.matrix.multiply(sc);
+        if(band&&ESC.mesas.setColorAt)ESC.mesas.setColorAt(i2,colT);
         ESC.mesas.setMatrixAt(i2++,d.matrix);
       }
     }
     ESC.mesas.instanceMatrix.needsUpdate=true;
-    ESC.mat.emissive.setHex(MODO_COL[modo2]||0x000000);
-    ESC.mat.emissiveIntensity=(MODO_INT[modo2]!=null?MODO_INT[modo2]:0);
+    if(band&&ESC.mesas.instanceColor)ESC.mesas.instanceColor.needsUpdate=true;
+    // Con bandas el emisivo global se apaga: si no, teñiría TODAS las mesas
+    // con el modo de una sola estrategia y las bandas dejarían de distinguirse.
+    ESC.mat.emissive.setHex(band?0x000000:(MODO_COL[modo2]||0x000000));
+    ESC.mat.emissiveIntensity=band?0:(MODO_INT[modo2]!=null?MODO_INT[modo2]:0);
+    if(band)pintaBarrasBanda(poa,poaBase);
   }
 }
 
@@ -4023,6 +4169,9 @@ async function montaEscena(){
       '). Los layouts viven en el repo <code>cobertura-zigbee</code> y se piden a su GitHub Pages: '+
       'sin red no hay planta. Se dibuja la comparativa.';
   }
+  // El control de bandas se refresca DESPUÉS de montar: solo existe sobre una
+  // planta real, y su estado tiene que aplicarse a la escena recién montada.
+  bandasUI();
   if(MODO==='live'){liveInit();liveTick(0.001);}
   else if(TL)update3D(TPOS);
 }
@@ -4083,6 +4232,28 @@ function labHint(){
 }
 ['stn','wbase','wgust','wcyc'].forEach(function(i){
   $(i).addEventListener('change',labHint);});
+/* ── LAS CINCO SOBRE LA PLANTA REAL ──
+   La comparativa las enseña a la vez pero en bloques sintéticos iguales; la
+   planta real enseña la geometría de verdad pero movida por UNA. Esto es lo de
+   en medio, y hay que decir lo que es: NINGUNA planta corre cinco estrategias
+   a la vez. Es la misma planta pintada cinco veces sobre su propia geometría
+   para poder carearlas sobre el terreno que tiene. */
+function bandasUI(){
+  var esPlanta=(ESC&&ESC.kind==='planta');
+  $('bandasBox').style.display=esPlanta?'':'none';
+  if(!esPlanta){$('bandasNota').textContent='';return;}
+  var on=$('bandas').checked;
+  ESC.bandas=on;
+  if(on){montaBandas();}else{quitaBandas();}
+  var eje=ESC.bandaEjeX?'a lo ancho':'a lo largo';
+  $('bandasNota').innerHTML=on
+    ? '· ' + ESC.bandaKs.length + ' franjas ' + eje + ' · <b>no es una planta con ' +
+      ESC.bandaKs.length + ' estrategias</b>: es la misma planta pintada ' +
+      ESC.bandaKs.length + ' veces sobre su geometría, para carearlas sobre el terreno real'
+    : '· ahora mismo la planta entera se mueve con <b>una</b> estrategia (la del selector de abajo)';
+  if(REP&&TL)update3D(TPOS); else if(MODO==='live')liveTick(0.001);
+}
+$('bandas').addEventListener('change',bandasUI);
 $('careoBtn').onclick=careo;
 $('source').addEventListener('change',function(){
   $('hsuFile').style.display=(this.value==='hsu')?'':'none';
