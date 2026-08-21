@@ -197,6 +197,25 @@ const SONDA = `(() => {
     aguas[0] * aguas[1] < 0);
 
   // ── la sombra: sin frustum dimensionado no se dibuja en ningún sitio ──
+  // «La fija no tiene sombra ni en el terreno»: sí la tiene —todas sus mallas
+  // proyectan— pero una fija mira al ecuador y tira la sombra hacia el POLO,
+  // o sea al fondo desde la cámara y detrás de sus propias filas. Se comprueba
+  // que proyecta de verdad, y que la ficha avisa de dónde hay que buscarla.
+  const proy = await p.evaluate(() => {
+    const out = {};
+    BLOQUES.forEach(B => { let c = 0, t = 0;
+      B.filas[0].traverse(o => { if (o.isMesh) { t++; if (o.castShadow) c++; } });
+      out[B.key] = [c, t]; });
+    return { out, suelo: TD.suelo.receiveShadow,
+             nota: document.getElementById('escNote').textContent };
+  });
+  check('todas las mallas de la fija proyectan sombra (' + proy.out.fija_optima.join('/') + ')',
+    proy.out.fija_optima[0] === proy.out.fija_optima[1] && proy.out.fija_optima[0] > 0,
+    JSON.stringify(proy.out));
+  check('y el suelo la recibe', proy.suelo === true);
+  check('la ficha dice que la sombra de la fija cae hacia el polo, al fondo',
+    /hacia el polo/i.test(proy.nota) && /al fondo/i.test(proy.nota), proy.nota.slice(-220));
+
   check('el sol proyecta sombra a mediodía', md.sol.sombra === true);
   check('el frustum de sombra cubre la escena (' + md.sol.frustum.toFixed(0) + ' m)',
     md.sol.frustum > 60);
