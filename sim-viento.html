@@ -763,6 +763,345 @@ LOC.fracExpuesta=function(nTrk,fpt,fs){
   return Math.min(1,fs/(nTrk*fpt));
 };
 
+/* ═══════════ GRANIZO-FÍSICA — inicio ═══════════
+   Espejo del núcleo Python `solargpt_core.stow_machine`: la máquina de AMENAZA
+   del §10.1 del Rev01.4. Doce estados que deciden CUÁNDO pre-alertar, cuándo
+   cruzar y cuándo quedarse quieta.
+
+   EL PYTHON ES LA FUENTE DE AUTORIDAD, al contrario que en `zonal`/`explain`
+   —donde el JS evolucionó primero— y a propósito: aquí la spec es un documento
+   de ingeniería y el core es quien lo implementa. Este bloque no innova; copia,
+   y el arnés `tests/test_granizo_traza.mjs` lo comprueba careando la TRAZA
+   EXACTA contra el mismo fichero de casos que reproduce el core.
+
+   Traza exacta y no tolerancia numérica: una máquina de estados no necesita
+   1e-9, necesita la misma secuencia de transiciones, en las mismas muestras y
+   por las mismas condiciones.
+
+   NO MUEVE NADA. Es literal del §10.1: la máquina de amenaza «emite órdenes a
+   la máquina de ejecución y NUNCA mueve directamente un tracker». Y no decide
+   ángulos: el §9.3 se los asigna a Estructuras.
+
+   Aquí NO hay una línea de DOM. Es el patrón de la casa (overcast /
+   backtracking): la física se puede extraer y correr en Node porque no toca
+   nada de la página. */
+var HAIL = (function () {
+  'use strict';
+
+  /* Los doce del §10.1, con el nombre del informe como valor. El orden es el
+     de la tabla del documento, y el arnés lo carea. */
+  var E = {
+    NORMAL: 'NORMAL',
+    VIGILANCIA: 'VIGILANCIA',
+    PREALERTA: 'PREALERTA',
+    PREPARACION: 'PREPARACIÓN',
+    HAIL_STOW_PREDICTIVO: 'HAIL_STOW_PREDICTIVO',
+    HAIL_STOW_REACTIVO: 'HAIL_STOW_REACTIVO',
+    EMERGENCIA: 'EMERGENCIA',
+    HAIL_STOW_CONFIRMADO: 'HAIL_STOW_CONFIRMADO',
+    MANTENIMIENTO_DE_POSICION: 'MANTENIMIENTO_DE_POSICIÓN',
+    RECUPERACION: 'RECUPERACIÓN',
+    FALLO: 'FALLO',
+    MANUAL: 'MANUAL'
+  };
+  var ORDEN_ESTADOS = ['NORMAL', 'VIGILANCIA', 'PREALERTA', 'PREPARACIÓN',
+    'HAIL_STOW_PREDICTIVO', 'HAIL_STOW_REACTIVO', 'EMERGENCIA',
+    'HAIL_STOW_CONFIRMADO', 'MANTENIMIENTO_DE_POSICIÓN', 'RECUPERACIÓN',
+    'FALLO', 'MANUAL'];
+  var DEFENSIVOS = ['HAIL_STOW_PREDICTIVO', 'HAIL_STOW_REACTIVO', 'EMERGENCIA',
+    'HAIL_STOW_CONFIRMADO', 'MANTENIMIENTO_DE_POSICIÓN'];
+  var TRANSVERSALES = ['FALLO', 'MANUAL'];
+  /* Entrar aquí implica ORDENAR un movimiento, y solo aquí mira el veto: el
+     §11 es explícito — el viento medido no «gana» al granizo, VETA el
+     tránsito. No cambia la amenaza, impide moverse. */
+  var CON_ORDEN = ['HAIL_STOW_PREDICTIVO', 'HAIL_STOW_REACTIVO', 'EMERGENCIA'];
+
+  function tiene(a, x) { return a.indexOf(x) >= 0; }
+  function num(v) { return (v === null || v === undefined) ? null : +v; }
+
+  /* ── EVALUADORES — puros: (muestra, parámetros, contexto) -> {activa, texto} */
+  function S(activa, texto) { return { activa: !!activa, texto: texto }; }
+
+  function tDisponible(m) {
+    return (m.celda_eta_min === null || m.celda_eta_min === undefined)
+      ? null : +m.celda_eta_min;
+  }
+  function f0(x) { return (Math.round(x * 1) / 1).toFixed(0); }
+  function f1(x) { return x.toFixed(1); }
+  /* `%g` de Python para el factor: 2.0 se imprime «2», no «2.0». */
+  function g(x) { return String(+x); }
+
+  var EV = {
+    fallo: function (m) { return S(!!m.fallo, 'fallo de datos, motor, encoder, energía o coms'); },
+    manual: function (m) { return S(!!m.manual, 'orden manual autenticada'); },
+
+    entorno_convectivo: function (m, p) {
+      if (num(m.cape_j_kg) === null && num(m.prob_tstorm_pct) === null)
+        return S(true, 'sin datos de entorno: vigilancia preventiva (§8-H)');
+      var cape = num(m.cape_j_kg) || 0, prob = num(m.prob_tstorm_pct) || 0;
+      var ok = cape >= (p.umbral_cape_j_kg || 0) || prob >= (p.umbral_prob_tstorm_pct || 0);
+      return S(ok, 'CAPE ' + f0(cape) + ' J/kg · prob_tstorm ' + f0(prob) + ' %');
+    },
+
+    entorno_remitido: function (m, p, c) {
+      if (num(m.cape_j_kg) === null && num(m.prob_tstorm_pct) === null)
+        return S(false, 'sin datos: NUNCA se desescala sin datos (§10.1)');
+      var cape = num(m.cape_j_kg) || 0, prob = num(m.prob_tstorm_pct) || 0;
+      var calmo = cape < (p.umbral_cape_j_kg || 0) && prob < (p.umbral_prob_tstorm_pct || 0);
+      var n = c.persistencia_calma;
+      return S(calmo && n >= (p.desescalado_pasadas_n || 1),
+        'entorno remitido ' + n + ' pasadas seguidas (exigidas ' + p.desescalado_pasadas_n + ')');
+    },
+
+    senal_granizo: function (m, p, c) {
+      if (num(m.hail_1h_cm) === null) return S(false, 'sin producto de granizo');
+      var ok = +m.hail_1h_cm >= (p.umbral_tamano_granizo_cm || 0)
+        && c.persistencia_granizo >= (p.persistencia_n || 1);
+      return S(ok, 'hail_1h ' + f1(+m.hail_1h_cm) + ' cm ≥ '
+        + p.umbral_tamano_granizo_cm + ' cm en ' + c.persistencia_granizo + ' actualizaciones');
+    },
+
+    amenaza_creible: function (m) {
+      if (m.poligono_intersecta === null || m.poligono_intersecta === undefined)
+        return S(false, 'sin polígono de nowcast');
+      var sev = String(m.celda_severidad || '').toLowerCase();
+      var ok = !!m.poligono_intersecta && tiene(['medium', 'high', 'media', 'alta'], sev);
+      return S(ok, 'polígono ' + (m.poligono_intersecta ? 'intersecta' : 'no')
+        + ' · severidad ' + (sev || '—'));
+    },
+
+    ventana_predictiva: function (m, p) {
+      var td = tDisponible(m);
+      if (td === null) return S(false, 'sin ETA: la ventana no se puede clasificar (§9.1)');
+      var tn = p.t_necesario_min + (p.margen_temporal_min || 0);
+      var fac = (p.factor_t_necesario || 2);
+      return S(td >= fac * tn, 'T_disp ' + f0(td) + ' min ≥ ' + g(p.factor_t_necesario)
+        + '·T_nec ' + f0(fac * tn) + ' min');
+    },
+
+    ventana_reactiva: function (m, p) {
+      var td = tDisponible(m);
+      if (td === null) return S(false, 'sin ETA: la ventana no se puede clasificar (§9.1)');
+      var tn = p.t_necesario_min + (p.margen_temporal_min || 0);
+      var fac = (p.factor_t_necesario || 2);
+      return S(tn <= td && td < fac * tn, 'T_nec ' + f0(tn) + ' ≤ T_disp ' + f0(td)
+        + ' < ' + f0(fac * tn) + ' min');
+    },
+
+    sin_ventana: function (m, p) {
+      var td = tDisponible(m);
+      if (td === null) return S(false, 'sin ETA');
+      var tn = p.t_necesario_min + (p.margen_temporal_min || 0);
+      return S(td < tn, 'T_disp ' + f0(td) + ' min < T_nec ' + f0(tn) + ' min');
+    },
+
+    /* Sin máquina de EJECUCIÓN (§10.2) no hay verificación fila a fila: se
+       supone alcanzada al paso siguiente y VA DICHO, que es distinto de fingir
+       que se ha verificado. */
+    posicion_verificada: function (m, p, c) {
+      return S(c.pasos_en_estado >= 1,
+        'posición supuesta alcanzada (sin máquina de ejecución: §10.2 no implementado)');
+    },
+
+    /* Capa 6: los TRES criterios, y se dice cuál falta. Fundidos, el que
+       sobrevive tapa al que falta — pasó con los 15 min sin precipitación
+       valiendo tres. */
+    permanencia_cumplida: function (m, p, c) {
+      var dwell = c.minutos_en_defensa, limpio = c.persistencia_limpio,
+        seco = c.minutos_sin_precipitacion, falta = [];
+      if (dwell < (p.t_min_permanencia_min || 0))
+        falta.push('permanencia ' + f0(dwell) + '/' + f0(p.t_min_permanencia_min) + ' min');
+      if (limpio < (p.desescalado_pasadas_n || 1))
+        falta.push('pasadas limpias ' + limpio + '/' + p.desescalado_pasadas_n);
+      if (seco < (p.t_sin_precipitacion_min || 0))
+        falta.push('sin precipitación ' + f0(seco) + '/' + f0(p.t_sin_precipitacion_min) + ' min');
+      if (falta.length) return S(false, 'falta ' + falta.join(' · '));
+      return S(true, 'permanencia ' + f0(dwell) + ' min · ' + limpio
+        + ' pasadas limpias · ' + f0(seco) + ' min sin precipitación');
+    },
+
+    retorno_verificado: function (m, p, c) {
+      return S(c.pasos_en_estado >= 1, 'retorno supuesto verificado');
+    },
+    evento_encima: function (m) {
+      var td = tDisponible(m);
+      return S(td !== null && td <= 0, 'la célula está encima');
+    },
+    restablecido: function (m) { return S(!m.fallo, 'fallo restablecido y verificado'); },
+    fin_manual: function (m) { return S(!m.manual, 'fin o caducidad del override'); }
+  };
+
+  /* ── TABLA DE TRANSICIONES — el §10.1, columna «Salida», puesta en tabla.
+     Explícita a propósito: es lo que el diagrama pinta, y un if-else enterrado
+     no se puede dibujar. `de:null` = desde CUALQUIER estado. */
+  var TRANS = [
+    { de: null, a: E.FALLO, cond: 'fallo', motivo: 'fallo que impide operar el nivel decisional' },
+    { de: null, a: E.MANUAL, cond: 'manual', motivo: 'orden manual autenticada' },
+    { de: E.FALLO, a: E.NORMAL, cond: 'restablecido', motivo: 'restablecimiento verificado' },
+    { de: E.MANUAL, a: E.NORMAL, cond: 'fin_manual', motivo: 'fin del override' },
+    { de: E.NORMAL, a: E.VIGILANCIA, cond: 'entorno_convectivo', motivo: 'entorno convectivo' },
+    { de: E.VIGILANCIA, a: E.PREALERTA, cond: 'senal_granizo', motivo: 'señal de granizo o célula en radio amplio' },
+    { de: E.VIGILANCIA, a: E.NORMAL, cond: 'entorno_remitido', motivo: 'entorno remitido de forma sostenida' },
+    { de: E.PREALERTA, a: E.PREPARACION, cond: 'amenaza_creible', motivo: 'amenaza creíble (Capa 2)' },
+    { de: E.PREALERTA, a: E.VIGILANCIA, cond: 'entorno_remitido', motivo: 'remisión persistente' },
+    { de: E.PREPARACION, a: E.EMERGENCIA, cond: 'sin_ventana', motivo: 'T_disp < T_nec' },
+    { de: E.PREPARACION, a: E.HAIL_STOW_REACTIVO, cond: 'ventana_reactiva', motivo: 'ventana corta' },
+    { de: E.PREPARACION, a: E.HAIL_STOW_PREDICTIVO, cond: 'ventana_predictiva', motivo: 'T_disp ≥ factor·T_nec' },
+    { de: E.HAIL_STOW_PREDICTIVO, a: E.HAIL_STOW_REACTIVO, cond: 'ventana_reactiva', motivo: 'la ventana se agota' },
+    { de: E.HAIL_STOW_PREDICTIVO, a: E.HAIL_STOW_CONFIRMADO, cond: 'posicion_verificada', motivo: 'posición verificada' },
+    { de: E.HAIL_STOW_REACTIVO, a: E.HAIL_STOW_CONFIRMADO, cond: 'posicion_verificada', motivo: 'posición verificada' },
+    { de: E.EMERGENCIA, a: E.HAIL_STOW_CONFIRMADO, cond: 'posicion_verificada', motivo: 'mejor posición alcanzable' },
+    { de: E.HAIL_STOW_CONFIRMADO, a: E.MANTENIMIENTO_DE_POSICION, cond: 'posicion_verificada', motivo: 'evento o permanencia mínima' },
+    { de: E.MANTENIMIENTO_DE_POSICION, a: E.RECUPERACION, cond: 'permanencia_cumplida', motivo: 'criterios de Capa 6 cumplidos' },
+    { de: E.RECUPERACION, a: E.NORMAL, cond: 'retorno_verificado', motivo: 'retorno verificado' }
+  ];
+
+  function transicionesDe(estado) {
+    var out = [];
+    if (!tiene(TRANSVERSALES, estado))
+      TRANS.forEach(function (t) { if (t.de === null) out.push(t); });
+    TRANS.forEach(function (t) { if (t.de === estado) out.push(t); });
+    return out;
+  }
+
+  /* ── VETO DE TRÁNSITO (§11 prio 2a). `null` = se puede mover; si no, el
+     motivo, para que quede registrado. Un dato ausente VETA: la regla H dice
+     que la ausencia no se lee como permiso. */
+  function veto(m, p, c) {
+    if (num(m.viento_sostenido_ms) === null || num(m.viento_racha_ms) === null)
+      return 'sin viento medido: la envolvente no se puede comprobar y la ausencia de dato no autoriza (§8-H)';
+    if (+m.viento_sostenido_ms > p.transito_sostenido_max_ms)
+      return 'sostenido ' + f0(+m.viento_sostenido_ms * 3.6) + ' km/h > '
+        + f0(p.transito_sostenido_max_ms * 3.6)
+        + ': fuera de envolvente (WIND_MOVEMENT_LOCKOUT, §11 prio 2a)';
+    if (+m.viento_racha_ms > p.transito_racha_max_ms)
+      return 'racha ' + f0(+m.viento_racha_ms * 3.6) + ' km/h > '
+        + f0(p.transito_racha_max_ms * 3.6)
+        + ': fuera de envolvente (WIND_MOVEMENT_LOCKOUT, §11 prio 2a)';
+    if (c.minutos_envolvente < (p.transito_confirmacion_min || 0))
+      return 'envolvente cumplida solo ' + f0(c.minutos_envolvente) + ' min de '
+        + f0(p.transito_confirmacion_min) + ' exigidos';
+    if (num(m.soc_pct) === null)
+      return 'sin SoC: no se puede garantizar el recorrido completo';
+    if (+m.soc_pct < p.soc_min_pct)
+      return 'SoC ' + f0(+m.soc_pct) + ' % < ' + f0(p.soc_min_pct) + ' % necesario';
+    return null;
+  }
+
+  function hhmm(t) { var s = String(t); return s.length >= 16 ? s.slice(11, 16) : s; }
+
+  function cierraNoAccion(diario, pend, dtMin) {
+    if (!pend.clave) return;
+    var est = pend.clave[0], dest = pend.clave[1], motivo = pend.clave[2];
+    var ini = hhmm(pend.desde), fin = hhmm(pend.hasta), n = pend.n;
+    var lapso = n > 1 ? (ini + '–' + fin) : ini;
+    var dur = n > 1 ? (' (' + f0(n * dtMin) + ' min, ' + n + ' muestras)') : '';
+    diario.push(lapso + ' — NO-ACCIÓN ' + est + dur + ': tocaba ' + dest
+      + ' (' + pend.ultima + ') y el tránsito está VETADO: ' + motivo);
+    pend.clave = null; pend.desde = null; pend.hasta = null; pend.n = 0; pend.ultima = '';
+  }
+
+  /* Los requeridos del core. Sin ellos NO se corre: el §19 del informe deja
+     14 de 17 «SIN VALOR» a propósito y aquí no se inventan tampoco. */
+  var REQUERIDOS = ['t_necesario_min', 'factor_t_necesario',
+    'umbral_tamano_granizo_cm', 'umbral_prob_tstorm_pct', 'umbral_cape_j_kg',
+    'persistencia_n', 't_min_permanencia_min', 'desescalado_pasadas_n',
+    't_sin_precipitacion_min', 'transito_sostenido_max_ms',
+    'transito_racha_max_ms', 'transito_confirmacion_min', 'soc_min_pct'];
+
+  function faltantes(p) {
+    return REQUERIDOS.filter(function (k) {
+      return p === null || p === undefined || p[k] === null || p[k] === undefined;
+    });
+  }
+
+  function simula(muestras, p, opciones) {
+    var o = opciones || {};
+    var falta = faltantes(p);
+    if (falta.length)
+      throw new Error('la máquina de amenaza no arranca sin estos parámetros, '
+        + 'y el Rev01.4 §19 no los da: ' + falta.join(', '));
+    if (!muestras || !muestras.length)
+      throw new Error('serie vacía: no hay nada que recorrer');
+    var dtMin = (o.dt_min === undefined || o.dt_min === null) ? 1 : +o.dt_min;
+    var estado = o.estado_inicial || E.NORMAL;
+    var pend = { clave: null, desde: null, hasta: null, n: 0, ultima: '' };
+    var c = {
+      persistencia_granizo: 0, persistencia_calma: 0, persistencia_limpio: 0,
+      pasos_en_estado: 0, minutos_en_defensa: 0, minutos_envolvente: 0,
+      minutos_sin_precipitacion: 0
+    };
+    var estados = [], trans = [], diario = [];
+
+    for (var i = 0; i < muestras.length; i++) {
+      var m = muestras[i];
+
+      if (num(m.hail_1h_cm) !== null && +m.hail_1h_cm >= p.umbral_tamano_granizo_cm)
+        c.persistencia_granizo += 1; else c.persistencia_granizo = 0;
+      var calmo = (num(m.cape_j_kg) !== null || num(m.prob_tstorm_pct) !== null)
+        && (num(m.cape_j_kg) || 0) < p.umbral_cape_j_kg
+        && (num(m.prob_tstorm_pct) || 0) < p.umbral_prob_tstorm_pct;
+      c.persistencia_calma = calmo ? c.persistencia_calma + 1 : 0;
+      var limpio = calmo && !m.precipitacion && !(num(m.hail_1h_cm) || 0);
+      c.persistencia_limpio = limpio ? c.persistencia_limpio + 1 : 0;
+      /* `null` NO es «no llueve»: sin dato el contador se para (§8-H). */
+      c.minutos_sin_precipitacion = (m.precipitacion === false)
+        ? c.minutos_sin_precipitacion + dtMin : 0;
+      var dentro = num(m.viento_sostenido_ms) !== null && num(m.viento_racha_ms) !== null
+        && +m.viento_sostenido_ms <= p.transito_sostenido_max_ms
+        && +m.viento_racha_ms <= p.transito_racha_max_ms;
+      c.minutos_envolvente = dentro ? c.minutos_envolvente + dtMin : 0;
+      if (tiene(DEFENSIVOS, estado)) c.minutos_en_defensa += dtMin;
+
+      var saltó = false, lista = transicionesDe(estado);
+      for (var k = 0; k < lista.length; k++) {
+        var tr = lista[k], sig = EV[tr.cond](m, p, c);
+        if (!sig.activa) continue;
+        if (tiene(CON_ORDEN, tr.a)) {
+          var mv = veto(m, p, c);
+          if (mv) {
+            if (o.diario_no_acciones !== false) {
+              var clave = [estado, tr.a, mv];
+              if (pend.clave && pend.clave[0] === clave[0]
+                && pend.clave[1] === clave[1] && pend.clave[2] === clave[2]) {
+                pend.hasta = m.t; pend.n += 1; pend.ultima = sig.texto;
+              } else {
+                cierraNoAccion(diario, pend, dtMin);
+                pend.clave = clave; pend.desde = m.t; pend.hasta = m.t;
+                pend.n = 1; pend.ultima = sig.texto;
+              }
+            }
+            continue;
+          }
+        }
+        cierraNoAccion(diario, pend, dtMin);
+        diario.push(hhmm(m.t) + ' — ' + estado + '→' + tr.a + ': ' + tr.motivo
+          + ' · ' + sig.texto);
+        trans.push({ i: i, t: m.t, de: estado, a: tr.a, condicion: tr.cond,
+                     motivo: tr.motivo, explicacion: sig.texto });
+        estado = tr.a;
+        c.pasos_en_estado = 0;
+        if (!tiene(DEFENSIVOS, estado)) c.minutos_en_defensa = 0;
+        saltó = true;
+        break;
+      }
+      if (!saltó) c.pasos_en_estado += 1;
+      estados.push(estado);
+    }
+    cierraNoAccion(diario, pend, dtMin);
+    return { estados: estados, transiciones: trans, diario: diario };
+  }
+
+  return {
+    E: E, ORDEN_ESTADOS: ORDEN_ESTADOS, DEFENSIVOS: DEFENSIVOS,
+    TRANSVERSALES: TRANSVERSALES, CON_ORDEN: CON_ORDEN, TRANS: TRANS,
+    EV: EV, REQUERIDOS: REQUERIDOS,
+    faltantes: faltantes, veto: veto, transicionesDe: transicionesDe,
+    simula: simula
+  };
+})();
+/* ═══════════ GRANIZO-FÍSICA — fin ═══════════ */
+
 /* ── MULTI-AÑO ──
    Un año bueno o malo cambia el resultado y con uno solo no se ve cuánto. Se
    descarga el periodo entero de una vez y se corre año a año: así sale la

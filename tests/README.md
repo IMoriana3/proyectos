@@ -50,6 +50,12 @@ porque llamar «Túnez» a otras coordenadas es poner nombre de planta a otro em
 
 `test_viento_sitio.js` cubre el **buscador de emplazamiento** en dos capas: las funciones puras extraídas del HTML (normalizar sin acentos, leer coordenadas pegadas, filtrar la lista local) y la ficha ABIERTA en Chromium — se teclea, se elige, y las coordenadas del formulario tienen que cambiar. Un buscador que filtra pero no rellena está tan roto como uno que no filtra, y ese es su mutante. La búsqueda REMOTA (geocodificador de Open-Meteo) no se exige, porque el banco tiene que correr sin red; lo que sí se exige es que su ausencia se declare.
 
+`test_granizo_traza.mjs` carea el bloque **GRANIZO-FÍSICA** de `sim-viento.html` contra el core Python: **traza exacta** —qué transición, en qué muestra, por qué condición—, no números con tolerancia. Una máquina de estados no necesita 1e-9, necesita la misma secuencia.
+
+De dónde salen los casos: si está el checkout **hermano** de `SolarGPTfull` se leen de ahí (fuente única literal, cero copias); si no, del **espejo** commiteado en `tests/goldens/`, que lleva el SHA-256 de la fuente. Y **cuando los dos están, se carean los hashes**: un espejo viejo lo caza cualquiera que tenga los dos repos. Los tres ficheros —golden, espejo y hash— los escribe **un solo comando** desde el core (`python scripts/gen_goldens_hailstow.py --write`), así que una divergencia solo puede significar vejez, nunca ambigüedad. El arnés **declara siempre en qué modo corrió**, porque aquí no hay CI que lo imponga.
+
+`test_granizo_espejo.mjs` es el guard de esa regla y vive **fuera** del arnés a propósito: si viviera dentro compartiría su condición de salto y se saltaría a sí mismo. La regla está extraída a función pura para poder ejercitar las cuatro combinaciones sin tocar el disco — el caso que importa (hay hermano y el espejo está viejo) no es reproducible en una máquina donde está al día.
+
 Comprueban además lo de siempre: que las tarjetas se pintan, que el detalle abre con su
 historial, que el botón *Paquete* apunta a `releases/latest` y que el panel de
 documentación carga el markdown de `docs/`.
@@ -123,6 +129,8 @@ node tests/test_sizing.js                  # 115 comprobaciones, careo del dimen
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
 node tests/test_viento_ejes.js             # 64 comprobaciones, lienzos, ejes, transmisión, reproductor y sombras
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
+node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core
+node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo
 node tests/test_layout.js                  # 192 comprobaciones, careo del generador de layout
 node tests/test_layout_ui.js               # 152 comprobaciones, el generador en Chromium
 ```
