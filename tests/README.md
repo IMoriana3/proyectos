@@ -55,16 +55,19 @@ historial, que el botón *Paquete* apunta a `releases/latest` y que el panel de
 documentación carga el markdown de `docs/`.
 
 `test_layout.js` carea la ficha **Generador de layout** contra el core Python sin navegador: extrae el
-bloque `MOTOR DE LAYOUT` del HTML REAL y lo corre sobre las mismas catorce parcelas que corrió
+bloque `MOTOR DE LAYOUT` del HTML REAL y lo corre sobre las mismas quince parcelas que corrió
 `solargpt_core.layout_v2.compute_layout_v2` (`careo-layout.json`) — tres de ellas bifila con
-multi-talla sobre borde girado y en L, que es donde el emparejado A/B se rompe, y una **finca REAL**
-cóncava que entra por `tests/parcelas/*.geojson` (cualquier GeoJSON exportado desde la propia ficha
+multi-talla sobre borde girado y en L, que es donde el emparejado A/B se rompe, y dos **fincas REALES**
+que entran por `tests/parcelas/*.geojson` (la cóncava de nueve vértices y la de Larraga, la del
+«deja mil huecos donde entran trackers» — sobre ella se mide que el ancla global AVISA del hueco
+que deja, que sin «alinear a rejilla» cada fila ancla en su linde y gana ≥30 % con el Δx=0 bifila
+intacto, y que la mejora respeta la unidad atómica) (cualquier GeoJSON exportado desde la propia ficha
 vale: el generador del fixture lo convierte en caso de careo). Exige el mismo número de **filas**
 (la geometría del campo en un número), las mesas y los kWp dentro del **2,5 %**, el **área útil**
 dentro del 0,5 % —el setback se resuelve aquí como erosión exacta, sin Shapely— y las fórmulas
 cerradas (largo de mesa, apertura, largo de fila, GCR de tracker) **exactas**. La UTM propia se mide
-contra pyproj: por debajo del milímetro. Medido hoy: tres casos clavados, las filas idénticas en 13
-de 14 y el peor dentro de la tolerancia global a 1,89 %; el fijo multi-talla sale a 2,59 % y lleva
+contra pyproj: por debajo del milímetro. Medido hoy: tres casos clavados, las filas idénticas en 14
+de 15 y el peor dentro de la tolerancia global a 1,89 %; el fijo multi-talla sale a 2,59 % y lleva
 tolerancia declarada (3 %) con el mecanismo medido escrito en el generador — el core pierde un slot
 de mesa en media parcela por su rejilla global × convergencia, así que en fijo el port queda POR
 ENCIMA del canónico. Sobre los datos se miden además dos invariantes que fueron quejas
@@ -119,6 +122,6 @@ node tests/test_sizing.js                  # 115 comprobaciones, careo del dimen
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
 node tests/test_viento_ejes.js             # 64 comprobaciones, lienzos, ejes, transmisión, reproductor y sombras
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
-node tests/test_layout.js                  # 177 comprobaciones, careo del generador de layout
-node tests/test_layout_ui.js               # 151 comprobaciones, el generador en Chromium
+node tests/test_layout.js                  # 191 comprobaciones, careo del generador de layout
+node tests/test_layout_ui.js               # 152 comprobaciones, el generador en Chromium
 ```

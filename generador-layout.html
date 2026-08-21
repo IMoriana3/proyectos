@@ -236,16 +236,29 @@ canvas.panning{cursor:grabbing}
         <div class="field"><label>Ancho mód. (m)</label><input id="modWid" type="number" step="0.001" value="1.134"></div>
         <div class="field"><label>Wp módulo</label><input id="modWp" type="number" step="5" value="630"></div>
       </div>
+      <!-- El pitch es GEOMETRÍA de la estructura (§03.T0: pitch + apertura → GCR),
+           no un parámetro suelto de implantación: el GCR derivado de abajo sale
+           de ESTE pitch, y tenerlos en tarjetas distintas era definir el tracker
+           a medias arriba y a medias abajo. -->
+      <div class="three" style="align-items:end">
+        <div class="field"><label>Pitch (m)</label><input id="pitch" type="number" step="0.01" value="6"></div>
+        <div class="field"><label>GCR objetivo</label><input id="gcrObj" type="number" step="0.001" value="0.397"></div>
+        <div class="field"><button class="btn ghost small" id="pitchFromGcr" style="padding:8px 10px">↳ Pitch desde GCR</button></div>
+      </div>
 
       <div class="deriv" id="deriv"></div>
 
       <div id="paneTracker">
-        <div class="three">
+        <div class="two">
+          <div class="field"><label>Tipo de tracker</label>
+            <select id="bifila"><option value="1">Bifila (2 sub-filas)</option><option value="0">Monofila</option></select></div>
+          <div class="field"><label>Backtracking</label>
+            <select id="backtrack"><option value="1">Activo</option><option value="0">No</option></select></div>
+        </div>
+        <div class="two">
           <div class="field"><label>Tilt del eje °</label><input id="axisTilt" type="number" step="0.1" value="0">
             <div class="tip">Eje inclinado (TSAT). 0 = horizontal.</div></div>
           <div class="field"><label>Máx. giro °</label><input id="maxAng" type="number" step="1" value="55"></div>
-          <div class="field"><label>Backtracking</label>
-            <select id="backtrack"><option value="1">Activo</option><option value="0">No</option></select></div>
         </div>
       </div>
       <div id="paneFija" style="display:none">
@@ -308,23 +321,14 @@ canvas.panning{cursor:grabbing}
     <div class="card">
       <h2><span class="ic">⇅</span> Implantación</h2>
       <div class="two">
-        <div class="field"><label>Pitch (m)</label><input id="pitch" type="number" step="0.01" value="6"></div>
         <div class="field"><label>Setback (m)</label><input id="setback" type="number" step="0.5" value="5"></div>
-      </div>
-      <div class="two" style="align-items:end">
-        <div class="field" style="margin-bottom:11px"><label>GCR objetivo</label><input id="gcrObj" type="number" step="0.001" value="0.397"></div>
-        <div class="field" style="margin-bottom:11px"><button class="btn ghost small" id="pitchFromGcr" style="padding:8px 10px">↳ Pitch desde GCR</button></div>
+        <div class="field"><label>Modo</label>
+          <select id="mode"><option value="aligned">aligned (canónico)</option><option value="adaptive">adaptive</option></select></div>
       </div>
       <div class="two">
         <div class="field"><label id="axisLbl">Azimut del eje °</label><input id="axis" type="number" step="1" value="0"></div>
         <div class="field"><label>Azimut de filas °</label><input id="panelAz" type="number" step="1" value="90">
           <div class="tip" id="azTip">Auto desde el eje.</div></div>
-      </div>
-      <div class="two">
-        <div class="field"><label>Modo</label>
-          <select id="mode"><option value="aligned">aligned (canónico)</option><option value="adaptive">adaptive</option></select></div>
-        <div class="field"><label>Tipo de tracker</label>
-          <select id="bifila"><option value="1">Bifila (2 sub-filas)</option><option value="0">Monofila</option></select></div>
       </div>
       <button class="btn" id="genBtn">▶ Generar implantación</button>
       <div id="prog" style="display:none;margin-top:8px">
@@ -974,6 +978,7 @@ function compute(cfg) {
      la pierde y la A se queda viuda: mesas sueltas que se leen como monofilas.
      Es la mitad del arreglo; la otra mitad es el espejo de más abajo. */
   var _segsB = null;
+  var _gridCap = 0, _gridPut = 0;   // déficit del ancla global (aviso rejilla_deja_hueco)
   function fits(segs, a, b) {
     if (!cabeEn(segs, a, b)) return false;
     if (_segsB && !cabeEn(_segsB, a, b)) return false;
@@ -986,9 +991,23 @@ function compute(cfg) {
     var span = isTracker ? (spt - 1) * sm + sw : sw;
     var adv  = isTracker ? (spt - 1) * sm + (sw + gapNs) : sm;
     var out = [];
-    function pack(xStart, xEnd) {
-      var res = [], x = xStart, guard = 0;
-      while (x + span <= xEnd + 1e-6 && guard++ < 100000) {
+    /* Contabilidad del déficit de REJILLA: cuántas unidades atómicas caben en
+       los tramos de esta fila (ancladas a su propio linde) frente a las que el
+       ancla global coloca de verdad. Alimenta el aviso `rejilla_deja_hueco`. */
+    if (mode === "aligned" && cfg.alignGrid) {
+      for (var gc = 0; gc < segs.length; gc++) {
+        var Lg = segs[gc][1] - segs[gc][0];
+        if (Lg >= span) _gridCap += Math.floor((Lg + (isTracker ? gapNs : gapMotor)) / adv) * (isTracker ? spt : 1);
+      }
+    }
+    /* `resync`: al fallar un hueco, avanzar un paso FINO en vez del avance
+       entero — sin él, un tramo que arranca desalineado del ancla pierde la
+       desalineación TODA la fila. Solo se usa sin «alinear a rejilla»: con la
+       rejilla global puesta, este camino es byte-idéntico al canónico (y al
+       careo contra el core). */
+    function pack(xStart, xEnd, resync) {
+      var res = [], x = xStart, fino = Math.max(sw * 0.02, 0.25), guard = 0;
+      while (x + span <= xEnd + 1e-6 && guard++ < 200000) {
         var hit = roadHit(x, x + span);
         if (hit) { x = hit[1]; continue; }
         var buf = [], ok = true;
@@ -997,10 +1016,21 @@ function compute(cfg) {
           if (!fits(segs, xs, xs + sw)) { ok = false; break; }
           buf.push({ x0: xs, x1: xs + sw, y0: yb, y1: yb + sz.collH, mods: sz.modsAct });
         }
-        if (ok) for (var q2 = 0; q2 < buf.length; q2++) res.push(buf[q2]);
-        x += adv;
+        if (ok) { for (var q2 = 0; q2 < buf.length; q2++) res.push(buf[q2]); x += adv; }
+        else x += (resync ? fino : adv);
       }
       return res;
+    }
+    /* ALINEADO SIN REJILLA GLOBAL: el ancla en el bbox pierde hasta una mesa
+       por cada linde diagonal EN CADA FILA (medido en la finca de Larraga:
+       128 mesas donde caben 184 — el «deja mil huecos donde entran trackers»).
+       Sin la casilla, cada tramo ancla en su propio arranque y re-sincroniza;
+       en bifila el fits() de banda doble sigue garantizando el Δx=0 del par.
+       Es una DIVERGENCIA DECLARADA del core, que ancla siempre en el bbox. */
+    if (mode === "aligned" && !cfg.alignGrid) {
+      for (var g2 = 0; g2 < segs.length; g2++)
+        out = out.concat(pack(segs[g2][0], segs[g2][1], true));
+      return out;
     }
     if (mode === "aligned") return pack(ix0 + offX, ix1);
     // adaptive: cada tramo arranca donde más quepa (varias fases)
@@ -1017,7 +1047,7 @@ function compute(cfg) {
       var best = null;
       for (var c = 0; c < cands.length; c++) {
         if (cands[c] < s0 - 1e-9) continue;
-        var tr = pack(cands[c], s1);
+        var tr = pack(cands[c], s1, true);
         if (best === null || tr.length > best.length) best = tr;
       }
       if (best) out = out.concat(best);
@@ -1186,6 +1216,7 @@ function compute(cfg) {
       }
     } else {
       row = segs.length ? (isMulti ? placeMulti(segs, yy, offX) : placeSingle(segs, yy, offX, base)) : [];
+      if (!isMulti) _gridPut += row.length;
     }
     if (isMulti && !esB && row.length) row = consolidaFila(row, segs, _segsB);
     _segsB = null;
@@ -1429,6 +1460,25 @@ function compute(cfg) {
   }
   if (fcsDropped) aviso('info', 'strings_incompletos_descartados',
     fcsDropped + ' estructura(s) de talla menor descartadas por «forzar strings completos».');
+  /* La rejilla GLOBAL ancla todas las filas en el bbox: con lindes diagonales
+     cada fila pierde hasta una unidad por extremo y el campo sale con huecos
+     donde caben trackers (la finca de Larraga: 120 colocadas de 160 posibles).
+     Si el déficit pasa del 10 %, se dice — con las dos salidas: desmarcar
+     «alinear a rejilla» (cada fila ancla en su linde) y multi-talla para los
+     retales donde no cabe una fila entera. */
+  if (mode === 'aligned' && cfg.alignGrid && !isMulti && _gridCap > 0 &&
+      (_gridCap - _gridPut) / _gridCap > 0.10) {
+    /* En bifila placeSingle solo corre por la sub-fila A (la B es su espejo):
+       los contadores van al total con el factor del par. El conteo es una
+       COTA por tramo (no re-comprueba la banda de la gemela), por eso el
+       aviso habla en aproximado. */
+    var _f = bifila ? 2 : 1;
+    aviso('warn', 'rejilla_deja_hueco',
+      'La rejilla global deja ~' + ((_gridCap - _gridPut) * _f) + ' mesa(s) sin colocar en los lindes (' +
+      Math.round(100 * (_gridCap - _gridPut) / _gridCap) + ' % de lo que cabe por tramo). ' +
+      'Desmarca «Alinear a rejilla» para que cada fila ancle en su linde' +
+      (isTracker ? ', y considera multi-talla (p. ej. 28, 14, 7) para los retales donde no cabe una fila entera.' : '.'));
+  }
   return { structures: structures, descartadas: descartadas, roads: roads, rows: rows, sizes: sizes,
            parcel_utm: extU, holes_utm: holesU, excl_utm: exclU,
            inner_band: innerBand, inner_band_h: SCAN * 4, rot: rot, center: ctr, bbox_inner: [ix0, iy0, ix1, iy1],

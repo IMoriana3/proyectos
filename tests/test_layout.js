@@ -326,6 +326,31 @@ fix.casos.forEach((c, i) => {
     malos === 0, malos + ' adyacencias fundibles sin fundir');
 });
 
+// LA FINCA DE LARRAGA («deja mil huecos donde entran trackers», 2026-08-21):
+// el ancla GLOBAL de la rejilla — canónica — pierde una unidad por linde
+// diagonal en cada fila. Tres medidas sobre los datos:
+//  1) el motor AVISA del déficit (rejilla_deja_hueco) en vez de callar;
+//  2) sin «alinear a rejilla», cada fila ancla en su linde y el campo gana
+//     ≥30 % de mesas manteniendo el Δx=0 del par bifila;
+//  3) la mejora respeta la unidad atómica (fila completa): conteo par.
+{
+  const i = caso('Larraga');
+  const c = fix.casos[i], r = js[i];
+  check('Larraga · el ancla global AVISA del hueco que deja (rejilla_deja_hueco)',
+    (r.avisos || []).some(a => a.codigo === 'rejilla_deja_hueco'),
+    JSON.stringify((r.avisos || []).map(a => a.codigo)));
+  const sinRejilla = correr(c, { align_to_grid: false });
+  const s2 = sinRejilla.stats;
+  check('Larraga · sin rejilla global: cada fila ancla en su linde y gana ≥30 % (' +
+        r.stats.structures + ' → ' + s2.structures + ')',
+    s2.structures >= Math.ceil(r.stats.structures * 1.30));
+  check('Larraga · la mejora sigue siendo BIFILA de verdad: Δx = 0 y conteo par',
+    s2.bifila === true && s2.ab_max_dx_m < 0.01 &&
+    sinRejilla.rows.every(f => f.length % 2 === 0));
+  check('Larraga · y sin rejilla el aviso de hueco NO sale (ya no lo hay)',
+    !(sinRejilla.avisos || []).some(a => a.codigo === 'rejilla_deja_hueco'));
+}
+
 // El invariante que costó arreglar en el cuaderno, medido en TODOS los casos
 // bifila del fixture: cada línea con conteo par y las sub-filas A/B con las
 // MISMAS X. Si la B vuelve a colocarse por su cuenta, esto se pone rojo.
