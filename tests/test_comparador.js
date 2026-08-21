@@ -161,7 +161,7 @@ const G = { apertura: C.collector_width_m, altoColector: C.collector_width_m,
             largoFila: 65.084, pitch: C.pitch_m, gcr };
 const cfg = { lat: C.lat, lon: C.lon, gcr, fija: G, tracker: G,
   maxang: C.max_angle_deg, albedo: C.albedo, tilt: C.tilt_deg, tiltEW: 12,
-  axTilt: C.axis_tilt_deg, geomDe: () => G };
+  axTilt: C.axis_tilt_deg, pend: C.cross_axis_slope_deg, geomDe: () => G };
 const rep = FIS.compara(C.structures, M, cfg);
 const js = {}; rep.filas.forEach(f => { js[f.key] = f; });
 const core = {}; fix.esperado.forEach(f => { core[f.key] = f; });
@@ -229,8 +229,11 @@ const bpNb = FIS.barridoPitch(FIS.spec('tracker_hsat_nobt'), M, cfg,
 check('sin backtracking, abrir el pitch QUITA sombra (' + bpNb.puntos[0].sombra.toFixed(2) +
   ' → ' + bpNb.puntos[6].sombra.toFixed(2) + ' %)',
   bpNb.puntos[6].sombra < bpNb.puntos[0].sombra - 0.1);
-check('con backtracking la sombra es ~0 a cualquier pitch (por eso existe)',
-  bp.puntos.every(q => q.sombra < 0.5));
+const bpLlano = FIS.barridoPitch(spTk, M, { ...cfg, pend: 0 },
+  { min: 4.5, max: 7.5, pasoCm: 50 });
+check('en llano, con backtracking la sombra es ~0 a cualquier pitch (por eso existe)',
+  bpLlano.puntos.every(q => q.sombra < 0.5),
+  bpLlano.puntos.map(q => q.sombra.toFixed(2)).join(','));
 // Los DOS máximos son de dos preguntas distintas, y en pitch caen en extremos
 // opuestos del rango: ésa es toda la razón de no declarar un óptimo único.
 check('el máximo de POA cae en el pitch más abierto (' + bp.maxPoa.pitch + ' m)',
@@ -262,8 +265,19 @@ check('el relativo del tilt es 0 en el óptimo y negativo fuera',
   Math.abs(bt.optimo.rel) < 1e-9 && bt.puntos.every(q => q.rel <= 1e-9));
 
 // ── 6) la física está viva, no devuelve constantes ──
-check('el backtracking deja la sombra casi a cero (' + js.tracker_hsat.sombra.toFixed(2) + ' %)',
-  js.tracker_hsat.sombra < 0.5);
+check('con pendiente (' + C.cross_axis_slope_deg + '°) el backtracking YA NO deja la sombra a ' +
+  'cero (' + js.tracker_hsat.sombra.toFixed(2) + ' %): el ángulo se calcula en llano',
+  js.tracker_hsat.sombra > 0.5);
+check('y esa sombra residual es la que dice el core (' + core.tracker_hsat.sombra_pct.toFixed(2) + ' %)',
+  Math.abs(js.tracker_hsat.sombra - core.tracker_hsat.sombra_pct) < 1.0,
+  js.tracker_hsat.sombra.toFixed(2) + ' vs ' + core.tracker_hsat.sombra_pct.toFixed(2));
+// y en LLANO sí se va a cero, que es la razón de ser del backtracking
+const llano = FIS.compara(['tracker_hsat', 'tracker_hsat_nobt'], M, { ...cfg, pend: 0 });
+const llanoBt = llano.filas.find(f => f.key === 'tracker_hsat');
+check('en terreno LLANO el backtracking sí deja la sombra a cero (' +
+  llanoBt.sombra.toFixed(3) + ' %)', llanoBt.sombra < 0.5, llanoBt.sombra.toFixed(3));
+check('la pendiente EMPEORA el backtracking (' + llanoBt.sombra.toFixed(2) + ' → ' +
+  js.tracker_hsat.sombra.toFixed(2) + ' %)', js.tracker_hsat.sombra > llanoBt.sombra + 0.5);
 check('sin backtracking SÍ hay sombra (' + js.tracker_hsat_nobt.sombra.toFixed(2) + ' %)',
   js.tracker_hsat_nobt.sombra > js.tracker_hsat.sombra + 0.5);
 check('sin backtracking apunta mejor: más POA ideal',
@@ -289,7 +303,9 @@ check('el óptimo neto nunca puede pasarse del de transposición (' +
   js.fija_optima.tilt + '° ≤ ' + js.fija_optima.tiltSinSombra + '°)',
   js.fija_optima.tilt <= js.fija_optima.tiltSinSombra);
 check('el aviso da la diferencia MEDIDA, no un «1-3°» de memoria',
-  rep.avisos.some(a => /serían\s+\d+°/.test(a)) && !rep.avisos.some(a => /1-3°/.test(a)),
+  (rep.avisos.some(a => /serían\s+\d+°/.test(a)) ||
+   rep.avisos.some(a => /saldría lo mismo/.test(a))) &&
+  !rep.avisos.some(a => /1-3°/.test(a)),
   rep.avisos.find(a => /tilt óptimo/.test(a)) || '(sin aviso)');
 // Los avisos salen del bloque de física y se pintan ESCAPADOS —bien escapados,
 // porque llevan etiquetas de estructura—, así que un <b> aquí se ve tal cual.

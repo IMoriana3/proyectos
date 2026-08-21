@@ -414,7 +414,17 @@ const SONDA = `(() => {
     document.querySelectorAll('.st').forEach(c => {
       c.checked = ['tracker_tsat', 'tracker_hsat'].includes(c.value); });
     construyeMundo(); actualiza3D();
-    const con = { cotas: cotas(), tsat: bajo('tracker_tsat'), hsat: bajo('tracker_hsat'),
+    // la pendiente MEDIDA del terreno bajo el bloque del eje inclinado: se
+    // sondea la cota a dos alturas de z en su vertical
+    const gradZ = () => {
+      const B = BLOQUES.find(b => b.key === 'tracker_tsat');
+      const x = B.filas[0].parent.position.x;
+      const h = z => cotaTerreno(x, z, RAMPAS_3D);
+      const dz = 10;
+      return +(Math.atan2(h(-dz) - h(dz), 2 * dz) * 180 / Math.PI).toFixed(2);
+    };
+    const con = { cotas: cotas(), pendMedida: gradZ(),
+                  tsat: bajo('tracker_tsat'), hsat: bajo('tracker_hsat'),
                   pT: poste('tracker_tsat'), pH: poste('tracker_hsat'),
                   suave: TD.suelo.geometry.attributes.normal &&
                          TD.suelo.geometry.attributes.normal.count };
@@ -432,9 +442,10 @@ const SONDA = `(() => {
   });
   check('el suelo lleva relieve donde hay eje inclinado (' + rel.con.cotas.hi + ' m)',
     rel.con.cotas.hi > 1 && rel.con.cotas.lo === 0, JSON.stringify(rel.con.cotas));
-  check('y sube exactamente lo que sube el eje (2 × media fila × sen ' + rel.axTilt + '°)',
-    Math.abs(rel.con.cotas.hi - rel.largo * Math.sin(rel.axTilt * Math.PI / 180)) < 0.05,
-    rel.con.cotas.hi + ' vs ' + (rel.largo * Math.sin(rel.axTilt * Math.PI / 180)).toFixed(2));
+  check('y la PENDIENTE del terreno bajo el eje inclinado es la del eje (' +
+    rel.con.pendMedida + '° vs ' + rel.axTilt + '°)',
+    Math.abs(Math.abs(rel.con.pendMedida) - rel.axTilt) < 0.6,
+    rel.con.pendMedida + ' vs ' + rel.axTilt);
   check('es un heightfield, no dos triángulos (' + rel.con.cotas.n + ' vértices)',
     rel.con.cotas.n > 5000, String(rel.con.cotas.n));
   check('con las normales recalculadas, que es lo que lo hace parecer terreno',
@@ -450,11 +461,51 @@ const SONDA = `(() => {
   // la declara. Si hay que preguntarlo, es que no estaba dicho.
   const porQue = await p.evaluate(() => document.getElementById('escNote').textContent);
   const plano = porQue.replace(/\s+/g, ' ');
-  check('la escena explica por qué solo el eje inclinado tiene ladera',
-    /solo el eje inclinado tiene ladera/i.test(plano) &&
-    /es la pendiente del terreno/i.test(plano), plano.slice(-320));
-  check('y avisa de que la POA no lleva pendiente de emplazamiento',
-    /cross_axis_slope/.test(porQue) && /no está expuesto/i.test(porQue), porQue.slice(-260));
+  check('la escena dice que la pendiente se aplica a las TRES familias',
+    /las TRES familias/i.test(plano) && /en igualdad/i.test(plano), plano.slice(-420));
+  check('y que cada una la lleva en SU dirección',
+    /la fija hacia el sur/i.test(plano) && /hacia el este/i.test(plano), plano.slice(-420));
+  check('y que el eje inclinado lleva además la del eje',
+    /un eje no se inclina en el aire/i.test(plano), plano.slice(-420));
+  check('y que las hincas son verticales: la fija no se inclina con el terreno',
+    /hincas son verticales/i.test(plano) && /se replantea sobre él/i.test(plano),
+    plano.slice(-260));
+
+  // ── la pendiente del emplazamiento, para TODAS ──
+  // Es lo que hace que la comparación sea en igualdad: la misma pendiente ⊥ a
+  // las filas para las tres familias, cada una en SU dirección de pitch.
+  const pend = await p.evaluate(() => {
+    const set = v => { const e = document.getElementById('pend');
+      e.value = String(v); e.dispatchEvent(new Event('change', { bubbles: true })); };
+    const grad = (k, eje) => {
+      const B = BLOQUES.find(b => b.key === k);
+      const x = B.filas[0].parent.position.x;
+      const h = (dx, dz) => cotaTerreno(x + dx, dz, RAMPAS_3D);
+      const d = 8;
+      return eje === 'x' ? +(Math.atan2(h(-d, 0) - h(d, 0), 2 * d) * 180 / Math.PI).toFixed(2)
+                         : +(Math.atan2(h(0, -d) - h(0, d), 2 * d) * 180 / Math.PI).toFixed(2);
+    };
+    document.querySelectorAll('.st').forEach(c => { c.checked = true; });
+    set(0); construyeMundo();
+    const cero = { fijaZ: grad('fija_optima', 'z'), tkX: grad('tracker_hsat', 'x') };
+    set(8); construyeMundo();
+    const ocho = { fijaZ: grad('fija_optima', 'z'), fijaX: grad('fija_optima', 'x'),
+                   tkX: grad('tracker_hsat', 'x'), tkZ: grad('tracker_hsat', 'z'),
+                   nota: document.getElementById('pendNota').textContent };
+    set(0); construyeMundo(); actualiza3D();
+    return { cero, ocho };
+  });
+  check('sin pendiente, el terreno de la fija y del seguidor es llano',
+    pend.cero.fijaZ === 0 && pend.cero.tkX === 0, JSON.stringify(pend.cero));
+  check('con 8°, la FIJA la lleva en su dirección de pitch (N-S): ' + pend.ocho.fijaZ + '°',
+    Math.abs(Math.abs(pend.ocho.fijaZ) - 8) < 0.6 && pend.ocho.fijaX === 0,
+    JSON.stringify(pend.ocho));
+  check('y el SEGUIDOR en la suya (E-O): ' + pend.ocho.tkX + '°',
+    Math.abs(Math.abs(pend.ocho.tkX) - 8) < 0.6 && pend.ocho.tkZ === 0,
+    JSON.stringify(pend.ocho));
+  check('y el campo dice el porcentaje y hacia dónde cae',
+    /%/.test(pend.ocho.nota) && /más BAJA|más ALTA/.test(pend.ocho.nota),
+    pend.ocho.nota);
 
   check('la cuña de la primera versión no ha vuelto',
     (await p.evaluate(() => typeof taludTSAT === 'undefined')) === true);

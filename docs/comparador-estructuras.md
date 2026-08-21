@@ -495,17 +495,36 @@ seguir subiendo con el suelo. Sin eje inclinado marcado, el suelo vuelve a ser l
 Las hincas vuelven a medir lo que miden: **2 m, las mismas que el eje horizontal**. Lo que cambia es
 el terreno, no la estructura.
 
-### ¿Por qué solo esa estructura tiene pendiente?
+### La pendiente del emplazamiento, para las tres
 
-Porque es la única que **la declara**. El «eje inclinado °» de un TSAT no es un parámetro de dibujo:
-**es** la pendiente del terreno sobre el que ese seguidor se monta — un eje no se inclina en el aire.
-Las demás llevan eje horizontal o son fijas, es decir, declaran terreno **llano**, y llano se dibuja.
+`Pendiente ⊥ filas °`, en la tarjeta de Emplazamiento porque es una propiedad del **sitio**. Se
+aplica a las **tres familias** — es lo que hace que la comparación sea en igualdad — y **entra en la
+física**, no solo en el dibujo: va al sombreado entre filas por el mismo sitio por el que entra en
+el core (`cross_axis_slope`, el de `pvlib.shading.shaded_fraction1d`). La fila de al lado deja de
+estar a la misma cota, y con `pend > 0` queda más **baja**.
 
-Con una consecuencia que conviene tener presente al comparar: la POA se calcula en todas las
-estructuras **sin pendiente de emplazamiento**. El `cross_axis_slope` que sí tiene el core no está
-expuesto en esta ficha, así que el terreno que se ve bajo el TSAT sale de **su propio parámetro**,
-no de un relieve del sitio. Si el emplazamiento tuviera una pendiente real, entraría en el
-sombreado de todas — y eso todavía no está.
+Cada familia la lleva en **su** dirección, porque cada una apila las filas hacia un lado: la fija
+hacia el sur (pitch N-S) y el seguidor y las dos aguas hacia el este (pitch E-O). El **eje
+inclinado** lleva además la del eje, que corre norte-sur — el «eje inclinado °» de un TSAT *es* la
+pendiente del terreno sobre el que se monta; un eje no se inclina en el aire.
+
+En la escena, las hincas siguen siendo **verticales** y el tilt no cambia: una fija en pendiente no
+se inclina con el terreno, se replantea sobre él. Cada fila se coloca a la cota del terreno bajo
+ella.
+
+#### Lo que destapa: con pendiente, el backtracking deja sombra
+
+El ángulo de backtracking se calcula **en llano**. Con el terreno inclinado, la fila de al lado no
+está donde ese cálculo supone, así que **deja de evitar la sombra**:
+
+| | sombra con backtracking |
+|---|---|
+| terreno llano | **0,00 %** |
+| pendiente 8° | **4,11 %** |
+
+Y no es un artefacto de la ficha: el core da 3,74 % en el mismo caso. El careo se genera ahora con
+**8° de pendiente** precisamente para que el signo y la fórmula no puedan pasar por casualidad — la
+POA queda dentro del 0,8–2,1 % del canónico y los Δ% dentro de 1,4 pp, con el orden idéntico.
 
 ### Dónde cae la sombra de cada familia
 
@@ -660,10 +679,10 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ## Pruebas
 
 ```bash
-node tests/test_comparador.js       # 89 comprobaciones · careo contra el core, sin navegador
+node tests/test_comparador.js       # 92 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 127 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 133 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 
