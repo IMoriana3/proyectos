@@ -2718,14 +2718,68 @@ function pendientesDEM(){
   return {ns:ns,ew:ew,mediaNs:sumN/k,mediaEw:sumE/k,max:maxS,n:n};
 }
 
-/* Celdas por encima de la pendiente máxima → anillos lon/lat que el motor resta
-   como exclusión de TOPOGRAFÍA. */
+/* El MDT se descarga sobre el BBOX de la parcela (más el margen), pero la
+   parcela del usuario rara vez es ese rectángulo: contar y pintar celdas que
+   caen FUERA de su polígono es marcar como descartado terreno que no es suyo
+   («me está marcando terreno fuera de la parcela que yo he dibujado»). Esta
+   máscara dice qué celdas TOCAN la parcela (todas las parcelas, anillo
+   exterior; los agujeros siguen contando aquí: el terreno que quita un
+   agujero ya está quitado por el agujero). */
+function mascaraParcelaDEM(){
+  if(!DEM)return null;
+  var anillos=[];
+  if(PARCEL&&PARCEL.length>=3)anillos.push(PARCEL);
+  PARCELAS.forEach(function(pz){if(pz.ext&&pz.ext.length>=3)anillos.push(pz.ext);});
+  var n=DEM.lats.length, dLat=(DEM.lats[1]-DEM.lats[0])/2, dLon=(DEM.lons[1]-DEM.lons[0])/2;
+  function dentroDe(px,py,poly){
+    var c=false;
+    for(var u=0,v=poly.length-1;u<poly.length;v=u++){
+      var ax=poly[u][0],ay=poly[u][1],bx=poly[v][0],by=poly[v][1];
+      if((ay>py)!==(by>py)&&px<(bx-ax)*(py-ay)/(by-ay)+ax)c=!c;
+    }
+    return c;
+  }
+  function seg(a,b,c2,d2){
+    function dd(p,q,r2){return (q[0]-p[0])*(r2[1]-p[1])-(q[1]-p[1])*(r2[0]-p[0]);}
+    var d1=dd(c2,d2,a),d2b=dd(c2,d2,b),d3=dd(a,b,c2),d4=dd(a,b,d2);
+    return ((d1>0)!==(d2b>0))&&((d3>0)!==(d4>0));
+  }
+  function toca(lo,la){
+    var x0=lo-dLon,x1=lo+dLon,y0=la-dLat,y1=la+dLat;
+    for(var ai=0;ai<anillos.length;ai++){
+      var poly=anillos[ai];
+      if(dentroDe(lo,la,poly))return true;
+      for(var e=0;e<4;e++){
+        var esq=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]][e];
+        if(dentroDe(esq[0],esq[1],poly))return true;
+      }
+      for(var u=0,v=poly.length-1;u<poly.length;v=u++){
+        var pv=poly[u];
+        if(pv[0]>=x0&&pv[0]<=x1&&pv[1]>=y0&&pv[1]<=y1)return true;
+        var esq2=[[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]];
+        for(var e2=0;e2<4;e2++)if(seg(poly[u],poly[v],esq2[e2],esq2[e2+1]))return true;
+      }
+    }
+    return false;
+  }
+  var dentro=[],nIn=0;
+  for(var r=0;r<n;r++){var fila=[];
+    for(var c=0;c<n;c++){var t=anillos.length?toca(DEM.lons[c],DEM.lats[r]):true;fila.push(t);if(t)nIn++;}
+    dentro.push(fila);}
+  var mLat=110540, mLon=111320*Math.cos(((DEM.lats[0]+DEM.lats[n-1])/2)*Math.PI/180);
+  return {dentro:dentro,nIn:nIn,areaCeldaM2:Math.abs(dLat*2*mLat)*Math.abs(dLon*2*mLon)};
+}
+
+/* Celdas de LA PARCELA por encima de la pendiente máxima → anillos lon/lat que
+   el motor resta como exclusión de TOPOGRAFÍA. */
 function celdasExcluidas(){
   if(!DEM||$('demOff').checked)return [];
   var P=pendientesDEM(); if(!P)return [];
   var lim=+$('slopeMax').value; if(!(lim>0))return [];
   var n=P.n, dLat=(DEM.lats[1]-DEM.lats[0])/2, dLon=(DEM.lons[1]-DEM.lons[0])/2, out=[];
+  var M=mascaraParcelaDEM();
   for(var r=0;r<n;r++)for(var c=0;c<n;c++){
+    if(M&&!M.dentro[r][c])continue;
     var tot=Math.hypot(Math.tan(P.ns[r][c]*Math.PI/180),Math.tan(P.ew[r][c]*Math.PI/180));
     if(Math.atan(tot)*180/Math.PI<=lim)continue;
     var la=DEM.lats[r],lo=DEM.lons[c];
@@ -2748,8 +2802,22 @@ function pintaPanelesDEM(){
   var zs=DEM.z.flat().filter(isFinite), z0=Math.min.apply(null,zs), z1=Math.max.apply(null,zs), dz=(z1-z0)||1;
   var excl=0;
   function tot(r,c){return Math.atan(Math.hypot(Math.tan(P.ns[r][c]*Math.PI/180),Math.tan(P.ew[r][c]*Math.PI/180)))*180/Math.PI;}
+  /* El rojo de «excluido» y el % son DE LA PARCELA: el raster cubre su bbox y
+     marcar terreno de fuera como descartado es contarle al usuario un recorte
+     que no existe (las mesas nunca estuvieron ahí). */
+  var M=mascaraParcelaDEM();
+  function enParcela(r,c){return !M||M.dentro[r][c];}
   var maxTot=0;
-  for(var r0=0;r0<n;r0++)for(var c0=0;c0<n;c0++){var t0=tot(r0,c0);if(t0>maxTot)maxTot=t0;if(t0>lim)excl++;}
+  for(var r0=0;r0<n;r0++)for(var c0=0;c0<n;c0++){
+    if(!enParcela(r0,c0))continue;
+    var t0=tot(r0,c0);if(t0>maxTot)maxTot=t0;if(t0>lim)excl++;}
+  var areaParcela=0;
+  [PARCEL].concat(PARCELAS.map(function(pz){return pz.ext;})).forEach(function(ring){
+    if(!ring||ring.length<3)return;
+    var utm=ring.map(function(cc){return LAY.utmFwd(cc[0],cc[1],LAY.utmZone(cc[0]),cc[1]<0);});
+    areaParcela+=Math.abs(LAY.ringArea(utm));
+  });
+  var pctExcl=areaParcela>0?Math.min(100,100*excl*(M?M.areaCeldaM2:0)/areaParcela):(100*excl/(n*n));
   function px2(lo,la){return [ (lo-lo0)/((lo1-lo0)||1e-9)*W, (1-(la-la0)/((la1-la0)||1e-9))*H ];}
   function celda(ctx,r,c,color){
     var x=(c-0.5)/(n-1)*W, y=(1-(r+0.5)/(n-1))*H;
@@ -2808,14 +2876,15 @@ function pintaPanelesDEM(){
       for(var r=0;r<n;r++)for(var c=0;c<n;c++){
         var v=DEM.z[r][c];celda(ctx,r,c,isFinite(v)?rTerrain((v-z0)/dz):'#222');}
     }},
-    {t:'Pendiente total (rojo > '+lim+'°) · máx '+maxTot.toFixed(1)+'°',pinta:function(ctx){
+    {t:'Pendiente total (rojo > '+lim+'° en tu parcela) · máx '+maxTot.toFixed(1)+'°',pinta:function(ctx){
       for(var r=0;r<n;r++)for(var c=0;c<n;c++){
-        var t2=tot(r,c);celda(ctx,r,c,t2>lim?'rgb(210,55,45)':rYlOrBr(t2/Math.max(lim,1)));}
+        var t2=tot(r,c);
+        celda(ctx,r,c,(t2>lim&&enParcela(r,c))?'rgb(210,55,45)':rYlOrBr(t2/Math.max(lim,1)));}
     }},
-    {t:'Zonas excluidas · '+(100*excl/(n*n)).toFixed(1)+' %'+(off?' (filtro APAGADO)':''),pinta:function(ctx){
+    {t:'Zonas excluidas · '+pctExcl.toFixed(1)+' % de la parcela'+(off?' (filtro APAGADO)':''),pinta:function(ctx){
       for(var r=0;r<n;r++)for(var c=0;c<n;c++){
-        var t3=tot(r,c);
-        celda(ctx,r,c,t3>lim?'rgba(210,55,45,.9)':'rgb(52,64,58)');}
+        var t3=tot(r,c), en=enParcela(r,c);
+        celda(ctx,r,c,(t3>lim&&en)?'rgba(210,55,45,.9)':(en?'rgb(52,64,58)':'rgb(33,40,36)'));}
     }}
   ];
   var cont=$('demPaneles');cont.style.display='';cont.innerHTML='';
@@ -2832,17 +2901,29 @@ function pintaPanelesDEM(){
 function aplicaDEM(){
   var P=pendientesDEM(); if(!P)return;
   var malas=celdasExcluidas();
-  $('demTag').textContent=DEM.src+' · malla '+P.n+'×'+P.n+' · '+malas.length+' celda(s) por encima de '+(+$('slopeMax').value)+'°';
+  /* Los números de esta tarjeta son DE LA PARCELA, no del bbox del MDT: las
+     medias sobrescriben las pendientes tecleadas y el máx enciende el aviso —
+     con el bbox entero entraban laderas del vecino y un cerro de fuera ponía
+     la tarjeta en naranja sin que una sola mesa lo pisara. */
+  var M=mascaraParcelaDEM(), sn=0,se=0,k2=0,mx=0;
+  for(var r2=0;r2<P.n;r2++)for(var c2=0;c2<P.n;c2++){
+    if(M&&!M.dentro[r2][c2])continue;
+    sn+=P.ns[r2][c2];se+=P.ew[r2][c2];k2++;
+    var t2=Math.atan(Math.hypot(Math.tan(P.ns[r2][c2]*Math.PI/180),Math.tan(P.ew[r2][c2]*Math.PI/180)))*180/Math.PI;
+    if(t2>mx)mx=t2;
+  }
+  var mNs=k2?sn/k2:P.mediaNs, mEw=k2?se/k2:P.mediaEw, mMax=k2?mx:P.max;
+  $('demTag').textContent=DEM.src+' · malla '+P.n+'×'+P.n+' · '+malas.length+' celda(s) de tu parcela por encima de '+(+$('slopeMax').value)+'°';
   $('derivDem').style.display='';
   $('derivDem').innerHTML=
-    d('Pendiente N-S',(P.mediaNs>=0?'+':'')+P.mediaNs.toFixed(2),'°')+
-    d('Pendiente E-O',(P.mediaEw>=0?'+':'')+P.mediaEw.toFixed(2),'°')+
-    d('Pendiente máx.',P.max.toFixed(1),'°',P.max>+$('slopeMax').value)+
-    d('Celdas fuera',String(malas.length),'de '+(P.n*P.n));
+    d('Pendiente N-S',(mNs>=0?'+':'')+mNs.toFixed(2),'°')+
+    d('Pendiente E-O',(mEw>=0?'+':'')+mEw.toFixed(2),'°')+
+    d('Pendiente máx.',mMax.toFixed(1),'°',mMax>+$('slopeMax').value)+
+    d('Celdas fuera',String(malas.length),'de '+(M?M.nIn:P.n*P.n)+' en la parcela');
   $('demUseBox').style.display='';
   if($('demUse').checked){
-    $('slopeNs').value=P.mediaNs.toFixed(2);
-    $('slopeEw').value=P.mediaEw.toFixed(2);
+    $('slopeNs').value=mNs.toFixed(2);
+    $('slopeEw').value=mEw.toFixed(2);
     // Las de arriba pasan a ser DEL MDT: dejarlas editables sería tener dos
     // verdades sobre la misma pendiente.
     $('slopeNs').disabled=$('slopeEw').disabled=true;

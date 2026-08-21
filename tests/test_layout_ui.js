@@ -753,6 +753,43 @@ const cajaLienzo = async page => {
     !(await page.evaluate(() => document.querySelector('#slopeEw').disabled)));
   await page.check('#demOff'); await page.dispatchEvent('#demOff', 'change');
 
+  // ── el recuento del MDT es DE LA PARCELA, no de su bbox ──
+  // El raster cubre el bbox de la parcela; con una parcela irregular las
+  // celdas de FUERA del polígono se contaban y se pintaban como descartadas
+  // («me está marcando terreno fuera de la parcela que yo he dibujado»).
+  // Triángulo = medio bbox: las celdas del otro medio no pueden contar.
+  await page.uncheck('#demOff'); await page.dispatchEvent('#demOff', 'change');
+  await page.selectOption('#parcelMode', 'geojson');
+  const TRI = { W: LON0 - 0.004, E: LON0 + 0.004, S: LAT0 - 0.002, N: LAT0 + 0.002 };
+  await page.fill('#geotxt', JSON.stringify({ type: 'Feature', properties: {}, geometry: {
+    type: 'Polygon', coordinates: [[[TRI.W, TRI.S], [TRI.E, TRI.S], [TRI.W, TRI.N], [TRI.W, TRI.S]]] } }));
+  await page.click('#geoApplyBtn');
+  await page.evaluate(() => { document.querySelector('#demTag').textContent = ''; });
+  await page.click('#demBtn');
+  await page.waitForFunction(() => /malla|No se pud/.test(document.querySelector('#demTag').textContent),
+    null, { timeout: 30000 });
+  const triCeldas = await page.evaluate(t => {
+    const qs = celdasExcluidas();
+    // fuera = centro claramente al otro lado de la diagonal del triángulo
+    // (margen de unas celdas para no discutir por el borde)
+    const fuera = qs.filter(q => {
+      const cx = (q[0][0] + q[2][0]) / 2, cy = (q[0][1] + q[2][1]) / 2;
+      return (cx - t.W) / (t.E - t.W) + (cy - t.S) / (t.N - t.S) > 1.12;
+    });
+    return { total: qs.length, fuera: fuera.length };
+  }, TRI);
+  check('con parcela TRIANGULAR sigue habiendo celdas excluidas dentro (' + triCeldas.total + ')',
+    triCeldas.total > 0, JSON.stringify(triCeldas));
+  check('y NINGUNA en el medio bbox que queda fuera del triángulo',
+    triCeldas.fuera === 0, triCeldas.fuera + ' celdas de fuera contadas');
+  check('el rótulo y la tarjeta lo dicen: celdas «de tu parcela», no del bbox',
+    /de tu parcela/.test(await page.textContent('#demTag')) &&
+    /en la parcela/.test(await page.textContent('#derivDem')),
+    (await page.textContent('#demTag')).slice(0, 90));
+  check('y el cuadro de zonas excluidas mide % DE LA PARCELA',
+    /% de la parcela/.test(await page.textContent('#demPaneles')));
+  await page.check('#demOff'); await page.dispatchEvent('#demOff', 'change');
+
   // ── varias parcelas ──
   // Cada recinto va por su cuenta al motor: implantar sobre la unión daría filas
   // cruzando el hueco entre parcelas, que es justo lo que no existe.
