@@ -618,8 +618,13 @@ const cajaLienzo = async page => {
     teselasTerreno > 0 && teselasTerreno <= 9, String(teselasTerreno));
   check('y el rótulo dice de dónde sale',
     /Teselas de terreno/.test(await page.textContent('#demTag')), await page.textContent('#demTag'));
-  check('con cotas decodificadas del color, no ceros',
-    await page.evaluate(() => DEM && DEM.z.flat().some(v => Math.abs(v) > 1)));
+  check('con cotas decodificadas del color, no ceros ni sentinelas',
+    await page.evaluate(() => {
+      const zs = DEM ? DEM.z.flat() : [];
+      return zs.length > 0 && zs.every(v => v > -100 && v < 5000) &&
+             Math.max(...zs) - Math.min(...zs) > 5;
+    }), JSON.stringify(await page.evaluate(() =>
+      DEM && [Math.min(...DEM.z.flat()), Math.max(...DEM.z.flat())])));
 
   // La CASCADA, que es el patrón de sources_for_country: si la primera fuente
   // cae, prueba la siguiente y DICE cuál ha servido. Se tumba la de teselas a
