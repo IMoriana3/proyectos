@@ -472,28 +472,30 @@ modelo **real** de `seguidor.js`, el mismo que pintan el Gemelo Digital y la Cob
    vecino y contamina la comparación—. Con 10 m se apagaban a 13°, justo por encima del amanecer
    de invierno que la escena existe para enseñar; con 16 m aguantan hasta 8,5°.
 
-### El eje inclinado, sin hundirse y sin inventarle terreno
+### El eje inclinado va sobre terreno en pendiente
 
 Un TSAT gira el eje sobre X, así que media fila quedaba **bajo el suelo** y la otra media volando.
+Costó tres versiones dar con la buena:
 
-El primer arreglo fue ponerle una **ladera** debajo, y no valía por dos razones. Una estética: en
-este sombreado plano una cuña se lee como una rampa de hormigón, no como terreno — hicieron falta
-tres intentos para admitirlo. Y otra de fondo: la escena se sostiene sobre «todos los bloques al
-mismo sol y sobre el **mismo suelo**», y darle terreno propio a uno rompe esa premisa. La pendiente
-del emplazamiento no es un parámetro de esta ficha.
+1. una **cuña** bajo el bloque — se leía como una rampa de hormigón, no como terreno;
+2. el suelo **plano** y la hinca alargada hasta el suelo — peor: un tracker con megasoportes a un
+   lado no es lo que se construye;
+3. **terreno con pendiente**, que es lo que un eje inclinado necesita para existir.
 
-Se resuelve como lo resuelve **bt3d**, que llama *drapeado* a lo mismo: «el tramo mantiene el tilt
-que manda el accionamiento pero se **eleva** hasta volar sobre el terreno en todo su largo — los
-postes se alargan, que es lo que hace el montaje real». Aquí el bloque sube
-`(largo de fila / 2) · sen(tilt del eje)` —5,65 m con 65 m de fila y 10°— y su hinca crece otro
-tanto para seguir llegando al suelo: 7,57 m contra los 2 m del eje horizontal.
+Se hace como en **bt3d**: un *heightfield* subdividido (`PlaneGeometry(w, l, 140, 70)`) con la cota
+de cada vértice y `computeVertexNormals()`. Eso es lo que lo hace leerse como una ladera: una malla
+de dos triángulos tiene una normal por cara y sale con aristas; con las normales recalculadas la luz
+varía de forma continua.
 
-> bt3d **sí** dibuja terreno, y bien: un *heightfield* de `PlaneGeometry(gw, gl, 72, 24)` con la
-> cota de cada vértice sacada del perfil y `computeVertexNormals()` — por eso se lee como una
-> ladera y no como una cuña. Pero allí la pendiente es un **dato del estudio**; aquí sería un
-> decorado.
+La pendiente aparece **solo donde hace falta** —bajo el bloque del eje inclinado— y se funde con el
+llano a los lados con un suavizado, así que no hay ningún canto. Sube exactamente lo que sube el
+eje (`largo de fila · sen(tilt)`, 11,3 m con 65 m y 10°) y luego **aplana en meseta**, en vez de
+seguir subiendo con el suelo. Sin eje inclinado marcado, el suelo vuelve a ser llano.
 
-### Dónde cae la sombra de cada familia### Dónde cae la sombra de cada familia
+Las hincas vuelven a medir lo que miden: **2 m, las mismas que el eje horizontal**. Lo que cambia es
+el terreno, no la estructura.
+
+### Dónde cae la sombra de cada familia### Dónde cae la sombra de cada familia### Dónde cae la sombra de cada familia
 
 La fija **sí** proyecta sombra —todas sus mallas la proyectan y el suelo la recibe—, pero mira al
 ecuador y por tanto la tira **hacia el polo**: al fondo desde la cámara por defecto, y detrás de
@@ -649,7 +651,7 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 node tests/test_comparador.js       # 89 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 122 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 125 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 

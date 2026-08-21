@@ -390,40 +390,63 @@ const SONDA = `(() => {
   check('elegir un emplazamiento del SUR gira la fija al NORTE (z=' +
     sur.bloques.fija_proyecto.n.z.toFixed(2) + ')', sur.bloques.fija_proyecto.n.z < -0.15);
 
-  // ── el eje inclinado no se hunde, y sin inventarle terreno ──
-  // Un TSAT gira el eje sobre X, así que media fila se metía bajo el suelo. La
-  // primera solución fue ponerle una ladera debajo, y no valía: en este
-  // sombreado plano una cuña se lee como una rampa de hormigón, y además
-  // contradice la premisa de la escena —todos los bloques sobre el MISMO
-  // suelo—. Se resuelve como en campo cuando el terreno no acompaña: HINCAS
-  // GRADUADAS. El bloque sube y su poste crece otro tanto para seguir llegando
-  // al suelo.
-  const tsat = await p.evaluate(() => {
-    const B = BLOQUES.find(b => b.key === 'tracker_tsat');
-    const H = BLOQUES.find(b => b.key === 'tracker_hsat');
-    const bajo = b => { let y = 1e9;
-      b.filas.forEach(u => { y = Math.min(y, new THREE.Box3().setFromObject(u).min.y); });
+  // ── el eje inclinado, sobre TERRENO EN PENDIENTE ──
+  // Dos intentos fallidos antes de esto: una cuña bajo el bloque (se leía como
+  // una rampa de hormigón) y el suelo plano con la hinca alargada (un tracker
+  // con megasoportes a un lado, que no es lo que se construye). Lo que hace
+  // falta es terreno, y se hace como en bt3d: heightfield subdividido con
+  // `computeVertexNormals()`, que es lo que hace que la luz varíe de forma
+  // continua en vez de salir por caras.
+  const rel = await p.evaluate(() => {
+    const cotas = () => { const pos = TD.suelo.geometry.attributes.position;
+      let lo = 1e9, hi = -1e9;
+      for (let i = 0; i < pos.count; i++) { const y = pos.getY(i);
+        lo = Math.min(lo, y); hi = Math.max(hi, y); }
+      return { lo: +lo.toFixed(2), hi: +hi.toFixed(2), n: pos.count }; };
+    const bajo = k => { const B = BLOQUES.find(b => b.key === k); let y = 1e9;
+      B.filas.forEach(u => { y = Math.min(y, new THREE.Box3().setFromObject(u).min.y); });
       return +y.toFixed(2); };
-    const poste = b => { let r = null;
-      b.filas[0].children.forEach(o => { if (o.isMesh) {
-        const c = new THREE.Box3().setFromObject(o);
-        r = { abajo: +c.min.y.toFixed(2), alto: +(c.max.y - c.min.y).toFixed(2) }; } });
-      return r; };
-    return { yTsat: bajo(B), yHsat: bajo(H), pTsat: poste(B), pHsat: poste(H) };
+    const poste = k => { const B = BLOQUES.find(b => b.key === k); let h = 0;
+      B.filas[0].children.forEach(o => { if (o.isMesh) {
+        const c = new THREE.Box3().setFromObject(o); h = +(c.max.y - c.min.y).toFixed(2); } });
+      return h; };
+    // con TSAT marcado
+    document.querySelectorAll('.st').forEach(c => {
+      c.checked = ['tracker_tsat', 'tracker_hsat'].includes(c.value); });
+    construyeMundo(); actualiza3D();
+    const con = { cotas: cotas(), tsat: bajo('tracker_tsat'), hsat: bajo('tracker_hsat'),
+                  pT: poste('tracker_tsat'), pH: poste('tracker_hsat'),
+                  suave: TD.suelo.geometry.attributes.normal &&
+                         TD.suelo.geometry.attributes.normal.count };
+    // sin TSAT: el suelo tiene que volver a ser llano
+    document.querySelectorAll('.st').forEach(c => { c.checked = c.value === 'tracker_hsat'; });
+    construyeMundo(); actualiza3D();
+    const sin = cotas();
+    const axTilt = +document.getElementById('axtilt').value;
+    const largo = cfgActual().tracker.largoFila;
+    document.querySelectorAll('.st').forEach(c => {
+      c.checked = ['fija_optima', 'fija_proyecto', 'fija_ew',
+                   'tracker_hsat', 'tracker_hsat_nobt', 'tracker_tsat'].includes(c.value); });
+    construyeMundo(); actualiza3D();
+    return { con, sin, axTilt, largo };
   });
-  check('el eje inclinado ya no se hunde (y mínima ' + tsat.yTsat + ' m)',
-    tsat.yTsat >= -0.01, String(tsat.yTsat));
-  check('y su poste LLEGA al suelo en vez de colgar (' + tsat.pTsat.abajo + ' m)',
-    Math.abs(tsat.pTsat.abajo) < 0.15, JSON.stringify(tsat.pTsat));
-  check('es una hinca graduada: más larga que la del eje horizontal (' +
-    tsat.pTsat.alto + ' vs ' + tsat.pHsat.alto + ' m)',
-    tsat.pTsat.alto > tsat.pHsat.alto + 1, JSON.stringify([tsat.pTsat, tsat.pHsat]));
-  check('el de eje horizontal tampoco se hunde', tsat.yHsat >= -0.01, String(tsat.yHsat));
-  // y no se le inventa terreno a nadie: todos los bloques comparten el mismo
-  // suelo, que es la premisa de la escena. El guard es directo —la función que
-  // dibujaba la rampa no puede existir— porque cualquier heurística sobre las
-  // mallas confunde el suelo con los cristales y las correas del seguidor.
-  check('a ningún bloque se le pone terreno propio: la rampa no ha vuelto',
+  check('el suelo lleva relieve donde hay eje inclinado (' + rel.con.cotas.hi + ' m)',
+    rel.con.cotas.hi > 1 && rel.con.cotas.lo === 0, JSON.stringify(rel.con.cotas));
+  check('y sube exactamente lo que sube el eje (2 × media fila × sen ' + rel.axTilt + '°)',
+    Math.abs(rel.con.cotas.hi - rel.largo * Math.sin(rel.axTilt * Math.PI / 180)) < 0.05,
+    rel.con.cotas.hi + ' vs ' + (rel.largo * Math.sin(rel.axTilt * Math.PI / 180)).toFixed(2));
+  check('es un heightfield, no dos triángulos (' + rel.con.cotas.n + ' vértices)',
+    rel.con.cotas.n > 5000, String(rel.con.cotas.n));
+  check('con las normales recalculadas, que es lo que lo hace parecer terreno',
+    rel.con.suave === rel.con.cotas.n, String(rel.con.suave));
+  check('sin eje inclinado, el suelo vuelve a ser llano',
+    rel.sin.hi === 0 && rel.sin.lo === 0, JSON.stringify(rel.sin));
+  check('el eje inclinado no se hunde (y mínima ' + rel.con.tsat + ' m)',
+    rel.con.tsat >= -0.01, String(rel.con.tsat));
+  check('y NO lleva megasoportes: su hinca mide lo mismo que la del horizontal (' +
+    rel.con.pT + ' vs ' + rel.con.pH + ' m)',
+    Math.abs(rel.con.pT - rel.con.pH) < 0.01, JSON.stringify([rel.con.pT, rel.con.pH]));
+  check('la cuña de la primera versión no ha vuelto',
     (await p.evaluate(() => typeof taludTSAT === 'undefined')) === true);
 
   // ── bifila: DOS filas que son UN seguidor, con su transmisión ──
