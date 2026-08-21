@@ -1618,9 +1618,10 @@ function pintaPico(c){
 function pintaPendiente(c){
   var p=c.pend||0;
   $('pendNota').innerHTML=!p
-    ? 'terreno llano'
-    : fmt(Math.abs(Math.tan(p*FIS.D2R)*100),1)+' % — la fila de al lado queda '+
-      (p>0?'más BAJA':'más ALTA')+', y eso cambia la sombra entre filas de las tres familias.';
+    ? 'terreno llano · el mismo para las tres'
+    : fmt(Math.abs(Math.tan(p*FIS.D2R)*100),1)+' % · <b>la misma para las tres</b> — la fila de '+
+      'al lado queda '+(p>0?'más BAJA':'más ALTA')+' en las tres familias, y eso es lo que '+
+      'iguala la comparación.';
 }
 function refrescaGeom(){
   var c=cfgActual();

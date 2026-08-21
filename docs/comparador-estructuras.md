@@ -512,6 +512,24 @@ En la escena, las hincas siguen siendo **verticales** y el tilt no cambia: una f
 se inclina con el terreno, se replantea sobre él. Cada fila se coloca a la cota del terreno bajo
 ella.
 
+#### Es UNA pendiente, la misma para las tres
+
+Eso es lo que iguala la comparación, y hay un test que lo exige: no basta con que el campo exista,
+tiene que **mover a las tres familias**. A 12° en Sevilla:
+
+| | sin pendiente | con 12° |
+|---|---|---|
+| Fija · tilt de proyecto | 0,17 % | **0,00 %** |
+| Tracker N-S · backtracking | 0,00 % | **6,44 %** |
+| Tracker N-S · sin backtracking | 6,37 % | **9,18 %** |
+
+La pendiente **le quita** sombra a la fija —las filas se escalonan y dejan de taparse— y **se la
+pone** al seguidor. O sea que cambia el resultado de la comparación, que es justo para lo que está.
+
+En la escena cada familia la lleva en su dirección de pitch, así que el terreno sube hacia lados
+distintos bajo cada bloque. Eso se lee como «pendientes distintas» y no lo es: es **la misma
+pendiente perpendicular a las filas**, y las filas de cada familia corren hacia otro lado.
+
 #### Lo que destapa: con pendiente, el backtracking deja sombra
 
 El ángulo de backtracking se calcula **en llano**. Con el terreno inclinado, la fila de al lado no
@@ -679,10 +697,10 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ## Pruebas
 
 ```bash
-node tests/test_comparador.js       # 92 comprobaciones · careo contra el core, sin navegador
+node tests/test_comparador.js       # 97 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 133 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 134 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 
