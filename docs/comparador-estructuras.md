@@ -472,20 +472,28 @@ modelo **real** de `seguidor.js`, el mismo que pintan el Gemelo Digital y la Cob
    vecino y contamina la comparación—. Con 10 m se apagaban a 13°, justo por encima del amanecer
    de invierno que la escena existe para enseñar; con 16 m aguantan hasta 8,5°.
 
-### El eje inclinado va sobre su ladera
+### El eje inclinado, sin hundirse y sin inventarle terreno
 
-Un TSAT gira el eje sobre X, así que media fila quedaba **bajo el suelo** y la otra media volando:
-en pantalla parecía una estructura clavada en la tierra. No era un fallo del dibujo — le faltaba el
-**terreno**. Un eje inclinado se monta sobre una ladera con esa misma pendiente (o con las hincas
-creciendo, que a esta escala es lo mismo).
+Un TSAT gira el eje sobre X, así que media fila quedaba **bajo el suelo** y la otra media volando.
 
-Ahora el bloque se sube hasta que su punta baja toca el cero —`(largo de fila / 2) · sen(tilt del
-eje)`, 5,65 m con 65 m de fila y 10°— y se le pone debajo un **talud** con la pendiente del eje,
-subiendo hacia el ecuador. Los de eje horizontal no llevan talud, que no lo necesitan. Hay tests que
-miden las dos cosas: que la cota mínima del bloque no baja de cero y que la pendiente del talud es
-la del eje.
+El primer arreglo fue ponerle una **ladera** debajo, y no valía por dos razones. Una estética: en
+este sombreado plano una cuña se lee como una rampa de hormigón, no como terreno — hicieron falta
+tres intentos para admitirlo. Y otra de fondo: la escena se sostiene sobre «todos los bloques al
+mismo sol y sobre el **mismo suelo**», y darle terreno propio a uno rompe esa premisa. La pendiente
+del emplazamiento no es un parámetro de esta ficha.
 
-### Dónde cae la sombra de cada familia
+Se resuelve como lo resuelve **bt3d**, que llama *drapeado* a lo mismo: «el tramo mantiene el tilt
+que manda el accionamiento pero se **eleva** hasta volar sobre el terreno en todo su largo — los
+postes se alargan, que es lo que hace el montaje real». Aquí el bloque sube
+`(largo de fila / 2) · sen(tilt del eje)` —5,65 m con 65 m de fila y 10°— y su hinca crece otro
+tanto para seguir llegando al suelo: 7,57 m contra los 2 m del eje horizontal.
+
+> bt3d **sí** dibuja terreno, y bien: un *heightfield* de `PlaneGeometry(gw, gl, 72, 24)` con la
+> cota de cada vértice sacada del perfil y `computeVertexNormals()` — por eso se lee como una
+> ladera y no como una cuña. Pero allí la pendiente es un **dato del estudio**; aquí sería un
+> decorado.
+
+### Dónde cae la sombra de cada familia### Dónde cae la sombra de cada familia
 
 La fija **sí** proyecta sombra —todas sus mallas la proyectan y el suelo la recibe—, pero mira al
 ecuador y por tanto la tira **hacia el polo**: al fondo desde la cámara por defecto, y detrás de
@@ -641,7 +649,7 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 node tests/test_comparador.js       # 89 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 120 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 122 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 

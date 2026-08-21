@@ -390,37 +390,41 @@ const SONDA = `(() => {
   check('elegir un emplazamiento del SUR gira la fija al NORTE (z=' +
     sur.bloques.fija_proyecto.n.z.toFixed(2) + ')', sur.bloques.fija_proyecto.n.z < -0.15);
 
-  // ── el eje inclinado no se hunde: va sobre su ladera ──
-  // Un TSAT gira el eje sobre X, así que media fila se metía bajo el suelo y la
-  // otra media volaba. No era un fallo del dibujo: le faltaba el TERRENO. Un
-  // eje inclinado se monta sobre una ladera con esa misma pendiente.
+  // ── el eje inclinado no se hunde, y sin inventarle terreno ──
+  // Un TSAT gira el eje sobre X, así que media fila se metía bajo el suelo. La
+  // primera solución fue ponerle una ladera debajo, y no valía: en este
+  // sombreado plano una cuña se lee como una rampa de hormigón, y además
+  // contradice la premisa de la escena —todos los bloques sobre el MISMO
+  // suelo—. Se resuelve como en campo cuando el terreno no acompaña: HINCAS
+  // GRADUADAS. El bloque sube y su poste crece otro tanto para seguir llegando
+  // al suelo.
   const tsat = await p.evaluate(() => {
     const B = BLOQUES.find(b => b.key === 'tracker_tsat');
     const H = BLOQUES.find(b => b.key === 'tracker_hsat');
     const bajo = b => { let y = 1e9;
       b.filas.forEach(u => { y = Math.min(y, new THREE.Box3().setFromObject(u).min.y); });
       return +y.toFixed(2); };
-    // el talud es el único hijo del grupo que es un Group con una malla plana
-    const talud = g => {
-      let r = null;
-      g.children.forEach(o => { if (o.isGroup && o.children.length === 1 &&
-        o.children[0].isMesh && o.children[0].geometry.type === 'PlaneGeometry')
-        r = o.children[0]; });
-      return r;
-    };
-    const t = talud(B.filas[0].parent);
-    return { yTsat: bajo(B), yHsat: bajo(H),
-             hayTalud: !!t, pend: t ? +((t.rotation.x + Math.PI / 2) * 180 / Math.PI).toFixed(2) : null,
-             taludHsat: !!talud(H.filas[0].parent),
-             axTilt: +document.getElementById('axtilt').value };
+    const poste = b => { let r = null;
+      b.filas[0].children.forEach(o => { if (o.isMesh) {
+        const c = new THREE.Box3().setFromObject(o);
+        r = { abajo: +c.min.y.toFixed(2), alto: +(c.max.y - c.min.y).toFixed(2) }; } });
+      return r; };
+    return { yTsat: bajo(B), yHsat: bajo(H), pTsat: poste(B), pHsat: poste(H) };
   });
-  check('el eje inclinado ya no se hunde en el terreno (y mínima ' + tsat.yTsat + ' m)',
+  check('el eje inclinado ya no se hunde (y mínima ' + tsat.yTsat + ' m)',
     tsat.yTsat >= -0.01, String(tsat.yTsat));
-  check('y se apoya en un talud con la pendiente del eje (' + tsat.pend + '° vs ' +
-    tsat.axTilt + '°)', tsat.hayTalud && Math.abs(Math.abs(tsat.pend) - tsat.axTilt) < 0.05,
-    JSON.stringify(tsat));
-  check('el de eje HORIZONTAL no lleva talud, que no lo necesita',
-    tsat.taludHsat === false && tsat.yHsat >= -0.01, JSON.stringify([tsat.taludHsat, tsat.yHsat]));
+  check('y su poste LLEGA al suelo en vez de colgar (' + tsat.pTsat.abajo + ' m)',
+    Math.abs(tsat.pTsat.abajo) < 0.15, JSON.stringify(tsat.pTsat));
+  check('es una hinca graduada: más larga que la del eje horizontal (' +
+    tsat.pTsat.alto + ' vs ' + tsat.pHsat.alto + ' m)',
+    tsat.pTsat.alto > tsat.pHsat.alto + 1, JSON.stringify([tsat.pTsat, tsat.pHsat]));
+  check('el de eje horizontal tampoco se hunde', tsat.yHsat >= -0.01, String(tsat.yHsat));
+  // y no se le inventa terreno a nadie: todos los bloques comparten el mismo
+  // suelo, que es la premisa de la escena. El guard es directo —la función que
+  // dibujaba la rampa no puede existir— porque cualquier heurística sobre las
+  // mallas confunde el suelo con los cristales y las correas del seguidor.
+  check('a ningún bloque se le pone terreno propio: la rampa no ha vuelto',
+    (await p.evaluate(() => typeof taludTSAT === 'undefined')) === true);
 
   // ── bifila: DOS filas que son UN seguidor, con su transmisión ──
   // Monofila y bifila no cambian la mesa —es operativa, no geométrica— pero sí

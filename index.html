@@ -1043,7 +1043,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/comparador-estructuras.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-20",
-    version: "1.21",
+    version: "1.22",
     docId: "comparador-estructuras",
     docUrl: "",
     download: "",
@@ -1088,6 +1088,7 @@ const PROJECTS = [
       { done:false, text:"Enganchar el LCOE (motor /economy) para que al lado del ranking de kWh salga el de €/MWh." }
     ],
     historial: [
+      { date:"2026-08-20", ver:"1.22", note:"La ladera del TSAT no valía. Estéticamente, porque en este sombreado plano una cuña se lee como una rampa de hormigón —tres intentos hicieron falta para admitirlo—; y de fondo, porque la escena se sostiene sobre «todos los bloques sobre el MISMO suelo» y darle terreno propio a uno rompe esa premisa: la pendiente del emplazamiento no es un parámetro de esta ficha. Se resuelve como en bt3d, que lo llama DRAPEADO: el bloque se eleva y su hinca crece otro tanto para seguir llegando al suelo (7,57 m contra los 2 m del eje horizontal), que es lo que hace el montaje real cuando el terreno no acompaña. Con un guard para que la rampa no vuelva." },
       { date:"2026-08-20", ver:"1.21", note:"El eje inclinado se hundía en el terreno: un TSAT gira el eje sobre X, así que media fila quedaba bajo el suelo y la otra media volando. No era un fallo del dibujo, le faltaba el TERRENO — un eje inclinado se monta sobre una ladera con esa misma pendiente (o con las hincas creciendo, que a esta escala es lo mismo). Ahora el bloque se sube hasta que su punta baja toca el cero —(largo de fila / 2)·sen(tilt del eje), 5,65 m con 65 m y 10°— y se le pone debajo un talud con la pendiente del eje, subiendo hacia el ecuador. Los de eje horizontal no llevan talud." },
       { date:"2026-08-20", ver:"1.20", note:"Un parque no es una tira. El campo se calculaba alineando las N filas una detrás de otra, y eso daba superficies imposibles: 100 MWp de seguidores salían de 17 km de largo por 65 m de ancho. Ahora se rompe en BLOQUES hasta que el conjunto queda aproximadamente cuadrado, que es lo que se busca en una parcela — a 100 MWp, 911 × 873 m la fija (14 bloques de 194 filas) y 1.020 × 1.041 m el tracker (16 de 170). El número de bloques sale de igualar los dos lados, no de un ajuste. Las hectáreas siguen siendo la huella de las filas; el rectángulo que las envuelve es algo mayor porque el último bloque queda incompleto, y eso se dice en vez de repartirlo." },
       { date:"2026-08-20", ver:"1.19", note:"Los avisos llevaban etiquetas HTML y se pintan ESCAPADOS —bien escapados, porque salen del bloque de física y llevan nombres de estructura—, así que los <b> se veían tal cual en pantalla. Fuera el HTML de ahí, y de paso los avisos a la mitad de largo: el del tilt óptimo pasó de cinco líneas a dos. Con guards para que no vuelva ni el HTML ni la verborrea. Y una aclaración en la escena: la fija SÍ proyecta sombra, pero mira al ecuador y la tira hacia el polo — al fondo desde la cámara y detrás de sus propias filas—, así que hay que orbitar o marcar menos estructuras para verla; las del seguidor caen de lado y se ven de frente." },

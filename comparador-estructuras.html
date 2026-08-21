@@ -2642,7 +2642,7 @@ function cotasSeguidor(G){
   Seguidor.setModsPerStr(G.modsStr);   // recalcula mesa, fila y centro de ala
   return (D.span>0?G.largoFila/D.span:1);
 }
-function seguidor3D(mats,escalaEje){
+function seguidor3D(mats,escalaEje,posteExtra){
   var g=new THREE.Group(), spin=new THREE.Group(); g.add(spin);
   Seguidor.parts(THREE,{detail:'mass',size:'largo'}).forEach(function(p){
     if(p.antenna||p.motorLink||p.damperLink)return;
@@ -2653,8 +2653,11 @@ function seguidor3D(mats,escalaEje){
   });
   var postH=Seguidor.DIMS.postH||2.0;
   g.position.y=postH; g.rotation.y=Math.PI/2;
-  var poste=new THREE.Mesh(new THREE.BoxGeometry(.18,postH,.18),mats.steel);
-  poste.position.y=postH/2; poste.castShadow=true;
+  /* El poste crece hacia ABAJO desde el tubo: con el bloque subido (eje
+     inclinado) tiene que seguir llegando al suelo, no quedarse colgando. */
+  var hP=postH+(posteExtra||0);
+  var poste=new THREE.Mesh(new THREE.BoxGeometry(.18,hP,.18),mats.steel);
+  poste.position.y=postH-hP/2; poste.castShadow=true;
   /* La escala va en `g` (el grupo del tubo), no en el wrap: así estira la viga,
      las alas y el vano del motor —lo que de verdad se alarga— y deja el poste
      con su sección. */
@@ -2712,31 +2715,6 @@ function encuadra(){
     if(Math.abs(k-1)<0.02)break;
     TD.cam.position.multiplyScalar(k);   // acercar o alejar sobre la misma línea
   }
-}
-
-/* ── EL TALUD DEL EJE INCLINADO ──
-   Un TSAT gira el eje sobre X, así que la mitad norte de la fila se hundía
-   bajo el suelo y la sur volaba: en pantalla parecía una estructura clavada en
-   la tierra. Y no es un fallo del dibujo, es que le faltaba el terreno: un eje
-   inclinado se monta sobre una LADERA que lleva esa misma pendiente (o con las
-   hincas creciendo, que a esta escala es lo mismo). Sin ladera, el dibujo dice
-   una cosa que en campo no existe.
-
-   Así que el bloque se sube hasta que su punta baja toca el cero y se le pone
-   debajo un talud con la pendiente del eje. La ladera sube hacia el ecuador,
-   que es hacia donde mira el eje. */
-function taludTSAT(mats,largo,ancho,aRad,color){
-  var g=new THREE.Group();
-  var geo=new THREE.PlaneGeometry(ancho,largo);
-  var mat=new THREE.MeshStandardMaterial({color:color,roughness:1,metalness:0,
-    side:THREE.DoubleSide});
-  var m=new THREE.Mesh(geo,mat);
-  /* Un plano nace en XY: -90° lo tumba, y el ángulo del eje lo inclina en el
-     plano YZ, que es donde bascula el TSAT. */
-  m.rotation.x=-Math.PI/2+aRad;
-  m.receiveShadow=true;
-  g.add(m);
-  return g;
 }
 
 /* ── El EJE COMPARTIDO de una bifila ──
@@ -2814,8 +2792,13 @@ function construyeMundo(){
          fija y el tracker se configuran aparte, y si el render los igualara
          estaría enseñando una estructura distinta de la que calcula la tabla. */
       if(spec.fam==='tracker'){
-        uno=seguidor3D(mats,escTk); uno.position.x=d;    // filas hacia el ESTE
-        if(spec.tsat)uno.position.y=alzaTSAT;            // apoyado en la ladera
+        /* El eje inclinado se sube para que su punta baja no se entierre, y su
+           POSTE se alarga otro tanto para que siga llegando al suelo: es lo
+           que se hace en campo cuando el terreno no acompaña —hincas
+           graduadas— y no obliga a inventarle una ladera a un bloque cuando
+           todos comparten el mismo suelo, que es la premisa de la escena. */
+        uno=seguidor3D(mats,escTk,spec.tsat?alzaTSAT:0); uno.position.x=d;
+        if(spec.tsat)uno.position.y=alzaTSAT;
       }else if(spec.fam==='fija_ew'){
         // dos aguas: la mesa lleva DOS paneles enfrentados, y las filas se
         // repiten hacia el este como en el seguidor (las filas corren N-S)
@@ -2833,15 +2816,6 @@ function construyeMundo(){
     /* En bifila, la transmisión que hace que esas dos filas sean UN seguidor. */
     if(agrupa>1)for(var t=0;t+agrupa<=nf;t+=agrupa){
       grupo.add(ejeBifila(mats,(t-(nf-1)/2)*pitch,(t+agrupa-1-(nf-1)/2)*pitch));
-    }
-    /* El talud va DEBAJO del bloque y con su misma pendiente: sin él, media
-       fila quedaba enterrada. */
-    if(spec.tsat){
-      var aT=(cfg.lat>=0?1:-1)*Math.abs(cfg.axTilt)*FIS.D2R;
-      var anchoT=(nf-1)*pitch+G.altoColector+8, largoT=G.largoFila+10;
-      var tal=taludTSAT(mats,largoT,anchoT,aT,0x2b3a22);
-      tal.position.y=alzaTSAT;
-      grupo.add(tal);
     }
     var col='#'+(COL[k]||'#888888').replace('#','');
     /* El rótulo se acota por el hueco Y por el largo del bloque: con una fila
