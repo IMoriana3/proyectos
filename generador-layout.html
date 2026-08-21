@@ -162,7 +162,13 @@ canvas.panning{cursor:grabbing}
 <header class="bar">
   <a class="back" href="index.html">← Panel</a>
   <h1>Generador de layout</h1>
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador</span>
+  <!-- La versión VISIBLE en la propia página («no pone versión», 2026-08-21):
+       hasta ahora solo vivía en la ficha del panel, así que desde el generador
+       era imposible saber si el service worker te había servido la build
+       nueva o la cacheada. Se espeja de la ficha (index.html, docId
+       generador-layout) y test_integridad.js exige que las dos coincidan —
+       un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.4.4</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -226,7 +232,6 @@ canvas.panning{cursor:grabbing}
         <p class="note" style="margin-top:0">Busca tu emplazamiento arriba, acércate con la rueda hasta ver la finca y pulsa <b>Dibujar parcela</b>: clic por vértice y <b>doble clic</b> para cerrar. Arrastrar mueve el mapa sin poner vértices.</p>
         <div class="btnrow">
           <button class="btn ghost small" id="drawStart">✏️ Dibujar parcela</button>
-          <button class="btn ghost small" id="varitaBtn" title="Detecta el contorno del campo en la ortofoto desde un clic. Es un BORRADOR VISUAL para retocar — la linde oficial es la del Catastro/SIGPAC.">🪄 Detectar parcela</button>
           <button class="btn ghost small" id="drawClear">🗑️ Limpiar</button>
         </div>
       </div>
@@ -459,6 +464,12 @@ canvas.panning{cursor:grabbing}
         <button class="btn ghost small mini" id="zIn" title="Acercar">+</button>
         <button class="btn ghost small mini" id="zOut" title="Alejar">−</button>
         <button class="btn ghost small mini" id="fit" title="Encajar la parcela en el lienzo">⤢ Encajar</button>
+        <!-- La varita vive en la barra del MAPA, no en el panel de dibujo: su
+             primer usuario no la encontró porque el panel solo se ve en modo
+             «Dibujarla sobre el lienzo» («no encuentro la varita», 2026-08-21
+             — la lección de «alinear a rejilla»: si no se encuentra, está mal
+             puesta). Al armarla, ella sola cambia al modo dibujo. -->
+        <button class="btn ghost small mini" id="varitaBtn" title="Detecta el contorno del campo en la ortofoto desde un clic. Es un BORRADOR VISUAL para retocar — la linde oficial es la del Catastro/SIGPAC. Cambia solo al modo «Dibujarla sobre el lienzo».">🪄 Detectar parcela</button>
         <select id="render" class="minisel" title="Cómo se pintan las mesas">
           <option value="auto">Render: auto</option>
           <option value="poly">Polígonos</option>
@@ -2405,6 +2416,12 @@ $('varitaBtn').onclick=function(){
   if(drawing&&DRAW.length){                       // no pisar un dibujo a medias
     $('mapHint').textContent='🪄 termina (o limpia) el dibujo en curso antes de detectar';
     return;
+  }
+  // Armarla desde CUALQUIER modo: el contorno detectado es un dibujo, así
+  // que la varita te lleva sola al modo «Dibujarla sobre el lienzo».
+  if($('parcelMode').value!=='draw'){
+    $('parcelMode').value='draw';
+    $('parcelMode').onchange.call($('parcelMode'));
   }
   varitaArmada=!varitaArmada;
   if(varitaArmada&&!$('orto').checked){$('orto').checked=true;draw();}

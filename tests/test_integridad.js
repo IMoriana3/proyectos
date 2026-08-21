@@ -54,5 +54,14 @@ if (mPM) {
   check('todo nombre de PLANT_MODULES tiene su ficha en PROJECTS', !huerfanos.length, huerfanos.join(', '));
 } else console.log('--   no encuentro PLANT_MODULES: me salto la comprobación');
 
+// 6) la versión que ENSEÑA el generador es la de su ficha («no pone versión»,
+//    2026-08-21: el rótulo se añadió ese día — y un rótulo sin guard se desvía
+//    en dos versiones, que es peor que no tenerlo)
+const gen = fs.readFileSync(path.join(RAIZ, 'generador-layout.html'), 'utf8');
+const vBadge = (gen.match(/id="verBadge">v([\d.]+)</) || [])[1];
+const vFicha = (html.match(/version: "([\d.]+)",\s*\n\s*docId: "generador-layout"/) || [])[1];
+check('el generador enseña su versión y es LA DE SU FICHA (' + vBadge + ' vs ' + vFicha + ')',
+  !!vBadge && vBadge === vFicha, JSON.stringify({ vBadge, vFicha }));
+
 console.log('\n' + (ko ? 'FALLOS: ' + ko + ' (de ' + (ok + ko) + ')' : 'OK — ' + ok + '/' + ok + ' comprobaciones'));
 process.exit(ko ? 1 : 0);

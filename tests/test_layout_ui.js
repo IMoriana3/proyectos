@@ -1290,7 +1290,6 @@ const cajaLienzo = async page => {
   await pagV.waitForFunction(() => /Esri World Imagery/.test(
     document.querySelector('#basemapMsg').textContent), null, { timeout: 15000 });
 
-  await pagV.selectOption('#parcelMode', 'draw');
   // núcleo puro, sobre sintético con ruido determinista
   const nucleo = await pagV.evaluate(() => {
     const w = 200, h = 200, img = new ImageData(w, h), d = img.data;
@@ -1337,7 +1336,17 @@ const cajaLienzo = async page => {
     const x = ((tx + 0.5) / n - VIEW.cx) * S + cv.width / 2;
     return { x, y: cv.height / 2, lado: S / n, w: cv.width, h: cv.height };
   });
+  // La página arranca en modo «rect» — LA QUEJA REAL («no encuentro la
+  // varita»): el botón vive ahora en la barra del mapa, visible en todos los
+  // modos, y al armarla cambia sola a «Dibujarla sobre el lienzo».
+  check('la varita se VE sin abrir ningún panel (modo rect)',
+    await pagV.evaluate(() => document.querySelector('#varitaBtn').offsetParent !== null &&
+      document.querySelector('#parcelMode').value === 'rect'));
   await pagV.click('#varitaBtn');
+  check('y al armarla cambia sola al modo dibujo',
+    (await pagV.evaluate(() => document.querySelector('#parcelMode').value)) === 'draw');
+  check('la cabecera enseña la versión (el guard de integridad la carea con la ficha)',
+    /^v\d+\.\d+/.test(await pagV.textContent('#verBadge')));
   check('la varita armada lo dice y enciende la ortofoto',
     /Clic en el campo/.test(await pagV.textContent('#varitaBtn')) &&
     /borrador visual/.test(await pagV.textContent('#mapHint')),
@@ -1370,7 +1379,6 @@ const cajaLienzo = async page => {
   await pagU.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
   await pagU.waitForFunction(() => /Esri World Imagery/.test(
     document.querySelector('#basemapMsg').textContent), null, { timeout: 15000 });
-  await pagU.selectOption('#parcelMode', 'draw');
   await pagU.click('#varitaBtn');
   await pagU.evaluate(() => { _movido = 0; });
   const cajaU = await cajaLienzo(pagU);
@@ -1386,7 +1394,6 @@ const cajaLienzo = async page => {
   await pagS.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
   await pagS.waitForFunction(() => /sin ortofoto/.test(
     document.querySelector('#basemapMsg').textContent), null, { timeout: 15000 });
-  await pagS.selectOption('#parcelMode', 'draw');
   await pagS.click('#varitaBtn');
   await pagS.evaluate(() => { _movido = 0; });
   const cajaSn = await cajaLienzo(pagS);
