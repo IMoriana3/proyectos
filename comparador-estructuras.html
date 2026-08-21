@@ -2642,7 +2642,7 @@ function cotasSeguidor(G){
   Seguidor.setModsPerStr(G.modsStr);   // recalcula mesa, fila y centro de ala
   return (D.span>0?G.largoFila/D.span:1);
 }
-function seguidor3D(mats,escalaEje,posteExtra){
+function seguidor3D(mats,escalaEje){
   var g=new THREE.Group(), spin=new THREE.Group(); g.add(spin);
   Seguidor.parts(THREE,{detail:'mass',size:'largo'}).forEach(function(p){
     if(p.antenna||p.motorLink||p.damperLink)return;
@@ -2653,11 +2653,8 @@ function seguidor3D(mats,escalaEje,posteExtra){
   });
   var postH=Seguidor.DIMS.postH||2.0;
   g.position.y=postH; g.rotation.y=Math.PI/2;
-  /* El poste crece hacia ABAJO desde el tubo: con el bloque subido (eje
-     inclinado) tiene que seguir llegando al suelo, no quedarse colgando. */
-  var hP=postH+(posteExtra||0);
-  var poste=new THREE.Mesh(new THREE.BoxGeometry(.18,hP,.18),mats.steel);
-  poste.position.y=postH-hP/2; poste.castShadow=true;
+  var poste=new THREE.Mesh(new THREE.BoxGeometry(.18,postH,.18),mats.steel);
+  poste.position.y=postH/2; poste.castShadow=true;
   /* La escala va en `g` (el grupo del tubo), no en el wrap: así estira la viga,
      las alas y el vano del motor —lo que de verdad se alarga— y deja el poste
      con su sección. */
