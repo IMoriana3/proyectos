@@ -446,6 +446,16 @@ const SONDA = `(() => {
   check('y NO lleva megasoportes: su hinca mide lo mismo que la del horizontal (' +
     rel.con.pT + ' vs ' + rel.con.pH + ' m)',
     Math.abs(rel.con.pT - rel.con.pH) < 0.01, JSON.stringify([rel.con.pT, rel.con.pH]));
+  // «¿por qué solo esa estructura tiene pendiente?» — porque es la única que
+  // la declara. Si hay que preguntarlo, es que no estaba dicho.
+  const porQue = await p.evaluate(() => document.getElementById('escNote').textContent);
+  const plano = porQue.replace(/\s+/g, ' ');
+  check('la escena explica por qué solo el eje inclinado tiene ladera',
+    /solo el eje inclinado tiene ladera/i.test(plano) &&
+    /es la pendiente del terreno/i.test(plano), plano.slice(-320));
+  check('y avisa de que la POA no lleva pendiente de emplazamiento',
+    /cross_axis_slope/.test(porQue) && /no está expuesto/i.test(porQue), porQue.slice(-260));
+
   check('la cuña de la primera versión no ha vuelto',
     (await p.evaluate(() => typeof taludTSAT === 'undefined')) === true);
 
