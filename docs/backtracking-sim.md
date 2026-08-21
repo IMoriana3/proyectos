@@ -388,6 +388,62 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-21 · v1.32** — **el CAREO: el clásico deja de ser una degradación a la que se cae y
+  pasa a ser una comparación que se enseña.** El simulador ya traía los dos modelos —`bt2d`
+  («ignora el relieve: un tracker sin configurar») y `true3d`— pero solo se podían mirar de uno en
+  uno. La casilla **CAREO** los enfrenta **sobre el mismo corte, el mismo día y el mismo seguidor**:
+  enciende las dos políticas, apaga el resto (con cinco curvas encima no se lee), pinta **los dos
+  fantasmas en el corte 2D** —bt3d sólido, clásico a trazos, cada uno con su sombra— y saca una
+  **cajita en formato captura** con el Δ del día. Apagada, la página se comporta **exactamente**
+  igual que antes. Tres presets de un clic (**pendiente 9 %, vaguada 2 m, cresta 2 m**) para
+  demostrar sin dibujar a mano.
+  **Ni una fórmula nueva en JS**: verificado que el diff no toca **ni un hunk** dentro del bloque
+  `FÍSICA PURA`. La integral del día se **re-derivó** del `dayKpis` de la v1.31 en vez de parchear la
+  extracción vieja, así el careo hereda gratis la banda del circunsolar, la sombra ponderada por DNI
+  y el Martinez con y sin estructura — una maquinaria, dos puntos de entrada.
+  **Medido** (pendiente 9 %, 21-jun, 8 filas, monofila; reproducido contra el motor antes de
+  publicarlo): bt3d **11,256** · clásico **10,964** · libro **11,340** kWh/m²·d, o sea **+2,66 %**
+  [+2,37 … +2,97] a favor del bt3d. Con el circunsolar sin tapar esto daba +1,62 %: **el clásico
+  pierde más ahora porque su sombra también se come el circunsolar**, que es la v1.31 pagando
+  intereses.
+  **Y la casilla «+ modelo de libro»** (apagada por defecto) **descompone** la diferencia contra lo
+  que asumiría una simulación de fila infinita y terreno plano: **+0,00 % axial · −3,32 % relieve ·
+  +2,57 % control**, con **denominador común declarado** (el kWh del libro) para que la suma **cierre
+  por construcción** y no quede resto sin atribuir. De ahí sale la frase de oferta:
+  *«el terreno os cuesta 3,3 puntos; nuestro control recupera 2,6»*.
+  Detalle que conviene decir en vez de esconder: el término axial sale **exactamente 0,00 %** porque
+  con una mesa por línea y filas largas la implantación real y la fila infinita ven la misma sombra;
+  despertará en plantas con tramos cortos o escalonados.
+  El «libro» **no es una tercera curva**: el mando de `bt2d` no mira el relieve, así que su θ(t) es
+  idéntica y pintarla sería una raya sobre otra — lo que cambia es **dónde se mide**, y por eso vive
+  en los números. La banda de la cajita usa **la misma convención que la tabla del día** (misma cota
+  arriba y abajo, ámbar si cruza el cero): un careo que afirmara en seco lo que la tabla matiza tres
+  centímetros más abajo sería una incoherencia de interfaz. Comprobado que en **llano** las tres
+  evaluaciones convergen: **Δ = 0,00 %**, banda **[0,00 … 0,00]**. QA 67 y gate en verde.
+
+- **2026-08-21 · v1.31.1** — **el veto exacto vale a TODAS las horas, no solo con sol bajo.**
+  Regresión de la v1.31 cazada por el barrido de invariantes (14.256 comprobaciones de
+  política-instante): en **pendiente 8° · monofila · 21-jun** el energy-optimal salía **0,47 % por
+  DEBAJO de pairwise**, imposible porque f=0 **es** pairwise y está en su propia rejilla. En la v1.30
+  el mismo caso daba +0,21 %, así que era regresión y no deuda vieja.
+  La causa es **un comentario que nadie volvió a leer**: el veto estaba limitado a `zen>65` porque
+  «con sol alto no hay sombra para ninguna f y más beam siempre gana». Ese argumento **murió dos
+  veces** sin que nadie lo revisara — la v1.28 metió la **estructura** de la mesa, que sombrea a
+  todas horas, y la v1.31 hizo que esa sombra cueste también **circunsolar**. El evaluador rápido de
+  la búsqueda sigue siendo ciego a las dos cosas, así que con sol alto elegía f>0 creyendo que salía
+  gratis. Ahora el veto se evalúa **siempre**, y solo contra los extremos que no son el candidato: 2
+  evaluaciones exactas extra, 3 si la f ganadora es interior. Medido tras el arreglo: óptimo
+  **+0,186 %** y libre **+0,232 %** sobre pairwise. Batería 64 (la regresión concreta reproducida
+  día completo, y un estático que veta que el cenit vuelva a condicionar el veto), y el barrido
+  completo relanzado **sin hallazgos**.
+  **Y el mismo hallazgo se portó al core** (`SolarGPTfull` v1.64.0): allí `POA_Global` sumaba la
+  difusa entera con el mismo razonamiento, así que los informes bancables con sombreado entre filas
+  iban optimistas **+0,906 %** en el caso con sombra y **0,000 %** sin ella —un sesgo asimétrico, que
+  es lo peligroso—. La validación contra PVSyst en Fleming lo confirma desde fuera: la capa
+  **GlobEff pasa de −0,7 % a ≈0,0 %** anual, mes a mes (julio −1,0 % → −0,2 %, agosto −1,1 % →
+  −0,3 %), al dar al circunsolar el **IAM del haz** en vez del integrado de bóveda. PVSyst lo reparte
+  igual: no es ajuste, es coincidir con la referencia.
+
 - **2026-08-20 · v1.31** — **la difusa también la tapa la sombra, y el IAM existe: con la óptica
   completa GANA EL BACKTRACKING.** La v1.30 arregló el parámetro eléctrico; quedaba el otro lado de
   la comparación, la irradiancia. Faltaban dos términos, y van en sentidos opuestos:
