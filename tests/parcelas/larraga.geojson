@@ -1,0 +1,117 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "tipo": "parcela",
+    "nombre": "Larraga (Navarra)",
+    "careo": {
+     "mount_type": "tracker",
+     "table_type": "1V",
+     "mods_per_struct": 28,
+     "bifila": true,
+     "pitch_m": 6.0,
+     "panel_az_deg": 90.0
+    },
+    "nota": "Finca real del 2026-08-21: «deja mil huecos donde entran trackers». Dos hallazgos: (1) el ancla GLOBAL de la rejilla pierde una unidad por linde diagonal en cada fila — el core también, y por eso el aviso rejilla_deja_hueco y el ancla por linde sin «alinear a rejilla»; (2) el careo daba 120 vs 124 porque el barrido del origen X/Y del core (11+11 offsets con exclusiones) no estaba portado — portado el 2026-08-21, este caso sale CLAVADO (124 = 124)."
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -1.8531766216507606,
+       42.56116002135519
+      ],
+      [
+       -1.8518263359158027,
+       42.56137009425721
+      ],
+      [
+       -1.8516177551925068,
+       42.56219421958102
+      ],
+      [
+       -1.8511786378803379,
+       42.56228309519116
+      ],
+      [
+       -1.8537584520894086,
+       42.563107208455314
+      ],
+      [
+       -1.8533303127100567,
+       42.5635515787372
+      ],
+      [
+       -1.8547684219074654,
+       42.56377780239217
+      ],
+      [
+       -1.8549550467651557,
+       42.563155685367136
+      ],
+      [
+       -1.854669620512226,
+       42.56236389109052
+      ],
+      [
+       -1.855240473018057,
+       42.562073025363176
+      ],
+      [
+       -1.8554929654725925,
+       42.561822556566945
+      ],
+      [
+       -1.853165643717972,
+       42.56116002135521
+      ],
+      [
+       -1.8531766216507606,
+       42.56116002135519
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "tipo": "exclusion"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -1.8540329004095497,
+       42.562638596365694
+      ],
+      [
+       -1.8540329004095497,
+       42.5625012438793
+      ],
+      [
+       -1.8538572534846764,
+       42.56252548257534
+      ],
+      [
+       -1.8538572534846764,
+       42.56267091455384
+      ],
+      [
+       -1.8539999666111555,
+       42.562638596365694
+      ],
+      [
+       -1.8540329004095497,
+       42.562638596365694
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

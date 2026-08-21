@@ -19,7 +19,11 @@ const SOLO = arg('solo');
 
 /* Un servidor por repo: las páginas piden ficheros del suyo por ruta relativa. */
 const PAGINAS = [
-  ['proyectos', 8201, ['index.html', 'cartera-tabla.html', 'layout.html', 'sim-solar.html']],
+  /* La lista se escribio a mano y se quedo corta: generador-layout, comparador-estructuras y
+     sim-viento existian y no se median, y el generador se quedaba en el 61 % del ancho a 2560 sin
+     que nadie se enterara. Si aparece una ficha nueva, va aqui. */
+  ['proyectos', 8201, ['index.html', 'cartera-tabla.html', 'layout.html', 'sim-solar.html',
+    'generador-layout.html', 'comparador-estructuras.html', 'sim-viento.html']],
   ['Cobertura-Zigbee', 8202, ['index.html', 'informe.html', 'modbus.html', 'crear.html', 'topografico.html', 'backtracking.html', 'overcast.html']],
   ['Siting', 8203, ['index.html']],
   ['SCADA', 8204, ['index.html']],

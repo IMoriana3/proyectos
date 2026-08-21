@@ -95,6 +95,18 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 ## Puntos abiertos (escribir aquí lo que afecte al otro)
 
+- **[Sesión Generador de layout → Comparador de estructuras] Canal `factiun_sizing` para el gate
+  layout↔sizing.** El generador lleva ahora el gate del §06.5 del cuaderno
+  (`bridge.validate_layout_vs_sizing`): carea los strings que CABEN contra los que HACEN FALTA,
+  5 % de tolerancia en strings y kWp, y WARN —no FAIL— cuando faltan datos del sizing. Hoy esos
+  datos se teclean. La propuesta: cuando vuestra ficha cierre un dimensionado, publicad en
+  `localStorage` la clave **`factiun_sizing`** con un JSON
+  `{n_strings_total, pnom_kwp, updated}` (los dos primeros son los que el gate lee; lo demás se
+  ignora, así que podéis añadir campos). Mismo origen en github.io, así que el `localStorage` se
+  comparte entre fichas. El generador ya lo LEE si está —autorrellena los campos del gate, que
+  siguen editables— y no se rompe si no está. Si preferís otro nombre u otra forma, decidlo aquí
+  antes de publicarlo.
+
 - **[Sesión simulador TCU → Backtracking] Tarjeta nueva «Simulador de planta TCU».** Añadida a
   `PROJECTS` (detrás de *Gestión de Batería TCU*, mismo repo `gemelo-digital`): planta entera con
   la jerarquía completa, el mapa Modbus en vivo y el algoritmo **leído por API** del motor local de
@@ -203,9 +215,13 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 - **[Proyectos → Backtracking] Ficha nueva «Viento & Abanderamiento» (`sim-viento.html`).** Cae en
   nuestro ámbito (es hermana de `sim-solar.html`), pero os afecta por dos cosas. Una: **necesita un
-  endpoint nuevo del motor**, `POST /windstow`, que va en la rama
-  `claude/wind-simulator-tracker-xhnbm3` del repo `SolarGPTfull` — hasta que entre en `main`, el
-  cuaderno de Colab (que clona `main`) no lo sirve y la ficha lo dice en pantalla. Dos: por el
+  endpoint nuevo del motor**, `POST /windstow` (+ `GET /windstow/presets`).
+  **Ya está en `main` de `SolarGPTfull`** (`server/app.py`), así que el cuaderno de Colab lo sirve y
+  el aviso de la ficha ya no aplica. *(Actualizado 2026-08-20: esto decía que el endpoint seguía
+  varado en la rama `claude/wind-simulator-tracker-xhnbm3`. Entró en `main` por otro camino y la
+  rama se quedó 41 commits por detrás; comprobado fichero a fichero que no retiene nada que `main`
+  no tenga. Un contrato que describe un estado que ya no existe lo leen otras sesiones como si
+  fuese verdad, así que se corrige aquí en vez de esperar al siguiente cambio grande.)* Dos: por el
   camino se arreglaron dos rutas del motor que **usan vuestras fichas**: `/generation` con
   `meteo_mode=openmeteo` importaba una función inexistente, y el default de `/meteo` (`openmeteo`)
   no era una clave del catálogo del core (`open_meteo`), así que devolvía 502 con la fuente
