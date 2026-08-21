@@ -120,9 +120,23 @@ const SONDA = `(() => {
   check('el box publica el CAMPO de cada familia, con sus dos lados',
     /CAMPO · FIJA/i.test(campo.read) && /CAMPO · TRACKER/i.test(campo.read) &&
     /E-O × N-S/.test(campo.read), campo.read.slice(-160));
-  check('y dice hacia dónde se apila cada una (la fija al sur, el seguidor al este)',
-    /apilan hacia el .*sur/i.test(campo.nota) && /apilan hacia el .*este/i.test(campo.nota),
-    campo.nota.slice(0, 200));
+  check('y dice hacia dónde apila cada una (la fija al sur, el seguidor al este)',
+    /apila hacia el .*sur/i.test(campo.nota) && /apila hacia el .*este/i.test(campo.nota),
+    campo.nota.slice(0, 300));
+  // un parque no es una tira: se rompe en bloques hasta quedar cuadrado
+  check('el box dice en cuántos BLOQUES se rompe cada campo',
+    /bloques de \d+ filas/i.test(campo.read), campo.read.slice(-200));
+  check('y la nota dice por qué: para que el campo quede cuadrado',
+    /cuadrado/i.test(campo.nota) && /tiras imposibles/i.test(campo.nota),
+    campo.nota.slice(0, 300));
+  const cuadra = await p.evaluate(() => {
+    const c = cfgActual(), mwp = +document.getElementById('mwp').value;
+    const F = FIS.planta(c.fija, mwp), K = FIS.planta(c.tracker, mwp);
+    return [F.ladoFila / F.ladoPitch, K.ladoFila / K.ladoPitch];
+  });
+  check('y los dos campos salen aproximadamente cuadrados (' +
+    cuadra.map(r => r.toFixed(2)).join(' / ') + ')',
+    cuadra.every(r => Math.abs(r - 1) < 0.25), JSON.stringify(cuadra));
   check('y que para la SOMBRA sí son filas infinitas, con su 1/N',
     /fila infinita/i.test(campo.nota) && /1\/\d+/.test(campo.nota), campo.nota.slice(-320));
   check('y aclara que ese % es DE LA PÉRDIDA, no de la energía',
