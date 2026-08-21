@@ -33,10 +33,36 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
    pantalla usaba poco más de la mitad y dejaba cientos de píxeles muertos a cada lado; con solo
    `vw` se pegaría a los bordes en pantallas enormes. El 94vw deja aire y el tope evita la línea
    kilométrica. Mismo criterio que el Panel. */
-.wrap{max-width:min(1560px,94vw);margin:0 auto;padding:20px 18px 60px}
+/* Mismo tope que el Panel: con 1560 px fijos, a 2560 se usaba el 61 % del ancho. */
+.wrap{max-width:min(2560px,94vw);margin:0 auto;padding:20px 18px 60px}
 .grid{display:grid;grid-template-columns:352px 1fr;gap:18px;align-items:start}
 @media(max-width:900px){.grid{grid-template-columns:1fr}}
 .col{display:flex;flex-direction:column;gap:14px}
+
+/* EL REPARTO. Las cinco tarjetas de entrada iban en una torre de 352 px y 3.896 px de alto,
+   con el plano al lado midiendo 984: quedaban ~2.900 px de hueco muerto a la derecha y hacía
+   falta bajar entre 3 y 4,5 pantallas para llegar a «Salidas». Con sitio de sobra, las entradas
+   fluyen en dos o tres columnas —`columns`, no rejilla: así se empaquetan por altura y no se
+   alinean por filas, que con tarjetas de 549 a 1.324 px dejaba huecos enormes— y el plano crece.
+   El orden de lectura se respeta: Parcela → Estructura → Terreno → Implantación → Salidas. */
+.col.ctl > .card{break-inside:avoid}
+/* La banda de entradas tiene ancho FIJO —dos o tres columnas de las mismas 352 px para las que
+   estan hechas las tarjetas— y el plano se queda con TODO lo que sobre. Repartiendo por fracciones
+   el plano encogia de 1.120 a 891 px justo a 1920, que es la pantalla mas comun: no compensaba. */
+@media(min-width:1500px){
+  .grid{grid-template-columns:718px minmax(0,1fr)}
+  .col.ctl{display:block;columns:2;column-gap:14px}
+  .col.ctl > .card{margin-bottom:14px}
+}
+@media(min-width:2100px){
+  .grid{grid-template-columns:1084px minmax(0,1fr)}
+  .col.ctl{columns:3}
+}
+/* El plano se queda a la vista mientras se tocan los parámetros: sin esto, al bajar a «Salidas»
+   se dejaba de ver lo que se estaba cambiando. */
+/* El sticky va en la COLUMNA, no en la tarjeta: con `align-items:start` la columna mide justo lo
+   que la tarjeta y al pegar ahi dentro no le quedaba recorrido ninguno —se iba con el scroll—. */
+@media(min-width:901px){ .col.map{position:sticky;top:14px} }
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
 .card h2{font:700 13px/1 var(--display);letter-spacing:.02em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .card h2 .ic{color:var(--accent)}
@@ -145,7 +171,7 @@ canvas.panning{cursor:grabbing}
 <div class="grid">
 
   <!-- ═══════════ ENTRADAS ═══════════ -->
-  <div class="col">
+  <div class="col ctl">
 
     <div class="card">
       <h2><span class="ic">▦</span> Parcela</h2>
@@ -414,7 +440,7 @@ canvas.panning{cursor:grabbing}
   </div>
 
   <!-- ═══════════ RESULTADO ═══════════ -->
-  <div class="col">
+  <div class="col map">
     <div class="card">
       <h2><span class="ic">◫</span> Implantación <span class="hint" id="hint">sin generar</span></h2>
       <div class="readout" id="ro"></div>
