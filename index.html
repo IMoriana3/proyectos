@@ -194,7 +194,12 @@ body{
 .card.open .chev{transform:rotate(90deg);color:var(--text)}
 
 .name{font-family:var(--display);font-size:1.12rem;font-weight:600;letter-spacing:-.01em;margin:11px 0 7px;line-height:1.18}
-.obj{font-size:.9rem;color:var(--muted);line-height:1.5;font-weight:300}
+/* La descripción, a TRES LÍNEAS. Iba de 1 a 11 según lo que se hubiera escrito, y con ello la
+   tarjeta de 156 a 608 px: la rejilla salía a diente de sierra. No se pierde texto —al abrir la
+   ficha se despliega entera—, así que el recorte solo afecta a la tarjeta cerrada. */
+.obj{font-size:.9rem;color:var(--muted);line-height:1.5;font-weight:300;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden}
+.card.open .obj{-webkit-line-clamp:none;line-clamp:none;overflow:visible}
 
 .meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:13px 18px 0}
 .tag{font-family:var(--mono);font-size:.7rem;color:var(--muted);border:1px solid var(--line-soft);border-radius:6px;padding:3px 8px;background:var(--panel-2)}
