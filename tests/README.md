@@ -48,6 +48,37 @@ porque llamar «Túnez» a otras coordenadas es poner nombre de planta a otro em
 
 `test_viento_sitio.js` cubre además las **horas locales**: que la zona IANA gane al desfase por longitud, que el horario de verano entre (Madrid UTC+1 en enero y UTC+2 en julio, Lima UTC-5 todo el año), que la vuelta hora-de-pared → instante aguante los **días del cambio de hora** —es donde una conversión de una sola pasada se desplaza—, y que sin zona declarada NO se finja la civil: se deriva de la longitud, que es hora SOLAR, y va dicho. Su mutante —ignorar la zona— tira 11 comprobaciones.
 
+`test_viento_planta.js` cubre **la planta real con todas las estrategias a la vez**: la comparativa las
+enseña juntas pero en bloques sintéticos iguales, y la planta real enseña la geometría de verdad pero movida
+por UNA. Esto es lo de en medio. Comprueba que las franjas son disjuntas y equilibradas, que **cada una mueve
+sus trackers con SU estrategia leyendo las matrices de instancia** —no el estado interno— y que en la franja
+del pasivo solo el borde está suelto. El layout se **inyecta** con `page.route`: los de verdad viven en el
+Pages de `cobertura-zigbee` y sin red no hay planta, así que la única prueba de esta pantalla no puede
+depender de que un host de terceros esté arriba. Ojo al **régimen**, que aquí mordió dos veces: con el reloj
+parado el seguidor no ha llegado a su ángulo y las seis franjas están a 0°; y a 45 km/h el pasivo no se ha
+soltado, así que su ángulo coincide con el de la base y «solo el borde suelto» no se puede observar — hacen
+falta 100 km/h **y** estar cerca del mediodía.
+
+`test_granizo_traza.mjs` carea el bloque **GRANIZO-FÍSICA** de `sim-viento.html` contra el core Python:
+**traza exacta** —qué transición, en qué muestra, por qué condición—, no números con tolerancia. Una máquina
+de estados no necesita 1e-9, necesita la misma secuencia. De dónde salen los casos: si está el checkout
+**hermano** de `SolarGPTfull` se leen de ahí (fuente única literal, cero copias); si no, del **espejo**
+commiteado en `tests/goldens/`, que lleva el SHA-256 de la fuente. Y **cuando los dos están, se carean los
+hashes**: un espejo viejo lo caza cualquiera que tenga los dos repos. Los tres ficheros —golden, espejo y
+hash— los escribe **un solo comando** desde el core (`python scripts/gen_goldens_hailstow.py --write`), así
+que una divergencia solo puede significar vejez, nunca ambigüedad. El arnés **declara siempre en qué modo
+corrió**, porque aquí no hay CI que lo imponga.
+
+`test_granizo_espejo.mjs` es el guard de esa regla y vive **fuera** del arnés a propósito: si viviera dentro
+compartiría su condición de salto y se saltaría a sí mismo. La regla está extraída a función pura para poder
+ejercitar las cuatro combinaciones sin tocar el disco — el caso que importa (hay hermano y el espejo está
+viejo) no es reproducible en una máquina donde está al día.
+
+`test_granizo_pestana.js` abre la pestaña de granizo en Chromium y comprueba lo que ninguno de los dos
+arneses ve: que el **diagrama tiene una arista por transición de la tabla que decide**, que los **tres
+contadores** de salida corren al mover el instante, que editar un umbral cambia el resultado sobre la misma
+serie, y que el banner **NO VALIDADO está en la UI** y no solo en el JSON.
+
 `test_viento_sitio.js` cubre el **buscador de emplazamiento** en dos capas: las funciones puras extraídas del HTML (normalizar sin acentos, leer coordenadas pegadas, filtrar la lista local) y la ficha ABIERTA en Chromium — se teclea, se elige, y las coordenadas del formulario tienen que cambiar. Un buscador que filtra pero no rellena está tan roto como uno que no filtra, y ese es su mutante. La búsqueda REMOTA (geocodificador de Open-Meteo) no se exige, porque el banco tiene que correr sin red; lo que sí se exige es que su ausencia se declare.
 
 Comprueban además lo de siempre: que las tarjetas se pintan, que el detalle abre con su
@@ -121,8 +152,12 @@ node tests/test_comparador.js              # 97 comprobaciones, careo contra el 
 node tests/test_comparador_3d.js           # 134 comprobaciones, escena 3D, equipos, sizing y barridos
 node tests/test_sizing.js                  # 115 comprobaciones, careo del dimensionado eléctrico
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
-node tests/test_viento_ejes.js             # 64 comprobaciones, lienzos, ejes, transmisión, reproductor y sombras
+node tests/test_viento_ejes.js             # 77 comprobaciones, lienzos, ejes, transmisión, reproductor, sombras y franjas
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
+node tests/test_viento_planta.js           # 15 comprobaciones, la planta real en franjas
+node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core
+node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo
+node tests/test_granizo_pestana.js         # 22 comprobaciones, la pestaña de granizo en Chromium
 node tests/test_layout.js                  # 196 comprobaciones, careo del generador de layout
 node tests/test_layout_ui.js               # 155 comprobaciones, el generador en Chromium
 ```
