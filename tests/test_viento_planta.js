@@ -168,6 +168,65 @@ const LAYOUT = {
   check('apagarlas vuelve a una sola estrategia y quita los rótulos',
         await page.evaluate(() => ESC.bandas === false && !ESC.etiquetas));
 
+  // ── LA CONSIGNA Y LO EJECUTADO SON DOS COSAS ───────────────────────
+  // «full stow · θ 0,0°» con el reloj parado se lee como que el
+  // abanderamiento no se ha dado. Se ha dado: no ha LLEGADO. El eje va a
+  // 0,17 °/s y cruzar de un límite al otro son casi once minutos.
+  await page.uncheck('#bandas');
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#lV', { timeout: 15000 });
+  await page.fill('#lV', '111'); await page.dispatchEvent('#lV', 'input');
+  await page.waitForTimeout(900);
+  const parado = await page.$$eval('#tiles .tile', ns => ns.map(n =>
+    n.querySelector('.m').textContent.replace(/\s+/g, ' ').trim()));
+  const stow = parado.filter(t => /full stow/.test(t));
+  check('con el reloj parado, las cuatro motorizadas ORDENAN pero no han ' +
+        'llegado (' + stow.length + ' en full stow)', stow.length >= 4);
+  check('y la tarjeta lo DICE: consigna, tiempo de recorrido y reloj parado',
+        stow.filter(t => /ordenado -55° · en camino/.test(t)).length >= 4 &&
+        stow.some(t => /reloj parado/.test(t)),
+        stow[0]);
+  // Aqui esta el nudo de todo el asunto. Las cuatro motorizadas y el pasivo
+  // acaban en el MISMO angulo, y hasta ahora la ficha les daba tambien la
+  // misma palabra: las cinco decian «full stow». No es lo mismo. Un full stow
+  // es una orden que el hierro tarda minutos en recorrer; la suelta es un
+  // desembrague que llega en un paso. La teja tiene que separarlos.
+  const tejaPas = parado.filter(t => /suelta/.test(t));
+  check('el PASIVO no dice «full stow»: eso es una ORDEN, y a el no le ordena ' +
+        'nadie — dice «suelta»', tejaPas.length === 1 && stow.length === 4,
+        'suelta=' + tejaPas.length + ' full_stow=' + stow.length + ' || ' + parado.join(' || '));
+  check('y esta YA en el tope sin «en camino»: no lo mueve un motor, CAE',
+        tejaPas.some(t => /θ -55/.test(t) && !/en camino/.test(t)),
+        tejaPas.join(' || '));
+  check('la suelta no se pinta del color del stow ordenado: son causas distintas',
+        await page.evaluate(() => MODO_COL.SUELTA !== MODO_COL.FULL_STOW &&
+                                  MODO_COL.SUELTA != null));
+  check('y el seguidor SIN abanderar no se marca por su retardo natural',
+        parado.some(t => /seguimiento/.test(t) && !/en camino/.test(t)),
+        'con un umbral por debajo de 2° la base decía «en camino» al mediodía');
+
+  await page.click('#lPlay');
+  await page.waitForFunction(() => LIVE && LIVE.ang.A1 < -30, { timeout: 20000 });
+  const andando = await page.$$eval('#tiles .tile', ns => ns.map(n =>
+    n.querySelector('.m').textContent.replace(/\s+/g, ' ').trim()));
+  check('corriendo el reloj, el ángulo avanza y el «en camino» se acorta',
+        andando.some(t => /full stow/.test(t) && /en camino/.test(t) &&
+                          !/reloj parado/.test(t)),
+        andando.filter(t => /full stow/.test(t))[0]);
+
+  // La coincidencia de angulo es eso, una coincidencia: el lado de montaje del
+  // pasivo es -55 y el viento venia del oeste. Con el viento del ESTE las
+  // motorizadas de tipo A se van a +55 y el pasivo sigue cayendo a -55, porque
+  // no elige lado: se cae al suyo. Sin esta comprobacion, el careo del angulo
+  // pasaria igual estando el pasivo mal, por dar los dos -55 siempre.
+  await page.fill('#lD', '90'); await page.dispatchEvent('#lD', 'input');
+  await page.waitForTimeout(700);
+  const este = await page.evaluate(() => ({ ...LIVE.orden }));
+  check('con el viento del ESTE las tipo A ordenan +55 y el pasivo sigue en -55: ' +
+        'no elige lado, se cae al suyo',
+        Math.round(este.A1) === 55 && Math.round(este.A2) === 55 &&
+        Math.round(este.PASIVO) === -55, JSON.stringify(este));
+
   check('la ficha no lanza errores de JS', errores.length === 0, errores.join(' | '));
   await browser.close();
   console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko) : '\nOK — ' + ok + '/' + ok + ' comprobaciones');

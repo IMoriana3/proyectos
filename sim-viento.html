@@ -807,14 +807,24 @@ LOC.dual=function(thT,ws,az,T1,T2,pmin,full,dtS,holdMin,parkMin,dead,noon){
 LOC.stepperPasivo=function(cfg){
   var suelta=false, th=0, side=cfg.pSide, tol=cfg.pTol||1, rel=cfg.pRel, full=cfg.full;
   return {
-    get mode(){return suelta?'FULL_STOW':'IDLE';}, get theta(){return th;},
+    // El modo se llama SUELTA y no FULL_STOW a proposito. Un full stow es una
+    // ORDEN: la maquina manda +-55 y el motor lo recorre a 0,17 grados/s, que
+    // son ~11 min de punta a punta. Aqui no hay orden ni motor: pasado el par
+    // de desembrague la fila se suelta y CAE a su tope en un paso. Puede
+    // acabar en el mismo angulo que un stow ordenado, por causas distintas, y
+    // por eso tampoco comparte su color.
+    get mode(){return suelta?'SUELTA':'IDLE';}, get theta(){return th;},
     step:function(tgt,ws,dtS){
       if(suelta&&Math.abs(tgt-side)<=tol)suelta=false;
       if(!suelta&&ws>rel)suelta=true;
       if(suelta)th=side;
       else{var d=tgt-th,m=LOC.SLEW*dtS;if(Math.abs(d)>m)d=(d>0?m:-m);
            th=Math.max(-full,Math.min(full,th+d));}
-      return {theta:th,mode:suelta?'FULL_STOW':'IDLE'};
+      // El pasivo no tiene consigna que perseguir: CAE. Su orden y su
+      // ejecutado coinciden siempre, y por eso es el único que se ve
+      // abanderado con el reloj parado — no porque sea más rápido, sino
+      // porque no lo mueve un motor.
+      return {theta:th,mode:suelta?'SUELTA':'IDLE',orden:th};
     }
   };
 };
@@ -1338,7 +1348,13 @@ LOC.stepper=function(kind,cfg){
         if(Math.abs(d)>maxD)d=(d>0?maxD:-maxD);
         th=Math.max(-full,Math.min(full,th+d));
       }
-      return {mode:st,theta:th};
+      // Se devuelve también la CONSIGNA (`nt`), no solo lo ejecutado. La
+      // máquina de estados ORDENA un ángulo y el hierro tarda en llegar a
+      // 0,17 °/s; sin la consigna, quien mira la tarjeta ve «FULL STOW · θ
+      // 0,0°» y lee que el abanderamiento no se ha dado. Se ha dado: no ha
+      // LLEGADO. Es la misma distinción que la gráfica de θ ya enseña con dos
+      // trazos, y que aquí faltaba.
+      return {mode:st,theta:th,orden:nt};
     }
   };
 };
@@ -1777,7 +1793,7 @@ LOC.run=function(cfg,onStep){
             'No se modela la dispersión entre unidades ni el tiempo de caída: la fila pasa al límite en un paso.',
             'La fila expuesta se supone siempre la misma y del mismo lado; no rota con el rumbo del viento.']}
       };
-      series.PASIVO={theta:PR.theta,orden:PR.theta,poa:poaF,mode:Array.from(PR.mask,function(v){return v?'FULL_STOW':'IDLE';}),events:pEvs};
+      series.PASIVO={theta:PR.theta,orden:PR.theta,poa:poaF,mode:Array.from(PR.mask,function(v){return v?'SUELTA':'IDLE';}),events:pEvs};
     }
     // ventana común para el campo 3D: el episodio más caro de TODOS los casos
     var peor=null;
@@ -2939,7 +2955,7 @@ function drawTrace(c){
   // fondo de los tramos abanderados
   for(var i=0;i<n;i++){
     if(tr.mode[i]&&tr.mode[i]!=='IDLE'){
-      x.fillStyle=(tr.mode[i]==='FULL_STOW')?'rgba(208,89,79,.16)':(tr.mode[i]==='PARTIAL_STOW'?'rgba(246,166,35,.13)':'rgba(128,147,164,.10)');
+      x.fillStyle=(tr.mode[i]==='FULL_STOW')?'rgba(208,89,79,.16)':(tr.mode[i]==='SUELTA')?'rgba(167,139,250,.16)':(tr.mode[i]==='PARTIAL_STOW'?'rgba(246,166,35,.13)':'rgba(128,147,164,.10)');
       x.fillRect(gx(i)-(W-L-R)/(2*(n-1)),T,(W-L-R)/(n-1)+0.6,H-B-T);}
   }
   x.strokeStyle='#1e2a3a';x.lineWidth=1;
@@ -3008,8 +3024,8 @@ function drawEvents(c){
    tiene su tubo en +X local, así que entra girado 90°. */
 var TD=null, TL=null, TPOS=0, PLAY=false, MODO='live';
 var NFILAS=2, PITCH=6.0, BLOQUE=34;
-var MODO_COL={IDLE:0x000000, PARTIAL_STOW:0xfbbd23, FULL_STOW:0xf87272, DESTOW_HOLD:0x9bb0c6};
-var MODO_INT={IDLE:0, PARTIAL_STOW:.42, FULL_STOW:.5, DESTOW_HOLD:.3};
+var MODO_COL={IDLE:0x000000, PARTIAL_STOW:0xfbbd23, FULL_STOW:0xf87272, DESTOW_HOLD:0x9bb0c6, SUELTA:0xa78bfa};
+var MODO_INT={IDLE:0, PARTIAL_STOW:.42, FULL_STOW:.5, DESTOW_HOLD:.3, SUELTA:.45};
 var PALA=0x1b3a6b;
 var LAYOUTS='https://imoriana3.github.io/cobertura-zigbee/';
 var ESC=null;     // {kind, bloques[], planta{...}}
@@ -3302,7 +3318,7 @@ function escenaComparativa(){
     if(esPas){
       // el rótulo de la fila suelta se pone SOBRE ella, que ahora es una entre
       // muchas y sin señalarla no se distingue
-      var e1=etiqueta3D('SUELTA','#f87272');
+      var e1=etiqueta3D('SUELTA','#a78bfa');
       e1.scale.multiplyScalar(0.62);
       e1.position.set(-(nF-1)/2*PITCH,Seguidor.DIMS.postH+4.2,0);
       var e2=etiqueta3D('EL RESTO, EN SEGUIMIENTO','#9bb0c6');
@@ -3795,7 +3811,29 @@ function ponSol(elDeg,azDeg,vms,dirDeg){
   }else TD.wind.visible=false;
 }
 
-function tiles(ang,modos,poa,poaBase,dpct){
+/* La CONSIGNA y lo EJECUTADO son dos cosas, y la tarjeta las enseñaba juntas
+   sin decirlo: «full stow · θ 0,0°» con el reloj parado se lee como que el
+   abanderamiento no se ha dado. Se ha dado — no ha LLEGADO. El eje va a
+   0,17 °/s y cruzar de un límite al otro son casi once minutos, así que con el
+   tiempo detenido la orden está puesta y el hierro no se ha movido.
+   El único que aparece abanderado de inmediato es el PASIVO, y no porque sea
+   más rápido: porque no lo mueve un motor, CAE. Sin esta línea, la lectura
+   natural de la pantalla es «solo se abanderan dos». */
+function enCamino(k,ang,orden){
+  if(!orden||orden[k]==null||ang[k]==null)return '';
+  var d=orden[k]-ang[k];
+  // El umbral es 2°, no la banda muerta: el seguidor SIN abanderar persigue el
+  // sol y va siempre un poco por detrás —al mediodía, un grado—, así que con
+  // 0,6° la tarjeta de la base decía «en camino» en régimen normal. Lo que hay
+  // que señalar es una maniobra pendiente, no el retardo natural del lazo.
+  if(Math.abs(d)<2)return '';
+  var seg=Math.abs(d)/LOC.SLEW, txt=(seg>=90?fmt(seg/60,1)+' min':fmt(seg,0)+' s');
+  var parado=(MODO==='live'&&LIVE&&!LIVE.run);
+  return ' <span class="sn" style="margin:0;color:var(--warn)">→ ordenado '+
+    fmt(orden[k],0)+'° · en camino, '+txt+' a 0,17 °/s'+
+    (parado?' · <b>reloj parado</b>':'')+'</span>';
+}
+function tiles(ang,modos,poa,poaBase,dpct,orden){
   var h='';
   casos().forEach(function(k){
     var col=(k==='BASE')?COL.BASE:COL[k];
@@ -3803,6 +3841,7 @@ function tiles(ang,modos,poa,poaBase,dpct){
     h+='<div class="tile" style="border-left-color:'+col+'">'+
       '<div class="n"><span class="dot" style="background:'+col+'"></span>'+(k==='BASE'?'Sin abanderar':k)+'</div>'+
       '<div class="m">'+esc((modos[k]||'IDLE').replace('_',' ').toLowerCase())+' · θ '+fmt(ang[k],1)+'°'+
+        enCamino(k,ang,orden)+
         (k==='PASIVO'&&LIVE&&LIVE.fracPas!=null
           ? ' <span class="sn" style="margin:0">fila suelta · planta = '+fmt(100*LIVE.fracPas,1)+' % del campo</span>'
           : '')+'</div>'+
@@ -3818,14 +3857,14 @@ function tiles(ang,modos,poa,poaBase,dpct){
 /* ═══════════ MODO EN VIVO ═══════════ */
 function liveInit(){
   var c=cfgStow();
-  LIVE={t:0, v:+$('lV').value/3.6, dir:+$('lD').value, run:false, steppers:{}, ang:{}, modos:{},
+  LIVE={t:0, v:+$('lV').value/3.6, dir:+$('lD').value, run:false, steppers:{}, ang:{}, modos:{}, orden:{},
         minF:+$('lH').value, simPrev:null};
   vivos().forEach(function(S){
     // el límite de mediodía es de las B (abanderan hacia el SOL); en las A el
     // lado lo manda el viento, así que su stepper va con la regla apagada.
     LIVE.steppers[S]=(S==='PASIVO')?LOC.stepperPasivo(c)
                     :LOC.stepper(S[1],Object.assign({},c,{noon:(S[0]==='B'?c.noon:0)}));
-    LIVE.ang[S]=0;LIVE.modos[S]='IDLE';});
+    LIVE.ang[S]=0;LIVE.modos[S]='IDLE';LIVE.orden[S]=0;});
   LIVE.ang.BASE=0; LIVE.modos.BASE='SEGUIMIENTO';
   liveLbl();
 }
@@ -3972,6 +4011,7 @@ function liveTick(dtReal){
   var dB=tgt-LIVE.ang.BASE, maxD=LOC.SLEW*dt;
   if(Math.abs(dB)>maxD)dB=(dB>0?maxD:-maxD);
   LIVE.ang.BASE=Math.max(-full,Math.min(full,LIVE.ang.BASE+dB));
+  LIVE.orden.BASE=tgt;
   var poa={}, bh=(P.el>0?900*Math.pow(Math.sin(P.el),1.15):0), dh=bh*0.16;
   poa.BASE=LOC.poa(LIVE.ang.BASE,P.el,P.az,bh,dh,bh+dh);
   vivos().forEach(function(S){
@@ -3979,6 +4019,7 @@ function liveTick(dtReal){
     var r=(S==='PASIVO')?LIVE.steppers[S].step(tgt,LIVE.v,dt)
                         :LIVE.steppers[S].step(tgt,LIVE.v,az,dt);
     LIVE.ang[S]=r.theta; LIVE.modos[S]=r.mode;
+    LIVE.orden[S]=(r.orden!=null?r.orden:r.theta);
     if(S==='PASIVO'){
       /* La POA del pasivo es la de la PLANTA, no la de la fila suelta: la
          interior sigue operando. Enseñar la de la fila aquí daría una pérdida
@@ -3991,7 +4032,7 @@ function liveTick(dtReal){
   });
   ponSol(P.el/LOC.D2R,P.azp,LIVE.v,LIVE.dir);
   pintaEscena(LIVE.ang,LIVE.modos,poa,poa.BASE);
-  if(!liveTick._n||(liveTick._n++%6===0))tiles(LIVE.ang,LIVE.modos,poa,poa.BASE);
+  if(!liveTick._n||(liveTick._n++%6===0))tiles(LIVE.ang,LIVE.modos,poa,poa.BASE,null,LIVE.orden);
   liveTick._n=(liveTick._n||1)+1;
 }
 
@@ -4030,13 +4071,18 @@ function update3D(i,sinTiles){
   if(!TD||!TL)return;
   i=Math.max(0,Math.min(TL.t.length-1,i|0)); TPOS=i;
   var ang={BASE:TL.baseline.theta[i]}, modos={BASE:'SEGUIMIENTO'}, poa={BASE:TL.baseline.poa[i]};
-  for(var k in TL.cases){ang[k]=TL.cases[k].theta[i];modos[k]=TL.cases[k].mode[i];poa[k]=TL.cases[k].poa[i];}
+  // La consigna también en el episodio: el timeline la trae (es el trazo fino
+  // de la gráfica de θ) y sin ella la tarjeta vuelve a mezclar orden con
+  // ejecución justo donde más se nota, que es en mitad de una maniobra.
+  var ordn={BASE:TL.baseline.theta[i]};
+  for(var k in TL.cases){ang[k]=TL.cases[k].theta[i];modos[k]=TL.cases[k].mode[i];poa[k]=TL.cases[k].poa[i];
+    ordn[k]=(TL.cases[k].orden?TL.cases[k].orden[i]:TL.cases[k].theta[i]);}
   ponSol(TL.sun_el[i],TL.sun_az[i],TL.wind_ms[i]||0,TL.wind_dir?TL.wind_dir[i]:null);
   pintaEscena(ang,modos,poa,poa.BASE);
   // El panel de tarjetas se REHACE en HTML entero, así que a 60 fotogramas por
   // segundo es la parte más cara de todo esto y la que menos se nota: el modo
   // «en vivo» ya lo repinta uno de cada seis y aquí se hace igual.
-  if(!sinTiles)tiles(ang,modos,poa,poa.BASE);
+  if(!sinTiles)tiles(ang,modos,poa,poa.BASE,null,ordn);
   $('tpos').value=i;
   var ts=new Date(TL.t[i]);
   $('tlbl').textContent=fechaHoraLocal(ts)+
