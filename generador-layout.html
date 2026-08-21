@@ -2563,7 +2563,7 @@ async function demDesdeTerreno(enCascada){
   try{
     for(var ty=t.ty0;ty<=t.ty1;ty++)for(var tx=t.tx0;tx<=t.tx1;tx++){
       var img=await cargaTesela(t.z,tx,ty);
-      ctx.drawImage(img,(tx-t.tx0)*256,(ty-t.ty0)*256);
+      ctx.drawImage(img,(tx-t.tx0)*256,(ty-t.ty0)*256,256,256);
     }
   }catch(e){
     $('demBtn').disabled=false;
@@ -2596,12 +2596,13 @@ async function demDesdeTerreno(enCascada){
     g.push(fila);}
   $('demBtn').disabled=false;
   var _zs=g.flat().filter(isFinite);
-  if(_zs.length&&Math.max.apply(null,_zs)-Math.min.apply(null,_zs)<0.01){
-    $('demTag').innerHTML='<span style="color:var(--build)">Las teselas han llegado PLANAS (Δz < 1 cm): '+
-      'o la zona es llanísima o la fuente ha fallado sin decirlo. Prueba otra fuente antes de fiarte.</span>';
-  }
+  var _plana=_zs.length&&Math.max.apply(null,_zs)-Math.min.apply(null,_zs)<0.01;
   DEM={lats:lats,lons:lons,z:g,src:'Teselas de terreno z'+t.z+' ('+t.n+' llamada'+(t.n>1?'s':'')+')'};
   aplicaDEM();
+  /* El aviso va DESPUÉS de aplicaDEM, que reescribe el rótulo: puesto antes,
+     moría sin que nadie lo viera — y un aviso que no se ve no existe. */
+  if(_plana)$('demTag').innerHTML+=' · <span style="color:var(--build)">las teselas han llegado PLANAS '+
+    '(Δz &lt; 1 cm): o la zona es llanísima o la fuente ha fallado sin decirlo. Prueba otra fuente antes de fiarte.</span>';
 }
 
 var _demCache={};
