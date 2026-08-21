@@ -1250,6 +1250,152 @@ const cajaLienzo = async page => {
     util.verde > 400, util.verde + ' px');
   await pag6.close();
 
+  // ── 🪄 VARITA: detectar el contorno de un campo en la ortofoto ──
+  // Detección VISUAL (flood-fill + Moore + Douglas-Peucker), no catastral.
+  // El núcleo se mide sobre un ImageData sintético CON RUIDO (un fixture
+  // limpio no valida una guarda contra píxeles reales), y el cableado entero
+  // —teselas → offscreen → detección → DRAW en lonlat— sobre teselas a RAYAS
+  // generadas aquí mismo: columnas de tesela claras/oscuras alternas, así el
+  // campo detectable existe de verdad en la ortofoto que sirve el stub.
+  const zlib = require('zlib');
+  function pngSolido(r, g, b, size = 256) {
+    const T = []; for (let n = 0; n < 256; n++) { let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; T[n] = c >>> 0; }
+    const crc = buf => { let c = ~0; for (const by of buf) c = T[(c ^ by) & 255] ^ (c >>> 8); return (~c) >>> 0; };
+    const chunk = (tipo, datos) => {
+      const len = Buffer.alloc(4); len.writeUInt32BE(datos.length);
+      const cuerpo = Buffer.concat([Buffer.from(tipo), datos]);
+      const c4 = Buffer.alloc(4); c4.writeUInt32BE(crc(cuerpo));
+      return Buffer.concat([len, cuerpo, c4]);
+    };
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(size, 0); ihdr.writeUInt32BE(size, 4); ihdr[8] = 8; ihdr[9] = 2;
+    const fila = Buffer.alloc(1 + size * 3);
+    for (let x = 0; x < size; x++) { fila[1 + x * 3] = r; fila[2 + x * 3] = g; fila[3 + x * 3] = b; }
+    const idat = zlib.deflateSync(Buffer.concat(Array(size).fill(fila)));
+    return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+      chunk('IHDR', ihdr), chunk('IDAT', idat), chunk('IEND', Buffer.alloc(0))]);
+  }
+  const T_CLARO = pngSolido(150, 140, 90), T_OSCURO = pngSolido(60, 90, 50);
+
+  const pagV = await browser.newPage();
+  await pagV.route('https://server.arcgisonline.com/**', r => {
+    const m = r.request().url().match(/tile\/(\d+)\/(\d+)\/(\d+)/);
+    const claro = m && (+m[3]) % 2 === 0;
+    r.fulfill({ status: 200, contentType: 'image/png',
+                headers: { 'access-control-allow-origin': '*' },
+                body: claro ? T_CLARO : T_OSCURO });
+  });
+  await pagV.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
+  await pagV.waitForFunction(() => /Esri World Imagery/.test(
+    document.querySelector('#basemapMsg').textContent), null, { timeout: 15000 });
+
+  await pagV.selectOption('#parcelMode', 'draw');
+  // núcleo puro, sobre sintético con ruido determinista
+  const nucleo = await pagV.evaluate(() => {
+    const w = 200, h = 200, img = new ImageData(w, h), d = img.data;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const dentro = x >= 40 && x < 160 && y >= 60 && y < 140;
+      const ruido = ((x * 7 + y * 13) % 5) - 2;
+      const i = (y * w + x) * 4;
+      d[i] = (dentro ? 150 : 60) + ruido; d[i + 1] = (dentro ? 140 : 90) + ruido;
+      d[i + 2] = (dentro ? 90 : 50) + ruido; d[i + 3] = 255;
+    }
+    const seg = varitaSegmenta(d, w, h, 100, 100, 24);
+    if (!seg) return { fallo: 'segmenta null' };
+    const ring = varitaContorno(seg.dentro, w, h);
+    if (!ring) return { fallo: 'contorno null' };
+    const simp = varitaSimplifica(ring, 2.5);
+    let a2 = 0;
+    for (let i = 0; i < simp.length; i++) {
+      const p = simp[i], q = simp[(i + 1) % simp.length];
+      a2 += p[0] * q[1] - q[0] * p[1];
+    }
+    const xs = simp.map(p => p[0]), ys = simp.map(p => p[1]);
+    const capON = varitaSegmenta(d, w, h, 100, 100, 1000) === null;
+    return { n: seg.n, crudo: ring.length, verts: simp.length,
+             area: Math.abs(a2 / 2), bbox: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
+             capON };
+  });
+  check('VARITA núcleo: el campo con ruido se segmenta (~120×80 px, ' + (nucleo.n || 0) + ')',
+    !nucleo.fallo && Math.abs(nucleo.n - 9600) < 960, JSON.stringify(nucleo));
+  check('y el contorno simplificado clava área y caja (' + nucleo.verts + ' vértices)',
+    Math.abs(nucleo.area - 9600) < 1150 &&
+    nucleo.bbox[0] >= 36 && nucleo.bbox[1] >= 56 && nucleo.bbox[2] <= 164 && nucleo.bbox[3] <= 144,
+    JSON.stringify(nucleo));
+  check('el crudo trae cientos de puntos y la simplificación lo deja en pocos (mutante ε=0 muere aquí)',
+    nucleo.crudo > 100 && nucleo.verts <= 30, nucleo.crudo + ' → ' + nucleo.verts);
+  check('y el TOPE del 45% mata la tolerancia pasada de rosca (mutante sin-tope muere aquí)',
+    nucleo.capON === true);
+
+  // E2E: clic sobre una columna clara → DRAW con el contorno de ESA raya
+  const cajaV = await cajaLienzo(pagV);
+  const punto = await pagV.evaluate(() => {
+    const cv = document.querySelector('#cv'), S = escalaMundo();
+    const n = Math.pow(2, Math.round(VIEW.z));
+    let tx = Math.floor(VIEW.cx * n); if (((tx % n) + n) % n % 2 !== 0) tx += 1;
+    const x = ((tx + 0.5) / n - VIEW.cx) * S + cv.width / 2;
+    return { x, y: cv.height / 2, lado: S / n, w: cv.width, h: cv.height };
+  });
+  await pagV.click('#varitaBtn');
+  check('la varita armada lo dice y enciende la ortofoto',
+    /Clic en el campo/.test(await pagV.textContent('#varitaBtn')) &&
+    /borrador visual/.test(await pagV.textContent('#mapHint')),
+    await pagV.textContent('#mapHint'));
+  await pagV.evaluate(() => { _movido = 0; });
+  await pagV.mouse.click(cajaV.x + punto.x * (cajaV.w / punto.w),
+                         cajaV.y + punto.y * (cajaV.h / punto.h));
+  const detectado = await pagV.evaluate(() => {
+    if (!DRAW.length) return { n: 0 };
+    const xs = DRAW.map(p => px(p[0], p[1])[0]), ys = DRAW.map(p => px(p[0], p[1])[1]);
+    return { n: DRAW.length, drawing, conParcela: !!PARCEL,
+             xspan: Math.max(...xs) - Math.min(...xs), yspan: Math.max(...ys) - Math.min(...ys),
+             hint: document.querySelector('#mapHint').textContent };
+  });
+  check('E2E: el clic en la raya clara propone su contorno como DIBUJO en curso (' + detectado.n + ' vértices)',
+    detectado.n >= 4 && detectado.drawing === true && detectado.conParcela &&
+    /contorno propuesto/.test(detectado.hint) && /no linde oficial/.test(detectado.hint),
+    JSON.stringify(detectado));
+  check('y el contorno mide lo que la raya: un ancho de tesela y todo el alto del lienzo',
+    Math.abs(detectado.xspan - punto.lado) < punto.lado * 0.4 &&
+    detectado.yspan > punto.h * 0.85,
+    JSON.stringify({ xspan: detectado.xspan, lado: punto.lado, yspan: detectado.yspan, h: punto.h }));
+  await pagV.close();
+
+  // uniforme de verdad → «no se distingue un recinto» (el tope, de punta a punta)
+  const pagU = await browser.newPage();
+  await pagU.route('https://server.arcgisonline.com/**', r => r.fulfill({
+    status: 200, contentType: 'image/png',
+    headers: { 'access-control-allow-origin': '*' }, body: T_CLARO }));
+  await pagU.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
+  await pagU.waitForFunction(() => /Esri World Imagery/.test(
+    document.querySelector('#basemapMsg').textContent), null, { timeout: 15000 });
+  await pagU.selectOption('#parcelMode', 'draw');
+  await pagU.click('#varitaBtn');
+  await pagU.evaluate(() => { _movido = 0; });
+  const cajaU = await cajaLienzo(pagU);
+  await pagU.mouse.click(cajaU.x + cajaU.w / 2, cajaU.y + cajaU.h / 2);
+  check('con ortofoto UNIFORME la varita lo dice en vez de inventarse un recinto',
+    /no se distingue un recinto/.test(await pagU.textContent('#mapHint')),
+    await pagU.textContent('#mapHint'));
+  await pagU.close();
+
+  // sin teselas → «necesita la ortofoto», no un contorno fantasma
+  const pagS = await browser.newPage();
+  await pagS.route('https://server.arcgisonline.com/**', r => r.abort());
+  await pagS.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
+  await pagS.waitForFunction(() => /sin ortofoto/.test(
+    document.querySelector('#basemapMsg').textContent), null, { timeout: 15000 });
+  await pagS.selectOption('#parcelMode', 'draw');
+  await pagS.click('#varitaBtn');
+  await pagS.evaluate(() => { _movido = 0; });
+  const cajaSn = await cajaLienzo(pagS);
+  await pagS.mouse.click(cajaSn.x + cajaSn.w / 2, cajaSn.y + cajaSn.h / 2);
+  check('sin teselas la varita pide la ortofoto en vez de detectar sobre el fondo',
+    /necesita la ortofoto/.test(await pagS.textContent('#mapHint')),
+    await pagS.textContent('#mapHint'));
+  await pagS.close();
+
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
   process.exit(ko ? 1 : 0);
