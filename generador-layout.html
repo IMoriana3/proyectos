@@ -880,6 +880,63 @@ function compute(cfg) {
   /* 1) parcela a UTM */
   var ext = closeRing(cfg.coords.map(function (c) { return [+c[0], +c[1]]; }));
   if (ext.length < 3) throw new Error("La parcela necesita al menos 3 vértices.");
+  /* ANILLO QUE SE CRUZA A SÍ MISMO: pasó en Larraga — el cierre del dibujo
+     retrocedió 0,9 m sobre el primer lado y quedó un lazo de área ~0. El core
+     lo repara con make_valid y AVISA; aquí el motor lo digería de suerte y sin
+     decir nada. La reparación es LA MISMA que make_valid con una pajarita:
+     partir el anillo en el punto de cruce y quedarse con el bucle grande —
+     quitar un vértice «a ojo» reparaba con OTRO anillo y el barrido de origen
+     se movía 4 mesas (120 vs 124, lo cazó el careo al primer intento). */
+  (function reparaAnillo() {
+    function orient(p, q, t) { return (q[0] - p[0]) * (t[1] - p[1]) - (q[1] - p[1]) * (t[0] - p[0]); }
+    function seCruzan(a, b, c, d) {
+      var d1 = orient(c, d, a), d2 = orient(c, d, b), d3 = orient(a, b, c), d4 = orient(a, b, d);
+      return ((d1 > 0) !== (d2 > 0)) && ((d3 > 0) !== (d4 > 0));
+    }
+    function cruceDe(r) {
+      var n = r.length;
+      for (var i = 0; i < n; i++) for (var j = i + 2; j < n; j++) {
+        if (i === 0 && j === n - 1) continue;
+        if (seCruzan(r[i], r[(i + 1) % n], r[j], r[(j + 1) % n])) return [i, j];
+      }
+      return null;
+    }
+    function puntoCruce(a, b, c, d) {
+      var A1 = b[1] - a[1], B1 = a[0] - b[0], C1 = A1 * a[0] + B1 * a[1];
+      var A2 = d[1] - c[1], B2 = c[0] - d[0], C2 = A2 * c[0] + B2 * c[1];
+      var det = A1 * B2 - A2 * B1;
+      if (Math.abs(det) < 1e-18) return null;
+      return [(B2 * C1 - B1 * C2) / det, (A1 * C2 - A2 * C1) / det];
+    }
+    function areaDe(r) {
+      var a = 0;
+      for (var i = 0; i < r.length; i++) { var b = r[(i + 1) % r.length]; a += r[i][0] * b[1] - b[0] * r[i][1]; }
+      return Math.abs(a / 2);
+    }
+    var reparado = false;
+    for (var pase = 0; pase < 3; pase++) {
+      var cr = cruceDe(ext);
+      if (!cr) break;
+      var i = cr[0], j = cr[1];
+      var X = puntoCruce(ext[i], ext[(i + 1) % ext.length], ext[j], ext[(j + 1) % ext.length]);
+      if (!X) break;
+      /* partir el lazo en el punto de cruce y quedarse con el bucle GRANDE —
+         exactamente lo que hace make_valid con una pajarita */
+      var loop1 = [X].concat(ext.slice(i + 1, j + 1));
+      var loop2 = [X].concat(ext.slice(j + 1)).concat(ext.slice(0, i + 1));
+      ext = (areaDe(loop1) >= areaDe(loop2)) ? loop1 : loop2;
+      reparado = true;
+    }
+    if (reparado) {
+      if (!cruceDe(ext))
+        aviso('warn', 'parcela_se_cruzaba',
+          'La parcela se cruzaba a sí misma (un lazo en el contorno, seguramente del cierre del dibujo). ' +
+          'Se ha partido en el punto de cruce y descartado el lazo pequeño — la misma reparación que hace el core, y avisada.');
+      else
+        aviso('warn', 'parcela_se_cruza',
+          'La parcela se cruza a sí misma en varios puntos y la reparación no llega: el layout puede salir raro. Redibuja el contorno sin cruzar los lados.');
+    }
+  })();
   var mLon = 0, mLat = 0;
   for (var i = 0; i < ext.length; i++) { mLon += ext[i][0]; mLat += ext[i][1]; }
   mLon /= ext.length; mLat /= ext.length;

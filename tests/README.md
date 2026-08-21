@@ -123,6 +123,6 @@ node tests/test_sizing.js                  # 115 comprobaciones, careo del dimen
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
 node tests/test_viento_ejes.js             # 64 comprobaciones, lienzos, ejes, transmisión, reproductor y sombras
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
-node tests/test_layout.js                  # 192 comprobaciones, careo del generador de layout
+node tests/test_layout.js                  # 194 comprobaciones, careo del generador de layout
 node tests/test_layout_ui.js               # 154 comprobaciones, el generador en Chromium
 ```

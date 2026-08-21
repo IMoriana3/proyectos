@@ -340,6 +340,15 @@ fix.casos.forEach((c, i) => {
 {
   const i = caso('Larraga');
   const c = fix.casos[i], r = js[i];
+  // La semilla de Larraga se conserva SUCIA a propósito (el lazo de 0,9 m del
+  // cierre del dibujo, el que Streamlit avisó): el motor tiene que REPARARLA
+  // —partir en el punto de cruce, como make_valid— y DECIRLO. Quitar un
+  // vértice «a ojo» reparaba con otro anillo y movía el barrido 4 mesas.
+  check('Larraga · el anillo sucio se repara AVISANDO (parcela_se_cruzaba)',
+    (r.avisos || []).some(a => a.codigo === 'parcela_se_cruzaba'));
+  check('Larraga · y los casos limpios NO llevan ese aviso',
+    !(js[caso('rect girado 35° · BIFILA')].avisos || [])
+      .some(a => a.codigo && a.codigo.indexOf('parcela_se_cruz') === 0));
   check('Larraga · con el barrido X/Y portado, las mesas salen CLAVADAS al core (' +
         r.stats.structures + ' = ' + c.core.structures + ')',
     r.stats.structures === c.core.structures &&
