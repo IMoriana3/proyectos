@@ -495,7 +495,19 @@ seguir subiendo con el suelo. Sin eje inclinado marcado, el suelo vuelve a ser l
 Las hincas vuelven a medir lo que miden: **2 m, las mismas que el eje horizontal**. Lo que cambia es
 el terreno, no la estructura.
 
-### Dónde cae la sombra de cada familia### Dónde cae la sombra de cada familia### Dónde cae la sombra de cada familia
+### ¿Por qué solo esa estructura tiene pendiente?
+
+Porque es la única que **la declara**. El «eje inclinado °» de un TSAT no es un parámetro de dibujo:
+**es** la pendiente del terreno sobre el que ese seguidor se monta — un eje no se inclina en el aire.
+Las demás llevan eje horizontal o son fijas, es decir, declaran terreno **llano**, y llano se dibuja.
+
+Con una consecuencia que conviene tener presente al comparar: la POA se calcula en todas las
+estructuras **sin pendiente de emplazamiento**. El `cross_axis_slope` que sí tiene el core no está
+expuesto en esta ficha, así que el terreno que se ve bajo el TSAT sale de **su propio parámetro**,
+no de un relieve del sitio. Si el emplazamiento tuviera una pendiente real, entraría en el
+sombreado de todas — y eso todavía no está.
+
+### Dónde cae la sombra de cada familia
 
 La fija **sí** proyecta sombra —todas sus mallas la proyectan y el suelo la recibe—, pero mira al
 ecuador y por tanto la tira **hacia el polo**: al fondo desde la cámara por defecto, y detrás de
@@ -651,7 +663,7 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 node tests/test_comparador.js       # 89 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 125 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 127 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 

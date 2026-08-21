@@ -1043,7 +1043,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/comparador-estructuras.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-20",
-    version: "1.23",
+    version: "1.24",
     docId: "comparador-estructuras",
     docUrl: "",
     download: "",
@@ -1088,6 +1088,7 @@ const PROJECTS = [
       { done:false, text:"Enganchar el LCOE (motor /economy) para que al lado del ranking de kWh salga el de €/MWh." }
     ],
     historial: [
+      { date:"2026-08-20", ver:"1.24", note:"«¿Por qué solo esa estructura tiene pendiente?» Porque es la única que la DECLARA: el «eje inclinado °» de un TSAT no es un parámetro de dibujo, es la pendiente del terreno sobre el que se monta — un eje no se inclina en el aire. Las demás llevan eje horizontal o son fijas, o sea que declaran terreno llano. Ahora lo dice la escena, con su consecuencia: la POA se calcula en todas SIN pendiente de emplazamiento (el cross_axis_slope del core no está expuesto aquí), así que ese terreno sale del parámetro del propio seguidor y no de un relieve del sitio." },
       { date:"2026-08-20", ver:"1.23", note:"Terreno con pendiente, que es lo que un eje inclinado necesita para existir. Las dos versiones anteriores no valían: una cuña bajo el bloque se leía como rampa de hormigón, y dejar el suelo plano alargando la hinca daba un tracker con megasoportes a un lado, que no es lo que se construye. Ahora el suelo es un heightfield subdividido (140×70) con la cota de cada vértice y computeVertexNormals(), como en bt3d — eso es lo que hace que la luz varíe de forma continua en vez de salir por caras. La pendiente aparece solo bajo el bloque del eje inclinado, se funde con el llano a los lados sin cantos, sube lo que sube el eje (11,3 m con 65 m de fila y 10°) y luego aplana en meseta. Sin eje inclinado, el suelo vuelve a ser llano. Y las hincas vuelven a medir 2 m, las mismas que el eje horizontal: lo que cambia es el terreno, no la estructura." },
       { date:"2026-08-20", ver:"1.22", note:"La ladera del TSAT no valía. Estéticamente, porque en este sombreado plano una cuña se lee como una rampa de hormigón —tres intentos hicieron falta para admitirlo—; y de fondo, porque la escena se sostiene sobre «todos los bloques sobre el MISMO suelo» y darle terreno propio a uno rompe esa premisa: la pendiente del emplazamiento no es un parámetro de esta ficha. Se resuelve como en bt3d, que lo llama DRAPEADO: el bloque se eleva y su hinca crece otro tanto para seguir llegando al suelo (7,57 m contra los 2 m del eje horizontal), que es lo que hace el montaje real cuando el terreno no acompaña. Con un guard para que la rampa no vuelva." },
       { date:"2026-08-20", ver:"1.21", note:"El eje inclinado se hundía en el terreno: un TSAT gira el eje sobre X, así que media fila quedaba bajo el suelo y la otra media volando. No era un fallo del dibujo, le faltaba el TERRENO — un eje inclinado se monta sobre una ladera con esa misma pendiente (o con las hincas creciendo, que a esta escala es lo mismo). Ahora el bloque se sube hasta que su punta baja toca el cero —(largo de fila / 2)·sen(tilt del eje), 5,65 m con 65 m y 10°— y se le pone debajo un talud con la pendiente del eje, subiendo hacia el ecuador. Los de eje horizontal no llevan talud." },

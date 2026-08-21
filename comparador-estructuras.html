@@ -361,7 +361,14 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         <b>Las de la fija hay que ir a buscarlas</b>: una fija mira al ecuador, así que tira la
         sombra hacia el polo — al fondo desde esta vista y detrás de sus propias filas. Órbita
         hacia el otro lado, o deja marcadas menos estructuras para que el encuadre se acerque.
-        Las del seguidor caen de lado y se ven de frente.</p>
+        Las del seguidor caen de lado y se ven de frente.
+        <b>Y sí, solo el eje inclinado tiene ladera</b>: no es un capricho del dibujo, es que es la
+        única estructura que declara pendiente. El «eje inclinado °» de un TSAT <i>es</i> la
+        pendiente del terreno sobre el que se monta — un eje no se inclina en el aire. Las demás
+        llevan eje horizontal o son fijas: declaran terreno llano, y llano se dibuja. Ojo con lo
+        que eso significa para la comparación: la POA se calcula en todas SIN pendiente de
+        emplazamiento (el <code>cross_axis_slope</code> del core no está expuesto aquí), así que el
+        terreno del TSAT sale de su propio parámetro, no de un relieve del sitio.</p>
     </div>
     <!-- ═════════ SIZING (columna ancha: la ventana hay que LEERLA) ═════════ -->
     <div class="card">
