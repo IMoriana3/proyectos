@@ -330,6 +330,12 @@ canvas.panning{cursor:grabbing}
         <div class="field"><label>Azimut de filas °</label><input id="panelAz" type="number" step="1" value="90">
           <div class="tip" id="azTip">Auto desde el eje.</div></div>
       </div>
+      <!-- A LA VISTA, no en avanzados: es la palanca que en parcelas con
+           lindes diagonales cambia el campo un tercio (Larraga: 124 → 164
+           mesas), los dos avisos del motor mandan a ella, y el usuario la
+           estuvo BUSCANDO. Marcada = canónico (cuaderno/Streamlit). -->
+      <label class="chk"><input type="checkbox" id="alignGrid" checked> Alinear a rejilla global
+        <span class="tip" style="display:block;margin:2px 0 0">Marcada: columnas rectas, como el cuaderno y Streamlit — pero en lindes diagonales deja huecos donde caben trackers. Desmarcada: cada fila ancla en su linde.</span></label>
       <button class="btn" id="genBtn">▶ Generar implantación</button>
       <div id="prog" style="display:none;margin-top:8px">
         <div style="height:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:4px;overflow:hidden">
@@ -362,7 +368,6 @@ canvas.panning{cursor:grabbing}
           <div class="field"><label>Offset de filas</label>
             <select id="rowOffset"><option value="none">Sin offset</option><option value="half">Medio paso</option></select></div>
         </div>
-        <label class="chk"><input type="checkbox" id="alignGrid" checked> Alinear a rejilla global (columnas rectas)</label>
         <label class="chk"><input type="checkbox" id="center" checked> Centrar el bloque en la parcela</label>
         <label class="chk"><input type="checkbox" id="forceComplete"> Forzar strings completos</label>
         <p class="note" style="margin-top:0">Descarta las estructuras de talla <b>menor</b> que la principal, que son las que dejan un string a medias. Con talla única no hay nada que descartar. <b>Ojo:</b> en el cuaderno esta casilla hoy no hace nada — el motor la pasa por las llamadas y la mete en la clave de caché, pero no toca la colocación.</p>

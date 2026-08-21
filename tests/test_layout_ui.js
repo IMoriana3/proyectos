@@ -84,6 +84,15 @@ const cajaLienzo = async page => {
   // pitch»: el pitch (que fija el GCR derivado de esta tarjeta), el GCR
   // objetivo y el tipo de tracker viven CON la estructura; en Implantación
   // quedan setback, azimuts y modo.
+  // «¿Dónde está lo de alinear a rejilla?» — estaba plegada en avanzados,
+  // siendo la palanca que cambia el campo un tercio y a la que mandan los dos
+  // avisos del motor. Tiene que verse SIN abrir nada.
+  check('«Alinear a rejilla» está A LA VISTA (sin abrir avanzados)',
+    await page.evaluate(() => {
+      const el = document.querySelector('#alignGrid');
+      const r = el.getBoundingClientRect();
+      return !el.closest('details') && r.width > 0 && r.height > 0;
+    }));
   check('pitch, GCR objetivo y tipo de tracker viven en la tarjeta de ESTRUCTURA',
     await page.evaluate(() => {
       const card = sel => document.querySelector(sel).closest('.card');
