@@ -150,7 +150,10 @@ opuestas.
 Lo que hace la ficha:
 
 - **Avisa** (`rejilla_deja_hueco`) cuando el ancla global deja más del 10 % de lo que cabe por
-  tramo, con el déficit medido y las dos salidas escritas.
+  tramo, con el déficit medido y las dos salidas escritas. Y avisa también de otro placebo:
+  **`adaptive` con la rejilla marcada sale igual que `aligned`** («pongo adaptativo y me sale
+  exactamente igual») — los arranques se cuantizan a la misma rejilla; el modo solo se despega con
+  la casilla desmarcada (`adaptive_con_rejilla`).
 - **Sin «alinear a rejilla»**, cada fila ancla en el arranque de su propio tramo y re-sincroniza a
   paso fino al fallar un hueco — en Larraga: de 120 a **160 mesas (+33 %)**, con el **Δx = 0** del
   par bifila intacto (el `fits` de banda doble sigue mandando). Es una **divergencia declarada**
@@ -377,7 +380,7 @@ unidades sobre parcelas irregulares, no el orden de magnitud. (La consolidación
 
 ## El careo
 
-`node tests/test_layout.js` — 194 comprobaciones, sin navegador.
+`node tests/test_layout.js` — 196 comprobaciones, sin navegador.
 
 Extrae el bloque `MOTOR DE LAYOUT` del `generador-layout.html` **real** (no una copia en un `.js`,
 que se quedaría careando una versión vieja) y lo corre sobre las mismas quince parcelas que corrió
