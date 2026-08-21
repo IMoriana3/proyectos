@@ -340,7 +340,11 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       <div id="escRead" class="readout" style="margin-top:10px"></div>
       <p class="note" id="escNote">Cada bloque es una estructura, con su pitch y su GCR, al mismo
         sol y sobre el mismo suelo. Mueve la hora y mira las <b>sombras entre filas</b>: es lo que
-        el backtracking existe para evitar, y lo que la columna «pérdida sombra» de la tabla mide.</p>
+        el backtracking existe para evitar, y lo que la columna «pérdida sombra» de la tabla mide.
+        <b>Las de la fija hay que ir a buscarlas</b>: una fija mira al ecuador, así que tira la
+        sombra hacia el polo — al fondo desde esta vista y detrás de sus propias filas. Órbita
+        hacia el otro lado, o deja marcadas menos estructuras para que el encuadre se acerque.
+        Las del seguidor caen de lado y se ven de frente.</p>
     </div>
     <!-- ═════════ SIZING (columna ancha: la ventana hay que LEERLA) ═════════ -->
     <div class="card">
@@ -850,7 +854,7 @@ FIS.CATALOGO=[
   {key:'fija_proyecto',    label:'Fija · tilt de proyecto',         fam:'fija',
    nota:'Monoinclinada al ecuador con el tilt que fije el proyecto.'},
   {key:'fija_ew',          label:'Fija · Este-Oeste (dos aguas)',   fam:'fija_ew', sinSombra:true,
-   nota:'Se promedian los dos planos, que tienen la misma superficie. El modelo de sombra que lleva la ficha supone todas las filas mirando al mismo sitio, y con dos aguas enfrentadas eso no vale — por eso aquí no se aplica.'},
+   nota:'Se promedian los dos planos, de igual superficie. El modelo de sombra supone todas las filas mirando al mismo sitio, y con aguas enfrentadas no vale.'},
   {key:'tracker_hsat',     label:'Tracker 1 eje N-S · backtracking',fam:'tracker', bt:true,
    nota:'HSAT canónico: eje horizontal N-S, backtracking activo.'},
   {key:'tracker_hsat_nobt',label:'Tracker 1 eje N-S · sin backtracking',fam:'tracker', bt:false,
@@ -1035,21 +1039,17 @@ FIS.compara=function(keys,M,cfg){
       suelo:r.neta*r.gcr,
       transp:ghi>0?((r.neta/ghi-1)*100):NaN,
       sombra:r.ideal>0?((1-r.neta/r.ideal)*100):0});
-    if(spec.sinSombra)avisos.push('«'+spec.label+'» se calcula SIN la sombra entre filas, así que '+
-      'su POA es un <b>techo</b>: en campo saldrá algo menos. '+spec.nota);
+    if(spec.sinSombra)avisos.push('«'+spec.label+'» va SIN sombra entre filas: su POA es un techo, '+
+      'en campo saldrá algo menos. '+spec.nota);
     if(spec.tiltOpt){
       var dif=(tiltSin!=null)?(tiltSin-tilt):0, gcrTxt=r.gcr.toFixed(3).replace('.',',');
-      avisos.push('«'+spec.label+'»: <b>'+tilt+'°</b> es el ángulo que más energía deja EN ESTA '+
-        'IMPLANTACIÓN, contando la sombra que cada fila le hace a la de detrás.'+
-        (dif<=0
-          ? ' Si las filas estuvieran solas saldría lo mismo: a esta densidad (GCR '+gcrTxt+') '+
-            'están tan abiertas que la sombra no llega a castigar a los ángulos altos.'
-          : ' Si las filas estuvieran SOLAS —sin vecinas detrás— el mejor ángulo sería <b>'+
-            tiltSin+'°</b>, '+dif+'° más. La diferencia la pone lo apretadas que van (GCR '+
-            gcrTxt+'): cuanto menos hueco entre filas, más castiga la sombra a los ángulos '+
-            'altos, así que compensa tumbar la mesa. El cuaderno publica el de '+tiltSin+'° '+
-            'porque lo calcula sin vecinas: no es que discrepen, es que contestan preguntas '+
-            'distintas.'));
+      avisos.push('«'+spec.label+'»: '+tilt+'° es el mejor ángulo AQUÍ, con la sombra entre filas '+
+        'contada.'+(dif<=0
+          ? ' Sin vecinas saldría lo mismo: a GCR '+gcrTxt+' las filas van tan abiertas que la '+
+            'sombra no castiga a los ángulos altos.'
+          : ' Sin vecinas serían '+tiltSin+'°, '+dif+'° más: a GCR '+gcrTxt+' cuanto más '+
+            'apretadas, más compensa tumbar la mesa. El cuaderno publica '+tiltSin+'° porque '+
+            'calcula sin vecinas.'));
     }
   });
   var base=null;
@@ -1058,7 +1058,7 @@ FIS.compara=function(keys,M,cfg){
   filas.forEach(function(f){f.delta=(base&&base.neta>0)?((f.neta/base.neta-1)*100):0;});
   var gcrs={}; filas.forEach(function(f){gcrs[Math.round(f.gcr*1e6)]=1;});
   var comun=Object.keys(gcrs).length<=1;
-  if(!comun)avisos.push('GCR distinto por estructura: la columna «POA módulo» sigue siendo el A/B de la estructura, pero el ranking por m² de SUELO incluye la densidad, no solo el seguimiento.');
+  if(!comun)avisos.push('GCR distinto por estructura: «POA módulo» sigue siendo el A/B de la estructura, pero el ranking por m² de SUELO ya incluye la densidad.');
   return {filas:filas, ghi:ghi, base:base?base.key:null, gcrComun:comun, avisos:avisos,
           pasos:M.t.length, dtH:dtH, fuente:M.source};
 };

@@ -468,6 +468,15 @@ modelo **real** de `seguidor.js`, el mismo que pintan el Gemelo Digital y la Cob
    vecino y contamina la comparación—. Con 10 m se apagaban a 13°, justo por encima del amanecer
    de invierno que la escena existe para enseñar; con 16 m aguantan hasta 8,5°.
 
+### Dónde cae la sombra de cada familia
+
+La fija **sí** proyecta sombra —todas sus mallas la proyectan y el suelo la recibe—, pero mira al
+ecuador y por tanto la tira **hacia el polo**: al fondo desde la cámara por defecto, y detrás de
+sus propias filas. Con seis bloques marcados el encuadre está tan lejos que además mide cuatro
+píxeles. Hay que orbitar al otro lado, o dejar menos estructuras marcadas para que el encuadre se
+acerque. Las del seguidor caen de lado y se ven de frente — de ahí la impresión de que la fija no
+tiene.
+
 ### El tilt óptimo de la escena, sin simular el año
 
 El bloque «Fija · tilt óptimo» se dibujaba con el **tilt de proyecto** hasta que dabas a *Comparar*,
@@ -612,10 +621,10 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ## Pruebas
 
 ```bash
-node tests/test_comparador.js       # 84 comprobaciones · careo contra el core, sin navegador
+node tests/test_comparador.js       # 86 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 111 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 114 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 

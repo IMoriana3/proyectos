@@ -269,15 +269,26 @@ check('el óptimo neto nunca puede pasarse del de transposición (' +
   js.fija_optima.tilt + '° ≤ ' + js.fija_optima.tiltSinSombra + '°)',
   js.fija_optima.tilt <= js.fija_optima.tiltSinSombra);
 check('el aviso da la diferencia MEDIDA, no un «1-3°» de memoria',
-  rep.avisos.some(a => /sería\s+<b>\d+°/.test(a)) && !rep.avisos.some(a => /1-3°/.test(a)),
+  rep.avisos.some(a => /serían\s+\d+°/.test(a)) && !rep.avisos.some(a => /1-3°/.test(a)),
   rep.avisos.find(a => /tilt óptimo/.test(a)) || '(sin aviso)');
+// Los avisos salen del bloque de física y se pintan ESCAPADOS —bien escapados,
+// porque llevan etiquetas de estructura—, así que un <b> aquí se ve tal cual.
+check('ningún aviso lleva HTML: se pintan escapados',
+  !rep.avisos.some(a => /<[a-z/]/i.test(a)),
+  rep.avisos.find(a => /<[a-z/]/i.test(a)) || '');
+// y que no se vayan de largo: un aviso de cinco líneas no se lee
+check('los avisos son concisos (el más largo, ' +
+  Math.max.apply(null, rep.avisos.map(a => a.length)) + ' caracteres)',
+  Math.max.apply(null, rep.avisos.map(a => a.length)) < 300,
+  rep.avisos.slice().sort((a, b) => b.length - a.length)[0]);
 // Y en cristiano: el aviso tiene que decir QUÉ es el número antes de cómo se
 // saca. «el NETO, barrido CON sombra» era jerga que no se entiende sola.
 const avTilt = rep.avisos.find(a => /tilt óptimo/.test(a)) || '';
 check('el aviso del tilt no usa jerga («el NETO», «barrido»)',
   !/\bel NETO\b/.test(avTilt) && !/barrido/i.test(avTilt), avTilt.slice(0, 140));
-check('y dice qué es el número: el que más energía deja en ESTA implantación',
-  /más energía deja/i.test(avTilt) && /sombra que cada fila/i.test(avTilt), avTilt.slice(0, 140));
+check('y dice qué es el número: el mejor ángulo AQUÍ, con la sombra contada',
+  /mejor ángulo AQUÍ/i.test(avTilt) && /sombra entre filas contada/i.test(avTilt),
+  avTilt.slice(0, 140));
 // el aviso de la E-O repetía «SIN sombreado entre filas» dos veces en la misma frase
 const avEW = rep.avisos.find(a => /Este-Oeste/.test(a)) || '';
 check('el aviso de la E-O no se repite a sí mismo',
