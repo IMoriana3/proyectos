@@ -94,12 +94,32 @@ check('pico: densidad de parcela ' + P.mwpHa.toFixed(4) + ' MWp/ha',
 // El campo es un RECTÁNGULO y sus dos lados se publican: es lo que contesta a
 // «¿las pone una detrás de otra o las hace infinitas?». Una detrás de otra —
 // para contar suelo. (Para la SOMBRA sí son infinitas, y eso va dicho aparte.)
-check('el campo publica sus dos lados (' + P.ladoFila.toFixed(2) + ' × ' +
-  P.ladoPitch.toFixed(0) + ' m)',
-  Math.abs(P.ladoFila - 65.084) < 1e-3 && Math.abs(P.ladoPitch - 271 * 6.0) < 1e-6,
-  JSON.stringify([P.ladoFila, P.ladoPitch]));
-check('y el rectángulo cuadra con las hectáreas',
-  Math.abs(P.ladoFila * P.ladoPitch / 1e4 - P.ha) < 1e-9);
+check('el campo se rompe en bloques hasta quedar CUADRADO (' +
+  Math.round(P.ladoFila) + ' × ' + Math.round(P.ladoPitch) + ' m, ' +
+  P.bloques + '×' + P.filasPorBloque + ')',
+  Math.abs(P.ladoFila / P.ladoPitch - 1) < 0.25,
+  JSON.stringify([P.ladoFila, P.ladoPitch, P.bloques, P.filasPorBloque]));
+check('los bloques cubren todas las filas',
+  P.bloques * P.filasPorBloque >= P.filas &&
+  (P.bloques - 1) * P.filasPorBloque < P.filas,
+  P.bloques + '×' + P.filasPorBloque + ' vs ' + P.filas);
+check('los lados salen de la geometría, no de un ajuste',
+  Math.abs(P.ladoFila - P.bloques * 65.084) < 1e-6 &&
+  Math.abs(P.ladoPitch - P.filasPorBloque * 6.0) < 1e-9);
+// las hectáreas siguen siendo la HUELLA de las filas: el rectángulo que las
+// envuelve es algo mayor porque el último bloque queda incompleto
+check('las hectáreas siguen siendo la huella de las filas, no el rectángulo',
+  Math.abs(P.ha - P.filas * 6.0 * 65.084 / 1e4) < 1e-9 &&
+  P.ladoFila * P.ladoPitch / 1e4 >= P.ha - 1e-9,
+  P.ha.toFixed(4) + ' vs ' + (P.ladoFila * P.ladoPitch / 1e4).toFixed(4));
+// y una tira imposible ya no puede salir: a 100 MWp el lado más largo se queda
+// en el orden del kilómetro, no en diecisiete
+const P100 = FIS.planta(GP, 100);
+check('a 100 MWp el campo sigue siendo cuadrado, no una tira de 17 km (' +
+  Math.round(P100.ladoFila) + ' × ' + Math.round(P100.ladoPitch) + ' m)',
+  Math.max(P100.ladoFila, P100.ladoPitch) < 2000 &&
+  Math.abs(P100.ladoFila / P100.ladoPitch - 1) < 0.25,
+  JSON.stringify([P100.ladoFila, P100.ladoPitch]));
 
 // más pitch = mismos módulos, mismas filas, MÁS suelo. Es toda la comparación.
 const Pancho = FIS.planta({ ...GP, pitch: 9.0 }, 10);

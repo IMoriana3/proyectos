@@ -58,40 +58,44 @@ instalado sobre el pedido (10,00 → 10,02 MWp con 660 Wp y 56 módulos por fila
 **huella del campo** —filas × pitch × largo de fila—, sin viales, sin subestación y sin los
 retranqueos de la parcela real.
 
-### Cómo se colocan: una detrás de otra, y hacia dónde
+### Cómo se colocan: en bloques, hasta que el campo queda cuadrado
 
 La pregunta que hay que contestar antes de creerse las hectáreas.
 
-**Para contar suelo**, el campo es un **rectángulo**: `filas` filas de `largo de fila`, una detrás
-de otra separadas por su pitch. Nada es infinito. Y cada familia se apila en una dirección distinta,
-porque su fila corre en la otra:
+Un parque **no es una tira**. Alineando las N filas una detrás de otra salían campos imposibles: a
+100 MWp los seguidores daban **17 km de largo por 65 m de ancho**. En campo se rompe en **bloques**
+hasta que el conjunto queda aproximadamente **cuadrado**, que es lo que se busca en una parcela. El
+número de bloques sale de igualar los dos lados (`bloques ≈ √área / largo de fila`), y cada uno
+aporta un largo de fila al lado correspondiente.
 
-| | la fila corre | las filas se apilan hacia | campo a 10 MWp |
+A 100 MWp con el módulo canónico:
+
+| | filas | bloques | campo |
 |---|---|---|---|
-| **Fija** | este-oeste | el **sur** | 65 × 1.220 m |
-| **Tracker** | norte-sur (su eje) | el **este** | 1.626 × 65 m |
+| **Fija** (1V, pitch 4,5) | 2.706 | 14 × 194 filas | **911 × 873 m** |
+| **Tracker** (1V, pitch 6,0) | 2.706 | 16 × 170 filas | **1.020 × 1.041 m** |
 
-Los dos lados se publican en el box, así que se ve de un vistazo si eso cabe en la parcela.
+Y cada familia se apila en la dirección **contraria** a como corre su fila: la **fija** corre
+este-oeste y apila hacia el **sur**; el **tracker** corre norte-sur (su eje) y apila hacia el
+**este**.
 
-**Para la sombra, en cambio, sí son infinitas.** El modelo de sombreado es el de **fila infinita**:
-cada fila la tapa otra idéntica a un pitch de distancia, en el plano perpendicular al eje. Eso
-tiene dos consecuencias que conviene tener claras:
+Las **hectáreas** que se publican siguen siendo la huella de las filas (`filas × pitch × largo de
+fila`). El rectángulo que las envuelve es algo mayor, porque el último bloque queda incompleto — se
+dice en vez de repartirlo. Y no lleva viales, ni subestación, ni los retranqueos de la parcela real:
+para eso está el generador de layout.
+
+**Para la sombra, en cambio, sí son infinitas.** El modelo de sombreado es el de **fila infinita**
+—cada fila la tapa otra idéntica a un pitch, en el plano perpendicular al eje—, que es la
+simplificación de `pvlib.shading.shaded_fraction1d` y por tanto la del core. Dos consecuencias:
 
 * la **primera fila sale sombreada** aunque en campo no tenga a nadie delante. De N filas hay
   **una** a la que se le cobra una sombra que no tiene, así que la pérdida por sombreado sale
-  **1/N** más alta de lo que debería: con 271 filas, un 0,37 %. Y ese 0,37 % es **de la pérdida**,
-  no de la energía — con la fija a GCR 0,529 la sombra modelada es 1,324 % y la real 1,319 %:
-  **0,005 puntos**. En el seguidor sin backtracking, que sí tiene sombra de verdad, 9,317 % contra
-  9,282 %. La ficha publica la corregida en la nota de la tabla, con el número de filas ya sabido;
-* **no hay efectos de borde por los extremos** de la fila: se supone infinitamente larga, así que
-  la sombra oblicua que se sale por la punta no se modela.
+  **1/N** más alta de lo que debería. Y ese porcentaje es **de la pérdida**, no de la energía — con
+  la fija a GCR 0,529 la sombra modelada es 1,324 % y la real 1,319 %: **0,005 puntos**. La ficha
+  publica la corregida en la nota de la tabla, con el número de filas ya sabido;
+* **no hay efectos de borde por los extremos** de la fila, que se supone infinitamente larga.
 
-Es la simplificación bankable de siempre (la misma de `pvlib.shading.shaded_fraction1d`, que es lo
-que usa el core), y a escala de planta el error es de décimas. En una implantación de tres filas
-no lo sería.
-
-Y el suelo es la **huella del campo**: sin viales, sin subestación y sin los retranqueos de la
-parcela real. Para eso está el generador de layout.
+A escala de planta el error es de décimas. En una implantación de tres filas no lo sería.
 
 ### La trampa, dicha en voz alta
 
@@ -621,10 +625,10 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ## Pruebas
 
 ```bash
-node tests/test_comparador.js       # 86 comprobaciones · careo contra el core, sin navegador
+node tests/test_comparador.js       # 89 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 114 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 117 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 
