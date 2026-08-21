@@ -59,7 +59,8 @@ bloque `MOTOR DE LAYOUT` del HTML REAL y lo corre sobre las mismas quince parcel
 `solargpt_core.layout_v2.compute_layout_v2` (`careo-layout.json`) — tres de ellas bifila con
 multi-talla sobre borde girado y en L, que es donde el emparejado A/B se rompe, y dos **fincas REALES**
 que entran por `tests/parcelas/*.geojson` (la cóncava de nueve vértices y la de Larraga, la del
-«deja mil huecos donde entran trackers» — sobre ella se mide que el ancla global AVISA del hueco
+«deja mil huecos donde entran trackers» — sobre ella se mide que sus mesas salen CLAVADAS al core
+(el barrido del origen X/Y del core, portado, con su mutante), que el ancla global AVISA del hueco
 que deja, que sin «alinear a rejilla» cada fila ancla en su linde y gana ≥30 % con el Δx=0 bifila
 intacto, y que la mejora respeta la unidad atómica) (cualquier GeoJSON exportado desde la propia ficha
 vale: el generador del fixture lo convierte en caso de careo). Exige el mismo número de **filas**
@@ -122,6 +123,6 @@ node tests/test_sizing.js                  # 115 comprobaciones, careo del dimen
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
 node tests/test_viento_ejes.js             # 64 comprobaciones, lienzos, ejes, transmisión, reproductor y sombras
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
-node tests/test_layout.js                  # 191 comprobaciones, careo del generador de layout
+node tests/test_layout.js                  # 192 comprobaciones, careo del generador de layout
 node tests/test_layout_ui.js               # 152 comprobaciones, el generador en Chromium
 ```
