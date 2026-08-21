@@ -233,6 +233,16 @@ Las exclusiones por terreno se cuentan **aparte** de las tuyas (`drop_topo_mask`
 `drop_user_poly` y `drop_line_buffer`): saber si el campo lo recorta el terreno o un dibujo tuyo no
 es el mismo problema.
 
+**Y todo el recuento es DE LA PARCELA, no de su bbox.** El raster del MDT cubre el rectángulo
+envolvente (más el margen), pero la parcela rara vez es ese rectángulo: contar y pintar como
+descartadas celdas que caen fuera del polígono era contarle al usuario un recorte que no existe —
+las mesas nunca estuvieron ahí («me está marcando terreno fuera de la parcela que yo he dibujado»).
+Las celdas excluidas, las pendientes medias que sobrescriben las tecleadas, la pendiente máxima que
+enciende el aviso, el «celdas fuera N de M» y el % del cuadro de zonas excluidas se miden solo
+sobre las celdas que **tocan** la parcela (todas las parcelas si hay varias), y el % es % de
+**área de parcela**. En los cuadros, el rojo de «excluido» solo aparece dentro; fuera se sigue
+viendo la pendiente en su rampa, que es información del terreno, no un descarte.
+
 **La cascada, que es lo que hace el cuaderno.** §02.5b no tiene *una* fuente: tiene una **lista
 priorizada por país** (`detect_country` → `sources_for_country`) y va cayendo a la siguiente cuando
 una falla. Su primera opción global es Copernicus GLO-30 en AWS **sin token**, y detrás vienen
