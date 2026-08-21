@@ -1816,7 +1816,10 @@
   ]
  },
  "not_modeled": [
-  "La máquina de EJECUCIÓN (§10.2, 17 estados, nivel tracker) no está implementada: depende de encoders, reintentos (N_retry/T_retry) y timeouts de firmware que esta simulación no tiene. Lo que sale de aquí es la ORDEN y su urgencia, no su verificación fila a fila.",
+  "La máquina de EJECUCIÓN (§10.2, 17 estados, nivel tracker) no está implementada. Lo que sale de aquí es la ORDEN y su urgencia, no su verificación fila a fila. El hueco tiene TRES partes y sus bloqueos son distintos; no las mezcle.",
+  "(1) El veto del §11 —viento fuera de envolvente PROHÍBE iniciar tránsito, estados 15-16 WIND_STOW_TRANSIT/WIND_MOVEMENT_LOCKOUT— NO está bloqueado por hardware: no necesita encoder, ni reintento, ni timeout. Necesita la serie de viento, que ya existe. Está pendiente de ENCARGO, no de datos. Hoy nada impide representar un tránsito a stow de granizo a través de una envolvente de viento: las dos máquinas no se conocen.",
+  "(2) La degradación 4->6 (HAIL_STOW_TRANSIT -> HAIL_PARTIAL_PROTECTION) es simulable con una flota inyectada —fila disponible / confirmada / fallida—, pero sus parámetros (N_retry, T_retry, timeout de confirmación) son del §19 y están PENDIENTES DE ENSAYO. Si se implementa, nacen sin valor, como los del §10.1: nada de defaults.",
+  "(3) La estrategia de detención o finalización cuando se excede la envolvente en mitad del tránsito (§10.2, estados 4 y 16, donde el informe escribe PENDIENTE DE INGENIERÍA las dos veces) y la maniobra parcial de LOW_SOC (§14) NO esperan código: esperan revisión de ingeniería Factiun. Además el §10.2 es herencia literal de Rev01.3 y no pasó por el repaso de la Rev01.4, al contrario que el §10.1 implementado aquí.",
   "T_necesario está PENDIENTE DE MEDICIÓN EN CAMPO (§9.1, bloqueante): el valor que se use aquí es una suposición del que llama, no una medida.",
   "Los ángulos de defensa NO los decide esta máquina: el §9.3 los asigna a Estructuras. Aquí solo sale la orden y su urgencia.",
   "Sin Meteomatics en vivo: la serie entra dada. Las estrategias B/C (cinemática de célula) se reducen al ETA que traiga la muestra; sin ETA, la ventana NO se clasifica y se dice."
