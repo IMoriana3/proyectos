@@ -168,6 +168,40 @@ const LAYOUT = {
   check('apagarlas vuelve a una sola estrategia y quita los rótulos',
         await page.evaluate(() => ESC.bandas === false && !ESC.etiquetas));
 
+  // ── LA CONSIGNA Y LO EJECUTADO SON DOS COSAS ───────────────────────
+  // «full stow · θ 0,0°» con el reloj parado se lee como que el
+  // abanderamiento no se ha dado. Se ha dado: no ha LLEGADO. El eje va a
+  // 0,17 °/s y cruzar de un límite al otro son casi once minutos.
+  await page.uncheck('#bandas');
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#lV', { timeout: 15000 });
+  await page.fill('#lV', '111'); await page.dispatchEvent('#lV', 'input');
+  await page.waitForTimeout(900);
+  const parado = await page.$$eval('#tiles .tile', ns => ns.map(n =>
+    n.querySelector('.m').textContent.replace(/\s+/g, ' ').trim()));
+  const stow = parado.filter(t => /full stow/.test(t));
+  check('con el reloj parado, las cuatro motorizadas ORDENAN pero no han ' +
+        'llegado (' + stow.length + ' en full stow)', stow.length >= 4);
+  check('y la tarjeta lo DICE: consigna, tiempo de recorrido y reloj parado',
+        stow.filter(t => /ordenado -55° · en camino/.test(t)).length >= 4 &&
+        stow.some(t => /reloj parado/.test(t)),
+        stow[0]);
+  check('el PASIVO no dice «en camino»: no lo mueve un motor, CAE',
+        stow.some(t => /θ -55/.test(t) && !/en camino/.test(t)),
+        stow.join(' || '));
+  check('y el seguidor SIN abanderar no se marca por su retardo natural',
+        parado.some(t => /seguimiento/.test(t) && !/en camino/.test(t)),
+        'con un umbral por debajo de 2° la base decía «en camino» al mediodía');
+
+  await page.click('#lPlay');
+  await page.waitForFunction(() => LIVE && LIVE.ang.A1 < -30, { timeout: 20000 });
+  const andando = await page.$$eval('#tiles .tile', ns => ns.map(n =>
+    n.querySelector('.m').textContent.replace(/\s+/g, ' ').trim()));
+  check('corriendo el reloj, el ángulo avanza y el «en camino» se acorta',
+        andando.some(t => /full stow/.test(t) && /en camino/.test(t) &&
+                          !/reloj parado/.test(t)),
+        andando.filter(t => /full stow/.test(t))[0]);
+
   check('la ficha no lanza errores de JS', errores.length === 0, errores.join(' | '));
   await browser.close();
   console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko) : '\nOK — ' + ok + '/' + ok + ' comprobaciones');
