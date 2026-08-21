@@ -367,9 +367,10 @@ interactúa con la rotación de convergencia y pierde un slot de mesa en la mita
 encima** del canónico hasta ~2,6 % — la desviación es optimista y va dicha, no escondida bajo una
 tolerancia global más ancha.
 
-Tres de los catorce son **bifila con multi-talla** —sobre rectángulo girado 35°, sobre parcela en L y
-sobre rectángulo recto—, y están ahí a propósito: es la combinación donde el emparejado A/B se
-rompe, es lo que se vio fallando en planta, y el careo no la cubría. Un banco que solo carea
+Cuatro de los catorce son **bifila con multi-talla** —la finca real también lo es—; los tres
+sintéticos —rectángulo girado 35°, parcela en L y rectángulo recto— están ahí a propósito: es la
+combinación donde el emparejado A/B se rompe, es lo que se vio fallando en planta, y el careo no la
+cubría. Un banco que solo carea
 rectángulos limpios y monofila no puede cazar lo que el uso real caza a la primera.
 
 Y en **todos** los casos bifila del fixture se mide el invariante sobre los datos: cero pares

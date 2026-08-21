@@ -929,6 +929,30 @@ const cajaLienzo = async page => {
   const mesasSes = num(await page.textContent('#ro .ro:nth-child(2) .v'));
   const sesion = await bajado('sesGuardar');
   check('la sesión se guarda a fichero .json', /sesion\.json$/.test(sesion.nombre), sesion.nombre);
+
+  // ── el export GeoJSON VUELVE A ENTRAR y reproduce el caso entero ──
+  // La doc lo promete y la verificación adversarial lo pilló en falso:
+  // parseGeoJSON no conocía el envoltorio {stats,geojson} («geometría
+  // ausente») y las exclusiones del export se tiraban. Roundtrip real:
+  // exportar, BORRAR las exclusiones, pegar el export, y que vuelvan con él.
+  const expRound = (await bajado('expGeo')).txt;
+  await page.click('#exclClear');
+  check('(preparación) las exclusiones quedan borradas antes del roundtrip',
+    await page.evaluate(() => EXCL.length === 0));
+  await page.selectOption('#parcelMode', 'geojson');
+  // el export son ~800 KB (todas las mesas): page.fill se ahoga con su cadena
+  // de accionabilidad — el valor entra por evaluate, con su evento input.
+  await page.evaluate(t => { const el = document.querySelector('#geotxt');
+    el.value = t; el.dispatchEvent(new Event('input', { bubbles: true })); }, expRound);
+  await page.click('#geoApplyBtn');
+  check('el export de la ficha se reconoce (parcela + exclusiones del fichero)',
+    /Export de la ficha reconocido/.test(await page.textContent('#foot')) &&
+    await page.evaluate(() => EXCL.length === 1),
+    await page.textContent('#foot'));
+  await generar(page);
+  const mesasRound = num(await page.textContent('#ro .ro:nth-child(2) .v'));
+  check('y al generar reproduce el caso entero: mismas mesas (' + mesasRound + ' vs ' + mesasSes + ')',
+    mesasRound === mesasSes);
   const pag5 = await browser.newPage();
   await pag5.route('https://server.arcgisonline.com/**', r => r.abort());
   await pag5.route('https://geocoding-api.open-meteo.com/**', r => r.abort());

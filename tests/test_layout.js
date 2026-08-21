@@ -237,20 +237,63 @@ check('y tests/parcelas/ conserva su semilla (.geojson)',
 
 // CONSOLIDACIÓN, la lección que costó aprender dos veces: «dos medios seguidos
 // es mejor UNO entero». En TODOS los casos multi-talla se exige que no queden
-// dos trackers ADYACENTES de la misma talla cuando la talla doble existe.
-// LÍMITE CONOCIDO del invariante: el motor solo funde cuando el doble CABE
-// (banda de la fila, banda de la sub-fila B, viales) y esta reconstrucción no
-// re-comprueba ese encaje. En los casos del fixture toda adyacencia es
-// fundible, así que 0 es lo correcto HOY; si un caso nuevo LEGÍTIMO se pone
-// rojo aquí (la doble no cabía por banda B o vial), el arreglo es afinar el
-// invariante a re-comprobar el encaje — no borrarlo ni excluir el caso.
+// dos trackers ADYACENTES de la misma talla cuando la talla doble existe
+// Y CABRÍA: el motor solo funde cuando el doble pasa la re-comprobación
+// (huecos/exclusiones de la fila, banda de la sub-fila B, viales), así que el
+// detector la reproduce — sin ella, una finca legítima con una acequia
+// estrecha entre dos trackers ponía el careo en rojo sin defecto del motor
+// (repro de la verificación adversarial: 60×200 con dos ranuras de 0,55 m →
+// 9 falsos «malos», los nueve con el doble cruzando la ranura).
+// COBERTURA DEL INVARIANTE, medida con mutantes (no supuesta): la propiedad
+// la garantizan DOS mecanismos redundantes — el greedy largest-first (con
+// catálogo doblante, el 2m siempre se prueba antes que dos m) y la
+// consolidación. Por eso los mutantes SUELTOS quedan verdes (el otro
+// mecanismo cubre: greedy invertido a secas → consolidaFila funde y el campo
+// sale bien) y el mutante DOBLE (greedy invertido + consolidación fuera)
+// pone ROJOS los seis casos multi con miles de adyacencias. El check vigila
+// la SALIDA, no el mecanismo — que es lo que el cliente ve en planta.
+const rectCortaPoly = (x0, y0, x1, y1, poly) => {
+  // ¿el rectángulo [x0,y0]-[x1,y1] toca el polígono? (vértice dentro del
+  // rect, esquina del rect dentro del polígono, o cruce de aristas)
+  const dentroPoly = (px, py) => {
+    let c = false;
+    for (let u = 0, v = poly.length - 1; u < poly.length; v = u++) {
+      const [ax, ay] = poly[u], [bx, by] = poly[v];
+      if ((ay > py) !== (by > py) && px < (bx - ax) * (py - ay) / (by - ay) + ax) c = !c;
+    }
+    return c;
+  };
+  for (const [px, py] of poly)
+    if (px >= x0 && px <= x1 && py >= y0 && py <= y1) return true;
+  for (const [px, py] of [[x0, y0], [x1, y0], [x1, y1], [x0, y1]])
+    if (dentroPoly(px, py)) return true;
+  const seg = (p1, p2, p3, p4) => {
+    const d = (a, b, cpt) => (b[0] - a[0]) * (cpt[1] - a[1]) - (b[1] - a[1]) * (cpt[0] - a[0]);
+    const d1 = d(p3, p4, p1), d2 = d(p3, p4, p2), d3 = d(p1, p2, p3), d4 = d(p1, p2, p4);
+    return ((d1 > 0) !== (d2 > 0)) && ((d3 > 0) !== (d4 > 0));
+  };
+  const esq = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+  for (let u = 0, v = poly.length - 1; u < poly.length; v = u++)
+    for (let e = 0; e < 4; e++)
+      if (seg(poly[u], poly[v], esq[e], esq[(e + 1) % 4])) return true;
+  return false;
+};
 fix.casos.forEach((c, i) => {
   const mps = c.cfg.mods_per_struct;
   if (!Array.isArray(mps) || mps.length < 2) return;
   const r = js[i];
   const gm = (c.cfg.gap_motor || 0.5) + 0.15, gn = (c.cfg.gap_ns || 0.5) + 0.2;
+  // Obstáculos en el marco LOCAL del motor (el mismo de las mesas): huecos,
+  // exclusiones y viales — lo mismo que consulta consolidaFila al re-comprobar.
+  const aLocal = ll => r.toLocal(r.toUtm(ll));
+  const obst = (c.poly_lonlat ? (c.holes_lonlat || []) : (c.holes || []).map(aLonLat))
+    .concat(c.excl_lonlat || [])
+    .map(ring => ring.map(aLocal))
+    .concat((r.roads || []).map(rd => rd.utm.map(pt => r.toLocal(pt))));
+  const FIT = 0.05;                                   // la holgura del motor
   let malos = 0;
-  for (const fila of r.rows) {
+  for (let fi = 0; fi < r.rows.length; fi++) {
+    const fila = r.rows[fi];
     const so = fila.slice().sort((a, b) => a.x0 - b.x0);
     const gr = []; let cur = [];
     for (const t of so) {
@@ -258,14 +301,29 @@ fix.casos.forEach((c, i) => {
       else { if (cur.length) gr.push(cur); cur = [t]; }
     }
     if (cur.length) gr.push(cur);
+    // Bandas donde el doble tiene que caber: la de esta fila y, en bifila, la
+    // de su gemela (las filas van en pares A/B consecutivos).
+    const bandaDe = f => {
+      let y0 = Infinity, y1 = -Infinity;
+      for (const t of f) { if (t.y0 < y0) y0 = t.y0; if (t.y1 > y1) y1 = t.y1; }
+      return [y0, y1];
+    };
+    const bandas = [bandaDe(fila)];
+    if (c.cfg.bifila) {
+      const par = (fi % 2 === 0) ? fi + 1 : fi - 1;
+      if (r.rows[par] && r.rows[par].length) bandas.push(bandaDe(r.rows[par]));
+    }
     for (let k = 0; k + 1 < gr.length; k++) {
       const a = gr[k], b = gr[k + 1];
-      if (a.length === 2 && b.length === 2 && a[0].mods === b[0].mods &&
-          mps.includes(2 * a[0].mods) && b[0].x0 - a[1].x1 <= gn) malos++;
+      if (!(a.length === 2 && b.length === 2 && a[0].mods === b[0].mods &&
+            mps.includes(2 * a[0].mods) && b[0].x0 - a[1].x1 <= gn)) continue;
+      const cabria = bandas.every(bd => obst.every(o =>
+        !rectCortaPoly(a[0].x0 + FIT, bd[0] + FIT, b[1].x1 - FIT, bd[1] - FIT, o)));
+      if (cabria) malos++;
     }
   }
-  check(c.nombre + ' · nunca dos trackers de la misma talla seguidos (existe la doble)',
-    malos === 0, malos + ' adyacencias');
+  check(c.nombre + ' · nunca dos trackers de la misma talla seguidos cuando el doble CABE',
+    malos === 0, malos + ' adyacencias fundibles sin fundir');
 });
 
 // El invariante que costó arreglar en el cuaderno, medido en TODOS los casos

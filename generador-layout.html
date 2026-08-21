@@ -1794,8 +1794,48 @@ $('geoFileBtn').onclick=function(){$('geoFile').click();};
 $('geoFile').onchange=function(e){var f=e.target.files[0];if(!f)return;var rd=new FileReader();
   rd.onload=function(ev){$('geotxt').value=ev.target.result;applyGeo();};rd.readAsText(f);$('geoFile').value='';};
 $('geoApplyBtn').onclick=applyGeo;
+/* El export de la propia ficha es un ENVOLTORIO {stats, geojson}, con la
+   parcela como feature tipo="parcela" y las exclusiones como features
+   tipo="exclusion" / "exclusion-linea". La doc promete que un fichero
+   exportado «se puede volver a soltar aquí y reproduce el caso entero» — y
+   parseGeoJSON, al no conocer el envoltorio, contestaba «geometría ausente»
+   (lo cazó la verificación adversarial ejecutándolo sobre un export real).
+   Además, un FeatureCollection con miles de rectángulos de MESA elegiría «el
+   primer polígono», que es una mesa, no la parcela. */
+function parseGeoExport(txt){
+  var gj;try{gj=JSON.parse(txt);}catch(e){return null;}
+  if(gj&&gj.type!=='FeatureCollection'&&gj.geojson&&gj.geojson.type==='FeatureCollection')gj=gj.geojson;
+  if(!gj||gj.type!=='FeatureCollection')return null;
+  var pars=[],excl=[],lineas=[];
+  (gj.features||[]).forEach(function(f){
+    var pr=f.properties||{},g=f.geometry||{};
+    if(pr.tipo==='parcela'&&g.type==='Polygon')
+      pars.push({nombre:pr.nombre||('Parcela '+(pars.length+1)),
+                 ext:g.coordinates[0].map(function(c){return [c[0],c[1]];}),
+                 holes:g.coordinates.slice(1).map(function(r){return r.map(function(c){return [c[0],c[1]];});})});
+    else if(pr.tipo==='exclusion'&&g.type==='Polygon')
+      excl.push(g.coordinates[0].map(function(c){return [c[0],c[1]];}));
+    else if(pr.tipo==='exclusion-linea'&&g.type==='LineString')
+      lineas.push({pts:g.coordinates.map(function(c){return [c[0],c[1]];}),buf:+(pr.buffer_m||5)});
+  });
+  if(!pars.length)return null;
+  return {parcelas:pars,excl:excl,exclLineas:lineas};
+}
 function applyGeo(){
-  try{var g=parseGeoJSON($('geotxt').value);PARCEL=g.ext;HOLES=g.holes;tagParcel();encaja();draw();autoguarda();
+  try{
+    var exp=parseGeoExport($('geotxt').value);
+    if(exp){
+      PARCEL=exp.parcelas[0].ext;HOLES=exp.parcelas[0].holes;
+      PARCELAS=exp.parcelas.slice(1);
+      if(exp.excl.length)EXCL=exp.excl;
+      if(exp.exclLineas.length)EXCL_LINEAS=exp.exclLineas;
+      pintaParcelas();tagParcel();encaja();draw();autoguarda();
+      $('foot').textContent='Export de la ficha reconocido: '+exp.parcelas.length+' parcela(s)'+
+        (exp.excl.length?(' + '+exp.excl.length+' exclusión(es)'):'')+
+        (exp.exclLineas.length?(' + '+exp.exclLineas.length+' exclusión(es) de línea'):'')+'. Pulsa Generar.';
+      return;
+    }
+    var g=parseGeoJSON($('geotxt').value);PARCEL=g.ext;HOLES=g.holes;tagParcel();encaja();draw();autoguarda();
     $('foot').textContent='GeoJSON cargado: '+PARCEL.length+' vértices'+(HOLES.length?(' y '+HOLES.length+' hueco(s) como exclusión'):'')+'. Pulsa Generar.';
   }catch(err){$('foot').innerHTML='<span style="color:var(--dead)">No se pudo leer el GeoJSON: '+(err&&err.message||err)+'</span>';}
 }
