@@ -2642,7 +2642,7 @@ function cotasSeguidor(G){
   Seguidor.setModsPerStr(G.modsStr);   // recalcula mesa, fila y centro de ala
   return (D.span>0?G.largoFila/D.span:1);
 }
-function seguidor3D(mats,escalaEje,posteExtra){
+function seguidor3D(mats,escalaEje){
   var g=new THREE.Group(), spin=new THREE.Group(); g.add(spin);
   Seguidor.parts(THREE,{detail:'mass',size:'largo'}).forEach(function(p){
     if(p.antenna||p.motorLink||p.damperLink)return;
@@ -2653,11 +2653,8 @@ function seguidor3D(mats,escalaEje,posteExtra){
   });
   var postH=Seguidor.DIMS.postH||2.0;
   g.position.y=postH; g.rotation.y=Math.PI/2;
-  /* El poste crece hacia ABAJO desde el tubo: con el bloque subido (eje
-     inclinado) tiene que seguir llegando al suelo, no quedarse colgando. */
-  var hP=postH+(posteExtra||0);
-  var poste=new THREE.Mesh(new THREE.BoxGeometry(.18,hP,.18),mats.steel);
-  poste.position.y=postH-hP/2; poste.castShadow=true;
+  var poste=new THREE.Mesh(new THREE.BoxGeometry(.18,postH,.18),mats.steel);
+  poste.position.y=postH/2; poste.castShadow=true;
   /* La escala va en `g` (el grupo del tubo), no en el wrap: así estira la viga,
      las alas y el vano del motor —lo que de verdad se alarga— y deja el poste
      con su sección. */
@@ -2717,6 +2714,51 @@ function encuadra(){
   }
 }
 
+/* ── EL SUELO, CON RELIEVE ──
+   Un eje inclinado no se monta en llano: se monta sobre terreno EN PENDIENTE.
+   La primera versión le puso una cuña debajo y se leía como una rampa de
+   hormigón; la segunda dejó el suelo plano y le alargó la hinca, que es peor
+   —un tracker con megasoportes a un lado no es lo que se construye—.
+
+   Lo que hace falta es un TERRENO, y se hace como en bt3d: un heightfield
+   subdividido con la cota de cada vértice y `computeVertexNormals()`. Eso es
+   lo que lo hace leerse como una ladera y no como una caja — una malla de dos
+   triángulos tiene una normal por cara y sale con aristas; con 140×70 y las
+   normales recalculadas, la luz varía de forma continua.
+
+   La pendiente solo aparece DONDE hace falta —bajo el bloque del eje
+   inclinado— y se funde con el llano a los lados con un suavizado, así que no
+   hay ningún canto. Los demás bloques siguen sobre el mismo suelo horizontal:
+   la premisa de la escena («todos sobre el mismo suelo») se mantiene, porque
+   lo que se dibuja no es un decorado sino la condición que ESE seguidor
+   necesita para existir. */
+function suave(u){                       // smoothstep, 1 dentro y 0 fuera
+  u=Math.max(0,Math.min(1,u));
+  return 1-u*u*(3-2*u);
+}
+function cotaTerreno(x,z,rampas){
+  var y=0;
+  for(var i=0;i<rampas.length;i++){
+    var r=rampas[i];
+    /* 1 dentro del bloque, y cae a 0 en `fundido` metros a cada lado */
+    var t=suave((Math.abs(x-r.x)-r.medio)/r.fundido);
+    if(t<=0)continue;
+    var h=r.alza-z*Math.tan(r.a);
+    y=Math.max(y,t*Math.max(0,Math.min(2*r.alza,h)));
+  }
+  return y;
+}
+function sueloRelieve(ancho,largoZ,rampas){
+  var geo=new THREE.PlaneGeometry(ancho,largoZ,140,70);
+  geo.rotateX(-Math.PI/2);
+  var pos=geo.attributes.position;
+  for(var i=0;i<pos.count;i++)
+    pos.setY(i,cotaTerreno(pos.getX(i),pos.getZ(i),rampas));
+  pos.needsUpdate=true;
+  geo.computeVertexNormals();
+  return geo;
+}
+
 /* ── El EJE COMPARTIDO de una bifila ──
    Monofila y bifila no cambian la mesa —es una diferencia operativa, no
    geométrica, y por eso la POA por m² de módulo es la misma—, pero sí cambian
@@ -2760,6 +2802,7 @@ function construyeMundo(){
      defecto del modelo. Si no, la escena enseñaría una estructura y la tabla
      calcularía otra. */
   var escTk=cotasSeguidor(cfg.tracker);   // el modelo, a las cotas configuradas
+  var rampas=[];                         // el relieve que pide cada eje inclinado
   /* Cuánto hay que subir el bloque del eje inclinado para que su punta baja
      apoye en el suelo en vez de hundirse: media fila por el seno del ángulo. */
   var alzaTSAT=(cfg.tracker.largoFila/2)*Math.sin(Math.abs(cfg.axTilt)*FIS.D2R);
@@ -2792,13 +2835,8 @@ function construyeMundo(){
          fija y el tracker se configuran aparte, y si el render los igualara
          estaría enseñando una estructura distinta de la que calcula la tabla. */
       if(spec.fam==='tracker'){
-        /* El eje inclinado se sube para que su punta baja no se entierre, y su
-           POSTE se alarga otro tanto para que siga llegando al suelo: es lo
-           que se hace en campo cuando el terreno no acompaña —hincas
-           graduadas— y no obliga a inventarle una ladera a un bloque cuando
-           todos comparten el mismo suelo, que es la premisa de la escena. */
-        uno=seguidor3D(mats,escTk,spec.tsat?alzaTSAT:0); uno.position.x=d;
-        if(spec.tsat)uno.position.y=alzaTSAT;
+        uno=seguidor3D(mats,escTk); uno.position.x=d;
+        if(spec.tsat)uno.position.y=alzaTSAT;   // el terreno sube con él
       }else if(spec.fam==='fija_ew'){
         // dos aguas: la mesa lleva DOS paneles enfrentados, y las filas se
         // repiten hacia el este como en el seguidor (las filas corren N-S)
@@ -2817,6 +2855,11 @@ function construyeMundo(){
     if(agrupa>1)for(var t=0;t+agrupa<=nf;t+=agrupa){
       grupo.add(ejeBifila(mats,(t-(nf-1)/2)*pitch,(t+agrupa-1-(nf-1)/2)*pitch));
     }
+    /* Un eje inclinado necesita que el terreno acompañe: se apunta su rampa
+       para que el suelo la lleve, con la misma pendiente que el eje. */
+    if(spec.tsat)rampas.push({x:grupo.position.x,
+      medio:((nf-1)*pitch+G.altoColector)/2+6, fundido:34,
+      alza:alzaTSAT, a:(cfg.lat>=0?1:-1)*Math.abs(cfg.axTilt)*FIS.D2R});
     var col='#'+(COL[k]||'#888888').replace('#','');
     /* El rótulo se acota por el hueco Y por el largo del bloque: con una fila
        de 68 m (un 2H de 14 módulos por string) el hueco es enorme y el nombre
@@ -2840,7 +2883,11 @@ function construyeMundo(){
   var ancho=anchoTot, largoZ=(nfMax+1)*8+largo;
   var asp=Math.max(1.2,(TD.w||900)/(TD.h||420));
   var d=Math.max((ancho*0.58)/(Math.tan(21*Math.PI/180)*asp),largoZ*0.9);
-  TD.suelo.scale.set(ancho*3.2,largoZ*4,1);
+  /* El suelo se REGENERA con la escena: lleva el relieve de los ejes
+     inclinados, y escalar un heightfield escalaría también las cotas. */
+  if(TD.suelo.geometry)TD.suelo.geometry.dispose();
+  TD.suelo.geometry=sueloRelieve(ancho*3.2,largoZ*4,rampas);
+  TD.suelo.scale.set(1,1,1); TD.suelo.rotation.set(0,0,0);
   TD.radio=Math.max(220,d*1.6);
   TD.cam.position.set(0,d*0.30,d*0.86); TD.ct.target.set(0,4,-largoZ*0.05);
   encuadra();
