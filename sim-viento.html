@@ -807,7 +807,13 @@ LOC.dual=function(thT,ws,az,T1,T2,pmin,full,dtS,holdMin,parkMin,dead,noon){
 LOC.stepperPasivo=function(cfg){
   var suelta=false, th=0, side=cfg.pSide, tol=cfg.pTol||1, rel=cfg.pRel, full=cfg.full;
   return {
-    get mode(){return suelta?'FULL_STOW':'IDLE';}, get theta(){return th;},
+    // El modo se llama SUELTA y no FULL_STOW a proposito. Un full stow es una
+    // ORDEN: la maquina manda +-55 y el motor lo recorre a 0,17 grados/s, que
+    // son ~11 min de punta a punta. Aqui no hay orden ni motor: pasado el par
+    // de desembrague la fila se suelta y CAE a su tope en un paso. Puede
+    // acabar en el mismo angulo que un stow ordenado, por causas distintas, y
+    // por eso tampoco comparte su color.
+    get mode(){return suelta?'SUELTA':'IDLE';}, get theta(){return th;},
     step:function(tgt,ws,dtS){
       if(suelta&&Math.abs(tgt-side)<=tol)suelta=false;
       if(!suelta&&ws>rel)suelta=true;
@@ -818,7 +824,7 @@ LOC.stepperPasivo=function(cfg){
       // ejecutado coinciden siempre, y por eso es el único que se ve
       // abanderado con el reloj parado — no porque sea más rápido, sino
       // porque no lo mueve un motor.
-      return {theta:th,mode:suelta?'FULL_STOW':'IDLE',orden:th};
+      return {theta:th,mode:suelta?'SUELTA':'IDLE',orden:th};
     }
   };
 };
@@ -1787,7 +1793,7 @@ LOC.run=function(cfg,onStep){
             'No se modela la dispersión entre unidades ni el tiempo de caída: la fila pasa al límite en un paso.',
             'La fila expuesta se supone siempre la misma y del mismo lado; no rota con el rumbo del viento.']}
       };
-      series.PASIVO={theta:PR.theta,orden:PR.theta,poa:poaF,mode:Array.from(PR.mask,function(v){return v?'FULL_STOW':'IDLE';}),events:pEvs};
+      series.PASIVO={theta:PR.theta,orden:PR.theta,poa:poaF,mode:Array.from(PR.mask,function(v){return v?'SUELTA':'IDLE';}),events:pEvs};
     }
     // ventana común para el campo 3D: el episodio más caro de TODOS los casos
     var peor=null;
@@ -2949,7 +2955,7 @@ function drawTrace(c){
   // fondo de los tramos abanderados
   for(var i=0;i<n;i++){
     if(tr.mode[i]&&tr.mode[i]!=='IDLE'){
-      x.fillStyle=(tr.mode[i]==='FULL_STOW')?'rgba(208,89,79,.16)':(tr.mode[i]==='PARTIAL_STOW'?'rgba(246,166,35,.13)':'rgba(128,147,164,.10)');
+      x.fillStyle=(tr.mode[i]==='FULL_STOW')?'rgba(208,89,79,.16)':(tr.mode[i]==='SUELTA')?'rgba(167,139,250,.16)':(tr.mode[i]==='PARTIAL_STOW'?'rgba(246,166,35,.13)':'rgba(128,147,164,.10)');
       x.fillRect(gx(i)-(W-L-R)/(2*(n-1)),T,(W-L-R)/(n-1)+0.6,H-B-T);}
   }
   x.strokeStyle='#1e2a3a';x.lineWidth=1;
@@ -3018,8 +3024,8 @@ function drawEvents(c){
    tiene su tubo en +X local, así que entra girado 90°. */
 var TD=null, TL=null, TPOS=0, PLAY=false, MODO='live';
 var NFILAS=2, PITCH=6.0, BLOQUE=34;
-var MODO_COL={IDLE:0x000000, PARTIAL_STOW:0xfbbd23, FULL_STOW:0xf87272, DESTOW_HOLD:0x9bb0c6};
-var MODO_INT={IDLE:0, PARTIAL_STOW:.42, FULL_STOW:.5, DESTOW_HOLD:.3};
+var MODO_COL={IDLE:0x000000, PARTIAL_STOW:0xfbbd23, FULL_STOW:0xf87272, DESTOW_HOLD:0x9bb0c6, SUELTA:0xa78bfa};
+var MODO_INT={IDLE:0, PARTIAL_STOW:.42, FULL_STOW:.5, DESTOW_HOLD:.3, SUELTA:.45};
 var PALA=0x1b3a6b;
 var LAYOUTS='https://imoriana3.github.io/cobertura-zigbee/';
 var ESC=null;     // {kind, bloques[], planta{...}}
@@ -3312,7 +3318,7 @@ function escenaComparativa(){
     if(esPas){
       // el rótulo de la fila suelta se pone SOBRE ella, que ahora es una entre
       // muchas y sin señalarla no se distingue
-      var e1=etiqueta3D('SUELTA','#f87272');
+      var e1=etiqueta3D('SUELTA','#a78bfa');
       e1.scale.multiplyScalar(0.62);
       e1.position.set(-(nF-1)/2*PITCH,Seguidor.DIMS.postH+4.2,0);
       var e2=etiqueta3D('EL RESTO, EN SEGUIMIENTO','#9bb0c6');
