@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.4.4</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.4.5</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -2378,17 +2378,53 @@ function varitaDetecta(sxPx,syPx){
   octx.fillStyle='#000';octx.fillRect(0,0,off.width,off.height);
   if(!pintaOrtofoto(octx,cv))return {err:'sin ortofoto'};
   var img=octx.getImageData(0,0,off.width,off.height);
-  // Escalera de tolerancias fina→gruesa: gana la primera con región razonable.
-  var TOLS=[16,24,34];
+  return varitaEscoge(img.data,off.width,off.height,sxPx,syPx)||{err:'sin recinto'};
+}
+/* Criterio de ACEPTACIÓN de un contorno — nacido del primer uso real
+   (2026-08-21, ortofoto de una planta construida): la franja de suelo entre
+   dos filas de trackers pasaba como «recinto» — una esquirla de ~8 px de
+   ancho con 5 vértices, «sin sentido» — porque el mínimo era 64 px y la
+   escalera aceptaba la primera región. Un campo de verdad, al zoom al que se
+   trabaja, son MILES de píxeles y decenas de metros de ancho. Tres
+   exigencias, cada una con su porqué:
+   · tamaño: región Y área del anillo ≥ 0,3% del lienzo — bajo eso es una
+     mota, no un campo;
+   · anchura: la caja del contorno ≥ 18 px en su lado corto — mata la
+     esquirla entre filas (el caso de la captura);
+   · forma: 4..80 vértices tras simplificar — el anillo-telaraña del suelo
+     percolando entre cien filas no cabe ahí. */
+function varitaValida(simp,n,w,h){
+  if(!simp||simp.length<4||simp.length>80)return false;
+  var minPx=Math.max(64,w*h*0.003);
+  if(n<minPx)return false;
+  var a2=0,minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+  for(var i=0;i<simp.length;i++){
+    var p=simp[i],q=simp[(i+1)%simp.length];
+    a2+=p[0]*q[1]-q[0]*p[1];
+    if(p[0]<minx)minx=p[0];if(p[0]>maxx)maxx=p[0];
+    if(p[1]<miny)miny=p[1];if(p[1]>maxy)maxy=p[1];
+  }
+  if(Math.abs(a2/2)<minPx)return false;
+  return Math.min(maxx-minx,maxy-miny)>=18;
+}
+/* La escalera prueba TODAS las tolerancias y elige la región VÁLIDA más
+   GRANDE — no la primera. «Gana la primera» mordió en el estreno: con
+   textura fina (rodadas, franjas, calvas) la tolerancia fina encuentra un
+   fragmento homogéneo y se queda ahí; la gruesa absorbe la textura y da el
+   campo entero. Elegir la mayor válida sirve a las dos: si pinchas un claro
+   DENTRO del campo, te lleva al campo. */
+function varitaEscoge(data,w,h,sx,sy){
+  var TOLS=[16,24,34],mejor=null;
   for(var t=0;t<TOLS.length;t++){
-    var seg=varitaSegmenta(img.data,off.width,off.height,sxPx,syPx,TOLS[t]);
+    var seg=varitaSegmenta(data,w,h,sx,sy,TOLS[t]);
     if(!seg)continue;
-    var ring=varitaContorno(seg.dentro,off.width,off.height);
+    var ring=varitaContorno(seg.dentro,w,h);
     if(!ring)continue;
     var simp=varitaSimplifica(ring,2.5);
-    if(simp&&simp.length>=4&&simp.length<=80)return {ring:simp,tol:TOLS[t],n:seg.n};
+    if(!varitaValida(simp,seg.n,w,h))continue;
+    if(!mejor||seg.n>mejor.n)mejor={ring:simp,tol:TOLS[t],n:seg.n};
   }
-  return {err:'sin recinto'};
+  return mejor;
 }
 function varitaClic(ev){
   var cv=$('cv'),r=cv.getBoundingClientRect();

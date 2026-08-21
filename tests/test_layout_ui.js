@@ -1327,6 +1327,48 @@ const cajaLienzo = async page => {
   check('y el TOPE del 45% mata la tolerancia pasada de rosca (mutante sin-tope muere aquí)',
     nucleo.capON === true);
 
+  // ── el criterio de ACEPTACIÓN, con el caso REAL del estreno como fixture ──
+  // La captura del 2026-08-21 («sin sentido»): sobre la ortofoto de una
+  // planta construida, la varita aceptó la franja de suelo entre dos filas
+  // de trackers — una esquirla de ~8 px de ancho. Y el «gana la primera»
+  // hacía que, pinchando un claro dentro de un campo con textura, se quedara
+  // con el fragmento en vez del campo.
+  const criterio = await pagV.evaluate(() => {
+    const w = 200, h = 200;
+    const pinta = f => { const img = new ImageData(w, h), d = img.data;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const c = f(x, y), i = (y * w + x) * 4;
+        d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+      } return d; };
+    // CASO 1 · la esquirla de la captura: franja clara de 8 px entre "filas"
+    const esquirla = pinta((x, y) => (x >= 96 && x < 104) ? [150, 140, 90] : [40, 55, 35]);
+    const r1 = varitaEscoge(esquirla, w, h, 100, 100);
+    // CASO 2 · claro DENTRO de un campo: parche (Δ≈27 del campo, >16 <34) en
+    // un campo grande sobre fondo oscuro. La fina se queda en el parche; la
+    // gruesa da el campo. Tiene que ganar EL CAMPO (mutante «gana la
+    // primera» muere aquí).
+    const campo = pinta((x, y) => {
+      if (x < 30 || x >= 170 || y < 40 || y >= 160) return [40, 55, 35];
+      if (x >= 85 && x < 115 && y >= 85 && y < 115) return [170, 155, 100];
+      return [150, 140, 90];
+    });
+    const r2 = varitaEscoge(campo, w, h, 100, 100);
+    let bbox2 = null;
+    if (r2) {
+      const xs = r2.ring.map(p => p[0]), ys = r2.ring.map(p => p[1]);
+      bbox2 = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+    }
+    return { esquirla: r1, campoTol: r2 && r2.tol, bbox2, n2: r2 && r2.n };
+  });
+  check('la ESQUIRLA de la captura se rechaza — «no se distingue», no un contorno sin sentido',
+    criterio.esquirla === null, JSON.stringify(criterio.esquirla));
+  check('y pinchando un CLARO dentro del campo gana el CAMPO, no el fragmento (mutante «gana la primera» muere aquí)',
+    !!criterio.bbox2 && criterio.n2 > 10000 &&
+    criterio.bbox2[0] >= 26 && criterio.bbox2[1] >= 36 &&
+    criterio.bbox2[2] <= 174 && criterio.bbox2[3] <= 164 &&
+    (criterio.bbox2[2] - criterio.bbox2[0]) > 130,
+    JSON.stringify(criterio));
+
   // E2E: clic sobre una columna clara → DRAW con el contorno de ESA raya
   const cajaV = await cajaLienzo(pagV);
   const punto = await pagV.evaluate(() => {
