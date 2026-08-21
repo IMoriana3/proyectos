@@ -48,6 +48,32 @@
   .field input,.field select{width:100%;background:var(--bg2);border:1px solid var(--line2);color:var(--tx);border-radius:8px;padding:7px 10px;font:inherit;font-size:.88rem}
   .field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  /* Pestañas de la ficha de stow. Estructura preparada para Nieve, que no se
+     implementa: un hueco declarado se lee mejor que una pestaña que no hace
+     nada. */
+  .tabs{display:flex;gap:6px;padding:0 18px 12px;flex-wrap:wrap}
+  .tabs button{background:var(--panel-2);border:1px solid var(--line2);color:var(--muted);
+    border-radius:9px;padding:7px 14px;font:inherit;font-size:.88rem;cursor:pointer}
+  .tabs button.on{background:var(--bg2);border-color:var(--accent);color:var(--tx)}
+  .tabs button:disabled{opacity:.42;cursor:not-allowed}
+  /* Banner de parámetros no validados. Va en la UI y no solo en el JSON: el
+     que mira la pantalla es quien tiene que enterarse. */
+  .noval{margin:0 0 12px;padding:9px 12px;border-radius:9px;font-size:.83rem;
+    background:rgba(251,189,35,.10);border:1px solid rgba(251,189,35,.45);color:#f0d089}
+  .noval b{color:#fbbd23}
+  .gsvg{width:100%;height:auto;background:var(--bg2);border:1px solid var(--line);
+    border-radius:10px;margin-top:8px}
+  .gstate{font-family:var(--mono);font-size:10.5px}
+  .cont3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+  .cont3 .c{background:var(--bg2);border:1px solid var(--line2);border-radius:10px;padding:9px 11px}
+  .cont3 .c .n{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted)}
+  .cont3 .c .v{font-size:1.15rem;margin-top:3px}
+  .cont3 .c .bar{height:5px;border-radius:3px;background:var(--line2);margin-top:6px;overflow:hidden}
+  .cont3 .c .bar i{display:block;height:100%;background:var(--accent)}
+  .cont3 .c.ok .bar i{background:var(--ok,#4ade80)}
+  #gDiario{max-height:280px;overflow:auto;font-family:var(--mono);font-size:11.5px;
+    line-height:1.65;white-space:pre-wrap}
   /* Buscador de emplazamiento: el desplegable flota sobre lo de abajo, así que
      la tarjeta no da un salto cada vez que aparece un resultado. */
   .sitiobox{position:relative}
@@ -173,6 +199,13 @@
     <a href="index.html">← Panel</a></div>
 </header>
 
+<div class="tabs" id="tabs">
+  <button id="tabViento" class="on">🌬️ Viento</button>
+  <button id="tabGranizo">⛨ Granizo</button>
+  <button disabled title="Hueco declarado: la máquina de nieve no está implementada. Una pestaña que no hace nada se lee peor que un hueco dicho.">❄ Nieve · pendiente</button>
+</div>
+
+<div id="panelViento">
 <div class="wrap">
 <div class="cols">
 
@@ -469,6 +502,82 @@
 <!-- La acción principal, fija abajo en móvil: enterrada tras tres tarjetas de
      parámetros obligaba a hacer scroll a ciegas para volver a ella. -->
 <div class="runbar"><button class="btn acc" id="runM">Simular el año</button></div>
+</div><!-- /panelViento -->
+
+<!-- ═════════ PESTAÑA GRANIZO ═════════
+     La máquina de AMENAZA del §10.1 (Rev01.4). NO mueve nada: decide. Corre
+     con el bloque GRANIZO-FÍSICA local o contra `POST /hailstow` del motor, y
+     los dos tienen que dar la MISMA traza — hay arnés que lo carea. -->
+<div id="panelGranizo" style="display:none">
+<div class="wrap">
+  <p class="noval" id="gNoval"></p>
+  <div class="cols">
+    <div>
+      <div class="card">
+        <h2>⛨ Máquina de amenaza <span class="sn">Rev01.4 §10.1 · 12 estados</span></h2>
+        <p class="note" style="margin-top:0">Decide <b>cuándo</b> pre-alertar, cuándo cruzar y
+          cuándo quedarse quieta. <b>No mueve un tracker</b> —es literal del informe— y no elige
+          ángulos: el §9.3 se los asigna a Estructuras.</p>
+        <div class="field"><label>Serie de entrada</label>
+          <select id="gFuente">
+            <option value="demo">Demostración · el episodio del fichero de casos</option>
+            <option value="file">Fichero propio · CSV o JSON</option>
+          </select></div>
+        <div class="field" id="gFileBox" style="display:none">
+          <label>Fichero (no sale del navegador)</label>
+          <input id="gFile" type="file" accept=".json,.csv,.txt"></div>
+        <div class="field"><label>Dónde se calcula</label>
+          <select id="gModo">
+            <option value="auto">Automático · motor si está, si no aquí</option>
+            <option value="local">Aquí (bloque GRANIZO-FÍSICA)</option>
+            <option value="remoto">Motor · POST /hailstow</option>
+          </select></div>
+        <button class="btn acc" id="gRun" style="width:100%;margin-top:4px">▶ Correr la máquina</button>
+        <p class="note" id="gModoNota" style="margin-bottom:0"></p>
+      </div>
+
+      <div class="card">
+        <h2>⚙ Parámetros <span class="sn">§19 · sin valores del informe</span></h2>
+        <p class="note" style="margin-top:0">El §19 publica 17 y deja <b>14 «SIN VALOR» a
+          propósito</b>: <i>«Ningún valor provisional se presenta como validado»</i>. Estos son los
+          <b>criterios de trabajo de julio de 2026</b>, que <b>no son del informe</b>. Edita y vuelve
+          a correr sobre la misma serie.</p>
+        <div id="gParams"></div>
+        <button class="btn small" id="gReset" style="margin-top:8px">↺ Volver a los de julio</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>◉ Dónde está la máquina <span class="sn" id="gEstadoVivo">—</span></h2>
+        <div id="gDiagrama"></div>
+        <p class="note" id="gDiagNota" style="margin-bottom:0"></p>
+      </div>
+
+      <div class="card" id="gTimelineCard" style="display:none">
+        <h2>◷ Recorrido <span class="sn" id="gTlHint"></span></h2>
+        <canvas id="gTl" width="880" height="180"></canvas>
+        <div class="timerow" style="margin-top:8px">
+          <input type="range" id="gPos" min="0" max="0" step="1" value="0">
+          <span class="t" id="gLbl">—</span>
+        </div>
+        <h3 style="font-size:.78rem;letter-spacing:.09em;text-transform:uppercase;
+                   color:var(--muted);font-family:var(--mono);margin:14px 0 0">
+          Los tres criterios de salida (Capa 6)</h3>
+        <div class="cont3" id="gConts"></div>
+        <p class="note" style="margin-bottom:0">Mientras uno de los tres no llegue, la fila
+          <b>no vuelve</b>. Son los contadores que corren hacia el regreso.</p>
+      </div>
+
+      <div class="card" id="gDiarioCard" style="display:none">
+        <h2>▤ Diario <span class="sn">incluidas las NO-ACCIONES, con su motivo</span></h2>
+        <div id="gDiario"></div>
+        <p class="note" id="gNoMod" style="margin-bottom:0"></p>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /panelGranizo -->
 
 <!-- Librerías LOCALES (sin CDN, offline) y el MODELO REAL del seguidor: `seguidor.js` es
      la fuente única que ya comparten el Gemelo Digital y Cobertura 3D, copiada aquí idéntica
@@ -4075,6 +4184,324 @@ window.addEventListener('resize',function(){
     try{drawTheta();}catch(e){}
   },120);
 });
+
+/* ═══════════════════ PESTAÑA GRANIZO — presentación ═══════════════════
+   Todo lo que hay aquí es DOM. La física está arriba, en el bloque
+   GRANIZO-FÍSICA, que no toca la página: por eso se puede extraer y carear
+   contra el core en Node. Aquí solo se pinta lo que aquel decide. */
+
+/* Posiciones del diagrama. A mano y fijas: son doce cajas y un grafo
+   auto-colocado sale peor y distinto cada vez, y lo que se enseña tiene que
+   ser reconocible entre una corrida y la siguiente. */
+var GPOS = {
+  'NORMAL': [40, 30], 'VIGILANCIA': [40, 105], 'PREALERTA': [40, 180],
+  'PREPARACIÓN': [40, 255],
+  'HAIL_STOW_PREDICTIVO': [285, 180], 'HAIL_STOW_REACTIVO': [285, 255],
+  'EMERGENCIA': [285, 330],
+  'HAIL_STOW_CONFIRMADO': [530, 255], 'MANTENIMIENTO_DE_POSICIÓN': [530, 330],
+  'RECUPERACIÓN': [530, 180],
+  'FALLO': [775, 40], 'MANUAL': [775, 105]
+};
+var GW = 215, GH = 34, GVB = [0, 0, 1010, 400];
+var GRAN = null;          // último resultado
+var GTABLA = null;        // tabla de transiciones vigente (local o del motor)
+var GPOSICION = 0;
+
+function gParamsDef() {
+  return {
+    t_necesario_min: ['T_necesario', 'min', '§9.1 · PENDIENTE DE MEDIR EN CAMPO'],
+    factor_t_necesario: ['Factor del reloj', '—', '§9.1 · «2 (criterio inicial)»'],
+    margen_temporal_min: ['Margen temporal', 'min', '§9.1'],
+    umbral_tamano_granizo_cm: ['Tamaño de granizo', 'cm', '§8-A · «candidato 1 (no aprobado)»'],
+    umbral_prob_tstorm_pct: ['Prob. tormenta', '%', 'criterio de julio'],
+    umbral_cape_j_kg: ['CAPE', 'J/kg', 'criterio de julio'],
+    persistencia_n: ['Persistencia', 'n', '§8-G'],
+    t_min_permanencia_min: ['Permanencia mínima', 'min', 'Capa 6'],
+    desescalado_pasadas_n: ['Pasadas limpias', 'n', 'Capa 6'],
+    t_sin_precipitacion_min: ['Sin precipitación', 'min', 'Capa 6'],
+    transito_sostenido_max_ms: ['Tránsito · sostenido', 'm/s', '§11 prio 2a'],
+    transito_racha_max_ms: ['Tránsito · racha', 'm/s', '§11 prio 2a'],
+    transito_confirmacion_min: ['Confirmación', 'min', 'criterio de julio'],
+    soc_min_pct: ['SoC mínimo', '%', 'criterio de julio']
+  };
+}
+var GJULIO = null;        // valores de julio, del demo (no tecleados aquí)
+
+function gPintaParams(vals) {
+  var d = gParamsDef(), h = '';
+  Object.keys(d).forEach(function (k) {
+    var v = vals[k];
+    h += '<div class="field"><label>' + esc(d[k][0]) +
+      ' <span class="sn" style="margin:0">' + esc(d[k][1]) + ' · ' + esc(d[k][2]) + '</span></label>' +
+      '<input class="gp" data-k="' + k + '" type="number" step="any" value="' +
+      (v === null || v === undefined ? '' : v) + '"></div>';
+  });
+  $('gParams').innerHTML = h;
+}
+function gLeeParams() {
+  var o = {};
+  [].forEach.call(document.querySelectorAll('.gp'), function (e) {
+    o[e.dataset.k] = (e.value === '' ? null : +e.value);
+  });
+  return o;
+}
+
+/* El banner va en la UI, no solo en el JSON: quien mira la pantalla es quien
+   tiene que enterarse de que estos números no están validados. */
+function gBanner(procedencia, validado) {
+  $('gNoval').innerHTML = validado
+    ? '<b>Parámetros validados.</b> ' + esc(procedencia)
+    : '<b>⚠ PARÁMETROS NO VALIDADOS.</b> ' + esc(procedencia || '') +
+      ' · Y el informe del que sale esta máquina se declara a sí mismo ' +
+      '<b>BORRADOR PARA DISCUSIÓN INTERNA, no apto para uso operativo ni comercial</b>.';
+}
+
+function gDiagrama(traza, estadoVivo) {
+  var usadas = {};
+  (traza || []).forEach(function (t) { usadas[t.de + '>' + t.a] = true; });
+  var svg = '<svg class="gsvg" viewBox="' + GVB.join(' ') + '" role="img" ' +
+    'aria-label="Diagrama de la máquina de amenaza con el estado vivo iluminado">';
+  svg += '<defs><marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" ' +
+    'markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5c7189"/></marker>' +
+    '<marker id="flOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" ' +
+    'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#fbbd23"/></marker></defs>';
+  // aristas primero, para que las cajas queden encima
+  (GTABLA || []).forEach(function (t) {
+    if (!t.de) return;                    // las transversales no se dibujan: van de todos
+    var a = GPOS[t.de], b = GPOS[t.a];
+    if (!a || !b) return;
+    var on = usadas[t.de + '>' + t.a];
+    var x1 = a[0] + GW / 2, y1 = a[1] + GH, x2 = b[0] + GW / 2, y2 = b[1];
+    if (Math.abs(a[1] - b[1]) < 4) { y1 = a[1] + GH / 2; y2 = b[1] + GH / 2; x1 = a[0] + GW; x2 = b[0]; }
+    else if (a[1] > b[1]) { y1 = a[1]; y2 = b[1] + GH; }
+    var mx = (x1 + x2) / 2, my = (y1 + y2) / 2 + (a[0] === b[0] ? 0 : 14);
+    svg += '<path d="M' + x1 + ',' + y1 + ' Q' + mx + ',' + my + ' ' + x2 + ',' + y2 +
+      '" fill="none" stroke="' + (on ? '#fbbd23' : '#243244') + '" stroke-width="' +
+      (on ? 2.2 : 1.2) + '" marker-end="url(#' + (on ? 'flOn' : 'fl') + ')"/>';
+  });
+  Object.keys(GPOS).forEach(function (k) {
+    var p = GPOS[k], vivo = (k === estadoVivo);
+    var def = (HAIL.DEFENSIVOS.indexOf(k) >= 0);
+    var tra = (HAIL.TRANSVERSALES.indexOf(k) >= 0);
+    var visitado = (traza || []).some(function (t) { return t.a === k || t.de === k; });
+    var fill = vivo ? '#fbbd23' : (def ? '#2a1b1e' : (tra ? '#1b2029' : '#141b24'));
+    var stroke = vivo ? '#fbbd23' : (visitado ? '#3d5170' : '#243244');
+    var col = vivo ? '#0b0f14' : (visitado ? '#eaf4ff' : '#5c7189');
+    svg += '<g><rect x="' + p[0] + '" y="' + p[1] + '" width="' + GW + '" height="' + GH +
+      '" rx="8" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + (vivo ? 2 : 1) + '"/>' +
+      '<text class="gstate" x="' + (p[0] + GW / 2) + '" y="' + (p[1] + GH / 2 + 4) +
+      '" text-anchor="middle" fill="' + col + '">' + esc(k) + '</text></g>';
+  });
+  svg += '<text class="gstate" x="775" y="176" fill="#5c7189">FALLO y MANUAL:</text>' +
+    '<text class="gstate" x="775" y="192" fill="#5c7189">desde cualquier estado</text></svg>';
+  $('gDiagrama').innerHTML = svg;
+}
+
+function gContadores(i) {
+  if (!GRAN || !GRAN.contadores) { $('gConts').innerHTML = ''; return; }
+  var c = GRAN.contadores[i] || {}, p = GRAN.parametros.valores;
+  var filas = [
+    ['permanencia', c.dwell, p.t_min_permanencia_min, 'min'],
+    ['pasadas limpias', c.limpio, p.desescalado_pasadas_n, ''],
+    ['sin precipitación', c.seco, p.t_sin_precipitacion_min, 'min']
+  ];
+  $('gConts').innerHTML = filas.map(function (f) {
+    var v = f[1] || 0, lim = f[2] || 1, pct = Math.min(100, 100 * v / lim);
+    return '<div class="c' + (v >= lim ? ' ok' : '') + '"><div class="n">' + esc(f[0]) +
+      '</div><div class="v">' + fmt(v, 0) + ' / ' + fmt(lim, 0) + ' ' + esc(f[3]) +
+      '</div><div class="bar"><i style="width:' + pct.toFixed(0) + '%"></i></div></div>';
+  }).join('');
+}
+
+function gDibujaTl() {
+  if (!GRAN) return;
+  var cv = $('gTl'), _p = prep2d(cv), x = _p.x, W = _p.W, H = _p.H, L = 210, R = 14, T = 10, B = 18;
+  x.clearRect(0, 0, W, H);
+  var ord = HAIL.ORDEN_ESTADOS, n = GRAN.estados.length;
+  var gy = function (k) { return T + (H - T - B) * (ord.indexOf(k) + 0.5) / ord.length; };
+  var gx = function (i) { return L + (i / Math.max(1, n - 1)) * (W - L - R); };
+  x.font = '9px ui-monospace,monospace'; x.textAlign = 'right';
+  ord.forEach(function (k) {
+    var y = gy(k);
+    x.strokeStyle = '#161f2b'; x.beginPath(); x.moveTo(L, y); x.lineTo(W - R, y); x.stroke();
+    x.fillStyle = (HAIL.DEFENSIVOS.indexOf(k) >= 0) ? '#f87272' : '#5c7189';
+    x.fillText(k, L - 6, y + 3);
+  });
+  x.strokeStyle = '#5aa9ff'; x.lineWidth = 2; x.beginPath();
+  GRAN.estados.forEach(function (e, i) {
+    var X = gx(i), Y = gy(e);
+    if (i === 0) x.moveTo(X, Y); else { x.lineTo(X, Y); }
+  });
+  x.stroke();
+  var xi = gx(GPOSICION);
+  x.strokeStyle = '#fbbd23'; x.lineWidth = 1.5;
+  x.beginPath(); x.moveTo(xi, T); x.lineTo(xi, H - B); x.stroke();
+}
+
+function gPinta(i) {
+  if (!GRAN) return;
+  GPOSICION = Math.max(0, Math.min(GRAN.estados.length - 1, i | 0));
+  var e = GRAN.estados[GPOSICION];
+  $('gEstadoVivo').textContent = e;
+  $('gPos').value = GPOSICION;
+  $('gLbl').textContent = (GRAN.t[GPOSICION] || '').slice(11, 16) + ' · ' + e;
+  gDiagrama(GRAN.transiciones.filter(function (t) { return t.i <= GPOSICION; }), e);
+  gContadores(GPOSICION);
+  gDibujaTl();
+}
+
+/* Los contadores se recalculan AQUÍ con la misma cuenta del bloque de física.
+   No se piden al motor porque no forman parte de la traza —son estado
+   interno— y duplicar la cuenta en el protocolo sería una tercera copia. */
+function gContadoresDe(muestras, p, dtMin) {
+  var out = [], dwell = 0, limpio = 0, seco = 0, estado = 'NORMAL';
+  var sim = HAIL.simula(muestras, p, { dt_min: dtMin });
+  for (var i = 0; i < muestras.length; i++) {
+    var m = muestras[i];
+    var calmo = (m.cape_j_kg != null || m.prob_tstorm_pct != null)
+      && (m.cape_j_kg || 0) < p.umbral_cape_j_kg
+      && (m.prob_tstorm_pct || 0) < p.umbral_prob_tstorm_pct;
+    limpio = (calmo && !m.precipitacion && !(m.hail_1h_cm || 0)) ? limpio + 1 : 0;
+    seco = (m.precipitacion === false) ? seco + dtMin : 0;
+    if (HAIL.DEFENSIVOS.indexOf(estado) >= 0) dwell += dtMin;
+    estado = sim.estados[i];
+    if (HAIL.DEFENSIVOS.indexOf(estado) < 0) dwell = 0;
+    out.push({ dwell: dwell, limpio: limpio, seco: seco });
+  }
+  return out;
+}
+
+async function gCorre() {
+  var btn = $('gRun'); btn.disabled = true; btn.textContent = 'Corriendo…';
+  try {
+    var D = await gSerie();
+    var p = gLeeParams(), dtMin = D.dt_min || 1;
+    var falta = HAIL.faltantes(p);
+    if (falta.length) throw new Error('faltan parámetros y el Rev01.4 §19 no los da: ' + falta.join(', '));
+    var modo = $('gModo').value, res = null, donde = '';
+    if (modo !== 'local' && ENGINE) {
+      try {
+        var r = await fetch(ENGINE + '/hailstow', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ muestras: D.muestras, parametros: p, dt_min: dtMin })
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        var j = await r.json();
+        res = { estados: j.estados, transiciones: j.transiciones, diario: j.diario,
+                not_modeled: j.not_modeled, parametros: j.parametros };
+        donde = 'motor SolarGPT (POST /hailstow)';
+      } catch (e) {
+        if (modo === 'remoto') throw e;
+        res = null;                       // en automático se cae al local
+      }
+    }
+    if (!res) {
+      var L = HAIL.simula(D.muestras, p, { dt_min: dtMin });
+      res = { estados: L.estados, transiciones: L.transiciones, diario: L.diario,
+              not_modeled: D.not_modeled || [],
+              parametros: { validado: false, procedencia: D.procedencia, valores: p } };
+      donde = 'aquí, en el navegador (bloque GRANIZO-FÍSICA)';
+    }
+    res.t = D.muestras.map(function (m) { return m.t; });
+    res.contadores = gContadoresDe(D.muestras, p, dtMin);
+    GRAN = res;
+    GTABLA = D.transiciones_tabla;
+    gBanner(res.parametros.procedencia, res.parametros.validado);
+    $('gModoNota').innerHTML = 'Calculado en <b>' + esc(donde) + '</b> · serie: ' +
+      esc(D.fuente) + ' · ' + D.muestras.length + ' muestras de ' + fmt(dtMin, 0) + ' min.';
+    $('gTimelineCard').style.display = ''; $('gDiarioCard').style.display = '';
+    $('gPos').max = Math.max(0, res.estados.length - 1);
+    $('gTlHint').textContent = res.transiciones.length + ' transiciones';
+    $('gDiario').textContent = res.diario.join('\n');
+    $('gNoMod').innerHTML = (res.not_modeled || []).map(function (t) {
+      return '⚠️ No modelado: ' + esc(t);
+    }).join('<br>');
+    var prim = res.transiciones.length ? res.transiciones[0].i : 0;
+    gPinta(prim);
+    $('gDiagNota').innerHTML = 'En ámbar, las transiciones que han ocurrido hasta el instante ' +
+      'que marca el deslizador. <b>FALLO</b> y <b>MANUAL</b> son alcanzables desde cualquier ' +
+      'estado y por eso no llevan flecha.';
+  } catch (e) {
+    $('gModoNota').innerHTML = '<b style="color:var(--err)">' + esc(String(e.message || e)) + '</b>';
+  } finally { btn.disabled = false; btn.textContent = '▶ Correr la máquina'; }
+}
+
+/* La serie: la demo sale del MISMO generador que el golden, así que la tabla
+   que se dibuja sin red es la misma que sirve /hailstow/presets. */
+var GDEMO = null;
+async function gSerie() {
+  if ($('gFuente').value === 'file' && GRAN_FILE) return GRAN_FILE;
+  if (!GDEMO) {
+    var r = await fetch('demo-granizo.json', { cache: 'no-store' });
+    if (!r.ok) throw new Error('no encuentro demo-granizo.json (HTTP ' + r.status + ')');
+    GDEMO = await r.json();
+  }
+  return {
+    muestras: GDEMO.demo.muestras, dt_min: GDEMO.demo.dt_min,
+    fuente: 'demostración · ' + GDEMO.demo.descripcion,
+    procedencia: GDEMO.parametros.procedencia,
+    transiciones_tabla: GDEMO.transiciones,
+    not_modeled: GDEMO.not_modeled
+  };
+}
+var GRAN_FILE = null;
+$('gFile').onchange = function () {
+  var f = this.files && this.files[0]; if (!f) return;
+  var fr = new FileReader();
+  fr.onload = function () {
+    try {
+      var j = JSON.parse(fr.result);
+      var ms = j.muestras || (j.demo && j.demo.muestras) || j;
+      if (!Array.isArray(ms) || !ms.length) throw new Error('no encuentro `muestras`');
+      GRAN_FILE = { muestras: ms, dt_min: +j.dt_min || 1, fuente: 'fichero ' + f.name,
+                    procedencia: 'declarados en la ficha',
+                    transiciones_tabla: (GDEMO && GDEMO.transiciones) || HAIL.TRANS.map(function (t) {
+                      return { de: t.de, a: t.a, condicion: t.cond, motivo: t.motivo }; }),
+                    not_modeled: [] };
+      $('gModoNota').textContent = ms.length + ' muestras leídas de ' + f.name + '. Pulsa correr.';
+    } catch (e) {
+      $('gModoNota').innerHTML = '<b style="color:var(--err)">' + esc(String(e.message || e)) + '</b>';
+    }
+  };
+  fr.readAsText(f);
+};
+
+$('gFuente').onchange = function () {
+  $('gFileBox').style.display = (this.value === 'file') ? '' : 'none';
+};
+$('gPos').oninput = function () { gPinta(+this.value); };
+$('gRun').onclick = gCorre;
+$('gReset').onclick = function () { if (GJULIO) gPintaParams(GJULIO); };
+
+function gTab(cual) {
+  var g = (cual === 'granizo');
+  $('panelViento').style.display = g ? 'none' : '';
+  $('panelGranizo').style.display = g ? '' : 'none';
+  $('tabViento').className = g ? '' : 'on';
+  $('tabGranizo').className = g ? 'on' : '';
+  if (g && !GJULIO) gArranca();
+}
+$('tabViento').onclick = function () { gTab('viento'); };
+$('tabGranizo').onclick = function () { gTab('granizo'); };
+
+/* Al abrir la pestaña se traen los valores de julio del MISMO sitio que la
+   tabla —el demo generado por el core—, para no teclearlos aquí. Y la tabla
+   del diagrama sale del motor si está, del demo si no: las dos son la misma. */
+async function gArranca() {
+  try {
+    var D = await gSerie();
+    GJULIO = D.muestras && GDEMO ? GDEMO.parametros.valores : null;
+    GTABLA = D.transiciones_tabla;
+    if (GJULIO) gPintaParams(GJULIO);
+    gBanner(D.procedencia, false);
+    gDiagrama([], null);
+    $('gDiagNota').innerHTML = 'La tabla del diagrama sale del core: ' +
+      (GTABLA || []).length + ' transiciones. Pulsa <b>correr</b> para verla encenderse.';
+  } catch (e) {
+    $('gDiagNota').innerHTML = '<b style="color:var(--err)">' + esc(String(e.message || e)) + '</b>';
+  }
+}
+
 fillRosa(); fillPresets(); loadCfg(); meteoTag(); loadPlants();
 fijaTZ(SITIO&&SITIO.tz,+$('lon').value); renderGusts();
 /* La escena se monta AL ABRIR, no al terminar de simular: era la pega — el

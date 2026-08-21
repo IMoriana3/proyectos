@@ -54,6 +54,8 @@ porque llamar «Túnez» a otras coordenadas es poner nombre de planta a otro em
 
 De dónde salen los casos: si está el checkout **hermano** de `SolarGPTfull` se leen de ahí (fuente única literal, cero copias); si no, del **espejo** commiteado en `tests/goldens/`, que lleva el SHA-256 de la fuente. Y **cuando los dos están, se carean los hashes**: un espejo viejo lo caza cualquiera que tenga los dos repos. Los tres ficheros —golden, espejo y hash— los escribe **un solo comando** desde el core (`python scripts/gen_goldens_hailstow.py --write`), así que una divergencia solo puede significar vejez, nunca ambigüedad. El arnés **declara siempre en qué modo corrió**, porque aquí no hay CI que lo imponga.
 
+`test_granizo_pestana.js` abre la pestaña en Chromium y comprueba lo que ninguno de los dos arneses ve: que el **diagrama tiene una arista por transición de la tabla que decide**, que los **tres contadores** de salida corren al mover el instante, que editar un umbral cambia el resultado sobre la misma serie (y que «volver a los de julio» lo deshace **en el resultado**, no solo en el campo), y que el banner **NO VALIDADO está en la UI** y no solo en el JSON. Ojo con el régimen: la primera versión comparaba dos finales que eran iguales con y sin el cambio, y encima pasaba `true` como condición — un test que aprueba siempre.
+
 `test_granizo_espejo.mjs` es el guard de esa regla y vive **fuera** del arnés a propósito: si viviera dentro compartiría su condición de salto y se saltaría a sí mismo. La regla está extraída a función pura para poder ejercitar las cuatro combinaciones sin tocar el disco — el caso que importa (hay hermano y el espejo está viejo) no es reproducible en una máquina donde está al día.
 
 Comprueban además lo de siempre: que las tarjetas se pintan, que el detalle abre con su
@@ -131,6 +133,7 @@ node tests/test_viento_ejes.js             # 64 comprobaciones, lienzos, ejes, t
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
 node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core
 node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo
+node tests/test_granizo_pestana.js         # 22 comprobaciones, la pestaña en Chromium
 node tests/test_layout.js                  # 192 comprobaciones, careo del generador de layout
 node tests/test_layout_ui.js               # 152 comprobaciones, el generador en Chromium
 ```
