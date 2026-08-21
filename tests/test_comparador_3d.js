@@ -390,6 +390,38 @@ const SONDA = `(() => {
   check('elegir un emplazamiento del SUR gira la fija al NORTE (z=' +
     sur.bloques.fija_proyecto.n.z.toFixed(2) + ')', sur.bloques.fija_proyecto.n.z < -0.15);
 
+  // ── el eje inclinado no se hunde: va sobre su ladera ──
+  // Un TSAT gira el eje sobre X, así que media fila se metía bajo el suelo y la
+  // otra media volaba. No era un fallo del dibujo: le faltaba el TERRENO. Un
+  // eje inclinado se monta sobre una ladera con esa misma pendiente.
+  const tsat = await p.evaluate(() => {
+    const B = BLOQUES.find(b => b.key === 'tracker_tsat');
+    const H = BLOQUES.find(b => b.key === 'tracker_hsat');
+    const bajo = b => { let y = 1e9;
+      b.filas.forEach(u => { y = Math.min(y, new THREE.Box3().setFromObject(u).min.y); });
+      return +y.toFixed(2); };
+    // el talud es el único hijo del grupo que es un Group con una malla plana
+    const talud = g => {
+      let r = null;
+      g.children.forEach(o => { if (o.isGroup && o.children.length === 1 &&
+        o.children[0].isMesh && o.children[0].geometry.type === 'PlaneGeometry')
+        r = o.children[0]; });
+      return r;
+    };
+    const t = talud(B.filas[0].parent);
+    return { yTsat: bajo(B), yHsat: bajo(H),
+             hayTalud: !!t, pend: t ? +((t.rotation.x + Math.PI / 2) * 180 / Math.PI).toFixed(2) : null,
+             taludHsat: !!talud(H.filas[0].parent),
+             axTilt: +document.getElementById('axtilt').value };
+  });
+  check('el eje inclinado ya no se hunde en el terreno (y mínima ' + tsat.yTsat + ' m)',
+    tsat.yTsat >= -0.01, String(tsat.yTsat));
+  check('y se apoya en un talud con la pendiente del eje (' + tsat.pend + '° vs ' +
+    tsat.axTilt + '°)', tsat.hayTalud && Math.abs(Math.abs(tsat.pend) - tsat.axTilt) < 0.05,
+    JSON.stringify(tsat));
+  check('el de eje HORIZONTAL no lleva talud, que no lo necesita',
+    tsat.taludHsat === false && tsat.yHsat >= -0.01, JSON.stringify([tsat.taludHsat, tsat.yHsat]));
+
   // ── bifila: DOS filas que son UN seguidor, con su transmisión ──
   // Monofila y bifila no cambian la mesa —es operativa, no geométrica— pero sí
   // cambian qué es «un seguidor». Sin dibujar el accionamiento compartido, dos

@@ -472,6 +472,19 @@ modelo **real** de `seguidor.js`, el mismo que pintan el Gemelo Digital y la Cob
    vecino y contamina la comparación—. Con 10 m se apagaban a 13°, justo por encima del amanecer
    de invierno que la escena existe para enseñar; con 16 m aguantan hasta 8,5°.
 
+### El eje inclinado va sobre su ladera
+
+Un TSAT gira el eje sobre X, así que media fila quedaba **bajo el suelo** y la otra media volando:
+en pantalla parecía una estructura clavada en la tierra. No era un fallo del dibujo — le faltaba el
+**terreno**. Un eje inclinado se monta sobre una ladera con esa misma pendiente (o con las hincas
+creciendo, que a esta escala es lo mismo).
+
+Ahora el bloque se sube hasta que su punta baja toca el cero —`(largo de fila / 2) · sen(tilt del
+eje)`, 5,65 m con 65 m de fila y 10°— y se le pone debajo un **talud** con la pendiente del eje,
+subiendo hacia el ecuador. Los de eje horizontal no llevan talud, que no lo necesitan. Hay tests que
+miden las dos cosas: que la cota mínima del bloque no baja de cero y que la pendiente del talud es
+la del eje.
+
 ### Dónde cae la sombra de cada familia
 
 La fija **sí** proyecta sombra —todas sus mallas la proyectan y el suelo la recibe—, pero mira al
@@ -628,7 +641,7 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 node tests/test_comparador.js       # 89 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 117 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 120 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 
