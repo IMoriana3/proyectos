@@ -135,5 +135,5 @@ node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS 
 node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo
 node tests/test_granizo_pestana.js         # 22 comprobaciones, la pestaña en Chromium
 node tests/test_layout.js                  # 192 comprobaciones, careo del generador de layout
-node tests/test_layout_ui.js               # 152 comprobaciones, el generador en Chromium
+node tests/test_layout_ui.js               # 154 comprobaciones, el generador en Chromium
 ```
