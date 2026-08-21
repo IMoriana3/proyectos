@@ -204,13 +204,16 @@ check('lo que no es fecha se devuelve tal cual',
   check('el aviso sigue a la tabla al añadir otra',
         /2 rachas/.test(await page.$eval('#labHint', e => e.textContent)));
   // y con la tabla vacía lo dice, en vez de callarse
-  // borrar RE-DIBUJA la tabla, así que los handles viejos quedan muertos: se
-  // vuelve a preguntar por el primero en cada vuelta.
-  for (let g = 0; g < 10; g++) {
-    const b = await page.$('#gtbl [data-del]');
-    if (!b) break;
-    await b.click();
-  }
+  // Vaciar la tabla SIN una tormenta de clics. Pulsar el botón de borrar en
+  // bucle mataba la pestaña —«Target page has been closed», a distinta altura
+  // en cada vuelta— porque la tabla se redibuja entera en cada pulsación y la
+  // página lleva encima una escena de three.js. El estado final es el mismo y
+  // se ejercita el mismo camino (`renderGusts` con la tabla vacía + `labHint`),
+  // que es lo que este test mira; el botón de borrar tiene su propio sitio y no
+  // es aquí. Un arnés que tumba el navegador no mide: mide el navegador.
+  await page.evaluate(() => { GUSTS.length = 0; renderGusts(); });
+  await page.waitForFunction(
+    () => !document.querySelector('#gtbl [data-del]'), { timeout: 5000 });
   const pista0 = (await page.$eval('#labHint', e => e.textContent)).trim();
   check('sin rachas dice que no hay nada que inyectar (' + pista0 + ')',
         /no hay nada que inyectar/.test(pista0));
