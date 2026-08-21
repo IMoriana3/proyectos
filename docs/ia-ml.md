@@ -32,6 +32,138 @@ El mismo criterio de relevancia hizo falta en el CUSUM: sobre quince puntos de r
 
 ---
 
+## Revisión 2026-08-21 — qué cambia con las últimas tarjetas
+
+> Entre la v0.1 y hoy han entrado **94 commits** y **cinco tarjetas nuevas** al Panel. Tres de ellas cambian el plan, y una destapa un **fallo de diseño en el módulo ya construido**. Esta sección revisa las propuestas; lo de abajo se mantiene salvo donde aquí se diga lo contrario.
+
+| Tarjeta nueva | Estado | Qué cambia para la IA |
+|---|---|---|
+| **Viento & Abanderamiento** (`sim-viento.html`) | Producción | El banco de pruebas del nowcast **ya existe** |
+| **Simulador de planta TCU** (`gemelo-digital/sim/`) | Producción | Fixture mucho mejor que el mío — y **rompe uno de mis residuos** |
+| **Medidor de tráfico** (`scada/trafico.html`) | Producción | Da la escala real de P1 |
+| **Comparador de estructuras** | Producción | Física completa en el navegador contra el core |
+| **Generador de layout** | En desarrollo | Motor de layout portado, con careo automático |
+
+### 1. El nowcast de racha ya no necesita andamiaje
+
+`sim-viento.html` compara las cinco estrategias canónicas (A1/A2/B1/B2 y el PASIVO) contra el mismo seguidor **sin abanderar**, para un emplazamiento y un año, y da exactamente las métricas que hacían falta: **POA perdida** (kWh/m²·año, % y mes a mes), **cuántas veces abandera** separando parcial de total, **cuánto tiempo** se queda así en % de horas de sol, y los **episodios más caros** con su traza. Y corre en el motor (`POST /windstow`), no en el navegador.
+
+Eso convierte P6 de «hay que construir la evaluación» en «el nowcast entra como una estrategia más y se mide con la misma vara». Es la diferencia entre un proyecto y un experimento.
+
+**Pero la ficha añade un matiz que yo no tenía, y acota lo que un nowcast puede prometer:** el **abanderamiento PASIVO** no es control, es respuesta mecánica — la fila exterior a barlovento se desembraga por carga de viento, la TCU se entera después *si acaso*, y no la levanta que amaine: solo el reenganche geométrico, que puede ser hasta el ocaso o hasta el amanecer siguiente. Ningún nowcast toca eso. **Antes de proponer un modelo hay que medir qué fracción de la pérdida anual es de control y cuál es mecánica**, porque si la mayor parte es pasiva, el nowcast optimiza el trozo pequeño.
+
+### 2. El Simulador de planta TCU rompe mi residuo de seguimiento
+
+Esta es la corrección importante, y va contra algo que ya está en el código.
+
+El simulador mantiene **separados el ángulo real y el medido** —desajuste de montaje, offset de 41058, deriva térmica, ruido y cuantización a 34,7 pulsos/°— y **cierra el lazo sobre la medida**. Su documentación enuncia la consecuencia sin rodeos:
+
+> 3° de desajuste sin compensar y el TCU publica que está clavado en su objetivo mientras la mesa está torcida, con el SCADA en verde y la producción sin aparecer.
+
+Mi residuo `tracking_bias` compara `tilt_angle` con `target_angle`, **los dos leídos del propio TCU**. Ante un encoder descalibrado ese residuo vale **cero**: el equipo cree que está donde le han dicho, y lo está — según su propia regla mal puesta. Es decir, **el residuo es ciego justo a la avería que dice detectar**, y el fixture que escribí no lo destapó porque inyecté el sesgo en el ángulo *real*, que es como si el TCU fuese honesto.
+
+Lo que sí lo ve: comparar el **ángulo**, no el error. A la misma hora, todas las TCU de una NCU deberían estar al mismo θ salvo por el terreno; la descalibrada declara 3° distintos de sus vecinas **con error propio nulo**. La maquinaria de comparación contra vecinos ya está construida — es cambiar qué magnitud se le pasa, no la arquitectura.
+
+**Propuesta:** añadir el residuo `tilt_vs_peers` (ángulo frente a vecinos a la misma marca de tiempo), y degradar `tracking_bias` a lo que realmente es: un detector de fallo de **lazo** (no llega a la consigna), no de **referencia**. Son dos averías distintas y hoy están mezcladas bajo un nombre que promete de más.
+
+Y el simulador trae además **inyección de averías con dos caminos físicos distintos**: *eje calado* (no gira, corriente de calado, salta la sobrecorriente software 41040 casi al instante) y *eje duro* (gira arrastrándose sin llegar al disparo, se detecta por ventana de 41039 y tres reintentos de 41065). **El «eje duro» es exactamente lo que persigue mi residuo de energía de motor**, y validarlo contra ese simulador —planta entera, jerarquía de control real, mapa Modbus real— vale infinitamente más que contra el fixture que me inventé.
+
+### 3. `canon.js`: la casa ya decidió el patrón, y mi consola lo incumple
+
+Cuando escribí `ia.html` la justifiqué como «espejo JS, mismo patrón que el Simulador de Backtracking». Ese patrón es el viejo. El nuevo está escrito en `gemelo-digital/sim/canon.js` y dice lo contrario:
+
+> El ALGORITMO de seguimiento es de SolarGPT, y portarlo a JavaScript es exactamente lo que crea dos versiones que divergen sin que nadie se entere. Ya pasó con el sleep (0,45 contra 0,64 W) y con la velocidad del actuador (0,16 contra 0,17 °/s): números que coincidían el día que se copiaron. Así que aquí no se calcula: se **PIDE**.
+
+Y añade la regla que más me importa: si el motor no está, **se dice en pantalla y en el registro** — *«un resultado de primer orden que parece uno canónico es peor que no tener resultado»*.
+
+Mi consola copia a mano `MOTOR_WH_PER_DEG_A/B`, la ley `Nf = 6000/DoD^1,2`, los umbrales de calidad y toda la lógica de residuos. Es exactamente la duplicación que ese comentario existe para prohibir, y el hecho de que hoy coincidan al bit no dice nada: los dos números del ejemplo también coincidían el día que se copiaron.
+
+**Propuesta:** invertir la consola. `GET /health` → si el motor está, pedirle `/salud` y pintar; si no está, decirlo en pantalla y no calcular en silencio. El núcleo JS se queda **solo** como modo demo declarado, nunca como camino de producción. El test de paridad que escribí pasa a ser la red de seguridad de ese modo demo, no la justificación del port.
+
+### 4. El Medidor de tráfico da la escala real de P1
+
+Ya no hace falta estimar: **10 plantas, 66 NCU, 6.039 TCU**, poll de 30 s, **1.343 MB/día** en la LAN y **760 MB/día** a la nube (23 GB/mes toda la flota, comprimidos). San José sola son 2.289 TCU — con 103 sin cuadrar contra el `config_tcu_sunner`, pregunta abierta para comisionado.
+
+Para el volcado histórico eso significa que el orden de magnitud es manejable, y que el particionado por planta/NCU/día tiene sentido porque el reparto es muy desigual: San José es el 36 % del tráfico y Bagnarelli el 0,7 %.
+
+### 5. Hay una segunda vía al dato real, más barata que InfluxDB
+
+`sim/careo.js` lee **capturas de campo de la TCU Toolbox**, y del formato aprovecha que las columnas llevan la dirección delante (`30111 tilt_angle [deg]`, `30093 corriente_bateria [mA]`), así que el lector no necesita conocer los nombres. Y la pestaña **SAT** de la toolbox hace *registro continuo de la planta durante días, a disco y resistente a reinicios*.
+
+Eso es **una ventana de días de telemetría real que ya se puede producir hoy**, sin tocar InfluxDB ni esperar a nadie. P1 deja de ser un prerrequisito bloqueante y pasa a tener dos caminos: el volcado histórico (mejor, más lento) y una campaña SAT de una semana (peor cobertura, disponible ya).
+
+**Propuesta:** que `solargpt_ml.ingest` lea también ese CSV. Es un lector más contra el mismo contrato `Sample`, y desbloquea el back-test sin depender del histórico.
+
+### Prioridad revisada
+
+| # | Qué | Por qué ahora | Bloqueado por |
+|---|---|---|---|
+| 1 | **Arreglar `tracking_bias` + añadir `tilt_vs_peers`** | Hoy el módulo promete detectar algo a lo que es ciego | nada |
+| 2 | **Lector de CSV de la TCU Toolbox** en `ingest` | Abre el dato real sin esperar a InfluxDB | nada |
+| 3 | **Validar contra el Simulador de planta TCU** | Fixture con jerarquía real y averías físicas (eje duro/calado) | nada |
+| 4 | **Invertir la consola a «pedir, no calcular»** | Alinearla con `canon.js` antes de que diverja | `/salud` servido |
+| 5 | **ML3.6 al registro** | Artefacto en disco, dato real (OMIE 2018-2022) | nada |
+| 6 | **Reparto control/mecánico de la pérdida por viento** | Acota lo que el nowcast puede prometer | `sim-viento` |
+| 7 | **Nowcast de racha** | El banco de pruebas ya existe | 6 |
+| 8 | **Back-test contra sustituciones del PEM** | Cierra G1 y G3, calibra | 2 o 3 |
+
+Lo que **baja** de prioridad respecto a la v0.1: el volcado de InfluxDB (deja de ser bloqueante) y el surrogate anual para el navegador — el Comparador de estructuras ya hace física completa en el navegador con careo automático contra el core, así que el problema que el surrogate resolvía es menor de lo que parecía.
+
+---
+
+## Catálogo completo de modelos en los notebooks
+
+> Barrido celda a celda de los tres notebooks (2026-08-21). Clasificación: **vivo** · **research declarado** (lleva su aviso en la celda) · **archivado** (bloqueado con un `RuntimeError` a propósito).
+
+### `TrackerGovernor_official_3.ipynb` — 13 celdas, todas vivas
+
+Es el notebook canónico de IA. Nada archivado, nada marcado research.
+
+| Modelo | § | Arquitectura | Target | Dato | Estado |
+|---|---|---|---|---|---|
+| Económico v2.1 | §06b–c | RF 300 / GB 400 / HGB 400, elige por R² | `delta_q_eur` contrafactual a 3 h | sintético + OMIE sintético | `models/v21_hybrid.joblib` |
+| ML3.5 | §08b | GBR 200, depth 6, lr 0,05 | idem | 26 sitios reales, holdout Reykjavik + Helsinki | `models/ml35_baseline.joblib` |
+| **ML3.6** | §08c | GBR igual | idem | 28 sitios + **OMIE real 2018-2022**, peso ×3 zona gris | `models/ml36_official.joblib` · **OFICIAL** |
+| Winter Learner | §09e–f | DT / RF / HistGBT, 4 clases | `winter_class` | **teacher = su propia regla v3** | entrenado, sin enchufar |
+| BT Learner | §09g | DT / RF / HistGBT, 3 clases | estrategia BT | **teacher = su propio selector v2.4** | `_GAIN_MODEL` sin cargar |
+| POA classifier | §09i | DT / RF / HistGBT, 4 clases | política difusa | 28 sitios reales | EXPERIMENTAL, **−11 % vs regla** |
+| Value ML v1 | §09j | RF 200 / depth 20 | POA de 4 políticas | 670.683 muestras | superado por v2 |
+| **Value ML v2** | §09z | RF 150 / depth 18 | idem, mixto 15 min | idem + 15 min | **OFICIAL 6/6, +2,63 %** |
+| Regret + umbral | §09z-regret | HGB | umbral óptimo por regret | — | utilidad |
+| Hardening | §09z-hard | DT vs RF vs HistGBT | balanced accuracy + estabilidad | — | comparativa |
+| Feature sprint | §09z-feat | RF 100 | ablation de features nuevas | — | estudio |
+
+### `SolarGPT_v16_2_surgical_fix.ipynb` — 13 vivas · 4 research · 18 archivadas
+
+Las **18 archivadas** llevan un `RuntimeError` que las bloquea con el motivo escrito: *«moved to TrackerGovernor»*. Son todo el linaje §60.5E.ML → ML3.6, el §60.6.7v2.4 / §60.6.10v2.4, el TFT (10.2b), el GRU (12.3), el multi-agente RL (15.1) y la NN de difusa (15.3). **Están así a propósito: ya se consolidaron.**
+
+Vivas: **01.10b** eventos severos (granizo / tormenta / nieve), **01.11** meteo ML multi-target, **01.11v2/v3** Validation Hub, **02.5g** producción en tiempo real (RF), **99.IC.7** y **09.0** IsolationForest, **47.4** surrogate baseline, **12.0** HGB con *pinball loss* (cuantiles), **48.1** hub de evaluación.
+
+Research declarado: 11.3 BESS · 11.5 SOH · 11.5b winter mode ML · 12.1 surrogate θopt.
+
+### `SolarGPT_physics_canonical.ipynb` — 1 viva, 2 research
+
+Entorno PPO (vivo) y los duplicados de 11.3 y 11.5. Nada propio.
+
+### Artefactos en disco
+
+Tres, y **los tres son del linaje económico**: `v21_hybrid.joblib`, `ml35_baseline.joblib`, `ml36_official.joblib`. El del Value ML v2 (`artifacts/poa_value_rf_15min_real.joblib`) **no está** — lo produce `scripts/retrain_15min_documented.py`. Confundirlos es fácil y ya pasó una vez en el registro de `solargpt_ml`; está corregido.
+
+### Qué traería de los notebooks, y qué no
+
+**Sí:**
+
+1. **ML3.6 al registro** — artefacto en disco, dato real, declarado OFICIAL. Es media hora de trabajo.
+2. **Los dos IsolationForest (09.0 + 99.IC.7)** sobre el dataset real. Son el complemento no supervisado a mis residuos: yo detecto lo que sé nombrar, ellos lo que no.
+3. **12.0, el HGB con pinball loss** — da cuantiles, que es justo lo que le falta a `fleet_health` para pasar G6.
+4. **01.11 + Validation Hub** como base del nowcast: split temporal, persistencia y climatología como baselines, skill score por horizonte. El andamiaje ya está escrito.
+
+**Decidir, no dejar a medias:** el `_GAIN_MODEL`. §60.6.7v2.4 lo entrena y está **archivado**; §09c del TrackerGovernor lo **espera** y, al no encontrarlo, cae a la heurística declarando que eso es *«el comportamiento oficial correcto»*. O se desarchiva y se entrena, o se borra esa rama del selector. Tenerlo a medias es lo peor de los dos mundos.
+
+**No:** el Winter Learner y el BT Learner mientras su etiqueta la genere su propia regla — el techo del alumno es el maestro. Si interesan, es como *surrogate* declarado (comprimir una regla de cinco capas para que corra en un ESP32), no como mejora. Y nada del bloque RL / PPO / TFT / GRU archivado.
+
+---
+
 ## Por qué este documento
 
 La plataforma tiene ML repartido en varios sitios y con niveles de madurez muy distintos: modelos oficiales con seis puertas de validación pasadas conviven con prototipos entrenados sobre datos sintéticos. El notebook `SolarGPT_v16_2` ya incluye una **auditoría de IA (2026-04-05)** que clasifica los bloques por madurez; este documento la recoge, la extiende a lo que hay fuera de ese notebook (TrackerGovernor, `factiun_core.rf`, el core) y añade lo que yo haría a continuación.
