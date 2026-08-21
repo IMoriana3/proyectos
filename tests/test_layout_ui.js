@@ -446,6 +446,21 @@ const cajaLienzo = async page => {
     JSON.stringify({ filaZ: v3bif.mesa && v3bif.mesa.filaZ, paso: v3bif.mesa && v3bif.mesa.pasoFila }));
   check('BIFILA → un nodo por PAREJA A/B: ~mesas/4 (' + v3bif.trackers.length + ' vs ' + mesasBif + ' mesas)',
     Math.abs(v3bif.trackers.length - mesasBif / 4) <= mesasBif * 0.02);
+  // UN eje de transmisión POR BIFILA, en el MOTOR — se pintaba uno por MESA
+  // (dos por tracker), que es lo que se vio en Larraga. El eje va en el hueco
+  // entre las dos mesas de la fila: su X no puede caer DENTRO de una mesa.
+  const ejesBif = await page.evaluate(() => {
+    const es = ejesBifila();
+    const dentroDeMesa = e => RES.rows.some(f => f.some(t =>
+      e.xa > t.x0 + 0.01 && e.xa < t.x1 - 0.01 &&
+      e.ya > t.y0 - 0.01 && e.ya < t.y1 + 0.01));
+    return { n: es.length, enMesa: es.filter(dentroDeMesa).length,
+             pares: RES.rows.reduce((a, f) => a + f.length, 0) / 4 };
+  });
+  check('y en el 2D, UN eje de transmisión por bifila (' + ejesBif.n + ' ejes para ' + mesasBif + ' mesas)',
+    Math.abs(ejesBif.n - ejesBif.pares) <= Math.max(2, ejesBif.pares * 0.02), JSON.stringify(ejesBif));
+  check('cada eje en el hueco del MOTOR, no atravesando una mesa',
+    ejesBif.enMesa === 0, ejesBif.enMesa + ' ejes dentro de mesa');
   check('con un TIPO por talla y el largo de FILA real (2 mesas + motor)',
     Object.keys(v3bif.mesa.tipos).length > 1 &&
     Object.values(v3bif.mesa.tipos).every(t => t.largo > 0 && t.modsAla > 0),

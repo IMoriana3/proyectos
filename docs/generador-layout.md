@@ -219,7 +219,10 @@ tras el recorte, cae su pareja.
   que el número.
 - **Mostrar eje bifila**: la biela que une las dos sub-filas de un mismo tracker. Es lo que hace
   visible que es bifila y no dos monofilas juntas. Va **marcada por defecto**: un eje que hay que
-  acordarse de encender es un eje que no se ve.
+  acordarse de encender es un eje que no se ve. Y es **UN eje por bifila, en el motor** — el hueco
+  entre las dos mesas de la fila, cruzando de la fila A a la B. Se pintaba uno por MESA (dos por
+  tracker), que fue lo que el usuario cazó en Larraga («¿estás poniendo dos ejes donde solo va
+  uno?»); el banco ahora cuenta los ejes (= bifilas) y exige que ninguno atraviese una mesa.
 - **Los módulos se dibujan.** Con zoom suficiente (≥ 3 px por módulo) cada mesa enseña sus
   separadores de módulo y las filas de la tabla (2V, 4H…): una mesa de 28 y una de 14 no se
   distinguen a ojo por el largo, y contando módulos sí.
