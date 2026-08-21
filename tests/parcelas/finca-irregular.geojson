@@ -1,0 +1,67 @@
+{
+ "type": "Feature",
+ "properties": {
+  "tipo": "parcela",
+  "nombre": "Finca dibujada (irregular, cóncava)",
+  "careo": {
+   "mount_type": "tracker",
+   "table_type": "1V",
+   "mods_per_struct": [
+    28,
+    14,
+    7
+   ],
+   "bifila": true,
+   "pitch_m": 6.0,
+   "panel_az_deg": 90.0
+  },
+  "_nota": "Semilla del careo con parcelas REALES: cóncava y con puntas, como la finca que destapó lo de bifila. Cualquier GeoJSON exportado por la ficha (lleva su feature tipo=parcela) puede soltarse en tests/parcelas/ y entra al careo al regenerar el fixture."
+ },
+ "geometry": {
+  "type": "Polygon",
+  "coordinates": [
+   [
+    [
+     -0.801502,
+     41.577426
+    ],
+    [
+     -0.799581,
+     41.579054
+    ],
+    [
+     -0.795978,
+     41.579325
+    ],
+    [
+     -0.794417,
+     41.577607
+    ],
+    [
+     -0.794778,
+     41.575254
+    ],
+    [
+     -0.796699,
+     41.573626
+    ],
+    [
+     -0.79766,
+     41.575616
+    ],
+    [
+     -0.799101,
+     41.573807
+    ],
+    [
+     -0.800542,
+     41.575073
+    ],
+    [
+     -0.801502,
+     41.577426
+    ]
+   ]
+  ]
+ }
+}

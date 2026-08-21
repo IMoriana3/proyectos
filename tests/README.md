@@ -55,15 +55,24 @@ historial, que el botón *Paquete* apunta a `releases/latest` y que el panel de
 documentación carga el markdown de `docs/`.
 
 `test_layout.js` carea la ficha **Generador de layout** contra el core Python sin navegador: extrae el
-bloque `MOTOR DE LAYOUT` del HTML REAL y lo corre sobre las mismas nueve parcelas que corrió
-`solargpt_core.layout_v2.compute_layout_v2` (`careo-layout.json`). Exige el mismo número de **filas**
+bloque `MOTOR DE LAYOUT` del HTML REAL y lo corre sobre las mismas catorce parcelas que corrió
+`solargpt_core.layout_v2.compute_layout_v2` (`careo-layout.json`) — tres de ellas bifila con
+multi-talla sobre borde girado y en L, que es donde el emparejado A/B se rompe, y una **finca REAL**
+cóncava que entra por `tests/parcelas/*.geojson` (cualquier GeoJSON exportado desde la propia ficha
+vale: el generador del fixture lo convierte en caso de careo). Exige el mismo número de **filas**
 (la geometría del campo en un número), las mesas y los kWp dentro del **2,5 %**, el **área útil**
 dentro del 0,5 % —el setback se resuelve aquí como erosión exacta, sin Shapely— y las fórmulas
 cerradas (largo de mesa, apertura, largo de fila, GCR de tracker) **exactas**. La UTM propia se mide
-contra pyproj: por debajo del milímetro. Medido hoy: cuatro casos clavados y el peor a 1,89 %. Con
-tres mutantes: si el setback deja de morder, si la banda de erosión se escribe sin el término del
-vértice —el fallo que hacía que el setback no recortara nada— o si el GCR se calcula sobre otro
-pitch, el careo se pone rojo. El fixture se regenera con
+contra pyproj: por debajo del milímetro. Medido hoy: tres casos clavados, las filas idénticas en 13
+de 14 y el peor dentro de la tolerancia global a 1,89 %; el fijo multi-talla sale a 2,59 % y lleva
+tolerancia declarada (3 %) con el mecanismo medido escrito en el generador — el core pierde un slot
+de mesa en media parcela por su rejilla global × convergencia, así que en fijo el port queda POR
+ENCIMA del canónico. Sobre los datos se miden además dos invariantes que fueron quejas
+repetidas en planta: en todos los bifila, cero pares descuadrados y **Δx = 0 m** entre sub-filas; en
+los multi-talla, **nunca dos trackers de la misma talla seguidos cuando existe la doble** (la
+consolidación). Con tres mutantes: si el setback deja de morder, si la banda de erosión se escribe
+sin el término del vértice —el fallo que hacía que el setback no recortara nada— o si el GCR se
+calcula sobre otro pitch, el careo se pone rojo. El fixture se regenera con
 `python3 tests/gen_careo_layout.py --core /ruta/a/SolarGPTfull/solargpt`.
 
 `test_layout_ui.js` mide lo OTRO del generador: que esté cableado. Un motor perfecto detrás de un
@@ -71,6 +80,15 @@ botón que no llama a nadie se lee como «no funciona». Comprueba que genera y 
 mesa en el lienzo, no solo números), que los tres caminos de parcela —cotas, GeoJSON y dibujo a
 mano— acaban en un layout, que el reparto multi-talla sale en pantalla, que en montaje fijo cambia
 el rótulo y se inhabilita bifila, y que las salidas se habilitan solo cuando hay algo que exportar.
+Y las piezas del cierre: los **cuatro cuadros del MDT** pintados de verdad y el MDT que **descarta
+sin volver a pulsar Generar**; el **3D por modo** (bifila un nodo por par A/B con
+`filaZ = pitch/2`, monofila uno por fila, fija uno por estructura); los **módulos dibujados** con
+zoom y las mesas en **un solo color**; la **banda del área útil** visible también con el grid
+girado (se pintaba como cajas de pantalla y con azimut girado salía una neblina; el mutante —quitar
+el fill— se comprobó a mano al escribir el check: 0 px y rojo); el **roundtrip de sesión** a una pestaña limpia (misma cuenta de
+mesas y sin monofilas de contrabando), el autoguardado tras recargar —que cazó un bug real: los
+gestos de ratón no guardaban— y el **gate layout↔sizing** en sus tres estados (PASS desde
+`factiun_sizing`, FAIL con strings desalineados, WARN sin datos).
 Cubre también el **buscador de emplazamiento** —cartera y presets sin red, coordenadas pegadas, y que sin red para el geocodificador se DIGA en vez de devolver una lista vacía— y sus funciones puras sobre la copia real que vive en esa ficha, no sobre la de `sim-viento.html`. Y la **ortofoto**: teselas simuladas (el banco no puede depender del servidor de Esri ni de que haya red), que el lienzo no quede TEÑIDO por ellas —si lo quedara, `getImageData` lanza y se caen todas las comprobaciones de pintado—, y que la rueda, el arrastre y «Encajar» muevan la vista. De aquí salieron tres arreglos: el doble clic metía el último vértice tres veces; cada tesela disparaba un repintado entero del campo; el encuadre se recalculaba con el primer vértice sobre una caja de tamaño cero, que es lo que hacía salir la parcela dibujada a «0,00 ha»; y «Encajar» seguía metiendo el BOCETO anterior, así que al pasar de «dibujada» a «por cotas» la vista se abría para incluir los dos —a cientos de kilómetros uno de otro— y lo que dibujaras después caía a decenas de km de la parcela. Cubre también las **exclusiones** dibujadas, exigiendo no que se pinten sino que el motor las OBEDEZCA: una exclusión que se ve pero no quita mesas es peor que no tenerla.
 
 `test_pwa.js` cubre la **app instalable**: manifest válido con iconos que existen de verdad
@@ -101,6 +119,6 @@ node tests/test_sizing.js                  # 115 comprobaciones, careo del dimen
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
 node tests/test_viento_ejes.js             # 64 comprobaciones, lienzos, ejes, transmisión, reproductor y sombras
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
-node tests/test_layout.js                  # 151 comprobaciones, careo del generador de layout
-node tests/test_layout_ui.js               # 113 comprobaciones, el generador en Chromium
+node tests/test_layout.js                  # 177 comprobaciones, careo del generador de layout
+node tests/test_layout_ui.js               # 147 comprobaciones, el generador en Chromium
 ```

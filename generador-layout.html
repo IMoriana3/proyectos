@@ -96,6 +96,10 @@ canvas.panning{cursor:grabbing}
 .deriv .d .v small{font-size:10.5px;color:var(--muted);font-weight:400}
 .deriv .d.warn{border-color:var(--build)}
 .deriv .d.warn .v{color:var(--build)}
+.dempaneles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}
+.dempaneles .pan{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:8px;padding:6px}
+.dempaneles canvas{width:100%;height:auto;display:block;border-radius:5px;margin:0;border:0;cursor:default}
+.dempaneles .tt{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:5px;text-align:center}
 .parcelas{margin-top:9px;display:flex;flex-direction:column;gap:5px}
 .parcelas .pz{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line-soft);
   border-radius:8px;padding:6px 9px;font-size:12px}
@@ -291,6 +295,7 @@ canvas.panning{cursor:grabbing}
         <input type="file" id="demCsv" accept=".csv,.txt" style="display:none">
         <p class="tag" id="demTag">sin MDT · las pendientes son las que teclees</p>
         <div class="deriv" id="derivDem" style="display:none"></div>
+        <div id="demPaneles" class="dempaneles" style="display:none"></div>
         <label class="chk" id="demUseBox" style="display:none"><input type="checkbox" id="demUse" checked> Usar las pendientes medias del MDT (sobrescribe las de arriba)</label>
         <p class="note" style="margin-top:0">El cuaderno (§02.5b) no tiene <i>una</i> fuente: tiene una <b>cascada por país</b> —<code>detect_country</code> → <code>sources_for_country</code>— y va cayendo a la siguiente cuando una falla. Aquí igual: <b>Automática</b> prueba las de abajo por orden y dice cuál ha servido. Las que van punto a punto (Open Topo Data y Open-Elevation son las mismas que usa el core; Open-Meteo se añadió aquí) comparten el problema del número de llamadas.</p>
         <p class="note" style="margin-top:0"><b>Lo que aquí NO se puede tener.</b> La cascada del cuaderno incluye fuentes regionales mucho mejores que estos 30 m: <b>IGN MDT05 a 5 m</b> en España, RGE ALTI en Francia, TINITALY a 10 m en Italia, USGS 3DEP a 10 m en EE. UU. Son servicios WCS que devuelven GeoTIFF, y eso no se abre desde un navegador — como tampoco se guarda un token de OpenTopography. Para <b>replanteo</b>, el MDT bueno sigue estando en el cuaderno; esto es para ver la forma del terreno y filtrar por pendiente.</p>
@@ -386,6 +391,23 @@ canvas.panning{cursor:grabbing}
         <button class="btn ghost small" id="btnPitchBanda" disabled style="grid-column:1/3">↔ Pitch requerido por banda</button>
         <button class="btn ghost small" id="btnChecklist" style="grid-column:1/3">✔ Checklist antes de congelar (§02.5i)</button>
       </div>
+      <p class="tag" style="margin-top:10px">Gate layout ↔ sizing (§06.5)</p>
+      <div class="two" style="align-items:end">
+        <div class="field" style="margin-bottom:8px"><label>Strings del sizing</label><input id="gateStrings" type="number" step="1" placeholder="n_strings_total"></div>
+        <div class="field" style="margin-bottom:8px"><label>kWp del sizing</label><input id="gateKwp" type="number" step="1" placeholder="pnom_kwp"></div>
+      </div>
+      <div class="btnrow">
+        <button class="btn ghost small" id="btnGate" style="grid-column:1/3">⚖ Correr el gate (tolerancia 5 %)</button>
+      </div>
+      <p class="tag" style="margin-top:10px">Sesión</p>
+      <div class="btnrow">
+        <button class="btn ghost small" id="sesGuardar">💾 Guardar sesión</button>
+        <button class="btn ghost small" id="sesCargar">📂 Cargar sesión</button>
+      </div>
+      <input type="file" id="sesFile" accept=".json" style="display:none">
+      <p class="note" style="margin-top:8px">La sesión también se guarda sola en este navegador: al volver a abrir, la ficha sigue donde estaba. El fichero es para llevarla a otro sitio o archivarla con el proyecto.</p>
+      <div class="btnrow" style="display:none">
+      </div>
       <p class="note">El GeoJSON sale en el mismo formato que lee el <a href="layout.html" style="color:var(--accent)">Explorador de layout</a> (<code>{stats, geojson}</code>). El 3D abre la planta <code>custom</code> del visor de cobertura.</p>
     </div>
 
@@ -407,7 +429,7 @@ canvas.panning{cursor:grabbing}
           <option value="line">Líneas</option>
         </select>
         <label class="chk mini2"><input type="checkbox" id="showDisc"> descartadas</label>
-        <label class="chk mini2"><input type="checkbox" id="showAxis"> eje bifila</label>
+        <label class="chk mini2"><input type="checkbox" id="showAxis" checked> eje bifila</label>
         <span class="maphint" id="mapHint">arrastra para mover · rueda para acercar</span>
       </div>
       <canvas id="cv" width="1000" height="700"></canvas>
@@ -467,12 +489,15 @@ canvas.panning{cursor:grabbing}
    · BIFILA. Emparejado por cercanía en X (`match_rows_by_x`), espejo de la
      sub-fila B sobre la A, y recorte a conteo PAR de mesas por línea.
 
+   · CONSOLIDACIÓN N-S (`consolidaFila`). Dos trackers contiguos de la misma
+     talla se funden en la doble si el catálogo la tiene, encadenado, sobre la
+     sub-fila A antes del espejo — recomprobando banda, gemela B y viales.
+
    Qué NO está portado (y por eso se DICE en pantalla, no se calla):
-   relleno por columna y edge-fill, consolidación N-S de trackers contiguos,
-   barrido de ángulo de grid, sweep de Y con exclusiones y filtro por pendiente
-   del MDT. Son refinamientos de borde: mueven unidades sobre parcelas
-   irregulares, no el orden de magnitud. El botón "motor SolarGPT" da el número
-   canónico cuando hace falta cerrar el proyecto.
+   relleno por columna y edge-fill, y el sweep de Y con exclusiones. Son
+   refinamientos de borde: mueven unidades sobre parcelas irregulares, no el
+   orden de magnitud. El botón "motor SolarGPT" da el número canónico cuando
+   hace falta cerrar el proyecto.
    ══════════════════════════════════════════════════════════════ */
 var LAY = (function () {
 "use strict";
@@ -1066,6 +1091,60 @@ function compute(cfg) {
     return out;
   }
 
+  /* CONSOLIDACIÓN (port del core, y la lección que costó aprender dos veces:
+     «dos medios seguidos es mejor UNO entero, ocupa menos»). Con tallas en
+     razón 2:1, dos trackers de talla m tienen los MISMOS módulos que uno de
+     talla 2m, pero el grande ahorra el gap entre trackers y un motor. Se
+     agrupan las mesas en trackers (el hueco del MOTOR une, el de entre-trackers
+     separa) y se funden adyacentes de la misma talla en la doble, ENCADENADO
+     (2 cortos → 1 medio → con otro medio → 1 largo). Se aplica a la sub-fila A
+     ANTES del espejo, así que en bifila A y B siguen alineadas por construcción.
+     Más estricto que el core en una cosa: el doble se recomprueba contra la
+     franja (y la banda B, y los viales) — dos trackers pueden caber en
+     segmentos DISTINTOS con un hueco en medio, y el doble lo cruzaría. */
+  function consolidaFila(row, segs, segsB) {
+    if (!isMulti || row.length < 2) return row;
+    var sptL = isTracker ? spt : 1;
+    var porTalla = {}; sizes.forEach(function (sz) { porTalla[sz.modsAct] = sz; });
+    var sr = row.slice().sort(function (a, b) { return a.x0 - b.x0; });
+    var grupos = [], g = [];
+    for (var i = 0; i < sr.length; i++) {
+      if (!g.length) { g.push(sr[i]); continue; }
+      var hueco = sr[i].x0 - g[g.length - 1].x1;
+      if (g.length < sptL && hueco <= gapMotor + 0.15) g.push(sr[i]);
+      else { grupos.push(g); g = [sr[i]]; }
+    }
+    if (g.length) grupos.push(g);
+    var sepMax = (isTracker ? gapNs : gapMotor) + 0.2;   // «adyacentes», no «en la misma fila»
+    var cambiado = true;
+    while (cambiado) {
+      cambiado = false;
+      for (var j = 0; j + 1 < grupos.length; j++) {
+        var a = grupos[j], b = grupos[j + 1];
+        if (a.length !== sptL || b.length !== sptL) continue;
+        var m = a[0].mods;
+        if (b[0].mods !== m) continue;
+        var doble = porTalla[2 * m];
+        if (!doble) continue;
+        if (b[0].x0 - a[a.length - 1].x1 > sepMax) continue;
+        var sw2 = doble.structW, start = a[0].x0, ya = a[0].y0, yb2 = a[0].y1;
+        var nuevo = [], ok = true;
+        for (var k = 0; k < sptL; k++) {
+          var xs = start + k * (sw2 + gapMotor);
+          if (!cabeEn(segs, xs, xs + sw2) || (segsB && !cabeEn(segsB, xs, xs + sw2)) ||
+              roadHit(xs, xs + sw2)) { ok = false; break; }
+          nuevo.push({ x0: xs, x1: xs + sw2, y0: ya, y1: yb2, mods: 2 * m });
+        }
+        if (!ok) continue;
+        grupos.splice(j, 2, nuevo);
+        cambiado = true;
+        break;                       // re-escanear: el encadenado 2m→4m sale solo
+      }
+    }
+    var out = []; grupos.forEach(function (t) { out = out.concat(t); });
+    return out;
+  }
+
   var minSizeMods = sizes[sizes.length - 1].modsAct;
   var minLineModules = minStructs * minSizeMods;
   function rowModules(row) { var m = 0; for (var i = 0; i < row.length; i++) m += row[i].mods; return m; }
@@ -1108,6 +1187,7 @@ function compute(cfg) {
     } else {
       row = segs.length ? (isMulti ? placeMulti(segs, yy, offX) : placeSingle(segs, yy, offX, base)) : [];
     }
+    if (isMulti && !esB && row.length) row = consolidaFila(row, segs, _segsB);
     _segsB = null;
     if (esA) { subA = row; subAY = yy; }
     for (var q3 = 0; q3 < row.length; q3++) row[q3].row = ri;
@@ -1351,7 +1431,7 @@ function compute(cfg) {
     fcsDropped + ' estructura(s) de talla menor descartadas por «forzar strings completos».');
   return { structures: structures, descartadas: descartadas, roads: roads, rows: rows, sizes: sizes,
            parcel_utm: extU, holes_utm: holesU, excl_utm: exclU,
-           inner_band: innerBand, rot: rot, center: ctr, bbox_inner: [ix0, iy0, ix1, iy1],
+           inner_band: innerBand, inner_band_h: SCAN * 4, rot: rot, center: ctr, bbox_inner: [ix0, iy0, ix1, iy1],
            stats: stats, avisos: avisos,
            toLonLat: inv, toUtm: fwd, fromLocal: fromLocal, toLocal: toLocal };
 }
@@ -1538,6 +1618,7 @@ function eligeSitio(s){
   if($('parcelMode').value==='rect')encaja();
   else if(s&&s.lat!=null)vuelaASitio(+s.lat,+s.lon);
   draw();
+  autoguarda();
 }
 
 function renderSitios(grupos,aviso){
@@ -1713,8 +1794,48 @@ $('geoFileBtn').onclick=function(){$('geoFile').click();};
 $('geoFile').onchange=function(e){var f=e.target.files[0];if(!f)return;var rd=new FileReader();
   rd.onload=function(ev){$('geotxt').value=ev.target.result;applyGeo();};rd.readAsText(f);$('geoFile').value='';};
 $('geoApplyBtn').onclick=applyGeo;
+/* El export de la propia ficha es un ENVOLTORIO {stats, geojson}, con la
+   parcela como feature tipo="parcela" y las exclusiones como features
+   tipo="exclusion" / "exclusion-linea". La doc promete que un fichero
+   exportado «se puede volver a soltar aquí y reproduce el caso entero» — y
+   parseGeoJSON, al no conocer el envoltorio, contestaba «geometría ausente»
+   (lo cazó la verificación adversarial ejecutándolo sobre un export real).
+   Además, un FeatureCollection con miles de rectángulos de MESA elegiría «el
+   primer polígono», que es una mesa, no la parcela. */
+function parseGeoExport(txt){
+  var gj;try{gj=JSON.parse(txt);}catch(e){return null;}
+  if(gj&&gj.type!=='FeatureCollection'&&gj.geojson&&gj.geojson.type==='FeatureCollection')gj=gj.geojson;
+  if(!gj||gj.type!=='FeatureCollection')return null;
+  var pars=[],excl=[],lineas=[];
+  (gj.features||[]).forEach(function(f){
+    var pr=f.properties||{},g=f.geometry||{};
+    if(pr.tipo==='parcela'&&g.type==='Polygon')
+      pars.push({nombre:pr.nombre||('Parcela '+(pars.length+1)),
+                 ext:g.coordinates[0].map(function(c){return [c[0],c[1]];}),
+                 holes:g.coordinates.slice(1).map(function(r){return r.map(function(c){return [c[0],c[1]];});})});
+    else if(pr.tipo==='exclusion'&&g.type==='Polygon')
+      excl.push(g.coordinates[0].map(function(c){return [c[0],c[1]];}));
+    else if(pr.tipo==='exclusion-linea'&&g.type==='LineString')
+      lineas.push({pts:g.coordinates.map(function(c){return [c[0],c[1]];}),buf:+(pr.buffer_m||5)});
+  });
+  if(!pars.length)return null;
+  return {parcelas:pars,excl:excl,exclLineas:lineas};
+}
 function applyGeo(){
-  try{var g=parseGeoJSON($('geotxt').value);PARCEL=g.ext;HOLES=g.holes;tagParcel();encaja();draw();
+  try{
+    var exp=parseGeoExport($('geotxt').value);
+    if(exp){
+      PARCEL=exp.parcelas[0].ext;HOLES=exp.parcelas[0].holes;
+      PARCELAS=exp.parcelas.slice(1);
+      if(exp.excl.length)EXCL=exp.excl;
+      if(exp.exclLineas.length)EXCL_LINEAS=exp.exclLineas;
+      pintaParcelas();tagParcel();encaja();draw();autoguarda();
+      $('foot').textContent='Export de la ficha reconocido: '+exp.parcelas.length+' parcela(s)'+
+        (exp.excl.length?(' + '+exp.excl.length+' exclusión(es)'):'')+
+        (exp.exclLineas.length?(' + '+exp.exclLineas.length+' exclusión(es) de línea'):'')+'. Pulsa Generar.';
+      return;
+    }
+    var g=parseGeoJSON($('geotxt').value);PARCEL=g.ext;HOLES=g.holes;tagParcel();encaja();draw();autoguarda();
     $('foot').textContent='GeoJSON cargado: '+PARCEL.length+' vértices'+(HOLES.length?(' y '+HOLES.length+' hueco(s) como exclusión'):'')+'. Pulsa Generar.';
   }catch(err){$('foot').innerHTML='<span style="color:var(--dead)">No se pudo leer el GeoJSON: '+(err&&err.message||err)+'</span>';}
 }
@@ -1943,12 +2064,13 @@ function cierraDibujo(){
   }
   if(drawDest!=='parcela')DRAW=[];
   drawing=false; pintaBotonesDibujo(); tagParcel(); draw();
+  autoguarda();
 }
 $('drawStart').onclick=function(){empiezaDibujo('parcela');};
 $('exclStart').onclick=function(){empiezaDibujo('exclusion');};
 $('lineStart').onclick=function(){empiezaDibujo('linea');};
-$('drawClear').onclick=function(){DRAW=[];PARCEL=null;drawing=false;pintaBotonesDibujo();draw();tagParcel();};
-$('exclClear').onclick=function(){EXCL=[];EXCL_LINEAS=[];tagParcel();draw();};
+$('drawClear').onclick=function(){DRAW=[];PARCEL=null;drawing=false;pintaBotonesDibujo();draw();tagParcel();autoguarda();};
+$('exclClear').onclick=function(){EXCL=[];EXCL_LINEAS=[];tagParcel();draw();autoguarda();};
 $('cv').addEventListener('click',function(ev){
   if(!drawing)return;
   // Un clic que ha sido ARRASTRE es navegación, no un vértice: sin esto, mover
@@ -1986,12 +2108,19 @@ function draw(){
     if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||1;ctx.stroke();}ctx.setLineDash([]);
   }
   if(RES&&RES.inner_band&&RES.inner_band.length){          // área útil (tras setback)
+    // Cada banda es un QUAD en el marco LOCAL (girado): sus cuatro esquinas se
+    // proyectan una a una. Unir los dos extremos con un fillRect de pantalla
+    // funcionaba solo sin giro; con azimut girado los extremos son diagonales y
+    // lo que salía era la caja envolvente de cada segmento — una neblina que no
+    // se leía como área útil. Los quads tejen el contorno erosionado exacto.
     ctx.fillStyle='rgba(54,211,153,.16)';
-    var invF=RES.toLonLat;
+    var invF=RES.toLonLat,hb2=(RES.inner_band_h||1.6)/2;
     RES.inner_band.forEach(function(bnd){
-      var a=RES.fromLocal(bnd.x0,bnd.y),b=RES.fromLocal(bnd.x1,bnd.y);
-      var la=invF(a),lb=invF(b),pa=px(la[0],la[1]),pb=px(lb[0],lb[1]);
-      ctx.fillRect(Math.min(pa[0],pb[0]),Math.min(pa[1],pb[1])-1,Math.abs(pb[0]-pa[0])||1,Math.max(Math.abs(pb[1]-pa[1]),1.6));
+      var cs=[[bnd.x0,bnd.y-hb2],[bnd.x1,bnd.y-hb2],[bnd.x1,bnd.y+hb2],[bnd.x0,bnd.y+hb2]];
+      ctx.beginPath();
+      for(var ci=0;ci<4;ci++){var l=invF(RES.fromLocal(cs[ci][0],cs[ci][1])),pq=px(l[0],l[1]);
+        ci?ctx.lineTo(pq[0],pq[1]):ctx.moveTo(pq[0],pq[1]);}
+      ctx.closePath();ctx.fill();
     });
   }
   PARCELAS.forEach(function(p){ring(p.ext,'rgba(84,166,255,.10)','#54A6FF',1.6);
@@ -2036,21 +2165,50 @@ function draw(){
       });
       ctx.setLineDash([]);
     }
-    ctx.strokeStyle='rgba(11,15,20,.55)';
+    /* UN color de mesa. Había dos —verde la talla principal y azul las
+       cortas— sin leyenda que lo dijera, y dos colores sin explicar son una
+       pregunta, no una información: el reparto por talla ya tiene su tabla. */
+    var COL_MESA='#36D399';
+    // Módulos DIBUJADOS cuando la escala lo permite: separadores reales de
+    // módulo a lo largo de la mesa (y las filas de la tabla en 2V/3V/4V).
+    // El umbral es por PÍXELES de módulo, no por zoom: en una parcela chica
+    // aparecen antes.
+    var modsDe={}; (RES.sizes||[]).forEach(function(sz){modsDe[sz.modsAct]=sz.mods;});
+    var nTab=(function(){var t=String(RES.stats.table_type||'1V');var v=parseInt(t,10);return (isFinite(v)&&v>0)?v:1;})();
+    function lerp(a,b,f){return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f];}
     for(var i=0;i<st.length;i++){
       var q=st[i].lonlat;
-      var col=(RES.stats.is_multi_size&&st[i].mods!==RES.stats.mods_per_struct)?'#54A6FF':'#36D399';
       if(lineas){
-        // eje largo del rectángulo = punto medio de dos lados opuestos
         var a=px((q[0][0]+q[3][0])/2,(q[0][1]+q[3][1])/2), b=px((q[1][0]+q[2][0])/2,(q[1][1]+q[2][1])/2);
-        ctx.strokeStyle=col;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+        ctx.strokeStyle=COL_MESA;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
         continue;
       }
       ctx.beginPath();
       for(var k=0;k<q.length;k++){var pp=px(q[k][0],q[k][1]);k?ctx.lineTo(pp[0],pp[1]):ctx.moveTo(pp[0],pp[1]);}
       ctx.closePath();
-      ctx.fillStyle=col;ctx.fill();
+      ctx.fillStyle=COL_MESA;ctx.fill();
       if(st.length<3000){ctx.strokeStyle='rgba(11,15,20,.55)';ctx.lineWidth=0.4;ctx.stroke();}
+      var nm=modsDe[st[i].mods]||st[i].mods;
+      var p0=px(q[0][0],q[0][1]), p1=px(q[1][0],q[1][1]);
+      var pxMod=Math.hypot(p1[0]-p0[0],p1[1]-p0[1])/Math.max(nm,1);
+      if(pxMod>=3&&nm>1){
+        ctx.strokeStyle='rgba(11,15,20,.45)';ctx.lineWidth=0.5;ctx.beginPath();
+        for(var mk=1;mk<nm;mk++){
+          var f=mk/nm;
+          var u=lerp(px(q[0][0],q[0][1]),px(q[1][0],q[1][1]),f);
+          var v2=lerp(px(q[3][0],q[3][1]),px(q[2][0],q[2][1]),f);
+          ctx.moveTo(u[0],u[1]);ctx.lineTo(v2[0],v2[1]);
+        }
+        if(nTab>1){
+          for(var tk=1;tk<nTab;tk++){
+            var ft=tk/nTab;
+            var uA=lerp(px(q[0][0],q[0][1]),px(q[3][0],q[3][1]),ft);
+            var uB=lerp(px(q[1][0],q[1][1]),px(q[2][0],q[2][1]),ft);
+            ctx.moveTo(uA[0],uA[1]);ctx.lineTo(uB[0],uB[1]);
+          }
+        }
+        ctx.stroke();
+      }
     }
     // Eje bifila: la biela que une las dos sub-filas de un mismo tracker. Es lo
     // que hace VISIBLE que es bifila y no dos monofilas juntas.
@@ -2114,14 +2272,25 @@ function d(k,v,u,warn){return '<div class="d'+(warn?' warn':'')+'"><div class="k
 
 function pintaDerivados(){
   var ap=apertura(), ah=altoColector(), g=gcrAct(), n=nTabla();
-  var mods=($('mods').value.split(',').map(function(x){return parseInt(x,10);})
-            .filter(function(x){return x>0;})[0])||0;
+  var tallas=$('mods').value.split(',').map(function(x){return parseInt(x,10);})
+            .filter(function(x){return x>0;});
+  if(!tallas.length)tallas=[28];
+  var esTrk=$('mount').value==='tracker';
+  /* MESA y FILA no son lo mismo, y confundirlos es confundir el unifilar:
+     una MESA es UN string (n de la tabla × mods/string); una FILA de tracker
+     son DOS mesas sobre el mismo tubo con el motor en medio — la misma
+     definición que publica el motor en `fila_len_m` = 2·mesa + gap_motor.
+     Antes aquí ponía «Mód./fila: 28» para un 1V/28, que es el string, no la
+     fila (56). Y con multi-talla se enseñan TODAS las tallas, no la primera. */
+  var mesaTxt=tallas.map(function(m2){return n*m2;}).join('·');
+  var filaTxt=tallas.map(function(m2){return 2*n*m2;}).join('·');
   var alto=(g>0.7), bajo=(g>0&&g<0.2);
   $('deriv').innerHTML=
     d('Apertura',ap.toFixed(3),'m')+
     d('Alto colector',ah.toFixed(3),'m')+
     d('GCR',g.toFixed(3),'',alto||bajo)+
-    d('Mód./fila',String(n*mods),'');
+    d('Mód./mesa (1 string)',mesaTxt,'')+
+    (esTrk?d('Mód./fila (2 mesas)',filaTxt,''):d('Mód./estructura',mesaTxt,''));
   var av=[];
   if(alto)av.push('GCR '+g.toFixed(2)+' es alto: sube el pitch o se sombrean.');
   if(bajo)av.push('GCR '+g.toFixed(2)+' bajo: terreno espacioso, menos potencia por hectárea.');
@@ -2182,7 +2351,7 @@ $('pitchFromGcr').onclick=function(){
   var g=+$('gcrObj').value;
   if(!(g>0.05&&g<0.95)){$('foot').innerHTML='<span style="color:var(--build)">El GCR objetivo tiene que estar entre 0,05 y 0,95.</span>';return;}
   $('pitch').value=(apertura()/g).toFixed(2);
-  pintaDerivados();
+  pintaDerivados(); autoguarda();
   $('foot').innerHTML='Pitch fijado en <b>'+$('pitch').value+' m</b> para GCR '+g.toFixed(3)+
     ' con apertura '+apertura().toFixed(3)+' m'+
     (Math.abs(g-CANON.GCR)<1e-6?' (el GCR canónico del cuaderno).':'.');
@@ -2205,7 +2374,7 @@ function pintaParcelas(){
            '<button data-i="'+i+'" title="Quitar">✕</button></div>';
   }).join('');
   [].forEach.call($('parcelList').querySelectorAll('button'),function(b){
-    b.onclick=function(){PARCELAS.splice(+b.dataset.i,1);pintaParcelas();tagParcel();encaja();draw();};
+    b.onclick=function(){PARCELAS.splice(+b.dataset.i,1);pintaParcelas();tagParcel();encaja();draw();autoguarda();};
   });
 }
 $('parcelAdd').onclick=function(){
@@ -2214,6 +2383,7 @@ $('parcelAdd').onclick=function(){
   PARCELAS.push({nombre:($('parcelName').value||('Parcela '+(PARCELAS.length+1))),ext:PARCEL.slice(),holes:HOLES.slice()});
   $('parcelName').value='Parcela '+(PARCELAS.length+1);
   pintaParcelas();tagParcel();encaja();draw();
+  autoguarda();
 };
 
 /* ═════════════════ IMPORTAR KML / KMZ ═════════════════
@@ -2287,7 +2457,7 @@ $('kmlFile').onchange=async function(e){
     PARCELAS=pol.slice(1).map(function(p){return {nombre:p.nombre,ext:p.ext,holes:p.holes};});
     $('parcelMode').value='geojson';
     $('paneRect').style.display='none';$('paneGeo').style.display='';$('paneDraw').style.display='none';
-    pintaParcelas();tagParcel();encaja();draw();
+    pintaParcelas();tagParcel();encaja();draw();autoguarda();
     $('foot').innerHTML='Importado <b>'+esc(f.name)+'</b>: '+pol.length+' polígono(s).'+
       (pol.length>1?' El primero es la parcela activa y el resto se han añadido a la lista.':'');
   }catch(err){
@@ -2425,6 +2595,11 @@ async function demDesdeTerreno(enCascada){
     }
     g.push(fila);}
   $('demBtn').disabled=false;
+  var _zs=g.flat().filter(isFinite);
+  if(_zs.length&&Math.max.apply(null,_zs)-Math.min.apply(null,_zs)<0.01){
+    $('demTag').innerHTML='<span style="color:var(--build)">Las teselas han llegado PLANAS (Δz < 1 cm): '+
+      'o la zona es llanísima o la fuente ha fallado sin decirlo. Prueba otra fuente antes de fiarte.</span>';
+  }
   DEM={lats:lats,lons:lons,z:g,src:'Teselas de terreno z'+t.z+' ('+t.n+' llamada'+(t.n>1?'s':'')+')'};
   aplicaDEM();
 }
@@ -2558,6 +2733,101 @@ function celdasExcluidas(){
   return out;
 }
 
+/* ── LOS CUATRO CUADROS del §02.5b (paridad con `plot_dem_panels`): satélite ·
+   elevación · pendiente total (rojo > máx) · zonas excluidas (%), con la
+   PARCELA encima de todos y las mesas del último layout. Es lo que en Streamlit
+   pidió el usuario con un «haz como en el notebook» y aquí faltaba entero. ── */
+function pintaPanelesDEM(){
+  if(!DEM){$('demPaneles').style.display='none';return;}
+  var P=pendientesDEM(); if(!P)return;
+  var n=P.n, lim=+$('slopeMax').value||20, off=$('demOff').checked;
+  var la0=DEM.lats[0], la1=DEM.lats[n-1], lo0=DEM.lons[0], lo1=DEM.lons[n-1];
+  var W=300,H=Math.max(90,Math.round(300*Math.abs(la1-la0)*110540/(Math.abs(lo1-lo0)*111320*Math.cos(((la0+la1)/2)*Math.PI/180)||1)));
+  H=Math.min(H,340);
+  var zs=DEM.z.flat().filter(isFinite), z0=Math.min.apply(null,zs), z1=Math.max.apply(null,zs), dz=(z1-z0)||1;
+  var excl=0;
+  function tot(r,c){return Math.atan(Math.hypot(Math.tan(P.ns[r][c]*Math.PI/180),Math.tan(P.ew[r][c]*Math.PI/180)))*180/Math.PI;}
+  var maxTot=0;
+  for(var r0=0;r0<n;r0++)for(var c0=0;c0<n;c0++){var t0=tot(r0,c0);if(t0>maxTot)maxTot=t0;if(t0>lim)excl++;}
+  function px2(lo,la){return [ (lo-lo0)/((lo1-lo0)||1e-9)*W, (1-(la-la0)/((la1-la0)||1e-9))*H ];}
+  function celda(ctx,r,c,color){
+    var x=(c-0.5)/(n-1)*W, y=(1-(r+0.5)/(n-1))*H;
+    ctx.fillStyle=color; ctx.fillRect(x,y,W/(n-1)+1,H/(n-1)+1);
+  }
+  // rampa tipo «terrain» (azul-verde-marrón-blanco) y tipo «YlOrBr»
+  function rTerrain(u){u=Math.max(0,Math.min(1,u));
+    var s=[[0,[40,90,160]],[0.25,[70,150,90]],[0.55,[150,140,80]],[0.8,[140,100,60]],[1,[235,235,235]]];
+    for(var i=1;i<s.length;i++)if(u<=s[i][0]){var a=s[i-1],b=s[i],f=(u-a[0])/(b[0]-a[0]);
+      return 'rgb('+a[1].map(function(v,k){return Math.round(v+(b[1][k]-v)*f);}).join(',')+')';}
+    return 'rgb(235,235,235)';}
+  function rYlOrBr(u){u=Math.max(0,Math.min(1,u));
+    var s=[[0,[255,247,188]],[0.5,[236,153,53]],[1,[120,60,10]]];
+    for(var i=1;i<s.length;i++)if(u<=s[i][0]){var a=s[i-1],b=s[i],f=(u-a[0])/(b[0]-a[0]);
+      return 'rgb('+a[1].map(function(v,k){return Math.round(v+(b[1][k]-v)*f);}).join(',')+')';}
+    return 'rgb(120,60,10)';}
+  function overlay(ctx){
+    // la PARCELA encima de todos, y las mesas del último layout
+    function anillo(pts,col,lw){if(!pts||!pts.length)return;
+      ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();
+      for(var i=0;i<pts.length;i++){var q=px2(pts[i][0],pts[i][1]);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]);}
+      ctx.closePath();ctx.stroke();}
+    anillo(PARCEL,'#E53935',1.6);
+    PARCELAS.forEach(function(pz){anillo(pz.ext,'#E53935',1.2);});
+    if(RES&&RES.structures.length){
+      ctx.strokeStyle='rgba(84,166,255,.85)';ctx.lineWidth=0.8;
+      var paso=Math.max(1,Math.floor(RES.structures.length/1500));
+      for(var i=0;i<RES.structures.length;i+=paso){
+        var q=RES.structures[i].lonlat;
+        var a=px2((q[0][0]+q[3][0])/2,(q[0][1]+q[3][1])/2), b=px2((q[1][0]+q[2][0])/2,(q[1][1]+q[2][1])/2);
+        ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+      }
+    }
+  }
+  var defs=[
+    {t:'Imagen satelital',pinta:function(ctx){
+      ctx.fillStyle='#3a3a30';ctx.fillRect(0,0,W,H);
+      // teselas de la ortofoto sobre el bbox del DEM (mismo caché que el lienzo)
+      var z=13,n2=Math.pow(2,z);
+      var tx0=Math.floor(lon2u(lo0)*n2),tx1=Math.floor(lon2u(lo1)*n2);
+      var ty0=Math.floor(lat2u(la1)*n2),ty1=Math.floor(lat2u(la0)*n2);
+      if((tx1-tx0+1)*(ty1-ty0+1)>16){z=12;n2=Math.pow(2,z);
+        tx0=Math.floor(lon2u(lo0)*n2);tx1=Math.floor(lon2u(lo1)*n2);
+        ty0=Math.floor(lat2u(la1)*n2);ty1=Math.floor(lat2u(la0)*n2);}
+      for(var ty=ty0;ty<=ty1;ty++)for(var tx=tx0;tx<=tx1;tx++){
+        var t=tesela(z,((tx%n2)+n2)%n2,ty);
+        if(!t.ok)continue;
+        var uA=(tx/n2-lon2u(lo0))/((lon2u(lo1)-lon2u(lo0))||1e-9)*W;
+        var vA=(ty/n2-lat2u(la1))/((lat2u(la0)-lat2u(la1))||1e-9)*H;
+        var uB=((tx+1)/n2-lon2u(lo0))/((lon2u(lo1)-lon2u(lo0))||1e-9)*W;
+        var vB=((ty+1)/n2-lat2u(la1))/((lat2u(la0)-lat2u(la1))||1e-9)*H;
+        try{ctx.drawImage(t.img,uA,vA,uB-uA,vB-vA);}catch(e){}
+      }
+    }},
+    {t:'Elevación · '+DEM.src.split(' (')[0]+' · '+z0.toFixed(0)+'–'+z1.toFixed(0)+' m',pinta:function(ctx){
+      for(var r=0;r<n;r++)for(var c=0;c<n;c++){
+        var v=DEM.z[r][c];celda(ctx,r,c,isFinite(v)?rTerrain((v-z0)/dz):'#222');}
+    }},
+    {t:'Pendiente total (rojo > '+lim+'°) · máx '+maxTot.toFixed(1)+'°',pinta:function(ctx){
+      for(var r=0;r<n;r++)for(var c=0;c<n;c++){
+        var t2=tot(r,c);celda(ctx,r,c,t2>lim?'rgb(210,55,45)':rYlOrBr(t2/Math.max(lim,1)));}
+    }},
+    {t:'Zonas excluidas · '+(100*excl/(n*n)).toFixed(1)+' %'+(off?' (filtro APAGADO)':''),pinta:function(ctx){
+      for(var r=0;r<n;r++)for(var c=0;c<n;c++){
+        var t3=tot(r,c);
+        celda(ctx,r,c,t3>lim?'rgba(210,55,45,.9)':'rgb(52,64,58)');}
+    }}
+  ];
+  var cont=$('demPaneles');cont.style.display='';cont.innerHTML='';
+  defs.forEach(function(d3){
+    var box=document.createElement('div');box.className='pan';
+    var cv=document.createElement('canvas');cv.width=W;cv.height=H;
+    var ctx=cv.getContext('2d');
+    d3.pinta(ctx);overlay(ctx);
+    var tt=document.createElement('div');tt.className='tt';tt.textContent=d3.t;
+    box.appendChild(cv);box.appendChild(tt);cont.appendChild(box);
+  });
+}
+
 function aplicaDEM(){
   var P=pendientesDEM(); if(!P)return;
   var malas=celdasExcluidas();
@@ -2576,7 +2846,11 @@ function aplicaDEM(){
     // verdades sobre la misma pendiente.
     $('slopeNs').disabled=$('slopeEw').disabled=true;
   } else { $('slopeNs').disabled=$('slopeEw').disabled=false; }
-  pintaDerivados(); draw();
+  pintaDerivados(); pintaPanelesDEM(); draw(); autoguarda();
+  /* Si ya había layout, se REGENERA solo: bajar el MDT después de generar y que
+     no cambiara nada se leía como «la topografía no descarta ninguna
+     estructura» — descartaba, pero solo al volver a pulsar Generar. */
+  if(RES&&RES.structures&&RES.structures.length)generar();
 }
 /* ── Open Topo Data y Open-Elevation: las dos fuentes punto-a-punto SIN TOKEN
    que usa el core (`dl_opentopodata`, `dl_open_elevation`). Se traen para que la
@@ -2779,6 +3053,11 @@ function coreToRes(j,st,cfg){
     var polys=g.type==='Polygon'?[g.coordinates[0]]:(g.type==='MultiPolygon'?g.coordinates.map(function(p){return p[0];}):[]);
     polys.forEach(function(r){ if(r&&r.length>=4) structs.push({lonlat:r.slice(0,4),mods:st.mods_per_struct||0,row:0,len:st.mesa_len_m||0,ap:st.collector_h_m||0}); });
   });
+  /* Las stats del core no traen mount_type/bifila (publica geometría, no la
+     petición): se reponen de la cfg con la que se le llamó, que el 3D los
+     necesita para decidir nodo-por-par vs fijas. */
+  if(st.mount_type==null)st.mount_type=(cfg&&cfg.mount==='fija')?'fija':'tracker';
+  if(st.bifila==null)st.bifila=!!(cfg&&cfg.bifila);
   return {structures:structs, roads:[], rows:[], sizes:[], inner_band:[], stats:st, avisos:(st.qa_avisos||[]),
           toLonLat:function(p){return p;}, center:[0,0], rot:0};
 }
@@ -2834,6 +3113,8 @@ function pintar(res,fuente){
   ['expGeo','expDxf','expKml','d3Btn','expHincas','expBoq','expXyz','expDae','btnPitchBanda']
     .forEach(function(id){$(id).disabled=!st.structures;});
   draw();
+  if(DEM)pintaPanelesDEM();
+  autoguarda();
 }
 $('genBtn').onclick=generar;
 
@@ -2851,7 +3132,8 @@ function checklist(){
     {ok:!!st&&st.qa_geometria_ok&&!!st.structures, t:'<b>QA del layout en verde</b> (sin avisos de fallo)'},
     {ok:!!st&&(!st.bifila||st.ab_max_dx_m<0.01), t:'<b>Bifila sin huérfanos</b> (Δx entre sub-filas ≈ 0)'},
     {ok:!!st&&!!st.grid_optimized, t:'<b>Orientación decidida con barrido</b>, no por defecto'},
-    {ok:null, t:'<b>Gate layout ↔ sizing</b> (§06.5 <code>validate_layout_vs_sizing</code>) — en el cuaderno'},
+    {ok:(typeof GATE!=='undefined'&&GATE)?(GATE.status==='PASS'?true:(GATE.status==='FAIL'?false:null)):null,
+     t:'<b>Gate layout ↔ sizing</b> (§06.5, tolerancia 5 %)'+((typeof GATE!=='undefined'&&GATE)?(' — '+GATE.status):' — córrelo con su botón')},
     {ok:null, t:'<b>Entorno OSM revisado</b> (§02.5h): sombras de invierno aceptadas o excluidas'},
     {ok:null, t:'<b>Pitch/GCR con sweep de LCOE</b> (§04.4) — el árbitro sigue siendo el cuaderno'}
   ];
@@ -3022,6 +3304,152 @@ $('btnPitchBanda').onclick=function(){
     ' Esto RECOMIENDA: no mueve ninguna estructura, y el árbitro sigue siendo el barrido de LCOE del cuaderno.</p>';
 };
 
+/* ═════════════════ SESIÓN: GUARDAR, CARGAR Y AUTOGUARDADO ═════════════════
+   Streamlit lleva el bloque guardar/cargar en las 23 páginas con una razón
+   escrita: si guardara solo una, salvar el trabajo obligaría a navegar hasta
+   ella. Aquí la ficha es una sola, pero la razón de fondo es la misma: cerrar
+   la pestaña no puede costar la parcela, las exclusiones y el MDT. El estado se
+   autoguarda en este navegador y además se exporta a fichero para llevarlo a
+   otro sitio o archivarlo con el proyecto. */
+var SES_KEY='genlayout_sesion', SES_V=1;
+var SES_CAMPOS=['lat','lon','pw','ph','prot','parcelMode','geotxt','parcelName','lineBuf',
+  'mount','table','mods','modLen','modWid','modWp','axisTilt','maxAng','backtrack','fixTilt',
+  'albedo','albedoT','slopeNs','slopeEw','demSrc','demN','demMargen','slopeMax',
+  'pitch','setback','gcrObj','axis','panelAz','mode','bifila',
+  'gapMod','gapMotor','gapNs','roadEvery','roadW','roadNsEvery','roadNsW','minStructs','rowOffset',
+  'gridFrom','gridTo','gridStep','render','calc','gateStrings','gateKwp'];
+var SES_CHECKS=['alignGrid','center','forceComplete','optAz','optGrid','demOff','demUse','orto','showDisc','showAxis'];
+
+function estadoSesion(){
+  var st={v:SES_V, guardada:null, campos:{}, checks:{}};
+  SES_CAMPOS.forEach(function(id){var el=$(id);if(el)st.campos[id]=el.value;});
+  SES_CHECKS.forEach(function(id){var el=$(id);if(el)st.checks[id]=el.checked;});
+  st.sitio=SITIO; st.parcel=PARCEL; st.holes=HOLES; st.parcelas=PARCELAS;
+  st.excl=EXCL; st.exclLineas=EXCL_LINEAS; st.dem=DEM; st.draw=DRAW;
+  st.view={cx:VIEW.cx,cy:VIEW.cy,z:VIEW.z};
+  return st;
+}
+function aplicaSesion(st){
+  if(!st||st.v!==SES_V)throw new Error('formato de sesión desconocido (v'+(st&&st.v)+')');
+  // ORDEN: el montaje va PRIMERO y syncAz después, porque syncAz fuerza
+  // monofila cuando es fija — restaurar bifila antes lo perdería. La lección
+  // «pongo bifila y me saca monofilas» también aplica al restaurar.
+  if(st.campos.mount!=null)$('mount').value=st.campos.mount;
+  syncAz();
+  SES_CAMPOS.forEach(function(id){var el=$(id);if(el&&st.campos[id]!=null)el.value=st.campos[id];});
+  SES_CHECKS.forEach(function(id){var el=$(id);if(el&&st.checks&&st.checks[id]!=null)el.checked=st.checks[id];});
+  SITIO=st.sitio||null; PARCEL=st.parcel||null; HOLES=st.holes||[];
+  PARCELAS=st.parcelas||[]; EXCL=st.excl||[]; EXCL_LINEAS=st.exclLineas||[];
+  DEM=st.dem||null; DRAW=st.draw||null;
+  if(st.view){VIEW.cx=st.view.cx;VIEW.cy=st.view.cy;VIEW.z=st.view.z;}
+  var m=$('parcelMode').value;
+  $('paneRect').style.display=m==='rect'?'':'none';
+  $('paneGeo').style.display=m==='geojson'?'':'none';
+  $('paneDraw').style.display=m==='draw'?'':'none';
+  $('gridSweepBox').style.display=$('optGrid').checked?'':'none';
+  if(m==='rect')buildParcel();
+  pintaSitio();pintaBotonesDibujo();pintaParcelas();pintaCosteDem();tagParcel();
+  if(DEM)aplicaDEM();
+  else {$('slopeNs').disabled=$('slopeEw').disabled=false;pintaDerivados();}
+  draw();
+}
+var _sesT=null;
+function autoguarda(){
+  if(_sesT)clearTimeout(_sesT);
+  _sesT=setTimeout(function(){
+    try{var st=estadoSesion();st.guardada=new Date().toISOString();
+        localStorage.setItem(SES_KEY,JSON.stringify(st));}catch(e){}
+  },800);
+}
+document.addEventListener('change',autoguarda);
+document.addEventListener('input',autoguarda);
+function restauraSesion(){
+  var raw=null;
+  try{raw=localStorage.getItem(SES_KEY);}catch(e){}
+  if(!raw)return false;
+  try{
+    aplicaSesion(JSON.parse(raw));
+    $('foot').innerHTML='Sesión anterior restaurada (parcela, exclusiones, MDT y configuración). '+
+      'Pulsa <b>Generar</b> para recalcular · <a href="#" id="sesReset" style="color:var(--dead)">empezar de cero</a>.';
+    var a=document.getElementById('sesReset');
+    if(a)a.onclick=function(ev){ev.preventDefault();
+      try{localStorage.removeItem(SES_KEY);}catch(e){}
+      location.reload();};
+    return true;
+  }catch(e){
+    try{localStorage.removeItem(SES_KEY);}catch(e2){}
+    return false;
+  }
+}
+$('sesGuardar').onclick=function(){
+  var st=estadoSesion();st.guardada=new Date().toISOString();
+  bajar(nombreSalida('sesion.json'),JSON.stringify(st,null,1),'application/json');
+  $('foot').textContent='Sesión guardada a fichero. También queda autoguardada en este navegador.';
+};
+$('sesCargar').onclick=function(){$('sesFile').click();};
+$('sesFile').onchange=function(e){
+  var f=e.target.files[0];if(!f)return;$('sesFile').value='';
+  var rd=new FileReader();
+  rd.onload=function(ev){
+    try{aplicaSesion(JSON.parse(ev.target.result));
+      $('foot').innerHTML='Sesión cargada de <b>'+esc(f.name)+'</b>. Pulsa <b>Generar</b> para recalcular.';
+      autoguarda();
+    }catch(err){$('foot').innerHTML='<span style="color:var(--dead)">No se pudo cargar la sesión: '+esc(err&&err.message||err)+'</span>';}
+  };
+  rd.readAsText(f);
+};
+
+/* ═════════════════ GATE LAYOUT ↔ SIZING (§06.5) ═════════════════
+   Port de `bridge.validate_layout_vs_sizing`, con sus mismas reglas: strings y
+   kWp del layout contra los del sizing, tolerancia del 5 % en ambos, y WARN
+   (no FAIL) cuando falta información — un gate que suspende por no tener datos
+   enseña rojo donde lo que hay es un hueco. El sizing entra a mano o, si la
+   ficha del comparador publica `factiun_sizing` en localStorage (propuesto en
+   el CONTRATO), se rellena solo. */
+var GATE=null;
+function leeSizingCompartido(){
+  try{
+    var raw=localStorage.getItem('factiun_sizing');
+    if(!raw)return null;
+    var j=JSON.parse(raw);
+    if(j&&(j.n_strings_total!=null||j.pnom_kwp!=null))return j;
+  }catch(e){}
+  return null;
+}
+function corredGate(){
+  var TOL=5.0, msgs=[], comp=leeSizingCompartido();
+  if(comp){
+    if(!$('gateStrings').value&&comp.n_strings_total!=null)$('gateStrings').value=comp.n_strings_total;
+    if(!$('gateKwp').value&&comp.pnom_kwp!=null)$('gateKwp').value=comp.pnom_kwp;
+  }
+  var ls=RES?RES.stats.strings:null, lk=RES?RES.stats.kWp:null;
+  var ss=parseInt($('gateStrings').value,10), sk=parseFloat($('gateKwp').value);
+  if(ls==null)msgs.push('sin layout generado — pulsa Generar');
+  if(!isFinite(ss)){ss=null;msgs.push('strings del sizing sin definir'+(comp?'':' (y el comparador no publica factiun_sizing)'));}
+  if(!isFinite(sk))sk=null;
+  var status,dS=null,dK=null;
+  if(ls==null||ss==null){ status='WARN'; }
+  else{
+    dS=Math.abs(ls-ss)/Math.max(ss,1)*100;
+    if(lk!=null&&sk!=null)dK=Math.abs(lk-sk)/Math.max(sk,1)*100;
+    var malS=dS>TOL, malK=(dK!=null&&dK>TOL);
+    if(malS)msgs.push('strings desalineados: layout='+fmt(ls)+' vs sizing='+fmt(ss)+' (Δ '+dS.toFixed(1)+' % > tol '+TOL+' %)');
+    if(malK)msgs.push('kWp desalineado: layout='+fmt(lk,1)+' vs sizing='+fmt(sk,1)+' (Δ '+dK.toFixed(1)+' % > tol '+TOL+' %)');
+    status=(malS||malK)?'FAIL':'PASS';
+  }
+  GATE={status:status,layout_strings:ls,sizing_strings:ss,layout_kwp:lk,sizing_kwp:sk,
+        strings_pct:dS,kwp_pct:dK,msgs:msgs};
+  var col=status==='PASS'?'var(--live)':(status==='FAIL'?'var(--dead)':'var(--build)');
+  $('sizes').innerHTML='<b>Gate layout ↔ sizing</b> <span style="color:'+col+';font-weight:700">'+status+'</span>'+
+    '<table><tr><th></th><th>Layout</th><th>Sizing</th><th>Δ %</th></tr>'+
+    '<tr><td>Strings</td><td>'+(ls==null?'—':fmt(ls))+'</td><td>'+(ss==null?'—':fmt(ss))+'</td><td>'+(dS==null?'—':dS.toFixed(1))+'</td></tr>'+
+    '<tr><td>kWp</td><td>'+(lk==null?'—':fmt(lk,1))+'</td><td>'+(sk==null?'—':fmt(sk,1))+'</td><td>'+(dK==null?'—':dK.toFixed(1))+'</td></tr></table>'+
+    (msgs.length?('<p class="note">'+msgs.map(esc).join('<br>')+'</p>'):'<p class="note">Coherentes dentro del 5 % — la misma tolerancia que `validate_layout_vs_sizing`.</p>')+
+    '<p class="note">WARN no es FAIL: significa que falta información, no que esté mal. El checklist §02.5i recoge este resultado.</p>';
+  return GATE;
+}
+$('btnGate').onclick=corredGate;
+
 /* ===== salidas ===== */
 /* El fichero se llama como el emplazamiento elegido: tres exports seguidos de
    tres sitios distintos y todos «layout.geojson» acaban siendo un misterio en
@@ -3036,7 +3464,29 @@ function bajar(nombre,txt,mime){
   a.href=u;a.download=nombre;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},2000);
 }
 $('expGeo').onclick=function(){ if(!RES)return;
-  bajar(nombreSalida('geojson'),JSON.stringify({stats:RES.stats,geojson:LAY.toGeoJSON(RES)},null,1)); };
+  var gj=LAY.toGeoJSON(RES);
+  /* La PARCELA viaja en el export. Sin ella, el fichero no podía volver a
+     entrar como caso del careo ni reabrirse como proyecto: eran mesas flotando
+     sin el recinto que las explica. Los agujeros van como anillos interiores y
+     las exclusiones como features aparte, cada una con su tipo. */
+  if(PARCEL&&PARCEL.length>=3){
+    var anillos=[PARCEL.concat([PARCEL[0]])].concat(HOLES.map(function(h){return h.concat([h[0]]);}));
+    gj.features.unshift({type:'Feature',properties:{tipo:'parcela',nombre:($('parcelName').value||'Parcela 1')},
+      geometry:{type:'Polygon',coordinates:anillos}});
+  }
+  PARCELAS.forEach(function(pz){
+    gj.features.unshift({type:'Feature',properties:{tipo:'parcela',nombre:pz.nombre},
+      geometry:{type:'Polygon',coordinates:[pz.ext.concat([pz.ext[0]])].concat((pz.holes||[]).map(function(h){return h.concat([h[0]]);}))}});
+  });
+  EXCL.forEach(function(ex){
+    gj.features.push({type:'Feature',properties:{tipo:'exclusion'},
+      geometry:{type:'Polygon',coordinates:[ex.concat([ex[0]])]}});
+  });
+  EXCL_LINEAS.forEach(function(L){
+    gj.features.push({type:'Feature',properties:{tipo:'exclusion-linea',buffer_m:L.buf},
+      geometry:{type:'LineString',coordinates:L.pts}});
+  });
+  bajar(nombreSalida('geojson'),JSON.stringify({stats:RES.stats,geojson:gj},null,1)); };
 $('expKml').onclick=function(){ if(!RES)return;
   var k='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Layout Factiun</name>'+
     '<Style id="m"><LineStyle><color>ff99d336</color><width>1</width></LineStyle><PolyStyle><color>7f99d336</color></PolyStyle></Style>'+
@@ -3060,84 +3510,172 @@ $('expDxf').onclick=function(){ if(!RES)return;
 $('d3Btn').onclick=function(){
   if(!RES||!RES.structures.length)return;
   var st=RES.stats;
-  /* El 3D dibujaba TODO del mismo tamaño y todo «completo»: se le mandaba una
-     sola talla global y ninguna razón de largo, así que un campo multi-talla
-     salía uniforme y no se parecía al 2D. El visor sí sabe hacerlo — lee
-     `mesa.tipos[blk].largo` y el `mr` por seguidor (Ayora tiene tres tallas) —,
-     lo que faltaba era mandárselo.
-
-     Un nodo del visor = UN tracker = las dos mesas que comparten tubo y motor.
-     `filaZ: 0` porque aquí cada fila es su propia línea: en el canónico la
-     geometría bifila es IDÉNTICA a la monofila (pitch entre todas las filas) y
-     lo de «bifila» es qué dos filas comparten motor, no una separación distinta.
-     Poner un filaZ ≠ 0 duplicaría filas que ya van una por una. */
-  var mLatC=110540, clat=0, clon=0, np=0;
-  RES.structures.forEach(function(x){x.lonlat.forEach(function(p){clon+=p[0];clat+=p[1];np++;});});
+  /* AL 3D CON LA SEMÁNTICA DEL VISOR, no con la del motor. En el visor un NODO
+     es UN TRACKER; si `mesa.filaZ > 0`, ese nodo dibuja DOS filas a ±filaZ y el
+     EJE DE TRANSMISIÓN entre ellas (Ayora: pasoFila 6, filaZ 3). Y una planta
+     FIJA no construye seguidores: la dibuja buildBOS desde `fijas` (una mesa =
+     un rectángulo en planta con su inclinación), con `trackers` solo para el
+     encuadre y el recuento — es exactamente como viaja Dicayagua.
+       · bifila  → un nodo por PAREJA A/B (centrado entre las dos filas),
+                   filaZ = pitch/2, y el visor pone el eje él solo;
+       · monofila → un nodo por tracker, filaZ = 0;
+       · fija    → `fijas` + fija:{tilt} (con fija:true a secas el visor corta
+                   el camino de seguidores y no dibuja NADA del campo). */
+  var esBif=!!st.bifila && st.mount_type==='tracker';
+  var esFija=st.mount_type==='fija';
+  var clat=0,clon=0,np=0;
+  RES.structures.forEach(function(x){x.lonlat.forEach(function(pp){clon+=pp[0];clat+=pp[1];np++;});});
   clat/=np; clon/=np;
-  var mLonC=111320*Math.cos(clat*Math.PI/180);
+  var mLonC=111320*Math.cos(clat*Math.PI/180), mLatC=110540;
+  var aMundo=function(lon,lat){return [(lon-clon)*mLonC,(lat-clat)*mLatC];};
+  /* Rumbo por la ARISTA MÁS LARGA del rectángulo: el anillo del motor JS sale
+     de rectWorld con un orden de esquinas conocido, pero el del core sale de
+     shapely y no lo comparte — derivar la rotación de «la esquina 0 y la 3»
+     giraba los nodos 90° con el motor canónico. La arista más larga es la
+     misma en cualquier orden. */
+  function rumboArista(lonlat){
+    var best=-1,rot=0;
+    for(var k=0;k<lonlat.length;k++){
+      var p1=lonlat[k],p2=lonlat[(k+1)%lonlat.length];
+      var dx=(p2[0]-p1[0])*mLonC,dy=(p2[1]-p1[1])*mLatC,L=dx*dx+dy*dy;
+      if(L>best){best=L;rot=Math.atan2(dx,dy)*180/Math.PI;}
+    }
+    return rot;
+  }
 
-  // Tallas presentes → un tipo de mesa por talla, con su largo real
-  var tallas={}, largoMax=0;
-  RES.structures.forEach(function(x){
-    var k='T'+x.mods, L=+x.len.toFixed(3);
-    if(!tallas[k]||L>tallas[k].largo)tallas[k]={modsAla:x.mods,largo:L};
+  /* La tabla manda en el handoff: en nV/nH lo que corre A LO LARGO del tubo es
+     `mods` módulos de ancho modWid (V) o modLen (H), y la cuerda del colector
+     son n módulos apilados. Mandar mods_per_struct (mods×n) como «módulos por
+     ala» hacía que el visor dibujara una fila 2V del DOBLE de largo. */
+  var tt=String(st.table_type||'1V').toUpperCase();
+  var nTab=parseInt(tt.slice(0,-1),10)||1;
+  var modAlong=(tt.slice(-1)==='V')?st.mod_wid_m:st.mod_len_m;
+  var sizesList=(RES.sizes&&RES.sizes.length)?RES.sizes:
+    [{mods:Math.round((st.mods_per_struct||0)/nTab)||st.mods_per_struct,structW:st.mesa_len_m,modsAct:st.mods_per_struct}];
+  var multiParcela=!(RES.rows&&RES.rows.length&&RES.fromLocal);
+  /* tipos[blk].largo: FILA entera (2 mesas + gap del motor) solo cuando el
+     emparejado existe; en fija, y en el fallback multi-parcela (un nodo por
+     MESA), el largo es la mesa sola — con la fila entera cada mesa se dibujaba
+     el doble de larga y el campo salía solapado. */
+  var filaEntera=(st.mount_type==='tracker')&&!multiParcela;
+  var tallas={},largoMax=0;
+  sizesList.forEach(function(sz){
+    var L=filaEntera?(2*sz.structW+(st.gap_motor_m||0.5)):sz.structW;
+    tallas['T'+sz.modsAct]={modsAla:sz.mods,largo:+L.toFixed(3)};
     if(L>largoMax)largoMax=L;
   });
+  var szDe=function(modsAct){var r=null;sizesList.forEach(function(s2){if(s2.modsAct===modsAct)r=s2;});return r;};
+  /* Tracker VIUDO (una sola mesa superviviente del emparejado): su nodo mide
+     MEDIA fila — dibujarlo con el largo de la fila entera pintaba media mesa
+     fantasma donde el 2D no tiene nada. */
+  function claveMedia(modsAct){
+    var k='M'+modsAct;
+    if(!tallas[k]){var sz=szDe(modsAct);
+      tallas[k]={modsAla:sz?sz.mods:null,largo:+((sz?sz.structW:largoMax/2)).toFixed(3)};}
+    return k;
+  }
 
-  // Agrupar mesas en trackers: dentro de una fila, dos mesas seguidas separadas
-  // por el gap del MOTOR son un tracker; si el hueco es el de entre trackers,
-  // empieza otro. Es `group_mesas_into_trackers` del core.
-  var porFila={};
-  RES.structures.forEach(function(x){ (porFila[x.row]=porFila[x.row]||[]).push(x); });
-  var trk=[], nEnteros=0, nSueltas=0;
-  Object.keys(porFila).forEach(function(f){
-    var fila=porFila[f].slice().sort(function(a,b){
-      return (a.cx!=null&&b.cx!=null)?(a.cx-b.cx):0;});
-    var grupo=[];
-    function cierra(){
-      if(!grupo.length)return;
-      var la=0,lo=0,k=0,largo=0,ang=0,mods=0;
-      grupo.forEach(function(g){
-        g.lonlat.forEach(function(p){lo+=p[0];la+=p[1];k++;});
-        mods=g.mods;
-        var q=g.lonlat, ejeA=[(q[0][0]+q[3][0])/2,(q[0][1]+q[3][1])/2], ejeB=[(q[1][0]+q[2][0])/2,(q[1][1]+q[2][1])/2];
-        var dE=(ejeB[0]-ejeA[0])*mLonC, dN=(ejeB[1]-ejeA[1])*mLatC, L=Math.hypot(dE,dN);
-        if(L>largo){largo=L;ang=Math.atan2(dE,dN)*180/Math.PI;}
+  function agrupa(fila){
+    /* En TRACKER dos mesas unidas por el gap del motor son UN tracker; en FIJA
+       cada estructura es su propio nodo — su separación normal es justamente
+       gapMotor, así que agrupar por ese hueco fundiría vecinas que no lo son. */
+    var maxPer=(st.mount_type==='tracker')?2:1;
+    var so=fila.slice().sort(function(a,b){return a.x0-b.x0;});
+    var out=[],g=[];
+    for(var i2=0;i2<so.length;i2++){
+      if(g.length&&g.length<maxPer&&so[i2].x0-g[g.length-1].x1<=(st.gap_motor_m||0.5)+0.15)g.push(so[i2]);
+      else{if(g.length)out.push(g);g=[so[i2]];}
+    }
+    if(g.length)out.push(g);
+    return out.map(function(gr){
+      return {x0:gr[0].x0,x1:gr[gr.length-1].x1,yc:(gr[0].y0+gr[0].y1)/2,mods:gr[0].mods,n:gr.length};
+    });
+  }
+  function nodo(cxL,cyL,mods,nMesas){
+    var w=RES.toLonLat(RES.fromLocal(cxL,cyL));
+    var w2=RES.toLonLat(RES.fromLocal(cxL+10,cyL));
+    var rot=Math.atan2((w2[0]-w[0])*mLonC,(w2[1]-w[1])*mLatC)*180/Math.PI;
+    var key=(filaEntera&&nMesas===1)?claveMedia(mods):('T'+mods);
+    var tp=tallas[key]||{largo:largoMax};
+    var mr=largoMax>0?Math.min(1,tp.largo/largoMax):1;
+    var q=aMundo(w[0],w[1]);
+    return {x:q[0], n:q[1], rot:rot,
+            t:(mr<0.999?'medio':'completo'), mods:mods, mr:+mr.toFixed(4), blk:key};
+  }
+  var trk=[],fijas=[],avisos3d=[];
+  if(!multiParcela){
+    if(esBif){
+      for(var pr=0;pr+1<RES.rows.length;pr+=2){
+        var A=agrupa(RES.rows[pr]), B=agrupa(RES.rows[pr+1]);
+        var nT=Math.min(A.length,B.length);
+        if(A.length!==B.length)avisos3d.push('par '+(pr/2)+' con '+A.length+'≠'+B.length+' trackers');
+        for(var t2=0;t2<nT;t2++){
+          var a=A[t2],b=B[t2];
+          trk.push(nodo((a.x0+a.x1)/2,(a.yc+b.yc)/2,a.mods,Math.min(a.n,b.n)));
+        }
+      }
+    } else {
+      RES.rows.forEach(function(f){
+        agrupa(f).forEach(function(a){trk.push(nodo((a.x0+a.x1)/2,a.yc,a.mods,a.n));});
       });
-      var mr=largoMax>0?Math.min(1,(grupo[0].len)/largoMax):1;
-      if(grupo.length===2)nEnteros++; else nSueltas++;
-      trk.push({x:(lo/k-clon)*mLonC, n:(la/k-clat)*mLatC, rot:ang,
-                t:(mr<0.999?'medio':'completo'), id:'M'+(trk.length+1),
-                mods:mods, mr:+mr.toFixed(4), blk:'T'+mods});
-      grupo=[];
     }
-    for(var i=0;i<fila.length;i++){
-      if(!grupo.length){grupo.push(fila[i]);continue;}
-      var prev=grupo[grupo.length-1];
-      var hueco=Math.abs(fila[i].cx-prev.cx)-(fila[i].len+prev.len)/2;
-      if(grupo.length<2&&hueco<=(st.gap_motor_m||0.5)+0.2)grupo.push(fila[i]);
-      else {cierra();grupo.push(fila[i]);}
-    }
-    cierra();
-  });
+  } else {
+    /* multi-parcela (o motor canónico): los rows agregados no viajan, así que
+       se cae a un nodo por MESA —con su largo de mesa, no de fila— y SIN
+       emparejado bifila. Se dice, no se disimula. */
+    esBif=false;
+    RES.structures.forEach(function(x){
+      var la=0,lo=0;x.lonlat.forEach(function(pp){lo+=pp[0];la+=pp[1];});
+      la/=x.lonlat.length;lo/=x.lonlat.length;
+      var q=aMundo(lo,la);
+      trk.push({x:q[0],n:q[1],rot:rumboArista(x.lonlat),t:'completo',mods:x.mods,mr:
+        (largoMax>0&&tallas['T'+x.mods])?+Math.min(1,tallas['T'+x.mods].largo/largoMax).toFixed(4):1,
+        blk:'T'+x.mods});
+    });
+    if(st.mount_type==='tracker')avisos3d.push('multi-parcela: un nodo por MESA y sin emparejado bifila en el 3D');
+  }
+  trk.forEach(function(t3,i4){t3.id='TK'+(i4+1);});
+
+  if(esFija){
+    /* El visor corta el camino de seguidores con `fija` y dibuja el campo desde
+       `fijas` (buildFijasInst): rectángulo en PLANTA (x, n, ancho w, fondo p),
+       inclinación y azimut. `p` va escorzado —el visor desescorza con
+       p/cos(i)— para que el faldón dibujado sea exactamente la apertura. */
+    var inc=+($('fixTilt').value||0), cosI=Math.cos(inc*Math.PI/180);
+    RES.structures.forEach(function(x){
+      var la=0,lo=0;x.lonlat.forEach(function(pp){lo+=pp[0];la+=pp[1];});
+      la/=x.lonlat.length;lo/=x.lonlat.length;
+      var q=aMundo(lo,la), rot=rumboArista(x.lonlat), sz=szDe(x.mods);
+      fijas.push({x:+q[0].toFixed(2), n:+q[1].toFixed(2),
+        w:+((x.len||st.mesa_len_m)).toFixed(2),
+        p:+(((x.ap||st.collector_h_m))*cosI).toFixed(2),
+        inclinacion:inc, azimut:+((((rot+90)%360)+360)%360).toFixed(1),
+        cols:(sz?sz.mods:x.mods), rows:nTab});
+    });
+  }
 
   var lay={plant:'custom', title:'Layout generado'+(SITIO&&SITIO.n?(' · '+SITIO.n):''),
     crs:'gen', clat:clat, clon:clon, cE:0, cN:0,
-    fija:(st.mount_type==='fija'),
-    mods:st.mods_per_struct||28,
-    mesa:{modW:st.mod_wid_m, modH:st.mod_len_m, gapMod:st.gap_modules_m,
-          gapDrive:st.gap_motor_m, pasoFila:st.pitch_m, filaZ:0, tipos:tallas},
-    trackers:trk, ncus:[], meteo:[], reps:[], inverters:[]};
+    fija:(esFija?{tilt:+($('fixTilt').value||0)}:false),
+    mods:(sizesList[0]&&sizesList[0].mods)||st.mods_per_string||28,
+    mesa:{modW:modAlong, modH:(st.collector_h_m||st.mod_len_m), gapMod:st.gap_modules_m,
+          gapDrive:st.gap_motor_m, pasoFila:st.pitch_m,
+          filaZ:(esBif?st.pitch_m/2:0), tipos:tallas},
+    trackers:trk, fijas:fijas, ncus:[], meteo:[], reps:[], inverters:[]};
   try{localStorage.setItem('cobertura_layout',JSON.stringify(lay));}catch(e){
     $('foot').innerHTML='<span style="color:var(--dead)">El layout no cabe en localStorage ('+
       fmt(trk.length)+' trackers). Baja el tamaño de la parcela o exporta a GeoJSON.</span>';return;}
-  $('foot').innerHTML='Al 3D: <b>'+fmt(trk.length)+'</b> trackers ('+nEnteros+' de dos mesas'+
-    (nSueltas?(', '+nSueltas+' sueltas'):'')+') y '+Object.keys(tallas).length+' talla(s) con su largo real.';
+  $('foot').innerHTML='Al 3D: <b>'+fmt(esFija?fijas.length:trk.length)+'</b> '+
+    (esFija?'mesas fijas ('+(+($('fixTilt').value||0))+'°)':
+     (esBif?'trackers BIFILA (2 filas + eje de transmisión cada uno, filaZ '+(st.pitch_m/2)+' m)':'trackers'))+
+    ' · '+Object.keys(tallas).length+' talla(s) con su largo real'+
+    (avisos3d.length?(' · <span style="color:var(--build)">'+esc(avisos3d.join(' · '))+'</span>'):'')+'.';
   window.open('../cobertura-zigbee/terreno.html?planta=custom','_blank');
 };
 
 /* ===== arranque ===== */
 loadPlants();syncAz();pintaBotonesDibujo();pintaCosteDem();buildParcel();encaja();draw();detectEngine();
+if(restauraSesion())encaja(),draw();
 </script>
 </body>
 </html>
