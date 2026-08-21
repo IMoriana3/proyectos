@@ -150,7 +150,10 @@ opuestas.
 Lo que hace la ficha:
 
 - **Avisa** (`rejilla_deja_hueco`) cuando el ancla global deja más del 10 % de lo que cabe por
-  tramo, con el déficit medido y las dos salidas escritas.
+  tramo, con el déficit medido y las dos salidas escritas. Y avisa también de otro placebo:
+  **`adaptive` con la rejilla marcada sale igual que `aligned`** («pongo adaptativo y me sale
+  exactamente igual») — los arranques se cuantizan a la misma rejilla; el modo solo se despega con
+  la casilla desmarcada (`adaptive_con_rejilla`).
 - **Sin «alinear a rejilla»**, cada fila ancla en el arranque de su propio tramo y re-sincroniza a
   paso fino al fallar un hueco — en Larraga: de 120 a **160 mesas (+33 %)**, con el **Δx = 0** del
   par bifila intacto (el `fits` de banda doble sigue mandando). Es una **divergencia declarada**
@@ -377,7 +380,7 @@ unidades sobre parcelas irregulares, no el orden de magnitud. (La consolidación
 
 ## El careo
 
-`node tests/test_layout.js` — 192 comprobaciones, sin navegador.
+`node tests/test_layout.js` — 196 comprobaciones, sin navegador.
 
 Extrae el bloque `MOTOR DE LAYOUT` del `generador-layout.html` **real** (no una copia en un `.js`,
 que se quedaría careando una versión vieja) y lo corre sobre las mismas quince parcelas que corrió
@@ -441,6 +444,16 @@ soltar en `tests/parcelas/` y el generador del fixture lo convierte en caso de c
 configuración por defecto es bifila multi-talla `28/14/7` —el régimen donde todo lo anterior puede
 romperse— y se cambia con `properties.careo`. Ver una parcela fallar en producción y no poder
 convertirla en test era la mitad del problema.
+
+## El anillo que se cruza a sí mismo
+
+Pasó en Larraga: el cierre del dibujo retrocedió 0,9 m sobre el primer lado y quedó un lazo de
+área ~0 — Streamlit avisó («la parcela se cruza a sí misma») y la ficha lo tragaba **sin decir
+nada**. Ahora el motor lo detecta y lo repara **igual que `make_valid`**: parte el anillo en el
+punto de cruce y descarta el bucle pequeño, avisando (`parcela_se_cruzaba`). No es un detalle de
+implementación: la primera versión quitaba un vértice «a ojo», reparaba con OTRO anillo y el
+barrido de origen se movía 4 mesas (120 vs 124) — lo cazó el careo al primer intento, porque la
+semilla de Larraga se conserva **sucia a propósito** y se exige el clavado y el aviso.
 
 ## Varias parcelas
 
