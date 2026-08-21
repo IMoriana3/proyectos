@@ -30,6 +30,7 @@ ESTRUCTURAS = ["fija_optima", "fija_proyecto", "fija_ew",
                "tracker_hsat", "tracker_hsat_nobt", "tracker_tsat"]
 PITCH_M, ANCHO_M = 6.00, 2.382
 ALBEDO, TILT_PROYECTO, MAX_ANGLE = 0.20, 25.0, 55.0
+PENDIENTE = 8.0        # pendiente del terreno ⊥ a las filas, en grados
 
 
 def main() -> int:
@@ -54,7 +55,8 @@ def main() -> int:
     cmp_ = compare_structures(
         meteo, LAT, LON, structures=ESTRUCTURAS, albedo=ALBEDO,
         gcr=ANCHO_M / PITCH_M, collector_height_m=ANCHO_M,
-        tilt_proyecto_deg=TILT_PROYECTO)
+        tilt_proyecto_deg=TILT_PROYECTO,
+        cross_axis_slope_deg=PENDIENTE)
 
     # El comparador normaliza a AÑO equivalente; el fixture guarda el bruto de
     # los doce días para que el JS no tenga que replicar esa normalización.
@@ -72,12 +74,14 @@ def main() -> int:
     doc = {
         "_": "Generado por tests/gen_careo_estructuras.py — NO editar a mano.",
         "core": {"catalogo": sorted(CATALOGO), "baseline": cmp_.baseline_key,
+                 "pendiente_deg": PENDIENTE,
                  "ghi_kwh_m2": round(cmp_.assumptions["ghi_kwh_m2_year"] * anos, 4),
                  "years_equiv": round(anos, 6)},
         "cfg": {"lat": LAT, "lon": LON, "year": YEAR, "pitch_m": PITCH_M,
                 "collector_width_m": ANCHO_M, "albedo": ALBEDO,
                 "tilt_deg": TILT_PROYECTO, "max_angle_deg": MAX_ANGLE,
-                "axis_tilt_deg": 10.0, "structures": ESTRUCTURAS},
+                "axis_tilt_deg": 10.0, "cross_axis_slope_deg": PENDIENTE,
+                "structures": ESTRUCTURAS},
         "meteo": {
             "t": [t.strftime("%Y-%m-%dT%H:%M:%SZ") for t in idx],
             "ghi": [round(float(v), 3) for v in meteo["GHI"]],
