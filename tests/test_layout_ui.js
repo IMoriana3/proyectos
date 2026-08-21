@@ -423,15 +423,20 @@ const cajaLienzo = async page => {
     return n;
   });
   check('con bifila hay ejes de transmisión que dibujar (' + ejes + ')', ejes > 50);
-  check('y el lienzo los pinta (más píxeles con el eje que sin él)',
+  check('y el lienzo los pinta (biela ROJA y viga GRIS del canon: más píxeles con la casilla que sin ella)',
     await page.evaluate(async () => {
+      // Colores de la página 6 de Streamlit: biela #C0392B, viga #7F8C8D.
       const cuenta = () => { const c = document.querySelector('#cv');
         const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-        let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] > 130 && d[i + 2] < 90) n++;
-        return n; };
+        let rojo = 0, gris = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i] > 150 && d[i] < 220 && d[i + 1] < 90 && d[i + 2] < 80) rojo++;
+          if (Math.abs(d[i] - 127) < 20 && Math.abs(d[i + 1] - 140) < 20 && Math.abs(d[i + 2] - 141) < 22) gris++;
+        }
+        return { rojo, gris }; };
       document.querySelector('#showAxis').checked = false; draw(); const sin = cuenta();
       document.querySelector('#showAxis').checked = true;  draw(); const con = cuenta();
-      return con > sin + 200;
+      return con.rojo > sin.rojo + 200 && con.gris > sin.gris + 200;
     }));
   await page.uncheck('#showAxis');
   await page.fill('#prot', '0'); await page.dispatchEvent('#prot', 'change');
@@ -470,6 +475,24 @@ const cajaLienzo = async page => {
     Math.abs(ejesBif.n - ejesBif.pares) <= Math.max(2, ejesBif.pares * 0.02), JSON.stringify(ejesBif));
   check('cada eje en el hueco del MOTOR, no atravesando una mesa',
     ejesBif.enMesa === 0, ejesBif.enMesa + ' ejes dentro de mesa');
+  // VIGA DE TORSIÓN: una por TRACKER (no por mesa), recorriéndolo de punta a
+  // punta CRUZANDO el hueco del motor. Cobertura medida de los mutantes:
+  // «una viga por mesa» muere en el conteo Y en la longitud (sobra el tramo
+  // del motor × nº de trackers); «viga solo sobre la primera mesa» conserva
+  // el conteo y muere en la longitud (falta media planta de viga).
+  const vgBif = await page.evaluate(() => {
+    const vs = vigasTorsion();
+    let lenV = vs.reduce((a, v) => a + Math.abs(v.xb - v.xa), 0);
+    let mesas = 0, lenM = 0, motores = 0;
+    RES.rows.forEach(f => { mesas += f.length; f.forEach(t => lenM += t.x1 - t.x0);
+      motores += trksFila(f).filter(tr => tr.length === 2).length; });
+    const esperado = lenM + motores * (RES.stats.gap_motor_m || 0.5);
+    return { n: vs.length, mesas, lenV: +lenV.toFixed(2), esperado: +esperado.toFixed(2) };
+  });
+  check('VIGA DE TORSIÓN: una por tracker, no por mesa (' + vgBif.n + ' vigas para ' + vgBif.mesas + ' mesas)',
+    Math.abs(vgBif.n - vgBif.mesas / 2) <= Math.max(2, vgBif.mesas * 0.02), JSON.stringify(vgBif));
+  check('y la viga recorre el tracker ENTERO, motor incluido (Σ largos = Σ mesas + huecos de motor)',
+    Math.abs(vgBif.lenV - vgBif.esperado) < 0.5, JSON.stringify(vgBif));
   check('con un TIPO por talla y el largo de FILA real (2 mesas + motor)',
     Object.keys(v3bif.mesa.tipos).length > 1 &&
     Object.values(v3bif.mesa.tipos).every(t => t.largo > 0 && t.modsAla > 0),
@@ -489,6 +512,30 @@ const cajaLienzo = async page => {
   });
   check('MONOFILA → filaZ = 0 y un nodo por tracker: ~mesas/2 (' + v3mono.trackers.length + ')',
     v3mono.mesa.filaZ === 0 && Math.abs(v3mono.trackers.length - mesasMono / 2) <= mesasMono * 0.02);
+  // En monofila la viga es TODO lo que hay que dibujar de ejes (no hay biela)
+  // — y antes no se pintaba NADA: la casilla solo actuaba con bifila, así que
+  // en monofila nada unía las 2 mesas + motor de cada tracker en pantalla.
+  const vgMono = await page.evaluate(() => {
+    const vs = vigasTorsion();
+    let mesas = 0; RES.rows.forEach(f => { mesas += f.length; });
+    const cuenta = () => { const c = document.querySelector('#cv');
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      let gris = 0, rojo = 0;
+      for (let i = 0; i < d.length; i += 4) {
+        if (Math.abs(d[i] - 127) < 20 && Math.abs(d[i + 1] - 140) < 20 && Math.abs(d[i + 2] - 141) < 22) gris++;
+        if (d[i] > 150 && d[i] < 220 && d[i + 1] < 90 && d[i + 2] < 80) rojo++;
+      }
+      return { gris, rojo }; };
+    document.querySelector('#showAxis').checked = false; draw(); const sin = cuenta();
+    document.querySelector('#showAxis').checked = true;  draw(); const con = cuenta();
+    document.querySelector('#showAxis').checked = false; draw();
+    return { n: vs.length, mesas, sin, con };
+  });
+  check('MONOFILA → viga de torsión por tracker también (' + vgMono.n + ' para ' + vgMono.mesas + ' mesas)',
+    Math.abs(vgMono.n - vgMono.mesas / 2) <= Math.max(2, vgMono.mesas * 0.02), JSON.stringify(vgMono));
+  check('y el lienzo la pinta en GRIS sin inventar bielas (monofila no tiene eje de transmisión)',
+    vgMono.con.gris > vgMono.sin.gris + 200 && vgMono.con.rojo <= vgMono.sin.rojo + 20,
+    JSON.stringify(vgMono));
 
   await page.selectOption('#mount', 'fija');
   await generar(page);
@@ -500,6 +547,22 @@ const cajaLienzo = async page => {
   check('FIJA → filaZ = 0 y un nodo POR ESTRUCTURA (' + v3fija.trackers.length + ' vs ' + estrFija + ')',
     v3fija.mesa.filaZ === 0 &&
     Math.abs(v3fija.trackers.length - estrFija) <= estrFija * 0.02);
+  // Una estructura fija no tiene tubo de torsión: la casilla no puede pintarle
+  // vigas grises a un montaje que no rota (misma puerta que el canon: la capa
+  // de ejes solo existe en tracker).
+  check('FIJA → sin viga de torsión que pintar (el gris no aparece al marcar la casilla)',
+    await page.evaluate(() => {
+      const cuenta = () => { const c = document.querySelector('#cv');
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+        let gris = 0;
+        for (let i = 0; i < d.length; i += 4)
+          if (Math.abs(d[i] - 127) < 20 && Math.abs(d[i + 1] - 140) < 20 && Math.abs(d[i + 2] - 141) < 22) gris++;
+        return gris; };
+      document.querySelector('#showAxis').checked = false; draw(); const sin = cuenta();
+      document.querySelector('#showAxis').checked = true;  draw(); const con = cuenta();
+      document.querySelector('#showAxis').checked = false; draw();
+      return con <= sin + 20;
+    }));
   // El visor con `fija` NO construye seguidores: corta en terreno.html:961 y el
   // campo se dibuja desde `fijas` (buildFijasInst) — mandar fija:true con las
   // mesas solo en `trackers` era un visor VACÍO (hallazgo de la verificación

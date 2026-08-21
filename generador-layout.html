@@ -438,7 +438,7 @@ canvas.panning{cursor:grabbing}
           <option value="line">Líneas</option>
         </select>
         <label class="chk mini2"><input type="checkbox" id="showDisc"> descartadas</label>
-        <label class="chk mini2"><input type="checkbox" id="showAxis" checked> eje bifila</label>
+        <label class="chk mini2"><input type="checkbox" id="showAxis" checked> viga y eje</label>
         <span class="maphint" id="mapHint">arrastra para mover · rueda para acercar</span>
       </div>
       <canvas id="cv" width="1000" height="700"></canvas>
@@ -2391,15 +2391,23 @@ function draw(){
         ctx.stroke();
       }
     }
-    // Eje bifila: la biela que une las dos sub-filas de un mismo tracker. Es lo
-    // que hace VISIBLE que es bifila y no dos monofilas juntas.
-    if($('showAxis').checked&&RES.stats.bifila&&RES.rows&&RES.fromLocal){
-      ctx.strokeStyle='rgba(246,166,35,.85)';ctx.lineWidth=1.1;
-      ejesBifila().forEach(function(e){
+    // VIGA DE TORSIÓN por tracker + eje de transmisión (biela) por bifila.
+    // Colores y jerarquía del canon (página 6 de Streamlit): tubo gris
+    // #7F8C8D fino, biela roja #C0392B y el doble de gruesa. La viga cruza
+    // el hueco del motor: es lo que hace VISIBLE que 2 mesas + motor son UN
+    // tracker y no dos sueltos — y la biela, que es bifila y no dos monofilas.
+    if($('showAxis').checked&&RES.rows&&RES.fromLocal&&RES.stats.mount_type!=='fija'){
+      function traza(e){
         var ca=RES.toLonLat(RES.fromLocal(e.xa,e.ya)),cb=RES.toLonLat(RES.fromLocal(e.xb,e.yb));
         var pa=px(ca[0],ca[1]),pb=px(cb[0],cb[1]);
         ctx.beginPath();ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);ctx.stroke();
-      });
+      }
+      ctx.strokeStyle='#7F8C8D';ctx.lineWidth=1.1;
+      vigasTorsion().forEach(traza);
+      if(RES.stats.bifila){
+        ctx.strokeStyle='#C0392B';ctx.lineWidth=2.2;
+        ejesBifila().forEach(traza);
+      }
     }
   }
   if(drawing&&DRAW&&DRAW.length){
@@ -2418,22 +2426,43 @@ function draw(){
    en Larraga («¿estás poniendo dos ejes donde solo va uno?»). Las mesas se
    agrupan en trackers con la misma regla del 3D (gap del motor une, gap N-S
    separa); un tracker viudo de una mesa no tiene motor y su eje va al centro. */
+/* Agrupar las mesas de una FILA en TRACKERS: el gap del motor (pequeño) une,
+   el hueco N-S (grande) separa, y nunca más de 2 mesas por tracker (fila
+   atómica). Es la MISMA regla para la viga y para la biela — dos agrupaciones
+   distintas serían dos verdades sobre qué es un tracker. */
+function trksFila(f){
+  var gm=(RES.stats.gap_motor_m||0.5)+0.15;
+  var so=f.slice().sort(function(a,b){return a.x0-b.x0;});
+  var g=[],res=[];
+  for(var i=0;i<so.length;i++){
+    if(g.length&&g.length<2&&so[i].x0-g[g.length-1].x1<=gm)g.push(so[i]);
+    else{if(g.length)res.push(g);g=[so[i]];}
+  }
+  if(g.length)res.push(g);
+  return res;
+}
+/* UNA viga de torsión por TRACKER (canon: kind=="axis" de
+   rows_to_bifila_axislines_geojson): recorre el eje central del tracker de
+   punta a punta, CRUZANDO el hueco del motor — 2 mesas + motor = una viga.
+   Un tracker viudo de una mesa lleva su viga corta (el canon también). En
+   fija no hay tubo: el que pinta ya no llama con mount_type 'fija'. */
+function vigasTorsion(){
+  if(!RES||!RES.rows||!RES.fromLocal)return [];
+  var out=[];
+  RES.rows.forEach(function(f){
+    trksFila(f).forEach(function(tr){
+      var y=(tr[0].y0+tr[0].y1)/2;
+      out.push({xa:tr[0].x0,ya:y,xb:tr[tr.length-1].x1,yb:y});
+    });
+  });
+  return out;
+}
 function ejesBifila(){
   if(!RES||!RES.stats.bifila||!RES.rows||!RES.fromLocal)return [];
-  var gm=(RES.stats.gap_motor_m||0.5)+0.15, out=[];
-  function trks(f){
-    var so=f.slice().sort(function(a,b){return a.x0-b.x0;});
-    var g=[],res=[];
-    for(var i=0;i<so.length;i++){
-      if(g.length&&g.length<2&&so[i].x0-g[g.length-1].x1<=gm)g.push(so[i]);
-      else{if(g.length)res.push(g);g=[so[i]];}
-    }
-    if(g.length)res.push(g);
-    return res;
-  }
+  var out=[];
   function xMotor(tr){return tr.length===2?(tr[0].x1+tr[1].x0)/2:(tr[0].x0+tr[0].x1)/2;}
   for(var r0=0;r0+1<RES.rows.length;r0+=2){
-    var A=trks(RES.rows[r0]),B=trks(RES.rows[r0+1]);
+    var A=trksFila(RES.rows[r0]),B=trksFila(RES.rows[r0+1]);
     var n=Math.min(A.length,B.length);
     for(var t=0;t<n;t++){
       out.push({xa:xMotor(A[t]),ya:(A[t][0].y0+A[t][0].y1)/2,
