@@ -34,6 +34,7 @@ const FIRMAS = ['function prep2d(cv){', 'function nicePaso(bruto){',
                                 'function factorPorDefecto(stepMin,pasos){',
                 'function opcionesRepro(stepMin,pasos){',
                 'function avancePasos(acc,dtReal,factor,stepMin){',
+                'function repartoBandas(base,ks){',
                 'var DURACIONES_REPRO=', 'var REPRO_MIN_PASOS_S=', 'var REPRO_DEF_S='];
 const trozos = FIRMAS.map(saca);
 check('las funciones puras siguen en el HTML', trozos.every(Boolean),
@@ -305,6 +306,99 @@ check('el default es el más cercano a los ' + ctx.REPRO_DEF_S + ' s',
         Math.round(100 * mal.fuera / mal.total) + ' % de las direcciones',
         mal.fuera > mal.total * 0.5 && mal.peor > 50,
         mal.fuera + '/' + mal.total + ', peor ' + mal.peor.toFixed(0) + ' m');
+})();
+
+// ── 10) la planta real repartida en FRANJAS, una por estrategia ──────────
+// La comparativa enseña las cinco a la vez pero en bloques sintéticos iguales;
+// la planta real enseña la geometría de verdad pero movida por UNA. Esto es lo
+// de en medio. La regla vive aparte del dibujo justo para poder medirla sin
+// montar una escena ni bajarse un layout — que es lo que no se puede hacer sin
+// red, y por tanto lo que no se probaría nunca si viviera dentro.
+const RB = ctx.repartoBandas;
+function campo(nx, nz, paso) {
+  const b = [];
+  for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++)
+    b.push({ x: i * paso, z: j * paso });
+  return b;
+}
+const KS = ['BASE', 'A1', 'A2', 'B1', 'B2', 'PASIVO'];
+
+(function () {
+  const b = campo(30, 6, 10), r = RB(b, KS);          // ancho: 300 × 60
+  check('el eje se MIDE: campo ancho -> reparto por X', r.ejeX === true);
+  const cuenta = {};
+  r.banda.forEach(i => { cuenta[i] = (cuenta[i] || 0) + 1; });
+  const tam = Object.values(cuenta);
+  check('las seis franjas existen y están equilibradas (' + tam.join(',') + ')',
+        Object.keys(cuenta).length === KS.length &&
+        Math.max(...tam) - Math.min(...tam) <= 1);
+  check('ningún tracker se queda sin banda',
+        r.banda.every(v => v !== undefined && v >= 0));
+})();
+
+(function () {
+  const b = campo(6, 30, 10), r = RB(b, KS);          // largo: 60 × 300
+  check('campo largo -> reparto por Z, no por X', r.ejeX === false);
+})();
+
+(function () {
+  // FRANJAS DISJUNTAS, que es lo que hace el reparto mirable. Si cada
+  // estrategia cogiera trackers salteados por todo el campo, cinco casos
+  // serían confeti y no un careo.
+  //
+  // La primera versión de esto medía «que los valores de x de una banda no
+  // tengan huecos», y un mutante de round-robin la pasaba: repartiendo uno de
+  // cada seis, TODAS las bandas cubren todos los x y ninguna tiene huecos. El
+  // test aprobaba por el motivo contrario al que buscaba. Lo que hay que
+  // exigir es que los rangos NO SE SOLAPEN.
+  const b = campo(30, 6, 10), r = RB(b, KS);
+  const rangos = KS.map((_, bi) => {
+    const xs = b.filter((_, i) => r.banda[i] === bi).map(p => (r.ejeX ? p.x : p.z));
+    return [Math.min(...xs), Math.max(...xs)];
+  }).sort((a, z) => a[0] - z[0]);
+  let solapes = 0;
+  for (let q = 1; q < rangos.length; q++)
+    if (rangos[q][0] <= rangos[q - 1][1]) solapes++;
+  check('las franjas NO se solapan (' +
+        rangos.map(x => x[0] + '–' + x[1]).join(' | ') + ')', solapes === 0);
+  const ancho = rangos.map(x => x[1] - x[0]);
+  check('y cada una es una franja estrecha, no el campo entero (anchos ' +
+        ancho.join(',') + ')', Math.max(...ancho) < 300 / KS.length * 1.5);
+})();
+
+(function () {
+  const b = campo(30, 6, 10), r = RB(b, KS);
+  const iPas = KS.indexOf('PASIVO');
+  const sueltos = r.suelto.filter(Boolean).length;
+  const enBanda = r.banda.filter(v => v === iPas).length;
+  check('en la banda del pasivo se suelta el BORDE, no la banda entera (' +
+        sueltos + ' de ' + enBanda + ')', sueltos > 0 && sueltos < enBanda);
+  check('y no se suelta nada fuera de esa banda',
+        r.suelto.every((v, i) => !v || r.banda[i] === iPas));
+})();
+
+(function () {
+  // Sin PASIVO en la lista no puede haber nada suelto: el caso no está.
+  const b = campo(20, 4, 10), r = RB(b, ['BASE', 'A1', 'B1']);
+  check('sin caso pasivo, nadie se suelta', r.suelto.every(v => !v));
+  check('y el reparto sigue cubriendo el campo',
+        new Set(r.banda).size === 3);
+})();
+
+check('un campo vacío no revienta', RB([], KS).banda.length === 0);
+check('sin casos tampoco', RB(campo(4, 4, 10), []).centros.length === 0);
+
+// MUTANTE: repartir por el eje CORTO deja franjas estrechas e ilegibles — y
+// con la retícula girada, cruzadas. Se comprueba que la regla NO lo hace.
+(function () {
+  const b = campo(30, 6, 10), r = RB(b, KS);
+  const anchoBanda = 300 / KS.length;                  // 50 m por franja
+  const c0 = r.centros[0], c1 = r.centros[1];
+  check('MUTANTE: los centros de dos franjas contiguas se separan por el eje ' +
+        'LARGO (' + Math.abs(c1.x - c0.x).toFixed(0) + ' m en X vs ' +
+        Math.abs(c1.z - c0.z).toFixed(0) + ' en Z)',
+        Math.abs(c1.x - c0.x) > anchoBanda * 0.5 &&
+        Math.abs(c1.z - c0.z) < 1);
 })();
 
 console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko)
