@@ -2714,6 +2714,31 @@ function encuadra(){
   }
 }
 
+/* ── EL TALUD DEL EJE INCLINADO ──
+   Un TSAT gira el eje sobre X, así que la mitad norte de la fila se hundía
+   bajo el suelo y la sur volaba: en pantalla parecía una estructura clavada en
+   la tierra. Y no es un fallo del dibujo, es que le faltaba el terreno: un eje
+   inclinado se monta sobre una LADERA que lleva esa misma pendiente (o con las
+   hincas creciendo, que a esta escala es lo mismo). Sin ladera, el dibujo dice
+   una cosa que en campo no existe.
+
+   Así que el bloque se sube hasta que su punta baja toca el cero y se le pone
+   debajo un talud con la pendiente del eje. La ladera sube hacia el ecuador,
+   que es hacia donde mira el eje. */
+function taludTSAT(mats,largo,ancho,aRad,color){
+  var g=new THREE.Group();
+  var geo=new THREE.PlaneGeometry(ancho,largo);
+  var mat=new THREE.MeshStandardMaterial({color:color,roughness:1,metalness:0,
+    side:THREE.DoubleSide});
+  var m=new THREE.Mesh(geo,mat);
+  /* Un plano nace en XY: -90° lo tumba, y el ángulo del eje lo inclina en el
+     plano YZ, que es donde bascula el TSAT. */
+  m.rotation.x=-Math.PI/2+aRad;
+  m.receiveShadow=true;
+  g.add(m);
+  return g;
+}
+
 /* ── El EJE COMPARTIDO de una bifila ──
    Monofila y bifila no cambian la mesa —es una diferencia operativa, no
    geométrica, y por eso la POA por m² de módulo es la misma—, pero sí cambian
@@ -2757,6 +2782,9 @@ function construyeMundo(){
      defecto del modelo. Si no, la escena enseñaría una estructura y la tabla
      calcularía otra. */
   var escTk=cotasSeguidor(cfg.tracker);   // el modelo, a las cotas configuradas
+  /* Cuánto hay que subir el bloque del eje inclinado para que su punta baja
+     apoye en el suelo en vez de hundirse: media fila por el seno del ángulo. */
+  var alzaTSAT=(cfg.tracker.largoFila/2)*Math.sin(Math.abs(cfg.axTilt)*FIS.D2R);
   var largoTk=cfg.tracker.largoFila, largo=Math.max(cfg.fija.largoFila,largoTk);
   /* Hueco entre bloques: 16 m, y no es un número bonito. De él sale la
      elevación a la que hay que apagar las sombras (más abajo), y con 10 m se
@@ -2787,6 +2815,7 @@ function construyeMundo(){
          estaría enseñando una estructura distinta de la que calcula la tabla. */
       if(spec.fam==='tracker'){
         uno=seguidor3D(mats,escTk); uno.position.x=d;    // filas hacia el ESTE
+        if(spec.tsat)uno.position.y=alzaTSAT;            // apoyado en la ladera
       }else if(spec.fam==='fija_ew'){
         // dos aguas: la mesa lleva DOS paneles enfrentados, y las filas se
         // repiten hacia el este como en el seguidor (las filas corren N-S)
@@ -2804,6 +2833,15 @@ function construyeMundo(){
     /* En bifila, la transmisión que hace que esas dos filas sean UN seguidor. */
     if(agrupa>1)for(var t=0;t+agrupa<=nf;t+=agrupa){
       grupo.add(ejeBifila(mats,(t-(nf-1)/2)*pitch,(t+agrupa-1-(nf-1)/2)*pitch));
+    }
+    /* El talud va DEBAJO del bloque y con su misma pendiente: sin él, media
+       fila quedaba enterrada. */
+    if(spec.tsat){
+      var aT=(cfg.lat>=0?1:-1)*Math.abs(cfg.axTilt)*FIS.D2R;
+      var anchoT=(nf-1)*pitch+G.altoColector+8, largoT=G.largoFila+10;
+      var tal=taludTSAT(mats,largoT,anchoT,aT,0x2b3a22);
+      tal.position.y=alzaTSAT;
+      grupo.add(tal);
     }
     var col='#'+(COL[k]||'#888888').replace('#','');
     /* El rótulo se acota por el hueco Y por el largo del bloque: con una fila
