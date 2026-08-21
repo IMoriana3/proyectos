@@ -184,11 +184,15 @@ def _casos_de_parcelas():
             cfg.update({"mount_type": "tracker", "table_type": "1V",
                         "mods_per_struct": [28, 14, 7], "bifila": True,
                         "pitch_m": 6.0, "panel_az_deg": 90.0})
-            cfg.update(props.get("careo") or {})
+            _careo = dict(props.get("careo") or {})
+            _tol = _careo.pop("tol_mesas_pct", None)
+            cfg.update(_careo)
             nombre = "PARCELA REAL · " + (props.get("nombre") or os.path.basename(fn))
             if len(parcelas) > 1:
                 nombre += f" · parcela {pi + 1}"
             caso = {"nombre": nombre, "poly_lonlat": ext, "holes_lonlat": holes, "cfg": cfg}
+            if _tol:
+                caso["tol_mesas_pct"] = _tol
             if excl:
                 caso["excl_lonlat"] = excl
             out.append(caso)

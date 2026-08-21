@@ -80,6 +80,16 @@ const cajaLienzo = async page => {
   check('el emplazamiento arranca en «manual»', (await page.textContent('#sitioSel')).trim() === 'manual');
   check('el azimut de filas se deriva del eje (eje N-S 0° → filas a 90°)',
     await page.inputValue('#panelAz') === '90');
+  // «El tracker se define arriba, no podemos poner arriba lo de 1V y abajo el
+  // pitch»: el pitch (que fija el GCR derivado de esta tarjeta), el GCR
+  // objetivo y el tipo de tracker viven CON la estructura; en Implantación
+  // quedan setback, azimuts y modo.
+  check('pitch, GCR objetivo y tipo de tracker viven en la tarjeta de ESTRUCTURA',
+    await page.evaluate(() => {
+      const card = sel => document.querySelector(sel).closest('.card');
+      return card('#pitch') === card('#mount') && card('#gcrObj') === card('#mount') &&
+             card('#bifila') === card('#mount') && card('#setback') !== card('#mount');
+    }));
   // MESA y FILA no son lo mismo: una mesa es UN string y una fila de tracker
   // son DOS mesas + motor. La casilla decía «Mód./fila: 28» para un 1V/28 —
   // el string, no la fila (56) — y con multi-talla solo enseñaba la primera.

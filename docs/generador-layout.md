@@ -137,6 +137,30 @@ Medido sobre parcela girada 35°, multi-talla y parcela en L: **0 pares descuadr
 El **eje de transmisión** (la biela que une las dos sub-filas) se dibuja con su casilla: es lo que
 hace visible que es bifila y no dos monofilas juntas.
 
+## La rejilla global, y el ancla por linde
+
+El modo `aligned` canónico ancla la rejilla de mesas en el **bbox** de la parcela: todas las filas
+comparten las mismas posiciones. En un rectángulo eso pierde como mucho una mesa por fila; con
+**lindes diagonales** pierde hasta una unidad por cada extremo de cada fila — y el campo sale con
+huecos donde caben trackers. No es un fallo del port: **el cuaderno y Streamlit hacen lo mismo**
+(medido en la finca de Larraga: el core coloca 124 mesas donde por tramo caben 160), y su barrido
+de 11 offsets de Y no lo salva porque un solo offset global no puede casar con dos diagonales
+opuestas.
+
+Lo que hace la ficha:
+
+- **Avisa** (`rejilla_deja_hueco`) cuando el ancla global deja más del 10 % de lo que cabe por
+  tramo, con el déficit medido y las dos salidas escritas.
+- **Sin «alinear a rejilla»**, cada fila ancla en el arranque de su propio tramo y re-sincroniza a
+  paso fino al fallar un hueco — en Larraga: de 120 a **160 mesas (+33 %)**, con el **Δx = 0** del
+  par bifila intacto (el `fits` de banda doble sigue mandando). Es una **divergencia declarada**
+  del core, que ancla siempre en el bbox; con la casilla marcada el camino es byte-idéntico al
+  canónico y el careo lo vigila.
+- El resto del hueco son **retales donde no cabe una fila entera** (la unidad atómica del cliente:
+  2 mesas por tubo, sin filas a medias): eso no lo arregla ningún ancla — lo arregla el
+  **multi-talla**, que es su razón de ser. Larraga con `28, 14, 7`: **6.076 módulos** frente a los
+  3.360 de la talla única anclada (+80 %).
+
 ## Consolidación: nunca dos cortos donde cabe un doble
 
 Regla del cliente, la misma que aplica el paso de consolidación N-S de `layout_v2`: **dos trackers
@@ -313,8 +337,8 @@ Los mismos nombres y los mismos defaults que la página **Layout** de Streamlit 
 
 | Grupo | Campos |
 |---|---|
-| Estructura | montaje (tracker/fija), tabla `1V…4V` / `1H…4H`, mods/string, largo y ancho de módulo, Wp |
-| Implantación | pitch, setback, azimut del eje → azimut de filas, modo `aligned`/`adaptive`, monofila/bifila |
+| Estructura | montaje (tracker/fija), tabla `1V…4V` / `1H…4H`, mods/string, largo y ancho de módulo, Wp, **pitch y GCR objetivo** (§03.T0: la geometría del tracker es pitch + apertura → GCR, y el GCR derivado de la tarjeta sale de ese pitch), **tipo de tracker** (bifila/monofila), tilt del eje, máx. giro, backtracking |
+| Implantación | setback, azimut del eje → azimut de filas, modo `aligned`/`adaptive` |
 | Avanzados | gap entre módulos, gap del motor, gap N-S, viales E-O y N-S, mín. estructuras por fila, offset de filas, alinear a rejilla, centrar |
 
 Dos cosas que conviene saber porque no son intuitivas:
@@ -350,10 +374,10 @@ unidades sobre parcelas irregulares, no el orden de magnitud. (La consolidación
 
 ## El careo
 
-`node tests/test_layout.js` — 177 comprobaciones, sin navegador.
+`node tests/test_layout.js` — 191 comprobaciones, sin navegador.
 
 Extrae el bloque `MOTOR DE LAYOUT` del `generador-layout.html` **real** (no una copia en un `.js`,
-que se quedaría careando una versión vieja) y lo corre sobre las mismas catorce parcelas que corrió
+que se quedaría careando una versión vieja) y lo corre sobre las mismas quince parcelas que corrió
 `solargpt_core.layout_v2.compute_layout_v2` (`tests/careo-layout.json`).
 
 Lo que se exige, y por qué eso y no la igualdad:
@@ -367,8 +391,8 @@ Lo que se exige, y por qué eso y no la igualdad:
 | GCR de tracker | exacto | `apertura / pitch`. En fija el core lo define por área, así que arrastra la diferencia del conteo |
 | UTM contra pyproj | < 1 mm | Tres órdenes de magnitud menos que el gap entre módulos |
 
-Medido hoy sobre los catorce casos: **tres clavados** (parcela girada 35° bifila, parcela en L
-monofila, setback de 15 m) y las **filas idénticas en 13 de 14** (el que no, el hueco central,
+Medido hoy sobre los quince casos: **tres clavados** (parcela girada 35° bifila, parcela en L
+monofila, setback de 15 m) y las **filas idénticas en 14 de 15** (el que no, el hueco central,
 dentro del ±1 del barrido de Y no portado). El peor caso dentro de la tolerancia global es el
 montaje fijo 2V, a **1,89 %**; el fijo **multi-talla** sale a **2,59 %** y lleva su tolerancia
 declarada (3 %) con el mecanismo medido en el generador del fixture: la rejilla global del core
@@ -377,7 +401,7 @@ interactúa con la rotación de convergencia y pierde un slot de mesa en la mita
 encima** del canónico hasta ~2,6 % — la desviación es optimista y va dicha, no escondida bajo una
 tolerancia global más ancha.
 
-Cuatro de los catorce son **bifila con multi-talla** —la finca real también lo es—; los tres
+Cuatro de los quince son **bifila con multi-talla** —la finca real también lo es—; los tres
 sintéticos —rectángulo girado 35°, parcela en L y rectángulo recto— están ahí a propósito: es la
 combinación donde el emparejado A/B se rompe, es lo que se vio fallando en planta, y el careo no la
 cubría. Un banco que solo carea
@@ -398,8 +422,11 @@ python3 tests/gen_careo_layout.py --core /ruta/a/SolarGPTfull/solargpt
 
 ### Parcelas reales en el careo
 
-El último caso es una **finca de verdad**: `tests/parcelas/finca-irregular.geojson`, nueve
-vértices, cóncava. Un careo que solo corre rectángulos sintéticos se cree que el mundo es
+Dos casos son **fincas de verdad**: `tests/parcelas/finca-irregular.geojson` (nueve vértices,
+cóncava) y `tests/parcelas/larraga.geojson` — la finca de Larraga que llegó con un «deja mil
+huecos donde entran trackers» y su exclusión dibujada, con `tol_mesas_pct: 4` declarado en su
+`properties.careo` (el core gana ~4 mesas con su barrido de 11 offsets de Y con exclusiones, no
+portado). La primera: Un careo que solo corre rectángulos sintéticos se cree que el mundo es
 rectangular — y el emparejado bifila, la consolidación y el multi-talla se rompen justo en los
 bordes que los rectángulos no tienen. Medido: **94 filas idénticas** a las del core y las mesas a
 **0,91 %** (1.300 frente a 1.312).
