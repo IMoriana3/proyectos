@@ -423,15 +423,20 @@ const cajaLienzo = async page => {
     return n;
   });
   check('con bifila hay ejes de transmisión que dibujar (' + ejes + ')', ejes > 50);
-  check('y el lienzo los pinta (más píxeles con el eje que sin él)',
+  check('y el lienzo los pinta (biela ROJA y viga GRIS del canon: más píxeles con la casilla que sin ella)',
     await page.evaluate(async () => {
+      // Colores de la página 6 de Streamlit: biela #C0392B, viga #7F8C8D.
       const cuenta = () => { const c = document.querySelector('#cv');
         const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
-        let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] > 130 && d[i + 2] < 90) n++;
-        return n; };
+        let rojo = 0, gris = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i] > 150 && d[i] < 220 && d[i + 1] < 90 && d[i + 2] < 80) rojo++;
+          if (Math.abs(d[i] - 127) < 20 && Math.abs(d[i + 1] - 140) < 20 && Math.abs(d[i + 2] - 141) < 22) gris++;
+        }
+        return { rojo, gris }; };
       document.querySelector('#showAxis').checked = false; draw(); const sin = cuenta();
       document.querySelector('#showAxis').checked = true;  draw(); const con = cuenta();
-      return con > sin + 200;
+      return con.rojo > sin.rojo + 200 && con.gris > sin.gris + 200;
     }));
   await page.uncheck('#showAxis');
   await page.fill('#prot', '0'); await page.dispatchEvent('#prot', 'change');
@@ -470,6 +475,24 @@ const cajaLienzo = async page => {
     Math.abs(ejesBif.n - ejesBif.pares) <= Math.max(2, ejesBif.pares * 0.02), JSON.stringify(ejesBif));
   check('cada eje en el hueco del MOTOR, no atravesando una mesa',
     ejesBif.enMesa === 0, ejesBif.enMesa + ' ejes dentro de mesa');
+  // VIGA DE TORSIÓN: una por TRACKER (no por mesa), recorriéndolo de punta a
+  // punta CRUZANDO el hueco del motor. Cobertura medida de los mutantes:
+  // «una viga por mesa» muere en el conteo Y en la longitud (sobra el tramo
+  // del motor × nº de trackers); «viga solo sobre la primera mesa» conserva
+  // el conteo y muere en la longitud (falta media planta de viga).
+  const vgBif = await page.evaluate(() => {
+    const vs = vigasTorsion();
+    let lenV = vs.reduce((a, v) => a + Math.abs(v.xb - v.xa), 0);
+    let mesas = 0, lenM = 0, motores = 0;
+    RES.rows.forEach(f => { mesas += f.length; f.forEach(t => lenM += t.x1 - t.x0);
+      motores += trksFila(f).filter(tr => tr.length === 2).length; });
+    const esperado = lenM + motores * (RES.stats.gap_motor_m || 0.5);
+    return { n: vs.length, mesas, lenV: +lenV.toFixed(2), esperado: +esperado.toFixed(2) };
+  });
+  check('VIGA DE TORSIÓN: una por tracker, no por mesa (' + vgBif.n + ' vigas para ' + vgBif.mesas + ' mesas)',
+    Math.abs(vgBif.n - vgBif.mesas / 2) <= Math.max(2, vgBif.mesas * 0.02), JSON.stringify(vgBif));
+  check('y la viga recorre el tracker ENTERO, motor incluido (Σ largos = Σ mesas + huecos de motor)',
+    Math.abs(vgBif.lenV - vgBif.esperado) < 0.5, JSON.stringify(vgBif));
   check('con un TIPO por talla y el largo de FILA real (2 mesas + motor)',
     Object.keys(v3bif.mesa.tipos).length > 1 &&
     Object.values(v3bif.mesa.tipos).every(t => t.largo > 0 && t.modsAla > 0),
@@ -489,6 +512,30 @@ const cajaLienzo = async page => {
   });
   check('MONOFILA → filaZ = 0 y un nodo por tracker: ~mesas/2 (' + v3mono.trackers.length + ')',
     v3mono.mesa.filaZ === 0 && Math.abs(v3mono.trackers.length - mesasMono / 2) <= mesasMono * 0.02);
+  // En monofila la viga es TODO lo que hay que dibujar de ejes (no hay biela)
+  // — y antes no se pintaba NADA: la casilla solo actuaba con bifila, así que
+  // en monofila nada unía las 2 mesas + motor de cada tracker en pantalla.
+  const vgMono = await page.evaluate(() => {
+    const vs = vigasTorsion();
+    let mesas = 0; RES.rows.forEach(f => { mesas += f.length; });
+    const cuenta = () => { const c = document.querySelector('#cv');
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      let gris = 0, rojo = 0;
+      for (let i = 0; i < d.length; i += 4) {
+        if (Math.abs(d[i] - 127) < 20 && Math.abs(d[i + 1] - 140) < 20 && Math.abs(d[i + 2] - 141) < 22) gris++;
+        if (d[i] > 150 && d[i] < 220 && d[i + 1] < 90 && d[i + 2] < 80) rojo++;
+      }
+      return { gris, rojo }; };
+    document.querySelector('#showAxis').checked = false; draw(); const sin = cuenta();
+    document.querySelector('#showAxis').checked = true;  draw(); const con = cuenta();
+    document.querySelector('#showAxis').checked = false; draw();
+    return { n: vs.length, mesas, sin, con };
+  });
+  check('MONOFILA → viga de torsión por tracker también (' + vgMono.n + ' para ' + vgMono.mesas + ' mesas)',
+    Math.abs(vgMono.n - vgMono.mesas / 2) <= Math.max(2, vgMono.mesas * 0.02), JSON.stringify(vgMono));
+  check('y el lienzo la pinta en GRIS sin inventar bielas (monofila no tiene eje de transmisión)',
+    vgMono.con.gris > vgMono.sin.gris + 200 && vgMono.con.rojo <= vgMono.sin.rojo + 20,
+    JSON.stringify(vgMono));
 
   await page.selectOption('#mount', 'fija');
   await generar(page);
@@ -500,6 +547,22 @@ const cajaLienzo = async page => {
   check('FIJA → filaZ = 0 y un nodo POR ESTRUCTURA (' + v3fija.trackers.length + ' vs ' + estrFija + ')',
     v3fija.mesa.filaZ === 0 &&
     Math.abs(v3fija.trackers.length - estrFija) <= estrFija * 0.02);
+  // Una estructura fija no tiene tubo de torsión: la casilla no puede pintarle
+  // vigas grises a un montaje que no rota (misma puerta que el canon: la capa
+  // de ejes solo existe en tracker).
+  check('FIJA → sin viga de torsión que pintar (el gris no aparece al marcar la casilla)',
+    await page.evaluate(() => {
+      const cuenta = () => { const c = document.querySelector('#cv');
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+        let gris = 0;
+        for (let i = 0; i < d.length; i += 4)
+          if (Math.abs(d[i] - 127) < 20 && Math.abs(d[i + 1] - 140) < 20 && Math.abs(d[i + 2] - 141) < 22) gris++;
+        return gris; };
+      document.querySelector('#showAxis').checked = false; draw(); const sin = cuenta();
+      document.querySelector('#showAxis').checked = true;  draw(); const con = cuenta();
+      document.querySelector('#showAxis').checked = false; draw();
+      return con <= sin + 20;
+    }));
   // El visor con `fija` NO construye seguidores: corta en terreno.html:961 y el
   // campo se dibuja desde `fijas` (buildFijasInst) — mandar fija:true con las
   // mesas solo en `trackers` era un visor VACÍO (hallazgo de la verificación
@@ -1186,6 +1249,152 @@ const cajaLienzo = async page => {
   check('la banda del área útil SE VE con el grid girado (píxeles verdes sin una sola mesa)',
     util.verde > 400, util.verde + ' px');
   await pag6.close();
+
+  // ── 🪄 VARITA: detectar el contorno de un campo en la ortofoto ──
+  // Detección VISUAL (flood-fill + Moore + Douglas-Peucker), no catastral.
+  // El núcleo se mide sobre un ImageData sintético CON RUIDO (un fixture
+  // limpio no valida una guarda contra píxeles reales), y el cableado entero
+  // —teselas → offscreen → detección → DRAW en lonlat— sobre teselas a RAYAS
+  // generadas aquí mismo: columnas de tesela claras/oscuras alternas, así el
+  // campo detectable existe de verdad en la ortofoto que sirve el stub.
+  const zlib = require('zlib');
+  function pngSolido(r, g, b, size = 256) {
+    const T = []; for (let n = 0; n < 256; n++) { let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; T[n] = c >>> 0; }
+    const crc = buf => { let c = ~0; for (const by of buf) c = T[(c ^ by) & 255] ^ (c >>> 8); return (~c) >>> 0; };
+    const chunk = (tipo, datos) => {
+      const len = Buffer.alloc(4); len.writeUInt32BE(datos.length);
+      const cuerpo = Buffer.concat([Buffer.from(tipo), datos]);
+      const c4 = Buffer.alloc(4); c4.writeUInt32BE(crc(cuerpo));
+      return Buffer.concat([len, cuerpo, c4]);
+    };
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(size, 0); ihdr.writeUInt32BE(size, 4); ihdr[8] = 8; ihdr[9] = 2;
+    const fila = Buffer.alloc(1 + size * 3);
+    for (let x = 0; x < size; x++) { fila[1 + x * 3] = r; fila[2 + x * 3] = g; fila[3 + x * 3] = b; }
+    const idat = zlib.deflateSync(Buffer.concat(Array(size).fill(fila)));
+    return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+      chunk('IHDR', ihdr), chunk('IDAT', idat), chunk('IEND', Buffer.alloc(0))]);
+  }
+  const T_CLARO = pngSolido(150, 140, 90), T_OSCURO = pngSolido(60, 90, 50);
+
+  const pagV = await browser.newPage();
+  await pagV.route('https://server.arcgisonline.com/**', r => {
+    const m = r.request().url().match(/tile\/(\d+)\/(\d+)\/(\d+)/);
+    const claro = m && (+m[3]) % 2 === 0;
+    r.fulfill({ status: 200, contentType: 'image/png',
+                headers: { 'access-control-allow-origin': '*' },
+                body: claro ? T_CLARO : T_OSCURO });
+  });
+  await pagV.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
+  await pagV.waitForFunction(() => /Esri World Imagery/.test(
+    document.querySelector('#basemapMsg').textContent), null, { timeout: 15000 });
+
+  await pagV.selectOption('#parcelMode', 'draw');
+  // núcleo puro, sobre sintético con ruido determinista
+  const nucleo = await pagV.evaluate(() => {
+    const w = 200, h = 200, img = new ImageData(w, h), d = img.data;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const dentro = x >= 40 && x < 160 && y >= 60 && y < 140;
+      const ruido = ((x * 7 + y * 13) % 5) - 2;
+      const i = (y * w + x) * 4;
+      d[i] = (dentro ? 150 : 60) + ruido; d[i + 1] = (dentro ? 140 : 90) + ruido;
+      d[i + 2] = (dentro ? 90 : 50) + ruido; d[i + 3] = 255;
+    }
+    const seg = varitaSegmenta(d, w, h, 100, 100, 24);
+    if (!seg) return { fallo: 'segmenta null' };
+    const ring = varitaContorno(seg.dentro, w, h);
+    if (!ring) return { fallo: 'contorno null' };
+    const simp = varitaSimplifica(ring, 2.5);
+    let a2 = 0;
+    for (let i = 0; i < simp.length; i++) {
+      const p = simp[i], q = simp[(i + 1) % simp.length];
+      a2 += p[0] * q[1] - q[0] * p[1];
+    }
+    const xs = simp.map(p => p[0]), ys = simp.map(p => p[1]);
+    const capON = varitaSegmenta(d, w, h, 100, 100, 1000) === null;
+    return { n: seg.n, crudo: ring.length, verts: simp.length,
+             area: Math.abs(a2 / 2), bbox: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
+             capON };
+  });
+  check('VARITA núcleo: el campo con ruido se segmenta (~120×80 px, ' + (nucleo.n || 0) + ')',
+    !nucleo.fallo && Math.abs(nucleo.n - 9600) < 960, JSON.stringify(nucleo));
+  check('y el contorno simplificado clava área y caja (' + nucleo.verts + ' vértices)',
+    Math.abs(nucleo.area - 9600) < 1150 &&
+    nucleo.bbox[0] >= 36 && nucleo.bbox[1] >= 56 && nucleo.bbox[2] <= 164 && nucleo.bbox[3] <= 144,
+    JSON.stringify(nucleo));
+  check('el crudo trae cientos de puntos y la simplificación lo deja en pocos (mutante ε=0 muere aquí)',
+    nucleo.crudo > 100 && nucleo.verts <= 30, nucleo.crudo + ' → ' + nucleo.verts);
+  check('y el TOPE del 45% mata la tolerancia pasada de rosca (mutante sin-tope muere aquí)',
+    nucleo.capON === true);
+
+  // E2E: clic sobre una columna clara → DRAW con el contorno de ESA raya
+  const cajaV = await cajaLienzo(pagV);
+  const punto = await pagV.evaluate(() => {
+    const cv = document.querySelector('#cv'), S = escalaMundo();
+    const n = Math.pow(2, Math.round(VIEW.z));
+    let tx = Math.floor(VIEW.cx * n); if (((tx % n) + n) % n % 2 !== 0) tx += 1;
+    const x = ((tx + 0.5) / n - VIEW.cx) * S + cv.width / 2;
+    return { x, y: cv.height / 2, lado: S / n, w: cv.width, h: cv.height };
+  });
+  await pagV.click('#varitaBtn');
+  check('la varita armada lo dice y enciende la ortofoto',
+    /Clic en el campo/.test(await pagV.textContent('#varitaBtn')) &&
+    /borrador visual/.test(await pagV.textContent('#mapHint')),
+    await pagV.textContent('#mapHint'));
+  await pagV.evaluate(() => { _movido = 0; });
+  await pagV.mouse.click(cajaV.x + punto.x * (cajaV.w / punto.w),
+                         cajaV.y + punto.y * (cajaV.h / punto.h));
+  const detectado = await pagV.evaluate(() => {
+    if (!DRAW.length) return { n: 0 };
+    const xs = DRAW.map(p => px(p[0], p[1])[0]), ys = DRAW.map(p => px(p[0], p[1])[1]);
+    return { n: DRAW.length, drawing, conParcela: !!PARCEL,
+             xspan: Math.max(...xs) - Math.min(...xs), yspan: Math.max(...ys) - Math.min(...ys),
+             hint: document.querySelector('#mapHint').textContent };
+  });
+  check('E2E: el clic en la raya clara propone su contorno como DIBUJO en curso (' + detectado.n + ' vértices)',
+    detectado.n >= 4 && detectado.drawing === true && detectado.conParcela &&
+    /contorno propuesto/.test(detectado.hint) && /no linde oficial/.test(detectado.hint),
+    JSON.stringify(detectado));
+  check('y el contorno mide lo que la raya: un ancho de tesela y todo el alto del lienzo',
+    Math.abs(detectado.xspan - punto.lado) < punto.lado * 0.4 &&
+    detectado.yspan > punto.h * 0.85,
+    JSON.stringify({ xspan: detectado.xspan, lado: punto.lado, yspan: detectado.yspan, h: punto.h }));
+  await pagV.close();
+
+  // uniforme de verdad → «no se distingue un recinto» (el tope, de punta a punta)
+  const pagU = await browser.newPage();
+  await pagU.route('https://server.arcgisonline.com/**', r => r.fulfill({
+    status: 200, contentType: 'image/png',
+    headers: { 'access-control-allow-origin': '*' }, body: T_CLARO }));
+  await pagU.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
+  await pagU.waitForFunction(() => /Esri World Imagery/.test(
+    document.querySelector('#basemapMsg').textContent), null, { timeout: 15000 });
+  await pagU.selectOption('#parcelMode', 'draw');
+  await pagU.click('#varitaBtn');
+  await pagU.evaluate(() => { _movido = 0; });
+  const cajaU = await cajaLienzo(pagU);
+  await pagU.mouse.click(cajaU.x + cajaU.w / 2, cajaU.y + cajaU.h / 2);
+  check('con ortofoto UNIFORME la varita lo dice en vez de inventarse un recinto',
+    /no se distingue un recinto/.test(await pagU.textContent('#mapHint')),
+    await pagU.textContent('#mapHint'));
+  await pagU.close();
+
+  // sin teselas → «necesita la ortofoto», no un contorno fantasma
+  const pagS = await browser.newPage();
+  await pagS.route('https://server.arcgisonline.com/**', r => r.abort());
+  await pagS.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
+  await pagS.waitForFunction(() => /sin ortofoto/.test(
+    document.querySelector('#basemapMsg').textContent), null, { timeout: 15000 });
+  await pagS.selectOption('#parcelMode', 'draw');
+  await pagS.click('#varitaBtn');
+  await pagS.evaluate(() => { _movido = 0; });
+  const cajaSn = await cajaLienzo(pagS);
+  await pagS.mouse.click(cajaSn.x + cajaSn.w / 2, cajaSn.y + cajaSn.h / 2);
+  check('sin teselas la varita pide la ortofoto en vez de detectar sobre el fondo',
+    /necesita la ortofoto/.test(await pagS.textContent('#mapHint')),
+    await pagS.textContent('#mapHint'));
+  await pagS.close();
 
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');

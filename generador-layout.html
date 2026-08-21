@@ -226,6 +226,7 @@ canvas.panning{cursor:grabbing}
         <p class="note" style="margin-top:0">Busca tu emplazamiento arriba, acércate con la rueda hasta ver la finca y pulsa <b>Dibujar parcela</b>: clic por vértice y <b>doble clic</b> para cerrar. Arrastrar mueve el mapa sin poner vértices.</p>
         <div class="btnrow">
           <button class="btn ghost small" id="drawStart">✏️ Dibujar parcela</button>
+          <button class="btn ghost small" id="varitaBtn" title="Detecta el contorno del campo en la ortofoto desde un clic. Es un BORRADOR VISUAL para retocar — la linde oficial es la del Catastro/SIGPAC.">🪄 Detectar parcela</button>
           <button class="btn ghost small" id="drawClear">🗑️ Limpiar</button>
         </div>
       </div>
@@ -464,7 +465,7 @@ canvas.panning{cursor:grabbing}
           <option value="line">Líneas</option>
         </select>
         <label class="chk mini2"><input type="checkbox" id="showDisc"> descartadas</label>
-        <label class="chk mini2"><input type="checkbox" id="showAxis" checked> eje bifila</label>
+        <label class="chk mini2"><input type="checkbox" id="showAxis" checked> viga y eje</label>
         <span class="maphint" id="mapHint">arrastra para mover · rueda para acercar</span>
       </div>
       <canvas id="cv" width="1000" height="700"></canvas>
@@ -2278,7 +2279,142 @@ $('exclStart').onclick=function(){empiezaDibujo('exclusion');};
 $('lineStart').onclick=function(){empiezaDibujo('linea');};
 $('drawClear').onclick=function(){DRAW=[];PARCEL=null;drawing=false;pintaBotonesDibujo();draw();tagParcel();autoguarda();};
 $('exclClear').onclick=function(){EXCL=[];EXCL_LINEAS=[];tagParcel();draw();autoguarda();};
+/* ── 🪄 VARITA: detectar el contorno de un campo en la ORTOFOTO ──
+   Detección VISUAL, no catastral: flood-fill por similitud de color desde el
+   clic, sobre un offscreen donde se pintan SOLO las teselas (sin velo, mesas
+   ni trazados — segmentar lo ya dibujado sería detectarse a sí mismo);
+   contorno por vecino-de-Moore y simplificación Douglas-Peucker. El resultado
+   entra como DIBUJO EN CURSO —editable, se cierra con doble clic o ⏹— y es un
+   BORRADOR: la linde oficial es la del Catastro/SIGPAC, y se dice en pantalla. */
+var varitaArmada=false;
+function varitaSegmenta(data,w,h,sx,sy,tol){
+  sx|=0;sy|=0;
+  if(sx<0||sy<0||sx>=w||sy>=h)return null;
+  // Semilla = media 5×5 alrededor del clic: un píxel suelto puede ser ruido.
+  var sr=0,sg=0,sb=0,ns=0,dx,dy,x,y,i;
+  for(dy=-2;dy<=2;dy++)for(dx=-2;dx<=2;dx++){
+    x=sx+dx;y=sy+dy;if(x<0||y<0||x>=w||y>=h)continue;
+    i=(y*w+x)*4;sr+=data[i];sg+=data[i+1];sb+=data[i+2];ns++;
+  }
+  sr/=ns;sg/=ns;sb/=ns;
+  var visto=new Uint8Array(w*h),dentro=new Uint8Array(w*h);
+  var cola=new Int32Array(w*h),lo=0,hi=0,n=0;
+  // Tope del 45% del lienzo: si la región se come media pantalla no hay
+  // recinto que detectar (imagen uniforme o tolerancia pasada de rosca).
+  var tope=Math.floor(w*h*0.45),t2=tol*tol;
+  visto[sy*w+sx]=1;cola[hi++]=sy*w+sx;
+  while(lo<hi){
+    var p=cola[lo++],i4=p*4;
+    var dr=data[i4]-sr,dg=data[i4+1]-sg,db=data[i4+2]-sb;
+    if(dr*dr+dg*dg+db*db>t2)continue;            // visitado, fuera de la región
+    dentro[p]=1;if(++n>tope)return null;
+    var py=(p/w)|0,pxx=p-py*w;
+    if(pxx>0&&!visto[p-1]){visto[p-1]=1;cola[hi++]=p-1;}
+    if(pxx<w-1&&!visto[p+1]){visto[p+1]=1;cola[hi++]=p+1;}
+    if(py>0&&!visto[p-w]){visto[p-w]=1;cola[hi++]=p-w;}
+    if(py<h-1&&!visto[p+w]){visto[p+w]=1;cola[hi++]=p+w;}
+  }
+  return n>=64?{dentro:dentro,n:n}:null;         // <64 px es ruido, no un campo
+}
+function varitaContorno(dentro,w,h){
+  // Vecino-de-Moore: recorre el borde en sentido horario desde el píxel de
+  // región más alto (y más a la izquierda), entrando «desde el oeste».
+  var start=-1;
+  for(var p=0;p<w*h;p++)if(dentro[p]){start=p;break;}
+  if(start<0)return null;
+  var sx=start%w,sy=(start/w)|0;
+  var DX=[-1,-1,0,1,1,1,0,-1],DY=[0,-1,-1,-1,0,1,1,1];   // horario desde O
+  function en(x,y){return x>=0&&y>=0&&x<w&&y<h&&dentro[y*w+x];}
+  var ring=[[sx,sy]],cx=sx,cy=sy,bx=sx-1,by=sy,guard=w*h*4;
+  do{
+    var bi=0;
+    for(var k=0;k<8;k++)if(cx+DX[k]===bx&&cy+DY[k]===by){bi=k;break;}
+    var found=false;
+    for(var k2=1;k2<=8;k2++){
+      var j=(bi+k2)%8,nx=cx+DX[j],ny=cy+DY[j];
+      if(en(nx,ny)){bx=cx+DX[(j+7)%8];by=cy+DY[(j+7)%8];cx=nx;cy=ny;found=true;break;}
+    }
+    if(!found)break;                             // píxel aislado
+    ring.push([cx,cy]);
+  }while((cx!==sx||cy!==sy)&&--guard>0);
+  return ring.length>=8?ring:null;
+}
+function varitaSimplifica(ring,eps){
+  // Douglas-Peucker sobre anillo: se parte por el punto más alejado del [0]
+  // (dos mitades abiertas) — DP directo sobre un anillo colapsa a una línea.
+  function dp(pts,i0,i1,out){
+    var ax=pts[i0][0],ay=pts[i0][1],bx=pts[i1][0],by=pts[i1][1];
+    var dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy,imax=-1,dmax=0;
+    for(var i=i0+1;i<i1;i++){
+      var t=L2?((pts[i][0]-ax)*dx+(pts[i][1]-ay)*dy)/L2:0;t=Math.max(0,Math.min(1,t));
+      var qx=ax+t*dx-pts[i][0],qy=ay+t*dy-pts[i][1],d=qx*qx+qy*qy;
+      if(d>dmax){dmax=d;imax=i;}
+    }
+    if(imax>=0&&dmax>eps*eps){dp(pts,i0,imax,out);out.push(pts[imax]);dp(pts,imax,i1,out);}
+  }
+  var far=0,fd=0;
+  for(var i=1;i<ring.length;i++){var dx=ring[i][0]-ring[0][0],dy=ring[i][1]-ring[0][1],d=dx*dx+dy*dy;
+    if(d>fd){fd=d;far=i;}}
+  if(!far)return null;
+  var A=ring.slice(0,far+1),B=ring.slice(far).concat([ring[0]]);
+  var out=[A[0]];dp(A,0,A.length-1,out);out.push(A[A.length-1]);dp(B,0,B.length-1,out);
+  return out;
+}
+function varitaDetecta(sxPx,syPx){
+  var cv=$('cv');
+  var off=document.createElement('canvas');off.width=cv.width;off.height=cv.height;
+  var octx=off.getContext('2d',{willReadFrequently:true});
+  octx.fillStyle='#000';octx.fillRect(0,0,off.width,off.height);
+  if(!pintaOrtofoto(octx,cv))return {err:'sin ortofoto'};
+  var img=octx.getImageData(0,0,off.width,off.height);
+  // Escalera de tolerancias fina→gruesa: gana la primera con región razonable.
+  var TOLS=[16,24,34];
+  for(var t=0;t<TOLS.length;t++){
+    var seg=varitaSegmenta(img.data,off.width,off.height,sxPx,syPx,TOLS[t]);
+    if(!seg)continue;
+    var ring=varitaContorno(seg.dentro,off.width,off.height);
+    if(!ring)continue;
+    var simp=varitaSimplifica(ring,2.5);
+    if(simp&&simp.length>=4&&simp.length<=80)return {ring:simp,tol:TOLS[t],n:seg.n};
+  }
+  return {err:'sin recinto'};
+}
+function varitaClic(ev){
+  var cv=$('cv'),r=cv.getBoundingClientRect();
+  var sx=(ev.clientX-r.left)*(cv.width/r.width),sy=(ev.clientY-r.top)*(cv.height/r.height);
+  var res=varitaDetecta(sx,sy);
+  if(res.err){
+    $('mapHint').textContent=(res.err==='sin ortofoto')
+      ?'🪄 la varita necesita la ortofoto cargada — marca «ortofoto» y espera las teselas'
+      :'🪄 ahí no se distingue un recinto (acércate más o pincha el interior del campo) — o dibújalo a mano';
+    return;
+  }
+  var S=escalaMundo();
+  DRAW=res.ring.map(function(q){
+    return [u2lon(VIEW.cx+(q[0]-cv.width/2)/S),u2lat(VIEW.cy+(q[1]-cv.height/2)/S)];
+  });
+  drawing=true;
+  if(drawDest==='linea')drawDest='parcela';      // una línea no se detecta
+  if(drawDest==='parcela'&&DRAW.length>=3){PARCEL=DRAW.slice();HOLES=[];}
+  varitaArmada=false;$('varitaBtn').textContent='🪄 Detectar parcela';
+  pintaBotonesDibujo();
+  $('mapHint').textContent='🪄 contorno propuesto ('+DRAW.length+' vértices) — BORRADOR visual, no linde oficial: clic añade vértices, doble clic o ⏹ lo acepta';
+  tagParcel();draw();autoguarda();
+}
+$('varitaBtn').onclick=function(){
+  if(drawing&&DRAW.length){                       // no pisar un dibujo a medias
+    $('mapHint').textContent='🪄 termina (o limpia) el dibujo en curso antes de detectar';
+    return;
+  }
+  varitaArmada=!varitaArmada;
+  if(varitaArmada&&!$('orto').checked){$('orto').checked=true;draw();}
+  $('varitaBtn').textContent=varitaArmada?'🪄 Clic en el campo…':'🪄 Detectar parcela';
+  $('mapHint').textContent=varitaArmada
+    ?'🪄 clic sobre el CAMPO: se propone su contorno — borrador visual para retocar, no linde oficial'
+    :'arrastra para mover · rueda para acercar';
+};
 $('cv').addEventListener('click',function(ev){
+  if(varitaArmada){if(_movido<3)varitaClic(ev);return;}
   if(!drawing)return;
   // Un clic que ha sido ARRASTRE es navegación, no un vértice: sin esto, mover
   // el mapa mientras dibujas planta un vértice en cada parada.
@@ -2417,15 +2553,23 @@ function draw(){
         ctx.stroke();
       }
     }
-    // Eje bifila: la biela que une las dos sub-filas de un mismo tracker. Es lo
-    // que hace VISIBLE que es bifila y no dos monofilas juntas.
-    if($('showAxis').checked&&RES.stats.bifila&&RES.rows&&RES.fromLocal){
-      ctx.strokeStyle='rgba(246,166,35,.85)';ctx.lineWidth=1.1;
-      ejesBifila().forEach(function(e){
+    // VIGA DE TORSIÓN por tracker + eje de transmisión (biela) por bifila.
+    // Colores y jerarquía del canon (página 6 de Streamlit): tubo gris
+    // #7F8C8D fino, biela roja #C0392B y el doble de gruesa. La viga cruza
+    // el hueco del motor: es lo que hace VISIBLE que 2 mesas + motor son UN
+    // tracker y no dos sueltos — y la biela, que es bifila y no dos monofilas.
+    if($('showAxis').checked&&RES.rows&&RES.fromLocal&&RES.stats.mount_type!=='fija'){
+      function traza(e){
         var ca=RES.toLonLat(RES.fromLocal(e.xa,e.ya)),cb=RES.toLonLat(RES.fromLocal(e.xb,e.yb));
         var pa=px(ca[0],ca[1]),pb=px(cb[0],cb[1]);
         ctx.beginPath();ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);ctx.stroke();
-      });
+      }
+      ctx.strokeStyle='#7F8C8D';ctx.lineWidth=1.1;
+      vigasTorsion().forEach(traza);
+      if(RES.stats.bifila){
+        ctx.strokeStyle='#C0392B';ctx.lineWidth=2.2;
+        ejesBifila().forEach(traza);
+      }
     }
   }
   if(drawing&&DRAW&&DRAW.length){
@@ -2444,22 +2588,43 @@ function draw(){
    en Larraga («¿estás poniendo dos ejes donde solo va uno?»). Las mesas se
    agrupan en trackers con la misma regla del 3D (gap del motor une, gap N-S
    separa); un tracker viudo de una mesa no tiene motor y su eje va al centro. */
+/* Agrupar las mesas de una FILA en TRACKERS: el gap del motor (pequeño) une,
+   el hueco N-S (grande) separa, y nunca más de 2 mesas por tracker (fila
+   atómica). Es la MISMA regla para la viga y para la biela — dos agrupaciones
+   distintas serían dos verdades sobre qué es un tracker. */
+function trksFila(f){
+  var gm=(RES.stats.gap_motor_m||0.5)+0.15;
+  var so=f.slice().sort(function(a,b){return a.x0-b.x0;});
+  var g=[],res=[];
+  for(var i=0;i<so.length;i++){
+    if(g.length&&g.length<2&&so[i].x0-g[g.length-1].x1<=gm)g.push(so[i]);
+    else{if(g.length)res.push(g);g=[so[i]];}
+  }
+  if(g.length)res.push(g);
+  return res;
+}
+/* UNA viga de torsión por TRACKER (canon: kind=="axis" de
+   rows_to_bifila_axislines_geojson): recorre el eje central del tracker de
+   punta a punta, CRUZANDO el hueco del motor — 2 mesas + motor = una viga.
+   Un tracker viudo de una mesa lleva su viga corta (el canon también). En
+   fija no hay tubo: el que pinta ya no llama con mount_type 'fija'. */
+function vigasTorsion(){
+  if(!RES||!RES.rows||!RES.fromLocal)return [];
+  var out=[];
+  RES.rows.forEach(function(f){
+    trksFila(f).forEach(function(tr){
+      var y=(tr[0].y0+tr[0].y1)/2;
+      out.push({xa:tr[0].x0,ya:y,xb:tr[tr.length-1].x1,yb:y});
+    });
+  });
+  return out;
+}
 function ejesBifila(){
   if(!RES||!RES.stats.bifila||!RES.rows||!RES.fromLocal)return [];
-  var gm=(RES.stats.gap_motor_m||0.5)+0.15, out=[];
-  function trks(f){
-    var so=f.slice().sort(function(a,b){return a.x0-b.x0;});
-    var g=[],res=[];
-    for(var i=0;i<so.length;i++){
-      if(g.length&&g.length<2&&so[i].x0-g[g.length-1].x1<=gm)g.push(so[i]);
-      else{if(g.length)res.push(g);g=[so[i]];}
-    }
-    if(g.length)res.push(g);
-    return res;
-  }
+  var out=[];
   function xMotor(tr){return tr.length===2?(tr[0].x1+tr[1].x0)/2:(tr[0].x0+tr[0].x1)/2;}
   for(var r0=0;r0+1<RES.rows.length;r0+=2){
-    var A=trks(RES.rows[r0]),B=trks(RES.rows[r0+1]);
+    var A=trksFila(RES.rows[r0]),B=trksFila(RES.rows[r0+1]);
     var n=Math.min(A.length,B.length);
     for(var t=0;t<n;t++){
       out.push({xa:xMotor(A[t]),ya:(A[t][0].y0+A[t][0].y1)/2,
