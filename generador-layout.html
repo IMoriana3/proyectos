@@ -498,7 +498,7 @@ canvas.panning{cursor:grabbing}
      sub-fila A antes del espejo — recomprobando banda, gemela B y viales.
 
    Qué NO está portado (y por eso se DICE en pantalla, no se calla):
-   relleno por columna y edge-fill, y el sweep de Y con exclusiones. Son
+   relleno por columna y edge-fill. Son
    refinamientos de borde: mueven unidades sobre parcelas irregulares, no el
    orden de magnitud. El botón "motor SolarGPT" da el número canónico cuando
    hace falta cerrar el proyecto.
@@ -776,8 +776,68 @@ function matchRowsByX(rowA, rowB, tol) {
 }
 
 /* ── el motor ────────────────────────────────────────────────────────── */
+/* Puntuación de un layout para elegir entre offsets — port de
+   compute_layout_score (layout_contract): módulos dominan y se penalizan
+   cortos, huérfanas bifila, recortes y la fragmentación de calles. */
+function puntuaLayout(res) {
+  var st = res.stats || {};
+  var modules = +st.modules || 0;
+  var nShort = 0, bySize = st.by_size || {};
+  var keys = Object.keys(bySize).map(Number);
+  if (keys.length) {
+    var primary = Math.max.apply(null, keys);
+    keys.forEach(function (m) { if (m < primary) nShort += bySize[m]; });
+  }
+  var orphans = +st.bifila_orphans || 0, trimmed = +st.bifila_trimmed || 0;
+  var lens = (res.rows || []).map(function (r) { return r.length; });
+  var cv = 0;
+  if (lens.length > 1) {
+    var mean = lens.reduce(function (a, b) { return a + b; }, 0) / lens.length;
+    if (mean > 0) {
+      var sd = Math.sqrt(lens.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / lens.length);
+      cv = sd / mean;
+    }
+  }
+  return modules - 0.5 * nShort - 2 * orphans - 1 * trimmed - 100 * cv;
+}
+
+/* BARRIDO DEL ORIGEN X/Y — el port del sweep del core que faltaba y que
+   explicaba el «¿por qué sale diferente? es inadmisible» de Larraga (core 124
+   por 120 de la ficha). Con CUALQUIER exclusión (polígonos del usuario o
+   agujeros del GeoJSON — las líneas y el MDT no lo disparan, igual que en el
+   core), se prueban 11 orígenes Y simétricos en ±pitch/2, y sobre el mejor Y
+   otros 11 de X (secuencial, no combinatorio: 22 corridas, no 121), eligiendo
+   por puntuación. Solo en la llamada de nivel superior. */
+function barridoOrigenXY(cfg) {
+  var N = 11, pitch = +cfg.pitch;
+  var mejor = null, mejorSc = -Infinity, mejorYo = 0;
+  for (var i = 0; i < N; i++) {
+    var yo = -0.5 * pitch + i * pitch / (N - 1);
+    var r = compute(Object.assign({}, cfg, { _yOff: yo, _xOff: 0 }));
+    var sc = puntuaLayout(r);
+    if (sc > mejorSc) { mejorSc = sc; mejor = r; mejorYo = yo; }
+  }
+  var mejorX = mejor, mejorScX = mejorSc, mejorXo = 0;
+  for (var j = 0; j < N; j++) {
+    var xo = -0.5 * pitch + j * pitch / (N - 1);
+    if (Math.abs(xo) < 1e-9) continue;
+    var rx = compute(Object.assign({}, cfg, { _yOff: mejorYo, _xOff: xo }));
+    var scx = puntuaLayout(rx);
+    if (scx > mejorScX) { mejorScX = scx; mejorX = rx; mejorXo = xo; }
+  }
+  mejorX.stats.y_offset_optimized = true;
+  mejorX.stats.y_offset_chosen_m = mejorYo;
+  mejorX.stats.x_offset_optimized = mejorXo !== 0;
+  mejorX.stats.x_offset_chosen_m = mejorXo;
+  return mejorX;
+}
+
 function compute(cfg) {
   var t0 = (typeof performance !== "undefined" && performance.now) ? performance.now() : 0;
+  if (cfg._yOff === undefined &&
+      ((cfg.exclusions && cfg.exclusions.length) || (cfg.holes && cfg.holes.length)))
+    return barridoOrigenXY(cfg);
+  var _ySweep = +cfg._yOff || 0, _xSweep = +cfg._xOff || 0;
   var avisos = [];
   function aviso(sev, cod, msg, extra) { avisos.push({ severidad: sev, codigo: cod, mensaje: msg, extra: extra }); }
 
@@ -1032,12 +1092,12 @@ function compute(cfg) {
         out = out.concat(pack(segs[g2][0], segs[g2][1], true));
       return out;
     }
-    if (mode === "aligned") return pack(ix0 + offX, ix1);
+    if (mode === "aligned") return pack(ix0 + offX + _xSweep, ix1);
     // adaptive: cada tramo arranca donde más quepa (varias fases)
     for (var g = 0; g < segs.length; g++) {
       var s0 = segs[g][0], s1 = segs[g][1];
       if (cfg.alignGrid) {
-        var base0 = ix0 + offX, kk = Math.ceil((s0 - base0) / adv - 1e-9);
+        var base0 = ix0 + offX + _xSweep, kk = Math.ceil((s0 - base0) / adv - 1e-9);
         out = out.concat(pack(base0 + Math.max(kk, 0) * adv, s1));
         continue;
       }
@@ -1058,7 +1118,7 @@ function compute(cfg) {
   // Multi-talla: greedy largest-first sobre rejilla común + segunda pasada fina.
   function placeMulti(segs, yb, offX) {
     var out = [], minSw = sizes[sizes.length - 1].structW;
-    var fine = Math.max(minSw * 0.1, 0.4), x = ix0 + offX, guard = 0;
+    var fine = Math.max(minSw * 0.1, 0.4), x = ix0 + offX + _xSweep, guard = 0;
     function trySize(sz, xx) {
       var sw = sz.structW, sm = sw + gapMotor;
       var span = isTracker ? (spt - 1) * sm + sw : sw;
@@ -1099,7 +1159,7 @@ function compute(cfg) {
     }
     // segunda pasada: paso fino por los huecos, saltando lo ya ocupado
     var occ = out.map(function (s) { return [s.x0, s.x1]; }).sort(function (a, b) { return a[0] - b[0]; });
-    var fine2 = Math.max(minSw * 0.2, 0.4); x = ix0 + offX; guard = 0;
+    var fine2 = Math.max(minSw * 0.2, 0.4); x = ix0 + offX + _xSweep; guard = 0;
     while (x <= ix1 + 1e-6 && guard++ < 200000) {
       var jumped = false;
       for (var o = 0; o < occ.length; o++) if (occ[o][0] - gapNs * 0.5 <= x && x < occ[o][1] + gapNs * 0.5) { x = occ[o][1] + gapNs * 0.5; jumped = true; break; }
@@ -1186,7 +1246,7 @@ function compute(cfg) {
     var estRows = Math.max(0, Math.floor((iy1 - iy0) / pitch));
     roadQ = centeredRoadPositions(bifila ? Math.floor(estRows / 2) : estRows, Math.round(cfg.roadEvery));
   }
-  var yy = iy0, guardRows = 0;
+  var yy = iy0 + _ySweep, guardRows = 0;
   while (yy + collH <= iy1 + 1e-6 && guardRows++ < 20000) {
     var trkIdx = bifila ? Math.floor(ri / 2) : ri, trkStart = bifila ? (ri % 2 === 0) : true;
     if (cfg.roadEvery > 0 && roadQ.length && trkStart && trkIdx === roadQ[0]) {

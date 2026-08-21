@@ -106,6 +106,10 @@ for (const caso of fix.casos) {
   // Con exclusiones el core barre el origen Y (11 offsets simétricos) y se queda
   // con el que más coloca; ese barrido NO está portado, así que la fila de
   // arranque puede diferir en una. Sin exclusiones la cuenta tiene que cuadrar.
+  // Con exclusiones/agujeros los DOS lados barren el origen X/Y (el port del
+  // sweep entró el 2026-08-21), pero la puntuación puede elegir offsets
+  // distintos por décimas y mover la fila de arranque: ±1 sigue siendo
+  // legítimo AHÍ — sin exclusiones no hay barrido y la cuenta debe cuadrar.
   const tolFilas = ((caso.holes && caso.holes.length) ||
                     (caso.holes_lonlat && caso.holes_lonlat.length) ||
                     (caso.excl_lonlat && caso.excl_lonlat.length)) ? 1 : 0;
@@ -336,6 +340,10 @@ fix.casos.forEach((c, i) => {
 {
   const i = caso('Larraga');
   const c = fix.casos[i], r = js[i];
+  check('Larraga · con el barrido X/Y portado, las mesas salen CLAVADAS al core (' +
+        r.stats.structures + ' = ' + c.core.structures + ')',
+    r.stats.structures === c.core.structures &&
+    r.stats.y_offset_optimized === true);
   check('Larraga · el ancla global AVISA del hueco que deja (rejilla_deja_hueco)',
     (r.avisos || []).some(a => a.codigo === 'rejilla_deja_hueco'),
     JSON.stringify((r.avisos || []).map(a => a.codigo)));

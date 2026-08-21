@@ -368,13 +368,13 @@ Dos cosas que conviene saber porque no son intuitivas:
 | `contains` contra `poly_r.buffer(0.05)` | Misma holgura de 5 cm. **No es cosmética**: sin ella, un borde que se desvía dos centímetros a lo largo de la parcela tira la primera mesa de cada fila y se pierde un tracker por fila |
 
 **Lo que NO está portado**, y por eso sale escrito en la propia ficha: relleno por columna y
-edge-fill, y el barrido del origen Y cuando hay exclusiones. Son refinamientos de borde: mueven
+edge-fill. Son refinamientos de borde: mueven
 unidades sobre parcelas irregulares, no el orden de magnitud. (La consolidación N-S, el barrido del
 ángulo de grid y el filtro por pendiente del MDT **sí están ya** — cada uno con su sección.)
 
 ## El careo
 
-`node tests/test_layout.js` — 191 comprobaciones, sin navegador.
+`node tests/test_layout.js` — 192 comprobaciones, sin navegador.
 
 Extrae el bloque `MOTOR DE LAYOUT` del `generador-layout.html` **real** (no una copia en un `.js`,
 que se quedaría careando una versión vieja) y lo corre sobre las mismas quince parcelas que corrió
@@ -384,7 +384,7 @@ Lo que se exige, y por qué eso y no la igualdad:
 
 | Magnitud | Tolerancia | Por qué |
 |---|---|---|
-| Nº de **filas** | idéntico | Es la geometría del campo (pitch, setback, orientación) en un número. Con exclusiones, ±1: el barrido de Y del core no está portado |
+| Nº de **filas** | idéntico | Es la geometría del campo (pitch, setback, orientación) en un número. Con exclusiones, ±1: los DOS lados barren el origen X/Y (portado 2026-08-21) pero la puntuación puede elegir offsets distintos por décimas |
 | **Mesas** y **kWp** | 2,5 % | El core lleva los refinamientos de borde de arriba |
 | **Área útil** | 0,5 % | La erosión contra el `buffer(-d)` de Shapely; el 0,5 % es la discretización del barrido |
 | Largo de mesa, apertura, largo de fila | exacto | Son fórmulas cerradas: no admiten tolerancia |
@@ -393,7 +393,7 @@ Lo que se exige, y por qué eso y no la igualdad:
 
 Medido hoy sobre los quince casos: **tres clavados** (parcela girada 35° bifila, parcela en L
 monofila, setback de 15 m) y las **filas idénticas en 14 de 15** (el que no, el hueco central,
-dentro del ±1 del barrido de Y no portado). El peor caso dentro de la tolerancia global es el
+dentro del ±1 de los barridos de origen). El peor caso dentro de la tolerancia global es el
 montaje fijo 2V, a **1,89 %**; el fijo **multi-talla** sale a **2,59 %** y lleva su tolerancia
 declarada (3 %) con el mecanismo medido en el generador del fixture: la rejilla global del core
 interactúa con la rotación de convergencia y pierde un slot de mesa en la mitad de las filas
@@ -424,9 +424,11 @@ python3 tests/gen_careo_layout.py --core /ruta/a/SolarGPTfull/solargpt
 
 Dos casos son **fincas de verdad**: `tests/parcelas/finca-irregular.geojson` (nueve vértices,
 cóncava) y `tests/parcelas/larraga.geojson` — la finca de Larraga que llegó con un «deja mil
-huecos donde entran trackers» y su exclusión dibujada, con `tol_mesas_pct: 4` declarado en su
-`properties.careo` (el core gana ~4 mesas con su barrido de 11 offsets de Y con exclusiones, no
-portado). La primera: Un careo que solo corre rectángulos sintéticos se cree que el mundo es
+huecos donde entran trackers», con su exclusión dibujada. Sus 124 mesas salen **clavadas** al
+core (0,00 %): el careo daba 120 por 124 hasta que se portó el barrido del origen X/Y del core
+(11 offsets de Y ± pitch/2 y 11 de X sobre el mejor Y, elegidos por la puntuación de
+`compute_layout_score` — solo con exclusiones o agujeros, como el core), y el check de «clavado»
+lo vigila con su mutante. Un careo que solo corre rectángulos sintéticos se cree que el mundo es
 rectangular — y el emparejado bifila, la consolidación y el multi-talla se rompen justo en los
 bordes que los rectángulos no tienen. Medido: **94 filas idénticas** a las del core y las mesas a
 **0,91 %** (1.300 frente a 1.312).
