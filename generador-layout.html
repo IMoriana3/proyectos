@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.4.6</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.4.7</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -469,7 +469,7 @@ canvas.panning{cursor:grabbing}
              «Dibujarla sobre el lienzo» («no encuentro la varita», 2026-08-21
              — la lección de «alinear a rejilla»: si no se encuentra, está mal
              puesta). Al armarla, ella sola cambia al modo dibujo. -->
-        <button class="btn ghost small mini" id="varitaBtn" title="Detecta el contorno del campo en la ortofoto desde un clic. Es un BORRADOR VISUAL para retocar — la linde oficial es la del Catastro/SIGPAC. Cambia solo al modo «Dibujarla sobre el lienzo».">🪄 Detectar parcela</button>
+        <button class="btn ghost small mini" id="varitaBtn" title="Propone un BORRADOR editable del contorno a partir del COLOR de la ortofoto — no es un detector de lindes: revísalo y retócalo siempre. Clics sucesivos SUMAN zonas vecinas; Alt+clic descarga la escena como fixture para el banco. La linde oficial es la del Catastro/SIGPAC.">🪄 Borrador de parcela</button>
         <select id="render" class="minisel" title="Cómo se pintan las mesas">
           <option value="auto">Render: auto</option>
           <option value="poly">Polígonos</option>
@@ -2272,6 +2272,7 @@ function empiezaDibujo(dest){
   pintaBotonesDibujo(); draw();
 }
 function cierraDibujo(){
+  varitaArmada=false;varitaReset();$('varitaBtn').textContent='🪄 Borrador de parcela';
   if(drawing&&DRAW){
     // Una LÍNEA vale con dos puntos: una zanja o una línea eléctrica no es un
     // polígono, y exigirle tres vértices sería pedirle que se cierre.
@@ -2439,15 +2440,6 @@ function varitaSimplifica(ring,eps){
   var out=[A[0]];dp(A,0,A.length-1,out);out.push(A[A.length-1]);dp(B,0,B.length-1,out);
   return out;
 }
-function varitaDetecta(sxPx,syPx){
-  var cv=$('cv');
-  var off=document.createElement('canvas');off.width=cv.width;off.height=cv.height;
-  var octx=off.getContext('2d',{willReadFrequently:true});
-  octx.fillStyle='#000';octx.fillRect(0,0,off.width,off.height);
-  if(!pintaOrtofoto(octx,cv))return {err:'sin ortofoto'};
-  var img=octx.getImageData(0,0,off.width,off.height);
-  return varitaEscoge(img.data,off.width,off.height,sxPx,syPx)||{err:'sin recinto'};
-}
 /* Criterio de ACEPTACIÓN de un contorno — nacido del primer uso real
    (2026-08-21, ortofoto de una planta construida): la franja de suelo entre
    dos filas de trackers pasaba como «recinto» — una esquirla de ~8 px de
@@ -2481,6 +2473,20 @@ function varitaValida(simp,n,w,h){
    fragmento homogéneo y se queda ahí; la gruesa absorbe la textura y da el
    campo entero. Elegir la mayor válida sirve a las dos: si pinchas un claro
    DENTRO del campo, te lleva al campo. */
+/* Máscara → anillo listo: contorno + simplificación ADAPTATIVA (ε sube
+   hasta bajar de 40 vértices retocables — las esquinas reales sobreviven,
+   la sierra no) + quitar-púas. */
+function varitaAnillo(dentro,w,h){
+  var ring=varitaContorno(dentro,w,h);
+  if(!ring)return null;
+  var simp=null,EPS=[2.5,4,6,9,13];
+  for(var e=0;e<EPS.length;e++){
+    simp=varitaSimplifica(ring,EPS[e]);
+    if(simp)simp=varitaSinPuas(simp);
+    if(simp&&simp.length<=40)break;
+  }
+  return simp||null;
+}
 function varitaEscoge(data,w,h,sx,sy){
   var TOLS=[16,24,34],mejor=null;
   for(var t=0;t<TOLS.length;t++){
@@ -2489,32 +2495,76 @@ function varitaEscoge(data,w,h,sx,sy){
     // Apertura (fuera brazos finos) y quedarse con la ISLA de la semilla.
     var comp=varitaComponente(varitaAbre(seg.dentro,w,h,3),w,h,sx|0,sy|0);
     if(!comp)continue;
-    var ring=varitaContorno(comp.dentro,w,h);
-    if(!ring)continue;
-    // Simplificación ADAPTATIVA: 61 vértices de sierra no se retocan a mano
-    // (Arganda). Se sube ε hasta bajar de 40 — las esquinas reales, que
-    // separan píxeles de verdad, sobreviven a ε grandes; la sierra no.
-    var simp=null,EPS=[2.5,4,6,9,13];
-    for(var e=0;e<EPS.length;e++){
-      simp=varitaSimplifica(ring,EPS[e]);
-      if(simp)simp=varitaSinPuas(simp);
-      if(simp&&simp.length<=40)break;
-    }
+    var simp=varitaAnillo(comp.dentro,w,h);
     if(!varitaValida(simp,comp.n,w,h))continue;
-    if(!mejor||comp.n>mejor.n)mejor={ring:simp,tol:TOLS[t],n:comp.n};
+    if(!mejor||comp.n>mejor.n)mejor={ring:simp,tol:TOLS[t],n:comp.n,dentro:comp.dentro};
   }
   return mejor;
 }
+/* CLICS QUE SUMAN (Arganda 2, «sigue mal en la 1.4.6»): una parcela real no
+   tiene UN color — mancha gris compactada + tierra marrón + la linde por
+   caminos. Ningún clic único puede adivinarla siguiendo color; el
+   magic-wand clásico sí: cada clic detecta SU zona y se UNE a lo acumulado
+   si se tocan, y el contorno se recalcula sobre la unión. Dos o tres clics
+   construyen la parcela. Una zona que no toca lo acumulado se rechaza con
+   aviso (unir islas daría un anillo imposible), y lo acumulado se conserva. */
+function varitaSuma(data,w,h,sx,sy,acc,accN){
+  var res=varitaEscoge(data,w,h,sx,sy);
+  if(!res)return acc?{sinZona:true}:null;
+  if(!acc){
+    return {dentro:res.dentro,n:res.n,ring:res.ring};
+  }
+  var union=new Uint8Array(acc),unionN=accN;
+  for(var i=0;i<w*h;i++)if(res.dentro[i]&&!union[i]){union[i]=1;unionN++;}
+  var comp=varitaComponente(union,w,h,sx|0,sy|0);
+  if(!comp||comp.n<unionN)return {disjunta:true};
+  var simp=varitaAnillo(comp.dentro,w,h);
+  if(!simp||!varitaValida(simp,comp.n,w,h))return {sinZona:true};
+  return {dentro:comp.dentro,n:comp.n,ring:simp};
+}
+/* El ACUMULADO de la varita: máscara en píxeles del lienzo + su encuadre.
+   Si la vista cambia (pan/zoom/resize), los píxeles ya no casan y se empieza
+   de cero — convertir la máscara entre encuadres sería inventar píxeles. */
+var varitaAcc=null,varitaAccN=0,varitaVista=null;
+function varitaReset(){varitaAcc=null;varitaAccN=0;varitaVista=null;}
 function varitaClic(ev){
   var cv=$('cv'),r=cv.getBoundingClientRect();
   var sx=(ev.clientX-r.left)*(cv.width/r.width),sy=(ev.clientY-r.top)*(cv.height/r.height);
-  var res=varitaDetecta(sx,sy);
-  if(res.err){
-    $('mapHint').textContent=(res.err==='sin ortofoto')
-      ?'🪄 la varita necesita la ortofoto cargada — marca «ortofoto» y espera las teselas'
-      :'🪄 ahí no se distingue un recinto (acércate más o pincha el interior del campo) — o dibújalo a mano';
+  var off=document.createElement('canvas');off.width=cv.width;off.height=cv.height;
+  var octx=off.getContext('2d',{willReadFrequently:true});
+  octx.fillStyle='#000';octx.fillRect(0,0,off.width,off.height);
+  if(!pintaOrtofoto(octx,cv)){
+    $('mapHint').textContent='🪄 la varita necesita la ortofoto cargada — marca «ortofoto» y espera las teselas';
     return;
   }
+  var img=octx.getImageData(0,0,off.width,off.height);
+  var vista=[VIEW.cx,VIEW.cy,VIEW.z,cv.width,cv.height].join('/');
+  if(ev.altKey){
+    // FIXTURE de escena REAL (encargo B10 tras El Burgo/Arganda: el banco
+    // sintético daba verde donde el sitio real fallaba — fixture ciego).
+    // Alt+clic descarga la ortofoto TAL CUAL la ve la varita + el punto
+    // pinchado y el encuadre: material de banco byte a byte, sin pedirle a
+    // nadie que recorte capturas a mano.
+    var meta={x:sx|0,y:sy|0,w:off.width,h:off.height,vista:vista};
+    off.toBlob(function(b){
+      var a=document.createElement('a');a.href=URL.createObjectURL(b);
+      a.download='varita-escena.png';a.click();
+      var a2=document.createElement('a');
+      a2.href='data:application/json,'+encodeURIComponent(JSON.stringify(meta));
+      a2.download='varita-escena.json';a2.click();
+    });
+  }
+  if(varitaVista!==vista){varitaAcc=null;varitaAccN=0;varitaVista=vista;}
+  var res=varitaSuma(img.data,off.width,off.height,sx|0,sy|0,varitaAcc,varitaAccN);
+  if(!res||res.sinZona){
+    $('mapHint').textContent='🪄 ahí no se distingue un recinto (acércate más o pincha el interior del campo)'+(varitaAcc?' — lo ya detectado se conserva':' — o dibújalo a mano');
+    return;
+  }
+  if(res.disjunta){
+    $('mapHint').textContent='🪄 esa zona no toca la ya detectada — pincha una vecina que la toque, o doble clic para aceptar lo que hay';
+    return;
+  }
+  varitaAcc=res.dentro;varitaAccN=res.n;
   var S=escalaMundo();
   DRAW=res.ring.map(function(q){
     return [u2lon(VIEW.cx+(q[0]-cv.width/2)/S),u2lat(VIEW.cy+(q[1]-cv.height/2)/S)];
@@ -2522,9 +2572,10 @@ function varitaClic(ev){
   drawing=true;
   if(drawDest==='linea')drawDest='parcela';      // una línea no se detecta
   if(drawDest==='parcela'&&DRAW.length>=3){PARCEL=DRAW.slice();HOLES=[];}
-  varitaArmada=false;$('varitaBtn').textContent='🪄 Detectar parcela';
   pintaBotonesDibujo();
-  $('mapHint').textContent='🪄 contorno propuesto ('+DRAW.length+' vértices) — BORRADOR visual, no linde oficial: clic añade vértices, doble clic o ⏹ lo acepta';
+  // La varita SIGUE armada: la parcela real rara vez es UN color (Arganda:
+  // mancha gris + tierra marrón) — el siguiente clic AÑADE la zona vecina.
+  $('mapHint').textContent='🪄 contorno propuesto ('+DRAW.length+' vértices) — BORRADOR visual, no linde oficial: otro clic 🪄 AÑADE la zona vecina · doble clic o ⏹ lo acepta';
   tagParcel();draw();autoguarda();
 }
 $('varitaBtn').onclick=function(){
@@ -2539,8 +2590,9 @@ $('varitaBtn').onclick=function(){
     $('parcelMode').onchange.call($('parcelMode'));
   }
   varitaArmada=!varitaArmada;
+  if(!varitaArmada)varitaReset();
   if(varitaArmada&&!$('orto').checked){$('orto').checked=true;draw();}
-  $('varitaBtn').textContent=varitaArmada?'🪄 Clic en el campo…':'🪄 Detectar parcela';
+  $('varitaBtn').textContent=varitaArmada?'🪄 Clic en el campo…':'🪄 Borrador de parcela';
   $('mapHint').textContent=varitaArmada
     ?'🪄 clic sobre el CAMPO: se propone su contorno — borrador visual para retocar, no linde oficial'
     :'arrastra para mover · rueda para acercar';
