@@ -1362,6 +1362,47 @@ const cajaLienzo = async page => {
   });
   check('la ESQUIRLA de la captura se rechaza — «no se distingue», no un contorno sin sentido',
     criterio.esquirla === null, JSON.stringify(criterio.esquirla));
+
+  // ── el parte de ARGANDA (2026-08-21, «la ha detectado francamente mal»):
+  // la región arrastraba un BRAZO FINO (un camino del mismo tono) hacia la
+  // esquina — cordón suelto y púas de ida-y-vuelta — y el borde salía con 61
+  // vértices de sierra. La apertura mata el brazo, quitar-púas los pliegues,
+  // y la simplificación adaptativa deja ≤40 vértices retocables.
+  const arganda = await pagV.evaluate(() => {
+    const w = 200, h = 200;
+    const pinta = f => { const img = new ImageData(w, h), d = img.data;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const c = f(x, y), i = (y * w + x) * 4;
+        d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+      } return d; };
+    // CASO 1 · campo con BRAZO fino de 4 px hasta la esquina (el camino)
+    const conBrazo = pinta((x, y) => {
+      const campo = x >= 40 && x < 150 && y >= 60 && y < 150;
+      const brazo = y >= 98 && y < 102 && x >= 150 && x < 200;
+      return (campo || brazo) ? [150, 140, 90] : [40, 55, 35];
+    });
+    const r1 = varitaEscoge(conBrazo, w, h, 95, 105);
+    const fueraDelCampo = r1 ? r1.ring.filter(p => p[0] > 156).length : -1;
+    // CASO 2 · borde ONDULADO en los cuatro lados (±12 px, periodo ~25):
+    // ondas que la APERTURA no plancha (más anchas que 2r+1) — el régimen
+    // donde la simplificación adaptativa es la única que puede bajar de 40
+    // (con dientes de ±5 el mutante sin-adaptativa sobrevivía: los alisaba
+    // la apertura y el invariante era decorativo).
+    const onda = v => Math.round(12 * Math.sin(v / 4));
+    const sierra = pinta((x, y) => {
+      const dentro = x >= 40 + onda(y) && x < 160 + onda(y + 7) &&
+                     y >= 40 + onda(x) && y < 160 + onda(x + 13) ;
+      return dentro ? [150, 140, 90] : [40, 55, 35];
+    });
+    const r2 = varitaEscoge(sierra, w, h, 100, 100);
+    return { conBrazo: !!r1, fueraDelCampo, verts2: r2 ? r2.ring.length : -1,
+             n2: r2 ? r2.n : -1 };
+  });
+  check('ARGANDA 1: el brazo fino (el camino) NO entra en el contorno (mutante sin-apertura muere aquí)',
+    arganda.conBrazo && arganda.fueraDelCampo === 0, JSON.stringify(arganda));
+  check('ARGANDA 2: el borde de sierra sale en ≤40 vértices retocables (mutante sin-adaptativa muere aquí)',
+    arganda.verts2 > 0 && arganda.verts2 <= 40 && arganda.n2 > 10000,
+    JSON.stringify(arganda));
   check('y pinchando un CLARO dentro del campo gana el CAMPO, no el fragmento (mutante «gana la primera» muere aquí)',
     !!criterio.bbox2 && criterio.n2 > 10000 &&
     criterio.bbox2[0] >= 26 && criterio.bbox2[1] >= 36 &&
