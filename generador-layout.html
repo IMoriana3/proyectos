@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.4.5</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.4.6</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -2347,8 +2347,76 @@ function varitaContorno(dentro,w,h){
     }
     if(!found)break;                             // píxel aislado
     ring.push([cx,cy]);
-  }while((cx!==sx||cy!==sy)&&--guard>0);
+  // Criterio de parada de JACOB: volver al arranque no basta — hay que volver
+  // ENTRANDO por el mismo sitio (backtrack al oeste, como al empezar). Parar
+  // solo por posición corta el anillo la primera vez que el borde roza el
+  // píxel inicial por otro lado, y el cierre artificial del anillo incompleto
+  // es el «cordón suelto» cruzando el mapa del parte de Arganda (2026-08-21).
+  }while(!(cx===sx&&cy===sy&&bx===sx-1&&by===sy)&&--guard>0);
   return ring.length>=8?ring:null;
+}
+/* APERTURA morfológica (erosión + dilatación, radio r) sobre la máscara, por
+   imagen integral (O(w·h)). El porqué es el parte de Arganda: la región del
+   flood-fill arrastra BRAZOS FINOS (un camino del mismo tono, una sombra) y
+   el contorno entra y sale por ellos — púas de sierra y cordones hacia
+   ninguna parte. La apertura mata todo lo más estrecho que ~2r+1 px sin
+   mover los bordes anchos; con la guarda de anchura mínima en 18 px, nada
+   legítimo cabe por debajo de r=3. */
+function varitaAbre(dentro,w,h,r){
+  function integral(m){
+    var I=new Int32Array((w+1)*(h+1));
+    for(var y=0;y<h;y++){var run=0;
+      for(var x=0;x<w;x++){run+=m[y*w+x];I[(y+1)*(w+1)+x+1]=I[y*(w+1)+x+1]+run;}}
+    return I;
+  }
+  function suma(I,x0,y0,x1,y1){
+    x0=Math.max(0,x0);y0=Math.max(0,y0);x1=Math.min(w-1,x1);y1=Math.min(h-1,y1);
+    if(x0>x1||y0>y1)return 0;
+    return I[(y1+1)*(w+1)+x1+1]-I[y0*(w+1)+x1+1]-I[(y1+1)*(w+1)+x0]+I[y0*(w+1)+x0];
+  }
+  var I1=integral(dentro),lado=2*r+1,ero=new Uint8Array(w*h);
+  for(var y=0;y<h;y++)for(var x=0;x<w;x++)
+    if(x>=r&&y>=r&&x<w-r&&y<h-r&&suma(I1,x-r,y-r,x+r,y+r)===lado*lado)ero[y*w+x]=1;
+  var I2=integral(ero),out=new Uint8Array(w*h);
+  for(var y2=0;y2<h;y2++)for(var x2=0;x2<w;x2++)
+    if(suma(I2,x2-r,y2-r,x2+r,y2+r)>0)out[y2*w+x2]=1;
+  return out;                    // apertura ⊆ región original, por propiedad
+}
+/* Tras la apertura la región puede partirse: quedarse SOLO con la componente
+   de la semilla — el contorno arrancaba del píxel más alto de TODA la
+   máscara y podía trazar otra isla. */
+function varitaComponente(dentro,w,h,sx,sy){
+  if(!dentro[sy*w+sx])return null;
+  var comp=new Uint8Array(w*h),cola=new Int32Array(w*h),lo=0,hi=0,n=0;
+  comp[sy*w+sx]=1;cola[hi++]=sy*w+sx;
+  while(lo<hi){
+    var p=cola[lo++];n++;
+    var py=(p/w)|0,pxx=p-py*w;
+    if(pxx>0&&dentro[p-1]&&!comp[p-1]){comp[p-1]=1;cola[hi++]=p-1;}
+    if(pxx<w-1&&dentro[p+1]&&!comp[p+1]){comp[p+1]=1;cola[hi++]=p+1;}
+    if(py>0&&dentro[p-w]&&!comp[p-w]){comp[p-w]=1;cola[hi++]=p-w;}
+    if(py<h-1&&dentro[p+w]&&!comp[p+w]){comp[p+w]=1;cola[hi++]=p+w;}
+  }
+  return {dentro:comp,n:n};
+}
+/* Quitar PÚAS: el patrón ida-y-vuelta (desvío por b casi doble que el camino
+   directo a→c) es un brazo que la apertura no llegó a matar o un pliegue del
+   trazado — nunca una esquina real: en un ángulo recto el desvío es ×1,41 y
+   aquí se exige ×1,8. Iterativo, porque quitar una púa puede destapar otra. */
+function varitaSinPuas(ring){
+  var out=ring.slice(),cambio=true,guard=10;
+  while(cambio&&--guard>0&&out.length>=4){
+    cambio=false;var res=[];
+    for(var i=0;i<out.length;i++){
+      var a=out[(i+out.length-1)%out.length],b=out[i],c=out[(i+1)%out.length];
+      var ab=Math.hypot(b[0]-a[0],b[1]-a[1]),bc=Math.hypot(c[0]-b[0],c[1]-b[1]);
+      var ac=Math.hypot(c[0]-a[0],c[1]-a[1]);
+      if(ab+bc>ac*1.8&&ab+bc>12){cambio=true;continue;}
+      res.push(b);
+    }
+    out=res;
+  }
+  return out;
 }
 function varitaSimplifica(ring,eps){
   // Douglas-Peucker sobre anillo: se parte por el punto más alejado del [0]
@@ -2418,11 +2486,22 @@ function varitaEscoge(data,w,h,sx,sy){
   for(var t=0;t<TOLS.length;t++){
     var seg=varitaSegmenta(data,w,h,sx,sy,TOLS[t]);
     if(!seg)continue;
-    var ring=varitaContorno(seg.dentro,w,h);
+    // Apertura (fuera brazos finos) y quedarse con la ISLA de la semilla.
+    var comp=varitaComponente(varitaAbre(seg.dentro,w,h,3),w,h,sx|0,sy|0);
+    if(!comp)continue;
+    var ring=varitaContorno(comp.dentro,w,h);
     if(!ring)continue;
-    var simp=varitaSimplifica(ring,2.5);
-    if(!varitaValida(simp,seg.n,w,h))continue;
-    if(!mejor||seg.n>mejor.n)mejor={ring:simp,tol:TOLS[t],n:seg.n};
+    // Simplificación ADAPTATIVA: 61 vértices de sierra no se retocan a mano
+    // (Arganda). Se sube ε hasta bajar de 40 — las esquinas reales, que
+    // separan píxeles de verdad, sobreviven a ε grandes; la sierra no.
+    var simp=null,EPS=[2.5,4,6,9,13];
+    for(var e=0;e<EPS.length;e++){
+      simp=varitaSimplifica(ring,EPS[e]);
+      if(simp)simp=varitaSinPuas(simp);
+      if(simp&&simp.length<=40)break;
+    }
+    if(!varitaValida(simp,comp.n,w,h))continue;
+    if(!mejor||comp.n>mejor.n)mejor={ring:simp,tol:TOLS[t],n:comp.n};
   }
   return mejor;
 }
