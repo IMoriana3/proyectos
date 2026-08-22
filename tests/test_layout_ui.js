@@ -1403,6 +1403,43 @@ const cajaLienzo = async page => {
   check('ARGANDA 2: el borde de sierra sale en ≤40 vértices retocables (mutante sin-adaptativa muere aquí)',
     arganda.verts2 > 0 && arganda.verts2 <= 40 && arganda.n2 > 10000,
     JSON.stringify(arganda));
+
+  // ── ARGANDA 3 («sigue mal en la 1.4.6»): la parcela real no tiene UN
+  // color — mancha gris compactada + tierra marrón, linde por caminos. Un
+  // clic solo da la mancha; los CLICS QUE SUMAN construyen la parcela: cada
+  // clic detecta su zona y se une a lo acumulado si se tocan. Una isla que
+  // no toca se rechaza con aviso y lo acumulado se conserva.
+  const suma = await pagV.evaluate(() => {
+    const w = 200, h = 200;
+    const pinta = f => { const img = new ImageData(w, h), d = img.data;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const c = f(x, y), i = (y * w + x) * 4;
+        d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+      } return d; };
+    // gris (60..100) y marrón (100..140) ADYACENTES; isla lejana en la esquina
+    const d = pinta((x, y) => {
+      if (y >= 60 && y < 150) {
+        if (x >= 60 && x < 100) return [120, 120, 120];
+        if (x >= 100 && x < 140) return [150, 140, 90];
+      }
+      if (x >= 165 && x < 195 && y >= 8 && y < 38) return [150, 140, 90];
+      return [40, 55, 35];
+    });
+    const bbox = r => { const xs = r.ring.map(p => p[0]), ys = r.ring.map(p => p[1]);
+      return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
+    const a = varitaSuma(d, w, h, 80, 100, null, 0);           // 1er clic: gris
+    const b = a && varitaSuma(d, w, h, 120, 100, a.dentro, a.n); // 2º: marrón vecino
+    const c = b && varitaSuma(d, w, h, 180, 20, b.dentro, b.n);  // 3º: isla lejana
+    return { a: a && bbox(a), b: b && !b.disjunta && bbox(b),
+             bN: b && b.n, cDisjunta: c && c.disjunta === true };
+  });
+  check('ARGANDA 3a: el primer clic da SU zona (la gris) y el segundo SUMA la vecina — el contorno crece a las dos (mutante sin-unión muere aquí)',
+    !!suma.a && suma.a[2] <= 106 &&
+    !!suma.b && suma.b[0] >= 54 && suma.b[0] <= 66 && suma.b[2] >= 134 && suma.b[2] <= 146 &&
+    suma.bN > 6000,
+    JSON.stringify(suma));
+  check('ARGANDA 3b: una isla que NO toca se rechaza con aviso y lo acumulado se conserva',
+    suma.cDisjunta === true, JSON.stringify(suma));
   check('y pinchando un CLARO dentro del campo gana el CAMPO, no el fragmento (mutante «gana la primera» muere aquí)',
     !!criterio.bbox2 && criterio.n2 > 10000 &&
     criterio.bbox2[0] >= 26 && criterio.bbox2[1] >= 36 &&
@@ -1446,12 +1483,28 @@ const cajaLienzo = async page => {
   });
   check('E2E: el clic en la raya clara propone su contorno como DIBUJO en curso (' + detectado.n + ' vértices)',
     detectado.n >= 4 && detectado.drawing === true && detectado.conParcela &&
-    /contorno propuesto/.test(detectado.hint) && /no linde oficial/.test(detectado.hint),
+    /contorno propuesto/.test(detectado.hint) && /no linde oficial/.test(detectado.hint) &&
+    /AÑADE la zona vecina/.test(detectado.hint),
     JSON.stringify(detectado));
   check('y el contorno mide lo que la raya: un ancho de tesela y todo el alto del lienzo',
     Math.abs(detectado.xspan - punto.lado) < punto.lado * 0.4 &&
     detectado.yspan > punto.h * 0.85,
     JSON.stringify({ xspan: detectado.xspan, lado: punto.lado, yspan: detectado.yspan, h: punto.h }));
+  // Alt+clic: la varita captura su PROPIA evidencia — descarga la escena
+  // (ortofoto del lienzo tal cual la ve + punto + encuadre) como material de
+  // fixture REAL para el banco. Encargo B10 tras El Burgo/Arganda: el banco
+  // sintético daba verde donde el sitio real fallaba, y recortar capturas a
+  // mano no es un mecanismo.
+  const dlP = pagV.waitForEvent('download', { timeout: 8000 }).catch(() => null);
+  await pagV.keyboard.down('Alt');
+  await pagV.evaluate(() => { _movido = 0; });
+  await pagV.mouse.click(cajaV.x + punto.x * (cajaV.w / punto.w),
+                         cajaV.y + punto.y * (cajaV.h / punto.h));
+  await pagV.keyboard.up('Alt');
+  const dl = await dlP;
+  check('Alt+clic descarga la ESCENA como fixture (varita-escena.png)',
+    !!dl && /varita-escena/.test(dl.suggestedFilename()),
+    dl ? dl.suggestedFilename() : 'sin descarga');
   await pagV.close();
 
   // uniforme de verdad → «no se distingue un recinto» (el tope, de punta a punta)
