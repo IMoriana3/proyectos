@@ -227,6 +227,75 @@ const LAYOUT = {
         Math.round(este.A1) === 55 && Math.round(este.A2) === 55 &&
         Math.round(este.PASIVO) === -55, JSON.stringify(este));
 
+  // ── LA HUELLA DE CADA FRANJA EN EL SUELO ───────────────────────────
+  // Con las franjas encendidas, a que grupo pertenece un seguidor solo se sabia por el
+  // color de su poste. La tentacion es pintar una caja por franja; seria mentira,
+  // porque la planta es un poligono irregular y la caja cubriria suelo sin seguidores.
+  // Se comprueba sobre una planta CON DIENTE DE SIERRA Y UN HUECO DENTRO, que es el
+  // regimen donde una caja y una huella de verdad dan resultados distintos. En una
+  // planta rectangular las dos coincidirian y el test pasaria por el motivo equivocado.
+  const IRREG = { clat: 41.5, clon: -0.8, mods: 28, modW: 1.134, filaZ: 3, trackers: [] };
+  for (let c = 0; c < 20; c++) {
+    const alto = 6 + Math.round(4 * Math.sin(c / 3));
+    for (let r = 0; r < alto; r++) {
+      if (c >= 8 && c <= 11 && r >= 2 && r <= 3) continue;      // el hueco, a proposito
+      IRREG.trackers.push({ x: c * 24, n: r * 40, rot: 0, t: 'completo' });
+    }
+  }
+  await page.unroute('**/*_layout.json');
+  await page.route('**/*_layout.json', r =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(IRREG) }));
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#escena', { timeout: 15000 });
+  await page.selectOption('#escena', 'fayon');
+  await page.waitForFunction(() => window.ESC && ESC.kind === 'planta', { timeout: 25000 });
+  await page.check('#bandas');
+  await page.waitForTimeout(700);
+
+  const H = await page.evaluate(() => {
+    const hu = (ESC.bifila ? ESC.filaZ : 0) + 1.6;
+    const h = huellaBandas(ESC.base, ESC.banda, ESC.bandaKs.length, hu, 10, 0);
+    const xs = ESC.base.map(b => b.x);
+    return {
+      porFranja: h.map((o, i) => ({
+        k: ESC.bandaKs[i], rects: o.rects.length, borde: o.borde.length,
+        cols: new Set(o.rects.map(r => Math.round(r.u))).size })),
+      hu: h[0].rects[0].hu, huMin: hu,
+      paso: (() => { const u = [...new Set(xs)].sort((a, b) => a - b);
+        const d = []; for (let q = 1; q < u.length; q++) d.push(u[q] - u[q - 1]);
+        d.sort((a, b) => a - b); return d[Math.floor(d.length / 2)]; })(),
+      // ninguna huella puede salirse de la planta
+      fuera: h.some(o => o.rects.some(r =>
+        r.u - r.hu < Math.min(...xs) - 1e-6 - h[0].rects[0].hu ||
+        r.u + r.hu > Math.max(...xs) + 1e-6 + h[0].rects[0].hu))
+    };
+  });
+
+  check('hay una huella por franja, y ninguna vacia (' +
+        H.porFranja.map(f => f.k + ':' + f.rects).join(' ') + ')',
+        H.porFranja.length >= 5 && H.porFranja.every(f => f.rects > 0));
+
+  check('el ancho se MIDE del paso entre columnas, no se elige (' + H.hu + ' m de ' +
+        H.paso + ' m de paso)', Math.abs(H.hu - H.paso / 2) < 0.01 && H.hu > H.huMin,
+        'con el ancho de la estructura a secas salen tiras sueltas, no una franja');
+
+  // El hueco interior: la columna que lo cruza tiene que quedar PARTIDA en dos tramos.
+  // Una caja —o una union que ignore los huecos— daria un rectangulo por columna.
+  const partidas = H.porFranja.filter(f => f.rects > f.cols);
+  check('un hueco dentro de la planta parte la huella: no se pinta suelo vacio (' +
+        partidas.map(f => f.k).join(' ') + ')', partidas.length >= 1,
+        JSON.stringify(H.porFranja));
+
+  check('ninguna huella se sale del campo', H.fuera === false);
+
+  // El contorno es el de la UNION: si fuese el de cada rectangulo por separado serian
+  // exactamente 4 aristas por rectangulo, y la franja saldria rayada por dentro.
+  const rayado = H.porFranja.filter(f => f.borde === 4 * f.rects);
+  check('el contorno cancela las aristas interiores (' +
+        H.porFranja.map(f => f.borde + '<' + 4 * f.rects).join(' ') + ')',
+        rayado.length === 0,
+        'una franja con 4 aristas por rectangulo es una franja dibujada a rayas');
+
   check('la ficha no lanza errores de JS', errores.length === 0, errores.join(' | '));
   await browser.close();
   console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko) : '\nOK — ' + ok + '/' + ok + ' comprobaciones');
