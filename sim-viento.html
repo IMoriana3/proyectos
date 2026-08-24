@@ -2439,6 +2439,101 @@ function repartoBandas(base,ks){
   return out;
 }
 
+/* ── LA HUELLA DE CADA FRANJA EN EL SUELO ──
+   Con las franjas encendidas, a qué grupo pertenece un seguidor solo se sabía por el
+   color de su poste, que es un palo de 18 cm en una planta de cientos de metros.
+
+   La tentación es pintar una caja por franja. Sería mentira: el reparto son losas
+   contiguas por un eje, pero la planta es un polígono irregular —bordes en diente de
+   sierra, huecos— y una caja pintaría suelo donde no hay un solo seguidor. Es
+   exactamente «no se fabrica en el render»: quedaría muy bien y sería geometría que
+   nadie ha medido.
+
+   Así que la huella se construye con las huellas REALES. Se trabaja en el marco del
+   seguidor —u perpendicular al tubo, v a lo largo— porque la retícula está girada:
+   el desplazamiento entre filas va en (cos rot, sin rot), luego el tubo va en
+   (-sin rot, cos rot). Por cada columna se funden los tramos que se tocan y se emite
+   un rectángulo por tramo, así que un hueco en mitad de la planta SIGUE siendo un
+   hueco. Pura, sin THREE, para poder carearla sin navegador. */
+function huellaBandas(base,banda,nB,hu,hv,rot){
+  var cs=Math.cos(rot||0), sn=Math.sin(rot||0), out=[];
+  for(var b=0;b<nB;b++)out.push({rects:[],borde:[]});
+  var col={}, us=[];
+  for(var i=0;i<base.length;i++){
+    var bi=banda[i]; if(bi==null||!out[bi])continue;
+    var x=base[i].x, z=base[i].z;
+    var u=x*cs+z*sn, v=-x*sn+z*cs;                    /* al marco del seguidor */
+    var hvi=(base[i].largo!=null?base[i].largo/2:hv);
+    var ur=Math.round(u*100)/100; us.push(ur);
+    var k=bi+'|'+ur;
+    (col[k]=col[k]||{b:bi,u:ur,t:[]}).t.push([v-hvi,v+hvi]);
+  }
+  /* EL ANCHO SE MIDE, NO SE ELIGE. `hu` que entra es el suelo minimo (la propia
+     estructura); el que se usa es la mitad del paso MEDIANO entre columnas, o sea el
+     pasillo repartido a partes iguales entre las dos filas que lo comparten. Con el
+     ancho de la estructura a secas salian tiras sueltas —las columnas estan a decenas
+     de metros— y una franja no se leia como un grupo. Con la mediana, un paso raro
+     (un hueco de servicio) no estira toda la alfombra. */
+  var uniq=us.filter(function(v,k,a){return a.indexOf(v)===k;}).sort(function(a,b){return a-b;});
+  var pasos=[]; for(var q=1;q<uniq.length;q++)pasos.push(uniq[q]-uniq[q-1]);
+  pasos.sort(function(a,b){return a-b;});
+  var paso=pasos.length?pasos[Math.floor(pasos.length/2)]:0;
+  var HU=Math.max(hu, paso? paso/2 : hu);
+
+  Object.keys(col).forEach(function(k){
+    var c=col[k]; c.t.sort(function(a,b){return a[0]-b[0];});
+    var cur=null;
+    c.t.forEach(function(t){
+      if(cur&&t[0]<=cur[1]+0.01){ if(t[1]>cur[1])cur[1]=t[1]; return; }
+      if(cur)out[c.b].rects.push({u:c.u,hu:HU,v0:cur[0],v1:cur[1]});
+      cur=[t[0],t[1]];
+    });
+    if(cur)out[c.b].rects.push({u:c.u,hu:HU,v0:cur[0],v1:cur[1]});
+  });
+
+  /* EL CONTORNO ES EL DE LA UNION, y eso NO es dibujar cada rectangulo.
+     Dos columnas vecinas comparten su linea divisoria, pero solo en el tramo en que
+     las dos llegan: si una es mas alta que la otra —y en una planta real casi siempre
+     lo es— el trozo que sobresale SI es borde y el resto no. Cancelar la arista entera
+     dejaba rayas interiores por toda la franja; conservarla entera, tambien.
+     Asi que en cada linea vertical se calcula la DIFERENCIA SIMETRICA entre lo que
+     cubre el rectangulo de la izquierda y lo que cubre el de la derecha: lo que solo
+     tiene relleno a un lado es contorno, lo que lo tiene a los dos es interior. Las
+     horizontales son siempre borde: dentro de una columna los tramos ya vienen
+     fundidos y separados por huecos de verdad. */
+  var une=function(iv){ iv=iv.slice().sort(function(a,b){return a[0]-b[0];});
+    var r=[],c=null; iv.forEach(function(t){
+      if(c&&t[0]<=c[1]+0.01){ if(t[1]>c[1])c[1]=t[1]; return; } if(c)r.push(c); c=[t[0],t[1]]; });
+    if(c)r.push(c); return r; };
+  var menos=function(A,B){ var r=[]; A.forEach(function(a){
+      var tr=[[a[0],a[1]]];
+      B.forEach(function(b){ var nx=[];
+        tr.forEach(function(t){
+          if(b[1]<=t[0]+0.01||b[0]>=t[1]-0.01){ nx.push(t); return; }
+          if(b[0]>t[0]+0.01)nx.push([t[0],b[0]]);
+          if(b[1]<t[1]-0.01)nx.push([b[1],t[1]]);
+        }); tr=nx; });
+      r=r.concat(tr); }); return r; };
+
+  out.forEach(function(o){
+    var lin={};
+    o.rects.forEach(function(r){
+      var a=Math.round((r.u-r.hu)*100)/100, b=Math.round((r.u+r.hu)*100)/100;
+      (lin[a]=lin[a]||{izq:[],der:[]}).der.push([r.v0,r.v1]);
+      (lin[b]=lin[b]||{izq:[],der:[]}).izq.push([r.v0,r.v1]);
+      o.borde.push({a:[a,r.v0],b:[b,r.v0]});          /* horizontales: siempre borde */
+      o.borde.push({a:[a,r.v1],b:[b,r.v1]});
+    });
+    Object.keys(lin).forEach(function(u){
+      var L=une(lin[u].izq), R=une(lin[u].der), uu=+u;
+      menos(L,R).concat(menos(R,L)).forEach(function(t){
+        if(t[1]-t[0]>0.01)o.borde.push({a:[uu,t[0]],b:[uu,t[1]]});
+      });
+    });
+  });
+  return out;
+}
+
 function ejesTransmision(nF,pitch,filasPorTrk,esPasivo,hueco){
   var out=[];
   if(!(filasPorTrk>=2))return out;                 // monofila: cada fila su motor
@@ -3615,6 +3710,36 @@ function montaBandas(){
   if(!ESC||ESC.kind!=='planta'||ESC.etiquetas)return;
   var g=new THREE.Group(), alto=Seguidor.DIMS.postH;
   var barras=[];
+
+  /* LA ALFOMBRA, antes que nada: va en el suelo y el resto se pinta encima.
+     `depthWrite:false` y un pelo por encima de y=0 para que no pelee con el plano
+     del terreno; `DoubleSide` porque la camara puede quedar por debajo del horizonte
+     en plantas grandes. Opacidad baja a proposito: delimita, no tapa. */
+  var hu=(ESC.bifila?ESC.filaZ:0)+1.6;
+  var rot0=ESC.base[0]?ESC.base[0].rot:0, csA=Math.cos(rot0), snA=Math.sin(rot0);
+  var alMundo=function(q){ return [q[0]*csA-q[1]*snA, q[0]*snA+q[1]*csA]; };
+  huellaBandas(ESC.base,ESC.banda,ESC.bandaKs.length,hu,10,rot0).forEach(function(o,bi){
+    if(!o.rects.length)return;
+    var k=ESC.bandaKs[bi], col=(k==='BASE')?COL.BASE:COL[k];
+    var pos=[];
+    o.rects.forEach(function(r){
+      var e=[[r.u-r.hu,r.v0],[r.u+r.hu,r.v0],[r.u+r.hu,r.v1],[r.u-r.hu,r.v1]].map(alMundo);
+      [0,1,2,0,2,3].forEach(function(v){ pos.push(e[v][0],0.06,e[v][1]); });
+    });
+    var geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+    g.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({
+      color:col, transparent:true, opacity:0.26, depthWrite:false, side:THREE.DoubleSide })));
+    /* y el borde, que es lo que de verdad DELIMITA: solo las aristas que quedaron
+       sin cancelar, o sea el contorno de la union. */
+    var lin=[];
+    o.borde.forEach(function(s2){ var a=alMundo(s2.a), b2=alMundo(s2.b);
+      lin.push(a[0],0.09,a[1], b2[0],0.09,b2[1]); });
+    var gl=new THREE.BufferGeometry();
+    gl.setAttribute('position',new THREE.Float32BufferAttribute(lin,3));
+    g.add(new THREE.LineSegments(gl,new THREE.LineBasicMaterial({
+      color:col, transparent:true, opacity:0.85, depthWrite:false })));
+  });
   ESC.bandaKs.forEach(function(k,bi){
     var c=ESC.bandaCentro[bi]; if(!c)return;
     var col=(k==='BASE')?COL.BASE:COL[k];
