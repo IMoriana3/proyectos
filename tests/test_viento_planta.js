@@ -227,6 +227,94 @@ const LAYOUT = {
         Math.round(este.A1) === 55 && Math.round(este.A2) === 55 &&
         Math.round(este.PASIVO) === -55, JSON.stringify(este));
 
+  // ── EL PASIVO SUELTA UNA FILA, NO EL TRACKER ───────────────────────
+  // En bifila las dos filas van sobre el MISMO motor, pero solo la de fuera se
+  // desembraga: la de dentro queda apantallada y sigue en seguimiento haya el viento
+  // que haya. El angulo se decidia por TRACKER, asi que las dos se abanderaban juntas
+  // y la banda del pasivo se pintaba como un abanderamiento de planta — que es justo
+  // lo que el pasivo NO es.
+  //
+  // El test de arriba no lo veia: lee `ang(i)` sobre la PRIMERA fila de cada tracker,
+  // que es precisamente la que si debe soltarse. Un test que muestrea una de las dos
+  // filas no puede ver que se movieron las dos.
+  // El regimen donde la propiedad puede romperse: por debajo del umbral de suelta no
+  // hay fila suelta que mirar, y el test daria verde sin haber comprobado nada.
+  // Un test de mas arriba APAGA las franjas para comprobar que se vuelve a una sola
+  // estrategia. Sin volver a encenderlas aqui, todo se pinta con la misma y las dos
+  // filas saldrian iguales — verde por no haber banda que mirar, no por estar bien.
+  await page.check('#bandas');
+  await page.fill('#lV', '120'); await page.dispatchEvent('#lV', 'input');
+  await page.waitForTimeout(900);
+  const filas = await page.evaluate(() => {
+    const m = new THREE.Matrix4();
+    const ang = k => { ESC.mesas.getMatrixAt(k, m);
+      return Math.round(Math.atan2(m.elements[4], m.elements[5]) * 180 / Math.PI); };
+    const iPas = ESC.bandaKs.indexOf('PASIVO');
+    const sueltos = [], quietos = [];
+    for (let i = 0; i < ESC.n; i++) {
+      if (ESC.banda[i] !== iPas) continue;
+      const f = [];
+      for (let q = 0; q < ESC.nFilas; q++) f.push(ang((i * ESC.nFilas + q) * 2));
+      (ESC.bandaSuelto[i] ? sueltos : quietos).push(f);
+    }
+    // y DONDE esta cada fila: la suelta tiene que ser la del perimetro
+    const pos = new THREE.Matrix4(), xDe = k => { ESC.mesas.getMatrixAt(k, pos);
+      return pos.elements[12]; };
+    const iAlgunSuelto = ESC.bandaSuelto.findIndex((v, i) => v && ESC.banda[i] === iPas);
+    return { sueltos, quietos, bifila: ESC.bifila, filaSuelta: ESC.filaSuelta,
+      xFilas: iAlgunSuelto < 0 ? null
+        : [xDe(iAlgunSuelto * ESC.nFilas * 2), xDe((iAlgunSuelto * ESC.nFilas + 1) * 2)],
+      lado: ESC.ladoExpuesto };
+  });
+
+  check('en el tracker suelto se abandera UNA fila y su gemela sigue en seguimiento (' +
+        JSON.stringify(filas.sueltos[0]) + ')',
+        filas.bifila && filas.sueltos.length > 0 &&
+        filas.sueltos.every(f => f.filter(a => Math.abs(a) > 5).length === 1),
+        'con las dos a -55 la banda del pasivo es un abanderamiento de planta, ' +
+        'que es lo que el pasivo NO es');
+
+  check('y en su franja, el tracker que NO es de perímetro no suelta ninguna (' +
+        JSON.stringify(filas.quietos[0]) + ')',
+        filas.quietos.length > 0 && filas.quietos.every(f => f.every(a => Math.abs(a) <= 5)));
+
+  // Cual de las dos se suelta no se elige: es la de FUERA. Se comprueba por su
+  // posicion en el mundo, no por el indice, que es lo que podria estar al reves.
+  // Las dos filas estan a la misma distancia del centro del tracker: lo que las
+  // distingue no es cuanto, es hacia DONDE. Y «hacia fuera» depende del rumbo, asi que
+  // la comprobacion tiene que preguntar por el lado expuesto en vez de fijar un signo:
+  // escrita para un solo viento, este test se caeria en cuanto el viento rolase.
+  check('la fila suelta es la del PERÍMETRO, la que da al viento (x=' +
+        (filas.xFilas ? filas.xFilas.map(v => Math.round(v)).join(' y ') : '?') +
+        ', lado ' + filas.lado + ')',
+        !!filas.xFilas &&
+        (filas.xFilas[filas.filaSuelta] - filas.xFilas[1 - filas.filaSuelta]) *
+          filas.lado > 0,
+        'si se soltara la de dentro, la de fuera la apantallaría y no habría carga');
+
+  // ── EL BORDE EXPUESTO LO DECIDE EL VIENTO ──────────────────────────
+  // La correccion de fondo del modelo: se suelta la fila a BARLOVENTO. Con viento del
+  // este, el borde este; con viento del oeste, el oeste. Antes se soltaba siempre el
+  // mismo borde y estaba declarado como agujero en el propio resultado.
+  const rola = {};
+  for (const d of ['270', '90']) {
+    await page.fill('#lD', d); await page.dispatchEvent('#lD', 'input');
+    await page.waitForTimeout(700);
+    rola[d] = await page.evaluate(() => ({
+      x: ESC.bandaSuelto.map((v, i) => v ? ESC.base[i].x : null).filter(v => v != null),
+      fila: ESC.filaSuelta, lado: ESC.ladoExpuesto }));
+  }
+  check('con viento del OESTE se suelta el borde oeste y con el del ESTE el este (' +
+        'O:' + JSON.stringify(rola['270'].x) + ' E:' + JSON.stringify(rola['90'].x) + ')',
+        rola['270'].x.length > 0 && rola['90'].x.length > 0 &&
+        Math.max(...rola['270'].x) < Math.min(...rola['90'].x),
+        'si no rota con el rumbo, la carga se la lleva siempre la misma fila');
+
+  check('y la fila del bifila que se suelta cambia con él (' +
+        rola['270'].fila + ' -> ' + rola['90'].fila + ')',
+        rola['270'].fila !== rola['90'].fila,
+        'la que da al viento es la de fuera, y «fuera» depende de por dónde sopla');
+
   // ── LA HUELLA DE CADA FRANJA EN EL SUELO ───────────────────────────
   // Con las franjas encendidas, a que grupo pertenece un seguidor solo se sabia por el
   // color de su poste. La tentacion es pintar una caja por franja; seria mentira,
