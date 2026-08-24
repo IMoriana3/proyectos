@@ -1791,7 +1791,7 @@ LOC.run=function(cfg,onStep){
           row_hours_released:Math.round(hRel*100)/100,
           not_modeled:['La velocidad de suelta es un SUSTITUTO declarado de la carga mecánica de desembrague: no es una velocidad medida.',
             'No se modela la dispersión entre unidades ni el tiempo de caída: la fila pasa al límite en un paso.',
-            'La fila expuesta se supone siempre la misma y del mismo lado; no rota con el rumbo del viento.']}
+            'EN ESTE INFORME la fila expuesta se supone siempre la misma y del mismo lado: no rota con el rumbo. La vista 3D en franjas SI la rota —se suelta el borde a barlovento y la fila del bifila que da al viento— asi que las dos superficies NO dicen lo mismo, y la buena es la 3D. Cerrar el hueco aqui es tocar el nucleo.']}
       };
       series.PASIVO={theta:PR.theta,orden:PR.theta,poa:poaF,mode:Array.from(PR.mask,function(v){return v?'SUELTA':'IDLE';}),events:pEvs};
     }
@@ -2410,7 +2410,7 @@ function niceRango(lo,hi,n){
    geometría real permite sin inventarse un rumbo. El resto de su banda sigue
    en seguimiento, que es lo que el pasivo es — si se pintara la banda entera
    al ángulo del pasivo se estaría dibujando un abanderamiento de planta. */
-function repartoBandas(base,ks){
+function repartoBandas(base,ks,dirViento){
   var N=base.length, out={banda:new Array(N),centros:[],ejeX:true,suelto:new Array(N)};
   if(!N||!ks||!ks.length)return out;
   var xs=base.map(function(b){return b.x;}), zs=base.map(function(b){return b.z;});
@@ -2429,12 +2429,41 @@ function repartoBandas(base,ks){
     }
     out.centros.push(cn?{x:sx/cn,z:sz/cn,n:cn,borde:borde}:null);
   });
+  /* CUAL DE LAS DOS FILAS DEL BIFILA. En bifila, un tracker son dos filas sobre el
+     mismo motor, y la que se desembraga es la del PERIMETRO: la de fuera. La otra va
+     detras, apantallada, y sigue en seguimiento haya el viento que haya.
+     No se elige: se deriva. Las filas se desplazan +-filaZ en el eje local z, que tras
+     el giro del tracker (rot + 90 grados) apunta a (cos rot, -sin rot) en el mundo. Se
+     proyecta ese desplazamiento sobre el eje del reparto y se queda la que va hacia el
+     borde, o sea la de coordenada menor. */
+  var cs0=Math.cos(base[0]?base[0].rot:0), sn0=Math.sin(base[0]?base[0].rot:0);
+  var dCo=out.ejeX?cs0:-sn0;                       /* cuanto avanza la fila 1 en el eje */
+  out.dCo=dCo; out.filaSuelta=0;                   /* se resuelve abajo, con el rumbo */
+
+  /* QUE BORDE SE SUELTA LO DECIDE EL VIENTO, no el montaje. Se suelta la fila
+     expuesta A BARLOVENTO: con viento del este, el borde este; con viento del oeste,
+     el oeste. Es la correccion de fondo del modelo — antes se soltaba SIEMPRE el mismo
+     borde, el de coordenada menor, y eso estaba declarado como agujero en el propio
+     resultado («la fila expuesta se supone siempre la misma y del mismo lado; no rota
+     con el rumbo del viento»).
+     El rumbo entra como AZIMUT DE PROCEDENCIA (de donde sopla). En la escena +x es
+     este y +z es sur, asi que el viento que viene de `dir` avanza hacia
+     (-sin dir, +cos dir) y la cara expuesta es la contraria: la del lado de donde
+     viene. Se proyecta sobre el eje del reparto y el signo dice que extremo. */
   var iPas=ks.indexOf('PASIVO');
   for(var q2=0;q2<N;q2++)out.suelto[q2]=false;
   if(iPas>=0&&out.centros[iPas]){
+    var rad=(dirViento==null?270:dirViento)*Math.PI/180;
+    var hacia=out.ejeX?Math.sin(rad):-Math.cos(rad);   /* componente del lado expuesto */
+    out.ladoExpuesto=(hacia>=0)?1:-1;                  /* +1 = extremo mayor */
     var tol=(out.ejeX?(maxx-minx):(maxz-minz))/Math.max(1,N)*2+0.5;
+    var enPas=[]; for(var q4=0;q4<N;q4++)if(out.banda[q4]===iPas)enPas.push(co[q4]);
+    var ext=(out.ladoExpuesto>0)?Math.max.apply(null,enPas):Math.min.apply(null,enPas);
+    /* y la fila del bifila que da al viento es la que avanza HACIA ese extremo */
+    out.filaSuelta=((out.dCo*out.ladoExpuesto)>=0)?1:0;
     for(var q3=0;q3<N;q3++)
-      out.suelto[q3]=(out.banda[q3]===iPas)&&(co[q3]-out.centros[iPas].borde<=tol);
+      out.suelto[q3]=(out.banda[q3]===iPas)&&
+                     (Math.abs(co[q3]-ext)<=tol);
   }
   return out;
 }
@@ -3690,15 +3719,31 @@ async function escenaPlanta(name){
      veces sobre su propia geometría, para poder carearlas sobre el terreno
      que tienen. Confundir eso con una planta real sería justo el tipo de
      imagen que parece un dato. */
-  var _ks = casos(), _rb = repartoBandas(base, _ks);
+  var _ks = casos(), _rb = repartoBandas(base, _ks, +$('lD').value);
 
   ESC={kind:'planta',name:name,mesas:mesas,base:base,dummy:dummy,mat:matMesa,
        n:N,center:[cx,cz],ext:ext,solape:solape,fuenteLargo:fuenteLargo,
        bifila:bifila,filaZ:filaZ,nFilas:nFilas,
        banda:_rb.banda, bandaKs:_ks, bandaCentro:_rb.centros,
-       bandaSuelto:_rb.suelto, bandaEjeX:_rb.ejeX, bandas:false, etiquetas:null,
+       bandaSuelto:_rb.suelto, bandaEjeX:_rb.ejeX, filaSuelta:_rb.filaSuelta,
+       bandas:false, etiquetas:null,
        info:N+' seguidores · '+(j.clat!=null?(+j.clat).toFixed(4)+', '+(+j.clon).toFixed(4):'')+nota};
   if(j.clat!=null){$('lat').value=(+j.clat).toFixed(4);$('lon').value=(+j.clon).toFixed(4);saveCfg();}
+}
+
+/* EL BORDE EXPUESTO NO ES FIJO. Si el viento rola, la fila que estaba a barlovento
+   deja de estarlo y la del otro extremo pasa a llevarse la carga. Sin recalcular, la
+   escena seguiria soltando el borde de cuando se monto la planta, que es el agujero
+   que este cambio cierra. El reparto en franjas NO se toca —eso es geometria— : solo
+   se rehace quien esta expuesto. */
+function actualizaExpuesto(dir){
+  if(!ESC||ESC.kind!=='planta'||!ESC.banda)return false;
+  var r=repartoBandas(ESC.base,ESC.bandaKs,dir);
+  var cambio=(ESC.filaSuelta!==r.filaSuelta);
+  if(!cambio)for(var i=0;i<r.suelto.length;i++)
+    if(!!r.suelto[i]!==!!ESC.bandaSuelto[i]){cambio=true;break;}
+  ESC.bandaSuelto=r.suelto; ESC.filaSuelta=r.filaSuelta; ESC.ladoExpuesto=r.ladoExpuesto;
+  return cambio;
 }
 
 /* ── Rótulos y barras de las bandas de la planta real ──
@@ -3830,6 +3875,14 @@ function pintaEscena(ang,modos,poa,poaBase){
         // resto sigue en seguimiento haya el viento que haya. Pintar la banda
         // entera al ángulo del pasivo sería dibujar un abanderamiento de
         // planta, que es exactamente lo que el pasivo NO es.
+        /* EL PASIVO SUELTA UNA FILA, NO EL TRACKER. En bifila las dos filas van sobre
+           el mismo motor pero solo la de fuera se desembraga; la de dentro queda
+           apantallada y sigue en seguimiento. El angulo se decidia aqui, POR TRACKER,
+           asi que las dos filas del bifila se abanderaban juntas y la banda del pasivo
+           se pintaba como un abanderamiento de planta — que es justo lo que el pasivo
+           NO es. Ahora aqui solo se marca el tracker, y quien decide es el bucle de
+           filas de abajo. */
+        var pasSuelto=(kb==='PASIVO' && ESC.bandaSuelto[i]);
         var esPasI=(kb==='PASIVO' && !ESC.bandaSuelto[i]);
         tI=(esPasI?thBaseP:(ang[kb]||0)*Math.PI/180);
         modoI=(esPasI?'IDLE':(modos[kb]||'IDLE'));
@@ -3839,7 +3892,18 @@ function pintaEscena(ang,modos,poa,poaBase){
         colT.setHex(hx?hx:0xffffff);
         if(!hx)colT.setRGB(1,1,1);
       }
-      for(var fq=0;fq<ESC.nFilas;fq++)
+      for(var fq=0;fq<ESC.nFilas;fq++){
+      /* Solo la fila de perimetro del tracker suelto lleva el angulo del pasivo; su
+         gemela sigue el seguimiento. Con una sola fila (monofila) no hay nada que
+         separar y `filaSuelta` vale 0. */
+      var tF=tI, modoF=modoI;
+      if(band&&pasSuelto&&ESC.bifila&&fq!==ESC.filaSuelta){
+        tF=thBaseP; modoF='IDLE';
+      }
+      if(band&&ESC.mesas.setColorAt){
+        var hxF=MODO_COL[modoF]||0;
+        colT.setHex(hxF?hxF:0xffffff); if(!hxF)colT.setRGB(1,1,1);
+      }
       for(var w=-1;w<=1;w+=2){
         d.position.set(b2.x,Seguidor.DIMS.postH,b2.z);
         d.rotation.set(0,b2.rot+Math.PI/2,0);
@@ -3848,7 +3912,7 @@ function pintaEscena(ang,modos,poa,poaBase){
         // en el SUELO y cada una bascula sobre su propio tubo. Después del giro,
         // la gemela subiría y bajaría con la inclinación.
         var fz=ESC.bifila?new THREE.Matrix4().makeTranslation(0,0,(fq?1:-1)*ESC.filaZ):null;
-        var m=new THREE.Matrix4().makeRotationX(tI);
+        var m=new THREE.Matrix4().makeRotationX(tF);
         // el desplazamiento del ala va ANTES de la escala: si fuese después
         // lo multiplicaría el largo y las dos alas se separarían de su tubo.
         var off=new THREE.Matrix4().makeTranslation(w*b2.half,0,0);
@@ -3857,6 +3921,7 @@ function pintaEscena(ang,modos,poa,poaBase){
         d.matrix.multiply(m); d.matrix.multiply(off); d.matrix.multiply(sc);
         if(band&&ESC.mesas.setColorAt)ESC.mesas.setColorAt(i2,colT);
         ESC.mesas.setMatrixAt(i2++,d.matrix);
+      }
       }
     }
     ESC.mesas.instanceMatrix.needsUpdate=true;
@@ -4090,6 +4155,12 @@ function liveLbl(){
   $('lHlbl').textContent=hhmm(m);
   $('lClock').textContent=fechaCorta(fechaLive())+' · '+hhmm(m);
   if(LIVE){LIVE.v=v/3.6;LIVE.dir=d;}
+  /* si el viento rola, cambia QUE borde esta expuesto: hay que rehacerlo aqui, que es
+     el unico sitio por donde pasa un cambio de rumbo. Los rotulos se remontan solo si
+     de verdad cambio algo, para no rehacer la escena a cada grado. */
+  if(typeof actualizaExpuesto==='function'&&actualizaExpuesto(d)&&ESC&&ESC.etiquetas){
+    ESC.mundo&&ESC.mundo.remove(ESC.etiquetas); ESC.etiquetas=null; montaBandas();
+  }
 }
 function compass(a){var d=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];return d[Math.round(a/22.5)%16];}
 function hhmm(min){min=((min%1440)+1440)%1440;var h=Math.floor(min/60),mm=Math.round(min%60);
