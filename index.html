@@ -1242,15 +1242,16 @@ const PROJECTS = [
     name: "Modelo de propagación RF",
     status: "build",
     objetivo: "Modelo físico de propagación Zigbee 2,4 GHz entre seguidor y NCU: siting predictivo, diagnóstico de la malla desplegada y representación 3D del enlace.",
-    stack: "HTML · Canvas 3D · Python (NumPy/NetworkX) · JS",
+    stack: "HTML · three.js (seguidor.js) · Python (NumPy/NetworkX) · JS",
     url: "https://imoriana3.github.io/cobertura-rf-fv/",
     repo: "https://github.com/imoriana3/cobertura-rf-fv",
-    updated: "2026-06-18",
+    updated: "2026-08-24",
     version: "",
     docId: "cobertura-rf",
     download: "",
     uso: [
-      "Render index.html (sin dependencias): geometría bifila parametrizable y enlace coloreado por margen real en dB; abre en navegador o GitHub Pages.",
+      "Render index.html (todo vendorizado, sin servidor ni internet): tres seguidores BIFILA con el modelo real de la casa (seguidor.js, el mismo que el gemelo digital y Cobertura 3D) — viga, correas, módulos, slew drive, TCU, seccionador, pilas y eje de transmisión —, geometría parametrizable y enlace coloreado por margen real en dB.",
+      "El dibujo y la física comparten cotas: la cara del módulo sale de DIMS.off y la antena cuelga los 0,725 m del catálogo (conector de la TCU + coax), no cotas inventadas en la página.",
       "Física: FSPL + dos rayos (Fresnel) + difracción multiobstáculo (Deygout, ITU-R P.526) + margen log-normal calibrable → RSSI predicho, margen y probabilidad de enlace.",
       "Diagnóstico Python: coords + RSSI medido → calibra sesgo, construye la malla (NetworkX), detecta SPOF y nodo dominador, escribe GeoJSON.",
       "Adaptador El Burgo: routes + log → RSSI por enlace + topología observada (elburgo_real_rssi.csv / elburgo_real.geojson incluidos como dataset real)."
@@ -1261,6 +1262,7 @@ const PROJECTS = [
       { done:false, text:"Validar el núcleo físico contra ray tracing." }
     ],
     historial: [
+      { date:"2026-08-24", ver:"", note:"El seguidor del visor pasa a ser el MODELO DE LA CASA (seguidor.js) sobre three.js, en bifila real (solo la viga del motor lleva TCU y antena, eje de transmisión con cardanes). Compartir cotas con la física destapó dos que la página se inventaba: la cara del módulo (0,25 → 0,14 = DIMS.off, la que entra en lowerEdge) y la caída de la antena (0,15 → 0,725 m de catálogo; a 0,15 el elemento radiante quedaba dentro de la TCU). Núcleo RF intacto. Tramo dibujado 7/14/28 módulos por ala, tres encuadres y QA de 28 comprobaciones en Chromium." },
       { date:"2026-06-18", ver:"", note:"Alta en el panel: render 3D + núcleo físico + diagnóstico y dataset real de El Burgo." }
     ]
   },
