@@ -528,6 +528,7 @@
           <select id="gFuente">
             <option value="demo">Demostración · el episodio del fichero de casos</option>
             <option value="file">Fichero propio · CSV o JSON</option>
+            <option value="viento">El episodio del demo, sobre el VIENTO de este emplazamiento</option>
           </select></div>
         <div class="field" id="gFileBox" style="display:none">
           <label>Fichero (no sale del navegador)</label>
@@ -4933,7 +4934,70 @@ async function gCorre() {
 /* La serie: la demo sale del MISMO generador que el golden, así que la tabla
    que se dibuja sin red es la misma que sirve /hailstow/presets. */
 var GDEMO = null;
+/* ── EL CRUCE DEL §11: EL VIENTO VETA EL TRÁNSITO ──
+   `veto_transito` existe desde el PR-A y está cableado: antes de entrar en un estado
+   con ORDEN, la máquina comprueba la envolvente de viento medido y el SoC, y si no
+   cabe registra el motivo en vez de mover. Pero solo se ejercitaba sobre las 120
+   muestras escritas a mano del demo. El viento que esta ficha simula —con su meteo,
+   su ráfaga y su emplazamiento— NUNCA llegaba a la máquina de granizo.
+
+   Esta fuente cierra ese cruce con la pregunta que antes no se podía hacer: si este
+   episodio de granizo hubiera caído durante el PEOR VIENTO DEL AÑO en este sitio,
+   ¿se habría vetado el tránsito?
+
+   Cómo se compone, y qué NO se inventa:
+   · las señales de granizo —celda, CAPE, tamaño, precipitación, SoC— son las del
+     demo, tal cual. Open-Meteo no las da y no se fabrican.
+   · el viento SÍ es del emplazamiento: sale de `REP.timeline.wind_ms`, la ventana
+     del episodio más caro del año que el informe ya calcula.
+   · la RACHA no viene medida en esa serie. Se deriva con el mismo modelo declarado
+     de la ficha (`LOC.gust`, una realización por hora), y va dicho: sin racha el
+     veto respondería «sin viento medido» y vetaría siempre, que sería un resultado
+     falso en la otra dirección.
+   El resultado NO es una predicción: es un careo entre dos cosas medidas por
+   separado, puestas a coincidir a propósito. */
+function gSerieSobreViento() {
+  if (!REP || !REP.timeline || !REP.timeline.wind_ms || !REP.timeline.wind_ms.length)
+    throw new Error('primero hay que simular el año: el viento del emplazamiento ' +
+                    'sale de la ventana del peor episodio, y todavía no hay informe');
+  if (!GDEMO) throw new Error('no está cargado el episodio del demo');
+  var TLw = REP.timeline, wsBase = TLw.wind_ms.slice();
+  /* la racha, con el modelo declarado de la ficha y su paso real */
+  var pph = Math.max(1, Math.round(60 / (TLw.window.step_minutes || 60)));
+  var raf = LOC.gust(Float64Array.from(wsBase), 42, pph);
+  var dem = GDEMO.demo.muestras;
+  var ms = dem.map(function (m, i) {
+    var k = Math.min(wsBase.length - 1, i);      // el episodio, sobre la ventana
+    var o = {};
+    for (var key in m) o[key] = m[key];
+    o.viento_sostenido_ms = Math.round(wsBase[k] * 100) / 100;
+    o.viento_racha_ms = Math.round(raf[k] * 100) / 100;
+    return o;
+  });
+  /* se expone la serie compuesta para que el banco pueda mirar el VALOR y no solo
+     el efecto: falsear el sostenido dejaría el veto disparándose por la racha, y un
+     test que solo mire «hubo veto» no vería el fallo. */
+  window.GRAN_MUESTRAS = ms;
+  var pico = Math.max.apply(null, ms.map(function (m) { return m.viento_racha_ms; }));
+  return {
+    muestras: ms, dt_min: GDEMO.demo.dt_min,
+    fuente: 'episodio del demo sobre el viento de ' + (REP.corrida
+      ? (+REP.corrida.lat).toFixed(4) + ', ' + (+REP.corrida.lon).toFixed(4) +
+        ' · ' + REP.corrida.year : 'este emplazamiento'),
+    procedencia: 'señales de granizo del demo; viento del emplazamiento (ventana ' +
+      'del peor episodio); racha derivada con el modelo declarado de la ficha',
+    transiciones_tabla: GDEMO.transiciones,
+    not_modeled: (GDEMO.not_modeled || []).concat([
+      'NO es una predicción: el episodio de granizo y el viento se midieron por ' +
+      'separado y aquí se les hace coincidir a propósito, para ver si el §11 vetaría ' +
+      'el tránsito. Racha de ' + (pico * 3.6).toFixed(0) + ' km/h en el pico.',
+      'La racha no viene medida en la serie del informe: se deriva con `LOC.gust`, ' +
+      'el mismo sustituto declarado que usa el resto de la ficha.'])
+  };
+}
+
 async function gSerie() {
+  if ($('gFuente').value === 'viento') return gSerieSobreViento();
   if ($('gFuente').value === 'file' && GRAN_FILE) return GRAN_FILE;
   if (!GDEMO) {
     var r = await fetch('demo-granizo.json', { cache: 'no-store' });
