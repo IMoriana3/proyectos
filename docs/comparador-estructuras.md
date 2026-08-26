@@ -629,10 +629,12 @@ cosa dibujada y otra calculada. Con 12° al sur en Sevilla eran **158 kWh/m²** 
 la tabla se moviera. La proyección con eje inclinado la decide ahora el **ángulo**, no la etiqueta
 del catálogo.
 
-Consecuencia que hay que ver venir: **HSAT y TSAT pasan a ser la misma estructura**. Coinciden en
-llano —no hay eje que inclinar— y coinciden con pendiente a lo largo del eje —los dos la toman—. Se
-dejan los dos en el catálogo porque el careo contra el core los corre por separado, pero en la ficha
-ya no hay nada que los distinga.
+Consecuencia: **el «eje inclinado (TSAT)» deja de ofrecerse**. Con la inclinación del eje puesta por
+el terreno es la misma estructura que el N-S — coinciden en llano (no hay eje que inclinar) y
+coinciden con pendiente a lo largo del eje (los dos la toman). La ficha pasa a comparar **cinco**
+estructuras. La entrada sigue en `FIS.CATALOGO` marcada `soloCareo`, porque el fixture del core la
+corrió por separado (`axis_tilt` 10, y el HSAT con 0) y ese camino sigue vivo mientras no haya azimut
+de terreno declarado.
 
 Sin azimut declarado se respeta el valor recibido: el core toma `axis_tilt` y `cross_axis_slope` por
 separado —son las dos componentes del mismo plano— y por ahí entra el careo (el HSAT con `axis_tilt`

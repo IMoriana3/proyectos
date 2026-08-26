@@ -338,9 +338,9 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       </div>
       <div class="two">
         <div class="field"><label>Ángulo máx °</label><input id="maxang" type="number" value="55"></div>
-        <div class="field"><label>Eje inclinado ° <span class="sn">del terreno</span></label>
+        <div class="field"><label>Eje del terreno °</label>
           <input id="axtilt" type="number" step="0.5" value="0" readonly
-                 title="No se teclea: es la componente de la pendiente del sitio a lo largo del eje (§03.0). Un eje no se inclina en el aire."></div>
+                 title="No se teclea: es la componente de la pendiente del sitio a lo largo del eje (§03.0). Un eje que sigue el terreno es un eje inclinado — por eso no hay una fila aparte de «eje inclinado»."></div>
       </div>
       <div class="field"><label>Disposición</label>
         <select id="tkFilas">
@@ -417,11 +417,10 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         fija ve toda la pendiente y el seguidor ninguna</b> — la ve entera a lo largo del eje. Eso
         no es un defecto de la comparación: es la razón por la que en un sitio real una estructura
         se monta y la otra no. Y el «eje inclinado °» de un TSAT debería ser justo esa componente a lo
-        largo del eje — un eje no se inclina en el aire, y lo lleva <b>todo</b> seguidor, no solo el
-        que el catálogo llama TSAT: cada lectura dice cuánto se inclina el suyo. Con eso, <b>HSAT y
-        TSAT son la misma estructura</b> — coinciden en llano y coinciden con pendiente a lo largo
-        del eje. Se dejan los dos en el catálogo porque el careo contra el core los corre por
-        separado, pero en la ficha ya no hay nada que los distinga.</p>
+        largo del eje — un eje no se inclina en el aire—, y lo lleva <b>todo</b> seguidor: cada lectura
+        dice cuánto se inclina el suyo con el terreno. Por eso <b>no hay una fila de «eje
+        inclinado»</b>: un seguidor sobre terreno que cae a lo largo de su eje YA es un seguidor de
+        eje inclinado, y en llano no hay eje que inclinar.</p>
     </div>
     <!-- ═════════ SIZING (columna ancha: la ventana hay que LEERLA) ═════════ -->
     <div class="card">
@@ -1069,8 +1068,16 @@ FIS.CATALOGO=[
    nota:'HSAT canónico: eje horizontal N-S, backtracking activo.'},
   {key:'tracker_hsat_nobt',label:'Tracker 1 eje N-S · sin backtracking',fam:'tracker', bt:false,
    nota:'Seguimiento astronómico puro: apunta mejor y se da sombra.'},
+  /* El eje inclinado ya NO se ofrece en la ficha: desde que la inclinación del
+     eje la pone el terreno, un «tracker de eje inclinado» y un «tracker N-S»
+     son la misma estructura — coinciden en llano (no hay eje que inclinar) y
+     coinciden con pendiente a lo largo del eje (los dos la toman). Se queda en
+     el catálogo porque el CAREO lo necesita: el fixture del core lo corrió por
+     separado, con `axis_tilt` 10 y el HSAT con 0, y ese camino sigue vivo
+     mientras no haya azimut de terreno declarado. */
   {key:'tracker_tsat',     label:'Tracker 1 eje inclinado (TSAT)',  fam:'tracker', bt:true, tsat:true,
-   nota:'Eje N-S inclinado hacia el ecuador.'}
+   soloCareo:true,
+   nota:'Solo careo: con el eje que pone el terreno es el mismo que el N-S.'}
 ];
 FIS.spec=function(key){for(var i=0;i<FIS.CATALOGO.length;i++)if(FIS.CATALOGO[i].key===key)return FIS.CATALOGO[i];return null;};
 
@@ -1616,7 +1623,7 @@ var POR_DEFECTO=['fija_optima','tracker_hsat'];
 var REP=null;
 
 function pintaEstructuras(){
-  $('structs').innerHTML=FIS.CATALOGO.map(function(s){
+  $('structs').innerHTML=FIS.CATALOGO.filter(function(s){return !s.soloCareo;}).map(function(s){
     return '<label class="chk"><input type="checkbox" class="st" value="'+s.key+'"'+
       (POR_DEFECTO.indexOf(s.key)>=0?' checked':'')+'> '+
       '<span class="sw" style="background:'+COL[s.key]+'"></span>'+esc(s.label)+
@@ -1813,7 +1820,7 @@ function pintaPendiente(c){
   /* El «eje inclinado °» ya no es una entrada: se rellena con lo que da el
      terreno a lo largo del eje. Si se dejara a mano, se podría teclear un eje
      que el emplazamiento no sostiene — dibujar una cosa y calcular otra. */
-  var ej=FIS.ejeTilt(c,FIS.spec('tracker_tsat'));
+  var ej=FIS.ejeTilt(c,FIS.spec('tracker_hsat'));
   if($('axtilt'))$('axtilt').value=ej.toFixed(1);
   var p=Math.abs(c.pend||0), az=c.pendAz||0;
   if(!p){ $('pendNota').innerHTML='terreno llano · el mismo para todas'; return; }
@@ -2382,7 +2389,7 @@ function barSpec(){
   var q=$('barQue').value.split(':'), fam=q[1];
   /* Se barre sobre una estructura REAL de la familia, y se prefiere una que
      esté marcada: así la curva es del mismo bicho que la tabla. */
-  var cands=(fam==='tracker')?['tracker_hsat','tracker_hsat_nobt','tracker_tsat']
+  var cands=(fam==='tracker')?['tracker_hsat','tracker_hsat_nobt']
                              :['fija_optima','fija_proyecto'];
   var marcadas=elegidas(), k=null;
   cands.some(function(c){if(marcadas.indexOf(c)>=0){k=c;return true;}});
@@ -2586,7 +2593,7 @@ async function run(){
         gcr_por_estructura:porEstructura(cfg,keys,'gcr'),
         pitch_por_estructura:porEstructura(cfg,keys,'pitch'),
         alto_por_estructura:porEstructura(cfg,keys,'altoColector'),
-        tilt_deg:cfg.tilt, axis_tilt_deg:FIS.ejeTilt(cfg,FIS.spec('tracker_tsat')),
+        tilt_deg:cfg.tilt, axis_tilt_deg:FIS.ejeTilt(cfg,FIS.spec('tracker_hsat')),
         max_angle_deg:cfg.maxang};
       var r=await fetch(ENGINE+'/structures',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
