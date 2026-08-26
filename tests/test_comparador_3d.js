@@ -81,11 +81,16 @@ const SONDA = `(() => {
   check('se ve desde que se abre, sin comparar nada',
     (await p.evaluate(() => BLOQUES.length)) === 2);
 
-  // marcar las seis
+  // marcar las CINCO. El catálogo tiene seis, pero el «eje inclinado (TSAT)» ya
+  // no se ofrece: con la inclinación del eje puesta por el terreno es la misma
+  // estructura que el N-S. Sigue en FIS.CATALOGO porque el careo lo corre.
   for (const c of await p.$$('.st')) if (!(await c.isChecked())) await c.check();
   await p.waitForTimeout(600);
-  check('un bloque por estructura marcada',
-    (await p.evaluate(() => BLOQUES.length)) === 6);
+  check('un bloque por estructura marcada (5 en la ficha, 6 en el catálogo)',
+    (await p.evaluate(() => BLOQUES.length)) === 5);
+  check('y el TSAT no se ofrece: sería el mismo seguidor',
+    (await p.evaluate(() => [...document.querySelectorAll('.st')]
+      .every(c => c.value !== 'tracker_tsat'))) === true);
 
   // ── el box de la potencia pico: ARRIBA DEL TODO ──
   // La comparación es a igualdad de MWp, así que el pico no es un campo más
@@ -167,7 +172,7 @@ const SONDA = `(() => {
   const md = await enHora(720);
   check('a mediodía el sol está alto (' + (Math.asin(md.sol.y) * 180 / Math.PI).toFixed(0) + '°)',
     md.sol.y > 0.9);
-  for (const k of ['tracker_hsat', 'tracker_hsat_nobt', 'tracker_tsat']) {
+  for (const k of ['tracker_hsat', 'tracker_hsat_nobt']) {
     check('a mediodía ' + k + ' apunta al sol (AOI ' + md.bloques[k].aoi.toFixed(1) + '°)',
       md.bloques[k].aoi < 15);
   }
@@ -181,18 +186,18 @@ const SONDA = `(() => {
   // el eje del seguidor corre NORTE-SUR: su componente este debe ser ~0
   check('el eje del seguidor corre N-S (|este|=' + Math.abs(md.bloques.tracker_hsat.eje.x).toFixed(3) + ')',
     Math.abs(md.bloques.tracker_hsat.eje.x) < 0.02);
-  // Y el del TSAT, en LLANO, también está horizontal: un eje no se inclina en
-  // el aire. Antes se dibujaba inclinado por el campo «eje inclinado °» aunque
-  // el suelo fuese plano, y eso era media fila enterrada o media volando.
-  // Cuánto se inclina de verdad se comprueba más abajo, con terreno.
-  check('en LLANO el eje del TSAT también está horizontal (y=' +
-    md.bloques.tracker_tsat.eje.y.toFixed(3) + ')',
-    Math.abs(md.bloques.tracker_tsat.eje.y) < 0.02);
+  // En LLANO el eje está horizontal, sin más: un eje no se inclina en el aire.
+  // Antes había una fila de «eje inclinado» que se dibujaba inclinada por un
+  // campo aunque el suelo fuese plano, y eso era media fila enterrada o media
+  // volando. Cuánto se inclina de verdad se comprueba más abajo, con terreno.
+  check('en LLANO el eje del seguidor está horizontal (y=' +
+    md.bloques.tracker_hsat.eje.y.toFixed(3) + ')',
+    Math.abs(md.bloques.tracker_hsat.eje.y) < 0.02);
 
   // ── mañana: tumbado al ESTE. El error de signo no se ve a mediodía ──
   const am = await enHora(480);
   check('por la mañana el sol está al ESTE (x=' + am.sol.x.toFixed(2) + ')', am.sol.x > 0.3);
-  for (const k of ['tracker_hsat', 'tracker_hsat_nobt', 'tracker_tsat']) {
+  for (const k of ['tracker_hsat', 'tracker_hsat_nobt']) {
     check('por la mañana ' + k + ' se tumba al ESTE (nx=' + am.bloques[k].n.x.toFixed(2) + ')',
       am.bloques[k].n.x > 0.2);
     check('por la mañana ' + k + ' sigue apuntando al sol (AOI ' + am.bloques[k].aoi.toFixed(1) + '°)',
@@ -472,6 +477,10 @@ const SONDA = `(() => {
       lejos: [grad(-300, -200), grad(300, -200), grad(-300, 200), grad(300, 200)],
       cotas: cotas() });
     document.querySelectorAll('.st').forEach(c => { c.checked = true; });
+    // el hemisferio decide hacia dónde apila la fija, así que se fija aquí:
+    // pruebas anteriores dejan la ficha en el sur
+    const lat = document.getElementById('lat'); lat.value = '37.3891';
+    lat.dispatchEvent(new Event('change', { bubbles: true }));
     set(0, 180); construyeMundo(); actualiza3D();
     const llano = foto();
     set(16, 180); construyeMundo(); actualiza3D();
@@ -508,8 +517,8 @@ const SONDA = `(() => {
       f.lejos.every(g => Math.abs(g.gx - gx) < 0.3 && Math.abs(g.gz - gz) < 0.3),
       JSON.stringify(f.lejos));
   });
-  check('y las seis estructuras se apoyan en él a la misma cota (curva de nivel)',
-    suelo.diagonal.bloques.length === 6 &&
+  check('y las cinco estructuras se apoyan en él a la misma cota (curva de nivel)',
+    suelo.diagonal.bloques.length === 5 &&
     suelo.diagonal.bloques.every(b => Math.abs(b.y) < 1e-6 && Math.abs(b.suelo) < 1e-6),
     JSON.stringify(suelo.diagonal.bloques.map(b => b.k + ':' + b.suelo)));
 
@@ -525,7 +534,7 @@ const SONDA = `(() => {
     Math.abs(cruzDe(suelo.alEste, 'fija_proyecto')) < 0.01 &&
     Math.abs(cruzDe(suelo.alEste, 'tracker_hsat') - 16) < 0.01,
     JSON.stringify(suelo.alEste.bloques.map(b => b.k + ':' + b.cruz)));
-  check('y en diagonal (135°) las seis ven lo mismo, que ya no se impone: sale',
+  check('y en diagonal (135°) todas ven lo mismo, que ya no se impone: sale',
     suelo.diagonal.bloques.every(b =>
       Math.abs(Math.abs(b.cruz) - Math.abs(cruzDe(suelo.diagonal, 'fija_proyecto'))) < 0.01),
     JSON.stringify(suelo.diagonal.bloques.map(b => b.k + ':' + b.cruz)));
@@ -569,11 +578,69 @@ const SONDA = `(() => {
     mide(0, 180);
     return r;
   });
+  // El SEGUIDOR sigue el terreno a lo largo de su eje —eso es un eje inclinado—.
+  // La FIJA no: se monta al tilt de proyecto y lo que compensa la pendiente a lo
+  // largo de sus filas es la longitud de las hincas. Así que aquí solo se exige
+  // al seguidor; de la fija se comprueba lo contrario más abajo.
   ['nne', 'este', 'sur'].forEach(caso => {
-    check('con la caída ' + caso + ', NINGUNA fila vuela ni se entierra en sus extremos',
-      sigue[caso].every(b => b.vuelo.every(v => Math.abs(v) < 0.02)),
+    check('con la caída ' + caso + ', el SEGUIDOR sigue el terreno de punta a punta',
+      sigue[caso].filter(b => /^tracker/.test(b.k))
+                 .every(b => b.vuelo.every(v => Math.abs(v) < 0.02)),
       JSON.stringify(sigue[caso].map(b => b.k + ':' + b.vuelo.join('/'))));
   });
+
+  // ── UNA FIJA NO SIGUE EL TERRENO: LO COMPENSAN LAS HINCAS ──
+  // Se monta al tilt de proyecto. Antes se escoraba la mesa entera con el suelo
+  // —que es lo que hace un seguidor— y el tilt dibujado dejaba de ser el
+  // tecleado.
+  const fijaPend = await p.evaluate(() => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
+    document.querySelectorAll('.st').forEach(c => { c.checked = c.value === 'fija_proyecto'; });
+    const mide = (pend, az) => {
+      s('pend', pend); s('pendAz', az);
+      const u = BLOQUES[0].filas[0]; u.updateWorldMatrix(true, true);
+      const n = new THREE.Vector3(0, 1, 0).applyQuaternion(
+        u.spin.getWorldQuaternion(new THREE.Quaternion())).normalize();
+      // ¿pisan las hincas el suelo?
+      let peor = 0;
+      u.children.forEach(o => { if (!o.isMesh || !o.geometry.parameters ||
+        Math.abs(o.geometry.parameters.width - 0.16) > 1e-6) return;
+        const c = new THREE.Box3().setFromObject(o);
+        const x = (c.min.x + c.max.x) / 2, z = (c.min.z + c.max.z) / 2;
+        const d = Math.abs(c.min.y - cotaTerreno(x, z, TERRENO_3D));
+        if (d > peor) peor = d; });
+      return { tilt: +(Math.acos(Math.min(1, n.y)) * 180 / Math.PI).toFixed(2),
+               pisan: +peor.toFixed(2), nocabe: !!BLOQUES[0].hincas.nocabe,
+               hincas: [+BLOQUES[0].hincas.corta.toFixed(2),
+                        +BLOQUES[0].hincas.larga.toFixed(2)] };
+    };
+    const r = { llano: mide(0, 180), ns: mide(12, 180), eo: mide(12, 90) };
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
+    s('pend', 0);
+    return r;
+  });
+  ['llano', 'ns', 'eo'].forEach(caso => {
+    check('la fija se monta a SU tilt (25°) también con la caída ' + caso + ': ' +
+      fijaPend[caso].tilt + '°', Math.abs(fijaPend[caso].tilt - 25) < 0.05,
+      JSON.stringify(fijaPend[caso]));
+    /* Las hincas pisan el suelo... mientras la hinca pueda existir. Donde el
+       terreno pide una hinca NEGATIVA no se monta de una pieza, y eso no se
+       tapa: se declara. */
+    check('  y sus hincas pisan el suelo' + (fijaPend[caso].nocabe ? ' donde las hay' : ''),
+      fijaPend[caso].nocabe || fijaPend[caso].pisan < 0.05,
+      String(fijaPend[caso].pisan));
+  });
+  check('con la pendiente ⊥ a sus filas (N-S) las hincas ni se enteran: todas iguales',
+    Math.abs(fijaPend.ns.hincas[0] - fijaPend.ns.hincas[1]) < 0.01,
+    JSON.stringify(fijaPend.ns.hincas));
+  check('y con la pendiente A LO LARGO (E-O) es la HINCA la que compensa (' +
+    fijaPend.eo.hincas.join('–') + ' m)',
+    fijaPend.eo.hincas[1] - fijaPend.eo.hincas[0] > 3, JSON.stringify(fijaPend.eo.hincas));
+  check('y cuando la hinca saldría NEGATIVA se declara: no se monta de una pieza',
+    fijaPend.eo.nocabe === true && fijaPend.llano.nocabe === false,
+    JSON.stringify([fijaPend.llano.nocabe, fijaPend.ns.nocabe, fijaPend.eo.nocabe]));
   // Y adaptarse es inclinarse LO QUE SE INCLINA EL SUELO, ni más ni menos: el
   // eje del seguidor sube exactamente la componente a lo largo del eje.
   const tk = c => sigue[c].find(b => b.k === 'tracker_hsat');
@@ -597,7 +664,7 @@ const SONDA = `(() => {
       e.dispatchEvent(new Event('change', { bubbles: true }));
       const q = document.getElementById('pendAz'); q.value = String(a);
       q.dispatchEvent(new Event('change', { bubbles: true }));
-      const B = BLOQUES.find(x => x.key === 'tracker_tsat');
+      const B = BLOQUES.find(x => x.key === 'tracker_hsat');
       const u = B.filas[0]; u.updateWorldMatrix(true, true);
       return { campo: +campo.value,
                dibujado: +(new THREE.Vector3(0, 0, 1).transformDirection(u.matrixWorld).y
@@ -622,6 +689,131 @@ const SONDA = `(() => {
     Math.sin(26 * Math.PI / 180).toFixed(3) + ')',
     Math.abs(Math.abs(eje.sur.dibujado) - Math.sin(26 * Math.PI / 180)) < 0.01,
     String(eje.sur.dibujado));
+
+  // ── EL AZIMUT DE LA ESTRUCTURA, QUE NO ES EL DEL TERRENO ──
+  // Ni la fija mira siempre al ecuador ni el eje corre siempre norte-sur: es
+  // decisión de proyecto. Se declara como desvío (0 = lo de manual, positivo al
+  // oeste) y tiene que mover la ESCENA, no solo la nota.
+  const azim = await p.evaluate(() => {
+    const grados = v => (v * 180 / Math.PI + 360) % 360;
+    const set = (df, de) => {
+      const a = document.getElementById('desvFija'); a.value = String(df);
+      a.dispatchEvent(new Event('change', { bubbles: true }));
+      const b = document.getElementById('desvEje'); b.value = String(de);
+      b.dispatchEvent(new Event('change', { bubbles: true }));
+      const F = BLOQUES.find(x => x.key === 'fija_proyecto');
+      const T = BLOQUES.find(x => x.key === 'tracker_hsat');
+      // Azimut al que APILA la fija, que es al que mira. Se mide sobre el marco
+      // del bloque y no sobre la normal del panel: la fila se apoya además en
+      // el terreno, y ese escorado mueve la normal unos grados — el azimut de
+      // proyecto es el del marco.
+      const g = F.filas[0].parent; g.updateWorldMatrix(true, false);
+      const d = new THREE.Vector3(0, 0, 1).transformDirection(g.matrixWorld);
+      const azPanel = grados(Math.atan2(d.x, -d.z));
+      // dirección del EJE del seguidor en el mundo (su +Z local es el tubo)
+      const u = T.filas[0]; u.updateWorldMatrix(true, true);
+      const e = new THREE.Vector3(0, 0, 1).transformDirection(u.matrixWorld);
+      const azEje = grados(Math.atan2(e.x, -e.z));
+      return { azPanel: +azPanel.toFixed(1), azEje: +azEje.toFixed(1),
+               cruzF: +F.cruz.toFixed(2), cruzT: +T.cruz.toFixed(2) };
+    };
+    document.querySelectorAll('.st').forEach(c => { c.checked = true; });
+    const lat = document.getElementById('lat'); lat.value = '37.3891';
+    lat.dispatchEvent(new Event('change', { bubbles: true }));
+    const e = document.getElementById('pend'); e.value = '16';
+    e.dispatchEvent(new Event('change', { bubbles: true }));
+    const q = document.getElementById('pendAz'); q.value = '180';
+    q.dispatchEvent(new Event('change', { bubbles: true }));
+    const r = { base: set(0, 0), fija30: set(30, 0), eje20: set(0, 20) };
+    r.nota = document.getElementById('azFijaNota').textContent.replace(/\s+/g, ' ');
+    set(0, 0);
+    return r;
+  });
+  check('sin desvíos el panel mira al sur (' + azim.base.azPanel + '°) y el eje ' +
+    'corre norte-sur (' + azim.base.azEje + '°)',
+    Math.abs(azim.base.azPanel - 180) < 1.5 &&
+    Math.min(azim.base.azEje, Math.abs(azim.base.azEje - 180)) < 1.5,
+    JSON.stringify(azim.base));
+  check('con 30° de desvío la fija mira a 210° en la ESCENA, no solo en la nota',
+    Math.abs(azim.fija30.azPanel - 210) < 1.5, String(azim.fija30.azPanel));
+  check('y el seguidor no se entera: su eje sigue norte-sur',
+    Math.min(azim.fija30.azEje, Math.abs(azim.fija30.azEje - 180)) < 1.5,
+    String(azim.fija30.azEje));
+  check('con 20° de desvío el EJE gira a 20° y la fija no se entera',
+    Math.min(Math.abs(azim.eje20.azEje - 20), Math.abs(azim.eje20.azEje - 200)) < 1.5 &&
+    Math.abs(azim.eje20.azPanel - 180) < 1.5, JSON.stringify(azim.eje20));
+  // y lo que de verdad importa: girar la estructura cambia CUÁNTA pendiente ve
+  check('girar la fija 30° le baja la pendiente ⊥ de 16° a ' + azim.fija30.cruzF + '° ' +
+    '(16° · cos 30°)', Math.abs(Math.tan(azim.fija30.cruzF * Math.PI / 180) -
+      Math.tan(16 * Math.PI / 180) * Math.cos(30 * Math.PI / 180)) < 0.002,
+    JSON.stringify([azim.base.cruzF, azim.fija30.cruzF]));
+  check('y girar el eje 20° le SUBE la del seguidor de 0° a ' + azim.eje20.cruzT + '°',
+    Math.abs(azim.base.cruzT) < 0.01 && Math.abs(azim.eje20.cruzT) > 5,
+    JSON.stringify([azim.base.cruzT, azim.eje20.cruzT]));
+  check('y el campo lo dice con su rumbo',
+    /210/.test(azim.nota) === false || /oeste|este/.test(azim.nota), azim.nota);
+
+  // ── BRÚJULA Y CÁMARA LIBRE ──
+  // Con tres azimutes en juego —terreno, fija y eje— y la cámara orbitando, sin
+  // una rosa no hay forma de leer ninguno. Y la cámara se podía desplazar desde
+  // siempre, pero cada reconstrucción la devolvía a su sitio: como no se podía
+  // tocar un campo sin perder la vista, en la práctica no se podía mirar a otro
+  // lado.
+  const rosa = async (pend, az) => {
+    await p.evaluate(v => {
+      const s = (id, x) => { const el = document.getElementById(id);
+        el.value = String(x); el.dispatchEvent(new Event('change', { bubbles: true })); };
+      s('pend', v[0]); s('pendAz', v[1]);
+    }, [pend, az]);
+    await p.waitForTimeout(350);
+    return p.evaluate(() => {
+      const g = id => document.querySelector('#' + id);
+      const gr = id => { const t = g(id).getAttribute('transform');
+        return t ? +/-?[\d.]+/.exec(t)[0] : null; };
+      return { norte: gr('brjRosa'), pend: gr('brjPend'),
+               pendVis: g('brjPend').style.display, solVis: g('brjSol').style.display,
+               sol: gr('brjSol') };
+    });
+  };
+  const bLlano = await rosa(0, 180), bSur = await rosa(16, 180), bEste = await rosa(16, 90);
+  check('hay brújula, y el norte gira con la cámara',
+    bLlano.norte !== null && Math.abs(bLlano.norte - bEste.norte) > 20,
+    JSON.stringify([bLlano.norte, bEste.norte]));
+  check('en llano no enseña flecha de pendiente: no hay ninguna',
+    bLlano.pendVis === 'none', bLlano.pendVis);
+  // La flecha apunta a donde CAE el terreno. Con la cámara cuesta abajo, cae
+  // hacia el que mira: abajo en pantalla, o sea cerca de 180°.
+  [['al sur', bSur], ['al este', bEste]].forEach(([nom, b]) => {
+    check('cayendo ' + nom + ' la flecha apunta cuesta abajo (' + b.pend + '°)',
+      b.pendVis === '' && Math.abs(Math.abs(b.pend) - 180) < 35, JSON.stringify(b));
+  });
+  check('y el sol también sale en la rosa, que es lo que dice adónde van las sombras',
+    bSur.solVis === '' && bSur.sol !== null, JSON.stringify(bSur));
+
+  const libre = await p.evaluate(async () => {
+    const antes = [TD.cam.position.x, TD.cam.position.z];
+    // el usuario orbita: OrbitControls dispara 'start'
+    TD.ct.dispatchEvent({ type: 'start' });
+    TD.cam.position.set(-90, 60, 20); TD.ct.update();
+    const mov = [TD.cam.position.x, TD.cam.position.z], flag = TD.libre;
+    // y ahora toca un campo, que reconstruye la escena
+    const e = document.getElementById('pend'); e.value = '20';
+    e.dispatchEvent(new Event('change', { bubbles: true }));
+    const tras = [TD.cam.position.x, TD.cam.position.z];
+    document.querySelector('.recentrar').click();
+    const rec = [TD.cam.position.x, TD.cam.position.z];
+    return { antes, mov, flag, tras, rec, libreTrasRec: TD.libre };
+  });
+  check('mover la cámara la marca como del USUARIO', libre.flag === true);
+  check('y reconstruir la escena ya no se la quita de las manos',
+    Math.hypot(libre.tras[0] - libre.mov[0], libre.tras[1] - libre.mov[1]) < 1,
+    JSON.stringify([libre.mov, libre.tras]));
+  check('«recentrar» la devuelve al encuadre de la escena',
+    libre.libreTrasRec === false &&
+    Math.hypot(libre.rec[0] - libre.mov[0], libre.rec[1] - libre.mov[1]) > 20,
+    JSON.stringify([libre.mov, libre.rec]));
+  await p.evaluate(() => { const e = document.getElementById('pend'); e.value = '0';
+    e.dispatchEvent(new Event('change', { bubbles: true })); });
 
   // ── LA CÁMARA, POR EL LADO DEL ECUADOR ──
   // La cámara se pone cuesta abajo para ver los bloques en línea y la ladera
@@ -680,46 +872,88 @@ const SONDA = `(() => {
   check('la cuña de la primera versión no ha vuelto',
     (await p.evaluate(() => typeof taludTSAT === 'undefined')) === true);
 
-  // ── bifila: DOS filas que son UN seguidor, con su transmisión ──
+  // ── bifila: DOS filas que son UN seguidor ──
   // Monofila y bifila no cambian la mesa —es operativa, no geométrica— pero sí
-  // cambian qué es «un seguidor». Sin dibujar el accionamiento compartido, dos
-  // filas de una bifila y dos monofilas se ven idénticas: justo la distinción
-  // que la palabra nombra.
+  // cambian qué es «un seguidor». La distinción la resuelve el modelo de la
+  // casa, el mismo que usa el bt3d: en una bifila solo UNA de las dos vigas
+  // lleva el accionamiento (`buildBeam` con west:true — slew completo, TCU,
+  // abarcones, antena) y la otra es la GEMELA, la del eje de transmisión, que
+  // del slew solo lleva las piezas twin (corona, bracket, soporte).
   const bloque = k => p.evaluate(`(() => {
     const B = BLOQUES.find(b => b.key === ${JSON.stringify(k)});
-    const g = B.filas[0].parent;
-    const ejes = g.children
-      .filter(o => B.filas.indexOf(o) < 0 && o.type === 'Group' && o.children.length === 4)
-      .map(e => { const c = new THREE.Box3().setFromObject(e);
-                  return { x0: +c.min.x.toFixed(2), x1: +c.max.x.toFixed(2) }; })
-      .sort((a, b) => a.x0 - b.x0);
-    return { filas: B.filas.length, por: B.porTracker, pitch: +B.pitch.toFixed(2), ejes };
+    const piezas = B.filas.map(u => { let n = 0; u.traverse(o => { if (o.isMesh) n++; }); return n; });
+    return { filas: B.filas.length, por: B.porTracker, pitch: +B.pitch.toFixed(2), piezas };
   })()`);
   const mono = await bloque('tracker_hsat');
-  check('en monofila hay ' + mono.filas + ' filas y ninguna transmisión',
-    mono.por === 1 && mono.ejes.length === 0, JSON.stringify(mono));
+  check('en monofila cada fila lleva SU accionamiento: todas iguales (' +
+    mono.piezas.join('/') + ')',
+    mono.por === 1 && mono.piezas.every(n => n === mono.piezas[0]),
+    JSON.stringify(mono));
 
   await pon('tkFilas', 2);
   const bi = await bloque('tracker_hsat');
   check('en bifila el bloque dibuja DOS seguidores enteros (4 filas)',
     bi.filas === 4 && bi.por === 2, JSON.stringify(bi));
-  check('cada seguidor bifila lleva SU transmisión (' + bi.ejes.length + ')',
-    bi.ejes.length === 2, JSON.stringify(bi.ejes));
-  const luz = bi.ejes.map(e => e.x1 - e.x0);
-  check('la transmisión cruza justo un pitch, de una fila a la otra (' +
-    luz.map(v => v.toFixed(2)).join(' / ') + ' con pitch ' + bi.pitch + ')',
-    luz.every(v => v > bi.pitch * 0.98 && v < bi.pitch * 1.12));
-  // el hueco del medio NO lleva barra: esas dos filas son de seguidores distintos
-  check('entre los dos seguidores no hay transmisión (' +
-    (bi.ejes[1].x0 - bi.ejes[0].x1).toFixed(2) + ' m de hueco)',
-    bi.ejes[1].x0 - bi.ejes[0].x1 > bi.pitch * 0.85);
+  check('y las vigas se alternan motriz/gemela (' + bi.piezas.join('/') + ')',
+    bi.piezas[0] === bi.piezas[2] && bi.piezas[1] === bi.piezas[3] &&
+    bi.piezas[0] > bi.piezas[1], JSON.stringify(bi.piezas));
+  check('la viga MOTRIZ es la misma que la de una monofila: no se le quita nada',
+    bi.piezas[0] === mono.piezas[0], JSON.stringify([mono.piezas[0], bi.piezas[0]]));
+  // La gemela no es media viga: lleva sus módulos y sus correas, y del slew solo
+  // corona, bracket y soporte. Si saliera casi vacía sería otro error.
+  check('y la GEMELA conserva módulos y correas, solo pierde el accionamiento',
+    bi.piezas[1] > bi.piezas[0] * 0.4 && bi.piezas[1] < bi.piezas[0] * 0.9,
+    JSON.stringify(bi.piezas));
+
+  // Y EL EJE que une cada par: la gemela no tiene motor, la mueve la motriz. Va
+  // de corona a corona —en el modelo de la casa la corona está en el centro del
+  // tubo— y en pendiente tiene que llegar a las DOS cotas, que no son la misma.
+  const trans = await p.evaluate(() => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
+    document.querySelectorAll('.st').forEach(c => { c.checked = c.value === 'tracker_hsat'; });
+    s('tkFilas', 2); s('pend', 16); s('pendAz', 90);
+    const B = BLOQUES[0], g = B.filas[0].parent;
+    const ejes = g.children.filter(o => B.filas.indexOf(o) < 0 && o.type === 'Group');
+    const out = ejes.map(ej => { ej.updateWorldMatrix(true, true);
+      const c = new THREE.Box3().setFromObject(ej);
+      /* ¿Llega a las dos coronas? Se mide la distancia de cada corona a la
+         CAJA del eje: cero si la toca. Comparar esquina con esquina no vale —
+         en pendiente el eje baja, así que su esquina de x mínima es la de y
+         MÁXIMA y el emparejamiento depende del signo. */
+      const alCorona = B.filas.map(u => {
+        const w = u.getWorldPosition(new THREE.Vector3());
+        const y = w.y + Seguidor.DIMS.postH;
+        const dx = Math.max(c.min.x - w.x, 0, w.x - c.max.x);
+        const dy = Math.max(c.min.y - y, 0, y - c.max.y);
+        return +Math.hypot(dx, dy).toFixed(2);
+      }).sort((a, b) => a - b);
+      return { luz: +(c.max.x - c.min.x).toFixed(2), extremos: alCorona.slice(0, 2) };
+    });
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
+    s('tkFilas', 2); s('pend', 0);
+    return { n: ejes.length, ejes: out, pitch: +B.pitch.toFixed(2) };
+  });
+  check('cada par bifila lleva SU eje de transmisión (' + trans.n + ')', trans.n === 2,
+    JSON.stringify(eje));
+  check('el eje cruza justo un pitch, de una corona a la de al lado (' +
+    trans.ejes.map(e => e.luz).join(' / ') + ' con pitch ' + trans.pitch + ')',
+    trans.ejes.every(e => e.luz > trans.pitch * 0.9 && e.luz < trans.pitch * 1.1),
+    JSON.stringify(trans.ejes));
+  check('y en PENDIENTE llega a las dos cotas: sus extremos caen en los tubos',
+    trans.ejes.every(e => e.extremos.every(d => d < 0.7)),
+    JSON.stringify(trans.ejes.map(e => e.extremos)));
+
+  await pon('tkFilas', 2);
   const fj = await bloque('fija_optima');
   check('la fija no se agrupa aunque el tracker sea bifila',
-    fj.por === 1 && fj.ejes.length === 0 && fj.filas === 3, JSON.stringify(fj));
+    fj.por === 1 && fj.filas === 3, JSON.stringify(fj));
   await pon('tkFilas', 1);
   const vuelta = await bloque('tracker_hsat');
-  check('volver a monofila deshace el par', vuelta.filas === mono.filas &&
-    vuelta.por === 1 && vuelta.ejes.length === 0, JSON.stringify(vuelta));
+  check('volver a monofila deshace el par y devuelve el accionamiento a todas',
+    vuelta.filas === mono.filas && vuelta.por === 1 &&
+    vuelta.piezas.every(n => n === mono.piezas[0]), JSON.stringify(vuelta));
 
   // ── una fija no tiene motor ──
   // El hueco entre las mesas de una fila es el MISMO parámetro geométrico en
@@ -941,6 +1175,109 @@ const SONDA = `(() => {
   check('ningún tilt bate al óptimo', bt2.rels.every(r => r <= 1e-9));
   check('y se declara que el óptimo es el de la REJILLA, no el fino',
     /rejilla/i.test(bt2.read), bt2.read.slice(0, 120));
+
+  // ── LO QUE LA TABLA NO PUEDE DECIDIR: backtracking sí o no ──
+  // Las dos filas de seguidor invitan a leer justo lo contrario de lo que dicen:
+  // la pérdida por sombra entra como fracción sombreada del plano, LINEAL, y en
+  // un string real una sombra parcial cuesta mucho más que su fracción. Por POA
+  // el backtracking casi nunca gana. Si eso no se dice, la tabla parece estar
+  // resolviendo una pregunta que no resuelve.
+  const notaBT = await p.evaluate(() => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    document.querySelectorAll('.st').forEach(c => { c.checked = true; });
+    s('pend', 0); construyeMundo();
+    drawTabla(REP.base);
+    const llano = document.getElementById('tblNote').textContent.replace(/\s+/g, ' ');
+    s('pend', 12); s('pendAz', 90);
+    drawTabla(REP.base);
+    const cruz = document.getElementById('tblNote').textContent.replace(/\s+/g, ' ');
+    s('pend', 0);
+    return { llano, cruz };
+  });
+  check('la tabla avisa de que por POA el backtracking casi nunca gana',
+    /fracción sombreada del plano/i.test(notaBT.llano) && /lineal/i.test(notaBT.llano) &&
+    /DC\/AC/.test(notaBT.llano), notaBT.llano.slice(-320));
+  check('y con pendiente ⊥ avisa además de que el ángulo se calcula en llano',
+    /en llano/i.test(notaBT.cruz) && /cross_axis_tilt/i.test(notaBT.cruz),
+    notaBT.cruz.slice(-320));
+  check('y sin pendiente ⊥ no lo dice, que no viene a cuento',
+    !/cross_axis_tilt/i.test(notaBT.llano), notaBT.llano.slice(-200));
+
+  // ── LAS HINCAS ──
+  // Una fila de 65 m sobre uno o dos postes no es una estructura: es un puente,
+  // o un balancín. En campo la hinca va cada 4-6 m en una fija y cada 6-9 m en
+  // un seguidor —es lo que fija el vano entre rodamientos, y con él el momento y
+  // la sección del tubo—. La fija llevaba DOS, una en cada punta; el seguidor,
+  // UNA, la del accionamiento.
+  const hincas = await p.evaluate(() => {
+    document.querySelectorAll('.st').forEach(c => {
+      c.checked = ['fija_proyecto', 'tracker_hsat'].includes(c.value); });
+    const e = document.getElementById('pend'); e.value = '0';
+    e.dispatchEvent(new Event('change', { bubbles: true }));
+    const mide = (k, eje) => {
+      const B = BLOQUES.find(b => b.key === k), u = B.filas[0];
+      const zs = [];
+      u.traverse(o => { if (o.isMesh && o.geometry.parameters &&
+        Math.abs(o.geometry.parameters.width - 0.18) < 1e-6 &&
+        Math.abs(o.geometry.parameters.height - Seguidor.DIMS.postH) < 1e-6)
+          zs.push(eje === 'z' ? o.position.z : o.position.x); });
+      // la fija las lleva dentro de la mesa: se buscan por su caja
+      if (!zs.length) u.traverse(o => { if (o.isMesh && o.geometry.parameters &&
+        Math.abs(o.geometry.parameters.width - 0.16) < 1e-6) zs.push(o.position.x); });
+      // el seguidor tiene además la hinca del accionamiento en el centro, que la
+      // pone el propio modelo (`soporte`): cuenta para el vano
+      if (eje === 'z') zs.push(0);
+      zs.sort((a, b) => a - b);
+      const pasos = zs.slice(1).map((v, i) => +(v - zs[i]).toFixed(2));
+      return { n: zs.length, largo: +cfgActual().geomDe(B.spec).largoFila.toFixed(2),
+               span: +(zs[zs.length - 1] - zs[0]).toFixed(2), pasos };
+    };
+    return { fija: mide('fija_proyecto', 'x'), tk: mide('tracker_hsat', 'z') };
+  });
+  check('la mesa fija lleva hinca cada 4-6 m, no dos en las puntas (' +
+    hincas.fija.n + ' en ' + hincas.fija.largo + ' m)',
+    hincas.fija.n >= 8 && hincas.fija.pasos.every(d => d <= 6.5),
+    JSON.stringify(hincas.fija));
+  check('y cubren la fila entera, no un trozo',
+    hincas.fija.span > hincas.fija.largo * 0.9, JSON.stringify(hincas.fija.span));
+  check('el seguidor lleva hinca cada 6-9 m, no solo la del accionamiento (' +
+    hincas.tk.n + ' en ' + hincas.tk.largo + ' m)',
+    hincas.tk.n >= 7 && hincas.tk.pasos.every(d => d <= 9),
+    JSON.stringify(hincas.tk));
+  check('y también de punta a punta del tubo',
+    hincas.tk.span > hincas.tk.largo * 0.9, JSON.stringify(hincas.tk.span));
+
+  // ── LOS LIENZOS 2D, NÍTIDOS ──
+  // Los width/height de un <canvas> son el BÚFER en píxeles y el CSS lo estira.
+  // Estaban fijos en 1.100 y el CSS los ponía al 100 % de la tarjeta, así que en
+  // una tarjeta más ancha —o en cualquier pantalla a 2×— el navegador AMPLIABA
+  // el dibujo y las letras salían pixeladas. El búfer tiene que ser el tamaño
+  // real por el `devicePixelRatio`, ni más ni menos.
+  const nitido = await p.evaluate(() => {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    return ['cvVent', 'cvBar', 'cvMes', 'cvRank'].map(id => {
+      const c = document.getElementById(id);
+      return { id, buf: c.width, css: Math.round(c.clientWidth),
+               debe: Math.round(Math.round(c.clientWidth) * dpr) };
+    });
+  });
+  check('cada lienzo 2D tiene el búfer que le toca: ni ampliado ni reducido',
+    nitido.every(c => c.css > 0 && Math.abs(c.buf - c.debe) <= 1),
+    JSON.stringify(nitido));
+  // y que no se salgan del lienzo: al pasar a la anchura real, la leyenda del
+  // ranking se iba por el borde derecho
+  const leyenda = await p.evaluate(() => {
+    const c = document.getElementById('cvRank'), g = c.getContext('2d');
+    g.font = '11px ui-monospace,monospace';
+    const L = Math.min(250, Math.round(c.clientWidth * 0.34));
+    const larga = 'sólido: por m² de módulo   ·   translúcido: por m² de suelo (× GCR)';
+    const corta = 'sólido: módulo · translúcido: suelo';
+    const usa = g.measureText(larga).width > c.clientWidth - L - 6 ? corta : larga;
+    return { cabe: L + g.measureText(usa).width <= c.clientWidth, ancho: c.clientWidth };
+  });
+  check('y la leyenda del ranking cabe en el lienzo (' + leyenda.ancho + ' px)',
+    leyenda.cabe === true, JSON.stringify(leyenda));
 
   // ── las temperaturas del emplazamiento ──
   // El string se dimensiona por los dos extremos térmicos del SITIO. Aquí no

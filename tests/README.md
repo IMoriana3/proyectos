@@ -13,9 +13,47 @@ escrito a mano en vez de quedarse en blanco.
 navegador: extrae el bloque `FÍSICA PURA` del HTML REAL —no una copia, que se quedaría careando una
 versión vieja— lo corre sobre la misma meteo que corrió `solargpt_core.structure_compare`
 (`careo-estructuras.json`) y exige que el ORDEN entre estructuras sea idéntico, los Δ% queden dentro
-de 2,5 pp y la POA absoluta dentro del 8 %. Incluye un mutante: si se invierte el sentido del eje
-inclinado, el careo tiene que ponerse rojo. El fixture se regenera con
-`python3 tests/gen_careo_estructuras.py --core /ruta/a/SolarGPTfull/solargpt`.
+de **0,80 pp** y la POA absoluta dentro del **2,5 %**. Incluye un mutante: si se invierte el sentido
+del eje inclinado, el careo tiene que ponerse rojo. El fixture se regenera con
+`python3 tests/gen_careo_estructuras.py --core /ruta/a/SolarGPTfull/solargpt --motivo "…"`.
+
+### El golden lleva MANIFIESTO, y las tolerancias tienen un número detrás (PORTAL-BUG-01)
+
+`careo-estructuras.json` estuvo **cinco días careando dos físicas distintas** sin que nada lo dijera,
+y el mecanismo no fue de cálculo sino de procedencia:
+
+| cuándo | qué |
+|---|---|
+| 2026-08-20 14:46 | el motor JS de la ficha empieza a sombrear el circunsolar (`dirCirc`, `c84753f`) |
+| 2026-08-21 08:36 | el **core** hace lo mismo (SolarGPT v1.64.0, `8c6fbc6`) |
+| 2026-08-21 17:43 | se regenera el golden (`9a15dc2`) — **nueve horas después** y con la física vieja dentro |
+
+El clon local de SolarGPT desde el que se generó no tenía ese merge, el golden **no registraba de qué
+core salía**, y la tolerancia de entonces (2,5 pp) era **más ancha que la deriva** (1,12 pp), así que
+el careo siguió en verde. Verificado: el golden anterior reproduce **dígito a dígito** (Δ = 0,000000
+en todos los campos) lo que da el core `bb396ad`, el commit inmediatamente anterior a v1.64.0.
+
+Lo que se cierra:
+
+* **manifiesto** en el golden con commit, versión y fecha del core, si el árbol estaba sucio, la
+  fecha de generación y el **motivo** — que `--motivo` exige y que el careo comprueba que tenga
+  sustancia;
+* **sello sha256** sobre los BYTES del fichero (con el propio campo vacío, y por eso funciona igual
+  desde Python y desde Node: hashear el objeto parseado sería carear `json.dumps` contra
+  `JSON.stringify`, que no escriben los mismos números);
+* **pin del core** en el careo: subir el golden a otro core obliga a tocar `CORE_PIN` y el cambio de
+  física aparece en el diff en vez de colarse dentro de un JSON de 30 KB;
+* **tolerancias medidas, no redondas**: el hueco real JS↔core (Hay-Davies vs Perez, sin IAM) es
+  1,365 % en POA y 0,367 pp en Δ%, así que las tolerancias quedan en ×1,8 y ×2,2 de ese hueco, con
+  una comprobación que impide que vuelvan a abrirse;
+* **centinela** con los números del golden viejo: la tolerancia de hoy los pone en rojo, y su
+  mutante comprueba que la de ayer no.
+
+**Límite declarado**: de las seis estructuras, la tolerancia nueva caza `tracker_hsat_nobt`
+(deriva 1,120 pp) y **no** `tracker_hsat` (0,499 pp) ni `tracker_tsat` (0,448 pp) — bajar más el
+listón dejaría ×1,3 sobre el hueco irreducible del modelo y el careo se pondría rojo por
+Hay-Davies-vs-Perez en vez de por un bug. Con una en rojo basta para parar el merge, que es para lo
+que existe; queda escrito para que nadie lea «la tolerancia cubre la deriva».
 
 `test_comparador_3d.js` mide la ORIENTACIÓN real de cada panel en la escena (la normal, sacada de
 la matriz del grupo que bascula) y la contrasta con dónde está el sol: un 3D bonito que apunte mal
@@ -150,12 +188,12 @@ python3 -m http.server 8099                # servir el repo (en otra terminal)
 node tests/test_index.js                   # 13 comprobaciones
 node tests/test_pwa.js                     # 21 comprobaciones (PWA)
 node tests/test_integridad.js              # 6 comprobaciones, sin navegador
-node tests/test_comparador.js              # 169 comprobaciones, careo contra el core y barridos
-node tests/test_comparador_3d.js           # 154 comprobaciones, escena 3D, equipos, sizing y barridos
+node tests/test_comparador.js              # 200 comprobaciones, careo contra el core y barridos
+node tests/test_comparador_3d.js           # 188 comprobaciones, escena 3D, equipos, sizing y barridos
 node tests/test_sizing.js                  # 115 comprobaciones, careo del dimensionado eléctrico
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
 node tests/test_viento_ejes.js             # 77 comprobaciones, lienzos, ejes, transmisión, reproductor, sombras y franjas
-node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
+node tests/test_viento_sitio.js            # 52 comprobaciones, emplazamiento, horas y laboratorio
 node tests/test_viento_planta.js           # 20 comprobaciones, la planta en franjas y consigna vs ejecutado
 node tests/test_viento_sello.js     # el informe declara con qué coordenadas se calculó
 node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core

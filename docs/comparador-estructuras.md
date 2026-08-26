@@ -529,6 +529,35 @@ Lo que consume el motor es `FIS.cruz(cfg, spec)`. Si no hay azimut declarado, `p
 cross-axis — que es como lo toma el core, y por eso el careo lo inyecta tal cual; con azimut, se
 deriva para cada familia.
 
+### El AZIMUT de la estructura, que no es el del terreno
+
+Ni la fija mira siempre al ecuador ni el eje de un seguidor corre siempre norte-sur: es una decisión
+de **proyecto**, y no tiene nada que ver con hacia dónde cae el terreno. Se declara como **desvío**
+—`0` = la orientación de manual, positivo hacia el **oeste**— porque así vale igual en los dos
+hemisferios y es como se especifica en obra («15° al oeste»). Cada familia lleva el suyo:
+`Desvío del azimut °` en el configurador de la fija y `Desvío del eje °` en el del tracker.
+
+Toda la proyección del sol pasa ahora por **una** función, `FIS.psPlano(el, az, pitchAz, …)`: el
+ángulo del sol en el plano ⊥ a las filas, para una dirección de pitch cualquiera. Con el pitch al sur
+sale la fija de siempre y con el pitch al este, el seguidor N-S — por eso el careo no se mueve.
+
+La pendiente se generaliza igual: la caída por metro en la dirección `A` es `gx·sen A − gz·cos A`;
+con `A = 180` sale `gz` y con `A = 90`, `gx`, que son los dos casos de manual. Y girar la estructura
+cambia **cuánta pendiente ve**: con el terreno cayendo al sur y 16°, girar la fija 30° le baja la ⊥ a
+`16° · cos 30°` = 13,9°, y girar el eje del seguidor 20° se la sube de 0° a 5,6°.
+
+En la escena, el bloque se construye en su marco de siempre —la fija apila en +Z, el seguidor y las
+dos aguas en +X— y se **gira entero** a su azimut; la pendiente se pasa entonces al marco del bloque,
+porque girado 30° moverse por su +X ya no es ir al este. Dos cosas que esto arrastró:
+
+* el giro de la mesa fija pasa a ser **siempre positivo** sobre su X local. Antes llevaba un signo
+  por hemisferio, y con el azimut declarado eso se aplicaba dos veces: en el sur volvía a mirar al
+  polo;
+* el **tilt y el azimut que entran en el cálculo son los declarados** —como en el core—, mientras que
+  la escena además apoya la fila en el suelo, así que la mesa queda algo escorada respecto a ellos.
+  Es la diferencia entre el proyecto y el replanteo, y va dicha en la escena porque en pendientes
+  fuertes se nota (con 16° y 30° de desvío, la normal del panel se va unos 17°).
+
 ### El terreno de la escena: un solo plano
 
 Todas las estructuras se montan sobre **el mismo plano**. Se dibuja como un *heightfield* igual que
@@ -594,8 +623,22 @@ eje hacia el ecuador por definición, así que con el terreno cayendo hacia el p
 y se calculaba el contrario. En el hemisferio sur el signo se da la vuelta, porque el ecuador está
 al norte.
 
+Y lo lleva **todo** seguidor, no solo el que el catálogo llama TSAT. Mientras esto era solo del
+TSAT, la escena dibujaba el eje del HSAT siguiendo el terreno y la física lo calculaba **plano**: una
+cosa dibujada y otra calculada. Con 12° al sur en Sevilla eran **158 kWh/m²** de diferencia sin que
+la tabla se moviera. La proyección con eje inclinado la decide ahora el **ángulo**, no la etiqueta
+del catálogo.
+
+Consecuencia: **el «eje inclinado (TSAT)» deja de ofrecerse**. Con la inclinación del eje puesta por
+el terreno es la misma estructura que el N-S — coinciden en llano (no hay eje que inclinar) y
+coinciden con pendiente a lo largo del eje (los dos la toman). La ficha pasa a comparar **cinco**
+estructuras. La entrada sigue en `FIS.CATALOGO` marcada `soloCareo`, porque el fixture del core la
+corrió por separado (`axis_tilt` 10, y el HSAT con 0) y ese camino sigue vivo mientras no haya azimut
+de terreno declarado.
+
 Sin azimut declarado se respeta el valor recibido: el core toma `axis_tilt` y `cross_axis_slope` por
-separado —son las dos componentes del mismo plano— y por ahí entra el careo.
+separado —son las dos componentes del mismo plano— y por ahí entra el careo (el HSAT con `axis_tilt`
+0 y el TSAT con 10).
 
 #### El horizonte también lleva la pendiente
 
@@ -606,17 +649,214 @@ con el cielo detrás y los bloques parecen estar sobre una mesa flotando en el v
 Con el terreno inclinado, el de horizonte tenía que inclinarse **con él**: plano y horizontal, el
 cuadrado del suelo de trabajo acababa contra él en un canto recto que cruzaba la escena. Una ladera
 que se corta en línea y sigue en llano no es un horizonte, es un error de dibujo. Va en el mismo
-plano y metro y medio por debajo. (Detalle: su geometría se pre-rota tumbada, para que la rotación
-del objeto quede libre para la pendiente — con `rotation.x = −π/2` en el objeto, inclinarlo lo ponía
-de canto y salía un muro.)
+plano y metro y medio por debajo, y **dimensionado con la escena**: inclinado, un plano de 12 km sube
+1.700 m por un lado y tapa el cielo entero; basta con que llegue más lejos que la niebla. (Detalle:
+su geometría se pre-rota tumbada, para que la rotación del objeto quede libre para la pendiente — con
+`rotation.x = −π/2` en el objeto, inclinarlo lo ponía de canto y salía un muro.)
 
-#### Y que se VEA: sombreado por cota
+Y la **altura de la cámara** se mide contra el suelo, no contra la horizontal: mirando ladera arriba
+con la cámara a 25° y el terreno a 16° quedan 9° de nada y la escena entera es cuesta, ni cielo ni
+fuga. Se le suma la pendiente para conservar el mismo ángulo de vista sobre el plano del sitio, que
+en llano es el de siempre.
+
+#### Lo que esta tabla NO puede decidir: backtracking sí o no
+
+Dos cosas que hay que decir en cuanto aparecen las dos filas de seguidor, porque el número invita a
+leer justo lo contrario de lo que dice:
+
+1. La comparación es de **POA**, y la pérdida por sombra entra como **fracción sombreada del plano,
+   lineal**. En un string real una sombra parcial cuesta mucho más que su fracción —el módulo tapado
+   arrastra a la serie— y eso aquí no se ve. Así que **por POA el backtracking casi nunca gana**:
+   renuncia a apuntar para quitarse una sombra que este modelo cobra barata. Lo que lo decide es la
+   energía DC/AC, y eso es otra ficha.
+2. El ángulo de backtracking se calcula **en llano**, que es lo que hace el core (y por eso el careo
+   cuadra). Con pendiente ⊥ a las filas deja de evitar la sombra: la fila de al lado está más alta y
+   sigue tapando. `pvlib` sabe hacerlo con la pendiente (`cross_axis_tilt`); el core no lo usa, y la
+   ficha no se lo va a inventar por su cuenta — lo dice y ya.
+
+Va en la nota de la tabla, y la segunda parte solo cuando hay pendiente ⊥ que la justifique.
+
+#### Una fija NO sigue el terreno: lo compensan las hincas
+
+Un seguidor sí sigue el terreno a lo largo de su eje —eso *es* un eje inclinado—. Una **fija no**: se
+monta al **tilt de proyecto** y lo que compensa la pendiente a lo largo de sus filas es la
+**longitud de las hincas**. Con 12° de cuesta la mesa sigue a 25°.
+
+Antes se escoraba la mesa entera con el suelo, que es lo que hace un seguidor: el tilt dibujado
+dejaba de ser el tecleado, y hubo que poner un aviso diciéndolo. Ese aviso sobra ahora — el tilt del
+cálculo y el del dibujo vuelven a ser el mismo.
+
+Cada lectura de fija dice el **rango de hinca** que sale, porque es lo que dice si la estructura se
+puede montar: con 12° a lo largo de una fila de 65 m van de **0,3 a 8,8 m**. Y cuando la hinca
+saldría **negativa** —el terreno se ha comido la mesa por ese lado— se declara: `hay que bancalear`.
+Con la pendiente ⊥ a las filas, en cambio, las hincas ni se enteran: todas iguales, y las filas se
+escalonan.
+
+#### El backtracking, con la pendiente
+
+`FIS.theta` acepta la pendiente ⊥ a las filas y backtrackea **con ella**, que es lo que hace
+`pvlib.tracking.singleaxis` con `cross_axis_tilt`:
+
+```
+d = 1 / (GCR · cos x)        separación entre ejes, corregida
+t = |d · cos(ψ − x)|         y si t ≥ 1 no hay sombra que evitar
+θ = ψ − signo(ψ) · acos(t)
+```
+
+Con `x = 0` sale la de siempre, cifra a cifra — por ahí entra el careo, porque **el core backtrackea
+en llano**. Con la pendiente metida, la sombra residual del seguidor con backtracking se va a
+**0,0000**: era 4,3 % a 8° sin ella.
+
+Va con interruptor (`backtracking con la pendiente`, marcado por defecto) porque son dos modelos
+distintos y conviene poder ver la diferencia: sin marcar es lo que hace el core, marcado es lo que
+hace pvlib y lo que hace un seguidor de verdad en un campo en cuesta.
+
+#### Las hincas de la fija
+
+Dos, una en cada punta, era lo que había — y desde casi cualquier ángulo se veía **una**. Una mesa de
+65 m sobre dos postes no es una estructura, es un puente. En campo la hinca va cada **4-6 m**, que es
+lo que aguanta el viento y lo que da el perfil, así que se reparten a paso ≤ 6 m entre las dos
+puntas. Todas miden lo mismo, porque la fila ya se ha inclinado con el terreno: lo que absorbe la
+pendiente es el **replanteo**, no una hinca más larga.
+
+#### La bifila, con el render de la casa
+
+Qué distingue una bifila de dos monofilas no me lo invento: lo resuelve el propio modelo de la casa
+—`Seguidor.buildBeam`, el mismo que usa el **bt3d**—. `west:true` da la viga del **motor**, con su
+slew completo, TCU, abarcones y antena; `west:false` la viga **gemela**, la del eje de transmisión,
+que lleva módulos y correas pero del slew solo las piezas `twin`: corona, bracket y soporte. En un
+par bifila, la primera viga es la motriz y la otra la gemela; en monofila todas llevan el suyo.
+
+Antes de esto había una barra dibujada a mano entre filas, con **una caja en medio a modo de motor**.
+No era el render de la casa, y en pendiente además quedaba colgando entre una fila y otra porque se
+dibujaba a altura fija.
+
+Lo que sí hace falta —y al quitar la barra se quedó sin dibujar— es el **eje** que une las dos vigas:
+la gemela no tiene motor, la mueve la motriz. Va de **corona a corona** (en `seguidor.js` la corona
+está en el centro del tubo), es un tubo del mismo acero con su brida en cada extremo, y **nada en
+medio**: el motor ya está donde tiene que estar, en el slew de la viga motriz. Se le pasan las cotas
+de las dos filas, porque en pendiente no están a la misma altura.
+
+#### Lo que esta tabla NO puede decidir: backtracking sí o no
+
+Dos cosas que hay que decir en cuanto aparecen las dos filas de seguidor, porque el número invita a
+leer justo lo contrario de lo que dice:
+
+1. La comparación es de **POA**, y la pérdida por sombra entra como **fracción sombreada del plano,
+   lineal**. En un string real una sombra parcial cuesta mucho más que su fracción —el módulo tapado
+   arrastra a la serie— y eso aquí no se ve. Así que **por POA el backtracking casi nunca gana**:
+   renuncia a apuntar para quitarse una sombra que este modelo cobra barata. Lo que lo decide es la
+   energía DC/AC, y eso es otra ficha.
+2. El ángulo de backtracking se calcula **en llano**, que es lo que hace el core (y por eso el careo
+   cuadra). Con pendiente ⊥ a las filas deja de evitar la sombra: la fila de al lado está más alta y
+   sigue tapando. `pvlib` sabe hacerlo con la pendiente (`cross_axis_tilt`); el core no lo usa, y la
+   ficha no se lo va a inventar por su cuenta — lo dice y ya.
+
+Va en la nota de la tabla, y la segunda parte solo cuando hay pendiente ⊥ que la justifique.
+
+#### Una fija NO sigue el terreno: lo compensan las hincas
+
+Un seguidor sí sigue el terreno a lo largo de su eje —eso *es* un eje inclinado—. Una **fija no**: se
+monta al **tilt de proyecto** y lo que compensa la pendiente a lo largo de sus filas es la
+**longitud de las hincas**. Con 12° de cuesta la mesa sigue a 25°.
+
+Antes se escoraba la mesa entera con el suelo, que es lo que hace un seguidor: el tilt dibujado
+dejaba de ser el tecleado, y hubo que poner un aviso diciéndolo. Ese aviso sobra ahora — el tilt del
+cálculo y el del dibujo vuelven a ser el mismo.
+
+Cada lectura de fija dice el **rango de hinca** que sale, porque es lo que dice si la estructura se
+puede montar: con 12° a lo largo de una fila de 65 m van de **0,3 a 8,8 m**. Y cuando la hinca
+saldría **negativa** —el terreno se ha comido la mesa por ese lado— se declara: `hay que bancalear`.
+Con la pendiente ⊥ a las filas, en cambio, las hincas ni se enteran: todas iguales, y las filas se
+escalonan.
+
+#### El backtracking, con la pendiente
+
+`FIS.theta` acepta la pendiente ⊥ a las filas y backtrackea **con ella**, que es lo que hace
+`pvlib.tracking.singleaxis` con `cross_axis_tilt`:
+
+```
+d = 1 / (GCR · cos x)        separación entre ejes, corregida
+t = |d · cos(ψ − x)|         y si t ≥ 1 no hay sombra que evitar
+θ = ψ − signo(ψ) · acos(t)
+```
+
+Con `x = 0` sale la de siempre, cifra a cifra — por ahí entra el careo, porque **el core backtrackea
+en llano**. Con la pendiente metida, la sombra residual del seguidor con backtracking se va a
+**0,0000**: era 4,3 % a 8° sin ella.
+
+Va con interruptor (`backtracking con la pendiente`, marcado por defecto) porque son dos modelos
+distintos y conviene poder ver la diferencia: sin marcar es lo que hace el core, marcado es lo que
+hace pvlib y lo que hace un seguidor de verdad en un campo en cuesta.
+
+#### Las hincas
+
+Una fila de 65 m sobre uno o dos postes no es una estructura: es un puente, o un balancín. La fija
+llevaba **dos**, una en cada punta; el seguidor, **una**, la del accionamiento. En campo la hinca va
+cada 4-6 m en una fija y cada 6-9 m en un seguidor —es lo que fija el vano entre rodamientos, y con
+él el momento y la sección del tubo—, así que se reparten a ese paso a lo largo de la fila. En el
+seguidor no se repite la del accionamiento: esa la pone el propio modelo (`soporte`, y en la gemela
+también, que es pieza `twin`).
+
+#### Los lienzos 2D, nítidos
+
+Los `width`/`height` de un `<canvas>` son el **búfer en píxeles**, y el CSS lo estira. Estaban fijos
+en 1.100 px de ancho y el CSS los ponía al 100 % de la tarjeta, así que el navegador **ampliaba** el
+dibujo: en una tarjeta más ancha, o en cualquier pantalla a 2×, las letras salían pixeladas. No era
+la fuente, era el lienzo.
+
+`lienzo(c, altoCss)` dimensiona el búfer al tamaño real **por `devicePixelRatio`** y escala el
+contexto, así que el resto del código sigue dibujando en píxeles lógicos y no se entera. El alto
+lógico se conserva —el del atributo— para que las proporciones no dependan del ancho de la ventana.
+
+Dos consecuencias que hubo que atender:
+
+* el búfer ya no se estira solo, así que al cambiar el ancho hay que **repintar**. No basta con el
+  `resize` de la ventana: la tarjeta de resultados aparece cuando ya se ha dibujado, y al maquetarse
+  cambia el ancho de sus lienzos — el primer dibujo salía a 960 px y la tarjeta se quedaba en 626.
+  Va con un `ResizeObserver` que repinta solo si cambió el **ancho** respecto al último pintado, que
+  es lo que evita realimentarse con el alto que fija `lienzo`;
+* al pasar a la anchura real, lo que se dibujaba a tamaño fijo ocupa más fracción: la columna de
+  rótulos del ranking pasa a ser un tercio del ancho en vez de 250 px, los rótulos se recortan por lo
+  que **miden** y no por número de letras, y la leyenda tiene una versión corta para cuando la larga
+  no cabe.
+
+#### Brújula, y la cámara donde uno quiera
+
+Con **tres azimutes** en juego —el del terreno, el de la fija y el del eje— y la cámara orbitando, no
+había forma de saber dónde cae el norte, así que ninguno de los tres se podía leer en la escena. Va
+una rosa 2D encima del lienzo, que es lo que se lee de un vistazo a cualquier ángulo, con:
+
+* **N/S/E/O** girando con la cámara;
+* la **flecha de máxima pendiente** — hacia dónde cae el terreno — cuando la hay;
+* el **sol**, que es lo que dice hacia dónde van las sombras.
+
+El truco es pasar una dirección del mundo a un ángulo de pantalla: la cámara mira en la dirección `v`
+(del ojo al objetivo), así que en planta «arriba» en pantalla es `v` y «derecha» es `v` girado −90°;
+el ángulo horario de cualquier dirección `w` es entonces `atan2(w·derecha, w·arriba)`. (La flecha de
+pendiente se dibuja hacia **arriba** como la aguja, porque ese ángulo se mide desde arriba: dibujada
+hacia abajo, rotarla 180° la dejaba apuntando al norte con el terreno cayendo al sur.)
+
+Y la **cámara es libre**. El botón derecho ya desplazaba, pero cada reconstrucción —y se reconstruye
+al tocar cualquier campo— devolvía la vista a su sitio, así que en la práctica no se podía mirar a
+otro lado. En cuanto el usuario la toca, la escena deja de recolocarla: manda él hasta que pulse
+**recentrar**. El tope de zoom se estira además con la escena, porque con seis bloques en pendiente
+el límite fijo de 1.200 m dejaba la rueda muerta antes de ver el campo entero.
+
+#### Y que se VEA: sombreado por cota y CURVAS DE NIVEL
 
 Con el terreno bien hecho la pendiente seguía sin verse, y no era el modelo: a mediodía de junio el
 sol está a **76°** —casi cenital— y una ladera de 16° recibe casi la misma luz que el llano, así que
 el suelo salía de un verde plano y uniforme. El terreno lleva un **tinte por altura** (claro arriba,
 oscuro abajo, como un mapa hipsométrico), en color de vértice sobre el mismo material. Hace legible
 el relieve a cualquier hora.
+
+Y **curvas de nivel**, porque el tinte solo no basta: se normaliza sobre todo el suelo —que es mucho
+más grande que la parcela— así que junto a las estructuras apenas varía y la ladera se lee plana. Una
+banda cada `paso` metros de cota da la pendiente de un vistazo a cualquier zoom, y es la convención
+de cualquier plano topográfico. El paso se elige para que salgan una decena de curvas en la zona de
+trabajo, redondeado a 1-2-5. La malla del suelo sube a 220×220: las curvas se interpolan entre
+vértices y con celdas de seis metros salían con dientes de sierra.
 
 Cada lectura de la escena dice además **cuánta pendiente ⊥ ve esa estructura**: sin eso, dos bloques
 sobre el mismo plano con sombras distintas parecen un error del dibujo.

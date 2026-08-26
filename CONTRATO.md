@@ -95,6 +95,46 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 ## Puntos abiertos (escribir aquí lo que afecte al otro)
 
+- **[Sesión Proyectos → Notebook / Streamlit] `POST /dem` no devuelve la extensión de la rejilla, y
+  sin eso el horizonte no se puede calcular en el navegador.** Se ha traído a `sim-solar.html` casi
+  todo `solargpt_core/sunearth.py`, pero **el horizonte del MDT y la pérdida por horizonte se
+  quedan fuera**, y no por falta de ganas: `/dem` responde `elev_grid` junto con mínimos, máximos y
+  pendientes, pero `lat_arr` y `lon_arr` se calculan dentro de `dem()` y se descartan. Sin los
+  límites geográficos no hay forma de pasar de celda a metros, y sin metros no sale el
+  `atan(Δh / distancia)` que es toda la matemática de `fetch_horizon_from_dem`. **Lo que pedimos,
+  por orden de preferencia:**
+    1. que `/dem` añada al JSON los límites de la rejilla —`lat_min`, `lat_max`, `lon_min`,
+       `lon_max`, o el paso en grados—; es un `out[...] = ...` de tres líneas y no rompe a nadie,
+       porque hoy nadie lee esos campos;
+    2. o un endpoint propio, `POST /horizonte {lat, lon}`, que devuelva directamente el perfil
+       `[[azimut, elevación], …]` con los mismos 72 azimuts y los mismos anillos de 500 m, 1, 2 y
+       5 km del cuaderno (§01.5a, celda 43), y así el navegador no replica la malla.
+  Con cualquiera de las dos, la ficha pinta el perfil, lo superpone a la carta solar como hace
+  `plot_sunpath_polar(horizon_profile=…)` y calcula la pérdida anual. Mientras tanto no se inventa
+  nada: la ficha simplemente no ofrece esa parte.
+
+- **[Sesión Proyectos → Notebook / Streamlit] Lo que ya está portado de `sunearth.py`, y con qué
+  diferencias.** Para que no se porte dos veces ni se discutan los números: `sim-solar.html` lleva
+  ya carta polar con los doce arcos mensuales y las líneas de hora (`show_months` /
+  `show_hour_lines`), sun path cartesiano con el *wrap-break* y el recentrado en el norte del
+  hemisferio sur (DNV #27), tabla de amanecer/mediodía solar/atardecer, los dos mapas de calor
+  anuales y la sombra al mediodía solar. **Tres diferencias declaradas**, todas por no tener pvlib
+  en el navegador: (a) el amanecer y el atardecer salen del **NOAA** de la propia ficha y no del
+  **SPA**, lo que son segundos, no minutos; (b) el GHI de cielo claro es el mismo simplificado que
+  ya usa el core en `plot_irradiance_heatmap` —`I0·sin(elev)`, sin turbidez ni altura, así que
+  sobreestima y pica en ~1.257 W/m²—; (c) la tabla enseña los doce días 21 y el año entero se baja
+  en CSV. El ángulo del seguidor **no se ha reescrito**: se porta literal de `overcast.html`
+  (`trueTrackAngle`, `singleaxis`, `thetaBaselineDay`), que es la fuente de autoridad que el propio
+  `get_baseline_theta` declara.
+
+- **[Sesión Proyectos → todas] El huso de una planta sale de su layout, no del navegador.**
+  `sim-solar.html` aplicaba UTC+2 a todo y San José —Perú— salía **siete horas corrido**. Ahora usa
+  la regla de la casa (`husoPlanta`/`aplicaHuso`): huso fijo si el layout lo declara —San José
+  −300 min, Dicayagua −240, Túnez +60, ninguno con cambio de hora— y si no la peninsular, día 88 a
+  298. **Esa tabla está copiada en la ficha por código de cartera**: si una planta gana `tzFijo` en
+  su `<planta>_layout.json`, hay que reflejarlo también en `TZ_FIJO` de `sim-solar.html`. Si
+  preferís que la ficha lea el layout en vez de duplicar, decidlo y se cambia.
+
 - **[Sesión Generador de layout → Comparador de estructuras] Canal `factiun_sizing` para el gate
   layout↔sizing.** El generador lleva ahora el gate del §06.5 del cuaderno
   (`bridge.validate_layout_vs_sizing`): carea los strings que CABEN contra los que HACEN FALTA,
@@ -268,4 +308,5 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 | 2026-08-19 | Proyectos | `sim-viento.html` v1.2: campo 3D con los casos en paralelo. Entran en el repo `lib/three.min.js`, `lib/OrbitControls.js` y **`seguidor.js`** (copia idéntica de la fuente única que ya comparten Gemelo Digital y Cobertura 3D: si la tocáis allí, hay que sincronizarla aquí). |
 | 2026-08-19 | Proyectos | SW v4: `docs/*.md` y `.json` a red primero (la Documentación se quedaba una versión atrás) y botón de armazón/actualizar en la barra. |
 | 2026-08-19 | Proyectos | `sim-viento.html` v1.5: adopta la estética de `overcast.html` / `backtracking.html` (tokens, etiquetas mono, `.viz3d`, cúpula de cielo con degradado) y la Escena 3D pasa al primer puesto de los resultados. |
+| 2026-08-21 | Proyectos | `sim-solar.html`: portado de `solargpt_core/sunearth.py` casi todo el sunpath —carta polar con arcos mensuales y líneas de hora, sun path cartesiano, trayectoria θ del seguidor con y sin backtracking, tabla de amanecer/mediodía/atardecer con CSV del año, mapas de calor anuales y sombra al mediodía. Además: la hora pasa a ser la LOCAL de la planta (San José salía 7 h corrido), el lienzo deja de dibujarse aumentado ×2,4, y una planta sin coordenadas ya no hereda las de la anterior. Horizonte del MDT pendiente de `/dem` (ver Puntos abiertos). |
 | 2026-08-19 | Proyectos | `sim-viento.html` v1.8: análisis de emplazamiento (rosa de vientos, multi-año con dispersión, extremos por Gumbel) y viento medido de las HSU (CSV o `GET /meteo/history` del SCADA). |

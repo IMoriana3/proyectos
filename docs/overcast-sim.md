@@ -1,4 +1,4 @@
-# Simulador de Overcast — Difusa en el navegador · y estudio del diffuse tracking
+# Simulador de radiación difusa — las políticas del core en el navegador · y estudio del diffuse tracking
 
 **Página**: `https://imoriana3.github.io/cobertura-zigbee/overcast.html` · repo `cobertura-zigbee`
 **Un único HTML, física offline, sin dependencias de código.** QA integrada (botón «Verificar contra
@@ -55,6 +55,32 @@ overcast con el tracker inclinado; continuous ≥ pvlib **en cada paso**; el pul
 conmuta; el dwell bloquea la re-entrada con la señal viva; los bordes de conmutación caen en el
 mismo instante físico a 5/10/15 min; enter_ratio imposible ⇒ jamás conmuta; ghi_min gigante ⇒
 passthrough; NaN en GHI ⇒ passthrough sin NaN en la salida.
+
+## ¿Y el óptimo anisótropo? Medido, y descartado
+
+El core no busca el máximo: barre **cinco** ángulos por paso (α ∈ {0, ¼, ½, ¾, 1}). Con circumsolar
+el óptimo no cae en esa rejilla, así que la pregunta legítima era cuánto se deja sobre la mesa.
+
+Se midió con una **cota** —el máximo exacto de la misma Perez sobre θ ∈ [0, θ_n], con semillas en los
+propios candidatos α y refino ternario— en 15 días (3 fechas × 5 cielos, decisión 5 min):
+
+| Cielo | Hueco hasta el óptimo |
+|---|---|
+| Despejado | 0,000 % |
+| Canónico (test del core) | 0,000 – 0,001 % |
+| Frentes | 0,004 – 0,008 % |
+| Tarde nublada | 0,001 – 0,017 % |
+| **Overcast total** | **0,000 – 0,049 %** |
+
+El hueco no llega al **0,05 %** y el ángulo difiere **1–2°**, casi siempre por debajo del deadband de
+1°: el actuador ni se movería distinto. Es dos órdenes de magnitud menor que la propia ganancia de
+difusa (1,2 %) y una décima parte del coste del tránsito (0,42 %/año).
+
+**Conclusión: no hay quinta política.** Lo que la app trae es la cota, en una casilla aparte, apagada
+por defecto y rotulada «NO es del core» — con su fila en la tabla y el hueco explícito frente a
+`continuous`. Sirve para *enseñar* que la política del core está pegada al techo, no para servirse
+como consigna. La batería exige que ese hueco siga por debajo del 0,1 %: si algún día creciera, la
+prueba lo caza y entonces sí tocaría llevar el barrido fino al core.
 
 ## El cielo del día
 

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0B0F14">
 <link rel="icon" href="favicon.svg">
-<title>Viento &amp; Abanderamiento — Factiun</title>
+<title>Comparador de estrategias de abanderamiento — Factiun</title>
 <!-- sin fuentes de Google: offline (fuentes del sistema) -->
 <style>
   /* Estética de la casa: la misma que `overcast.html` y `backtracking.html` de
@@ -845,7 +845,7 @@ LOC.stepperPasivo=function(cfg){
    ahí. Que rotara con el rumbo sería dibujar una fila que se pasea sola. */
 LOC.pasivo=function(thT,ws,release,side,tol,dtS){
   var n=thT.length,out=new Float64Array(n),mask=new Uint8Array(n),eps=[];
-  var suelta=false,ini=0,lado=0,fijo=(typeof side==='number');
+  var suelta=false,ini=0,lado=0,fijo=(typeof side==='number'),nAng=0;
   for(var i=0;i<n;i++){
     // ORDEN: primero el reenganche, después la suelta. Al revés, con viento
     // sostenido la fila se reenganchaba y pasaba un paso entero en
@@ -859,17 +859,36 @@ LOC.pasivo=function(thT,ws,release,side,tol,dtS){
     // 5× las horas sin avisar. Mismo criterio que
     // `wind_stow_passive.apply_passive_release`.
     var cruza=(i>0&&suelta&&(thT[i-1]-lado)*(thT[i]-lado)<=0);
-    if(suelta&&(cruza||Math.abs(thT[i]-lado)<=tol)){
-      suelta=false;
-      eps.push({i0:ini,i1:i-1,hours:(i-ini)*dtS/3600,lado:lado});
-    }
+    var reeng=(suelta&&(cruza||Math.abs(thT[i]-lado)<=tol));
+    if(reeng){suelta=false;nAng++;}
+    /* UN EPISODIO TERMINA CUANDO LA FILA SE ENGANCHA DE VERDAD, no cuando se
+       cumple la condicion geometrica. Si el viento sigue por encima del umbral,
+       el reenganche y la suelta caian en el MISMO paso: la mascara no bajaba ni
+       un instante —la fila estuvo suelta todo el rato— y aun asi se cerraba un
+       episodio y se abria otro. Con el lado por defecto es peor, porque theta
+       SATURA en el tope y la condicion se cumple en cada muestra.
+       Medido con viento sostenido y paso minutal: 45.990 episodios declarados
+       frente a 365 subidas reales de la mascara, y una duracion media de 0,16 h
+       para una fila que llevaba veinte horas caida. El recuento era un artefacto
+       del paso; las horas siempre estuvieron bien.
+       El lado tampoco se re-sortea: si no llego a engancharse, no hubo suelta
+       nueva que congelara un lado nuevo. */
     if(!suelta&&ws[i]>release){
-      suelta=true;ini=i;lado=fijo?side:side[i];
+      if(!reeng){ini=i;lado=fijo?side:side[i];}
+      suelta=true;
+    }else if(reeng){
+      eps.push({i0:ini,i1:i-1,hours:(i-ini)*dtS/3600,lado:lado});
     }
     if(suelta){out[i]=lado;mask[i]=1;}else out[i]=thT[i];
   }
   if(suelta)eps.push({i0:ini,i1:n-1,hours:(n-ini)*dtS/3600,lado:lado,sin_reenganche:true});
-  return {theta:out,mask:mask,episodios:eps};
+  /* DOS NÚMEROS, cada uno diciendo lo suyo. `episodios` son tramos CONTINUOS con
+     la fila caída, y es lo que se publica como abanderamientos: no depende del paso.
+     `pasosPorElAngulo` cuenta las veces que el seguimiento cruzó el ángulo estando
+     suelta — mecánicamente cierto, el hierro pasa por ahí, pero NO es un
+     abanderamiento y SÍ escala con el paso (45.990 a minutal frente a 365 tramos).
+     Se guarda porque describe el hierro; no se publica como recuento. */
+  return {theta:out,mask:mask,episodios:eps,pasosPorElAngulo:nAng};
 };
 /* Lado al que cae si sigue al viento: el MISMO criterio de signo que las
    estrategias A (cara al viento), para que no haya dos reglas de lado en la
@@ -1803,6 +1822,9 @@ LOC.run=function(cfg,onStep){
         hours_by_month:byM.map(function(v){return Math.round(v*100)/100;}),
         events_by_month:(function(){var o=new Array(12).fill(0);pEvs.forEach(function(e){o[e.month-1]++;});return o;})(),
         n_events:pEvs.length, n_events_full:pEvs.length, n_events_partial_only:0,
+        /* el dato mecánico, aparte y declarado: ver `LOC.pasivo` */
+        n_pasos_por_el_angulo:PR.pasosPorElAngulo,
+        n_pasos_por_el_angulo_depende_del_paso:true,
         duration_h_mean:pDur.length?Math.round(1000*pDur.reduce(function(a,b){return a+b;},0)/pDur.length)/1000:0,
         duration_h_median:pDur.length?pDur[Math.floor(0.5*pDur.length)]:0,
         duration_h_p95:pDur.length?pDur[Math.min(pDur.length-1,Math.floor(0.95*pDur.length))]:0,
@@ -2043,9 +2065,15 @@ function buscaSitio(){
       lat:co.lat,lon:co.lon,det:'tal como las has escrito · hora derivada de la longitud',
       src:'Coordenadas',tz:null}]});
   grupos.push({label:'Cartera y presets',items:loc});
-  renderSitios(grupos, q.trim().length>=3?'Buscando en Open-Meteo…':null);
+  /* El anuncio tiene que salir SOLO si de verdad se va a buscar fuera. Con
+     coordenadas pegadas la búsqueda remota ni se lanza —hay dos líneas más
+     abajo un `return`—, así que decir «Buscando en Open-Meteo…» era anunciar
+     algo que no iba a pasar: el desplegable se quedaba con ese texto puesto
+     para siempre. La condición es la MISMA que decide si se busca. */
+  var vaABuscar=(!co&&normSitio(q).length>=3);
+  renderSitios(grupos, vaABuscar?'Buscando en Open-Meteo…':null);
   if(_sitioT)clearTimeout(_sitioT);
-  if(co||normSitio(q).length<3)return;              // coordenadas: no hace falta red
+  if(!vaABuscar)return;                             // coordenadas: no hace falta red
   _sitioT=setTimeout(function(){
     var qv=q;
     buscaRemoto(q).then(function(rem){
@@ -2890,8 +2918,16 @@ function drawTable(){
   ord().forEach(function(s){
     var c=REP.cases[s];
     h+='<tr'+(s===b?' class="win"':'')+'><td><span class="dot" style="background:'+COL[s]+'"></span><b>'+s+'</b> · '+
+       /* LA VELOCIDAD DE SUELTA VIAJA CON EL RESULTADO. El denominador ya estaba
+          —«1 fila de 20»— porque sin él el impacto de planta no es interpretable.
+          Faltaba la otra mitad: a qué viento se suelta. Ese número MANDA en todo
+          el caso —a 40 km/h salen 248 sueltas y 3.677 h; a 90, seis y 52— y no
+          está medido: es un sustituto declarado del par de desembrague. Ponerlo
+          en el anexo y no en la fila era dejar que el resultado se leyera sin su
+          parámetro. Es la misma regla del denominador, aplicada a la otra mitad. */
        esc(c.passive
-             ? 'mecánico · 1 fila de '+(c.passive.n_trackers*c.passive.filas_por_tracker)+
+             ? 'mecánico · suelta a '+fmt(c.passive.release_kmh,0)+' km/h (no medida)'+
+               ' · 1 fila de '+(c.passive.n_trackers*c.passive.filas_por_tracker)+
                ' ('+fmt(100*c.passive.fraccion_expuesta,1)+' % del campo)'
              : (c.orientation==='sol'?'cara al sol':'cara al viento')+' · '+
                c.n_thresholds+(c.n_thresholds>1?' umbrales':' umbral'))+'</td>'+

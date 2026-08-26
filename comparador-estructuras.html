@@ -115,6 +115,14 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
 #view3d{position:relative;width:100%;height:min(52vh,460px);min-height:300px;border:1px solid var(--line-soft);border-radius:10px;overflow:hidden;background:#0B0F14}
 #view3d canvas{display:block;width:100%;height:100%;border:0;border-radius:0;margin:0}
 .hint3d{position:absolute;left:10px;bottom:9px;font:400 10.5px var(--mono);color:var(--muted-2);background:rgba(11,15,20,.55);padding:3px 8px;border-radius:6px;pointer-events:none}
+.brujula{position:absolute;right:10px;top:10px;width:96px;height:96px;pointer-events:none;
+  background:rgba(11,15,20,.45);border-radius:50%;backdrop-filter:blur(2px)}
+.brujula text{font:600 11px var(--mono);fill:var(--muted-2);text-anchor:middle;dominant-baseline:middle}
+.brujula text.n{fill:#e8eef6}
+.recentrar{position:absolute;right:10px;top:112px;font:400 10.5px var(--mono);
+  color:var(--muted-2);background:rgba(11,15,20,.55);border:1px solid rgba(255,255,255,.12);
+  padding:3px 8px;border-radius:6px;cursor:pointer}
+.recentrar:hover{color:#e8eef6;border-color:var(--accent)}
 .tline{display:flex;align-items:center;gap:10px;margin-top:10px}
 .tline input[type=range]{flex:1;accent-color:var(--accent)}
 .tline input[type=date]{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit;font-size:12.5px}
@@ -277,6 +285,13 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         <div class="field"><label>Tilt de proyecto °</label><input id="tilt" type="number" step="0.5" value="25"></div>
         <div class="field"><label>Tilt dos aguas °</label><input id="tiltEW" type="number" step="0.5" value="12"></div>
       </div>
+      <div class="two">
+        <div class="field"><label>Desvío del azimut °</label>
+          <input id="desvFija" type="number" step="1" value="0"
+                 title="0 = mirando al ecuador. Positivo = girada hacia el OESTE. Es una decisión de proyecto y no tiene que ver con el azimut del terreno."></div>
+        <div class="field"><label>&nbsp;</label>
+          <p class="mini" style="padding-top:9px" id="azFijaNota">mira al ecuador</p></div>
+      </div>
       <div id="fxRead" class="readout" style="margin-top:4px"></div>
       <p class="mini" id="fxNota"></p>
     </div>
@@ -315,10 +330,20 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         <div class="field"><label>Gap del motor (m)</label><input id="tkGapMot" type="number" step="0.01" value="0.50"></div>
       </div>
       <div class="two">
+        <div class="field"><label>Desvío del eje °</label>
+          <input id="desvEje" type="number" step="1" value="0"
+                 title="0 = eje norte-sur. Positivo = girado hacia el OESTE. Es una decisión de proyecto y no tiene que ver con el azimut del terreno."></div>
+        <div class="field"><label>&nbsp;</label>
+          <p class="mini" style="padding-top:9px" id="azEjeNota">eje norte-sur</p></div>
+      </div>
+      <div class="two">
         <div class="field"><label>Ángulo máx °</label><input id="maxang" type="number" value="55"></div>
-        <div class="field"><label>Eje inclinado ° <span class="sn">del terreno</span></label>
+        <div class="field"><label>&nbsp;</label>
+          <label class="chk" style="padding-top:9px"><input type="checkbox" id="btPend" checked>
+            backtracking <b>con la pendiente</b></label></div>
+        <div class="field"><label>Eje del terreno °</label>
           <input id="axtilt" type="number" step="0.5" value="0" readonly
-                 title="No se teclea: es la componente de la pendiente del sitio a lo largo del eje (§03.0). Un eje no se inclina en el aire."></div>
+                 title="No se teclea: es la componente de la pendiente del sitio a lo largo del eje (§03.0). Un eje que sigue el terreno es un eje inclinado — por eso no hay una fila aparte de «eje inclinado»."></div>
       </div>
       <div class="field"><label>Disposición</label>
         <select id="tkFilas">
@@ -375,7 +400,16 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         largo</i> de ellas — eso es lo que hace un eje que sigue el terreno, y lo que hacen las
         hincas de una fija al replantearse. En la dirección del pitch, en cambio, se
         <b>escalonan</b> a distinta cota sin cambiar el tilt: la pendiente la tiene el terreno, no
-        la estructura.
+        la estructura. Y una <b>fija no sigue el terreno</b>: se monta al tilt de proyecto y lo que
+        compensa la pendiente a lo largo de sus filas es la <b>longitud de las hincas</b> — 12° de
+        cuesta y la mesa sigue a 25°. Cada lectura de fija dice el rango de hinca que sale: es lo
+        que dice si esa estructura se puede montar de una pieza o hay que <b>bancalear</b>. El
+        seguidor sí sigue el terreno a lo largo de su eje, porque eso es un eje inclinado.
+        <b>El azimut de la estructura</b> es cosa aparte del terreno: se declara como <b>desvío</b>
+        (0 = la fija al ecuador y el eje norte-sur, positivo hacia el oeste) y cada familia lleva el
+        suyo. Girar la estructura cambia <b>cuánta pendiente ve</b>: con el terreno cayendo al sur y
+        16°, girar la fija 30° le baja la ⊥ a 13,9° y girar el eje del seguidor 20° se la sube de 0°
+        a 5,6°.
         <b>El terreno</b> es <b>uno solo</b>: la pendiente del emplazamiento con su
         <b>azimut</b>, y todas las estructuras montadas sobre ese mismo plano — por eso van
         alineadas sobre la <b>curva de nivel</b> y la cámara se pone cuesta abajo. Lo que cambia
@@ -387,8 +421,10 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         fija ve toda la pendiente y el seguidor ninguna</b> — la ve entera a lo largo del eje. Eso
         no es un defecto de la comparación: es la razón por la que en un sitio real una estructura
         se monta y la otra no. Y el «eje inclinado °» de un TSAT debería ser justo esa componente a lo
-        largo del eje — un eje no se inclina en el aire: cada lectura de seguidor dice cuánto se
-        inclina el suyo con el terreno, y si el TSAT declara otra cosa, también lo dice.</p>
+        largo del eje — un eje no se inclina en el aire—, y lo lleva <b>todo</b> seguidor: cada lectura
+        dice cuánto se inclina el suyo con el terreno. Por eso <b>no hay una fila de «eje
+        inclinado»</b>: un seguidor sobre terreno que cae a lo largo de su eje YA es un seguidor de
+        eje inclinado, y en llano no hay eje que inclinar.</p>
     </div>
     <!-- ═════════ SIZING (columna ancha: la ventana hay que LEERLA) ═════════ -->
     <div class="card">
@@ -534,13 +570,46 @@ FIS.sun=function(date,latR,lon){
    vector solar sobre ese plano. El módulo no es un adorno — es lo que hace
    exacto el coseno del ángulo de incidencia (ver FIS.poa) sin dividir por
    cos(ps), que con el sol rasante en el eje se va a cero y revienta.          */
-FIS.psTracker=function(el,az){
-  var sx=-Math.cos(el)*Math.sin(az), sz=Math.sin(el);   // este positivo (el core)
-  return {ps:Math.atan2(sx,sz)*FIS.R2D, rho:Math.hypot(sx,sz)};
+FIS.psTracker=function(el,az,cfg){
+  // ⊥ al eje; con el eje N-S el pitch va al ESTE, que es el signo del core
+  return FIS.psPlano(el,az,(cfg?FIS.azEje(cfg):0)+90,0,0);
 };
-FIS.psFija=function(el,az,lat){
-  var sx=Math.cos(el)*Math.cos(az)*(lat>=0?1:-1), sz=Math.sin(el);  // hacia el ecuador
-  return {ps:Math.atan2(sx,sz)*FIS.R2D, rho:Math.hypot(sx,sz)};
+/* ── EL AZIMUT DE LA ESTRUCTURA ────────────────────────────────────────────
+   Ni la fija mira siempre al ecuador ni el eje de un seguidor corre siempre
+   norte-sur: es una decisión de proyecto, y no tiene nada que ver con hacia
+   dónde cae el terreno. Se declara como DESVÍO —0 = la orientación de manual,
+   positivo hacia el oeste— porque así vale igual en los dos hemisferios y es
+   como se especifica en obra («15° al oeste»).
+
+   Toda la proyección del sol pasa por una sola función: el ángulo del sol en
+   el plano ⊥ a las filas, para una dirección de pitch cualquiera. Con el pitch
+   al sur sale la fija de siempre y con el pitch al este, el seguidor N-S.
+
+   Convenios: `az` del sol es el que da FIS.sun —desde el SUR, positivo al
+   oeste— y los azimutes de estructura van desde el NORTE en sentido horario
+   (0 N, 90 E, 180 S, 270 O), como el del terreno.                            */
+FIS.azEquador=function(lat){return (lat>=0)?180:0;};   // hacia dónde mira una fija
+FIS.azFija=function(cfg){return FIS.azEquador(cfg.lat)+(cfg.desvFija||0);};
+FIS.azEje=function(cfg){return (cfg.desvEje||0);};     // 0 = eje norte-sur
+/* Hacia dónde APILA las filas cada familia. La fija apila en la dirección a la
+   que mira; el seguidor y las dos aguas, ⊥ a su eje. */
+FIS.azPitch=function(cfg,spec){
+  return (spec&&spec.fam==='fija')?FIS.azFija(cfg):(FIS.azEje(cfg)+90);
+};
+FIS.psPlano=function(el,az,pitchAz,axTiltDeg,alongAz){
+  var As=180+az*FIS.R2D;                                  // azimut solar desde el norte
+  var sc=Math.cos(el)*Math.cos((As-pitchAz)*FIS.D2R);      // en la dirección del pitch
+  var su=Math.sin(el);
+  if(axTiltDeg){
+    /* Eje inclinado: el marco gira T alrededor del eje del PITCH, así que su
+       cenit se inclina hacia `alongAz` — el extremo del eje que baja. */
+    var sa=Math.cos(el)*Math.cos((As-alongAz)*FIS.D2R), T=axTiltDeg*FIS.D2R;
+    su=su*Math.cos(T)+sa*Math.sin(T);
+  }
+  return {ps:Math.atan2(sc,su)*FIS.R2D, rho:Math.hypot(sc,su)};
+};
+FIS.psFija=function(el,az,lat,cfg){
+  return FIS.psPlano(el,az,cfg?FIS.azFija(cfg):FIS.azEquador(lat),0,0);
 };
 /* Eje INCLINADO (TSAT). El eje sube hacia el ecuador: en el hemisferio norte,
    hacia el sur. Se lleva el vector solar al marco del eje y se mide allí el
@@ -554,18 +623,17 @@ FIS.psFija=function(el,az,lat){
    horizontal). El core lo esquiva con `axis_tilt` NEGATIVO y azimut 0. Aquí no
    hay auto-corrección que esquivar, pero el signo se elige igual —hacia el
    ecuador— para que las dos superficies contesten lo mismo.                  */
-FIS.psTSAT=function(el,az,axTiltDeg,lat){
+FIS.psTSAT=function(el,az,axTiltDeg,lat,cfg){
   /* CON SIGNO: positivo = el eje cae hacia el ECUADOR, que es el TSAT de
      manual. Negativo = cae hacia el POLO, y eso también existe — lo pone el
      terreno, no el catálogo, y un emplazamiento no elige hacia dónde baja. Con
-     `Math.abs` se dibujaba un eje y se calculaba el contrario. */
-  var T=axTiltDeg*FIS.D2R;
-  // Marco [este, ecuador, cenit] con el azimut medido desde el sur, este negativo.
-  var e=-Math.cos(el)*Math.sin(az), q=Math.cos(el)*Math.cos(az)*(lat>=0?1:-1), u=Math.sin(el);
-  // El marco gira T alrededor del eje E-O: su «cenit» se inclina hacia el ecuador,
-  // que es justo lo que hace que el eje mire al ecuador y no al polo.
-  var u2=u*Math.cos(T)+q*Math.sin(T);
-  return {ps:Math.atan2(e,u2)*FIS.R2D, rho:Math.hypot(e,u2)};
+     `Math.abs` se dibujaba un eje y se calculaba el contrario.
+     El extremo del eje al que se refiere ese signo es el que mira al ECUADOR,
+     que con el eje desviado ya no es el sur exacto. */
+  var eje=cfg?FIS.azEje(cfg):0, eq=FIS.azEquador(lat);
+  var dif=(((eje-eq)%360)+360)%360;
+  var along=(dif>90&&dif<270)?eje+180:eje;      // el extremo que mira al ecuador
+  return FIS.psPlano(el,az,eje+90,axTiltDeg,along);
 };
 /* Inclinación de la superficie sobre la horizontal (grados) — la que ve el
    cielo, y por tanto la que manda en el fondo difuso. Con eje horizontal
@@ -834,10 +902,21 @@ FIS.stringV=function(n,w){return {vocFrio:n*w.vocFrio, vmpCaliente:n*w.vmpCalien
 /* ── θ de seguimiento con backtracking (Anderson-Mikofski) ──
    Con ps ya proyectado, el backtracking es una línea: retroceder lo justo para
    que la fila de al lado no te tape. */
-FIS.theta=function(psDeg,gcr,maxang,bt){
+/* `cruzDeg`: la pendiente ⊥ a las filas, para BACKTRACKEAR CON ELLA. Sin ella
+   —que es lo que hace el core, y por eso el careo entra por ahí— el ángulo se
+   calcula como si el campo fuese llano: la fila de al lado está más alta y
+   sigue tapando, así que el backtracking deja de evitar la sombra justo cuando
+   más falta hace. La corrección es la de `pvlib.tracking.singleaxis` con
+   `cross_axis_tilt`:
+       d = 1 / (GCR · cos x)            separación entre ejes, corregida
+       t = |d · cos(ψ − x)|             y si t ≥ 1 no hay sombra que evitar
+       θ = ψ − signo(ψ) · acos(t)
+   Con x = 0 sale la de siempre, cifra a cifra. */
+FIS.theta=function(psDeg,gcr,maxang,bt,cruzDeg){
   var R=psDeg*FIS.D2R;
   if(bt){
-    var t=Math.min(1,(1/gcr)*Math.cos(R));
+    var x=(cruzDeg||0)*FIS.D2R;
+    var t=Math.min(1,Math.abs(Math.cos(R-x)/(gcr*Math.cos(x))));
     var retro=Math.acos(t);
     /* El retroceso no puede pasar de dejar la mesa PLANA: aplanarse más sería
        tumbarse hacia el otro lado, que no evita ninguna sombra — la crea. Con
@@ -881,12 +960,14 @@ FIS.pendPlano=function(betaDeg,azDeg){
   var t=Math.tan(Math.abs(betaDeg||0)*FIS.D2R), A=(azDeg||0)*FIS.D2R;
   return {gx:t*Math.sin(A), gz:-t*Math.cos(A)};
 };
-FIS.ejePitch=function(spec){        // hacia dónde APILA las filas esta familia
-  return (spec&&spec.fam==='fija')?'z':'x';   // fija al SUR; seguidor y dos aguas al ESTE
-};
-FIS.pendComp=function(betaDeg,azDeg,eje){
-  var g=FIS.pendPlano(betaDeg,azDeg);
-  var cruz=(eje==='x')?g.gx:g.gz, largo=(eje==='x')?g.gz:g.gx;
+/* La componente de la pendiente en la dirección del PITCH (⊥ a las filas) y en
+   la de las filas, para un pitch en cualquier azimut. La caída por metro en la
+   dirección `A` es `gx·sen A − gz·cos A`; con A=180 sale `gz` y con A=90, `gx`,
+   que son los dos casos de manual. */
+FIS.pendComp=function(betaDeg,azDeg,pitchAz){
+  var g=FIS.pendPlano(betaDeg,azDeg), P=pitchAz*FIS.D2R;
+  var cruz=g.gx*Math.sin(P)-g.gz*Math.cos(P);
+  var largo=g.gx*Math.cos(P)+g.gz*Math.sin(P);      // ⊥ a la anterior: a lo largo
   return {cruz:Math.atan(cruz)*FIS.R2D, largo:Math.atan(largo)*FIS.R2D};
 };
 /* La que consume el motor. Si no hay azimut declarado, `pend` ES el cross-axis
@@ -894,7 +975,7 @@ FIS.pendComp=function(betaDeg,azDeg,eje){
    azimut, se DERIVA para cada familia. */
 FIS.cruz=function(cfg,spec){
   if(cfg.pendAz==null)return cfg.pend||0;
-  return FIS.pendComp(cfg.pend,cfg.pendAz,FIS.ejePitch(spec)).cruz;
+  return FIS.pendComp(cfg.pend,cfg.pendAz,FIS.azPitch(cfg,spec)).cruz;
 };
 /* Y EL EJE INCLINADO TAMPOCO SE TECLEA: lo pone el terreno. Un TSAT no es un
    seguidor con un parámetro más, es un seguidor sobre una pendiente que corre
@@ -905,10 +986,25 @@ FIS.cruz=function(cfg,spec){
    y `cross_axis_slope` por separado —son las dos componentes del mismo plano—
    y por ahí entra el careo. */
 FIS.ejeTilt=function(cfg,spec){
-  if(!spec||!spec.tsat)return 0;
-  if(cfg.pendAz==null)return cfg.axTilt||0;
-  var g=FIS.pendPlano(cfg.pend,cfg.pendAz);
-  return (cfg.lat>=0?1:-1)*Math.atan(g.gz)*FIS.R2D;
+  if(!spec||spec.fam!=='tracker')return 0;
+  /* TODOS los seguidores, no solo el TSAT. Un eje norte-sur sobre un terreno
+     que cae norte-sur NO es horizontal: sigue el terreno, y entonces es un eje
+     inclinado — se llame como se llame en el catálogo. Mientras esto solo se
+     aplicaba al TSAT, la escena dibujaba el eje del HSAT siguiendo el terreno y
+     la física lo calculaba plano: una cosa dibujada y otra calculada, que es
+     justo lo que esta ficha no puede hacer. Con 12° al sur en Sevilla eran 158
+     kWh/m² de diferencia sin que la tabla se moviera.
+     Sin azimut declarado se respeta lo recibido, que es el camino del careo: el
+     core corrió el HSAT con axis_tilt 0 y el TSAT con 10. */
+  if(cfg.pendAz==null)return spec.tsat?(cfg.axTilt||0):0;
+  /* La componente A LO LARGO DEL EJE, con el signo de bajar hacia el ecuador:
+     positivo cuando el extremo que mira al ecuador es el más bajo. */
+  var q=FIS.pendComp(cfg.pend,cfg.pendAz,FIS.azEje(cfg)+90);
+  /* `largo` mide la caída hacia `pitchAz+90`, o sea hacia el extremo del eje a
+     `azEje+180`. Si ese extremo NO es el que mira al ecuador, hay que darle la
+     vuelta al signo — el mismo extremo que elige psTSAT. */
+  var dif=((((FIS.azEje(cfg)+180)-FIS.azEquador(cfg.lat))%360)+360)%360;
+  return ((dif>90&&dif<270)?-1:1)*q.largo;
 };
 
 /* ── Fracción sombreada entre dos filas iguales, exacta en el plano ⊥ al eje ──
@@ -987,8 +1083,16 @@ FIS.CATALOGO=[
    nota:'HSAT canónico: eje horizontal N-S, backtracking activo.'},
   {key:'tracker_hsat_nobt',label:'Tracker 1 eje N-S · sin backtracking',fam:'tracker', bt:false,
    nota:'Seguimiento astronómico puro: apunta mejor y se da sombra.'},
+  /* El eje inclinado ya NO se ofrece en la ficha: desde que la inclinación del
+     eje la pone el terreno, un «tracker de eje inclinado» y un «tracker N-S»
+     son la misma estructura — coinciden en llano (no hay eje que inclinar) y
+     coinciden con pendiente a lo largo del eje (los dos la toman). Se queda en
+     el catálogo porque el CAREO lo necesita: el fixture del core lo corrió por
+     separado, con `axis_tilt` 10 y el HSAT con 0, y ese camino sigue vivo
+     mientras no haya azimut de terreno declarado. */
   {key:'tracker_tsat',     label:'Tracker 1 eje inclinado (TSAT)',  fam:'tracker', bt:true, tsat:true,
-   nota:'Eje N-S inclinado hacia el ecuador.'}
+   soloCareo:true,
+   nota:'Solo careo: con el eje que pone el terreno es el mismo que el N-S.'}
 ];
 FIS.spec=function(key){for(var i=0;i<FIS.CATALOGO.length;i++)if(FIS.CATALOGO[i].key===key)return FIS.CATALOGO[i];return null;};
 
@@ -1015,13 +1119,21 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
     if(S.el<=0)continue;
     var bh=M.dni[i], dh=M.dhi[i], gh=M.ghi[i], e0=FIS.E0(M.t[i]), P0, planos;
     if(spec.fam==='tracker'){
-      P0=spec.tsat?FIS.psTSAT(S.el,S.az,axT,cfg.lat):FIS.psTracker(S.el,S.az);
-      planos=[FIS.theta(P0.ps,gcr,cfg.maxang,spec.bt)];
+      /* La proyección con eje inclinado la decide el ÁNGULO, no la etiqueta del
+         catálogo: si el eje está inclinado —lo diga el catálogo o lo ponga el
+         terreno— hay que proyectar con el marco girado. Preguntando por
+         `spec.tsat` se calculaba plano un eje que la escena dibujaba
+         inclinado. */
+      P0=axT?FIS.psTSAT(S.el,S.az,axT,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
+      /* El backtracking, con la pendiente o sin ella. Sin ella es lo que hace
+         el core —y es por donde entra el careo—; con ella es lo que hace pvlib
+         y lo que hace un seguidor de verdad en un campo en cuesta. */
+      planos=[FIS.theta(P0.ps,gcr,cfg.maxang,spec.bt,cfg.btPend?cruz:0)];
     }else if(spec.fam==='fija_ew'){
-      P0=FIS.psTracker(S.el,S.az);                    // aguas al este y al oeste
+      P0=FIS.psTracker(S.el,S.az,cfg);                // aguas al este y al oeste
       planos=[tilt,-tilt];
     }else{
-      P0=FIS.psFija(S.el,S.az,cfg.lat);
+      P0=FIS.psFija(S.el,S.az,cfg.lat,cfg);
       planos=[tilt];
     }
     var sN=0,sI=0;
@@ -1529,7 +1641,7 @@ var POR_DEFECTO=['fija_optima','tracker_hsat'];
 var REP=null;
 
 function pintaEstructuras(){
-  $('structs').innerHTML=FIS.CATALOGO.map(function(s){
+  $('structs').innerHTML=FIS.CATALOGO.filter(function(s){return !s.soloCareo;}).map(function(s){
     return '<label class="chk"><input type="checkbox" class="st" value="'+s.key+'"'+
       (POR_DEFECTO.indexOf(s.key)>=0?' checked':'')+'> '+
       '<span class="sw" style="background:'+COL[s.key]+'"></span>'+esc(s.label)+
@@ -1601,6 +1713,8 @@ function cfgActual(){
     fija:F, tracker:K, gcr:K.gcr,
     maxang:+$('maxang').value, tilt:+$('tilt').value, tiltEW:+$('tiltEW').value,
     pend:+$('pend').value, pendAz:+$('pendAz').value,
+    desvFija:+$('desvFija').value, desvEje:+$('desvEje').value,
+    btPend:$('btPend').checked,
     axTilt:+$('axtilt').value, igualado:$('igualar').checked,
     geomDe:function(spec){return spec.fam==='tracker'?K:F;}
   };
@@ -1710,15 +1824,26 @@ function rumbo(az){
   var R=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
   return R[Math.round((((az%360)+360)%360)/22.5)%16];
 }
+function pintaAzimut(c){
+  var af=FIS.azFija(c), ae=FIS.azEje(c);
+  $('azFijaNota').innerHTML=!(c.desvFija||0)
+    ? 'mira al ecuador · <b>'+fmt(af,0)+'°</b>'
+    : '<b>'+fmt(((af%360)+360)%360,0)+'°</b> ('+rumbo(af)+') · '+
+      Math.abs(c.desvFija)+'° al '+(c.desvFija>0?'oeste':'este')+' del ecuador';
+  $('azEjeNota').innerHTML=!(c.desvEje||0)
+    ? 'eje norte-sur · apila al este'
+    : 'eje a <b>'+fmt(((ae%360)+360)%360,0)+'°</b> ('+rumbo(ae)+') · apila a '+
+      fmt(((ae+90)%360+360)%360,0)+'°';
+}
 function pintaPendiente(c){
   /* El «eje inclinado °» ya no es una entrada: se rellena con lo que da el
      terreno a lo largo del eje. Si se dejara a mano, se podría teclear un eje
      que el emplazamiento no sostiene — dibujar una cosa y calcular otra. */
-  var ej=FIS.ejeTilt(c,FIS.spec('tracker_tsat'));
+  var ej=FIS.ejeTilt(c,FIS.spec('tracker_hsat'));
   if($('axtilt'))$('axtilt').value=ej.toFixed(1);
   var p=Math.abs(c.pend||0), az=c.pendAz||0;
   if(!p){ $('pendNota').innerHTML='terreno llano · el mismo para todas'; return; }
-  var f=FIS.pendComp(p,az,'z'), t=FIS.pendComp(p,az,'x');
+  var f=FIS.pendComp(p,az,FIS.azFija(c)), t=FIS.pendComp(p,az,FIS.azEje(c)+90);
   var dice=function(nom,q){
     return '<b>'+nom+'</b> '+fmt(Math.abs(q.cruz),1)+'° ⊥ a sus filas'+
            (Math.abs(q.largo)>0.05?' · '+fmt(Math.abs(q.largo),1)+'° a lo largo':'');
@@ -1730,7 +1855,7 @@ function pintaPendiente(c){
 }
 function refrescaGeom(){
   var c=cfgActual();
-  pintaPendiente(c);
+  pintaPendiente(c); pintaAzimut(c);
   pintaFam('fx',c.fija); pintaFam('tk',c.tracker); pintaPico(c);
   $('fxGob').textContent='§03.F · '+gobierna('fija');
   $('tkGob').textContent='§03.T0 · '+gobierna('tracker');
@@ -1749,7 +1874,7 @@ function refrescaGeom(){
 }
 var CAMPOS_GEOM=['fxModL','fxModW','fxWp','fxTabla','fxPitch','fxModsStr','fxNStr','fxGapMod','fxGapMot',
                  'tkModL','tkModW','tkWp','tkTabla','tkPitch','tkModsStr','tkNStr','tkGapMod','tkGapMot',
-                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend','pendAz'];
+                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend','pendAz','desvFija','desvEje','btPend'];
 CAMPOS_GEOM.forEach(function(id){
   var el=$(id); if(!el)return;
   el.addEventListener('input',refrescaGeom); el.addEventListener('change',refrescaGeom);
@@ -2034,13 +2159,69 @@ function refrescaSizing(){
   pintaVentana({W:W,n:n,m:m,v:v});
 }
 
+/* ── UN LIENZO 2D NÍTIDO ──────────────────────────────────────────────────
+   Los `width`/`height` de un <canvas> son el BÚFER en píxeles, y el CSS lo
+   estira. Estaban fijos en 1.100 px de ancho y el CSS los ponía al 100 % de la
+   tarjeta, así que el navegador AMPLIABA el dibujo: en una tarjeta más ancha, o
+   en cualquier pantalla a 2×, las letras salían pixeladas — no era la fuente,
+   era el lienzo.
+   Esto dimensiona el búfer al tamaño REAL en píxeles de dispositivo y escala el
+   contexto, así que el resto del código sigue dibujando en píxeles lógicos y no
+   se entera. El alto lógico se conserva —el que tenía el atributo— para que las
+   proporciones del gráfico no dependan del ancho de la ventana.
+   Devuelve {g, W, H} ya limpio.                                              */
+/* Y como el búfer ya no se estira solo, al cambiar el ancho de la ventana hay
+   que REPINTAR: antes el navegador reescalaba el dibujo viejo (borroso, pero
+   dibujado). */
+var TREPINTA=null, ANCHO_PINTADO={};
+/* Y hay que VIGILARLOS, no solo escuchar el `resize` de la ventana: la tarjeta
+   de resultados aparece cuando ya se ha dibujado, y al maquetarse cambia el
+   ancho de sus lienzos. Sin esto, el primer dibujo salía a 960 px y la tarjeta
+   se quedaba en 626 — otra vez ampliado, esta vez sin que la ventana se hubiera
+   movido. Se repinta solo si el ANCHO cambió respecto al último pintado, que es
+   lo que evita realimentarse con el alto que fija `lienzo`. */
+function vigilaLienzos(){
+  if(typeof ResizeObserver==='undefined')return;
+  var ids=['cvVent','cvBar','cvMes','cvRank'];
+  var ro=new ResizeObserver(function(){
+    var cambia=ids.some(function(id){
+      var c=$(id);
+      return c&&c.clientWidth&&Math.abs(c.clientWidth-(ANCHO_PINTADO[id]||0))>1;
+    });
+    if(cambia){clearTimeout(TREPINTA); TREPINTA=setTimeout(repintaLienzos,60);}
+  });
+  ids.forEach(function(id){var c=$(id); if(c)ro.observe(c);});
+}
+function repintaLienzos(){
+  if($('cvVent'))pintaVentana(VENT_ULT);
+  if($('cvBar'))dibujaBarrido();
+  if(typeof REP!=='undefined'&&REP&&REP.filas){drawMeses();drawRank();}
+}
+window.addEventListener('resize',function(){
+  clearTimeout(TREPINTA); TREPINTA=setTimeout(repintaLienzos,150);
+});
+function lienzo(c,altoCss){
+  var dpr=Math.min(window.devicePixelRatio||1,2);
+  var W=Math.max(360,Math.round(c.clientWidth||altoCss*3)), H=altoCss;
+  if(c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr)){
+    c.width=Math.round(W*dpr); c.height=Math.round(H*dpr);
+  }
+  c.style.height=H+'px';
+  ANCHO_PINTADO[c.id]=W;
+  var g=c.getContext('2d');
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,W,H);
+  return {g:g,W:W,H:H};
+}
+
 /* La ventana de tensión, dibujada. Y dibujada con βVmp, no con γPmax: el
    original pintaba la curva de Vmp con el coeficiente de POTENCIA mientras la
    cuenta usaba el de tensión, así que el dibujo y el número no coincidían. */
+var VENT_ULT=null;
 function pintaVentana(d){
   var c=$('cvVent'); if(!c)return;
-  var g=c.getContext('2d'), W=c.width, H=c.height;
-  g.clearRect(0,0,W,H);
+  VENT_ULT=d;
+  var Z=lienzo(c,300), g=Z.g, W=Z.W, H=Z.H;
   if(!d){g.fillStyle='#7A8794'; g.font='12px ui-monospace,monospace';
     g.fillText('elige módulo e inversor',14,H/2); return;}
   var L=54,R=14,T=14,B=26, t0=d.W?+$('szTmin').value-5:0, t1=+$('szTmax').value+5;
@@ -2227,7 +2408,7 @@ function barSpec(){
   var q=$('barQue').value.split(':'), fam=q[1];
   /* Se barre sobre una estructura REAL de la familia, y se prefiere una que
      esté marcada: así la curva es del mismo bicho que la tabla. */
-  var cands=(fam==='tracker')?['tracker_hsat','tracker_hsat_nobt','tracker_tsat']
+  var cands=(fam==='tracker')?['tracker_hsat','tracker_hsat_nobt']
                              :['fija_optima','fija_proyecto'];
   var marcadas=elegidas(), k=null;
   cands.some(function(c){if(marcadas.indexOf(c)>=0){k=c;return true;}});
@@ -2346,8 +2527,7 @@ function pintaBarrido(){
    dejaría una de las dos aplastada contra el borde. */
 function dibujaBarrido(){
   var c=$('cvBar'); if(!c)return;
-  var g=c.getContext('2d'), W=c.width, H=c.height, L=62, R=66, T=16, B=30;
-  g.clearRect(0,0,W,H);
+  var Z=lienzo(c,320), g=Z.g, W=Z.W, H=Z.H, L=62, R=66, T=16, B=30;
   if(!BAR){g.fillStyle='#7A8794'; g.font='13px ui-monospace,monospace';
     g.fillText('dale a «Barrer» para ver la curva',18,H/2); return;}
   var P=BAR.puntos, esP=(BAR.tipo==='pitch');
@@ -2432,7 +2612,7 @@ async function run(){
         gcr_por_estructura:porEstructura(cfg,keys,'gcr'),
         pitch_por_estructura:porEstructura(cfg,keys,'pitch'),
         alto_por_estructura:porEstructura(cfg,keys,'altoColector'),
-        tilt_deg:cfg.tilt, axis_tilt_deg:FIS.ejeTilt(cfg,FIS.spec('tracker_tsat')),
+        tilt_deg:cfg.tilt, axis_tilt_deg:FIS.ejeTilt(cfg,FIS.spec('tracker_hsat')),
         max_angle_deg:cfg.maxang};
       var r=await fetch(ENGINE+'/structures',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
@@ -2527,13 +2707,46 @@ function drawTabla(base){
     '<b>POA módulo</b> es lo que ve el panel; <b>POA suelo</b> = POA × GCR, lo que ve la parcela. '+
     (REP.gcrComun?'Con el mismo GCR el segundo es el primero escalado y no reordena nada — dale a cada familia su pitch arriba para que cada una lleve su densidad.'
                  :'Con densidades distintas el orden por suelo ya no tiene por qué coincidir con el de módulo.')+
-    ' Los seguidores van en modo IDEAL: sin abanderamiento, sin banda muerta y sin política de difusa — el coste del control real es otra pregunta (ficha <a href="sim-viento.html" style="color:var(--accent)">Viento</a>).';
+    ' Los seguidores van en modo IDEAL: sin abanderamiento, sin banda muerta y sin política de difusa — el coste del control real es otra pregunta (ficha <a href="sim-viento.html" style="color:var(--accent)">Viento</a>).'+
+    avisoBacktracking(f);
+}
+
+/* ── LO QUE ESTA TABLA NO PUEDE DECIDIR: backtracking sí o no ──────────────
+   Dos cosas que hay que decir en cuanto aparecen las dos filas de seguidor,
+   porque el número invita a leer justo lo contrario de lo que dice:
+
+   1. La comparación es de POA, y la pérdida por sombra entra como FRACCIÓN
+      SOMBREADA del plano, lineal. En un string real una sombra parcial cuesta
+      mucho más que su fracción —el módulo tapado arrastra a la serie— y eso no
+      se ve aquí. Así que por POA el backtracking casi nunca gana: renuncia a
+      apuntar para quitarse una sombra que este modelo cobra barata. Lo que
+      decide de verdad es la energía DC/AC, y eso es otra ficha.
+
+   2. El ángulo de backtracking se calcula EN LLANO, que es lo que hace el core
+      (y por eso el careo cuadra). Con pendiente ⊥ a las filas deja de evitar la
+      sombra: la fila de al lado está más alta y sigue tapando. pvlib sabe
+      hacerlo con la pendiente (`cross_axis_tilt`); el core no lo usa, y la
+      ficha no se lo va a inventar por su cuenta.                              */
+function avisoBacktracking(f){
+  var bt=null,nb=null;
+  f.forEach(function(x){ if(x.key==='tracker_hsat')bt=x; if(x.key==='tracker_hsat_nobt')nb=x; });
+  if(!bt||!nb)return '';
+  var cruz=Math.abs(FIS.cruz(cfgActual(),FIS.spec('tracker_hsat')));
+  var t=' <b>Y sobre el backtracking</b>: la pérdida por sombra entra aquí como '+
+    'fracción sombreada del plano, <b>lineal</b>. En un string real una sombra parcial cuesta '+
+    'mucho más que su fracción, así que por POA el backtracking casi nunca gana — renuncia a '+
+    'apuntar para quitarse una sombra que este modelo cobra barata. Esta tabla no decide si '+
+    'compensa: eso se decide en DC/AC.';
+  if(cruz>0.5)t+=' Además, el ángulo se calcula <b>en llano</b> —es lo que hace el core— y con '+
+    fmt(cruz,1)+'° ⊥ a las filas deja de evitar la sombra: le quedan '+fmt(bt.sombra,2)+' % '+
+    'contra el '+fmt(nb.sombra,2)+' % del que no lo lleva. pvlib sabe backtrackear con la '+
+    'pendiente (<i>cross_axis_tilt</i>); el core no lo usa.';
+  return t;
 }
 
 /* Barras mensuales agrupadas */
 function drawMeses(){
-  var c=$('cvMes'),g=c.getContext('2d'),W=c.width,H=c.height,f=REP.filas;
-  g.clearRect(0,0,W,H);
+  var c=$('cvMes'),Z=lienzo(c,320),g=Z.g,W=Z.W,H=Z.H,f=REP.filas;
   var L=52,R=14,T=16,B=30,gw=(W-L-R)/12;
   var max=0; f.forEach(function(x){x.mes.forEach(function(v){if(v>max)max=v;});});
   if(max<=0)return;
@@ -2558,16 +2771,21 @@ function drawMeses(){
 }
 /* Ranking anual: módulo (sólido) y suelo (rayado) */
 function drawRank(){
-  var c=$('cvRank'),g=c.getContext('2d'),W=c.width,H=c.height,f=REP.filas;
-  g.clearRect(0,0,W,H);
-  var L=250,R=70,T=16,B=22,rowH=(H-T-B)/f.length;
+  var c=$('cvRank'),Z=lienzo(c,250),g=Z.g,W=Z.W,H=Z.H,f=REP.filas;
+  /* La columna de rótulos se lleva un TERCIO del ancho, no 250 px fijos: con el
+     lienzo ya a la anchura real de la tarjeta, esos 250 se comían el 40 % en
+     una ventana estrecha. */
+  var L=Math.min(250,Math.round(W*0.34)),R=70,T=16,B=22,rowH=(H-T-B)/f.length;
   var max=0; f.forEach(function(x){max=Math.max(max,x.neta);});
   if(max<=0)return;
   g.font='12px system-ui,sans-serif';
   f.forEach(function(x,i){
     var y=T+rowH*i, hb=Math.min(15,rowH*0.34);
     g.fillStyle='#E7EEF4';g.textAlign='right';
-    g.fillText(x.label.length>34?x.label.slice(0,33)+'…':x.label,L-10,y+rowH/2+4);
+    /* y el rótulo se recorta por lo que MIDE, no por número de letras */
+    var et=x.label;
+    while(et.length>6&&g.measureText(et).width>L-14)et=et.slice(0,-2)+'…';
+    g.fillText(et,L-10,y+rowH/2+4);
     g.fillStyle=COL[x.key]||'#888';
     g.fillRect(L,y+rowH/2-hb-2,(W-L-R)*(x.neta/max),hb);
     g.globalAlpha=.45;
@@ -2577,7 +2795,11 @@ function drawRank(){
     g.fillText(fmt(x.neta,0),L+(W-L-R)*(x.neta/max)+6,y+rowH/2-2);
   });
   g.fillStyle='#5E6F7E';g.textAlign='left';g.font='11px ui-monospace,monospace';
-  g.fillText('sólido: por m² de módulo   ·   translúcido: por m² de suelo (× GCR)',L,H-6);
+  /* La leyenda, en su versión corta si la larga no cabe: se salía por el borde
+     derecho en cuanto la tarjeta bajaba de unos 900 px. */
+  var leg='sólido: por m² de módulo   ·   translúcido: por m² de suelo (× GCR)';
+  if(g.measureText(leg).width>W-L-6)leg='sólido: módulo · translúcido: suelo';
+  g.fillText(leg,L,H-6);
 }
 
 
@@ -2624,6 +2846,12 @@ function init3D(){
     var ct=new THREE.OrbitControls(cam,rd.domElement);
     ct.enableDamping=true; ct.dampingFactor=.08; ct.maxPolarAngle=Math.PI*0.49;
     ct.minDistance=12; ct.maxDistance=1200; ct.target.set(0,0,0);
+    /* CÁMARA LIBRE. El botón derecho ya desplazaba, pero cada reconstrucción
+       —y se reconstruye al tocar cualquier campo— devolvía la vista a su sitio,
+       así que en la práctica no se podía mirar a otro lado. En cuanto el
+       usuario la toca, la escena deja de recolocarla: manda él hasta que pulse
+       «recentrar». */
+    ct.addEventListener('start',function(){ if(TD)TD.libre=true; });
     var hemi=new THREE.HemisphereLight(0xbcd4ff,0x1a2510,0.5);
     var sun=new THREE.DirectionalLight(0xffeecc,1.5);
     sun.castShadow=true; sun.shadow.mapSize.width=2048; sun.shadow.mapSize.height=2048;
@@ -2649,7 +2877,7 @@ function init3D(){
     /* La geometría ya viene TUMBADA (rotateX en la propia malla) para que la
        rotación del objeto quede libre: es la que le da luego la pendiente del
        sitio. Con `rotation.x=-PI/2` en el objeto, inclinarlo lo ponía de canto. */
-    var horizGeo=new THREE.PlaneGeometry(12000,12000); horizGeo.rotateX(-Math.PI/2);
+    var horizGeo=new THREE.PlaneGeometry(1,1); horizGeo.rotateX(-Math.PI/2);
     var horiz=new THREE.Mesh(horizGeo,
       new THREE.MeshLambertMaterial({color:0x1e2a19}));
     horiz.position.y=-1.5; sc.add(horiz);
@@ -2665,8 +2893,42 @@ function init3D(){
     var hint=document.createElement('div'); hint.className='hint3d';
     hint.textContent='arrastrar: orbitar · rueda: zoom · botón dcho: desplazar';
     h.appendChild(hint);
+    /* ── BRÚJULA ──
+       Con tres azimutes en juego —el del terreno, el de la fija y el del eje—
+       y la cámara orbitando, no hay forma de saber dónde cae el norte, así que
+       ninguno de los tres se puede leer en la escena. Va como rosa 2D encima
+       del lienzo, que es lo que se lee de un vistazo a cualquier ángulo, y
+       lleva además la FLECHA de máxima pendiente (hacia dónde cae el terreno) y
+       el SOL, que es lo que dice hacia dónde van las sombras. */
+    var brj=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    brj.setAttribute('class','brujula'); brj.setAttribute('viewBox','-50 -50 100 100');
+    brj.innerHTML=
+      '<g id="brjRosa">'+
+        '<circle r="38" fill="none" stroke="rgba(255,255,255,.18)"/>'+
+        '<circle r="30" fill="none" stroke="rgba(255,255,255,.08)"/>'+
+        '<path d="M0,-38 L5,-6 L0,0 L-5,-6 Z" fill="#e05b5b"/>'+
+        '<path d="M0,38 L5,6 L0,0 L-5,6 Z" fill="rgba(255,255,255,.35)"/>'+
+        '<text class="n" y="-43">N</text><text y="44">S</text>'+
+        '<text x="44">E</text><text x="-44">O</text>'+
+      '</g>'+
+      /* La flecha de pendiente se dibuja hacia ARRIBA como la aguja, porque el
+         ángulo que se le aplica se mide desde arriba. Dibujada hacia abajo,
+         rotarla 180° la dejaba apuntando al norte con el terreno cayendo al
+         sur — justo al revés. */
+      '<g id="brjPend" style="display:none">'+
+        '<path d="M0,8 L0,-18 M0,-24 L-5,-15 L5,-15 Z" fill="#7ee2a8" stroke="#7ee2a8" '+
+              'stroke-width="2.4" stroke-linecap="round"/>'+
+      '</g>'+
+      '<g id="brjSol" style="display:none">'+
+        '<circle cy="-33" r="5" fill="#ffd479"/></g>';
+    h.appendChild(brj);
+    var rec=document.createElement('button'); rec.className='recentrar';
+    rec.type='button'; rec.textContent='recentrar';
+    rec.onclick=function(){ if(!TD)return; TD.libre=false; construyeMundo(); actualiza3D(); };
+    h.appendChild(rec);
     TD={rd:rd,sc:sc,cam:cam,ct:ct,sun:sun,sunM:sunM,suelo:suelo,horiz:horiz,hemi:hemi,
-        skyCv:skyCv,skyTx:skyTx,skyKey:'',radio:300,elevMinSombra:2};
+        skyCv:skyCv,skyTx:skyTx,skyKey:'',radio:300,elevMinSombra:2,
+        brj:brj,libre:false};
     suelo.scale.set(600,420,1);
     var last=performance.now();
     (function loop(now){requestAnimationFrame(loop); if(!TD)return;
@@ -2674,7 +2936,7 @@ function init3D(){
       if(w&&(TD.w!==w||TD.h!==hh)){TD.w=w;TD.h=hh;rd.setSize(w,hh,false);cam.aspect=w/hh;cam.updateProjectionMatrix();}
       var dt=Math.min(0.1,((now||performance.now())-last)/1000); last=now||performance.now();
       if(PLAY)avanzaHora(dt);
-      ct.update(); rd.render(sc,cam);})(performance.now());
+      ct.update(); pintaBrujula(); rd.render(sc,cam);})(performance.now());
   }catch(e){ TD=null; $('view3d').innerHTML='<div class="sinwebgl">Sin WebGL en este navegador: '+
       'la comparativa numérica funciona igual.</div>'; }
 }
@@ -2698,6 +2960,36 @@ function setSky(cenit,horiz){
                                    0.165*l+0.09*horiz[1]*(1-l),
                                    0.098*l+0.08*horiz[2]*(1-l));
   }
+}
+/* ── PINTAR LA BRÚJULA ──
+   Rosa 2D encima del lienzo. El truco es pasar una dirección del MUNDO a un
+   ángulo de PANTALLA: la cámara mira en la dirección `v` (del ojo al objetivo),
+   así que en planta «arriba» en pantalla es `v` y «derecha» es `v` girado −90°.
+   Con eso, el ángulo horario de cualquier dirección `w` es `atan2(w·derecha,
+   w·arriba)`, y es lo único que hace falta para el norte, para la caída del
+   terreno y para el sol.                                                      */
+function pintaBrujula(){
+  if(!TD||!TD.brj)return;
+  var c=TD.cam.position, t=TD.ct.target;
+  var vx=t.x-c.x, vz=t.z-c.z, m=Math.hypot(vx,vz);
+  if(m<1e-6)return;
+  vx/=m; vz/=m;
+  var ang=function(wx,wz){                      // grados horarios desde arriba
+    var d=Math.hypot(wx,wz); if(d<1e-9)return null;
+    wx/=d; wz/=d;
+    return Math.atan2(wx*(-vz)+wz*vx, wx*vx+wz*vz)*FIS.R2D;
+  };
+  var g=function(id){return TD.brj.querySelector('#'+id);};
+  var aN=ang(0,-1);                             // el norte es −z
+  if(aN!=null)g('brjRosa').setAttribute('transform','rotate('+aN.toFixed(1)+')');
+  var T=TERRENO_3D, aP=(Math.hypot(T.gx,T.gz)>1e-9)?ang(T.gx,T.gz):null;
+  var pe=g('brjPend');
+  pe.style.display=(aP==null)?'none':'';
+  if(aP!=null)pe.setAttribute('transform','rotate('+aP.toFixed(1)+')');
+  var so=g('brjSol'), sp=TD.sun.position;
+  var aS=(sp.y>t.y)?ang(sp.x-t.x,sp.z-t.z):null;
+  so.style.display=(aS==null)?'none':'';
+  if(aS!=null)so.setAttribute('transform','rotate('+aS.toFixed(1)+')');
 }
 function ponSol(elDeg,azDeg){
   if(!TD)return;
@@ -2782,24 +3074,69 @@ function cotasSeguidor(G){
   Seguidor.setModsPerStr(G.modsStr);   // recalcula mesa, fila y centro de ala
   return (D.span>0?G.largoFila/D.span:1);
 }
-function seguidor3D(mats,escalaEje){
-  var g=new THREE.Group(), spin=new THREE.Group(); g.add(spin);
-  Seguidor.parts(THREE,{detail:'mass',size:'largo'}).forEach(function(p){
-    if(p.antenna||p.motorLink||p.damperLink)return;
-    var geo; try{geo=p.geom(THREE);}catch(e){return;}
-    var mesh=new THREE.Mesh(geo,mats[p.mat]||mats.steel);
-    mesh.applyMatrix4(p.m); mesh.castShadow=!!p.cast; mesh.receiveShadow=true;
-    (p.spin?spin:g).add(mesh);
+/* ── EL EJE DE TRANSMISIÓN de una bifila ──
+   La viga gemela no tiene motor: la mueve la motriz, y lo que las une es un eje
+   que va de corona a corona. En `seguidor.js` la corona está en el centro del
+   tubo (x=0 de la viga), así que el eje cruza el pitch a la altura del tubo, por
+   el centro de las dos filas.
+   Es un EJE y nada más: un tubo del mismo acero, sin caja en medio — el motor
+   ya está donde tiene que estar, en el slew de la viga motriz. La versión
+   anterior era una barra a mano con un cajón encima que no es lo que se monta.
+   Se le pasan las cotas de las dos filas porque en pendiente no están a la
+   misma altura. */
+function ejeTransmision(mats,xa,xb,ya,yb){
+  var D=Seguidor.DIMS, g=new THREE.Group();
+  var dx=xb-xa, dy=yb-ya, L=Math.hypot(dx,dy);
+  var tubo=new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,L,14),
+                          mats.silver||mats.steel);
+  tubo.rotation.z=Math.PI/2-Math.atan2(dy,dx);   // el cilindro nace en Y
+  tubo.position.set((xa+xb)/2,D.postH+(ya+yb)/2,0);
+  tubo.castShadow=true; g.add(tubo);
+  [[xa,ya],[xb,yb]].forEach(function(q){         // brida contra cada corona
+    var c=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.10,0.09,14),
+                         mats.steel);
+    c.rotation.z=Math.PI/2;
+    c.position.set(q[0]+(q[0]<((xa+xb)/2)?0.22:-0.22),D.postH+q[1],0);
+    c.castShadow=true; g.add(c);
   });
+  return g;
+}
+
+/* `motriz`: en una BIFILA solo una de las dos vigas lleva el accionamiento.
+   Esa distinción no me la invento — la resuelve el propio modelo de la casa
+   (`Seguidor.buildBeam`, el mismo que usa el bt3d): `west:true` da la viga del
+   MOTOR con su slew completo, TCU, abarcones y antena, y `west:false` la viga
+   GEMELA, la del eje de transmisión, que lleva módulos y correas pero del slew
+   solo las piezas `twin` — corona, bracket y soporte. Es justo lo que
+   distingue una bifila de dos monofilas, y es lo que hay que replicar en vez
+   de dibujar una barra entre filas. */
+function seguidor3D(mats,escalaEje,motriz,largoFila){
+  var g=new THREE.Group(), spin=new THREE.Group(); g.add(spin);
+  var viga=Seguidor.buildBeam(THREE,{materials:mats,west:(motriz!==false),
+                                     detail:'mass',size:'largo'});
+  spin.add(viga.spin); g.add(viga.static);
   var postH=Seguidor.DIMS.postH||2.0;
   g.position.y=postH; g.rotation.y=Math.PI/2;
-  var poste=new THREE.Mesh(new THREE.BoxGeometry(.18,postH,.18),mats.steel);
-  poste.position.y=postH/2; poste.castShadow=true;
   /* La escala va en `g` (el grupo del tubo), no en el wrap: así estira la viga,
-     las alas y el vano del motor —lo que de verdad se alarga— y deja el poste
+     las alas y el vano del motor —lo que de verdad se alarga— y deja los postes
      con su sección. */
   if(escalaEje&&Math.abs(escalaEje-1)>1e-6)g.scale.x=escalaEje;
-  var wrap=new THREE.Group(); wrap.add(g,poste); wrap.spin=spin;
+  var wrap=new THREE.Group(); wrap.add(g);
+  /* HINCAS. Había UNA, bajo el accionamiento: un tubo de par de 65 m sobre un
+     solo poste no es un seguidor, es un balancín. La hinca va cada 6-9 m —es lo
+     que fija el vano entre rodamientos, y con ella el momento y la sección del
+     tubo—, así que se reparten a paso ≤ 8 m a lo largo del tubo, que en el marco
+     del wrap corre en Z. La del accionamiento no se repite: esa la pone el
+     propio modelo (`soporte`, y en la gemela también, que es pieza twin). */
+  var L=largoFila||Seguidor.DIMS.span||60;
+  var nP=Math.max(2,Math.round(L/8)+1), z0=-L/2, dP=L/(nP-1);
+  for(var i=0;i<nP;i++){
+    var z=z0+i*dP;
+    if(Math.abs(z)<1.6)continue;                 // ahí ya está el del slew
+    var p=new THREE.Mesh(new THREE.BoxGeometry(.18,postH,.18),mats.steel);
+    p.position.set(0,postH/2,z); p.castShadow=true; wrap.add(p);
+  }
+  wrap.spin=spin;
   return wrap;
 }
 
@@ -2809,17 +3146,39 @@ function seguidor3D(mats,escalaEje){
    seguidor.js, que es donde viven — así el panel de la fija y el del seguidor
    son el mismo objeto con la misma cara. El grupo `spin` existe igual para que
    el resto del código trate a las dos familias igual.                        */
-function mesaFija3D(mats,largo,ancho){
+/* `gLong`: la caída del terreno por metro A LO LARGO de la mesa. Una fija NO
+   sigue el terreno: se monta al tilt de proyecto y lo que compensa la pendiente
+   es la LONGITUD DE LAS HINCAS — 12° de cuesta y la mesa sigue a 25°. Antes se
+   escoraba la mesa entera con el suelo, que es lo que hace un seguidor, no una
+   fija: el tilt dibujado dejaba de ser el tecleado. */
+function mesaFija3D(mats,largo,ancho,gLong){
   var D=Seguidor.DIMS, wrap=new THREE.Group(), spin=new THREE.Group();
   var panel=new THREE.Mesh(new THREE.BoxGeometry(largo,0.045,ancho),mats.glass);
   panel.castShadow=true; panel.receiveShadow=true; spin.add(panel);
   var viga=new THREE.Mesh(new THREE.BoxGeometry(largo,D.tube*0.7,D.tube*0.7),mats.steel);
   viga.position.y=-0.13; viga.castShadow=true; spin.add(viga);
   wrap.add(spin);
-  [-largo/2+0.8, largo/2-0.8].forEach(function(x){
-    var p=new THREE.Mesh(new THREE.BoxGeometry(.16,D.postH,.16),mats.steel);
-    p.position.set(x,D.postH/2,0); p.castShadow=true; wrap.add(p);
-  });
+  /* HINCAS. Dos, una en cada punta, era lo que se veía —y desde casi cualquier
+     ángulo se veía UNA—: una mesa de 65 m sobre dos postes no es una estructura,
+     es un puente. En campo la hinca va cada 4-6 m, que es lo que aguanta el
+     viento y lo que da el perfil. Se reparten a paso ≤ 6 m entre las dos puntas.
+     Todas miden lo mismo porque la fila ya se ha inclinado con el terreno: lo
+     que absorbe la pendiente es el replanteo, no una hinca más larga. */
+  var nP=Math.max(2,Math.round((largo-1.6)/6)+1), x0=-largo/2+0.8, dP=(largo-1.6)/(nP-1);
+  var g=gLong||0, corta=D.postH, larga=D.postH, nocabe=false;
+  for(var ip=0;ip<nP;ip++){
+    var x=x0+ip*dP;
+    /* El suelo bajo esta hinca está a −x·g respecto al centro de la mesa, y la
+       viga sigue a `postH`: la hinca mide lo que hay entre los dos. Si sale
+       NEGATIVA, el terreno se ha comido la mesa por ese lado: no se monta de una
+       pieza y hay que bancalear. Se dibuja el mínimo y se DECLARA. */
+    var h=D.postH+x*g;
+    if(h<0.25){h=0.25; nocabe=true;}
+    if(h<corta)corta=h; if(h>larga)larga=h;
+    var p=new THREE.Mesh(new THREE.BoxGeometry(.16,h,.16),mats.steel);
+    p.position.set(x,D.postH-h/2,0); p.castShadow=true; wrap.add(p);
+  }
+  wrap.hincas={corta:corta,larga:larga,nocabe:nocabe};
   spin.position.y=D.postH;
   wrap.spin=spin;
   return wrap;
@@ -2881,7 +3240,9 @@ function cotaTerreno(x,z,T){
   return -(x*(T.gx||0)+z*(T.gz||0));
 }
 function sueloRelieve(lado,T){
-  var geo=new THREE.PlaneGeometry(lado,lado,120,120);
+  /* 220×220 y no 120: las curvas de nivel se interpolan entre vértices, así que
+     con celdas de seis metros salían con dientes de sierra. */
+  var geo=new THREE.PlaneGeometry(lado,lado,220,220);
   geo.rotateX(-Math.PI/2);
   var pos=geo.attributes.position, lo=0, hi=0;
   for(var i=0;i<pos.count;i++){
@@ -2898,8 +3259,25 @@ function sueloRelieve(lado,T){
      justo lo que la escena tiene que enseñar. Va en color de VÉRTICE, que se
      multiplica por el del material: 1 deja el verde tal cual. */
   var med=(hi+lo)/2, semi=(hi-lo)/2, col=new Float32Array(pos.count*3);
+  /* Y CURVAS DE NIVEL, porque el tinte solo no basta: se normaliza sobre todo
+     el suelo —que es mucho más grande que la parcela— así que junto a las
+     estructuras apenas varía y la ladera se lee plana. Una banda cada `paso`
+     metros de cota da la pendiente de un vistazo a cualquier zoom, y es la
+     convención de cualquier plano topográfico. El paso se elige para que salgan
+     una decena de curvas en la zona de trabajo, redondeado a 1-2-5. */
+  var paso=0;
+  if(semi>0.05){
+    var bruto=(hi-lo)/12, e=Math.pow(10,Math.floor(Math.log(bruto)/Math.LN10)),
+        m=bruto/e;
+    paso=(m<1.5?1:m<3.5?2:m<7.5?5:10)*e;
+  }
   for(var j=0;j<pos.count;j++){
-    var f=semi>0.05?1+0.42*Math.max(-1,Math.min(1,(pos.getY(j)-med)/semi)):1;
+    var y=pos.getY(j);
+    var f=semi>0.05?1+0.34*Math.max(-1,Math.min(1,(y-med)/semi)):1;
+    if(paso>0){
+      var u=y/paso; u=Math.abs(u-Math.round(u))*2;       // 0 en la curva, 1 entre curvas
+      if(u<0.16)f*=0.80+0.20*(u/0.16);
+    }
     col[j*3]=col[j*3+1]=col[j*3+2]=f;
   }
   geo.setAttribute('color',new THREE.BufferAttribute(col,3));
@@ -2915,18 +3293,6 @@ function sueloRelieve(lado,T){
    justo la distinción que la palabra «bifila» nombra.
    La barra va a la altura del tubo y en el centro del eje (z=0, donde está el
    motor), cruzando de una fila a la otra.                                    */
-function ejeBifila(mats,xa,xb){
-  var D=Seguidor.DIMS, g=new THREE.Group(), L=Math.abs(xb-xa);
-  var barra=new THREE.Mesh(new THREE.BoxGeometry(L,0.16,0.16),mats.silver||mats.steel);
-  barra.position.set((xa+xb)/2,D.postH,0); barra.castShadow=true; g.add(barra);
-  [xa,xb].forEach(function(x){                    // acoplamiento en cada tubo
-    var c=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.30,0.30),mats.motor||mats.steel);
-    c.position.set(x,D.postH,0); c.castShadow=true; g.add(c);
-  });
-  var m=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.48,0.42),mats.motor||mats.steel);
-  m.position.set((xa+xb)/2,D.postH-0.12,0); m.castShadow=true; g.add(m);
-  return g;
-}
 
 /* ── El mundo: un bloque por estructura ──
    Cada bloque lleva NFILAS3D filas al pitch REAL de esa estructura (el de su
@@ -2986,9 +3352,18 @@ function construyeMundo(){
        lo que en campo absorben las hincas, y aquí se ve como un extremo más
        enterrado que el otro. */
     var alEste=(esTk||spec.fam==='fija_ew');
-    var cotaFila=function(dx,dz){return cotaTerreno(grupo.position.x+dx,
-                                                    grupo.position.z+dz,T)-
-                                        cotaTerreno(grupo.position.x,grupo.position.z,T);};
+    /* EL AZIMUT DE LA ESTRUCTURA. El bloque se construye en su marco de
+       siempre —la fija apila en +Z y el seguidor y las dos aguas en +X— y se
+       GIRA entero a su azimut. Con los desvíos a cero el giro es cero y todo
+       queda como estaba. */
+    var apZ=FIS.azPitch(cfg,spec);
+    var gy=((alEste?90:180)-apZ)*FIS.D2R;
+    grupo.rotation.y=gy;
+    /* Y la pendiente hay que verla en el marco DEL BLOQUE, no en el del mundo:
+       girado 30°, moverse por su +X ya no es ir al este. */
+    var cg=Math.cos(gy), sg=Math.sin(gy);
+    var gLocX=T.gx*cg-T.gz*sg, gLocZ=T.gx*sg+T.gz*cg;
+    var cotaFila=function(dx,dz){return -(dx*gLocX+dz*gLocZ);};
     /* LA FILA SE ADAPTA AL TERRENO. La pendiente la tiene el suelo; la
        estructura se replantea sobre él. Apoyar cada fila en la cota de su
        CENTRO y dejarla horizontal a lo largo no vale: con 65 m de fila y 10,8°
@@ -3001,7 +3376,7 @@ function construyeMundo(){
        Lo que NO cambia es el tilt ni la ⊥: en la dirección del pitch las filas
        se escalonan a distinta cota, no se inclinan. Y para un seguidor esto es
        literalmente lo que hace un eje que sigue el terreno — un TSAT es eso. */
-    var rollZ=-Math.atan(T.gx), rollX=Math.atan(T.gz);
+    var rollZ=-Math.atan(gLocX), rollX=Math.atan(gLocZ);
     for(var f=0;f<nf;f++){
       var d=(f-(nf-1)/2)*pitch;
       var uno;
@@ -3009,31 +3384,39 @@ function construyeMundo(){
          fija y el tracker se configuran aparte, y si el render los igualara
          estaría enseñando una estructura distinta de la que calcula la tabla. */
       if(spec.fam==='tracker'){
-        uno=seguidor3D(mats,escTk); uno.position.x=d; uno.position.y=cotaFila(d,0);
+        /* En bifila, la PRIMERA viga de cada par es la del motor y las demás
+           son gemelas: eso es lo que hace que dos filas sean UN seguidor, y no
+           dos. En monofila todas llevan el suyo. */
+        uno=seguidor3D(mats,escTk,(agrupa<2)||(f%agrupa===0),G.largoFila);
+        uno.position.x=d; uno.position.y=cotaFila(d,0);
         uno.rotation.x=rollX;                            // el eje sigue el terreno
       }else if(spec.fam==='fija_ew'){
         // dos aguas: la mesa lleva DOS paneles enfrentados, y las filas se
         // repiten hacia el este como en el seguidor (las filas corren N-S)
         uno=new THREE.Group();
-        var a=mesaFija3D(mats,G.largoFila,G.altoColector/2),
-            b=mesaFija3D(mats,G.largoFila,G.altoColector/2);
+        /* Su +X local mira al −Z del bloque tras el giro de 90°, así que la
+           caída a lo largo de la mesa es la de Z cambiada de signo. */
+        var a=mesaFija3D(mats,G.largoFila,G.altoColector/2,-gLocZ),
+            b=mesaFija3D(mats,G.largoFila,G.altoColector/2,-gLocZ);
         a.position.z=-G.altoColector/4; b.position.z=G.altoColector/4;
         uno.add(a,b); uno.spinPair=[a.spin,b.spin]; uno.position.x=d;
         uno.position.y=cotaFila(d,0);
         /* Euler XYZ: la Y gira la mesa a lo largo de N-S y la X, que se aplica
            después, la inclina sobre el eje del MUNDO — que es el que corre
            este-oeste, ⊥ a esas filas. */
-        uno.rotation.set(rollX,Math.PI/2,0);
+        /* Sin escorar: una fija se monta al tilt de proyecto y la pendiente a
+           lo largo de sus filas la compensan las hincas. */
+        uno.rotation.set(0,Math.PI/2,0);
       }else{
-        uno=mesaFija3D(mats,G.largoFila,G.altoColector); uno.position.z=d;  // filas al SUR
+        uno=mesaFija3D(mats,G.largoFila,G.altoColector,gLocX); uno.position.z=d;  // filas al SUR
         uno.position.y=cotaFila(0,d);
-        uno.rotation.z=rollZ;                            // la mesa sigue el terreno
       }
       grupo.add(uno); filas.push(uno);
     }
-    /* En bifila, la transmisión que hace que esas dos filas sean UN seguidor. */
-    if(agrupa>1)for(var t=0;t+agrupa<=nf;t+=agrupa){
-      grupo.add(ejeBifila(mats,(t-(nf-1)/2)*pitch,(t+agrupa-1-(nf-1)/2)*pitch));
+    /* Y el eje que une cada par: de la corona de la motriz a la de su gemela. */
+    if(agrupa>1)for(var tr=0;tr+agrupa<=nf;tr+=agrupa){
+      var xa=(tr-(nf-1)/2)*pitch, xb=(tr+agrupa-1-(nf-1)/2)*pitch;
+      grupo.add(ejeTransmision(mats,xa,xb,cotaFila(xa,0),cotaFila(xb,0)));
     }
     var col='#'+(COL[k]||'#888888').replace('#','');
     /* El rótulo se acota por el hueco Y por el largo del bloque: con una fila
@@ -3043,9 +3426,11 @@ function construyeMundo(){
                       (agrupa>1?' · '+(agrupa===2?'bifila':agrupa+' filas'):''),
                       col,Math.min(sep*0.85,Math.max(12,largo*0.55)));
     et.position.set(0,D.postH+2.4+et.userData.alto,0); grupo.add(et);
+    var hin=filas[0]&&filas[0].hincas;
     BLOQUES.push({key:k,spec:spec,filas:filas,gcr:gcr,pitch:pitch,porTracker:agrupa,
+                  hincas:hin,
                   cruz:FIS.cruz(cfg,spec), rollX:rollX, rollZ:rollZ,
-                  largoPend:FIS.pendComp(cfg.pend,cfg.pendAz,FIS.ejePitch(spec)).largo});
+                  largoPend:FIS.pendComp(cfg.pend,cfg.pendAz,FIS.azPitch(cfg,spec)).largo});
   });
   /* ── ENCUADRE Y SOMBRAS ──
      Las dos cosas que hay que dimensionar CON la escena, no a ojo:
@@ -3072,15 +3457,23 @@ function construyeMundo(){
   TD.suelo.scale.set(1,1,1); TD.suelo.rotation.set(0,0,0);
   /* El horizonte, en el MISMO plano y un pelo por debajo: así el cuadrado del
      suelo de trabajo no acaba en un canto recto contra un llano. */
+  /* Y se DIMENSIONA con la escena, no 12 km: inclinado, un plano de 12 km sube
+     1.700 m por un lado y tapa el cielo entero. Basta con que llegue más lejos
+     que la niebla — allí ya es del color de la bruma— y ni un metro más. */
   TD.horiz.rotation.set(Math.atan(T.gz||0),0,-Math.atan(T.gx||0));
+  TD.horiz.scale.set(Math.max(2600,d*9),1,Math.max(2600,d*9));
   TD.horiz.position.y=-1.5;
   TD.radio=Math.max(220,d*1.6);
+  /* El tope de zoom se estira con la escena: con seis bloques en pendiente el
+     límite fijo de 1.200 m dejaba la rueda muerta antes de ver el campo entero. */
+  TD.ct.maxDistance=Math.max(1200,d*6);
   /* La cámara se pone CUESTA ABAJO, mirando ladera arriba. No es gusto: los
      bloques van sobre la curva de nivel, que gira con el azimut, y desde el sur
      fijo con la caída al este quedaban en fila india —el primero enorme y el
      último un punto—. Desde abajo se ven en línea, uno al lado del otro, y la
      ladera sube por detrás, que es lo que hay que leer. En llano no hay cuesta:
      se mira desde el sur, como siempre. */
+  if(!TD.libre){
   var vx=mg>1e-9?(T.gx/mg):0, vz=mg>1e-9?(T.gz/mg):1;
   /* ...pero SIEMPRE por el lado del ECUADOR. Las dos direcciones ⊥ a la línea
      de bloques encuadran igual de bien, y solo una enseña la cara: una fija
@@ -3104,9 +3497,16 @@ function construyeMundo(){
      el primero era el triple que el último. */
   var gi=20*FIS.D2R, cg=Math.cos(gi), sg=Math.sin(gi);
   var rx=vx*cg+vz*sg, rz=-vx*sg+vz*cg;
-  TD.cam.position.set(rx*d*0.86,d*0.40,rz*d*0.86);
+  /* La ALTURA se mide contra el suelo, no contra la horizontal: mirando ladera
+     arriba con la cámara a 25° y el terreno a 16°, quedan 9° de nada y la
+     escena entera es cuesta — ni cielo ni fuga, todo verde. Se le suma la
+     pendiente para conservar el mismo ángulo de vista SOBRE el plano del sitio,
+     que en llano es el de siempre. */
+  var ojo=(25+Math.abs(cfg.pend||0))*FIS.D2R;
+  TD.cam.position.set(rx*d*0.86,d*0.86*Math.tan(ojo),rz*d*0.86);
   TD.ct.target.set(0,4,0);
   encuadra();
+  }
   /* La niebla se dimensiona con la escena. Fija, o se come los bloques cuando
      son pocos, o deja una línea dura donde acaba el suelo cuando son seis. */
   if(TD.sc.fog){TD.sc.fog.near=d*0.9; TD.sc.fog.far=d*5.5;}
@@ -3147,8 +3547,9 @@ function actualiza3D(){
   BLOQUES.forEach(function(B){
     var th=0, spec=B.spec, tilt=(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
     if(spec.fam==='tracker'){
-      var P=spec.tsat?FIS.psTSAT(S.el,S.az,FIS.ejeTilt(cfg,spec),cfg.lat):FIS.psTracker(S.el,S.az);
-      th=(elDeg>0)?FIS.theta(P.ps,B.gcr,cfg.maxang,spec.bt):0;
+      var ax3=FIS.ejeTilt(cfg,spec);
+      var P=ax3?FIS.psTSAT(S.el,S.az,ax3,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
+      th=(elDeg>0)?FIS.theta(P.ps,B.gcr,cfg.maxang,spec.bt,cfg.btPend?B.cruz:0):0;
       B.filas.forEach(function(u){
         /* SIGNO. El grupo del seguidor entra girado 90° en Y, así que su +X
            local (el tubo) apunta al NORTE y su +Z local al ESTE. Girar POSITIVO
@@ -3173,12 +3574,15 @@ function actualiza3D(){
       });
       th=tilt;
     }else{
-      // Fija monoinclinada: mira al ECUADOR. Filas E-O ⇒ el giro va sobre X.
-      var sgn=(cfg.lat>=0?1:-1);
+      /* Fija monoinclinada. El giro va sobre su X local y SIEMPRE positivo:
+         inclina la mesa hacia su +Z local, que es la dirección a la que mira —
+         el azimut ya lo ha puesto el giro del bloque. Antes llevaba aquí un
+         signo por hemisferio; con el azimut declarado eso lo hacía dos veces y
+         en el sur volvía a mirar al polo. */
       var estimado=(spec.tiltOpt&&!REP);
       var tOpt=spec.tiltOpt?(REP?tiltDeRep(B.key):tiltEstimado(cfg,spec)):tilt;
       B.estimado=estimado;
-      B.filas.forEach(function(u){u.spin.rotation.x=sgn*tOpt*FIS.D2R;});
+      B.filas.forEach(function(u){u.spin.rotation.x=tOpt*FIS.D2R;});
       th=tOpt;
     }
     var imposible=(B.gcr>1);
@@ -3196,7 +3600,13 @@ function actualiza3D(){
              un eje no se inclina en el aire, así que ese número es el que
              tendría que llevar el «eje inclinado °» de un TSAT. */
           ((spec.fam==='tracker'&&Math.abs(B.largoPend)>1)
-            ?' · eje '+fmt(Math.abs(B.largoPend),1)+'° con el terreno':''))));
+            ?' · eje '+fmt(Math.abs(B.largoPend),1)+'° con el terreno':'')+
+          /* Y en una fija, lo que la pendiente a lo largo de sus filas CUESTA:
+             la mesa se monta al tilt de proyecto, así que quien compensa es la
+             hinca. Ver el rango es ver si la estructura existe. */
+          ((B.hincas&&B.hincas.larga-B.hincas.corta>0.1)
+            ?' · hincas '+fmt(B.hincas.corta,1)+'–'+fmt(B.hincas.larga,1)+' m'+
+             (B.hincas.nocabe?': hay que bancalear':''):''))));
   });
   $('escRead').innerHTML=ro.join('');
 }
@@ -3264,6 +3674,7 @@ CAMPOS_GEOM.forEach(function(id){
 $('hora').oninput=actualiza3D;
 $('fecha').onchange=actualiza3D;
 $('play').onclick=function(){PLAY=!PLAY;this.textContent=PLAY?'❚❚':'▶';};
+vigilaLienzos();
 </script>
 </body>
 </html>
