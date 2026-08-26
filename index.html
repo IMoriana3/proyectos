@@ -641,9 +641,9 @@ const PROJECTS = [
       "«Verificar contra el contrato del core» corre la QA de la física en el navegador; en repo: node tools/test_overcast_sim.mjs."
     ],
     pendientes: [
-      { done:true,  text:"Consigna anisótropa: MEDIDA y descartada como política (v1.18.0). El barrido de 5 α del core deja como mucho un 0,049 % sobre la mesa (15 días, 3 fechas × 5 cielos) con 1–2° de diferencia, casi siempre por debajo del deadband. Se entrega la COTA que lo demuestra, no la política. Si el hueco creciera, hay una prueba que lo caza y entonces tocaría llevárselo al core" },
-      { done:true,  text:"Export CSV de θ(t) por política para la TCU Toolbox (hecho v1.17.0: el día al minuto, con la configuración entera en la cabecera y verificado re-integrando el propio fichero)" },
-      { done:true, text:"Modo zonal (por NCU): cada NCU decide con su señal local frente a la decisión de planta (hecho v1.1; cuando el core tenga la política zonal, espejarla aquí)" }
+      { done:true,  text:"Consigna anisótropa: medida y descartada como política — el barrido de 5 α del core deja ≤ 0,049 % (v1.18.0)" },
+      { done:true,  text:"Export CSV de θ(t) y POA por política, al minuto y con la configuración entera (v1.17.0)" },
+      { done:true,  text:"Modo zonal por NCU, con cielo propio por zona (v1.1 y v1.13.0)" }
     ],
     historial: [
       { date:"2026-08-26", ver:"v1.18.0", note:"LA CONSIGNA ANISÓTROPA: medida, y por eso NO implementada como política. El core barre cinco ángulos por paso y con circumsolar el máximo cae entre candidatos; la pregunta era cuánto deja sobre la mesa. Medido en 15 días: como mucho 0,049 % (overcast total en junio), 0,00-0,02 % en el resto, con 1-2° de diferencia de ángulo — casi siempre por debajo del deadband de 1°, o sea que el actuador ni se movería distinto. Dos órdenes de magnitud por debajo de la ganancia de difusa y una décima parte del coste del tránsito: una quinta política no se paga. Lo que se entrega es la COTA que lo demuestra, declarada «NO es del core», con su fila en la tabla y el hueco explícito, para poder ENSEÑAR que continuous está pegada al techo en vez de afirmarlo. Dos correcciones por el camino: una rejilla fija de 0,25° caía entre los puntos donde el α acierta y la cota quedaba por debajo de lo que acota (ahora se siembra con los candidatos α y refina por búsqueda ternaria), y se calculaba con actuador instantáneo (ahora decide en su ciclo y ejecuta con el mismo lazo). QA 76." },
