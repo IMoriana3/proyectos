@@ -606,17 +606,38 @@ con el cielo detrás y los bloques parecen estar sobre una mesa flotando en el v
 Con el terreno inclinado, el de horizonte tenía que inclinarse **con él**: plano y horizontal, el
 cuadrado del suelo de trabajo acababa contra él en un canto recto que cruzaba la escena. Una ladera
 que se corta en línea y sigue en llano no es un horizonte, es un error de dibujo. Va en el mismo
-plano y metro y medio por debajo. (Detalle: su geometría se pre-rota tumbada, para que la rotación
-del objeto quede libre para la pendiente — con `rotation.x = −π/2` en el objeto, inclinarlo lo ponía
-de canto y salía un muro.)
+plano y metro y medio por debajo, y **dimensionado con la escena**: inclinado, un plano de 12 km sube
+1.700 m por un lado y tapa el cielo entero; basta con que llegue más lejos que la niebla. (Detalle:
+su geometría se pre-rota tumbada, para que la rotación del objeto quede libre para la pendiente — con
+`rotation.x = −π/2` en el objeto, inclinarlo lo ponía de canto y salía un muro.)
 
-#### Y que se VEA: sombreado por cota
+Y la **altura de la cámara** se mide contra el suelo, no contra la horizontal: mirando ladera arriba
+con la cámara a 25° y el terreno a 16° quedan 9° de nada y la escena entera es cuesta, ni cielo ni
+fuga. Se le suma la pendiente para conservar el mismo ángulo de vista sobre el plano del sitio, que
+en llano es el de siempre.
+
+#### Las hincas de la fija
+
+Dos, una en cada punta, era lo que había — y desde casi cualquier ángulo se veía **una**. Una mesa de
+65 m sobre dos postes no es una estructura, es un puente. En campo la hinca va cada **4-6 m**, que es
+lo que aguanta el viento y lo que da el perfil, así que se reparten a paso ≤ 6 m entre las dos
+puntas. Todas miden lo mismo, porque la fila ya se ha inclinado con el terreno: lo que absorbe la
+pendiente es el **replanteo**, no una hinca más larga.
+
+#### Y que se VEA: sombreado por cota y CURVAS DE NIVEL
 
 Con el terreno bien hecho la pendiente seguía sin verse, y no era el modelo: a mediodía de junio el
 sol está a **76°** —casi cenital— y una ladera de 16° recibe casi la misma luz que el llano, así que
 el suelo salía de un verde plano y uniforme. El terreno lleva un **tinte por altura** (claro arriba,
 oscuro abajo, como un mapa hipsométrico), en color de vértice sobre el mismo material. Hace legible
 el relieve a cualquier hora.
+
+Y **curvas de nivel**, porque el tinte solo no basta: se normaliza sobre todo el suelo —que es mucho
+más grande que la parcela— así que junto a las estructuras apenas varía y la ladera se lee plana. Una
+banda cada `paso` metros de cota da la pendiente de un vistazo a cualquier zoom, y es la convención
+de cualquier plano topográfico. El paso se elige para que salgan una decena de curvas en la zona de
+trabajo, redondeado a 1-2-5. La malla del suelo sube a 220×220: las curvas se interpolan entre
+vértices y con celdas de seis metros salían con dientes de sierra.
 
 Cada lectura de la escena dice además **cuánta pendiente ⊥ ve esa estructura**: sin eso, dos bloques
 sobre el mismo plano con sombras distintas parecen un error del dibujo.
