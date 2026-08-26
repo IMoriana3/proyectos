@@ -1866,7 +1866,25 @@ LOC.scenario=function(M,sc,lat,dtH){
     meta.use_gust=true; meta.gust_pasos_por_hora=pphG;
     notes.push('viento convertido a ráfaga de 3 s (Cook/IEC): la serie ya NO es media '+
       'horaria. La realización es POR HORA y se sostiene sobre los '+pphG+' paso(s) de '+
-      'esa hora, para que el recuento de eventos no dependa del paso de cálculo');}
+      'esa hora, para que el recuento de eventos no dependa del paso de cálculo');
+    /* Y la consecuencia, que es lo que de verdad hay que leer: T1 y T2 están
+       DEFINIDOS SOBRE LA MEDIA. Aplicarlos a una serie de racha no es el mismo
+       criterio, y la ficha no puede decidirlo por el proyecto — pero sí tiene
+       que decir de qué tamaño es la diferencia, o el número sale con la misma
+       cara que si nada hubiera cambiado.
+
+       Medido sobre un año a paso minutal con el generador del core (Weibull
+       k=2 + AR(1), tres emplazamientos). Y el giro que conviene saber: la
+       discrepancia es MAYOR donde la planta es más tranquila, que es justo
+       donde nadie la busca. */
+    notes.push('OJO AL CRITERIO: los umbrales T1 (40 km/h) y T2 (60 km/h) están '+
+      'DEFINIDOS SOBRE LA VELOCIDAD MEDIA, no sobre la racha. Dispararlos contra '+
+      'esta serie es OTRO criterio de proyecto, no un ajuste: medido sobre un año '+
+      'sintético a paso minutal, T1 pasa de 571 a 3.440 h/año (x6) y T2 de 38 a '+
+      '848 h/año (x22) en un emplazamiento templado. La diferencia se ESTRECHA '+
+      'con el viento (x2 y x4 en uno muy expuesto), o sea que es máxima donde '+
+      'menos se espera. Quién decide contra qué serie se comparan los umbrales es '+
+      'una decisión de proyecto y esta ficha no la toma.');}
   var t0=M.t[0].getTime();
   var inject=function(when,peak,dur,shape,dir,src){
     if(when==null||!(peak>0)){meta.events_skipped.push({source:src,why:when==null?'sin instante':'sin pico'});return;}

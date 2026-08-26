@@ -155,6 +155,45 @@ const meteoSint = lat => {
   check('y ese umbral CAMBIA el resultado (' + vistas['90'].ev + ' -> ' +
         vistas['60'].ev + ' abanderamientos)', vistas['90'].ev !== vistas['60'].ev);
 
+  // ── El criterio del umbral, DECLARADO junto al resultado ─────────────
+  // T1 y T2 están definidos sobre la velocidad MEDIA. La casilla de ráfaga
+  // sustituye la serie entera, así que dispararlos contra ella es OTRO
+  // criterio de proyecto, no un ajuste — y la ficha no lo decide, que no le
+  // toca. Lo que SÍ le toca es decir de qué tamaño es la diferencia: sin el
+  // número, el resultado sale con la misma cara que si nada hubiera cambiado,
+  // que es el modo de fallo del capítulo del abanderamiento en el informe.
+  await page.check('#wgust');
+  await page.evaluate(() => { window.REP = null; });
+  await page.click('#run');
+  await page.waitForFunction(() => window.REP && REP.cases, { timeout: 90000 });
+  // Se lee del DOM y no del objeto a propósito: un aviso que solo existe en
+  // el estado no existe. Lo que hay que comprobar es que el usuario lo VE, al
+  // lado del número que cambia.
+  await page.waitForTimeout(400);
+  const nota = await page.evaluate(() => {
+    const w = [...document.querySelectorAll('#out .warn')]
+      .find(e => /Banco de pruebas/.test(e.textContent));
+    return w ? w.textContent.replace(/\s+/g, ' ') : '';
+  });
+  check('con ráfaga, la ficha AVISA de que los umbrales son sobre la MEDIA',
+        /DEFINIDOS SOBRE LA VELOCIDAD MEDIA/.test(nota), nota.slice(-160));
+  check('y lo CUANTIFICA en vez de dejarlo en una advertencia',
+        /x6/.test(nota) && /x22/.test(nota), nota.slice(-200));
+  check('y dice que la decisión es del PROYECTO, no suya',
+        /esta ficha no la toma/.test(nota), nota.slice(-120));
+  // El par: sin ráfaga no hay nada que advertir, y un aviso que sale siempre
+  // deja de leerse. Si esto se pusiera rojo, los tres de arriba estarían
+  // pasando por un texto incondicional.
+  await page.uncheck('#wgust');
+  await page.evaluate(() => { window.REP = null; });
+  await page.click('#run');
+  await page.waitForFunction(() => window.REP && REP.cases, { timeout: 90000 });
+  await page.waitForTimeout(400);
+  const sinRafaga = await page.evaluate(
+    () => document.getElementById('out').textContent.replace(/\s+/g, ' '));
+  check('y SIN ráfaga el aviso no sale (no es un texto incondicional)',
+        !/DEFINIDOS SOBRE LA VELOCIDAD MEDIA/.test(sinRafaga));
+
   check('la ficha no lanza errores de JS', errores.length === 0, errores.join(' | '));
   await browser.close();
   console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko) : '\nOK — ' + ok + '/' + ok + ' comprobaciones');
