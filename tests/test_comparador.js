@@ -347,6 +347,67 @@ check('y el de transposición NO se mueve: no sabe que hay vecinas (' +
   flojo.sinSombra + '° = ' + apretado.sinSombra + '°)',
   flojo.sinSombra === apretado.sinSombra);
 
+// ── 6b-bis) LA PENDIENTE ES DEL SITIO, CON AZIMUT ──
+// Un emplazamiento no tiene una pendiente «⊥ a las filas»: tiene UNA, con su
+// magnitud y su dirección de caída. Referenciarla a las filas le pedía al
+// terreno girar con cada estructura. Lo que gira son las FILAS, y por eso cada
+// familia ve una COMPONENTE distinta del mismo plano.
+const FIJA = FIS.spec('fija_proyecto'), TK = FIS.spec('tracker_hsat'),
+      EW = FIS.spec('fija_ew');
+check('la fija apila al SUR y el seguidor y las dos aguas al ESTE',
+  FIS.ejePitch(FIJA) === 'z' && FIS.ejePitch(TK) === 'x' && FIS.ejePitch(EW) === 'x',
+  [FIS.ejePitch(FIJA), FIS.ejePitch(TK), FIS.ejePitch(EW)].join(','));
+// Los cuatro rumbos cardinales, que son los que se pueden razonar a mano.
+[[180, 16, 0, 'al SUR: la fija la ve entera y el seguidor NADA'],
+ [90, 0, 16, 'al ESTE: al revés, el seguidor entera y la fija nada'],
+ [0, -16, 0, 'al NORTE: la fija la ve entera pero con el signo cambiado'],
+ [270, 0, -16, 'al OESTE: el seguidor, con el signo cambiado']
+].forEach(([az, cf, ct, nom]) => {
+  const f = FIS.pendComp(16, az, 'z'), t = FIS.pendComp(16, az, 'x');
+  check('cayendo ' + nom, Math.abs(f.cruz - cf) < 1e-9 && Math.abs(t.cruz - ct) < 1e-9,
+    JSON.stringify({ fija: +f.cruz.toFixed(3), tk: +t.cruz.toFixed(3) }));
+  // y lo que no ve ⊥ lo ve A LO LARGO: no se pierde por el camino
+  check('  y lo que no entra ⊥ entra a lo largo (tan²⊥ + tan²largo = tan²β)',
+    Math.abs(Math.tan(f.cruz * Math.PI / 180) ** 2 + Math.tan(f.largo * Math.PI / 180) ** 2
+             - Math.tan(16 * Math.PI / 180) ** 2) < 1e-12);
+});
+// El caso en que TODAS ven lo mismo no es un ajuste: es un azimut concreto.
+const d45 = FIS.pendComp(16, 135, 'z'), t45 = FIS.pendComp(16, 135, 'x');
+check('solo cayendo en diagonal (135°) las dos ven lo MISMO: ' + d45.cruz.toFixed(2) + '°',
+  Math.abs(d45.cruz - t45.cruz) < 1e-9 &&
+  Math.abs(d45.cruz - Math.atan(Math.tan(16 * Math.PI / 180) / Math.SQRT2) * 180 / Math.PI) < 1e-9,
+  d45.cruz.toFixed(4) + ' vs ' + t45.cruz.toFixed(4));
+check('terreno llano: ninguna ve nada, apunte donde apunte el azimut',
+  [0, 45, 90, 200, 359].every(a => FIS.pendComp(0, a, 'z').cruz === 0 &&
+                                   FIS.pendComp(0, a, 'x').cruz === 0));
+// El seam del careo: el core recibe el cross-axis directamente, así que sin
+// azimut declarado `pend` ES el cross-axis. Con azimut, se deriva.
+check('sin azimut declarado, `pend` es el cross-axis tal cual (el camino del careo)',
+  FIS.cruz({ pend: 8 }, FIJA) === 8 && FIS.cruz({ pend: 8 }, TK) === 8);
+check('con azimut, cada familia recibe SU componente',
+  Math.abs(FIS.cruz({ pend: 16, pendAz: 180 }, FIJA) - 16) < 1e-9 &&
+  Math.abs(FIS.cruz({ pend: 16, pendAz: 180 }, TK)) < 1e-9);
+// Y lo que de verdad importa: eso llega al SOMBREADO, no se queda en la nota.
+const caeSur = porClaveTmp(FIS.compara(['fija_proyecto', 'tracker_hsat_nobt'], M,
+  { ...cfg, pend: 16, pendAz: 180 }));
+const caeEste = porClaveTmp(FIS.compara(['fija_proyecto', 'tracker_hsat_nobt'], M,
+  { ...cfg, pend: 16, pendAz: 90 }));
+const llanoAz = porClaveTmp(FIS.compara(['fija_proyecto', 'tracker_hsat_nobt'], M,
+  { ...cfg, pend: 0, pendAz: 180 }));
+function porClaveTmp(r) { return Object.fromEntries(r.filas.map(f => [f.key, f])); }
+check('cayendo al SUR la pendiente mueve la sombra de la FIJA (' +
+  llanoAz.fija_proyecto.sombra.toFixed(2) + ' → ' + caeSur.fija_proyecto.sombra.toFixed(2) + ' %)',
+  Math.abs(caeSur.fija_proyecto.sombra - llanoAz.fija_proyecto.sombra) > 0.05);
+check('  y NO la del seguidor, que la lleva a lo largo del eje (' +
+  caeSur.tracker_hsat_nobt.sombra.toFixed(3) + ' %)',
+  Math.abs(caeSur.tracker_hsat_nobt.sombra - llanoAz.tracker_hsat_nobt.sombra) < 1e-9);
+check('cayendo al ESTE se invierte: mueve al SEGUIDOR (' +
+  llanoAz.tracker_hsat_nobt.sombra.toFixed(2) + ' → ' +
+  caeEste.tracker_hsat_nobt.sombra.toFixed(2) + ' %)',
+  Math.abs(caeEste.tracker_hsat_nobt.sombra - llanoAz.tracker_hsat_nobt.sombra) > 0.05);
+check('  y no a la fija',
+  Math.abs(caeEste.fija_proyecto.sombra - llanoAz.fija_proyecto.sombra) < 1e-9);
+
 // ── 6c) LA MISMA PENDIENTE PARA LAS TRES: eso es la igualdad ──
 // El parámetro es UNO, del emplazamiento, y entra en el sombreado de todas las
 // familias por el mismo sitio. Lo que se exige aquí no es que exista el campo
