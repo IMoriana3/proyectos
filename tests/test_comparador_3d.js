@@ -1232,6 +1232,53 @@ const SONDA = `(() => {
   check('y con pendiente ⊥ dice que el ángulo va CON la pendiente, y cuánta sombra queda',
     /con la pendiente/i.test(notaBT.cruz) && /cross_axis_tilt/i.test(notaBT.cruz),
     notaBT.cruz.slice(-320));
+
+  // ── EL DIAGNÓSTICO «backtracking en llano» ──
+  // No es un modelo alternativo: es lo que hacía el core hasta SolarGPT v1.70.0
+  // y está para poder MEDIR lo que cuesta backtrackear mal en un campo en
+  // cuesta. Por eso va desmarcado, y por eso la tabla tiene que gritarlo cuando
+  // se marca — si no, alguien lo deja puesto y compara con el modelo viejo.
+  const diag = await p.evaluate(() => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const marca = v => { const c = document.getElementById('btLlano'); c.checked = v;
+      c.dispatchEvent(new Event('change', { bubbles: true })); };
+    document.querySelectorAll('.st').forEach(c => { c.checked = true; });
+    s('pend', 12); s('pendAz', 90);
+    // La FÍSICA se mide llamando al motor, no releyendo la tabla: toggle sin
+    // volver a comparar no recalcula nada, y así tiene que ser.
+    const M = FIS.clearskyCorto(cfgActual().lat, cfgActual().lon, 2023);
+    const corre = llano => {
+      const c = { ...cfgActual(), btLlano: llano };
+      return +FIS.compara(['tracker_hsat'], M, c).filas[0].sombra.toFixed(2);
+    };
+    const arranca = document.getElementById('btLlano').checked;
+    const fis = { bueno: corre(false), viejo: corre(true) };
+    // y el TEXTO sale del modelo con el que se corrió la tabla, no del
+    // interruptor vivo: marcarlo sin recomparar no debe cambiar el aviso
+    const nota = () => { drawTabla(REP.base);
+      return document.getElementById('tblNote').textContent.replace(/\s+/g, ' '); };
+    const antesDeCorrer = (marca(true), nota());
+    REP.btLlano = true;  const conViejo = nota();
+    REP.btLlano = false; const conBueno = nota();
+    marca(false); s('pend', 0);
+    return { arranca, fis, antesDeCorrer, conViejo, conBueno };
+  });
+  check('el diagnóstico arranca DESMARCADO: el modelo bueno es el que manda',
+    diag.arranca === false);
+  check('marcarlo devuelve la sombra que dejaba el modelo viejo (' +
+    diag.fis.bueno + ' % → ' + diag.fis.viejo + ' %)',
+    diag.fis.viejo > diag.fis.bueno + 1, JSON.stringify(diag.fis));
+  check('la tabla avisa de que estás en diagnóstico, no en un modelo alternativo',
+    /modo diagnóstico/i.test(diag.conViejo) &&
+    /no es un modelo alternativo/i.test(diag.conViejo), diag.conViejo.slice(-320));
+  check('sin él no lo menciona, que no viene a cuento',
+    !/modo diagnóstico/i.test(diag.conBueno), diag.conBueno.slice(-200));
+  // El aviso sale del modelo con el que se CORRIÓ la tabla, no del interruptor
+  // vivo: marcarlo sin volver a comparar cambiaría el texto dejando debajo los
+  // números de la tirada anterior.
+  check('y marcarlo sin volver a comparar no cambia el aviso: los números serían de antes',
+    !/modo diagnóstico/i.test(diag.antesDeCorrer), diag.antesDeCorrer.slice(-200));
   check('y sin pendiente ⊥ no lo dice, que no viene a cuento',
     !/cross_axis_tilt/i.test(notaBT.llano), notaBT.llano.slice(-200));
 

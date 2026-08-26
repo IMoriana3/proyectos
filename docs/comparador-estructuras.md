@@ -706,11 +706,19 @@ t = |d · cos(ψ − x)|         y si t ≥ 1 no hay sombra que evitar
 Con `x = 0` sale la de siempre, cifra a cifra. Con la pendiente metida, la sombra residual del
 seguidor con backtracking se va a **0,0000**: era 4,3 % a 8° sin ella.
 
-Hubo un interruptor durante dos horas, porque **el core backtrackeaba en llano** y había que poder
-carear contra él. Ya no hace falta: el core lleva `cross_axis_tilt` desde **SolarGPT v1.70.0** (mismo
-día, `solargpt_core/poa.py` — la llamada a `pvlib.tracking.singleaxis` iba sin él mientras el
-sombreado sí llevaba el `cross_axis_slope`). Hay un solo modelo y el careo entra por él: a 8° el
-core da **0,16 %** de sombra residual y la ficha **0,20 %**, contra los 3,74 / 4,11 de antes.
+El core lleva `cross_axis_tilt` desde **SolarGPT v1.70.0** (mismo día, `solargpt_core/poa.py` — la
+llamada a `pvlib.tracking.singleaxis` iba sin él mientras el sombreado sí llevaba el
+`cross_axis_slope`). Hay **un solo modelo** y el careo entra por él: a 8° el core da **0,16 %** de
+sombra residual y la ficha **0,20 %**, contra los 3,74 / 4,11 de antes.
+
+Queda un `backtracking en llano` **desmarcado**, y es un **diagnóstico**, no una alternativa:
+calcula el ángulo como si el campo fuese llano —lo que hacía el core hasta ese día— para poder ver
+de un vistazo lo que cuesta backtrackear mal en un campo en cuesta, que es un número que quiere
+cualquiera que herede uno. La tabla lo grita cuando está puesto, porque si no alguien lo deja
+marcado y compara contra el modelo viejo sin saberlo.
+
+El aviso sale del modelo con el que se **corrió** la tabla (`REP.btLlano`), no del interruptor vivo:
+marcarlo sin volver a comparar cambiaría el texto dejando debajo los números de la tirada anterior.
 
 #### Las hincas de la fija
 
@@ -785,11 +793,19 @@ t = |d · cos(ψ − x)|         y si t ≥ 1 no hay sombra que evitar
 Con `x = 0` sale la de siempre, cifra a cifra. Con la pendiente metida, la sombra residual del
 seguidor con backtracking se va a **0,0000**: era 4,3 % a 8° sin ella.
 
-Hubo un interruptor durante dos horas, porque **el core backtrackeaba en llano** y había que poder
-carear contra él. Ya no hace falta: el core lleva `cross_axis_tilt` desde **SolarGPT v1.70.0** (mismo
-día, `solargpt_core/poa.py` — la llamada a `pvlib.tracking.singleaxis` iba sin él mientras el
-sombreado sí llevaba el `cross_axis_slope`). Hay un solo modelo y el careo entra por él: a 8° el
-core da **0,16 %** de sombra residual y la ficha **0,20 %**, contra los 3,74 / 4,11 de antes.
+El core lleva `cross_axis_tilt` desde **SolarGPT v1.70.0** (mismo día, `solargpt_core/poa.py` — la
+llamada a `pvlib.tracking.singleaxis` iba sin él mientras el sombreado sí llevaba el
+`cross_axis_slope`). Hay **un solo modelo** y el careo entra por él: a 8° el core da **0,16 %** de
+sombra residual y la ficha **0,20 %**, contra los 3,74 / 4,11 de antes.
+
+Queda un `backtracking en llano` **desmarcado**, y es un **diagnóstico**, no una alternativa:
+calcula el ángulo como si el campo fuese llano —lo que hacía el core hasta ese día— para poder ver
+de un vistazo lo que cuesta backtrackear mal en un campo en cuesta, que es un número que quiere
+cualquiera que herede uno. La tabla lo grita cuando está puesto, porque si no alguien lo deja
+marcado y compara contra el modelo viejo sin saberlo.
+
+El aviso sale del modelo con el que se **corrió** la tabla (`REP.btLlano`), no del interruptor vivo:
+marcarlo sin volver a comparar cambiaría el texto dejando debajo los números de la tirada anterior.
 
 #### Las hincas
 
