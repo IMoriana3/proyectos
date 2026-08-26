@@ -141,8 +141,16 @@ const LAYOUT = {
   const pasAng = await page.evaluate(() => {
     const m = ESC.mesas.instanceMatrix.array, pt = 2 * ESC.nFilas;
     const iPas = ESC.bandaKs.indexOf('PASIVO');
-    const ang = i => Math.round(Math.atan2(m[i * pt * 16 + 4], m[i * pt * 16 + 5])
-                                * 180 / Math.PI * 10) / 10;
+    // SONDA AGNOSTICA AL GIRO DE LA PLANTA. Leer `atan2(e[4], e[5])` da el angulo solo
+    // mientras el tracker no este girado: la matriz es R_y(rot+90)*R_x(theta) y con
+    // rot=90 el R_y vale 180 grados, que deja e[4]=0 y e[5]=cos(theta) — la sonda
+    // devuelve 0 SEA CUAL SEA el angulo. En una planta girada asi, todo esto daria
+    // verde sin haber medido nada. Se quita el R_y conocido y se lee el R_x que queda.
+    const M4 = new THREE.Matrix4(), IN = new THREE.Matrix4(), Q = new THREE.Matrix4();
+    const angDe = (k, rot) => { ESC.mesas.getMatrixAt(k, M4);
+      IN.makeRotationY(-(rot + Math.PI / 2)); Q.multiplyMatrices(IN, M4);
+      return Math.round(Math.atan2(Q.elements[6], Q.elements[5]) * 180 / Math.PI * 10) / 10; };
+    const ang = i => angDe(i * pt, ESC.base[i].rot);
     const sueltos = [], resto = [];
     for (let i = 0; i < ESC.n; i++)
       if (ESC.banda[i] === iPas) (ESC.bandaSuelto[i] ? sueltos : resto).push(ang(i));
@@ -246,15 +254,18 @@ const LAYOUT = {
   await page.fill('#lV', '120'); await page.dispatchEvent('#lV', 'input');
   await page.waitForTimeout(900);
   const filas = await page.evaluate(() => {
-    const m = new THREE.Matrix4();
-    const ang = k => { ESC.mesas.getMatrixAt(k, m);
-      return Math.round(Math.atan2(m.elements[4], m.elements[5]) * 180 / Math.PI); };
+    // misma sonda agnostica al giro (ver el comentario de mas arriba)
+    const m = new THREE.Matrix4(), iv = new THREE.Matrix4(), qq = new THREE.Matrix4();
+    const angR = (k, rot) => { ESC.mesas.getMatrixAt(k, m);
+      iv.makeRotationY(-(rot + Math.PI / 2)); qq.multiplyMatrices(iv, m);
+      return Math.round(Math.atan2(qq.elements[6], qq.elements[5]) * 180 / Math.PI); };
     const iPas = ESC.bandaKs.indexOf('PASIVO');
     const sueltos = [], quietos = [];
     for (let i = 0; i < ESC.n; i++) {
       if (ESC.banda[i] !== iPas) continue;
       const f = [];
-      for (let q = 0; q < ESC.nFilas; q++) f.push(ang((i * ESC.nFilas + q) * 2));
+      for (let q = 0; q < ESC.nFilas; q++)
+        f.push(angR((i * ESC.nFilas + q) * 2, ESC.base[i].rot));
       (ESC.bandaSuelto[i] ? sueltos : quietos).push(f);
     }
     // y DONDE esta cada fila: la suelta tiene que ser la del perimetro
@@ -322,6 +333,9 @@ const LAYOUT = {
   // Se comprueba sobre una planta CON DIENTE DE SIERRA Y UN HUECO DENTRO, que es el
   // regimen donde una caja y una huella de verdad dan resultados distintos. En una
   // planta rectangular las dos coincidirian y el test pasaria por el motivo equivocado.
+  // La planta va GIRADA 90 grados a proposito: es el regimen donde la sonda de angulo
+  // por `atan2(e[4], e[5])` se queda ciega, y donde por tanto todo esto podria dar
+  // verde sin medir nada. Si alguien vuelve a esa sonda, estas comprobaciones caen.
   const IRREG = { clat: 41.5, clon: -0.8, mods: 28, modW: 1.134, filaZ: 3, trackers: [] };
   for (let c = 0; c < 20; c++) {
     const alto = 6 + Math.round(4 * Math.sin(c / 3));
@@ -383,6 +397,49 @@ const LAYOUT = {
         H.porFranja.map(f => f.borde + '<' + 4 * f.rects).join(' ') + ')',
         rayado.length === 0,
         'una franja con 4 aristas por rectangulo es una franja dibujada a rayas');
+
+  // ── LA MISMA PLANTA, GIRADA 90° ────────────────────────────────────
+  // Todas las comprobaciones de arriba corren sobre una planta con rot=0, que es
+  // justo donde la sonda de angulo por `atan2(e[4], e[5])` funciona. Con rot=90 la
+  // matriz es R_y(180)*R_x(theta): e[4] vale 0 y e[5] vale cos(theta), asi que esa
+  // sonda devuelve 0 sea cual sea el angulo y TODO daria verde sin medir nada.
+  // Este bloque corre la propiedad que importa —una fila suelta, no dos— en ese
+  // regimen. Con la sonda vieja, cae.
+  const GIRADA = { clat: 41.5, clon: -0.8, mods: 28, modW: 1.134, filaZ: 3,
+    trackers: [] };
+  for (let c = 0; c < 16; c++) for (let r = 0; r < 6; r++)
+    GIRADA.trackers.push({ x: c * 24, n: r * 40, rot: 90, t: 'completo' });
+  await page.unroute('**/*_layout.json');
+  await page.route('**/*_layout.json', r =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(GIRADA) }));
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#escena', { timeout: 15000 });
+  await page.selectOption('#escena', 'fayon');
+  await page.waitForFunction(() => window.ESC && ESC.kind === 'planta', { timeout: 25000 });
+  await page.check('#bandas');
+  await page.fill('#lV', '120'); await page.dispatchEvent('#lV', 'input');
+  await page.waitForTimeout(900);
+
+  const gir = await page.evaluate(() => {
+    const m = new THREE.Matrix4(), iv = new THREE.Matrix4(), qq = new THREE.Matrix4();
+    const angR = (k, rot) => { ESC.mesas.getMatrixAt(k, m);
+      iv.makeRotationY(-(rot + Math.PI / 2)); qq.multiplyMatrices(iv, m);
+      return Math.round(Math.atan2(qq.elements[6], qq.elements[5]) * 180 / Math.PI); };
+    const iPas = ESC.bandaKs.indexOf('PASIVO'), f = [];
+    for (let i = 0; i < ESC.n; i++) {
+      if (ESC.banda[i] !== iPas || !ESC.bandaSuelto[i]) continue;
+      const g = []; for (let q = 0; q < ESC.nFilas; q++)
+        g.push(angR((i * ESC.nFilas + q) * 2, ESC.base[i].rot));
+      f.push(g);
+    }
+    return { sueltos: f.length, ejemplo: f[0] || null,
+      mal: f.filter(g => g.filter(a => Math.abs(a) > 5).length !== 1).length };
+  });
+  check('con la planta girada 90° hay filas sueltas que medir (' + gir.sueltos + ')',
+        gir.sueltos > 0, 'sin sueltos, lo de abajo pasaría por no haber nada que mirar');
+  check('y sigue soltándose UNA fila por tracker, no dos (' +
+        JSON.stringify(gir.ejemplo) + ')', gir.mal === 0,
+        'este es el régimen donde la sonda por atan2(e[4],e[5]) se queda ciega');
 
   check('la ficha no lanza errores de JS', errores.length === 0, errores.join(' | '));
   await browser.close();
