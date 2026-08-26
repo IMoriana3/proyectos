@@ -388,6 +388,94 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-26 · v1.35** — **las consignas iban al seguidor equivocado en 157 de 748, y el primer
+  volcado real lo destapó.** El id del layout **no codifica la NCU** —`TK 045-06` tiene `ncu=9`— y su
+  número **no reinicia en 1** en todas ellas (en Ayora, NCU9 va de 45 a 85, NCU10 de 66 a 105). El
+  nº de TCU que entiende la planta es el **rango del seguidor dentro de su NCU**. `export_consignas`
+  lo tomaba del número del id: con Ayora eso apareja mal **157 de 748** seguidores repartidos en cinco
+  NCUs, y **una consigna con el TCU equivocado no es una consigna inútil, es la consigna de OTRO
+  seguidor**. En un exportador que existe precisamente para mandar ángulos a una planta. Corregido y
+  verificado contra el volcado: **16 de 16 NCUs con todas sus consignas, cero huérfanos**; guard que
+  exige que dentro de cada NCU los TCU sean 1..n sin huecos ni repeticiones.
+  **Dos «pendientes» que el volcado permite tachar**: el **signo** queda confirmado —**θ<0 = ESTE**,
+  o sea que la columna que casa con `Objetivo` es `theta_tcu_deg`—; y **la arquitectura importa**, lo
+  que ahora está escrito en la cabecera del exportador. Hay **dos**, y cada una tiene su entregable:
+  si la inteligencia vive en la **TCU**, lo que hace falta es la **ficha de registros**
+  (41098/41100/41102/41104 y los vanos); si vive en la **NCU**, lo que hace falta es la **tabla de
+  consignas**. El Burgo es el segundo caso, y por eso su plantilla de TCU lleva `slope = 0`: la TCU no
+  calcula nada. Confundirlas no es un matiz — escribir pendientes en una planta que no las usa no hace
+  nada, y mandar consignas a una que las calcula sola, tampoco.
+  **Y una página nueva, `telemetria.html`**, para contestar sin depender de nadie la pregunta que
+  llevaba días abierta: **¿esta planta corrige el relieve o manda un ángulo único?** Lee la tabla
+  `telemetria` de Supabase —donde `importar-logs.html` deja los CSV diarios de las NCU, con `series =
+  {t, v:{angle, target_angle, …}}`— y mide **cuánto se abren entre sí los objetivos** a lo largo del
+  día. **No compara contra ningún modelo**, así que no necesita levantamiento: vale para El Burgo,
+  que no tiene cotas en el repo. Tres decisiones que la hacen fiable: la apertura es **p95 − p5** y no
+  máx − mín (un solo seguidor en tope falsearía el máximo todos los días, y siempre hay alguno); los
+  que están en **posición segura** se excluyen; y el remuestreo a malla común **descarta** la muestra
+  que cae a más de media malla en vez de arrastrar un valor viejo —los logs de TCU pierden ~7% del día
+  en decenas de huecos de radio, y rellenarlos en silencio **inventaría apertura donde no la hay**—.
+  Probada en Chromium **en las dos direcciones**, con una planta de ángulo único y otra que abre:
+  una página probada solo con el caso bueno no distinguiría nada. QA 72 + 8 de la página.
+
+- **2026-08-26 · v1.34** — **el primer cruce contra la planta REAL, y la cadena valida.** Volcado de
+  Ayora (782 filas: 751 seguidores + 16 NCU + 5 repetidores + 10 HSU) cruzado contra las consignas del
+  simulador con `tools/cruce_diagnostico.mjs`. Quedan cerradas tres cosas que llevaban semanas
+  declaradas como pendientes de una lectura: el **huso** es **UTC+2** (mediana 0,33° frente a 17° con
+  +1 y 33° con UTC; el tool lo deduce y **exige que gane con holgura**, si no aborta y pide `--huso`),
+  el **convenio de signos** y la **identidad**.
+  **Medido: 743 seguidores en seguimiento, mediana −0,33°, p95 0,46°, máximo 0,55°, cero atípicos.**
+  Eso valida de extremo a extremo identidad → línea → geometría del levantamiento → posición solar →
+  convenio.
+  **Lo que un volcado de mediodía NO puede hacer, y el informe lo dice en cada ejecución**: discriminar
+  la política. A 60° de elevación no hay sombra y astro, bt2d, pairwise y bt3d dan lo mismo —
+  separación **0,000°**. Es el **control**, no la prueba, y se avisa para que nadie lo cite al revés.
+  De ahí salió la **firma de dispersión**, que sí es binaria y no necesita interpretar medianas: con
+  eje N-S el astronómico manda **el mismo ángulo a toda la planta** a cualquier hora, y el bt3d **abre**
+  porque cada pareja tiene su pendiente. Medido sobre Ayora: **0,41° de apertura a mediodía y 11,66° al
+  ocaso**. Basta contar cuántos ángulos distintos manda la planta.
+  **NCU7 queda SIN VERIFICAR** —layout 25 seguidores, diagnóstico 22, con un hueco en el TCU 14—: el
+  rango deja de ser fiable tras el hueco, y con sol alto un desfase de una línea ni se nota. Se marca
+  en vez de darlo por bueno.
+  **Hallazgo de mantenimiento, no de modelo:** 6 seguidores en posición segura por `SoC insuficiente
+  (L3)`, **cinco mudos entre 4,5 y 14,4 días**; el peor, `NCU1/TCU62`, parado en el **tope contrario**
+  al que se le pide. Comprobación cruzada con un segundo volcado ocho días anterior: las fechas de
+  caída **cuadran** (6,4+8 = 14,4 días, 1,7+8 = 9,7…), o sea que llevan muertos desde antes y nadie
+  los ha tocado. Y ahí salió un fallo de clasificación del propio tool: filtrar por `Modo` antes que
+  por batería escondía el peor caso en «no-AUTO». QA 71.
+  **Un sesgo que sigue sin explicar, y se dice:** −0,33° en un volcado y −1,24° en otro. Ni ángulo
+  constante (varía ×3,8) ni retraso de reloj constante (1,22 vs 4,73 min, con velocidades de giro casi
+  idénticas). Descartado el tiempo de barrido con la edad de cada lectura (0–14 s). Hipótesis viva:
+  que la TCU recalcule `Objetivo` **a escalones** de T minutos, lo que da un retraso uniforme en [0,T]
+  según dónde caiga el volcado; con dos muestras solo se acota **T ≥ 4,7 min**. Es falsable.
+
+- **2026-08-26 · v1.33** — **arranque en 0,9 s, la ficha de configuración por seguidor, y el 41106.**
+  Reportado que el simulador cargaba lento con planta real. Medido, día completo a paso de 5 min: a 80
+  líneas los dos **optimizadores** se llevan **1,6 s + 3,0 s de los 5,5 s** —el **84%**— y `optfree`
+  escala **peor que lineal** (×13 cuando las filas van ×10). Y son justo los dos que la página ya marca
+  como **asesoría**. Al cargar planta real se apagan **y la nota dice cuáles y por qué**: apagarlos en
+  silencio habría sido peor que la lentitud. Un testigo evita repetirlo. El **gate** pasa a declarar su
+  precondición —reenciende las dos que valida— en vez de heredar el default de la pantalla.
+  **`tools/export_config_tcu.mjs`**: la ficha de qué lleva cada TCU, con su registro. Y aquí la lección
+  fue **mirar antes de construir**: la configuración por TCU del levantamiento **ya existía publicada**
+  en `modbus.html` (`config_tcu_sunner_<planta>.csv`), con lo difícil dentro —la vecina crítica y el
+  vector de pendiente con su azimut—. Lo que faltaba no era calcularla, era **poder usarla**: viene en
+  su orden, con identidad de zona («HD-1»), sin los vanos y sin decir a qué registro va cada número. El
+  tool **une**, sin recalcular ni una pendiente, por la terna medida —**754 de 754 sin un empate**, y si
+  deja de ser unívoca **aborta**—. Autocomprobación: `|transv| = |vector·cos(az−90°)|` en las **1.508
+  parejas**, peor desvío **0,0068 pp**, lo que confirma **medido** que el par (vector, azimut) es lo que
+  piden 41098/41100. **Hallazgo:** San José **no casa con su propio levantamiento** (pendiente máxima
+  25,0% en el fichero publicado, 49,6% en las cotas): el exportador aborta y lo dice.
+  **El 41106** aparecía en radianes mientras su gemelo 41033 va en metros. Comprobado contra la
+  extracción del documento de fabricante: **el volcado es fiel, la errata es de origen**, y se ve la
+  causa — hereda unidad, defecto y rango **idénticos** a los del 41102, cuatro direcciones más arriba.
+  Ya estaba **resuelto en campo** sin que hiciera falta pedirlo: la TCU Toolbox lo tenía anotado con la
+  lectura real (**Ayora lee 6**, y su levantamiento mide **6,002 m**). La unidad pasa a `m (doc: rad,
+  errata)`: dice lo que el equipo usa **y** lo que el documento afirma. Y al añadir esa curación salió
+  un **fallo latente** del generador: `CURADO` se consultaba **ciego al dispositivo**, y como los tres
+  mapas comparten rangos, la entrada de la TCU pisó el `meters/second` de la HSU. Nunca había mordido
+  porque las dos curaciones existentes eran de la NCU. QA 70.
+
 - **2026-08-21 · v1.32** — **el CAREO: el clásico deja de ser una degradación a la que se cae y
   pasa a ser una comparación que se enseña.** El simulador ya traía los dos modelos —`bt2d`
   («ignora el relieve: un tracker sin configurar») y `true3d`— pero solo se podían mirar de uno en

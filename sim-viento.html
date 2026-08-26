@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0B0F14">
 <link rel="icon" href="favicon.svg">
-<title>Viento &amp; Abanderamiento — Factiun</title>
+<title>Comparador de estrategias de abanderamiento — Factiun</title>
 <!-- sin fuentes de Google: offline (fuentes del sistema) -->
 <style>
   /* Estética de la casa: la misma que `overcast.html` y `backtracking.html` de
@@ -2918,8 +2918,16 @@ function drawTable(){
   ord().forEach(function(s){
     var c=REP.cases[s];
     h+='<tr'+(s===b?' class="win"':'')+'><td><span class="dot" style="background:'+COL[s]+'"></span><b>'+s+'</b> · '+
+       /* LA VELOCIDAD DE SUELTA VIAJA CON EL RESULTADO. El denominador ya estaba
+          —«1 fila de 20»— porque sin él el impacto de planta no es interpretable.
+          Faltaba la otra mitad: a qué viento se suelta. Ese número MANDA en todo
+          el caso —a 40 km/h salen 248 sueltas y 3.677 h; a 90, seis y 52— y no
+          está medido: es un sustituto declarado del par de desembrague. Ponerlo
+          en el anexo y no en la fila era dejar que el resultado se leyera sin su
+          parámetro. Es la misma regla del denominador, aplicada a la otra mitad. */
        esc(c.passive
-             ? 'mecánico · 1 fila de '+(c.passive.n_trackers*c.passive.filas_por_tracker)+
+             ? 'mecánico · suelta a '+fmt(c.passive.release_kmh,0)+' km/h (no medida)'+
+               ' · 1 fila de '+(c.passive.n_trackers*c.passive.filas_por_tracker)+
                ' ('+fmt(100*c.passive.fraccion_expuesta,1)+' % del campo)'
              : (c.orientation==='sol'?'cara al sol':'cara al viento')+' · '+
                c.n_thresholds+(c.n_thresholds>1?' umbrales':' umbral'))+'</td>'+
