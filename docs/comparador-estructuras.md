@@ -837,6 +837,12 @@ el ángulo horario de cualquier dirección `w` es entonces `atan2(w·derecha, w�
 pendiente se dibuja hacia **arriba** como la aguja, porque ese ángulo se mide desde arriba: dibujada
 hacia abajo, rotarla 180° la dejaba apuntando al norte con el terreno cayendo al sur.)
 
+Y **ni la cámara ni el objetivo bajan del suelo**. `maxPolarAngle` solo impide bajar del plano
+horizontal que pasa por el objetivo, y eso no basta en cuanto hay pendiente o se desplaza la vista:
+con la ladera subiendo, el suelo bajo la cámara puede estar por encima de ella y la escena se ve
+desde dentro de la tierra. Se acota contra el terreno de verdad —que con un plano cuesta dos
+multiplicaciones—: la cámara a 1,5 m del suelo, el objetivo a 0,5.
+
 Y la **cámara es libre**. El botón derecho ya desplazaba, pero cada reconstrucción —y se reconstruye
 al tocar cualquier campo— devolvía la vista a su sitio, así que en la práctica no se podía mirar a
 otro lado. En cuanto el usuario la toca, la escena deja de recolocarla: manda él hasta que pulse
