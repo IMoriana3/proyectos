@@ -2065,9 +2065,15 @@ function buscaSitio(){
       lat:co.lat,lon:co.lon,det:'tal como las has escrito · hora derivada de la longitud',
       src:'Coordenadas',tz:null}]});
   grupos.push({label:'Cartera y presets',items:loc});
-  renderSitios(grupos, q.trim().length>=3?'Buscando en Open-Meteo…':null);
+  /* El anuncio tiene que salir SOLO si de verdad se va a buscar fuera. Con
+     coordenadas pegadas la búsqueda remota ni se lanza —hay dos líneas más
+     abajo un `return`—, así que decir «Buscando en Open-Meteo…» era anunciar
+     algo que no iba a pasar: el desplegable se quedaba con ese texto puesto
+     para siempre. La condición es la MISMA que decide si se busca. */
+  var vaABuscar=(!co&&normSitio(q).length>=3);
+  renderSitios(grupos, vaABuscar?'Buscando en Open-Meteo…':null);
   if(_sitioT)clearTimeout(_sitioT);
-  if(co||normSitio(q).length<3)return;              // coordenadas: no hace falta red
+  if(!vaABuscar)return;                             // coordenadas: no hace falta red
   _sitioT=setTimeout(function(){
     var qv=q;
     buscaRemoto(q).then(function(rem){

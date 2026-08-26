@@ -676,6 +676,41 @@ leer justo lo contrario de lo que dice:
 
 Va en la nota de la tabla, y la segunda parte solo cuando hay pendiente ⊥ que la justifique.
 
+#### Una fija NO sigue el terreno: lo compensan las hincas
+
+Un seguidor sí sigue el terreno a lo largo de su eje —eso *es* un eje inclinado—. Una **fija no**: se
+monta al **tilt de proyecto** y lo que compensa la pendiente a lo largo de sus filas es la
+**longitud de las hincas**. Con 12° de cuesta la mesa sigue a 25°.
+
+Antes se escoraba la mesa entera con el suelo, que es lo que hace un seguidor: el tilt dibujado
+dejaba de ser el tecleado, y hubo que poner un aviso diciéndolo. Ese aviso sobra ahora — el tilt del
+cálculo y el del dibujo vuelven a ser el mismo.
+
+Cada lectura de fija dice el **rango de hinca** que sale, porque es lo que dice si la estructura se
+puede montar: con 12° a lo largo de una fila de 65 m van de **0,3 a 8,8 m**. Y cuando la hinca
+saldría **negativa** —el terreno se ha comido la mesa por ese lado— se declara: `hay que bancalear`.
+Con la pendiente ⊥ a las filas, en cambio, las hincas ni se enteran: todas iguales, y las filas se
+escalonan.
+
+#### El backtracking, con la pendiente
+
+`FIS.theta` acepta la pendiente ⊥ a las filas y backtrackea **con ella**, que es lo que hace
+`pvlib.tracking.singleaxis` con `cross_axis_tilt`:
+
+```
+d = 1 / (GCR · cos x)        separación entre ejes, corregida
+t = |d · cos(ψ − x)|         y si t ≥ 1 no hay sombra que evitar
+θ = ψ − signo(ψ) · acos(t)
+```
+
+Con `x = 0` sale la de siempre, cifra a cifra — por ahí entra el careo, porque **el core backtrackea
+en llano**. Con la pendiente metida, la sombra residual del seguidor con backtracking se va a
+**0,0000**: era 4,3 % a 8° sin ella.
+
+Va con interruptor (`backtracking con la pendiente`, marcado por defecto) porque son dos modelos
+distintos y conviene poder ver la diferencia: sin marcar es lo que hace el core, marcado es lo que
+hace pvlib y lo que hace un seguidor de verdad en un campo en cuesta.
+
 #### Las hincas de la fija
 
 Dos, una en cada punta, era lo que había — y desde casi cualquier ángulo se veía **una**. Una mesa de
@@ -718,6 +753,41 @@ leer justo lo contrario de lo que dice:
    ficha no se lo va a inventar por su cuenta — lo dice y ya.
 
 Va en la nota de la tabla, y la segunda parte solo cuando hay pendiente ⊥ que la justifique.
+
+#### Una fija NO sigue el terreno: lo compensan las hincas
+
+Un seguidor sí sigue el terreno a lo largo de su eje —eso *es* un eje inclinado—. Una **fija no**: se
+monta al **tilt de proyecto** y lo que compensa la pendiente a lo largo de sus filas es la
+**longitud de las hincas**. Con 12° de cuesta la mesa sigue a 25°.
+
+Antes se escoraba la mesa entera con el suelo, que es lo que hace un seguidor: el tilt dibujado
+dejaba de ser el tecleado, y hubo que poner un aviso diciéndolo. Ese aviso sobra ahora — el tilt del
+cálculo y el del dibujo vuelven a ser el mismo.
+
+Cada lectura de fija dice el **rango de hinca** que sale, porque es lo que dice si la estructura se
+puede montar: con 12° a lo largo de una fila de 65 m van de **0,3 a 8,8 m**. Y cuando la hinca
+saldría **negativa** —el terreno se ha comido la mesa por ese lado— se declara: `hay que bancalear`.
+Con la pendiente ⊥ a las filas, en cambio, las hincas ni se enteran: todas iguales, y las filas se
+escalonan.
+
+#### El backtracking, con la pendiente
+
+`FIS.theta` acepta la pendiente ⊥ a las filas y backtrackea **con ella**, que es lo que hace
+`pvlib.tracking.singleaxis` con `cross_axis_tilt`:
+
+```
+d = 1 / (GCR · cos x)        separación entre ejes, corregida
+t = |d · cos(ψ − x)|         y si t ≥ 1 no hay sombra que evitar
+θ = ψ − signo(ψ) · acos(t)
+```
+
+Con `x = 0` sale la de siempre, cifra a cifra — por ahí entra el careo, porque **el core backtrackea
+en llano**. Con la pendiente metida, la sombra residual del seguidor con backtracking se va a
+**0,0000**: era 4,3 % a 8° sin ella.
+
+Va con interruptor (`backtracking con la pendiente`, marcado por defecto) porque son dos modelos
+distintos y conviene poder ver la diferencia: sin marcar es lo que hace el core, marcado es lo que
+hace pvlib y lo que hace un seguidor de verdad en un campo en cuesta.
 
 #### Las hincas
 
