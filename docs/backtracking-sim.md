@@ -388,6 +388,40 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-26 · v1.36 · herramientas** — **`tools/careo_sombra.mjs`: la pregunta que el cliente hace
+  ANTES que los kWh.** «¿Mi planta se hace sombra, y de quién es la culpa?» no se contesta con un
+  porcentaje de energía. Se contesta hora a hora y separando dos cosas que en una gráfica parecen la
+  misma: la **sombra EVITABLE** —la que desaparece si la TCU lleva configurada la pendiente real de su
+  vecina, y es la que justifica la intervención— y la **sombra INEVITABLE** —la que queda con el
+  seguidor ya contra su tope mecánico, que no la quita ninguna configuración porque sale del binomio
+  vano/límite de giro, o sea del diseño de la planta—. Prometer «cero sombras» es falso en cualquier
+  planta con topes finitos; lo que sí se sostiene es la **VENTANA LIMPIA**: el intervalo sin sombra en
+  **ningún** seguidor (el peor de los 754, no la media).
+
+  **El error que estuvo aquí y se deja escrito.** La primera versión usaba `bt2d` como configuración
+  «sin configurar». Está mal: `bt2d` **no es «pairwise con pendiente 0»**, es otra política (un ángulo
+  para toda la planta con el vano medio, sin el mínimo por pareja). Al medir política y registro a la
+  vez, el 21-dic salía que **configurar el levantamiento EMPEORA la sombra** —14,15 % contra 12,88 %—,
+  que es lo contrario de la verdad y lo que habría ido a una propuesta de cliente. Comparando lo
+  comparable —misma política, registro a cero contra registro medido— sale **14,31 % → 14,15 %**: la
+  configuración mejora. La regla que queda es que **una comparación tiene que aislar UNA variable**, y
+  hay comprobación que falla si alguien vuelve a cambiar dos. Por el camino quedó descartada la
+  hipótesis de signo invertido en la pendiente: negarla **mejora por la mañana y empeora por la
+  tarde**, que es precisamente la firma de un signo CORRECTO.
+
+  **La ponderación por irradiancia, sin la cual el número engaña.** La media temporal da el mismo peso
+  al 84 % de sombra de las 21:30 que al mediodía, y a esa hora la DNI son 1,2 W/m². Sin ponderar,
+  Ayora «tiene» un 6 % de sombra; ponderada, un 2,2 %. Las dos cifras son correctas y **sólo la segunda
+  tiene que ver con los kWh** — es la que reconcilia la sombra con el +0,50 % de energía.
+
+  **Ayora, sombra ponderada (sin configurar → configurada → 3D) y ventana limpia:** 21-mar 3,38 → 3,23
+  → 2,85 (13:00–14:30) · 21-jun 2,28 → 2,20 → 2,40 (11:50–16:25) · 21-sep 3,36 → 3,21 → 2,84
+  (12:45–14:15) · 21-dic 5,52 → 5,40 → 3,43 (13:15–14:00). **Configurar el registro aporta 0,08–0,15
+  puntos**: real y pequeño. **El 3D aporta bastante más** —más de dos puntos en diciembre— pero **no se
+  consigue escribiendo registros: pide NCU**, y Ayora hoy no tiene esa arquitectura. Y la ventana
+  limpia es estrecha fuera del verano: hora y media en los equinoccios, tres cuartos en diciembre —
+  hecho del diseño (vano 6 m, tope ±55°), no defecto de operación. QA 81.
+
 - **2026-08-26 · v1.36** — **el control de entrada del relieve, y un cero que mentía al ocaso.**
   Dos cosas, y las dos salen de intentar contestar a un cliente.
 
