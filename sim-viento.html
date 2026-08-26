@@ -2298,6 +2298,17 @@ async function run(){
         REP=MULTI.anos[0].rep;
       }else{ MULTI=null; REP=await LOC.run(body); }
     }
+    /* EL INFORME TIENE QUE DECIR DE DONDE SALE. La etiqueta de meteo nombraba la
+       FUENTE («Open-Meteo (ERA5)») pero no el SITIO, asi que dos corridas de dos
+       emplazamientos distintos se veian identicas en pantalla y no habia forma de
+       comprobar de un vistazo si el numero habia cambiado de sitio o no. El sello sale
+       del CUERPO QUE SE CORRIO, no de las casillas: editar la latitud sin volver a
+       simular no debe mover el sello, porque los numeros de la tabla siguen siendo los
+       del sitio anterior. */
+    REP.corrida={lat:body.lat,lon:body.lon,year:body.year,year1:body.year1,
+                 fuente:body.source||body.meteo_mode||'openmeteo'};
+    meteoTag();          /* el sello se rehace AQUI: si no, enseña el de la corrida
+                            anterior, que es exactamente el fallo que viene a evitar */
     render();
   }catch(e){
     out.innerHTML='<div class="engmsg err"><b>No se pudo simular.</b><br>'+esc(e.message)+'</div>';
@@ -4576,12 +4587,27 @@ $('gpreset').onchange=function(){if(this.value){addGust(this.value);this.value='
 $('wbase').addEventListener('change',function(){saveCfg();});
 function meteoTag(){
   var f=$('source').value;
-  $('meteoTag').textContent=(f==='clearsky')
+  var base=(f==='clearsky')
     ? 'Cielo claro calculado aquí · sin nubes: la POA absoluta sale alta'
     : ({openmeteo:'Open-Meteo (ERA5)',pvgis:'PVGIS horario',nasa:'NASA POWER'}[f]||f)+
       ' · viento y dirección horarios';
+  /* y el SELLO de lo que hay en pantalla: coordenadas y año de la corrida que produjo
+     la tabla. Si no coincide con las casillas, se dice — que es justo el caso en el
+     que alguien cambia de sitio, no vuelve a simular, y lee los numeros de antes. */
+  var c=(typeof REP!=='undefined'&&REP&&REP.corrida)?REP.corrida:null;
+  var sello='';
+  if(c){
+    var vivo=(Math.abs(c.lat-(+$('lat').value))<1e-4&&Math.abs(c.lon-(+$('lon').value))<1e-4);
+    sello=' · <b>en pantalla:</b> '+(+c.lat).toFixed(4)+', '+(+c.lon).toFixed(4)+
+      ' · '+c.year+(c.year1&&c.year1!==c.year?'–'+c.year1:'')+
+      (vivo?'':' <span style="color:var(--build)">— las casillas dicen '+
+        (+$('lat').value).toFixed(4)+', '+(+$('lon').value).toFixed(4)+
+        ': vuelve a simular</span>');
+  }
+  $('meteoTag').innerHTML=esc(base)+sello;
 }
 $('source').addEventListener('change',meteoTag);
+['lat','lon'].forEach(function(id){$(id).addEventListener('input',meteoTag);});
 /* Al cambiar el tamaño hay que REDIBUJAR, no solo estirar: desde que el búfer
    se ajusta al ancho real, estirar el lienzo sería volver al pixelado. Con
    pausa, porque `resize` dispara decenas de veces al arrastrar el borde y cada

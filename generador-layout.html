@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.4.7</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.4.9</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -2383,6 +2383,38 @@ function varitaAbre(dentro,w,h,r){
     if(suma(I2,x2-r,y2-r,x2+r,y2+r)>0)out[y2*w+x2]=1;
   return out;                    // apertura ⊆ región original, por propiedad
 }
+/* Rellenar los huecos INTERIORES (los que no tocan el borde del lienzo).
+   El porqué es la PRIMERA ortofoto real que entró al banco (Arganda,
+   2026-08-26): un campo seco de verdad está MOTEADO —piedras, matojos,
+   rodadas— así que el flood-fill deja la máscara como un queso, y la
+   apertura de radio 3, que exige un bloque macizo de 7×7 para sobrevivir,
+   se comía el 92% de la región (22.852 → 1.856 px) llevándose por delante
+   el píxel que el usuario había pinchado. El peldaño entero se descartaba y
+   la varita contestaba «ahí no se distingue un recinto» sobre un campo
+   perfectamente visible.
+   NO es un cierre morfológico: un cierre tiende PUENTES y fundiría dos
+   campos separados por un camino estrecho — un contorno que se come la
+   parcela del vecino tiene buena pinta y es peor que el fallo que cura.
+   Esto solo toca lo que YA está completamente rodeado. Un hueco que toca el
+   borde del lienzo no se rellena: no se sabe si cierra más allá del
+   encuadre, y suponerlo sería inventar superficie fuera de la imagen. */
+function varitaRellena(dentro,w,h){
+  var alc=new Uint8Array(w*h),i,x,y;
+  for(x=0;x<w;x++){ if(!dentro[x])alc[x]=1; if(!dentro[(h-1)*w+x])alc[(h-1)*w+x]=1; }
+  for(y=0;y<h;y++){ if(!dentro[y*w])alc[y*w]=1; if(!dentro[y*w+w-1])alc[y*w+w-1]=1; }
+  var cola=new Int32Array(w*h),lo=0,hi=0;
+  for(i=0;i<w*h;i++)if(alc[i])cola[hi++]=i;
+  while(lo<hi){
+    var p=cola[lo++],py=(p/w)|0,px=p-py*w;
+    if(px>0&&!dentro[p-1]&&!alc[p-1]){alc[p-1]=1;cola[hi++]=p-1;}
+    if(px<w-1&&!dentro[p+1]&&!alc[p+1]){alc[p+1]=1;cola[hi++]=p+1;}
+    if(py>0&&!dentro[p-w]&&!alc[p-w]){alc[p-w]=1;cola[hi++]=p-w;}
+    if(py<h-1&&!dentro[p+w]&&!alc[p+w]){alc[p+w]=1;cola[hi++]=p+w;}
+  }
+  var out=new Uint8Array(w*h);
+  for(i=0;i<w*h;i++)out[i]=(dentro[i]||!alc[i])?1:0;
+  return out;
+}
 /* Tras la apertura la región puede partirse: quedarse SOLO con la componente
    de la semilla — el contorno arrancaba del píxel más alto de TODA la
    máscara y podía trazar otra isla. */
@@ -2493,7 +2525,10 @@ function varitaEscoge(data,w,h,sx,sy){
     var seg=varitaSegmenta(data,w,h,sx,sy,TOLS[t]);
     if(!seg)continue;
     // Apertura (fuera brazos finos) y quedarse con la ISLA de la semilla.
-    var comp=varitaComponente(varitaAbre(seg.dentro,w,h,3),w,h,sx|0,sy|0);
+    // Rellenar el moteado ANTES de abrir (ver varitaRellena): sobre una
+    // ortofoto real la apertura se comía el 92% de la región y mataba la
+    // semilla.
+    var comp=varitaComponente(varitaAbre(varitaRellena(seg.dentro,w,h),w,h,3),w,h,sx|0,sy|0);
     if(!comp)continue;
     var simp=varitaAnillo(comp.dentro,w,h);
     if(!varitaValida(simp,comp.n,w,h))continue;
@@ -4207,6 +4242,24 @@ $('d3Btn').onclick=function(){
     return rot;
   }
 
+  /* EL AZIMUT DE UNA FIJA TIENE SENTIDO; EL RUMBO DE UNA ARISTA, NO.
+     `rumboArista` devuelve el rumbo del lado más largo TAL COMO se recorre, y
+     el mismo lado leído al revés da r o r+180 — depende del orden en que el
+     motor emita los vértices, que no es un contrato. En TRACKER daba igual (un
+     tubo es una línea sin sentido y r ó r+180 dibujan el mismo tubo), y por eso
+     nadie lo vio; en FIJA es la diferencia entre mirar al sur y mirar al norte.
+     Medido en el propio generador (2026-08-22, «me lo hace al revés, las
+     estructuras mirando al norte en España»): con azimut de filas 180 (sur), el
+     handoff salía con azimut 0/360 en las 256 mesas — el campo entero volcado.
+     Se conserva la geometría de la arista (el giro fino de la retícula) y el
+     HEMISFERIO lo fija el canon: de las dos lecturas se elige la que cae del
+     lado del azimut de FILAS, que en montaje fijo ES el azimut de la superficie
+     (canon de la casa: tracker ⇒ panel_az = eje+90; fija ⇒ panel_az es la
+     dirección a la que miran los paneles). */
+  function azimutFija(rot, azRef){
+    var a=(((rot+90)%360)+360)%360, d=(((a-azRef)%360)+360)%360;
+    return (d>90&&d<270)?(((a+180)%360)+360)%360:a;
+  }
   /* La tabla manda en el handoff: en nV/nH lo que corre A LO LARGO del tubo es
      `mods` módulos de ancho modWid (V) o modLen (H), y la cuerda del colector
      son n módulos apilados. Mandar mods_per_struct (mods×n) como «módulos por
@@ -4306,6 +4359,9 @@ $('d3Btn').onclick=function(){
        inclinación y azimut. `p` va escorzado —el visor desescorza con
        p/cos(i)— para que el faldón dibujado sea exactamente la apertura. */
     var inc=+($('fixTilt').value||0), cosI=Math.cos(inc*Math.PI/180);
+    // Referencia del hemisferio: el azimut de filas que USÓ el motor (si el
+    // barrido de rejilla lo movió, stats lo publica ya corregido).
+    var azRefFija=(st.panel_az_deg==null)?180:+st.panel_az_deg;
     RES.structures.forEach(function(x){
       var la=0,lo=0;x.lonlat.forEach(function(pp){lo+=pp[0];la+=pp[1];});
       la/=x.lonlat.length;lo/=x.lonlat.length;
@@ -4313,7 +4369,9 @@ $('d3Btn').onclick=function(){
       fijas.push({x:+q[0].toFixed(2), n:+q[1].toFixed(2),
         w:+((x.len||st.mesa_len_m)).toFixed(2),
         p:+(((x.ap||st.collector_h_m))*cosI).toFixed(2),
-        inclinacion:inc, azimut:+((((rot+90)%360)+360)%360).toFixed(1),
+        // El módulo va DESPUÉS del redondeo: 359,97 → «360.0» se colaba como
+        // un azimut fuera de rango en el handoff.
+        inclinacion:inc, azimut:+((+azimutFija(rot,azRefFija).toFixed(1))%360).toFixed(1),
         cols:(sz?sz.mods:x.mods), rows:nTab});
     });
   }
