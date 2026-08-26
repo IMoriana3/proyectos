@@ -842,6 +842,40 @@ const SONDA = `(() => {
   check('entre los dos seguidores no hay transmisión (' +
     (bi.ejes[1].x0 - bi.ejes[0].x1).toFixed(2) + ' m de hueco)',
     bi.ejes[1].x0 - bi.ejes[0].x1 > bi.pitch * 0.85);
+  // Y EN PENDIENTE la transmisión tiene que seguir a las dos filas que une: se
+  // dibujaba a altura fija, así que con el terreno inclinado quedaba colgando
+  // entre una y otra, ni acoplada a la de arriba ni a la de abajo.
+  const trans = await p.evaluate(() => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
+    document.querySelectorAll('.st').forEach(c => { c.checked = c.value === 'tracker_hsat'; });
+    s('tkFilas', 2); s('pend', 16); s('pendAz', 90);
+    const B = BLOQUES[0], g = B.filas[0].parent;
+    const ejes = g.children.filter(o => B.filas.indexOf(o) < 0 && o.type === 'Group');
+    const out = [];
+    ejes.forEach(ej => { ej.updateWorldMatrix(true, true);
+      ej.children.filter(c => c.geometry && c.geometry.parameters &&
+        Math.abs(c.geometry.parameters.width - 0.22) < 1e-6).forEach(c => {
+          const w = c.getWorldPosition(new THREE.Vector3());
+          let cerca = null, d0 = 1e9;
+          B.filas.forEach(u => { const q = u.getWorldPosition(new THREE.Vector3());
+            const d = Math.hypot(q.x - w.x, q.z - w.z);
+            if (d < d0) { d0 = d; cerca = q; } });
+          out.push({ dist: +d0.toFixed(2), sobre: +(w.y - cerca.y).toFixed(2) });
+        }); });
+    // se deja la escena como estaba: las pruebas de al lado cuentan con ella
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
+    s('tkFilas', 1); s('pend', 0);
+    return out;
+  });
+  check('en pendiente, cada acoplamiento cae sobre SU tubo (4 acoplamientos)',
+    trans.length === 4 && trans.every(a => a.dist < 0.05), JSON.stringify(trans));
+  check('y todos a la misma altura sobre la fila que unen: la barra las sigue',
+    trans.every(a => Math.abs(a.sobre - trans[0].sobre) < 0.02),
+    JSON.stringify(trans.map(a => a.sobre)));
+
+  await pon('tkFilas', 2);
   const fj = await bloque('fija_optima');
   check('la fija no se agrupa aunque el tracker sea bifila',
     fj.por === 1 && fj.ejes.length === 0 && fj.filas === 3, JSON.stringify(fj));

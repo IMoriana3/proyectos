@@ -653,6 +653,13 @@ lo que aguanta el viento y lo que da el perfil, así que se reparten a paso ≤ 
 puntas. Todas miden lo mismo, porque la fila ya se ha inclinado con el terreno: lo que absorbe la
 pendiente es el **replanteo**, no una hinca más larga.
 
+#### El eje de transmisión, en pendiente
+
+La barra que hace que dos filas sean **un** seguidor se dibujaba a `postH` fijo. Con el terreno
+inclinado las dos filas que une no están a la misma altura, así que quedaba **colgando** entre una y
+otra: ni acoplada a la de arriba ni a la de abajo. Ahora se le pasan las **cotas** de las dos filas,
+la barra se orienta entre ellas y cada acoplamiento cae sobre su tubo.
+
 #### Brújula, y la cámara donde uno quiera
 
 Con **tres azimutes** en juego —el del terreno, el de la fija y el del eje— y la cámara orbitando, no

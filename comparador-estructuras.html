@@ -3093,16 +3093,24 @@ function sueloRelieve(lado,T){
    justo la distinción que la palabra «bifila» nombra.
    La barra va a la altura del tubo y en el centro del eje (z=0, donde está el
    motor), cruzando de una fila a la otra.                                    */
-function ejeBifila(mats,xa,xb){
-  var D=Seguidor.DIMS, g=new THREE.Group(), L=Math.abs(xb-xa);
+/* El eje de transmisión de una bifila: la barra que hace que dos filas sean UN
+   seguidor. Se le pasan las COTAS de las dos filas que une, porque en pendiente
+   no están a la misma altura — antes se dibujaba a `postH` fijo y quedaba
+   colgando entre una fila y otra, ni acoplado a la de arriba ni a la de abajo. */
+function ejeBifila(mats,xa,xb,ya,yb){
+  ya=ya||0; yb=yb||0;
+  var D=Seguidor.DIMS, g=new THREE.Group();
+  var dx=xb-xa, dy=yb-ya, L=Math.hypot(dx,dy);
   var barra=new THREE.Mesh(new THREE.BoxGeometry(L,0.16,0.16),mats.silver||mats.steel);
-  barra.position.set((xa+xb)/2,D.postH,0); barra.castShadow=true; g.add(barra);
-  [xa,xb].forEach(function(x){                    // acoplamiento en cada tubo
+  barra.position.set((xa+xb)/2,D.postH+(ya+yb)/2,0);
+  barra.rotation.z=Math.atan2(dy,dx);             // la barra sigue a las dos filas
+  barra.castShadow=true; g.add(barra);
+  [[xa,ya],[xb,yb]].forEach(function(q){          // acoplamiento en cada tubo
     var c=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.30,0.30),mats.motor||mats.steel);
-    c.position.set(x,D.postH,0); c.castShadow=true; g.add(c);
+    c.position.set(q[0],D.postH+q[1],0); c.castShadow=true; g.add(c);
   });
   var m=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.48,0.42),mats.motor||mats.steel);
-  m.position.set((xa+xb)/2,D.postH-0.12,0); m.castShadow=true; g.add(m);
+  m.position.set((xa+xb)/2,D.postH+(ya+yb)/2-0.12,0); m.castShadow=true; g.add(m);
   return g;
 }
 
@@ -3220,7 +3228,8 @@ function construyeMundo(){
     }
     /* En bifila, la transmisión que hace que esas dos filas sean UN seguidor. */
     if(agrupa>1)for(var t=0;t+agrupa<=nf;t+=agrupa){
-      grupo.add(ejeBifila(mats,(t-(nf-1)/2)*pitch,(t+agrupa-1-(nf-1)/2)*pitch));
+      var xa=(t-(nf-1)/2)*pitch, xb=(t+agrupa-1-(nf-1)/2)*pitch;
+      grupo.add(ejeBifila(mats,xa,xb,cotaFila(xa,0),cotaFila(xb,0)));
     }
     var col='#'+(COL[k]||'#888888').replace('#','');
     /* El rótulo se acota por el hueco Y por el largo del bloque: con una fila
