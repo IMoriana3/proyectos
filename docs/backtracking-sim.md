@@ -388,6 +388,57 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-26 · v1.36** — **el control de entrada del relieve, y un cero que mentía al ocaso.**
+  Dos cosas, y las dos salen de intentar contestar a un cliente.
+
+  **a) `tools/valida_relieve.mjs` — la puerta antes del número.** El careo 3D-contra-2D compara dos
+  formas de apuntar sobre LA MISMA geometría; si la geometría está mal, la comparación sigue saliendo,
+  con un número perfectamente formateado y perfectamente falso. San José lo destapó: su bloque 0 daba
+  **−0,08 % de «ganancia»** sobre una geometría que contiene **tres líneas hundidas 4,8 m, 12,2 m y
+  12,5 m respecto a SUS DOS VECINAS a la vez**. Una fila de seguidores en un pozo de 12 m de hondo y
+  6 m de ancho no existe: es un error de cota. Ahora la planta pasa un control con veredicto
+  **APTA / APTA CON RESERVAS / NO EVALUABLE**, y en NO EVALUABLE **no se emite ganancia**
+  (`process.exit(1)`, sirve de gate en CI).
+
+  **Lo que se aprendió equivocándose, y por eso queda escrito:** la primera versión rechazaba por
+  «pendiente entre líneas > 20°, imposible de montar». Está mal, y era el error caro: la inclinación
+  que limita el fabricante es la del **eje** (N-S, de montaje — 3,6° máx en Ayora, 2,7° en San José:
+  sanas las dos), mientras que el desnivel entre **líneas contiguas** es justamente la geometría que
+  el backtracking necesita conocer, y **un bancal lo produce legítimamente**. En San José las líneas
+  7 y 36 bajan 2 m y **se quedan abajo**: eso es terreno real. Rechazar por el valor del salto era
+  rechazar precisamente las plantas donde corregir el relieve más vale la pena. El control que de
+  verdad decide es **la línea aislada**: una que se separa de sus dos vecinas a la vez, baja y vuelve
+  a subir, más de medio vano. Eso no es ladera ni bancal. Umbral atado al hardware: no cabe entre
+  ellas, la cuerda del seguidor son 2,38 m. Los otros controles son cobertura del levantamiento
+  (< 95 % → reserva), eje de montaje (8,5° reserva / 11,3° rechazo), vano contra el pitch declarado
+  (fuera de [0,75 · 1,25]·pitch reserva, > 1,5·pitch rechazo: ahí hay un vial, no una fila vecina) y
+  solape norte. Cinco comprobaciones nuevas en la batería, **con cotas sintéticas** — es la única
+  forma de probar que el control distingue un bancal de una línea suelta: el bancal que baja y se
+  queda tiene que salir APTA, y esa comprobación es la que impide repetir el error de arriba.
+
+  **b) La sombra al ocaso era CERO, con la planta tapada entera.** `shadeRows` devolvía un array de
+  ceros en toda la banda `zen ≥ 89,5°` porque el ray-cast 3D deja de ser fiable ahí. Pero devolver
+  cero no es decir «no lo sé»: es **afirmar que no hay sombra**, justo cuando a 0,35° de sol la
+  sombra de una fila mide 6/tan(0,35°) ≈ 980 m. En la tabla de consignas de Ayora del 21-jun salía
+  como un salto de **76,6 % a 0,00 % en un paso de 10 min**. Ahora se **clava al borde de validez**
+  (`zen = 89,5°`) en vez de inventar un cero: conserva qué fila tapa a cuál, mantiene sin sombra las
+  5 filas del borde por donde entra el sol, y la serie sale monótona — 58 → 67 → 77 → **87 %**, y
+  cero solo cuando el sol se pone de verdad. La energía en juego está acotada por la DNI de ese tramo
+  (**1,2 W/m²**): el careo de Ayora no se mueve ni en el tercer decimal. No se arregló por la
+  energía, se arregló porque **la tabla publicaba un número falso**. Regresión en la batería que
+  exige monotonía en la última media hora.
+
+  **Y el resultado honesto de Ayora, ya sobre geometría validada: +0,50 %** (media de 4 días
+  representativos, POA de planta, contador 3D con estructura, IAM b₀=0,05, paso 5 min, limitado por
+  actuador) — 21-mar +0,70 %, 21-jun +0,16 %, 21-sep +0,68 %, 21-dic +0,80 %. **No es el 2,66 % que
+  se venía citando**: aquel salía del preset de demostración de 9 % de pendiente, no de Ayora. Ayora
+  es suave (|pendiente| entre líneas: mediana 0,56°, p95 2,06°, máx 3,17°) y la ganancia va con el
+  relieve. La consecuencia comercial es que **la propuesta no es un porcentaje, es una medición**.
+  La tabla del 21-jun (754 seguidores × 178 pasos = 134 212 filas) se valida sola contra la firma de
+  los dos regímenes: **apertura p95−p5 de 0,10° de media en seguimiento puro y 7,99° en backtracking
+  — ×77**, con los topes mecánicos de ±55° saliendo donde tienen que salir (09:00–09:30 y 18:30–19:00).
+  QA 78.
+
 - **2026-08-26 · v1.35** — **las consignas iban al seguidor equivocado en 157 de 748, y el primer
   volcado real lo destapó.** El id del layout **no codifica la NCU** —`TK 045-06` tiene `ncu=9`— y su
   número **no reinicia en 1** en todas ellas (en Ayora, NCU9 va de 45 a 85, NCU10 de 66 a 105). El
