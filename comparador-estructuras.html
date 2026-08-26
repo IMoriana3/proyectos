@@ -820,7 +820,13 @@ FIS.theta=function(psDeg,gcr,maxang,bt){
   var R=psDeg*FIS.D2R;
   if(bt){
     var t=Math.min(1,(1/gcr)*Math.cos(R));
-    R=R-Math.sign(R)*Math.acos(t);
+    var retro=Math.acos(t);
+    /* El retroceso no puede pasar de dejar la mesa PLANA: aplanarse más sería
+       tumbarse hacia el otro lado, que no evita ninguna sombra — la crea. Con
+       GCR ≤ 1 esta cota nunca actúa; con GCR > 1 (geometría imposible) es lo
+       único que impide que salga un ángulo invertido. */
+    if(retro>Math.abs(R))retro=Math.abs(R);
+    R=R-Math.sign(R)*retro;
   }
   var deg=R*FIS.R2D;
   return Math.max(-maxang,Math.min(maxang,deg));
@@ -3003,10 +3009,13 @@ function actualiza3D(){
       B.filas.forEach(function(u){u.spin.rotation.x=sgn*tOpt*FIS.D2R;});
       th=tOpt;
     }
+    var imposible=(B.gcr>1);
     ro.push(roEsc(spec.label.replace('Tracker 1 eje ','').replace('Fija · ',''),
-      (spec.fam==='tracker'?(elDeg>0?fmt(th,1)+'°':'—')
-                           :(B.estimado?'≈ ':'')+fmt(th,0)+'°'),
-      spec.fam==='tracker'?'θ':(B.estimado?'tilt estimado':'tilt')));
+      imposible?'—'
+        :(spec.fam==='tracker'?(elDeg>0?fmt(th,1)+'°':'—')
+                              :(B.estimado?'≈ ':'')+fmt(th,0)+'°'),
+      imposible?'GCR '+fmt(B.gcr,2)+': no cabe'
+        :(spec.fam==='tracker'?'θ':(B.estimado?'tilt estimado':'tilt'))));
   });
   $('escRead').innerHTML=ro.join('');
 }
