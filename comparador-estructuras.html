@@ -2936,7 +2936,7 @@ function init3D(){
       if(w&&(TD.w!==w||TD.h!==hh)){TD.w=w;TD.h=hh;rd.setSize(w,hh,false);cam.aspect=w/hh;cam.updateProjectionMatrix();}
       var dt=Math.min(0.1,((now||performance.now())-last)/1000); last=now||performance.now();
       if(PLAY)avanzaHora(dt);
-      ct.update(); pintaBrujula(); rd.render(sc,cam);})(performance.now());
+      ct.update(); bajoTierra(); pintaBrujula(); rd.render(sc,cam);})(performance.now());
   }catch(e){ TD=null; $('view3d').innerHTML='<div class="sinwebgl">Sin WebGL en este navegador: '+
       'la comparativa numérica funciona igual.</div>'; }
 }
@@ -2961,6 +2961,21 @@ function setSky(cenit,horiz){
                                    0.098*l+0.08*horiz[2]*(1-l));
   }
 }
+/* ── NI LA CÁMARA NI EL OBJETIVO POR DEBAJO DEL SUELO ──
+   `maxPolarAngle` solo impide bajar del plano horizontal que pasa por el
+   OBJETIVO, y eso no basta en cuanto hay pendiente o se desplaza la vista: con
+   la ladera subiendo, el suelo bajo la cámara puede estar por encima de ella y
+   la escena se ve desde dentro de la tierra. Se acota contra el terreno de
+   verdad, que con un plano cuesta dos multiplicaciones.                       */
+function bajoTierra(){
+  if(!TD)return;
+  var t=TD.ct.target, c=TD.cam.position;
+  var yt=cotaTerreno(t.x,t.z,TERRENO_3D);
+  if(t.y<yt+0.5)t.y=yt+0.5;
+  var yc=cotaTerreno(c.x,c.z,TERRENO_3D)+1.5;   // 1,5 m: la altura de los ojos
+  if(c.y<yc)c.y=yc;
+}
+
 /* ── PINTAR LA BRÚJULA ──
    Rosa 2D encima del lienzo. El truco es pasar una dirección del MUNDO a un
    ángulo de PANTALLA: la cámara mira en la dirección `v` (del ojo al objetivo),

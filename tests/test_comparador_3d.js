@@ -815,6 +815,37 @@ const SONDA = `(() => {
   await p.evaluate(() => { const e = document.getElementById('pend'); e.value = '0';
     e.dispatchEvent(new Event('change', { bubbles: true })); });
 
+  // ── NI LA CÁMARA NI EL OBJETIVO BAJO EL SUELO ──
+  // `maxPolarAngle` solo impide bajar del plano horizontal que pasa por el
+  // objetivo, y eso no basta con pendiente o desplazando la vista: con la ladera
+  // subiendo, el suelo bajo la cámara puede estar por encima de ella y la escena
+  // se ve desde dentro de la tierra.
+  const topo = await p.evaluate(async () => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    s('pend', 16); s('pendAz', 90);
+    const espera = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const prueba = async (cam, tgt) => {
+      TD.ct.dispatchEvent({ type: 'start' });
+      TD.cam.position.set(cam[0], cam[1], cam[2]);
+      if (tgt) TD.ct.target.set(tgt[0], tgt[1], tgt[2]);
+      TD.ct.update(); await espera();
+      const c = TD.cam.position, t = TD.ct.target;
+      return { cam: +(c.y - cotaTerreno(c.x, c.z, TERRENO_3D)).toFixed(2),
+               tgt: +(t.y - cotaTerreno(t.x, t.z, TERRENO_3D)).toFixed(2) };
+    };
+    const r = { ladera: await prueba([-260, 5, 0]), bajoCero: await prueba([0, -40, 120]),
+                objetivo: await prueba([0, 60, 150], [300, -90, 0]) };
+    s('pend', 0); document.querySelector('.recentrar').click();
+    return r;
+  });
+  ['ladera', 'bajoCero', 'objetivo'].forEach(caso => {
+    check('metiendo la cámara bajo tierra («' + caso + '») sale sola: queda a ' +
+      topo[caso].cam + ' m del suelo', topo[caso].cam >= 1.4, JSON.stringify(topo[caso]));
+    check('  y el objetivo tampoco se hunde (' + topo[caso].tgt + ' m)',
+      topo[caso].tgt >= 0.4, JSON.stringify(topo[caso]));
+  });
+
   // ── LA CÁMARA, POR EL LADO DEL ECUADOR ──
   // La cámara se pone cuesta abajo para ver los bloques en línea y la ladera
   // subiendo por detrás. Pero cuesta abajo puede ser el NORTE, y una fija mira
