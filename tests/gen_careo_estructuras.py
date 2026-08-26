@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -31,6 +32,36 @@ ESTRUCTURAS = ["fija_optima", "fija_proyecto", "fija_ew",
 PITCH_M, ANCHO_M = 6.00, 2.382
 ALBEDO, TILT_PROYECTO, MAX_ANGLE = 0.20, 25.0, 55.0
 PENDIENTE = 8.0        # pendiente del terreno ⊥ a las filas, en grados
+
+
+def procedencia(core: Path) -> dict:
+    """De QUÉ core salieron estas cifras. Sin esto, un golden atrasado no se
+    distingue de uno al día — y eso ya pasó: el fixture del 21-08 se generó
+    contra un checkout SIN la corrección #100 (la sombra entre filas tapa
+    también el circunsolar de Perez), nueve horas después de que entrara.
+
+    `core_limpio` no es un adorno: un core con cambios sin commitear ejecuta
+    algo que el commit declarado NO describe, así que el golden deja de ser
+    reproducible aunque lleve un SHA de 40 caracteres con muy buena pinta.
+    """
+    raiz = core.parent if (core / "solargpt_core").is_dir() else core
+
+    def git(*args):
+        return subprocess.run(["git", "-C", str(raiz), *args],
+                              capture_output=True, text=True,
+                              check=True).stdout.strip()
+
+    import pvlib as _pvlib
+    sucio = git("status", "--porcelain")
+    return {
+        "core_commit": git("rev-parse", "HEAD"),
+        "core_descripcion": git("log", "-1", "--format=%h %ad %s", "--date=short"),
+        "core_limpio": sucio == "",
+        "core_sucio_detalle": ([] if sucio == ""
+                               else sucio.splitlines()[:20]),
+        "pvlib": _pvlib.__version__,
+        "python": sys.version.split()[0],
+    }
 
 
 def main() -> int:
@@ -89,9 +120,15 @@ def main() -> int:
             "dhi": [round(float(v), 3) for v in meteo["DHI"]],
         },
         "esperado": filas,
+        "procedencia": procedencia(Path(a.core)),
     }
     Path(a.out).write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
+    proc = doc["procedencia"]
     print(f"escrito {a.out} · {len(idx)} pasos · {len(filas)} estructuras")
+    print(f"  core: {proc['core_descripcion']}  ·  pvlib {proc['pvlib']}")
+    if not proc["core_limpio"]:
+        print("  ¡OJO! el core tiene cambios SIN COMMITEAR: este golden NO es "
+              "reproducible y el guard lo va a rechazar.")
     for f in filas:
         print(f"  {f['label']:<42} {f['poa_kwh_m2']:>8.1f} kWh/m²  {f['delta_pct']:+7.2f} %")
     return 0
