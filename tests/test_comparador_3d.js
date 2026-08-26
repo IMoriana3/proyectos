@@ -390,6 +390,47 @@ const SONDA = `(() => {
   check('elegir un emplazamiento del SUR gira la fija al NORTE (z=' +
     sur.bloques.fija_proyecto.n.z.toFixed(2) + ')', sur.bloques.fija_proyecto.n.z < -0.15);
 
+  // ── una mesa que no cabe en el pitch: plano y DICHO ──
+  // Con 3V a pitch 6 la apertura (7,146 m) no cabe (GCR 1,19) y el
+  // backtracking pedía retroceder más de lo que había avanzado: el seguidor
+  // salía a −32,6° A MEDIODÍA y girando al revés. Ahora se queda plano y la
+  // escena dice por qué en vez de enseñar un ángulo inventado.
+  const nocabe = await p.evaluate(() => {
+    const set = (t, pi) => {
+      const e = document.getElementById('tkTabla'), q = document.getElementById('tkPitch');
+      e.value = t; q.value = pi;
+      e.dispatchEvent(new Event('change', { bubbles: true }));
+      q.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    const lee = () => {
+      const B = BLOQUES.find(b => b.key === 'tracker_hsat');
+      const th = m => { document.getElementById('hora').value = m; actualiza3D();
+        return +(B.filas[0].spin.rotation.x * 180 / Math.PI).toFixed(1); };
+      const r = { th08: th(480), th12: th(720), th17: th(1020), gcr: +B.gcr.toFixed(3) };
+      r.txt = [...document.querySelectorAll('#escRead .ro')]
+        .map(d => d.textContent.replace(/\s+/g, ' ')).join(' | ');
+      return r;
+    };
+    document.querySelectorAll('.st').forEach(c => { c.checked = c.value === 'tracker_hsat'; });
+    set('3V', '6.00'); construyeMundo();
+    const mal = lee();
+    set('3V', '9.00'); construyeMundo();
+    const bien = lee();
+    set('1V', '6.00'); construyeMundo(); actualiza3D();
+    return { mal, bien };
+  });
+  check('con la mesa que no cabe (GCR ' + nocabe.mal.gcr + ') el seguidor se queda PLANO ' +
+    'a todas horas', [nocabe.mal.th08, nocabe.mal.th12, nocabe.mal.th17]
+      .every(t => Math.abs(t) < 0.01), JSON.stringify(nocabe.mal));
+  check('y la escena DICE que no cabe, en vez de enseñar un ángulo inventado',
+    /no cabe/i.test(nocabe.mal.txt), nocabe.mal.txt.slice(0, 200));
+  check('abriendo el pitch a 9 m la misma mesa vuelve a girar (' + nocabe.bien.th08 +
+    '° / ' + nocabe.bien.th12 + '° / ' + nocabe.bien.th17 + '°)',
+    nocabe.bien.th08 > 1 && Math.abs(nocabe.bien.th12) < 2 && nocabe.bien.th17 < -1,
+    JSON.stringify(nocabe.bien));
+  check('y por la mañana al ESTE y por la tarde al OESTE, no al revés',
+    nocabe.bien.th08 > 0 && nocabe.bien.th17 < 0);
+
   // ── el eje inclinado, sobre TERRENO EN PENDIENTE ──
   // Dos intentos fallidos antes de esto: una cuña bajo el bloque (se leía como
   // una rampa de hormigón) y el suelo plano con la hinca alargada (un tracker

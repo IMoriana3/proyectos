@@ -149,9 +149,9 @@ npm install playwright                     # el navegador ya está en /opt/pw-br
 python3 -m http.server 8099                # servir el repo (en otra terminal)
 node tests/test_index.js                   # 13 comprobaciones
 node tests/test_pwa.js                     # 21 comprobaciones (PWA)
-node tests/test_integridad.js              # 7 comprobaciones, sin navegador
-node tests/test_comparador.js              # 97 comprobaciones, careo contra el core y barridos
-node tests/test_comparador_3d.js           # 134 comprobaciones, escena 3D, equipos, sizing y barridos
+node tests/test_integridad.js              # 6 comprobaciones, sin navegador
+node tests/test_comparador.js              # 143 comprobaciones, careo contra el core y barridos
+node tests/test_comparador_3d.js           # 138 comprobaciones, escena 3D, equipos, sizing y barridos
 node tests/test_sizing.js                  # 115 comprobaciones, careo del dimensionado eléctrico
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
 node tests/test_viento_ejes.js             # 77 comprobaciones, lienzos, ejes, transmisión, reproductor, sombras y franjas

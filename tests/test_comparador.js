@@ -373,6 +373,33 @@ check('con pendiente el ranking se recalcula con TODAS en el mismo terreno',
   Math.abs(CP.tracker_hsat.neta - SP.tracker_hsat.neta) > 0.01,
   CP.tracker_hsat.neta.toFixed(2) + ' vs ' + SP.tracker_hsat.neta.toFixed(2));
 
+// ── 6d) EL BACKTRACKING NUNCA INVIERTE EL ÁNGULO ──
+// Retroceder es APLANARSE para no taparse: como mucho hasta plano. Pasarse del
+// cero sería tumbarse hacia el otro lado, que no evita ninguna sombra — la
+// crea. Con GCR ≤ 1 la cota nunca actúa; con un GCR imposible (>1, la apertura
+// no cabe en el pitch) era lo único que faltaba: con 3V a pitch 6 el seguidor
+// salía a −32,6° A MEDIODÍA y girando al revés.
+[[0.397, 'GCR normal'], [0.794, 'GCR apretado'], [1.0, 'GCR justo en el límite']]
+  .forEach(([g, nom]) => {
+  [-60, -30, -5, 0, 5, 30, 60].forEach(ps => {
+    const th = FIS.theta(ps, g, 55, true);
+    check('backtracking a ' + nom + ' (' + g + ') no invierte el signo en ps=' + ps + '° (θ=' +
+      th.toFixed(1) + '°)', ps === 0 || th * ps >= -1e-9, String(th));
+    check('  y nunca se pasa del ángulo astronómico (|' + th.toFixed(1) + '| ≤ |' + ps + '|)',
+      Math.abs(th) <= Math.abs(ps) + 1e-9);
+  });
+});
+// y con la geometría IMPOSIBLE se queda plano en vez de inventarse un ángulo
+[1.19, 1.59, 3.0].forEach(g => {
+  const th = [-60, -20, 0, 20, 60].map(ps => FIS.theta(ps, g, 55, true));
+  check('con GCR ' + g + ' (imposible) el seguidor se queda PLANO, no invertido',
+    th.every(t => Math.abs(t) < 1e-9), JSON.stringify(th));
+});
+// sin backtracking la cota no pinta nada: sigue el sol y punto
+check('sin backtracking el ángulo es el astronómico, cota o no cota',
+  Math.abs(FIS.theta(40, 1.19, 55, false) - 40) < 1e-9 &&
+  Math.abs(FIS.theta(-40, 0.4, 55, false) + 40) < 1e-9);
+
 // ── 7) hemisferio sur: la fija tiene que mirar al NORTE ──
 // Si `psFija` no cambiara de signo bajo el ecuador, la fija apuntaría al polo y
 // perdería contra el plano horizontal. Es el guard de esa línea.

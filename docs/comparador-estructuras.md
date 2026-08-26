@@ -586,6 +586,24 @@ discrepen: es que responden a preguntas distintas.
 | 0,68 | 25° | 36° | **11°** |
 | 0,75 | 21° | 36° | 15° |
 
+### Una mesa que no cabe en el pitch: plano, y dicho
+
+Con **3V a pitch 6** la apertura son 7,146 m y no caben en 6: **GCR 1,19**. La tarjeta ya lo
+rechazaba en rojo y desactivaba el botón, pero la **escena seguía dibujando**, y lo que dibujaba
+era un disparate: el seguidor salía a **−32,6° a mediodía** y girando al revés.
+
+No era el render: era la fórmula del backtracking. `θ = ps − signo(ps)·acos(cos ps / GCR)` — con
+GCR ≤ 1 el retroceso nunca llega a `|ps|`, pero con GCR > 1 **pide retroceder más de lo que ha
+avanzado**, cruza el cero y devuelve el ángulo con el signo cambiado.
+
+El arreglo es la regla física: **el backtracking solo reduce |θ|, nunca lo invierte**. Retroceder es
+aplanarse para no taparse; pasarse del cero sería tumbarse hacia el otro lado, que no evita ninguna
+sombra — la crea. Con GCR ≤ 1 la cota **no actúa nunca** (el careo lo confirma: sigue idéntico), y
+con GCR > 1 el seguidor se queda **plano**, que es lo único honesto cuando la geometría no existe.
+La escena lo dice: `— · GCR 1,19: no cabe`.
+
+Abriendo el pitch a 9 m la misma mesa 3V vuelve a girar con normalidad.
+
 ### La escena tiene que OBEDECER a los dos configuradores
 
 Un 3D que no se mueve con lo que configuras es peor que no tenerlo: se lee como una prueba visual
@@ -697,10 +715,10 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ## Pruebas
 
 ```bash
-node tests/test_comparador.js       # 97 comprobaciones · careo contra el core, sin navegador
+node tests/test_comparador.js       # 143 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 134 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 138 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 
