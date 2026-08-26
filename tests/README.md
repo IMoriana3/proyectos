@@ -157,6 +157,7 @@ node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de e
 node tests/test_viento_ejes.js             # 77 comprobaciones, lienzos, ejes, transmisión, reproductor, sombras y franjas
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
 node tests/test_viento_planta.js           # 20 comprobaciones, la planta en franjas y consigna vs ejecutado
+node tests/test_viento_sello.js     # el informe declara con qué coordenadas se calculó
 node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core
 node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo
 node tests/test_granizo_pestana.js         # 22 comprobaciones, la pestaña de granizo en Chromium
