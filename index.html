@@ -555,7 +555,7 @@ const PROJECTS = [
     pendientes: [
       { done:true, text:"Cargar terreno real de Ayora / San José (hecho v1.4 vía cotas X,Y,Z de extremos de mesa, mejor que el CSV de pendientes)" },
       { done:false, text:"Política min_ground_light (agrivoltaica) — está en el core, sin portar" },
-      { done:false, text:"Export CSV de θ(t) por política para la TCU Toolbox" }
+      { done:true,  text:"Export CSV de θ(t) por política para la TCU Toolbox (hecho v1.17.0: el día al minuto, con la configuración entera en la cabecera y verificado re-integrando el propio fichero)" }
     ],
     historial: [
       { date:"2026-08-26", ver:"v1.35.0", note:"LAS CONSIGNAS IBAN AL SEGUIDOR EQUIVOCADO en 157 de 748, y el primer volcado real lo destapó: el id del layout NO codifica la NCU («TK 045-06» tiene ncu=9) y su número no reinicia en 1, así que el TCU es el RANGO dentro de su NCU. Una consigna con el TCU equivocado no es inútil: es la consigna de OTRO seguidor. Verificado tras el arreglo: 16 de 16 NCUs, cero huérfanos. Confirmado también el signo (θ<0 = ESTE) y escrito que HAY DOS ARQUITECTURAS: si la inteligencia vive en la TCU hace falta la ficha de registros, si vive en la NCU hace falta la tabla de consignas — El Burgo es el segundo caso. Y nueva telemetria.html: dice si una planta corrige el relieve midiendo cuánto se ABREN entre sí los objetivos, sin comparar contra ningún modelo y sin necesitar levantamiento. QA 72 + 8." },
@@ -618,7 +618,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/cobertura-zigbee/overcast.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-08-26",
-    version: "v1.16.0",
+    version: "v1.17.0",
     docId: "overcast-sim",
     docUrl: "",
     uso: [
@@ -627,6 +627,7 @@ const PROJECTS = [
       "O trae un día REAL: fuente Open-Meteo → «Cargar la fecha» (ERA5 si es antigua, previsión si es reciente) o «En vivo» (hoy, reloj en ahora, refresco cada 10 min). La irradiancia del paso pasa a ser la medida.",
       "Activa políticas y compáralas: ▶ anima el día; el HUD da GHI/DNI/DHI, θ, modo y Δ POA instantánea; la banda violeta marca el modo flat.",
       "La tabla del día da POA, Δ vs pvlib, % en flat, conmutaciones, recorrido (desgaste) y coste del lazo (decidir tarde + llegar tarde).",
+      "⬇ CSV DEL DÍA (auditoría): el día AL MINUTO —meteo, θ de consigna, θ EJECUTADO, POA y flag de cada política, y con el zonal también de cada NCU— con toda la configuración en la cabecera (emplazamiento, geometría, lazo, DiffuseConfig, fuente de la meteo) y el resumen del día. Es lo que convierte «te lo enseño» en «tómalo y compruébalo»: re-integrando la columna de POA del fichero se reproduce la tabla de pantalla dentro de 0,04 Wh/m².",
       "«Calcular año» pondera 12 días × tres cielos tipo según el clima (seco / atlántico / centroeuropa, editable).",
       "Activa el ZONAL: nº de NCUs y minutos que tarda el frente en cruzar; la escena 3D pinta cada zona con su nube y su θ, y la tabla compara decisión global vs cada-NCU-con-su-señal.",
       "☁ CIELO POR NCU: además del frente que cruza, cada NCU puede llevar SU propio cielo — preset o PINTADO A MANO con el ratón. El ámbito es una LISTA: el ✏ de cada NCU alterna y el selector trae «la planta», «TODAS las NCUs» o una suelta, así que un trazo puede caer sobre varias zonas a la vez (cada una partiendo de SU serie). Pintar una NCU no toca ni a las demás ni al cielo de planta, que queda de fondo como referencia.",
@@ -640,10 +641,12 @@ const PROJECTS = [
     ],
     pendientes: [
       { done:false, text:"Consigna anisótropa del modo difuso (ángulo óptimo ≠ 0° con circumsolar) como política extra — el core barre α, el óptimo analítico de Solar Energy 2025 daría la forma cerrada" },
-      { done:false, text:"Export CSV de θ(t) por política para la TCU Toolbox" },
+      { done:true,  text:"Export CSV de θ(t) por política para la TCU Toolbox (hecho v1.17.0: el día al minuto, con la configuración entera en la cabecera y verificado re-integrando el propio fichero)" },
       { done:true, text:"Modo zonal (por NCU): cada NCU decide con su señal local frente a la decisión de planta (hecho v1.1; cuando el core tenga la política zonal, espejarla aquí)" }
     ],
     historial: [
+      { date:"2026-08-26", ver:"v1.17.0", note:"EXPORT CSV, que es lo que convierte «te lo enseño en mi portátil» en «tómalo y compruébalo». Baja el día en la rejilla FINA (al minuto, la del actuador) con zenit, azimut, GHI/DNI/DHI, cc, θ_n y —por política— θ de consigna, θ EJECUTADO, POA y flag; con el zonal, además el cc, el θ y el flag de cada NCU. La cabecera lleva emplazamiento, geometría con el GCR derivado, lazo (slew, deadband y las DOS resoluciones), la DiffuseConfig entera, la fuente de la meteo y el resumen del día: sin eso el fichero son números sin procedencia. Verificado re-integrando el propio CSV: las cuatro políticas cuadran con la tabla dentro de 0,04 Wh/m². La POA sale del θ ejecutado y nunca de la consigna, y los ángulos van en convención TCU declarada en el propio fichero. QA 73." },
+      
       { date:"2026-08-26", ver:"v1.16.0", note:"Botón «Nube corta en la NCU 1»: monta en un clic el escenario donde la histéresis se gana el sueldo. La duración no es fija, sale del confirm configurado (0,8×), así que sigue siendo «más corta que el confirm» aunque se toquen los ajustes. Medido con confirm 30′ y nube de 25′ a las 13:00 sobre 4 NCUs: poa_switch da CERO conmutaciones y 226° de recorrido —idéntico a pvlib, la señal vivió 10 min y el confirm pide 30—, mientras flat da 2 conmutaciones y 252°, o sea 26° de desgaste extra por una nube que pasa de largo; y las zonas despejadas ni se enteran. El dato honesto va por delante: zonal − global = 0,00 %. El escenario no sirve para vender ganancia, sirve para justificar POR QUÉ el tracker no se movió, que es lo que pregunta un cliente al ver la nube en el satélite. QA 71." },
       
       { date:"2026-08-26", ver:"v1.15.0", note:"Tres cosas que salieron de mirar la pantalla. (1) «¿Por qué hay 4 NCUs y solo me salen 3?»: la rejilla llevaba un alto fijo pensado para las 21 NCUs de San José, pero el botón ✏ que la v1.14 puso DEBAJO del desplegable hizo crecer la fila y con 4 zonas la última se iba detrás de un scroll que no se ve venir — ahora el ✏ va en línea y el alto lo decide el número de zonas. (2) PINTAR VARIAS A LA VEZ: el ámbito pasa de un destino a una lista (el ✏ alterna; el selector trae «la planta», «TODAS» o una suelta); un trazo cae sobre todas las seleccionadas pero cada una parte de SU serie, y las demás se dibujan en línea sobre la tira para verlo. (3) La gráfica contaba DOS historias superpuestas sin decirlo: las 5 curvas de política son decisión de PLANTA y las de NCU son UNA sola política resuelta por zona — ahora la leyenda lo declara («θ por NCU · diffuse_poa_switch») y las políticas no zonificadas se atenúan. QA 70." },
