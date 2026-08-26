@@ -1113,6 +1113,50 @@ const SONDA = `(() => {
   check('y se declara que el óptimo es el de la REJILLA, no el fino',
     /rejilla/i.test(bt2.read), bt2.read.slice(0, 120));
 
+  // ── LAS HINCAS ──
+  // Una fila de 65 m sobre uno o dos postes no es una estructura: es un puente,
+  // o un balancín. En campo la hinca va cada 4-6 m en una fija y cada 6-9 m en
+  // un seguidor —es lo que fija el vano entre rodamientos, y con él el momento y
+  // la sección del tubo—. La fija llevaba DOS, una en cada punta; el seguidor,
+  // UNA, la del accionamiento.
+  const hincas = await p.evaluate(() => {
+    document.querySelectorAll('.st').forEach(c => {
+      c.checked = ['fija_proyecto', 'tracker_hsat'].includes(c.value); });
+    const e = document.getElementById('pend'); e.value = '0';
+    e.dispatchEvent(new Event('change', { bubbles: true }));
+    const mide = (k, eje) => {
+      const B = BLOQUES.find(b => b.key === k), u = B.filas[0];
+      const zs = [];
+      u.traverse(o => { if (o.isMesh && o.geometry.parameters &&
+        Math.abs(o.geometry.parameters.width - 0.18) < 1e-6 &&
+        Math.abs(o.geometry.parameters.height - Seguidor.DIMS.postH) < 1e-6)
+          zs.push(eje === 'z' ? o.position.z : o.position.x); });
+      // la fija las lleva dentro de la mesa: se buscan por su caja
+      if (!zs.length) u.traverse(o => { if (o.isMesh && o.geometry.parameters &&
+        Math.abs(o.geometry.parameters.width - 0.16) < 1e-6) zs.push(o.position.x); });
+      // el seguidor tiene además la hinca del accionamiento en el centro, que la
+      // pone el propio modelo (`soporte`): cuenta para el vano
+      if (eje === 'z') zs.push(0);
+      zs.sort((a, b) => a - b);
+      const pasos = zs.slice(1).map((v, i) => +(v - zs[i]).toFixed(2));
+      return { n: zs.length, largo: +cfgActual().geomDe(B.spec).largoFila.toFixed(2),
+               span: +(zs[zs.length - 1] - zs[0]).toFixed(2), pasos };
+    };
+    return { fija: mide('fija_proyecto', 'x'), tk: mide('tracker_hsat', 'z') };
+  });
+  check('la mesa fija lleva hinca cada 4-6 m, no dos en las puntas (' +
+    hincas.fija.n + ' en ' + hincas.fija.largo + ' m)',
+    hincas.fija.n >= 8 && hincas.fija.pasos.every(d => d <= 6.5),
+    JSON.stringify(hincas.fija));
+  check('y cubren la fila entera, no un trozo',
+    hincas.fija.span > hincas.fija.largo * 0.9, JSON.stringify(hincas.fija.span));
+  check('el seguidor lleva hinca cada 6-9 m, no solo la del accionamiento (' +
+    hincas.tk.n + ' en ' + hincas.tk.largo + ' m)',
+    hincas.tk.n >= 7 && hincas.tk.pasos.every(d => d <= 9),
+    JSON.stringify(hincas.tk));
+  check('y también de punta a punta del tubo',
+    hincas.tk.span > hincas.tk.largo * 0.9, JSON.stringify(hincas.tk.span));
+
   // ── LOS LIENZOS 2D, NÍTIDOS ──
   // Los width/height de un <canvas> son el BÚFER en píxeles y el CSS lo estira.
   // Estaban fijos en 1.100 y el CSS los ponía al 100 % de la tarjeta, así que en
