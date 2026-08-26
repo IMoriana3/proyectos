@@ -99,7 +99,7 @@ if (MAN) {
   // estructura). El hueco JS<->core NO se movio: sigue en 1,36 % de POA
   // (fija_ew) y 0,367 pp de delta, asi que las tolerancias se quedan donde
   // estaban. Lo unico que cambia es contra que core esta sellado el golden.
-  const CORE_PIN = { version: '1.70.0', commit: 'f67c555d' };
+  const CORE_PIN = { version: '1.69.0', commit: '14fed75d' };
   check('el golden corresponde al core fijado (v' + CORE_PIN.version + ')',
     MAN.core.version === CORE_PIN.version,
     'golden v' + MAN.core.version + ' vs pin v' + CORE_PIN.version +
