@@ -972,6 +972,33 @@ var PLANTS={};
    del SEED en cartera-tabla.html. */
 var COORDS_FALLBACK={'24002':[41.57634,-0.79814],'24025':[39.11821,-1.15985],'24019':[-16.59577,-71.80644],
   '24007':[41.22694,0.32415],'24021':[33.8685,9.8433]};
+/* HORA LOCAL DE LA PLANTA, NO LA QUE HUBIERA EN EL CAMPO. El huso estaba a mano y se quedaba en
+   el 2 de siempre: elegias San Jose -Peru, UTC-5- y el dia salia corrido SIETE horas, con el sol
+   saliendo de noche. Se aplica la misma regla que el resto de la casa (husoPlanta/aplicaHuso de
+   backtracking.html y overcast.html):
+
+     · si la planta tiene huso FIJO declarado, ese y no se discute. Salen de los layouts del DWG,
+       que son la autoridad: sanjose -300 min (Peru), dicayagua -240 (Republica Dominicana) y
+       tunez +60 (Tunez). Ninguno de los tres cambia la hora en verano.
+     · si no, la regla peninsular: UTC+2 del dia 88 al 298 y UTC+1 el resto. Vale igual para las
+       italianas, que comparten cambio de hora y huso con España.
+
+   Y se respeta al usuario: si ha tocado el campo a mano, NO se le pisa. Solo se refresca mientras
+   siga en el ultimo valor que pusimos nosotros. */
+var TZ_FIJO={'24019':-300, '24021':60, '26322':60};      // por codigo de cartera; minutos, sin verano
+function husoPlanta(cod,fechaISO){
+  if(cod&&TZ_FIJO[cod]!=null)return TZ_FIJO[cod]/60;
+  var d=new Date((fechaISO||'')+'T12:00:00');
+  var doy=isNaN(d)?172:Math.floor((d-new Date(d.getFullYear(),0,0))/86400000);
+  return (doy>=88&&doy<=298)?2:1;
+}
+var _huso=null, _husoCod=null;
+function aplicaHuso(cod){
+  var t=$('tz'); if(!t)return;
+  if(cod!==undefined)_husoCod=cod;
+  var v=husoPlanta(_husoCod,$('date')?$('date').value:'');
+  if(_huso===null||+t.value===_huso){ t.value=v; _huso=v; }
+}
 function loadPlants(){
   try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
   var opts='<option value="">— manual —</option>';
@@ -1001,6 +1028,7 @@ function pickPlant(cod){
   }
   if(p.wmod)$('pmpp').value=Math.round(p.wmod);
   if(p.cantidad)$('nmod').value=Math.round(p.cantidad);
+  aplicaHuso(cod);
   drawSky();
 }
 $('plant').onchange=function(){if(this.value)pickPlant(this.value);};
@@ -1009,11 +1037,14 @@ if($('calCsv'))$('calCsv').onclick=calCsvDescarga;
 $('kind').onchange=function(){var trk=this.value==='tracker';$('trkParams').style.display=trk?'':'none';$('fixParams').style.display=trk?'none':'';drawTheta();};
 ['gcr','maxang','tilt','azi'].forEach(function(id){var e=$(id); if(e)e.addEventListener('input',drawTheta);});
 ['lat','lon','date','tz','obj'].forEach(function(id){$(id).addEventListener('input',drawSky);});
+$('date').addEventListener('input',function(){aplicaHuso();drawSky();});   // el cambio de hora depende del dia
+$('tz').addEventListener('input',function(){_huso=null;});                // si lo tocas tu, deja de refrescarse
 $('hour').addEventListener('input',drawSky);
 $('simBtn').onclick=simulate;
 $('demBtn').onclick=relieve;
 window.addEventListener('resize',drawSky);
 loadPlants();
+aplicaHuso(null);
 drawSky();
 detectEngine();
 </script>
