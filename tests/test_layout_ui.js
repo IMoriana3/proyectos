@@ -96,7 +96,7 @@ const cajaLienzo = async page => {
   check('pitch, GCR objetivo y tipo de tracker viven en la tarjeta de ESTRUCTURA',
     await page.evaluate(() => {
       const card = sel => document.querySelector(sel).closest('.card');
-      return card('#pitch') === card('#mount') && card('#gcrObj') === card('#mount') &&
+      return card('#pitchTrk') === card('#mount') && card('#gcrObj') === card('#mount') &&
              card('#bifila') === card('#mount') && card('#setback') !== card('#mount');
     }));
   // MESA y FILA no son lo mismo: una mesa es UN string y una fila de tracker
@@ -236,10 +236,10 @@ const cajaLienzo = async page => {
 
   // ── el pitch manda: más pitch, menos filas ──
   const filas1 = num(await page.textContent('#ro .ro:nth-child(4) .v'));
-  await page.fill('#pitch', '9'); await generar(page);
+  await page.fill('#pitchTrk', '9'); await generar(page);
   const filas2 = num(await page.textContent('#ro .ro:nth-child(4) .v'));
   check('subir el pitch de 6 a 9 m quita filas (' + filas1 + ' → ' + filas2 + ')', filas2 < filas1);
-  await page.fill('#pitch', '6');
+  await page.fill('#pitchTrk', '6');
 
   // ── multi-talla: el reparto se ve ──
   await page.fill('#mods', '28, 14, 7'); await generar(page);
@@ -805,8 +805,10 @@ const cajaLienzo = async page => {
   // Un límite que RECORTE sin vaciar: el plano sintético sube 400 m en el bbox,
   // así que con 1° no quedaría ni una mesa y no se estaría midiendo el filtro,
   // se estaría midiendo el caso vacío (que se prueba aparte, más abajo).
-  await page.fill('#slopeMax', '6');
-  await page.dispatchEvent('#slopeMax', 'change');
+  // El umbral ya no es un número global: lo pone el montaje en su cuadro,
+  // con sus DOS ejes. Se fijan los dos para reproducir el mismo recorte.
+  await page.fill('#slopeTrkEw', '6'); await page.fill('#slopeTrkNs', '6');
+  await page.dispatchEvent('#slopeTrkEw', 'change');
   await page.waitForTimeout(200);
   check('bajar la pendiente máxima marca celdas fuera',
     /[1-9]\d* celda/.test(await page.textContent('#demTag')), await page.textContent('#demTag'));
@@ -831,13 +833,15 @@ const cajaLienzo = async page => {
     await page.evaluate(() => (RES.stats.mdt_excl_frac || 0) <= 0.35));
   // Y el caso límite: una pendiente máxima imposible deja el campo vacío y la
   // ficha lo DICE, en vez de quedarse en blanco sin explicación.
-  await page.fill('#slopeMax', '0.2'); await page.dispatchEvent('#slopeMax', 'change');
+  await page.fill('#slopeTrkEw', '0.2'); await page.fill('#slopeTrkNs', '0.2');
+  await page.dispatchEvent('#slopeTrkEw', 'change');
   await generar(page);
   check('una pendiente máxima imposible deja el layout vacío y se dice',
     /No cabe ninguna estructura|área útil queda vacía/.test(await page.textContent('#foot')) ||
     await page.evaluate(() => !!document.querySelector('.aviso.fail')),
     await page.textContent('#foot'));
-  await page.fill('#slopeMax', '6'); await page.dispatchEvent('#slopeMax', 'change');
+  await page.fill('#slopeTrkEw', '6'); await page.fill('#slopeTrkNs', '6');
+  await page.dispatchEvent('#slopeTrkEw', 'change');
   await generar(page);
   await page.check('#demOff');
   await page.dispatchEvent('#demOff', 'change');
@@ -1174,7 +1178,7 @@ const cajaLienzo = async page => {
 
   // ── pitch imposible: la ficha lo canta ──
   await page.selectOption('#parcelMode', 'rect');
-  await page.fill('#pitch', '1.2'); await generar(page);
+  await page.fill('#pitchTrk', '1.2'); await generar(page);
   check('un pitch menor que la apertura sale como aviso de FALLO',
     await page.evaluate(() => !!document.querySelector('.aviso.fail')));
 

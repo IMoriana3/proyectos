@@ -94,7 +94,18 @@ es la **medida** interpolada — el modelo de nubes solo rellena huecos.
 
 # Estudio: diffuse optimization / overcast en trackers
 
-*Elaborado 2026-08-14. Cifras de fabricante separadas de cifras medidas/publicadas.*
+*Elaborado 2026-08-14 · revisado 2026-08-26. Cifras de fabricante separadas de cifras medidas/publicadas.*
+
+> **Revisión 2026-08-26.** El punto de §1 «el óptimo no es exactamente 0° con cielo anisótropo» ha
+> dejado de ser una cita para pasar a ser una **medida propia**: el barrido de cinco α del core deja
+> como mucho **0,049 %** frente al óptimo exacto, con 1–2° de diferencia que casi siempre caen por
+> debajo del deadband de 1°. Está desarrollado en **«¿Y el óptimo anisótropo? Medido, y descartado»**,
+> arriba en este mismo documento, y es la razón por la que **no** se implementó la quinta política que
+> §1 sugería.
+>
+> La tabla de la competencia de §3 **sí se ha repasado el 26-08**, con dos avisos: la revisión se hizo
+> solo con buscador —el entorno no dejó abrir ninguna fuente primaria— y el «+1,5 % anual» de PVH
+> **no se pudo re-verificar**. El detalle, fila a fila, está en la nota de método al final de §3.
 
 ## 1 · La física
 
@@ -137,15 +148,19 @@ del lazo») en el preset «frentes».
 
 ## 3 · La competencia
 
+*Cifras repasadas el **2026-08-26**. Ver la nota de método al final de la sección: esta pasada se
+hizo con buscador, sin poder abrir las fuentes primarias.*
+
+
 | Fabricante · producto | Mecanismo | Anual (fuente) | Días cubiertos |
 |---|---|---|---|
 | **Nextracker · TrueCapture** (Diffuse + Zonal Diffuse 2023) | sensores por fila + ML + previsión; zonal: solo la zona bajo la nube pasa a difuso | paquete «2–6 %» (mkt); **difuso aislado 0,42–0,99 %** (TaiyangNews); ~4 % paquete validado (Quintas, ICF) | — |
 | **Array · SmarTrack Diffuse** | GHI en tiempo real + límites anti-chattering explícitos | «hasta 5 %» paquete (mkt, metodología DNV); sin cifra separada del difuso | — |
-| **Soltec · Diffuse Booster / TeamTrack** | sensores + previsión | 2,5 % Mediterráneo / 3,8 % Norte (TÜV, vs estándar; mezcla efectos) | **+5,3 % nublados** Mediterráneo, +6,9 % Norte, pico +12,4 % un día (TÜV Rheinland) |
-| **TrinaTracker · SuperTrack** (STA+SBA) | modelo bifacial 12 parámetros + deep learning | mkt «3–8 %»; **+3,24 % medido 1 año (SGS)**, +3,06 % (informe independiente) — paquete | — |
+| **Soltec · Diffuse Booster / TeamTrack** | sensores + previsión | 2,5 % Mediterráneo / **1,3 % ecuatorial** / 3,8 % Norte (TÜV, vs estándar; mezcla efectos) | **+5,3 % nublados** Mediterráneo, +6,9 % Norte, pico +12,4 % un día (TÜV Rheinland, 2021) |
+| **TrinaTracker · SuperTrack** (STA+SBA) | modelo bifacial 12 parámetros + deep learning | mkt «3–8 %»; **+3,24 % medido 1 año (SGS/CGC)**, +3,06 % (informe independiente); **media anual +2,21 %** — paquete | **hasta +9,15 % en cubierto**; +3,84 % con alta difusa (Nangong, Hebei) |
 | **Arctech · AI tracking** | terreno + nubes + bifacial + inversores | mkt hasta 7 % total; **nubes 0,5–2 %** (white paper propio) | — |
 | **GameChange · WeatherSmart** | distingue sombreado aleatorio de día cubierto | **hasta 1,5 % anual** (mkt) | **+6,02 % validado** (Enertis 2024); mkt hasta 13 % |
-| **PVH · Diffuse Control** (dic-2024) | side-by-side de dos plantas contiguas | **+1,5 % anual medido** en sitio nublado | hasta +20 % días muy cubiertos |
+| **PVH · Diffuse Control** (dic-2024) | side-by-side de dos plantas contiguas | +1,5 % anual medido en sitio nublado ⚠ *no re-verificado en 2026-08* | hasta +20 % días muy cubiertos (PVH) |
 | **Soltigua · MaxRad** | rota a posición menos inclinada | — | hasta +7 % nublados de verano (mkt) |
 
 **Lectura honesta**: los «hasta 5–8 %» son paquetes completos (terreno + difuso + bifacial) y
@@ -157,6 +172,37 @@ sector está migrando de la cifra a: control **zonal** (Nextracker), **anticipac
 de difusa, detección de cielo cubierto y mitigación de «flutter» (US10935992, US11703887,
 US12025349, US11500397, US11823409, US12345447): revisar libertad de operación antes de
 industrializar un algoritmo propio.
+
+**Lo que ha aparecido desde agosto de 2025 — y va a favor de la cifra honesta.** Dos trabajos
+revisados por pares, ninguno de un fabricante:
+
+- **Electronics 15(3):597 (29-ene-2026)**, «Solar-Tracker Diffuse-Response Algorithm for Balancing
+  Energy Gain and Mechanical Wear»: es el paper que §2 ya citaba, y ahora se sabe que está
+  **validado con medidas de campo de marzo de 2025**, con exactitud global < 3 % e incertidumbre de
+  potencia < 1 %, en cadenas monofaciales **y bifaciales**. Su criterio es exactamente el nuestro:
+  exigir que el cubierto **persista** un mínimo antes de ir a la posición de difusa.
+- **Sensors 24(12):3890**, seguimiento con IA sobre bifacial en el nordeste de Brasil: **hasta
+  +7,83 % en un día nublado y ~+1,2 % de media** frente a un algoritmo comercial. Es la
+  corroboración independiente más directa de nuestro rango: un punto y pico de media, no un 5 %.
+
+**Nota de método (2026-08-26).** Esta revisión se hizo **solo con buscador**: el entorno no permitió
+abrir ninguna de las fuentes primarias (pv-magazine, pv-tech, MDPI, OSTI, webs de fabricante
+estaban todas bloqueadas), así que las cifras nuevas provienen de resúmenes de resultados y **no se
+han contrastado contra el documento original**. Lo que sí cambió respecto a agosto de 2025:
+
+| Fila | Estado tras la revisión |
+|---|---|
+| Nextracker · 0,42–0,99 % | confirmada |
+| Soltec · 5,3 / 6,9 / 12,4 % | confirmada; se añade el 1,3 % ecuatorial que faltaba |
+| GameChange · 6,02 % (Enertis) | confirmada, validación de marzo de 2024 |
+| Array · «hasta 5 %» (DNV GL) | confirmada; **sigue sin publicar cifra separada del difuso** |
+| Arctech · hasta 7 % total | confirmada; DNV·GL avala la fiabilidad de los datos publicados |
+| TrinaTracker | **ampliada** con +2,21 % media anual, +9,15 % cubierto y +3,84 % en Nangong |
+| PVH · +1,5 % anual | ⚠ **no re-verificada**: en las fuentes accesibles solo aparece el «hasta 20 % en días nublados». Tratarla como dato de fabricante hasta poder abrir el original |
+
+Antes de usar cualquiera de estas cifras delante de un cliente, conviene abrir la fuente primaria
+desde una red sin restricciones. Ninguna conclusión del estudio depende de ellas: el rango honesto
+de §4 se sostiene sobre NREL y sobre los dos papers de arriba.
 
 ## 4 · Qué significa para Factiun
 
@@ -177,10 +223,15 @@ industrializar un algoritmo propio.
 
 ## Fuentes principales
 
+*Repasadas 2026-08-26; ver la nota de método de §3.*
+
 Kelly & Gibson 2009/2011 (*Solar Energy* 83/85) · Anderson & Mikofski 2020 (NREL TP-5K00-76626) ·
 Anderson & Aneja 2022 (IEEE PVSC 49, NREL) · *Solar Energy* 2018 (estudio europeo POA nublado) ·
 *Solar Energy* 2025 (óptimo analítico bajo cualquier cielo) · Adinolfi Borea et al. 2026
-(*Electronics* 15:597, persistencia temporal) · pvlib issue #1694 · PVsyst docs (Engerer2) ·
+(*Electronics* 15:597, 29-ene-2026, persistencia temporal; medidas de campo de marzo de 2025,
+mono y bifacial; copia en OSTI) · *Sensors* 24(12):3890 (IA sobre bifacial, NE de Brasil:
++7,83 % un día nublado, ~+1,2 % de media frente a un algoritmo comercial) · pvlib issue #1694 ·
+PVsyst docs (Engerer2) ·
 Nextracker (datasheet TrueCapture, Zonal Diffuse PR, TaiyangNews, Quintas, ICF) · Array
 (SmarTrack Diffuse, GlobeNewswire 2020/2025) · Soltec (TÜV Rheinland vía pv magazine / Solar
 Builder, whitepaper TeamTrack) · TrinaTracker (SGS vía pv magazine, SolarQuarter) · Arctech
