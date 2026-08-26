@@ -316,7 +316,9 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       </div>
       <div class="two">
         <div class="field"><label>Ángulo máx °</label><input id="maxang" type="number" value="55"></div>
-        <div class="field"><label>Eje inclinado °</label><input id="axtilt" type="number" step="0.5" value="10"></div>
+        <div class="field"><label>Eje inclinado ° <span class="sn">del terreno</span></label>
+          <input id="axtilt" type="number" step="0.5" value="0" readonly
+                 title="No se teclea: es la componente de la pendiente del sitio a lo largo del eje (§03.0). Un eje no se inclina en el aire."></div>
       </div>
       <div class="field"><label>Disposición</label>
         <select id="tkFilas">
@@ -553,7 +555,11 @@ FIS.psFija=function(el,az,lat){
    hay auto-corrección que esquivar, pero el signo se elige igual —hacia el
    ecuador— para que las dos superficies contesten lo mismo.                  */
 FIS.psTSAT=function(el,az,axTiltDeg,lat){
-  var T=Math.abs(axTiltDeg)*FIS.D2R;                 // magnitud; el sentido lo pone el marco
+  /* CON SIGNO: positivo = el eje cae hacia el ECUADOR, que es el TSAT de
+     manual. Negativo = cae hacia el POLO, y eso también existe — lo pone el
+     terreno, no el catálogo, y un emplazamiento no elige hacia dónde baja. Con
+     `Math.abs` se dibujaba un eje y se calculaba el contrario. */
+  var T=axTiltDeg*FIS.D2R;
   // Marco [este, ecuador, cenit] con el azimut medido desde el sur, este negativo.
   var e=-Math.cos(el)*Math.sin(az), q=Math.cos(el)*Math.cos(az)*(lat>=0?1:-1), u=Math.sin(el);
   // El marco gira T alrededor del eje E-O: su «cenit» se inclina hacia el ecuador,
@@ -890,6 +896,20 @@ FIS.cruz=function(cfg,spec){
   if(cfg.pendAz==null)return cfg.pend||0;
   return FIS.pendComp(cfg.pend,cfg.pendAz,FIS.ejePitch(spec)).cruz;
 };
+/* Y EL EJE INCLINADO TAMPOCO SE TECLEA: lo pone el terreno. Un TSAT no es un
+   seguidor con un parámetro más, es un seguidor sobre una pendiente que corre
+   A LO LARGO de su eje — un eje no se inclina en el aire. Así que es la
+   componente a lo largo del eje del mismo plano, con el signo de mirar al
+   ecuador. En llano sale 0 y el TSAT es un HSAT, que es la verdad.
+   Sin azimut declarado se respeta el valor recibido: el core toma `axis_tilt`
+   y `cross_axis_slope` por separado —son las dos componentes del mismo plano—
+   y por ahí entra el careo. */
+FIS.ejeTilt=function(cfg,spec){
+  if(!spec||!spec.tsat)return 0;
+  if(cfg.pendAz==null)return cfg.axTilt||0;
+  var g=FIS.pendPlano(cfg.pend,cfg.pendAz);
+  return (cfg.lat>=0?1:-1)*Math.atan(g.gz)*FIS.R2D;
+};
 
 /* ── Fracción sombreada entre dos filas iguales, exacta en el plano ⊥ al eje ──
    Puerto de `shadeFracPair` del Simulador de Backtracking (cobertura-zigbee),
@@ -989,13 +1009,13 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
   var dtH=(n>1)?((M.t[1]-M.t[0])/3600000):1;
   var neta=0, ideal=0, mes=new Float64Array(12);
   var tilt=(tiltForzado!=null)?tiltForzado:(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
-  var axT=(spec.tsat?cfg.axTilt:0);
+  var axT=FIS.ejeTilt(cfg,spec);
   for(var i=0;i<n;i++){
     var S=FIS.sun(M.t[i],latR,cfg.lon);
     if(S.el<=0)continue;
     var bh=M.dni[i], dh=M.dhi[i], gh=M.ghi[i], e0=FIS.E0(M.t[i]), P0, planos;
     if(spec.fam==='tracker'){
-      P0=spec.tsat?FIS.psTSAT(S.el,S.az,cfg.axTilt,cfg.lat):FIS.psTracker(S.el,S.az);
+      P0=spec.tsat?FIS.psTSAT(S.el,S.az,axT,cfg.lat):FIS.psTracker(S.el,S.az);
       planos=[FIS.theta(P0.ps,gcr,cfg.maxang,spec.bt)];
     }else if(spec.fam==='fija_ew'){
       P0=FIS.psTracker(S.el,S.az);                    // aguas al este y al oeste
@@ -1691,6 +1711,11 @@ function rumbo(az){
   return R[Math.round((((az%360)+360)%360)/22.5)%16];
 }
 function pintaPendiente(c){
+  /* El «eje inclinado °» ya no es una entrada: se rellena con lo que da el
+     terreno a lo largo del eje. Si se dejara a mano, se podría teclear un eje
+     que el emplazamiento no sostiene — dibujar una cosa y calcular otra. */
+  var ej=FIS.ejeTilt(c,FIS.spec('tracker_tsat'));
+  if($('axtilt'))$('axtilt').value=ej.toFixed(1);
   var p=Math.abs(c.pend||0), az=c.pendAz||0;
   if(!p){ $('pendNota').innerHTML='terreno llano · el mismo para todas'; return; }
   var f=FIS.pendComp(p,az,'z'), t=FIS.pendComp(p,az,'x');
@@ -2407,7 +2432,8 @@ async function run(){
         gcr_por_estructura:porEstructura(cfg,keys,'gcr'),
         pitch_por_estructura:porEstructura(cfg,keys,'pitch'),
         alto_por_estructura:porEstructura(cfg,keys,'altoColector'),
-        tilt_deg:cfg.tilt, axis_tilt_deg:cfg.axTilt, max_angle_deg:cfg.maxang};
+        tilt_deg:cfg.tilt, axis_tilt_deg:FIS.ejeTilt(cfg,FIS.spec('tracker_tsat')),
+        max_angle_deg:cfg.maxang};
       var r=await fetch(ENGINE+'/structures',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
       REP=await r.json(); REP.local=false;
@@ -3096,7 +3122,7 @@ function actualiza3D(){
   BLOQUES.forEach(function(B){
     var th=0, spec=B.spec, tilt=(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
     if(spec.fam==='tracker'){
-      var P=spec.tsat?FIS.psTSAT(S.el,S.az,cfg.axTilt,cfg.lat):FIS.psTracker(S.el,S.az);
+      var P=spec.tsat?FIS.psTSAT(S.el,S.az,FIS.ejeTilt(cfg,spec),cfg.lat):FIS.psTracker(S.el,S.az);
       th=(elDeg>0)?FIS.theta(P.ps,B.gcr,cfg.maxang,spec.bt):0;
       B.filas.forEach(function(u){
         /* SIGNO. El grupo del seguidor entra girado 90° en Y, así que su +X
@@ -3145,9 +3171,7 @@ function actualiza3D(){
              un eje no se inclina en el aire, así que ese número es el que
              tendría que llevar el «eje inclinado °» de un TSAT. */
           ((spec.fam==='tracker'&&Math.abs(B.largoPend)>1)
-            ?' · eje '+fmt(Math.abs(B.largoPend),1)+'° con el terreno':'')+
-          ((spec.tsat&&Math.abs(Math.abs(cfg.axTilt)-Math.abs(B.largoPend))>1)
-            ?' · declara '+fmt(Math.abs(cfg.axTilt),1)+'°':''))));
+            ?' · eje '+fmt(Math.abs(B.largoPend),1)+'° con el terreno':''))));
   });
   $('escRead').innerHTML=ro.join('');
 }

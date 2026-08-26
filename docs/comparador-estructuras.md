@@ -568,10 +568,26 @@ Para un seguidor eso es literalmente **un eje que sigue el terreno**, que es lo 
 que **no** cambia es el tilt ni la componente ⊥: en la dirección del pitch las filas se **escalonan**
 a distinta cota, no se inclinan.
 
-De ahí que el «eje inclinado °» de un TSAT deba ser **esa** componente a lo largo del eje — un eje no
-se inclina en el aire. Cada lectura de seguidor dice cuánto se inclina el suyo con el terreno, y si
-el TSAT declara otro valor, la lectura lo dice también: no se dibuja una cosa y se calcula otra en
-silencio. En **llano**, el eje del TSAT sale horizontal, porque no hay pendiente que seguir.
+#### El «eje inclinado °» no se teclea: lo pone el terreno
+
+Un TSAT no es un seguidor con un parámetro más: es un seguidor **sobre una pendiente que corre a lo
+largo de su eje**. Un eje no se inclina en el aire. Así que el campo es de **solo lectura** y se
+rellena con la componente a lo largo del eje del mismo plano del sitio:
+
+| cae al | eje inclinado (lat > 0) |
+|---|---|
+| **S** (180°) | **+β** — el eje mira al ecuador, el TSAT de manual |
+| **N** (0°) | **−β** — mira al polo, y eso también existe |
+| **E**/**O** | **0** — esa pendiente es ⊥ al eje, no a lo largo |
+| llano | **0** — sin pendiente no hay TSAT que valga |
+
+Eso obligó a que `FIS.psTSAT` acepte el **signo**: antes tomaba `Math.abs(axis_tilt)` y orientaba el
+eje hacia el ecuador por definición, así que con el terreno cayendo hacia el polo se dibujaba un eje
+y se calculaba el contrario. En el hemisferio sur el signo se da la vuelta, porque el ecuador está
+al norte.
+
+Sin azimut declarado se respeta el valor recibido: el core toma `axis_tilt` y `cross_axis_slope` por
+separado —son las dos componentes del mismo plano— y por ahí entra el careo.
 
 #### Y que se VEA: sombreado por cota
 

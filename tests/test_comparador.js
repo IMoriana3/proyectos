@@ -408,6 +408,37 @@ check('cayendo al ESTE se invierte: mueve al SEGUIDOR (' +
 check('  y no a la fija',
   Math.abs(caeEste.fija_proyecto.sombra - llanoAz.fija_proyecto.sombra) < 1e-9);
 
+// ── 6b-ter) EL EJE INCLINADO LO PONE EL TERRENO ──
+// Un TSAT no es un seguidor con un parámetro más: es un seguidor sobre una
+// pendiente que corre A LO LARGO de su eje. Un eje no se inclina en el aire,
+// así que el «eje inclinado °» no se teclea, se deriva — y con SIGNO, porque
+// un emplazamiento no elige hacia dónde baja.
+const TSAT = FIS.spec('tracker_tsat');
+[[180, 26, 'cayendo al SUR el eje mira al ECUADOR'],
+ [0, -26, 'cayendo al NORTE mira al POLO, y eso también existe'],
+ [90, 0, 'cayendo al ESTE no hay nada a lo largo del eje: horizontal'],
+ [270, 0, 'ni al OESTE']
+].forEach(([az, esp, nom]) => {
+  const e = FIS.ejeTilt({ pend: 26, pendAz: az, lat: 37.4 }, TSAT);
+  check(nom + ' (' + e.toFixed(1) + '°)', Math.abs(e - esp) < 0.01, e.toFixed(3));
+});
+check('en LLANO el eje sale 0: sin pendiente no hay TSAT que valga',
+  FIS.ejeTilt({ pend: 0, pendAz: 180, lat: 37.4 }, TSAT) === 0);
+check('en el hemisferio SUR el ecuador está al norte, y el signo se da la vuelta',
+  Math.abs(FIS.ejeTilt({ pend: 26, pendAz: 0, lat: -16.6 }, TSAT) - 26) < 0.01,
+  FIS.ejeTilt({ pend: 26, pendAz: 0, lat: -16.6 }, TSAT).toFixed(3));
+check('y solo el TSAT lo lleva: un HSAT es horizontal por definición',
+  FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, FIS.spec('tracker_hsat')) === 0);
+check('sin azimut declarado se respeta el valor recibido (el camino del careo)',
+  FIS.ejeTilt({ pend: 8, axTilt: 10, lat: 37.4 }, TSAT) === 10);
+// Y el signo tiene consecuencia, que es lo que lo hace física y no adorno.
+const ejeEq = FIS.compara(['tracker_tsat'], M, { ...cfg, pend: 20, pendAz: 180 });
+const ejePol = FIS.compara(['tracker_tsat'], M, { ...cfg, pend: 20, pendAz: 0 });
+check('el eje hacia el ECUADOR capta más que hacia el POLO (' +
+  ejeEq.filas[0].neta.toFixed(1) + ' vs ' + ejePol.filas[0].neta.toFixed(1) + ' kWh/m²)',
+  ejeEq.filas[0].neta > ejePol.filas[0].neta + 10,
+  ejeEq.filas[0].neta.toFixed(1) + ' vs ' + ejePol.filas[0].neta.toFixed(1));
+
 // ── 6c) LA MISMA PENDIENTE PARA LAS TRES: eso es la igualdad ──
 // El parámetro es UNO, del emplazamiento, y entra en el sombreado de todas las
 // familias por el mismo sitio. Lo que se exige aquí no es que exista el campo
@@ -475,7 +506,7 @@ check('en el hemisferio sur la fija sigue transponiendo por encima del GHI',
 // del eje (mirando al polo, que es lo que hacía el core con el azimut sin
 // esquivar) y se exige que el TSAT deje de ganar.
 const psTSATBueno = FIS.psTSAT;
-FIS.psTSAT = function (el, az, axTiltDeg, lat) { return psTSATBueno(el, az, -axTiltDeg, -lat); };
+FIS.psTSAT = function (el, az, axTiltDeg, lat) { return psTSATBueno(el, az, -axTiltDeg, lat); };
 const mut = FIS.compara(['tracker_hsat', 'tracker_tsat'], M, cfg);
 const mutTsat = mut.filas.find(f => f.key === 'tracker_tsat');
 const mutHsat = mut.filas.find(f => f.key === 'tracker_hsat');
