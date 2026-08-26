@@ -61,12 +61,21 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
    REALES (ver ajustaLienzo), asi que la letra mide lo que dice que mide, se ensanche lo que se
    ensanche. */
 #sky{height:clamp(240px,30vh,340px)}
+/* Las tarjetas son hermanas de una rejilla de dos columnas, asi que caian en zigzag y el
+   «Recorrido del sol» acabo en la columna de ENTRADAS, aplastado a 250 px. Estas dos ocupan la
+   fila entera: las graficas quedan todas arriba y la tabla, debajo. */
+.card.anchoTotal{grid-column:1/-1}
 .solrow2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .solrow2 canvas{height:clamp(220px,26vh,300px)}
 @media(max-width:1100px){ .solrow2{grid-template-columns:1fr} }
 .chkrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
 .chkrow .chk{display:flex;align-items:center;gap:6px;cursor:pointer}
-.caltab{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+/* La tabla tiene siete columnas y su ancho MINIMO (417 px) era mayor que un movil de 390: como
+   max-width no encoge por debajo del min-content, estiraba la tarjeta y con ella la pagina entera,
+   que se iba en scroll horizontal. Scrollea dentro de su caja, y las tarjetas pueden encoger. */
+#calOut{overflow-x:auto}
+.grid > .card{min-width:0}
+.caltab{width:100%;min-width:430px;border-collapse:collapse;font-family:var(--mono);font-size:12px}
 .caltab th{text-align:right;font-weight:600;color:var(--muted-2);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:4px 6px;border-bottom:1px solid var(--line)}
 .caltab th:first-child,.caltab td:first-child{text-align:left}
 .caltab td{text-align:right;padding:4px 6px;border-bottom:1px solid var(--line-soft);color:var(--tx)}
@@ -141,7 +150,7 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
     </div>
 
     <!-- SUN PATH CARTESIANO + TRAYECTORIA DEL TRACKER -->
-    <div class="card">
+    <div class="card anchoTotal">
       <h2><span class="ic">⌁</span> Recorrido del sol y del seguidor <span style="margin-left:auto;font:400 11px var(--mono);color:var(--muted)">azimut × elevación · θ del eje</span></h2>
       <div class="solrow2">
         <canvas id="cart" width="640" height="300" title="Sun path cartesiano: azimut en el eje X, elevación en el Y"></canvas>
@@ -150,8 +159,8 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
     </div>
 
     <!-- CALENDARIO SOLAR -->
-    <div class="card">
-      <h2><span class="ic">🗓</span> Orto, tránsito y ocaso <span style="margin-left:auto;font:400 11px var(--mono);color:var(--muted)">día 21 de cada mes · hora local</span></h2>
+    <div class="card anchoTotal">
+      <h2><span class="ic">🗓</span> Amanecer, mediodía solar y atardecer <span style="margin-left:auto;font:400 11px var(--mono);color:var(--muted)">día 21 de cada mes · hora local</span></h2>
       <div id="calOut"></div>
       <div class="btnrow" style="margin-top:10px">
         <button class="btn ghost small" id="calCsv">⬇ El año entero en CSV</button>
@@ -197,9 +206,12 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
             <div class="field" style="display:flex;align-items:flex-end"><label style="display:flex;align-items:center;gap:7px;font-weight:400;color:var(--muted);margin:0 0 9px"><input type="checkbox" id="econOn"> calcular al simular</label></div>
           </div>
         </details>
-        <div style="display:flex;gap:8px">
-          <button class="btn" id="simBtn" style="flex:1">▶ Simular</button>
-          <button class="btn ghost" id="demBtn" style="flex:none" title="Relieve del emplazamiento (motor, online)">⛰ Relieve</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" id="simBtn" style="flex:1 1 140px">▶ Simular</button>
+          <!-- width:auto: .btn lleva width:100% y con flex:none el boton no podia encoger, asi que en
+               un movil se salia de la pantalla (441 px de borde en un ancho de 390) y arrastraba la
+               pagina entera a scroll horizontal. -->
+          <button class="btn ghost" id="demBtn" style="flex:0 1 auto;width:auto" title="Relieve del emplazamiento (motor, online)">⛰ Relieve</button>
         </div>
       </div>
       <div>
@@ -431,7 +443,7 @@ function drawSky(){
   ctx.strokeStyle=C_SOL;ctx.lineWidth=2;ctx.stroke();
   // relleno bajo curva
   ctx.lineTo(gx(1440),y0);ctx.lineTo(gx(0),y0);ctx.closePath();ctx.fillStyle='rgba(246,166,35,.10)';ctx.fill();
-  // orto / ocaso
+  // amanecer / atardecer
   ctx.fillStyle='#36D399';
   [CUR.rise,CUR.set].forEach(function(m){if(m!=null){var xx=gx(m);ctx.fillRect(xx-1,y1,2,y0-y1);}});
 
@@ -440,7 +452,7 @@ function drawSky(){
   /* ---- SERIE DE SOMBRA, eje propio a la derecha en metros -------------------------------------
      La sombra es altura/tan(elevación) y se dispara con el sol bajo: 3 m de objeto a 1° de
      elevación son 172 m. Dibujada a escala libre aplastaría la curva del sol contra el eje, así
-     que van tres medidas: (a) SOLO entre orto y ocaso, (b) el eje se corta en un TECHO derivado
+     que van tres medidas: (a) SOLO entre el amanecer y el atardecer, (b) el eje se corta en un TECHO derivado
      de la altura del objeto, y (c) el tramo que se sale del techo va DISCONTINUO apoyado en él,
      para que se lea como un recorte y no como una meseta real de la sombra.
      Es un segundo eje y por tanto NO es comparable en altura con la curva del sol: cada eje va
@@ -484,7 +496,7 @@ function drawSky(){
 
   /* leyenda: con dos series la identidad no puede ir solo por color. Lleva fondo propio porque
      con el sol bajo la sombra se dispara justo por aquí (esquina superior izquierda, poco
-     después del orto) y sin él la curva pisaba el texto. */
+     después del amanecer) y sin él la curva pisaba el texto. */
   ctx.font='10px ui-monospace,monospace';ctx.textAlign='left';
   var lx=x0+8,ly=y1+11,lineas=['elevación · eje izq. (°)'];
   if(techo!=null)lineas.push('sombra de '+obj+' m · eje dcho. (m)');
@@ -498,9 +510,9 @@ function drawSky(){
   updateReadout(g,hm);
   drawPath(); calSolar(); drawCart(); drawTheta();
 }
-/* ORTO, TRANSITO Y OCASO. Lo que en el core es sunrise_sunset_table: por dia, salida, paso por el
-   meridiano, puesta, duracion y elevacion maxima. Dos diferencias que van DECLARADAS:
-     · alli la hora de orto/ocaso sale del SPA de pvlib y aqui del mismo NOAA que usa toda esta
+/* AMANECER, MEDIODIA SOLAR Y ATARDECER. Lo que en el core es sunrise_sunset_table: por dia, salida,
+   paso por el meridiano, puesta, duracion y elevacion maxima. Dos diferencias que van DECLARADAS:
+     · alli la hora de amanecer y atardecer sale del SPA de pvlib y aqui del mismo NOAA que usa toda esta
        ficha, con refraccion. Entre los dos hay segundos, no minutos.
      · alli son los 365 dias; en la tarjeta se ensenan los doce dias 21, que es lo que se lee de un
        vistazo. El año entero se baja en CSV con el boton, y ese si trae los 365.
@@ -508,17 +520,17 @@ function drawSky(){
 function filaCal(lat,lon,tz,ds){
   var c=dayCurve(lat,lon,ds,tz);
   var dur=(c.rise!=null&&c.set!=null)?(c.set-c.rise)/60:(c.peak.el>0?24:0);
-  return {fecha:ds, orto:c.rise, transito:c.peak.min, ocaso:c.set, horas:dur, elev:c.peak.el, az:c.peak.az};
+  return {fecha:ds, amanecer:c.rise, mediodia:c.peak.min, atardecer:c.set, horas:dur, elev:c.peak.el, az:c.peak.az};
 }
 function calSolar(){
   var box=$('calOut'); if(!box)return;
-  if(faltanCoords()){ box.innerHTML='<p class="note">Sin coordenadas no hay orto ni ocaso que calcular.</p>'; return; }
+  if(faltanCoords()){ box.innerHTML='<p class="note">Sin coordenadas no hay amanecer ni atardecer que calcular.</p>'; return; }
   var lat=+$('lat').value,lon=+$('lon').value,tz=+$('tz').value,y=($('date').value||'2026-06-21').slice(0,4);
   var MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  var h='<table class="caltab"><thead><tr><th>Día 21</th><th>Orto</th><th>Tránsito</th><th>Ocaso</th><th>Horas de sol</th><th>Elev. máx.</th><th>Azimut</th></tr></thead><tbody>';
+  var h='<table class="caltab"><thead><tr><th>Día 21</th><th>Amanecer</th><th>Mediodía solar</th><th>Atardecer</th><th>Horas de sol</th><th>Elev. máx.</th><th>Azimut</th></tr></thead><tbody>';
   for(var m=1;m<=12;m++){
     var r=filaCal(lat,lon,tz,y+'-'+(m<10?'0':'')+m+'-21');
-    h+='<tr><td>'+MES[m-1]+'</td><td>'+hhmm(r.orto)+'</td><td>'+hhmm(r.transito)+'</td><td>'+hhmm(r.ocaso)+'</td>'
+    h+='<tr><td>'+MES[m-1]+'</td><td>'+hhmm(r.amanecer)+'</td><td>'+hhmm(r.mediodia)+'</td><td>'+hhmm(r.atardecer)+'</td>'
       +'<td>'+(r.horas?r.horas.toFixed(2):'—')+'</td><td>'+r.elev.toFixed(1)+'°</td><td>'+Math.round(r.az)+'° '+compass(r.az)+'</td></tr>';
   }
   box.innerHTML=h+'</tbody></table>';
@@ -526,14 +538,14 @@ function calSolar(){
 function calCsvDescarga(){
   if(faltanCoords())return;
   var lat=+$('lat').value,lon=+$('lon').value,tz=+$('tz').value,y=+($('date').value||'2026-06-21').slice(0,4);
-  var L=['fecha,orto,transito,ocaso,horas_sol,elev_max_deg,azimut_pico_deg'];
+  var L=['fecha,amanecer,mediodia_solar,atardecer,horas_sol,elev_max_deg,azimut_pico_deg'];
   for(var d=0;d<366;d++){
     var f=new Date(Date.UTC(y,0,1+d)); if(f.getUTCFullYear()!==y)break;
     var ds=f.toISOString().slice(0,10), r=filaCal(lat,lon,tz,ds);
-    L.push([ds,hhmm(r.orto),hhmm(r.transito),hhmm(r.ocaso),(r.horas||0).toFixed(3),r.elev.toFixed(2),r.az.toFixed(1)].join(','));
+    L.push([ds,hhmm(r.amanecer),hhmm(r.mediodia),hhmm(r.atardecer),(r.horas||0).toFixed(3),r.elev.toFixed(2),r.az.toFixed(1)].join(','));
   }
   var b=new Blob([L.join('\n')],{type:'text/csv;charset=utf-8'}), u=URL.createObjectURL(b);
-  var a=document.createElement('a'); a.href=u; a.download='orto_ocaso_'+lat.toFixed(4)+'_'+lon.toFixed(4)+'_'+y+'.csv';
+  var a=document.createElement('a'); a.href=u; a.download='amanecer_atardecer_'+lat.toFixed(4)+'_'+lon.toFixed(4)+'_'+y+'.csv';
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},1000);
 }
 /* ── EL ANGULO DEL SEGUIDOR ────────────────────────────────────────────────────────────────────
@@ -670,7 +682,7 @@ function updateReadout(g,hm){
     card('Elevación',(g.elevation>0?g.elevation.toFixed(1):'—'),'°')+
     card('Azimut',g.azimuth.toFixed(1),'° '+compass(g.azimuth))+
     card('Pico solar',CUR.peak.el.toFixed(1),'° · '+hhmm(CUR.peak.min))+
-    card('Orto / ocaso',hhmm(CUR.rise),'→ '+hhmm(CUR.set))+
+    card('Amanecer / atardecer',hhmm(CUR.rise),'→ '+hhmm(CUR.set))+
     card('Sombra obj.',shadow,sdir?('hacia '+sdir):'')+avisoTZ();
 }
 /* AVISO DE HUSO: el cálculo solar es correcto, pero si el UTC no casa con la longitud el día entero sale
