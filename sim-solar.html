@@ -985,9 +985,35 @@ var COORDS_FALLBACK={'24002':[41.57634,-0.79814],'24025':[39.11821,-1.15985],'24
 
    Y se respeta al usuario: si ha tocado el campo a mano, NO se le pisa. Solo se refresca mientras
    siga en el ultimo valor que pusimos nosotros. */
-var TZ_FIJO={'24019':-300, '24021':60, '26322':60};      // por codigo de cartera; minutos, sin verano
+/* EL INDICE DE PLANTAS, que es la fuente. Antes esta ficha llevaba su PROPIA tabla de husos fijos,
+   copiada a mano de los layouts: en cuanto una planta cambiara el suyo, la copia se quedaba vieja y
+   nadie se enteraba. Ahora se pide `plantas_indice.json`, que cobertura-zigbee genera de los
+   propios layouts, y aqui no se guarda ningun dato de planta.
+
+   El indice trae ademas las COORDENADAS medidas del DWG, y eso resuelve otra cosa: de las 22
+   plantas de la cartera, 17 no tienen lat/lon, y cinco de ellas -Bagnarelli, Benante, Panbianco,
+   Paramo y El Polvorin- si las tienen en su layout. Donde la cartera no llega, llega el DWG, y se
+   dice de donde salen.
+
+   Si no hay red, se cae a la regla peninsular y se avisa: mejor una regla declarada que una copia
+   vieja fingiendo ser un dato. */
+var INDICE=null, INDICE_PEDIDO=false;
+var LAYOUTS='https://imoriana3.github.io/cobertura-zigbee/';
+function pideIndice(){
+  if(INDICE_PEDIDO)return Promise.resolve(INDICE); INDICE_PEDIDO=true;
+  return fetch(LAYOUTS+'plantas_indice.json',{cache:'no-store'})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(j){ INDICE=(j&&j.plantas)?j.plantas:null; return INDICE; })
+    .catch(function(){ INDICE=null; return null; });
+}
+function delIndice(cod){
+  if(!INDICE||!cod)return null;
+  for(var i=0;i<INDICE.length;i++) if(String(INDICE[i].codigo)===String(cod)) return INDICE[i];
+  return null;
+}
 function husoPlanta(cod,fechaISO){
-  if(cod&&TZ_FIJO[cod]!=null)return TZ_FIJO[cod]/60;
+  var p=delIndice(cod);
+  if(p&&p.tz_fijo_min!=null)return p.tz_fijo_min/60;
   var d=new Date((fechaISO||'')+'T12:00:00');
   var doy=isNaN(d)?172:Math.floor((d-new Date(d.getFullYear(),0,0))/86400000);
   return (doy>=88&&doy<=298)?2:1;
@@ -1022,9 +1048,13 @@ function pickPlant(cod){
     var c=COORDS_FALLBACK[cod];
     $('lat').value=c[0]; $('lon').value=c[1];
     avisoCoords('Coordenadas del respaldo del visor, no de la cartera'+(cod==='24021'?' · aproximadas a ±500 m':'')+'.','derivada');
+  }else if(delIndice(cod)&&delIndice(cod).lat!=null){
+    var q=delIndice(cod);
+    $('lat').value=q.lat; $('lon').value=q.lon;
+    avisoCoords('La cartera no trae coordenadas de esta planta: se toman del centro de su layout del DWG ('+q.planta+').','derivada');
   }else{
     $('lat').value=''; $('lon').value='';
-    avisoCoords('«'+nom+'» no tiene coordenadas en la cartera. Se han borrado las anteriores para no simular este sitio en otro: teclea la latitud y la longitud, o rellenalas en la Cartera tecnica.','falta');
+    avisoCoords('«'+nom+'» no tiene coordenadas ni en la cartera ni en un layout. Se han borrado las anteriores para no simular este sitio en otro: teclea la latitud y la longitud, o rellenalas en la Cartera tecnica.','falta');
   }
   if(p.wmod)$('pmpp').value=Math.round(p.wmod);
   if(p.cantidad)$('nmod').value=Math.round(p.cantidad);
@@ -1046,6 +1076,7 @@ window.addEventListener('resize',drawSky);
 loadPlants();
 aplicaHuso(null);
 drawSky();
+pideIndice().then(function(){ if($('plant').value)pickPlant($('plant').value); else {aplicaHuso();drawSky();} });
 detectEngine();
 </script>
 </body>
