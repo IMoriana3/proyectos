@@ -544,7 +544,15 @@ Y la **cámara se pone cuesta abajo**, mirando ladera arriba. No es gusto: la l�
 con el azimut, y desde el sur fijo con la caída al este quedaban en fila india — el primero enorme y
 el último un punto. En llano no hay cuesta y se mira desde el sur, como siempre.
 
-Con una condición que costó un susto: **siempre por el lado del ecuador**. Las dos direcciones ⊥ a
+Y con **un cuarto de vuelta corto, 20°**. Mirar exactamente por la línea de máxima pendiente es el
+peor ángulo para leerla: la ladera cae hacia el fondo y en pantalla no se inclina nada — con la
+caída al sur salían dos franjas de verde y ni un desnivel. Ni un grado más de 20, eso sí: los
+bloques van sobre la curva de nivel, así que cuanto más se gira, más se hunde esa línea en
+perspectiva y más desiguales salen (a 28° el primero era el triple que el último). El encuadre pasa
+a siete pasadas porque con la cámara girada la caja del mundo entra más torcida y con cuatro se
+quedaba a un 6 % de encajar.
+
+Con una condición más, que costó un susto: **siempre por el lado del ecuador**. Las dos direcciones ⊥ a
 la línea de bloques encuadran igual de bien, y solo una enseña la cara — una fija mira al ecuador,
 así que con la caída al NNE la cámara se plantaba *detrás* de los paneles y la escena salía en negro,
 con las mesas de canto. Y cuando la caída es este u oeste no hay componente hacia el ecuador

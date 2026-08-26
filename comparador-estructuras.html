@@ -2829,7 +2829,10 @@ function mesaFija3D(mats,largo,ancho){
    El guard vive en tests/test_comparador_3d.js: nada puede quedar fuera. */
 function encuadra(){
   var MARGEN=0.90;                       // deja aire a los lados
-  for(var it=0; it<4; it++){
+  /* Siete pasadas y no cuatro: con la cámara girada un cuarto de vuelta sobre
+     la ladera la caja del mundo entra en pantalla más torcida y cuatro
+     iteraciones se quedaban a un 6 % de encajar. */
+  for(var it=0; it<7; it++){
     TD.ct.update(); TD.cam.updateMatrixWorld(); TD.cam.updateProjectionMatrix();
     var caja=new THREE.Box3().setFromObject(MUNDO);
     if(!isFinite(caja.min.x))return;
@@ -3079,7 +3082,16 @@ function construyeMundo(){
   if(vz*eq<-1e-9){vx=-vx; vz=-vz;}
   vz+=0.6*eq;
   var vn=Math.hypot(vx,vz); vx/=vn; vz/=vn;
-  TD.cam.position.set(vx*d*0.86,d*0.30,vz*d*0.86);
+  /* Y con un cuarto de vuelta corta. Mirar EXACTAMENTE por la línea de máxima
+     pendiente es el peor ángulo para leerla: la ladera cae hacia el fondo y en
+     pantalla no se inclina nada — con la caída al sur salían dos franjas de
+     verde y ni un desnivel. Girando 20° la ladera se ve de tres cuartos. Ni un
+     grado más: los bloques van sobre la curva de nivel, así que cuanto más se
+     gira, más se hunde esa línea en perspectiva y más desiguales salen — a 28°
+     el primero era el triple que el último. */
+  var gi=20*FIS.D2R, cg=Math.cos(gi), sg=Math.sin(gi);
+  var rx=vx*cg+vz*sg, rz=-vx*sg+vz*cg;
+  TD.cam.position.set(rx*d*0.86,d*0.40,rz*d*0.86);
   TD.ct.target.set(0,4,0);
   encuadra();
   /* La niebla se dimensiona con la escena. Fija, o se come los bloques cuando
