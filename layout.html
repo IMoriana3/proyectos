@@ -134,8 +134,23 @@ $('engine').onclick=function(){var cur='';try{cur=localStorage.getItem('factiun_
   ENGINE=null;setEngine(false,'reconectando…');detectEngine();};
 
 /* ===== render GeoJSON genérico (Polygon/MultiPolygon/LineString) ===== */
+/* A LOS PIXELES DE LA PANTALLA. El lienzo tenia su tamaño fijo en el atributo (920x600) y el CSS
+   lo estiraba a lo que ocupara: en una pantalla de densidad 2 eso es dibujar a menos de la mitad
+   de resolucion de la que hay -medido, x1,12 en vez de x2- y el navegador amplia lo dibujado,
+   letra y trazo incluidos. Se dimensiona el bufer al hueco REAL por la densidad, y se escala el
+   contexto para que 1 unidad de dibujo siga siendo 1 px de CSS: el codigo de pintado no cambia. */
+function nitido(cv){
+  var dpr=Math.min(window.devicePixelRatio||1,2);
+  var W=Math.round(cv.clientWidth||cv.width), H=Math.round(cv.clientHeight||cv.height);
+  if(!W||!H)return null;
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);}
+  var ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx:ctx,W:W,H:H};
+}
 function drawGeo(fc){
-  var cv=$('cv'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  window.__ultGeo=fc;
+  var cv=$('cv'),_n=nitido(cv); if(!_n)return false;
+  var ctx=_n.ctx,W=_n.W,H=_n.H;
   ctx.clearRect(0,0,W,H);ctx.fillStyle='#0b0f14';ctx.fillRect(0,0,W,H);
   if(!fc||!fc.features||!fc.features.length)return false;
   var minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
@@ -222,6 +237,13 @@ $('geoFile').onchange=function(e){var f=e.target.files[0];if(!f)return;var rd=ne
   rd.readAsText(f);$('geoFile').value='';};
 loadPlants();
 detectEngine();
+/* Rehacer al cambiar el hueco, no solo la ventana: al plegar un panel o al entrar una fuente el
+   lienzo se ensancha y el bufer se quedaba con la anchura vieja. */
+if(window.ResizeObserver&&$('cv')){
+  var _rq=null, _ro=new ResizeObserver(function(){ if(_rq)cancelAnimationFrame(_rq);
+    _rq=requestAnimationFrame(function(){_rq=null; if(window.__ultGeo)drawGeo(window.__ultGeo);}); });
+  _ro.observe($('cv'));
+}
 </script>
 </body>
 </html>
