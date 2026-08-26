@@ -61,6 +61,13 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
    REALES (ver ajustaLienzo), asi que la letra mide lo que dice que mide, se ensanche lo que se
    ensanche. */
 #sky{height:clamp(240px,30vh,340px)}
+.chkrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
+.chkrow .chk{display:flex;align-items:center;gap:6px;cursor:pointer}
+.caltab{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+.caltab th{text-align:right;font-weight:600;color:var(--muted-2);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:4px 6px;border-bottom:1px solid var(--line)}
+.caltab th:first-child,.caltab td:first-child{text-align:left}
+.caltab td{text-align:right;padding:4px 6px;border-bottom:1px solid var(--line-soft);color:var(--tx)}
+.caltab tr:hover td{background:rgba(255,255,255,.03)}
 #path{height:clamp(240px,30vh,340px);aspect-ratio:1/1;width:auto;flex:none}
 .solrow{display:flex;gap:10px;align-items:stretch}
 .solrow #sky{flex:1;min-width:0}
@@ -123,6 +130,20 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
         <span class="hourlbl" id="hourlbl">12:00</span>
       </div>
       <div class="readout" id="ro"></div>
+      <div class="chkrow">
+        <label class="chk"><input type="checkbox" id="cMes"> los 12 arcos del mes</label>
+        <label class="chk"><input type="checkbox" id="cHora"> líneas de hora (analema)</label>
+        <span class="tag" style="margin-left:auto">carta solar · proyección equidistante</span>
+      </div>
+    </div>
+
+    <!-- CALENDARIO SOLAR -->
+    <div class="card">
+      <h2><span class="ic">🗓</span> Orto, tránsito y ocaso <span style="margin-left:auto;font:400 11px var(--mono);color:var(--muted)">día 21 de cada mes · hora local</span></h2>
+      <div id="calOut"></div>
+      <div class="btnrow" style="margin-top:10px">
+        <button class="btn ghost small" id="calCsv">⬇ El año entero en CSV</button>
+      </div>
     </div>
   </div>
 
@@ -279,6 +300,15 @@ function ajustaLienzo(cv){
    centro, el norte arriba. Se pintan el dia elegido y, de referencia, los dos solsticios y el
    equinoccio, que son los que acotan todo el año. Misma geometria que la curva del dia -el
    solarGeom de esta pagina, algoritmo NOAA-, no hay un segundo modelo. */
+/* Rampa tipo `turbo` de matplotlib, por tramos. Es una APROXIMACION -el turbo de verdad son 256
+   valores tabulados- y aqui solo distingue doce arcos, para lo que sobra. */
+function turbo(t){
+  t=Math.max(0,Math.min(1,t));
+  var k=[[48,18,59],[70,107,227],[26,183,166],[122,220,79],[249,205,53],[249,120,35],[122,4,3]];
+  var x=t*(k.length-1), i=Math.min(k.length-2,Math.floor(x)), f=x-i;
+  var c=[0,1,2].map(function(j){return Math.round(k[i][j]+(k[i+1][j]-k[i][j])*f);});
+  return 'rgb('+c.join(',')+')';
+}
 function drawPath(){
   var cv=$('path'); if(!cv) return;
   var L=ajustaLienzo(cv); if(!L) return;
@@ -299,8 +329,50 @@ function drawPath(){
   [['N',0],['E',90],['S',180],['O',270]].forEach(function(d){
     var p=xy(d[1],-4.5); ctx.fillText(d[0],p[0],p[1]);
   });
-  /* el año, en tres trazos: solsticio de junio, equinoccio y solsticio de diciembre */
   var y=(date||'2026-06-21').slice(0,4);
+
+  /* LOS DOCE ARCOS DEL MES, como el show_months del core: el dia 21 de cada mes, paso de 10 min.
+     Rampa tipo turbo y no ciclica a proposito -misma razon que alli-: con una ciclica el blanco
+     del centro se comia junio y julio sobre el fondo oscuro. */
+  if($('cMes')&&$('cMes').checked){
+    var MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    for(var mi=1;mi<=12;mi++){
+      var t=(mi-1)/11, col=turbo(t), primero=true;
+      ctx.beginPath(); ctx.strokeStyle=col; ctx.lineWidth=1; ctx.globalAlpha=.85;
+      for(var mm=0;mm<=1440;mm+=10){
+        var gg=solarGeom(localToUTCms(y+'-'+(mi<10?'0':'')+mi+'-21',mm,tz),lat,lon);
+        if(gg.elevation<=0){primero=true;continue;}
+        var qq=xy(gg.azimuth,gg.elevation);
+        if(primero){ctx.moveTo(qq[0],qq[1]);primero=false;}else ctx.lineTo(qq[0],qq[1]);
+      }
+      ctx.stroke(); ctx.globalAlpha=1;
+    }
+  }
+
+  /* LINEAS DE HORA: para cada hora de reloj, por donde anda el sol a lo largo del año. Es la
+     analema proyectada, y es lo que deja leer la carta como un reloj. Se rotula donde mas alto
+     esta el sol a esa hora, igual que en el core. */
+  if($('cHora')&&$('cHora').checked){
+    ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(var hh=0;hh<24;hh++){
+      var pts=[],alto=null;
+      for(var dd=0;dd<365;dd+=5){
+        var f=new Date(Date.UTC(+y,0,1+dd)), ds=f.toISOString().slice(0,10);
+        var gh=solarGeom(localToUTCms(ds,hh*60,tz),lat,lon);
+        if(gh.elevation<=0)continue;
+        pts.push(xy(gh.azimuth,gh.elevation));
+        if(!alto||gh.elevation>alto.el)alto={el:gh.elevation,p:pts[pts.length-1]};
+      }
+      if(pts.length<3)continue;                       // hora que aqui nunca tiene sol
+      ctx.beginPath(); ctx.strokeStyle='#55636f'; ctx.lineWidth=.7; ctx.globalAlpha=.7;
+      pts.forEach(function(p,i){ if(i)ctx.lineTo(p[0],p[1]); else ctx.moveTo(p[0],p[1]); });
+      ctx.stroke(); ctx.globalAlpha=1;
+      if(alto){ ctx.fillStyle='rgba(11,15,20,.75)'; ctx.fillRect(alto.p[0]-9,alto.p[1]-6,18,12);
+        ctx.fillStyle='#8fa0b0'; ctx.fillText(hh+'h',alto.p[0],alto.p[1]); }
+    }
+  }
+
+  /* el año, en tres trazos: solsticio de junio, equinoccio y solsticio de diciembre */
   var refs=[[y+'-06-21','#3f4d5e'],[y+'-03-21','#37485c'],[y+'-12-21','#3f4d5e']];
   refs.concat([[date,'#F6A623']]).forEach(function(d,i){
     var esHoy=(i===refs.length);
@@ -412,7 +484,45 @@ function drawSky(){
     ctx.fillStyle='#8093A4';ctx.fillText(t,lx+15,ly+i*15);
   });
   updateReadout(g,hm);
-  drawPath();
+  drawPath(); calSolar();
+}
+/* ORTO, TRANSITO Y OCASO. Lo que en el core es sunrise_sunset_table: por dia, salida, paso por el
+   meridiano, puesta, duracion y elevacion maxima. Dos diferencias que van DECLARADAS:
+     · alli la hora de orto/ocaso sale del SPA de pvlib y aqui del mismo NOAA que usa toda esta
+       ficha, con refraccion. Entre los dos hay segundos, no minutos.
+     · alli son los 365 dias; en la tarjeta se ensenan los doce dias 21, que es lo que se lee de un
+       vistazo. El año entero se baja en CSV con el boton, y ese si trae los 365.
+   El transito no se busca aparte: es el minuto de elevacion maxima que ya devuelve dayCurve. */
+function filaCal(lat,lon,tz,ds){
+  var c=dayCurve(lat,lon,ds,tz);
+  var dur=(c.rise!=null&&c.set!=null)?(c.set-c.rise)/60:(c.peak.el>0?24:0);
+  return {fecha:ds, orto:c.rise, transito:c.peak.min, ocaso:c.set, horas:dur, elev:c.peak.el, az:c.peak.az};
+}
+function calSolar(){
+  var box=$('calOut'); if(!box)return;
+  if(faltanCoords()){ box.innerHTML='<p class="note">Sin coordenadas no hay orto ni ocaso que calcular.</p>'; return; }
+  var lat=+$('lat').value,lon=+$('lon').value,tz=+$('tz').value,y=($('date').value||'2026-06-21').slice(0,4);
+  var MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var h='<table class="caltab"><thead><tr><th>Día 21</th><th>Orto</th><th>Tránsito</th><th>Ocaso</th><th>Horas de sol</th><th>Elev. máx.</th><th>Azimut</th></tr></thead><tbody>';
+  for(var m=1;m<=12;m++){
+    var r=filaCal(lat,lon,tz,y+'-'+(m<10?'0':'')+m+'-21');
+    h+='<tr><td>'+MES[m-1]+'</td><td>'+hhmm(r.orto)+'</td><td>'+hhmm(r.transito)+'</td><td>'+hhmm(r.ocaso)+'</td>'
+      +'<td>'+(r.horas?r.horas.toFixed(2):'—')+'</td><td>'+r.elev.toFixed(1)+'°</td><td>'+Math.round(r.az)+'° '+compass(r.az)+'</td></tr>';
+  }
+  box.innerHTML=h+'</tbody></table>';
+}
+function calCsvDescarga(){
+  if(faltanCoords())return;
+  var lat=+$('lat').value,lon=+$('lon').value,tz=+$('tz').value,y=+($('date').value||'2026-06-21').slice(0,4);
+  var L=['fecha,orto,transito,ocaso,horas_sol,elev_max_deg,azimut_pico_deg'];
+  for(var d=0;d<366;d++){
+    var f=new Date(Date.UTC(y,0,1+d)); if(f.getUTCFullYear()!==y)break;
+    var ds=f.toISOString().slice(0,10), r=filaCal(lat,lon,tz,ds);
+    L.push([ds,hhmm(r.orto),hhmm(r.transito),hhmm(r.ocaso),(r.horas||0).toFixed(3),r.elev.toFixed(2),r.az.toFixed(1)].join(','));
+  }
+  var b=new Blob([L.join('\n')],{type:'text/csv;charset=utf-8'}), u=URL.createObjectURL(b);
+  var a=document.createElement('a'); a.href=u; a.download='orto_ocaso_'+lat.toFixed(4)+'_'+lon.toFixed(4)+'_'+y+'.csv';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},1000);
 }
 function updateReadout(g,hm){
   $('hourlbl').textContent=hhmm(hm);
@@ -628,6 +738,8 @@ function pickPlant(cod){
   drawSky();
 }
 $('plant').onchange=function(){if(this.value)pickPlant(this.value);};
+['cMes','cHora'].forEach(function(id){var e=$(id); if(e)e.addEventListener('change',drawPath);});
+if($('calCsv'))$('calCsv').onclick=calCsvDescarga;
 $('kind').onchange=function(){var trk=this.value==='tracker';$('trkParams').style.display=trk?'':'none';$('fixParams').style.display=trk?'none':'';};
 ['lat','lon','date','tz','obj'].forEach(function(id){$(id).addEventListener('input',drawSky);});
 $('hour').addEventListener('input',drawSky);
