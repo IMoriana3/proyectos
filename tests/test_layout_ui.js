@@ -1539,6 +1539,55 @@ const cajaLienzo = async page => {
     await pagS.textContent('#mapHint'));
   await pagS.close();
 
+  // ── EL AZIMUT DE LA FIJA MIRA AL SUR (2026-08-22) ──
+  // «Me lo hace en el 3D al revés, las estructuras mirando al norte en
+  // España». El handoff derivaba el azimut de superficie del rumbo de la
+  // arista más larga (`rot+90`) — y una arista no tiene sentido: el mismo lado
+  // leído al revés da r ó r+180, según el orden en que el motor emita los
+  // vértices. En TRACKER daba igual (el tubo es una línea sin sentido, y por
+  // eso nadie lo vio); en FIJA volcaba el campo entero. El visor lo consume
+  // como dirección de MIRADA (makeRotationY(π−az): 180 = sur).
+  //
+  // RÉGIMEN, medido y no supuesto: la primera versión de este bloque colgaba
+  // del recorrido largo de la suite y su MUTANTE SOBREVIVIÓ — allí la arista
+  // ya caía del lado bueno y el test no podía ver el bug (corolario 2 de la
+  // casa, en vivo). El caso vive en página propia reproduciendo la medición
+  // que sí lo destapó: rectángulo 300×200 en España, montaje fija, azimut de
+  // filas 180 → antes salían las 256 mesas a 0/360.
+  const pagAz = await browser.newPage();
+  await pagAz.route('https://server.arcgisonline.com/**', r => r.abort());
+  await pagAz.goto(BASE + '/generador-layout.html', { waitUntil: 'domcontentloaded' });
+  await pagAz.evaluate(() => { document.querySelector('#orto').checked = false; });
+  await pagAz.selectOption('#mount', 'fija');
+  await pagAz.fill('#lat', '41.5'); await pagAz.fill('#lon', '-0.8');
+  await pagAz.fill('#pw', '300'); await pagAz.fill('#ph', '200');
+  const _az = async () => {
+    await generar(pagAz);
+    return pagAz.evaluate(() => {
+      document.querySelector('#d3Btn').click();
+      const L = JSON.parse(localStorage.getItem('cobertura_layout') || '{}');
+      const az = (L.fijas || []).map(f => f.azimut);
+      const ref = +document.querySelector('#panelAz').value;
+      const dRef = az.map(a => Math.abs(((((a - ref) % 360) + 540) % 360) - 180));
+      return { n: az.length, unicos: [...new Set(az)].slice(0, 4), ref,
+               peor: az.length ? Math.max(...dRef) : 999,
+               fuera: az.filter(a => !(a >= 0 && a < 360)).length };
+    });
+  };
+  const azSur = await _az();
+  check('FIJA → el 3D recibe las mesas mirando al SUR, no al norte (az de filas ' +
+        azSur.ref + '° → ' + JSON.stringify(azSur.unicos) + ')',
+    azSur.n > 100 && azSur.peor < 1, JSON.stringify(azSur));
+  check('y el azimut viaja normalizado a [0, 360) — «360.0» no es un azimut',
+    azSur.fuera === 0, JSON.stringify(azSur));
+  // Régimen del giro: con la retícula girada el hemisferio se mantiene Y el
+  // giro fino de la arista se conserva (no se sustituye por la referencia).
+  await pagAz.fill('#panelAz', '200');
+  const azGir = await _az();
+  check('FIJA girada 200° → las mesas siguen del lado sur, con el giro conservado',
+    azGir.n > 100 && azGir.peor < 1, JSON.stringify(azGir));
+  await pagAz.close();
+
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
   process.exit(ko ? 1 : 0);
