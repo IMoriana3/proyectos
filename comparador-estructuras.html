@@ -2794,6 +2794,7 @@ function cotaTerreno(x,z,rampas){
           suave((Math.abs(z-r.z)-r.mz)/r.fz);
     if(w<=0)continue;
     /* Cota RELATIVA al centro de la bancada, que está en cero: sube por un
+<<<<<<< HEAD
        lado lo mismo que baja por el otro. Sin la `alza` que levantaba cada
        bloque a una altura distinta.
        La rampa se ACOTA al tamaño de la bancada y fuera sigue plana. No es
@@ -2811,6 +2812,11 @@ function cotaTerreno(x,z,rampas){
        las dos esquinas extremas, y ninguna estructura se apoya ahí. */
     var tope=Math.max(r.mx*Math.abs(Math.tan(r.ax||0)),r.mz*Math.abs(Math.tan(r.az||0)));
     y+=w*Math.max(-tope,Math.min(tope,h));
+=======
+       lado lo mismo que baja por el otro. Sin `alza` ni `tope` — eran los que
+       levantaban cada bloque a una altura distinta y le ponían meseta. */
+    y+=w*(-(x-r.x)*Math.tan(r.ax||0)-(z-r.z)*Math.tan(r.az||0));
+>>>>>>> origin/main
   }
   return y;
 }
@@ -2901,12 +2907,20 @@ function construyeMundo(){
   var sep=Math.max(largo,(nfMax-1)*Math.max(6,cfg.tracker.pitch))+16;
   /* Con terreno en pendiente cada bloque necesita su bancada Y el fundido que
      la devuelve al llano, y con la separación de llano ese fundido sale tan
+<<<<<<< HEAD
      corto que la transición es un escalón. Al DOBLE entra justo: media
      distancia al vecino para la bancada y la otra media para el talud, que es
      la única proporción con la que el talud no sale más empinado que la
      propia pendiente. */
   if((cfg.pend||0)||(cfg.axTilt&&keys.some(function(k){var e=FIS.spec(k);return e&&e.tsat;})))
     sep*=2;
+=======
+     corto que la transición es un escalón. Se abre la mano un 60 %: lo justo
+     para que la banca entre y la vuelta al llano se lea como un talud, sin
+     alejar tanto la cámara que las estructuras se queden en miniatura. */
+  if((cfg.pend||0)||(cfg.axTilt&&keys.some(function(k){var e=FIS.spec(k);return e&&e.tsat;})))
+    sep*=1.6;
+>>>>>>> origin/main
   var x0=-(keys.length-1)*sep/2, anchoTot=(keys.length-1)*sep+largo;
 
   keys.forEach(function(k,i){
@@ -2971,6 +2985,7 @@ function construyeMundo(){
          bajar, y entre dos bloques saldría un ESCALÓN donde tiene que haber una
          transición. Por eso, en cuanto hay pendiente, los bloques se separan al
          doble: el terreno que necesitan para existir ocupa sitio. */
+<<<<<<< HEAD
       /* TAMAÑO de la bancada. Ceñirla al bloque era lo que hacía la pendiente
          invisible: una fija de 3 filas a 4,5 m mide 10 m, y 16° sobre 10 m son
          1,4 m de desnivel — nada en una escena de 170 m. Así que la bancada es
@@ -2983,6 +2998,11 @@ function construyeMundo(){
       var mz=Math.max(lim*0.5,fondoBloque/2+8);
       rampas.push({x:grupo.position.x, z:0,
                    mx:mx, mz:mz, fx:lim-mx, fz:mz*1.6,
+=======
+      var lim=sep*0.5, mx=Math.min(anchoBloque/2+8,lim*0.5);
+      rampas.push({x:grupo.position.x, z:0,
+                   mx:mx, mz:fondoBloque/2+8, fx:lim-mx, fz:(fondoBloque/2+8)*1.6,
+>>>>>>> origin/main
                    ax:ejeX, az:ejeZ});
     }
     var col='#'+(COL[k]||'#888888').replace('#','');

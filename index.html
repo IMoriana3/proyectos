@@ -516,7 +516,7 @@ body{
    ===================================================================== */
 const PROJECTS = [
   {
-    name: "Mapa de registros Modbus",
+    name: "Mapa Modbus",
     status: "live",
     objetivo: "Consulta del mapa Modbus completo de NCU, HSU y TCU, con dirección absoluta por unidad y decodificación de valores crudos en vivo.",
     stack: "HTML · sin dependencias",
@@ -601,7 +601,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Simulador de cielo cubierto",
+    name: "Simulador de radiación difusa",
     status: "live",
     objetivo: "Evaluación de las cuatro políticas de radiación difusa en días nublados: cielo definido manualmente o real de Open-Meteo, zonificación por NCU y balance de POA de cada política.",
     stack: "HTML offline · Three.js (libs locales) + seguidor.js · Canvas · pvlib singleaxis + Ineichen + Perez portados a JS · Open-Meteo (datos, opcional)",
@@ -652,9 +652,9 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Generador de siting de comunicaciones",
+    name: "Diseño de red de comunicaciones",
     status: "live",
-    objetivo: "Generación del siting de comunicaciones de una planta nueva: a partir del listado de seguidores, ubicación automática de NCU, RSU y gateways.",
+    objetivo: "Diseño de la red de comunicaciones de una planta nueva: a partir del listado de seguidores, ubicación automática de NCU, RSU y gateways.",
     stack: "HTML · Canvas · min-cost flow",
     url: "https://imoriana3.github.io/siting/",
     repo: "https://github.com/imoriana3/siting",
@@ -670,7 +670,7 @@ const PROJECTS = [
     historial: [ { date:"2026-06-22", ver:"", note:"Plantilla de creación en la cartera (Siting en blanco)." } ]
   },
   {
-    name: "Alta de planta desde CSV o DXF",
+    name: "Alta de planta",
     status: "live",
     objetivo: "Alta de una planta nueva a partir de ficheros CSV o DXF: reconocimiento de los bloques de tracker por su geometría y previsualización 2D/3D. Ejecución offline.",
     stack: "HTML offline · UTM↔WGS84 · parser DXF · Three.js",
@@ -688,7 +688,7 @@ const PROJECTS = [
     historial: [ { date:"2026-06-22", ver:"", note:"Creación de planta: datos base + CSV/DXF, reconocimiento de bloques por geometría." } ]
   },
   {
-    name: "Checklists de obra",
+    name: "Control de obra",
     status: "live",
     objetivo: "Gestión de checklists de obra para plantas fotovoltaicas: construcción, calidad, punchlist, mapa y cuadro de mando.",
     stack: "HTML · Firebase (Auth/Firestore) · GitHub Pages",
@@ -733,7 +733,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Visor de asignación topográfica · San José",
+    name: "Visor de levantamiento",
     status: "live",
     objetivo: "Asignación de 18.190 puntos topográficos a los 2.289 seguidores de la planta mediante flujo de coste mínimo. Ejecución offline.",
     stack: "HTML offline · datos NetworkX (min-cost flow)",
@@ -754,7 +754,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Visor de geometría as-built · Ayora",
+    name: "Visor de geometría as-built",
     status: "live",
     objetivo: "Reconstrucción de la geometría as-built de los 754 seguidores de la planta a partir de 3.069 puntos de levantamiento, con backtracking corregido por terreno.",
     stack: "HTML offline · Plotly · levantamiento topográfico",
@@ -778,7 +778,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Gemelo digital de seguidor",
+    name: "Gemelo digital de seguidor y control",
     status: "build",
     objetivo: "Réplica digital del seguidor y de su unidad de control, con geometría física real y control predictivo.",
     stack: "HTML · 3D · FastAPI · WebSocket · Docker",
@@ -803,7 +803,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Simulador de batería del seguidor",
+    name: "Simulador de batería",
     status: "live",
     objetivo: "Simulación anual de la gestión de la batería LiFePO4 del seguidor según la metodología del Battery Availability Study: porcentaje de tiempo no disponible, porcentaje de producción perdida y análisis rainflow en cualquier emplazamiento.",
     stack: "HTML autocontenido · canvas 2D · Open-Meteo · CSV PVSyst · Leaflet",
@@ -872,7 +872,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Calculadora de tráfico de red",
+    name: "Medidor de tráfico",
     status: "live",
     objetivo: "Cálculo del tráfico que el SCADA genera en la LAN de planta y del volumen que cada planta envía a la nube, con el mismo modelo de bytes que aplica el colector en operación.",
     stack: "HTML · sin dependencias · modelo en Python",
@@ -900,7 +900,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Simulador de abanderamiento por viento",
+    name: "Comparador de estrategias de abanderamiento",
     status: "live",
     objetivo: "Comparación de las estrategias canónicas de abanderamiento (A1/A2/B1/B2 y pasivo) frente al mismo seguidor sin abanderar: POA perdida, número de abanderamientos al año y tiempo acumulado en posición de defensa.",
     stack: "HTML autocontenido · física en el navegador · canvas 2D · Three.js + seguidor.js (escena 3D) · estética de overcast/bt3d · motor SolarGPT opcional (POST /windstow)",
@@ -988,8 +988,8 @@ const PROJECTS = [
     stack: "HTML autocontenido · motor de layout en el navegador (UTM + erosión exacta del setback + knapsack multi-talla) · canvas 2D · careo contra solargpt_core.layout_v2",
     url: "https://imoriana3.github.io/proyectos/generador-layout.html",
     repo: "https://github.com/imoriana3/proyectos",
-    updated: "2026-08-21",
-    version: "1.4.8",
+    updated: "2026-08-26",
+    version: "1.4.9",
     docId: "generador-layout",
     docUrl: "",
     download: "",
@@ -1025,6 +1025,7 @@ const PROJECTS = [
       { done:false, text:"El canal factiun_sizing: el gate ya lo lee; falta que el Comparador lo publique (propuesto en CONTRATO, Puntos abiertos)." }
     ],
     historial: [
+      { date:"2026-08-26", ver:"1.4.9", note:"La varita fallaba sobre ortofoto REAL, y lo destapó la primera escena de verdad que entró al banco (Arganda, Alt+clic del mantenedor): un campo seco está MOTEADO —piedras, matojos, rodadas— así que el flood-fill deja la máscara agujereada, y la apertura de radio 3, que exige un bloque macizo de 7×7 para sobrevivir, se comía el 92% de la región (22.852 → 1.856 px) llevándose el propio píxel pinchado: contestaba «ahí no se distingue un recinto» sobre un campo perfectamente visible. Ahora se rellenan antes los huecos INTERIORES. No es un cierre morfológico: un cierre tiende puentes y fundiría dos campos separados por un camino estrecho, que es peor porque tiene buena pinta. Careado contra el port Python sobre esa misma escena real: mismo anillo, 28 vértices; y las 10 escenas sintéticas, idénticas." },
       { date:"2026-08-22", ver:"1.4.8", note:"«Me lo hace en el 3D al revés, las estructuras mirando al norte en España»: el handoff al visor derivaba el azimut de la superficie del rumbo de la arista más larga de la mesa (rot+90) — y una arista NO tiene sentido: el mismo lado leído al revés da r ó r+180, según el orden en que el motor emita los vértices, que no es un contrato. En TRACKER daba igual (un tubo es una línea sin sentido, y por eso nadie lo vio en un año); en FIJA es la diferencia entre mirar al sur y mirar al norte. Medido antes de curar: con azimut de filas 180 salían las 256 mesas a 0/360. Ahora se conserva la geometría de la arista (el giro fino de la retícula) y el HEMISFERIO lo fija el canon — de las dos lecturas gana la que cae del lado del azimut de FILAS, que en fija ES el azimut de superficie. De propina, el módulo va DESPUÉS del redondeo: «360.0» se colaba como azimut fuera de rango. La POA no estaba afectada (el azimut de la fija es input propio del motor, no viaja por el handoff), solo el dibujo — pero un 3D que miente sobre la orientación es una comprobación visual que engaña. UI 179→182." },
       { date:"2026-08-22", ver:"1.4.7", note:"Arganda 3 («sigue mal en la 1.4.6») + encargo B10: una parcela real no tiene UN color — mancha gris + tierra marrón, linde por caminos — y ningún clic único puede adivinarla siguiendo color. (1) CLICS QUE SUMAN, el magic-wand clásico: la varita queda armada tras el primer contorno y cada clic detecta su zona y la UNE a lo acumulado si se tocan, recalculando el contorno; una isla que no toca se rechaza con aviso y lo acumulado se conserva; pan/zoom resetea (convertir máscaras entre encuadres sería inventar píxeles); doble clic acepta. Dos o tres clics construyen la parcela. (2) RE-ETIQUETADO de expectativas (encargo B10): el botón pasa a «🪄 Borrador de parcela» — propone un borrador editable a partir del color, NO es un detector de lindes, y así lo dice su título; la detección buena por coordenadas es el Catastro/SIGPAC. (3) La varita captura su PROPIA evidencia: Alt+clic descarga la escena exacta que ve (ortofoto del lienzo + punto + encuadre) — material de fixture REAL para el banco, que daba verde sintético donde el sitio real fallaba (fixture ciego); recortar capturas a mano no es un mecanismo. Mutante sin-unión en rojo doble. UI 176→179." },
       { date:"2026-08-21", ver:"1.4.6", note:"El parte de Arganda («la ha detectado francamente mal»): la región del flood-fill arrastraba BRAZOS FINOS (un camino del mismo tono) y el contorno salía con púas de ida-y-vuelta, un cordón suelto cruzando el mapa y 61 vértices de sierra. Tres curas de visión clásica, con la escena convertida en fixtures: (1) APERTURA morfológica r=3 por imagen integral — mata todo lo más estrecho que ~7 px sin mover los bordes anchos, y tras ella el contorno traza solo la ISLA de la semilla; (2) criterio de parada de JACOB en el trazado — volver al arranque no basta, hay que volver entrando por el mismo sitio: parar solo por posición cortaba el anillo y el cierre artificial era el cordón suelto; más quitar-PÚAS (desvío ×1,8 sobre el camino directo = pliegue, nunca esquina real); (3) simplificación ADAPTATIVA — ε sube hasta bajar de 40 vértices retocables; las esquinas reales sobreviven, la sierra no. Mutantes en rojo cada uno en su régimen — el de la adaptativa exigió ondas de ±12 px que la apertura no plancha (con dientes de ±5 el invariante era decorativo). UI 174→176." },
@@ -1137,7 +1138,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Agente y collector de planta",
+    name: "Agente Modbus y collector",
     status: "build",
     objetivo: "Componentes que se ejecutan dentro de la planta: agente Modbus de solo lectura y collector, que alimentan al SCADA y a las utilidades de campo.",
     stack: "PowerShell · Modbus TCP · Cloudflare Tunnel · Supabase",
@@ -1164,9 +1165,9 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Utilidades de configuración en campo",
+    name: "TCU Toolbox",
     status: "live",
-    objetivo: "Herramienta offline para configurar, diagnosticar y respaldar unidades de control de seguidor a través del gateway Modbus de la NCU.",
+    objetivo: "Herramienta offline para configurar, diagnosticar y respaldar TCUs Sunner a través del gateway Modbus de la NCU.",
     stack: "PowerShell · Modbus TCP · offline",
     url: "",                                                  // no hay deploy: se ejecuta en el portátil de campo
     repo: "https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox",
@@ -1195,7 +1196,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Siting de comunicaciones · demo",
+    name: "Diseño de red de comunicaciones · demo",
     status: "demo",
     objetivo: "Emplazamiento de NCU, TCU, HSU y repetidores sobre la geometría real de la planta.",
     stack: "HTML · PWA",
@@ -1217,7 +1218,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Diagnóstico de cobertura Zigbee · El Burgo",
+    name: "Diagnóstico de cobertura Zigbee",
     status: "build",
     objetivo: "Medición sobre imagen satélite de la cobertura Zigbee desplegada: nivel de señal, nodos sin respuesta, saltos y criticidad de cada unidad.",
     stack: "HTML · Leaflet · PowerShell (RCI/telnet) · CSV",
@@ -1273,7 +1274,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Cartera de plantas",
+    name: "Cartera de proyectos",
     status: "build",
     objetivo: "Base de datos y cuadro de mando de los proyectos adjudicados: indicadores, gráficas, mapa mundial y tabla editable.",
     stack: "HTML · Supabase (Postgres + Auth + RLS) · Chart.js · Leaflet",
@@ -1296,7 +1297,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "SCADA de planta",
+    name: "SCADA",
     status: "live",
     objetivo: "Supervisión de la planta en operación: sinóptico sobre plano, seguimiento del día, estado de la flota y acceso al gemelo 3D.",
     stack: "HTML · Supabase · Chart.js · gemelo 3D (cobertura-zigbee)",
@@ -1345,7 +1346,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Registro de puesta en marcha",
+    name: "Seguimiento PEM",
     status: "live",
     objetivo: "Registro de puesta en marcha por planta: diagnósticos, comisionado, inventarios y auditorías, con comparación frente a la visita anterior.",
     stack: "HTML · Supabase (Postgres + Auth + RLS)",
@@ -1364,7 +1365,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Inventario de direccionamiento IP",
+    name: "IPs de plantas",
     status: "live",
     objetivo: "Tabla editable del direccionamiento por planta: NCU, gateways, esclavos, versión de firmware y accesos remotos.",
     stack: "HTML · Supabase (Postgres + Auth + RLS)",
@@ -1521,8 +1522,8 @@ const PLANT_VIEWS = [
 ];
 /* Módulos que YA viven en una planta (sección Plantas): no se repiten abajo en Herramientas */
 const PLANT_MODULES = new Set([
-  "Visor de asignación topográfica · San José", "Visor de geometría as-built · Ayora",
-  "Siting de comunicaciones · demo", "Diagnóstico de cobertura Zigbee · El Burgo"
+  "Visor de levantamiento", "Visor de geometría as-built",
+  "Diseño de red de comunicaciones · demo", "Diagnóstico de cobertura Zigbee"
 ]);
 const TOOLS = PROJECTS.filter(p => !PLANT_MODULES.has(p.name));   // Herramientas = solo lo genérico (no de planta)
 
