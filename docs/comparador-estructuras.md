@@ -552,6 +552,27 @@ ninguna, así que se le suma un sesgo: mejor un poco de escorzo en la línea de 
 estructuras de perfil. (Detalle de JS: `cos(90°)` no es cero sino 6·10⁻¹⁷, y sin épsilon ese ruido
 decidía el lado.)
 
+#### Las filas se adaptan al terreno
+
+La pendiente la tiene el **suelo**; la estructura se replantea sobre él. Apoyar cada fila en la cota
+de su **centro** y dejarla horizontal a lo largo no vale: con 65 m de fila y 24° de pendiente en esa
+dirección, un extremo vuela 14 m y el otro se entierra otros 14 — que es exactamente el «tracker con
+megasoportes» que no se construye.
+
+Así que cada fila se inclina **lo que se inclina el terreno en su dirección larga**, ni más ni menos:
+
+* filas que corren este-oeste (la fija): giran en Z, y la caída es `gx`;
+* filas que corren norte-sur (seguidor y dos aguas): giran en X, y es `gz`.
+
+Para un seguidor eso es literalmente **un eje que sigue el terreno**, que es lo que es un TSAT. Lo
+que **no** cambia es el tilt ni la componente ⊥: en la dirección del pitch las filas se **escalonan**
+a distinta cota, no se inclinan.
+
+De ahí que el «eje inclinado °» de un TSAT deba ser **esa** componente a lo largo del eje — un eje no
+se inclina en el aire. Cada lectura de seguidor dice cuánto se inclina el suyo con el terreno, y si
+el TSAT declara otro valor, la lectura lo dice también: no se dibuja una cosa y se calcula otra en
+silencio. En **llano**, el eje del TSAT sale horizontal, porque no hay pendiente que seguir.
+
 #### Y que se VEA: sombreado por cota
 
 Con el terreno bien hecho la pendiente seguía sin verse, y no era el modelo: a mediodía de junio el
