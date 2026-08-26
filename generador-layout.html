@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.5.0</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.5.1</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -3868,15 +3868,28 @@ function computaMixto(cfg, zonas){
    de máscaras en la página. */
 function zonasPorPendiente(pend, lims, minAreaM2){
   if(!pend||!DEM)return null;
+  /* LA MÁSCARA DE LA PARCELA NO ES OPCIONAL. El MDT se descarga sobre el
+     BBOX de la parcela MÁS margen, así que recorrer la rejilla entera
+     propondría zonas sobre terreno que el usuario no ha dibujado — es
+     literalmente la queja que ya costó escribir `mascaraParcelaDEM`: «me está
+     marcando terreno fuera de la parcela que yo he dibujado». Y aquí sería
+     peor que marcar: se colocarían MESAS ahí.
+     Las celdas de fuera tampoco cuentan como «no desarrollable»: no es que no
+     admitan montaje, es que no son la parcela. */
+  var msk=mascaraParcelaDEM();
   var n=pend.n, aptoT=new Uint8Array(n*n), aptoF=new Uint8Array(n*n), nada=0;
   for(var r=0;r<n;r++)for(var c=0;c<n;c++){
-    var i=r*n+c, ae=Math.abs(pend.ew[r][c]), an=Math.abs(pend.ns[r][c]);
+    var i=r*n+c;
+    if(msk&&!msk.dentro[r][c]){aptoT[i]=0;aptoF[i]=0;continue;}
+    var ae=Math.abs(pend.ew[r][c]), an=Math.abs(pend.ns[r][c]);
     var t=(ae<=lims.trkEw&&an<=lims.trkNs);
     var f=(!t)&&(ae<=lims.fijaEw&&an<=lims.fijaNs);
     aptoT[i]=t?1:0; aptoF[i]=f?1:0; if(!t&&!f)nada++;
   }
-  var mLat=110540, mLon=111320*Math.cos(((DEM.lats[0]+DEM.lats[n-1])/2)*Math.PI/180);
-  var celda=Math.abs((DEM.lats[1]-DEM.lats[0])*mLat*(DEM.lons[1]-DEM.lons[0])*mLon);
+  // El área de celda la da la propia máscara: dos aritméticas para la misma
+  // cota acaban discrepando, y entonces las hectáreas del reparto no cuadran
+  // con las que enseña el panel del MDT.
+  var celda=msk?msk.areaCeldaM2:0;
   var zonas=[], desc=0, areaDesc=0, areas={tracker:0,fixed:0}, avisos=[];
 
   function poligonos(mask, etiqueta, mount, pitch){
@@ -3890,7 +3903,15 @@ function zonasPorPendiente(pend, lims, minAreaM2){
       for(var k=0;k<n*n;k++)if(isla.dentro[k])resto[k]=0;
       var ring=varitaContorno(isla.dentro,n,n);
       if(!ring)continue;
-      var simp=varitaSimplifica(ring,1.5)||ring;
+      /* EPSILON EN CELDAS, y aquí una celda del MDT son cientos de metros —
+         no un píxel de ortofoto de 30 cm. Copiando el 1,5 de la varita se
+         toleraban ~285 m de desvío y una banda de 2 celdas de ancho (59 ha
+         medidas en el banco) COLAPSABA a una línea y se descartaba entera.
+         Por debajo de media celda solo se quitan los puntos alineados de un
+         borde recto: las esquinas y los escalones reales sobreviven. El
+         contorno sale a resolución de MDT, que es lo honesto — fingirlo más
+         suave sería dibujar una linde que el dato no tiene. */
+      var simp=varitaSimplifica(ring,0.5)||ring;
       var area=isla.n*celda;
       if(area<minAreaM2||simp.length<3){desc++;areaDesc+=area;continue;}
       areas[mount]+=area;

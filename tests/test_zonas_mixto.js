@@ -106,6 +106,42 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   }, { A: CUAD_A, B: CUAD_B });
   check('nombres de zona repetidos se rechazan', /repetidos/.test(dup), dup);
 
+  // ── LA MÁSCARA DE LA PARCELA: el MDT cubre el bbox MÁS margen ──
+  // Sin ella la propuesta reparte terreno que el usuario no ha dibujado, y
+  // aquí no se queda en marcarlo: se colocarían MESAS ahí. Es la queja que ya
+  // costó escribir `mascaraParcelaDEM`.
+  const mask = await page.evaluate(() => {
+    // MDT sintético 24×24 sobre un bbox MUCHO mayor que la parcela, con
+    // pendiente creciente hacia el este para que haya tres bandas.
+    const n = 24, lat0 = 41.560, lon0 = -0.820, paso = 0.0020;
+    const lats = [], lons = [], z = [];
+    for (let i = 0; i < n; i++) { lats.push(lat0 + i * paso); lons.push(lon0 + i * paso); }
+    for (let r = 0; r < n; r++) { const f = [];
+      for (let c = 0; c < n; c++) f.push(c * c * 0.9); z.push(f); }
+    window.DEM = { lats, lons, z };
+    // la parcela ocupa solo el cuadrante central
+    window.PARCEL = [[lon0 + 8 * paso, lat0 + 8 * paso], [lon0 + 15 * paso, lat0 + 8 * paso],
+                     [lon0 + 15 * paso, lat0 + 15 * paso], [lon0 + 8 * paso, lat0 + 15 * paso]];
+    window.HOLES = [];
+    const pend = window.pendientesDEM();
+    const p = window.zonasPorPendiente(pend,
+      { trkEw: 6, trkNs: 30, fijaEw: 12, fijaNs: 30, pitchTrk: 6, pitchFija: 4 }, 1);
+    const lonMin = lon0 + 8 * paso, lonMax = lon0 + 15 * paso;
+    const latMin = lat0 + 8 * paso, latMax = lat0 + 15 * paso;
+    const tol = paso * 1.01;   // una celda de holgura: el contorno va por celdas
+    let fuera = 0, vert = 0;
+    p.zonas.forEach(zz => zz.coords.forEach(q => { vert++;
+      if (q[0] < lonMin - tol || q[0] > lonMax + tol || q[1] < latMin - tol || q[1] > latMax + tol) fuera++; }));
+    return { nZonas: p.zonas.length, vertices: vert, fuera,
+             montajes: Array.from(new Set(p.zonas.map(zz => zz.mount))).sort(),
+             noDesarrollable: p.areaNoDesarrollable };
+  });
+  check('la propuesta NO sale de la parcela dibujada',
+    mask.fuera === 0, mask.fuera + ' de ' + mask.vertices + ' vértices fuera');
+  check('  …y aun así propone zonas dentro', mask.nZonas > 0, JSON.stringify(mask));
+  check('  …con los dos montajes, que es el régimen que distingue',
+    mask.montajes.length === 2, mask.montajes.join(','));
+
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
   process.exit(ko ? 1 : 0);
