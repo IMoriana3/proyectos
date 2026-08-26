@@ -63,6 +63,11 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
 .engmsg{background:var(--panel-2);border:1px dashed var(--line2,#2b3a4d);border-color:var(--build);border-radius:9px;padding:11px 13px;font-size:12.5px;color:var(--text);line-height:1.55}
 .engmsg code{background:#0b0f14;color:var(--build);padding:1px 6px;border-radius:5px;font-family:var(--mono);font-size:11.5px}
 .tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);margin-top:2px}
+/* El aviso de coordenadas NO es una nota al pie: si sale, es que el emplazamiento elegido no tiene
+   sitio y no se puede simular. Que se vea. */
+#plantMsg{text-transform:none;letter-spacing:0;font-size:11.5px;line-height:1.45}
+#plantMsg.falta{color:#F6A623}
+#plantMsg.derivada{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -80,7 +85,8 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
     <div class="card">
       <h2><span class="ic">☉</span> Emplazamiento</h2>
       <div class="field"><label>Planta (de la cartera)</label>
-        <select id="plant"><option value="">— manual —</option></select></div>
+        <select id="plant"><option value="">— manual —</option></select>
+        <div class="tag" id="plantMsg"></div></div>
       <div class="two">
         <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="41.65"></div>
         <div class="field"><label>Longitud °</label><input id="lon" type="number" step="0.0001" value="-0.9"></div>
@@ -241,6 +247,15 @@ function techoSombra(obj,peakEl){
 function fmtM(v){return String(v>=10?Math.round(v):Math.round(v*10)/10);}
 
 function drawSky(){
+  var cv0=$('sky');
+  /* Campo vacio no es lat 0: `+''` da 0, y sin esto el cielo se dibujaba en el golfo de Guinea
+     como si tal cosa. Sin coordenadas no hay cielo que pintar. */
+  if(faltanCoords()){
+    var c0=cv0.getContext('2d'); c0.clearRect(0,0,cv0.width,cv0.height);
+    c0.fillStyle='#7d8ea0'; c0.font='13px system-ui,sans-serif'; c0.textAlign='center';
+    c0.fillText('Sin coordenadas: teclea la latitud y la longitud', cv0.width/2, cv0.height/2);
+    CUR=null; return;
+  }
   var lat=+$('lat').value,lon=+$('lon').value,tz=+$('tz').value,date=$('date').value;
   CUR=dayCurve(lat,lon,date,tz);
   var cv=$('sky'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height,padL=34,padB=22,padT=10,padR=40;   // padR deja sitio al eje de sombra
@@ -379,6 +394,7 @@ var MOD=null;   // parámetros del módulo CEC elegido (de /modules)
 
 async function simulate(){
   var out=$('prodOut'); $('demOut').innerHTML='';
+  if(faltanCoords()){ out.innerHTML='<p class="note" style="color:#F6A623">Sin coordenadas no se simula: el emplazamiento elegido no las trae. Tecléalas arriba o rellénalas en la Cartera técnica.</p>'; return; }
   var lat=+$('lat').value,lon=+$('lon').value,kind=$('kind').value,mode=$('mode').value;
   if(!ENGINE){ out.innerHTML=engineOffMsg(); return; }
   out.innerHTML='<p class="note">Simulando en el motor…</p>';
@@ -453,6 +469,7 @@ function drawDemGrid(grid){
 }
 async function relieve(){
   var d=$('demOut');
+  if(faltanCoords()){ d.innerHTML='<p class="note" style="color:#F6A623">Sin coordenadas no hay relieve que pedir: el emplazamiento elegido no las trae.</p>'; return; }
   if(!ENGINE){ d.innerHTML='<p class="note">El relieve necesita el motor (y conexión para el DEM).</p>'; return; }
   d.innerHTML='<p class="note">Consultando relieve…</p>';
   try{
@@ -508,10 +525,27 @@ function loadPlants(){
   Object.keys(PLANTS).sort().forEach(function(cod){var p=PLANTS[cod];opts+='<option value="'+cod+'">'+((p&&p.nombre)||'?')+' · '+cod+'</option>';});
   $('plant').innerHTML=opts;
 }
+/* SIN COORDENADAS SE DICE, NO SE HEREDAN LAS DE ANTES. Esto arreglaba mal: cuando la planta no
+   traia lat/lon ni estaba en el respaldo, los campos se quedaban CON LOS DEL SITIO ANTERIOR y la
+   simulacion salia adelante tan tranquila, con el sol de otro sitio. No es un caso raro: de las 22
+   plantas del SEED de la cartera, 17 van sin coordenadas y el respaldo solo cubre las 5 que si las
+   tienen. Ahora se vacian los campos y se avisa; y cuando salen del respaldo, tambien se dice de
+   donde, que son valores DERIVADOS (Tunez esta aproximado a ±500 m). */
+function faltanCoords(){ return $('lat').value==='' || $('lon').value===''; }
+function avisoCoords(txt,cls){ var e=$('plantMsg'); if(!e)return; e.textContent=txt||''; e.className='tag'+(cls?' '+cls:''); }
 function pickPlant(cod){
   var p=PLANTS[cod]; if(!p)return;
-  var c=(p.lat!=null&&p.lon!=null)?[p.lat,p.lon]:COORDS_FALLBACK[cod];
-  if(c){$('lat').value=c[0];$('lon').value=c[1];}
+  var nom=(p&&p.nombre)||cod;
+  if(p.lat!=null&&p.lon!=null){
+    $('lat').value=p.lat; $('lon').value=p.lon; avisoCoords('');
+  }else if(COORDS_FALLBACK[cod]){
+    var c=COORDS_FALLBACK[cod];
+    $('lat').value=c[0]; $('lon').value=c[1];
+    avisoCoords('Coordenadas del respaldo del visor, no de la cartera'+(cod==='24021'?' · aproximadas a ±500 m':'')+'.','derivada');
+  }else{
+    $('lat').value=''; $('lon').value='';
+    avisoCoords('«'+nom+'» no tiene coordenadas en la cartera. Se han borrado las anteriores para no simular este sitio en otro: teclea la latitud y la longitud, o rellenalas en la Cartera tecnica.','falta');
+  }
   if(p.wmod)$('pmpp').value=Math.round(p.wmod);
   if(p.cantidad)$('nmod').value=Math.round(p.cantidad);
   drawSky();
