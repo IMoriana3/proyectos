@@ -156,6 +156,12 @@ check('lo que no es fecha se devuelve tal cual',
   // coordenadas pegadas
   await page.fill('#sitioQ', '-16.5958, -71.8064');
   await page.waitForSelector('#sitioRes .it', { timeout: 5000 });
+  // ...y NO se anuncia una búsqueda que no se va a hacer: con coordenadas la
+  // remota ni se lanza, así que el «Buscando en Open-Meteo…» se quedaba puesto
+  // para siempre y se leía como que la red no responde.
+  check('con coordenadas no anuncia una búsqueda remota que no va a hacer',
+        !/Buscando en Open-Meteo/.test(
+          await page.$eval('#sitioRes', e => e.textContent)));
   await page.click('#sitioRes .it');
   check('pegar coordenadas también vale',
         Math.abs(+(await page.$eval('#lat', e => e.value)) + 16.5958) < 0.01 &&

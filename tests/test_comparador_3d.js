@@ -578,11 +578,69 @@ const SONDA = `(() => {
     mide(0, 180);
     return r;
   });
+  // El SEGUIDOR sigue el terreno a lo largo de su eje —eso es un eje inclinado—.
+  // La FIJA no: se monta al tilt de proyecto y lo que compensa la pendiente a lo
+  // largo de sus filas es la longitud de las hincas. Así que aquí solo se exige
+  // al seguidor; de la fija se comprueba lo contrario más abajo.
   ['nne', 'este', 'sur'].forEach(caso => {
-    check('con la caída ' + caso + ', NINGUNA fila vuela ni se entierra en sus extremos',
-      sigue[caso].every(b => b.vuelo.every(v => Math.abs(v) < 0.02)),
+    check('con la caída ' + caso + ', el SEGUIDOR sigue el terreno de punta a punta',
+      sigue[caso].filter(b => /^tracker/.test(b.k))
+                 .every(b => b.vuelo.every(v => Math.abs(v) < 0.02)),
       JSON.stringify(sigue[caso].map(b => b.k + ':' + b.vuelo.join('/'))));
   });
+
+  // ── UNA FIJA NO SIGUE EL TERRENO: LO COMPENSAN LAS HINCAS ──
+  // Se monta al tilt de proyecto. Antes se escoraba la mesa entera con el suelo
+  // —que es lo que hace un seguidor— y el tilt dibujado dejaba de ser el
+  // tecleado.
+  const fijaPend = await p.evaluate(() => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
+    document.querySelectorAll('.st').forEach(c => { c.checked = c.value === 'fija_proyecto'; });
+    const mide = (pend, az) => {
+      s('pend', pend); s('pendAz', az);
+      const u = BLOQUES[0].filas[0]; u.updateWorldMatrix(true, true);
+      const n = new THREE.Vector3(0, 1, 0).applyQuaternion(
+        u.spin.getWorldQuaternion(new THREE.Quaternion())).normalize();
+      // ¿pisan las hincas el suelo?
+      let peor = 0;
+      u.children.forEach(o => { if (!o.isMesh || !o.geometry.parameters ||
+        Math.abs(o.geometry.parameters.width - 0.16) > 1e-6) return;
+        const c = new THREE.Box3().setFromObject(o);
+        const x = (c.min.x + c.max.x) / 2, z = (c.min.z + c.max.z) / 2;
+        const d = Math.abs(c.min.y - cotaTerreno(x, z, TERRENO_3D));
+        if (d > peor) peor = d; });
+      return { tilt: +(Math.acos(Math.min(1, n.y)) * 180 / Math.PI).toFixed(2),
+               pisan: +peor.toFixed(2), nocabe: !!BLOQUES[0].hincas.nocabe,
+               hincas: [+BLOQUES[0].hincas.corta.toFixed(2),
+                        +BLOQUES[0].hincas.larga.toFixed(2)] };
+    };
+    const r = { llano: mide(0, 180), ns: mide(12, 180), eo: mide(12, 90) };
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
+    s('pend', 0);
+    return r;
+  });
+  ['llano', 'ns', 'eo'].forEach(caso => {
+    check('la fija se monta a SU tilt (25°) también con la caída ' + caso + ': ' +
+      fijaPend[caso].tilt + '°', Math.abs(fijaPend[caso].tilt - 25) < 0.05,
+      JSON.stringify(fijaPend[caso]));
+    /* Las hincas pisan el suelo... mientras la hinca pueda existir. Donde el
+       terreno pide una hinca NEGATIVA no se monta de una pieza, y eso no se
+       tapa: se declara. */
+    check('  y sus hincas pisan el suelo' + (fijaPend[caso].nocabe ? ' donde las hay' : ''),
+      fijaPend[caso].nocabe || fijaPend[caso].pisan < 0.05,
+      String(fijaPend[caso].pisan));
+  });
+  check('con la pendiente ⊥ a sus filas (N-S) las hincas ni se enteran: todas iguales',
+    Math.abs(fijaPend.ns.hincas[0] - fijaPend.ns.hincas[1]) < 0.01,
+    JSON.stringify(fijaPend.ns.hincas));
+  check('y con la pendiente A LO LARGO (E-O) es la HINCA la que compensa (' +
+    fijaPend.eo.hincas.join('–') + ' m)',
+    fijaPend.eo.hincas[1] - fijaPend.eo.hincas[0] > 3, JSON.stringify(fijaPend.eo.hincas));
+  check('y cuando la hinca saldría NEGATIVA se declara: no se monta de una pieza',
+    fijaPend.eo.nocabe === true && fijaPend.llano.nocabe === false,
+    JSON.stringify([fijaPend.llano.nocabe, fijaPend.ns.nocabe, fijaPend.eo.nocabe]));
   // Y adaptarse es inclinarse LO QUE SE INCLINA EL SUELO, ni más ni menos: el
   // eje del seguidor sube exactamente la componente a lo largo del eje.
   const tk = c => sigue[c].find(b => b.k === 'tracker_hsat');
