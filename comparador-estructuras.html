@@ -171,11 +171,12 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         <div class="field"><label>Albedo</label><input id="albedo" type="number" step="0.01" value="0.20"></div>
       </div>
       <div class="two">
-        <div class="field"><label>Pendiente ⊥ filas °</label>
+        <div class="field"><label>Pendiente del terreno °</label>
           <input id="pend" type="number" step="0.5" value="0"></div>
-        <div class="field"><label>&nbsp;</label>
-          <p class="mini" style="padding-top:9px" id="pendNota">terreno llano</p></div>
+        <div class="field"><label>Azimut de la caída °</label>
+          <input id="pendAz" type="number" step="5" value="180"></div>
       </div>
+      <p class="mini" id="pendNota">terreno llano</p>
       <div class="two">
         <div class="field"><label>&nbsp;</label><p class="mini" style="padding-top:9px">albedo = del SITIO (§03.0), compartido</p></div>
         <div class="field"><label>Meteo</label>
@@ -368,17 +369,18 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         sombra hacia el polo — al fondo desde esta vista y detrás de sus propias filas. Órbita
         hacia el otro lado, o deja marcadas menos estructuras para que el encuadre se acerque.
         Las del seguidor caen de lado y se ven de frente.
-        <b>El terreno</b>: la <b>pendiente ⊥ filas</b> es la MISMA para las TRES familias —es lo
-        que hace que la comparación sea en igualdad— pero cada una la lleva <b>girada a SUS
-        filas</b>: la fija apila hacia el sur, el seguidor y las dos aguas hacia el este. No es un
-        plano único, y no puede serlo: una fila es rígida y solo se replantea sobre terreno a nivel
-        <i>a lo largo</i> de ella, y las filas de una fija y las de un seguidor son
-        perpendiculares — el plano que dejara bien a una enterraría a la otra. Por eso las
-        bancadas tienen todas el mismo desnivel y la misma cota central: misma pendiente, girada.
-        El <b>eje inclinado</b> lleva además la del eje, que corre norte-sur: el «eje inclinado °»
-        de un TSAT <i>es</i> la pendiente del terreno sobre el que se monta — un eje no se inclina
-        en el aire. Las hincas son verticales y el tilt no cambia: una fija en pendiente no se
-        inclina con el terreno, se replantea sobre él.</p>
+        <b>El terreno</b> es <b>uno solo</b>: la pendiente del emplazamiento con su
+        <b>azimut</b>, y todas las estructuras montadas sobre ese mismo plano — por eso van
+        alineadas sobre la <b>curva de nivel</b> y la cámara se pone cuesta abajo. Lo que cambia
+        con la estructura no es el terreno, es la <b>componente</b> que ve: la ⊥ a sus filas es la
+        que sombrea (el <i>cross_axis_slope</i>) y la que sale en cada lectura; la que corre a lo
+        largo de las filas no sombrea, pero hay que absorberla con las hincas, con bancales o
+        inclinando el eje. Y son distintas porque las filas corren hacia lados distintos: las de
+        una fija este-oeste, las de un seguidor norte-sur. <b>Con el terreno cayendo al sur, la
+        fija ve toda la pendiente y el seguidor ninguna</b> — la ve entera a lo largo del eje. Eso
+        no es un defecto de la comparación: es la razón por la que en un sitio real una estructura
+        se monta y la otra no. Las hincas son verticales y el tilt no cambia: una fija en pendiente
+        no se inclina con el terreno, se replantea sobre él.</p>
     </div>
     <!-- ═════════ SIZING (columna ancha: la ventana hay que LEERLA) ═════════ -->
     <div class="card">
@@ -836,6 +838,53 @@ FIS.theta=function(psDeg,gcr,maxang,bt){
   return Math.max(-maxang,Math.min(maxang,deg));
 };
 
+/* ── LA PENDIENTE DEL SITIO: módulo y AZIMUT ──────────────────────────────
+   Un emplazamiento no tiene una pendiente «⊥ a las filas»: tiene UNA pendiente,
+   con su magnitud y su dirección de máxima caída. Referenciarla a las filas era
+   pedirle al terreno que girase con cada estructura, que es justo lo que no
+   hace. Lo que cambia con la estructura es qué COMPONENTE de esa pendiente ve
+   cada una:
+
+     · la componente ⊥ a las filas es la que entra en el sombreado — el
+       `cross_axis_slope` de `pvlib.shading.shaded_fraction1d`, el mismo por el
+       que entra en el core;
+     · la componente A LO LARGO de las filas no entra en el sombreado, pero
+       decide si la estructura se puede replantear: una fila es rígida, y esa
+       componente hay que absorberla con hincas de distinta longitud, con
+       bancales o inclinando el eje.
+
+   Y son distintas para cada familia porque las filas corren hacia lados
+   distintos: las de una fija este-oeste (apila al sur), las de un seguidor
+   norte-sur (apila al este). Con el terreno cayendo al SUR, la fija ve toda la
+   pendiente ⊥ a sus filas y el seguidor NINGUNA — la ve entera a lo largo del
+   eje. Eso no es un defecto de la comparación: es la razón por la que en un
+   emplazamiento real una estructura se puede montar y la otra no.
+
+   Convenio: azimut de la CAÍDA, desde el norte y en sentido horario (0 N, 90 E,
+   180 S, 270 O), y mundo con +x al ESTE y +z al SUR. La caída por metro es
+   entonces `gx = tan β · sen A` hacia el este y `gz = −tan β · cos A` hacia el
+   sur. El signo de la componente ⊥ es el de pvlib: POSITIVA cuando la fila de
+   al lado (a +pitch) queda más BAJA.                                          */
+FIS.pendPlano=function(betaDeg,azDeg){
+  var t=Math.tan(Math.abs(betaDeg||0)*FIS.D2R), A=(azDeg||0)*FIS.D2R;
+  return {gx:t*Math.sin(A), gz:-t*Math.cos(A)};
+};
+FIS.ejePitch=function(spec){        // hacia dónde APILA las filas esta familia
+  return (spec&&spec.fam==='fija')?'z':'x';   // fija al SUR; seguidor y dos aguas al ESTE
+};
+FIS.pendComp=function(betaDeg,azDeg,eje){
+  var g=FIS.pendPlano(betaDeg,azDeg);
+  var cruz=(eje==='x')?g.gx:g.gz, largo=(eje==='x')?g.gz:g.gx;
+  return {cruz:Math.atan(cruz)*FIS.R2D, largo:Math.atan(largo)*FIS.R2D};
+};
+/* La que consume el motor. Si no hay azimut declarado, `pend` ES el cross-axis
+   —que es como lo toma el core, y por eso el careo lo inyecta tal cual—; con
+   azimut, se DERIVA para cada familia. */
+FIS.cruz=function(cfg,spec){
+  if(cfg.pendAz==null)return cfg.pend||0;
+  return FIS.pendComp(cfg.pend,cfg.pendAz,FIS.ejePitch(spec)).cruz;
+};
+
 /* ── Fracción sombreada entre dos filas iguales, exacta en el plano ⊥ al eje ──
    Puerto de `shadeFracPair` del Simulador de Backtracking (cobertura-zigbee),
    que a su vez replica `pvlib.shading.shaded_fraction1d` y allí está careado
@@ -928,6 +977,9 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
      entre filas del ALTO DE COLECTOR, que es lo que físicamente tapa e incluye
      los gaps. Con 1V son el mismo número; con 2V ya no. */
   var G=cfg.geomDe(spec), gcr=G.gcr, pitch=G.pitch;
+  /* La pendiente que ve ESTA familia: la componente ⊥ a SUS filas de la
+     pendiente del sitio, no la del sitio entera. */
+  var cruz=FIS.cruz(cfg,spec);
   var dtH=(n>1)?((M.t[1]-M.t[0])/3600000):1;
   var neta=0, ideal=0, mes=new Float64Array(12);
   var tilt=(tiltForzado!=null)?tiltForzado:(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
@@ -949,7 +1001,7 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
     var sN=0,sI=0;
     for(var k=0;k<planos.length;k++){
       var t=planos[k];
-      var fsh=spec.sinSombra?0:FIS.shade(P0.ps,t,pitch,G.altoColector,cfg.pend||0);
+      var fsh=spec.sinSombra?0:FIS.shade(P0.ps,t,pitch,G.altoColector,cruz);
       var P=FIS.poa(P0.ps,P0.rho,t,FIS.tiltSup(t,axT),bh,dh,gh,cfg.albedo,fsh,Math.sin(S.el),e0);
       sN+=P.neta; sI+=P.ideal;
     }
@@ -1522,7 +1574,7 @@ function cfgActual(){
     lat:+$('lat').value, lon:+$('lon').value, albedo:+$('albedo').value,
     fija:F, tracker:K, gcr:K.gcr,
     maxang:+$('maxang').value, tilt:+$('tilt').value, tiltEW:+$('tiltEW').value,
-    pend:+$('pend').value,
+    pend:+$('pend').value, pendAz:+$('pendAz').value,
     axTilt:+$('axtilt').value, igualado:$('igualar').checked,
     geomDe:function(spec){return spec.fam==='tracker'?K:F;}
   };
@@ -1625,13 +1677,25 @@ function pintaPico(c){
     'último bloque queda incompleto, y no lleva viales, ni subestación, ni los retranqueos de la '+
     'parcela real.';
 }
+/* Un solo terreno para todas, y lo que cada una VE de él. Es la diferencia
+   entre teclear «pendiente ⊥ filas» —que le pedía al terreno girar con cada
+   estructura— y teclear la pendiente del sitio con su azimut. */
+function rumbo(az){
+  var R=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+  return R[Math.round((((az%360)+360)%360)/22.5)%16];
+}
 function pintaPendiente(c){
-  var p=c.pend||0;
-  $('pendNota').innerHTML=!p
-    ? 'terreno llano · el mismo para las tres'
-    : fmt(Math.abs(Math.tan(p*FIS.D2R)*100),1)+' % · <b>la misma para las tres</b>, girada a las '+
-      'filas de cada una — la fila de al lado queda '+(p>0?'más BAJA':'más ALTA')+' en las tres '+
-      'familias, y eso es lo que iguala la comparación.';
+  var p=Math.abs(c.pend||0), az=c.pendAz||0;
+  if(!p){ $('pendNota').innerHTML='terreno llano · el mismo para todas'; return; }
+  var f=FIS.pendComp(p,az,'z'), t=FIS.pendComp(p,az,'x');
+  var dice=function(nom,q){
+    return '<b>'+nom+'</b> '+fmt(Math.abs(q.cruz),1)+'° ⊥ a sus filas'+
+           (Math.abs(q.largo)>0.05?' · '+fmt(Math.abs(q.largo),1)+'° a lo largo':'');
+  };
+  $('pendNota').innerHTML=fmt(Math.tan(p*FIS.D2R)*100,1)+' % cayendo al <b>'+rumbo(az)+'</b> ('+
+    fmt(az,0)+'°) — <b>un solo terreno</b>, y cada familia ve su componente: '+
+    dice('fija',f)+'; '+dice('seguidor y dos aguas',t)+'. La ⊥ es la que sombrea; '+
+    'la de a lo largo hay que absorberla con las hincas o inclinando el eje.';
 }
 function refrescaGeom(){
   var c=cfgActual();
@@ -1654,7 +1718,7 @@ function refrescaGeom(){
 }
 var CAMPOS_GEOM=['fxModL','fxModW','fxWp','fxTabla','fxPitch','fxModsStr','fxNStr','fxGapMod','fxGapMot',
                  'tkModL','tkModW','tkWp','tkTabla','tkPitch','tkModsStr','tkNStr','tkGapMod','tkGapMot',
-                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend'];
+                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend','pendAz'];
 CAMPOS_GEOM.forEach(function(id){
   var el=$(id); if(!el)return;
   el.addEventListener('input',refrescaGeom); el.addEventListener('change',refrescaGeom);
@@ -2749,77 +2813,35 @@ function encuadra(){
   }
 }
 
-/* ── EL SUELO, CON RELIEVE ──
-   Un eje inclinado no se monta en llano: se monta sobre terreno EN PENDIENTE.
-   La primera versión le puso una cuña debajo y se leía como una rampa de
-   hormigón; la segunda dejó el suelo plano y le alargó la hinca, que es peor
-   —un tracker con megasoportes a un lado no es lo que se construye—. Lo que
-   hace falta es lo que hace el bt3d: un HEIGHTFIELD. El suelo es un plano
-   subdividido con la cota de cada vértice y `computeVertexNormals()`. Eso es
-   lo que lo hace leerse como una ladera y no como una caja — una malla de dos
-   triángulos tiene una normal por cara y sale con aristas; con 140×70 y las
-   normales recalculadas, la luz varía de forma continua.
+/* ── EL SUELO: UN SOLO PLANO, EL DEL SITIO ────────────────────────────────
+   Un emplazamiento tiene UNA pendiente, con su magnitud y su azimut, y todas
+   las estructuras se montan sobre ELLA. Las versiones anteriores dibujaban una
+   bancada por bloque, cada una girada a las filas de su familia — que era la
+   consecuencia de teclear la pendiente «⊥ a las filas», y le pedía al terreno
+   girar con cada estructura. El terreno no gira: lo que cambia con la
+   estructura es la COMPONENTE que ve (§ FIS.pendComp).
 
-   ¿POR QUÉ NO UN SOLO PLANO PARA TODAS? Es la pregunta obvia —«misma
-   pendiente» suena a «mismo plano»— y la respuesta es geométrica: una fila es
-   un objeto RÍGIDO y solo se replantea sobre terreno que esté A NIVEL A LO
-   LARGO de ella. Las filas de una fija corren este-oeste y las de un seguidor
-   norte-sur: son PERPENDICULARES. Un único plano inclinado no puede estar a
-   nivel a lo largo de las dos a la vez — el que dejara la fija bien enterraría
-   medio seguidor, y al revés. Así que lo que se comparte no es el plano: es la
-   PENDIENTE, la misma para todas, cada una girada a sus filas. Eso es
-   exactamente lo que dice la física (`cross_axis_slope` es ⊥ a las filas, no
-   una dirección del mapa) y es lo que se construye en campo: las filas siguen
-   la curva de nivel.
+   Se dibuja como un HEIGHTFIELD igual que en el bt3d —plano subdividido, cota
+   por vértice y `computeVertexNormals()`— y no como dos triángulos: una malla
+   de dos caras tiene una normal por cara y sale con aristas.
 
-   Y para que se LEA como la misma pendiente y no como seis cerros distintos,
-   las bancadas se dibujan iguales: mismo tamaño relativo, mismo desnivel,
-   todas centradas en la cota CERO —suben por un lado lo mismo que bajan por el
-   otro— y fundidas con el llano común. Antes cada una se levantaba entera
-   hasta apoyar su punto más bajo en el cero y el resultado eran montañas de
-   distinta altura, que es justo lo contrario de lo que hay que enseñar. */
-function suave(u){                       // smoothstep, 1 dentro y 0 fuera
-  u=Math.max(0,Math.min(1,u));
-  return 1-u*u*(3-2*u);
+   Y los bloques se colocan sobre la CURVA DE NIVEL de ese plano, no en fila
+   este-oeste. Es lo que hace que todos arranquen de la misma cota estando
+   sobre el mismo plano: alineados este-oeste con el terreno cayendo al este,
+   el sexto bloque quedaría cien metros por debajo del primero y no habría
+   comparación que mirar. En campo es lo mismo: las filas siguen la curva de
+   nivel.                                                                     */
+var TERRENO_3D={gx:0,gz:0};   // caída por metro hacia el ESTE y hacia el SUR
+function cotaTerreno(x,z,T){
+  T=T||TERRENO_3D;
+  return -(x*(T.gx||0)+z*(T.gz||0));
 }
-function cotaTerreno(x,z,rampas){
-  var y=0;
-  rampas=rampas||RAMPAS_3D;
-  for(var i=0;i<rampas.length;i++){
-    var r=rampas[i];
-    /* 1 dentro de la bancada, y cae a 0 en `fundido` metros por los CUATRO
-       lados. Acotarla solo en X era lo que la convertía en un cordal que
-       cruzaba el mapa entero de norte a sur. */
-    var w=suave((Math.abs(x-r.x)-r.mx)/r.fx)*
-          suave((Math.abs(z-r.z)-r.mz)/r.fz);
-    if(w<=0)continue;
-    /* Cota RELATIVA al centro de la bancada, que está en cero: sube por un
-       lado lo mismo que baja por el otro. Sin la `alza` que levantaba cada
-       bloque a una altura distinta.
-       La rampa se ACOTA al tamaño de la bancada y fuera sigue plana. No es
-       cosmética: dentro del fundido, un desnivel que siguiera creciendo con la
-       distancia se multiplica por la caída de la ventana del OTRO eje, y en la
-       esquina de una bancada con pendiente en los dos —el eje inclinado, que
-       lleva la del sitio y la del eje— salía un talud de 34° con 12
-       tecleados. */
-    var dx=Math.max(-r.mx,Math.min(r.mx,x-r.x)),
-        dz=Math.max(-r.mz,Math.min(r.mz,z-r.z));
-    var h=-dx*Math.tan(r.ax||0)-dz*Math.tan(r.az||0);
-    /* Y en las ESQUINAS de una bancada con pendiente en los dos ejes, el
-       desnivel de una se suma al de la otra y el talud tendría que devolver el
-       doble en los mismos metros. Se acota al mayor de los dos: solo recorta
-       las dos esquinas extremas, y ninguna estructura se apoya ahí. */
-    var tope=Math.max(r.mx*Math.abs(Math.tan(r.ax||0)),r.mz*Math.abs(Math.tan(r.az||0)));
-    y+=w*Math.max(-tope,Math.min(tope,h));
-  }
-  return y;
-}
-function sueloRelieve(ancho,largoZ,rampas){
-  var geo=new THREE.PlaneGeometry(ancho,largoZ,140,70);
+function sueloRelieve(lado,T){
+  var geo=new THREE.PlaneGeometry(lado,lado,120,120);
   geo.rotateX(-Math.PI/2);
   var pos=geo.attributes.position, lo=0, hi=0;
   for(var i=0;i<pos.count;i++){
-    var y=cotaTerreno(pos.getX(i),pos.getZ(i),rampas);
+    var y=cotaTerreno(pos.getX(i),pos.getZ(i),T);
     pos.setY(i,y); if(y<lo)lo=y; if(y>hi)hi=y;
   }
   pos.needsUpdate=true;
@@ -2883,7 +2905,12 @@ function construyeMundo(){
      defecto del modelo. Si no, la escena enseñaría una estructura y la tabla
      calcularía otra. */
   var escTk=cotasSeguidor(cfg.tracker);   // el modelo, a las cotas configuradas
-  var rampas=[]; RAMPAS_3D=rampas;       // el relieve que pide cada bloque
+  /* EL TERRENO DEL SITIO: uno, con su caída al este y al sur. */
+  var T=FIS.pendPlano(cfg.pend,cfg.pendAz); TERRENO_3D=T;
+  /* La CURVA DE NIVEL de ese plano: perpendicular a la caída. Los bloques se
+     alinean sobre ella, así que todos arrancan exactamente de la cota cero. */
+  var mg=Math.hypot(T.gx,T.gz);
+  var ux=mg>1e-9?(-T.gz/mg):1, uz=mg>1e-9?(T.gx/mg):0;
 
   var largoTk=cfg.tracker.largoFila, largo=Math.max(cfg.fija.largoFila,largoTk);
   /* Hueco entre bloques: 16 m, y no es un número bonito. De él sale la
@@ -2899,36 +2926,25 @@ function construyeMundo(){
   var nfTk=(porTk>1)?Math.min(6,porTk*2):NFILAS3D;
   var nfMax=Math.max(NFILAS3D,nfTk);
   var sep=Math.max(largo,(nfMax-1)*Math.max(6,cfg.tracker.pitch))+16;
-  /* Con terreno en pendiente cada bloque necesita su bancada Y el fundido que
-     la devuelve al llano, y con la separación de llano ese fundido sale tan
-     corto que la transición es un escalón. Al DOBLE entra justo: media
-     distancia al vecino para la bancada y la otra media para el talud, que es
-     la única proporción con la que el talud no sale más empinado que la
-     propia pendiente. */
-  if((cfg.pend||0)||(cfg.axTilt&&keys.some(function(k){var e=FIS.spec(k);return e&&e.tsat;})))
-    sep*=2;
   var x0=-(keys.length-1)*sep/2, anchoTot=(keys.length-1)*sep+largo;
 
   keys.forEach(function(k,i){
     var spec=FIS.spec(k); if(!spec)return;
     var G=cfg.geomDe(spec), gcr=G.gcr, pitch=G.pitch;
-    var grupo=new THREE.Group(); grupo.position.x=x0+i*sep; MUNDO.add(grupo);
+    var grupo=new THREE.Group();
+    var d0=x0+i*sep; grupo.position.set(d0*ux,0,d0*uz); MUNDO.add(grupo);
     var filas=[];
     var esTk=(spec.fam==='tracker'), nf=esTk?nfTk:NFILAS3D, agrupa=esTk?porTk:1;
-    /* El relieve que pide este bloque, EN SU DIRECCIÓN de pitch:
-         · la pendiente ⊥ a las filas va en Z para las fijas (apilan al sur) y
-           en X para los seguidores y las dos aguas (apilan al este);
-         · el eje inclinado lleva ADEMÁS la del eje, que corre en Z.
-       Las filas se colocan luego a la COTA del terreno bajo cada una, con sus
-       hincas verticales y su tilt sin tocar: una fija en pendiente no se
-       inclina con el terreno, se replantea sobre él. */
+    /* Cada fila se apoya donde está el TERRENO, que es el mismo plano para
+       todas. Las hincas siguen verticales y el tilt no cambia: una fija en
+       pendiente no se inclina con el terreno, se replantea sobre él. Y la
+       componente a lo LARGO de la fila no la sigue —la fila es rígida—: eso es
+       lo que en campo absorben las hincas, y aquí se ve como un extremo más
+       enterrado que el otro. */
     var alEste=(esTk||spec.fam==='fija_ew');
-    var pR=(cfg.pend||0)*FIS.D2R;
-    var aEje=(spec.tsat?(cfg.lat>=0?1:-1)*Math.abs(cfg.axTilt)*FIS.D2R:0);
-    var ejeX=alEste?pR:0, ejeZ=aEje+(alEste?0:pR);
-    var anchoBloque=alEste?((nf-1)*pitch+G.altoColector):G.largoFila;
-    var fondoBloque=alEste?G.largoFila:((nf-1)*pitch+G.altoColector);
-    var cotaFila=function(dx,dz){return -dx*Math.tan(ejeX)-dz*Math.tan(ejeZ);};
+    var cotaFila=function(dx,dz){return cotaTerreno(grupo.position.x+dx,
+                                                    grupo.position.z+dz,T)-
+                                        cotaTerreno(grupo.position.x,grupo.position.z,T);};
     for(var f=0;f<nf;f++){
       var d=(f-(nf-1)/2)*pitch;
       var uno;
@@ -2957,34 +2973,6 @@ function construyeMundo(){
     if(agrupa>1)for(var t=0;t+agrupa<=nf;t+=agrupa){
       grupo.add(ejeBifila(mats,(t-(nf-1)/2)*pitch,(t+agrupa-1-(nf-1)/2)*pitch));
     }
-    /* Un eje inclinado necesita que el terreno acompañe: se apunta su rampa
-       para que el suelo la lleve, con la misma pendiente que el eje. */
-    if(ejeX||ejeZ){
-      /* La bancada: el terreno que ESTA estructura necesita, con su pendiente,
-         acotado a su huella más un margen y centrado en la cota cero — la
-         misma cota para todas, que es lo que deja la comparación a nivel. */
-      /* La bancada llega hasta media distancia al vecino y NI UN METRO MÁS:
-         si dos se solapasen, sus pendientes se SUMARÍAN en la franja común y
-         el terreno de en medio saldría al doble de lo tecleado. */
-      /* Y el fundido no puede ser MÁS CORTO que la propia bancada: si lo fuera,
-         la vuelta al llano bajaría en menos metros lo que la bancada tarda en
-         bajar, y entre dos bloques saldría un ESCALÓN donde tiene que haber una
-         transición. Por eso, en cuanto hay pendiente, los bloques se separan al
-         doble: el terreno que necesitan para existir ocupa sitio. */
-      /* TAMAÑO de la bancada. Ceñirla al bloque era lo que hacía la pendiente
-         invisible: una fija de 3 filas a 4,5 m mide 10 m, y 16° sobre 10 m son
-         1,4 m de desnivel — nada en una escena de 170 m. Así que la bancada es
-         la MISMA para todas y tan ancha como cabe entre bloque y bloque
-         (media distancia al vecino, la mitad bancada y la mitad talud), y solo
-         crece si el bloque no cupiera. Es además lo que hace que se lea como la
-         misma pendiente: seis bancadas del mismo tamaño y el mismo desnivel. */
-      var lim=sep*0.5;
-      var mx=Math.min(Math.max(lim*0.5,anchoBloque/2+8),lim-10);
-      var mz=Math.max(lim*0.5,fondoBloque/2+8);
-      rampas.push({x:grupo.position.x, z:0,
-                   mx:mx, mz:mz, fx:lim-mx, fz:mz*1.6,
-                   ax:ejeX, az:ejeZ});
-    }
     var col='#'+(COL[k]||'#888888').replace('#','');
     /* El rótulo se acota por el hueco Y por el largo del bloque: con una fila
        de 68 m (un 2H de 14 módulos por string) el hueco es enorme y el nombre
@@ -2993,7 +2981,8 @@ function construyeMundo(){
                       (agrupa>1?' · '+(agrupa===2?'bifila':agrupa+' filas'):''),
                       col,Math.min(sep*0.85,Math.max(12,largo*0.55)));
     et.position.set(0,D.postH+2.4+et.userData.alto,0); grupo.add(et);
-    BLOQUES.push({key:k,spec:spec,filas:filas,gcr:gcr,pitch:pitch,porTracker:agrupa});
+    BLOQUES.push({key:k,spec:spec,filas:filas,gcr:gcr,pitch:pitch,porTracker:agrupa,
+                  cruz:FIS.cruz(cfg,spec)});
   });
   /* ── ENCUADRE Y SOMBRAS ──
      Las dos cosas que hay que dimensionar CON la escena, no a ojo:
@@ -3011,16 +3000,33 @@ function construyeMundo(){
   /* El suelo se REGENERA con la escena: lleva el relieve de los ejes
      inclinados, y escalar un heightfield escalaría también las cotas. */
   if(TD.suelo.geometry)TD.suelo.geometry.dispose();
-  TD.suelo.geometry=sueloRelieve(ancho*3.2,largoZ*4,rampas);
+  /* El suelo es un CUADRADO centrado en la escena: los bloques ya no van en
+     tira este-oeste sino sobre la curva de nivel, que corre en diagonal en
+     cuanto el azimut no es N-S ni E-O. Y no puede ser enorme: con el plano
+     inclinado, cada metro de más se va cien metros arriba por un lado. La
+     niebla cose el borde. */
+  TD.suelo.geometry=sueloRelieve(Math.max(anchoTot,largoZ)*2.4+320,T);
   TD.suelo.scale.set(1,1,1); TD.suelo.rotation.set(0,0,0);
   TD.radio=Math.max(220,d*1.6);
-  TD.cam.position.set(0,d*0.30,d*0.86); TD.ct.target.set(0,4,-largoZ*0.05);
+  /* La cámara se pone CUESTA ABAJO, mirando ladera arriba. No es gusto: los
+     bloques van sobre la curva de nivel, que gira con el azimut, y desde el sur
+     fijo con la caída al este quedaban en fila india —el primero enorme y el
+     último un punto—. Desde abajo se ven en línea, uno al lado del otro, y la
+     ladera sube por detrás, que es lo que hay que leer. En llano no hay cuesta:
+     se mira desde el sur, como siempre. */
+  var vx=mg>1e-9?(T.gx/mg):0, vz=mg>1e-9?(T.gz/mg):1;
+  TD.cam.position.set(vx*d*0.86,d*0.30,vz*d*0.86);
+  TD.ct.target.set(0,4,0);
   encuadra();
   /* La niebla se dimensiona con la escena. Fija, o se come los bloques cuando
      son pocos, o deja una línea dura donde acaba el suelo cuando son seis. */
   if(TD.sc.fog){TD.sc.fog.near=d*0.9; TD.sc.fog.far=d*5.5;}
   var sh=TD.sun.shadow.camera;
-  sh.left=-ancho*0.62; sh.right=ancho*0.62; sh.top=largoZ*0.9; sh.bottom=-largoZ*0.9;
+  /* El frustum de sombra, por RADIO y no por ancho×largo: con la línea de
+     bloques girada con el azimut, un rectángulo este-oeste dejaba fuera medio
+     campo y las sombras desaparecían por ese lado. */
+  var Rsh=Math.max(ancho,largoZ)*0.62+largo;
+  sh.left=-Rsh; sh.right=Rsh; sh.top=Rsh; sh.bottom=-Rsh;
   sh.far=Math.max(1500,d*6); sh.updateProjectionMatrix();
   /* Elevación por debajo de la cual se apagan las sombras, DERIVADA de la
      geometría y no tecleada: una sombra mide `altura / tan(elev)`, así que la
@@ -3088,7 +3094,11 @@ function actualiza3D(){
         :(spec.fam==='tracker'?(elDeg>0?fmt(th,1)+'°':'—')
                               :(B.estimado?'≈ ':'')+fmt(th,0)+'°'),
       imposible?'GCR '+fmt(B.gcr,2)+': no cabe'
-        :(spec.fam==='tracker'?'θ':(B.estimado?'tilt estimado':'tilt'))));
+        :((spec.fam==='tracker'?'θ':(B.estimado?'tilt estimado':'tilt'))+
+          /* Lo que ESTA estructura ve del terreno: la componente ⊥ a sus filas
+             es la que sombrea. Sin decirlo, dos bloques sobre el mismo plano
+             con sombras distintas parecen un error de la escena. */
+          (B.cruz?' · '+fmt(Math.abs(B.cruz),1)+'° ⊥ filas':''))));
   });
   $('escRead').innerHTML=ro.join('');
 }

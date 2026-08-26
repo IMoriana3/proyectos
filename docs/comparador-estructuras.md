@@ -487,34 +487,78 @@ de cada vértice y `computeVertexNormals()`. Eso es lo que lo hace leerse como u
 de dos triángulos tiene una normal por cara y sale con aristas; con las normales recalculadas la luz
 varía de forma continua.
 
-Cada estructura se apoya en su **bancada**: el terreno que ESA estructura necesita, con su
-pendiente, acotado a su huella más un margen y fundido con el llano por los cuatro lados. Sin eje
-inclinado ni pendiente de sitio, el suelo vuelve a ser llano.
+Las hincas miden lo que miden: **2 m, las mismas que el eje horizontal**. Lo que cambia es el
+terreno, no la estructura. (Cómo se dibuja hoy ese terreno —un solo plano para todas— está más
+abajo.)
 
-Las hincas vuelven a medir lo que miden: **2 m, las mismas que el eje horizontal**. Lo que cambia es
-el terreno, no la estructura.
+### La pendiente del emplazamiento: magnitud y AZIMUT
 
-### La pendiente del emplazamiento, para las tres
+`Pendiente del terreno °` y `Azimut de la caída °`, en la tarjeta de Emplazamiento porque son una
+propiedad del **sitio**. Azimut de la caída desde el norte y en sentido horario: 0 N, 90 E, 180 S,
+270 O.
 
-`Pendiente ⊥ filas °`, en la tarjeta de Emplazamiento porque es una propiedad del **sitio**. Se
-aplica a las **tres familias** — es lo que hace que la comparación sea en igualdad — y **entra en la
-física**, no solo en el dibujo: va al sombreado entre filas por el mismo sitio por el que entra en
-el core (`cross_axis_slope`, el de `pvlib.shading.shaded_fraction1d`). La fila de al lado deja de
-estar a la misma cota, y con `pend > 0` queda más **baja**.
+La versión anterior pedía la «pendiente ⊥ filas», y eso era pedirle al terreno que **girase con
+cada estructura**. Un emplazamiento no tiene una pendiente perpendicular a nada: tiene **una**, con
+su magnitud y su dirección de máxima caída. Lo que gira son las **filas**, y por eso cada familia ve
+una **componente** distinta del mismo plano:
 
-Cada familia la lleva en **su** dirección, porque cada una apila las filas hacia un lado: la fija
-hacia el sur (pitch N-S) y el seguidor y las dos aguas hacia el este (pitch E-O). El **eje
-inclinado** lleva además la del eje, que corre norte-sur — el «eje inclinado °» de un TSAT *es* la
-pendiente del terreno sobre el que se monta; un eje no se inclina en el aire.
+* la componente **⊥ a las filas** es la que entra en el sombreado — el `cross_axis_slope` de
+  `pvlib.shading.shaded_fraction1d`, el mismo por el que entra en el core;
+* la componente **a lo largo** de las filas no sombrea, pero decide si la estructura se puede
+  replantear: una fila es rígida, y esa componente hay que absorberla con hincas de distinta
+  longitud, con bancales o inclinando el eje.
 
-En la escena, las hincas siguen siendo **verticales** y el tilt no cambia: una fija en pendiente no
-se inclina con el terreno, se replantea sobre él. Cada fila se coloca a la cota del terreno bajo
-ella.
+Con `β` la pendiente y `A` el azimut de la caída, y el mundo con +x al este y +z al sur, la caída
+por metro es `gx = tan β · sen A` y `gz = −tan β · cos A`. La fija apila las filas al **sur** (sus
+filas corren este-oeste) y el seguidor y las dos aguas al **este** (las suyas corren norte-sur), así
+que:
 
-#### Es UNA pendiente, la misma para las tres
+| cae al | fija · ⊥ filas | fija · a lo largo | seguidor · ⊥ filas | seguidor · a lo largo |
+|---|---|---|---|---|
+| **S** (180°) | **β** | 0 | **0** | β |
+| **E** (90°) | 0 | β | **β** | 0 |
+| **N** (0°) | **−β** | 0 | 0 | β |
+| **SE** (135°) | β/√2 | β/√2 | β/√2 | β/√2 |
 
-Eso es lo que iguala la comparación, y hay un test que lo exige: no basta con que el campo exista,
-tiene que **mover a las tres familias**. A 12° en Sevilla:
+Lo que dice la primera fila es lo importante: **con el terreno cayendo al sur, la fija ve toda la
+pendiente y el seguidor ninguna** — la ve entera a lo largo del eje. Eso no es un defecto de la
+comparación: es la razón por la que en un emplazamiento real una estructura se puede montar y la
+otra no. Y el caso en que **todas** ven lo mismo no se impone: sale, y solo en la diagonal.
+
+Lo que consume el motor es `FIS.cruz(cfg, spec)`. Si no hay azimut declarado, `pend` **es** el
+cross-axis — que es como lo toma el core, y por eso el careo lo inyecta tal cual; con azimut, se
+deriva para cada familia.
+
+### El terreno de la escena: un solo plano
+
+Todas las estructuras se montan sobre **el mismo plano**. Se dibuja como un *heightfield* igual que
+en **bt3d** —plano subdividido, cota por vértice y `computeVertexNormals()`— y no como dos
+triángulos: una malla de dos caras tiene una normal por cara y sale con aristas.
+
+Los bloques se colocan sobre la **curva de nivel** de ese plano, no en fila este-oeste. Es lo que
+hace que todos arranquen de la misma cota estando sobre el mismo plano: alineados este-oeste con el
+terreno cayendo al este, el sexto bloque quedaría cien metros por debajo del primero. En campo es lo
+mismo: las filas siguen la curva de nivel.
+
+Y la **cámara se pone cuesta abajo**, mirando ladera arriba. No es gusto: la línea de bloques gira
+con el azimut, y desde el sur fijo con la caída al este quedaban en fila india — el primero enorme y
+el último un punto. En llano no hay cuesta y se mira desde el sur, como siempre.
+
+#### Y que se VEA: sombreado por cota
+
+Con el terreno bien hecho la pendiente seguía sin verse, y no era el modelo: a mediodía de junio el
+sol está a **76°** —casi cenital— y una ladera de 16° recibe casi la misma luz que el llano, así que
+el suelo salía de un verde plano y uniforme. El terreno lleva un **tinte por altura** (claro arriba,
+oscuro abajo, como un mapa hipsométrico), en color de vértice sobre el mismo material. Hace legible
+el relieve a cualquier hora.
+
+Cada lectura de la escena dice además **cuánta pendiente ⊥ ve esa estructura**: sin eso, dos bloques
+sobre el mismo plano con sombras distintas parecen un error del dibujo.
+
+#### Es UN terreno, y mueve el resultado
+
+Que la pendiente entra en la **física** y no solo en el dibujo se exige con un test. A 12° en
+Sevilla, con la pendiente entrando como cross-axis en las tres familias:
 
 | | sin pendiente | con 12° |
 |---|---|---|
@@ -524,51 +568,6 @@ tiene que **mover a las tres familias**. A 12° en Sevilla:
 
 La pendiente **le quita** sombra a la fija —las filas se escalonan y dejan de taparse— y **se la
 pone** al seguidor. O sea que cambia el resultado de la comparación, que es justo para lo que está.
-
-En la escena cada familia la lleva en su dirección de pitch, así que el terreno sube hacia lados
-distintos bajo cada bloque. Eso se lee como «pendientes distintas» y no lo es: es **la misma
-pendiente perpendicular a las filas**, y las filas de cada familia corren hacia otro lado.
-
-#### ¿Por qué no un solo plano para todas?
-
-Es la pregunta obvia —«misma pendiente» suena a «mismo plano»— y la respuesta es geométrica: **una
-fila es un objeto rígido** y solo se replantea sobre terreno que esté *a nivel a lo largo* de ella.
-Las filas de una fija corren este-oeste y las de un seguidor norte-sur: son **perpendiculares**. Un
-único plano inclinado no puede estar a nivel a lo largo de las dos a la vez — el que dejara bien a
-la fija enterraría medio seguidor, y al revés. Lo que se comparte no es el plano: es la
-**pendiente**, la misma para todas, girada a sus filas. Es exactamente lo que dice la física
-(`cross_axis_slope` es ⊥ a las filas, no una dirección del mapa) y lo que se hace en campo: las
-filas siguen la curva de nivel.
-
-Para que **se lea** como una sola pendiente y no como seis cerros, las bancadas se dibujan iguales:
-
-* mismo desnivel y **misma cota central** — suben por un lado lo mismo que bajan por el otro. Antes
-  cada una se levantaba entera hasta apoyar su punto más bajo en el cero, y el resultado eran seis
-  montañas de distinta altura;
-* acotadas por los **cuatro** lados. Antes solo lo estaban en X, así que la ladera se estiraba de
-  norte a sur hasta el borde del mapa y arriba aplanaba en meseta;
-* **sin solaparse**: entre dos bancadas el terreno vuelve exactamente a la cota común. Si se
-  solapasen, sus pendientes se sumarían y el terreno bajo una estructura ya no sería el tecleado.
-  Por eso, en cuanto hay pendiente, los bloques se separan **al doble**: media distancia al vecino
-  para la bancada y la otra media para el talud, que es la única proporción con la que el talud no
-  sale más empinado que la propia pendiente;
-* del **mismo tamaño**, y tan anchas como caben entre bloque y bloque. Ceñirlas al bloque era lo
-  que hacía la pendiente invisible: una fija de 3 filas a 4,5 m de pitch mide 10 m, y 16° sobre
-  10 m son 1,4 m de desnivel — nada en una escena de 170 m.
-
-El talud es la única franja más inclinada que lo tecleado (pica en torno a 1,5× en su punto medio)
-y no lleva ninguna estructura encima. En las **esquinas** de una bancada con pendiente en los dos
-ejes —solo el eje inclinado, que lleva la del sitio y la del eje— el desnivel de una se sumaría al
-de la otra y el talud tendría que devolver el doble en los mismos metros: se acota al mayor de los
-dos, lo que recorta esas dos esquinas y nada más.
-
-#### Y que se VEA: sombreado por cota
-
-Con el terreno bien hecho la pendiente seguía sin verse, y no era el modelo: a mediodía de junio el
-sol está a **76°** —casi cenital— y una ladera de 16° recibe casi la misma luz que el llano, así que
-el suelo salía de un verde plano y uniforme. El terreno lleva un **tinte por altura** (claro arriba,
-oscuro abajo, como un mapa hipsométrico), en color de vértice sobre el mismo material. Hace legible
-el relieve a cualquier hora, que es justo lo que la escena tiene que enseñar.
 
 #### Lo que destapa: con pendiente, el backtracking deja sombra
 
