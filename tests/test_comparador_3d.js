@@ -690,6 +690,68 @@ const SONDA = `(() => {
   check('y el campo lo dice con su rumbo',
     /210/.test(azim.nota) === false || /oeste|este/.test(azim.nota), azim.nota);
 
+  // ── BRÚJULA Y CÁMARA LIBRE ──
+  // Con tres azimutes en juego —terreno, fija y eje— y la cámara orbitando, sin
+  // una rosa no hay forma de leer ninguno. Y la cámara se podía desplazar desde
+  // siempre, pero cada reconstrucción la devolvía a su sitio: como no se podía
+  // tocar un campo sin perder la vista, en la práctica no se podía mirar a otro
+  // lado.
+  const rosa = async (pend, az) => {
+    await p.evaluate(v => {
+      const s = (id, x) => { const el = document.getElementById(id);
+        el.value = String(x); el.dispatchEvent(new Event('change', { bubbles: true })); };
+      s('pend', v[0]); s('pendAz', v[1]);
+    }, [pend, az]);
+    await p.waitForTimeout(350);
+    return p.evaluate(() => {
+      const g = id => document.querySelector('#' + id);
+      const gr = id => { const t = g(id).getAttribute('transform');
+        return t ? +/-?[\d.]+/.exec(t)[0] : null; };
+      return { norte: gr('brjRosa'), pend: gr('brjPend'),
+               pendVis: g('brjPend').style.display, solVis: g('brjSol').style.display,
+               sol: gr('brjSol') };
+    });
+  };
+  const bLlano = await rosa(0, 180), bSur = await rosa(16, 180), bEste = await rosa(16, 90);
+  check('hay brújula, y el norte gira con la cámara',
+    bLlano.norte !== null && Math.abs(bLlano.norte - bEste.norte) > 20,
+    JSON.stringify([bLlano.norte, bEste.norte]));
+  check('en llano no enseña flecha de pendiente: no hay ninguna',
+    bLlano.pendVis === 'none', bLlano.pendVis);
+  // La flecha apunta a donde CAE el terreno. Con la cámara cuesta abajo, cae
+  // hacia el que mira: abajo en pantalla, o sea cerca de 180°.
+  [['al sur', bSur], ['al este', bEste]].forEach(([nom, b]) => {
+    check('cayendo ' + nom + ' la flecha apunta cuesta abajo (' + b.pend + '°)',
+      b.pendVis === '' && Math.abs(Math.abs(b.pend) - 180) < 35, JSON.stringify(b));
+  });
+  check('y el sol también sale en la rosa, que es lo que dice adónde van las sombras',
+    bSur.solVis === '' && bSur.sol !== null, JSON.stringify(bSur));
+
+  const libre = await p.evaluate(async () => {
+    const antes = [TD.cam.position.x, TD.cam.position.z];
+    // el usuario orbita: OrbitControls dispara 'start'
+    TD.ct.dispatchEvent({ type: 'start' });
+    TD.cam.position.set(-90, 60, 20); TD.ct.update();
+    const mov = [TD.cam.position.x, TD.cam.position.z], flag = TD.libre;
+    // y ahora toca un campo, que reconstruye la escena
+    const e = document.getElementById('pend'); e.value = '20';
+    e.dispatchEvent(new Event('change', { bubbles: true }));
+    const tras = [TD.cam.position.x, TD.cam.position.z];
+    document.querySelector('.recentrar').click();
+    const rec = [TD.cam.position.x, TD.cam.position.z];
+    return { antes, mov, flag, tras, rec, libreTrasRec: TD.libre };
+  });
+  check('mover la cámara la marca como del USUARIO', libre.flag === true);
+  check('y reconstruir la escena ya no se la quita de las manos',
+    Math.hypot(libre.tras[0] - libre.mov[0], libre.tras[1] - libre.mov[1]) < 1,
+    JSON.stringify([libre.mov, libre.tras]));
+  check('«recentrar» la devuelve al encuadre de la escena',
+    libre.libreTrasRec === false &&
+    Math.hypot(libre.rec[0] - libre.mov[0], libre.rec[1] - libre.mov[1]) > 20,
+    JSON.stringify([libre.mov, libre.rec]));
+  await p.evaluate(() => { const e = document.getElementById('pend'); e.value = '0';
+    e.dispatchEvent(new Event('change', { bubbles: true })); });
+
   // ── LA CÁMARA, POR EL LADO DEL ECUADOR ──
   // La cámara se pone cuesta abajo para ver los bloques en línea y la ladera
   // subiendo por detrás. Pero cuesta abajo puede ser el NORTE, y una fija mira

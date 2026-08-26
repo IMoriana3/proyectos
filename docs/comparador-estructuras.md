@@ -653,6 +653,28 @@ lo que aguanta el viento y lo que da el perfil, así que se reparten a paso ≤ 
 puntas. Todas miden lo mismo, porque la fila ya se ha inclinado con el terreno: lo que absorbe la
 pendiente es el **replanteo**, no una hinca más larga.
 
+#### Brújula, y la cámara donde uno quiera
+
+Con **tres azimutes** en juego —el del terreno, el de la fija y el del eje— y la cámara orbitando, no
+había forma de saber dónde cae el norte, así que ninguno de los tres se podía leer en la escena. Va
+una rosa 2D encima del lienzo, que es lo que se lee de un vistazo a cualquier ángulo, con:
+
+* **N/S/E/O** girando con la cámara;
+* la **flecha de máxima pendiente** — hacia dónde cae el terreno — cuando la hay;
+* el **sol**, que es lo que dice hacia dónde van las sombras.
+
+El truco es pasar una dirección del mundo a un ángulo de pantalla: la cámara mira en la dirección `v`
+(del ojo al objetivo), así que en planta «arriba» en pantalla es `v` y «derecha» es `v` girado −90°;
+el ángulo horario de cualquier dirección `w` es entonces `atan2(w·derecha, w·arriba)`. (La flecha de
+pendiente se dibuja hacia **arriba** como la aguja, porque ese ángulo se mide desde arriba: dibujada
+hacia abajo, rotarla 180° la dejaba apuntando al norte con el terreno cayendo al sur.)
+
+Y la **cámara es libre**. El botón derecho ya desplazaba, pero cada reconstrucción —y se reconstruye
+al tocar cualquier campo— devolvía la vista a su sitio, así que en la práctica no se podía mirar a
+otro lado. En cuanto el usuario la toca, la escena deja de recolocarla: manda él hasta que pulse
+**recentrar**. El tope de zoom se estira además con la escena, porque con seis bloques en pendiente
+el límite fijo de 1.200 m dejaba la rueda muerta antes de ver el campo entero.
+
 #### Y que se VEA: sombreado por cota y CURVAS DE NIVEL
 
 Con el terreno bien hecho la pendiente seguía sin verse, y no era el modelo: a mediodía de junio el
