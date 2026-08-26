@@ -3015,6 +3015,19 @@ function construyeMundo(){
      ladera sube por detrás, que es lo que hay que leer. En llano no hay cuesta:
      se mira desde el sur, como siempre. */
   var vx=mg>1e-9?(T.gx/mg):0, vz=mg>1e-9?(T.gz/mg):1;
+  /* ...pero SIEMPRE por el lado del ECUADOR. Las dos direcciones ⊥ a la línea
+     de bloques encuadran igual de bien, y solo una enseña la cara: una fija
+     mira al ecuador, así que con la caída al norte la cámara se plantaba
+     DETRÁS de los paneles y lo que se veía era el dorso — negro, y con las
+     mesas de canto. Y cuando la caída es este u oeste no hay componente hacia
+     el ecuador ninguna, así que se le suma un sesgo: mejor un poco de escorzo
+     en la línea de bloques que mirar seis estructuras de perfil. */
+  var eq=(cfg.lat>=0)?1:-1;                   // el ecuador cae al SUR (+z) en el norte
+  /* Con épsilon: `cos(90°)` en JS no es cero sino 6e-17, y con la caída al
+     este ese ruido decidía de qué lado se ponía la cámara. */
+  if(vz*eq<-1e-9){vx=-vx; vz=-vz;}
+  vz+=0.6*eq;
+  var vn=Math.hypot(vx,vz); vx/=vn; vz/=vn;
   TD.cam.position.set(vx*d*0.86,d*0.30,vz*d*0.86);
   TD.ct.target.set(0,4,0);
   encuadra();
