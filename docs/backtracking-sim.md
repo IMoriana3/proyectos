@@ -388,6 +388,49 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-26 · v1.37** — **el simulador ya enseña la planta COMO ESTÁ CONFIGURADA, no solo como
+  debería estar.** Hasta ahora la página ofrecía `pairwise` —que usa las pendientes medidas, o sea la
+  planta *bien* configurada— y `bt2d`, que es otra política distinta; no había forma de ver lo que de
+  verdad hace un seguidor con los registros a cero. Mando nuevo **«Configuración de la TCU»** con dos
+  posiciones: *según levantamiento* (41098/41100 y 41102/41104 con la pendiente medida) y *sin
+  configurar* (registros de fábrica, 0) — que es el estado real de Ayora.
+
+  **La distinción que lo hace correcto: el terreno NO cambia con este mando.** `terrain()` sigue
+  devolviendo la geometría real y es la que ve el contador de sombra; `terrainTCU()` solo falsea la
+  *creencia* con la que el seguidor calcula su ángulo. Si el contador usara la creencia, con el
+  registro a cero la sombra desaparecería por arte de magia — y sería un simulador que demuestra que
+  no configurar es gratis. Cableado en los **cuatro** sitios que calculan ángulo (el día, la tabla
+  anual y los dos caminos de instante del slider): si el arrastre entre pasos de malla usara otra
+  creencia, saltaría entre dos políticas a mitad de gesto. `terrainTCU` no hace trigonometría, es un
+  DATO para la misma física, igual que `careoTerreno`.
+
+  **UNA INCOHERENCIA DESTAPADA POR IÑAKI, y que sigue abierta.** «¿Podemos sacar las pendientes para
+  evitar sombras con una política que no podemos simular?» La respuesta honesta es que había **dos
+  reglas distintas y no las habíamos cruzado nunca**: la ficha del levantamiento da la pendiente **por
+  seguidor a su VECINA CRÍTICA** (a veces la hermana del mismo accionamiento, a menos distancia — el
+  fichero lo trae explícito en `este_vecina_critica`/`oeste_vecina_critica` y `n_candidatas`),
+  mientras que nuestro `pairwise` empareja **líneas geométricas** promediando el solape norte. Medido:
+  difieren **~1,8× en la mediana** (1,76 % contra 0,98 %; p95 4,79 contra 3,59; máx 8,80 contra 5,53).
+  No es que una esté mal —la crítica es por definición la peor, tiene que salir mayor—, y la prueba de
+  que las dos describen la misma planta es que **la longitudinal coincide exacta: 1,48° las dos**. Pero
+  significa que `export_config_tcu.mjs` **entregaba números que nunca habían entrado en nuestro
+  simulador**: validábamos con unos y enviábamos otros.
+
+  **Metidos por fin, y el resultado tranquiliza a medias:** con las pendientes de la ficha sale
+  **+0,112 %** y con las nuestras **+0,118 %** (mismo día, misma política, contador sobre la geometría
+  real). Con pendientes que difieren un 80 %, el resultado se mueve seis milésimas de punto — así que
+  **cuál de los dos juegos se escriba no es el riesgo**.
+
+  **Lo que SÍ sigue sin verificar** es qué hace el firmware con ellos. La única comprobación de campo
+  fue a mediodía, y el propio informe declara que a mediodía **ninguna política se distingue de otra**.
+  Que la TCU haga un backtracking tipo `pairwise` es una suposición nuestra, no una medida. Se cierra
+  con dos pruebas baratas y en este orden: **(1)** un volcado con **sol bajo** ahora, con los registros
+  a cero, que discrimina la política *base* —cuándo entra en backtracking, cómo usa el vano, cómo se
+  comporta en el tope— sin tocar nada; **(2)** escribir los registros en **UN** seguidor y leer su
+  `Objetivo`, que aísla el término de pendiente. Hasta que pasen las dos, la ficha es una propuesta
+  bien fundada, **no un entregable verificado**, y así debe decirlo el documento de cliente.
+  Pendiente: tercera posición del mando, «según la ficha (vecina crítica)». QA 84.
+
 - **2026-08-26 · AYORA, DIAGNÓSTICO CON IMPORTE** — confirmado en planta que **Ayora no tiene
   configurada ninguna pendiente ni ningún azimut**. Eso la sitúa en la columna «sin configurar» de
   todas las tablas y convierte el ejercicio en un diagnóstico con precio. El precio es incómodo y por
