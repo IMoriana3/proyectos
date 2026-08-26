@@ -417,8 +417,11 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         fija ve toda la pendiente y el seguidor ninguna</b> — la ve entera a lo largo del eje. Eso
         no es un defecto de la comparación: es la razón por la que en un sitio real una estructura
         se monta y la otra no. Y el «eje inclinado °» de un TSAT debería ser justo esa componente a lo
-        largo del eje — un eje no se inclina en el aire: cada lectura de seguidor dice cuánto se
-        inclina el suyo con el terreno, y si el TSAT declara otra cosa, también lo dice.</p>
+        largo del eje — un eje no se inclina en el aire, y lo lleva <b>todo</b> seguidor, no solo el
+        que el catálogo llama TSAT: cada lectura dice cuánto se inclina el suyo. Con eso, <b>HSAT y
+        TSAT son la misma estructura</b> — coinciden en llano y coinciden con pendiente a lo largo
+        del eje. Se dejan los dos en el catálogo porque el careo contra el core los corre por
+        separado, pero en la ficha ya no hay nada que los distinga.</p>
     </div>
     <!-- ═════════ SIZING (columna ancha: la ventana hay que LEERLA) ═════════ -->
     <div class="card">
@@ -969,8 +972,17 @@ FIS.cruz=function(cfg,spec){
    y `cross_axis_slope` por separado —son las dos componentes del mismo plano—
    y por ahí entra el careo. */
 FIS.ejeTilt=function(cfg,spec){
-  if(!spec||!spec.tsat)return 0;
-  if(cfg.pendAz==null)return cfg.axTilt||0;
+  if(!spec||spec.fam!=='tracker')return 0;
+  /* TODOS los seguidores, no solo el TSAT. Un eje norte-sur sobre un terreno
+     que cae norte-sur NO es horizontal: sigue el terreno, y entonces es un eje
+     inclinado — se llame como se llame en el catálogo. Mientras esto solo se
+     aplicaba al TSAT, la escena dibujaba el eje del HSAT siguiendo el terreno y
+     la física lo calculaba plano: una cosa dibujada y otra calculada, que es
+     justo lo que esta ficha no puede hacer. Con 12° al sur en Sevilla eran 158
+     kWh/m² de diferencia sin que la tabla se moviera.
+     Sin azimut declarado se respeta lo recibido, que es el camino del careo: el
+     core corrió el HSAT con axis_tilt 0 y el TSAT con 10. */
+  if(cfg.pendAz==null)return spec.tsat?(cfg.axTilt||0):0;
   /* La componente A LO LARGO DEL EJE, con el signo de bajar hacia el ecuador:
      positivo cuando el extremo que mira al ecuador es el más bajo. */
   var q=FIS.pendComp(cfg.pend,cfg.pendAz,FIS.azEje(cfg)+90);
@@ -1085,7 +1097,12 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
     if(S.el<=0)continue;
     var bh=M.dni[i], dh=M.dhi[i], gh=M.ghi[i], e0=FIS.E0(M.t[i]), P0, planos;
     if(spec.fam==='tracker'){
-      P0=spec.tsat?FIS.psTSAT(S.el,S.az,axT,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
+      /* La proyección con eje inclinado la decide el ÁNGULO, no la etiqueta del
+         catálogo: si el eje está inclinado —lo diga el catálogo o lo ponga el
+         terreno— hay que proyectar con el marco girado. Preguntando por
+         `spec.tsat` se calculaba plano un eje que la escena dibujaba
+         inclinado. */
+      P0=axT?FIS.psTSAT(S.el,S.az,axT,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
       planos=[FIS.theta(P0.ps,gcr,cfg.maxang,spec.bt)];
     }else if(spec.fam==='fija_ew'){
       P0=FIS.psTracker(S.el,S.az,cfg);                // aguas al este y al oeste
@@ -3033,20 +3050,33 @@ function ejeTransmision(mats,xa,xb,ya,yb){
    solo las piezas `twin` — corona, bracket y soporte. Es justo lo que
    distingue una bifila de dos monofilas, y es lo que hay que replicar en vez
    de dibujar una barra entre filas. */
-function seguidor3D(mats,escalaEje,motriz){
+function seguidor3D(mats,escalaEje,motriz,largoFila){
   var g=new THREE.Group(), spin=new THREE.Group(); g.add(spin);
   var viga=Seguidor.buildBeam(THREE,{materials:mats,west:(motriz!==false),
                                      detail:'mass',size:'largo'});
   spin.add(viga.spin); g.add(viga.static);
   var postH=Seguidor.DIMS.postH||2.0;
   g.position.y=postH; g.rotation.y=Math.PI/2;
-  var poste=new THREE.Mesh(new THREE.BoxGeometry(.18,postH,.18),mats.steel);
-  poste.position.y=postH/2; poste.castShadow=true;
   /* La escala va en `g` (el grupo del tubo), no en el wrap: así estira la viga,
-     las alas y el vano del motor —lo que de verdad se alarga— y deja el poste
+     las alas y el vano del motor —lo que de verdad se alarga— y deja los postes
      con su sección. */
   if(escalaEje&&Math.abs(escalaEje-1)>1e-6)g.scale.x=escalaEje;
-  var wrap=new THREE.Group(); wrap.add(g,poste); wrap.spin=spin;
+  var wrap=new THREE.Group(); wrap.add(g);
+  /* HINCAS. Había UNA, bajo el accionamiento: un tubo de par de 65 m sobre un
+     solo poste no es un seguidor, es un balancín. La hinca va cada 6-9 m —es lo
+     que fija el vano entre rodamientos, y con ella el momento y la sección del
+     tubo—, así que se reparten a paso ≤ 8 m a lo largo del tubo, que en el marco
+     del wrap corre en Z. La del accionamiento no se repite: esa la pone el
+     propio modelo (`soporte`, y en la gemela también, que es pieza twin). */
+  var L=largoFila||Seguidor.DIMS.span||60;
+  var nP=Math.max(2,Math.round(L/8)+1), z0=-L/2, dP=L/(nP-1);
+  for(var i=0;i<nP;i++){
+    var z=z0+i*dP;
+    if(Math.abs(z)<1.6)continue;                 // ahí ya está el del slew
+    var p=new THREE.Mesh(new THREE.BoxGeometry(.18,postH,.18),mats.steel);
+    p.position.set(0,postH/2,z); p.castShadow=true; wrap.add(p);
+  }
+  wrap.spin=spin;
   return wrap;
 }
 
@@ -3282,7 +3312,7 @@ function construyeMundo(){
         /* En bifila, la PRIMERA viga de cada par es la del motor y las demás
            son gemelas: eso es lo que hace que dos filas sean UN seguidor, y no
            dos. En monofila todas llevan el suyo. */
-        uno=seguidor3D(mats,escTk,(agrupa<2)||(f%agrupa===0));
+        uno=seguidor3D(mats,escTk,(agrupa<2)||(f%agrupa===0),G.largoFila);
         uno.position.x=d; uno.position.y=cotaFila(d,0);
         uno.rotation.x=rollX;                            // el eje sigue el terreno
       }else if(spec.fam==='fija_ew'){
@@ -3437,8 +3467,8 @@ function actualiza3D(){
   BLOQUES.forEach(function(B){
     var th=0, spec=B.spec, tilt=(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
     if(spec.fam==='tracker'){
-      var P=spec.tsat?FIS.psTSAT(S.el,S.az,FIS.ejeTilt(cfg,spec),cfg.lat,cfg)
-                     :FIS.psTracker(S.el,S.az,cfg);
+      var ax3=FIS.ejeTilt(cfg,spec);
+      var P=ax3?FIS.psTSAT(S.el,S.az,ax3,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
       th=(elDeg>0)?FIS.theta(P.ps,B.gcr,cfg.maxang,spec.bt):0;
       B.filas.forEach(function(u){
         /* SIGNO. El grupo del seguidor entra girado 90° en Y, así que su +X

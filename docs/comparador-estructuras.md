@@ -623,8 +623,20 @@ eje hacia el ecuador por definición, así que con el terreno cayendo hacia el p
 y se calculaba el contrario. En el hemisferio sur el signo se da la vuelta, porque el ecuador está
 al norte.
 
+Y lo lleva **todo** seguidor, no solo el que el catálogo llama TSAT. Mientras esto era solo del
+TSAT, la escena dibujaba el eje del HSAT siguiendo el terreno y la física lo calculaba **plano**: una
+cosa dibujada y otra calculada. Con 12° al sur en Sevilla eran **158 kWh/m²** de diferencia sin que
+la tabla se moviera. La proyección con eje inclinado la decide ahora el **ángulo**, no la etiqueta
+del catálogo.
+
+Consecuencia que hay que ver venir: **HSAT y TSAT pasan a ser la misma estructura**. Coinciden en
+llano —no hay eje que inclinar— y coinciden con pendiente a lo largo del eje —los dos la toman—. Se
+dejan los dos en el catálogo porque el careo contra el core los corre por separado, pero en la ficha
+ya no hay nada que los distinga.
+
 Sin azimut declarado se respeta el valor recibido: el core toma `axis_tilt` y `cross_axis_slope` por
-separado —son las dos componentes del mismo plano— y por ahí entra el careo.
+separado —son las dos componentes del mismo plano— y por ahí entra el careo (el HSAT con `axis_tilt`
+0 y el TSAT con 10).
 
 #### El horizonte también lleva la pendiente
 
@@ -670,6 +682,15 @@ la gemela no tiene motor, la mueve la motriz. Va de **corona a corona** (en `seg
 está en el centro del tubo), es un tubo del mismo acero con su brida en cada extremo, y **nada en
 medio**: el motor ya está donde tiene que estar, en el slew de la viga motriz. Se le pasan las cotas
 de las dos filas, porque en pendiente no están a la misma altura.
+
+#### Las hincas
+
+Una fila de 65 m sobre uno o dos postes no es una estructura: es un puente, o un balancín. La fija
+llevaba **dos**, una en cada punta; el seguidor, **una**, la del accionamiento. En campo la hinca va
+cada 4-6 m en una fija y cada 6-9 m en un seguidor —es lo que fija el vano entre rodamientos, y con
+él el momento y la sección del tubo—, así que se reparten a ese paso a lo largo de la fila. En el
+seguidor no se repite la del accionamiento: esa la pone el propio modelo (`soporte`, y en la gemela
+también, que es pieza `twin`).
 
 #### Los lienzos 2D, nítidos
 

@@ -456,9 +456,16 @@ function porClaveTmp(r) { return Object.fromEntries(r.filas.map(f => [f.key, f])
 check('cayendo al SUR la pendiente mueve la sombra de la FIJA (' +
   llanoAz.fija_proyecto.sombra.toFixed(2) + ' → ' + caeSur.fija_proyecto.sombra.toFixed(2) + ' %)',
   Math.abs(caeSur.fija_proyecto.sombra - llanoAz.fija_proyecto.sombra) > 0.05);
-check('  y NO la del seguidor, que la lleva a lo largo del eje (' +
-  caeSur.tracker_hsat_nobt.sombra.toFixed(3) + ' %)',
-  Math.abs(caeSur.tracker_hsat_nobt.sombra - llanoAz.tracker_hsat_nobt.sombra) < 1e-9);
+// Al seguidor esa misma pendiente no le entra ⊥ —le entra a lo largo del eje—,
+// así que no le cambia el `cross_axis_slope`. Lo que sí le cambia es el EJE: un
+// eje norte-sur sobre un terreno que cae norte-sur no es horizontal.
+check('  al seguidor esa pendiente no le entra ⊥: su cross-axis sigue en cero',
+  Math.abs(FIS.cruz({ ...cfg, pend: 16, pendAz: 180 }, TK)) < 1e-9);
+check('  pero sí le inclina el EJE, y eso mueve su POA (' +
+  llanoAz.tracker_hsat_nobt.neta.toFixed(1) + ' → ' +
+  caeSur.tracker_hsat_nobt.neta.toFixed(1) + ' kWh/m²)',
+  caeSur.tracker_hsat_nobt.neta > llanoAz.tracker_hsat_nobt.neta + 1,
+  [llanoAz.tracker_hsat_nobt.neta, caeSur.tracker_hsat_nobt.neta].join(' vs '));
 check('cayendo al ESTE se invierte: mueve al SEGUIDOR (' +
   llanoAz.tracker_hsat_nobt.sombra.toFixed(2) + ' → ' +
   caeEste.tracker_hsat_nobt.sombra.toFixed(2) + ' %)',
@@ -485,8 +492,29 @@ check('en LLANO el eje sale 0: sin pendiente no hay TSAT que valga',
 check('en el hemisferio SUR el ecuador está al norte, y el signo se da la vuelta',
   Math.abs(FIS.ejeTilt({ pend: 26, pendAz: 0, lat: -16.6 }, TSAT) - 26) < 0.01,
   FIS.ejeTilt({ pend: 26, pendAz: 0, lat: -16.6 }, TSAT).toFixed(3));
-check('y solo el TSAT lo lleva: un HSAT es horizontal por definición',
-  FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, FIS.spec('tracker_hsat')) === 0);
+// Y lo lleva TODO seguidor, no solo el que el catálogo llama TSAT: un eje
+// norte-sur sobre un terreno que cae norte-sur sigue el terreno, y entonces está
+// inclinado. Mientras esto era solo del TSAT, la escena dibujaba el eje del HSAT
+// siguiendo el terreno y la física lo calculaba plano.
+check('lo lleva TODO seguidor, no solo el que se llama TSAT',
+  Math.abs(FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 },
+                       FIS.spec('tracker_hsat')) - 26) < 0.01);
+check('y una fija no: no tiene eje que inclinar',
+  FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, FIJA) === 0 &&
+  FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, EW) === 0);
+// La consecuencia, que hay que ver venir: con pendiente a lo largo del eje, el
+// HSAT y el TSAT son la MISMA estructura y dan lo mismo.
+const nsSur = FIS.compara(['tracker_hsat', 'tracker_tsat'], M,
+  { ...cfg, pend: 12, pendAz: 180 });
+const nsLlano = FIS.compara(['tracker_hsat', 'tracker_tsat'], M,
+  { ...cfg, pend: 0, pendAz: 180 });
+check('con el terreno cayendo a lo largo del eje, HSAT y TSAT coinciden: ' +
+  'son la misma estructura',
+  Math.abs(nsSur.filas[0].neta - nsSur.filas[1].neta) < 1e-9,
+  nsSur.filas.map(f => f.key + ':' + f.neta.toFixed(2)).join(' '));
+check('y en llano también, porque el eje lo pone el terreno y no hay',
+  Math.abs(nsLlano.filas[0].neta - nsLlano.filas[1].neta) < 1e-9,
+  nsLlano.filas.map(f => f.key + ':' + f.neta.toFixed(2)).join(' '));
 check('sin azimut declarado se respeta el valor recibido (el camino del careo)',
   FIS.ejeTilt({ pend: 8, axTilt: 10, lat: 37.4 }, TSAT) === 10);
 // Y el signo tiene consecuencia, que es lo que lo hace física y no adorno.
