@@ -388,6 +388,46 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-26 · v1.38** — **la FICHA que se escribe en la TCU, por fin cargable en el simulador.**
+  Tercera posición del mando: *«La FICHA que se escribe en la TCU (por seguidor, vecina crítica)»*.
+  Cierra la incoherencia de v1.37 — se entregaban números que nunca habían entrado en el simulador —
+  y de paso corrige una etiqueta que mentía: *«según levantamiento»* prometía la ficha y entregaba la
+  pendiente que la página deduce **por pareja de líneas**; ahora se llama por su nombre.
+
+  **El emparejamiento era lo difícil, y es donde estaba el riesgo.** Son **dos rejillas distintas**:
+  la ficha agrupa con tolerancia `pitch/4` sobre **trackers** (221 líneas en Ayora) y
+  `plantFromCotas` con `pitch/2` sobre **filas** (295); y los marcos de x tampoco coinciden — la
+  ficha va de −1238 a +1238 m y el simulador de 0 a 477, recentrado al bloque cargado. **Emparejar
+  por índice habría repetido exactamente el fallo que costó 157 consignas mal dirigidas.** Se
+  empareja por la **x MEDIDA**, y para eso `plantFromCotas` devuelve ahora `lineXAbs`, la x sin
+  recentrar: una magnitud física que las dos partes calculan igual y que no depende de qué bloque se
+  cargue.
+
+  **El signo no se supone: se DETERMINA, y tiene que ganar con margen** — la misma regla que el huso
+  horario en `cruce_diagnostico`. Medido sobre las 107 líneas de Ayora, el hueco entre la línea *i* y
+  la *i+1*: `+oeste(i+1)` acierta el **92 %** (error mediano 0,32°) · `−este(i)` el 84 % (0,31°) ·
+  `+este(i)` el 16 % · `−oeste(i+1)` el 8 %. La elección no está reñida. Se usa el oeste y el este
+  queda de reserva cuando falta. Hay comprobación que **falla si el acuerdo baja del 85 %**: si la
+  ficha cambiara de convenio hay que volver a decidirlo, no seguir dibujando pendientes al revés.
+
+  **Cobertura declarada, no supuesta.** En Ayora casan **66 de 80 líneas** por x, y con la reserva
+  del este se cubren las **79 parejas**. Las que no casan **se quedan con la pendiente de las cotas** y
+  se cuentan en la nota de la planta: rellenarlas con cero sería fabricar un llano donde sólo falta un
+  dato. Si la planta no tiene ficha publicada, la opción sale **deshabilitada** y la nota lo dice.
+
+  **El resultado, que confirma que son dos cosas distintas:** la ficha da |pendiente| mediana
+  **0,72°** contra **0,50°** de las cotas — la vecina crítica es por definición la peor. Hay
+  comprobación que falla si saliera la MISMA, porque eso significaría que no se cargó o que se está
+  leyendo la columna equivocada.
+
+  **Y dos comprobaciones REPARADAS, que es lo que más conviene recordar.** Buscar el cuerpo de una
+  función «hasta el siguiente `function`» ha fallado **dos veces**: primero se tragaba `terrain()`
+  entera y saltaba por un `pitch:` que no era suyo, y luego el comentario de `aplicaFicha`. Ahora hay
+  un `cuerpoFn()` que cuenta llaves. Y la de v1.33 fijaba el **texto vecino** de `avisoCaras` en vez
+  de la propiedad, así que fallaba cada vez que se insertaba otro aviso — ruido, no regresión: ahora
+  comprueba que el aviso acabe dentro de la nota, que es lo que importa. **Un test que analiza el
+  trozo equivocado del fichero no protege nada.** QA 86.
+
 - **2026-08-26 · v1.37** — **el simulador ya enseña la planta COMO ESTÁ CONFIGURADA, no solo como
   debería estar.** Hasta ahora la página ofrecía `pairwise` —que usa las pendientes medidas, o sea la
   planta *bien* configurada— y `bt2d`, que es otra política distinta; no había forma de ver lo que de
