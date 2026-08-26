@@ -94,7 +94,18 @@ es la **medida** interpolada — el modelo de nubes solo rellena huecos.
 
 # Estudio: diffuse optimization / overcast en trackers
 
-*Elaborado 2026-08-14. Cifras de fabricante separadas de cifras medidas/publicadas.*
+*Elaborado 2026-08-14 · revisado 2026-08-26. Cifras de fabricante separadas de cifras medidas/publicadas.*
+
+> **Revisión 2026-08-26.** El punto de §1 «el óptimo no es exactamente 0° con cielo anisótropo» ha
+> dejado de ser una cita para pasar a ser una **medida propia**: el barrido de cinco α del core deja
+> como mucho **0,049 %** frente al óptimo exacto, con 1–2° de diferencia que casi siempre caen por
+> debajo del deadband de 1°. Está desarrollado en **«¿Y el óptimo anisótropo? Medido, y descartado»**,
+> arriba en este mismo documento, y es la razón por la que **no** se implementó la quinta política que
+> §1 sugería.
+>
+> El resto del estudio —en particular la tabla de la competencia de §3 y sus fuentes— **no se ha vuelto
+> a verificar desde el 14-08**. Antes de enseñarlo a un cliente conviene repasar si alguna de esas
+> cifras se ha actualizado.
 
 ## 1 · La física
 
