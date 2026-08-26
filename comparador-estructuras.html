@@ -2688,7 +2688,41 @@ function drawTabla(base){
     '<b>POA módulo</b> es lo que ve el panel; <b>POA suelo</b> = POA × GCR, lo que ve la parcela. '+
     (REP.gcrComun?'Con el mismo GCR el segundo es el primero escalado y no reordena nada — dale a cada familia su pitch arriba para que cada una lleve su densidad.'
                  :'Con densidades distintas el orden por suelo ya no tiene por qué coincidir con el de módulo.')+
-    ' Los seguidores van en modo IDEAL: sin abanderamiento, sin banda muerta y sin política de difusa — el coste del control real es otra pregunta (ficha <a href="sim-viento.html" style="color:var(--accent)">Viento</a>).';
+    ' Los seguidores van en modo IDEAL: sin abanderamiento, sin banda muerta y sin política de difusa — el coste del control real es otra pregunta (ficha <a href="sim-viento.html" style="color:var(--accent)">Viento</a>).'+
+    avisoBacktracking(f);
+}
+
+/* ── LO QUE ESTA TABLA NO PUEDE DECIDIR: backtracking sí o no ──────────────
+   Dos cosas que hay que decir en cuanto aparecen las dos filas de seguidor,
+   porque el número invita a leer justo lo contrario de lo que dice:
+
+   1. La comparación es de POA, y la pérdida por sombra entra como FRACCIÓN
+      SOMBREADA del plano, lineal. En un string real una sombra parcial cuesta
+      mucho más que su fracción —el módulo tapado arrastra a la serie— y eso no
+      se ve aquí. Así que por POA el backtracking casi nunca gana: renuncia a
+      apuntar para quitarse una sombra que este modelo cobra barata. Lo que
+      decide de verdad es la energía DC/AC, y eso es otra ficha.
+
+   2. El ángulo de backtracking se calcula EN LLANO, que es lo que hace el core
+      (y por eso el careo cuadra). Con pendiente ⊥ a las filas deja de evitar la
+      sombra: la fila de al lado está más alta y sigue tapando. pvlib sabe
+      hacerlo con la pendiente (`cross_axis_tilt`); el core no lo usa, y la
+      ficha no se lo va a inventar por su cuenta.                              */
+function avisoBacktracking(f){
+  var bt=null,nb=null;
+  f.forEach(function(x){ if(x.key==='tracker_hsat')bt=x; if(x.key==='tracker_hsat_nobt')nb=x; });
+  if(!bt||!nb)return '';
+  var cruz=Math.abs(FIS.cruz(cfgActual(),FIS.spec('tracker_hsat')));
+  var t=' <b>Y sobre el backtracking</b>: la pérdida por sombra entra aquí como '+
+    'fracción sombreada del plano, <b>lineal</b>. En un string real una sombra parcial cuesta '+
+    'mucho más que su fracción, así que por POA el backtracking casi nunca gana — renuncia a '+
+    'apuntar para quitarse una sombra que este modelo cobra barata. Esta tabla no decide si '+
+    'compensa: eso se decide en DC/AC.';
+  if(cruz>0.5)t+=' Además, el ángulo se calcula <b>en llano</b> —es lo que hace el core— y con '+
+    fmt(cruz,1)+'° ⊥ a las filas deja de evitar la sombra: le quedan '+fmt(bt.sombra,2)+' % '+
+    'contra el '+fmt(nb.sombra,2)+' % del que no lo lleva. pvlib sabe backtrackear con la '+
+    'pendiente (<i>cross_axis_tilt</i>); el core no lo usa.';
+  return t;
 }
 
 /* Barras mensuales agrupadas */
