@@ -126,6 +126,14 @@ const meteoSint = lat => {
   const vistas = {};
   for (const v of ['90', '60']) {
     await page.fill('#pasV', v); await page.dispatchEvent('#pasV', 'input');
+    // El resultado ANTERIOR se borra antes de pulsar. Sin esto la espera de
+    // abajo se cumple al instante con el `REP` de la vuelta previa, y la
+    // segunda iteración lee la etiqueta VIEJA: el arnés fallaba 2 de cada 4
+    // veces y su rojo decía «no sigue el valor configurado» — que es un
+    // diagnóstico falso, porque la ficha lo seguía perfectamente. Un test que
+    // espera sobre estado que puede sobrevivir a la acción no está esperando
+    // a nada.
+    await page.evaluate(() => { window.REP = null; });
     await page.click('#run');
     await page.waitForFunction(() => window.REP && REP.cases && REP.cases.PASIVO,
                                { timeout: 90000 });

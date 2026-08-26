@@ -1040,12 +1040,19 @@ var HAIL = (function () {
       return S(td < tn, 'T_disp ' + f0(td) + ' min < T_nec ' + f0(tn) + ' min');
     },
 
-    /* Sin máquina de EJECUCIÓN (§10.2) no hay verificación fila a fila: se
-       supone alcanzada al paso siguiente y VA DICHO, que es distinto de fingir
-       que se ha verificado. */
+    /* La máquina de EJECUCIÓN ya existe —el bloque GRANIZO-EJECUCIÓN de más
+       abajo, §10.2 estados 4/5/6— pero AQUÍ no la hay que consumir: la de
+       amenaza trabaja sobre una serie meteorológica, no sobre una flota, así
+       que no tiene filas cuyo ángulo verificar. Se simula aparte.
+
+       Sigue siendo una SUPOSICIÓN y VA DICHO, que es distinto de fingir que se
+       ha verificado. Este texto decía «§10.2 no implementado» y dejó de ser
+       cierto: una declaración de limitación que envejece miente con la
+       autoridad de estar siendo honesta. */
     posicion_verificada: function (m, p, c) {
       return S(c.pasos_en_estado >= 1,
-        'posición supuesta alcanzada (sin máquina de ejecución: §10.2 no implementado)');
+        'posición supuesta alcanzada (aquí no hay flota que verificar; la ' +
+        'máquina de EJECUCIÓN del §10.2 se simula aparte)');
     },
 
     /* Capa 6: los TRES criterios, y se dice cuál falta. Fundidos, el que
@@ -1246,6 +1253,246 @@ var HAIL = (function () {
   };
 })();
 /* ═══════════ GRANIZO-FÍSICA — fin ═══════════ */
+
+/* ═══════════ GRANIZO-EJECUCIÓN — inicio ═══════════
+   Espejo del núcleo Python `solargpt_core.execution_machine`: la máquina de
+   EJECUCIÓN del §10.2, estados 4 · 5 · 6. Lo que la de amenaza ORDENA, ésta
+   VERIFICA — fila a fila.
+
+   EL PYTHON ES LA FUENTE DE AUTORIDAD, igual que en el bloque de amenaza y por
+   el mismo motivo: la spec es un documento de ingeniería y el core es quien la
+   implementa. Este bloque no innova; copia, y `tests/test_ejecucion_traza.mjs`
+   lo carea contra el MISMO fichero de casos que reproduce el core.
+
+   POR QUÉ EXISTE, en una frase: hasta ahora la condición `posicion_verificada`
+   de la máquina de amenaza daba la posición por alcanzada al paso siguiente y
+   lo decía —«sin máquina de ejecución: §10.2 no implementado»—. Con esto,
+   «planta protegida» pasa a significar algo verificado.
+
+   LA REGLA QUE MANDA SOBRE TODAS: **NUNCA «planta protegida» por timeout**. Un
+   plazo vencido con filas sin confirmar degrada a protección parcial; jamás
+   promueve a posición segura. Es el fallback del §10.2 y la razón entera de
+   que el estado 6 exista.
+
+   Y LO QUE SE CAREA ES LA SECUENCIA COMPLETA, no el estado final: la rama de
+   fallo declarado y la de timeout CONVERGEN en el mismo estado, así que un
+   careo por el final dejaría perder una de las dos sin ponerse rojo. Lo enseñó
+   un mutante que sobrevivió en el core.
+
+   LA FLOTA SE INYECTA. Aquí no hay encoders. El tiempo de recorrido de cada
+   fila, la simultaneidad, la alimentación y la dispersión entre unidades NO se
+   modelan, y eso viaja en `FUERA_DE_C2` dentro del propio resultado.
+
+   Aquí NO hay una línea de DOM: la física se extrae y corre en Node. */
+var EJEC = (function () {
+  'use strict';
+
+  /* Los tres del §10.2 que C2 cubre, con el nombre del informe como valor. */
+  var E = {
+    HAIL_STOW_TRANSIT: 'HAIL_STOW_TRANSIT',           /* 4 */
+    HAIL_SAFE_POSITION: 'HAIL_SAFE_POSITION',         /* 5 */
+    HAIL_PARTIAL_PROTECTION: 'HAIL_PARTIAL_PROTECTION' /* 6 */
+  };
+  var ORDEN_ESTADOS = ['HAIL_STOW_TRANSIT', 'HAIL_SAFE_POSITION',
+    'HAIL_PARTIAL_PROTECTION'];
+
+  /* Los cuatro del §19, TODOS sin valor a propósito. La máquina no arranca sin
+     ellos: un umbral inventado aquí decide si una planta se declara
+     protegida, y eso no es un default razonable, es una firma. */
+  var REQUERIDOS = ['timeout_confirmacion_s', 'n_retry', 't_retry_s',
+    'tolerancia_confirmacion_deg'];
+  var APARTADO = {
+    timeout_confirmacion_s: '§10.2, PENDIENTE DE ENSAYO — dueño Firmware',
+    n_retry: '§19 · §10.2, SIN VALOR — dueño Firmware',
+    t_retry_s: '§10.2, PENDIENTE DE ENSAYO — dueño Firmware',
+    tolerancia_confirmacion_deg:
+      '§10.2 «fila confirmada», PENDIENTE DE ENSAYO — dueño Firmware'
+  };
+
+  var FUERA_DE_C2 = [
+    'Estados 7 a 17 del §10.2 (HAIL_ACTIVE, retorno, transversales, ' +
+    'POST_EVENT_INSPECTION): no implementados.',
+    'La parada o finalización del tránsito con la envolvente excedida ' +
+    '(estados 4 y 16) está declarada PENDIENTE DE INGENIERÍA por el propio ' +
+    'informe: no espera código, espera criterio estructural.',
+    'La maniobra parcial de LOW_SOC (§14) está PENDIENTE DE ENSAYO ENERGÉTICO ' +
+    'Y VALIDACIÓN ESTRUCTURAL: una posición intermedia es un estado no ' +
+    'caracterizado.',
+    'El tiempo de recorrido de cada fila, la simultaneidad, la alimentación y ' +
+    'la dispersión entre unidades NO se modelan: la flota se inyecta.'
+  ];
+
+  function faltantes(p) {
+    p = p || {};
+    var out = [];
+    for (var k = 0; k < REQUERIDOS.length; k++) {
+      var n = REQUERIDOS[k];
+      if (p[n] === null || p[n] === undefined) out.push(n + ' (' + APARTADO[n] + ')');
+    }
+    return out;
+  }
+
+  /* Confirmada = telemetría presente Y dentro de tolerancia Y sin fallo.
+     `error_deg` ausente NO es confirmada: la regla H —«un dato ausente no se
+     lee como permiso»— aplicada a la fila. Y un fallo declarado manda sobre el
+     ángulo: una fila puede estar en posición y haber perdido el motor. */
+  function confirmada(f, tol) {
+    if (f.fallo !== null && f.fallo !== undefined) return false;
+    if (f.error_deg === null || f.error_deg === undefined) return false;
+    return Math.abs(+f.error_deg) <= tol;
+  }
+
+  function f0(x) { return x.toFixed(0); }
+
+  /* `flota[i]` es el estado de TODAS las filas en el paso i. `envolvente[i]`
+     es la salida del veto del §11 (C1): con `false`, los reintentos del estado
+     6 no se autorizan. Ausente = se supone dentro, y va DICHO en el diario. */
+  function simula(flota, p, dtS, envolvente) {
+    var falta = faltantes(p);
+    if (falta.length) {
+      throw new Error('la máquina de EJECUCIÓN no arranca sin estos ' +
+        'parámetros, y el Rev01.4 los deja PENDIENTES DE ENSAYO a propósito: ' +
+        falta.join(', ') + '. Decláralos con su procedencia; no hay defaults ' +
+        'porque un umbral inventado aquí decide si una planta se declara ' +
+        'protegida.');
+    }
+    if (!(dtS > 0)) throw new Error('dtS debe ser > 0, got ' + dtS);
+
+    var n = flota.length;
+    var tol = +p.tolerancia_confirmacion_deg;
+    var timeout = +p.timeout_confirmacion_s;
+    var nRetry = +p.n_retry;
+    var tRetry = +p.t_retry_s;
+
+    var estados = [], trans = [], diario = [], pct = [], reintentos = {};
+    var ultimoRetry = {};
+    diario.push('— Máquina de EJECUCIÓN · FAC-AS-HS-001 Rev01.4 §10.2 —');
+    diario.push('C2: estados 4/5/6 con flota inyectada. timeout ' +
+      f0(timeout) + ' s · n_retry ' + nRetry + ' · t_retry ' + f0(tRetry) +
+      ' s · tolerancia ' + tol.toFixed(2) + '°');
+    if (envolvente === null || envolvente === undefined) {
+      diario.push('sin veto del §11 declarado: los reintentos se autorizan ' +
+        'siempre. En una corrida de verdad esto lo dice `veto_transito` (C1).');
+    }
+
+    var estado = E.HAIL_STOW_TRANSIT;
+    var tTransito = 0;
+
+    for (var i = 0; i < n; i++) {
+      var filas = flota[i];
+      var disp = [], j;
+      for (j = 0; j < filas.length; j++) {
+        if (filas[j].disponible !== false) disp.push(filas[j]);
+      }
+      var dentro = (envolvente === null || envolvente === undefined)
+        ? true : !!envolvente[i];
+
+      /* «Las filas que ya llegaron se mantienen sin re-tránsitos» (§10.2) sale
+         del filtro por PASO, no de un acumulado: una fila que llegó y luego
+         pierde posición vuelve a hacer falta, y un acumulado la daría por
+         buena para siempre. */
+      var conf = {};
+      var nConf = 0;
+      for (j = 0; j < disp.length; j++) {
+        if (confirmada(disp[j], tol)) { conf[disp[j].id] = true; nConf++; }
+      }
+      var p100 = disp.length ? (100 * nConf / disp.length) : 100;
+      pct.push(Math.round(p100 * 100) / 100);
+
+      var anterior = estado, motivo = null, faltan = [], k;
+
+      if (estado === E.HAIL_STOW_TRANSIT) {
+        tTransito += dtS;
+        for (j = 0; j < disp.length; j++) {
+          if (!conf[disp[j].id]) faltan.push(disp[j]);
+        }
+        if (!faltan.length && disp.length) {
+          estado = E.HAIL_SAFE_POSITION;
+          motivo = 'todas las filas disponibles confirmadas';
+        } else if (tTransito >= timeout && faltan.length) {
+          /* NUNCA «planta protegida» por timeout: el vencimiento del plazo
+             degrada a 6, jamás promueve a 5. Es el fallback del §10.2 y la
+             razón de que el estado 6 exista. */
+          estado = E.HAIL_PARTIAL_PROTECTION;
+          motivo = 'timeout ' + f0(timeout) + ' s con ' + faltan.length +
+            ' fila(s) sin confirmar: NUNCA «planta protegida» por timeout';
+        } else {
+          var conFallo = [];
+          for (j = 0; j < faltan.length; j++) {
+            if (faltan[j].fallo) conFallo.push(faltan[j].fallo);
+          }
+          if (conFallo.length) {
+            /* Degrada YA, sin esperar al plazo. El desenlace sería el mismo
+               —una fila con fallo tampoco confirma—, así que lo que esta rama
+               decide es el CUÁNDO: sin ella la máquina se pasa el timeout
+               entero en tránsito diciendo que la maniobra sigue viva. */
+            estado = E.HAIL_PARTIAL_PROTECTION;
+            var ms = conFallo.filter(function (v, ix) {
+              return conFallo.indexOf(v) === ix;
+            }).sort();
+            motivo = 'fallo declarado en fila(s): ' + ms.join(', ');
+          }
+        }
+
+      } else if (estado === E.HAIL_SAFE_POSITION) {
+        var perdidas = 0;
+        for (j = 0; j < disp.length; j++) if (!conf[disp[j].id]) perdidas++;
+        if (perdidas) {
+          estado = E.HAIL_PARTIAL_PROTECTION;
+          motivo = perdidas + ' fila(s) pierden posición desde segura ' +
+            '(§10.2, fallback del estado 5)';
+        }
+
+      } else { /* HAIL_PARTIAL_PROTECTION */
+        for (j = 0; j < disp.length; j++) {
+          if (!conf[disp[j].id]) faltan.push(disp[j]);
+        }
+        if (!faltan.length && disp.length) {
+          estado = E.HAIL_SAFE_POSITION;
+          motivo = 'todas recuperadas (§10.2, salida del estado 6)';
+        } else {
+          /* reintentos: SOLO dentro de envolvente y con tope n_retry. El §11
+             es explícito — el viento VETA el movimiento, no lo ordena, y un
+             reintento ES un movimiento. */
+          for (k = 0; k < faltan.length; k++) {
+            var f = faltan[k], hechos = reintentos[f.id] || 0;
+            if (hechos >= nRetry) continue;
+            var ult = (ultimoRetry[f.id] === undefined) ? -1e9 : ultimoRetry[f.id];
+            if ((i * dtS) - ult < tRetry) continue;
+            if (!dentro) {
+              diario.push('paso ' + i + ': reintento de la fila ' + f.id +
+                ' NO autorizado — fuera de envolvente (§11 prio 2a)');
+              continue;
+            }
+            reintentos[f.id] = hechos + 1;
+            ultimoRetry[f.id] = i * dtS;
+            diario.push('paso ' + i + ': reintento ' + (hechos + 1) + '/' +
+              nRetry + ' en la fila ' + f.id);
+          }
+        }
+      }
+
+      if (motivo && estado !== anterior) {
+        trans.push({ i: i, de: anterior, a: estado, motivo: motivo,
+                     pct_protegido: Math.round(p100 * 100) / 100 });
+        diario.push('paso ' + i + ': ' + anterior + ' → ' + estado + ' · ' +
+          motivo + ' · ' + p100.toFixed(1) + ' % protegido');
+      }
+      estados.push(estado);
+    }
+
+    return { estados: estados, transiciones: trans, diario: diario,
+             pct_protegido: pct, reintentos: reintentos,
+             not_modeled: FUERA_DE_C2 };
+  }
+
+  return {
+    E: E, ORDEN_ESTADOS: ORDEN_ESTADOS, REQUERIDOS: REQUERIDOS,
+    APARTADO: APARTADO, FUERA_DE_C2: FUERA_DE_C2,
+    faltantes: faltantes, confirmada: confirmada, simula: simula
+  };
+})();
+/* ═══════════ GRANIZO-EJECUCIÓN — fin ═══════════ */
 
 /* ── MULTI-AÑO ──
    Un año bueno o malo cambia el resultado y con uno solo no se ve cuánto. Se

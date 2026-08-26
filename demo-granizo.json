@@ -1771,7 +1771,7 @@
     "a": "HAIL_STOW_CONFIRMADO",
     "condicion": "posicion_verificada",
     "motivo": "posición verificada",
-    "explicacion": "posición supuesta alcanzada (sin máquina de ejecución: §10.2 no implementado)"
+    "explicacion": "posición supuesta alcanzada (aquí no hay flota que verificar; la máquina de EJECUCIÓN del §10.2 se simula aparte)"
    },
    {
     "i": 25,
@@ -1780,7 +1780,7 @@
     "a": "MANTENIMIENTO_DE_POSICIÓN",
     "condicion": "posicion_verificada",
     "motivo": "evento o permanencia mínima",
-    "explicacion": "posición supuesta alcanzada (sin máquina de ejecución: §10.2 no implementado)"
+    "explicacion": "posición supuesta alcanzada (aquí no hay flota que verificar; la máquina de EJECUCIÓN del §10.2 se simula aparte)"
    },
    {
     "i": 89,
@@ -1809,17 +1809,18 @@
    "16:13 — VIGILANCIA→PREALERTA: señal de granizo o célula en radio amplio · hail_1h 1.6 cm ≥ 1.0 cm en 2 actualizaciones",
    "16:20 — PREALERTA→PREPARACIÓN: amenaza creíble (Capa 2) · polígono intersecta · severidad high",
    "16:21 — PREPARACIÓN→HAIL_STOW_REACTIVO: ventana corta · T_nec 30 ≤ T_disp 49 < 60 min",
-   "16:23 — HAIL_STOW_REACTIVO→HAIL_STOW_CONFIRMADO: posición verificada · posición supuesta alcanzada (sin máquina de ejecución: §10.2 no implementado)",
-   "16:25 — HAIL_STOW_CONFIRMADO→MANTENIMIENTO_DE_POSICIÓN: evento o permanencia mínima · posición supuesta alcanzada (sin máquina de ejecución: §10.2 no implementado)",
+   "16:23 — HAIL_STOW_REACTIVO→HAIL_STOW_CONFIRMADO: posición verificada · posición supuesta alcanzada (aquí no hay flota que verificar; la máquina de EJECUCIÓN del §10.2 se simula aparte)",
+   "16:25 — HAIL_STOW_CONFIRMADO→MANTENIMIENTO_DE_POSICIÓN: evento o permanencia mínima · posición supuesta alcanzada (aquí no hay flota que verificar; la máquina de EJECUCIÓN del §10.2 se simula aparte)",
    "17:29 — MANTENIMIENTO_DE_POSICIÓN→RECUPERACIÓN: criterios de Capa 6 cumplidos · permanencia 68 min · 15 pasadas limpias · 15 min sin precipitación",
    "17:31 — RECUPERACIÓN→NORMAL: retorno verificado · retorno supuesto verificado"
   ]
  },
  "not_modeled": [
-  "La máquina de EJECUCIÓN (§10.2, 17 estados, nivel tracker) no está implementada. Lo que sale de aquí es la ORDEN y su urgencia, no su verificación fila a fila. El hueco tiene TRES partes y sus bloqueos son distintos; no las mezcle.",
-  "(1) El veto del §11 —viento fuera de envolvente PROHÍBE iniciar tránsito, estados 15-16 WIND_STOW_TRANSIT/WIND_MOVEMENT_LOCKOUT— NO está bloqueado por hardware: no necesita encoder, ni reintento, ni timeout. Necesita la serie de viento, que ya existe. Está pendiente de ENCARGO, no de datos. Hoy nada impide representar un tránsito a stow de granizo a través de una envolvente de viento: las dos máquinas no se conocen.",
-  "(2) La degradación 4->6 (HAIL_STOW_TRANSIT -> HAIL_PARTIAL_PROTECTION) es simulable con una flota inyectada —fila disponible / confirmada / fallida—, pero sus parámetros (N_retry, T_retry, timeout de confirmación) son del §19 y están PENDIENTES DE ENSAYO. Si se implementa, nacen sin valor, como los del §10.1: nada de defaults.",
-  "(3) La estrategia de detención o finalización cuando se excede la envolvente en mitad del tránsito (§10.2, estados 4 y 16, donde el informe escribe PENDIENTE DE INGENIERÍA las dos veces) y la maniobra parcial de LOW_SOC (§14) NO esperan código: esperan revisión de ingeniería Factiun. Además el §10.2 es herencia literal de Rev01.3 y no pasó por el repaso de la Rev01.4, al contrario que el §10.1 implementado aquí.",
+  "La máquina de EJECUCIÓN (§10.2, 17 estados, nivel tracker) está implementada EN PARTE. Lo que sale de aquí sigue siendo la ORDEN y su urgencia; la verificación fila a fila vive en `execution_machine` y se simula aparte, con la flota inyectada. El hueco tenía TRES partes con bloqueos distintos; dos están cerradas y la tercera no espera código.",
+  "(1) CERRADO. El veto del §11 —viento fuera de envolvente PROHÍBE iniciar tránsito, estados 15-16 WIND_STOW_TRANSIT/WIND_MOVEMENT_LOCKOUT— lo implementa `veto_transito` y esta misma máquina lo consulta antes de cualquier estado con orden. Nunca estuvo bloqueado por hardware: no necesitaba encoder, ni reintento, ni timeout.",
+  "(2) CERRADO. La degradación 4->6 (HAIL_STOW_TRANSIT -> HAIL_PARTIAL_PROTECTION) la simula `execution_machine` con la flota inyectada (fila disponible / confirmada / fallida). Sus parámetros (N_retry, T_retry, timeout de confirmación, tolerancia) son del §19 y siguen PENDIENTES DE ENSAYO: nacen sin valor y la máquina se NIEGA a correr sin ellos, como los del §10.1. Nada de defaults.",
+  "(3) ABIERTO, y no por falta de código. La estrategia de detención o finalización cuando se excede la envolvente en mitad del tránsito (§10.2, estados 4 y 16, donde el informe escribe PENDIENTE DE INGENIERÍA las dos veces) y la maniobra parcial de LOW_SOC (§14) esperan revisión de ingeniería Factiun. Además el §10.2 es herencia literal de Rev01.3 y no pasó por el repaso de la Rev01.4, al contrario que el §10.1.",
+  "Y siguen sin implementar los estados 7 a 17 del §10.2 (HAIL_ACTIVE, retorno, transversales, POST_EVENT_INSPECTION). `execution_machine` cubre 4, 5 y 6.",
   "T_necesario está PENDIENTE DE MEDICIÓN EN CAMPO (§9.1, bloqueante): el valor que se use aquí es una suposición del que llama, no una medida.",
   "Los ángulos de defensa NO los decide esta máquina: el §9.3 los asigna a Estructuras. Aquí solo sale la orden y su urgencia.",
   "Sin Meteomatics en vivo: la serie entra dada. Las estrategias B/C (cinemática de célula) se reducen al ETA que traiga la muestra; sin ETA, la ventana NO se clasifica y se dice."
