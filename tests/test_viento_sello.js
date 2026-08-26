@@ -104,6 +104,49 @@ const meteoSint = lat => {
         /41\.5763/.test(s4) && !/en pantalla: 38/.test(s4), s4);
   check('y avisa de que la casilla ya no coincide', /vuelve a simular/.test(s4), s4);
 
+  // ── LA VELOCIDAD DE SUELTA VIAJA CON EL RESULTADO ─────────────────
+  // La fila del pasivo ya enseñaba el DENOMINADOR —«1 fila de 20»— porque sin él
+  // el impacto de planta no es interpretable. Faltaba la otra mitad: a qué viento
+  // se suelta. Ese número manda en todo el caso y NO está medido: es un sustituto
+  // declarado del par de desembrague. Estaba en el anexo, no en la fila.
+  //
+  // Lo que hay que vigilar no es que aparezca un número: es que sea EL QUE SE
+  // CONFIGURÓ. Un literal fijo se vería igual mientras nadie mueva la casilla.
+  const filaPasivo = () => page.evaluate(() => {
+    const tr = [...document.querySelectorAll('#cmpCard tbody tr')]
+      .find(t => /PASIVO/.test(t.textContent));
+    return tr ? tr.children[0].textContent.replace(/\s+/g, ' ').trim() : '';
+  });
+
+  // La meteo inyectada de este arnés depende de la LATITUD: a 41,5° el viento
+  // no pasa de ~36 km/h y no cruzaría ninguno de los dos umbrales, así que la
+  // última comprobación pasaría por no haber nada que ver. Se mueve al sitio
+  // ventoso, donde 60 se cruza y 90 no — que es el régimen que separa los dos.
+  await page.fill('#lat', '43.2'); await page.dispatchEvent('#lat', 'input');
+  const vistas = {};
+  for (const v of ['90', '60']) {
+    await page.fill('#pasV', v); await page.dispatchEvent('#pasV', 'input');
+    await page.click('#run');
+    await page.waitForFunction(() => window.REP && REP.cases && REP.cases.PASIVO,
+                               { timeout: 90000 });
+    await page.waitForTimeout(400);
+    vistas[v] = { fila: await filaPasivo(),
+                  ev: await page.evaluate(() => REP.cases.PASIVO.n_events) };
+  }
+
+  check('la fila del pasivo dice a qué viento se suelta (' + vistas['90'].fila + ')',
+        /suelta a 90 km\/h/.test(vistas['90'].fila), vistas['90'].fila);
+  check('y va dicho que NO es una medida',
+        /no medida/.test(vistas['90'].fila), vistas['90'].fila);
+  check('sigue el valor CONFIGURADO, no un literal (90 -> 60)',
+        /suelta a 60 km\/h/.test(vistas['60'].fila), vistas['60'].fila);
+  check('sin perder el denominador, que era la otra mitad',
+        /1 fila de \d+ \(/.test(vistas['60'].fila), vistas['60'].fila);
+  // Lo que vuelve no-trivial a todo lo anterior: si el umbral no cambiara el
+  // resultado, enseñarlo al lado del resultado no serviría de nada.
+  check('y ese umbral CAMBIA el resultado (' + vistas['90'].ev + ' -> ' +
+        vistas['60'].ev + ' abanderamientos)', vistas['90'].ev !== vistas['60'].ev);
+
   check('la ficha no lanza errores de JS', errores.length === 0, errores.join(' | '));
   await browser.close();
   console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko) : '\nOK — ' + ok + '/' + ok + ' comprobaciones');
