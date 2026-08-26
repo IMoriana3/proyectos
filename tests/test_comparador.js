@@ -177,17 +177,51 @@ const ordJS = ordena(Object.fromEntries(Object.entries(js).map(([k, v]) => [k, {
 const ordCore = ordena(Object.fromEntries(Object.entries(core).map(([k, v]) => [k, { poa: v.poa_kwh_m2 }])));
 check('el orden entre estructuras es el mismo', ordJS === ordCore, '\n     JS   ' + ordJS + '\n     core ' + ordCore);
 
-// ── 5) magnitudes, con la tolerancia declarada ──
-const TOL_POA = 0.08, TOL_DELTA = 2.5;
+// ── 5) magnitudes: un TECHO de cordura y un TRINQUETE ──
+//
+// El techo (TOL_POA) estaba en el 8 % y la brecha real es del 0,7 al 1,4 %:
+// dejaba pasar seis veces lo que hay. Peor que holgado, era CIEGO para lo que
+// este careo existe para ver — cuando el core se corrigió la sombra del
+// circunsolar de Perez (#100), la POA se movió un 0,45 % y este banco pasó
+// verde con el golden viejo. Una tolerancia dieciocho veces mayor que el
+// cambio que vigila no vigila nada.
+//
+// Pero apretar el techo no basta, y conviene entender por qué: JS y core son
+// dos transposiciones DISTINTAS y se separan un 1,4 % por su cuenta, sin que
+// nadie se haya equivocado. Cualquier techo que tolere eso —2 %, 1,5 %— sigue
+// siendo mayor que el 0,45 % de una corrección de física de verdad. El techo
+// no puede ver ese tamaño. Nunca.
+//
+// Lo que sí puede es el TRINQUETE: la brecha JS↔core de cada estructura es
+// una función pura del golden y de este motor, y los dos cambian solo a
+// propósito. Así que se congela la brecha OBSERVADA y se exige que no se
+// mueva. Si el core gana una corrección que el JS no tiene, la brecha se abre
+// justo esa cantidad —0,45 pp— y salta, por debajo de lo que el techo alcanza.
+//
+// Regenerar el golden mueve estas cifras A PROPÓSITO: se actualizan en el
+// mismo commit que lo justifique por escrito, igual que el pin de la varita.
+const TOL_POA = 0.02, TOL_DELTA = 0.6;
+const BRECHA = {           // |JS/core − 1| en %, congelada
+  fija_optima: 0.92, fija_proyecto: 0.81, fija_ew: 1.36,
+  tracker_hsat: 1.09, tracker_hsat_nobt: 1.15, tracker_tsat: 0.68,
+};
+const BRECHA_VENTANA = 0.15;   // pp — menor que los 0,45 de #100, que es el punto
 C.structures.forEach(k => {
   const a = js[k], b = core[k];
   if (!a || !b) { check('falta ' + k, false); return; }
   const dPoa = Math.abs(a.neta / b.poa_kwh_m2 - 1);
-  check('POA de ' + k + ' dentro del ' + (TOL_POA * 100) + ' % (' + (dPoa * 100).toFixed(1) + ' %)',
+  check('POA de ' + k + ' dentro del ' + (TOL_POA * 100) + ' % (' + (dPoa * 100).toFixed(2) + ' %)',
     dPoa < TOL_POA, a.neta.toFixed(1) + ' vs ' + b.poa_kwh_m2.toFixed(1));
   const dDelta = Math.abs(a.delta - b.delta_pct);
   check('Δ% de ' + k + ' dentro de ' + TOL_DELTA + ' pp (' + dDelta.toFixed(2) + ' pp)',
     dDelta < TOL_DELTA, a.delta.toFixed(2) + ' vs ' + b.delta_pct.toFixed(2));
+  // el trinquete
+  const obs = dPoa * 100, esp = BRECHA[k];
+  check('la brecha JS↔core de ' + k + ' NO se ha movido (' + obs.toFixed(2)
+        + ' vs ' + esp.toFixed(2) + ' pp congelados)',
+    Math.abs(obs - esp) < BRECHA_VENTANA,
+    'se abrió/cerró ' + (obs - esp).toFixed(2) + ' pp: o el core cambió y el '
+    + 'motor JS no, o al revés');
 });
 
 // ── 5b) LOS BARRIDOS ──
