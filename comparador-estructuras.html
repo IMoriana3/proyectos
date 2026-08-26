@@ -338,9 +338,6 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       </div>
       <div class="two">
         <div class="field"><label>Ángulo máx °</label><input id="maxang" type="number" value="55"></div>
-        <div class="field"><label>&nbsp;</label>
-          <label class="chk" style="padding-top:9px"><input type="checkbox" id="btPend" checked>
-            backtracking <b>con la pendiente</b></label></div>
         <div class="field"><label>Eje del terreno °</label>
           <input id="axtilt" type="number" step="0.5" value="0" readonly
                  title="No se teclea: es la componente de la pendiente del sitio a lo largo del eje (§03.0). Un eje que sigue el terreno es un eje inclinado — por eso no hay una fila aparte de «eje inclinado»."></div>
@@ -1125,10 +1122,12 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
          `spec.tsat` se calculaba plano un eje que la escena dibujaba
          inclinado. */
       P0=axT?FIS.psTSAT(S.el,S.az,axT,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
-      /* El backtracking, con la pendiente o sin ella. Sin ella es lo que hace
-         el core —y es por donde entra el careo—; con ella es lo que hace pvlib
-         y lo que hace un seguidor de verdad en un campo en cuesta. */
-      planos=[FIS.theta(P0.ps,gcr,cfg.maxang,spec.bt,cfg.btPend?cruz:0)];
+      /* El backtracking, CON la pendiente ⊥ a las filas. Hubo un tiempo —dos
+         horas— en que esto fue un interruptor, porque el core backtrackeaba en
+         llano y había que poder careadr contra él. Ya no: el core lleva
+         `cross_axis_tilt` desde SolarGPT v1.70.0, así que hay un solo modelo y
+         el careo entra por él. */
+      planos=[FIS.theta(P0.ps,gcr,cfg.maxang,spec.bt,cruz)];
     }else if(spec.fam==='fija_ew'){
       P0=FIS.psTracker(S.el,S.az,cfg);                // aguas al este y al oeste
       planos=[tilt,-tilt];
@@ -1714,7 +1713,6 @@ function cfgActual(){
     maxang:+$('maxang').value, tilt:+$('tilt').value, tiltEW:+$('tiltEW').value,
     pend:+$('pend').value, pendAz:+$('pendAz').value,
     desvFija:+$('desvFija').value, desvEje:+$('desvEje').value,
-    btPend:$('btPend').checked,
     axTilt:+$('axtilt').value, igualado:$('igualar').checked,
     geomDe:function(spec){return spec.fam==='tracker'?K:F;}
   };
@@ -1874,7 +1872,7 @@ function refrescaGeom(){
 }
 var CAMPOS_GEOM=['fxModL','fxModW','fxWp','fxTabla','fxPitch','fxModsStr','fxNStr','fxGapMod','fxGapMot',
                  'tkModL','tkModW','tkWp','tkTabla','tkPitch','tkModsStr','tkNStr','tkGapMod','tkGapMot',
-                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend','pendAz','desvFija','desvEje','btPend'];
+                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend','pendAz','desvFija','desvEje'];
 CAMPOS_GEOM.forEach(function(id){
   var el=$(id); if(!el)return;
   el.addEventListener('input',refrescaGeom); el.addEventListener('change',refrescaGeom);
@@ -2737,10 +2735,10 @@ function avisoBacktracking(f){
     'mucho más que su fracción, así que por POA el backtracking casi nunca gana — renuncia a '+
     'apuntar para quitarse una sombra que este modelo cobra barata. Esta tabla no decide si '+
     'compensa: eso se decide en DC/AC.';
-  if(cruz>0.5)t+=' Además, el ángulo se calcula <b>en llano</b> —es lo que hace el core— y con '+
-    fmt(cruz,1)+'° ⊥ a las filas deja de evitar la sombra: le quedan '+fmt(bt.sombra,2)+' % '+
-    'contra el '+fmt(nb.sombra,2)+' % del que no lo lleva. pvlib sabe backtrackear con la '+
-    'pendiente (<i>cross_axis_tilt</i>); el core no lo usa.';
+  if(cruz>0.5)t+=' Con '+fmt(cruz,1)+'° ⊥ a las filas el ángulo se calcula <b>con la '+
+    'pendiente</b> (<i>cross_axis_tilt</i>, como pvlib y como el core desde SolarGPT v1.70.0), '+
+    'así que sigue quitando la sombra: le quedan '+fmt(bt.sombra,2)+' % contra el '+
+    fmt(nb.sombra,2)+' % del que no lo lleva.';
   return t;
 }
 
@@ -3564,7 +3562,7 @@ function actualiza3D(){
     if(spec.fam==='tracker'){
       var ax3=FIS.ejeTilt(cfg,spec);
       var P=ax3?FIS.psTSAT(S.el,S.az,ax3,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
-      th=(elDeg>0)?FIS.theta(P.ps,B.gcr,cfg.maxang,spec.bt,cfg.btPend?B.cruz:0):0;
+      th=(elDeg>0)?FIS.theta(P.ps,B.gcr,cfg.maxang,spec.bt,B.cruz):0;
       B.filas.forEach(function(u){
         /* SIGNO. El grupo del seguidor entra girado 90° en Y, así que su +X
            local (el tubo) apunta al NORTE y su +Z local al ESTE. Girar POSITIVO

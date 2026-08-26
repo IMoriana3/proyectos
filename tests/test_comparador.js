@@ -99,7 +99,7 @@ if (MAN) {
   // estructura). El hueco JS<->core NO se movio: sigue en 1,36 % de POA
   // (fija_ew) y 0,367 pp de delta, asi que las tolerancias se quedan donde
   // estaban. Lo unico que cambia es contra que core esta sellado el golden.
-  const CORE_PIN = { version: '1.69.0', commit: '82af2aa1' };
+  const CORE_PIN = { version: '1.70.0', commit: 'f67c555d' };
   check('el golden corresponde al core fijado (v' + CORE_PIN.version + ')',
     MAN.core.version === CORE_PIN.version,
     'golden v' + MAN.core.version + ' vs pin v' + CORE_PIN.version +
@@ -435,13 +435,17 @@ check('el relativo del tilt es 0 en el óptimo y negativo fuera',
   Math.abs(bt.optimo.rel) < 1e-9 && bt.puntos.every(q => q.rel <= 1e-9));
 
 // ── 6) la física está viva, no devuelve constantes ──
-check('con pendiente (' + C.cross_axis_slope_deg + '°) el backtracking YA NO deja la sombra a ' +
-  'cero (' + js.tracker_hsat.sombra.toFixed(2) + ' %): el ángulo se calcula en llano',
-  js.tracker_hsat.sombra > 0.5);
+// Esto medía lo contrario hasta SolarGPT v1.70.0: el ángulo se calculaba en
+// llano y con pendiente quedaba un 3,7 % de sombra residual. Ahora el core lleva
+// `cross_axis_tilt` (pvlib), la ficha también, y el backtracking sigue haciendo
+// su trabajo en cuesta.
+check('con pendiente (' + C.cross_axis_slope_deg + '°) el backtracking SIGUE quitando la ' +
+  'sombra (' + js.tracker_hsat.sombra.toFixed(2) + ' %): el ángulo va con la pendiente',
+  js.tracker_hsat.sombra < 0.5);
 /* 1,0 pp absoluto sobre una sombra de ~4 % era un 25 % relativo de aire: la
    deriva que se coló medía 0,44 pp. Lo medido hoy contra el core al día es
    0,07 pp. */
-check('y esa sombra residual es la que dice el core (' + core.tracker_hsat.sombra_pct.toFixed(2) + ' %)',
+check('y esa sombra —la que quede— es la que dice el core (' + core.tracker_hsat.sombra_pct.toFixed(2) + ' %)',
   Math.abs(js.tracker_hsat.sombra - core.tracker_hsat.sombra_pct) < 0.5,
   js.tracker_hsat.sombra.toFixed(2) + ' vs ' + core.tracker_hsat.sombra_pct.toFixed(2));
 // y en LLANO sí se va a cero, que es la razón de ser del backtracking
@@ -449,8 +453,17 @@ const llano = FIS.compara(['tracker_hsat', 'tracker_hsat_nobt'], M, { ...cfg, pe
 const llanoBt = llano.filas.find(f => f.key === 'tracker_hsat');
 check('en terreno LLANO el backtracking sí deja la sombra a cero (' +
   llanoBt.sombra.toFixed(3) + ' %)', llanoBt.sombra < 0.5, llanoBt.sombra.toFixed(3));
-check('la pendiente EMPEORA el backtracking (' + llanoBt.sombra.toFixed(2) + ' → ' +
-  js.tracker_hsat.sombra.toFixed(2) + ' %)', js.tracker_hsat.sombra > llanoBt.sombra + 0.5);
+check('y la pendiente ya no lo estropea (' + llanoBt.sombra.toFixed(2) + ' → ' +
+  js.tracker_hsat.sombra.toFixed(2) + ' %)',
+  js.tracker_hsat.sombra < llanoBt.sombra + 0.5);
+/* El guardia del guard: si el SOMBREADO hubiera dejado de ver la pendiente, la
+   comprobación de arriba daría verde por la razón equivocada. Sin backtracking
+   la pendiente tiene que seguir notándose. */
+const llanoNb = llano.filas.find(f => f.key === 'tracker_hsat_nobt');
+check('sin backtracking la pendiente SÍ se sigue notando (' + llanoNb.sombra.toFixed(2) +
+  ' → ' + js.tracker_hsat_nobt.sombra.toFixed(2) + ' %)',
+  js.tracker_hsat_nobt.sombra > llanoNb.sombra + 0.3,
+  llanoNb.sombra.toFixed(2) + ' vs ' + js.tracker_hsat_nobt.sombra.toFixed(2));
 check('sin backtracking SÍ hay sombra (' + js.tracker_hsat_nobt.sombra.toFixed(2) + ' %)',
   js.tracker_hsat_nobt.sombra > js.tracker_hsat.sombra + 0.5);
 check('sin backtracking apunta mejor: más POA ideal',

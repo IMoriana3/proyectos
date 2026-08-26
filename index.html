@@ -682,7 +682,7 @@ const PROJECTS = [
     updated: "2026-06-22",
     version: "",
     docId: "",
-    docUrl: "",
+    docUrl: "https://raw.githubusercontent.com/imoriana3/siting/main/README.md",
     uso: [
       "Sube los seguidores en CSV (lat,lng o x,y; opcional power_block, id) o el Excel del proyecto. Hay botón de plantilla.",
       "Ajusta alcance y capacidades; autoubica NCUs/RSU/GW y exporta la asignación TCU→NCU→GW."
@@ -1089,7 +1089,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/comparador-estructuras.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-26",
-    version: "1.47",
+    version: "1.48",
     docId: "comparador-estructuras",
     docUrl: "",
     download: "",
@@ -1134,6 +1134,7 @@ const PROJECTS = [
       { done:false, text:"Enganchar el LCOE (motor /economy) para que al lado del ranking de kWh salga el de €/MWh." }
     ],
     historial: [
+      { date:"2026-08-26", ver:"1.48", note:"EL CORE ADOPTA cross_axis_tilt, así que fuera el interruptor: hay un solo modelo de backtracking y el careo entra por él. El agujero estaba en solargpt_core/poa.py — compute_tracker_poa_v2 recibía cross_axis_slope_deg y lo pasaba al sombreado (shaded_fraction1d) pero NO a pvlib.tracking.singleaxis, así que el seguidor se aplanaba para un campo llano que no era el suyo. Arreglado en SolarGPT v1.70.0 con sus cinco tests, y dado la vuelta al test que medía justo lo contrario («1° de pendiente rompe el backtracking sin sombra: picos del 50 %»), que ahora exige que NO se rompa y lleva el guardia que le faltaba. Careo regenerado contra ese core: a 8° de pendiente el core da 0,16 % de sombra residual y la ficha 0,20 %, donde antes eran 3,74 y 4,11. Y el aviso de la tabla cambia de sentido: ya no dice que el ángulo se calcule en llano, dice cuánta sombra queda." },
       { date:"2026-08-26", ver:"1.47", note:"La cámara se metía bajo el terreno. `maxPolarAngle` solo impide bajar del plano horizontal que pasa por el objetivo, y eso no basta en cuanto hay pendiente o se desplaza la vista: con la ladera subiendo, el suelo bajo la cámara puede estar por encima de ella y la escena se ve desde dentro de la tierra. Ahora se acota contra el terreno de verdad —que con un plano cuesta dos multiplicaciones—: la cámara a 1,5 m del suelo y el objetivo a 0,5, así que si la metes debajo sale sola." },
       { date:"2026-08-26", ver:"1.46", note:"Tres cosas. (1) UNA FIJA NO SIGUE EL TERRENO: se monta al tilt de proyecto y lo que compensa la pendiente a lo largo de sus filas es la longitud de las hincas — 12° de cuesta y la mesa sigue a 25°. Antes se escoraba la mesa entera con el suelo, que es lo que hace un seguidor, y el tilt dibujado dejaba de ser el tecleado. Cada lectura de fija dice ahora el rango de hinca (con 12° a lo largo de 65 m, de 0,3 a 8,8 m) y cuando saldría NEGATIVA lo declara: hay que bancalear. Con la pendiente ⊥ a las filas las hincas ni se enteran. (2) BACKTRACKING CON LA PENDIENTE, la fórmula de pvlib (cross_axis_tilt): con x=0 sale la de siempre cifra a cifra —por ahí entra el careo, porque el core backtrackea en llano— y con la pendiente metida la sombra residual se va a 0,0000 donde era 4,3 % a 8°. Va con interruptor, marcado por defecto, para poder ver la diferencia. (3) El buscador de sim-viento anunciaba «Buscando en Open-Meteo…» al pegar coordenadas, cuando con coordenadas la búsqueda remota ni se lanza: el aviso se quedaba puesto para siempre y se leía como que la red no responde." },
       { date:"2026-08-26", ver:"1.45", note:"«Sin backtracking» sale por delante de «con backtracking» y la tabla no decía por qué. Dos avisos, porque el número invita a leer lo contrario de lo que dice: (1) la comparación es de POA y la pérdida por sombra entra como fracción sombreada del plano, LINEAL — en un string real una sombra parcial cuesta mucho más que su fracción, así que por POA el backtracking casi nunca gana; lo decide la energía DC/AC, que es otra ficha. (2) El ángulo de backtracking se calcula EN LLANO, que es lo que hace el core y por eso el careo cuadra: con pendiente ⊥ a las filas deja de evitar la sombra — a 12° al este le quedan 7,1 % contra el 11,0 % del que no lo lleva. pvlib sabe backtrackear con la pendiente (cross_axis_tilt); el core no lo usa y la ficha no se lo inventa: lo dice. El segundo aviso solo sale cuando hay pendiente ⊥ que lo justifique." },
@@ -1240,28 +1241,6 @@ const PROJECTS = [
       { date:"2026-08-06", ver:"11.0", note:"Las alarmas del bloque de la NCU se decodifican con SU tabla de bits, no con la de la TCU: eran mapas distintos." },
       { date:"2026-08-05", ver:"2.3", note:"NCU completa con puerto automático, CSV de plantas y TCU 109 (fusión con la versión de campo)." },
       { date:"2026-08-04", ver:"2.1", note:"Mapa v6.1 completo, diagnóstico con alarmas en texto, reloj, identidad, backups y filtro de variables." }
-    ]
-  },
-  {
-    name: "Diseño de red de comunicaciones · demo",
-    status: "demo",
-    objetivo: "Emplazamiento de NCU, TCU, HSU y repetidores sobre la geometría real de la planta.",
-    stack: "HTML · PWA",
-    url: "https://imoriana3.github.io/siting/",
-    repo: "https://github.com/imoriana3/siting",
-    updated: "2026-06-16",
-    version: "",
-    docId: "",
-    docUrl: "https://raw.githubusercontent.com/imoriana3/siting/main/README.md",
-    download: "",
-    uso: [
-      "Fichero: index.html.",
-      "Geometría real de seguidores de El Burgo I desde plantillas Excel.",
-      "Coordenadas de motores FUV I/II importadas desde CSV."
-    ],
-    pendientes: [],
-    historial: [
-      { date:"2026-06-08", ver:"", note:"Añadida geometría real El Burgo I y CSVs de motores FUV I/II." }
     ]
   },
   {
@@ -1570,7 +1549,7 @@ const PLANT_VIEWS = [
 /* Módulos que YA viven en una planta (sección Plantas): no se repiten abajo en Herramientas */
 const PLANT_MODULES = new Set([
   "Visor de levantamiento", "Visor de geometría as-built",
-  "Diseño de red de comunicaciones · demo", "Diagnóstico de cobertura Zigbee"
+  "Diagnóstico de cobertura Zigbee"
 ]);
 const TOOLS = PROJECTS.filter(p => !PLANT_MODULES.has(p.name));   // Herramientas = solo lo genérico (no de planta)
 

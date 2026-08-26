@@ -161,7 +161,7 @@ hizo con buscador, sin poder abrir las fuentes primarias.*
 | **Arctech · AI tracking** | terreno + nubes + bifacial + inversores | mkt hasta 7 % total; **nubes 0,5–2 %** (white paper propio) | — |
 | **GameChange · WeatherSmart** | distingue sombreado aleatorio de día cubierto | **hasta 1,5 % anual** (mkt) | **+6,02 % validado** (Enertis 2024); mkt hasta 13 % |
 | **PVH · Diffuse Control** (dic-2024) | side-by-side de dos plantas contiguas | +1,5 % anual medido en sitio nublado ⚠ *no re-verificado en 2026-08* | hasta +20 % días muy cubiertos (PVH) |
-| **Soltigua · MaxRad** | rota a posición menos inclinada | — | hasta +7 % nublados de verano (mkt) |
+| **Soltigua · MaxRad** | rota a posición menos inclinada, con el beneficio recalculado y enviado a cada controlador | **> 1 % en Centroeuropa** (fabricante, sitios con nublado frecuente) | hasta +7 % nublados de verano (fabricante) |
 
 **Lectura honesta**: los «hasta 5–8 %» son paquetes completos (terreno + difuso + bifacial) y
 marketing. El **modo difuso aislado converge en ~0,4–1,5 % anual** en climas templados y **5–13 %
@@ -185,6 +185,20 @@ revisados por pares, ninguno de un fabricante:
   +7,83 % en un día nublado y ~+1,2 % de media** frente a un algoritmo comercial. Es la
   corroboración independiente más directa de nuestro rango: un punto y pico de media, no un 5 %.
 
+- **Solar RRL 8:2300507 (2024)**, Muñoz *et al.* (UPM): compara tres algoritmos contra el
+  astronómico en **ocho emplazamientos**, midiendo irradiancia en plano, potencia DC monofacial y
+  —esto es lo interesante— el **número de movimientos**. Dos de los tres optimizan la difusa; el
+  tercero, «Analytical», calcula el ángulo óptimo con **todas** las componentes: es la forma cerrada
+  que §1 mencionaba. Resultado: el Analytical gana a los otros dos y llega a **+3 % sobre el
+  astronómico en sitios de alta fracción difusa**.
+
+  **Matiz, porque el número invita a confundirse**: ese +3 % es *contra el astronómico puro* y en
+  emplazamientos muy nublados. Nuestra medida de la cota (≤ 0,049 %) es *contra el barrido de cinco
+  α del core*, que ya es un optimizador de difusa — no contra el astronómico. Las dos cosas pueden
+  ser ciertas a la vez, y de hecho lo son: el salto grande es pasar de **no optimizar a optimizar**;
+  el salto de **optimizar bien a optimizar perfecto** es despreciable. Es la conclusión de §4 vista
+  desde fuera.
+
 **Nota de método (2026-08-26).** Esta revisión se hizo **solo con buscador**: el entorno no permitió
 abrir ninguna de las fuentes primarias (pv-magazine, pv-tech, MDPI, OSTI, webs de fabricante
 estaban todas bloqueadas), así que las cifras nuevas provienen de resúmenes de resultados y **no se
@@ -198,6 +212,7 @@ han contrastado contra el documento original**. Lo que sí cambió respecto a ag
 | Array · «hasta 5 %» (DNV GL) | confirmada; **sigue sin publicar cifra separada del difuso** |
 | Arctech · hasta 7 % total | confirmada; DNV·GL avala la fiabilidad de los datos publicados |
 | TrinaTracker | **ampliada** con +2,21 % media anual, +9,15 % cubierto y +3,84 % en Nangong |
+| Soltigua · sin cifra anual | **cerrada**: > 1 % en Centroeuropa, dato de fabricante, sin tercero |
 | PVH · +1,5 % anual | ⚠ **no re-verificada**: en las fuentes accesibles solo aparece el «hasta 20 % en días nublados». Tratarla como dato de fabricante hasta poder abrir el original |
 
 Antes de usar cualquiera de estas cifras delante de un cliente, conviene abrir la fuente primaria
@@ -213,6 +228,11 @@ de §4 se sostiene sobre NREL y sobre los dos papers de arriba.
 2. **Vender la cifra honesta**: en Iberia, difuso aislado ≈ 0,3–1 % anual según sitio (más en
    Cantábrico/Galicia que en el valle del Ebro); en días cubiertos, +5–12 %. Prometer el «hasta
    5 %» del marketing ajeno nos pondría en la casilla de los que mezclan efectos.
+   *Contrastado (2026-08)*: la horquilla aguanta. Muñoz *et al.* llegan a +3 % **frente al
+   astronómico** en sitios de alta fracción difusa —no frente a un optimizador de difusa, que es
+   nuestra referencia—, el estudio brasileño mide ~+1,2 % de media contra un algoritmo comercial y
+   Soltigua declara «> 1 %» en Centroeuropa. Todo apunta al mismo sitio: un punto y pico donde
+   llueve.
 3. **La TCU puede ejecutarlo hoy**: solo necesita GHI (o la POA estimada del propio string como
    proxy) y la máquina confirm/dwell — sin sensórica nueva. El salto siguiente (zonal,
    anticipación por nowcasting) requiere NCU con visión de planta, la misma arquitectura que el
@@ -230,13 +250,14 @@ Anderson & Aneja 2022 (IEEE PVSC 49, NREL) · *Solar Energy* 2018 (estudio europ
 *Solar Energy* 2025 (óptimo analítico bajo cualquier cielo) · Adinolfi Borea et al. 2026
 (*Electronics* 15:597, 29-ene-2026, persistencia temporal; medidas de campo de marzo de 2025,
 mono y bifacial; copia en OSTI) · *Sensors* 24(12):3890 (IA sobre bifacial, NE de Brasil:
-+7,83 % un día nublado, ~+1,2 % de media frente a un algoritmo comercial) · pvlib issue #1694 ·
++7,83 % un día nublado, ~+1,2 % de media frente a un algoritmo comercial) · *Solar RRL* 8:2300507 (2024), Muñoz et al., UPM
+(tres algoritmos frente al astronómico en 8 sitios, con número de movimientos) · pvlib issue #1694 ·
 PVsyst docs (Engerer2) ·
 Nextracker (datasheet TrueCapture, Zonal Diffuse PR, TaiyangNews, Quintas, ICF) · Array
 (SmarTrack Diffuse, GlobeNewswire 2020/2025) · Soltec (TÜV Rheinland vía pv magazine / Solar
 Builder, whitepaper TeamTrack) · TrinaTracker (SGS vía pv magazine, SolarQuarter) · Arctech
 (SolarQuarter 2021) · GameChange (PRNewswire/Enertis 2024) · PVH (Solar Power World / pv magazine
-dic-2024) · Soltigua (MaxRad) · patentes USPTO citadas en el texto.
+dic-2024) · Soltigua (web de MaxRad) · patentes USPTO citadas en el texto.
 
 ## Uso
 
