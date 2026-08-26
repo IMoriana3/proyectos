@@ -388,6 +388,41 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-26 · AYORA, DIAGNÓSTICO CON IMPORTE** — confirmado en planta que **Ayora no tiene
+  configurada ninguna pendiente ni ningún azimut**. Eso la sitúa en la columna «sin configurar» de
+  todas las tablas y convierte el ejercicio en un diagnóstico con precio. El precio es incómodo y por
+  eso conviene tenerlo escrito.
+
+  **Careo A→B con la base correcta** (misma política, lo único que cambia es el contenido del
+  registro; el careo anterior usaba `bt2d` de referencia, que ya se estableció que es otra política):
+  21-mar 7,477 → 7,476 (**−0,01 %**) · 21-jun 11,030 → 11,053 (**+0,21 %**) · 21-sep 7,433 → 7,432
+  (**−0,00 %**) · 21-dic 2,978 → 2,972 (**−0,19 %**) · **media 7,229 → 7,233 = +0,05 %**. Frente a
+  eso, el 3D completo da **+0,48 %**.
+
+  **Escribir las pendientes en las 754 TCU de Ayora no merece la pena**: cinco centésimas de punto,
+  dentro del ruido de cualquier medida de campo, y negativo en tres de los cuatro días de referencia.
+  La razón es la planta, no el método — con 0,56° de desnivel mediano entre filas contiguas no hay
+  relieve que corregir. El valor está en el 3D, y **el 3D no se consigue escribiendo registros: pide
+  NCU**, que es lo que El Burgo tiene y Ayora no. Decirlo tiene un coste comercial evidente y es la
+  única versión que aguanta que el cliente mire su curva de producción dentro de un año.
+
+  **`tools/sensib_azimut.mjs` — la otra mitad de la pregunta, cerrada.** Los planos van en UTM y **el
+  norte de la cuadrícula UTM no es el norte verdadero**: la diferencia es la convergencia de
+  meridianos, γ = atan(tan(λ−λ₀)·sin φ). En Ayora (EPSG:25830, huso 30N, meridiano central −3°) vale
+  **1,161°**, y como los 754 seguidores llevan `rot = 0` están replanteados paralelos a la cuadrícula,
+  así que su azimut verdadero es ese y la TCU tiene 0. **Medido lo que cuesta no saberlo:** 0,000° →
+  +0,000 % (control del método, exacto) · **1,161° → −0,025 %** · 3° → −0,090 % · 5° → −0,183 %. **No
+  importa**, y por tanto **no compensa mandar a nadie a comprobar el replanteo con GPS**. Un resultado
+  negativo medido vale tanto como uno positivo: éste ahorra el viaje.
+
+  **Y una explicación cómoda que era falsa.** Se escribió primero que el error «entra por un coseno,
+  así que va con el cuadrado del desvío». Lo desmiente la propia tabla que tenía encima: de 1° a 5° la
+  pérdida se multiplica por **7,6**, no por 25 — exponente ≈1,26, **casi lineal**. Es pequeño por una
+  razón más simple: un grado sobre un eje que barre ±55° perturba la geometría un 2 %. La versión
+  cuadrática llegó a colarse en el documento de cliente **contradiciendo la tabla de arriba**, que es
+  justo el tipo de contradicción en pantalla que la casa considera un fallo. Corregida en la
+  herramienta y en el documento.
+
 - **2026-08-26 · v1.36 · herramientas** — **`tools/careo_sombra.mjs`: la pregunta que el cliente hace
   ANTES que los kWh.** «¿Mi planta se hace sombra, y de quién es la culpa?» no se contesta con un
   porcentaje de energía. Se contesta hora a hora y separando dos cosas que en una gráfica parecen la
