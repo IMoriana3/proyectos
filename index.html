@@ -682,7 +682,7 @@ const PROJECTS = [
     updated: "2026-06-22",
     version: "",
     docId: "",
-    docUrl: "",
+    docUrl: "https://raw.githubusercontent.com/imoriana3/siting/main/README.md",
     uso: [
       "Sube los seguidores en CSV (lat,lng o x,y; opcional power_block, id) o el Excel del proyecto. Hay botón de plantilla.",
       "Ajusta alcance y capacidades; autoubica NCUs/RSU/GW y exporta la asignación TCU→NCU→GW."
@@ -1241,28 +1241,6 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Diseño de red de comunicaciones · demo",
-    status: "demo",
-    objetivo: "Emplazamiento de NCU, TCU, HSU y repetidores sobre la geometría real de la planta.",
-    stack: "HTML · PWA",
-    url: "https://imoriana3.github.io/siting/",
-    repo: "https://github.com/imoriana3/siting",
-    updated: "2026-06-16",
-    version: "",
-    docId: "",
-    docUrl: "https://raw.githubusercontent.com/imoriana3/siting/main/README.md",
-    download: "",
-    uso: [
-      "Fichero: index.html.",
-      "Geometría real de seguidores de El Burgo I desde plantillas Excel.",
-      "Coordenadas de motores FUV I/II importadas desde CSV."
-    ],
-    pendientes: [],
-    historial: [
-      { date:"2026-06-08", ver:"", note:"Añadida geometría real El Burgo I y CSVs de motores FUV I/II." }
-    ]
-  },
-  {
     name: "Diagnóstico de cobertura Zigbee",
     status: "build",
     objetivo: "Medición sobre imagen satélite de la cobertura Zigbee desplegada: nivel de señal, nodos sin respuesta, saltos y criticidad de cada unidad.",
@@ -1568,7 +1546,7 @@ const PLANT_VIEWS = [
 /* Módulos que YA viven en una planta (sección Plantas): no se repiten abajo en Herramientas */
 const PLANT_MODULES = new Set([
   "Visor de levantamiento", "Visor de geometría as-built",
-  "Diseño de red de comunicaciones · demo", "Diagnóstico de cobertura Zigbee"
+  "Diagnóstico de cobertura Zigbee"
 ]);
 const TOOLS = PROJECTS.filter(p => !PLANT_MODULES.has(p.name));   // Herramientas = solo lo genérico (no de planta)
 
