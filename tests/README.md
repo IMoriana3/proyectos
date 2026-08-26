@@ -52,7 +52,9 @@ porque llamar «Túnez» a otras coordenadas es poner nombre de planta a otro em
 enseña juntas pero en bloques sintéticos iguales, y la planta real enseña la geometría de verdad pero movida
 por UNA. Esto es lo de en medio. Comprueba que las franjas son disjuntas y equilibradas, que **cada una mueve
 sus trackers con SU estrategia leyendo las matrices de instancia** —no el estado interno— y que en la franja
-del pasivo solo el borde está suelto. El layout se **inyecta** con `page.route`: los de verdad viven en el
+del pasivo solo el borde está suelto. Cubre además que la tarjeta distinga **la consigna de lo ejecutado**: con el viento a 111 km/h y el reloj parado, las cuatro estrategias motorizadas están en `FULL STOW` y a **θ 0°** —la orden está dada, el hierro no ha llegado— mientras el pasivo ya está a −55° porque no lo mueve un motor, **cae**. Sin decirlo, la pantalla se lee como «solo se abanderan dos». Sus mutantes: quitar la consigna del stepper tira 2 comprobaciones, y bajar el umbral de 2° tira la que exige que el seguidor sin abanderar **no** se marque por su retardo natural de un grado al mediodía.
+
+El layout se **inyecta** con `page.route`: los de verdad viven en el
 Pages de `cobertura-zigbee` y sin red no hay planta, así que la única prueba de esta pantalla no puede
 depender de que un host de terceros esté arriba. Ojo al **régimen**, que aquí mordió dos veces: con el reloj
 parado el seguidor no ha llegado a su ángulo y las seis franjas están a 0°; y a 45 km/h el pasivo no se ha
@@ -154,10 +156,10 @@ node tests/test_sizing.js                  # 115 comprobaciones, careo del dimen
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
 node tests/test_viento_ejes.js             # 77 comprobaciones, lienzos, ejes, transmisión, reproductor, sombras y franjas
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
-node tests/test_viento_planta.js           # 15 comprobaciones, la planta real en franjas
+node tests/test_viento_planta.js           # 20 comprobaciones, la planta en franjas y consigna vs ejecutado
 node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core
 node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo
 node tests/test_granizo_pestana.js         # 22 comprobaciones, la pestaña de granizo en Chromium
 node tests/test_layout.js                  # 196 comprobaciones, careo del generador de layout
-node tests/test_layout_ui.js               # 155 comprobaciones, el generador en Chromium
+node tests/test_layout_ui.js               # 179 comprobaciones, el generador en Chromium
 ```

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0B0F14">
 <link rel="icon" href="favicon.svg">
-<title>Generador de layout — Factiun</title>
+<title>Generador de implantaciones — Factiun</title>
 <!-- sin fuentes de Google: offline (fuentes del sistema) -->
 <style>
 :root{
@@ -161,8 +161,14 @@ canvas.panning{cursor:grabbing}
 <body>
 <header class="bar">
   <a class="back" href="index.html">← Panel</a>
-  <h1>Generador de layout</h1>
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador</span>
+  <h1>Generador de implantaciones</h1>
+  <!-- La versión VISIBLE en la propia página («no pone versión», 2026-08-21):
+       hasta ahora solo vivía en la ficha del panel, así que desde el generador
+       era imposible saber si el service worker te había servido la build
+       nueva o la cacheada. Se espeja de la ficha (index.html, docId
+       generador-layout) y test_integridad.js exige que las dos coincidan —
+       un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.4.7</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -458,13 +464,19 @@ canvas.panning{cursor:grabbing}
         <button class="btn ghost small mini" id="zIn" title="Acercar">+</button>
         <button class="btn ghost small mini" id="zOut" title="Alejar">−</button>
         <button class="btn ghost small mini" id="fit" title="Encajar la parcela en el lienzo">⤢ Encajar</button>
+        <!-- La varita vive en la barra del MAPA, no en el panel de dibujo: su
+             primer usuario no la encontró porque el panel solo se ve en modo
+             «Dibujarla sobre el lienzo» («no encuentro la varita», 2026-08-21
+             — la lección de «alinear a rejilla»: si no se encuentra, está mal
+             puesta). Al armarla, ella sola cambia al modo dibujo. -->
+        <button class="btn ghost small mini" id="varitaBtn" title="Propone un BORRADOR editable del contorno a partir del COLOR de la ortofoto — no es un detector de lindes: revísalo y retócalo siempre. Clics sucesivos SUMAN zonas vecinas; Alt+clic descarga la escena como fixture para el banco. La linde oficial es la del Catastro/SIGPAC.">🪄 Borrador de parcela</button>
         <select id="render" class="minisel" title="Cómo se pintan las mesas">
           <option value="auto">Render: auto</option>
           <option value="poly">Polígonos</option>
           <option value="line">Líneas</option>
         </select>
         <label class="chk mini2"><input type="checkbox" id="showDisc"> descartadas</label>
-        <label class="chk mini2"><input type="checkbox" id="showAxis" checked> eje bifila</label>
+        <label class="chk mini2"><input type="checkbox" id="showAxis" checked> viga y eje</label>
         <span class="maphint" id="mapHint">arrastra para mover · rueda para acercar</span>
       </div>
       <canvas id="cv" width="1000" height="700"></canvas>
@@ -2260,6 +2272,7 @@ function empiezaDibujo(dest){
   pintaBotonesDibujo(); draw();
 }
 function cierraDibujo(){
+  varitaArmada=false;varitaReset();$('varitaBtn').textContent='🪄 Borrador de parcela';
   if(drawing&&DRAW){
     // Una LÍNEA vale con dos puntos: una zanja o una línea eléctrica no es un
     // polígono, y exigirle tres vértices sería pedirle que se cierre.
@@ -2278,7 +2291,314 @@ $('exclStart').onclick=function(){empiezaDibujo('exclusion');};
 $('lineStart').onclick=function(){empiezaDibujo('linea');};
 $('drawClear').onclick=function(){DRAW=[];PARCEL=null;drawing=false;pintaBotonesDibujo();draw();tagParcel();autoguarda();};
 $('exclClear').onclick=function(){EXCL=[];EXCL_LINEAS=[];tagParcel();draw();autoguarda();};
+/* ── 🪄 VARITA: detectar el contorno de un campo en la ORTOFOTO ──
+   Detección VISUAL, no catastral: flood-fill por similitud de color desde el
+   clic, sobre un offscreen donde se pintan SOLO las teselas (sin velo, mesas
+   ni trazados — segmentar lo ya dibujado sería detectarse a sí mismo);
+   contorno por vecino-de-Moore y simplificación Douglas-Peucker. El resultado
+   entra como DIBUJO EN CURSO —editable, se cierra con doble clic o ⏹— y es un
+   BORRADOR: la linde oficial es la del Catastro/SIGPAC, y se dice en pantalla. */
+var varitaArmada=false;
+function varitaSegmenta(data,w,h,sx,sy,tol){
+  sx|=0;sy|=0;
+  if(sx<0||sy<0||sx>=w||sy>=h)return null;
+  // Semilla = media 5×5 alrededor del clic: un píxel suelto puede ser ruido.
+  var sr=0,sg=0,sb=0,ns=0,dx,dy,x,y,i;
+  for(dy=-2;dy<=2;dy++)for(dx=-2;dx<=2;dx++){
+    x=sx+dx;y=sy+dy;if(x<0||y<0||x>=w||y>=h)continue;
+    i=(y*w+x)*4;sr+=data[i];sg+=data[i+1];sb+=data[i+2];ns++;
+  }
+  sr/=ns;sg/=ns;sb/=ns;
+  var visto=new Uint8Array(w*h),dentro=new Uint8Array(w*h);
+  var cola=new Int32Array(w*h),lo=0,hi=0,n=0;
+  // Tope del 45% del lienzo: si la región se come media pantalla no hay
+  // recinto que detectar (imagen uniforme o tolerancia pasada de rosca).
+  var tope=Math.floor(w*h*0.45),t2=tol*tol;
+  visto[sy*w+sx]=1;cola[hi++]=sy*w+sx;
+  while(lo<hi){
+    var p=cola[lo++],i4=p*4;
+    var dr=data[i4]-sr,dg=data[i4+1]-sg,db=data[i4+2]-sb;
+    if(dr*dr+dg*dg+db*db>t2)continue;            // visitado, fuera de la región
+    dentro[p]=1;if(++n>tope)return null;
+    var py=(p/w)|0,pxx=p-py*w;
+    if(pxx>0&&!visto[p-1]){visto[p-1]=1;cola[hi++]=p-1;}
+    if(pxx<w-1&&!visto[p+1]){visto[p+1]=1;cola[hi++]=p+1;}
+    if(py>0&&!visto[p-w]){visto[p-w]=1;cola[hi++]=p-w;}
+    if(py<h-1&&!visto[p+w]){visto[p+w]=1;cola[hi++]=p+w;}
+  }
+  return n>=64?{dentro:dentro,n:n}:null;         // <64 px es ruido, no un campo
+}
+function varitaContorno(dentro,w,h){
+  // Vecino-de-Moore: recorre el borde en sentido horario desde el píxel de
+  // región más alto (y más a la izquierda), entrando «desde el oeste».
+  var start=-1;
+  for(var p=0;p<w*h;p++)if(dentro[p]){start=p;break;}
+  if(start<0)return null;
+  var sx=start%w,sy=(start/w)|0;
+  var DX=[-1,-1,0,1,1,1,0,-1],DY=[0,-1,-1,-1,0,1,1,1];   // horario desde O
+  function en(x,y){return x>=0&&y>=0&&x<w&&y<h&&dentro[y*w+x];}
+  var ring=[[sx,sy]],cx=sx,cy=sy,bx=sx-1,by=sy,guard=w*h*4;
+  do{
+    var bi=0;
+    for(var k=0;k<8;k++)if(cx+DX[k]===bx&&cy+DY[k]===by){bi=k;break;}
+    var found=false;
+    for(var k2=1;k2<=8;k2++){
+      var j=(bi+k2)%8,nx=cx+DX[j],ny=cy+DY[j];
+      if(en(nx,ny)){bx=cx+DX[(j+7)%8];by=cy+DY[(j+7)%8];cx=nx;cy=ny;found=true;break;}
+    }
+    if(!found)break;                             // píxel aislado
+    ring.push([cx,cy]);
+  // Criterio de parada de JACOB: volver al arranque no basta — hay que volver
+  // ENTRANDO por el mismo sitio (backtrack al oeste, como al empezar). Parar
+  // solo por posición corta el anillo la primera vez que el borde roza el
+  // píxel inicial por otro lado, y el cierre artificial del anillo incompleto
+  // es el «cordón suelto» cruzando el mapa del parte de Arganda (2026-08-21).
+  }while(!(cx===sx&&cy===sy&&bx===sx-1&&by===sy)&&--guard>0);
+  return ring.length>=8?ring:null;
+}
+/* APERTURA morfológica (erosión + dilatación, radio r) sobre la máscara, por
+   imagen integral (O(w·h)). El porqué es el parte de Arganda: la región del
+   flood-fill arrastra BRAZOS FINOS (un camino del mismo tono, una sombra) y
+   el contorno entra y sale por ellos — púas de sierra y cordones hacia
+   ninguna parte. La apertura mata todo lo más estrecho que ~2r+1 px sin
+   mover los bordes anchos; con la guarda de anchura mínima en 18 px, nada
+   legítimo cabe por debajo de r=3. */
+function varitaAbre(dentro,w,h,r){
+  function integral(m){
+    var I=new Int32Array((w+1)*(h+1));
+    for(var y=0;y<h;y++){var run=0;
+      for(var x=0;x<w;x++){run+=m[y*w+x];I[(y+1)*(w+1)+x+1]=I[y*(w+1)+x+1]+run;}}
+    return I;
+  }
+  function suma(I,x0,y0,x1,y1){
+    x0=Math.max(0,x0);y0=Math.max(0,y0);x1=Math.min(w-1,x1);y1=Math.min(h-1,y1);
+    if(x0>x1||y0>y1)return 0;
+    return I[(y1+1)*(w+1)+x1+1]-I[y0*(w+1)+x1+1]-I[(y1+1)*(w+1)+x0]+I[y0*(w+1)+x0];
+  }
+  var I1=integral(dentro),lado=2*r+1,ero=new Uint8Array(w*h);
+  for(var y=0;y<h;y++)for(var x=0;x<w;x++)
+    if(x>=r&&y>=r&&x<w-r&&y<h-r&&suma(I1,x-r,y-r,x+r,y+r)===lado*lado)ero[y*w+x]=1;
+  var I2=integral(ero),out=new Uint8Array(w*h);
+  for(var y2=0;y2<h;y2++)for(var x2=0;x2<w;x2++)
+    if(suma(I2,x2-r,y2-r,x2+r,y2+r)>0)out[y2*w+x2]=1;
+  return out;                    // apertura ⊆ región original, por propiedad
+}
+/* Tras la apertura la región puede partirse: quedarse SOLO con la componente
+   de la semilla — el contorno arrancaba del píxel más alto de TODA la
+   máscara y podía trazar otra isla. */
+function varitaComponente(dentro,w,h,sx,sy){
+  if(!dentro[sy*w+sx])return null;
+  var comp=new Uint8Array(w*h),cola=new Int32Array(w*h),lo=0,hi=0,n=0;
+  comp[sy*w+sx]=1;cola[hi++]=sy*w+sx;
+  while(lo<hi){
+    var p=cola[lo++];n++;
+    var py=(p/w)|0,pxx=p-py*w;
+    if(pxx>0&&dentro[p-1]&&!comp[p-1]){comp[p-1]=1;cola[hi++]=p-1;}
+    if(pxx<w-1&&dentro[p+1]&&!comp[p+1]){comp[p+1]=1;cola[hi++]=p+1;}
+    if(py>0&&dentro[p-w]&&!comp[p-w]){comp[p-w]=1;cola[hi++]=p-w;}
+    if(py<h-1&&dentro[p+w]&&!comp[p+w]){comp[p+w]=1;cola[hi++]=p+w;}
+  }
+  return {dentro:comp,n:n};
+}
+/* Quitar PÚAS: el patrón ida-y-vuelta (desvío por b casi doble que el camino
+   directo a→c) es un brazo que la apertura no llegó a matar o un pliegue del
+   trazado — nunca una esquina real: en un ángulo recto el desvío es ×1,41 y
+   aquí se exige ×1,8. Iterativo, porque quitar una púa puede destapar otra. */
+function varitaSinPuas(ring){
+  var out=ring.slice(),cambio=true,guard=10;
+  while(cambio&&--guard>0&&out.length>=4){
+    cambio=false;var res=[];
+    for(var i=0;i<out.length;i++){
+      var a=out[(i+out.length-1)%out.length],b=out[i],c=out[(i+1)%out.length];
+      var ab=Math.hypot(b[0]-a[0],b[1]-a[1]),bc=Math.hypot(c[0]-b[0],c[1]-b[1]);
+      var ac=Math.hypot(c[0]-a[0],c[1]-a[1]);
+      if(ab+bc>ac*1.8&&ab+bc>12){cambio=true;continue;}
+      res.push(b);
+    }
+    out=res;
+  }
+  return out;
+}
+function varitaSimplifica(ring,eps){
+  // Douglas-Peucker sobre anillo: se parte por el punto más alejado del [0]
+  // (dos mitades abiertas) — DP directo sobre un anillo colapsa a una línea.
+  function dp(pts,i0,i1,out){
+    var ax=pts[i0][0],ay=pts[i0][1],bx=pts[i1][0],by=pts[i1][1];
+    var dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy,imax=-1,dmax=0;
+    for(var i=i0+1;i<i1;i++){
+      var t=L2?((pts[i][0]-ax)*dx+(pts[i][1]-ay)*dy)/L2:0;t=Math.max(0,Math.min(1,t));
+      var qx=ax+t*dx-pts[i][0],qy=ay+t*dy-pts[i][1],d=qx*qx+qy*qy;
+      if(d>dmax){dmax=d;imax=i;}
+    }
+    if(imax>=0&&dmax>eps*eps){dp(pts,i0,imax,out);out.push(pts[imax]);dp(pts,imax,i1,out);}
+  }
+  var far=0,fd=0;
+  for(var i=1;i<ring.length;i++){var dx=ring[i][0]-ring[0][0],dy=ring[i][1]-ring[0][1],d=dx*dx+dy*dy;
+    if(d>fd){fd=d;far=i;}}
+  if(!far)return null;
+  var A=ring.slice(0,far+1),B=ring.slice(far).concat([ring[0]]);
+  var out=[A[0]];dp(A,0,A.length-1,out);out.push(A[A.length-1]);dp(B,0,B.length-1,out);
+  return out;
+}
+/* Criterio de ACEPTACIÓN de un contorno — nacido del primer uso real
+   (2026-08-21, ortofoto de una planta construida): la franja de suelo entre
+   dos filas de trackers pasaba como «recinto» — una esquirla de ~8 px de
+   ancho con 5 vértices, «sin sentido» — porque el mínimo era 64 px y la
+   escalera aceptaba la primera región. Un campo de verdad, al zoom al que se
+   trabaja, son MILES de píxeles y decenas de metros de ancho. Tres
+   exigencias, cada una con su porqué:
+   · tamaño: región Y área del anillo ≥ 0,3% del lienzo — bajo eso es una
+     mota, no un campo;
+   · anchura: la caja del contorno ≥ 18 px en su lado corto — mata la
+     esquirla entre filas (el caso de la captura);
+   · forma: 4..80 vértices tras simplificar — el anillo-telaraña del suelo
+     percolando entre cien filas no cabe ahí. */
+function varitaValida(simp,n,w,h){
+  if(!simp||simp.length<4||simp.length>80)return false;
+  var minPx=Math.max(64,w*h*0.003);
+  if(n<minPx)return false;
+  var a2=0,minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+  for(var i=0;i<simp.length;i++){
+    var p=simp[i],q=simp[(i+1)%simp.length];
+    a2+=p[0]*q[1]-q[0]*p[1];
+    if(p[0]<minx)minx=p[0];if(p[0]>maxx)maxx=p[0];
+    if(p[1]<miny)miny=p[1];if(p[1]>maxy)maxy=p[1];
+  }
+  if(Math.abs(a2/2)<minPx)return false;
+  return Math.min(maxx-minx,maxy-miny)>=18;
+}
+/* La escalera prueba TODAS las tolerancias y elige la región VÁLIDA más
+   GRANDE — no la primera. «Gana la primera» mordió en el estreno: con
+   textura fina (rodadas, franjas, calvas) la tolerancia fina encuentra un
+   fragmento homogéneo y se queda ahí; la gruesa absorbe la textura y da el
+   campo entero. Elegir la mayor válida sirve a las dos: si pinchas un claro
+   DENTRO del campo, te lleva al campo. */
+/* Máscara → anillo listo: contorno + simplificación ADAPTATIVA (ε sube
+   hasta bajar de 40 vértices retocables — las esquinas reales sobreviven,
+   la sierra no) + quitar-púas. */
+function varitaAnillo(dentro,w,h){
+  var ring=varitaContorno(dentro,w,h);
+  if(!ring)return null;
+  var simp=null,EPS=[2.5,4,6,9,13];
+  for(var e=0;e<EPS.length;e++){
+    simp=varitaSimplifica(ring,EPS[e]);
+    if(simp)simp=varitaSinPuas(simp);
+    if(simp&&simp.length<=40)break;
+  }
+  return simp||null;
+}
+function varitaEscoge(data,w,h,sx,sy){
+  var TOLS=[16,24,34],mejor=null;
+  for(var t=0;t<TOLS.length;t++){
+    var seg=varitaSegmenta(data,w,h,sx,sy,TOLS[t]);
+    if(!seg)continue;
+    // Apertura (fuera brazos finos) y quedarse con la ISLA de la semilla.
+    var comp=varitaComponente(varitaAbre(seg.dentro,w,h,3),w,h,sx|0,sy|0);
+    if(!comp)continue;
+    var simp=varitaAnillo(comp.dentro,w,h);
+    if(!varitaValida(simp,comp.n,w,h))continue;
+    if(!mejor||comp.n>mejor.n)mejor={ring:simp,tol:TOLS[t],n:comp.n,dentro:comp.dentro};
+  }
+  return mejor;
+}
+/* CLICS QUE SUMAN (Arganda 2, «sigue mal en la 1.4.6»): una parcela real no
+   tiene UN color — mancha gris compactada + tierra marrón + la linde por
+   caminos. Ningún clic único puede adivinarla siguiendo color; el
+   magic-wand clásico sí: cada clic detecta SU zona y se UNE a lo acumulado
+   si se tocan, y el contorno se recalcula sobre la unión. Dos o tres clics
+   construyen la parcela. Una zona que no toca lo acumulado se rechaza con
+   aviso (unir islas daría un anillo imposible), y lo acumulado se conserva. */
+function varitaSuma(data,w,h,sx,sy,acc,accN){
+  var res=varitaEscoge(data,w,h,sx,sy);
+  if(!res)return acc?{sinZona:true}:null;
+  if(!acc){
+    return {dentro:res.dentro,n:res.n,ring:res.ring};
+  }
+  var union=new Uint8Array(acc),unionN=accN;
+  for(var i=0;i<w*h;i++)if(res.dentro[i]&&!union[i]){union[i]=1;unionN++;}
+  var comp=varitaComponente(union,w,h,sx|0,sy|0);
+  if(!comp||comp.n<unionN)return {disjunta:true};
+  var simp=varitaAnillo(comp.dentro,w,h);
+  if(!simp||!varitaValida(simp,comp.n,w,h))return {sinZona:true};
+  return {dentro:comp.dentro,n:comp.n,ring:simp};
+}
+/* El ACUMULADO de la varita: máscara en píxeles del lienzo + su encuadre.
+   Si la vista cambia (pan/zoom/resize), los píxeles ya no casan y se empieza
+   de cero — convertir la máscara entre encuadres sería inventar píxeles. */
+var varitaAcc=null,varitaAccN=0,varitaVista=null;
+function varitaReset(){varitaAcc=null;varitaAccN=0;varitaVista=null;}
+function varitaClic(ev){
+  var cv=$('cv'),r=cv.getBoundingClientRect();
+  var sx=(ev.clientX-r.left)*(cv.width/r.width),sy=(ev.clientY-r.top)*(cv.height/r.height);
+  var off=document.createElement('canvas');off.width=cv.width;off.height=cv.height;
+  var octx=off.getContext('2d',{willReadFrequently:true});
+  octx.fillStyle='#000';octx.fillRect(0,0,off.width,off.height);
+  if(!pintaOrtofoto(octx,cv)){
+    $('mapHint').textContent='🪄 la varita necesita la ortofoto cargada — marca «ortofoto» y espera las teselas';
+    return;
+  }
+  var img=octx.getImageData(0,0,off.width,off.height);
+  var vista=[VIEW.cx,VIEW.cy,VIEW.z,cv.width,cv.height].join('/');
+  if(ev.altKey){
+    // FIXTURE de escena REAL (encargo B10 tras El Burgo/Arganda: el banco
+    // sintético daba verde donde el sitio real fallaba — fixture ciego).
+    // Alt+clic descarga la ortofoto TAL CUAL la ve la varita + el punto
+    // pinchado y el encuadre: material de banco byte a byte, sin pedirle a
+    // nadie que recorte capturas a mano.
+    var meta={x:sx|0,y:sy|0,w:off.width,h:off.height,vista:vista};
+    off.toBlob(function(b){
+      var a=document.createElement('a');a.href=URL.createObjectURL(b);
+      a.download='varita-escena.png';a.click();
+      var a2=document.createElement('a');
+      a2.href='data:application/json,'+encodeURIComponent(JSON.stringify(meta));
+      a2.download='varita-escena.json';a2.click();
+    });
+  }
+  if(varitaVista!==vista){varitaAcc=null;varitaAccN=0;varitaVista=vista;}
+  var res=varitaSuma(img.data,off.width,off.height,sx|0,sy|0,varitaAcc,varitaAccN);
+  if(!res||res.sinZona){
+    $('mapHint').textContent='🪄 ahí no se distingue un recinto (acércate más o pincha el interior del campo)'+(varitaAcc?' — lo ya detectado se conserva':' — o dibújalo a mano');
+    return;
+  }
+  if(res.disjunta){
+    $('mapHint').textContent='🪄 esa zona no toca la ya detectada — pincha una vecina que la toque, o doble clic para aceptar lo que hay';
+    return;
+  }
+  varitaAcc=res.dentro;varitaAccN=res.n;
+  var S=escalaMundo();
+  DRAW=res.ring.map(function(q){
+    return [u2lon(VIEW.cx+(q[0]-cv.width/2)/S),u2lat(VIEW.cy+(q[1]-cv.height/2)/S)];
+  });
+  drawing=true;
+  if(drawDest==='linea')drawDest='parcela';      // una línea no se detecta
+  if(drawDest==='parcela'&&DRAW.length>=3){PARCEL=DRAW.slice();HOLES=[];}
+  pintaBotonesDibujo();
+  // La varita SIGUE armada: la parcela real rara vez es UN color (Arganda:
+  // mancha gris + tierra marrón) — el siguiente clic AÑADE la zona vecina.
+  $('mapHint').textContent='🪄 contorno propuesto ('+DRAW.length+' vértices) — BORRADOR visual, no linde oficial: otro clic 🪄 AÑADE la zona vecina · doble clic o ⏹ lo acepta';
+  tagParcel();draw();autoguarda();
+}
+$('varitaBtn').onclick=function(){
+  if(drawing&&DRAW.length){                       // no pisar un dibujo a medias
+    $('mapHint').textContent='🪄 termina (o limpia) el dibujo en curso antes de detectar';
+    return;
+  }
+  // Armarla desde CUALQUIER modo: el contorno detectado es un dibujo, así
+  // que la varita te lleva sola al modo «Dibujarla sobre el lienzo».
+  if($('parcelMode').value!=='draw'){
+    $('parcelMode').value='draw';
+    $('parcelMode').onchange.call($('parcelMode'));
+  }
+  varitaArmada=!varitaArmada;
+  if(!varitaArmada)varitaReset();
+  if(varitaArmada&&!$('orto').checked){$('orto').checked=true;draw();}
+  $('varitaBtn').textContent=varitaArmada?'🪄 Clic en el campo…':'🪄 Borrador de parcela';
+  $('mapHint').textContent=varitaArmada
+    ?'🪄 clic sobre el CAMPO: se propone su contorno — borrador visual para retocar, no linde oficial'
+    :'arrastra para mover · rueda para acercar';
+};
 $('cv').addEventListener('click',function(ev){
+  if(varitaArmada){if(_movido<3)varitaClic(ev);return;}
   if(!drawing)return;
   // Un clic que ha sido ARRASTRE es navegación, no un vértice: sin esto, mover
   // el mapa mientras dibujas planta un vértice en cada parada.
@@ -2417,15 +2737,23 @@ function draw(){
         ctx.stroke();
       }
     }
-    // Eje bifila: la biela que une las dos sub-filas de un mismo tracker. Es lo
-    // que hace VISIBLE que es bifila y no dos monofilas juntas.
-    if($('showAxis').checked&&RES.stats.bifila&&RES.rows&&RES.fromLocal){
-      ctx.strokeStyle='rgba(246,166,35,.85)';ctx.lineWidth=1.1;
-      ejesBifila().forEach(function(e){
+    // VIGA DE TORSIÓN por tracker + eje de transmisión (biela) por bifila.
+    // Colores y jerarquía del canon (página 6 de Streamlit): tubo gris
+    // #7F8C8D fino, biela roja #C0392B y el doble de gruesa. La viga cruza
+    // el hueco del motor: es lo que hace VISIBLE que 2 mesas + motor son UN
+    // tracker y no dos sueltos — y la biela, que es bifila y no dos monofilas.
+    if($('showAxis').checked&&RES.rows&&RES.fromLocal&&RES.stats.mount_type!=='fija'){
+      function traza(e){
         var ca=RES.toLonLat(RES.fromLocal(e.xa,e.ya)),cb=RES.toLonLat(RES.fromLocal(e.xb,e.yb));
         var pa=px(ca[0],ca[1]),pb=px(cb[0],cb[1]);
         ctx.beginPath();ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);ctx.stroke();
-      });
+      }
+      ctx.strokeStyle='#7F8C8D';ctx.lineWidth=1.1;
+      vigasTorsion().forEach(traza);
+      if(RES.stats.bifila){
+        ctx.strokeStyle='#C0392B';ctx.lineWidth=2.2;
+        ejesBifila().forEach(traza);
+      }
     }
   }
   if(drawing&&DRAW&&DRAW.length){
@@ -2444,22 +2772,43 @@ function draw(){
    en Larraga («¿estás poniendo dos ejes donde solo va uno?»). Las mesas se
    agrupan en trackers con la misma regla del 3D (gap del motor une, gap N-S
    separa); un tracker viudo de una mesa no tiene motor y su eje va al centro. */
+/* Agrupar las mesas de una FILA en TRACKERS: el gap del motor (pequeño) une,
+   el hueco N-S (grande) separa, y nunca más de 2 mesas por tracker (fila
+   atómica). Es la MISMA regla para la viga y para la biela — dos agrupaciones
+   distintas serían dos verdades sobre qué es un tracker. */
+function trksFila(f){
+  var gm=(RES.stats.gap_motor_m||0.5)+0.15;
+  var so=f.slice().sort(function(a,b){return a.x0-b.x0;});
+  var g=[],res=[];
+  for(var i=0;i<so.length;i++){
+    if(g.length&&g.length<2&&so[i].x0-g[g.length-1].x1<=gm)g.push(so[i]);
+    else{if(g.length)res.push(g);g=[so[i]];}
+  }
+  if(g.length)res.push(g);
+  return res;
+}
+/* UNA viga de torsión por TRACKER (canon: kind=="axis" de
+   rows_to_bifila_axislines_geojson): recorre el eje central del tracker de
+   punta a punta, CRUZANDO el hueco del motor — 2 mesas + motor = una viga.
+   Un tracker viudo de una mesa lleva su viga corta (el canon también). En
+   fija no hay tubo: el que pinta ya no llama con mount_type 'fija'. */
+function vigasTorsion(){
+  if(!RES||!RES.rows||!RES.fromLocal)return [];
+  var out=[];
+  RES.rows.forEach(function(f){
+    trksFila(f).forEach(function(tr){
+      var y=(tr[0].y0+tr[0].y1)/2;
+      out.push({xa:tr[0].x0,ya:y,xb:tr[tr.length-1].x1,yb:y});
+    });
+  });
+  return out;
+}
 function ejesBifila(){
   if(!RES||!RES.stats.bifila||!RES.rows||!RES.fromLocal)return [];
-  var gm=(RES.stats.gap_motor_m||0.5)+0.15, out=[];
-  function trks(f){
-    var so=f.slice().sort(function(a,b){return a.x0-b.x0;});
-    var g=[],res=[];
-    for(var i=0;i<so.length;i++){
-      if(g.length&&g.length<2&&so[i].x0-g[g.length-1].x1<=gm)g.push(so[i]);
-      else{if(g.length)res.push(g);g=[so[i]];}
-    }
-    if(g.length)res.push(g);
-    return res;
-  }
+  var out=[];
   function xMotor(tr){return tr.length===2?(tr[0].x1+tr[1].x0)/2:(tr[0].x0+tr[0].x1)/2;}
   for(var r0=0;r0+1<RES.rows.length;r0+=2){
-    var A=trks(RES.rows[r0]),B=trks(RES.rows[r0+1]);
+    var A=trksFila(RES.rows[r0]),B=trksFila(RES.rows[r0+1]);
     var n=Math.min(A.length,B.length);
     for(var t=0;t<n;t++){
       out.push({xa:xMotor(A[t]),ya:(A[t][0].y0+A[t][0].y1)/2,

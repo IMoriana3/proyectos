@@ -34,7 +34,7 @@ const FIRMAS = ['function prep2d(cv){', 'function nicePaso(bruto){',
                                 'function factorPorDefecto(stepMin,pasos){',
                 'function opcionesRepro(stepMin,pasos){',
                 'function avancePasos(acc,dtReal,factor,stepMin){',
-                'function repartoBandas(base,ks){',
+                'function repartoBandas(base,ks,dirViento){',
                 'var DURACIONES_REPRO=', 'var REPRO_MIN_PASOS_S=', 'var REPRO_DEF_S='];
 const trozos = FIRMAS.map(saca);
 check('las funciones puras siguen en el HTML', trozos.every(Boolean),

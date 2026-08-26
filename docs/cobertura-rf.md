@@ -7,7 +7,8 @@ Un solo motor físico, tres usos: **siting predictivo**, **diagnóstico** de una
 
 ## 1. Qué incluye
 
-- `index.html` — render 3D interactivo, sin dependencias: patrón de la antena sobre el suelo y enlace coloreado por margen real, con la geometría bifila parametrizable. Es el "programita" que se abre en el navegador / GitHub Pages.
+- `index.html` — render 3D interactivo (WebGL, todo vendorizado: se abre sin servidor y sin internet) con el **modelo real del seguidor**: patrón de la antena sobre el suelo y enlace coloreado por margen real, con la geometría bifila parametrizable. Es el "programita" que se abre en el navegador / GitHub Pages.
+- `seguidor.js` — la **fuente única** del seguidor solar (cotas, piezas y materiales) que comparten el gemelo digital, Cobertura 3D y el simulador de backtracking. Copia idéntica: mejorarla en un repo mejora todos.
 - `python/` — núcleo físico + driver de diagnóstico para correr sobre tus datos.
 - `web/` — port JS del núcleo (para integrar el cálculo en cualquier HTML) y una demo de mapa de cobertura.
 - `docs/` — ficha para el panel de proyectos.
@@ -19,6 +20,10 @@ Un solo motor físico, tres usos: **siting predictivo**, **diagnóstico** de una
 ```
 cobertura-rf-fv/
 ├── index.html                  # render interactivo (GitHub Pages sirve esto)
+├── seguidor.js                 # modelo del seguidor (idéntico en todos los repos)
+├── lib/                        # three.js r128 + OrbitControls (vendorizados)
+├── tests/
+│   └── test_visor_3d.js        # QA del visor en Chromium (28 comprobaciones)
 ├── README.md
 ├── INSTRUCCIONES.md            # cómo usarlo paso a paso
 ├── elburgo_real_rssi.csv       # dataset real El Burgo (RSSI por enlace)
@@ -43,17 +48,27 @@ cobertura-rf-fv/
 
 ## 3. El render interactivo (`index.html`)
 
-Ábrelo en cualquier navegador (doble clic) o publícalo en GitHub Pages. No necesita servidor ni internet.
+Ábrelo en cualquier navegador (doble clic) o publícalo en GitHub Pages. No necesita servidor ni internet: three.js y el modelo del seguidor van dentro del repo.
+
+Lo que ves son **tres seguidores bifila** montados con `seguidor.js`, el modelo de la casa (el mismo del gemelo digital y de Cobertura 3D): viga de torsión partida, correas omega con su abarcón, módulos de 1.134 × 2.382 con textura de células y sus cajas de conexión, cableado leapfrog, slew drive con reductora y motor, TCU con chapas y abarcones, seccionador DC, pilas y amortiguadores. De cada pareja, solo la viga del motor lleva TCU y antena, y un eje de transmisión Ø 60 con sus dos cardanes la une con la gemela.
+
+Que sea el modelo de la casa no es estética: obliga a que el dibujo y la física hablen del mismo seguidor. Dos cotas que esta página se inventaba y que ahora salen del modelo:
+
+- la **cara del módulo** está a `DIMS.off` = 0,14 m sobre el eje del tubo (antes, 0,25 a ojo). Es la cota que entra en `lowerEdge()`, el canto que apantalla el enlace: con una en el dibujo y otra en la difracción, la imagen se leía como la prueba visual de un número que la contradecía;
+- la **antena** cuelga donde dice el catálogo: el coax sale del conector de la TCU (0,225 m bajo el eje del tubo) y baja los 0,50 m de `antHang`, así que la caída de partida son 0,725 m, no 0,15. Con 0,15 el elemento radiante quedaba *dentro* de la caja de la TCU — imposible de ver mientras el seguidor era un rectángulo. A 0,72 m la antena queda por debajo del canto bajo del módulo y el salto pasa por debajo de las mesas, que es lo que se ve en planta.
 
 Controles:
 
 - **Inclinación** — ángulo de los seguidores (−55° a 55°).
-- **Caída de la antena bajo la viga** — cuánto cuelga el látigo por debajo del tubo de torsión.
+- **Caída de la antena bajo la viga** — cuánto cuelga el látigo por debajo del tubo de torsión. Arranca en la cota del modelo (0,725 m); el recorrido 0,25–1,50 m queda para explorar otros montajes.
 - **Distancia entre filas** — paso entre filas. Las antenas van en las filas pares, así que cada salto es 2× este valor y cruza la fila intermedia.
 - **Altura de la viga de torsión** — cota del eje de giro.
 - **Altura de módulo** — dimensión del módulo a lo largo de la pendiente.
 - **Suelo** — conductor perfecto / tierra real (húmeda).
 - **Radio** — XBee RR (+8 dBm) / XBee-PRO RR (+19 dBm).
+- **Tramo dibujado** — 7 módulos por ala (16,6 m), 14 (32,7 m) o los 28 de la fila real (64,7 m). Solo afecta al encuadre: la física es una sección transversal y no depende del largo.
+- **Encuadre** — Conjunto / Antena / Accionamiento, tres posiciones de cámara.
+- **Patrón de la antena** — apaga el toroide para ver el seguidor limpio.
 
 La línea entre antenas se colorea por el margen real (verde holgado → ámbar al límite → rojo sin enlace) y muestra el valor en dB. Gira la escena con el ratón/dedo y haz zoom con la rueda.
 

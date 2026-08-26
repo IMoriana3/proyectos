@@ -168,6 +168,222 @@ const LAYOUT = {
   check('apagarlas vuelve a una sola estrategia y quita los rótulos',
         await page.evaluate(() => ESC.bandas === false && !ESC.etiquetas));
 
+  // ── LA CONSIGNA Y LO EJECUTADO SON DOS COSAS ───────────────────────
+  // «full stow · θ 0,0°» con el reloj parado se lee como que el
+  // abanderamiento no se ha dado. Se ha dado: no ha LLEGADO. El eje va a
+  // 0,17 °/s y cruzar de un límite al otro son casi once minutos.
+  await page.uncheck('#bandas');
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#lV', { timeout: 15000 });
+  await page.fill('#lV', '111'); await page.dispatchEvent('#lV', 'input');
+  await page.waitForTimeout(900);
+  const parado = await page.$$eval('#tiles .tile', ns => ns.map(n =>
+    n.querySelector('.m').textContent.replace(/\s+/g, ' ').trim()));
+  const stow = parado.filter(t => /full stow/.test(t));
+  check('con el reloj parado, las cuatro motorizadas ORDENAN pero no han ' +
+        'llegado (' + stow.length + ' en full stow)', stow.length >= 4);
+  check('y la tarjeta lo DICE: consigna, tiempo de recorrido y reloj parado',
+        stow.filter(t => /ordenado -55° · en camino/.test(t)).length >= 4 &&
+        stow.some(t => /reloj parado/.test(t)),
+        stow[0]);
+  // Aqui esta el nudo de todo el asunto. Las cuatro motorizadas y el pasivo
+  // acaban en el MISMO angulo, y hasta ahora la ficha les daba tambien la
+  // misma palabra: las cinco decian «full stow». No es lo mismo. Un full stow
+  // es una orden que el hierro tarda minutos en recorrer; la suelta es un
+  // desembrague que llega en un paso. La teja tiene que separarlos.
+  const tejaPas = parado.filter(t => /suelta/.test(t));
+  check('el PASIVO no dice «full stow»: eso es una ORDEN, y a el no le ordena ' +
+        'nadie — dice «suelta»', tejaPas.length === 1 && stow.length === 4,
+        'suelta=' + tejaPas.length + ' full_stow=' + stow.length + ' || ' + parado.join(' || '));
+  check('y esta YA en el tope sin «en camino»: no lo mueve un motor, CAE',
+        tejaPas.some(t => /θ -55/.test(t) && !/en camino/.test(t)),
+        tejaPas.join(' || '));
+  check('la suelta no se pinta del color del stow ordenado: son causas distintas',
+        await page.evaluate(() => MODO_COL.SUELTA !== MODO_COL.FULL_STOW &&
+                                  MODO_COL.SUELTA != null));
+  check('y el seguidor SIN abanderar no se marca por su retardo natural',
+        parado.some(t => /seguimiento/.test(t) && !/en camino/.test(t)),
+        'con un umbral por debajo de 2° la base decía «en camino» al mediodía');
+
+  await page.click('#lPlay');
+  await page.waitForFunction(() => LIVE && LIVE.ang.A1 < -30, { timeout: 20000 });
+  const andando = await page.$$eval('#tiles .tile', ns => ns.map(n =>
+    n.querySelector('.m').textContent.replace(/\s+/g, ' ').trim()));
+  check('corriendo el reloj, el ángulo avanza y el «en camino» se acorta',
+        andando.some(t => /full stow/.test(t) && /en camino/.test(t) &&
+                          !/reloj parado/.test(t)),
+        andando.filter(t => /full stow/.test(t))[0]);
+
+  // La coincidencia de angulo es eso, una coincidencia: el lado de montaje del
+  // pasivo es -55 y el viento venia del oeste. Con el viento del ESTE las
+  // motorizadas de tipo A se van a +55 y el pasivo sigue cayendo a -55, porque
+  // no elige lado: se cae al suyo. Sin esta comprobacion, el careo del angulo
+  // pasaria igual estando el pasivo mal, por dar los dos -55 siempre.
+  await page.fill('#lD', '90'); await page.dispatchEvent('#lD', 'input');
+  await page.waitForTimeout(700);
+  const este = await page.evaluate(() => ({ ...LIVE.orden }));
+  check('con el viento del ESTE las tipo A ordenan +55 y el pasivo sigue en -55: ' +
+        'no elige lado, se cae al suyo',
+        Math.round(este.A1) === 55 && Math.round(este.A2) === 55 &&
+        Math.round(este.PASIVO) === -55, JSON.stringify(este));
+
+  // ── EL PASIVO SUELTA UNA FILA, NO EL TRACKER ───────────────────────
+  // En bifila las dos filas van sobre el MISMO motor, pero solo la de fuera se
+  // desembraga: la de dentro queda apantallada y sigue en seguimiento haya el viento
+  // que haya. El angulo se decidia por TRACKER, asi que las dos se abanderaban juntas
+  // y la banda del pasivo se pintaba como un abanderamiento de planta — que es justo
+  // lo que el pasivo NO es.
+  //
+  // El test de arriba no lo veia: lee `ang(i)` sobre la PRIMERA fila de cada tracker,
+  // que es precisamente la que si debe soltarse. Un test que muestrea una de las dos
+  // filas no puede ver que se movieron las dos.
+  // El regimen donde la propiedad puede romperse: por debajo del umbral de suelta no
+  // hay fila suelta que mirar, y el test daria verde sin haber comprobado nada.
+  // Un test de mas arriba APAGA las franjas para comprobar que se vuelve a una sola
+  // estrategia. Sin volver a encenderlas aqui, todo se pinta con la misma y las dos
+  // filas saldrian iguales — verde por no haber banda que mirar, no por estar bien.
+  await page.check('#bandas');
+  await page.fill('#lV', '120'); await page.dispatchEvent('#lV', 'input');
+  await page.waitForTimeout(900);
+  const filas = await page.evaluate(() => {
+    const m = new THREE.Matrix4();
+    const ang = k => { ESC.mesas.getMatrixAt(k, m);
+      return Math.round(Math.atan2(m.elements[4], m.elements[5]) * 180 / Math.PI); };
+    const iPas = ESC.bandaKs.indexOf('PASIVO');
+    const sueltos = [], quietos = [];
+    for (let i = 0; i < ESC.n; i++) {
+      if (ESC.banda[i] !== iPas) continue;
+      const f = [];
+      for (let q = 0; q < ESC.nFilas; q++) f.push(ang((i * ESC.nFilas + q) * 2));
+      (ESC.bandaSuelto[i] ? sueltos : quietos).push(f);
+    }
+    // y DONDE esta cada fila: la suelta tiene que ser la del perimetro
+    const pos = new THREE.Matrix4(), xDe = k => { ESC.mesas.getMatrixAt(k, pos);
+      return pos.elements[12]; };
+    const iAlgunSuelto = ESC.bandaSuelto.findIndex((v, i) => v && ESC.banda[i] === iPas);
+    return { sueltos, quietos, bifila: ESC.bifila, filaSuelta: ESC.filaSuelta,
+      xFilas: iAlgunSuelto < 0 ? null
+        : [xDe(iAlgunSuelto * ESC.nFilas * 2), xDe((iAlgunSuelto * ESC.nFilas + 1) * 2)],
+      lado: ESC.ladoExpuesto };
+  });
+
+  check('en el tracker suelto se abandera UNA fila y su gemela sigue en seguimiento (' +
+        JSON.stringify(filas.sueltos[0]) + ')',
+        filas.bifila && filas.sueltos.length > 0 &&
+        filas.sueltos.every(f => f.filter(a => Math.abs(a) > 5).length === 1),
+        'con las dos a -55 la banda del pasivo es un abanderamiento de planta, ' +
+        'que es lo que el pasivo NO es');
+
+  check('y en su franja, el tracker que NO es de perímetro no suelta ninguna (' +
+        JSON.stringify(filas.quietos[0]) + ')',
+        filas.quietos.length > 0 && filas.quietos.every(f => f.every(a => Math.abs(a) <= 5)));
+
+  // Cual de las dos se suelta no se elige: es la de FUERA. Se comprueba por su
+  // posicion en el mundo, no por el indice, que es lo que podria estar al reves.
+  // Las dos filas estan a la misma distancia del centro del tracker: lo que las
+  // distingue no es cuanto, es hacia DONDE. Y «hacia fuera» depende del rumbo, asi que
+  // la comprobacion tiene que preguntar por el lado expuesto en vez de fijar un signo:
+  // escrita para un solo viento, este test se caeria en cuanto el viento rolase.
+  check('la fila suelta es la del PERÍMETRO, la que da al viento (x=' +
+        (filas.xFilas ? filas.xFilas.map(v => Math.round(v)).join(' y ') : '?') +
+        ', lado ' + filas.lado + ')',
+        !!filas.xFilas &&
+        (filas.xFilas[filas.filaSuelta] - filas.xFilas[1 - filas.filaSuelta]) *
+          filas.lado > 0,
+        'si se soltara la de dentro, la de fuera la apantallaría y no habría carga');
+
+  // ── EL BORDE EXPUESTO LO DECIDE EL VIENTO ──────────────────────────
+  // La correccion de fondo del modelo: se suelta la fila a BARLOVENTO. Con viento del
+  // este, el borde este; con viento del oeste, el oeste. Antes se soltaba siempre el
+  // mismo borde y estaba declarado como agujero en el propio resultado.
+  const rola = {};
+  for (const d of ['270', '90']) {
+    await page.fill('#lD', d); await page.dispatchEvent('#lD', 'input');
+    await page.waitForTimeout(700);
+    rola[d] = await page.evaluate(() => ({
+      x: ESC.bandaSuelto.map((v, i) => v ? ESC.base[i].x : null).filter(v => v != null),
+      fila: ESC.filaSuelta, lado: ESC.ladoExpuesto }));
+  }
+  check('con viento del OESTE se suelta el borde oeste y con el del ESTE el este (' +
+        'O:' + JSON.stringify(rola['270'].x) + ' E:' + JSON.stringify(rola['90'].x) + ')',
+        rola['270'].x.length > 0 && rola['90'].x.length > 0 &&
+        Math.max(...rola['270'].x) < Math.min(...rola['90'].x),
+        'si no rota con el rumbo, la carga se la lleva siempre la misma fila');
+
+  check('y la fila del bifila que se suelta cambia con él (' +
+        rola['270'].fila + ' -> ' + rola['90'].fila + ')',
+        rola['270'].fila !== rola['90'].fila,
+        'la que da al viento es la de fuera, y «fuera» depende de por dónde sopla');
+
+  // ── LA HUELLA DE CADA FRANJA EN EL SUELO ───────────────────────────
+  // Con las franjas encendidas, a que grupo pertenece un seguidor solo se sabia por el
+  // color de su poste. La tentacion es pintar una caja por franja; seria mentira,
+  // porque la planta es un poligono irregular y la caja cubriria suelo sin seguidores.
+  // Se comprueba sobre una planta CON DIENTE DE SIERRA Y UN HUECO DENTRO, que es el
+  // regimen donde una caja y una huella de verdad dan resultados distintos. En una
+  // planta rectangular las dos coincidirian y el test pasaria por el motivo equivocado.
+  const IRREG = { clat: 41.5, clon: -0.8, mods: 28, modW: 1.134, filaZ: 3, trackers: [] };
+  for (let c = 0; c < 20; c++) {
+    const alto = 6 + Math.round(4 * Math.sin(c / 3));
+    for (let r = 0; r < alto; r++) {
+      if (c >= 8 && c <= 11 && r >= 2 && r <= 3) continue;      // el hueco, a proposito
+      IRREG.trackers.push({ x: c * 24, n: r * 40, rot: 0, t: 'completo' });
+    }
+  }
+  await page.unroute('**/*_layout.json');
+  await page.route('**/*_layout.json', r =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(IRREG) }));
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#escena', { timeout: 15000 });
+  await page.selectOption('#escena', 'fayon');
+  await page.waitForFunction(() => window.ESC && ESC.kind === 'planta', { timeout: 25000 });
+  await page.check('#bandas');
+  await page.waitForTimeout(700);
+
+  const H = await page.evaluate(() => {
+    const hu = (ESC.bifila ? ESC.filaZ : 0) + 1.6;
+    const h = huellaBandas(ESC.base, ESC.banda, ESC.bandaKs.length, hu, 10, 0);
+    const xs = ESC.base.map(b => b.x);
+    return {
+      porFranja: h.map((o, i) => ({
+        k: ESC.bandaKs[i], rects: o.rects.length, borde: o.borde.length,
+        cols: new Set(o.rects.map(r => Math.round(r.u))).size })),
+      hu: h[0].rects[0].hu, huMin: hu,
+      paso: (() => { const u = [...new Set(xs)].sort((a, b) => a - b);
+        const d = []; for (let q = 1; q < u.length; q++) d.push(u[q] - u[q - 1]);
+        d.sort((a, b) => a - b); return d[Math.floor(d.length / 2)]; })(),
+      // ninguna huella puede salirse de la planta
+      fuera: h.some(o => o.rects.some(r =>
+        r.u - r.hu < Math.min(...xs) - 1e-6 - h[0].rects[0].hu ||
+        r.u + r.hu > Math.max(...xs) + 1e-6 + h[0].rects[0].hu))
+    };
+  });
+
+  check('hay una huella por franja, y ninguna vacia (' +
+        H.porFranja.map(f => f.k + ':' + f.rects).join(' ') + ')',
+        H.porFranja.length >= 5 && H.porFranja.every(f => f.rects > 0));
+
+  check('el ancho se MIDE del paso entre columnas, no se elige (' + H.hu + ' m de ' +
+        H.paso + ' m de paso)', Math.abs(H.hu - H.paso / 2) < 0.01 && H.hu > H.huMin,
+        'con el ancho de la estructura a secas salen tiras sueltas, no una franja');
+
+  // El hueco interior: la columna que lo cruza tiene que quedar PARTIDA en dos tramos.
+  // Una caja —o una union que ignore los huecos— daria un rectangulo por columna.
+  const partidas = H.porFranja.filter(f => f.rects > f.cols);
+  check('un hueco dentro de la planta parte la huella: no se pinta suelo vacio (' +
+        partidas.map(f => f.k).join(' ') + ')', partidas.length >= 1,
+        JSON.stringify(H.porFranja));
+
+  check('ninguna huella se sale del campo', H.fuera === false);
+
+  // El contorno es el de la UNION: si fuese el de cada rectangulo por separado serian
+  // exactamente 4 aristas por rectangulo, y la franja saldria rayada por dentro.
+  const rayado = H.porFranja.filter(f => f.borde === 4 * f.rects);
+  check('el contorno cancela las aristas interiores (' +
+        H.porFranja.map(f => f.borde + '<' + 4 * f.rects).join(' ') + ')',
+        rayado.length === 0,
+        'una franja con 4 aristas por rectangulo es una franja dibujada a rayas');
+
   check('la ficha no lanza errores de JS', errores.length === 0, errores.join(' | '));
   await browser.close();
   console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko) : '\nOK — ' + ok + '/' + ok + ' comprobaciones');
