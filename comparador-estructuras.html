@@ -2649,7 +2649,7 @@ function init3D(){
     /* La geometría ya viene TUMBADA (rotateX en la propia malla) para que la
        rotación del objeto quede libre: es la que le da luego la pendiente del
        sitio. Con `rotation.x=-PI/2` en el objeto, inclinarlo lo ponía de canto. */
-    var horizGeo=new THREE.PlaneGeometry(12000,12000); horizGeo.rotateX(-Math.PI/2);
+    var horizGeo=new THREE.PlaneGeometry(1,1); horizGeo.rotateX(-Math.PI/2);
     var horiz=new THREE.Mesh(horizGeo,
       new THREE.MeshLambertMaterial({color:0x1e2a19}));
     horiz.position.y=-1.5; sc.add(horiz);
@@ -2816,10 +2816,17 @@ function mesaFija3D(mats,largo,ancho){
   var viga=new THREE.Mesh(new THREE.BoxGeometry(largo,D.tube*0.7,D.tube*0.7),mats.steel);
   viga.position.y=-0.13; viga.castShadow=true; spin.add(viga);
   wrap.add(spin);
-  [-largo/2+0.8, largo/2-0.8].forEach(function(x){
+  /* HINCAS. Dos, una en cada punta, era lo que se veía —y desde casi cualquier
+     ángulo se veía UNA—: una mesa de 65 m sobre dos postes no es una estructura,
+     es un puente. En campo la hinca va cada 4-6 m, que es lo que aguanta el
+     viento y lo que da el perfil. Se reparten a paso ≤ 6 m entre las dos puntas.
+     Todas miden lo mismo porque la fila ya se ha inclinado con el terreno: lo
+     que absorbe la pendiente es el replanteo, no una hinca más larga. */
+  var nP=Math.max(2,Math.round((largo-1.6)/6)+1), x0=-largo/2+0.8, dP=(largo-1.6)/(nP-1);
+  for(var ip=0;ip<nP;ip++){
     var p=new THREE.Mesh(new THREE.BoxGeometry(.16,D.postH,.16),mats.steel);
-    p.position.set(x,D.postH/2,0); p.castShadow=true; wrap.add(p);
-  });
+    p.position.set(x0+ip*dP,D.postH/2,0); p.castShadow=true; wrap.add(p);
+  }
   spin.position.y=D.postH;
   wrap.spin=spin;
   return wrap;
@@ -2881,7 +2888,9 @@ function cotaTerreno(x,z,T){
   return -(x*(T.gx||0)+z*(T.gz||0));
 }
 function sueloRelieve(lado,T){
-  var geo=new THREE.PlaneGeometry(lado,lado,120,120);
+  /* 220×220 y no 120: las curvas de nivel se interpolan entre vértices, así que
+     con celdas de seis metros salían con dientes de sierra. */
+  var geo=new THREE.PlaneGeometry(lado,lado,220,220);
   geo.rotateX(-Math.PI/2);
   var pos=geo.attributes.position, lo=0, hi=0;
   for(var i=0;i<pos.count;i++){
@@ -2898,8 +2907,25 @@ function sueloRelieve(lado,T){
      justo lo que la escena tiene que enseñar. Va en color de VÉRTICE, que se
      multiplica por el del material: 1 deja el verde tal cual. */
   var med=(hi+lo)/2, semi=(hi-lo)/2, col=new Float32Array(pos.count*3);
+  /* Y CURVAS DE NIVEL, porque el tinte solo no basta: se normaliza sobre todo
+     el suelo —que es mucho más grande que la parcela— así que junto a las
+     estructuras apenas varía y la ladera se lee plana. Una banda cada `paso`
+     metros de cota da la pendiente de un vistazo a cualquier zoom, y es la
+     convención de cualquier plano topográfico. El paso se elige para que salgan
+     una decena de curvas en la zona de trabajo, redondeado a 1-2-5. */
+  var paso=0;
+  if(semi>0.05){
+    var bruto=(hi-lo)/12, e=Math.pow(10,Math.floor(Math.log(bruto)/Math.LN10)),
+        m=bruto/e;
+    paso=(m<1.5?1:m<3.5?2:m<7.5?5:10)*e;
+  }
   for(var j=0;j<pos.count;j++){
-    var f=semi>0.05?1+0.42*Math.max(-1,Math.min(1,(pos.getY(j)-med)/semi)):1;
+    var y=pos.getY(j);
+    var f=semi>0.05?1+0.34*Math.max(-1,Math.min(1,(y-med)/semi)):1;
+    if(paso>0){
+      var u=y/paso; u=Math.abs(u-Math.round(u))*2;       // 0 en la curva, 1 entre curvas
+      if(u<0.16)f*=0.80+0.20*(u/0.16);
+    }
     col[j*3]=col[j*3+1]=col[j*3+2]=f;
   }
   geo.setAttribute('color',new THREE.BufferAttribute(col,3));
@@ -3072,7 +3098,11 @@ function construyeMundo(){
   TD.suelo.scale.set(1,1,1); TD.suelo.rotation.set(0,0,0);
   /* El horizonte, en el MISMO plano y un pelo por debajo: así el cuadrado del
      suelo de trabajo no acaba en un canto recto contra un llano. */
+  /* Y se DIMENSIONA con la escena, no 12 km: inclinado, un plano de 12 km sube
+     1.700 m por un lado y tapa el cielo entero. Basta con que llegue más lejos
+     que la niebla — allí ya es del color de la bruma— y ni un metro más. */
   TD.horiz.rotation.set(Math.atan(T.gz||0),0,-Math.atan(T.gx||0));
+  TD.horiz.scale.set(Math.max(2600,d*9),1,Math.max(2600,d*9));
   TD.horiz.position.y=-1.5;
   TD.radio=Math.max(220,d*1.6);
   /* La cámara se pone CUESTA ABAJO, mirando ladera arriba. No es gusto: los
@@ -3104,7 +3134,13 @@ function construyeMundo(){
      el primero era el triple que el último. */
   var gi=20*FIS.D2R, cg=Math.cos(gi), sg=Math.sin(gi);
   var rx=vx*cg+vz*sg, rz=-vx*sg+vz*cg;
-  TD.cam.position.set(rx*d*0.86,d*0.40,rz*d*0.86);
+  /* La ALTURA se mide contra el suelo, no contra la horizontal: mirando ladera
+     arriba con la cámara a 25° y el terreno a 16°, quedan 9° de nada y la
+     escena entera es cuesta — ni cielo ni fuga, todo verde. Se le suma la
+     pendiente para conservar el mismo ángulo de vista SOBRE el plano del sitio,
+     que en llano es el de siempre. */
+  var ojo=(25+Math.abs(cfg.pend||0))*FIS.D2R;
+  TD.cam.position.set(rx*d*0.86,d*0.86*Math.tan(ojo),rz*d*0.86);
   TD.ct.target.set(0,4,0);
   encuadra();
   /* La niebla se dimensiona con la escena. Fija, o se come los bloques cuando
