@@ -52,6 +52,27 @@ if (!FIS) { console.log('\nFALLOS: ' + ko); process.exit(1); }
 //
 // El golden no registraba de qué core salía, así que estar atrasado era
 // indistinguible de estar al día. Esto es lo que cierra esa puerta.
+//
+// CLASIFICACIÓN, que el protocolo de PORTAL-BUG-01 pedía por escrito y no se
+// llegó a dejar. De las seis categorías previstas, el fallo fue DOS:
+//
+//   1. fixture obsoleto ....................... NO. El fixture describía
+//      correctamente al core del que salió; el problema es que ese core ya no
+//      era el de `main`.
+//   2. bug en el portal ....................... NO. El motor JS había portado
+//      la corrección del circunsolar el día ANTES que el core.
+//   3. bug en el core ......................... NO, en aquel momento. (Sí lo
+//      hubo después, y es otra incidencia: CROSS-TILT-01.)
+//   4. input no equivalente ................... NO. Misma meteo, misma
+//      geometría: el fixture las lleva dentro y el careo las reusa.
+//   5. CAMBIO FÍSICO INTENCIONADO SIN MIGRACIÓN ... SÍ. v1.64.0 corrigió la
+//      sombra del circunsolar deliberadamente y nadie regeneró el golden.
+//   6. TOLERANCIA INCORRECTA .................. SÍ, y es la que lo dejó pasar
+//      cinco días: 8 % y 2,5 pp son seis veces el hueco real, así que la
+//      deriva cabía entera dentro del margen.
+//
+// Las dos a la vez importan: la 5 lo causó y la 6 lo hizo invisible. Arreglar
+// solo una habría dejado la puerta abierta por el otro lado.
 const CRUDO = fs.readFileSync(path.join(__dirname, 'careo-estructuras.json'), 'utf8');
 const crypto = require('crypto');
 const MAN = JSON.parse(CRUDO).manifiesto;
@@ -99,7 +120,16 @@ if (MAN) {
   // estructura). El hueco JS<->core NO se movio: sigue en 1,36 % de POA
   // (fija_ew) y 0,367 pp de delta, asi que las tolerancias se quedan donde
   // estaban. Lo unico que cambia es contra que core esta sellado el golden.
-  const CORE_PIN = { version: '1.70.0', commit: 'f67c555d' };
+  /* Re-fijado el 2026-08-26 al regenerar contra `origin/main` limpio.
+     El pin anterior decía v1.70.0 / f67c555 y NINGUNO de los dos existe:
+     el core de `main` es v1.69.0 y ese commit no está en SolarGPTfull —
+     `git fetch origin f67c555` da «couldn't find remote ref». O sea que el
+     golden venía sellado contra una rama que nunca aterrizó, con un número
+     de versión que tampoco. Las CIFRAS sí cuadraban, porque la física que
+     aquella rama traía acabó entrando por otro camino (CROSS-TILT-01); lo
+     que mentía era la etiqueta, que es justo lo que este pin existe para
+     que no pase. */
+  const CORE_PIN = { version: '1.69.0', commit: 'ce3701c0' };
   check('el golden corresponde al core fijado (v' + CORE_PIN.version + ')',
     MAN.core.version === CORE_PIN.version,
     'golden v' + MAN.core.version + ' vs pin v' + CORE_PIN.version +
@@ -312,6 +342,63 @@ C.structures.forEach(k => {
   check('Δ% de ' + k + ' dentro de ' + TOL_DELTA + ' pp (' + dDelta.toFixed(3) + ' pp)',
     dDelta < TOL_DELTA, a.delta.toFixed(2) + ' vs ' + b.delta_pct.toFixed(2));
 });
+
+// ── 5b) DÓNDE se separan, no sólo QUE se separan ──────────────────────────
+// El protocolo de PORTAL-BUG-01 pedía comparar los outputs INTERMEDIOS y
+// localizar el PRIMER punto de divergencia. Este banco comparaba POA y Δ%
+// finales, y el 2026-08-26 eso costó caro: cuando el core y la ficha se
+// separaron, lo único que supo decir fue «el Δ% no cuadra» — y de ahí se
+// dedujo, mal, que la ficha enseñaba física vieja. Fallaba el core: el
+// backtracking no llevaba la pendiente (CROSS-TILT-01).
+//
+// La cadena se recorre EN ORDEN y se corta en la primera etapa que se separa:
+// una etapa mala arrastra todas las siguientes, y enumerarlas esconde al
+// culpable entre sus consecuencias.
+//
+// HUECO DECLARADO, y es la mitad de la cadena: el motor de la ficha publica
+// `ideal`, `sombra` y `neta`, pero NO el ángulo ni el desglose de difusa. O
+// sea que desde este lado se puede localizar entre esas tres, y no antes. El
+// ángulo —que es justo lo que habría resuelto el caso de hoy— sólo se carea
+// desde el core, en `test_careo_comparador_golden.py`. Para cerrarlo del todo
+// habría que publicar θ desde el bloque FÍSICA PURA, y ese bloque está fijado
+// por hash: mover el pin es una decisión aparte, no un efecto colateral de
+// este banco.
+const ETAPAS_JS = [
+  ['poa_ideal_sin_sombra', a => a.ideal, b => b.poa_ideal_kwh_m2, 'kWh/m²', TOL_POA, true],
+  ['sombra', a => a.sombra, b => b.sombra_pct, 'pp', 0.8, false],
+  ['poa_neta', a => a.neta, b => b.poa_kwh_m2, 'kWh/m²', TOL_POA, true],
+];
+C.structures.forEach(k => {
+  const a = js[k], b = core[k];
+  if (!a || !b) return;
+  let culpable = null;
+  for (const [nombre, fjs, fcore, ud, tol, relativa] of ETAPAS_JS) {
+    const x = fjs(a), y = fcore(b);
+    if (x == null || y == null) continue;
+    const d = relativa ? Math.abs(x / y - 1) : Math.abs(x - y);
+    if (d >= tol) { culpable = { nombre, x, y, d, ud, relativa }; break; }
+  }
+  check('la cadena de ' + k + (culpable ? ' se separa en «' + culpable.nombre + '»' : ' cuadra etapa por etapa'),
+    culpable === null,
+    culpable ? ('JS ' + culpable.x.toFixed(3) + ' vs core ' + culpable.y.toFixed(3) +
+                ' (' + (culpable.relativa ? (culpable.d * 100).toFixed(2) + ' %' : culpable.d.toFixed(3) + ' pp') +
+                '). Las etapas anteriores cuadran, así que la divergencia NACE aquí.') : '');
+});
+// Y el zombi: si la cadena no supiera cortar en la primera, esto no probaría
+// nada. Se le da una cadena con la etapa 1 mala y la 3 peor, y tiene que
+// nombrar la 1.
+{
+  const falsoJs = { ideal: 110, sombra: 0.2, neta: 50 };
+  const falsoCore = { poa_ideal_kwh_m2: 100, sombra_pct: 0.2, poa_kwh_m2: 100 };
+  let primera = null;
+  for (const [nombre, fjs, fcore, , tol, relativa] of ETAPAS_JS) {
+    const d = relativa ? Math.abs(fjs(falsoJs) / fcore(falsoCore) - 1)
+                       : Math.abs(fjs(falsoJs) - fcore(falsoCore));
+    if (d >= tol) { primera = nombre; break; }
+  }
+  check('ZOMBI: con dos etapas malas, la cadena nombra la PRIMERA',
+    primera === 'poa_ideal_sin_sombra', 'nombró ' + primera);
+}
 
 // ── 5a) CENTINELA de PORTAL-BUG-01 ────────────────────────────────────────
 // Los números del golden VIEJO (core v1.63, antes de que la sombra tapara el

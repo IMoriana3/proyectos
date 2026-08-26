@@ -132,6 +132,50 @@ def sellar(texto: str) -> str:
     return texto.replace(_HUECO_SHA, f'"sha256": "{h}"', 1)
 
 
+#: La cadena de cálculo EN ORDEN. Sirve para LOCALIZAR: recorrida de principio
+#: a fin, la primera etapa que discrepa es el primer punto de divergencia. El
+#: protocolo de PORTAL-BUG-01 lo pedía y este golden no lo tenía —guardaba
+#: cuatro agregados finales—, así que el 2026-08-26 el careo solo supo decir
+#: «el POA no cuadra» y de ahí se acusó al portal de enseñar física vieja
+#: cuando el que fallaba era el core: el backtracking no llevaba la pendiente
+#: (CROSS-TILT-01). Con el ÁNGULO delante, eso se ve de un vistazo.
+_ETAPAS = (
+    ("theta_abs_medio", "theta_target_deg", "abs_mean"),
+    ("poa_directa", "POA_Direct", "sum"),
+    ("poa_difusa_cielo", "POA_Sky_Diffuse", "sum"),
+    ("poa_difusa_suelo", "POA_Ground_Diffuse", "sum"),
+    ("poa_ideal_sin_sombra", "POA_Ideal_NoShade", "sum"),
+    ("sombra_media", "ShadedFraction", "mean"),
+    ("poa_neta", "POA_Global", "sum"),
+)
+
+
+def _cadena(cmp_):
+    """Un número por etapa y estructura, del detalle que publica el core.
+
+    Se piden con `getattr` porque `detalle` es reciente: contra un core que no
+    lo exponga el golden sale SIN cadena y el careo lo dice, en vez de fingir
+    que localiza. Una fija no tiene ángulo y su cadena empieza en la directa:
+    las columnas ausentes se saltan, no se rellenan con un cero que mentiría.
+    """
+    import numpy as _np
+    detalle = getattr(cmp_, "detalle", None) or {}
+    out = {}
+    for clave, df in detalle.items():
+        etapas = {}
+        for nombre, col, modo in _ETAPAS:
+            if col not in df.columns:
+                continue
+            v = df[col].to_numpy(dtype=float)
+            val = (_np.nansum(v) if modo == "sum"
+                   else _np.nanmean(v) if modo == "mean"
+                   else _np.nanmean(_np.abs(v)))
+            etapas[nombre] = round(float(val), 6)
+        if etapas:
+            out[clave] = etapas
+    return out
+
+
 def _procedencia(core_dir: Path) -> dict:
     """De qué core y con qué stack salió este golden.
 
@@ -237,6 +281,8 @@ def main() -> int:
             "dhi": [round(float(v), 3) for v in meteo["DHI"]],
         },
         "esperado": filas,
+        # DÓNDE, no sólo QUÉ. Ver `_ETAPAS`.
+        "cadena": _cadena(cmp_),
     }
     doc["manifiesto"] = {
         "_": ("De qué core sale este golden y por qué se regeneró. Sin esto, un "
