@@ -2146,12 +2146,12 @@ var VIEW={cx:lon2u(-0.79814),cy:lat2u(41.57634),z:15};
 function escalaMundo(){return TILE_PX*Math.pow(2,VIEW.z);}
 function px(lon,lat){
   var cv=$('cv'),S=escalaMundo();
-  return [(lon2u(lon)-VIEW.cx)*S+cv.width/2, (lat2u(lat)-VIEW.cy)*S+cv.height/2];
+  return [(lon2u(lon)-VIEW.cx)*S+CVW()/2, (lat2u(lat)-VIEW.cy)*S+CVH()/2];
 }
 function canvasToWorld(ev){
   var cv=$('cv'),r=cv.getBoundingClientRect(),S=escalaMundo();
-  var cx=(ev.clientX-r.left)*(cv.width/r.width), cy=(ev.clientY-r.top)*(cv.height/r.height);
-  return [u2lon(VIEW.cx+(cx-cv.width/2)/S), u2lat(VIEW.cy+(cy-cv.height/2)/S)];
+  var cx=(ev.clientX-r.left)*(CVW()/r.width), cy=(ev.clientY-r.top)*(CVH()/r.height);
+  return [u2lon(VIEW.cx+(cx-CVW()/2)/S), u2lat(VIEW.cy+(cy-CVH()/2)/S)];
 }
 
 /* Encajar: el encuadre que mete la parcela entera con aire. Se llama al cambiar
@@ -2178,7 +2178,7 @@ function encaja(){
     if(u<x0)x0=u; if(u>x1)x1=u; if(v<y0)y0=v; if(v>y1)y1=v;});
   VIEW.cx=(x0+x1)/2; VIEW.cy=(y0+y1)/2;
   var du=Math.max(x1-x0,1e-9), dv=Math.max(y1-y0,1e-9), pad=1.14;
-  var S=Math.min(cv.width/(du*pad), cv.height/(dv*pad));
+  var S=Math.min(CVW()/(du*pad), CVH()/(dv*pad));
   VIEW.z=Math.max(Z_MIN,Math.min(Z_MAX,Math.log2(S/TILE_PX)));
 }
 
@@ -2221,11 +2221,44 @@ function tesela(z,x,y){
   t.img.src=url;
   return t;
 }
+/* ── EL LIENZO Y SU RESOLUCION ─────────────────────────────────────────────
+   El canvas nacia con un buffer FIJO de 1000x700 y el CSS lo estiraba a lo
+   ancho que hubiera: en una pantalla de 1270 px el navegador ampliaba 1000
+   pixeles a 1270, y de ahi la falta de nitidez. Ahora el buffer se ajusta al
+   tamano real del elemento por `devicePixelRatio` (con tope 2: por encima el
+   coste de pintar crece al cuadrado y ya no se nota).
+
+   TODO EL DIBUJO SIGUE EN PIXELES CSS. `ctx.setTransform(K,…)` hace que una
+   unidad de dibujo sea un pixel CSS, y CVW()/CVH() devuelven el ancho y el
+   alto en esas mismas unidades. Asi los grosores de linea, los tipos y los
+   margenes fijos siguen midiendo lo que median, y solo cambia la finura.
+
+   Y LA VARITA SE QUEDA EN CSS a proposito. Su lienzo auxiliar se crea con
+   CVW()/CVH(), o sea en el MISMO grid de pixeles de siempre: lee la ortofoto
+   exactamente igual que antes de esto, con los mismos umbrales y el mismo
+   relleno por inundacion. Darle mas resolucion habria multiplicado por cuatro
+   los pixeles que recorre y cambiado un comportamiento que no se puede probar
+   aqui sin teselas. Nitidez para lo que se ve, grid intacto para lo que mide. */
+var DPRK=1;
+function CVW(){return $('cv').width/DPRK;}
+function CVH(){return $('cv').height/DPRK;}
+function ajustaLienzo(){
+  var cv=$('cv'); if(!cv)return false;
+  var w=Math.round(cv.clientWidth||cv.width), h=Math.round(cv.clientHeight||cv.height);
+  if(!w||!h)return false;
+  var K=Math.min(window.devicePixelRatio||1,2);
+  var W=Math.round(w*K), H=Math.round(h*K);
+  if(cv.width===W&&cv.height===H&&DPRK===K)return false;
+  cv.width=W; cv.height=H; DPRK=K;
+  return true;                                   // cambio: quien llame decide si repinta
+}
+
+
 function pintaOrtofoto(ctx,cv){
   var S=escalaMundo(), tz=Math.max(Z_MIN,Math.min(Z_MAX,Math.round(VIEW.z))), n=Math.pow(2,tz);
   var lado=S/n;                                   // píxeles que ocupa una tesela
-  var u0=VIEW.cx-(cv.width/2)/S, u1=VIEW.cx+(cv.width/2)/S;
-  var v0=VIEW.cy-(cv.height/2)/S, v1=VIEW.cy+(cv.height/2)/S;
+  var u0=VIEW.cx-(CVW()/2)/S, u1=VIEW.cx+(CVW()/2)/S;
+  var v0=VIEW.cy-(CVH()/2)/S, v1=VIEW.cy+(CVH()/2)/S;
   var tx0=Math.floor(u0*n), tx1=Math.floor(u1*n), ty0=Math.floor(v0*n), ty1=Math.floor(v1*n);
   var pedidas=0;
   ctx.imageSmoothingEnabled=true;
@@ -2236,7 +2269,7 @@ function pintaOrtofoto(ctx,cv){
       var wx=((tx%n)+n)%n;
       var t=tesela(tz,wx,ty);
       if(!t.ok)continue;
-      var X=(tx/n-VIEW.cx)*S+cv.width/2, Y=(ty/n-VIEW.cy)*S+cv.height/2;
+      var X=(tx/n-VIEW.cx)*S+CVW()/2, Y=(ty/n-VIEW.cy)*S+CVH()/2;
       // +1 px de solape: sin él se ve una rejilla de costuras entre teselas
       ctx.drawImage(t.img,Math.floor(X),Math.floor(Y),Math.ceil(lado)+1,Math.ceil(lado)+1);
     }
@@ -2249,8 +2282,8 @@ function pintaRejilla(ctx,cv){
   var mpp=156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,VIEW.z);
   var paso=50/mpp; while(paso<24)paso*=2; while(paso>240)paso/=2;
   ctx.strokeStyle='rgba(35,48,61,.85)'; ctx.lineWidth=1; ctx.beginPath();
-  for(var x=(cv.width/2)%paso;x<cv.width;x+=paso){ctx.moveTo(x,0);ctx.lineTo(x,cv.height);}
-  for(var y=(cv.height/2)%paso;y<cv.height;y+=paso){ctx.moveTo(0,y);ctx.lineTo(cv.width,y);}
+  for(var x=(CVW()/2)%paso;x<CVW();x+=paso){ctx.moveTo(x,0);ctx.lineTo(x,CVH());}
+  for(var y=(CVH()/2)%paso;y<CVH();y+=paso){ctx.moveTo(0,y);ctx.lineTo(CVW(),y);}
   ctx.stroke();
 }
 function avisoBasemap(hayOrto){
@@ -2271,7 +2304,7 @@ $('cv').addEventListener('pointerdown',function(ev){
 $('cv').addEventListener('pointermove',function(ev){
   if(!_pan)return;
   var cv=$('cv'),r=cv.getBoundingClientRect(),S=escalaMundo();
-  var dx=(ev.clientX-_pan.x)*(cv.width/r.width), dy=(ev.clientY-_pan.y)*(cv.height/r.height);
+  var dx=(ev.clientX-_pan.x)*(CVW()/r.width), dy=(ev.clientY-_pan.y)*(CVH()/r.height);
   _movido=Math.max(_movido,Math.hypot(ev.clientX-_pan.x,ev.clientY-_pan.y));
   if(_movido<3)return;
   VIEW.cx=_pan.cx-dx/S; VIEW.cy=_pan.cy-dy/S; pideRepintar();
@@ -2284,8 +2317,8 @@ $('cv').addEventListener('pointercancel',function(){_pan=null;$('cv').classList.
 $('cv').addEventListener('wheel',function(ev){
   ev.preventDefault();
   var cv=$('cv'),r=cv.getBoundingClientRect(),S=escalaMundo();
-  var mx=(ev.clientX-r.left)*(cv.width/r.width)-cv.width/2;
-  var my=(ev.clientY-r.top)*(cv.height/r.height)-cv.height/2;
+  var mx=(ev.clientX-r.left)*(CVW()/r.width)-CVW()/2;
+  var my=(ev.clientY-r.top)*(CVH()/r.height)-CVH()/2;
   var uAnt=VIEW.cx+mx/S, vAnt=VIEW.cy+my/S;                 // punto bajo el cursor
   VIEW.z=Math.max(Z_MIN,Math.min(Z_MAX,VIEW.z-Math.sign(ev.deltaY)*0.45));
   var S2=escalaMundo();
@@ -2610,8 +2643,8 @@ var varitaAcc=null,varitaAccN=0,varitaVista=null;
 function varitaReset(){varitaAcc=null;varitaAccN=0;varitaVista=null;}
 function varitaClic(ev){
   var cv=$('cv'),r=cv.getBoundingClientRect();
-  var sx=(ev.clientX-r.left)*(cv.width/r.width),sy=(ev.clientY-r.top)*(cv.height/r.height);
-  var off=document.createElement('canvas');off.width=cv.width;off.height=cv.height;
+  var sx=(ev.clientX-r.left)*(CVW()/r.width),sy=(ev.clientY-r.top)*(CVH()/r.height);
+  var off=document.createElement('canvas');off.width=Math.round(CVW());off.height=Math.round(CVH());
   var octx=off.getContext('2d',{willReadFrequently:true});
   octx.fillStyle='#000';octx.fillRect(0,0,off.width,off.height);
   if(!pintaOrtofoto(octx,cv)){
@@ -2619,7 +2652,7 @@ function varitaClic(ev){
     return;
   }
   var img=octx.getImageData(0,0,off.width,off.height);
-  var vista=[VIEW.cx,VIEW.cy,VIEW.z,cv.width,cv.height].join('/');
+  var vista=[VIEW.cx,VIEW.cy,VIEW.z,CVW(),CVH()].join('/');
   if(ev.altKey){
     // FIXTURE de escena REAL (encargo B10 tras El Burgo/Arganda: el banco
     // sintético daba verde donde el sitio real fallaba — fixture ciego).
@@ -2648,7 +2681,7 @@ function varitaClic(ev){
   varitaAcc=res.dentro;varitaAccN=res.n;
   var S=escalaMundo();
   DRAW=res.ring.map(function(q){
-    return [u2lon(VIEW.cx+(q[0]-cv.width/2)/S),u2lat(VIEW.cy+(q[1]-cv.height/2)/S)];
+    return [u2lon(VIEW.cx+(q[0]-CVW()/2)/S),u2lat(VIEW.cy+(q[1]-CVH()/2)/S)];
   });
   drawing=true;
   if(drawDest==='linea')drawDest='parcela';      // una línea no se detecta
@@ -2695,17 +2728,26 @@ $('cv').addEventListener('click',function(ev){
   tagParcel();draw();
 });
 $('cv').addEventListener('dblclick',function(){ if(drawing)cierraDibujo(); });
+/* Al cambiar el tamano de la ventana el buffer deja de casar con el elemento y
+   se volveria a ver ampliado. Se reajusta y se repinta — y se OLVIDA lo que
+   llevara acumulado la varita, porque su mascara son pixeles de ESTE encuadre y
+   convertirlos a otro seria inventarlos (lo dice ya su propio comentario). */
+addEventListener('resize',function(){ if(ajustaLienzo()){ varitaReset(); draw(); } });
 
 /* ── el repintado ── */
 function draw(){
   var cv=$('cv'),ctx=cv.getContext('2d');
-  ctx.clearRect(0,0,cv.width,cv.height);ctx.fillStyle='#0F151D';ctx.fillRect(0,0,cv.width,cv.height);
+  ajustaLienzo();
+  // Una unidad de dibujo = un pixel CSS. Se pone en CADA repintado porque el
+  // buffer puede haber cambiado de tamano justo arriba, y eso resetea la matriz.
+  ctx.setTransform(DPRK,0,0,DPRK,0,0);
+  ctx.clearRect(0,0,CVW(),CVH());ctx.fillStyle='#0F151D';ctx.fillRect(0,0,CVW(),CVH());
   var hayOrto=false;
   if($('orto').checked)hayOrto=pintaOrtofoto(ctx,cv);
   if(!hayOrto)pintaRejilla(ctx,cv);
   // Velo oscuro sobre la ortofoto: sin él, las mesas verdes sobre un secarral
   // claro pierden el contraste que tienen sobre el fondo del panel.
-  if(hayOrto){ctx.fillStyle='rgba(11,15,20,.28)';ctx.fillRect(0,0,cv.width,cv.height);}
+  if(hayOrto){ctx.fillStyle='rgba(11,15,20,.28)';ctx.fillRect(0,0,CVW(),CVH());}
   avisoBasemap(hayOrto);
 
   function ring(pts,fill,stroke,lw,dash){
@@ -2901,11 +2943,11 @@ function ejesBifila(){
 function drawEscala(ctx,cv,hayOrto){
   var lat=u2lat(VIEW.cy);
   var mpp=156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,VIEW.z);   // m por píxel
-  var objetivo=cv.width*0.18*mpp, pot=Math.pow(10,Math.floor(Math.log10(objetivo)));
+  var objetivo=CVW()*0.18*mpp, pot=Math.pow(10,Math.floor(Math.log10(objetivo)));
   var buenos=[1,2,5,10].map(function(f){return f*pot;}).filter(function(v){return v<=objetivo*2;});
   var L=buenos[buenos.length-1]||100, w=L/mpp;
-  var y=cv.height-18;
-  if(hayOrto){ctx.fillStyle='rgba(11,15,20,.55)';ctx.fillRect(8,cv.height-40,w+22,32);}
+  var y=CVH()-18;
+  if(hayOrto){ctx.fillStyle='rgba(11,15,20,.55)';ctx.fillRect(8,CVH()-40,w+22,32);}
   ctx.strokeStyle='#8093A4';ctx.fillStyle='#B9C7D3';ctx.lineWidth=1.4;
   ctx.beginPath();ctx.moveTo(16,y);ctx.lineTo(16+w,y);ctx.stroke();
   ctx.beginPath();ctx.moveTo(16,y-4);ctx.lineTo(16,y+4);ctx.moveTo(16+w,y-4);ctx.lineTo(16+w,y+4);ctx.stroke();
