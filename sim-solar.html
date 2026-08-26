@@ -65,6 +65,10 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
    «Recorrido del sol» acabo en la columna de ENTRADAS, aplastado a 250 px. Estas dos ocupan la
    fila entera: las graficas quedan todas arriba y la tabla, debajo. */
 .card.anchoTotal{grid-column:1/-1}
+.solrow3{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.solrow3 canvas{height:clamp(180px,22vh,230px)}
+#shYear{height:clamp(150px,18vh,200px)}
+@media(max-width:1100px){ .solrow3{grid-template-columns:1fr} }
 .solrow2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .solrow2 canvas{height:clamp(220px,26vh,300px)}
 @media(max-width:1100px){ .solrow2{grid-template-columns:1fr} }
@@ -156,6 +160,17 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
         <canvas id="cart" width="640" height="300" title="Sun path cartesiano: azimut en el eje X, elevación en el Y"></canvas>
         <canvas id="theta" width="640" height="300" title="Ángulo del seguidor a lo largo del día"></canvas>
       </div>
+    </div>
+
+    <!-- EL AÑO DE UN VISTAZO -->
+    <div class="card anchoTotal">
+      <h2><span class="ic">▩</span> El año de un vistazo <span style="margin-left:auto;font:400 11px var(--mono);color:var(--muted)">día × hora · hora local</span></h2>
+      <div class="solrow3">
+        <div><canvas id="hmEl" width="640" height="230"></canvas><div class="tag">elevación solar (°) · 0 → 90</div></div>
+        <div><canvas id="hmIr" width="640" height="230"></canvas><div class="tag">GHI de cielo claro (W/m²) · 0 → 1.100</div></div>
+      </div>
+      <canvas id="shYear" width="1300" height="200" style="margin-top:10px"></canvas>
+      <div class="tag">longitud de sombra al MEDIODÍA SOLAR del objeto de arriba, a lo largo del año</div>
     </div>
 
     <!-- CALENDARIO SOLAR -->
@@ -508,7 +523,7 @@ function drawSky(){
     ctx.fillStyle='#8093A4';ctx.fillText(t,lx+15,ly+i*15);
   });
   updateReadout(g,hm);
-  drawPath(); calSolar(); drawCart(); drawTheta();
+  drawPath(); calSolar(); drawCart(); drawTheta(); drawAno();
 }
 /* AMANECER, MEDIODIA SOLAR Y ATARDECER. Lo que en el core es sunrise_sunset_table: por dia, salida,
    paso por el meridiano, puesta, duracion y elevacion maxima. Dos diferencias que van DECLARADAS:
@@ -672,6 +687,108 @@ function drawTheta(){
   ctx.fillStyle='#8093A4';ctx.fillText('— θ de seguimiento puro',x0+186,H-6);
   ctx.fillStyle='#5E6F7E';ctx.textAlign='right';
   ctx.fillText('θ ahora: '+(aq&&aq.bt!=null&&aq.sol?aq.bt.toFixed(1)+'°':'—'),x1,H-6);
+}
+/* ── EL AÑO DE UN VISTAZO ──────────────────────────────────────────────────────────────────────
+   Los tres del core que no necesitan nada de fuera: plot_elevation_heatmap, plot_irradiance_heatmap
+   y plot_shadow_annual. Todo con el mismo NOAA de esta ficha.
+
+   El GHI de cielo claro es el MISMO simplificado del core, y alli tambien se llama asi:
+   I0·sin(elev), con I0 = 1367·(1+0,033·cos(2π·doy/365)) -la excentricidad de la orbita-. No es
+   Ineichen: no lleva turbidez ni altura, asi que sobreestima. Es un PROXY para ver la forma del
+   año, no una prevision de produccion; para eso esta el motor.
+
+   La sombra se mide en el MEDIODIA SOLAR, no a las 12:00 del reloj. El core lleva esa correccion
+   con nombre y fecha -«¿las sombras no deberian ser simetricas?», 2026-08-10-: evaluando al reloj
+   salian dos dientes de sierra en los cambios de hora. Aqui el transito es el minuto de elevacion
+   maxima, buscado a 10 min y afinado a 1. La asimetria que queda entre solsticios es REAL: es la
+   analema. */
+var YEAR_CACHE=null;
+function anoSolar(lat,lon,tz,y){
+  var k=lat.toFixed(4)+'|'+lon.toFixed(4)+'|'+tz+'|'+y;
+  if(YEAR_CACHE&&YEAR_CACHE.k===k)return YEAR_CACHE;
+  var dias=[], el=[], ir=[], sombra=[], maxIr=0;
+  var bis=(y%4===0&&y%100!==0)||y%400===0, nd=bis?366:365;
+  for(var d=0;d<nd;d++){
+    var f=new Date(Date.UTC(y,0,1+d)), ds=f.toISOString().slice(0,10);
+    var I0=1367*(1+0.033*Math.cos(2*Math.PI*(d+1)/365));
+    var fila=[], filaI=[];
+    for(var h=0;h<24;h++){
+      var g=solarGeom(localToUTCms(ds,h*60,tz),lat,lon);
+      var e=Math.max(0,g.elevation); fila.push(e);
+      var q=Math.max(0,I0*Math.sin(e*RAD)); filaI.push(q); if(q>maxIr)maxIr=q;
+    }
+    el.push(fila); ir.push(filaI);
+    /* transito: barrido de 10 min y afinado de 1 */
+    var mejor={el:-99,m:0};
+    for(var m=0;m<=1440;m+=10){ var gg=solarGeom(localToUTCms(ds,m,tz),lat,lon);
+      if(gg.elevation>mejor.el)mejor={el:gg.elevation,m:m}; }
+    for(var m2=mejor.m-10;m2<=mejor.m+10;m2++){ if(m2<0||m2>1440)continue;
+      var g2=solarGeom(localToUTCms(ds,m2,tz),lat,lon);
+      if(g2.elevation>mejor.el)mejor={el:g2.elevation,m:m2}; }
+    sombra.push(mejor.el>0?1/Math.tan(mejor.el*RAD):null);   // por metro de altura
+    dias.push(ds);
+  }
+  YEAR_CACHE={k:k,nd:nd,dias:dias,el:el,ir:ir,sombra:sombra,maxIr:maxIr};
+  return YEAR_CACHE;
+}
+/* rampas: 'hot' para la elevacion y 'YlOrRd' para la irradiancia, como en el core */
+function rampaHot(t){ t=Math.max(0,Math.min(1,t));
+  var r=Math.min(255,Math.round(t*3*255)), g=Math.min(255,Math.round(Math.max(0,t*3-1)*255)),
+      b=Math.min(255,Math.round(Math.max(0,t*3-2)*255));
+  return 'rgb('+r+','+g+','+b+')'; }
+function rampaYlOrRd(t){ t=Math.max(0,Math.min(1,t));
+  var k=[[255,255,204],[254,217,118],[253,141,60],[227,26,28],[128,0,38]];
+  var x=t*(k.length-1), i=Math.min(k.length-2,Math.floor(x)), fr=x-i;
+  return 'rgb('+[0,1,2].map(function(j){return Math.round(k[i][j]+(k[i+1][j]-k[i][j])*fr);}).join(',')+')'; }
+
+function pintaMapa(cv,datos,nd,vmax,rampa,titulo){
+  var L=ajustaLienzo(cv); if(!L)return;
+  var ctx=L.ctx,W=L.W,H=L.H,pl=30,pr=8,pt=8,pb=18;
+  var x0=pl,x1=W-pr,y0=H-pb,y1=pt, cw=(x1-x0)/nd, ch=(y0-y1)/24;
+  for(var d=0;d<nd;d++)for(var h=0;h<24;h++){
+    var v=datos[d][h]; if(v<=0)continue;
+    ctx.fillStyle=rampa(v/vmax);
+    ctx.fillRect(x0+d*cw, y0-(h+1)*ch, Math.max(1,cw+0.5), Math.max(1,ch+0.5));
+  }
+  ctx.strokeStyle='#1A2530';ctx.lineWidth=1;ctx.strokeRect(x0,y1,x1-x0,y0-y1);
+  ctx.fillStyle='#5E6F7E';ctx.font='9px ui-monospace,monospace';
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  [0,6,12,18,24].forEach(function(h){ ctx.fillText(h+'h',x0-4,y0-h*ch); });
+  ctx.textAlign='center';ctx.textBaseline='top';
+  var MES=['E','F','M','A','M','J','J','A','S','O','N','D'], acum=0;
+  [31,28,31,30,31,30,31,31,30,31,30,31].forEach(function(dm,i){
+    ctx.fillText(MES[i], x0+(acum+dm/2)*cw, y0+3); acum+=dm; });
+}
+function drawAno(){
+  var a=$('hmEl'), b2=$('hmIr'), c=$('shYear'); if(!a||!b2||!c)return;
+  if(faltanCoords()){ [a,b2,c].forEach(function(cv){ var L=ajustaLienzo(cv); if(!L)return;
+      L.ctx.fillStyle='#5E6F7E';L.ctx.font='12px system-ui,sans-serif';L.ctx.textAlign='center';
+      L.ctx.fillText('Sin coordenadas',L.W/2,L.H/2); }); return; }
+  var lat=+$('lat').value,lon=+$('lon').value,tz=+$('tz').value,y=+($('date').value||'2026-06-21').slice(0,4);
+  var A=anoSolar(lat,lon,tz,y);
+  pintaMapa(a,A.el,A.nd,90,rampaHot);
+  pintaMapa(b2,A.ir,A.nd,1100,rampaYlOrRd);
+  /* la sombra del año */
+  var L=ajustaLienzo(c); if(!L)return;
+  var ctx=L.ctx,W=L.W,H=L.H,pl=34,pr=10,pt=10,pb=18;
+  var obj=+$('obj').value||1, serie=A.sombra.map(function(v){return v==null?null:v*obj;});
+  var vals=serie.filter(function(v){return v!=null;});
+  var vmax=Math.max.apply(null,vals)||1, x0=pl,x1=W-pr,y0=H-pb,y1=pt;
+  var gx=function(i){return x0+i/(A.nd-1)*(x1-x0);}, gy=function(v){return y0-(v/vmax)*(y0-y1);};
+  ctx.strokeStyle='#1A2530';ctx.lineWidth=1;ctx.fillStyle='#5E6F7E';ctx.font='9px ui-monospace,monospace';
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  [0,vmax/2,vmax].forEach(function(v){ var yy=gy(v); ctx.beginPath();ctx.moveTo(x0,yy);ctx.lineTo(x1,yy);ctx.stroke();
+    ctx.fillText(v.toFixed(1)+'m',x0-4,yy); });
+  ctx.beginPath(); ctx.moveTo(gx(0),y0);
+  serie.forEach(function(v,i){ if(v!=null)ctx.lineTo(gx(i),gy(v)); });
+  ctx.lineTo(gx(A.nd-1),y0); ctx.closePath(); ctx.fillStyle='rgba(52,73,94,.35)'; ctx.fill();
+  ctx.beginPath(); var pr2=true;
+  serie.forEach(function(v,i){ if(v==null){pr2=true;return;} if(pr2){ctx.moveTo(gx(i),gy(v));pr2=false;}else ctx.lineTo(gx(i),gy(v)); });
+  ctx.strokeStyle='#8fa9c4'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#5E6F7E';ctx.textAlign='center';ctx.textBaseline='top';
+  var MES=['E','F','M','A','M','J','J','A','S','O','N','D'], acum=0;
+  [31,28,31,30,31,30,31,31,30,31,30,31].forEach(function(dm,i){
+    ctx.fillText(MES[i], gx(acum+dm/2), y0+3); acum+=dm; });
 }
 function updateReadout(g,hm){
   $('hourlbl').textContent=hhmm(hm);
