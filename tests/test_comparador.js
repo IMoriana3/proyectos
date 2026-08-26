@@ -354,16 +354,29 @@ check('y el de transposición NO se mueve: no sabe que hay vecinas (' +
 // familia ve una COMPONENTE distinta del mismo plano.
 const FIJA = FIS.spec('fija_proyecto'), TK = FIS.spec('tracker_hsat'),
       EW = FIS.spec('fija_ew');
-check('la fija apila al SUR y el seguidor y las dos aguas al ESTE',
-  FIS.ejePitch(FIJA) === 'z' && FIS.ejePitch(TK) === 'x' && FIS.ejePitch(EW) === 'x',
-  [FIS.ejePitch(FIJA), FIS.ejePitch(TK), FIS.ejePitch(EW)].join(','));
+const N = { lat: 37.4 };                       // hemisferio norte, sin desvíos
+check('sin desvíos, la fija apila al SUR (180°) y el seguidor y las dos aguas al ESTE (90°)',
+  FIS.azPitch(N, FIJA) === 180 && FIS.azPitch(N, TK) === 90 && FIS.azPitch(N, EW) === 90,
+  [FIS.azPitch(N, FIJA), FIS.azPitch(N, TK), FIS.azPitch(N, EW)].join(','));
+check('en el hemisferio SUR la fija apila al NORTE, que es donde tiene el ecuador',
+  FIS.azPitch({ lat: -16.6 }, FIJA) === 0);
+// El azimut es una decisión de PROYECTO y se declara como desvío: 0 = la
+// orientación de manual, positivo hacia el oeste. Así vale en los dos
+// hemisferios y es como se especifica en obra.
+check('el desvío gira la fija: 15° al oeste = mirar a 195°',
+  FIS.azPitch({ lat: 37.4, desvFija: 15 }, FIJA) === 195);
+check('y el del eje gira el seguidor: eje a 20° = apilar a 110°',
+  FIS.azPitch({ lat: 37.4, desvEje: 20 }, TK) === 110);
+check('y son INDEPENDIENTES: el desvío de la fija no toca al seguidor',
+  FIS.azPitch({ lat: 37.4, desvFija: 15 }, TK) === 90 &&
+  FIS.azPitch({ lat: 37.4, desvEje: 20 }, FIJA) === 180);
 // Los cuatro rumbos cardinales, que son los que se pueden razonar a mano.
 [[180, 16, 0, 'al SUR: la fija la ve entera y el seguidor NADA'],
  [90, 0, 16, 'al ESTE: al revés, el seguidor entera y la fija nada'],
  [0, -16, 0, 'al NORTE: la fija la ve entera pero con el signo cambiado'],
  [270, 0, -16, 'al OESTE: el seguidor, con el signo cambiado']
 ].forEach(([az, cf, ct, nom]) => {
-  const f = FIS.pendComp(16, az, 'z'), t = FIS.pendComp(16, az, 'x');
+  const f = FIS.pendComp(16, az, 180), t = FIS.pendComp(16, az, 90);
   check('cayendo ' + nom, Math.abs(f.cruz - cf) < 1e-9 && Math.abs(t.cruz - ct) < 1e-9,
     JSON.stringify({ fija: +f.cruz.toFixed(3), tk: +t.cruz.toFixed(3) }));
   // y lo que no ve ⊥ lo ve A LO LARGO: no se pierde por el camino
@@ -372,21 +385,33 @@ check('la fija apila al SUR y el seguidor y las dos aguas al ESTE',
              - Math.tan(16 * Math.PI / 180) ** 2) < 1e-12);
 });
 // El caso en que TODAS ven lo mismo no es un ajuste: es un azimut concreto.
-const d45 = FIS.pendComp(16, 135, 'z'), t45 = FIS.pendComp(16, 135, 'x');
+const d45 = FIS.pendComp(16, 135, 180), t45 = FIS.pendComp(16, 135, 90);
 check('solo cayendo en diagonal (135°) las dos ven lo MISMO: ' + d45.cruz.toFixed(2) + '°',
   Math.abs(d45.cruz - t45.cruz) < 1e-9 &&
   Math.abs(d45.cruz - Math.atan(Math.tan(16 * Math.PI / 180) / Math.SQRT2) * 180 / Math.PI) < 1e-9,
   d45.cruz.toFixed(4) + ' vs ' + t45.cruz.toFixed(4));
 check('terreno llano: ninguna ve nada, apunte donde apunte el azimut',
-  [0, 45, 90, 200, 359].every(a => FIS.pendComp(0, a, 'z').cruz === 0 &&
-                                   FIS.pendComp(0, a, 'x').cruz === 0));
+  [0, 45, 90, 200, 359].every(a => FIS.pendComp(0, a, 180).cruz === 0 &&
+                                   FIS.pendComp(0, a, 90).cruz === 0));
+// Y lo que pedía el caso general: con la estructura girada, la componente ⊥ ya
+// no es la del manual. Terreno al sur y fija desviada 30° al oeste.
+const gir = FIS.pendComp(16, 180, 210);
+check('con la fija desviada 30°, de los 16° del terreno solo ve ' +
+  gir.cruz.toFixed(1) + '° ⊥ a sus filas (cos 30° · tan β)',
+  Math.abs(Math.tan(gir.cruz * Math.PI / 180) -
+           Math.tan(16 * Math.PI / 180) * Math.cos(30 * Math.PI / 180)) < 1e-12,
+  JSON.stringify(gir));
+check('  y el resto le entra a lo largo de las filas',
+  Math.abs(Math.tan(gir.cruz * Math.PI / 180) ** 2 +
+           Math.tan(gir.largo * Math.PI / 180) ** 2 -
+           Math.tan(16 * Math.PI / 180) ** 2) < 1e-12);
 // El seam del careo: el core recibe el cross-axis directamente, así que sin
 // azimut declarado `pend` ES el cross-axis. Con azimut, se deriva.
 check('sin azimut declarado, `pend` es el cross-axis tal cual (el camino del careo)',
-  FIS.cruz({ pend: 8 }, FIJA) === 8 && FIS.cruz({ pend: 8 }, TK) === 8);
+  FIS.cruz({ pend: 8, lat: 37.4 }, FIJA) === 8 && FIS.cruz({ pend: 8, lat: 37.4 }, TK) === 8);
 check('con azimut, cada familia recibe SU componente',
-  Math.abs(FIS.cruz({ pend: 16, pendAz: 180 }, FIJA) - 16) < 1e-9 &&
-  Math.abs(FIS.cruz({ pend: 16, pendAz: 180 }, TK)) < 1e-9);
+  Math.abs(FIS.cruz({ pend: 16, pendAz: 180, lat: 37.4 }, FIJA) - 16) < 1e-9 &&
+  Math.abs(FIS.cruz({ pend: 16, pendAz: 180, lat: 37.4 }, TK)) < 1e-9);
 // Y lo que de verdad importa: eso llega al SOMBREADO, no se queda en la nota.
 const caeSur = porClaveTmp(FIS.compara(['fija_proyecto', 'tracker_hsat_nobt'], M,
   { ...cfg, pend: 16, pendAz: 180 }));

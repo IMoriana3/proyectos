@@ -277,6 +277,13 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         <div class="field"><label>Tilt de proyecto °</label><input id="tilt" type="number" step="0.5" value="25"></div>
         <div class="field"><label>Tilt dos aguas °</label><input id="tiltEW" type="number" step="0.5" value="12"></div>
       </div>
+      <div class="two">
+        <div class="field"><label>Desvío del azimut °</label>
+          <input id="desvFija" type="number" step="1" value="0"
+                 title="0 = mirando al ecuador. Positivo = girada hacia el OESTE. Es una decisión de proyecto y no tiene que ver con el azimut del terreno."></div>
+        <div class="field"><label>&nbsp;</label>
+          <p class="mini" style="padding-top:9px" id="azFijaNota">mira al ecuador</p></div>
+      </div>
       <div id="fxRead" class="readout" style="margin-top:4px"></div>
       <p class="mini" id="fxNota"></p>
     </div>
@@ -313,6 +320,13 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       <div class="two">
         <div class="field"><label>Gap módulos (m)</label><input id="tkGapMod" type="number" step="0.001" value="0.020"></div>
         <div class="field"><label>Gap del motor (m)</label><input id="tkGapMot" type="number" step="0.01" value="0.50"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Desvío del eje °</label>
+          <input id="desvEje" type="number" step="1" value="0"
+                 title="0 = eje norte-sur. Positivo = girado hacia el OESTE. Es una decisión de proyecto y no tiene que ver con el azimut del terreno."></div>
+        <div class="field"><label>&nbsp;</label>
+          <p class="mini" style="padding-top:9px" id="azEjeNota">eje norte-sur</p></div>
       </div>
       <div class="two">
         <div class="field"><label>Ángulo máx °</label><input id="maxang" type="number" value="55"></div>
@@ -375,7 +389,15 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         largo</i> de ellas — eso es lo que hace un eje que sigue el terreno, y lo que hacen las
         hincas de una fija al replantearse. En la dirección del pitch, en cambio, se
         <b>escalonan</b> a distinta cota sin cambiar el tilt: la pendiente la tiene el terreno, no
-        la estructura.
+        la estructura. Ojo con una consecuencia: el <b>tilt y el azimut que entran en el cálculo son
+        los DECLARADOS</b> —como en el core—, mientras que la escena además apoya la fila en el
+        suelo, así que la mesa queda algo escorada respecto a ellos. Es la diferencia entre el
+        proyecto y el replanteo, y en pendientes fuertes se nota.
+        <b>El azimut de la estructura</b> es cosa aparte del terreno: se declara como <b>desvío</b>
+        (0 = la fija al ecuador y el eje norte-sur, positivo hacia el oeste) y cada familia lleva el
+        suyo. Girar la estructura cambia <b>cuánta pendiente ve</b>: con el terreno cayendo al sur y
+        16°, girar la fija 30° le baja la ⊥ a 13,9° y girar el eje del seguidor 20° se la sube de 0°
+        a 5,6°.
         <b>El terreno</b> es <b>uno solo</b>: la pendiente del emplazamiento con su
         <b>azimut</b>, y todas las estructuras montadas sobre ese mismo plano — por eso van
         alineadas sobre la <b>curva de nivel</b> y la cámara se pone cuesta abajo. Lo que cambia
@@ -534,13 +556,46 @@ FIS.sun=function(date,latR,lon){
    vector solar sobre ese plano. El módulo no es un adorno — es lo que hace
    exacto el coseno del ángulo de incidencia (ver FIS.poa) sin dividir por
    cos(ps), que con el sol rasante en el eje se va a cero y revienta.          */
-FIS.psTracker=function(el,az){
-  var sx=-Math.cos(el)*Math.sin(az), sz=Math.sin(el);   // este positivo (el core)
-  return {ps:Math.atan2(sx,sz)*FIS.R2D, rho:Math.hypot(sx,sz)};
+FIS.psTracker=function(el,az,cfg){
+  // ⊥ al eje; con el eje N-S el pitch va al ESTE, que es el signo del core
+  return FIS.psPlano(el,az,(cfg?FIS.azEje(cfg):0)+90,0,0);
 };
-FIS.psFija=function(el,az,lat){
-  var sx=Math.cos(el)*Math.cos(az)*(lat>=0?1:-1), sz=Math.sin(el);  // hacia el ecuador
-  return {ps:Math.atan2(sx,sz)*FIS.R2D, rho:Math.hypot(sx,sz)};
+/* ── EL AZIMUT DE LA ESTRUCTURA ────────────────────────────────────────────
+   Ni la fija mira siempre al ecuador ni el eje de un seguidor corre siempre
+   norte-sur: es una decisión de proyecto, y no tiene nada que ver con hacia
+   dónde cae el terreno. Se declara como DESVÍO —0 = la orientación de manual,
+   positivo hacia el oeste— porque así vale igual en los dos hemisferios y es
+   como se especifica en obra («15° al oeste»).
+
+   Toda la proyección del sol pasa por una sola función: el ángulo del sol en
+   el plano ⊥ a las filas, para una dirección de pitch cualquiera. Con el pitch
+   al sur sale la fija de siempre y con el pitch al este, el seguidor N-S.
+
+   Convenios: `az` del sol es el que da FIS.sun —desde el SUR, positivo al
+   oeste— y los azimutes de estructura van desde el NORTE en sentido horario
+   (0 N, 90 E, 180 S, 270 O), como el del terreno.                            */
+FIS.azEquador=function(lat){return (lat>=0)?180:0;};   // hacia dónde mira una fija
+FIS.azFija=function(cfg){return FIS.azEquador(cfg.lat)+(cfg.desvFija||0);};
+FIS.azEje=function(cfg){return (cfg.desvEje||0);};     // 0 = eje norte-sur
+/* Hacia dónde APILA las filas cada familia. La fija apila en la dirección a la
+   que mira; el seguidor y las dos aguas, ⊥ a su eje. */
+FIS.azPitch=function(cfg,spec){
+  return (spec&&spec.fam==='fija')?FIS.azFija(cfg):(FIS.azEje(cfg)+90);
+};
+FIS.psPlano=function(el,az,pitchAz,axTiltDeg,alongAz){
+  var As=180+az*FIS.R2D;                                  // azimut solar desde el norte
+  var sc=Math.cos(el)*Math.cos((As-pitchAz)*FIS.D2R);      // en la dirección del pitch
+  var su=Math.sin(el);
+  if(axTiltDeg){
+    /* Eje inclinado: el marco gira T alrededor del eje del PITCH, así que su
+       cenit se inclina hacia `alongAz` — el extremo del eje que baja. */
+    var sa=Math.cos(el)*Math.cos((As-alongAz)*FIS.D2R), T=axTiltDeg*FIS.D2R;
+    su=su*Math.cos(T)+sa*Math.sin(T);
+  }
+  return {ps:Math.atan2(sc,su)*FIS.R2D, rho:Math.hypot(sc,su)};
+};
+FIS.psFija=function(el,az,lat,cfg){
+  return FIS.psPlano(el,az,cfg?FIS.azFija(cfg):FIS.azEquador(lat),0,0);
 };
 /* Eje INCLINADO (TSAT). El eje sube hacia el ecuador: en el hemisferio norte,
    hacia el sur. Se lleva el vector solar al marco del eje y se mide allí el
@@ -554,18 +609,17 @@ FIS.psFija=function(el,az,lat){
    horizontal). El core lo esquiva con `axis_tilt` NEGATIVO y azimut 0. Aquí no
    hay auto-corrección que esquivar, pero el signo se elige igual —hacia el
    ecuador— para que las dos superficies contesten lo mismo.                  */
-FIS.psTSAT=function(el,az,axTiltDeg,lat){
+FIS.psTSAT=function(el,az,axTiltDeg,lat,cfg){
   /* CON SIGNO: positivo = el eje cae hacia el ECUADOR, que es el TSAT de
      manual. Negativo = cae hacia el POLO, y eso también existe — lo pone el
      terreno, no el catálogo, y un emplazamiento no elige hacia dónde baja. Con
-     `Math.abs` se dibujaba un eje y se calculaba el contrario. */
-  var T=axTiltDeg*FIS.D2R;
-  // Marco [este, ecuador, cenit] con el azimut medido desde el sur, este negativo.
-  var e=-Math.cos(el)*Math.sin(az), q=Math.cos(el)*Math.cos(az)*(lat>=0?1:-1), u=Math.sin(el);
-  // El marco gira T alrededor del eje E-O: su «cenit» se inclina hacia el ecuador,
-  // que es justo lo que hace que el eje mire al ecuador y no al polo.
-  var u2=u*Math.cos(T)+q*Math.sin(T);
-  return {ps:Math.atan2(e,u2)*FIS.R2D, rho:Math.hypot(e,u2)};
+     `Math.abs` se dibujaba un eje y se calculaba el contrario.
+     El extremo del eje al que se refiere ese signo es el que mira al ECUADOR,
+     que con el eje desviado ya no es el sur exacto. */
+  var eje=cfg?FIS.azEje(cfg):0, eq=FIS.azEquador(lat);
+  var dif=(((eje-eq)%360)+360)%360;
+  var along=(dif>90&&dif<270)?eje+180:eje;      // el extremo que mira al ecuador
+  return FIS.psPlano(el,az,eje+90,axTiltDeg,along);
 };
 /* Inclinación de la superficie sobre la horizontal (grados) — la que ve el
    cielo, y por tanto la que manda en el fondo difuso. Con eje horizontal
@@ -881,12 +935,14 @@ FIS.pendPlano=function(betaDeg,azDeg){
   var t=Math.tan(Math.abs(betaDeg||0)*FIS.D2R), A=(azDeg||0)*FIS.D2R;
   return {gx:t*Math.sin(A), gz:-t*Math.cos(A)};
 };
-FIS.ejePitch=function(spec){        // hacia dónde APILA las filas esta familia
-  return (spec&&spec.fam==='fija')?'z':'x';   // fija al SUR; seguidor y dos aguas al ESTE
-};
-FIS.pendComp=function(betaDeg,azDeg,eje){
-  var g=FIS.pendPlano(betaDeg,azDeg);
-  var cruz=(eje==='x')?g.gx:g.gz, largo=(eje==='x')?g.gz:g.gx;
+/* La componente de la pendiente en la dirección del PITCH (⊥ a las filas) y en
+   la de las filas, para un pitch en cualquier azimut. La caída por metro en la
+   dirección `A` es `gx·sen A − gz·cos A`; con A=180 sale `gz` y con A=90, `gx`,
+   que son los dos casos de manual. */
+FIS.pendComp=function(betaDeg,azDeg,pitchAz){
+  var g=FIS.pendPlano(betaDeg,azDeg), P=pitchAz*FIS.D2R;
+  var cruz=g.gx*Math.sin(P)-g.gz*Math.cos(P);
+  var largo=g.gx*Math.cos(P)+g.gz*Math.sin(P);      // ⊥ a la anterior: a lo largo
   return {cruz:Math.atan(cruz)*FIS.R2D, largo:Math.atan(largo)*FIS.R2D};
 };
 /* La que consume el motor. Si no hay azimut declarado, `pend` ES el cross-axis
@@ -894,7 +950,7 @@ FIS.pendComp=function(betaDeg,azDeg,eje){
    azimut, se DERIVA para cada familia. */
 FIS.cruz=function(cfg,spec){
   if(cfg.pendAz==null)return cfg.pend||0;
-  return FIS.pendComp(cfg.pend,cfg.pendAz,FIS.ejePitch(spec)).cruz;
+  return FIS.pendComp(cfg.pend,cfg.pendAz,FIS.azPitch(cfg,spec)).cruz;
 };
 /* Y EL EJE INCLINADO TAMPOCO SE TECLEA: lo pone el terreno. Un TSAT no es un
    seguidor con un parámetro más, es un seguidor sobre una pendiente que corre
@@ -907,8 +963,14 @@ FIS.cruz=function(cfg,spec){
 FIS.ejeTilt=function(cfg,spec){
   if(!spec||!spec.tsat)return 0;
   if(cfg.pendAz==null)return cfg.axTilt||0;
-  var g=FIS.pendPlano(cfg.pend,cfg.pendAz);
-  return (cfg.lat>=0?1:-1)*Math.atan(g.gz)*FIS.R2D;
+  /* La componente A LO LARGO DEL EJE, con el signo de bajar hacia el ecuador:
+     positivo cuando el extremo que mira al ecuador es el más bajo. */
+  var q=FIS.pendComp(cfg.pend,cfg.pendAz,FIS.azEje(cfg)+90);
+  /* `largo` mide la caída hacia `pitchAz+90`, o sea hacia el extremo del eje a
+     `azEje+180`. Si ese extremo NO es el que mira al ecuador, hay que darle la
+     vuelta al signo — el mismo extremo que elige psTSAT. */
+  var dif=((((FIS.azEje(cfg)+180)-FIS.azEquador(cfg.lat))%360)+360)%360;
+  return ((dif>90&&dif<270)?-1:1)*q.largo;
 };
 
 /* ── Fracción sombreada entre dos filas iguales, exacta en el plano ⊥ al eje ──
@@ -1015,13 +1077,13 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
     if(S.el<=0)continue;
     var bh=M.dni[i], dh=M.dhi[i], gh=M.ghi[i], e0=FIS.E0(M.t[i]), P0, planos;
     if(spec.fam==='tracker'){
-      P0=spec.tsat?FIS.psTSAT(S.el,S.az,axT,cfg.lat):FIS.psTracker(S.el,S.az);
+      P0=spec.tsat?FIS.psTSAT(S.el,S.az,axT,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
       planos=[FIS.theta(P0.ps,gcr,cfg.maxang,spec.bt)];
     }else if(spec.fam==='fija_ew'){
-      P0=FIS.psTracker(S.el,S.az);                    // aguas al este y al oeste
+      P0=FIS.psTracker(S.el,S.az,cfg);                // aguas al este y al oeste
       planos=[tilt,-tilt];
     }else{
-      P0=FIS.psFija(S.el,S.az,cfg.lat);
+      P0=FIS.psFija(S.el,S.az,cfg.lat,cfg);
       planos=[tilt];
     }
     var sN=0,sI=0;
@@ -1601,6 +1663,7 @@ function cfgActual(){
     fija:F, tracker:K, gcr:K.gcr,
     maxang:+$('maxang').value, tilt:+$('tilt').value, tiltEW:+$('tiltEW').value,
     pend:+$('pend').value, pendAz:+$('pendAz').value,
+    desvFija:+$('desvFija').value, desvEje:+$('desvEje').value,
     axTilt:+$('axtilt').value, igualado:$('igualar').checked,
     geomDe:function(spec){return spec.fam==='tracker'?K:F;}
   };
@@ -1710,6 +1773,17 @@ function rumbo(az){
   var R=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
   return R[Math.round((((az%360)+360)%360)/22.5)%16];
 }
+function pintaAzimut(c){
+  var af=FIS.azFija(c), ae=FIS.azEje(c);
+  $('azFijaNota').innerHTML=!(c.desvFija||0)
+    ? 'mira al ecuador · <b>'+fmt(af,0)+'°</b>'
+    : '<b>'+fmt(((af%360)+360)%360,0)+'°</b> ('+rumbo(af)+') · '+
+      Math.abs(c.desvFija)+'° al '+(c.desvFija>0?'oeste':'este')+' del ecuador';
+  $('azEjeNota').innerHTML=!(c.desvEje||0)
+    ? 'eje norte-sur · apila al este'
+    : 'eje a <b>'+fmt(((ae%360)+360)%360,0)+'°</b> ('+rumbo(ae)+') · apila a '+
+      fmt(((ae+90)%360+360)%360,0)+'°';
+}
 function pintaPendiente(c){
   /* El «eje inclinado °» ya no es una entrada: se rellena con lo que da el
      terreno a lo largo del eje. Si se dejara a mano, se podría teclear un eje
@@ -1718,7 +1792,7 @@ function pintaPendiente(c){
   if($('axtilt'))$('axtilt').value=ej.toFixed(1);
   var p=Math.abs(c.pend||0), az=c.pendAz||0;
   if(!p){ $('pendNota').innerHTML='terreno llano · el mismo para todas'; return; }
-  var f=FIS.pendComp(p,az,'z'), t=FIS.pendComp(p,az,'x');
+  var f=FIS.pendComp(p,az,FIS.azFija(c)), t=FIS.pendComp(p,az,FIS.azEje(c)+90);
   var dice=function(nom,q){
     return '<b>'+nom+'</b> '+fmt(Math.abs(q.cruz),1)+'° ⊥ a sus filas'+
            (Math.abs(q.largo)>0.05?' · '+fmt(Math.abs(q.largo),1)+'° a lo largo':'');
@@ -1730,7 +1804,7 @@ function pintaPendiente(c){
 }
 function refrescaGeom(){
   var c=cfgActual();
-  pintaPendiente(c);
+  pintaPendiente(c); pintaAzimut(c);
   pintaFam('fx',c.fija); pintaFam('tk',c.tracker); pintaPico(c);
   $('fxGob').textContent='§03.F · '+gobierna('fija');
   $('tkGob').textContent='§03.T0 · '+gobierna('tracker');
@@ -1749,7 +1823,7 @@ function refrescaGeom(){
 }
 var CAMPOS_GEOM=['fxModL','fxModW','fxWp','fxTabla','fxPitch','fxModsStr','fxNStr','fxGapMod','fxGapMot',
                  'tkModL','tkModW','tkWp','tkTabla','tkPitch','tkModsStr','tkNStr','tkGapMod','tkGapMot',
-                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend','pendAz'];
+                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend','pendAz','desvFija','desvEje'];
 CAMPOS_GEOM.forEach(function(id){
   var el=$(id); if(!el)return;
   el.addEventListener('input',refrescaGeom); el.addEventListener('change',refrescaGeom);
@@ -3012,9 +3086,18 @@ function construyeMundo(){
        lo que en campo absorben las hincas, y aquí se ve como un extremo más
        enterrado que el otro. */
     var alEste=(esTk||spec.fam==='fija_ew');
-    var cotaFila=function(dx,dz){return cotaTerreno(grupo.position.x+dx,
-                                                    grupo.position.z+dz,T)-
-                                        cotaTerreno(grupo.position.x,grupo.position.z,T);};
+    /* EL AZIMUT DE LA ESTRUCTURA. El bloque se construye en su marco de
+       siempre —la fija apila en +Z y el seguidor y las dos aguas en +X— y se
+       GIRA entero a su azimut. Con los desvíos a cero el giro es cero y todo
+       queda como estaba. */
+    var apZ=FIS.azPitch(cfg,spec);
+    var gy=((alEste?90:180)-apZ)*FIS.D2R;
+    grupo.rotation.y=gy;
+    /* Y la pendiente hay que verla en el marco DEL BLOQUE, no en el del mundo:
+       girado 30°, moverse por su +X ya no es ir al este. */
+    var cg=Math.cos(gy), sg=Math.sin(gy);
+    var gLocX=T.gx*cg-T.gz*sg, gLocZ=T.gx*sg+T.gz*cg;
+    var cotaFila=function(dx,dz){return -(dx*gLocX+dz*gLocZ);};
     /* LA FILA SE ADAPTA AL TERRENO. La pendiente la tiene el suelo; la
        estructura se replantea sobre él. Apoyar cada fila en la cota de su
        CENTRO y dejarla horizontal a lo largo no vale: con 65 m de fila y 10,8°
@@ -3027,7 +3110,7 @@ function construyeMundo(){
        Lo que NO cambia es el tilt ni la ⊥: en la dirección del pitch las filas
        se escalonan a distinta cota, no se inclinan. Y para un seguidor esto es
        literalmente lo que hace un eje que sigue el terreno — un TSAT es eso. */
-    var rollZ=-Math.atan(T.gx), rollX=Math.atan(T.gz);
+    var rollZ=-Math.atan(gLocX), rollX=Math.atan(gLocZ);
     for(var f=0;f<nf;f++){
       var d=(f-(nf-1)/2)*pitch;
       var uno;
@@ -3071,7 +3154,7 @@ function construyeMundo(){
     et.position.set(0,D.postH+2.4+et.userData.alto,0); grupo.add(et);
     BLOQUES.push({key:k,spec:spec,filas:filas,gcr:gcr,pitch:pitch,porTracker:agrupa,
                   cruz:FIS.cruz(cfg,spec), rollX:rollX, rollZ:rollZ,
-                  largoPend:FIS.pendComp(cfg.pend,cfg.pendAz,FIS.ejePitch(spec)).largo});
+                  largoPend:FIS.pendComp(cfg.pend,cfg.pendAz,FIS.azPitch(cfg,spec)).largo});
   });
   /* ── ENCUADRE Y SOMBRAS ──
      Las dos cosas que hay que dimensionar CON la escena, no a ojo:
@@ -3183,7 +3266,8 @@ function actualiza3D(){
   BLOQUES.forEach(function(B){
     var th=0, spec=B.spec, tilt=(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
     if(spec.fam==='tracker'){
-      var P=spec.tsat?FIS.psTSAT(S.el,S.az,FIS.ejeTilt(cfg,spec),cfg.lat):FIS.psTracker(S.el,S.az);
+      var P=spec.tsat?FIS.psTSAT(S.el,S.az,FIS.ejeTilt(cfg,spec),cfg.lat,cfg)
+                     :FIS.psTracker(S.el,S.az,cfg);
       th=(elDeg>0)?FIS.theta(P.ps,B.gcr,cfg.maxang,spec.bt):0;
       B.filas.forEach(function(u){
         /* SIGNO. El grupo del seguidor entra girado 90° en Y, así que su +X
@@ -3209,12 +3293,15 @@ function actualiza3D(){
       });
       th=tilt;
     }else{
-      // Fija monoinclinada: mira al ECUADOR. Filas E-O ⇒ el giro va sobre X.
-      var sgn=(cfg.lat>=0?1:-1);
+      /* Fija monoinclinada. El giro va sobre su X local y SIEMPRE positivo:
+         inclina la mesa hacia su +Z local, que es la dirección a la que mira —
+         el azimut ya lo ha puesto el giro del bloque. Antes llevaba aquí un
+         signo por hemisferio; con el azimut declarado eso lo hacía dos veces y
+         en el sur volvía a mirar al polo. */
       var estimado=(spec.tiltOpt&&!REP);
       var tOpt=spec.tiltOpt?(REP?tiltDeRep(B.key):tiltEstimado(cfg,spec)):tilt;
       B.estimado=estimado;
-      B.filas.forEach(function(u){u.spin.rotation.x=sgn*tOpt*FIS.D2R;});
+      B.filas.forEach(function(u){u.spin.rotation.x=tOpt*FIS.D2R;});
       th=tOpt;
     }
     var imposible=(B.gcr>1);

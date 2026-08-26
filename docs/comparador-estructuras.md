@@ -529,6 +529,35 @@ Lo que consume el motor es `FIS.cruz(cfg, spec)`. Si no hay azimut declarado, `p
 cross-axis — que es como lo toma el core, y por eso el careo lo inyecta tal cual; con azimut, se
 deriva para cada familia.
 
+### El AZIMUT de la estructura, que no es el del terreno
+
+Ni la fija mira siempre al ecuador ni el eje de un seguidor corre siempre norte-sur: es una decisión
+de **proyecto**, y no tiene nada que ver con hacia dónde cae el terreno. Se declara como **desvío**
+—`0` = la orientación de manual, positivo hacia el **oeste**— porque así vale igual en los dos
+hemisferios y es como se especifica en obra («15° al oeste»). Cada familia lleva el suyo:
+`Desvío del azimut °` en el configurador de la fija y `Desvío del eje °` en el del tracker.
+
+Toda la proyección del sol pasa ahora por **una** función, `FIS.psPlano(el, az, pitchAz, …)`: el
+ángulo del sol en el plano ⊥ a las filas, para una dirección de pitch cualquiera. Con el pitch al sur
+sale la fija de siempre y con el pitch al este, el seguidor N-S — por eso el careo no se mueve.
+
+La pendiente se generaliza igual: la caída por metro en la dirección `A` es `gx·sen A − gz·cos A`;
+con `A = 180` sale `gz` y con `A = 90`, `gx`, que son los dos casos de manual. Y girar la estructura
+cambia **cuánta pendiente ve**: con el terreno cayendo al sur y 16°, girar la fija 30° le baja la ⊥ a
+`16° · cos 30°` = 13,9°, y girar el eje del seguidor 20° se la sube de 0° a 5,6°.
+
+En la escena, el bloque se construye en su marco de siempre —la fija apila en +Z, el seguidor y las
+dos aguas en +X— y se **gira entero** a su azimut; la pendiente se pasa entonces al marco del bloque,
+porque girado 30° moverse por su +X ya no es ir al este. Dos cosas que esto arrastró:
+
+* el giro de la mesa fija pasa a ser **siempre positivo** sobre su X local. Antes llevaba un signo
+  por hemisferio, y con el azimut declarado eso se aplicaba dos veces: en el sur volvía a mirar al
+  polo;
+* el **tilt y el azimut que entran en el cálculo son los declarados** —como en el core—, mientras que
+  la escena además apoya la fila en el suelo, así que la mesa queda algo escorada respecto a ellos.
+  Es la diferencia entre el proyecto y el replanteo, y va dicha en la escena porque en pendientes
+  fuertes se nota (con 16° y 30° de desvío, la normal del panel se va unos 17°).
+
 ### El terreno de la escena: un solo plano
 
 Todas las estructuras se montan sobre **el mismo plano**. Se dibuja como un *heightfield* igual que

@@ -472,6 +472,10 @@ const SONDA = `(() => {
       lejos: [grad(-300, -200), grad(300, -200), grad(-300, 200), grad(300, 200)],
       cotas: cotas() });
     document.querySelectorAll('.st').forEach(c => { c.checked = true; });
+    // el hemisferio decide hacia dónde apila la fija, así que se fija aquí:
+    // pruebas anteriores dejan la ficha en el sur
+    const lat = document.getElementById('lat'); lat.value = '37.3891';
+    lat.dispatchEvent(new Event('change', { bubbles: true }));
     set(0, 180); construyeMundo(); actualiza3D();
     const llano = foto();
     set(16, 180); construyeMundo(); actualiza3D();
@@ -622,6 +626,69 @@ const SONDA = `(() => {
     Math.sin(26 * Math.PI / 180).toFixed(3) + ')',
     Math.abs(Math.abs(eje.sur.dibujado) - Math.sin(26 * Math.PI / 180)) < 0.01,
     String(eje.sur.dibujado));
+
+  // ── EL AZIMUT DE LA ESTRUCTURA, QUE NO ES EL DEL TERRENO ──
+  // Ni la fija mira siempre al ecuador ni el eje corre siempre norte-sur: es
+  // decisión de proyecto. Se declara como desvío (0 = lo de manual, positivo al
+  // oeste) y tiene que mover la ESCENA, no solo la nota.
+  const azim = await p.evaluate(() => {
+    const grados = v => (v * 180 / Math.PI + 360) % 360;
+    const set = (df, de) => {
+      const a = document.getElementById('desvFija'); a.value = String(df);
+      a.dispatchEvent(new Event('change', { bubbles: true }));
+      const b = document.getElementById('desvEje'); b.value = String(de);
+      b.dispatchEvent(new Event('change', { bubbles: true }));
+      const F = BLOQUES.find(x => x.key === 'fija_proyecto');
+      const T = BLOQUES.find(x => x.key === 'tracker_hsat');
+      // Azimut al que APILA la fija, que es al que mira. Se mide sobre el marco
+      // del bloque y no sobre la normal del panel: la fila se apoya además en
+      // el terreno, y ese escorado mueve la normal unos grados — el azimut de
+      // proyecto es el del marco.
+      const g = F.filas[0].parent; g.updateWorldMatrix(true, false);
+      const d = new THREE.Vector3(0, 0, 1).transformDirection(g.matrixWorld);
+      const azPanel = grados(Math.atan2(d.x, -d.z));
+      // dirección del EJE del seguidor en el mundo (su +Z local es el tubo)
+      const u = T.filas[0]; u.updateWorldMatrix(true, true);
+      const e = new THREE.Vector3(0, 0, 1).transformDirection(u.matrixWorld);
+      const azEje = grados(Math.atan2(e.x, -e.z));
+      return { azPanel: +azPanel.toFixed(1), azEje: +azEje.toFixed(1),
+               cruzF: +F.cruz.toFixed(2), cruzT: +T.cruz.toFixed(2) };
+    };
+    document.querySelectorAll('.st').forEach(c => { c.checked = true; });
+    const lat = document.getElementById('lat'); lat.value = '37.3891';
+    lat.dispatchEvent(new Event('change', { bubbles: true }));
+    const e = document.getElementById('pend'); e.value = '16';
+    e.dispatchEvent(new Event('change', { bubbles: true }));
+    const q = document.getElementById('pendAz'); q.value = '180';
+    q.dispatchEvent(new Event('change', { bubbles: true }));
+    const r = { base: set(0, 0), fija30: set(30, 0), eje20: set(0, 20) };
+    r.nota = document.getElementById('azFijaNota').textContent.replace(/\s+/g, ' ');
+    set(0, 0);
+    return r;
+  });
+  check('sin desvíos el panel mira al sur (' + azim.base.azPanel + '°) y el eje ' +
+    'corre norte-sur (' + azim.base.azEje + '°)',
+    Math.abs(azim.base.azPanel - 180) < 1.5 &&
+    Math.min(azim.base.azEje, Math.abs(azim.base.azEje - 180)) < 1.5,
+    JSON.stringify(azim.base));
+  check('con 30° de desvío la fija mira a 210° en la ESCENA, no solo en la nota',
+    Math.abs(azim.fija30.azPanel - 210) < 1.5, String(azim.fija30.azPanel));
+  check('y el seguidor no se entera: su eje sigue norte-sur',
+    Math.min(azim.fija30.azEje, Math.abs(azim.fija30.azEje - 180)) < 1.5,
+    String(azim.fija30.azEje));
+  check('con 20° de desvío el EJE gira a 20° y la fija no se entera',
+    Math.min(Math.abs(azim.eje20.azEje - 20), Math.abs(azim.eje20.azEje - 200)) < 1.5 &&
+    Math.abs(azim.eje20.azPanel - 180) < 1.5, JSON.stringify(azim.eje20));
+  // y lo que de verdad importa: girar la estructura cambia CUÁNTA pendiente ve
+  check('girar la fija 30° le baja la pendiente ⊥ de 16° a ' + azim.fija30.cruzF + '° ' +
+    '(16° · cos 30°)', Math.abs(Math.tan(azim.fija30.cruzF * Math.PI / 180) -
+      Math.tan(16 * Math.PI / 180) * Math.cos(30 * Math.PI / 180)) < 0.002,
+    JSON.stringify([azim.base.cruzF, azim.fija30.cruzF]));
+  check('y girar el eje 20° le SUBE la del seguidor de 0° a ' + azim.eje20.cruzT + '°',
+    Math.abs(azim.base.cruzT) < 0.01 && Math.abs(azim.eje20.cruzT) > 5,
+    JSON.stringify([azim.base.cruzT, azim.eje20.cruzT]));
+  check('y el campo lo dice con su rumbo',
+    /210/.test(azim.nota) === false || /oeste|este/.test(azim.nota), azim.nota);
 
   // ── LA CÁMARA, POR EL LADO DEL ECUADOR ──
   // La cámara se pone cuesta abajo para ver los bloques en línea y la ladera
