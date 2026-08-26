@@ -2934,15 +2934,19 @@ function cotasSeguidor(G){
   Seguidor.setModsPerStr(G.modsStr);   // recalcula mesa, fila y centro de ala
   return (D.span>0?G.largoFila/D.span:1);
 }
-function seguidor3D(mats,escalaEje){
+/* `motriz`: en una BIFILA solo una de las dos vigas lleva el accionamiento.
+   Esa distinción no me la invento — la resuelve el propio modelo de la casa
+   (`Seguidor.buildBeam`, el mismo que usa el bt3d): `west:true` da la viga del
+   MOTOR con su slew completo, TCU, abarcones y antena, y `west:false` la viga
+   GEMELA, la del eje de transmisión, que lleva módulos y correas pero del slew
+   solo las piezas `twin` — corona, bracket y soporte. Es justo lo que
+   distingue una bifila de dos monofilas, y es lo que hay que replicar en vez
+   de dibujar una barra entre filas. */
+function seguidor3D(mats,escalaEje,motriz){
   var g=new THREE.Group(), spin=new THREE.Group(); g.add(spin);
-  Seguidor.parts(THREE,{detail:'mass',size:'largo'}).forEach(function(p){
-    if(p.antenna||p.motorLink||p.damperLink)return;
-    var geo; try{geo=p.geom(THREE);}catch(e){return;}
-    var mesh=new THREE.Mesh(geo,mats[p.mat]||mats.steel);
-    mesh.applyMatrix4(p.m); mesh.castShadow=!!p.cast; mesh.receiveShadow=true;
-    (p.spin?spin:g).add(mesh);
-  });
+  var viga=Seguidor.buildBeam(THREE,{materials:mats,west:(motriz!==false),
+                                     detail:'mass',size:'largo'});
+  spin.add(viga.spin); g.add(viga.static);
   var postH=Seguidor.DIMS.postH||2.0;
   g.position.y=postH; g.rotation.y=Math.PI/2;
   var poste=new THREE.Mesh(new THREE.BoxGeometry(.18,postH,.18),mats.steel);
@@ -3093,26 +3097,6 @@ function sueloRelieve(lado,T){
    justo la distinción que la palabra «bifila» nombra.
    La barra va a la altura del tubo y en el centro del eje (z=0, donde está el
    motor), cruzando de una fila a la otra.                                    */
-/* El eje de transmisión de una bifila: la barra que hace que dos filas sean UN
-   seguidor. Se le pasan las COTAS de las dos filas que une, porque en pendiente
-   no están a la misma altura — antes se dibujaba a `postH` fijo y quedaba
-   colgando entre una fila y otra, ni acoplado a la de arriba ni a la de abajo. */
-function ejeBifila(mats,xa,xb,ya,yb){
-  ya=ya||0; yb=yb||0;
-  var D=Seguidor.DIMS, g=new THREE.Group();
-  var dx=xb-xa, dy=yb-ya, L=Math.hypot(dx,dy);
-  var barra=new THREE.Mesh(new THREE.BoxGeometry(L,0.16,0.16),mats.silver||mats.steel);
-  barra.position.set((xa+xb)/2,D.postH+(ya+yb)/2,0);
-  barra.rotation.z=Math.atan2(dy,dx);             // la barra sigue a las dos filas
-  barra.castShadow=true; g.add(barra);
-  [[xa,ya],[xb,yb]].forEach(function(q){          // acoplamiento en cada tubo
-    var c=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.30,0.30),mats.motor||mats.steel);
-    c.position.set(q[0],D.postH+q[1],0); c.castShadow=true; g.add(c);
-  });
-  var m=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.48,0.42),mats.motor||mats.steel);
-  m.position.set((xa+xb)/2,D.postH+(ya+yb)/2-0.12,0); m.castShadow=true; g.add(m);
-  return g;
-}
 
 /* ── El mundo: un bloque por estructura ──
    Cada bloque lleva NFILAS3D filas al pitch REAL de esa estructura (el de su
@@ -3204,7 +3188,11 @@ function construyeMundo(){
          fija y el tracker se configuran aparte, y si el render los igualara
          estaría enseñando una estructura distinta de la que calcula la tabla. */
       if(spec.fam==='tracker'){
-        uno=seguidor3D(mats,escTk); uno.position.x=d; uno.position.y=cotaFila(d,0);
+        /* En bifila, la PRIMERA viga de cada par es la del motor y las demás
+           son gemelas: eso es lo que hace que dos filas sean UN seguidor, y no
+           dos. En monofila todas llevan el suyo. */
+        uno=seguidor3D(mats,escTk,(agrupa<2)||(f%agrupa===0));
+        uno.position.x=d; uno.position.y=cotaFila(d,0);
         uno.rotation.x=rollX;                            // el eje sigue el terreno
       }else if(spec.fam==='fija_ew'){
         // dos aguas: la mesa lleva DOS paneles enfrentados, y las filas se
@@ -3225,11 +3213,6 @@ function construyeMundo(){
         uno.rotation.z=rollZ;                            // la mesa sigue el terreno
       }
       grupo.add(uno); filas.push(uno);
-    }
-    /* En bifila, la transmisión que hace que esas dos filas sean UN seguidor. */
-    if(agrupa>1)for(var t=0;t+agrupa<=nf;t+=agrupa){
-      var xa=(t-(nf-1)/2)*pitch, xb=(t+agrupa-1-(nf-1)/2)*pitch;
-      grupo.add(ejeBifila(mats,xa,xb,cotaFila(xa,0),cotaFila(xb,0)));
     }
     var col='#'+(COL[k]||'#888888').replace('#','');
     /* El rótulo se acota por el hueco Y por el largo del bloque: con una fila

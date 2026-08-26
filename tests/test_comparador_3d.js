@@ -809,80 +809,48 @@ const SONDA = `(() => {
   check('la cuña de la primera versión no ha vuelto',
     (await p.evaluate(() => typeof taludTSAT === 'undefined')) === true);
 
-  // ── bifila: DOS filas que son UN seguidor, con su transmisión ──
+  // ── bifila: DOS filas que son UN seguidor ──
   // Monofila y bifila no cambian la mesa —es operativa, no geométrica— pero sí
-  // cambian qué es «un seguidor». Sin dibujar el accionamiento compartido, dos
-  // filas de una bifila y dos monofilas se ven idénticas: justo la distinción
-  // que la palabra nombra.
+  // cambian qué es «un seguidor». La distinción la resuelve el modelo de la
+  // casa, el mismo que usa el bt3d: en una bifila solo UNA de las dos vigas
+  // lleva el accionamiento (`buildBeam` con west:true — slew completo, TCU,
+  // abarcones, antena) y la otra es la GEMELA, la del eje de transmisión, que
+  // del slew solo lleva las piezas twin (corona, bracket, soporte).
   const bloque = k => p.evaluate(`(() => {
     const B = BLOQUES.find(b => b.key === ${JSON.stringify(k)});
-    const g = B.filas[0].parent;
-    const ejes = g.children
-      .filter(o => B.filas.indexOf(o) < 0 && o.type === 'Group' && o.children.length === 4)
-      .map(e => { const c = new THREE.Box3().setFromObject(e);
-                  return { x0: +c.min.x.toFixed(2), x1: +c.max.x.toFixed(2) }; })
-      .sort((a, b) => a.x0 - b.x0);
-    return { filas: B.filas.length, por: B.porTracker, pitch: +B.pitch.toFixed(2), ejes };
+    const piezas = B.filas.map(u => { let n = 0; u.traverse(o => { if (o.isMesh) n++; }); return n; });
+    return { filas: B.filas.length, por: B.porTracker, pitch: +B.pitch.toFixed(2), piezas };
   })()`);
   const mono = await bloque('tracker_hsat');
-  check('en monofila hay ' + mono.filas + ' filas y ninguna transmisión',
-    mono.por === 1 && mono.ejes.length === 0, JSON.stringify(mono));
+  check('en monofila cada fila lleva SU accionamiento: todas iguales (' +
+    mono.piezas.join('/') + ')',
+    mono.por === 1 && mono.piezas.every(n => n === mono.piezas[0]),
+    JSON.stringify(mono));
 
   await pon('tkFilas', 2);
   const bi = await bloque('tracker_hsat');
   check('en bifila el bloque dibuja DOS seguidores enteros (4 filas)',
     bi.filas === 4 && bi.por === 2, JSON.stringify(bi));
-  check('cada seguidor bifila lleva SU transmisión (' + bi.ejes.length + ')',
-    bi.ejes.length === 2, JSON.stringify(bi.ejes));
-  const luz = bi.ejes.map(e => e.x1 - e.x0);
-  check('la transmisión cruza justo un pitch, de una fila a la otra (' +
-    luz.map(v => v.toFixed(2)).join(' / ') + ' con pitch ' + bi.pitch + ')',
-    luz.every(v => v > bi.pitch * 0.98 && v < bi.pitch * 1.12));
-  // el hueco del medio NO lleva barra: esas dos filas son de seguidores distintos
-  check('entre los dos seguidores no hay transmisión (' +
-    (bi.ejes[1].x0 - bi.ejes[0].x1).toFixed(2) + ' m de hueco)',
-    bi.ejes[1].x0 - bi.ejes[0].x1 > bi.pitch * 0.85);
-  // Y EN PENDIENTE la transmisión tiene que seguir a las dos filas que une: se
-  // dibujaba a altura fija, así que con el terreno inclinado quedaba colgando
-  // entre una y otra, ni acoplada a la de arriba ni a la de abajo.
-  const trans = await p.evaluate(() => {
-    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
-      el.dispatchEvent(new Event('change', { bubbles: true })); };
-    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
-    document.querySelectorAll('.st').forEach(c => { c.checked = c.value === 'tracker_hsat'; });
-    s('tkFilas', 2); s('pend', 16); s('pendAz', 90);
-    const B = BLOQUES[0], g = B.filas[0].parent;
-    const ejes = g.children.filter(o => B.filas.indexOf(o) < 0 && o.type === 'Group');
-    const out = [];
-    ejes.forEach(ej => { ej.updateWorldMatrix(true, true);
-      ej.children.filter(c => c.geometry && c.geometry.parameters &&
-        Math.abs(c.geometry.parameters.width - 0.22) < 1e-6).forEach(c => {
-          const w = c.getWorldPosition(new THREE.Vector3());
-          let cerca = null, d0 = 1e9;
-          B.filas.forEach(u => { const q = u.getWorldPosition(new THREE.Vector3());
-            const d = Math.hypot(q.x - w.x, q.z - w.z);
-            if (d < d0) { d0 = d; cerca = q; } });
-          out.push({ dist: +d0.toFixed(2), sobre: +(w.y - cerca.y).toFixed(2) });
-        }); });
-    // se deja la escena como estaba: las pruebas de al lado cuentan con ella
-    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
-    s('tkFilas', 1); s('pend', 0);
-    return out;
-  });
-  check('en pendiente, cada acoplamiento cae sobre SU tubo (4 acoplamientos)',
-    trans.length === 4 && trans.every(a => a.dist < 0.05), JSON.stringify(trans));
-  check('y todos a la misma altura sobre la fila que unen: la barra las sigue',
-    trans.every(a => Math.abs(a.sobre - trans[0].sobre) < 0.02),
-    JSON.stringify(trans.map(a => a.sobre)));
+  check('y las vigas se alternan motriz/gemela (' + bi.piezas.join('/') + ')',
+    bi.piezas[0] === bi.piezas[2] && bi.piezas[1] === bi.piezas[3] &&
+    bi.piezas[0] > bi.piezas[1], JSON.stringify(bi.piezas));
+  check('la viga MOTRIZ es la misma que la de una monofila: no se le quita nada',
+    bi.piezas[0] === mono.piezas[0], JSON.stringify([mono.piezas[0], bi.piezas[0]]));
+  // La gemela no es media viga: lleva sus módulos y sus correas, y del slew solo
+  // corona, bracket y soporte. Si saliera casi vacía sería otro error.
+  check('y la GEMELA conserva módulos y correas, solo pierde el accionamiento',
+    bi.piezas[1] > bi.piezas[0] * 0.4 && bi.piezas[1] < bi.piezas[0] * 0.9,
+    JSON.stringify(bi.piezas));
 
   await pon('tkFilas', 2);
   const fj = await bloque('fija_optima');
   check('la fija no se agrupa aunque el tracker sea bifila',
-    fj.por === 1 && fj.ejes.length === 0 && fj.filas === 3, JSON.stringify(fj));
+    fj.por === 1 && fj.filas === 3, JSON.stringify(fj));
   await pon('tkFilas', 1);
   const vuelta = await bloque('tracker_hsat');
-  check('volver a monofila deshace el par', vuelta.filas === mono.filas &&
-    vuelta.por === 1 && vuelta.ejes.length === 0, JSON.stringify(vuelta));
+  check('volver a monofila deshace el par y devuelve el accionamiento a todas',
+    vuelta.filas === mono.filas && vuelta.por === 1 &&
+    vuelta.piezas.every(n => n === mono.piezas[0]), JSON.stringify(vuelta));
 
   // ── una fija no tiene motor ──
   // El hueco entre las mesas de una fila es el MISMO parámetro geométrico en

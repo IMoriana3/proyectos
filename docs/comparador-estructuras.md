@@ -653,12 +653,17 @@ lo que aguanta el viento y lo que da el perfil, así que se reparten a paso ≤ 
 puntas. Todas miden lo mismo, porque la fila ya se ha inclinado con el terreno: lo que absorbe la
 pendiente es el **replanteo**, no una hinca más larga.
 
-#### El eje de transmisión, en pendiente
+#### La bifila, con el render de la casa
 
-La barra que hace que dos filas sean **un** seguidor se dibujaba a `postH` fijo. Con el terreno
-inclinado las dos filas que une no están a la misma altura, así que quedaba **colgando** entre una y
-otra: ni acoplada a la de arriba ni a la de abajo. Ahora se le pasan las **cotas** de las dos filas,
-la barra se orienta entre ellas y cada acoplamiento cae sobre su tubo.
+Qué distingue una bifila de dos monofilas no me lo invento: lo resuelve el propio modelo de la casa
+—`Seguidor.buildBeam`, el mismo que usa el **bt3d**—. `west:true` da la viga del **motor**, con su
+slew completo, TCU, abarcones y antena; `west:false` la viga **gemela**, la del eje de transmisión,
+que lleva módulos y correas pero del slew solo las piezas `twin`: corona, bracket y soporte. En un
+par bifila, la primera viga es la motriz y la otra la gemela; en monofila todas llevan el suyo.
+
+Antes de esto había una barra dibujada a mano entre filas, con una caja en medio a modo de motor.
+No era el render de la casa, y en pendiente además quedaba colgando entre una fila y otra porque se
+dibujaba a altura fija. Fuera las dos cosas.
 
 #### Brújula, y la cámara donde uno quiera
 
