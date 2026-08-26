@@ -1,4 +1,4 @@
-# Simulador de Overcast — Difusa en el navegador · y estudio del diffuse tracking
+# Simulador de radiación difusa — las políticas del core en el navegador · y estudio del diffuse tracking
 
 **Página**: `https://imoriana3.github.io/cobertura-zigbee/overcast.html` · repo `cobertura-zigbee`
 **Un único HTML, física offline, sin dependencias de código.** QA integrada (botón «Verificar contra
