@@ -115,6 +115,14 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
 #view3d{position:relative;width:100%;height:min(52vh,460px);min-height:300px;border:1px solid var(--line-soft);border-radius:10px;overflow:hidden;background:#0B0F14}
 #view3d canvas{display:block;width:100%;height:100%;border:0;border-radius:0;margin:0}
 .hint3d{position:absolute;left:10px;bottom:9px;font:400 10.5px var(--mono);color:var(--muted-2);background:rgba(11,15,20,.55);padding:3px 8px;border-radius:6px;pointer-events:none}
+.brujula{position:absolute;right:10px;top:10px;width:96px;height:96px;pointer-events:none;
+  background:rgba(11,15,20,.45);border-radius:50%;backdrop-filter:blur(2px)}
+.brujula text{font:600 11px var(--mono);fill:var(--muted-2);text-anchor:middle;dominant-baseline:middle}
+.brujula text.n{fill:#e8eef6}
+.recentrar{position:absolute;right:10px;top:112px;font:400 10.5px var(--mono);
+  color:var(--muted-2);background:rgba(11,15,20,.55);border:1px solid rgba(255,255,255,.12);
+  padding:3px 8px;border-radius:6px;cursor:pointer}
+.recentrar:hover{color:#e8eef6;border-color:var(--accent)}
 .tline{display:flex;align-items:center;gap:10px;margin-top:10px}
 .tline input[type=range]{flex:1;accent-color:var(--accent)}
 .tline input[type=date]{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit;font-size:12.5px}
@@ -2698,6 +2706,12 @@ function init3D(){
     var ct=new THREE.OrbitControls(cam,rd.domElement);
     ct.enableDamping=true; ct.dampingFactor=.08; ct.maxPolarAngle=Math.PI*0.49;
     ct.minDistance=12; ct.maxDistance=1200; ct.target.set(0,0,0);
+    /* CÁMARA LIBRE. El botón derecho ya desplazaba, pero cada reconstrucción
+       —y se reconstruye al tocar cualquier campo— devolvía la vista a su sitio,
+       así que en la práctica no se podía mirar a otro lado. En cuanto el
+       usuario la toca, la escena deja de recolocarla: manda él hasta que pulse
+       «recentrar». */
+    ct.addEventListener('start',function(){ if(TD)TD.libre=true; });
     var hemi=new THREE.HemisphereLight(0xbcd4ff,0x1a2510,0.5);
     var sun=new THREE.DirectionalLight(0xffeecc,1.5);
     sun.castShadow=true; sun.shadow.mapSize.width=2048; sun.shadow.mapSize.height=2048;
@@ -2739,8 +2753,42 @@ function init3D(){
     var hint=document.createElement('div'); hint.className='hint3d';
     hint.textContent='arrastrar: orbitar · rueda: zoom · botón dcho: desplazar';
     h.appendChild(hint);
+    /* ── BRÚJULA ──
+       Con tres azimutes en juego —el del terreno, el de la fija y el del eje—
+       y la cámara orbitando, no hay forma de saber dónde cae el norte, así que
+       ninguno de los tres se puede leer en la escena. Va como rosa 2D encima
+       del lienzo, que es lo que se lee de un vistazo a cualquier ángulo, y
+       lleva además la FLECHA de máxima pendiente (hacia dónde cae el terreno) y
+       el SOL, que es lo que dice hacia dónde van las sombras. */
+    var brj=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    brj.setAttribute('class','brujula'); brj.setAttribute('viewBox','-50 -50 100 100');
+    brj.innerHTML=
+      '<g id="brjRosa">'+
+        '<circle r="38" fill="none" stroke="rgba(255,255,255,.18)"/>'+
+        '<circle r="30" fill="none" stroke="rgba(255,255,255,.08)"/>'+
+        '<path d="M0,-38 L5,-6 L0,0 L-5,-6 Z" fill="#e05b5b"/>'+
+        '<path d="M0,38 L5,6 L0,0 L-5,6 Z" fill="rgba(255,255,255,.35)"/>'+
+        '<text class="n" y="-43">N</text><text y="44">S</text>'+
+        '<text x="44">E</text><text x="-44">O</text>'+
+      '</g>'+
+      /* La flecha de pendiente se dibuja hacia ARRIBA como la aguja, porque el
+         ángulo que se le aplica se mide desde arriba. Dibujada hacia abajo,
+         rotarla 180° la dejaba apuntando al norte con el terreno cayendo al
+         sur — justo al revés. */
+      '<g id="brjPend" style="display:none">'+
+        '<path d="M0,8 L0,-18 M0,-24 L-5,-15 L5,-15 Z" fill="#7ee2a8" stroke="#7ee2a8" '+
+              'stroke-width="2.4" stroke-linecap="round"/>'+
+      '</g>'+
+      '<g id="brjSol" style="display:none">'+
+        '<circle cy="-33" r="5" fill="#ffd479"/></g>';
+    h.appendChild(brj);
+    var rec=document.createElement('button'); rec.className='recentrar';
+    rec.type='button'; rec.textContent='recentrar';
+    rec.onclick=function(){ if(!TD)return; TD.libre=false; construyeMundo(); actualiza3D(); };
+    h.appendChild(rec);
     TD={rd:rd,sc:sc,cam:cam,ct:ct,sun:sun,sunM:sunM,suelo:suelo,horiz:horiz,hemi:hemi,
-        skyCv:skyCv,skyTx:skyTx,skyKey:'',radio:300,elevMinSombra:2};
+        skyCv:skyCv,skyTx:skyTx,skyKey:'',radio:300,elevMinSombra:2,
+        brj:brj,libre:false};
     suelo.scale.set(600,420,1);
     var last=performance.now();
     (function loop(now){requestAnimationFrame(loop); if(!TD)return;
@@ -2748,7 +2796,7 @@ function init3D(){
       if(w&&(TD.w!==w||TD.h!==hh)){TD.w=w;TD.h=hh;rd.setSize(w,hh,false);cam.aspect=w/hh;cam.updateProjectionMatrix();}
       var dt=Math.min(0.1,((now||performance.now())-last)/1000); last=now||performance.now();
       if(PLAY)avanzaHora(dt);
-      ct.update(); rd.render(sc,cam);})(performance.now());
+      ct.update(); pintaBrujula(); rd.render(sc,cam);})(performance.now());
   }catch(e){ TD=null; $('view3d').innerHTML='<div class="sinwebgl">Sin WebGL en este navegador: '+
       'la comparativa numérica funciona igual.</div>'; }
 }
@@ -2772,6 +2820,36 @@ function setSky(cenit,horiz){
                                    0.165*l+0.09*horiz[1]*(1-l),
                                    0.098*l+0.08*horiz[2]*(1-l));
   }
+}
+/* ── PINTAR LA BRÚJULA ──
+   Rosa 2D encima del lienzo. El truco es pasar una dirección del MUNDO a un
+   ángulo de PANTALLA: la cámara mira en la dirección `v` (del ojo al objetivo),
+   así que en planta «arriba» en pantalla es `v` y «derecha» es `v` girado −90°.
+   Con eso, el ángulo horario de cualquier dirección `w` es `atan2(w·derecha,
+   w·arriba)`, y es lo único que hace falta para el norte, para la caída del
+   terreno y para el sol.                                                      */
+function pintaBrujula(){
+  if(!TD||!TD.brj)return;
+  var c=TD.cam.position, t=TD.ct.target;
+  var vx=t.x-c.x, vz=t.z-c.z, m=Math.hypot(vx,vz);
+  if(m<1e-6)return;
+  vx/=m; vz/=m;
+  var ang=function(wx,wz){                      // grados horarios desde arriba
+    var d=Math.hypot(wx,wz); if(d<1e-9)return null;
+    wx/=d; wz/=d;
+    return Math.atan2(wx*(-vz)+wz*vx, wx*vx+wz*vz)*FIS.R2D;
+  };
+  var g=function(id){return TD.brj.querySelector('#'+id);};
+  var aN=ang(0,-1);                             // el norte es −z
+  if(aN!=null)g('brjRosa').setAttribute('transform','rotate('+aN.toFixed(1)+')');
+  var T=TERRENO_3D, aP=(Math.hypot(T.gx,T.gz)>1e-9)?ang(T.gx,T.gz):null;
+  var pe=g('brjPend');
+  pe.style.display=(aP==null)?'none':'';
+  if(aP!=null)pe.setAttribute('transform','rotate('+aP.toFixed(1)+')');
+  var so=g('brjSol'), sp=TD.sun.position;
+  var aS=(sp.y>t.y)?ang(sp.x-t.x,sp.z-t.z):null;
+  so.style.display=(aS==null)?'none':'';
+  if(aS!=null)so.setAttribute('transform','rotate('+aS.toFixed(1)+')');
 }
 function ponSol(elDeg,azDeg){
   if(!TD)return;
@@ -3188,12 +3266,16 @@ function construyeMundo(){
   TD.horiz.scale.set(Math.max(2600,d*9),1,Math.max(2600,d*9));
   TD.horiz.position.y=-1.5;
   TD.radio=Math.max(220,d*1.6);
+  /* El tope de zoom se estira con la escena: con seis bloques en pendiente el
+     límite fijo de 1.200 m dejaba la rueda muerta antes de ver el campo entero. */
+  TD.ct.maxDistance=Math.max(1200,d*6);
   /* La cámara se pone CUESTA ABAJO, mirando ladera arriba. No es gusto: los
      bloques van sobre la curva de nivel, que gira con el azimut, y desde el sur
      fijo con la caída al este quedaban en fila india —el primero enorme y el
      último un punto—. Desde abajo se ven en línea, uno al lado del otro, y la
      ladera sube por detrás, que es lo que hay que leer. En llano no hay cuesta:
      se mira desde el sur, como siempre. */
+  if(!TD.libre){
   var vx=mg>1e-9?(T.gx/mg):0, vz=mg>1e-9?(T.gz/mg):1;
   /* ...pero SIEMPRE por el lado del ECUADOR. Las dos direcciones ⊥ a la línea
      de bloques encuadran igual de bien, y solo una enseña la cara: una fija
@@ -3226,6 +3308,7 @@ function construyeMundo(){
   TD.cam.position.set(rx*d*0.86,d*0.86*Math.tan(ojo),rz*d*0.86);
   TD.ct.target.set(0,4,0);
   encuadra();
+  }
   /* La niebla se dimensiona con la escena. Fija, o se come los bloques cuando
      son pocos, o deja una línea dura donde acaba el suelo cuando son seis. */
   if(TD.sc.fog){TD.sc.fog.near=d*0.9; TD.sc.fog.far=d*5.5;}
