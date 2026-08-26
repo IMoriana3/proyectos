@@ -81,11 +81,16 @@ const SONDA = `(() => {
   check('se ve desde que se abre, sin comparar nada',
     (await p.evaluate(() => BLOQUES.length)) === 2);
 
-  // marcar las seis
+  // marcar las CINCO. El catálogo tiene seis, pero el «eje inclinado (TSAT)» ya
+  // no se ofrece: con la inclinación del eje puesta por el terreno es la misma
+  // estructura que el N-S. Sigue en FIS.CATALOGO porque el careo lo corre.
   for (const c of await p.$$('.st')) if (!(await c.isChecked())) await c.check();
   await p.waitForTimeout(600);
-  check('un bloque por estructura marcada',
-    (await p.evaluate(() => BLOQUES.length)) === 6);
+  check('un bloque por estructura marcada (5 en la ficha, 6 en el catálogo)',
+    (await p.evaluate(() => BLOQUES.length)) === 5);
+  check('y el TSAT no se ofrece: sería el mismo seguidor',
+    (await p.evaluate(() => [...document.querySelectorAll('.st')]
+      .every(c => c.value !== 'tracker_tsat'))) === true);
 
   // ── el box de la potencia pico: ARRIBA DEL TODO ──
   // La comparación es a igualdad de MWp, así que el pico no es un campo más
@@ -167,7 +172,7 @@ const SONDA = `(() => {
   const md = await enHora(720);
   check('a mediodía el sol está alto (' + (Math.asin(md.sol.y) * 180 / Math.PI).toFixed(0) + '°)',
     md.sol.y > 0.9);
-  for (const k of ['tracker_hsat', 'tracker_hsat_nobt', 'tracker_tsat']) {
+  for (const k of ['tracker_hsat', 'tracker_hsat_nobt']) {
     check('a mediodía ' + k + ' apunta al sol (AOI ' + md.bloques[k].aoi.toFixed(1) + '°)',
       md.bloques[k].aoi < 15);
   }
@@ -181,18 +186,18 @@ const SONDA = `(() => {
   // el eje del seguidor corre NORTE-SUR: su componente este debe ser ~0
   check('el eje del seguidor corre N-S (|este|=' + Math.abs(md.bloques.tracker_hsat.eje.x).toFixed(3) + ')',
     Math.abs(md.bloques.tracker_hsat.eje.x) < 0.02);
-  // Y el del TSAT, en LLANO, también está horizontal: un eje no se inclina en
-  // el aire. Antes se dibujaba inclinado por el campo «eje inclinado °» aunque
-  // el suelo fuese plano, y eso era media fila enterrada o media volando.
-  // Cuánto se inclina de verdad se comprueba más abajo, con terreno.
-  check('en LLANO el eje del TSAT también está horizontal (y=' +
-    md.bloques.tracker_tsat.eje.y.toFixed(3) + ')',
-    Math.abs(md.bloques.tracker_tsat.eje.y) < 0.02);
+  // En LLANO el eje está horizontal, sin más: un eje no se inclina en el aire.
+  // Antes había una fila de «eje inclinado» que se dibujaba inclinada por un
+  // campo aunque el suelo fuese plano, y eso era media fila enterrada o media
+  // volando. Cuánto se inclina de verdad se comprueba más abajo, con terreno.
+  check('en LLANO el eje del seguidor está horizontal (y=' +
+    md.bloques.tracker_hsat.eje.y.toFixed(3) + ')',
+    Math.abs(md.bloques.tracker_hsat.eje.y) < 0.02);
 
   // ── mañana: tumbado al ESTE. El error de signo no se ve a mediodía ──
   const am = await enHora(480);
   check('por la mañana el sol está al ESTE (x=' + am.sol.x.toFixed(2) + ')', am.sol.x > 0.3);
-  for (const k of ['tracker_hsat', 'tracker_hsat_nobt', 'tracker_tsat']) {
+  for (const k of ['tracker_hsat', 'tracker_hsat_nobt']) {
     check('por la mañana ' + k + ' se tumba al ESTE (nx=' + am.bloques[k].n.x.toFixed(2) + ')',
       am.bloques[k].n.x > 0.2);
     check('por la mañana ' + k + ' sigue apuntando al sol (AOI ' + am.bloques[k].aoi.toFixed(1) + '°)',
@@ -512,8 +517,8 @@ const SONDA = `(() => {
       f.lejos.every(g => Math.abs(g.gx - gx) < 0.3 && Math.abs(g.gz - gz) < 0.3),
       JSON.stringify(f.lejos));
   });
-  check('y las seis estructuras se apoyan en él a la misma cota (curva de nivel)',
-    suelo.diagonal.bloques.length === 6 &&
+  check('y las cinco estructuras se apoyan en él a la misma cota (curva de nivel)',
+    suelo.diagonal.bloques.length === 5 &&
     suelo.diagonal.bloques.every(b => Math.abs(b.y) < 1e-6 && Math.abs(b.suelo) < 1e-6),
     JSON.stringify(suelo.diagonal.bloques.map(b => b.k + ':' + b.suelo)));
 
@@ -529,7 +534,7 @@ const SONDA = `(() => {
     Math.abs(cruzDe(suelo.alEste, 'fija_proyecto')) < 0.01 &&
     Math.abs(cruzDe(suelo.alEste, 'tracker_hsat') - 16) < 0.01,
     JSON.stringify(suelo.alEste.bloques.map(b => b.k + ':' + b.cruz)));
-  check('y en diagonal (135°) las seis ven lo mismo, que ya no se impone: sale',
+  check('y en diagonal (135°) todas ven lo mismo, que ya no se impone: sale',
     suelo.diagonal.bloques.every(b =>
       Math.abs(Math.abs(b.cruz) - Math.abs(cruzDe(suelo.diagonal, 'fija_proyecto'))) < 0.01),
     JSON.stringify(suelo.diagonal.bloques.map(b => b.k + ':' + b.cruz)));
@@ -601,7 +606,7 @@ const SONDA = `(() => {
       e.dispatchEvent(new Event('change', { bubbles: true }));
       const q = document.getElementById('pendAz'); q.value = String(a);
       q.dispatchEvent(new Event('change', { bubbles: true }));
-      const B = BLOQUES.find(x => x.key === 'tracker_tsat');
+      const B = BLOQUES.find(x => x.key === 'tracker_hsat');
       const u = B.filas[0]; u.updateWorldMatrix(true, true);
       return { campo: +campo.value,
                dibujado: +(new THREE.Vector3(0, 0, 1).transformDirection(u.matrixWorld).y
