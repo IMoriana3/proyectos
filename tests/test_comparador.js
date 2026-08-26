@@ -45,6 +45,27 @@ check('el catálogo del JS es el del core (' + clavesJS.length + ')',
   JSON.stringify(clavesJS) === JSON.stringify(fix.core.catalogo.slice().sort()),
   clavesJS.join(',') + ' vs ' + fix.core.catalogo.join(','));
 
+/* ── 2a) el golden dice DE DÓNDE sale ──────────────────────────────────────
+   `gen_careo_estructuras.py` recibe el core como una RUTA LOCAL (`--core`), así
+   que el resultado depende de lo que tuviera comprobado quien lo generó. Sin
+   dejar constancia, un golden viejo es indistinguible de uno al día: el
+   2026-08-21 el core corrigió la sombra del circunsolar por la mañana y este
+   fixture se regeneró por la tarde desde un checkout anterior — se quedó una
+   física por detrás del core Y del portal, y el careo siguió en verde porque
+   la deriva cabía de sobra en la tolerancia.
+   Esto no detecta que el golden esté viejo (para eso está el guard del lado
+   del core, que sí tiene el core delante); detecta que no se pueda ni saberlo. */
+const proc = fix.procedencia;
+check('el golden declara su procedencia', !!proc);
+check('...y de qué commit del core salió',
+  !!(proc && /^[0-9a-f]{40}$/.test(proc.core_commit || '')),
+  proc && proc.core_descripcion);
+check('...y con qué pvlib, que la física vive ahí',
+  !!(proc && proc.pvlib), proc && ('pvlib ' + proc.pvlib));
+check('...y que el core NO tenía cambios sin commitear al generarlo',
+  !!(proc && proc.core_limpio === true),
+  proc && proc.core_limpio === false ? 'generado sobre un árbol sucio: irreproducible' : '');
+
 // ── 2b) el TAMAÑO de la estructura, contra `layout_engine.compute_size_from_mods` ──
 // Cifras sacadas del core (mismos argumentos): si la ficha se inventa una
 // fórmula propia para la mesa, el layout de planta y la ficha dejan de hablar
@@ -178,7 +199,16 @@ const ordCore = ordena(Object.fromEntries(Object.entries(core).map(([k, v]) => [
 check('el orden entre estructuras es el mismo', ordJS === ordCore, '\n     JS   ' + ordJS + '\n     core ' + ordCore);
 
 // ── 5) magnitudes, con la tolerancia declarada ──
-const TOL_POA = 0.08, TOL_DELTA = 2.5;
+/* Las dos tolerancias declaran la diferencia de MODELO DE CIELO —el JS va por
+   Hay-Davies y el core por Perez—, no un margen para que el test pase.
+   Estaban en 8 % y 2,5 pp: entre quince y seis veces la discrepancia real, que
+   MEDIDA contra el core de hoy es 1,4 % de POA y 0,37 pp de Δ. Un careo con
+   ese aire dentro no es una puerta, es un adorno: se comió entera una
+   corrección de física del core (la sombra del circunsolar, v1.64.0) y siguió
+   dando 97/97 con el golden una versión por detrás.
+   Se bajan a ~2x lo medido, que es margen para el modelo de cielo y para nada
+   más. Si esto se pone rojo, hay algo que mirar de verdad. */
+const TOL_POA = 0.03, TOL_DELTA = 1.0;
 C.structures.forEach(k => {
   const a = js[k], b = core[k];
   if (!a || !b) { check('falta ' + k, false); return; }
@@ -268,8 +298,11 @@ check('el relativo del tilt es 0 en el óptimo y negativo fuera',
 check('con pendiente (' + C.cross_axis_slope_deg + '°) el backtracking YA NO deja la sombra a ' +
   'cero (' + js.tracker_hsat.sombra.toFixed(2) + ' %): el ángulo se calcula en llano',
   js.tracker_hsat.sombra > 0.5);
+/* 1,0 pp absoluto sobre una sombra de ~4 % era un 25 % relativo de aire: la
+   deriva que se coló medía 0,44 pp. Lo medido hoy contra el core al día es
+   0,07 pp. */
 check('y esa sombra residual es la que dice el core (' + core.tracker_hsat.sombra_pct.toFixed(2) + ' %)',
-  Math.abs(js.tracker_hsat.sombra - core.tracker_hsat.sombra_pct) < 1.0,
+  Math.abs(js.tracker_hsat.sombra - core.tracker_hsat.sombra_pct) < 0.5,
   js.tracker_hsat.sombra.toFixed(2) + ' vs ' + core.tracker_hsat.sombra_pct.toFixed(2));
 // y en LLANO sí se va a cero, que es la razón de ser del backtracking
 const llano = FIS.compara(['tracker_hsat', 'tracker_hsat_nobt'], M, { ...cfg, pend: 0 });
