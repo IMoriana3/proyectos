@@ -661,9 +661,15 @@ slew completo, TCU, abarcones y antena; `west:false` la viga **gemela**, la del 
 que lleva módulos y correas pero del slew solo las piezas `twin`: corona, bracket y soporte. En un
 par bifila, la primera viga es la motriz y la otra la gemela; en monofila todas llevan el suyo.
 
-Antes de esto había una barra dibujada a mano entre filas, con una caja en medio a modo de motor.
+Antes de esto había una barra dibujada a mano entre filas, con **una caja en medio a modo de motor**.
 No era el render de la casa, y en pendiente además quedaba colgando entre una fila y otra porque se
-dibujaba a altura fija. Fuera las dos cosas.
+dibujaba a altura fija.
+
+Lo que sí hace falta —y al quitar la barra se quedó sin dibujar— es el **eje** que une las dos vigas:
+la gemela no tiene motor, la mueve la motriz. Va de **corona a corona** (en `seguidor.js` la corona
+está en el centro del tubo), es un tubo del mismo acero con su brida en cada extremo, y **nada en
+medio**: el motor ya está donde tiene que estar, en el slew de la viga motriz. Se le pasan las cotas
+de las dos filas, porque en pendiente no están a la misma altura.
 
 #### Brújula, y la cámara donde uno quiera
 

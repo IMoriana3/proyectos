@@ -1064,7 +1064,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/comparador-estructuras.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-26",
-    version: "1.40",
+    version: "1.41",
     docId: "comparador-estructuras",
     docUrl: "",
     download: "",
@@ -1109,6 +1109,7 @@ const PROJECTS = [
       { done:false, text:"Enganchar el LCOE (motor /economy) para que al lado del ranking de kWh salga el de €/MWh." }
     ],
     historial: [
+      { date:"2026-08-26", ver:"1.41", note:"Al pasar la bifila al render de la casa se quedó sin EJE: la viga gemela no tiene motor, la mueve la motriz, y lo que las une tiene que verse. Va de corona a corona —en seguidor.js la corona está en el centro del tubo—, es un tubo del mismo acero con su brida en cada extremo y NADA en medio: el motor ya está donde tiene que estar, en el slew de la viga motriz. La caja que había antes en mitad del eje era inventada. Y llega a las dos cotas, que en pendiente no son la misma: medido, sus extremos tocan las dos coronas y cruza justo un pitch." },
       { date:"2026-08-26", ver:"1.40", note:"La BIFILA pasa a dibujarse con el render de la casa. Lo que había era una barra inventada entre filas con una caja en medio a modo de motor — ni es lo que se construye ni es lo que dibuja el bt3d. Qué distingue una bifila de dos monofilas lo resuelve el propio modelo (Seguidor.buildBeam): west:true da la viga del MOTOR con su slew completo, TCU, abarcones y antena, y west:false la viga GEMELA, la del eje de transmisión, que lleva módulos y correas pero del slew solo las piezas twin (corona, bracket y soporte). En un par bifila la primera viga es la motriz y la otra la gemela; en monofila todas llevan el suyo. Medido: 57 mallas la motriz —las mismas que una monofila, no se le quita nada— y 34 la gemela." },
       { date:"2026-08-26", ver:"1.39", note:"«¿El eje de transmisión?» Estaba, pero se había quedado en llano: la barra que hace que dos filas sean UN seguidor se dibujaba a altura fija, y con el terreno inclinado las dos filas que une no están a la misma cota — así que quedaba colgando entre una y otra, ni acoplada a la de arriba ni a la de abajo. Ahora se le pasan las cotas de las dos filas, la barra se orienta entre ellas y cada acoplamiento cae sobre su tubo: medido, los cuatro a menos de 5 cm de su fila y todos a la misma altura sobre ella." },
       { date:"2026-08-26", ver:"1.38", note:"BRÚJULA y cámara libre. Con tres azimutes en juego —terreno, fija y eje— y la cámara orbitando no había forma de saber dónde cae el norte, así que ninguno de los tres se podía leer en la escena. Va una rosa 2D encima del lienzo con N/S/E/O girando con la cámara, la flecha de máxima pendiente (hacia dónde cae el terreno) y el sol, que es lo que dice hacia dónde van las sombras. Y la cámara pasa a ser libre: el botón derecho ya desplazaba, pero cada reconstrucción —y se reconstruye al tocar cualquier campo— devolvía la vista a su sitio, así que en la práctica no se podía mirar a otro lado; ahora, en cuanto se toca, la escena deja de recolocarla hasta que se pulse «recentrar». El tope de zoom se estira con la escena, que con seis bloques en pendiente el límite fijo de 1.200 m dejaba la rueda muerta antes de ver el campo entero." },

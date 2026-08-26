@@ -842,6 +842,46 @@ const SONDA = `(() => {
     bi.piezas[1] > bi.piezas[0] * 0.4 && bi.piezas[1] < bi.piezas[0] * 0.9,
     JSON.stringify(bi.piezas));
 
+  // Y EL EJE que une cada par: la gemela no tiene motor, la mueve la motriz. Va
+  // de corona a corona —en el modelo de la casa la corona está en el centro del
+  // tubo— y en pendiente tiene que llegar a las DOS cotas, que no son la misma.
+  const trans = await p.evaluate(() => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
+    document.querySelectorAll('.st').forEach(c => { c.checked = c.value === 'tracker_hsat'; });
+    s('tkFilas', 2); s('pend', 16); s('pendAz', 90);
+    const B = BLOQUES[0], g = B.filas[0].parent;
+    const ejes = g.children.filter(o => B.filas.indexOf(o) < 0 && o.type === 'Group');
+    const out = ejes.map(ej => { ej.updateWorldMatrix(true, true);
+      const c = new THREE.Box3().setFromObject(ej);
+      /* ¿Llega a las dos coronas? Se mide la distancia de cada corona a la
+         CAJA del eje: cero si la toca. Comparar esquina con esquina no vale —
+         en pendiente el eje baja, así que su esquina de x mínima es la de y
+         MÁXIMA y el emparejamiento depende del signo. */
+      const alCorona = B.filas.map(u => {
+        const w = u.getWorldPosition(new THREE.Vector3());
+        const y = w.y + Seguidor.DIMS.postH;
+        const dx = Math.max(c.min.x - w.x, 0, w.x - c.max.x);
+        const dy = Math.max(c.min.y - y, 0, y - c.max.y);
+        return +Math.hypot(dx, dy).toFixed(2);
+      }).sort((a, b) => a - b);
+      return { luz: +(c.max.x - c.min.x).toFixed(2), extremos: alCorona.slice(0, 2) };
+    });
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
+    s('tkFilas', 2); s('pend', 0);
+    return { n: ejes.length, ejes: out, pitch: +B.pitch.toFixed(2) };
+  });
+  check('cada par bifila lleva SU eje de transmisión (' + trans.n + ')', trans.n === 2,
+    JSON.stringify(eje));
+  check('el eje cruza justo un pitch, de una corona a la de al lado (' +
+    trans.ejes.map(e => e.luz).join(' / ') + ' con pitch ' + trans.pitch + ')',
+    trans.ejes.every(e => e.luz > trans.pitch * 0.9 && e.luz < trans.pitch * 1.1),
+    JSON.stringify(trans.ejes));
+  check('y en PENDIENTE llega a las dos cotas: sus extremos caen en los tubos',
+    trans.ejes.every(e => e.extremos.every(d => d < 0.7)),
+    JSON.stringify(trans.ejes.map(e => e.extremos)));
+
   await pon('tkFilas', 2);
   const fj = await bloque('fija_optima');
   check('la fija no se agrupa aunque el tracker sea bifila',
