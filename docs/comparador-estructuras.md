@@ -487,10 +487,9 @@ de cada vértice y `computeVertexNormals()`. Eso es lo que lo hace leerse como u
 de dos triángulos tiene una normal por cara y sale con aristas; con las normales recalculadas la luz
 varía de forma continua.
 
-La pendiente aparece **solo donde hace falta** —bajo el bloque del eje inclinado— y se funde con el
-llano a los lados con un suavizado, así que no hay ningún canto. Sube exactamente lo que sube el
-eje (`largo de fila · sen(tilt)`, 11,3 m con 65 m y 10°) y luego **aplana en meseta**, en vez de
-seguir subiendo con el suelo. Sin eje inclinado marcado, el suelo vuelve a ser llano.
+Cada estructura se apoya en su **bancada**: el terreno que ESA estructura necesita, con su
+pendiente, acotado a su huella más un margen y fundido con el llano por los cuatro lados. Sin eje
+inclinado ni pendiente de sitio, el suelo vuelve a ser llano.
 
 Las hincas vuelven a medir lo que miden: **2 m, las mismas que el eje horizontal**. Lo que cambia es
 el terreno, no la estructura.
@@ -529,6 +528,30 @@ pone** al seguidor. O sea que cambia el resultado de la comparación, que es jus
 En la escena cada familia la lleva en su dirección de pitch, así que el terreno sube hacia lados
 distintos bajo cada bloque. Eso se lee como «pendientes distintas» y no lo es: es **la misma
 pendiente perpendicular a las filas**, y las filas de cada familia corren hacia otro lado.
+
+#### ¿Por qué no un solo plano para todas?
+
+Es la pregunta obvia —«misma pendiente» suena a «mismo plano»— y la respuesta es geométrica: **una
+fila es un objeto rígido** y solo se replantea sobre terreno que esté *a nivel a lo largo* de ella.
+Las filas de una fija corren este-oeste y las de un seguidor norte-sur: son **perpendiculares**. Un
+único plano inclinado no puede estar a nivel a lo largo de las dos a la vez — el que dejara bien a
+la fija enterraría medio seguidor, y al revés. Lo que se comparte no es el plano: es la
+**pendiente**, la misma para todas, girada a sus filas. Es exactamente lo que dice la física
+(`cross_axis_slope` es ⊥ a las filas, no una dirección del mapa) y lo que se hace en campo: las
+filas siguen la curva de nivel.
+
+Para que **se lea** como una sola pendiente y no como seis cerros, las bancadas se dibujan iguales:
+
+* mismo desnivel y **misma cota central** — suben por un lado lo mismo que bajan por el otro. Antes
+  cada una se levantaba entera hasta apoyar su punto más bajo en el cero, y el resultado eran seis
+  montañas de distinta altura;
+* acotadas por los **cuatro** lados. Antes solo lo estaban en X, así que la ladera se estiraba de
+  norte a sur hasta el borde del mapa y arriba aplanaba en meseta;
+* **sin solaparse**: entre dos bancadas el terreno vuelve exactamente a la cota común. Si se
+  solapasen, sus pendientes se sumarían y el terreno bajo una estructura ya no sería el tecleado.
+  Por eso, en cuanto hay pendiente, los bloques se separan un 60 % más: el talud que devuelve la
+  bancada al llano ocupa sitio. Ese talud es la única franja más inclinada que lo tecleado (pica en
+  torno a 1,9× en su punto medio) y no hay ninguna estructura encima.
 
 #### Lo que destapa: con pendiente, el backtracking deja sombra
 
