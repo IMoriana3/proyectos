@@ -2116,13 +2116,69 @@ function refrescaSizing(){
   pintaVentana({W:W,n:n,m:m,v:v});
 }
 
+/* ── UN LIENZO 2D NÍTIDO ──────────────────────────────────────────────────
+   Los `width`/`height` de un <canvas> son el BÚFER en píxeles, y el CSS lo
+   estira. Estaban fijos en 1.100 px de ancho y el CSS los ponía al 100 % de la
+   tarjeta, así que el navegador AMPLIABA el dibujo: en una tarjeta más ancha, o
+   en cualquier pantalla a 2×, las letras salían pixeladas — no era la fuente,
+   era el lienzo.
+   Esto dimensiona el búfer al tamaño REAL en píxeles de dispositivo y escala el
+   contexto, así que el resto del código sigue dibujando en píxeles lógicos y no
+   se entera. El alto lógico se conserva —el que tenía el atributo— para que las
+   proporciones del gráfico no dependan del ancho de la ventana.
+   Devuelve {g, W, H} ya limpio.                                              */
+/* Y como el búfer ya no se estira solo, al cambiar el ancho de la ventana hay
+   que REPINTAR: antes el navegador reescalaba el dibujo viejo (borroso, pero
+   dibujado). */
+var TREPINTA=null, ANCHO_PINTADO={};
+/* Y hay que VIGILARLOS, no solo escuchar el `resize` de la ventana: la tarjeta
+   de resultados aparece cuando ya se ha dibujado, y al maquetarse cambia el
+   ancho de sus lienzos. Sin esto, el primer dibujo salía a 960 px y la tarjeta
+   se quedaba en 626 — otra vez ampliado, esta vez sin que la ventana se hubiera
+   movido. Se repinta solo si el ANCHO cambió respecto al último pintado, que es
+   lo que evita realimentarse con el alto que fija `lienzo`. */
+function vigilaLienzos(){
+  if(typeof ResizeObserver==='undefined')return;
+  var ids=['cvVent','cvBar','cvMes','cvRank'];
+  var ro=new ResizeObserver(function(){
+    var cambia=ids.some(function(id){
+      var c=$(id);
+      return c&&c.clientWidth&&Math.abs(c.clientWidth-(ANCHO_PINTADO[id]||0))>1;
+    });
+    if(cambia){clearTimeout(TREPINTA); TREPINTA=setTimeout(repintaLienzos,60);}
+  });
+  ids.forEach(function(id){var c=$(id); if(c)ro.observe(c);});
+}
+function repintaLienzos(){
+  if($('cvVent'))pintaVentana(VENT_ULT);
+  if($('cvBar'))dibujaBarrido();
+  if(typeof REP!=='undefined'&&REP&&REP.filas){drawMeses();drawRank();}
+}
+window.addEventListener('resize',function(){
+  clearTimeout(TREPINTA); TREPINTA=setTimeout(repintaLienzos,150);
+});
+function lienzo(c,altoCss){
+  var dpr=Math.min(window.devicePixelRatio||1,2);
+  var W=Math.max(360,Math.round(c.clientWidth||altoCss*3)), H=altoCss;
+  if(c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr)){
+    c.width=Math.round(W*dpr); c.height=Math.round(H*dpr);
+  }
+  c.style.height=H+'px';
+  ANCHO_PINTADO[c.id]=W;
+  var g=c.getContext('2d');
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,W,H);
+  return {g:g,W:W,H:H};
+}
+
 /* La ventana de tensión, dibujada. Y dibujada con βVmp, no con γPmax: el
    original pintaba la curva de Vmp con el coeficiente de POTENCIA mientras la
    cuenta usaba el de tensión, así que el dibujo y el número no coincidían. */
+var VENT_ULT=null;
 function pintaVentana(d){
   var c=$('cvVent'); if(!c)return;
-  var g=c.getContext('2d'), W=c.width, H=c.height;
-  g.clearRect(0,0,W,H);
+  VENT_ULT=d;
+  var Z=lienzo(c,300), g=Z.g, W=Z.W, H=Z.H;
   if(!d){g.fillStyle='#7A8794'; g.font='12px ui-monospace,monospace';
     g.fillText('elige módulo e inversor',14,H/2); return;}
   var L=54,R=14,T=14,B=26, t0=d.W?+$('szTmin').value-5:0, t1=+$('szTmax').value+5;
@@ -2428,8 +2484,7 @@ function pintaBarrido(){
    dejaría una de las dos aplastada contra el borde. */
 function dibujaBarrido(){
   var c=$('cvBar'); if(!c)return;
-  var g=c.getContext('2d'), W=c.width, H=c.height, L=62, R=66, T=16, B=30;
-  g.clearRect(0,0,W,H);
+  var Z=lienzo(c,320), g=Z.g, W=Z.W, H=Z.H, L=62, R=66, T=16, B=30;
   if(!BAR){g.fillStyle='#7A8794'; g.font='13px ui-monospace,monospace';
     g.fillText('dale a «Barrer» para ver la curva',18,H/2); return;}
   var P=BAR.puntos, esP=(BAR.tipo==='pitch');
@@ -2614,8 +2669,7 @@ function drawTabla(base){
 
 /* Barras mensuales agrupadas */
 function drawMeses(){
-  var c=$('cvMes'),g=c.getContext('2d'),W=c.width,H=c.height,f=REP.filas;
-  g.clearRect(0,0,W,H);
+  var c=$('cvMes'),Z=lienzo(c,320),g=Z.g,W=Z.W,H=Z.H,f=REP.filas;
   var L=52,R=14,T=16,B=30,gw=(W-L-R)/12;
   var max=0; f.forEach(function(x){x.mes.forEach(function(v){if(v>max)max=v;});});
   if(max<=0)return;
@@ -2640,16 +2694,21 @@ function drawMeses(){
 }
 /* Ranking anual: módulo (sólido) y suelo (rayado) */
 function drawRank(){
-  var c=$('cvRank'),g=c.getContext('2d'),W=c.width,H=c.height,f=REP.filas;
-  g.clearRect(0,0,W,H);
-  var L=250,R=70,T=16,B=22,rowH=(H-T-B)/f.length;
+  var c=$('cvRank'),Z=lienzo(c,250),g=Z.g,W=Z.W,H=Z.H,f=REP.filas;
+  /* La columna de rótulos se lleva un TERCIO del ancho, no 250 px fijos: con el
+     lienzo ya a la anchura real de la tarjeta, esos 250 se comían el 40 % en
+     una ventana estrecha. */
+  var L=Math.min(250,Math.round(W*0.34)),R=70,T=16,B=22,rowH=(H-T-B)/f.length;
   var max=0; f.forEach(function(x){max=Math.max(max,x.neta);});
   if(max<=0)return;
   g.font='12px system-ui,sans-serif';
   f.forEach(function(x,i){
     var y=T+rowH*i, hb=Math.min(15,rowH*0.34);
     g.fillStyle='#E7EEF4';g.textAlign='right';
-    g.fillText(x.label.length>34?x.label.slice(0,33)+'…':x.label,L-10,y+rowH/2+4);
+    /* y el rótulo se recorta por lo que MIDE, no por número de letras */
+    var et=x.label;
+    while(et.length>6&&g.measureText(et).width>L-14)et=et.slice(0,-2)+'…';
+    g.fillText(et,L-10,y+rowH/2+4);
     g.fillStyle=COL[x.key]||'#888';
     g.fillRect(L,y+rowH/2-hb-2,(W-L-R)*(x.neta/max),hb);
     g.globalAlpha=.45;
@@ -2659,7 +2718,11 @@ function drawRank(){
     g.fillText(fmt(x.neta,0),L+(W-L-R)*(x.neta/max)+6,y+rowH/2-2);
   });
   g.fillStyle='#5E6F7E';g.textAlign='left';g.font='11px ui-monospace,monospace';
-  g.fillText('sólido: por m² de módulo   ·   translúcido: por m² de suelo (× GCR)',L,H-6);
+  /* La leyenda, en su versión corta si la larga no cabe: se salía por el borde
+     derecho en cuanto la tarjeta bajaba de unos 900 px. */
+  var leg='sólido: por m² de módulo   ·   translúcido: por m² de suelo (× GCR)';
+  if(g.measureText(leg).width>W-L-6)leg='sólido: módulo · translúcido: suelo';
+  g.fillText(leg,L,H-6);
 }
 
 
@@ -3495,6 +3558,7 @@ CAMPOS_GEOM.forEach(function(id){
 $('hora').oninput=actualiza3D;
 $('fecha').onchange=actualiza3D;
 $('play').onclick=function(){PLAY=!PLAY;this.textContent=PLAY?'❚❚':'▶';};
+vigilaLienzos();
 </script>
 </body>
 </html>
