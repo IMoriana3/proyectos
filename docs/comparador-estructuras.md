@@ -549,9 +549,26 @@ Para que **se lea** como una sola pendiente y no como seis cerros, las bancadas 
   norte a sur hasta el borde del mapa y arriba aplanaba en meseta;
 * **sin solaparse**: entre dos bancadas el terreno vuelve exactamente a la cota común. Si se
   solapasen, sus pendientes se sumarían y el terreno bajo una estructura ya no sería el tecleado.
-  Por eso, en cuanto hay pendiente, los bloques se separan un 60 % más: el talud que devuelve la
-  bancada al llano ocupa sitio. Ese talud es la única franja más inclinada que lo tecleado (pica en
-  torno a 1,9× en su punto medio) y no hay ninguna estructura encima.
+  Por eso, en cuanto hay pendiente, los bloques se separan **al doble**: media distancia al vecino
+  para la bancada y la otra media para el talud, que es la única proporción con la que el talud no
+  sale más empinado que la propia pendiente;
+* del **mismo tamaño**, y tan anchas como caben entre bloque y bloque. Ceñirlas al bloque era lo
+  que hacía la pendiente invisible: una fija de 3 filas a 4,5 m de pitch mide 10 m, y 16° sobre
+  10 m son 1,4 m de desnivel — nada en una escena de 170 m.
+
+El talud es la única franja más inclinada que lo tecleado (pica en torno a 1,5× en su punto medio)
+y no lleva ninguna estructura encima. En las **esquinas** de una bancada con pendiente en los dos
+ejes —solo el eje inclinado, que lleva la del sitio y la del eje— el desnivel de una se sumaría al
+de la otra y el talud tendría que devolver el doble en los mismos metros: se acota al mayor de los
+dos, lo que recorta esas dos esquinas y nada más.
+
+#### Y que se VEA: sombreado por cota
+
+Con el terreno bien hecho la pendiente seguía sin verse, y no era el modelo: a mediodía de junio el
+sol está a **76°** —casi cenital— y una ladera de 16° recibe casi la misma luz que el llano, así que
+el suelo salía de un verde plano y uniforme. El terreno lleva un **tinte por altura** (claro arriba,
+oscuro abajo, como un mapa hipsométrico), en color de vértice sobre el mismo material. Hace legible
+el relieve a cualquier hora, que es justo lo que la escena tiene que enseñar.
 
 #### Lo que destapa: con pendiente, el backtracking deja sombra
 

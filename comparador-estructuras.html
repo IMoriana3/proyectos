@@ -2548,7 +2548,7 @@ function init3D(){
        cúpula — sin él, el de trabajo se acaba en un borde RECTO con el cielo
        detrás y los bloques parecen estar sobre una mesa flotando en el vacío. */
     var suelo=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
-      new THREE.MeshLambertMaterial({color:0x24301d}));
+      new THREE.MeshLambertMaterial({color:0x24301d,vertexColors:true}));
     suelo.rotation.x=-Math.PI/2; suelo.receiveShadow=true; sc.add(suelo);
     var horiz=new THREE.Mesh(new THREE.PlaneGeometry(12000,12000),
       new THREE.MeshLambertMaterial({color:0x1e2a19}));
@@ -2794,20 +2794,49 @@ function cotaTerreno(x,z,rampas){
           suave((Math.abs(z-r.z)-r.mz)/r.fz);
     if(w<=0)continue;
     /* Cota RELATIVA al centro de la bancada, que está en cero: sube por un
-       lado lo mismo que baja por el otro. Sin `alza` ni `tope` — eran los que
-       levantaban cada bloque a una altura distinta y le ponían meseta. */
-    y+=w*(-(x-r.x)*Math.tan(r.ax||0)-(z-r.z)*Math.tan(r.az||0));
+       lado lo mismo que baja por el otro. Sin la `alza` que levantaba cada
+       bloque a una altura distinta.
+       La rampa se ACOTA al tamaño de la bancada y fuera sigue plana. No es
+       cosmética: dentro del fundido, un desnivel que siguiera creciendo con la
+       distancia se multiplica por la caída de la ventana del OTRO eje, y en la
+       esquina de una bancada con pendiente en los dos —el eje inclinado, que
+       lleva la del sitio y la del eje— salía un talud de 34° con 12
+       tecleados. */
+    var dx=Math.max(-r.mx,Math.min(r.mx,x-r.x)),
+        dz=Math.max(-r.mz,Math.min(r.mz,z-r.z));
+    var h=-dx*Math.tan(r.ax||0)-dz*Math.tan(r.az||0);
+    /* Y en las ESQUINAS de una bancada con pendiente en los dos ejes, el
+       desnivel de una se suma al de la otra y el talud tendría que devolver el
+       doble en los mismos metros. Se acota al mayor de los dos: solo recorta
+       las dos esquinas extremas, y ninguna estructura se apoya ahí. */
+    var tope=Math.max(r.mx*Math.abs(Math.tan(r.ax||0)),r.mz*Math.abs(Math.tan(r.az||0)));
+    y+=w*Math.max(-tope,Math.min(tope,h));
   }
   return y;
 }
 function sueloRelieve(ancho,largoZ,rampas){
   var geo=new THREE.PlaneGeometry(ancho,largoZ,140,70);
   geo.rotateX(-Math.PI/2);
-  var pos=geo.attributes.position;
-  for(var i=0;i<pos.count;i++)
-    pos.setY(i,cotaTerreno(pos.getX(i),pos.getZ(i),rampas));
+  var pos=geo.attributes.position, lo=0, hi=0;
+  for(var i=0;i<pos.count;i++){
+    var y=cotaTerreno(pos.getX(i),pos.getZ(i),rampas);
+    pos.setY(i,y); if(y<lo)lo=y; if(y>hi)hi=y;
+  }
   pos.needsUpdate=true;
   geo.computeVertexNormals();
+  /* SOMBREADO POR COTA. Sin esto la pendiente no se ve, y no por el modelo:
+     a mediodía de junio el sol está a 76° —casi cenital— y una ladera de 16°
+     recibe casi la misma luz que el llano, así que el terreno sale de un verde
+     plano y uniforme. Un tinte por altura (claro arriba, oscuro abajo, como un
+     mapa hipsométrico) hace legible el relieve a cualquier hora, que es
+     justo lo que la escena tiene que enseñar. Va en color de VÉRTICE, que se
+     multiplica por el del material: 1 deja el verde tal cual. */
+  var med=(hi+lo)/2, semi=(hi-lo)/2, col=new Float32Array(pos.count*3);
+  for(var j=0;j<pos.count;j++){
+    var f=semi>0.05?1+0.42*Math.max(-1,Math.min(1,(pos.getY(j)-med)/semi)):1;
+    col[j*3]=col[j*3+1]=col[j*3+2]=f;
+  }
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
   return geo;
 }
 
@@ -2872,11 +2901,12 @@ function construyeMundo(){
   var sep=Math.max(largo,(nfMax-1)*Math.max(6,cfg.tracker.pitch))+16;
   /* Con terreno en pendiente cada bloque necesita su bancada Y el fundido que
      la devuelve al llano, y con la separación de llano ese fundido sale tan
-     corto que la transición es un escalón. Se abre la mano un 60 %: lo justo
-     para que la banca entre y la vuelta al llano se lea como un talud, sin
-     alejar tanto la cámara que las estructuras se queden en miniatura. */
+     corto que la transición es un escalón. Al DOBLE entra justo: media
+     distancia al vecino para la bancada y la otra media para el talud, que es
+     la única proporción con la que el talud no sale más empinado que la
+     propia pendiente. */
   if((cfg.pend||0)||(cfg.axTilt&&keys.some(function(k){var e=FIS.spec(k);return e&&e.tsat;})))
-    sep*=1.6;
+    sep*=2;
   var x0=-(keys.length-1)*sep/2, anchoTot=(keys.length-1)*sep+largo;
 
   keys.forEach(function(k,i){
@@ -2941,9 +2971,18 @@ function construyeMundo(){
          bajar, y entre dos bloques saldría un ESCALÓN donde tiene que haber una
          transición. Por eso, en cuanto hay pendiente, los bloques se separan al
          doble: el terreno que necesitan para existir ocupa sitio. */
-      var lim=sep*0.5, mx=Math.min(anchoBloque/2+8,lim*0.5);
+      /* TAMAÑO de la bancada. Ceñirla al bloque era lo que hacía la pendiente
+         invisible: una fija de 3 filas a 4,5 m mide 10 m, y 16° sobre 10 m son
+         1,4 m de desnivel — nada en una escena de 170 m. Así que la bancada es
+         la MISMA para todas y tan ancha como cabe entre bloque y bloque
+         (media distancia al vecino, la mitad bancada y la mitad talud), y solo
+         crece si el bloque no cupiera. Es además lo que hace que se lea como la
+         misma pendiente: seis bancadas del mismo tamaño y el mismo desnivel. */
+      var lim=sep*0.5;
+      var mx=Math.min(Math.max(lim*0.5,anchoBloque/2+8),lim-10);
+      var mz=Math.max(lim*0.5,fondoBloque/2+8);
       rampas.push({x:grupo.position.x, z:0,
-                   mx:mx, mz:fondoBloque/2+8, fx:lim-mx, fz:(fondoBloque/2+8)*1.6,
+                   mx:mx, mz:mz, fx:lim-mx, fz:mz*1.6,
                    ax:ejeX, az:ejeZ});
     }
     var col='#'+(COL[k]||'#888888').replace('#','');
