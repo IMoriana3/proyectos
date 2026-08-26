@@ -1229,8 +1229,8 @@ const SONDA = `(() => {
   check('la tabla avisa de que por POA el backtracking casi nunca gana',
     /fracción sombreada del plano/i.test(notaBT.llano) && /lineal/i.test(notaBT.llano) &&
     /DC\/AC/.test(notaBT.llano), notaBT.llano.slice(-320));
-  check('y con pendiente ⊥ avisa además de que el ángulo se calcula en llano',
-    /en llano/i.test(notaBT.cruz) && /cross_axis_tilt/i.test(notaBT.cruz),
+  check('y con pendiente ⊥ dice que el ángulo va CON la pendiente, y cuánta sombra queda',
+    /con la pendiente/i.test(notaBT.cruz) && /cross_axis_tilt/i.test(notaBT.cruz),
     notaBT.cruz.slice(-320));
   check('y sin pendiente ⊥ no lo dice, que no viene a cuento',
     !/cross_axis_tilt/i.test(notaBT.llano), notaBT.llano.slice(-200));

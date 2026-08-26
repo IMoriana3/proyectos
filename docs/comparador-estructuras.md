@@ -703,13 +703,14 @@ t = |d · cos(ψ − x)|         y si t ≥ 1 no hay sombra que evitar
 θ = ψ − signo(ψ) · acos(t)
 ```
 
-Con `x = 0` sale la de siempre, cifra a cifra — por ahí entra el careo, porque **el core backtrackea
-en llano**. Con la pendiente metida, la sombra residual del seguidor con backtracking se va a
-**0,0000**: era 4,3 % a 8° sin ella.
+Con `x = 0` sale la de siempre, cifra a cifra. Con la pendiente metida, la sombra residual del
+seguidor con backtracking se va a **0,0000**: era 4,3 % a 8° sin ella.
 
-Va con interruptor (`backtracking con la pendiente`, marcado por defecto) porque son dos modelos
-distintos y conviene poder ver la diferencia: sin marcar es lo que hace el core, marcado es lo que
-hace pvlib y lo que hace un seguidor de verdad en un campo en cuesta.
+Hubo un interruptor durante dos horas, porque **el core backtrackeaba en llano** y había que poder
+carear contra él. Ya no hace falta: el core lleva `cross_axis_tilt` desde **SolarGPT v1.70.0** (mismo
+día, `solargpt_core/poa.py` — la llamada a `pvlib.tracking.singleaxis` iba sin él mientras el
+sombreado sí llevaba el `cross_axis_slope`). Hay un solo modelo y el careo entra por él: a 8° el
+core da **0,16 %** de sombra residual y la ficha **0,20 %**, contra los 3,74 / 4,11 de antes.
 
 #### Las hincas de la fija
 
@@ -781,13 +782,14 @@ t = |d · cos(ψ − x)|         y si t ≥ 1 no hay sombra que evitar
 θ = ψ − signo(ψ) · acos(t)
 ```
 
-Con `x = 0` sale la de siempre, cifra a cifra — por ahí entra el careo, porque **el core backtrackea
-en llano**. Con la pendiente metida, la sombra residual del seguidor con backtracking se va a
-**0,0000**: era 4,3 % a 8° sin ella.
+Con `x = 0` sale la de siempre, cifra a cifra. Con la pendiente metida, la sombra residual del
+seguidor con backtracking se va a **0,0000**: era 4,3 % a 8° sin ella.
 
-Va con interruptor (`backtracking con la pendiente`, marcado por defecto) porque son dos modelos
-distintos y conviene poder ver la diferencia: sin marcar es lo que hace el core, marcado es lo que
-hace pvlib y lo que hace un seguidor de verdad en un campo en cuesta.
+Hubo un interruptor durante dos horas, porque **el core backtrackeaba en llano** y había que poder
+carear contra él. Ya no hace falta: el core lleva `cross_axis_tilt` desde **SolarGPT v1.70.0** (mismo
+día, `solargpt_core/poa.py` — la llamada a `pvlib.tracking.singleaxis` iba sin él mientras el
+sombreado sí llevaba el `cross_axis_slope`). Hay un solo modelo y el careo entra por él: a 8° el
+core da **0,16 %** de sombra residual y la ficha **0,20 %**, contra los 3,74 / 4,11 de antes.
 
 #### Las hincas
 
