@@ -587,6 +587,42 @@ const SONDA = `(() => {
   check('y la lectura del seguidor dice cuánto se inclina su eje con el terreno',
     /eje [\d,]+° con el terreno/.test(sigue.lect), sigue.lect.slice(0, 300));
 
+  // El «eje inclinado °» ya no es una entrada: se rellena con lo que da el
+  // terreno a lo largo del eje. Dejarlo a mano permitía teclear un eje que el
+  // emplazamiento no sostiene, y entonces se dibuja una cosa y se calcula otra.
+  const eje = await p.evaluate(() => {
+    const campo = document.getElementById('axtilt');
+    const set = (b, a) => {
+      const e = document.getElementById('pend'); e.value = String(b);
+      e.dispatchEvent(new Event('change', { bubbles: true }));
+      const q = document.getElementById('pendAz'); q.value = String(a);
+      q.dispatchEvent(new Event('change', { bubbles: true }));
+      const B = BLOQUES.find(x => x.key === 'tracker_tsat');
+      const u = B.filas[0]; u.updateWorldMatrix(true, true);
+      return { campo: +campo.value,
+               dibujado: +(new THREE.Vector3(0, 0, 1).transformDirection(u.matrixWorld).y
+                           .toFixed(4)) };
+    };
+    const r = { ro: campo.readOnly, sur: set(26, 180), norte: set(26, 0),
+                este: set(26, 90), llano: set(0, 180) };
+    return r;
+  });
+  check('el campo del eje inclinado es de solo lectura: lo pone el terreno',
+    eje.ro === true, String(eje.ro));
+  check('cayendo al SUR marca +26° (el eje mira al ecuador)',
+    Math.abs(eje.sur.campo - 26) < 0.1, String(eje.sur.campo));
+  check('cayendo al NORTE marca −26°: un eje puede caer hacia el polo',
+    Math.abs(eje.norte.campo + 26) < 0.1, String(eje.norte.campo));
+  check('cayendo al ESTE, 0°: esa pendiente es ⊥ al eje, no a lo largo',
+    Math.abs(eje.este.campo) < 0.1, String(eje.este.campo));
+  check('y en LLANO, 0°: sin pendiente no hay TSAT que valga',
+    Math.abs(eje.llano.campo) < 0.01, String(eje.llano.campo));
+  // y lo dibujado coincide con lo declarado, que es de lo que iba todo esto
+  check('el eje DIBUJADO es el mismo que marca el campo (sen 26° = ' +
+    Math.sin(26 * Math.PI / 180).toFixed(3) + ')',
+    Math.abs(Math.abs(eje.sur.dibujado) - Math.sin(26 * Math.PI / 180)) < 0.01,
+    String(eje.sur.dibujado));
+
   // ── LA CÁMARA, POR EL LADO DEL ECUADOR ──
   // La cámara se pone cuesta abajo para ver los bloques en línea y la ladera
   // subiendo por detrás. Pero cuesta abajo puede ser el NORTE, y una fija mira
