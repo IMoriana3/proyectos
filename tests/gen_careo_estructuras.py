@@ -132,6 +132,44 @@ def sellar(texto: str) -> str:
     return texto.replace(_HUECO_SHA, f'"sha256": "{h}"', 1)
 
 
+def _procedencia(core_dir: Path) -> dict:
+    """De qué core y con qué stack salió este golden.
+
+    Sin esto el fixture era INAUDITABLE por construcción: `--core` es una ruta
+    LOCAL sin pin, así que el resultado depende de lo que tuviera comprobado
+    quien lo generó, y no quedaba ni rastro de qué era. Y pasó de verdad: el
+    2026-08-21 el core corrigió la sombra del circunsolar de Perez a las 08:36
+    y este fichero se regeneró a las 17:43 —nueve horas DESPUÉS— desde un
+    checkout viejo. El golden se quedó una física por detrás del core Y del
+    portal, y mirándolo no había forma de saberlo.
+    """
+    def _git(*args: str) -> str:
+        try:
+            return subprocess.run(("git", "-C", str(core_dir), *args),
+                                  capture_output=True, text=True, timeout=15,
+                                  check=True).stdout.strip()
+        except Exception:
+            return "desconocido"
+
+    import numpy
+    import pandas
+    import pvlib
+
+    sucio = _git("status", "--porcelain")
+    return {
+        "core_commit": _git("rev-parse", "HEAD"),
+        "core_descripcion": _git("log", "-1", "--format=%h %ad %s", "--date=short"),
+        # False = se generó con cambios sin commitear: el commit NO describe
+        # lo que se ejecutó, así que el golden no es reproducible.
+        "core_limpio": sucio == "",
+        "generado_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "python": sys.version.split()[0],
+        "pvlib": pvlib.__version__,
+        "numpy": numpy.__version__,
+        "pandas": pandas.__version__,
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--core", required=True, help="raíz del repo con solargpt_core/")
@@ -179,8 +217,10 @@ def main() -> int:
         "gcr": round(r.gcr, 6),
     } for r in cmp_.rows]
 
+    proc = _procedencia(Path(a.core).resolve())
     doc = {
         "_": "Generado por tests/gen_careo_estructuras.py — NO editar a mano.",
+        "procedencia": proc,
         "core": {"catalogo": sorted(CATALOGO), "baseline": cmp_.baseline_key,
                  "pendiente_deg": PENDIENTE,
                  "ghi_kwh_m2": round(cmp_.assumptions["ghi_kwh_m2_year"] * anos, 4),
@@ -220,6 +260,10 @@ def main() -> int:
     print(f"  motivo {a.motivo.strip()}")
     if not mc["commit"] or not mc["version"]:
         print("  AVISO: procedencia INCOMPLETA — el careo lo declarará")
+    print(f"  core: {proc['core_descripcion']}"
+          + ("" if proc["core_limpio"] else "   ⚠ CON CAMBIOS SIN COMMITEAR"))
+    print(f"  stack: pvlib {proc['pvlib']} · numpy {proc['numpy']} "
+          f"· pandas {proc['pandas']}")
     for f in filas:
         print(f"  {f['label']:<42} {f['poa_kwh_m2']:>8.1f} kWh/m²  {f['delta_pct']:+7.2f} %")
     return 0

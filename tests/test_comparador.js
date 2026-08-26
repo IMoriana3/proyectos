@@ -94,7 +94,12 @@ if (MAN) {
   // —no está aquí, el generador lo pide con `--core`—, así que se fija: subir
   // el golden a otro core obliga a tocar ESTA línea, y entonces el cambio de
   // física aparece en el diff en vez de colarse en un JSON de 30 KB.
-  const CORE_PIN = { version: '1.67.0', commit: '54d40eef' };
+  // Re-medido el 2026-08-26 tras traer main 5cc22b2, que cambio la fisica del
+  // comparador en v1.36 (hincas, horizonte acotado) y v1.37 (azimut de la
+  // estructura). El hueco JS<->core NO se movio: sigue en 1,36 % de POA
+  // (fija_ew) y 0,367 pp de delta, asi que las tolerancias se quedan donde
+  // estaban. Lo unico que cambia es contra que core esta sellado el golden.
+  const CORE_PIN = { version: '1.69.0', commit: '82af2aa1' };
   check('el golden corresponde al core fijado (v' + CORE_PIN.version + ')',
     MAN.core.version === CORE_PIN.version,
     'golden v' + MAN.core.version + ' vs pin v' + CORE_PIN.version +
@@ -111,6 +116,27 @@ const clavesJS = FIS.CATALOGO.map(s => s.key).sort();
 check('el catálogo del JS es el del core (' + clavesJS.length + ')',
   JSON.stringify(clavesJS) === JSON.stringify(fix.core.catalogo.slice().sort()),
   clavesJS.join(',') + ' vs ' + fix.core.catalogo.join(','));
+
+/* ── 2a) el golden dice DE DÓNDE sale ──────────────────────────────────────
+   `gen_careo_estructuras.py` recibe el core como una RUTA LOCAL (`--core`), así
+   que el resultado depende de lo que tuviera comprobado quien lo generó. Sin
+   dejar constancia, un golden viejo es indistinguible de uno al día: el
+   2026-08-21 el core corrigió la sombra del circunsolar por la mañana y este
+   fixture se regeneró por la tarde desde un checkout anterior — se quedó una
+   física por detrás del core Y del portal, y el careo siguió en verde porque
+   la deriva cabía de sobra en la tolerancia.
+   Esto no detecta que el golden esté viejo (para eso está el guard del lado
+   del core, que sí tiene el core delante); detecta que no se pueda ni saberlo. */
+const proc = fix.procedencia;
+check('el golden declara su procedencia', !!proc);
+check('...y de qué commit del core salió',
+  !!(proc && /^[0-9a-f]{40}$/.test(proc.core_commit || '')),
+  proc && proc.core_descripcion);
+check('...y con qué pvlib, que la física vive ahí',
+  !!(proc && proc.pvlib), proc && ('pvlib ' + proc.pvlib));
+check('...y que el core NO tenía cambios sin commitear al generarlo',
+  !!(proc && proc.core_limpio === true),
+  proc && proc.core_limpio === false ? 'generado sobre un árbol sucio: irreproducible' : '');
 
 // ── 2b) el TAMAÑO de la estructura, contra `layout_engine.compute_size_from_mods` ──
 // Cifras sacadas del core (mismos argumentos): si la ficha se inventa una
@@ -412,8 +438,11 @@ check('el relativo del tilt es 0 en el óptimo y negativo fuera',
 check('con pendiente (' + C.cross_axis_slope_deg + '°) el backtracking YA NO deja la sombra a ' +
   'cero (' + js.tracker_hsat.sombra.toFixed(2) + ' %): el ángulo se calcula en llano',
   js.tracker_hsat.sombra > 0.5);
+/* 1,0 pp absoluto sobre una sombra de ~4 % era un 25 % relativo de aire: la
+   deriva que se coló medía 0,44 pp. Lo medido hoy contra el core al día es
+   0,07 pp. */
 check('y esa sombra residual es la que dice el core (' + core.tracker_hsat.sombra_pct.toFixed(2) + ' %)',
-  Math.abs(js.tracker_hsat.sombra - core.tracker_hsat.sombra_pct) < 1.0,
+  Math.abs(js.tracker_hsat.sombra - core.tracker_hsat.sombra_pct) < 0.5,
   js.tracker_hsat.sombra.toFixed(2) + ' vs ' + core.tracker_hsat.sombra_pct.toFixed(2));
 // y en LLANO sí se va a cero, que es la razón de ser del backtracking
 const llano = FIS.compara(['tracker_hsat', 'tracker_hsat_nobt'], M, { ...cfg, pend: 0 });
@@ -498,16 +527,29 @@ check('y el de transposición NO se mueve: no sabe que hay vecinas (' +
 // familia ve una COMPONENTE distinta del mismo plano.
 const FIJA = FIS.spec('fija_proyecto'), TK = FIS.spec('tracker_hsat'),
       EW = FIS.spec('fija_ew');
-check('la fija apila al SUR y el seguidor y las dos aguas al ESTE',
-  FIS.ejePitch(FIJA) === 'z' && FIS.ejePitch(TK) === 'x' && FIS.ejePitch(EW) === 'x',
-  [FIS.ejePitch(FIJA), FIS.ejePitch(TK), FIS.ejePitch(EW)].join(','));
+const N = { lat: 37.4 };                       // hemisferio norte, sin desvíos
+check('sin desvíos, la fija apila al SUR (180°) y el seguidor y las dos aguas al ESTE (90°)',
+  FIS.azPitch(N, FIJA) === 180 && FIS.azPitch(N, TK) === 90 && FIS.azPitch(N, EW) === 90,
+  [FIS.azPitch(N, FIJA), FIS.azPitch(N, TK), FIS.azPitch(N, EW)].join(','));
+check('en el hemisferio SUR la fija apila al NORTE, que es donde tiene el ecuador',
+  FIS.azPitch({ lat: -16.6 }, FIJA) === 0);
+// El azimut es una decisión de PROYECTO y se declara como desvío: 0 = la
+// orientación de manual, positivo hacia el oeste. Así vale en los dos
+// hemisferios y es como se especifica en obra.
+check('el desvío gira la fija: 15° al oeste = mirar a 195°',
+  FIS.azPitch({ lat: 37.4, desvFija: 15 }, FIJA) === 195);
+check('y el del eje gira el seguidor: eje a 20° = apilar a 110°',
+  FIS.azPitch({ lat: 37.4, desvEje: 20 }, TK) === 110);
+check('y son INDEPENDIENTES: el desvío de la fija no toca al seguidor',
+  FIS.azPitch({ lat: 37.4, desvFija: 15 }, TK) === 90 &&
+  FIS.azPitch({ lat: 37.4, desvEje: 20 }, FIJA) === 180);
 // Los cuatro rumbos cardinales, que son los que se pueden razonar a mano.
 [[180, 16, 0, 'al SUR: la fija la ve entera y el seguidor NADA'],
  [90, 0, 16, 'al ESTE: al revés, el seguidor entera y la fija nada'],
  [0, -16, 0, 'al NORTE: la fija la ve entera pero con el signo cambiado'],
  [270, 0, -16, 'al OESTE: el seguidor, con el signo cambiado']
 ].forEach(([az, cf, ct, nom]) => {
-  const f = FIS.pendComp(16, az, 'z'), t = FIS.pendComp(16, az, 'x');
+  const f = FIS.pendComp(16, az, 180), t = FIS.pendComp(16, az, 90);
   check('cayendo ' + nom, Math.abs(f.cruz - cf) < 1e-9 && Math.abs(t.cruz - ct) < 1e-9,
     JSON.stringify({ fija: +f.cruz.toFixed(3), tk: +t.cruz.toFixed(3) }));
   // y lo que no ve ⊥ lo ve A LO LARGO: no se pierde por el camino
@@ -516,21 +558,33 @@ check('la fija apila al SUR y el seguidor y las dos aguas al ESTE',
              - Math.tan(16 * Math.PI / 180) ** 2) < 1e-12);
 });
 // El caso en que TODAS ven lo mismo no es un ajuste: es un azimut concreto.
-const d45 = FIS.pendComp(16, 135, 'z'), t45 = FIS.pendComp(16, 135, 'x');
+const d45 = FIS.pendComp(16, 135, 180), t45 = FIS.pendComp(16, 135, 90);
 check('solo cayendo en diagonal (135°) las dos ven lo MISMO: ' + d45.cruz.toFixed(2) + '°',
   Math.abs(d45.cruz - t45.cruz) < 1e-9 &&
   Math.abs(d45.cruz - Math.atan(Math.tan(16 * Math.PI / 180) / Math.SQRT2) * 180 / Math.PI) < 1e-9,
   d45.cruz.toFixed(4) + ' vs ' + t45.cruz.toFixed(4));
 check('terreno llano: ninguna ve nada, apunte donde apunte el azimut',
-  [0, 45, 90, 200, 359].every(a => FIS.pendComp(0, a, 'z').cruz === 0 &&
-                                   FIS.pendComp(0, a, 'x').cruz === 0));
+  [0, 45, 90, 200, 359].every(a => FIS.pendComp(0, a, 180).cruz === 0 &&
+                                   FIS.pendComp(0, a, 90).cruz === 0));
+// Y lo que pedía el caso general: con la estructura girada, la componente ⊥ ya
+// no es la del manual. Terreno al sur y fija desviada 30° al oeste.
+const gir = FIS.pendComp(16, 180, 210);
+check('con la fija desviada 30°, de los 16° del terreno solo ve ' +
+  gir.cruz.toFixed(1) + '° ⊥ a sus filas (cos 30° · tan β)',
+  Math.abs(Math.tan(gir.cruz * Math.PI / 180) -
+           Math.tan(16 * Math.PI / 180) * Math.cos(30 * Math.PI / 180)) < 1e-12,
+  JSON.stringify(gir));
+check('  y el resto le entra a lo largo de las filas',
+  Math.abs(Math.tan(gir.cruz * Math.PI / 180) ** 2 +
+           Math.tan(gir.largo * Math.PI / 180) ** 2 -
+           Math.tan(16 * Math.PI / 180) ** 2) < 1e-12);
 // El seam del careo: el core recibe el cross-axis directamente, así que sin
 // azimut declarado `pend` ES el cross-axis. Con azimut, se deriva.
 check('sin azimut declarado, `pend` es el cross-axis tal cual (el camino del careo)',
-  FIS.cruz({ pend: 8 }, FIJA) === 8 && FIS.cruz({ pend: 8 }, TK) === 8);
+  FIS.cruz({ pend: 8, lat: 37.4 }, FIJA) === 8 && FIS.cruz({ pend: 8, lat: 37.4 }, TK) === 8);
 check('con azimut, cada familia recibe SU componente',
-  Math.abs(FIS.cruz({ pend: 16, pendAz: 180 }, FIJA) - 16) < 1e-9 &&
-  Math.abs(FIS.cruz({ pend: 16, pendAz: 180 }, TK)) < 1e-9);
+  Math.abs(FIS.cruz({ pend: 16, pendAz: 180, lat: 37.4 }, FIJA) - 16) < 1e-9 &&
+  Math.abs(FIS.cruz({ pend: 16, pendAz: 180, lat: 37.4 }, TK)) < 1e-9);
 // Y lo que de verdad importa: eso llega al SOMBREADO, no se queda en la nota.
 const caeSur = porClaveTmp(FIS.compara(['fija_proyecto', 'tracker_hsat_nobt'], M,
   { ...cfg, pend: 16, pendAz: 180 }));
