@@ -544,6 +544,14 @@ Y la **cámara se pone cuesta abajo**, mirando ladera arriba. No es gusto: la l�
 con el azimut, y desde el sur fijo con la caída al este quedaban en fila india — el primero enorme y
 el último un punto. En llano no hay cuesta y se mira desde el sur, como siempre.
 
+Con una condición que costó un susto: **siempre por el lado del ecuador**. Las dos direcciones ⊥ a
+la línea de bloques encuadran igual de bien, y solo una enseña la cara — una fija mira al ecuador,
+así que con la caída al NNE la cámara se plantaba *detrás* de los paneles y la escena salía en negro,
+con las mesas de canto. Y cuando la caída es este u oeste no hay componente hacia el ecuador
+ninguna, así que se le suma un sesgo: mejor un poco de escorzo en la línea de bloques que mirar seis
+estructuras de perfil. (Detalle de JS: `cos(90°)` no es cero sino 6·10⁻¹⁷, y sin épsilon ese ruido
+decidía el lado.)
+
 #### Y que se VEA: sombreado por cota
 
 Con el terreno bien hecho la pendiente seguía sin verse, y no era el modelo: a mediodía de junio el

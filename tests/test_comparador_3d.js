@@ -530,6 +530,45 @@ const SONDA = `(() => {
   check('cada lectura dice cuánta pendiente ⊥ ve esa estructura',
     /⊥ filas/.test(suelo.lect), suelo.lect.slice(0, 260));
 
+  // ── LA CÁMARA, POR EL LADO DEL ECUADOR ──
+  // La cámara se pone cuesta abajo para ver los bloques en línea y la ladera
+  // subiendo por detrás. Pero cuesta abajo puede ser el NORTE, y una fija mira
+  // al ecuador: con la caída al NNE la cámara se plantaba detrás de los paneles
+  // y la escena salía en negro, con las mesas de canto. Las dos direcciones ⊥ a
+  // la línea de bloques encuadran igual; solo una enseña la cara.
+  const mira = await p.evaluate(() => {
+    const out = [];
+    // el hemisferio manda de qué lado está el ecuador, así que se fija aquí:
+    // pruebas anteriores dejan la ficha en el sur y el lado bueno es el otro
+    const lat = document.getElementById('lat'); lat.value = '37.3891';
+    lat.dispatchEvent(new Event('change', { bubbles: true }));
+    [0, 23, 90, 135, 180, 270, 340].forEach(az => {
+      const e = document.getElementById('pend'); e.value = '26';
+      e.dispatchEvent(new Event('change', { bubbles: true }));
+      const q = document.getElementById('pendAz'); q.value = String(az);
+      q.dispatchEvent(new Event('change', { bubbles: true }));
+      const B = BLOQUES.find(b => b.key === 'fija_optima');
+      const sp = B.filas[0].spin; sp.updateWorldMatrix(true, false);
+      const n = new THREE.Vector3(0, 1, 0).applyQuaternion(
+        sp.getWorldQuaternion(new THREE.Quaternion())).normalize();
+      const v = new THREE.Vector3().subVectors(TD.cam.position,
+        B.filas[0].getWorldPosition(new THREE.Vector3())).normalize();
+      out.push({ az, cara: +n.dot(v).toFixed(3),
+                 camZ: +TD.cam.position.z.toFixed(0) });
+    });
+    const e = document.getElementById('pend'); e.value = '0';
+    e.dispatchEvent(new Event('change', { bubbles: true }));
+    return out;
+  });
+  check('la cámara mira la CARA de los paneles, caiga el terreno hacia donde caiga',
+    mira.every(m => m.cara > 0.12), JSON.stringify(mira));
+  check('y en el hemisferio norte se queda al sur del campo, nunca detrás',
+    mira.every(m => m.camZ > 0), JSON.stringify(mira.map(m => m.az + ':' + m.camZ)));
+  // cos(90°) en JS es 6e-17, no 0: sin épsilon ese ruido decidía el lado
+  check('con la caída al este y al oeste el lado se elige por la pendiente, no por el ruido',
+    mira.find(m => m.az === 90) && mira.find(m => m.az === 270) &&
+    Math.sign(mira.find(m => m.az === 90).cara) === 1, JSON.stringify(mira));
+
   // ── el texto: por qué el terreno es uno y las componentes no ──
   const porQue = await p.evaluate(() => document.getElementById('escNote').textContent);
   const plano = porQue.replace(/\s+/g, ' ');
