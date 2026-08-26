@@ -1113,6 +1113,37 @@ const SONDA = `(() => {
   check('y se declara que el óptimo es el de la REJILLA, no el fino',
     /rejilla/i.test(bt2.read), bt2.read.slice(0, 120));
 
+  // ── LOS LIENZOS 2D, NÍTIDOS ──
+  // Los width/height de un <canvas> son el BÚFER en píxeles y el CSS lo estira.
+  // Estaban fijos en 1.100 y el CSS los ponía al 100 % de la tarjeta, así que en
+  // una tarjeta más ancha —o en cualquier pantalla a 2×— el navegador AMPLIABA
+  // el dibujo y las letras salían pixeladas. El búfer tiene que ser el tamaño
+  // real por el `devicePixelRatio`, ni más ni menos.
+  const nitido = await p.evaluate(() => {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    return ['cvVent', 'cvBar', 'cvMes', 'cvRank'].map(id => {
+      const c = document.getElementById(id);
+      return { id, buf: c.width, css: Math.round(c.clientWidth),
+               debe: Math.round(Math.round(c.clientWidth) * dpr) };
+    });
+  });
+  check('cada lienzo 2D tiene el búfer que le toca: ni ampliado ni reducido',
+    nitido.every(c => c.css > 0 && Math.abs(c.buf - c.debe) <= 1),
+    JSON.stringify(nitido));
+  // y que no se salgan del lienzo: al pasar a la anchura real, la leyenda del
+  // ranking se iba por el borde derecho
+  const leyenda = await p.evaluate(() => {
+    const c = document.getElementById('cvRank'), g = c.getContext('2d');
+    g.font = '11px ui-monospace,monospace';
+    const L = Math.min(250, Math.round(c.clientWidth * 0.34));
+    const larga = 'sólido: por m² de módulo   ·   translúcido: por m² de suelo (× GCR)';
+    const corta = 'sólido: módulo · translúcido: suelo';
+    const usa = g.measureText(larga).width > c.clientWidth - L - 6 ? corta : larga;
+    return { cabe: L + g.measureText(usa).width <= c.clientWidth, ancho: c.clientWidth };
+  });
+  check('y la leyenda del ranking cabe en el lienzo (' + leyenda.ancho + ' px)',
+    leyenda.cabe === true, JSON.stringify(leyenda));
+
   // ── las temperaturas del emplazamiento ──
   // El string se dimensiona por los dos extremos térmicos del SITIO. Aquí no
   // hay red al archivo de Open-Meteo, así que se sustituye la bajada por una

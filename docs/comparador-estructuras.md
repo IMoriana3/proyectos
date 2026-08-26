@@ -671,6 +671,29 @@ está en el centro del tubo), es un tubo del mismo acero con su brida en cada ex
 medio**: el motor ya está donde tiene que estar, en el slew de la viga motriz. Se le pasan las cotas
 de las dos filas, porque en pendiente no están a la misma altura.
 
+#### Los lienzos 2D, nítidos
+
+Los `width`/`height` de un `<canvas>` son el **búfer en píxeles**, y el CSS lo estira. Estaban fijos
+en 1.100 px de ancho y el CSS los ponía al 100 % de la tarjeta, así que el navegador **ampliaba** el
+dibujo: en una tarjeta más ancha, o en cualquier pantalla a 2×, las letras salían pixeladas. No era
+la fuente, era el lienzo.
+
+`lienzo(c, altoCss)` dimensiona el búfer al tamaño real **por `devicePixelRatio`** y escala el
+contexto, así que el resto del código sigue dibujando en píxeles lógicos y no se entera. El alto
+lógico se conserva —el del atributo— para que las proporciones no dependan del ancho de la ventana.
+
+Dos consecuencias que hubo que atender:
+
+* el búfer ya no se estira solo, así que al cambiar el ancho hay que **repintar**. No basta con el
+  `resize` de la ventana: la tarjeta de resultados aparece cuando ya se ha dibujado, y al maquetarse
+  cambia el ancho de sus lienzos — el primer dibujo salía a 960 px y la tarjeta se quedaba en 626.
+  Va con un `ResizeObserver` que repinta solo si cambió el **ancho** respecto al último pintado, que
+  es lo que evita realimentarse con el alto que fija `lienzo`;
+* al pasar a la anchura real, lo que se dibujaba a tamaño fijo ocupa más fracción: la columna de
+  rótulos del ranking pasa a ser un tercio del ancho en vez de 250 px, los rótulos se recortan por lo
+  que **miden** y no por número de letras, y la leyenda tiene una versión corta para cuando la larga
+  no cabe.
+
 #### Brújula, y la cámara donde uno quiera
 
 Con **tres azimutes** en juego —el del terreno, el de la fija y el del eje— y la cámara orbitando, no
