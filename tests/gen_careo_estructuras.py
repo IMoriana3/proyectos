@@ -8,19 +8,49 @@ lo mismo y compare peras con peras.
 
 Se regenera a mano (no en CI: necesita el repo del motor y pvlib):
 
-    python3 tests/gen_careo_estructuras.py --core /ruta/a/SolarGPTfull/solargpt
+    python3 tests/gen_careo_estructuras.py --core /ruta/a/SolarGPTfull/solargpt \
+        --motivo "por qué se regenera"
 
 Doce días —el 15 de cada mes, horario— en vez del año entero: recorre las cuatro
 estaciones, ejercita el backtracking en el solsticio de invierno (que es cuando
 la sombra entre filas manda) y deja un fixture de 30 KB en vez de 600 KB. Los
 kWh/m² del fixture son los de esos doce días, no un año: lo que se carea es la
 FÍSICA y el ORDEN, no un anual.
+
+MANIFIESTO — por qué existe (PORTAL-BUG-01, 2026-08-26)
+=======================================================
+Este golden estuvo **cinco días midiendo otra física** sin que nada lo dijera, y
+el mecanismo del fallo es de proceso, no de cálculo:
+
+* 2026-08-20 14:46 · el motor JS de la ficha empieza a sombrear el circunsolar
+  (`dirCirc`, commit `c84753f`);
+* 2026-08-21 08:36 · el CORE hace lo mismo (`8c6fbc6`, SolarGPT v1.64.0: «la
+  sombra entre filas tapa también el circunsolar de Perez»);
+* 2026-08-21 17:43 · se regenera este fixture (`9a15dc2`)… **nueve horas
+  después** del cambio del core y con la física VIEJA dentro. El clon local de
+  SolarGPT desde el que se generó no tenía ese merge.
+
+Y no cantó por dos razones que ahora se cierran aquí:
+
+1. **el fixture no registraba de qué core salía**, así que era imposible saber
+   que estaba atrasado sin rehacer el cálculo;
+2. la tolerancia del careo (2,5 pp y 8 %) es más ANCHA que la deriva que
+   introdujo el cambio (máx. 1,12 pp y 1,0 %), así que `test_comparador.js`
+   siguió en verde careando dos físicas distintas.
+
+Por eso el fixture lleva ahora un bloque `manifiesto` con el commit y la versión
+del core, la fecha, el hash del contenido y el MOTIVO de la regeneración, y
+`--motivo` es OBLIGATORIO: un golden que se puede actualizar sin dejar dicho por
+qué es un golden que se actualiza para poner el CI verde.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 LAT, LON = 37.3891, -5.9845          # Sevilla — el sitio por defecto de la ficha
@@ -33,11 +63,89 @@ ALBEDO, TILT_PROYECTO, MAX_ANGLE = 0.20, 25.0, 55.0
 PENDIENTE = 8.0        # pendiente del terreno ⊥ a las filas, en grados
 
 
+def _git(repo: Path, *args: str) -> str:
+    """Salida de un `git` en `repo`, o "" si no se puede leer.
+
+    No se inventa nada: si el core no es un repo git o el binario no está, el
+    campo sale vacío y el guard del careo lo declara como procedencia
+    INCOMPLETA. Un SHA fabricado sería peor que ninguno.
+    """
+    try:
+        out = subprocess.run(["git", "-C", str(repo), *args],
+                             capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return out.stdout.strip() if out.returncode == 0 else ""
+
+
+def procedencia_del_core(core: Path) -> dict:
+    """De qué core sale este golden. Lo que faltaba en PORTAL-BUG-01.
+
+    `sucio` no es cosmético: un golden generado sobre un árbol con cambios sin
+    commitear no es reproducible por nadie más, y el careo tiene que poder
+    decirlo en vez de dar por buena una procedencia que no lleva a ningún sitio.
+    """
+    raiz = core.parent if core.name == "solargpt" else core
+    version = fecha_version = ""
+    try:
+        sys.path.insert(0, str(core))
+        from solargpt_core import version as _v          # type: ignore
+        version = str(getattr(_v, "__version__", ""))
+        fecha_version = str(getattr(_v, "VERSION_DATE", ""))
+    except Exception:                                     # noqa: BLE001
+        pass
+    return {
+        "repo": "IMoriana3/SolarGPTfull",
+        "commit": _git(raiz, "rev-parse", "HEAD"),
+        "commit_fecha": _git(raiz, "log", "-1", "--format=%ad", "--date=short"),
+        "rama": _git(raiz, "rev-parse", "--abbrev-ref", "HEAD"),
+        "version": version,
+        "version_fecha": fecha_version,
+        "sucio": bool(_git(raiz, "status", "--porcelain")),
+    }
+
+
+#: Hueco del hash dentro del propio fichero, antes de rellenarlo.
+_HUECO_SHA = '"sha256": ""'
+
+
+def sellar(texto: str) -> str:
+    """Mete en el fichero el SHA-256 de SU PROPIO TEXTO con el hueco vacío.
+
+    El hash se calcula sobre los BYTES del fichero, no sobre el dict
+    reserializado, y eso es deliberado: `json.dumps` de Python y
+    `JSON.stringify` de JavaScript **no** escriben los mismos números
+    (`0.0` frente a `0`, `1e-05` frente a `0.00001`), así que un hash sobre el
+    objeto parseado sería un careo entre lenguajes disfrazado de comprobación
+    de integridad, y se rompería el día menos oportuno por un cero.
+
+    El truco para que el hash quepa dentro de lo que hashea: se escribe con el
+    campo VACÍO, se hashea el texto, y se sustituye el hueco. El verificador
+    hace justo lo contrario. Textual, sin ambigüedad y comprobable desde
+    cualquier lenguaje que sepa leer un fichero.
+    """
+    if texto.count(_HUECO_SHA) != 1:
+        raise RuntimeError(
+            f"se esperaba exactamente un hueco {_HUECO_SHA} en el golden y hay "
+            f"{texto.count(_HUECO_SHA)}: sellarlo mal es peor que no sellarlo")
+    h = hashlib.sha256(texto.encode("utf-8")).hexdigest()
+    return texto.replace(_HUECO_SHA, f'"sha256": "{h}"', 1)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--core", required=True, help="raíz del repo con solargpt_core/")
     ap.add_argument("--out", default=str(Path(__file__).parent / "careo-estructuras.json"))
+    # OBLIGATORIO a propósito: regenerar un golden sin dejar escrito POR QUÉ es
+    # la forma más fácil de tapar una deriva de física con un commit de una
+    # línea. Ver el bloque MANIFIESTO del docstring.
+    ap.add_argument("--motivo", required=True,
+                    help="por qué se regenera (queda en el manifiesto del golden)")
     a = ap.parse_args()
+    if len(a.motivo.strip()) < 20:
+        ap.error("--motivo demasiado corto: se pide una frase que explique el "
+                 "cambio, no una palabra. Un motivo vacío de contenido es un "
+                 "motivo ausente con mejor cara.")
     sys.path.insert(0, a.core)
 
     import numpy as np
@@ -90,8 +198,28 @@ def main() -> int:
         },
         "esperado": filas,
     }
-    Path(a.out).write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
+    doc["manifiesto"] = {
+        "_": ("De qué core sale este golden y por qué se regeneró. Sin esto, un "
+              "fixture atrasado es indistinguible de uno al día — que es como "
+              "PORTAL-BUG-01 estuvo cinco días careando dos físicas."),
+        "generado_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generador": Path(__file__).name,
+        "motivo": a.motivo.strip(),
+        "core": procedencia_del_core(Path(a.core).resolve()),
+    }
+    doc["manifiesto"]["sha256"] = ""          # hueco: lo rellena `sellar`
+
+    texto = sellar(json.dumps(doc, ensure_ascii=False, indent=None))
+    Path(a.out).write_text(texto, encoding="utf-8")
+    doc["manifiesto"]["sha256"] = json.loads(texto)["manifiesto"]["sha256"]
+    mc = doc["manifiesto"]["core"]
     print(f"escrito {a.out} · {len(idx)} pasos · {len(filas)} estructuras")
+    print(f"  core   {mc['version'] or '?'} · {(mc['commit'] or '?')[:8]} "
+          f"({mc['commit_fecha'] or '?'}){'  ÁRBOL SUCIO' if mc['sucio'] else ''}")
+    print(f"  sha256 {doc['manifiesto']['sha256'][:16]}…")
+    print(f"  motivo {a.motivo.strip()}")
+    if not mc["commit"] or not mc["version"]:
+        print("  AVISO: procedencia INCOMPLETA — el careo lo declarará")
     for f in filas:
         print(f"  {f['label']:<42} {f['poa_kwh_m2']:>8.1f} kWh/m²  {f['delta_pct']:+7.2f} %")
     return 0
