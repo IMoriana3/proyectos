@@ -659,6 +659,23 @@ con la cámara a 25° y el terreno a 16° quedan 9° de nada y la escena entera 
 fuga. Se le suma la pendiente para conservar el mismo ángulo de vista sobre el plano del sitio, que
 en llano es el de siempre.
 
+#### Lo que esta tabla NO puede decidir: backtracking sí o no
+
+Dos cosas que hay que decir en cuanto aparecen las dos filas de seguidor, porque el número invita a
+leer justo lo contrario de lo que dice:
+
+1. La comparación es de **POA**, y la pérdida por sombra entra como **fracción sombreada del plano,
+   lineal**. En un string real una sombra parcial cuesta mucho más que su fracción —el módulo tapado
+   arrastra a la serie— y eso aquí no se ve. Así que **por POA el backtracking casi nunca gana**:
+   renuncia a apuntar para quitarse una sombra que este modelo cobra barata. Lo que lo decide es la
+   energía DC/AC, y eso es otra ficha.
+2. El ángulo de backtracking se calcula **en llano**, que es lo que hace el core (y por eso el careo
+   cuadra). Con pendiente ⊥ a las filas deja de evitar la sombra: la fila de al lado está más alta y
+   sigue tapando. `pvlib` sabe hacerlo con la pendiente (`cross_axis_tilt`); el core no lo usa, y la
+   ficha no se lo va a inventar por su cuenta — lo dice y ya.
+
+Va en la nota de la tabla, y la segunda parte solo cuando hay pendiente ⊥ que la justifique.
+
 #### Las hincas de la fija
 
 Dos, una en cada punta, era lo que había — y desde casi cualquier ángulo se veía **una**. Una mesa de
@@ -684,6 +701,23 @@ la gemela no tiene motor, la mueve la motriz. Va de **corona a corona** (en `seg
 está en el centro del tubo), es un tubo del mismo acero con su brida en cada extremo, y **nada en
 medio**: el motor ya está donde tiene que estar, en el slew de la viga motriz. Se le pasan las cotas
 de las dos filas, porque en pendiente no están a la misma altura.
+
+#### Lo que esta tabla NO puede decidir: backtracking sí o no
+
+Dos cosas que hay que decir en cuanto aparecen las dos filas de seguidor, porque el número invita a
+leer justo lo contrario de lo que dice:
+
+1. La comparación es de **POA**, y la pérdida por sombra entra como **fracción sombreada del plano,
+   lineal**. En un string real una sombra parcial cuesta mucho más que su fracción —el módulo tapado
+   arrastra a la serie— y eso aquí no se ve. Así que **por POA el backtracking casi nunca gana**:
+   renuncia a apuntar para quitarse una sombra que este modelo cobra barata. Lo que lo decide es la
+   energía DC/AC, y eso es otra ficha.
+2. El ángulo de backtracking se calcula **en llano**, que es lo que hace el core (y por eso el careo
+   cuadra). Con pendiente ⊥ a las filas deja de evitar la sombra: la fila de al lado está más alta y
+   sigue tapando. `pvlib` sabe hacerlo con la pendiente (`cross_axis_tilt`); el core no lo usa, y la
+   ficha no se lo va a inventar por su cuenta — lo dice y ya.
+
+Va en la nota de la tabla, y la segunda parte solo cuando hay pendiente ⊥ que la justifique.
 
 #### Las hincas
 

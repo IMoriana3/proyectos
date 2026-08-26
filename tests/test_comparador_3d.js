@@ -1118,6 +1118,34 @@ const SONDA = `(() => {
   check('y se declara que el óptimo es el de la REJILLA, no el fino',
     /rejilla/i.test(bt2.read), bt2.read.slice(0, 120));
 
+  // ── LO QUE LA TABLA NO PUEDE DECIDIR: backtracking sí o no ──
+  // Las dos filas de seguidor invitan a leer justo lo contrario de lo que dicen:
+  // la pérdida por sombra entra como fracción sombreada del plano, LINEAL, y en
+  // un string real una sombra parcial cuesta mucho más que su fracción. Por POA
+  // el backtracking casi nunca gana. Si eso no se dice, la tabla parece estar
+  // resolviendo una pregunta que no resuelve.
+  const notaBT = await p.evaluate(() => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    document.querySelectorAll('.st').forEach(c => { c.checked = true; });
+    s('pend', 0); construyeMundo();
+    drawTabla(REP.base);
+    const llano = document.getElementById('tblNote').textContent.replace(/\s+/g, ' ');
+    s('pend', 12); s('pendAz', 90);
+    drawTabla(REP.base);
+    const cruz = document.getElementById('tblNote').textContent.replace(/\s+/g, ' ');
+    s('pend', 0);
+    return { llano, cruz };
+  });
+  check('la tabla avisa de que por POA el backtracking casi nunca gana',
+    /fracción sombreada del plano/i.test(notaBT.llano) && /lineal/i.test(notaBT.llano) &&
+    /DC\/AC/.test(notaBT.llano), notaBT.llano.slice(-320));
+  check('y con pendiente ⊥ avisa además de que el ángulo se calcula en llano',
+    /en llano/i.test(notaBT.cruz) && /cross_axis_tilt/i.test(notaBT.cruz),
+    notaBT.cruz.slice(-320));
+  check('y sin pendiente ⊥ no lo dice, que no viene a cuento',
+    !/cross_axis_tilt/i.test(notaBT.llano), notaBT.llano.slice(-200));
+
   // ── LAS HINCAS ──
   // Una fila de 65 m sobre uno o dos postes no es una estructura: es un puente,
   // o un balancín. En campo la hinca va cada 4-6 m en una fija y cada 6-9 m en
