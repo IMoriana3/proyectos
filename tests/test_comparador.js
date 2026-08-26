@@ -38,6 +38,78 @@ const FIS = ctx.FIS;
 check('la física compila y exporta FIS', !!(FIS && FIS.compara));
 if (!FIS) { console.log('\nFALLOS: ' + ko); process.exit(1); }
 
+// ── 1b) MANIFIESTO del golden — PORTAL-BUG-01 ──────────────────────────────
+// Este fichero estuvo CINCO DÍAS careando dos físicas distintas sin que nada lo
+// dijera, y no por un error de cálculo:
+//
+//   2026-08-20 14:46 · el motor JS de la ficha empieza a sombrear el
+//                      circunsolar (`dirCirc`, commit c84753f)
+//   2026-08-21 08:36 · el CORE hace lo mismo (SolarGPT v1.64.0, 8c6fbc6)
+//   2026-08-21 17:43 · se regenera este golden (9a15dc2) — NUEVE HORAS después
+//                      del cambio del core y con la física VIEJA dentro: el
+//                      clon local de SolarGPT desde el que se generó no tenía
+//                      ese merge.
+//
+// El golden no registraba de qué core salía, así que estar atrasado era
+// indistinguible de estar al día. Esto es lo que cierra esa puerta.
+const CRUDO = fs.readFileSync(path.join(__dirname, 'careo-estructuras.json'), 'utf8');
+const crypto = require('crypto');
+const MAN = JSON.parse(CRUDO).manifiesto;
+
+check('el golden trae manifiesto', !!MAN);
+if (MAN) {
+  // Cada campo por separado, no un `&&` de todos: parámetros fundidos = criterio
+  // fantasma, y aquí interesa saber CUÁL falta.
+  [['generado_utc', MAN.generado_utc], ['generador', MAN.generador],
+   ['motivo', MAN.motivo], ['sha256', MAN.sha256],
+   ['core.commit', MAN.core && MAN.core.commit],
+   ['core.version', MAN.core && MAN.core.version]].forEach(([k, v]) => {
+    check('el manifiesto declara ' + k, !!v && String(v).trim() !== '',
+      'vacío — procedencia INCOMPLETA: este golden no lleva a ningún sitio');
+  });
+
+  check('el motivo de la regeneración tiene sustancia (' +
+    String(MAN.motivo || '').length + ' caracteres)',
+    String(MAN.motivo || '').trim().length >= 20,
+    'un golden que se actualiza sin dejar escrito POR QUÉ es un golden que se ' +
+    'actualiza para poner el CI verde');
+
+  check('el golden NO se generó sobre un árbol de core sucio',
+    MAN.core && MAN.core.sucio === false,
+    'con cambios sin commitear en el core, este golden no lo puede reproducir nadie');
+
+  // El sello se calcula sobre los BYTES del fichero con el propio campo vacío:
+  // hashear el objeto parseado sería carear `json.dumps` contra
+  // `JSON.stringify`, que no escriben los mismos números (0.0 vs 0).
+  const mh = CRUDO.match(/"sha256": "([0-9a-f]{64})"/);
+  check('el sello del golden está donde se espera', !!mh);
+  if (mh) {
+    const calc = crypto.createHash('sha256')
+      .update(CRUDO.replace(mh[0], '"sha256": ""'), 'utf8').digest('hex');
+    check('el golden no se ha editado a mano (sha256 cuadra)', calc === mh[1],
+      calc.slice(0, 16) + '… vs ' + mh[1].slice(0, 16) + '…');
+  }
+
+  // PIN de la versión del core. No puede comprobarse contra el core de verdad
+  // —no está aquí, el generador lo pide con `--core`—, así que se fija: subir
+  // el golden a otro core obliga a tocar ESTA línea, y entonces el cambio de
+  // física aparece en el diff en vez de colarse en un JSON de 30 KB.
+  // Re-medido el 2026-08-26 tras traer main 5cc22b2, que cambio la fisica del
+  // comparador en v1.36 (hincas, horizonte acotado) y v1.37 (azimut de la
+  // estructura). El hueco JS<->core NO se movio: sigue en 1,36 % de POA
+  // (fija_ew) y 0,367 pp de delta, asi que las tolerancias se quedan donde
+  // estaban. Lo unico que cambia es contra que core esta sellado el golden.
+  const CORE_PIN = { version: '1.69.0', commit: '82af2aa1' };
+  check('el golden corresponde al core fijado (v' + CORE_PIN.version + ')',
+    MAN.core.version === CORE_PIN.version,
+    'golden v' + MAN.core.version + ' vs pin v' + CORE_PIN.version +
+    ' — si has regenerado contra otro core, actualiza CORE_PIN y di en el ' +
+    'cuerpo del PR qué se movió y por qué');
+  check('y al commit fijado (' + CORE_PIN.commit + ')',
+    String(MAN.core.commit).startsWith(CORE_PIN.commit),
+    String(MAN.core.commit).slice(0, 8) + ' vs ' + CORE_PIN.commit);
+}
+
 // ── 2) el catálogo del JS es el del core ──
 const fix = JSON.parse(fs.readFileSync(path.join(__dirname, 'careo-estructuras.json'), 'utf8'));
 const clavesJS = FIS.CATALOGO.map(s => s.key).sort();
@@ -198,27 +270,95 @@ const ordJS = ordena(Object.fromEntries(Object.entries(js).map(([k, v]) => [k, {
 const ordCore = ordena(Object.fromEntries(Object.entries(core).map(([k, v]) => [k, { poa: v.poa_kwh_m2 }])));
 check('el orden entre estructuras es el mismo', ordJS === ordCore, '\n     JS   ' + ordJS + '\n     core ' + ordCore);
 
-// ── 5) magnitudes, con la tolerancia declarada ──
-/* Las dos tolerancias declaran la diferencia de MODELO DE CIELO —el JS va por
-   Hay-Davies y el core por Perez—, no un margen para que el test pase.
-   Estaban en 8 % y 2,5 pp: entre quince y seis veces la discrepancia real, que
-   MEDIDA contra el core de hoy es 1,4 % de POA y 0,37 pp de Δ. Un careo con
-   ese aire dentro no es una puerta, es un adorno: se comió entera una
-   corrección de física del core (la sombra del circunsolar, v1.64.0) y siguió
-   dando 97/97 con el golden una versión por detrás.
-   Se bajan a ~2x lo medido, que es margen para el modelo de cielo y para nada
-   más. Si esto se pone rojo, hay algo que mirar de verdad. */
-const TOL_POA = 0.03, TOL_DELTA = 1.0;
+// ── 5) magnitudes, con la tolerancia JUSTIFICADA ──────────────────────────
+// PORTAL-BUG-01: las tolerancias eran 8 % y 2,5 pp, y NO son un número redondo
+// elegido por prudencia — son seis veces el hueco que el careo tiene de verdad,
+// y esa holgura fue la que dejó pasar cinco días una deriva de física. Medido
+// sobre este mismo fixture:
+//
+//   hueco REAL JS↔core (Hay-Davies vs Perez, sin IAM)  POA 1,365 %  ·  Δ% 0,367 pp
+//   deriva que introdujo el core v1.64                  POA 0,994 %  ·  Δ% 1,120 pp
+//   tolerancia anterior                                 POA 8,000 %  ·  Δ% 2,500 pp
+//
+// De ahí salen las dos cifras, y una limitación que va DICHA:
+//
+//   · Δ% → 0,80 pp. Es 2,2× el hueco real, y habría cazado la deriva de 1,12 pp.
+//     Es el eje que discrimina, porque el Δ% se mide contra la misma referencia
+//     en los dos motores y buena parte del sesgo del modelo se cancela.
+//   · POA → 2,5 %. Es 1,8× el hueco real. **No puede cazar esta clase de
+//     deriva**: los 0,994 % que movió v1.64 caben por debajo del 1,365 % que
+//     separa a Hay-Davies de Perez. Apretarla más sería un test que se pone
+//     rojo por el modelo, no por un bug. Se declara en vez de fingir que cubre
+//     lo que no cubre.
+const TOL_POA = 0.025, TOL_DELTA = 0.80;
+// Hueco medido con el golden al día. Si alguien afloja las tolerancias, esto
+// enseña contra qué se están comparando.
+const HUECO_MEDIDO = { poa_pct: 1.365, delta_pp: 0.367 };
+check('la tolerancia de Δ% no es gratuita: ' + TOL_DELTA + ' pp sobre un hueco real de ' +
+  HUECO_MEDIDO.delta_pp + ' pp (×' + (TOL_DELTA / HUECO_MEDIDO.delta_pp).toFixed(1) + ')',
+  TOL_DELTA / HUECO_MEDIDO.delta_pp < 3.0,
+  'con más de ×3 de holgura la comprobación deja de vigilar la física');
+check('la tolerancia de POA tampoco: ' + (TOL_POA * 100).toFixed(1) + ' % sobre ' +
+  HUECO_MEDIDO.poa_pct + ' % (×' + (TOL_POA * 100 / HUECO_MEDIDO.poa_pct).toFixed(1) + ')',
+  TOL_POA * 100 / HUECO_MEDIDO.poa_pct < 3.0);
+
 C.structures.forEach(k => {
   const a = js[k], b = core[k];
   if (!a || !b) { check('falta ' + k, false); return; }
   const dPoa = Math.abs(a.neta / b.poa_kwh_m2 - 1);
-  check('POA de ' + k + ' dentro del ' + (TOL_POA * 100) + ' % (' + (dPoa * 100).toFixed(1) + ' %)',
+  check('POA de ' + k + ' dentro del ' + (TOL_POA * 100).toFixed(1) + ' % (' + (dPoa * 100).toFixed(2) + ' %)',
     dPoa < TOL_POA, a.neta.toFixed(1) + ' vs ' + b.poa_kwh_m2.toFixed(1));
   const dDelta = Math.abs(a.delta - b.delta_pct);
-  check('Δ% de ' + k + ' dentro de ' + TOL_DELTA + ' pp (' + dDelta.toFixed(2) + ' pp)',
+  check('Δ% de ' + k + ' dentro de ' + TOL_DELTA + ' pp (' + dDelta.toFixed(3) + ' pp)',
     dDelta < TOL_DELTA, a.delta.toFixed(2) + ' vs ' + b.delta_pct.toFixed(2));
 });
+
+// ── 5a) CENTINELA de PORTAL-BUG-01 ────────────────────────────────────────
+// Los números del golden VIEJO (core v1.63, antes de que la sombra tapara el
+// circunsolar). Con la tolerancia de entonces pasaban; con la de ahora tienen
+// que caer. Sin esto, apretar las tolerancias sería una afirmación sin medir:
+// esto es la prueba de que la puerta que se dejó abierta ya no lo está.
+const GOLDEN_VIEJO_v163 = {
+  fija_optima: { poa: 84.9623, delta: 0.0 },
+  fija_proyecto: { poa: 83.2087, delta: -2.0641 },
+  fija_ew: { poa: 69.0831, delta: -18.6897 },
+  tracker_hsat: { poa: 93.5703, delta: 10.1315 },
+  tracker_hsat_nobt: { poa: 96.7986, delta: 13.9312 },
+  tracker_tsat: { poa: 100.0250, delta: 17.7287 },
+};
+const cazadas = C.structures.filter(k => {
+  const v = GOLDEN_VIEJO_v163[k], b = core[k];
+  return Math.abs(v.delta - b.delta_pct) >= TOL_DELTA ||
+         Math.abs(v.poa / b.poa_kwh_m2 - 1) >= TOL_POA;
+});
+// Y aquí va un límite MEDIDO, no una promesa: de las seis estructuras, la
+// tolerancia de hoy solo caza `tracker_hsat_nobt`, que es la de deriva mayor
+// (1,120 pp). Las otras dos con sombra —`tracker_hsat` 0,499 pp y
+// `tracker_tsat` 0,448 pp— se quedan por debajo del listón, y **no se puede
+// bajar más**: el hueco irreducible entre Hay-Davies y Perez es 0,367 pp, así
+// que cazarlas dejaría ×1,3 de holgura y el careo se pondría rojo por el
+// modelo en vez de por un bug.
+//
+// Lo que esto SÍ garantiza: que una deriva de esta clase pone el careo en ROJO.
+// Con una basta para parar el merge, que es para lo que existe. Escrito así
+// —con el número— para que nadie lea «la tolerancia cubre la deriva» y se
+// quede tranquilo con las otras dos.
+//
+// (Esta comprobación se escribió prediciendo ≥2 y salió 1. Se corrige la
+// predicción, no el listón.)
+check('CENTINELA: la tolerancia de hoy CAZA el golden viejo de v1.63 (' +
+  cazadas.length + ' de ' + C.structures.length + ' estructuras: ' +
+  (cazadas.join(', ') || '—') + ')',
+  cazadas.length >= 1, 'ninguna — la deriva volvería a colarse entera');
+// Y el mutante del centinela: con la tolerancia ANTERIOR no cazaba ninguna, que
+// es exactamente lo que pasó. Si esto falla, el centinela no mide lo que dice.
+const cazadasAntes = C.structures.filter(k => {
+  const v = GOLDEN_VIEJO_v163[k], b = core[k];
+  return Math.abs(v.delta - b.delta_pct) >= 2.5 ||
+         Math.abs(v.poa / b.poa_kwh_m2 - 1) >= 0.08;
+});
+check('MUTANTE del centinela: con la tolerancia ANTERIOR (8 % / 2,5 pp) no cazaba ninguna',
+  cazadasAntes.length === 0, 'cazaba ' + cazadasAntes.join(', '));
 
 // ── 5b) LOS BARRIDOS ──
 // La rejilla de pitch se exige EXACTA contra la de `pitch_sweep._generate_step_pitches`
