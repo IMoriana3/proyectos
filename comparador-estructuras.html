@@ -2934,6 +2934,34 @@ function cotasSeguidor(G){
   Seguidor.setModsPerStr(G.modsStr);   // recalcula mesa, fila y centro de ala
   return (D.span>0?G.largoFila/D.span:1);
 }
+/* ── EL EJE DE TRANSMISIÓN de una bifila ──
+   La viga gemela no tiene motor: la mueve la motriz, y lo que las une es un eje
+   que va de corona a corona. En `seguidor.js` la corona está en el centro del
+   tubo (x=0 de la viga), así que el eje cruza el pitch a la altura del tubo, por
+   el centro de las dos filas.
+   Es un EJE y nada más: un tubo del mismo acero, sin caja en medio — el motor
+   ya está donde tiene que estar, en el slew de la viga motriz. La versión
+   anterior era una barra a mano con un cajón encima que no es lo que se monta.
+   Se le pasan las cotas de las dos filas porque en pendiente no están a la
+   misma altura. */
+function ejeTransmision(mats,xa,xb,ya,yb){
+  var D=Seguidor.DIMS, g=new THREE.Group();
+  var dx=xb-xa, dy=yb-ya, L=Math.hypot(dx,dy);
+  var tubo=new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,L,14),
+                          mats.silver||mats.steel);
+  tubo.rotation.z=Math.PI/2-Math.atan2(dy,dx);   // el cilindro nace en Y
+  tubo.position.set((xa+xb)/2,D.postH+(ya+yb)/2,0);
+  tubo.castShadow=true; g.add(tubo);
+  [[xa,ya],[xb,yb]].forEach(function(q){         // brida contra cada corona
+    var c=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.10,0.09,14),
+                         mats.steel);
+    c.rotation.z=Math.PI/2;
+    c.position.set(q[0]+(q[0]<((xa+xb)/2)?0.22:-0.22),D.postH+q[1],0);
+    c.castShadow=true; g.add(c);
+  });
+  return g;
+}
+
 /* `motriz`: en una BIFILA solo una de las dos vigas lleva el accionamiento.
    Esa distinción no me la invento — la resuelve el propio modelo de la casa
    (`Seguidor.buildBeam`, el mismo que usa el bt3d): `west:true` da la viga del
@@ -3213,6 +3241,11 @@ function construyeMundo(){
         uno.rotation.z=rollZ;                            // la mesa sigue el terreno
       }
       grupo.add(uno); filas.push(uno);
+    }
+    /* Y el eje que une cada par: de la corona de la motriz a la de su gemela. */
+    if(agrupa>1)for(var tr=0;tr+agrupa<=nf;tr+=agrupa){
+      var xa=(tr-(nf-1)/2)*pitch, xb=(tr+agrupa-1-(nf-1)/2)*pitch;
+      grupo.add(ejeTransmision(mats,xa,xb,cotaFila(xa,0),cotaFila(xb,0)));
     }
     var col='#'+(COL[k]||'#888888').replace('#','');
     /* El rótulo se acota por el hueco Y por el largo del bloque: con una fila
