@@ -181,9 +181,13 @@ const SONDA = `(() => {
   // el eje del seguidor corre NORTE-SUR: su componente este debe ser ~0
   check('el eje del seguidor corre N-S (|este|=' + Math.abs(md.bloques.tracker_hsat.eje.x).toFixed(3) + ')',
     Math.abs(md.bloques.tracker_hsat.eje.x) < 0.02);
-  // el del TSAT, además, SUBE hacia el ecuador
-  check('el eje del TSAT sube hacia el ecuador (y=' + md.bloques.tracker_tsat.eje.y.toFixed(3) + ')',
-    Math.abs(md.bloques.tracker_tsat.eje.y) > 0.1);
+  // Y el del TSAT, en LLANO, también está horizontal: un eje no se inclina en
+  // el aire. Antes se dibujaba inclinado por el campo «eje inclinado °» aunque
+  // el suelo fuese plano, y eso era media fila enterrada o media volando.
+  // Cuánto se inclina de verdad se comprueba más abajo, con terreno.
+  check('en LLANO el eje del TSAT también está horizontal (y=' +
+    md.bloques.tracker_tsat.eje.y.toFixed(3) + ')',
+    Math.abs(md.bloques.tracker_tsat.eje.y) < 0.02);
 
   // ── mañana: tumbado al ESTE. El error de signo no se ve a mediodía ──
   const am = await enHora(480);
@@ -530,6 +534,134 @@ const SONDA = `(() => {
   check('cada lectura dice cuánta pendiente ⊥ ve esa estructura',
     /⊥ filas/.test(suelo.lect), suelo.lect.slice(0, 260));
 
+  // ── LAS FILAS SE ADAPTAN AL TERRENO ──
+  // La pendiente la tiene el SUELO; la estructura se replantea sobre él. Cada
+  // fila apoyada en la cota de su CENTRO y horizontal a lo largo no vale: con
+  // 65 m de fila y 24° en esa dirección, un extremo vuela 14 m y el otro se
+  // entierra otros 14 — el «tracker con megasoportes» que no se construye.
+  const sigue = await p.evaluate(() => {
+    const mide = (b, a) => {
+      const e = document.getElementById('pend'); e.value = String(b);
+      e.dispatchEvent(new Event('change', { bubbles: true }));
+      const q = document.getElementById('pendAz'); q.value = String(a);
+      q.dispatchEvent(new Event('change', { bubbles: true }));
+      return BLOQUES.map(B => {
+        const u = B.filas[0]; u.updateWorldMatrix(true, true);
+        const L = cfgActual().geomDe(B.spec).largoFila / 2;
+        // eje largo EN LOCAL: la fija y las dos aguas lo llevan en X (la mesa);
+        // el seguidor en Z, porque el modelo entra girado 90° en Y por dentro
+        const ej = (B.spec.fam === 'tracker') ? new THREE.Vector3(0, 0, 1)
+                                              : new THREE.Vector3(1, 0, 0);
+        const vuelo = [-L, L].map(t => {
+          const v = ej.clone().multiplyScalar(t).applyMatrix4(u.matrixWorld);
+          return +(v.y - cotaTerreno(v.x, v.z, TERRENO_3D)).toFixed(2);
+        });
+        return { k: B.key, vuelo, largo: +B.largoPend.toFixed(1),
+                 cruz: +B.cruz.toFixed(1),
+                 ejeY: +new THREE.Vector3(0, 0, 1).transformDirection(u.matrixWorld).y.toFixed(3) };
+      });
+    };
+    document.querySelectorAll('.st').forEach(c => { c.checked = true; });
+    const lat = document.getElementById('lat'); lat.value = '37.3891';
+    lat.dispatchEvent(new Event('change', { bubbles: true }));
+    const r = { nne: mide(26, 23), este: mide(26, 90), sur: mide(26, 180) };
+    r.lect = document.getElementById('escRead').textContent.replace(/\s+/g, ' ');
+    mide(0, 180);
+    return r;
+  });
+  ['nne', 'este', 'sur'].forEach(caso => {
+    check('con la caída ' + caso + ', NINGUNA fila vuela ni se entierra en sus extremos',
+      sigue[caso].every(b => b.vuelo.every(v => Math.abs(v) < 0.02)),
+      JSON.stringify(sigue[caso].map(b => b.k + ':' + b.vuelo.join('/'))));
+  });
+  // Y adaptarse es inclinarse LO QUE SE INCLINA EL SUELO, ni más ni menos: el
+  // eje del seguidor sube exactamente la componente a lo largo del eje.
+  const tk = c => sigue[c].find(b => b.k === 'tracker_hsat');
+  check('el eje del seguidor se inclina con el terreno: sen(24,2°) = ' +
+    Math.abs(tk('nne').ejeY).toFixed(3),
+    Math.abs(Math.abs(tk('nne').ejeY) - Math.sin(Math.abs(tk('nne').largo) * Math.PI / 180)) < 0.01,
+    JSON.stringify({ ejeY: tk('nne').ejeY, largo: tk('nne').largo }));
+  check('y con la caída al ESTE, que corre ⊥ a su eje, el eje se queda horizontal',
+    Math.abs(tk('este').ejeY) < 0.01 && Math.abs(tk('este').cruz - 26) < 0.1,
+    JSON.stringify({ ejeY: tk('este').ejeY, cruz: tk('este').cruz }));
+  check('y la lectura del seguidor dice cuánto se inclina su eje con el terreno',
+    /eje [\d,]+° con el terreno/.test(sigue.lect), sigue.lect.slice(0, 300));
+
+  // El «eje inclinado °» ya no es una entrada: se rellena con lo que da el
+  // terreno a lo largo del eje. Dejarlo a mano permitía teclear un eje que el
+  // emplazamiento no sostiene, y entonces se dibuja una cosa y se calcula otra.
+  const eje = await p.evaluate(() => {
+    const campo = document.getElementById('axtilt');
+    const set = (b, a) => {
+      const e = document.getElementById('pend'); e.value = String(b);
+      e.dispatchEvent(new Event('change', { bubbles: true }));
+      const q = document.getElementById('pendAz'); q.value = String(a);
+      q.dispatchEvent(new Event('change', { bubbles: true }));
+      const B = BLOQUES.find(x => x.key === 'tracker_tsat');
+      const u = B.filas[0]; u.updateWorldMatrix(true, true);
+      return { campo: +campo.value,
+               dibujado: +(new THREE.Vector3(0, 0, 1).transformDirection(u.matrixWorld).y
+                           .toFixed(4)) };
+    };
+    const r = { ro: campo.readOnly, sur: set(26, 180), norte: set(26, 0),
+                este: set(26, 90), llano: set(0, 180) };
+    return r;
+  });
+  check('el campo del eje inclinado es de solo lectura: lo pone el terreno',
+    eje.ro === true, String(eje.ro));
+  check('cayendo al SUR marca +26° (el eje mira al ecuador)',
+    Math.abs(eje.sur.campo - 26) < 0.1, String(eje.sur.campo));
+  check('cayendo al NORTE marca −26°: un eje puede caer hacia el polo',
+    Math.abs(eje.norte.campo + 26) < 0.1, String(eje.norte.campo));
+  check('cayendo al ESTE, 0°: esa pendiente es ⊥ al eje, no a lo largo',
+    Math.abs(eje.este.campo) < 0.1, String(eje.este.campo));
+  check('y en LLANO, 0°: sin pendiente no hay TSAT que valga',
+    Math.abs(eje.llano.campo) < 0.01, String(eje.llano.campo));
+  // y lo dibujado coincide con lo declarado, que es de lo que iba todo esto
+  check('el eje DIBUJADO es el mismo que marca el campo (sen 26° = ' +
+    Math.sin(26 * Math.PI / 180).toFixed(3) + ')',
+    Math.abs(Math.abs(eje.sur.dibujado) - Math.sin(26 * Math.PI / 180)) < 0.01,
+    String(eje.sur.dibujado));
+
+  // ── LA CÁMARA, POR EL LADO DEL ECUADOR ──
+  // La cámara se pone cuesta abajo para ver los bloques en línea y la ladera
+  // subiendo por detrás. Pero cuesta abajo puede ser el NORTE, y una fija mira
+  // al ecuador: con la caída al NNE la cámara se plantaba detrás de los paneles
+  // y la escena salía en negro, con las mesas de canto. Las dos direcciones ⊥ a
+  // la línea de bloques encuadran igual; solo una enseña la cara.
+  const mira = await p.evaluate(() => {
+    const out = [];
+    // el hemisferio manda de qué lado está el ecuador, así que se fija aquí:
+    // pruebas anteriores dejan la ficha en el sur y el lado bueno es el otro
+    const lat = document.getElementById('lat'); lat.value = '37.3891';
+    lat.dispatchEvent(new Event('change', { bubbles: true }));
+    [0, 23, 90, 135, 180, 270, 340].forEach(az => {
+      const e = document.getElementById('pend'); e.value = '26';
+      e.dispatchEvent(new Event('change', { bubbles: true }));
+      const q = document.getElementById('pendAz'); q.value = String(az);
+      q.dispatchEvent(new Event('change', { bubbles: true }));
+      const B = BLOQUES.find(b => b.key === 'fija_optima');
+      const sp = B.filas[0].spin; sp.updateWorldMatrix(true, false);
+      const n = new THREE.Vector3(0, 1, 0).applyQuaternion(
+        sp.getWorldQuaternion(new THREE.Quaternion())).normalize();
+      const v = new THREE.Vector3().subVectors(TD.cam.position,
+        B.filas[0].getWorldPosition(new THREE.Vector3())).normalize();
+      out.push({ az, cara: +n.dot(v).toFixed(3),
+                 camZ: +TD.cam.position.z.toFixed(0) });
+    });
+    const e = document.getElementById('pend'); e.value = '0';
+    e.dispatchEvent(new Event('change', { bubbles: true }));
+    return out;
+  });
+  check('la cámara mira la CARA de los paneles, caiga el terreno hacia donde caiga',
+    mira.every(m => m.cara > 0.12), JSON.stringify(mira));
+  check('y en el hemisferio norte se queda al sur del campo, nunca detrás',
+    mira.every(m => m.camZ > 0), JSON.stringify(mira.map(m => m.az + ':' + m.camZ)));
+  // cos(90°) en JS es 6e-17, no 0: sin épsilon ese ruido decidía el lado
+  check('con la caída al este y al oeste el lado se elige por la pendiente, no por el ruido',
+    mira.find(m => m.az === 90) && mira.find(m => m.az === 270) &&
+    Math.sign(mira.find(m => m.az === 90).cara) === 1, JSON.stringify(mira));
+
   // ── el texto: por qué el terreno es uno y las componentes no ──
   const porQue = await p.evaluate(() => document.getElementById('escNote').textContent);
   const plano = porQue.replace(/\s+/g, ' ');
@@ -539,9 +671,11 @@ const SONDA = `(() => {
     /componente/i.test(plano) && /cross_axis_slope/i.test(plano), plano.slice(-520));
   check('y lo dice con el caso que lo demuestra: cayendo al sur, el seguidor no ve nada',
     /cayendo al sur/i.test(plano) && /el seguidor ninguna/i.test(plano), plano.slice(-520));
-  check('y que las hincas son verticales: la fija no se inclina con el terreno',
-    /hincas son verticales/i.test(plano) && /se replantea sobre él/i.test(plano),
+  check('y que las filas se adaptan al terreno a lo largo y se escalonan en el pitch',
+    /se adaptan al terreno/i.test(plano) && /escalonan/i.test(plano),
     plano.slice(-260));
+  check('y que el eje inclinado de un TSAT debería ser esa misma componente',
+    /un eje no se inclina en el aire/i.test(plano), plano.slice(-320));
 
   check('la cuña de la primera versión no ha vuelto',
     (await p.evaluate(() => typeof taludTSAT === 'undefined')) === true);

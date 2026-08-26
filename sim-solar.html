@@ -55,6 +55,40 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
 .ro .v{font:700 17px/1.2 var(--display);margin-top:3px}
 .ro .v small{font-size:12px;color:var(--muted);font-weight:400}
 canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:10px;margin-top:6px}
+/* EL LIENZO NO SE ESTIRA. Se dibujaba a 700x280 y el CSS lo estiraba a todo el ancho: en una
+   pantalla ancha eso son 2,4 aumentos, y con ellos crecian la letra de 10 px hasta 24 y el trazo
+   de 1 px hasta 2,4. De ahi que agobiara. Ahora el alto va acotado y el dibujo se hace a pixeles
+   REALES (ver ajustaLienzo), asi que la letra mide lo que dice que mide, se ensanche lo que se
+   ensanche. */
+#sky{height:clamp(240px,30vh,340px)}
+/* Las tarjetas son hermanas de una rejilla de dos columnas, asi que caian en zigzag y el
+   «Recorrido del sol» acabo en la columna de ENTRADAS, aplastado a 250 px. Estas dos ocupan la
+   fila entera: las graficas quedan todas arriba y la tabla, debajo. */
+.card.anchoTotal{grid-column:1/-1}
+.solrow3{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.solrow3 canvas{height:clamp(180px,22vh,230px)}
+#shYear{height:clamp(150px,18vh,200px)}
+@media(max-width:1100px){ .solrow3{grid-template-columns:1fr} }
+.solrow2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.solrow2 canvas{height:clamp(220px,26vh,300px)}
+@media(max-width:1100px){ .solrow2{grid-template-columns:1fr} }
+.chkrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
+.chkrow .chk{display:flex;align-items:center;gap:6px;cursor:pointer}
+/* La tabla tiene siete columnas y su ancho MINIMO (417 px) era mayor que un movil de 390: como
+   max-width no encoge por debajo del min-content, estiraba la tarjeta y con ella la pagina entera,
+   que se iba en scroll horizontal. Scrollea dentro de su caja, y las tarjetas pueden encoger. */
+#calOut{overflow-x:auto}
+.grid > .card{min-width:0}
+.caltab{width:100%;min-width:430px;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+.caltab th{text-align:right;font-weight:600;color:var(--muted-2);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:4px 6px;border-bottom:1px solid var(--line)}
+.caltab th:first-child,.caltab td:first-child{text-align:left}
+.caltab td{text-align:right;padding:4px 6px;border-bottom:1px solid var(--line-soft);color:var(--tx)}
+.caltab tr:hover td{background:rgba(255,255,255,.03)}
+#path{height:clamp(240px,30vh,340px);aspect-ratio:1/1;width:auto;flex:none}
+.solrow{display:flex;gap:10px;align-items:stretch}
+.solrow #sky{flex:1;min-width:0}
+/* apilados: la carta baja debajo y se queda CUADRADA -manda aspect-ratio, no el alto- */
+@media(max-width:1200px){ .solrow{display:block} .solrow #path{width:min(100%,340px);height:auto;margin-left:auto;margin-right:auto} }
 .note{font-size:12px;color:var(--muted-2);margin-top:10px;line-height:1.5}
 .note code{color:var(--muted);background:var(--panel-2);padding:1px 5px;border-radius:5px;font-family:var(--mono)}
 .slider-row{display:flex;align-items:center;gap:10px;margin-top:12px}
@@ -63,6 +97,11 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
 .engmsg{background:var(--panel-2);border:1px dashed var(--line2,#2b3a4d);border-color:var(--build);border-radius:9px;padding:11px 13px;font-size:12.5px;color:var(--text);line-height:1.55}
 .engmsg code{background:#0b0f14;color:var(--build);padding:1px 6px;border-radius:5px;font-family:var(--mono);font-size:11.5px}
 .tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);margin-top:2px}
+/* El aviso de coordenadas NO es una nota al pie: si sale, es que el emplazamiento elegido no tiene
+   sitio y no se puede simular. Que se vea. */
+#plantMsg{text-transform:none;letter-spacing:0;font-size:11.5px;line-height:1.45}
+#plantMsg.falta{color:#F6A623}
+#plantMsg.derivada{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -80,7 +119,8 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
     <div class="card">
       <h2><span class="ic">☉</span> Emplazamiento</h2>
       <div class="field"><label>Planta (de la cartera)</label>
-        <select id="plant"><option value="">— manual —</option></select></div>
+        <select id="plant"><option value="">— manual —</option></select>
+        <div class="tag" id="plantMsg"></div></div>
       <div class="two">
         <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="41.65"></div>
         <div class="field"><label>Longitud °</label><input id="lon" type="number" step="0.0001" value="-0.9"></div>
@@ -96,13 +136,50 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
     <!-- GEOMETRÍA SOLAR -->
     <div class="card">
       <h2><span class="ic">◔</span> Geometría solar <span style="margin-left:auto;font:400 11px var(--mono);color:var(--muted)">elevación y sombra · hora local</span></h2>
-      <canvas id="sky" width="700" height="280"></canvas>
+      <div class="solrow">
+        <canvas id="sky" width="700" height="280"></canvas>
+        <canvas id="path" width="360" height="360" title="Carta solar: por dónde pasa el sol visto desde el suelo"></canvas>
+      </div>
       <div class="slider-row">
         <span style="font-size:12px;color:var(--muted)">Hora</span>
         <input type="range" id="hour" min="0" max="1439" step="5" value="720">
         <span class="hourlbl" id="hourlbl">12:00</span>
       </div>
       <div class="readout" id="ro"></div>
+      <div class="chkrow">
+        <label class="chk"><input type="checkbox" id="cMes"> los 12 arcos del mes</label>
+        <label class="chk"><input type="checkbox" id="cHora"> líneas de hora (analema)</label>
+        <span class="tag" style="margin-left:auto">carta solar · proyección equidistante</span>
+      </div>
+    </div>
+
+    <!-- SUN PATH CARTESIANO + TRAYECTORIA DEL TRACKER -->
+    <div class="card anchoTotal">
+      <h2><span class="ic">⌁</span> Recorrido del sol y del seguidor <span style="margin-left:auto;font:400 11px var(--mono);color:var(--muted)">azimut × elevación · θ del eje</span></h2>
+      <div class="solrow2">
+        <canvas id="cart" width="640" height="300" title="Sun path cartesiano: azimut en el eje X, elevación en el Y"></canvas>
+        <canvas id="theta" width="640" height="300" title="Ángulo del seguidor a lo largo del día"></canvas>
+      </div>
+    </div>
+
+    <!-- EL AÑO DE UN VISTAZO -->
+    <div class="card anchoTotal">
+      <h2><span class="ic">▩</span> El año de un vistazo <span style="margin-left:auto;font:400 11px var(--mono);color:var(--muted)">día × hora · hora local</span></h2>
+      <div class="solrow3">
+        <div><canvas id="hmEl" width="640" height="230"></canvas><div class="tag">elevación solar (°) · 0 → 90</div></div>
+        <div><canvas id="hmIr" width="640" height="230"></canvas><div class="tag">GHI de cielo claro (W/m²) · 0 → 1.100</div></div>
+      </div>
+      <canvas id="shYear" width="1300" height="200" style="margin-top:10px"></canvas>
+      <div class="tag">longitud de sombra al MEDIODÍA SOLAR del objeto de arriba, a lo largo del año</div>
+    </div>
+
+    <!-- CALENDARIO SOLAR -->
+    <div class="card anchoTotal">
+      <h2><span class="ic">🗓</span> Amanecer, mediodía solar y atardecer <span style="margin-left:auto;font:400 11px var(--mono);color:var(--muted)">día 21 de cada mes · hora local</span></h2>
+      <div id="calOut"></div>
+      <div class="btnrow" style="margin-top:10px">
+        <button class="btn ghost small" id="calCsv">⬇ El año entero en CSV</button>
+      </div>
     </div>
   </div>
 
@@ -144,9 +221,12 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
             <div class="field" style="display:flex;align-items:flex-end"><label style="display:flex;align-items:center;gap:7px;font-weight:400;color:var(--muted);margin:0 0 9px"><input type="checkbox" id="econOn"> calcular al simular</label></div>
           </div>
         </details>
-        <div style="display:flex;gap:8px">
-          <button class="btn" id="simBtn" style="flex:1">▶ Simular</button>
-          <button class="btn ghost" id="demBtn" style="flex:none" title="Relieve del emplazamiento (motor, online)">⛰ Relieve</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" id="simBtn" style="flex:1 1 140px">▶ Simular</button>
+          <!-- width:auto: .btn lleva width:100% y con flex:none el boton no podia encoger, asi que en
+               un movil se salia de la pantalla (441 px de borde en un ancho de 390) y arrastraba la
+               pagina entera a scroll horizontal. -->
+          <button class="btn ghost" id="demBtn" style="flex:0 1 auto;width:auto" title="Relieve del emplazamiento (motor, online)">⛰ Relieve</button>
         </div>
       </div>
       <div>
@@ -240,11 +320,133 @@ function techoSombra(obj,peakEl){
 }
 function fmtM(v){return String(v>=10?Math.round(v):Math.round(v*10)/10);}
 
+/* PIXELES REALES. El lienzo tenia su tamaño interno fijo (700x280) y el CSS lo estiraba: todo lo
+   dibujado se escalaba con el, letra y trazo incluidos. Esto ajusta el buffer al tamaño que ocupa
+   de verdad -por la densidad de la pantalla, para que no salga borroso- y deja el contexto escalado
+   de modo que 1 unidad de dibujo = 1 px de CSS. Devuelve las medidas en px de CSS. */
+function ajustaLienzo(cv){
+  var dpr=Math.min(window.devicePixelRatio||1,2);
+  var W=Math.round(cv.clientWidth||cv.width), H=Math.round(cv.clientHeight||cv.height);
+  if(!W||!H) return null;
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
+  var ctx=cv.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  return {ctx:ctx,W:W,H:H};
+}
+
+/* CARTA SOLAR. Por donde pasa el sol visto desde el suelo: el horizonte es el borde, el cenit el
+   centro, el norte arriba. Se pintan el dia elegido y, de referencia, los dos solsticios y el
+   equinoccio, que son los que acotan todo el año. Misma geometria que la curva del dia -el
+   solarGeom de esta pagina, algoritmo NOAA-, no hay un segundo modelo. */
+/* Rampa tipo `turbo` de matplotlib, por tramos. Es una APROXIMACION -el turbo de verdad son 256
+   valores tabulados- y aqui solo distingue doce arcos, para lo que sobra. */
+function turbo(t){
+  t=Math.max(0,Math.min(1,t));
+  var k=[[48,18,59],[70,107,227],[26,183,166],[122,220,79],[249,205,53],[249,120,35],[122,4,3]];
+  var x=t*(k.length-1), i=Math.min(k.length-2,Math.floor(x)), f=x-i;
+  var c=[0,1,2].map(function(j){return Math.round(k[i][j]+(k[i+1][j]-k[i][j])*f);});
+  return 'rgb('+c.join(',')+')';
+}
+function drawPath(){
+  var cv=$('path'); if(!cv) return;
+  var L=ajustaLienzo(cv); if(!L) return;
+  var ctx=L.ctx, W=L.W, H=L.H, cx=W/2, cy=H/2, R=Math.min(W,H)/2-16;
+  if(faltanCoords()){
+    ctx.fillStyle='#5E6F7E'; ctx.font='12px system-ui,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Sin coordenadas', cx, cy); return;
+  }
+  var lat=+$('lat').value, lon=+$('lon').value, tz=+$('tz').value, date=$('date').value;
+  /* proyeccion equidistante: r crece con el angulo cenital, o sea 90-elevacion */
+  function xy(az,el){ var r=R*(90-el)/90, a=(az-90)*RAD; return [cx+r*Math.cos(a), cy+r*Math.sin(a)]; }
+  ctx.lineWidth=1; ctx.strokeStyle='#1A2530';
+  [30,60].forEach(function(e){ ctx.beginPath(); ctx.arc(cx,cy,R*(90-e)/90,0,2*Math.PI); ctx.stroke(); });
+  ctx.beginPath(); ctx.arc(cx,cy,R,0,2*Math.PI); ctx.strokeStyle='#2c3a49'; ctx.stroke();
+  ctx.strokeStyle='#1A2530'; ctx.beginPath(); ctx.moveTo(cx-R,cy); ctx.lineTo(cx+R,cy);
+  ctx.moveTo(cx,cy-R); ctx.lineTo(cx,cy+R); ctx.stroke();
+  ctx.fillStyle='#5E6F7E'; ctx.font='10px ui-monospace,monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  [['N',0],['E',90],['S',180],['O',270]].forEach(function(d){
+    var p=xy(d[1],-4.5); ctx.fillText(d[0],p[0],p[1]);
+  });
+  var y=(date||'2026-06-21').slice(0,4);
+
+  /* LOS DOCE ARCOS DEL MES, como el show_months del core: el dia 21 de cada mes, paso de 10 min.
+     Rampa tipo turbo y no ciclica a proposito -misma razon que alli-: con una ciclica el blanco
+     del centro se comia junio y julio sobre el fondo oscuro. */
+  if($('cMes')&&$('cMes').checked){
+    var MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    for(var mi=1;mi<=12;mi++){
+      var t=(mi-1)/11, col=turbo(t), primero=true;
+      ctx.beginPath(); ctx.strokeStyle=col; ctx.lineWidth=1; ctx.globalAlpha=.85;
+      for(var mm=0;mm<=1440;mm+=10){
+        var gg=solarGeom(localToUTCms(y+'-'+(mi<10?'0':'')+mi+'-21',mm,tz),lat,lon);
+        if(gg.elevation<=0){primero=true;continue;}
+        var qq=xy(gg.azimuth,gg.elevation);
+        if(primero){ctx.moveTo(qq[0],qq[1]);primero=false;}else ctx.lineTo(qq[0],qq[1]);
+      }
+      ctx.stroke(); ctx.globalAlpha=1;
+    }
+  }
+
+  /* LINEAS DE HORA: para cada hora de reloj, por donde anda el sol a lo largo del año. Es la
+     analema proyectada, y es lo que deja leer la carta como un reloj. Se rotula donde mas alto
+     esta el sol a esa hora, igual que en el core. */
+  if($('cHora')&&$('cHora').checked){
+    ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(var hh=0;hh<24;hh++){
+      var pts=[],alto=null;
+      for(var dd=0;dd<365;dd+=5){
+        var f=new Date(Date.UTC(+y,0,1+dd)), ds=f.toISOString().slice(0,10);
+        var gh=solarGeom(localToUTCms(ds,hh*60,tz),lat,lon);
+        if(gh.elevation<=0)continue;
+        pts.push(xy(gh.azimuth,gh.elevation));
+        if(!alto||gh.elevation>alto.el)alto={el:gh.elevation,p:pts[pts.length-1]};
+      }
+      if(pts.length<3)continue;                       // hora que aqui nunca tiene sol
+      ctx.beginPath(); ctx.strokeStyle='#55636f'; ctx.lineWidth=.7; ctx.globalAlpha=.7;
+      pts.forEach(function(p,i){ if(i)ctx.lineTo(p[0],p[1]); else ctx.moveTo(p[0],p[1]); });
+      ctx.stroke(); ctx.globalAlpha=1;
+      if(alto){ ctx.fillStyle='rgba(11,15,20,.75)'; ctx.fillRect(alto.p[0]-9,alto.p[1]-6,18,12);
+        ctx.fillStyle='#8fa0b0'; ctx.fillText(hh+'h',alto.p[0],alto.p[1]); }
+    }
+  }
+
+  /* el año, en tres trazos: solsticio de junio, equinoccio y solsticio de diciembre */
+  var refs=[[y+'-06-21','#3f4d5e'],[y+'-03-21','#37485c'],[y+'-12-21','#3f4d5e']];
+  refs.concat([[date,'#F6A623']]).forEach(function(d,i){
+    var esHoy=(i===refs.length);
+    var c=dayCurve(lat,lon,d[0],tz), primero=true;
+    ctx.beginPath(); ctx.strokeStyle=d[1]; ctx.lineWidth=esHoy?2:1;
+    c.pts.forEach(function(p){ if(p.el<0){primero=true;return;}
+      var q=xy(p.az,p.el); if(primero){ctx.moveTo(q[0],q[1]);primero=false;}else ctx.lineTo(q[0],q[1]); });
+    ctx.stroke();
+  });
+  /* el sol en la hora del deslizador, el mismo punto que la curva del dia */
+  var hm=+$('hour').value;
+  var g=solarGeom(localToUTCms(date,hm,tz),lat,lon);
+  if(g.elevation>0){
+    var p=xy(g.azimuth,g.elevation);
+    ctx.beginPath(); ctx.arc(p[0],p[1],5,0,2*Math.PI);
+    ctx.fillStyle='#5AA9FF'; ctx.fill(); ctx.strokeStyle='#0B0F14'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic'; ctx.fillStyle='#5E6F7E';
+  ctx.fillText('carta solar · jun · equinoccio · dic', 8, H-8);
+}
+
 function drawSky(){
+  var cv0=$('sky');
+  /* Campo vacio no es lat 0: `+''` da 0, y sin esto el cielo se dibujaba en el golfo de Guinea
+     como si tal cosa. Sin coordenadas no hay cielo que pintar. */
+  if(faltanCoords()){
+    var L0=ajustaLienzo(cv0);
+    if(L0){ L0.ctx.fillStyle='#7d8ea0'; L0.ctx.font='13px system-ui,sans-serif'; L0.ctx.textAlign='center';
+      L0.ctx.fillText('Sin coordenadas: teclea la latitud y la longitud', L0.W/2, L0.H/2); }
+    CUR=null; drawPath(); return;
+  }
   var lat=+$('lat').value,lon=+$('lon').value,tz=+$('tz').value,date=$('date').value;
   CUR=dayCurve(lat,lon,date,tz);
-  var cv=$('sky'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height,padL=34,padB=22,padT=10,padR=40;   // padR deja sitio al eje de sombra
-  ctx.clearRect(0,0,W,H);
+  var L=ajustaLienzo(cv0); if(!L){ drawPath(); return; }
+  var cv=cv0,ctx=L.ctx,W=L.W,H=L.H,padL=34,padB=22,padT=10,padR=40;   // padR deja sitio al eje de sombra
   var x0=padL,x1=W-padR,y0=H-padB,y1=padT, gx=function(m){return x0+(m/1440)*(x1-x0);}, gy=function(el){return y0-(Math.max(0,el)/90)*(y0-y1);};
   // rejilla
   ctx.strokeStyle='#1A2530';ctx.fillStyle='#5E6F7E';ctx.font='10px ui-monospace,monospace';ctx.lineWidth=1;
@@ -256,7 +458,7 @@ function drawSky(){
   ctx.strokeStyle=C_SOL;ctx.lineWidth=2;ctx.stroke();
   // relleno bajo curva
   ctx.lineTo(gx(1440),y0);ctx.lineTo(gx(0),y0);ctx.closePath();ctx.fillStyle='rgba(246,166,35,.10)';ctx.fill();
-  // orto / ocaso
+  // amanecer / atardecer
   ctx.fillStyle='#36D399';
   [CUR.rise,CUR.set].forEach(function(m){if(m!=null){var xx=gx(m);ctx.fillRect(xx-1,y1,2,y0-y1);}});
 
@@ -265,7 +467,7 @@ function drawSky(){
   /* ---- SERIE DE SOMBRA, eje propio a la derecha en metros -------------------------------------
      La sombra es altura/tan(elevación) y se dispara con el sol bajo: 3 m de objeto a 1° de
      elevación son 172 m. Dibujada a escala libre aplastaría la curva del sol contra el eje, así
-     que van tres medidas: (a) SOLO entre orto y ocaso, (b) el eje se corta en un TECHO derivado
+     que van tres medidas: (a) SOLO entre el amanecer y el atardecer, (b) el eje se corta en un TECHO derivado
      de la altura del objeto, y (c) el tramo que se sale del techo va DISCONTINUO apoyado en él,
      para que se lea como un recorte y no como una meseta real de la sombra.
      Es un segundo eje y por tanto NO es comparable en altura con la curva del sol: cada eje va
@@ -309,7 +511,7 @@ function drawSky(){
 
   /* leyenda: con dos series la identidad no puede ir solo por color. Lleva fondo propio porque
      con el sol bajo la sombra se dispara justo por aquí (esquina superior izquierda, poco
-     después del orto) y sin él la curva pisaba el texto. */
+     después del amanecer) y sin él la curva pisaba el texto. */
   ctx.font='10px ui-monospace,monospace';ctx.textAlign='left';
   var lx=x0+8,ly=y1+11,lineas=['elevación · eje izq. (°)'];
   if(techo!=null)lineas.push('sombra de '+obj+' m · eje dcho. (m)');
@@ -321,6 +523,272 @@ function drawSky(){
     ctx.fillStyle='#8093A4';ctx.fillText(t,lx+15,ly+i*15);
   });
   updateReadout(g,hm);
+  drawPath(); calSolar(); drawCart(); drawTheta(); drawAno();
+}
+/* AMANECER, MEDIODIA SOLAR Y ATARDECER. Lo que en el core es sunrise_sunset_table: por dia, salida,
+   paso por el meridiano, puesta, duracion y elevacion maxima. Dos diferencias que van DECLARADAS:
+     · alli la hora de amanecer y atardecer sale del SPA de pvlib y aqui del mismo NOAA que usa toda esta
+       ficha, con refraccion. Entre los dos hay segundos, no minutos.
+     · alli son los 365 dias; en la tarjeta se ensenan los doce dias 21, que es lo que se lee de un
+       vistazo. El año entero se baja en CSV con el boton, y ese si trae los 365.
+   El transito no se busca aparte: es el minuto de elevacion maxima que ya devuelve dayCurve. */
+function filaCal(lat,lon,tz,ds){
+  var c=dayCurve(lat,lon,ds,tz);
+  var dur=(c.rise!=null&&c.set!=null)?(c.set-c.rise)/60:(c.peak.el>0?24:0);
+  return {fecha:ds, amanecer:c.rise, mediodia:c.peak.min, atardecer:c.set, horas:dur, elev:c.peak.el, az:c.peak.az};
+}
+function calSolar(){
+  var box=$('calOut'); if(!box)return;
+  if(faltanCoords()){ box.innerHTML='<p class="note">Sin coordenadas no hay amanecer ni atardecer que calcular.</p>'; return; }
+  var lat=+$('lat').value,lon=+$('lon').value,tz=+$('tz').value,y=($('date').value||'2026-06-21').slice(0,4);
+  var MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var h='<table class="caltab"><thead><tr><th>Día 21</th><th>Amanecer</th><th>Mediodía solar</th><th>Atardecer</th><th>Horas de sol</th><th>Elev. máx.</th><th>Azimut</th></tr></thead><tbody>';
+  for(var m=1;m<=12;m++){
+    var r=filaCal(lat,lon,tz,y+'-'+(m<10?'0':'')+m+'-21');
+    h+='<tr><td>'+MES[m-1]+'</td><td>'+hhmm(r.amanecer)+'</td><td>'+hhmm(r.mediodia)+'</td><td>'+hhmm(r.atardecer)+'</td>'
+      +'<td>'+(r.horas?r.horas.toFixed(2):'—')+'</td><td>'+r.elev.toFixed(1)+'°</td><td>'+Math.round(r.az)+'° '+compass(r.az)+'</td></tr>';
+  }
+  box.innerHTML=h+'</tbody></table>';
+}
+function calCsvDescarga(){
+  if(faltanCoords())return;
+  var lat=+$('lat').value,lon=+$('lon').value,tz=+$('tz').value,y=+($('date').value||'2026-06-21').slice(0,4);
+  var L=['fecha,amanecer,mediodia_solar,atardecer,horas_sol,elev_max_deg,azimut_pico_deg'];
+  for(var d=0;d<366;d++){
+    var f=new Date(Date.UTC(y,0,1+d)); if(f.getUTCFullYear()!==y)break;
+    var ds=f.toISOString().slice(0,10), r=filaCal(lat,lon,tz,ds);
+    L.push([ds,hhmm(r.amanecer),hhmm(r.mediodia),hhmm(r.atardecer),(r.horas||0).toFixed(3),r.elev.toFixed(2),r.az.toFixed(1)].join(','));
+  }
+  var b=new Blob([L.join('\n')],{type:'text/csv;charset=utf-8'}), u=URL.createObjectURL(b);
+  var a=document.createElement('a'); a.href=u; a.download='amanecer_atardecer_'+lat.toFixed(4)+'_'+lon.toFixed(4)+'_'+y+'.csv';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},1000);
+}
+/* ── EL ANGULO DEL SEGUIDOR ────────────────────────────────────────────────────────────────────
+   Portado LITERAL de overcast.html (`trueTrackAngle`, `singleaxis`, `thetaBaselineDay`, commit
+   6ead492 de cobertura-zigbee). Ese JS es la FUENTE DE AUTORIDAD de este algoritmo: lo dice el
+   propio core, que a su vez lo replica en get_baseline_theta. No se reescribe aqui otra version.
+   El stow de noche obedece al tope mecanico igual que el seguimiento: es una posicion del hierro,
+   no una preferencia, y sin ese recorte una consigna mayor que el maximo saldria inejecutable. */
+var DEG=180/Math.PI;
+function trueTrackAngle(zenDeg,azDeg,axisTilt,axisAz){
+  var sz=Math.sin(zenDeg*RAD);
+  var x=sz*Math.sin(azDeg*RAD), y=sz*Math.cos(azDeg*RAD), z=Math.cos(zenDeg*RAD);
+  var ca=Math.cos(axisAz*RAD), sa=Math.sin(axisAz*RAD);
+  var ct=Math.cos(axisTilt*RAD), st=Math.sin(axisTilt*RAD);
+  return Math.atan2(x*ca-y*sa, x*sa*st+y*ca*st+z*ct)*DEG;
+}
+function singleaxis(zenDeg,azDeg,p){
+  if(!(zenDeg<90))return NaN;                       // noche → NaN, como pvlib
+  var wid=trueTrackAngle(zenDeg,azDeg,p.axisTilt,p.axisAz), th=wid;
+  if(p.backtrack){
+    var axesDist=1/(p.gcr*Math.cos((p.crossAxisTilt||0)*RAD));
+    var temp=Math.abs(axesDist*Math.cos((wid-(p.crossAxisTilt||0))*RAD));
+    if(temp<1) th=wid-Math.sign(wid)*Math.acos(temp)*DEG;
+  }
+  return Math.max(-p.maxAngle,Math.min(p.maxAngle,th));
+}
+/* la curva del dia: seguimiento verdadero (sin backtracking) y el ejecutable (con el) */
+function thetaDia(lat,lon,date,tz,gcr,maxAngle,axisAz){
+  var out=[];
+  for(var m=0;m<=1440;m+=5){
+    var g=solarGeom(localToUTCms(date,m,tz),lat,lon), zen=90-g.elevation;
+    var p={axisTilt:0,axisAz:axisAz,maxAngle:maxAngle,backtrack:true,gcr:gcr,crossAxisTilt:0};
+    var bt=singleaxis(zen,g.azimuth,p);
+    var lib=singleaxis(zen,g.azimuth,{axisTilt:0,axisAz:axisAz,maxAngle:maxAngle,backtrack:false,gcr:gcr,crossAxisTilt:0});
+    out.push({m:m, sol:g.elevation>0, bt:isFinite(bt)?bt:null, libre:isFinite(lib)?lib:null});
+  }
+  return out;
+}
+
+/* ── SUN PATH CARTESIANO ───────────────────────────────────────────────────────────────────────
+   Azimut en X, elevacion en Y. Dos cosas que trae el core y que NO son cosmeticas (van con su
+   nombre alli: «wrap-break + south-centered, DNV finding #27»):
+     · en el hemisferio SUR el eje se recentra en el norte, porque si no la curva se parte por el
+       medio en vez de salir de una pieza;
+     · se corta el trazo cuando el azimut da la vuelta (|Δaz| > 180°), que si no matplotlib -y un
+       canvas igual- dibuja una raya horizontal cruzando el grafico entera. */
+function drawCart(){
+  var cv=$('cart'); if(!cv)return;
+  var L=ajustaLienzo(cv); if(!L)return;
+  var ctx=L.ctx,W=L.W,H=L.H,pl=34,pr=10,pt=12,pb=22;
+  if(faltanCoords()){ ctx.fillStyle='#5E6F7E';ctx.font='12px system-ui,sans-serif';ctx.textAlign='center';
+    ctx.fillText('Sin coordenadas',W/2,H/2); return; }
+  var lat=+$('lat').value,lon=+$('lon').value,tz=+$('tz').value,date=$('date').value;
+  var sur=lat<0;                                    // recentrado en el norte
+  var wrap=function(a){ return sur?((a+180)%360)-180:a; };
+  var x0=pl,x1=W-pr,y0=H-pb,y1=pt, ax0=sur?-180:0, ax1=sur?180:360, elMax=90;
+  var gx=function(a){return x0+(wrap(a)-ax0)/(ax1-ax0)*(x1-x0);};
+  var gy=function(e){return y0-(e/elMax)*(y0-y1);};
+  ctx.strokeStyle='#1A2530';ctx.fillStyle='#5E6F7E';ctx.font='10px ui-monospace,monospace';ctx.lineWidth=1;
+  for(var e=0;e<=90;e+=30){ var yy=gy(e); ctx.beginPath();ctx.moveTo(x0,yy);ctx.lineTo(x1,yy);ctx.stroke();
+    ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(e+'°',x0-5,yy); }
+  var marcas=sur?[[-180,'S'],[-90,'O'],[0,'N'],[90,'E'],[180,'S']]:[[0,'N'],[90,'E'],[180,'S'],[270,'O'],[360,'N']];
+  ctx.textAlign='center';ctx.textBaseline='top';
+  marcas.forEach(function(mk){ var xx=x0+(mk[0]-ax0)/(ax1-ax0)*(x1-x0);
+    ctx.beginPath();ctx.moveTo(xx,y1);ctx.lineTo(xx,y0);ctx.strokeStyle='#1A2530';ctx.stroke();
+    ctx.fillStyle='#5E6F7E';ctx.fillText(mk[1],xx,y0+4); });
+  var y=(date||'2026-06-21').slice(0,4);
+  var series=[[y+'-06-21','#3f4d5e',1],[y+'-03-21','#37485c',1],[y+'-12-21','#3f4d5e',1],[date,'#F6A623',2]];
+  series.forEach(function(d){
+    var c=dayCurve(lat,lon,d[0],tz), prev=null;
+    ctx.beginPath();ctx.strokeStyle=d[1];ctx.lineWidth=d[2];
+    c.pts.forEach(function(p){
+      if(p.el<0){prev=null;return;}
+      var salta=prev!=null&&Math.abs(wrap(p.az)-wrap(prev))>180;   // vuelta del azimut
+      var q=[gx(p.az),gy(p.el)];
+      if(prev==null||salta)ctx.moveTo(q[0],q[1]);else ctx.lineTo(q[0],q[1]);
+      prev=p.az;
+    });
+    ctx.stroke();
+  });
+  var hm=+$('hour').value, g=solarGeom(localToUTCms(date,hm,tz),lat,lon);
+  if(g.elevation>0){ ctx.beginPath();ctx.arc(gx(g.azimuth),gy(g.elevation),5,0,2*Math.PI);
+    ctx.fillStyle='#5AA9FF';ctx.fill();ctx.strokeStyle='#0B0F14';ctx.lineWidth=1.5;ctx.stroke(); }
+  ctx.fillStyle='#5E6F7E';ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  ctx.fillText('sun path · azimut × elevación'+(sur?' · centrado en el norte':''),x0,H-6);
+}
+
+/* ── TRAYECTORIA DEL SEGUIDOR ──────────────────────────────────────────────────────────────── */
+function drawTheta(){
+  var cv=$('theta'); if(!cv)return;
+  var L=ajustaLienzo(cv); if(!L)return;
+  var ctx=L.ctx,W=L.W,H=L.H,pl=34,pr=10,pt=12,pb=22;
+  if(faltanCoords()){ ctx.fillStyle='#5E6F7E';ctx.font='12px system-ui,sans-serif';ctx.textAlign='center';
+    ctx.fillText('Sin coordenadas',W/2,H/2); return; }
+  var fija=$('kind')&&$('kind').value==='fixed';
+  ctx.font='10px ui-monospace,monospace';
+  if(fija){ ctx.fillStyle='#5E6F7E';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('Montaje FIJO: el ángulo no cambia ('+(+$('tilt').value)+'° de inclinación, '+(+$('azi').value)+'° de azimut)',W/2,H/2);
+    return; }
+  var lat=+$('lat').value,lon=+$('lon').value,tz=+$('tz').value,date=$('date').value;
+  var gcr=+$('gcr').value||0.397, mx=+$('maxang').value||55;
+  var T=thetaDia(lat,lon,date,tz,gcr,mx,180);
+  var x0=pl,x1=W-pr,y0=H-pb,y1=pt;
+  var gx=function(m){return x0+m/1440*(x1-x0);};
+  var gy=function(t){return (y0+y1)/2-(t/mx)*((y0-y1)/2);};
+  ctx.strokeStyle='#1A2530';ctx.fillStyle='#5E6F7E';ctx.lineWidth=1;
+  [-mx,-mx/2,0,mx/2,mx].forEach(function(t){ var yy=gy(t); ctx.beginPath();ctx.moveTo(x0,yy);ctx.lineTo(x1,yy);ctx.stroke();
+    ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(Math.round(t)+'°',x0-5,yy); });
+  ctx.textAlign='center';ctx.textBaseline='top';
+  [0,360,720,1080,1440].forEach(function(m){ var xx=gx(m);
+    ctx.beginPath();ctx.moveTo(xx,y1);ctx.lineTo(xx,y0);ctx.strokeStyle='#1A2530';ctx.stroke();
+    ctx.fillStyle='#5E6F7E';ctx.fillText((m/60)+'h',xx,y0+4); });
+  [['libre','#55636f',1],['bt','#36D399',2]].forEach(function(k){
+    var primero=true; ctx.beginPath();ctx.strokeStyle=k[1];ctx.lineWidth=k[2];
+    T.forEach(function(p){ var v=p[k[0]]; if(v==null||!p.sol){primero=true;return;}
+      var q=[gx(p.m),gy(v)]; if(primero){ctx.moveTo(q[0],q[1]);primero=false;}else ctx.lineTo(q[0],q[1]); });
+    ctx.stroke();
+  });
+  var hm=+$('hour').value, aq=T.reduce(function(a,p){return Math.abs(p.m-hm)<Math.abs(a.m-hm)?p:a;},T[0]);
+  if(aq&&aq.bt!=null&&aq.sol){ ctx.beginPath();ctx.arc(gx(aq.m),gy(aq.bt),5,0,2*Math.PI);
+    ctx.fillStyle='#5AA9FF';ctx.fill();ctx.strokeStyle='#0B0F14';ctx.lineWidth=1.5;ctx.stroke(); }
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  ctx.fillStyle='#36D399';ctx.fillText('— θ ejecutable (backtracking, GCR '+gcr+')',x0,H-6);
+  ctx.fillStyle='#8093A4';ctx.fillText('— θ de seguimiento puro',x0+186,H-6);
+  ctx.fillStyle='#5E6F7E';ctx.textAlign='right';
+  ctx.fillText('θ ahora: '+(aq&&aq.bt!=null&&aq.sol?aq.bt.toFixed(1)+'°':'—'),x1,H-6);
+}
+/* ── EL AÑO DE UN VISTAZO ──────────────────────────────────────────────────────────────────────
+   Los tres del core que no necesitan nada de fuera: plot_elevation_heatmap, plot_irradiance_heatmap
+   y plot_shadow_annual. Todo con el mismo NOAA de esta ficha.
+
+   El GHI de cielo claro es el MISMO simplificado del core, y alli tambien se llama asi:
+   I0·sin(elev), con I0 = 1367·(1+0,033·cos(2π·doy/365)) -la excentricidad de la orbita-. No es
+   Ineichen: no lleva turbidez ni altura, asi que sobreestima. Es un PROXY para ver la forma del
+   año, no una prevision de produccion; para eso esta el motor.
+
+   La sombra se mide en el MEDIODIA SOLAR, no a las 12:00 del reloj. El core lleva esa correccion
+   con nombre y fecha -«¿las sombras no deberian ser simetricas?», 2026-08-10-: evaluando al reloj
+   salian dos dientes de sierra en los cambios de hora. Aqui el transito es el minuto de elevacion
+   maxima, buscado a 10 min y afinado a 1. La asimetria que queda entre solsticios es REAL: es la
+   analema. */
+var YEAR_CACHE=null;
+function anoSolar(lat,lon,tz,y){
+  var k=lat.toFixed(4)+'|'+lon.toFixed(4)+'|'+tz+'|'+y;
+  if(YEAR_CACHE&&YEAR_CACHE.k===k)return YEAR_CACHE;
+  var dias=[], el=[], ir=[], sombra=[], maxIr=0;
+  var bis=(y%4===0&&y%100!==0)||y%400===0, nd=bis?366:365;
+  for(var d=0;d<nd;d++){
+    var f=new Date(Date.UTC(y,0,1+d)), ds=f.toISOString().slice(0,10);
+    var I0=1367*(1+0.033*Math.cos(2*Math.PI*(d+1)/365));
+    var fila=[], filaI=[];
+    for(var h=0;h<24;h++){
+      var g=solarGeom(localToUTCms(ds,h*60,tz),lat,lon);
+      var e=Math.max(0,g.elevation); fila.push(e);
+      var q=Math.max(0,I0*Math.sin(e*RAD)); filaI.push(q); if(q>maxIr)maxIr=q;
+    }
+    el.push(fila); ir.push(filaI);
+    /* transito: barrido de 10 min y afinado de 1 */
+    var mejor={el:-99,m:0};
+    for(var m=0;m<=1440;m+=10){ var gg=solarGeom(localToUTCms(ds,m,tz),lat,lon);
+      if(gg.elevation>mejor.el)mejor={el:gg.elevation,m:m}; }
+    for(var m2=mejor.m-10;m2<=mejor.m+10;m2++){ if(m2<0||m2>1440)continue;
+      var g2=solarGeom(localToUTCms(ds,m2,tz),lat,lon);
+      if(g2.elevation>mejor.el)mejor={el:g2.elevation,m:m2}; }
+    sombra.push(mejor.el>0?1/Math.tan(mejor.el*RAD):null);   // por metro de altura
+    dias.push(ds);
+  }
+  YEAR_CACHE={k:k,nd:nd,dias:dias,el:el,ir:ir,sombra:sombra,maxIr:maxIr};
+  return YEAR_CACHE;
+}
+/* rampas: 'hot' para la elevacion y 'YlOrRd' para la irradiancia, como en el core */
+function rampaHot(t){ t=Math.max(0,Math.min(1,t));
+  var r=Math.min(255,Math.round(t*3*255)), g=Math.min(255,Math.round(Math.max(0,t*3-1)*255)),
+      b=Math.min(255,Math.round(Math.max(0,t*3-2)*255));
+  return 'rgb('+r+','+g+','+b+')'; }
+function rampaYlOrRd(t){ t=Math.max(0,Math.min(1,t));
+  var k=[[255,255,204],[254,217,118],[253,141,60],[227,26,28],[128,0,38]];
+  var x=t*(k.length-1), i=Math.min(k.length-2,Math.floor(x)), fr=x-i;
+  return 'rgb('+[0,1,2].map(function(j){return Math.round(k[i][j]+(k[i+1][j]-k[i][j])*fr);}).join(',')+')'; }
+
+function pintaMapa(cv,datos,nd,vmax,rampa,titulo){
+  var L=ajustaLienzo(cv); if(!L)return;
+  var ctx=L.ctx,W=L.W,H=L.H,pl=30,pr=8,pt=8,pb=18;
+  var x0=pl,x1=W-pr,y0=H-pb,y1=pt, cw=(x1-x0)/nd, ch=(y0-y1)/24;
+  for(var d=0;d<nd;d++)for(var h=0;h<24;h++){
+    var v=datos[d][h]; if(v<=0)continue;
+    ctx.fillStyle=rampa(v/vmax);
+    ctx.fillRect(x0+d*cw, y0-(h+1)*ch, Math.max(1,cw+0.5), Math.max(1,ch+0.5));
+  }
+  ctx.strokeStyle='#1A2530';ctx.lineWidth=1;ctx.strokeRect(x0,y1,x1-x0,y0-y1);
+  ctx.fillStyle='#5E6F7E';ctx.font='9px ui-monospace,monospace';
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  [0,6,12,18,24].forEach(function(h){ ctx.fillText(h+'h',x0-4,y0-h*ch); });
+  ctx.textAlign='center';ctx.textBaseline='top';
+  var MES=['E','F','M','A','M','J','J','A','S','O','N','D'], acum=0;
+  [31,28,31,30,31,30,31,31,30,31,30,31].forEach(function(dm,i){
+    ctx.fillText(MES[i], x0+(acum+dm/2)*cw, y0+3); acum+=dm; });
+}
+function drawAno(){
+  var a=$('hmEl'), b2=$('hmIr'), c=$('shYear'); if(!a||!b2||!c)return;
+  if(faltanCoords()){ [a,b2,c].forEach(function(cv){ var L=ajustaLienzo(cv); if(!L)return;
+      L.ctx.fillStyle='#5E6F7E';L.ctx.font='12px system-ui,sans-serif';L.ctx.textAlign='center';
+      L.ctx.fillText('Sin coordenadas',L.W/2,L.H/2); }); return; }
+  var lat=+$('lat').value,lon=+$('lon').value,tz=+$('tz').value,y=+($('date').value||'2026-06-21').slice(0,4);
+  var A=anoSolar(lat,lon,tz,y);
+  pintaMapa(a,A.el,A.nd,90,rampaHot);
+  pintaMapa(b2,A.ir,A.nd,1100,rampaYlOrRd);
+  /* la sombra del año */
+  var L=ajustaLienzo(c); if(!L)return;
+  var ctx=L.ctx,W=L.W,H=L.H,pl=34,pr=10,pt=10,pb=18;
+  var obj=+$('obj').value||1, serie=A.sombra.map(function(v){return v==null?null:v*obj;});
+  var vals=serie.filter(function(v){return v!=null;});
+  var vmax=Math.max.apply(null,vals)||1, x0=pl,x1=W-pr,y0=H-pb,y1=pt;
+  var gx=function(i){return x0+i/(A.nd-1)*(x1-x0);}, gy=function(v){return y0-(v/vmax)*(y0-y1);};
+  ctx.strokeStyle='#1A2530';ctx.lineWidth=1;ctx.fillStyle='#5E6F7E';ctx.font='9px ui-monospace,monospace';
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  [0,vmax/2,vmax].forEach(function(v){ var yy=gy(v); ctx.beginPath();ctx.moveTo(x0,yy);ctx.lineTo(x1,yy);ctx.stroke();
+    ctx.fillText(v.toFixed(1)+'m',x0-4,yy); });
+  ctx.beginPath(); ctx.moveTo(gx(0),y0);
+  serie.forEach(function(v,i){ if(v!=null)ctx.lineTo(gx(i),gy(v)); });
+  ctx.lineTo(gx(A.nd-1),y0); ctx.closePath(); ctx.fillStyle='rgba(52,73,94,.35)'; ctx.fill();
+  ctx.beginPath(); var pr2=true;
+  serie.forEach(function(v,i){ if(v==null){pr2=true;return;} if(pr2){ctx.moveTo(gx(i),gy(v));pr2=false;}else ctx.lineTo(gx(i),gy(v)); });
+  ctx.strokeStyle='#8fa9c4'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#5E6F7E';ctx.textAlign='center';ctx.textBaseline='top';
+  var MES=['E','F','M','A','M','J','J','A','S','O','N','D'], acum=0;
+  [31,28,31,30,31,30,31,31,30,31,30,31].forEach(function(dm,i){
+    ctx.fillText(MES[i], gx(acum+dm/2), y0+3); acum+=dm; });
 }
 function updateReadout(g,hm){
   $('hourlbl').textContent=hhmm(hm);
@@ -331,7 +799,7 @@ function updateReadout(g,hm){
     card('Elevación',(g.elevation>0?g.elevation.toFixed(1):'—'),'°')+
     card('Azimut',g.azimuth.toFixed(1),'° '+compass(g.azimuth))+
     card('Pico solar',CUR.peak.el.toFixed(1),'° · '+hhmm(CUR.peak.min))+
-    card('Orto / ocaso',hhmm(CUR.rise),'→ '+hhmm(CUR.set))+
+    card('Amanecer / atardecer',hhmm(CUR.rise),'→ '+hhmm(CUR.set))+
     card('Sombra obj.',shadow,sdir?('hacia '+sdir):'')+avisoTZ();
 }
 /* AVISO DE HUSO: el cálculo solar es correcto, pero si el UTC no casa con la longitud el día entero sale
@@ -379,6 +847,7 @@ var MOD=null;   // parámetros del módulo CEC elegido (de /modules)
 
 async function simulate(){
   var out=$('prodOut'); $('demOut').innerHTML='';
+  if(faltanCoords()){ out.innerHTML='<p class="note" style="color:#F6A623">Sin coordenadas no se simula: el emplazamiento elegido no las trae. Tecléalas arriba o rellénalas en la Cartera técnica.</p>'; return; }
   var lat=+$('lat').value,lon=+$('lon').value,kind=$('kind').value,mode=$('mode').value;
   if(!ENGINE){ out.innerHTML=engineOffMsg(); return; }
   out.innerHTML='<p class="note">Simulando en el motor…</p>';
@@ -453,6 +922,7 @@ function drawDemGrid(grid){
 }
 async function relieve(){
   var d=$('demOut');
+  if(faltanCoords()){ d.innerHTML='<p class="note" style="color:#F6A623">Sin coordenadas no hay relieve que pedir: el emplazamiento elegido no las trae.</p>'; return; }
   if(!ENGINE){ d.innerHTML='<p class="note">El relieve necesita el motor (y conexión para el DEM).</p>'; return; }
   d.innerHTML='<p class="note">Consultando relieve…</p>';
   try{
@@ -502,28 +972,79 @@ var PLANTS={};
    del SEED en cartera-tabla.html. */
 var COORDS_FALLBACK={'24002':[41.57634,-0.79814],'24025':[39.11821,-1.15985],'24019':[-16.59577,-71.80644],
   '24007':[41.22694,0.32415],'24021':[33.8685,9.8433]};
+/* HORA LOCAL DE LA PLANTA, NO LA QUE HUBIERA EN EL CAMPO. El huso estaba a mano y se quedaba en
+   el 2 de siempre: elegias San Jose -Peru, UTC-5- y el dia salia corrido SIETE horas, con el sol
+   saliendo de noche. Se aplica la misma regla que el resto de la casa (husoPlanta/aplicaHuso de
+   backtracking.html y overcast.html):
+
+     · si la planta tiene huso FIJO declarado, ese y no se discute. Salen de los layouts del DWG,
+       que son la autoridad: sanjose -300 min (Peru), dicayagua -240 (Republica Dominicana) y
+       tunez +60 (Tunez). Ninguno de los tres cambia la hora en verano.
+     · si no, la regla peninsular: UTC+2 del dia 88 al 298 y UTC+1 el resto. Vale igual para las
+       italianas, que comparten cambio de hora y huso con España.
+
+   Y se respeta al usuario: si ha tocado el campo a mano, NO se le pisa. Solo se refresca mientras
+   siga en el ultimo valor que pusimos nosotros. */
+var TZ_FIJO={'24019':-300, '24021':60, '26322':60};      // por codigo de cartera; minutos, sin verano
+function husoPlanta(cod,fechaISO){
+  if(cod&&TZ_FIJO[cod]!=null)return TZ_FIJO[cod]/60;
+  var d=new Date((fechaISO||'')+'T12:00:00');
+  var doy=isNaN(d)?172:Math.floor((d-new Date(d.getFullYear(),0,0))/86400000);
+  return (doy>=88&&doy<=298)?2:1;
+}
+var _huso=null, _husoCod=null;
+function aplicaHuso(cod){
+  var t=$('tz'); if(!t)return;
+  if(cod!==undefined)_husoCod=cod;
+  var v=husoPlanta(_husoCod,$('date')?$('date').value:'');
+  if(_huso===null||+t.value===_huso){ t.value=v; _huso=v; }
+}
 function loadPlants(){
   try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
   var opts='<option value="">— manual —</option>';
   Object.keys(PLANTS).sort().forEach(function(cod){var p=PLANTS[cod];opts+='<option value="'+cod+'">'+((p&&p.nombre)||'?')+' · '+cod+'</option>';});
   $('plant').innerHTML=opts;
 }
+/* SIN COORDENADAS SE DICE, NO SE HEREDAN LAS DE ANTES. Esto arreglaba mal: cuando la planta no
+   traia lat/lon ni estaba en el respaldo, los campos se quedaban CON LOS DEL SITIO ANTERIOR y la
+   simulacion salia adelante tan tranquila, con el sol de otro sitio. No es un caso raro: de las 22
+   plantas del SEED de la cartera, 17 van sin coordenadas y el respaldo solo cubre las 5 que si las
+   tienen. Ahora se vacian los campos y se avisa; y cuando salen del respaldo, tambien se dice de
+   donde, que son valores DERIVADOS (Tunez esta aproximado a ±500 m). */
+function faltanCoords(){ return $('lat').value==='' || $('lon').value===''; }
+function avisoCoords(txt,cls){ var e=$('plantMsg'); if(!e)return; e.textContent=txt||''; e.className='tag'+(cls?' '+cls:''); }
 function pickPlant(cod){
   var p=PLANTS[cod]; if(!p)return;
-  var c=(p.lat!=null&&p.lon!=null)?[p.lat,p.lon]:COORDS_FALLBACK[cod];
-  if(c){$('lat').value=c[0];$('lon').value=c[1];}
+  var nom=(p&&p.nombre)||cod;
+  if(p.lat!=null&&p.lon!=null){
+    $('lat').value=p.lat; $('lon').value=p.lon; avisoCoords('');
+  }else if(COORDS_FALLBACK[cod]){
+    var c=COORDS_FALLBACK[cod];
+    $('lat').value=c[0]; $('lon').value=c[1];
+    avisoCoords('Coordenadas del respaldo del visor, no de la cartera'+(cod==='24021'?' · aproximadas a ±500 m':'')+'.','derivada');
+  }else{
+    $('lat').value=''; $('lon').value='';
+    avisoCoords('«'+nom+'» no tiene coordenadas en la cartera. Se han borrado las anteriores para no simular este sitio en otro: teclea la latitud y la longitud, o rellenalas en la Cartera tecnica.','falta');
+  }
   if(p.wmod)$('pmpp').value=Math.round(p.wmod);
   if(p.cantidad)$('nmod').value=Math.round(p.cantidad);
+  aplicaHuso(cod);
   drawSky();
 }
 $('plant').onchange=function(){if(this.value)pickPlant(this.value);};
-$('kind').onchange=function(){var trk=this.value==='tracker';$('trkParams').style.display=trk?'':'none';$('fixParams').style.display=trk?'none':'';};
+['cMes','cHora'].forEach(function(id){var e=$(id); if(e)e.addEventListener('change',drawPath);});
+if($('calCsv'))$('calCsv').onclick=calCsvDescarga;
+$('kind').onchange=function(){var trk=this.value==='tracker';$('trkParams').style.display=trk?'':'none';$('fixParams').style.display=trk?'none':'';drawTheta();};
+['gcr','maxang','tilt','azi'].forEach(function(id){var e=$(id); if(e)e.addEventListener('input',drawTheta);});
 ['lat','lon','date','tz','obj'].forEach(function(id){$(id).addEventListener('input',drawSky);});
+$('date').addEventListener('input',function(){aplicaHuso();drawSky();});   // el cambio de hora depende del dia
+$('tz').addEventListener('input',function(){_huso=null;});                // si lo tocas tu, deja de refrescarse
 $('hour').addEventListener('input',drawSky);
 $('simBtn').onclick=simulate;
 $('demBtn').onclick=relieve;
 window.addEventListener('resize',drawSky);
 loadPlants();
+aplicaHuso(null);
 drawSky();
 detectEngine();
 </script>

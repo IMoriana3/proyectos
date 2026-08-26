@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.4.9</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.5.1</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -348,6 +348,42 @@ canvas.panning{cursor:grabbing}
       </div>
       </details>
       <p class="note" style="margin-top:8px">Cuidado con qué hace cada cosa. Estas <b>pendientes medias</b> no son un parámetro del motor —<code>compute_layout_v2</code> no las recibe e implanta en planta—, así que por sí solas no mueven ni quitan una mesa: viajan con el layout al <b>backtracking</b> (<code>cross_axis_slope_deg</code>) y a la sombra entre filas. Pero <b>el terreno sí entra en la colocación</b>, por la otra puerta y la misma que en el cuaderno: el <b>filtro de pendiente máxima</b> del MDT excluye las celdas que se pasan, y eso quita mesas.</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="ic">🧩</span> Zonas de montaje — fija y tracker a la vez</h2>
+      <p class="note" style="margin-top:0">Una parcela puede no admitir seguidor entera: pendiente, forma o
+        criterio de proyecto. Aquí se reparte en zonas y cada una se calcula con SU montaje.
+        <b>El reparto lo decides tú</b>; el botón de pendiente solo propone. Mismo motor y mismas reglas que
+        el bloque «Zonas de montaje» de Streamlit y la celda §02.5a-MIX del cuaderno.</p>
+      <div class="two">
+        <div class="field"><label>Pitch tracker (m)</label><input id="mixPitchTrk" type="number" step="0.1" value="6"></div>
+        <div class="field"><label>Pitch fija (m)</label><input id="mixPitchFija" type="number" step="0.1" value="4"></div>
+      </div>
+      <p class="note" style="margin-top:6px">Cada montaje tiene <b>dos</b> límites y los dos tienen que
+        cumplirse. No son el mismo problema: en un seguidor de eje horizontal la pendiente <b>E-O</b>
+        descuadra filas vecinas y obliga a mover tierras, mientras la <b>N-S</b> la absorbe escalonando
+        hincas; en fija no hay eje que escalonar, pero la N-S cambia la inclinación efectiva y el sombreado
+        entre filas. Van en <b>grados</b> — un 15 % son 8,5°.</p>
+      <div class="two">
+        <div class="field"><label>Tracker E-O °</label><input id="mixTrkEw" type="number" step="0.5" value="8"></div>
+        <div class="field"><label>Tracker N-S °</label><input id="mixTrkNs" type="number" step="0.5" value="15"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Fija E-O °</label><input id="mixFijaEw" type="number" step="0.5" value="15"></div>
+        <div class="field"><label>Fija N-S °</label><input id="mixFijaNs" type="number" step="0.5" value="15"></div>
+      </div>
+      <div class="field"><label>Área mínima de zona (m²)</label><input id="mixMinArea" type="number" step="100" value="2000"></div>
+      <div class="btnrow">
+        <button class="btn ghost small" id="mixProponer">📐 Proponer por pendiente</button>
+        <button class="btn ghost small" id="mixLimpiar">🧹 Limpiar zonas</button>
+      </div>
+      <p class="tag" id="mixTag">sin zonas · propón un reparto o define las tuyas</p>
+      <div id="mixOut"></div>
+      <p class="note" style="margin-top:8px"><b>Alcance.</b> El reparto por pendiente necesita el MDT
+        descargado arriba: sin él no se propone nada, porque media propuesta tendría exactamente la misma
+        pinta que una buena. Y lo que no admite NINGÚN montaje no se convierte en zona: sale con sus metros
+        para que lo decidas — fabricarle un montaje sería inventar el proyecto.</p>
     </div>
 
     <div class="card">
@@ -3656,6 +3692,11 @@ async function generar(){
   try{
     if($('calc').value==='core'&&ENGINE){ await generarCore(cfg); }
     else if($('optAz').checked||$('optGrid').checked){ await generarBarrido(cfg); }
+    else if(MIX_ZONAS.length){
+      // Con zonas definidas manda el layout MIXTO: cada una con su montaje.
+      RES=computaMixto(cfg,MIX_ZONAS); Object.assign(RES.stats,cfg.decl);
+      pintar(RES,'navegador · '+MIX_ZONAS.length+' zonas de montaje');
+    }
     else { RES=computaTodas(cfg); Object.assign(RES.stats,cfg.decl); pintar(RES,'navegador'); }
   }catch(e){
     $('foot').innerHTML='<span style="color:var(--dead)">No se pudo generar: '+(e&&e.message||e)+'</span>';
@@ -3704,6 +3745,257 @@ function computaTodas(cfg){
   R.rows=[]; R.inner_band=[];
   return R;
 }
+
+/* ══════════════ ZONAS DE MONTAJE: fija y tracker en el MISMO layout ═══════
+   Gemelo de `solargpt_core.layout_mixto`. Regla del cliente (2026-08-26):
+   «el html debe ser igual que notebook y streamlit».
+
+   No hay física nueva: se corre el motor UNA VEZ POR ZONA, cada una con su
+   montaje y su pitch, y se funden los resultados — el mismo patrón que
+   `computaTodas` ya usaba para varias parcelas.
+
+   LO CARO ES EL CONTRATO, no la geometría:
+
+   · `trackers` NO SE PUEDE SUMAR. En montaje fijo el motor lo emite igual al
+     número de MESAS (`trackers: isTracker ? nStructs/spt : nStructs`), y
+     `computaTodas` los sumaba a ciegas — con un solo montaje da igual, con
+     dos daría un número que no es ni motores ni mesas, y con muy buena
+     pinta: nadie cuestiona un 45 donde esperaba un 40. Aquí los motores se
+     cuentan SOLO donde los hay.
+   · `pitch`, `GCR`, la tabla y el largo de mesa NO tienen valor único. Salen
+     `null` con su motivo y el desglose por zona al lado. Antes que un
+     escalar que miente, `null` y el desglose.
+   · Se publica el reparto de kWp POR MONTAJE: la planta pasa a tener dos
+     poblaciones con POA distinta, así que toda cifra media es una
+     ponderación y sin denominador no se puede juzgar.
+   · Cada mesa viaja sabiendo su montaje, o el 3D dibujaría seguidores donde
+     hay fija. */
+var ZONAS_SIN_VALOR_UNICO = {
+  pitch:      'el paso entre filas es propio de cada montaje',
+  GCR:        'se deriva de apertura/pitch, distintos por zona',
+  table_type: 'cada zona puede llevar otra tabla',
+  mesa_len_m: 'depende de módulos por mesa y de la tabla',
+  fila_len_m: 'no existe en fija: no hay motor que separe dos mesas'
+};
+
+function computaMixto(cfg, zonas){
+  if(!zonas||!zonas.length)throw new Error('un layout mixto necesita al menos una zona');
+  var nombres=zonas.map(function(z){return z.nombre;});
+  if(new Set(nombres).size!==nombres.length)
+    throw new Error('nombres de zona repetidos: el desglose se indexa por nombre y quedaría machacado');
+
+  var partes=zonas.map(function(z){
+    return LAY.compute(Object.assign({},cfg,{
+      coords:z.coords, holes:z.holes||[],
+      mount:z.mount, pitch:z.pitch!=null?z.pitch:cfg.pitch
+    }));
+  });
+  var base=partes[0];
+  var R={structures:[],descartadas:[],roads:[],rows:[],sizes:base.sizes,inner_band:[],
+         rot:base.rot,center:base.center,bbox_inner:base.bbox_inner,avisos:[],
+         toLonLat:base.toLonLat,fromLocal:base.fromLocal,porZona:[]};
+  var SUMA=['structures','strings','rows','modules','kWp','col_area_m2','poly_area_m2',
+            'inner_area_m2','discarded_structs','ms'];
+  var st={}; SUMA.forEach(function(k){st[k]=0;});
+  st.by_size={}; var motores=0, kwpPorMontaje={}, montajes={};
+
+  partes.forEach(function(r,i){
+    var z=zonas[i];
+    // Cada mesa marcada con su montaje y su zona.
+    R.structures=R.structures.concat(r.structures.map(function(e){
+      return Object.assign({},e,{zona:z.nombre,mount:z.mount});}));
+    R.descartadas=R.descartadas.concat(r.descartadas||[]);
+    R.roads=R.roads.concat(r.roads||[]);
+    R.avisos=R.avisos.concat((r.avisos||[]).map(function(a){
+      return Object.assign({},a,{mensaje:'['+z.nombre+'] '+a.mensaje});}));
+    SUMA.forEach(function(k){st[k]+=(r.stats[k]||0);});
+    Object.keys(r.stats.by_size||{}).forEach(function(k){
+      st.by_size[k]=(st.by_size[k]||0)+r.stats.by_size[k];});
+    // MOTORES: solo donde los hay. En fija el motor emite 1 por mesa.
+    var mot=(z.mount==='tracker')?(r.stats.trackers||0):0;
+    motores+=mot;
+    kwpPorMontaje[z.mount]=(kwpPorMontaje[z.mount]||0)+(r.stats.kWp||0);
+    montajes[z.mount]=true;
+    R.porZona.push({nombre:z.nombre,mount:z.mount,pitch:z.pitch,
+                    structures:r.stats.structures,motores:mot,kWp:r.stats.kWp,
+                    GCR:r.stats.GCR});
+  });
+
+  Object.keys(ZONAS_SIN_VALOR_UNICO).forEach(function(k){st[k]=null;});
+  st.sin_valor_unico=ZONAS_SIN_VALOR_UNICO;
+  st.trackers=motores;                       // motores REALES
+  st.n_motors=motores;
+  st.motores_por_zona={};
+  R.porZona.forEach(function(p){st.motores_por_zona[p.nombre]=p.motores;});
+  st.montajes=Object.keys(montajes).sort();
+  st.es_mixto=st.montajes.length>1;
+  st.zonas=nombres;
+  st.kwp_por_montaje=kwpPorMontaje;
+  var tot=st.kWp;
+  st.fraccion_kwp_por_montaje={};
+  st.montajes.forEach(function(m){
+    // Con planta vacía NO se reparte 0 % a cada uno: no hay reparto que dar,
+    // y un 0.0 se leería como «esta zona no aporta», que es otra cosa.
+    st.fraccion_kwp_por_montaje[m]=tot>0?(kwpPorMontaje[m]/tot):null;});
+  st.usable_fill=st.inner_area_m2>0?st.col_area_m2/st.inner_area_m2:0;
+  st.fill_factor =st.poly_area_m2>0?st.col_area_m2/st.poly_area_m2:0;
+  st.density_kWp_ha=st.poly_area_m2>0?st.kWp/(st.poly_area_m2/1e4):0;
+  st.n_zonas=partes.length;
+  R.stats=st;
+  // Eje bifila y banda del área útil son por zona: dibujar los de la primera
+  // sobre todas mentiría.
+  R.rows=[]; R.inner_band=[];
+  return R;
+}
+
+/* PROPUESTA por pendiente — gemela de `propone_zonas_por_pendiente`.
+   El dibujo MANDA; esto solo propone.
+
+   TRES bandas y no dos (corrección del cliente): lo que no admite seguidor NO
+   es automáticamente fija — una mesa rígida sobre un 30 % tampoco se monta, y
+   por encima de su límite el terreno NO ES DESARROLLABLE. Repartir toda la
+   pendiente entre los dos montajes daba un layout impecable con mesas
+   colgadas de un talud.
+
+   DOS ejes por montaje, y los dos tienen que pasar: en un seguidor de eje
+   horizontal la E-O descuadra filas vecinas mientras la N-S la absorbe
+   escalonando hincas; en fija no hay eje que escalonar, pero la N-S cambia la
+   inclinación efectiva y el sombreado entre filas. Colapsarlas en «pendiente
+   máxima» es un parámetro fundido.
+
+   Los polígonos se trazan con el MISMO contorno que la varita
+   (`varitaComponente`/`varitaContorno`/`varitaSimplifica`): un solo trazador
+   de máscaras en la página. */
+function zonasPorPendiente(pend, lims, minAreaM2){
+  if(!pend||!DEM)return null;
+  /* LA MÁSCARA DE LA PARCELA NO ES OPCIONAL. El MDT se descarga sobre el
+     BBOX de la parcela MÁS margen, así que recorrer la rejilla entera
+     propondría zonas sobre terreno que el usuario no ha dibujado — es
+     literalmente la queja que ya costó escribir `mascaraParcelaDEM`: «me está
+     marcando terreno fuera de la parcela que yo he dibujado». Y aquí sería
+     peor que marcar: se colocarían MESAS ahí.
+     Las celdas de fuera tampoco cuentan como «no desarrollable»: no es que no
+     admitan montaje, es que no son la parcela. */
+  var msk=mascaraParcelaDEM();
+  var n=pend.n, aptoT=new Uint8Array(n*n), aptoF=new Uint8Array(n*n), nada=0;
+  for(var r=0;r<n;r++)for(var c=0;c<n;c++){
+    var i=r*n+c;
+    if(msk&&!msk.dentro[r][c]){aptoT[i]=0;aptoF[i]=0;continue;}
+    var ae=Math.abs(pend.ew[r][c]), an=Math.abs(pend.ns[r][c]);
+    var t=(ae<=lims.trkEw&&an<=lims.trkNs);
+    var f=(!t)&&(ae<=lims.fijaEw&&an<=lims.fijaNs);
+    aptoT[i]=t?1:0; aptoF[i]=f?1:0; if(!t&&!f)nada++;
+  }
+  // El área de celda la da la propia máscara: dos aritméticas para la misma
+  // cota acaban discrepando, y entonces las hectáreas del reparto no cuadran
+  // con las que enseña el panel del MDT.
+  var celda=msk?msk.areaCeldaM2:0;
+  var zonas=[], desc=0, areaDesc=0, areas={tracker:0,fixed:0}, avisos=[];
+
+  function poligonos(mask, etiqueta, mount, pitch){
+    var resto=new Uint8Array(mask), guard=64;
+    while(guard-- > 0){
+      var f0=-1; for(var i=0;i<n*n;i++)if(resto[i]){f0=i;break;}
+      if(f0<0)break;
+      var fy=(f0/n)|0, fx=f0-fy*n;
+      var isla=varitaComponente(resto,n,n,fx,fy);
+      if(!isla){resto[f0]=0;continue;}
+      for(var k=0;k<n*n;k++)if(isla.dentro[k])resto[k]=0;
+      var ring=varitaContorno(isla.dentro,n,n);
+      if(!ring)continue;
+      /* EPSILON EN CELDAS, y aquí una celda del MDT son cientos de metros —
+         no un píxel de ortofoto de 30 cm. Copiando el 1,5 de la varita se
+         toleraban ~285 m de desvío y una banda de 2 celdas de ancho (59 ha
+         medidas en el banco) COLAPSABA a una línea y se descartaba entera.
+         Por debajo de media celda solo se quitan los puntos alineados de un
+         borde recto: las esquinas y los escalones reales sobreviven. El
+         contorno sale a resolución de MDT, que es lo honesto — fingirlo más
+         suave sería dibujar una linde que el dato no tiene. */
+      var simp=varitaSimplifica(ring,0.5)||ring;
+      var area=isla.n*celda;
+      if(area<minAreaM2||simp.length<3){desc++;areaDesc+=area;continue;}
+      areas[mount]+=area;
+      zonas.push({nombre:etiqueta+'-'+(zonas.filter(function(z){return z.mount===mount;}).length+1),
+                  mount:mount, pitch:pitch, holes:[],
+                  coords:simp.map(function(q){
+                    var rr=Math.min(n-1,q[1]), cc=Math.min(n-1,q[0]);
+                    return [DEM.lons[cc], DEM.lats[rr]];})});
+    }
+  }
+  poligonos(aptoT,'tracker','tracker',lims.pitchTrk);
+  poligonos(aptoF,'fija','fixed',lims.pitchFija);
+
+  ['Ew','Ns'].forEach(function(eje){
+    if(lims['fija'+eje]<lims['trk'+eje])
+      avisos.push('en el eje '+(eje==='Ew'?'E-O':'N-S')+' la fija ('+lims['fija'+eje].toFixed(1)+
+        '°) tolera MENOS que el seguidor ('+lims['trk'+eje].toFixed(1)+'°): ahí la fija no hace de '+
+        'recambio y ese terreno cae directo a no desarrollable. Puede ser correcto —son estructuras '+
+        'distintas— pero conviene mirarlo.');
+  });
+  var areaNada=nada*celda;
+  if(areaNada>0)avisos.push(Math.round(areaNada).toLocaleString('es-ES')+' m² no admiten NINGÚN '+
+    'montaje con estos límites: no se reparten entre fija y tracker, se caen del proyecto salvo '+
+    'movimiento de tierras. Lo decides tú.');
+  if(desc)avisos.push(desc+' isla(s) por debajo de '+Math.round(minAreaM2).toLocaleString('es-ES')+
+    ' m² descartadas ('+Math.round(areaDesc).toLocaleString('es-ES')+' m² en total): no dan ni para '+
+    'una fila. Bájalo si quieres conservarlas.');
+  if(!zonas.length)avisos.push('ninguna zona supera el área mínima: no hay reparto que proponer.');
+  return {zonas:zonas, areaTracker:areas.tracker, areaFija:areas.fixed,
+          areaNoDesarrollable:areaNada, islasDescartadas:desc, areaDescartada:areaDesc,
+          avisos:avisos, limites:lims};
+}
+
+/* ── Cableado del panel de zonas ─────────────────────────────────────────
+   Las zonas viven en una global y se PINTAN fuera del manejador del botón:
+   lo que se dibuja dentro de una rama de evento desaparece en el siguiente
+   repintado, y el usuario lo lee como «lo ha pensado y no ha sacado nada». */
+var MIX_ZONAS=[], MIX_PROP=null;
+
+function mixLee(){
+  return {trkEw:+$('mixTrkEw').value, trkNs:+$('mixTrkNs').value,
+          fijaEw:+$('mixFijaEw').value, fijaNs:+$('mixFijaNs').value,
+          pitchTrk:+$('mixPitchTrk').value, pitchFija:+$('mixPitchFija').value};
+}
+
+function mixPinta(){
+  var out=$('mixOut'), tag=$('mixTag');
+  if(!MIX_ZONAS.length){
+    out.innerHTML=''; tag.textContent='sin zonas · propón un reparto o define las tuyas'; return;
+  }
+  var ha=function(m2){return (m2/1e4).toFixed(2)+' ha';};
+  var h='';
+  if(MIX_PROP){
+    h+='<p class="tag">tracker <b>'+ha(MIX_PROP.areaTracker)+'</b> · fija <b>'+ha(MIX_PROP.areaFija)+
+       '</b> · <span style="color:var(--dead)">no desarrollable <b>'+ha(MIX_PROP.areaNoDesarrollable)+
+       '</b></span></p>';
+    h+='<p class="note" style="margin-top:0">Límites usados — tracker '+MIX_PROP.limites.trkEw.toFixed(1)+
+       '° E-O / '+MIX_PROP.limites.trkNs.toFixed(1)+'° N-S · fija '+MIX_PROP.limites.fijaEw.toFixed(1)+
+       '° E-O / '+MIX_PROP.limites.fijaNs.toFixed(1)+'° N-S. <b>Es una propuesta</b>: retócala.</p>';
+    MIX_PROP.avisos.forEach(function(a){
+      h+='<p class="note" style="margin-top:0;color:var(--build)">⚠ '+esc(a)+'</p>';});
+  }
+  h+='<table class="mini"><tr><th>zona</th><th>montaje</th><th>pitch</th></tr>';
+  MIX_ZONAS.forEach(function(z){
+    h+='<tr><td>'+esc(z.nombre)+'</td><td>'+(z.mount==='tracker'?'tracker':'fija')+
+       '</td><td>'+(z.pitch!=null?z.pitch.toFixed(1)+' m':'—')+'</td></tr>';});
+  h+='</table>';
+  out.innerHTML=h;
+  tag.textContent=MIX_ZONAS.length+' zona(s) · el layout se calculará por zonas';
+}
+
+$('mixProponer').onclick=function(){
+  var pend=pendientesDEM();
+  if(!pend){
+    $('mixTag').innerHTML='<span style="color:var(--dead)">Necesita el MDT descargado arriba: '+
+      'sin rejilla de pendientes no se propone nada.</span>';
+    return;
+  }
+  var lims=mixLee();
+  var p=zonasPorPendiente(pend, lims, +$('mixMinArea').value||2000);
+  MIX_PROP=p; MIX_ZONAS=p?p.zonas:[];
+  mixPinta();
+};
+$('mixLimpiar').onclick=function(){MIX_ZONAS=[];MIX_PROP=null;mixPinta();};
 
 /* Barrido de orientación. La casilla de azimut es el rango 90–270 del cuaderno;
    la de ángulo de grid, el rango y el paso que se teclean. Si están las dos, el

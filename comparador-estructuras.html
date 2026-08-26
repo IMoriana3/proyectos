@@ -316,7 +316,9 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       </div>
       <div class="two">
         <div class="field"><label>Ángulo máx °</label><input id="maxang" type="number" value="55"></div>
-        <div class="field"><label>Eje inclinado °</label><input id="axtilt" type="number" step="0.5" value="10"></div>
+        <div class="field"><label>Eje inclinado ° <span class="sn">del terreno</span></label>
+          <input id="axtilt" type="number" step="0.5" value="0" readonly
+                 title="No se teclea: es la componente de la pendiente del sitio a lo largo del eje (§03.0). Un eje no se inclina en el aire."></div>
       </div>
       <div class="field"><label>Disposición</label>
         <select id="tkFilas">
@@ -369,6 +371,11 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         sombra hacia el polo — al fondo desde esta vista y detrás de sus propias filas. Órbita
         hacia el otro lado, o deja marcadas menos estructuras para que el encuadre se acerque.
         Las del seguidor caen de lado y se ven de frente.
+        <b>Las filas se adaptan al terreno</b>: se inclinan lo que se inclina el suelo <i>a lo
+        largo</i> de ellas — eso es lo que hace un eje que sigue el terreno, y lo que hacen las
+        hincas de una fija al replantearse. En la dirección del pitch, en cambio, se
+        <b>escalonan</b> a distinta cota sin cambiar el tilt: la pendiente la tiene el terreno, no
+        la estructura.
         <b>El terreno</b> es <b>uno solo</b>: la pendiente del emplazamiento con su
         <b>azimut</b>, y todas las estructuras montadas sobre ese mismo plano — por eso van
         alineadas sobre la <b>curva de nivel</b> y la cámara se pone cuesta abajo. Lo que cambia
@@ -379,8 +386,9 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         una fija este-oeste, las de un seguidor norte-sur. <b>Con el terreno cayendo al sur, la
         fija ve toda la pendiente y el seguidor ninguna</b> — la ve entera a lo largo del eje. Eso
         no es un defecto de la comparación: es la razón por la que en un sitio real una estructura
-        se monta y la otra no. Las hincas son verticales y el tilt no cambia: una fija en pendiente
-        no se inclina con el terreno, se replantea sobre él.</p>
+        se monta y la otra no. Y el «eje inclinado °» de un TSAT debería ser justo esa componente a lo
+        largo del eje — un eje no se inclina en el aire: cada lectura de seguidor dice cuánto se
+        inclina el suyo con el terreno, y si el TSAT declara otra cosa, también lo dice.</p>
     </div>
     <!-- ═════════ SIZING (columna ancha: la ventana hay que LEERLA) ═════════ -->
     <div class="card">
@@ -547,7 +555,11 @@ FIS.psFija=function(el,az,lat){
    hay auto-corrección que esquivar, pero el signo se elige igual —hacia el
    ecuador— para que las dos superficies contesten lo mismo.                  */
 FIS.psTSAT=function(el,az,axTiltDeg,lat){
-  var T=Math.abs(axTiltDeg)*FIS.D2R;                 // magnitud; el sentido lo pone el marco
+  /* CON SIGNO: positivo = el eje cae hacia el ECUADOR, que es el TSAT de
+     manual. Negativo = cae hacia el POLO, y eso también existe — lo pone el
+     terreno, no el catálogo, y un emplazamiento no elige hacia dónde baja. Con
+     `Math.abs` se dibujaba un eje y se calculaba el contrario. */
+  var T=axTiltDeg*FIS.D2R;
   // Marco [este, ecuador, cenit] con el azimut medido desde el sur, este negativo.
   var e=-Math.cos(el)*Math.sin(az), q=Math.cos(el)*Math.cos(az)*(lat>=0?1:-1), u=Math.sin(el);
   // El marco gira T alrededor del eje E-O: su «cenit» se inclina hacia el ecuador,
@@ -884,6 +896,20 @@ FIS.cruz=function(cfg,spec){
   if(cfg.pendAz==null)return cfg.pend||0;
   return FIS.pendComp(cfg.pend,cfg.pendAz,FIS.ejePitch(spec)).cruz;
 };
+/* Y EL EJE INCLINADO TAMPOCO SE TECLEA: lo pone el terreno. Un TSAT no es un
+   seguidor con un parámetro más, es un seguidor sobre una pendiente que corre
+   A LO LARGO de su eje — un eje no se inclina en el aire. Así que es la
+   componente a lo largo del eje del mismo plano, con el signo de mirar al
+   ecuador. En llano sale 0 y el TSAT es un HSAT, que es la verdad.
+   Sin azimut declarado se respeta el valor recibido: el core toma `axis_tilt`
+   y `cross_axis_slope` por separado —son las dos componentes del mismo plano—
+   y por ahí entra el careo. */
+FIS.ejeTilt=function(cfg,spec){
+  if(!spec||!spec.tsat)return 0;
+  if(cfg.pendAz==null)return cfg.axTilt||0;
+  var g=FIS.pendPlano(cfg.pend,cfg.pendAz);
+  return (cfg.lat>=0?1:-1)*Math.atan(g.gz)*FIS.R2D;
+};
 
 /* ── Fracción sombreada entre dos filas iguales, exacta en el plano ⊥ al eje ──
    Puerto de `shadeFracPair` del Simulador de Backtracking (cobertura-zigbee),
@@ -983,13 +1009,13 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
   var dtH=(n>1)?((M.t[1]-M.t[0])/3600000):1;
   var neta=0, ideal=0, mes=new Float64Array(12);
   var tilt=(tiltForzado!=null)?tiltForzado:(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
-  var axT=(spec.tsat?cfg.axTilt:0);
+  var axT=FIS.ejeTilt(cfg,spec);
   for(var i=0;i<n;i++){
     var S=FIS.sun(M.t[i],latR,cfg.lon);
     if(S.el<=0)continue;
     var bh=M.dni[i], dh=M.dhi[i], gh=M.ghi[i], e0=FIS.E0(M.t[i]), P0, planos;
     if(spec.fam==='tracker'){
-      P0=spec.tsat?FIS.psTSAT(S.el,S.az,cfg.axTilt,cfg.lat):FIS.psTracker(S.el,S.az);
+      P0=spec.tsat?FIS.psTSAT(S.el,S.az,axT,cfg.lat):FIS.psTracker(S.el,S.az);
       planos=[FIS.theta(P0.ps,gcr,cfg.maxang,spec.bt)];
     }else if(spec.fam==='fija_ew'){
       P0=FIS.psTracker(S.el,S.az);                    // aguas al este y al oeste
@@ -1685,6 +1711,11 @@ function rumbo(az){
   return R[Math.round((((az%360)+360)%360)/22.5)%16];
 }
 function pintaPendiente(c){
+  /* El «eje inclinado °» ya no es una entrada: se rellena con lo que da el
+     terreno a lo largo del eje. Si se dejara a mano, se podría teclear un eje
+     que el emplazamiento no sostiene — dibujar una cosa y calcular otra. */
+  var ej=FIS.ejeTilt(c,FIS.spec('tracker_tsat'));
+  if($('axtilt'))$('axtilt').value=ej.toFixed(1);
   var p=Math.abs(c.pend||0), az=c.pendAz||0;
   if(!p){ $('pendNota').innerHTML='terreno llano · el mismo para todas'; return; }
   var f=FIS.pendComp(p,az,'z'), t=FIS.pendComp(p,az,'x');
@@ -2401,7 +2432,8 @@ async function run(){
         gcr_por_estructura:porEstructura(cfg,keys,'gcr'),
         pitch_por_estructura:porEstructura(cfg,keys,'pitch'),
         alto_por_estructura:porEstructura(cfg,keys,'altoColector'),
-        tilt_deg:cfg.tilt, axis_tilt_deg:cfg.axTilt, max_angle_deg:cfg.maxang};
+        tilt_deg:cfg.tilt, axis_tilt_deg:FIS.ejeTilt(cfg,FIS.spec('tracker_tsat')),
+        max_angle_deg:cfg.maxang};
       var r=await fetch(ENGINE+'/structures',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
       REP=await r.json(); REP.local=false;
@@ -2614,9 +2646,18 @@ function init3D(){
     var suelo=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
       new THREE.MeshLambertMaterial({color:0x24301d,vertexColors:true}));
     suelo.rotation.x=-Math.PI/2; suelo.receiveShadow=true; sc.add(suelo);
-    var horiz=new THREE.Mesh(new THREE.PlaneGeometry(12000,12000),
+    /* La geometría ya viene TUMBADA (rotateX en la propia malla) para que la
+       rotación del objeto quede libre: es la que le da luego la pendiente del
+       sitio. Con `rotation.x=-PI/2` en el objeto, inclinarlo lo ponía de canto. */
+    var horizGeo=new THREE.PlaneGeometry(12000,12000); horizGeo.rotateX(-Math.PI/2);
+    var horiz=new THREE.Mesh(horizGeo,
       new THREE.MeshLambertMaterial({color:0x1e2a19}));
-    horiz.rotation.x=-Math.PI/2; horiz.position.y=-1.5; sc.add(horiz);
+    horiz.position.y=-1.5; sc.add(horiz);
+    /* Y el de horizonte se INCLINA con el terreno (más abajo, en cada
+       construcción). Plano y horizontal, el cuadrado del suelo de trabajo
+       acababa contra él en un canto recto que cruzaba la escena — una ladera
+       que se corta en línea y sigue en llano no es un horizonte, es un error
+       de dibujo. */
     /* La NIEBLA es lo que cose los dos con el cielo: sin ella, por lejos que
        llegue el suelo siempre hay una línea dura donde acaba. Su color lo
        repinta `setSky`, así que al amanecer la bruma se pone naranja. */
@@ -2797,7 +2838,10 @@ function mesaFija3D(mats,largo,ancho){
    El guard vive en tests/test_comparador_3d.js: nada puede quedar fuera. */
 function encuadra(){
   var MARGEN=0.90;                       // deja aire a los lados
-  for(var it=0; it<4; it++){
+  /* Siete pasadas y no cuatro: con la cámara girada un cuarto de vuelta sobre
+     la ladera la caja del mundo entra en pantalla más torcida y cuatro
+     iteraciones se quedaban a un 6 % de encajar. */
+  for(var it=0; it<7; it++){
     TD.ct.update(); TD.cam.updateMatrixWorld(); TD.cam.updateProjectionMatrix();
     var caja=new THREE.Box3().setFromObject(MUNDO);
     if(!isFinite(caja.min.x))return;
@@ -2945,6 +2989,19 @@ function construyeMundo(){
     var cotaFila=function(dx,dz){return cotaTerreno(grupo.position.x+dx,
                                                     grupo.position.z+dz,T)-
                                         cotaTerreno(grupo.position.x,grupo.position.z,T);};
+    /* LA FILA SE ADAPTA AL TERRENO. La pendiente la tiene el suelo; la
+       estructura se replantea sobre él. Apoyar cada fila en la cota de su
+       CENTRO y dejarla horizontal a lo largo no vale: con 65 m de fila y 10,8°
+       de pendiente en esa dirección, un extremo vuela 6 m y el otro se entierra
+       otros 6 — que es exactamente el «tracker con megasoportes» que no se
+       construye. Así que la fila se inclina LO QUE SE INCLINA EL TERRENO EN SU
+       DIRECCIÓN LARGA, ni más ni menos.
+         · filas que corren E-O (la fija): giran en Z, y la caída es `gx`;
+         · filas que corren N-S (seguidor y dos aguas): giran en X, y es `gz`.
+       Lo que NO cambia es el tilt ni la ⊥: en la dirección del pitch las filas
+       se escalonan a distinta cota, no se inclinan. Y para un seguidor esto es
+       literalmente lo que hace un eje que sigue el terreno — un TSAT es eso. */
+    var rollZ=-Math.atan(T.gx), rollX=Math.atan(T.gz);
     for(var f=0;f<nf;f++){
       var d=(f-(nf-1)/2)*pitch;
       var uno;
@@ -2953,6 +3010,7 @@ function construyeMundo(){
          estaría enseñando una estructura distinta de la que calcula la tabla. */
       if(spec.fam==='tracker'){
         uno=seguidor3D(mats,escTk); uno.position.x=d; uno.position.y=cotaFila(d,0);
+        uno.rotation.x=rollX;                            // el eje sigue el terreno
       }else if(spec.fam==='fija_ew'){
         // dos aguas: la mesa lleva DOS paneles enfrentados, y las filas se
         // repiten hacia el este como en el seguidor (las filas corren N-S)
@@ -2962,10 +3020,14 @@ function construyeMundo(){
         a.position.z=-G.altoColector/4; b.position.z=G.altoColector/4;
         uno.add(a,b); uno.spinPair=[a.spin,b.spin]; uno.position.x=d;
         uno.position.y=cotaFila(d,0);
-        uno.rotation.y=Math.PI/2;                        // mesa a lo largo de N-S
+        /* Euler XYZ: la Y gira la mesa a lo largo de N-S y la X, que se aplica
+           después, la inclina sobre el eje del MUNDO — que es el que corre
+           este-oeste, ⊥ a esas filas. */
+        uno.rotation.set(rollX,Math.PI/2,0);
       }else{
         uno=mesaFija3D(mats,G.largoFila,G.altoColector); uno.position.z=d;  // filas al SUR
         uno.position.y=cotaFila(0,d);
+        uno.rotation.z=rollZ;                            // la mesa sigue el terreno
       }
       grupo.add(uno); filas.push(uno);
     }
@@ -2982,7 +3044,8 @@ function construyeMundo(){
                       col,Math.min(sep*0.85,Math.max(12,largo*0.55)));
     et.position.set(0,D.postH+2.4+et.userData.alto,0); grupo.add(et);
     BLOQUES.push({key:k,spec:spec,filas:filas,gcr:gcr,pitch:pitch,porTracker:agrupa,
-                  cruz:FIS.cruz(cfg,spec)});
+                  cruz:FIS.cruz(cfg,spec), rollX:rollX, rollZ:rollZ,
+                  largoPend:FIS.pendComp(cfg.pend,cfg.pendAz,FIS.ejePitch(spec)).largo});
   });
   /* ── ENCUADRE Y SOMBRAS ──
      Las dos cosas que hay que dimensionar CON la escena, no a ojo:
@@ -2996,7 +3059,7 @@ function construyeMundo(){
        Y esta ficha existe en buena parte para enseñar la sombra entre filas.  */
   var ancho=anchoTot, largoZ=(nfMax+1)*8+largo;
   var asp=Math.max(1.2,(TD.w||900)/(TD.h||420));
-  var d=Math.max((ancho*0.58)/(Math.tan(21*Math.PI/180)*asp),largoZ*0.9);
+  var d=Math.max((ancho*0.58)/(Math.tan(TD.cam.fov/2*Math.PI/180)*asp),largoZ*0.9);
   /* El suelo se REGENERA con la escena: lleva el relieve de los ejes
      inclinados, y escalar un heightfield escalaría también las cotas. */
   if(TD.suelo.geometry)TD.suelo.geometry.dispose();
@@ -3007,6 +3070,10 @@ function construyeMundo(){
      niebla cose el borde. */
   TD.suelo.geometry=sueloRelieve(Math.max(anchoTot,largoZ)*2.4+320,T);
   TD.suelo.scale.set(1,1,1); TD.suelo.rotation.set(0,0,0);
+  /* El horizonte, en el MISMO plano y un pelo por debajo: así el cuadrado del
+     suelo de trabajo no acaba en un canto recto contra un llano. */
+  TD.horiz.rotation.set(Math.atan(T.gz||0),0,-Math.atan(T.gx||0));
+  TD.horiz.position.y=-1.5;
   TD.radio=Math.max(220,d*1.6);
   /* La cámara se pone CUESTA ABAJO, mirando ladera arriba. No es gusto: los
      bloques van sobre la curva de nivel, que gira con el azimut, y desde el sur
@@ -3015,7 +3082,29 @@ function construyeMundo(){
      ladera sube por detrás, que es lo que hay que leer. En llano no hay cuesta:
      se mira desde el sur, como siempre. */
   var vx=mg>1e-9?(T.gx/mg):0, vz=mg>1e-9?(T.gz/mg):1;
-  TD.cam.position.set(vx*d*0.86,d*0.30,vz*d*0.86);
+  /* ...pero SIEMPRE por el lado del ECUADOR. Las dos direcciones ⊥ a la línea
+     de bloques encuadran igual de bien, y solo una enseña la cara: una fija
+     mira al ecuador, así que con la caída al norte la cámara se plantaba
+     DETRÁS de los paneles y lo que se veía era el dorso — negro, y con las
+     mesas de canto. Y cuando la caída es este u oeste no hay componente hacia
+     el ecuador ninguna, así que se le suma un sesgo: mejor un poco de escorzo
+     en la línea de bloques que mirar seis estructuras de perfil. */
+  var eq=(cfg.lat>=0)?1:-1;                   // el ecuador cae al SUR (+z) en el norte
+  /* Con épsilon: `cos(90°)` en JS no es cero sino 6e-17, y con la caída al
+     este ese ruido decidía de qué lado se ponía la cámara. */
+  if(vz*eq<-1e-9){vx=-vx; vz=-vz;}
+  vz+=0.6*eq;
+  var vn=Math.hypot(vx,vz); vx/=vn; vz/=vn;
+  /* Y con un cuarto de vuelta corta. Mirar EXACTAMENTE por la línea de máxima
+     pendiente es el peor ángulo para leerla: la ladera cae hacia el fondo y en
+     pantalla no se inclina nada — con la caída al sur salían dos franjas de
+     verde y ni un desnivel. Girando 20° la ladera se ve de tres cuartos. Ni un
+     grado más: los bloques van sobre la curva de nivel, así que cuanto más se
+     gira, más se hunde esa línea en perspectiva y más desiguales salen — a 28°
+     el primero era el triple que el último. */
+  var gi=20*FIS.D2R, cg=Math.cos(gi), sg=Math.sin(gi);
+  var rx=vx*cg+vz*sg, rz=-vx*sg+vz*cg;
+  TD.cam.position.set(rx*d*0.86,d*0.40,rz*d*0.86);
   TD.ct.target.set(0,4,0);
   encuadra();
   /* La niebla se dimensiona con la escena. Fija, o se come los bloques cuando
@@ -3058,7 +3147,7 @@ function actualiza3D(){
   BLOQUES.forEach(function(B){
     var th=0, spec=B.spec, tilt=(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
     if(spec.fam==='tracker'){
-      var P=spec.tsat?FIS.psTSAT(S.el,S.az,cfg.axTilt,cfg.lat):FIS.psTracker(S.el,S.az);
+      var P=spec.tsat?FIS.psTSAT(S.el,S.az,FIS.ejeTilt(cfg,spec),cfg.lat):FIS.psTracker(S.el,S.az);
       th=(elDeg>0)?FIS.theta(P.ps,B.gcr,cfg.maxang,spec.bt):0;
       B.filas.forEach(function(u){
         /* SIGNO. El grupo del seguidor entra girado 90° en Y, así que su +X
@@ -3071,7 +3160,11 @@ function actualiza3D(){
         u.spin.rotation.x=th*FIS.D2R;
         // Eje inclinado: el TSAT sube hacia el ecuador. En el hemisferio norte,
         // hacia el sur (+z del mundo).
-        u.rotation.x=(spec.tsat?(cfg.lat>=0?1:-1)*Math.abs(cfg.axTilt)*FIS.D2R:0);
+        /* El eje se inclina lo que se inclina EL TERRENO a lo largo de él, no
+           lo que diga un campo: un eje no se inclina en el aire. Si el TSAT
+           declara otro valor, la lectura lo dice — no se dibuja una cosa y se
+           calcula otra en silencio. */
+        u.rotation.x=B.rollX;
       });
     }else if(spec.fam==='fija_ew'){
       B.filas.forEach(function(u){
@@ -3098,7 +3191,12 @@ function actualiza3D(){
           /* Lo que ESTA estructura ve del terreno: la componente ⊥ a sus filas
              es la que sombrea. Sin decirlo, dos bloques sobre el mismo plano
              con sombras distintas parecen un error de la escena. */
-          (B.cruz?' · '+fmt(Math.abs(B.cruz),1)+'° ⊥ filas':''))));
+          (B.cruz?' · '+fmt(Math.abs(B.cruz),1)+'° ⊥ filas':'')+
+          /* Y para un seguidor, cuánto se inclina su EJE al seguir el terreno:
+             un eje no se inclina en el aire, así que ese número es el que
+             tendría que llevar el «eje inclinado °» de un TSAT. */
+          ((spec.fam==='tracker'&&Math.abs(B.largoPend)>1)
+            ?' · eje '+fmt(Math.abs(B.largoPend),1)+'° con el terreno':''))));
   });
   $('escRead').innerHTML=ro.join('');
 }

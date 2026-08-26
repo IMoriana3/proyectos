@@ -1543,11 +1543,33 @@ LOC.windSynth=function(nh,k,A,lat,seed){
   return out;
 };
 /* Ráfaga de 3 s (Cook/IEC), igual que wind_synth.gust_from_hourly */
-LOC.gust=function(ws,seed){
+/* LA RÁFAGA NO PUEDE DEPENDER DEL PASO DE CÁLCULO. Espejo de
+   `wind_synth.gust_from_hourly`: se sorteaba UNA REALIZACIÓN POR MUESTRA, y la serie
+   llega en la rejilla que traiga el remuestreo —la canónica es MINUTAL—, así que el
+   recuento de abanderamientos se multiplicaba con el paso sin que el viento cambiara.
+   Medido sobre un año real (media 6,7 m/s, umbral 40 km/h):
+
+       paso        eventos     horas
+       horario         501     4.661
+       15 min          776     4.678
+       1 min         9.021     4.672
+
+   Las horas clavadas y el recuento por dieciocho: ese número no medía el viento,
+   medía cuántas veces se miraba. Una ráfaga de 3 s está correlacionada consigo misma;
+   sorteos independientes cada minuto son ruido blanco y cada pico cuenta como un
+   abanderamiento nuevo.
+   Ahora UNA realización por HORA, sostenida sobre los pasos de esa hora — el mismo
+   patrón que el viento sintético ya usaba. Lo que queda de variación con el paso ya
+   no es ruido: es el viento base interpolado cruzando en puntos que el paso horario
+   no ve, igual que le pasa a las horas. */
+LOC.gust=function(ws,seed,pasosPorHora){
   var r=LOC.rng(seed),o=new Float64Array(ws.length);
+  var pph=Math.max(1,Math.round(pasosPorHora||1)), g=null, hAnt=-1;
   for(var i=0;i<ws.length;i++){
+    var h=Math.floor(i/pph);
+    if(h!==hAnt){ g=Math.exp(0.10*LOC.norm(r)); hAnt=h; }   /* una por hora */
     var u=Math.max(0.5,ws[i]), ti=0.14*(0.75+5.6/u);
-    o[i]=u*(1+3.5*ti*Math.exp(0.10*LOC.norm(r)));
+    o[i]=u*(1+3.5*ti*g);
   }
   return o;
 };
@@ -1569,8 +1591,15 @@ LOC.scenario=function(M,sc,lat,dtH){
     meta.synthetic={k:sc.k||2,A:sc.A||6.5,seed:sc.seed||42};
   }
   if(sc.dir_deg!=null&&sc.dir_deg!==''){for(i=0;i<n;i++)wd[i]=+sc.dir_deg;meta.dir_deg=+sc.dir_deg;}
-  if(sc.use_gust){ws=LOC.gust(ws,sc.gust_seed||sc.seed||42);meta.use_gust=true;
-    notes.push('viento convertido a ráfaga de 3 s (Cook/IEC): la serie ya NO es media horaria');}
+  if(sc.use_gust){
+    /* el paso sale del dtH que ya se midió sobre la serie: es el único sitio donde
+       consta, y declararlo aparte sería invitar a que no coincidan */
+    var pphG=Math.max(1,Math.round(1/Math.max(dtH,1e-9)));
+    ws=LOC.gust(ws,sc.gust_seed||sc.seed||42,pphG);
+    meta.use_gust=true; meta.gust_pasos_por_hora=pphG;
+    notes.push('viento convertido a ráfaga de 3 s (Cook/IEC): la serie ya NO es media '+
+      'horaria. La realización es POR HORA y se sostiene sobre los '+pphG+' paso(s) de '+
+      'esa hora, para que el recuento de eventos no dependa del paso de cálculo');}
   var t0=M.t[0].getTime();
   var inject=function(when,peak,dur,shape,dir,src){
     if(when==null||!(peak>0)){meta.events_skipped.push({source:src,why:when==null?'sin instante':'sin pico'});return;}

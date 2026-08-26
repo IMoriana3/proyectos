@@ -544,6 +544,72 @@ Y la **cámara se pone cuesta abajo**, mirando ladera arriba. No es gusto: la l�
 con el azimut, y desde el sur fijo con la caída al este quedaban en fila india — el primero enorme y
 el último un punto. En llano no hay cuesta y se mira desde el sur, como siempre.
 
+Y con **un cuarto de vuelta corto, 20°**. Mirar exactamente por la línea de máxima pendiente es el
+peor ángulo para leerla: la ladera cae hacia el fondo y en pantalla no se inclina nada — con la
+caída al sur salían dos franjas de verde y ni un desnivel. Ni un grado más de 20, eso sí: los
+bloques van sobre la curva de nivel, así que cuanto más se gira, más se hunde esa línea en
+perspectiva y más desiguales salen (a 28° el primero era el triple que el último). El encuadre pasa
+a siete pasadas porque con la cámara girada la caja del mundo entra más torcida y con cuatro se
+quedaba a un 6 % de encajar.
+
+Con una condición más, que costó un susto: **siempre por el lado del ecuador**. Las dos direcciones ⊥ a
+la línea de bloques encuadran igual de bien, y solo una enseña la cara — una fija mira al ecuador,
+así que con la caída al NNE la cámara se plantaba *detrás* de los paneles y la escena salía en negro,
+con las mesas de canto. Y cuando la caída es este u oeste no hay componente hacia el ecuador
+ninguna, así que se le suma un sesgo: mejor un poco de escorzo en la línea de bloques que mirar seis
+estructuras de perfil. (Detalle de JS: `cos(90°)` no es cero sino 6·10⁻¹⁷, y sin épsilon ese ruido
+decidía el lado.)
+
+#### Las filas se adaptan al terreno
+
+La pendiente la tiene el **suelo**; la estructura se replantea sobre él. Apoyar cada fila en la cota
+de su **centro** y dejarla horizontal a lo largo no vale: con 65 m de fila y 24° de pendiente en esa
+dirección, un extremo vuela 14 m y el otro se entierra otros 14 — que es exactamente el «tracker con
+megasoportes» que no se construye.
+
+Así que cada fila se inclina **lo que se inclina el terreno en su dirección larga**, ni más ni menos:
+
+* filas que corren este-oeste (la fija): giran en Z, y la caída es `gx`;
+* filas que corren norte-sur (seguidor y dos aguas): giran en X, y es `gz`.
+
+Para un seguidor eso es literalmente **un eje que sigue el terreno**, que es lo que es un TSAT. Lo
+que **no** cambia es el tilt ni la componente ⊥: en la dirección del pitch las filas se **escalonan**
+a distinta cota, no se inclinan.
+
+#### El «eje inclinado °» no se teclea: lo pone el terreno
+
+Un TSAT no es un seguidor con un parámetro más: es un seguidor **sobre una pendiente que corre a lo
+largo de su eje**. Un eje no se inclina en el aire. Así que el campo es de **solo lectura** y se
+rellena con la componente a lo largo del eje del mismo plano del sitio:
+
+| cae al | eje inclinado (lat > 0) |
+|---|---|
+| **S** (180°) | **+β** — el eje mira al ecuador, el TSAT de manual |
+| **N** (0°) | **−β** — mira al polo, y eso también existe |
+| **E**/**O** | **0** — esa pendiente es ⊥ al eje, no a lo largo |
+| llano | **0** — sin pendiente no hay TSAT que valga |
+
+Eso obligó a que `FIS.psTSAT` acepte el **signo**: antes tomaba `Math.abs(axis_tilt)` y orientaba el
+eje hacia el ecuador por definición, así que con el terreno cayendo hacia el polo se dibujaba un eje
+y se calculaba el contrario. En el hemisferio sur el signo se da la vuelta, porque el ecuador está
+al norte.
+
+Sin azimut declarado se respeta el valor recibido: el core toma `axis_tilt` y `cross_axis_slope` por
+separado —son las dos componentes del mismo plano— y por ahí entra el careo.
+
+#### El horizonte también lleva la pendiente
+
+El suelo va en dos piezas: el de **trabajo**, que recibe sombras y se dimensiona con la escena, y el
+de **horizonte**, enorme, que llega hasta la cúpula — sin él el de trabajo se acaba en un borde recto
+con el cielo detrás y los bloques parecen estar sobre una mesa flotando en el vacío.
+
+Con el terreno inclinado, el de horizonte tenía que inclinarse **con él**: plano y horizontal, el
+cuadrado del suelo de trabajo acababa contra él en un canto recto que cruzaba la escena. Una ladera
+que se corta en línea y sigue en llano no es un horizonte, es un error de dibujo. Va en el mismo
+plano y metro y medio por debajo. (Detalle: su geometría se pre-rota tumbada, para que la rotación
+del objeto quede libre para la pendiente — con `rotation.x = −π/2` en el objeto, inclinarlo lo ponía
+de canto y salía un muro.)
+
 #### Y que se VEA: sombreado por cota
 
 Con el terreno bien hecho la pendiente seguía sin verse, y no era el modelo: a mediodía de junio el
