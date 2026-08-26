@@ -149,17 +149,18 @@ npm install playwright                     # el navegador ya está en /opt/pw-br
 python3 -m http.server 8099                # servir el repo (en otra terminal)
 node tests/test_index.js                   # 13 comprobaciones
 node tests/test_pwa.js                     # 21 comprobaciones (PWA)
-node tests/test_integridad.js              # 7 comprobaciones, sin navegador
-node tests/test_comparador.js              # 97 comprobaciones, careo contra el core y barridos
-node tests/test_comparador_3d.js           # 134 comprobaciones, escena 3D, equipos, sizing y barridos
+node tests/test_integridad.js              # 6 comprobaciones, sin navegador
+node tests/test_comparador.js              # 169 comprobaciones, careo contra el core y barridos
+node tests/test_comparador_3d.js           # 154 comprobaciones, escena 3D, equipos, sizing y barridos
 node tests/test_sizing.js                  # 115 comprobaciones, careo del dimensionado eléctrico
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
 node tests/test_viento_ejes.js             # 77 comprobaciones, lienzos, ejes, transmisión, reproductor, sombras y franjas
 node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
 node tests/test_viento_planta.js           # 20 comprobaciones, la planta en franjas y consigna vs ejecutado
+node tests/test_viento_sello.js     # el informe declara con qué coordenadas se calculó
 node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core
 node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo
 node tests/test_granizo_pestana.js         # 22 comprobaciones, la pestaña de granizo en Chromium
 node tests/test_layout.js                  # 196 comprobaciones, careo del generador de layout
-node tests/test_layout_ui.js               # 179 comprobaciones, el generador en Chromium
+node tests/test_layout_ui.js               # 182 comprobaciones, el generador en Chromium
 ```

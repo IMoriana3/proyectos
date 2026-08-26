@@ -487,35 +487,123 @@ de cada vértice y `computeVertexNormals()`. Eso es lo que lo hace leerse como u
 de dos triángulos tiene una normal por cara y sale con aristas; con las normales recalculadas la luz
 varía de forma continua.
 
-La pendiente aparece **solo donde hace falta** —bajo el bloque del eje inclinado— y se funde con el
-llano a los lados con un suavizado, así que no hay ningún canto. Sube exactamente lo que sube el
-eje (`largo de fila · sen(tilt)`, 11,3 m con 65 m y 10°) y luego **aplana en meseta**, en vez de
-seguir subiendo con el suelo. Sin eje inclinado marcado, el suelo vuelve a ser llano.
+Las hincas miden lo que miden: **2 m, las mismas que el eje horizontal**. Lo que cambia es el
+terreno, no la estructura. (Cómo se dibuja hoy ese terreno —un solo plano para todas— está más
+abajo.)
 
-Las hincas vuelven a medir lo que miden: **2 m, las mismas que el eje horizontal**. Lo que cambia es
-el terreno, no la estructura.
+### La pendiente del emplazamiento: magnitud y AZIMUT
 
-### La pendiente del emplazamiento, para las tres
+`Pendiente del terreno °` y `Azimut de la caída °`, en la tarjeta de Emplazamiento porque son una
+propiedad del **sitio**. Azimut de la caída desde el norte y en sentido horario: 0 N, 90 E, 180 S,
+270 O.
 
-`Pendiente ⊥ filas °`, en la tarjeta de Emplazamiento porque es una propiedad del **sitio**. Se
-aplica a las **tres familias** — es lo que hace que la comparación sea en igualdad — y **entra en la
-física**, no solo en el dibujo: va al sombreado entre filas por el mismo sitio por el que entra en
-el core (`cross_axis_slope`, el de `pvlib.shading.shaded_fraction1d`). La fila de al lado deja de
-estar a la misma cota, y con `pend > 0` queda más **baja**.
+La versión anterior pedía la «pendiente ⊥ filas», y eso era pedirle al terreno que **girase con
+cada estructura**. Un emplazamiento no tiene una pendiente perpendicular a nada: tiene **una**, con
+su magnitud y su dirección de máxima caída. Lo que gira son las **filas**, y por eso cada familia ve
+una **componente** distinta del mismo plano:
 
-Cada familia la lleva en **su** dirección, porque cada una apila las filas hacia un lado: la fija
-hacia el sur (pitch N-S) y el seguidor y las dos aguas hacia el este (pitch E-O). El **eje
-inclinado** lleva además la del eje, que corre norte-sur — el «eje inclinado °» de un TSAT *es* la
-pendiente del terreno sobre el que se monta; un eje no se inclina en el aire.
+* la componente **⊥ a las filas** es la que entra en el sombreado — el `cross_axis_slope` de
+  `pvlib.shading.shaded_fraction1d`, el mismo por el que entra en el core;
+* la componente **a lo largo** de las filas no sombrea, pero decide si la estructura se puede
+  replantear: una fila es rígida, y esa componente hay que absorberla con hincas de distinta
+  longitud, con bancales o inclinando el eje.
 
-En la escena, las hincas siguen siendo **verticales** y el tilt no cambia: una fija en pendiente no
-se inclina con el terreno, se replantea sobre él. Cada fila se coloca a la cota del terreno bajo
-ella.
+Con `β` la pendiente y `A` el azimut de la caída, y el mundo con +x al este y +z al sur, la caída
+por metro es `gx = tan β · sen A` y `gz = −tan β · cos A`. La fija apila las filas al **sur** (sus
+filas corren este-oeste) y el seguidor y las dos aguas al **este** (las suyas corren norte-sur), así
+que:
 
-#### Es UNA pendiente, la misma para las tres
+| cae al | fija · ⊥ filas | fija · a lo largo | seguidor · ⊥ filas | seguidor · a lo largo |
+|---|---|---|---|---|
+| **S** (180°) | **β** | 0 | **0** | β |
+| **E** (90°) | 0 | β | **β** | 0 |
+| **N** (0°) | **−β** | 0 | 0 | β |
+| **SE** (135°) | β/√2 | β/√2 | β/√2 | β/√2 |
 
-Eso es lo que iguala la comparación, y hay un test que lo exige: no basta con que el campo exista,
-tiene que **mover a las tres familias**. A 12° en Sevilla:
+Lo que dice la primera fila es lo importante: **con el terreno cayendo al sur, la fija ve toda la
+pendiente y el seguidor ninguna** — la ve entera a lo largo del eje. Eso no es un defecto de la
+comparación: es la razón por la que en un emplazamiento real una estructura se puede montar y la
+otra no. Y el caso en que **todas** ven lo mismo no se impone: sale, y solo en la diagonal.
+
+Lo que consume el motor es `FIS.cruz(cfg, spec)`. Si no hay azimut declarado, `pend` **es** el
+cross-axis — que es como lo toma el core, y por eso el careo lo inyecta tal cual; con azimut, se
+deriva para cada familia.
+
+### El terreno de la escena: un solo plano
+
+Todas las estructuras se montan sobre **el mismo plano**. Se dibuja como un *heightfield* igual que
+en **bt3d** —plano subdividido, cota por vértice y `computeVertexNormals()`— y no como dos
+triángulos: una malla de dos caras tiene una normal por cara y sale con aristas.
+
+Los bloques se colocan sobre la **curva de nivel** de ese plano, no en fila este-oeste. Es lo que
+hace que todos arranquen de la misma cota estando sobre el mismo plano: alineados este-oeste con el
+terreno cayendo al este, el sexto bloque quedaría cien metros por debajo del primero. En campo es lo
+mismo: las filas siguen la curva de nivel.
+
+Y la **cámara se pone cuesta abajo**, mirando ladera arriba. No es gusto: la línea de bloques gira
+con el azimut, y desde el sur fijo con la caída al este quedaban en fila india — el primero enorme y
+el último un punto. En llano no hay cuesta y se mira desde el sur, como siempre.
+
+Con una condición que costó un susto: **siempre por el lado del ecuador**. Las dos direcciones ⊥ a
+la línea de bloques encuadran igual de bien, y solo una enseña la cara — una fija mira al ecuador,
+así que con la caída al NNE la cámara se plantaba *detrás* de los paneles y la escena salía en negro,
+con las mesas de canto. Y cuando la caída es este u oeste no hay componente hacia el ecuador
+ninguna, así que se le suma un sesgo: mejor un poco de escorzo en la línea de bloques que mirar seis
+estructuras de perfil. (Detalle de JS: `cos(90°)` no es cero sino 6·10⁻¹⁷, y sin épsilon ese ruido
+decidía el lado.)
+
+#### Las filas se adaptan al terreno
+
+La pendiente la tiene el **suelo**; la estructura se replantea sobre él. Apoyar cada fila en la cota
+de su **centro** y dejarla horizontal a lo largo no vale: con 65 m de fila y 24° de pendiente en esa
+dirección, un extremo vuela 14 m y el otro se entierra otros 14 — que es exactamente el «tracker con
+megasoportes» que no se construye.
+
+Así que cada fila se inclina **lo que se inclina el terreno en su dirección larga**, ni más ni menos:
+
+* filas que corren este-oeste (la fija): giran en Z, y la caída es `gx`;
+* filas que corren norte-sur (seguidor y dos aguas): giran en X, y es `gz`.
+
+Para un seguidor eso es literalmente **un eje que sigue el terreno**, que es lo que es un TSAT. Lo
+que **no** cambia es el tilt ni la componente ⊥: en la dirección del pitch las filas se **escalonan**
+a distinta cota, no se inclinan.
+
+#### El «eje inclinado °» no se teclea: lo pone el terreno
+
+Un TSAT no es un seguidor con un parámetro más: es un seguidor **sobre una pendiente que corre a lo
+largo de su eje**. Un eje no se inclina en el aire. Así que el campo es de **solo lectura** y se
+rellena con la componente a lo largo del eje del mismo plano del sitio:
+
+| cae al | eje inclinado (lat > 0) |
+|---|---|
+| **S** (180°) | **+β** — el eje mira al ecuador, el TSAT de manual |
+| **N** (0°) | **−β** — mira al polo, y eso también existe |
+| **E**/**O** | **0** — esa pendiente es ⊥ al eje, no a lo largo |
+| llano | **0** — sin pendiente no hay TSAT que valga |
+
+Eso obligó a que `FIS.psTSAT` acepte el **signo**: antes tomaba `Math.abs(axis_tilt)` y orientaba el
+eje hacia el ecuador por definición, así que con el terreno cayendo hacia el polo se dibujaba un eje
+y se calculaba el contrario. En el hemisferio sur el signo se da la vuelta, porque el ecuador está
+al norte.
+
+Sin azimut declarado se respeta el valor recibido: el core toma `axis_tilt` y `cross_axis_slope` por
+separado —son las dos componentes del mismo plano— y por ahí entra el careo.
+
+#### Y que se VEA: sombreado por cota
+
+Con el terreno bien hecho la pendiente seguía sin verse, y no era el modelo: a mediodía de junio el
+sol está a **76°** —casi cenital— y una ladera de 16° recibe casi la misma luz que el llano, así que
+el suelo salía de un verde plano y uniforme. El terreno lleva un **tinte por altura** (claro arriba,
+oscuro abajo, como un mapa hipsométrico), en color de vértice sobre el mismo material. Hace legible
+el relieve a cualquier hora.
+
+Cada lectura de la escena dice además **cuánta pendiente ⊥ ve esa estructura**: sin eso, dos bloques
+sobre el mismo plano con sombras distintas parecen un error del dibujo.
+
+#### Es UN terreno, y mueve el resultado
+
+Que la pendiente entra en la **física** y no solo en el dibujo se exige con un test. A 12° en
+Sevilla, con la pendiente entrando como cross-axis en las tres familias:
 
 | | sin pendiente | con 12° |
 |---|---|---|
@@ -525,10 +613,6 @@ tiene que **mover a las tres familias**. A 12° en Sevilla:
 
 La pendiente **le quita** sombra a la fija —las filas se escalonan y dejan de taparse— y **se la
 pone** al seguidor. O sea que cambia el resultado de la comparación, que es justo para lo que está.
-
-En la escena cada familia la lleva en su dirección de pitch, así que el terreno sube hacia lados
-distintos bajo cada bloque. Eso se lee como «pendientes distintas» y no lo es: es **la misma
-pendiente perpendicular a las filas**, y las filas de cada familia corren hacia otro lado.
 
 #### Lo que destapa: con pendiente, el backtracking deja sombra
 
@@ -585,6 +669,24 @@ discrepen: es que responden a preguntas distintas.
 | 0,53 | 32° | 36° | 4° |
 | 0,68 | 25° | 36° | **11°** |
 | 0,75 | 21° | 36° | 15° |
+
+### Una mesa que no cabe en el pitch: plano, y dicho
+
+Con **3V a pitch 6** la apertura son 7,146 m y no caben en 6: **GCR 1,19**. La tarjeta ya lo
+rechazaba en rojo y desactivaba el botón, pero la **escena seguía dibujando**, y lo que dibujaba
+era un disparate: el seguidor salía a **−32,6° a mediodía** y girando al revés.
+
+No era el render: era la fórmula del backtracking. `θ = ps − signo(ps)·acos(cos ps / GCR)` — con
+GCR ≤ 1 el retroceso nunca llega a `|ps|`, pero con GCR > 1 **pide retroceder más de lo que ha
+avanzado**, cruza el cero y devuelve el ángulo con el signo cambiado.
+
+El arreglo es la regla física: **el backtracking solo reduce |θ|, nunca lo invierte**. Retroceder es
+aplanarse para no taparse; pasarse del cero sería tumbarse hacia el otro lado, que no evita ninguna
+sombra — la crea. Con GCR ≤ 1 la cota **no actúa nunca** (el careo lo confirma: sigue idéntico), y
+con GCR > 1 el seguidor se queda **plano**, que es lo único honesto cuando la geometría no existe.
+La escena lo dice: `— · GCR 1,19: no cabe`.
+
+Abriendo el pitch a 9 m la misma mesa 3V vuelve a girar con normalidad.
 
 ### La escena tiene que OBEDECER a los dos configuradores
 
@@ -697,10 +799,10 @@ dejar de ganar. Un guard que nunca se pone rojo es decoración.
 ## Pruebas
 
 ```bash
-node tests/test_comparador.js       # 97 comprobaciones · careo contra el core, sin navegador
+node tests/test_comparador.js       # 143 comprobaciones · careo contra el core, sin navegador
 python3 -m http.server 8099         # (en otra terminal, para el 3D)
 node tests/test_comparador_sitio.js # 36 comprobaciones · el buscador de emplazamiento
-node tests/test_comparador_3d.js    # 134 comprobaciones · escena, equipos y sizing
+node tests/test_comparador_3d.js    # 138 comprobaciones · escena, equipos y sizing
 node tests/test_sizing.js           # 115 comprobaciones · careo del dimensionado eléctrico · la escena en un Chromium de verdad
 ```
 

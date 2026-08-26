@@ -380,6 +380,98 @@ check('y el de transposición NO se mueve: no sabe que hay vecinas (' +
   flojo.sinSombra + '° = ' + apretado.sinSombra + '°)',
   flojo.sinSombra === apretado.sinSombra);
 
+// ── 6b-bis) LA PENDIENTE ES DEL SITIO, CON AZIMUT ──
+// Un emplazamiento no tiene una pendiente «⊥ a las filas»: tiene UNA, con su
+// magnitud y su dirección de caída. Referenciarla a las filas le pedía al
+// terreno girar con cada estructura. Lo que gira son las FILAS, y por eso cada
+// familia ve una COMPONENTE distinta del mismo plano.
+const FIJA = FIS.spec('fija_proyecto'), TK = FIS.spec('tracker_hsat'),
+      EW = FIS.spec('fija_ew');
+check('la fija apila al SUR y el seguidor y las dos aguas al ESTE',
+  FIS.ejePitch(FIJA) === 'z' && FIS.ejePitch(TK) === 'x' && FIS.ejePitch(EW) === 'x',
+  [FIS.ejePitch(FIJA), FIS.ejePitch(TK), FIS.ejePitch(EW)].join(','));
+// Los cuatro rumbos cardinales, que son los que se pueden razonar a mano.
+[[180, 16, 0, 'al SUR: la fija la ve entera y el seguidor NADA'],
+ [90, 0, 16, 'al ESTE: al revés, el seguidor entera y la fija nada'],
+ [0, -16, 0, 'al NORTE: la fija la ve entera pero con el signo cambiado'],
+ [270, 0, -16, 'al OESTE: el seguidor, con el signo cambiado']
+].forEach(([az, cf, ct, nom]) => {
+  const f = FIS.pendComp(16, az, 'z'), t = FIS.pendComp(16, az, 'x');
+  check('cayendo ' + nom, Math.abs(f.cruz - cf) < 1e-9 && Math.abs(t.cruz - ct) < 1e-9,
+    JSON.stringify({ fija: +f.cruz.toFixed(3), tk: +t.cruz.toFixed(3) }));
+  // y lo que no ve ⊥ lo ve A LO LARGO: no se pierde por el camino
+  check('  y lo que no entra ⊥ entra a lo largo (tan²⊥ + tan²largo = tan²β)',
+    Math.abs(Math.tan(f.cruz * Math.PI / 180) ** 2 + Math.tan(f.largo * Math.PI / 180) ** 2
+             - Math.tan(16 * Math.PI / 180) ** 2) < 1e-12);
+});
+// El caso en que TODAS ven lo mismo no es un ajuste: es un azimut concreto.
+const d45 = FIS.pendComp(16, 135, 'z'), t45 = FIS.pendComp(16, 135, 'x');
+check('solo cayendo en diagonal (135°) las dos ven lo MISMO: ' + d45.cruz.toFixed(2) + '°',
+  Math.abs(d45.cruz - t45.cruz) < 1e-9 &&
+  Math.abs(d45.cruz - Math.atan(Math.tan(16 * Math.PI / 180) / Math.SQRT2) * 180 / Math.PI) < 1e-9,
+  d45.cruz.toFixed(4) + ' vs ' + t45.cruz.toFixed(4));
+check('terreno llano: ninguna ve nada, apunte donde apunte el azimut',
+  [0, 45, 90, 200, 359].every(a => FIS.pendComp(0, a, 'z').cruz === 0 &&
+                                   FIS.pendComp(0, a, 'x').cruz === 0));
+// El seam del careo: el core recibe el cross-axis directamente, así que sin
+// azimut declarado `pend` ES el cross-axis. Con azimut, se deriva.
+check('sin azimut declarado, `pend` es el cross-axis tal cual (el camino del careo)',
+  FIS.cruz({ pend: 8 }, FIJA) === 8 && FIS.cruz({ pend: 8 }, TK) === 8);
+check('con azimut, cada familia recibe SU componente',
+  Math.abs(FIS.cruz({ pend: 16, pendAz: 180 }, FIJA) - 16) < 1e-9 &&
+  Math.abs(FIS.cruz({ pend: 16, pendAz: 180 }, TK)) < 1e-9);
+// Y lo que de verdad importa: eso llega al SOMBREADO, no se queda en la nota.
+const caeSur = porClaveTmp(FIS.compara(['fija_proyecto', 'tracker_hsat_nobt'], M,
+  { ...cfg, pend: 16, pendAz: 180 }));
+const caeEste = porClaveTmp(FIS.compara(['fija_proyecto', 'tracker_hsat_nobt'], M,
+  { ...cfg, pend: 16, pendAz: 90 }));
+const llanoAz = porClaveTmp(FIS.compara(['fija_proyecto', 'tracker_hsat_nobt'], M,
+  { ...cfg, pend: 0, pendAz: 180 }));
+function porClaveTmp(r) { return Object.fromEntries(r.filas.map(f => [f.key, f])); }
+check('cayendo al SUR la pendiente mueve la sombra de la FIJA (' +
+  llanoAz.fija_proyecto.sombra.toFixed(2) + ' → ' + caeSur.fija_proyecto.sombra.toFixed(2) + ' %)',
+  Math.abs(caeSur.fija_proyecto.sombra - llanoAz.fija_proyecto.sombra) > 0.05);
+check('  y NO la del seguidor, que la lleva a lo largo del eje (' +
+  caeSur.tracker_hsat_nobt.sombra.toFixed(3) + ' %)',
+  Math.abs(caeSur.tracker_hsat_nobt.sombra - llanoAz.tracker_hsat_nobt.sombra) < 1e-9);
+check('cayendo al ESTE se invierte: mueve al SEGUIDOR (' +
+  llanoAz.tracker_hsat_nobt.sombra.toFixed(2) + ' → ' +
+  caeEste.tracker_hsat_nobt.sombra.toFixed(2) + ' %)',
+  Math.abs(caeEste.tracker_hsat_nobt.sombra - llanoAz.tracker_hsat_nobt.sombra) > 0.05);
+check('  y no a la fija',
+  Math.abs(caeEste.fija_proyecto.sombra - llanoAz.fija_proyecto.sombra) < 1e-9);
+
+// ── 6b-ter) EL EJE INCLINADO LO PONE EL TERRENO ──
+// Un TSAT no es un seguidor con un parámetro más: es un seguidor sobre una
+// pendiente que corre A LO LARGO de su eje. Un eje no se inclina en el aire,
+// así que el «eje inclinado °» no se teclea, se deriva — y con SIGNO, porque
+// un emplazamiento no elige hacia dónde baja.
+const TSAT = FIS.spec('tracker_tsat');
+[[180, 26, 'cayendo al SUR el eje mira al ECUADOR'],
+ [0, -26, 'cayendo al NORTE mira al POLO, y eso también existe'],
+ [90, 0, 'cayendo al ESTE no hay nada a lo largo del eje: horizontal'],
+ [270, 0, 'ni al OESTE']
+].forEach(([az, esp, nom]) => {
+  const e = FIS.ejeTilt({ pend: 26, pendAz: az, lat: 37.4 }, TSAT);
+  check(nom + ' (' + e.toFixed(1) + '°)', Math.abs(e - esp) < 0.01, e.toFixed(3));
+});
+check('en LLANO el eje sale 0: sin pendiente no hay TSAT que valga',
+  FIS.ejeTilt({ pend: 0, pendAz: 180, lat: 37.4 }, TSAT) === 0);
+check('en el hemisferio SUR el ecuador está al norte, y el signo se da la vuelta',
+  Math.abs(FIS.ejeTilt({ pend: 26, pendAz: 0, lat: -16.6 }, TSAT) - 26) < 0.01,
+  FIS.ejeTilt({ pend: 26, pendAz: 0, lat: -16.6 }, TSAT).toFixed(3));
+check('y solo el TSAT lo lleva: un HSAT es horizontal por definición',
+  FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, FIS.spec('tracker_hsat')) === 0);
+check('sin azimut declarado se respeta el valor recibido (el camino del careo)',
+  FIS.ejeTilt({ pend: 8, axTilt: 10, lat: 37.4 }, TSAT) === 10);
+// Y el signo tiene consecuencia, que es lo que lo hace física y no adorno.
+const ejeEq = FIS.compara(['tracker_tsat'], M, { ...cfg, pend: 20, pendAz: 180 });
+const ejePol = FIS.compara(['tracker_tsat'], M, { ...cfg, pend: 20, pendAz: 0 });
+check('el eje hacia el ECUADOR capta más que hacia el POLO (' +
+  ejeEq.filas[0].neta.toFixed(1) + ' vs ' + ejePol.filas[0].neta.toFixed(1) + ' kWh/m²)',
+  ejeEq.filas[0].neta > ejePol.filas[0].neta + 10,
+  ejeEq.filas[0].neta.toFixed(1) + ' vs ' + ejePol.filas[0].neta.toFixed(1));
+
 // ── 6c) LA MISMA PENDIENTE PARA LAS TRES: eso es la igualdad ──
 // El parámetro es UNO, del emplazamiento, y entra en el sombreado de todas las
 // familias por el mismo sitio. Lo que se exige aquí no es que exista el campo
@@ -406,6 +498,33 @@ check('con pendiente el ranking se recalcula con TODAS en el mismo terreno',
   Math.abs(CP.tracker_hsat.neta - SP.tracker_hsat.neta) > 0.01,
   CP.tracker_hsat.neta.toFixed(2) + ' vs ' + SP.tracker_hsat.neta.toFixed(2));
 
+// ── 6d) EL BACKTRACKING NUNCA INVIERTE EL ÁNGULO ──
+// Retroceder es APLANARSE para no taparse: como mucho hasta plano. Pasarse del
+// cero sería tumbarse hacia el otro lado, que no evita ninguna sombra — la
+// crea. Con GCR ≤ 1 la cota nunca actúa; con un GCR imposible (>1, la apertura
+// no cabe en el pitch) era lo único que faltaba: con 3V a pitch 6 el seguidor
+// salía a −32,6° A MEDIODÍA y girando al revés.
+[[0.397, 'GCR normal'], [0.794, 'GCR apretado'], [1.0, 'GCR justo en el límite']]
+  .forEach(([g, nom]) => {
+  [-60, -30, -5, 0, 5, 30, 60].forEach(ps => {
+    const th = FIS.theta(ps, g, 55, true);
+    check('backtracking a ' + nom + ' (' + g + ') no invierte el signo en ps=' + ps + '° (θ=' +
+      th.toFixed(1) + '°)', ps === 0 || th * ps >= -1e-9, String(th));
+    check('  y nunca se pasa del ángulo astronómico (|' + th.toFixed(1) + '| ≤ |' + ps + '|)',
+      Math.abs(th) <= Math.abs(ps) + 1e-9);
+  });
+});
+// y con la geometría IMPOSIBLE se queda plano en vez de inventarse un ángulo
+[1.19, 1.59, 3.0].forEach(g => {
+  const th = [-60, -20, 0, 20, 60].map(ps => FIS.theta(ps, g, 55, true));
+  check('con GCR ' + g + ' (imposible) el seguidor se queda PLANO, no invertido',
+    th.every(t => Math.abs(t) < 1e-9), JSON.stringify(th));
+});
+// sin backtracking la cota no pinta nada: sigue el sol y punto
+check('sin backtracking el ángulo es el astronómico, cota o no cota',
+  Math.abs(FIS.theta(40, 1.19, 55, false) - 40) < 1e-9 &&
+  Math.abs(FIS.theta(-40, 0.4, 55, false) + 40) < 1e-9);
+
 // ── 7) hemisferio sur: la fija tiene que mirar al NORTE ──
 // Si `psFija` no cambiara de signo bajo el ecuador, la fija apuntaría al polo y
 // perdería contra el plano horizontal. Es el guard de esa línea.
@@ -420,7 +539,7 @@ check('en el hemisferio sur la fija sigue transponiendo por encima del GHI',
 // del eje (mirando al polo, que es lo que hacía el core con el azimut sin
 // esquivar) y se exige que el TSAT deje de ganar.
 const psTSATBueno = FIS.psTSAT;
-FIS.psTSAT = function (el, az, axTiltDeg, lat) { return psTSATBueno(el, az, -axTiltDeg, -lat); };
+FIS.psTSAT = function (el, az, axTiltDeg, lat) { return psTSATBueno(el, az, -axTiltDeg, lat); };
 const mut = FIS.compara(['tracker_hsat', 'tracker_tsat'], M, cfg);
 const mutTsat = mut.filas.find(f => f.key === 'tracker_tsat');
 const mutHsat = mut.filas.find(f => f.key === 'tracker_hsat');

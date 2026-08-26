@@ -516,7 +516,7 @@ body{
    ===================================================================== */
 const PROJECTS = [
   {
-    name: "Mapa de registros Modbus",
+    name: "Mapa Modbus",
     status: "live",
     objetivo: "Consulta del mapa Modbus completo de NCU, HSU y TCU, con dirección absoluta por unidad y decodificación de valores crudos en vivo.",
     stack: "HTML · sin dependencias",
@@ -601,14 +601,14 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Simulador de cielo cubierto",
+    name: "Simulador de radiación difusa",
     status: "live",
     objetivo: "Evaluación de las cuatro políticas de radiación difusa en días nublados: cielo definido manualmente o real de Open-Meteo, zonificación por NCU y balance de POA de cada política.",
     stack: "HTML offline · Three.js (libs locales) + seguidor.js · Canvas · pvlib singleaxis + Ineichen + Perez portados a JS · Open-Meteo (datos, opcional)",
     url: "https://imoriana3.github.io/cobertura-zigbee/overcast.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
-    updated: "2026-08-14",
-    version: "v1.13.0",
+    updated: "2026-08-26",
+    version: "v1.14.0",
     docId: "overcast-sim",
     docUrl: "",
     uso: [
@@ -619,7 +619,8 @@ const PROJECTS = [
       "La tabla del día da POA, Δ vs pvlib, % en flat, conmutaciones, recorrido (desgaste) y coste del lazo (decidir tarde + llegar tarde).",
       "«Calcular año» pondera 12 días × tres cielos tipo según el clima (seco / atlántico / centroeuropa, editable).",
       "Activa el ZONAL: nº de NCUs y minutos que tarda el frente en cruzar; la escena 3D pinta cada zona con su nube y su θ, y la tabla compara decisión global vs cada-NCU-con-su-señal.",
-      "☁ CIELO POR NCU: además del frente que cruza, cada NCU puede llevar SU propio preset (botones de alternar despejado/overcast, aleatorio por NCU, o todas igual que la planta). Es la única forma de ver la zonificación de verdad: con cielo uniforme el zonal es idéntico al global por construcción. La gráfica de θ dibuja la curva de cada NCU con su envolvente.",
+      "☁ CIELO POR NCU: además del frente que cruza, cada NCU puede llevar SU propio cielo — preset o PINTADO A MANO con el ratón (selector de ámbito junto a la tira, o el botón ✏ de cada NCU). Pintar una NCU no toca ni a las demás ni al cielo de planta, que queda de fondo como referencia.",
+      "☁ Presets por NCU (botones de alternar despejado/overcast, aleatorio por NCU, o todas igual que la planta). Es la única forma de ver la zonificación de verdad: con cielo uniforme el zonal es idéntico al global por construcción. La gráfica de θ dibuja la curva de cada NCU con su envolvente.",
       "📋 El DIARIO DE DECISIONES justifica cada movimiento como el SCADA (abanderar/desabanderar): hora, NCU, causa y números — lo narrado ES lo ejecutado (QA bit a bit).",
       "⬇ 365 días reales (ERA5): el anual con la meteo MEDIDA del emplazamiento, día a día y con el lazo. ✈ Vuelo libre por la planta (WASD + ratón).",
       "⛰ Planta real: CUALQUIERA de la cartera con layout (El Burgo, Fayón, San José, Túnez, Ayora, Bagnarelli monofila a 23,7°, Páramo) — las zonas pasan a ser las NCUs de verdad (lag por centroide), la planta instanciada en 3D teñida por estado (azul track · violeta FLAT · ámbar retiene) y el banco de nubes barriendo el frente.",
@@ -632,6 +633,7 @@ const PROJECTS = [
       { done:true, text:"Modo zonal (por NCU): cada NCU decide con su señal local frente a la decisión de planta (hecho v1.1; cuando el core tenga la política zonal, espejarla aquí)" }
     ],
     historial: [
+      { date:"2026-08-24", ver:"v1.14.0", note:"La v1.13.0 dejó media herramienta: por NCU solo se podía ELEGIR PRESET, mientras el cielo de planta se pintaba con el ratón — y el caso interesante («esta NCU con una nube de 40 min a las 14:20 y la de al lado despejada») no es ninguno de los siete predefinidos. Ahora la tira tiene ÁMBITO: la planta o una NCU concreta, con un accesor único que comparten el pincel, «aplicar preset» y «despejar». Al primer trazo la zona materializa su serie y se declara como «pintado a mano»; las barras van en su magenta y el cielo de planta queda de fondo como línea de referencia. Verificado en navegador con el ratón: pintando 14-16 h en la NCU 3, el cc de planta sigue en 38 % y solo esa zona cambia. QA 70, con un check estático contra la regresión de que el pincel vuelva a escribir en el cielo de planta." },
       { date:"2026-08-24", ver:"v1.13.0", note:"UN CIELO POR NCU. El zonal tenía un techo de nacimiento: todas las NCUs veían la MISMA serie de nubosidad retardada por el centroide, así que solo podía enseñar un FRENTE cruzando — con cielo uniforme el zonal es idéntico al global POR CONSTRUCCIÓN, y el caso que justifica el control zonal (una NCU con la nube encima y la de al lado despejada) no se podía ni plantear. Con cielo por zona: frente sobre cielo uniforme +0,02 %, alternando despejado/overcast +1,33 %, con las despejadas siguiendo al sol y las cubiertas en plano a la vez. El modo encendido sin tocar nada es un no-op EXACTO y la QA lo exige. Con día real la meteo NO se retarda por zona: un punto de Open-Meteo no trae información espacial. Además, la gráfica de θ enseñaba una sola curva de planta mientras la escena y la tabla ya iban por zonas — ahora dibuja el θ ejecutado de cada NCU con su envolvente; y las etiquetas de la escena se cortaban («☁ retiene» mide 483 px en un lienzo de 320, se leía «retien»), ahora el texto se ajusta hasta caber. QA 69." },
       { date:"2026-08-14", ver:"v1.10.2", note:"El diario narraba un stow que la gráfica de θ desmentía en la misma pantalla, y lo cazó el usuario cruzando el cronograma con las curvas. Los eventos «AMANECE … arranca el seguimiento» y «ANOCHECE … entra a stow» iban anclados en GHI > ghi_min —la puerta de la DIFUSA— mientras el hierro sale del stow y vuelve a él con el amanecer y el ocaso GEOMÉTRICOS: en el día de tarde nublada, 30′ tarde por la mañana y 79′ pronto por la tarde, o sea que decía «arranca el seguimiento» con el tracker ya siguiendo y «entra a stow» con el sol hora y cuarto por encima del horizonte. Y el reset nocturno remataba con «θ → stow» cuando lo que hace es SALIR DEL PLANO. Ahora son cuatro eventos, cada uno con su reloj, y la puerta de la difusa avisa de que cerrarse NO es el stow. QA 65: el minuto del wake/sleep tiene que coincidir con el minuto en que el θ EJECUTADO se mueve (a 5/10/15 min), y las cinco políticas tienen que narrar el MISMO stow porque es del hierro. Comprobado que la prueba falla con el código anterior." },
       { date:"2026-08-14", ver:"v1.10.1 (revertida)", note:"Durante unas horas esta app llevó una capa de VIENTO y stow (v1.11–v1.12) y se llegó a llamar «Simulador de TCU». Se retiró entera: cada simulador de la casa hace UNA cosa —el de BT tampoco lleva viento ni nieve— y el stow ya tiene su sitio en el comprobador de la Estrategia de Stow de Seguimiento PEM, donde además se verifica contra logs reales de planta. Las decisiones que COMBINAN capas (difusa + viento + BT, con su jerarquía de mando) son de un ente por encima: el simulador de TCU o el gemelo digital, no una de las piezas. El fichero volvió byte a byte a v1.10.1." },
@@ -650,9 +652,9 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Generador de siting de comunicaciones",
+    name: "Diseño de red de comunicaciones",
     status: "live",
-    objetivo: "Generación del siting de comunicaciones de una planta nueva: a partir del listado de seguidores, ubicación automática de NCU, RSU y gateways.",
+    objetivo: "Diseño de la red de comunicaciones de una planta nueva: a partir del listado de seguidores, ubicación automática de NCU, RSU y gateways.",
     stack: "HTML · Canvas · min-cost flow",
     url: "https://imoriana3.github.io/siting/",
     repo: "https://github.com/imoriana3/siting",
@@ -668,7 +670,7 @@ const PROJECTS = [
     historial: [ { date:"2026-06-22", ver:"", note:"Plantilla de creación en la cartera (Siting en blanco)." } ]
   },
   {
-    name: "Alta de planta desde CSV o DXF",
+    name: "Alta de planta",
     status: "live",
     objetivo: "Alta de una planta nueva a partir de ficheros CSV o DXF: reconocimiento de los bloques de tracker por su geometría y previsualización 2D/3D. Ejecución offline.",
     stack: "HTML offline · UTM↔WGS84 · parser DXF · Three.js",
@@ -686,7 +688,7 @@ const PROJECTS = [
     historial: [ { date:"2026-06-22", ver:"", note:"Creación de planta: datos base + CSV/DXF, reconocimiento de bloques por geometría." } ]
   },
   {
-    name: "Checklists de obra",
+    name: "Control de obra",
     status: "live",
     objetivo: "Gestión de checklists de obra para plantas fotovoltaicas: construcción, calidad, punchlist, mapa y cuadro de mando.",
     stack: "HTML · Firebase (Auth/Firestore) · GitHub Pages",
@@ -731,7 +733,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Visor de asignación topográfica · San José",
+    name: "Visor de levantamiento",
     status: "live",
     objetivo: "Asignación de 18.190 puntos topográficos a los 2.289 seguidores de la planta mediante flujo de coste mínimo. Ejecución offline.",
     stack: "HTML offline · datos NetworkX (min-cost flow)",
@@ -752,7 +754,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Visor de geometría as-built · Ayora",
+    name: "Visor de geometría as-built",
     status: "live",
     objetivo: "Reconstrucción de la geometría as-built de los 754 seguidores de la planta a partir de 3.069 puntos de levantamiento, con backtracking corregido por terreno.",
     stack: "HTML offline · Plotly · levantamiento topográfico",
@@ -776,7 +778,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Gemelo digital de seguidor",
+    name: "Gemelo digital de seguidor y control",
     status: "build",
     objetivo: "Réplica digital del seguidor y de su unidad de control, con geometría física real y control predictivo.",
     stack: "HTML · 3D · FastAPI · WebSocket · Docker",
@@ -801,7 +803,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Simulador de batería del seguidor",
+    name: "Simulador de batería",
     status: "live",
     objetivo: "Simulación anual de la gestión de la batería LiFePO4 del seguidor según la metodología del Battery Availability Study: porcentaje de tiempo no disponible, porcentaje de producción perdida y análisis rainflow en cualquier emplazamiento.",
     stack: "HTML autocontenido · canvas 2D · Open-Meteo · CSV PVSyst · Leaflet",
@@ -870,7 +872,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Calculadora de tráfico de red",
+    name: "Medidor de tráfico",
     status: "live",
     objetivo: "Cálculo del tráfico que el SCADA genera en la LAN de planta y del volumen que cada planta envía a la nube, con el mismo modelo de bytes que aplica el colector en operación.",
     stack: "HTML · sin dependencias · modelo en Python",
@@ -898,7 +900,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Simulador de abanderamiento por viento",
+    name: "Comparador de estrategias de abanderamiento",
     status: "live",
     objetivo: "Comparación de las estrategias canónicas de abanderamiento (A1/A2/B1/B2 y pasivo) frente al mismo seguidor sin abanderar: POA perdida, número de abanderamientos al año y tiempo acumulado en posición de defensa.",
     stack: "HTML autocontenido · física en el navegador · canvas 2D · Three.js + seguidor.js (escena 3D) · estética de overcast/bt3d · motor SolarGPT opcional (POST /windstow)",
@@ -986,8 +988,8 @@ const PROJECTS = [
     stack: "HTML autocontenido · motor de layout en el navegador (UTM + erosión exacta del setback + knapsack multi-talla) · canvas 2D · careo contra solargpt_core.layout_v2",
     url: "https://imoriana3.github.io/proyectos/generador-layout.html",
     repo: "https://github.com/imoriana3/proyectos",
-    updated: "2026-08-21",
-    version: "1.4.7",
+    updated: "2026-08-26",
+    version: "1.5.0",
     docId: "generador-layout",
     docUrl: "",
     download: "",
@@ -1012,7 +1014,7 @@ const PROJECTS = [
       "SESIÓN: se guarda sola (localStorage, 800 ms de retardo, y también en los gestos de ratón — cerrar un dibujo o borrar exclusiones no disparan change y el primer test lo cazó fuera del autoguardado), se restaura al volver anunciándolo, y se exporta/importa como sesion.json. Restaurar respeta el orden montaje → azimut → resto: la lección «pongo bifila y me saca monofilas» también aplica al restaurar.",
       "GATE layout↔sizing (§06.5, el puerto de bridge.validate_layout_vs_sizing): strings y kWp del layout contra los del sizing al 5 % — PASS/FAIL con los mensajes del bridge y WARN, no FAIL, cuando faltan datos, que no haber mirado no es estar mal. El checklist §02.5i lo consume, y los números del sizing se teclean o llegan por localStorage.factiun_sizing (canal propuesto en el CONTRATO para que lo publique el Comparador).",
       "Careo automático contra el core (node tests/test_layout.js, 196 comprobaciones): las mismas QUINCE parcelas por los dos motores —tres bifila con multi-talla sobre borde girado y en L, que es donde el emparejado A/B se rompe; un fijo multi-talla, y una finca REAL cóncava que entra por tests/parcelas/*.geojson: cualquier GeoJSON exportado desde la propia ficha vale (envoltorio {stats,geojson} incluido, con sus exclusiones), y el generador del fixture lo convierte en caso de careo—, exigiendo el mismo número de FILAS, mesas y kWp dentro del 2,5 %, área útil dentro del 0,5 % y las fórmulas cerradas exactas. Tres casos clavados, filas idénticas en 14 de 15, el peor dentro de la global a 1,89 % — y el fijo multi-talla a 2,59 % con tolerancia DECLARADA (3 %) y el mecanismo medido escrito en el generador: el core pierde un slot por rejilla global × convergencia y en fijo el port queda POR ENCIMA del canónico. Sobre los datos se miden además los invariantes que fueron quejas repetidas: en todos los bifila, cero pares descuadrados y Δx = 0 m entre sub-filas; en los multi-talla, nunca dos trackers de la misma talla seguidos cuando existe la doble. El fixture se regenera con python3 tests/gen_careo_layout.py --core /ruta/a/SolarGPTfull/solargpt.",
-      "Y el cableado en Chromium (node tests/test_layout_ui.js, 179 comprobaciones): que genera y PINTA de verdad, que los tres caminos de parcela acaban en layout, que las salidas se habilitan solo cuando hay algo que exportar — y las piezas nuevas: los cuatro cuadros del MDT pintados, el MDT que descarta SIN volver a pulsar Generar, el 3D por modo, los módulos dibujados, el área útil visible con el grid girado, el roundtrip de sesión a una pestaña limpia (misma cuenta de mesas y sin monofilas de contrabando) y el gate en sus tres estados. De ahí salieron el arreglo del doble clic —metía el último vértice tres veces— y el del autoguardado, que no guardaba los gestos de ratón.",
+      "Y el cableado en Chromium (node tests/test_layout_ui.js, 182 comprobaciones): que genera y PINTA de verdad, que los tres caminos de parcela acaban en layout, que las salidas se habilitan solo cuando hay algo que exportar — y las piezas nuevas: los cuatro cuadros del MDT pintados, el MDT que descarta SIN volver a pulsar Generar, el 3D por modo, los módulos dibujados, el área útil visible con el grid girado, el roundtrip de sesión a una pestaña limpia (misma cuenta de mesas y sin monofilas de contrabando) y el gate en sus tres estados. De ahí salieron el arreglo del doble clic —metía el último vértice tres veces— y el del autoguardado, que no guardaba los gestos de ratón.",
       "Salidas: GeoJSON (el mismo formato que carga el Explorador de layout), DXF de polilíneas, KML para Google Earth y paso directo al 3D de cobertura-zigbee."
     ],
     pendientes: [
@@ -1023,6 +1025,9 @@ const PROJECTS = [
       { done:false, text:"El canal factiun_sizing: el gate ya lo lee; falta que el Comparador lo publique (propuesto en CONTRATO, Puntos abiertos)." }
     ],
     historial: [
+      { date:"2026-08-26", ver:"1.5.0", note:"FIJA y TRACKER en el mismo layout, por zonas — y aquí porque el html debe ser IGUAL que el cuaderno y Streamlit, no una versión recortada. Se corre el motor una vez por zona con su montaje y su pitch y se funden los resultados; el patrón ya estaba para varias parcelas. Lo caro es el CONTRATO: los motores solo se cuentan donde los hay —en fija el motor emite 1 «tracker» por MESA, y sumarlo a ciegas daba 1.278 donde los seguidores son 510— y pitch, GCR, tabla y largos salen NULL con su motivo, porque con dos montajes no tienen valor único. Botón que PROPONE el reparto por pendiente con dos ejes (E-O y N-S, los dos tienen que pasar) y TRES bandas: tracker, fija y NO DESARROLLABLE — lo que no admite ninguno no se convierte en zona, sale con sus metros para que lo decidas. Consume las rejillas de pendiente que el MDT ya calculaba y tiraba." },
+      { date:"2026-08-26", ver:"1.4.9", note:"La varita fallaba sobre ortofoto REAL, y lo destapó la primera escena de verdad que entró al banco (Arganda, Alt+clic del mantenedor): un campo seco está MOTEADO —piedras, matojos, rodadas— así que el flood-fill deja la máscara agujereada, y la apertura de radio 3, que exige un bloque macizo de 7×7 para sobrevivir, se comía el 92% de la región (22.852 → 1.856 px) llevándose el propio píxel pinchado: contestaba «ahí no se distingue un recinto» sobre un campo perfectamente visible. Ahora se rellenan antes los huecos INTERIORES. No es un cierre morfológico: un cierre tiende puentes y fundiría dos campos separados por un camino estrecho, que es peor porque tiene buena pinta. Careado contra el port Python sobre esa misma escena real: mismo anillo, 28 vértices; y las 10 escenas sintéticas, idénticas." },
+      { date:"2026-08-22", ver:"1.4.8", note:"«Me lo hace en el 3D al revés, las estructuras mirando al norte en España»: el handoff al visor derivaba el azimut de la superficie del rumbo de la arista más larga de la mesa (rot+90) — y una arista NO tiene sentido: el mismo lado leído al revés da r ó r+180, según el orden en que el motor emita los vértices, que no es un contrato. En TRACKER daba igual (un tubo es una línea sin sentido, y por eso nadie lo vio en un año); en FIJA es la diferencia entre mirar al sur y mirar al norte. Medido antes de curar: con azimut de filas 180 salían las 256 mesas a 0/360. Ahora se conserva la geometría de la arista (el giro fino de la retícula) y el HEMISFERIO lo fija el canon — de las dos lecturas gana la que cae del lado del azimut de FILAS, que en fija ES el azimut de superficie. De propina, el módulo va DESPUÉS del redondeo: «360.0» se colaba como azimut fuera de rango. La POA no estaba afectada (el azimut de la fija es input propio del motor, no viaja por el handoff), solo el dibujo — pero un 3D que miente sobre la orientación es una comprobación visual que engaña. UI 179→182." },
       { date:"2026-08-22", ver:"1.4.7", note:"Arganda 3 («sigue mal en la 1.4.6») + encargo B10: una parcela real no tiene UN color — mancha gris + tierra marrón, linde por caminos — y ningún clic único puede adivinarla siguiendo color. (1) CLICS QUE SUMAN, el magic-wand clásico: la varita queda armada tras el primer contorno y cada clic detecta su zona y la UNE a lo acumulado si se tocan, recalculando el contorno; una isla que no toca se rechaza con aviso y lo acumulado se conserva; pan/zoom resetea (convertir máscaras entre encuadres sería inventar píxeles); doble clic acepta. Dos o tres clics construyen la parcela. (2) RE-ETIQUETADO de expectativas (encargo B10): el botón pasa a «🪄 Borrador de parcela» — propone un borrador editable a partir del color, NO es un detector de lindes, y así lo dice su título; la detección buena por coordenadas es el Catastro/SIGPAC. (3) La varita captura su PROPIA evidencia: Alt+clic descarga la escena exacta que ve (ortofoto del lienzo + punto + encuadre) — material de fixture REAL para el banco, que daba verde sintético donde el sitio real fallaba (fixture ciego); recortar capturas a mano no es un mecanismo. Mutante sin-unión en rojo doble. UI 176→179." },
       { date:"2026-08-21", ver:"1.4.6", note:"El parte de Arganda («la ha detectado francamente mal»): la región del flood-fill arrastraba BRAZOS FINOS (un camino del mismo tono) y el contorno salía con púas de ida-y-vuelta, un cordón suelto cruzando el mapa y 61 vértices de sierra. Tres curas de visión clásica, con la escena convertida en fixtures: (1) APERTURA morfológica r=3 por imagen integral — mata todo lo más estrecho que ~7 px sin mover los bordes anchos, y tras ella el contorno traza solo la ISLA de la semilla; (2) criterio de parada de JACOB en el trazado — volver al arranque no basta, hay que volver entrando por el mismo sitio: parar solo por posición cortaba el anillo y el cierre artificial era el cordón suelto; más quitar-PÚAS (desvío ×1,8 sobre el camino directo = pliegue, nunca esquina real); (3) simplificación ADAPTATIVA — ε sube hasta bajar de 40 vértices retocables; las esquinas reales sobreviven, la sierra no. Mutantes en rojo cada uno en su régimen — el de la adaptativa exigió ondas de ±12 px que la apertura no plancha (con dientes de ±5 el invariante era decorativo). UI 174→176." },
       { date:"2026-08-21", ver:"1.4.5", note:"«Sin sentido» — el primer uso real de la varita (ortofoto de una planta construida) aceptó como recinto la franja de suelo entre dos filas de trackers: una esquirla de ~8 px con 5 vértices. Dos causas, dos curas con la captura convertida en fixture: (1) CRITERIO DE ACEPTACIÓN — mínimo del 0,3% del lienzo en región Y en área del anillo, y ≥18 px en el lado corto de la caja (la esquirla exacta de la captura, rechazada por test con su mutante en rojo); (2) la escalera de tolerancias ya no acepta LA PRIMERA región sino LA MAYOR válida — con textura fina (rodadas, calvas, franjas) la tolerancia fina se quedaba con un fragmento homogéneo del campo; ahora pinchar un claro DENTRO del campo devuelve el campo (test con el mutante gana-la-primera en rojo). UI 172→174." },
@@ -1055,8 +1060,8 @@ const PROJECTS = [
     stack: "HTML autocontenido · física en el navegador (Hay-Davies + sombra geométrica + backtracking) · catálogo CEC completo (16.758 módulos + 4.910 inversores) · dimensionado eléctrico portado del core · canvas 2D · Three.js + seguidor.js (escena 3D) · estética de overcast/bt3d · motor SolarGPT opcional (POST /structures) · careo automático contra el core",
     url: "https://imoriana3.github.io/proyectos/comparador-estructuras.html",
     repo: "https://github.com/imoriana3/proyectos",
-    updated: "2026-08-20",
-    version: "1.26",
+    updated: "2026-08-26",
+    version: "1.33",
     docId: "comparador-estructuras",
     docUrl: "",
     download: "",
@@ -1101,6 +1106,13 @@ const PROJECTS = [
       { done:false, text:"Enganchar el LCOE (motor /economy) para que al lado del ranking de kWh salga el de €/MWh." }
     ],
     historial: [
+      { date:"2026-08-26", ver:"1.33", note:"El «eje inclinado °» ya no se teclea: lo pone el terreno. Un TSAT no es un seguidor con un parámetro más, es un seguidor sobre una pendiente que corre A LO LARGO de su eje — un eje no se inclina en el aire—, así que el campo pasa a solo lectura y se rellena con la componente a lo largo del eje del mismo plano del sitio: +26° con la caída al sur (mira al ecuador), −26° con la caída al norte (mira al polo, que también existe), 0° con la caída al este u oeste (esa pendiente es ⊥ al eje) y 0° en llano — sin pendiente no hay TSAT que valga. Eso obligó a que la física acepte el SIGNO: psTSAT tomaba Math.abs(axis_tilt) y orientaba el eje hacia el ecuador por definición, así que con el terreno cayendo hacia el polo se dibujaba un eje y se calculaba el contrario; ahora el eje al ecuador capta más que al polo, medido. En el hemisferio sur el signo se da la vuelta. El careo no se toca: sin azimut declarado se respeta el valor recibido, que es como el core toma axis_tilt y cross_axis_slope, por separado." },
+      { date:"2026-08-26", ver:"1.32", note:"«Quien tiene la pendiente es el terreno, luego el tracker se adapta.» Faltaba justo eso: cada fila se apoyaba en la cota de su CENTRO y se quedaba horizontal a lo largo, así que con 65 m de fila y 24° de pendiente en esa dirección un extremo volaba 14 m y el otro se enterraba otros 14 — el «tracker con megasoportes» de siempre, ahora en la fija. Ahora cada fila se inclina lo que se inclina el terreno en su dirección larga, ni más ni menos: las que corren este-oeste giran en Z y las que corren norte-sur en X. Medido en los dos extremos de cada fila y con tres azimutes distintos, ninguna vuela ni se entierra (< 2 cm). Para un seguidor eso es literalmente un eje que sigue el terreno, que es lo que es un TSAT: por eso en LLANO el eje del TSAT sale ahora horizontal —un eje no se inclina en el aire— y cada lectura de seguidor dice cuánto se inclina el suyo con el terreno, y si el TSAT declara otro valor, también lo dice. Lo que no cambia es el tilt ni la ⊥: en la dirección del pitch las filas se escalonan a distinta cota, no se inclinan." },
+      { date:"2026-08-26", ver:"1.31", note:"«¿Qué está haciendo?» Con la caída al NNE la escena salía en negro y con las mesas de canto: la cámara se pone cuesta abajo para ver los bloques en línea y la ladera subiendo por detrás, pero cuesta abajo puede ser el NORTE — y una fija mira al ecuador, así que la cámara acababa DETRÁS de los paneles enseñando el dorso. Las dos direcciones ⊥ a la línea de bloques encuadran igual de bien y solo una enseña la cara: ahora se elige siempre la del lado del ecuador (y la del norte en el hemisferio sur). Cuando la caída es este u oeste no hay componente hacia el ecuador ninguna, así que se le suma un sesgo — mejor algo de escorzo en la línea de bloques que mirar seis estructuras de perfil. De regalo, un detalle de JS: cos(90°) no es cero sino 6e-17, y sin épsilon ese ruido decidía de qué lado se ponía la cámara." },
+      { date:"2026-08-26", ver:"1.30", note:"«Solo permite una dirección perpendicular; debe ser con azimut, no referenciada a la fila.» Exacto, y era un error de modelo, no de dibujo: pedir la «pendiente ⊥ filas» es pedirle al terreno que gire con cada estructura. Un emplazamiento tiene UNA pendiente, con su magnitud y su azimut de caída; lo que gira son las FILAS. Ahora se teclean los dos (0 N, 90 E, 180 S, 270 O) y cada familia recibe la COMPONENTE que le toca: la ⊥ a sus filas entra en el sombreado (el cross_axis_slope del core) y la que corre a lo largo no sombrea pero hay que absorberla con las hincas, con bancales o inclinando el eje. La consecuencia es la que importa: con el terreno cayendo al SUR la fija ve toda la pendiente y el seguidor NINGUNA —la ve entera a lo largo del eje—, y al este al revés; el caso en que todas ven lo mismo ya no se impone, sale, y solo con la caída en diagonal. En la escena eso se traduce en un solo plano para todas, los bloques sobre la curva de nivel (así arrancan todos de la misma cota) y la cámara cuesta abajo mirando ladera arriba, porque la línea de bloques gira con el azimut. El careo no se toca: sin azimut declarado, `pend` sigue siendo el cross-axis tal cual lo toma el core." },
+      { date:"2026-08-26", ver:"1.29", note:"«Le pongo 16° de pendiente y me sale eso.» Y salía, con razón: las bancadas se dibujaban ceñidas al bloque, y una fija de 3 filas a 4,5 m mide 10 m — 16° sobre 10 m son 1,4 m de desnivel, invisible en una escena de 170 m. Ahora la bancada es la misma para todas y tan ancha como cabe entre bloque y bloque (media distancia al vecino de bancada y la otra media de talud, que es la única proporción con la que el talud no sale más empinado que la propia pendiente). Y aun así seguía sin verse, esta vez por la luz: a mediodía de junio el sol está a 76°, casi cenital, y una ladera de 16° recibe casi la misma luz que el llano — el suelo salía de un verde plano y uniforme. Lleva ya un tinte por altura (claro arriba, oscuro abajo, como un mapa hipsométrico) que hace legible el relieve a cualquier hora. De paso, en las esquinas de la bancada del eje inclinado —la única con pendiente en los dos ejes— los dos desniveles se sumaban y el talud salía a 34° con 12 tecleados: ahora se acota al mayor de los dos y se queda en 17°." },
+      { date:"2026-08-26", ver:"1.28", note:"«Esto no es tener la misma pendiente.» Lo era —cada bloque llevaba los grados tecleados perpendiculares a SUS filas— pero el terreno no lo enseñaba: cada bancada se levantaba entera hasta apoyar su punto más bajo en la cota cero, así que cada estructura quedaba sobre un cerro de distinta altura, con meseta arriba y una ladera que se estiraba hasta el borde del mapa porque solo estaba acotada en X. Ahora las seis bancadas son iguales: mismo desnivel, MISMA COTA CENTRAL (suben por un lado lo que bajan por el otro), acotadas por los cuatro lados y sin solaparse — entre dos, el terreno vuelve exactamente a la cota común, y con pendiente los bloques se separan un 60 % más porque el talud que devuelve la bancada al llano ocupa sitio. Un plano único no es posible y ahora la escena dice por qué: una fila es rígida y solo se replantea sobre terreno a nivel A LO LARGO de ella, y las filas de una fija (este-oeste) y las de un seguidor (norte-sur) son perpendiculares — el plano que dejara bien a una enterraría a la otra. Lo que se comparte no es el plano: es la pendiente, la misma para todas, girada a sus filas. La física no cambia: ya usaba un solo cross_axis_slope para las tres." },
+      { date:"2026-08-21", ver:"1.27", note:"Con una mesa 3V o mayor a pitch 6 el seguidor salía a −32,6° A MEDIODÍA y girando al revés. No era el render: la apertura (7,146 m) no cabe en el pitch (GCR 1,19) y la fórmula del backtracking pedía retroceder más de lo que había avanzado, cruzaba el cero y devolvía el ángulo con el signo cambiado. El arreglo es la regla física: el backtracking solo REDUCE |θ|, nunca lo invierte — retroceder es aplanarse para no taparse, y pasarse del cero sería tumbarse hacia el otro lado, que no evita sombra sino que la crea. Con GCR ≤ 1 la cota no actúa nunca (el careo sigue idéntico) y con GCR > 1 el seguidor se queda plano, que es lo único honesto cuando la geometría no existe. La escena lo dice ahora («GCR 1,19: no cabe») en vez de enseñar un ángulo inventado; abriendo el pitch a 9 m la misma mesa vuelve a girar bien." },
       { date:"2026-08-20", ver:"1.26", note:"La pendiente es UNA y la misma para las tres familias — eso es lo que iguala la comparación—, y ahora hay un test que lo EXIGE: no basta con que el campo exista, tiene que mover a las tres. A 12° en Sevilla la fija pasa de 0,17 % de sombra a 0,00 % (las filas se escalonan y dejan de taparse) y el seguidor con backtracking de 0,00 % a 6,44 %: la pendiente le quita sombra a una y se la pone a la otra, o sea que cambia el resultado de la comparación. Y va dicho en el propio campo, porque en la escena cada familia lleva la pendiente en su dirección de pitch y el terreno sube hacia lados distintos bajo cada bloque — eso se lee como tres pendientes distintas y es la misma perpendicular a las filas." },
       { date:"2026-08-20", ver:"1.25", note:"PENDIENTE DEL EMPLAZAMIENTO para las tres familias, que es lo que permite comparar en igualdad. Entra en la FÍSICA, no solo en el dibujo: al sombreado entre filas por el mismo sitio que en el core (cross_axis_slope de pvlib.shading.shaded_fraction1d), y el careo se regenera con 8° para que el signo y la fórmula no puedan pasar por casualidad — POA dentro del 0,8-2,1 % del canónico y Δ% dentro de 1,4 pp, orden idéntico. Cada familia la lleva en SU dirección de pitch: la fija al sur, el seguidor y las dos aguas al este; el eje inclinado suma además la del eje. En la escena las hincas siguen verticales y el tilt no cambia — una fija en pendiente no se inclina con el terreno, se replantea sobre él. Y destapa algo que conviene saber: el backtracking se calcula EN LLANO, así que con pendiente deja de evitar la sombra (0,00 % en llano contra 4,11 % a 8°, y el core da 3,74 % en el mismo caso)." },
       { date:"2026-08-20", ver:"1.24", note:"«¿Por qué solo esa estructura tiene pendiente?» Porque es la única que la DECLARA: el «eje inclinado °» de un TSAT no es un parámetro de dibujo, es la pendiente del terreno sobre el que se monta — un eje no se inclina en el aire. Las demás llevan eje horizontal o son fijas, o sea que declaran terreno llano. Ahora lo dice la escena, con su consecuencia: la POA se calcula en todas SIN pendiente de emplazamiento (el cross_axis_slope del core no está expuesto aquí), así que ese terreno sale del parámetro del propio seguidor y no de un relieve del sitio." },
@@ -1131,7 +1143,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Agente y collector de planta",
+    name: "Agente Modbus y collector",
     status: "build",
     objetivo: "Componentes que se ejecutan dentro de la planta: agente Modbus de solo lectura y collector, que alimentan al SCADA y a las utilidades de campo.",
     stack: "PowerShell · Modbus TCP · Cloudflare Tunnel · Supabase",
@@ -1158,9 +1170,9 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Utilidades de configuración en campo",
+    name: "TCU Toolbox",
     status: "live",
-    objetivo: "Herramienta offline para configurar, diagnosticar y respaldar unidades de control de seguidor a través del gateway Modbus de la NCU.",
+    objetivo: "Herramienta offline para configurar, diagnosticar y respaldar TCUs Sunner a través del gateway Modbus de la NCU.",
     stack: "PowerShell · Modbus TCP · offline",
     url: "",                                                  // no hay deploy: se ejecuta en el portátil de campo
     repo: "https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox",
@@ -1189,7 +1201,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Siting de comunicaciones · demo",
+    name: "Diseño de red de comunicaciones · demo",
     status: "demo",
     objetivo: "Emplazamiento de NCU, TCU, HSU y repetidores sobre la geometría real de la planta.",
     stack: "HTML · PWA",
@@ -1211,7 +1223,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Diagnóstico de cobertura Zigbee · El Burgo",
+    name: "Diagnóstico de cobertura Zigbee",
     status: "build",
     objetivo: "Medición sobre imagen satélite de la cobertura Zigbee desplegada: nivel de señal, nodos sin respuesta, saltos y criticidad de cada unidad.",
     stack: "HTML · Leaflet · PowerShell (RCI/telnet) · CSV",
@@ -1267,7 +1279,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Cartera de plantas",
+    name: "Cartera de proyectos",
     status: "build",
     objetivo: "Base de datos y cuadro de mando de los proyectos adjudicados: indicadores, gráficas, mapa mundial y tabla editable.",
     stack: "HTML · Supabase (Postgres + Auth + RLS) · Chart.js · Leaflet",
@@ -1290,7 +1302,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "SCADA de planta",
+    name: "SCADA",
     status: "live",
     objetivo: "Supervisión de la planta en operación: sinóptico sobre plano, seguimiento del día, estado de la flota y acceso al gemelo 3D.",
     stack: "HTML · Supabase · Chart.js · gemelo 3D (cobertura-zigbee)",
@@ -1339,7 +1351,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Registro de puesta en marcha",
+    name: "Seguimiento PEM",
     status: "live",
     objetivo: "Registro de puesta en marcha por planta: diagnósticos, comisionado, inventarios y auditorías, con comparación frente a la visita anterior.",
     stack: "HTML · Supabase (Postgres + Auth + RLS)",
@@ -1358,7 +1370,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Inventario de direccionamiento IP",
+    name: "IPs de plantas",
     status: "live",
     objetivo: "Tabla editable del direccionamiento por planta: NCU, gateways, esclavos, versión de firmware y accesos remotos.",
     stack: "HTML · Supabase (Postgres + Auth + RLS)",
@@ -1515,8 +1527,8 @@ const PLANT_VIEWS = [
 ];
 /* Módulos que YA viven en una planta (sección Plantas): no se repiten abajo en Herramientas */
 const PLANT_MODULES = new Set([
-  "Visor de asignación topográfica · San José", "Visor de geometría as-built · Ayora",
-  "Siting de comunicaciones · demo", "Diagnóstico de cobertura Zigbee · El Burgo"
+  "Visor de levantamiento", "Visor de geometría as-built",
+  "Diseño de red de comunicaciones · demo", "Diagnóstico de cobertura Zigbee"
 ]);
 const TOOLS = PROJECTS.filter(p => !PLANT_MODULES.has(p.name));   // Herramientas = solo lo genérico (no de planta)
 

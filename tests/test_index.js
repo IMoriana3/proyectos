@@ -21,7 +21,7 @@ function check(nombre, valor, esperado) {
 
 // La tarjeta de la toolbox, por su nombre visible.
 async function tarjetaToolbox(page) {
-  return page.locator('article.card', { has: page.locator('.name', { hasText: 'Utilidades de configuración en campo' }) }).first();
+  return page.locator('article.card', { has: page.locator('.name', { hasText: 'TCU Toolbox' }) }).first();
 }
 
 // Monta la pagina con la API de releases simulada. `respuesta` decide que
@@ -45,7 +45,7 @@ async function abrir(browser, respuesta) {
   let page = await abrir(browser, { tag_name: 'toolbox-v12.7', published_at: '2026-09-01T10:00:00Z' });
   let card = await tarjetaToolbox(page);
   await page.waitForFunction(() => {
-    const c = [...document.querySelectorAll('article.card')].find(x => x.querySelector('.name')?.textContent.includes('Utilidades de configuración en campo'));
+    const c = [...document.querySelectorAll('article.card')].find(x => x.querySelector('.name')?.textContent.includes('TCU Toolbox'));
     return c && c.querySelector('.ver')?.textContent === '12.7';
   }, null, { timeout: 5000 });
   check('version de la release', await card.locator('.ver').textContent(), '12.7');
@@ -59,7 +59,7 @@ async function abrir(browser, respuesta) {
   page = await abrir(browser, { tag_name: 'v3.1', published_at: '2026-01-02T00:00:00Z' });
   card = await tarjetaToolbox(page);
   await page.waitForFunction(() => {
-    const c = [...document.querySelectorAll('article.card')].find(x => x.querySelector('.name')?.textContent.includes('Utilidades de configuración en campo'));
+    const c = [...document.querySelectorAll('article.card')].find(x => x.querySelector('.name')?.textContent.includes('TCU Toolbox'));
     return c && c.querySelector('.ver')?.textContent === '3.1';
   }, null, { timeout: 5000 });
   check('tag v3.1 sin prefijo', await card.locator('.ver').textContent(), '3.1');
