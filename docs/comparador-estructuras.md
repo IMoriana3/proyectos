@@ -597,6 +597,19 @@ al norte.
 Sin azimut declarado se respeta el valor recibido: el core toma `axis_tilt` y `cross_axis_slope` por
 separado —son las dos componentes del mismo plano— y por ahí entra el careo.
 
+#### El horizonte también lleva la pendiente
+
+El suelo va en dos piezas: el de **trabajo**, que recibe sombras y se dimensiona con la escena, y el
+de **horizonte**, enorme, que llega hasta la cúpula — sin él el de trabajo se acaba en un borde recto
+con el cielo detrás y los bloques parecen estar sobre una mesa flotando en el vacío.
+
+Con el terreno inclinado, el de horizonte tenía que inclinarse **con él**: plano y horizontal, el
+cuadrado del suelo de trabajo acababa contra él en un canto recto que cruzaba la escena. Una ladera
+que se corta en línea y sigue en llano no es un horizonte, es un error de dibujo. Va en el mismo
+plano y metro y medio por debajo. (Detalle: su geometría se pre-rota tumbada, para que la rotación
+del objeto quede libre para la pendiente — con `rotation.x = −π/2` en el objeto, inclinarlo lo ponía
+de canto y salía un muro.)
+
 #### Y que se VEA: sombreado por cota
 
 Con el terreno bien hecho la pendiente seguía sin verse, y no era el modelo: a mediodía de junio el

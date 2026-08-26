@@ -2646,9 +2646,18 @@ function init3D(){
     var suelo=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
       new THREE.MeshLambertMaterial({color:0x24301d,vertexColors:true}));
     suelo.rotation.x=-Math.PI/2; suelo.receiveShadow=true; sc.add(suelo);
-    var horiz=new THREE.Mesh(new THREE.PlaneGeometry(12000,12000),
+    /* La geometría ya viene TUMBADA (rotateX en la propia malla) para que la
+       rotación del objeto quede libre: es la que le da luego la pendiente del
+       sitio. Con `rotation.x=-PI/2` en el objeto, inclinarlo lo ponía de canto. */
+    var horizGeo=new THREE.PlaneGeometry(12000,12000); horizGeo.rotateX(-Math.PI/2);
+    var horiz=new THREE.Mesh(horizGeo,
       new THREE.MeshLambertMaterial({color:0x1e2a19}));
-    horiz.rotation.x=-Math.PI/2; horiz.position.y=-1.5; sc.add(horiz);
+    horiz.position.y=-1.5; sc.add(horiz);
+    /* Y el de horizonte se INCLINA con el terreno (más abajo, en cada
+       construcción). Plano y horizontal, el cuadrado del suelo de trabajo
+       acababa contra él en un canto recto que cruzaba la escena — una ladera
+       que se corta en línea y sigue en llano no es un horizonte, es un error
+       de dibujo. */
     /* La NIEBLA es lo que cose los dos con el cielo: sin ella, por lejos que
        llegue el suelo siempre hay una línea dura donde acaba. Su color lo
        repinta `setSky`, así que al amanecer la bruma se pone naranja. */
@@ -3050,7 +3059,7 @@ function construyeMundo(){
        Y esta ficha existe en buena parte para enseñar la sombra entre filas.  */
   var ancho=anchoTot, largoZ=(nfMax+1)*8+largo;
   var asp=Math.max(1.2,(TD.w||900)/(TD.h||420));
-  var d=Math.max((ancho*0.58)/(Math.tan(21*Math.PI/180)*asp),largoZ*0.9);
+  var d=Math.max((ancho*0.58)/(Math.tan(TD.cam.fov/2*Math.PI/180)*asp),largoZ*0.9);
   /* El suelo se REGENERA con la escena: lleva el relieve de los ejes
      inclinados, y escalar un heightfield escalaría también las cotas. */
   if(TD.suelo.geometry)TD.suelo.geometry.dispose();
@@ -3061,6 +3070,10 @@ function construyeMundo(){
      niebla cose el borde. */
   TD.suelo.geometry=sueloRelieve(Math.max(anchoTot,largoZ)*2.4+320,T);
   TD.suelo.scale.set(1,1,1); TD.suelo.rotation.set(0,0,0);
+  /* El horizonte, en el MISMO plano y un pelo por debajo: así el cuadrado del
+     suelo de trabajo no acaba en un canto recto contra un llano. */
+  TD.horiz.rotation.set(Math.atan(T.gz||0),0,-Math.atan(T.gx||0));
+  TD.horiz.position.y=-1.5;
   TD.radio=Math.max(220,d*1.6);
   /* La cámara se pone CUESTA ABAJO, mirando ladera arriba. No es gusto: los
      bloques van sobre la curva de nivel, que gira con el azimut, y desde el sur
