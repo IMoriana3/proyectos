@@ -516,7 +516,7 @@ body{
    ===================================================================== */
 const PROJECTS = [
   {
-    name: "Mapa de registros Modbus",
+    name: "Mapa Modbus",
     status: "live",
     objetivo: "Consulta del mapa Modbus completo de NCU, HSU y TCU, con dirección absoluta por unidad y decodificación de valores crudos en vivo.",
     stack: "HTML · sin dependencias",
@@ -601,7 +601,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Simulador de cielo cubierto",
+    name: "Simulador de radiación difusa",
     status: "live",
     objetivo: "Evaluación de las cuatro políticas de radiación difusa en días nublados: cielo definido manualmente o real de Open-Meteo, zonificación por NCU y balance de POA de cada política.",
     stack: "HTML offline · Three.js (libs locales) + seguidor.js · Canvas · pvlib singleaxis + Ineichen + Perez portados a JS · Open-Meteo (datos, opcional)",
@@ -652,9 +652,9 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Generador de siting de comunicaciones",
+    name: "Diseño de red de comunicaciones",
     status: "live",
-    objetivo: "Generación del siting de comunicaciones de una planta nueva: a partir del listado de seguidores, ubicación automática de NCU, RSU y gateways.",
+    objetivo: "Diseño de la red de comunicaciones de una planta nueva: a partir del listado de seguidores, ubicación automática de NCU, RSU y gateways.",
     stack: "HTML · Canvas · min-cost flow",
     url: "https://imoriana3.github.io/siting/",
     repo: "https://github.com/imoriana3/siting",
@@ -670,7 +670,7 @@ const PROJECTS = [
     historial: [ { date:"2026-06-22", ver:"", note:"Plantilla de creación en la cartera (Siting en blanco)." } ]
   },
   {
-    name: "Alta de planta desde CSV o DXF",
+    name: "Alta de planta",
     status: "live",
     objetivo: "Alta de una planta nueva a partir de ficheros CSV o DXF: reconocimiento de los bloques de tracker por su geometría y previsualización 2D/3D. Ejecución offline.",
     stack: "HTML offline · UTM↔WGS84 · parser DXF · Three.js",
@@ -688,7 +688,7 @@ const PROJECTS = [
     historial: [ { date:"2026-06-22", ver:"", note:"Creación de planta: datos base + CSV/DXF, reconocimiento de bloques por geometría." } ]
   },
   {
-    name: "Checklists de obra",
+    name: "Control de obra",
     status: "live",
     objetivo: "Gestión de checklists de obra para plantas fotovoltaicas: construcción, calidad, punchlist, mapa y cuadro de mando.",
     stack: "HTML · Firebase (Auth/Firestore) · GitHub Pages",
@@ -733,7 +733,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Visor de asignación topográfica · San José",
+    name: "Visor de levantamiento",
     status: "live",
     objetivo: "Asignación de 18.190 puntos topográficos a los 2.289 seguidores de la planta mediante flujo de coste mínimo. Ejecución offline.",
     stack: "HTML offline · datos NetworkX (min-cost flow)",
@@ -754,7 +754,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Visor de geometría as-built · Ayora",
+    name: "Visor de geometría as-built",
     status: "live",
     objetivo: "Reconstrucción de la geometría as-built de los 754 seguidores de la planta a partir de 3.069 puntos de levantamiento, con backtracking corregido por terreno.",
     stack: "HTML offline · Plotly · levantamiento topográfico",
@@ -778,7 +778,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Gemelo digital de seguidor",
+    name: "Gemelo digital de seguidor y control",
     status: "build",
     objetivo: "Réplica digital del seguidor y de su unidad de control, con geometría física real y control predictivo.",
     stack: "HTML · 3D · FastAPI · WebSocket · Docker",
@@ -803,7 +803,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Simulador de batería del seguidor",
+    name: "Simulador de batería",
     status: "live",
     objetivo: "Simulación anual de la gestión de la batería LiFePO4 del seguidor según la metodología del Battery Availability Study: porcentaje de tiempo no disponible, porcentaje de producción perdida y análisis rainflow en cualquier emplazamiento.",
     stack: "HTML autocontenido · canvas 2D · Open-Meteo · CSV PVSyst · Leaflet",
@@ -872,7 +872,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Calculadora de tráfico de red",
+    name: "Medidor de tráfico",
     status: "live",
     objetivo: "Cálculo del tráfico que el SCADA genera en la LAN de planta y del volumen que cada planta envía a la nube, con el mismo modelo de bytes que aplica el colector en operación.",
     stack: "HTML · sin dependencias · modelo en Python",
@@ -900,7 +900,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Simulador de abanderamiento por viento",
+    name: "Comparador de estrategias de abanderamiento",
     status: "live",
     objetivo: "Comparación de las estrategias canónicas de abanderamiento (A1/A2/B1/B2 y pasivo) frente al mismo seguidor sin abanderar: POA perdida, número de abanderamientos al año y tiempo acumulado en posición de defensa.",
     stack: "HTML autocontenido · física en el navegador · canvas 2D · Three.js + seguidor.js (escena 3D) · estética de overcast/bt3d · motor SolarGPT opcional (POST /windstow)",
@@ -1137,7 +1137,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Agente y collector de planta",
+    name: "Agente Modbus y collector",
     status: "build",
     objetivo: "Componentes que se ejecutan dentro de la planta: agente Modbus de solo lectura y collector, que alimentan al SCADA y a las utilidades de campo.",
     stack: "PowerShell · Modbus TCP · Cloudflare Tunnel · Supabase",
@@ -1164,9 +1164,9 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Utilidades de configuración en campo",
+    name: "TCU Toolbox",
     status: "live",
-    objetivo: "Herramienta offline para configurar, diagnosticar y respaldar unidades de control de seguidor a través del gateway Modbus de la NCU.",
+    objetivo: "Herramienta offline para configurar, diagnosticar y respaldar TCUs Sunner a través del gateway Modbus de la NCU.",
     stack: "PowerShell · Modbus TCP · offline",
     url: "",                                                  // no hay deploy: se ejecuta en el portátil de campo
     repo: "https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox",
@@ -1195,7 +1195,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Siting de comunicaciones · demo",
+    name: "Diseño de red de comunicaciones · demo",
     status: "demo",
     objetivo: "Emplazamiento de NCU, TCU, HSU y repetidores sobre la geometría real de la planta.",
     stack: "HTML · PWA",
@@ -1217,7 +1217,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Diagnóstico de cobertura Zigbee · El Burgo",
+    name: "Diagnóstico de cobertura Zigbee",
     status: "build",
     objetivo: "Medición sobre imagen satélite de la cobertura Zigbee desplegada: nivel de señal, nodos sin respuesta, saltos y criticidad de cada unidad.",
     stack: "HTML · Leaflet · PowerShell (RCI/telnet) · CSV",
@@ -1273,7 +1273,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Cartera de plantas",
+    name: "Cartera de proyectos",
     status: "build",
     objetivo: "Base de datos y cuadro de mando de los proyectos adjudicados: indicadores, gráficas, mapa mundial y tabla editable.",
     stack: "HTML · Supabase (Postgres + Auth + RLS) · Chart.js · Leaflet",
@@ -1296,7 +1296,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "SCADA de planta",
+    name: "SCADA",
     status: "live",
     objetivo: "Supervisión de la planta en operación: sinóptico sobre plano, seguimiento del día, estado de la flota y acceso al gemelo 3D.",
     stack: "HTML · Supabase · Chart.js · gemelo 3D (cobertura-zigbee)",
@@ -1345,7 +1345,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Registro de puesta en marcha",
+    name: "Seguimiento PEM",
     status: "live",
     objetivo: "Registro de puesta en marcha por planta: diagnósticos, comisionado, inventarios y auditorías, con comparación frente a la visita anterior.",
     stack: "HTML · Supabase (Postgres + Auth + RLS)",
@@ -1364,7 +1364,7 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Inventario de direccionamiento IP",
+    name: "IPs de plantas",
     status: "live",
     objetivo: "Tabla editable del direccionamiento por planta: NCU, gateways, esclavos, versión de firmware y accesos remotos.",
     stack: "HTML · Supabase (Postgres + Auth + RLS)",
@@ -1521,8 +1521,8 @@ const PLANT_VIEWS = [
 ];
 /* Módulos que YA viven en una planta (sección Plantas): no se repiten abajo en Herramientas */
 const PLANT_MODULES = new Set([
-  "Visor de asignación topográfica · San José", "Visor de geometría as-built · Ayora",
-  "Siting de comunicaciones · demo", "Diagnóstico de cobertura Zigbee · El Burgo"
+  "Visor de levantamiento", "Visor de geometría as-built",
+  "Diseño de red de comunicaciones · demo", "Diagnóstico de cobertura Zigbee"
 ]);
 const TOOLS = PROJECTS.filter(p => !PLANT_MODULES.has(p.name));   // Herramientas = solo lo genérico (no de planta)
 
