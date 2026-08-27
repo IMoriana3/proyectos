@@ -1163,6 +1163,15 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
   var cruz=FIS.cruz(cfg,spec);
   var dtH=(n>1)?((M.t[1]-M.t[0])/3600000):1;
   var neta=0, ideal=0, mes=new Float64Array(12);
+  /* θ ACUMULADO, para que el careo pueda LOCALIZAR. Sin esto, un careo contra
+     el core solo sabe decir que la POA no cuadra, y de ahí a acusar al lado
+     equivocado hay un paso: pasó el 2026-08-26, cuando la POA no cuadraba y se
+     dedujo que la ficha llevaba física vieja. Fallaba el backtracking del core.
+     Con el ángulo delante eso es una línea.
+     Se promedia sobre los pasos DE DÍA —el bucle ya salta la noche— porque el
+     ángulo nocturno no es un dato: es un relleno, y promediarlo mezclaría dos
+     convenios distintos con el core. */
+  var thAbs=0, nDia=0, thSerie=[];
   var tilt=(tiltForzado!=null)?tiltForzado:(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
   var axT=FIS.ejeTilt(cfg,spec);
   /* Las MITADES del eje. En todo lo que no sea un quebrado sobre terreno
@@ -1170,44 +1179,66 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
   var ejes=FIS.ejesMitades(cfg,spec);
   for(var i=0;i<n;i++){
     var S=FIS.sun(M.t[i],latR,cfg.lon);
-    if(S.el<=0)continue;
+    if(S.el<=0){ thSerie.push(null); continue; }   // hueco declarado, no ausencia
     var bh=M.dni[i], dh=M.dhi[i], gh=M.ghi[i], e0=FIS.E0(M.t[i]), P0, planos;
     var sN=0,sI=0;
     if(spec.fam==='tracker'){
-      /* Cada mitad es un seguidor con SU eje: su propia proyección del sol, su
-         propio ángulo de backtracking y su propia sombra. La fila es la media
-         de las dos, que tienen la misma superficie. */
-      for(var mi=0;mi<ejes.length;mi++){
-        var ax=ejes[mi];
+      /* La proyección con eje inclinado la decide el ÁNGULO, no la etiqueta del
+         catálogo: si el eje está inclinado —lo diga el catálogo o lo ponga el
+         terreno— hay que proyectar con el marco girado. Preguntando por
+         `spec.tsat` se calculaba plano un eje que la escena dibujaba
+         inclinado.
+         Y un QUEBRADO tiene DOS ejes, uno por mesa, así que cada plano se lleva
+         SU proyección y SU eje: su ángulo de backtracking, su sombra y su
+         inclinación de superficie salen de los suyos. En todo lo demás la lista
+         tiene un elemento y esto es exactamente lo de siempre. */
+      planos=ejes.map(function(ax){
         var Pm=ax?FIS.psTSAT(S.el,S.az,ax,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
-        var th=FIS.theta(Pm.ps,gcr,cfg.maxang,spec.bt,cfg.btLlano?0:cruz);
-        var fs=spec.sinSombra?0:FIS.shade(Pm.ps,th,pitch,G.altoColector,cruz);
-        var Pp=FIS.poa(Pm.ps,Pm.rho,th,FIS.tiltSup(th,ax),bh,dh,gh,cfg.albedo,fs,
-                       Math.sin(S.el),e0);
-        sN+=Pp.neta/ejes.length; sI+=Pp.ideal/ejes.length;
-      }
-      neta+=sN*dtH/1000; ideal+=sI*dtH/1000;
-      mes[M.t[i].getUTCMonth()]+=sN*dtH/1000;
-      continue;
-    }
-    if(spec.fam==='fija_ew'){
+        /* El backtracking va CON la pendiente ⊥ a las filas — pvlib, y el core
+           desde SolarGPT v1.70.0—, y por ahí entra el careo.
+           `btLlano` es un DIAGNÓSTICO, no una alternativa: calcula el ángulo
+           como si el campo fuese llano, que es lo que hacía el core hasta ese
+           día. No es el modelo de nadie; está para poder ver de un vistazo lo
+           que cuesta backtrackear mal en un campo en cuesta, que es un número
+           que quiere cualquiera que herede uno. Por eso va desmarcado. */
+        return {th:FIS.theta(Pm.ps,gcr,cfg.maxang,spec.bt,cfg.btLlano?0:cruz),
+                P:Pm, ax:ax};
+      });
+      P0=planos[0].P;
+    }else if(spec.fam==='fija_ew'){
       P0=FIS.psTracker(S.el,S.az,cfg);                // aguas al este y al oeste
-      planos=[tilt,-tilt];
+      planos=[{th:tilt,P:P0,ax:axT},{th:-tilt,P:P0,ax:axT}];
     }else{
       P0=FIS.psFija(S.el,S.az,cfg.lat,cfg);
-      planos=[tilt];
+      planos=[{th:tilt,P:P0,ax:axT}];
     }
     for(var k=0;k<planos.length;k++){
-      var t=planos[k];
-      var fsh=spec.sinSombra?0:FIS.shade(P0.ps,t,pitch,G.altoColector,cruz);
-      var P=FIS.poa(P0.ps,P0.rho,t,FIS.tiltSup(t,axT),bh,dh,gh,cfg.albedo,fsh,Math.sin(S.el),e0);
+      var pl=planos[k], t=pl.th;
+      var fsh=spec.sinSombra?0:FIS.shade(pl.P.ps,t,pitch,G.altoColector,cruz);
+      var P=FIS.poa(pl.P.ps,pl.P.rho,t,FIS.tiltSup(t,pl.ax),bh,dh,gh,cfg.albedo,fsh,
+                    Math.sin(S.el),e0);
       sN+=P.neta; sI+=P.ideal;
     }
     sN/=planos.length; sI/=planos.length;             // dos aguas = misma superficie, media
+    /* En una fija a dos aguas los dos planos son +tilt y −tilt: su |θ| es el
+       mismo, así que basta el primero y no hay que promediar signos que se
+       anulan.
+       La máscara es `gh>0` y NO la del bucle (`elevación>0`) a propósito: el
+       careo del core promedia sobre GHI>0, y en el filo del día los dos
+       criterios no seleccionan los mismos pasos — con θ grande a sol rasante
+       eso movía la media 0,17°, suficiente para una alarma falsa. Igualarlas
+       por construcción cuesta una condición y evita discutirlo cada vez. */
+    /* Con un QUEBRADO la fila tiene DOS ángulos y una serie solo puede llevar
+       uno: lleva el de la primera mesa, y va dicho. El careo no corre quebrados
+       —el core no los tiene— y la lectura publica los dos. */
+    if(gh>0){ thAbs+=Math.abs(planos[0].th); nDia++; thSerie.push(planos[0].th); }
+    else thSerie.push(null);
     neta+=sN*dtH/1000; ideal+=sI*dtH/1000;
     mes[M.t[i].getUTCMonth()]+=sN*dtH/1000;
   }
-  return {neta:neta, ideal:ideal, mes:Array.from(mes), gcr:gcr, pitch:pitch, tilt:(spec.fam==='tracker'?null:tilt)};
+  return {neta:neta, ideal:ideal, mes:Array.from(mes), gcr:gcr, pitch:pitch,
+          thetaAbs:(nDia>0?thAbs/nDia:0), nDia:nDia, thetaSerie:thSerie,
+          tilt:(spec.fam==='tracker'?null:tilt)};
 };
 
 /* Tilt óptimo: barrido grueso 0..60 cada 5° y fino ±4° cada 1°, la misma
@@ -1340,6 +1371,7 @@ FIS.compara=function(keys,M,cfg){
       tilt:(spec.fam==='tracker'?null:(tilt!=null?tilt:r.tilt)),
       tiltOpt:!!spec.tiltOpt, tiltSinSombra:tiltSin,
       suelo:r.neta*r.gcr,
+      thetaAbs:r.thetaAbs, nDia:r.nDia, thetaSerie:r.thetaSerie,
       transp:ghi>0?((r.neta/ghi-1)*100):NaN,
       sombra:r.ideal>0?((1-r.neta/r.ideal)*100):0});
     if(spec.sinSombra)avisos.push('«'+spec.label+'» va SIN sombra entre filas: su POA es un techo, '+

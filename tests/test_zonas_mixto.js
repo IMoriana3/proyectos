@@ -192,6 +192,45 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   check('el pitch que lee el motor cambia CON el montaje',
     porMontaje.t === 7.5 && porMontaje.f === 3.5, JSON.stringify(porMontaje));
 
+  /* ── SIN PARCELA NO SE PROPONE ────────────────────────────────────────
+   * El MDT se descarga sobre el BBOX de la parcela MÁS margen. Sin linde,
+   * recorrer la rejilla entera propone zonas sobre el terreno del vecino —y
+   * ahí se colocarían mesas—. `mascaraParcelaDEM` ya lo cubría… salvo en el
+   * único caso que importa: sin ningún anillo devolvía «todo dentro», así
+   * que el guard se desactivaba solo justo cuando hacía falta.
+   * Lo destapó portar el recorte a Python (SolarGPTfull#166), donde la linde
+   * es argumento OBLIGATORIO. */
+  const sinLinde = await page.evaluate(() => {
+    const PARCEL_prev = window.PARCEL, PARCELAS_prev = window.PARCELAS;
+    window.PARCEL = null; window.PARCELAS = [];
+    // DEM sintético mínimo: 4×4 celdas, llano — con parcela saldría zona.
+    window.DEM = { lats: [41.570, 41.572, 41.574, 41.576],
+                   lons: [-0.800, -0.798, -0.796, -0.794] };
+    const msk = window.mascaraParcelaDEM();
+    const pend = { n: 4, ew: [], ns: [] };
+    for (let r = 0; r < 4; r++) { pend.ew.push([0, 0, 0, 0]); pend.ns.push([0, 0, 0, 0]); }
+    const prop = window.zonasPorPendiente(
+      pend, { trkEw: 10, trkNs: 15, fijaEw: 12, fijaNs: 12 }, 1);
+    window.PARCEL = PARCEL_prev; window.PARCELAS = PARCELAS_prev;
+    return { msk: msk, sinParcela: !!(prop && prop.sinParcela),
+             nZonas: prop && prop.zonas ? prop.zonas.length : -1 };
+  });
+  check('sin ningún anillo, la máscara es NULL y no «todo dentro»',
+    sinLinde.msk === null, JSON.stringify(sinLinde.msk));
+  check('y el reparto se NIEGA a proponer en vez de repartir el BBOX',
+    sinLinde.sinParcela === true && sinLinde.nZonas === 0,
+    JSON.stringify(sinLinde));
+
+  const dice = await page.evaluate(() => {
+    window.MIX_PROP = { sinParcela: true, zonas: [] }; window.MIX_ZONAS = [];
+    window.mixPinta();
+    return { out: document.getElementById('mixOut').textContent,
+             tag: document.getElementById('mixTag').textContent };
+  });
+  check('y lo DICE, en vez de quedarse mudo como si no hubiera salido nada',
+    /parcela/i.test(dice.out) && /sin parcela/i.test(dice.tag),
+    JSON.stringify(dice));
+
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
   process.exit(ko ? 1 : 0);

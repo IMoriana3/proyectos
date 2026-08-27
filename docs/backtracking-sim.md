@@ -388,6 +388,209 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-26 · v1.38** — **la FICHA que se escribe en la TCU, por fin cargable en el simulador.**
+  Tercera posición del mando: *«La FICHA que se escribe en la TCU (por seguidor, vecina crítica)»*.
+  Cierra la incoherencia de v1.37 — se entregaban números que nunca habían entrado en el simulador —
+  y de paso corrige una etiqueta que mentía: *«según levantamiento»* prometía la ficha y entregaba la
+  pendiente que la página deduce **por pareja de líneas**; ahora se llama por su nombre.
+
+  **El emparejamiento era lo difícil, y es donde estaba el riesgo.** Son **dos rejillas distintas**:
+  la ficha agrupa con tolerancia `pitch/4` sobre **trackers** (221 líneas en Ayora) y
+  `plantFromCotas` con `pitch/2` sobre **filas** (295); y los marcos de x tampoco coinciden — la
+  ficha va de −1238 a +1238 m y el simulador de 0 a 477, recentrado al bloque cargado. **Emparejar
+  por índice habría repetido exactamente el fallo que costó 157 consignas mal dirigidas.** Se
+  empareja por la **x MEDIDA**, y para eso `plantFromCotas` devuelve ahora `lineXAbs`, la x sin
+  recentrar: una magnitud física que las dos partes calculan igual y que no depende de qué bloque se
+  cargue.
+
+  **El signo no se supone: se DETERMINA, y tiene que ganar con margen** — la misma regla que el huso
+  horario en `cruce_diagnostico`. Medido sobre las 107 líneas de Ayora, el hueco entre la línea *i* y
+  la *i+1*: `+oeste(i+1)` acierta el **92 %** (error mediano 0,32°) · `−este(i)` el 84 % (0,31°) ·
+  `+este(i)` el 16 % · `−oeste(i+1)` el 8 %. La elección no está reñida. Se usa el oeste y el este
+  queda de reserva cuando falta. Hay comprobación que **falla si el acuerdo baja del 85 %**: si la
+  ficha cambiara de convenio hay que volver a decidirlo, no seguir dibujando pendientes al revés.
+
+  **Cobertura declarada, no supuesta.** En Ayora casan **66 de 80 líneas** por x, y con la reserva
+  del este se cubren las **79 parejas**. Las que no casan **se quedan con la pendiente de las cotas** y
+  se cuentan en la nota de la planta: rellenarlas con cero sería fabricar un llano donde sólo falta un
+  dato. Si la planta no tiene ficha publicada, la opción sale **deshabilitada** y la nota lo dice.
+
+  **El resultado, que confirma que son dos cosas distintas:** la ficha da |pendiente| mediana
+  **0,72°** contra **0,50°** de las cotas — la vecina crítica es por definición la peor. Hay
+  comprobación que falla si saliera la MISMA, porque eso significaría que no se cargó o que se está
+  leyendo la columna equivocada.
+
+  **Y dos comprobaciones REPARADAS, que es lo que más conviene recordar.** Buscar el cuerpo de una
+  función «hasta el siguiente `function`» ha fallado **dos veces**: primero se tragaba `terrain()`
+  entera y saltaba por un `pitch:` que no era suyo, y luego el comentario de `aplicaFicha`. Ahora hay
+  un `cuerpoFn()` que cuenta llaves. Y la de v1.33 fijaba el **texto vecino** de `avisoCaras` en vez
+  de la propiedad, así que fallaba cada vez que se insertaba otro aviso — ruido, no regresión: ahora
+  comprueba que el aviso acabe dentro de la nota, que es lo que importa. **Un test que analiza el
+  trozo equivocado del fichero no protege nada.** QA 86.
+
+- **2026-08-26 · v1.37** — **el simulador ya enseña la planta COMO ESTÁ CONFIGURADA, no solo como
+  debería estar.** Hasta ahora la página ofrecía `pairwise` —que usa las pendientes medidas, o sea la
+  planta *bien* configurada— y `bt2d`, que es otra política distinta; no había forma de ver lo que de
+  verdad hace un seguidor con los registros a cero. Mando nuevo **«Configuración de la TCU»** con dos
+  posiciones: *según levantamiento* (41098/41100 y 41102/41104 con la pendiente medida) y *sin
+  configurar* (registros de fábrica, 0) — que es el estado real de Ayora.
+
+  **La distinción que lo hace correcto: el terreno NO cambia con este mando.** `terrain()` sigue
+  devolviendo la geometría real y es la que ve el contador de sombra; `terrainTCU()` solo falsea la
+  *creencia* con la que el seguidor calcula su ángulo. Si el contador usara la creencia, con el
+  registro a cero la sombra desaparecería por arte de magia — y sería un simulador que demuestra que
+  no configurar es gratis. Cableado en los **cuatro** sitios que calculan ángulo (el día, la tabla
+  anual y los dos caminos de instante del slider): si el arrastre entre pasos de malla usara otra
+  creencia, saltaría entre dos políticas a mitad de gesto. `terrainTCU` no hace trigonometría, es un
+  DATO para la misma física, igual que `careoTerreno`.
+
+  **UNA INCOHERENCIA DESTAPADA POR IÑAKI, y que sigue abierta.** «¿Podemos sacar las pendientes para
+  evitar sombras con una política que no podemos simular?» La respuesta honesta es que había **dos
+  reglas distintas y no las habíamos cruzado nunca**: la ficha del levantamiento da la pendiente **por
+  seguidor a su VECINA CRÍTICA** (a veces la hermana del mismo accionamiento, a menos distancia — el
+  fichero lo trae explícito en `este_vecina_critica`/`oeste_vecina_critica` y `n_candidatas`),
+  mientras que nuestro `pairwise` empareja **líneas geométricas** promediando el solape norte. Medido:
+  difieren **~1,8× en la mediana** (1,76 % contra 0,98 %; p95 4,79 contra 3,59; máx 8,80 contra 5,53).
+  No es que una esté mal —la crítica es por definición la peor, tiene que salir mayor—, y la prueba de
+  que las dos describen la misma planta es que **la longitudinal coincide exacta: 1,48° las dos**. Pero
+  significa que `export_config_tcu.mjs` **entregaba números que nunca habían entrado en nuestro
+  simulador**: validábamos con unos y enviábamos otros.
+
+  **Metidos por fin, y el resultado tranquiliza a medias:** con las pendientes de la ficha sale
+  **+0,112 %** y con las nuestras **+0,118 %** (mismo día, misma política, contador sobre la geometría
+  real). Con pendientes que difieren un 80 %, el resultado se mueve seis milésimas de punto — así que
+  **cuál de los dos juegos se escriba no es el riesgo**.
+
+  **Lo que SÍ sigue sin verificar** es qué hace el firmware con ellos. La única comprobación de campo
+  fue a mediodía, y el propio informe declara que a mediodía **ninguna política se distingue de otra**.
+  Que la TCU haga un backtracking tipo `pairwise` es una suposición nuestra, no una medida. Se cierra
+  con dos pruebas baratas y en este orden: **(1)** un volcado con **sol bajo** ahora, con los registros
+  a cero, que discrimina la política *base* —cuándo entra en backtracking, cómo usa el vano, cómo se
+  comporta en el tope— sin tocar nada; **(2)** escribir los registros en **UN** seguidor y leer su
+  `Objetivo`, que aísla el término de pendiente. Hasta que pasen las dos, la ficha es una propuesta
+  bien fundada, **no un entregable verificado**, y así debe decirlo el documento de cliente.
+  Pendiente: tercera posición del mando, «según la ficha (vecina crítica)». QA 84.
+
+- **2026-08-26 · AYORA, DIAGNÓSTICO CON IMPORTE** — confirmado en planta que **Ayora no tiene
+  configurada ninguna pendiente ni ningún azimut**. Eso la sitúa en la columna «sin configurar» de
+  todas las tablas y convierte el ejercicio en un diagnóstico con precio. El precio es incómodo y por
+  eso conviene tenerlo escrito.
+
+  **Careo A→B con la base correcta** (misma política, lo único que cambia es el contenido del
+  registro; el careo anterior usaba `bt2d` de referencia, que ya se estableció que es otra política):
+  21-mar 7,477 → 7,476 (**−0,01 %**) · 21-jun 11,030 → 11,053 (**+0,21 %**) · 21-sep 7,433 → 7,432
+  (**−0,00 %**) · 21-dic 2,978 → 2,972 (**−0,19 %**) · **media 7,229 → 7,233 = +0,05 %**. Frente a
+  eso, el 3D completo da **+0,48 %**.
+
+  **Escribir las pendientes en las 754 TCU de Ayora no merece la pena**: cinco centésimas de punto,
+  dentro del ruido de cualquier medida de campo, y negativo en tres de los cuatro días de referencia.
+  La razón es la planta, no el método — con 0,56° de desnivel mediano entre filas contiguas no hay
+  relieve que corregir. El valor está en el 3D, y **el 3D no se consigue escribiendo registros: pide
+  NCU**, que es lo que El Burgo tiene y Ayora no. Decirlo tiene un coste comercial evidente y es la
+  única versión que aguanta que el cliente mire su curva de producción dentro de un año.
+
+  **`tools/sensib_azimut.mjs` — la otra mitad de la pregunta, cerrada.** Los planos van en UTM y **el
+  norte de la cuadrícula UTM no es el norte verdadero**: la diferencia es la convergencia de
+  meridianos, γ = atan(tan(λ−λ₀)·sin φ). En Ayora (EPSG:25830, huso 30N, meridiano central −3°) vale
+  **1,161°**, y como los 754 seguidores llevan `rot = 0` están replanteados paralelos a la cuadrícula,
+  así que su azimut verdadero es ese y la TCU tiene 0. **Medido lo que cuesta no saberlo:** 0,000° →
+  +0,000 % (control del método, exacto) · **1,161° → −0,025 %** · 3° → −0,090 % · 5° → −0,183 %. **No
+  importa**, y por tanto **no compensa mandar a nadie a comprobar el replanteo con GPS**. Un resultado
+  negativo medido vale tanto como uno positivo: éste ahorra el viaje.
+
+  **Y una explicación cómoda que era falsa.** Se escribió primero que el error «entra por un coseno,
+  así que va con el cuadrado del desvío». Lo desmiente la propia tabla que tenía encima: de 1° a 5° la
+  pérdida se multiplica por **7,6**, no por 25 — exponente ≈1,26, **casi lineal**. Es pequeño por una
+  razón más simple: un grado sobre un eje que barre ±55° perturba la geometría un 2 %. La versión
+  cuadrática llegó a colarse en el documento de cliente **contradiciendo la tabla de arriba**, que es
+  justo el tipo de contradicción en pantalla que la casa considera un fallo. Corregida en la
+  herramienta y en el documento.
+
+- **2026-08-26 · v1.36 · herramientas** — **`tools/careo_sombra.mjs`: la pregunta que el cliente hace
+  ANTES que los kWh.** «¿Mi planta se hace sombra, y de quién es la culpa?» no se contesta con un
+  porcentaje de energía. Se contesta hora a hora y separando dos cosas que en una gráfica parecen la
+  misma: la **sombra EVITABLE** —la que desaparece si la TCU lleva configurada la pendiente real de su
+  vecina, y es la que justifica la intervención— y la **sombra INEVITABLE** —la que queda con el
+  seguidor ya contra su tope mecánico, que no la quita ninguna configuración porque sale del binomio
+  vano/límite de giro, o sea del diseño de la planta—. Prometer «cero sombras» es falso en cualquier
+  planta con topes finitos; lo que sí se sostiene es la **VENTANA LIMPIA**: el intervalo sin sombra en
+  **ningún** seguidor (el peor de los 754, no la media).
+
+  **El error que estuvo aquí y se deja escrito.** La primera versión usaba `bt2d` como configuración
+  «sin configurar». Está mal: `bt2d` **no es «pairwise con pendiente 0»**, es otra política (un ángulo
+  para toda la planta con el vano medio, sin el mínimo por pareja). Al medir política y registro a la
+  vez, el 21-dic salía que **configurar el levantamiento EMPEORA la sombra** —14,15 % contra 12,88 %—,
+  que es lo contrario de la verdad y lo que habría ido a una propuesta de cliente. Comparando lo
+  comparable —misma política, registro a cero contra registro medido— sale **14,31 % → 14,15 %**: la
+  configuración mejora. La regla que queda es que **una comparación tiene que aislar UNA variable**, y
+  hay comprobación que falla si alguien vuelve a cambiar dos. Por el camino quedó descartada la
+  hipótesis de signo invertido en la pendiente: negarla **mejora por la mañana y empeora por la
+  tarde**, que es precisamente la firma de un signo CORRECTO.
+
+  **La ponderación por irradiancia, sin la cual el número engaña.** La media temporal da el mismo peso
+  al 84 % de sombra de las 21:30 que al mediodía, y a esa hora la DNI son 1,2 W/m². Sin ponderar,
+  Ayora «tiene» un 6 % de sombra; ponderada, un 2,2 %. Las dos cifras son correctas y **sólo la segunda
+  tiene que ver con los kWh** — es la que reconcilia la sombra con el +0,50 % de energía.
+
+  **Ayora, sombra ponderada (sin configurar → configurada → 3D) y ventana limpia:** 21-mar 3,38 → 3,23
+  → 2,85 (13:00–14:30) · 21-jun 2,28 → 2,20 → 2,40 (11:50–16:25) · 21-sep 3,36 → 3,21 → 2,84
+  (12:45–14:15) · 21-dic 5,52 → 5,40 → 3,43 (13:15–14:00). **Configurar el registro aporta 0,08–0,15
+  puntos**: real y pequeño. **El 3D aporta bastante más** —más de dos puntos en diciembre— pero **no se
+  consigue escribiendo registros: pide NCU**, y Ayora hoy no tiene esa arquitectura. Y la ventana
+  limpia es estrecha fuera del verano: hora y media en los equinoccios, tres cuartos en diciembre —
+  hecho del diseño (vano 6 m, tope ±55°), no defecto de operación. QA 81.
+
+- **2026-08-26 · v1.36** — **el control de entrada del relieve, y un cero que mentía al ocaso.**
+  Dos cosas, y las dos salen de intentar contestar a un cliente.
+
+  **a) `tools/valida_relieve.mjs` — la puerta antes del número.** El careo 3D-contra-2D compara dos
+  formas de apuntar sobre LA MISMA geometría; si la geometría está mal, la comparación sigue saliendo,
+  con un número perfectamente formateado y perfectamente falso. San José lo destapó: su bloque 0 daba
+  **−0,08 % de «ganancia»** sobre una geometría que contiene **tres líneas hundidas 4,8 m, 12,2 m y
+  12,5 m respecto a SUS DOS VECINAS a la vez**. Una fila de seguidores en un pozo de 12 m de hondo y
+  6 m de ancho no existe: es un error de cota. Ahora la planta pasa un control con veredicto
+  **APTA / APTA CON RESERVAS / NO EVALUABLE**, y en NO EVALUABLE **no se emite ganancia**
+  (`process.exit(1)`, sirve de gate en CI).
+
+  **Lo que se aprendió equivocándose, y por eso queda escrito:** la primera versión rechazaba por
+  «pendiente entre líneas > 20°, imposible de montar». Está mal, y era el error caro: la inclinación
+  que limita el fabricante es la del **eje** (N-S, de montaje — 3,6° máx en Ayora, 2,7° en San José:
+  sanas las dos), mientras que el desnivel entre **líneas contiguas** es justamente la geometría que
+  el backtracking necesita conocer, y **un bancal lo produce legítimamente**. En San José las líneas
+  7 y 36 bajan 2 m y **se quedan abajo**: eso es terreno real. Rechazar por el valor del salto era
+  rechazar precisamente las plantas donde corregir el relieve más vale la pena. El control que de
+  verdad decide es **la línea aislada**: una que se separa de sus dos vecinas a la vez, baja y vuelve
+  a subir, más de medio vano. Eso no es ladera ni bancal. Umbral atado al hardware: no cabe entre
+  ellas, la cuerda del seguidor son 2,38 m. Los otros controles son cobertura del levantamiento
+  (< 95 % → reserva), eje de montaje (8,5° reserva / 11,3° rechazo), vano contra el pitch declarado
+  (fuera de [0,75 · 1,25]·pitch reserva, > 1,5·pitch rechazo: ahí hay un vial, no una fila vecina) y
+  solape norte. Cinco comprobaciones nuevas en la batería, **con cotas sintéticas** — es la única
+  forma de probar que el control distingue un bancal de una línea suelta: el bancal que baja y se
+  queda tiene que salir APTA, y esa comprobación es la que impide repetir el error de arriba.
+
+  **b) La sombra al ocaso era CERO, con la planta tapada entera.** `shadeRows` devolvía un array de
+  ceros en toda la banda `zen ≥ 89,5°` porque el ray-cast 3D deja de ser fiable ahí. Pero devolver
+  cero no es decir «no lo sé»: es **afirmar que no hay sombra**, justo cuando a 0,35° de sol la
+  sombra de una fila mide 6/tan(0,35°) ≈ 980 m. En la tabla de consignas de Ayora del 21-jun salía
+  como un salto de **76,6 % a 0,00 % en un paso de 10 min**. Ahora se **clava al borde de validez**
+  (`zen = 89,5°`) en vez de inventar un cero: conserva qué fila tapa a cuál, mantiene sin sombra las
+  5 filas del borde por donde entra el sol, y la serie sale monótona — 58 → 67 → 77 → **87 %**, y
+  cero solo cuando el sol se pone de verdad. La energía en juego está acotada por la DNI de ese tramo
+  (**1,2 W/m²**): el careo de Ayora no se mueve ni en el tercer decimal. No se arregló por la
+  energía, se arregló porque **la tabla publicaba un número falso**. Regresión en la batería que
+  exige monotonía en la última media hora.
+
+  **Y el resultado honesto de Ayora, ya sobre geometría validada: +0,50 %** (media de 4 días
+  representativos, POA de planta, contador 3D con estructura, IAM b₀=0,05, paso 5 min, limitado por
+  actuador) — 21-mar +0,70 %, 21-jun +0,16 %, 21-sep +0,68 %, 21-dic +0,80 %. **No es el 2,66 % que
+  se venía citando**: aquel salía del preset de demostración de 9 % de pendiente, no de Ayora. Ayora
+  es suave (|pendiente| entre líneas: mediana 0,56°, p95 2,06°, máx 3,17°) y la ganancia va con el
+  relieve. La consecuencia comercial es que **la propuesta no es un porcentaje, es una medición**.
+  La tabla del 21-jun (754 seguidores × 178 pasos = 134 212 filas) se valida sola contra la firma de
+  los dos regímenes: **apertura p95−p5 de 0,10° de media en seguimiento puro y 7,99° en backtracking
+  — ×77**, con los topes mecánicos de ±55° saliendo donde tienen que salir (09:00–09:30 y 18:30–19:00).
+  QA 78.
+
 - **2026-08-26 · v1.35** — **las consignas iban al seguidor equivocado en 157 de 748, y el primer
   volcado real lo destapó.** El id del layout **no codifica la NCU** —`TK 045-06` tiene `ncu=9`— y su
   número **no reinicia en 1** en todas ellas (en Ayora, NCU9 va de 45 a 85, NCU10 de 66 a 105). El
