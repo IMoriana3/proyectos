@@ -1147,6 +1147,15 @@ FIS.cruz=function(cfg,spec){
    lo que se teclea y lo que se mide en campo—, repartida a partes iguales
    alrededor de la media: la mitad que mira al ecuador se lleva +q/2 y la del
    polo −q/2. Con 10° tecleados, una mesa está 10° más tumbada que la otra. */
+/* ¿CRUZA ALGÚN STRING LA RÓTULA? Los strings se reparten a lo largo de la fila
+   y la rótula está en el centro, así que el corte entre strings cae justo ahí
+   sólo si hay un número PAR de strings por fila. Con impar, el string de en
+   medio queda a caballo de las dos mesas — y un string en serie lo manda su
+   módulo peor, no el promedio. */
+FIS.strQuiebro=function(cfg,spec){
+  var G=cfg.geomDe(spec), n=Math.max(1,Math.round(G.nStr||1));
+  return {nStr:n, cruza:(n%2===1)};
+};
 FIS.ejesMitades=function(cfg,spec){
   var ax=FIS.ejeTilt(cfg,spec), q=(cfg.quiebro||0);
   if(!spec||spec.fam!=='tracker'||!q)return [ax];
@@ -1381,7 +1390,7 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
      Se promedia sobre los pasos DE DÍA —el bucle ya salta la noche— porque el
      ángulo nocturno no es un dato: es un relleno, y promediarlo mezclaría dos
      convenios distintos con el core. */
-  var thAbs=0, nDia=0, thSerie=[];
+  var thAbs=0, nDia=0, thSerie=[], porPlano=null;
   var tilt=(tiltForzado!=null)?tiltForzado:(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
   var axT=FIS.ejeTilt(cfg,spec);
   /* Y para la monoinclinada, la caída a lo largo de SUS filas (este-oeste). */
@@ -1438,6 +1447,11 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
       var P=FIS.poa(pl.P.ps,pl.P.rho,t,FIS.tiltSup(t,pl.ax),bh,dh,gh,cfg.albedo,fsh,
                     Math.sin(S.el),e0);
       sN+=P.neta; sI+=P.ideal;
+      /* Y la de CADA plano por separado. En un quebrado las dos mesas no
+         captan lo mismo —tienen inclinaciones distintas— y esa diferencia es la
+         que decide si un string que cruce la rótula sale penalizado. Promediada
+         desaparece, y es justo lo que hay que poder mirar. */
+      if(planos.length>1){ if(!porPlano)porPlano=[0,0]; porPlano[k]+=P.neta*dtH/1000; }
     }
     sN/=planos.length; sI/=planos.length;             // dos aguas = misma superficie, media
     /* En una fija a dos aguas los dos planos son +tilt y −tilt: su |θ| es el
@@ -1456,7 +1470,7 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
     neta+=sN*dtH/1000; ideal+=sI*dtH/1000;
     mes[M.t[i].getUTCMonth()]+=sN*dtH/1000;
   }
-  return {neta:neta, ideal:ideal, mes:Array.from(mes), gcr:gcr, pitch:pitch,
+  return {neta:neta, ideal:ideal, mes:Array.from(mes), gcr:gcr, pitch:pitch, mesas:porPlano,
           thetaAbs:(nDia>0?thAbs/nDia:0), nDia:nDia, thetaSerie:thSerie,
           tilt:(spec.fam==='tracker'?null:tilt)};
 };
@@ -1587,7 +1601,7 @@ FIS.compara=function(keys,M,cfg){
       : null;
     var r=FIS.corre(spec,M,cfg,tilt);
     filas.push({key:k, label:spec.label, fam:spec.fam, nota:spec.nota,
-      neta:r.neta, ideal:r.ideal, mes:r.mes, gcr:r.gcr, pitch:r.pitch,
+      neta:r.neta, ideal:r.ideal, mes:r.mes, gcr:r.gcr, pitch:r.pitch, mesas:r.mesas,
       tilt:(spec.fam==='tracker'?null:(tilt!=null?tilt:r.tilt)),
       tiltOpt:!!spec.tiltOpt, tiltSinSombra:tiltSin,
       suelo:r.neta*r.gcr,
@@ -3078,7 +3092,32 @@ function avisoQuebrado(f){
     ') y eso es <b>Jensen</b>, no una ventaja: la curva POA-vs-inclinación-de-eje es cóncava, '+
     'así que la media de las dos mitades cae bajo el punto medio. Lo que el número no dice es '+
     'que ese tubo recto '+(vuela>0.1?'<b>volaría '+fmt(vuela,1)+' m</b> sobre el terreno por '+
-    'cada extremo':'no se apoya en ese terreno')+'. El quebrado no gana POA: gana poder montarse.';
+    'cada extremo':'no se apoya en ese terreno')+'. El quebrado no gana POA: gana poder montarse.'+
+    avisoMesas(que);
+}
+/* LAS DOS MESAS NO CAPTAN LO MISMO, y el promedio se lo calla. Importa por lo
+   ELÉCTRICO: un string en serie lo manda su módulo peor, así que un string a
+   caballo de la rótula rinde por la mesa mala, no por la media. Esta ficha
+   compara POA —irradiación por m² de módulo— y ese desacoplo es DC: NO está en
+   el número. Lo que sí puede hacer es dar los dos POA, la diferencia, y decir
+   si con el reparto de strings que hay puesto algún string cruza. */
+function avisoMesas(que){
+  if(!que||!que.mesas||que.mesas.length!==2)return '';
+  var cfg=cfgActual(), st=FIS.strQuiebro(cfg,FIS.spec('tracker_queb'));
+  var a=Math.max(que.mesas[0],que.mesas[1]), b=Math.min(que.mesas[0],que.mesas[1]);
+  var dif=(a>0)?((1-b/a)*100):0;
+  return ' <b>Y las dos mesas no captan lo mismo</b>: '+fmt(a,0)+' y '+fmt(b,0)+
+    ' kWh/m² (<b>'+fmt(dif,1)+' %</b> entre ellas). La tabla publica la media, que es lo correcto '+
+    'para POA por m² de módulo —la mitad de los módulos ve un plano y la otra mitad el otro—, pero '+
+    'la consecuencia eléctrica no es una media: un string en serie lo manda su módulo peor. Con '+
+    '<b>'+st.nStr+' string'+(st.nStr===1?'':'s')+' por fila</b>, '+
+    (st.cruza
+      ? 'el de en medio queda <b>a caballo de la rótula</b>, así que rendiría por la mesa mala. '+
+        'Con un número PAR de strings por fila el corte cae justo en la rótula y eso no pasa.'
+      : 'el corte entre strings cae en la rótula: <b>ninguno la cruza</b>, cada mesa alimenta los '+
+        'suyos y el desacoplo se queda entre strings, que pesa mucho menos que dentro de uno.')+
+    ' Ese desacoplo es <b>DC</b> y esta comparación es de POA: no está contado en ninguna cifra '+
+    'de la tabla.';
 }
 function avisoBacktracking(f){
   var bt=null,nb=null;

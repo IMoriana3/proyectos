@@ -268,6 +268,64 @@ const SONDA = `(() => {
     /fila INFINITA/i.test(notaTbl) && /sería en realidad/i.test(notaTbl) &&
     /puntos de diferencia/i.test(notaTbl), notaTbl.slice(0, 260));
 
+  /* LA NOTA DEL QUEBRADO. Con las dos mesas a inclinaciones distintas, la
+     tabla publica la MEDIA, y esa media se calla lo eléctrico: un string en
+     serie lo manda su módulo peor. Como la ficha compara POA y no DC, lo que
+     tiene que hacer es DECIRLO, con las dos cifras y con el reparto de strings
+     que hay puesto. */
+  const notaQ = await p.evaluate(async () => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const espera = ms => new Promise(r => setTimeout(r, ms));
+    const antesSt = [...document.querySelectorAll('.st')].map(c => c.checked);
+    const antesPend = document.getElementById('pend').value;
+    const antesAz = document.getElementById('pendAz').value;
+    document.querySelectorAll('.st').forEach(c => {
+      c.checked = c.value === 'tracker_hsat' || c.value === 'tracker_queb'; });
+    s('pend', 12); s('pendAz', 180); s('quiebro', 10);
+    /* «Comparar el año» tarda lo que tarda, así que no se espera un tiempo
+       fijo: se espera a que la nota sea la de ESTA tirada. Con un sleep corto,
+       la comprobación leía la nota de la anterior y daba verde por casualidad.
+       El campo admite 1 o 2 strings por fila, así que el caso impar es 1: un
+       solo string a lo largo de toda la fila, que cruza la rótula entero. */
+    const nota = () => document.getElementById('tblNote').textContent;
+    const hasta = async f => { for (let i = 0; i < 80; i++) {
+      if (f(nota())) return nota(); await espera(250); } return nota(); };
+    const lee = async n => { s('tkNStr', n); document.getElementById('run').click();
+      return hasta(t => new RegExp('<?b?>?' + n + '<?/?b?>? string').test(t) ||
+                        new RegExp(n + ' string').test(t)); };
+    const par = await lee(2), impar = await lee(1);
+    s('quiebro', 0); s('tkNStr', 2);
+    document.getElementById('run').click();
+    const sinQuiebro = await hasta(t => !/no captan lo mismo/i.test(t));
+    /* Y devolver la tabla como estaba: esta comprobación cambia la selección y
+       vuelve a comparar, así que si no se restaura, las de más abajo miran una
+       tabla que ya no tiene las filas que buscan. */
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antesSt[i]; });
+    s('pend', antesPend); s('pendAz', antesAz);
+    document.getElementById('run').click();
+    for (let i = 0; i < 80; i++) {
+      const fila = [...document.querySelectorAll('#tbl tbody tr')]
+        .find(tr => /óptim/i.test(tr.cells[0].textContent));
+      if (fila) break;
+      await espera(250);
+    }
+    return { par, impar, sinQuiebro };
+  });
+  check('la nota dice que las dos mesas NO captan lo mismo, con las dos cifras',
+    /no captan lo mismo/i.test(notaQ.par) && /kWh\/m²/.test(notaQ.par) &&
+    /% *<?\/?b?>? *entre ellas|entre ellas/.test(notaQ.par),
+    notaQ.par.slice(-420));
+  check('  y avisa de que el desacoplo es DC y NO está en ninguna cifra',
+    /desacoplo/i.test(notaQ.par) && /DC/.test(notaQ.par) &&
+    /no está contado/i.test(notaQ.par), notaQ.par.slice(-320));
+  check('con 2 strings por fila dice que el corte cae en la rótula: ninguno cruza',
+    /ninguno la cruza/i.test(notaQ.par), notaQ.par.slice(-320));
+  check('y con 3, que el de en medio queda a caballo de las dos mesas',
+    /a caballo de la rótula/i.test(notaQ.impar), notaQ.impar.slice(-320));
+  check('sin quiebro no hay nada de esto que contar',
+    !/no captan lo mismo/i.test(notaQ.sinQuiebro), notaQ.sinQuiebro.slice(-200));
+
   // ── la tabla trae el dimensionado a igualdad de pico ──
   const tabla = await p.evaluate(`(() => {
     const th = [...document.querySelectorAll('#tbl thead th')].map(t => t.textContent);
