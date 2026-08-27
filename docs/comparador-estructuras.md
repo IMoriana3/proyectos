@@ -790,6 +790,14 @@ Dos cosas hubo que arreglar para poder decir eso:
   metros mide ese paso— y, si es más corto que la fila, que ahí una fila cruza más de una cumbrera y
   el quebrado modela **una** rótula.
 
+Y un detalle que sólo aparece al apoyarlas en el terreno de verdad: las hincas del **quebrado** no
+salen exactamente iguales, sino **2,01 y 2,09 m** con 12° de caída y 10° de quiebro. No es ruido: son
+verticales, y las dos aguas están a **7° y 17°**, así que para dejar el tubo a la misma distancia
+*perpendicular* del suelo la hinca bajo el agua más tumbada mide un poco más — 2/cos 7° = 2,015
+contra 2/cos 17° = 2,091. Siete centímetros. El modelo viejo, que medía en el marco local, no los
+veía. Lo que se exige en el banco es lo que decide: que **no crezcan con el terreno**, que es lo que
+sí le pasa al rígido (2,7 → 5,0 m).
+
 #### Los soportes de una fija: DOS líneas, y no miden lo mismo
 
 Una mesa fija no gira: se apoya en la línea de postes de delante y en la de detrás, y el propio tilt

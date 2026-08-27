@@ -859,9 +859,18 @@ const SONDA = `(() => {
   check('con 10° de quiebro el QUEBRADO drapea: de media viga a la punta el ' +
     'tubo sube ' + queb.q10.tracker_queb.sube + ' m sobre el suelo, o sea nada',
     Math.abs(queb.q10.tracker_queb.sube) < 0.1, JSON.stringify(queb.q10.tracker_queb));
-  check('  y por eso sus hincas son todas iguales (' +
-    queb.q10.tracker_queb.hincas.join(' y ') + ' m)',
-    Math.abs(queb.q10.tracker_queb.hincas[1] - queb.q10.tracker_queb.hincas[0]) < 0.01,
+  /* Y por eso sus hincas son todas la misma, salvo un detalle que sale al
+     apoyarlas en el terreno de verdad: son VERTICALES, y las dos aguas están a
+     inclinaciones distintas —7° y 17° con 12° de caída y 10° de quiebro—, así
+     que para dejar el tubo a la misma distancia PERPENDICULAR del suelo la
+     hinca vertical bajo el agua más tumbada mide un poco más: 2/cos 7° = 2,015
+     contra 2/cos 17° = 2,091. Siete centímetros, y son reales — el modelo
+     viejo, que medía en el marco local, no los veía. Lo que se exige es lo que
+     importa: que NO crezcan con el terreno, que es lo que sí le pasa al
+     rígido (2,7 → 5,0 m). */
+  check('  y por eso sus hincas son prácticamente la misma (' +
+    queb.q10.tracker_queb.hincas.join(' y ') + ' m: 2/cos 7° y 2/cos 17°)',
+    Math.abs(queb.q10.tracker_queb.hincas[1] - queb.q10.tracker_queb.hincas[0]) < 0.12,
     JSON.stringify(queb.q10.tracker_queb.hincas));
   check('mientras el RÍGIDO, recto, cruza por encima del caballón: sube ' +
     queb.q10.tracker_hsat.sube + ' m en ese mismo cuarto de viga',
