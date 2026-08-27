@@ -151,8 +151,12 @@ def sellar(texto: str) -> str:
 #: «el POA no cuadra» y de ahí se acusó al portal de enseñar física vieja
 #: cuando el que fallaba era el core: el backtracking no llevaba la pendiente
 #: (CROSS-TILT-01). Con el ÁNGULO delante, eso se ve de un vistazo.
+#: θ NO va como agregado, va como SERIE. Medido: el defecto que motivó todo
+#: esto —backtrackear como si el campo fuese llano— mueve θ 7,5° de media y
+#: hasta 34,8° paso a paso, y sin embargo la MEDIA de |θ| solo se mueve 0,07°,
+#: porque las desviaciones se compensan. Un agregado de θ parecería cobertura y
+#: no lo sería: por eso la serie se guarda entera y el careo mira `max|Δθ|`.
 _ETAPAS = (
-    ("theta_abs_medio", "theta_target_deg", "abs_mean"),
     ("poa_directa", "POA_Direct", "sum"),
     ("poa_difusa_cielo", "POA_Sky_Diffuse", "sum"),
     ("poa_difusa_suelo", "POA_Ground_Diffuse", "sum"),
@@ -179,10 +183,35 @@ def _cadena(cmp_):
             if col not in df.columns:
                 continue
             v = df[col].to_numpy(dtype=float)
-            val = (_np.nansum(v) if modo == "sum"
-                   else _np.nanmean(v) if modo == "mean"
-                   else _np.nanmean(_np.abs(v)))
+            if modo == "abs_mean":  # ya no se usa; se deja el modo por si vuelve
+                # Solo los pasos DE DÍA. El ángulo nocturno no es un dato, es un
+                # relleno, y promediarlo mete media serie a cero. El motor de la
+                # ficha promedia solo de día —su bucle salta la noche—, así que
+                # sin esta máscara los dos lados medirían cosas distintas y la
+                # comparación daría un factor ≈2 falso. Medido antes de ponerla:
+                # tracker_hsat 15,261 aquí contra 30,138 en la ficha.
+                dia = (df["GHI"].to_numpy(dtype=float) > 0.0
+                       if "GHI" in df.columns else _np.ones(len(v), dtype=bool))
+                vd = v[dia]
+                val = _np.nanmean(_np.abs(vd)) if vd.size else 0.0
+            else:
+                val = _np.nansum(v) if modo == "sum" else _np.nanmean(v)
             etapas[nombre] = round(float(val), 6)
+        # La SERIE de θ, solo en los pasos de día y solo para lo que la tiene.
+        # Una fija no sigue al sol: su θ es el tilt, constante, y guardarlo 288
+        # veces no informa de nada.
+        if "theta_target_deg" in df.columns and clave.startswith("tracker"):
+            th = df["theta_target_deg"].to_numpy(dtype=float)
+            dia = (df["GHI"].to_numpy(dtype=float) > 0.0
+                   if "GHI" in df.columns else _np.ones(len(th), dtype=bool))
+            # Longitud COMPLETA con `null` donde no hay día, no solo los pasos
+            # diurnos: los dos motores no ponen la frontera del día en el mismo
+            # sitio —hay un paso con GHI>0 en el que la ficha ya considera el sol
+            # bajo el horizonte— y comparar dos listas de 144 y 145 elementos
+            # alinea mal TODO lo que va detrás. Con el índice compartido, cada
+            # lado marca sus huecos y se comparan solo los pasos que ambos tienen.
+            etapas["theta_serie"] = [(round(float(x), 3) if ok else None)
+                                     for x, ok in zip(th, dia)]
         if etapas:
             out[clave] = etapas
     return out
