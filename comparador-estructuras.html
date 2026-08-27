@@ -2157,8 +2157,19 @@ function pintaQuiebro(c){
   var q=Math.abs(c.quiebro||0);
   if(!q){ $('quiebroNota').innerHTML='sin quiebro · quebrado y rígido son la misma estructura'; return; }
   var ax=FIS.ejeTilt(c,FIS.spec('tracker_queb'));
+  /* Y si la caída no es ⊥ a las filas, la cumbrera deja de ser una: cada bloque
+     necesita la suya. Va dicho, y con el paso — si es más corto que la fila,
+     una fila cruza más de una cumbrera y el quebrado, que modela UNA rótula,
+     deja de describir ese terreno. */
+  var per=(typeof TERRENO_3D!=='undefined')?(TERRENO_3D.qPer||0):0;
+  var largo=(c.geomDe?c.geomDe(FIS.spec('tracker_queb')).largoFila:0)||0;
   $('quiebroNota').innerHTML='una mesa a <b>'+fmt(ax+q/2,1)+'°</b> y la otra a <b>'+
-    fmt(ax-q/2,1)+'°</b> — el rígido se queda en '+fmt(ax,1)+'° y su tubo no toca ni una.';
+    fmt(ax-q/2,1)+'°</b> — el rígido se queda en '+fmt(ax,1)+'° y su tubo no toca ni una.'+
+    (per>1?'<br>La caída no es ⊥ a las filas, así que la cumbrera no es una: se repite cada '+
+      fmt(per,0)+' m para pasar por el centro de cada bloque.'+
+      (largo>0&&per<largo?' <b>Y es más corta que la fila ('+fmt(largo,0)+' m)</b>: una fila '+
+        'cruza más de una cumbrera y el quebrado modela UNA rótula — ahí la escena y la cuenta '+
+        'dejan de describir el mismo terreno.':''):'');
 }
 function pintaAzimut(c){
   var af=FIS.azFija(c), ae=FIS.azEje(c);
@@ -3606,22 +3617,44 @@ function seguidor3D(mats,escalaEje,motriz,largoFila,quiebro,quiebroTerr){
      propio modelo (`soporte`, y en la gemela también, que es pieza twin). */
   var L=largoFila||Seguidor.DIMS.span||60;
   var nP=Math.max(2,Math.round(L/8)+1), z0=-L/2, dP=L/(nP-1);
-  var qT=quiebroTerr||0, corta=postH, larga=postH;
+  var qT=quiebroTerr||0, postes=[];
   for(var i=0;i<nP;i++){
     var z=z0+i*dP;
     if(Math.abs(z)<1.6)continue;                 // ahí ya está el del slew
-    /* Cada hinca va del SUELO al TUBO. Con el terreno quebrado los dos bajan
-       en un seguidor quebrado —la hinca mide lo mismo, que es la gracia de la
-       rótula— y solo baja el suelo en uno rígido, así que la hinca crece: es
-       el precio de no doblar, y aquí se ve. */
-    var ySuelo=-Math.abs(z)*Math.tan(qT);
-    var yTubo=postH+(quiebro?ySuelo:0);
-    var h=Math.max(0.25,yTubo-ySuelo);
-    if(h<corta)corta=h; if(h>larga)larga=h;
-    var p=new THREE.Mesh(new THREE.BoxGeometry(.18,h,.18),mats.steel);
-    p.position.set(0,yTubo-h/2,z); p.castShadow=true; wrap.add(p);
+    var p=new THREE.Mesh(new THREE.BoxGeometry(.18,1,.18),mats.steel);
+    p.castShadow=true; p.userData={z:z}; wrap.add(p); postes.push(p);
   }
-  wrap.hincas={corta:corta,larga:larga,nocabe:false};
+  wrap.hincas={corta:postH,larga:postH,nocabe:false};
+  /* Cada hinca va del SUELO al TUBO, y el suelo se PREGUNTA, no se deduce: con
+     el terreno quebrado la cuenta hecha en el marco local usa tan(quiebro/2)
+     por metro, que no es exactamente el caballón que se dibuja —las dos aguas
+     quedan a eje±quiebro/2— y dejaba los pies del rígido a 14 cm del suelo.
+     Igual que en la mesa fija: se lleva la cabeza del poste al mundo, se mira
+     la cota ahí y se mide la vertical; y sale vertical aunque su fila vaya
+     inclinada.
+     Con el terreno quebrado, en un seguidor QUEBRADO la hinca mide lo mismo en
+     toda la fila —ésa es la gracia de la rótula— y en uno rígido crece: es el
+     precio de no doblar, y aquí se ve. */
+  var _vw=new THREE.Vector3(), _qw=new THREE.Quaternion(), _sw=new THREE.Vector3();
+  wrap.ponSuelo=function(){
+    var corta=Infinity, larga=-Infinity;
+    wrap.updateWorldMatrix(true,false);
+    wrap.matrixWorld.decompose(_vw,_qw,_sw);
+    var qInv=_qw.clone().invert(), sq=Math.tan(qT);
+    postes.forEach(function(p){
+      var z=p.userData.z;
+      /* La cabeza va en el TUBO, que en un quebrado ya baja con su media viga. */
+      var yTubo=postH+(quiebro?-Math.abs(z)*sq:0);
+      var W=new THREE.Vector3(0,yTubo,z).applyMatrix4(wrap.matrixWorld);
+      var h=W.y-cotaTerreno(W.x,W.z,TERRENO_3D);
+      if(h<0.25)h=0.25;
+      if(h<corta)corta=h; if(h>larga)larga=h;
+      p.quaternion.copy(qInv);
+      p.scale.y=h;
+      p.position.copy(wrap.worldToLocal(W.clone().setY(W.y-h/2)));
+    });
+    wrap.hincas.corta=corta; wrap.hincas.larga=larga;
+  };
   wrap.spin=spin;
   /* Dos mesas, dos tubos: cada una gira lo suyo, porque cada una tiene su
      inclinación de eje y por tanto su ángulo de seguimiento. */
@@ -3752,14 +3785,18 @@ function encuadra(){
    comparación que mirar. En campo es lo mismo: las filas siguen la curva de
    nivel.                                                                     */
 var TERRENO_3D={gx:0,gz:0,q:0,ex:0,ez:1};   // caída por metro al ESTE y al SUR, + quiebro
-/* El QUIEBRO: un caballón recto que cruza el campo PERPENDICULAR al eje de los
-   seguidores y pasa por el centro de la escena, con las dos aguas cayendo hacia
-   fuera. No es un adorno del bloque: es UN terreno, el mismo para todas, y por
-   eso la línea de cumbrera es una y no una por estructura.
-   Los bloques se alinean sobre la curva de nivel del plano —que con la caída
-   ⊥ al eje corre paralela a la cumbrera—, así que todos la cruzan por su
-   centro, que es donde va la rótula. Cuando el azimut del terreno y el del eje
-   no son perpendiculares eso deja de cumplirse, y va dicho en la escena. */
+/* El QUIEBRO: un caballón recto PERPENDICULAR al eje de los seguidores, con las
+   dos aguas cayendo hacia fuera, que pasa por el centro de cada bloque — que es
+   donde va la rótula.
+   Y por el de CADA bloque, no sólo por el del centro de la escena. Con la caída
+   ⊥ al eje la curva de nivel corre paralela a la cumbrera y las dos cosas
+   coinciden, pero en cuanto el azimut del terreno no es ⊥ a las filas dejan de
+   coincidir: los bloques se alinean sobre la curva de nivel y se van separando
+   de una cumbrera única. Medido con 25° al 120 y 16° de quiebro, eso dejaba
+   bloques a TREINTA METROS del suelo y hincas de 32 m. La cumbrera se repite
+   ahora con el paso de los bloques proyectado sobre el eje, así que cada uno
+   cae sobre la suya — que es lo mismo que hace la ficha con la pendiente: el
+   mismo terreno para todas, girado a sus filas. */
 function cotaTerreno(x,z,T){
   T=T||TERRENO_3D;
   var y=-(x*(T.gx||0)+z*(T.gz||0));
@@ -3769,6 +3806,7 @@ function cotaTerreno(x,z,T){
        simétrico: así las dos quedan justo a eje±quiebro/2 y la viga quebrada
        se apoya en el suelo en vez de rozarlo. */
     var sq=x*(T.ex||0)+z*(T.ez||0);
+    if(T.qPer>1)sq-=T.qPer*Math.round(sq/T.qPer);   // una cumbrera por bloque
     y+=sq*(sq>0?(T.kN||0):(T.kS||0));
   }
   return y;
@@ -3886,6 +3924,11 @@ function construyeMundo(){
   var nfTk=(porTk>1)?Math.min(6,porTk*2):NFILAS3D;
   var nfMax=Math.max(NFILAS3D,nfTk);
   var sep=Math.max(largo,(nfMax-1)*Math.max(6,cfg.tracker.pitch))+16;
+  /* El paso de la cumbrera: lo que avanza a lo largo del eje al saltar de un
+     bloque al siguiente. Con la caída ⊥ a las filas vale cero —la línea de
+     bloques ES paralela a la cumbrera— y entonces hay una sola, que es el caso
+     de manual. */
+  T.qPer=T.q?Math.abs(sep*(ux*T.ex+uz*T.ez)):0;
   var x0=-(keys.length-1)*sep/2, anchoTot=(keys.length-1)*sep+largo;
 
   keys.forEach(function(k,i){
@@ -3942,6 +3985,7 @@ function construyeMundo(){
                        (cfg.quiebro||0)/2*FIS.D2R);
         uno.position.x=d; uno.position.y=cotaFila(d,0);
         uno.rotation.x=rollX;                            // el eje sigue el terreno
+        uno.updateMatrixWorld(true); uno.ponSuelo();     // y las hincas, al suelo
       }else if(spec.fam==='fija_ew'){
         // dos aguas: la mesa lleva DOS paneles enfrentados, y las filas se
         // repiten hacia el este como en el seguidor (las filas corren N-S)

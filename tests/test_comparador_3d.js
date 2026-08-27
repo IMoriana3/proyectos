@@ -859,9 +859,18 @@ const SONDA = `(() => {
   check('con 10° de quiebro el QUEBRADO drapea: de media viga a la punta el ' +
     'tubo sube ' + queb.q10.tracker_queb.sube + ' m sobre el suelo, o sea nada',
     Math.abs(queb.q10.tracker_queb.sube) < 0.1, JSON.stringify(queb.q10.tracker_queb));
-  check('  y por eso sus hincas son todas iguales (' +
-    queb.q10.tracker_queb.hincas.join(' y ') + ' m)',
-    Math.abs(queb.q10.tracker_queb.hincas[1] - queb.q10.tracker_queb.hincas[0]) < 0.01,
+  /* Y por eso sus hincas son todas la misma, salvo un detalle que sale al
+     apoyarlas en el terreno de verdad: son VERTICALES, y las dos aguas están a
+     inclinaciones distintas —7° y 17° con 12° de caída y 10° de quiebro—, así
+     que para dejar el tubo a la misma distancia PERPENDICULAR del suelo la
+     hinca vertical bajo el agua más tumbada mide un poco más: 2/cos 7° = 2,015
+     contra 2/cos 17° = 2,091. Siete centímetros, y son reales — el modelo
+     viejo, que medía en el marco local, no los veía. Lo que se exige es lo que
+     importa: que NO crezcan con el terreno, que es lo que sí le pasa al
+     rígido (2,7 → 5,0 m). */
+  check('  y por eso sus hincas son prácticamente la misma (' +
+    queb.q10.tracker_queb.hincas.join(' y ') + ' m: 2/cos 7° y 2/cos 17°)',
+    Math.abs(queb.q10.tracker_queb.hincas[1] - queb.q10.tracker_queb.hincas[0]) < 0.12,
     JSON.stringify(queb.q10.tracker_queb.hincas));
   check('mientras el RÍGIDO, recto, cruza por encima del caballón: sube ' +
     queb.q10.tracker_hsat.sube + ' m en ese mismo cuarto de viga',
@@ -907,6 +916,63 @@ const SONDA = `(() => {
     s('quiebro', 0);
     return r;
   });
+  /* LAS HINCAS PISAN EL SUELO, TODAS. No es un detalle de dibujo: la lectura
+     publica su rango y con él se decide si la estructura se puede montar ahí.
+     Se mide la peor de todas contra la cota del terreno bajo su pie, y en los
+     casos que rompen: caída ⊥, a lo largo, en diagonal y con caballón. */
+  const pies = await p.evaluate(async () => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
+    document.querySelectorAll('.st').forEach(c => { c.checked = true; });
+    const espera = ms => new Promise(r => setTimeout(r, ms));
+    const mide = async (pend, az, q) => {
+      s('pend', pend); s('pendAz', az); s('quiebro', q);
+      await espera(350);
+      let peor = 0, quien = '', n = 0;
+      BLOQUES.forEach(B => B.filas.forEach(u => {
+        u.updateWorldMatrix(true, true);
+        /* Las hincas que dibuja la ficha son hijas DIRECTAS de la fila (o de
+           cada paño); las piezas del modelo de la casa, no — y algunas tienen
+           la misma sección, así que barrer con traverse las contaba y daba una
+           alarma falsa de 2 m. */
+        const cand = [];
+        u.children.forEach(o => { if (o.isMesh) cand.push(o);
+          else if (o.children) o.children.forEach(x => { if (x.isMesh) cand.push(x); }); });
+        cand.forEach(o => { const pr = o.geometry.parameters || {};
+          if (Math.abs(pr.width - 0.16) > 1e-6 && Math.abs(pr.width - 0.18) > 1e-6) return;
+          n++;
+          const c = new THREE.Box3().setFromObject(o);
+          const d = c.min.y - cotaTerreno((c.min.x + c.max.x) / 2, (c.min.z + c.max.z) / 2,
+                                          TERRENO_3D);
+          if (Math.abs(d) > Math.abs(peor)) { peor = d; quien = B.key; }
+        });
+      }));
+      return { peor: +peor.toFixed(2), quien, n, per: +(TERRENO_3D.qPer || 0).toFixed(0) };
+    };
+    const r = { llano: await mide(0, 180, 0), cruz: await mide(12, 90, 0),
+                largo: await mide(12, 180, 0), queb: await mide(12, 180, 10),
+                torcido: await mide(25, 120, 16) };
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
+    s('pend', 0); s('quiebro', 0);
+    return r;
+  });
+  ['llano', 'cruz', 'largo', 'queb', 'torcido'].forEach(caso => {
+    check('ninguna hinca flota ni se entierra con la caída ' + caso + ' (' +
+      pies[caso].n + ' hincas, peor ' + pies[caso].peor + ' m)',
+      Math.abs(pies[caso].peor) < 0.05,
+      JSON.stringify(pies[caso]));
+  });
+  /* Y el caso que lo rompía: con la caída NO ⊥ a las filas, la línea de bloques
+     se separa de una cumbrera única y los bloques quedaban en el aire —30 m
+     medidos, con hincas de 32—. La cumbrera se repite con el paso de los
+     bloques para pasar por el centro de cada uno. */
+  check('con la caída torcida la cumbrera se repite cada ' + pies.torcido.per +
+    ' m: una por bloque',
+    pies.torcido.per > 1, JSON.stringify(pies.torcido));
+  check('  y con la caída ⊥ a las filas no hace falta: la cumbrera es UNA',
+    pies.queb.per === 0, JSON.stringify(pies.queb));
+
   check('el quebrado lleva RÓTULA dibujada: dos bridas en el actuador',
     rotula.q20.bridas === 2, JSON.stringify(rotula.q20));
   check('  y abre exactamente el quiebro tecleado (' + rotula.q20.abre + '° con 20°)',
@@ -1636,13 +1702,18 @@ const SONDA = `(() => {
     const mide = (k, eje) => {
       const B = BLOQUES.find(b => b.key === k), u = B.filas[0];
       const zs = [];
-      u.traverse(o => { if (o.isMesh && o.geometry.parameters &&
-        Math.abs(o.geometry.parameters.width - 0.18) < 1e-6 &&
-        Math.abs(o.geometry.parameters.height - Seguidor.DIMS.postH) < 1e-6)
+      /* Las hincas que dibuja la ficha son hijas DIRECTAS de la fila (o de cada
+         paño en las dos aguas); las del modelo de la casa van por dentro. Y ya
+         no se distinguen por su ALTURA —ahora la altura va en la escala, porque
+         cada una se ajusta al terreno bajo su pie—, así que se distinguen por
+         dónde cuelgan y por su sección. Buscándolas por `height === postH` se
+         encontraban los postes del modelo: 7 mal repartidos en vez de 8. */
+      const cand = [];
+      u.children.forEach(o => { if (o.isMesh) cand.push(o);
+        else if (o.children) o.children.forEach(x => { if (x.isMesh) cand.push(x); }); });
+      cand.forEach(o => { const pr = o.geometry.parameters || {};
+        if (Math.abs(pr.width - 0.18) < 1e-6 || Math.abs(pr.width - 0.16) < 1e-6)
           zs.push(eje === 'z' ? o.position.z : o.position.x); });
-      // la fija las lleva dentro de la mesa: se buscan por su caja
-      if (!zs.length) u.traverse(o => { if (o.isMesh && o.geometry.parameters &&
-        Math.abs(o.geometry.parameters.width - 0.16) < 1e-6) zs.push(o.position.x); });
       // el seguidor tiene además la hinca del accionamiento en el centro, que la
       // pone el propio modelo (`soporte`): cuenta para el vano
       if (eje === 'z') zs.push(0);
