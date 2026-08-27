@@ -816,8 +816,19 @@ check('cayendo al ESTE se invierte: mueve al SEGUIDOR (' +
   llanoAz.tracker_hsat_nobt.sombra.toFixed(2) + ' → ' +
   caeEste.tracker_hsat_nobt.sombra.toFixed(2) + ' %)',
   Math.abs(caeEste.tracker_hsat_nobt.sombra - llanoAz.tracker_hsat_nobt.sombra) > 0.05);
-check('  y no a la fija',
-  Math.abs(caeEste.fija_proyecto.sombra - llanoAz.fija_proyecto.sombra) < 1e-9);
+/* A la fija esa caída no le entra ⊥ —sus filas corren este-oeste, así que la
+   componente ⊥ es la norte-sur— y por ahí no le cambia el cross-axis. Lo que sí
+   le cambia es que su FILA sigue el terreno a lo largo: la mesa se tumba sus
+   grados sobre una fila inclinada, y eso mueve la proyección del sol y con ella
+   la sombra. Antes esto era exactamente cero porque la fila se quedaba
+   horizontal — y con 12° sobre 65 m eso enterraba la mesa cinco metros. */
+check('  a la fija esa pendiente no le entra ⊥: su cross-axis sigue en cero',
+  Math.abs(FIS.cruz({ ...cfg, pend: 16, pendAz: 90 }, FIJA)) < 1e-9);
+check('  pero sí le inclina la FILA, y eso mueve su POA (' +
+  llanoAz.fija_proyecto.neta.toFixed(1) + ' → ' +
+  caeEste.fija_proyecto.neta.toFixed(1) + ' kWh/m²)',
+  Math.abs(caeEste.fija_proyecto.neta - llanoAz.fija_proyecto.neta) > 0.1,
+  [llanoAz.fija_proyecto.neta, caeEste.fija_proyecto.neta].join(' vs '));
 
 // ── 6b-ter) EL EJE INCLINADO LO PONE EL TERRENO ──
 // Un TSAT no es un seguidor con un parámetro más: es un seguidor sobre una
