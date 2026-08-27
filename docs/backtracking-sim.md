@@ -388,6 +388,24 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-27 · FE DE ERRATAS: las cifras «netas» contaban la escalera DOS veces** — y el
+  invariante fue quien lo cazó. Al acotar lo accionable con `energy-optimal` salió **−0,38 % por
+  debajo de pairwise**, que es imposible por construcción (el veto exacto garantiza ≥). La única
+  explicación posible era la métrica: y en efecto, **`poaPlant().plant` ya lleva la escalera de
+  diodos dentro** (`beam·(1−se)`), así que la «POA neta» calculada aparte la restaba otra vez.
+
+  **Quedan corregidas:** las ganancias de Ayora son **B +0,08 % y C +0,44 %** (las cifras «netas»
+  +0,153 %/+0,852 % publicadas en la entrada de v1.39 y en el PR #568 estaban infladas por el doble
+  descuento — la cifra simple YA incluía los diodos, no había una «lectura más favorable» escondida).
+  La pérdida por sombra de Ayora se expresa mejor sobre el bruto: **389 kWh/m²·año = 12,7 % del POA
+  bruto** (el «14,56 %» era la misma cantidad expresada sobre el neto). La ANATOMÍA de esa pérdida
+  (46 % tope de diseño · 53 % mesa rígida sobre terreno que ondula · estructura despreciable) no
+  cambia: son proporciones. Los números de San José (+0,17 %/+0,20 %) no estaban afectados.
+
+  La lección es vieja y merece repetirse: **cuando un resultado viola un invariante, el error está
+  en la medición, no en el invariante** — y tener el invariante escrito es lo que convirtió un doble
+  descuento silencioso en una alarma que sonó a la primera.
+
 - **2026-08-27 · «A por ellos»: los tres pendientes, cerrados en una tarde** — San José evaluable,
   la anatomía completa del 14,56 % de Ayora, y el protocolo de campo. Tres investigaciones que
   merecen quedar contadas enteras, porque en las tres el camino importó tanto como el destino.
