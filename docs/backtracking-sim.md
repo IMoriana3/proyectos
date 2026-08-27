@@ -388,6 +388,46 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-27 · v1.39.3–v1.39.5 · la tarde en que «no va nada fluido», y las TRES causas** — con una
+  presentación delante y la página inusable en el navegador del usuario mientras aquí todo estaba en
+  verde. Tres arreglos encadenados, y una lección de diagnóstico que vale más que los tres.
+
+  **v1.39.3 — recálculo por fragmentos.** `computeDay` pasa a ser UN generador con dos caudales: el
+  arranque y los tests lo drenan en síncrono (semántica idéntica) y `recompute()` lo drena en
+  fragmentos de ~40 ms con `setTimeout(0)` — no `requestAnimationFrame`, que se pausa en pestañas en
+  segundo plano. Mientras se cocina el DAY nuevo, el VIEJO sigue vivo: la página responde con los
+  datos de antes, el testigo dice «calculando… N %», y si llega otro cambio a mitad un token invalida
+  la pasada — el último gana, como en un editor. Y la cota exacta `gMax` del terreno: el terreno
+  fantasma de v1.39 actuaba por accidente de salida rápida del marchador de rayos; al quitarlo, el
+  caso común pasó a ser «caminar el rayo entero (160 pasos) para concluir que no choca». El suelo
+  nunca supera la cota medida más alta, así que el rayo se corta ahí — corte exacto, no heurística,
+  y el oráculo de podas lo confirma.
+
+  **v1.39.4 — el 3D renderizaba en bucle SIEMPRE.** `loop3D` renderizaba la escena entera en cada
+  frame, incondicionalmente: 854 mesas con sombras PCF suaves y antialias, sesenta veces por segundo,
+  aunque nadie tocara nada. En una gráfica integrada eso arrastra la página COMPLETA — menús,
+  teclado, todo. Llevaba así desde v1.2. Ahora renderiza bajo demanda (`R3_DIRTY`): medido, de ~90
+  renders/1,5 s en reposo a 4 y silencio. Y blindaje del recálculo: si algo revienta a mitad, el
+  error se enseña EN PANTALLA en vez de dejar «calculando…» girando para siempre — que es
+  indistinguible de un cuelgue y no se puede diagnosticar por teléfono.
+
+  **v1.39.5 — la causa de verdad, y la encontró el usuario.** «Pon que de base no cargue la
+  configuración que tiene ahora de topografía, por probar.» La página guardaba TODO el estado en
+  `localStorage` y lo restauraba al abrir — incluida una implantación de 80 filas y los
+  OPTIMIZADORES ENCENDIDOS si así quedó la última sesión. El primer cálculo del arranque es síncrono
+  (aún no hay DAY), así que la página se congelaba decenas de segundos antes de poder tocar nada:
+  «falla en la base, no me deja ni simular». E invisible para el diagnóstico, porque dependía del
+  navegador de CADA uno — a quien probaba en limpio le iba bien. Ahora el arranque parte SIEMPRE de
+  la implantación por defecto y las políticas de fábrica; sólo se restauran las preferencias ligeras
+  (emplazamiento, fecha, atmósfera). `?limpio` en la URL borra el estado guardado. Verificado
+  envenenando el localStorage a propósito con ese mismo escenario: arranque en 1,2 s hasta en el
+  banco (~20× más lento que un portátil).
+
+  **La lección, para la próxima vez:** cuando «aquí verde, allí roto», la diferencia suele ser el
+  ESTADO PERSISTIDO del cliente — el banco de pruebas nace limpio y el navegador del usuario arrastra
+  meses. Tres arreglos reales pero secundarios se hicieron persiguiendo un síntoma cuya causa era un
+  `localStorage` envenenado; la hipótesis correcta la trajo el usuario. QA 102.
+
 - **2026-08-27 · v1.39** — **el contador se inventaba TERRENO donde no había mesa que lo midiera.**
   Sale de perseguir una pregunta del cliente —«¿sobre qué estás midiendo, cuál es la base?»— hasta
   el fondo. Al desglosar la pérdida por sombra apareció que Ayora tenía **sombra de terreno con el sol
