@@ -920,6 +920,70 @@ check('el umbral del horizonte del campo es 90° − pendiente (' + (90 - PEND).
 check('MUTANTE: con el umbral en 90° a secas (sin pendiente) la sombra se cae',
   Math.cos((-86.1 - 0) * Math.PI / 180) > 0 && Math.cos((-86.1 - PEND) * Math.PI / 180) <= 0);
 
+// ── 6a-ter) LA RAMA DEGENERADA: EL COLECTOR DE CANTO AL SOL (CANTO-01) ──
+// `FIS.shade` tiene una rama que nadie había acotado: cuando la fila receptora
+// queda EXACTAMENTE de canto al sol (θ − ψ = ±90°), su proyección tiene ancho
+// cero, la división `ov/w` se indetermina, y la función devuelve `ov>0?1:0`.
+// Un valor devuelto por un camino que nadie ha medido es un sitio donde
+// esconderse, aunque el valor resulte ser el bueno — y aquí lo es.
+//
+// SE ABRIÓ COMO SOSPECHA Y SE CIERRA COMO NO-FALLO, con la corrección de un
+// error mío: en el PR de SOMBRA-01 anoté ese `return 1` como «valor falso»
+// porque el trazador de rayos daba 0 en ψ=−82° θ=8° p=8°. Estaba arbitrando
+// contra el oráculo evaluado EN la singularidad, donde el propio trazador se
+// rompe (muestrea puntos de un colector de canto, con los rayos rasando el
+// plano del suelo). Tomando el LÍMITE por los dos lados —que es lo que hay que
+// hacer en una singularidad— el oráculo dice 1,0000, igual que la ficha, y la
+// ficha además pasa por el punto de forma continua.
+const CANTOS = [
+  [-82, 8, 8], [-40, 50, 0], [65, -25, 0], [20, -70, 0], [-70, 20, 8], [30, -60, 12],
+];
+CANTOS.forEach(([ps, th, pend]) => {
+  // límite del oráculo por los dos lados, NO su valor en el punto
+  const izq = rayos(ps, th - 1e-3, PIT, CW, pend, 1.5, 40, 4001);
+  const der = rayos(ps, th + 1e-3, PIT, CW, pend, 1.5, 40, 4001);
+  const got = FIS.shade(ps, th, PIT, CW, pend);
+  check('canto al sol ψ=' + ps + '° θ=' + th + '° p=' + pend + '°: la ficha da ' +
+    got.toFixed(4) + ' y el límite del oráculo es ' + izq.toFixed(4),
+    Math.abs(izq - der) < 0.01 && Math.abs(got - izq) < 0.01,
+    got.toFixed(4) + ' contra ' + izq.toFixed(4) + '/' + der.toFixed(4));
+});
+// y que pasa por la singularidad SIN salto: si la rama devolviera otra cosa,
+// esto vería el escalón aunque el careo anual no lo notase.
+[[-82, 8, 8], [-40, 50, 0]].forEach(([ps, th, pend]) => {
+  const alrededor = [-1e-2, -1e-6, 0, 1e-6, 1e-2].map(e => FIS.shade(ps, th + e, PIT, CW, pend));
+  check('y pasa por el canto sin escalón (ψ=' + ps + '°: ' +
+    alrededor.map(v => v.toFixed(3)).join(' ') + ')',
+    Math.max(...alrededor) - Math.min(...alrededor) < 0.01);
+});
+/* LA COTA, que es lo que faltaba y por lo que esto deja de ser un agujero.
+   La rama se dispara con `w = cw·|cos(θ−ψ)| < 1e-9`. Y `FIS.poa` transpone el
+   haz con `cosAOI = ρ·cos(ψ−θ)`, ρ ≤ 1: ES EL MISMO COSENO. O sea que la
+   condición que hace ambigua a la sombra es la MISMA que anula el haz al que
+   se aplica — no es una casualidad afortunada, es una identidad. El
+   circunsolar de Perez va con `A = max(0, cosAOI)`, así que hereda la cota.
+   Devuelva la rama 0 o 1, lo que multiplica está acotado por 5,9e-7 W/m². */
+const COS_MAX = 1e-9 / CW;
+check('la rama solo puede dispararse con |cos(θ−ψ)| < ' + COS_MAX.toExponential(1),
+  Math.abs(COS_MAX - 1e-9 / 2.382) < 1e-15);
+check('y ese es el MISMO coseno que anula el haz: cota ' +
+  (COS_MAX * 1400).toExponential(1) + ' W/m² con DNI 1400',
+  COS_MAX * 1400 < 1e-6, (COS_MAX * 1400).toExponential(2));
+// ALCANZABLE, no teórica: sobre los θ que el propio careo usa, un ψ puede caer
+// a 2,0e-13 del canto. Se deja medido para que nadie la borre por «imposible».
+{
+  let minAbs = 1, arg = null;
+  for (let ps = -89.9; ps <= 89.9; ps += 0.001) {
+    for (const th of [C.tilt_deg, -C.tilt_deg, 0, C.max_angle_deg, -C.max_angle_deg]) {
+      const v = Math.abs(Math.cos((th - ps) * Math.PI / 180));
+      if (v < minAbs) { minAbs = v; arg = [ps, th]; }
+    }
+  }
+  check('la rama es ALCANZABLE, no teórica (|cos(θ−ψ)| baja a ' + minAbs.toExponential(1) +
+    ' en ψ=' + arg[0].toFixed(3) + '° θ=' + arg[1] + '°)',
+    minAbs < COS_MAX, minAbs.toExponential(2) + ' contra el umbral ' + COS_MAX.toExponential(2));
+}
+
 // ── 6b) EL ÓPTIMO NETO CONTRA EL DE TRANSPOSICIÓN ──
 // El aviso decía «queda 1-3° por encima» como número FIJO. Eso solo vale a GCR
 // flojo: con las filas apretadas un tilt alto se tapa la fila de detrás y el
