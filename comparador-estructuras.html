@@ -618,8 +618,42 @@ FIS.psPlano=function(el,az,pitchAz,axTiltDeg,alongAz){
   }
   return {ps:Math.atan2(sc,su)*FIS.R2D, rho:Math.hypot(sc,su)};
 };
-FIS.psFija=function(el,az,lat,cfg){
-  return FIS.psPlano(el,az,cfg?FIS.azFija(cfg):FIS.azEquador(lat),0,0);
+FIS.psFija=function(el,az,lat,cfg,axTiltDeg,alongAz){
+  return FIS.psPlano(el,az,cfg?FIS.azFija(cfg):FIS.azEquador(lat),
+                     axTiltDeg||0,alongAz||0);
+};
+/* LA FIJA TAMBIÉN SIGUE EL TERRENO A LO LARGO DE SUS FILAS (este-oeste), y su
+   pendiente N-S sigue siendo la tecleada. No es una contradicción, es
+   geometría: la línea de máxima pendiente de una mesa que mira al ecuador corre
+   NORTE-SUR, que es justamente el eje sobre el que hay que rodarla para que
+   siga el terreno este-oeste — y rodar sobre un eje deja quietos los vectores
+   de ese eje. O sea que el tilt N-S es el de proyecto, exacto, y lo que se
+   inclina es la fila.
+   Lo que sí cambia es la inclinación TOTAL de la superficie —25° de proyecto
+   con 12° a lo largo dan 27,2°—, y eso va dicho en la lectura.
+   Devuelve {tilt, alongAz}: magnitud y azimut del extremo que BAJA, que es lo
+   que `psPlano` necesita. Sin azimut de terreno declarado devuelve 0, que es el
+   camino del careo: el core corre las fijas sin pendiente a lo largo. */
+/* EL TILT QUE SE TECLEA ES EL DE LA PENDIENTE ⊥ A LAS FILAS, y hay que
+   convertirlo al giro que de verdad se le da a la mesa sobre SU fila cuando la
+   fila va inclinada. Rodar la fila no deja quieta esa pendiente —lo comprobé
+   midiendo: 25° tumbados sobre una fila con 12° a lo largo dan 25,49° de
+   pendiente N-S—, así que el giro se corrige:
+       pendiente ⊥ = atan( tan(giro) / cos(inclinación de la fila) )
+   y al revés,  giro = atan( tan(tilt) · cos(inclinación) ).
+   Con la fila horizontal es el mismo número, que es el camino del careo.
+   Un SEGUIDOR no entra aquí: su θ es un ángulo de motor sobre su eje, no una
+   pendiente de proyecto — y por eso no se corrige. */
+FIS.thMesa=function(tiltDeg,axDeg){
+  if(!axDeg)return tiltDeg;
+  return Math.atan(Math.tan(tiltDeg*FIS.D2R)*Math.cos(axDeg*FIS.D2R))*FIS.R2D;
+};
+FIS.largoFija=function(cfg){
+  if(!cfg||cfg.pendAz==null)return {tilt:0,alongAz:0};
+  var P=FIS.azFija(cfg), q=FIS.pendComp(cfg.pend,cfg.pendAz,P);
+  /* `largo` mide la caída hacia `pitchAz+90`; si es negativa, baja al otro
+     extremo de la fila. */
+  return {tilt:Math.abs(q.largo), alongAz:P+((q.largo>=0)?90:-90)};
 };
 /* Eje INCLINADO (TSAT). El eje sube hacia el ecuador: en el hemisferio norte,
    hacia el sur. Se lleva el vector solar al marco del eje y se mide allí el
@@ -1039,7 +1073,17 @@ FIS.ejesMitades=function(cfg,spec){
   return [ax+q/2, ax-q/2];              // ecuador y polo, cada una la suya
 };
 FIS.ejeTilt=function(cfg,spec){
-  if(!spec||spec.fam!=='tracker')return 0;
+  /* Las DOS AGUAS también. Sus filas corren norte-sur igual que el eje de un
+     seguidor, y su cumbrera es una línea recta apoyada en el terreno: sobre una
+     caída norte-sur no queda horizontal, se inclina con ella. Y eso NO cambia
+     su tilt —los dos paños siguen a ±tiltEO sobre la cumbrera—, exactamente
+     igual que inclinar el eje de un seguidor no cambia su ángulo de
+     seguimiento. Geométricamente son el mismo marco girado: por eso comparten
+     esta función y la misma proyección.
+     La monoinclinada no entra: sus filas corren este-oeste y su tilt ES la
+     dirección norte-sur, así que ahí la pendiente se compensa con la hinca —
+     que es lo que se pidió y lo que hace el campo. */
+  if(!spec||(spec.fam!=='tracker'&&spec.fam!=='fija_ew'))return 0;
   /* TODOS los seguidores, no solo el TSAT. Un eje norte-sur sobre un terreno
      que cae norte-sur NO es horizontal: sigue el terreno, y entonces es un eje
      inclinado — se llame como se llame en el catálogo. Mientras esto solo se
@@ -1049,7 +1093,7 @@ FIS.ejeTilt=function(cfg,spec){
      kWh/m² de diferencia sin que la tabla se moviera.
      Sin azimut declarado se respeta lo recibido, que es el camino del careo: el
      core corrió el HSAT con axis_tilt 0 y el TSAT con 10. */
-  if(cfg.pendAz==null)return spec.tsat?(cfg.axTilt||0):0;
+  if(cfg.pendAz==null)return spec.tsat?(cfg.axTilt||0):0;   // camino del careo
   /* La componente A LO LARGO DEL EJE, con el signo de bajar hacia el ecuador:
      positivo cuando el extremo que mira al ecuador es el más bajo. */
   var q=FIS.pendComp(cfg.pend,cfg.pendAz,FIS.azEje(cfg)+90);
@@ -1187,6 +1231,8 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
   var thAbs=0, nDia=0, thSerie=[];
   var tilt=(tiltForzado!=null)?tiltForzado:(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
   var axT=FIS.ejeTilt(cfg,spec);
+  /* Y para la monoinclinada, la caída a lo largo de SUS filas (este-oeste). */
+  var lFija=(spec.fam==='fija')?FIS.largoFija(cfg):{tilt:0,alongAz:0};
   /* Las MITADES del eje. En todo lo que no sea un quebrado sobre terreno
      quebrado es una sola, y entonces esto es exactamente lo de siempre. */
   var ejes=FIS.ejesMitades(cfg,spec);
@@ -1219,11 +1265,19 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
       });
       P0=planos[0].P;
     }else if(spec.fam==='fija_ew'){
-      P0=FIS.psTracker(S.el,S.az,cfg);                // aguas al este y al oeste
-      planos=[{th:tilt,P:P0,ax:axT},{th:-tilt,P:P0,ax:axT}];
+      /* Aguas al este y al oeste. Con la cumbrera inclinada por el terreno el
+         marco de proyección es el mismo que el de un eje inclinado: si no, se
+         dibujaría una cumbrera en cuesta y se calcularía otra horizontal. */
+      P0=axT?FIS.psTSAT(S.el,S.az,axT,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
+      var thEW=FIS.thMesa(tilt,axT);
+      planos=[{th:thEW,P:P0,ax:axT},{th:-thEW,P:P0,ax:axT}];
     }else{
-      P0=FIS.psFija(S.el,S.az,cfg.lat,cfg);
-      planos=[{th:tilt,P:P0,ax:axT}];
+      /* La fila sigue el terreno a lo largo (este-oeste) y la mesa se tumba sus
+         grados sobre ELLA: el mismo marco girado que un eje inclinado. Si la
+         escena la rodara y la física no, sería otra vez dibujar una cosa y
+         calcular otra. */
+      P0=FIS.psFija(S.el,S.az,cfg.lat,cfg,lFija.tilt,lFija.alongAz);
+      planos=[{th:FIS.thMesa(tilt,lFija.tilt),P:P0,ax:lFija.tilt}];
     }
     for(var k=0;k<planos.length;k++){
       var pl=planos[k], t=pl.th;
@@ -3251,19 +3305,25 @@ function cotasSeguidor(G){
    anterior era una barra a mano con un cajón encima que no es lo que se monta.
    Se le pasan las cotas de las dos filas porque en pendiente no están a la
    misma altura. */
-function ejeTransmision(mats,xa,xb,ya,yb){
-  var D=Seguidor.DIMS, g=new THREE.Group();
-  var dx=xb-xa, dy=yb-ya, L=Math.hypot(dx,dy);
+function ejeTransmision(mats,pa,pb){
+  /* De CORONA a CORONA, y las coronas se las damos MEDIDAS, no deducidas de la
+     cota del suelo: en cuanto el terreno cae a lo largo del eje la fila se
+     inclina sobre su centro y el tubo se va 0,42 m en Z con 12° — el eje se
+     quedaba en Z=0 apuntando al aire por encima de la corona. Ahora se le pasan
+     los dos puntos del tubo tal cual están, así que da igual cómo se haya
+     inclinado la fila: el eje llega donde tiene que llegar. */
+  var g=new THREE.Group(), d=new THREE.Vector3().subVectors(pb,pa), L=d.length();
   var tubo=new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,L,14),
                           mats.silver||mats.steel);
-  tubo.rotation.z=Math.PI/2-Math.atan2(dy,dx);   // el cilindro nace en Y
-  tubo.position.set((xa+xb)/2,D.postH+(ya+yb)/2,0);
+  /* El cilindro nace en Y: se orienta con la cuaternión que lleva +Y a la
+     dirección corona-corona, que vale para cualquier inclinación en 3D. */
+  tubo.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
+  tubo.position.copy(pa).addScaledVector(d,0.5);
   tubo.castShadow=true; g.add(tubo);
-  [[xa,ya],[xb,yb]].forEach(function(q){         // brida contra cada corona
-    var c=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.10,0.09,14),
-                         mats.steel);
-    c.rotation.z=Math.PI/2;
-    c.position.set(q[0]+(q[0]<((xa+xb)/2)?0.22:-0.22),D.postH+q[1],0);
+  [0,1].forEach(function(i){                     // brida contra cada corona
+    var c=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.10,0.09,14),mats.steel);
+    c.quaternion.copy(tubo.quaternion);
+    c.position.copy(i?pb:pa).addScaledVector(d,i?-0.22/L:0.22/L);
     c.castShadow=true; g.add(c);
   });
   return g;
@@ -3370,34 +3430,62 @@ function seguidor3D(mats,escalaEje,motriz,largoFila,quiebro,quiebroTerr){
    es la LONGITUD DE LAS HINCAS — 12° de cuesta y la mesa sigue a 25°. Antes se
    escoraba la mesa entera con el suelo, que es lo que hace un seguidor, no una
    fija: el tilt dibujado dejaba de ser el tecleado. */
-function mesaFija3D(mats,largo,ancho,gLong){
+function mesaFija3D(mats,largo,ancho){
   var D=Seguidor.DIMS, wrap=new THREE.Group(), spin=new THREE.Group();
   var panel=new THREE.Mesh(new THREE.BoxGeometry(largo,0.045,ancho),mats.glass);
   panel.castShadow=true; panel.receiveShadow=true; spin.add(panel);
   var viga=new THREE.Mesh(new THREE.BoxGeometry(largo,D.tube*0.7,D.tube*0.7),mats.steel);
   viga.position.y=-0.13; viga.castShadow=true; spin.add(viga);
   wrap.add(spin);
-  /* HINCAS. Dos, una en cada punta, era lo que se veía —y desde casi cualquier
-     ángulo se veía UNA—: una mesa de 65 m sobre dos postes no es una estructura,
-     es un puente. En campo la hinca va cada 4-6 m, que es lo que aguanta el
-     viento y lo que da el perfil. Se reparten a paso ≤ 6 m entre las dos puntas.
-     Todas miden lo mismo porque la fila ya se ha inclinado con el terreno: lo
-     que absorbe la pendiente es el replanteo, no una hinca más larga. */
+  /* HINCAS. DOS FILAS, no una. Una mesa fija no gira: se apoya en dos líneas de
+     postes, la de delante y la de detrás, y por el propio tilt NO MIDEN LO
+     MISMO — con 2,4 m de mesa a 25° hay un metro de diferencia entre ellas. Con
+     una sola línea bajo el eje la mesa parecía un balancín y el rango de hinca
+     que publicaba la lectura no era el de la estructura.
+     A lo largo de la fila sí miden todas igual, porque la fila se replantea
+     sobre el terreno: lo que absorbe esa pendiente es el replanteo.
+     `gCruz` es la caída del terreno en la dirección del PITCH (⊥ a la fila),
+     que es la que separa el pie de delante del de detrás. */
   var nP=Math.max(2,Math.round((largo-1.6)/6)+1), x0=-largo/2+0.8, dP=(largo-1.6)/(nP-1);
-  var g=gLong||0, corta=D.postH, larga=D.postH, nocabe=false;
+  var a=Math.max(0.2,ancho/2-0.1), postes=[];
   for(var ip=0;ip<nP;ip++){
     var x=x0+ip*dP;
-    /* El suelo bajo esta hinca está a −x·g respecto al centro de la mesa, y la
-       viga sigue a `postH`: la hinca mide lo que hay entre los dos. Si sale
-       NEGATIVA, el terreno se ha comido la mesa por ese lado: no se monta de una
-       pieza y hay que bancalear. Se dibuja el mínimo y se DECLARA. */
-    var h=D.postH+x*g;
-    if(h<0.25){h=0.25; nocabe=true;}
-    if(h<corta)corta=h; if(h>larga)larga=h;
-    var p=new THREE.Mesh(new THREE.BoxGeometry(.16,h,.16),mats.steel);
-    p.position.set(x,D.postH-h/2,0); p.castShadow=true; wrap.add(p);
+    [-a,a].forEach(function(zp){
+      var p=new THREE.Mesh(new THREE.BoxGeometry(.16,1,.16),mats.steel);
+      p.castShadow=true; p.userData={x:x,zp:zp}; wrap.add(p); postes.push(p);
+    });
   }
-  wrap.hincas={corta:corta,larga:larga,nocabe:nocabe};
+  /* El tilt no se sabe al construir —sale del barrido, de la estimación o del
+     campo— y es JUSTO lo que separa las dos líneas de postes, así que la altura
+     se recalcula cuando se pone. */
+  /* Cada poste se apoya en el TERRENO DE VERDAD, no en una aproximación del
+     plano: se lleva su cabeza al mundo, se pregunta la cota ahí y se mide la
+     vertical. Con la fila rodada, cualquier cuenta hecha en el marco local se
+     queda corta —a 30° dejaba los pies a 39 cm del suelo—, y además el poste
+     tiene que salir VERTICAL en el mundo aunque su fila vaya inclinada: eso lo
+     hace la cuaternión inversa de la fila. */
+  var _v=new THREE.Vector3(), _q=new THREE.Quaternion(), _s=new THREE.Vector3();
+  wrap.ponTilt=function(tRad){
+    var st=Math.sin(tRad||0), ct=Math.cos(tRad||0);
+    var corta=Infinity, larga=-Infinity, nocabe=false;
+    wrap.updateWorldMatrix(true,false);
+    wrap.matrixWorld.decompose(_v,_q,_s);
+    var qInv=_q.clone().invert();
+    postes.forEach(function(p){
+      var x=p.userData.x, zp=p.userData.zp;
+      var yTecho=D.postH-zp*st, zh=zp*ct;              // borde de la mesa
+      var W=new THREE.Vector3(x,yTecho,zh).applyMatrix4(wrap.matrixWorld);
+      var h=W.y-cotaTerreno(W.x,W.z,TERRENO_3D);
+      if(h<0.25){h=0.25; nocabe=true;}
+      if(h<corta)corta=h; if(h>larga)larga=h;
+      p.quaternion.copy(qInv);                          // vertical en el MUNDO
+      p.scale.y=h;
+      p.position.copy(wrap.worldToLocal(W.clone().setY(W.y-h/2)));
+    });
+    wrap.hincas.corta=corta; wrap.hincas.larga=larga; wrap.hincas.nocabe=nocabe;
+  };
+  wrap.hincas={corta:D.postH,larga:D.postH,nocabe:false};
+  wrap.ponTilt(0);
   spin.position.y=D.postH;
   wrap.spin=spin;
   return wrap;
@@ -3639,27 +3727,56 @@ function construyeMundo(){
         uno=new THREE.Group();
         /* Su +X local mira al −Z del bloque tras el giro de 90°, así que la
            caída a lo largo de la mesa es la de Z cambiada de signo. */
-        var a=mesaFija3D(mats,G.largoFila,G.altoColector/2,-gLocZ),
-            b=mesaFija3D(mats,G.largoFila,G.altoColector/2,-gLocZ);
+        /* Sin pendiente A LO LARGO en las hincas: la fila entera se apoya en
+           el terreno (abajo), así que todas miden lo mismo — como en el
+           seguidor. Antes se quedaba horizontal y quien compensaba era la
+           hinca, que es lo que hay que hacer en la monoinclinada y NO aquí. */
+        var a=mesaFija3D(mats,G.largoFila,G.altoColector/2),
+            b=mesaFija3D(mats,G.largoFila,G.altoColector/2);
         a.position.z=-G.altoColector/4; b.position.z=G.altoColector/4;
         uno.add(a,b); uno.spinPair=[a.spin,b.spin]; uno.position.x=d;
+        /* Las hincas viven en cada PAÑO, así que la fila no publicaba ninguna y
+           la lectura de las dos aguas no podía decir su rango — la única
+           familia muda de las tres. Se agregan las dos. */
+        uno.hincas={corta:Math.min(a.hincas.corta,b.hincas.corta),
+                    larga:Math.max(a.hincas.larga,b.hincas.larga),
+                    nocabe:!!(a.hincas.nocabe||b.hincas.nocabe)};
         uno.position.y=cotaFila(d,0);
-        /* Euler XYZ: la Y gira la mesa a lo largo de N-S y la X, que se aplica
-           después, la inclina sobre el eje del MUNDO — que es el que corre
-           este-oeste, ⊥ a esas filas. */
-        /* Sin escorar: una fija se monta al tilt de proyecto y la pendiente a
-           lo largo de sus filas la compensan las hincas. */
-        uno.rotation.set(0,Math.PI/2,0);
+        /* IGUAL QUE EL SEGUIDOR: la fila se inclina lo que se inclina el
+           terreno en su dirección larga. Una cumbrera de 65 m no se monta
+           horizontal sobre una ladera que cae norte-sur; se replantea sobre
+           ella. Lo que NO cambia es el tilt de los dos paños: siguen a ±tiltEO
+           sobre la cumbrera, y la física lo calcula con ese mismo marco.
+           Euler XYZ: la Y gira la mesa a lo largo de N-S y la X, que se aplica
+           después, la inclina sobre el eje del BLOQUE — el que corre
+           este-oeste, ⊥ a esas filas, que es el mismo que usa el seguidor. */
+        uno.rotation.set(rollX,Math.PI/2,0);
       }else{
-        uno=mesaFija3D(mats,G.largoFila,G.altoColector,gLocX); uno.position.z=d;  // filas al SUR
+        /* IGUAL QUE EL SEGUIDOR Y QUE LAS DOS AGUAS: la fila sigue el terreno
+           A LO LARGO, que en una monoinclinada es este-oeste. Y su pendiente
+           N-S sigue siendo la tecleada, porque la línea de máxima pendiente de
+           la mesa corre norte-sur y ése es justamente el eje sobre el que se
+           rueda: rodar sobre un eje deja quietos los vectores de ese eje.
+           Antes se quedaba horizontal y lo compensaba la hinca, y con 12° a lo
+           largo de 65 m eso pedía hincas de 0,25 a 8,7 m: la mesa entraba CINCO
+           METROS en el terreno por un extremo y volaba siete por el otro. */
+        uno=mesaFija3D(mats,G.largoFila,G.altoColector); uno.position.z=d;
         uno.position.y=cotaFila(0,d);
+        uno.rotation.z=rollZ;                            // la fila sigue el terreno
       }
       grupo.add(uno); filas.push(uno);
     }
     /* Y el eje que une cada par: de la corona de la motriz a la de su gemela. */
-    if(agrupa>1)for(var tr=0;tr+agrupa<=nf;tr+=agrupa){
-      var xa=(tr-(nf-1)/2)*pitch, xb=(tr+agrupa-1-(nf-1)/2)*pitch;
-      grupo.add(ejeTransmision(mats,xa,xb,cotaFila(xa,0),cotaFila(xb,0)));
+    if(agrupa>1){
+      /* Las coronas, medidas sobre la escena ya montada: el origen del grupo
+         que bascula ES el centro del tubo. */
+      grupo.updateMatrixWorld(true);
+      var _p=new THREE.Vector3();
+      for(var tr=0;tr+agrupa<=nf;tr+=agrupa){
+        var cA=grupo.worldToLocal(filas[tr].spin.getWorldPosition(_p).clone());
+        var cB=grupo.worldToLocal(filas[tr+agrupa-1].spin.getWorldPosition(_p).clone());
+        grupo.add(ejeTransmision(mats,cA,cB));
+      }
     }
     var col='#'+(COL[k]||'#888888').replace('#','');
     /* El rótulo se acota por el hueco Y por el largo del bloque: con una fila
@@ -3669,7 +3786,7 @@ function construyeMundo(){
                       (agrupa>1?' · '+(agrupa===2?'bifila':agrupa+' filas'):''),
                       col,Math.min(sep*0.85,Math.max(12,largo*0.55)));
     et.position.set(0,D.postH+2.4+et.userData.alto,0); grupo.add(et);
-    var hin=filas[0]&&filas[0].hincas;
+    var hin=filas[0]&&filas[0].hincas;   // se refresca en actualiza3D con el tilt
     BLOQUES.push({key:k,spec:spec,filas:filas,gcr:gcr,pitch:pitch,porTracker:agrupa,
                   hincas:hin,
                   cruz:FIS.cruz(cfg,spec), rollX:rollX, rollZ:rollZ,
@@ -3838,8 +3955,18 @@ function actualiza3D(){
       });
     }else if(spec.fam==='fija_ew'){
       B.filas.forEach(function(u){
-        u.spinPair[0].rotation.x= tilt*FIS.D2R;
-        u.spinPair[1].rotation.x=-tilt*FIS.D2R;
+        var thE=FIS.thMesa(tilt,FIS.ejeTilt(cfg,spec))*FIS.D2R;
+        u.spinPair[0].rotation.x= thE;
+        u.spinPair[1].rotation.x=-thE;
+        /* Los postes de cada paño no miden lo mismo entre sí: los separa el
+           propio tilt. Se recalculan cuando se pone. */
+        if(u.children)u.children.forEach(function(m){if(m.ponTilt)m.ponTilt(thE);});
+        /* Se MUTA, no se reemplaza: la lectura guarda una referencia a este
+           objeto desde que se construyó el bloque, y cambiarlo por otro dejaba
+           publicando el rango de antes de poner el tilt. */
+        u.hincas.corta=Math.min(u.children[0].hincas.corta,u.children[1].hincas.corta);
+        u.hincas.larga=Math.max(u.children[0].hincas.larga,u.children[1].hincas.larga);
+        u.hincas.nocabe=!!(u.children[0].hincas.nocabe||u.children[1].hincas.nocabe);
       });
       th=tilt;
     }else{
@@ -3851,7 +3978,14 @@ function actualiza3D(){
       var estimado=(spec.tiltOpt&&!REP);
       var tOpt=spec.tiltOpt?(REP?tiltDeRep(B.key):tiltEstimado(cfg,spec)):tilt;
       B.estimado=estimado;
-      B.filas.forEach(function(u){u.spin.rotation.x=tOpt*FIS.D2R;});
+      /* Lo que se teclea es la pendiente ⊥ a las filas; lo que se GIRA sobre
+         una fila inclinada es un poco menos, justo para que esa pendiente
+         salga la tecleada. Es la misma corrección que hace la tabla. */
+      var thF=FIS.thMesa(tOpt,FIS.largoFija(cfg).tilt)*FIS.D2R;
+      B.filas.forEach(function(u){
+        u.spin.rotation.x=thF;
+        if(u.ponTilt)u.ponTilt(thF);            // los postes, con el tilt puesto
+      });
       th=tOpt;
     }
     var imposible=(B.gcr>1);
@@ -3870,6 +4004,10 @@ function actualiza3D(){
              tendría que llevar el «eje inclinado °» de un TSAT. */
           ((spec.fam==='tracker'&&Math.abs(B.largoPend)>1)
             ?' · eje '+fmt(Math.abs(B.largoPend),1)+'° con el terreno':'')+
+          /* Y en unas dos aguas, lo mismo con su CUMBRERA: corre norte-sur como
+             el eje de un seguidor y se inclina con el terreno igual que él. */
+          ((spec.fam==='fija_ew'&&Math.abs(B.largoPend)>1)
+            ?' · cumbrera '+fmt(Math.abs(B.largoPend),1)+'° con el terreno':'')+
           /* Y en una fija, lo que la pendiente a lo largo de sus filas CUESTA:
              la mesa se monta al tilt de proyecto, así que quien compensa es la
              hinca. Ver el rango es ver si la estructura existe. */

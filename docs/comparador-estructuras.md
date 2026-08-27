@@ -27,7 +27,7 @@ pueden producir distinto (módulo, térmico, inversor, pérdidas) y costar muy d
 |---|---|
 | **Fija · tilt óptimo** | Monoinclinada al ecuador; el tilt sale de un barrido anual sobre la meteo del sitio |
 | **Fija · tilt de proyecto** | La misma, con el tilt y el azimut que se teclean |
-| **Fija · Este-Oeste** | Dos aguas, media de los dos planos (misma superficie de módulo cada uno) |
+| **Fija · Este-Oeste** | Dos aguas, media de los dos planos (misma superficie de módulo cada uno); su cumbrera corre N-S y sigue el terreno |
 | **Tracker N-S · backtracking** | HSAT canónico: eje horizontal norte-sur, backtracking activo |
 | **Tracker N-S · sin backtracking** | Seguimiento astronómico puro: apunta mejor y se da sombra |
 | **Tracker de eje inclinado (TSAT)** | Eje norte-sur inclinado hacia el ecuador |
@@ -712,21 +712,81 @@ leer justo lo contrario de lo que dice:
 
 Va en la nota de la tabla, y la segunda parte solo cuando hay pendiente ⊥ que la justifique.
 
-#### Una fija NO sigue el terreno: lo compensan las hincas
+#### La fija sigue el terreno A LO LARGO, y su pendiente ⊥ es la tecleada
 
-Un seguidor sí sigue el terreno a lo largo de su eje —eso *es* un eje inclinado—. Una **fija no**: se
-monta al **tilt de proyecto** y lo que compensa la pendiente a lo largo de sus filas es la
-**longitud de las hincas**. Con 12° de cuesta la mesa sigue a 25°.
+Las dos cosas a la vez. Una fila de 65 m no se monta horizontal sobre una ladera: se replanta sobre
+ella, igual que un seguidor y que unas dos aguas. Antes se quedaba horizontal y quien compensaba era
+la hinca, y con 12° a lo largo de sus filas eso pedía hincas de **0,25 a 8,74 m** — con la mesa
+**cinco metros dentro del terreno** por un extremo y volando siete por el otro. Eso no es una fija
+sobre una cuesta, es una fija que no existe.
 
-Antes se escoraba la mesa entera con el suelo, que es lo que hace un seguidor: el tilt dibujado
-dejaba de ser el tecleado, y hubo que poner un aviso diciéndolo. Ese aviso sobra ahora — el tilt del
-cálculo y el del dibujo vuelven a ser el mismo.
+Lo que **no** cambia es la pendiente que se teclea, que es la de la dirección ⊥ a las filas
+(norte-sur en una monoinclinada). Y ahí hay un detalle que hay que hacer bien, porque la intuición
+falla: rodar la fila **sí** mueve esa pendiente. Medido, 25° tumbados sobre una fila con 12° a lo
+largo dan **25,49°** de pendiente norte-sur. La relación es
 
-Cada lectura de fija dice el **rango de hinca** que sale, porque es lo que dice si la estructura se
-puede montar: con 12° a lo largo de una fila de 65 m van de **0,3 a 8,8 m**. Y cuando la hinca
-saldría **negativa** —el terreno se ha comido la mesa por ese lado— se declara: `hay que bancalear`.
-Con la pendiente ⊥ a las filas, en cambio, las hincas ni se enteran: todas iguales, y las filas se
-escalonan.
+```
+pendiente ⊥ = atan( tan(giro sobre la fila) / cos(inclinación de la fila) )
+```
+
+así que el giro que se le da a la mesa sobre su propia fila es el de la inversa —`FIS.thMesa`—:
+**24,51°** para que la pendiente norte-sur salga los 25 de proyecto. Con la fila horizontal es el
+mismo número, que es el camino del careo.
+
+La inclinación **total** de la superficie sí cambia, y es la otra mitad de la verdad:
+acos(cos 24,51° · cos 12°) = **27,13°**. Es `FIS.tiltSup` sobre `FIS.thMesa`, las dos funciones que
+usa la tabla — lo dibujado y lo calculado son lo mismo.
+
+Un **seguidor** no lleva esta corrección, y no es una excepción caprichosa: su θ es un ángulo de
+motor sobre su eje, no una pendiente de proyecto.
+
+#### Los soportes de una fija: DOS líneas, y no miden lo mismo
+
+Una mesa fija no gira: se apoya en la línea de postes de delante y en la de detrás, y el propio tilt
+las hace distintas — con 25° hay cerca de un metro entre una y otra. Con una sola línea bajo el eje
+la mesa parecía un balancín y el rango de hinca que publicaba la lectura no era el de la estructura.
+
+Cada poste se apoya en el **terreno de verdad**: se lleva su cabeza al mundo, se pregunta la cota
+ahí y se mide la vertical. Cualquier cuenta hecha en el marco local se queda corta en cuanto la fila
+va rodada — a 30° dejaba los pies a 39 cm del suelo. Y sale **vertical en el mundo** aunque su fila
+vaya inclinada.
+
+Con eso, la pendiente a lo largo ya no estira las hincas (12° y 30° dan el mismo rango que el llano)
+y desaparece el caso de «hay que bancalear», que era consecuencia del modelo viejo. La pendiente ⊥
+sí las mueve, y en el sentido correcto: **acerca** las dos líneas, porque el suelo cae hacia el
+mismo lado que la mesa.
+
+#### Y las DOS AGUAS sí, igual que el seguidor
+
+La diferencia no es de familia, es de **dirección**. Las filas de una monoinclinada corren
+este-oeste y su tilt **es** la dirección norte-sur: ahí la pendiente no se puede seguir sin cambiar
+el tilt de proyecto, así que la absorbe la hinca. Las filas de unas **dos aguas** corren norte-sur
+—igual que el eje de un seguidor— y lo que corre por su cumbrera es una recta apoyada en el suelo:
+sobre una caída norte-sur **no queda horizontal**, se inclina con ella. Una cumbrera de 65 m
+horizontal sobre una ladera es el mismo «megasoporte» que ya no se dibuja en ninguna otra familia.
+
+E inclinar la cumbrera **no cambia el tilt**: los dos paños siguen a ±tiltEO sobre ella, igual que
+inclinar el eje de un seguidor no cambia su ángulo de seguimiento. Geométricamente son el mismo
+marco girado, así que comparten `FIS.ejeTilt` y la misma proyección (`psTSAT`) — y el test lo exige
+midiendo el ángulo **entre los dos paños**, que es 2 × tiltEO se mire desde donde se mire.
+
+Y tiene consecuencia en la cifra, que es lo que lo hace física y no dibujo. En Sevilla, cielo claro:
+
+| caída | POA dos aguas |
+|---|---|
+| llano | 65,5 kWh/m² |
+| **12° al sur** | **72,4** (+10,5 %) |
+| 20° al sur | 75,6 |
+| 12° al este | 65,5 (sin cambio: esa pendiente es la ⊥, y entra por el sombreado) |
+
+Mientras la cumbrera se dibujaba horizontal y se calculaba horizontal no había contradicción, pero
+sí una estructura que no se monta así. Ahora la lectura de las dos aguas dice cuánto se inclina su
+cumbrera con el terreno, igual que la del seguidor dice lo del eje.
+
+**Hueco declarado**: el core corre las dos aguas como dos planos fijos a ±tilt con azimut 90/270,
+sin cumbrera que inclinar. El careo no se mueve porque va por el camino sin azimut de terreno
+declarado —`FIS.ejeTilt` devuelve 0 ahí—, pero con pendiente declarada la ficha y el core dan
+distinto para esta familia, y es la ficha la que está describiendo lo que se construye.
 
 #### El backtracking, con la pendiente
 
@@ -799,11 +859,11 @@ leer justo lo contrario de lo que dice:
 
 Va en la nota de la tabla, y la segunda parte solo cuando hay pendiente ⊥ que la justifique.
 
-#### Una fija NO sigue el terreno: lo compensan las hincas
+#### Una fija monoinclinada NO sigue el terreno: lo compensan las hincas
 
-Un seguidor sí sigue el terreno a lo largo de su eje —eso *es* un eje inclinado—. Una **fija no**: se
-monta al **tilt de proyecto** y lo que compensa la pendiente a lo largo de sus filas es la
-**longitud de las hincas**. Con 12° de cuesta la mesa sigue a 25°.
+Un seguidor sí sigue el terreno a lo largo de su eje —eso *es* un eje inclinado—. Una **fija
+monoinclinada no**: se monta al **tilt de proyecto** y lo que compensa la pendiente a lo largo de sus
+filas es la **longitud de las hincas**. Con 12° de cuesta la mesa sigue a 25°.
 
 Antes se escoraba la mesa entera con el suelo, que es lo que hace un seguidor: el tilt dibujado
 dejaba de ser el tecleado, y hubo que poner un aviso diciéndolo. Ese aviso sobra ahora — el tilt del

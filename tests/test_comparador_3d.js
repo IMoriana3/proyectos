@@ -587,12 +587,24 @@ const SONDA = `(() => {
       sigue[caso].filter(b => /^tracker/.test(b.k))
                  .every(b => b.vuelo.every(v => Math.abs(v) < 0.02)),
       JSON.stringify(sigue[caso].map(b => b.k + ':' + b.vuelo.join('/'))));
+    /* Y las DOS AGUAS igual que el seguidor: su cumbrera corre norte-sur, así
+       que una cumbrera de 65 m no se monta horizontal sobre la ladera — se
+       replantea sobre ella. Es la diferencia con la monoinclinada, cuyas filas
+       corren este-oeste y cuyo tilt ES esa dirección: allí compensa la hinca. */
+    check('  y las DOS AGUAS también: su cumbrera se replantea sobre el terreno',
+      sigue[caso].filter(b => b.k === 'fija_ew')
+                 .every(b => b.vuelo.every(v => Math.abs(v) < 0.02)),
+      JSON.stringify(sigue[caso].filter(b => b.k === 'fija_ew')
+                                .map(b => b.k + ':' + b.vuelo.join('/'))));
   });
 
-  // ── UNA FIJA NO SIGUE EL TERRENO: LO COMPENSAN LAS HINCAS ──
-  // Se monta al tilt de proyecto. Antes se escoraba la mesa entera con el suelo
-  // —que es lo que hace un seguidor— y el tilt dibujado dejaba de ser el
-  // tecleado.
+  // ── LA FIJA SIGUE EL TERRENO A LO LARGO, Y SU TILT N-S ES EL TECLEADO ──
+  // Las dos cosas a la vez, que suenan a contradicción y no lo son: la línea de
+  // máxima pendiente de una mesa que mira al ecuador corre NORTE-SUR, y ése es
+  // justamente el eje sobre el que hay que rodarla para que siga el terreno
+  // este-oeste. Rodar sobre un eje deja quietos los vectores de ese eje, así
+  // que el tilt N-S no se entera. Lo que sí cambia es la inclinación TOTAL de
+  // la superficie, y eso se mide aparte.
   const fijaPend = await p.evaluate(() => {
     const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
       el.dispatchEvent(new Event('change', { bubbles: true })); };
@@ -603,130 +615,80 @@ const SONDA = `(() => {
       const u = BLOQUES[0].filas[0]; u.updateWorldMatrix(true, true);
       const n = new THREE.Vector3(0, 1, 0).applyQuaternion(
         u.spin.getWorldQuaternion(new THREE.Quaternion())).normalize();
-      // ¿pisan las hincas el suelo?
-      let peor = 0;
+      /* El tilt N-S: la pendiente de la mesa medida en el plano vertical
+         norte-sur, que es la que se teclea. Sale de la normal proyectada. */
+      const ns = Math.atan2(Math.abs(n.z), n.y) * 180 / Math.PI;
+      let peor = 0, nH = 0;
       u.children.forEach(o => { if (!o.isMesh || !o.geometry.parameters ||
         Math.abs(o.geometry.parameters.width - 0.16) > 1e-6) return;
+        nH++;
         const c = new THREE.Box3().setFromObject(o);
         const x = (c.min.x + c.max.x) / 2, z = (c.min.z + c.max.z) / 2;
         const d = Math.abs(c.min.y - cotaTerreno(x, z, TERRENO_3D));
         if (d > peor) peor = d; });
-      return { tilt: +(Math.acos(Math.min(1, n.y)) * 180 / Math.PI).toFixed(2),
+      return { total: +(Math.acos(Math.min(1, n.y)) * 180 / Math.PI).toFixed(2),
+               ns: +ns.toFixed(2), nH: nH,
                pisan: +peor.toFixed(2), nocabe: !!BLOQUES[0].hincas.nocabe,
                hincas: [+BLOQUES[0].hincas.corta.toFixed(2),
                         +BLOQUES[0].hincas.larga.toFixed(2)] };
     };
-    const r = { llano: mide(0, 180), ns: mide(12, 180), eo: mide(12, 90) };
+    const r = { llano: mide(0, 180), ns: mide(12, 180), eo: mide(12, 90),
+                eo30: mide(30, 90) };
     document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
     s('pend', 0);
     return r;
   });
-  ['llano', 'ns', 'eo'].forEach(caso => {
-    check('la fija se monta a SU tilt (25°) también con la caída ' + caso + ': ' +
-      fijaPend[caso].tilt + '°', Math.abs(fijaPend[caso].tilt - 25) < 0.05,
+  ['llano', 'ns', 'eo', 'eo30'].forEach(caso => {
+    check('la fija conserva SU tilt N-S (25°) con la caída ' + caso + ': ' +
+      fijaPend[caso].ns + '°', Math.abs(fijaPend[caso].ns - 25) < 0.05,
       JSON.stringify(fijaPend[caso]));
-    /* Las hincas pisan el suelo... mientras la hinca pueda existir. Donde el
-       terreno pide una hinca NEGATIVA no se monta de una pieza, y eso no se
-       tapa: se declara. */
-    check('  y sus hincas pisan el suelo' + (fijaPend[caso].nocabe ? ' donde las hay' : ''),
-      fijaPend[caso].nocabe || fijaPend[caso].pisan < 0.05,
+    /* Las hincas pisan el suelo. El margen no es cero porque una hinca es un
+       PRISMA: rodada con la fila, su esquina más baja queda un par de
+       centímetros por debajo de su eje. */
+    check('  y sus hincas pisan el suelo', fijaPend[caso].pisan < 0.12,
       String(fijaPend[caso].pisan));
   });
-  check('con la pendiente ⊥ a sus filas (N-S) las hincas ni se enteran: todas iguales',
-    Math.abs(fijaPend.ns.hincas[0] - fijaPend.ns.hincas[1]) < 0.01,
-    JSON.stringify(fijaPend.ns.hincas));
-  check('y con la pendiente A LO LARGO (E-O) es la HINCA la que compensa (' +
-    fijaPend.eo.hincas.join('–') + ' m)',
-    fijaPend.eo.hincas[1] - fijaPend.eo.hincas[0] > 3, JSON.stringify(fijaPend.eo.hincas));
-  check('y cuando la hinca saldría NEGATIVA se declara: no se monta de una pieza',
-    fijaPend.eo.nocabe === true && fijaPend.llano.nocabe === false,
-    JSON.stringify([fijaPend.llano.nocabe, fijaPend.ns.nocabe, fijaPend.eo.nocabe]));
-  // ── EL SEGUIDOR QUEBRADO: DOS MESAS, UNA RÓTULA ──
-  // El terreno con caballón a lo largo del eje es justo el caso que compra un
-  // quebrado. Lo que hay que ver en el 3D es la diferencia FÍSICA: el quebrado
-  // se apoya en las dos aguas con hincas iguales; el rígido, con el mismo tubo
-  // recto, vuela sobre el caballón y sus hincas se estiran.
-  const queb = await p.evaluate(() => {
-    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
-      el.dispatchEvent(new Event('change', { bubbles: true })); };
-    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
-    document.querySelectorAll('.st').forEach(c => {
-      c.checked = c.value === 'tracker_hsat' || c.value === 'tracker_queb'; });
-    const mide = (pend, q) => {
-      s('pend', pend); s('pendAz', 180); s('quiebro', q);
-      const out = {};
-      BLOQUES.forEach(B => {
-        const u = B.filas[0]; u.updateWorldMatrix(true, true);
-        const L = cfgActual().geomDe(B.spec).largoFila / 2;
-        /* Hay que pinchar el TUBO, no los paneles: un panel girado 50° sube
-           metro y medio por su propio giro y eso no dice nada del terreno.
-           El quiebro tampoco vive en la matriz de la fila —son dos medias
-           vigas giradas por dentro—, así que se buscan por nombre; si no las
-           hay, el tubo es uno solo. En ambos casos el tubo corre por el +X
-           local del marco, y se pincha a media viga y en la punta: la
-           DIFERENCIA entre esos dos puntos no depende de dónde tenga el marco
-           su origen, que es lo que hace la medida comparable entre los dos. */
-        const medias = []; u.traverse(o => { if (/^media/.test(o.name)) medias.push(o); });
-        const marco = t => medias.length
-          ? medias.find(m => /Norte/.test(m.name) === (t > 0)) : u.spin;
-        const cota = [-L, -L / 4, L / 4, L].map(t => {
-          const m = marco(t); m.updateWorldMatrix(true, false);
-          const w = new THREE.Vector3(t, 0, 0).applyMatrix4(m.matrixWorld);
-          return +(w.y - cotaTerreno(w.x, w.z, TERRENO_3D)).toFixed(2);
-        });
-        // lo que sube el tubo de media viga a la punta, en los dos sentidos
-        const sube = Math.max(cota[0] - cota[1], cota[3] - cota[2]);
-        out[B.key] = { cota, sube: +sube.toFixed(2), largo: +(L * 2).toFixed(0),
-                       desalin: +(B.desalin || 0).toFixed(2),
-                       hincas: [+B.hincas.corta.toFixed(2), +B.hincas.larga.toFixed(2)] };
-      });
-      out.nota = document.getElementById('quiebroNota').textContent.replace(/\s+/g, ' ');
-      return out;
-    };
-    const r = { llano: mide(12, 0), q10: mide(12, 10) };
-    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
-    s('pend', 0); s('quiebro', 0);
-    return r;
-  });
-  // El invariante que hace que esto sea seguro: sin quiebro NO hay dos
-  // estructuras, hay una. Si esto se rompe, el quebrado ha dejado de ser el
-  // rígido articulado y pasa a ser otra cosa.
-  check('con quiebro 0 el quebrado y el rígido son la MISMA geometría',
-    JSON.stringify(queb.llano.tracker_queb) === JSON.stringify(queb.llano.tracker_hsat),
-    JSON.stringify([queb.llano.tracker_hsat, queb.llano.tracker_queb]));
-  check('  y la ficha lo dice en vez de dibujar dos filas iguales sin explicar',
-    /misma estructura/i.test(queb.llano.nota), queb.llano.nota);
-  // Con caballón: el quebrado se apoya, el rígido vuela.
-  /* Con caballón, la diferencia entre uno y otro no es de matiz: el quebrado
-     drapea —toda la fila a la misma altura sobre el suelo, así que todas sus
-     hincas miden lo mismo— y el rígido, con el tubo recto, cruza por encima. */
-  check('con 10° de quiebro el QUEBRADO drapea: de media viga a la punta el ' +
-    'tubo sube ' + queb.q10.tracker_queb.sube + ' m sobre el suelo, o sea nada',
-    Math.abs(queb.q10.tracker_queb.sube) < 0.1, JSON.stringify(queb.q10.tracker_queb));
-  check('  y por eso sus hincas son todas iguales (' +
-    queb.q10.tracker_queb.hincas.join(' y ') + ' m)',
-    Math.abs(queb.q10.tracker_queb.hincas[1] - queb.q10.tracker_queb.hincas[0]) < 0.01,
-    JSON.stringify(queb.q10.tracker_queb.hincas));
-  check('mientras el RÍGIDO, recto, cruza por encima del caballón: sube ' +
-    queb.q10.tracker_hsat.sube + ' m en ese mismo cuarto de viga',
-    queb.q10.tracker_hsat.sube > 1.5, JSON.stringify(queb.q10.tracker_hsat));
-  check('  y hay que sostenerlo con hincas de ' +
-    queb.q10.tracker_hsat.hincas.join(' a ') + ' m',
-    queb.q10.tracker_hsat.hincas[1] - queb.q10.tracker_hsat.hincas[0] > 1,
-    JSON.stringify(queb.q10.tracker_hsat.hincas));
-  /* Y ese vuelo no es solo un dibujo: la física lo calcula por su cuenta para
-     poder decirlo en la lectura. Si el 3D y la cuenta se separan, salta aquí. */
-  /* De media viga a la punta hay 3/4 del vuelo total: el mismo número que la
-     física publica en la lectura. Si el 3D y la cuenta se separan, salta aquí. */
-  check('  ese vuelo lo mide también la física: desalin = ' +
-    queb.q10.tracker_hsat.desalin + ' m contra ' +
-    (queb.q10.tracker_hsat.sube / 0.75).toFixed(2) + ' m medidos en la escena',
-    Math.abs(queb.q10.tracker_hsat.desalin - queb.q10.tracker_hsat.sube / 0.75) < 0.1,
-    JSON.stringify(queb.q10.tracker_hsat));
-  check('y la nota dice a qué queda cada mesa: 10° de diferencia repartidos ' +
-    'sobre los 12° de caída (17° y 7°)',
-    /17/.test(queb.q10.nota) && /7/.test(queb.q10.nota) && /12/.test(queb.q10.nota),
-    queb.q10.nota);
+  /* Y la inclinación TOTAL de la superficie sí cambia, que es la otra mitad de
+     la verdad. Sale de las dos correcciones encadenadas: sobre una fila con 12°
+     a lo largo, la mesa se gira 24,51° —atan(tan25 · cos12)— para que su
+     pendiente ⊥ sea los 25 de proyecto, y la superficie resultante queda a
+     acos(cos24,51 · cos12) = 27,13°. Es `FIS.tiltSup` sobre `FIS.thMesa`, las
+     dos funciones que usa la tabla: lo dibujado y lo calculado son lo mismo. */
+  const thMesa = Math.atan(Math.tan(25 * Math.PI / 180) * Math.cos(12 * Math.PI / 180));
+  check('y la inclinación TOTAL sí cambia: ' + fijaPend.eo.total +
+    '° = acos(cos24,51 · cos12)',
+    Math.abs(fijaPend.eo.total -
+      Math.acos(Math.cos(thMesa) * Math.cos(12 * Math.PI / 180)) * 180 / Math.PI) < 0.05,
+    JSON.stringify(fijaPend.eo));
+  /* LAS HINCAS. Una mesa fija apoya en DOS líneas de postes y el propio tilt las
+     hace distintas: con 2,4 m de mesa a 25°, un metro entre la de delante y la
+     de detrás. Eso es de la ESTRUCTURA y está también en llano. */
+  const difH = f => +(f.hincas[1] - f.hincas[0]).toFixed(2);
+  check('la fija apoya en DOS líneas de postes, y el tilt las hace distintas (' +
+    fijaPend.llano.hincas.join('–') + ' m ya en llano)',
+    fijaPend.llano.nH >= 16 && difH(fijaPend.llano) > 0.5,
+    JSON.stringify(fijaPend.llano));
+  /* Lo que NO puede pasar es que la pendiente A LO LARGO las estire: para eso
+     la fila sigue el terreno. Antes, con 12° sobre 65 m, iban de 0,25 a 8,74 m
+     —y la mesa entraba CINCO METROS en el suelo por un extremo—. */
+  check('y la pendiente A LO LARGO ya no las estira: la fila sigue el terreno (' +
+    fijaPend.eo.hincas.join('–') + ' m con 12°, ' +
+    fijaPend.eo30.hincas.join('–') + ' m con 30°)',
+    Math.abs(difH(fijaPend.eo) - difH(fijaPend.llano)) < 0.05 &&
+    Math.abs(difH(fijaPend.eo30) - difH(fijaPend.llano)) < 0.05,
+    JSON.stringify([fijaPend.llano.hincas, fijaPend.eo.hincas, fijaPend.eo30.hincas]));
+  check('  ni con 30°, que es donde antes había que bancalear: ninguna hinca imposible',
+    !fijaPend.eo.nocabe && !fijaPend.eo30.nocabe,
+    JSON.stringify([fijaPend.eo.nocabe, fijaPend.eo30.nocabe]));
+  /* Con la pendiente ⊥ (norte-sur para una fija) las filas se escalonan a
+     distinta cota, así que tampoco se estiran. Lo que sí hace esa pendiente es
+     ACERCAR las dos líneas de postes —el suelo cae hacia el mismo lado que la
+     mesa, de modo que el poste bajo sube y el alto baja—, y eso es real: lo que
+     no puede es crecer. */
+  check('y con la pendiente ⊥ a sus filas (N-S) no crecen: si acaso se acercan (' +
+    fijaPend.ns.hincas.join('–') + ' contra ' + fijaPend.llano.hincas.join('–') + ' m)',
+    difH(fijaPend.ns) <= difH(fijaPend.llano) + 0.05,
+    JSON.stringify([fijaPend.llano.hincas, fijaPend.ns.hincas]));
 
   // Y adaptarse es inclinarse LO QUE SE INCLINA EL SUELO, ni más ni menos: el
   // eje del seguidor sube exactamente la componente a lo largo del eje.
@@ -1025,43 +987,73 @@ const SONDA = `(() => {
 
   // Y EL EJE que une cada par: la gemela no tiene motor, la mueve la motriz. Va
   // de corona a corona —en el modelo de la casa la corona está en el centro del
-  // tubo— y en pendiente tiene que llegar a las DOS cotas, que no son la misma.
+  // tubo— y tiene que llegar a las DOS, se incline como se incline el terreno.
+  // Se mide contra la corona DE VERDAD (el origen del grupo que bascula) y en
+  // 3D. Medirla como «la cota del suelo + la altura del poste», en el plano XY,
+  // daba verde con el eje apuntando al aire: con el terreno cayendo A LO LARGO
+  // del eje la fila se inclina sobre su centro y el tubo se va 0,42 m en Z.
   const trans = await p.evaluate(() => {
     const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
       el.dispatchEvent(new Event('change', { bubbles: true })); };
     const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
     document.querySelectorAll('.st').forEach(c => { c.checked = c.value === 'tracker_hsat'; });
-    s('tkFilas', 2); s('pend', 16); s('pendAz', 90);
-    const B = BLOQUES[0], g = B.filas[0].parent;
-    const ejes = g.children.filter(o => B.filas.indexOf(o) < 0 && o.type === 'Group');
-    const out = ejes.map(ej => { ej.updateWorldMatrix(true, true);
-      const c = new THREE.Box3().setFromObject(ej);
-      /* ¿Llega a las dos coronas? Se mide la distancia de cada corona a la
-         CAJA del eje: cero si la toca. Comparar esquina con esquina no vale —
-         en pendiente el eje baja, así que su esquina de x mínima es la de y
-         MÁXIMA y el emparejamiento depende del signo. */
-      const alCorona = B.filas.map(u => {
-        const w = u.getWorldPosition(new THREE.Vector3());
-        const y = w.y + Seguidor.DIMS.postH;
-        const dx = Math.max(c.min.x - w.x, 0, w.x - c.max.x);
-        const dy = Math.max(c.min.y - y, 0, y - c.max.y);
-        return +Math.hypot(dx, dy).toFixed(2);
-      }).sort((a, b) => a - b);
-      return { luz: +(c.max.x - c.min.x).toFixed(2), extremos: alCorona.slice(0, 2) };
-    });
+    s('tkFilas', 2);
+    const mide = (pend, az) => {
+      s('pend', pend); s('pendAz', az);
+      const B = BLOQUES[0], g = B.filas[0].parent;
+      g.updateMatrixWorld(true);
+      const coronas = B.filas.map(u => u.spin.getWorldPosition(new THREE.Vector3()));
+      const ejes = g.children.filter(o => B.filas.indexOf(o) < 0 && o.type === 'Group');
+      const out = ejes.map(ej => {
+        ej.updateWorldMatrix(true, true);
+        /* Las BRIDAS son los cilindros cortos (9 cm), y van 22 cm por dentro de
+           cada corona: si el eje llega, cada brida tiene una corona a 22 cm. */
+        const bridas = [];
+        ej.traverse(o => { if (o.isMesh && o.geometry.parameters &&
+          Math.abs(o.geometry.parameters.height - 0.09) < 1e-6)
+          bridas.push(o.getWorldPosition(new THREE.Vector3())); });
+        const dist = bridas.map(b => +Math.min(...coronas.map(c => c.distanceTo(b))).toFixed(2));
+        const tubo = ej.children[0].getWorldPosition(new THREE.Vector3());
+        return { bridas: bridas.length, aCorona: dist.sort((a, b) => a - b),
+                 luz: +ej.children[0].geometry.parameters.height.toFixed(2),
+                 alSuelo: +(tubo.y - cotaTerreno(tubo.x, tubo.z, TERRENO_3D)).toFixed(2) };
+      });
+      return { n: ejes.length, ejes: out, pitch: +B.pitch.toFixed(2),
+               entreCoronas: +coronas[0].distanceTo(coronas[1]).toFixed(2) };
+    };
+    const r = { llano: mide(0, 180), cruz: mide(16, 90), largo: mide(12, 180),
+                diag: mide(14, 135) };
     document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
-    s('tkFilas', 2); s('pend', 0);
-    return { n: ejes.length, ejes: out, pitch: +B.pitch.toFixed(2) };
+    s('pend', 0);
+    return r;
   });
-  check('cada par bifila lleva SU eje de transmisión (' + trans.n + ')', trans.n === 2,
-    JSON.stringify(eje));
-  check('el eje cruza justo un pitch, de una corona a la de al lado (' +
-    trans.ejes.map(e => e.luz).join(' / ') + ' con pitch ' + trans.pitch + ')',
-    trans.ejes.every(e => e.luz > trans.pitch * 0.9 && e.luz < trans.pitch * 1.1),
-    JSON.stringify(trans.ejes));
-  check('y en PENDIENTE llega a las dos cotas: sus extremos caen en los tubos',
-    trans.ejes.every(e => e.extremos.every(d => d < 0.7)),
-    JSON.stringify(trans.ejes.map(e => e.extremos)));
+  check('cada par bifila lleva SU eje de transmisión (' + trans.llano.n + ')',
+    trans.llano.n === 2, JSON.stringify(trans.llano));
+  ['llano', 'cruz', 'largo', 'diag'].forEach(caso => {
+    const t = trans[caso];
+    check('el eje llega a las DOS coronas con la caída ' + caso + ' (bridas a ' +
+      t.ejes.map(e => e.aCorona.join('/')).join(' y ') + ' m)',
+      t.ejes.every(e => e.bridas === 2 && e.aCorona.every(d => Math.abs(d - 0.22) < 0.08)),
+      JSON.stringify(t.ejes));
+    check('  y mide lo que hay entre ellas (' + t.ejes.map(e => e.luz).join('/') +
+      ' contra ' + t.entreCoronas + ' m)',
+      t.ejes.every(e => Math.abs(e.luz - t.entreCoronas) < 0.05),
+      JSON.stringify([t.ejes.map(e => e.luz), t.entreCoronas]));
+  });
+  /* Con la caída A LO LARGO las dos coronas están a la MISMA cota, así que el
+     eje sale horizontal — y aun así hay que llegar: se han movido en Z. */
+  check('con la caída a lo largo del eje las coronas no se separan en cota: ' +
+    trans.largo.entreCoronas + ' m = el pitch (' + trans.largo.pitch + ')',
+    Math.abs(trans.largo.entreCoronas - trans.largo.pitch) < 0.05,
+    JSON.stringify(trans.largo));
+  /* Y con la caída ⊥ sí: las filas se escalonan y el eje baja de una a otra. */
+  /* Y con la caída ⊥ sí: las filas se escalonan, así que el eje ya no cruza un
+     pitch sino la hipotenusa — pitch / cos(16°) = 6,24 con 6 m de pitch. */
+  check('y con la caída ⊥ sí: el eje baja de una fila a la otra y cruza la ' +
+    'hipotenusa (' + trans.cruz.entreCoronas + ' m = 6 / cos 16°)',
+    Math.abs(trans.cruz.entreCoronas -
+             trans.cruz.pitch / Math.cos(16 * Math.PI / 180)) < 0.05,
+    JSON.stringify(trans.cruz));
 
   await pon('tkFilas', 2);
   const fj = await bloque('fija_optima');

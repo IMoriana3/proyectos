@@ -826,8 +826,19 @@ check('cayendo al ESTE se invierte: mueve al SEGUIDOR (' +
   llanoAz.tracker_hsat_nobt.sombra.toFixed(2) + ' → ' +
   caeEste.tracker_hsat_nobt.sombra.toFixed(2) + ' %)',
   Math.abs(caeEste.tracker_hsat_nobt.sombra - llanoAz.tracker_hsat_nobt.sombra) > 0.05);
-check('  y no a la fija',
-  Math.abs(caeEste.fija_proyecto.sombra - llanoAz.fija_proyecto.sombra) < 1e-9);
+/* A la fija esa caída no le entra ⊥ —sus filas corren este-oeste, así que la
+   componente ⊥ es la norte-sur— y por ahí no le cambia el cross-axis. Lo que sí
+   le cambia es que su FILA sigue el terreno a lo largo: la mesa se tumba sus
+   grados sobre una fila inclinada, y eso mueve la proyección del sol y con ella
+   la sombra. Antes esto era exactamente cero porque la fila se quedaba
+   horizontal — y con 12° sobre 65 m eso enterraba la mesa cinco metros. */
+check('  a la fija esa pendiente no le entra ⊥: su cross-axis sigue en cero',
+  Math.abs(FIS.cruz({ ...cfg, pend: 16, pendAz: 90 }, FIJA)) < 1e-9);
+check('  pero sí le inclina la FILA, y eso mueve su POA (' +
+  llanoAz.fija_proyecto.neta.toFixed(1) + ' → ' +
+  caeEste.fija_proyecto.neta.toFixed(1) + ' kWh/m²)',
+  Math.abs(caeEste.fija_proyecto.neta - llanoAz.fija_proyecto.neta) > 0.1,
+  [llanoAz.fija_proyecto.neta, caeEste.fija_proyecto.neta].join(' vs '));
 
 // ── 6b-ter) EL EJE INCLINADO LO PONE EL TERRENO ──
 // Un TSAT no es un seguidor con un parámetro más: es un seguidor sobre una
@@ -855,9 +866,33 @@ check('en el hemisferio SUR el ecuador está al norte, y el signo se da la vuelt
 check('lo lleva TODO seguidor, no solo el que se llama TSAT',
   Math.abs(FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 },
                        FIS.spec('tracker_hsat')) - 26) < 0.01);
-check('y una fija no: no tiene eje que inclinar',
-  FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, FIJA) === 0 &&
-  FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, EW) === 0);
+/* Y las DOS AGUAS igual que el seguidor: sus filas corren norte-sur y su
+   cumbrera es una recta apoyada en el terreno — sobre una caída norte-sur no
+   queda horizontal. Inclinar la cumbrera NO cambia su tilt: los dos paños
+   siguen a ±tiltEO sobre ella, igual que inclinar un eje no cambia el ángulo
+   de seguimiento. */
+check('y las DOS AGUAS también: su cumbrera corre N-S y sigue el terreno',
+  Math.abs(FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, EW) - 26) < 0.01,
+  String(FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, EW)));
+/* La MONOINCLINADA no, y esa es la diferencia que hay que tener clara: sus
+   filas corren este-oeste y su tilt ES la dirección norte-sur, así que ahí la
+   pendiente la compensa la HINCA — se monta al tilt de proyecto. */
+check('la monoinclinada NO: su tilt es esa dirección, y ahí compensa la hinca',
+  FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, FIJA) === 0);
+/* Con la caída ⊥ a esas filas (este-oeste) no hay nada que seguir a lo largo:
+   esa pendiente es la que SOMBREA, y entra por la ⊥, no por la cumbrera. */
+check('con la caída al ESTE la cumbrera no se entera: esa pendiente es la ⊥',
+  Math.abs(FIS.ejeTilt({ pend: 26, pendAz: 90, lat: 37.4 }, EW)) < 0.01,
+  String(FIS.ejeTilt({ pend: 26, pendAz: 90, lat: 37.4 }, EW)));
+/* Y tiene consecuencia en la CIFRA, que es lo que lo hace física: si la
+   cumbrera se inclinara solo en el dibujo, la tabla no se movería. */
+{
+  const llano = FIS.compara(['fija_ew'], M, { ...cfg, pend: 0, pendAz: 180 }).filas[0].neta;
+  const cuesta = FIS.compara(['fija_ew'], M, { ...cfg, pend: 20, pendAz: 180 }).filas[0].neta;
+  check('y la cumbrera inclinada MUEVE la POA de las dos aguas (' +
+    llano.toFixed(1) + ' → ' + cuesta.toFixed(1) + ' kWh/m²)',
+    Math.abs(cuesta - llano) > 1, JSON.stringify([llano, cuesta]));
+}
 // La consecuencia, que hay que ver venir: con pendiente a lo largo del eje, el
 // HSAT y el TSAT son la MISMA estructura y dan lo mismo.
 const nsSur = FIS.compara(['tracker_hsat', 'tracker_tsat'], M,
