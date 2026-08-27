@@ -352,6 +352,9 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
           <input id="axtilt" type="number" step="0.5" value="0" readonly
                  title="No se teclea: es la componente de la pendiente del sitio a lo largo del eje (§03.0). Un eje que sigue el terreno es un eje inclinado — por eso no hay una fila aparte de «eje inclinado»."></div>
       </div>
+      <div class="field">
+        <label class="chk"><input type="checkbox" id="contrasol">
+          <span title="Con el sol rasante, el retroceso que pide el backtracking puede pasarse de la horizontal: la mesa cruza el cero y queda tumbada hacia el lado CONTRARIO al sol. Si el eje real puede hacer ese movimiento, márcalo. Si no —o si prefieres que el retroceso se pare en plana— déjalo sin marcar. Medido en Sevilla con 8° de pendiente: pasa en 2 de 58 pasos del día y cuesta 0,04 % de POA.">permitir ir <b>a contrasol</b> <span class="sn">(cruzar la horizontal backtrackeando)</span></span></label></div>
       <div class="field"><label>Disposición</label>
         <select id="tkFilas">
           <option value="1">Monofila · 1 fila por tracker</option>
@@ -931,17 +934,27 @@ FIS.quiebroK=function(cfg){
   var q=(cfg.quiebro||0)/2*FIS.D2R, m0=Math.tan(a0);
   return {a0:a0, m0:m0, kN:Math.tan(a0-q)-m0, kS:Math.tan(a0+q)-m0};
 };
-FIS.theta=function(psDeg,gcr,maxang,bt,cruzDeg){
+FIS.theta=function(psDeg,gcr,maxang,bt,cruzDeg,contrasol){
   var R=psDeg*FIS.D2R;
   if(bt){
     var x=(cruzDeg||0)*FIS.D2R;
     var t=Math.min(1,Math.abs(Math.cos(R-x)/(gcr*Math.cos(x))));
     var retro=Math.acos(t);
-    /* El retroceso no puede pasar de dejar la mesa PLANA: aplanarse más sería
-       tumbarse hacia el otro lado, que no evita ninguna sombra — la crea. Con
-       GCR ≤ 1 esta cota nunca actúa; con GCR > 1 (geometría imposible) es lo
-       único que impide que salga un ángulo invertido. */
-    if(retro>Math.abs(R))retro=Math.abs(R);
+    /* ¿Puede el retroceso pasar de dejar la mesa PLANA? Si se pasa, la mesa
+       cruza el cero y queda tumbada hacia el lado CONTRARIO al sol: ir «a
+       contrasol». Esta ficha lo cortaba SIEMPRE, con este razonamiento —
+       aplanarse más no evita ninguna sombra, la crea— y `pvlib`, que es lo que
+       corre el core, no lo corta nunca. Los dos son defendibles y la diferencia
+       no es de energía: medido en Sevilla con 8° de pendiente, pasa en 2 de 58
+       pasos del día y vale 0,04 % de POA. Lo que decide no es el modelo, es si
+       el EJE REAL puede hacer ese movimiento, así que se elige.
+       Sin marcar —el defecto— se corta en plana, que es lo que esta ficha ha
+       hecho siempre: el defecto no cambia lo que la gente ya veía.
+       Con GCR > 1 (geometría imposible) el corte sigue actuando aunque se
+       permita el contrasol: ahí no evita un movimiento, evita un absurdo. */
+    var topeAbsurdo=(gcr>1)?Math.abs(R):Infinity;
+    var tope=contrasol?topeAbsurdo:Math.abs(R);
+    if(retro>tope)retro=tope;
     R=R-Math.sign(R)*retro;
   }
   var deg=R*FIS.R2D;
@@ -1201,7 +1214,7 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
            día. No es el modelo de nadie; está para poder ver de un vistazo lo
            que cuesta backtrackear mal en un campo en cuesta, que es un número
            que quiere cualquiera que herede uno. Por eso va desmarcado. */
-        return {th:FIS.theta(Pm.ps,gcr,cfg.maxang,spec.bt,cfg.btLlano?0:cruz),
+        return {th:FIS.theta(Pm.ps,gcr,cfg.maxang,spec.bt,cfg.btLlano?0:cruz,cfg.contrasol),
                 P:Pm, ax:ax};
       });
       P0=planos[0].P;
@@ -1809,6 +1822,7 @@ function cfgActual(){
     desvFija:+$('desvFija').value, desvEje:+$('desvEje').value,
     quiebro:+$('quiebro').value,
     btLlano:$('btLlano').checked,
+    contrasol:$('contrasol').checked,
     axTilt:+$('axtilt').value, igualado:$('igualar').checked,
     geomDe:function(spec){return spec.fam==='tracker'?K:F;}
   };
@@ -1975,7 +1989,7 @@ function refrescaGeom(){
 }
 var CAMPOS_GEOM=['fxModL','fxModW','fxWp','fxTabla','fxPitch','fxModsStr','fxNStr','fxGapMod','fxGapMot',
                  'tkModL','tkModW','tkWp','tkTabla','tkPitch','tkModsStr','tkNStr','tkGapMod','tkGapMot',
-                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend','pendAz','desvFija','desvEje','btLlano','quiebro'];
+                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend','pendAz','desvFija','desvEje','btLlano','contrasol','quiebro'];
 CAMPOS_GEOM.forEach(function(id){
   var el=$(id); if(!el)return;
   el.addEventListener('input',refrescaGeom); el.addEventListener('change',refrescaGeom);
@@ -3789,7 +3803,7 @@ function actualiza3D(){
     if(spec.fam==='tracker'){
       var ax3=FIS.ejeTilt(cfg,spec);
       var P=ax3?FIS.psTSAT(S.el,S.az,ax3,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
-      th=(elDeg>0)?FIS.theta(P.ps,B.gcr,cfg.maxang,spec.bt,cfg.btLlano?0:B.cruz):0;
+      th=(elDeg>0)?FIS.theta(P.ps,B.gcr,cfg.maxang,spec.bt,cfg.btLlano?0:B.cruz,cfg.contrasol):0;
       B.filas.forEach(function(u){
         /* SIGNO. El grupo del seguidor entra girado 90° en Y, así que su +X
            local (el tubo) apunta al NORTE y su +Z local al ESTE. Girar POSITIVO
@@ -3810,7 +3824,7 @@ function actualiza3D(){
           var ejM=FIS.ejesMitades(cfg,spec);
           [[u.medias[0],ejM[ejM.length-1]],[u.medias[1],ejM[0]]].forEach(function(par){
             var Pm=par[1]?FIS.psTSAT(S.el,S.az,par[1],cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
-            var thm=(elDeg>0)?FIS.theta(Pm.ps,B.gcr,cfg.maxang,spec.bt,cfg.btLlano?0:B.cruz):0;
+            var thm=(elDeg>0)?FIS.theta(Pm.ps,B.gcr,cfg.maxang,spec.bt,cfg.btLlano?0:B.cruz,cfg.contrasol):0;
             par[0].rotation.x=thm*FIS.D2R;
           });
         }
