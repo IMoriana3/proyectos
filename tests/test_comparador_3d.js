@@ -268,6 +268,64 @@ const SONDA = `(() => {
     /fila INFINITA/i.test(notaTbl) && /sería en realidad/i.test(notaTbl) &&
     /puntos de diferencia/i.test(notaTbl), notaTbl.slice(0, 260));
 
+  /* LA NOTA DEL QUEBRADO. Con las dos mesas a inclinaciones distintas, la
+     tabla publica la MEDIA, y esa media se calla lo eléctrico: un string en
+     serie lo manda su módulo peor. Como la ficha compara POA y no DC, lo que
+     tiene que hacer es DECIRLO, con las dos cifras y con el reparto de strings
+     que hay puesto. */
+  const notaQ = await p.evaluate(async () => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const espera = ms => new Promise(r => setTimeout(r, ms));
+    const antesSt = [...document.querySelectorAll('.st')].map(c => c.checked);
+    const antesPend = document.getElementById('pend').value;
+    const antesAz = document.getElementById('pendAz').value;
+    document.querySelectorAll('.st').forEach(c => {
+      c.checked = c.value === 'tracker_hsat' || c.value === 'tracker_queb'; });
+    s('pend', 12); s('pendAz', 180); s('quiebro', 10);
+    /* «Comparar el año» tarda lo que tarda, así que no se espera un tiempo
+       fijo: se espera a que la nota sea la de ESTA tirada. Con un sleep corto,
+       la comprobación leía la nota de la anterior y daba verde por casualidad.
+       El campo admite 1 o 2 strings por fila, así que el caso impar es 1: un
+       solo string a lo largo de toda la fila, que cruza la rótula entero. */
+    const nota = () => document.getElementById('tblNote').textContent;
+    const hasta = async f => { for (let i = 0; i < 80; i++) {
+      if (f(nota())) return nota(); await espera(250); } return nota(); };
+    const lee = async n => { s('tkNStr', n); document.getElementById('run').click();
+      return hasta(t => new RegExp('<?b?>?' + n + '<?/?b?>? string').test(t) ||
+                        new RegExp(n + ' string').test(t)); };
+    const par = await lee(2), impar = await lee(1);
+    s('quiebro', 0); s('tkNStr', 2);
+    document.getElementById('run').click();
+    const sinQuiebro = await hasta(t => !/no captan lo mismo/i.test(t));
+    /* Y devolver la tabla como estaba: esta comprobación cambia la selección y
+       vuelve a comparar, así que si no se restaura, las de más abajo miran una
+       tabla que ya no tiene las filas que buscan. */
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antesSt[i]; });
+    s('pend', antesPend); s('pendAz', antesAz);
+    document.getElementById('run').click();
+    for (let i = 0; i < 80; i++) {
+      const fila = [...document.querySelectorAll('#tbl tbody tr')]
+        .find(tr => /óptim/i.test(tr.cells[0].textContent));
+      if (fila) break;
+      await espera(250);
+    }
+    return { par, impar, sinQuiebro };
+  });
+  check('la nota dice que las dos mesas NO captan lo mismo, con las dos cifras',
+    /no captan lo mismo/i.test(notaQ.par) && /kWh\/m²/.test(notaQ.par) &&
+    /% *<?\/?b?>? *entre ellas|entre ellas/.test(notaQ.par),
+    notaQ.par.slice(-420));
+  check('  y avisa de que el desacoplo es DC y NO está en ninguna cifra',
+    /desacoplo/i.test(notaQ.par) && /DC/.test(notaQ.par) &&
+    /no está contado/i.test(notaQ.par), notaQ.par.slice(-320));
+  check('con 2 strings por fila dice que el corte cae en la rótula: ninguno cruza',
+    /ninguno la cruza/i.test(notaQ.par), notaQ.par.slice(-320));
+  check('y con 3, que el de en medio queda a caballo de las dos mesas',
+    /a caballo de la rótula/i.test(notaQ.impar), notaQ.impar.slice(-320));
+  check('sin quiebro no hay nada de esto que contar',
+    !/no captan lo mismo/i.test(notaQ.sinQuiebro), notaQ.sinQuiebro.slice(-200));
+
   // ── la tabla trae el dimensionado a igualdad de pico ──
   const tabla = await p.evaluate(`(() => {
     const th = [...document.querySelectorAll('#tbl thead th')].map(t => t.textContent);
@@ -689,6 +747,209 @@ const SONDA = `(() => {
     fijaPend.ns.hincas.join('–') + ' contra ' + fijaPend.llano.hincas.join('–') + ' m)',
     difH(fijaPend.ns) <= difH(fijaPend.llano) + 0.05,
     JSON.stringify([fijaPend.llano.hincas, fijaPend.ns.hincas]));
+
+  // ── LAS DOS AGUAS SOBRE LA LADERA: LO QUE CAMBIA Y LO QUE NO ──
+  // Inclinar la cumbrera con el terreno NO puede cambiar el tilt de los paños:
+  // siguen a ±tiltEO sobre ella, igual que inclinar el eje de un seguidor no
+  // cambia su ángulo de seguimiento. Si cambiara, la escena estaría enseñando
+  // una estructura con otro tilt del que calcula la tabla.
+  const ew = await p.evaluate(() => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
+    document.querySelectorAll('.st').forEach(c => { c.checked = c.value === 'fija_ew'; });
+    const mide = (pend, az) => {
+      s('pend', pend); s('pendAz', az);
+      const B = BLOQUES[0], u = B.filas[0]; u.updateWorldMatrix(true, true);
+      // el ángulo ENTRE los dos paños no depende del marco: es 2·tilt siempre
+      const n = u.spinPair.map(g => new THREE.Vector3(0, 1, 0)
+        .applyQuaternion(g.getWorldQuaternion(new THREE.Quaternion())).normalize());
+      return { entre: +(Math.acos(Math.max(-1, Math.min(1, n[0].dot(n[1])))) * 180 / Math.PI).toFixed(2),
+               hincas: [+B.hincas.corta.toFixed(2), +B.hincas.larga.toFixed(2)],
+               cumbrera: +B.largoPend.toFixed(1) };
+    };
+    const r = { llano: mide(0, 180), ns: mide(12, 180), eo: mide(12, 90) };
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
+    s('pend', 0);
+    return r;
+  });
+  const tiltEW = await p.evaluate(() => +document.getElementById('tiltEW').value);
+  /* Lo que se teclea es la pendiente ⊥ a las filas; sobre una cumbrera
+     inclinada el giro de cada paño sobre ella es un poco menor —`FIS.thMesa`—
+     para que esa pendiente salga la tecleada. El ángulo ENTRE los dos paños es
+     el doble de ese giro, y no depende del marco desde el que se mire. */
+  ['llano', 'ns', 'eo'].forEach(caso => {
+    const th = Math.atan(Math.tan(tiltEW * Math.PI / 180) *
+                         Math.cos(ew[caso].cumbrera * Math.PI / 180)) * 180 / Math.PI;
+    check('las dos aguas conservan su tilt con la caída ' + caso + ': ' +
+      ew[caso].entre + '° entre paños = 2 × ' + th.toFixed(2) + '°',
+      Math.abs(ew[caso].entre - 2 * th) < 0.1, JSON.stringify(ew[caso]));
+  });
+  /* Las hincas de cada paño no son iguales entre sí —las separa su propio
+     tilt, como en cualquier mesa fija—, pero la pendiente NO las estira: para
+     eso la cumbrera sigue el terreno. */
+  check('con la caída N-S la cumbrera se inclina con el terreno (' +
+    ew.ns.cumbrera + '°) y las hincas no se estiran por ello',
+    Math.abs(ew.ns.cumbrera) > 11 &&
+    Math.abs((ew.ns.hincas[1] - ew.ns.hincas[0]) -
+             (ew.llano.hincas[1] - ew.llano.hincas[0])) < 0.05,
+    JSON.stringify([ew.llano.hincas, ew.ns.hincas]));
+  check('y con la caída ⊥ a esas filas (E-O) no hay cumbrera que inclinar: es la ⊥',
+    Math.abs(ew.eo.cumbrera) < 0.1, JSON.stringify(ew.eo));
+
+  // ── EL SEGUIDOR QUEBRADO: DOS MESAS, UNA RÓTULA ──
+  // El terreno con caballón a lo largo del eje es justo el caso que compra un
+  // quebrado. Lo que hay que ver en el 3D es la diferencia FÍSICA: el quebrado
+  // se apoya en las dos aguas con hincas iguales; el rígido, con el mismo tubo
+  // recto, vuela sobre el caballón y sus hincas se estiran.
+  const queb = await p.evaluate(() => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
+    document.querySelectorAll('.st').forEach(c => {
+      c.checked = c.value === 'tracker_hsat' || c.value === 'tracker_queb'; });
+    const mide = (pend, q) => {
+      s('pend', pend); s('pendAz', 180); s('quiebro', q);
+      const out = {};
+      BLOQUES.forEach(B => {
+        const u = B.filas[0]; u.updateWorldMatrix(true, true);
+        const L = cfgActual().geomDe(B.spec).largoFila / 2;
+        /* Hay que pinchar el TUBO, no los paneles: un panel girado 50° sube
+           metro y medio por su propio giro y eso no dice nada del terreno.
+           El quiebro tampoco vive en la matriz de la fila —son dos medias
+           vigas giradas por dentro—, así que se buscan por nombre; si no las
+           hay, el tubo es uno solo. En ambos casos el tubo corre por el +X
+           local del marco, y se pincha a media viga y en la punta: la
+           DIFERENCIA entre esos dos puntos no depende de dónde tenga el marco
+           su origen, que es lo que hace la medida comparable entre los dos. */
+        const medias = []; u.traverse(o => { if (/^media/.test(o.name)) medias.push(o); });
+        const marco = t => medias.length
+          ? medias.find(m => /Norte/.test(m.name) === (t > 0)) : u.spin;
+        const cota = [-L, -L / 4, L / 4, L].map(t => {
+          const m = marco(t); m.updateWorldMatrix(true, false);
+          const w = new THREE.Vector3(t, 0, 0).applyMatrix4(m.matrixWorld);
+          return +(w.y - cotaTerreno(w.x, w.z, TERRENO_3D)).toFixed(2);
+        });
+        // lo que sube el tubo de media viga a la punta, en los dos sentidos
+        const sube = Math.max(cota[0] - cota[1], cota[3] - cota[2]);
+        out[B.key] = { cota, sube: +sube.toFixed(2), largo: +(L * 2).toFixed(0),
+                       desalin: +(B.desalin || 0).toFixed(2),
+                       hincas: [+B.hincas.corta.toFixed(2), +B.hincas.larga.toFixed(2)] };
+      });
+      out.nota = document.getElementById('quiebroNota').textContent.replace(/\s+/g, ' ');
+      return out;
+    };
+    const r = { llano: mide(12, 0), q10: mide(12, 10) };
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
+    s('pend', 0); s('quiebro', 0);
+    return r;
+  });
+  // El invariante que hace que esto sea seguro: sin quiebro NO hay dos
+  // estructuras, hay una. Si esto se rompe, el quebrado ha dejado de ser el
+  // rígido articulado y pasa a ser otra cosa.
+  check('con quiebro 0 el quebrado y el rígido son la MISMA geometría',
+    JSON.stringify(queb.llano.tracker_queb) === JSON.stringify(queb.llano.tracker_hsat),
+    JSON.stringify([queb.llano.tracker_hsat, queb.llano.tracker_queb]));
+  check('  y la ficha lo dice en vez de dibujar dos filas iguales sin explicar',
+    /misma estructura/i.test(queb.llano.nota), queb.llano.nota);
+  // Con caballón: el quebrado se apoya, el rígido vuela.
+  /* Con caballón, la diferencia entre uno y otro no es de matiz: el quebrado
+     drapea —toda la fila a la misma altura sobre el suelo, así que todas sus
+     hincas miden lo mismo— y el rígido, con el tubo recto, cruza por encima. */
+  check('con 10° de quiebro el QUEBRADO drapea: de media viga a la punta el ' +
+    'tubo sube ' + queb.q10.tracker_queb.sube + ' m sobre el suelo, o sea nada',
+    Math.abs(queb.q10.tracker_queb.sube) < 0.1, JSON.stringify(queb.q10.tracker_queb));
+  check('  y por eso sus hincas son todas iguales (' +
+    queb.q10.tracker_queb.hincas.join(' y ') + ' m)',
+    Math.abs(queb.q10.tracker_queb.hincas[1] - queb.q10.tracker_queb.hincas[0]) < 0.01,
+    JSON.stringify(queb.q10.tracker_queb.hincas));
+  check('mientras el RÍGIDO, recto, cruza por encima del caballón: sube ' +
+    queb.q10.tracker_hsat.sube + ' m en ese mismo cuarto de viga',
+    queb.q10.tracker_hsat.sube > 1.5, JSON.stringify(queb.q10.tracker_hsat));
+  check('  y hay que sostenerlo con hincas de ' +
+    queb.q10.tracker_hsat.hincas.join(' a ') + ' m',
+    queb.q10.tracker_hsat.hincas[1] - queb.q10.tracker_hsat.hincas[0] > 1,
+    JSON.stringify(queb.q10.tracker_hsat.hincas));
+  /* Y ese vuelo no es solo un dibujo: la física lo calcula por su cuenta para
+     poder decirlo en la lectura. Si el 3D y la cuenta se separan, salta aquí. */
+  /* De media viga a la punta hay 3/4 del vuelo total: el mismo número que la
+     física publica en la lectura. Si el 3D y la cuenta se separan, salta aquí. */
+  check('  ese vuelo lo mide también la física: desalin = ' +
+    queb.q10.tracker_hsat.desalin + ' m contra ' +
+    (queb.q10.tracker_hsat.sube / 0.75).toFixed(2) + ' m medidos en la escena',
+    Math.abs(queb.q10.tracker_hsat.desalin - queb.q10.tracker_hsat.sube / 0.75) < 0.1,
+    JSON.stringify(queb.q10.tracker_hsat));
+  /* LA RÓTULA. Un quebrado sin articulación dibujada se lee como un tubo
+     doblado, y un tubo doblado no existe. Se exige que esté —dos bridas, una
+     por media viga, así que cada una se inclina con la suya— y que ABRA lo
+     tecleado: el ángulo entre ellas es el quiebro, medido sobre la escena. */
+  const rotula = await p.evaluate(() => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
+    const mide = (q, key) => {
+      document.querySelectorAll('.st').forEach(c => { c.checked = c.value === key; });
+      s('pend', 0); s('pendAz', 180); s('quiebro', q);
+      const u = BLOQUES[0].filas[0]; u.updateWorldMatrix(true, true);
+      const br = [];
+      u.traverse(o => { if (o.isMesh && o.geometry.parameters &&
+        Math.abs(o.geometry.parameters.radiusTop - 0.19) < 1e-6) {
+        /* El eje de la brida es su +Y local, que el giro de π/2 en Z pone a lo
+           largo del tubo: el ángulo entre las dos ES el quiebro. */
+        br.push(new THREE.Vector3(0, 1, 0).transformDirection(o.matrixWorld).normalize()); } });
+      const ang = (br.length === 2)
+        ? Math.acos(Math.max(-1, Math.min(1, Math.abs(br[0].dot(br[1]))))) * 180 / Math.PI : null;
+      return { bridas: br.length, abre: ang === null ? null : +ang.toFixed(2) };
+    };
+    const r = { q20: mide(20, 'tracker_queb'), q0: mide(0, 'tracker_queb'),
+                rigido: mide(20, 'tracker_hsat') };
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
+    s('quiebro', 0);
+    return r;
+  });
+  check('el quebrado lleva RÓTULA dibujada: dos bridas en el actuador',
+    rotula.q20.bridas === 2, JSON.stringify(rotula.q20));
+  check('  y abre exactamente el quiebro tecleado (' + rotula.q20.abre + '° con 20°)',
+    Math.abs(rotula.q20.abre - 20) < 0.1, JSON.stringify(rotula.q20));
+  check('sin quiebro no hay rótula que dibujar: es el mismo seguidor rígido',
+    rotula.q0.bridas === 0 && rotula.rigido.bridas === 0,
+    JSON.stringify([rotula.q0, rotula.rigido]));
+  /* Y LA CUMBRERA, marcada en el suelo: sin ella se ve un terreno ondulado y no
+     el caballón que explica por qué el seguidor quiebra ahí y no en otro
+     sitio. Se mide sobre el color de vértice del propio terreno. */
+  const cumbrera = await p.evaluate(() => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const mide = q => {
+      s('pend', 0); s('pendAz', 180); s('quiebro', q);
+      const g = TD.suelo.geometry, pos = g.attributes.position, col = g.attributes.color;
+      if (!col) return null;
+      let enCresta = 0, nC = 0, fuera = 0, nF = 0;
+      for (let i = 0; i < pos.count; i++) {
+        const sq = Math.abs(pos.getX(i) * TERRENO_3D.ex + pos.getZ(i) * TERRENO_3D.ez);
+        if (sq < 0.8) { enCresta += col.getX(i); nC++; }
+        else if (sq > 6 && sq < 14) { fuera += col.getX(i); nF++; }
+      }
+      return { cresta: nC ? +(enCresta / nC).toFixed(3) : null,
+               fuera: nF ? +(fuera / nF).toFixed(3) : null };
+    };
+    const r = { con: mide(20), sin: mide(0) };
+    s('quiebro', 0);
+    return r;
+  });
+  check('la CUMBRERA del caballón se marca en el suelo (' +
+    (cumbrera.con && cumbrera.con.cresta) + ' contra ' +
+    (cumbrera.con && cumbrera.con.fuera) + ' fuera de ella)',
+    !!cumbrera.con && cumbrera.con.cresta > cumbrera.con.fuera * 1.2,
+    JSON.stringify(cumbrera.con));
+  check('  y sin caballón no se marca nada: no hay cumbrera que marcar',
+    !!cumbrera.sin && Math.abs(cumbrera.sin.cresta - cumbrera.sin.fuera) < 0.01,
+    JSON.stringify(cumbrera.sin));
+
+  check('y la nota dice a qué queda cada mesa: 10° de diferencia repartidos ' +
+    'sobre los 12° de caída (17° y 7°)',
+    /17/.test(queb.q10.nota) && /7/.test(queb.q10.nota) && /12/.test(queb.q10.nota),
+    queb.q10.nota);
 
   // Y adaptarse es inclinarse LO QUE SE INCLINA EL SUELO, ni más ni menos: el
   // eje del seguidor sube exactamente la componente a lo largo del eje.
@@ -1533,6 +1794,55 @@ const SONDA = `(() => {
   });
   check('y al TRACKER', ok2.tk === ok2.n, JSON.stringify(ok2));
   check('con los dos de acuerdo, lo dice en verde', /✓/.test(ok2.txt), ok2.txt.slice(0, 120));
+
+  // ── LO QUE SE SALE DEL ENCUADRE, DICHO ──
+  // Los bloques van en línea sobre la curva de nivel y el campo mide cientos de
+  // metros: orbitando bajo, el más cercano se cae por debajo del borde y esa
+  // estructura desaparece de la escena sin decir nada. No es culling —está
+  // dibujada, con sus mallas— pero quien mira ve seis donde hay siete.
+  const encuadre = await p.evaluate(async () => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    document.querySelectorAll('.st').forEach(c => { c.checked = true; });
+    s('pend', 12); s('pendAz', 87);
+    const espera = ms => new Promise(r => setTimeout(r, ms));
+    const nota = () => { const e = document.querySelector('.fuera');
+      return (e && e.style.display === 'block') ? e.textContent : ''; };
+    await espera(400);
+    const alAbrir = nota();
+    /* Cámaras BAJAS mirando a lo largo de la línea de bloques: ahí es donde el
+       más cercano se cae por debajo del borde. No se fija una sola —depende de
+       la geometría que tenga puesta la ficha en ese momento—: se barre la
+       órbita y se exige que donde ocurre, se diga. */
+    const caja = new THREE.Box3();
+    BLOQUES.forEach(B => B.filas.forEach(u => caja.expandByObject(u)));
+    const c = caja.getCenter(new THREE.Vector3());
+    const R = caja.getSize(new THREE.Vector3()).length() * 0.6;
+    TD.libre = true;
+    const avisos = [];
+    for (const elev of [6, 10, 16]) {
+      for (let az = 0; az < 360; az += 45) {
+        const a = az * Math.PI / 180, e = elev * Math.PI / 180;
+        TD.cam.position.set(c.x + R * Math.cos(e) * Math.sin(a), c.y + R * Math.sin(e),
+                            c.z + R * Math.cos(e) * Math.cos(a));
+        TD.ct.target.copy(c); TD.ct.update();
+        await espera(300);
+        const n = nota();
+        if (n) avisos.push(elev + '°/' + az + '° ' + n.replace(' · pulsa para recentrar', ''));
+      }
+    }
+    const bajo = avisos.join(' | ');
+    document.querySelector('.recentrar').click();
+    await espera(500);
+    return { alAbrir: alAbrir, bajo: bajo, trasRecentrar: nota() };
+  });
+  check('al abrir, con todo encuadrado, no se avisa de nada',
+    encuadre.alAbrir === '', encuadre.alAbrir);
+  check('pero orbitando bajo hay ángulos donde una se sale, y se DICE cuál (' +
+    encuadre.bajo.split(' | ')[0] + ')',
+    /fuera del encuadre/.test(encuadre.bajo), encuadre.bajo || '(nunca avisó)');
+  check('  y recentrar la devuelve, así que el aviso se apaga',
+    encuadre.trasRecentrar === '', encuadre.trasRecentrar);
 
   check('sin errores de JS', errs.length === 0, errs.join(' | '));
   await b.close();
