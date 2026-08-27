@@ -64,7 +64,7 @@ distinto del que se ha calculado.
 por ser mejor estructura: la curva POA-vs-inclinación-de-eje es **cóncava**, así que la media de
 dos mesas a 17° y 7° cae por debajo del punto medio a 12°. Es Jensen. Lo que el número no dice
 es que ese tubo recto **no se puede montar ahí**: vuela metros sobre el caballón por los dos
-extremos —2,8 m con 10° de quiebro en una fila de 65 m— y hay que sostenerlo con hincas que
+extremos —2,97 m con 10° de quiebro sobre 12° de caída, en una fila de 65 m— y hay que sostenerlo con hincas que
 pasan de 2,0 a 4,9 m, cuando el quebrado apoya con todas iguales. La ficha publica el vuelo y lo
 explica debajo de la tabla; sin eso, la comparación está a medias.
 
