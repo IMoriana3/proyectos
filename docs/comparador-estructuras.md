@@ -31,9 +31,45 @@ pueden producir distinto (módulo, térmico, inversor, pérdidas) y costar muy d
 | **Tracker N-S · backtracking** | HSAT canónico: eje horizontal norte-sur, backtracking activo |
 | **Tracker N-S · sin backtracking** | Seguimiento astronómico puro: apunta mejor y se da sombra |
 | **Tracker de eje inclinado (TSAT)** | Eje norte-sur inclinado hacia el ecuador |
+| **Tracker quebrado · backtracking** | Rótula en el actuador: la mesa norte y la sur quedan a inclinaciones distintas |
+| **Tracker quebrado · sin backtracking** | El mismo quebrado, para aislar qué aporta cada cosa |
 
-Son las mismas claves y las mismas etiquetas que `solargpt_core.structure_compare.CATALOGO`, y el
-careo lo comprueba: si el core añade una y la ficha no, el test se pone rojo.
+Las seis primeras son las mismas claves y las mismas etiquetas que
+`solargpt_core.structure_compare.CATALOGO`, y el careo lo comprueba: si el core añade una y la
+ficha no, el test se pone rojo.
+
+Los dos **quebrados** no están en el core, y eso no se disimula: el catálogo del core corre una
+estructura con UN eje, y un quebrado son dos medias vigas con su rótula. Van marcados
+`soloFicha`, el test exige que lo que la ficha tiene de más esté declarado —así añadir una
+estructura que el core no sabe expresar no se cuela en silencio— y el motor Python las rechaza
+diciendo por qué en vez de devolver una fila que no es la que se pidió. Lo que mantiene vivo el
+careo es que **con quiebro 0 el quebrado y el rígido dan la misma cifra**, y eso se exige.
+
+### El seguidor quebrado
+
+Un quebrado no es un seguidor con otro número: es el mismo, con una rótula en el actuador
+central, de modo que la fila norte y la fila sur se montan a inclinaciones distintas. Es lo que
+se compra cuando el terreno quiebra a lo largo del eje.
+
+El parámetro es **la diferencia entre las dos mesas** —`Quiebro N-S °`—, no lo que se aparta
+cada una: con 10° sobre un terreno que cae 12° al sur, una mesa queda a 17° y la otra a 7°. El
+rígido, en el mismo sitio, se queda en los 12° de la media.
+
+Cada mesa corre **su** física: su ángulo de seguimiento, su retroceso de backtracking y su
+sombra, con las mismas funciones que la tabla; el seguidor es la media de las dos. Y en la
+escena cada mesa gira lo suyo, porque dibujar las dos al mismo ángulo sería enseñar un seguidor
+distinto del que se ha calculado.
+
+**Y aquí la tabla dice lo contrario de lo que parece.** Por POA el rígido sale por delante, y no
+por ser mejor estructura: la curva POA-vs-inclinación-de-eje es **cóncava**, así que la media de
+dos mesas a 17° y 7° cae por debajo del punto medio a 12°. Es Jensen. Lo que el número no dice
+es que ese tubo recto **no se puede montar ahí**: vuela metros sobre el caballón por los dos
+extremos —2,97 m con 10° de quiebro sobre 12° de caída, en una fila de 65 m— y hay que sostenerlo con hincas que
+pasan de 2,0 a 4,9 m, cuando el quebrado apoya con todas iguales. La ficha publica el vuelo y lo
+explica debajo de la tabla; sin eso, la comparación está a medias.
+
+El quiebro es **a lo largo** del eje: no toca la pendiente ⊥ de nadie, y por tanto no cambia el
+backtracking por ese lado.
 
 ## Igualdad de potencia pico
 

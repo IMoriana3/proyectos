@@ -81,13 +81,13 @@ const SONDA = `(() => {
   check('se ve desde que se abre, sin comparar nada',
     (await p.evaluate(() => BLOQUES.length)) === 2);
 
-  // marcar las CINCO. El catálogo tiene seis, pero el «eje inclinado (TSAT)» ya
+  // marcar las SIETE. El catálogo tiene ocho, pero el «eje inclinado (TSAT)» ya
   // no se ofrece: con la inclinación del eje puesta por el terreno es la misma
   // estructura que el N-S. Sigue en FIS.CATALOGO porque el careo lo corre.
   for (const c of await p.$$('.st')) if (!(await c.isChecked())) await c.check();
   await p.waitForTimeout(600);
-  check('un bloque por estructura marcada (5 en la ficha, 6 en el catálogo)',
-    (await p.evaluate(() => BLOQUES.length)) === 5);
+  check('un bloque por estructura marcada (7 en la ficha, 8 en el catálogo)',
+    (await p.evaluate(() => BLOQUES.length)) === 7);
   check('y el TSAT no se ofrece: sería el mismo seguidor',
     (await p.evaluate(() => [...document.querySelectorAll('.st')]
       .every(c => c.value !== 'tracker_tsat'))) === true);
@@ -517,8 +517,8 @@ const SONDA = `(() => {
       f.lejos.every(g => Math.abs(g.gx - gx) < 0.3 && Math.abs(g.gz - gz) < 0.3),
       JSON.stringify(f.lejos));
   });
-  check('y las cinco estructuras se apoyan en él a la misma cota (curva de nivel)',
-    suelo.diagonal.bloques.length === 5 &&
+  check('y las siete estructuras se apoyan en él a la misma cota (curva de nivel)',
+    suelo.diagonal.bloques.length === 7 &&
     suelo.diagonal.bloques.every(b => Math.abs(b.y) < 1e-6 && Math.abs(b.suelo) < 1e-6),
     JSON.stringify(suelo.diagonal.bloques.map(b => b.k + ':' + b.suelo)));
 
@@ -641,6 +641,93 @@ const SONDA = `(() => {
   check('y cuando la hinca saldría NEGATIVA se declara: no se monta de una pieza',
     fijaPend.eo.nocabe === true && fijaPend.llano.nocabe === false,
     JSON.stringify([fijaPend.llano.nocabe, fijaPend.ns.nocabe, fijaPend.eo.nocabe]));
+  // ── EL SEGUIDOR QUEBRADO: DOS MESAS, UNA RÓTULA ──
+  // El terreno con caballón a lo largo del eje es justo el caso que compra un
+  // quebrado. Lo que hay que ver en el 3D es la diferencia FÍSICA: el quebrado
+  // se apoya en las dos aguas con hincas iguales; el rígido, con el mismo tubo
+  // recto, vuela sobre el caballón y sus hincas se estiran.
+  const queb = await p.evaluate(() => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
+    document.querySelectorAll('.st').forEach(c => {
+      c.checked = c.value === 'tracker_hsat' || c.value === 'tracker_queb'; });
+    const mide = (pend, q) => {
+      s('pend', pend); s('pendAz', 180); s('quiebro', q);
+      const out = {};
+      BLOQUES.forEach(B => {
+        const u = B.filas[0]; u.updateWorldMatrix(true, true);
+        const L = cfgActual().geomDe(B.spec).largoFila / 2;
+        /* Hay que pinchar el TUBO, no los paneles: un panel girado 50° sube
+           metro y medio por su propio giro y eso no dice nada del terreno.
+           El quiebro tampoco vive en la matriz de la fila —son dos medias
+           vigas giradas por dentro—, así que se buscan por nombre; si no las
+           hay, el tubo es uno solo. En ambos casos el tubo corre por el +X
+           local del marco, y se pincha a media viga y en la punta: la
+           DIFERENCIA entre esos dos puntos no depende de dónde tenga el marco
+           su origen, que es lo que hace la medida comparable entre los dos. */
+        const medias = []; u.traverse(o => { if (/^media/.test(o.name)) medias.push(o); });
+        const marco = t => medias.length
+          ? medias.find(m => /Norte/.test(m.name) === (t > 0)) : u.spin;
+        const cota = [-L, -L / 4, L / 4, L].map(t => {
+          const m = marco(t); m.updateWorldMatrix(true, false);
+          const w = new THREE.Vector3(t, 0, 0).applyMatrix4(m.matrixWorld);
+          return +(w.y - cotaTerreno(w.x, w.z, TERRENO_3D)).toFixed(2);
+        });
+        // lo que sube el tubo de media viga a la punta, en los dos sentidos
+        const sube = Math.max(cota[0] - cota[1], cota[3] - cota[2]);
+        out[B.key] = { cota, sube: +sube.toFixed(2), largo: +(L * 2).toFixed(0),
+                       desalin: +(B.desalin || 0).toFixed(2),
+                       hincas: [+B.hincas.corta.toFixed(2), +B.hincas.larga.toFixed(2)] };
+      });
+      out.nota = document.getElementById('quiebroNota').textContent.replace(/\s+/g, ' ');
+      return out;
+    };
+    const r = { llano: mide(12, 0), q10: mide(12, 10) };
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
+    s('pend', 0); s('quiebro', 0);
+    return r;
+  });
+  // El invariante que hace que esto sea seguro: sin quiebro NO hay dos
+  // estructuras, hay una. Si esto se rompe, el quebrado ha dejado de ser el
+  // rígido articulado y pasa a ser otra cosa.
+  check('con quiebro 0 el quebrado y el rígido son la MISMA geometría',
+    JSON.stringify(queb.llano.tracker_queb) === JSON.stringify(queb.llano.tracker_hsat),
+    JSON.stringify([queb.llano.tracker_hsat, queb.llano.tracker_queb]));
+  check('  y la ficha lo dice en vez de dibujar dos filas iguales sin explicar',
+    /misma estructura/i.test(queb.llano.nota), queb.llano.nota);
+  // Con caballón: el quebrado se apoya, el rígido vuela.
+  /* Con caballón, la diferencia entre uno y otro no es de matiz: el quebrado
+     drapea —toda la fila a la misma altura sobre el suelo, así que todas sus
+     hincas miden lo mismo— y el rígido, con el tubo recto, cruza por encima. */
+  check('con 10° de quiebro el QUEBRADO drapea: de media viga a la punta el ' +
+    'tubo sube ' + queb.q10.tracker_queb.sube + ' m sobre el suelo, o sea nada',
+    Math.abs(queb.q10.tracker_queb.sube) < 0.1, JSON.stringify(queb.q10.tracker_queb));
+  check('  y por eso sus hincas son todas iguales (' +
+    queb.q10.tracker_queb.hincas.join(' y ') + ' m)',
+    Math.abs(queb.q10.tracker_queb.hincas[1] - queb.q10.tracker_queb.hincas[0]) < 0.01,
+    JSON.stringify(queb.q10.tracker_queb.hincas));
+  check('mientras el RÍGIDO, recto, cruza por encima del caballón: sube ' +
+    queb.q10.tracker_hsat.sube + ' m en ese mismo cuarto de viga',
+    queb.q10.tracker_hsat.sube > 1.5, JSON.stringify(queb.q10.tracker_hsat));
+  check('  y hay que sostenerlo con hincas de ' +
+    queb.q10.tracker_hsat.hincas.join(' a ') + ' m',
+    queb.q10.tracker_hsat.hincas[1] - queb.q10.tracker_hsat.hincas[0] > 1,
+    JSON.stringify(queb.q10.tracker_hsat.hincas));
+  /* Y ese vuelo no es solo un dibujo: la física lo calcula por su cuenta para
+     poder decirlo en la lectura. Si el 3D y la cuenta se separan, salta aquí. */
+  /* De media viga a la punta hay 3/4 del vuelo total: el mismo número que la
+     física publica en la lectura. Si el 3D y la cuenta se separan, salta aquí. */
+  check('  ese vuelo lo mide también la física: desalin = ' +
+    queb.q10.tracker_hsat.desalin + ' m contra ' +
+    (queb.q10.tracker_hsat.sube / 0.75).toFixed(2) + ' m medidos en la escena',
+    Math.abs(queb.q10.tracker_hsat.desalin - queb.q10.tracker_hsat.sube / 0.75) < 0.1,
+    JSON.stringify(queb.q10.tracker_hsat));
+  check('y la nota dice a qué queda cada mesa: 10° de diferencia repartidos ' +
+    'sobre los 12° de caída (17° y 7°)',
+    /17/.test(queb.q10.nota) && /7/.test(queb.q10.nota) && /12/.test(queb.q10.nota),
+    queb.q10.nota);
+
   // Y adaptarse es inclinarse LO QUE SE INCLINA EL SUELO, ni más ni menos: el
   // eje del seguidor sube exactamente la componente a lo largo del eje.
   const tk = c => sigue[c].find(b => b.k === 'tracker_hsat');
