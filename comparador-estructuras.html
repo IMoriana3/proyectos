@@ -1183,7 +1183,16 @@ FIS.ejeTilt=function(cfg,spec){
      kWh/m² de diferencia sin que la tabla se moviera.
      Sin azimut declarado se respeta lo recibido, que es el camino del careo: el
      core corrió el HSAT con axis_tilt 0 y el TSAT con 10. */
-  if(cfg.pendAz==null)return spec.tsat?(cfg.axTilt||0):0;   // camino del careo
+  if(cfg.pendAz==null){
+    /* CAMINO DEL CAREO. Sin azimut de terreno se respeta lo RECIBIDO, que es
+       como el core toma sus componentes: por separado y sin plano que las
+       genere. El core sólo aplica la componente a lo largo a las DOS AGUAS
+       —a los seguidores no, y tiene test que lo fija—, así que aquí igual: si
+       se le diera al seguidor, el careo compararía dos cosas distintas y la
+       diferencia se leería como física. */
+    if(spec.fam==='fija_ew')return cfg.pendLargo||0;
+    return spec.tsat?(cfg.axTilt||0):0;
+  }
   /* La componente A LO LARGO DEL EJE, con el signo de bajar hacia el ecuador:
      positivo cuando el extremo que mira al ecuador es el más bajo. */
   var q=FIS.pendComp(cfg.pend,cfg.pendAz,FIS.azEje(cfg)+90);
