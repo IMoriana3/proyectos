@@ -231,6 +231,37 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     /parcela/i.test(dice.out) && /sin parcela/i.test(dice.tag),
     JSON.stringify(dice));
 
+
+  /* ── LOS DOS PANES, A LA VISTA (reporte 2026-08-27) ────────────────────
+   * «Si quiero llenarlo de trackers y fija no tengo dónde seleccionar las
+   * pendientes máximas de cada uno»: los límites existían pero el pane del
+   * montaje no seleccionado iba con display:none — escondido justo lo que
+   * el reparto mixto necesita. Ahora los dos son visibles siempre (el no
+   * seleccionado, atenuado) y EDITABLES. Sin duplicar casillas: mismos ids. */
+  const panes = await page.evaluate(() => {
+    const vis = id => getComputedStyle(document.getElementById(id)).display !== 'none';
+    const sel = document.getElementById('mount');
+    sel.value = 'tracker'; sel.dispatchEvent(new Event('change'));
+    const conTracker = { trk: vis('paneTracker'), fija: vis('paneFija'),
+      opTrk: getComputedStyle(document.getElementById('paneTracker')).opacity,
+      opFija: getComputedStyle(document.getElementById('paneFija')).opacity };
+    const f = document.getElementById('slopeFijaEw'); f.value = '11.5';
+    f.dispatchEvent(new Event('change'));
+    const leido = document.getElementById('slopeFijaEw').value;
+    sel.value = 'fija'; sel.dispatchEvent(new Event('change'));
+    const conFija = { trk: vis('paneTracker'), fija: vis('paneFija') };
+    sel.value = 'tracker'; sel.dispatchEvent(new Event('change'));
+    return { conTracker, conFija, leido };
+  });
+  check('con Tracker seleccionado, el pane de FIJA sigue visible',
+    panes.conTracker.trk && panes.conTracker.fija, JSON.stringify(panes.conTracker));
+  check('…atenuado, no escondido (se ve cuál manda en el layout de un montaje)',
+    parseFloat(panes.conTracker.opFija) < parseFloat(panes.conTracker.opTrk));
+  check('con Fija seleccionada, el de TRACKER también sigue visible',
+    panes.conFija.trk && panes.conFija.fija);
+  check('los límites de la fija se editan SIN cambiar el selector',
+    panes.leido === '11.5', panes.leido);
+
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
   process.exit(ko ? 1 : 0);

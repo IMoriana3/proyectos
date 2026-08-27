@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.1</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.2</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -276,6 +276,7 @@ canvas.panning{cursor:grabbing}
       <div class="deriv" id="deriv"></div>
 
       <div id="paneTracker">
+        <div class="tip" style="margin:4px 0 2px;font-weight:600">Tracker (1 eje) — pitch y pendientes máximas</div>
         <div class="two">
           <div class="field"><label>Pitch (m)</label><input id="pitchTrk" type="number" step="0.1" value="6">
             <div class="tip">Paso entre filas de SEGUIDOR.</div></div>
@@ -300,7 +301,8 @@ canvas.panning{cursor:grabbing}
           <div class="field"><label>Máx. giro °</label><input id="maxAng" type="number" step="1" value="55"></div>
         </div>
       </div>
-      <div id="paneFija" style="display:none">
+      <div id="paneFija">
+        <div class="tip" style="margin:10px 0 2px;font-weight:600">Fija — pitch y pendientes máximas</div>
         <div class="two">
           <div class="field"><label>Pitch (m)</label><input id="pitchFija" type="number" step="0.1" value="4">
             <div class="tip">Paso entre filas de mesa FIJA.</div></div>
@@ -380,8 +382,7 @@ canvas.panning{cursor:grabbing}
         <b>El reparto lo decides tú</b>; el botón solo propone. Mismo motor y mismas reglas que el bloque
         «Zonas de montaje» de Streamlit y la celda §02.5a-MIX del cuaderno.</p>
       <p class="note" style="margin-top:0"><b>El pitch y las pendientes máximas de cada montaje están en su
-        cuadro de <span style="white-space:nowrap">▦ Estructura</span></b> —cambia el selector de Montaje
-        para ver el otro—. Aquí no se repiten: dos casillas para lo mismo acaban discrepando, y el que las
+        cuadro de <span style="white-space:nowrap">▦ Estructura</span></b> —los dos cuadros están a la vista, el del otro montaje sale atenuado—. Aquí no se repiten: dos casillas para lo mismo acaban discrepando, y el que las
         lee no sabe cuál manda.</p>
       <div class="field"><label>Área mínima de zona (m²)</label><input id="mixMinArea" type="number" step="100" value="2000"></div>
       <div class="btnrow">
@@ -3064,8 +3065,16 @@ function syncAz(){
     :'Filas perpendiculares al azimut de módulos (Sur 180° → filas E-O).';
   $('bifila').disabled=!tracker;
   if(!tracker)$('bifila').value='0';
-  $('paneTracker').style.display=tracker?'':'none';
-  $('paneFija').style.display=tracker?'none':'';
+  /* Los DOS panes SIEMPRE visibles (reporte del cliente, 2026-08-27: «si
+     quiero llenarlo de trackers y fija no tengo dónde seleccionar las
+     pendientes máximas de cada uno»). Con zonas mixtas hacen falta los
+     límites de AMBOS montajes a la vez, y esconder uno tras el selector era
+     esconder justo lo que el reparto necesita. El selector sigue mandando
+     sobre el layout de UN montaje: su pane va pleno y el otro, atenuado —
+     editable igual, que es de lo que se alimentan las zonas. Sin duplicar ni
+     una casilla: son los MISMOS inputs de siempre, solo que a la vista. */
+  $('paneTracker').style.opacity=tracker?'1':'0.55';
+  $('paneFija').style.opacity=tracker?'0.55':'1';
   // El albedo vive en Terreno cuando hay tracker y en Estructura cuando es fija:
   // un solo valor, dos sitios, así que se sincronizan para no tener dos verdades.
   $('albedoBox').style.display=tracker?'':'none';
