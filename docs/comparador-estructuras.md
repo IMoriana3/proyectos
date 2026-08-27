@@ -770,6 +770,26 @@ usa la tabla — lo dibujado y lo calculado son lo mismo.
 Un **seguidor** no lleva esta corrección, y no es una excepción caprichosa: su θ es un ángulo de
 motor sobre su eje, no una pendiente de proyecto.
 
+#### Las hincas pisan el suelo, y eso se mide
+
+Todas, en todas las familias: **0,00 m** de vuelo con la caída llana, ⊥, a lo largo, en diagonal y
+con caballón. No es un detalle de dibujo — la lectura publica el rango de hinca y con él se decide
+si la estructura se puede montar ahí.
+
+Dos cosas hubo que arreglar para poder decir eso:
+
+* Las del **seguidor** se calculaban en el marco local con `tan(quiebro/2)` por metro, que no es
+  exactamente el caballón que se dibuja —las dos aguas quedan a eje±quiebro/2—: dejaba los pies del
+  rígido a 14 cm del suelo sobre el caballón. Ahora se pregunta la cota **de verdad** bajo la cabeza
+  de cada poste y se mide la vertical, como ya hacía la mesa fija.
+* Y con la caída **no ⊥ a las filas** más quiebro, la línea de bloques —que va sobre la curva de
+  nivel— se separa de una cumbrera única: con 25° al 120° y 16° de quiebro había bloques a **treinta
+  metros** del suelo, con hincas de 32 m. La cumbrera **se repite** con el paso de los bloques
+  proyectado sobre el eje, así que cada bloque cae sobre la suya. Es lo mismo que la ficha ya hace
+  con la pendiente: el mismo terreno para todas, girado a sus filas. Va dicho bajo el campo —cuántos
+  metros mide ese paso— y, si es más corto que la fila, que ahí una fila cruza más de una cumbrera y
+  el quebrado modela **una** rótula.
+
 #### Los soportes de una fija: DOS líneas, y no miden lo mismo
 
 Una mesa fija no gira: se apoya en la línea de postes de delante y en la de detrás, y el propio tilt
