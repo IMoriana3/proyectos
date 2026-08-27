@@ -71,6 +71,23 @@ explica debajo de la tabla; sin eso, la comparación está a medias.
 El quiebro es **a lo largo** del eje: no toca la pendiente ⊥ de nadie, y por tanto no cambia el
 backtracking por ese lado.
 
+#### Las dos mesas no captan lo mismo, y el promedio se lo calla
+
+Es lo que la tabla no puede decir con una sola cifra. Con 10° de quiebro sobre 12° de caída al sur
+en Sevilla, la mesa que mira al ecuador capta **101,6 kWh/m²** y la otra **97,5**: un **4,1 %** entre
+ellas. La tabla publica la media, y para POA por m² de módulo eso es **correcto** —la mitad de los
+módulos ve un plano y la otra mitad el otro—; la ficha publica además las dos.
+
+Lo que no es una media es la consecuencia **eléctrica**: un string en serie lo manda su módulo peor,
+así que un string a caballo de la rótula rinde por la mesa mala y no por el promedio. Eso es
+desacoplo **DC** y esta comparación es de **POA**: no está contado en ninguna cifra de la tabla, y
+va dicho con esas palabras.
+
+Lo que sí se puede decir con la geometría que hay puesta es **si algún string cruza**. Los strings
+se reparten a lo largo de la fila y la rótula está en el centro, así que el corte entre strings cae
+justo ahí sólo si hay un número **par** de strings por fila. Con impar, el de en medio queda a
+caballo. La nota lo dice en cada caso, con el número que haya puesto en el configurador.
+
 **Y se ve que quiebra.** Dos cosas que faltaban para eso:
 
 * **La rótula**, dibujada: dos bridas —una en cada media viga, así que cada una se inclina con la

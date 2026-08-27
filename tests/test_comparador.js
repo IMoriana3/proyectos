@@ -957,6 +957,33 @@ check('el eje hacia el ECUADOR capta más que hacia el POLO (' +
   check('y el quebrado sin backtracking pierde contra el quebrado con él',
     f.tracker_queb_nobt.neta !== f.tracker_queb.neta,
     JSON.stringify([f.tracker_queb.neta, f.tracker_queb_nobt.neta]));
+  /* LAS DOS MESAS NO CAPTAN LO MISMO, y eso hay que poder mirarlo: la tabla
+     publica la media —correcto para POA por m² de módulo, la mitad de los
+     módulos ve un plano y la otra mitad el otro— pero la consecuencia
+     eléctrica no es una media. */
+  check('cada mesa publica SU captación, no solo la media (' +
+    (f.tracker_queb.mesas || []).map(v => v.toFixed(1)).join(' y ') + ' kWh/m²)',
+    !!f.tracker_queb.mesas && f.tracker_queb.mesas.length === 2,
+    JSON.stringify(f.tracker_queb.mesas));
+  check('  y la media de las dos ES la cifra de la tabla, exacta',
+    Math.abs((f.tracker_queb.mesas[0] + f.tracker_queb.mesas[1]) / 2 -
+             f.tracker_queb.neta) < 1e-9,
+    JSON.stringify([f.tracker_queb.mesas, f.tracker_queb.neta]));
+  check('  y con 10° de quiebro la diferencia entre mesas es real (' +
+    (100 * (1 - Math.min(...f.tracker_queb.mesas) / Math.max(...f.tracker_queb.mesas)))
+      .toFixed(1) + ' %)',
+    (1 - Math.min(...f.tracker_queb.mesas) / Math.max(...f.tracker_queb.mesas)) > 0.01,
+    JSON.stringify(f.tracker_queb.mesas));
+  check('el RÍGIDO no tiene dos mesas que publicar: es una sola',
+    !f.tracker_hsat.mesas, JSON.stringify(f.tracker_hsat.mesas));
+  /* ¿CRUZA ALGÚN STRING LA RÓTULA? Un string en serie lo manda su módulo peor,
+     así que uno a caballo de la rótula rinde por la mesa mala. Con un número
+     PAR de strings por fila el corte cae justo en la rótula y no pasa. */
+  const geomN = n => ({ ...c, geomDe: () => ({ ...G, nStr: n }) });
+  check('con un número PAR de strings por fila, el corte cae en la rótula: ninguno cruza',
+    [2, 4, 6].every(n => FIS.strQuiebro(geomN(n), FIS.spec('tracker_queb')).cruza === false));
+  check('con impar, el de en medio queda a caballo de las dos mesas',
+    [1, 3, 5].every(n => FIS.strQuiebro(geomN(n), FIS.spec('tracker_queb')).cruza === true));
   /* El backtracking de cada mesa usa la pendiente ⊥ del sitio, que es la misma
      para las dos: el quiebro es A LO LARGO del eje y no toca la ⊥. */
   check('el quiebro es a lo largo del eje: no cambia la pendiente ⊥ de nadie',
