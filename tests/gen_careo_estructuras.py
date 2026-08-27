@@ -78,6 +78,13 @@ ESTRUCTURAS = ["fija_optima", "fija_proyecto", "fija_ew",
 PITCH_M, ANCHO_M = 6.00, 2.382
 ALBEDO, TILT_PROYECTO, MAX_ANGLE = 0.20, 25.0, 55.0
 PENDIENTE = 8.0        # pendiente del terreno ⊥ a las filas, en grados
+# Y la otra mitad del terreno: la componente A LO LARGO de las filas. No
+# sombrea, pero inclina la CUMBRERA de una fija a dos aguas —sus filas corren
+# norte-sur, como el eje de un seguidor— y eso mueve su POA. Sin declararla, el
+# careo no podía mirar esa parte: el core la sabe calcular desde SolarGPT #185
+# y el golden iba sin ella. 6° y no 8 a propósito: dos números distintos hacen
+# visible si alguien confunde una componente con la otra.
+PENDIENTE_LARGO = 6.0
 #: ¿Puede el eje cruzar la horizontal backtrackeando («ir a contrasol»)? Es el
 #: defecto del core —lo que `pvlib` hace— y el golden lo declara para que el
 #: banco pueda poner la ficha en el mismo sitio en vez de tolerar la diferencia.
@@ -362,6 +369,7 @@ def main() -> int:
         gcr=ANCHO_M / PITCH_M, collector_height_m=ANCHO_M,
         tilt_proyecto_deg=TILT_PROYECTO,
         cross_axis_slope_deg=PENDIENTE,
+        along_axis_slope_deg=PENDIENTE_LARGO,
         permitir_contrasol=PERMITIR_CONTRASOL)
 
     # El comparador normaliza a AÑO equivalente; el fixture guarda el bruto de
@@ -389,6 +397,7 @@ def main() -> int:
                 "collector_width_m": ANCHO_M, "albedo": ALBEDO,
                 "tilt_deg": TILT_PROYECTO, "max_angle_deg": MAX_ANGLE,
                 "axis_tilt_deg": 10.0, "cross_axis_slope_deg": PENDIENTE,
+                "along_axis_slope_deg": PENDIENTE_LARGO,
                 # El quiebro se DERIVA del catálogo, no se teclea: si el core
                 # cambia la diferencia entre mesas, el fixture lo sigue solo y
                 # la ficha lo lee de aquí. Escribirlo a mano sería una segunda

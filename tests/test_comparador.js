@@ -305,6 +305,10 @@ const cfg = { lat: C.lat, lon: C.lon, gcr, fija: G, tracker: G,
   /* El quiebro sale del FIXTURE, que lo deriva del catálogo del core: mismo
      número en los dos motores, o el careo del quebrado no significa nada. */
   quiebro: C.broken_deg,
+  /* Y la componente A LO LARGO de las filas, que inclina la cumbrera de las
+     dos aguas. El core la toma como parámetro suelto —no hay plano que la
+     genere en su modelo— y aquí entra igual, por el camino del careo. */
+  pendLargo: C.along_axis_slope_deg,
   /* El golden DECLARA con qué ajuste corrió el core, y aquí se pone la ficha en
      el mismo sitio. Antes no se declaraba: los dos motores corrían con opciones
      distintas —la ficha cortaba el retroceso en plana y el core no— y el careo
@@ -712,7 +716,29 @@ const GOLDEN_VIEJO_v163 = {
    concreta y no puede opinar de estructuras que nacieron después (los quebrados
    entraron el 2026-08-27). Recorrer `C.structures` reventaba con `undefined` en
    cuanto el catálogo creció. */
-const VIEJAS = Object.keys(GOLDEN_VIEJO_v163).filter(k => core[k]);
+/* Y hay una segunda condición, que este centinela no tenía y ha hecho falta:
+   el ESCENARIO tiene que ser el mismo. Sus números son evidencia de una deriva
+   de FÍSICA (sombrear el circunsolar, v1.63), y eso sólo se puede medir contra
+   una corrida de la MISMA configuración. Al declarar la componente del terreno
+   A LO LARGO de las filas —que inclina la cumbrera de las dos aguas— `fija_ew`
+   pasó a correr otro caso: 69,08 → 73,20 kWh/m² y −18,69 → −13,84 pp. Eso no
+   es deriva del core, es otro escenario, y compararlo diría una cosa por otra.
+   Se excluye con su motivo y con su fecha, no en silencio. */
+const ESCENARIO_CAMBIADO = {
+  fija_ew: '2026-08-27: el careo declara `along_axis_slope_deg` (6°) y su ' +
+           'cumbrera se inclina — el golden de v1.63 corrió con cumbrera plana',
+};
+const VIEJAS = Object.keys(GOLDEN_VIEJO_v163)
+  .filter(k => core[k] && !ESCENARIO_CAMBIADO[k]);
+/* Test de zombis de la exención (regla de la casa): una entrada que ya no
+   corresponde a ninguna estructura del golden viejo es un permiso huérfano. */
+Object.keys(ESCENARIO_CAMBIADO).forEach(k => {
+  check('la exención del centinela para ' + k + ' tiene dueño vivo y motivo',
+    !!GOLDEN_VIEJO_v163[k] && ESCENARIO_CAMBIADO[k].length > 40,
+    k + ' ya no está en el golden viejo, o su motivo está vacío');
+});
+check('y el centinela conserva a qué puede testificar (' + VIEJAS.join(', ') + ')',
+  VIEJAS.length >= 3, 'con menos de tres estructuras deja de ser evidencia de nada');
 const cazadas = VIEJAS.filter(k => {
   const v = GOLDEN_VIEJO_v163[k], b = core[k];
   return Math.abs(v.delta - b.delta_pct) >= TOL_DELTA ||

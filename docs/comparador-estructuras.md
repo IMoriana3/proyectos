@@ -853,10 +853,22 @@ Mientras la cumbrera se dibujaba horizontal y se calculaba horizontal no había 
 sí una estructura que no se monta así. Ahora la lectura de las dos aguas dice cuánto se inclina su
 cumbrera con el terreno, igual que la del seguidor dice lo del eje.
 
-**Hueco declarado**: el core corre las dos aguas como dos planos fijos a ±tilt con azimut 90/270,
-sin cumbrera que inclinar. El careo no se mueve porque va por el camino sin azimut de terreno
-declarado —`FIS.ejeTilt` devuelve 0 ahí—, pero con pendiente declarada la ficha y el core dan
-distinto para esta familia, y es la ficha la que está describiendo lo que se construye.
+**Hueco CERRADO (2026-08-27)**: el core la sabe inclinar desde SolarGPT #185 y el careo la mira
+desde que el golden declara `along_axis_slope_deg` (6°, distinto del 8° de la ⊥ a propósito: dos
+números iguales harían invisible confundir una componente con la otra).
+
+**Y no era un puerto: son dos derivaciones independientes.** La ficha rota el marco de proyección
+—`psTSAT` con la inclinación de la cumbrera, y `tiltSup` para la superficie— y el core compone el
+plano: calcula la inclinación y el azimut resultantes y transpone normal. Dos caminos escritos con
+horas de diferencia, y **coinciden al 0,00 %** de POA (0,005 pp en Δ), dentro del 0,1 % que exige el
+careo. Con la cumbrera a 6°, la E-O sube de 69,08 a 73,20 kWh/m² en los doce días del fixture.
+
+**Lo que se rompió al cerrarlo, y es el hallazgo**: el centinela de PORTAL-BUG-01 marcó `fija_ew`
+como deriva del core. No lo era — es **otro escenario**: sus números congelados son de una corrida
+con cumbrera plana. A ese centinela le faltaba una condición que ahora está escrita: sus cifras son
+evidencia de una deriva de FÍSICA y sólo se pueden comparar contra una corrida de la MISMA
+configuración. La exención va con motivo, fecha, test de zombis y un mínimo de estructuras — un
+centinela que se queda sin sujetos deja de ser evidencia de nada. Sigue testificando sobre cinco.
 
 #### Lo que se sale del encuadre, dicho
 
