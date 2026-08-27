@@ -1191,16 +1191,15 @@ FIS.CATALOGO=[
      el catálogo porque el CAREO lo necesita: el fixture del core lo corrió por
      separado, con `axis_tilt` 10 y el HSAT con 0, y ese camino sigue vivo
      mientras no haya azimut de terreno declarado. */
-  /* SOLO EN LA FICHA. El core no tiene seguidor quebrado: su catálogo corre una
-     estructura con UN eje, y esto son dos medias vigas con su rótula. No es una
-     divergencia de resultados —con quiebro 0 el quebrado y el rígido dan la
-     misma cifra, y por ahí sigue entrando el careo— es una capacidad que solo
-     existe en un lado. Va declarado, y el motor Python no las acepta. */
+  /* EL CORE YA LOS TIENE (SolarGPT v1.71.0): `broken_deg` en su catálogo corre
+     las dos mesas por separado y promedia, igual que aquí. Nacieron como hueco
+     declarado —sólo existían en la ficha, así que el careo no podía cubrirlos—
+     y ese hueco está cerrado: entran en el golden y el motor Python los acepta. */
   {key:'tracker_queb',     label:'Tracker quebrado · backtracking', fam:'tracker', bt:true,
-   quebrado:true, soloFicha:true,
+   quebrado:true,
    nota:'Rótula en el actuador: cada media viga drapea con SU pendiente.'},
   {key:'tracker_queb_nobt',label:'Tracker quebrado · sin backtracking',fam:'tracker', bt:false,
-   quebrado:true, soloFicha:true,
+   quebrado:true,
    nota:'El mismo quebrado, sin backtracking: para aislar qué aporta cada cosa.'},
   {key:'tracker_tsat',     label:'Tracker 1 eje inclinado (TSAT)',  fam:'tracker', bt:true, tsat:true,
    soloCareo:true,
@@ -1305,9 +1304,19 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
        eso movía la media 0,17°, suficiente para una alarma falsa. Igualarlas
        por construcción cuesta una condición y evita discutirlo cada vez. */
     /* Con un QUEBRADO la fila tiene DOS ángulos y una serie solo puede llevar
-       uno: lleva el de la primera mesa, y va dicho. El careo no corre quebrados
-       —el core no los tiene— y la lectura publica los dos. */
-    if(gh>0){ thAbs+=Math.abs(planos[0].th); nDia++; thSerie.push(planos[0].th); }
+       uno: lleva la MEDIA de las dos mesas. No es un ángulo que ejecute
+       ninguna —eso son los dos que publica la lectura— pero es lo que el core
+       pone en su serie, y con dos convenciones distintas el careo comparaba
+       peras con manzanas: cazó 18,38° de diferencia máxima cuando lo único que
+       diferían era en qué llamaban «el ángulo».
+       Con una sola mesa —todo lo que no sea un quebrado— la media ES el
+       ángulo, así que aquí no cambia nada. */
+    if(gh>0){
+      var thMed=0;
+      for(var q=0;q<planos.length;q++)thMed+=planos[q].th;
+      thMed/=planos.length;
+      thAbs+=Math.abs(thMed); nDia++; thSerie.push(thMed);
+    }
     else thSerie.push(null);
     neta+=sN*dtH/1000; ideal+=sI*dtH/1000;
     mes[M.t[i].getUTCMonth()]+=sN*dtH/1000;
@@ -2802,11 +2811,14 @@ async function run(){
         alto_por_estructura:porEstructura(cfg,keys,'altoColector'),
         tilt_deg:cfg.tilt, axis_tilt_deg:FIS.ejeTilt(cfg,FIS.spec('tracker_hsat')),
         max_angle_deg:cfg.maxang};
-      /* El core no conoce el quebrado: mandárselo devolvería un error feo o,
-         peor, una fila que no es la que se pidió. Se dice y se para. */
+      /* Si alguna estructura no existiera en el core, mandársela devolvería un
+         error feo o —peor— una fila que no es la que se pidió. Desde SolarGPT
+         v1.71.0 el quebrado ya está allí, así que hoy no queda ninguna: el
+         guard se queda porque la próxima estructura que nazca aquí volverá a
+         nacer sin motor Python. */
       var soloF=keys.filter(function(k){var e=FIS.spec(k);return e&&e.soloFicha;});
-      if(soloF.length)throw new Error('el motor Python no tiene seguidor quebrado ('+
-        soloF.join(', ')+'): esa estructura solo existe en la ficha. Cambia el cálculo a '+
+      if(soloF.length)throw new Error('el motor Python no tiene ('+soloF.join(', ')+
+        '): esa estructura solo existe en la ficha. Cambia el cálculo a '+
         '«en el navegador» o desmárcala.');
       var r=await fetch(ENGINE+'/structures',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}

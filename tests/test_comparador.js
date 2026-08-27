@@ -129,7 +129,12 @@ if (MAN) {
      aquella rama traía acabó entrando por otro camino (CROSS-TILT-01); lo
      que mentía era la etiqueta, que es justo lo que este pin existe para
      que no pase. */
-  const CORE_PIN = { version: '1.69.0', commit: '332cc2fc' };
+  /* Re-fijado el 2026-08-27 al entrar el seguidor QUEBRADO en el catálogo del
+     core (SolarGPT #185, v1.71.0; el golden se generó sobre v1.72.0, que ya lo
+     lleva). El generador VERIFICA que ese commit esté en `main` antes de
+     escribir — es el guard que nació de PORTAL-BUG-01, cuando un golden se
+     generó desde una rama sin mergear y dejó `main` en rojo. */
+  const CORE_PIN = { version: '1.72.0', commit: 'a427e9b7' };
   check('el golden corresponde al core fijado (v' + CORE_PIN.version + ')',
     MAN.core.version === CORE_PIN.version,
     'golden v' + MAN.core.version + ' vs pin v' + CORE_PIN.version +
@@ -298,7 +303,11 @@ const G = { apertura: C.collector_width_m, altoColector: C.collector_width_m,
             largoFila: 65.084, pitch: C.pitch_m, gcr };
 const cfg = { lat: C.lat, lon: C.lon, gcr, fija: G, tracker: G,
   maxang: C.max_angle_deg, albedo: C.albedo, tilt: C.tilt_deg, tiltEW: 12,
-  axTilt: C.axis_tilt_deg, pend: C.cross_axis_slope_deg, geomDe: () => G };
+  axTilt: C.axis_tilt_deg, pend: C.cross_axis_slope_deg,
+  /* El quiebro sale del FIXTURE, que lo deriva del catálogo del core: es el
+     mismo número en los dos motores o el careo del quebrado no significa
+     nada. Tecleado aquí sería una segunda fuente de verdad. */
+  quiebro: C.broken_deg, geomDe: () => G };
 const rep = FIS.compara(C.structures, M, cfg);
 /* El HUECO del catálogo, exigido: con quiebro 0 el quebrado ES el rígido, cifra
    a cifra. Por ahí sigue entrando el careo aunque el core no tenga la
@@ -316,11 +325,57 @@ check('el GHI del sitio cuadra (±1 %)',
   Math.abs(rep.ghi / fix.core.ghi_kwh_m2 - 1) < 0.01,
   rep.ghi.toFixed(1) + ' vs ' + fix.core.ghi_kwh_m2.toFixed(1));
 
+/* Las TOLERANCIAS se declaran aquí y no en §5 porque el orden las necesita:
+   sin ellas no puede saber qué pares NO es capaz de decidir. Su justificación
+   —que no son un número prudente sino el hueco medido por seis— sigue en §5. */
+const TOL_POA = 0.025, TOL_DELTA = 0.80;
+/* El hueco MEDIDO entre los dos motores (§5 lo justifica y lo vigila). El
+   empate del orden se decide con ESTE número y no con la tolerancia: la
+   tolerancia es el hueco por seis, y con ella `fija_optima ≈ fija_proyecto`
+   —2,1 %, que es justo lo que la ficha existe para enseñar— habría pasado por
+   «no decidible». Lo dijo el guard del propio empate, no yo. */
+const HUECO_MEDIDO = { poa_pct: 1.365, delta_pp: 0.367 };
+const TOL_EMPATE = HUECO_MEDIDO.poa_pct / 100;
+
 // ── 4) el ORDEN, que es lo que decide ──
 const ordena = o => Object.keys(o).sort((a, b) => o[b].poa - o[a].poa).join(' > ');
 const ordJS = ordena(Object.fromEntries(Object.entries(js).map(([k, v]) => [k, { poa: v.neta }])));
 const ordCore = ordena(Object.fromEntries(Object.entries(core).map(([k, v]) => [k, { poa: v.poa_kwh_m2 }])));
-check('el orden entre estructuras es el mismo', ordJS === ordCore, '\n     JS   ' + ordJS + '\n     core ' + ordCore);
+/* EL ORDEN, con los EMPATES declarados.
+   Dos estructuras separadas por menos que la tolerancia del propio careo no
+   tienen orden decidible CON ESTE INSTRUMENTO: la diferencia de modelo de cielo
+   entre los dos motores (Perez contra Hay-Davies, ~1 %) es mayor que el hueco
+   que las separa, así que cuál va delante lo decide el ruido y no la física.
+   Pasó al entrar los quebrados: `tracker_queb_nobt` y `tracker_hsat` quedan a
+   0,026 % en el core —cien veces por debajo del 2,5 % de tolerancia— y los dos
+   motores los ordenan al revés. Exigir ahí un orden estricto sería medir ruido;
+   tragárselo en silencio sería peor. Se declara el empate y se exige el orden
+   en todo lo demás. */
+const empatan = (a, b) => Math.abs(core[a].poa_kwh_m2 / core[b].poa_kwh_m2 - 1) < TOL_EMPATE;
+const conEmpates = orden => {            // ordena alfabéticamente dentro de cada empate
+  const grupos = [];
+  orden.split(' > ').forEach(k => {
+    const g = grupos[grupos.length - 1];
+    if (g && empatan(g[g.length - 1], k)) g.push(k); else grupos.push([k]);
+  });
+  return grupos.map(g => g.slice().sort().join(' = ')).join(' > ');
+};
+const empatados = ordCore.split(' > ').filter((k, i, a) => i && empatan(a[i - 1], k));
+check('el orden entre estructuras es el mismo' +
+  (empatados.length ? ' (con ' + empatados.length + ' empate(s) declarado(s))' : ''),
+  conEmpates(ordJS) === conEmpates(ordCore),
+  '\n     JS   ' + ordJS + '\n     core ' + ordCore +
+  '\n     empates: ' + (conEmpates(ordCore) || '—'));
+/* Y el empate no se declara a ciegas: se exige que sea PEQUEÑO de verdad.
+   Sin esto, subir la tolerancia algún día convertiría el orden entero en
+   «todo empata» sin que nadie lo notara. */
+empatados.forEach(k => {
+  const prev = ordCore.split(' > ')[ordCore.split(' > ').indexOf(k) - 1];
+  const d = Math.abs(core[prev].poa_kwh_m2 / core[k].poa_kwh_m2 - 1) * 100;
+  check('  el empate ' + prev + ' ≈ ' + k + ' es de ' + d.toFixed(3) + ' %: por debajo del ' +
+    'hueco medido entre motores (' + HUECO_MEDIDO.poa_pct + ' %)',
+    d < HUECO_MEDIDO.poa_pct, String(d));
+});
 
 // ── 5) magnitudes, con la tolerancia JUSTIFICADA ──────────────────────────
 // PORTAL-BUG-01: las tolerancias eran 8 % y 2,5 pp, y NO son un número redondo
@@ -342,10 +397,9 @@ check('el orden entre estructuras es el mismo', ordJS === ordCore, '\n     JS   
 //     separa a Hay-Davies de Perez. Apretarla más sería un test que se pone
 //     rojo por el modelo, no por un bug. Se declara en vez de fingir que cubre
 //     lo que no cubre.
-const TOL_POA = 0.025, TOL_DELTA = 0.80;
+// (declaradas más arriba: el orden las necesita para saber qué NO puede decidir)
 // Hueco medido con el golden al día. Si alguien afloja las tolerancias, esto
 // enseña contra qué se están comparando.
-const HUECO_MEDIDO = { poa_pct: 1.365, delta_pp: 0.367 };
 check('la tolerancia de Δ% no es gratuita: ' + TOL_DELTA + ' pp sobre un hueco real de ' +
   HUECO_MEDIDO.delta_pp + ' pp (×' + (TOL_DELTA / HUECO_MEDIDO.delta_pp).toFixed(1) + ')',
   TOL_DELTA / HUECO_MEDIDO.delta_pp < 3.0,
@@ -519,8 +573,13 @@ const GOLDEN_VIEJO_v163 = {
   tracker_hsat_nobt: { poa: 96.7986, delta: 13.9312 },
   tracker_tsat: { poa: 100.0250, delta: 17.7287 },
 };
-const cazadas = C.structures.filter(k => {
+/* Solo las que EXISTÍAN en aquel golden: es evidencia de una deriva histórica
+   concreta, así que no puede opinar de estructuras que nacieron después (los
+   quebrados entraron el 2026-08-27). Recorrer `C.structures` a secas reventaba
+   con `undefined` en cuanto el catálogo creció. */
+const cazadas = Object.keys(GOLDEN_VIEJO_v163).filter(k => {
   const v = GOLDEN_VIEJO_v163[k], b = core[k];
+  if (!b) return false;
   return Math.abs(v.delta - b.delta_pct) >= TOL_DELTA ||
          Math.abs(v.poa / b.poa_kwh_m2 - 1) >= TOL_POA;
 });
@@ -540,13 +599,14 @@ const cazadas = C.structures.filter(k => {
 // (Esta comprobación se escribió prediciendo ≥2 y salió 1. Se corrige la
 // predicción, no el listón.)
 check('CENTINELA: la tolerancia de hoy CAZA el golden viejo de v1.63 (' +
-  cazadas.length + ' de ' + C.structures.length + ' estructuras: ' +
+  cazadas.length + ' de ' + Object.keys(GOLDEN_VIEJO_v163).length + ' estructuras: ' +
   (cazadas.join(', ') || '—') + ')',
   cazadas.length >= 1, 'ninguna — la deriva volvería a colarse entera');
 // Y el mutante del centinela: con la tolerancia ANTERIOR no cazaba ninguna, que
 // es exactamente lo que pasó. Si esto falla, el centinela no mide lo que dice.
-const cazadasAntes = C.structures.filter(k => {
+const cazadasAntes = Object.keys(GOLDEN_VIEJO_v163).filter(k => {   // mismo recorte
   const v = GOLDEN_VIEJO_v163[k], b = core[k];
+  if (!b) return false;
   return Math.abs(v.delta - b.delta_pct) >= 2.5 ||
          Math.abs(v.poa / b.poa_kwh_m2 - 1) >= 0.08;
 });
