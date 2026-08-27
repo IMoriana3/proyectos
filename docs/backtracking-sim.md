@@ -388,6 +388,20 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-27 · la cota del optimal, y el matiz que frena el 12,7 %** — la jerarquía completa de
+  Ayora sobre la métrica buena (POA anual, escalera incluida): **A 2673,8 → B +0,08 % → OPT +0,18 %
+  → C 3D +0,44 %**. El invariante se cumple (OPT ≥ B; C supera a OPT porque el optimal busca en una
+  familia restringida de una sola f). Conclusión ACOTADA: del ~7 % que se lleva la mesa rígida sobre
+  terreno que ondula, ni el árbitro que ve la escalera delante recupera más de +0,18 %. **Es
+  estructural, no de consigna.**
+
+  **Y el matiz antes de que nadie cite el 12,7 % a un cliente:** la escalera del modelo es el peor
+  caso POR DISEÑO DECLARADO — cualquier sombra >10⁻⁶ mata media mesa (con n=2). Una fila de células
+  son ~8 % de cuerda, así que los mordiscos de 1-5 % que dominan la ventana de backtracking puede que
+  ni disparen el diodo en el módulo real. **El 12,7 % es cota superior.** La mejora candidata:
+  `elecLoss` con umbral físico de fila de células — necesita el despiece eléctrico del módulo
+  (células a lo largo de la cuerda), que es ficha técnica, no campo.
+
 - **2026-08-27 · FE DE ERRATAS: las cifras «netas» contaban la escalera DOS veces** — y el
   invariante fue quien lo cazó. Al acotar lo accionable con `energy-optimal` salió **−0,38 % por
   debajo de pairwise**, que es imposible por construcción (el veto exacto garantiza ≥). La única
