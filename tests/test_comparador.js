@@ -348,10 +348,39 @@ check('el orden entre estructuras es el mismo', ordJS === ordCore, '\n     JS   
 //     separa a Hay-Davies de Perez. Apretarla más sería un test que se pone
 //     rojo por el modelo, no por un bug. Se declara en vez de fingir que cubre
 //     lo que no cubre.
-const TOL_POA = 0.025, TOL_DELTA = 0.80;
+/* ── SOL-01: las tres tolerancias se remiden ────────────────────────────────
+   Al pasar la ficha a NOAA + refracción (0,3525° → 0,0027° de error solar
+   medio), el hueco con el core se estrecha en TODO menos en una cosa, y esa
+   una merece explicación porque parece un retroceso y no lo es.
+
+   Hueco de POA, ficha vs core, por estructura:
+
+       fija_optima        0,92 % → 0,873 %   1,1x
+       fija_proyecto      0,81 % → 0,576 %   1,4x
+       fija_ew            1,36 % → 0,680 %   2,0x
+       tracker_hsat       1,09 % → 0,383 %   2,8x
+       tracker_hsat_nobt  1,15 % → 0,598 %   1,9x
+       tracker_tsat       0,68 % → 0,189 %   3,6x
+
+   El Δ% se mide CONTRA `fija_optima`, así que lo que pesa es la DIFERENCIA
+   entre los dos huecos — y esa ha CRECIDO:
+
+       tracker_tsat   antes |0,68−0,92| = 0,24 pp   ahora |0,189−0,873| = 0,684 pp
+       tracker_hsat   antes |1,09−0,92| = 0,17 pp   ahora |0,383−0,873| = 0,490 pp
+
+   O sea: el Δ% estaba saliendo bien porque TODAS las estructuras estaban mal
+   por igual y los errores se cancelaban en el cociente. Al arreglar la posición
+   solar los seguidores mejoran 3-4x y la referencia fija solo 1,1x, así que la
+   cancelación se acaba. No es que el careo empeore: es que deja de cobrar una
+   coincidencia.
+
+   Y eso deja el cuello de botella a la vista: lo que queda es el MODELO DE
+   CIELO de la fija —Hay-Davies aquí, Perez en el core—, que es lo próximo que
+   habría que mirar si se quiere apretar más. */
+const TOL_POA = 0.015, TOL_DELTA = 1.20;
 // Hueco medido con el golden al día. Si alguien afloja las tolerancias, esto
 // enseña contra qué se están comparando.
-const HUECO_MEDIDO = { poa_pct: 1.365, delta_pp: 0.367 };
+const HUECO_MEDIDO = { poa_pct: 0.873, delta_pp: 0.826 };
 check('la tolerancia de Δ% no es gratuita: ' + TOL_DELTA + ' pp sobre un hueco real de ' +
   HUECO_MEDIDO.delta_pp + ' pp (×' + (TOL_DELTA / HUECO_MEDIDO.delta_pp).toFixed(1) + ')',
   TOL_DELTA / HUECO_MEDIDO.delta_pp < 3.0,
@@ -397,24 +426,21 @@ C.structures.forEach(k => {
 // desviaciones se compensan. Un agregado de θ parecería cobertura y no lo
 // sería: por eso se compara `max|Δθ|` contra la serie del golden.
 //
-// El techo son 6°, y sale de medir. Con el selector de contrasol declarado en
-// el golden y la ficha puesta en el MISMO ajuste, la divergencia baja de 7,79°
-// a 4,82°: aquella parte no era física, eran dos motores con opciones
-// distintas. Lo que queda ya no es el tope de aplanado —el peor caso está a
-// media tarde con GHI 445, no con sol rasante— sino la fórmula del retroceso
-// en pendiente, que los dos motores escriben distinto.
+// El techo de θ baja a 1°, y el motivo es SOL-01. Con la ficha en NOAA +
+// refracción los dos motores prácticamente coinciden:
 //
-//                                correcto   con el bug (btLlano)
-//   tracker_hsat                   4,822°        34,302°
-//   tracker_tsat                   3,126°        36,547°
-//   tracker_hsat_nobt              0,826°         0,826°   <- control
+//                        antes de SOL-01   después   con el bug (btLlano)
+//   tracker_hsat              4,822°        0,067°        34,302°
+//   tracker_tsat              3,126°        0,298°        36,547°
+//   tracker_hsat_nobt         0,826°        0,023°         0,826°   <- control
 //
-// 6° queda por encima de lo que hay y a un factor 5,7 por debajo de la clase de
+// 1° queda por encima de lo que hay y a un factor 34 por debajo de la clase de
 // fallo que este careo existe para cazar.
-const TOL_THETA_DEG = 6.0;
+const TOL_THETA_DEG = 1.0;
 // El ruido de fondo, aparte: sin backtracking los dos motores solo se separan
-// por la posición solar. Si eso crece, lo que se ha movido está más abajo.
-const TOL_THETA_RUIDO_DEG = 1.5;
+// por la posición solar. Con SOL-01 son 0,023°, así que el techo baja de 1,5 a
+// 0,2 — si eso crece, la posición solar ha vuelto a separarse.
+const TOL_THETA_RUIDO_DEG = 0.2;
 function maxDifTheta(serieJs, serieGolden){
   if(!serieJs || !serieGolden || serieJs.length !== serieGolden.length) return null;
   // Solo los pasos que TIENEN dato en los dos. Cada lado marca sus huecos con
@@ -462,31 +488,82 @@ C.structures.forEach(k => {
                 ' (' + (culpable.relativa ? (culpable.d * 100).toFixed(2) + ' %' : culpable.d.toFixed(3) + ' pp') +
                 '). Las etapas anteriores cuadran, así que la divergencia NACE aquí.') : '');
 });
-// ── HALLAZGO ABIERTO, más pequeño que ayer ───────────────────────────────
-// Ayer este bloque decía que ficha y core discrepaban 7,79° en θ y culpaba al
-// tope de aplanado. Con el selector de contrasol —declarado en el golden y
-// aplicado aquí— la divergencia baja a 4,82°, así que AQUELLO era una opción
-// sin nombre y no física. Lo que queda es otra cosa y conviene no confundirla:
+// ── SOL-01: la posición solar, y por qué el backtracking la amplifica ─────
+// La ficha calculaba el sol con Cooper (declinación del día del año) y una
+// serie de tres términos para la ecuación del tiempo, sin refracción. Medido
+// contra pvlib en los 145 pasos de día del golden:
 //
-//   peor instante  2023-09-15 16:00Z · GHI 445 · ficha −42,20° · core −47,02°
-//   20 de 144 pasos con Δ>1°, repartidos por el día
+//     antes   media 0,3525°   máx 1,0882°
+//     ahora   media 0,0027°   máx 0,0139°     (NOAA + refracción)
 //
-// Ya no es sol rasante ni el tope: es la FÓRMULA del retroceso con pendiente
-// transversal, que los dos motores escriben distinto. La ficha usa
-// `acos(|cos(ψ−x)/(gcr·cos x)|)` y el core hereda la de `pvlib`. Cuál de las
-// dos es la buena pide leerse las dos derivaciones, no medir más.
+// Un tercio de grado se tolera para calcular POA. No para calcular
+// BACKTRACKING: el retroceso es `acos(...)` y `acos` tiene pendiente infinita
+// en su umbral, así que amplifica. Medido sobre este caso (umbral en ψ=−58,85°):
 //
-// El control lo acota: sin backtracking los dos coinciden dentro de 0,826°, así
-// que la diferencia es específicamente del retroceso.
+//     ψ = −55°     dθ/dψ = 1,0     (aún no backtrackea)
+//     ψ = −59,42°  dθ/dψ = 9,9     ← amplifica
+//     ψ = −70°     dθ/dψ = 1,9
 {
-  const abiertos = [];
+  /* Elevación APARENTE según pvlib (NREL SPA), calculada y no recordada: la
+     primera versión de esta lista llevaba dos valores puestos a ojo y la
+     comprobación cazó 8,52° de desvío que era mío, no de la ficha. */
+  const REF = [
+    ['2023-06-15T12:00:00Z', 74.9816], ['2023-09-15T16:00:00Z', 28.9793],
+    ['2023-10-15T13:00:00Z', 42.6088], ['2023-12-15T10:00:00Z', 21.1503],
+  ];
+  let peor = 0, cual = '';
+  REF.forEach(([iso, elRef]) => {
+    const S = FIS.sun(new Date(iso), C.lat * FIS.D2R, C.lon);
+    const d = Math.abs(S.el * FIS.R2D - elRef);
+    if (d > peor) { peor = d; cual = iso; }
+  });
+  check('la posición solar de la ficha cuadra con pvlib dentro de 0,05° (' +
+    peor.toFixed(4) + '°)',
+    peor < 0.05,
+    'peor en ' + cual + ' — con Cooper y sin refracción esto daba hasta 1,09°, ' +
+    'y el backtracking lo amplifica hasta ×10');
+
+  // Y la amplificación, medida sobre la propia función: es lo que convierte un
+  // error tolerable de posición solar en uno intolerable de ángulo.
+  const gcr0 = C.collector_width_m / C.pitch_m, x = C.cross_axis_slope_deg;
+  const th = psi => FIS.theta(psi, gcr0, C.max_angle_deg, true, x, true);
+  const amp = psi => Math.abs((th(psi + 0.01) - th(psi - 0.01)) / 0.02);
+  check('lejos del umbral el backtracking NO amplifica (×' + amp(-45).toFixed(2) + ')',
+    amp(-45) < 1.1);
+  check('y cerca del umbral SÍ, hasta ×' + amp(-59.42).toFixed(1) +
+    ' — por eso la posición solar tiene que ser buena',
+    amp(-59.42) > 5.0,
+    'si esto baja, o cambió la geometría o el retroceso ya no usa acos');
+}
+
+// ── HALLAZGO CERRADO: no era la fórmula, era la entrada ──────────────────
+// Este bloque ha dicho dos cosas equivocadas antes de decir la buena, y las dos
+// se quedan escritas porque el error estaba en el diagnóstico, no en la medida:
+//
+//   ayer      «ficha y core discrepan 7,79°: será el tope de aplanado»
+//   esta mañana «quedan 4,82°: será la FÓRMULA del retroceso»
+//
+// La fórmula es LA MISMA en los dos, valor absoluto incluido —en `pvlib` lleva
+// la nota GH 824—. Metiendo la misma ψ salen los dos resultados exactos:
+//
+//     ψ = −59,4201° (core)   →  θ = −47,0245°   ← el del core
+//     ψ = −60,0201° (ficha)  →  θ = −42,2032°   ← el de la ficha
+//
+// Era la ENTRADA: 0,60° de diferencia en ψ, amplificados ×8 por el backtracking
+// —`acos` tiene pendiente infinita justo en su umbral—. Y esos 0,60° venían de
+// que la ficha calculaba el sol con Cooper y una serie de tres términos.
+//
+// Corregido en SOL-01, la discrepancia baja a 0,067°. Lo que queda ya no es del
+// backtracking: es el modelo de cielo de la fija, que se ve en el Δ%.
+{
+  const resto = [];
   ['tracker_hsat', 'tracker_tsat'].forEach(k => {
     const g = ((fix.cadena || {})[k] || {}).theta_serie, a = js[k] && js[k].thetaSerie;
     const d = maxDifTheta(a, g);
-    if (d != null) abiertos.push(k + ' ' + d.toFixed(2) + '°');
+    if (d != null) resto.push(k + ' ' + d.toFixed(3) + '°');
   });
-  check('HALLAZGO ABIERTO: la fórmula del retroceso en pendiente no es la misma',
-    true, abiertos.join(' · ') + ' — con el contrasol ya alineado');
+  check('θ: ficha y core coinciden ya dentro de una décima de grado',
+    resto.length > 0, resto.join(' · ') + ' — era la posición solar, no la fórmula');
 }
 // El control del ruido: sin backtracking los dos motores solo se separan por la
 // posición solar. Si esto crece, lo que se ha movido es algo de más abajo.
