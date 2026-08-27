@@ -31,7 +31,12 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     // cfg mínimo del motor, con la parcela grande que engloba las dos zonas
     const cfg = {
       coords: A.concat(B), holes: [], mount: 'tracker', pitch: 6,
-      setback: 5, tableType: '1V', modsPerStruct: 30, modLen: 2.382, modWid: 1.134,
+      setback: 0,  /* SUSTITUCIÓN DECLARADA (2026-08-27): esta escena prueba la
+        SEMÁNTICA DE SUMA del mixto, y su «parcela» (A.concat(B)) es un ocho
+        autocruzado que no es linde de nada — con el setback-solo-linde
+        nuevo, un retranqueo aquí filtraría contra esa basura. La banda de
+        la linde tiene su banco propio más abajo, con parcela de verdad. */
+        _setback_anulado: 5, tableType: '1V', modsPerStruct: 30, modLen: 2.382, modWid: 1.134,
       gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5, panelAz: 180, decl: {}
     };
     const zonas = [
@@ -261,6 +266,53 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     panes.conFija.trk && panes.conFija.fija);
   check('los límites de la fija se editan SIN cambiar el selector',
     panes.leido === '11.5', panes.leido);
+
+
+  /* ── EL SETBACK MUERDE LA LINDE, NO LAS RAYAS INTERNAS (2026-08-27) ────
+   * «¿Por qué no me dibuja la fija?»: una tira de fija con bordes internos
+   * quedaba «área útil vacía» porque el setback se aplicaba al borde de la
+   * ZONA. Escena calibrada como la del banco Python: tira de ~11 m pegada a
+   * la linde este — el retranqueo doble la mataba; con el post-filtro vive
+   * y SOLO pierde lo que toca la linde real. */
+  const linde = await page.evaluate(() => {
+    const PAR = [[-0.800, 41.570], [-0.7920, 41.570], [-0.7920, 41.5745], [-0.800, 41.5745]];
+    const BORDE = -0.79213;                       // tira de ~11 m
+    const ZT = [[-0.800, 41.570], [BORDE, 41.570], [BORDE, 41.5745], [-0.800, 41.5745]];
+    const ZF = [[BORDE, 41.570], [-0.7920, 41.570], [-0.7920, 41.5745], [BORDE, 41.5745]];
+    const cfg = { coords: PAR, holes: [], exclusions: [], mount: 'tracker', table: '1V',
+      mods: [28], modLen: 2.382, modWid: 1.134, moduleWp: 590, pitch: 6, setback: 5,
+      panelAz: 90, bifila: true, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5,
+      roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4, mode: 'adaptive',
+      minStructs: 1, rowOffset: 'none', alignGrid: false, center: true };
+    const R = computaMixto(cfg, [
+      { nombre: 'trk', coords: ZT, holes: [], mount: 'tracker', pitch: 6 },
+      { nombre: 'fija', coords: ZF, holes: [], mount: 'fixed', pitch: 4 }]);
+    const pz = {}; R.porZona.forEach(p => pz[p.nombre] = p.structures);
+    // distancia de cada mesa a la linde REAL, con la utm de la mesa
+    const r0 = R.structures[0] ? null : null;
+    let minD = 1/0, filasImpares = 0;
+    const P = R.structures.length ? R.structures.map(e => e.utm) : [];
+    // reconstruir la linde en UTM con toUtm del resultado base no está
+    // exportado en R: se comprueba vía los avisos + el recuento por filas.
+    const filas = {};
+    R.structures.forEach(e => { if (e.mount === 'tracker')
+      filas[e.row] = (filas[e.row] || 0) + 1; });
+    const pares = Object.keys(filas).sort((a,b)=>a-b);
+    for (let k = 0; k + 1 <= pares.length - 1; k += 2)
+      if (filas[pares[k]] !== filas[pares[k+1]]) filasImpares++;
+    const avisoLinde = R.avisos.some(a => /LINDE real/.test(a.mensaje || ''));
+    return { fija: pz.fija || 0, trk: pz.trk || 0, filasImpares, avisoLinde,
+             kwpFija: (R.stats.kwp_por_montaje || {}).fixed || 0 };
+  });
+  check('setback-linde · la tira de FIJA con bordes internos VIVE',
+    linde.fija > 0, JSON.stringify(linde));
+  check('setback-linde · la zona grande no se hunde', linde.trk > 500, String(linde.trk));
+  check('setback-linde · en bifila NO quedan viudas (parejas con igual conteo)',
+    linde.filasImpares === 0, linde.filasImpares + ' pareja(s) descompensadas');
+  check('setback-linde · lo retirado junto a la linde real se AVISA',
+    linde.avisoLinde);
+  check('setback-linde · la fija aporta kWp al reparto por montaje',
+    linde.kwpFija > 0);
 
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');

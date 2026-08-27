@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.2</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.3</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -3897,11 +3897,84 @@ function computaMixto(cfg, zonas){
   if(new Set(nombres).size!==nombres.length)
     throw new Error('nombres de zona repetidos: el desglose se indexa por nombre y quedaría machacado');
 
+  /* ── EL SETBACK ES DE LA LINDE, NO DE LAS RAYAS INTERNAS ──────────────
+     Reportado por el cliente (2026-08-27, «¿por qué no me dibuja la fija?»):
+     cada zona corría como parcela independiente y el retranqueo se comía
+     también sus fronteras internas — dos zonas de fija de 1,2 ha en tiras
+     salían «área útil vacía» con 5 m por todos los lados. Aquí no hay
+     recorte booleano de polígonos, así que el mecanismo es POST-FILTRO:
+     cada zona se coloca con setback 0 y después se descarta la mesa que
+     invada la banda de la linde REAL (cfg.coords, la parcela dibujada).
+     En bifila el descarte es POR PAREJA: tirar una mesa y dejar a su gemela
+     sería fabricar viudas — el «sin biela» de agosto. Espejo del mismo
+     arreglo en Python (compute_layout_mixto, parcela_lonlat). */
+  var _sbL=+cfg.setback||0, _parL=(cfg.coords&&cfg.coords.length>=3)?cfg.coords:null;
+  function _filtraLinde(r,z){
+    if(!_parL||_sbL<=0||!r.structures.length)return;
+    var P=_parL.map(function(c){return r.toUtm(c);});
+    function _pip(pt){var c=false;                       // dentro de la parcela
+      for(var u=0,v2=P.length-1;u<P.length;v2=u++){
+        if((P[u][1]>pt[1])!==(P[v2][1]>pt[1])&&
+           pt[0]<(P[v2][0]-P[u][0])*(pt[1]-P[u][1])/(P[v2][1]-P[u][1])+P[u][0])c=!c;}
+      return c;}
+    function _dSeg(pt,a,b){var dx=b[0]-a[0],dy=b[1]-a[1],L2=dx*dx+dy*dy||1e-12;
+      var t=Math.max(0,Math.min(1,((pt[0]-a[0])*dx+(pt[1]-a[1])*dy)/L2));
+      var px2=a[0]+t*dx-pt[0],py=a[1]+t*dy-pt[1];return Math.sqrt(px2*px2+py*py);}
+    function _dLinde(pt){var d=1/0;
+      for(var u=0,v2=P.length-1;u<P.length;v2=u++)d=Math.min(d,_dSeg(pt,P[v2],P[u]));
+      return d;}
+    function _invade(e){for(var k=0;k<e.utm.length;k++){
+        if(!_pip(e.utm[k])||_dLinde(e.utm[k])<_sbL)return true;}return false;}
+    /* La atomicidad por PAREJA es CINTURÓN DECLARADO: el mutante que la
+       rompe sobrevive al banco (medido) porque con linde rectilínea las dos
+       gemelas invaden la banda simétricamente y nunca queda viuda que
+       detectar — haría falta una linde diagonal con el paso justo. Se
+       mantiene porque el coste es nulo y la viuda es el fallo histórico
+       («sin biela»); quien la quite no rompe ninguna prueba, y eso es lo que
+       hay que saber antes de quitarla. */
+    var bif=(z.mount==='tracker')&&cfg.bifila;
+    var fuera={};                                        // índices a tirar
+    if(bif){
+      // pareja atómica: las filas van emparejadas (2k,2k+1) y alineadas por
+      // orden de cx dentro de la fila — si cae una, cae su gemela.
+      var porFila={};r.structures.forEach(function(e,i){(porFila[e.row]=porFila[e.row]||[]).push(i);});
+      Object.keys(porFila).forEach(function(f){porFila[f].sort(function(a,b){return r.structures[a].cx-r.structures[b].cx;});});
+      Object.keys(porFila).forEach(function(f){f=+f;if(f%2)return;var A=porFila[f]||[],B=porFila[f+1]||[];
+        for(var q=0;q<Math.max(A.length,B.length);q++){
+          var ia=A[q],ib=B[q];
+          var cae=(ia!=null&&_invade(r.structures[ia]))||(ib!=null&&_invade(r.structures[ib]));
+          if(cae){if(ia!=null)fuera[ia]=1;if(ib!=null)fuera[ib]=1;}}});
+    } else {
+      r.structures.forEach(function(e,i){if(_invade(e))fuera[i]=1;});
+    }
+    var n=Object.keys(fuera).length;
+    if(!n)return;
+    var st=r.stats, wpModulo=(st.modules>0)?(st.kWp/st.modules):0, pares=0;
+    var quedan=[];
+    r.structures.forEach(function(e,i){
+      if(!fuera[i]){quedan.push(e);return;}
+      r.descartadas.push(e);
+      st.structures--; st.strings--; st.modules-=e.mods;
+      st.kWp-=e.mods*wpModulo;
+      if(st.by_size&&st.by_size[e.mods]!=null){st.by_size[e.mods]--;if(!st.by_size[e.mods])delete st.by_size[e.mods];}
+      if(st.col_area_m2)st.col_area_m2-=(e.len||0)*(e.ap||0);
+    });
+    if(bif)pares=Math.round(n/2);
+    if(z.mount==='tracker'&&st.trackers)st.trackers-=bif?pares:n;
+    r.structures=quedan;
+    r.avisos.push({sev:'warn',codigo:'setback_linde',
+      mensaje:n+' mesa(s) retiradas por la banda de '+_sbL+' m de la LINDE real'+
+              (bif?' ('+pares+' pareja(s) completas: sin viudas)':'')+
+              ' — las fronteras internas entre zonas ya no comen setback.'});
+  }
   var partes=zonas.map(function(z){
-    return LAY.compute(Object.assign({},cfg,{
+    var r=LAY.compute(Object.assign({},cfg,{
       coords:z.coords, holes:z.holes||[],
-      mount:z.mount, pitch:z.pitch!=null?z.pitch:cfg.pitch
+      mount:z.mount, pitch:z.pitch!=null?z.pitch:cfg.pitch,
+      setback:(_parL&&_sbL>0)?0:cfg.setback
     }));
+    _filtraLinde(r,z);
+    return r;
   });
   var base=partes[0];
   var R={structures:[],descartadas:[],roads:[],rows:[],sizes:base.sizes,inner_band:[],
