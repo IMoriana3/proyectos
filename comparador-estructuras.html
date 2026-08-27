@@ -552,19 +552,92 @@ var FIS={
      familia trae SU pitch y su mesa, como §03.F y §03.T0, y de ahí sale su GCR. */
 };
 
-FIS.decl=function(N){return 23.45*Math.sin(2*Math.PI*(284+N)/365)*FIS.D2R;};
-FIS.eot=function(N){var B=2*Math.PI/365*(N-81);return 9.87*Math.sin(2*B)-7.53*Math.cos(B)-1.5*Math.sin(B);};
+/* ── POSICIÓN SOLAR ─────────────────────────────────────────────────────────
+   SOL-01. Antes esto eran dos aproximaciones de manual, las dos con el DÍA DEL
+   AÑO como única entrada:
+
+       decl = 23,45·sin(2π(284+N)/365)              (Cooper)
+       eot  = 9,87·sin2B − 7,53·cosB − 1,5·sinB     (serie de tres términos)
+
+   Medido contra `pvlib` en los 145 pasos de día del golden, elevación solar:
+
+       vs la aparente   media 0,3525°   máx 1,0882°
+       vs la real       media 0,3049°   máx 1,0699°
+       de eso, refracción sola: media 0,0554°, máx 0,5190°
+
+   O sea: ~0,30° del algoritmo y ~0,06° de no modelar la refracción. Un tercio
+   de grado es más de la mitad del diámetro aparente del sol, y para calcular
+   POA se tolera — pero esta ficha también calcula BACKTRACKING, y ahí no.
+
+   POR QUÉ IMPORTA TANTO: el backtracking es un AMPLIFICADOR de este error. El
+   retroceso vale `acos(|cos(ψ−x)/(gcr·cos x)|)`, y `acos` tiene pendiente
+   infinita en 1 — justo el umbral en el que el backtracking arranca. Medido
+   sobre este caso (gcr 0,397, pendiente 8°, umbral en ψ = −58,85°):
+
+       ψ = −55°      dθ/dψ = 1,0     (aún no backtrackea)
+       ψ = −59,42°   dθ/dψ = 9,9     ← AMPLIFICA
+       ψ = −60,02°   dθ/dψ = 6,7
+       ψ = −70°      dθ/dψ = 1,9
+
+   Así es como 0,60° de error en ψ se convirtieron en 4,82° de discrepancia con
+   el core, que es lo que el careo llevaba anotado como hallazgo abierto — y
+   que NO era la fórmula del retroceso: es la misma en los dos, valor absoluto
+   incluido. Era la entrada.
+
+   Ahora se usa el algoritmo NOAA (Michalsky), que es el que `pvlib` sirve como
+   `ephemeris`, con la corrección de refracción estándar. Precisión ~0,01°:
+   treinta veces mejor, y por debajo de lo que el amplificador puede convertir
+   en un problema. */
+FIS.jd=function(date){ return date.getTime()/864e5 + 2440587.5; };
+/* Declinación y ecuación del tiempo por NOAA. Se devuelven juntas porque
+   comparten media docena de términos: separarlas obligaría a calcularlos dos
+   veces o a que una llamara a la otra a escondidas. */
+FIS.solNOAA=function(date){
+  var T=(FIS.jd(date)-2451545)/36525;
+  var L0=(280.46646+T*(36000.76983+0.0003032*T))%360; if(L0<0)L0+=360;
+  var M=357.52911+T*(35999.05029-0.0001537*T);
+  var e=0.016708634-T*(0.000042037+0.0000001267*T);
+  var Mr=M*FIS.D2R;
+  var C=Math.sin(Mr)*(1.914602-T*(0.004817+0.000014*T))
+       +Math.sin(2*Mr)*(0.019993-0.000101*T)+Math.sin(3*Mr)*0.000289;
+  var om=125.04-1934.136*T;
+  var lam=(L0+C-0.00569-0.00478*Math.sin(om*FIS.D2R))*FIS.D2R;
+  var eps0=23+(26+((21.448-T*(46.815+T*(0.00059-T*0.001813))))/60)/60;
+  var eps=(eps0+0.00256*Math.cos(om*FIS.D2R))*FIS.D2R;
+  var decl=Math.asin(Math.sin(eps)*Math.sin(lam));
+  var y=Math.tan(eps/2)*Math.tan(eps/2), L0r=L0*FIS.D2R;
+  var eot=4*FIS.R2D*(y*Math.sin(2*L0r)-2*e*Math.sin(Mr)
+        +4*e*y*Math.sin(Mr)*Math.cos(2*L0r)
+        -0.5*y*y*Math.sin(4*L0r)-1.25*e*e*Math.sin(2*Mr));
+  return {decl:decl, eot:eot};
+};
+/* Refracción atmosférica (NOAA), en grados. El seguidor apunta al sol que SE
+   VE, no al geométrico, así que esto no es un refinamiento: es la magnitud que
+   el lazo persigue. Vale medio grado en el horizonte, que es justo donde el
+   backtracking está más cerca de su umbral. */
+FIS.refrac=function(elDeg){
+  if(elDeg>85)return 0;
+  var t=Math.tan(elDeg*FIS.D2R), r;
+  if(elDeg>5) r=58.1/t-0.07/(t*t*t)+0.000086/Math.pow(t,5);
+  else if(elDeg>-0.575) r=1735+elDeg*(-518.2+elDeg*(103.4+elDeg*(-12.79+elDeg*0.711)));
+  else r=-20.772/t;
+  return r/3600;
+};
 /* Elevación (rad) y azimut desde el SUR con el este NEGATIVO (rad).
    Puerto literal del de sim-viento.html: misma casa, mismo sol. */
 FIS.sun=function(date,latR,lon){
-  var N=Math.floor((date-Date.UTC(date.getUTCFullYear(),0,0))/864e5);
   var h=date.getUTCHours()+date.getUTCMinutes()/60+date.getUTCSeconds()/3600;
-  var hs=h+lon/15+FIS.eot(N)/60, D=FIS.decl(N), w=(hs-12)*15*FIS.D2R;
+  var S=FIS.solNOAA(date);
+  var hs=h+lon/15+S.eot/60, D=S.decl, w=(hs-12)*15*FIS.D2R;
   var sinEl=Math.sin(latR)*Math.sin(D)+Math.cos(latR)*Math.cos(D)*Math.cos(w);
   var el=Math.asin(Math.max(-1,Math.min(1,sinEl)));
+  /* El azimut se calcula con la elevación GEOMÉTRICA —la refracción sube el
+     sol, no lo gira— y solo después se corrige la elevación. Hacerlo al revés
+     mete el error de refracción dentro del azimut, que es de donde sale ψ. */
+  var elAparente=(el*FIS.R2D+FIS.refrac(el*FIS.R2D))*FIS.D2R;
   var caz=(sinEl*Math.sin(latR)-Math.sin(D))/Math.max(1e-6,Math.cos(el)*Math.cos(latR));
   var az=Math.acos(Math.max(-1,Math.min(1,caz))); if(w<0)az=-az;
-  return {el:el, az:az};
+  return {el:elAparente, az:az};
 };
 
 /* ── Ángulo solar PROYECTADO sobre el plano ⊥ al eje (grados, desde el cenit) ──
