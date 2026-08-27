@@ -388,6 +388,52 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-27 · «A por ellos»: los tres pendientes, cerrados en una tarde** — San José evaluable,
+  la anatomía completa del 14,56 % de Ayora, y el protocolo de campo. Tres investigaciones que
+  merecen quedar contadas enteras, porque en las tres el camino importó tanto como el destino.
+
+  **1 · San José: el 36,6 m era OTRA REFERENCIA VERTICAL, y no hizo falta topógrafo.** La pista
+  decisiva estaba en el asbuilt crudo: **8 seguidores cuyas dos filas del mismo tubo difieren
+  ~36,6 m** — seis entre 36,59 y 36,70 m, en puntas del parque separadas kilómetros, todas las
+  desviaciones positivas. Una constante repetida en sitios sin relación no es terreno ni error de
+  campo puntual: es una fila procesada con otra referencia vertical (36,6 m es además la ondulación
+  del geoide en Arequipa: huele a cota elipsoidal WGS84 colada entre ortométricas). Antes se probó y
+  descartó la hipótesis del cruce de asignación: solo 3 de 16 casaban con cotas de otras líneas, pero
+  el trío de x=360/373/385 en cadena llevó al asbuilt, y ahí estaba la firma con los ids del
+  proveedor (`TR-06_1-005-E` y compañía), listos para reclamar. **La corrección vive en
+  `cotas_asbuilt.py` y es declarada, nunca silenciosa**: bifila con filas a >3 m → se descarta la que
+  se aparta de los vecinos y se duplica la hermana (inc=1); fila suelta con el mismo síntoma → el
+  seguidor queda SIN MEDIR, porque mejor un hueco declarado que una cota con otra referencia
+  duplicada dos veces. Y el vano ancho dejó de ser rechazo — otro umbral afinado equivocándose:
+  `pairwise` usa el vano real por pareja, así que un par al doble de vano simula interacción casi
+  nula, que es la verdad si en medio hay un vial. **Resultado: APTA CON RESERVAS**, y el primer
+  número honesto: **B +0,17 % · C 3D +0,20 %** (POA, 4 días). Saneada, San José es mansa (desnivel
+  mediana 1,29°): el «máx 64°» era el dato con otra referencia. Los dos tests que exigían que San
+  José FALLARA cumplieron su función —eran el recordatorio de revisar el informe al corregir— y se
+  les dio la vuelta: ahora vigilan que la corrección no se deshaga.
+
+  **2 · Ayora: la anatomía del 14,56 %, con CUATRO hipótesis muertas y una que cuadra al decimal.**
+  Muertas, cada una con su test: pendientes sin configurar (B no lo recupera); emisores al tope
+  (0,09 %); residuo de tangencia del escalón (las sombras son reales: mediana 7-8 % de cuerda en 98
+  de 107 filas); y **la torsión axial como culpable — al revés: es PROTECTORA** (mesas rectas
+  sombrean 16-30 % contra 5-8 % de las reales, porque dos vecinas que siguen el mismo terreno local
+  mantienen su Δz pequeño; de paso, la primera versión del test rectificaba anclando la recta en s=0
+  y desplazaba mesas metros — el ancla va en el centro de masas de los tramos). **El mecanismo:** la
+  variación del desnivel local A LO LARGO del solape — mediana p5-p95 de Δz(n) dentro de cada
+  pareja: **0,27 m** — sobre una mesa RÍGIDA con un solo θ. Sombra esperada ≈ 0,27/(2·2,382·cos 45°)
+  = **8,0 % de cuerda**: lo medido. La anatomía final: **6,73 % receptor en tope (diseño) · 0,09 %
+  emisor en tope · 0,01 % estructura · 7,74 % mesa rígida sobre terreno que ondula** — irreducible
+  por consigna de un solo θ: la mesa no puede doblarse. La única palanca es retraerse de más donde
+  la escalera de diodos lo pague (lo que arbitra `energy-optimal`, cuya cota anual quedó corriendo).
+
+  **3 · El protocolo de la prueba de un seguidor** (`tools/protocolo_prueba_pendiente.mjs`) — un
+  protocolo que CALCULA, no un documento: elige el seguidor de más pendiente transversal de la NCU
+  con volcado de referencia (TCU 26 de NCU12, oeste −6,91 % / este +7,82 %), imprime los cuatro
+  registros exactos, predice la firma horaria (separación de **hasta 21,3°** solo en las ventanas de
+  backtracking — 213 veces la resolución del registro) y deja escrita la vuelta atrás (cuatro
+  ceros; riesgo mecánico nulo: los topes duros no se tocan). Cierra la última suposición sobre el
+  firmware: qué hace con 41098-41104 cuando no están a cero. QA 103.
+
 - **2026-08-27 · v1.39.3–v1.39.5 · la tarde en que «no va nada fluido», y las TRES causas** — con una
   presentación delante y la página inusable en el navegador del usuario mientras aquí todo estaba en
   verde. Tres arreglos encadenados, y una lección de diagnóstico que vale más que los tres.
