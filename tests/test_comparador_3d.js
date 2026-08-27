@@ -587,6 +587,15 @@ const SONDA = `(() => {
       sigue[caso].filter(b => /^tracker/.test(b.k))
                  .every(b => b.vuelo.every(v => Math.abs(v) < 0.02)),
       JSON.stringify(sigue[caso].map(b => b.k + ':' + b.vuelo.join('/'))));
+    /* Y las DOS AGUAS igual que el seguidor: su cumbrera corre norte-sur, así
+       que una cumbrera de 65 m no se monta horizontal sobre la ladera — se
+       replantea sobre ella. Es la diferencia con la monoinclinada, cuyas filas
+       corren este-oeste y cuyo tilt ES esa dirección: allí compensa la hinca. */
+    check('  y las DOS AGUAS también: su cumbrera se replantea sobre el terreno',
+      sigue[caso].filter(b => b.k === 'fija_ew')
+                 .every(b => b.vuelo.every(v => Math.abs(v) < 0.02)),
+      JSON.stringify(sigue[caso].filter(b => b.k === 'fija_ew')
+                                .map(b => b.k + ':' + b.vuelo.join('/'))));
   });
 
   // ── UNA FIJA NO SIGUE EL TERRENO: LO COMPENSAN LAS HINCAS ──
@@ -641,6 +650,44 @@ const SONDA = `(() => {
   check('y cuando la hinca saldría NEGATIVA se declara: no se monta de una pieza',
     fijaPend.eo.nocabe === true && fijaPend.llano.nocabe === false,
     JSON.stringify([fijaPend.llano.nocabe, fijaPend.ns.nocabe, fijaPend.eo.nocabe]));
+  // ── LAS DOS AGUAS SOBRE LA LADERA: LO QUE CAMBIA Y LO QUE NO ──
+  // Inclinar la cumbrera con el terreno NO puede cambiar el tilt de los paños:
+  // siguen a ±tiltEO sobre ella, igual que inclinar el eje de un seguidor no
+  // cambia su ángulo de seguimiento. Si cambiara, la escena estaría enseñando
+  // una estructura con otro tilt del que calcula la tabla.
+  const ew = await p.evaluate(() => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
+    document.querySelectorAll('.st').forEach(c => { c.checked = c.value === 'fija_ew'; });
+    const mide = (pend, az) => {
+      s('pend', pend); s('pendAz', az);
+      const B = BLOQUES[0], u = B.filas[0]; u.updateWorldMatrix(true, true);
+      // el ángulo ENTRE los dos paños no depende del marco: es 2·tilt siempre
+      const n = u.spinPair.map(g => new THREE.Vector3(0, 1, 0)
+        .applyQuaternion(g.getWorldQuaternion(new THREE.Quaternion())).normalize());
+      return { entre: +(Math.acos(Math.max(-1, Math.min(1, n[0].dot(n[1])))) * 180 / Math.PI).toFixed(2),
+               hincas: [+B.hincas.corta.toFixed(2), +B.hincas.larga.toFixed(2)],
+               cumbrera: +B.largoPend.toFixed(1) };
+    };
+    const r = { llano: mide(0, 180), ns: mide(12, 180), eo: mide(12, 90) };
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
+    s('pend', 0);
+    return r;
+  });
+  const tiltEW = await p.evaluate(() => +document.getElementById('tiltEW').value);
+  ['llano', 'ns', 'eo'].forEach(caso => {
+    check('las dos aguas conservan su tilt con la caída ' + caso + ': ' +
+      ew[caso].entre + '° entre paños = 2 × ' + tiltEW + '°',
+      Math.abs(ew[caso].entre - 2 * tiltEW) < 0.1, JSON.stringify(ew[caso]));
+  });
+  check('con la caída N-S la cumbrera se inclina con el terreno (' +
+    ew.ns.cumbrera + '°) y las hincas ni se enteran: todas iguales',
+    Math.abs(ew.ns.cumbrera) > 11 &&
+    Math.abs(ew.ns.hincas[1] - ew.ns.hincas[0]) < 0.01, JSON.stringify(ew.ns));
+  check('y con la caída ⊥ a esas filas (E-O) no hay cumbrera que inclinar: es la ⊥',
+    Math.abs(ew.eo.cumbrera) < 0.1, JSON.stringify(ew.eo));
+
   // ── EL SEGUIDOR QUEBRADO: DOS MESAS, UNA RÓTULA ──
   // El terreno con caballón a lo largo del eje es justo el caso que compra un
   // quebrado. Lo que hay que ver en el 3D es la diferencia FÍSICA: el quebrado

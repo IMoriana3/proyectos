@@ -1026,7 +1026,17 @@ FIS.ejesMitades=function(cfg,spec){
   return [ax+q/2, ax-q/2];              // ecuador y polo, cada una la suya
 };
 FIS.ejeTilt=function(cfg,spec){
-  if(!spec||spec.fam!=='tracker')return 0;
+  /* Las DOS AGUAS también. Sus filas corren norte-sur igual que el eje de un
+     seguidor, y su cumbrera es una línea recta apoyada en el terreno: sobre una
+     caída norte-sur no queda horizontal, se inclina con ella. Y eso NO cambia
+     su tilt —los dos paños siguen a ±tiltEO sobre la cumbrera—, exactamente
+     igual que inclinar el eje de un seguidor no cambia su ángulo de
+     seguimiento. Geométricamente son el mismo marco girado: por eso comparten
+     esta función y la misma proyección.
+     La monoinclinada no entra: sus filas corren este-oeste y su tilt ES la
+     dirección norte-sur, así que ahí la pendiente se compensa con la hinca —
+     que es lo que se pidió y lo que hace el campo. */
+  if(!spec||(spec.fam!=='tracker'&&spec.fam!=='fija_ew'))return 0;
   /* TODOS los seguidores, no solo el TSAT. Un eje norte-sur sobre un terreno
      que cae norte-sur NO es horizontal: sigue el terreno, y entonces es un eje
      inclinado — se llame como se llame en el catálogo. Mientras esto solo se
@@ -1036,7 +1046,7 @@ FIS.ejeTilt=function(cfg,spec){
      kWh/m² de diferencia sin que la tabla se moviera.
      Sin azimut declarado se respeta lo recibido, que es el camino del careo: el
      core corrió el HSAT con axis_tilt 0 y el TSAT con 10. */
-  if(cfg.pendAz==null)return spec.tsat?(cfg.axTilt||0):0;
+  if(cfg.pendAz==null)return spec.tsat?(cfg.axTilt||0):0;   // camino del careo
   /* La componente A LO LARGO DEL EJE, con el signo de bajar hacia el ecuador:
      positivo cuando el extremo que mira al ecuador es el más bajo. */
   var q=FIS.pendComp(cfg.pend,cfg.pendAz,FIS.azEje(cfg)+90);
@@ -1206,7 +1216,10 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
       });
       P0=planos[0].P;
     }else if(spec.fam==='fija_ew'){
-      P0=FIS.psTracker(S.el,S.az,cfg);                // aguas al este y al oeste
+      /* Aguas al este y al oeste. Con la cumbrera inclinada por el terreno el
+         marco de proyección es el mismo que el de un eje inclinado: si no, se
+         dibujaría una cumbrera en cuesta y se calcularía otra horizontal. */
+      P0=axT?FIS.psTSAT(S.el,S.az,axT,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
       planos=[{th:tilt,P:P0,ax:axT},{th:-tilt,P:P0,ax:axT}];
     }else{
       P0=FIS.psFija(S.el,S.az,cfg.lat,cfg);
@@ -3625,17 +3638,30 @@ function construyeMundo(){
         uno=new THREE.Group();
         /* Su +X local mira al −Z del bloque tras el giro de 90°, así que la
            caída a lo largo de la mesa es la de Z cambiada de signo. */
-        var a=mesaFija3D(mats,G.largoFila,G.altoColector/2,-gLocZ),
-            b=mesaFija3D(mats,G.largoFila,G.altoColector/2,-gLocZ);
+        /* Sin pendiente A LO LARGO en las hincas: la fila entera se apoya en
+           el terreno (abajo), así que todas miden lo mismo — como en el
+           seguidor. Antes se quedaba horizontal y quien compensaba era la
+           hinca, que es lo que hay que hacer en la monoinclinada y NO aquí. */
+        var a=mesaFija3D(mats,G.largoFila,G.altoColector/2,0),
+            b=mesaFija3D(mats,G.largoFila,G.altoColector/2,0);
         a.position.z=-G.altoColector/4; b.position.z=G.altoColector/4;
         uno.add(a,b); uno.spinPair=[a.spin,b.spin]; uno.position.x=d;
+        /* Las hincas viven en cada PAÑO, así que la fila no publicaba ninguna y
+           la lectura de las dos aguas no podía decir su rango — la única
+           familia muda de las tres. Se agregan las dos. */
+        uno.hincas={corta:Math.min(a.hincas.corta,b.hincas.corta),
+                    larga:Math.max(a.hincas.larga,b.hincas.larga),
+                    nocabe:!!(a.hincas.nocabe||b.hincas.nocabe)};
         uno.position.y=cotaFila(d,0);
-        /* Euler XYZ: la Y gira la mesa a lo largo de N-S y la X, que se aplica
-           después, la inclina sobre el eje del MUNDO — que es el que corre
-           este-oeste, ⊥ a esas filas. */
-        /* Sin escorar: una fija se monta al tilt de proyecto y la pendiente a
-           lo largo de sus filas la compensan las hincas. */
-        uno.rotation.set(0,Math.PI/2,0);
+        /* IGUAL QUE EL SEGUIDOR: la fila se inclina lo que se inclina el
+           terreno en su dirección larga. Una cumbrera de 65 m no se monta
+           horizontal sobre una ladera que cae norte-sur; se replantea sobre
+           ella. Lo que NO cambia es el tilt de los dos paños: siguen a ±tiltEO
+           sobre la cumbrera, y la física lo calcula con ese mismo marco.
+           Euler XYZ: la Y gira la mesa a lo largo de N-S y la X, que se aplica
+           después, la inclina sobre el eje del BLOQUE — el que corre
+           este-oeste, ⊥ a esas filas, que es el mismo que usa el seguidor. */
+        uno.rotation.set(rollX,Math.PI/2,0);
       }else{
         uno=mesaFija3D(mats,G.largoFila,G.altoColector,gLocX); uno.position.z=d;  // filas al SUR
         uno.position.y=cotaFila(0,d);
@@ -3856,6 +3882,10 @@ function actualiza3D(){
              tendría que llevar el «eje inclinado °» de un TSAT. */
           ((spec.fam==='tracker'&&Math.abs(B.largoPend)>1)
             ?' · eje '+fmt(Math.abs(B.largoPend),1)+'° con el terreno':'')+
+          /* Y en unas dos aguas, lo mismo con su CUMBRERA: corre norte-sur como
+             el eje de un seguidor y se inclina con el terreno igual que él. */
+          ((spec.fam==='fija_ew'&&Math.abs(B.largoPend)>1)
+            ?' · cumbrera '+fmt(Math.abs(B.largoPend),1)+'° con el terreno':'')+
           /* Y en una fija, lo que la pendiente a lo largo de sus filas CUESTA:
              la mesa se monta al tilt de proyecto, así que quien compensa es la
              hinca. Ver el rango es ver si la estructura existe. */
