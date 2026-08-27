@@ -450,7 +450,12 @@ function maxDifTheta(serieJs, serieGolden){
 }
 const ETAPAS_JS = [
   ['poa_ideal_sin_sombra', a => a.ideal, b => b.poa_ideal_kwh_m2, 'kWh/m²', TOL_POA, true],
-  ['sombra', a => a.sombra, b => b.sombra_pct, 'pp', 0.8, false],
+  /* 0,8 pp era el listón de cuando la ficha daba CERO de sombra en los
+     seguidores y el core 0,19: cabía el fallo entero por debajo. Corregido
+     SOMBRA-01 la desviación máxima medida sobre las seis estructuras es
+     0,035 pp (`tracker_hsat_nobt`), así que 0,10 pp deja ×3 de holgura y el
+     listón vuelve a poder ponerse rojo. */
+  ['sombra', a => a.sombra, b => b.sombra_pct, 'pp', 0.10, false],
   ['poa_neta', a => a.neta, b => b.poa_kwh_m2, 'kWh/m²', TOL_POA, true],
 ];
 C.structures.forEach(k => {
@@ -775,9 +780,10 @@ check('con pendiente (' + C.cross_axis_slope_deg + '°) el backtracking SIGUE qu
 /* 1,0 pp absoluto sobre una sombra de ~4 % era un 25 % relativo de aire: la
    deriva que se coló medía 0,44 pp. Lo medido hoy contra el core al día es
    0,07 pp. */
-check('y esa sombra —la que quede— es la que dice el core (' + core.tracker_hsat.sombra_pct.toFixed(2) + ' %)',
-  Math.abs(js.tracker_hsat.sombra - core.tracker_hsat.sombra_pct) < 0.5,
-  js.tracker_hsat.sombra.toFixed(2) + ' vs ' + core.tracker_hsat.sombra_pct.toFixed(2));
+check('y esa sombra —la que quede— es la que dice el core (' + js.tracker_hsat.sombra.toFixed(3) +
+  ' vs ' + core.tracker_hsat.sombra_pct.toFixed(3) + ' %)',
+  Math.abs(js.tracker_hsat.sombra - core.tracker_hsat.sombra_pct) < 0.05,
+  js.tracker_hsat.sombra.toFixed(3) + ' vs ' + core.tracker_hsat.sombra_pct.toFixed(3));
 // y en LLANO sí se va a cero, que es la razón de ser del backtracking
 const llano = FIS.compara(['tracker_hsat', 'tracker_hsat_nobt'], M, { ...cfg, pend: 0 });
 const llanoBt = llano.filas.find(f => f.key === 'tracker_hsat');
@@ -805,6 +811,90 @@ check('el tilt óptimo es plausible a ' + C.lat.toFixed(0) + '°N (' + js.fija_o
   js.fija_optima.tilt > 20 && js.fija_optima.tilt < 45);
 check('el óptimo bate al tilt de proyecto', js.fija_optima.neta >= js.fija_proyecto.neta);
 check('la fija transpone por encima del GHI', js.fija_proyecto.transp > 5);
+
+// ── 6a-bis) EL HORIZONTE DEL PROPIO CAMPO (SOMBRA-01) ──
+// `FIS.shade` mira SOLO la fila de al lado: proyecta las dos cuerdas sobre la
+// perpendicular al rayo y mide el solape. En llano eso es exacto —coincide con
+// `pvlib.shading.shaded_fraction1d` hasta 1,6e-15 en todo el barrido— pero en
+// CUESTA se queda corto, y no por poco: con el sol rasante por el lado de
+// ARRIBA el rayo se escapa POR DEBAJO de la fila de arriba… y se mete en la
+// ladera. El modelo de dos filas no tiene ladera, así que declara «no hay
+// sombra» donde el campo está entero a la sombra.
+//
+// El umbral es geométrico y no tiene ajuste: sobre un terreno de pendiente p,
+// un rayo sube cot|ψ| por unidad de avance horizontal y el terreno sube tan p,
+// así que el rayo escapa mientras cot|ψ| > tan p, o sea |ψ| < 90° − p. Pasado
+// ese punto el campo tiene su propio ocaso aunque el sol siga alto: en el
+// golden hay pasos a 7,55° de elevación y 284 W/m² de DNI ya por debajo de él.
+//
+// El oráculo de este bloque NO es `shaded_fraction1d` ni `FIS.shade`: es un
+// trazador de rayos escrito aquí, con el suelo como obstáculo, que es lo único
+// que arbitró entre las dos (una decía 0,23 y la otra 1,00 en el mismo paso).
+// Se le pasa la altura del eje para que se vea que el resultado NO depende de
+// ella — la ladera tapa igual a 1,0 m que a 2,5 m.
+const rayos = (psDeg, thDeg, pitch, cw, pendDeg, h, nFilas, N) => {
+  const D = Math.PI / 180, P = psDeg * D, T = thDeg * D, hw = cw / 2;
+  const tp = Math.tan(pendDeg * D);
+  const dx = Math.cos(T), dz = -Math.sin(T);
+  const sx = Math.sin(P), sz = Math.cos(P);
+  let tapados = 0;
+  for (let i = 0; i < N; i++) {
+    const u = -hw + (2 * hw * i) / (N - 1);
+    const px = u * dx, pz = h + u * dz;
+    let bloqueado = false;
+    for (let k = -nFilas; k <= nFilas && !bloqueado; k++) {
+      if (k === 0) continue;
+      const ax = k * pitch - hw * dx, az = -k * pitch * tp + h - hw * dz;
+      const ex = 2 * hw * dx, ez = 2 * hw * dz;
+      const det = sx * (-ez) - sz * (-ex);
+      if (Math.abs(det) < 1e-14) continue;
+      const rx = ax - px, rz = az - pz;
+      const t = (rx * (-ez) - rz * (-ex)) / det;
+      const v = (sx * rz - sz * rx) / det;
+      if (t > 1e-9 && v >= 0 && v <= 1) bloqueado = true;
+    }
+    if (!bloqueado) {                       // el terreno: z = −x·tan(p)
+      const den = sz + sx * tp;
+      if (Math.abs(den) > 1e-14 && -(pz + px * tp) / den > 1e-9) bloqueado = true;
+    }
+    if (bloqueado) tapados++;
+  }
+  return tapados / N;
+};
+const PIT = 6.00, CW = 2.382, PEND = 8.0;
+check('el umbral del horizonte del campo es 90° − pendiente (' + (90 - PEND).toFixed(1) + '°)',
+  Math.abs((90 - PEND) - 82.0) < 1e-9);
+// Cuatro pasos REALES del golden (los de `tracker_hsat` que discrepaban) y tres
+// de control por debajo del umbral, donde nada debe moverse.
+[[-86.1, 27.7], [-85.8, 28.4], [-88.5, 23.4], [-82.1, 36.3],
+ [-81.5, 37.0], [-79.0, 40.0], [-70.0, -40.0], [-60.0, 50.0],
+ [+86.1, -27.7], [+70.0, 40.0]].forEach(([ps, th]) => {
+  const ref = rayos(ps, th, PIT, CW, PEND, 1.5, 40, 4001);
+  const got = FIS.shade(ps, th, PIT, CW, PEND);
+  check('sombra en ψ=' + ps.toFixed(1) + '° θ=' + th.toFixed(1) + '°: ' +
+    got.toFixed(4) + ' (rayos con suelo ' + ref.toFixed(4) + ')',
+    Math.abs(got - ref) < 0.01, got.toFixed(4) + ' vs ' + ref.toFixed(4));
+});
+// y la ladera tapa igual sea cual sea la altura del eje: si el resultado
+// dependiera de `h`, el umbral no sería geométrico y este bloque no valdría.
+[1.0, 1.5, 2.5].forEach(h => {
+  check('más allá del horizonte la sombra es TOTAL con el eje a ' + h.toFixed(1) + ' m',
+    Math.abs(rayos(-86.1, 27.7, PIT, CW, PEND, h, 40, 2001) - 1) < 1e-9);
+});
+// En LLANO no hay horizonte de campo que valga (90° − 0 = 90°, y el sol nunca
+// llega): el guard tiene que ser INERTE, y esta es la prueba de que lo es.
+[[-88.0, 30.0], [-70.0, -40.0], [+55.0, 20.0], [-30.0, -30.0]].forEach(([ps, th]) => {
+  const ref = rayos(ps, th, PIT, CW, 0, 1.5, 40, 4001);
+  check('en LLANO ψ=' + ps.toFixed(1) + '° θ=' + th.toFixed(1) + '° sigue exacta (' +
+    FIS.shade(ps, th, PIT, CW, 0).toFixed(4) + ')',
+    Math.abs(FIS.shade(ps, th, PIT, CW, 0) - ref) < 0.01,
+    FIS.shade(ps, th, PIT, CW, 0).toFixed(4) + ' vs ' + ref.toFixed(4));
+});
+// MUTANTE del guard nuevo: si el umbral se pusiera en 90° a secas —olvidando la
+// pendiente, que es justo el fallo que se corrige— los pasos del golden de
+// arriba volverían a dar «casi nada» en vez de sombra total.
+check('MUTANTE: con el umbral en 90° a secas (sin pendiente) la sombra se cae',
+  Math.cos((-86.1 - 0) * Math.PI / 180) > 0 && Math.cos((-86.1 - PEND) * Math.PI / 180) <= 0);
 
 // ── 6b) EL ÓPTIMO NETO CONTRA EL DE TRANSPOSICIÓN ──
 // El aviso decía «queda 1-3° por encima» como número FIJO. Eso solo vale a GCR
@@ -1112,13 +1202,14 @@ const sinPend = FIS.compara(['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt
   { ...cfg, pend: 0 });
 const porClave = r => Object.fromEntries(r.filas.map(f => [f.key, f]));
 const CP = porClave(conPend), SP = porClave(sinPend);
-/* `tracker_hsat` sale de esta lista, y el motivo vale la pena: con el contrasol
-   PERMITIDO —que es como corre el golden— el backtracking absorbe la pendiente
-   ENTERA y la sombra se queda en cero. O sea que «la pendiente mueve la sombra»
-   deja de ser cierto para el seguidor backtrackeado, no porque el parámetro no
-   llegue, sino porque el retroceso lo neutraliza. Se comprueban las dos caras
-   justo debajo en vez de quitar la comprobación. */
-['fija_proyecto', 'tracker_hsat_nobt'].forEach(k => {
+/* `tracker_hsat` estuvo FUERA de esta lista, y la exención era el fallo
+   hablando: se leía «con el contrasol permitido el backtracking absorbe la
+   pendiente ENTERA y la sombra se queda en cero», y era mentira medida sobre
+   un `FIS.shade` que no veía la ladera (SOMBRA-01). Corregido el sombreado, el
+   seguidor backtrackeado también acusa la pendiente —0,000 → 0,207 %— y entra
+   en la lista con los demás. Una exención que desaparece al arreglar el bug es
+   la señal de que la exención ERA el bug. */
+['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt'].forEach(k => {
   check('la pendiente mueve la sombra de ' + k + ' (' + SP[k].sombra.toFixed(2) +
     ' → ' + CP[k].sombra.toFixed(2) + ' %)',
     Math.abs(CP[k].sombra - SP[k].sombra) > 0.05,
@@ -1131,17 +1222,34 @@ const CP = porClave(conPend), SP = porClave(sinPend);
     { ...cfg, pend, contrasol: true })).tracker_hsat.sombra;
   const btNo = pend => porClave(FIS.compara(['tracker_hsat'], M,
     { ...cfg, pend, contrasol: false })).tracker_hsat.sombra;
-  check('permitiendo contrasol, el backtracking absorbe la pendiente entera (' +
+  /* Esto decía «el backtracking absorbe la pendiente ENTERA» y exigía
+     bt(12) ≈ bt(0) ≈ 0. Era una predicción mía, y era FALSA: la sostenía el
+     `FIS.shade` ciego a la ladera. Pasado el ocaso del propio campo
+     —|ψ| > 90° − pendiente— NINGÚN giro salva la fila, porque lo que tapa el
+     sol ya no es la fila de delante sino el terreno. Se deja escrito lo que
+     se predijo y lo que se midió, que es la única forma de que la próxima
+     predicción se pese. */
+  check('en LLANO el backtracking sí deja la sombra a cero (' + bt(0).toFixed(3) + ' %)',
+    bt(0) < 0.01, 'para eso existe el retroceso');
+  check('en CUESTA ya no la absorbe entera —el campo tiene su propio ocaso— (' +
     bt(0).toFixed(3) + ' → ' + bt(12).toFixed(3) + ' %)',
-    Math.abs(bt(12) - bt(0)) < 0.01,
-    'si esto crece, el retroceso ha dejado de poder neutralizarla');
+    bt(12) > 0.1,
+    'si vuelve a cero, FIS.shade ha dejado de ver el horizonte del campo');
+  check('pero el retroceso sigue quitando la mayor parte (' + bt(12).toFixed(3) +
+    ' contra ' + btNo(12).toFixed(3) + ' % sin él)',
+    bt(12) < 0.75 * btNo(12),
+    bt(12).toFixed(3) + ' vs ' + btNo(12).toFixed(3));
+  check('y el residuo CRECE con la pendiente (8° ' + bt(8).toFixed(3) + ' → 12° ' +
+    bt(12).toFixed(3) + ' → 20° ' + bt(20).toFixed(3) + ' %)',
+    bt(8) < bt(12) && bt(12) < bt(20),
+    [bt(8), bt(12), bt(20)].map(v => v.toFixed(3)).join(' / '));
   check('  y prohibiéndolo, la pendiente SÍ deja sombra (' +
     btNo(0).toFixed(3) + ' → ' + btNo(12).toFixed(3) + ' %)',
     btNo(12) - btNo(0) > 0.05,
     'el selector no está llegando al sombreado');
 }
-check('y es UN solo parámetro, no uno por familia: las dos que pueden, cambian',
-  ['fija_proyecto', 'tracker_hsat_nobt'].every(k =>
+check('y es UN solo parámetro, no uno por familia: las tres que pueden, cambian',
+  ['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt'].every(k =>
     Math.abs(CP[k].sombra - SP[k].sombra) > 0.05),
   'tracker_hsat queda fuera a propósito: con contrasol permitido su retroceso ' +
   'absorbe la pendiente, y eso se comprueba arriba en sus dos caras');
