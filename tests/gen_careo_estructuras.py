@@ -40,6 +40,18 @@ Y no cantó por dos razones que ahora se cierran aquí:
 
 Por eso el fixture lleva ahora un bloque `manifiesto` con el commit y la versión
 del core, la fecha, el hash del contenido y el MOTIVO de la regeneración, y
+**EL CORE TIENE QUE ESTAR EN `main`** (2026-08-26). `--core` es una ruta LOCAL
+y nada obligaba a que el checkout estuviera en `main`. Ese día este golden se
+generó desde la rama de un PR ABIERTO de SolarGPTfull, así que pasó a describir
+una física que en `main` no existía: `main` quedó en rojo, y **con `main` rojo
+toda rama nueva nace roja** — tres PRs atascados a la vez y un ciclo cerrado (el
+PR bloqueado por un pin, el arreglo del pin bloqueado por este golden, y este
+golden solo se arreglaba mergeando el PR).
+
+Registrar la procedencia hizo el fixture AUDITABLE. Pero auditable no es
+correcto: había que ir a mirarlo. Ahora es MECANISMO — el generador se niega, y
+saltárselo exige `--permitir-core-fuera-de-main`, que hay que escribir a mano.
+
 `--motivo` es OBLIGATORIO: un golden que se puede actualizar sin dejar dicho por
 qué es un golden que se actualiza para poner el CI verde.
 """
@@ -214,6 +226,57 @@ def _procedencia(core_dir: Path) -> dict:
     }
 
 
+def core_en_main(core_dir: Path) -> tuple:
+    """¿El core del que se va a generar está EN `main`? (ok, detalle)
+
+    2026-08-26. La regla que faltaba, y la que costó una noche entera.
+
+    `--core` es una ruta LOCAL: nada obliga a que el checkout esté en `main`.
+    El 2026-08-26 este golden se generó desde la rama del PR #156 de
+    SolarGPTfull —abierto y SIN MERGEAR—, así que pasó a describir una física
+    que en `main` no existía. Consecuencia: `main` en rojo, y **con `main` rojo
+    toda rama nueva nace roja**. Tres PRs atascados a la vez, tres sesiones
+    empujando el mismo pin, y un ciclo cerrado —el PR bloqueado por el pin, el
+    arreglo del pin bloqueado por este golden, y este golden solo se arreglaba
+    mergeando el PR—.
+
+    Registrar la procedencia (lo que ya hacía este script) hizo el fixture
+    AUDITABLE: se podía saber de dónde venía. Pero auditable no es lo mismo que
+    correcto — había que ir a mirarlo. Esto lo convierte en **mecanismo**: el
+    generador se niega, y quien quiera saltárselo tiene que decirlo por su
+    nombre.
+
+    No basta con mirar la rama: se comprueba por ANCESTRO contra `origin/main`
+    refrescado, porque un checkout puede llamarse `main` y estar por detrás, y
+    porque `origin/main` es una caché — si no se refresca, la comprobación
+    mide un remoto de hace horas.
+    """
+    def _git(*args: str):
+        try:
+            r = subprocess.run(("git", "-C", str(core_dir), *args),
+                               capture_output=True, text=True, timeout=30)
+            return r.returncode, r.stdout.strip()
+        except Exception as e:
+            return 1, str(e)
+
+    cod, _ = _git("fetch", "origin", "main")
+    if cod != 0:
+        return None, ("no se pudo refrescar `origin/main` (¿sin red?). NO se "
+                      "da por buena la comprobación: se declara que no se pudo "
+                      "hacer, que es distinto de que salga bien.")
+    _, head = _git("rev-parse", "HEAD")
+    cod, _ = _git("merge-base", "--is-ancestor", "HEAD", "origin/main")
+    if cod == 0:
+        return True, f"{head[:12]} está en `main`"
+    _, rama = _git("rev-parse", "--abbrev-ref", "HEAD")
+    return False, (
+        f"el core está en {head[:12]} (rama `{rama}`), que NO es ancestro de "
+        f"`origin/main`. Generar aquí produce un golden que describe una física "
+        f"que `main` no tiene: dejaría `main` en rojo, y con `main` rojo toda "
+        f"rama nueva nace roja. Mergea primero, o pasa "
+        f"`--permitir-core-fuera-de-main` con su motivo si sabes lo que haces.")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--core", required=True, help="raíz del repo con solargpt_core/")
@@ -223,11 +286,25 @@ def main() -> int:
     # línea. Ver el bloque MANIFIESTO del docstring.
     ap.add_argument("--motivo", required=True,
                     help="por qué se regenera (queda en el manifiesto del golden)")
+    ap.add_argument("--permitir-core-fuera-de-main", action="store_true",
+                    help="generar aunque el core NO esté en `main` (lo normal "
+                         "es que esto sea un error: ver core_en_main)")
     a = ap.parse_args()
     if len(a.motivo.strip()) < 20:
         ap.error("--motivo demasiado corto: se pide una frase que explique el "
                  "cambio, no una palabra. Un motivo vacío de contenido es un "
                  "motivo ausente con mejor cara.")
+    # LA PUERTA: el core tiene que estar en `main`.
+    _ok, _detalle = core_en_main(Path(a.core).resolve())
+    if _ok is False and not a.permitir_core_fuera_de_main:
+        ap.error(f"core fuera de `main`: {_detalle}")
+    if _ok is False:
+        print(f"  ⚠️  GENERANDO DESDE FUERA DE `main` a propósito: {_detalle}")
+    elif _ok is None:
+        print(f"  ⚠️  {_detalle}")
+    else:
+        print(f"  ✅ {_detalle}")
+
     sys.path.insert(0, a.core)
 
     import numpy as np
