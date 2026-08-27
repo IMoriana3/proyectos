@@ -1195,7 +1195,22 @@ FIS.ejeTilt=function(cfg,spec){
    de los dos segmentos sobre el eje ⊥ al rayo, dividido por la proyección de la
    fila que recibe la sombra: lineal y exacto para segmentos rectos.           */
 FIS.shade=function(psDeg,thDeg,pitch,cw,pendDeg){
-  if(!isFinite(psDeg)||Math.abs(psDeg)>=89.9)return 0;
+  if(!isFinite(psDeg))return 0;
+  /* EL CAMPO TIENE SU PROPIO HORIZONTE (SOMBRA-01). Lo de abajo mira solo la
+     fila de al lado, y en llano eso es EXACTO —coincide con el
+     `shaded_fraction1d` de pvlib hasta 1,6e-15 en todo el barrido—. En cuesta
+     no: con el sol rasante por el lado de ARRIBA el rayo se escapa por debajo
+     de la fila de arriba y se mete en la ladera, que este modelo de dos filas
+     no tiene, así que declaraba «sin sombra» un campo entero a la sombra.
+     El umbral no lleva ajuste: el rayo sube cot|ψ| por unidad de avance y el
+     terreno sube tan p, así que escapa mientras |ψ| < 90° − p. Justo el signo
+     que cambia en el término del pitch de la Eq. 12 de pvlib, y por eso el
+     core ya lo hacía. Arbitrado por trazado de rayos CON suelo: 1,0000 exacto
+     pasado el umbral —para cualquier altura de eje— y sin tocar nada por
+     debajo de él. Cuesta abajo el horizonte es 90° + p y el sol no lo alcanza,
+     de modo que este guard es INERTE en llano. */
+  if(Math.cos((psDeg-(pendDeg||0))*FIS.D2R)<=0)return 1;
+  if(Math.abs(psDeg)>=89.9)return 0;
   var hw=cw/2, ps=psDeg*FIS.D2R, th=thDeg*FIS.D2R;
   var dx=Math.cos(th), dz=-Math.sin(th);             // cuerda: θ>0 ⇒ borde derecho abajo
   var zR=-pitch*Math.tan((pendDeg||0)*FIS.D2R);      // cota de la fila de al lado
