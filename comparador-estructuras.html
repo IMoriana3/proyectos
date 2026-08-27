@@ -1243,6 +1243,66 @@ FIS.shade=function(psDeg,thDeg,pitch,cw,pendDeg){
   return Math.max(0,Math.min(1,ov/w));
 };
 
+/* ── Fracción sombreada entre filas de AGUAS ENFRENTADAS (fija E-O) ──────────
+   Hermana de `FIS.shade` —mismos argumentos, otra geometría— y puerto literal
+   de `poa.shaded_fraction_dos_aguas` del core.
+
+   POR QUÉ NO VALE LA DE AL LADO. El modelo de fila supone TODAS las filas
+   orientadas igual, y entonces el obstáculo es el borde ALTO de la vecina. Con
+   aguas enfrentadas eso es falso: la vecina tiene su borde alto en la
+   CUMBRERA, o sea en su punto medio, y su agua más cercana BAJA hacia
+   nosotros. Y no se arregla mapeándolo a un cobertizo de paso efectivo: con
+   paso 3 m y paño de 2,4 m a 30° ese paso sale MENOR que el propio paño —filas
+   solapadas— y `shaded_fraction1d` devuelve 0,67 de sombra con el sol casi
+   cenital. Por eso el modelo se derivó aparte y lo arbitró un TRAZADO DE
+   RAYOS, que no comparte álgebra con él.
+
+   LA GEOMETRÍA, en el plano ⊥ a la cumbrera —el mismo en el que un seguidor
+   mide su θ—. Cada mesa ocupa `W = 2·L·cos b` con la cumbrera en su punto
+   medio a altura `D = L·sen b`, siendo `L = cw/2` la longitud de UN paño: el
+   ancho de colector es el de la mesa ENTERA, para que el GCR siga significando
+   área de módulo entre área de suelo.
+
+   De la vecina solo pueden sombrear DOS puntos —su alero de este lado y su
+   cumbrera— y manda el que deja la recta de sombra más alta, o sea el que
+   maximiza `z − x·tanψ`. Cuál de los dos NO es un detalle: en llano gana
+   siempre la cumbrera, pero CUESTA ARRIBA el alero de la vecina puede quedar
+   más alto que nuestra propia cumbrera y la sombra la echa él. Medido creerse
+   lo contrario: 0,303 de sombra donde la cumbrera sola decía 0.
+
+   Y el paño LEJANO es otra rama, que tampoco es la obvia: al mediodía el sol
+   está EN el plano de la cumbrera y los DOS paños lo ven, así que ponerlo a
+   sombra total «porque está de espaldas» es falso —cuesta 37 puntos de POA
+   anual, que es un número lo bastante grande como para parecer un modelo—. Lo
+   tapa su PROPIA cumbrera y sale de una pieza: `ψ < b`, todo o nada, que es
+   exactamente la condición de que el sol esté detrás de ese plano (AOI > 90).
+   Ahí el 1 no penaliza: el haz ya vale 0, y el circunsolar con él.
+
+   AQUÍ NO HAY GUARDA DE HORIZONTE, y es un resultado y no un olvido: el modelo
+   de fila necesita uno porque solo mira a la vecina y con el sol rasante el
+   rayo se le escapa a una ladera que no tiene; aquí la ladera SÍ está, porque
+   el alero de la vecina se apoya en el terreno y hace de horizonte él solo.  */
+FIS.shadeEW=function(psDeg,thDeg,pitch,cw,pendDeg){
+  if(!isFinite(psDeg))return 0;
+  var s=psDeg>=0?1:-1, lejano=(thDeg*s)<0;
+  var psi=(90-Math.abs(psDeg))*FIS.D2R, b=Math.abs(thDeg)*FIS.D2R;
+  var tb=Math.tan(b), tp=Math.tan(psi);
+  var L=cw/2, D=L*Math.sin(b), ancho=L*Math.cos(b);
+  if(ancho<=0)return 0;
+  var dz=-s*pitch*Math.tan((pendDeg||0)*FIS.D2R);
+  var K=Math.max(dz-pitch*tp, dz+D-(pitch+ancho)*tp);
+  var f;
+  if(lejano){
+    if(tp<=tb)return 1;                              // lo tapa su propia cumbrera
+    /* ojo al signo: aquí tb−tp es NEGATIVO, así que el obstáculo que más
+       sombrea (K mayor) es el que deja el xi más PEQUEÑO */
+    f=1-(Math.max(K,ancho*(tb-tp))/(tb-tp))/ancho;
+  }else{
+    f=(K+2*ancho*tp)/(tb+tp)/ancho;                  // sube desde SU alero
+  }
+  return isFinite(f)?Math.max(0,Math.min(1,f)):0;
+};
+
 /* ── POA en el plano girado θ, con la sombra aplicada SOLO al haz y su halo ──
    Igual que el core: la difusa no se sombrea en este camino (la del cielo la
    ve el módulo casi entera aunque la fila de delante tape el sol), y por eso
@@ -1253,16 +1313,19 @@ FIS.shade=function(psDeg,thDeg,pitch,cw,pendDeg){
    cos(AOI) = n·s = ρ·cos(ps − θ), con ρ el módulo de la proyección del vector
    solar sobre el plano ⊥ al eje. Nada de dividir por cos(ps).
 
-   La difusa del cielo NO es isotrópica: va por **Hay-Davies**, que reparte la
-   DHI entre un halo alrededor del sol (índice de anisotropía AI = DNI/E0, que
-   se transpone como el haz) y un fondo isotrópico. Empezó siendo isotrópica y
+   La difusa del cielo NO es isotrópica: va por **Perez (allsitescomposite
+   1990)**, el mismo del core —circunsolar, fondo isotrópico y brillo de
+   horizonte—. Este párrafo decía «Hay-Davies» hasta hoy, y llevaba
+   equivocándose desde que CIELO-01 le puso Perez: una descripción que envejece
+   miente con autoridad. Lo que sigue es la historia de cómo se llegó aquí, y
+   va en pasado a propósito. Empezó siendo isotrópica y
    el careo contra el core lo tumbó: con isotrópica el seguidor SIN
    backtracking perdía contra el que backtrackea, y con Perez —el del core—
    gana, porque apuntar mejor cobra el halo. Quedaban a 1,1 % y el modelo no
    los distinguía, así que el ORDEN salía cambiado justo en el par que más se
    parece. Con el circunsolar dentro, los dos motores ordenan igual.
-   El halo es también la mitad de la diferencia con Perez; lo que queda fuera
-   es el brillo de horizonte y el IAM.                                        */
+   El halo era también la mitad de la diferencia con Perez; hoy no queda
+   ninguna, y lo único que sigue fuera es el IAM.                             */
 FIS.E0=function(date){                               // irradiancia extraterrestre normal
   var N=Math.floor((date-Date.UTC(date.getUTCFullYear(),0,0))/864e5);
   return 1367*(1+0.033*Math.cos(2*Math.PI*N/365));
@@ -1345,8 +1408,8 @@ FIS.CATALOGO=[
    nota:'Monoinclinada al ecuador; el tilt sale del barrido anual.'},
   {key:'fija_proyecto',    label:'Fija · tilt de proyecto',         fam:'fija',
    nota:'Monoinclinada al ecuador con el tilt que fije el proyecto.'},
-  {key:'fija_ew',          label:'Fija · Este-Oeste (dos aguas)',   fam:'fija_ew', sinSombra:true,
-   nota:'Se promedian los dos planos, de igual superficie. El modelo de sombra supone todas las filas mirando al mismo sitio, y con aguas enfrentadas no vale.'},
+  {key:'fija_ew',          label:'Fija · Este-Oeste (dos aguas)',   fam:'fija_ew',
+   nota:'Se promedian los dos planos, de igual superficie. La sombra entre filas NO es la de fila 1D —con aguas enfrentadas el obstáculo es la CUMBRERA de la vecina—: va por su propio modelo, arbitrado con trazado de rayos.'},
   {key:'tracker_hsat',     label:'Tracker 1 eje N-S · backtracking',fam:'tracker', bt:true,
    nota:'HSAT canónico: eje horizontal N-S, backtracking activo.'},
   {key:'tracker_hsat_nobt',label:'Tracker 1 eje N-S · sin backtracking',fam:'tracker', bt:false,
@@ -1451,7 +1514,14 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
     }
     for(var k=0;k<planos.length;k++){
       var pl=planos[k], t=pl.th;
-      var fsh=spec.sinSombra?0:FIS.shade(pl.P.ps,t,pitch,G.altoColector,cruz);
+      /* Las aguas enfrentadas tienen su propia geometría de sombra: el
+         obstáculo es la CUMBRERA de la vecina, no su borde alto. Mismo reparto
+         que hace el core, que llama a `shaded_fraction_dos_aguas` en vez de al
+         modelo de fila. */
+      var fsh=spec.sinSombra?0
+             :(spec.fam==='fija_ew'
+                 ?FIS.shadeEW(pl.P.ps,t,pitch,G.altoColector,cruz)
+                 :FIS.shade  (pl.P.ps,t,pitch,G.altoColector,cruz));
       var P=FIS.poa(pl.P.ps,pl.P.rho,t,FIS.tiltSup(t,pl.ax),bh,dh,gh,cfg.albedo,fsh,
                     Math.sin(S.el),e0);
       sN+=P.neta; sI+=P.ideal;
@@ -1626,6 +1696,11 @@ FIS.compara=function(keys,M,cfg){
       thetaAbs:r.thetaAbs, nDia:r.nDia, thetaSerie:r.thetaSerie,
       transp:ghi>0?((r.neta/ghi-1)*100):NaN,
       sombra:r.ideal>0?((1-r.neta/r.ideal)*100):0});
+    /* HOY NO LO DISPARA NADIE: la última que iba sin sombra era la de dos
+       aguas, y su hueco se cerró dándole el modelo que le toca (`FIS.shadeEW`).
+       El aviso se queda —apagarla es una decisión legítima y hay que
+       declararla— pero que hoy esté callado va con guardia en el banco, para
+       que no vuelva por herencia. */
     if(spec.sinSombra)avisos.push('«'+spec.label+'» va SIN sombra entre filas: su POA es un techo, '+
       'en campo saldrá algo menos. '+spec.nota);
     if(spec.tiltOpt){
@@ -1715,8 +1790,8 @@ if(typeof module!=='undefined'&&module.exports)module.exports=FIS;   // para tes
 
 /* ===================== MOTOR SOLARGPT (local o remoto vía túnel de Colab) =====================
    Mismo contrato que sim-solar.html / sim-viento.html: se prueba la URL guardada
-   y luego los puertos locales. El motor es un EXTRA —el número canónico con
-   Perez e IAM—, nunca un requisito: sin él la ficha calcula igual. */
+   y luego los puertos locales. El motor es un EXTRA —el número canónico, con
+   IAM—, nunca un requisito: sin él la ficha calcula igual. */
 var ENGINE=null;
 function engineUrls(){var u=[];try{var s=localStorage.getItem('factiun_engine_url');if(s)u.push(s.replace(/\/+$/,''));}catch(e){}[8765,8000,9000].forEach(function(p){u.push('http://127.0.0.1:'+p);});return u;}
 async function detectEngine(){
@@ -1749,7 +1824,7 @@ $('engine').onclick=function(){var cur='';try{cur=localStorage.getItem('factiun_
 var COLAB='https://colab.research.google.com/github/IMoriana3/SolarGPTfull/blob/main/Factiun_plataforma.ipynb';
 function engineOffMsg(){
   return '<div class="engmsg"><b>El número canónico lo da el motor, y no está conectado.</b><br>'+
-    'La ficha calcula sola (lo tienes en «En el navegador»); el motor añade Perez, IAM y la '+
+    'La ficha calcula sola (lo tienes en «En el navegador»); el motor añade el <b>IAM</b> y la '+
     'cadena entera del core. Dos formas de tenerlo:<br><br>'+
     '<b>1 · Colab</b> (lo normal, 2-3 min la primera vez)<br>'+
     '&nbsp;&nbsp;a. Abre <a href="'+COLAB+'" target="_blank" rel="noopener" style="color:var(--accent)">'+
@@ -1763,10 +1838,11 @@ function localBanner(){
   return '<div class="warn" style="border-color:var(--line);background:var(--panel-2)">'+
     '<b style="color:var(--muted)">Calculado en el navegador.</b> <span style="color:var(--muted-2)">'+
     'Posición solar por declinación + ecuación del tiempo, seguimiento con backtracking '+
-    '(Anderson-Mikofski), sombreado geométrico entre filas y transposición de <b>Hay-Davies</b> '+
-    '(circunsolar + fondo isotrópico). Lo que NO lleva y sí lleva el motor Python: <b>Perez</b> '+
-    'e <b>IAM</b>. Careado contra el core sobre doce días típicos: POA absoluta dentro del '+
-    '<b>0,8–2,2 %</b>, Δ% dentro de <b>1,4 pp</b> y el <b>orden entre estructuras idéntico</b> — '+
+    '(Anderson-Mikofski), sombreado geométrico entre filas —incluido el de aguas enfrentadas, '+
+    'que tiene su propia geometría— y transposición de <b>Perez</b> (allsitescomposite 1990), '+
+    'la misma del core. Lo único que NO lleva y sí lleva el motor Python es el <b>IAM</b>. '+
+    'Careado contra el core sobre doce días típicos, las ocho estructuras: POA absoluta dentro '+
+    'del <b>0,04 %</b>, Δ% dentro de <b>0,04 pp</b> y el <b>orden entre estructuras idéntico</b> — '+
     'que es para lo que está la ficha. Con el motor conectado puedes pedir el número canónico.'+
     '</span></div>';
 }

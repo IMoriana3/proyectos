@@ -132,7 +132,7 @@ if (MAN) {
   /* Re-fijado al entrar el QUEBRADO en el catálogo del core (SolarGPT #185).
      El golden se regeneró contra `main` y el generador VERIFICA que ese commit
      esté en `main` antes de escribir — el guard que nació de PORTAL-BUG-01. */
-  const CORE_PIN = { version: '1.72.0', commit: 'a427e9b7' };
+  const CORE_PIN = { version: '1.74.0', commit: 'afed8b74' };
   check('el golden corresponde al core fijado (v' + CORE_PIN.version + ')',
     MAN.core.version === CORE_PIN.version,
     'golden v' + MAN.core.version + ' vs pin v' + CORE_PIN.version +
@@ -726,7 +726,10 @@ const GOLDEN_VIEJO_v163 = {
    Se excluye con su motivo y con su fecha, no en silencio. */
 const ESCENARIO_CAMBIADO = {
   fija_ew: '2026-08-27: el careo declara `along_axis_slope_deg` (6°) y su ' +
-           'cumbrera se inclina — el golden de v1.63 corrió con cumbrera plana',
+           'cumbrera se inclina — el golden de v1.63 corrió con cumbrera plana. ' +
+           'Y desde v1.74.0 corre además CON sombra entre filas (aguas ' +
+           'enfrentadas), que aquel golden tampoco tenía: dos escenarios de ' +
+           'diferencia, no una deriva',
 };
 const VIEJAS = Object.keys(GOLDEN_VIEJO_v163)
   .filter(k => core[k] && !ESCENARIO_CAMBIADO[k]);
@@ -1471,6 +1474,169 @@ check('con pendiente el ranking se recalcula con TODAS en el mismo terreno',
 check('sin backtracking el ángulo es el astronómico, cota o no cota',
   Math.abs(FIS.theta(40, 1.19, 55, false) - 40) < 1e-9 &&
   Math.abs(FIS.theta(-40, 0.4, 55, false) + 40) < 1e-9);
+
+// ── 6b) SOMBRA ENTRE AGUAS ENFRENTADAS — arbitrada con TRAZADO DE RAYOS ─────
+// `fija_ew` corría SIN sombra entre filas y estaba escrito como hueco: el
+// modelo de fila supone TODAS las filas orientadas igual, y con aguas
+// enfrentadas el obstáculo es la CUMBRERA de la vecina. Aquí se cierra.
+//
+// El árbitro NO es pvlib: su convención de cobertizos no expresa este caso —al
+// mapearlo, el paso efectivo sale menor que el propio paño (filas solapadas) y
+// devuelve 0,67 de sombra con el sol casi cenital—. Es un trazado de rayos
+// escrito aquí, que no comparte una línea de álgebra con `FIS.shadeEW`.
+//
+// Dos errores que cazó, y ninguno lo habría visto un test de «da un número»:
+//   1. el paño de sotavento a sombra total — al mediodía el sol está EN el
+//      plano de la cumbrera y los DOS paños lo ven. Costaba −37 % de POA.
+//   2. la cumbrera de la vecina como único obstáculo — cierto en llano, falso
+//      en cuesta: su ALERO puede quedar más alto que nuestra propia cumbrera.
+function siluetaEW(p, L, beta, pend) {
+  const b = beta * Math.PI / 180, W = 2 * L * Math.cos(b), D = L * Math.sin(b);
+  const m = Math.tan((pend || 0) * Math.PI / 180), segs = [];
+  for (let k = -6; k <= 6; k++) {
+    if (!k) continue;
+    const x0 = k * p, zb = -k * p * m;
+    segs.push([x0, zb, x0 + W / 2, zb + D]);
+    segs.push([x0 + W / 2, zb + D, x0 + W, zb]);
+  }
+  return segs;
+}
+function cortaEW(px, pz, dx, dz, segs) {
+  for (const [x0, z0, x1, z1] of segs) {
+    const sx = x1 - x0, sz = z1 - z0, den = dx * sz - dz * sx;
+    if (Math.abs(den) < 1e-12) continue;
+    const t = ((x0 - px) * sz - (z0 - pz) * sx) / den;
+    const u = ((x0 - px) * dz - (z0 - pz) * dx) / den;
+    if (t > 1e-9 && u >= -1e-9 && u <= 1 + 1e-9) return true;
+  }
+  return false;
+}
+const N_RAYOS = 1201, REJILLA = 1 / N_RAYOS;
+function porRayosEW(psiDeg, betaDeg, L, p, pano, pend) {
+  const b = betaDeg * Math.PI / 180, psi = psiDeg * Math.PI / 180;
+  const W = 2 * L * Math.cos(b), D = L * Math.sin(b);
+  const dx = Math.cos(psi), dz = Math.sin(psi);
+  const segs = siluetaEW(p, L, betaDeg, pend);
+  segs.push([0, 0, W / 2, D]);                        // nuestra agua oeste
+  if (pano === 'cara') segs.push([W / 2, D, W, 0]);   // y la del este
+  let som = 0;
+  for (let i = 0; i < N_RAYOS; i++) {
+    const u = i / (N_RAYOS - 1);
+    const x = pano === 'cara' ? W - u * W / 2 : u * W / 2, z = u * D;
+    if (cortaEW(x + 1e-7 * dx, z + 1e-7 * dz, dx, dz, segs)) som++;
+  }
+  return som / N_RAYOS;
+}
+check('la ficha tiene el modelo de aguas enfrentadas', typeof FIS.shadeEW === 'function');
+
+(function () {
+  let peorCara = 0, peorLejos = 0, dondeC = null, n = 0;
+  for (const pend of [0, 5, -5]) {
+    for (const beta of [7, 12, 20, 30]) {
+      for (const L of [1.2, 2.4]) {
+        for (const p of [3, 5, 8]) {
+          if (2 * L * Math.cos(beta * Math.PI / 180) > p) continue;  // filas solapadas
+          for (const psi of [5, 8, 12, 20, 30, 45, 70]) {
+            for (const signo of [1, -1]) {
+              // espejar la escena es cambiar el signo de la pendiente
+              const pr = signo > 0 ? pend : -pend, ps = signo * (90 - psi);
+              const mio = FIS.shadeEW(ps, signo * beta, p, 2 * L, pend);
+              const suyo = porRayosEW(psi, beta, L, p, 'cara', pr);
+              if (Math.abs(mio - suyo) > peorCara) {
+                peorCara = Math.abs(mio - suyo);
+                dondeC = 'pend ' + pend + ' β ' + beta + ' L ' + L + ' p ' + p + ' ψ ' + psi;
+              }
+              n++;
+              if (psi > beta) {   // por debajo manda el AOI, no la sombra
+                peorLejos = Math.max(peorLejos, Math.abs(
+                  FIS.shadeEW(ps, -signo * beta, p, 2 * L, pend) -
+                  porRayosEW(psi, beta, L, p, 'lejos', pr)));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  check('el paño de cara coincide con el trazado de rayos (' + n + ' casos, con pendiente)',
+    peorCara <= 2 * REJILLA, 'peor ' + peorCara.toExponential(2) + ' en ' + dondeC);
+  check('y el paño LEJANO queda limpio en cuanto el sol lo alcanza',
+    peorLejos <= 2 * REJILLA, 'peor ' + peorLejos.toExponential(2));
+})();
+
+// Por debajo de β el paño lejano lo tapa SU PROPIA cumbrera, y ahí el 1 no
+// penaliza: es exactamente el AOI > 90. No se arbitra con rayos —un rayo que
+// sale de la superficie hacia atrás no «corta» nada— sino contra esa condición.
+[7, 12, 30].forEach(function (beta) {
+  let bien = true;
+  [1, beta - 0.5, beta + 0.5, 60].forEach(function (psi) {
+    const ps = 90 - psi, f = FIS.shadeEW(ps, -beta, 5, 4.8, 0);
+    if ((f === 1) !== ((ps + beta) >= 90)) bien = false;
+  });
+  check('el paño lejano vale 1 exactamente cuando el sol está detrás (β=' + beta + '°)', bien);
+});
+
+// SOMBRA-01 sin guarda: aquí el ALERO de la vecina se apoya en el terreno y
+// hace de horizonte él solo, así que el guarda explícito del modelo de fila
+// salía INERTE (medido: no decidía en ningún caso) y se retiró. Lo que hacía
+// se exige aquí como propiedad.
+(function () {
+  let bien = true, caso = null;
+  for (const pend of [-45, -30, -20, -10, 10, 20, 30, 45]) {
+    for (const rot of [-30, -12, -7, 7, 12, 30]) {
+      for (let ps = -89.5; ps <= 89.5; ps += 1) {
+        if (Math.cos((ps - pend) * Math.PI / 180) > 0) continue;
+        if (FIS.shadeEW(ps, rot, 5, 4.8, pend) !== 1) {
+          bien = false; caso = 'pend ' + pend + ' rot ' + rot + ' ps ' + ps;
+        }
+      }
+    }
+  }
+  check('con el sol bajo la ladera no queda luz: la geometría hace de horizonte',
+    bien, caso);
+  check('y con el sol alto en llano el paño de cara NO está tapado',
+    FIS.shadeEW(30, 12, 5, 4.8, 0) < 1);
+})();
+
+// El ancho de colector es el de la MESA ENTERA (los dos paños reparten el
+// módulo mitad y mitad). Leerlo como el de UN paño doblaría la huella.
+check('doblar el ancho de colector sombrea más',
+  FIS.shadeEW(80, 20, 3, 4.8, 0) > FIS.shadeEW(80, 20, 3, 2.4, 0) &&
+  FIS.shadeEW(80, 20, 3, 2.4, 0) > 0);
+
+// El hueco, cerrado — y con guardia para que no vuelva por herencia.
+check('ninguna estructura del catálogo va ya sin sombra entre filas',
+  FIS.CATALOGO.every(e => !e.sinSombra),
+  FIS.CATALOGO.filter(e => e.sinSombra).map(e => e.key).join(', '));
+
+(function () {
+  const conSombra = FIS.compara(['fija_ew'], M, cfg).filas[0];
+  const spec = FIS.spec('fija_ew');
+  spec.sinSombra = true;
+  const sinSombra = FIS.compara(['fija_ew'], M, cfg).filas[0];
+  delete spec.sinSombra;
+  check('la sombra MUEVE a la dos aguas', conSombra.neta < sinSombra.neta,
+    sinSombra.neta.toFixed(1) + ' -> ' + conSombra.neta.toFixed(1));
+  // Y la magnitud tiene que ser de dos aguas, no de cobertizo: por eso se
+  // montan al 70 % de GCR, donde una monoinclinada no cabría.
+  const perd = (sinSombra.neta - conSombra.neta) / sinSombra.neta;
+  check('y le quita lo que le tiene que quitar (< 1 %)', perd > 0 && perd < 0.01,
+    (100 * perd).toFixed(3) + ' %');
+})();
+
+// MUTANTE: el paño lejano siempre a la sombra, que es el fallo que costó −37 %.
+(function () {
+  const bueno = FIS.shadeEW;
+  FIS.shadeEW = function (ps, th, p, cw, pend) {
+    return (th * (ps >= 0 ? 1 : -1)) < 0 ? 1 : bueno(ps, th, p, cw, pend);
+  };
+  const mutado = FIS.compara(['fija_ew'], M, cfg).filas[0].neta;
+  FIS.shadeEW = bueno;
+  const sano = FIS.compara(['fija_ew'], M, cfg).filas[0].neta;
+  check('MUTANTE: con el paño lejano a sombra total, la dos aguas se desploma',
+    (sano - mutado) / sano > 0.10,
+    'sano ' + sano.toFixed(1) + ' vs mutado ' + mutado.toFixed(1));
+})();
 
 // ── 7) hemisferio sur: la fija tiene que mirar al NORTE ──
 // Si `psFija` no cambiara de signo bajo el ecuador, la fija apuntaría al polo y

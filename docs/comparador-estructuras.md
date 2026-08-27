@@ -504,12 +504,23 @@ transposición NEGATIVA—, que es la firma de una geometría imposible, no de u
 
 ## Lo que NO se modela, y va dicho en pantalla
 
-* La **fija Este-Oeste** corre **sin sombreado entre filas**: el modelo de fila 1D supone todas las
-  filas igual orientadas y no vale para aguas enfrentadas. Su POA es un techo, no un número
-  comparable al pie de la letra con las demás. Sale como aviso en la propia ficha.
+* ~~La **fija Este-Oeste** corre **sin sombreado entre filas**~~ — **CERRADO** (SolarGPT v1.74.0,
+  2026-08-27). Era cierto: el modelo de fila 1D supone todas las filas igual orientadas y no vale
+  para aguas enfrentadas, así que su POA era un techo. Ahora tiene el modelo que le corresponde
+  —con aguas enfrentadas el obstáculo es la **CUMBRERA** de la vecina, o su **ALERO** si está
+  cuesta arriba—, en los dos motores (`FIS.shadeEW` y `poa.shaded_fraction_dos_aguas`) y careado
+  entre ellos al **0,00 %**. El árbitro no fue pvlib —su convención de cobertizos no expresa este
+  caso: al mapearlo da 0,67 de sombra con el sol casi cenital— sino un **trazado de rayos**, 1530
+  casos a 2e-04. Cuesta poco (−0,09 % al GCR típico de 0,70, −1,05 % con cumbrera y cuesta), y
+  tiene que costar poco: por eso una dos aguas se monta a ese GCR, donde una monoinclinada no
+  cabría.
 * El **tilt óptimo** del navegador se barre CON sombra (es el óptimo neto); el del cuaderno sale de
   un barrido de transposición sin sombra y queda 1-3° por encima. También sale como aviso.
-* No hay bifacialidad, ni suciedad, ni terreno: campo plano y monofacial.
+* La **difusa del cielo que tapa la fila de enfrente** no se modela para NINGUNA estructura, así
+  que la comparación entre ellas es pareja, pero no es el número de campo.
+* El modelo de sombra es de **campo infinito**: la primera fila, que no tiene vecina, paga una
+  sombra que no tiene (medido más arriba: 0,005 puntos con la geometría de esta ficha).
+* No hay bifacialidad ni suciedad: campo monofacial.
 
 ## La escena 3D
 
