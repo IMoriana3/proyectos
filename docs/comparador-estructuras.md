@@ -71,6 +71,19 @@ explica debajo de la tabla; sin eso, la comparación está a medias.
 El quiebro es **a lo largo** del eje: no toca la pendiente ⊥ de nadie, y por tanto no cambia el
 backtracking por ese lado.
 
+**Y se ve que quiebra.** Dos cosas que faltaban para eso:
+
+* **La rótula**, dibujada: dos bridas —una en cada media viga, así que cada una se inclina con la
+  suya— y su bulón, en el actuador. Sin ella las dos medias vigas se juntan sin más y el quiebro se
+  lee como un tubo doblado, que es otra cosa: un tubo doblado no existe, una viga articulada sí. El
+  test mide el ángulo **entre las dos bridas** sobre la escena y exige que sea el quiebro tecleado.
+* **La cumbrera del caballón**, marcada en el suelo. Con las dos aguas simétricas las curvas de
+  nivel salen espejadas a los dos lados y la línea de cumbrera es una más entre ellas: se ve un
+  terreno ondulado, no el caballón que explica por qué el seguidor quiebra ahí y no en otro sitio.
+  Y no bastaba con aclararla: la curva de nivel pasa justo por la cumbrera —es la cota máxima— y la
+  oscurece, así que las dos se anulaban (medido: 1,39 contra 1,33 de su alrededor). En la cumbrera
+  manda la cumbrera.
+
 ## Igualdad de potencia pico
 
 Arriba del todo, antes que nada, va la **potencia pico de la planta** (MWp). Es el marco de toda la

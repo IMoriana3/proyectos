@@ -3521,6 +3521,19 @@ function seguidor3D(mats,escalaEje,motriz,largoFila,quiebro,quiebroTerr){
         (x>0?t[1]:t[2]).add(o);
       });
     });
+    /* LA RÓTULA, que es lo que hace quebrado a un quebrado. Sin dibujarla las
+       dos medias vigas se juntan sin más en el actuador y el quiebro se lee
+       como un tubo doblado, que es otra cosa: un tubo doblado no existe, una
+       viga articulada sí. Dos bridas —una por media viga, así que cada una se
+       inclina con la suya y se ve el ángulo entre ellas— y su bulón. */
+    var matB=mats.silver||mats.steel;
+    [[spN,1],[spS,-1]].forEach(function(t){
+      var br=new THREE.Mesh(new THREE.CylinderGeometry(0.19,0.19,0.05,18),matB);
+      br.rotation.z=Math.PI/2; br.position.x=t[1]*0.32; br.castShadow=true;
+      t[0].add(br);
+    });
+    var bulon=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,0.46,12),mats.steel);
+    bulon.rotation.z=Math.PI/2; bulon.castShadow=true; spin.add(bulon);
     g.add(medN,medS);
     medias=[spN,spS];                             // [norte, sur]
   }
@@ -3738,10 +3751,21 @@ function sueloRelieve(lado,T){
         m=bruto/e;
     paso=(m<1.5?1:m<3.5?2:m<7.5?5:10)*e;
   }
+  /* Y LA CUMBRERA DEL CABALLÓN, marcada. Con las dos aguas simétricas las
+     curvas de nivel salen espejadas a los dos lados y la línea de cumbrera es
+     una más entre ellas: se ve un terreno ondulado, no el caballón que explica
+     por qué el seguidor quiebra ahí y no en otro sitio. */
+  var qx=T&&T.ex||0, qz=T&&T.ez||0, hayQ=!!(T&&T.q);
   for(var j=0;j<pos.count;j++){
     var y=pos.getY(j);
     var f=semi>0.05?1+0.34*Math.max(-1,Math.min(1,(y-med)/semi)):1;
-    if(paso>0){
+    var sq=hayQ?Math.abs(pos.getX(j)*qx+pos.getZ(j)*qz):1e9;   // distancia a la cumbrera
+    if(sq<1.6){
+      /* En la cumbrera manda la cumbrera: la curva de nivel pasa justo por ahí
+         —es la cota máxima— y la OSCURECE, así que las dos se anulaban y la
+         línea no se veía (medido: 1,39 contra 1,33 de su alrededor). */
+      f*=1+0.45*(1-sq/1.6);
+    }else if(paso>0){
       var u=y/paso; u=Math.abs(u-Math.round(u))*2;       // 0 en la curva, 1 entre curvas
       if(u<0.16)f*=0.80+0.20*(u/0.16);
     }
