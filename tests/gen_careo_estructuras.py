@@ -69,7 +69,12 @@ LAT, LON = 37.3891, -5.9845          # Sevilla — el sitio por defecto de la fi
 YEAR = 2023
 DIAS = [f"{YEAR}-{m:02d}-15" for m in range(1, 13)]
 ESTRUCTURAS = ["fija_optima", "fija_proyecto", "fija_ew",
-               "tracker_hsat", "tracker_hsat_nobt", "tracker_tsat"]
+               "tracker_hsat", "tracker_hsat_nobt",
+               # Los QUEBRADOS entran desde que el core los tiene (SolarGPT
+               # v1.71.0). Antes eran un hueco declarado de la ficha: los corría
+               # sólo el navegador y el careo no podía cubrirlos.
+               "tracker_queb", "tracker_queb_nobt",
+               "tracker_tsat"]
 PITCH_M, ANCHO_M = 6.00, 2.382
 ALBEDO, TILT_PROYECTO, MAX_ANGLE = 0.20, 25.0, 55.0
 PENDIENTE = 8.0        # pendiente del terreno ⊥ a las filas, en grados
@@ -384,6 +389,11 @@ def main() -> int:
                 "collector_width_m": ANCHO_M, "albedo": ALBEDO,
                 "tilt_deg": TILT_PROYECTO, "max_angle_deg": MAX_ANGLE,
                 "axis_tilt_deg": 10.0, "cross_axis_slope_deg": PENDIENTE,
+                # El quiebro se DERIVA del catálogo, no se teclea: si el core
+                # cambia la diferencia entre mesas, el fixture lo sigue solo y
+                # la ficha lo lee de aquí. Escribirlo a mano sería una segunda
+                # fuente de verdad para el mismo número.
+                "broken_deg": float(CATALOGO["tracker_queb"].broken_deg),
                 # Con qué ajuste corrió el core. Antes esto no se declaraba y el
                 # banco no tenía forma de poner la ficha en el mismo sitio: de
                 # ahí venía el «hallazgo abierto» de 7,79° en θ, que no era una
