@@ -129,7 +129,7 @@ if (MAN) {
      aquella rama traía acabó entrando por otro camino (CROSS-TILT-01); lo
      que mentía era la etiqueta, que es justo lo que este pin existe para
      que no pase. */
-  const CORE_PIN = { version: '1.69.0', commit: '332cc2fc' };
+  const CORE_PIN = { version: '1.70.0', commit: '250d2acf' };
   check('el golden corresponde al core fijado (v' + CORE_PIN.version + ')',
     MAN.core.version === CORE_PIN.version,
     'golden v' + MAN.core.version + ' vs pin v' + CORE_PIN.version +
@@ -298,7 +298,13 @@ const G = { apertura: C.collector_width_m, altoColector: C.collector_width_m,
             largoFila: 65.084, pitch: C.pitch_m, gcr };
 const cfg = { lat: C.lat, lon: C.lon, gcr, fija: G, tracker: G,
   maxang: C.max_angle_deg, albedo: C.albedo, tilt: C.tilt_deg, tiltEW: 12,
-  axTilt: C.axis_tilt_deg, pend: C.cross_axis_slope_deg, geomDe: () => G };
+  axTilt: C.axis_tilt_deg, pend: C.cross_axis_slope_deg, geomDe: () => G,
+  /* El golden DECLARA con qué ajuste corrió el core, y aquí se pone la ficha en
+     el mismo sitio. Antes no se declaraba: los dos motores corrían con opciones
+     distintas —la ficha cortaba el retroceso en plana y el core no— y el careo
+     lo tapaba con un techo de 10° llamándolo «hallazgo abierto». No era una
+     divergencia de física: era una opción sin nombre. */
+  contrasol: C.permitir_contrasol === true };
 const rep = FIS.compara(C.structures, M, cfg);
 /* El HUECO del catálogo, exigido: con quiebro 0 el quebrado ES el rígido, cifra
    a cifra. Por ahí sigue entrando el careo aunque el core no tenga la
@@ -391,19 +397,23 @@ C.structures.forEach(k => {
 // desviaciones se compensan. Un agregado de θ parecería cobertura y no lo
 // sería: por eso se compara `max|Δθ|` contra la serie del golden.
 //
-// El techo son 10°, y no es un número prudente: sale de medir las TRES cosas
-// que hay que separar, con la ficha de hoy contra el golden de hoy.
+// El techo son 6°, y sale de medir. Con el selector de contrasol declarado en
+// el golden y la ficha puesta en el MISMO ajuste, la divergencia baja de 7,79°
+// a 4,82°: aquella parte no era física, eran dos motores con opciones
+// distintas. Lo que queda ya no es el tope de aplanado —el peor caso está a
+// media tarde con GHI 445, no con sol rasante— sino la fórmula del retroceso
+// en pendiente, que los dos motores escriben distinto.
 //
-//                        correcto   con el bug (btLlano)
-//   tracker_hsat           7,786°        34,302°
-//   tracker_tsat           5,016°        36,547°
-//   tracker_hsat_nobt      0,826°         0,826°   <- control: sin backtracking
-//                                                     no cambia nada
-// 10° queda por encima de la divergencia REAL que hay hoy y a un factor 3,4 por
-// debajo de la clase de fallo que este careo existe para cazar.
-const TOL_THETA_DEG = 10.0;
-// Y el ruido de fondo se fija aparte: sin backtracking los dos motores solo se
-// separan por la posición solar, y eso no debe crecer sin que nadie lo note.
+//                                correcto   con el bug (btLlano)
+//   tracker_hsat                   4,822°        34,302°
+//   tracker_tsat                   3,126°        36,547°
+//   tracker_hsat_nobt              0,826°         0,826°   <- control
+//
+// 6° queda por encima de lo que hay y a un factor 5,7 por debajo de la clase de
+// fallo que este careo existe para cazar.
+const TOL_THETA_DEG = 6.0;
+// El ruido de fondo, aparte: sin backtracking los dos motores solo se separan
+// por la posición solar. Si eso crece, lo que se ha movido está más abajo.
 const TOL_THETA_RUIDO_DEG = 1.5;
 function maxDifTheta(serieJs, serieGolden){
   if(!serieJs || !serieGolden || serieJs.length !== serieGolden.length) return null;
@@ -452,22 +462,22 @@ C.structures.forEach(k => {
                 ' (' + (culpable.relativa ? (culpable.d * 100).toFixed(2) + ' %' : culpable.d.toFixed(3) + ' pp') +
                 '). Las etapas anteriores cuadran, así que la divergencia NACE aquí.') : '');
 });
-// ── HALLAZGO ABIERTO: la ficha aplana y el core no ───────────────────────
-// Este careo, en su primera ejecución de verdad, localizó una divergencia en θ
-// que nadie había visto — que es justo para lo que se construyó. No se tapa
-// subiendo el techo ni se arregla aquí: cuál de los dos tiene razón es física.
+// ── HALLAZGO ABIERTO, más pequeño que ayer ───────────────────────────────
+// Ayer este bloque decía que ficha y core discrepaban 7,79° en θ y culpaba al
+// tope de aplanado. Con el selector de contrasol —declarado en el golden y
+// aplicado aquí— la divergencia baja a 4,82°, así que AQUELLO era una opción
+// sin nombre y no física. Lo que queda es otra cosa y conviene no confundirla:
 //
-//   peor instante  2023-06-15 19:00Z (sol bajo, GHI 61)
-//   la ficha dice  θ = 0,00°   ·   el core dice  θ = 7,79°
+//   peor instante  2023-09-15 16:00Z · GHI 445 · ficha −42,20° · core −47,02°
+//   20 de 144 pasos con Δ>1°, repartidos por el día
 //
-// El cero no es casualidad: `FIS.theta` topa el retroceso en la mesa PLANA —su
-// propio comentario lo dice, «aplanarse más sería tumbarse hacia el otro lado,
-// que no evita ninguna sombra: la crea»— y `pvlib.tracking.singleaxis`, que es
-// lo que corre el core, no aplica ese tope. Con sol rasante el retroceso que
-// pide la geometría se pasa, la ficha se planta en 0 y el core no.
+// Ya no es sol rasante ni el tope: es la FÓRMULA del retroceso con pendiente
+// transversal, que los dos motores escriben distinto. La ficha usa
+// `acos(|cos(ψ−x)/(gcr·cos x)|)` y el core hereda la de `pvlib`. Cuál de las
+// dos es la buena pide leerse las dos derivaciones, no medir más.
 //
-// Decidirlo pide criterio de control, no de careo: si un seguidor real debe
-// poder pasar de plano backtrackeando. Queda medido y a la vista.
+// El control lo acota: sin backtracking los dos coinciden dentro de 0,826°, así
+// que la diferencia es específicamente del retroceso.
 {
   const abiertos = [];
   ['tracker_hsat', 'tracker_tsat'].forEach(k => {
@@ -475,8 +485,8 @@ C.structures.forEach(k => {
     const d = maxDifTheta(a, g);
     if (d != null) abiertos.push(k + ' ' + d.toFixed(2) + '°');
   });
-  check('HALLAZGO ABIERTO: ficha y core discrepan en θ con sol rasante (tope de aplanado)',
-    true, abiertos.join(' · ') + ' — decisión de control, pendiente');
+  check('HALLAZGO ABIERTO: la fórmula del retroceso en pendiente no es la misma',
+    true, abiertos.join(' · ') + ' — con el contrasol ya alineado');
 }
 // El control del ruido: sin backtracking los dos motores solo se separan por la
 // posición solar. Si esto crece, lo que se ha movido es algo de más abajo.
@@ -975,15 +985,39 @@ const sinPend = FIS.compara(['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt
   { ...cfg, pend: 0 });
 const porClave = r => Object.fromEntries(r.filas.map(f => [f.key, f]));
 const CP = porClave(conPend), SP = porClave(sinPend);
-['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt'].forEach(k => {
+/* `tracker_hsat` sale de esta lista, y el motivo vale la pena: con el contrasol
+   PERMITIDO —que es como corre el golden— el backtracking absorbe la pendiente
+   ENTERA y la sombra se queda en cero. O sea que «la pendiente mueve la sombra»
+   deja de ser cierto para el seguidor backtrackeado, no porque el parámetro no
+   llegue, sino porque el retroceso lo neutraliza. Se comprueban las dos caras
+   justo debajo en vez de quitar la comprobación. */
+['fija_proyecto', 'tracker_hsat_nobt'].forEach(k => {
   check('la pendiente mueve la sombra de ' + k + ' (' + SP[k].sombra.toFixed(2) +
     ' → ' + CP[k].sombra.toFixed(2) + ' %)',
     Math.abs(CP[k].sombra - SP[k].sombra) > 0.05,
     SP[k].sombra.toFixed(3) + ' vs ' + CP[k].sombra.toFixed(3));
 });
-check('y es UN solo parámetro, no uno por familia: las tres cambian a la vez',
-  ['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt']
-    .every(k => CP[k].sombra !== SP[k].sombra));
+/* Las dos caras del selector, sobre el MISMO caso. Es la consecuencia más
+   visible de la decisión y por eso va medida y no contada. */
+{
+  const bt = pend => porClave(FIS.compara(['tracker_hsat'], M,
+    { ...cfg, pend, contrasol: true })).tracker_hsat.sombra;
+  const btNo = pend => porClave(FIS.compara(['tracker_hsat'], M,
+    { ...cfg, pend, contrasol: false })).tracker_hsat.sombra;
+  check('permitiendo contrasol, el backtracking absorbe la pendiente entera (' +
+    bt(0).toFixed(3) + ' → ' + bt(12).toFixed(3) + ' %)',
+    Math.abs(bt(12) - bt(0)) < 0.01,
+    'si esto crece, el retroceso ha dejado de poder neutralizarla');
+  check('  y prohibiéndolo, la pendiente SÍ deja sombra (' +
+    btNo(0).toFixed(3) + ' → ' + btNo(12).toFixed(3) + ' %)',
+    btNo(12) - btNo(0) > 0.05,
+    'el selector no está llegando al sombreado');
+}
+check('y es UN solo parámetro, no uno por familia: las dos que pueden, cambian',
+  ['fija_proyecto', 'tracker_hsat_nobt'].every(k =>
+    Math.abs(CP[k].sombra - SP[k].sombra) > 0.05),
+  'tracker_hsat queda fuera a propósito: con contrasol permitido su retroceso ' +
+  'absorbe la pendiente, y eso se comprueba arriba en sus dos caras');
 // y la POA también, que es lo que decide
 check('con pendiente el ranking se recalcula con TODAS en el mismo terreno',
   conPend.filas.every(f => isFinite(f.neta) && f.neta > 0) &&
