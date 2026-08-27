@@ -788,6 +788,21 @@ sin cumbrera que inclinar. El careo no se mueve porque va por el camino sin azim
 declarado —`FIS.ejeTilt` devuelve 0 ahí—, pero con pendiente declarada la ficha y el core dan
 distinto para esta familia, y es la ficha la que está describiendo lo que se construye.
 
+#### Lo que se sale del encuadre, dicho
+
+Los bloques van en línea sobre la curva de nivel y el campo mide cientos de metros, así que
+orbitando bajo el más cercano se cae por debajo del borde: **una estructura de la comparación
+desaparece de la escena sin decir nada**, y se lee como que no se ha dibujado. No es culling —está
+ahí, con sus mallas; medido, 24 de sus 26 mallas quedan fuera del frustum— sino encuadre, y pasa
+desde que los bloques se alinean. Se comprobó que no es una regresión corriendo el mismo barrido
+sobre la versión anterior: mismos ángulos, mismos ceros.
+
+Ahora se nombra sobre el lienzo —«fuera del encuadre: tilt óptimo»— y pulsando se recentra. La
+prueba es por las **ocho esquinas** de la caja de cada bloque, no por su esfera envolvente: una fila
+mide 65 m, así que su esfera roza el encuadre casi siempre y el aviso no saltaba nunca. Detrás de la
+cámara la proyección se da la vuelta, así que se trata aparte: entero detrás es estar fuera, a
+caballo del plano de la cámara se da por visible.
+
 #### El backtracking, con la pendiente
 
 `FIS.theta` acepta la pendiente ⊥ a las filas y backtrackea **con ella**, que es lo que hace

@@ -1534,6 +1534,55 @@ const SONDA = `(() => {
   check('y al TRACKER', ok2.tk === ok2.n, JSON.stringify(ok2));
   check('con los dos de acuerdo, lo dice en verde', /✓/.test(ok2.txt), ok2.txt.slice(0, 120));
 
+  // ── LO QUE SE SALE DEL ENCUADRE, DICHO ──
+  // Los bloques van en línea sobre la curva de nivel y el campo mide cientos de
+  // metros: orbitando bajo, el más cercano se cae por debajo del borde y esa
+  // estructura desaparece de la escena sin decir nada. No es culling —está
+  // dibujada, con sus mallas— pero quien mira ve seis donde hay siete.
+  const encuadre = await p.evaluate(async () => {
+    const s = (id, v) => { const el = document.getElementById(id); el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true })); };
+    document.querySelectorAll('.st').forEach(c => { c.checked = true; });
+    s('pend', 12); s('pendAz', 87);
+    const espera = ms => new Promise(r => setTimeout(r, ms));
+    const nota = () => { const e = document.querySelector('.fuera');
+      return (e && e.style.display === 'block') ? e.textContent : ''; };
+    await espera(400);
+    const alAbrir = nota();
+    /* Cámaras BAJAS mirando a lo largo de la línea de bloques: ahí es donde el
+       más cercano se cae por debajo del borde. No se fija una sola —depende de
+       la geometría que tenga puesta la ficha en ese momento—: se barre la
+       órbita y se exige que donde ocurre, se diga. */
+    const caja = new THREE.Box3();
+    BLOQUES.forEach(B => B.filas.forEach(u => caja.expandByObject(u)));
+    const c = caja.getCenter(new THREE.Vector3());
+    const R = caja.getSize(new THREE.Vector3()).length() * 0.6;
+    TD.libre = true;
+    const avisos = [];
+    for (const elev of [6, 10, 16]) {
+      for (let az = 0; az < 360; az += 45) {
+        const a = az * Math.PI / 180, e = elev * Math.PI / 180;
+        TD.cam.position.set(c.x + R * Math.cos(e) * Math.sin(a), c.y + R * Math.sin(e),
+                            c.z + R * Math.cos(e) * Math.cos(a));
+        TD.ct.target.copy(c); TD.ct.update();
+        await espera(300);
+        const n = nota();
+        if (n) avisos.push(elev + '°/' + az + '° ' + n.replace(' · pulsa para recentrar', ''));
+      }
+    }
+    const bajo = avisos.join(' | ');
+    document.querySelector('.recentrar').click();
+    await espera(500);
+    return { alAbrir: alAbrir, bajo: bajo, trasRecentrar: nota() };
+  });
+  check('al abrir, con todo encuadrado, no se avisa de nada',
+    encuadre.alAbrir === '', encuadre.alAbrir);
+  check('pero orbitando bajo hay ángulos donde una se sale, y se DICE cuál (' +
+    encuadre.bajo.split(' | ')[0] + ')',
+    /fuera del encuadre/.test(encuadre.bajo), encuadre.bajo || '(nunca avisó)');
+  check('  y recentrar la devuelve, así que el aviso se apaga',
+    encuadre.trasRecentrar === '', encuadre.trasRecentrar);
+
   check('sin errores de JS', errs.length === 0, errs.join(' | '));
   await b.close();
   console.log('\n' + (ko ? 'FALLOS: ' + ko + ' (de ' + (ok + ko) + ')' : 'OK — ' + ok + '/' + ok + ' comprobaciones'));

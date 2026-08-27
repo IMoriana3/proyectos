@@ -123,6 +123,14 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
   color:var(--muted-2);background:rgba(11,15,20,.55);border:1px solid rgba(255,255,255,.12);
   padding:3px 8px;border-radius:6px;cursor:pointer}
 .recentrar:hover{color:#e8eef6;border-color:var(--accent)}
+/* Lo que se sale del encuadre se DICE. Con los bloques en línea sobre la curva
+   de nivel, orbitar bajo deja el más cercano fuera de cuadro: una estructura de
+   la comparación desaparece sin más, y eso se lee como que no está. */
+.fuera{position:absolute;right:10px;top:140px;max-width:270px;text-align:right;
+  font:400 10.5px var(--mono);color:#ffd479;background:rgba(11,15,20,.62);
+  border:1px solid rgba(255,212,121,.35);padding:3px 8px;border-radius:6px;
+  cursor:pointer;display:none;line-height:1.45}
+.fuera:hover{color:#fff}
 .tline{display:flex;align-items:center;gap:10px;margin-top:10px}
 .tline input[type=range]{flex:1;accent-color:var(--accent)}
 .tline input[type=date]{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit;font-size:12.5px}
@@ -3205,9 +3213,11 @@ function init3D(){
     rec.type='button'; rec.textContent='recentrar';
     rec.onclick=function(){ if(!TD)return; TD.libre=false; construyeMundo(); actualiza3D(); };
     h.appendChild(rec);
+    var fue=document.createElement('div'); fue.className='fuera';
+    fue.onclick=rec.onclick; h.appendChild(fue);
     TD={rd:rd,sc:sc,cam:cam,ct:ct,sun:sun,sunM:sunM,suelo:suelo,horiz:horiz,hemi:hemi,
         skyCv:skyCv,skyTx:skyTx,skyKey:'',radio:300,elevMinSombra:2,
-        brj:brj,libre:false};
+        brj:brj,libre:false,fuera:fue};
     suelo.scale.set(600,420,1);
     var last=performance.now();
     (function loop(now){requestAnimationFrame(loop); if(!TD)return;
@@ -3215,7 +3225,10 @@ function init3D(){
       if(w&&(TD.w!==w||TD.h!==hh)){TD.w=w;TD.h=hh;rd.setSize(w,hh,false);cam.aspect=w/hh;cam.updateProjectionMatrix();}
       var dt=Math.min(0.1,((now||performance.now())-last)/1000); last=now||performance.now();
       if(PLAY)avanzaHora(dt);
-      ct.update(); bajoTierra(); pintaBrujula(); rd.render(sc,cam);})(performance.now());
+      ct.update(); bajoTierra(); pintaBrujula();
+      /* Cuatro veces por segundo basta: es un aviso, no una animación. */
+      if((now||0)-(TD.tFuera||0)>250){TD.tFuera=(now||0); avisaFuera();}
+      rd.render(sc,cam);})(performance.now());
   }catch(e){ TD=null; $('view3d').innerHTML='<div class="sinwebgl">Sin WebGL en este navegador: '+
       'la comparativa numérica funciona igual.</div>'; }
 }
@@ -3970,6 +3983,48 @@ function construyeMundo(){
   TD.elevMinSombra=Math.atan(alt/Math.max(6,sep-largo))*180/Math.PI*0.8;
 }
 
+/* ── LO QUE SE SALE DEL ENCUADRE, DICHO ──
+   Los bloques van en línea sobre la curva de nivel y el campo mide cientos de
+   metros, así que orbitando bajo el más cercano se cae por debajo del borde: la
+   estructura desaparece de la escena sin decir nada y se lee como que no se ha
+   dibujado. Pasaba desde que hay bloques en línea, y no es un fallo del render
+   —está ahí, con sus mallas— sino del encuadre. Así que se nombra, y pulsando
+   se recentra.
+   Se comprueba contra la esfera envolvente de cada bloque, que se recalcula en
+   `actualiza3D`: sólo se avisa de los que quedan ENTEROS fuera. */
+var _esq=null;
+function avisaFuera(){
+  if(!TD||!TD.fuera)return;
+  if(!_esq){_esq=[]; for(var i=0;i<8;i++)_esq.push(new THREE.Vector3());}
+  var cam=TD.cam, f=[];
+  BLOQUES.forEach(function(B){
+    if(!B.caja||B.caja.isEmpty())return;
+    /* Esfera envolvente NO vale: una fila mide 65 m, así que su esfera roza el
+       encuadre casi siempre y el aviso no saltaba nunca. Se proyectan las OCHO
+       esquinas de la caja: el bloque está fuera si todas se salen POR EL MISMO
+       LADO. Si alguna cae cerca o detrás de la cámara se da por visible, que
+       ahí la proyección se da la vuelta y avisaría en falso. */
+    var mn=B.caja.min, mx=B.caja.max, k=0, izq=0,der=0,arr=0,aba=0, detras=0;
+    for(var a=0;a<2;a++)for(var b=0;b<2;b++)for(var c=0;c<2;c++){
+      var v=_esq[k++].set(a?mx.x:mn.x, b?mx.y:mn.y, c?mx.z:mn.z);
+      if(v.applyMatrix4(cam.matrixWorldInverse).z>-cam.near){detras++; continue;}
+      v.applyMatrix4(cam.projectionMatrix);   // ya está en el marco de la cámara
+      if(v.x<-1)izq++; if(v.x>1)der++; if(v.y<-1)aba++; if(v.y>1)arr++;
+    }
+    /* Detrás de la cámara la proyección se da la vuelta, así que se trata
+       aparte: entero detrás es estar fuera; a caballo del plano de la cámara se
+       da por visible, que es la respuesta prudente. */
+    if(detras&&detras<8)return;
+    if(detras===8||izq===8||der===8||aba===8||arr===8)
+      f.push(B.spec.label.replace('Tracker 1 eje ','').replace('Fija · ','')
+                         .replace(' (dos aguas)',''));
+  });
+  if(!f.length){TD.fuera.style.display='none'; return;}
+  TD.fuera.style.display='block';
+  TD.fuera.textContent=(f.length===1?'fuera del encuadre: ':f.length+' fuera del encuadre: ')+
+                       f.join(', ')+' · pulsa para recentrar';
+}
+
 /* ── Poner la escena en un INSTANTE ──
    Los ángulos NO se inventan aquí: salen de las mismas funciones que calculan
    la tabla (FIS.psTracker/psFija/psTSAT + FIS.theta). Si la escena y la tabla
@@ -4061,6 +4116,10 @@ function actualiza3D(){
       });
       th=tOpt;
     }
+    /* La envolvente del bloque, con las filas ya giradas: es lo que decide si
+       ha quedado fuera del encuadre. */
+    B.caja=new THREE.Box3();
+    B.filas.forEach(function(u){u.updateWorldMatrix(true,true); B.caja.expandByObject(u);});
     var imposible=(B.gcr>1);
     ro.push(roEsc(spec.label.replace('Tracker 1 eje ','').replace('Fija · ',''),
       imposible?'—'
