@@ -348,39 +348,33 @@ check('el orden entre estructuras es el mismo', ordJS === ordCore, '\n     JS   
 //     separa a Hay-Davies de Perez. Apretarla más sería un test que se pone
 //     rojo por el modelo, no por un bug. Se declara en vez de fingir que cubre
 //     lo que no cubre.
-/* ── SOL-01: las tres tolerancias se remiden ────────────────────────────────
-   Al pasar la ficha a NOAA + refracción (0,3525° → 0,0027° de error solar
-   medio), el hueco con el core se estrecha en TODO menos en una cosa, y esa
-   una merece explicación porque parece un retroceso y no lo es.
+/* ── CIELO-01: las tolerancias, otra vez, y ahora de verdad pequeñas ────────
+   Al portar Perez a la ficha —antes Hay-Davies— el hueco de transposición
+   desaparece. Hueco de POA, ficha vs core:
 
-   Hueco de POA, ficha vs core, por estructura:
+                        antes SOL-01   tras SOL-01   tras CIELO-01
+       fija_optima          0,92 %       0,873 %        0,003 %
+       fija_proyecto        0,81 %       0,576 %        0,001 %
+       fija_ew              1,36 %       0,680 %        0,003 %
+       tracker_hsat         1,09 %       0,383 %        0,198 %
+       tracker_hsat_nobt    1,15 %       0,598 %        0,172 %
+       tracker_tsat         0,68 %       0,189 %        0,251 %
 
-       fija_optima        0,92 % → 0,873 %   1,1x
-       fija_proyecto      0,81 % → 0,576 %   1,4x
-       fija_ew            1,36 % → 0,680 %   2,0x
-       tracker_hsat       1,09 % → 0,383 %   2,8x
-       tracker_hsat_nobt  1,15 % → 0,598 %   1,9x
-       tracker_tsat       0,68 % → 0,189 %   3,6x
+   Y el Δ% de las fijas baja a 0,005 pp, que es ruido de coma flotante.
 
-   El Δ% se mide CONTRA `fija_optima`, así que lo que pesa es la DIFERENCIA
-   entre los dos huecos — y esa ha CRECIDO:
+   LO QUE QUEDA, localizado con la cadena y no supuesto: la POA IDEAL —sin
+   sombra— coincide ya en TODAS las estructuras dentro de 0,004 %, seguidores
+   incluidos. Todo el residuo de los seguidores está en la SOMBRA: la ficha
+   reporta cero y el core 0,2 %, con el ángulo cuadrando a 0,067°. O sea que el
+   siguiente cuello de botella es `FIS.shade` contra `shaded_fraction1d`, no la
+   transposición ni el seguimiento.
 
-       tracker_tsat   antes |0,68−0,92| = 0,24 pp   ahora |0,189−0,873| = 0,684 pp
-       tracker_hsat   antes |1,09−0,92| = 0,17 pp   ahora |0,383−0,873| = 0,490 pp
-
-   O sea: el Δ% estaba saliendo bien porque TODAS las estructuras estaban mal
-   por igual y los errores se cancelaban en el cociente. Al arreglar la posición
-   solar los seguidores mejoran 3-4x y la referencia fija solo 1,1x, así que la
-   cancelación se acaba. No es que el careo empeore: es que deja de cobrar una
-   coincidencia.
-
-   Y eso deja el cuello de botella a la vista: lo que queda es el MODELO DE
-   CIELO de la fija —Hay-Davies aquí, Perez en el core—, que es lo próximo que
-   habría que mirar si se quiere apretar más. */
-const TOL_POA = 0.015, TOL_DELTA = 1.20;
+   Las tolerancias se ponen donde el careo aún puede vigilar: por encima del
+   0,251 % que hay y muy por debajo de lo que costaría un error de física. */
+const TOL_POA = 0.005, TOL_DELTA = 0.50;
 // Hueco medido con el golden al día. Si alguien afloja las tolerancias, esto
 // enseña contra qué se están comparando.
-const HUECO_MEDIDO = { poa_pct: 0.873, delta_pp: 0.826 };
+const HUECO_MEDIDO = { poa_pct: 0.251, delta_pp: 0.304 };
 check('la tolerancia de Δ% no es gratuita: ' + TOL_DELTA + ' pp sobre un hueco real de ' +
   HUECO_MEDIDO.delta_pp + ' pp (×' + (TOL_DELTA / HUECO_MEDIDO.delta_pp).toFixed(1) + ')',
   TOL_DELTA / HUECO_MEDIDO.delta_pp < 3.0,
@@ -488,6 +482,62 @@ C.structures.forEach(k => {
                 ' (' + (culpable.relativa ? (culpable.d * 100).toFixed(2) + ' %' : culpable.d.toFixed(3) + ' pp') +
                 '). Las etapas anteriores cuadran, así que la divergencia NACE aquí.') : '');
 });
+// ── CIELO-01: la transposición de la difusa ───────────────────────────────
+// La ficha usaba Hay-Davies y el core usa Perez 1990. Descomponiendo la fija de
+// tilt óptimo sobre los 12 días del golden, el hueco NO estaba repartido:
+//
+//     haz directo      ficha 73,185   core 73,185   <- idéntico
+//     suelo            ficha  1,404   core  1,404   <- idéntico
+//     difusa de cielo  ficha  9,644   core 10,389   <- todo el hueco, 0,745
+//
+// Eso es 0,877 % de 84,961, que era exactamente el 0,873 % que el careo medía.
+// Hay-Davies queda un 7,7 % por debajo por no llevar término de horizonte.
+{
+  /* Las tres partes de Perez según pvlib, CALCULADAS ejecutándolo y no puestas
+     a ojo — en SOL-01 me inventé dos referencias y la propia prueba las cazó
+     con 8,52° de desvío. Fija de tilt 37°, azimut 180°. */
+  const REF = [
+    ['2023-06-15T12:00:00Z', 41.9759, 62.0756,  6.8151],
+    ['2023-09-15T16:00:00Z', 33.7299, 43.4959, 12.3513],
+    ['2023-12-15T10:00:00Z', 20.9440, 26.6923,  7.8314],
+  ];
+  let peor = 0, cual = '', detalle = '';
+  REF.forEach(([iso, refIso, refCirc, refHor]) => {
+    const k = fix.meteo.t.indexOf(iso);
+    if (k < 0) { check('el instante ' + iso + ' está en la meteo del golden', false); return; }
+    const d = new Date(iso), S = FIS.sun(d, C.lat * FIS.D2R, C.lon);
+    const zen = 90 - S.el * FIS.R2D;
+    const P0 = FIS.psFija(S.el, S.az, C.lat, { lat: C.lat, lon: C.lon });
+    const cosAOI = Math.max(0, P0.rho * Math.cos((P0.ps - 37) * FIS.D2R));
+    const p = FIS.perez(fix.meteo.dhi[k], fix.meteo.dni[k], FIS.E0(d), zen, cosAOI, 37);
+    [['iso', p.iso, refIso], ['circ', p.circ, refCirc], ['hor', p.hor, refHor]]
+      .forEach(([n, v, r]) => {
+        const e = Math.abs(v - r) / Math.max(r, 1e-9) * 100;
+        if (e > peor) { peor = e; cual = iso; detalle = n + ' ' + v.toFixed(4) + ' vs ' + r.toFixed(4); }
+      });
+  });
+  check('las tres partes de Perez cuadran con pvlib dentro del 0,5 % (' +
+    peor.toFixed(3) + ' %)', peor < 0.5,
+    'peor en ' + cual + ': ' + detalle);
+
+  /* Y el control que impide que esto sea «Perez devuelve algo»: Hay-Davies, el
+     modelo que había, NO cuadra. Sin esta comprobación, una implementación que
+     casualmente diera números parecidos pasaría igual. */
+  const k = fix.meteo.t.indexOf('2023-06-15T12:00:00Z');
+  const d = new Date('2023-06-15T12:00:00Z'), S = FIS.sun(d, C.lat * FIS.D2R, C.lon);
+  const P0 = FIS.psFija(S.el, S.az, C.lat, { lat: C.lat, lon: C.lon });
+  const cosAOI = Math.max(0, P0.rho * Math.cos((P0.ps - 37) * FIS.D2R));
+  const cb = Math.cos(37 * FIS.D2R), e0 = FIS.E0(d);
+  const AI = Math.max(0, Math.min(1, fix.meteo.dni[k] / Math.max(e0, 1)));
+  const Rb = Math.min(20, cosAOI / Math.max(Math.sin(S.el), 0.05));
+  const hayDavies = fix.meteo.dhi[k] * (AI * Rb + (1 - AI) * (1 + cb) / 2);
+  const perezTotal = 41.9759 + 62.0756 + 6.8151;
+  check('ZOMBI: Hay-Davies —lo que había— NO da lo mismo (' +
+    hayDavies.toFixed(2) + ' vs ' + perezTotal.toFixed(2) + ' W/m²)',
+    Math.abs(hayDavies / perezTotal - 1) > 0.02,
+    'si los dos modelos coincidieran aquí, esta prueba no probaría nada');
+}
+
 // ── SOL-01: la posición solar, y por qué el backtracking la amplifica ─────
 // La ficha calculaba el sol con Cooper (declinación del día del año) y una
 // serie de tres términos para la ecuación del tiempo, sin refracción. Medido
