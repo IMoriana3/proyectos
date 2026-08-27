@@ -142,6 +142,95 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   check('  …con los dos montajes, que es el régimen que distingue',
     mask.montajes.length === 2, mask.montajes.join(','));
 
+  // ── UNA fuente por montaje: el guard de la NO duplicación ──
+  // Reportado por el cliente: «tenemos duplicado lo de pitch y pendiente
+  // máxima, ¿para qué? Debería estar únicamente en su cuadro de config de
+  // fija o de tracker». El síntoma ya había mordido: un filtro global de
+  // pendiente en 2° convivía con límites de zona en 15/25 sobre terreno de
+  // 16,3°, ganaba el más estricto EN SILENCIO y el layout salía «no
+  // implantable» sin decir por qué.
+  const uni = await page.evaluate(() => {
+    const q = sel => document.querySelectorAll(sel).length;
+    return {
+      // los que ya no deben existir
+      pitchGlobal: q('#pitch'), slopeGlobal: q('#slopeMax'),
+      mixPitch: q('#mixPitchTrk') + q('#mixPitchFija'),
+      mixLims: q('#mixTrkEw') + q('#mixTrkNs') + q('#mixFijaEw') + q('#mixFijaNs'),
+      // exactamente UNO de cada, y dentro del pane de su montaje
+      pitchTrk: q('#paneTracker #pitchTrk'), pitchFija: q('#paneFija #pitchFija'),
+      limsTrk: q('#paneTracker #slopeTrkEw') + q('#paneTracker #slopeTrkNs'),
+      limsFija: q('#paneFija #slopeFijaEw') + q('#paneFija #slopeFijaNs'),
+      // y las puertas únicas existen
+      puertas: ['pitchAct', 'pitchDe', 'limPendAct', 'limPendDe', 'admiteMontaje']
+        .filter(f => typeof window[f] === 'function').length
+    };
+  });
+  check('NO queda un pitch global (era el duplicado del de cada montaje)',
+    uni.pitchGlobal === 0, String(uni.pitchGlobal));
+  check('NO queda una pendiente máxima global (era el que ganaba en silencio)',
+    uni.slopeGlobal === 0, String(uni.slopeGlobal));
+  check('el panel de zonas NO repite pitch ni límites',
+    uni.mixPitch === 0 && uni.mixLims === 0, uni.mixPitch + '/' + uni.mixLims);
+  check('cada montaje tiene UN pitch, en SU cuadro',
+    uni.pitchTrk === 1 && uni.pitchFija === 1, uni.pitchTrk + '/' + uni.pitchFija);
+  check('cada montaje tiene DOS pendientes máximas, en SU cuadro',
+    uni.limsTrk === 2 && uni.limsFija === 2, uni.limsTrk + '/' + uni.limsFija);
+  check('y existen las puertas únicas para leerlos', uni.puertas === 5, String(uni.puertas));
+
+  // el pitch que usa el motor es el DEL MONTAJE ACTIVO, no uno fijo
+  const porMontaje = await page.evaluate(() => {
+    const set = (id, v) => { document.querySelector('#' + id).value = String(v); };
+    set('pitchTrk', 7.5); set('pitchFija', 3.5);
+    const sel = document.querySelector('#mount');
+    sel.value = 'tracker'; sel.dispatchEvent(new Event('change'));
+    const t = window.pitchAct();
+    sel.value = 'fija'; sel.dispatchEvent(new Event('change'));
+    const f = window.pitchAct();
+    sel.value = 'tracker'; sel.dispatchEvent(new Event('change'));
+    return { t, f };
+  });
+  check('el pitch que lee el motor cambia CON el montaje',
+    porMontaje.t === 7.5 && porMontaje.f === 3.5, JSON.stringify(porMontaje));
+
+  /* ── SIN PARCELA NO SE PROPONE ────────────────────────────────────────
+   * El MDT se descarga sobre el BBOX de la parcela MÁS margen. Sin linde,
+   * recorrer la rejilla entera propone zonas sobre el terreno del vecino —y
+   * ahí se colocarían mesas—. `mascaraParcelaDEM` ya lo cubría… salvo en el
+   * único caso que importa: sin ningún anillo devolvía «todo dentro», así
+   * que el guard se desactivaba solo justo cuando hacía falta.
+   * Lo destapó portar el recorte a Python (SolarGPTfull#166), donde la linde
+   * es argumento OBLIGATORIO. */
+  const sinLinde = await page.evaluate(() => {
+    const PARCEL_prev = window.PARCEL, PARCELAS_prev = window.PARCELAS;
+    window.PARCEL = null; window.PARCELAS = [];
+    // DEM sintético mínimo: 4×4 celdas, llano — con parcela saldría zona.
+    window.DEM = { lats: [41.570, 41.572, 41.574, 41.576],
+                   lons: [-0.800, -0.798, -0.796, -0.794] };
+    const msk = window.mascaraParcelaDEM();
+    const pend = { n: 4, ew: [], ns: [] };
+    for (let r = 0; r < 4; r++) { pend.ew.push([0, 0, 0, 0]); pend.ns.push([0, 0, 0, 0]); }
+    const prop = window.zonasPorPendiente(
+      pend, { trkEw: 10, trkNs: 15, fijaEw: 12, fijaNs: 12 }, 1);
+    window.PARCEL = PARCEL_prev; window.PARCELAS = PARCELAS_prev;
+    return { msk: msk, sinParcela: !!(prop && prop.sinParcela),
+             nZonas: prop && prop.zonas ? prop.zonas.length : -1 };
+  });
+  check('sin ningún anillo, la máscara es NULL y no «todo dentro»',
+    sinLinde.msk === null, JSON.stringify(sinLinde.msk));
+  check('y el reparto se NIEGA a proponer en vez de repartir el BBOX',
+    sinLinde.sinParcela === true && sinLinde.nZonas === 0,
+    JSON.stringify(sinLinde));
+
+  const dice = await page.evaluate(() => {
+    window.MIX_PROP = { sinParcela: true, zonas: [] }; window.MIX_ZONAS = [];
+    window.mixPinta();
+    return { out: document.getElementById('mixOut').textContent,
+             tag: document.getElementById('mixTag').textContent };
+  });
+  check('y lo DICE, en vez de quedarse mudo como si no hubiera salido nada',
+    /parcela/i.test(dice.out) && /sin parcela/i.test(dice.tag),
+    JSON.stringify(dice));
+
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
   process.exit(ko ? 1 : 0);

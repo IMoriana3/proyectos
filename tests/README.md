@@ -188,12 +188,12 @@ python3 -m http.server 8099                # servir el repo (en otra terminal)
 node tests/test_index.js                   # 13 comprobaciones
 node tests/test_pwa.js                     # 21 comprobaciones (PWA)
 node tests/test_integridad.js              # 6 comprobaciones, sin navegador
-node tests/test_comparador.js              # 200 comprobaciones, careo contra el core y barridos
-node tests/test_comparador_3d.js           # 176 comprobaciones, escena 3D, equipos, sizing y barridos
+node tests/test_comparador.js              # 226 comprobaciones, careo contra el core, quebrado y barridos
+node tests/test_comparador_3d.js           # 214 comprobaciones, escena 3D, equipos, sizing y barridos
 node tests/test_sizing.js                  # 115 comprobaciones, careo del dimensionado eléctrico
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
 node tests/test_viento_ejes.js             # 77 comprobaciones, lienzos, ejes, transmisión, reproductor, sombras y franjas
-node tests/test_viento_sitio.js            # 51 comprobaciones, emplazamiento, horas y laboratorio
+node tests/test_viento_sitio.js            # 52 comprobaciones, emplazamiento, horas y laboratorio
 node tests/test_viento_planta.js           # 20 comprobaciones, la planta en franjas y consigna vs ejecutado
 node tests/test_viento_sello.js     # el informe declara con qué coordenadas se calculó
 node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core

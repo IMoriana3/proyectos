@@ -27,13 +27,49 @@ pueden producir distinto (módulo, térmico, inversor, pérdidas) y costar muy d
 |---|---|
 | **Fija · tilt óptimo** | Monoinclinada al ecuador; el tilt sale de un barrido anual sobre la meteo del sitio |
 | **Fija · tilt de proyecto** | La misma, con el tilt y el azimut que se teclean |
-| **Fija · Este-Oeste** | Dos aguas, media de los dos planos (misma superficie de módulo cada uno) |
+| **Fija · Este-Oeste** | Dos aguas, media de los dos planos (misma superficie de módulo cada uno); su cumbrera corre N-S y sigue el terreno |
 | **Tracker N-S · backtracking** | HSAT canónico: eje horizontal norte-sur, backtracking activo |
 | **Tracker N-S · sin backtracking** | Seguimiento astronómico puro: apunta mejor y se da sombra |
 | **Tracker de eje inclinado (TSAT)** | Eje norte-sur inclinado hacia el ecuador |
+| **Tracker quebrado · backtracking** | Rótula en el actuador: la mesa norte y la sur quedan a inclinaciones distintas |
+| **Tracker quebrado · sin backtracking** | El mismo quebrado, para aislar qué aporta cada cosa |
 
-Son las mismas claves y las mismas etiquetas que `solargpt_core.structure_compare.CATALOGO`, y el
-careo lo comprueba: si el core añade una y la ficha no, el test se pone rojo.
+Las seis primeras son las mismas claves y las mismas etiquetas que
+`solargpt_core.structure_compare.CATALOGO`, y el careo lo comprueba: si el core añade una y la
+ficha no, el test se pone rojo.
+
+Los dos **quebrados** no están en el core, y eso no se disimula: el catálogo del core corre una
+estructura con UN eje, y un quebrado son dos medias vigas con su rótula. Van marcados
+`soloFicha`, el test exige que lo que la ficha tiene de más esté declarado —así añadir una
+estructura que el core no sabe expresar no se cuela en silencio— y el motor Python las rechaza
+diciendo por qué en vez de devolver una fila que no es la que se pidió. Lo que mantiene vivo el
+careo es que **con quiebro 0 el quebrado y el rígido dan la misma cifra**, y eso se exige.
+
+### El seguidor quebrado
+
+Un quebrado no es un seguidor con otro número: es el mismo, con una rótula en el actuador
+central, de modo que la fila norte y la fila sur se montan a inclinaciones distintas. Es lo que
+se compra cuando el terreno quiebra a lo largo del eje.
+
+El parámetro es **la diferencia entre las dos mesas** —`Quiebro N-S °`—, no lo que se aparta
+cada una: con 10° sobre un terreno que cae 12° al sur, una mesa queda a 17° y la otra a 7°. El
+rígido, en el mismo sitio, se queda en los 12° de la media.
+
+Cada mesa corre **su** física: su ángulo de seguimiento, su retroceso de backtracking y su
+sombra, con las mismas funciones que la tabla; el seguidor es la media de las dos. Y en la
+escena cada mesa gira lo suyo, porque dibujar las dos al mismo ángulo sería enseñar un seguidor
+distinto del que se ha calculado.
+
+**Y aquí la tabla dice lo contrario de lo que parece.** Por POA el rígido sale por delante, y no
+por ser mejor estructura: la curva POA-vs-inclinación-de-eje es **cóncava**, así que la media de
+dos mesas a 17° y 7° cae por debajo del punto medio a 12°. Es Jensen. Lo que el número no dice
+es que ese tubo recto **no se puede montar ahí**: vuela metros sobre el caballón por los dos
+extremos —2,97 m con 10° de quiebro sobre 12° de caída, en una fila de 65 m— y hay que sostenerlo con hincas que
+pasan de 2,0 a 4,9 m, cuando el quebrado apoya con todas iguales. La ficha publica el vuelo y lo
+explica debajo de la tabla; sin eso, la comparación está a medias.
+
+El quiebro es **a lo largo** del eje: no toca la pendiente ⊥ de nadie, y por tanto no cambia el
+backtracking por ese lado.
 
 ## Igualdad de potencia pico
 
@@ -659,6 +695,127 @@ con la cámara a 25° y el terreno a 16° quedan 9° de nada y la escena entera 
 fuga. Se le suma la pendiente para conservar el mismo ángulo de vista sobre el plano del sitio, que
 en llano es el de siempre.
 
+#### Lo que esta tabla NO puede decidir: backtracking sí o no
+
+Dos cosas que hay que decir en cuanto aparecen las dos filas de seguidor, porque el número invita a
+leer justo lo contrario de lo que dice:
+
+1. La comparación es de **POA**, y la pérdida por sombra entra como **fracción sombreada del plano,
+   lineal**. En un string real una sombra parcial cuesta mucho más que su fracción —el módulo tapado
+   arrastra a la serie— y eso aquí no se ve. Así que **por POA el backtracking casi nunca gana**:
+   renuncia a apuntar para quitarse una sombra que este modelo cobra barata. Lo que lo decide es la
+   energía DC/AC, y eso es otra ficha.
+2. El ángulo de backtracking se calcula **en llano**, que es lo que hace el core (y por eso el careo
+   cuadra). Con pendiente ⊥ a las filas deja de evitar la sombra: la fila de al lado está más alta y
+   sigue tapando. `pvlib` sabe hacerlo con la pendiente (`cross_axis_tilt`); el core no lo usa, y la
+   ficha no se lo va a inventar por su cuenta — lo dice y ya.
+
+Va en la nota de la tabla, y la segunda parte solo cuando hay pendiente ⊥ que la justifique.
+
+#### La fija sigue el terreno A LO LARGO, y su pendiente ⊥ es la tecleada
+
+Las dos cosas a la vez. Una fila de 65 m no se monta horizontal sobre una ladera: se replanta sobre
+ella, igual que un seguidor y que unas dos aguas. Antes se quedaba horizontal y quien compensaba era
+la hinca, y con 12° a lo largo de sus filas eso pedía hincas de **0,25 a 8,74 m** — con la mesa
+**cinco metros dentro del terreno** por un extremo y volando siete por el otro. Eso no es una fija
+sobre una cuesta, es una fija que no existe.
+
+Lo que **no** cambia es la pendiente que se teclea, que es la de la dirección ⊥ a las filas
+(norte-sur en una monoinclinada). Y ahí hay un detalle que hay que hacer bien, porque la intuición
+falla: rodar la fila **sí** mueve esa pendiente. Medido, 25° tumbados sobre una fila con 12° a lo
+largo dan **25,49°** de pendiente norte-sur. La relación es
+
+```
+pendiente ⊥ = atan( tan(giro sobre la fila) / cos(inclinación de la fila) )
+```
+
+así que el giro que se le da a la mesa sobre su propia fila es el de la inversa —`FIS.thMesa`—:
+**24,51°** para que la pendiente norte-sur salga los 25 de proyecto. Con la fila horizontal es el
+mismo número, que es el camino del careo.
+
+La inclinación **total** de la superficie sí cambia, y es la otra mitad de la verdad:
+acos(cos 24,51° · cos 12°) = **27,13°**. Es `FIS.tiltSup` sobre `FIS.thMesa`, las dos funciones que
+usa la tabla — lo dibujado y lo calculado son lo mismo.
+
+Un **seguidor** no lleva esta corrección, y no es una excepción caprichosa: su θ es un ángulo de
+motor sobre su eje, no una pendiente de proyecto.
+
+#### Los soportes de una fija: DOS líneas, y no miden lo mismo
+
+Una mesa fija no gira: se apoya en la línea de postes de delante y en la de detrás, y el propio tilt
+las hace distintas — con 25° hay cerca de un metro entre una y otra. Con una sola línea bajo el eje
+la mesa parecía un balancín y el rango de hinca que publicaba la lectura no era el de la estructura.
+
+Cada poste se apoya en el **terreno de verdad**: se lleva su cabeza al mundo, se pregunta la cota
+ahí y se mide la vertical. Cualquier cuenta hecha en el marco local se queda corta en cuanto la fila
+va rodada — a 30° dejaba los pies a 39 cm del suelo. Y sale **vertical en el mundo** aunque su fila
+vaya inclinada.
+
+Con eso, la pendiente a lo largo ya no estira las hincas (12° y 30° dan el mismo rango que el llano)
+y desaparece el caso de «hay que bancalear», que era consecuencia del modelo viejo. La pendiente ⊥
+sí las mueve, y en el sentido correcto: **acerca** las dos líneas, porque el suelo cae hacia el
+mismo lado que la mesa.
+
+#### Y las DOS AGUAS sí, igual que el seguidor
+
+La diferencia no es de familia, es de **dirección**. Las filas de una monoinclinada corren
+este-oeste y su tilt **es** la dirección norte-sur: ahí la pendiente no se puede seguir sin cambiar
+el tilt de proyecto, así que la absorbe la hinca. Las filas de unas **dos aguas** corren norte-sur
+—igual que el eje de un seguidor— y lo que corre por su cumbrera es una recta apoyada en el suelo:
+sobre una caída norte-sur **no queda horizontal**, se inclina con ella. Una cumbrera de 65 m
+horizontal sobre una ladera es el mismo «megasoporte» que ya no se dibuja en ninguna otra familia.
+
+E inclinar la cumbrera **no cambia el tilt**: los dos paños siguen a ±tiltEO sobre ella, igual que
+inclinar el eje de un seguidor no cambia su ángulo de seguimiento. Geométricamente son el mismo
+marco girado, así que comparten `FIS.ejeTilt` y la misma proyección (`psTSAT`) — y el test lo exige
+midiendo el ángulo **entre los dos paños**, que es 2 × tiltEO se mire desde donde se mire.
+
+Y tiene consecuencia en la cifra, que es lo que lo hace física y no dibujo. En Sevilla, cielo claro:
+
+| caída | POA dos aguas |
+|---|---|
+| llano | 65,5 kWh/m² |
+| **12° al sur** | **72,4** (+10,5 %) |
+| 20° al sur | 75,6 |
+| 12° al este | 65,5 (sin cambio: esa pendiente es la ⊥, y entra por el sombreado) |
+
+Mientras la cumbrera se dibujaba horizontal y se calculaba horizontal no había contradicción, pero
+sí una estructura que no se monta así. Ahora la lectura de las dos aguas dice cuánto se inclina su
+cumbrera con el terreno, igual que la del seguidor dice lo del eje.
+
+**Hueco declarado**: el core corre las dos aguas como dos planos fijos a ±tilt con azimut 90/270,
+sin cumbrera que inclinar. El careo no se mueve porque va por el camino sin azimut de terreno
+declarado —`FIS.ejeTilt` devuelve 0 ahí—, pero con pendiente declarada la ficha y el core dan
+distinto para esta familia, y es la ficha la que está describiendo lo que se construye.
+
+#### El backtracking, con la pendiente
+
+`FIS.theta` acepta la pendiente ⊥ a las filas y backtrackea **con ella**, que es lo que hace
+`pvlib.tracking.singleaxis` con `cross_axis_tilt`:
+
+```
+d = 1 / (GCR · cos x)        separación entre ejes, corregida
+t = |d · cos(ψ − x)|         y si t ≥ 1 no hay sombra que evitar
+θ = ψ − signo(ψ) · acos(t)
+```
+
+Con `x = 0` sale la de siempre, cifra a cifra. Con la pendiente metida, la sombra residual del
+seguidor con backtracking se va a **0,0000**: era 4,3 % a 8° sin ella.
+
+El core lleva `cross_axis_tilt` desde **SolarGPT v1.70.0** (mismo día, `solargpt_core/poa.py` — la
+llamada a `pvlib.tracking.singleaxis` iba sin él mientras el sombreado sí llevaba el
+`cross_axis_slope`). Hay **un solo modelo** y el careo entra por él: a 8° el core da **0,16 %** de
+sombra residual y la ficha **0,20 %**, contra los 3,74 / 4,11 de antes.
+
+Queda un `backtracking en llano` **desmarcado**, y es un **diagnóstico**, no una alternativa:
+calcula el ángulo como si el campo fuese llano —lo que hacía el core hasta ese día— para poder ver
+de un vistazo lo que cuesta backtrackear mal en un campo en cuesta, que es un número que quiere
+cualquiera que herede uno. La tabla lo grita cuando está puesto, porque si no alguien lo deja
+marcado y compara contra el modelo viejo sin saberlo.
+
+El aviso sale del modelo con el que se **corrió** la tabla (`REP.btLlano`), no del interruptor vivo:
+marcarlo sin volver a comparar cambiaría el texto dejando debajo los números de la tirada anterior.
+
 #### Las hincas de la fija
 
 Dos, una en cada punta, era lo que había — y desde casi cualquier ángulo se veía **una**. Una mesa de
@@ -684,6 +841,67 @@ la gemela no tiene motor, la mueve la motriz. Va de **corona a corona** (en `seg
 está en el centro del tubo), es un tubo del mismo acero con su brida en cada extremo, y **nada en
 medio**: el motor ya está donde tiene que estar, en el slew de la viga motriz. Se le pasan las cotas
 de las dos filas, porque en pendiente no están a la misma altura.
+
+#### Lo que esta tabla NO puede decidir: backtracking sí o no
+
+Dos cosas que hay que decir en cuanto aparecen las dos filas de seguidor, porque el número invita a
+leer justo lo contrario de lo que dice:
+
+1. La comparación es de **POA**, y la pérdida por sombra entra como **fracción sombreada del plano,
+   lineal**. En un string real una sombra parcial cuesta mucho más que su fracción —el módulo tapado
+   arrastra a la serie— y eso aquí no se ve. Así que **por POA el backtracking casi nunca gana**:
+   renuncia a apuntar para quitarse una sombra que este modelo cobra barata. Lo que lo decide es la
+   energía DC/AC, y eso es otra ficha.
+2. El ángulo de backtracking se calcula **en llano**, que es lo que hace el core (y por eso el careo
+   cuadra). Con pendiente ⊥ a las filas deja de evitar la sombra: la fila de al lado está más alta y
+   sigue tapando. `pvlib` sabe hacerlo con la pendiente (`cross_axis_tilt`); el core no lo usa, y la
+   ficha no se lo va a inventar por su cuenta — lo dice y ya.
+
+Va en la nota de la tabla, y la segunda parte solo cuando hay pendiente ⊥ que la justifique.
+
+#### Una fija monoinclinada NO sigue el terreno: lo compensan las hincas
+
+Un seguidor sí sigue el terreno a lo largo de su eje —eso *es* un eje inclinado—. Una **fija
+monoinclinada no**: se monta al **tilt de proyecto** y lo que compensa la pendiente a lo largo de sus
+filas es la **longitud de las hincas**. Con 12° de cuesta la mesa sigue a 25°.
+
+Antes se escoraba la mesa entera con el suelo, que es lo que hace un seguidor: el tilt dibujado
+dejaba de ser el tecleado, y hubo que poner un aviso diciéndolo. Ese aviso sobra ahora — el tilt del
+cálculo y el del dibujo vuelven a ser el mismo.
+
+Cada lectura de fija dice el **rango de hinca** que sale, porque es lo que dice si la estructura se
+puede montar: con 12° a lo largo de una fila de 65 m van de **0,3 a 8,8 m**. Y cuando la hinca
+saldría **negativa** —el terreno se ha comido la mesa por ese lado— se declara: `hay que bancalear`.
+Con la pendiente ⊥ a las filas, en cambio, las hincas ni se enteran: todas iguales, y las filas se
+escalonan.
+
+#### El backtracking, con la pendiente
+
+`FIS.theta` acepta la pendiente ⊥ a las filas y backtrackea **con ella**, que es lo que hace
+`pvlib.tracking.singleaxis` con `cross_axis_tilt`:
+
+```
+d = 1 / (GCR · cos x)        separación entre ejes, corregida
+t = |d · cos(ψ − x)|         y si t ≥ 1 no hay sombra que evitar
+θ = ψ − signo(ψ) · acos(t)
+```
+
+Con `x = 0` sale la de siempre, cifra a cifra. Con la pendiente metida, la sombra residual del
+seguidor con backtracking se va a **0,0000**: era 4,3 % a 8° sin ella.
+
+El core lleva `cross_axis_tilt` desde **SolarGPT v1.70.0** (mismo día, `solargpt_core/poa.py` — la
+llamada a `pvlib.tracking.singleaxis` iba sin él mientras el sombreado sí llevaba el
+`cross_axis_slope`). Hay **un solo modelo** y el careo entra por él: a 8° el core da **0,16 %** de
+sombra residual y la ficha **0,20 %**, contra los 3,74 / 4,11 de antes.
+
+Queda un `backtracking en llano` **desmarcado**, y es un **diagnóstico**, no una alternativa:
+calcula el ángulo como si el campo fuese llano —lo que hacía el core hasta ese día— para poder ver
+de un vistazo lo que cuesta backtrackear mal en un campo en cuesta, que es un número que quiere
+cualquiera que herede uno. La tabla lo grita cuando está puesto, porque si no alguien lo deja
+marcado y compara contra el modelo viejo sin saberlo.
+
+El aviso sale del modelo con el que se **corrió** la tabla (`REP.btLlano`), no del interruptor vivo:
+marcarlo sin volver a comparar cambiaría el texto dejando debajo los números de la tirada anterior.
 
 #### Las hincas
 
@@ -732,6 +950,12 @@ El truco es pasar una dirección del mundo a un ángulo de pantalla: la cámara 
 el ángulo horario de cualquier dirección `w` es entonces `atan2(w·derecha, w·arriba)`. (La flecha de
 pendiente se dibuja hacia **arriba** como la aguja, porque ese ángulo se mide desde arriba: dibujada
 hacia abajo, rotarla 180° la dejaba apuntando al norte con el terreno cayendo al sur.)
+
+Y **ni la cámara ni el objetivo bajan del suelo**. `maxPolarAngle` solo impide bajar del plano
+horizontal que pasa por el objetivo, y eso no basta en cuanto hay pendiente o se desplaza la vista:
+con la ladera subiendo, el suelo bajo la cámara puede estar por encima de ella y la escena se ve
+desde dentro de la tierra. Se acota contra el terreno de verdad —que con un plano cuesta dos
+multiplicaciones—: la cámara a 1,5 m del suelo, el objetivo a 0,5.
 
 Y la **cámara es libre**. El botón derecho ya desplazaba, pero cada reconstrucción —y se reconstruye
 al tocar cualquier campo— devolvía la vista a su sitio, así que en la práctica no se podía mirar a

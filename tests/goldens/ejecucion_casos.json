@@ -1,0 +1,3399 @@
+{
+ "_leeme": "Fuente ÚNICA de casos de la máquina de EJECUCIÓN de hail stow (Rev01.4 §10.2, estados 4/5/6). La consumen tests/test_execution_machine.py y el arnés de Node que carea el bloque GRANIZO-EJECUCIÓN de sim-viento.html. NO se edita a mano: se regenera con scripts/gen_goldens_ejecucion.py --write y el diff entra en el PR.",
+ "_paridad": "Se carea la SECUENCIA COMPLETA de estados, no solo el final: la rama de fallo declarado y la de timeout convergen en el mismo estado, y un careo por el final dejaría perder una de las dos sin ponerse rojo.",
+ "_invariante": "NUNCA «planta protegida» por timeout. Ningún caso puede tener HAIL_SAFE_POSITION después de una transición cuyo motivo empiece por «timeout».",
+ "_parametros_no_validados": true,
+ "_parametros_de_donde_salen": "ELEGIDOS PARA ESTE BANCO. El §19 publica los cuatro SIN VALOR y con responsable asignado; no son el ajuste de ninguna planta.",
+ "parametros": {
+  "timeout_confirmacion_s": 120.0,
+  "n_retry": 2,
+  "t_retry_s": 30.0,
+  "tolerancia_confirmacion_deg": 1.0
+ },
+ "responsables": {
+  "timeout_confirmacion_s": "§10.2, PENDIENTE DE ENSAYO — dueño Firmware",
+  "n_retry": "§19 · §10.2, SIN VALOR — dueño Firmware",
+  "t_retry_s": "§10.2, PENDIENTE DE ENSAYO — dueño Firmware",
+  "tolerancia_confirmacion_deg": "§10.2 «fila confirmada», PENDIENTE DE ENSAYO — dueño Firmware"
+ },
+ "fuera_de_alcance": [
+  "Estados 7 a 17 del §10.2 (HAIL_ACTIVE, retorno, transversales, POST_EVENT_INSPECTION): no implementados.",
+  "La parada o finalización del tránsito con la envolvente excedida (estados 4 y 16) está declarada PENDIENTE DE INGENIERÍA por el propio informe: no espera código, espera criterio estructural.",
+  "La maniobra parcial de LOW_SOC (§14) está PENDIENTE DE ENSAYO ENERGÉTICO Y VALIDACIÓN ESTRUCTURAL: una posición intermedia es un estado no caracterizado.",
+  "El tiempo de recorrido de cada fila, la simultaneidad, la alimentación y la dispersión entre unidades NO se modelan: la flota se inyecta."
+ ],
+ "casos": [
+  {
+   "nombre": "todas_confirman",
+   "descripcion": "Las cuatro llegan dentro de tolerancia: posición segura, 100 %.",
+   "dt_s": 30.0,
+   "envolvente_ok": null,
+   "flota": [
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ]
+   ],
+   "esperado": {
+    "estado_final": "HAIL_SAFE_POSITION",
+    "estados": [
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION"
+    ],
+    "pct_protegido": [
+     100.0,
+     100.0,
+     100.0,
+     100.0,
+     100.0,
+     100.0
+    ],
+    "n_transiciones": 1,
+    "traza": [
+     [
+      0,
+      "HAIL_STOW_TRANSIT",
+      "HAIL_SAFE_POSITION",
+      "todas las filas disponibles confirmadas"
+     ]
+    ],
+    "reintentos": {}
+   }
+  },
+  {
+   "nombre": "timeout_no_protege",
+   "descripcion": "Una fila nunca confirma: al vencer el plazo degrada a protección parcial. NUNCA «planta protegida» por timeout.",
+   "dt_s": 30.0,
+   "envolvente_ok": null,
+   "flota": [
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ]
+   ],
+   "esperado": {
+    "estado_final": "HAIL_PARTIAL_PROTECTION",
+    "estados": [
+     "HAIL_STOW_TRANSIT",
+     "HAIL_STOW_TRANSIT",
+     "HAIL_STOW_TRANSIT",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION"
+    ],
+    "pct_protegido": [
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0
+    ],
+    "n_transiciones": 1,
+    "traza": [
+     [
+      3,
+      "HAIL_STOW_TRANSIT",
+      "HAIL_PARTIAL_PROTECTION",
+      "timeout 120 s con 1 fila(s) sin confirmar: NUNCA «planta protegida» por timeout"
+     ]
+    ],
+    "reintentos": {
+     "2": 2
+    }
+   }
+  },
+  {
+   "nombre": "excluida_no_bloquea",
+   "descripcion": "La misma fila, EXCLUIDA por mantenimiento: no bloquea, y el 100 % se mide sobre las disponibles.",
+   "dt_s": 30.0,
+   "envolvente_ok": null,
+   "flota": [
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "disponible": false,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "disponible": false,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "disponible": false,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "disponible": false,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "disponible": false,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "disponible": false,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ]
+   ],
+   "esperado": {
+    "estado_final": "HAIL_SAFE_POSITION",
+    "estados": [
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION"
+    ],
+    "pct_protegido": [
+     100.0,
+     100.0,
+     100.0,
+     100.0,
+     100.0,
+     100.0
+    ],
+    "n_transiciones": 1,
+    "traza": [
+     [
+      0,
+      "HAIL_STOW_TRANSIT",
+      "HAIL_SAFE_POSITION",
+      "todas las filas disponibles confirmadas"
+     ]
+    ],
+    "reintentos": {}
+   }
+  },
+  {
+   "nombre": "sin_telemetria",
+   "descripcion": "Coms caídas en una fila: sin dato NO es confirmada, esté donde esté.",
+   "dt_s": 30.0,
+   "envolvente_ok": null,
+   "flota": [
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ]
+   ],
+   "esperado": {
+    "estado_final": "HAIL_PARTIAL_PROTECTION",
+    "estados": [
+     "HAIL_STOW_TRANSIT",
+     "HAIL_STOW_TRANSIT",
+     "HAIL_STOW_TRANSIT",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION"
+    ],
+    "pct_protegido": [
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0
+    ],
+    "n_transiciones": 1,
+    "traza": [
+     [
+      3,
+      "HAIL_STOW_TRANSIT",
+      "HAIL_PARTIAL_PROTECTION",
+      "timeout 120 s con 1 fila(s) sin confirmar: NUNCA «planta protegida» por timeout"
+     ]
+    ],
+    "reintentos": {
+     "1": 2
+    }
+   }
+  },
+  {
+   "nombre": "fallo_degrada_ya",
+   "descripcion": "Fallo de motor con el ángulo CORRECTO: degrada en el primer paso, sin esperar al plazo. Solo se distingue al principio.",
+   "dt_s": 30.0,
+   "envolvente_ok": null,
+   "flota": [
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "fallo_motor_encoder"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "fallo_motor_encoder"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "fallo_motor_encoder"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "fallo_motor_encoder"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "fallo_motor_encoder"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "fallo_motor_encoder"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "fallo_motor_encoder"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "fallo_motor_encoder"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "fallo_motor_encoder"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "fallo_motor_encoder"
+     }
+    ]
+   ],
+   "esperado": {
+    "estado_final": "HAIL_PARTIAL_PROTECTION",
+    "estados": [
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION"
+    ],
+    "pct_protegido": [
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0
+    ],
+    "n_transiciones": 1,
+    "traza": [
+     [
+      0,
+      "HAIL_STOW_TRANSIT",
+      "HAIL_PARTIAL_PROTECTION",
+      "fallo declarado en fila(s): fallo_motor_encoder"
+     ]
+    ],
+    "reintentos": {
+     "3": 2
+    }
+   }
+  },
+  {
+   "nombre": "fallo_coms_degrada_ya",
+   "descripcion": "El mismo caso con el otro motivo del informe.",
+   "dt_s": 30.0,
+   "envolvente_ok": null,
+   "flota": [
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "coms"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "coms"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "coms"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "coms"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "coms"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "coms"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "coms"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "coms"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "coms"
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.0
+     },
+     {
+      "id": 1,
+      "error_deg": 0.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.0,
+      "fallo": "coms"
+     }
+    ]
+   ],
+   "esperado": {
+    "estado_final": "HAIL_PARTIAL_PROTECTION",
+    "estados": [
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION"
+    ],
+    "pct_protegido": [
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0
+    ],
+    "n_transiciones": 1,
+    "traza": [
+     [
+      0,
+      "HAIL_STOW_TRANSIT",
+      "HAIL_PARTIAL_PROTECTION",
+      "fallo declarado en fila(s): coms"
+     ]
+    ],
+    "reintentos": {
+     "3": 2
+    }
+   }
+  },
+  {
+   "nombre": "recupera_y_vuelve",
+   "descripcion": "La fila caída se recupera: salida del estado 6 hacia posición segura.",
+   "dt_s": 30.0,
+   "envolvente_ok": null,
+   "flota": [
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ]
+   ],
+   "esperado": {
+    "estado_final": "HAIL_SAFE_POSITION",
+    "estados": [
+     "HAIL_STOW_TRANSIT",
+     "HAIL_STOW_TRANSIT",
+     "HAIL_STOW_TRANSIT",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION"
+    ],
+    "pct_protegido": [
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     100.0,
+     100.0,
+     100.0,
+     100.0,
+     100.0,
+     100.0
+    ],
+    "n_transiciones": 2,
+    "traza": [
+     [
+      3,
+      "HAIL_STOW_TRANSIT",
+      "HAIL_PARTIAL_PROTECTION",
+      "timeout 120 s con 1 fila(s) sin confirmar: NUNCA «planta protegida» por timeout"
+     ],
+     [
+      6,
+      "HAIL_PARTIAL_PROTECTION",
+      "HAIL_SAFE_POSITION",
+      "todas recuperadas (§10.2, salida del estado 6)"
+     ]
+    ],
+    "reintentos": {
+     "2": 2
+    }
+   }
+  },
+  {
+   "nombre": "pierde_posicion",
+   "descripcion": "Se llega a posición segura y DESPUÉS una fila la pierde: fallback del estado 5. Hay que llegar a 5 primero o esto mide otra transición.",
+   "dt_s": 30.0,
+   "envolvente_ok": null,
+   "flota": [
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 40.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 40.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 40.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 40.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 40.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 40.0
+     },
+     {
+      "id": 2,
+      "error_deg": 0.2
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ]
+   ],
+   "esperado": {
+    "estado_final": "HAIL_PARTIAL_PROTECTION",
+    "estados": [
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_SAFE_POSITION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION"
+    ],
+    "pct_protegido": [
+     100.0,
+     100.0,
+     100.0,
+     100.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0
+    ],
+    "n_transiciones": 2,
+    "traza": [
+     [
+      0,
+      "HAIL_STOW_TRANSIT",
+      "HAIL_SAFE_POSITION",
+      "todas las filas disponibles confirmadas"
+     ],
+     [
+      4,
+      "HAIL_SAFE_POSITION",
+      "HAIL_PARTIAL_PROTECTION",
+      "1 fila(s) pierden posición desde segura (§10.2, fallback del estado 5)"
+     ]
+    ],
+    "reintentos": {
+     "1": 2
+    }
+   }
+  },
+  {
+   "nombre": "reintentos_vetados",
+   "descripcion": "Fuera de envolvente NO se reintenta: un reintento es un movimiento (§11 prio 2a). El diario lo dice en vez de ejecutarlo.",
+   "dt_s": 30.0,
+   "envolvente_ok": false,
+   "flota": [
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ]
+   ],
+   "esperado": {
+    "estado_final": "HAIL_PARTIAL_PROTECTION",
+    "estados": [
+     "HAIL_STOW_TRANSIT",
+     "HAIL_STOW_TRANSIT",
+     "HAIL_STOW_TRANSIT",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION"
+    ],
+    "pct_protegido": [
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0
+    ],
+    "n_transiciones": 1,
+    "traza": [
+     [
+      3,
+      "HAIL_STOW_TRANSIT",
+      "HAIL_PARTIAL_PROTECTION",
+      "timeout 120 s con 1 fila(s) sin confirmar: NUNCA «planta protegida» por timeout"
+     ]
+    ],
+    "reintentos": {}
+   }
+  },
+  {
+   "nombre": "reintentos_dentro",
+   "descripcion": "El par del anterior: dentro de envolvente sí se reintenta, con tope.",
+   "dt_s": 30.0,
+   "envolvente_ok": true,
+   "flota": [
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ],
+    [
+     {
+      "id": 0,
+      "error_deg": 0.2
+     },
+     {
+      "id": 1,
+      "error_deg": 0.2
+     },
+     {
+      "id": 2,
+      "error_deg": 40.0
+     },
+     {
+      "id": 3,
+      "error_deg": 0.2
+     }
+    ]
+   ],
+   "esperado": {
+    "estado_final": "HAIL_PARTIAL_PROTECTION",
+    "estados": [
+     "HAIL_STOW_TRANSIT",
+     "HAIL_STOW_TRANSIT",
+     "HAIL_STOW_TRANSIT",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION",
+     "HAIL_PARTIAL_PROTECTION"
+    ],
+    "pct_protegido": [
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0,
+     75.0
+    ],
+    "n_transiciones": 1,
+    "traza": [
+     [
+      3,
+      "HAIL_STOW_TRANSIT",
+      "HAIL_PARTIAL_PROTECTION",
+      "timeout 120 s con 1 fila(s) sin confirmar: NUNCA «planta protegida» por timeout"
+     ]
+    ],
+    "reintentos": {
+     "2": 2
+    }
+   }
+  }
+ ]
+}

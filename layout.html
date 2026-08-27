@@ -241,9 +241,15 @@ detectEngine();
    lienzo se ensancha y el bufer se quedaba con la anchura vieja. */
 if(window.ResizeObserver&&$('cv')){
   var _rq=null, _ro=new ResizeObserver(function(){ if(_rq)cancelAnimationFrame(_rq);
-    _rq=requestAnimationFrame(function(){_rq=null; if(window.__ultGeo)drawGeo(window.__ultGeo);}); });
+    _rq=requestAnimationFrame(function(){_rq=null;
+      if(window.__ultGeo)drawGeo(window.__ultGeo); else nitido($('cv')); }); });
   _ro.observe($('cv'));
 }
+/* Y una vez al cargar, aunque no haya nada que dibujar. `nitido()` solo corria dentro de
+   `drawGeo`, asi que hasta la primera implantacion el bufer se quedaba con los 920x600 del
+   atributo: no se ve porque el lienzo esta vacio, pero el banco de nitidez lo mide y no puede
+   distinguir «vacio» de «mal dimensionado». Asi el tamano es coherente desde el primer momento. */
+if($('cv'))nitido($('cv'));
 </script>
 </body>
 </html>

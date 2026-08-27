@@ -52,6 +52,27 @@ if (!FIS) { console.log('\nFALLOS: ' + ko); process.exit(1); }
 //
 // El golden no registraba de qué core salía, así que estar atrasado era
 // indistinguible de estar al día. Esto es lo que cierra esa puerta.
+//
+// CLASIFICACIÓN, que el protocolo de PORTAL-BUG-01 pedía por escrito y no se
+// llegó a dejar. De las seis categorías previstas, el fallo fue DOS:
+//
+//   1. fixture obsoleto ....................... NO. El fixture describía
+//      correctamente al core del que salió; el problema es que ese core ya no
+//      era el de `main`.
+//   2. bug en el portal ....................... NO. El motor JS había portado
+//      la corrección del circunsolar el día ANTES que el core.
+//   3. bug en el core ......................... NO, en aquel momento. (Sí lo
+//      hubo después, y es otra incidencia: CROSS-TILT-01.)
+//   4. input no equivalente ................... NO. Misma meteo, misma
+//      geometría: el fixture las lleva dentro y el careo las reusa.
+//   5. CAMBIO FÍSICO INTENCIONADO SIN MIGRACIÓN ... SÍ. v1.64.0 corrigió la
+//      sombra del circunsolar deliberadamente y nadie regeneró el golden.
+//   6. TOLERANCIA INCORRECTA .................. SÍ, y es la que lo dejó pasar
+//      cinco días: 8 % y 2,5 pp son seis veces el hueco real, así que la
+//      deriva cabía entera dentro del margen.
+//
+// Las dos a la vez importan: la 5 lo causó y la 6 lo hizo invisible. Arreglar
+// solo una habría dejado la puerta abierta por el otro lado.
 const CRUDO = fs.readFileSync(path.join(__dirname, 'careo-estructuras.json'), 'utf8');
 const crypto = require('crypto');
 const MAN = JSON.parse(CRUDO).manifiesto;
@@ -99,7 +120,16 @@ if (MAN) {
   // estructura). El hueco JS<->core NO se movio: sigue en 1,36 % de POA
   // (fija_ew) y 0,367 pp de delta, asi que las tolerancias se quedan donde
   // estaban. Lo unico que cambia es contra que core esta sellado el golden.
-  const CORE_PIN = { version: '1.69.0', commit: '82af2aa1' };
+  /* Re-fijado el 2026-08-26 al regenerar contra `origin/main` limpio.
+     El pin anterior decía v1.70.0 / f67c555 y NINGUNO de los dos existe:
+     el core de `main` es v1.69.0 y ese commit no está en SolarGPTfull —
+     `git fetch origin f67c555` da «couldn't find remote ref». O sea que el
+     golden venía sellado contra una rama que nunca aterrizó, con un número
+     de versión que tampoco. Las CIFRAS sí cuadraban, porque la física que
+     aquella rama traía acabó entrando por otro camino (CROSS-TILT-01); lo
+     que mentía era la etiqueta, que es justo lo que este pin existe para
+     que no pase. */
+  const CORE_PIN = { version: '1.70.0', commit: '250d2acf' };
   check('el golden corresponde al core fijado (v' + CORE_PIN.version + ')',
     MAN.core.version === CORE_PIN.version,
     'golden v' + MAN.core.version + ' vs pin v' + CORE_PIN.version +
@@ -113,9 +143,23 @@ if (MAN) {
 // ── 2) el catálogo del JS es el del core ──
 const fix = JSON.parse(fs.readFileSync(path.join(__dirname, 'careo-estructuras.json'), 'utf8'));
 const clavesJS = FIS.CATALOGO.map(s => s.key).sort();
-check('el catálogo del JS es el del core (' + clavesJS.length + ')',
-  JSON.stringify(clavesJS) === JSON.stringify(fix.core.catalogo.slice().sort()),
-  clavesJS.join(',') + ' vs ' + fix.core.catalogo.join(','));
+const soloFicha = FIS.CATALOGO.filter(s => s.soloFicha).map(s => s.key).sort();
+/* El catálogo del core tiene que estar ENTERO en la ficha: si el core corre una
+   estructura que aquí no existe, la comparación deja de ser la misma. */
+check('el catálogo del core está entero en la ficha (' + fix.core.catalogo.length + ')',
+  fix.core.catalogo.every(k => clavesJS.indexOf(k) >= 0),
+  fix.core.catalogo.filter(k => clavesJS.indexOf(k) < 0).join(',') || 'ninguna falta');
+/* Y lo que la ficha tiene DE MÁS tiene que estar declarado como tal, una por
+   una. Sin esto, añadir una estructura que el core no sabe expresar se cuela
+   sin que nadie lo diga — que es la mitad de este guard. */
+const deMas = clavesJS.filter(k => fix.core.catalogo.indexOf(k) < 0).sort();
+check('y lo que la ficha tiene de más va declarado `soloFicha` (' + deMas.join(',') + ')',
+  JSON.stringify(deMas) === JSON.stringify(soloFicha),
+  'de más: ' + deMas.join(',') + ' · declaradas: ' + soloFicha.join(','));
+/* HUECO DECLARADO: el seguidor QUEBRADO no existe en el core. No es una
+   divergencia de resultados —con quiebro 0 da la misma cifra que el rígido— es
+   una capacidad que solo vive en la ficha. Se exige más abajo, donde ya hay
+   `cfg` y meteo. */
 
 /* ── 2a) el golden dice DE DÓNDE sale ──────────────────────────────────────
    `gen_careo_estructuras.py` recibe el core como una RUTA LOCAL (`--core`), así
@@ -254,8 +298,22 @@ const G = { apertura: C.collector_width_m, altoColector: C.collector_width_m,
             largoFila: 65.084, pitch: C.pitch_m, gcr };
 const cfg = { lat: C.lat, lon: C.lon, gcr, fija: G, tracker: G,
   maxang: C.max_angle_deg, albedo: C.albedo, tilt: C.tilt_deg, tiltEW: 12,
-  axTilt: C.axis_tilt_deg, pend: C.cross_axis_slope_deg, geomDe: () => G };
+  axTilt: C.axis_tilt_deg, pend: C.cross_axis_slope_deg, geomDe: () => G,
+  /* El golden DECLARA con qué ajuste corrió el core, y aquí se pone la ficha en
+     el mismo sitio. Antes no se declaraba: los dos motores corrían con opciones
+     distintas —la ficha cortaba el retroceso en plana y el core no— y el careo
+     lo tapaba con un techo de 10° llamándolo «hallazgo abierto». No era una
+     divergencia de física: era una opción sin nombre. */
+  contrasol: C.permitir_contrasol === true };
 const rep = FIS.compara(C.structures, M, cfg);
+/* El HUECO del catálogo, exigido: con quiebro 0 el quebrado ES el rígido, cifra
+   a cifra. Por ahí sigue entrando el careo aunque el core no tenga la
+   estructura. */
+check('con quiebro 0 el quebrado ES el rígido, cifra a cifra',
+  (() => {
+    const r = FIS.compara(['tracker_hsat', 'tracker_queb'], M, { ...cfg, quiebro: 0 }).filas;
+    return Math.abs(r[0].neta - r[1].neta) < 1e-12;
+  })());
 const js = {}; rep.filas.forEach(f => { js[f.key] = f; });
 const core = {}; fix.esperado.forEach(f => { core[f.key] = f; });
 
@@ -312,6 +370,151 @@ C.structures.forEach(k => {
   check('Δ% de ' + k + ' dentro de ' + TOL_DELTA + ' pp (' + dDelta.toFixed(3) + ' pp)',
     dDelta < TOL_DELTA, a.delta.toFixed(2) + ' vs ' + b.delta_pct.toFixed(2));
 });
+
+// ── 5b) DÓNDE se separan, no sólo QUE se separan ──────────────────────────
+// El protocolo de PORTAL-BUG-01 pedía comparar los outputs INTERMEDIOS y
+// localizar el PRIMER punto de divergencia. Este banco comparaba POA y Δ%
+// finales, y el 2026-08-26 eso costó caro: cuando el core y la ficha se
+// separaron, lo único que supo decir fue «el Δ% no cuadra» — y de ahí se
+// dedujo, mal, que la ficha enseñaba física vieja. Fallaba el core: el
+// backtracking no llevaba la pendiente (CROSS-TILT-01).
+//
+// La cadena se recorre EN ORDEN y se corta en la primera etapa que se separa:
+// una etapa mala arrastra todas las siguientes, y enumerarlas esconde al
+// culpable entre sus consecuencias.
+//
+// HUECO DECLARADO, y es la mitad de la cadena: el motor de la ficha publica
+// `ideal`, `sombra` y `neta`, pero NO el ángulo ni el desglose de difusa. O
+// sea que desde este lado se puede localizar entre esas tres, y no antes. El
+// ángulo —que es justo lo que habría resuelto el caso de hoy— sólo se carea
+// desde el core, en `test_careo_comparador_golden.py`. Para cerrarlo del todo
+// habría que publicar θ desde el bloque FÍSICA PURA, y ese bloque está fijado
+// por hash: mover el pin es una decisión aparte, no un efecto colateral de
+// este banco.
+// θ va ANTES que todo lo demás, y va por SERIE. Medido: el defecto que motivó
+// esto —backtrackear como si el campo fuese llano— mueve θ 7,5° de media y
+// hasta 34,8° paso a paso, pero la MEDIA de |θ| solo se mueve 0,07° porque las
+// desviaciones se compensan. Un agregado de θ parecería cobertura y no lo
+// sería: por eso se compara `max|Δθ|` contra la serie del golden.
+//
+// El techo son 6°, y sale de medir. Con el selector de contrasol declarado en
+// el golden y la ficha puesta en el MISMO ajuste, la divergencia baja de 7,79°
+// a 4,82°: aquella parte no era física, eran dos motores con opciones
+// distintas. Lo que queda ya no es el tope de aplanado —el peor caso está a
+// media tarde con GHI 445, no con sol rasante— sino la fórmula del retroceso
+// en pendiente, que los dos motores escriben distinto.
+//
+//                                correcto   con el bug (btLlano)
+//   tracker_hsat                   4,822°        34,302°
+//   tracker_tsat                   3,126°        36,547°
+//   tracker_hsat_nobt              0,826°         0,826°   <- control
+//
+// 6° queda por encima de lo que hay y a un factor 5,7 por debajo de la clase de
+// fallo que este careo existe para cazar.
+const TOL_THETA_DEG = 6.0;
+// El ruido de fondo, aparte: sin backtracking los dos motores solo se separan
+// por la posición solar. Si eso crece, lo que se ha movido está más abajo.
+const TOL_THETA_RUIDO_DEG = 1.5;
+function maxDifTheta(serieJs, serieGolden){
+  if(!serieJs || !serieGolden || serieJs.length !== serieGolden.length) return null;
+  // Solo los pasos que TIENEN dato en los dos. Cada lado marca sus huecos con
+  // null porque la frontera del día no cae en el mismo sitio: hay un paso con
+  // GHI>0 en el que la ficha ya da el sol por puesto. Comparar por índice
+  // compartido evita alinear mal la serie entera por un paso de diferencia.
+  let m = 0, n = 0;
+  for(let i=0;i<serieJs.length;i++){
+    if(serieJs[i]==null || serieGolden[i]==null) continue;
+    m = Math.max(m, Math.abs(serieJs[i]-serieGolden[i])); n++;
+  }
+  return n>0 ? m : null;
+}
+const ETAPAS_JS = [
+  ['poa_ideal_sin_sombra', a => a.ideal, b => b.poa_ideal_kwh_m2, 'kWh/m²', TOL_POA, true],
+  ['sombra', a => a.sombra, b => b.sombra_pct, 'pp', 0.8, false],
+  ['poa_neta', a => a.neta, b => b.poa_kwh_m2, 'kWh/m²', TOL_POA, true],
+];
+C.structures.forEach(k => {
+  const a = js[k], b = core[k];
+  if (!a || !b) return;
+  let culpable = null;
+  // θ primero: es la etapa que CAUSA las demás.
+  const serieG = ((fix.cadena || {})[k] || {}).theta_serie;
+  if (serieG && a.thetaSerie) {
+    const d = maxDifTheta(a.thetaSerie, serieG);
+    if (d === null) {
+      check('la serie de θ de ' + k + ' tiene el mismo número de pasos que el golden',
+        false, a.thetaSerie.length + ' vs ' + serieG.length +
+        ' — se comparan pasos distintos, así que el careo no dice nada');
+      return;
+    }
+    if (d >= TOL_THETA_DEG) culpable = { nombre: 'theta', x: d, y: 0, d, relativa: false };
+  }
+  for (const [nombre, fjs, fcore, ud, tol, relativa] of ETAPAS_JS) {
+    if (culpable) break;
+    const x = fjs(a), y = fcore(b);
+    if (x == null || y == null) continue;
+    const d = relativa ? Math.abs(x / y - 1) : Math.abs(x - y);
+    if (d >= tol) { culpable = { nombre, x, y, d, ud, relativa }; break; }
+  }
+  check('la cadena de ' + k + (culpable ? ' se separa en «' + culpable.nombre + '»' : ' cuadra etapa por etapa'),
+    culpable === null,
+    culpable ? ('JS ' + culpable.x.toFixed(3) + ' vs core ' + culpable.y.toFixed(3) +
+                ' (' + (culpable.relativa ? (culpable.d * 100).toFixed(2) + ' %' : culpable.d.toFixed(3) + ' pp') +
+                '). Las etapas anteriores cuadran, así que la divergencia NACE aquí.') : '');
+});
+// ── HALLAZGO ABIERTO, más pequeño que ayer ───────────────────────────────
+// Ayer este bloque decía que ficha y core discrepaban 7,79° en θ y culpaba al
+// tope de aplanado. Con el selector de contrasol —declarado en el golden y
+// aplicado aquí— la divergencia baja a 4,82°, así que AQUELLO era una opción
+// sin nombre y no física. Lo que queda es otra cosa y conviene no confundirla:
+//
+//   peor instante  2023-09-15 16:00Z · GHI 445 · ficha −42,20° · core −47,02°
+//   20 de 144 pasos con Δ>1°, repartidos por el día
+//
+// Ya no es sol rasante ni el tope: es la FÓRMULA del retroceso con pendiente
+// transversal, que los dos motores escriben distinto. La ficha usa
+// `acos(|cos(ψ−x)/(gcr·cos x)|)` y el core hereda la de `pvlib`. Cuál de las
+// dos es la buena pide leerse las dos derivaciones, no medir más.
+//
+// El control lo acota: sin backtracking los dos coinciden dentro de 0,826°, así
+// que la diferencia es específicamente del retroceso.
+{
+  const abiertos = [];
+  ['tracker_hsat', 'tracker_tsat'].forEach(k => {
+    const g = ((fix.cadena || {})[k] || {}).theta_serie, a = js[k] && js[k].thetaSerie;
+    const d = maxDifTheta(a, g);
+    if (d != null) abiertos.push(k + ' ' + d.toFixed(2) + '°');
+  });
+  check('HALLAZGO ABIERTO: la fórmula del retroceso en pendiente no es la misma',
+    true, abiertos.join(' · ') + ' — con el contrasol ya alineado');
+}
+// El control del ruido: sin backtracking los dos motores solo se separan por la
+// posición solar. Si esto crece, lo que se ha movido es algo de más abajo.
+{
+  const g = ((fix.cadena || {})['tracker_hsat_nobt'] || {}).theta_serie;
+  const a = js['tracker_hsat_nobt'] && js['tracker_hsat_nobt'].thetaSerie;
+  const d = maxDifTheta(a, g);
+  check('sin backtracking, θ solo se separa por la posición solar (' +
+    (d == null ? '?' : d.toFixed(3)) + '° ≤ ' + TOL_THETA_RUIDO_DEG + '°)',
+    d != null && d < TOL_THETA_RUIDO_DEG,
+    'si esto crece, la diferencia ya no es el backtracking');
+}
+
+// Y el zombi: si la cadena no supiera cortar en la primera, esto no probaría
+// nada. Se le da una cadena con la etapa 1 mala y la 3 peor, y tiene que
+// nombrar la 1.
+{
+  const falsoJs = { ideal: 110, sombra: 0.2, neta: 50 };
+  const falsoCore = { poa_ideal_kwh_m2: 100, sombra_pct: 0.2, poa_kwh_m2: 100 };
+  let primera = null;
+  for (const [nombre, fjs, fcore, , tol, relativa] of ETAPAS_JS) {
+    const d = relativa ? Math.abs(fjs(falsoJs) / fcore(falsoCore) - 1)
+                       : Math.abs(fjs(falsoJs) - fcore(falsoCore));
+    if (d >= tol) { primera = nombre; break; }
+  }
+  check('ZOMBI: con dos etapas malas, la cadena nombra la PRIMERA',
+    primera === 'poa_ideal_sin_sombra', 'nombró ' + primera);
+}
 
 // ── 5a) CENTINELA de PORTAL-BUG-01 ────────────────────────────────────────
 // Los números del golden VIEJO (core v1.63, antes de que la sombra tapara el
@@ -435,13 +638,17 @@ check('el relativo del tilt es 0 en el óptimo y negativo fuera',
   Math.abs(bt.optimo.rel) < 1e-9 && bt.puntos.every(q => q.rel <= 1e-9));
 
 // ── 6) la física está viva, no devuelve constantes ──
-check('con pendiente (' + C.cross_axis_slope_deg + '°) el backtracking YA NO deja la sombra a ' +
-  'cero (' + js.tracker_hsat.sombra.toFixed(2) + ' %): el ángulo se calcula en llano',
-  js.tracker_hsat.sombra > 0.5);
+// Esto medía lo contrario hasta SolarGPT v1.70.0: el ángulo se calculaba en
+// llano y con pendiente quedaba un 3,7 % de sombra residual. Ahora el core lleva
+// `cross_axis_tilt` (pvlib), la ficha también, y el backtracking sigue haciendo
+// su trabajo en cuesta.
+check('con pendiente (' + C.cross_axis_slope_deg + '°) el backtracking SIGUE quitando la ' +
+  'sombra (' + js.tracker_hsat.sombra.toFixed(2) + ' %): el ángulo va con la pendiente',
+  js.tracker_hsat.sombra < 0.5);
 /* 1,0 pp absoluto sobre una sombra de ~4 % era un 25 % relativo de aire: la
    deriva que se coló medía 0,44 pp. Lo medido hoy contra el core al día es
    0,07 pp. */
-check('y esa sombra residual es la que dice el core (' + core.tracker_hsat.sombra_pct.toFixed(2) + ' %)',
+check('y esa sombra —la que quede— es la que dice el core (' + core.tracker_hsat.sombra_pct.toFixed(2) + ' %)',
   Math.abs(js.tracker_hsat.sombra - core.tracker_hsat.sombra_pct) < 0.5,
   js.tracker_hsat.sombra.toFixed(2) + ' vs ' + core.tracker_hsat.sombra_pct.toFixed(2));
 // y en LLANO sí se va a cero, que es la razón de ser del backtracking
@@ -449,8 +656,17 @@ const llano = FIS.compara(['tracker_hsat', 'tracker_hsat_nobt'], M, { ...cfg, pe
 const llanoBt = llano.filas.find(f => f.key === 'tracker_hsat');
 check('en terreno LLANO el backtracking sí deja la sombra a cero (' +
   llanoBt.sombra.toFixed(3) + ' %)', llanoBt.sombra < 0.5, llanoBt.sombra.toFixed(3));
-check('la pendiente EMPEORA el backtracking (' + llanoBt.sombra.toFixed(2) + ' → ' +
-  js.tracker_hsat.sombra.toFixed(2) + ' %)', js.tracker_hsat.sombra > llanoBt.sombra + 0.5);
+check('y la pendiente ya no lo estropea (' + llanoBt.sombra.toFixed(2) + ' → ' +
+  js.tracker_hsat.sombra.toFixed(2) + ' %)',
+  js.tracker_hsat.sombra < llanoBt.sombra + 0.5);
+/* El guardia del guard: si el SOMBREADO hubiera dejado de ver la pendiente, la
+   comprobación de arriba daría verde por la razón equivocada. Sin backtracking
+   la pendiente tiene que seguir notándose. */
+const llanoNb = llano.filas.find(f => f.key === 'tracker_hsat_nobt');
+check('sin backtracking la pendiente SÍ se sigue notando (' + llanoNb.sombra.toFixed(2) +
+  ' → ' + js.tracker_hsat_nobt.sombra.toFixed(2) + ' %)',
+  js.tracker_hsat_nobt.sombra > llanoNb.sombra + 0.3,
+  llanoNb.sombra.toFixed(2) + ' vs ' + js.tracker_hsat_nobt.sombra.toFixed(2));
 check('sin backtracking SÍ hay sombra (' + js.tracker_hsat_nobt.sombra.toFixed(2) + ' %)',
   js.tracker_hsat_nobt.sombra > js.tracker_hsat.sombra + 0.5);
 check('sin backtracking apunta mejor: más POA ideal',
@@ -610,8 +826,19 @@ check('cayendo al ESTE se invierte: mueve al SEGUIDOR (' +
   llanoAz.tracker_hsat_nobt.sombra.toFixed(2) + ' → ' +
   caeEste.tracker_hsat_nobt.sombra.toFixed(2) + ' %)',
   Math.abs(caeEste.tracker_hsat_nobt.sombra - llanoAz.tracker_hsat_nobt.sombra) > 0.05);
-check('  y no a la fija',
-  Math.abs(caeEste.fija_proyecto.sombra - llanoAz.fija_proyecto.sombra) < 1e-9);
+/* A la fija esa caída no le entra ⊥ —sus filas corren este-oeste, así que la
+   componente ⊥ es la norte-sur— y por ahí no le cambia el cross-axis. Lo que sí
+   le cambia es que su FILA sigue el terreno a lo largo: la mesa se tumba sus
+   grados sobre una fila inclinada, y eso mueve la proyección del sol y con ella
+   la sombra. Antes esto era exactamente cero porque la fila se quedaba
+   horizontal — y con 12° sobre 65 m eso enterraba la mesa cinco metros. */
+check('  a la fija esa pendiente no le entra ⊥: su cross-axis sigue en cero',
+  Math.abs(FIS.cruz({ ...cfg, pend: 16, pendAz: 90 }, FIJA)) < 1e-9);
+check('  pero sí le inclina la FILA, y eso mueve su POA (' +
+  llanoAz.fija_proyecto.neta.toFixed(1) + ' → ' +
+  caeEste.fija_proyecto.neta.toFixed(1) + ' kWh/m²)',
+  Math.abs(caeEste.fija_proyecto.neta - llanoAz.fija_proyecto.neta) > 0.1,
+  [llanoAz.fija_proyecto.neta, caeEste.fija_proyecto.neta].join(' vs '));
 
 // ── 6b-ter) EL EJE INCLINADO LO PONE EL TERRENO ──
 // Un TSAT no es un seguidor con un parámetro más: es un seguidor sobre una
@@ -639,9 +866,33 @@ check('en el hemisferio SUR el ecuador está al norte, y el signo se da la vuelt
 check('lo lleva TODO seguidor, no solo el que se llama TSAT',
   Math.abs(FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 },
                        FIS.spec('tracker_hsat')) - 26) < 0.01);
-check('y una fija no: no tiene eje que inclinar',
-  FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, FIJA) === 0 &&
-  FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, EW) === 0);
+/* Y las DOS AGUAS igual que el seguidor: sus filas corren norte-sur y su
+   cumbrera es una recta apoyada en el terreno — sobre una caída norte-sur no
+   queda horizontal. Inclinar la cumbrera NO cambia su tilt: los dos paños
+   siguen a ±tiltEO sobre ella, igual que inclinar un eje no cambia el ángulo
+   de seguimiento. */
+check('y las DOS AGUAS también: su cumbrera corre N-S y sigue el terreno',
+  Math.abs(FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, EW) - 26) < 0.01,
+  String(FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, EW)));
+/* La MONOINCLINADA no, y esa es la diferencia que hay que tener clara: sus
+   filas corren este-oeste y su tilt ES la dirección norte-sur, así que ahí la
+   pendiente la compensa la HINCA — se monta al tilt de proyecto. */
+check('la monoinclinada NO: su tilt es esa dirección, y ahí compensa la hinca',
+  FIS.ejeTilt({ pend: 26, pendAz: 180, lat: 37.4 }, FIJA) === 0);
+/* Con la caída ⊥ a esas filas (este-oeste) no hay nada que seguir a lo largo:
+   esa pendiente es la que SOMBREA, y entra por la ⊥, no por la cumbrera. */
+check('con la caída al ESTE la cumbrera no se entera: esa pendiente es la ⊥',
+  Math.abs(FIS.ejeTilt({ pend: 26, pendAz: 90, lat: 37.4 }, EW)) < 0.01,
+  String(FIS.ejeTilt({ pend: 26, pendAz: 90, lat: 37.4 }, EW)));
+/* Y tiene consecuencia en la CIFRA, que es lo que lo hace física: si la
+   cumbrera se inclinara solo en el dibujo, la tabla no se movería. */
+{
+  const llano = FIS.compara(['fija_ew'], M, { ...cfg, pend: 0, pendAz: 180 }).filas[0].neta;
+  const cuesta = FIS.compara(['fija_ew'], M, { ...cfg, pend: 20, pendAz: 180 }).filas[0].neta;
+  check('y la cumbrera inclinada MUEVE la POA de las dos aguas (' +
+    llano.toFixed(1) + ' → ' + cuesta.toFixed(1) + ' kWh/m²)',
+    Math.abs(cuesta - llano) > 1, JSON.stringify([llano, cuesta]));
+}
 // La consecuencia, que hay que ver venir: con pendiente a lo largo del eje, el
 // HSAT y el TSAT son la MISMA estructura y dan lo mismo.
 const nsSur = FIS.compara(['tracker_hsat', 'tracker_tsat'], M,
@@ -665,6 +916,64 @@ check('el eje hacia el ECUADOR capta más que hacia el POLO (' +
   ejeEq.filas[0].neta > ejePol.filas[0].neta + 10,
   ejeEq.filas[0].neta.toFixed(1) + ' vs ' + ejePol.filas[0].neta.toFixed(1));
 
+// ── 6b-quater) EL SEGUIDOR QUEBRADO: DOS MESAS, UNA RÓTULA ────────────────
+// Un quebrado no es un seguidor con otro número: es la MISMA estructura con
+// una rótula en el actuador, de modo que la mesa norte y la sur quedan a
+// inclinaciones distintas. El quiebro es la DIFERENCIA entre las dos, repartida
+// a media a cada lado de la que pondría el terreno.
+{
+  const c = { ...cfg, pend: 12, pendAz: 180, quiebro: 10 };
+  const rig = FIS.ejesMitades(c, FIS.spec('tracker_hsat'));
+  const que = FIS.ejesMitades(c, FIS.spec('tracker_queb'));
+  check('el terreno pone 12° de eje y el RÍGIDO se queda en la media (' +
+    rig.map(a => a.toFixed(1)).join(',') + '°)',
+    rig.length === 1 && Math.abs(rig[0] - 12) < 0.01, JSON.stringify(rig));
+  check('y el QUEBRADO reparte los 10° de quiebro: una mesa a 17° y otra a 7°',
+    que.length === 2 && Math.abs(que[0] - 17) < 0.01 && Math.abs(que[1] - 7) < 0.01,
+    JSON.stringify(que));
+  check('el quiebro es la DIFERENCIA entre mesas, no lo que se aparta cada una',
+    Math.abs((que[0] - que[1]) - 10) < 1e-9, String(que[0] - que[1]));
+  // 30° de quiebro sobre 12° de eje: una mesa se pasa al otro lado del ecuador.
+  const q30 = FIS.ejesMitades({ ...c, quiebro: 30 }, FIS.spec('tracker_queb'));
+  check('con 30° de quiebro una mesa cruza la horizontal y sale negativa (' +
+    q30.map(a => a.toFixed(0)).join('/') + '°): se dibuja, no se recorta',
+    q30[1] < 0, JSON.stringify(q30));
+
+  const f = Object.fromEntries(FIS.compara(
+    ['tracker_hsat', 'tracker_queb', 'tracker_queb_nobt'], M, c).filas.map(x => [x.key, x]));
+  /* Cada mesa corre su propia física —su ángulo, su retroceso, su sombra— y el
+     seguidor es la media de las dos. Si el quebrado devolviera lo mismo que el
+     rígido es que las mitades no están corriendo. */
+  const mitades = [17, 7].map(ax => FIS.compara(['tracker_hsat'], M,
+    { ...c, quiebro: 0, pend: Math.abs(ax), pendAz: 180 }).filas[0].neta);
+  check('el quebrado no es el rígido: corre las dos mesas por separado (' +
+    f.tracker_queb.neta.toFixed(2) + ' vs ' + f.tracker_hsat.neta.toFixed(2) + ')',
+    Math.abs(f.tracker_queb.neta - f.tracker_hsat.neta) > 0.1,
+    JSON.stringify([f.tracker_queb.neta, f.tracker_hsat.neta]));
+  check('  y es la MEDIA de las dos mesas, no una tercera cosa (' +
+    f.tracker_queb.neta.toFixed(2) + ' vs ' + ((mitades[0] + mitades[1]) / 2).toFixed(2) + ')',
+    Math.abs(f.tracker_queb.neta - (mitades[0] + mitades[1]) / 2) < 0.5,
+    JSON.stringify(mitades));
+  /* JENSEN, y por eso hay que decirlo en pantalla: la curva POA-vs-inclinación
+     de eje es CÓNCAVA, así que la media de dos mesas a 17° y 7° cae por debajo
+     del punto medio a 12°. Leído solo, el número dice «el rígido gana» — y ese
+     rígido es el que no se puede montar. */
+  check('el rígido gana en POA por Jensen, no por ser mejor estructura',
+    f.tracker_hsat.neta > f.tracker_queb.neta, JSON.stringify(
+      [f.tracker_hsat.neta, f.tracker_queb.neta]));
+  check('  la curva es cóncava: 12° está por encima de la media de 17° y 7°',
+    mitades[0] < 2 * f.tracker_hsat.neta - mitades[1] + 1e-9,
+    JSON.stringify([mitades[0], f.tracker_hsat.neta, mitades[1]]));
+  check('y el quebrado sin backtracking pierde contra el quebrado con él',
+    f.tracker_queb_nobt.neta !== f.tracker_queb.neta,
+    JSON.stringify([f.tracker_queb.neta, f.tracker_queb_nobt.neta]));
+  /* El backtracking de cada mesa usa la pendiente ⊥ del sitio, que es la misma
+     para las dos: el quiebro es A LO LARGO del eje y no toca la ⊥. */
+  check('el quiebro es a lo largo del eje: no cambia la pendiente ⊥ de nadie',
+    Math.abs(FIS.cruz(c, FIS.spec('tracker_queb')) -
+             FIS.cruz({ ...c, quiebro: 0 }, FIS.spec('tracker_queb'))) < 1e-12);
+}
+
 // ── 6c) LA MISMA PENDIENTE PARA LAS TRES: eso es la igualdad ──
 // El parámetro es UNO, del emplazamiento, y entra en el sombreado de todas las
 // familias por el mismo sitio. Lo que se exige aquí no es que exista el campo
@@ -676,15 +985,39 @@ const sinPend = FIS.compara(['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt
   { ...cfg, pend: 0 });
 const porClave = r => Object.fromEntries(r.filas.map(f => [f.key, f]));
 const CP = porClave(conPend), SP = porClave(sinPend);
-['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt'].forEach(k => {
+/* `tracker_hsat` sale de esta lista, y el motivo vale la pena: con el contrasol
+   PERMITIDO —que es como corre el golden— el backtracking absorbe la pendiente
+   ENTERA y la sombra se queda en cero. O sea que «la pendiente mueve la sombra»
+   deja de ser cierto para el seguidor backtrackeado, no porque el parámetro no
+   llegue, sino porque el retroceso lo neutraliza. Se comprueban las dos caras
+   justo debajo en vez de quitar la comprobación. */
+['fija_proyecto', 'tracker_hsat_nobt'].forEach(k => {
   check('la pendiente mueve la sombra de ' + k + ' (' + SP[k].sombra.toFixed(2) +
     ' → ' + CP[k].sombra.toFixed(2) + ' %)',
     Math.abs(CP[k].sombra - SP[k].sombra) > 0.05,
     SP[k].sombra.toFixed(3) + ' vs ' + CP[k].sombra.toFixed(3));
 });
-check('y es UN solo parámetro, no uno por familia: las tres cambian a la vez',
-  ['fija_proyecto', 'tracker_hsat', 'tracker_hsat_nobt']
-    .every(k => CP[k].sombra !== SP[k].sombra));
+/* Las dos caras del selector, sobre el MISMO caso. Es la consecuencia más
+   visible de la decisión y por eso va medida y no contada. */
+{
+  const bt = pend => porClave(FIS.compara(['tracker_hsat'], M,
+    { ...cfg, pend, contrasol: true })).tracker_hsat.sombra;
+  const btNo = pend => porClave(FIS.compara(['tracker_hsat'], M,
+    { ...cfg, pend, contrasol: false })).tracker_hsat.sombra;
+  check('permitiendo contrasol, el backtracking absorbe la pendiente entera (' +
+    bt(0).toFixed(3) + ' → ' + bt(12).toFixed(3) + ' %)',
+    Math.abs(bt(12) - bt(0)) < 0.01,
+    'si esto crece, el retroceso ha dejado de poder neutralizarla');
+  check('  y prohibiéndolo, la pendiente SÍ deja sombra (' +
+    btNo(0).toFixed(3) + ' → ' + btNo(12).toFixed(3) + ' %)',
+    btNo(12) - btNo(0) > 0.05,
+    'el selector no está llegando al sombreado');
+}
+check('y es UN solo parámetro, no uno por familia: las dos que pueden, cambian',
+  ['fija_proyecto', 'tracker_hsat_nobt'].every(k =>
+    Math.abs(CP[k].sombra - SP[k].sombra) > 0.05),
+  'tracker_hsat queda fuera a propósito: con contrasol permitido su retroceso ' +
+  'absorbe la pendiente, y eso se comprueba arriba en sus dos caras');
 // y la POA también, que es lo que decide
 check('con pendiente el ranking se recalcula con TODAS en el mismo terreno',
   conPend.filas.every(f => isFinite(f.neta) && f.neta > 0) &&

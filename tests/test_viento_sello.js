@@ -104,6 +104,96 @@ const meteoSint = lat => {
         /41\.5763/.test(s4) && !/en pantalla: 38/.test(s4), s4);
   check('y avisa de que la casilla ya no coincide', /vuelve a simular/.test(s4), s4);
 
+  // ── LA VELOCIDAD DE SUELTA VIAJA CON EL RESULTADO ─────────────────
+  // La fila del pasivo ya enseñaba el DENOMINADOR —«1 fila de 20»— porque sin él
+  // el impacto de planta no es interpretable. Faltaba la otra mitad: a qué viento
+  // se suelta. Ese número manda en todo el caso y NO está medido: es un sustituto
+  // declarado del par de desembrague. Estaba en el anexo, no en la fila.
+  //
+  // Lo que hay que vigilar no es que aparezca un número: es que sea EL QUE SE
+  // CONFIGURÓ. Un literal fijo se vería igual mientras nadie mueva la casilla.
+  const filaPasivo = () => page.evaluate(() => {
+    const tr = [...document.querySelectorAll('#cmpCard tbody tr')]
+      .find(t => /PASIVO/.test(t.textContent));
+    return tr ? tr.children[0].textContent.replace(/\s+/g, ' ').trim() : '';
+  });
+
+  // La meteo inyectada de este arnés depende de la LATITUD: a 41,5° el viento
+  // no pasa de ~36 km/h y no cruzaría ninguno de los dos umbrales, así que la
+  // última comprobación pasaría por no haber nada que ver. Se mueve al sitio
+  // ventoso, donde 60 se cruza y 90 no — que es el régimen que separa los dos.
+  await page.fill('#lat', '43.2'); await page.dispatchEvent('#lat', 'input');
+  const vistas = {};
+  for (const v of ['90', '60']) {
+    await page.fill('#pasV', v); await page.dispatchEvent('#pasV', 'input');
+    // El resultado ANTERIOR se borra antes de pulsar. Sin esto la espera de
+    // abajo se cumple al instante con el `REP` de la vuelta previa, y la
+    // segunda iteración lee la etiqueta VIEJA: el arnés fallaba 2 de cada 4
+    // veces y su rojo decía «no sigue el valor configurado» — que es un
+    // diagnóstico falso, porque la ficha lo seguía perfectamente. Un test que
+    // espera sobre estado que puede sobrevivir a la acción no está esperando
+    // a nada.
+    await page.evaluate(() => { window.REP = null; });
+    await page.click('#run');
+    await page.waitForFunction(() => window.REP && REP.cases && REP.cases.PASIVO,
+                               { timeout: 90000 });
+    await page.waitForTimeout(400);
+    vistas[v] = { fila: await filaPasivo(),
+                  ev: await page.evaluate(() => REP.cases.PASIVO.n_events) };
+  }
+
+  check('la fila del pasivo dice a qué viento se suelta (' + vistas['90'].fila + ')',
+        /suelta a 90 km\/h/.test(vistas['90'].fila), vistas['90'].fila);
+  check('y va dicho que NO es una medida',
+        /no medida/.test(vistas['90'].fila), vistas['90'].fila);
+  check('sigue el valor CONFIGURADO, no un literal (90 -> 60)',
+        /suelta a 60 km\/h/.test(vistas['60'].fila), vistas['60'].fila);
+  check('sin perder el denominador, que era la otra mitad',
+        /1 fila de \d+ \(/.test(vistas['60'].fila), vistas['60'].fila);
+  // Lo que vuelve no-trivial a todo lo anterior: si el umbral no cambiara el
+  // resultado, enseñarlo al lado del resultado no serviría de nada.
+  check('y ese umbral CAMBIA el resultado (' + vistas['90'].ev + ' -> ' +
+        vistas['60'].ev + ' abanderamientos)', vistas['90'].ev !== vistas['60'].ev);
+
+  // ── El criterio del umbral, DECLARADO junto al resultado ─────────────
+  // T1 y T2 están definidos sobre la velocidad MEDIA. La casilla de ráfaga
+  // sustituye la serie entera, así que dispararlos contra ella es OTRO
+  // criterio de proyecto, no un ajuste — y la ficha no lo decide, que no le
+  // toca. Lo que SÍ le toca es decir de qué tamaño es la diferencia: sin el
+  // número, el resultado sale con la misma cara que si nada hubiera cambiado,
+  // que es el modo de fallo del capítulo del abanderamiento en el informe.
+  await page.check('#wgust');
+  await page.evaluate(() => { window.REP = null; });
+  await page.click('#run');
+  await page.waitForFunction(() => window.REP && REP.cases, { timeout: 90000 });
+  // Se lee del DOM y no del objeto a propósito: un aviso que solo existe en
+  // el estado no existe. Lo que hay que comprobar es que el usuario lo VE, al
+  // lado del número que cambia.
+  await page.waitForTimeout(400);
+  const nota = await page.evaluate(() => {
+    const w = [...document.querySelectorAll('#out .warn')]
+      .find(e => /Banco de pruebas/.test(e.textContent));
+    return w ? w.textContent.replace(/\s+/g, ' ') : '';
+  });
+  check('con ráfaga, la ficha AVISA de que los umbrales son sobre la MEDIA',
+        /DEFINIDOS SOBRE LA VELOCIDAD MEDIA/.test(nota), nota.slice(-160));
+  check('y lo CUANTIFICA en vez de dejarlo en una advertencia',
+        /x6/.test(nota) && /x22/.test(nota), nota.slice(-200));
+  check('y dice que la decisión es del PROYECTO, no suya',
+        /esta ficha no la toma/.test(nota), nota.slice(-120));
+  // El par: sin ráfaga no hay nada que advertir, y un aviso que sale siempre
+  // deja de leerse. Si esto se pusiera rojo, los tres de arriba estarían
+  // pasando por un texto incondicional.
+  await page.uncheck('#wgust');
+  await page.evaluate(() => { window.REP = null; });
+  await page.click('#run');
+  await page.waitForFunction(() => window.REP && REP.cases, { timeout: 90000 });
+  await page.waitForTimeout(400);
+  const sinRafaga = await page.evaluate(
+    () => document.getElementById('out').textContent.replace(/\s+/g, ' '));
+  check('y SIN ráfaga el aviso no sale (no es un texto incondicional)',
+        !/DEFINIDOS SOBRE LA VELOCIDAD MEDIA/.test(sinRafaga));
+
   check('la ficha no lanza errores de JS', errores.length === 0, errores.join(' | '));
   await browser.close();
   console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko) : '\nOK — ' + ok + '/' + ok + ' comprobaciones');

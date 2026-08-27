@@ -50,6 +50,81 @@
   S.setModsPerStr = function (n) { D.modsPerStr = n; D.strLen = n * D.modW + (n - 1) * D.gapMod; D.span = 2 * D.strLen + D.gapDrive; D.mesaC = D.gapDrive / 2 + D.strLen / 2; };
 
   /* ---------- MATERIALES (cada app crea los suyos con su THREE) ---------- */
+  /* Células FV para la cara del módulo. Vive AQUÍ, con el modelo, y no en cada página:
+     `glass` a secas es blanco liso, y un campo de seguidores blancos no se parece a
+     una planta -- según le dé el sol sale una fila cegada y la de al lado negra, que
+     es lo que hacía que el campo se viera "raro". Se cachea porque generar el canvas
+     por cada llamada tira una textura nueva a la GPU sin motivo. */
+  var _ptex = null;
+  S.panelTex = function (THREE) {
+    if (_ptex) return _ptex;
+    if (typeof document === 'undefined') return null;
+    var W = 128, H = 256, c = document.createElement('canvas'), x = c.getContext('2d');
+    c.width = W; c.height = H;
+    x.fillStyle = '#0a1019'; x.fillRect(0, 0, W, H);                    // marco/fondo casi negro
+    var nx = 6, ny = 12, cw = W / nx, ch = H / ny, gap = 1.4;           // rejilla de células 6x12
+    for (var iy = 0; iy < ny; iy++) for (var ix = 0; ix < nx; ix++) {
+      var L = 7.5 + Math.random() * 3.5;                                // azul muy oscuro con leve variación
+      var g = x.createLinearGradient(ix * cw, iy * ch, ix * cw + cw, iy * ch + ch);
+      g.addColorStop(0, 'hsl(214,48%,' + (L + 2).toFixed(1) + '%)');
+      g.addColorStop(1, 'hsl(214,48%,' + L.toFixed(1) + '%)');
+      x.fillStyle = g; x.fillRect(ix * cw + gap, iy * ch + gap, cw - 2 * gap, ch - 2 * gap);
+      x.strokeStyle = 'rgba(150,175,200,.30)'; x.lineWidth = 0.8;       // 3 busbars por célula
+      for (var b = 1; b <= 3; b++) {
+        var bx = ix * cw + cw * b / 4;
+        x.beginPath(); x.moveTo(bx, iy * ch + gap); x.lineTo(bx, iy * ch + ch - gap); x.stroke();
+      }
+    }
+    _ptex = new THREE.CanvasTexture(c);
+    _ptex.wrapS = _ptex.wrapT = THREE.RepeatWrapping;
+    _ptex.anisotropy = 4;
+    return _ptex;
+  };
+
+  /* Deja `glass` como un módulo de verdad: células por delante y cara trasera bifacial
+     apagada. Es lo que hacía a mano cada página; ahora lo hace el modelo. */
+  S.vistePaneles = function (THREE, mats) {
+    var t = S.panelTex(THREE);
+    if (!t || !mats || !mats.glass) return mats;
+    mats.glass.map = t; mats.glass.emissiveMap = t;
+    mats.glass.emissive = new THREE.Color(0x2b333d);
+    mats.glass.emissiveIntensity = 0.32;
+    mats.glass.needsUpdate = true;
+    return mats;
+  };
+
+  /* ---------- EJE DE TRANSMISIÓN (bífila) ----------
+     En una bífila el motor está en UNA viga y la gemela se mueve por un eje que cruza
+     hasta la otra. `parts()` describe UNA viga, así que este eje no cabe ahí: va ENTRE
+     las dos, y lo coloca la app, igual que el cable motor↔TCU y los amortiguadores.
+
+     Las medidas NO se inventan aquí: salen de `overcast.html`, que lo dibuja desde
+     antes, y están CONFIRMADAS (Ignacio, ago-2026). Ojo con eso, porque dentro del
+     propio overcast conviven dos ejes distintos: Ø 60 en la vista instanciada y Ø 100
+     en la de detalle. El bueno es el Ø 60 — que esté aquí es lo que evita que la
+     próxima página elija el otro. */
+  D.ejeTransD = 0.06;        // Ø 60 mm — confirmado
+  D.ejeTransY = -0.22;       // por debajo del eje del tubo
+  D.cardanD = 0.18;          // acoplamientos de los extremos (Ø 180 mm)
+  D.cardanL = 0.30;
+  D.cardanHueco = 0.25;      // lo que el eje deja libre a cada lado
+  D.cardanOffset = 0.22;     // a qué distancia de cada viga va su cardán
+  S.ejeTransGeom = function (THREE, sep) {
+    var g = new THREE.CylinderGeometry(D.ejeTransD / 2, D.ejeTransD / 2,
+                                       Math.max(0.1, sep - 2 * D.cardanHueco), 8);
+    g.rotateX(Math.PI / 2);            // el cilindro nace en Y; el eje cruza en Z
+    g.translate(0, D.ejeTransY, 0);
+    return g;
+  };
+  /* los dos cardanes, en los extremos del eje. `dz` = ±(sep/2 − hueco + L/2) */
+  S.cardanGeom = function (THREE) {
+    var g = new THREE.CylinderGeometry(D.cardanD / 2, D.cardanD / 2, D.cardanL, 8);
+    g.rotateX(Math.PI / 2);
+    g.translate(0, D.ejeTransY, 0);
+    return g;
+  };
+  S.cardanDz = function (sep) { return sep / 2 - D.cardanOffset; };
+
   S.materials = function (THREE) {
     return {
       glass:  new THREE.MeshStandardMaterial({ color:0xffffff, roughness:.14, metalness:.10, emissive:0x0a1626, emissiveIntensity:.07 }),
@@ -296,19 +371,64 @@
    * Devuelve { spin, static, modCols }: 'spin' bascula (rotation.x), 'static'
    * fija (slew); 'modCols' = centros de módulo {x,z} (p.ej. para capas de nieve).
    * ==================================================================== */
+  /* Piezas que van SOLO en la viga del motor: la TCU con sus abarcones y chapas, la
+     antena, y el seccionador con sus derivaciones DC. La gemela lleva el eje de
+     transmisión y punto. La lista y el criterio son ÚNICOS y los comparten buildBeam e
+     instancePlan: con una copia en cada sitio, el día que se toque una acaba habiendo
+     una bífila con dos TCU y dos motores, que es un seguidor que no existe. */
+  var SOLO_OESTE = { tcu:1, tcuabarcon:1, tcuchapa:1, antena:1, antenatip:1, motorlink:1,
+                     secc:1, seccknob:1, seccmaneta:1, seccchapa:1, seccabarcon:1,
+                     secclink:1, seccdca:1, seccdcb:1 };
+  function esDeEstaViga(p, west) {
+    if (west) return true;
+    if (SOLO_OESTE[p.key] || p.antenna) return false;   // TCU / antena / seccionador
+    return !!(p.spin || p.twin);                        // del slew, en la gemela solo las twin
+  }
+  S.SOLO_OESTE = SOLO_OESTE;
+
+  /* ====================================================================
+   * LOS PILOTES: dónde se apoya el tubo a lo largo de su eje
+   * ====================================================================
+   * `parts()` deja los postes fuera («los pone CADA app»), y con ellos se
+   * quedaba fuera DÓNDE van. La regla estaba escrita solo en `terreno.html`, y
+   * el simulador de cobertura RF, que no la tenía, se inventaba dos apoyos en la
+   * X del amortiguador: un tubo de 64 m sujeto por tres puntos, sin los
+   * intermedios. Como el criterio es UNO, vive aquí.
+   *
+   * Retícula genérica de la casa: cuatro apoyos, a ±28 y ±9 m del centro en el
+   * seguidor completo de 28 módulos por ala, y PROPORCIONALES al largo en los
+   * acortados (Ayora tiene 28/21/14, San José 32/16) — un medio con la retícula
+   * del completo se queda con las punteras al aire. El slew va aparte, en el
+   * centro, y lo pone la app con la corona.
+   *
+   * NO sustituye a la retícula MEDIDA cuando la hay: El Burgo tiene la suya por
+   * tipo de seguidor, sacada de los círculos del Tierras.dwg, y esa manda.
+   * ==================================================================== */
+  S.pilotesX = function (mods) {
+    var k = (mods || D.modsPerStr) / 28;
+    return [-28 * k, -9 * k, 9 * k, 28 * k];
+  };
+  /* El pie del amortiguador se apoya en un poste que EXISTE: el segundo por cada
+     extremo de la retícula que tenga esa fila. Si va a una X inventada, queda
+     colgado en el vano o atravesando el terreno. */
+  S.damperPostX = function (xs) { return [xs[1], xs[xs.length - 2]]; };
+
   S.buildBeam = function (THREE, opts) {
     opts = opts || {};
     var mats = opts.materials || S.materials(THREE);
     var west = opts.west !== false;
     var skip = opts.skip || {};
-    var WEST = { tcu:1, tcuabarcon:1, tcuchapa:1, antena:1, antenatip:1, motorlink:1, secc:1, seccknob:1, seccmaneta:1, seccchapa:1, seccabarcon:1, secclink:1, seccdca:1, seccdcb:1 };   // el seccionador (y sus derivaciones DC) va con la TCU: solo viga oeste
     var spin = new THREE.Group(), stat = new THREE.Group(), modCols = [], dampers = [];
-    S.parts(THREE, { size:opts.size||'largo', detail:opts.detail||'full' }).forEach(function (p) {
+    /* `damperX` SE PASA. El comentario de los amortiguadores dice que la X la
+       pone cada app por aquí, y `buildBeam` se la comía: la app colocaba sus
+       postes en la retícula y el pie del amortiguador se quedaba en la X que
+       `parts()` se estima sola, a 70 cm del poste más cercano, colgado del vano. */
+    S.parts(THREE, { size:opts.size||'largo', detail:opts.detail||'full',
+                     damperX:opts.damperX }).forEach(function (p) {
       if (p.motorLink) return;                                   // cable motor↔TCU: lo gestiona la app por frame (pendiente)
       if (p.damperLink) { dampers.push({ a:p.a, b:p.b }); return; }   // amortiguadores: en AMBAS vigas; render per-frame en la app
       if (skip[p.key]) return;
-      if (!west && (WEST[p.key] || p.antenna)) return;           // TCU/antena/abarcón-TCU/chapa: solo viga oeste
-      if (!west && !p.spin && !p.twin) return;                   // slew completo solo oeste; en la gemela solo piezas twin
+      if (!esDeEstaViga(p, west)) return;
       var mesh = new THREE.Mesh(p.geom(THREE), mats[p.mat]);
       mesh.applyMatrix4(p.m);
       mesh.castShadow = !!p.cast; mesh.receiveShadow = true;
@@ -325,10 +445,19 @@
    *   plan = Seguidor.instancePlan(THREE, {detail:'mass', size:'largo'})
    *   -> [{ key, mat, geom, spin, cast, locals:[Matrix4,...] }]
    * La app: por cada tracker t y cada local L -> setMatrixAt(base_t · (spin?Rx:1) · L)
+   *
+   * opts.west funciona IGUAL que en buildBeam, y por el mismo motivo: un seguidor es
+   * BIFILA, dos vigas, y solo una lleva motor, TCU, antena y seccionador. Antes esta
+   * función ignoraba la opción y devolvía siempre la viga completa; quien la llamaba
+   * con west:true creyendo que pedía «la del motor» dibujaba en realidad un campo de
+   * seguidores monofila, cada uno con su propia TCU. Sin la opción no se filtra nada,
+   * que es lo que hacía siempre: los que ya la usan así no notan el cambio.
    * ==================================================================== */
   S.instancePlan = function (THREE, opts) {
     var byType = {}, order = [];
+    var west = !opts || opts.west !== false;
     S.parts(THREE, opts).forEach(function (p) {
+      if (!esDeEstaViga(p, west)) return;
       if (!byType[p.key]) { byType[p.key] = { key:p.key, mat:p.mat, geom:p.geom, spin:p.spin, cast:p.cast, terrainScaled:!!p.terrainScaled, twin:!!p.twin, antenna:!!p.antenna, tip:!!p.tip, motorLink:!!p.motorLink, damperLink:!!p.damperLink, a:p.a, b:p.b, as:[], bs:[], locals:[] }; order.push(p.key); }
       byType[p.key].locals.push(p.m);
       if (p.a) byType[p.key].as.push(p.a);
@@ -337,6 +466,150 @@
     return order.map(function (k){ return byType[k]; });
   };
 
-  S.VERSION = '0.4.19';
+  /* ====================================================================
+   * EL APOYO: poste + tambor + horquilla + virola + CASQUILLO
+   * ====================================================================
+   * `parts()` deja fuera los postes a propósito («los pone CADA app, difieren»),
+   * y con ellos se quedaba fuera la unión viga↔poste entera. Pero la unión NO
+   * difiere entre plantas: difiere DÓNDE va. Así que las piezas viven aquí y
+   * cada app decide en qué X las pone.
+   *
+   * Geometría y proporciones: del render del fabricante (Solar Steel) y de las
+   * fotos del poste real, tal como las dibujan Cobertura 3D (`terreno.html`) y
+   * el gemelo digital. Sin cotas de plano — proporciones derivadas de esa
+   * imagen, y así está declarado allí desde el principio.
+   *
+   *   poste     — perfil C 140×70 con labios, canal ABIERTO hacia el exterior
+   *               del tracker (se ve el interior en la foto).
+   *   tambor    — casquillo de giro: polímero oscuro con 12 ranuras radiales.
+   *               Es ESTÁTICO (no bascula), así que su ojo es REDONDO (r 0,088
+   *               ≥ la semidiagonal 0,085 de la viga de 0,12) para que la viga
+   *               cuadrada gire dentro sin atravesarlo a ninguna hora.
+   *   horquilla — pieza de regulación PRE01: dos placas con cuna semicircular,
+   *               orejetas, cartelas que flanquean el perfil C, placa base y
+   *               los 4 tornillos pasantes de la foto.
+   *   virola    — fleje-arco que cierra la horquilla por encima del tambor y
+   *               retiene el casquillo en su cuna.
+   *   casquillo — manguito de polímero que ABRAZA la viga y llena el ojo del
+   *               tambor. GIRA CON la viga: boca cuadrada 0,1216 ceñida a la
+   *               viga de 0,12 y exterior redondo r 0,0865, que cabe en el ojo
+   *               (0,088) a cualquier basculación (semidiagonal 0,0859).
+   *
+   * Marco CANÓNICO, el de `parts()`: +X a lo largo del tubo, Y arriba, origen
+   * en el EJE del tubo. El poste baja desde `-opts.postH` (su base) hasta la
+   * base de la horquilla; el resto va centrado en el eje.
+   * ==================================================================== */
+  S.apoyoMaterials = function (THREE) {
+    return {
+      steel: new THREE.MeshStandardMaterial({ color:0x9aa3ac, roughness:.45, metalness:.65 }),
+      hdpe:  new THREE.MeshStandardMaterial({ color:0x0e0f10, roughness:.85, metalness:.05 })   // el casquillo es NEGRO
+    };
+  };
+
+  /* opts.postH = del suelo a la BASE de la horquilla. Devuelve geometrías, no
+     mallas: la app las instancia o las clona según le convenga. */
+  S.apoyoGeoms = function (THREE, opts) {
+    opts = opts || {};
+    var postH = (opts.postH !== undefined) ? opts.postH : 1.747;   // 2 − 0,253 del gemelo
+    var DEG = Math.PI / 180;
+
+    // --- poste: perfil C 140×70 con labios ---
+    var cp = new THREE.Shape();
+    cp.moveTo(-0.07,0.035); cp.lineTo(-0.07,-0.035); cp.lineTo(0.07,-0.035); cp.lineTo(0.07,0.035);
+    cp.lineTo(0.055,0.035); cp.lineTo(0.055,-0.027); cp.lineTo(-0.055,-0.027); cp.lineTo(-0.055,0.035);
+    cp.closePath();
+    var poste = new THREE.ExtrudeGeometry(cp, { depth:postH, bevelEnabled:false });
+    poste.translate(0,0,-postH/2); poste.rotateX(-Math.PI/2); poste.rotateY(Math.PI/2);
+
+    // --- tambor: ojo redondo + 12 ranuras radiales ---
+    var cj = new THREE.Shape(); cj.absarc(0,0,0.115,0,Math.PI*2,false);
+    var cjh = new THREE.Path(); cjh.absarc(0,0,0.088,0,Math.PI*2,true); cj.holes.push(cjh);
+    for (var sl = 0; sl < 12; sl++) {
+      var a0 = (sl*30+8)*DEG, a1 = (sl*30+24)*DEG, sh = new THREE.Path();
+      sh.moveTo(0.108*Math.cos(a1),0.108*Math.sin(a1)); sh.absarc(0,0,0.108,a1,a0,true);
+      sh.lineTo(0.093*Math.cos(a0),0.093*Math.sin(a0)); sh.absarc(0,0,0.093,a0,a1,false);
+      sh.closePath(); cj.holes.push(sh);
+    }
+    var tambor = new THREE.ExtrudeGeometry(cj, { depth:0.17, bevelEnabled:false, curveSegments:24 });
+    tambor.translate(0,0,-0.085); tambor.rotateY(Math.PI/2);   // ojo a lo largo de la viga
+
+    // --- horquilla PRE01: 2 placas + cartelas + base + 4 tornillos ---
+    var fk = new THREE.Shape();
+    fk.moveTo(-0.05,-0.44); fk.lineTo(0.05,-0.44); fk.lineTo(0.15,-0.20); fk.lineTo(0.15,0.03); fk.lineTo(0.1131,0.03);
+    fk.absarc(0,0,0.117,0.2594,2.8822,true); fk.lineTo(-0.15,0.03); fk.lineTo(-0.15,-0.20); fk.closePath();
+    var fkP = new THREE.ExtrudeGeometry(fk, { depth:0.012, bevelEnabled:false, curveSegments:20 });
+    fkP.translate(0,0,-0.006);
+    var blt = function (bx,by){ return new THREE.CylinderGeometry(0.013,0.013,0.20,6).rotateX(Math.PI/2).translate(bx,by,0); };
+    var horquilla = merge([ fkP.clone().translate(0,0,0.082), fkP.translate(0,0,-0.082),
+      new THREE.BoxGeometry(0.024,0.20,0.152).translate(0.138,-0.14,0),
+      new THREE.BoxGeometry(0.024,0.20,0.152).translate(-0.138,-0.14,0),
+      new THREE.BoxGeometry(0.30,0.016,0.176).translate(0,-0.245,0),
+      blt(0.1315,-0.005), blt(-0.1315,-0.005), blt(0,-0.30), blt(0,-0.38) ]);
+    horquilla.rotateY(Math.PI/2);
+
+    // --- virola: fleje-arco que cierra por encima del tambor ---
+    var vi = new THREE.Shape();
+    vi.moveTo(0.131*Math.cos(-0.2618),0.131*Math.sin(-0.2618)); vi.absarc(0,0,0.131,-0.2618,3.4034,false);
+    vi.lineTo(0.117*Math.cos(3.4034),0.117*Math.sin(3.4034)); vi.absarc(0,0,0.117,3.4034,-0.2618,true); vi.closePath();
+    var virola = new THREE.ExtrudeGeometry(vi, { depth:0.15, bevelEnabled:false, curveSegments:22 });
+    virola.translate(0,0,-0.075); virola.rotateY(Math.PI/2);
+
+    // --- casquillo: boca CUADRADA que abraza la viga, exterior redondo ---
+    var bu = new THREE.Shape(); bu.absarc(0,0,0.0865,0,Math.PI*2,false);
+    var buh = new THREE.Path();
+    buh.moveTo(0.0608,0.0608); buh.lineTo(0.0608,-0.0608); buh.lineTo(-0.0608,-0.0608); buh.lineTo(-0.0608,0.0608); buh.closePath();
+    bu.holes.push(buh);
+    var casquillo = new THREE.ExtrudeGeometry(bu, { depth:0.19, bevelEnabled:false, curveSegments:24 });
+    casquillo.translate(0,0,-0.095); casquillo.rotateY(Math.PI/2);
+
+    return { poste:poste, tambor:tambor, horquilla:horquilla, virola:virola, casquillo:casquillo, postH:postH };
+  };
+
+  /* Fusión de geometrías sin depender de BufferGeometryUtils (que no todas las
+     páginas vendorizan). Misma implementación que usan el gemelo y Cobertura 3D. */
+  function merge(gs) {
+    var P=[],N=[],U=[],I=[],o=0;
+    for (var k=0;k<gs.length;k++){
+      var g=gs[k], p=g.attributes.position, n=g.attributes.normal, u=g.attributes.uv, ix=g.index, c=p.count, j;
+      for (j=0;j<c;j++){ P.push(p.getX(j),p.getY(j),p.getZ(j)); N.push(n.getX(j),n.getY(j),n.getZ(j)); U.push(u?u.getX(j):0,u?u.getY(j):0); }
+      if (ix) for (j=0;j<ix.count;j++) I.push(ix.getX(j)+o); else for (j=0;j<c;j++) I.push(j+o);
+      o+=c;
+    }
+    var G=new THREE.BufferGeometry();
+    G.setAttribute('position', new THREE.Float32BufferAttribute(P,3));
+    G.setAttribute('normal',   new THREE.Float32BufferAttribute(N,3));
+    G.setAttribute('uv',       new THREE.Float32BufferAttribute(U,2));
+    G.setIndex(I); return G;
+  }
+
+  /* ====================================================================
+   * AMORTIGUADOR LARGO (el de Cobertura 3D v5.44-47, no el corto de `parts`)
+   * Pie a 30 cm del SUELO, 30 cm del poste hacia el motor y 13 cm transversal
+   * (luz clara con el poste); MÉNSULA fija poste→pie; y CIMA en la ESQUINA
+   * INFERIOR de la viga vía una OREJETA-CHAPA que gira con ella.
+   * Devuelve las piezas y los dos extremos; la app lo orienta por frame, igual
+   * que hace con `dampers`, porque cruza la frontera fija/basculante.
+   *
+   * `hub` = altura del EJE del tubo sobre el suelo. Hace falta porque el pie se
+   * mide desde el SUELO (30 cm) y el marco canónico tiene su origen en el eje:
+   * sin ella, el pie se va 30 cm por encima del tubo y el amortiguador asoma
+   * por encima del panel.
+   * ==================================================================== */
+  S.amortiguadorLargo = function (THREE, bx, hub) {
+    var sgn = bx > 0 ? 1 : -1, dxl = bx - sgn * 0.30;
+    var pieY = 0.30 - (hub || 0);   // 30 cm del SUELO, en el marco del tubo
+    return {
+      x: dxl,                       // X del pie (30 cm del poste, hacia el motor)
+      pieY: pieY,
+      pie: [dxl, pieY, 0.13],       // extremo FIJO: 30 cm del suelo, 13 cm transversal
+      cima: [dxl, -0.075, 0.085],   // extremo que BASCULA: esquina inferior de la viga
+      body: { r: 0.05, seg: 14 },   // cuerpo del amortiguador
+      rod:  { r: 0.022, seg: 10 },  // vástago
+      mensula: { r: 0.016, seg: 8 },// ménsula fija poste→pie
+      orejeta: { w: 0.10, h: 0.173, d: 0.02 }
+    };
+  };
+
+  S.VERSION = '0.4.22';
   root.Seguidor = S;
 })(typeof window !== 'undefined' ? window : this);

@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.5.1</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.1</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -272,15 +272,22 @@ canvas.panning{cursor:grabbing}
            no un parámetro suelto de implantación: el GCR derivado de abajo sale
            de ESTE pitch, y tenerlos en tarjetas distintas era definir el tracker
            a medias arriba y a medias abajo. -->
-      <div class="three" style="align-items:end">
-        <div class="field"><label>Pitch (m)</label><input id="pitch" type="number" step="0.01" value="6"></div>
-        <div class="field"><label>GCR objetivo</label><input id="gcrObj" type="number" step="0.001" value="0.397"></div>
-        <div class="field"><button class="btn ghost small" id="pitchFromGcr" style="padding:8px 10px">↳ Pitch desde GCR</button></div>
-      </div>
 
       <div class="deriv" id="deriv"></div>
 
       <div id="paneTracker">
+        <div class="two">
+          <div class="field"><label>Pitch (m)</label><input id="pitchTrk" type="number" step="0.1" value="6">
+            <div class="tip">Paso entre filas de SEGUIDOR.</div></div>
+          <div class="field"><label>GCR objetivo</label><input id="gcrObj" type="number" step="0.001" value="0.397">
+            <button class="btn ghost small mini" id="pitchFromGcr">↳ Pitch desde GCR</button></div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Pendiente máx. E-O °</label><input id="slopeTrkEw" type="number" step="0.5" value="8">
+            <div class="tip">La transversal: descuadra filas vecinas y obliga a mover tierras.</div></div>
+          <div class="field"><label>Pendiente máx. N-S °</label><input id="slopeTrkNs" type="number" step="0.5" value="15">
+            <div class="tip">A lo largo del eje: la absorbe escalonando hincas, así que tolera más.</div></div>
+        </div>
         <div class="two">
           <div class="field"><label>Tipo de tracker</label>
             <select id="bifila"><option value="1">Bifila (2 sub-filas)</option><option value="0">Monofila</option></select></div>
@@ -294,6 +301,18 @@ canvas.panning{cursor:grabbing}
         </div>
       </div>
       <div id="paneFija" style="display:none">
+        <div class="two">
+          <div class="field"><label>Pitch (m)</label><input id="pitchFija" type="number" step="0.1" value="4">
+            <div class="tip">Paso entre filas de mesa FIJA.</div></div>
+          <div class="field"><label>&nbsp;</label><div class="tip">La fija no tiene GCR objetivo: el pitch lo
+            fija el criterio de sombra entre filas.</div></div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Pendiente máx. E-O °</label><input id="slopeFijaEw" type="number" step="0.5" value="15"></div>
+          <div class="field"><label>Pendiente máx. N-S °</label><input id="slopeFijaNs" type="number" step="0.5" value="15">
+            <div class="tip">No hay eje que escalonar, pero la N-S cambia la inclinación efectiva y el
+              sombreado entre filas.</div></div>
+        </div>
         <div class="two">
           <div class="field"><label>Tilt fijo °</label><input id="fixTilt" type="number" step="1" value="25">
             <div class="tip">Default 25°, el típico de latitud media.</div></div>
@@ -330,7 +349,11 @@ canvas.panning{cursor:grabbing}
         </div>
         <div class="two">
           <div class="field"><label>Margen alrededor (m)</label><input id="demMargen" type="number" step="10" value="0"></div>
-          <div class="field"><label>Pendiente máx. (°)</label><input id="slopeMax" type="number" step="0.5" value="20"></div>
+          <div class="field"><label>Pendiente máx.</label>
+            <div class="tip">La pone cada montaje en su cuadro de <b>Estructura</b> (E-O y N-S por separado),
+              y con zonas manda la de cada zona. Aquí había un segundo número global que se contradecía con
+              aquéllos en silencio: filtro en 2°, límites en 15/25 y terreno a 16,3° dejaba la parcela en
+              «no implantable» sin decir por qué.</div></div>
         </div>
         <label class="chk"><input type="checkbox" id="demOff"> Desactivar el filtro de pendiente (no excluir)</label>
         <div class="btnrow">
@@ -354,25 +377,12 @@ canvas.panning{cursor:grabbing}
       <h2><span class="ic">🧩</span> Zonas de montaje — fija y tracker a la vez</h2>
       <p class="note" style="margin-top:0">Una parcela puede no admitir seguidor entera: pendiente, forma o
         criterio de proyecto. Aquí se reparte en zonas y cada una se calcula con SU montaje.
-        <b>El reparto lo decides tú</b>; el botón de pendiente solo propone. Mismo motor y mismas reglas que
-        el bloque «Zonas de montaje» de Streamlit y la celda §02.5a-MIX del cuaderno.</p>
-      <div class="two">
-        <div class="field"><label>Pitch tracker (m)</label><input id="mixPitchTrk" type="number" step="0.1" value="6"></div>
-        <div class="field"><label>Pitch fija (m)</label><input id="mixPitchFija" type="number" step="0.1" value="4"></div>
-      </div>
-      <p class="note" style="margin-top:6px">Cada montaje tiene <b>dos</b> límites y los dos tienen que
-        cumplirse. No son el mismo problema: en un seguidor de eje horizontal la pendiente <b>E-O</b>
-        descuadra filas vecinas y obliga a mover tierras, mientras la <b>N-S</b> la absorbe escalonando
-        hincas; en fija no hay eje que escalonar, pero la N-S cambia la inclinación efectiva y el sombreado
-        entre filas. Van en <b>grados</b> — un 15 % son 8,5°.</p>
-      <div class="two">
-        <div class="field"><label>Tracker E-O °</label><input id="mixTrkEw" type="number" step="0.5" value="8"></div>
-        <div class="field"><label>Tracker N-S °</label><input id="mixTrkNs" type="number" step="0.5" value="15"></div>
-      </div>
-      <div class="two">
-        <div class="field"><label>Fija E-O °</label><input id="mixFijaEw" type="number" step="0.5" value="15"></div>
-        <div class="field"><label>Fija N-S °</label><input id="mixFijaNs" type="number" step="0.5" value="15"></div>
-      </div>
+        <b>El reparto lo decides tú</b>; el botón solo propone. Mismo motor y mismas reglas que el bloque
+        «Zonas de montaje» de Streamlit y la celda §02.5a-MIX del cuaderno.</p>
+      <p class="note" style="margin-top:0"><b>El pitch y las pendientes máximas de cada montaje están en su
+        cuadro de <span style="white-space:nowrap">▦ Estructura</span></b> —cambia el selector de Montaje
+        para ver el otro—. Aquí no se repiten: dos casillas para lo mismo acaban discrepando, y el que las
+        lee no sabe cuál manda.</p>
       <div class="field"><label>Área mínima de zona (m²)</label><input id="mixMinArea" type="number" step="100" value="2000"></div>
       <div class="btnrow">
         <button class="btn ghost small" id="mixProponer">📐 Proponer por pendiente</button>
@@ -1866,7 +1876,7 @@ function eligeSitio(s){
   if(s&&s.lat!=null){$('lat').value=(+s.lat).toFixed(5);$('lon').value=(+s.lon).toFixed(5);}
   // El pitch de la planta manda si la cartera lo trae: era lo que hacía el
   // desplegable viejo y sigue siendo cierto.
-  if(s&&s.pitch&&isFinite(s.pitch))$('pitch').value=s.pitch;
+  if(s&&s.pitch&&isFinite(s.pitch))ponPitch(montajeAct(),s.pitch);
   $('sitioQ').value=s?s.n:'';
   $('sitioRes').style.display='none';
   pintaSitio(); buildParcel();
@@ -2136,12 +2146,12 @@ var VIEW={cx:lon2u(-0.79814),cy:lat2u(41.57634),z:15};
 function escalaMundo(){return TILE_PX*Math.pow(2,VIEW.z);}
 function px(lon,lat){
   var cv=$('cv'),S=escalaMundo();
-  return [(lon2u(lon)-VIEW.cx)*S+cv.width/2, (lat2u(lat)-VIEW.cy)*S+cv.height/2];
+  return [(lon2u(lon)-VIEW.cx)*S+CVW()/2, (lat2u(lat)-VIEW.cy)*S+CVH()/2];
 }
 function canvasToWorld(ev){
   var cv=$('cv'),r=cv.getBoundingClientRect(),S=escalaMundo();
-  var cx=(ev.clientX-r.left)*(cv.width/r.width), cy=(ev.clientY-r.top)*(cv.height/r.height);
-  return [u2lon(VIEW.cx+(cx-cv.width/2)/S), u2lat(VIEW.cy+(cy-cv.height/2)/S)];
+  var cx=(ev.clientX-r.left)*(CVW()/r.width), cy=(ev.clientY-r.top)*(CVH()/r.height);
+  return [u2lon(VIEW.cx+(cx-CVW()/2)/S), u2lat(VIEW.cy+(cy-CVH()/2)/S)];
 }
 
 /* Encajar: el encuadre que mete la parcela entera con aire. Se llama al cambiar
@@ -2168,7 +2178,7 @@ function encaja(){
     if(u<x0)x0=u; if(u>x1)x1=u; if(v<y0)y0=v; if(v>y1)y1=v;});
   VIEW.cx=(x0+x1)/2; VIEW.cy=(y0+y1)/2;
   var du=Math.max(x1-x0,1e-9), dv=Math.max(y1-y0,1e-9), pad=1.14;
-  var S=Math.min(cv.width/(du*pad), cv.height/(dv*pad));
+  var S=Math.min(CVW()/(du*pad), CVH()/(dv*pad));
   VIEW.z=Math.max(Z_MIN,Math.min(Z_MAX,Math.log2(S/TILE_PX)));
 }
 
@@ -2211,11 +2221,44 @@ function tesela(z,x,y){
   t.img.src=url;
   return t;
 }
+/* ── EL LIENZO Y SU RESOLUCION ─────────────────────────────────────────────
+   El canvas nacia con un buffer FIJO de 1000x700 y el CSS lo estiraba a lo
+   ancho que hubiera: en una pantalla de 1270 px el navegador ampliaba 1000
+   pixeles a 1270, y de ahi la falta de nitidez. Ahora el buffer se ajusta al
+   tamano real del elemento por `devicePixelRatio` (con tope 2: por encima el
+   coste de pintar crece al cuadrado y ya no se nota).
+
+   TODO EL DIBUJO SIGUE EN PIXELES CSS. `ctx.setTransform(K,…)` hace que una
+   unidad de dibujo sea un pixel CSS, y CVW()/CVH() devuelven el ancho y el
+   alto en esas mismas unidades. Asi los grosores de linea, los tipos y los
+   margenes fijos siguen midiendo lo que median, y solo cambia la finura.
+
+   Y LA VARITA SE QUEDA EN CSS a proposito. Su lienzo auxiliar se crea con
+   CVW()/CVH(), o sea en el MISMO grid de pixeles de siempre: lee la ortofoto
+   exactamente igual que antes de esto, con los mismos umbrales y el mismo
+   relleno por inundacion. Darle mas resolucion habria multiplicado por cuatro
+   los pixeles que recorre y cambiado un comportamiento que no se puede probar
+   aqui sin teselas. Nitidez para lo que se ve, grid intacto para lo que mide. */
+var DPRK=1;
+function CVW(){return $('cv').width/DPRK;}
+function CVH(){return $('cv').height/DPRK;}
+function ajustaLienzo(){
+  var cv=$('cv'); if(!cv)return false;
+  var w=Math.round(cv.clientWidth||cv.width), h=Math.round(cv.clientHeight||cv.height);
+  if(!w||!h)return false;
+  var K=Math.min(window.devicePixelRatio||1,2);
+  var W=Math.round(w*K), H=Math.round(h*K);
+  if(cv.width===W&&cv.height===H&&DPRK===K)return false;
+  cv.width=W; cv.height=H; DPRK=K;
+  return true;                                   // cambio: quien llame decide si repinta
+}
+
+
 function pintaOrtofoto(ctx,cv){
   var S=escalaMundo(), tz=Math.max(Z_MIN,Math.min(Z_MAX,Math.round(VIEW.z))), n=Math.pow(2,tz);
   var lado=S/n;                                   // píxeles que ocupa una tesela
-  var u0=VIEW.cx-(cv.width/2)/S, u1=VIEW.cx+(cv.width/2)/S;
-  var v0=VIEW.cy-(cv.height/2)/S, v1=VIEW.cy+(cv.height/2)/S;
+  var u0=VIEW.cx-(CVW()/2)/S, u1=VIEW.cx+(CVW()/2)/S;
+  var v0=VIEW.cy-(CVH()/2)/S, v1=VIEW.cy+(CVH()/2)/S;
   var tx0=Math.floor(u0*n), tx1=Math.floor(u1*n), ty0=Math.floor(v0*n), ty1=Math.floor(v1*n);
   var pedidas=0;
   ctx.imageSmoothingEnabled=true;
@@ -2226,7 +2269,7 @@ function pintaOrtofoto(ctx,cv){
       var wx=((tx%n)+n)%n;
       var t=tesela(tz,wx,ty);
       if(!t.ok)continue;
-      var X=(tx/n-VIEW.cx)*S+cv.width/2, Y=(ty/n-VIEW.cy)*S+cv.height/2;
+      var X=(tx/n-VIEW.cx)*S+CVW()/2, Y=(ty/n-VIEW.cy)*S+CVH()/2;
       // +1 px de solape: sin él se ve una rejilla de costuras entre teselas
       ctx.drawImage(t.img,Math.floor(X),Math.floor(Y),Math.ceil(lado)+1,Math.ceil(lado)+1);
     }
@@ -2239,8 +2282,8 @@ function pintaRejilla(ctx,cv){
   var mpp=156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,VIEW.z);
   var paso=50/mpp; while(paso<24)paso*=2; while(paso>240)paso/=2;
   ctx.strokeStyle='rgba(35,48,61,.85)'; ctx.lineWidth=1; ctx.beginPath();
-  for(var x=(cv.width/2)%paso;x<cv.width;x+=paso){ctx.moveTo(x,0);ctx.lineTo(x,cv.height);}
-  for(var y=(cv.height/2)%paso;y<cv.height;y+=paso){ctx.moveTo(0,y);ctx.lineTo(cv.width,y);}
+  for(var x=(CVW()/2)%paso;x<CVW();x+=paso){ctx.moveTo(x,0);ctx.lineTo(x,CVH());}
+  for(var y=(CVH()/2)%paso;y<CVH();y+=paso){ctx.moveTo(0,y);ctx.lineTo(CVW(),y);}
   ctx.stroke();
 }
 function avisoBasemap(hayOrto){
@@ -2261,7 +2304,7 @@ $('cv').addEventListener('pointerdown',function(ev){
 $('cv').addEventListener('pointermove',function(ev){
   if(!_pan)return;
   var cv=$('cv'),r=cv.getBoundingClientRect(),S=escalaMundo();
-  var dx=(ev.clientX-_pan.x)*(cv.width/r.width), dy=(ev.clientY-_pan.y)*(cv.height/r.height);
+  var dx=(ev.clientX-_pan.x)*(CVW()/r.width), dy=(ev.clientY-_pan.y)*(CVH()/r.height);
   _movido=Math.max(_movido,Math.hypot(ev.clientX-_pan.x,ev.clientY-_pan.y));
   if(_movido<3)return;
   VIEW.cx=_pan.cx-dx/S; VIEW.cy=_pan.cy-dy/S; pideRepintar();
@@ -2274,8 +2317,8 @@ $('cv').addEventListener('pointercancel',function(){_pan=null;$('cv').classList.
 $('cv').addEventListener('wheel',function(ev){
   ev.preventDefault();
   var cv=$('cv'),r=cv.getBoundingClientRect(),S=escalaMundo();
-  var mx=(ev.clientX-r.left)*(cv.width/r.width)-cv.width/2;
-  var my=(ev.clientY-r.top)*(cv.height/r.height)-cv.height/2;
+  var mx=(ev.clientX-r.left)*(CVW()/r.width)-CVW()/2;
+  var my=(ev.clientY-r.top)*(CVH()/r.height)-CVH()/2;
   var uAnt=VIEW.cx+mx/S, vAnt=VIEW.cy+my/S;                 // punto bajo el cursor
   VIEW.z=Math.max(Z_MIN,Math.min(Z_MAX,VIEW.z-Math.sign(ev.deltaY)*0.45));
   var S2=escalaMundo();
@@ -2600,8 +2643,8 @@ var varitaAcc=null,varitaAccN=0,varitaVista=null;
 function varitaReset(){varitaAcc=null;varitaAccN=0;varitaVista=null;}
 function varitaClic(ev){
   var cv=$('cv'),r=cv.getBoundingClientRect();
-  var sx=(ev.clientX-r.left)*(cv.width/r.width),sy=(ev.clientY-r.top)*(cv.height/r.height);
-  var off=document.createElement('canvas');off.width=cv.width;off.height=cv.height;
+  var sx=(ev.clientX-r.left)*(CVW()/r.width),sy=(ev.clientY-r.top)*(CVH()/r.height);
+  var off=document.createElement('canvas');off.width=Math.round(CVW());off.height=Math.round(CVH());
   var octx=off.getContext('2d',{willReadFrequently:true});
   octx.fillStyle='#000';octx.fillRect(0,0,off.width,off.height);
   if(!pintaOrtofoto(octx,cv)){
@@ -2609,7 +2652,7 @@ function varitaClic(ev){
     return;
   }
   var img=octx.getImageData(0,0,off.width,off.height);
-  var vista=[VIEW.cx,VIEW.cy,VIEW.z,cv.width,cv.height].join('/');
+  var vista=[VIEW.cx,VIEW.cy,VIEW.z,CVW(),CVH()].join('/');
   if(ev.altKey){
     // FIXTURE de escena REAL (encargo B10 tras El Burgo/Arganda: el banco
     // sintético daba verde donde el sitio real fallaba — fixture ciego).
@@ -2638,7 +2681,7 @@ function varitaClic(ev){
   varitaAcc=res.dentro;varitaAccN=res.n;
   var S=escalaMundo();
   DRAW=res.ring.map(function(q){
-    return [u2lon(VIEW.cx+(q[0]-cv.width/2)/S),u2lat(VIEW.cy+(q[1]-cv.height/2)/S)];
+    return [u2lon(VIEW.cx+(q[0]-CVW()/2)/S),u2lat(VIEW.cy+(q[1]-CVH()/2)/S)];
   });
   drawing=true;
   if(drawDest==='linea')drawDest='parcela';      // una línea no se detecta
@@ -2685,17 +2728,26 @@ $('cv').addEventListener('click',function(ev){
   tagParcel();draw();
 });
 $('cv').addEventListener('dblclick',function(){ if(drawing)cierraDibujo(); });
+/* Al cambiar el tamano de la ventana el buffer deja de casar con el elemento y
+   se volveria a ver ampliado. Se reajusta y se repinta — y se OLVIDA lo que
+   llevara acumulado la varita, porque su mascara son pixeles de ESTE encuadre y
+   convertirlos a otro seria inventarlos (lo dice ya su propio comentario). */
+addEventListener('resize',function(){ if(ajustaLienzo()){ varitaReset(); draw(); } });
 
 /* ── el repintado ── */
 function draw(){
   var cv=$('cv'),ctx=cv.getContext('2d');
-  ctx.clearRect(0,0,cv.width,cv.height);ctx.fillStyle='#0F151D';ctx.fillRect(0,0,cv.width,cv.height);
+  ajustaLienzo();
+  // Una unidad de dibujo = un pixel CSS. Se pone en CADA repintado porque el
+  // buffer puede haber cambiado de tamano justo arriba, y eso resetea la matriz.
+  ctx.setTransform(DPRK,0,0,DPRK,0,0);
+  ctx.clearRect(0,0,CVW(),CVH());ctx.fillStyle='#0F151D';ctx.fillRect(0,0,CVW(),CVH());
   var hayOrto=false;
   if($('orto').checked)hayOrto=pintaOrtofoto(ctx,cv);
   if(!hayOrto)pintaRejilla(ctx,cv);
   // Velo oscuro sobre la ortofoto: sin él, las mesas verdes sobre un secarral
   // claro pierden el contraste que tienen sobre el fondo del panel.
-  if(hayOrto){ctx.fillStyle='rgba(11,15,20,.28)';ctx.fillRect(0,0,cv.width,cv.height);}
+  if(hayOrto){ctx.fillStyle='rgba(11,15,20,.28)';ctx.fillRect(0,0,CVW(),CVH());}
   avisoBasemap(hayOrto);
 
   function ring(pts,fill,stroke,lw,dash){
@@ -2891,11 +2943,11 @@ function ejesBifila(){
 function drawEscala(ctx,cv,hayOrto){
   var lat=u2lat(VIEW.cy);
   var mpp=156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,VIEW.z);   // m por píxel
-  var objetivo=cv.width*0.18*mpp, pot=Math.pow(10,Math.floor(Math.log10(objetivo)));
+  var objetivo=CVW()*0.18*mpp, pot=Math.pow(10,Math.floor(Math.log10(objetivo)));
   var buenos=[1,2,5,10].map(function(f){return f*pot;}).filter(function(v){return v<=objetivo*2;});
   var L=buenos[buenos.length-1]||100, w=L/mpp;
-  var y=cv.height-18;
-  if(hayOrto){ctx.fillStyle='rgba(11,15,20,.55)';ctx.fillRect(8,cv.height-40,w+22,32);}
+  var y=CVH()-18;
+  if(hayOrto){ctx.fillStyle='rgba(11,15,20,.55)';ctx.fillRect(8,CVH()-40,w+22,32);}
   ctx.strokeStyle='#8093A4';ctx.fillStyle='#B9C7D3';ctx.lineWidth=1.4;
   ctx.beginPath();ctx.moveTo(16,y);ctx.lineTo(16+w,y);ctx.stroke();
   ctx.beginPath();ctx.moveTo(16,y-4);ctx.lineTo(16,y+4);ctx.moveTo(16+w,y-4);ctx.lineTo(16+w,y+4);ctx.stroke();
@@ -2918,7 +2970,36 @@ function esVertical(){return String($('table').value||'1V').toUpperCase().slice(
    módulos apilados. Streamlit enseña los dos justo por esto. */
 function apertura(){return nTabla()*(esVertical()?+$('modLen').value:+$('modWid').value);}
 function altoColector(){return apertura()+(nTabla()-1)*(+$('gapMod').value);}
-function gcrAct(){var p=+$('pitch').value;return p>0?apertura()/p:0;}
+/* ══ UNA fuente por montaje ══════════════════════════════════════════════
+   Reportado por el cliente con la pantalla delante: «tenemos duplicado lo de
+   pitch y pendiente máxima, ¿para qué? Debería estar únicamente en su cuadro
+   de config de fija o de tracker».
+
+   Tenía razón, y el síntoma ya había mordido: un filtro global de pendiente
+   en 2° convivía con límites de zona en 15/25 sobre terreno de 16,3°, y el
+   más estricto ganaba EN SILENCIO — «no implantable» sin decir por qué.
+   Avisar de que dos casillas se contradicen es peor que no tener dos
+   casillas. Ahora cada montaje trae su pitch y sus dos pendientes máximas en
+   SU cuadro, y estas funciones son las únicas puertas: nadie lee un input de
+   pitch o de pendiente por su id. */
+function montajeAct(){return $('mount').value;}
+function pitchDe(m){return +$(m==='tracker'?'pitchTrk':'pitchFija').value;}
+function pitchAct(){return pitchDe(montajeAct());}
+function ponPitch(m,v){$(m==='tracker'?'pitchTrk':'pitchFija').value=v;}
+function limPendDe(m){
+  return m==='tracker'
+    ? {ew:+$('slopeTrkEw').value, ns:+$('slopeTrkNs').value}
+    : {ew:+$('slopeFijaEw').value, ns:+$('slopeFijaNs').value};
+}
+function limPendAct(){return limPendDe(montajeAct());}
+/* ¿Admite este montaje esta celda? Los DOS ejes tienen que pasar — que baste
+   uno sería el parámetro fundido que esto viene a eliminar. */
+function admiteMontaje(m,ew,ns){
+  var L=limPendDe(m);
+  return Math.abs(ew)<=L.ew && Math.abs(ns)<=L.ns;
+}
+
+function gcrAct(){var p=pitchAct();return p>0?apertura()/p:0;}
 
 function d(k,v,u,warn){return '<div class="d'+(warn?' warn':'')+'"><div class="k">'+k+'</div>'+
   '<div class="v">'+v+(u?' <small>'+u+'</small>':'')+'</div></div>';}
@@ -2958,7 +3039,7 @@ function pintaDerivados(){
    el desnivel entre filas consecutivas y la diferencia entre el pitch medido en
    planta y el medido sobre el terreno. */
 function pintaTerreno(){
-  var pit=+$('pitch').value, ns=+$('slopeNs').value||0, ew=+$('slopeEw').value||0;
+  var pit=pitchAct(), ns=+$('slopeNs').value||0, ew=+$('slopeEw').value||0;
   var tracker=$('mount').value==='tracker';
   // La pendiente que cruza las filas es la perpendicular a ellas: con filas a lo
   // largo del eje N-S, la que cruza es la E-O.
@@ -2992,7 +3073,7 @@ function syncAz(){
 }
 $('mount').onchange=function(){if(this.value==='fija'&&+$('axis').value===0)$('axis').value=180;syncAz();};
 $('axis').onchange=syncAz;
-['table','modLen','modWid','mods','pitch','gapMod','slopeNs','slopeEw'].forEach(function(id){
+['table','modLen','modWid','mods','pitchTrk','pitchFija','gapMod','slopeNs','slopeEw'].forEach(function(id){
   $(id).addEventListener('input',pintaDerivados);
 });
 ['albedo','albedoT'].forEach(function(id){
@@ -3003,9 +3084,9 @@ $('axis').onchange=syncAz;
 $('pitchFromGcr').onclick=function(){
   var g=+$('gcrObj').value;
   if(!(g>0.05&&g<0.95)){$('foot').innerHTML='<span style="color:var(--build)">El GCR objetivo tiene que estar entre 0,05 y 0,95.</span>';return;}
-  $('pitch').value=(apertura()/g).toFixed(2);
+  ponPitch(montajeAct(),(apertura()/g).toFixed(2));
   pintaDerivados(); autoguarda();
-  $('foot').innerHTML='Pitch fijado en <b>'+$('pitch').value+' m</b> para GCR '+g.toFixed(3)+
+  $('foot').innerHTML='Pitch fijado en <b>'+pitchAct().toFixed(2)+' m</b> para GCR '+g.toFixed(3)+
     ' con apertura '+apertura().toFixed(3)+' m'+
     (Math.abs(g-CANON.GCR)<1e-6?' (el GCR canónico del cuaderno).':'.');
 };
@@ -3381,6 +3462,14 @@ function pendientesDEM(){
 function mascaraParcelaDEM(){
   if(!DEM)return null;
   var anillos=[];
+  /* SIN NINGÚN ANILLO NO HAY MÁSCARA, y no «una máscara que dice que sí a
+     todo». Ese `anillos.length ? toca(...) : true` era el propio guard
+     desactivándose justo en el caso que viene a cubrir: sin parcela dibujada,
+     el reparto salía sobre el BBOX del MDT —el terreno del vecino— y el
+     comentario de `zonasPorPendiente` decía «LA MÁSCARA NO ES OPCIONAL»
+     mientras el código la hacía opcional. Lo destapó portar el recorte a
+     Python (SolarGPTfull#166): allí la linde es un argumento OBLIGATORIO, y
+     aquí tenía una puerta de atrás. */
   if(PARCEL&&PARCEL.length>=3)anillos.push(PARCEL);
   PARCELAS.forEach(function(pz){if(pz.ext&&pz.ext.length>=3)anillos.push(pz.ext);});
   var n=DEM.lats.length, dLat=(DEM.lats[1]-DEM.lats[0])/2, dLon=(DEM.lons[1]-DEM.lons[0])/2;
@@ -3417,9 +3506,10 @@ function mascaraParcelaDEM(){
   }
   var dentro=[],nIn=0;
   for(var r=0;r<n;r++){var fila=[];
-    for(var c=0;c<n;c++){var t=anillos.length?toca(DEM.lons[c],DEM.lats[r]):true;fila.push(t);if(t)nIn++;}
+    for(var c=0;c<n;c++){var t=toca(DEM.lons[c],DEM.lats[r]);fila.push(t);if(t)nIn++;}
     dentro.push(fila);}
   var mLat=110540, mLon=111320*Math.cos(((DEM.lats[0]+DEM.lats[n-1])/2)*Math.PI/180);
+  if(!anillos.length)return null;
   return {dentro:dentro,nIn:nIn,areaCeldaM2:Math.abs(dLat*2*mLat)*Math.abs(dLon*2*mLon)};
 }
 
@@ -3428,13 +3518,16 @@ function mascaraParcelaDEM(){
 function celdasExcluidas(){
   if(!DEM||$('demOff').checked)return [];
   var P=pendientesDEM(); if(!P)return [];
-  var lim=+$('slopeMax').value; if(!(lim>0))return [];
+  /* El criterio ya no es un umbral GLOBAL sobre la pendiente total: es el del
+     MONTAJE, con sus dos ejes. Un seguidor aguanta mucha N-S y poca E-O, y
+     una pendiente total no distingue las dos — con el umbral único, terreno
+     que el seguidor monta sin problema salía excluido y al revés. */
+  var m=montajeAct(), L=limPendDe(m); if(!(L.ew>0&&L.ns>0))return [];
   var n=P.n, dLat=(DEM.lats[1]-DEM.lats[0])/2, dLon=(DEM.lons[1]-DEM.lons[0])/2, out=[];
   var M=mascaraParcelaDEM();
   for(var r=0;r<n;r++)for(var c=0;c<n;c++){
     if(M&&!M.dentro[r][c])continue;
-    var tot=Math.hypot(Math.tan(P.ns[r][c]*Math.PI/180),Math.tan(P.ew[r][c]*Math.PI/180));
-    if(Math.atan(tot)*180/Math.PI<=lim)continue;
+    if(admiteMontaje(m,P.ew[r][c],P.ns[r][c]))continue;
     var la=DEM.lats[r],lo=DEM.lons[c];
     out.push([[lo-dLon,la-dLat],[lo+dLon,la-dLat],[lo+dLon,la+dLat],[lo-dLon,la+dLat]]);
   }
@@ -3448,7 +3541,10 @@ function celdasExcluidas(){
 function pintaPanelesDEM(){
   if(!DEM){$('demPaneles').style.display='none';return;}
   var P=pendientesDEM(); if(!P)return;
-  var n=P.n, lim=+$('slopeMax').value||20, off=$('demOff').checked;
+  var n=P.n, off=$('demOff').checked, mAct=montajeAct(), L=limPendDe(mAct);
+  // `lim` sigue existiendo SOLO para la escala de color del mapa de pendiente
+  // total, que es una visualización; quien decide excluir es `admiteMontaje`.
+  var lim=Math.max(L.ew,L.ns)||20;
   var la0=DEM.lats[0], la1=DEM.lats[n-1], lo0=DEM.lons[0], lo1=DEM.lons[n-1];
   var W=300,H=Math.max(90,Math.round(300*Math.abs(la1-la0)*110540/(Math.abs(lo1-lo0)*111320*Math.cos(((la0+la1)/2)*Math.PI/180)||1)));
   H=Math.min(H,340);
@@ -3463,7 +3559,8 @@ function pintaPanelesDEM(){
   var maxTot=0;
   for(var r0=0;r0<n;r0++)for(var c0=0;c0<n;c0++){
     if(!enParcela(r0,c0))continue;
-    var t0=tot(r0,c0);if(t0>maxTot)maxTot=t0;if(t0>lim)excl++;}
+    var t0=tot(r0,c0);if(t0>maxTot)maxTot=t0;
+    if(!admiteMontaje(mAct,P.ew[r0][c0],P.ns[r0][c0]))excl++;}
   var areaParcela=0;
   [PARCEL].concat(PARCELAS.map(function(pz){return pz.ext;})).forEach(function(ring){
     if(!ring||ring.length<3)return;
@@ -3532,12 +3629,12 @@ function pintaPanelesDEM(){
     {t:'Pendiente total (rojo > '+lim+'° en tu parcela) · máx '+maxTot.toFixed(1)+'°',pinta:function(ctx){
       for(var r=0;r<n;r++)for(var c=0;c<n;c++){
         var t2=tot(r,c);
-        celda(ctx,r,c,(t2>lim&&enParcela(r,c))?'rgb(210,55,45)':rYlOrBr(t2/Math.max(lim,1)));}
+        celda(ctx,r,c,(!admiteMontaje(mAct,P.ew[r][c],P.ns[r][c])&&enParcela(r,c))?'rgb(210,55,45)':rYlOrBr(t2/Math.max(lim,1)));}
     }},
     {t:'Zonas excluidas · '+pctExcl.toFixed(1)+' % de la parcela'+(off?' (filtro APAGADO)':''),pinta:function(ctx){
       for(var r=0;r<n;r++)for(var c=0;c<n;c++){
         var t3=tot(r,c), en=enParcela(r,c);
-        celda(ctx,r,c,(t3>lim&&en)?'rgba(210,55,45,.9)':(en?'rgb(52,64,58)':'rgb(33,40,36)'));}
+        celda(ctx,r,c,(!admiteMontaje(mAct,P.ew[r][c],P.ns[r][c])&&en)?'rgba(210,55,45,.9)':(en?'rgb(52,64,58)':'rgb(33,40,36)'));}
     }}
   ];
   var cont=$('demPaneles');cont.style.display='';cont.innerHTML='';
@@ -3566,12 +3663,16 @@ function aplicaDEM(){
     if(t2>mx)mx=t2;
   }
   var mNs=k2?sn/k2:P.mediaNs, mEw=k2?se/k2:P.mediaEw, mMax=k2?mx:P.max;
-  $('demTag').textContent=DEM.src+' · malla '+P.n+'×'+P.n+' · '+malas.length+' celda(s) de tu parcela por encima de '+(+$('slopeMax').value)+'°';
+  var _L=limPendAct();
+  $('demTag').textContent=DEM.src+' · malla '+P.n+'×'+P.n+' · '+malas.length+
+    ' celda(s) de tu parcela fuera de lo que aguanta '+
+    (montajeAct()==='tracker'?'el seguidor':'la fija')+
+    ' ('+_L.ew.toFixed(1)+'° E-O / '+_L.ns.toFixed(1)+'° N-S)';
   $('derivDem').style.display='';
   $('derivDem').innerHTML=
     d('Pendiente N-S',(mNs>=0?'+':'')+mNs.toFixed(2),'°')+
     d('Pendiente E-O',(mEw>=0?'+':'')+mEw.toFixed(2),'°')+
-    d('Pendiente máx.',mMax.toFixed(1),'°',mMax>+$('slopeMax').value)+
+    d('Pendiente máx.',mMax.toFixed(1),'°',mMax>Math.max(limPendAct().ew,limPendAct().ns))+
     d('Celdas fuera',String(malas.length),'de '+(M?M.nIn:P.n*P.n)+' en la parcela');
   $('demUseBox').style.display='';
   if($('demUse').checked){
@@ -3645,7 +3746,10 @@ $('demCsv').onchange=function(e){var f=e.target.files[0];if(!f)return;var rd=new
   rd.onload=function(ev){try{demDesdeCSV(ev.target.result);}catch(err){
     $('demTag').innerHTML='<span style="color:var(--dead)">CSV no válido: '+(err&&err.message||err)+'</span>';}};
   rd.readAsText(f);$('demCsv').value='';};
-['slopeMax','demOff'].forEach(function(id){$(id).addEventListener('change',function(){if(DEM)aplicaDEM();});});
+// Los umbrales viven ahora en el cuadro de cada montaje, así que el MDT se
+// re-aplica cuando cambia cualquiera de ellos — o el montaje activo.
+['slopeTrkEw','slopeTrkNs','slopeFijaEw','slopeFijaNs','demOff','mount']
+  .forEach(function(id){$(id).addEventListener('change',function(){if(DEM)aplicaDEM();});});
 $('demUse').onchange=function(){ if(DEM)aplicaDEM(); else {$('slopeNs').disabled=$('slopeEw').disabled=false;} };
 
 /* ===== generar ===== */
@@ -3658,7 +3762,7 @@ function readCfg(){
     forceComplete:$('forceComplete').checked,
     mount:$('mount').value, table:$('table').value, mods:mods.sort(function(a,b){return b-a;}),
     modLen:+$('modLen').value, modWid:+$('modWid').value, moduleWp:+$('modWp').value,
-    pitch:+$('pitch').value, setback:+$('setback').value, panelAz:+$('panelAz').value,
+    pitch:pitchAct(), setback:+$('setback').value, panelAz:+$('panelAz').value,
     bifila:$('bifila').value==='1', gapModules:+$('gapMod').value,
     gapMotor:+$('gapMotor').value, gapNs:+$('gapNs').value,
     roadEvery:+$('roadEvery').value, roadW:+$('roadW').value,
@@ -3877,10 +3981,11 @@ function zonasPorPendiente(pend, lims, minAreaM2){
      Las celdas de fuera tampoco cuentan como «no desarrollable»: no es que no
      admitan montaje, es que no son la parcela. */
   var msk=mascaraParcelaDEM();
+  if(!msk)return {sinParcela:true, zonas:[]};   // sin linde no se propone
   var n=pend.n, aptoT=new Uint8Array(n*n), aptoF=new Uint8Array(n*n), nada=0;
   for(var r=0;r<n;r++)for(var c=0;c<n;c++){
     var i=r*n+c;
-    if(msk&&!msk.dentro[r][c]){aptoT[i]=0;aptoF[i]=0;continue;}
+    if(!msk.dentro[r][c]){aptoT[i]=0;aptoF[i]=0;continue;}
     var ae=Math.abs(pend.ew[r][c]), an=Math.abs(pend.ns[r][c]);
     var t=(ae<=lims.trkEw&&an<=lims.trkNs);
     var f=(!t)&&(ae<=lims.fijaEw&&an<=lims.fijaNs);
@@ -3951,14 +4056,30 @@ function zonasPorPendiente(pend, lims, minAreaM2){
    repintado, y el usuario lo lee como «lo ha pensado y no ha sacado nada». */
 var MIX_ZONAS=[], MIX_PROP=null;
 
+/* Los límites y los pitch NO viven aquí: viven en el cuadro de Estructura de
+   cada montaje, y esta función solo los recoge. Tenerlos duplicados en el
+   panel de zonas fue el fallo que reportó el cliente — dos casillas para lo
+   mismo acaban discrepando y el que las lee no sabe cuál manda. */
 function mixLee(){
-  return {trkEw:+$('mixTrkEw').value, trkNs:+$('mixTrkNs').value,
-          fijaEw:+$('mixFijaEw').value, fijaNs:+$('mixFijaNs').value,
-          pitchTrk:+$('mixPitchTrk').value, pitchFija:+$('mixPitchFija').value};
+  var T=limPendDe('tracker'), F=limPendDe('fija');
+  return {trkEw:T.ew, trkNs:T.ns, fijaEw:F.ew, fijaNs:F.ns,
+          pitchTrk:pitchDe('tracker'), pitchFija:pitchDe('fija')};
 }
 
 function mixPinta(){
   var out=$('mixOut'), tag=$('mixTag');
+  /* El motivo, ANTES que el vacío: «no ha salido nada» y «no puedo mirarlo
+     porque no hay parcela» se leen igual en pantalla, y solo uno de los dos
+     lo arregla el usuario. */
+  if(MIX_PROP&&MIX_PROP.sinParcela){
+    out.innerHTML='<p class="note" style="color:var(--build)">⚠ <b>Dibuja o carga '+
+      'la parcela</b> antes de proponer el reparto. El MDT se descarga sobre el '+
+      'rectángulo que la envuelve <i>más margen</i>, así que sin la linde la '+
+      'propuesta saldría sobre el terreno de al lado —y ahí se colocarían mesas— '+
+      'sin que se notara mirándola.</p>';
+    tag.textContent='sin parcela · no se propone';
+    return;
+  }
   if(!MIX_ZONAS.length){
     out.innerHTML=''; tag.textContent='sin zonas · propón un reparto o define las tuyas'; return;
   }
@@ -4202,7 +4323,7 @@ function pitchPorBanda(){
   } else {
     bandas=[0,Math.abs(+$('slopeEw').value||0)];
   }
-  var base=+$('pitch').value, llano=req(0);
+  var base=pitchAct(), llano=req(0);
   return {llano:llano, base:base, bandas:bandas.map(function(sl,i){
     var p=req(sl);
     return {banda:i+1, pendiente:sl, pitch_req:p, delta:p-llano, cabe:isFinite(p)&&p<=base};
@@ -4284,7 +4405,7 @@ $('btnPitchBanda').onclick=function(){
   var mal=R.bandas.filter(function(b){return !b.cabe;}).length;
   $('sizes').innerHTML='<b>Pitch requerido por banda</b> <span style="color:var(--muted-2)">'+
     '(dynamic distance · apertura '+apertura().toFixed(3)+' m · tilt '+(+$('maxAng').value)+'° · sol a '+LIMIT_ELEV+'°)</span>'+
-    '<table><tr><th>Banda</th><th>Pend. E-O °</th><th>Pitch req. m</th><th>Δ vs llano</th><th>¿cabe con '+(+$('pitch').value)+' m?</th></tr>'+
+    '<table><tr><th>Banda</th><th>Pend. E-O °</th><th>Pitch req. m</th><th>Δ vs llano</th><th>¿cabe con '+pitchAct().toFixed(2)+' m?</th></tr>'+
     R.bandas.map(function(b){
       return '<tr><td>'+b.banda+'</td><td>'+b.pendiente.toFixed(2)+'</td><td>'+
         (isFinite(b.pitch_req)?b.pitch_req.toFixed(2):'∞')+'</td><td>'+
