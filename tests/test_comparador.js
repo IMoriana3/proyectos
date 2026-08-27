@@ -113,9 +113,23 @@ if (MAN) {
 // ── 2) el catálogo del JS es el del core ──
 const fix = JSON.parse(fs.readFileSync(path.join(__dirname, 'careo-estructuras.json'), 'utf8'));
 const clavesJS = FIS.CATALOGO.map(s => s.key).sort();
-check('el catálogo del JS es el del core (' + clavesJS.length + ')',
-  JSON.stringify(clavesJS) === JSON.stringify(fix.core.catalogo.slice().sort()),
-  clavesJS.join(',') + ' vs ' + fix.core.catalogo.join(','));
+const soloFicha = FIS.CATALOGO.filter(s => s.soloFicha).map(s => s.key).sort();
+/* El catálogo del core tiene que estar ENTERO en la ficha: si el core corre una
+   estructura que aquí no existe, la comparación deja de ser la misma. */
+check('el catálogo del core está entero en la ficha (' + fix.core.catalogo.length + ')',
+  fix.core.catalogo.every(k => clavesJS.indexOf(k) >= 0),
+  fix.core.catalogo.filter(k => clavesJS.indexOf(k) < 0).join(',') || 'ninguna falta');
+/* Y lo que la ficha tiene DE MÁS tiene que estar declarado como tal, una por
+   una. Sin esto, añadir una estructura que el core no sabe expresar se cuela
+   sin que nadie lo diga — que es la mitad de este guard. */
+const deMas = clavesJS.filter(k => fix.core.catalogo.indexOf(k) < 0).sort();
+check('y lo que la ficha tiene de más va declarado `soloFicha` (' + deMas.join(',') + ')',
+  JSON.stringify(deMas) === JSON.stringify(soloFicha),
+  'de más: ' + deMas.join(',') + ' · declaradas: ' + soloFicha.join(','));
+/* HUECO DECLARADO: el seguidor QUEBRADO no existe en el core. No es una
+   divergencia de resultados —con quiebro 0 da la misma cifra que el rígido— es
+   una capacidad que solo vive en la ficha. Se exige más abajo, donde ya hay
+   `cfg` y meteo. */
 
 /* ── 2a) el golden dice DE DÓNDE sale ──────────────────────────────────────
    `gen_careo_estructuras.py` recibe el core como una RUTA LOCAL (`--core`), así
@@ -256,6 +270,14 @@ const cfg = { lat: C.lat, lon: C.lon, gcr, fija: G, tracker: G,
   maxang: C.max_angle_deg, albedo: C.albedo, tilt: C.tilt_deg, tiltEW: 12,
   axTilt: C.axis_tilt_deg, pend: C.cross_axis_slope_deg, geomDe: () => G };
 const rep = FIS.compara(C.structures, M, cfg);
+/* El HUECO del catálogo, exigido: con quiebro 0 el quebrado ES el rígido, cifra
+   a cifra. Por ahí sigue entrando el careo aunque el core no tenga la
+   estructura. */
+check('con quiebro 0 el quebrado ES el rígido, cifra a cifra',
+  (() => {
+    const r = FIS.compara(['tracker_hsat', 'tracker_queb'], M, { ...cfg, quiebro: 0 }).filas;
+    return Math.abs(r[0].neta - r[1].neta) < 1e-12;
+  })());
 const js = {}; rep.filas.forEach(f => { js[f.key] = f; });
 const core = {}; fix.esperado.forEach(f => { core[f.key] = f; });
 
@@ -677,6 +699,64 @@ check('el eje hacia el ECUADOR capta más que hacia el POLO (' +
   ejeEq.filas[0].neta.toFixed(1) + ' vs ' + ejePol.filas[0].neta.toFixed(1) + ' kWh/m²)',
   ejeEq.filas[0].neta > ejePol.filas[0].neta + 10,
   ejeEq.filas[0].neta.toFixed(1) + ' vs ' + ejePol.filas[0].neta.toFixed(1));
+
+// ── 6b-quater) EL SEGUIDOR QUEBRADO: DOS MESAS, UNA RÓTULA ────────────────
+// Un quebrado no es un seguidor con otro número: es la MISMA estructura con
+// una rótula en el actuador, de modo que la mesa norte y la sur quedan a
+// inclinaciones distintas. El quiebro es la DIFERENCIA entre las dos, repartida
+// a media a cada lado de la que pondría el terreno.
+{
+  const c = { ...cfg, pend: 12, pendAz: 180, quiebro: 10 };
+  const rig = FIS.ejesMitades(c, FIS.spec('tracker_hsat'));
+  const que = FIS.ejesMitades(c, FIS.spec('tracker_queb'));
+  check('el terreno pone 12° de eje y el RÍGIDO se queda en la media (' +
+    rig.map(a => a.toFixed(1)).join(',') + '°)',
+    rig.length === 1 && Math.abs(rig[0] - 12) < 0.01, JSON.stringify(rig));
+  check('y el QUEBRADO reparte los 10° de quiebro: una mesa a 17° y otra a 7°',
+    que.length === 2 && Math.abs(que[0] - 17) < 0.01 && Math.abs(que[1] - 7) < 0.01,
+    JSON.stringify(que));
+  check('el quiebro es la DIFERENCIA entre mesas, no lo que se aparta cada una',
+    Math.abs((que[0] - que[1]) - 10) < 1e-9, String(que[0] - que[1]));
+  // 30° de quiebro sobre 12° de eje: una mesa se pasa al otro lado del ecuador.
+  const q30 = FIS.ejesMitades({ ...c, quiebro: 30 }, FIS.spec('tracker_queb'));
+  check('con 30° de quiebro una mesa cruza la horizontal y sale negativa (' +
+    q30.map(a => a.toFixed(0)).join('/') + '°): se dibuja, no se recorta',
+    q30[1] < 0, JSON.stringify(q30));
+
+  const f = Object.fromEntries(FIS.compara(
+    ['tracker_hsat', 'tracker_queb', 'tracker_queb_nobt'], M, c).filas.map(x => [x.key, x]));
+  /* Cada mesa corre su propia física —su ángulo, su retroceso, su sombra— y el
+     seguidor es la media de las dos. Si el quebrado devolviera lo mismo que el
+     rígido es que las mitades no están corriendo. */
+  const mitades = [17, 7].map(ax => FIS.compara(['tracker_hsat'], M,
+    { ...c, quiebro: 0, pend: Math.abs(ax), pendAz: 180 }).filas[0].neta);
+  check('el quebrado no es el rígido: corre las dos mesas por separado (' +
+    f.tracker_queb.neta.toFixed(2) + ' vs ' + f.tracker_hsat.neta.toFixed(2) + ')',
+    Math.abs(f.tracker_queb.neta - f.tracker_hsat.neta) > 0.1,
+    JSON.stringify([f.tracker_queb.neta, f.tracker_hsat.neta]));
+  check('  y es la MEDIA de las dos mesas, no una tercera cosa (' +
+    f.tracker_queb.neta.toFixed(2) + ' vs ' + ((mitades[0] + mitades[1]) / 2).toFixed(2) + ')',
+    Math.abs(f.tracker_queb.neta - (mitades[0] + mitades[1]) / 2) < 0.5,
+    JSON.stringify(mitades));
+  /* JENSEN, y por eso hay que decirlo en pantalla: la curva POA-vs-inclinación
+     de eje es CÓNCAVA, así que la media de dos mesas a 17° y 7° cae por debajo
+     del punto medio a 12°. Leído solo, el número dice «el rígido gana» — y ese
+     rígido es el que no se puede montar. */
+  check('el rígido gana en POA por Jensen, no por ser mejor estructura',
+    f.tracker_hsat.neta > f.tracker_queb.neta, JSON.stringify(
+      [f.tracker_hsat.neta, f.tracker_queb.neta]));
+  check('  la curva es cóncava: 12° está por encima de la media de 17° y 7°',
+    mitades[0] < 2 * f.tracker_hsat.neta - mitades[1] + 1e-9,
+    JSON.stringify([mitades[0], f.tracker_hsat.neta, mitades[1]]));
+  check('y el quebrado sin backtracking pierde contra el quebrado con él',
+    f.tracker_queb_nobt.neta !== f.tracker_queb.neta,
+    JSON.stringify([f.tracker_queb.neta, f.tracker_queb_nobt.neta]));
+  /* El backtracking de cada mesa usa la pendiente ⊥ del sitio, que es la misma
+     para las dos: el quiebro es A LO LARGO del eje y no toca la ⊥. */
+  check('el quiebro es a lo largo del eje: no cambia la pendiente ⊥ de nadie',
+    Math.abs(FIS.cruz(c, FIS.spec('tracker_queb')) -
+             FIS.cruz({ ...c, quiebro: 0 }, FIS.spec('tracker_queb'))) < 1e-12);
+}
 
 // ── 6c) LA MISMA PENDIENTE PARA LAS TRES: eso es la igualdad ──
 // El parámetro es UNO, del emplazamiento, y entra en el sombreado de todas las

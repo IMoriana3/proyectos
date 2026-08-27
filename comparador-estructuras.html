@@ -184,6 +184,13 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         <div class="field"><label>Azimut de la caída °</label>
           <input id="pendAz" type="number" step="5" value="180"></div>
       </div>
+      <div class="two">
+        <div class="field"><label>Quiebro N-S ° <span class="sn">entre las dos mesas</span></label>
+          <input id="quiebro" type="number" step="0.5" value="0"
+                 title="DIFERENCIA de inclinación entre las dos mesas de un seguidor: el terreno quebrado a lo largo del eje, con caballón en el centro. Con 10°, una mesa queda 10° más tumbada que la otra. Es lo que distingue un seguidor quebrado —rótula en el actuador, cada media viga con su pendiente— de uno rígido, que se queda en la media. Con 0 son la misma estructura."></div>
+        <div class="field"><label>&nbsp;</label>
+          <p class="mini" style="padding-top:9px" id="quiebroNota">sin quiebro</p></div>
+      </div>
       <p class="mini" id="pendNota">terreno llano</p>
       <div class="two">
         <div class="field"><label>&nbsp;</label><p class="mini" style="padding-top:9px">albedo = del SITIO (§03.0), compartido</p></div>
@@ -912,6 +919,18 @@ FIS.stringV=function(n,w){return {vocFrio:n*w.vocFrio, vmpCaliente:n*w.vmpCalien
        t = |d · cos(ψ − x)|             y si t ≥ 1 no hay sombra que evitar
        θ = ψ − signo(ψ) · acos(t)
    Con x = 0 sale la de siempre, cifra a cifra. */
+/* EL CABALLÓN, DEFINIDO UNA SOLA VEZ. El terreno quebrado y la cuenta de lo
+   que vuela un tubo recto tienen que salir del MISMO sitio, o la escena enseña
+   un caballón y la lectura habla de otro. Las dos aguas quedan exactamente a
+   la inclinación de eje ±quiebro/2 —que es lo que corre `ejesMitades`—, así
+   que lo que se dibuja es lo que se calcula.
+   `kN`/`kS`: cuánto cae cada agua por metro horizontal desde la cumbrera,
+   RESPECTO al plano base (que ya lleva su pendiente). */
+FIS.quiebroK=function(cfg){
+  var a0=FIS.pendComp(cfg.pend,cfg.pendAz,FIS.azEje(cfg)+90).largo*FIS.D2R;
+  var q=(cfg.quiebro||0)/2*FIS.D2R, m0=Math.tan(a0);
+  return {a0:a0, m0:m0, kN:Math.tan(a0-q)-m0, kS:Math.tan(a0+q)-m0};
+};
 FIS.theta=function(psDeg,gcr,maxang,bt,cruzDeg){
   var R=psDeg*FIS.D2R;
   if(bt){
@@ -985,6 +1004,27 @@ FIS.cruz=function(cfg,spec){
    Sin azimut declarado se respeta el valor recibido: el core toma `axis_tilt`
    y `cross_axis_slope` por separado —son las dos componentes del mismo plano—
    y por ahí entra el careo. */
+/* ── EL QUIEBRO DEL TERRENO, Y EL TRACKER QUEBRADO ────────────────────────
+   Un seguidor QUEBRADO lleva rótula en el actuador central: la viga de par va
+   partida en dos medias vigas —norte y sur— y cada una drapea con SU pendiente.
+   Uno rígido no puede: un tubo recto no se dobla, así que se queda en la media
+   de las dos y sus paneles quedan desalineados del terreno por los dos lados.
+
+   Para que eso signifique algo el terreno tiene que estar QUEBRADO a lo largo
+   del eje: con un solo plano las dos mitades tienen la misma pendiente y el
+   quebrado y el rígido son la misma estructura. Por eso el quiebro es un campo
+   del EMPLAZAMIENTO —el terreno a dos aguas— y no de la estructura.
+
+   Convenio: `quiebro` es la DIFERENCIA de inclinación entre las dos mesas —es
+   lo que se teclea y lo que se mide en campo—, repartida a partes iguales
+   alrededor de la media: la mitad que mira al ecuador se lleva +q/2 y la del
+   polo −q/2. Con 10° tecleados, una mesa está 10° más tumbada que la otra. */
+FIS.ejesMitades=function(cfg,spec){
+  var ax=FIS.ejeTilt(cfg,spec), q=(cfg.quiebro||0);
+  if(!spec||spec.fam!=='tracker'||!q)return [ax];
+  if(!spec.quebrado)return [ax];        // el rígido se queda en la MEDIA
+  return [ax+q/2, ax-q/2];              // ecuador y polo, cada una la suya
+};
 FIS.ejeTilt=function(cfg,spec){
   if(!spec||spec.fam!=='tracker')return 0;
   /* TODOS los seguidores, no solo el TSAT. Un eje norte-sur sobre un terreno
@@ -1090,6 +1130,17 @@ FIS.CATALOGO=[
      el catálogo porque el CAREO lo necesita: el fixture del core lo corrió por
      separado, con `axis_tilt` 10 y el HSAT con 0, y ese camino sigue vivo
      mientras no haya azimut de terreno declarado. */
+  /* SOLO EN LA FICHA. El core no tiene seguidor quebrado: su catálogo corre una
+     estructura con UN eje, y esto son dos medias vigas con su rótula. No es una
+     divergencia de resultados —con quiebro 0 el quebrado y el rígido dan la
+     misma cifra, y por ahí sigue entrando el careo— es una capacidad que solo
+     existe en un lado. Va declarado, y el motor Python no las acepta. */
+  {key:'tracker_queb',     label:'Tracker quebrado · backtracking', fam:'tracker', bt:true,
+   quebrado:true, soloFicha:true,
+   nota:'Rótula en el actuador: cada media viga drapea con SU pendiente.'},
+  {key:'tracker_queb_nobt',label:'Tracker quebrado · sin backtracking',fam:'tracker', bt:false,
+   quebrado:true, soloFicha:true,
+   nota:'El mismo quebrado, sin backtracking: para aislar qué aporta cada cosa.'},
   {key:'tracker_tsat',     label:'Tracker 1 eje inclinado (TSAT)',  fam:'tracker', bt:true, tsat:true,
    soloCareo:true,
    nota:'Solo careo: con el eje que pone el terreno es el mismo que el N-S.'}
@@ -1114,33 +1165,38 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
   var neta=0, ideal=0, mes=new Float64Array(12);
   var tilt=(tiltForzado!=null)?tiltForzado:(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
   var axT=FIS.ejeTilt(cfg,spec);
+  /* Las MITADES del eje. En todo lo que no sea un quebrado sobre terreno
+     quebrado es una sola, y entonces esto es exactamente lo de siempre. */
+  var ejes=FIS.ejesMitades(cfg,spec);
   for(var i=0;i<n;i++){
     var S=FIS.sun(M.t[i],latR,cfg.lon);
     if(S.el<=0)continue;
     var bh=M.dni[i], dh=M.dhi[i], gh=M.ghi[i], e0=FIS.E0(M.t[i]), P0, planos;
+    var sN=0,sI=0;
     if(spec.fam==='tracker'){
-      /* La proyección con eje inclinado la decide el ÁNGULO, no la etiqueta del
-         catálogo: si el eje está inclinado —lo diga el catálogo o lo ponga el
-         terreno— hay que proyectar con el marco girado. Preguntando por
-         `spec.tsat` se calculaba plano un eje que la escena dibujaba
-         inclinado. */
-      P0=axT?FIS.psTSAT(S.el,S.az,axT,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
-      /* El backtracking va CON la pendiente ⊥ a las filas — pvlib, y el core
-         desde SolarGPT v1.70.0—, y por ahí entra el careo.
-         `btLlano` es un DIAGNÓSTICO, no una alternativa: calcula el ángulo como
-         si el campo fuese llano, que es lo que hacía el core hasta ese día. No
-         es el modelo de nadie; está para poder ver de un vistazo lo que cuesta
-         backtrackear mal en un campo en cuesta, que es un número que quiere
-         cualquiera que herede uno. Por eso va desmarcado. */
-      planos=[FIS.theta(P0.ps,gcr,cfg.maxang,spec.bt,cfg.btLlano?0:cruz)];
-    }else if(spec.fam==='fija_ew'){
+      /* Cada mitad es un seguidor con SU eje: su propia proyección del sol, su
+         propio ángulo de backtracking y su propia sombra. La fila es la media
+         de las dos, que tienen la misma superficie. */
+      for(var mi=0;mi<ejes.length;mi++){
+        var ax=ejes[mi];
+        var Pm=ax?FIS.psTSAT(S.el,S.az,ax,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
+        var th=FIS.theta(Pm.ps,gcr,cfg.maxang,spec.bt,cfg.btLlano?0:cruz);
+        var fs=spec.sinSombra?0:FIS.shade(Pm.ps,th,pitch,G.altoColector,cruz);
+        var Pp=FIS.poa(Pm.ps,Pm.rho,th,FIS.tiltSup(th,ax),bh,dh,gh,cfg.albedo,fs,
+                       Math.sin(S.el),e0);
+        sN+=Pp.neta/ejes.length; sI+=Pp.ideal/ejes.length;
+      }
+      neta+=sN*dtH/1000; ideal+=sI*dtH/1000;
+      mes[M.t[i].getUTCMonth()]+=sN*dtH/1000;
+      continue;
+    }
+    if(spec.fam==='fija_ew'){
       P0=FIS.psTracker(S.el,S.az,cfg);                // aguas al este y al oeste
       planos=[tilt,-tilt];
     }else{
       P0=FIS.psFija(S.el,S.az,cfg.lat,cfg);
       planos=[tilt];
     }
-    var sN=0,sI=0;
     for(var k=0;k<planos.length;k++){
       var t=planos[k];
       var fsh=spec.sinSombra?0:FIS.shade(P0.ps,t,pitch,G.altoColector,cruz);
@@ -1640,7 +1696,8 @@ $('sitioQ').addEventListener('keydown',function(ev){
 
 /* ===================== UI ===================== */
 var COL={fija_optima:'#54A6FF',fija_proyecto:'#8C7BFF',fija_ew:'#F6A623',
-         tracker_hsat:'#36D399',tracker_hsat_nobt:'#2BB5A0',tracker_tsat:'#E86FB0'};
+         tracker_hsat:'#36D399',tracker_hsat_nobt:'#2BB5A0',tracker_tsat:'#E86FB0',
+         tracker_queb:'#F5A524',tracker_queb_nobt:'#C77C10'};
 var POR_DEFECTO=['fija_optima','tracker_hsat'];
 var REP=null;
 
@@ -1718,6 +1775,7 @@ function cfgActual(){
     maxang:+$('maxang').value, tilt:+$('tilt').value, tiltEW:+$('tiltEW').value,
     pend:+$('pend').value, pendAz:+$('pendAz').value,
     desvFija:+$('desvFija').value, desvEje:+$('desvEje').value,
+    quiebro:+$('quiebro').value,
     btLlano:$('btLlano').checked,
     axTilt:+$('axtilt').value, igualado:$('igualar').checked,
     geomDe:function(spec){return spec.fam==='tracker'?K:F;}
@@ -1828,6 +1886,13 @@ function rumbo(az){
   var R=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
   return R[Math.round((((az%360)+360)%360)/22.5)%16];
 }
+function pintaQuiebro(c){
+  var q=Math.abs(c.quiebro||0);
+  if(!q){ $('quiebroNota').innerHTML='sin quiebro · quebrado y rígido son la misma estructura'; return; }
+  var ax=FIS.ejeTilt(c,FIS.spec('tracker_queb'));
+  $('quiebroNota').innerHTML='una mesa a <b>'+fmt(ax+q/2,1)+'°</b> y la otra a <b>'+
+    fmt(ax-q/2,1)+'°</b> — el rígido se queda en '+fmt(ax,1)+'° y su tubo no toca ni una.';
+}
 function pintaAzimut(c){
   var af=FIS.azFija(c), ae=FIS.azEje(c);
   $('azFijaNota').innerHTML=!(c.desvFija||0)
@@ -1859,7 +1924,7 @@ function pintaPendiente(c){
 }
 function refrescaGeom(){
   var c=cfgActual();
-  pintaPendiente(c); pintaAzimut(c);
+  pintaPendiente(c); pintaAzimut(c); pintaQuiebro(c);
   pintaFam('fx',c.fija); pintaFam('tk',c.tracker); pintaPico(c);
   $('fxGob').textContent='§03.F · '+gobierna('fija');
   $('tkGob').textContent='§03.T0 · '+gobierna('tracker');
@@ -1878,7 +1943,7 @@ function refrescaGeom(){
 }
 var CAMPOS_GEOM=['fxModL','fxModW','fxWp','fxTabla','fxPitch','fxModsStr','fxNStr','fxGapMod','fxGapMot',
                  'tkModL','tkModW','tkWp','tkTabla','tkPitch','tkModsStr','tkNStr','tkGapMod','tkGapMot',
-                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend','pendAz','desvFija','desvEje','btLlano'];
+                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend','pendAz','desvFija','desvEje','btLlano','quiebro'];
 CAMPOS_GEOM.forEach(function(id){
   var el=$(id); if(!el)return;
   el.addEventListener('input',refrescaGeom); el.addEventListener('change',refrescaGeom);
@@ -2618,6 +2683,12 @@ async function run(){
         alto_por_estructura:porEstructura(cfg,keys,'altoColector'),
         tilt_deg:cfg.tilt, axis_tilt_deg:FIS.ejeTilt(cfg,FIS.spec('tracker_hsat')),
         max_angle_deg:cfg.maxang};
+      /* El core no conoce el quebrado: mandárselo devolvería un error feo o,
+         peor, una fila que no es la que se pidió. Se dice y se para. */
+      var soloF=keys.filter(function(k){var e=FIS.spec(k);return e&&e.soloFicha;});
+      if(soloF.length)throw new Error('el motor Python no tiene seguidor quebrado ('+
+        soloF.join(', ')+'): esa estructura solo existe en la ficha. Cambia el cálculo a '+
+        '«en el navegador» o desmárcala.');
       var r=await fetch(ENGINE+'/structures',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
       REP=await r.json(); REP.local=false;
@@ -2717,7 +2788,7 @@ function drawTabla(base){
     (REP.gcrComun?'Con el mismo GCR el segundo es el primero escalado y no reordena nada — dale a cada familia su pitch arriba para que cada una lleve su densidad.'
                  :'Con densidades distintas el orden por suelo ya no tiene por qué coincidir con el de módulo.')+
     ' Los seguidores van en modo IDEAL: sin abanderamiento, sin banda muerta y sin política de difusa — el coste del control real es otra pregunta (ficha <a href="sim-viento.html" style="color:var(--accent)">Viento</a>).'+
-    avisoBacktracking(f);
+    avisoBacktracking(f)+avisoQuebrado(f);
 }
 
 /* ── LO QUE ESTA TABLA NO PUEDE DECIDIR: backtracking sí o no ──────────────
@@ -2736,6 +2807,26 @@ function drawTabla(base){
       sombra: la fila de al lado está más alta y sigue tapando. pvlib sabe
       hacerlo con la pendiente (`cross_axis_tilt`); el core no lo usa, y la
       ficha no se lo va a inventar por su cuenta.                              */
+/* ── EL QUEBRADO GANA MENOS POA, Y AUN ASÍ ES EL QUE SE MONTA ─────────────
+   La curva POA-vs-inclinación-de-eje es CÓNCAVA, así que la media de dos
+   mitades a ax±q cae por debajo del rígido a ax: puro Jensen. Leído solo, el
+   número dice «el rígido gana». Lo que no dice es que ese rígido no se puede
+   montar: su tubo, recto, vuela metros sobre el terreno por los dos extremos.
+   La comparación no está completa sin las dos mitades del argumento. */
+function avisoQuebrado(f){
+  var q=cfgActual().quiebro||0; if(!q)return '';
+  var rig=null,que=null;
+  f.forEach(function(x){ if(x.key==='tracker_hsat')rig=x; if(x.key==='tracker_queb')que=x; });
+  if(!rig||!que)return '';
+  var B=BLOQUES.filter(function(b){return b.key==='tracker_hsat';})[0];
+  var vuela=B?B.desalin:0;
+  return ' <b>Y sobre el quebrado</b>: con '+fmt(q,1)+'° de quiebro el rígido sale por '+
+    'delante en POA ('+fmt(rig.poa||rig.neta,0)+' contra '+fmt(que.poa||que.neta,0)+
+    ') y eso es <b>Jensen</b>, no una ventaja: la curva POA-vs-inclinación-de-eje es cóncava, '+
+    'así que la media de las dos mitades cae bajo el punto medio. Lo que el número no dice es '+
+    'que ese tubo recto '+(vuela>0.1?'<b>volaría '+fmt(vuela,1)+' m</b> sobre el terreno por '+
+    'cada extremo':'no se apoya en ese terreno')+'. El quebrado no gana POA: gana poder montarse.';
+}
 function avisoBacktracking(f){
   var bt=null,nb=null;
   f.forEach(function(x){ if(x.key==='tracker_hsat')bt=x; if(x.key==='tracker_hsat_nobt')nb=x; });
@@ -3140,11 +3231,50 @@ function ejeTransmision(mats,xa,xb,ya,yb){
    solo las piezas `twin` — corona, bracket y soporte. Es justo lo que
    distingue una bifila de dos monofilas, y es lo que hay que replicar en vez
    de dibujar una barra entre filas. */
-function seguidor3D(mats,escalaEje,motriz,largoFila){
+function seguidor3D(mats,escalaEje,motriz,largoFila,quiebro,quiebroTerr){
   var g=new THREE.Group(), spin=new THREE.Group(); g.add(spin);
   var viga=Seguidor.buildBeam(THREE,{materials:mats,west:(motriz!==false),
                                      detail:'mass',size:'largo'});
   spin.add(viga.spin); g.add(viga.static);
+  /* QUEBRADO: rótula en el actuador. El modelo de la casa ya trae la viga de
+     par PARTIDA en dos medias vigas que se unen en X=0 —está escrito en
+     `seguidor.js` para esto—, así que aquí solo hay que repartir las piezas por
+     el signo de su X y girar cada mitad lo suyo. Girar sobre la Z local del
+     tubo es girar sobre el eje que corre ⊥ a la fila: la inclinación A LO
+     LARGO, que es la que quiebra. Lo que está en X=0 —el slew, el actuador— se
+     queda en medio, que es donde está la rótula. */
+  var medias=null;
+  if(quiebro){
+    /* La rótula va POR ENCIMA del giro del tubo, no por debajo. Metida dentro
+       del grupo que bascula, su charnela giraba con el seguidor: al mediodía
+       quebraba los 5° enteros y a las 8 de la mañana, con el tubo a 60°, solo
+       quebraba su coseno — la media viga se despegaba un metro del suelo. La
+       inclinación de cada mesa la pone el TERRENO y no se mueve en todo el
+       día; lo que gira dentro de cada mesa es su tubo. */
+    var medN=new THREE.Group(), medS=new THREE.Group();
+    var spN=new THREE.Group(), spS=new THREE.Group();
+    medN.add(spN); medS.add(spS);
+    medN.name='mediaNorte'; medS.name='mediaSur';
+    /* Girar sobre la Z local es girar sobre el eje ⊥ a la fila: la inclinación
+       A LO LARGO, que es la que quiebra. Lo que está en X=0 —el slew, el
+       actuador— se queda en medio, que es donde está la rótula. */
+    medN.rotation.z=-quiebro; medS.rotation.z=quiebro;
+    /* El modelo de la casa ya trae la viga de par PARTIDA en dos medias que se
+       unen en X=0 —está escrito en `seguidor.js` para esto—, así que aquí solo
+       hay que repartir por el signo de la X: lo que bascula a su spin, lo fijo
+       a la mesa. `buildBeam` aplica la matriz de la pieza AL MESH, así que el
+       desplazamiento vive en `position` — con `o.matrix` daba 0 para todas y
+       las dos mitades salían vacías. */
+    [[viga.spin,spN,spS],[viga.static,medN,medS]].forEach(function(t){
+      t[0].children.slice().forEach(function(o){
+        var x=o.position.x;
+        if(Math.abs(x)<1e-6)return;               // el actuador no se mueve
+        (x>0?t[1]:t[2]).add(o);
+      });
+    });
+    g.add(medN,medS);
+    medias=[spN,spS];                             // [norte, sur]
+  }
   var postH=Seguidor.DIMS.postH||2.0;
   g.position.y=postH; g.rotation.y=Math.PI/2;
   /* La escala va en `g` (el grupo del tubo), no en el wrap: así estira la viga,
@@ -3160,13 +3290,26 @@ function seguidor3D(mats,escalaEje,motriz,largoFila){
      propio modelo (`soporte`, y en la gemela también, que es pieza twin). */
   var L=largoFila||Seguidor.DIMS.span||60;
   var nP=Math.max(2,Math.round(L/8)+1), z0=-L/2, dP=L/(nP-1);
+  var qT=quiebroTerr||0, corta=postH, larga=postH;
   for(var i=0;i<nP;i++){
     var z=z0+i*dP;
     if(Math.abs(z)<1.6)continue;                 // ahí ya está el del slew
-    var p=new THREE.Mesh(new THREE.BoxGeometry(.18,postH,.18),mats.steel);
-    p.position.set(0,postH/2,z); p.castShadow=true; wrap.add(p);
+    /* Cada hinca va del SUELO al TUBO. Con el terreno quebrado los dos bajan
+       en un seguidor quebrado —la hinca mide lo mismo, que es la gracia de la
+       rótula— y solo baja el suelo en uno rígido, así que la hinca crece: es
+       el precio de no doblar, y aquí se ve. */
+    var ySuelo=-Math.abs(z)*Math.tan(qT);
+    var yTubo=postH+(quiebro?ySuelo:0);
+    var h=Math.max(0.25,yTubo-ySuelo);
+    if(h<corta)corta=h; if(h>larga)larga=h;
+    var p=new THREE.Mesh(new THREE.BoxGeometry(.18,h,.18),mats.steel);
+    p.position.set(0,yTubo-h/2,z); p.castShadow=true; wrap.add(p);
   }
+  wrap.hincas={corta:corta,larga:larga,nocabe:false};
   wrap.spin=spin;
+  /* Dos mesas, dos tubos: cada una gira lo suyo, porque cada una tiene su
+     inclinación de eje y por tanto su ángulo de seguimiento. */
+  if(medias)wrap.medias=medias;
   return wrap;
 }
 
@@ -3264,10 +3407,27 @@ function encuadra(){
    el sexto bloque quedaría cien metros por debajo del primero y no habría
    comparación que mirar. En campo es lo mismo: las filas siguen la curva de
    nivel.                                                                     */
-var TERRENO_3D={gx:0,gz:0};   // caída por metro hacia el ESTE y hacia el SUR
+var TERRENO_3D={gx:0,gz:0,q:0,ex:0,ez:1};   // caída por metro al ESTE y al SUR, + quiebro
+/* El QUIEBRO: un caballón recto que cruza el campo PERPENDICULAR al eje de los
+   seguidores y pasa por el centro de la escena, con las dos aguas cayendo hacia
+   fuera. No es un adorno del bloque: es UN terreno, el mismo para todas, y por
+   eso la línea de cumbrera es una y no una por estructura.
+   Los bloques se alinean sobre la curva de nivel del plano —que con la caída
+   ⊥ al eje corre paralela a la cumbrera—, así que todos la cruzan por su
+   centro, que es donde va la rótula. Cuando el azimut del terreno y el del eje
+   no son perpendiculares eso deja de cumplirse, y va dicho en la escena. */
 function cotaTerreno(x,z,T){
   T=T||TERRENO_3D;
-  return -(x*(T.gx||0)+z*(T.gz||0));
+  var y=-(x*(T.gx||0)+z*(T.gz||0));
+  if(T.q){
+    /* s: distancia horizontal a la cumbrera A LO LARGO del eje, con signo
+       (+ hacia el norte). Cada agua cae con su coeficiente, no con uno solo
+       simétrico: así las dos quedan justo a eje±quiebro/2 y la viga quebrada
+       se apoya en el suelo en vez de rozarlo. */
+    var sq=x*(T.ex||0)+z*(T.ez||0);
+    y+=sq*(sq>0?(T.kN||0):(T.kS||0));
+  }
+  return y;
 }
 function sueloRelieve(lado,T){
   /* 220×220 y no 120: las curvas de nivel se interpolan entre vértices, así que
@@ -3347,6 +3507,11 @@ function construyeMundo(){
   var escTk=cotasSeguidor(cfg.tracker);   // el modelo, a las cotas configuradas
   /* EL TERRENO DEL SITIO: uno, con su caída al este y al sur. */
   var T=FIS.pendPlano(cfg.pend,cfg.pendAz); TERRENO_3D=T;
+  /* La dirección del EJE de los seguidores, que es a lo largo de la que
+     quiebra el terreno: la cumbrera va ⊥ a ella. */
+  var aE=FIS.azEje(cfg)*FIS.D2R;
+  T.q=cfg.quiebro||0; T.ex=Math.sin(aE); T.ez=-Math.cos(aE);
+  var K=FIS.quiebroK(cfg); T.kN=K.kN; T.kS=K.kS;
   /* La CURVA DE NIVEL de ese plano: perpendicular a la caída. Los bloques se
      alinean sobre ella, así que todos arrancan exactamente de la cota cero. */
   var mg=Math.hypot(T.gx,T.gz);
@@ -3417,7 +3582,9 @@ function construyeMundo(){
         /* En bifila, la PRIMERA viga de cada par es la del motor y las demás
            son gemelas: eso es lo que hace que dos filas sean UN seguidor, y no
            dos. En monofila todas llevan el suyo. */
-        uno=seguidor3D(mats,escTk,(agrupa<2)||(f%agrupa===0),G.largoFila);
+        uno=seguidor3D(mats,escTk,(agrupa<2)||(f%agrupa===0),G.largoFila,
+                       spec.quebrado?((cfg.quiebro||0)/2*FIS.D2R):0,
+                       (cfg.quiebro||0)/2*FIS.D2R);
         uno.position.x=d; uno.position.y=cotaFila(d,0);
         uno.rotation.x=rollX;                            // el eje sigue el terreno
       }else if(spec.fam==='fija_ew'){
@@ -3460,7 +3627,18 @@ function construyeMundo(){
     BLOQUES.push({key:k,spec:spec,filas:filas,gcr:gcr,pitch:pitch,porTracker:agrupa,
                   hincas:hin,
                   cruz:FIS.cruz(cfg,spec), rollX:rollX, rollZ:rollZ,
-                  largoPend:FIS.pendComp(cfg.pend,cfg.pendAz,FIS.azPitch(cfg,spec)).largo});
+                  largoPend:FIS.pendComp(cfg.pend,cfg.pendAz,FIS.azPitch(cfg,spec)).largo,
+    /* Lo que le cuesta a un tubo RECTO un terreno quebrado: se queda en la
+       media, así que sus dos extremos vuelan sobre el suelo. Es el número que
+       dice si esa estructura se puede montar ahí. */
+    desalin:(function(){
+      if(spec.fam!=='tracker'||!(cfg.quiebro||0)||spec.quebrado)return 0;
+      /* El tubo recto va a la media: a L metros de tubo desde la rótula está
+         L·cos(a0) metros horizontales de la cumbrera, y el suelo ahí ha caído
+         lo suyo. Mismos kN/kS que dibuja el terreno. */
+      var K=FIS.quiebroK(cfg), s=G.largoFila/2*Math.cos(K.a0);
+      return s*Math.max(Math.abs(K.kN),Math.abs(K.kS));
+    })()});
   });
   /* ── ENCUADRE Y SOMBRAS ──
      Las dos cosas que hay que dimensionar CON la escena, no a ojo:
@@ -3589,6 +3767,21 @@ function actualiza3D(){
            seguidor mira al oeste: AOI de 106° contra el sol. Lo caza
            tests/test_comparador_3d.js midiendo la normal a las 8 y a las 17. */
         u.spin.rotation.x=th*FIS.D2R;
+        /* QUEBRADO: cada mesa tiene SU inclinación de eje, así que cada una
+           calcula SU ángulo de seguimiento —y su retroceso— con la misma
+           función que la tabla. Dibujar las dos al mismo ángulo sería enseñar
+           un seguidor que no es el que se ha calculado.
+           El reparto: `ejesMitades` da [eje+q/2, eje−q/2] y la media que cae
+           hacia el norte —la que se aleja del ecuador en el hemisferio norte—
+           es la de eje−q/2. */
+        if(u.medias){
+          var ejM=FIS.ejesMitades(cfg,spec);
+          [[u.medias[0],ejM[ejM.length-1]],[u.medias[1],ejM[0]]].forEach(function(par){
+            var Pm=par[1]?FIS.psTSAT(S.el,S.az,par[1],cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
+            var thm=(elDeg>0)?FIS.theta(Pm.ps,B.gcr,cfg.maxang,spec.bt,cfg.btLlano?0:B.cruz):0;
+            par[0].rotation.x=thm*FIS.D2R;
+          });
+        }
         // Eje inclinado: el TSAT sube hacia el ecuador. En el hemisferio norte,
         // hacia el sur (+z del mundo).
         /* El eje se inclina lo que se inclina EL TERRENO a lo largo de él, no
@@ -3634,6 +3827,10 @@ function actualiza3D(){
           /* Y en una fija, lo que la pendiente a lo largo de sus filas CUESTA:
              la mesa se monta al tilt de proyecto, así que quien compensa es la
              hinca. Ver el rango es ver si la estructura existe. */
+          /* Y en un seguidor RÍGIDO sobre terreno quebrado, lo que vuela: es
+             lo que dice si se puede montar. El quebrado no vuela nada — para
+             eso lleva la rótula. */
+          ((B.desalin>0.1)?' · el tubo vuela '+fmt(B.desalin,1)+' m':'')+
           ((B.hincas&&B.hincas.larga-B.hincas.corta>0.1)
             ?' · hincas '+fmt(B.hincas.corta,1)+'–'+fmt(B.hincas.larga,1)+' m'+
              (B.hincas.nocabe?': hay que bancalear':''):''))));
