@@ -687,7 +687,7 @@ const PROJECTS = [
     stack: "HTML · Canvas · min-cost flow",
     url: "https://imoriana3.github.io/siting/",
     repo: "https://github.com/imoriana3/siting",
-    updated: "2026-06-22",
+    updated: "2026-08-27",
     version: "",
     docId: "",
     docUrl: "https://raw.githubusercontent.com/imoriana3/siting/main/README.md",
@@ -696,7 +696,10 @@ const PROJECTS = [
       "Ajusta alcance y capacidades; autoubica NCUs/RSU/GW y exporta la asignación TCU→NCU→GW."
     ],
     pendientes: [],
-    historial: [ { date:"2026-06-22", ver:"", note:"Plantilla de creación en la cartera (Siting en blanco)." } ]
+    historial: [
+      { date:"2026-08-27", ver:"", note:"Las NCU dejan de caer sobre los trackers: guarda de 2 m a toda mesa en TODOS los caminos (autositing, clic, arrastre, HSU, conservador) y, en el automático, preferencia por el pasillo ancho o la calle (≥6 m, como los proyectos reales — San José entrega a 11 m). Cambiar las cotas de mesa re-libra las NCU en vez de solo redibujar. Si el pasillo no da los 2 m, no se finge: el panel avisa en ámbar, y en rojo si una NCU queda encima de una mesa. Banco nuevo de 40 comprobaciones (QA 107 en total)." },
+      { date:"2026-06-22", ver:"", note:"Plantilla de creación en la cartera (Siting en blanco)." }
+    ]
   },
   {
     name: "Alta de planta",
