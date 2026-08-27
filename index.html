@@ -1042,7 +1042,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/generador-layout.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-26",
-    version: "1.6.3",
+    version: "1.6.4",
     docId: "generador-layout",
     docUrl: "",
     download: "",
@@ -1078,6 +1078,7 @@ const PROJECTS = [
       { done:false, text:"El canal factiun_sizing: el gate ya lo lee; falta que el Comparador lo publique (propuesto en CONTRATO, Puntos abiertos)." }
     ],
     historial: [
+      { date:"2026-08-27", ver:"1.6.4", note:"«El filtro de pendiente excluye el 100 % de la parcela» — sobre una zona que el propio reparto habia declarado apta para FIJA a 25°. El layout mixto congelaba un solo exclTopo en el cfg, calculado con los limites del montaje DEL SELECTOR (tracker, 5°/5°), y todas las zonas lo heredaban: la fija moria filtrada a lo tracker. Ahora cada zona pide las celdas excluidas de SU montaje. De paso, el pie del resumen ya no dice «pitch undefined m»: en el mixto dice «por zona» y «en la linde»." },
       { date:"2026-08-27", ver:"1.6.3", note:"«¿Por qué no me dibuja la fija?» El setback se aplicaba al borde de CADA zona del layout mixto, fronteras internas incluidas — una tira de fija de 1,2 ha quedaba «área útil vacía» con 5 m por todos los lados mientras la zona de 11 ha ni lo notaba. El retranqueo protege el perímetro LEGAL, y una raya del reparto por pendiente no es perímetro de nada. Ahora cada zona se coloca con setback 0 y se retira solo la mesa que invade la banda de la linde REAL (la parcela dibujada); en bifila el descarte es por pareja completa, sin viudas. Espejo del mismo arreglo en el motor Python." },
       { date:"2026-08-27", ver:"1.6.2", note:"«Si quiero llenarlo de trackers y fija no tengo dónde seleccionar las pendientes máximas de cada uno». Los límites por montaje existían desde v1.6.0, pero el cuadro del montaje no seleccionado iba ESCONDIDO tras el selector — justo lo que el reparto mixto necesita a la vista. Ahora los dos cuadros de Estructura son visibles siempre: el del montaje del layout, pleno; el otro, atenuado pero editable. Sin duplicar ni una casilla (mismos inputs, mismas puertas): la lección de la v1.6.0 sigue en pie." },
       { date:"2026-08-26", ver:"1.6.1", note:"«No me ha hecho el reparto bien nunca». La máscara de la parcela tenía una PUERTA DE ATRÁS: sin ningún anillo dibujado, `mascaraParcelaDEM` devolvía «todo dentro» en vez de nada, así que el guard se desactivaba solo justo en el caso que viene a cubrir — y el reparto salía sobre el BBOX del MDT, que es la parcela MÁS margen: terreno del vecino, con mesas encima. El comentario del código decía «LA MÁSCARA NO ES OPCIONAL» mientras el código la hacía opcional. Ahora sin linde no se propone y se DICE por qué, en vez de quedarse mudo como si no hubiera salido nada. Lo destapó portar el mismo recorte a Python (SolarGPTfull#166), donde la linde pasa a ser un argumento obligatorio." },
