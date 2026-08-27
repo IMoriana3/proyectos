@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.0</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.1</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -3462,6 +3462,14 @@ function pendientesDEM(){
 function mascaraParcelaDEM(){
   if(!DEM)return null;
   var anillos=[];
+  /* SIN NINGÚN ANILLO NO HAY MÁSCARA, y no «una máscara que dice que sí a
+     todo». Ese `anillos.length ? toca(...) : true` era el propio guard
+     desactivándose justo en el caso que viene a cubrir: sin parcela dibujada,
+     el reparto salía sobre el BBOX del MDT —el terreno del vecino— y el
+     comentario de `zonasPorPendiente` decía «LA MÁSCARA NO ES OPCIONAL»
+     mientras el código la hacía opcional. Lo destapó portar el recorte a
+     Python (SolarGPTfull#166): allí la linde es un argumento OBLIGATORIO, y
+     aquí tenía una puerta de atrás. */
   if(PARCEL&&PARCEL.length>=3)anillos.push(PARCEL);
   PARCELAS.forEach(function(pz){if(pz.ext&&pz.ext.length>=3)anillos.push(pz.ext);});
   var n=DEM.lats.length, dLat=(DEM.lats[1]-DEM.lats[0])/2, dLon=(DEM.lons[1]-DEM.lons[0])/2;
@@ -3498,9 +3506,10 @@ function mascaraParcelaDEM(){
   }
   var dentro=[],nIn=0;
   for(var r=0;r<n;r++){var fila=[];
-    for(var c=0;c<n;c++){var t=anillos.length?toca(DEM.lons[c],DEM.lats[r]):true;fila.push(t);if(t)nIn++;}
+    for(var c=0;c<n;c++){var t=toca(DEM.lons[c],DEM.lats[r]);fila.push(t);if(t)nIn++;}
     dentro.push(fila);}
   var mLat=110540, mLon=111320*Math.cos(((DEM.lats[0]+DEM.lats[n-1])/2)*Math.PI/180);
+  if(!anillos.length)return null;
   return {dentro:dentro,nIn:nIn,areaCeldaM2:Math.abs(dLat*2*mLat)*Math.abs(dLon*2*mLon)};
 }
 
@@ -3972,10 +3981,11 @@ function zonasPorPendiente(pend, lims, minAreaM2){
      Las celdas de fuera tampoco cuentan como «no desarrollable»: no es que no
      admitan montaje, es que no son la parcela. */
   var msk=mascaraParcelaDEM();
+  if(!msk)return {sinParcela:true, zonas:[]};   // sin linde no se propone
   var n=pend.n, aptoT=new Uint8Array(n*n), aptoF=new Uint8Array(n*n), nada=0;
   for(var r=0;r<n;r++)for(var c=0;c<n;c++){
     var i=r*n+c;
-    if(msk&&!msk.dentro[r][c]){aptoT[i]=0;aptoF[i]=0;continue;}
+    if(!msk.dentro[r][c]){aptoT[i]=0;aptoF[i]=0;continue;}
     var ae=Math.abs(pend.ew[r][c]), an=Math.abs(pend.ns[r][c]);
     var t=(ae<=lims.trkEw&&an<=lims.trkNs);
     var f=(!t)&&(ae<=lims.fijaEw&&an<=lims.fijaNs);
@@ -4058,6 +4068,18 @@ function mixLee(){
 
 function mixPinta(){
   var out=$('mixOut'), tag=$('mixTag');
+  /* El motivo, ANTES que el vacío: «no ha salido nada» y «no puedo mirarlo
+     porque no hay parcela» se leen igual en pantalla, y solo uno de los dos
+     lo arregla el usuario. */
+  if(MIX_PROP&&MIX_PROP.sinParcela){
+    out.innerHTML='<p class="note" style="color:var(--build)">⚠ <b>Dibuja o carga '+
+      'la parcela</b> antes de proponer el reparto. El MDT se descarga sobre el '+
+      'rectángulo que la envuelve <i>más margen</i>, así que sin la linde la '+
+      'propuesta saldría sobre el terreno de al lado —y ahí se colocarían mesas— '+
+      'sin que se notara mirándola.</p>';
+    tag.textContent='sin parcela · no se propone';
+    return;
+  }
   if(!MIX_ZONAS.length){
     out.innerHTML=''; tag.textContent='sin zonas · propón un reparto o define las tuyas'; return;
   }
