@@ -388,6 +388,99 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-27 · v1.39** — **el contador se inventaba TERRENO donde no había mesa que lo midiera.**
+  Sale de perseguir una pregunta del cliente —«¿sobre qué estás midiendo, cuál es la base?»— hasta
+  el fondo. Al desglosar la pérdida por sombra apareció que Ayora tenía **sombra de terreno con el sol
+  a 44°**, en un bloque con **0,61 % de pendiente**. Con el sol a 44° el rayo sube 97 cm por metro y
+  ese terreno sube 0,6 cm: es geométricamente imposible.
+
+  **El fallo.** Cuando el marchador de rayos preguntaba la cota del suelo en un punto, `cot(fila,
+  norte)` se pegaba al extremo del tramo más cercano **si esa fila no tenía mesa en esa coordenada
+  norte**. En Ayora ese tramo llegaba a estar **a 376 m**, y con inclinación N-S real eso son metros
+  de cota inventada:
+
+  ```
+  en norte −543,4 m:
+    fila 34  tiene tramo ahí        →  cota  6,60 m   (real)
+    fila 33  su tramo está a 376 m  →  cota 15,99 m   (fabricada)
+    gzOf interpola                  →  «suelo» a 10,30 m
+  ```
+
+  El suelo salía **5,7 m por encima del módulo del que partía el rayo** y `terrBlocked` lo daba por
+  bloqueado. Pasa en toda planta con las filas escalonadas en norte, que son casi todas.
+
+  **El arreglo.** `cotD` devuelve también a qué distancia de un tramo REAL está la consulta, y `gzOf`
+  sólo deja votar a las filas que de verdad miden ese norte (tolerancia 5 m). Si ninguna lo mide, **no
+  se inventa suelo**: devuelve −∞ y el rayo pasa. La cota de los PLANOS no cambia — ahí el norte cae
+  dentro del tramo por construcción.
+
+  **Efecto medido** (Ayora, 21-mar, true3d): el aporte del terreno a la sombra pasa de **+2,05 pp a
+  +0,003 pp**, y la sombra media del día de **3,81 % a 1,77 %**. **Estaba inflada 2,2×.**
+
+  **Por qué el oráculo no lo cazó: porque llevaba SU PROPIA COPIA del mismo `cot`.** Un oráculo que
+  duplica el defecto no puede detectarlo. Ésa es la lección que se lleva la casa, y no es de este bug:
+  es de cómo se escriben los oráculos. Arreglado también en la batería, escrito aparte — lo que tiene
+  que coincidir es el RESULTADO, no el código. Los dos vuelven a casar.
+
+  **Y la base, contestada como debía haberse contestado desde el principio.** El titular era «+0,05 %»
+  sobre POA, que es la lectura menos favorable de las disponibles. Sobre **POA de planta 2 676
+  kWh/m²·año** (12 días tipo ponderados por días del mes) y **neta tras la escalera de diodos 2 286**:
+  escribir las pendientes vale **+0,153 %** y calcular en la NCU **+0,852 %** — se triplica y se dobla,
+  porque el escalón de subcadena amplifica toda mejora de sombra. Los porcentajes apenas se movieron
+  con el arreglo del terreno (el fantasma afectaba a las tres configuraciones por igual y se cancelaba
+  en la división); lo que estaba mal era el absoluto. **Y ninguna de las dos cifras es energía**: son
+  irradiancia efectiva de plano, les falta rendimiento de módulo y BOS.
+
+- **2026-08-27 · v1.39 · el volcado real de una NCU entera** — `tools/cruce_ncu_dia.mjs`. NCU12 de
+  Ayora, 7-ago-2026, 50 seguidores, **409 234 muestras a 10 s**. Cierra la objeción que llevaba
+  semanas abierta: *«¿podemos sacar pendientes para una política que no podemos simular?»*.
+
+  **(a) La TCU SÍ hace backtracking**: de 17:30 a 19:00 UTC la bandera se levanta y el objetivo se
+  aplana 55 → 30,8 → 18,7 → 9,2 → 0,9, apartándose del astronómico, que se quedaría clavado en el tope.
+  **(b) Pero lo hace PLANO**: apertura p95−p5 entre seguidores **0,08°**, y el modelo con los 50 TCU
+  llevando la misma plantilla predice **0,000° exacto** (con las pendientes configuradas predeciría
+  6-13°). **(c) El vano sí está bien**: ajustando cuál explica los ángulos sale **6,00 m**, el medido.
+  **(d) La política que explica la planta es `pairwise` con pendientes a cero, a 0,59°** de desviación
+  mediana en los 25 instantes que discriminan, ganando por 1,82° a la siguiente.
+
+  **Tres errores propios, los tres cazados y con prueba:**
+  · **Un «desfase de reloj de 4 minutos» que era MI BINNING.** La rejilla se quedaba con la última
+  muestra del tramo, así que lo que el informe llamaba «12:00» era el dato de las 12:04:50. Ese
+  desplazamiento se disfrazaba de física —1,15° de sesgo constante, parecidísimo a la convergencia de
+  meridianos de Ayora (1,161°), o sea con una explicación física plausible esperando a que la
+  adoptara—. Leyendo al instante exacto el residuo cae a **0,034° RMS** y no queda desfase ninguno.
+  · **El veredicto promediaba sobre TODAS las horas**, y con sol alto las cuatro políticas mandan el
+  mismo ángulo: la diferencia quedaba enterrada. Es el mismo vicio que el informe lleva advirtiendo
+  desde el primer volcado, aplicado a sí mismo. Ahora sólo votan los instantes con abanico ≥ 1°.
+  · **El veredicto de dispersión era una RAZÓN a secas.** Con 6 seguidores salía ×9 y declaraba
+  «backtracking COORDINADO» en una planta que reparte el mismo ángulo a todos — una conclusión FALSA
+  sobre la planta. El registro se cuantiza a 0,1°: una razón entre dos números en el suelo de
+  resolución no dice nada. Ahora hay suelo absoluto de 1°.
+
+  **Y una lección que costó un susto:** la mañana del 7-ago los seguidores apuntaban al tope OESTE con
+  el sol saliendo por el ESTE, tres horas. Parecía un defecto de control grave. El log de eventos dice
+  que era `admin` desde la interfaz web: posición de seguridad 7 a las 06:28, posición 1 a las 07:23,
+  liberada a las 07:47. Mantenimiento. **Una herramienta que juzga el comportamiento de una planta sin
+  leer su log de eventos acaba culpando a la planta de lo que hizo una persona.** Ahora lo lee, lo
+  publica, y si el volcado no trae log lo DICE en vez de callárselo.
+
+- **2026-08-27 · v1.39 · la página moría EN BLANCO si `sol.js` no llegaba** — «no me deja entrar al
+  html, no carga», y era una pantalla en blanco sin un solo mensaje. El fichero estaba bien (rama y
+  `main` cargan las dos limpias, 288 pasos, cero errores; Pages desplegando en verde) y resultó ser
+  caché del navegador. Pero **un visor que se queda mudo cuando le falta una dependencia no se puede
+  diagnosticar desde el otro lado del teléfono**, y eso sí es nuestro: desde que el sol salió a
+  `sol.js` la página tiene una dependencia externa. Ahora sale un aviso con la causa y los tres pasos
+  (recarga forzando caché · abrir `sol.js` a pelo para ver si da 404 · servir por HTTP si se abrió con
+  `file://`).
+
+  **Y una sutileza de JavaScript que merece quedar escrita: el primer aviso SE MATABA A SÍ MISMO.**
+  Usaba `typeof VER` para mostrar la versión, y `const VER` vive en el ámbito léxico global: la
+  ligadura existe desde antes de ejecutarse el script. Si ese script muere antes de inicializarla
+  —que es EXACTAMENTE el caso que el aviso cubre— la variable queda en zona muerta temporal y **hasta
+  `typeof` lanza ReferenceError**. El guard reventaba justo en el escenario para el que se escribió.
+  Ahora lee `VER` dentro de un `try`. De paso, `backtracking.html` pedía `sol.js?v=0.1.0` y
+  `overcast.html` `?v=0.2.0` siendo el mismo fichero: alineadas, con test que falla si divergen. QA 98.
+
 - **2026-08-26 · v1.38** — **la FICHA que se escribe en la TCU, por fin cargable en el simulador.**
   Tercera posición del mando: *«La FICHA que se escribe en la TCU (por seguidor, vecina crítica)»*.
   Cierra la incoherencia de v1.37 — se entregaban números que nunca habían entrado en el simulador —
