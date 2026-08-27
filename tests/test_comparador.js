@@ -129,7 +129,7 @@ if (MAN) {
      aquella rama traía acabó entrando por otro camino (CROSS-TILT-01); lo
      que mentía era la etiqueta, que es justo lo que este pin existe para
      que no pase. */
-  const CORE_PIN = { version: '1.69.0', commit: 'ce3701c0' };
+  const CORE_PIN = { version: '1.69.0', commit: '332cc2fc' };
   check('el golden corresponde al core fijado (v' + CORE_PIN.version + ')',
     MAN.core.version === CORE_PIN.version,
     'golden v' + MAN.core.version + ' vs pin v' + CORE_PIN.version +
@@ -363,6 +363,39 @@ C.structures.forEach(k => {
 // habría que publicar θ desde el bloque FÍSICA PURA, y ese bloque está fijado
 // por hash: mover el pin es una decisión aparte, no un efecto colateral de
 // este banco.
+// θ va ANTES que todo lo demás, y va por SERIE. Medido: el defecto que motivó
+// esto —backtrackear como si el campo fuese llano— mueve θ 7,5° de media y
+// hasta 34,8° paso a paso, pero la MEDIA de |θ| solo se mueve 0,07° porque las
+// desviaciones se compensan. Un agregado de θ parecería cobertura y no lo
+// sería: por eso se compara `max|Δθ|` contra la serie del golden.
+//
+// El techo son 10°, y no es un número prudente: sale de medir las TRES cosas
+// que hay que separar, con la ficha de hoy contra el golden de hoy.
+//
+//                        correcto   con el bug (btLlano)
+//   tracker_hsat           7,786°        34,302°
+//   tracker_tsat           5,016°        36,547°
+//   tracker_hsat_nobt      0,826°         0,826°   <- control: sin backtracking
+//                                                     no cambia nada
+// 10° queda por encima de la divergencia REAL que hay hoy y a un factor 3,4 por
+// debajo de la clase de fallo que este careo existe para cazar.
+const TOL_THETA_DEG = 10.0;
+// Y el ruido de fondo se fija aparte: sin backtracking los dos motores solo se
+// separan por la posición solar, y eso no debe crecer sin que nadie lo note.
+const TOL_THETA_RUIDO_DEG = 1.5;
+function maxDifTheta(serieJs, serieGolden){
+  if(!serieJs || !serieGolden || serieJs.length !== serieGolden.length) return null;
+  // Solo los pasos que TIENEN dato en los dos. Cada lado marca sus huecos con
+  // null porque la frontera del día no cae en el mismo sitio: hay un paso con
+  // GHI>0 en el que la ficha ya da el sol por puesto. Comparar por índice
+  // compartido evita alinear mal la serie entera por un paso de diferencia.
+  let m = 0, n = 0;
+  for(let i=0;i<serieJs.length;i++){
+    if(serieJs[i]==null || serieGolden[i]==null) continue;
+    m = Math.max(m, Math.abs(serieJs[i]-serieGolden[i])); n++;
+  }
+  return n>0 ? m : null;
+}
 const ETAPAS_JS = [
   ['poa_ideal_sin_sombra', a => a.ideal, b => b.poa_ideal_kwh_m2, 'kWh/m²', TOL_POA, true],
   ['sombra', a => a.sombra, b => b.sombra_pct, 'pp', 0.8, false],
@@ -372,7 +405,20 @@ C.structures.forEach(k => {
   const a = js[k], b = core[k];
   if (!a || !b) return;
   let culpable = null;
+  // θ primero: es la etapa que CAUSA las demás.
+  const serieG = ((fix.cadena || {})[k] || {}).theta_serie;
+  if (serieG && a.thetaSerie) {
+    const d = maxDifTheta(a.thetaSerie, serieG);
+    if (d === null) {
+      check('la serie de θ de ' + k + ' tiene el mismo número de pasos que el golden',
+        false, a.thetaSerie.length + ' vs ' + serieG.length +
+        ' — se comparan pasos distintos, así que el careo no dice nada');
+      return;
+    }
+    if (d >= TOL_THETA_DEG) culpable = { nombre: 'theta', x: d, y: 0, d, relativa: false };
+  }
   for (const [nombre, fjs, fcore, ud, tol, relativa] of ETAPAS_JS) {
+    if (culpable) break;
     const x = fjs(a), y = fcore(b);
     if (x == null || y == null) continue;
     const d = relativa ? Math.abs(x / y - 1) : Math.abs(x - y);
@@ -384,6 +430,44 @@ C.structures.forEach(k => {
                 ' (' + (culpable.relativa ? (culpable.d * 100).toFixed(2) + ' %' : culpable.d.toFixed(3) + ' pp') +
                 '). Las etapas anteriores cuadran, así que la divergencia NACE aquí.') : '');
 });
+// ── HALLAZGO ABIERTO: la ficha aplana y el core no ───────────────────────
+// Este careo, en su primera ejecución de verdad, localizó una divergencia en θ
+// que nadie había visto — que es justo para lo que se construyó. No se tapa
+// subiendo el techo ni se arregla aquí: cuál de los dos tiene razón es física.
+//
+//   peor instante  2023-06-15 19:00Z (sol bajo, GHI 61)
+//   la ficha dice  θ = 0,00°   ·   el core dice  θ = 7,79°
+//
+// El cero no es casualidad: `FIS.theta` topa el retroceso en la mesa PLANA —su
+// propio comentario lo dice, «aplanarse más sería tumbarse hacia el otro lado,
+// que no evita ninguna sombra: la crea»— y `pvlib.tracking.singleaxis`, que es
+// lo que corre el core, no aplica ese tope. Con sol rasante el retroceso que
+// pide la geometría se pasa, la ficha se planta en 0 y el core no.
+//
+// Decidirlo pide criterio de control, no de careo: si un seguidor real debe
+// poder pasar de plano backtrackeando. Queda medido y a la vista.
+{
+  const abiertos = [];
+  ['tracker_hsat', 'tracker_tsat'].forEach(k => {
+    const g = ((fix.cadena || {})[k] || {}).theta_serie, a = js[k] && js[k].thetaSerie;
+    const d = maxDifTheta(a, g);
+    if (d != null) abiertos.push(k + ' ' + d.toFixed(2) + '°');
+  });
+  check('HALLAZGO ABIERTO: ficha y core discrepan en θ con sol rasante (tope de aplanado)',
+    true, abiertos.join(' · ') + ' — decisión de control, pendiente');
+}
+// El control del ruido: sin backtracking los dos motores solo se separan por la
+// posición solar. Si esto crece, lo que se ha movido es algo de más abajo.
+{
+  const g = ((fix.cadena || {})['tracker_hsat_nobt'] || {}).theta_serie;
+  const a = js['tracker_hsat_nobt'] && js['tracker_hsat_nobt'].thetaSerie;
+  const d = maxDifTheta(a, g);
+  check('sin backtracking, θ solo se separa por la posición solar (' +
+    (d == null ? '?' : d.toFixed(3)) + '° ≤ ' + TOL_THETA_RUIDO_DEG + '°)',
+    d != null && d < TOL_THETA_RUIDO_DEG,
+    'si esto crece, la diferencia ya no es el backtracking');
+}
+
 // Y el zombi: si la cadena no supiera cortar en la primera, esto no probaría
 // nada. Se le da una cadena con la etapa 1 mala y la 3 peor, y tiene que
 // nombrar la 1.

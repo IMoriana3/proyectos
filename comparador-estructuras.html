@@ -1112,11 +1112,20 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
   var cruz=FIS.cruz(cfg,spec);
   var dtH=(n>1)?((M.t[1]-M.t[0])/3600000):1;
   var neta=0, ideal=0, mes=new Float64Array(12);
+  /* θ ACUMULADO, para que el careo pueda LOCALIZAR. Sin esto, un careo contra
+     el core solo sabe decir que la POA no cuadra, y de ahí a acusar al lado
+     equivocado hay un paso: pasó el 2026-08-26, cuando la POA no cuadraba y se
+     dedujo que la ficha llevaba física vieja. Fallaba el backtracking del core.
+     Con el ángulo delante eso es una línea.
+     Se promedia sobre los pasos DE DÍA —el bucle ya salta la noche— porque el
+     ángulo nocturno no es un dato: es un relleno, y promediarlo mezclaría dos
+     convenios distintos con el core. */
+  var thAbs=0, nDia=0, thSerie=[];
   var tilt=(tiltForzado!=null)?tiltForzado:(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
   var axT=FIS.ejeTilt(cfg,spec);
   for(var i=0;i<n;i++){
     var S=FIS.sun(M.t[i],latR,cfg.lon);
-    if(S.el<=0)continue;
+    if(S.el<=0){ thSerie.push(null); continue; }   // hueco declarado, no ausencia
     var bh=M.dni[i], dh=M.dhi[i], gh=M.ghi[i], e0=FIS.E0(M.t[i]), P0, planos;
     if(spec.fam==='tracker'){
       /* La proyección con eje inclinado la decide el ÁNGULO, no la etiqueta del
@@ -1148,10 +1157,22 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
       sN+=P.neta; sI+=P.ideal;
     }
     sN/=planos.length; sI/=planos.length;             // dos aguas = misma superficie, media
+    /* En una fija a dos aguas los dos planos son +tilt y −tilt: su |θ| es el
+       mismo, así que basta el primero y no hay que promediar signos que se
+       anulan.
+       La máscara es `gh>0` y NO la del bucle (`elevación>0`) a propósito: el
+       careo del core promedia sobre GHI>0, y en el filo del día los dos
+       criterios no seleccionan los mismos pasos — con θ grande a sol rasante
+       eso movía la media 0,17°, suficiente para una alarma falsa. Igualarlas
+       por construcción cuesta una condición y evita discutirlo cada vez. */
+    if(gh>0){ thAbs+=Math.abs(planos[0]); nDia++; thSerie.push(planos[0]); }
+    else thSerie.push(null);
     neta+=sN*dtH/1000; ideal+=sI*dtH/1000;
     mes[M.t[i].getUTCMonth()]+=sN*dtH/1000;
   }
-  return {neta:neta, ideal:ideal, mes:Array.from(mes), gcr:gcr, pitch:pitch, tilt:(spec.fam==='tracker'?null:tilt)};
+  return {neta:neta, ideal:ideal, mes:Array.from(mes), gcr:gcr, pitch:pitch,
+          thetaAbs:(nDia>0?thAbs/nDia:0), nDia:nDia, thetaSerie:thSerie,
+          tilt:(spec.fam==='tracker'?null:tilt)};
 };
 
 /* Tilt óptimo: barrido grueso 0..60 cada 5° y fino ±4° cada 1°, la misma
@@ -1284,6 +1305,7 @@ FIS.compara=function(keys,M,cfg){
       tilt:(spec.fam==='tracker'?null:(tilt!=null?tilt:r.tilt)),
       tiltOpt:!!spec.tiltOpt, tiltSinSombra:tiltSin,
       suelo:r.neta*r.gcr,
+      thetaAbs:r.thetaAbs, nDia:r.nDia, thetaSerie:r.thetaSerie,
       transp:ghi>0?((r.neta/ghi-1)*100):NaN,
       sombra:r.ideal>0?((1-r.neta/r.ideal)*100):0});
     if(spec.sinSombra)avisos.push('«'+spec.label+'» va SIN sombra entre filas: su POA es un techo, '+
