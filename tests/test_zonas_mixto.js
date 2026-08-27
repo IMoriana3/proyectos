@@ -118,6 +118,7 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   const mask = await page.evaluate(() => {
     // MDT sintético 24×24 sobre un bbox MUCHO mayor que la parcela, con
     // pendiente creciente hacia el este para que haya tres bandas.
+    const _prev = { DEM: window.DEM, PARCEL: window.PARCEL, HOLES: window.HOLES };
     const n = 24, lat0 = 41.560, lon0 = -0.820, paso = 0.0020;
     const lats = [], lons = [], z = [];
     for (let i = 0; i < n; i++) { lats.push(lat0 + i * paso); lons.push(lon0 + i * paso); }
@@ -137,6 +138,7 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     let fuera = 0, vert = 0;
     p.zonas.forEach(zz => zz.coords.forEach(q => { vert++;
       if (q[0] < lonMin - tol || q[0] > lonMax + tol || q[1] < latMin - tol || q[1] > latMax + tol) fuera++; }));
+    window.DEM = _prev.DEM; window.PARCEL = _prev.PARCEL; window.HOLES = _prev.HOLES;
     return { nZonas: p.zonas.length, vertices: vert, fuera,
              montajes: Array.from(new Set(p.zonas.map(zz => zz.mount))).sort(),
              noDesarrollable: p.areaNoDesarrollable };
@@ -206,7 +208,8 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
    * Lo destapó portar el recorte a Python (SolarGPTfull#166), donde la linde
    * es argumento OBLIGATORIO. */
   const sinLinde = await page.evaluate(() => {
-    const PARCEL_prev = window.PARCEL, PARCELAS_prev = window.PARCELAS;
+    const PARCEL_prev = window.PARCEL, PARCELAS_prev = window.PARCELAS,
+          DEM_prev = window.DEM;   // el stub sin `z` reventaría a los bancos de después
     window.PARCEL = null; window.PARCELAS = [];
     // DEM sintético mínimo: 4×4 celdas, llano — con parcela saldría zona.
     window.DEM = { lats: [41.570, 41.572, 41.574, 41.576],
@@ -217,6 +220,7 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     const prop = window.zonasPorPendiente(
       pend, { trkEw: 10, trkNs: 15, fijaEw: 12, fijaNs: 12 }, 1);
     window.PARCEL = PARCEL_prev; window.PARCELAS = PARCELAS_prev;
+    window.DEM = DEM_prev;
     return { msk: msk, sinParcela: !!(prop && prop.sinParcela),
              nZonas: prop && prop.zonas ? prop.zonas.length : -1 };
   });
@@ -313,6 +317,100 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     linde.avisoLinde);
   check('setback-linde · la fija aporta kWp al reparto por montaje',
     linde.kwpFija > 0);
+
+
+  /* ── EL FILTRO DE PENDIENTE JUZGA CON EL MONTAJE DE LA ZONA ────────────
+   * «El filtro de pendiente excluye el 100 % de la parcela» sobre una zona
+   * FIJA que el propio reparto declaró apta a 25°: el mixto congelaba un
+   * solo exclTopo en el cfg —el del montaje DEL SELECTOR— y todas las zonas
+   * lo heredaban. DEM sintético: rampa de ~10° N-S, entre el límite del
+   * tracker (5°) y el de la fija (25°). */
+  const filtro = await page.evaluate(() => {
+    const antes = { dem: window.DEM, par: window.PARCEL, hol: window.HOLES,
+      te: $('slopeTrkEw').value, tn: $('slopeTrkNs').value,
+      fe: $('slopeFijaEw').value, fn: $('slopeFijaNs').value,
+      off: $('demOff').checked, sel: $('mount').value };
+    try {
+      $('slopeTrkEw').value = '5'; $('slopeTrkNs').value = '5';
+      $('slopeFijaEw').value = '25'; $('slopeFijaNs').value = '25';
+      $('demOff').checked = false;
+      $('mount').value = 'tracker';                 // el selector, en TRACKER
+      const n = 8, lats = [], lons = [], z = [];
+      for (let i = 0; i < n; i++) { lats.push(41.570 + i * 0.0008); lons.push(-0.800 + i * 0.0008); }
+      const dyM = 0.0008 * 110540;                   // ~88 m por celda
+      for (let r = 0; r < n; r++) { const f = [];
+        for (let c = 0; c < n; c++) f.push(r * dyM * Math.tan(10 * Math.PI / 180));
+        z.push(f); }                                  // rampa 10° hacia el norte
+      window.DEM = { lats, lons, z };
+      // la parcela manda: celdasExcluidas solo juzga celdas DENTRO de ella
+      window.PARCEL = [[-0.801, 41.569], [-0.794, 41.569], [-0.794, 41.576], [-0.801, 41.576]];
+      window.HOLES = [];
+      const trk = celdasExcluidas('tracker').length;
+      const fija = celdasExcluidas('fixed').length;
+      const porDefecto = celdasExcluidas().length;   // sin arg: el selector
+      return { trk, fija, porDefecto };
+    } finally {
+      window.DEM = antes.dem; window.PARCEL = antes.par; window.HOLES = antes.hol;
+      $('slopeTrkEw').value = antes.te; $('slopeTrkNs').value = antes.tn;
+      $('slopeFijaEw').value = antes.fe; $('slopeFijaNs').value = antes.fn;
+      $('demOff').checked = antes.off; $('mount').value = antes.sel;
+    }
+  });
+  check('filtro · a 10° el TRACKER (lim 5°) excluye celdas', filtro.trk > 0,
+    JSON.stringify(filtro));
+  check('filtro · la FIJA (lim 25°) NO pierde ni una', filtro.fija === 0,
+    filtro.fija + ' celdas excluidas con limite de sobra');
+  check('filtro · sin argumento sigue mandando el selector (camino de un montaje)',
+    filtro.porDefecto === filtro.trk);
+  // y computaMixto se lo pasa POR ZONA, no congelado del cfg
+  const src = await page.evaluate(() => computaMixto.toString());
+  check('filtro · computaMixto pide celdasExcluidas(z.mount)',
+    src.indexOf('celdasExcluidas(z.mount)') !== -1);
+
+  /* La escena de la captura: el cfg llega con el exclTopo CONGELADO del
+   * selector (tracker a 5°) y una zona entera es FIJA sobre 10°. Con el bug,
+   * la zona hereda esas exclusiones y muere «100 % excluida»; arreglado,
+   * planta mesas. */
+  const vive = await page.evaluate(() => {
+    const antes = { dem: window.DEM, par: window.PARCEL, hol: window.HOLES,
+      te: $('slopeTrkEw').value, tn: $('slopeTrkNs').value,
+      fe: $('slopeFijaEw').value, fn: $('slopeFijaNs').value,
+      off: $('demOff').checked, sel: $('mount').value };
+    try {
+      $('slopeTrkEw').value = '5'; $('slopeTrkNs').value = '5';
+      $('slopeFijaEw').value = '25'; $('slopeFijaNs').value = '25';
+      $('demOff').checked = false; $('mount').value = 'tracker';
+      const n = 8, lats = [], lons = [], z = [];
+      for (let i = 0; i < n; i++) { lats.push(41.570 + i * 0.0008); lons.push(-0.800 + i * 0.0008); }
+      const dyM = 0.0008 * 110540;
+      for (let r = 0; r < n; r++) { const f = [];
+        for (let c = 0; c < n; c++) f.push(r * dyM * Math.tan(10 * Math.PI / 180));
+        z.push(f); }
+      window.DEM = { lats, lons, z };
+      const PAR = [[-0.7995, 41.5705], [-0.7950, 41.5705],
+                   [-0.7950, 41.5750], [-0.7995, 41.5750]];
+      window.PARCEL = PAR; window.HOLES = [];   // el filtro juzga DENTRO de la parcela
+      const cfg = { coords: PAR, holes: [], exclusions: [], mount: 'tracker', table: '1V',
+        mods: [28], modLen: 2.382, modWid: 1.134, moduleWp: 590, pitch: 6, setback: 0,
+        panelAz: 90, bifila: false, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5,
+        roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4, mode: 'adaptive',
+        minStructs: 1, rowOffset: 'none', alignGrid: false, center: true,
+        exclTopo: celdasExcluidas(), mdtFracTh: 0.35 };   // congelado del SELECTOR
+      const R = computaMixto(cfg, [
+        { nombre: 'fija', coords: PAR, holes: [], mount: 'fixed', pitch: 4 }]);
+      return { frozen: cfg.exclTopo.length,
+               mesas: R.porZona[0] ? R.porZona[0].structures : -1 };
+    } finally {
+      window.DEM = antes.dem; window.PARCEL = antes.par; window.HOLES = antes.hol;
+      $('slopeTrkEw').value = antes.te; $('slopeTrkNs').value = antes.tn;
+      $('slopeFijaEw').value = antes.fe; $('slopeFijaNs').value = antes.fn;
+      $('demOff').checked = antes.off; $('mount').value = antes.sel;
+    }
+  });
+  check('filtro · el cfg congelado del selector SÍ excluía terreno', vive.frozen > 0,
+    JSON.stringify(vive));
+  check('filtro · …y aun así la zona FIJA planta mesas (la captura del bug)',
+    vive.mesas > 0, vive.mesas + ' mesas');
 
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');

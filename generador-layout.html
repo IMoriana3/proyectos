@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.3</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.4</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -3524,14 +3524,19 @@ function mascaraParcelaDEM(){
 
 /* Celdas de LA PARCELA por encima de la pendiente máxima → anillos lon/lat que
    el motor resta como exclusión de TOPOGRAFÍA. */
-function celdasExcluidas(){
+function celdasExcluidas(mZona){
   if(!DEM||$('demOff').checked)return [];
   var P=pendientesDEM(); if(!P)return [];
   /* El criterio ya no es un umbral GLOBAL sobre la pendiente total: es el del
      MONTAJE, con sus dos ejes. Un seguidor aguanta mucha N-S y poca E-O, y
      una pendiente total no distingue las dos — con el umbral único, terreno
-     que el seguidor monta sin problema salía excluido y al revés. */
-  var m=montajeAct(), L=limPendDe(m); if(!(L.ew>0&&L.ns>0))return [];
+     que el seguidor monta sin problema salía excluido y al revés.
+     `mZona` OPCIONAL (2026-08-27, «el filtro de pendiente excluye el 100 %
+     de la parcela» sobre una zona FIJA): el layout mixto congela un solo
+     `exclTopo` en el cfg y todas las zonas heredaban las exclusiones del
+     montaje DEL SELECTOR — la fija que el reparto declaró apta a 25° moría
+     filtrada a 5°. Cada zona pide ahora las celdas de SU montaje. */
+  var m=mZona||montajeAct(), L=limPendDe(m); if(!(L.ew>0&&L.ns>0))return [];
   var n=P.n, dLat=(DEM.lats[1]-DEM.lats[0])/2, dLon=(DEM.lons[1]-DEM.lons[0])/2, out=[];
   var M=mascaraParcelaDEM();
   for(var r=0;r<n;r++)for(var c=0;c<n;c++){
@@ -3971,7 +3976,10 @@ function computaMixto(cfg, zonas){
     var r=LAY.compute(Object.assign({},cfg,{
       coords:z.coords, holes:z.holes||[],
       mount:z.mount, pitch:z.pitch!=null?z.pitch:cfg.pitch,
-      setback:(_parL&&_sbL>0)?0:cfg.setback
+      setback:(_parL&&_sbL>0)?0:cfg.setback,
+      // el filtro de pendiente juzga con los limites del montaje DE LA ZONA,
+      // no con los del selector: sin esto la fija muere filtrada a lo tracker
+      exclTopo:(typeof celdasExcluidas==='function')?celdasExcluidas(z.mount):(cfg.exclTopo||[])
     }));
     _filtraLinde(r,z);
     return r;
@@ -4301,7 +4309,7 @@ function pintar(res,fuente){
   if(st.center_shift_m&&(st.center_shift_m[0]||st.center_shift_m[1]))
     extra.push('centrado Δx='+st.center_shift_m[0].toFixed(1)+' m, Δy='+st.center_shift_m[1].toFixed(1)+' m');
   $('foot').innerHTML=st.structures
-    ? ('Implantación de <b>'+fmt(st.structures)+'</b> mesas en <b>'+fmt(st.rows)+'</b> filas · pitch '+st.pitch_m+' m · setback '+st.setback_m+' m · UTM '+(st.epsg||'—')+
+    ? ('Implantación de <b>'+fmt(st.structures)+'</b> mesas en <b>'+fmt(st.rows)+'</b> filas · pitch '+(st.pitch_m==null?'por zona':st.pitch_m+' m')+' · setback '+(st.setback_m==null?'en la linde':st.setback_m+' m')+' · UTM '+(st.epsg||'—')+
        (extra.length?(' · '+extra.join(' · ')):'')+'.')
     : 'No cabe ninguna estructura con estos parámetros.';
   ['expGeo','expDxf','expKml','d3Btn','expHincas','expBoq','expXyz','expDae','btnPitchBanda']
