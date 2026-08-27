@@ -78,6 +78,10 @@ ESTRUCTURAS = ["fija_optima", "fija_proyecto", "fija_ew",
 PITCH_M, ANCHO_M = 6.00, 2.382
 ALBEDO, TILT_PROYECTO, MAX_ANGLE = 0.20, 25.0, 55.0
 PENDIENTE = 8.0        # pendiente del terreno ⊥ a las filas, en grados
+#: ¿Puede el eje cruzar la horizontal backtrackeando («ir a contrasol»)? Es el
+#: defecto del core —lo que `pvlib` hace— y el golden lo declara para que el
+#: banco pueda poner la ficha en el mismo sitio en vez de tolerar la diferencia.
+PERMITIR_CONTRASOL = True
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -357,7 +361,8 @@ def main() -> int:
         meteo, LAT, LON, structures=ESTRUCTURAS, albedo=ALBEDO,
         gcr=ANCHO_M / PITCH_M, collector_height_m=ANCHO_M,
         tilt_proyecto_deg=TILT_PROYECTO,
-        cross_axis_slope_deg=PENDIENTE)
+        cross_axis_slope_deg=PENDIENTE,
+        permitir_contrasol=PERMITIR_CONTRASOL)
 
     # El comparador normaliza a AÑO equivalente; el fixture guarda el bruto de
     # los doce días para que el JS no tenga que replicar esa normalización.
@@ -389,6 +394,11 @@ def main() -> int:
                 # la ficha lo lee de aquí. Escribirlo a mano sería una segunda
                 # fuente de verdad para el mismo número.
                 "broken_deg": float(CATALOGO["tracker_queb"].broken_deg),
+                # Con qué ajuste corrió el core. Antes esto no se declaraba y el
+                # banco no tenía forma de poner la ficha en el mismo sitio: de
+                # ahí venía el «hallazgo abierto» de 7,79° en θ, que no era una
+                # divergencia de física sino dos motores con distinta opción.
+                "permitir_contrasol": PERMITIR_CONTRASOL,
                 "structures": ESTRUCTURAS},
         "meteo": {
             "t": [t.strftime("%Y-%m-%dT%H:%M:%SZ") for t in idx],

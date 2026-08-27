@@ -388,6 +388,217 @@ de los FPS).
 
 ## Historial
 
+- **2026-08-27 · la cota del optimal, y el matiz que frena el 12,7 %** — la jerarquía completa de
+  Ayora sobre la métrica buena (POA anual, escalera incluida): **A 2673,8 → B +0,08 % → OPT +0,18 %
+  → C 3D +0,44 %**. El invariante se cumple (OPT ≥ B; C supera a OPT porque el optimal busca en una
+  familia restringida de una sola f). Conclusión ACOTADA: del ~7 % que se lleva la mesa rígida sobre
+  terreno que ondula, ni el árbitro que ve la escalera delante recupera más de +0,18 %. **Es
+  estructural, no de consigna.**
+
+  **Y el matiz antes de que nadie cite el 12,7 % a un cliente:** la escalera del modelo es el peor
+  caso POR DISEÑO DECLARADO — cualquier sombra >10⁻⁶ mata media mesa (con n=2). Una fila de células
+  son ~8 % de cuerda, así que los mordiscos de 1-5 % que dominan la ventana de backtracking puede que
+  ni disparen el diodo en el módulo real. **El 12,7 % es cota superior.** La mejora candidata:
+  `elecLoss` con umbral físico de fila de células — necesita el despiece eléctrico del módulo
+  (células a lo largo de la cuerda), que es ficha técnica, no campo.
+
+- **2026-08-27 · FE DE ERRATAS: las cifras «netas» contaban la escalera DOS veces** — y el
+  invariante fue quien lo cazó. Al acotar lo accionable con `energy-optimal` salió **−0,38 % por
+  debajo de pairwise**, que es imposible por construcción (el veto exacto garantiza ≥). La única
+  explicación posible era la métrica: y en efecto, **`poaPlant().plant` ya lleva la escalera de
+  diodos dentro** (`beam·(1−se)`), así que la «POA neta» calculada aparte la restaba otra vez.
+
+  **Quedan corregidas:** las ganancias de Ayora son **B +0,08 % y C +0,44 %** (las cifras «netas»
+  +0,153 %/+0,852 % publicadas en la entrada de v1.39 y en el PR #568 estaban infladas por el doble
+  descuento — la cifra simple YA incluía los diodos, no había una «lectura más favorable» escondida).
+  La pérdida por sombra de Ayora se expresa mejor sobre el bruto: **389 kWh/m²·año = 12,7 % del POA
+  bruto** (el «14,56 %» era la misma cantidad expresada sobre el neto). La ANATOMÍA de esa pérdida
+  (46 % tope de diseño · 53 % mesa rígida sobre terreno que ondula · estructura despreciable) no
+  cambia: son proporciones. Los números de San José (+0,17 %/+0,20 %) no estaban afectados.
+
+  La lección es vieja y merece repetirse: **cuando un resultado viola un invariante, el error está
+  en la medición, no en el invariante** — y tener el invariante escrito es lo que convirtió un doble
+  descuento silencioso en una alarma que sonó a la primera.
+
+- **2026-08-27 · «A por ellos»: los tres pendientes, cerrados en una tarde** — San José evaluable,
+  la anatomía completa del 14,56 % de Ayora, y el protocolo de campo. Tres investigaciones que
+  merecen quedar contadas enteras, porque en las tres el camino importó tanto como el destino.
+
+  **1 · San José: el 36,6 m era OTRA REFERENCIA VERTICAL, y no hizo falta topógrafo.** La pista
+  decisiva estaba en el asbuilt crudo: **8 seguidores cuyas dos filas del mismo tubo difieren
+  ~36,6 m** — seis entre 36,59 y 36,70 m, en puntas del parque separadas kilómetros, todas las
+  desviaciones positivas. Una constante repetida en sitios sin relación no es terreno ni error de
+  campo puntual: es una fila procesada con otra referencia vertical (36,6 m es además la ondulación
+  del geoide en Arequipa: huele a cota elipsoidal WGS84 colada entre ortométricas). Antes se probó y
+  descartó la hipótesis del cruce de asignación: solo 3 de 16 casaban con cotas de otras líneas, pero
+  el trío de x=360/373/385 en cadena llevó al asbuilt, y ahí estaba la firma con los ids del
+  proveedor (`TR-06_1-005-E` y compañía), listos para reclamar. **La corrección vive en
+  `cotas_asbuilt.py` y es declarada, nunca silenciosa**: bifila con filas a >3 m → se descarta la que
+  se aparta de los vecinos y se duplica la hermana (inc=1); fila suelta con el mismo síntoma → el
+  seguidor queda SIN MEDIR, porque mejor un hueco declarado que una cota con otra referencia
+  duplicada dos veces. Y el vano ancho dejó de ser rechazo — otro umbral afinado equivocándose:
+  `pairwise` usa el vano real por pareja, así que un par al doble de vano simula interacción casi
+  nula, que es la verdad si en medio hay un vial. **Resultado: APTA CON RESERVAS**, y el primer
+  número honesto: **B +0,17 % · C 3D +0,20 %** (POA, 4 días). Saneada, San José es mansa (desnivel
+  mediana 1,29°): el «máx 64°» era el dato con otra referencia. Los dos tests que exigían que San
+  José FALLARA cumplieron su función —eran el recordatorio de revisar el informe al corregir— y se
+  les dio la vuelta: ahora vigilan que la corrección no se deshaga.
+
+  **2 · Ayora: la anatomía del 14,56 %, con CUATRO hipótesis muertas y una que cuadra al decimal.**
+  Muertas, cada una con su test: pendientes sin configurar (B no lo recupera); emisores al tope
+  (0,09 %); residuo de tangencia del escalón (las sombras son reales: mediana 7-8 % de cuerda en 98
+  de 107 filas); y **la torsión axial como culpable — al revés: es PROTECTORA** (mesas rectas
+  sombrean 16-30 % contra 5-8 % de las reales, porque dos vecinas que siguen el mismo terreno local
+  mantienen su Δz pequeño; de paso, la primera versión del test rectificaba anclando la recta en s=0
+  y desplazaba mesas metros — el ancla va en el centro de masas de los tramos). **El mecanismo:** la
+  variación del desnivel local A LO LARGO del solape — mediana p5-p95 de Δz(n) dentro de cada
+  pareja: **0,27 m** — sobre una mesa RÍGIDA con un solo θ. Sombra esperada ≈ 0,27/(2·2,382·cos 45°)
+  = **8,0 % de cuerda**: lo medido. La anatomía final: **6,73 % receptor en tope (diseño) · 0,09 %
+  emisor en tope · 0,01 % estructura · 7,74 % mesa rígida sobre terreno que ondula** — irreducible
+  por consigna de un solo θ: la mesa no puede doblarse. La única palanca es retraerse de más donde
+  la escalera de diodos lo pague (lo que arbitra `energy-optimal`, cuya cota anual quedó corriendo).
+
+  **3 · El protocolo de la prueba de un seguidor** (`tools/protocolo_prueba_pendiente.mjs`) — un
+  protocolo que CALCULA, no un documento: elige el seguidor de más pendiente transversal de la NCU
+  con volcado de referencia (TCU 26 de NCU12, oeste −6,91 % / este +7,82 %), imprime los cuatro
+  registros exactos, predice la firma horaria (separación de **hasta 21,3°** solo en las ventanas de
+  backtracking — 213 veces la resolución del registro) y deja escrita la vuelta atrás (cuatro
+  ceros; riesgo mecánico nulo: los topes duros no se tocan). Cierra la última suposición sobre el
+  firmware: qué hace con 41098-41104 cuando no están a cero. QA 103.
+
+- **2026-08-27 · v1.39.3–v1.39.5 · la tarde en que «no va nada fluido», y las TRES causas** — con una
+  presentación delante y la página inusable en el navegador del usuario mientras aquí todo estaba en
+  verde. Tres arreglos encadenados, y una lección de diagnóstico que vale más que los tres.
+
+  **v1.39.3 — recálculo por fragmentos.** `computeDay` pasa a ser UN generador con dos caudales: el
+  arranque y los tests lo drenan en síncrono (semántica idéntica) y `recompute()` lo drena en
+  fragmentos de ~40 ms con `setTimeout(0)` — no `requestAnimationFrame`, que se pausa en pestañas en
+  segundo plano. Mientras se cocina el DAY nuevo, el VIEJO sigue vivo: la página responde con los
+  datos de antes, el testigo dice «calculando… N %», y si llega otro cambio a mitad un token invalida
+  la pasada — el último gana, como en un editor. Y la cota exacta `gMax` del terreno: el terreno
+  fantasma de v1.39 actuaba por accidente de salida rápida del marchador de rayos; al quitarlo, el
+  caso común pasó a ser «caminar el rayo entero (160 pasos) para concluir que no choca». El suelo
+  nunca supera la cota medida más alta, así que el rayo se corta ahí — corte exacto, no heurística,
+  y el oráculo de podas lo confirma.
+
+  **v1.39.4 — el 3D renderizaba en bucle SIEMPRE.** `loop3D` renderizaba la escena entera en cada
+  frame, incondicionalmente: 854 mesas con sombras PCF suaves y antialias, sesenta veces por segundo,
+  aunque nadie tocara nada. En una gráfica integrada eso arrastra la página COMPLETA — menús,
+  teclado, todo. Llevaba así desde v1.2. Ahora renderiza bajo demanda (`R3_DIRTY`): medido, de ~90
+  renders/1,5 s en reposo a 4 y silencio. Y blindaje del recálculo: si algo revienta a mitad, el
+  error se enseña EN PANTALLA en vez de dejar «calculando…» girando para siempre — que es
+  indistinguible de un cuelgue y no se puede diagnosticar por teléfono.
+
+  **v1.39.5 — la causa de verdad, y la encontró el usuario.** «Pon que de base no cargue la
+  configuración que tiene ahora de topografía, por probar.» La página guardaba TODO el estado en
+  `localStorage` y lo restauraba al abrir — incluida una implantación de 80 filas y los
+  OPTIMIZADORES ENCENDIDOS si así quedó la última sesión. El primer cálculo del arranque es síncrono
+  (aún no hay DAY), así que la página se congelaba decenas de segundos antes de poder tocar nada:
+  «falla en la base, no me deja ni simular». E invisible para el diagnóstico, porque dependía del
+  navegador de CADA uno — a quien probaba en limpio le iba bien. Ahora el arranque parte SIEMPRE de
+  la implantación por defecto y las políticas de fábrica; sólo se restauran las preferencias ligeras
+  (emplazamiento, fecha, atmósfera). `?limpio` en la URL borra el estado guardado. Verificado
+  envenenando el localStorage a propósito con ese mismo escenario: arranque en 1,2 s hasta en el
+  banco (~20× más lento que un portátil).
+
+  **La lección, para la próxima vez:** cuando «aquí verde, allí roto», la diferencia suele ser el
+  ESTADO PERSISTIDO del cliente — el banco de pruebas nace limpio y el navegador del usuario arrastra
+  meses. Tres arreglos reales pero secundarios se hicieron persiguiendo un síntoma cuya causa era un
+  `localStorage` envenenado; la hipótesis correcta la trajo el usuario. QA 102.
+
+- **2026-08-27 · v1.39** — **el contador se inventaba TERRENO donde no había mesa que lo midiera.**
+  Sale de perseguir una pregunta del cliente —«¿sobre qué estás midiendo, cuál es la base?»— hasta
+  el fondo. Al desglosar la pérdida por sombra apareció que Ayora tenía **sombra de terreno con el sol
+  a 44°**, en un bloque con **0,61 % de pendiente**. Con el sol a 44° el rayo sube 97 cm por metro y
+  ese terreno sube 0,6 cm: es geométricamente imposible.
+
+  **El fallo.** Cuando el marchador de rayos preguntaba la cota del suelo en un punto, `cot(fila,
+  norte)` se pegaba al extremo del tramo más cercano **si esa fila no tenía mesa en esa coordenada
+  norte**. En Ayora ese tramo llegaba a estar **a 376 m**, y con inclinación N-S real eso son metros
+  de cota inventada:
+
+  ```
+  en norte −543,4 m:
+    fila 34  tiene tramo ahí        →  cota  6,60 m   (real)
+    fila 33  su tramo está a 376 m  →  cota 15,99 m   (fabricada)
+    gzOf interpola                  →  «suelo» a 10,30 m
+  ```
+
+  El suelo salía **5,7 m por encima del módulo del que partía el rayo** y `terrBlocked` lo daba por
+  bloqueado. Pasa en toda planta con las filas escalonadas en norte, que son casi todas.
+
+  **El arreglo.** `cotD` devuelve también a qué distancia de un tramo REAL está la consulta, y `gzOf`
+  sólo deja votar a las filas que de verdad miden ese norte (tolerancia 5 m). Si ninguna lo mide, **no
+  se inventa suelo**: devuelve −∞ y el rayo pasa. La cota de los PLANOS no cambia — ahí el norte cae
+  dentro del tramo por construcción.
+
+  **Efecto medido** (Ayora, 21-mar, true3d): el aporte del terreno a la sombra pasa de **+2,05 pp a
+  +0,003 pp**, y la sombra media del día de **3,81 % a 1,77 %**. **Estaba inflada 2,2×.**
+
+  **Por qué el oráculo no lo cazó: porque llevaba SU PROPIA COPIA del mismo `cot`.** Un oráculo que
+  duplica el defecto no puede detectarlo. Ésa es la lección que se lleva la casa, y no es de este bug:
+  es de cómo se escriben los oráculos. Arreglado también en la batería, escrito aparte — lo que tiene
+  que coincidir es el RESULTADO, no el código. Los dos vuelven a casar.
+
+  **Y la base, contestada como debía haberse contestado desde el principio.** El titular era «+0,05 %»
+  sobre POA, que es la lectura menos favorable de las disponibles. Sobre **POA de planta 2 676
+  kWh/m²·año** (12 días tipo ponderados por días del mes) y **neta tras la escalera de diodos 2 286**:
+  escribir las pendientes vale **+0,153 %** y calcular en la NCU **+0,852 %** — se triplica y se dobla,
+  porque el escalón de subcadena amplifica toda mejora de sombra. Los porcentajes apenas se movieron
+  con el arreglo del terreno (el fantasma afectaba a las tres configuraciones por igual y se cancelaba
+  en la división); lo que estaba mal era el absoluto. **Y ninguna de las dos cifras es energía**: son
+  irradiancia efectiva de plano, les falta rendimiento de módulo y BOS.
+
+- **2026-08-27 · v1.39 · el volcado real de una NCU entera** — `tools/cruce_ncu_dia.mjs`. NCU12 de
+  Ayora, 7-ago-2026, 50 seguidores, **409 234 muestras a 10 s**. Cierra la objeción que llevaba
+  semanas abierta: *«¿podemos sacar pendientes para una política que no podemos simular?»*.
+
+  **(a) La TCU SÍ hace backtracking**: de 17:30 a 19:00 UTC la bandera se levanta y el objetivo se
+  aplana 55 → 30,8 → 18,7 → 9,2 → 0,9, apartándose del astronómico, que se quedaría clavado en el tope.
+  **(b) Pero lo hace PLANO**: apertura p95−p5 entre seguidores **0,08°**, y el modelo con los 50 TCU
+  llevando la misma plantilla predice **0,000° exacto** (con las pendientes configuradas predeciría
+  6-13°). **(c) El vano sí está bien**: ajustando cuál explica los ángulos sale **6,00 m**, el medido.
+  **(d) La política que explica la planta es `pairwise` con pendientes a cero, a 0,59°** de desviación
+  mediana en los 25 instantes que discriminan, ganando por 1,82° a la siguiente.
+
+  **Tres errores propios, los tres cazados y con prueba:**
+  · **Un «desfase de reloj de 4 minutos» que era MI BINNING.** La rejilla se quedaba con la última
+  muestra del tramo, así que lo que el informe llamaba «12:00» era el dato de las 12:04:50. Ese
+  desplazamiento se disfrazaba de física —1,15° de sesgo constante, parecidísimo a la convergencia de
+  meridianos de Ayora (1,161°), o sea con una explicación física plausible esperando a que la
+  adoptara—. Leyendo al instante exacto el residuo cae a **0,034° RMS** y no queda desfase ninguno.
+  · **El veredicto promediaba sobre TODAS las horas**, y con sol alto las cuatro políticas mandan el
+  mismo ángulo: la diferencia quedaba enterrada. Es el mismo vicio que el informe lleva advirtiendo
+  desde el primer volcado, aplicado a sí mismo. Ahora sólo votan los instantes con abanico ≥ 1°.
+  · **El veredicto de dispersión era una RAZÓN a secas.** Con 6 seguidores salía ×9 y declaraba
+  «backtracking COORDINADO» en una planta que reparte el mismo ángulo a todos — una conclusión FALSA
+  sobre la planta. El registro se cuantiza a 0,1°: una razón entre dos números en el suelo de
+  resolución no dice nada. Ahora hay suelo absoluto de 1°.
+
+  **Y una lección que costó un susto:** la mañana del 7-ago los seguidores apuntaban al tope OESTE con
+  el sol saliendo por el ESTE, tres horas. Parecía un defecto de control grave. El log de eventos dice
+  que era `admin` desde la interfaz web: posición de seguridad 7 a las 06:28, posición 1 a las 07:23,
+  liberada a las 07:47. Mantenimiento. **Una herramienta que juzga el comportamiento de una planta sin
+  leer su log de eventos acaba culpando a la planta de lo que hizo una persona.** Ahora lo lee, lo
+  publica, y si el volcado no trae log lo DICE en vez de callárselo.
+
+- **2026-08-27 · v1.39 · la página moría EN BLANCO si `sol.js` no llegaba** — «no me deja entrar al
+  html, no carga», y era una pantalla en blanco sin un solo mensaje. El fichero estaba bien (rama y
+  `main` cargan las dos limpias, 288 pasos, cero errores; Pages desplegando en verde) y resultó ser
+  caché del navegador. Pero **un visor que se queda mudo cuando le falta una dependencia no se puede
+  diagnosticar desde el otro lado del teléfono**, y eso sí es nuestro: desde que el sol salió a
+  `sol.js` la página tiene una dependencia externa. Ahora sale un aviso con la causa y los tres pasos
+  (recarga forzando caché · abrir `sol.js` a pelo para ver si da 404 · servir por HTTP si se abrió con
+  `file://`).
+
+  **Y una sutileza de JavaScript que merece quedar escrita: el primer aviso SE MATABA A SÍ MISMO.**
+  Usaba `typeof VER` para mostrar la versión, y `const VER` vive en el ámbito léxico global: la
+  ligadura existe desde antes de ejecutarse el script. Si ese script muere antes de inicializarla
+  —que es EXACTAMENTE el caso que el aviso cubre— la variable queda en zona muerta temporal y **hasta
+  `typeof` lanza ReferenceError**. El guard reventaba justo en el escenario para el que se escribió.
+  Ahora lee `VER` dentro de un `try`. De paso, `backtracking.html` pedía `sol.js?v=0.1.0` y
+  `overcast.html` `?v=0.2.0` siendo el mismo fichero: alineadas, con test que falla si divergen. QA 98.
+
 - **2026-08-26 · v1.38** — **la FICHA que se escribe en la TCU, por fin cargable en el simulador.**
   Tercera posición del mando: *«La FICHA que se escribe en la TCU (por seguidor, vecina crítica)»*.
   Cierra la incoherencia de v1.37 — se entregaban números que nunca habían entrado en el simulador —
