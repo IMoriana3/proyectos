@@ -1693,13 +1693,18 @@ const SONDA = `(() => {
     const mide = (k, eje) => {
       const B = BLOQUES.find(b => b.key === k), u = B.filas[0];
       const zs = [];
-      u.traverse(o => { if (o.isMesh && o.geometry.parameters &&
-        Math.abs(o.geometry.parameters.width - 0.18) < 1e-6 &&
-        Math.abs(o.geometry.parameters.height - Seguidor.DIMS.postH) < 1e-6)
+      /* Las hincas que dibuja la ficha son hijas DIRECTAS de la fila (o de cada
+         paño en las dos aguas); las del modelo de la casa van por dentro. Y ya
+         no se distinguen por su ALTURA —ahora la altura va en la escala, porque
+         cada una se ajusta al terreno bajo su pie—, así que se distinguen por
+         dónde cuelgan y por su sección. Buscándolas por `height === postH` se
+         encontraban los postes del modelo: 7 mal repartidos en vez de 8. */
+      const cand = [];
+      u.children.forEach(o => { if (o.isMesh) cand.push(o);
+        else if (o.children) o.children.forEach(x => { if (x.isMesh) cand.push(x); }); });
+      cand.forEach(o => { const pr = o.geometry.parameters || {};
+        if (Math.abs(pr.width - 0.18) < 1e-6 || Math.abs(pr.width - 0.16) < 1e-6)
           zs.push(eje === 'z' ? o.position.z : o.position.x); });
-      // la fija las lleva dentro de la mesa: se buscan por su caja
-      if (!zs.length) u.traverse(o => { if (o.isMesh && o.geometry.parameters &&
-        Math.abs(o.geometry.parameters.width - 0.16) < 1e-6) zs.push(o.position.x); });
       // el seguidor tiene además la hinca del accionamiento en el centro, que la
       // pone el propio modelo (`soporte`): cuenta para el vano
       if (eje === 'z') zs.push(0);
