@@ -348,40 +348,47 @@ check('el orden entre estructuras es el mismo', ordJS === ordCore, '\n     JS   
 //     separa a Hay-Davies de Perez. Apretarla más sería un test que se pone
 //     rojo por el modelo, no por un bug. Se declara en vez de fingir que cubre
 //     lo que no cubre.
-/* ── CIELO-01: las tolerancias, otra vez, y ahora de verdad pequeñas ────────
-   Al portar Perez a la ficha —antes Hay-Davies— el hueco de transposición
-   desaparece. Hueco de POA, ficha vs core:
+/* ── LAS TOLERANCIAS, Y POR QUÉ SE MIDEN SOLAS (CENTINELA-01) ──────────────
+   Hueco de POA, ficha vs core, incidencia a incidencia:
 
-                        antes SOL-01   tras SOL-01   tras CIELO-01
-       fija_optima          0,92 %       0,873 %        0,003 %
-       fija_proyecto        0,81 %       0,576 %        0,001 %
-       fija_ew              1,36 %       0,680 %        0,003 %
-       tracker_hsat         1,09 %       0,383 %        0,198 %
-       tracker_hsat_nobt    1,15 %       0,598 %        0,172 %
-       tracker_tsat         0,68 %       0,189 %        0,251 %
+                     antes SOL-01  tras SOL-01  tras CIELO-01  tras SOMBRA-01
+       fija_optima       0,92 %      0,873 %       0,003 %        0,003 %
+       fija_proyecto     0,81 %      0,576 %       0,001 %        0,001 %
+       fija_ew           1,36 %      0,680 %       0,003 %        0,003 %
+       tracker_hsat      1,09 %      0,383 %       0,198 %        0,009 %
+       tracker_hsat_nobt 1,15 %      0,598 %       0,172 %        0,035 %
+       tracker_tsat      0,68 %      0,189 %       0,251 %        0,000 %
 
-   Y el Δ% de las fijas baja a 0,005 pp, que es ruido de coma flotante.
+   Cuatro correcciones seguidas han bajado el hueco de 1,36 % a 0,035 %. Y ahí
+   está el fallo que este bloque arregla: el listón NO bajó con él.
 
-   LO QUE QUEDA, localizado con la cadena y no supuesto: la POA IDEAL —sin
-   sombra— coincide ya en TODAS las estructuras dentro de 0,004 %, seguidores
-   incluidos. Todo el residuo de los seguidores está en la SOMBRA: la ficha
-   reporta cero y el core 0,2 %, con el ángulo cuadrando a 0,067°. O sea que el
-   siguiente cuello de botella es `FIS.shade` contra `shaded_fraction1d`, no la
-   transposición ni el seguimiento.
+   Hasta aquí la holgura se vigilaba contra `HUECO_MEDIDO`, una COPIA A MANO
+   del hueco del día ({ poa_pct: 0,251, delta_pp: 0,304 }), y se exigía que el
+   listón no la superase por más de ×3. Como numerador y denominador se
+   apuntaban JUNTOS, la comprobación seguía verde mientras la física convergía:
+   el hueco real cayó a 0,035 % y la copia se quedó en 0,251, así que el ×3
+   declarado era en realidad **×14**. Un guardia que mide contra su propio
+   recuerdo no vigila nada.
 
-   Las tolerancias se ponen donde el careo aún puede vigilar: por encima del
-   0,251 % que hay y muy por debajo de lo que costaría un error de física. */
-const TOL_POA = 0.005, TOL_DELTA = 0.50;
-// Hueco medido con el golden al día. Si alguien afloja las tolerancias, esto
-// enseña contra qué se están comparando.
-const HUECO_MEDIDO = { poa_pct: 0.251, delta_pp: 0.304 };
-check('la tolerancia de Δ% no es gratuita: ' + TOL_DELTA + ' pp sobre un hueco real de ' +
-  HUECO_MEDIDO.delta_pp + ' pp (×' + (TOL_DELTA / HUECO_MEDIDO.delta_pp).toFixed(1) + ')',
-  TOL_DELTA / HUECO_MEDIDO.delta_pp < 3.0,
-  'con más de ×3 de holgura la comprobación deja de vigilar la física');
-check('la tolerancia de POA tampoco: ' + (TOL_POA * 100).toFixed(1) + ' % sobre ' +
-  HUECO_MEDIDO.poa_pct + ' % (×' + (TOL_POA * 100 / HUECO_MEDIDO.poa_pct).toFixed(1) + ')',
-  TOL_POA * 100 / HUECO_MEDIDO.poa_pct < 3.0);
+   Ahora el hueco se CALCULA en cada corrida, sobre las mismas seis estructuras
+   que el careo acaba de comparar. No puede quedarse atrás: si la física
+   converge otra vez, esto se pone rojo y pide que se apriete el listón, que es
+   exactamente lo que no pasó entre CIELO-01 y SOMBRA-01. */
+const TOL_POA = 0.001, TOL_DELTA = 0.10;
+const vivoPoa = Math.max(...C.structures.map(k => Math.abs(js[k].neta / core[k].poa_kwh_m2 - 1)));
+const vivoDelta = Math.max(...C.structures.map(k => Math.abs(js[k].delta - core[k].delta_pct)));
+/* La ventana: por debajo de ×2 el careo se pondría rojo con el primer
+   redondeo y acabaría subiéndose el listón para callarlo —que es la forma
+   elegante de actualizar un golden para poner el CI verde—; por encima de ×3
+   deja de vigilar la física. */
+check('la tolerancia de POA se mide sola: ' + (TOL_POA * 100).toFixed(1) + ' % sobre un ' +
+  'hueco VIVO de ' + (100 * vivoPoa).toFixed(4) + ' % (×' + (TOL_POA / vivoPoa).toFixed(1) + ')',
+  TOL_POA / vivoPoa >= 2 && TOL_POA / vivoPoa <= 3,
+  'TOL_POA ' + TOL_POA + ' contra ' + vivoPoa.toExponential(2) + ' medido ahora mismo');
+check('la de Δ% también: ' + TOL_DELTA + ' pp sobre un hueco VIVO de ' +
+  vivoDelta.toFixed(4) + ' pp (×' + (TOL_DELTA / vivoDelta).toFixed(1) + ')',
+  TOL_DELTA / vivoDelta >= 2 && TOL_DELTA / vivoDelta <= 3,
+  'TOL_DELTA ' + TOL_DELTA + ' contra ' + vivoDelta.toFixed(4) + ' medido ahora mismo');
 
 C.structures.forEach(k => {
   const a = js[k], b = core[k];
@@ -666,25 +673,42 @@ const cazadas = C.structures.filter(k => {
   return Math.abs(v.delta - b.delta_pct) >= TOL_DELTA ||
          Math.abs(v.poa / b.poa_kwh_m2 - 1) >= TOL_POA;
 });
-// Y aquí va un límite MEDIDO, no una promesa: de las seis estructuras, la
-// tolerancia de hoy solo caza `tracker_hsat_nobt`, que es la de deriva mayor
-// (1,120 pp). Las otras dos con sombra —`tracker_hsat` 0,499 pp y
-// `tracker_tsat` 0,448 pp— se quedan por debajo del listón, y **no se puede
-// bajar más**: el hueco irreducible entre Hay-Davies y Perez es 0,367 pp, así
-// que cazarlas dejaría ×1,3 de holgura y el careo se pondría rojo por el
-// modelo en vez de por un bug.
-//
-// Lo que esto SÍ garantiza: que una deriva de esta clase pone el careo en ROJO.
-// Con una basta para parar el merge, que es para lo que existe. Escrito así
-// —con el número— para que nadie lea «la tolerancia cubre la deriva» y se
-// quede tranquilo con las otras dos.
-//
-// (Esta comprobación se escribió prediciendo ≥2 y salió 1. Se corrige la
-// predicción, no el listón.)
-check('CENTINELA: la tolerancia de hoy CAZA el golden viejo de v1.63 (' +
-  cazadas.length + ' de ' + C.structures.length + ' estructuras: ' +
-  (cazadas.join(', ') || '—') + ')',
-  cazadas.length >= 1, 'ninguna — la deriva volvería a colarse entera');
+/* Este párrafo decía, con números: «la tolerancia de hoy solo caza
+   `tracker_hsat_nobt` (1,120 pp); las otras dos —`tracker_hsat` 0,499 pp y
+   `tracker_tsat` 0,448 pp— se quedan por debajo, y NO SE PUEDE BAJAR MÁS: el
+   hueco irreducible entre Hay-Davies y Perez es 0,367 pp». Las tres cosas
+   dejaron de ser ciertas y el comentario siguió ahí (CENTINELA-01):
+
+   · la ficha ya no usa Hay-Davies —CIELO-01 le puso Perez—, así que el hueco
+     que justificaba el suelo del listón NO EXISTE;
+   · las derivas se miden contra `core[k]`, y el core se movió: `tracker_hsat`
+     no deriva 0,499 pp sino 2,3375, y `tracker_tsat` 2,0507. El comentario
+     seguía citando la aritmética de otro core;
+   · por eso el centinela ya no caza una de seis: caza TRES.
+
+   Un comentario obsoleto que argumenta por qué un listón no puede bajar es
+   peor que no tener comentario: es el sitio exacto donde se esconde un bug.
+
+   Lo que se afirma ahora está MEDIDO y se recalcula en cada corrida: el
+   centinela caza TODAS las estructuras que de verdad derivaron. Las tres que
+   no caza no son fallos del listón —no derivaron: 1,4e-5 relativo la peor, o
+   sea 0,0014 %—, porque el cambio de v1.63 (sombrear el circunsolar) sólo
+   podía mover a las que tienen sombra. */
+const DERIVA_NULA = 1e-4;   // por debajo de esto no hay nada que cazar
+const derivaron = C.structures.filter(k => {
+  const v = GOLDEN_VIEJO_v163[k], b = core[k];
+  return Math.abs(v.poa / b.poa_kwh_m2 - 1) >= DERIVA_NULA;
+});
+check('CENTINELA: caza TODAS las estructuras que derivaron de verdad (' +
+  cazadas.length + ' de ' + derivaron.length + ': ' + (cazadas.join(', ') || '—') + ')',
+  derivaron.length > 0 && derivaron.every(k => cazadas.includes(k)),
+  'derivaron ' + derivaron.join(', ') + ' — cazó ' + (cazadas.join(', ') || 'ninguna'));
+check('  y las que NO caza es porque no derivaron (peor ' +
+  (100 * Math.max(...C.structures.filter(k => !derivaron.includes(k))
+    .map(k => Math.abs(GOLDEN_VIEJO_v163[k].poa / core[k].poa_kwh_m2 - 1)))).toFixed(4) + ' %)',
+  C.structures.filter(k => !derivaron.includes(k))
+    .every(k => Math.abs(GOLDEN_VIEJO_v163[k].poa / core[k].poa_kwh_m2 - 1) < DERIVA_NULA));
+
 // Y el mutante del centinela: con la tolerancia ANTERIOR no cazaba ninguna, que
 // es exactamente lo que pasó. Si esto falla, el centinela no mide lo que dice.
 const cazadasAntes = C.structures.filter(k => {
