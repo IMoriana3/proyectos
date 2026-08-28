@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.10</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.11</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -256,7 +256,7 @@ canvas.panning{cursor:grabbing}
       <h2><span class="ic">▤</span> Estructura</h2>
       <div class="two">
         <div class="field"><label>Montaje</label>
-          <select id="mount"><option value="tracker">Tracker (1 eje)</option><option value="fija">Fija</option></select></div>
+          <select id="mount"><option value="tracker">Tracker (1 eje)</option><option value="fija">Fija</option><option value="mixto">Mixto (fija + tracker)</option></select></div>
         <div class="field"><label>Tabla</label>
           <select id="table"><option>1V</option><option>2V</option><option>3V</option><option>4V</option><option>1H</option><option>2H</option><option>3H</option><option>4H</option></select></div>
       </div>
@@ -289,6 +289,11 @@ canvas.panning{cursor:grabbing}
           <div class="field"><label>Pendiente máx. N-S °</label><input id="slopeTrkNs" type="number" step="0.5" value="15">
             <div class="tip">A lo largo del eje: la absorbe escalonando hincas, así que tolera más.</div></div>
         </div>
+      <div class="two">
+        <div class="field"><label id="axisLbl">Azimut del eje °</label><input id="axis" type="number" step="1" value="0"></div>
+        <div class="field"><label>Azimut de filas °</label><input id="panelAz" type="number" step="1" value="90">
+          <div class="tip" id="azTip">Auto desde el eje.</div></div>
+      </div>
         <div class="two">
           <div class="field"><label>Tipo de tracker</label>
             <select id="bifila"><option value="1">Bifila (2 sub-filas)</option><option value="0">Monofila</option></select></div>
@@ -396,6 +401,10 @@ canvas.panning{cursor:grabbing}
       <p class="note" style="margin-top:0"><b>El pitch y las pendientes máximas de cada montaje están en su
         cuadro de <span style="white-space:nowrap">▦ Estructura</span></b> —los dos cuadros están a la vista, el del otro montaje sale atenuado—. Aquí no se repiten: dos casillas para lo mismo acaban discrepando, y el que las
         lee no sabe cuál manda.</p>
+      <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0">
+        <input type="checkbox" id="mixRellenoFija" checked style="margin-top:3px">
+        <span class="tip" style="margin:0">Rellenar con <b>FIJA</b> los huecos donde el tracker no entra por geometría (2ª pasada sobre el sobrante real: mesas colocadas + su pasillo de pitch).</span>
+      </label>
       <div class="two">
         <div class="field"><label>Área mín. zona TRACKER (m²)</label><input id="mixMinArea" type="number" step="100" value="0"></div>
         <div class="field"><label>Área mín. zona FIJA (m²)</label><input id="mixMinAreaFija" type="number" step="50" value="0">
@@ -419,11 +428,6 @@ canvas.panning{cursor:grabbing}
         <div class="field"><label>Setback (m)</label><input id="setback" type="number" step="0.5" value="5"></div>
         <div class="field"><label>Modo</label>
           <select id="mode"><option value="aligned">aligned (canónico)</option><option value="adaptive">adaptive</option></select></div>
-      </div>
-      <div class="two">
-        <div class="field"><label id="axisLbl">Azimut del eje °</label><input id="axis" type="number" step="1" value="0"></div>
-        <div class="field"><label>Azimut de filas °</label><input id="panelAz" type="number" step="1" value="90">
-          <div class="tip" id="azTip">Auto desde el eje.</div></div>
       </div>
       <!-- A LA VISTA, no en avanzados: es la palanca que en parcelas con
            lindes diagonales cambia el campo un tercio (Larraga: 124 → 164
@@ -3123,32 +3127,34 @@ function pintaTerreno(){
 }
 
 /* ===== azimut de filas y campos por montaje ===== */
+/* TRES modos (petición del cliente, 2026-08-28): Fija / Tracker / Mixto.
+   El pane que no aplica se atenúa Y SE BLOQUEA («se pone gris y no deja
+   tocarla»); en Mixto los dos quedan plenos. SUSTITUCIÓN DECLARADA del
+   comportamiento v1.6.2 (ambos siempre editables): entonces no existía el
+   modo Mixto y editar los límites del otro montaje era la única puerta al
+   reparto — ahora esa puerta es el modo Mixto. */
+function habilitaPane(id, on){
+  var pane=$(id);
+  pane.style.opacity=on?'1':'0.45';
+  pane.style.pointerEvents=on?'':'none';
+  pane.querySelectorAll('input,select,button').forEach(function(el){el.disabled=!on;});
+}
 function syncAz(){
-  var tracker=$('mount').value==='tracker';
-  $('axisLbl').textContent=tracker?'Azimut del eje °':'Azimut módulos °';
+  var modo=$('mount').value;
+  var tracker=(modo==='tracker'||modo==='mixto');
+  $('axisLbl').textContent='Azimut del eje °';
   var ax=+$('axis').value;
-  $('panelAz').value=tracker?(((ax+90)%360)+360)%360:(((ax)%360)+360)%360;
-  $('azTip').textContent=tracker
-    ?'Filas a lo largo del eje (eje N-S 0° → filas N-S). Override manual solo para orientaciones especiales.'
-    :'Filas perpendiculares al azimut de módulos (Sur 180° → filas E-O).';
-  $('bifila').disabled=!tracker;
-  if(!tracker)$('bifila').value='0';
-  /* Los DOS panes SIEMPRE visibles (reporte del cliente, 2026-08-27: «si
-     quiero llenarlo de trackers y fija no tengo dónde seleccionar las
-     pendientes máximas de cada uno»). Con zonas mixtas hacen falta los
-     límites de AMBOS montajes a la vez, y esconder uno tras el selector era
-     esconder justo lo que el reparto necesita. El selector sigue mandando
-     sobre el layout de UN montaje: su pane va pleno y el otro, atenuado —
-     editable igual, que es de lo que se alimentan las zonas. Sin duplicar ni
-     una casilla: son los MISMOS inputs de siempre, solo que a la vista. */
-  $('paneTracker').style.opacity=tracker?'1':'0.55';
-  $('paneFija').style.opacity=tracker?'0.55':'1';
+  $('panelAz').value=(((ax+90)%360)+360)%360;
+  $('azTip').textContent='Filas a lo largo del eje (eje N-S 0° → filas N-S). Override manual solo para orientaciones especiales.';
+  habilitaPane('paneTracker', tracker);
+  habilitaPane('paneFija', modo!=='tracker');
+  if(tracker)$('bifila').disabled=false;
   // El albedo vive en Terreno cuando hay tracker y en Estructura cuando es fija:
   // un solo valor, dos sitios, así que se sincronizan para no tener dos verdades.
   $('albedoBox').style.display=tracker?'':'none';
   pintaDerivados();
 }
-$('mount').onchange=function(){if(this.value==='fija'&&+$('axis').value===0)$('axis').value=180;syncAz();};
+$('mount').onchange=function(){syncAz();};
 $('axis').onchange=syncAz;
 ['table','modLen','modWid','mods','pitchTrk','pitchFija','gapMod','slopeNs','slopeEw'].forEach(function(id){
   $(id).addEventListener('input',pintaDerivados);
@@ -3842,9 +3848,15 @@ function readCfg(){
     coords:PARCEL, holes:HOLES, exclusions:EXCL, exclLines:EXCL_LINEAS,
     exclTopo:celdasExcluidas(), mdtFracTh:0.35,
     forceComplete:$('forceComplete').checked,
-    mount:$('mount').value, table:$('table').value, mods:mods.sort(function(a,b){return b-a;}),
+    mount:$('mount').value,
+    // en modo FIJA mandan las casillas de SU pane (azimut y tabla de la
+    // fija): el pane del tracker está en gris y bloqueado
+    table:($('mount').value==='fija')?tablaDe('fija'):$('table').value,
+    mods:mods.sort(function(a,b){return b-a;}),
     modLen:+$('modLen').value, modWid:+$('modWid').value, moduleWp:+$('modWp').value,
-    pitch:pitchAct(), setback:+$('setback').value, panelAz:+$('panelAz').value,
+    pitch:($('mount').value==='fija')?pitchDe('fija'):pitchDe('tracker'),
+    setback:+$('setback').value,
+    panelAz:($('mount').value==='fija')?azFilasFija():+$('panelAz').value,
     bifila:$('bifila').value==='1', gapModules:+$('gapMod').value,
     gapMotor:+$('gapMotor').value, gapNs:+$('gapNs').value,
     roadEvery:+$('roadEvery').value, roadW:+$('roadW').value,
@@ -3876,14 +3888,33 @@ async function generar(){
   $('genBtn').disabled=true;
   await new Promise(function(r){setTimeout(r,20);});
   try{
-    if($('calc').value==='core'&&ENGINE){ await generarCore(cfg); }
-    else if($('optAz').checked||$('optGrid').checked){ await generarBarrido(cfg); }
-    else if(MIX_ZONAS.length){
-      // Con zonas definidas manda el layout MIXTO: cada una con su montaje.
+    var modo=$('mount').value;
+    if(modo==='mixto'){
+      /* El MODO manda (2026-08-28): antes las zonas se colaban siempre que
+         existieran, y en modo mono se ignoraban... al revés. Ahora: Mixto
+         exige zonas (sin ellas no hay reparto que calcular, y calcular otra
+         cosa con el selector en Mixto sería un éxito falso); Tracker/Fija
+         corren mono-montaje y AVISAN si hay zonas definidas que se ignoran. */
+      if($('calc').value==='core'&&ENGINE)
+        throw new Error('el motor canónico no calcula el layout MIXTO todavía: pon Cálculo en «Navegador».');
+      if($('optAz').checked||$('optGrid').checked)
+        throw new Error('el barrido de azimut/rejilla no corre sobre el layout MIXTO: desmárcalo.');
+      if(!MIX_ZONAS.length)
+        throw new Error('el modo MIXTO necesita zonas: propón el reparto por pendiente o importa un GeoJSON con el montaje de cada una.');
+      cfg.rellenoFija=!!($('mixRellenoFija')&&$('mixRellenoFija').checked);
       RES=computaMixto(cfg,MIX_ZONAS); Object.assign(RES.stats,cfg.decl);
-      pintar(RES,'navegador · '+MIX_ZONAS.length+' zonas de montaje');
+      pintar(RES,'navegador · MIXTO · '+MIX_ZONAS.length+' zonas');
     }
-    else { RES=computaTodas(cfg); Object.assign(RES.stats,cfg.decl); pintar(RES,'navegador'); }
+    else if($('calc').value==='core'&&ENGINE){ await generarCore(cfg); }
+    else if($('optAz').checked||$('optGrid').checked){ await generarBarrido(cfg); }
+    else {
+      RES=computaTodas(cfg); Object.assign(RES.stats,cfg.decl);
+      pintar(RES,'navegador · '+(modo==='fija'?'FIJA':'TRACKER'));
+      if(MIX_ZONAS.length)
+        $('foot').innerHTML+=' · <span style="color:var(--build)">hay '+MIX_ZONAS.length+
+          ' zona(s) de montaje definidas que se IGNORAN en modo '+(modo==='fija'?'Fija':'Tracker')+
+          ' — ponlo en Mixto para usarlas</span>';
+    }
   }catch(e){
     $('foot').innerHTML='<span style="color:var(--dead)">No se pudo generar: '+(e&&e.message||e)+'</span>';
     $('hint').textContent='error';
@@ -3964,6 +3995,116 @@ var ZONAS_SIN_VALOR_UNICO = {
   fila_len_m: 'no existe en fija: no hay motor que separe dos mesas'
 };
 
+/* ── El SOBRANTE que el tracker no puede usar, como zonas de FIJA ────────
+   Rasteriza el área útil (celda 3 m) en un marco local equirrectangular —
+   SOLO para decidir los huecos: la zona resultante vuelve a lon/lat con la
+   inversa exacta y el motor la coloca con su propio UTM. Ocupado = cada
+   mesa colocada inflada a su pasillo: media anchura transversal =
+   max(pitch de su zona, pitch de la fija)/2 + 0,3 m (cota conservadora del
+   pasillo, declarada), y +0,6 m a lo largo. Los huecos se extraen con la
+   MISMA maquinaria del reparto (componente + anillo por aristas + partes
+   simples). */
+function huecosParaFija(cfg, zonas, partes){
+  var par=(cfg.coords||[]).map(function(c){return [+c[0],+c[1]];});
+  if(par.length<3)return [];
+  var lat0=0,lon0=0;par.forEach(function(c){lon0+=c[0];lat0+=c[1];});
+  lon0/=par.length;lat0/=par.length;
+  var kx=111320*Math.cos(lat0*Math.PI/180), ky=110540;
+  function aM(c){return [(c[0]-lon0)*kx,(c[1]-lat0)*ky];}
+  function aLL(x,y){return [lon0+x/kx, lat0+y/ky];}
+  var parM=par.map(aM);
+  var xs=parM.map(function(q){return q[0];}), ysM=parM.map(function(q){return q[1];});
+  var x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs);
+  var y0=Math.min.apply(null,ysM), y1=Math.max.apply(null,ysM);
+  var cel=3, W=Math.max(2,Math.ceil((x1-x0)/cel)), H=Math.max(2,Math.ceil((y1-y0)/cel));
+  if(W*H>400000)return [];                       // parcela gigante: no rasterizamos
+  function pip(pt,R){var c=false;
+    for(var u=0,v=R.length-1;u<R.length;v=u++){
+      if((R[u][1]>pt[1])!==(R[v][1]>pt[1])&&
+         pt[0]<(R[v][0]-R[u][0])*(pt[1]-R[u][1])/(R[v][1]-R[u][1])+R[u][0])c=!c;}
+    return c;}
+  function dSeg(pt,a,b){var dx=b[0]-a[0],dy=b[1]-a[1],L2=dx*dx+dy*dy||1e-12;
+    var t=Math.max(0,Math.min(1,((pt[0]-a[0])*dx+(pt[1]-a[1])*dy)/L2));
+    var px2=a[0]+t*dx-pt[0],py=a[1]+t*dy-pt[1];return Math.sqrt(px2*px2+py*py);}
+  function dLinde(pt){var d=1/0;
+    for(var u=0,v=parM.length-1;u<parM.length;v=u++)d=Math.min(d,dSeg(pt,parM[v],parM[u]));
+    return d;}
+  var vetosM=[];
+  (cfg.holes||[]).concat(cfg.exclusions||[]).forEach(function(h){
+    if(h&&h.length>=3)vetosM.push(h.map(function(c){return aM([+c[0],+c[1]]);}));});
+  var sb=Math.max(0,+cfg.setback||0);
+  var libre=new Uint8Array(W*H);
+  for(var r=0;r<H;r++)for(var c=0;c<W;c++){
+    var pt=[x0+(c+0.5)*cel, y0+(r+0.5)*cel];
+    if(!pip(pt,parM))continue;
+    if(sb>0&&dLinde(pt)<sb)continue;
+    var veto=false;
+    for(var v2=0;v2<vetosM.length;v2++)if(pip(pt,vetosM[v2])){veto=true;break;}
+    if(!veto)libre[r*W+c]=1;
+  }
+  // ocupar: cada mesa con su pasillo
+  var pitchZ={};zonas.forEach(function(z){pitchZ[z.nombre]=(z.pitch!=null?z.pitch:cfg.pitch);});
+  var pFija=(typeof pitchDe==='function')?pitchDe('fija'):4;
+  partes.forEach(function(rp,zi){
+    rp.structures.forEach(function(e){
+      if(!e.lonlat||e.lonlat.length<4)return;
+      var q=e.lonlat.slice(0,4).map(aM);
+      var cx=(q[0][0]+q[2][0])/2, cy=(q[0][1]+q[2][1])/2;
+      var e01=[q[1][0]-q[0][0],q[1][1]-q[0][1]], e12=[q[2][0]-q[1][0],q[2][1]-q[1][1]];
+      var L01=Math.hypot(e01[0],e01[1]), L12=Math.hypot(e12[0],e12[1]);
+      var uL=L01>=L12?[e01[0]/L01,e01[1]/L01]:[e12[0]/L12,e12[1]/L12];
+      var uS=[-uL[1],uL[0]];
+      var hallLargo=Math.max(L01,L12)/2+0.6;
+      var pz=Math.max(pitchZ[e.zona]||+cfg.pitch||6, pFija);
+      var hallCorto=pz/2+0.3;
+      var R=Math.hypot(hallLargo,hallCorto);
+      var c0=Math.max(0,Math.floor((cx-R-x0)/cel)), c1=Math.min(W-1,Math.ceil((cx+R-x0)/cel));
+      var r0=Math.max(0,Math.floor((cy-R-y0)/cel)), r1=Math.min(H-1,Math.ceil((cy+R-y0)/cel));
+      for(var rr=r0;rr<=r1;rr++)for(var cc=c0;cc<=c1;cc++){
+        var i=rr*W+cc;if(!libre[i])continue;
+        var dx=x0+(cc+0.5)*cel-cx, dy=y0+(rr+0.5)*cel-cy;
+        if(Math.abs(dx*uL[0]+dy*uL[1])<=hallLargo&&
+           Math.abs(dx*uS[0]+dy*uS[1])<=hallCorto)libre[i]=0;
+      }
+    });
+  });
+  // umbral: la mesa fija MENOR con margen — derivada de la config (la
+  // formula de MESA de la casa: ancho_mod x N + (N-1) x gap; el alto es la
+  // apertura de la tabla). structureDimsMulti vive dentro del motor y no es
+  // alcanzable desde aqui: se deriva con la misma formula, no se inventa.
+  var modsList=(Array.isArray(cfg.mods)?cfg.mods:[cfg.mods]).map(Number);
+  var modsMin=Math.min.apply(null,modsList);
+  var tF=(typeof tablaDe==='function')?tablaDe('fija'):String(cfg.table||'1V');
+  var nTab=parseInt(tF,10)||1, esV=/V/i.test(tF);
+  var gapM=+cfg.gapModules||0.02;
+  var largoMesa=modsMin*(+cfg.modWid)+(modsMin-1)*gapM;
+  var altoMesa=nTab*(esV?+cfg.modLen:+cfg.modWid)+(nTab-1)*gapM;
+  var minM2=(largoMesa+1)*(altoMesa+1);
+  var out=[], resto=new Uint8Array(libre), guard=64, idx=0;
+  while(guard-->0){
+    var f0=-1;for(var i2=0;i2<W*H;i2++)if(resto[i2]){f0=i2;break;}
+    if(f0<0)break;
+    var fy=(f0/W)|0, fx=f0-fy*W;
+    var isla=varitaComponente(resto,W,H,fx,fy);
+    if(!isla){resto[f0]=0;continue;}
+    for(var k2=0;k2<W*H;k2++)if(isla.dentro[k2])resto[k2]=0;
+    if(isla.n*cel*cel<minM2)continue;
+    var ring=anilloDeCeldasIsla(isla.dentro,W,H);
+    if(!ring)continue;
+    mixPartesSimples(ring).forEach(function(parte){
+      var a2=0;
+      for(var v3=0;v3<parte.length;v3++){var w=parte[(v3+1)%parte.length];a2+=parte[v3][0]*w[1]-w[0]*parte[v3][1];}
+      if(Math.abs(a2/2)*cel*cel<minM2)return;
+      idx++;
+      out.push({nombre:'relleno-'+idx, mount:'fixed',
+                pitch:pFija, holes:[],
+                coords:parte.map(function(q2){
+                  return aLL(x0+(q2[0]+0.5)*cel, y0+(q2[1]+0.5)*cel);})});
+    });
+  }
+  return out.slice(0,24);                        // techo de zonas, declarado
+}
+
 function computaMixto(cfg, zonas){
   if(!zonas||!zonas.length)throw new Error('un layout mixto necesita al menos una zona');
   var nombres=zonas.map(function(z){return z.nombre;});
@@ -4040,7 +4181,7 @@ function computaMixto(cfg, zonas){
               (bif?' ('+pares+' pareja(s) completas: sin viudas)':'')+
               ' — las fronteras internas entre zonas ya no comen setback.'});
   }
-  var partes=zonas.map(function(z){
+  var _computaZona=function(z){
     var r=LAY.compute(Object.assign({},cfg,{
       coords:z.coords, holes:z.holes||[],
       mount:z.mount, pitch:z.pitch!=null?z.pitch:cfg.pitch,
@@ -4066,7 +4207,35 @@ function computaMixto(cfg, zonas){
     }));
     _filtraLinde(r,z);
     return r;
-  });
+  };
+  var partes=zonas.map(_computaZona);
+
+  /* ── SEGUNDA PASADA: RELLENO DE FIJA (2026-08-28, «no aprovecha los
+     huecos donde no entra tracker... mal pensado») ─────────────────────
+     El reparto va por PENDIENTE, pero el tracker también falla por
+     GEOMETRÍA: bolsillos más cortos que una fila, esquinas, remates. Esas
+     celdas son «aptas tracker» y nadie se las ofrecía a la fija. Aquí se
+     calcula el SOBRANTE REAL —área útil menos cada mesa colocada con su
+     pasillo de pitch— y se ofrece a la fija como zonas nuevas, que pasan
+     por el MISMO camino por-zona (azimut/tabla/mínimo/filtro de fija). */
+  var _rellenoInfo=null;
+  if(cfg.rellenoFija&&zonas.some(function(z){return z.mount==='tracker';})){
+    var _zR=huecosParaFija(cfg,zonas,partes);
+    if(_zR.length){
+      var _pR=_zR.map(_computaZona);
+      // los huecos donde tampoco cupo fija NI se listan: son artefactos de
+      // la segunda pasada, no zonas del usuario
+      var _zK=[],_pK=[],_mR=0;
+      _zR.forEach(function(z,i){
+        var st=_pR[i].stats.structures||0;
+        if(st>0){_zK.push(z);_pK.push(_pR[i]);_mR+=st;}
+      });
+      if(_zK.length){
+        zonas=zonas.concat(_zK); partes=partes.concat(_pK);
+        _rellenoInfo={mesas:_mR, huecos:_zK.length};
+      }
+    }
+  }
   var base=partes[0];
   /* VISTAS para el render de vigas y ejes (2026-08-28, «selecciono bifila y
      me salen monofilas»): el mixto fundia R.rows=[] y el pintor de viga/eje
@@ -4127,6 +4296,9 @@ function computaMixto(cfg, zonas){
         'tamaño. Si no quieres verlas, sube el área mínima de ese montaje en el reparto.'});
     R.avisos=resto;
   })();
+  if(_rellenoInfo)R.avisos.push({sev:'info',codigo:'relleno_fija',
+    mensaje:'RELLENO de fija: '+_rellenoInfo.mesas+' mesa(s) en '+_rellenoInfo.huecos+
+            ' hueco(s) donde el tracker no entra por geometría (2ª pasada sobre el sobrante real).'});
   Object.keys(ZONAS_SIN_VALOR_UNICO).forEach(function(k){st[k]=null;});
   st.sin_valor_unico=ZONAS_SIN_VALOR_UNICO;
   st.trackers=motores;                       // motores REALES
@@ -4235,22 +4407,23 @@ function mixPartesSimples(anillo){
    MDT son celdas de ~90 m, así que una isla de 2×2 (¡3 ha!) desaparecía en
    silencio, sin contarse ni como descartada. Mismo mecanismo que el épsilon:
    el mismo número significa otra cosa según el tamaño de celda. */
-function anilloDeCeldasIsla(dentro, n){
+function anilloDeCeldasIsla(dentro, n, alto){
+  var W=n, H=alto||n;
   var aristas={}, arranque=null;
   function k(p){return p[0]+','+p[1];}
-  for(var r=0;r<n;r++)for(var c=0;c<n;c++){
-    if(!dentro[r*n+c])continue;
+  for(var r=0;r<H;r++)for(var c=0;c<W;c++){
+    if(!dentro[r*W+c])continue;
     var v=[[c-0.5,r-0.5],[c+0.5,r-0.5],[c+0.5,r+0.5],[c-0.5,r+0.5]];
     // lados: [a,b] con el vecino de fuera → arista de borde, orientada
     var lados=[[v[0],v[1],r-1,c],[v[1],v[2],r,c+1],[v[2],v[3],r+1,c],[v[3],v[0],r,c-1]];
     for(var l=0;l<4;l++){
       var nr=lados[l][2], nc=lados[l][3];
-      var fuera=(nr<0||nr>=n||nc<0||nc>=n||!dentro[nr*n+nc]);
+      var fuera=(nr<0||nr>=H||nc<0||nc>=W||!dentro[nr*W+nc]);
       if(fuera){aristas[k(lados[l][0])]=lados[l][1];if(!arranque)arranque=lados[l][0];}
     }
   }
   if(!arranque)return null;
-  var ring=[arranque], q=aristas[k(arranque)], guard=4*n*n;
+  var ring=[arranque], q=aristas[k(arranque)], guard=4*W*H;
   while(q&&guard-->0){
     if(q[0]===arranque[0]&&q[1]===arranque[1])break;
     ring.push(q); q=aristas[k(q)];
@@ -4770,7 +4943,7 @@ var SES_CAMPOS=['lat','lon','pw','ph','prot','parcelMode','geotxt','parcelName',
      y sus campos nuevos no se persistian y volvian a defaults al recargar */
   'pitchTrk','pitchFija','slopeTrkEw','slopeTrkNs','slopeFijaEw','slopeFijaNs',
   'tableFija','azRowsFija','mixMinArea','mixMinAreaFija'];
-var SES_CHECKS=['alignGrid','center','forceComplete','optAz','optGrid','demOff','demUse','orto','showDisc','showAxis'];
+var SES_CHECKS=['alignGrid','center','forceComplete','optAz','optGrid','demOff','demUse','orto','showDisc','showAxis','mixRellenoFija'];
 
 function estadoSesion(){
   var st={v:SES_V, guardada:null, campos:{}, checks:{}};
