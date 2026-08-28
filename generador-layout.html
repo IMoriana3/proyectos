@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.8</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.9</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -319,6 +319,12 @@ canvas.panning{cursor:grabbing}
           <div class="field"><label>Tilt fijo °</label><input id="fixTilt" type="number" step="1" value="25">
             <div class="tip">Default 25°, el típico de latitud media.</div></div>
           <div class="field"><label>Albedo del suelo</label><input id="albedo" type="number" step="0.01" value="0.20"></div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Azimut de filas (fija) °</label>
+            <input id="azRowsFija" type="number" step="1" value="180">
+            <div class="tip">Filas E-O mirando al sur (180), lo natural en fija. Manda en las ZONAS de fija del layout mixto; sin esto heredaban el azimut del tracker y salían giradas 90°.</div></div>
+          <div class="field"></div>
         </div>
         <div class="two">
           <div class="field"><label>Tabla de la fija</label>
@@ -2895,18 +2901,20 @@ function draw(){
     // #7F8C8D fino, biela roja #C0392B y el doble de gruesa. La viga cruza
     // el hueco del motor: es lo que hace VISIBLE que 2 mesas + motor son UN
     // tracker y no dos sueltos — y la biela, que es bifila y no dos monofilas.
-    if($('showAxis').checked&&RES.rows&&RES.fromLocal&&RES.stats.mount_type!=='fija'){
-      function traza(e){
-        var ca=RES.toLonLat(RES.fromLocal(e.xa,e.ya)),cb=RES.toLonLat(RES.fromLocal(e.xb,e.yb));
-        var pa=px(ca[0],ca[1]),pb=px(cb[0],cb[1]);
-        ctx.beginPath();ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);ctx.stroke();
-      }
-      ctx.strokeStyle='#7F8C8D';ctx.lineWidth=1.1;
-      vigasTorsion().forEach(traza);
-      if(RES.stats.bifila){
-        ctx.strokeStyle='#C0392B';ctx.lineWidth=2.2;
-        ejesBifila().forEach(traza);
-      }
+    if($('showAxis').checked){
+      vistasEjes().forEach(function(vista){
+        function traza(e){
+          var ca=vista.toLonLat(vista.fromLocal(e.xa,e.ya)),cb=vista.toLonLat(vista.fromLocal(e.xb,e.yb));
+          var pa=px(ca[0],ca[1]),pb=px(cb[0],cb[1]);
+          ctx.beginPath();ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);ctx.stroke();
+        }
+        ctx.strokeStyle='#7F8C8D';ctx.lineWidth=1.1;
+        vigasTorsion(vista).forEach(traza);
+        if(vista.bifila){
+          ctx.strokeStyle='#C0392B';ctx.lineWidth=2.2;
+          ejesBifila(vista).forEach(traza);
+        }
+      });
     }
   }
   if(drawing&&DRAW&&DRAW.length){
@@ -2930,7 +2938,7 @@ function draw(){
    atómica). Es la MISMA regla para la viga y para la biela — dos agrupaciones
    distintas serían dos verdades sobre qué es un tracker. */
 function trksFila(f){
-  var gm=(RES.stats.gap_motor_m||0.5)+0.15;
+  var gm=((RES&&RES.stats&&RES.stats.gap_motor_m)||0.5)+0.15;
   var so=f.slice().sort(function(a,b){return a.x0-b.x0;});
   var g=[],res=[];
   for(var i=0;i<so.length;i++){
@@ -2945,10 +2953,23 @@ function trksFila(f){
    punta a punta, CRUZANDO el hueco del motor — 2 mesas + motor = una viga.
    Un tracker viudo de una mesa lleva su viga corta (el canon también). En
    fija no hay tubo: el que pinta ya no llama con mount_type 'fija'. */
-function vigasTorsion(){
-  if(!RES||!RES.rows||!RES.fromLocal)return [];
+/* Las VISTAS del pintor de vigas/ejes: en el layout de un montaje, una (el
+   propio RES, si es tracker); en el MIXTO, una por zona de tracker con su
+   marco local — cada zona rota y centra distinto y las filas no se pueden
+   fundir en un solo marco. */
+function vistasEjes(){
+  if(!RES)return [];
+  if(RES.partesTracker)return RES.partesTracker;
+  if(RES.rows&&RES.fromLocal&&RES.stats.mount_type!=='fija')
+    return [{rows:RES.rows, fromLocal:RES.fromLocal, toLonLat:RES.toLonLat,
+             bifila:!!RES.stats.bifila}];
+  return [];
+}
+function vigasTorsion(vista){
+  vista=vista||RES;
+  if(!vista||!vista.rows||!vista.fromLocal)return [];
   var out=[];
-  RES.rows.forEach(function(f){
+  vista.rows.forEach(function(f){
     trksFila(f).forEach(function(tr){
       var y=(tr[0].y0+tr[0].y1)/2;
       out.push({xa:tr[0].x0,ya:y,xb:tr[tr.length-1].x1,yb:y});
@@ -2956,12 +2977,13 @@ function vigasTorsion(){
   });
   return out;
 }
-function ejesBifila(){
-  if(!RES||!RES.stats.bifila||!RES.rows||!RES.fromLocal)return [];
+function ejesBifila(vista){
+  vista=vista||((RES&&RES.stats&&RES.stats.bifila)?{rows:RES.rows,fromLocal:RES.fromLocal,bifila:true}:null);
+  if(!vista||!vista.bifila||!vista.rows||!vista.fromLocal)return [];
   var out=[];
   function xMotor(tr){return tr.length===2?(tr[0].x1+tr[1].x0)/2:(tr[0].x0+tr[0].x1)/2;}
-  for(var r0=0;r0+1<RES.rows.length;r0+=2){
-    var A=trksFila(RES.rows[r0]),B=trksFila(RES.rows[r0+1]);
+  for(var r0=0;r0+1<vista.rows.length;r0+=2){
+    var A=trksFila(vista.rows[r0]),B=trksFila(vista.rows[r0+1]);
     var n=Math.min(A.length,B.length);
     for(var t=0;t<n;t++){
       out.push({xa:xMotor(A[t]),ya:(A[t][0].y0+A[t][0].y1)/2,
@@ -3034,6 +3056,8 @@ function tablaDe(m){
   return (m==='fixed'||m==='fija') ? String($('tableFija').value||$('table').value)
                                    : String($('table').value||'1V');
 }
+/* Azimut de FILAS de la fija (zonas del mixto): 180 = filas E-O al sur. */
+function azFilasFija(){var v=parseFloat($('azRowsFija').value);return isFinite(v)?((v%360)+360)%360:180;}
 /* ¿Admite este montaje esta celda? Los DOS ejes tienen que pasar — que baste
    uno sería el parámetro fundido que esto viene a eliminar. */
 function admiteMontaje(m,ew,ns){
@@ -4020,6 +4044,18 @@ function computaMixto(cfg, zonas){
       // la TABLA tambien es del montaje: sin esto la fija del mixto salia
       // siempre con la tabla del selector (1V de tracker, p. ej.)
       table:(typeof tablaDe==='function')?tablaDe(z.mount):cfg.table,
+      /* Y el AZIMUT DE FILAS, el MINIMO por fila y el BIFILA tambien son del
+         montaje (2026-08-28, «y la fija... nada»): heredando los del tracker,
+         una cinta de fija salia VACIA — az 270 le ponia las filas N-S (una
+         mesa por fila) y el minimo de 2 estructuras/fila (paridad de cuaderno
+         PARA TRACKER) las podaba todas. Medido: cinta 11x120 m con min 2 y az
+         270 → 0 mesas; az 180 → 18; min 1 → 30. Una mesa fija suelta es
+         unidad legitima (no hay motor ni pareja). Y bifila:false directo — la
+         zona fija lo ignoraria avisando, y 15 zonas son 15 avisos identicos
+         que se leen como «tu bifila no funciona». */
+      panelAz:(z.mount==='fixed'&&typeof azFilasFija==='function')?azFilasFija():cfg.panelAz,
+      minStructs:(z.mount==='fixed')?1:cfg.minStructs,
+      bifila:(z.mount==='fixed')?false:cfg.bifila,
       setback:(_parL&&_sbL>0)?0:cfg.setback,
       // el filtro de pendiente juzga con los limites del montaje DE LA ZONA,
       // no con los del selector: sin esto la fija muere filtrada a lo tracker
@@ -4029,9 +4065,22 @@ function computaMixto(cfg, zonas){
     return r;
   });
   var base=partes[0];
+  /* VISTAS para el render de vigas y ejes (2026-08-28, «selecciono bifila y
+     me salen monofilas»): el mixto fundia R.rows=[] y el pintor de viga/eje
+     no tenia nada que recorrer — todo salia como mesas sueltas. Cada zona
+     tiene SU marco local (rot/centroide propios), asi que las filas no se
+     pueden concatenar: se publican por zona, solo las de TRACKER (la fija
+     no tiene tubo), con su bifila y sus conversores. */
+  var _partesTracker=partes.map(function(r,i){
+    return (zonas[i].mount==='tracker'&&r.rows&&r.fromLocal)
+      ? {rows:r.rows, fromLocal:r.fromLocal, toLonLat:r.toLonLat,
+         bifila:!!(r.stats&&r.stats.bifila)}
+      : null;
+  }).filter(function(v){return !!v;});
   var R={structures:[],descartadas:[],roads:[],rows:[],sizes:base.sizes,inner_band:[],
          rot:base.rot,center:base.center,bbox_inner:base.bbox_inner,avisos:[],
          toLonLat:base.toLonLat,fromLocal:base.fromLocal,porZona:[]};
+  R.partesTracker=_partesTracker;
   var SUMA=['structures','strings','rows','modules','kWp','col_area_m2','poly_area_m2',
             'inner_area_m2','discarded_structs','ms'];
   var st={}; SUMA.forEach(function(k){st[k]=0;});
