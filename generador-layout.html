@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.13</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.14</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -4177,6 +4177,24 @@ function computaMixto(cfg, zonas){
     }
     var n=Object.keys(fuera).length;
     if(!n)return;
+    /* Las FILAS se podan A LA PAR (2026-08-28, «mira las bielas movidas»):
+       el pintor de vigas y bielas no recorre r.structures sino r.rows (vía
+       partesTracker), y aquí solo se podaba structures — cada mesa retirada
+       por la banda dejaba su viga gris y su biela roja pintadas sobre el
+       hueco. Se casan por (fila, centro-x LOCAL): structures se construyó
+       de estos mismos objetos de rows, así que los floats son idénticos.
+       Las filas que quedan vacías se conservan VACÍAS en su posición: la
+       biela empareja filas por paridad de índice (A=2k, B=2k+1) y
+       eliminarlas correría el emparejamiento una fila. */
+    var _muertas={};
+    Object.keys(fuera).forEach(function(i){var e=r.structures[+i];
+      _muertas[e.row+'|'+e.cx.toFixed(3)]=1;});
+    if(r.rows&&r.rows.length){
+      r.rows=r.rows.map(function(f){return f.filter(function(s){
+        return !_muertas[s.row+'|'+((s.x0+s.x1)/2).toFixed(3)];});});
+      if(r.stats&&r.stats.rows!=null)
+        r.stats.rows=r.rows.filter(function(f){return f.length;}).length;
+    }
     var st=r.stats, wpModulo=(st.modules>0)?(st.kWp/st.modules):0, pares=0;
     var quedan=[];
     r.structures.forEach(function(e,i){
