@@ -1059,7 +1059,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/generador-layout.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-26",
-    version: "1.6.16",
+    version: "1.6.17",
     docId: "generador-layout",
     docUrl: "",
     download: "",
@@ -1095,6 +1095,7 @@ const PROJECTS = [
       { done:false, text:"El canal factiun_sizing: el gate ya lo lee; falta que el Comparador lo publique (propuesto en CONTRATO, Puntos abiertos)." }
     ],
     historial: [
+      { date:"2026-08-28", ver:"1.6.17", note:"«Mas huecos»: los que quedaban eran TIRAS VERTICALES entre columnas de tracker — estrechas en la direccion de la fila de fija (az 180), asi que salian vacias aunque la mesa quepa DE PIE. El relleno prueba ahora LAS DOS orientaciones por hueco (el az del proyectista y su perpendicular) y gana la que mas mesas mete; a igualdad, la del proyectista. Es maximizacion geometrica declarada: la energia por orientacion se juzga aguas abajo. Medido en Tudela: 389 → 473 mesas de relleno (+50 % acumulado desde v1.6.14). Cada zona de relleno viaja con su azimut propio (z.azFija)." },
       { date:"2026-08-28", ver:"1.6.16", note:"«Ahi entrarian...» (bolsillos junto a la linde aun vacios en v1.6.15): dos comedores de bolsillos, los dos medidos en la parcela real de Tudela. (1) El pasillo de ocupacion leia el pitch por e.zona — campo que las mesas del raster no llevan — y caia SIEMPRE al pitch del tracker: a cada fila de fija se le regalaba ~1 m de pasillo por lado. Ahora el pitch sale de la zona real (paralelo zonas/partes). (2) El relleno era de UNA pasada: dentro de un hueco grande la fase de las filas no llega a la esquina, pero ese resto como zona propia ancla su fila y entra — el relleno ITERA (hasta 3 pasadas, corta cuando una no anade). Medido: 316 (v1.6.14) → 351 (v1.6.15) → 389 mesas de relleno (+23 % total)." },
       { date:"2026-08-28", ver:"1.6.15", note:"«Ahi entra una fila mas»: la celda del raster del relleno de fija era fija de 3 m y la cuantizacion perdia hasta media celda por borde de hueco — con pitch de fija de 4 m, justo LA fila pegada a la linde. La celda es ahora ADAPTATIVA: la mas fina (1,5 / 2 / 3 m) que quepa en el presupuesto de celdas de siempre. Medido en la parcela real de Tudela (15,9 ha, sesion del cliente, ahora fixture del banco): 316 → 351 mesas de relleno (+11 %). Solo una parcela enorme cae a 3 m; la gigante sigue sin rasterizarse." },
       { date:"2026-08-28", ver:"1.6.14", note:"«Mira las bielas movidas»: la poda de la banda de la LINDE retiraba las mesas de structures pero NO de las filas (rows), y el pintor de vigas y bielas recorre las filas — cada mesa retirada dejaba su viga gris y su biela roja pintadas sobre el hueco vacio. Ahora la poda quita la mesa de los dos sitios a la vez (casadas por fila y centro exactos) y las filas que quedan vacias se conservan EN SU POSICION, porque la biela empareja filas por paridad A/B y correrlas dibujaria bielas entre filas que no son pareja." },

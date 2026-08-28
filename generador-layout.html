@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.16</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.17</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -4249,7 +4249,11 @@ function computaMixto(cfg, zonas){
          unidad legitima (no hay motor ni pareja). Y bifila:false directo — la
          zona fija lo ignoraria avisando, y 15 zonas son 15 avisos identicos
          que se leen como «tu bifila no funciona». */
-      panelAz:(z.mount==='fixed'&&typeof azFilasFija==='function')?azFilasFija():cfg.panelAz,
+      /* z.azFija (v1.6.17): las zonas de RELLENO pueden traer su azimut de
+         filas propio — el hueco vertical entre columnas de tracker solo
+         admite la mesa DE PIE (filas N-S), y el az global de la fija es
+         del proyectista, no del hueco. Una zona normal no lo trae. */
+      panelAz:(z.mount==='fixed')?(z.azFija!=null?+z.azFija:((typeof azFilasFija==='function')?azFilasFija():180)):cfg.panelAz,
       minStructs:(z.mount==='fixed')?1:cfg.minStructs,
       bifila:(z.mount==='fixed')?false:cfg.bifila,
       setback:(_parL&&_sbL>0)?0:cfg.setback,
@@ -4281,12 +4285,25 @@ function computaMixto(cfg, zonas){
        DENSOS aquí (huecosParaFija arranca en relleno-1 en cada llamada y
        el desglose por zona se indexa por nombre). */
     var _mR=0,_hR=0,_idxR=0;
+    var _azF=(typeof azFilasFija==='function')?azFilasFija():180;
+    var _azPerp=((_azF+90)%360+360)%360;
     for(var _pas=0;_pas<3;_pas++){
       var _zR=huecosParaFija(cfg,zonas,partes);
       if(!_zR.length)break;
       var _zK=[],_pK=[];
       _zR.forEach(function(z){
+        /* LAS DOS ORIENTACIONES por hueco (v1.6.17, «más huecos»): con el
+           az global de la fija, los huecos VERTICALES entre columnas de
+           tracker —estrechos en la dirección de la fila— salían vacíos
+           aunque la mesa quepa DE PIE. Se prueba el az del proyectista y
+           su perpendicular y gana el que más mesas mete; a igualdad, el
+           del proyectista. Es maximización GEOMÉTRICA y va declarada: la
+           energía por orientación se juzga aguas abajo, no aquí. */
+        z.azFija=_azF;
         var r=_computaZona(z);
+        var zP=Object.assign({},z,{azFija:_azPerp});
+        var rP=_computaZona(zP);
+        if((rP.stats.structures||0)>(r.stats.structures||0)){z=zP;r=rP;}
         var st=r.stats.structures||0;
         // los huecos donde tampoco cupo fija NI se listan: son artefactos
         // de la pasada, no zonas del usuario
