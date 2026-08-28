@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.6</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.7</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -4051,6 +4051,22 @@ function computaMixto(cfg, zonas){
                     GCR:r.stats.GCR});
   });
 
+  /* Una pared de ✗ idénticos no informa (captura del 2026-08-28: siete
+     «no cabe ninguna estructura» seguidos): se agrupan en UN aviso con la
+     lista de zonas. `fail` solo si no cabe en NINGUNA — si el resto del
+     layout está plantado, que haya microzonas vacías es un warn con receta. */
+  (function agrupaVacios(){
+    var vacios=[], resto=[];
+    R.avisos.forEach(function(a){
+      (a.codigo==='layout_vacio'?vacios:resto).push(a);});
+    if(!vacios.length)return;
+    var zs=vacios.map(function(a){var m=/^\[([^\]]+)\]/.exec(a.mensaje);return m?m[1]:'?';});
+    resto.push({sev:(R.structures.length?'warn':'fail'), codigo:'zonas_sin_estructuras',
+      mensaje:'En '+zs.length+' zona(s) no cabe ninguna estructura ('+zs.join(', ')+'): '+
+        'islas más pequeñas que una fila de su montaje, o pitch/mods grandes para su '+
+        'tamaño. Si no quieres verlas, sube el área mínima de ese montaje en el reparto.'});
+    R.avisos=resto;
+  })();
   Object.keys(ZONAS_SIN_VALOR_UNICO).forEach(function(k){st[k]=null;});
   st.sin_valor_unico=ZONAS_SIN_VALOR_UNICO;
   st.trackers=motores;                       // motores REALES
@@ -4225,7 +4241,16 @@ function zonasPorPendiente(pend, lims, minAreaM2, minAreaFijaM2){
       var isla=varitaComponente(resto,n,n,fx,fy);
       if(!isla){resto[f0]=0;continue;}
       for(var k=0;k<n*n;k++)if(isla.dentro[k])resto[k]=0;
-      var ring=varitaContorno(isla.dentro,n,n)||anilloDeCeldasIsla(isla.dentro,n);
+      /* Por ARISTAS de celda SIEMPRE, no por centros (2026-08-28, «no
+         entiendo»): el paseo por centros convierte una CINTA de 1 celda de
+         ancho —90 m × medio km de terreno REAL, el caso típico de la fija
+         bordeando lo empinado— en una línea de área CERO, y esa zona llega
+         al motor como «no cabe ninguna estructura». Medido: cinta 1×6 →
+         contorno de 401 puntos y área 0. El anillo por aristas le da su
+         anchura de verdad; era el respaldo de v1.6.6 y es la forma correcta
+         para todas. Los agujeros interiores se omiten como antes: sus celdas
+         las veta el filtro de pendiente del montaje si no las aguanta. */
+      var ring=anilloDeCeldasIsla(isla.dentro,n);
       if(!ring)continue;
       /* EPSILON EN CELDAS, y aquí una celda del MDT son cientos de metros —
          no un píxel de ortofoto de 30 cm. Copiando el 1,5 de la varita se

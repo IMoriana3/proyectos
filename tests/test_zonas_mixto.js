@@ -471,11 +471,13 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
       window.DEM = antes.dem; window.PARCEL = antes.par; window.HOLES = antes.hol;
     }
   });
-  check('lazos · la mancuerna sale en DOS zonas de fija (todas las piezas, como el core)',
-    lazos.nZonas === 2 && lazos.montajes.every(m => m === 'fixed'), JSON.stringify(lazos));
+  // v1.6.7: con el contorno por ARISTAS la mancuerna es UNA zona — su
+  // cintura es una celda REAL (~88 m), no un pellizco de área cero. Las dos
+  // zonas de v1.6.5 eran el sintoma del trazado por centros, no la fisica.
+  check('lazos · la mancuerna es UNA zona de fija con su cintura real',
+    lazos.nZonas === 1 && lazos.montajes.every(m => m === 'fixed'), JSON.stringify(lazos));
   check('lazos · TODOS los contornos del reparto son anillos SIMPLES',
     lazos.simples.length > 0 && lazos.simples.every(Boolean), JSON.stringify(lazos.simples));
-  check('lazos · el pellizco se AVISA, no se arregla en silencio', lazos.avisoPellizco);
   check('lazos · la pajarita se parte en 2 lazos simples',
     lazos.pajaritaN === 2 && lazos.pajaritaSimples, JSON.stringify(lazos));
   check('lazos · el anillo con vertice repetido tambien queda simple', lazos.tocadaSimples);
@@ -573,6 +575,74 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   check('color · tracker y fija llevan colores DISTINTOS en la capa de pendiente',
     color.trk !== color.fija, JSON.stringify(color));
   check('color · la leyenda nombra los dos', color.leyenda);
+
+
+  /* ── LA CINTA DE 1 CELDA TIENE ANCHURA (2026-08-28, «no entiendo») ─────
+   * El paseo por CENTROS convertia una cinta de 1 celda de ancho (90 m x
+   * medio km de terreno real) en una linea de area CERO: la zona llegaba al
+   * motor sin anchura y soltaba «no cabe ninguna estructura» — la pared de
+   * ✗ de la captura. Por ARISTAS la cinta mide lo que mide y se planta. */
+  const cinta = await page.evaluate(() => {
+    const antes = { dem: window.DEM, par: window.PARCEL, hol: window.HOLES };
+    try {
+      const n = 10, lats = [], lons = [];
+      for (let i = 0; i < n; i++) { lats.push(41.570 + i * 0.0008); lons.push(-0.800 + i * 0.0008); }
+      window.DEM = { lats, lons, z: lats.map(() => lons.map(() => 0)) };
+      window.PARCEL = [[-0.801, 41.569], [-0.791, 41.569], [-0.791, 41.579], [-0.801, 41.579]];
+      window.HOLES = [];
+      const ew = [], ns = [];
+      for (let r = 0; r < n; r++) { const fe = [], fn = [];
+        for (let c = 0; c < n; c++) { fe.push(0); fn.push((r === 4 && c >= 2 && c <= 7) ? 10 : 50); }
+        ew.push(fe); ns.push(fn); }
+      const prop = zonasPorPendiente({ n, ew, ns },
+        { trkEw: 5, trkNs: 5, fijaEw: 25, fijaNs: 25, pitchTrk: 6, pitchFija: 4 }, 0, 0);
+      if (prop.zonas.length !== 1) return { nZonas: prop.zonas.length };
+      const z = prop.zonas[0];
+      const cfg = { coords: window.PARCEL, holes: [], exclusions: [], mount: 'tracker',
+        table: '1V', mods: [8], modLen: 2.382, modWid: 1.134, moduleWp: 590, pitch: 6,
+        setback: 0, panelAz: 90, bifila: false, gapModules: 0.02, gapMotor: 0.5,
+        gapNs: 0.5, roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4,
+        mode: 'adaptive', minStructs: 1, rowOffset: 'none', alignGrid: false, center: true };
+      const R = computaMixto(cfg, [{ nombre: z.nombre, coords: z.coords, holes: [],
+                                     mount: z.mount, pitch: 4 }]);
+      return { nZonas: 1, mount: z.mount, mesas: R.porZona[0].structures,
+               avisos: R.avisos.map(a => a.codigo) };
+    } finally {
+      window.DEM = antes.dem; window.PARCEL = antes.par; window.HOLES = antes.hol;
+    }
+  });
+  check('cinta · la banda de 1 celda es UNA zona de fija', cinta.nZonas === 1
+    && cinta.mount === 'fixed', JSON.stringify(cinta));
+  check('cinta · …con ANCHURA: el motor le planta mesas (antes «no cabe ninguna»)',
+    (cinta.mesas || 0) > 0, JSON.stringify(cinta));
+
+  /* ── la pared de ✗ se agrupa en UN aviso ─────────────────────────────── */
+  const pared = await page.evaluate(() => {
+    // dos zonas minusculas donde NO cabe nada + una grande que si se planta
+    const G  = [[-0.800, 41.570], [-0.796, 41.570], [-0.796, 41.574], [-0.800, 41.574]];
+    const P1 = [[-0.7959, 41.570], [-0.79585, 41.570], [-0.79585, 41.57005], [-0.7959, 41.57005]];
+    const P2 = [[-0.7958, 41.571], [-0.79575, 41.571], [-0.79575, 41.57105], [-0.7958, 41.57105]];
+    const cfg = { coords: [[-0.800, 41.570], [-0.795, 41.570], [-0.795, 41.574], [-0.800, 41.574]],
+      holes: [], exclusions: [], mount: 'tracker', table: '1V', mods: [28],
+      modLen: 2.382, modWid: 1.134, moduleWp: 590, pitch: 6, setback: 0, panelAz: 90,
+      bifila: false, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5, roadEvery: 0, roadW: 4,
+      roadNsEvery: 0, roadNsW: 4, mode: 'adaptive', minStructs: 1, rowOffset: 'none',
+      alignGrid: false, center: true };
+    const R = computaMixto(cfg, [
+      { nombre: 'grande', coords: G, holes: [], mount: 'tracker', pitch: 6 },
+      { nombre: 'mini-1', coords: P1, holes: [], mount: 'fixed', pitch: 4 },
+      { nombre: 'mini-2', coords: P2, holes: [], mount: 'fixed', pitch: 4 }]);
+    const agrupado = R.avisos.filter(a => a.codigo === 'zonas_sin_estructuras');
+    const sueltos = R.avisos.filter(a => a.codigo === 'layout_vacio');
+    return { mesas: R.structures.length, nAgrupados: agrupado.length,
+             nSueltos: sueltos.length, sev: agrupado[0] && agrupado[0].sev,
+             nombra: !!(agrupado[0] && /mini-1/.test(agrupado[0].mensaje)
+                                    && /mini-2/.test(agrupado[0].mensaje)) };
+  });
+  check('pared · los «no cabe» se agrupan en UN aviso que NOMBRA las zonas',
+    pared.nAgrupados === 1 && pared.nSueltos === 0 && pared.nombra, JSON.stringify(pared));
+  check('pared · con el resto del layout plantado es WARN, no fail',
+    pared.mesas > 0 && pared.sev === 'warn');
 
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
