@@ -863,6 +863,24 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   check('modos · MIXTO sin zonas se niega con el motivo («necesita zonas»)',
     /MIXTO necesita zonas/.test(gate), JSON.stringify(gate).slice(0, 160));
 
+
+  /* ── UN solo albedo, en Terreno (2026-08-28, «el albedo está duplicado») ── */
+  const albedo = await page.evaluate(() => {
+    const antes = $('mount').value, vis = el => el.offsetParent !== null, out = {};
+    try {
+      ['fija', 'tracker', 'mixto'].forEach(m => {
+        $('mount').value = m; syncAz();
+        out[m] = { terreno: vis($('albedoT')), pane: vis($('albedo')) };
+      });
+      $('albedoT').value = '0.31'; $('albedoT').dispatchEvent(new Event('input'));
+      out.sync = $('albedo').value;
+      return out;
+    } finally { $('mount').value = antes; syncAz(); }
+  });
+  check('albedo · UNO solo en pantalla (Terreno) en los tres modos, y sincronizado',
+    ['fija', 'tracker', 'mixto'].every(m => albedo[m].terreno && !albedo[m].pane)
+      && albedo.sync === '0.31', JSON.stringify(albedo));
+
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
   process.exit(ko ? 1 : 0);

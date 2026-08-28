@@ -13,7 +13,7 @@
    - api.github.com y demás orígenes: NI SE TOCAN. Sin red fallan igual que ahora,
      que es lo que el panel ya sabe manejar (mantiene lo escrito a mano).
    Al cambiar CACHE se tira la anterior entera: es la forma de publicar cambios. */
-const CACHE = "factiun-panel-v114";
+const CACHE = "factiun-panel-v115";
 
 /* Rutas relativas al scope (/proyectos/ en Pages, / al servirlo en local). */
 const SHELL = [
@@ -35,6 +35,14 @@ const SHELL = [
 ];
 
 self.addEventListener("install", e => {
+  /* ACTIVACIÓN INMEDIATA (2026-08-28, «pero siguen los mismos menús»): sin
+     skipWaiting el SW nuevo se quedaba EN ESPERA mientras hubiera cualquier
+     pestaña abierta, y recargar servía la versión vieja — cada publicación
+     exigía cerrar todas las pestañas sin que nada lo dijera. Con la app
+     recién publicada varias veces al día, eso es enseñar versiones viejas
+     con cara de nuevas. clients.claim() ya estaba en activate; esta es la
+     otra mitad. */
+  self.skipWaiting();
   e.waitUntil((async () => {
     const c = await caches.open(CACHE);
     // Una a una: si mañana falta un fichero del armazón, el SW se instala igual

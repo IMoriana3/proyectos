@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.11</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.12</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -323,7 +323,11 @@ canvas.panning{cursor:grabbing}
         <div class="two">
           <div class="field"><label>Tilt fijo °</label><input id="fixTilt" type="number" step="1" value="25">
             <div class="tip">Default 25°, el típico de latitud media.</div></div>
-          <div class="field"><label>Albedo del suelo</label><input id="albedo" type="number" step="0.01" value="0.20"></div>
+          <!-- El albedo es del SUELO, no del montaje: vive en Terreno
+               (#albedoT). Este input queda OCULTO y sincronizado — con el
+               modo Mixto los dos panes van plenos y salia DUPLICADO en
+               pantalla (2026-08-28). -->
+          <div class="field" style="display:none"><input id="albedo" type="number" step="0.01" value="0.20"></div>
         </div>
         <div class="two">
           <div class="field"><label>Azimut de filas (fija) °</label>
@@ -3151,7 +3155,7 @@ function syncAz(){
   if(tracker)$('bifila').disabled=false;
   // El albedo vive en Terreno cuando hay tracker y en Estructura cuando es fija:
   // un solo valor, dos sitios, así que se sincronizan para no tener dos verdades.
-  $('albedoBox').style.display=tracker?'':'none';
+  $('albedoBox').style.display='';   // el albedo es del suelo: visible en los tres modos
   pintaDerivados();
 }
 $('mount').onchange=function(){syncAz();};
