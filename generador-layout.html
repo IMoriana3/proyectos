@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.18</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.19</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -4257,6 +4257,16 @@ function computaMixto(cfg, zonas){
       minStructs:(z.mount==='fixed')?1:cfg.minStructs,
       bifila:(z.mount==='fixed')?false:cfg.bifila,
       setback:(_parL&&_sbL>0)?0:cfg.setback,
+      /* Un RETAL no es sitio para fases globales (v1.6.19, «has metido
+         fijas norte sur»): las zonas de relleno heredaban «alinear a
+         rejilla global» y el modo aligned del proyecto, y dentro de un
+         hueco pequeño la fase de la rejilla puede dejar la orientación
+         TUMBADA en cero mesas (las líneas caen fuera del hueco) — un cero
+         ARTIFICIAL que cumplía el «solo si tumbada no entra nada» y
+         volcaba retales a fija de pie en cascada. En un retal, cada fila
+         ancla en su linde: adaptive y sin rejilla, siempre. */
+      alignGrid:z.esRelleno?false:cfg.alignGrid,
+      mode:z.esRelleno?'adaptive':cfg.mode,
       // el filtro de pendiente juzga con los limites del montaje DE LA ZONA,
       // no con los del selector: sin esto la fija muere filtrada a lo tracker
       exclTopo:(typeof celdasExcluidas==='function')?celdasExcluidas(z.mount):(cfg.exclTopo||[])
@@ -4274,6 +4284,24 @@ function computaMixto(cfg, zonas){
      calcula el SOBRANTE REAL —área útil menos cada mesa colocada con su
      pasillo de pitch— y se ofrece a la fija como zonas nuevas, que pasan
      por el MISMO camino por-zona (azimut/tabla/mínimo/filtro de fija). */
+  /* REPARTO INCOMPLETO, AVISADO (v1.6.19, la parcela de varita del
+     cliente): el reparto cubría 6,08 de 8,97 ha —MDT bajado con OTRA
+     parcela— y las 2,9 ha sin zona acababan plantadas por el relleno de
+     fija sin que nada dijera por qué no había tracker ahí. El área es
+     aproximada (equirect + zapato; si las zonas se rozan, el hueco real
+     es MAYOR que el avisado, nunca menor... al revés: el solape resta). */
+  var _avisoReparto=null;
+  if(cfg.coords&&cfg.coords.length>=3){
+    var _areaLL=function(an){var lat0=0;an.forEach(function(c){lat0+=c[1];});lat0/=an.length;
+      var kx=111320*Math.cos(lat0*Math.PI/180),ky=110540,s=0;
+      for(var i=0;i<an.length;i++){var a=an[i],b=an[(i+1)%an.length];
+        s+=(a[0]*kx)*(b[1]*ky)-(b[0]*kx)*(a[1]*ky);}
+      return Math.abs(s/2);};
+    var _aPar=_areaLL(cfg.coords),_aZon=0;
+    zonas.forEach(function(z){_aZon+=_areaLL(z.coords);});
+    var _falta=_aPar-_aZon;
+    if(_falta>Math.max(2000,0.05*_aPar))_avisoReparto={ha:_falta/1e4};
+  }
   var _rellenoInfo=null;
   if(cfg.rellenoFija&&zonas.some(function(z){return z.mount==='tracker';})){
     /* ITERADO (v1.6.16, «ahí entrarían...»): una sola pasada dejaba
@@ -4293,26 +4321,23 @@ function computaMixto(cfg, zonas){
       if(!_zR.length)break;
       var _zK=[],_pK=[];
       _zR.forEach(function(z){
-        /* LA PERPENDICULAR solo donde TUMBADA NO ENTRA NADA (v1.6.18,
-           «qué engendro es este»): la v1.6.17 dejaba ganar a la
-           perpendicular por UNA mesa de diferencia, y en un hueco GRANDE
-           eso volcaba el campo entero a fija de pie (filas N-S mirando al
-           este) por un puñado de mesas — medido en la parcela del
-           cliente. La perpendicular existe para el hueco vertical donde
-           la mesa tumbada NO CABE (su caso original: 0 tumbada / N de
-           pie); donde tumbada entra algo, manda la orientación del
-           proyectista y lo renunciado se AVISA con sus números, que la
-           decisión de volcar un hueco es suya, no del relleno. Medido en
-           Tudela: 473 (regla vieja) → 402, y los 71 de diferencia eran
-           vuelcos marginales. */
-        z.azFija=_azF;
+        /* LA FIJA DE PIE NO SE PLANTA SOLA (v1.6.19, «has metido fijas
+           norte sur increíble»): el vuelco automático a la perpendicular
+           —nacido en v1.6.17 «gana la que más mete», capado en v1.6.18 a
+           «solo si tumbada no entra nada»— siguió sembrando columnas de
+           fija N-S entre los trackers ralos del cliente, y la fija de pie
+           (mirando al este) es una decisión de PROYECTO que nadie tomó:
+           la introduje yo persiguiendo huecos. Fuera el automatismo: el
+           relleno usa SIEMPRE el azimut de filas de la fija del
+           proyectista, y lo que cabría de pie se AVISA con sus números —
+           quien las quiera cambia «Azimut de filas (fija)» y regenera,
+           y entonces salen a la vista, elegidas. La perpendicular se
+           sigue COMPUTANDO solo para poder avisar con cifra medida. */
+        z.azFija=_azF; z.esRelleno=true;
         var r=_computaZona(z);
-        var zP=Object.assign({},z,{azFija:_azPerp});
-        var rP=_computaZona(zP);
-        var n180=r.stats.structures||0, n90=rP.stats.structures||0;
-        if(!n180&&n90>0){z=zP;r=rP;}
-        else if(n90>n180&&n180>0){_renuncia.mesas+=n90-n180;_renuncia.huecos++;}
         var st=r.stats.structures||0;
+        var nP=_computaZona(Object.assign({},z,{azFija:_azPerp})).stats.structures||0;
+        if(nP>st){_renuncia.mesas+=nP-st;_renuncia.huecos++;}
         // los huecos donde tampoco cupo fija NI se listan: son artefactos
         // de la pasada, no zonas del usuario
         if(st>0){z.nombre='relleno-'+(++_idxR);_zK.push(z);_pK.push(r);_mR+=st;}
@@ -4384,19 +4409,22 @@ function computaMixto(cfg, zonas){
         'tamaño. Si no quieres verlas, sube el área mínima de ese montaje en el reparto.'});
     R.avisos=resto;
   })();
+  if(_avisoReparto)R.avisos.push({sev:'warn',codigo:'reparto_incompleto',
+    mensaje:'≈'+_avisoReparto.ha.toFixed(2)+' ha de la parcela no pertenecen a NINGUNA zona del reparto'+
+            (cfg.rellenoFija?' — el relleno las está plantando de FIJA.':'.')+
+            ' Si ahí esperabas tracker, re-descarga el MDT con ESTA parcela puesta y vuelve a Proponer por pendiente.'});
   if(_rellenoInfo){
     if(_rellenoInfo.huecos)R.avisos.push({sev:'info',codigo:'relleno_fija',
       mensaje:'RELLENO de fija: '+_rellenoInfo.mesas+' mesa(s) en '+_rellenoInfo.huecos+
               ' hueco(s) donde el tracker no entra por geometría (2ª pasada sobre el sobrante real).'});
-    /* Lo RENUNCIADO se dice con sus números: volcar un hueco entero a fija
-       de pie por unas mesas más es una decisión del proyectista, no del
-       relleno (v1.6.18). Cambiando «Azimut de filas (fija)» a la
-       perpendicular puede recuperarlas — y entonces el campo entero de
-       fija sale con esa orientación, a la vista. */
+    /* Lo que cabría DE PIE se dice con sus números y NO se planta solo
+       (v1.6.19): la fija perpendicular es una decisión de proyecto.
+       Cambiando «Azimut de filas (fija)» y regenerando salen — a la
+       vista, elegidas. */
     if(_rellenoInfo.renunciaHuecos)R.avisos.push({sev:'info',codigo:'relleno_fija_renuncia',
       mensaje:'En '+_rellenoInfo.renunciaHuecos+' hueco(s) cabrían '+_rellenoInfo.renunciaMesas+
-              ' mesa(s) MÁS con la fija a '+_rellenoInfo.azPerp+'° (de pie) — se respeta tu azimut de '+
-              _rellenoInfo.azFija+'°; la perpendicular solo entra sola donde tumbada no cabe ninguna.'});
+              ' mesa(s) MÁS con la fija a '+_rellenoInfo.azPerp+'° (de pie) — NO se plantan solas: '+
+              'si las quieres, cambia «Azimut de filas (fija)» a '+_rellenoInfo.azPerp+'° y regenera.'});
   }
   Object.keys(ZONAS_SIN_VALOR_UNICO).forEach(function(k){st[k]=null;});
   st.sin_valor_unico=ZONAS_SIN_VALOR_UNICO;
