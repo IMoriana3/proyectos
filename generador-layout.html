@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.17</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.18</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -4285,6 +4285,7 @@ function computaMixto(cfg, zonas){
        DENSOS aquí (huecosParaFija arranca en relleno-1 en cada llamada y
        el desglose por zona se indexa por nombre). */
     var _mR=0,_hR=0,_idxR=0;
+    var _renuncia={mesas:0,huecos:0};
     var _azF=(typeof azFilasFija==='function')?azFilasFija():180;
     var _azPerp=((_azF+90)%360+360)%360;
     for(var _pas=0;_pas<3;_pas++){
@@ -4292,18 +4293,25 @@ function computaMixto(cfg, zonas){
       if(!_zR.length)break;
       var _zK=[],_pK=[];
       _zR.forEach(function(z){
-        /* LAS DOS ORIENTACIONES por hueco (v1.6.17, «más huecos»): con el
-           az global de la fija, los huecos VERTICALES entre columnas de
-           tracker —estrechos en la dirección de la fila— salían vacíos
-           aunque la mesa quepa DE PIE. Se prueba el az del proyectista y
-           su perpendicular y gana el que más mesas mete; a igualdad, el
-           del proyectista. Es maximización GEOMÉTRICA y va declarada: la
-           energía por orientación se juzga aguas abajo, no aquí. */
+        /* LA PERPENDICULAR solo donde TUMBADA NO ENTRA NADA (v1.6.18,
+           «qué engendro es este»): la v1.6.17 dejaba ganar a la
+           perpendicular por UNA mesa de diferencia, y en un hueco GRANDE
+           eso volcaba el campo entero a fija de pie (filas N-S mirando al
+           este) por un puñado de mesas — medido en la parcela del
+           cliente. La perpendicular existe para el hueco vertical donde
+           la mesa tumbada NO CABE (su caso original: 0 tumbada / N de
+           pie); donde tumbada entra algo, manda la orientación del
+           proyectista y lo renunciado se AVISA con sus números, que la
+           decisión de volcar un hueco es suya, no del relleno. Medido en
+           Tudela: 473 (regla vieja) → 402, y los 71 de diferencia eran
+           vuelcos marginales. */
         z.azFija=_azF;
         var r=_computaZona(z);
         var zP=Object.assign({},z,{azFija:_azPerp});
         var rP=_computaZona(zP);
-        if((rP.stats.structures||0)>(r.stats.structures||0)){z=zP;r=rP;}
+        var n180=r.stats.structures||0, n90=rP.stats.structures||0;
+        if(!n180&&n90>0){z=zP;r=rP;}
+        else if(n90>n180&&n180>0){_renuncia.mesas+=n90-n180;_renuncia.huecos++;}
         var st=r.stats.structures||0;
         // los huecos donde tampoco cupo fija NI se listan: son artefactos
         // de la pasada, no zonas del usuario
@@ -4313,7 +4321,8 @@ function computaMixto(cfg, zonas){
       _hR+=_zK.length;
       zonas=zonas.concat(_zK); partes=partes.concat(_pK);
     }
-    if(_hR)_rellenoInfo={mesas:_mR, huecos:_hR};
+    if(_hR||_renuncia.huecos)_rellenoInfo={mesas:_mR, huecos:_hR,
+      renunciaMesas:_renuncia.mesas, renunciaHuecos:_renuncia.huecos, azFija:_azF, azPerp:_azPerp};
   }
   var base=partes[0];
   /* VISTAS para el render de vigas y ejes (2026-08-28, «selecciono bifila y
@@ -4375,9 +4384,20 @@ function computaMixto(cfg, zonas){
         'tamaño. Si no quieres verlas, sube el área mínima de ese montaje en el reparto.'});
     R.avisos=resto;
   })();
-  if(_rellenoInfo)R.avisos.push({sev:'info',codigo:'relleno_fija',
-    mensaje:'RELLENO de fija: '+_rellenoInfo.mesas+' mesa(s) en '+_rellenoInfo.huecos+
-            ' hueco(s) donde el tracker no entra por geometría (2ª pasada sobre el sobrante real).'});
+  if(_rellenoInfo){
+    if(_rellenoInfo.huecos)R.avisos.push({sev:'info',codigo:'relleno_fija',
+      mensaje:'RELLENO de fija: '+_rellenoInfo.mesas+' mesa(s) en '+_rellenoInfo.huecos+
+              ' hueco(s) donde el tracker no entra por geometría (2ª pasada sobre el sobrante real).'});
+    /* Lo RENUNCIADO se dice con sus números: volcar un hueco entero a fija
+       de pie por unas mesas más es una decisión del proyectista, no del
+       relleno (v1.6.18). Cambiando «Azimut de filas (fija)» a la
+       perpendicular puede recuperarlas — y entonces el campo entero de
+       fija sale con esa orientación, a la vista. */
+    if(_rellenoInfo.renunciaHuecos)R.avisos.push({sev:'info',codigo:'relleno_fija_renuncia',
+      mensaje:'En '+_rellenoInfo.renunciaHuecos+' hueco(s) cabrían '+_rellenoInfo.renunciaMesas+
+              ' mesa(s) MÁS con la fija a '+_rellenoInfo.azPerp+'° (de pie) — se respeta tu azimut de '+
+              _rellenoInfo.azFija+'°; la perpendicular solo entra sola donde tumbada no cabe ninguna.'});
+  }
   Object.keys(ZONAS_SIN_VALOR_UNICO).forEach(function(k){st[k]=null;});
   st.sin_valor_unico=ZONAS_SIN_VALOR_UNICO;
   st.trackers=motores;                       // motores REALES
