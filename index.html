@@ -1065,7 +1065,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/generador-layout.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-26",
-    version: "1.6.19",
+    version: "1.6.20",
     docId: "generador-layout",
     docUrl: "",
     download: "",
@@ -1101,6 +1101,7 @@ const PROJECTS = [
       { done:false, text:"El canal factiun_sizing: el gate ya lo lee; falta que el Comparador lo publique (propuesto en CONTRATO, Puntos abiertos)." }
     ],
     historial: [
+      { date:"2026-08-28", ver:"1.6.20", note:"«¿Por que no pintas fija donde esta prohibido el tracker?» / «¿por que no pones fijas mas largas si tienes sitio?»: las dos cosas eran «Alinear a rejilla global» aplicandose DENTRO del mixto — las zonas del reparto son dentadas por definicion y anclarlas a una rejilla mundial pierde tramos enteros (el propio aviso del motor lo media: 36 % de lo que cabe por tramo sin colocar). La rejilla global ya NO aplica en el layout por zonas (el gemelo Python del mixto nunca la uso: paridad por el mismo default); si la casilla esta marcada, se avisa de que se ignora. En los modos de UN montaje sigue mandando la casilla." },
       { date:"2026-08-28", ver:"1.6.19", note:"«Has metido fijas norte sur increible»: la fija DE PIE no se planta sola NUNCA. El vuelco automatico a la perpendicular (v1.6.17 «gana la que mas mete», v1.6.18 «solo si tumbada no cabe») seguia sembrando columnas N-S entre trackers ralos — y la fija mirando al este es una decision de PROYECTO que nadie tomo. Ahora el relleno usa siempre TU azimut de filas de fija, y lo que cabria de pie se AVISA con sus numeros (en Tudela: 97 mesas): si las quieres, cambias el azimut y regeneras. Ademas: las zonas de relleno ya no heredan «alinear a rejilla global» ni el modo aligned (un retal ancla cada fila en su linde), y si el reparto no cubre la parcela se AVISA con las hectareas sin zona y la receta (re-descargar el MDT con esta parcela y volver a proponer)." },
       { date:"2026-08-28", ver:"1.6.18", note:"«Que engendro es este»: la perpendicular del relleno (v1.6.17) podia ganar por UNA mesa de diferencia, y en un hueco GRANDE eso volcaba el campo entero a fija de pie (filas N-S mirando al este) por un punado de mesas. Ahora la perpendicular solo entra donde la mesa TUMBADA no cabe ninguna — su caso original — y lo renunciado se DECLARA en un aviso con sus numeros (en Tudela: 82 mesas mas cabrian de pie; volcar un hueco es decision del proyectista, que puede cambiar el azimut de filas de la fija y regenerar). Medido en Tudela: 402 mesas de relleno, sin engendros." },
       { date:"2026-08-28", ver:"1.6.17", note:"«Mas huecos»: los que quedaban eran TIRAS VERTICALES entre columnas de tracker — estrechas en la direccion de la fila de fija (az 180), asi que salian vacias aunque la mesa quepa DE PIE. El relleno prueba ahora LAS DOS orientaciones por hueco (el az del proyectista y su perpendicular) y gana la que mas mesas mete; a igualdad, la del proyectista. Es maximizacion geometrica declarada: la energia por orientacion se juzga aguas abajo. Medido en Tudela: 389 → 473 mesas de relleno (+50 % acumulado desde v1.6.14). Cada zona de relleno viaja con su azimut propio (z.azFija)." },
