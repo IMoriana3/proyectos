@@ -80,6 +80,33 @@ async function abrir(browser, respuesta) {
   page = await abrir(browser, 403);
   const nCards = await page.locator('article.card').count();
   check('se pintan las tarjetas', nCards > 5, 'true');
+
+  // ---------- las tarjetas de planta solo llevan VISTAS ----------
+  // El boton «Coordenadas» armaba aqui el ZIP de campo, y despistaba: entre seis
+  // botones que abren una vista habia uno que descargaba un fichero, y no se
+  // entendia que descargaba ni para que. Eso se hace ahora DENTRO de Cobertura,
+  // con «↓ Medir en planta», que es donde esta el que va a medir. Aqui no vuelve.
+  const pv = await page.evaluate(() => {
+    const c = Array.from(document.querySelectorAll('article.pcard'));
+    const hijos = c.flatMap(x => Array.from(x.querySelectorAll('.pviews > *')));
+    return {
+      tarjetas: c.length,
+      // cada hijo es un enlace a una vista o el hueco de una vista que no hay
+      soloVistas: hijos.every(h => (h.tagName === 'A' && h.href) ||
+                                   (h.tagName === 'SPAN' && h.classList.contains('off'))),
+      botones: hijos.filter(h => h.tagName === 'BUTTON').length,
+      texto: /coordenadas/i.test(document.querySelector('#plants').textContent),
+    };
+  });
+  check('hay tarjetas de planta', pv.tarjetas > 5, 'true');
+  check('en la fila de vistas no hay ningun boton', pv.botones, '0');
+  check('solo enlaces a vistas (y huecos de las que faltan)', pv.soloVistas, 'true');
+  check('y la palabra «Coordenadas» no aparece en ninguna tarjeta', pv.texto, 'false');
+  // y la maquinaria del ZIP se fue con el: dejarla es codigo muerto que un dia
+  // alguien vuelve a cablear sin querer
+  check('sin el armador de paquetes en la pagina', await page.evaluate(
+    () => ['zipStore','crc32','bajaPaquete','paqueteDe','leemeDe','slugCobertura']
+            .some(f => typeof window[f] === 'function')), 'false');
   card = await tarjetaToolbox(page);
   await card.locator('.card-toggle').click();
   check('el detalle abre', await card.locator('.detail').isVisible(), 'true');
