@@ -962,30 +962,47 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     let mesas = 0, huecos = 0;
     R.porZona.forEach(p => { if (p.nombre.startsWith('relleno')) { mesas += p.structures; huecos++; } });
     const _ren = R.avisos.find(a => a.codigo === 'relleno_fija_renuncia');
-    return { mesas, huecos, celda: window.huecosParaFija._ultimaCelda,
+    // mesas de relleno DE PIE (más altas N-S que anchas E-O) — con el az de
+    // fija de la sesión (180) no puede haber NINGUNA (v1.6.19)
+    let dePie = 0;
+    const _kx = 111320 * Math.cos(42.071 * Math.PI / 180), _ky = 110540;
+    R.structures.forEach(e => {
+      if (e.mount !== 'fixed' || !/^relleno/.test(e.zona || '')) return;
+      const lons = e.lonlat.map(c => c[0]), lats = e.lonlat.map(c => c[1]);
+      if ((Math.max(...lats) - Math.min(...lats)) * _ky >
+          (Math.max(...lons) - Math.min(...lons)) * _kx) dePie++;
+    });
+    return { mesas, huecos, dePie, celda: window.huecosParaFija._ultimaCelda,
              renuncia: _ren ? +(_ren.mensaje.match(/(\d+) mesa\(s\) MÁS/) || [0, 0])[1] : 0,
              total: R.stats.structures };
   }, JSON.parse(require('fs').readFileSync(__dirname + '/parcelas/tudela.sesion.json', 'utf8')));
   check('tudela · el relleno usa la celda FINA (la parcela cabe de sobra)',
     tudela.celda === 1.5, 'celda=' + tudela.celda);
-  /* La escalera MEDIDA de este número (v1.6.15-18, cada peldaño con su
-   * mutante bajo el código ACTUAL): pasillo con pitch de tracker para
-   * TODAS las mesas (pitchZ[e.zona] con campo que no existe) → 370 · una
-   * sola pasada → 382 · sin perpendicular en absoluto → 389 · sano → 402.
-   * El umbral de 395 mata a los TRES; el de la celda gruesa muere además
-   * en el check de arriba. El mutante «la perpendicular gana por una»
-   * (v1.6.17, el del ENGENDRO) da MÁS mesas (473) y no puede morir en un
-   * umbral inferior: muere en el check de RENUNCIA de abajo. Si un cambio
-   * legítimo del motor mueve el número, se RE-MIDE la escalera entera —
-   * este umbral es una medición, no un deseo. */
-  check('tudela · el relleno apura los bolsillos (≥395 mesas: celda fina + pasillo por zona + iterado + perpendicular solo-si-cero)',
-    tudela.mesas >= 395, tudela.mesas + ' mesas en ' + tudela.huecos + ' huecos (escalera: 370/382/389/402)');
-  /* «Qué engendro es este» (v1.6.18): la perpendicular ya NO vuelca un
-   * hueco donde la mesa tumbada entra — lo renunciado se DECLARA con sus
-   * números (en Tudela: 82 mesas más cabrían de pie). El mutante que
-   * restaura el «gana por una» de v1.6.17 no renuncia a nada y muere aquí. */
-  check('tudela · lo renunciado por respetar el azimut del proyectista se DECLARA (≥50 mesas en el aviso)',
-    tudela.renuncia >= 50, 'renuncia=' + tudela.renuncia + ' (medido: 82)');
+  /* La escalera MEDIDA de este número (v1.6.15-19, cada peldaño con su
+   * mutante bajo el código ACTUAL, regla v1.6.19 «la fija de pie NO se
+   * planta sola»): pasillo con pitch de tracker para TODAS las mesas →
+   * 358 · una sola pasada → 379 · sano → 389 (0 de pie, renuncia 97).
+   * El umbral de 385 mata a esos dos; la celda gruesa muere además en el
+   * check de arriba. El mutante del RETAL (las zonas de relleno vuelven a
+   * heredar rejilla global y modo aligned) SOBREVIVE en esta escena —
+   * medido: 389=389, los retales de Tudela no sufren la fase de la
+   * rejilla — y queda como CINTURÓN DECLARADO con su motivo en el código
+   * (v1.6.19): quien lo quite no rompe ninguna prueba, y eso es lo que
+   * hay que saber antes de quitarlo. Si un cambio legítimo del motor
+   * mueve el número, se RE-MIDE la escalera — es una medición, no un
+   * deseo. */
+  check('tudela · el relleno apura los bolsillos (≥385 mesas: celda fina + pasillo por zona + iterado)',
+    tudela.mesas >= 385, tudela.mesas + ' mesas en ' + tudela.huecos + ' huecos (escalera: 358/379/389)');
+  /* «Has metido fijas norte sur increíble» (v1.6.19): la fija DE PIE no
+   * se planta sola NUNCA — con el az de fija de la sesión (180), cero
+   * mesas de relleno verticales. El mutante que restaura el vuelco de
+   * v1.6.18 (solo-si-cero) mete 13 de pie y muere aquí. */
+  check('tudela · NINGUNA fija de pie sin que el proyectista la pida (dePie=0)',
+    tudela.dePie === 0, tudela.dePie + ' mesa(s) verticales (el vuelco de v1.6.18 daba 13)');
+  /* Y lo que cabría de pie se DECLARA con sus números para que la
+   * decisión sea suya (medido: 97 mesas en el aviso). */
+  check('tudela · lo que cabría DE PIE se declara en el aviso (≥50 mesas)',
+    tudela.renuncia >= 50, 'renuncia=' + tudela.renuncia + ' (medido: 97)');
 
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
