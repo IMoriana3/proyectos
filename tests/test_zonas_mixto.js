@@ -786,6 +786,83 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   check('sesion · los campos por montaje (pitch/tabla/azimut de la fija) sobreviven',
     sesion.pf === '3.7' && sesion.tf === '2V' && sesion.az === '135', JSON.stringify(sesion));
 
+
+  /* ── RELLENO DE FIJA en el sobrante del tracker (2026-08-28, «no
+   * aprovecha los huecos donde no entra tracker... mal pensado») ───────── */
+  const relleno = await page.evaluate(() => {
+    const k = 111320 * Math.cos(41.57 * Math.PI / 180), ky = 110540;
+    const X = m => -0.800 + m / k, Y = m => 41.570 + m / ky;
+    // L: brazo grande 200x150 + brazo chico 30x60 — la fila de tracker (64 m)
+    // NO cabe en el brazo chico; una mesa fija de talla 7 (8,1 m) sí
+    const L = [[X(0),Y(0)],[X(200),Y(0)],[X(200),Y(150)],[X(30),Y(150)],[X(30),Y(210)],[X(0),Y(210)]];
+    const cfg = { coords: L, holes: [], exclusions: [], mount: 'tracker', table: '1V',
+      mods: [28, 14, 7], modLen: 2.382, modWid: 1.134, moduleWp: 630, pitch: 6, setback: 0,
+      panelAz: 270, bifila: true, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5,
+      roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4, mode: 'adaptive',
+      minStructs: 2, rowOffset: 'none', alignGrid: false, center: true, rellenoFija: true };
+    const Z = [{ nombre: 'trk', coords: L, holes: [], mount: 'tracker', pitch: 6 }];
+    const R = computaMixto(cfg, Z);
+    const sin = computaMixto(Object.assign({}, cfg, { rellenoFija: false }), Z);
+    return { mesasRelleno: R.structures.filter(e => /^relleno/.test(e.zona)).length,
+             aviso: R.avisos.some(a => a.codigo === 'relleno_fija'),
+             sinRelleno: sin.structures.filter(e => /^relleno/.test(e.zona)).length,
+             vacias: R.porZona.filter(p => /^relleno/.test(p.nombre) && !p.structures).length };
+  });
+  check('relleno · el brazo donde no cabe fila de tracker se planta con FIJA',
+    relleno.mesasRelleno > 0, JSON.stringify(relleno));
+  check('relleno · con aviso que lo cuenta, sin zonas de relleno vacías, y apagable',
+    relleno.aviso && relleno.vacias === 0 && relleno.sinRelleno === 0, JSON.stringify(relleno));
+
+  /* ── SELECTOR Fija / Tracker / Mixto con panes en gris ────────────────── */
+  const modos = await page.evaluate(() => {
+    const antes = $('mount').value, out = {};
+    function estado() {
+      return { trkDis: $('pitchTrk').disabled, fijaDis: $('pitchFija').disabled,
+               opTrk: $('paneTracker').style.opacity, opFija: $('paneFija').style.opacity };
+    }
+    try {
+      $('mount').value = 'fija'; syncAz(); out.fija = estado();
+      $('mount').value = 'tracker'; syncAz(); out.tracker = estado();
+      $('mount').value = 'mixto'; syncAz(); out.mixto = estado();
+      // y readCfg en modo FIJA: mandan las casillas del pane de la fija
+      $('mount').value = 'fija'; syncAz();
+      const g = { az: $('azRowsFija').value, tf: $('tableFija').value, pf: $('pitchFija').value };
+      $('azRowsFija').value = '135'; $('tableFija').value = '2V'; $('pitchFija').value = '3.5';
+      window.PARCEL = window.PARCEL || [[-0.800, 41.570], [-0.795, 41.570], [-0.795, 41.575], [-0.800, 41.575]];
+      const cfg = readCfg();
+      out.cfgFija = { panelAz: cfg.panelAz, table: cfg.table, pitch: cfg.pitch, mount: cfg.mount };
+      $('azRowsFija').value = g.az; $('tableFija').value = g.tf; $('pitchFija').value = g.pf;
+      return out;
+    } finally { $('mount').value = antes; syncAz(); }
+  });
+  check('modos · en FIJA el pane del tracker queda BLOQUEADO (gris y sin tocar)',
+    modos.fija.trkDis === true && modos.fija.fijaDis === false
+      && parseFloat(modos.fija.opTrk) < 1, JSON.stringify(modos.fija));
+  check('modos · en TRACKER el pane de la fija queda bloqueado',
+    modos.tracker.fijaDis === true && modos.tracker.trkDis === false, JSON.stringify(modos.tracker));
+  check('modos · en MIXTO los dos panes quedan plenos y editables',
+    modos.mixto.trkDis === false && modos.mixto.fijaDis === false
+      && modos.mixto.opTrk === '1' && modos.mixto.opFija === '1', JSON.stringify(modos.mixto));
+  check('modos · en FIJA mandan las casillas de SU pane (azimut 135, tabla 2V, pitch 3.5)',
+    modos.cfgFija.panelAz === 135 && modos.cfgFija.table === '2V'
+      && Math.abs(modos.cfgFija.pitch - 3.5) < 1e-9, JSON.stringify(modos.cfgFija));
+
+  // el modo MIXTO sin zonas se NIEGA con el motivo, no calcula otra cosa
+  const gate = await page.evaluate(async () => {
+    const antes = { m: $('mount').value, z: MIX_ZONAS, par: window.PARCEL };
+    try {
+      window.PARCEL = [[-0.800, 41.570], [-0.795, 41.570], [-0.795, 41.575], [-0.800, 41.575]];
+      MIX_ZONAS = [];
+      $('mount').value = 'mixto'; syncAz();
+      await generar();
+      return $('foot').textContent;
+    } finally {
+      $('mount').value = antes.m; MIX_ZONAS = antes.z; window.PARCEL = antes.par; syncAz();
+    }
+  });
+  check('modos · MIXTO sin zonas se niega con el motivo («necesita zonas»)',
+    /MIXTO necesita zonas/.test(gate), JSON.stringify(gate).slice(0, 160));
+
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
   process.exit(ko ? 1 : 0);
