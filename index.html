@@ -275,14 +275,6 @@ body{
 .detail .dgroup:last-child:nth-child(n+4){grid-column:span 2}
 @media (max-width:1100px){ .detail .dgroup:last-child:nth-child(n+4){grid-column:auto} }
 .dlabel{font-family:var(--mono);font-size:.64rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--muted-2);margin-bottom:8px}
-/* Paquete de campo: el mismo lenguaje que el resto de la ficha, sin inventar
-   otro estilo de botón ni otro gris. */
-/* El botón de coordenadas vive en la fila de vistas de cada planta: mismo
-   tamaño y mismo hueco que los demás, sin llamar la atención más que ellos.
-   Mientras arma el paquete el propio botón lleva la cuenta (3/18, ✓, ✕): no
-   hace falta otro sitio donde mirar. */
-.paq-btn{white-space:nowrap;font-variant-numeric:tabular-nums}
-.paq-btn[disabled]{opacity:.6;cursor:progress}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-family:var(--mono);font-size:.76rem}
 .kv dt{color:var(--muted-2)}
 .kv dd{color:var(--text);word-break:break-all}
@@ -1678,105 +1670,6 @@ function linkRow(label, href){
   return `<dt>${label}</dt><dd class="empty">pendiente</dd>`;
 }
 
-/* PAQUETE-INI ────────────────────────────────────────────────────────────────
-   EL PAQUETE DE CAMPO. La tarjeta arma el ZIP con las coordenadas de una planta
-   leyendo el índice del repo de Cobertura Zigbee. No hay ZIP guardado: uno
-   guardado se queda viejo el día que cambie un layout, y a campo hay que
-   llevarse lo que hay.
-
-   El ZIP se escribe aquí, sin librería: SOLO ALMACENADO (método 0, sin
-   comprimir). Son CSV pequeños, y a cambio el escritor cabe en treinta líneas y
-   no mete una dependencia en un panel que se abre sin nada instalado.
-   ─────────────────────────────────────────────────────────────────────────── */
-const _crcTab = (() => {
-  const t = new Uint32Array(256);
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-    t[n] = c >>> 0;
-  }
-  return t;
-})();
-function crc32(b){
-  let c = 0xFFFFFFFF;
-  for (let i = 0; i < b.length; i++) c = _crcTab[(c ^ b[i]) & 0xFF] ^ (c >>> 8);
-  return (c ^ 0xFFFFFFFF) >>> 0;
-}
-/* Fecha y hora en el formato de MS-DOS que pide el ZIP: los segundos van en
-   pasos de dos, y el año cuenta desde 1980. */
-function dosFecha(d){
-  return { hora: ((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)) & 0xFFFF,
-           dia: (((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()) & 0xFFFF };
-}
-function zipStore(ficheros, fecha){
-  const enc = new TextEncoder(), f = dosFecha(fecha || new Date());
-  const partes = [], central = [];
-  let off = 0;
-  const u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
-  const u16 = v => [v & 255, (v >>> 8) & 255];
-  for (const q of ficheros) {
-    const nombre = enc.encode(q.nombre);
-    const datos = q.datos instanceof Uint8Array ? q.datos : enc.encode(String(q.datos));
-    const crc = crc32(datos);
-    const cab = new Uint8Array([...u32(0x04034b50), ...u16(20), ...u16(0), ...u16(0),
-      ...u16(f.hora), ...u16(f.dia), ...u32(crc), ...u32(datos.length), ...u32(datos.length),
-      ...u16(nombre.length), ...u16(0)]);
-    partes.push(cab, nombre, datos);
-    central.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0), ...u16(0),
-      ...u16(f.hora), ...u16(f.dia), ...u32(crc), ...u32(datos.length), ...u32(datos.length),
-      ...u16(nombre.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off)]));
-    off += cab.length + nombre.length + datos.length;
-    central[central.length - 1]._n = nombre;
-  }
-  const cenIni = off;
-  let cenLen = 0;
-  for (let i = 0; i < central.length; i++) cenLen += central[i].length + central[i]._n.length;
-  const fin = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0),
-    ...u16(central.length), ...u16(central.length), ...u32(cenLen), ...u32(cenIni), ...u16(0)]);
-  const total = off + cenLen + fin.length;
-  const out = new Uint8Array(total);
-  let k = 0;
-  for (const q of partes) { out.set(q, k); k += q.length; }
-  for (const c of central) { out.set(c, k); k += c.length; out.set(c._n, k); k += c._n.length; }
-  out.set(fin, k);
-  return out;
-}
-/* Qué ficheros lleva el paquete de una planta: sus coordenadas por ámbito, sus
-   coordinadores y su manifiesto. Todo lo que hace falta para salir a medir. */
-function paqueteDe(indice, planta){
-  const p = (indice.plantas || []).find(q => q.planta === planta);
-  if (!p) return null;
-  const fich = p.ficheros.map(q => q.fichero).concat([p.manifiesto]);
-  return { planta: p.planta, titulo: p.titulo, ficheros: [...new Set(fich)], resumen: p };
-}
-/* El LÉEME que va dentro: sin él, quien abra el ZIP en campo no sabe cuál de los
-   veinte CSV tiene que lanzar. */
-function leemeDe(p){
-  const conIp = p.resumen.ficheros.filter(q => q.ip);
-  return [
-    "PAQUETE DE CAMPO — " + p.titulo,
-    "",
-    "Qué es: las coordenadas de entrada para lanzar la medida de cobertura.",
-    "",
-    "CUÁL LANZAR. El ámbito que se lanza es el (NCU,GW): cada uno es una IP:puerto",
-    "del SCADA. Son los ficheros coords_*_NCU<nn>_GW<n>.csv.",
-    p.resumen.gateways_declarados_en_scada
-      ? "Esta planta declara sus gateways en el SCADA."
-      : "Esta planta NO declara gateways en el SCADA: el ámbito es la NCU (coords_*_NCU<nn>.csv).",
-    "",
-    conIp.length ? "Gateways con IP:puerto declarado:" : "Ningún gateway trae IP:puerto todavía.",
-    ...conIp.map(q => "  NCU " + q.ncu + " GW " + q.gw + "  ->  " + q.ip + ":" + q.puerto +
-                      "   (" + q.fichero + ", " + q.tcus + " TCU)"),
-    "",
-    "ncus_*.csv son los COORDINADORES: no se sondean, son quien sondea.",
-    "manifiesto_*.json dice qué ámbitos hay y de dónde sale cada dato.",
-    "",
-    "Al volver: el volcado del coordinador se convierte con",
-    "  python3 diagnostico_elburgo.py <coords>.csv <rssi>.csv " + p.planta + "_real.geojson",
-    ""
-  ].join("\n");
-}
-/* PAQUETE-FIN ───────────────────────────────────────────────────────────── */
 
 function detailHTML(p){
   const id = "d-"+slug(p.name);
@@ -1977,69 +1870,6 @@ function potenciaDC(pl){
      que la cartera sí tiene, y a esta escala esa décima es medio megavatio. */
   return " · " + (v < 100 ? v.toFixed(2).replace(/\.?0+$/,'').replace('.',',') : String(Math.round(v))) + " MWdc";
 }
-/* El nombre de la planta en Cobertura Zigbee sale de su propia URL (`?planta=`),
-   no de un campo nuevo: así no hay una segunda lista que mantener al día. */
-function slugCobertura(pl){
-  const u = (pl.views && (pl.views.cobertura || pl.views.layout2d || pl.views.topo3d)) || "";
-  const m = /[?&]planta=([a-z0-9_-]+)/i.exec(u);
-  return m ? m[1] : null;
-}
-/* Arma y descarga el paquete de campo de una planta. Se hace TODO al pulsar: el
-   panel dibuja treinta y tres tarjetas y no va a pedir treinta y tres índices
-   por si acaso. */
-const _idxCob = {};
-async function bajaPaquete(slug, btn){
-  const base = SITE + "cobertura-zigbee/cobertura_coords/";
-  const txt = btn.textContent;
-  const di = (t) => { btn.textContent = t; };
-  btn.disabled = true;
-  try {
-    di("índice…");
-    if(!_idxCob.p) _idxCob.p = fetch(base + "indice.json", {cache:"no-store"})
-      .then(r => { if(!r.ok) throw new Error("indice.json: HTTP " + r.status); return r.json(); });
-    const idx = await _idxCob.p;
-    const paq = paqueteDe(idx, slug);
-    if(!paq){
-      /* Esa planta no tiene malla que medir —Dicayagua es de mesas FIJAS y su
-         layout no trae ninguna NCU—, así que el botón se apaga y lo dice, en vez
-         de fallar cada vez que alguien lo pruebe. */
-      btn.disabled = true; btn.textContent = "Sin malla";
-      btn.title = "Esta planta no tiene malla Zigbee que medir: no está en el índice de cobertura.";
-      return;
-    }
-    di("0/" + paq.ficheros.length);
-    let n = 0;
-    const partes = await Promise.all(paq.ficheros.map(async f => {
-      const r = await fetch(base + paq.planta + "/" + f, {cache:"no-store"});
-      if(!r.ok) throw new Error(f + ": HTTP " + r.status);
-      const datos = new Uint8Array(await r.arrayBuffer());
-      di((++n) + "/" + paq.ficheros.length);
-      return { nombre: paq.planta + "/" + f, datos };
-    }));
-    partes.unshift({ nombre: paq.planta + "/LEEME.txt",
-                     datos: new TextEncoder().encode(leemeDe(paq)) });
-    const url = URL.createObjectURL(new Blob([zipStore(partes)], {type:"application/zip"}));
-    const a = document.createElement("a");
-    a.href = url; a.download = "cobertura_" + paq.planta + ".zip";
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 4000);
-    di("✓ " + partes.length);
-  } catch(e){
-    /* Decir QUÉ ha fallado, no «error». El caso normal es que esa carpeta no
-       esté publicada en Pages, y entonces hay que bajarlos del repositorio. */
-    _idxCob.p = null;
-    di("✕");
-    btn.title = "No se pudo armar el paquete — " + (e && e.message ? e.message : e) +
-                ". Si la carpeta cobertura_coords/ no está publicada en GitHub Pages, " +
-                "los ficheros se bajan del repositorio.";
-  } finally {
-    if(btn.textContent !== "Sin malla"){
-      btn.disabled = false;
-      setTimeout(()=>{ if(btn.textContent !== "Sin malla") btn.textContent = txt; }, 6000);
-    }
-  }
-}
-
 function plantCardHTML(pl){
   const arrow='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 17 17 7M9 7h8v8"/></svg>';
   const btns = PLANT_VIEWS.map(v=>{
@@ -2051,16 +1881,10 @@ function plantCardHTML(pl){
     if(v.core) return `<span class="btn off" title="${esc(v.label)} no disponible para ${esc(pl.name)}">${v.label}</span>`;
     return "";
   }).join("");
-  /* Las COORDENADAS para ir a medir: se arman aquí, con lo que hay hoy en el
-     repo. Un ZIP guardado se queda viejo el día que cambie un layout. */
-  const slug = slugCobertura(pl);
-  const paq = slug
-    ? `<button class="btn paq-btn" type="button" data-paq="${esc(slug)}" title="Arma el ZIP con las coordenadas de esta planta para lanzar la medida de cobertura (un fichero por ámbito, más el manifiesto y un léeme)">Coordenadas</button>`
-    : "";
   return `<article class="card pcard" style="--c:var(--demo)">
     <div class="phead">${pl.oferta ? '<span class="pcode oferta" title="Proyecto en oferta: aún no está firmado ni tiene número de proyecto">OFERTA</span>' : `<span class="pcode">${esc(pl.code)}</span>`}<h3 class="name">${esc(pl.name)}<span class="pdc">${esc(potenciaDC(pl))}</span></h3></div>
     <p class="obj">${esc(pl.loc)}</p>
-    <div class="pviews">${btns}${paq}</div>
+    <div class="pviews">${btns}</div>
   </article>`;
 }
 /* Ordenadas por NÚMERO DE PROYECTO, que es como se las nombra en la casa. El array se deja en su
@@ -2072,9 +1896,6 @@ function renderPlants(){
   const el=document.getElementById("plants");
   if(el){
     el.innerHTML = PLANTS_ORD.map(plantCardHTML).join("");
-    el.querySelectorAll(".paq-btn").forEach(b=>{
-      b.onclick = (e)=>{ e.stopPropagation(); bajaPaquete(b.dataset.paq, b); };
-    });
   }
   const c=document.getElementById("plants-cnt"); if(c) c.textContent = "· "+PLANTS.length;
 }
