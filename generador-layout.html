@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.9</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.10</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -2815,9 +2815,12 @@ function draw(){
        Se pinta una capa POR MONTAJE EN USO, cada una con su color de la
        leyenda; una celda vetada para los dos sale con los dos superpuestos
        (más oscura), que es literalmente lo que le pasa. */
-    var msEx=(typeof MIX_ZONAS!=='undefined'&&MIX_ZONAS.length)
-      ? MIX_ZONAS.map(function(z){return z.mount;}).filter(function(m,i,a){return a.indexOf(m)===i;})
-      : [montajeAct()==='tracker'?'tracker':'fixed'];
+    /* SIEMPRE las dos capas (2026-08-28, «las zonas que no se puede
+       implantar fija por qué no salen»): la leyenda promete dos colores y
+       sin reparto en pantalla solo se pintaba la del montaje del SELECTOR —
+       la capa de fija (lo que ni la fija admite = no desarrollable) no
+       aparecía nunca hasta proponer zonas. */
+    var msEx=['tracker','fixed'];
     msEx.forEach(function(m){
       var c=colorExclDe(m);
       celdasExcluidas(m).forEach(function(q){ring(q,c.f,c.s,0.8);});
@@ -4762,7 +4765,11 @@ var SES_CAMPOS=['lat','lon','pw','ph','prot','parcelMode','geotxt','parcelName',
   'albedo','albedoT','slopeNs','slopeEw','demSrc','demN','demMargen','slopeMax',
   'pitch','setback','gcrObj','axis','panelAz','mode','bifila',
   'gapMod','gapMotor','gapNs','roadEvery','roadW','roadNsEvery','roadNsW','minStructs','rowOffset',
-  'gridFrom','gridTo','gridStep','render','calc','gateStrings','gateKwp'];
+  'gridFrom','gridTo','gridStep','render','calc','gateStrings','gateKwp',
+  /* v1.6.10: la lista se habia quedado VIEJA — los panes por montaje (v1.6.2+)
+     y sus campos nuevos no se persistian y volvian a defaults al recargar */
+  'pitchTrk','pitchFija','slopeTrkEw','slopeTrkNs','slopeFijaEw','slopeFijaNs',
+  'tableFija','azRowsFija','mixMinArea','mixMinAreaFija'];
 var SES_CHECKS=['alignGrid','center','forceComplete','optAz','optGrid','demOff','demUse','orto','showDisc','showAxis'];
 
 function estadoSesion(){
@@ -4771,6 +4778,9 @@ function estadoSesion(){
   SES_CHECKS.forEach(function(id){var el=$(id);if(el)st.checks[id]=el.checked;});
   st.sitio=SITIO; st.parcel=PARCEL; st.holes=HOLES; st.parcelas=PARCELAS;
   st.excl=EXCL; st.exclLineas=EXCL_LINEAS; st.dem=DEM; st.draw=DRAW;
+  // las ZONAS del reparto tambien son sesion (2026-08-28, «las zonas de
+  // fija por que no salen»): sin esto el reparto desaparecia al recargar
+  st.mixZonas=MIX_ZONAS; st.mixProp=MIX_PROP;
   st.view={cx:VIEW.cx,cy:VIEW.cy,z:VIEW.z};
   return st;
 }
@@ -4786,6 +4796,7 @@ function aplicaSesion(st){
   SITIO=st.sitio||null; PARCEL=st.parcel||null; HOLES=st.holes||[];
   PARCELAS=st.parcelas||[]; EXCL=st.excl||[]; EXCL_LINEAS=st.exclLineas||[];
   DEM=st.dem||null; DRAW=st.draw||null;
+  MIX_ZONAS=st.mixZonas||[]; MIX_PROP=st.mixProp||null;
   if(st.view){VIEW.cx=st.view.cx;VIEW.cy=st.view.cy;VIEW.z=st.view.z;}
   var m=$('parcelMode').value;
   $('paneRect').style.display=m==='rect'?'':'none';
@@ -4796,6 +4807,7 @@ function aplicaSesion(st){
   pintaSitio();pintaBotonesDibujo();pintaParcelas();pintaCosteDem();tagParcel();
   if(DEM)aplicaDEM();
   else {$('slopeNs').disabled=$('slopeEw').disabled=false;pintaDerivados();}
+  mixPinta();
   draw();
 }
 var _sesT=null;
@@ -4814,7 +4826,7 @@ function restauraSesion(){
   if(!raw)return false;
   try{
     aplicaSesion(JSON.parse(raw));
-    $('foot').innerHTML='Sesión anterior restaurada (parcela, exclusiones, MDT y configuración). '+
+    $('foot').innerHTML='Sesión anterior restaurada (parcela, exclusiones, MDT, configuración y zonas de montaje). '+
       'Pulsa <b>Generar</b> para recalcular · <a href="#" id="sesReset" style="color:var(--dead)">empezar de cero</a>.';
     var a=document.getElementById('sesReset');
     if(a)a.onclick=function(ev){ev.preventDefault();
