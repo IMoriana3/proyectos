@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.7</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.8</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -942,7 +942,15 @@ function compute(cfg) {
   var avisos = [];
   function aviso(sev, cod, msg, extra) { avisos.push({ severidad: sev, codigo: cod, mensaje: msg, extra: extra }); }
 
-  var mount      = cfg.mount === "fija" ? "fija" : "tracker";
+  /* «fixed» ES fija (2026-08-28, «ahí entran fijas, tú lo estás viendo»):
+     el reparto y computaMixto emiten mount:'fixed' (el vocabulario del core
+     Python) y esta normalización mandaba TODO lo que no fuera el literal
+     «fija» al camino de TRACKER — así que las zonas de fija del mixto se
+     computaban con unidad de 2 mesas + gap motor (18,9 m con talla 8) y una
+     isla donde cabía una mesa suelta de 9,2 m salía «no cabe ninguna
+     estructura». Medido: isla de 18 m → 0 mesas; con el arreglo → mesas
+     sueltas. Lo cazó el cliente a ojo contra mi «son legítimas». */
+  var mount      = (cfg.mount === "fija" || cfg.mount === "fixed") ? "fija" : "tracker";
   var isTracker  = mount === "tracker";
   var pitch      = +cfg.pitch;
   var setback    = Math.max(0, +cfg.setback || 0);
@@ -4444,7 +4452,7 @@ function coreToRes(j,st,cfg){
   /* Las stats del core no traen mount_type/bifila (publica geometría, no la
      petición): se reponen de la cfg con la que se le llamó, que el 3D los
      necesita para decidir nodo-por-par vs fijas. */
-  if(st.mount_type==null)st.mount_type=(cfg&&cfg.mount==='fija')?'fija':'tracker';
+  if(st.mount_type==null)st.mount_type=(cfg&&(cfg.mount==='fija'||cfg.mount==='fixed'))?'fija':'tracker';
   if(st.bifila==null)st.bifila=!!(cfg&&cfg.bifila);
   return {structures:structs, roads:[], rows:[], sizes:[], inner_band:[], stats:st, avisos:(st.qa_avisos||[]),
           toLonLat:function(p){return p;}, center:[0,0], rot:0};

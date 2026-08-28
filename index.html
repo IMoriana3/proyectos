@@ -1052,7 +1052,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/generador-layout.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-26",
-    version: "1.6.7",
+    version: "1.6.8",
     docId: "generador-layout",
     docUrl: "",
     download: "",
@@ -1088,6 +1088,7 @@ const PROJECTS = [
       { done:false, text:"El canal factiun_sizing: el gate ya lo lee; falta que el Comparador lo publique (propuesto en CONTRATO, Puntos abiertos)." }
     ],
     historial: [
+      { date:"2026-08-28", ver:"1.6.8", note:"«Ahi entran fijas, tu lo estas viendo»: el motor normalizaba el montaje con mount === «fija» y TODO lo demas —incluido «fixed», que es lo que emiten el reparto y el layout mixto— corria como TRACKER. Las zonas de fija del mixto se computaban con unidad de 2 mesas + gap motor (18,9 m con talla 8), y una isla donde cabe una mesa suelta de 9,2 m salia «no cabe ninguna estructura». Medido: isla de 10 m pasa de 0 a 2 mesas; la de 15, de 0 a 4. «fixed» es fija tambien en el rotulo del resumen." },
       { date:"2026-08-28", ver:"1.6.7", note:"«No entiendo» (pared de ✗ tras quitar el minimo): dos cosas. (1) El paseo por CENTROS de celda convertia una CINTA de 1 celda de ancho —90 m x medio km de terreno real, el caso tipico de la fija bordeando lo empinado— en una linea de area CERO: la zona llegaba al motor sin anchura y soltaba «no cabe ninguna estructura». Ahora TODOS los contornos del reparto se trazan por ARISTAS de celda (el respaldo de v1.6.6, generalizado) y la cinta mide lo que mide y se planta. La mancuerna de v1.6.5 pasa a ser UNA zona: su cintura es una celda real, no un pellizco. (2) Los «no cabe» que quedan —islas de tracker mas pequenas que una fila— se agrupan en UN aviso que nombra las zonas, warn si el resto del layout esta plantado." },
       { date:"2026-08-28", ver:"1.6.6", note:"«En esos huecos la fija entraria»: los huecos del campo de tracker que si admiten fija caian como islas pequenas y se las comian DOS bocas — el umbral unico de area minima (calibrado a tracker; ahora hay umbral POR MONTAJE y por defecto SIN minimo, a peticion) y el ||2000 que se tragaba el cero explicito tecleado (falsy no es ausente). Ademas varitaContorno, calibrado para pixeles de ortofoto, devolvia null en islas de 1-2 celdas de MDT (~3 ha) y desaparecian sin contarse: ahora tienen anillo de respaldo por aristas de celda. La capa «pendiente > max.» se pinta con un color POR MONTAJE (morado tracker, cian fija) y la fija del mixto tiene su propia tabla (1V/2V/3V…), en vez de heredar la del selector." },
       { date:"2026-08-28", ver:"1.6.5", note:"«La parcela se cruza a si misma en varios puntos y la reparacion no llega» sobre las zonas del reparto por pendiente: una isla PELLIZCADA (dos lobulos unidos por una celda) hace que el paseo del contorno pase dos veces por la misma celda y el anillo salga cruzado — y con varios cruces la reparacion del motor (3 pases, lazo grande) no llega, dejando la zona en «no cabe ninguna estructura». Ahora el reparto parte cada contorno en sus lazos SIMPLES antes de empujarlo: cada pieza con area es su propia zona, los lazos de area ~0 se descartan y el pellizco se avisa. Es lo mismo que hace el make_valid del motor Python, que devuelve todas las piezas." },

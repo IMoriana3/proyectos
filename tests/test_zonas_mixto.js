@@ -644,6 +644,33 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   check('pared · con el resto del layout plantado es WARN, no fail',
     pared.mesas > 0 && pared.sev === 'warn');
 
+
+  /* ── «FIXED» ES FIJA (2026-08-28, «ahí entran fijas, tú lo estás viendo») ─
+   * El motor normalizaba el montaje con `cfg.mount === 'fija'` y TODO lo
+   * demás —incluido 'fixed', que es lo que emiten el reparto y computaMixto—
+   * corría como TRACKER: unidad de 2 mesas + gap motor (18,9 m con talla 8),
+   * y una isla donde cabe una mesa suelta de 9,2 m salía «no cabe ninguna
+   * estructura». Lo cazó el cliente a ojo. */
+  const fixedFija = await page.evaluate(() => {
+    const L = 15, dLon = L / 111320 / Math.cos(41.57 * Math.PI / 180), dLat = L / 110540;
+    const Z = [[-0.798, 41.572], [-0.798 + dLon, 41.572],
+               [-0.798 + dLon, 41.572 + dLat], [-0.798, 41.572 + dLat]];
+    const PAR = [[-0.800, 41.570], [-0.795, 41.570], [-0.795, 41.575], [-0.800, 41.575]];
+    const cfg = { coords: PAR, holes: [], exclusions: [], mount: 'tracker', table: '1V',
+      mods: [21, 12, 8], modLen: 2.382, modWid: 1.134, moduleWp: 630, pitch: 6, setback: 5,
+      panelAz: 270, bifila: true, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5,
+      roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4, mode: 'adaptive',
+      minStructs: 1, rowOffset: 'none', alignGrid: false, center: true };
+    const R = computaMixto(cfg, [{ nombre: 'isla', coords: Z, holes: [],
+                                   mount: 'fixed', pitch: 4 }]);
+    return { mesas: R.porZona[0].structures, avisos: R.avisos.map(a => a.codigo) };
+  });
+  check('fixed-es-fija · una isla de 15 m planta mesas SUELTAS de fija (con '
+      + 'geometria de tracker salia 0: exige la unidad de 2 mesas + gap motor)',
+    fixedFija.mesas >= 3, JSON.stringify(fixedFija));
+  check('fixed-es-fija · el aviso «bifila ignorada en fija» delata el camino bueno',
+    fixedFija.avisos.indexOf('bifila_ignorada_en_fija') !== -1, JSON.stringify(fixedFija.avisos));
+
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
   process.exit(ko ? 1 : 0);
