@@ -1055,7 +1055,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/generador-layout.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-26",
-    version: "1.6.12",
+    version: "1.6.13",
     docId: "generador-layout",
     docUrl: "",
     download: "",
@@ -1091,6 +1091,7 @@ const PROJECTS = [
       { done:false, text:"El canal factiun_sizing: el gate ya lo lee; falta que el Comparador lo publique (propuesto en CONTRATO, Puntos abiertos)." }
     ],
     historial: [
+      { date:"2026-08-28", ver:"1.6.13", note:"Las bandas marcadas en verde («eso se puede rellenar de fija») SI se rellenan con la version nueva — reproducida la escena: bandas de 38 m entre cintas de fija → 132 mesas de relleno. Lo que se veia era el calculo de la version CACHEADA anterior al relleno (el bug del service worker de v1.6.12). Ademas, el techo de 24 huecos del relleno se corta ahora ORDENADO por area — los grandes primero; sin ordenar, una parcela muy fragmentada podia tirar los huecos grandes del norte." },
       { date:"2026-08-28", ver:"1.6.12", note:"«Pero siguen los mismos menus que antes»: no faltaba el cambio — el service worker nuevo quedaba EN ESPERA mientras hubiera cualquier pestana abierta y recargar servia la version vieja; cada publicacion exigia cerrar todas las pestanas sin que nada lo dijera. skipWaiting() en install (clients.claim ya estaba): a partir de esta, recargar trae la version nueva. El badge de version junto al titulo es la comprobacion. Y el ALBEDO, que con el modo Mixto salia DUPLICADO (pane de fija + Terreno), queda UNO solo en Terreno — es del suelo, no del montaje — visible en los tres modos." },
       { date:"2026-08-28", ver:"1.6.11", note:"Dos piezas pedidas en caliente. (1) RELLENO DE FIJA: «no aprovecha los huecos donde no entra tracker... mal pensado» — el reparto iba solo por pendiente y el tracker tambien falla por GEOMETRIA (bolsillos mas cortos que una fila). Segunda pasada: se colocan los trackers, se rasteriza el sobrante real (area util menos cada mesa con su pasillo de pitch) y los huecos se ofrecen a la fija como zonas nuevas por el mismo camino por-zona. Checkbox en el panel de zonas, encendido por defecto. (2) SELECTOR DE TRES MODOS: Fija / Tracker / Mixto — el pane que no aplica se pone gris Y BLOQUEADO, en Mixto los dos plenos; el azimut del eje/filas del tracker vive ahora en SU pane (cada montaje autocontenido: pitch, pendientes, azimut, tabla); en modo Fija mandan las casillas del pane de la fija; el modo manda al Generar — Mixto exige zonas y los modos mono avisan si hay zonas definidas que se ignoran." },
       { date:"2026-08-28", ver:"1.6.10", note:"«Sea como sea no funciona, no mete fija»: al recargar, la sesion restauraba parcela, MDT y configuracion pero NO las zonas del reparto — MIX_ZONAS volvia vacio y el siguiente Generar corria como layout de UN montaje: trackers y huecos sin fija. La sesion guarda y restaura ahora el reparto (zonas + propuesta) y ademas los campos por montaje que la lista vieja no persistia (pitch tracker/fija, limites de pendiente por montaje, tabla y azimut de la fija, areas minimas). Y la capa «pendiente > max.» del mapa pinta SIEMPRE los dos montajes: sin reparto en pantalla solo salia la del selector y la leyenda prometia dos colores." },
