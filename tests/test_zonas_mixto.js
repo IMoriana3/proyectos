@@ -1003,6 +1003,38 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
    * decisión sea suya (medido: 97 mesas en el aviso). */
   check('tudela · lo que cabría DE PIE se declara en el aviso (≥50 mesas)',
     tudela.renuncia >= 50, 'renuncia=' + tudela.renuncia + ' (medido: 97)');
+  /* «¿Por qué no pones fijas más largas si tienes sitio?» (v1.6.20): la
+   * rejilla global NO aplica en el mixto — las zonas del reparto son
+   * dentadas y la rejilla mundial pierde tramos enteros (medido en la
+   * parcela del cliente: 36 % por tramo, por el propio aviso del motor).
+   * El gemelo Python nunca la usó: paridad por el mismo default.
+   * CINTURÓN DECLARADO: el mutante que restaura la herencia
+   * (alignGrid:cfg.alignGrid) SOBREVIVE a este banco — medido: Tudela y
+   * el trapecio diagonal salen INVARIANTES a la rejilla, así que el
+   * check de inmunidad de abajo es hoy un centinela que no puede
+   * ponerse rojo aquí; la escena con el mecanismo es la parcela de
+   * varita del cliente (38 vértices, az 270, multi-talla), sin fixture
+   * aún. El check del AVISO sí muerde (quitar el push del aviso lo
+   * tumba). Quien quite el alignGrid:false no rompe ninguna prueba de
+   * geometría, y eso es lo que hay que saber antes de quitarlo. */
+  const rejilla = await page.evaluate((ses) => {
+    aplicaSesion(ses);
+    function corre(grid) {
+      $('alignGrid').checked = grid; $('mode').value = 'aligned';
+      const cfg = readCfg(); cfg.rellenoFija = true;
+      const R = computaMixto(cfg, MIX_ZONAS);
+      return { total: R.stats.structures, kwp: R.stats.kWp,
+               aviso: R.avisos.some(a => a.codigo === 'rejilla_ignorada_en_mixto') };
+    }
+    const con = corre(true), sin = corre(false);
+    return { con, sin };
+  }, JSON.parse(require('fs').readFileSync(__dirname + '/parcelas/tudela.sesion.json', 'utf8')));
+  check('tudela · el mixto es INMUNE a «alinear a rejilla global» (mismo layout con y sin)',
+    rejilla.con.total === rejilla.sin.total && rejilla.con.kwp === rejilla.sin.kwp,
+    rejilla.con.total + ' vs ' + rejilla.sin.total + ' mesas');
+  check('tudela · y la casilla marcada se declara IGNORADA en un aviso',
+    rejilla.con.aviso === true && rejilla.sin.aviso === false,
+    JSON.stringify({ con: rejilla.con.aviso, sin: rejilla.sin.aviso }));
 
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');

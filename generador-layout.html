@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.19</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.20</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -4257,15 +4257,19 @@ function computaMixto(cfg, zonas){
       minStructs:(z.mount==='fixed')?1:cfg.minStructs,
       bifila:(z.mount==='fixed')?false:cfg.bifila,
       setback:(_parL&&_sbL>0)?0:cfg.setback,
-      /* Un RETAL no es sitio para fases globales (v1.6.19, «has metido
-         fijas norte sur»): las zonas de relleno heredaban «alinear a
-         rejilla global» y el modo aligned del proyecto, y dentro de un
-         hueco pequeño la fase de la rejilla puede dejar la orientación
-         TUMBADA en cero mesas (las líneas caen fuera del hueco) — un cero
-         ARTIFICIAL que cumplía el «solo si tumbada no entra nada» y
-         volcaba retales a fija de pie en cascada. En un retal, cada fila
-         ancla en su linde: adaptive y sin rejilla, siempre. */
-      alignGrid:z.esRelleno?false:cfg.alignGrid,
+      /* LA REJILLA GLOBAL NO APLICA EN EL MIXTO (v1.6.20, «¿por qué no
+         pintas fija donde está prohibido el tracker?» / «¿por qué no
+         pones fijas más largas?»): las zonas del reparto son DENTADAS
+         por definición (celdas de MDT, huecos del relleno) y anclarlas a
+         una rejilla mundial pierde tramos enteros — el propio aviso del
+         motor lo medía en la parcela del cliente: 36 % de lo que cabe
+         por tramo sin colocar. El gemelo Python del mixto
+         (compute_layout_mixto) NUNCA pasa align_to_grid: paridad por
+         herencia del mismo default, no una opinión nueva. La casilla
+         sigue mandando en los modos de UN montaje. Y un RETAL de relleno
+         tampoco es sitio para el modo aligned (v1.6.19): cada fila ancla
+         en su linde. */
+      alignGrid:false,
       mode:z.esRelleno?'adaptive':cfg.mode,
       // el filtro de pendiente juzga con los limites del montaje DE LA ZONA,
       // no con los del selector: sin esto la fija muere filtrada a lo tracker
@@ -4409,6 +4413,8 @@ function computaMixto(cfg, zonas){
         'tamaño. Si no quieres verlas, sube el área mínima de ese montaje en el reparto.'});
     R.avisos=resto;
   })();
+  if(cfg.alignGrid)R.avisos.push({sev:'info',codigo:'rejilla_ignorada_en_mixto',
+    mensaje:'«Alinear a rejilla global» NO aplica en el layout por zonas: las zonas del reparto son dentadas y la rejilla mundial pierde tramos enteros. Cada fila ancla en su linde (el gemelo Python del mixto hace lo mismo).'});
   if(_avisoReparto)R.avisos.push({sev:'warn',codigo:'reparto_incompleto',
     mensaje:'≈'+_avisoReparto.ha.toFixed(2)+' ha de la parcela no pertenecen a NINGUNA zona del reparto'+
             (cfg.rellenoFija?' — el relleno las está plantando de FIJA.':'.')+
