@@ -966,13 +966,16 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   }, JSON.parse(require('fs').readFileSync(__dirname + '/parcelas/tudela.sesion.json', 'utf8')));
   check('tudela · el relleno usa la celda FINA (la parcela cabe de sobra)',
     tudela.celda === 1.5, 'celda=' + tudela.celda);
-  /* La escalera MEDIDA de este número (v1.6.15-16): celda gruesa de 3 m →
-   * 316 · pasillo con pitch de tracker para TODAS las mesas (pitchZ[e.zona]
-   * con campo que no existe) → 358 · una sola pasada → 379 · sano → 389.
-   * El umbral de 385 mata al mutante del pasillo y al de una-pasada; el de
-   * la celda muere además en el check de arriba. */
-  check('tudela · el relleno apura los bolsillos (≥385 mesas: celda fina + pasillo por zona + iterado)',
-    tudela.mesas >= 385, tudela.mesas + ' mesas en ' + tudela.huecos + ' huecos (escalera: 316/358/379/389)');
+  /* La escalera MEDIDA de este número (v1.6.15-17, cada peldaño con su
+   * mutante bajo el código ACTUAL): sin orientación perpendicular → 389 ·
+   * pasillo con pitch de tracker para TODAS las mesas (pitchZ[e.zona] con
+   * campo que no existe) → 423 · una sola pasada → 464 · sano → 473. El
+   * umbral de 470 mata a los TRES; el de la celda gruesa (316 en su
+   * versión) muere además en el check de arriba. Si un cambio legítimo del
+   * motor mueve el número, se RE-MIDE la escalera entera — este umbral es
+   * una medición, no un deseo. */
+  check('tudela · el relleno apura los bolsillos (≥470 mesas: celda fina + pasillo por zona + iterado + dos orientaciones)',
+    tudela.mesas >= 470, tudela.mesas + ' mesas en ' + tudela.huecos + ' huecos (escalera: 389/423/464/473)');
 
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
