@@ -325,6 +325,70 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     linde.kwpFija > 0);
 
 
+  /* ── LA PODA DE LA LINDE TAMBIÉN PODA LAS FILAS (2026-08-28) ───────────
+   * «Mira las bielas movidas»: el pintor de vigas y bielas no recorre
+   * r.structures sino r.rows (vía partesTracker), y la poda de la banda
+   * solo tocaba structures — cada mesa retirada dejaba su viga gris y su
+   * biela roja pintadas sobre el hueco. La escena de arriba NO vale para
+   * esto (medido: su zona de tracker centrada queda entera a >5 m de la
+   * linde y las podadas son todas de la fija, cuyas filas no viajan en
+   * partesTracker). Aquí el MECANISMO es obligado: linde ESTE diagonal y
+   * una única zona de tracker bifila que ES la parcela — las mesas del
+   * escalón caen seguro. */
+  const fantasma = await page.evaluate(() => {
+    const PAR = [[-0.800, 41.570], [-0.794, 41.570], [-0.7962, 41.5745], [-0.800, 41.5745]];
+    const cfg = { coords: PAR, holes: [], exclusions: [], mount: 'tracker', table: '1V',
+      mods: [28], modLen: 2.382, modWid: 1.134, moduleWp: 590, pitch: 6, setback: 5,
+      panelAz: 90, bifila: true, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5,
+      roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4, mode: 'adaptive',
+      minStructs: 1, rowOffset: 'none', alignGrid: false, center: true };
+    const R = computaMixto(cfg, [
+      { nombre: 'trk', coords: PAR, holes: [], mount: 'tracker', pitch: 6 }]);
+    /* El patrón oro se deriva de R.structures (lo que de verdad quedó tras
+       la poda), NO de v.rows — que es justo lo acusado. Se reagrupan las
+       mesas vivas por fila con el MISMO trksFila del pintor y se exige
+       IGUALDAD: cada viga pintada coincide con el span de un tracker vivo
+       y cada punta de biela con el motor de uno. Un «cubre alguna mesa» o
+       un margen de un gap NO valen: la viga fantasma del extremo también
+       roza la mesa viva de al lado (medido: así sobrevivió el mutante). */
+    let rowsMesas = 0, vigasTot = 0, vigasHuerfanas = 0, bielasTot = 0, bielasHuerfanas = 0;
+    const porFila = {};
+    R.structures.forEach(e => { if (e.mount !== 'tracker') return;
+      const k = e.cy.toFixed(2);
+      (porFila[k] = porFila[k] || []).push({ x0: e.cx - e.len / 2, x1: e.cx + e.len / 2 }); });
+    const spans = {}, motores = {};
+    Object.keys(porFila).forEach(k => window.trksFila(porFila[k]).forEach(tr => {
+      (spans[k] = spans[k] || []).push([tr[0].x0, tr[tr.length - 1].x1]);
+      (motores[k] = motores[k] || []).push(
+        tr.length === 2 ? (tr[0].x1 + tr[1].x0) / 2 : (tr[0].x0 + tr[0].x1) / 2); }));
+    (R.partesTracker || []).forEach(v => {
+      v.rows.forEach(f => { rowsMesas += f.length; });
+      window.vigasTorsion(v).forEach(e => { vigasTot++;
+        const okv = (spans[e.ya.toFixed(2)] || []).some(sp =>
+          Math.abs(sp[0] - e.xa) < 0.05 && Math.abs(sp[1] - e.xb) < 0.05);
+        if (!okv) vigasHuerfanas++; });
+      window.ejesBifila(v).forEach(e => { bielasTot++;
+        [[e.xa, e.ya], [e.xb, e.yb]].forEach(pt => {
+          const okb = (motores[pt[1].toFixed(2)] || []).some(m => Math.abs(m - pt[0]) < 0.05);
+          if (!okb) bielasHuerfanas++; }); });
+    });
+    return { rowsMesas,
+      trkMesas: R.structures.filter(e => e.mount === 'tracker').length,
+      podadas: R.descartadas.length, vigasTot, vigasHuerfanas, bielasTot, bielasHuerfanas };
+  });
+  check('bielas-fantasma · la escena PODA de verdad mesas de tracker',
+    fantasma.podadas > 0 && fantasma.trkMesas > 0, JSON.stringify(fantasma));
+  check('bielas-fantasma · las FILAS se podan a la par que las mesas',
+    fantasma.rowsMesas === fantasma.trkMesas,
+    'rows llevan ' + fantasma.rowsMesas + ' mesas y structures ' + fantasma.trkMesas);
+  check('bielas-fantasma · ninguna VIGA huérfana sobre el hueco de la banda',
+    fantasma.vigasTot > 0 && fantasma.vigasHuerfanas === 0,
+    fantasma.vigasHuerfanas + ' viga(s) sin mesa debajo de ' + fantasma.vigasTot);
+  check('bielas-fantasma · ninguna BIELA con la punta en el vacío',
+    fantasma.bielasTot > 0 && fantasma.bielasHuerfanas === 0,
+    fantasma.bielasHuerfanas + ' punta(s) huérfanas de ' + fantasma.bielasTot + ' bielas');
+
+
   /* ── EL FILTRO DE PENDIENTE JUZGA CON EL MONTAJE DE LA ZONA ────────────
    * «El filtro de pendiente excluye el 100 % de la parcela» sobre una zona
    * FIJA que el propio reparto declaró apta a 25°: el mixto congelaba un
