@@ -279,6 +279,11 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
    * la linde este — el retranqueo doble la mataba; con el post-filtro vive
    * y SOLO pierde lo que toca la linde real. */
   const linde = await page.evaluate(() => {
+    /* SUSTITUCIÓN DECLARADA (v1.6.9): la fija ya no hereda el azimut del
+       tracker — usa su propio «Azimut de filas (fija)». Esta tira corre N-S,
+       así que el proyectista orienta las filas a lo largo (90): con el
+       default 180 las filas serían de 11 m y la mesa de 28 módulos no cabe. */
+    const _azFijaAntes = $('azRowsFija').value; $('azRowsFija').value = '90';
     const PAR = [[-0.800, 41.570], [-0.7920, 41.570], [-0.7920, 41.5745], [-0.800, 41.5745]];
     const BORDE = -0.79213;                       // tira de ~11 m
     const ZT = [[-0.800, 41.570], [BORDE, 41.570], [BORDE, 41.5745], [-0.800, 41.5745]];
@@ -305,6 +310,7 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     for (let k = 0; k + 1 <= pares.length - 1; k += 2)
       if (filas[pares[k]] !== filas[pares[k+1]]) filasImpares++;
     const avisoLinde = R.avisos.some(a => /LINDE real/.test(a.mensaje || ''));
+    $('azRowsFija').value = _azFijaAntes;
     return { fija: pz.fija || 0, trk: pz.trk || 0, filasImpares, avisoLinde,
              kwpFija: (R.stats.kwp_por_montaje || {}).fixed || 0 };
   });
@@ -668,8 +674,76 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   check('fixed-es-fija · una isla de 15 m planta mesas SUELTAS de fija (con '
       + 'geometria de tracker salia 0: exige la unidad de 2 mesas + gap motor)',
     fixedFija.mesas >= 3, JSON.stringify(fixedFija));
-  check('fixed-es-fija · el aviso «bifila ignorada en fija» delata el camino bueno',
-    fixedFija.avisos.indexOf('bifila_ignorada_en_fija') !== -1, JSON.stringify(fixedFija.avisos));
+  /* SUSTITUCIÓN DECLARADA (v1.6.9): computaMixto pasa bifila:false a las
+     zonas de fija — 15 zonas eran 15 avisos idénticos que se leían como «tu
+     bifila no funciona». El camino de fija se delata ahora en DIRECTO contra
+     el motor (que conserva el aviso para quien le pase bifila a una fija),
+     y el mixto se exige LIMPIO de esa pared. */
+  const avisoDirecto = await page.evaluate(() => {
+    const Z = [[-0.798, 41.572], [-0.7978, 41.572], [-0.7978, 41.5722], [-0.798, 41.5722]];
+    const R = LAY.compute({ coords: Z, holes: [], exclusions: [], mount: 'fixed',
+      table: '1V', mods: [8], modLen: 2.382, modWid: 1.134, moduleWp: 630, pitch: 4,
+      setback: 0, panelAz: 180, bifila: true, gapModules: 0.02, gapMotor: 0.5,
+      gapNs: 0.5, roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4,
+      mode: 'adaptive', minStructs: 1, rowOffset: 'none', alignGrid: false, center: true });
+    return (R.avisos || []).map(a => a.codigo);
+  });
+  check('fixed-es-fija · el motor en DIRECTO avisa «bifila ignorada» con mount fixed',
+    avisoDirecto.indexOf('bifila_ignorada_en_fija') !== -1, JSON.stringify(avisoDirecto));
+  check('fixed-es-fija · el MIXTO no emite la pared de «bifila ignorada» (bifila:false por zona)',
+    fixedFija.avisos.indexOf('bifila_ignorada_en_fija') === -1, JSON.stringify(fixedFija.avisos));
+
+
+  /* ── «Y LA FIJA... NADA» (2026-08-28): az, mínimo y bifila POR MONTAJE ── */
+  const fijaViva = await page.evaluate(() => {
+    const PAR = [[-0.800, 41.570], [-0.794, 41.570], [-0.794, 41.576], [-0.800, 41.576]];
+    function cinta(anchoM, largoM, vertical) {
+      const dW = anchoM / 111320 / Math.cos(41.57 * Math.PI / 180), dH = largoM / 110540;
+      const w = vertical ? dW * (anchoM / anchoM) : (largoM / 111320 / Math.cos(41.57 * Math.PI / 180));
+      const h = vertical ? dH : (anchoM / 110540);
+      const x0 = -0.798, y0 = 41.5715;
+      const dx = vertical ? (anchoM / 111320 / Math.cos(41.57 * Math.PI / 180)) : w;
+      return [[x0, y0], [x0 + dx, y0], [x0 + dx, y0 + h], [x0, y0 + h]];
+    }
+    const cfg = { coords: PAR, holes: [], exclusions: [], mount: 'tracker', table: '1V',
+      mods: [21, 12, 8], modLen: 2.382, modWid: 1.134, moduleWp: 630, pitch: 6, setback: 5,
+      panelAz: 270, bifila: true, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5,
+      roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4, mode: 'adaptive',
+      minStructs: 2, rowOffset: 'none', alignGrid: false, center: true };
+    // cinta HORIZONTAL (11 m alto x 120 m): con az y minimo heredados del
+    // tracker salia 0 — la escena del «nada»
+    const H = computaMixto(cfg, [{ nombre: 'h', coords: cinta(11, 120, false),
+                                   holes: [], mount: 'fixed', pitch: 4 }]);
+    // cinta VERTICAL (11 m ancho x 120 m): filas E-O de una mesa — decide el
+    // minimo de 1 por fila en fija
+    const V = computaMixto(cfg, [{ nombre: 'v', coords: cinta(11, 120, true),
+                                   holes: [], mount: 'fixed', pitch: 4 }]);
+    // espia del azimut por zona
+    const orig = LAY.compute, vistos = [];
+    let T;
+    try {
+      LAY.compute = function (c) { vistos.push(c.mount + ':' + c.panelAz + ':min' + c.minStructs + ':bif' + c.bifila); return orig(c); };
+      T = computaMixto(cfg, [
+        { nombre: 'trk', coords: cinta(60, 120, false), holes: [], mount: 'tracker', pitch: 6 },
+        { nombre: 'fij', coords: [[-0.797, 41.574], [-0.796, 41.574], [-0.796, 41.575], [-0.797, 41.575]], holes: [], mount: 'fixed', pitch: 4 }]);
+    } finally { LAY.compute = orig; }
+    return { mesasH: H.porZona[0].structures, mesasV: V.porZona[0].structures,
+             vistos, partes: (T.partesTracker || []).map(v => ({ bifila: v.bifila, filas: v.rows.length })),
+             ejes: (typeof ejesBifila === 'function' && T.partesTracker && T.partesTracker[0])
+               ? ejesBifila(T.partesTracker[0]).length : -1 };
+  });
+  check('fija-viva · la cinta HORIZONTAL planta (az de fija propio, no el del tracker)',
+    fijaViva.mesasH > 0, JSON.stringify({ mesasH: fijaViva.mesasH }));
+  check('fija-viva · la cinta VERTICAL planta (minimo 1 mesa/fila en fija)',
+    fijaViva.mesasV > 0, JSON.stringify({ mesasV: fijaViva.mesasV }));
+  check('fija-viva · el espia lo confirma: tracker az 270 y fija az 180 / min1 / sin bifila',
+    fijaViva.vistos.some(v => v === 'tracker:270:min2:biftrue')
+      && fijaViva.vistos.some(v => v === 'fixed:180:min1:biffalse'), JSON.stringify(fijaViva.vistos));
+  check('ejes · el mixto publica la vista de TRACKER con sus filas y su bifila',
+    fijaViva.partes.length === 1 && fijaViva.partes[0].bifila === true
+      && fijaViva.partes[0].filas > 0, JSON.stringify(fijaViva.partes));
+  check('ejes · ejesBifila(vista) traza bielas en la zona de tracker del mixto',
+    fijaViva.ejes > 0, JSON.stringify({ ejes: fijaViva.ejes }));
 
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
