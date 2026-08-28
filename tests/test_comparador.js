@@ -132,7 +132,7 @@ if (MAN) {
   /* Re-fijado al entrar el QUEBRADO en el catálogo del core (SolarGPT #185).
      El golden se regeneró contra `main` y el generador VERIFICA que ese commit
      esté en `main` antes de escribir — el guard que nació de PORTAL-BUG-01. */
-  const CORE_PIN = { version: '1.74.0', commit: 'afed8b74' };
+  const CORE_PIN = { version: '1.75.0', commit: '0c7cccef' };
   check('el golden corresponde al core fijado (v' + CORE_PIN.version + ')',
     MAN.core.version === CORE_PIN.version,
     'golden v' + MAN.core.version + ' vs pin v' + CORE_PIN.version +
@@ -872,9 +872,27 @@ check('el relativo del tilt es 0 en el óptimo y negativo fuera',
 // llano y con pendiente quedaba un 3,7 % de sombra residual. Ahora el core lleva
 // `cross_axis_tilt` (pvlib), la ficha también, y el backtracking sigue haciendo
 // su trabajo en cuesta.
+/* LA COLUMNA «SOMBRA» TIENE AHORA DOS PARTES, y hay que separarlas para que
+   este check siga midiendo lo que dice. El backtracking quita la sombra del
+   HAZ; el cielo que tapa la fila de enfrente NO lo puede quitar —es geometría
+   de factor de vista, está ahí gire el tracker lo que gire—. Sumadas en un
+   solo número, un 0,5 % con backtracking se leería como «el retroceso no
+   funciona», que es falso. Se aísla con `sinMascara`. */
+const sinMascara = (k, c) => {
+  const sp = FIS.spec(k); sp.sinMascara = true;
+  try {
+    const r = {}; FIS.compara([k], M, c || cfg).filas.forEach(f => { r[f.key] = f; });
+    return r[k];
+  } finally { delete sp.sinMascara; }
+};
+const hazSolo = sinMascara('tracker_hsat');
 check('con pendiente (' + C.cross_axis_slope_deg + '°) el backtracking SIGUE quitando la ' +
-  'sombra (' + js.tracker_hsat.sombra.toFixed(2) + ' %): el ángulo va con la pendiente',
-  js.tracker_hsat.sombra < 0.5);
+  'sombra del HAZ (' + hazSolo.sombra.toFixed(2) + ' %): el ángulo va con la pendiente',
+  hazSolo.sombra < 0.5);
+check('y el cielo que tapa la vecina NO lo quita —ni puede— (' +
+  (js.tracker_hsat.sombra - hazSolo.sombra).toFixed(3) + ' pp que se quedan)',
+  js.tracker_hsat.sombra - hazSolo.sombra > 0.1,
+  'si el retroceso lo borrara, es que se está enmascarando dos veces');
 /* 1,0 pp absoluto sobre una sombra de ~4 % era un 25 % relativo de aire: la
    deriva que se coló medía 0,44 pp. Lo medido hoy contra el core al día es
    0,07 pp. */
@@ -1418,8 +1436,12 @@ const CP = porClave(conPend), SP = porClave(sinPend);
      sol ya no es la fila de delante sino el terreno. Se deja escrito lo que
      se predijo y lo que se midió, que es la única forma de que la próxima
      predicción se pese. */
-  check('en LLANO el backtracking sí deja la sombra a cero (' + bt(0).toFixed(3) + ' %)',
-    bt(0) < 0.01, 'para eso existe el retroceso');
+  /* Sobre la sombra del HAZ, que es la que el retroceso puede quitar: el
+     cielo tapado por la vecina no se va con ningún ángulo. */
+  const btHaz = pend => sinMascara('tracker_hsat',
+    { ...cfg, pend, contrasol: true }).sombra;
+  check('en LLANO el backtracking sí deja la sombra del HAZ a cero (' +
+    btHaz(0).toFixed(3) + ' %)', btHaz(0) < 0.01, 'para eso existe el retroceso');
   check('en CUESTA ya no la absorbe entera —el campo tiene su propio ocaso— (' +
     bt(0).toFixed(3) + ' → ' + bt(12).toFixed(3) + ' %)',
     bt(12) > 0.1,
@@ -1637,6 +1659,91 @@ check('ninguna estructura del catálogo va ya sin sombra entre filas',
     (sano - mutado) / sano > 0.10,
     'sano ' + sano.toFixed(1) + ' vs mutado ' + mutado.toFixed(1));
 })();
+
+// ── 6c) EL CIELO QUE TAPA LA FILA DE ENFRENTE — oráculo por RAYOS ───────────
+// La fila de delante no solo tapa el haz: sube el horizonte del módulo y con
+// él se pierde la banda de bóveda que había debajo. En el comparador eso NO se
+// modelaba, y la nota que declaraba el hueco decía que daba igual «porque a
+// nadie se le aplica, así que la comparación sigue siendo pareja». Medido, es
+// falso: va de 0,045 % a 0,46 % de POA según la estructura —hasta 0,34 pp de
+// Δ%— y manda el TILT, no el GCR.
+//
+// `FIS.skyMask` es analítica. El árbitro de aquí NO: lanza rayos en todas las
+// direcciones del plano ⊥ a las filas, mira cuáles llegan al cielo sin cortar
+// a la vecina, y suma su contribución al factor de vista —(1/2)·cos α dα,
+// medido desde la normal—. No comparte una línea de álgebra con ella.
+function vfPorRayos(tiltDeg, gcr, nDir, nPtos) {
+  const b = tiltDeg * Math.PI / 180, cw = 1.0, p = cw / gcr;
+  const D = cw * Math.sin(b), W = cw * Math.cos(b);
+  // segmentos de las filas vecinas (la nuestra ocupa [0,W], alero en 0)
+  const segs = [];
+  for (let k = -6; k <= 6; k++) {
+    if (!k) continue;
+    segs.push([k * p, 0, k * p + W, D]);
+  }
+  const corta = (px, pz, dx, dz) => segs.some(([x0, z0, x1, z1]) => {
+    const sx = x1 - x0, sz = z1 - z0, den = dx * sz - dz * sx;
+    if (Math.abs(den) < 1e-12) return false;
+    const t = ((x0 - px) * sz - (z0 - pz) * sx) / den;
+    const u = ((x0 - px) * dz - (z0 - pz) * dx) / den;
+    return t > 1e-9 && u >= -1e-9 && u <= 1 + 1e-9;
+  });
+  // normal del paño: mira hacia −x y arriba (el alero está en x=0 y sube al +x)
+  const nx = -Math.sin(b), nz = Math.cos(b);
+  let acum = 0;
+  for (let j = 0; j < nPtos; j++) {                 // puntos del colector
+    const f = (j + 0.5) / nPtos, px = f * W, pz = f * D;
+    let vf = 0;
+    for (let i = 0; i < nDir; i++) {                // direcciones del cielo
+      const a = -Math.PI / 2 + (i + 0.5) / nDir * Math.PI;   // desde la normal
+      const dx = nx * Math.cos(a) - nz * Math.sin(a);
+      const dz = nz * Math.cos(a) + nx * Math.sin(a);
+      if (dz <= 0) continue;                        // hacia el suelo: no es cielo
+      if (corta(px + 1e-9 * dx, pz + 1e-9 * dz, dx, dz)) continue;
+      vf += 0.5 * Math.cos(a) * (Math.PI / nDir);
+    }
+    acum += vf;
+  }
+  return acum / nPtos;
+}
+check('la ficha tiene el modelo de cielo enmascarado', typeof FIS.skyMask === 'function');
+(function () {
+  let peor = 0, donde = null, n = 0;
+  for (const tilt of [7, 12, 25, 30, 40]) {
+    for (const gcr of [0.2, 0.3, 0.397, 0.45, 0.7]) {
+      const libre = (1 + Math.cos(tilt * Math.PI / 180)) / 2;
+      const suyo = vfPorRayos(tilt, gcr, 4000, 41) / libre;
+      const d = Math.abs(FIS.skyMask(tilt, gcr) - suyo);
+      if (d > peor) { peor = d; donde = 'tilt ' + tilt + ' gcr ' + gcr; }
+      n++;
+    }
+  }
+  check('el cielo enmascarado coincide con el trazado de rayos (' + n + ' geometrías)',
+    peor < 2e-3, 'peor ' + peor.toExponential(2) + ' en ' + donde);
+})();
+check('un plano HORIZONTAL no pierde cielo: no hay banda debajo del horizonte',
+  FIS.skyMask(0, 0.7) === 1);
+check('geometría degenerada devuelve 1 en vez de inventarse algo',
+  FIS.skyMask(30, 0) === 1 && FIS.skyMask(30, 1) === 1 && FIS.skyMask(30, 1.5) === 1);
+check('pierde más cuanto más empinado y cuanto más apretado',
+  FIS.skyMask(40, 0.45) < FIS.skyMask(25, 0.45) &&
+  FIS.skyMask(30, 0.70) < FIS.skyMask(30, 0.30));
+// El circunsolar NO se enmascara: viene de la posición del sol y ya lo tapa la
+// sombra del haz. Se comprueba sobre la POA, que es donde se decide.
+(function () {
+  const P = (r) => FIS.poa(20, 1, 25, 25, 800, 120, 900, 0.2, 0, 0.7, 1361, r);
+  const libre = P(1), tapado = P(0.9);
+  check('enmascarar el cielo baja la POA pero NO toca al haz ni a su halo',
+    tapado.neta < libre.neta && tapado.ideal === libre.ideal,
+    'ideal ' + libre.ideal.toFixed(4) + ' vs ' + tapado.ideal.toFixed(4));
+  const sinSol = FIS.poa(20, 1, 25, 25, 0, 120, 900, 0.2, 0, 0.7, 1361, 0.9);
+  const sinSolLibre = FIS.poa(20, 1, 25, 25, 0, 120, 900, 0.2, 0, 0.7, 1361, 1);
+  check('y sin haz sigue quitando cielo (el isotrópico y el horizonte)',
+    sinSol.neta < sinSolLibre.neta);
+})();
+// Las dos aguas van con gcr/2, y eso NO es una aproximación.
+check('un paño de dos aguas ve el cielo de un cobertizo de MEDIO colector',
+  Math.abs(FIS.skyMask(12, 0.70 / 2) - FIS.skyMask(12, 0.35)) < 1e-15);
 
 // ── 7) hemisferio sur: la fija tiene que mirar al NORTE ──
 // Si `psFija` no cambiara de signo bajo el ecuador, la fija apuntaría al polo y

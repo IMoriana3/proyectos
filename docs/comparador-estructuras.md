@@ -516,8 +516,22 @@ transposición NEGATIVA—, que es la firma de una geometría imposible, no de u
   cabría.
 * El **tilt óptimo** del navegador se barre CON sombra (es el óptimo neto); el del cuaderno sale de
   un barrido de transposición sin sombra y queda 1-3° por encima. También sale como aviso.
-* La **difusa del cielo que tapa la fila de enfrente** no se modela para NINGUNA estructura, así
-  que la comparación entre ellas es pareja, pero no es el número de campo.
+* ~~La **difusa del cielo que tapa la fila de enfrente** no se modela~~ — **CERRADO** (SolarGPT
+  v1.75.0, 2026-08-28), y la razón que llevaba escrita era falsa: decía que daba igual «porque a
+  nadie se le aplica, así que la comparación sigue siendo pareja». **No lo es.** Medido, va de
+  0,045 % a 0,46 % de POA según la estructura —hasta **0,34 pp de Δ%**, más que la tolerancia del
+  careo entre los dos motores— y manda el **tilt**, no el GCR: una dos aguas a 12° apenas pierde
+  cielo aunque vaya al 70 % de suelo, y una fija a 30° pierde diez veces más. Ahora va por
+  `poa.sky_masking_ratio` / `FIS.skyMask`, careado contra `pvlib.bifacial.infinite_sheds` a
+  2,3e-06 y contra un trazado de rayos independiente en la ficha. **No se enmascara** el
+  circunsolar (viene de la posición del sol y ya lo tapa la sombra del haz) ni el albedo (el suelo
+  también lo tapa la vecina, pero eso es otro modelo y aquí no está); el término de **horizonte**
+  de Perez se enmascara con el mismo factor que el isotrópico, y como vive justo en el horizonte
+  se tapa en realidad más: es una **cota inferior** de la pérdida.
+* **La columna «pérdida sombra» lleva ahora dos cosas** y la ficha lo dice en pantalla: la sombra
+  del **haz** —que el backtracking quita, y en llano deja en cero— y el **cielo** que tapa la fila
+  de enfrente, que ningún ángulo recupera. Sumadas en un solo número, un tracker con backtracking
+  no marca 0 y eso no significa que el retroceso falle.
 * El modelo de sombra es de **campo infinito**: la primera fila, que no tiene vecina, paga una
   sombra que no tiene (medido más arriba: 0,005 puntos con la geometría de esta ficha).
 * No hay bifacialidad ni suciedad: campo monofacial.

@@ -1303,6 +1303,47 @@ FIS.shadeEW=function(psDeg,thDeg,pitch,cw,pendDeg){
   return isFinite(f)?Math.max(0,Math.min(1,f)):0;
 };
 
+/* ── LA FILA DE ENFRENTE TAMBIÉN TAPA CIELO ─────────────────────────────────
+   Puerto literal de `poa.sky_masking_ratio` del core. Devuelve la fracción del
+   cielo ISOTRÓPICO que le sobrevive al vecino.
+
+   No solo tapa el haz: sube el horizonte del módulo un ángulo ψ —el ángulo de
+   máscara— y con él se pierde la banda de bóveda que había debajo.
+
+   La geometría es de una línea. Un plano inclinado b sin nada delante ve
+   (1+cos b)/2 de la bóveda; con el horizonte levantado ψ por delante ve
+   (1+cos(b+ψ))/2 —comprobación: b=0, ψ=90° da 0,5, o sea media bóveda—. El
+   ángulo de máscara en un punto a fracción s de la altura del colector es la
+   ecuación 8 de Passias & Källback, la misma de `pvlib.shading.masking_angle`:
+
+       ψ(s) = atan( gcr·(1−s)·sen b / (1 − gcr·(1−s)·cos b) )
+
+   y como varía a lo largo del colector —máximo abajo, nulo arriba— se promedia
+   sobre él, con 101 puntos: la MISMA constante que el core, porque si no los
+   dos motores dejarían de poder compararse cifra a cifra.
+
+   POR QUÉ NO `sky_diffuse_passias` de pvlib: porque mide otra cosa —la pérdida
+   referida a la bóveda ENTERA y no a la que ese plano ve—, y da entre 5 y 8
+   veces menos. Lo de aquí coincide con `pvlib.bifacial.infinite_sheds` —el
+   modelo numérico de la propia pvlib— a 2,3e-06 en 25 geometrías.
+
+   DOS AGUAS: la misma función con gcr/2. No es una aproximación: el ángulo de
+   máscara desde un paño hasta la cumbrera de la vecina es IDÉNTICO al de un
+   cobertizo de medio colector al mismo paso, a 4e-15 grados.                 */
+FIS.SKY_MASK_N=101;
+FIS.skyMask=function(tiltDeg,gcr){
+  if(!(gcr>0&&gcr<1))return 1;                       // geometría degenerada
+  var b=tiltDeg*FIS.D2R, libre=(1+Math.cos(b))/2;
+  if(libre<=1e-12)return 1;
+  var n=FIS.SKY_MASK_N, suma=0;
+  for(var i=0;i<n;i++){
+    var resto=gcr*(1-(i+0.5)/n);                     // colector POR ENCIMA
+    var psi=Math.atan2(resto*Math.sin(b),1-resto*Math.cos(b));
+    suma+=(1+Math.cos(b+psi))/2;
+  }
+  return Math.max(0,Math.min(1,(suma/n)/libre));
+};
+
 /* ── POA en el plano girado θ, con la sombra aplicada SOLO al haz y su halo ──
    Igual que el core: la difusa no se sombrea en este camino (la del cielo la
    ve el módulo casi entera aunque la fila de delante tape el sol), y por eso
@@ -1386,7 +1427,7 @@ FIS.perez=function(dh,bh,e0,zenDeg,cosAOI,tiltSupDeg){
   var cb=Math.cos(tiltSupDeg*FIS.D2R), sb=Math.sin(tiltSupDeg*FIS.D2R);
   return {iso:dh*0.5*(1-F1)*(1+cb), circ:dh*F1*A/B, hor:dh*F2*sb};
 };
-FIS.poa=function(psDeg,rho,thDeg,tiltSupDeg,bh,dh,gh,albedo,fsh,sinEl,e0){
+FIS.poa=function(psDeg,rho,thDeg,tiltSupDeg,bh,dh,gh,albedo,fsh,sinEl,e0,rCielo){
   var cosAOI=Math.max(0,rho*Math.cos((psDeg-thDeg)*FIS.D2R));
   var cb=Math.cos(tiltSupDeg*FIS.D2R);
   var zenDeg=90-Math.asin(Math.max(-1,Math.min(1,sinEl)))*FIS.R2D;
@@ -1398,8 +1439,24 @@ FIS.poa=function(psDeg,rho,thDeg,tiltSupDeg,bh,dh,gh,albedo,fsh,sinEl,e0){
   // sombrean. Es la misma regla de antes; lo que cambia es de dónde sale cada
   // parte, que ahora es Perez y no Hay-Davies.
   var dirCirc=haz+P.circ;
-  var difFondo=P.iso+P.hor+suelo;
-  return {neta:dirCirc*(1-fsh)+difFondo, ideal:dirCirc+difFondo};
+  /* Y la fila de enfrente tapa CIELO: el isotrópico y el horizonte se
+     enmascaran (`FIS.skyMask`). El CIRCUNSOLAR no —viene de la posición del
+     sol, no de la bóveda, y ya lo tapa la sombra del haz dos líneas arriba;
+     enmascararlo aquí sería cobrarle la misma sombra dos veces—. El albedo
+     tampoco: eso es el suelo, y su enmascaramiento es otro modelo que aquí no
+     está y va declarado.
+     El término de HORIZONTE se enmascara con el mismo factor que el
+     isotrópico. Vive justo en el horizonte, así que en realidad se tapa MÁS:
+     esto es una cota INFERIOR de la pérdida, y va dicha. */
+  var rC=(rCielo==null)?1:rCielo;
+  var fondo=P.iso+P.hor;
+  /* El IDEAL es la transposición limpia: sin sombra de haz Y SIN cielo tapado.
+     El cielo que tapa la vecina ES sombreado entre filas, así que va en la
+     columna de «sombra» y no escondido en el techo — igual que el core, cuyo
+     `POA_Ideal_NoShade` se calcula antes de enmascarar nada. Meterlo en el
+     ideal lo haría desaparecer de la lectura: el careo por etapas lo cazó en
+     `poa_ideal_sin_sombra`, que es exactamente para lo que está. */
+  return {neta:dirCirc*(1-fsh)+fondo*rC+suelo, ideal:dirCirc+fondo+suelo};
 };
 
 /* ── Catálogo: mismas claves y mismas etiquetas que `structure_compare.CATALOGO` ── */
@@ -1522,8 +1579,20 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
              :(spec.fam==='fija_ew'
                  ?FIS.shadeEW(pl.P.ps,t,pitch,G.altoColector,cruz)
                  :FIS.shade  (pl.P.ps,t,pitch,G.altoColector,cruz));
-      var P=FIS.poa(pl.P.ps,pl.P.rho,t,FIS.tiltSup(t,pl.ax),bh,dh,gh,cfg.albedo,fsh,
-                    Math.sin(S.el),e0);
+      /* El cielo que le sobrevive al vecino. En una dos aguas cada paño ve su
+         propia fila de cobertizos de MEDIO colector, de ahí el gcr/2 —
+         verificado, no aproximado—. Mismo reparto que hace el core. */
+      var tSup=FIS.tiltSup(t,pl.ax);
+      var gcrMask=G.altoColector/pitch;
+      if(spec.fam==='fija_ew')gcrMask/=2;
+      /* `sinSombra` significa TRANSPOSICIÓN PURA, y el cielo que tapa la
+         vecina también es sombreado entre filas: si se dejara puesto, el
+         barrido «sin sombra» del tilt óptimo sabría de vecinas y dejaría de
+         ser lo que dice ser. Es el mismo criterio del core, cuyo
+         `_optimal_tilt` corre sin enmascarar. */
+      var rCielo=(spec.sinMascara||spec.sinSombra)?1:FIS.skyMask(tSup,gcrMask);
+      var P=FIS.poa(pl.P.ps,pl.P.rho,t,tSup,bh,dh,gh,cfg.albedo,fsh,
+                    Math.sin(S.el),e0,rCielo);
       sN+=P.neta; sI+=P.ideal;
       /* Y la de CADA plano por separado. En un quebrado las dos mesas no
          captan lo mismo —tienen inclinaciones distintas— y esa diferencia es la
@@ -3149,7 +3218,14 @@ function drawTabla(base){
   var peor=null;
   if(P)f.forEach(function(x){var q=P.por[x.key];
     if(q&&x.sombra>0.05&&(!peor||x.sombra>peor.x.sombra))peor={x:x,q:q};});
-  $('tblNote').innerHTML=(peor?'La columna <b>pérdida sombra</b> sale del modelo de fila '+
+  $('tblNote').innerHTML=
+    '<b>Pérdida sombra</b> lleva DOS cosas, y conviene no confundirlas: la sombra del '+
+    '<b>haz</b> —la que el backtracking existe para quitar, y en llano la deja en cero— y el '+
+    '<b>cielo</b> que tapa la fila de enfrente, que ningún ángulo recupera: es geometría de '+
+    'factor de vista, está ahí gire el seguidor lo que gire. Por eso una fila con backtracking '+
+    'no marca 0 aquí, y no es que el retroceso falle. El cielo tapado manda por el <b>tilt</b> '+
+    'más que por el GCR: una dos aguas casi tumbada apenas pierde aunque vaya muy apretada. '+
+    (peor?'La columna sale además del modelo de fila '+
       'INFINITA, así que le cobra sombra también a la primera fila, que no tiene a nadie '+
       'delante. Con '+fmt(peor.q.filas,0)+' filas, el '+fmt(peor.x.sombra,2)+' % de «'+
       esc(peor.x.label)+'» sería en realidad '+fmt(peor.x.sombra*(peor.q.filas-1)/peor.q.filas,2)+
