@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.15</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.16</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -4063,6 +4063,13 @@ function huecosParaFija(cfg, zonas, partes){
   var pitchZ={};zonas.forEach(function(z){pitchZ[z.nombre]=(z.pitch!=null?z.pitch:cfg.pitch);});
   var pFija=(typeof pitchDe==='function')?pitchDe('fija'):4;
   partes.forEach(function(rp,zi){
+    /* El pitch del pasillo es EL DE LA ZONA de la mesa (v1.6.16, «ahí
+       entrarían...»): antes se leía pitchZ[e.zona] y las mesas de `partes`
+       NO llevan ese campo (lo reciben las copias de R.structures, no el
+       motor) — caía SIEMPRE al pitch del tracker, y a cada fila de fija
+       se le regalaba ~1 m de pasillo por lado que se comía los bolsillos
+       de la linde. partes y zonas van en paralelo: el nombre sale de zi. */
+    var _pzZona=pitchZ[(zonas[zi]||{}).nombre];
     rp.structures.forEach(function(e){
       if(!e.lonlat||e.lonlat.length<4)return;
       var q=e.lonlat.slice(0,4).map(aM);
@@ -4072,7 +4079,7 @@ function huecosParaFija(cfg, zonas, partes){
       var uL=L01>=L12?[e01[0]/L01,e01[1]/L01]:[e12[0]/L12,e12[1]/L12];
       var uS=[-uL[1],uL[0]];
       var hallLargo=Math.max(L01,L12)/2+0.6;
-      var pz=Math.max(pitchZ[e.zona]||+cfg.pitch||6, pFija);
+      var pz=Math.max(_pzZona||+cfg.pitch||6, pFija);
       var hallCorto=pz/2+0.3;
       var R=Math.hypot(hallLargo,hallCorto);
       var c0=Math.max(0,Math.floor((cx-R-x0)/cel)), c1=Math.min(W-1,Math.ceil((cx+R-x0)/cel));
@@ -4265,21 +4272,31 @@ function computaMixto(cfg, zonas){
      por el MISMO camino por-zona (azimut/tabla/mínimo/filtro de fija). */
   var _rellenoInfo=null;
   if(cfg.rellenoFija&&zonas.some(function(z){return z.mount==='tracker';})){
-    var _zR=huecosParaFija(cfg,zonas,partes);
-    if(_zR.length){
-      var _pR=_zR.map(_computaZona);
-      // los huecos donde tampoco cupo fija NI se listan: son artefactos de
-      // la segunda pasada, no zonas del usuario
-      var _zK=[],_pK=[],_mR=0;
-      _zR.forEach(function(z,i){
-        var st=_pR[i].stats.structures||0;
-        if(st>0){_zK.push(z);_pK.push(_pR[i]);_mR+=st;}
+    /* ITERADO (v1.6.16, «ahí entrarían...»): una sola pasada dejaba
+       bolsillos que SÍ admiten mesa — dentro de un hueco grande, la fase
+       de las filas no llega a la esquina, pero ese resto como zona propia
+       ancla su fila y entra. Medido en Tudela (fixture del banco): la 2ª
+       pasada añade 17 huecos con mesa y la 3ª casi nada — 3 pasadas de
+       techo y corte en cuanto una no añade. Los nombres se renumeran
+       DENSOS aquí (huecosParaFija arranca en relleno-1 en cada llamada y
+       el desglose por zona se indexa por nombre). */
+    var _mR=0,_hR=0,_idxR=0;
+    for(var _pas=0;_pas<3;_pas++){
+      var _zR=huecosParaFija(cfg,zonas,partes);
+      if(!_zR.length)break;
+      var _zK=[],_pK=[];
+      _zR.forEach(function(z){
+        var r=_computaZona(z);
+        var st=r.stats.structures||0;
+        // los huecos donde tampoco cupo fija NI se listan: son artefactos
+        // de la pasada, no zonas del usuario
+        if(st>0){z.nombre='relleno-'+(++_idxR);_zK.push(z);_pK.push(r);_mR+=st;}
       });
-      if(_zK.length){
-        zonas=zonas.concat(_zK); partes=partes.concat(_pK);
-        _rellenoInfo={mesas:_mR, huecos:_zK.length};
-      }
+      if(!_zK.length)break;
+      _hR+=_zK.length;
+      zonas=zonas.concat(_zK); partes=partes.concat(_pK);
     }
+    if(_hR)_rellenoInfo={mesas:_mR, huecos:_hR};
   }
   var base=partes[0];
   /* VISTAS para el render de vigas y ejes (2026-08-28, «selecciono bifila y
