@@ -961,21 +961,31 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     const R = computaMixto(cfg, MIX_ZONAS);
     let mesas = 0, huecos = 0;
     R.porZona.forEach(p => { if (p.nombre.startsWith('relleno')) { mesas += p.structures; huecos++; } });
+    const _ren = R.avisos.find(a => a.codigo === 'relleno_fija_renuncia');
     return { mesas, huecos, celda: window.huecosParaFija._ultimaCelda,
+             renuncia: _ren ? +(_ren.mensaje.match(/(\d+) mesa\(s\) MÁS/) || [0, 0])[1] : 0,
              total: R.stats.structures };
   }, JSON.parse(require('fs').readFileSync(__dirname + '/parcelas/tudela.sesion.json', 'utf8')));
   check('tudela · el relleno usa la celda FINA (la parcela cabe de sobra)',
     tudela.celda === 1.5, 'celda=' + tudela.celda);
-  /* La escalera MEDIDA de este número (v1.6.15-17, cada peldaño con su
-   * mutante bajo el código ACTUAL): sin orientación perpendicular → 389 ·
-   * pasillo con pitch de tracker para TODAS las mesas (pitchZ[e.zona] con
-   * campo que no existe) → 423 · una sola pasada → 464 · sano → 473. El
-   * umbral de 470 mata a los TRES; el de la celda gruesa (316 en su
-   * versión) muere además en el check de arriba. Si un cambio legítimo del
-   * motor mueve el número, se RE-MIDE la escalera entera — este umbral es
-   * una medición, no un deseo. */
-  check('tudela · el relleno apura los bolsillos (≥470 mesas: celda fina + pasillo por zona + iterado + dos orientaciones)',
-    tudela.mesas >= 470, tudela.mesas + ' mesas en ' + tudela.huecos + ' huecos (escalera: 389/423/464/473)');
+  /* La escalera MEDIDA de este número (v1.6.15-18, cada peldaño con su
+   * mutante bajo el código ACTUAL): pasillo con pitch de tracker para
+   * TODAS las mesas (pitchZ[e.zona] con campo que no existe) → 370 · una
+   * sola pasada → 382 · sin perpendicular en absoluto → 389 · sano → 402.
+   * El umbral de 395 mata a los TRES; el de la celda gruesa muere además
+   * en el check de arriba. El mutante «la perpendicular gana por una»
+   * (v1.6.17, el del ENGENDRO) da MÁS mesas (473) y no puede morir en un
+   * umbral inferior: muere en el check de RENUNCIA de abajo. Si un cambio
+   * legítimo del motor mueve el número, se RE-MIDE la escalera entera —
+   * este umbral es una medición, no un deseo. */
+  check('tudela · el relleno apura los bolsillos (≥395 mesas: celda fina + pasillo por zona + iterado + perpendicular solo-si-cero)',
+    tudela.mesas >= 395, tudela.mesas + ' mesas en ' + tudela.huecos + ' huecos (escalera: 370/382/389/402)');
+  /* «Qué engendro es este» (v1.6.18): la perpendicular ya NO vuelca un
+   * hueco donde la mesa tumbada entra — lo renunciado se DECLARA con sus
+   * números (en Tudela: 82 mesas más cabrían de pie). El mutante que
+   * restaura el «gana por una» de v1.6.17 no renuncia a nada y muere aquí. */
+  check('tudela · lo renunciado por respetar el azimut del proyectista se DECLARA (≥50 mesas en el aviso)',
+    tudela.renuncia >= 50, 'renuncia=' + tudela.renuncia + ' (medido: 82)');
 
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
