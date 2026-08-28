@@ -1047,7 +1047,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/generador-layout.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-08-26",
-    version: "1.6.5",
+    version: "1.6.6",
     docId: "generador-layout",
     docUrl: "",
     download: "",
@@ -1083,6 +1083,7 @@ const PROJECTS = [
       { done:false, text:"El canal factiun_sizing: el gate ya lo lee; falta que el Comparador lo publique (propuesto en CONTRATO, Puntos abiertos)." }
     ],
     historial: [
+      { date:"2026-08-28", ver:"1.6.6", note:"«En esos huecos la fija entraria»: los huecos del campo de tracker que si admiten fija caian como islas pequenas y se las comian DOS bocas — el umbral unico de area minima (calibrado a tracker; ahora hay umbral POR MONTAJE y por defecto SIN minimo, a peticion) y el ||2000 que se tragaba el cero explicito tecleado (falsy no es ausente). Ademas varitaContorno, calibrado para pixeles de ortofoto, devolvia null en islas de 1-2 celdas de MDT (~3 ha) y desaparecian sin contarse: ahora tienen anillo de respaldo por aristas de celda. La capa «pendiente > max.» se pinta con un color POR MONTAJE (morado tracker, cian fija) y la fija del mixto tiene su propia tabla (1V/2V/3V…), en vez de heredar la del selector." },
       { date:"2026-08-28", ver:"1.6.5", note:"«La parcela se cruza a si misma en varios puntos y la reparacion no llega» sobre las zonas del reparto por pendiente: una isla PELLIZCADA (dos lobulos unidos por una celda) hace que el paseo del contorno pase dos veces por la misma celda y el anillo salga cruzado — y con varios cruces la reparacion del motor (3 pases, lazo grande) no llega, dejando la zona en «no cabe ninguna estructura». Ahora el reparto parte cada contorno en sus lazos SIMPLES antes de empujarlo: cada pieza con area es su propia zona, los lazos de area ~0 se descartan y el pellizco se avisa. Es lo mismo que hace el make_valid del motor Python, que devuelve todas las piezas." },
       { date:"2026-08-27", ver:"1.6.4", note:"«El filtro de pendiente excluye el 100 % de la parcela» — sobre una zona que el propio reparto habia declarado apta para FIJA a 25°. El layout mixto congelaba un solo exclTopo en el cfg, calculado con los limites del montaje DEL SELECTOR (tracker, 5°/5°), y todas las zonas lo heredaban: la fija moria filtrada a lo tracker. Ahora cada zona pide las celdas excluidas de SU montaje. De paso, el pie del resumen ya no dice «pitch undefined m»: en el mixto dice «por zona» y «en la linde»." },
       { date:"2026-08-27", ver:"1.6.3", note:"«¿Por qué no me dibuja la fija?» El setback se aplicaba al borde de CADA zona del layout mixto, fronteras internas incluidas — una tira de fija de 1,2 ha quedaba «área útil vacía» con 5 m por todos los lados mientras la zona de 11 ha ni lo notaba. El retranqueo protege el perímetro LEGAL, y una raya del reparto por pendiente no es perímetro de nada. Ahora cada zona se coloca con setback 0 y se retira solo la mesa que invade la banda de la linde REAL (la parcela dibujada); en bifila el descarte es por pareja completa, sin viudas. Espejo del mismo arreglo en el motor Python." },

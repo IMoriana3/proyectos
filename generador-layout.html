@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.5</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.6</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -320,6 +320,12 @@ canvas.panning{cursor:grabbing}
             <div class="tip">Default 25°, el típico de latitud media.</div></div>
           <div class="field"><label>Albedo del suelo</label><input id="albedo" type="number" step="0.01" value="0.20"></div>
         </div>
+        <div class="two">
+          <div class="field"><label>Tabla de la fija</label>
+            <select id="tableFija"><option>1V</option><option>2V</option><option>3V</option><option>4V</option><option>1H</option><option>2H</option><option>3H</option><option>4H</option></select>
+            <div class="tip">Manda en las ZONAS de fija del layout mixto. En el layout de un solo montaje sigue mandando la Tabla de arriba — dos casillas para lo mismo discrepan, así que aquí va dicho cuál manda dónde.</div></div>
+          <div class="field"></div>
+        </div>
       </div>
     </div>
 
@@ -384,7 +390,11 @@ canvas.panning{cursor:grabbing}
       <p class="note" style="margin-top:0"><b>El pitch y las pendientes máximas de cada montaje están en su
         cuadro de <span style="white-space:nowrap">▦ Estructura</span></b> —los dos cuadros están a la vista, el del otro montaje sale atenuado—. Aquí no se repiten: dos casillas para lo mismo acaban discrepando, y el que las
         lee no sabe cuál manda.</p>
-      <div class="field"><label>Área mínima de zona (m²)</label><input id="mixMinArea" type="number" step="100" value="2000"></div>
+      <div class="two">
+        <div class="field"><label>Área mín. zona TRACKER (m²)</label><input id="mixMinArea" type="number" step="100" value="0"></div>
+        <div class="field"><label>Área mín. zona FIJA (m²)</label><input id="mixMinAreaFija" type="number" step="50" value="0">
+          <div class="tip">Por defecto SIN mínimo: se conserva toda isla, y los huecos del tracker que admiten fija entran como zonas. Sube el del montaje que quieras podar — una fila fija ronda 50–150 m² y una de tracker &gt;700.</div></div>
+      </div>
       <div class="btnrow">
         <button class="btn ghost small" id="mixProponer">📐 Proponer por pendiente</button>
         <button class="btn ghost small" id="mixLimpiar">🧹 Limpiar zonas</button>
@@ -534,7 +544,8 @@ canvas.panning{cursor:grabbing}
         <span><i style="background:#F6A623"></i> vial</span>
         <span><i style="background:rgba(208,89,79,.35);border:1px solid #D0594F"></i> exclusión</span>
         <span><i style="background:rgba(128,147,164,.30);border:1px dashed #8093A4"></i> descartada</span>
-        <span><i style="background:rgba(150,110,220,.30);border:1px solid rgba(150,110,220,.75)"></i> pendiente &gt; máx.</span>
+        <span><i style="background:rgba(150,110,220,.30);border:1px solid rgba(150,110,220,.75)"></i> pendiente &gt; máx. tracker</span>
+        <span><i style="background:rgba(80,190,205,.30);border:1px solid rgba(80,190,205,.75)"></i> pendiente &gt; máx. fija</span>
         <span id="basemapMsg" style="color:var(--muted-2)"></span>
       </div>
       <div class="avisos" id="avisos"></div>
@@ -2785,8 +2796,18 @@ function draw(){
   // exclusiones que has dibujado tú. Ver DÓNDE recorta el terreno es la mitad
   // del valor de tener MDT.
   if(DEM&&!$('demOff').checked){
-    var malas=celdasExcluidas();
-    malas.forEach(function(q){ring(q,'rgba(150,110,220,.28)','rgba(150,110,220,.75)',0.8);});
+    /* Con zonas, cada montaje tiene SUS exclusiones (v1.6.4): pintar una
+       sola capa mezclaba dos criterios y no se sabía qué recorta a quién.
+       Se pinta una capa POR MONTAJE EN USO, cada una con su color de la
+       leyenda; una celda vetada para los dos sale con los dos superpuestos
+       (más oscura), que es literalmente lo que le pasa. */
+    var msEx=(typeof MIX_ZONAS!=='undefined'&&MIX_ZONAS.length)
+      ? MIX_ZONAS.map(function(z){return z.mount;}).filter(function(m,i,a){return a.indexOf(m)===i;})
+      : [montajeAct()==='tracker'?'tracker':'fixed'];
+    msEx.forEach(function(m){
+      var c=colorExclDe(m);
+      celdasExcluidas(m).forEach(function(q){ring(q,c.f,c.s,0.8);});
+    });
   }
   EXCL_LINEAS.forEach(function(L){
     if(!L.pts||L.pts.length<2)return;
@@ -2993,6 +3014,18 @@ function limPendDe(m){
     : {ew:+$('slopeFijaEw').value, ns:+$('slopeFijaNs').value};
 }
 function limPendAct(){return limPendDe(montajeAct());}
+/* Color de la capa «pendiente > máx.» de CADA montaje — el de la leyenda.
+   'tracker' morado; todo lo demás ('fixed'/'fija') cian. */
+function colorExclDe(m){return m==='tracker'
+  ? {f:'rgba(150,110,220,.28)', s:'rgba(150,110,220,.75)'}
+  : {f:'rgba(80,190,205,.28)',  s:'rgba(80,190,205,.75)'};}
+/* Tabla POR MONTAJE: la global (#table) es la del layout de un solo montaje
+   y la de las zonas de TRACKER del mixto; #tableFija manda solo en las
+   zonas de FIJA del mixto. */
+function tablaDe(m){
+  return (m==='fixed'||m==='fija') ? String($('tableFija').value||$('table').value)
+                                   : String($('table').value||'1V');
+}
 /* ¿Admite este montaje esta celda? Los DOS ejes tienen que pasar — que baste
    uno sería el parámetro fundido que esto viene a eliminar. */
 function admiteMontaje(m,ew,ns){
@@ -3976,6 +4009,9 @@ function computaMixto(cfg, zonas){
     var r=LAY.compute(Object.assign({},cfg,{
       coords:z.coords, holes:z.holes||[],
       mount:z.mount, pitch:z.pitch!=null?z.pitch:cfg.pitch,
+      // la TABLA tambien es del montaje: sin esto la fija del mixto salia
+      // siempre con la tabla del selector (1V de tracker, p. ej.)
+      table:(typeof tablaDe==='function')?tablaDe(z.mount):cfg.table,
       setback:(_parL&&_sbL>0)?0:cfg.setback,
       // el filtro de pendiente juzga con los limites del montaje DE LA ZONA,
       // no con los del selector: sin esto la fija muere filtrada a lo tracker
@@ -4117,7 +4153,42 @@ function mixPartesSimples(anillo){
   return out.filter(function(q){return q.length>=3;});
 }
 
-function zonasPorPendiente(pend, lims, minAreaM2){
+/* Anillo por ARISTAS de las celdas de una isla (a media celda del centro).
+   Es el respaldo para islas PEQUEÑAS: `varitaContorno` está calibrado para
+   píxeles de ortofoto y devuelve null por debajo de su mínimo — que en el
+   MDT son celdas de ~90 m, así que una isla de 2×2 (¡3 ha!) desaparecía en
+   silencio, sin contarse ni como descartada. Mismo mecanismo que el épsilon:
+   el mismo número significa otra cosa según el tamaño de celda. */
+function anilloDeCeldasIsla(dentro, n){
+  var aristas={}, arranque=null;
+  function k(p){return p[0]+','+p[1];}
+  for(var r=0;r<n;r++)for(var c=0;c<n;c++){
+    if(!dentro[r*n+c])continue;
+    var v=[[c-0.5,r-0.5],[c+0.5,r-0.5],[c+0.5,r+0.5],[c-0.5,r+0.5]];
+    // lados: [a,b] con el vecino de fuera → arista de borde, orientada
+    var lados=[[v[0],v[1],r-1,c],[v[1],v[2],r,c+1],[v[2],v[3],r+1,c],[v[3],v[0],r,c-1]];
+    for(var l=0;l<4;l++){
+      var nr=lados[l][2], nc=lados[l][3];
+      var fuera=(nr<0||nr>=n||nc<0||nc>=n||!dentro[nr*n+nc]);
+      if(fuera){aristas[k(lados[l][0])]=lados[l][1];if(!arranque)arranque=lados[l][0];}
+    }
+  }
+  if(!arranque)return null;
+  var ring=[arranque], q=aristas[k(arranque)], guard=4*n*n;
+  while(q&&guard-->0){
+    if(q[0]===arranque[0]&&q[1]===arranque[1])break;
+    ring.push(q); q=aristas[k(q)];
+  }
+  return ring.length>=4?ring:null;
+}
+
+function zonasPorPendiente(pend, lims, minAreaM2, minAreaFijaM2){
+  /* Umbral POR MONTAJE (2026-08-28, «en esos huecos la fija entraría»): una
+     fila fija ocupa ~50-150 m² y una de tracker >700, así que juzgar las
+     islas de fija con el umbral del tracker tiraba justo los huecos del
+     campo de tracker que SÍ admiten fija (medido: 75 islas, ~3 ha). Sin el
+     cuarto argumento, la fija hereda el umbral único (compatibilidad). */
+  if(minAreaFijaM2==null)minAreaFijaM2=minAreaM2;
   if(!pend||!DEM)return null;
   /* LA MÁSCARA DE LA PARCELA NO ES OPCIONAL. El MDT se descarga sobre el
      BBOX de la parcela MÁS margen, así que recorrer la rejilla entera
@@ -4145,6 +4216,7 @@ function zonasPorPendiente(pend, lims, minAreaM2){
   var zonas=[], desc=0, areaDesc=0, areas={tracker:0,fixed:0}, avisos=[];
 
   function poligonos(mask, etiqueta, mount, pitch){
+    var minZona=(mount==='fixed')?minAreaFijaM2:minAreaM2;
     var resto=new Uint8Array(mask), guard=64;
     while(guard-- > 0){
       var f0=-1; for(var i=0;i<n*n;i++)if(resto[i]){f0=i;break;}
@@ -4153,7 +4225,7 @@ function zonasPorPendiente(pend, lims, minAreaM2){
       var isla=varitaComponente(resto,n,n,fx,fy);
       if(!isla){resto[f0]=0;continue;}
       for(var k=0;k<n*n;k++)if(isla.dentro[k])resto[k]=0;
-      var ring=varitaContorno(isla.dentro,n,n);
+      var ring=varitaContorno(isla.dentro,n,n)||anilloDeCeldasIsla(isla.dentro,n);
       if(!ring)continue;
       /* EPSILON EN CELDAS, y aquí una celda del MDT son cientos de metros —
          no un píxel de ortofoto de 30 cm. Copiando el 1,5 de la varita se
@@ -4165,7 +4237,7 @@ function zonasPorPendiente(pend, lims, minAreaM2){
          suave sería dibujar una linde que el dato no tiene. */
       var simp=varitaSimplifica(ring,0.5)||ring;
       var area=isla.n*celda;
-      if(area<minAreaM2||simp.length<3){desc++;areaDesc+=area;continue;}
+      if(area<minZona||simp.length<3){desc++;areaDesc+=area;continue;}
       areas[mount]+=area;
       /* Una isla PELLIZCADA sale con el contorno cruzado: se parte en sus
          lazos simples y CADA pieza con área es su propia zona (paridad con
@@ -4193,7 +4265,7 @@ function zonasPorPendiente(pend, lims, minAreaM2){
         var b0=DEM.lats[i0],b1=DEM.lats[Math.min(n-1,i0+1)];return b0+(b1-b0)*f;}
       partes.forEach(function(parte, pi){
         var aM2=areaCel(parte)*celda;
-        if(pi>0&&aM2<minAreaM2){if(aM2>celda*0.5){desc++;areaDesc+=aM2;}return;}
+        if(pi>0&&aM2<minZona){if(aM2>celda*0.5){desc++;areaDesc+=aM2;}return;}
         zonas.push({nombre:etiqueta+'-'+(zonas.filter(function(z){return z.mount===mount;}).length+1),
                     mount:mount, pitch:pitch, holes:[],
                     coords:parte.map(function(q){return [lonDe(q[0]), latDe(q[1])];})});
@@ -4214,9 +4286,11 @@ function zonasPorPendiente(pend, lims, minAreaM2){
   if(areaNada>0)avisos.push(Math.round(areaNada).toLocaleString('es-ES')+' m² no admiten NINGÚN '+
     'montaje con estos límites: no se reparten entre fija y tracker, se caen del proyecto salvo '+
     'movimiento de tierras. Lo decides tú.');
-  if(desc)avisos.push(desc+' isla(s) por debajo de '+Math.round(minAreaM2).toLocaleString('es-ES')+
-    ' m² descartadas ('+Math.round(areaDesc).toLocaleString('es-ES')+' m² en total): no dan ni para '+
-    'una fila. Bájalo si quieres conservarlas.');
+  if(desc)avisos.push(desc+' isla(s) por debajo del área mínima de su montaje (tracker '+
+    Math.round(minAreaM2).toLocaleString('es-ES')+' m² · fija '+
+    Math.round(minAreaFijaM2).toLocaleString('es-ES')+' m²) descartadas ('+
+    Math.round(areaDesc).toLocaleString('es-ES')+' m² en total): no dan ni para una fila. '+
+    'Baja el del montaje que quieras conservar.');
   if(!zonas.length)avisos.push('ninguna zona supera el área mínima: no hay reparto que proponer.');
   return {zonas:zonas, areaTracker:areas.tracker, areaFija:areas.fixed,
           areaNoDesarrollable:areaNada, islasDescartadas:desc, areaDescartada:areaDesc,
@@ -4285,7 +4359,11 @@ $('mixProponer').onclick=function(){
     return;
   }
   var lims=mixLee();
-  var p=zonasPorPendiente(pend, lims, +$('mixMinArea').value||2000);
+  /* «Pero le he puesto área mínima 0» (2026-08-28): el `||2000` de antes se
+     tragaba el CERO explícito — falsy no es ausente. 0 = conservar todo. */
+  var _mT=parseFloat($('mixMinArea').value);     if(!isFinite(_mT)||_mT<0)_mT=0;
+  var _mF=parseFloat($('mixMinAreaFija').value); if(!isFinite(_mF)||_mF<0)_mF=0;
+  var p=zonasPorPendiente(pend, lims, _mT, _mF);
   MIX_PROP=p; MIX_ZONAS=p?p.zonas:[];
   mixPinta();
 };

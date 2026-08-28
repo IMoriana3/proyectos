@@ -480,6 +480,100 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     lazos.pajaritaN === 2 && lazos.pajaritaSimples, JSON.stringify(lazos));
   check('lazos · el anillo con vertice repetido tambien queda simple', lazos.tocadaSimples);
 
+
+  /* ── «EN ESOS HUECOS LA FIJA ENTRARÍA» (2026-08-28) ────────────────────
+   * Los huecos del campo de tracker que SÍ admiten fija caían como islas
+   * pequeñas y el umbral ÚNICO (calibrado a tracker) se las comía — 75
+   * islas, ~3 ha en el parte real. Umbral POR MONTAJE + el 0 explícito
+   * VALE (el ||2000 se lo tragaba: falsy no es ausente). */
+  const hueco = await page.evaluate(() => {
+    const antes = { dem: window.DEM, par: window.PARCEL, hol: window.HOLES };
+    try {
+      const n = 8, lats = [], lons = [];
+      for (let i = 0; i < n; i++) { lats.push(41.570 + i * 0.0008); lons.push(-0.800 + i * 0.0008); }
+      window.DEM = { lats, lons, z: lats.map(() => lons.map(() => 0)) };
+      window.PARCEL = [[-0.801, 41.569], [-0.793, 41.569], [-0.793, 41.577], [-0.801, 41.577]];
+      window.HOLES = [];
+      // mar de tracker con un HUECO 2x2 que solo admite fija
+      const enHueco = (r, c) => (r >= 3 && r <= 4 && c >= 3 && c <= 4);
+      const ew = [], ns = [];
+      for (let r = 0; r < n; r++) { const fe = [], fn = [];
+        for (let c = 0; c < n; c++) { fe.push(0); fn.push(enHueco(r, c) ? 10 : 2); }
+        ew.push(fe); ns.push(fn); }
+      const lims = { trkEw: 5, trkNs: 5, fijaEw: 25, fijaNs: 25, pitchTrk: 6, pitchFija: 4 };
+      const conUmbrales = zonasPorPendiente({ n, ew, ns }, lims, 50000, 5000);
+      const sinMinimo   = zonasPorPendiente({ n, ew, ns }, lims, 0, 0);
+      const cuenta = p => ({ trk: p.zonas.filter(z => z.mount === 'tracker').length,
+                             fija: p.zonas.filter(z => z.mount === 'fixed').length });
+      return { conUmbrales: cuenta(conUmbrales), sinMinimo: cuenta(sinMinimo) };
+    } finally {
+      window.DEM = antes.dem; window.PARCEL = antes.par; window.HOLES = antes.hol;
+    }
+  });
+  check('hueco · la isla de FIJA se juzga con SU umbral, no con el del tracker',
+    hueco.conUmbrales.fija >= 1 && hueco.conUmbrales.trk >= 1, JSON.stringify(hueco));
+  check('hueco · sin mínimo (0) se conserva todo', hueco.sinMinimo.fija >= 1);
+
+  // el CERO EXPLÍCITO llega al reparto (falsy != ausente)
+  const cero = await page.evaluate(() => {
+    const orig = window.zonasPorPendiente, origDem = window.DEM;
+    const antes = { t: $('mixMinArea').value, f: $('mixMinAreaFija').value };
+    let capturado = null;
+    try {
+      window.DEM = { lats: [41.57, 41.571], lons: [-0.8, -0.799], z: [[0, 0], [0, 0]] };
+      window.zonasPorPendiente = function (pend, lims, mT, mF) {
+        capturado = [mT, mF];
+        return { sinParcela: false, zonas: [], avisos: [], areaTracker: 0, areaFija: 0,
+                 areaNoDesarrollable: 0, islasDescartadas: 0, areaDescartada: 0, limites: lims };
+      };
+      $('mixMinArea').value = '0'; $('mixMinAreaFija').value = '0';
+      $('mixProponer').onclick();
+      return capturado;
+    } finally {
+      window.zonasPorPendiente = orig; window.DEM = origDem;
+      $('mixMinArea').value = antes.t; $('mixMinAreaFija').value = antes.f;
+    }
+  });
+  check('cero · «área mínima 0» llega como 0, no como el default',
+    Array.isArray(cero) && cero[0] === 0 && cero[1] === 0, JSON.stringify(cero));
+
+  // la TABLA de cada zona es la de SU montaje
+  const tabla = await page.evaluate(() => {
+    const orig = LAY.compute, antes = { t: $('table').value, f: $('tableFija').value };
+    const vistas = [];
+    try {
+      $('table').value = '1V'; $('tableFija').value = '2V';
+      LAY.compute = function (cfg) { vistas.push(cfg.mount + ':' + cfg.table); return orig(cfg); };
+      const Z1 = [[-0.800, 41.570], [-0.798, 41.570], [-0.798, 41.572], [-0.800, 41.572]];
+      const Z2 = [[-0.798, 41.570], [-0.796, 41.570], [-0.796, 41.572], [-0.798, 41.572]];
+      const cfg = { coords: [[-0.800, 41.570], [-0.796, 41.570], [-0.796, 41.572], [-0.800, 41.572]],
+        holes: [], exclusions: [], mount: 'tracker', table: '1V',
+        mods: [28], modLen: 2.382, modWid: 1.134, moduleWp: 590, pitch: 6, setback: 0,
+        panelAz: 90, bifila: false, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5,
+        roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4, mode: 'adaptive',
+        minStructs: 1, rowOffset: 'none', alignGrid: false, center: true };
+      computaMixto(cfg, [
+        { nombre: 'trk', coords: Z1, holes: [], mount: 'tracker', pitch: 6 },
+        { nombre: 'fija', coords: Z2, holes: [], mount: 'fixed', pitch: 4 }]);
+      return vistas;
+    } finally {
+      LAY.compute = orig; $('table').value = antes.t; $('tableFija').value = antes.f;
+    }
+  });
+  check('tabla · la zona de tracker computa con la tabla global (1V)',
+    tabla.some(v => v === 'tracker:1V'), JSON.stringify(tabla));
+  check('tabla · la zona de FIJA computa con SU tabla (2V), no con la del selector',
+    tabla.some(v => v === 'fixed:2V'), JSON.stringify(tabla));
+
+  // un color por montaje, y la leyenda los nombra
+  const color = await page.evaluate(() => ({
+    trk: colorExclDe('tracker').f, fija: colorExclDe('fixed').f,
+    leyenda: document.body.innerHTML.indexOf('pendiente &gt; máx. tracker') !== -1
+          && document.body.innerHTML.indexOf('pendiente &gt; máx. fija') !== -1 }));
+  check('color · tracker y fija llevan colores DISTINTOS en la capa de pendiente',
+    color.trk !== color.fija, JSON.stringify(color));
+  check('color · la leyenda nombra los dos', color.leyenda);
+
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
   process.exit(ko ? 1 : 0);
