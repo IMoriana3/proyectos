@@ -745,6 +745,47 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   check('ejes · ejesBifila(vista) traza bielas en la zona de tracker del mixto',
     fijaViva.ejes > 0, JSON.stringify({ ejes: fijaViva.ejes }));
 
+
+  /* ── las DOS capas de pendiente se pintan SIEMPRE (2026-08-28) ────────── */
+  const capas = await page.evaluate(() => {
+    // el pintor decide los montajes en el bloque de celdasExcluidas: se
+    // inspecciona el codigo del pintor por el marcador de la decision
+    const src = document.documentElement.innerHTML;
+    return { siempreAmbas: src.indexOf("var msEx=['tracker','fixed']") !== -1 };
+  });
+  check('capas · el mapa pinta la capa de pendiente de LOS DOS montajes siempre',
+    capas.siempreAmbas);
+
+
+  /* ── LA SESIÓN GUARDA EL REPARTO (2026-08-28, «las zonas de fija por qué
+   * no salen»): tras recargar, MIX_ZONAS volvía vacío y el layout se
+   * calculaba de un solo montaje; y media configuración por montaje
+   * (pitchFija, tableFija, azRowsFija, límites, mínimos) volvía a defaults
+   * porque la lista de campos de sesión se quedó vieja. */
+  const sesion = await page.evaluate(() => {
+    const antes = { z: MIX_ZONAS, p: MIX_PROP,
+      pf: $('pitchFija').value, tf: $('tableFija').value, az: $('azRowsFija').value };
+    try {
+      MIX_ZONAS = [{ nombre: 'fija-1', mount: 'fixed', pitch: 4,
+                     coords: [[-0.798, 41.572], [-0.797, 41.572], [-0.797, 41.573]], holes: [] }];
+      MIX_PROP = null;
+      $('pitchFija').value = '3.7'; $('tableFija').value = '2V'; $('azRowsFija').value = '135';
+      const st = estadoSesion();
+      MIX_ZONAS = []; $('pitchFija').value = '4'; $('tableFija').value = '1V'; $('azRowsFija').value = '180';
+      aplicaSesion(JSON.parse(JSON.stringify(st)));
+      return { zonas: MIX_ZONAS.length, nombre: MIX_ZONAS[0] && MIX_ZONAS[0].nombre,
+               pf: $('pitchFija').value, tf: $('tableFija').value, az: $('azRowsFija').value };
+    } finally {
+      MIX_ZONAS = antes.z; MIX_PROP = antes.p;
+      $('pitchFija').value = antes.pf; $('tableFija').value = antes.tf; $('azRowsFija').value = antes.az;
+      mixPinta();
+    }
+  });
+  check('sesion · el reparto SOBREVIVE a guardar y restaurar',
+    sesion.zonas === 1 && sesion.nombre === 'fija-1', JSON.stringify(sesion));
+  check('sesion · los campos por montaje (pitch/tabla/azimut de la fija) sobreviven',
+    sesion.pf === '3.7' && sesion.tf === '2V' && sesion.az === '135', JSON.stringify(sesion));
+
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
   process.exit(ko ? 1 : 0);
