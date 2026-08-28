@@ -412,6 +412,74 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   check('filtro · …y aun así la zona FIJA planta mesas (la captura del bug)',
     vive.mesas > 0, vive.mesas + ' mesas');
 
+
+  /* ── LOS CONTORNOS DEL REPARTO SALEN SIMPLES (2026-08-28) ──────────────
+   * «[fija-1] La parcela se cruza a sí misma en varios puntos y la
+   * reparación no llega … No cabe ninguna estructura»: una isla PELLIZCADA
+   * (dos lóbulos unidos por una celda — el caso típico de la fija, banda
+   * alrededor del tracker) hace que el paseo del contorno pase dos veces
+   * por la misma celda y el anillo salga cruzado. El core Python lo repara
+   * con make_valid y devuelve TODAS las piezas; el generador empujaba el
+   * anillo cruzado tal cual. Escena: MANCUERNA — dos bloques unidos por UNA
+   * celda puente, que el paseo del contorno visita DOS veces (medido: el
+   * reloj de arena en diagonal NO reproduce, el paseo corta la esquina). */
+  const lazos = await page.evaluate(() => {
+    const antes = { dem: window.DEM, par: window.PARCEL, hol: window.HOLES };
+    try {
+      const n = 8, lats = [], lons = [];
+      for (let i = 0; i < n; i++) { lats.push(41.570 + i * 0.0008); lons.push(-0.800 + i * 0.0008); }
+      window.DEM = { lats, lons, z: lats.map(() => lons.map(() => 0)) };
+      window.PARCEL = [[-0.801, 41.569], [-0.793, 41.569], [-0.793, 41.577], [-0.801, 41.577]];
+      window.HOLES = [];
+      // pend a mano: fija apta SOLO en el reloj de arena, tracker en ninguna
+      const ew = [], ns = [];
+      const enMancuerna = (r, c) => ((r <= 1 && c >= 1 && c <= 3) || (r === 2 && c === 2)
+                                     || (r >= 3 && r <= 4 && c >= 1 && c <= 3));
+      for (let r = 0; r < n; r++) { const fe = [], fn = [];
+        for (let c = 0; c < n; c++) { fe.push(0); fn.push(enMancuerna(r, c) ? 10 : 50); }
+        ew.push(fe); ns.push(fn); }
+      const prop = zonasPorPendiente({ n, ew, ns },
+        { trkEw: 5, trkNs: 5, fijaEw: 25, fijaNs: 25, pitchTrk: 6, pitchFija: 4 }, 1000);
+      // checker de simplicidad: mismo criterio que la particion
+      function orient(p, q, t) { return (q[0]-p[0])*(t[1]-p[1])-(q[1]-p[1])*(t[0]-p[0]); }
+      function seCruzan(a, b, c, d) {
+        const d1 = orient(c,d,a), d2 = orient(c,d,b), d3 = orient(a,b,c), d4 = orient(a,b,d);
+        return ((d1>0)!==(d2>0))&&((d3>0)!==(d4>0));
+      }
+      function esSimple(r) {
+        const m = r.length;
+        for (let i = 0; i < m; i++) for (let j = i + 1; j < m; j++) {
+          const dx = r[i][0]-r[j][0], dy = r[i][1]-r[j][1];
+          if (dx*dx + dy*dy < 1e-18) return false;              // vertice repetido
+        }
+        for (let i = 0; i < m; i++) for (let j = i + 2; j < m; j++) {
+          if (i === 0 && j === m - 1) continue;
+          if (seCruzan(r[i], r[(i+1)%m], r[j], r[(j+1)%m])) return false;
+        }
+        return true;
+      }
+      // y la particion en directo, con una pajarita de manual
+      const pajarita = mixPartesSimples([[0,0],[4,4],[4,0],[0,4]]);
+      const tocada  = mixPartesSimples([[0,0],[4,0],[4,4],[2,2],[0,4],[0,0],[-2,2]]);
+      return { nZonas: prop.zonas.length,
+               montajes: prop.zonas.map(z => z.mount),
+               simples: prop.zonas.map(z => esSimple(z.coords)),
+               avisoPellizco: prop.avisos.some(a => /pellizcad/.test(a)),
+               pajaritaN: pajarita.length, pajaritaSimples: pajarita.every(esSimple),
+               tocadaSimples: tocada.every(esSimple) };
+    } finally {
+      window.DEM = antes.dem; window.PARCEL = antes.par; window.HOLES = antes.hol;
+    }
+  });
+  check('lazos · la mancuerna sale en DOS zonas de fija (todas las piezas, como el core)',
+    lazos.nZonas === 2 && lazos.montajes.every(m => m === 'fixed'), JSON.stringify(lazos));
+  check('lazos · TODOS los contornos del reparto son anillos SIMPLES',
+    lazos.simples.length > 0 && lazos.simples.every(Boolean), JSON.stringify(lazos.simples));
+  check('lazos · el pellizco se AVISA, no se arregla en silencio', lazos.avisoPellizco);
+  check('lazos · la pajarita se parte en 2 lazos simples',
+    lazos.pajaritaN === 2 && lazos.pajaritaSimples, JSON.stringify(lazos));
+  check('lazos · el anillo con vertice repetido tambien queda simple', lazos.tocadaSimples);
+
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
   process.exit(ko ? 1 : 0);

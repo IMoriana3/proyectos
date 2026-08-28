@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.4</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.5</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -4060,6 +4060,63 @@ function computaMixto(cfg, zonas){
    Los polígonos se trazan con el MISMO contorno que la varita
    (`varitaComponente`/`varitaContorno`/`varitaSimplifica`): un solo trazador
    de máscaras en la página. */
+/* ── make_valid del pobre: partir un anillo en sus lazos SIMPLES ──────────
+   El contorno de una isla PELLIZCADA (dos lóbulos que se tocan en una
+   esquina — el caso típico de la fija, que es la banda alrededor del
+   tracker) pasa dos veces por la misma celda y el anillo sale cruzado. El
+   core Python no tiene este problema porque su `_recorta` pasa por
+   `make_valid` y DEVUELVE TODAS las piezas («quedarse con la mayor perdería
+   terreno sin decirlo»); aquí faltaba ese paso y el anillo cruzado llegaba
+   al motor, que con varios cruces avisa «la reparación no llega» y deja la
+   zona en «no cabe ninguna estructura» (captura del 2026-08-28, fija-1).
+   Se parte en cada vértice repetido y en cada cruce de aristas; el filtro
+   por área lo hace quien llama, porque el criterio (minArea) es suyo. */
+function mixPartesSimples(anillo){
+  function orient(p,q,t){return (q[0]-p[0])*(t[1]-p[1])-(q[1]-p[1])*(t[0]-p[0]);}
+  function seCruzan(a,b,c,d){
+    var d1=orient(c,d,a), d2=orient(c,d,b), d3=orient(a,b,c), d4=orient(a,b,d);
+    return ((d1>0)!==(d2>0))&&((d3>0)!==(d4>0));
+  }
+  function puntoCruce(a,b,c,d){
+    var A1=b[1]-a[1], B1=a[0]-b[0], C1=A1*a[0]+B1*a[1];
+    var A2=d[1]-c[1], B2=c[0]-d[0], C2=A2*c[0]+B2*c[1];
+    var det=A1*B2-A2*B1;
+    if(Math.abs(det)<1e-18)return null;
+    return [(B2*C1-B1*C2)/det,(A1*C2-A2*C1)/det];
+  }
+  var out=[], cola=[anillo.slice()], guard=64;
+  while(cola.length&&guard-->0){
+    var r=cola.pop(), n=r.length, i, j, hecho=false;
+    if(n<3)continue;
+    // 1) vértice repetido: el paseo pasó dos veces por la misma celda
+    for(i=0;i<n&&!hecho;i++)for(j=i+1;j<n;j++){
+      var dx=r[i][0]-r[j][0], dy=r[i][1]-r[j][1];
+      if(dx*dx+dy*dy<1e-12){
+        cola.push(r.slice(i,j));                    // r[i]==r[j] lo cierra
+        cola.push(r.slice(j).concat(r.slice(0,i+1)).slice(0,-1));
+        hecho=true;break;
+      }
+    }
+    if(hecho)continue;
+    // 2) cruce de aristas: la pajarita clásica
+    for(i=0;i<n&&!hecho;i++)for(j=i+2;j<n;j++){
+      if(i===0&&j===n-1)continue;
+      if(seCruzan(r[i],r[(i+1)%n],r[j],r[(j+1)%n])){
+        var X=puntoCruce(r[i],r[(i+1)%n],r[j],r[(j+1)%n]);
+        if(!X)continue;
+        cola.push([X].concat(r.slice(i+1,j+1)));
+        cola.push([X].concat(r.slice(j+1)).concat(r.slice(0,i+1)));
+        hecho=true;break;
+      }
+    }
+    if(!hecho)out.push(r);                          // simple: se queda
+  }
+  // guard agotado (caso patológico): lo que quede en cola sale tal cual —
+  // peor sería tirarlo en silencio; el motor avisará si sigue cruzado.
+  while(cola.length)out.push(cola.pop());
+  return out.filter(function(q){return q.length>=3;});
+}
+
 function zonasPorPendiente(pend, lims, minAreaM2){
   if(!pend||!DEM)return null;
   /* LA MÁSCARA DE LA PARCELA NO ES OPCIONAL. El MDT se descarga sobre el
@@ -4110,11 +4167,37 @@ function zonasPorPendiente(pend, lims, minAreaM2){
       var area=isla.n*celda;
       if(area<minAreaM2||simp.length<3){desc++;areaDesc+=area;continue;}
       areas[mount]+=area;
-      zonas.push({nombre:etiqueta+'-'+(zonas.filter(function(z){return z.mount===mount;}).length+1),
-                  mount:mount, pitch:pitch, holes:[],
-                  coords:simp.map(function(q){
-                    var rr=Math.min(n-1,q[1]), cc=Math.min(n-1,q[0]);
-                    return [DEM.lons[cc], DEM.lats[rr]];})});
+      /* Una isla PELLIZCADA sale con el contorno cruzado: se parte en sus
+         lazos simples y CADA pieza con área es su propia zona (paridad con
+         el `_recorta` del core, que hace make_valid y devuelve todas las
+         piezas). El mayor se queda siempre —conserva el comportamiento del
+         anillo único—; los lazos de área ~0 son artefactos del paseo. */
+      function areaCel(q){
+        var a2=0;
+        for(var v=0;v<q.length;v++){var w=q[(v+1)%q.length];a2+=q[v][0]*w[1]-w[0]*q[v][1];}
+        return Math.abs(a2/2);
+      }
+      var partes=mixPartesSimples(simp).sort(function(p1,p2){return areaCel(p2)-areaCel(p1);});
+      if(!partes.length)partes=[simp];
+      if(partes.length>1)
+        avisos.push('el contorno de una isla de '+etiqueta+' salía pellizcado (se cruzaba a '+
+          'sí mismo): se ha partido en sus piezas simples — la(s) con área siguen como zona(s), '+
+          'los lazos de área ~0 se descartan. Es lo mismo que hace el make_valid del motor Python.');
+      /* Los puntos de cruce que introduce la partición son FRACCIONARIOS
+         (caen en mitad de una arista): se interpola sobre la rejilla en vez
+         de indexarla — indexar con un no-entero daría `undefined` y un
+         vértice NaN, que es peor que el cruce que se está arreglando. */
+      function lonDe(x){x=Math.min(n-1,Math.max(0,x));var i0=Math.floor(x),f=x-i0;
+        var b0=DEM.lons[i0],b1=DEM.lons[Math.min(n-1,i0+1)];return b0+(b1-b0)*f;}
+      function latDe(y){y=Math.min(n-1,Math.max(0,y));var i0=Math.floor(y),f=y-i0;
+        var b0=DEM.lats[i0],b1=DEM.lats[Math.min(n-1,i0+1)];return b0+(b1-b0)*f;}
+      partes.forEach(function(parte, pi){
+        var aM2=areaCel(parte)*celda;
+        if(pi>0&&aM2<minAreaM2){if(aM2>celda*0.5){desc++;areaDesc+=aM2;}return;}
+        zonas.push({nombre:etiqueta+'-'+(zonas.filter(function(z){return z.mount===mount;}).length+1),
+                    mount:mount, pitch:pitch, holes:[],
+                    coords:parte.map(function(q){return [lonDe(q[0]), latDe(q[1])];})});
+      });
     }
   }
   poligonos(aptoT,'tracker','tracker',lims.pitchTrk);
