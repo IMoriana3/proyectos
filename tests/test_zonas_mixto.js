@@ -389,6 +389,7 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     fantasma.bielasHuerfanas + ' punta(s) huérfanas de ' + fantasma.bielasTot + ' bielas');
 
 
+
   /* ── EL FILTRO DE PENDIENTE JUZGA CON EL MONTAJE DE LA ZONA ────────────
    * «El filtro de pendiente excluye el 100 % de la parcela» sobre una zona
    * FIJA que el propio reparto declaró apta a 25°: el mixto congelaba un
@@ -944,6 +945,29 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   check('albedo · UNO solo en pantalla (Terreno) en los tres modos, y sincronizado',
     ['fija', 'tracker', 'mixto'].every(m => albedo[m].terreno && !albedo[m].pane)
       && albedo.sync === '0.31', JSON.stringify(albedo));
+
+  /* ── LA CELDA DEL RELLENO ES ADAPTATIVA (v1.6.15) ──────────────────────
+   * «Ahí entra una fila más» (cliente, con su sesión de Tudela): la celda
+   * fija de 3 m perdía hasta media celda por borde de hueco, y con pitch de
+   * fija de 4 m eso es LA fila pegada a la linde. La escena es la PARCELA
+   * REAL (tests/parcelas/tudela.sesion.json, 15,9 ha, 19 zonas, MDT 48×48):
+   * las sintéticas no distinguen (medido: el trapecio da 163=163 con 1,5 y
+   * con 3 m — el mecanismo vive en la interacción pasillos×lindes×zonas).
+   * Medido en esta escena: celda 3 → 316 mesas de relleno; 1,5 → 351.
+   * El mutante «celda forzada a 3» debe morir en el umbral de 340. */
+  const tudela = await page.evaluate((ses) => {
+    aplicaSesion(ses);
+    const cfg = readCfg(); cfg.rellenoFija = true;
+    const R = computaMixto(cfg, MIX_ZONAS);
+    let mesas = 0, huecos = 0;
+    R.porZona.forEach(p => { if (p.nombre.startsWith('relleno')) { mesas += p.structures; huecos++; } });
+    return { mesas, huecos, celda: window.huecosParaFija._ultimaCelda,
+             total: R.stats.structures };
+  }, JSON.parse(require('fs').readFileSync(__dirname + '/parcelas/tudela.sesion.json', 'utf8')));
+  check('tudela · el relleno usa la celda FINA (la parcela cabe de sobra)',
+    tudela.celda === 1.5, 'celda=' + tudela.celda);
+  check('tudela · la celda fina apura la fila de la linde (≥340 mesas de relleno)',
+    tudela.mesas >= 340, tudela.mesas + ' mesas en ' + tudela.huecos + ' huecos (con celda 3 salían 316)');
 
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');

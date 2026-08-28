@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.14</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.15</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -4020,8 +4020,21 @@ function huecosParaFija(cfg, zonas, partes){
   var xs=parM.map(function(q){return q[0];}), ysM=parM.map(function(q){return q[1];});
   var x0=Math.min.apply(null,xs), x1=Math.max.apply(null,xs);
   var y0=Math.min.apply(null,ysM), y1=Math.max.apply(null,ysM);
-  var cel=3, W=Math.max(2,Math.ceil((x1-x0)/cel)), H=Math.max(2,Math.ceil((y1-y0)/cel));
-  if(W*H>400000)return [];                       // parcela gigante: no rasterizamos
+  /* CELDA ADAPTATIVA (v1.6.15, «ahí entra una fila más»): con celda fija de
+     3 m la cuantización perdía hasta media celda por borde de hueco — y con
+     pitch de fija de 4 m eso es LA fila pegada a la linde. Medido en la
+     parcela real de Tudela (15,9 ha, sesión del cliente): 3 m → 316 mesas
+     de relleno; 1,5 m → 351 (+11 %). Se toma la celda más FINA que quepa en
+     el presupuesto de celdas de siempre; solo una parcela enorme cae a 3 m,
+     y la gigante sigue sin rasterizarse (mismo techo, declarado). */
+  var cel=0, W=0, H=0;
+  [1.5,2,3].some(function(c){
+    var w=Math.max(2,Math.ceil((x1-x0)/c)), h=Math.max(2,Math.ceil((y1-y0)/c));
+    if(w*h<=400000){cel=c;W=w;H=h;return true;}
+    return false;
+  });
+  huecosParaFija._ultimaCelda=cel||null;         // autodeclarado, para banco y depuración
+  if(!cel)return [];                             // parcela gigante: no rasterizamos
   function pip(pt,R){var c=false;
     for(var u=0,v=R.length-1;u<R.length;v=u++){
       if((R[u][1]>pt[1])!==(R[v][1]>pt[1])&&
