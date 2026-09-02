@@ -978,21 +978,20 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   }, JSON.parse(require('fs').readFileSync(__dirname + '/parcelas/tudela.sesion.json', 'utf8')));
   check('tudela · el relleno usa la celda FINA (la parcela cabe de sobra)',
     tudela.celda === 1.5, 'celda=' + tudela.celda);
-  /* La escalera MEDIDA de este número (v1.6.15-19, cada peldaño con su
-   * mutante bajo el código ACTUAL, regla v1.6.19 «la fija de pie NO se
-   * planta sola»): pasillo con pitch de tracker para TODAS las mesas →
-   * 358 · una sola pasada → 379 · sano → 389 (0 de pie, renuncia 97).
-   * El umbral de 385 mata a esos dos; la celda gruesa muere además en el
-   * check de arriba. El mutante del RETAL (las zonas de relleno vuelven a
-   * heredar rejilla global y modo aligned) SOBREVIVE en esta escena —
-   * medido: 389=389, los retales de Tudela no sufren la fase de la
-   * rejilla — y queda como CINTURÓN DECLARADO con su motivo en el código
-   * (v1.6.19): quien lo quite no rompe ninguna prueba, y eso es lo que
-   * hay que saber antes de quitarlo. Si un cambio legítimo del motor
-   * mueve el número, se RE-MIDE la escalera — es una medición, no un
-   * deseo. */
-  check('tudela · el relleno apura los bolsillos (≥385 mesas: celda fina + pasillo por zona + iterado)',
-    tudela.mesas >= 385, tudela.mesas + ' mesas en ' + tudela.huecos + ' huecos (escalera: 358/379/389)');
+  /* La escalera MEDIDA de este número (v1.6.15-21, cada peldaño con su
+   * mutante bajo el código ACTUAL): pasillo con pitch de tracker → 348 ·
+   * una sola pasada → 362 · huecos sin agujeros interiores → 367 (el
+   * cinturón poda las pisadas y AVISA) · sano → 371 (0 de pie, 0
+   * solapes). El umbral de 368 mata a los tres. OJO: el 389 de v1.6.19-20
+   * incluía PISADAS —mesas de relleno sobre mesas ya colocadas, el bug de
+   * Pamplona— que nadie había medido: el número bajó al volverse honesto.
+   * Mutantes SUPERVIVIENTES declarados: el del retal-rejilla (v1.6.19,
+   * Tudela no sufre la fase) y el del CINTURÓN anti-solape (los agujeros
+   * interiores ya protegen; su testigo es el aviso relleno_pisadas, que
+   * SÍ muerde — escena pamplona). Si un cambio legítimo del motor mueve
+   * el número, se RE-MIDE la escalera — es una medición, no un deseo. */
+  check('tudela · el relleno apura los bolsillos (≥368 mesas: celda fina + pasillo por zona + iterado + agujeros)',
+    tudela.mesas >= 368, tudela.mesas + ' mesas en ' + tudela.huecos + ' huecos (escalera: 348/362/367/371)');
   /* «Has metido fijas norte sur increíble» (v1.6.19): la fija DE PIE no
    * se planta sola NUNCA — con el az de fija de la sesión (180), cero
    * mesas de relleno verticales. El mutante que restaura el vuelco de
@@ -1035,6 +1034,43 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   check('tudela · y la casilla marcada se declara IGNORADA en un aviso',
     rejilla.con.aviso === true && rejilla.sin.aviso === false,
     JSON.stringify({ con: rejilla.con.aviso, sin: rejilla.sin.aviso }));
+
+  /* ── PAMPLONA: EL RELLENO NO PISA LO PLANTADO (v1.6.21) ────────────────
+   * «Pisa trackers con fija» (cliente, con su sesión): el anillo del hueco
+   * era SOLO la cadena exterior y, con el margen libre conectado alrededor
+   * de un bloque plantado, el hueco ABRAZABA el bloque entero — medido: un
+   * hueco con las 34 mesas de tracker-4 dentro y 59 fijas encima. La
+   * escena es SU parcela (tests/parcelas/pamplona.sesion.json); Tudela no
+   * contiene el mecanismo en esta magnitud. Dos capas: los AGUJEROS
+   * interiores del hueco (geometría, la de verdad) y el cinturón
+   * anti-solape (testigo: si actúa, AVISA). El mutante «sin agujeros»
+   * muere en el check del aviso; el del cinturón sobrevive con los
+   * agujeros activos (declarado en el código). */
+  const pamplona = await page.evaluate((ses) => {
+    aplicaSesion(ses);
+    const cfg = readCfg(); cfg.rellenoFija = true;
+    const R = computaMixto(cfg, MIX_ZONAS);
+    const kx = 111320 * Math.cos(42.825 * Math.PI / 180), ky = 110540;
+    function bb(e) { const xs = e.lonlat.map(c => c[0] * kx), ys = e.lonlat.map(c => c[1] * ky);
+      return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; }
+    const trk = [], fij = [];
+    R.structures.forEach(e => { (e.mount === 'tracker' ? trk : fij).push(bb(e)); });
+    let solapes = 0;
+    fij.forEach(f => { for (const t of trk) {
+      if (Math.min(f[2], t[2]) - Math.max(f[0], t[0]) > 0.5 &&
+          Math.min(f[3], t[3]) - Math.max(f[1], t[1]) > 0.5) { solapes++; break; } } });
+    let relleno = 0; R.porZona.forEach(p => { if (p.nombre.startsWith('relleno')) relleno += p.structures; });
+    return { solapes, relleno, fija: fij.length,
+             avisoPisadas: R.avisos.some(a => a.codigo === 'relleno_pisadas') };
+  }, JSON.parse(require('fs').readFileSync(__dirname + '/parcelas/pamplona.sesion.json', 'utf8')));
+  check('pamplona · NINGUNA mesa de fija pisa una de tracker (el bug del cliente: 59)',
+    pamplona.solapes === 0 && pamplona.fija > 100,
+    pamplona.solapes + ' solape(s) sobre ' + pamplona.fija + ' fijas');
+  check('pamplona · y el cinturón NO tuvo que actuar (los agujeros protegen en la geometría)',
+    pamplona.avisoPisadas === false,
+    'aviso relleno_pisadas presente: el cinturón podó — los agujeros no cubren algo');
+  check('pamplona · el relleno honesto sigue plantando (≥85 mesas; medido: 92)',
+    pamplona.relleno >= 85, pamplona.relleno + ' mesas de relleno');
 
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
