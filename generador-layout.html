@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.20</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.21</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -4104,6 +4104,51 @@ function huecosParaFija(cfg, zonas, partes){
   var largoMesa=modsMin*(+cfg.modWid)+(modsMin-1)*gapM;
   var altoMesa=nTab*(esV?+cfg.modLen:+cfg.modWid)+(nTab-1)*gapM;
   var minM2=(largoMesa+1)*(altoMesa+1);
+  /* AGUJEROS INTERIORES del sobrante (v1.6.21, «pisa trackers con fija»):
+     el anillo del hueco era SOLO la cadena exterior — herencia de la
+     propuesta por pendiente, donde los agujeros los veta el filtro del
+     montaje. Aquí un agujero interior es un CAMPO YA PLANTADO: si el
+     margen libre conecta alrededor de un bloque de trackers, el anillo
+     exterior lo abraza entero y el motor de fija —que no sabe de
+     trackers— planta filas a través (medido en la parcela de Pamplona
+     del cliente: un hueco abrazaba las 34 mesas de tracker-4 y 59 fijas
+     salían encima). Los agujeros son lo OCUPADO no alcanzable desde el
+     borde del raster; cada uno viaja como hole de su hueco y el motor lo
+     respeta como cualquier agujero de parcela. */
+  var _noLib=new Uint8Array(W*H), _vb=new Uint8Array(W*H), _pilaB=[];
+  for(var nb2=0;nb2<W*H;nb2++)_noLib[nb2]=libre[nb2]?0:1;
+  for(var bc=0;bc<W;bc++){_pilaB.push(bc);_pilaB.push((H-1)*W+bc);}
+  for(var br=0;br<H;br++){_pilaB.push(br*W);_pilaB.push(br*W+W-1);}
+  while(_pilaB.length){
+    var pb=_pilaB.pop();
+    if(_vb[pb]||!_noLib[pb])continue;
+    _vb[pb]=1;
+    var pr=(pb/W)|0, pc=pb-pr*W;
+    if(pc>0)_pilaB.push(pb-1); if(pc<W-1)_pilaB.push(pb+1);
+    if(pr>0)_pilaB.push(pb-W); if(pr<H-1)_pilaB.push(pb+W);
+  }
+  var _agujeros=[];                               // {seed:[cx,cy], ring:[[cx,cy],…]}
+  var _restoA=new Uint8Array(W*H);
+  for(var na2=0;na2<W*H;na2++)_restoA[na2]=(_noLib[na2]&&!_vb[na2])?1:0;
+  var _guardA=64;
+  while(_guardA-->0){
+    var a0=-1;for(var ai=0;ai<W*H;ai++)if(_restoA[ai]){a0=ai;break;}
+    if(a0<0)break;
+    var ay=(a0/W)|0, ax=a0-ay*W;
+    var compA=varitaComponente(_restoA,W,H,ax,ay);
+    if(!compA){_restoA[a0]=0;continue;}
+    for(var ak=0;ak<W*H;ak++)if(compA.dentro[ak])_restoA[ak]=0;
+    var ringA=anilloDeCeldasIsla(compA.dentro,W,H);
+    if(ringA)_agujeros.push({seed:[ax,ay], ring:ringA});
+  }
+  function _pipCel(pt,R){var c=false;
+    for(var u=0,v2=R.length-1;u<R.length;v2=u++){
+      if((R[u][1]>pt[1])!==(R[v2][1]>pt[1])&&
+         pt[0]<(R[v2][0]-R[u][0])*(pt[1]-R[u][1])/(R[v2][1]-R[u][1])+R[u][0])c=!c;}
+    return c;}
+  function _areaCel(R){var s2=0;
+    for(var v3=0;v3<R.length;v3++){var w=R[(v3+1)%R.length];s2+=R[v3][0]*w[1]-w[0]*R[v3][1];}
+    return Math.abs(s2/2);}
   var out=[], resto=new Uint8Array(libre), guard=64, idx=0;
   while(guard-->0){
     var f0=-1;for(var i2=0;i2<W*H;i2++)if(resto[i2]){f0=i2;break;}
@@ -4116,26 +4161,24 @@ function huecosParaFija(cfg, zonas, partes){
     var ring=anilloDeCeldasIsla(isla.dentro,W,H);
     if(!ring)continue;
     mixPartesSimples(ring).forEach(function(parte){
-      var a2=0;
-      for(var v3=0;v3<parte.length;v3++){var w=parte[(v3+1)%parte.length];a2+=parte[v3][0]*w[1]-w[0]*parte[v3][1];}
-      if(Math.abs(a2/2)*cel*cel<minM2)return;
+      // agujeros de ESTA parte, y el área ÚTIL les descuenta lo suyo — un
+      // donut de 200 m² con 180 de agujero no llega al umbral de la mesa
+      var hs=_agujeros.filter(function(a){return _pipCel(a.seed,parte);});
+      var aNeta=(_areaCel(parte)-hs.reduce(function(s,a){return s+_areaCel(a.ring);},0))*cel*cel;
+      if(aNeta<minM2)return;
       idx++;
       out.push({nombre:'relleno-'+idx, mount:'fixed',
-                pitch:pFija, holes:[],
+                pitch:pFija, _areaM2:aNeta,
+                holes:hs.map(function(a){return a.ring.map(function(q2){
+                  return aLL(x0+(q2[0]+0.5)*cel, y0+(q2[1]+0.5)*cel);});}),
                 coords:parte.map(function(q2){
                   return aLL(x0+(q2[0]+0.5)*cel, y0+(q2[1]+0.5)*cel);})});
     });
   }
-  /* Techo de zonas ORDENADO por área — los huecos grandes primero: sin
-     ordenar, el corte iba por orden de barrido (sur primero) y una parcela
-     muy fragmentada podía tirar los huecos grandes del norte. Cinturón sin
-     banco que lo ejercite (exigiría >24 huecos), declarado. */
-  out.sort(function(a2,b2){
-    function area(z){var s2=0;
-      for(var v=0;v<z.coords.length;v++){var w=z.coords[(v+1)%z.coords.length];
-        s2+=z.coords[v][0]*w[1]-w[0]*z.coords[v][1];}
-      return Math.abs(s2);}
-    return area(b2)-area(a2);});
+  /* Techo de zonas ORDENADO por área NETA — los huecos grandes primero:
+     sin ordenar, el corte iba por orden de barrido. Cinturón sin banco que
+     lo ejercite (exigiría >24 huecos), declarado. */
+  out.sort(function(a2,b2){return b2._areaM2-a2._areaM2;});
   return out.slice(0,24);
 }
 
@@ -4316,13 +4359,61 @@ function computaMixto(cfg, zonas){
        techo y corte en cuanto una no añade. Los nombres se renumeran
        DENSOS aquí (huecosParaFija arranca en relleno-1 en cada llamada y
        el desglose por zona se indexa por nombre). */
-    var _mR=0,_hR=0,_idxR=0;
+    var _mR=0,_hR=0,_idxR=0,_pisadas=0;
     var _renuncia={mesas:0,huecos:0};
     var _azF=(typeof azFilasFija==='function')?azFilasFija():180;
     var _azPerp=((_azF+90)%360+360)%360;
+    /* CINTURÓN (v1.6.21, «pisa trackers con fija»): el relleno JAMÁS
+       publica una mesa que solape otra ya colocada. Con los agujeros
+       interiores del hueco (huecosParaFija) esto debe quitar CERO; si
+       quita algo se AVISA con el número — un cinturón que actúa en
+       silencio esconde el bug que lo hizo necesario. bbox equirect con
+       0,5 m de holgura: dos mesas legítimamente contiguas no se tocan
+       (siempre hay pasillo), así que todo solape >0,5 m es pisada real. */
+    var _latC=0;(cfg.coords||[]).forEach(function(c){_latC+=c[1];});
+    _latC=(cfg.coords&&cfg.coords.length)?_latC/cfg.coords.length:42;
+    var _kxP=111320*Math.cos(_latC*Math.PI/180), _kyP=110540;
+    function _bbLL(ll){var x0=1/0,y0=1/0,x1=-1/0,y1=-1/0;
+      ll.forEach(function(c){var x=c[0]*_kxP,y=c[1]*_kyP;
+        if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;});
+      return [x0,y0,x1,y1];}
+    function _quitaPisadas(r,ocupBB){
+      var fuera={};
+      r.structures.forEach(function(e,i){
+        if(!e.lonlat)return;
+        var bb=_bbLL(e.lonlat);
+        for(var oi=0;oi<ocupBB.length;oi++){var o=ocupBB[oi];
+          if(Math.min(bb[2],o[2])-Math.max(bb[0],o[0])>0.5&&
+             Math.min(bb[3],o[3])-Math.max(bb[1],o[1])>0.5){fuera[i]=1;break;}}
+      });
+      var n=Object.keys(fuera).length;
+      if(!n)return 0;
+      // misma poda a la par que _filtraLinde: structures Y rows (la
+      // lección de las bielas fantasma), con stats descontadas
+      var muertas={};
+      Object.keys(fuera).forEach(function(i){var e=r.structures[+i];
+        if(e.row!=null&&e.cx!=null)muertas[e.row+'|'+e.cx.toFixed(3)]=1;});
+      if(r.rows&&r.rows.length)
+        r.rows=r.rows.map(function(f){return f.filter(function(s){
+          return !muertas[s.row+'|'+((s.x0+s.x1)/2).toFixed(3)];});});
+      var st=r.stats, wpM=(st.modules>0)?(st.kWp/st.modules):0, quedan=[];
+      r.structures.forEach(function(e,i){
+        if(!fuera[i]){quedan.push(e);return;}
+        r.descartadas.push(e);
+        st.structures--; st.strings--; st.modules-=e.mods; st.kWp-=e.mods*wpM;
+        if(st.by_size&&st.by_size[e.mods]!=null){st.by_size[e.mods]--;if(!st.by_size[e.mods])delete st.by_size[e.mods];}
+        if(st.col_area_m2)st.col_area_m2-=(e.len||0)*(e.ap||0);
+      });
+      if(st.trackers)st.trackers-=n;
+      r.structures=quedan;
+      return n;
+    }
     for(var _pas=0;_pas<3;_pas++){
       var _zR=huecosParaFija(cfg,zonas,partes);
       if(!_zR.length)break;
+      var _ocupBB=[];
+      partes.forEach(function(rp){rp.structures.forEach(function(e){
+        if(e.lonlat)_ocupBB.push(_bbLL(e.lonlat));});});
       var _zK=[],_pK=[];
       _zR.forEach(function(z){
         /* LA FIJA DE PIE NO SE PLANTA SOLA (v1.6.19, «has metido fijas
@@ -4339,8 +4430,11 @@ function computaMixto(cfg, zonas){
            sigue COMPUTANDO solo para poder avisar con cifra medida. */
         z.azFija=_azF; z.esRelleno=true;
         var r=_computaZona(z);
+        _pisadas+=_quitaPisadas(r,_ocupBB);
         var st=r.stats.structures||0;
-        var nP=_computaZona(Object.assign({},z,{azFija:_azPerp})).stats.structures||0;
+        var rP=_computaZona(Object.assign({},z,{azFija:_azPerp}));
+        _quitaPisadas(rP,_ocupBB);
+        var nP=rP.stats.structures||0;
         if(nP>st){_renuncia.mesas+=nP-st;_renuncia.huecos++;}
         // los huecos donde tampoco cupo fija NI se listan: son artefactos
         // de la pasada, no zonas del usuario
@@ -4350,8 +4444,9 @@ function computaMixto(cfg, zonas){
       _hR+=_zK.length;
       zonas=zonas.concat(_zK); partes=partes.concat(_pK);
     }
-    if(_hR||_renuncia.huecos)_rellenoInfo={mesas:_mR, huecos:_hR,
-      renunciaMesas:_renuncia.mesas, renunciaHuecos:_renuncia.huecos, azFija:_azF, azPerp:_azPerp};
+    if(_hR||_renuncia.huecos||_pisadas)_rellenoInfo={mesas:_mR, huecos:_hR,
+      renunciaMesas:_renuncia.mesas, renunciaHuecos:_renuncia.huecos, azFija:_azF, azPerp:_azPerp,
+      pisadas:_pisadas};
   }
   var base=partes[0];
   /* VISTAS para el render de vigas y ejes (2026-08-28, «selecciono bifila y
@@ -4427,6 +4522,11 @@ function computaMixto(cfg, zonas){
        (v1.6.19): la fija perpendicular es una decisión de proyecto.
        Cambiando «Azimut de filas (fija)» y regenerando salen — a la
        vista, elegidas. */
+    /* Un cinturón que actúa NO es un éxito: los agujeros del hueco deben
+       hacer imposible la pisada. Si este aviso sale, hay un mecanismo de
+       solape sin cubrir — repórtalo con la sesión. */
+    if(_rellenoInfo.pisadas)R.avisos.push({sev:'warn',codigo:'relleno_pisadas',
+      mensaje:'El cinturón anti-solape quitó '+_rellenoInfo.pisadas+' mesa(s) de relleno que PISABAN mesas ya colocadas. No debería quitar ninguna: guarda la sesión (💾) y repórtalo.'});
     if(_rellenoInfo.renunciaHuecos)R.avisos.push({sev:'info',codigo:'relleno_fija_renuncia',
       mensaje:'En '+_rellenoInfo.renunciaHuecos+' hueco(s) cabrían '+_rellenoInfo.renunciaMesas+
               ' mesa(s) MÁS con la fija a '+_rellenoInfo.azPerp+'° (de pie) — NO se plantan solas: '+
