@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.21</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.22</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -4130,10 +4130,11 @@ function huecosParaFija(cfg, zonas, partes){
   var _agujeros=[];                               // {seed:[cx,cy], ring:[[cx,cy],…]}
   var _restoA=new Uint8Array(W*H);
   for(var na2=0;na2<W*H;na2++)_restoA[na2]=(_noLib[na2]&&!_vb[na2])?1:0;
-  var _guardA=64;
-  while(_guardA-->0){
-    var a0=-1;for(var ai=0;ai<W*H;ai++)if(_restoA[ai]){a0=ai;break;}
+  var _scanA=0;                                  // mismo cursor que las islas: sin techo
+  while(true){
+    var a0=-1;for(var ai=_scanA;ai<W*H;ai++)if(_restoA[ai]){a0=ai;break;}
     if(a0<0)break;
+    _scanA=a0;
     var ay=(a0/W)|0, ax=a0-ay*W;
     var compA=varitaComponente(_restoA,W,H,ax,ay);
     if(!compA){_restoA[a0]=0;continue;}
@@ -4149,10 +4150,20 @@ function huecosParaFija(cfg, zonas, partes){
   function _areaCel(R){var s2=0;
     for(var v3=0;v3<R.length;v3++){var w=R[(v3+1)%R.length];s2+=R[v3][0]*w[1]-w[0]*R[v3][1];}
     return Math.abs(s2/2);}
-  var out=[], resto=new Uint8Array(libre), guard=64, idx=0;
-  while(guard-->0){
-    var f0=-1;for(var i2=0;i2<W*H;i2++)if(resto[i2]){f0=i2;break;}
+  /* SIN techo de islas (v1.6.22, «no aprovecha al máximo los huecos»): el
+     guard de 64 cortaba por ORDEN DE BARRIDO, no por tamaño — el polvo de
+     la parte alta del raster agotaba el presupuesto y un hueco de 1,4 ha
+     más abajo NI SE VISITABA (medido en Tudela, pasada 1: 64 islas
+     sumaban 3.758 de 21.650 m² libres). El barrido con cursor no vuelve
+     atrás (cada isla visitada se borra del raster), así que el coste
+     total queda acotado por las celdas y no hace falta techo: termina
+     porque cada vuelta borra al menos una celda. El techo honesto —24
+     huecos POR ÁREA— sigue abajo. */
+  var out=[], resto=new Uint8Array(libre), idx=0, _scanI=0;
+  while(true){
+    var f0=-1;for(var i2=_scanI;i2<W*H;i2++)if(resto[i2]){f0=i2;break;}
     if(f0<0)break;
+    _scanI=f0;
     var fy=(f0/W)|0, fx=f0-fy*W;
     var isla=varitaComponente(resto,W,H,fx,fy);
     if(!isla){resto[f0]=0;continue;}
@@ -4359,7 +4370,7 @@ function computaMixto(cfg, zonas){
        techo y corte en cuanto una no añade. Los nombres se renumeran
        DENSOS aquí (huecosParaFija arranca en relleno-1 en cada llamada y
        el desglose por zona se indexa por nombre). */
-    var _mR=0,_hR=0,_idxR=0,_pisadas=0;
+    var _mR=0,_hR=0,_mT=0,_hT=0,_idxR=0,_pisadas=0;
     var _renuncia={mesas:0,huecos:0};
     var _azF=(typeof azFilasFija==='function')?azFilasFija():180;
     var _azPerp=((_azF+90)%360+360)%360;
@@ -4408,7 +4419,58 @@ function computaMixto(cfg, zonas){
       r.structures=quedan;
       return n;
     }
-    for(var _pas=0;_pas<3;_pas++){
+    /* MEDIAS FILAS FUERA del relleno de tracker (v1.6.22): la unidad del
+       cliente (2026-08-04) es «monofila = 1 fila con 2 mesas; bifila = 2
+       filas con 2 mesas cada una» y el core no emite líneas con conteo
+       impar. El motor JS sí puede (la pasada fina del adaptive y los
+       post-filtros rompen la paridad — las zonas TITULARES del mixto ya
+       llevan líneas impares por la poda de linde, defecto PREEXISTENTE
+       declarado y aparte). Lo NUEVO que publica el relleno de tracker
+       nace limpio: toda línea con conteo impar, o pareja bifila coja o
+       desigual, se cae — su sitio lo recoge la fija en la pasada
+       siguiente. Poda structures Y rows a la par (lección de las bielas
+       fantasma) y recuenta las filas de stats. */
+    function _quitaMediasFilas(r){
+      if(!r.stats||r.stats.mount_type!=='tracker'||!r.structures.length)return 0;
+      var bif=!!r.stats.bifila, cnt={};
+      r.structures.forEach(function(e){cnt[e.row]=(cnt[e.row]||0)+1;});
+      var fuera={};
+      r.structures.forEach(function(e,i){
+        var f=+e.row;
+        if((cnt[f]||0)%2!==0){fuera[i]=1;return;}
+        if(bif){
+          var g=(f%2===0)?f+1:f-1;
+          if((cnt[g]||0)%2!==0||!(cnt[g]>0)||cnt[g]!==cnt[f])fuera[i]=1;
+        }
+      });
+      var n=Object.keys(fuera).length;
+      if(!n)return 0;
+      var muertas={};
+      Object.keys(fuera).forEach(function(i){var e=r.structures[+i];
+        if(e.row!=null&&e.cx!=null)muertas[e.row+'|'+e.cx.toFixed(3)]=1;});
+      if(r.rows&&r.rows.length)
+        r.rows=r.rows.map(function(f2){return f2.filter(function(s){
+          return !muertas[s.row+'|'+((s.x0+s.x1)/2).toFixed(3)];});});
+      var st=r.stats, wpM=(st.modules>0)?(st.kWp/st.modules):0, quedan=[];
+      r.structures.forEach(function(e,i){
+        if(!fuera[i]){quedan.push(e);return;}
+        r.descartadas.push(e);
+        st.structures--; st.strings--; st.modules-=e.mods; st.kWp-=e.mods*wpM;
+        if(st.by_size&&st.by_size[e.mods]!=null){st.by_size[e.mods]--;if(!st.by_size[e.mods])delete st.by_size[e.mods];}
+        if(st.col_area_m2)st.col_area_m2-=(e.len||0)*(e.ap||0);
+      });
+      st.trackers=Math.floor(st.structures/2);   // filas (nombre histórico)
+      r.structures=quedan;
+      return n;
+    }
+    /* HASTA CONVERGER (v1.6.22, «no aprovecha al máximo los huecos»): el
+       techo de 3 pasadas se quedaba corto — al plantar una pasada, los
+       bordes de lo nuevo abren huecos que la siguiente sí llena, y el
+       corte a las 3 dejaba mesas medidas encima de la mesa (Tudela: 7;
+       Pamplona: 4 + una unidad entera de tracker). El corte real es «una
+       pasada que no añade»; el 8 es un guard contra un ciclo que no debe
+       darse (cada pasada añade o corta). */
+    for(var _pas=0;_pas<8;_pas++){
       var _zR=huecosParaFija(cfg,zonas,partes);
       if(!_zR.length)break;
       var _ocupBB=[];
@@ -4416,6 +4478,27 @@ function computaMixto(cfg, zonas){
         if(e.lonlat)_ocupBB.push(_bbLL(e.lonlat));});});
       var _zK=[],_pK=[];
       _zR.forEach(function(z){
+        /* EL MONTAJE TITULAR PRIMERO (v1.6.22, «en todos los trackers
+           podían ser más largos o entraría fija»): si en el hueco entra
+           una unidad COMPLETA de tracker —con el azimut, pitch, paridad
+           y bifila del proyecto, y pasando su filtro de pendiente y de
+           linde—, el hueco es del tracker: es la regla del cliente («si
+           no entra bifila... se rellena de fija») leída hacia delante.
+           Medido en la parcela de Pamplona: una bifila completa (4
+           mesas) cabía en el sobrante y el relleno solo ofrecía fija.
+           SOLO si entra LIMPIO (cero pisadas del cinturón): una poda
+           parcial en bifila fabricaría viudas — el «sin biela» de
+           agosto. Si no entra o no entra limpio, cae a la fija de
+           siempre. */
+        var zT=Object.assign({},z,{mount:'tracker',pitch:null,esRelleno:true});
+        var rT=_computaZona(zT);
+        var _pisT=_quitaPisadas(rT,_ocupBB);
+        var _mediasT=_quitaMediasFilas(rT);
+        if(_pisT===0&&(rT.stats.structures||0)>0){
+          zT.nombre='relleno-'+(++_idxR);
+          _zK.push(zT);_pK.push(rT);_mT+=rT.stats.structures;_hT++;
+          return;
+        }
         /* LA FIJA DE PIE NO SE PLANTA SOLA (v1.6.19, «has metido fijas
            norte sur increíble»): el vuelco automático a la perpendicular
            —nacido en v1.6.17 «gana la que más mete», capado en v1.6.18 a
@@ -4444,7 +4527,8 @@ function computaMixto(cfg, zonas){
       _hR+=_zK.length;
       zonas=zonas.concat(_zK); partes=partes.concat(_pK);
     }
-    if(_hR||_renuncia.huecos||_pisadas)_rellenoInfo={mesas:_mR, huecos:_hR,
+    if(_hR||_hT||_renuncia.huecos||_pisadas)_rellenoInfo={mesas:_mR, huecos:_hR,
+      mesasTracker:_mT, huecosTracker:_hT,
       renunciaMesas:_renuncia.mesas, renunciaHuecos:_renuncia.huecos, azFija:_azF, azPerp:_azPerp,
       pisadas:_pisadas};
   }
@@ -4482,8 +4566,15 @@ function computaMixto(cfg, zonas){
     SUMA.forEach(function(k){st[k]+=(r.stats[k]||0);});
     Object.keys(r.stats.by_size||{}).forEach(function(k){
       st.by_size[k]=(st.by_size[k]||0)+r.stats.by_size[k];});
-    // MOTORES: solo donde los hay. En fija el motor emite 1 por mesa.
-    var mot=(z.mount==='tracker')?(r.stats.trackers||0):0;
+    /* MOTORES: solo donde los hay. En fija el motor emite 1 «tracker» por
+       mesa (0 motores). En tracker, stats.trackers cuenta FILAS (nombre
+       histórico, paridad con el core): monofila = 1 motor por fila, pero
+       en BIFILA un motor mueve DOS filas — leído directo, n_motors salía
+       DUPLICADO en todo mixto bifila (v1.6.22, medido: una bifila
+       completa de 4 mesas contaba 2 motores). Con líneas impares de los
+       post-filtros el /2 es aproximación, declarada aquí. */
+    var _filasZ=(z.mount==='tracker')?(r.stats.trackers||0):0;
+    var mot=(z.mount==='tracker')?((r.stats&&r.stats.bifila)?Math.round(_filasZ/2):_filasZ):0;
     motores+=mot;
     kwpPorMontaje[z.mount]=(kwpPorMontaje[z.mount]||0)+(r.stats.kWp||0);
     montajes[z.mount]=true;
@@ -4515,6 +4606,9 @@ function computaMixto(cfg, zonas){
             (cfg.rellenoFija?' — el relleno las está plantando de FIJA.':'.')+
             ' Si ahí esperabas tracker, re-descarga el MDT con ESTA parcela puesta y vuelve a Proponer por pendiente.'});
   if(_rellenoInfo){
+    if(_rellenoInfo.huecosTracker)R.avisos.push({sev:'info',codigo:'relleno_tracker',
+      mensaje:'RELLENO de tracker: '+_rellenoInfo.mesasTracker+' mesa(s) en '+_rellenoInfo.huecosTracker+
+              ' hueco(s) del sobrante donde aún entraba una unidad COMPLETA del montaje titular (mismo azimut, pitch y bifila del proyecto).'});
     if(_rellenoInfo.huecos)R.avisos.push({sev:'info',codigo:'relleno_fija',
       mensaje:'RELLENO de fija: '+_rellenoInfo.mesas+' mesa(s) en '+_rellenoInfo.huecos+
               ' hueco(s) donde el tracker no entra por geometría (2ª pasada sobre el sobrante real).'});
