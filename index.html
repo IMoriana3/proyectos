@@ -516,6 +516,27 @@ body{
    ===================================================================== */
 const PROJECTS = [
   {
+    name: "Careo SolarGPT ↔ PVSyst",
+    status: "live",
+    objetivo: "Tarjeta de comparativa y validación de la auditoría POA + energía frente a PVSyst: transposición por componente (Fleming +0,12 %), cadena por etapa con el hallazgo térmico Uc/Uv, El Burgo I (astronomía/backtracking) y Vadorada (careo automático sin config manual: GlobInc +0,03 %, E_Grid −0,99 % con bifacial). Veredictos compartidos por hallazgo.",
+    stack: "Artifact de Claude · veredictos compartidos en vivo · números reproducibles desde scripts/audit/careo_pvsyst_poa_energia.py",
+    url: "https://claude.ai/code/artifact/00159cc1-8e92-4f31-a0bb-5de70efe1031",
+    repo: "https://github.com/IMoriana3/SolarGPTfull",
+    updated: "2026-09-07",
+    version: "PR #213",
+    docId: "",
+    docUrl: "https://github.com/IMoriana3/SolarGPTfull/blob/claude/loving-galileo-adcosy/solargpt/docs/auditoria-poa-energia-pvsyst.md",
+    uso: [
+      "Abre la tarjeta, revisa cada bloque (A componentes · B cadena+térmico · C El Burgo · D Vadorada) y marca Validar/Rechazar con tu nombre: el veredicto queda compartido y se ve en vivo.",
+      "OJO: el artifact nace privado — hay que compartirlo desde el menú de la propia página para que el enlace funcione al resto del equipo.",
+      "Todos los números se reproducen con: python scripts/audit/careo_pvsyst_poa_energia.py (repo SolarGPTfull)."
+    ],
+    pendientes: [
+      { done:false, text:"Validar los 7 hallazgos en la tarjeta (en especial la decisión térmica de Fleming: Uc=20/Uv=0 → −1,61 %)" },
+      { done:false, text:"Re-export de El Burgo I con columnas de irradiancia/energía para carear su energía" }
+    ]
+  },
+  {
     name: "Mapa Modbus",
     status: "live",
     objetivo: "Consulta del mapa Modbus completo de NCU, HSU y TCU, con dirección absoluta por unidad y decodificación de valores crudos en vivo.",
