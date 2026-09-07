@@ -959,8 +959,14 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     aplicaSesion(ses);
     const cfg = readCfg(); cfg.rellenoFija = true;
     const R = computaMixto(cfg, MIX_ZONAS);
-    let mesas = 0, huecos = 0;
-    R.porZona.forEach(p => { if (p.nombre.startsWith('relleno')) { mesas += p.structures; huecos++; } });
+    let mesas = 0, huecos = 0, trkM = 0, trkH = 0, parOk = true, motOk = true;
+    R.porZona.forEach(p => {
+      if (!p.nombre.startsWith('relleno')) return;
+      mesas += p.structures; huecos++;
+      if (p.mount === 'tracker') { trkM += p.structures; trkH++;
+        if (p.structures % 4 !== 0) parOk = false;          // bifila: 2 filas × 2 mesas
+        if (p.motores !== p.structures / 4) motOk = false; } // 1 motor por unidad
+    });
     const _ren = R.avisos.find(a => a.codigo === 'relleno_fija_renuncia');
     // mesas de relleno DE PIE (más altas N-S que anchas E-O) — con el az de
     // fija de la sesión (180) no puede haber NINGUNA (v1.6.19)
@@ -972,26 +978,63 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
       if ((Math.max(...lats) - Math.min(...lats)) * _ky >
           (Math.max(...lons) - Math.min(...lons)) * _kx) dePie++;
     });
-    return { mesas, huecos, dePie, celda: window.huecosParaFija._ultimaCelda,
+    // cinturón: ninguna mesa de relleno-tracker pisa NADA ya colocado
+    const _kx2 = _kx, bbT = e => { const xs = e.lonlat.map(c => c[0] * _kx2), ys = e.lonlat.map(c => c[1] * _ky);
+      return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
+    const rel = [], otras = [];
+    R.structures.forEach(e => {
+      ((e.mount === 'tracker' && /^relleno/.test(e.zona || '')) ? rel : otras).push(bbT(e)); });
+    let solapesTrk = 0;
+    rel.forEach(b => { for (const o of otras) {
+      if (Math.min(b[2], o[2]) - Math.max(b[0], o[0]) > 0.5 &&
+          Math.min(b[3], o[3]) - Math.max(b[1], o[1]) > 0.5) { solapesTrk++; break; } } });
+    return { mesas, huecos, trkM, trkH, parOk, motOk, solapesTrk,
+             avisoTrk: R.avisos.some(a => a.codigo === 'relleno_tracker'),
+             nMotores: R.stats.n_motors,
+             dePie, celda: window.huecosParaFija._ultimaCelda,
              renuncia: _ren ? +(_ren.mensaje.match(/(\d+) mesa\(s\) MÁS/) || [0, 0])[1] : 0,
              total: R.stats.structures };
   }, JSON.parse(require('fs').readFileSync(__dirname + '/parcelas/tudela.sesion.json', 'utf8')));
   check('tudela · el relleno usa la celda FINA (la parcela cabe de sobra)',
     tudela.celda === 1.5, 'celda=' + tudela.celda);
-  /* La escalera MEDIDA de este número (v1.6.15-21, cada peldaño con su
-   * mutante bajo el código ACTUAL): pasillo con pitch de tracker → 348 ·
-   * una sola pasada → 362 · huecos sin agujeros interiores → 367 (el
-   * cinturón poda las pisadas y AVISA) · sano → 371 (0 de pie, 0
-   * solapes). El umbral de 368 mata a los tres. OJO: el 389 de v1.6.19-20
-   * incluía PISADAS —mesas de relleno sobre mesas ya colocadas, el bug de
-   * Pamplona— que nadie había medido: el número bajó al volverse honesto.
-   * Mutantes SUPERVIVIENTES declarados: el del retal-rejilla (v1.6.19,
-   * Tudela no sufre la fase) y el del CINTURÓN anti-solape (los agujeros
-   * interiores ya protegen; su testigo es el aviso relleno_pisadas, que
-   * SÍ muerde — escena pamplona). Si un cambio legítimo del motor mueve
-   * el número, se RE-MIDE la escalera — es una medición, no un deseo. */
-  check('tudela · el relleno apura los bolsillos (≥368 mesas: celda fina + pasillo por zona + iterado + agujeros)',
-    tudela.mesas >= 368, tudela.mesas + ' mesas en ' + tudela.huecos + ' huecos (escalera: 348/362/367/371)');
+  /* La escalera RE-MEDIDA en v1.6.22 (el motor se movió: convergencia,
+   * sin guard de islas, tracker-first — «es una medición, no un deseo»),
+   * cada peldaño con su mutante bajo el código ACTUAL: una sola pasada →
+   * 79 · guard de 64 islas restaurado → 314 (el polvo estrangula el
+   * barrido y un hueco de 1,4 ha ni se visita) · techo de 3 pasadas
+   * (v1.6.21) → 376 · sano → 380 (32 de tracker + 348 de fija, 0 de pie,
+   * 0 solapes). El umbral de 378 mata a los tres. La escalera vieja
+   * (348/362/367/371, v1.6.15-21) queda como historia: sus mutantes de
+   * pasillo y agujeros siguen muriendo aquí o en el aviso de pisadas.
+   * Mutantes SUPERVIVIENTES declarados: retal-rejilla (v1.6.19, Tudela
+   * no sufre la fase) y cinturón anti-solape (los agujeros protegen; su
+   * testigo es el aviso relleno_pisadas — y el mutante sin-agujeros lo
+   * enciende TAMBIÉN en tudela ahora, medido). */
+  check('tudela · el relleno apura los bolsillos HASTA CONVERGER (≥378 mesas)',
+    tudela.mesas >= 378, tudela.mesas + ' mesas en ' + tudela.huecos + ' huecos (escalera v1.6.22: 79/314/376/380)');
+  /* «En todos los trackers podían ser más largos o entraría fija»
+   * (v1.6.22): el sobrante se ofrece PRIMERO al montaje titular — donde
+   * entra una unidad COMPLETA de bifila, el hueco es del tracker. El
+   * mutante que salta el intento (sin_tracker_first) deja trkM=0 y
+   * apaga el aviso: muere aquí (medido sano: 32 mesas en 6 huecos). */
+  check('tudela · el sobrante donde entra bifila completa es del TRACKER (≥24 mesas, ≥4 huecos, con aviso)',
+    tudela.trkM >= 24 && tudela.trkH >= 4 && tudela.avisoTrk,
+    tudela.trkM + ' mesas trk en ' + tudela.trkH + ' huecos, aviso=' + tudela.avisoTrk);
+  /* La unidad del cliente (2026-08-04): «bifila = 2 filas con 2 mesas
+   * cada una». El relleno de tracker publica solo unidades completas
+   * (structures %4 = 0) con 1 motor por unidad. El mutante sin_paridad
+   * (no podar medias filas) publica 40 con líneas de 1 mesa: muere aquí.
+   * Las zonas TITULARES aún llevan líneas impares por la poda de linde —
+   * defecto PREEXISTENTE declarado, fuera de este check a propósito. */
+  check('tudela · el relleno de tracker publica UNIDADES completas (÷4, 1 motor por unidad)',
+    tudela.parOk && tudela.motOk, 'parOk=' + tudela.parOk + ' motOk=' + tudela.motOk);
+  /* n_motors se DERIVA de filas/2 en bifila (v1.6.22): leer
+   * stats.trackers como motores duplicaba n_motors en todo mixto bifila.
+   * Mutante motores_filas → 353 aquí: muere. Medido sano: 177. */
+  check('tudela · los motores del mixto NO se duplican con bifila (<200)',
+    tudela.nMotores > 0 && tudela.nMotores < 200, 'n_motors=' + tudela.nMotores + ' (con el bug: 353)');
+  check('tudela · ninguna mesa de relleno-tracker PISA nada ya colocado',
+    tudela.solapesTrk === 0, tudela.solapesTrk + ' solape(s)');
   /* «Has metido fijas norte sur increíble» (v1.6.19): la fija DE PIE no
    * se planta sola NUNCA — con el az de fija de la sesión (180), cero
    * mesas de relleno verticales. El mutante que restaura el vuelco de
@@ -999,9 +1042,10 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   check('tudela · NINGUNA fija de pie sin que el proyectista la pida (dePie=0)',
     tudela.dePie === 0, tudela.dePie + ' mesa(s) verticales (el vuelco de v1.6.18 daba 13)');
   /* Y lo que cabría de pie se DECLARA con sus números para que la
-   * decisión sea suya (medido: 97 mesas en el aviso). */
+   * decisión sea suya (re-medido en v1.6.22: 172 — el barrido sin guard
+   * examina muchos más huecos y renuncia en más). */
   check('tudela · lo que cabría DE PIE se declara en el aviso (≥50 mesas)',
-    tudela.renuncia >= 50, 'renuncia=' + tudela.renuncia + ' (medido: 97)');
+    tudela.renuncia >= 50, 'renuncia=' + tudela.renuncia + ' (medido: 172)');
   /* «¿Por qué no pones fijas más largas si tienes sitio?» (v1.6.20): la
    * rejilla global NO aplica en el mixto — las zonas del reparto son
    * dentadas y la rejilla mundial pierde tramos enteros (medido en la
@@ -1059,8 +1103,15 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     fij.forEach(f => { for (const t of trk) {
       if (Math.min(f[2], t[2]) - Math.max(f[0], t[0]) > 0.5 &&
           Math.min(f[3], t[3]) - Math.max(f[1], t[1]) > 0.5) { solapes++; break; } } });
-    let relleno = 0; R.porZona.forEach(p => { if (p.nombre.startsWith('relleno')) relleno += p.structures; });
-    return { solapes, relleno, fija: fij.length,
+    let relleno = 0, trkM = 0, parOk = true, motOk = true;
+    R.porZona.forEach(p => {
+      if (!p.nombre.startsWith('relleno')) return;
+      relleno += p.structures;
+      if (p.mount === 'tracker') { trkM += p.structures;
+        if (p.structures % 4 !== 0) parOk = false;
+        if (p.motores !== p.structures / 4) motOk = false; } });
+    return { solapes, relleno, fija: fij.length, trkM, parOk, motOk,
+             avisoTrk: R.avisos.some(a => a.codigo === 'relleno_tracker'),
              avisoPisadas: R.avisos.some(a => a.codigo === 'relleno_pisadas') };
   }, JSON.parse(require('fs').readFileSync(__dirname + '/parcelas/pamplona.sesion.json', 'utf8')));
   check('pamplona · NINGUNA mesa de fija pisa una de tracker (el bug del cliente: 59)',
@@ -1069,8 +1120,15 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   check('pamplona · y el cinturón NO tuvo que actuar (los agujeros protegen en la geometría)',
     pamplona.avisoPisadas === false,
     'aviso relleno_pisadas presente: el cinturón podó — los agujeros no cubren algo');
-  check('pamplona · el relleno honesto sigue plantando (≥85 mesas; medido: 92)',
+  check('pamplona · el relleno honesto sigue plantando (≥85 mesas; medido v1.6.22: 96)',
     pamplona.relleno >= 85, pamplona.relleno + ' mesas de relleno');
+  /* El hallazgo de la sesión v1.6.22: en el sobrante de SU parcela aún
+   * entraba una bifila COMPLETA (4 mesas, 1 motor) y el relleno solo
+   * ofrecía fija. Los mutantes sin_tracker_first y celda-forzada-a-3
+   * dejan trkM=0: mueren aquí. */
+  check('pamplona · la bifila completa que cabía en el sobrante es del TRACKER (4 mesas, 1 motor)',
+    pamplona.trkM >= 4 && pamplona.parOk && pamplona.motOk && pamplona.avisoTrk,
+    'trkM=' + pamplona.trkM + ' parOk=' + pamplona.parOk + ' motOk=' + pamplona.motOk);
 
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
