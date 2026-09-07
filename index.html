@@ -545,7 +545,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/cobertura-zigbee/produccion.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-09-07",
-    version: "v1.4.0",
+    version: "v1.7.0",
     docId: "",
     docUrl: "",
     uso: [
@@ -553,6 +553,8 @@ const PROJECTS = [
       "Cuatro magnitudes: POA instante (W/m²), POA Σ día (kWh/m²), P string (kW) y E string Σ día (kWh). Las eléctricas usan la MISMA cadena DC que notebook y streamlit (t_cell Faiman + PVWatts γ), con Wp, mód/string, γ, T ambiente y viento a la vista en su tarjeta.",
       "Planta «El Burgo I»: carga los 823 strings reales del plano de numeración (g.i.t.s, elburgo_strings.json) con el pitch medido por vano y la geometría del layout; los chips pasan a ser por inversor (36, media de sus strings). Elevación plana: el relieve de El Burgo no está levantado, y la página lo declara en vez de fingirlo.",
       "Mueve la hora (o ▶ para animar) en modo «instante»; en «Σ día» integra el día entero a paso de 5 min con el modo de seguimiento activo.",
+      "La escena proyecta la SOMBRA real entre filas (el mismo montaje que el simulador de BT 3D) y El Burgo dibuja sus mesas por tramos con los caminos del plano.",
+      "Ámbito: planta entera o el parque de UNA NCU (Ayora/San José por el layout de cotas; El Burgo casando g.i.t con el idPrevio). El Burgo va en BIFILA real: vigas emparejadas por unidad con θ acoplado y motor solo en la viga oeste.",
       "AUTO usa backtracking pairwise (la política de planta); marca MANUAL y mueve el slider de θ para forzar un ángulo común y ver la sombra entrar por strings.",
       "Sube la nubosidad para atenuar el cielo (el mismo modelo que el simulador de nubes: DNI·(1−cc)³, GHI·(1−0,70·cc)).",
       "QA sin navegador: node tools/test_produccion.mjs — incluye paridad bit a bit página↔motor."
