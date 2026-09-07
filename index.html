@@ -538,6 +538,29 @@ const PROJECTS = [
     ]
   },
   {
+    name: "Producción 3D por string",
+    status: "live",
+    objetivo: "Ver la producción de CADA string (fila) en colores sobre el terreno 3D: instante en W/m² o día acumulado en kWh/m², con seguimiento AUTO (backtracking pairwise) o MANUAL con slider, y nubosidad. La física NO vive en la página: extrae en caliente el bloque FÍSICA PURA del simulador de backtracking, cero copias.",
+    stack: "HTML offline · Three.js (libs locales) · física extraída de backtracking.html (mismo contrato de delimitadores que su QA) · sol.js + irradiancia.js compartidos",
+    url: "https://imoriana3.github.io/cobertura-zigbee/produccion.html",
+    repo: "https://github.com/imoriana3/cobertura-zigbee",
+    updated: "2026-09-07",
+    version: "v1.0.0",
+    docId: "",
+    docUrl: "",
+    uso: [
+      "Elige emplazamiento, fecha, geometría y terreno (llano / pendiente / ondulado / valle): cada string se pinta con su color normalizado min→máx de planta (azul = el que menos produce, rojo = el que más), con su chip S1…Sn numérico debajo.",
+      "Mueve la hora (o ▶ para animar) en modo «instante»; en «Σ día» integra el día entero a paso de 5 min con el modo de seguimiento activo.",
+      "AUTO usa backtracking pairwise (la política de planta); marca MANUAL y mueve el slider de θ para forzar un ángulo común y ver la sombra entrar por strings.",
+      "Sube la nubosidad para atenuar el cielo (el mismo modelo que el simulador de nubes: DNI·(1−cc)³, GHI·(1−0,70·cc)).",
+      "QA sin navegador: node tools/test_produccion.mjs — incluye paridad bit a bit página↔motor."
+    ],
+    pendientes: [
+      { done:false, text:"Cargar terreno real de Ayora / San José como en el simulador (por ahora presets E-O)" },
+      { done:false, text:"Producción eléctrica por string (Wp, mismatch, bypass) además de POA — el motor eléctrico ya está en la física extraída" }
+    ]
+  },
+  {
     name: "Mapa Modbus",
     status: "live",
     objetivo: "Consulta del mapa Modbus completo de NCU, HSU y TCU, con dirección absoluta por unidad y decodificación de valores crudos en vivo.",
