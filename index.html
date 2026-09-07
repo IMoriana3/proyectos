@@ -540,16 +540,17 @@ const PROJECTS = [
   {
     name: "Producción 3D por string",
     status: "live",
-    objetivo: "Ver la producción de CADA string (fila) en colores sobre el terreno 3D: instante en W/m² o día acumulado en kWh/m², con seguimiento AUTO (backtracking pairwise) o MANUAL con slider, y nubosidad. Con planta El Burgo I carga los 823 strings reales del plano y agrega por sus 36 inversores. La física NO vive en la página: extrae en caliente el bloque FÍSICA PURA del simulador de backtracking, cero copias.",
+    objetivo: "POA y ENERGÍA de CADA string en colores sobre el terreno 3D, igual para todas las plantas — ninguna es especial: cada string con su posición, inclinación y tilt entra al mismo motor. POA del bloque FÍSICA PURA del simulador (extraído en caliente, cero copias) y cadena DC del Notebook (t_cell PVSyst-Faiman + PVWatts γ de solargpt_core, careada dígito a dígito contra el core en el QA). Con El Burgo I carga los 823 strings reales del plano y agrega por sus 36 inversores.",
     stack: "HTML offline · Three.js (libs locales) · física extraída de backtracking.html (mismo contrato de delimitadores que su QA) · sol.js + irradiancia.js compartidos",
     url: "https://imoriana3.github.io/cobertura-zigbee/produccion.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-09-07",
-    version: "v1.1.0",
+    version: "v1.2.0",
     docId: "",
     docUrl: "",
     uso: [
       "Elige emplazamiento, fecha, geometría y terreno (llano / pendiente / ondulado / valle): cada string se pinta con su color normalizado min→máx de planta (azul = el que menos produce, rojo = el que más), con su chip S1…Sn numérico debajo.",
+      "Cuatro magnitudes: POA instante (W/m²), POA Σ día (kWh/m²), P string (kW) y E string Σ día (kWh). Las eléctricas usan la MISMA cadena DC que notebook y streamlit (t_cell Faiman + PVWatts γ), con Wp, mód/string, γ, T ambiente y viento a la vista en su tarjeta.",
       "Planta «El Burgo I»: carga los 823 strings reales del plano de numeración (g.i.t.s, elburgo_strings.json) con el pitch medido por vano y la geometría del layout; los chips pasan a ser por inversor (36, media de sus strings). Elevación plana: el relieve de El Burgo no está levantado, y la página lo declara en vez de fingirlo.",
       "Mueve la hora (o ▶ para animar) en modo «instante»; en «Σ día» integra el día entero a paso de 5 min con el modo de seguimiento activo.",
       "AUTO usa backtracking pairwise (la política de planta); marca MANUAL y mueve el slider de θ para forzar un ángulo común y ver la sombra entrar por strings.",
@@ -560,7 +561,8 @@ const PROJECTS = [
       { done:true,  text:"Planta real con inversores y distribución de strings (hecho v1.1.0: El Burgo I, 823 strings del plano agregados por sus 36 inversores, pitch por vano real)" },
       { done:false, text:"Relieve real de El Burgo (el plano no trae cotas levantadas; con relieve la sombra separaría más los inversores)" },
       { done:false, text:"Cargar terreno real de Ayora / San José como en el simulador (por ahora presets E-O)" },
-      { done:false, text:"Producción eléctrica por string (Wp, mismatch, bypass) además de POA — el motor eléctrico ya está en la física extraída" }
+      { done:true,  text:"Producción eléctrica por string además de POA (hecho v1.2.0: cadena DC del Notebook — t_cell Faiman + PVWatts γ — careada dígito a dígito contra solargpt_core en el QA; Martinez/bypass ya venían dentro del POA del motor)" },
+      { done:false, text:"Cadena AC por inversor (recorte Paco, eficiencia) — la DC por string ya está; el agregado por inversor suma en kWh" }
     ]
   },
   {
