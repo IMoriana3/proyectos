@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0B0F14">
+<title>Buscador de implantaciones — Factiun</title>
+<link rel="icon" href="favicon.svg">
+<style>
+:root{--void:#0B0F14;--panel:#121922;--panel-2:#0F151D;--line:#23303D;--text:#E7EEF4;--muted:#8093A4;
+  --accent:#36D399;--warn:#F2A900;--danger:#ef5f6b;
+  --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;--sans:'IBM Plex Sans',system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--void);color:var(--text);font-family:var(--sans);overflow:hidden}
+#lienzo{position:fixed;inset:0;width:100%;height:100%;display:block}
+#panel{position:fixed;top:10px;right:10px;bottom:44px;width:288px;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+#panel .tarj{background:rgba(15,21,29,.92);border:1px solid var(--line);border-radius:8px;padding:7px 9px 6px;flex:none}
+#panel .tarj.crece{flex:1;min-height:60px;display:flex;flex-direction:column}
+#panel h3{font:600 9.5px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between}
+#panel h3 b{color:var(--accent);font-weight:600}
+#panel canvas{display:block;width:100%}
+#panel .tarj.crece canvas{flex:1;min-height:0}
+#panel .tres{display:flex;justify-content:space-between;font:600 9.5px/1.2 var(--mono);margin-top:4px;color:var(--muted)}
+#panel .tres b{color:var(--accent)}
+#barra{position:fixed;left:10px;right:10px;bottom:8px;background:rgba(15,21,29,.92);border:1px solid var(--line);
+  border-radius:8px;padding:7px 12px;font:600 10.5px/1.6 var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#barra b{color:var(--text)}#barra .v{color:var(--accent)}#barra .r{color:var(--danger)}
+/* ojo: un display propio PISA el atributo hidden (que actúa por display:none del UA); sin la regla
+   de abajo este velo tapaba la página entera aunque estuviera hidden — pasó, 2026-09-08 */
+#aviso{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--void);z-index:9}
+#aviso[hidden]{display:none}
+#aviso div{max-width:520px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 26px;font-size:13.5px;line-height:1.6;color:var(--muted)}
+#aviso b{color:var(--text)}
+@media(max-width:900px){#panel{display:none}}
+</style>
+</head>
+<body>
+<canvas id="lienzo"></canvas>
+<aside id="panel">
+  <div class="tarj"><h3>hasta el siguiente mejor <b id="nSitio"></b></h3><canvas id="cGap" height="30"></canvas></div>
+  <div class="tarj"><h3>giro de filas 0–45°</h3><canvas id="cGiro" height="52"></canvas>
+    <div class="tres" id="tGiro"></div></div>
+  <div class="tarj"><h3>viales en fila (tramos)</h3><canvas id="cVial" height="44"></canvas>
+    <div class="tres" id="tVial"></div></div>
+  <div class="tarj"><h3>mejor hasta ahora</h3><canvas id="cMejor" height="62"></canvas>
+    <div class="tres" id="tMejor"></div></div>
+  <div class="tarj crece"><h3>giro × viales <b id="nPuntos"></b></h3><canvas id="cNube"></canvas></div>
+</aside>
+<div id="barra">cargando el motor…</div>
+<div id="aviso" hidden><div id="avisoTxt"></div></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   BUSCADOR DE IMPLANTACIONES — miles de variantes de layout en vivo, para VERLAS buscar.
+
+   Réplica (2026-09-08) de un vídeo ajeno de LinkedIn que gustó en casa: una parcela sobre
+   terreno oscuro, el optimizador barriendo giros y cortes de fila, lo mejor en verde, los
+   retales en rojo y un panel de telemetría de la búsqueda. Esto es lo mismo con las piezas
+   de VERDAD de la casa:
+
+   · EL MOTOR NO ES NUEVO. Se extrae en runtime el bloque «MOTOR DE LAYOUT» de
+     generador-layout.html —el port del cuaderno careado contra
+     solargpt_core.layout_v2.compute_layout_v2 en tests/test_layout.js— con el MISMO regex que
+     usa ese banco. Un segundo motor serían dos verdades sobre la misma parcela y nadie
+     mirando; de eso ya nos curamos.
+
+   · LOS MANDOS SON LOS DEL MOTOR: giro de filas = panelAz (90° canónico + 0–45°),
+     tresbolillo = rowOffset (none/half), tramos = roadNsEvery (viales EN la fila cada N
+     estructuras, que es lo que parte una fila en secciones). La mesa es la del generador
+     por defecto: 1V·28 módulos de 630 Wp (2,382×1,134), bifila, pitch 6 m, setback 5 m.
+
+   · LAS PARCELAS SINTÉTICAS SE DECLARAN: cada «site» sale de una semilla visible en la
+     barra (reproducible). El terreno del fondo es DECORACIÓN procedente de la misma semilla
+     —ambienta, no es dato— y así se dice aquí. Arrastra un <planta>_layout.json de la suite
+     y el buscador corre sobre su VALLADO real (solo geometría; el fondo decorativo se apaga).
+
+   · LO ROJO ES REAL: son las `descartadas` del motor (mesas que no caben enteras), no un
+     efecto. El verde→amarillo de cada mesa es su llenado (módulos de la mesa / 28).
+
+   Teclas: Espacio pausa · N siguiente site · R misma parcela, otra semilla de búsqueda ·
+   C limpia lo acumulado · H esconde el panel. Con ?quieto=1 arranca PARADO y sin avance de
+   site (para el banco, o para encuadrar antes de grabar: Espacio lanza la búsqueda ahí);
+   ?semilla=A-B y ?site=K fijan la reproducción.
+   Banco: tests/test_buscador.js (determinismo, monotonía del récord, parcela real).
+   ═══════════════════════════════════════════════════════════════════════════════════════════ */
+"use strict";
+const $=id=>document.getElementById(id);
+const URLQ=new URLSearchParams(location.search);
+const QUIETO=URLQ.get("quieto")==="1";
+
+/* ── RNG con semilla a la vista (mulberry32; dos mitades solo por legibilidad en la barra) ── */
+function rngDe(a,b){let s=(a*2654435761^b*97531)>>>0;return function(){s|=0;s=s+0x6D2B79F5|0;
+  let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+let SEM=[0,0];
+(function(){const q=URLQ.get("semilla");
+  if(q&&/^\d+-\d+$/.test(q)){SEM=q.split("-").map(Number);}
+  else{SEM=[Math.floor(Math.random()*9e5)+1e5,Math.floor(Math.random()*9e5)+1e5];}})();
+let SITE=Math.max(1,+URLQ.get("site")||1);
+
+/* ── la mesa del generador, por defecto (misma cfg que construye su panel) ── */
+const BASE={mount:"tracker",table:"1V",mods:[28],modLen:2.382,modWid:1.134,moduleWp:630,
+  pitch:6,setback:5,bifila:true,gapModules:.02,gapMotor:.5,gapNs:.5,
+  roadEvery:0,roadW:4,roadNsW:4,mode:"aligned",minStructs:2,alignGrid:false,center:true,
+  holes:[],exclusions:[]};
+const VIALES=[0,0,3,4,5,6,8];               // 0 doble: sin cortar también merece muestras
+
+/* ── geodesia mínima: las parcelas se generan en metros y el motor come lon/lat ── */
+const ANCLA={lon:-3.7,lat:40.4};
+const M_LON=111320*Math.cos(ANCLA.lat*Math.PI/180),M_LAT=110540;
+const aLonLat=pts=>pts.map(p=>[ANCLA.lon+p[0]/M_LON,ANCLA.lat+p[1]/M_LAT]);
+
+/* ── parcela sintética por semilla: polígono radial con mordidas, 0–2 agujeros ── */
+function parcelaSintetica(rnd){
+  const n=10+Math.floor(rnd()*6),R=200+rnd()*220,exc=.55+rnd()*.3,pts=[];
+  for(let i=0;i<n;i++){const a=i/n*2*Math.PI+rnd()*.25,r=R*(exc+rnd()*(1-exc));
+    pts.push([Math.cos(a)*r*(1.1+rnd()*.4),Math.sin(a)*r]);}
+  const holes=[];const nh=rnd()<.55?1+Math.floor(rnd()*2):0;
+  for(let h=0;h<nh;h++){const cx=(rnd()-.5)*R,cy=(rnd()-.5)*R,r0=25+rnd()*45,m=7,ring=[];
+    for(let i=0;i<m;i++){const a=i/m*2*Math.PI;ring.push([cx+Math.cos(a)*r0*(0.8+rnd()*.5),cy+Math.sin(a)*r0*(0.8+rnd()*.5)]);}
+    holes.push(ring);}
+  /* el «terreno» del fondo: DECORACIÓN de la misma semilla — ambienta, no es dato */
+  const deco=[];const nd=6+Math.floor(rnd()*7);
+  for(let d=0;d<nd;d++){const cx=(rnd()-.5)*R*5,cy=(rnd()-.5)*R*4,r0=40+rnd()*180,m=9,ring=[];
+    for(let i=0;i<m;i++){const a=i/m*2*Math.PI;ring.push([cx+Math.cos(a)*r0*(0.6+rnd()*.8),cy+Math.sin(a)*r0*(0.6+rnd()*.8)]);}
+    deco.push(ring);}
+  return {pts,holes,deco,nombre:null};
+}
+
+/* ── parcela REAL: arrastra un <planta>_layout.json (vallado = tramos concatenados) ── */
+let REAL=null;
+function cargaLayoutReal(L){
+  const f=L&&L.fence;if(!Array.isArray(f)||!f.length)return false;
+  const anillo=[];f.forEach(tr=>(tr||[]).forEach(p=>{const q=[+p[0],+p[1]];
+    const u=anillo[anillo.length-1];if(!u||Math.hypot(u[0]-q[0],u[1]-q[1])>.01)anillo.push(q);}));
+  if(anillo.length<3)return false;
+  const cx=anillo.reduce((s,p)=>s+p[0],0)/anillo.length,cy=anillo.reduce((s,p)=>s+p[1],0)/anillo.length;
+  REAL={pts:anillo.map(p=>[p[0]-cx,p[1]-cy]),holes:[],deco:[],nombre:L.title||L.plant||"layout"};
+  nuevoSite(true);return true;
+}
+addEventListener("dragover",e=>e.preventDefault());
+addEventListener("drop",e=>{e.preventDefault();const fi=e.dataTransfer.files[0];if(!fi)return;
+  fi.text().then(t=>{if(!cargaLayoutReal(JSON.parse(t)))pon("ese JSON no trae `fence`: hace falta un <planta>_layout.json con vallado");});});
+
+/* ── estado de la búsqueda ── */
+let LAY=null,PARCELA=null,CFGP=null,RND=null,PAUSA=QUIETO;   // quieto: arranca parado, manda PASO() o Espacio
+let OPC=0,MEJOR=null,ULTIMO=null,KWS=[],GAPS=[],DESDE=0,HIST={giro:[],vial:new Map()},NUBE=[],SERIE=[];
+let VISTA={ang:0};
+
+function nuevoSite(mismaParcela){
+  if(!mismaParcela)SITE++;
+  const rp=rngDe(SEM[0]+SITE*7919,SEM[1]);                       // la parcela sale del site…
+  PARCELA=REAL||parcelaSintetica(rp);
+  RND=rngDe(SEM[0]+SITE*104729,SEM[1]+(mismaParcela?OPC:0));     // …y la búsqueda, de su propia rama
+  CFGP=Object.assign({},BASE,{coords:aLonLat(PARCELA.pts),holes:PARCELA.holes.map(aLonLat)});
+  OPC=0;MEJOR=null;ULTIMO=null;KWS=[];GAPS=[];DESDE=0;NUBE=[];SERIE=[];
+  HIST={giro:new Array(15).fill(null),vial:new Map()};
+  VISTA.ang=(SITE*.7)%(2*Math.PI);
+  encuadra();
+}
+
+/* ── un candidato = una pasada REAL del motor ── */
+function candidato(){
+  const giro=RND()*45,offset=RND()<.5?"none":"half",vial=VIALES[Math.floor(RND()*VIALES.length)];
+  const r=LAY.compute(Object.assign({},CFGP,{panelAz:90+giro,rowOffset:offset,roadNsEvery:vial}));
+  const s=r.stats,kwp=s.kWp||0;OPC++;
+  ULTIMO={r,giro,offset,vial,kwp,str:s.strings||0,util:s.usable_fill||0};
+  if(KWS.length<6000)KWS.push(kwp);
+  const b=Math.min(14,Math.floor(giro/3));
+  if(HIST.giro[b]==null||kwp>HIST.giro[b])HIST.giro[b]=kwp;
+  const kv="v"+vial;if(!HIST.vial.has(kv)||kwp>HIST.vial.get(kv))HIST.vial.set(kv,kwp);
+  if(NUBE.length<4000)NUBE.push([giro,vial+(offset==="half"?.45:0),kwp]);
+  if(!MEJOR||kwp>MEJOR.kwp){
+    GAPS.push(OPC-DESDE);DESDE=OPC;if(GAPS.length>12)GAPS.shift();
+    MEJOR={giro,offset,vial,kwp,str:s.strings||0,util:s.usable_fill||0,r};
+  }
+  SERIE.push([OPC,MEJOR.kwp,MEJOR.util]);if(SERIE.length>900)SERIE.splice(0,SERIE.length-900);
+}
+
+/* ── proyección del lienzo: encuadre por bbox + giro lento + tumbado (el falso 3D del vídeo) ── */
+const CV=$("lienzo"),CX=CV.getContext("2d");let TR=null;
+function encuadra(){
+  const xs=PARCELA.pts.map(p=>p[0]),ys=PARCELA.pts.map(p=>p[1]);
+  TR={cx:(Math.min(...xs)+Math.max(...xs))/2,cy:(Math.min(...ys)+Math.max(...ys))/2,
+      ancho:Math.max(...xs)-Math.min(...xs),alto:Math.max(...ys)-Math.min(...ys)};
+}
+function tamano(){const d=Math.min(devicePixelRatio||1,2);
+  CV.width=innerWidth*d;CV.height=innerHeight*d;CX.setTransform(d,0,0,d,0,0);}
+addEventListener("resize",tamano);
+function pV(p){ // metros → pantalla, con vista girada y tumbada
+  const a=VISTA.ang,c=Math.cos(a),s=Math.sin(a);
+  const x=(p[0]-TR.cx)*c-(p[1]-TR.cy)*s,y=(p[0]-TR.cx)*s+(p[1]-TR.cy)*c;
+  const escala=Math.min((innerWidth-340)/(TR.ancho*1.35),innerHeight/(TR.alto*1.9))||1;
+  return [innerWidth/2-130+x*escala,innerHeight/2+y*escala*.55-y*0.0002*escala*escala];
+}
+function traza(pts,cerrar){CX.beginPath();pts.forEach((p,i)=>{const q=pV(p);i?CX.lineTo(q[0],q[1]):CX.moveTo(q[0],q[1]);});if(cerrar)CX.closePath();}
+
+function dibuja(){
+  CX.clearRect(0,0,innerWidth,innerHeight);
+  /* fondo decorativo (solo en sites sintéticos, y declarado como decoración) */
+  if(!REAL)PARCELA.deco.forEach((r,i)=>{traza(r,true);CX.fillStyle=i%3?"rgba(22,32,44,.5)":"rgba(16,34,52,.55)";CX.fill();});
+  traza(PARCELA.pts,true);CX.fillStyle="rgba(13,20,29,.96)";CX.fill();
+  CX.strokeStyle="rgba(231,238,244,.5)";CX.lineWidth=1.2;CX.stroke();
+  PARCELA.holes.forEach(h=>{traza(h,true);CX.fillStyle="rgba(9,13,19,.95)";CX.fill();CX.strokeStyle="rgba(128,147,164,.4)";CX.stroke();});
+  const u=ULTIMO;if(!u)return;
+  const loc=q=>[q[0]-OFF[0],q[1]-OFF[1]];
+  (u.r.roads||[]).forEach(rd=>{if(rd&&rd.length){traza(rd.map(loc),true);CX.fillStyle="rgba(128,147,164,.10)";CX.fill();}});
+  const full=BASE.mods[0],t=performance.now()/460;
+  u.r.structures.forEach(st=>{const p=st.utm.map(loc),f=Math.min(1,(st.mods||full)/full);
+    traza(p,true);
+    CX.strokeStyle=f>=1?"rgba(84,240,150,.85)":"hsla("+(120*f)+",85%,60%,.85)";
+    CX.lineWidth=f>=1?1.1:1.4;CX.stroke();});
+  (u.r.descartadas||[]).forEach(st=>{if(!st.utm)return;const p=st.utm.map(loc);
+    traza(p,true);CX.strokeStyle="rgba(239,95,107,"+(0.55+0.35*Math.sin(t))+")";CX.lineWidth=2;CX.stroke();});
+}
+/* structures.utm viene en UTM absolutas; el origen local se mide una vez por site */
+let OFF=[0,0];
+function mideOff(r){if(!r||!r.parcel_utm||!r.parcel_utm.length)return;
+  const q=r.parcel_utm[0],p=PARCELA.pts[0];OFF=[q[0]-p[0],q[1]-p[1]];}
+
+/* ── el panel ── */
+function miniCanvas(c){const d=Math.min(devicePixelRatio||1,2),w=c.clientWidth,h=c.clientHeight||+c.getAttribute("height");
+  if(c.width!==w*d||c.height!==h*d){c.width=w*d;c.height=h*d;}const g=c.getContext("2d");g.setTransform(d,0,0,d,0,0);g.clearRect(0,0,w,h);return [g,w,h];}
+const fmtK=v=>v>=1000?(v/1000).toFixed(v>=10000?1:2)+" MWp":Math.round(v)+" kWp";
+function cuantiles(){if(!KWS.length)return[0,0,0];const a=KWS.slice().sort((x,y)=>x-y);
+  return [a[0],a[Math.floor(a.length/2)],a[a.length-1]];}
+function panel(){
+  $("nSitio").textContent="site "+SITE;
+  {const [g,w,h]=miniCanvas($("cGap"));const n=Math.max(GAPS.length,1),bw=w/12;
+   GAPS.forEach((v,i)=>{const a=Math.min(1,v/Math.max(...GAPS,1));
+     g.fillStyle=i===GAPS.length-1?"#36D399":"rgba(54,211,153,.35)";
+     g.fillRect(i*bw+1,h-4-(h-12)*a,bw-2,(h-12)*a+2);
+     g.fillStyle="#8093A4";g.font="600 7px monospace";if(v)g.fillText(v,i*bw+1,h);});}
+  {const [g,w,h]=miniCanvas($("cGiro"));const max=Math.max(...HIST.giro.filter(x=>x!=null),1);
+   HIST.giro.forEach((v,i)=>{if(v==null)return;const bw=w/15,a=v/max;
+     g.fillStyle=MEJOR&&Math.floor(MEJOR.giro/3)===i?"#54F096":"rgba(54,211,153,.45)";
+     g.fillRect(i*bw+1,h-(h-2)*a,bw-2,(h-2)*a);});}
+  {const [g,w,h]=miniCanvas($("cVial"));const ks=VIALES.filter((v,i,a)=>a.indexOf(v)===i);
+   const max=Math.max(...ks.map(k=>HIST.vial.get("v"+k)||0),1),bw=w/ks.length;
+   ks.forEach((k,i)=>{const v=HIST.vial.get("v"+k);if(v==null)return;const a=v/max;
+     g.fillStyle=MEJOR&&MEJOR.vial===k?"#54F096":"rgba(54,211,153,.45)";
+     g.fillRect(i*bw+2,h-12-(h-14)*a,bw-4,(h-14)*a+1);
+     g.fillStyle="#8093A4";g.font="600 8px monospace";g.fillText(k?("c/"+k):"sin",i*bw+2,h-2);});}
+  {const [g,w,h]=miniCanvas($("cMejor"));if(SERIE.length>1){
+     const x0=SERIE[0][0],x1=SERIE[SERIE.length-1][0],kmax=SERIE[SERIE.length-1][1]||1;
+     const X=o=>2+(w-4)*(o-x0)/Math.max(1,x1-x0);
+     g.strokeStyle="#36D399";g.lineWidth=1.4;g.beginPath();
+     SERIE.forEach((p,i)=>{const y=h-4-(h-10)*(p[1]/kmax);i?g.lineTo(X(p[0]),y):g.moveTo(X(p[0]),y);});g.stroke();
+     g.strokeStyle="#F2A900";g.lineWidth=1;g.beginPath();
+     SERIE.forEach((p,i)=>{const y=h-4-(h-10)*p[2];i?g.lineTo(X(p[0]),y):g.moveTo(X(p[0]),y);});g.stroke();
+     g.fillStyle="#F2A900";g.font="600 8px monospace";g.fillText(Math.round((MEJOR?MEJOR.util:0)*100)+"% útil",4,10);}}
+  {const [g,w,h]=miniCanvas($("cNube"));$("nPuntos").textContent=NUBE.length? NUBE.length+" pts":"";
+   const kb=MEJOR?MEJOR.kwp:1;
+   NUBE.forEach(p=>{const x=2+(w-6)*(p[0]/45),y=h-6-(h-12)*(p[1]/8.6),q=p[2]/kb;
+     g.fillStyle=q>.995?"#54F096":q>.97?"rgba(54,211,153,.7)":q>.9?"rgba(128,167,150,.45)":"rgba(106,123,139,.22)";
+     g.fillRect(x,y,q>.995?3.4:2.2,q>.995?3.4:2.2);});}
+  const [k0,k1,k2]=cuantiles();
+  $("tGiro").innerHTML="<span>"+fmtK(k0)+"</span><span>"+fmtK(k1)+"</span><b>"+fmtK(k2)+"</b>";
+  $("tVial").innerHTML="<span>mín · med · mejor</span><b>"+(MEJOR?MEJOR.str+" str":"")+"</b>";
+  $("tMejor").innerHTML="<span>"+(MEJOR?"giro "+MEJOR.giro.toFixed(1)+"° · "+(MEJOR.offset==="half"?"tresbolillo":"alineado")+(MEJOR.vial?" · vial c/"+MEJOR.vial:"")+"</span><b>"+fmtK(MEJOR.kwp)+"</b>":"</span><b></b>");
+}
+function barra(){
+  const [k0,k1,k2]=cuantiles();
+  $("barra").innerHTML="<b>"+OPC.toLocaleString("es-ES")+"</b> opciones · "+
+    (REAL?"parcela real <b>"+PARCELA.nombre+"</b> (geometría del vallado)":"site <b>"+SITE+"</b> · sintética")+
+    " · semilla "+SEM[0]+"-"+SEM[1]+
+    " · DC <span>"+fmtK(k0)+"</span> · <span>"+fmtK(k1)+"</span> · <span class=v>"+fmtK(k2)+
+    (MEJOR?" · "+MEJOR.str+" str":"")+"</span>"+
+    (ULTIMO&&ULTIMO.r.descartadas&&ULTIMO.r.descartadas.length?" · <span class=r>"+ULTIMO.r.descartadas.length+" descartadas en rojo</span>":"")+
+    " · mesa 1V·28×630 Wp bifila · pitch 6 · <b>Espacio</b> pausa · <b>N</b> site · <b>R</b> semilla · <b>C</b> limpia · <b>H</b> panel · arrastra un layout.json";
+}
+function pon(t){$("barra").innerHTML=t;}
+
+/* ── el bucle: candidatos de verdad a presupuesto de frame, y avance de site solo ── */
+let ultAvance=performance.now(),ultPanel=0;
+function vuelta(now){
+  if(LAY&&!PAUSA){
+    const t0=performance.now();
+    do{candidato();}while(performance.now()-t0<24&&OPC%997);   // al menos uno; más si el motor da
+    if(ULTIMO&&OPC<=1)mideOff(ULTIMO.r);
+    if(!QUIETO&&now-ultAvance>12000){REAL=null;nuevoSite();ultAvance=now;}
+  }
+  VISTA.ang+=.0009;
+  if(LAY&&PARCELA){dibuja();if(now-ultPanel>230){panel();barra();ultPanel=now;}}
+  requestAnimationFrame(vuelta);
+}
+
+addEventListener("keydown",e=>{
+  if(e.key===" "){PAUSA=!PAUSA;e.preventDefault();}
+  else if(e.key==="n"||e.key==="N"){REAL=null;nuevoSite();ultAvance=performance.now();}
+  else if(e.key==="r"||e.key==="R"){SEM[1]=(SEM[1]+1)%1e6;nuevoSite(true);}
+  else if(e.key==="c"||e.key==="C"){nuevoSite(true);}
+  else if(e.key==="h"||e.key==="H"){$("panel").hidden=!$("panel").hidden;}
+});
+
+/* ── ganchos del banco: correr N candidatos en seco y leer el estado ── */
+window.PASO=n=>{for(let i=0;i<n;i++)candidato();if(OPC&&!OFF[0])mideOff(ULTIMO.r);dibuja();panel();barra();};
+window.ESTADO=()=>({opciones:OPC,mejorKwp:MEJOR?MEJOR.kwp:0,mejorStr:MEJOR?MEJOR.str:0,
+  semilla:SEM.join("-"),site:SITE,real:!!REAL,descartadas:ULTIMO&&ULTIMO.r.descartadas?ULTIMO.r.descartadas.length:0});
+window.cargaLayoutReal=cargaLayoutReal;
+
+/* ── arranque: el motor DE VERDAD, extraído del generador con el regex del banco ── */
+(async function(){
+  tamano();
+  try{
+    const html=await (await fetch("generador-layout.html")).text();
+    const m=html.match(/MOTOR DE LAYOUT — inicio[\s\S]*?\*\/([\s\S]*?)\/\* ═+ MOTOR DE LAYOUT — fin/);
+    if(!m)throw new Error("no encuentro el bloque MOTOR DE LAYOUT en generador-layout.html");
+    (new Function(m[1]+";window.LAY=LAY;"))();
+    LAY=window.LAY;
+    if(!LAY||!LAY.compute)throw new Error("el motor no exporta LAY.compute");
+  }catch(e){
+    $("aviso").hidden=false;
+    $("avisoTxt").innerHTML="<b>No puedo cargar el motor de layout.</b><br>"+e.message+
+      "<br><br>Este buscador reutiliza el MOTOR del generador (generador-layout.html), que se lee por red: "+
+      "abre la herramienta <b>servida</b> (el despliegue de Pages, o <code>python3 -m http.server</code> en la carpeta). "+
+      "Desde <code>file://</code> el navegador bloquea esa lectura.";
+    return;
+  }
+  nuevoSite(true);
+  requestAnimationFrame(vuelta);
+})();
+</script>
+</body>
+</html>
