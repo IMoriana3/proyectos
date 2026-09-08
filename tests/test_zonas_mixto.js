@@ -31,7 +31,12 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     // cfg mínimo del motor, con la parcela grande que engloba las dos zonas
     const cfg = {
       coords: A.concat(B), holes: [], mount: 'tracker', pitch: 6,
-      setback: 5, tableType: '1V', modsPerStruct: 30, modLen: 2.382, modWid: 1.134,
+      setback: 0,  /* SUSTITUCIÓN DECLARADA (2026-08-27): esta escena prueba la
+        SEMÁNTICA DE SUMA del mixto, y su «parcela» (A.concat(B)) es un ocho
+        autocruzado que no es linde de nada — con el setback-solo-linde
+        nuevo, un retranqueo aquí filtraría contra esa basura. La banda de
+        la linde tiene su banco propio más abajo, con parcela de verdad. */
+        _setback_anulado: 5, tableType: '1V', modsPerStruct: 30, modLen: 2.382, modWid: 1.134,
       gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5, panelAz: 180, decl: {}
     };
     const zonas = [
@@ -113,6 +118,7 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   const mask = await page.evaluate(() => {
     // MDT sintético 24×24 sobre un bbox MUCHO mayor que la parcela, con
     // pendiente creciente hacia el este para que haya tres bandas.
+    const _prev = { DEM: window.DEM, PARCEL: window.PARCEL, HOLES: window.HOLES };
     const n = 24, lat0 = 41.560, lon0 = -0.820, paso = 0.0020;
     const lats = [], lons = [], z = [];
     for (let i = 0; i < n; i++) { lats.push(lat0 + i * paso); lons.push(lon0 + i * paso); }
@@ -132,6 +138,7 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     let fuera = 0, vert = 0;
     p.zonas.forEach(zz => zz.coords.forEach(q => { vert++;
       if (q[0] < lonMin - tol || q[0] > lonMax + tol || q[1] < latMin - tol || q[1] > latMax + tol) fuera++; }));
+    window.DEM = _prev.DEM; window.PARCEL = _prev.PARCEL; window.HOLES = _prev.HOLES;
     return { nZonas: p.zonas.length, vertices: vert, fuera,
              montajes: Array.from(new Set(p.zonas.map(zz => zz.mount))).sort(),
              noDesarrollable: p.areaNoDesarrollable };
@@ -201,7 +208,8 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
    * Lo destapó portar el recorte a Python (SolarGPTfull#166), donde la linde
    * es argumento OBLIGATORIO. */
   const sinLinde = await page.evaluate(() => {
-    const PARCEL_prev = window.PARCEL, PARCELAS_prev = window.PARCELAS;
+    const PARCEL_prev = window.PARCEL, PARCELAS_prev = window.PARCELAS,
+          DEM_prev = window.DEM;   // el stub sin `z` reventaría a los bancos de después
     window.PARCEL = null; window.PARCELAS = [];
     // DEM sintético mínimo: 4×4 celdas, llano — con parcela saldría zona.
     window.DEM = { lats: [41.570, 41.572, 41.574, 41.576],
@@ -212,6 +220,7 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     const prop = window.zonasPorPendiente(
       pend, { trkEw: 10, trkNs: 15, fijaEw: 12, fijaNs: 12 }, 1);
     window.PARCEL = PARCEL_prev; window.PARCELAS = PARCELAS_prev;
+    window.DEM = DEM_prev;
     return { msk: msk, sinParcela: !!(prop && prop.sinParcela),
              nZonas: prop && prop.zonas ? prop.zonas.length : -1 };
   });
@@ -230,6 +239,896 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
   check('y lo DICE, en vez de quedarse mudo como si no hubiera salido nada',
     /parcela/i.test(dice.out) && /sin parcela/i.test(dice.tag),
     JSON.stringify(dice));
+
+
+  /* ── LOS DOS PANES, A LA VISTA (reporte 2026-08-27) ────────────────────
+   * «Si quiero llenarlo de trackers y fija no tengo dónde seleccionar las
+   * pendientes máximas de cada uno»: los límites existían pero el pane del
+   * montaje no seleccionado iba con display:none — escondido justo lo que
+   * el reparto mixto necesita. Ahora los dos son visibles siempre (el no
+   * seleccionado, atenuado) y EDITABLES. Sin duplicar casillas: mismos ids. */
+  const panes = await page.evaluate(() => {
+    const vis = id => getComputedStyle(document.getElementById(id)).display !== 'none';
+    const sel = document.getElementById('mount');
+    sel.value = 'tracker'; sel.dispatchEvent(new Event('change'));
+    const conTracker = { trk: vis('paneTracker'), fija: vis('paneFija'),
+      opTrk: getComputedStyle(document.getElementById('paneTracker')).opacity,
+      opFija: getComputedStyle(document.getElementById('paneFija')).opacity };
+    const f = document.getElementById('slopeFijaEw'); f.value = '11.5';
+    f.dispatchEvent(new Event('change'));
+    const leido = document.getElementById('slopeFijaEw').value;
+    sel.value = 'fija'; sel.dispatchEvent(new Event('change'));
+    const conFija = { trk: vis('paneTracker'), fija: vis('paneFija') };
+    sel.value = 'tracker'; sel.dispatchEvent(new Event('change'));
+    return { conTracker, conFija, leido };
+  });
+  check('con Tracker seleccionado, el pane de FIJA sigue visible',
+    panes.conTracker.trk && panes.conTracker.fija, JSON.stringify(panes.conTracker));
+  check('…atenuado, no escondido (se ve cuál manda en el layout de un montaje)',
+    parseFloat(panes.conTracker.opFija) < parseFloat(panes.conTracker.opTrk));
+  check('con Fija seleccionada, el de TRACKER también sigue visible',
+    panes.conFija.trk && panes.conFija.fija);
+  check('los límites de la fija se editan SIN cambiar el selector',
+    panes.leido === '11.5', panes.leido);
+
+
+  /* ── EL SETBACK MUERDE LA LINDE, NO LAS RAYAS INTERNAS (2026-08-27) ────
+   * «¿Por qué no me dibuja la fija?»: una tira de fija con bordes internos
+   * quedaba «área útil vacía» porque el setback se aplicaba al borde de la
+   * ZONA. Escena calibrada como la del banco Python: tira de ~11 m pegada a
+   * la linde este — el retranqueo doble la mataba; con el post-filtro vive
+   * y SOLO pierde lo que toca la linde real. */
+  const linde = await page.evaluate(() => {
+    /* SUSTITUCIÓN DECLARADA (v1.6.9): la fija ya no hereda el azimut del
+       tracker — usa su propio «Azimut de filas (fija)». Esta tira corre N-S,
+       así que el proyectista orienta las filas a lo largo (90): con el
+       default 180 las filas serían de 11 m y la mesa de 28 módulos no cabe. */
+    const _azFijaAntes = $('azRowsFija').value; $('azRowsFija').value = '90';
+    const PAR = [[-0.800, 41.570], [-0.7920, 41.570], [-0.7920, 41.5745], [-0.800, 41.5745]];
+    const BORDE = -0.79213;                       // tira de ~11 m
+    const ZT = [[-0.800, 41.570], [BORDE, 41.570], [BORDE, 41.5745], [-0.800, 41.5745]];
+    const ZF = [[BORDE, 41.570], [-0.7920, 41.570], [-0.7920, 41.5745], [BORDE, 41.5745]];
+    const cfg = { coords: PAR, holes: [], exclusions: [], mount: 'tracker', table: '1V',
+      mods: [28], modLen: 2.382, modWid: 1.134, moduleWp: 590, pitch: 6, setback: 5,
+      panelAz: 90, bifila: true, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5,
+      roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4, mode: 'adaptive',
+      minStructs: 1, rowOffset: 'none', alignGrid: false, center: true };
+    const R = computaMixto(cfg, [
+      { nombre: 'trk', coords: ZT, holes: [], mount: 'tracker', pitch: 6 },
+      { nombre: 'fija', coords: ZF, holes: [], mount: 'fixed', pitch: 4 }]);
+    const pz = {}; R.porZona.forEach(p => pz[p.nombre] = p.structures);
+    // distancia de cada mesa a la linde REAL, con la utm de la mesa
+    const r0 = R.structures[0] ? null : null;
+    let minD = 1/0, filasImpares = 0;
+    const P = R.structures.length ? R.structures.map(e => e.utm) : [];
+    // reconstruir la linde en UTM con toUtm del resultado base no está
+    // exportado en R: se comprueba vía los avisos + el recuento por filas.
+    const filas = {};
+    R.structures.forEach(e => { if (e.mount === 'tracker')
+      filas[e.row] = (filas[e.row] || 0) + 1; });
+    const pares = Object.keys(filas).sort((a,b)=>a-b);
+    for (let k = 0; k + 1 <= pares.length - 1; k += 2)
+      if (filas[pares[k]] !== filas[pares[k+1]]) filasImpares++;
+    const avisoLinde = R.avisos.some(a => /LINDE real/.test(a.mensaje || ''));
+    $('azRowsFija').value = _azFijaAntes;
+    return { fija: pz.fija || 0, trk: pz.trk || 0, filasImpares, avisoLinde,
+             kwpFija: (R.stats.kwp_por_montaje || {}).fixed || 0 };
+  });
+  check('setback-linde · la tira de FIJA con bordes internos VIVE',
+    linde.fija > 0, JSON.stringify(linde));
+  check('setback-linde · la zona grande no se hunde', linde.trk > 500, String(linde.trk));
+  check('setback-linde · en bifila NO quedan viudas (parejas con igual conteo)',
+    linde.filasImpares === 0, linde.filasImpares + ' pareja(s) descompensadas');
+  check('setback-linde · lo retirado junto a la linde real se AVISA',
+    linde.avisoLinde);
+  check('setback-linde · la fija aporta kWp al reparto por montaje',
+    linde.kwpFija > 0);
+
+
+  /* ── LA PODA DE LA LINDE TAMBIÉN PODA LAS FILAS (2026-08-28) ───────────
+   * «Mira las bielas movidas»: el pintor de vigas y bielas no recorre
+   * r.structures sino r.rows (vía partesTracker), y la poda de la banda
+   * solo tocaba structures — cada mesa retirada dejaba su viga gris y su
+   * biela roja pintadas sobre el hueco. La escena de arriba NO vale para
+   * esto (medido: su zona de tracker centrada queda entera a >5 m de la
+   * linde y las podadas son todas de la fija, cuyas filas no viajan en
+   * partesTracker). Aquí el MECANISMO es obligado: linde ESTE diagonal y
+   * una única zona de tracker bifila que ES la parcela — las mesas del
+   * escalón caen seguro. */
+  const fantasma = await page.evaluate(() => {
+    const PAR = [[-0.800, 41.570], [-0.794, 41.570], [-0.7962, 41.5745], [-0.800, 41.5745]];
+    const cfg = { coords: PAR, holes: [], exclusions: [], mount: 'tracker', table: '1V',
+      mods: [28], modLen: 2.382, modWid: 1.134, moduleWp: 590, pitch: 6, setback: 5,
+      panelAz: 90, bifila: true, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5,
+      roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4, mode: 'adaptive',
+      minStructs: 1, rowOffset: 'none', alignGrid: false, center: true };
+    const R = computaMixto(cfg, [
+      { nombre: 'trk', coords: PAR, holes: [], mount: 'tracker', pitch: 6 }]);
+    /* El patrón oro se deriva de R.structures (lo que de verdad quedó tras
+       la poda), NO de v.rows — que es justo lo acusado. Se reagrupan las
+       mesas vivas por fila con el MISMO trksFila del pintor y se exige
+       IGUALDAD: cada viga pintada coincide con el span de un tracker vivo
+       y cada punta de biela con el motor de uno. Un «cubre alguna mesa» o
+       un margen de un gap NO valen: la viga fantasma del extremo también
+       roza la mesa viva de al lado (medido: así sobrevivió el mutante). */
+    let rowsMesas = 0, vigasTot = 0, vigasHuerfanas = 0, bielasTot = 0, bielasHuerfanas = 0;
+    const porFila = {};
+    R.structures.forEach(e => { if (e.mount !== 'tracker') return;
+      const k = e.cy.toFixed(2);
+      (porFila[k] = porFila[k] || []).push({ x0: e.cx - e.len / 2, x1: e.cx + e.len / 2 }); });
+    const spans = {}, motores = {};
+    Object.keys(porFila).forEach(k => window.trksFila(porFila[k]).forEach(tr => {
+      (spans[k] = spans[k] || []).push([tr[0].x0, tr[tr.length - 1].x1]);
+      (motores[k] = motores[k] || []).push(
+        tr.length === 2 ? (tr[0].x1 + tr[1].x0) / 2 : (tr[0].x0 + tr[0].x1) / 2); }));
+    (R.partesTracker || []).forEach(v => {
+      v.rows.forEach(f => { rowsMesas += f.length; });
+      window.vigasTorsion(v).forEach(e => { vigasTot++;
+        const okv = (spans[e.ya.toFixed(2)] || []).some(sp =>
+          Math.abs(sp[0] - e.xa) < 0.05 && Math.abs(sp[1] - e.xb) < 0.05);
+        if (!okv) vigasHuerfanas++; });
+      window.ejesBifila(v).forEach(e => { bielasTot++;
+        [[e.xa, e.ya], [e.xb, e.yb]].forEach(pt => {
+          const okb = (motores[pt[1].toFixed(2)] || []).some(m => Math.abs(m - pt[0]) < 0.05);
+          if (!okb) bielasHuerfanas++; }); });
+    });
+    return { rowsMesas,
+      trkMesas: R.structures.filter(e => e.mount === 'tracker').length,
+      podadas: R.descartadas.length, vigasTot, vigasHuerfanas, bielasTot, bielasHuerfanas };
+  });
+  check('bielas-fantasma · la escena PODA de verdad mesas de tracker',
+    fantasma.podadas > 0 && fantasma.trkMesas > 0, JSON.stringify(fantasma));
+  check('bielas-fantasma · las FILAS se podan a la par que las mesas',
+    fantasma.rowsMesas === fantasma.trkMesas,
+    'rows llevan ' + fantasma.rowsMesas + ' mesas y structures ' + fantasma.trkMesas);
+  check('bielas-fantasma · ninguna VIGA huérfana sobre el hueco de la banda',
+    fantasma.vigasTot > 0 && fantasma.vigasHuerfanas === 0,
+    fantasma.vigasHuerfanas + ' viga(s) sin mesa debajo de ' + fantasma.vigasTot);
+  check('bielas-fantasma · ninguna BIELA con la punta en el vacío',
+    fantasma.bielasTot > 0 && fantasma.bielasHuerfanas === 0,
+    fantasma.bielasHuerfanas + ' punta(s) huérfanas de ' + fantasma.bielasTot + ' bielas');
+
+
+
+  /* ── EL FILTRO DE PENDIENTE JUZGA CON EL MONTAJE DE LA ZONA ────────────
+   * «El filtro de pendiente excluye el 100 % de la parcela» sobre una zona
+   * FIJA que el propio reparto declaró apta a 25°: el mixto congelaba un
+   * solo exclTopo en el cfg —el del montaje DEL SELECTOR— y todas las zonas
+   * lo heredaban. DEM sintético: rampa de ~10° N-S, entre el límite del
+   * tracker (5°) y el de la fija (25°). */
+  const filtro = await page.evaluate(() => {
+    const antes = { dem: window.DEM, par: window.PARCEL, hol: window.HOLES,
+      te: $('slopeTrkEw').value, tn: $('slopeTrkNs').value,
+      fe: $('slopeFijaEw').value, fn: $('slopeFijaNs').value,
+      off: $('demOff').checked, sel: $('mount').value };
+    try {
+      $('slopeTrkEw').value = '5'; $('slopeTrkNs').value = '5';
+      $('slopeFijaEw').value = '25'; $('slopeFijaNs').value = '25';
+      $('demOff').checked = false;
+      $('mount').value = 'tracker';                 // el selector, en TRACKER
+      const n = 8, lats = [], lons = [], z = [];
+      for (let i = 0; i < n; i++) { lats.push(41.570 + i * 0.0008); lons.push(-0.800 + i * 0.0008); }
+      const dyM = 0.0008 * 110540;                   // ~88 m por celda
+      for (let r = 0; r < n; r++) { const f = [];
+        for (let c = 0; c < n; c++) f.push(r * dyM * Math.tan(10 * Math.PI / 180));
+        z.push(f); }                                  // rampa 10° hacia el norte
+      window.DEM = { lats, lons, z };
+      // la parcela manda: celdasExcluidas solo juzga celdas DENTRO de ella
+      window.PARCEL = [[-0.801, 41.569], [-0.794, 41.569], [-0.794, 41.576], [-0.801, 41.576]];
+      window.HOLES = [];
+      const trk = celdasExcluidas('tracker').length;
+      const fija = celdasExcluidas('fixed').length;
+      const porDefecto = celdasExcluidas().length;   // sin arg: el selector
+      return { trk, fija, porDefecto };
+    } finally {
+      window.DEM = antes.dem; window.PARCEL = antes.par; window.HOLES = antes.hol;
+      $('slopeTrkEw').value = antes.te; $('slopeTrkNs').value = antes.tn;
+      $('slopeFijaEw').value = antes.fe; $('slopeFijaNs').value = antes.fn;
+      $('demOff').checked = antes.off; $('mount').value = antes.sel;
+    }
+  });
+  check('filtro · a 10° el TRACKER (lim 5°) excluye celdas', filtro.trk > 0,
+    JSON.stringify(filtro));
+  check('filtro · la FIJA (lim 25°) NO pierde ni una', filtro.fija === 0,
+    filtro.fija + ' celdas excluidas con limite de sobra');
+  check('filtro · sin argumento sigue mandando el selector (camino de un montaje)',
+    filtro.porDefecto === filtro.trk);
+  // y computaMixto se lo pasa POR ZONA, no congelado del cfg
+  const src = await page.evaluate(() => computaMixto.toString());
+  check('filtro · computaMixto pide celdasExcluidas(z.mount)',
+    src.indexOf('celdasExcluidas(z.mount)') !== -1);
+
+  /* La escena de la captura: el cfg llega con el exclTopo CONGELADO del
+   * selector (tracker a 5°) y una zona entera es FIJA sobre 10°. Con el bug,
+   * la zona hereda esas exclusiones y muere «100 % excluida»; arreglado,
+   * planta mesas. */
+  const vive = await page.evaluate(() => {
+    const antes = { dem: window.DEM, par: window.PARCEL, hol: window.HOLES,
+      te: $('slopeTrkEw').value, tn: $('slopeTrkNs').value,
+      fe: $('slopeFijaEw').value, fn: $('slopeFijaNs').value,
+      off: $('demOff').checked, sel: $('mount').value };
+    try {
+      $('slopeTrkEw').value = '5'; $('slopeTrkNs').value = '5';
+      $('slopeFijaEw').value = '25'; $('slopeFijaNs').value = '25';
+      $('demOff').checked = false; $('mount').value = 'tracker';
+      const n = 8, lats = [], lons = [], z = [];
+      for (let i = 0; i < n; i++) { lats.push(41.570 + i * 0.0008); lons.push(-0.800 + i * 0.0008); }
+      const dyM = 0.0008 * 110540;
+      for (let r = 0; r < n; r++) { const f = [];
+        for (let c = 0; c < n; c++) f.push(r * dyM * Math.tan(10 * Math.PI / 180));
+        z.push(f); }
+      window.DEM = { lats, lons, z };
+      const PAR = [[-0.7995, 41.5705], [-0.7950, 41.5705],
+                   [-0.7950, 41.5750], [-0.7995, 41.5750]];
+      window.PARCEL = PAR; window.HOLES = [];   // el filtro juzga DENTRO de la parcela
+      const cfg = { coords: PAR, holes: [], exclusions: [], mount: 'tracker', table: '1V',
+        mods: [28], modLen: 2.382, modWid: 1.134, moduleWp: 590, pitch: 6, setback: 0,
+        panelAz: 90, bifila: false, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5,
+        roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4, mode: 'adaptive',
+        minStructs: 1, rowOffset: 'none', alignGrid: false, center: true,
+        exclTopo: celdasExcluidas(), mdtFracTh: 0.35 };   // congelado del SELECTOR
+      const R = computaMixto(cfg, [
+        { nombre: 'fija', coords: PAR, holes: [], mount: 'fixed', pitch: 4 }]);
+      return { frozen: cfg.exclTopo.length,
+               mesas: R.porZona[0] ? R.porZona[0].structures : -1 };
+    } finally {
+      window.DEM = antes.dem; window.PARCEL = antes.par; window.HOLES = antes.hol;
+      $('slopeTrkEw').value = antes.te; $('slopeTrkNs').value = antes.tn;
+      $('slopeFijaEw').value = antes.fe; $('slopeFijaNs').value = antes.fn;
+      $('demOff').checked = antes.off; $('mount').value = antes.sel;
+    }
+  });
+  check('filtro · el cfg congelado del selector SÍ excluía terreno', vive.frozen > 0,
+    JSON.stringify(vive));
+  check('filtro · …y aun así la zona FIJA planta mesas (la captura del bug)',
+    vive.mesas > 0, vive.mesas + ' mesas');
+
+
+  /* ── LOS CONTORNOS DEL REPARTO SALEN SIMPLES (2026-08-28) ──────────────
+   * «[fija-1] La parcela se cruza a sí misma en varios puntos y la
+   * reparación no llega … No cabe ninguna estructura»: una isla PELLIZCADA
+   * (dos lóbulos unidos por una celda — el caso típico de la fija, banda
+   * alrededor del tracker) hace que el paseo del contorno pase dos veces
+   * por la misma celda y el anillo salga cruzado. El core Python lo repara
+   * con make_valid y devuelve TODAS las piezas; el generador empujaba el
+   * anillo cruzado tal cual. Escena: MANCUERNA — dos bloques unidos por UNA
+   * celda puente, que el paseo del contorno visita DOS veces (medido: el
+   * reloj de arena en diagonal NO reproduce, el paseo corta la esquina). */
+  const lazos = await page.evaluate(() => {
+    const antes = { dem: window.DEM, par: window.PARCEL, hol: window.HOLES };
+    try {
+      const n = 8, lats = [], lons = [];
+      for (let i = 0; i < n; i++) { lats.push(41.570 + i * 0.0008); lons.push(-0.800 + i * 0.0008); }
+      window.DEM = { lats, lons, z: lats.map(() => lons.map(() => 0)) };
+      window.PARCEL = [[-0.801, 41.569], [-0.793, 41.569], [-0.793, 41.577], [-0.801, 41.577]];
+      window.HOLES = [];
+      // pend a mano: fija apta SOLO en el reloj de arena, tracker en ninguna
+      const ew = [], ns = [];
+      const enMancuerna = (r, c) => ((r <= 1 && c >= 1 && c <= 3) || (r === 2 && c === 2)
+                                     || (r >= 3 && r <= 4 && c >= 1 && c <= 3));
+      for (let r = 0; r < n; r++) { const fe = [], fn = [];
+        for (let c = 0; c < n; c++) { fe.push(0); fn.push(enMancuerna(r, c) ? 10 : 50); }
+        ew.push(fe); ns.push(fn); }
+      const prop = zonasPorPendiente({ n, ew, ns },
+        { trkEw: 5, trkNs: 5, fijaEw: 25, fijaNs: 25, pitchTrk: 6, pitchFija: 4 }, 1000);
+      // checker de simplicidad: mismo criterio que la particion
+      function orient(p, q, t) { return (q[0]-p[0])*(t[1]-p[1])-(q[1]-p[1])*(t[0]-p[0]); }
+      function seCruzan(a, b, c, d) {
+        const d1 = orient(c,d,a), d2 = orient(c,d,b), d3 = orient(a,b,c), d4 = orient(a,b,d);
+        return ((d1>0)!==(d2>0))&&((d3>0)!==(d4>0));
+      }
+      function esSimple(r) {
+        const m = r.length;
+        for (let i = 0; i < m; i++) for (let j = i + 1; j < m; j++) {
+          const dx = r[i][0]-r[j][0], dy = r[i][1]-r[j][1];
+          if (dx*dx + dy*dy < 1e-18) return false;              // vertice repetido
+        }
+        for (let i = 0; i < m; i++) for (let j = i + 2; j < m; j++) {
+          if (i === 0 && j === m - 1) continue;
+          if (seCruzan(r[i], r[(i+1)%m], r[j], r[(j+1)%m])) return false;
+        }
+        return true;
+      }
+      // y la particion en directo, con una pajarita de manual
+      const pajarita = mixPartesSimples([[0,0],[4,4],[4,0],[0,4]]);
+      const tocada  = mixPartesSimples([[0,0],[4,0],[4,4],[2,2],[0,4],[0,0],[-2,2]]);
+      return { nZonas: prop.zonas.length,
+               montajes: prop.zonas.map(z => z.mount),
+               simples: prop.zonas.map(z => esSimple(z.coords)),
+               avisoPellizco: prop.avisos.some(a => /pellizcad/.test(a)),
+               pajaritaN: pajarita.length, pajaritaSimples: pajarita.every(esSimple),
+               tocadaSimples: tocada.every(esSimple) };
+    } finally {
+      window.DEM = antes.dem; window.PARCEL = antes.par; window.HOLES = antes.hol;
+    }
+  });
+  // v1.6.7: con el contorno por ARISTAS la mancuerna es UNA zona — su
+  // cintura es una celda REAL (~88 m), no un pellizco de área cero. Las dos
+  // zonas de v1.6.5 eran el sintoma del trazado por centros, no la fisica.
+  check('lazos · la mancuerna es UNA zona de fija con su cintura real',
+    lazos.nZonas === 1 && lazos.montajes.every(m => m === 'fixed'), JSON.stringify(lazos));
+  check('lazos · TODOS los contornos del reparto son anillos SIMPLES',
+    lazos.simples.length > 0 && lazos.simples.every(Boolean), JSON.stringify(lazos.simples));
+  check('lazos · la pajarita se parte en 2 lazos simples',
+    lazos.pajaritaN === 2 && lazos.pajaritaSimples, JSON.stringify(lazos));
+  check('lazos · el anillo con vertice repetido tambien queda simple', lazos.tocadaSimples);
+
+
+  /* ── «EN ESOS HUECOS LA FIJA ENTRARÍA» (2026-08-28) ────────────────────
+   * Los huecos del campo de tracker que SÍ admiten fija caían como islas
+   * pequeñas y el umbral ÚNICO (calibrado a tracker) se las comía — 75
+   * islas, ~3 ha en el parte real. Umbral POR MONTAJE + el 0 explícito
+   * VALE (el ||2000 se lo tragaba: falsy no es ausente). */
+  const hueco = await page.evaluate(() => {
+    const antes = { dem: window.DEM, par: window.PARCEL, hol: window.HOLES };
+    try {
+      const n = 8, lats = [], lons = [];
+      for (let i = 0; i < n; i++) { lats.push(41.570 + i * 0.0008); lons.push(-0.800 + i * 0.0008); }
+      window.DEM = { lats, lons, z: lats.map(() => lons.map(() => 0)) };
+      window.PARCEL = [[-0.801, 41.569], [-0.793, 41.569], [-0.793, 41.577], [-0.801, 41.577]];
+      window.HOLES = [];
+      // mar de tracker con un HUECO 2x2 que solo admite fija
+      const enHueco = (r, c) => (r >= 3 && r <= 4 && c >= 3 && c <= 4);
+      const ew = [], ns = [];
+      for (let r = 0; r < n; r++) { const fe = [], fn = [];
+        for (let c = 0; c < n; c++) { fe.push(0); fn.push(enHueco(r, c) ? 10 : 2); }
+        ew.push(fe); ns.push(fn); }
+      const lims = { trkEw: 5, trkNs: 5, fijaEw: 25, fijaNs: 25, pitchTrk: 6, pitchFija: 4 };
+      const conUmbrales = zonasPorPendiente({ n, ew, ns }, lims, 50000, 5000);
+      const sinMinimo   = zonasPorPendiente({ n, ew, ns }, lims, 0, 0);
+      const cuenta = p => ({ trk: p.zonas.filter(z => z.mount === 'tracker').length,
+                             fija: p.zonas.filter(z => z.mount === 'fixed').length });
+      return { conUmbrales: cuenta(conUmbrales), sinMinimo: cuenta(sinMinimo) };
+    } finally {
+      window.DEM = antes.dem; window.PARCEL = antes.par; window.HOLES = antes.hol;
+    }
+  });
+  check('hueco · la isla de FIJA se juzga con SU umbral, no con el del tracker',
+    hueco.conUmbrales.fija >= 1 && hueco.conUmbrales.trk >= 1, JSON.stringify(hueco));
+  check('hueco · sin mínimo (0) se conserva todo', hueco.sinMinimo.fija >= 1);
+
+  // el CERO EXPLÍCITO llega al reparto (falsy != ausente)
+  const cero = await page.evaluate(() => {
+    const orig = window.zonasPorPendiente, origDem = window.DEM;
+    const antes = { t: $('mixMinArea').value, f: $('mixMinAreaFija').value };
+    let capturado = null;
+    try {
+      window.DEM = { lats: [41.57, 41.571], lons: [-0.8, -0.799], z: [[0, 0], [0, 0]] };
+      window.zonasPorPendiente = function (pend, lims, mT, mF) {
+        capturado = [mT, mF];
+        return { sinParcela: false, zonas: [], avisos: [], areaTracker: 0, areaFija: 0,
+                 areaNoDesarrollable: 0, islasDescartadas: 0, areaDescartada: 0, limites: lims };
+      };
+      $('mixMinArea').value = '0'; $('mixMinAreaFija').value = '0';
+      $('mixProponer').onclick();
+      return capturado;
+    } finally {
+      window.zonasPorPendiente = orig; window.DEM = origDem;
+      $('mixMinArea').value = antes.t; $('mixMinAreaFija').value = antes.f;
+    }
+  });
+  check('cero · «área mínima 0» llega como 0, no como el default',
+    Array.isArray(cero) && cero[0] === 0 && cero[1] === 0, JSON.stringify(cero));
+
+  // la TABLA de cada zona es la de SU montaje
+  const tabla = await page.evaluate(() => {
+    const orig = LAY.compute, antes = { t: $('table').value, f: $('tableFija').value };
+    const vistas = [];
+    try {
+      $('table').value = '1V'; $('tableFija').value = '2V';
+      LAY.compute = function (cfg) { vistas.push(cfg.mount + ':' + cfg.table); return orig(cfg); };
+      const Z1 = [[-0.800, 41.570], [-0.798, 41.570], [-0.798, 41.572], [-0.800, 41.572]];
+      const Z2 = [[-0.798, 41.570], [-0.796, 41.570], [-0.796, 41.572], [-0.798, 41.572]];
+      const cfg = { coords: [[-0.800, 41.570], [-0.796, 41.570], [-0.796, 41.572], [-0.800, 41.572]],
+        holes: [], exclusions: [], mount: 'tracker', table: '1V',
+        mods: [28], modLen: 2.382, modWid: 1.134, moduleWp: 590, pitch: 6, setback: 0,
+        panelAz: 90, bifila: false, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5,
+        roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4, mode: 'adaptive',
+        minStructs: 1, rowOffset: 'none', alignGrid: false, center: true };
+      computaMixto(cfg, [
+        { nombre: 'trk', coords: Z1, holes: [], mount: 'tracker', pitch: 6 },
+        { nombre: 'fija', coords: Z2, holes: [], mount: 'fixed', pitch: 4 }]);
+      return vistas;
+    } finally {
+      LAY.compute = orig; $('table').value = antes.t; $('tableFija').value = antes.f;
+    }
+  });
+  check('tabla · la zona de tracker computa con la tabla global (1V)',
+    tabla.some(v => v === 'tracker:1V'), JSON.stringify(tabla));
+  check('tabla · la zona de FIJA computa con SU tabla (2V), no con la del selector',
+    tabla.some(v => v === 'fixed:2V'), JSON.stringify(tabla));
+
+  // un color por montaje, y la leyenda los nombra
+  const color = await page.evaluate(() => ({
+    trk: colorExclDe('tracker').f, fija: colorExclDe('fixed').f,
+    leyenda: document.body.innerHTML.indexOf('pendiente &gt; máx. tracker') !== -1
+          && document.body.innerHTML.indexOf('pendiente &gt; máx. fija') !== -1 }));
+  check('color · tracker y fija llevan colores DISTINTOS en la capa de pendiente',
+    color.trk !== color.fija, JSON.stringify(color));
+  check('color · la leyenda nombra los dos', color.leyenda);
+
+
+  /* ── LA CINTA DE 1 CELDA TIENE ANCHURA (2026-08-28, «no entiendo») ─────
+   * El paseo por CENTROS convertia una cinta de 1 celda de ancho (90 m x
+   * medio km de terreno real) en una linea de area CERO: la zona llegaba al
+   * motor sin anchura y soltaba «no cabe ninguna estructura» — la pared de
+   * ✗ de la captura. Por ARISTAS la cinta mide lo que mide y se planta. */
+  const cinta = await page.evaluate(() => {
+    const antes = { dem: window.DEM, par: window.PARCEL, hol: window.HOLES };
+    try {
+      const n = 10, lats = [], lons = [];
+      for (let i = 0; i < n; i++) { lats.push(41.570 + i * 0.0008); lons.push(-0.800 + i * 0.0008); }
+      window.DEM = { lats, lons, z: lats.map(() => lons.map(() => 0)) };
+      window.PARCEL = [[-0.801, 41.569], [-0.791, 41.569], [-0.791, 41.579], [-0.801, 41.579]];
+      window.HOLES = [];
+      const ew = [], ns = [];
+      for (let r = 0; r < n; r++) { const fe = [], fn = [];
+        for (let c = 0; c < n; c++) { fe.push(0); fn.push((r === 4 && c >= 2 && c <= 7) ? 10 : 50); }
+        ew.push(fe); ns.push(fn); }
+      const prop = zonasPorPendiente({ n, ew, ns },
+        { trkEw: 5, trkNs: 5, fijaEw: 25, fijaNs: 25, pitchTrk: 6, pitchFija: 4 }, 0, 0);
+      if (prop.zonas.length !== 1) return { nZonas: prop.zonas.length };
+      const z = prop.zonas[0];
+      const cfg = { coords: window.PARCEL, holes: [], exclusions: [], mount: 'tracker',
+        table: '1V', mods: [8], modLen: 2.382, modWid: 1.134, moduleWp: 590, pitch: 6,
+        setback: 0, panelAz: 90, bifila: false, gapModules: 0.02, gapMotor: 0.5,
+        gapNs: 0.5, roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4,
+        mode: 'adaptive', minStructs: 1, rowOffset: 'none', alignGrid: false, center: true };
+      const R = computaMixto(cfg, [{ nombre: z.nombre, coords: z.coords, holes: [],
+                                     mount: z.mount, pitch: 4 }]);
+      return { nZonas: 1, mount: z.mount, mesas: R.porZona[0].structures,
+               avisos: R.avisos.map(a => a.codigo) };
+    } finally {
+      window.DEM = antes.dem; window.PARCEL = antes.par; window.HOLES = antes.hol;
+    }
+  });
+  check('cinta · la banda de 1 celda es UNA zona de fija', cinta.nZonas === 1
+    && cinta.mount === 'fixed', JSON.stringify(cinta));
+  check('cinta · …con ANCHURA: el motor le planta mesas (antes «no cabe ninguna»)',
+    (cinta.mesas || 0) > 0, JSON.stringify(cinta));
+
+  /* ── la pared de ✗ se agrupa en UN aviso ─────────────────────────────── */
+  const pared = await page.evaluate(() => {
+    // dos zonas minusculas donde NO cabe nada + una grande que si se planta
+    const G  = [[-0.800, 41.570], [-0.796, 41.570], [-0.796, 41.574], [-0.800, 41.574]];
+    const P1 = [[-0.7959, 41.570], [-0.79585, 41.570], [-0.79585, 41.57005], [-0.7959, 41.57005]];
+    const P2 = [[-0.7958, 41.571], [-0.79575, 41.571], [-0.79575, 41.57105], [-0.7958, 41.57105]];
+    const cfg = { coords: [[-0.800, 41.570], [-0.795, 41.570], [-0.795, 41.574], [-0.800, 41.574]],
+      holes: [], exclusions: [], mount: 'tracker', table: '1V', mods: [28],
+      modLen: 2.382, modWid: 1.134, moduleWp: 590, pitch: 6, setback: 0, panelAz: 90,
+      bifila: false, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5, roadEvery: 0, roadW: 4,
+      roadNsEvery: 0, roadNsW: 4, mode: 'adaptive', minStructs: 1, rowOffset: 'none',
+      alignGrid: false, center: true };
+    const R = computaMixto(cfg, [
+      { nombre: 'grande', coords: G, holes: [], mount: 'tracker', pitch: 6 },
+      { nombre: 'mini-1', coords: P1, holes: [], mount: 'fixed', pitch: 4 },
+      { nombre: 'mini-2', coords: P2, holes: [], mount: 'fixed', pitch: 4 }]);
+    const agrupado = R.avisos.filter(a => a.codigo === 'zonas_sin_estructuras');
+    const sueltos = R.avisos.filter(a => a.codigo === 'layout_vacio');
+    return { mesas: R.structures.length, nAgrupados: agrupado.length,
+             nSueltos: sueltos.length, sev: agrupado[0] && agrupado[0].sev,
+             nombra: !!(agrupado[0] && /mini-1/.test(agrupado[0].mensaje)
+                                    && /mini-2/.test(agrupado[0].mensaje)) };
+  });
+  check('pared · los «no cabe» se agrupan en UN aviso que NOMBRA las zonas',
+    pared.nAgrupados === 1 && pared.nSueltos === 0 && pared.nombra, JSON.stringify(pared));
+  check('pared · con el resto del layout plantado es WARN, no fail',
+    pared.mesas > 0 && pared.sev === 'warn');
+
+
+  /* ── «FIXED» ES FIJA (2026-08-28, «ahí entran fijas, tú lo estás viendo») ─
+   * El motor normalizaba el montaje con `cfg.mount === 'fija'` y TODO lo
+   * demás —incluido 'fixed', que es lo que emiten el reparto y computaMixto—
+   * corría como TRACKER: unidad de 2 mesas + gap motor (18,9 m con talla 8),
+   * y una isla donde cabe una mesa suelta de 9,2 m salía «no cabe ninguna
+   * estructura». Lo cazó el cliente a ojo. */
+  const fixedFija = await page.evaluate(() => {
+    const L = 15, dLon = L / 111320 / Math.cos(41.57 * Math.PI / 180), dLat = L / 110540;
+    const Z = [[-0.798, 41.572], [-0.798 + dLon, 41.572],
+               [-0.798 + dLon, 41.572 + dLat], [-0.798, 41.572 + dLat]];
+    const PAR = [[-0.800, 41.570], [-0.795, 41.570], [-0.795, 41.575], [-0.800, 41.575]];
+    const cfg = { coords: PAR, holes: [], exclusions: [], mount: 'tracker', table: '1V',
+      mods: [21, 12, 8], modLen: 2.382, modWid: 1.134, moduleWp: 630, pitch: 6, setback: 5,
+      panelAz: 270, bifila: true, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5,
+      roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4, mode: 'adaptive',
+      minStructs: 1, rowOffset: 'none', alignGrid: false, center: true };
+    const R = computaMixto(cfg, [{ nombre: 'isla', coords: Z, holes: [],
+                                   mount: 'fixed', pitch: 4 }]);
+    return { mesas: R.porZona[0].structures, avisos: R.avisos.map(a => a.codigo) };
+  });
+  check('fixed-es-fija · una isla de 15 m planta mesas SUELTAS de fija (con '
+      + 'geometria de tracker salia 0: exige la unidad de 2 mesas + gap motor)',
+    fixedFija.mesas >= 3, JSON.stringify(fixedFija));
+  /* SUSTITUCIÓN DECLARADA (v1.6.9): computaMixto pasa bifila:false a las
+     zonas de fija — 15 zonas eran 15 avisos idénticos que se leían como «tu
+     bifila no funciona». El camino de fija se delata ahora en DIRECTO contra
+     el motor (que conserva el aviso para quien le pase bifila a una fija),
+     y el mixto se exige LIMPIO de esa pared. */
+  const avisoDirecto = await page.evaluate(() => {
+    const Z = [[-0.798, 41.572], [-0.7978, 41.572], [-0.7978, 41.5722], [-0.798, 41.5722]];
+    const R = LAY.compute({ coords: Z, holes: [], exclusions: [], mount: 'fixed',
+      table: '1V', mods: [8], modLen: 2.382, modWid: 1.134, moduleWp: 630, pitch: 4,
+      setback: 0, panelAz: 180, bifila: true, gapModules: 0.02, gapMotor: 0.5,
+      gapNs: 0.5, roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4,
+      mode: 'adaptive', minStructs: 1, rowOffset: 'none', alignGrid: false, center: true });
+    return (R.avisos || []).map(a => a.codigo);
+  });
+  check('fixed-es-fija · el motor en DIRECTO avisa «bifila ignorada» con mount fixed',
+    avisoDirecto.indexOf('bifila_ignorada_en_fija') !== -1, JSON.stringify(avisoDirecto));
+  check('fixed-es-fija · el MIXTO no emite la pared de «bifila ignorada» (bifila:false por zona)',
+    fixedFija.avisos.indexOf('bifila_ignorada_en_fija') === -1, JSON.stringify(fixedFija.avisos));
+
+
+  /* ── «Y LA FIJA... NADA» (2026-08-28): az, mínimo y bifila POR MONTAJE ── */
+  const fijaViva = await page.evaluate(() => {
+    const PAR = [[-0.800, 41.570], [-0.794, 41.570], [-0.794, 41.576], [-0.800, 41.576]];
+    function cinta(anchoM, largoM, vertical) {
+      const dW = anchoM / 111320 / Math.cos(41.57 * Math.PI / 180), dH = largoM / 110540;
+      const w = vertical ? dW * (anchoM / anchoM) : (largoM / 111320 / Math.cos(41.57 * Math.PI / 180));
+      const h = vertical ? dH : (anchoM / 110540);
+      const x0 = -0.798, y0 = 41.5715;
+      const dx = vertical ? (anchoM / 111320 / Math.cos(41.57 * Math.PI / 180)) : w;
+      return [[x0, y0], [x0 + dx, y0], [x0 + dx, y0 + h], [x0, y0 + h]];
+    }
+    const cfg = { coords: PAR, holes: [], exclusions: [], mount: 'tracker', table: '1V',
+      mods: [21, 12, 8], modLen: 2.382, modWid: 1.134, moduleWp: 630, pitch: 6, setback: 5,
+      panelAz: 270, bifila: true, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5,
+      roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4, mode: 'adaptive',
+      minStructs: 2, rowOffset: 'none', alignGrid: false, center: true };
+    // cinta HORIZONTAL (11 m alto x 120 m): con az y minimo heredados del
+    // tracker salia 0 — la escena del «nada»
+    const H = computaMixto(cfg, [{ nombre: 'h', coords: cinta(11, 120, false),
+                                   holes: [], mount: 'fixed', pitch: 4 }]);
+    // cinta VERTICAL (11 m ancho x 120 m): filas E-O de una mesa — decide el
+    // minimo de 1 por fila en fija
+    const V = computaMixto(cfg, [{ nombre: 'v', coords: cinta(11, 120, true),
+                                   holes: [], mount: 'fixed', pitch: 4 }]);
+    // espia del azimut por zona
+    const orig = LAY.compute, vistos = [];
+    let T;
+    try {
+      LAY.compute = function (c) { vistos.push(c.mount + ':' + c.panelAz + ':min' + c.minStructs + ':bif' + c.bifila); return orig(c); };
+      T = computaMixto(cfg, [
+        { nombre: 'trk', coords: cinta(60, 120, false), holes: [], mount: 'tracker', pitch: 6 },
+        { nombre: 'fij', coords: [[-0.797, 41.574], [-0.796, 41.574], [-0.796, 41.575], [-0.797, 41.575]], holes: [], mount: 'fixed', pitch: 4 }]);
+    } finally { LAY.compute = orig; }
+    return { mesasH: H.porZona[0].structures, mesasV: V.porZona[0].structures,
+             vistos, partes: (T.partesTracker || []).map(v => ({ bifila: v.bifila, filas: v.rows.length })),
+             ejes: (typeof ejesBifila === 'function' && T.partesTracker && T.partesTracker[0])
+               ? ejesBifila(T.partesTracker[0]).length : -1 };
+  });
+  check('fija-viva · la cinta HORIZONTAL planta (az de fija propio, no el del tracker)',
+    fijaViva.mesasH > 0, JSON.stringify({ mesasH: fijaViva.mesasH }));
+  check('fija-viva · la cinta VERTICAL planta (minimo 1 mesa/fila en fija)',
+    fijaViva.mesasV > 0, JSON.stringify({ mesasV: fijaViva.mesasV }));
+  check('fija-viva · el espia lo confirma: tracker az 270 y fija az 180 / min1 / sin bifila',
+    fijaViva.vistos.some(v => v === 'tracker:270:min2:biftrue')
+      && fijaViva.vistos.some(v => v === 'fixed:180:min1:biffalse'), JSON.stringify(fijaViva.vistos));
+  check('ejes · el mixto publica la vista de TRACKER con sus filas y su bifila',
+    fijaViva.partes.length === 1 && fijaViva.partes[0].bifila === true
+      && fijaViva.partes[0].filas > 0, JSON.stringify(fijaViva.partes));
+  check('ejes · ejesBifila(vista) traza bielas en la zona de tracker del mixto',
+    fijaViva.ejes > 0, JSON.stringify({ ejes: fijaViva.ejes }));
+
+
+  /* ── las DOS capas de pendiente se pintan SIEMPRE (2026-08-28) ────────── */
+  const capas = await page.evaluate(() => {
+    // el pintor decide los montajes en el bloque de celdasExcluidas: se
+    // inspecciona el codigo del pintor por el marcador de la decision
+    const src = document.documentElement.innerHTML;
+    return { siempreAmbas: src.indexOf("var msEx=['tracker','fixed']") !== -1 };
+  });
+  check('capas · el mapa pinta la capa de pendiente de LOS DOS montajes siempre',
+    capas.siempreAmbas);
+
+
+  /* ── LA SESIÓN GUARDA EL REPARTO (2026-08-28, «las zonas de fija por qué
+   * no salen»): tras recargar, MIX_ZONAS volvía vacío y el layout se
+   * calculaba de un solo montaje; y media configuración por montaje
+   * (pitchFija, tableFija, azRowsFija, límites, mínimos) volvía a defaults
+   * porque la lista de campos de sesión se quedó vieja. */
+  const sesion = await page.evaluate(() => {
+    const antes = { z: MIX_ZONAS, p: MIX_PROP,
+      pf: $('pitchFija').value, tf: $('tableFija').value, az: $('azRowsFija').value };
+    try {
+      MIX_ZONAS = [{ nombre: 'fija-1', mount: 'fixed', pitch: 4,
+                     coords: [[-0.798, 41.572], [-0.797, 41.572], [-0.797, 41.573]], holes: [] }];
+      MIX_PROP = null;
+      $('pitchFija').value = '3.7'; $('tableFija').value = '2V'; $('azRowsFija').value = '135';
+      const st = estadoSesion();
+      MIX_ZONAS = []; $('pitchFija').value = '4'; $('tableFija').value = '1V'; $('azRowsFija').value = '180';
+      aplicaSesion(JSON.parse(JSON.stringify(st)));
+      return { zonas: MIX_ZONAS.length, nombre: MIX_ZONAS[0] && MIX_ZONAS[0].nombre,
+               pf: $('pitchFija').value, tf: $('tableFija').value, az: $('azRowsFija').value };
+    } finally {
+      MIX_ZONAS = antes.z; MIX_PROP = antes.p;
+      $('pitchFija').value = antes.pf; $('tableFija').value = antes.tf; $('azRowsFija').value = antes.az;
+      mixPinta();
+    }
+  });
+  check('sesion · el reparto SOBREVIVE a guardar y restaurar',
+    sesion.zonas === 1 && sesion.nombre === 'fija-1', JSON.stringify(sesion));
+  check('sesion · los campos por montaje (pitch/tabla/azimut de la fija) sobreviven',
+    sesion.pf === '3.7' && sesion.tf === '2V' && sesion.az === '135', JSON.stringify(sesion));
+
+
+  /* ── RELLENO DE FIJA en el sobrante del tracker (2026-08-28, «no
+   * aprovecha los huecos donde no entra tracker... mal pensado») ───────── */
+  const relleno = await page.evaluate(() => {
+    const k = 111320 * Math.cos(41.57 * Math.PI / 180), ky = 110540;
+    const X = m => -0.800 + m / k, Y = m => 41.570 + m / ky;
+    // L: brazo grande 200x150 + brazo chico 30x60 — la fila de tracker (64 m)
+    // NO cabe en el brazo chico; una mesa fija de talla 7 (8,1 m) sí
+    const L = [[X(0),Y(0)],[X(200),Y(0)],[X(200),Y(150)],[X(30),Y(150)],[X(30),Y(210)],[X(0),Y(210)]];
+    const cfg = { coords: L, holes: [], exclusions: [], mount: 'tracker', table: '1V',
+      mods: [28, 14, 7], modLen: 2.382, modWid: 1.134, moduleWp: 630, pitch: 6, setback: 0,
+      panelAz: 270, bifila: true, gapModules: 0.02, gapMotor: 0.5, gapNs: 0.5,
+      roadEvery: 0, roadW: 4, roadNsEvery: 0, roadNsW: 4, mode: 'adaptive',
+      minStructs: 2, rowOffset: 'none', alignGrid: false, center: true, rellenoFija: true };
+    const Z = [{ nombre: 'trk', coords: L, holes: [], mount: 'tracker', pitch: 6 }];
+    const R = computaMixto(cfg, Z);
+    const sin = computaMixto(Object.assign({}, cfg, { rellenoFija: false }), Z);
+    return { mesasRelleno: R.structures.filter(e => /^relleno/.test(e.zona)).length,
+             aviso: R.avisos.some(a => a.codigo === 'relleno_fija'),
+             sinRelleno: sin.structures.filter(e => /^relleno/.test(e.zona)).length,
+             vacias: R.porZona.filter(p => /^relleno/.test(p.nombre) && !p.structures).length };
+  });
+  check('relleno · el brazo donde no cabe fila de tracker se planta con FIJA',
+    relleno.mesasRelleno > 0, JSON.stringify(relleno));
+  check('relleno · con aviso que lo cuenta, sin zonas de relleno vacías, y apagable',
+    relleno.aviso && relleno.vacias === 0 && relleno.sinRelleno === 0, JSON.stringify(relleno));
+
+  /* ── SELECTOR Fija / Tracker / Mixto con panes en gris ────────────────── */
+  const modos = await page.evaluate(() => {
+    const antes = $('mount').value, out = {};
+    function estado() {
+      return { trkDis: $('pitchTrk').disabled, fijaDis: $('pitchFija').disabled,
+               opTrk: $('paneTracker').style.opacity, opFija: $('paneFija').style.opacity };
+    }
+    try {
+      $('mount').value = 'fija'; syncAz(); out.fija = estado();
+      $('mount').value = 'tracker'; syncAz(); out.tracker = estado();
+      $('mount').value = 'mixto'; syncAz(); out.mixto = estado();
+      // y readCfg en modo FIJA: mandan las casillas del pane de la fija
+      $('mount').value = 'fija'; syncAz();
+      const g = { az: $('azRowsFija').value, tf: $('tableFija').value, pf: $('pitchFija').value };
+      $('azRowsFija').value = '135'; $('tableFija').value = '2V'; $('pitchFija').value = '3.5';
+      window.PARCEL = window.PARCEL || [[-0.800, 41.570], [-0.795, 41.570], [-0.795, 41.575], [-0.800, 41.575]];
+      const cfg = readCfg();
+      out.cfgFija = { panelAz: cfg.panelAz, table: cfg.table, pitch: cfg.pitch, mount: cfg.mount };
+      $('azRowsFija').value = g.az; $('tableFija').value = g.tf; $('pitchFija').value = g.pf;
+      return out;
+    } finally { $('mount').value = antes; syncAz(); }
+  });
+  check('modos · en FIJA el pane del tracker queda BLOQUEADO (gris y sin tocar)',
+    modos.fija.trkDis === true && modos.fija.fijaDis === false
+      && parseFloat(modos.fija.opTrk) < 1, JSON.stringify(modos.fija));
+  check('modos · en TRACKER el pane de la fija queda bloqueado',
+    modos.tracker.fijaDis === true && modos.tracker.trkDis === false, JSON.stringify(modos.tracker));
+  check('modos · en MIXTO los dos panes quedan plenos y editables',
+    modos.mixto.trkDis === false && modos.mixto.fijaDis === false
+      && modos.mixto.opTrk === '1' && modos.mixto.opFija === '1', JSON.stringify(modos.mixto));
+  check('modos · en FIJA mandan las casillas de SU pane (azimut 135, tabla 2V, pitch 3.5)',
+    modos.cfgFija.panelAz === 135 && modos.cfgFija.table === '2V'
+      && Math.abs(modos.cfgFija.pitch - 3.5) < 1e-9, JSON.stringify(modos.cfgFija));
+
+  // el modo MIXTO sin zonas se NIEGA con el motivo, no calcula otra cosa
+  const gate = await page.evaluate(async () => {
+    const antes = { m: $('mount').value, z: MIX_ZONAS, par: window.PARCEL };
+    try {
+      window.PARCEL = [[-0.800, 41.570], [-0.795, 41.570], [-0.795, 41.575], [-0.800, 41.575]];
+      MIX_ZONAS = [];
+      $('mount').value = 'mixto'; syncAz();
+      await generar();
+      return $('foot').textContent;
+    } finally {
+      $('mount').value = antes.m; MIX_ZONAS = antes.z; window.PARCEL = antes.par; syncAz();
+    }
+  });
+  check('modos · MIXTO sin zonas se niega con el motivo («necesita zonas»)',
+    /MIXTO necesita zonas/.test(gate), JSON.stringify(gate).slice(0, 160));
+
+
+  /* ── UN solo albedo, en Terreno (2026-08-28, «el albedo está duplicado») ── */
+  const albedo = await page.evaluate(() => {
+    const antes = $('mount').value, vis = el => el.offsetParent !== null, out = {};
+    try {
+      ['fija', 'tracker', 'mixto'].forEach(m => {
+        $('mount').value = m; syncAz();
+        out[m] = { terreno: vis($('albedoT')), pane: vis($('albedo')) };
+      });
+      $('albedoT').value = '0.31'; $('albedoT').dispatchEvent(new Event('input'));
+      out.sync = $('albedo').value;
+      return out;
+    } finally { $('mount').value = antes; syncAz(); }
+  });
+  check('albedo · UNO solo en pantalla (Terreno) en los tres modos, y sincronizado',
+    ['fija', 'tracker', 'mixto'].every(m => albedo[m].terreno && !albedo[m].pane)
+      && albedo.sync === '0.31', JSON.stringify(albedo));
+
+  /* ── LA CELDA DEL RELLENO ES ADAPTATIVA (v1.6.15) ──────────────────────
+   * «Ahí entra una fila más» (cliente, con su sesión de Tudela): la celda
+   * fija de 3 m perdía hasta media celda por borde de hueco, y con pitch de
+   * fija de 4 m eso es LA fila pegada a la linde. La escena es la PARCELA
+   * REAL (tests/parcelas/tudela.sesion.json, 15,9 ha, 19 zonas, MDT 48×48):
+   * las sintéticas no distinguen (medido: el trapecio da 163=163 con 1,5 y
+   * con 3 m — el mecanismo vive en la interacción pasillos×lindes×zonas).
+   * Medido en esta escena: celda 3 → 316 mesas de relleno; 1,5 → 351.
+   * El mutante «celda forzada a 3» debe morir en el umbral de 340. */
+  const tudela = await page.evaluate((ses) => {
+    aplicaSesion(ses);
+    const cfg = readCfg(); cfg.rellenoFija = true;
+    const R = computaMixto(cfg, MIX_ZONAS);
+    let mesas = 0, huecos = 0, trkM = 0, trkH = 0, parOk = true, motOk = true;
+    R.porZona.forEach(p => {
+      if (!p.nombre.startsWith('relleno')) return;
+      mesas += p.structures; huecos++;
+      if (p.mount === 'tracker') { trkM += p.structures; trkH++;
+        if (p.structures % 4 !== 0) parOk = false;          // bifila: 2 filas × 2 mesas
+        if (p.motores !== p.structures / 4) motOk = false; } // 1 motor por unidad
+    });
+    const _ren = R.avisos.find(a => a.codigo === 'relleno_fija_renuncia');
+    // mesas de relleno DE PIE (más altas N-S que anchas E-O) — con el az de
+    // fija de la sesión (180) no puede haber NINGUNA (v1.6.19)
+    let dePie = 0;
+    const _kx = 111320 * Math.cos(42.071 * Math.PI / 180), _ky = 110540;
+    R.structures.forEach(e => {
+      if (e.mount !== 'fixed' || !/^relleno/.test(e.zona || '')) return;
+      const lons = e.lonlat.map(c => c[0]), lats = e.lonlat.map(c => c[1]);
+      if ((Math.max(...lats) - Math.min(...lats)) * _ky >
+          (Math.max(...lons) - Math.min(...lons)) * _kx) dePie++;
+    });
+    // cinturón: ninguna mesa de relleno-tracker pisa NADA ya colocado
+    const _kx2 = _kx, bbT = e => { const xs = e.lonlat.map(c => c[0] * _kx2), ys = e.lonlat.map(c => c[1] * _ky);
+      return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
+    const rel = [], otras = [];
+    R.structures.forEach(e => {
+      ((e.mount === 'tracker' && /^relleno/.test(e.zona || '')) ? rel : otras).push(bbT(e)); });
+    let solapesTrk = 0;
+    rel.forEach(b => { for (const o of otras) {
+      if (Math.min(b[2], o[2]) - Math.max(b[0], o[0]) > 0.5 &&
+          Math.min(b[3], o[3]) - Math.max(b[1], o[1]) > 0.5) { solapesTrk++; break; } } });
+    return { mesas, huecos, trkM, trkH, parOk, motOk, solapesTrk,
+             avisoTrk: R.avisos.some(a => a.codigo === 'relleno_tracker'),
+             nMotores: R.stats.n_motors,
+             dePie, celda: window.huecosParaFija._ultimaCelda,
+             renuncia: _ren ? +(_ren.mensaje.match(/(\d+) mesa\(s\) MÁS/) || [0, 0])[1] : 0,
+             total: R.stats.structures };
+  }, JSON.parse(require('fs').readFileSync(__dirname + '/parcelas/tudela.sesion.json', 'utf8')));
+  check('tudela · el relleno usa la celda FINA (la parcela cabe de sobra)',
+    tudela.celda === 1.5, 'celda=' + tudela.celda);
+  /* La escalera RE-MEDIDA en v1.6.22 (el motor se movió: convergencia,
+   * sin guard de islas, tracker-first — «es una medición, no un deseo»),
+   * cada peldaño con su mutante bajo el código ACTUAL: una sola pasada →
+   * 79 · guard de 64 islas restaurado → 314 (el polvo estrangula el
+   * barrido y un hueco de 1,4 ha ni se visita) · techo de 3 pasadas
+   * (v1.6.21) → 376 · sano → 380 (32 de tracker + 348 de fija, 0 de pie,
+   * 0 solapes). El umbral de 378 mata a los tres. La escalera vieja
+   * (348/362/367/371, v1.6.15-21) queda como historia: sus mutantes de
+   * pasillo y agujeros siguen muriendo aquí o en el aviso de pisadas.
+   * Mutantes SUPERVIVIENTES declarados: retal-rejilla (v1.6.19, Tudela
+   * no sufre la fase) y cinturón anti-solape (los agujeros protegen; su
+   * testigo es el aviso relleno_pisadas — y el mutante sin-agujeros lo
+   * enciende TAMBIÉN en tudela ahora, medido). */
+  check('tudela · el relleno apura los bolsillos HASTA CONVERGER (≥378 mesas)',
+    tudela.mesas >= 378, tudela.mesas + ' mesas en ' + tudela.huecos + ' huecos (escalera v1.6.22: 79/314/376/380)');
+  /* «En todos los trackers podían ser más largos o entraría fija»
+   * (v1.6.22): el sobrante se ofrece PRIMERO al montaje titular — donde
+   * entra una unidad COMPLETA de bifila, el hueco es del tracker. El
+   * mutante que salta el intento (sin_tracker_first) deja trkM=0 y
+   * apaga el aviso: muere aquí (medido sano: 32 mesas en 6 huecos). */
+  check('tudela · el sobrante donde entra bifila completa es del TRACKER (≥24 mesas, ≥4 huecos, con aviso)',
+    tudela.trkM >= 24 && tudela.trkH >= 4 && tudela.avisoTrk,
+    tudela.trkM + ' mesas trk en ' + tudela.trkH + ' huecos, aviso=' + tudela.avisoTrk);
+  /* La unidad del cliente (2026-08-04): «bifila = 2 filas con 2 mesas
+   * cada una». El relleno de tracker publica solo unidades completas
+   * (structures %4 = 0) con 1 motor por unidad. El mutante sin_paridad
+   * (no podar medias filas) publica 40 con líneas de 1 mesa: muere aquí.
+   * Las zonas TITULARES aún llevan líneas impares por la poda de linde —
+   * defecto PREEXISTENTE declarado, fuera de este check a propósito. */
+  check('tudela · el relleno de tracker publica UNIDADES completas (÷4, 1 motor por unidad)',
+    tudela.parOk && tudela.motOk, 'parOk=' + tudela.parOk + ' motOk=' + tudela.motOk);
+  /* n_motors se DERIVA de filas/2 en bifila (v1.6.22): leer
+   * stats.trackers como motores duplicaba n_motors en todo mixto bifila.
+   * Mutante motores_filas → 353 aquí: muere. Medido sano: 177. */
+  check('tudela · los motores del mixto NO se duplican con bifila (<200)',
+    tudela.nMotores > 0 && tudela.nMotores < 200, 'n_motors=' + tudela.nMotores + ' (con el bug: 353)');
+  check('tudela · ninguna mesa de relleno-tracker PISA nada ya colocado',
+    tudela.solapesTrk === 0, tudela.solapesTrk + ' solape(s)');
+  /* «Has metido fijas norte sur increíble» (v1.6.19): la fija DE PIE no
+   * se planta sola NUNCA — con el az de fija de la sesión (180), cero
+   * mesas de relleno verticales. El mutante que restaura el vuelco de
+   * v1.6.18 (solo-si-cero) mete 13 de pie y muere aquí. */
+  check('tudela · NINGUNA fija de pie sin que el proyectista la pida (dePie=0)',
+    tudela.dePie === 0, tudela.dePie + ' mesa(s) verticales (el vuelco de v1.6.18 daba 13)');
+  /* Y lo que cabría de pie se DECLARA con sus números para que la
+   * decisión sea suya (re-medido en v1.6.22: 172 — el barrido sin guard
+   * examina muchos más huecos y renuncia en más). */
+  check('tudela · lo que cabría DE PIE se declara en el aviso (≥50 mesas)',
+    tudela.renuncia >= 50, 'renuncia=' + tudela.renuncia + ' (medido: 172)');
+  /* «¿Por qué no pones fijas más largas si tienes sitio?» (v1.6.20): la
+   * rejilla global NO aplica en el mixto — las zonas del reparto son
+   * dentadas y la rejilla mundial pierde tramos enteros (medido en la
+   * parcela del cliente: 36 % por tramo, por el propio aviso del motor).
+   * El gemelo Python nunca la usó: paridad por el mismo default.
+   * CINTURÓN DECLARADO: el mutante que restaura la herencia
+   * (alignGrid:cfg.alignGrid) SOBREVIVE a este banco — medido: Tudela y
+   * el trapecio diagonal salen INVARIANTES a la rejilla, así que el
+   * check de inmunidad de abajo es hoy un centinela que no puede
+   * ponerse rojo aquí; la escena con el mecanismo es la parcela de
+   * varita del cliente (38 vértices, az 270, multi-talla), sin fixture
+   * aún. El check del AVISO sí muerde (quitar el push del aviso lo
+   * tumba). Quien quite el alignGrid:false no rompe ninguna prueba de
+   * geometría, y eso es lo que hay que saber antes de quitarlo. */
+  const rejilla = await page.evaluate((ses) => {
+    aplicaSesion(ses);
+    function corre(grid) {
+      $('alignGrid').checked = grid; $('mode').value = 'aligned';
+      const cfg = readCfg(); cfg.rellenoFija = true;
+      const R = computaMixto(cfg, MIX_ZONAS);
+      return { total: R.stats.structures, kwp: R.stats.kWp,
+               aviso: R.avisos.some(a => a.codigo === 'rejilla_ignorada_en_mixto') };
+    }
+    const con = corre(true), sin = corre(false);
+    return { con, sin };
+  }, JSON.parse(require('fs').readFileSync(__dirname + '/parcelas/tudela.sesion.json', 'utf8')));
+  check('tudela · el mixto es INMUNE a «alinear a rejilla global» (mismo layout con y sin)',
+    rejilla.con.total === rejilla.sin.total && rejilla.con.kwp === rejilla.sin.kwp,
+    rejilla.con.total + ' vs ' + rejilla.sin.total + ' mesas');
+  check('tudela · y la casilla marcada se declara IGNORADA en un aviso',
+    rejilla.con.aviso === true && rejilla.sin.aviso === false,
+    JSON.stringify({ con: rejilla.con.aviso, sin: rejilla.sin.aviso }));
+
+  /* ── PAMPLONA: EL RELLENO NO PISA LO PLANTADO (v1.6.21) ────────────────
+   * «Pisa trackers con fija» (cliente, con su sesión): el anillo del hueco
+   * era SOLO la cadena exterior y, con el margen libre conectado alrededor
+   * de un bloque plantado, el hueco ABRAZABA el bloque entero — medido: un
+   * hueco con las 34 mesas de tracker-4 dentro y 59 fijas encima. La
+   * escena es SU parcela (tests/parcelas/pamplona.sesion.json); Tudela no
+   * contiene el mecanismo en esta magnitud. Dos capas: los AGUJEROS
+   * interiores del hueco (geometría, la de verdad) y el cinturón
+   * anti-solape (testigo: si actúa, AVISA). El mutante «sin agujeros»
+   * muere en el check del aviso; el del cinturón sobrevive con los
+   * agujeros activos (declarado en el código). */
+  const pamplona = await page.evaluate((ses) => {
+    aplicaSesion(ses);
+    const cfg = readCfg(); cfg.rellenoFija = true;
+    const R = computaMixto(cfg, MIX_ZONAS);
+    const kx = 111320 * Math.cos(42.825 * Math.PI / 180), ky = 110540;
+    function bb(e) { const xs = e.lonlat.map(c => c[0] * kx), ys = e.lonlat.map(c => c[1] * ky);
+      return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; }
+    const trk = [], fij = [];
+    R.structures.forEach(e => { (e.mount === 'tracker' ? trk : fij).push(bb(e)); });
+    let solapes = 0;
+    fij.forEach(f => { for (const t of trk) {
+      if (Math.min(f[2], t[2]) - Math.max(f[0], t[0]) > 0.5 &&
+          Math.min(f[3], t[3]) - Math.max(f[1], t[1]) > 0.5) { solapes++; break; } } });
+    let relleno = 0, trkM = 0, parOk = true, motOk = true;
+    R.porZona.forEach(p => {
+      if (!p.nombre.startsWith('relleno')) return;
+      relleno += p.structures;
+      if (p.mount === 'tracker') { trkM += p.structures;
+        if (p.structures % 4 !== 0) parOk = false;
+        if (p.motores !== p.structures / 4) motOk = false; } });
+    return { solapes, relleno, fija: fij.length, trkM, parOk, motOk,
+             avisoTrk: R.avisos.some(a => a.codigo === 'relleno_tracker'),
+             avisoPisadas: R.avisos.some(a => a.codigo === 'relleno_pisadas') };
+  }, JSON.parse(require('fs').readFileSync(__dirname + '/parcelas/pamplona.sesion.json', 'utf8')));
+  check('pamplona · NINGUNA mesa de fija pisa una de tracker (el bug del cliente: 59)',
+    pamplona.solapes === 0 && pamplona.fija > 100,
+    pamplona.solapes + ' solape(s) sobre ' + pamplona.fija + ' fijas');
+  check('pamplona · y el cinturón NO tuvo que actuar (los agujeros protegen en la geometría)',
+    pamplona.avisoPisadas === false,
+    'aviso relleno_pisadas presente: el cinturón podó — los agujeros no cubren algo');
+  check('pamplona · el relleno honesto sigue plantando (≥85 mesas; medido v1.6.22: 96)',
+    pamplona.relleno >= 85, pamplona.relleno + ' mesas de relleno');
+  /* El hallazgo de la sesión v1.6.22: en el sobrante de SU parcela aún
+   * entraba una bifila COMPLETA (4 mesas, 1 motor) y el relleno solo
+   * ofrecía fija. Los mutantes sin_tracker_first y celda-forzada-a-3
+   * dejan trkM=0: mueren aquí. */
+  check('pamplona · la bifila completa que cabía en el sobrante es del TRACKER (4 mesas, 1 motor)',
+    pamplona.trkM >= 4 && pamplona.parOk && pamplona.motOk && pamplona.avisoTrk,
+    'trkM=' + pamplona.trkM + ' parOk=' + pamplona.parOk + ' motOk=' + pamplona.motOk);
 
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');

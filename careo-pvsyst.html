@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0B0F14">
+<link rel="icon" href="favicon.svg">
+<title>Careo SolarGPT ↔ PVSyst</title>
+<!-- sin fuentes de Google: offline. Fallbacks del sistema (como el panel). -->
+<style>
+/* Sistema visual del Panel de Proyectos Factiun (proyectos/index.html):
+   mismo void, mismos paneles, mismos colores de estado. Identidad única
+   oscura A PROPÓSITO — como el panel — con todo pintado explícito. */
+:root{
+  color-scheme: dark;
+  --void:#0B0F14; --panel:#121922; --panel-2:#0F151D; --panel-hi:#18222D;
+  --line:#23303D; --line-soft:#1A2530;
+  --ink:#E7EEF4; --ink-2:#8093A4; --ink-3:#5E6F7E;
+  --live:#36D399; --build:#F6A623; --demo:#54A6FF; --dead:#D0594F;
+  --accent:#36D399; --accent-ink:#08130D;
+  --bar:#54A6FF;
+  --ok:#36D399; --ok-bg:rgba(54,211,153,.12);
+  --warn:#F6A623; --warn-bg:rgba(246,166,35,.12);
+  --bad:#D0594F; --bad-bg:rgba(208,89,79,.14);
+  --chip-bg:#18222D;
+  --focus:#36D399;
+  --radius:14px; --radius-sm:9px;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --display:'Space Grotesk','IBM Plex Sans',system-ui,sans-serif;
+}
+body{
+  background-color:var(--void); color:var(--ink);
+  background-image:
+    radial-gradient(120% 80% at 50% -10%, rgba(54,211,153,.05), transparent 60%),
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size:auto, 34px 34px, 34px 34px;
+  background-attachment:fixed;
+  font-family:var(--sans);
+  font-size:15px; line-height:1.5; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:980px; margin:0 auto; padding:28px 20px 64px;}
+a{color:var(--accent);}
+:is(button,input):focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
+
+header.top{display:flex; flex-direction:column; gap:10px; margin-bottom:24px;}
+h1{font-family:var(--display); font-size:clamp(24px,4vw,32px); font-weight:700; margin:0; letter-spacing:-.01em; text-wrap:balance;}
+.sub{color:var(--ink-2); margin:0; max-width:64ch;}
+.meta{display:flex; flex-wrap:wrap; gap:8px;}
+.chip{display:inline-flex; align-items:center; gap:6px; background:var(--chip-bg);
+  border-radius:999px; padding:3px 11px; font-size:12.5px; color:var(--ink-2);}
+.chip b{color:var(--ink); font-weight:600;}
+.chip .mono{font-size:12px;}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums;}
+
+section{margin-top:34px;}
+.sec-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:4px;}
+h2{font-family:var(--display); font-size:19px; font-weight:600; margin:0;}
+.sec-note{color:var(--ink-2); font-size:13.5px; margin:2px 0 12px; max-width:72ch;}
+.eyebrow{font-size:11.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3);}
+
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
+.tblwrap{overflow-x:auto;}
+table{border-collapse:collapse; width:100%; min-width:640px;}
+th{font-size:11.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--ink-3); text-align:right; padding:10px 14px 6px; border-bottom:1px solid var(--line);}
+th:first-child{text-align:left;}
+th.thbar{text-align:center;}
+td{padding:8px 14px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap;}
+tr:last-child td{border-bottom:none;}
+td:first-child{text-align:left; font-weight:500;}
+tr.total td{background:var(--panel-2); font-weight:600;}
+td.num{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums; font-size:13.5px;}
+td.delta{font-weight:600;}
+
+.barcell{min-width:170px;}
+.bartrack{position:relative; height:12px; width:170px; margin-left:auto; margin-right:auto;}
+.bartrack .axis{position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--line);}
+.bartrack .bar{position:absolute; top:1px; height:10px; background:var(--bar);}
+.bartrack .bar.neg{right:50%; border-radius:4px 0 0 4px;}
+.bartrack .bar.pos{left:50%; border-radius:0 4px 4px 0;}
+.scale-note{color:var(--ink-3); font-size:11.5px; text-align:center; padding:6px 0 8px;}
+
+.pill{display:inline-block; font-size:11px; font-weight:600; letter-spacing:.04em;
+  border-radius:999px; padding:2px 9px;}
+.pill.ok{color:var(--ok); background:var(--ok-bg);}
+.pill.warn{color:var(--warn); background:var(--warn-bg);}
+.pill.bad{color:var(--bad); background:var(--bad-bg);}
+
+.callout{border-left:3px solid var(--accent); background:var(--panel); border-radius:0 var(--radius) var(--radius) 0;
+  border-top:1px solid var(--line); border-right:1px solid var(--line); border-bottom:1px solid var(--line);
+  padding:14px 18px; margin-top:14px;}
+.callout h3{margin:0 0 6px; font-size:15.5px;}
+.callout p{margin:6px 0; color:var(--ink-2); font-size:14px; max-width:72ch;}
+.kv{display:grid; grid-template-columns:max-content max-content; gap:3px 18px; margin:10px 0 4px;}
+.kv .k{color:var(--ink-2); font-size:13.5px;}
+.kv .v{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums;
+  font-size:13.5px; text-align:right;}
+.kv .v em{font-style:normal; color:var(--ink-3);}
+
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; margin-top:12px;}
+.tile{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px;}
+.tile .lbl{font-size:12px; color:var(--ink-2);}
+.tile .val{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums;
+  font-size:21px; font-weight:600; margin-top:2px;}
+.tile .ctx{font-size:12px; color:var(--ink-3); margin-top:2px;}
+
+/* validación */
+.valid-head{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+.progress{font-size:13.5px; color:var(--ink-2);}
+.progress b{color:var(--ink);}
+.who{display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink-2);}
+.who input{background:var(--panel); color:var(--ink); border:1px solid var(--line);
+  border-radius:7px; padding:5px 9px; font:inherit; font-size:13.5px; width:150px;}
+.finding{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+  padding:14px 16px; margin-top:10px;}
+.finding .frow{display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;}
+.finding h3{margin:0; font-size:15px; font-weight:600;}
+.finding .ev{color:var(--ink-2); font-size:13.5px; margin:5px 0 0; max-width:74ch;}
+.f-state{display:flex; align-items:center; gap:8px; flex-shrink:0;}
+.f-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:11px;}
+.f-actions input{flex:1 1 220px; background:var(--panel-2); color:var(--ink);
+  border:1px solid var(--line); border-radius:7px; padding:6px 10px; font:inherit; font-size:13.5px;}
+button{font:inherit; font-size:13px; font-weight:600; border-radius:7px; cursor:pointer;
+  padding:6px 13px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink);}
+button:disabled{opacity:.45; cursor:not-allowed;}
+button.primary{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+.f-log{font-size:12.5px; color:var(--ink-3); margin-top:8px; min-height:1em;}
+.f-log b{color:var(--ink-2);}
+.offline{display:none; margin-top:12px; font-size:13px; color:var(--warn);
+  background:var(--warn-bg); border-radius:8px; padding:8px 12px;}
+
+footer{margin-top:40px; border-top:1px solid var(--line); padding-top:16px;
+  color:var(--ink-2); font-size:13px;}
+footer code{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12.5px;
+  background:var(--chip-bg); border-radius:5px; padding:1px 6px; color:var(--ink);}
+@media (prefers-reduced-motion: no-preference){
+  .bartrack .bar{transition:width .3s ease;}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="top">
+  <span class="eyebrow">Auditoría · 2026-09-07</span>
+  <h1>Careo SolarGPT ↔ PVSyst</h1>
+  <p class="sub">Tarjeta de validación de la auditoría de POA y energía. Cada número sale de
+  <span class="mono">scripts/audit/careo_pvsyst_poa_energia.py</span> sobre los exports horarios
+  de PVSyst; el veredicto de cada hallazgo se marca abajo y queda compartido para todo el equipo.</p>
+  <div class="meta">
+    <span class="chip">ancla <b class="mono">79edb53</b></span>
+    <span class="chip">Fleming · PVSyst <b>8.0.18</b> · 235 MWp tracker</span>
+    <span class="chip">El Burgo I · PVSyst <b>8.0.11</b> · solo ángulos</span>
+    <span class="chip">Vadorada · PVSyst <b>8.1.2</b> · bifacial · careo automático</span>
+    <span class="chip"><a href="https://github.com/IMoriana3/SolarGPTfull/pull/213">PR #213</a></span>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head"><h2>A · Transposición por componente</h2>
+    <span class="pill ok">GLOBAL +0,12 %</span></div>
+  <p class="sec-note">Fleming, run de transposición pura (sin sombras, IAM ni Tier-4) contra el
+  desglose Perez del CSV de PVSyst. La paridad es real componente a componente — no un cuadre de suma.
+  Δ% = SolarGPT/PVSyst − 1.</p>
+  <div class="panel"><div class="tblwrap">
+  <table>
+    <thead><tr><th>Componente (kWh/m²·año)</th><th>SolarGPT</th><th>PVSyst</th>
+      <th class="thbar">Δ% · escala ±3 %</th><th>Δ%</th><th>Umbral</th></tr></thead>
+    <tbody id="tbl-a"></tbody>
+  </table>
+  </div><div class="scale-note">El horizonte queda fuera del ±1 % relativo, pero vale 0,6 kWh/m² sobre 1.912 en absoluto.</div></div>
+</section>
+
+<section>
+  <div class="sec-head"><h2>B · Cadena de energía por etapa</h2>
+    <span class="pill warn">agregado limpio · interior compensado</span></div>
+  <p class="sec-note">Config exacta del banco bancable (CEC + Sandia + Uc=24/Uv=1.2).
+  El E_Grid clava el +0,00 %, pero por etapas se ve la compensación: la irradiancia efectiva
+  llega −0,85 % y el térmico la devuelve.</p>
+  <div class="panel"><div class="tblwrap">
+  <table>
+    <thead><tr><th>Etapa</th><th>SolarGPT</th><th>PVSyst</th>
+      <th class="thbar">Δ% · escala ±2 %</th><th>Δ%</th><th>Umbral</th></tr></thead>
+    <tbody id="tbl-b"></tbody>
+  </table>
+  </div></div>
+
+  <div class="callout">
+    <h3>El térmico del banco no es el que usó PVSyst</h3>
+    <p>La columna horaria <span class="mono">TArray</span> permite medirlo en vez de creerlo:
+    la ΔT célula−ambiente de PVSyst casa con <b>Uc=20/Uv=0</b> — lo que declara su propio PDF —
+    y no con el 24/1.2 del banco («V8 usó 24/1.2 internamente» queda refutado por la medida).</p>
+    <div class="kv">
+      <span class="k">ΔT media PVSyst (TArray−T_Amb)</span><span class="v">15,67 °C</span>
+      <span class="k">modelo Faiman Uc=20/Uv=0</span><span class="v">15,43 °C <em>← casa</em></span>
+      <span class="k">modelo del banco Uc=24/Uv=1.2</span><span class="v">11,28 °C</span>
+      <span class="k">E_Grid con térmico del banco</span><span class="v">394,87 GWh · +0,00 %</span>
+      <span class="k">E_Grid con térmico 20/0</span><span class="v">388,52 GWh · <b>−1,61 %</b></span>
+    </div>
+    <p>Corregirlo mueve el golden bancable (yield 1.680 → 1.653): la decisión es del mantenedor.
+    Queda medido con su mutante.</p>
+  </div>
+
+  <div class="callout">
+    <h3>Dos PR con dos definiciones, restados en la página 16</h3>
+    <div class="kv">
+      <span class="k">PR definición PVSyst (sobre GlobInc)</span><span class="v">87,98 % <em>· PVSyst 87,97 → Δ +0,01 pp</em></span>
+      <span class="k">pr_net del core (sobre POA efectiva)</span><span class="v">92,31 % <em>· Δ aparente +4,34 pp</em></span>
+    </div>
+    <p>La página 16 muestra <span class="mono">pr_net − pvsyst_pr_pct</span> como «Δ pp»:
+    +4,34 puntos de mejora que no existe. La comparación homogénea da +0,01 pp.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><h2>C · El Burgo I — astronomía y backtracking</h2>
+    <span class="pill ok">geometría compatible con la canónica</span></div>
+  <p class="sec-note">Primer careo de su CSV (estaba en el repo sin usar). Solo trae ángulos:
+  la energía <b>no es medible</b> con este export — falta re-exportar con irradiancias
+  (plantilla en <span class="mono">pvsyst_sites/EXPORT_TEMPLATE.md</span>). La zona horaria no venía
+  declarada y se resolvió por barrido: <b>Etc/GMT-1 + centro de hora +30 min</b>.</p>
+  <div class="tiles">
+    <div class="tile"><div class="lbl">Elevación solar (RMSE)</div><div class="val">0,295°</div>
+      <div class="ctx">HSol vs pvlib, sol &gt; 3°</div></div>
+    <div class="tile"><div class="lbl">Azimut solar (RMSE)</div><div class="val">0,343°</div>
+      <div class="ctx">convención PVSyst 0 = Sur</div></div>
+    <div class="tile"><div class="lbl">|Δθ| tracker medio</div><div class="val">0,253°</div>
+      <div class="ctx">p95 1,18° · máx 3,66° (flancos de backtracking)</div></div>
+    <div class="tile"><div class="lbl">GCR ajustado por barrido</div><div class="val">0,400</div>
+      <div class="ctx">canónico de planta 0,397 · paso del barrido 0,005</div></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><h2>D · Vadorada — careo automático, sin config manual</h2>
+    <span class="pill ok">E_Grid −0,99 %</span></div>
+  <p class="sec-note">Gumāndev (India) · PVSyst 8.1.2 · 5.208 kWp bifacial HSAT con la geometría
+  canónica (pitch 6,00 / apertura 2,38) · UTC+5:30. El programa extrae la configuración entera del
+  CSV+PDF —ni lat/lon, ni GCR, ni γ tecleados— y carea con <b>los mismos motores</b> del notebook y
+  Streamlit. Es el caso de aceptación de «se traga un export PVSyst y lo carea él solo»
+  (<span class="mono">tests/test_pvsyst_vadorada.py</span>, 8/8).</p>
+  <div class="tiles">
+    <div class="tile"><div class="lbl">GlobInc anual</div><div class="val">+0,03 %</div>
+      <div class="ctx">peor mes ±0,89 % · 2.267,6 vs 2.267,0 kWh/m²</div></div>
+    <div class="tile"><div class="lbl">E_Grid anual</div><div class="val">−0,99 %</div>
+      <div class="ctx">10,35 vs 10,45 GWh · meses entre −2,3 y +2,1 %</div></div>
+    <div class="tile"><div class="lbl">Ganancia trasera</div><div class="val">+7,40 %</div>
+      <div class="ctx">bifacialidad 80 % + factores traseros del informe</div></div>
+    <div class="tile"><div class="lbl">Huecos cerrados</div><div class="val">5</div>
+      <div class="ctx">husos de media hora · mes perdido al este de Greenwich · extractor de sitio ·
+      γ en kWp · bifacial en la cascada</div></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><h2>Sube tu export y carea otro proyecto</h2>
+    <span class="pill ok" style="color:var(--demo);background:rgba(84,166,255,.12)">herramienta</span></div>
+  <p class="sec-note">El careo lo ejecuta el <b>motor canónico de SolarGPT</b> (el mismo cálculo del
+  notebook y de la web — no se puede replicar aquí sin duplicar el motor, y en esta casa las réplicas
+  están prohibidas). La superficie de subida es la página <b>16 · PVSyst Waterfall</b> de la app:</p>
+  <div class="panel" style="padding:14px 18px">
+    <ol style="margin:0; padding-left:20px; color:var(--ink-2); font-size:14px; line-height:1.9">
+      <li>Abre <a href="https://solargptfull-mvf2eshstctvrd7marrakh.streamlit.app/">SolarGPT</a>
+        → página <b>16 · PVSyst Waterfall</b> (beta:
+        <a href="https://solargptfull-c7z6fgnbvkrcsdttx5kvu5.streamlit.app/">validación previa aquí</a>).</li>
+      <li>En la barra lateral elige «Mi export» y sube el <b>CSV horario de PVSyst</b>
+        (o el hourly en <b>.xlsx</b>) con su offset UTC — admite medias horas (India +5,5).</li>
+      <li>En «Replicador desde MI informe» sube el <b>PDF del informe</b>: el extractor saca solo
+        el sitio, la geometría, las pérdidas, el γ y el bloque bifacial, y simula la réplica.</li>
+      <li>Vuelve aquí y registra el veredicto del proyecto en el panel de abajo.</li>
+    </ol>
+    <p style="margin:10px 0 0; color:var(--ink-3); font-size:12.5px">
+      <b>v1.83.0 en beta y PRODUCCIÓN</b> (2026-09-07): Excel, husos de media hora,
+      autorrelleno del sitio desde el PDF y bifacial ya están en las dos apps — comprueba el
+      «v1.83» de la barra lateral. Referencia de columnas del export:
+      <span class="mono">pvsyst_sites/EXPORT_TEMPLATE.md</span>.</p>
+  </div>
+</section>
+
+<section>
+  <div class="valid-head">
+    <div class="sec-head" style="margin-bottom:0"><h2>Validación del equipo</h2></div>
+    <div class="who">
+      <label for="who">Tu nombre</label>
+      <input id="who" placeholder="p. ej. Iñaki" autocomplete="off">
+    </div>
+  </div>
+  <p class="sec-note" style="margin-top:8px">Marca cada hallazgo tras contrastarlo (el comando del pie
+  reproduce todos los números). Los veredictos se guardan <b>en este navegador</b>; para ponerlos en
+  común, expórtalos e impórtalos abajo — o usa el
+  <a href="https://claude.ai/code/artifact/00159cc1-8e92-4f31-a0bb-5de70efe1031">registro compartido
+  en vivo</a> (requiere acceso). <span class="progress" id="progress"></span></p>
+  <div class="f-actions" style="margin:0 0 4px">
+    <button id="btn-export">Exportar veredictos (JSON)</button>
+    <button id="btn-import">Importar veredictos</button>
+    <input type="file" id="file-import" accept="application/json" hidden>
+  </div>
+  <div id="findings"></div>
+</section>
+
+<footer>
+  Reproducir: <code>python scripts/audit/careo_pvsyst_poa_energia.py</code> ·
+  detalle y predicciones previas en <code>solargpt/docs/auditoria-poa-energia-pvsyst.md</code> ·
+  referencias PVSyst: CSV horarios de Fleming y El Burgo I (evidencia de terceros, no se regenera).
+</footer>
+</div>
+
+<script>
+"use strict";
+const ROWS_A = [
+  ["haz (BeamTrp)",        "1.151,1", "1.149,0", 0.18],
+  ["isótropa (DifITrp)",   "397,8",   "400,1",  -0.57],
+  ["circunsolar (CircTrp)","317,0",   "315,9",   0.33],
+  ["horizonte (HBndTrp)",  "23,7",    "24,3",   -2.56],
+  ["albedo (AlbTrp)",      "27,6",    "27,5",    0.26],
+  ["GLOBAL (GlobTrp)",     "1.912,8", "1.910,4", 0.12, true],
+];
+const ROWS_B = [
+  ["GlobShd (kWh/m²)",  "1.850,2", "1.865,4", -0.82],
+  ["GlobEff (kWh/m²)",  "1.819,7", "1.835,4", -0.85],
+  ["EArrNom (GWh)",     "427,8",   "431,5",   -0.86],
+  ["EArray (GWh)",      "402,0",   "400,1",    0.46],
+  ["EOutInv (GWh)",     "394,9",   "394,9",    0.00],
+  ["E_Grid (GWh)",      "394,9",   "394,9",    0.00, true],
+];
+function pill(d){
+  const a = Math.abs(d);
+  if (a <= 0.5) return '<span class="pill ok">±0,5 estricto</span>';
+  if (a <= 1.0) return '<span class="pill warn">±1 bancable</span>';
+  return '<span class="pill bad">fuera de ±1</span>';
+}
+function fmtd(d){
+  const s = d > 0 ? "+" : (d < 0 ? "−" : "+");
+  return s + Math.abs(d).toFixed(2).replace(".", ",") + " %";
+}
+function rows(tbodyId, rows, scale){
+  const el = document.getElementById(tbodyId);
+  el.innerHTML = rows.map(([n, sg, pv, d, tot]) => {
+    const w = Math.min(Math.abs(d) / scale, 1) * 85;
+    const side = d < 0 ? "neg" : "pos";
+    return `<tr${tot ? ' class="total"' : ""}>
+      <td>${n}</td><td class="num">${sg}</td><td class="num">${pv}</td>
+      <td class="barcell"><div class="bartrack"><span class="axis"></span>
+        <span class="bar ${side}" style="width:${w}px"></span></div></td>
+      <td class="num delta">${fmtd(d)}</td><td>${pill(d)}</td></tr>`;
+  }).join("");
+}
+rows("tbl-a", ROWS_A, 3);
+rows("tbl-b", ROWS_B, 2);
+
+const FINDINGS = [
+  { id: "a-componentes", t: "A · La transposición cuadra por componente",
+    ev: "Global +0,12 % y ningún componente fuera del ±0,6 % salvo el horizonte (−2,56 % relativo, 0,6 kWh/m² absoluto). La paridad no es compensación de suma." },
+  { id: "b-compensacion", t: "B · El E_Grid +0,00 % descansa en una compensación de ~1,6 puntos",
+    ev: "Irradiancia efectiva −0,85 % devuelta por el térmico (+1,6 %), con el clipping (DC/AC 1,22) absorbiendo el remanente." },
+  { id: "b-termico", t: "B · PVSyst simuló Fleming con Uc=20/Uv=0, no con el 24/1.2 del banco",
+    ev: "ΔT media de TArray 15,67 °C vs 15,43 del modelo 20/0 (11,28 con 24/1.2). Con 20/0 la cadena queda en −1,61 %. Decisión de corrección: del mantenedor." },
+  { id: "pr-definiciones", t: "PR · La página 16 resta dos definiciones distintas de PR",
+    ev: "pr_net 92,31 % (POA efectiva) contra 87,97 % de PVSyst (GlobInc): +4,34 pp aparentes; homogéneo da +0,01 pp." },
+  { id: "c-burgo", t: "C · El Burgo I: geometría validada; energía no medible con su CSV",
+    ev: "Astronomía RMSE 0,295°, |Δθ| 0,253° medio, GCR ajustado 0,400 ≈ canónico 0,397. Falta re-export con irradiancias para carear energía." },
+  { id: "clamp-1kwp", t: "Menor · max(…,1) distorsiona yield y PR por debajo de 1 kWp",
+    ev: "Un módulo de 595 W sale con yield ×0,595 exacto (medido). Régimen expuesto: residencial / careos de módulo suelto." },
+  { id: "d-vadorada", t: "D · El careo automático de un export PVSyst queda operativo (Vadorada)",
+    ev: "Config 100 % extraída del CSV+PDF, motores canónicos: GlobInc +0,03 %, E_Grid −0,99 % con bifacial +7,40 %. Cinco huecos del pipeline cerrados con test cada uno." },
+];
+const ESTADOS = {
+  validado:  { lbl: "Validado",  cls: "ok" },
+  rechazado: { lbl: "Rechazado", cls: "bad" },
+  pendiente: { lbl: "Pendiente", cls: "warn" },
+};
+const cont = document.getElementById("findings");
+cont.innerHTML = FINDINGS.map(f => `
+  <div class="finding" id="f-${f.id}">
+    <div class="frow">
+      <div><h3>${f.t}</h3><p class="ev">${f.ev}</p></div>
+      <div class="f-state"><span class="pill warn" data-role="estado">Pendiente</span></div>
+    </div>
+    <div class="f-actions">
+      <input data-role="nota" placeholder="Nota (opcional): qué contrastaste o por qué no cuadra" autocomplete="off">
+      <button class="primary" data-act="validado" disabled>Validar</button>
+      <button data-act="rechazado" disabled>Rechazar</button>
+      <button data-act="pendiente" disabled hidden>Reabrir</button>
+    </div>
+    <div class="f-log" data-role="log"></div>
+  </div>`).join("");
+
+const who = document.getElementById("who");
+try { who.value = localStorage.getItem("careo-nombre") || ""; } catch (e) {}
+who.addEventListener("change", () => { try { localStorage.setItem("careo-nombre", who.value); } catch (e) {} });
+
+/* Veredictos EN ESTE NAVEGADOR (localStorage), como el resto de herramientas
+   del panel: sin backend. La puesta en común es por export/import JSON o por
+   el registro compartido del artifact. */
+const LS_KEY = "careo-pvsyst-veredictos";
+let state = {};
+try { state = JSON.parse(localStorage.getItem(LS_KEY) || "{}") || {}; } catch (e) { state = {}; }
+
+function guardar(){
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
+}
+function paint(){
+  let done = 0;
+  for (const f of FINDINGS){
+    const card = document.getElementById("f-" + f.id);
+    const d = state[f.id];
+    const est = (d && ESTADOS[d.estado]) ? d.estado : "pendiente";
+    if (est === "validado") done++;
+    const p = card.querySelector('[data-role="estado"]');
+    p.textContent = ESTADOS[est].lbl;
+    p.className = "pill " + ESTADOS[est].cls;
+    const log = card.querySelector('[data-role="log"]');
+    if (d && d.autor){
+      const fecha = d.ts ? new Date(d.ts).toLocaleString("es-ES",
+        { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+      log.innerHTML = `<b>${escapeHtml(d.autor)}</b> · ${fecha}` +
+        (d.nota ? ` — ${escapeHtml(d.nota)}` : "");
+    } else { log.textContent = ""; }
+    const resuelto = est !== "pendiente";
+    card.querySelector('[data-act="validado"]').hidden = resuelto;
+    card.querySelector('[data-act="rechazado"]').hidden = resuelto;
+    card.querySelector('[data-act="pendiente"]').hidden = !resuelto;
+  }
+  document.getElementById("progress").innerHTML =
+    `<b>${done}/${FINDINGS.length}</b> validados.`;
+}
+function escapeHtml(t){
+  return String(t).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+document.querySelectorAll(".finding button").forEach(b => { b.disabled = false; });
+paint();
+
+cont.addEventListener("click", (ev) => {
+  const btn = ev.target.closest("button[data-act]");
+  if (!btn) return;
+  const card = btn.closest(".finding");
+  const id = card.id.slice(2);
+  const nota = card.querySelector('[data-role="nota"]').value.trim();
+  const autor = who.value.trim() || "anónimo";
+  state[id] = { estado: btn.dataset.act, autor, nota, ts: new Date().toISOString() };
+  guardar();
+  card.querySelector('[data-role="nota"]').value = "";
+  paint();
+});
+
+/* Export / import para poner los veredictos en común sin backend. El import
+   FUSIONA: gana el veredicto más reciente por hallazgo (ts), nunca borra. */
+document.getElementById("btn-export").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify({
+    pagina: "careo-pvsyst", exportado: new Date().toISOString(),
+    veredictos: state }, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "careo-pvsyst-veredictos.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+document.getElementById("btn-import").addEventListener("click",
+  () => document.getElementById("file-import").click());
+document.getElementById("file-import").addEventListener("change", async (ev) => {
+  const f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    const otros = (data && data.veredictos) || {};
+    let fusionados = 0;
+    for (const [id, v] of Object.entries(otros)){
+      if (!v || !v.estado) continue;
+      const mio = state[id];
+      if (!mio || String(v.ts || "") > String(mio.ts || "")){ state[id] = v; fusionados++; }
+    }
+    guardar(); paint();
+    document.getElementById("progress").innerHTML +=
+      ` <span style="color:var(--ink-3)">(${fusionados} importados)</span>`;
+  } catch (e) {
+    alert("JSON de veredictos ilegible: " + e.message);
+  } finally { ev.target.value = ""; }
+});
+</script>
+
+</body>
+</html>

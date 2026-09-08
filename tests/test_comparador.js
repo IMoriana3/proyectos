@@ -129,7 +129,10 @@ if (MAN) {
      aquella rama traía acabó entrando por otro camino (CROSS-TILT-01); lo
      que mentía era la etiqueta, que es justo lo que este pin existe para
      que no pase. */
-  const CORE_PIN = { version: '1.70.0', commit: '250d2acf' };
+  /* Re-fijado al entrar el QUEBRADO en el catálogo del core (SolarGPT #185).
+     El golden se regeneró contra `main` y el generador VERIFICA que ese commit
+     esté en `main` antes de escribir — el guard que nació de PORTAL-BUG-01. */
+  const CORE_PIN = { version: '1.75.0', commit: '0c7cccef' };
   check('el golden corresponde al core fijado (v' + CORE_PIN.version + ')',
     MAN.core.version === CORE_PIN.version,
     'golden v' + MAN.core.version + ' vs pin v' + CORE_PIN.version +
@@ -299,6 +302,13 @@ const G = { apertura: C.collector_width_m, altoColector: C.collector_width_m,
 const cfg = { lat: C.lat, lon: C.lon, gcr, fija: G, tracker: G,
   maxang: C.max_angle_deg, albedo: C.albedo, tilt: C.tilt_deg, tiltEW: 12,
   axTilt: C.axis_tilt_deg, pend: C.cross_axis_slope_deg, geomDe: () => G,
+  /* El quiebro sale del FIXTURE, que lo deriva del catálogo del core: mismo
+     número en los dos motores, o el careo del quebrado no significa nada. */
+  quiebro: C.broken_deg,
+  /* Y la componente A LO LARGO de las filas, que inclina la cumbrera de las
+     dos aguas. El core la toma como parámetro suelto —no hay plano que la
+     genere en su modelo— y aquí entra igual, por el camino del careo. */
+  pendLargo: C.along_axis_slope_deg,
   /* El golden DECLARA con qué ajuste corrió el core, y aquí se pone la ficha en
      el mismo sitio. Antes no se declaraba: los dos motores corrían con opciones
      distintas —la ficha cortaba el retroceso en plana y el core no— y el careo
@@ -326,7 +336,41 @@ check('el GHI del sitio cuadra (±1 %)',
 const ordena = o => Object.keys(o).sort((a, b) => o[b].poa - o[a].poa).join(' > ');
 const ordJS = ordena(Object.fromEntries(Object.entries(js).map(([k, v]) => [k, { poa: v.neta }])));
 const ordCore = ordena(Object.fromEntries(Object.entries(core).map(([k, v]) => [k, { poa: v.poa_kwh_m2 }])));
-check('el orden entre estructuras es el mismo', ordJS === ordCore, '\n     JS   ' + ordJS + '\n     core ' + ordCore);
+/* EL ORDEN, con los EMPATES declarados.
+   Dos estructuras separadas por menos que el hueco que hay HOY entre los dos
+   motores no tienen orden decidible con este instrumento: cuál va delante lo
+   decide el ruido y no la física. Pasó al entrar los quebrados —
+   `tracker_queb_nobt` y `tracker_hsat` quedan a 0,026 % en el core— y los dos
+   motores los ordenaban al revés. Exigir ahí un orden estricto es medir ruido;
+   tragárselo en silencio es peor.
+   El umbral es el hueco VIVO (se calcula abajo, sobre esta misma corrida), no
+   la tolerancia: con la tolerancia como umbral —que es el hueco por su
+   holgura— `fija_optima ≈ fija_proyecto` (2,1 %, justo lo que la ficha existe
+   para enseñar) pasaría por «no decidible». Lo dijo el guard del propio
+   empate, no yo. */
+const huecoVivo = Math.max(...C.structures.map(
+  k => Math.abs(js[k].neta / core[k].poa_kwh_m2 - 1)));
+const empatan = (a, b) => Math.abs(core[a].poa_kwh_m2 / core[b].poa_kwh_m2 - 1) < huecoVivo;
+const conEmpates = orden => {
+  const grupos = [];
+  orden.split(' > ').forEach(k => {
+    const g = grupos[grupos.length - 1];
+    if (g && empatan(g[g.length - 1], k)) g.push(k); else grupos.push([k]);
+  });
+  return grupos.map(g => g.slice().sort().join(' = ')).join(' > ');
+};
+const empatados = ordCore.split(' > ').filter((k, i, a) => i && empatan(a[i - 1], k));
+check('el orden entre estructuras es el mismo' +
+  (empatados.length ? ' (con ' + empatados.length + ' empate(s) declarado(s))' : ''),
+  conEmpates(ordJS) === conEmpates(ordCore),
+  '\n     JS   ' + ordJS + '\n     core ' + ordCore +
+  '\n     con empates: ' + conEmpates(ordCore));
+/* Y el empate no se declara a ciegas: se exige que el hueco que lo justifica
+   sea PEQUEÑO. Si algún día el careo se afloja, esto salta antes de que «no
+   decidible» se coma una diferencia que sí lo es. */
+check('  el umbral del empate es el hueco vivo entre motores (' +
+  (huecoVivo * 100).toFixed(3) + ' %), y sigue siendo pequeño',
+  huecoVivo < 0.005, String(huecoVivo));
 
 // ── 5) magnitudes, con la tolerancia JUSTIFICADA ──────────────────────────
 // PORTAL-BUG-01: las tolerancias eran 8 % y 2,5 pp, y NO son un número redondo
@@ -668,7 +712,37 @@ const GOLDEN_VIEJO_v163 = {
   tracker_hsat_nobt: { poa: 96.7986, delta: 13.9312 },
   tracker_tsat: { poa: 100.0250, delta: 17.7287 },
 };
-const cazadas = C.structures.filter(k => {
+/* Solo las que EXISTÍAN en aquel golden: es evidencia de una deriva histórica
+   concreta y no puede opinar de estructuras que nacieron después (los quebrados
+   entraron el 2026-08-27). Recorrer `C.structures` reventaba con `undefined` en
+   cuanto el catálogo creció. */
+/* Y hay una segunda condición, que este centinela no tenía y ha hecho falta:
+   el ESCENARIO tiene que ser el mismo. Sus números son evidencia de una deriva
+   de FÍSICA (sombrear el circunsolar, v1.63), y eso sólo se puede medir contra
+   una corrida de la MISMA configuración. Al declarar la componente del terreno
+   A LO LARGO de las filas —que inclina la cumbrera de las dos aguas— `fija_ew`
+   pasó a correr otro caso: 69,08 → 73,20 kWh/m² y −18,69 → −13,84 pp. Eso no
+   es deriva del core, es otro escenario, y compararlo diría una cosa por otra.
+   Se excluye con su motivo y con su fecha, no en silencio. */
+const ESCENARIO_CAMBIADO = {
+  fija_ew: '2026-08-27: el careo declara `along_axis_slope_deg` (6°) y su ' +
+           'cumbrera se inclina — el golden de v1.63 corrió con cumbrera plana. ' +
+           'Y desde v1.74.0 corre además CON sombra entre filas (aguas ' +
+           'enfrentadas), que aquel golden tampoco tenía: dos escenarios de ' +
+           'diferencia, no una deriva',
+};
+const VIEJAS = Object.keys(GOLDEN_VIEJO_v163)
+  .filter(k => core[k] && !ESCENARIO_CAMBIADO[k]);
+/* Test de zombis de la exención (regla de la casa): una entrada que ya no
+   corresponde a ninguna estructura del golden viejo es un permiso huérfano. */
+Object.keys(ESCENARIO_CAMBIADO).forEach(k => {
+  check('la exención del centinela para ' + k + ' tiene dueño vivo y motivo',
+    !!GOLDEN_VIEJO_v163[k] && ESCENARIO_CAMBIADO[k].length > 40,
+    k + ' ya no está en el golden viejo, o su motivo está vacío');
+});
+check('y el centinela conserva a qué puede testificar (' + VIEJAS.join(', ') + ')',
+  VIEJAS.length >= 3, 'con menos de tres estructuras deja de ser evidencia de nada');
+const cazadas = VIEJAS.filter(k => {
   const v = GOLDEN_VIEJO_v163[k], b = core[k];
   return Math.abs(v.delta - b.delta_pct) >= TOL_DELTA ||
          Math.abs(v.poa / b.poa_kwh_m2 - 1) >= TOL_POA;
@@ -695,7 +769,7 @@ const cazadas = C.structures.filter(k => {
    sea 0,0014 %—, porque el cambio de v1.63 (sombrear el circunsolar) sólo
    podía mover a las que tienen sombra. */
 const DERIVA_NULA = 1e-4;   // por debajo de esto no hay nada que cazar
-const derivaron = C.structures.filter(k => {
+const derivaron = VIEJAS.filter(k => {
   const v = GOLDEN_VIEJO_v163[k], b = core[k];
   return Math.abs(v.poa / b.poa_kwh_m2 - 1) >= DERIVA_NULA;
 });
@@ -704,14 +778,14 @@ check('CENTINELA: caza TODAS las estructuras que derivaron de verdad (' +
   derivaron.length > 0 && derivaron.every(k => cazadas.includes(k)),
   'derivaron ' + derivaron.join(', ') + ' — cazó ' + (cazadas.join(', ') || 'ninguna'));
 check('  y las que NO caza es porque no derivaron (peor ' +
-  (100 * Math.max(...C.structures.filter(k => !derivaron.includes(k))
+  (100 * Math.max(...VIEJAS.filter(k => !derivaron.includes(k))
     .map(k => Math.abs(GOLDEN_VIEJO_v163[k].poa / core[k].poa_kwh_m2 - 1)))).toFixed(4) + ' %)',
-  C.structures.filter(k => !derivaron.includes(k))
+  VIEJAS.filter(k => !derivaron.includes(k))
     .every(k => Math.abs(GOLDEN_VIEJO_v163[k].poa / core[k].poa_kwh_m2 - 1) < DERIVA_NULA));
 
 // Y el mutante del centinela: con la tolerancia ANTERIOR no cazaba ninguna, que
 // es exactamente lo que pasó. Si esto falla, el centinela no mide lo que dice.
-const cazadasAntes = C.structures.filter(k => {
+const cazadasAntes = VIEJAS.filter(k => {   // mismo recorte histórico
   const v = GOLDEN_VIEJO_v163[k], b = core[k];
   return Math.abs(v.delta - b.delta_pct) >= 2.5 ||
          Math.abs(v.poa / b.poa_kwh_m2 - 1) >= 0.08;
@@ -798,9 +872,27 @@ check('el relativo del tilt es 0 en el óptimo y negativo fuera',
 // llano y con pendiente quedaba un 3,7 % de sombra residual. Ahora el core lleva
 // `cross_axis_tilt` (pvlib), la ficha también, y el backtracking sigue haciendo
 // su trabajo en cuesta.
+/* LA COLUMNA «SOMBRA» TIENE AHORA DOS PARTES, y hay que separarlas para que
+   este check siga midiendo lo que dice. El backtracking quita la sombra del
+   HAZ; el cielo que tapa la fila de enfrente NO lo puede quitar —es geometría
+   de factor de vista, está ahí gire el tracker lo que gire—. Sumadas en un
+   solo número, un 0,5 % con backtracking se leería como «el retroceso no
+   funciona», que es falso. Se aísla con `sinMascara`. */
+const sinMascara = (k, c) => {
+  const sp = FIS.spec(k); sp.sinMascara = true;
+  try {
+    const r = {}; FIS.compara([k], M, c || cfg).filas.forEach(f => { r[f.key] = f; });
+    return r[k];
+  } finally { delete sp.sinMascara; }
+};
+const hazSolo = sinMascara('tracker_hsat');
 check('con pendiente (' + C.cross_axis_slope_deg + '°) el backtracking SIGUE quitando la ' +
-  'sombra (' + js.tracker_hsat.sombra.toFixed(2) + ' %): el ángulo va con la pendiente',
-  js.tracker_hsat.sombra < 0.5);
+  'sombra del HAZ (' + hazSolo.sombra.toFixed(2) + ' %): el ángulo va con la pendiente',
+  hazSolo.sombra < 0.5);
+check('y el cielo que tapa la vecina NO lo quita —ni puede— (' +
+  (js.tracker_hsat.sombra - hazSolo.sombra).toFixed(3) + ' pp que se quedan)',
+  js.tracker_hsat.sombra - hazSolo.sombra > 0.1,
+  'si el retroceso lo borrara, es que se está enmascarando dos veces');
 /* 1,0 pp absoluto sobre una sombra de ~4 % era un 25 % relativo de aire: la
    deriva que se coló medía 0,44 pp. Lo medido hoy contra el core al día es
    0,07 pp. */
@@ -1344,8 +1436,12 @@ const CP = porClave(conPend), SP = porClave(sinPend);
      sol ya no es la fila de delante sino el terreno. Se deja escrito lo que
      se predijo y lo que se midió, que es la única forma de que la próxima
      predicción se pese. */
-  check('en LLANO el backtracking sí deja la sombra a cero (' + bt(0).toFixed(3) + ' %)',
-    bt(0) < 0.01, 'para eso existe el retroceso');
+  /* Sobre la sombra del HAZ, que es la que el retroceso puede quitar: el
+     cielo tapado por la vecina no se va con ningún ángulo. */
+  const btHaz = pend => sinMascara('tracker_hsat',
+    { ...cfg, pend, contrasol: true }).sombra;
+  check('en LLANO el backtracking sí deja la sombra del HAZ a cero (' +
+    btHaz(0).toFixed(3) + ' %)', btHaz(0) < 0.01, 'para eso existe el retroceso');
   check('en CUESTA ya no la absorbe entera —el campo tiene su propio ocaso— (' +
     bt(0).toFixed(3) + ' → ' + bt(12).toFixed(3) + ' %)',
     bt(12) > 0.1,
@@ -1400,6 +1496,254 @@ check('con pendiente el ranking se recalcula con TODAS en el mismo terreno',
 check('sin backtracking el ángulo es el astronómico, cota o no cota',
   Math.abs(FIS.theta(40, 1.19, 55, false) - 40) < 1e-9 &&
   Math.abs(FIS.theta(-40, 0.4, 55, false) + 40) < 1e-9);
+
+// ── 6b) SOMBRA ENTRE AGUAS ENFRENTADAS — arbitrada con TRAZADO DE RAYOS ─────
+// `fija_ew` corría SIN sombra entre filas y estaba escrito como hueco: el
+// modelo de fila supone TODAS las filas orientadas igual, y con aguas
+// enfrentadas el obstáculo es la CUMBRERA de la vecina. Aquí se cierra.
+//
+// El árbitro NO es pvlib: su convención de cobertizos no expresa este caso —al
+// mapearlo, el paso efectivo sale menor que el propio paño (filas solapadas) y
+// devuelve 0,67 de sombra con el sol casi cenital—. Es un trazado de rayos
+// escrito aquí, que no comparte una línea de álgebra con `FIS.shadeEW`.
+//
+// Dos errores que cazó, y ninguno lo habría visto un test de «da un número»:
+//   1. el paño de sotavento a sombra total — al mediodía el sol está EN el
+//      plano de la cumbrera y los DOS paños lo ven. Costaba −37 % de POA.
+//   2. la cumbrera de la vecina como único obstáculo — cierto en llano, falso
+//      en cuesta: su ALERO puede quedar más alto que nuestra propia cumbrera.
+function siluetaEW(p, L, beta, pend) {
+  const b = beta * Math.PI / 180, W = 2 * L * Math.cos(b), D = L * Math.sin(b);
+  const m = Math.tan((pend || 0) * Math.PI / 180), segs = [];
+  for (let k = -6; k <= 6; k++) {
+    if (!k) continue;
+    const x0 = k * p, zb = -k * p * m;
+    segs.push([x0, zb, x0 + W / 2, zb + D]);
+    segs.push([x0 + W / 2, zb + D, x0 + W, zb]);
+  }
+  return segs;
+}
+function cortaEW(px, pz, dx, dz, segs) {
+  for (const [x0, z0, x1, z1] of segs) {
+    const sx = x1 - x0, sz = z1 - z0, den = dx * sz - dz * sx;
+    if (Math.abs(den) < 1e-12) continue;
+    const t = ((x0 - px) * sz - (z0 - pz) * sx) / den;
+    const u = ((x0 - px) * dz - (z0 - pz) * dx) / den;
+    if (t > 1e-9 && u >= -1e-9 && u <= 1 + 1e-9) return true;
+  }
+  return false;
+}
+const N_RAYOS = 1201, REJILLA = 1 / N_RAYOS;
+function porRayosEW(psiDeg, betaDeg, L, p, pano, pend) {
+  const b = betaDeg * Math.PI / 180, psi = psiDeg * Math.PI / 180;
+  const W = 2 * L * Math.cos(b), D = L * Math.sin(b);
+  const dx = Math.cos(psi), dz = Math.sin(psi);
+  const segs = siluetaEW(p, L, betaDeg, pend);
+  segs.push([0, 0, W / 2, D]);                        // nuestra agua oeste
+  if (pano === 'cara') segs.push([W / 2, D, W, 0]);   // y la del este
+  let som = 0;
+  for (let i = 0; i < N_RAYOS; i++) {
+    const u = i / (N_RAYOS - 1);
+    const x = pano === 'cara' ? W - u * W / 2 : u * W / 2, z = u * D;
+    if (cortaEW(x + 1e-7 * dx, z + 1e-7 * dz, dx, dz, segs)) som++;
+  }
+  return som / N_RAYOS;
+}
+check('la ficha tiene el modelo de aguas enfrentadas', typeof FIS.shadeEW === 'function');
+
+(function () {
+  let peorCara = 0, peorLejos = 0, dondeC = null, n = 0;
+  for (const pend of [0, 5, -5]) {
+    for (const beta of [7, 12, 20, 30]) {
+      for (const L of [1.2, 2.4]) {
+        for (const p of [3, 5, 8]) {
+          if (2 * L * Math.cos(beta * Math.PI / 180) > p) continue;  // filas solapadas
+          for (const psi of [5, 8, 12, 20, 30, 45, 70]) {
+            for (const signo of [1, -1]) {
+              // espejar la escena es cambiar el signo de la pendiente
+              const pr = signo > 0 ? pend : -pend, ps = signo * (90 - psi);
+              const mio = FIS.shadeEW(ps, signo * beta, p, 2 * L, pend);
+              const suyo = porRayosEW(psi, beta, L, p, 'cara', pr);
+              if (Math.abs(mio - suyo) > peorCara) {
+                peorCara = Math.abs(mio - suyo);
+                dondeC = 'pend ' + pend + ' β ' + beta + ' L ' + L + ' p ' + p + ' ψ ' + psi;
+              }
+              n++;
+              if (psi > beta) {   // por debajo manda el AOI, no la sombra
+                peorLejos = Math.max(peorLejos, Math.abs(
+                  FIS.shadeEW(ps, -signo * beta, p, 2 * L, pend) -
+                  porRayosEW(psi, beta, L, p, 'lejos', pr)));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  check('el paño de cara coincide con el trazado de rayos (' + n + ' casos, con pendiente)',
+    peorCara <= 2 * REJILLA, 'peor ' + peorCara.toExponential(2) + ' en ' + dondeC);
+  check('y el paño LEJANO queda limpio en cuanto el sol lo alcanza',
+    peorLejos <= 2 * REJILLA, 'peor ' + peorLejos.toExponential(2));
+})();
+
+// Por debajo de β el paño lejano lo tapa SU PROPIA cumbrera, y ahí el 1 no
+// penaliza: es exactamente el AOI > 90. No se arbitra con rayos —un rayo que
+// sale de la superficie hacia atrás no «corta» nada— sino contra esa condición.
+[7, 12, 30].forEach(function (beta) {
+  let bien = true;
+  [1, beta - 0.5, beta + 0.5, 60].forEach(function (psi) {
+    const ps = 90 - psi, f = FIS.shadeEW(ps, -beta, 5, 4.8, 0);
+    if ((f === 1) !== ((ps + beta) >= 90)) bien = false;
+  });
+  check('el paño lejano vale 1 exactamente cuando el sol está detrás (β=' + beta + '°)', bien);
+});
+
+// SOMBRA-01 sin guarda: aquí el ALERO de la vecina se apoya en el terreno y
+// hace de horizonte él solo, así que el guarda explícito del modelo de fila
+// salía INERTE (medido: no decidía en ningún caso) y se retiró. Lo que hacía
+// se exige aquí como propiedad.
+(function () {
+  let bien = true, caso = null;
+  for (const pend of [-45, -30, -20, -10, 10, 20, 30, 45]) {
+    for (const rot of [-30, -12, -7, 7, 12, 30]) {
+      for (let ps = -89.5; ps <= 89.5; ps += 1) {
+        if (Math.cos((ps - pend) * Math.PI / 180) > 0) continue;
+        if (FIS.shadeEW(ps, rot, 5, 4.8, pend) !== 1) {
+          bien = false; caso = 'pend ' + pend + ' rot ' + rot + ' ps ' + ps;
+        }
+      }
+    }
+  }
+  check('con el sol bajo la ladera no queda luz: la geometría hace de horizonte',
+    bien, caso);
+  check('y con el sol alto en llano el paño de cara NO está tapado',
+    FIS.shadeEW(30, 12, 5, 4.8, 0) < 1);
+})();
+
+// El ancho de colector es el de la MESA ENTERA (los dos paños reparten el
+// módulo mitad y mitad). Leerlo como el de UN paño doblaría la huella.
+check('doblar el ancho de colector sombrea más',
+  FIS.shadeEW(80, 20, 3, 4.8, 0) > FIS.shadeEW(80, 20, 3, 2.4, 0) &&
+  FIS.shadeEW(80, 20, 3, 2.4, 0) > 0);
+
+// El hueco, cerrado — y con guardia para que no vuelva por herencia.
+check('ninguna estructura del catálogo va ya sin sombra entre filas',
+  FIS.CATALOGO.every(e => !e.sinSombra),
+  FIS.CATALOGO.filter(e => e.sinSombra).map(e => e.key).join(', '));
+
+(function () {
+  const conSombra = FIS.compara(['fija_ew'], M, cfg).filas[0];
+  const spec = FIS.spec('fija_ew');
+  spec.sinSombra = true;
+  const sinSombra = FIS.compara(['fija_ew'], M, cfg).filas[0];
+  delete spec.sinSombra;
+  check('la sombra MUEVE a la dos aguas', conSombra.neta < sinSombra.neta,
+    sinSombra.neta.toFixed(1) + ' -> ' + conSombra.neta.toFixed(1));
+  // Y la magnitud tiene que ser de dos aguas, no de cobertizo: por eso se
+  // montan al 70 % de GCR, donde una monoinclinada no cabría.
+  const perd = (sinSombra.neta - conSombra.neta) / sinSombra.neta;
+  check('y le quita lo que le tiene que quitar (< 1 %)', perd > 0 && perd < 0.01,
+    (100 * perd).toFixed(3) + ' %');
+})();
+
+// MUTANTE: el paño lejano siempre a la sombra, que es el fallo que costó −37 %.
+(function () {
+  const bueno = FIS.shadeEW;
+  FIS.shadeEW = function (ps, th, p, cw, pend) {
+    return (th * (ps >= 0 ? 1 : -1)) < 0 ? 1 : bueno(ps, th, p, cw, pend);
+  };
+  const mutado = FIS.compara(['fija_ew'], M, cfg).filas[0].neta;
+  FIS.shadeEW = bueno;
+  const sano = FIS.compara(['fija_ew'], M, cfg).filas[0].neta;
+  check('MUTANTE: con el paño lejano a sombra total, la dos aguas se desploma',
+    (sano - mutado) / sano > 0.10,
+    'sano ' + sano.toFixed(1) + ' vs mutado ' + mutado.toFixed(1));
+})();
+
+// ── 6c) EL CIELO QUE TAPA LA FILA DE ENFRENTE — oráculo por RAYOS ───────────
+// La fila de delante no solo tapa el haz: sube el horizonte del módulo y con
+// él se pierde la banda de bóveda que había debajo. En el comparador eso NO se
+// modelaba, y la nota que declaraba el hueco decía que daba igual «porque a
+// nadie se le aplica, así que la comparación sigue siendo pareja». Medido, es
+// falso: va de 0,045 % a 0,46 % de POA según la estructura —hasta 0,34 pp de
+// Δ%— y manda el TILT, no el GCR.
+//
+// `FIS.skyMask` es analítica. El árbitro de aquí NO: lanza rayos en todas las
+// direcciones del plano ⊥ a las filas, mira cuáles llegan al cielo sin cortar
+// a la vecina, y suma su contribución al factor de vista —(1/2)·cos α dα,
+// medido desde la normal—. No comparte una línea de álgebra con ella.
+function vfPorRayos(tiltDeg, gcr, nDir, nPtos) {
+  const b = tiltDeg * Math.PI / 180, cw = 1.0, p = cw / gcr;
+  const D = cw * Math.sin(b), W = cw * Math.cos(b);
+  // segmentos de las filas vecinas (la nuestra ocupa [0,W], alero en 0)
+  const segs = [];
+  for (let k = -6; k <= 6; k++) {
+    if (!k) continue;
+    segs.push([k * p, 0, k * p + W, D]);
+  }
+  const corta = (px, pz, dx, dz) => segs.some(([x0, z0, x1, z1]) => {
+    const sx = x1 - x0, sz = z1 - z0, den = dx * sz - dz * sx;
+    if (Math.abs(den) < 1e-12) return false;
+    const t = ((x0 - px) * sz - (z0 - pz) * sx) / den;
+    const u = ((x0 - px) * dz - (z0 - pz) * dx) / den;
+    return t > 1e-9 && u >= -1e-9 && u <= 1 + 1e-9;
+  });
+  // normal del paño: mira hacia −x y arriba (el alero está en x=0 y sube al +x)
+  const nx = -Math.sin(b), nz = Math.cos(b);
+  let acum = 0;
+  for (let j = 0; j < nPtos; j++) {                 // puntos del colector
+    const f = (j + 0.5) / nPtos, px = f * W, pz = f * D;
+    let vf = 0;
+    for (let i = 0; i < nDir; i++) {                // direcciones del cielo
+      const a = -Math.PI / 2 + (i + 0.5) / nDir * Math.PI;   // desde la normal
+      const dx = nx * Math.cos(a) - nz * Math.sin(a);
+      const dz = nz * Math.cos(a) + nx * Math.sin(a);
+      if (dz <= 0) continue;                        // hacia el suelo: no es cielo
+      if (corta(px + 1e-9 * dx, pz + 1e-9 * dz, dx, dz)) continue;
+      vf += 0.5 * Math.cos(a) * (Math.PI / nDir);
+    }
+    acum += vf;
+  }
+  return acum / nPtos;
+}
+check('la ficha tiene el modelo de cielo enmascarado', typeof FIS.skyMask === 'function');
+(function () {
+  let peor = 0, donde = null, n = 0;
+  for (const tilt of [7, 12, 25, 30, 40]) {
+    for (const gcr of [0.2, 0.3, 0.397, 0.45, 0.7]) {
+      const libre = (1 + Math.cos(tilt * Math.PI / 180)) / 2;
+      const suyo = vfPorRayos(tilt, gcr, 4000, 41) / libre;
+      const d = Math.abs(FIS.skyMask(tilt, gcr) - suyo);
+      if (d > peor) { peor = d; donde = 'tilt ' + tilt + ' gcr ' + gcr; }
+      n++;
+    }
+  }
+  check('el cielo enmascarado coincide con el trazado de rayos (' + n + ' geometrías)',
+    peor < 2e-3, 'peor ' + peor.toExponential(2) + ' en ' + donde);
+})();
+check('un plano HORIZONTAL no pierde cielo: no hay banda debajo del horizonte',
+  FIS.skyMask(0, 0.7) === 1);
+check('geometría degenerada devuelve 1 en vez de inventarse algo',
+  FIS.skyMask(30, 0) === 1 && FIS.skyMask(30, 1) === 1 && FIS.skyMask(30, 1.5) === 1);
+check('pierde más cuanto más empinado y cuanto más apretado',
+  FIS.skyMask(40, 0.45) < FIS.skyMask(25, 0.45) &&
+  FIS.skyMask(30, 0.70) < FIS.skyMask(30, 0.30));
+// El circunsolar NO se enmascara: viene de la posición del sol y ya lo tapa la
+// sombra del haz. Se comprueba sobre la POA, que es donde se decide.
+(function () {
+  const P = (r) => FIS.poa(20, 1, 25, 25, 800, 120, 900, 0.2, 0, 0.7, 1361, r);
+  const libre = P(1), tapado = P(0.9);
+  check('enmascarar el cielo baja la POA pero NO toca al haz ni a su halo',
+    tapado.neta < libre.neta && tapado.ideal === libre.ideal,
+    'ideal ' + libre.ideal.toFixed(4) + ' vs ' + tapado.ideal.toFixed(4));
+  const sinSol = FIS.poa(20, 1, 25, 25, 0, 120, 900, 0.2, 0, 0.7, 1361, 0.9);
+  const sinSolLibre = FIS.poa(20, 1, 25, 25, 0, 120, 900, 0.2, 0, 0.7, 1361, 1);
+  check('y sin haz sigue quitando cielo (el isotrópico y el horizonte)',
+    sinSol.neta < sinSolLibre.neta);
+})();
+// Las dos aguas van con gcr/2, y eso NO es una aproximación.
+check('un paño de dos aguas ve el cielo de un cobertizo de MEDIO colector',
+  Math.abs(FIS.skyMask(12, 0.70 / 2) - FIS.skyMask(12, 0.35)) < 1e-15);
 
 // ── 7) hemisferio sur: la fija tiene que mirar al NORTE ──
 // Si `psFija` no cambiara de signo bajo el ecuador, la fija apuntaría al polo y

@@ -581,7 +581,9 @@ const cajaLienzo = async page => {
   // los del string (a lo largo del tubo van mods de ancho modWid, apilados en
   // n filas) y la cuerda del colector se dobla. Mandar mods×n como «módulos
   // por ala» dibujaba la fila 2V del DOBLE de largo en el visor.
-  await page.selectOption('#table', '2V');
+  // SUSTITUCIÓN DECLARADA (v1.6.11): en modo FIJA manda la «Tabla de la
+  // fija» de su pane, no la global — la global queda en el ámbito tracker.
+  await page.selectOption('#tableFija', '2V');
   await generar(page);
   const v3dosV = await page.evaluate(() => {
     document.querySelector('#d3Btn').click();
@@ -591,7 +593,7 @@ const cajaLienzo = async page => {
   check('2V → mods por ala = los del string (no ×2) y modH = cuerda del colector (2·módulo)',
     v3dosV.mods === 28 && Math.abs(v3dosV.mesa.modH - 2 * dims2v.modLen) < 1e-6,
     JSON.stringify({ mods: v3dosV.mods, modH: v3dosV.mesa.modH }));
-  await page.selectOption('#table', '1V');
+  await page.selectOption('#tableFija', '1V');
   await page.selectOption('#mount', 'tracker');
   await page.selectOption('#bifila', '1');
   await page.fill('#mods', '28');
@@ -1571,7 +1573,9 @@ const cajaLienzo = async page => {
       document.querySelector('#d3Btn').click();
       const L = JSON.parse(localStorage.getItem('cobertura_layout') || '{}');
       const az = (L.fijas || []).map(f => f.azimut);
-      const ref = +document.querySelector('#panelAz').value;
+      // SUSTITUCIÓN DECLARADA (v1.6.11): en modo FIJA el azimut de filas
+      // es el del pane de la fija (#azRowsFija); #panelAz es del tracker.
+      const ref = +document.querySelector('#azRowsFija').value;
       const dRef = az.map(a => Math.abs(((((a - ref) % 360) + 540) % 360) - 180));
       return { n: az.length, unicos: [...new Set(az)].slice(0, 4), ref,
                peor: az.length ? Math.max(...dRef) : 999,
@@ -1586,7 +1590,7 @@ const cajaLienzo = async page => {
     azSur.fuera === 0, JSON.stringify(azSur));
   // Régimen del giro: con la retícula girada el hemisferio se mantiene Y el
   // giro fino de la arista se conserva (no se sustituye por la referencia).
-  await pagAz.fill('#panelAz', '200');
+  await pagAz.fill('#azRowsFija', '200');
   const azGir = await _az();
   check('FIJA girada 200° → las mesas siguen del lado sur, con el giro conservado',
     azGir.n > 100 && azGir.peor < 1, JSON.stringify(azGir));

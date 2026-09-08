@@ -38,12 +38,24 @@ Las seis primeras son las mismas claves y las mismas etiquetas que
 `solargpt_core.structure_compare.CATALOGO`, y el careo lo comprueba: si el core añade una y la
 ficha no, el test se pone rojo.
 
-Los dos **quebrados** no están en el core, y eso no se disimula: el catálogo del core corre una
-estructura con UN eje, y un quebrado son dos medias vigas con su rótula. Van marcados
-`soloFicha`, el test exige que lo que la ficha tiene de más esté declarado —así añadir una
-estructura que el core no sabe expresar no se cuela en silencio— y el motor Python las rechaza
-diciendo por qué en vez de devolver una fila que no es la que se pidió. Lo que mantiene vivo el
-careo es que **con quiebro 0 el quebrado y el rígido dan la misma cifra**, y eso se exige.
+Los dos **quebrados** nacieron como hueco declarado —sólo existían aquí, así que el careo no podía
+cubrirlos— y ese hueco **está cerrado**: desde SolarGPT v1.71.0 el core los tiene (`broken_deg` en
+su catálogo corre las dos mesas por separado y promedia, igual que la ficha), entran en el golden y
+el motor Python los acepta. El guard de `soloFicha` se queda vacío pero vivo: la próxima estructura
+que nazca en la ficha volverá a nacer sin motor Python.
+
+**Y el careo, al enfrentarlos por primera vez, cazó dos cosas.** La primera era de convención y no
+de física: el core publica como θ la **media de las dos mesas** y la ficha publicaba el de la
+primera —18,38° de diferencia máxima—. Ninguna de las dos es «el» ángulo, así que las dos publican
+ahora la media, y queda dicho que **ese ángulo no lo ejecuta ninguna mesa**: los dos reales salen en
+la lectura. La segunda es un **empate**: con los quebrados dentro, `tracker_queb_nobt` y
+`tracker_hsat` quedan a 0,026 % en el core, cincuenta veces por debajo del hueco medido entre los
+dos motores (1,365 %, Perez contra Hay-Davies). Ese par no tiene orden decidible con este
+instrumento, y el careo lo **declara** en vez de exigir un orden que decidiría el ruido.
+
+El umbral del empate es el hueco **medido**, no la tolerancia: lo dijo el guard del propio empate,
+que saltó cuando lo puse en la tolerancia (2,5 %) y se tragó `fija_optima ≈ fija_proyecto` —2,1 %,
+que es justo lo que la ficha existe para enseñar.
 
 ### El seguidor quebrado
 
@@ -492,12 +504,37 @@ transposición NEGATIVA—, que es la firma de una geometría imposible, no de u
 
 ## Lo que NO se modela, y va dicho en pantalla
 
-* La **fija Este-Oeste** corre **sin sombreado entre filas**: el modelo de fila 1D supone todas las
-  filas igual orientadas y no vale para aguas enfrentadas. Su POA es un techo, no un número
-  comparable al pie de la letra con las demás. Sale como aviso en la propia ficha.
+* ~~La **fija Este-Oeste** corre **sin sombreado entre filas**~~ — **CERRADO** (SolarGPT v1.74.0,
+  2026-08-27). Era cierto: el modelo de fila 1D supone todas las filas igual orientadas y no vale
+  para aguas enfrentadas, así que su POA era un techo. Ahora tiene el modelo que le corresponde
+  —con aguas enfrentadas el obstáculo es la **CUMBRERA** de la vecina, o su **ALERO** si está
+  cuesta arriba—, en los dos motores (`FIS.shadeEW` y `poa.shaded_fraction_dos_aguas`) y careado
+  entre ellos al **0,00 %**. El árbitro no fue pvlib —su convención de cobertizos no expresa este
+  caso: al mapearlo da 0,67 de sombra con el sol casi cenital— sino un **trazado de rayos**, 1530
+  casos a 2e-04. Cuesta poco (−0,09 % al GCR típico de 0,70, −1,05 % con cumbrera y cuesta), y
+  tiene que costar poco: por eso una dos aguas se monta a ese GCR, donde una monoinclinada no
+  cabría.
 * El **tilt óptimo** del navegador se barre CON sombra (es el óptimo neto); el del cuaderno sale de
   un barrido de transposición sin sombra y queda 1-3° por encima. También sale como aviso.
-* No hay bifacialidad, ni suciedad, ni terreno: campo plano y monofacial.
+* ~~La **difusa del cielo que tapa la fila de enfrente** no se modela~~ — **CERRADO** (SolarGPT
+  v1.75.0, 2026-08-28), y la razón que llevaba escrita era falsa: decía que daba igual «porque a
+  nadie se le aplica, así que la comparación sigue siendo pareja». **No lo es.** Medido, va de
+  0,045 % a 0,46 % de POA según la estructura —hasta **0,34 pp de Δ%**, más que la tolerancia del
+  careo entre los dos motores— y manda el **tilt**, no el GCR: una dos aguas a 12° apenas pierde
+  cielo aunque vaya al 70 % de suelo, y una fija a 30° pierde diez veces más. Ahora va por
+  `poa.sky_masking_ratio` / `FIS.skyMask`, careado contra `pvlib.bifacial.infinite_sheds` a
+  2,3e-06 y contra un trazado de rayos independiente en la ficha. **No se enmascara** el
+  circunsolar (viene de la posición del sol y ya lo tapa la sombra del haz) ni el albedo (el suelo
+  también lo tapa la vecina, pero eso es otro modelo y aquí no está); el término de **horizonte**
+  de Perez se enmascara con el mismo factor que el isotrópico, y como vive justo en el horizonte
+  se tapa en realidad más: es una **cota inferior** de la pérdida.
+* **La columna «pérdida sombra» lleva ahora dos cosas** y la ficha lo dice en pantalla: la sombra
+  del **haz** —que el backtracking quita, y en llano deja en cero— y el **cielo** que tapa la fila
+  de enfrente, que ningún ángulo recupera. Sumadas en un solo número, un tracker con backtracking
+  no marca 0 y eso no significa que el retroceso falle.
+* El modelo de sombra es de **campo infinito**: la primera fila, que no tiene vecina, paga una
+  sombra que no tiene (medido más arriba: 0,005 puntos con la geometría de esta ficha).
+* No hay bifacialidad ni suciedad: campo monofacial.
 
 ## La escena 3D
 
@@ -841,10 +878,22 @@ Mientras la cumbrera se dibujaba horizontal y se calculaba horizontal no había 
 sí una estructura que no se monta así. Ahora la lectura de las dos aguas dice cuánto se inclina su
 cumbrera con el terreno, igual que la del seguidor dice lo del eje.
 
-**Hueco declarado**: el core corre las dos aguas como dos planos fijos a ±tilt con azimut 90/270,
-sin cumbrera que inclinar. El careo no se mueve porque va por el camino sin azimut de terreno
-declarado —`FIS.ejeTilt` devuelve 0 ahí—, pero con pendiente declarada la ficha y el core dan
-distinto para esta familia, y es la ficha la que está describiendo lo que se construye.
+**Hueco CERRADO (2026-08-27)**: el core la sabe inclinar desde SolarGPT #185 y el careo la mira
+desde que el golden declara `along_axis_slope_deg` (6°, distinto del 8° de la ⊥ a propósito: dos
+números iguales harían invisible confundir una componente con la otra).
+
+**Y no era un puerto: son dos derivaciones independientes.** La ficha rota el marco de proyección
+—`psTSAT` con la inclinación de la cumbrera, y `tiltSup` para la superficie— y el core compone el
+plano: calcula la inclinación y el azimut resultantes y transpone normal. Dos caminos escritos con
+horas de diferencia, y **coinciden al 0,00 %** de POA (0,005 pp en Δ), dentro del 0,1 % que exige el
+careo. Con la cumbrera a 6°, la E-O sube de 69,08 a 73,20 kWh/m² en los doce días del fixture.
+
+**Lo que se rompió al cerrarlo, y es el hallazgo**: el centinela de PORTAL-BUG-01 marcó `fija_ew`
+como deriva del core. No lo era — es **otro escenario**: sus números congelados son de una corrida
+con cumbrera plana. A ese centinela le faltaba una condición que ahora está escrita: sus cifras son
+evidencia de una deriva de FÍSICA y sólo se pueden comparar contra una corrida de la MISMA
+configuración. La exención va con motivo, fecha, test de zombis y un mínimo de estructuras — un
+centinela que se queda sin sujetos deja de ser evidencia de nada. Sigue testificando sobre cinco.
 
 #### Lo que se sale del encuadre, dicho
 

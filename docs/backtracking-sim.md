@@ -323,7 +323,12 @@ Porque son dos preguntas distintas: el panel **Políticas** decide **cuáles se 
 (curvas, tablas, año); el desplegable **ESCENA** junto al slider decide **cuál se anima** en el 3D/2D
 y en el HUD. Están rotulados para que no se confundan.
 
-## QA — 25 comprobaciones, dos superficies
+## QA — la misma batería, dos superficies
+
+<!-- El título llevaba «25 comprobaciones» desde que las había: la batería va por 130 y el número
+     caducaba en cada sesión. Lo que importa aquí no es cuántas son, sino que la página y Node
+     corran EXACTAMENTE las mismas; el recuento lo dice la propia batería al terminar. -->
+
 
 `node tools/test_backtracking_sim.mjs` (repo `cobertura-zigbee`) extrae el bloque `FÍSICA PURA` del HTML
 y lo ejecuta en Node; el botón de la página corre la **misma** `runPhysicsQA()`. Si tocas la física y no
@@ -387,6 +392,65 @@ de los FPS).
   calientes (cargar Ayora pasó de 27 s a ~10-15 s; la mayor parte es energy-optimal sobre 80 líneas).
 
 ## Historial
+
+- **2026-09-08 · la referencia vertical se caza en el PUNTO, y la fila condenada deja de votar** —
+  el control de cotas entraba por el as-built, que ya es dato **cocinado**: dos cotas por fila. Ahí un
+  cambio de referencia vertical solo se ve a medias, y de ese atajo salieron dos fallos, los dos
+  medidos en San José.
+
+  **(1) La media diluye.** Lo que cambia de referencia no es un punto suelto: es una **MESA ENTERA**,
+  que es tanto como decir una sesión de campo. `TR-09_1-044-E` tiene la mesa sur a 1531,7 m y la norte
+  a 1568,7 — **36,7 m de salto en el mismo tubo**, físicamente imposible; su hermana `-W` tiene las
+  cuatro cotas a 1531,x. Como el as-built conserva un extremo de cada mesa, la media de la fila sale a
+  mitad de camino (**+18,2 m**) y pasaba el umbral de 3 m **de suerte, no por diseño**. Había dos casos
+  justo ahí (`TR-09_1-044-E` +18,20 y `TR-06_2-015-W` +18,61).
+
+  **(2) El filtro se mordía la cola.** `TR-08_1-002-E` es una fila **buena** (cero puntos marcados) y se
+  descartaba porque la mediana de su vecindario se apoyaba en **su propia hermana** `TR-08_1-002-W`,
+  condenada dos líneas antes. Ese seguidor se quedaba sin medir teniendo una fila válida. Ahora la lista
+  de vecinas se reconstruye tras condenar y se purga en cada paso. Resultado neto: **coge una fuga que
+  el control por fila no veía** (`TR-08_1-001-E`, cuyo seguidor sí se queda sin medir porque no tiene
+  otra fila) y **salva** `TR-08_1-002`.
+
+  **Contra qué se compara cada punto, y por qué así.** Contra sus vecinos **laterales a la misma
+  coordenada norte**, no contra una bola de radio fijo. La diferencia no es cosmética: el relieve real
+  es **solidario** — un talud aparece igual en todos los seguidores de esa estación y al comparar
+  lateralmente se cancela —, mientras que una referencia distinta no lo es. Con la bola de 40 m salían
+  **7 falsos positivos** en el borde sur de TR-07, que es un escalón real de ~3,5 m idéntico en 067-073.
+
+  **El umbral no es delicado, y eso se vigila.** En San José el reparto de desvíos deja una **banda
+  vacía entre 5 y 20 m**: cualquier umbral de 3 a 20 marca exactamente los mismos **98 puntos en 54
+  filas**, +36,55 m de media, σ 0,40 m, **los 98 positivos** — la firma de la ondulación del geoide en
+  Arequipa. En Ayora ningún punto pasa de 1,7 m. Hay un test que falla si esa banda se cierra: si algún
+  día aparece algo entre 3 y 20 m, no es ni ruido ni geoide y hay que mirarlo antes de tocar nada.
+
+  **De dónde sale el dato.** La nube cruda del visor de as-built (`IMoriana3/visores`): 17.839 puntos
+  en San José y 3.069 en Ayora, **con Z absoluta** — 4 por fila en San José (los dos extremos de cada
+  una de sus dos mesas de 36,74 m, separadas 0,89 m) y 2 en Ayora, donde la fila es una sola mesa. Se
+  importa al repo (`tools/importa_puntos.py` → `<planta>_puntos.json`) para que la cadena no dependa de
+  un repositorio externo en ejecución.
+
+  **El entregable: `tools/reclama_referencia.py` → `reclamacion_sanjose.csv`.** 98 puntos con **id de
+  punto**, coordenada, cota entregada y cota esperada. Salen **las 54 filas, no las 12** que llegan al
+  modelo: las otras 42 se caían antes en la asignación por otros motivos, y que no nos estorben hoy no
+  las hace buenas — al topógrafo hay que devolvérselas igual.
+
+  **Lo que NO se mueve.** Ayora regenera **byte a byte igual**: la corrección no la toca, que es la
+  comprobación de que no hemos cambiado la planta buena para arreglar la mala. San José mantiene APTA
+  CON RESERVAS y sus cifras. QA **111 → 130** (con lo del otro hilo), y el detector del test es una
+  **reimplementación independiente** — ventana sobre puntos ordenados por *y*, no cubos en *x* — porque
+  la lección del terreno fantasma fue que el oráculo no cazó el fallo por llevar dentro una copia del
+  código malo.
+
+  **De paso, una contradicción en pantalla:** con el layout de Ayora retirando tres seguidores hay más
+  grupos levantados que trackers, y la resta de censos imprimía «**-3 sin medir**». Se cuenta lo que se
+  dice que se cuenta.
+
+  **Y un hallazgo que no es nuestro pero conviene apuntar:** el visor `asbuilt` dibuja cada tubo a **la
+  mitad de su largo real** (36,75 m declarados frente a 74,43 m que cubren sus propios puntos y 75,12 m
+  de separación entre filas de la misma línea). Es fallo de dibujo, no de dato — la pendiente axial que
+  publica sí coincide con la media de sus dos mesas —, pero es justo lo que delata el pantallazo: las
+  líneas de puntos caen **fuera** de las barras. Vive en `IMoriana3/visores`, fuera de esta rama.
 
 - **2026-08-27 · la cota del optimal, y el matiz que frena el 12,7 %** — la jerarquía completa de
   Ayora sobre la métrica buena (POA anual, escalera incluida): **A 2673,8 → B +0,08 % → OPT +0,18 %
