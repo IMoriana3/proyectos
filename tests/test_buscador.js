@@ -44,10 +44,27 @@ const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
   check('con sus strings', e1.mejorStr > 0, e1.mejorStr);
   check('la semilla pedida es la que corre', e1.semilla === '123456-654321' && e1.site === 3, e1.semilla + ' site ' + e1.site);
 
-  // monotonía: el récord no baja al seguir
+  // ── EL RENDIMIENTO POR ORIENTACIÓN, que es lo que faltaba ──────────────────────────────────
+  // Girar las filas gira el EJE del seguidor y eso cuesta producción. Sin esto la búsqueda
+  // ordenaba por kWp INSTALADOS y premiaba llenar en diagonal: más módulos, peor planta.
+  check('el modelo solar se extrae de sim-solar.html', e1.sol === true);
+  check('y con él se construye la tabla de rendimiento', e1.tabla === true);
+  const f = await page.evaluate(() => [0, 10, 20, 30, 45].map(a => FACTOR(a)));
+  check('el eje N-S es la referencia (f = 1)', Math.abs(f[0] - 1) < 1e-9, f[0]);
+  check('girarlo SIEMPRE cuesta, y más cuanto más se gira',
+    f[1] < f[0] && f[2] < f[1] && f[3] < f[2] && f[4] < f[3], JSON.stringify(f.map(x => +x.toFixed(4))));
+  // el orden de magnitud importa: plano no penalizaría nada, exagerado prohibiría girar aunque
+  // compense. En eje horizontal a media latitud, 45° cuestan pocos puntos — eso es lo real.
+  check('y el coste a 45° es de pocos puntos, ni ruido ni prohibición',
+    f[4] > 0.90 && f[4] < 0.995, f[4].toFixed(4));
+  check('el mejor se ordena por ENERGÍA = kWp × rendimiento',
+    Math.abs(e1.mejorEner - e1.mejorKwp * e1.mejorRend) < 1e-6,
+    JSON.stringify({ ener: e1.mejorEner, kwp: e1.mejorKwp, rend: e1.mejorRend }));
+
+  // monotonía: el récord (en energía) no baja al seguir
   await page.evaluate(() => PASO(25));
   const e2 = await page.evaluate(() => ESTADO());
-  check('el récord no baja al seguir buscando', e2.mejorKwp >= e1.mejorKwp, e2.mejorKwp + ' < ' + e1.mejorKwp);
+  check('el récord no baja al seguir buscando', e2.mejorEner >= e1.mejorEner, e2.mejorEner + ' < ' + e1.mejorEner);
 
   // la barra cuenta lo mismo que el estado
   const barra = await page.evaluate(() => document.getElementById('barra').textContent);
@@ -145,12 +162,17 @@ const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
   check('A deja el mejor con azimut absoluto y sus números', !!mejor && mejor.panelAz > 100 && mejor.panelAz <= 145 &&
     mejor.kwp === ee.mejorKwp && ['none', 'half'].includes(mejor.rowOffset),
     JSON.stringify(mejor && { az: mejor.panelAz, kwp: mejor.kwp }));
+  // y viaja el EJE: en este motor las filas son ⟂ al eje, así que aplicar el giro sin mover el
+  // eje dejaría un layout que declara un eje que no es el suyo (y de ahí comen 3D y backtracking)
+  check('el mejor lleva su EJE, coherente con las filas', Math.abs(mejor.axis - (mejor.panelAz - 90)) < 1e-9,
+    JSON.stringify({ axis: mejor.axis, panelAz: mejor.panelAz }));
   await pageE.close();
 
   // al VOLVER al generador (focus), los tres mandos aparecen puestos y el hint lo canta
   await pageG.evaluate(() => window.dispatchEvent(new Event('focus')));
   const puesto = await pageG.evaluate(() => ({
     az: document.getElementById('panelAz').value,
+    eje: document.getElementById('axis').value,
     off: document.getElementById('rowOffset').value,
     vial: document.getElementById('roadNsEvery').value,
     hint: document.getElementById('hint').textContent,
@@ -158,7 +180,24 @@ const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
   check('al volver, el azimut del mejor está puesto', Math.abs(+puesto.az - mejor.panelAz) < 0.06, puesto.az + ' vs ' + mejor.panelAz);
   check('y el tresbolillo y los viales', puesto.off === mejor.rowOffset && +puesto.vial === mejor.roadNsEvery,
     puesto.off + '/' + puesto.vial);
+  check('y el EJE también, que si no el layout declara uno que no es el suyo',
+    Math.abs(+puesto.eje - mejor.axis) < 0.06 && Math.abs(+puesto.az - +puesto.eje - 90) < 0.12,
+    JSON.stringify({ eje: puesto.eje, az: puesto.az, esperado: mejor.axis }));
   check('el hint pide Generar y el canal queda limpio', puesto.hint.includes('Generar') && puesto.limpio, puesto.hint.slice(0, 70));
+
+  // ── MONTAJE FIJO: ahí el azimut de filas es el de los PANELES (al sur). Girarlo no es una
+  //    variante de reparto, es apuntar los módulos a otro sitio: no se gira y se dice. ──
+  await pageG.evaluate(() => { document.getElementById('mount').value = 'fija';
+    if (typeof syncAz === 'function') syncAz();
+    document.getElementById('optBtn').click(); });
+  const pageF = await ctx.newPage();
+  await pageF.goto(BASE + '/buscador-implantacion.html?encargo=1&quieto=1&semilla=7-7');
+  await pageF.waitForFunction(() => window.LAY && window.LAY.compute, null, { timeout: 30000 });
+  await pageF.evaluate(() => PASO(8));
+  const ef = await pageF.evaluate(() => ESTADO());
+  check('en fija no se gira nada', ef.encargo === true && ef.gira === false && ef.mejorGiro === 0,
+    JSON.stringify({ gira: ef.gira, giro: ef.mejorGiro }));
+  check('y la barra lo dice', (await pageF.evaluate(() => document.getElementById('barra').textContent)).includes('fija: no se gira'));
   await ctx.close();
 
   console.log('\n' + ok + ' OK, ' + ko + ' FAIL');
