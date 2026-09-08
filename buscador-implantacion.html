@@ -163,8 +163,66 @@ addEventListener("dragover",e=>e.preventDefault());
 addEventListener("drop",e=>{e.preventDefault();const fi=e.dataTransfer.files[0];if(!fi)return;
   fi.text().then(t=>{if(!cargaLayoutReal(JSON.parse(t)))pon("ese JSON no trae `fence`: hace falta un <planta>_layout.json con vallado");});});
 
+/* ── RENDIMIENTO POR ORIENTACIÓN DEL EJE — lo que faltaba y hacía absurdo el resultado ──────────
+   Un seguidor de un eje quiere el eje N-S. En este motor las filas van perpendiculares al eje
+   (panelAz = eje + 90), así que GIRAR LAS FILAS ES GIRAR EL EJE, y eso cuesta producción. Ordenar
+   por kWp instalados lo ignoraba: premiaba llenar la parcela en diagonal, que mete más módulos y
+   produce peor. Se vio en una parcela de verdad —«cómo va a ser esto la mejor opción», 2026-09-08—
+   y tenía toda la razón.
+
+   Ahora cada candidato se ordena por ENERGÍA RELATIVA = kWp × f(eje), con
+
+     f(A) = ∫ DNI·cos(AOI) del año con el eje en azimut A, entre lo mismo con el eje N-S.
+
+   · el ángulo del seguidor lo da `singleaxis()` de sim-solar.html —con su backtracking y su tope
+     mecánico—, extraído, no copiado: es el port literal de overcast, la fuente de autoridad;
+   · DNI de CIELO CLARO por masa de aire (Meinel, 1000·0,7^AM^0,678). No es la irradiación del
+     sitio: es lo que hace que el mediodía pese más que el amanecer, que es lo que decide entre
+     orientaciones;
+   · cos(AOI) = s·n, con n = (senθ·cosA, −senθ·senA, cosθ) para eje horizontal.
+
+   LO QUE NO ENTRA, y por eso el número se enseña como «rendimiento» y no como producción: difusa,
+   TMY del sitio, terreno, suciedad, temperatura, ni sombras entre filas más allá del backtracking.
+   Es un factor RELATIVO entre orientaciones. Para la energía de verdad está el cuaderno.
+
+   En MONTAJE FIJO no se gira nada: ahí el azimut de filas es el de los paneles (al sur), y
+   rotarlo no es una variante de reparto sino apuntar los módulos a otro sitio. Se dice y se
+   buscan solo tresbolillo y viales. */
+let SOL=null,TABLA_F=null,GCR_F=0;
+function construyeTablaF(gcr,maxAngle,backtrack){
+  const c=CFGP.coords,lat=c.reduce((s,p)=>s+p[1],0)/c.length,lon=c.reduce((s,p)=>s+p[0],0)/c.length;
+  /* el año en 12 días (el 15 de cada mes) a paso de 15 min: la RAZÓN entre orientaciones se
+     estabiliza mucho antes que el valor absoluto, y esto se recalcula al cambiar de parcela */
+  const soles=[];
+  for(let mes=0;mes<12;mes++)for(let min=0;min<1440;min+=15){
+    const g=SOL.solarGeom(Date.UTC(2026,mes,15,0,0,0)+min*60000-lon/15*3600000,lat,lon);
+    if(g.elevation<3)continue;                              // por debajo la DNI no decide nada
+    const zen=90-g.elevation,am=1/Math.cos(zen*Math.PI/180);
+    soles.push({zen,az:g.azimuth,dni:1000*Math.pow(0.7,Math.pow(am,0.678))});
+  }
+  const suma=A=>{let s=0;
+    for(const q of soles){
+      const th=SOL.singleaxis(q.zen,q.az,{axisTilt:0,axisAz:A,maxAngle,backtrack,gcr,crossAxisTilt:0});
+      if(!isFinite(th))continue;
+      const R=Math.PI/180,sz=Math.sin(q.zen*R),st=Math.sin(th*R),ct=Math.cos(th*R);
+      const nx=st*Math.cos(A*R),ny=-st*Math.sin(A*R);       // eje horizontal: normal girada θ sobre el eje
+      const cos=sz*Math.sin(q.az*R)*nx+sz*Math.cos(q.az*R)*ny+Math.cos(q.zen*R)*ct;
+      if(cos>0)s+=q.dni*cos;
+    }
+    return s;};
+  const ref=suma(0)||1,t=new Map();
+  for(let A=-90;A<=90;A+=1)t.set(A,suma(A)/ref);
+  TABLA_F=t;GCR_F=gcr;
+}
+function factorF(ejeAz){
+  if(!TABLA_F)return 1;
+  const a=((ejeAz+90)%180+180)%180-90;                      // el eje es una recta: 100° y -80° son el mismo
+  const lo=Math.floor(a),hi=Math.min(90,lo+1),f=a-lo;
+  return (TABLA_F.get(lo)??1)*(1-f)+(TABLA_F.get(hi)??1)*f;
+}
+
 /* ── estado de la búsqueda ── */
-let LAY=null,PARCELA=null,CFGP=null,RND=null,PAUSA=QUIETO;   // quieto: arranca parado, manda PASO() o Espacio
+let LAY=null,PARCELA=null,CFGP=null,RND=null,GIRA=true,PAUSA=QUIETO;   // quieto: arranca parado, manda PASO() o Espacio
 let OPC=0,MEJOR=null,ULTIMO=null,KWS=[],GAPS=[],DESDE=0,HIST={giro:[],vial:new Map()},NUBE=[],SERIE=[];
 let VISTA={ang:0};
 
@@ -174,6 +232,8 @@ function nuevoSite(mismaParcela){
   PARCELA=ENCARGO?parcelaDeEncargo(ENCARGO):(REAL||parcelaSintetica(rp));
   RND=rngDe(SEM[0]+SITE*104729,SEM[1]+(mismaParcela?OPC:0));     // …y la búsqueda, de su propia rama
   AZ0=ENCARGO?(+ENCARGO.panelAz||90):90;                         // el giro 0–45° se SUMA al azimut del encargo
+  GIRA=!(ENCARGO&&ENCARGO.mount==="fija");                       // en fija el azimut es el de los paneles: no se gira
+  TABLA_F=null;GCR_F=0;                                          // el rendimiento es de ESTE sitio (su latitud)
   CFGP=ENCARGO?Object.assign({},ENCARGO)
               :Object.assign({},BASE,{coords:aLonLat(PARCELA.pts),holes:PARCELA.holes.map(aLonLat)});
   OPC=0;MEJOR=null;ULTIMO=null;KWS=[];GAPS=[];DESDE=0;NUBE=[];SERIE=[];
@@ -183,22 +243,27 @@ function nuevoSite(mismaParcela){
   encuadra();
 }
 
-/* ── un candidato = una pasada REAL del motor ── */
+/* ── un candidato = una pasada REAL del motor, ORDENADO POR ENERGÍA ── */
 function candidato(){
-  const giro=RND()*45,offset=RND()<.5?"none":"half",vial=VIALES[Math.floor(RND()*VIALES.length)];
+  const giro=GIRA?RND()*45:0,offset=RND()<.5?"none":"half",vial=VIALES[Math.floor(RND()*VIALES.length)];
   const r=LAY.compute(Object.assign({},CFGP,{panelAz:AZ0+giro,rowOffset:offset,roadNsEvery:vial}));
   const s=r.stats,kwp=s.kWp||0;OPC++;
-  ULTIMO={r,giro,offset,vial,kwp,str:s.strings||0,util:s.usable_fill||0};
-  if(KWS.length<6000)KWS.push(kwp);
+  /* la tabla se construye con el GCR REAL, que sale del motor; y se rehace si cambia */
+  if(GIRA&&SOL&&kwp>0&&(!TABLA_F||Math.abs((s.GCR||0)-GCR_F)>1e-6))
+    construyeTablaF(s.GCR||0.4,(CFGP.decl&&CFGP.decl.max_angle_deg)||55,
+      !CFGP.decl||CFGP.decl.backtrack!==false);
+  const rend=factorF(AZ0+giro-90),ener=kwp*rend;            // energía relativa: instalado × rendimiento
+  ULTIMO={r,giro,offset,vial,kwp,rend,ener,str:s.strings||0,util:s.usable_fill||0};
+  if(KWS.length<6000)KWS.push(ener);
   const b=Math.min(14,Math.floor(giro/3));
-  if(HIST.giro[b]==null||kwp>HIST.giro[b])HIST.giro[b]=kwp;
-  const kv="v"+vial;if(!HIST.vial.has(kv)||kwp>HIST.vial.get(kv))HIST.vial.set(kv,kwp);
-  if(NUBE.length<4000)NUBE.push([giro,vial+(offset==="half"?.45:0),kwp]);
-  if(!MEJOR||kwp>MEJOR.kwp){
+  if(HIST.giro[b]==null||ener>HIST.giro[b])HIST.giro[b]=ener;
+  const kv="v"+vial;if(!HIST.vial.has(kv)||ener>HIST.vial.get(kv))HIST.vial.set(kv,ener);
+  if(NUBE.length<4000)NUBE.push([giro,vial+(offset==="half"?.45:0),ener]);
+  if(!MEJOR||ener>MEJOR.ener){
     GAPS.push(OPC-DESDE);DESDE=OPC;if(GAPS.length>12)GAPS.shift();
-    MEJOR={giro,offset,vial,kwp,str:s.strings||0,util:s.usable_fill||0,r};
+    MEJOR={giro,offset,vial,kwp,rend,ener,str:s.strings||0,util:s.usable_fill||0,r};
   }
-  SERIE.push([OPC,MEJOR.kwp,MEJOR.util]);if(SERIE.length>900)SERIE.splice(0,SERIE.length-900);
+  SERIE.push([OPC,MEJOR.ener,MEJOR.util]);if(SERIE.length>900)SERIE.splice(0,SERIE.length-900);
 }
 
 /* ── proyección del lienzo: encuadre por bbox + giro lento + tumbado (el falso 3D del vídeo) ── */
@@ -280,8 +345,10 @@ function panel(){
      g.fillRect(x,y,q>.995?3.4:2.2,q>.995?3.4:2.2);});}
   const [k0,k1,k2]=cuantiles();
   $("tGiro").innerHTML="<span>"+fmtK(k0)+"</span><span>"+fmtK(k1)+"</span><b>"+fmtK(k2)+"</b>";
-  $("tVial").innerHTML="<span>mín · med · mejor</span><b>"+(MEJOR?MEJOR.str+" str":"")+"</b>";
-  $("tMejor").innerHTML="<span>"+(MEJOR?"giro "+MEJOR.giro.toFixed(1)+"° · "+(MEJOR.offset==="half"?"tresbolillo":"alineado")+(MEJOR.vial?" · vial c/"+MEJOR.vial:"")+"</span><b>"+fmtK(MEJOR.kwp)+"</b>":"</span><b></b>");
+  $("tVial").innerHTML="<span>mín · med · mejor (energía rel.)</span><b>"+(MEJOR?MEJOR.str+" str":"")+"</b>";
+  $("tMejor").innerHTML=MEJOR?("<span>giro "+MEJOR.giro.toFixed(1)+"° · rend. "+(MEJOR.rend*100).toFixed(1)+
+    "% · "+(MEJOR.offset==="half"?"tresbolillo":"alineado")+(MEJOR.vial?" · vial c/"+MEJOR.vial:"")+
+    "</span><b>"+fmtK(MEJOR.kwp)+"</b>"):"<span></span><b></b>";
 }
 let AVISO_BARRA=null;                                            // mensaje pegajoso: sobrevive al refresco de la barra
 function barra(){
@@ -291,8 +358,11 @@ function barra(){
     (ENCARGO?"<b>parcela del Generador</b> · su mesa y su azimut ("+AZ0+"°) · <b>A</b> aplica el mejor":
      REAL?"parcela real <b>"+PARCELA.nombre+"</b> (geometría del vallado)":"site <b>"+SITE+"</b> · sintética")+
     " · semilla "+SEM[0]+"-"+SEM[1]+
-    " · DC <span>"+fmtK(k0)+"</span> · <span>"+fmtK(k1)+"</span> · <span class=v>"+fmtK(k2)+
-    (MEJOR?" · "+MEJOR.str+" str":"")+"</span>"+
+    " · energía rel. <span>"+fmtK(k0)+"</span> · <span>"+fmtK(k1)+"</span> · <span class=v>"+fmtK(k2)+"</span>"+
+    (MEJOR?" · mejor: <b>"+fmtK(MEJOR.kwp)+"</b> DC × <b>"+(MEJOR.rend*100).toFixed(1)+"%</b> de rendimiento"+
+      (MEJOR.rend<0.985?" <span class=r>(eje "+(AZ0+MEJOR.giro-90).toFixed(0)+"°, no N-S)</span>":"")+
+      " · "+MEJOR.str+" str":"")+
+    (GIRA?"":" · <b>fija: no se gira</b> (el azimut es el de los paneles)")+
     (ULTIMO&&ULTIMO.r.descartadas&&ULTIMO.r.descartadas.length?" · <span class=r>"+ULTIMO.r.descartadas.length+" descartadas en rojo</span>":"")+
     (ENCARGO?"":" · mesa 1V·28×630 Wp bifila · pitch 6")+
     " · <b>Espacio</b> pausa · <b>N</b> site · <b>R</b> semilla · <b>C</b> limpia · <b>H</b> panel · arrastra un layout.json";
@@ -320,11 +390,15 @@ addEventListener("keydown",e=>{
   else if(e.key==="c"||e.key==="C"){nuevoSite(true);}
   else if(e.key==="h"||e.key==="H"){$("panel").hidden=!$("panel").hidden;}
   else if((e.key==="a"||e.key==="A")&&ENCARGO&&MEJOR){
+    /* viaja también el EJE: en este motor las filas van perpendiculares al eje, así que aplicar el
+       giro sin mover el azimut del eje dejaría un layout que MIENTE sobre sí mismo —geometría
+       girada declarando eje N-S— y de ahí comen el 3D, el backtracking y los simuladores. */
     localStorage.setItem("buscador_mejor",JSON.stringify({panelAz:AZ0+MEJOR.giro,giro:MEJOR.giro,
-      rowOffset:MEJOR.offset,roadNsEvery:MEJOR.vial,kwp:MEJOR.kwp,str:MEJOR.str,fecha:Date.now()}));
-    pon("mejor ENVIADO al Generador — giro +"+MEJOR.giro.toFixed(1)+"° ("+(AZ0+MEJOR.giro).toFixed(1)+"°) · "+
+      axis:AZ0+MEJOR.giro-90,rend:MEJOR.rend,rowOffset:MEJOR.offset,roadNsEvery:MEJOR.vial,
+      kwp:MEJOR.kwp,str:MEJOR.str,fecha:Date.now()}));
+    pon("mejor ENVIADO al Generador — giro +"+MEJOR.giro.toFixed(1)+"° (eje "+(AZ0+MEJOR.giro-90).toFixed(1)+"°) · "+
       (MEJOR.offset==="half"?"tresbolillo":"alineado")+(MEJOR.vial?" · vial c/"+MEJOR.vial:"")+" · "+fmtK(MEJOR.kwp)+
-      " · vuelve a su pestaña: los mandos ya están puestos, pulsa Generar",9000);
+      " al "+(MEJOR.rend*100).toFixed(1)+"% de rendimiento · vuelve a su pestaña y pulsa Generar",9000);
   }
 });
 
@@ -332,7 +406,10 @@ addEventListener("keydown",e=>{
 window.PASO=n=>{for(let i=0;i<n;i++)candidato();if(OPC&&!OFF[0])mideOff(ULTIMO.r);dibuja();panel();barra();};
 window.ESTADO=()=>({opciones:OPC,mejorKwp:MEJOR?MEJOR.kwp:0,mejorStr:MEJOR?MEJOR.str:0,
   semilla:SEM.join("-"),site:SITE,real:!!REAL,off:OFF.slice(),encargo:!!ENCARGO,az0:AZ0,
+  gira:GIRA,sol:!!SOL,tabla:!!TABLA_F,mejorGiro:MEJOR?MEJOR.giro:null,
+  mejorRend:MEJOR?MEJOR.rend:null,mejorEner:MEJOR?MEJOR.ener:null,
   descartadas:ULTIMO&&ULTIMO.r.descartadas?ULTIMO.r.descartadas.length:0});
+window.FACTOR=factorF;
 window.cargaLayoutReal=cargaLayoutReal;
 
 /* ── arranque: el motor DE VERDAD, extraído del generador con el regex del banco ── */
@@ -345,6 +422,15 @@ window.cargaLayoutReal=cargaLayoutReal;
     (new Function(m[1]+";window.LAY=LAY;"))();
     LAY=window.LAY;
     if(!LAY||!LAY.compute)throw new Error("el motor no exporta LAY.compute");
+    /* y el MODELO SOLAR de sim-solar.html, por el mismo camino: sin él no se puede ordenar por
+       energía y ordenar por kWp instalados es justo lo que daba resultados absurdos */
+    try{
+      const hs=await (await fetch("sim-solar.html")).text();
+      const a=hs.match(/MOTOR SOLAR — inicio[\s\S]*?\*\/([\s\S]*?)\/\* ═+ MOTOR SOLAR — fin/);
+      const b=hs.match(/SEGUIMIENTO — inicio[\s\S]*?\*\/([\s\S]*?)\/\* ═+ SEGUIMIENTO — fin/);
+      if(a&&b){(new Function(a[1]+b[1]+";window.__SOL={solarGeom:solarGeom,singleaxis:singleaxis};"))();
+        SOL=window.__SOL;}
+    }catch(e){SOL=null;}
   }catch(e){
     $("aviso").hidden=false;
     $("avisoTxt").innerHTML="<b>No puedo cargar el motor de layout.</b><br>"+e.message+

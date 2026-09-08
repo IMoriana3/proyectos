@@ -239,10 +239,13 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
 
 <script>
 "use strict";
-var RAD=Math.PI/180;
 function $(id){return document.getElementById(id);}
 
-/* ===================== GEOMETRÍA SOLAR (NOAA, navegador, offline) ===================== */
+/* ═══════════════════ MOTOR SOLAR — inicio ═══════════════════
+   Geometría solar NOAA. Delimitado para poder EXTRAERLO desde otras fichas sin copiarlo: lo lee
+   buscador-implantacion.html igual que lee el «MOTOR DE LAYOUT» del generador. Dentro no puede
+   entrar nada que toque el DOM ni el estado de esta página. */
+var RAD=Math.PI/180;
 function julianDay(ms){return ms/86400000+2440587.5;}
 function refraction(elev){ // grados → corrección atmosférica (grados)
   if(elev>85)return 0; var te=Math.tan(elev*RAD),r;
@@ -280,6 +283,7 @@ function solarGeom(dateUTCms,lat,lon){
   else az=(lat>decl)?180:0;
   return {elevation:elev+refraction(elev),azimuth:az,declination:decl};
 }
+/* ═══════════════════ MOTOR SOLAR — fin ═══════════════════ */
 // instante (hora local en minutos) → ms UTC, restando el offset
 function localToUTCms(dateStr,localMin,tzOff){
   var p=dateStr.split('-'); // YYYY-MM-DD
@@ -569,6 +573,9 @@ function calCsvDescarga(){
    propio core, que a su vez lo replica en get_baseline_theta. No se reescribe aqui otra version.
    El stow de noche obedece al tope mecanico igual que el seguimiento: es una posicion del hierro,
    no una preferencia, y sin ese recorte una consigna mayor que el maximo saldria inejecutable. */
+/* ═══════════════════ SEGUIMIENTO — inicio ═══════════════════
+   El ángulo del seguidor, delimitado por la misma razón que el MOTOR SOLAR de arriba: se extrae
+   desde otras fichas en vez de copiarse. Sigue siendo el port literal de overcast.html. */
 var DEG=180/Math.PI;
 function trueTrackAngle(zenDeg,azDeg,axisTilt,axisAz){
   var sz=Math.sin(zenDeg*RAD);
@@ -587,6 +594,7 @@ function singleaxis(zenDeg,azDeg,p){
   }
   return Math.max(-p.maxAngle,Math.min(p.maxAngle,th));
 }
+/* ═══════════════════ SEGUIMIENTO — fin ═══════════════════ */
 /* la curva del dia: seguimiento verdadero (sin backtracking) y el ejecutable (con el) */
 function thetaDia(lat,lon,date,tz,gcr,maxAngle,axisAz){
   var out=[];
