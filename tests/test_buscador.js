@@ -144,31 +144,80 @@ const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
     enc.cfg.coords.length === 4 && enc.cfg.pitch === 7 && enc.cfg.panelAz === 100,
     JSON.stringify(enc && { pitch: enc.cfg && enc.cfg.pitch, az: enc.cfg && enc.cfg.panelAz }));
 
-  // el buscador se abre con ?encargo=1 y barre SOBRE esa parcela y esa mesa
+  // ── CASO 1: parcela donde girar NO compensa → el buscador NO debe proponer nada ──────────
+  // Antes proponía como «mejor» algo PEOR que el punto de partida: el muestreo aleatorio casi
+  // nunca caía en el giro 0 y girar resta. Ahora la BASE entra la primera y es la referencia.
   const pageE = await ctx.newPage();
   await pageE.setViewportSize({ width: 1280, height: 800 });
   pageE.on('pageerror', e => fallos.push('encargo: ' + e.message));
   await pageE.goto(BASE + '/buscador-implantacion.html?encargo=1&quieto=1&semilla=42-42');
   await pageE.waitForFunction(() => window.LAY && window.LAY.compute, null, { timeout: 30000 });
-  await pageE.evaluate(() => PASO(10));
+  await pageE.evaluate(() => PASO(1));
+  const b0 = await pageE.evaluate(() => ESTADO());
+  check('el PRIMER candidato es la base: sin girar', b0.mejorGiro === 0 && b0.baseKwp > 0,
+    JSON.stringify({ giro: b0.mejorGiro, base: b0.baseKwp }));
+  await pageE.evaluate(() => PASO(40));
   const ee = await pageE.evaluate(() => ESTADO());
   check('el buscador corre en modo encargo, con el azimut del panel', ee.encargo === true && ee.az0 === 100 && ee.mejorKwp > 0,
     JSON.stringify({ encargo: ee.encargo, az0: ee.az0, kwp: ee.mejorKwp }));
+  check('el mejor NUNCA queda por debajo de la base', ee.mejorEner >= ee.baseEner - 1e-9,
+    JSON.stringify({ mejor: ee.mejorEner, base: ee.baseEner }));
   const barraE = await pageE.evaluate(() => document.getElementById('barra').textContent);
   check('y la barra dice de quién es la parcela', barraE.includes('parcela del Generador') && barraE.includes('A'), barraE.slice(0, 90));
-  // A = aplicar: el mejor queda en buscador_mejor con el azimut ABSOLUTO
-  await pageE.keyboard.press('a');
-  const mejor = await pageE.evaluate(() => JSON.parse(localStorage.getItem('buscador_mejor')));
-  check('A deja el mejor con azimut absoluto y sus números', !!mejor && mejor.panelAz > 100 && mejor.panelAz <= 145 &&
-    mejor.kwp === ee.mejorKwp && ['none', 'half'].includes(mejor.rowOffset),
-    JSON.stringify(mejor && { az: mejor.panelAz, kwp: mejor.kwp }));
-  // y viaja el EJE: en este motor las filas son ⟂ al eje, así que aplicar el giro sin mover el
-  // eje dejaría un layout que declara un eje que no es el suyo (y de ahí comen 3D y backtracking)
-  check('el mejor lleva su EJE, coherente con las filas', Math.abs(mejor.axis - (mejor.panelAz - 90)) < 1e-9,
-    JSON.stringify({ axis: mejor.axis, panelAz: mejor.panelAz }));
+  if (Math.abs(ee.mejorEner - ee.baseEner) < 1e-9) {
+    check('sin mejora, la barra lo dice en redondo', barraE.includes('la base sigue ganando'), barraE.slice(-90));
+    await pageE.keyboard.press('a');
+    check('y A NO envia nada: aplicarlo empeoraria lo que ya hay',
+      (await pageE.evaluate(() => localStorage.getItem('buscador_mejor'))) === null);
+    check('avisando de por que', (await pageE.evaluate(() => document.getElementById('barra').textContent)).includes('NO se envía'));
+  }
   await pageE.close();
 
-  // al VOLVER al generador (focus), los tres mandos aparecen puestos y el hint lo canta
+  // ── CASO 2: parcela ALARGADA EN DIAGONAL, metida COMO LA METE UN USUARIO ─────────────────
+  // Inyectar PARCEL por JS no deja la ficha en el estado en que la deja la UI: al generar se
+  // usaba otra parcela y el careo comparaba dos plantas distintas (era el banco engañándose,
+  // no el producto). Se pega el GeoJSON y se pulsa su botón, como en test_layout_ui.
+  const DIAG = (() => {
+    const cx = -0.80, cy = 41.575, L = 0.0085, W = 0.0011, a = 30 * Math.PI / 180;
+    const R = (dx, dy) => [cx + (dx * Math.cos(a) - dy * Math.sin(a)), cy + (dx * Math.sin(a) + dy * Math.cos(a)) * 0.75];
+    const r = [R(-L, -W), R(L, -W), R(L, W), R(-L, W)];
+    return JSON.stringify({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [r.concat([r[0]])] } });
+  })();
+  await pageG.selectOption('#parcelMode', 'geojson');
+  await pageG.fill('#geotxt', DIAG);
+  await pageG.waitForTimeout(1000);                       // el debounce del autoguardado
+  await pageG.click('#geoApplyBtn');
+  // sin barrido: la gracia del caso es que la BASE no venga ya optimizada, y así se puede
+  // comprobar la ida y vuelta entera. Con barrido, la ficha ya elige el azimut ella sola.
+  await pageG.evaluate(() => {
+    document.getElementById('optAz').checked = false; document.getElementById('optGrid').checked = false;
+    document.getElementById('panelAz').value = 90; document.getElementById('axis').value = 0;
+  });
+  await pageG.evaluate(() => { document.querySelector('#hint').textContent = ''; document.querySelector('#genBtn').click(); });
+  await pageG.waitForFunction(() => { const t = document.querySelector('#hint').textContent;
+    return t.indexOf('ms') >= 0 || t.indexOf('error') >= 0; }, null, { timeout: 60000 });
+  await pageG.evaluate(() => document.getElementById('optBtn').click());
+  const pageD = await ctx.newPage();
+  pageD.on('pageerror', e => fallos.push('diagonal: ' + e.message));
+  await pageD.goto(BASE + '/buscador-implantacion.html?encargo=1&quieto=1&semilla=9-9');
+  await pageD.waitForFunction(() => window.LAY && window.LAY.compute, null, { timeout: 30000 });
+  await pageD.evaluate(() => PASO(80));
+  const ed = await pageD.evaluate(() => ESTADO());
+  check('en una parcela diagonal SÍ encuentra mejora, y grande', ed.mejorEner > ed.baseEner * 1.05 && ed.mejorGiro > 5,
+    JSON.stringify({ base: Math.round(ed.baseKwp), mejor: Math.round(ed.mejorKwp), giro: +ed.mejorGiro.toFixed(1) }));
+  await pageD.keyboard.press('a');
+  const mejor = await pageD.evaluate(() => JSON.parse(localStorage.getItem('buscador_mejor')));
+  if (!mejor) { check('en la diagonal SÍ debería haber envío (no lo hubo)', false, JSON.stringify(ed)); }
+  else {
+  check('A lo envía con su azimut y sus números', !!mejor && mejor.kwp === ed.mejorKwp && ['none', 'half'].includes(mejor.rowOffset),
+    JSON.stringify(mejor && { az: mejor.panelAz, kwp: mejor.kwp }));
+  // el EJE viaja: en este motor las filas son ⟂ al eje, así que aplicar el giro sin mover el eje
+  // dejaría un layout que declara un eje que no es el suyo (y de ahí comen 3D y backtracking)
+  check('el mejor lleva su EJE, coherente con las filas', Math.abs(mejor.axis - (mejor.panelAz - 90)) < 1e-9,
+    JSON.stringify({ axis: mejor.axis, panelAz: mejor.panelAz }));
+  await pageD.close();
+
+  // al VOLVER al generador (focus), los mandos aparecen puestos y el hint lo canta
   await pageG.evaluate(() => window.dispatchEvent(new Event('focus')));
   const puesto = await pageG.evaluate(() => ({
     az: document.getElementById('panelAz').value,
@@ -184,6 +233,21 @@ const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
     Math.abs(+puesto.eje - mejor.axis) < 0.06 && Math.abs(+puesto.az - +puesto.eje - 90) < 0.12,
     JSON.stringify({ eje: puesto.eje, az: puesto.az, esperado: mejor.axis }));
   check('el hint pide Generar y el canal queda limpio', puesto.hint.includes('Generar') && puesto.limpio, puesto.hint.slice(0, 70));
+  // el barrido propio de la ficha se APAGA: si no, al generar re-barre y pisa el azimut que
+  // acaba de traer el buscador — prometía una planta y salía otra
+  check('y el barrido de la ficha queda apagado, para respetar el azimut aplicado',
+    await pageG.evaluate(() => !document.getElementById('optAz').checked && !document.getElementById('optGrid').checked), true);
+
+  // ── Y EL CAREO QUE FALTABA: que al GENERAR salgan los kWp que el buscador prometió. Sin esto
+  //    el puente podía poner los mandos «bien» y dar otra planta, y nadie se enteraba. Es la
+  //    comprobación que habría cazado sola el «igual???» de 2026-09-08.
+  await pageG.evaluate(() => { document.querySelector('#hint').textContent = ''; document.querySelector('#genBtn').click(); });
+  await pageG.waitForFunction(() => { const t = document.querySelector('#hint').textContent;
+    return t.indexOf('ms') >= 0 || t.indexOf('error') >= 0; }, null, { timeout: 60000 });
+  const kwpReal = await pageG.evaluate(() => RES.stats.kWp);
+  check('el Generador reproduce los kWp que el buscador prometió',
+    Math.abs(kwpReal - mejor.kwp) / mejor.kwp < 1e-6, kwpReal + ' vs ' + mejor.kwp);
+  }
 
   // ── MONTAJE FIJO: ahí el azimut de filas es el de los PANELES (al sur). Girarlo no es una
   //    variante de reparto, es apuntar los módulos a otro sitio: no se gira y se dice. ──

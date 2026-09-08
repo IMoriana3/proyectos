@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.7.1</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.8.0</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -1776,14 +1776,22 @@ async function barrido(cfg, opts) {
   var angulos = [];
   for (var x = de; x < a; x += paso) angulos.push(((x % 360) + 360) % 360);
   if (!angulos.length) angulos = [cfg.panelAz];
-  var mejor = null, mejorAng = cfg.panelAz, probados = [];
+  var mejor = null, mejorAng = cfg.panelAz, mejorVal = -Infinity, probados = [];
   for (var i = 0; i < angulos.length; i++) {
     var r;
     try { r = (opts.computa || compute)(Object.assign({}, cfg, { panelAz: angulos[i] })); }
     catch (e) { r = null; }
     var kwp = r ? r.stats.kWp : 0;
-    probados.push({ az: angulos[i], kWp: kwp, structures: r ? r.stats.structures : 0 });
-    if (!mejor || kwp > mejor.stats.kWp) { mejor = r; mejorAng = angulos[i]; }
+    /* `opts.peso(az)` PONDERA cada ángulo antes de compararlos. Sin él esto se queda con el de
+       más kWp INSTALADOS —lo que hace el core, y por eso es lo que hay aquí por defecto—, pero
+       en seguidores las filas van perpendiculares al eje: girarlas gira el EJE, que quiere ser
+       N-S, y eso cuesta producción. Comparar solo kWp premia llenar la parcela en diagonal:
+       más módulos y peor planta. La ficha inyecta el rendimiento del eje y así se compara
+       ENERGÍA. El motor no se trae física solar: recibe un peso y punto. */
+    var w = opts.peso ? opts.peso(angulos[i]) : 1;
+    var val = kwp * w;
+    probados.push({ az: angulos[i], kWp: kwp, rend: w, valor: val, structures: r ? r.stats.structures : 0 });
+    if (r && (!mejor || val > mejorVal)) { mejor = r; mejorAng = angulos[i]; mejorVal = val; }
     if (opts.onPaso) await opts.onPaso(i + 1, angulos.length, angulos[i], kwp);
   }
   if (!mejor) return null;
@@ -1791,9 +1799,12 @@ async function barrido(cfg, opts) {
   mejor.stats.grid_angle_deg = mejorAng;
   mejor.stats.panel_az_deg = mejorAng;
   mejor.stats.sweep = probados;
+  mejor.stats.grid_rend = opts.peso ? opts.peso(mejorAng) : 1;
   var base = probados.filter(function (p) { return Math.abs(p.az - cfg.panelAz) < 1e-9; })[0];
-  mejor.stats.grid_angle_gain_pct = (base && base.kWp > 0)
-    ? 100 * (mejor.stats.kWp - base.kWp) / base.kWp : 0;
+  /* la ganancia se mide con el MISMO criterio con el que se ha elegido: si se pondera por
+     rendimiento, anunciar un + de kWp que no es el de energía sería vender otra cosa */
+  mejor.stats.grid_angle_gain_pct = (base && base.valor > 0)
+    ? 100 * (mejorVal - base.valor) / base.valor : 0;
   return mejor;
 }
 
@@ -4955,6 +4966,69 @@ $('mixProponer').onclick=function(){
 };
 $('mixLimpiar').onclick=function(){MIX_ZONAS=[];MIX_PROP=null;mixPinta();};
 
+/* EL RENDIMIENTO DEL EJE, para que el barrido compare ENERGÍA y no potencia instalada.
+   En seguidores las filas van perpendiculares al eje (panelAz = eje + 90), así que barrer el
+   azimut es barrer la orientación del EJE — que quiere ser N-S. Quedarse con el de más kWp
+   premiaba llenar la parcela en diagonal: más módulos y peor planta. Eso se vio en una parcela
+   de verdad («cómo va a ser esto la mejor opción», 2026-09-08).
+
+   f(A) = ∫ DNI·cos(AOI) del año con el eje en A, entre lo mismo con el eje N-S. El ángulo del
+   seguidor lo da `singleaxis` de sim-solar.html —EXTRAÍDO, no copiado: es el port literal de
+   overcast, con su backtracking y su tope— y la DNI es de cielo claro por masa de aire, que es
+   lo que hace pesar el mediodía más que el amanecer. NO entra: difusa, TMY del sitio, terreno,
+   suciedad ni temperatura. Es un factor RELATIVO entre orientaciones, no una previsión.
+
+   En montaje FIJO no se pondera: allí el azimut de filas es el de los PANELES y este modelo,
+   que es de seguidor de un eje, no lo describe. Y si el modelo no se puede cargar, se devuelve
+   null y el barrido se comporta como siempre: mejor sin ponderar que ponderando a ojo. */
+var _SOLC=null;
+async function cargaSolar(){
+  if(_SOLC!==null)return _SOLC;
+  try{
+    var h=await (await fetch('sim-solar.html')).text();
+    var a=h.match(/MOTOR SOLAR — inicio[\s\S]*?\*\/([\s\S]*?)\/\* ═+ MOTOR SOLAR — fin/);
+    var b=h.match(/SEGUIMIENTO — inicio[\s\S]*?\*\/([\s\S]*?)\/\* ═+ SEGUIMIENTO — fin/);
+    _SOLC=(a&&b)?(new Function(a[1]+b[1]+';return {solarGeom:solarGeom,singleaxis:singleaxis};'))():false;
+  }catch(e){_SOLC=false;}
+  return _SOLC;
+}
+async function pesoRendimiento(cfg){
+  if(cfg.mount==='fija')return null;
+  var S=await cargaSolar(); if(!S)return null;
+  var c=cfg.coords||[]; if(c.length<3)return null;
+  var lat=c.reduce(function(s,p){return s+p[1];},0)/c.length,
+      lon=c.reduce(function(s,p){return s+p[0];},0)/c.length;
+  var gcr=(cfg.decl&&cfg.decl.collector_height_m&&cfg.pitch)?cfg.decl.collector_height_m/cfg.pitch:0.4;
+  var maxA=(cfg.decl&&cfg.decl.max_angle_deg)||55, bt=!cfg.decl||cfg.decl.backtrack!==false;
+  var soles=[];
+  for(var mes=0;mes<12;mes++)for(var min=0;min<1440;min+=15){
+    var g=S.solarGeom(Date.UTC(2026,mes,15,0,0,0)+min*60000-lon/15*3600000,lat,lon);
+    if(g.elevation<3)continue;
+    var zen=90-g.elevation,am=1/Math.cos(zen*Math.PI/180);
+    soles.push({zen:zen,az:g.azimuth,dni:1000*Math.pow(0.7,Math.pow(am,0.678))});
+  }
+  if(!soles.length)return null;
+  function suma(A){
+    var s=0,R=Math.PI/180;
+    for(var i=0;i<soles.length;i++){
+      var q=soles[i];
+      var th=S.singleaxis(q.zen,q.az,{axisTilt:0,axisAz:A,maxAngle:maxA,backtrack:bt,gcr:gcr,crossAxisTilt:0});
+      if(!isFinite(th))continue;
+      var sz=Math.sin(q.zen*R),st=Math.sin(th*R),ct=Math.cos(th*R);
+      var cos=sz*Math.sin(q.az*R)*(st*Math.cos(A*R))+sz*Math.cos(q.az*R)*(-st*Math.sin(A*R))+Math.cos(q.zen*R)*ct;
+      if(cos>0)s+=q.dni*cos;
+    }
+    return s;
+  }
+  var ref=suma(0)||1,cache={};
+  return function(panelAz){
+    /* el eje es una RECTA: 100° y −80° son la misma orientación */
+    var A=Math.round(((panelAz-90)%180+180)%180-90);
+    if(cache[A]==null)cache[A]=suma(A)/ref;
+    return cache[A];
+  };
+}
+
 /* Barrido de orientación. La casilla de azimut es el rango 90–270 del cuaderno;
    la de ángulo de grid, el rango y el paso que se teclean. Si están las dos, el
    rango explícito manda — es el más específico. */
@@ -4963,7 +5037,8 @@ async function generarBarrido(cfg){
   if($('optGrid').checked){desde=+$('gridFrom').value;hasta=+$('gridTo').value;paso=+$('gridStep').value||5;}
   $('prog').style.display='';$('progBar').style.width='0';
   var t0=Date.now();
-  var mejor=await LAY.barrido(cfg,{desde:desde,hasta:hasta,paso:paso,computa:computaTodas,onPaso:async function(i,n,ang,kwp){
+  var peso=await pesoRendimiento(cfg);
+  var mejor=await LAY.barrido(cfg,{desde:desde,hasta:hasta,paso:paso,computa:computaTodas,peso:peso,onPaso:async function(i,n,ang,kwp){
     $('progBar').style.width=(100*i/n).toFixed(1)+'%';
     $('progTxt').textContent='barriendo '+ang.toFixed(0)+'° · '+i+'/'+n+' · mejor hasta ahora '+
       (kwp/1000).toFixed(2)+' MWp';
@@ -4976,8 +5051,12 @@ async function generarBarrido(cfg){
   // layout que no se corresponde con lo que dicen sus casillas.
   $('panelAz').value=RES.stats.grid_angle_deg.toFixed(0);
   pintar(RES,'navegador · barrido '+Math.round((Date.now()-t0)/100)/10+' s');
+  var _rd=RES.stats.grid_rend;
   $('foot').innerHTML+=' · <b>Barrido:</b> mejor azimut '+RES.stats.grid_angle_deg.toFixed(0)+'°'+
-    (RES.stats.grid_angle_gain_pct?(' ('+(RES.stats.grid_angle_gain_pct>=0?'+':'')+RES.stats.grid_angle_gain_pct.toFixed(1)+' % frente al que tenías)'):'')+'.';
+    (RES.stats.grid_angle_gain_pct?(' ('+(RES.stats.grid_angle_gain_pct>=0?'+':'')+RES.stats.grid_angle_gain_pct.toFixed(1)+' % frente al que tenías)'):'')+
+    (_rd!=null&&_rd!==1
+      ? ' — elegido por ENERGÍA: este eje rinde el '+(_rd*100).toFixed(1)+' % de un eje N-S, y aun así gana'
+      : (_rd===1?' — eje N-S, rendimiento pleno':' — por potencia instalada: sin modelo de rendimiento del eje'))+'.';
 }
 
 async function generarCore(cfg){
@@ -5088,10 +5167,19 @@ addEventListener('focus',function(){
   if(m.panelAz!=null)$('panelAz').value=Math.round(m.panelAz*10)/10;
   if(m.rowOffset)$('rowOffset').value=m.rowOffset;
   if(m.roadNsEvery!=null)$('roadNsEvery').value=m.roadNsEvery;
+  /* Y SE APAGA EL BARRIDO. Esta ficha barre el azimut por su cuenta al generar y ESCRIBE el
+     ganador en la casilla: con el barrido puesto, el azimut que acaba de traer el buscador se
+     pisaba y lo que salía no era lo prometido (se vio: prometía 14.958 kWp y salían 16.158).
+     Aplicar un azimut concreto y volver a barrerlo son cosas incompatibles; manda lo aplicado,
+     y se dice para que no parezca que la casilla se ha desmarcado sola. */
+  var _barria=$('optAz').checked||$('optGrid').checked;
+  if(_barria){$('optAz').checked=false;$('optGrid').checked=false;
+    $('gridSweepBox').style.display='none';}
   $('hint').textContent='mandos del buscador puestos — eje '+(m.axis!=null?m.axis.toFixed(1):'?')+'° '+
     (m.rend!=null?'('+(m.rend*100).toFixed(1)+'% de rendimiento) ':'')+'· '+
     (m.rowOffset==='half'?'tresbolillo':'alineado')+(m.roadNsEvery?' · vial c/'+m.roadNsEvery:'')+
-    ' · '+Math.round(m.kwp||0).toLocaleString('es-ES')+' kWp: pulsa Generar para verlo';
+    ' · '+Math.round(m.kwp||0).toLocaleString('es-ES')+' kWp'+
+    (_barria?' · BARRIDO APAGADO para respetar este azimut':'')+': pulsa Generar para verlo';
 });
 
 /* ═════════════════ CHECKLIST ANTES DE CONGELAR (§02.5i) ═════════════════

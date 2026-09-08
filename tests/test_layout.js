@@ -399,5 +399,37 @@ fix.casos.forEach((c, i) => {
     malos === 0 && dxmax < 1e-9 && r.rows.every(f => f.length % 2 === 0));
 });
 
-console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
-process.exit(ko ? 1 : 0);
+// ── EL BARRIDO DE AZIMUT COMPARA ENERGÍA, NO POTENCIA INSTALADA ────────────────────────────
+// En seguidores las filas van perpendiculares al eje, así que barrer el azimut es barrer la
+// orientación del EJE — que quiere ser N-S. Quedarse con el de más kWp premiaba llenar la
+// parcela en diagonal: más módulos y peor planta. `opts.peso(az)` pondera; sin él, el barrido
+// se comporta como el core (que también se queda con el de más kWp), y eso también se exige.
+(async () => {
+  const fake = cfg => ({ stats: { kWp: 1000 + (cfg.panelAz - 90) * 10, structures: 10 }, structures: [] });
+  const sin = await LAY.barrido({ panelAz: 90 }, { desde: 90, hasta: 135, paso: 5, computa: fake });
+  check('sin peso, el barrido se queda con el de más kWp (como el core): ' + sin.stats.grid_angle_deg + '°',
+    sin.stats.grid_angle_deg === 130 && sin.stats.kWp === 1400);
+  // ahora con un rendimiento que cae al girar: 1 % por grado. El de 130° instala un 40 % más
+  // pero rinde un 60 %, así que en ENERGÍA pierde contra ángulos menores.
+  const peso = az => 1 - 0.01 * Math.abs(az - 90);
+  const con = await LAY.barrido({ panelAz: 90 }, { desde: 90, hasta: 135, paso: 5, computa: fake, peso: peso });
+  const val = a => (1000 + (a - 90) * 10) * peso(a);
+  let mejorA = 90; for (let a = 90; a < 135; a += 5) if (val(a) > val(mejorA)) mejorA = a;
+  check('con peso, gana el de más ENERGÍA (' + con.stats.grid_angle_deg + '°, no ' + sin.stats.grid_angle_deg + '°)',
+    con.stats.grid_angle_deg === mejorA && con.stats.grid_angle_deg !== sin.stats.grid_angle_deg);
+  check('y deja dicho el rendimiento del ganador',
+    Math.abs(con.stats.grid_rend - peso(mejorA)) < 1e-12, con.stats.grid_rend);
+  // la ganancia anunciada se mide con el MISMO criterio con el que se ha elegido
+  const espera = 100 * (val(mejorA) - val(90)) / val(90);
+  check('la ganancia anunciada es la de energía, no la de kWp (' + con.stats.grid_angle_gain_pct.toFixed(2) + ' %)',
+    Math.abs(con.stats.grid_angle_gain_pct - espera) < 1e-9);
+  // un peso plano no puede cambiar nada: si lo cambiara, el peso estaría haciendo de más
+  const plano = await LAY.barrido({ panelAz: 90 }, { desde: 90, hasta: 135, paso: 5, computa: fake, peso: () => 1 });
+  check('un peso plano deja el barrido exactamente como estaba',
+    plano.stats.grid_angle_deg === sin.stats.grid_angle_deg);
+
+  console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
+  process.exit(ko ? 1 : 0);
+})();
+const _fin = () => {};
+if (false) console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
