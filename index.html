@@ -545,7 +545,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/cobertura-zigbee/produccion.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-09-08",
-    version: "v1.12.3",
+    version: "v1.12.5",
     docId: "",
     docUrl: "",
     uso: [
@@ -567,10 +567,11 @@ const PROJECTS = [
       { done:false, text:"Relieve real de El Burgo (el plano no trae cotas levantadas y ningún servicio DEM era alcanzable desde el entorno; con relieve la sombra separaría más los inversores)" },
       { done:true,  text:"Cargar terreno real de Ayora / San José como en el simulador (hecho v1.3.0: plantFromCotas extraído del BT 3D — cotas z de extremos de mesa, tilts medidos, pitch por vano y pairDz del solape)" },
       { done:true,  text:"Producción eléctrica por string además de POA (hecho v1.2.0: cadena DC del Notebook — t_cell Faiman + PVWatts γ — careada dígito a dígito contra solargpt_core en el QA; Martinez/bypass ya venían dentro del POA del motor)" },
-      { done:true,  text:"Cadena AC por inversor (hecho v1.12: apply_dc_losses + inversor PVWatts con recorte + apply_grid_limit, golden del core a 1e-9; El Burgo con su mapeo real de 36 inversores, el resto reparto uniforme declarado). El TRAFO (Fe+Cu) queda sin portar, declarado en pantalla" },
+      { done:true,  text:"Cadena AC por inversor (hecho v1.12: apply_dc_losses + inversor PVWatts con recorte + apply_grid_limit, golden del core a 1e-9; El Burgo con su mapeo real de 36 inversores, el resto reparto uniforme declarado; v1.12.5: en Ayora/San José la cadena cuenta las FILAS medidas con sus módulos por largo, no un string por línea — la Pdc iba ~5× corta). El TRAFO (Fe+Cu) queda sin portar, declarado en pantalla" },
       { done:true,  text:"Meteo real y agregados (hecho v1.12: TMY PVGIS por fichero horneado o API del navegador, Σ mes/año a paso horario, careo con medida por inversor y CSV)" },
       { done:true,  text:"instancePlan de seguidor.js para el modelo detallado a escala de planta entera (hecho v1.12: >600 mesas van instanciadas — Ayora entera pasa de ~29.000 mallas a ~80 — con retícula de postes pilotesX y suelo drapeado al tilt N-S medido)" },
       { done:true,  text:"Hornear los <planta>_tmy.json (hecho v1.12.1: los tres TMY descargados de PVGIS por el maintainer y condensados con el flujo de gen_tmy_pvgis.py — GHI anual El Burgo 1.704 · Ayora 1.828 · San José 2.389 kWh/m², con careo propio en el QA; la tarjeta ya no depende de que PVGIS conteste al navegador)" },
+      { done:false, text:"Tilt N-S por MESA/fila en la física (hoy plantFromCotas lo agrega por línea; las cotas traen la z de cada extremo de cada fila) — es un cambio del bloque FÍSICA PURA del simulador de BT 3D, no de esta tarjeta, para que el BT siga siendo el mismo" },
       { done:false, text:"Careo automático contra el SCADA cuando haya energía por inversor en Supabase (hoy diagnosticos lleva salud de TCUs, no kWh — el careo manual por CSV ya está)" }
     ]
   },
