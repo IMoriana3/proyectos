@@ -545,7 +545,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/cobertura-zigbee/produccion.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-09-08",
-    version: "v1.12.5",
+    version: "v1.13.0",
     docId: "",
     docUrl: "",
     uso: [
@@ -571,8 +571,11 @@ const PROJECTS = [
       { done:true,  text:"Meteo real y agregados (hecho v1.12: TMY PVGIS por fichero horneado o API del navegador, Σ mes/año a paso horario, careo con medida por inversor y CSV)" },
       { done:true,  text:"instancePlan de seguidor.js para el modelo detallado a escala de planta entera (hecho v1.12: >600 mesas van instanciadas — Ayora entera pasa de ~29.000 mallas a ~80 — con retícula de postes pilotesX y suelo drapeado al tilt N-S medido)" },
       { done:true,  text:"Hornear los <planta>_tmy.json (hecho v1.12.1: los tres TMY descargados de PVGIS por el maintainer y condensados con el flujo de gen_tmy_pvgis.py — GHI anual El Burgo 1.704 · Ayora 1.828 · San José 2.389 kWh/m², con careo propio en el QA; la tarjeta ya no depende de que PVGIS conteste al navegador)" },
-      { done:false, text:"Tilt N-S por MESA/fila en la física (hoy plantFromCotas lo agrega por línea; las cotas traen la z de cada extremo de cada fila) — es un cambio del bloque FÍSICA PURA del simulador de BT 3D, no de esta tarjeta, para que el BT siga siendo el mismo" },
+      { done:true,  text:"Tilt N-S por MESA/fila en la física (hecho v1.13.0 / simulador v1.41.0: plantFromCotas publica segTilt y segPairs — el tilt de cada mesa y las parejas bifila exactas — y el motor tiene anglesAstroSeg / anglesPairwiseSeg / policyAnglesSeg / poaPlantSeg; sin segTilt es IDÉNTICO bit a bit al motor de línea, medido en el QA. La tarjeta calcula θ y POA mesa a mesa y la cadena DC come la POA de CADA mesa; la UI del simulador sigue por línea)" },
       { done:false, text:"Careo automático contra el SCADA cuando haya energía por inversor en Supabase (hoy diagnosticos lleva salud de TCUs, no kWh — el careo manual por CSV ya está)" }
+    ],
+    historial: [
+      { date:"2026-09-08", ver:"v1.13.0", note:"TILT POR MESA. «Debemos tener en cuenta el tilt por string, por mesa!» — el motor agregaba el tilt N-S de cada línea (media de sus mesas) y una mesa de −1,44° y otra de −0,85° de la MISMA línea salían con el mismo θ y la misma POA. Ahora la física del simulador (v1.41.0, bloque FÍSICA PURA) lleva segTilt y segPairs desde plantFromCotas y calcula el astro y el pairwise mesa a mesa: cada mesa con SU θ, cada pareja bifila (dos mesas del mismo trk) con su vecina exacta del solape, y la sombra 3D con el plano de cada mesa. Medido en Ayora NCU 2: 138 mesas, 69 parejas, 40/54 líneas con θ distinto por mesa (fila 24: θ 29,14/29,21/29,19° para tilts −1,44/−0,85/−1,06°). Sin tilt por mesa (El Burgo, genérica) el resultado es IDÉNTICO bit a bit, y el QA lo vigila con un mutante que sin segPairs sobrevive. La cadena DC come la POA de la mesa de cada string (strInvCotas guarda k). QA 30 en Node; el del simulador suma 6 careos." }
     ]
   },
   {
@@ -600,8 +603,8 @@ const PROJECTS = [
     stack: "HTML offline · Three.js (libs locales) · Canvas · pvlib singleaxis (A&M 2020) portado a JS",
     url: "https://imoriana3.github.io/cobertura-zigbee/backtracking.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
-    updated: "2026-09-07",
-    version: "v1.40.0",
+    updated: "2026-09-08",
+    version: "v1.41.0",
     docId: "backtracking-sim",
     docUrl: "",
     uso: [
@@ -618,6 +621,7 @@ const PROJECTS = [
       { done:true,  text:"Export CSV de θ(t) por política para la TCU Toolbox (hecho v1.17.0: el día al minuto, con la configuración entera en la cabecera y verificado re-integrando el propio fichero)" }
     ],
     historial: [
+      { date:"2026-09-08", ver:"v1.41.0", note:"TILT POR MESA EN LA FÍSICA PURA — de forma ADITIVA. plantFromCotas publica ahora segTilt (el tilt N-S medido de cada mesa con SUS dos cotas) y segPairs (las parejas bifila exactas: dos mesas del mismo trk), y el motor gana anglesAstroSeg, anglesPairwiseSeg (la vecina es la mesa que SOLAPA en la fila de al lado, con la pendiente medida en el solape y el mínimo |θ| de las candidatas), applyDriveSeg, policyAnglesSeg y poaPlantSeg (la fila = media ponderada por largo de sus mesas); shadeBand3DAll admite un θ por tramo y publica la sombra por mesa. Sin segTilt TODO es identidad bit a bit con el motor de línea, medido en el QA con seis careos nuevos y un mutante que sin segPairs sobrevive. La UI del simulador sigue por línea: quien lo consume hoy es la tarjeta de Producción 3D. La suite arrastra 3 fallos PREEXISTENTES (ayora_layout 751 ≠ 754 cotas: ámbito NCU 1:1, ficha TCU, export_consignas), idénticos en main." },
       { date:"2026-09-07", ver:"v1.40.0", note:"NUBOSIDAD, MANDO MANUAL Y PRODUCCIÓN POR FILA EN COLORES — sin una fórmula nueva de física. El modelo nube→irradiancia SUBE a sol.js v0.3.0 como fuente única (era de overcast.html; el mismo overcast canónico de la QA de difusa del core: GHI·(1−0,70·cc), DNI·(1−cc)³, DHI por cierre) y a 0 % es NO-OP EXACTO exigido por identidad en la QA — ni un decimal de los goldens se mueve con el mando a cero. El MANUAL es capa de VISTA vía sceneInstant: θ común a todas las filas recortado al tope, mueve escena, corte 2D, HUD y colores; computeDay, curvas y tabla siguen siendo de las políticas. Los COLORES pintan cada mesa con su POA (rampa turbo con leyenda min→max): modo instante (W/m², responde en vivo a manual y nubes) y modo día (Σ poaR·Δt, kWh/m²). QA 107 checks (4 nuevos con su mutante previsto), overcast 83/83 con el alias, y humo en Chromium: 976→559 W/m² al meter 50 % de nubes — el haz se desploma antes que el global, como debe." },
       { date:"2026-08-27", ver:"cota optimal", note:"LA JERARQUÍA COMPLETA DE AYORA sobre la métrica buena (POA anual, escalera incluida): A 2673,8 kWh/m² → B pendientes +0,08 % → OPT energy-optimal +0,18 % → C 3D +0,44 %. El invariante se cumple (OPT ≥ B; C supera a OPT porque el optimal busca en una familia de una sola f). CONCLUSIÓN ACOTADA: del ~7 % de la mesa rígida, ni el árbitro que ve la escalera delante recupera más de +0,18 % — es ESTRUCTURAL, no de consigna. Y EL MATIZ antes de citar el 12,7 % a un cliente: la escalera del modelo es el peor caso POR DISEÑO DECLARADO (cualquier sombra >1e-6 mata media mesa con n=2), y una fila de células son ~8 % de cuerda: los mordiscos de 1-5 % que dominan el backtracking puede que ni disparen el diodo real. El 12,7 % es COTA SUPERIOR. Mejora candidata: elecLoss con umbral físico de fila de células — ficha técnica del módulo, no campo." },
       { date:"2026-08-27", ver:"fe de erratas", note:"LAS CIFRAS «NETAS» CONTABAN LA ESCALERA DOS VECES — y lo cazó el invariante: energy-optimal salió −0,38 % por debajo de pairwise, imposible por construcción (el veto exacto garantiza ≥), luego el error estaba en la MÉTRICA. En efecto: poaPlant().plant YA lleva la escalera de diodos dentro (beam·(1−se)) y la «neta» calculada aparte la restaba otra vez. CORREGIDO: Ayora es B +0,08 % y C +0,44 % (los +0,153 %/+0,852 % del PR #568 estaban inflados; la cifra simple ya incluía los diodos — no había una «lectura más favorable» escondida). La pérdida por sombra: 389 kWh/m²·año = 12,7 % del POA BRUTO (el 14,56 % era lo mismo sobre el neto). La anatomía (46 % tope de diseño · 53 % mesa rígida · estructura nada) no cambia: son proporciones. San José (+0,17 %/+0,20 %) no estaba afectado. La lección de siempre: cuando un resultado viola un invariante, el error está en la medición — y tener el invariante ESCRITO convirtió un doble descuento silencioso en una alarma que sonó a la primera." },
