@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.6.22</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.7.0</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -440,6 +440,7 @@ canvas.panning{cursor:grabbing}
       <label class="chk"><input type="checkbox" id="alignGrid" checked> Alinear a rejilla global
         <span class="tip" style="display:block;margin:2px 0 0">Marcada: columnas rectas, como el cuaderno y Streamlit — pero en lindes diagonales deja huecos donde caben trackers. Desmarcada: cada fila ancla en su linde.</span></label>
       <button class="btn" id="genBtn">▶ Generar implantación</button>
+      <button class="btn" id="optBtn" title="Barre miles de variantes de giro, tresbolillo y viales sobre ESTA parcela con ESTA mesa, en el Buscador de implantaciones; allí, la tecla A trae el mejor de vuelta a estos mandos">◱ Optimizar</button>
       <div id="prog" style="display:none;margin-top:8px">
         <div style="height:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:4px;overflow:hidden">
           <div id="progBar" style="height:100%;width:0;background:var(--accent);transition:width .12s"></div></div>
@@ -5065,6 +5066,28 @@ function pintar(res,fuente){
   autoguarda();
 }
 $('genBtn').onclick=generar;
+/* ===== puente con el Buscador de implantaciones =====
+   «Optimizar» deja en localStorage (buscador_encargo) la MISMA cfg que come el motor —parcela,
+   agujeros, exclusiones y mesa tal cual está el panel— y abre el buscador con ?encargo=1. Allí
+   la tecla A deja el mejor en buscador_mejor; al VOLVER a esta pestaña (focus) esos tres mandos
+   entran en el panel y se avisa por el hint: materializarlo sigue siendo cosa de «Generar»,
+   que aquí no se genera nada sin pedirlo. */
+$('optBtn').onclick=function(){
+  if(!PARCEL||PARCEL.length<3){$('hint').textContent='sin parcela: define una antes de optimizar';return;}
+  localStorage.setItem('buscador_encargo',JSON.stringify({de:'generador',fecha:Date.now(),cfg:readCfg()}));
+  window.open('buscador-implantacion.html?encargo=1','_blank');
+};
+addEventListener('focus',function(){
+  var t=localStorage.getItem('buscador_mejor');if(!t)return;
+  var m;try{m=JSON.parse(t);}catch(e){localStorage.removeItem('buscador_mejor');return;}
+  localStorage.removeItem('buscador_mejor');
+  if(m.panelAz!=null)$('panelAz').value=Math.round(m.panelAz*10)/10;
+  if(m.rowOffset)$('rowOffset').value=m.rowOffset;
+  if(m.roadNsEvery!=null)$('roadNsEvery').value=m.roadNsEvery;
+  $('hint').textContent='mandos del buscador puestos — giro +'+(m.giro!=null?m.giro.toFixed(1):'?')+'° · '+
+    (m.rowOffset==='half'?'tresbolillo':'alineado')+(m.roadNsEvery?' · vial c/'+m.roadNsEvery:'')+
+    ' · '+Math.round(m.kwp||0).toLocaleString('es-ES')+' kWp: pulsa Generar para verlo';
+});
 
 /* ═════════════════ CHECKLIST ANTES DE CONGELAR (§02.5i) ═════════════════
    El cierre de la página Workflow, con los ocho puntos del cuaderno. Cinco los

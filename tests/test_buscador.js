@@ -85,8 +85,81 @@ const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
     JSON.stringify({ real: e4.real, opciones: e4.opciones, kwp: e4.mejorKwp }));
   const barra2 = await page.evaluate(() => document.getElementById('barra').textContent);
   check('la barra dice que es la parcela real y cuál', barra2.includes('parcela real') && barra2.includes('Prueba'), barra2.slice(0, 80));
+  // el origen UTM del dibujo se RE-MIDE al cambiar de parcela: sin eso las mesas del site
+  // nuevo salían corridas con el origen del anterior cuando conduce PASO() (grabación, banco)
+  check('el origen del dibujo se re-mide en la parcela nueva', await page.evaluate(() => {
+    const antes = ESTADO().off.slice();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+    const enBlanco = ESTADO().off[0] === 0;                    // nuevoSite lo resetea…
+    PASO(3);
+    const despues = ESTADO().off;                              // …y el primer candidato lo vuelve a medir
+    return enBlanco && despues[0] !== 0 && (despues[0] !== antes[0] || despues[1] !== antes[1]);
+  }), true);
   // un JSON sin vallado no cuela
   check('sin `fence` no hay parcela real', (await page.evaluate(() => cargaLayoutReal({ title: 'x' }))) === false);
+
+  // ── EL PUENTE CON EL GENERADOR: Optimizar → encargo → A → mandos puestos al volver ──
+  // Un CONTEXTO común: browser.newPage() aísla el storage por página, y el canal real del
+  // puente es el localStorage compartido de un mismo navegador.
+  const ctx = await browser.newContext();
+  const pageG = await ctx.newPage();
+  await pageG.setViewportSize({ width: 1400, height: 900 });
+  pageG.on('pageerror', e => fallos.push('generador: ' + e.message));
+  await pageG.goto(BASE + '/generador-layout.html');
+  await pageG.waitForFunction(() => window.LAY && typeof readCfg === 'function', null, { timeout: 30000 });
+  // sin parcela (se fuerza: la ficha arranca con un rectángulo por defecto), Optimizar avisa y NO abre
+  await pageG.evaluate(() => { window.open = () => { window.__abierto = true; return null; }; });
+  const guarda = await pageG.evaluate(() => { const p = PARCEL; PARCEL = [];
+    document.getElementById('optBtn').click();
+    const r = { abierto: !!window.__abierto, hint: document.getElementById('hint').textContent };
+    PARCEL = p; return r; });
+  check('sin parcela, Optimizar avisa y no abre', !guarda.abierto && guarda.hint.includes('sin parcela'), JSON.stringify(guarda));
+  // con parcela: el encargo lleva la cfg ENTERA del panel
+  await pageG.evaluate(() => {
+    PARCEL = [[-0.80, 41.57], [-0.79, 41.57], [-0.79, 41.578], [-0.80, 41.578]];
+    HOLES = []; EXCL = [];
+    document.getElementById('pitchTrk').value = 7;               // una mesa distinta a la del buscador suelto
+    document.getElementById('panelAz').value = 100;              // y un azimut propio
+  });
+  await pageG.click('#optBtn');
+  const enc = await pageG.evaluate(() => JSON.parse(localStorage.getItem('buscador_encargo')));
+  check('Optimizar deja el encargo con la cfg del panel', !!enc && enc.de === 'generador' &&
+    enc.cfg.coords.length === 4 && enc.cfg.pitch === 7 && enc.cfg.panelAz === 100,
+    JSON.stringify(enc && { pitch: enc.cfg && enc.cfg.pitch, az: enc.cfg && enc.cfg.panelAz }));
+
+  // el buscador se abre con ?encargo=1 y barre SOBRE esa parcela y esa mesa
+  const pageE = await ctx.newPage();
+  await pageE.setViewportSize({ width: 1280, height: 800 });
+  pageE.on('pageerror', e => fallos.push('encargo: ' + e.message));
+  await pageE.goto(BASE + '/buscador-implantacion.html?encargo=1&quieto=1&semilla=42-42');
+  await pageE.waitForFunction(() => window.LAY && window.LAY.compute, null, { timeout: 30000 });
+  await pageE.evaluate(() => PASO(10));
+  const ee = await pageE.evaluate(() => ESTADO());
+  check('el buscador corre en modo encargo, con el azimut del panel', ee.encargo === true && ee.az0 === 100 && ee.mejorKwp > 0,
+    JSON.stringify({ encargo: ee.encargo, az0: ee.az0, kwp: ee.mejorKwp }));
+  const barraE = await pageE.evaluate(() => document.getElementById('barra').textContent);
+  check('y la barra dice de quién es la parcela', barraE.includes('parcela del Generador') && barraE.includes('A'), barraE.slice(0, 90));
+  // A = aplicar: el mejor queda en buscador_mejor con el azimut ABSOLUTO
+  await pageE.keyboard.press('a');
+  const mejor = await pageE.evaluate(() => JSON.parse(localStorage.getItem('buscador_mejor')));
+  check('A deja el mejor con azimut absoluto y sus números', !!mejor && mejor.panelAz > 100 && mejor.panelAz <= 145 &&
+    mejor.kwp === ee.mejorKwp && ['none', 'half'].includes(mejor.rowOffset),
+    JSON.stringify(mejor && { az: mejor.panelAz, kwp: mejor.kwp }));
+  await pageE.close();
+
+  // al VOLVER al generador (focus), los tres mandos aparecen puestos y el hint lo canta
+  await pageG.evaluate(() => window.dispatchEvent(new Event('focus')));
+  const puesto = await pageG.evaluate(() => ({
+    az: document.getElementById('panelAz').value,
+    off: document.getElementById('rowOffset').value,
+    vial: document.getElementById('roadNsEvery').value,
+    hint: document.getElementById('hint').textContent,
+    limpio: localStorage.getItem('buscador_mejor') === null }));
+  check('al volver, el azimut del mejor está puesto', Math.abs(+puesto.az - mejor.panelAz) < 0.06, puesto.az + ' vs ' + mejor.panelAz);
+  check('y el tresbolillo y los viales', puesto.off === mejor.rowOffset && +puesto.vial === mejor.roadNsEvery,
+    puesto.off + '/' + puesto.vial);
+  check('el hint pide Generar y el canal queda limpio', puesto.hint.includes('Generar') && puesto.limpio, puesto.hint.slice(0, 70));
+  await ctx.close();
 
   console.log('\n' + ok + ' OK, ' + ko + ' FAIL');
   if (fallos.length) console.log('errores JS: ' + fallos.join(' | '));

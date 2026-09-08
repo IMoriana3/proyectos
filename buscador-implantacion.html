@@ -77,10 +77,17 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
    · LO ROJO ES REAL: son las `descartadas` del motor (mesas que no caben enteras), no un
      efecto. El verde→amarillo de cada mesa es su llenado (módulos de la mesa / 28).
 
-   Teclas: Espacio pausa · N siguiente site · R misma parcela, otra semilla de búsqueda ·
-   C limpia lo acumulado · H esconde el panel. Con ?quieto=1 arranca PARADO y sin avance de
-   site (para el banco, o para encuadrar antes de grabar: Espacio lanza la búsqueda ahí);
-   ?semilla=A-B y ?site=K fijan la reproducción.
+   · Y EL PUENTE CON EL GENERADOR, que es lo que lo hace herramienta y no demo: su botón
+     «◱ Optimizar» deja en localStorage (buscador_encargo) SU parcela y SU mesa, y esto se abre
+     con ?encargo=1, barre sobre ellas (el giro 0–45° se suma al azimut de filas que traiga el
+     encargo) y con la tecla A devuelve el mejor (buscador_mejor): al volver a la pestaña del
+     Generador, sus mandos de giro/tresbolillo/viales aparecen puestos y Generar lo materializa.
+
+   Teclas: Espacio pausa · N siguiente site (sale del encargo) · R misma parcela, otra semilla ·
+   C limpia lo acumulado · H esconde el panel · A aplica el mejor al Generador (con encargo).
+   Con ?quieto=1 arranca PARADO y sin avance de site (para el banco, o para encuadrar antes de
+   grabar: Espacio lanza la búsqueda ahí); ?semilla=A-B y ?site=K fijan la reproducción. Con
+   encargo tampoco se avanza solo: la parcela es la tuya, no una rueda de demos.
    Banco: tests/test_buscador.js (determinismo, monotonía del récord, parcela real).
    ═══════════════════════════════════════════════════════════════════════════════════════════ */
 "use strict";
@@ -126,6 +133,21 @@ function parcelaSintetica(rnd){
   return {pts,holes,deco,nombre:null};
 }
 
+/* ── el encargo del Generador: SU parcela y SU mesa, desde localStorage ── */
+let ENCARGO=null,AZ0=90;
+(function(){
+  if(URLQ.get("encargo")!=="1")return;
+  try{const e=JSON.parse(localStorage.getItem("buscador_encargo")||"");
+    if(e&&e.cfg&&Array.isArray(e.cfg.coords)&&e.cfg.coords.length>2)ENCARGO=e.cfg;}catch(err){}
+})();
+function parcelaDeEncargo(cfg){
+  const lon0=cfg.coords.reduce((s,p)=>s+p[0],0)/cfg.coords.length;
+  const lat0=cfg.coords.reduce((s,p)=>s+p[1],0)/cfg.coords.length;
+  const mx=111320*Math.cos(lat0*Math.PI/180),my=110540;
+  const am=pts=>pts.map(p=>[(p[0]-lon0)*mx,(p[1]-lat0)*my]);
+  return {pts:am(cfg.coords),holes:(cfg.holes||[]).map(am),deco:[],nombre:"parcela del Generador"};
+}
+
 /* ── parcela REAL: arrastra un <planta>_layout.json (vallado = tramos concatenados) ── */
 let REAL=null;
 function cargaLayoutReal(L){
@@ -147,12 +169,15 @@ let OPC=0,MEJOR=null,ULTIMO=null,KWS=[],GAPS=[],DESDE=0,HIST={giro:[],vial:new M
 let VISTA={ang:0};
 
 function nuevoSite(mismaParcela){
-  if(!mismaParcela)SITE++;
+  if(!mismaParcela){SITE++;ENCARGO=null;}                        // N sale del encargo: vuelven los sintéticos
   const rp=rngDe(SEM[0]+SITE*7919,SEM[1]);                       // la parcela sale del site…
-  PARCELA=REAL||parcelaSintetica(rp);
+  PARCELA=ENCARGO?parcelaDeEncargo(ENCARGO):(REAL||parcelaSintetica(rp));
   RND=rngDe(SEM[0]+SITE*104729,SEM[1]+(mismaParcela?OPC:0));     // …y la búsqueda, de su propia rama
-  CFGP=Object.assign({},BASE,{coords:aLonLat(PARCELA.pts),holes:PARCELA.holes.map(aLonLat)});
+  AZ0=ENCARGO?(+ENCARGO.panelAz||90):90;                         // el giro 0–45° se SUMA al azimut del encargo
+  CFGP=ENCARGO?Object.assign({},ENCARGO)
+              :Object.assign({},BASE,{coords:aLonLat(PARCELA.pts),holes:PARCELA.holes.map(aLonLat)});
   OPC=0;MEJOR=null;ULTIMO=null;KWS=[];GAPS=[];DESDE=0;NUBE=[];SERIE=[];
+  OFF=[0,0];   // el origen UTM del dibujo es DE CADA PARCELA: sin esto, tras cambiar de site las mesas salían corridas si conducía PASO()
   HIST={giro:new Array(15).fill(null),vial:new Map()};
   VISTA.ang=(SITE*.7)%(2*Math.PI);
   encuadra();
@@ -161,7 +186,7 @@ function nuevoSite(mismaParcela){
 /* ── un candidato = una pasada REAL del motor ── */
 function candidato(){
   const giro=RND()*45,offset=RND()<.5?"none":"half",vial=VIALES[Math.floor(RND()*VIALES.length)];
-  const r=LAY.compute(Object.assign({},CFGP,{panelAz:90+giro,rowOffset:offset,roadNsEvery:vial}));
+  const r=LAY.compute(Object.assign({},CFGP,{panelAz:AZ0+giro,rowOffset:offset,roadNsEvery:vial}));
   const s=r.stats,kwp=s.kWp||0;OPC++;
   ULTIMO={r,giro,offset,vial,kwp,str:s.strings||0,util:s.usable_fill||0};
   if(KWS.length<6000)KWS.push(kwp);
@@ -258,17 +283,21 @@ function panel(){
   $("tVial").innerHTML="<span>mín · med · mejor</span><b>"+(MEJOR?MEJOR.str+" str":"")+"</b>";
   $("tMejor").innerHTML="<span>"+(MEJOR?"giro "+MEJOR.giro.toFixed(1)+"° · "+(MEJOR.offset==="half"?"tresbolillo":"alineado")+(MEJOR.vial?" · vial c/"+MEJOR.vial:"")+"</span><b>"+fmtK(MEJOR.kwp)+"</b>":"</span><b></b>");
 }
+let AVISO_BARRA=null;                                            // mensaje pegajoso: sobrevive al refresco de la barra
 function barra(){
+  if(AVISO_BARRA){if(performance.now()<AVISO_BARRA.hasta){$("barra").innerHTML=AVISO_BARRA.txt;return;}AVISO_BARRA=null;}
   const [k0,k1,k2]=cuantiles();
   $("barra").innerHTML="<b>"+OPC.toLocaleString("es-ES")+"</b> opciones · "+
-    (REAL?"parcela real <b>"+PARCELA.nombre+"</b> (geometría del vallado)":"site <b>"+SITE+"</b> · sintética")+
+    (ENCARGO?"<b>parcela del Generador</b> · su mesa y su azimut ("+AZ0+"°) · <b>A</b> aplica el mejor":
+     REAL?"parcela real <b>"+PARCELA.nombre+"</b> (geometría del vallado)":"site <b>"+SITE+"</b> · sintética")+
     " · semilla "+SEM[0]+"-"+SEM[1]+
     " · DC <span>"+fmtK(k0)+"</span> · <span>"+fmtK(k1)+"</span> · <span class=v>"+fmtK(k2)+
     (MEJOR?" · "+MEJOR.str+" str":"")+"</span>"+
     (ULTIMO&&ULTIMO.r.descartadas&&ULTIMO.r.descartadas.length?" · <span class=r>"+ULTIMO.r.descartadas.length+" descartadas en rojo</span>":"")+
-    " · mesa 1V·28×630 Wp bifila · pitch 6 · <b>Espacio</b> pausa · <b>N</b> site · <b>R</b> semilla · <b>C</b> limpia · <b>H</b> panel · arrastra un layout.json";
+    (ENCARGO?"":" · mesa 1V·28×630 Wp bifila · pitch 6")+
+    " · <b>Espacio</b> pausa · <b>N</b> site · <b>R</b> semilla · <b>C</b> limpia · <b>H</b> panel · arrastra un layout.json";
 }
-function pon(t){$("barra").innerHTML=t;}
+function pon(t,ms){AVISO_BARRA={txt:t,hasta:performance.now()+(ms||6000)};$("barra").innerHTML=t;}
 
 /* ── el bucle: candidatos de verdad a presupuesto de frame, y avance de site solo ── */
 let ultAvance=performance.now(),ultPanel=0;
@@ -276,8 +305,8 @@ function vuelta(now){
   if(LAY&&!PAUSA){
     const t0=performance.now();
     do{candidato();}while(performance.now()-t0<24&&OPC%997);   // al menos uno; más si el motor da
-    if(ULTIMO&&OPC<=1)mideOff(ULTIMO.r);
-    if(!QUIETO&&now-ultAvance>12000){REAL=null;nuevoSite();ultAvance=now;}
+    if(ULTIMO&&!OFF[0])mideOff(ULTIMO.r);
+    if(!QUIETO&&!ENCARGO&&now-ultAvance>12000){REAL=null;nuevoSite();ultAvance=now;}
   }
   VISTA.ang+=.0009;
   if(LAY&&PARCELA){dibuja();if(now-ultPanel>230){panel();barra();ultPanel=now;}}
@@ -290,12 +319,20 @@ addEventListener("keydown",e=>{
   else if(e.key==="r"||e.key==="R"){SEM[1]=(SEM[1]+1)%1e6;nuevoSite(true);}
   else if(e.key==="c"||e.key==="C"){nuevoSite(true);}
   else if(e.key==="h"||e.key==="H"){$("panel").hidden=!$("panel").hidden;}
+  else if((e.key==="a"||e.key==="A")&&ENCARGO&&MEJOR){
+    localStorage.setItem("buscador_mejor",JSON.stringify({panelAz:AZ0+MEJOR.giro,giro:MEJOR.giro,
+      rowOffset:MEJOR.offset,roadNsEvery:MEJOR.vial,kwp:MEJOR.kwp,str:MEJOR.str,fecha:Date.now()}));
+    pon("mejor ENVIADO al Generador — giro +"+MEJOR.giro.toFixed(1)+"° ("+(AZ0+MEJOR.giro).toFixed(1)+"°) · "+
+      (MEJOR.offset==="half"?"tresbolillo":"alineado")+(MEJOR.vial?" · vial c/"+MEJOR.vial:"")+" · "+fmtK(MEJOR.kwp)+
+      " · vuelve a su pestaña: los mandos ya están puestos, pulsa Generar",9000);
+  }
 });
 
 /* ── ganchos del banco: correr N candidatos en seco y leer el estado ── */
 window.PASO=n=>{for(let i=0;i<n;i++)candidato();if(OPC&&!OFF[0])mideOff(ULTIMO.r);dibuja();panel();barra();};
 window.ESTADO=()=>({opciones:OPC,mejorKwp:MEJOR?MEJOR.kwp:0,mejorStr:MEJOR?MEJOR.str:0,
-  semilla:SEM.join("-"),site:SITE,real:!!REAL,descartadas:ULTIMO&&ULTIMO.r.descartadas?ULTIMO.r.descartadas.length:0});
+  semilla:SEM.join("-"),site:SITE,real:!!REAL,off:OFF.slice(),encargo:!!ENCARGO,az0:AZ0,
+  descartadas:ULTIMO&&ULTIMO.r.descartadas?ULTIMO.r.descartadas.length:0});
 window.cargaLayoutReal=cargaLayoutReal;
 
 /* ── arranque: el motor DE VERDAD, extraído del generador con el regex del banco ── */
