@@ -393,6 +393,21 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-09 · las bielas, recontadas, y 39 filas que iban naranja** — Ignacio: *«cuenta cuántas
+  bielas te salen ahora»*. San José **2.289**, una por tracker: 2.243 entre vigas con cotas medidas,
+  35 con alguna cota repuesta, 9 sobre copia de hermana, 2 en los seguidores del plano. Largo p5 6,156 ·
+  mediana 6,225 · p95 6,280 · **máx 6,447 m** (antes 6,599: eran las copias fuera de sitio). Ayora 751.
+
+  El recuento cazó un fallo del merge: salían **14 «del plano» con 2 reconstruidos**. La marca por
+  tope (`est: f.est||eyS`) pisa la del tracker en la mesa reparada y `segOrig` la leía como
+  «reconstruido»: en el 3D las 39 filas con cota repuesta —levantadas, con sus cuatro puntos— iban
+  teñidas de naranja como si no se hubieran levantado. Ahora la categoría se lee de `trk.est`, con
+  invariante: las mesas «del plano» son exactamente las de los trackers `est`. QA 148 → **149**.
+
+  Y los 99 puntos con la Z en otra referencia, entregados en lista para el cliente (CSV con coma
+  decimal): 18.289 puntos en el levantamiento, 18.312 que pide el plano, 23 que faltan (los 3
+  trackers), 99 con la Z a +36,6 m (X e Y correctas), 18.190 limpios.
+
 - **2026-09-09 · la Z de 99 puntos está mal, y la fila reparada va rígida** — Ignacio: *«para, no
   sustituyas nada, ¿qué quieres decir, que la z está mal?»*. Sí, y se ve en el fichero crudo:
   TR-09_1-044-W tiene la mesa sur a 1531,7–1532,0 y la norte a **1568,7** — 36,7 m de salto en el
