@@ -168,7 +168,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.8.0</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.8.1</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -4561,7 +4561,14 @@ function computaMixto(cfg, zonas){
          rot:base.rot,center:base.center,bbox_inner:base.bbox_inner,avisos:[],
          toLonLat:base.toLonLat,fromLocal:base.fromLocal,porZona:[]};
   R.partesTracker=_partesTracker;
-  var SUMA=['structures','strings','rows','modules','kWp','col_area_m2','poly_area_m2',
+  /* `poly_area_m2` NO ENTRA AQUÍ. Lo demás es aditivo —mesas, módulos, kWp, área de colector—
+     pero el ÁREA DE LA PARCELA es una sola cosa y no la suma de sus trozos: sumándola, dos zonas
+     que se solapan la cuentan dos veces y hasta un troceo limpio la infla (medido: la misma
+     parcela de 25,0 ha declaraba 50,6 ha partida en 19 zonas). Y de `poly_area` cuelgan la
+     OCUPACIÓN y la DENSIDAD, así que las dos salían a la mitad y hacían desconfiar de un layout
+     que podía estar bien («9,2 % de ocupación… si aún hay huecos», 2026-09-08). Se mide una vez,
+     de la parcela de verdad, más abajo. */
+  var SUMA=['structures','strings','rows','modules','kWp','col_area_m2',
             'inner_area_m2','discarded_structs','ms'];
   var st={}; SUMA.forEach(function(k){st[k]=0;});
   st.by_size={}; var motores=0, kwpPorMontaje={}, montajes={};
@@ -4654,6 +4661,23 @@ function computaMixto(cfg, zonas){
     // Con planta vacía NO se reparte 0 % a cada uno: no hay reparto que dar,
     // y un 0.0 se leería como «esta zona no aporta», que es otra cosa.
     st.fraccion_kwp_por_montaje[m]=tot>0?(kwpPorMontaje[m]/tot):null;});
+  /* EL ÁREA DE LA PARCELA, medida UNA VEZ sobre la parcela de verdad (cfg.coords) y no sumando
+     zonas. Se pasa a UTM con el mismo `toUtm` con el que se filtró la linde —así es el mismo
+     marco métrico que usan las mesas— y se cierra con la fórmula del agrimensor. Si no hubiera
+     parcela dibujada (no debería en mixto), queda el respaldo de sumar las zonas, que es lo que
+     había, pero avisando de que ese número no es de fiar. */
+  var _sumaZonas=partes.reduce(function(s,r){return s+(r.stats.poly_area_m2||0);},0);
+  var _toUtm=partes.length&&partes[0].toUtm;
+  if(_parL&&_parL.length>=3&&_toUtm){
+    var Q=_parL.map(function(c){return _toUtm(c);}),A2=0;
+    for(var u=0,v3=Q.length-1;u<Q.length;v3=u++)A2+=(Q[v3][0]+Q[u][0])*(Q[v3][1]-Q[u][1]);
+    st.poly_area_m2=Math.abs(A2/2);
+  }else{
+    st.poly_area_m2=_sumaZonas;
+    R.avisos.push({nivel:'warn',mensaje:'sin parcela dibujada, la superficie es la SUMA de las zonas: '+
+      'si se solapan, la ocupación y la densidad salen bajas'});
+  }
+  st.poly_area_zonas_m2=_sumaZonas;          // lo que ocupan las zonas, que es OTRA cosa y también informa
   st.usable_fill=st.inner_area_m2>0?st.col_area_m2/st.inner_area_m2:0;
   st.fill_factor =st.poly_area_m2>0?st.col_area_m2/st.poly_area_m2:0;
   st.density_kWp_ha=st.poly_area_m2>0?st.kWp/(st.poly_area_m2/1e4):0;

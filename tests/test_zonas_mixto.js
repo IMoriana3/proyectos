@@ -1130,6 +1130,50 @@ const CUAD_B = [[-0.7980, 41.5743], [-0.7925, 41.5743], [-0.7925, 41.5790], [-0.
     pamplona.trkM >= 4 && pamplona.parOk && pamplona.motOk && pamplona.avisoTrk,
     'trkM=' + pamplona.trkM + ' parOk=' + pamplona.parOk + ' motOk=' + pamplona.motOk);
 
+  // ── EL ÁREA DE LA PARCELA NO ES LA SUMA DE LAS ZONAS ─────────────────────────────────────
+  // Se sumaba `poly_area_m2` zona a zona, y de ahí cuelgan la OCUPACIÓN y la DENSIDAD: la misma
+  // parcela partida en trozos declaraba el doble de superficie y las dos cifras salían a la
+  // mitad, haciendo desconfiar de un layout que podía estar bien.
+  const areas = await page.evaluate(([A, B]) => {
+    // la misma cfg que usa el resto de este banco (la que sí planta mesas)
+    const cfg = { holes: [], mount: 'tracker', pitch: 6, setback: 5, tableType: '1V',
+                  modsPerStruct: 30, modLen: 2.382, modWid: 1.134, gapModules: 0.02,
+                  gapMotor: 0.5, gapNs: 0.5, panelAz: 180, decl: {} };
+    // La parcela ENTERA (A ∪ B es un rectángulo) contra la MISMA partida en MUCHAS tiras.
+    // Muchas a propósito: con dos zonas grandes la suma de sus áreas casi coincide con la
+    // parcela y el fallo no asoma; el sobrante que cada zona añade solo pesa cuando se trocea
+    // fino, que es justo el caso real (un reparto por pendiente son decenas de zonas).
+    const entera = [A[0], B[1], B[2], A[3]];
+    const x0 = A[0][0], x1 = B[1][0], y0 = A[0][1], y1 = A[2][1], N = 12, w = (x1 - x0) / N;
+    const tiras = Array.from({ length: N }, (_, i) => ({ nombre: 'z' + i, mount: 'tracker',
+      coords: [[x0 + i * w, y0], [x0 + (i + 1) * w, y0], [x0 + (i + 1) * w, y1], [x0 + i * w, y1]] }));
+    // Y ZONAS QUE SE SOLAPAN, que es el caso REAL: el relleno de fija ocupa huecos DENTRO de lo
+    // que ya cubren las de tracker, así que sumar áreas cuenta el mismo terreno dos veces. Con
+    // 19 tiras + 3 de relleno se medía 2,02 veces la parcela, y de ahí la ocupación a la mitad.
+    tiras.push({ nombre: 'relleno', mount: 'fixed', esRelleno: true,
+      coords: [[x0, y0], [x0 + 6 * w, y0], [x0 + 6 * w, y1], [x0, y1]] });
+    const uno = LAY.compute(Object.assign({}, cfg, { coords: entera }));
+    const dos = window.computaMixto(Object.assign({}, cfg, { coords: entera }), tiras);
+    return { poly1: uno.stats.poly_area_m2, poly2: dos.stats.poly_area_m2,
+             zonas2: dos.stats.poly_area_zonas_m2, ocup1: uno.stats.fill_factor,
+             ocup2: dos.stats.fill_factor, col1: uno.stats.col_area_m2, col2: dos.stats.col_area_m2 };
+  }, [CUAD_A, CUAD_B]);
+  check('la superficie del mixto es la de la PARCELA, no la suma de sus zonas, que se SOLAPAN (' +
+    Math.round(areas.poly2) + ' m² vs ' + Math.round(areas.poly1) + ')',
+    Math.abs(areas.poly2 - areas.poly1) / areas.poly1 < 0.02,
+    JSON.stringify({ mixto: Math.round(areas.poly2), simple: Math.round(areas.poly1) }));
+  check('y la ocupación sale del mismo orden que en el layout simple (' +
+    (areas.ocup2 * 100).toFixed(1) + ' % vs ' + (areas.ocup1 * 100).toFixed(1) + ' %)',
+    areas.ocup2 > areas.ocup1 * 0.8, JSON.stringify({ mixto: areas.ocup2, simple: areas.ocup1 }));
+  // La suma de zonas se conserva aparte porque informa de OTRA cosa. Y aquí tiene que salir
+  // MAYOR que la parcela: esa es la prueba de que se solapan y de que sumarla sería erróneo.
+  check('la suma de las zonas se conserva aparte, y delata el solape (' +
+    (areas.zonas2 / areas.poly1).toFixed(2) + '× la parcela)',
+    areas.zonas2 > areas.poly1 * 1.1, 'zonas ' + Math.round(areas.zonas2));
+  // y la ocupación tiene que ser CONSISTENTE con lo que hay puesto: col/poly, sin atajos
+  check('la ocupación del mixto es exactamente su área de colector entre su parcela',
+    Math.abs(areas.ocup2 - areas.col2 / areas.poly2) < 1e-9);
+
   await browser.close();
   console.log('\n' + ok + ' OK · ' + ko + ' FALLOS');
   process.exit(ko ? 1 : 0);
