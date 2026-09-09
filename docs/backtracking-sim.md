@@ -393,6 +393,21 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-09 · las bielas, recontadas, y 39 filas que iban naranja** — Ignacio: *«cuenta cuántas
+  bielas te salen ahora»*. San José **2.289**, una por tracker: 2.243 entre vigas con cotas medidas,
+  35 con alguna cota repuesta, 9 sobre copia de hermana, 2 en los seguidores del plano. Largo p5 6,156 ·
+  mediana 6,225 · p95 6,280 · **máx 6,447 m** (antes 6,599: eran las copias fuera de sitio). Ayora 751.
+
+  El recuento cazó un fallo del merge: salían **14 «del plano» con 2 reconstruidos**. La marca por
+  tope (`est: f.est||eyS`) pisa la del tracker en la mesa reparada y `segOrig` la leía como
+  «reconstruido»: en el 3D las 39 filas con cota repuesta —levantadas, con sus cuatro puntos— iban
+  teñidas de naranja como si no se hubieran levantado. Ahora la categoría se lee de `trk.est`, con
+  invariante: las mesas «del plano» son exactamente las de los trackers `est`. QA 148 → **149**.
+
+  Y los 99 puntos con la Z en otra referencia, entregados en lista para el cliente (CSV con coma
+  decimal): 18.289 puntos en el levantamiento, 18.312 que pide el plano, 23 que faltan (los 3
+  trackers), 99 con la Z a +36,6 m (X e Y correctas), 18.190 limpios.
+
 - **2026-09-09 · #626 entra en main: la fusión con el arreglo del bucket, y el CI que se caía por una
   pestaña** — Ignacio: *«mergea cuando esté verde»*. Las cuatro entradas de debajo se fundieron con lo
   que quedaba de la otra rama: el filtro de candidatos del bucket iba contra la x de la **primera** fila
