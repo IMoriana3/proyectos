@@ -312,6 +312,31 @@ const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
   check('en fija no se gira nada', ef.encargo === true && ef.gira === false && ef.mejorGiro === 0,
     JSON.stringify({ gira: ef.gira, giro: ef.mejorGiro }));
   check('y la barra lo dice', (await pageF.evaluate(() => document.getElementById('barra').textContent)).includes('fija: no se gira'));
+
+  // ── LA BARRA TIENE QUE PODERSE LEER ─────────────────────────────────────────────────────
+  // Se ordena por ENERGÍA, así que la mejor puede llevar MENOS potencia instalada y ganar
+  // igual subiendo el rendimiento. Con «base 6,14 MWp · mejor 6,06 MWp · +1,5 %» eso parece
+  // una cuenta mal hecha: faltaba el rendimiento de la BASE y qué mide ese porcentaje.
+  await pageF.evaluate(() => {
+    BASE_REF = { kwp: 6140, rend: 0.968, ener: 6140 * 0.968, str: 0 };
+    MEJOR = { kwp: 6060, rend: 0.999, ener: 6060 * 0.999, giro: -48, az: 270, offset: 'none', vial: 0, str: 0, util: 0 };
+    barra(); });
+  const bTexto = await pageF.evaluate(() => document.getElementById('barra').textContent);
+  check('la base se enseña con SU rendimiento, no solo con los MWp',
+    /base\s+6[.,]14 MWp\s*×\s*96[.,]8\s*%/.test(bTexto), bTexto.slice(0, 160));
+  check('el porcentaje dice de que es: de ENERGIA', bTexto.includes('% de energía'), bTexto.slice(-160));
+  check('y cuadra con las dos energias', /\+1[.,]9 % de energía|\+1[.,]9% de energía/.test(bTexto),
+    (bTexto.match(/\+[\d.,]+ ?% de energía/) || [''])[0]);
+  check('con menos potencia que la base, se DICE al lado',
+    /-1[.,]3\s*% de potencia/.test(bTexto) && /\+3[.,]1 puntos de rendimiento/.test(bTexto),
+    (bTexto.match(/\([^)]*potencia[^)]*\)/) || [''])[0]);
+  // y si la mejor lleva MAS potencia, no hay nada que explicar
+  const bMas = await pageF.evaluate(() => {
+    MEJOR = { kwp: 6300, rend: 0.999, ener: 6300 * 0.999, giro: -48, az: 270, offset: 'none', vial: 0, str: 0, util: 0 };
+    barra(); return document.getElementById('barra').textContent; });
+  check('con mas potencia, no se cuelga la explicacion', !/de potencia/.test(bMas),
+    (bMas.match(/\([^)]*\)/) || [''])[0]);
+
   await ctx.close();
 
   console.log('\n' + ok + ' OK, ' + ko + ' FAIL');
