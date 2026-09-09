@@ -141,6 +141,96 @@ check('los pasos sin ráfaga medida se quedan en la media, no se rellenan',
 check('y la cobertura lo refleja (no dice 100 %)',
       S3.meta.gust_cobertura_pct < 60, String(S3.meta.gust_cobertura_pct));
 
+// ── 5) OPEN-METEO: la ráfaga se pide, y pedirla no puede romper nada ──
+// La consulta lleva `wind_gusts_10m` de forma OPTIMISTA. Si el servicio no la
+// reconoce, la petición falla ENTERA —no devuelve el resto sin ese campo— así
+// que el camino principal no puede depender de que la sirva: se reintenta sin
+// ella. Aquí se ejercitan los tres caminos con un `fetch` de mentira, que es lo
+// único que se puede hacer sin red y lo único que hace falta.
+const LOC2 = ctx.LOC;
+for (const f of ['LOC.fetchYear=function(lat,lon,year,year1,sinRafaga){',
+                 'LOC._omParse=function(j,sinRafaga){']) {
+  const t = saca(f);
+  check('se extrae ' + f.slice(4, f.indexOf('=')), !!t, f);
+  if (t) vm.runInContext(t, ctx);
+}
+vm.runInContext("LOC.OM='a,b'; LOC.OM_RAFAGA='wind_gusts_10m';", ctx);
+
+function cuerpoOM({ conGust }) {
+  const H = { time: [], shortwave_radiation: [], diffuse_radiation: [],
+    direct_normal_irradiance: [], temperature_2m: [], windspeed_10m: [],
+    winddirection_10m: [] };
+  if (conGust) H.wind_gusts_10m = [];
+  for (let i = 0; i < 24; i++) {
+    H.time.push('2023-01-01T' + String(i).padStart(2, '0') + ':00');
+    H.shortwave_radiation.push(0); H.diffuse_radiation.push(0);
+    H.direct_normal_irradiance.push(0); H.temperature_2m.push(15);
+    H.windspeed_10m.push(5); H.winddirection_10m.push(200);
+    if (conGust) H.wind_gusts_10m.push(21);
+  }
+  return { hourly: H };
+}
+// Un `fetch` que responde según lo que se le pida, y CUENTA las llamadas.
+function fakeFetch({ aceptaGust, redCae }) {
+  const urls = [];
+  ctx.fetch = (u) => {
+    urls.push(u);
+    if (redCae) return Promise.reject(new Error('red caída'));
+    const pide = /wind_gusts_10m/.test(u);
+    if (pide && !aceptaGust)
+      return Promise.resolve({ ok: false, status: 400 });     // la API la rechaza
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(cuerpoOM({ conGust: pide })) });
+  };
+  return urls;
+}
+
+// Todo lo asíncrono va dentro de un guardia: una promesa rechazada sin capturar
+// mata el proceso con una traza en vez de dar un FAIL, y entonces el arnés deja
+// de REPORTAR y pasa a explotar. Se vio con el mutante que quita el reintento.
+process.on('unhandledRejection', e => {
+  check('ninguna promesa queda sin capturar', false, String(e && e.message || e));
+  console.log('\nFALLA — ' + ok + '/' + (ok + ko) + ' comprobaciones');
+  process.exit(1);
+});
+
+(async () => {
+ try {
+  // (a) el servicio la sirve
+  let urls = fakeFetch({ aceptaGust: true });
+  let M = await LOC2.fetchYear(40, 0, 2023);
+  check('OM · se PIDE la ráfaga en la consulta', /wind_gusts_10m/.test(urls[0]), urls[0]);
+  check('OM · con ráfaga servida, `tiene_rafaga` queda en true', M.tiene_rafaga === true);
+  check('OM · y la serie llega con el valor medido', M.gust && M.gust[0] === 21,
+        M.gust ? String(M.gust[0]) : 'sin serie');
+  check('OM · una sola llamada cuando todo va bien', urls.length === 1, String(urls.length));
+
+  // (b) la API la RECHAZA: el camino principal no puede caerse
+  urls = fakeFetch({ aceptaGust: false });
+  M = await LOC2.fetchYear(40, 0, 2023);
+  check('OM · si la API rechaza la ráfaga, la meteo SIGUE llegando',
+        !!M && M.ws && M.ws.length === 24);
+  check('OM · y se reintenta SIN ella (dos llamadas, la segunda sin el campo)',
+        urls.length === 2 && !/wind_gusts_10m/.test(urls[1]),
+        urls.length + ' llamadas');
+  check('OM · la ausencia va DECLARADA, no callada',
+        M.rafaga_no_servida === true && !M.tiene_rafaga);
+
+  // (c) la red cae de verdad: se propaga, no se disfraza de «sin ráfaga»
+  urls = fakeFetch({ redCae: true });
+  let err = null;
+  try { await LOC2.fetchYear(40, 0, 2023); } catch (e) { err = e; }
+  check('OM · si la red cae, el error se PROPAGA (no se lee como «sin ráfaga»)',
+        !!err && /red caída/.test(err.message), err && err.message);
+  check('OM · y el reintento se gasta UNA vez, no en bucle',
+        urls.length === 2, urls.length + ' llamadas');
+
+ } catch (e) {
+   check('el camino de Open-Meteo no revienta', false, String(e && e.message || e));
+ }
+  console.log('\n' + (ko ? 'FALLA' : 'OK') + ' — ' + ok + '/' + (ok + ko) + ' comprobaciones');
+  process.exit(ko ? 1 : 0);
+})();
+
 // ── MUTANTE ───────────────────────────────────────────────────────────
 // El defecto original, reproducido: sintetizar aunque haya medida. Si este
 // arnés no lo cazara, no estaría midiendo lo que dice medir.
@@ -152,5 +242,3 @@ check('MUTANTE: el modelo sobre esta misma media NO da el pico medido',
       'el modelo da ' + Math.max.apply(null, Array.from(mutWs)).toFixed(2) +
       ' y la medida 30: si coincidieran, este banco no distinguiría');
 
-console.log('\n' + (ko ? 'FALLA' : 'OK') + ' — ' + ok + '/' + (ok + ko) + ' comprobaciones');
-process.exit(ko ? 1 : 0);

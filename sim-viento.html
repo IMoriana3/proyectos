@@ -686,7 +686,13 @@ var LOC={
   D2R:Math.PI/180,
   NIGHT:-5.0,            // posición nocturna en convención del core (la misma que compute_tracker_poa_v2)
   ALBEDO:0.20,
-  OM:'shortwave_radiation,diffuse_radiation,direct_normal_irradiance,temperature_2m,windspeed_10m,winddirection_10m'
+  OM:'shortwave_radiation,diffuse_radiation,direct_normal_irradiance,temperature_2m,windspeed_10m,winddirection_10m',
+  /* La RÁFAGA va aparte y no pegada a la lista de arriba a propósito: se pide
+     de forma OPTIMISTA y, si la petición falla, se reintenta sin ella. Así
+     pedirla no puede tumbar el camino principal — que es lo que impedía
+     añadirla antes, porque una variable que el servicio no reconociera haría
+     fallar la consulta ENTERA, no solo ese campo. */
+  OM_RAFAGA:'wind_gusts_10m'
 };
 LOC.decl=function(N){return 23.45*Math.sin(2*Math.PI*(284+N)/365)*LOC.D2R;};
 LOC.eot=function(N){var B=2*Math.PI/365*(N-81);return 9.87*Math.sin(2*B)-7.53*Math.cos(B)-1.5*Math.sin(B);};
@@ -1629,17 +1635,43 @@ LOC.stepper=function(kind,cfg){
 };
 
 /* ── Meteo ── */
-LOC.fetchYear=function(lat,lon,year,year1){
+LOC.fetchYear=function(lat,lon,year,year1,sinRafaga){
   var y1=year1||year;
+  var vars=LOC.OM+(sinRafaga?'':','+LOC.OM_RAFAGA);
   var u='https://archive-api.open-meteo.com/v1/archive?latitude='+lat+'&longitude='+lon+
-    '&start_date='+year+'-01-01&end_date='+y1+'-12-31&hourly='+LOC.OM+
+    '&start_date='+year+'-01-01&end_date='+y1+'-12-31&hourly='+vars+
     '&windspeed_unit=ms&timezone=UTC';
   return fetch(u).then(function(r){
     if(!r.ok)throw new Error('Open-Meteo HTTP '+r.status);return r.json();
-  }).then(function(j){
+  }).then(function(j){ return LOC._omParse(j,sinRafaga); },
+  function(e){
+    /* EL REINTENTO SIN RÁFAGA, que es lo que hace SEGURA la petición optimista.
+       Si el servicio no reconoce `wind_gusts_10m`, la consulta falla ENTERA —no
+       devuelve el resto sin ese campo—, así que el camino principal no puede
+       depender de que la sirva. Se vuelve a pedir sin ella y se sigue
+       exactamente como antes, con la ausencia DECLARADA.
+
+       Va como segundo argumento de `then` y no como `catch` a propósito: así
+       este manejador ve SOLO los fallos de la petición, y un error de parseo
+       —que sería un bug nuestro— no dispara un reintento que lo taparía.
+
+       Un reintento como mucho, y solo en el caso de fallo: si el segundo
+       también cae, se propaga ESE error, que es el que describe la red de
+       verdad. */
+    if(sinRafaga)throw e;
+    return LOC.fetchYear(lat,lon,year,year1,true).then(function(M){
+      M.rafaga_no_servida=true; return M;
+    });
+  });
+};
+LOC._omParse=function(j,sinRafaga){
+  return Promise.resolve(j).then(function(j){
     var H=j.hourly; if(!H||!H.time)throw new Error('Open-Meteo sin datos para ese año');
     var n=H.time.length,o={t:new Array(n),ghi:new Float64Array(n),dhi:new Float64Array(n),
       dni:new Float64Array(n),temp:new Float64Array(n),ws:new Float64Array(n),wd:new Float64Array(n)};
+    /* Solo se reserva si el servicio la ha SERVIDO. Pedirla y que no venga es
+       un resultado, no un error: se sigue sin ella y la ficha lo declara. */
+    if(!sinRafaga&&H.wind_gusts_10m)o.gust=new Float64Array(n);
     for(var i=0;i<n;i++){
       o.t[i]=new Date(H.time[i]+'Z');
       o.ghi[i]=Math.max(0,H.shortwave_radiation[i]||0);
@@ -1648,8 +1680,11 @@ LOC.fetchYear=function(lat,lon,year,year1){
       o.temp[i]=(H.temperature_2m&&H.temperature_2m[i]!=null)?H.temperature_2m[i]:15;
       o.ws[i]=(H.windspeed_10m&&H.windspeed_10m[i])||0;
       o.wd[i]=(H.winddirection_10m&&H.winddirection_10m[i]!=null)?H.winddirection_10m[i]:NaN;
+      if(o.gust)o.gust[i]=(H.wind_gusts_10m[i]!=null)?Math.max(0,H.wind_gusts_10m[i]):NaN;
     }
-    o.source='open_meteo'; return o;
+    o.source='open_meteo';
+    o.tiene_rafaga=!!(o.gust&&Array.prototype.some.call(o.gust,isFinite));
+    return o;
   });
 };
 /* Cielo claro: sin red, para probar rachas o cuando Open-Meteo no responde.
