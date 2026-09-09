@@ -41,6 +41,7 @@ function saca(firma) {
   return j < 0 ? null : HTML.slice(i, j + 3);
 }
 const FIRMAS = ['LOC.resample=function(M,stepMin){', 'LOC.scenario=function(M,sc,lat,dtH){',
+                'LOC.cizalla=function(M,h){',
                 'LOC.gust=function(ws,seed,pasosPorHora){',
                 'LOC.windSynth=function(nh,k,A,lat,seed){',
                 'LOC.kernel=function(dtMin,dur,shape){',
@@ -227,6 +228,74 @@ process.on('unhandledRejection', e => {
  } catch (e) {
    check('el camino de Open-Meteo no revienta', false, String(e && e.message || e));
  }
+// ── 6) LA CIZALLADURA VA A LAS DOS SERIES ─────────────────────────────
+// Esto NO tenía cobertura ninguna. Ni `wind_height_m` ni `scale_applied`
+// aparecían en un solo arnés de los 22 —1.658 comprobaciones— y la línea que
+// lleva el factor a la ráfaga se añadió con la ráfaga medida, sin prueba. El
+// invariante estaba escrito en un comentario junto al código, que es la
+// manera de que envejezca sin que nadie se entere.
+//
+// Lo que lo hace grave no es el número: es que fallar es SILENCIOSO. Con la
+// media subida a buje y la ráfaga quieta a 10 m, `use_gust` acabaría
+// eligiendo la media en todos los pasos y el criterio seguiría anunciándose
+// como «medido». Un dato sintético con etiqueta de medido.
+const ALFA = 1 / 7, H = 80, F = Math.pow(H / 10, ALFA);
+
+const C1 = LOC.resample(meteo({ conRafaga: true }), 60);
+const wsAntes = Array.from(C1.ws), gustAntes = Array.from(C1.gust);
+const f1 = LOC.cizalla(C1, H);
+check('el factor es el perfil de potencia con α=1/7 sobre los 10 m',
+      Math.abs(f1 - F) < 1e-12, f1 + ' vs ' + F);
+check('la MEDIA se corrige a altura de buje',
+      C1.ws.every((v, i) => Math.abs(v - wsAntes[i] * F) < 1e-9));
+check('y la RÁFAGA se corrige con el MISMO factor',
+      C1.gust.every((v, i) => Math.abs(v - gustAntes[i] * F) < 1e-9),
+      'ráfaga[0] ' + C1.gust[0] + ' esperado ' + gustAntes[0] * F);
+// El invariante de verdad no depende del valor de α: sea cual sea el perfil,
+// las dos series tienen que salir de la misma altura. Esto sobrevive a que
+// alguien cambie 1/7 por otro exponente, que es lo que un careo contra un
+// número no hace.
+check('el cociente ráfaga/media se CONSERVA (misma altura, sea cual sea α)',
+      C1.gust.every((v, i) => Math.abs(v / C1.ws[i] - gustAntes[i] / wsAntes[i]) < 1e-9));
+
+const C2 = LOC.resample(meteo({ conRafaga: true }), 60);
+const ws10 = Array.from(C2.ws);
+check('a 10 m el factor es exactamente 1 y no toca nada',
+      LOC.cizalla(C2, 10) === 1 && C2.ws.every((v, i) => v === ws10[i]));
+const C3 = LOC.resample(meteo({ conRafaga: true }), 60);
+check('sin altura declarada tampoco (no se inventa una corrección)',
+      LOC.cizalla(C3, undefined) === 1 && LOC.cizalla(C3, 0) === 1);
+const C4 = LOC.resample(meteo({ conRafaga: false }), 60);
+check('sin serie de ráfaga no revienta', LOC.cizalla(C4, H) === F && !C4.gust);
+
+// EL ORÁCULO DE COMPORTAMIENTO, que es el que ata el bug de verdad.
+// Media 20 y ráfaga 21: con las dos corregidas la ráfaga sigue ganando y la
+// cobertura es del 100 %. Corrigiendo solo la media, 20·1.3459 = 26,9 supera
+// a 21 en TODOS los pasos, la media gana en todos, y el informe seguiría
+// diciendo `gust_origen: 'medida'` con cobertura 0. Nadie miraría.
+function meteoAjustada() {
+  const M = meteo({ conRafaga: true });
+  for (let i = 0; i < N; i++) { M.ws[i] = 20; M.gust[i] = 21; }
+  return M;
+}
+const C5 = LOC.resample(meteoAjustada(), 60);
+LOC.cizalla(C5, H);
+const S5 = LOC.scenario(C5, { base: 'meteo', use_gust: true }, 40, 1);
+check('con las dos corregidas la ráfaga medida SIGUE ganando',
+      S5.meta.gust_cobertura_pct === 100, String(S5.meta.gust_cobertura_pct));
+check('y el criterio se aplica sobre la ráfaga, no sobre la media subida',
+      S5.ws.every(v => Math.abs(v - 21 * F) < 1e-6),
+      'ws[0]=' + S5.ws[0] + ' · media subida sería ' + 20 * F);
+
+// MUTANTE de esta sección: la cizalladura solo a la media. Se aplica AQUÍ,
+// sobre los mismos datos, para enseñar qué pasaría — no basta con afirmarlo.
+const C6 = LOC.resample(meteoAjustada(), 60);
+for (let i = 0; i < C6.ws.length; i++) C6.ws[i] *= F;   // y la ráfaga NO
+const S6 = LOC.scenario(C6, { base: 'meteo', use_gust: true }, 40, 1);
+check('MUTANTE: corrigiendo solo la media, la medida deja de contar (0 %)',
+      S6.meta.gust_cobertura_pct === 0 && S6.meta.gust_origen === 'medida',
+      'cobertura ' + S6.meta.gust_cobertura_pct + ' · origen ' + S6.meta.gust_origen);
+
   console.log('\n' + (ko ? 'FALLA' : 'OK') + ' — ' + ok + '/' + (ok + ko) + ' comprobaciones');
   process.exit(ko ? 1 : 0);
 })();
