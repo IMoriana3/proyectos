@@ -393,6 +393,67 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-09 · el emparejamiento E/W lo decide el BORDE del bloque, no una regla fija** —
+  Ignacio, sobre el levantamiento: *«faltan 3 trackers, 24 puntos, no se pudieron tomar»*. Con ese
+  dato la aritmética cierra: 4.578 vigas × 4 puntas − 24 = **18.288**, y el fichero del topógrafo
+  tiene **18.289**. Lo midió todo salvo esos tres. Así que los 129 huecos y los 535 puntos sin
+  repartir **no eran del levantamiento: eran nuestros**.
+
+  **La regla estaba al revés.** «El plano marca la viga ESTE y la hermana va un paso al OESTE» es
+  falso en la mayor parte de San José. No se veía porque la medida que la sostenía se hizo sobre la
+  **asignación vieja del proveedor**, que ya traía esa convención dentro: circular.
+
+  Y no se puede arbitrar de las dos formas que parecen obvias:
+
+  | criterio | por qué no vale |
+  |---|---|
+  | por **cota** | dos vigas vecinas sobre el mismo terreno se parecen compartan tubo o no: 0,166 m de desfase con la del oeste contra 0,160 con la del este, 1.125 trackers a favor de una y 1.032 de la otra |
+  | **contando puntos** a cada lado | en mitad de un bloque hay puntos a los dos lados, porque las vigas embaldosan cada 6,17 m — ese criterio daba 1.702 trackers al este, ruido puro |
+
+  **Lo único que decide es el borde.** Una tirada de *k* trackers contiguos ocupa 2*k* vigas: con la
+  hermana al oeste van de `x_primero−6,17` a `x_ultimo`; con la hermana al este, de `x_primero` a
+  `x_ultimo+6,17`. Ocupan lo mismo y sólo se distinguen por las **puntas**, así que se mira si hay
+  puntos justo fuera. Sale **ESTE en 82 tiradas (1.618 trackers)** y OESTE en 2 (34).
+
+  **Verificado por cuatro caminos**: a mano en la banda más larga (102 trackers, n = −737,6: cero
+  puntos en `x_primero−6,2`, cinco en `x_ultimo+6,2`); la predicción que se deriva se cumple entera
+  —si la regla vieja inventa una viga fantasma al oeste de cada bloque, las vigas vacías tienen que
+  estar todas ahí: son **57, y las 57 son el primer tracker de su tirada**, ninguna en el interior—;
+  la cobertura pasa de 4.489 a **4.574** vigas con ≥3 puntos de 4.578, con las vacías de 60 a **1**;
+  y el reparto coloca **18.287 de 18.289** puntos, que es el techo del topógrafo.
+
+  | | antes | ahora |
+  |---|---|---|
+  | filas del as-built | 4.449 | **4.572** |
+  | puntos sin repartir | 535 | **3** |
+  | filas con sus 4 puntas | 4.426 | **4.569** (99,9 %) |
+  | trackers con una sola viga | 132 | **11** |
+  | trackers con cota | 2.285 | **2.286** de 2.289 |
+  | reconstruidos del plano | 4 | **3** (los del topógrafo) |
+  | en el visor, trackers con una sola viga dibujada | 125 | **4** |
+
+  **El careo mueve el 98,6 % de las filas, pero lo que se mueve es la IDENTIDAD, no la geometría**:
+  de las 4.433 vigas físicas que ya estaban, **4.422 salen idénticas al centímetro**; 2.254 cambian
+  de lado E↔W en su mismo tracker y 2.116 pasan al de al lado, que es exactamente el corrimiento de
+  una viga. La etiqueta dice ahora el lado de verdad: si la hermana va al este, la viga que marca el
+  plano es la **oeste** del par, y llamarla `-E` sería mentir en el id — que es justo lo que une la
+  ficha de registros TCU.
+
+  **Comprobaciones de emparejamiento, antes de mergear**: 0 vigas con dos dueños · 0 trackers cuyo
+  par no incluya la x del plano (de 2.284) · paso entre las dos vigas p5 6,151 · mediana 6,218 ·
+  p95 6,371 · cizallado mediana **0,150 m** y p95 0,379, igual que antes del cambio · y de los 38
+  trackers con desfase > 1 m, **los 38** tienen una viga con otra referencia vertical ya reclamada,
+  ninguno sin explicación. El cizallado es la que más pesa porque es **independiente de la regla del
+  borde**: si las vigas estuvieran mal casadas, saldrían desfases grandes sin motivo.
+
+  De paso, el careo de la mesa contaminada llevaba el id `TR-09_1-044-E` a pelo y se caía con el
+  renombre (la viga es la misma, ahora `-W`). Ahora busca el caso **por el fenómeno** —una mesa
+  entera marcada, de dos puntos, que sea una punta y no la junta, porque si lo contaminado es la
+  junta los extremos salen limpios y no hay dilución que medir (pasa en 6 filas)— y exige que el
+  salto por fila sea la mitad del salto por punto. Un careo que se cae por un renombre no comprueba
+  lo que dice comprobar. QA **146** · producción 35 · producción 3D 31 · relieve APTA · Ayora sin
+  cambios.
+
 - **2026-09-09 · una punta contaminada ya no se lleva por delante la fila entera** —
   El careo contra la nube llevaba tiempo diciendo `DISCREPA: 6 reconstruidos tienen nube encima`:
   seis seguidores que se reconstruían del plano —geometría nominal y cota del terreno vecino—
