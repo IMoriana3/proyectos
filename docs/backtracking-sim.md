@@ -393,6 +393,73 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-09 · una punta contaminada ya no se lleva por delante la fila entera** —
+  El careo contra la nube llevaba tiempo diciendo `DISCREPA: 6 reconstruidos tienen nube encima`:
+  seis seguidores que se reconstruían del plano —geometría nominal y cota del terreno vecino—
+  teniendo **nube sana justo encima**. Se pudieron medir y no se engancharon.
+
+  **Dos causas, las dos reales.** La primera, que `cotas_asbuilt.py` volvía a deducir por CERCANÍA
+  qué tracker es cada grupo de filas, cuando el as-built ya trae su id: desde que el reparto lo
+  genera el propio repositorio, las 4.449 filas de San José llevan un `tk` que existe en el
+  layout. Comprobado que las dos vías no se contradicen —de los 2.287 grupos, las dos coinciden en
+  los 2.287— así que no es lo que perdía trackers.
+
+  La segunda sí: **una fila con UN punto de otra referencia vertical se tiraba entera**. Y lo que
+  se contamina es la COTA — la X,Y del punto sigue donde el topógrafo la puso. Tirando la fila se
+  perdían su posición, su largo y las cotas SANAS que tuviera, y su tracker acababa reconstruido
+  del plano con TODO estimado en vez de una sola cota. Medida la población de las 52 filas
+  señaladas en San José:
+
+  | | filas |
+  |---|---|
+  | un extremo malo, centro y otro extremo sanos | **31** |
+  | todos los puntos malos | 11 |
+  | sólo el centro malo (los dos extremos sanos) | **6** |
+  | un extremo malo + algo del centro | 4 |
+
+  **Lo que decide es cuántas PUNTAS se pierden**, porque `zs/zn/ys/yn` salen de ahí. La junta es
+  aparte: vale por la articulación, no por los extremos, así que si la toca la contaminación se
+  pierde la junta (`nm/ym` a null, `art` a 0), no la fila. Con las dos puntas, la fila sí se cae.
+
+  **De dónde sale la cota que se repone, elegido midiendo.** Prueba de dejar-uno-fuera sobre las
+  4.375 filas sanas de cuatro puntos: se tapa la cota de cada punta y se estima con cada fuente
+  posible (unos 8.400 casos por fuente) para compararla con la que el topógrafo midió de verdad.
+
+  | fuente | mediana | p95 | máx |
+  |---|---|---|---|
+  | **la hermana, misma punta** | **0,167 m** | **0,474** | **1,65** |
+  | mediana del vecindario | 0,418 m | 1,337 | 2,76 |
+  | el propio tubo, extrapolado | 0,446 m | 2,201 | 5,66 |
+
+  La hermana gana por el doble, y no por casualidad: las dos vigas de un bifila comparten tubo.
+  Extrapolar el propio tubo desde su junta es lo PEOR de las tres, porque el tubo articula justo
+  ahí. Así que: la hermana si tiene esa punta sana, y si no el vecindario; sin ninguna de las dos,
+  la fila se cae como antes.
+
+  **Y lo derivado se rehace.** `sl` y `pa` salen de las dos cotas de la fila, así que con la punta
+  contaminada valían cualquier cosa. Antes daba igual porque la fila se tiraba entera; ahora se
+  queda, y **`sl` = 98,8 % con `pa` = [0,83 · 196,8] habría entrado al modelo tal cual**. Se
+  recalculan con la misma fórmula del reparto: el peor `|pa|` de la planta pasa de 196,8 % a
+  **11,64 %**, que es un talud de verdad.
+
+  **Nada de esto viaja sin decirlo:** cada fila lleva `ye` — 0 las dos cotas medidas, 1 la sur
+  repuesta, 2 la norte, 3 las dos del plano (`est=1`) — y el meta declara `n_ye` y el error acotado
+  de cada fuente.
+
+  | | antes | ahora |
+  |---|---|---|
+  | trackers con cota | 2.279 (99,6 %) | **2.285 (99,8 %)** |
+  | reconstruidos del plano | 10 | **4** |
+  | reconstruidos con nube sana encima | 6 | **0** |
+  | trackers con una sola viga medida | 161 | **132** |
+  | filas contaminadas descartadas | 52 | **17** (35 se reparan) |
+  | veredicto del careo | DISCREPA | **CUADRA** |
+
+  Ayora no tiene ni un punto contaminado, así que no se mueve. QA 143 → **146**, con el careo
+  detector/oráculo actualizado (señalar no es tirar) y dos invariantes nuevos: una fila reparada
+  conserva su geometría medida y su punta sana intacta, y **`pa` tiene que salir de las cotas que
+  la propia fila emite** — que es exactamente la clase de fallo que se acaba de cazar.
+
 - **2026-09-09 · la fase del reparto se resuelve POR LÍNEA, no tracker a tracker** —
   Con el reparto por nodos ya en marcha quedaban **153 seguidores con una sola viga** y algunos
   dibujados a media longitud: en el visor, las barras no llegaban a sus propios puntos. La causa
