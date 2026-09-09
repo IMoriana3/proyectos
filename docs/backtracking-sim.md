@@ -393,6 +393,74 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-09 · el reparto del levantamiento de San José, rehecho desde el crudo** —
+  Ignacio pasa el **CSV original del topógrafo** (18.289 puntos) y el Excel de asignación que
+  generó él. La auditoría (`tools/audita_asignacion.py`) separa las dos cosas: **el dato está
+  intacto** —coordenadas y cota copiadas bit a bit, |ΔZ| y |ΔXY| máximos de 0,000000 m, cero
+  duplicados, cero inventados— y **el reparto no**: 93 trackers con puntos imposibles, hasta
+  **1.575 m de dispersión**, y uno con 44 puntos repartidos un kilómetro en Y con sólo 0,5 m
+  en X — una **columna entera de un eje** colgada de un solo tracker. Concentrado en TR-07 (30)
+  y TR-08 (32). Una cota mala canta contra sus vecinas; una asignación mala **no canta en
+  ningún sitio**, porque la cota es normal: lo que está mal es de quién se dice que es.
+
+  **La geometría no se supone, se mide.** Sobre los trackers cuya asignación vieja sí era sana
+  sale muy apretada: fila E en la x del tracker (mediana −0,004 m), fila W a **6,174 m** al
+  oeste, centro de fila = n del tracker (−0,038 m), largo **74,43 m**.
+
+  **Y hubo que llegar al reparto POR NODOS.** Tres intentos antes, todos medidos:
+
+  | criterio | filas completas | por qué falla |
+  |---|---|---|
+  | tracker más cercano | 33 % | un tracker mide 74 m: su centro no es buen juez |
+  | centro de fila más cercano | 90 % | las puntas se van a la vecina: 222 filas con 5 puntos y 217 con 3 |
+  | cupo de 4 por distancia | 98,7 % | **encoge 17 filas sanas a 38 m**: coge los dos puntos del tope norte y deja fuera el sur |
+  | **por nodos** | **99,8 %** | de las 4.143 filas que ya existían, sólo **tres** cambian |
+
+  La clave: los puntos no están sueltos, van en **nodos de dos**, y el tipo de nodo se lee en su
+  separación — **junta de ~0,9 m** dentro del tubo, **tope de ~0,2 m** entre tubos. El nodo de
+  junta cae en la n declarada del tracker y da la **fase**: sus cuatro puntas son ese par más,
+  de cada nodo contiguo, el punto más cercano.
+
+  **Lo que gana la cadena:**
+
+  | | antes | ahora |
+  |---|---|---|
+  | filas del as-built | 4.145 | **4.421** |
+  | trackers con cota | 2.182 (95,3 %) | **2.273 (99,3 %)** |
+  | sin medir / reconstruidos del plano | 107 | **16** |
+  | reconstruidos con medida real debajo | 198 | **17** |
+  | filas contaminadas visibles al modelo | 12 de 54 | **51 de 53** |
+
+  Ese último es el bueno: las filas contaminadas que antes **se caían por el camino** ya no se
+  pierden — entran, y el control las descarta con su id. Con eso queda cerrado el «qué queda en
+  pie» de la entrada anterior.
+
+  **Cuatro fallos destapados al regenerar, tres míos y uno heredado:** heredaba `tp`/`mods` del
+  fichero viejo y les colgaba 32 módulos a los 98 seguidores **«medio»** de 37,5 m (ahora se
+  derivan del largo medido invirtiendo la fórmula del nominal: unánime, 32 los «completo» y 16
+  los «medio», con p25 = p75 en los cuatro grupos); emitía filas de 18,3 m que son **fragmentos**
+  de media mesa, y con ellas los 2 accionamientos que caían en mitad de la mesa en vez de en el
+  morro; `cotas_asbuilt.py` aprendía el largo típico de los **no levantados**, y al quedar sólo
+  16 los tipos «corto» se quedaban sin largo; y el **sesgo de montaje** restaba el nominal de UN
+  tipo a la mediana de TODOS los largos — con dos tipos en planta, un reconstruido salió de
+  **111,10 m** para 32 módulos.
+
+  **Lo que NO se inventa.** Los vectores transversales `cse/cso/ase/aso` vienen de una derivación
+  que no está en el repositorio: ni la pendiente a la fila de al lado a un vano, ni a dos, ni el
+  `so/se` del visor los reproducen (error mediano de 0,2 a 4,8 pp). Se **arrastran** por id de
+  fila y las 278 filas recuperadas los llevan a `null`, declarado en el meta. Emitirlos con una
+  regla adivinada cambiaría en silencio la ficha de registros TCU, que es lo que se entrega al
+  cliente.
+
+  **Un reparto, dos ficheros:** `<planta>_puntos.json` sale del mismo sitio que el as-built. Si
+  uno dice que un punto es de una fila y el otro que es de otra, el control de referencia
+  vertical condena la fila equivocada.
+
+  Y una que casi se cuela: la **reclamación estaba desfasada** respecto al dato final —se generó
+  antes de que el largo mínimo tirara los fragmentos, y dos de las filas contaminadas estaban
+  entre ellos—. Es el mismo fallo que llevo toda la sesión persiguiendo en otros: un número que
+  se queda atrás y sigue pareciendo un dato. QA 143/143 · GATE OK.
+
 - **2026-09-09 · la puerta de relieve, pasada a la cartera entera: 2 de 11** — y el
   resultado no es una tabla de once veredictos, porque **nueve plantas no tienen una sola
   cota**. Dar un veredicto ahí sería contestar una pregunta que no se ha podido hacer, así
