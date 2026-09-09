@@ -65,7 +65,17 @@ declare -A PISO=(
   [test_comparador_3d.js]=247
   [test_comparador_sitio.js]=36
   [test_ejecucion_traza.mjs]=61
-  [test_granizo_espejo.mjs]=9
+  # 8 y no 9 A PROPÓSITO, y esto es un HUECO DECLARADO, no un listón flojo:
+  # la novena comprobación de este arnés carea el espejo commiteado contra la
+  # FUENTE, que vive en el repo hermano `SolarGPTfull` — privado, así que el
+  # runner no puede clonarlo con el token por defecto. Donde el hermano está
+  # al lado (una máquina de desarrollo) publica 9 y el careo ocurre; en CI
+  # publica 8 y ese careo NO se hace.
+  #
+  # Cómo se cierra, para quien pase por aquí: un secreto de solo lectura sobre
+  # `SolarGPTfull` y un `actions/checkout` del hermano al nivel del workspace.
+  # Es una decisión del mantenedor (crear el secreto), no de un commit.
+  [test_granizo_espejo.mjs]=8
   [test_granizo_pestana.js]=28
   [test_granizo_traza.mjs]=30
   [test_index.js]=18
@@ -98,10 +108,19 @@ for _t in tests/test_*.js tests/test_*.mjs; do
 done
 
 # ── LO QUE NO CORRE AQUÍ, CON DUEÑO Y MOTIVO ─────────────────────────────
-# Vacío a propósito: hoy los veintiún arneses corren sin repos hermanos ni
-# red. Si alguno deja de poder, se apunta AQUÍ con su motivo — y el guard de
-# zombis de abajo exige que el fichero siga existiendo, para que una exención
-# no sobreviva al arnés que eximía.
+# Vacío: ningún arnés está exento. Si alguno deja de poder correr, se apunta
+# AQUÍ con su motivo — y el guard de zombis de abajo exige que el fichero siga
+# existiendo, para que una exención no sobreviva al arnés que eximía.
+#
+# CORRECCIÓN, y va escrita porque la versión anterior de este comentario decía
+# lo contrario: NO es cierto que los veintiún arneses den lo mismo con red que
+# sin ella. Lo escribí midiendo que ninguno NOMBRA un host externo, que es otra
+# cosa, y la primera tirada de CI lo desmintió — `test_layout_ui` comprueba que
+# la cascada de fuentes de terreno caiga al siguiente peldaño cuando la primera
+# falla, y con red DE VERDAD la cascada aterriza en un peldaño que el arnés no
+# intercepta. O sea que ese arnés depende de NO tener red, justo al revés de lo
+# que yo había afirmado. Se arregla en su sitio (interceptando también ese
+# peldaño), no aquí: una exención lo taparía.
 declare -A EXCLUIDOS=()
 
 mkdir -p "$LOGS"
@@ -163,7 +182,12 @@ for t in tests/test_*.js tests/test_*.mjs; do
     printf 'ROJO %-30s %s · %ss\n' "$n" "$motivo" "$seg"
     echo "     ── últimas líneas de $log ──"
     grep '^FAIL ' "$log" | head -5 | sed 's/^/     /'
-    tail -3 "$log" | sed 's/^/     /'
+    # 25 y no 3. Con 3 líneas, un arnés que revienta enseña el pie de la traza
+    # —«}», vacío, «Node.js v22»— y ni una palabra del error: medido en la
+    # tirada #2 de esta puerta, que dejó cuatro rojos ilegibles. El log entero
+    # va en el artefacto, pero el que lee la consola tiene que poder empezar
+    # por aquí.
+    tail -25 "$log" | sed 's/^/     /'
   fi
 done
 

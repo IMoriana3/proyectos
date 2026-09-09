@@ -32,7 +32,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      # `fetch-depth: 0` NO es por gusto: `test_integridad.js` compara los
+      # recuentos de tarjetas y plantas contra `git show origin/main:index.html`.
+      # Con el checkout por defecto (una sola ref) `origin/main` no existe, el
+      # arnés ANUNCIA que se salta la comparación y publica 5 en vez de 7 — un
+      # salto silencioso en CI, que es justo lo que el tercer corolario prohíbe.
+      # Lo cazó el piso; se cierra dándole la referencia, no bajando el listón.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -115,3 +123,9 @@ jobs:
           # servidor que no levanta— el directorio no existe, y un error aquí
           # taparía la causa real con una segunda queja.
           if-no-files-found: warn
+          # `.arneses` empieza por punto y esta acción excluye los ocultos POR
+          # DEFECTO: la tirada #2 acabó en «No files were found with the
+          # provided path: .arneses/» y me dejó sin los logs justo cuando hacían
+          # falta para diagnosticar. Un artefacto que no sube es un artefacto
+          # que no existe.
+          include-hidden-files: true
