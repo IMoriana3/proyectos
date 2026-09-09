@@ -393,6 +393,38 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-09 · la Z de 99 puntos está mal, y la fila reparada va rígida** — Ignacio: *«para, no
+  sustituyas nada, ¿qué quieres decir, que la z está mal?»*. Sí, y se ve en el fichero crudo:
+  TR-09_1-044-W tiene la mesa sur a 1531,7–1532,0 y la norte a **1568,7** — 36,7 m de salto en el
+  mismo tubo de 74 m, con la viga hermana a 6 m plana a 1532; TR-08_1-001-E entera a 1588,7 con el
+  tracker de 12 m al este a 1551. El mismo **+36,6 m** en 99 puntos repartidos por toda la planta,
+  dispersión 0,4 m: una cota procesada en otra referencia vertical (la ondulación del geoide en
+  Arequipa), no terreno. X e Y intactas.
+
+  Decisión de Ignacio: **dejarlo como está** —marcar, reponer en el modelo, reclamar al topógrafo
+  (`reclamacion_sanjose.csv`)— y que **la fila reparada lleve una sola pendiente para sus dos mesas**.
+  Con una cota repuesta, el quiebro de la junta ya no es medida (saldría de una punta estimada contra
+  la junta medida, que es inventar una articulación): se quita la junta y la fila entra rígida, con la
+  pendiente entre sus dos puntas igual para la mesa sur y la norte. 39 filas, 0 con quiebro; en la
+  escena, las dos mesas de cada una salen con el mismo tilt.
+
+- **2026-09-09 · lo que no es medida es la COTA, no la viga — y la capa magenta tapaba el origen** —
+  Ignacio: *«¿por qué tienes filas no medidas, si tenemos todos los puntos?»*. Tenía razón en la
+  pregunta y la etiqueta era mala. De las 52 vigas del filtro, **46 tienen sus cuatro puntos** y se
+  dibujan donde el topógrafo las midió: lo que se les repone es la **altura**, porque 99 cotas en 54
+  filas vienen en otra referencia vertical (+36,6 m) y como cota son inservibles. Solo 6 vigas
+  (3 seguidores) no tienen puntos. Posición y largo: **18.289 de 18.289 puntos, ni una viga inventada**.
+
+  La métrica pasa a llamarse **«Origen de la cota de la viga»** —cotas medidas · una cota repuesta ·
+  las dos repuestas · cota copiada de su hermana · sin levantar, geometría del plano— y la casilla
+  «Solo cotas no medidas» dice cuántas están además sin sus puntos, **contadas en la nube** (6), no
+  sumando categorías (que daba 13: 7 de las 9 copias sí tienen sus puntos).
+
+  Y al cargar `main` en Chromium salió que la capa «cota de otra referencia», encendida por defecto,
+  pinta con trazo grueso y **el mismo magenta** que «copiada de su hermana» encima de 46 de las 52
+  filas: se veía todo magenta. Coloreando por origen esa capa sobra —el origen ya dice dónde y por
+  qué— y no se dibuja. Capturas antes/después en visores#13.
+
 - **2026-09-09 · el borde de la tirada se leía con la viga del vecino: 4 seguidores mal emparejados
   y 2 que faltaban sin saberlo** — Ignacio, sobre el marcado: *«si a algún tracker le falta la hermana
   a otra le sobra»* y *«son 3 trackers enteros los que faltan»*. Las dos cosas eran ciertas y las dos
