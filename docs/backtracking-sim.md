@@ -393,6 +393,23 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-09 · lo que no es medida es la COTA, no la viga — y la capa magenta tapaba el origen** —
+  Ignacio: *«¿por qué tienes filas no medidas, si tenemos todos los puntos?»*. Tenía razón en la
+  pregunta y la etiqueta era mala. De las 52 vigas del filtro, **46 tienen sus cuatro puntos** y se
+  dibujan donde el topógrafo las midió: lo que se les repone es la **altura**, porque 99 cotas en 54
+  filas vienen en otra referencia vertical (+36,6 m) y como cota son inservibles. Solo 6 vigas
+  (3 seguidores) no tienen puntos. Posición y largo: **18.289 de 18.289 puntos, ni una viga inventada**.
+
+  La métrica pasa a llamarse **«Origen de la cota de la viga»** —cotas medidas · una cota repuesta ·
+  las dos repuestas · cota copiada de su hermana · sin levantar, geometría del plano— y la casilla
+  «Solo cotas no medidas» dice cuántas están además sin sus puntos, **contadas en la nube** (6), no
+  sumando categorías (que daba 13: 7 de las 9 copias sí tienen sus puntos).
+
+  Y al cargar `main` en Chromium salió que la capa «cota de otra referencia», encendida por defecto,
+  pinta con trazo grueso y **el mismo magenta** que «copiada de su hermana» encima de 46 de las 52
+  filas: se veía todo magenta. Coloreando por origen esa capa sobra —el origen ya dice dónde y por
+  qué— y no se dibuja. Capturas antes/después en visores#13.
+
 - **2026-09-09 · el borde de la tirada se leía con la viga del vecino: 4 seguidores mal emparejados
   y 2 que faltaban sin saberlo** — Ignacio, sobre el marcado: *«si a algún tracker le falta la hermana
   a otra le sobra»* y *«son 3 trackers enteros los que faltan»*. Las dos cosas eran ciertas y las dos
