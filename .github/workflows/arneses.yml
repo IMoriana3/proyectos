@@ -22,10 +22,27 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Una tirada por rama: si llegan dos empujones seguidos, manda el último.
+# Una tirada por rama: si llegan dos empujones seguidos a una RAMA, manda el
+# último — lo anterior ya no se va a fusionar y gastar runner en ello es tirar
+# minutos.
+#
+# En `main` NO, y esto es una corrección de la primera versión de este fichero,
+# que ponía `true` a secas. Medido el mismo día: con varias ramas fusionando
+# seguidas, `cancel-in-progress` mató DOS tiradas de main consecutivas
+# —8006ce3 y 20c639a, las dos «cancelled»— porque la siguiente fusión llegó
+# antes de que la anterior acabase (los arneses tardan ~11 min).
+#
+# O sea que dos commits aterrizaron en main SIN VEREDICTO y nadie lo iba a
+# notar: en la lista de tiradas «cancelled» no se lee como rojo. Y main es el
+# único sitio donde se prueba el ÁRBOL FUSIONADO — un PR se prueba contra la
+# base que tenía al abrirse, así que #427 y #428 nunca corrieron juntos.
+#
+# Para una puerta cuyo principio es que el veredicto se LEE y no se supone,
+# perder el veredicto en silencio es justo el fallo que no puede permitirse.
+# En main cada commit corre entero, aunque cueste minutos.
 concurrency:
   group: arneses-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   navegador:
