@@ -1,0 +1,87 @@
+# LA PUERTA DE ESTE REPO, QUE NO EXISTÍA.
+#
+# Hasta hoy el único workflow de `proyectos` era `pages-build-deployment`, el
+# que despliega el sitio: verificado por API, no supuesto. O sea que veintiún
+# arneses de navegador —más de mil comprobaciones, con sus mutantes y sus
+# careos contra el core— corrían **cuando alguien se acordaba**, y nada
+# impedía fusionar con cualquiera de ellos en rojo.
+#
+# Esto es la mitad mecánica del arreglo. La otra mitad NO la puede hacer un
+# commit: marcar este check como OBLIGATORIO en la protección de rama de
+# `main` es una decisión de gobernanza y es del mantenedor. Mientras no se
+# marque, esto INFORMA y no bloquea — que es mejor que nada y peor que una
+# puerta, y conviene no confundirlo.
+#
+# El veredicto lo da `tests/correr.sh`, y lo da leyendo los RECUENTOS de cada
+# arnés, no el código de salida de la tubería. El porqué está en su cabecera.
+name: arneses
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Una tirada por rama: si llegan dos empujones seguidos, manda el último.
+concurrency:
+  group: arneses-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  navegador:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Este repo IGNORA `package.json` y `package-lock.json` a propósito, y su
+      # `.gitignore` escribe el motivo: «son 19 MB de herramienta, no del
+      # proyecto; el Panel es HTML plano y no necesita build ni dependencias
+      # para publicarse». Esa decisión no se toca desde aquí: se instala sin
+      # manifiesto.
+      #
+      # Y se instala ANCLADO. Un `playwright@latest` haría que el veredicto de
+      # esta puerta dependiera de lo que npm publicase esta mañana: no mediría
+      # el repo, mediría el reloj. Es el mismo fallo que ya costó tres PR
+      # atascados con el pin del bloque JS, y la cura es la misma — la versión
+      # se fija a propósito y su cambio se ve en el diff. Al subirla, súbela
+      # también en tests/README.md.
+      - name: dependencias
+        run: npm install --no-save --no-audit --no-fund playwright@1.62.1
+
+      - name: navegador
+        run: npx playwright install --with-deps chromium
+
+      # El repo se sirve como lo sirve GitHub Pages: ficheros estáticos. Los
+      # arneses hablan con :8099 y ahí es donde se cae si no está.
+      - name: servir el repo en :8099
+        run: |
+          set -o pipefail
+          python3 -m http.server 8099 --bind 127.0.0.1 >/dev/null 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:8099/index.html && break
+            sleep 1
+          done
+          curl -sf -o /dev/null http://localhost:8099/index.html
+
+      - name: correr los arneses
+        run: bash tests/correr.sh
+
+      # Los logs completos sobreviven al runner: sin ellos, un rojo obliga a
+      # reproducirlo a ciegas. Se suben TAMBIÉN en verde, porque los recuentos
+      # de una tirada verde son la línea base de la siguiente.
+      - name: guardar los logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arneses-${{ github.run_id }}
+          path: .arneses/
+          retention-days: 14
+          # `warn` y no `error`: si el fallo fue ANTES de correr nada —el
+          # servidor que no levanta— el directorio no existe, y un error aquí
+          # taparía la causa real con una segunda queja.
+          if-no-files-found: warn

@@ -184,24 +184,89 @@ Cubre también la **velocidad de arranque** del reproductor: la ventana se muest
 
 Cubre además la regla del **eje de transmisión** de la escena 3D —qué filas empareja un motor bifila y dónde se corta el eje en el caso pasivo—, que vive en una función pura aparte del dibujo justo para poder ejercitarla sin montar una escena. Con sus dos mutantes: se reproduce el cálculo viejo y el criterio tiene que rechazarlo.
 
+## La puerta: `tests/correr.sh` y el workflow `arneses`
+
+Hasta el 2026-09-09 este repo tenía **veintiún arneses y ninguna puerta**. Verificado por API,
+no supuesto: el único workflow era `pages-build-deployment`, el del despliegue del sitio. O sea
+que las 1.630 comprobaciones —con sus mutantes y sus careos contra el core— corrían **cuando
+alguien se acordaba**, y nada impedía fusionar con cualquiera de ellas en rojo. Es el
+decimocuarto corolario del `CLAUDE.md` de SolarGPT, literal y en el otro repo: toda la
+disciplina vale lo que valga la puerta.
+
+```bash
+python3 -m http.server 8099                # servir el repo (en otra terminal)
+bash tests/correr.sh                       # los 21 · 1.630 comprobaciones · ~17 min
+bash tests/correr.sh viento                # solo los que casen con el patrón
+```
+
+**El veredicto sale del RECUENTO LEÍDO, no del código de salida**, y aquí eso no es una
+costumbre sino el código: un arnés está verde si sale con 0 **y** no imprime ninguna línea
+`FAIL` **y** publica al menos su **piso** de comprobaciones. Ese tercer requisito es el que
+impide el verde vacío — un arnés que revienta antes de comprobar nada, o cuyo formato de salida
+cambia, se pone rojo en vez de colarse. Lo demás son guards de los que ya se ha pagado aquí: se
+comprueba que el servidor esté vivo ANTES (un puerto muerto se lee como regresión), la lista de
+exenciones lleva su guard de zombis, y un arnés nuevo **sin piso** para la tirada en vez de
+quedar vigilado por un umbral que no puede fallar.
+
+**Los pisos están medidos, no copiados.** Al medirlos, seis de los que este mismo fichero daba
+por buenos estaban viejos: `test_layout` publica **201** y el texto decía 196, `test_index`
+**18** y decía 13, `test_granizo_pestana` **28** y decía 22. Un piso transcrito habría nacido
+mintiendo, que es justo lo que un recuento sin mecanismo acaba haciendo.
+
+Cuatro mutantes sobre el propio corredor, **verificados aplicados** antes de juzgarlo:
+
+| mutante | qué pasa |
+|---|---|
+| un arnés imprime una línea `FAIL` | ROJO — y lo caza aunque el arnés se autoproclame «7/7» |
+| un arnés sale con 0 sin comprobar nada | ROJO por el piso (el vacío es error, no PASS) |
+| un arnés pierde comprobaciones y sale con 0 | ROJO por el piso |
+| un arnés nuevo sin piso | ROJO antes de correr nada |
+
+El primero **sobrevivió en el primer intento y no porque el corredor fallara**: lo había añadido
+detrás del `process.exit` del arnés, así que nunca se ejecutaba. Verificar el mutante APLICADO
+—imprimir la línea mutada— es lo que lo separó de un test débil.
+
+**La red no hace falta**, y va medido: ningún arnés sin `page.route` nombra un host externo, y
+ninguno de los que no interceptan dispara una simulación. Los 21 pasan en un entorno con la
+salida bloqueada por el proxy, así que el verde ES la evidencia. *Límite declarado*: eso dice
+que ningún arnés PIDE la red, no que un runner con red abierta no pueda dejar que una página
+salga por su cuenta.
+
+**Lo que este mecanismo NO hace, y es la mitad que falta:** el workflow `arneses` corre en cada
+PR pero **no bloquea** mientras nadie lo marque como check obligatorio en la protección de rama
+de `main`. Eso es gobernanza y es del mantenedor. Hasta entonces esto INFORMA, que es mejor que
+nada y peor que una puerta — y conviene no confundirlo, porque un check que no bloquea es
+decorativo.
+
+La versión de Playwright se ancla **en el workflow** (`playwright@1.62.1`) y no en un manifiesto:
+este repo ignora `package.json` a propósito y su `.gitignore` escribe el motivo. Sin anclar, el
+veredicto de la puerta dependería de lo que npm publicase esa mañana — no mediría el repo,
+mediría el reloj, que es el fallo que ya costó tres PR atascados con el pin del bloque JS.
+
+### Los arneses, uno a uno (comprobaciones medidas el 2026-09-09)
+
 ```bash
 npm install playwright                     # el navegador ya está en /opt/pw-browsers
 python3 -m http.server 8099                # servir el repo (en otra terminal)
-node tests/test_index.js                   # 13 comprobaciones
+node tests/test_index.js                   # 18 comprobaciones
 node tests/test_pwa.js                     # 21 comprobaciones (PWA)
-node tests/test_integridad.js              # 6 comprobaciones, sin navegador
-node tests/test_comparador.js              # 280 comprobaciones, careo contra el core (quebrado incluido) y barridos
+node tests/test_integridad.js              # 7 comprobaciones, sin navegador
+node tests/test_comparador.js              # 304 comprobaciones, careo contra el core (quebrado incluido) y barridos
 node tests/test_comparador_3d.js           # 247 comprobaciones, escena 3D, equipos, sizing y barridos
 node tests/test_sizing.js                  # 115 comprobaciones, careo del dimensionado eléctrico
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
+node tests/test_buscador.js                # 55 comprobaciones, el buscador de implantaciones
+node tests/test_careo_pvsyst.js            # 11 comprobaciones, el careo contra PVsyst
 node tests/test_viento_ejes.js             # 77 comprobaciones, lienzos, ejes, transmisión, reproductor, sombras y franjas
 node tests/test_viento_sitio.js            # 52 comprobaciones, emplazamiento, horas y laboratorio
-node tests/test_viento_planta.js           # 20 comprobaciones, la planta en franjas y consigna vs ejecutado
-node tests/test_viento_sello.js     # el informe declara con qué coordenadas se calculó
+node tests/test_viento_planta.js           # 35 comprobaciones, la planta en franjas y consigna vs ejecutado
+node tests/test_viento_sello.js            # 17 comprobaciones, el informe declara con qué coordenadas se calculó
 node tests/test_viento_reproductor.js      # 18 comprobaciones, pasar de la barra sigue en el tiempo
 node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core
 node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo
-node tests/test_granizo_pestana.js         # 22 comprobaciones, la pestaña de granizo en Chromium
-node tests/test_layout.js                  # 196 comprobaciones, careo del generador de layout
+node tests/test_granizo_pestana.js         # 28 comprobaciones, la pestaña de granizo en Chromium
+node tests/test_ejecucion_traza.mjs        # 61 comprobaciones, la máquina de ejecución del §10.2
+node tests/test_layout.js                  # 201 comprobaciones, careo del generador de layout
 node tests/test_layout_ui.js               # 182 comprobaciones, el generador en Chromium
+node tests/test_zonas_mixto.js             # 106 comprobaciones, el reparto por zonas
 ```
