@@ -264,7 +264,7 @@ node tests/test_viento_sitio.js            # 52 comprobaciones, emplazamiento, h
 node tests/test_viento_planta.js           # 35 comprobaciones, la planta en franjas y consigna vs ejecutado
 node tests/test_viento_sello.js            # 17 comprobaciones, el informe declara con qué coordenadas se calculó
 node tests/test_viento_reproductor.js      # 18 comprobaciones, pasar de la barra sigue en el tiempo
-node tests/test_viento_rafaga_medida.js    # 18 comprobaciones, la ráfaga MEDIDA manda sobre el modelo
+node tests/test_viento_rafaga_medida.js    # 29 comprobaciones, la ráfaga MEDIDA manda, y Open-Meteo la pide sin riesgo
 node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core
 node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo
 node tests/test_granizo_pestana.js         # 28 comprobaciones, la pestaña de granizo en Chromium
