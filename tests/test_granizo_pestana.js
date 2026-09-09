@@ -148,7 +148,15 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
     await page.route('**/archive-api.open-meteo.com/**', r => r.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify(meteoPico(pico)) }));
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    // 90 s y no los 30 de por defecto. La recarga cae justo después de una
+    // corrida de un año a paso MINUTAL, y en un runner de dos núcleos esa
+    // cuenta sigue ocupando el hilo principal cuando se pide el reload: en CI
+    // expiraba a los 30 s con las 21 comprobaciones anteriores en verde. No es
+    // aflojar un listón —no se comprueba nada menos—, es darle a una operación
+    // lenta el tiempo que de verdad tarda en la máquina más lenta que la corre.
+    // Es la misma holgura que este arnés ya le da a `REP.timeline` dos líneas
+    // más abajo.
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 90000 });
     await page.waitForSelector('#run', { timeout: 15000 });
     await page.click('#run');
     await page.waitForFunction(() => window.REP && REP.timeline, { timeout: 90000 });

@@ -729,6 +729,18 @@ const cajaLienzo = async page => {
   // cae, prueba la siguiente y DICE cuál ha servido. Se tumba la de teselas a
   // propósito y tiene que salir adelante con Open Topo Data.
   await page.evaluate(() => { DEM = null; });
+  // LA CACHÉ DE IMÁGENES HAY QUE VACIARLA, y no es celo: las teselas se cargan
+  // con `new Image()` y el bloque de arriba ya pidió ESTAS MISMAS (misma
+  // parcela, mismo z13). Una imagen que ya está en la caché de memoria del
+  // render se sirve SIN emitir petición, así que el `abort` de la línea
+  // siguiente no llega a dispararse, la cascada no cae y el rótulo sigue
+  // diciendo «Teselas de terreno». Lo destapó la primera tirada de CI: aquí
+  // pasaba y allí no, y la diferencia era la versión del navegador (141 vs
+  // 151), o sea que el verde de antes dependía de cómo cachease Chromium ese
+  // día. `Network.clearBrowserCache` lo vuelve independiente de eso.
+  const cdpCache = await page.context().newCDPSession(page);
+  await cdpCache.send('Network.clearBrowserCache');
+  await cdpCache.detach().catch(() => {});
   await page.route('https://s3.amazonaws.com/elevation-tiles-prod/**', r => r.abort());
   let otdLlamadas = 0;
   await page.route('https://api.opentopodata.org/**', r => {

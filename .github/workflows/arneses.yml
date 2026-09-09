@@ -1,0 +1,131 @@
+# LA PUERTA DE ESTE REPO, QUE NO EXISTÍA.
+#
+# Hasta hoy el único workflow de `proyectos` era `pages-build-deployment`, el
+# que despliega el sitio: verificado por API, no supuesto. O sea que veintiún
+# arneses de navegador —más de mil comprobaciones, con sus mutantes y sus
+# careos contra el core— corrían **cuando alguien se acordaba**, y nada
+# impedía fusionar con cualquiera de ellos en rojo.
+#
+# Esto es la mitad mecánica del arreglo. La otra mitad NO la puede hacer un
+# commit: marcar este check como OBLIGATORIO en la protección de rama de
+# `main` es una decisión de gobernanza y es del mantenedor. Mientras no se
+# marque, esto INFORMA y no bloquea — que es mejor que nada y peor que una
+# puerta, y conviene no confundirlo.
+#
+# El veredicto lo da `tests/correr.sh`, y lo da leyendo los RECUENTOS de cada
+# arnés, no el código de salida de la tubería. El porqué está en su cabecera.
+name: arneses
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Una tirada por rama: si llegan dos empujones seguidos, manda el último.
+concurrency:
+  group: arneses-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  navegador:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      # `fetch-depth: 0` NO es por gusto: `test_integridad.js` compara los
+      # recuentos de tarjetas y plantas contra `git show origin/main:index.html`.
+      # Con el checkout por defecto (una sola ref) `origin/main` no existe, el
+      # arnés ANUNCIA que se salta la comparación y publica 5 en vez de 7 — un
+      # salto silencioso en CI, que es justo lo que el tercer corolario prohíbe.
+      # Lo cazó el piso; se cierra dándole la referencia, no bajando el listón.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Este repo IGNORA `package.json` y `package-lock.json` a propósito, y su
+      # `.gitignore` escribe el motivo: «son 19 MB de herramienta, no del
+      # proyecto; el Panel es HTML plano y no necesita build ni dependencias
+      # para publicarse». Esa decisión no se toca desde aquí: se instala sin
+      # manifiesto.
+      #
+      # Y se instala ANCLADO. Un `playwright@latest` haría que el veredicto de
+      # esta puerta dependiera de lo que npm publicase esta mañana: no mediría
+      # el repo, mediría el reloj. Es el mismo fallo que ya costó tres PR
+      # atascados con el pin del bloque JS, y la cura es la misma — la versión
+      # se fija a propósito y su cambio se ve en el diff. Al subirla, súbela
+      # también en tests/README.md.
+      - name: dependencias
+        run: npm install --no-save --no-audit --no-fund playwright@1.62.1
+
+      # SIN `--with-deps`, y no por ahorrar: ese flag lanza un `apt-get update`
+      # sobre TODOS los repos del runner —incluido el de Google Chrome, que
+      # este trabajo no usa para nada— y la tirada #1 murió justo ahí, con el
+      # índice de Google a medio publicar:
+      #
+      #   E: Failed to fetch https://dl.google.com/linux/chrome-stable/…/Packages.gz
+      #      Hash Sum mismatch
+      #      Last modification reported: 2026-09-09 09:41:12
+      #      Release file created at:    2026-09-09 17:16:59
+      #   Failed to install browsers · exited with code: 100
+      #
+      # O sea que el veredicto de esta puerta dependía de que un tercero no
+      # estuviera publicando su índice en ese minuto. La imagen `ubuntu-latest`
+      # ya trae las bibliotecas que necesita este Chromium, así que la cura no
+      # es reintentar: es no pedir el índice.
+      - name: navegador
+        run: npx playwright install chromium
+
+      # Y como quitar `--with-deps` es una APUESTA sobre lo que trae la imagen,
+      # se comprueba aquí y no dentro de un arnés: si algún día falta una
+      # biblioteca, el rojo sale con este nombre y esta línea, no disfrazado de
+      # regresión en la primera prueba que abra un navegador.
+      - name: que el navegador ARRANQUE (si falta una .so, se ve aquí)
+        run: |
+          set -o pipefail
+          node -e "
+            const { chromium } = require('playwright');
+            chromium.launch().then(async b => {
+              console.log('chromium levanta ·', b.version());
+              await b.close();
+            }).catch(e => { console.error('NO levanta:', e.message); process.exit(1); });
+          "
+
+      # El repo se sirve como lo sirve GitHub Pages: ficheros estáticos. Los
+      # arneses hablan con :8099 y ahí es donde se cae si no está.
+      - name: servir el repo en :8099
+        run: |
+          set -o pipefail
+          python3 -m http.server 8099 --bind 127.0.0.1 >/dev/null 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:8099/index.html && break
+            sleep 1
+          done
+          curl -sf -o /dev/null http://localhost:8099/index.html
+
+      - name: correr los arneses
+        run: bash tests/correr.sh
+
+      # Los logs completos sobreviven al runner: sin ellos, un rojo obliga a
+      # reproducirlo a ciegas. Se suben TAMBIÉN en verde, porque los recuentos
+      # de una tirada verde son la línea base de la siguiente.
+      - name: guardar los logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arneses-${{ github.run_id }}
+          path: .arneses/
+          retention-days: 14
+          # `warn` y no `error`: si el fallo fue ANTES de correr nada —el
+          # servidor que no levanta— el directorio no existe, y un error aquí
+          # taparía la causa real con una segunda queja.
+          if-no-files-found: warn
+          # `.arneses` empieza por punto y esta acción excluye los ocultos POR
+          # DEFECTO: la tirada #2 acabó en «No files were found with the
+          # provided path: .arneses/» y me dejó sin los logs justo cuando hacían
+          # falta para diagnosticar. Un artefacto que no sube es un artefacto
+          # que no existe.
+          include-hidden-files: true
