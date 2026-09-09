@@ -65,16 +65,29 @@ declare -A PISO=(
   [test_comparador_3d.js]=247
   [test_comparador_sitio.js]=36
   [test_ejecucion_traza.mjs]=61
-  # 8 y no 9 A PROPÓSITO, y esto es un HUECO DECLARADO, no un listón flojo:
-  # la novena comprobación de este arnés carea el espejo commiteado contra la
-  # FUENTE, que vive en el repo hermano `SolarGPTfull` — privado, así que el
-  # runner no puede clonarlo con el token por defecto. Donde el hermano está
-  # al lado (una máquina de desarrollo) publica 9 y el careo ocurre; en CI
-  # publica 8 y ese careo NO se hace.
+  # 8 y no 9 A PROPÓSITO, y esto es un HUECO DECLARADO, no un listón flojo.
   #
-  # Cómo se cierra, para quien pase por aquí: un secreto de solo lectura sobre
-  # `SolarGPTfull` y un `actions/checkout` del hermano al nivel del workspace.
-  # Es una decisión del mantenedor (crear el secreto), no de un commit.
+  # CORREGIDO: la primera versión de esta nota decía que la novena
+  # comprobación «carea el espejo commiteado contra la FUENTE» y que cerrarla
+  # exigía un secreto de solo lectura sobre `SolarGPTfull`. Las dos cosas eran
+  # falsas, y se ven leyendo el arnés:
+  #
+  #   · el careo contra la fuente SÍ ocurre —lo hace «el espejo de este repo
+  #     está en orden», con la regla extraída a función pura— y sin el hermano
+  #     degrada a auto-consistencia contra el `.sha256` commiteado. El propio
+  #     arnés lo dice en su salida: «SIN repo hermano: no se ha podido carear
+  #     (modo declarado, no aprobado)». Y las cuatro combinaciones de la regla
+  #     —espejo viejo, al día, sin hash, sin espejo— se ejercitan SIEMPRE sobre
+  #     la función pura, aquí incluido.
+  #   · la que no corre es otra: «el generador del core escribe también el
+  #     espejo y su hash», que lee `solargpt/scripts/gen_goldens_hailstow.py`
+  #     de `SolarGPTfull`.
+  #
+  # O sea que lo que falta en CI no es el careo, es comprobar que el generador
+  # del core sigue escribiendo el espejo. Y eso NO necesita secreto ninguno:
+  # el generador vive en `SolarGPTfull`, así que la comprobación se cierra
+  # ALLÍ, en su propia suite, sin clonar nada. Queda anotado como lo que hay
+  # que hacer, no como una limitación del entorno.
   [test_granizo_espejo.mjs]=8
   [test_granizo_pestana.js]=28
   [test_granizo_traza.mjs]=30
