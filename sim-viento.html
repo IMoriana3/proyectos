@@ -396,7 +396,9 @@
 
       <div class="timerow" id="epCtl" style="display:none">
         <button class="btn small acc" id="play">▶ Reproducir</button>
+        <button class="btn small" id="tprev" title="La ventana anterior: acaba justo donde ésta empieza, así que el tiempo va hacia atrás sin saltarse nada.">‹</button>
         <input type="range" id="tpos" min="0" max="0" step="1" value="0">
+        <button class="btn small" id="tnext" title="La ventana siguiente: empieza justo donde ésta acaba, así que el tiempo sigue hacia delante y cambia el día. Al llegar al final del año se vuelve al episodio.">›</button>
         <span class="t" id="tlbl">—</span>
         <select id="tspeed" title="Cuánto tarda en reproducirse la ventana entera. Las opciones salen del PASO de la ventana: por debajo de un paso por segundo la escena se queda congelada entre muestra y muestra."></select>
       </div>
@@ -1921,6 +1923,60 @@ LOC.scenario=function(M,sc,lat,dtH){
   return {ws:ws,wd:wd,meta:(sc.base!=='meteo'||meta.events_applied.length||sc.use_gust||sc.dir_deg!=null)?meta:null};
 };
 
+/* ── LA VENTANA DEL 3D SE REBANA, NO SE CONGELA ──
+   El reproductor del modo episodio enseñaba UNA ventana —la del episodio más
+   caro del año— y al llegar al final volvía a su primer instante. O sea que el
+   tiempo NUNCA seguía hacia delante: con un año entero de meteo detrás, la
+   escena se quedaba dando vueltas al mismo día.
+
+   Rebanar es exactamente lo que ya hacía `LOC.run` para su ventana, así que la
+   regla vive AQUÍ y la usan las dos: la del informe y las que el reproductor
+   pide después. Dos rebanadoras serían dos muestreos distintos sobre el mismo
+   dato y comparar una ventana con la siguiente dejaría de significar nada.
+
+   Devuelve `null` cuando en ese tramo no hay dato — que es la respuesta que
+   necesita quien avanza: «aquí se acabó el año», no una ventana vacía que se
+   pintaría como si lo fuera. */
+LOC.ventana=function(SRC,t0,t1){
+  var t=SRC.t, n=t.length, maxSteps=SRC.max_steps||240, i;
+  var sel=[];for(i=0;i<n;i++){var ti=t[i].getTime();if(ti>=t0&&ti<=t1)sel.push(i);}
+  if(!sel.length)return null;
+  var stride=Math.max(1,Math.ceil(sel.length/maxSteps));
+  sel=sel.filter(function(_,j){return j%stride===0;});
+  var pick=function(a,dec){return sel.map(function(j){return Math.round(a[j]*Math.pow(10,dec))/Math.pow(10,dec);});};
+  var TLo={window:{start:t[sel[0]].toISOString(),end:t[sel[sel.length-1]].toISOString(),
+      steps:sel.length,step_minutes:Math.round(SRC.dtH*60*stride*100)/100},
+    t:sel.map(function(j){return t[j].toISOString();}),
+    sun_el:sel.map(function(j){return Math.round(SRC.el[j]/LOC.D2R*100)/100;}),
+    sun_az:sel.map(function(j){return Math.round(SRC.azp[j]*100)/100;}),
+    wind_ms:pick(SRC.ws,2),
+    wind_dir:sel.map(function(j){return isNaN(SRC.wd[j])?null:Math.round(SRC.wd[j]*10)/10;}),
+    baseline:{theta:pick(SRC.thB,2),poa:pick(SRC.poaB,1)},cases:{}};
+  for(var S in SRC.series)TLo.cases[S]={theta:pick(SRC.series[S].theta,2),
+    orden:pick(SRC.series[S].orden||SRC.series[S].theta,2),poa:pick(SRC.series[S].poa,1),
+    mode:sel.map(function(j){return SRC.series[S].mode[j];})};
+  return TLo;
+};
+/* La fuente se RETIENE muestreada al paso que el reproductor puede enseñar, no
+   al del cálculo. Con el default de esta ficha —un año a paso minutal— guardar
+   las series enteras serían más de cien megas retenidos para pintar 240 pasos,
+   y la ventana ya se muestrea a ese `stride`: por debajo no hay nada que ver.
+   La reducción no se calla — el paso de cada ventana sale en
+   `window.step_minutes`, que es el mismo con o sin ella. */
+LOC.fuenteReducida=function(SRC,k){
+  if(!(k>1))return SRC;
+  var n=SRC.t.length,idx=[],i;
+  for(i=0;i<n;i+=k)idx.push(i);
+  var num=function(a){return Float64Array.from(idx,function(j){return a[j];});};
+  var any=function(a){return idx.map(function(j){return a[j];});};
+  var R={t:any(SRC.t),el:num(SRC.el),azp:num(SRC.azp),ws:num(SRC.ws),wd:num(SRC.wd),
+    thB:num(SRC.thB),poaB:num(SRC.poaB),dtH:SRC.dtH*k,max_steps:SRC.max_steps,series:{}};
+  for(var S in SRC.series)R.series[S]={theta:num(SRC.series[S].theta),
+    orden:num(SRC.series[S].orden||SRC.series[S].theta),
+    poa:num(SRC.series[S].poa),mode:any(SRC.series[S].mode)};
+  return R;
+};
+
 /* ── El informe: MISMO contrato que POST /windstow, para que la ficha entera
       (tablas, gráficas, campo 3D) no sepa de dónde viene el número ── */
 LOC.run=function(cfg,onStep){
@@ -2122,20 +2178,13 @@ LOC.run=function(cfg,onStep){
       t0=Date.parse(peor.start)-pad;t1=Date.parse(peor.end)+pad;}
     else{var mid=M.t[Math.floor(n/2)];t0=Date.UTC(mid.getUTCFullYear(),mid.getUTCMonth(),mid.getUTCDate());
       t1=t0+hrs*3600e3;}
-    var sel=[];for(i=0;i<n;i++){var ti=M.t[i].getTime();if(ti>=t0&&ti<=t1)sel.push(i);}
-    if(!sel.length)for(i=0;i<Math.min(n,maxSteps);i++)sel.push(i);
-    var stride=Math.max(1,Math.ceil(sel.length/maxSteps));sel=sel.filter(function(_,j){return j%stride===0;});
-    var pick=function(a,dec){return sel.map(function(j){return Math.round(a[j]*Math.pow(10,dec))/Math.pow(10,dec);});};
-    var TLo={window:{start:M.t[sel[0]].toISOString(),end:M.t[sel[sel.length-1]].toISOString(),
-        steps:sel.length,step_minutes:Math.round(dtH*60*stride*100)/100},
-      t:sel.map(function(j){return M.t[j].toISOString();}),
-      sun_el:sel.map(function(j){return Math.round(el[j]/LOC.D2R*100)/100;}),
-      sun_az:sel.map(function(j){return Math.round(azp[j]*100)/100;}),
-      wind_ms:pick(ws,2), wind_dir:sel.map(function(j){return isNaN(wd[j])?null:Math.round(wd[j]*10)/10;}),
-      baseline:{theta:pick(thB,2),poa:pick(poaB,1)},cases:{}};
-    for(var S3 in series)TLo.cases[S3]={theta:pick(series[S3].theta,2),
-      orden:pick(series[S3].orden||series[S3].theta,2),poa:pick(series[S3].poa,1),
-      mode:sel.map(function(j){return series[S3].mode[j];})};
+    var SRC={t:M.t,el:el,azp:azp,ws:ws,wd:wd,thB:thB,poaB:poaB,series:series,dtH:dtH,
+             max_steps:maxSteps};
+    /* Si la ventana pedida no pilla dato, el informe cae a las primeras
+       `max_steps` muestras del año: una ventana que no existe no puede quedar
+       vacía en el 3D. Se dice con los mismos límites, no con otra rebanadora. */
+    var TLo=LOC.ventana(SRC,t0,t1)||
+            LOC.ventana(SRC,M.t[0].getTime(),M.t[Math.min(n,maxSteps)-1].getTime());
     // traza del peor episodio de cada caso, para la gráfica de detalle
     for(var S4 in cases){
       var te=cases[S4].top_events[0];
@@ -2156,7 +2205,7 @@ LOC.run=function(cfg,onStep){
     var rosa=LOC.rosa(ws,wd,dtH,T1,T2);
     var sorted=Array.from(ws).sort(function(a,b){return a-b;});
     var over=function(T){var h=0;for(var j=0;j<n;j++)if(ws[j]>T)h+=dtH;return h;};
-    return {engine:'navegador · modelo local (isotrópico, sin sombreado ni lazo de control)',
+    var INF={engine:'navegador · modelo local (isotrópico, sin sombreado ni lazo de control)',
       local:true,
       site:{lat:lat,lon:lon,name:cfg.name||null},
       meteo:{rows:n,dt_h:Math.round(dtH*1e4)/1e4,period:[M.t[0].toISOString(),M.t[n-1].toISOString()],
@@ -2180,6 +2229,22 @@ LOC.run=function(cfg,onStep){
         tracker:cfg.tracker},
       baseline:{poa_kwh_m2:Math.round(eB*1000)/1000,poa_monthly_kwh_m2:monthly(poaB)},
       cases:cases, timeline:TLo};
+    /* La fuente de la que el reproductor rebana las ventanas siguientes. Va
+       como propiedad NO ENUMERABLE a propósito: es una caché de trabajo del
+       navegador, no un resultado, y no debe viajar en ningún volcado del
+       informe ni confundirse con el contrato de `POST /windstow` —que llega
+       por HTTP y no la trae, así que por ese camino el reproductor lo DICE en
+       vez de fingir que puede avanzar. */
+    if(cfg.timeline){
+      var kFuente=Math.max(1,Math.round(((t1-t0)/6e4/maxSteps)/(dtH*60)));
+      Object.defineProperty(INF,'__src',{value:LOC.fuenteReducida(SRC,kFuente),
+        enumerable:false,configurable:true});
+    }
+    /* Solo la corrida que PIDE ventana retiene serie. En multi-año `runMulti`
+       pasa `timeline` únicamente al primer año —que es el que alimenta el 3D—,
+       así que los demás no arrastran su año retenido detrás sin que nadie lo
+       vaya a reproducir. */
+    return INF;
   });
 };
 
@@ -4575,35 +4640,101 @@ function liveTick(dtReal){
 }
 
 /* ═══════════ MODO EPISODIO ═══════════ */
+/* ── PASAR DE LA BARRA ES SEGUIR EN EL TIEMPO, NO VOLVER AL PRINCIPIO ──
+   La ventana del informe es la del episodio más caro del año, y el
+   reproductor la daba por todo el mundo posible: al llegar al final volvía a
+   su primer instante (`(TPOS+pasos) % t.length`), así que la fecha del rótulo
+   no pasaba nunca del día del episodio por muchas vueltas que uno le diera.
+
+   Ahora la ventana se CORRE: la siguiente empieza donde acaba ésta, sin hueco
+   ni solape, de modo que el reloj avanza de verdad y el día cambia solo. Se
+   corre por su propio ancho y no por 24 h fijas justamente por eso — con una
+   ventana de 36 h, saltar un día repetiría doce horas ya vistas, y con una de
+   16 h se saltaría ocho sin enseñarlas.
+
+   `VENT0` es la del episodio, a la que se vuelve cuando se acaba el año: es la
+   que el informe calculó y la que el resto de la ficha sigue leyendo de
+   `REP.timeline` (la gráfica de θ, el careo de granizo). Correr el reproductor
+   NO la toca. */
+var VENT0=null;
+function fuenteVentanas(){return (REP&&REP.__src)?REP.__src:null;}
+function ventanaVecina(dir){
+  var a=Date.parse(TL.window.start), b=Date.parse(TL.window.end);
+  var paso=(+TL.window.step_minutes||1)*60e3, ancho=b-a+paso;
+  return {t0:a+dir*ancho, t1:b+dir*ancho};
+}
+function hayVentana(dir){
+  var SRC=fuenteVentanas(); if(!SRC||!TL)return false;
+  var v=ventanaVecina(dir), n=SRC.t.length;
+  return v.t1>=SRC.t[0].getTime() && v.t0<=SRC.t[n-1].getTime();
+}
+/* Corre la ventana y devuelve si pudo. `i` es dónde cae el reproductor dentro
+   de la nueva: 0 yendo hacia delante (se entra por el principio) y el último
+   paso yendo hacia atrás (se entra por el final), que es lo que hace que
+   avanzar y retroceder sean continuos y no dos saltos distintos. */
+function correVentana(dir,i){
+  var SRC=fuenteVentanas(); if(!SRC||!hayVentana(dir))return false;
+  var v=ventanaVecina(dir), TLn=LOC.ventana(SRC,v.t0,v.t1);
+  if(!TLn||!TLn.t.length)return false;
+  ponVentana(TLn,(i!=null?i:(dir>0?0:TLn.t.length-1)));
+  return true;
+}
+function vuelveAlEpisodio(i){
+  if(!VENT0||TL===VENT0)return false;
+  ponVentana(VENT0,i||0);
+  return true;
+}
+/* Deja una ventana montada: la barra, el rótulo de la tarjeta y la escena.
+   La lista de VELOCIDADES solo se rehace si cambia el paso —correr la ventana
+   no debe reiniciar la velocidad que el usuario acaba de elegir— y `rehaz`
+   la fuerza cuando se monta el episodio de cero. */
+function ponVentana(TLn,i,rehaz){
+  var pasoAnt=TL&&TL.window?TL.window.step_minutes:null;
+  TL=TLn;
+  $('tpos').max=Math.max(0,TL.t.length-1);
+  if(rehaz||pasoAnt!==TL.window.step_minutes){
+    /* La velocidad de arranque se elige por la ventana, no por un default fijo,
+       y se DICE cuánto dura: sin eso, con meteo de paso grueso el reproductor
+       salía a segundos por fotograma y parecía que no avanzaba. Si el usuario ya
+       ha tocado el selector, manda él. */
+    var _prev=+$('tspeed').value||0;
+    var _ops=opcionesRepro(TL.window.step_minutes,TL.window.steps);
+    $('tspeed').innerHTML=_ops.map(function(o){
+      return '<option value="'+o.factor+'">'+Math.round(o.seg)+' s · ×'+o.factor+'</option>';
+    }).join('');
+    var _def=factorPorDefecto(TL.window.step_minutes,TL.window.steps);
+    // si el usuario ya eligió y esa velocidad sigue existiendo, manda él
+    $('tspeed').value=($('tspeed').dataset.tocado&&_ops.some(function(o){return o.factor===_prev;}))
+      ? _prev : _def;
+  }
+  $('tprev').disabled=!hayVentana(-1);
+  $('tnext').disabled=!hayVentana(1);
+  /* El rótulo dice QUÉ TRAMO se está viendo, no solo cuánto dura: sin las
+     fechas, dos ventanas seguidas se leen iguales y correrlas no se nota. Y
+     donde no se puede correr —el informe llegó por HTTP y no trae la serie— se
+     DICE, en vez de dejar que la vuelta al principio parezca la única
+     conducta posible. */
+  $('c3hint').textContent=fechaHoraLocal(TL.window.start)+' → '+fechaHoraLocal(TL.window.end)+
+    ' · '+TL.window.steps+' pasos de '+TL.window.step_minutes+
+    ' min · la ventana entera en '+
+    Math.round(duracionRepro(TL.window.step_minutes,+$('tspeed').value,TL.window.steps))+' s'+
+    (fuenteVentanas()
+      ? (TL===VENT0?' · al pasar de la barra sigue por el día siguiente':' · corrida desde el episodio')
+      : ' · el informe viene del motor y no trae la serie del año: aquí la barra da la vuelta');
+  update3D(i);
+}
 function build3D(){
   if(!TD||!REP||!REP.timeline)return;
-  TL=REP.timeline;
-  $('tpos').max=Math.max(0,TL.t.length-1);
+  VENT0=REP.timeline;
+  var TLe=REP.timeline;
   var i0=0, mejor=-1;
-  for(var i=0;i<TL.t.length;i++){
-    var pb=TL.baseline.poa[i]||0, dmax=0;
-    for(var k in TL.cases)dmax=Math.max(dmax,Math.abs(pb-(TL.cases[k].poa[i]||0)));
+  for(var i=0;i<TLe.t.length;i++){
+    var pb=TLe.baseline.poa[i]||0, dmax=0;
+    for(var k in TLe.cases)dmax=Math.max(dmax,Math.abs(pb-(TLe.cases[k].poa[i]||0)));
     if(dmax>mejor){mejor=dmax;i0=i;}
   }
-  if(mejor<=0){var sol=-99;for(var j=0;j<TL.t.length;j++)if((TL.sun_el[j]||-99)>sol){sol=TL.sun_el[j];i0=j;}}
-  TPOS=i0; $('tpos').value=i0;
-  /* La velocidad de arranque se elige por la ventana, no por un default fijo,
-     y se DICE cuánto dura: sin eso, con meteo de paso grueso el reproductor
-     salía a segundos por fotograma y parecía que no avanzaba. Si el usuario ya
-     ha tocado el selector, manda él. */
-  var _prev=+$('tspeed').value||0;
-  var _ops=opcionesRepro(TL.window.step_minutes,TL.window.steps);
-  $('tspeed').innerHTML=_ops.map(function(o){
-    return '<option value="'+o.factor+'">'+Math.round(o.seg)+' s · ×'+o.factor+'</option>';
-  }).join('');
-  var _def=factorPorDefecto(TL.window.step_minutes,TL.window.steps);
-  // si el usuario ya eligió y esa velocidad sigue existiendo, manda él
-  $('tspeed').value=($('tspeed').dataset.tocado&&_ops.some(function(o){return o.factor===_prev;}))
-    ? _prev : _def;
-  $('c3hint').textContent=TL.window.steps+' pasos de '+TL.window.step_minutes+
-    ' min · la ventana entera en '+
-    Math.round(duracionRepro(TL.window.step_minutes,+$('tspeed').value,TL.window.steps))+' s';
-  update3D(i0);
+  if(mejor<=0){var sol=-99;for(var j=0;j<TLe.t.length;j++)if((TLe.sun_el[j]||-99)>sol){sol=TLe.sun_el[j];i0=j;}}
+  ponVentana(TLe,i0,true);
 }
 function update3D(i,sinTiles){
   if(!TD||!TL)return;
@@ -4656,7 +4787,21 @@ function epTick(dtReal){
                     (TL.window&&TL.window.step_minutes)||1);
   EPACC=r.acc;
   if(!r.pasos)return;
-  var n=(TPOS+r.pasos)%TL.t.length;
+  var n=TPOS+r.pasos;
+  if(n>=TL.t.length){
+    /* Se acabó la barra. Lo que sigue es el tramo siguiente del año —y con él
+       el día siguiente—, no el primer instante de éste. Los pasos que sobran
+       se gastan DENTRO de la ventana nueva, así que la velocidad no se
+       resiente en el empalme. Solo cuando ya no hay año por delante se vuelve
+       al episodio, y si tampoco eso (no hay serie: informe del motor) se da la
+       vuelta como se daba antes. */
+    var sobra=n-TL.t.length;
+    if(correVentana(1,0)||vuelveAlEpisodio(0)){
+      update3D(Math.min(sobra,TL.t.length-1));
+      return;
+    }
+    n=n%TL.t.length;
+  }
   epTick._n=(epTick._n||0)+1;
   update3D(n,(epTick._n%6)!==0);
 }
@@ -4871,6 +5016,11 @@ $('year1').addEventListener('input',function(){
 document.querySelector('header .sub').onclick=function(){this.classList.toggle('on');};
 $('play').onclick=playToggle;
 $('tpos').oninput=function(){if(PLAY)playToggle();update3D(+this.value);};
+/* Arrastrar la barra no puede pasar de su extremo, así que correr la ventana a
+   mano necesita botón propio: sin el de volver, avanzar sería un viaje de ida
+   y la única forma de regresar al episodio sería cambiar de modo. */
+$('tprev').onclick=function(){if(PLAY)playToggle();correVentana(-1);};
+$('tnext').onclick=function(){if(PLAY)playToggle();correVentana(1);};
 $('mLive').onclick=function(){setModo('live');};
 $('mEp').onclick=function(){setModo('ep');};
 $('escena').onchange=function(){montaEscena();saveCfg();};
