@@ -53,8 +53,38 @@ jobs:
       - name: dependencias
         run: npm install --no-save --no-audit --no-fund playwright@1.62.1
 
+      # SIN `--with-deps`, y no por ahorrar: ese flag lanza un `apt-get update`
+      # sobre TODOS los repos del runner —incluido el de Google Chrome, que
+      # este trabajo no usa para nada— y la tirada #1 murió justo ahí, con el
+      # índice de Google a medio publicar:
+      #
+      #   E: Failed to fetch https://dl.google.com/linux/chrome-stable/…/Packages.gz
+      #      Hash Sum mismatch
+      #      Last modification reported: 2026-09-09 09:41:12
+      #      Release file created at:    2026-09-09 17:16:59
+      #   Failed to install browsers · exited with code: 100
+      #
+      # O sea que el veredicto de esta puerta dependía de que un tercero no
+      # estuviera publicando su índice en ese minuto. La imagen `ubuntu-latest`
+      # ya trae las bibliotecas que necesita este Chromium, así que la cura no
+      # es reintentar: es no pedir el índice.
       - name: navegador
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
+
+      # Y como quitar `--with-deps` es una APUESTA sobre lo que trae la imagen,
+      # se comprueba aquí y no dentro de un arnés: si algún día falta una
+      # biblioteca, el rojo sale con este nombre y esta línea, no disfrazado de
+      # regresión en la primera prueba que abra un navegador.
+      - name: que el navegador ARRANQUE (si falta una .so, se ve aquí)
+        run: |
+          set -o pipefail
+          node -e "
+            const { chromium } = require('playwright');
+            chromium.launch().then(async b => {
+              console.log('chromium levanta ·', b.version());
+              await b.close();
+            }).catch(e => { console.error('NO levanta:', e.message); process.exit(1); });
+          "
 
       # El repo se sirve como lo sirve GitHub Pages: ficheros estáticos. Los
       # arneses hablan con :8099 y ahí es donde se cae si no está.
