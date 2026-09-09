@@ -1768,13 +1768,28 @@ LOC.fetchHSU=function(url,horas,hsu){
 LOC.resample=function(M,stepMin){
   if(!stepMin||stepMin>=60)return M;
   var f=Math.round(60/stepMin),n=(M.t.length-1)*f+1;
-  var o={t:new Array(n),source:M.source};
+  /* Lo que NO es serie también viaja. Antes este objeto nacía con `t` y
+     `source` y nada más, así que remuestrear perdía `unidad` y
+     `tiene_rafaga` — y como el paso por defecto es 1 min, SIEMPRE se
+     remuestrea: el informe declaraba «sin ráfaga» y unidad desconocida
+     aunque el CSV las trajera. Un dato que se pierde al cambiar de paso es
+     peor que uno que no se lee, porque el que lo pasó lo vio en pantalla. */
+  var o={t:new Array(n),source:M.source,unidad:M.unidad,
+         tiene_rafaga:M.tiene_rafaga};
   ['ghi','dhi','dni','temp','ws'].forEach(function(k){o[k]=new Float64Array(n);});
   o.wd=new Float64Array(n);
+  /* La RÁFAGA se sostiene, no se interpola. Es un máximo del intervalo, no un
+     valor instantáneo: interpolar entre dos picos horarios inventaría ráfagas
+     intermedias que nadie midió. Se mantiene el valor de SU hora sobre todos
+     los pasos de esa hora, que es exactamente lo que el camino sintético ya
+     hace y documenta («la realización es POR HORA y se sostiene sobre los
+     pasos de esa hora, para que el recuento no dependa del paso»). */
+  if(M.gust)o.gust=new Float64Array(n);
   for(var i=0;i<n;i++){
     var a=Math.min(M.t.length-1,Math.floor(i/f)),b=Math.min(M.t.length-1,a+1),u=(i%f)/f;
     o.t[i]=new Date(M.t[a].getTime()+(i%f)*stepMin*60000);
     ['ghi','dhi','dni','temp','ws'].forEach(function(k){o[k][i]=M[k][a]*(1-u)+M[k][b]*u;});
+    if(o.gust)o.gust[i]=M.gust[a];
     var wa=M.wd[a],wb=M.wd[b];
     if(isNaN(wa)||isNaN(wb))o.wd[i]=isNaN(wa)?wb:wa;
     else{
@@ -1864,11 +1879,35 @@ LOC.scenario=function(M,sc,lat,dtH){
     /* el paso sale del dtH que ya se midió sobre la serie: es el único sitio donde
        consta, y declararlo aparte sería invitar a que no coincidan */
     var pphG=Math.max(1,Math.round(1/Math.max(dtH,1e-9)));
-    ws=LOC.gust(ws,sc.gust_seed||sc.seed||42,pphG);
     meta.use_gust=true; meta.gust_pasos_por_hora=pphG;
-    notes.push('viento convertido a ráfaga de 3 s (Cook/IEC): la serie ya NO es media '+
-      'horaria. La realización es POR HORA y se sostiene sobre los '+pphG+' paso(s) de '+
-      'esa hora, para que el recuento de eventos no dependa del paso de cálculo');
+    /* ── LA MEDIDA MANDA SOBRE EL MODELO ──
+       Esto sintetizaba SIEMPRE, incluso con la ráfaga medida delante. El CSV
+       de la HSU la trae —se parsea en `LOC.parseCSV` y la ficha llega a
+       anunciar «trae ráfaga» en pantalla— y aquí se tiraba para poner en su
+       lugar una realización de Cook/IEC. Un modelo sustituyendo a un dato
+       medido, en silencio, sobre el histórico de la planta del usuario.
+
+       Donde la medida FALTA no se inventa: se deja la media de ese paso y se
+       publica la cobertura. Rellenar los huecos con el modelo mezclaría dos
+       procedencias en una sola serie, y entonces un número alto dejaría de
+       poder atribuirse — que es el fallo que esta ficha evita en todas partes. */
+    var med=(M.gust&&M.tiene_rafaga)?M.gust:null, nMed=0;
+    if(med){
+      for(i=0;i<n;i++)if(isFinite(med[i])&&med[i]>ws[i]){ws[i]=med[i];nMed++;}
+      var cob=Math.round(1000*nMed/n)/10;
+      meta.gust_origen='medida'; meta.gust_cobertura_pct=cob;
+      notes.push('ráfaga MEDIDA de la fuente ('+cob+' % de los pasos): NO se '+
+        'sintetiza nada. Donde la fuente no trae ráfaga se deja la media de ese '+
+        'paso —no se rellena con el modelo, que mezclaría procedencias— así que '+
+        'esos pasos van por lo BAJO, no inventados');
+    }else{
+      ws=LOC.gust(ws,sc.gust_seed||sc.seed||42,pphG);
+      meta.gust_origen='modelo';
+      notes.push('viento convertido a ráfaga de 3 s (Cook/IEC): la serie ya NO es media '+
+        'horaria. La realización es POR HORA y se sostiene sobre los '+pphG+' paso(s) de '+
+        'esa hora, para que el recuento de eventos no dependa del paso de cálculo. '+
+        'La fuente NO trae ráfaga medida: si la trajera, mandaría ella');
+    }
     /* Y la consecuencia, que es lo que de verdad hay que leer: T1 y T2 están
        DEFINIDOS SOBRE LA MEDIA. Aplicarlos a una serie de racha no es el mismo
        criterio, y la ficha no puede decidirlo por el proyecto — pero sí tiene
@@ -1989,7 +2028,12 @@ LOC.run=function(cfg,onStep){
     var M=LOC.resample(M0,cfg.resample_minutes);
     var n=M.t.length,dtH=(n>1?(M.t[1]-M.t[0])/3600e3:1);
     var shear=cfg.wind_height_m>0?Math.pow(cfg.wind_height_m/10,1/7):1;
+    /* El cizallamiento va a las DOS series. La ráfaga medida está a la misma
+       altura que la media —10 m en el reanálisis, el anemómetro en la HSU— y
+       corregir solo una dejaría el criterio comparando series a alturas
+       distintas: T1 y T2 se aplicarían a 10 m mientras la media va a 4 m. */
     for(var i=0;i<n;i++)M.ws[i]*=shear;
+    if(M.gust)for(var ig=0;ig<n;ig++)M.gust[ig]*=shear;
     var SC=LOC.scenario(M,cfg.wind_scenario,lat,dtH), ws=SC.ws, wd=SC.wd;
     // ¿hay dirección de VERDAD? Sin ella el motor resuelve con 180° fijos, y un
     // lado «que sigue al viento» saldría constante: un lado fijo disfrazado.
