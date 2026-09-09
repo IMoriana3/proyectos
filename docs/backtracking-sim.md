@@ -393,6 +393,44 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-09 · la puerta de relieve, pasada a la cartera entera: 2 de 11** — y el
+  resultado no es una tabla de once veredictos, porque **nueve plantas no tienen una sola
+  cota**. Dar un veredicto ahí sería contestar una pregunta que no se ha podido hacer, así
+  que `tools/gate_relieve_cartera.mjs` es un **censo** con cuatro escalones, no una nota:
+
+  | escalón | plantas | qué significa |
+  |---|---|---|
+  | **EVALUADA** | Ayora (APTA, 100 %), San José (APTA CON RESERVAS, 95,3 %) | la puerta se ejecuta de verdad |
+  | **NO APLICA** | Dicayagua (5.493 uds) | `FixedMount`: sin seguimiento no hay backtracking que corregir |
+  | **SIN LEVANTAMIENTO** | 8 plantas, 2.996 seguidores | no hay cotas de ningún tipo |
+  | **SIN CASAR** | ninguna hoy | hay as-built pero falta `cotas_asbuilt.py` |
+
+  **La ironía de Dicayagua:** es la planta con MEJOR relieve de toda la cartera —curvas de
+  nivel propias del levantamiento, 3.843 curvas y 359.527 vértices, malla IDW de 10 m— y es
+  justo la que no lo necesita, porque es de estructura fija. Pedirle un levantamiento de
+  seguidores no tiene sentido.
+
+  **Lo que deliberadamente NO se hace.** Sería fácil rellenar el hueco con el DEM global que
+  ya usa `terreno.html` (teselas Terrarium, ~30 m) y sacar once veredictos. Sería **teatro**:
+  el vano de estas plantas son 6 m, así que un DEM de 30 m no resuelve la diferencia de cota
+  **entre filas contiguas**, que es exactamente la magnitud que decide el backtracking. Daría
+  un relieve suave, un «APTA» tranquilizador y una configuración basada en nada. Hay un test
+  en la batería que falla si alguna planta sin cotas aparece con veredicto.
+
+  **De propina, un agujero que salió al mirar:** seis plantas (bagnarelli, benante, panbianco,
+  paramo, polvorin, tunez) **no declaran vano**, que es la base de toda la geometría de
+  backtracking — sin él no hay gcr real ni sombra que calcular. El censo publica la separación
+  medida entre seguidores contiguos de la misma banda, pero **no la llama vano**: en Ayora y
+  San José, las dos que conocemos, sale exactamente el **doble** (12,00 frente a 6,00; 12,40
+  frente a 6,20) porque el seguidor del layout es una **bifila** y lleva dos filas. Cuál es
+  bifila y cuál no es dato del proyecto: se confirma, no se adivina — y dividir por dos a
+  ciegas habría metido un vano inventado en seis plantas.
+
+  Entregable: `censo_relieve_cartera.csv`, con qué falta exactamente en cada planta y las ocho
+  sin levantamiento ordenadas por tamaño (panbianco 1.476 · benante 730 · paramo 396 ·
+  elburgo 215 · polvorin 119 · fayon 24 · tunez 19 · bagnarelli 17), que es por donde empieza
+  a pagar pedirlo. QA 133.
+
 - **2026-09-08 · la referencia vertical se caza en el PUNTO, y la fila condenada deja de votar** —
   el control de cotas entraba por el as-built, que ya es dato **cocinado**: dos cotas por fila. Ahí un
   cambio de referencia vertical solo se ve a medias, y de ese atajo salieron dos fallos, los dos
