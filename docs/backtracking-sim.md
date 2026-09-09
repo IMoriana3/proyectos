@@ -428,19 +428,22 @@ de los FPS).
   se lo daba al primero que pasara, dejando al vecino con 3 puntas y 37 m. Ese punto es la
   **frontera**, o sea el extremo de los dos. Se comparte sólo en ese caso: **1 punto de 17.755**.
 
+  Medido ya **fusionado** con el control de largo por tipo de la otra sesión (los módulos salen del
+  tipo del plano y el largo pasa a árbitro: `main` en 4.415 filas):
+
   | | antes | ahora |
   |---|---|---|
-  | filas del as-built | 4.421 | **4.449** |
-  | trackers con las dos vigas | 2.134 | **2.162** |
-  | trackers con una sola viga | 153 | **125** |
-  | filas emitidas a media longitud | 4 | **0** |
+  | filas del as-built | 4.415 | **4.449** |
+  | trackers con las dos vigas | 2.128 | **2.162** |
+  | trackers con una sola viga | 159 | **125** |
   | trackers con cota | 2.273 (99,3 %) | **2.279 (99,6 %)** |
   | reconstruidos del plano | 16 | **10** |
   | reconstruidos con nube sana encima | 17 | **6** |
 
-  De las 4.418 filas que ya existían **cambian 3**, y las tres a mejor: `TR-05_2-060-W` de 37,74 m
-  a 74,61, `TR-08_1-094-W` de 37,65 a 75,17 y `TR-10_2-002-W` de 55,93 a 75,06 — exactamente el
-  «los trackers no llegan a sus extremos» que se veía.
+  De las 4.415 filas que ya existían **no cambia ninguna** (desvío 0,0000 m en x, zs, zn, ys, yn,
+  zm, ym y sl). Y tres que el control de largo tiraba por medir la mitad vuelven enteras:
+  `TR-05_2-060-W` de 37,74 m a 74,61, `TR-08_1-094-W` de 37,65 a 75,17 y `TR-10_2-002-W` de 55,93 a
+  75,06 — exactamente el «los trackers no llegan a sus extremos» que se veía.
 
   **Barrido de las cuatro ventanas** (D_MAX 8/12/16, radio 80/150/300 m, TOL_J/TOL_T 4-6/5-6/6-8,
   27 combinaciones): el as-built sale entre **4.444 y 4.460 filas**, un 0,4 % de recorrido, y las
@@ -457,8 +460,8 @@ de los FPS).
   **310 → 184**, y esas 184 son exactamente los 184 «medio» reales; el p5 del largo pasa de 37,74 m
   a **74,14**. Sube en cambio de 83 a 125 los trackers con una sola viga dibujada, y eso es lo
   honesto: **42 de las 45 filas que desaparecen eran «completo» dibujados a 40 o a 20 m** — media
-  viga haciéndose pasar por entera. QA 143 · `careo_cotas_nube` de 17 reconstruidos con nube
-  encima a 6.
+  viga haciéndose pasar por entera. QA 145 · `careo_cotas_nube` de 17 reconstruidos con nube
+  encima a 6. Producción 35 · producción 3D 31 · relieve APTA · release gate OK.
 
 - **2026-09-09 · el reparto del levantamiento de San José, rehecho desde el crudo** —
   Ignacio pasa el **CSV original del topógrafo** (18.289 puntos) y el Excel de asignación que

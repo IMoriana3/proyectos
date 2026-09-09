@@ -144,9 +144,12 @@ const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
     enc.cfg.coords.length === 4 && enc.cfg.pitch === 7 && enc.cfg.panelAz === 100,
     JSON.stringify(enc && { pitch: enc.cfg && enc.cfg.pitch, az: enc.cfg && enc.cfg.panelAz }));
 
-  // ── CASO 1: parcela donde girar NO compensa → el buscador NO debe proponer nada ──────────
-  // Antes proponía como «mejor» algo PEOR que el punto de partida: el muestreo aleatorio casi
-  // nunca caía en el giro 0 y girar resta. Ahora la BASE entra la primera y es la referencia.
+  // ── CASO 1: el eje de partida viene TORCIDO → hay que enderezarlo, y eso es giro NEGATIVO ──
+  // El buscador solo probaba giros de 0 a 45°: media rosa, y justo la mitad que no sirve. Con
+  // el eje de partida a 10° del N-S (panelAz 100), esa ventana solo ofrecía alejarse más, el
+  // rendimiento solo podía bajar y la base ganaba SIEMPRE por construcción — «sigue cogiendo
+  // esta opción como la mejor… y no es verdad» (2026-09-09). Ahora se buscan los 180 grados.
+  // Sigue en pie que la BASE entra la primera y es la referencia: nada se propone por debajo.
   const pageE = await ctx.newPage();
   await pageE.setViewportSize({ width: 1280, height: 800 });
   pageE.on('pageerror', e => fallos.push('encargo: ' + e.message));
@@ -164,14 +167,61 @@ const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
     JSON.stringify({ mejor: ee.mejorEner, base: ee.baseEner }));
   const barraE = await pageE.evaluate(() => document.getElementById('barra').textContent);
   check('y la barra dice de quién es la parcela', barraE.includes('parcela del Generador') && barraE.includes('A'), barraE.slice(0, 90));
-  if (Math.abs(ee.mejorEner - ee.baseEner) < 1e-9) {
-    check('sin mejora, la barra lo dice en redondo', barraE.includes('la base sigue ganando'), barraE.slice(-90));
-    await pageE.keyboard.press('a');
-    check('y A NO envia nada: aplicarlo empeoraria lo que ya hay',
-      (await pageE.evaluate(() => localStorage.getItem('buscador_mejor'))) === null);
-    check('avisando de por que', (await pageE.evaluate(() => document.getElementById('barra').textContent)).includes('NO se envía'));
-  }
+  // con el eje torcido, la mejora EXISTE y hay que encontrarla
+  check('con el eje torcido, el buscador SI encuentra algo mejor que la base',
+    ee.mejorEner > ee.baseEner * 1.0005, JSON.stringify({ mejor: ee.mejorEner, base: ee.baseEner }));
+  check('y lo mejor es enderezar el eje: giro NEGATIVO, el que no se miraba',
+    ee.mejorGiro < 0, ee.mejorGiro);
+  check('el eje acaba mas cerca del N-S que el de partida',
+    Math.abs(((ee.az0 + ee.mejorGiro - 90) % 180 + 270) % 180 - 90) < 10, ee.mejorGiro);
+  check('y con mejor rendimiento que la base', ee.mejorRend > 0.999, ee.mejorRend);
+  const giros = await pageE.evaluate(() => NUBE.map(p => p[0]));
+  check('se muestrean los dos lados de la rosa',
+    giros.some(g => g < -45) && giros.some(g => g > 45), JSON.stringify([Math.min(...giros).toFixed(0), Math.max(...giros).toFixed(0)]));
   await pageE.close();
+
+  // ── CASO 1b: si la base YA es lo mejor, no se propone nada ───────────────────────────────
+  // Es el otro lado de lo mismo: con el eje ya en N-S sobre una parcela que no premia girar,
+  // todo giro resta y el buscador tiene que decirlo y NO mandar nada. Antes esto salia «bien»
+  // por el motivo equivocado —no miraba donde estaba la mejora—, asi que ahora se comprueba
+  // sobre un caso en el que es verdad.
+  await pageG.evaluate(() => { document.getElementById('panelAz').value = 90; });   // eje N-S
+  await pageG.click('#optBtn');
+  const pageB = await ctx.newPage();
+  await pageB.setViewportSize({ width: 1280, height: 800 });
+  pageB.on('pageerror', e => fallos.push('encargo N-S: ' + e.message));
+  await pageB.evaluate(() => localStorage.removeItem('buscador_mejor')).catch(() => {});
+  await pageB.goto(BASE + '/buscador-implantacion.html?encargo=1&quieto=1&semilla=42-42');
+  await pageB.waitForFunction(() => window.LAY && window.LAY.compute, null, { timeout: 30000 });
+  await pageB.evaluate(() => { localStorage.removeItem('buscador_mejor'); PASO(60); });
+  const eb = await pageB.evaluate(() => ESTADO());
+  const barraB = await pageB.evaluate(() => document.getElementById('barra').textContent);
+  check('con el eje ya en N-S, la base sigue ganando', Math.abs(eb.mejorEner - eb.baseEner) < 1e-9,
+    JSON.stringify({ mejor: eb.mejorEner, base: eb.baseEner, giro: eb.mejorGiro }));
+  check('sin mejora, la barra lo dice en redondo', barraB.includes('la base sigue ganando'), barraB.slice(-90));
+  await pageB.keyboard.press('a');
+  check('y A NO envia nada: aplicarlo empeoraria lo que ya hay',
+    (await pageB.evaluate(() => localStorage.getItem('buscador_mejor'))) === null);
+  check('avisando de por que', (await pageB.evaluate(() => document.getElementById('barra').textContent)).includes('NO se envía'));
+  await pageB.close();
+
+  // ── CASO 1c: con un azimut de partida BAJO, el giro negativo se sale por debajo de 0 ──────
+  // 20° de partida menos 90° de giro son −70°: el mando del Generador se lo traga, pero eso
+  // no se escribe en un plano. El azimut de filas es una recta, asi que 290° es lo mismo.
+  await pageG.evaluate(() => { document.getElementById('panelAz').value = 20; });
+  await pageG.click('#optBtn');
+  const pageC = await ctx.newPage();
+  pageC.on('pageerror', e => fallos.push('encargo az bajo: ' + e.message));
+  await pageC.goto(BASE + '/buscador-implantacion.html?encargo=1&quieto=1&semilla=42-42');
+  await pageC.waitForFunction(() => window.LAY && window.LAY.compute, null, { timeout: 30000 });
+  const az20 = await pageC.evaluate(() => { const o = []; for (let i = 0; i < 80; i++) { PASO(1); o.push([ULTIMO.giro, ULTIMO.az]); } return o; });
+  check('el caso se prueba de verdad: hay giros que se salen por debajo de 0',
+    az20.some(x => 20 + x[0] < 0), JSON.stringify(az20.map(x => +x[0].toFixed(0)).slice(0, 8)));
+  check('y aun asi el azimut aplicado nunca es negativo',
+    az20.every(x => x[1] >= 0 && x[1] < 360),
+    JSON.stringify(az20.filter(x => x[1] < 0).slice(0, 3)));
+  await pageC.close();
+  await pageG.evaluate(() => { document.getElementById('panelAz').value = 100; });   // se deja como estaba
 
   // ── CASO 2: parcela ALARGADA EN DIAGONAL, metida COMO LA METE UN USUARIO ─────────────────
   // Inyectar PARCEL por JS no deja la ficha en el estado en que la deja la UI: al generar se
@@ -262,6 +312,31 @@ const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
   check('en fija no se gira nada', ef.encargo === true && ef.gira === false && ef.mejorGiro === 0,
     JSON.stringify({ gira: ef.gira, giro: ef.mejorGiro }));
   check('y la barra lo dice', (await pageF.evaluate(() => document.getElementById('barra').textContent)).includes('fija: no se gira'));
+
+  // ── LA BARRA TIENE QUE PODERSE LEER ─────────────────────────────────────────────────────
+  // Se ordena por ENERGÍA, así que la mejor puede llevar MENOS potencia instalada y ganar
+  // igual subiendo el rendimiento. Con «base 6,14 MWp · mejor 6,06 MWp · +1,5 %» eso parece
+  // una cuenta mal hecha: faltaba el rendimiento de la BASE y qué mide ese porcentaje.
+  await pageF.evaluate(() => {
+    BASE_REF = { kwp: 6140, rend: 0.968, ener: 6140 * 0.968, str: 0 };
+    MEJOR = { kwp: 6060, rend: 0.999, ener: 6060 * 0.999, giro: -48, az: 270, offset: 'none', vial: 0, str: 0, util: 0 };
+    barra(); });
+  const bTexto = await pageF.evaluate(() => document.getElementById('barra').textContent);
+  check('la base se enseña con SU rendimiento, no solo con los MWp',
+    /base\s+6[.,]14 MWp\s*×\s*96[.,]8\s*%/.test(bTexto), bTexto.slice(0, 160));
+  check('el porcentaje dice de que es: de ENERGIA', bTexto.includes('% de energía'), bTexto.slice(-160));
+  check('y cuadra con las dos energias', /\+1[.,]9 % de energía|\+1[.,]9% de energía/.test(bTexto),
+    (bTexto.match(/\+[\d.,]+ ?% de energía/) || [''])[0]);
+  check('con menos potencia que la base, se DICE al lado',
+    /-1[.,]3\s*% de potencia/.test(bTexto) && /\+3[.,]1 puntos de rendimiento/.test(bTexto),
+    (bTexto.match(/\([^)]*potencia[^)]*\)/) || [''])[0]);
+  // y si la mejor lleva MAS potencia, no hay nada que explicar
+  const bMas = await pageF.evaluate(() => {
+    MEJOR = { kwp: 6300, rend: 0.999, ener: 6300 * 0.999, giro: -48, az: 270, offset: 'none', vial: 0, str: 0, util: 0 };
+    barra(); return document.getElementById('barra').textContent; });
+  check('con mas potencia, no se cuelga la explicacion', !/de potencia/.test(bMas),
+    (bMas.match(/\([^)]*\)/) || [''])[0]);
+
   await ctx.close();
 
   console.log('\n' + ok + ' OK, ' + ko + ' FAIL');
