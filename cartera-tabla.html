@@ -120,6 +120,7 @@ tfoot td.lbl-tot{color:var(--accent);font-size:11px;letter-spacing:.06em;text-tr
   <button class="btn" id="impBtn" title="Cargar desde un Excel con el mismo formato">⬆ Importar Excel</button>
   <button class="btn" id="xlsBtn">⬇ Exportar Excel</button>
   <button class="btn" id="csvBtn">⬇ CSV</button>
+  <button class="btn" id="seedBtn" title="Vuelca la tabla de ESTE navegador en el formato que lleva el fichero: es la única forma de que lo que editas aquí llegue al repositorio">⬇ SEED (para el repo)</button>
   <button class="btn warn" id="resetBtn" title="Volver a los datos del Excel original">↺ Restaurar</button>
   <input type="file" id="impFile" accept=".xlsx,.xls" style="display:none">
 </div>
@@ -458,6 +459,23 @@ $('csvBtn').onclick=function(){
   var csv=aoa.map(row=>row.map(c=>{ c=String(c==null?'':c); return /[";\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c; }).join(';')).join('\r\n');
   dl(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}),'Cartera_plantas_'+stamp()+'.csv');
 };
+/* ===== volcar el SEED (2026-09-09) =====
+   La tabla vive en localStorage y `load()` solo cae al SEED cuando el navegador
+   no tiene nada. O sea que TODO lo que se teclea aquí —plantas nuevas incluidas—
+   se queda en un navegador y no llega nunca al repositorio. Ya estaba avisado en
+   el comentario del SEED, y aun así pasó: en la cartera del navegador hay plantas
+   (Conselice, sin ir más lejos) que no existen en ningún fichero de la casa, así
+   que el catálogo que consumen el gemelo y los visores no las tiene.
+
+   El Excel ya se exporta, pero para volver AL FICHERO hay que re-parsearlo por
+   posición de columna. Esto salta ese paso: escupe el literal exacto que va en
+   `const SEED = [...]`, listo para pegar. Un dato que no puede volver a su fuente
+   acaba divergiendo de ella. */
+$('seedBtn').onclick=function(){
+  var js='const SEED = '+JSON.stringify(DATA)+';\n';
+  dl(new Blob([js],{type:'text/javascript;charset=utf-8'}),'SEED_'+stamp()+'.js');
+};
+
 function stamp(){var d=new Date();return d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2);}
 function dl(blob,name){var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
 
