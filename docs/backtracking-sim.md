@@ -393,6 +393,53 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-09 · el borde de la tirada se leía con la viga del vecino: 4 seguidores mal emparejados
+  y 2 que faltaban sin saberlo** — Ignacio, sobre el marcado: *«si a algún tracker le falta la hermana
+  a otra le sobra»* y *«son 3 trackers enteros los que faltan»*. Las dos cosas eran ciertas y las dos
+  apuntaban al mismo sitio.
+
+  Para decidir de qué lado empareja una tirada se cuentan los puntos de la línea de al lado. La
+  ventana era la del tracker (`n ± L/2 + 4`), y en la misma línea de x puede haber un tracker
+  **«medio»** de 37,6 m cuyo tramo **solapa en n** con el arranque de un «completo» de 74,4: sus
+  puntos entraban en la ventana y hacían creer que había viga a ese lado. Con eso el borde se lee al
+  revés y **todo el emparejamiento de la tirada se corre un paso**. Lo que distingue a una viga de
+  este largo de la intrusa es su **punta norte**, a 37 m de donde estaría la del medio: ahora se
+  exige punto en las **dos** puntas.
+
+  | | antes | ahora |
+  |---|---|---|
+  | vigas emitidas | 4.572 | **4.578** (2.289 × 2, la planta entera) |
+  | puntos repartidos | 18.287 | **18.289** (los del topógrafo, todos) |
+  | trackers con las dos vigas | 2.284 | **2.287** |
+  | seguidores con UNA viga | 4 | **0** |
+  | reconstruidos del plano | 3 | **2** |
+  | vigas en choque | — | **0** de 4.578 |
+
+  TR-08_2-037 está en el plano a −192,7 y su pareja real es (−192,65 · −186,47), las dos vigas
+  medidas de 74,4 m — pero −186,47 se le adjudicaba a 038. Igual con TR-10_1-005, TR-08_1-027 y
+  TR-08_1-028. Y los dos reconstruidos que quedan, **TR-09_2-010 y TR-09_2-011**, son los que no se
+  levantaron: antes salían con una viga cada uno.
+
+  **Y dos seguidores levantados enteros salían «reconstruidos del plano».** TR-06_1-005 y
+  TR-08_1-001 tienen sus ocho puntos, pero sus cuatro puntas vinieron con la otra referencia
+  vertical: al perder las dos puntas de las dos vigas se tiraba el seguidor entero —con su posición
+  y su largo, que son medida— para rehacerlo del layout. Ahora se conserva la geometría y se
+  reponen las dos cotas del terreno vecino, cada punta con la del terreno en **su** n para que la
+  pendiente no sea una fila plana supuesta.
+
+  **La marca, por viga.** `inc` era del tracker y no decía cuál de las dos es la copia; ahora cada
+  fila lleva `hm`, su `id` de levantamiento, y la escala de origen tiene cinco niveles: medida ·
+  una punta repuesta · las dos cotas repuestas (posición y largo medidos) · duplicada de su hermana ·
+  reconstruida del plano. San José: **4.526 · 35 · 4 · 9 · 4**. La escena tiñe pala y marco de lo que
+  no es medida y el globo dice cuál es cuál; el mapa lo pinta por categoría, con la leyenda contada y
+  casilla para aislarlas. Una viga que no se midió no puede parecer una medida. Ayora, cero de las
+  cuatro.
+
+  **Y el visor del cliente servía datos de otra época**: `generate_asbuilt.py` escribía en
+  `san-jose/js/data_asbuilt.js`, que no lo carga nadie —la página lee `asbuilt/data/sanjose.js`—, así
+  que el mapa llevaba desde por la mañana con 4.491 filas mientras el generador decía «OK» sobre el
+  fichero muerto. Una sola salida, la de verdad. QA 146 → **148**.
+
 - **2026-09-09 · lo que NO se midió, pintado — y el visor servía un fichero muerto** —
   Ignacio: *«márcame por favor lo de hermanas duplicadas y reconstruidos, que se vea claro cuáles
   son»*. Al ir a pintarlos aparecieron tres cosas peores que la falta de color.
