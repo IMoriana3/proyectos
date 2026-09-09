@@ -86,8 +86,35 @@ declare -A PISO=(
   # O sea que lo que falta en CI no es el careo, es comprobar que el generador
   # del core sigue escribiendo el espejo. Y eso NO necesita secreto ninguno:
   # el generador vive en `SolarGPTfull`, así que la comprobación se cierra
-  # ALLÍ, en su propia suite, sin clonar nada. Queda anotado como lo que hay
-  # que hacer, no como una limitación del entorno.
+  # ALLÍ, en su propia suite, sin clonar nada.
+  #
+  # HECHO, y esta línea se actualiza porque un hueco declarado también se
+  # mantiene: una nota que sigue diciendo «queda por hacer» sobre algo ya
+  # hecho miente con la autoridad de estar escrita al lado del código.
+  # Está en `solargpt/tests/test_generadores_de_espejo.py`, y cierra MÁS de
+  # lo que esta nota pedía:
+  #
+  #   · no lo GREPEA, lo EJECUTA. La comprobación de aquí exige que el fuente
+  #     del generador mencione `hailstow_casos.sha256`, y un grep sigue verde
+  #     si la promesa está escrita en un comentario y ha dejado de cumplirse.
+  #     Allí se corre `main()` con el destino parcheado y se mira lo escrito.
+  #   · y son DOS generadores, no uno: `gen_goldens_ejecucion.py` tenía el
+  #     contrato idéntico y no tenía guardián en NINGÚN repo — ni siquiera el
+  #     grep que el de granizo sí tenía desde aquí.
+  #
+  # El piso sigue siendo 8, pero YA NO por lo mismo: no porque falte cerrar
+  # nada, sino porque la novena comprobación de este arnés necesita el
+  # checkout hermano y en esta CI no está. Eso no se arregla subiendo el
+  # listón; se quedaría rojo en cada tirada.
+  #
+  # Y una advertencia sobre esta nota misma: el nombre del fichero de allí es
+  # PROSA, y nada de este repo lo comprueba. Se pensó un careo textual —«que
+  # algún test de la suite hermana nombre el generador»— y se descartó al
+  # medirlo: `test_stow_machine.py` ya lo nombraba ANTES de que el guardián
+  # existiera, así que ese oráculo habría estado verde con el hueco abierto,
+  # y un oráculo que pasa con el bug puesto no es un oráculo. Si aquel
+  # fichero se renombra, esta línea envejece y solo la caza quien lea los dos
+  # repos. Queda dicho aquí en vez de fingir que hay una red debajo.
   [test_granizo_espejo.mjs]=8
   [test_granizo_pestana.js]=28
   [test_granizo_traza.mjs]=30
