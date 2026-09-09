@@ -24,7 +24,7 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
 #panel .tres b{color:var(--accent)}
 #barra{position:fixed;left:10px;right:10px;bottom:8px;background:rgba(15,21,29,.92);border:1px solid var(--line);
   border-radius:8px;padding:7px 12px;font:600 10.5px/1.6 var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#barra b{color:var(--text)}#barra .v{color:var(--accent)}#barra .r{color:var(--danger)}
+#barra b{color:var(--text)}#barra .v{color:var(--accent)}#barra .r{color:var(--danger)}#barra .g{color:var(--muted)}
 /* ojo: un display propio PISA el atributo hidden (que actúa por display:none del UA); sin la regla
    de abajo este velo tapaba la página entera aunque estuviera hidden — pasó, 2026-09-08 */
 #aviso{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--void);z-index:9}
@@ -398,7 +398,18 @@ function mejora(){
   if(!MEJOR||!BASE_REF)return "";
   const d=100*(MEJOR.ener-BASE_REF.ener)/(BASE_REF.ener||1);
   if(d<=0.05)return '<span class=r>la base sigue ganando: aquí no hay nada que mejorar</span>';
-  return '<span class=v>+'+d.toFixed(1)+'% sobre la base</span>';
+  /* SE ORDENA POR ENERGÍA, así que la mejor puede llevar MENOS potencia instalada que la base
+     y ganar igual subiendo el rendimiento. Eso hay que decirlo AL LADO del porcentaje: leer
+     «base 6,14 MWp · mejor 6,06 MWp · +1,5 %» es una cuenta mal hecha —«sin sentido»,
+     2026-09-09— porque faltaba a la vista el rendimiento de la base y qué mide ese 1,5 %.
+     Con las dos partes delante es un CAMBIO, no un error: se sueltan unos kWp y se cobran
+     en orientación. */
+  const dk=100*(MEJOR.kwp-BASE_REF.kwp)/(BASE_REF.kwp||1),
+        dp=(MEJOR.rend-BASE_REF.rend)*100;
+  const detalle=dk<-0.05
+    ? ' <span class=g>('+dk.toFixed(1)+'% de potencia y +'+dp.toFixed(1)+' puntos de rendimiento)</span>'
+    : '';
+  return '<span class=v>+'+d.toFixed(1)+'% de energía</span>'+detalle;
 }
 let AVISO_BARRA=null;                                            // mensaje pegajoso: sobrevive al refresco de la barra
 function barra(){
@@ -408,7 +419,9 @@ function barra(){
     (ENCARGO?"<b>parcela del Generador</b> · su mesa y su azimut ("+AZ0+"°) · <b>A</b> aplica el mejor":
      REAL?"parcela real <b>"+PARCELA.nombre+"</b> (geometría del vallado)":"site <b>"+SITE+"</b> · sintética")+
     " · semilla "+SEM[0]+"-"+SEM[1]+
-    (BASE_REF?" · base <b>"+fmtK(BASE_REF.kwp)+"</b>":"")+
+    /* la base con SU rendimiento: sin él, el «mejor … × 99,9 %» de al lado no se puede comparar
+       con nada y el porcentaje del final parece que sale de los MWp, que no es lo que mide */
+    (BASE_REF?" · base <b>"+fmtK(BASE_REF.kwp)+"</b> × <b>"+(BASE_REF.rend*100).toFixed(1)+"%</b>":"")+
     (MEJOR?" · mejor <b>"+fmtK(MEJOR.kwp)+"</b> × <b>"+(MEJOR.rend*100).toFixed(1)+"%</b> rend."+
       (MEJOR.rend<0.985?" <span class=r>(eje "+(MEJOR.az-90).toFixed(0)+"°, no N-S)</span>":"")+
       " · "+mejora():"")+

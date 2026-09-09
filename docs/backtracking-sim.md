@@ -393,6 +393,76 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-09 · la fase del reparto se resuelve POR LÍNEA, no tracker a tracker** —
+  Con el reparto por nodos ya en marcha quedaban **153 seguidores con una sola viga** y algunos
+  dibujados a media longitud: en el visor, las barras no llegaban a sus propios puntos. La causa
+  no era que faltara levantamiento. El reparto anclaba cada tracker a su nodo de junta más
+  cercano con una **ventana de 5 m**, y **hay líneas cuyos tubos están desplazados** respecto de
+  lo que el plano declara para ese tracker. Medido en el bloque norte de San José (x 1162→1206,
+  ocho líneas):
+
+  | línea x | nodos (n) |
+  |---|---|
+  | 1162,17 · 1168,37 · 1174,55 · 1180,74 · **1186,95** | −1089,3 · −1052,1 · −1014,6 · −977,1 … |
+  | **1193,15** · 1199,35 · 1205,54 | −1082,3 · −1045,2 · −1007,6 · −970,0 … |
+
+  Las ocho líneas cuadran con las vigas del plano **en X hasta 2 cm** (paso medido 6,20 frente a
+  6,174 nominal), así que el emparejamiento E/W es bueno; lo que cambia es **dónde empiezan los
+  tubos**: la frontera del subbloque cae en campo entre 1186,95 y 1193,15, y en el plano entre los
+  trackers 1180,7 y 1193,1 — **una viga de diferencia**. La viga W del tracker 1193,1 está,
+  físicamente, con los tubos del subbloque de al lado, 7,0 m al sur. La ventana de 5 m la tiraba
+  entera.
+
+  **Una fila sola no puede decidir su fase**: si le falta su nodo de junta, su nodo más cercano es
+  un tope y miente en 18,7 o 37,5 m. El vecindario sí. El desfase se estima ahora por línea y en
+  local — la **mediana del desvío nodo-centro de las filas del plano a menos de 150 m sobre esa
+  misma línea** — y con él se ancla.
+
+  **Y el semipaso lo da el plano, no la línea.** Un intento previo ajustaba una retícula única por
+  línea (paso 37,5) y hundía el resultado a 4.228 filas: San José tiene **98 seguidores «medio»**,
+  de 37,2 m, cuyos topes están a 18,6 m del centro y no a 37,2. El tipo declarado ya dice cuánto
+  mide cada tubo, así que los topes se buscan **en centro ± L/2 de su propio tipo**.
+
+  **Un tope medido con un solo punto es de los DOS tubos.** Con la fase ya resuelta seguían
+  cayéndose 18 filas sanas de 74,4 m: en su tope sólo se había medido un punto y la exclusividad
+  se lo daba al primero que pasara, dejando al vecino con 3 puntas y 37 m. Ese punto es la
+  **frontera**, o sea el extremo de los dos. Se comparte sólo en ese caso: **1 punto de 17.755**.
+
+  Medido ya **fusionado** con el control de largo por tipo de la otra sesión (los módulos salen del
+  tipo del plano y el largo pasa a árbitro: `main` en 4.415 filas):
+
+  | | antes | ahora |
+  |---|---|---|
+  | filas del as-built | 4.415 | **4.449** |
+  | trackers con las dos vigas | 2.128 | **2.162** |
+  | trackers con una sola viga | 159 | **125** |
+  | trackers con cota | 2.273 (99,3 %) | **2.279 (99,6 %)** |
+  | reconstruidos del plano | 16 | **10** |
+  | reconstruidos con nube sana encima | 17 | **6** |
+
+  De las 4.415 filas que ya existían **no cambia ninguna** (desvío 0,0000 m en x, zs, zn, ys, yn,
+  zm, ym y sl). Y tres que el control de largo tiraba por medir la mitad vuelven enteras:
+  `TR-05_2-060-W` de 37,74 m a 74,61, `TR-08_1-094-W` de 37,65 a 75,17 y `TR-10_2-002-W` de 55,93 a
+  75,06 — exactamente el «los trackers no llegan a sus extremos» que se veía.
+
+  **Barrido de las cuatro ventanas** (D_MAX 8/12/16, radio 80/150/300 m, TOL_J/TOL_T 4-6/5-6/6-8,
+  27 combinaciones): el as-built sale entre **4.444 y 4.460 filas**, un 0,4 % de recorrido, y las
+  tres filas que cambian son las mismas en todas. `D_MAX` se deja en **12 y no en 16** —que daría
+  8 filas más— porque **18,7 m es media mesa**: por encima de eso un tope puede hacerse pasar por
+  junta y envenenar la mediana de la línea, y a 20 m el resultado ya se da la vuelta (4.451). El
+  límite se pone dentro de la banda donde el discriminante no puede equivocarse, no donde sale el
+  número más alto.
+
+  **Y el visor deja de leer la asignación del proveedor.** `visores/san-jose/tools/generate_asbuilt.py`
+  seguía derivando su geometría de `final_v2_labeled.csv` —la misma asignación con 93 trackers
+  imposibles que ya estaba auditada—, así que la planta que se miraba en pantalla no era la que
+  simulaba el modelo. Ahora los dos leen **el mismo reparto**. En el visor: filas de menos de 60 m
+  **310 → 184**, y esas 184 son exactamente los 184 «medio» reales; el p5 del largo pasa de 37,74 m
+  a **74,14**. Sube en cambio de 83 a 125 los trackers con una sola viga dibujada, y eso es lo
+  honesto: **42 de las 45 filas que desaparecen eran «completo» dibujados a 40 o a 20 m** — media
+  viga haciéndose pasar por entera. QA 145 · `careo_cotas_nube` de 17 reconstruidos con nube
+  encima a 6. Producción 35 · producción 3D 31 · relieve APTA · release gate OK.
+
 - **2026-09-09 · el reparto del levantamiento de San José, rehecho desde el crudo** —
   Ignacio pasa el **CSV original del topógrafo** (18.289 puntos) y el Excel de asignación que
   generó él. La auditoría (`tools/audita_asignacion.py`) separa las dos cosas: **el dato está
