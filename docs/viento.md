@@ -219,6 +219,34 @@ anual.
 estrategia — centrada en el episodio más caro. Es la que permite comparar sin trampa: sin ventana
 común, cada estrategia enseñaría su peor momento y no el mismo.
 
+**Y al pasar de la barra el tiempo SIGUE.** Antes volvía a su primer instante —
+`(TPOS+pasos) % t.length` —, así que con un año entero de meteo detrás la escena se quedaba dando
+vueltas al mismo día y la fecha del rótulo no pasaba nunca de la del episodio. Ahora la ventana se
+**corre**: la siguiente empieza justo donde acaba ésta, sin hueco ni solape, y con ella cambia el
+día. Se corre **por su propio ancho y no por 24 h fijas** a propósito — con una ventana de 36 h,
+saltar un día repetiría doce horas ya vistas, y con una de 16 h se saltaría ocho sin enseñarlas: las
+dos versiones «cambian de día» y solo una enseña el año que hay debajo. Los botones `‹` y `›` hacen
+lo mismo a mano, porque arrastrar la barra no puede pasar de su extremo y sin el de volver avanzar
+sería un viaje de ida.
+
+Dos límites, medidos y no supuestos:
+
+- La serie del año se **retiene muestreada al paso de la ventana**, no al del cálculo. Con el
+  default minutal, guardar las series enteras serían más de cien megas retenidos para pintar 240
+  pasos, y la ventana ya se muestrea a ese `stride`: por debajo no hay nada que ver. El paso queda
+  declarado en `window.step_minutes`, que es el mismo con o sin reducción.
+- Por el camino del **motor** el informe llega por HTTP y **no trae serie**: ahí la ventana no se
+  puede correr, los dos botones se apagan y el rótulo lo dice. Una vuelta al principio sin explicar
+  se lee igual que el defecto que esto viene a arreglar. Al final del año pasa lo mismo por otro
+  motivo —no hay más dato— y se vuelve al episodio.
+
+La ventana del informe (`REP.timeline`) **no se toca** al correr el reproductor: es la que leen la
+gráfica de θ y el careo de granizo, y moverla cambiaría números que no son de este control.
+
+Guard: `tests/test_viento_reproductor.js`, con su mutante — correr **24 h fijas** también cambia de
+día, así que un test que solo mirara la fecha daría verde con las dos; lo que distingue es la
+continuidad de la costura, y es lo que el mutante pone en rojo.
+
 El **cielo responde al sol**, como en `backtracking.html`: degradado por altura con el cénit oscuro y
 el horizonte encendido, que vira a naranja al alba y al ocaso y se apaga en el crepúsculo; la luz
 pierde fuerza y se va al rojo con el sol bajo. El disco solar va como sprite con halo y se dimensiona
