@@ -2053,6 +2053,29 @@ LOC.fuenteReducida=function(SRC,k){
 
 /* ── El informe: MISMO contrato que POST /windstow, para que la ficha entera
       (tablas, gráficas, campo 3D) no sepa de dónde viene el número ── */
+/* ── LA CIZALLADURA, A ALTURA DE BUJE ─────────────────────────────────────
+   Perfil de potencia con α=1/7 sobre los 10 m del reanálisis. Va EXTRAÍDA a
+   función pura por un motivo, no por gusto: estaba suelta dentro de `run` y
+   por eso NINGUNO de los 22 arneses la tocaba — ni `wind_height_m` ni
+   `scale_applied` aparecían en una sola comprobación. Un comentario afirmaba
+   el invariante y nadie lo comprobaba, que es la forma que tiene un
+   comentario de ir camino de mentir.
+
+   EL INVARIANTE: el factor va a las DOS series. La ráfaga medida está a la
+   MISMA altura que la media —10 m en el reanálisis, el anemómetro en la
+   HSU—, así que corregir solo una las deja a alturas distintas y T1/T2
+   comparan cosas que no son comparables. Peor aún, en silencio: con la media
+   subida y la ráfaga quieta, `use_gust` acabaría eligiendo la media en todos
+   los pasos y el criterio seguiría diciéndose «medido».
+
+   Devuelve el factor porque el informe lo publica como `scale_applied`: el
+   número que se enseña es el que se aplicó, no uno recalculado aparte. */
+LOC.cizalla=function(M,h){
+  var f=h>0?Math.pow(h/10,1/7):1,i;
+  for(i=0;i<M.ws.length;i++)M.ws[i]*=f;
+  if(M.gust)for(i=0;i<M.gust.length;i++)M.gust[i]*=f;
+  return f;
+};
 LOC.run=function(cfg,onStep){
   var lat=cfg.lat,lon=cfg.lon,latR=lat*LOC.D2R;
   var cs=(cfg.source==='clearsky'||cfg.meteo_mode==='clearsky');
@@ -2062,13 +2085,15 @@ LOC.run=function(cfg,onStep){
   return get.then(function(M0){
     var M=LOC.resample(M0,cfg.resample_minutes);
     var n=M.t.length,dtH=(n>1?(M.t[1]-M.t[0])/3600e3:1);
-    var shear=cfg.wind_height_m>0?Math.pow(cfg.wind_height_m/10,1/7):1;
-    /* El cizallamiento va a las DOS series. La ráfaga medida está a la misma
-       altura que la media —10 m en el reanálisis, el anemómetro en la HSU— y
-       corregir solo una dejaría el criterio comparando series a alturas
-       distintas: T1 y T2 se aplicarían a 10 m mientras la media va a 4 m. */
-    for(var i=0;i<n;i++)M.ws[i]*=shear;
-    if(M.gust)for(var ig=0;ig<n;ig++)M.gust[ig]*=shear;
+    /* `var i` se declara AQUÍ y no en el primer bucle que la usa: el cuerpo de
+       `run` tiene siete `for(i=…)` sueltos que dependen de esta declaración, y
+       el fichero es `'use strict'`, así que sin ella la primera asignación
+       lanza ReferenceError y la simulación no termina. Estaba escondida en el
+       bucle del cizallamiento, y al extraer ese bucle a `LOC.cizalla` se fue
+       con él: los arneses de navegador se quedaron colgados hasta el timeout.
+       Si algún día se reordena esto, la declaración se queda. */
+    var i;
+    var shear=LOC.cizalla(M,cfg.wind_height_m);
     var SC=LOC.scenario(M,cfg.wind_scenario,lat,dtH), ws=SC.ws, wd=SC.wd;
     // ¿hay dirección de VERDAD? Sin ella el motor resuelve con 180° fijos, y un
     // lado «que sigue al viento» saldría constante: un lado fijo disfrazado.
