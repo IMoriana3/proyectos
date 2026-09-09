@@ -393,6 +393,21 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-09 · la Z de 99 puntos está mal, y la fila reparada va rígida** — Ignacio: *«para, no
+  sustituyas nada, ¿qué quieres decir, que la z está mal?»*. Sí, y se ve en el fichero crudo:
+  TR-09_1-044-W tiene la mesa sur a 1531,7–1532,0 y la norte a **1568,7** — 36,7 m de salto en el
+  mismo tubo de 74 m, con la viga hermana a 6 m plana a 1532; TR-08_1-001-E entera a 1588,7 con el
+  tracker de 12 m al este a 1551. El mismo **+36,6 m** en 99 puntos repartidos por toda la planta,
+  dispersión 0,4 m: una cota procesada en otra referencia vertical (la ondulación del geoide en
+  Arequipa), no terreno. X e Y intactas.
+
+  Decisión de Ignacio: **dejarlo como está** —marcar, reponer en el modelo, reclamar al topógrafo
+  (`reclamacion_sanjose.csv`)— y que **la fila reparada lleve una sola pendiente para sus dos mesas**.
+  Con una cota repuesta, el quiebro de la junta ya no es medida (saldría de una punta estimada contra
+  la junta medida, que es inventar una articulación): se quita la junta y la fila entra rígida, con la
+  pendiente entre sus dos puntas igual para la mesa sur y la norte. 39 filas, 0 con quiebro; en la
+  escena, las dos mesas de cada una salen con el mismo tilt.
+
 - **2026-09-09 · lo que no es medida es la COTA, no la viga — y la capa magenta tapaba el origen** —
   Ignacio: *«¿por qué tienes filas no medidas, si tenemos todos los puntos?»*. Tenía razón en la
   pregunta y la etiqueta era mala. De las 52 vigas del filtro, **46 tienen sus cuatro puntos** y se
