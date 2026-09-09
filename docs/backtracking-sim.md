@@ -393,6 +393,25 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-09 · #626 entra en main: la fusión con el arreglo del bucket, y el CI que se caía por una
+  pestaña** — Ignacio: *«mergea cuando esté verde»*. Las cuatro entradas de debajo se fundieron con lo
+  que quedaba de la otra rama: el filtro de candidatos del bucket iba contra la x de la **primera** fila
+  del cubo y no contra su rango. Son ortogonales —uno decide el lado de la hermana, el otro qué puntos
+  entran al cubo— y sobre el reparto por el borde bajaba los puntos sin repartir de 3 a 1; con el borde
+  leído en las dos puntas, 0. Los generados de San José no se resolvieron a mano: se regeneraron con la
+  cadena entera sobre el reparto fusionado, y `backtracking.html` conserva las dos marcas, `segOrig`
+  por mesa y `segEst` por tope. `vigas_sin_enganchar.py`, que quedó pendiente de correr sobre el reparto
+  bueno, ya no tiene nada que listar: sus 65 «sin tracker» eran la viga fantasma.
+
+  El CI se puso rojo en `test_bt3d_rot` con el test y `terreno.html` sin cambiar: la primera pestaña
+  seguía viva renderizando El Burgo entero en swiftshader mientras la segunda cargaba el mismo HTML, y en
+  el runner las dos comparten proceso — en `main` pasaba en 4 min 40 s, al límite. Cerrada la primera
+  antes de abrir la segunda: 6 min. Queda dicho que `test_equipos` tarda 40 min en el runner (Ayora sola,
+  34) con tope de 45, y 6 en local: un commit a mitad lo cancela y lo reinicia.
+
+  Cifra final en `main`: **2.287 de 2.289** seguidores con sus dos vigas, 0 con una sola, 2
+  reconstruidos del plano, 9 copiadas de su hermana, **18.289 de 18.289** puntos. QA 148 · 13 bancos en verde.
+
 - **2026-09-09 · la Z de 99 puntos está mal, y la fila reparada va rígida** — Ignacio: *«para, no
   sustituyas nada, ¿qué quieres decir, que la z está mal?»*. Sí, y se ve en el fichero crudo:
   TR-09_1-044-W tiene la mesa sur a 1531,7–1532,0 y la norte a **1568,7** — 36,7 m de salto en el
