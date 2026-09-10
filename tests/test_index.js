@@ -78,8 +78,16 @@ async function abrir(browser, respuesta) {
 
   // ---------- lo de siempre sigue funcionando ----------
   page = await abrir(browser, 403);
-  const nCards = await page.locator('article.card').count();
-  check('se pintan las tarjetas', nCards > 5, 'true');
+  // CORREGIDO. Esto contaba `article.card` A SECAS con umbral «mas de cinco»,
+  // y se llamaba «se pintan las tarjetas»: las de PLANTA son tambien
+  // `article.card` y con las de herramienta vacias quedan ONCE, asi que la
+  // condicion pasaria sin haberse pintado ni una herramienta. El mecanismo no
+  // estaba sin vigilar —con ese mutante el arnes revienta y el porton lo caza
+  // por recuento— pero el liston era flojo y el nombre prometia mas. Ahora
+  // cuenta la rejilla, que es la de herramientas, y exige UNA POR HERRAMIENTA.
+  const nCards = await page.locator('#grid article.card').count();
+  const nTools = await page.evaluate(() => TOOLS.length);
+  check('se pintan las tarjetas de herramienta', nCards === nTools && nTools > 5, 'true');
 
   // ---------- las tarjetas de planta solo llevan VISTAS ----------
   // El boton «Coordenadas» armaba aqui el ZIP de campo, y despistaba: entre seis

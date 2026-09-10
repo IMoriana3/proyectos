@@ -133,6 +133,24 @@ declare -A PISO=(
   [test_layout.js]=201
   [test_layout_ui.js]=182
   [test_pwa.js]=21
+  # El careo que faltaba entre DOS FICHAS: `cartera-tabla.html` escribe
+  # `factiun_plantas` con `publishSpecs` y `index.html` lo lee en `SPECS` para
+  # poner la potencia junto al nombre. Cada lado tenía ya su banco y ninguno
+  # comprobaba que encajaran; aquí se corre el `publishSpecs` DE VERDAD y lo
+  # que escribe se le da a la portada.
+  #
+  # MEDIDO: contra `test_index`, `test_integridad` y `test_pwa` mataron CERO la
+  # potencia redondeada siempre a entero, el orden por nombre invertido, la
+  # cuenta de estados contando doble y la búsqueda mirando solo el nombre.
+  #
+  # El CONTROL POSITIVO encontró además un listón flojo: la comprobación
+  # llamada «se pintan las tarjetas» cuenta `article.card` SIN DISTINGUIR y
+  # pide «más de cinco», y con las de herramienta vacías quedan ONCE de planta,
+  # que también son `article.card`. (Primero escribí que `test_index` seguía
+  # VERDE con ese mutante: era falso y el fallo era de mi medición — el arnés
+  # revienta y da cero comprobaciones leídas, que el portón sí caza. Queda
+  # dicho aquí porque una nota equivocada envejece peor que ninguna.)
+  [test_portada.js]=42
   # El hueco de `sim-solar.html` NO era «no la abre nadie»: `test_buscador.js`
   # sí corre `solarGeom` y `singleaxis` de esta ficha en el navegador —romper
   # `singleaxis` mata 9 allí, y romper la marca del bloque, 4—. Lo que no había
