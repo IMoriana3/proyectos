@@ -258,12 +258,17 @@ declare -A EXCLUIDOS=()
 #     y las páginas de OTROS repos; aquí tarda más de 90 s y avisa de las
 #     carpetas que le faltan. Es una MEDIDA de diseño (cuánto ancho aprovecha
 #     cada página), no un banco de regresión.
-#   · tools/test_nitidez.mjs      SÍ corre aquí y pasa (búfer/CSS ×1,99 en los
-#     lienzos de sim-solar). No se mete en el portón todavía porque clava la
-#     ruta del navegador `chromium_headless_shell-1194`, que es la de ESTE
-#     contenedor y no la del runner: entrarlo sin arreglar eso sería cambiar un
-#     hueco declarado por un rojo intermitente. Queda apuntado como lo que es:
-#     el candidato más claro a entrar.
+#   · tools/test_nitidez.mjs      corre aquí y sale 0 — pero ese 0 NO ES UN
+#     VEREDICTO. Cuenta los lienzos por debajo de la densidad de la pantalla,
+#     los imprime, y termina con 0 pase lo que pase: su único `process.exit`
+#     cubre el caso de que falte la dependencia. Es un INFORME con nombre de
+#     banco. (Corrijo aquí mi propia nota de hace un rato, que decía «corre y
+#     PASA»: leí el código de salida como si fuera un veredicto, que es el
+#     cuarto corolario y la segunda vez que me pasa el mismo día.)
+#     Para entrar en el portón le faltan dos cosas, no una: dar veredicto, y
+#     no clavar la ruta `chromium_headless_shell-1194`, que es la de ESTE
+#     contenedor y no la del runner. Además sirve cinco repos hermanos, así
+#     que aquí solo mide las páginas de éste.
 #
 # La tabla no es decorativa: el guard de abajo exige que nombre a TODOS los
 # `test_*` de fuera de `tests/`, y que cada uno siga existiendo. Así ni aparece
@@ -271,7 +276,7 @@ declare -A EXCLUIDOS=()
 declare -A FUERA_DEL_PORTON=(
   [tools/test_cartera_dwg.mjs]="carea contra el DWG; necesita el repo cobertura-zigbee al lado"
   [tools/test_ancho.mjs]="medida de diseño; necesita playwright-core y páginas de otros repos"
-  [tools/test_nitidez.mjs]="corre y pasa aquí, pero clava la ruta del navegador de este contenedor"
+  [tools/test_nitidez.mjs]="informe sin veredicto (sale 0 siempre); además clava la ruta del navegador de este contenedor"
 )
 
 mkdir -p "$LOGS"
