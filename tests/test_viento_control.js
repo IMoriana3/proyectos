@@ -24,8 +24,9 @@
 //   · `LOC.fracExpuesta` corre siempre que corre el bloque pasivo, y
 //     `test_viento_planta` lo ejercita de verdad (comprueba el ángulo de la
 //     fila soltada a 100 km/h). Mismo caso: atravesado y sin mirar.
-//   · `LOC.ladoDelViento` es OTRA COSA: solo se llama con
-//     `side_mode === 'viento'`, y **ningún arnés pone ese modo** —comprobado—,
+//   · `LOC.ladoDelViento` era OTRA COSA: solo se llama con
+//     `side_mode === 'viento'`. Cuando esto se escribió NINGÚN arnés ponía ese
+//     modo; desde el 2026-09-10 lo pone `test_viento_orquestacion.js`,
 //     así que su mutante era INALCANZABLE, no «no comprobado». El hueco ahí no
 //     es de oráculo sino de camino: hay un modo entero de la ficha que no se
 //     ejercita. Se cubre aquí sobre la función pura, y el hueco del camino
@@ -194,21 +195,30 @@ check('el lado sigue al rumbo paso a paso', lados[2] === 55);
 check('sin rumbo (NaN) cae al lado positivo, no a NaN',
       arr(LOC.ladoDelViento(F64([NaN]), 55))[0] === 55);
 
-// HUECO DECLARADO, y se declara porque medirlo fue el hallazgo: lo de arriba
-// comprueba la FUNCIÓN. El camino de la ficha que la llama —`side_mode` en
-// «viento»— no lo ejercita ningún arnés: ninguno toca `#pasModo`. Por eso el
-// mutante del lado invertido murió cero veces contra los siete arneses, y por
-// eso este banco no puede decir que ese camino esté cubierto. Cerrarlo pide un
-// arnés de navegador que ponga el selector y compruebe el lado resultante, y
-// eso es otro PR — anotarlo aquí es lo que impide que el verde de este fichero
-// se lea como más de lo que es.
-check('DECLARADO: ningún arnés pone `side_mode` en «viento» (hueco de camino)',
-      !/pasModo|side_mode/.test(
+// HUECO DECLARADO, ESTRECHADO — y esta nota cuenta las dos mitades porque el
+// centinela hizo exactamente lo que se le pidió.
+//
+// La versión anterior decía que NINGÚN arnés ejercitaba el camino de
+// `side_mode` en «viento», y buscaba `pasModo|side_mode` en el resto de la
+// carpeta. El 2026-09-10 saltó, y saltó por la buena razón que su propio
+// mensaje anunciaba: `test_viento_orquestacion.js` recorre ese camino entero
+// —le pasa `side_mode:'viento'` a `LOC.run` y fija el lado por su
+// CONSECUENCIA: con el viento del este la fila suelta recoge 37,6 kWh/m² y con
+// el del oeste 26,2—. Comprobado además que el mutante del lado invertido, el
+// que aquí moría cero veces, ahora muere allí.
+//
+// Lo que NO está cubierto, y por eso esta declaración se estrecha en vez de
+// retirarse: el SELECTOR de la ficha. Ningún arnés toca `#pasModo`, así que
+// entre el desplegable y el `cfg.passive` que llega al motor sigue habiendo un
+// tramo que nadie recorre. Es un hueco más pequeño y más concreto que el de
+// antes, y sigue siendo un hueco.
+check('DECLARADO: ningún arnés toca el selector `#pasModo` de la ficha',
+      !/pasModo/.test(
         fs.readdirSync(path.join(RAIZ, 'tests'))
           .filter(f => /^test_.*\.(js|mjs)$/.test(f) && f !== 'test_viento_control.js')
           .map(f => fs.readFileSync(path.join(RAIZ, 'tests', f), 'utf8'))
           .join('\n')),
-      'si esto falla es BUENA noticia: alguien ha cubierto el camino y toca ' +
+      'si esto falla es BUENA noticia: alguien ha cubierto el selector y toca ' +
       'retirar esta declaración en vez de arreglarla');
 
 console.log('\n' + (ko ? 'FALLA' : 'OK') + ' — ' + ok + '/' + (ok + ko) + ' comprobaciones');

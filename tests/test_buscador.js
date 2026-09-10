@@ -26,6 +26,17 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
 const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
   [[0, 0], [400, 0]], [[400, 0], [400, 260]], [[400, 260], [0, 260]], [[0, 260], [0, 0]]] };
 
+// Espera a que la ficha esté LISTA para computar: el motor traído del
+// generador Y la parcela construida. Va en una función y no repetida cuatro
+// veces porque la ventana entre las dos cosas es justo lo que se nos escapó.
+async function esperaListo(pg) {
+  await pg.waitForFunction(() => window.LAY && window.LAY.compute, null, { timeout: 30000 });
+  await pg.waitForFunction(() => {
+    try { return typeof CFGP !== 'undefined' && CFGP && CFGP.coords && CFGP.coords.length > 0; }
+    catch (e) { return false; }
+  }, null, { timeout: 30000 });
+}
+
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
@@ -34,7 +45,20 @@ const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
   const URL1 = BASE + '/buscador-implantacion.html?quieto=1&semilla=123456-654321&site=3';
 
   await page.goto(URL1);
-  await page.waitForFunction(() => window.LAY && window.LAY.compute, null, { timeout: 30000 });
+  // LA ESPERA VA POR LA PARCELA, NO SOLO POR EL MOTOR. Esperar únicamente a
+  // `LAY.compute` deja una ventana abierta: la ficha pone `window.LAY` en
+  // cuanto se trae el motor del generador, pero la PARCELA (`CFGP`) la
+  // construye `nuevoSite()` DESPUÉS, y entre las dos cosas hay un `await` que
+  // se descarga `sim-solar.html` entera (67 KB). En esa ventana `compute`
+  // existe y `CFGP` sigue a null, así que `PASO()` le pasa un objeto SIN
+  // `coords` y el motor revienta con «Cannot read properties of undefined
+  // (reading 'map')».
+  //
+  // No es teoría: pasó en CI el 2026-09-10 (publicó 15 de 55 comprobaciones y
+  // murió ahí), y aquí no se reproduce ni en tres pasadas seguidas — es una
+  // carrera que solo se abre cuando la máquina va cargada. La espera correcta
+  // es la que incluye el dato que `compute` necesita.
+  await esperaListo(page);
   check('el motor se extrae del generador y exporta compute', true);
 
   await page.evaluate(() => PASO(25));
@@ -86,7 +110,7 @@ const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
   // determinismo: misma URL, mismas 25 → el MISMO mejor
   const page2 = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page2.goto(URL1);
-  await page2.waitForFunction(() => window.LAY && window.LAY.compute, null, { timeout: 30000 });
+  await esperaListo(page2);
   await page2.evaluate(() => PASO(25));
   const e3 = await page2.evaluate(() => ESTADO());
   check('misma semilla → mismo mejor kWp (reproducible)', e3.mejorKwp === e1.mejorKwp, e3.mejorKwp + ' vs ' + e1.mejorKwp);
@@ -123,6 +147,9 @@ const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
   await pageG.setViewportSize({ width: 1400, height: 900 });
   pageG.on('pageerror', e => fallos.push('generador: ' + e.message));
   await pageG.goto(BASE + '/generador-layout.html');
+  // Ésta NO pasa por `esperaListo` a propósito: no llama a `PASO()`, y de
+  // hecho fuerza `PARCEL = []` para comprobar el aviso. Exigirle parcela
+  // sería esperar justo lo que este bloque quiere que falte.
   await pageG.waitForFunction(() => window.LAY && typeof readCfg === 'function', null, { timeout: 30000 });
   // sin parcela (se fuerza: la ficha arranca con un rectángulo por defecto), Optimizar avisa y NO abre
   await pageG.evaluate(() => { window.open = () => { window.__abierto = true; return null; }; });
@@ -154,7 +181,7 @@ const LAYOUT_PRUEBA = { title: 'Prueba', fence: [
   await pageE.setViewportSize({ width: 1280, height: 800 });
   pageE.on('pageerror', e => fallos.push('encargo: ' + e.message));
   await pageE.goto(BASE + '/buscador-implantacion.html?encargo=1&quieto=1&semilla=42-42');
-  await pageE.waitForFunction(() => window.LAY && window.LAY.compute, null, { timeout: 30000 });
+  await esperaListo(pageE);
   await pageE.evaluate(() => PASO(1));
   const b0 = await pageE.evaluate(() => ESTADO());
   check('el PRIMER candidato es la base: sin girar', b0.mejorGiro === 0 && b0.baseKwp > 0,
