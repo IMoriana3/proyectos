@@ -1712,18 +1712,28 @@ const PLANTS = [
      módulos y 518 de 29—, 177.190 módulos, módulo 1,134 x 2,382 m, paso de 5,00 m y giro 0 en
      todas (filas norte-sur). Recinto de 157,08 ha y 23 áreas de implantación con 138,09 ha.
      SON BÍFILAS (confirmado por el proyectista), así que esas 3.314 filas son 1.657 SEGUIDORES:
-     el plano coloca una entrada por tubo. Qué tubo va con cuál no está en ese DWG y no se
-     inventa; la nota `bifila` del layout lo deja escrito.
+     el plano coloca una entrada por tubo. Qué tubo va con cuál sale de la capa «PVcase Multiple
+     Rows Center Line» del propio DWG y está MEDIDO: 1.340 parejas con 1.956 evidencias y cero
+     contradicciones. Las 634 filas que esa capa no determina se quedan sin `par` y NO se
+     emparejan a ojo; la nota `bifila` del layout lo deja escrito.
 
      LA POTENCIA sale de los módulos medidos por el vatiaje que da el proyectista: 177.190 x 630 W
      (Astronergy) = 111.629,7 kWp. No estaba en el plano —de ahí que naciera sin cifra—, y las dos
      partes de la cuenta viajan en el layout (`modulo` y `pdc_kwp`) para poder rehacerla. Cuadra
      con la medida: 630 W en los 2,382 x 1,134 m del propio DWG son 233 W/m², un 23,3 %.
 
-     SOLO LAYOUT 2D. Sin Topografía 3D porque no hay levantamiento: este plano no trae curvas de
-     nivel (Dicayagua sí las tenía, y por eso ella la lleva). Y sin siting, cobertura ni SCADA, que
-     son de TCU/NCU y aquí no hay ninguna: el DWG no es de comunicaciones. */
+     SIN Topografía 3D porque no hay levantamiento: este plano no trae curvas de nivel (Dicayagua
+     sí las tenía, y por eso ella la lleva). Y sin cobertura ni SCADA, que son de TCU/NCU y aquí no
+     hay ninguna: el DWG no es de comunicaciones.
+
+     CON SITING, y esto es una CORRECCIÓN de lo que decía antes esta ficha. «No hay TCU/NCU» solo
+     descarta el camino de «proyecto real» del diseñador, que COPIA la red del DWG. El otro camino
+     —el siting automático, el de los dos 26127 FUV— no necesita ninguna: le das el campo y CALCULA
+     las NCU. Es exactamente este caso, y quedó fuera por un motivo que solo cubría la mitad de la
+     herramienta. Va con los 1.340 seguidores cuya pareja está medida (81 % del campo); los 317 que
+     el plano no empareja no entran, y el rótulo del botón lo dice. */
   { name:"Catania", code:"", oferta:true, pdc:111.6297, loc:"Catania · Sicilia · Italia", views:{
+      siting:     SITE+"siting/?planta=catania",
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=catania",
   }},
   /* BENANTE 25004 y PANBIANCO 25004.2 (Sicilia). Son dos plantas del MISMO emplazamiento, a 1,3 km
