@@ -143,6 +143,11 @@ declare -A PISO=(
   [test_viento_gumbel.js]=24
   [test_viento_pasivo.js]=30
   [test_viento_planta.js]=35
+  # De la TERCERA pasada: intercambiar los factores de vista del cielo y el
+  # suelo en `LOC.poa` —la transposición de la que sale toda la energía— mató
+  # CERO contra los TRECE arneses de viento. Medido con el árbol limpio y nada
+  # más corriendo.
+  [test_viento_poa.js]=30
   [test_viento_rafaga_medida.js]=39
   [test_viento_reproductor.js]=18
   [test_viento_rosa.js]=23
