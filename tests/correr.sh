@@ -128,7 +128,13 @@ declare -A PISO=(
   # la llamada real, los diez arneses que abren la ficha —539 comprobaciones—
   # se quedaron verdes. La histéresis se podía borrar y el repo no lo notaba.
   [test_viento_abanderamiento.js]=33
+  # De la batería de mutación del 2026-09-10: SIETE mutantes sobre mecanismos
+  # que ningún arnés nombraba —Gumbel, lazo de control, denominador del pasivo—
+  # mataron CERO comprobaciones contra los 238 de los arneses de viento. Estos
+  # dos ficheros los cazan.
+  [test_viento_control.js]=28
   [test_viento_ejes.js]=77
+  [test_viento_gumbel.js]=24
   [test_viento_planta.js]=35
   [test_viento_rafaga_medida.js]=39
   [test_viento_reproductor.js]=18
