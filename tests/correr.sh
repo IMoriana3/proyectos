@@ -124,6 +124,10 @@ declare -A PISO=(
   [test_layout_ui.js]=182
   [test_pwa.js]=21
   [test_sizing.js]=115
+  # Nace de un hueco MEDIDO: con el `hold` de la histéresis puesto a cero en
+  # la llamada real, los diez arneses que abren la ficha —539 comprobaciones—
+  # se quedaron verdes. La histéresis se podía borrar y el repo no lo notaba.
+  [test_viento_abanderamiento.js]=33
   [test_viento_ejes.js]=77
   [test_viento_planta.js]=35
   [test_viento_rafaga_medida.js]=39
