@@ -132,6 +132,24 @@ declare -A PISO=(
   [test_integridad.js]=7
   [test_layout.js]=201
   [test_layout_ui.js]=182
+  # LOS LIENZOS A LA DENSIDAD DE LA PANTALLA. Un `<canvas>` con el búfer más
+  # pequeño de lo que ocupa lo AMPLÍA el navegador: letra y trazo gordos y
+  # blandos. MEDIDO: con `var dpr=1` en `layout.html`, los cuatro arneses que
+  # abren esa ficha dieron 544 comprobaciones VERDES y salida 0 —`test_layout`
+  # 201, `test_layout_ui` 182, `test_zonas_mixto` 106 y `test_buscador` 55—.
+  # Se miraron las DOS señales, recuento y código de salida.
+  #
+  # Había una herramienta que medía esto y no votaba: `tools/test_nitidez.mjs`
+  # lo hace sobre cinco repos y termina con 0 pase lo que pase. No se toca —es
+  # un instrumento para MIRAR, de varios repos— y la parte de este repo entra
+  # aquí con veredicto.
+  #
+  # La ficha de viento se CORRE dentro del banco: ocho de sus nueve lienzos
+  # están ocultos hasta que hay simulación, y la primera versión medía uno solo
+  # y daba verde. Lo delató su propia batería (el mutante del 2D sobrevivía
+  # mientras el del 3D moría). Quedan DOS sin alcanzar, `extCv` y `gTl`, y está
+  # dicho en el arnés.
+  [test_nitidez.js]=32
   [test_pwa.js]=21
   # El careo que faltaba entre DOS FICHAS: `cartera-tabla.html` escribe
   # `factiun_plantas` con `publishSpecs` y `index.html` lo lee en `SPECS` para
