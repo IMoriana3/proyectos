@@ -393,6 +393,15 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-10 · el cizallado medido también en el 3D** — Ignacio: *«aplica lo del cizallado medido
+  también al 3D»*. `cotas_asbuilt.py` mide por seguidor el corrimiento del centro de una viga respecto
+  del de su hermana a lo largo del eje (`sh`), de las mismas puntas que se dibujan, y la planta declara
+  cuántos van corridos (`n_sh`, > 0,5 m) con su reparto (`sh_p50/p95/max`). San José: p50 0,117 ·
+  p95 0,232 · máx 1,199, **10 seguidores corridos, los mismos que mide el mapa**; Ayora: 0,027 / 0,090
+  / 0,207, ninguno. El globo del 3D lo dice en cada fila («cizallado E/W 0,118 m», y en magenta «vigas
+  corridas» si pasa de 0,5). Test nuevo: el cizallado sale de las puntas de cada tracker, la cuenta
+  declarada coincide, y San José/Ayora dan 10/0 como el 2D. Las cotas no cambian en nada más.
+
 - **2026-09-10 · las bielas también en Ayora** — Ignacio: *«lo del visor con bielas y tal aplícalo en
   Ayora»*. El visor emparejaba las dos vigas de un seguidor por el sufijo `-E/-W` del id, que es el de
   San José; en Ayora las dos filas se llaman `HD-1-0`/`HD-1-1` y se quedaban sin biela. Ahora el
