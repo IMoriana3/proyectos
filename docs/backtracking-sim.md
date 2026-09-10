@@ -393,6 +393,19 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-10 · el visor 2D dibuja mesas y bielas, no filas enteras** — Ignacio: *«¿podrías dibujar
+  la biela entre las filas? Y las mesas, no? Porque aquí representas filas, no mesas»*. El as-built
+  trae la junta medida y el generador la tiraba. Ahora cada fila con junta son sus **dos mesas** (sur y
+  norte del morro, con el hueco del accionamiento, sus cotas y su pendiente), el **motor** va en el
+  morro con su desplazamiento respecto de la recta entre puntas, y hay capa nueva de **bielas**: el eje
+  de transmisión entre las dos vigas del mismo seguidor, de morro a morro. San José: 4.517 filas
+  articuladas (2.281 seguidores), 9.034 mesas, **2.289 bielas**.
+
+  Regla que hubo que fijar: **el 2D dibuja el levantamiento tal cual** (puntas y junta del as-built,
+  la cota contaminada marcada y no corregida) y del modelo sólo toma una decisión, si soltó la junta
+  la fila va rígida. Mezclar puntas del as-built con la junta del modelo daba motores «desplazados»
+  37 m en las copias de hermana; con la regla, el máximo es 2,81 m, el mismo que el modelo.
+
 - **2026-09-10 · cargar una planta nueva ya no exige sembrar nada a mano** — Ignacio: *«deja listo lo
   de las dos aristas para cargar plantas nuevas»*. Las dos eran de arranque, no de física.
 
