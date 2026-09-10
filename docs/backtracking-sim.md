@@ -393,6 +393,14 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-09 · el globo del 3D dice qué puntos** — Ignacio: *«añade al globo del 3D el desvío y el
+  id del punto»*. El 2D ya lo decía en la ficha y la reclamación lo lleva en el CSV; el 3D sólo decía
+  «esa cota es del terreno vecino». Ahora cada fila con cota repuesta o copiada lleva en `cotas.json`
+  sus puntos `[id, desvío]` (del detector, `pmal`; la copia con los de la fila descartada), la escena
+  los publica por mesa (`segRp`) y el globo los escribe bajo la marca de origen: *«puntos con la Z en
+  otra referencia: 8437 (+36,9 m) · 8438 (+36,6 m)»*. 46 filas, 92 mesas, 170 entradas. Invariante:
+  toda fila repuesta trae sus puntos, ninguna limpia los trae, todos con desvío > 3 m. QA 149 → **150**.
+
 - **2026-09-09 · las bielas, recontadas, y 39 filas que iban naranja** — Ignacio: *«cuenta cuántas
   bielas te salen ahora»*. San José **2.289**, una por tracker: 2.243 entre vigas con cotas medidas,
   35 con alguna cota repuesta, 9 sobre copia de hermana, 2 en los seguidores del plano. Largo p5 6,156 ·
