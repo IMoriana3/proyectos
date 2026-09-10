@@ -243,6 +243,42 @@ done
 # peldaño), no aquí: una exención lo taparía.
 declare -A EXCLUIDOS=()
 
+# ── LOS `test_*` QUE VIVEN FUERA DE `tests/` ─────────────────────────────
+# Un fichero llamado `test_algo` que no está en `tests/` NO LO CORRE NADIE: no
+# entra en el bucle de abajo, no tiene piso, y su veredicto no vota. Eso puede
+# estar bien —hay bancos que necesitan un repo hermano que aquí no hay— pero
+# tiene que estar DICHO, o el nombre promete una vigilancia que no existe.
+#
+# MEDIDO el 2026-09-10, corriendo los tres a mano en este contenedor:
+#
+#   · tools/test_cartera_dwg.mjs  sale 2 sin el repo `cobertura-zigbee` al
+#     lado: carea la cartera contra lo MEDIDO en el DWG (seguidores, HSU,
+#     pitch, centro) y sin el índice del plano no tiene contra qué carear.
+#   · tools/test_ancho.mjs        necesita `playwright-core` de un repo hermano
+#     y las páginas de OTROS repos; aquí tarda más de 90 s y avisa de las
+#     carpetas que le faltan. Es una MEDIDA de diseño (cuánto ancho aprovecha
+#     cada página), no un banco de regresión.
+#   · tools/test_nitidez.mjs      corre aquí y sale 0 — pero ese 0 NO ES UN
+#     VEREDICTO. Cuenta los lienzos por debajo de la densidad de la pantalla,
+#     los imprime, y termina con 0 pase lo que pase: su único `process.exit`
+#     cubre el caso de que falte la dependencia. Es un INFORME con nombre de
+#     banco. (Corrijo aquí mi propia nota de hace un rato, que decía «corre y
+#     PASA»: leí el código de salida como si fuera un veredicto, que es el
+#     cuarto corolario y la segunda vez que me pasa el mismo día.)
+#     Para entrar en el portón le faltan dos cosas, no una: dar veredicto, y
+#     no clavar la ruta `chromium_headless_shell-1194`, que es la de ESTE
+#     contenedor y no la del runner. Además sirve cinco repos hermanos, así
+#     que aquí solo mide las páginas de éste.
+#
+# La tabla no es decorativa: el guard de abajo exige que nombre a TODOS los
+# `test_*` de fuera de `tests/`, y que cada uno siga existiendo. Así ni aparece
+# uno nuevo en silencio ni sobrevive una excusa al fichero que excusaba.
+declare -A FUERA_DEL_PORTON=(
+  [tools/test_cartera_dwg.mjs]="carea contra el DWG; necesita el repo cobertura-zigbee al lado"
+  [tools/test_ancho.mjs]="medida de diseño; necesita playwright-core y páginas de otros repos"
+  [tools/test_nitidez.mjs]="informe sin veredicto (sale 0 siempre); además clava la ruta del navegador de este contenedor"
+)
+
 mkdir -p "$LOGS"
 rojo=0; verdes=0; total_checks=0; lista_rojos=""
 
@@ -254,6 +290,28 @@ if ! curl -sf -o /dev/null --max-time 5 "$BASE/index.html"; then
   echo "       levanta el repo:  python3 -m http.server 8099"
   exit 1
 fi
+
+# ── guard de los `test_*` de fuera del portón ────────────────────────────
+# Las dos direcciones, como en la tabla de pisos: que no falte ninguno (uno sin
+# declarar es un banco que nadie corre y nadie sabe que nadie corre) y que no
+# sobre ninguno (una excusa que sobrevive a su fichero miente con autoridad).
+for f in $(find . -name 'test_*.js' -o -name 'test_*.mjs' | sed 's|^\./||' | grep -v '^tests/' | grep -v node_modules | sort); do
+  if [ -z "${FUERA_DEL_PORTON[$f]+x}" ]; then
+    echo "ROJO · $f se llama test_* y NO lo corre el portón, y no está declarado"
+    echo "       o lo mueves a tests/ con su piso, o lo apuntas en FUERA_DEL_PORTON con el motivo"
+    exit 1
+  fi
+done
+for f in "${!FUERA_DEL_PORTON[@]}"; do
+  if [ ! -f "$f" ]; then
+    echo "ROJO · declaración huérfana: $f ya no existe, borra su entrada"
+    exit 1
+  fi
+  if [ -z "${FUERA_DEL_PORTON[$f]}" ]; then
+    echo "ROJO · declarado sin motivo: $f"
+    exit 1
+  fi
+done
 
 # ── guard de zombis de la lista de exenciones (corolario 6) ──────────────
 for e in "${!EXCLUIDOS[@]}"; do
