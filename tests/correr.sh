@@ -133,11 +133,24 @@ declare -A PISO=(
   # mataron CERO comprobaciones contra los 238 de los arneses de viento. Estos
   # dos ficheros los cazan.
   [test_viento_control.js]=28
+  # De la SEGUNDA batería, la del control positivo: `parseCSV` con el separador
+  # menos frecuente, `rosa` repartiendo por truncamiento y `pasivo` sin
+  # reenganche por cruce mataron CERO cada uno. El de CSV no es un hueco de
+  # banco sino de CAMINO: cuelga del manejador de subida, que ningún arnés
+  # dispara — y se cierra igual, porque el código existe y decide.
+  [test_viento_csv.js]=31
   [test_viento_ejes.js]=77
   [test_viento_gumbel.js]=24
+  [test_viento_pasivo.js]=30
   [test_viento_planta.js]=35
+  # De la TERCERA pasada: intercambiar los factores de vista del cielo y el
+  # suelo en `LOC.poa` —la transposición de la que sale toda la energía— mató
+  # CERO contra los TRECE arneses de viento. Medido con el árbol limpio y nada
+  # más corriendo.
+  [test_viento_poa.js]=30
   [test_viento_rafaga_medida.js]=39
   [test_viento_reproductor.js]=18
+  [test_viento_rosa.js]=23
   # El CONTROL POSITIVO de la segunda batería —declinación de 23,45° a 13,45°,
   # que mueve el ángulo de seguimiento hasta 13,8°— murió CERO contra los nueve
   # arneses de viento. Verificado que el instrumento medía: con un error de

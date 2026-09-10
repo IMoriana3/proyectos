@@ -393,6 +393,41 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-10 · el visor 2D dibuja mesas y bielas, no filas enteras** — Ignacio: *«¿podrías dibujar
+  la biela entre las filas? Y las mesas, no? Porque aquí representas filas, no mesas»*. El as-built
+  trae la junta medida y el generador la tiraba. Ahora cada fila con junta son sus **dos mesas** (sur y
+  norte del morro, con el hueco del accionamiento, sus cotas y su pendiente), el **motor** va en el
+  morro con su desplazamiento respecto de la recta entre puntas, y hay capa nueva de **bielas**: el eje
+  de transmisión entre las dos vigas del mismo seguidor, de morro a morro. San José: 4.517 filas
+  articuladas (2.281 seguidores), 9.034 mesas, **2.289 bielas**.
+
+  Regla que hubo que fijar: **el 2D dibuja el levantamiento tal cual** (puntas y junta del as-built,
+  la cota contaminada marcada y no corregida) y del modelo sólo toma una decisión, si soltó la junta
+  la fila va rígida. Mezclar puntas del as-built con la junta del modelo daba motores «desplazados»
+  37 m en las copias de hermana; con la regla, el máximo es 2,81 m, el mismo que el modelo.
+
+- **2026-09-10 · cargar una planta nueva ya no exige sembrar nada a mano** — Ignacio: *«deja listo lo
+  de las dos aristas para cargar plantas nuevas»*. Las dos eran de arranque, no de física.
+
+  **1. El reparto exigía un as-built previo.** `reparte_levantamiento.py` heredaba de él la meta y los
+  vectores TCU, y para una planta nueva no lo hay. Lo que heredaba de verdad tiene fuente propia: el
+  marco local (`cE`, `cN`) y la ficha del módulo (`modW`, `gapMod`, `gapDrive`, pitch, cuerda, gcr,
+  límite) están en el **layout**; la base de cotas es la **mediana de la Z del levantamiento**,
+  redondeada al metro (un origen, declarado); el huso UTM se lee del `crs` del layout
+  (`EPSG:32719 → 19S`); y los vectores TCU no tienen fuente aquí y van a null, como ya pasaba con toda
+  fila nueva. Probado quitando el as-built de San José y regenerando desde cero: **4.572 de 4.572 filas
+  idénticas** en geometría y cota absoluta.
+
+  **2. El generador del visor estaba escrito para San José.** Rutas, huso 19S, nombre y código clavados,
+  en `san-jose/tools/`. Pasa a `asbuilt/tools/generate_asbuilt.py <planta>`: lee de
+  `asbuilt/source/<planta>/`, la meta sale del as-built (que la hereda del layout), lo que el plano
+  no sabe —el cliente— va en `meta.json`, y escribe `data/<planta>.js` y una entrada en
+  `data/plantas.js`. La página deja de conocer plantas: selector y `?planta=` salen del manifiesto.
+  San José regenerado por el camino nuevo: `data/sanjose.js` **byte a byte igual** al que servía.
+
+  Cargar una planta: `reparte_levantamiento.py elburgo` → `cotas_asbuilt.py elburgo` → copiar los
+  tres JSON → `generate_asbuilt.py elburgo`. Sin tocar ninguna página.
+
 - **2026-09-09 · el globo del 3D dice qué puntos** — Ignacio: *«añade al globo del 3D el desvío y el
   id del punto»*. El 2D ya lo decía en la ficha y la reclamación lo lleva en el CSV; el 3D sólo decía
   «esa cota es del terreno vecino». Ahora cada fila con cota repuesta o copiada lleva en `cotas.json`
