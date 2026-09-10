@@ -393,6 +393,15 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-10 · «sector anómalo» se mide de la geometría dibujada** — Ignacio: *«¿qué es sector
+  anómalo en San José?»*. Son los seguidores con las dos vigas **corridas entre sí a lo largo del eje**
+  más de 0,5 m (cizallado; comparten tubo, debería ser ~0). Y la marca venía de `shear.csv`, calculado
+  sobre la **asignación vieja del proveedor**: marcaba **59** seguidores y, medido sobre el reparto
+  nuevo, sólo **1** de ellos tiene las vigas corridas de verdad. Ahora el cizallado se calcula en el
+  generador, centro de la viga E contra el de la W del mismo seguidor, y va por fila (`sh`). San José:
+  p50 0,118 m · p95 0,231 · máx 1,199; **10 seguidores > 0,5 m**, entre ellos TR-10_1-011, TR-09_1-011
+  y TR-02_2-057 — justo los que el reparto avisa por largo apartado de su tipo.
+
 - **2026-09-10 · el largo de la viga sale del tipo del plano — preparando El Burgo** — Ignacio:
   *«carga El Burgo como primera planta real»*. No se puede todavía: **no hay levantamiento de El Burgo**
   en ningún repositorio (sólo el plano, las coordenadas de TCU del barrido zigbee y el TMY). Hace falta
