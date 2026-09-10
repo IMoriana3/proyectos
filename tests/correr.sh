@@ -140,6 +140,10 @@ declare -A PISO=(
   # dispara — y se cierra igual, porque el código existe y decide.
   [test_viento_csv.js]=31
   [test_viento_ejes.js]=77
+  # Las dos fuentes sintéticas INVENTAN datos a propósito, y lo que este arnés
+  # vigila sobre todo es que lo DECLAREN: viento cero y rumbo NaN en el cielo
+  # claro, y `sin_irradiancia` al completar. Ninguna aparecía en un arnés.
+  [test_viento_fuente.js]=28
   [test_viento_gumbel.js]=24
   [test_viento_pasivo.js]=30
   [test_viento_planta.js]=35
