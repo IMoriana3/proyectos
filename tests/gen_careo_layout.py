@@ -22,6 +22,59 @@ import sys
 LAT, LON = 41.57634, -0.79814
 
 
+#: Cifras significativas con las que se escriben los resultados del core.
+#:
+#: NO es cosmética: sin esto el fichero guarda el float completo, y los últimos
+#: bits de las magnitudes que salen de la geometría (`col_area_m2` y los ratios
+#: derivados: `fill_factor`, `usable_fill`, `GCR`) DEPENDEN DEL ENTORNO — de la
+#: versión de shapely/GEOS y del intérprete. El careo compara por IGUALDAD
+#: EXACTA, así que un golden sin cuantizar sólo vuelve a salir idéntico en la
+#: máquina donde se generó: verde en la CI que lo parió y rojo para cualquier
+#: otro, con un mensaje que culpa al core de una deriva que no existe. Y peor,
+#: cuyo remedio —«regenéralo»— mete los bits de esa otra máquina en el fichero
+#: y se lo rompe a todos los demás.
+#:
+#: Medido el 2026-09-10 entre dos entornos (CI: Python 3.11 + requirements.txt;
+#: otro: 3.12.3 + shapely 2.1.2/GEOS 3.13.1). Campos que aún difieren:
+#:
+#:     %.15g → 43     %.14g → 8     %.13g → 1     %.12g → 0     %.10g → 0
+#:
+#: El límite medido es 12. Se eligen 10 para tener dos órdenes de margen contra
+#: entornos que no se han podido medir, y sigue siendo una resolución absurda:
+#: 0,1 cm² sobre una parcela de nueve hectáreas.
+#:
+#: Y la pregunta que hay que contestar al aflojar cualquier comparación: CUÁNTA
+#: SENSIBILIDAD SE PIERDE. Medido inyectando una deriva relativa en
+#: `col_area_m2` del core y mirando si el careo se cae:
+#:
+#:     1e-8  → ROJO      1e-11 → ROJO      1e-12 → verde      1e-14 → verde
+#:
+#: O sea que la ceguera empieza por debajo de 1e-12 y el ruido de entorno vive
+#: en ~1e-14: dos órdenes de margen. Nótese que muere ya en 1e-11, POR DEBAJO
+#: del propio escalón de cuantización — con 253 campos, una deriva coherente
+#: hace que alguno cruce el redondeo aunque sea menor que él. Se predijo que
+#: 1e-11 sobreviviría y no fue así; queda escrito el resultado, no la
+#: predicción. Cualquier cambio real de física mueve estas cifras órdenes de
+#: magnitud por encima de todo esto.
+#:
+#: `requirements.txt` del core declara `shapely>=2.0,<3`, o sea que el entorno
+#: de CI también puede moverse solo: sin cuantizar, esto se caía algún día sin
+#: que nadie hubiera tocado nada.
+CIFRAS_CORE = 10
+
+
+def _q(v, cifras=CIFRAS_CORE):
+    """Cuantiza a `cifras` significativas, devolviendo float.
+
+    Refleja la semántica del `float(...)` que había antes aquí, `bool`
+    incluido —hoy no aparece ninguno en `STAT_KEYS`, pero si mañana aparece
+    tiene que seguir escribiéndose igual que se escribía—. La llamada va
+    guardada por el mismo `isinstance` de siempre, así que aquí no llega
+    nada que no sea numérico.
+    """
+    return float(f"{float(v):.{cifras}g}")
+
+
 def _to_lonlat(pts, lat=LAT, lon=LON):
     m_lon = 111320.0 * math.cos(math.radians(lat))
     m_lat = 110540.0
@@ -278,8 +331,11 @@ def main():
             **entrada_geo,
             **({"tol_mesas_pct": caso["tol_mesas_pct"]} if caso.get("tol_mesas_pct") else {}),
             "cfg": cfg,
+            # `_q` en vez de `float`: los últimos bits de las magnitudes
+            # geométricas dependen del entorno y este fichero se carea por
+            # igualdad exacta (ver CIFRAS_CORE, arriba).
             "core": {k: (None if st.get(k) is None else
-                         (float(st[k]) if isinstance(st.get(k), (int, float)) else st.get(k)))
+                         (_q(st[k]) if isinstance(st.get(k), (int, float)) else st.get(k)))
                      for k in STAT_KEYS},
         })
         print(f"  · {caso['nombre']}: {st['structures']} mesas · "
