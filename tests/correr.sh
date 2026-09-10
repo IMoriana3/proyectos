@@ -204,6 +204,22 @@ declare -A PISO=(
   # el troceado por años no da un fallo: da otro viento de diseño. Se prueba la
   # orquestación con un espía en el sitio de `LOC.run`, sin traer el motor.
   [test_viento_multi.js]=28
+  # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,
+  # `control`, `poa`, `single`, `dual`, `pasivo`— y ninguno el MONTAJE: en qué
+  # orden se llaman y qué sale del conjunto. Ahí viven decisiones que no son de
+  # ninguna pieza: que la LÍNEA BASE también pase por el lazo de control (si no,
+  # todos los deltas salen inflados), que la consigna se guarde ANTES del lazo,
+  # que el límite de mediodía sea de las B, y que las A orienten por el rumbo
+  # del viento y las B por el sol.
+  #
+  # MEDIDO: el mutante que pone las horas por defecto de `LOC.fetchHSU` a 24 en
+  # vez de 720 —verificado aplicado en disco— mató CERO contra los VEINTE
+  # arneses que abren la ficha. `fetchHSU` no la nombraba ninguno.
+  #
+  # Corre SIN RED: `cfg.meteoPre` corta la descarga —y el banco comprueba que
+  # de verdad la corta— y el SCADA se intercepta en el navegador, que es la
+  # única forma de probar un 500 o una respuesta sin muestras.
+  [test_viento_orquestacion.js]=90
   [test_viento_pasivo.js]=30
   [test_viento_planta.js]=35
   # De la TERCERA pasada: intercambiar los factores de vista del cielo y el
