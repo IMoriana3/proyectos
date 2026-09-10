@@ -50,8 +50,20 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
 // viento, y pasa de 1 lienzo medido a 7.
 //
 // Quedan DOS que ni así aparecen —`extCv` (extremos) y `gTl` (línea de tiempo
-// de racha)—: piden más interacción de la que este banco hace. Va dicho aquí
-// en vez de contarlos como medidos.
+// de racha)—: piden más interacción de la que este banco hace. `extCv` necesita
+// una corrida MULTI-AÑO (con un solo año no hay dispersión que dibujar) y `gTl`
+// que se haya calculado la pestaña de granizo.
+//
+// AFINADO el 2026-09-10, porque la versión anterior de esta nota decía menos de
+// lo que se sabe y eso también envejece: los OCHO lienzos 2D de la ficha se
+// dimensionan por la MISMA función, `prep2d`, y ese mecanismo sí está medido —
+// el mutante que le pone el `dpr` a 1 mata SEIS de los siete que este banco
+// alcanza. O sea que lo que falta no son dos mecanismos sin vigilar, son dos
+// INSTANCIAS del mismo mecanismo ya vigilado, en caminos que este banco no
+// recorre. Es un hueco más pequeño del que la nota anterior sugería, y sigue
+// siendo un hueco: `prep2d` lleva escrito en su propio comentario que su bug
+// fue justo el de una tarjeta en `display:none`, que es el estado del que
+// vienen estos dos.
 const meteoSint = lat => {
   const n = 8760, h = { time: [], shortwave_radiation: [], diffuse_radiation: [],
     direct_normal_irradiance: [], temperature_2m: [], windspeed_10m: [], winddirection_10m: [] };
