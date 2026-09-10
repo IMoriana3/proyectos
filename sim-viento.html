@@ -1665,9 +1665,21 @@ LOC.fetchYear=function(lat,lon,year,year1,sinRafaga){
        depender de que la sirva. Se vuelve a pedir sin ella y se sigue
        exactamente como antes, con la ausencia DECLARADA.
 
-       Va como segundo argumento de `then` y no como `catch` a propósito: así
-       este manejador ve SOLO los fallos de la petición, y un error de parseo
-       —que sería un bug nuestro— no dispara un reintento que lo taparía.
+       Va como segundo argumento de `then` y no como `catch` a propósito, y lo
+       que eso compra es MÁS ESTRECHO de lo que esta nota decía antes. MEDIDO
+       el 2026-09-10, peticiones que salen en cada caso:
+
+           la red cae ....................... 2   reintenta
+           HTTP 500 ......................... 2   reintenta
+           JSON ilegible (`r.json()` falla) . 2   reintenta
+           `_omParse` lanza (sin `hourly`) .. 1   NO reintenta
+
+       O sea: el manejador ve todo lo que va mal HASTA DECODIFICAR el JSON
+       incluido. Lo que NO ve —y es lo que la forma `then(B, C)` compra— es lo
+       que lanza `_omParse`, que es NUESTRA interpretación de una respuesta
+       bien formada: ahí un reintento taparía un bug nuestro. La versión
+       anterior de esta nota decía «ve SOLO los fallos de la petición» y metía
+       el parseo entero en el mismo saco; la decodificación también entra.
 
        Un reintento como mucho, y solo en el caso de fallo: si el segundo
        también cae, se propaga ESE error, que es el que describe la red de
