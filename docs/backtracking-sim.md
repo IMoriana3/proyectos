@@ -393,6 +393,21 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-10 · el largo de la viga sale del tipo del plano — preparando El Burgo** — Ignacio:
+  *«carga El Burgo como primera planta real»*. No se puede todavía: **no hay levantamiento de El Burgo**
+  en ningún repositorio (sólo el plano, las coordenadas de TCU del barrido zigbee y el TMY). Hace falta
+  `elburgo_levantamiento.csv` del topógrafo (`id,X,Y,Z`, cuatro puntas por viga, UTM 30N). Lo que sí
+  se ha visto al mirar el layout y se deja resuelto: El Burgo **no trae ficha de módulo** y sus tipos no
+  son «completo/medio» sino *Interior/Exterior con/sin rótula* y *Medio*, así que el reparto (que
+  busca los topes a L/2 del centro) y la reconstrucción del plano no tenían de dónde sacar el largo.
+
+  Ahora el largo nominal por tipo se resuelve en orden: `tipos_largo` del layout (declarado, medido en
+  el DWG: El Burgo 64,6 m las mesas y 32,6 la media, con los pilotes reales a ±30,5/30,8 y ±13,6 m),
+  `mesa.tipos[<tipo>].largo` si el bloque se llama como el tipo, y la ficha del módulo si la hay
+  (San José: 73,87 / 37,20 m, exactamente lo de antes). El largo por defecto es el del tipo más
+  frecuente del plano. `cotas_asbuilt.del_plano` reconstruye también sin ficha de módulo, con el largo
+  del tipo. San José: 0 de 4.572 filas cambian, cotas idénticas. QA 150.
+
 - **2026-09-10 · el visor 2D dibuja mesas y bielas, no filas enteras** — Ignacio: *«¿podrías dibujar
   la biela entre las filas? Y las mesas, no? Porque aquí representas filas, no mesas»*. El as-built
   trae la junta medida y el generador la tiraba. Ahora cada fila con junta son sus **dos mesas** (sur y
