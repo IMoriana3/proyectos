@@ -138,6 +138,12 @@ declare -A PISO=(
   [test_viento_planta.js]=35
   [test_viento_rafaga_medida.js]=39
   [test_viento_reproductor.js]=18
+  # El CONTROL POSITIVO de la segunda batería —declinación de 23,45° a 13,45°,
+  # que mueve el ángulo de seguimiento hasta 13,8°— murió CERO contra los nueve
+  # arneses de viento. Verificado que el instrumento medía: con un error de
+  # sintaxis inyectado, el navegador sí lo ve. Este arnés ancla la geometría a
+  # astronomía de manual.
+  [test_viento_sol.js]=28
   [test_viento_sello.js]=17
   [test_viento_sitio.js]=52
   [test_zonas_mixto.js]=106
