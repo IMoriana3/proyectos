@@ -140,6 +140,10 @@ declare -A PISO=(
   # dispara — y se cierra igual, porque el código existe y decide.
   [test_viento_csv.js]=31
   [test_viento_ejes.js]=77
+  # Las dos fuentes sintéticas INVENTAN datos a propósito, y lo que este arnés
+  # vigila sobre todo es que lo DECLAREN: viento cero y rumbo NaN en el cielo
+  # claro, y `sin_irradiancia` al completar. Ninguna aparecía en un arnés.
+  [test_viento_fuente.js]=28
   [test_viento_gumbel.js]=24
   [test_viento_pasivo.js]=30
   [test_viento_planta.js]=35
@@ -157,6 +161,11 @@ declare -A PISO=(
   # sintaxis inyectado, el navegador sí lo ve. Este arnés ancla la geometría a
   # astronomía de manual.
   [test_viento_sol.js]=28
+  # El careo de las DOS cabezas del abanderamiento: la de serie (informe) y la
+  # de paso a paso (panel en vivo). Encontró que `stepperPasivo` reenganchaba
+  # solo por proximidad mientras `pasivo` ya llevaba el criterio de cruce: a
+  # paso de una hora, 3 pasos sueltos contra 24.
+  [test_viento_steppers.js]=17
   [test_viento_sello.js]=17
   [test_viento_sitio.js]=52
   [test_zonas_mixto.js]=106
