@@ -133,6 +133,15 @@ declare -A PISO=(
   [test_layout.js]=201
   [test_layout_ui.js]=182
   [test_pwa.js]=21
+  # El hueco de `sim-solar.html` NO era «no la abre nadie»: `test_buscador.js`
+  # sí corre `solarGeom` y `singleaxis` de esta ficha en el navegador —romper
+  # `singleaxis` mata 9 allí, y romper la marca del bloque, 4—. Lo que no había
+  # era NINGÚN valor fijado: allí solo se comprueba un ORDEN (el eje N-S vale 1
+  # y girarlo cuesta más cada vez), y un orden sobrevive a casi cualquier error
+  # de valor. MEDIDO: contra los CINCO arneses que podían verlo, mataron CERO
+  # el día juliano corrido un día entero, el backtracking quitado del todo y la
+  # refracción anulada. Este banco los mata 4, 5 y 3.
+  [test_solar.js]=73
   [test_sizing.js]=115
   # Nace de un hueco MEDIDO: con el `hold` de la histéresis puesto a cero en
   # la llamada real, los diez arneses que abren la ficha —539 comprobaciones—
