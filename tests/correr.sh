@@ -135,6 +135,7 @@ declare -A PISO=(
   [test_viento_control.js]=28
   [test_viento_ejes.js]=77
   [test_viento_gumbel.js]=24
+  [test_viento_pasivo.js]=30
   [test_viento_planta.js]=35
   [test_viento_rafaga_medida.js]=39
   [test_viento_reproductor.js]=18
