@@ -61,6 +61,16 @@ PATRON="${1:-}"
 declare -A PISO=(
   [test_buscador.js]=55
   [test_careo_pvsyst.js]=11
+  # La cartera del usuario NO la probaba nadie: de los 33 arneses, el único que
+  # nombraba `cartera-tabla.html` era `test_pwa.js`, y lo que hacía con ella era
+  # listarla en la caché. MEDIDO: un mutante que invierte la migración de fases
+  # —cada «Terminado» del usuario pasa a «Sin empezar» en su cartera guardada—
+  # mató CERO en `test_pwa`, `test_index` y `test_integridad`, y ningún otro
+  # arnés abre el fichero, así que ése era el cuadro completo. Lo que hay
+  # debajo son datos de verdad y sin vuelta atrás: `migrateFases` reescribe lo
+  # guardado en CADA carga, y `publishSpecs` escribe `factiun_plantas`, el
+  # registro que LEEN los demás visores.
+  [test_cartera.js]=45
   [test_comparador.js]=304
   [test_comparador_3d.js]=247
   [test_comparador_sitio.js]=36
