@@ -161,6 +161,11 @@ declare -A PISO=(
   # sintaxis inyectado, el navegador sí lo ve. Este arnés ancla la geometría a
   # astronomía de manual.
   [test_viento_sol.js]=28
+  # El careo de las DOS cabezas del abanderamiento: la de serie (informe) y la
+  # de paso a paso (panel en vivo). Encontró que `stepperPasivo` reenganchaba
+  # solo por proximidad mientras `pasivo` ya llevaba el criterio de cruce: a
+  # paso de una hora, 3 pasos sueltos contra 24.
+  [test_viento_steppers.js]=17
   [test_viento_sello.js]=17
   [test_viento_sitio.js]=52
   [test_zonas_mixto.js]=106

@@ -815,6 +815,18 @@ LOC.dual=function(thT,ws,az,T1,T2,pmin,full,dtS,holdMin,parkMin,dead,noon){
    ahí hasta que el seguimiento pasa por su ángulo, que puede ser horas. */
 LOC.stepperPasivo=function(cfg){
   var suelta=false, th=0, side=cfg.pSide, tol=cfg.pTol||1, rel=cfg.pRel, full=cfg.full;
+  /* `prev` guarda el objetivo del paso anterior para poder detectar el CRUCE.
+     Sin él esta máquina reengancha solo por proximidad, y `LOC.pasivo` —que
+     resuelve exactamente lo mismo sobre la serie entera— lleva el criterio de
+     cruce desde que se midió que a paso grueso el seguimiento PASA por el
+     ángulo entre dos muestras sin que ninguna caiga dentro de la tolerancia.
+     Eran DOS CABEZAS para una regla, con la corrección en una sola: careadas
+     sobre la misma serie a paso de una hora, `pasivo` daba 3 pasos sueltos y
+     este stepper 24 — la fila suelta para siempre en el panel en vivo
+     mientras el informe decía que había reenganchado. Aquí el paso no es el
+     de la serie sino el salto del reloj simulado, así que se ve al arrastrar
+     el control de tiempo, no con el reloj corriendo solo. */
+  var prev=null;
   return {
     // El modo se llama SUELTA y no FULL_STOW a proposito. Un full stow es una
     // ORDEN: la maquina manda +-55 y el motor lo recorre a 0,17 grados/s, que
@@ -824,7 +836,9 @@ LOC.stepperPasivo=function(cfg){
     // por eso tampoco comparte su color.
     get mode(){return suelta?'SUELTA':'IDLE';}, get theta(){return th;},
     step:function(tgt,ws,dtS){
-      if(suelta&&Math.abs(tgt-side)<=tol)suelta=false;
+      var cruza=(prev!=null&&suelta&&(prev-side)*(tgt-side)<=0);
+      if(suelta&&(cruza||Math.abs(tgt-side)<=tol))suelta=false;
+      prev=tgt;
       if(!suelta&&ws>rel)suelta=true;
       if(suelta)th=side;
       else{var d=tgt-th,m=LOC.SLEW*dtS;if(Math.abs(d)>m)d=(d>0?m:-m);
