@@ -203,6 +203,16 @@ declare -A PISO=(
   # `runMulti` produce los MÁXIMOS ANUALES que come Gumbel, así que un error en
   # el troceado por años no da un fallo: da otro viento de diseño. Se prueba la
   # orquestación con un espía en el sitio de `LOC.run`, sin traer el motor.
+  # LA PUERTA DE METEO, y el hallazgo que la justifica: NADIE MIRABA LA URL.
+  # MEDIDO contra los seis arneses que nombran `fetchYear` o interceptan esa
+  # API, con los mutantes verificados aplicados: `windspeed_unit=ms` -> `kmh`
+  # mató CERO, el fin de rango con `year` en vez de `year1` mató CERO, y quitar
+  # el `if(!r.ok)` mató CERO. El primero es el caro: si el servicio devuelve
+  # km/h y la ficha lo trata como m/s, TODO el viento de TODA corrida real sale
+  # multiplicado por 3,6. Los arneses no estaban flojos: INTERCEPTAN la API y
+  # contestan ellos, así que la URL pedida les da igual — y un contrato con un
+  # servicio de fuera solo se vigila mirando lo que se PIDE.
+  [test_viento_meteo.js]=33
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,
   # `control`, `poa`, `single`, `dual`, `pasivo`— y ninguno el MONTAJE: en qué
