@@ -145,6 +145,10 @@ declare -A PISO=(
   # claro, y `sin_irradiancia` al completar. Ninguna aparecía en un arnés.
   [test_viento_fuente.js]=28
   [test_viento_gumbel.js]=24
+  # `runMulti` produce los MÁXIMOS ANUALES que come Gumbel, así que un error en
+  # el troceado por años no da un fallo: da otro viento de diseño. Se prueba la
+  # orquestación con un espía en el sitio de `LOC.run`, sin traer el motor.
+  [test_viento_multi.js]=28
   [test_viento_pasivo.js]=30
   [test_viento_planta.js]=35
   # De la TERCERA pasada: intercambiar los factores de vista del cielo y el
