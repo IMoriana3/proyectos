@@ -17,13 +17,23 @@
 // afirma un arreglo sin nada que la sostenga: se podía volver a redondear y
 // el comentario seguiría ahí, mintiendo con autoridad.
 //
-// Y EL CONTROL POSITIVO ENCONTRÓ OTRA COSA. Al comprobar que el instrumento
+// EL CONTROL POSITIVO, Y UNA CORRECCIÓN MÍA. Al comprobar que el instrumento
 // medía —hacer que `cardHTML` devolviera cadena vacía, o sea TODAS las
-// tarjetas de herramienta en blanco— `test_index` siguió verde, y siguió
-// verde precisamente la comprobación llamada «se pintan las tarjetas». No
-// miente el código: miente el NOMBRE. Lo que cuenta es `article.card`, y las
-// tarjetas de PLANTA son también `article.card`, así que las de planta solas
-// ya pasan de cinco. Aquí se cuentan por separado.
+// tarjetas de herramienta en blanco— leí que `test_index` seguía verde. ERA
+// FALSO, y el error era de mi medición: ese arnés REVIENTA (salida 1, cero
+// comprobaciones leídas) esperando la tarjeta de la toolbox, que ya no se
+// pinta, y mi script contaba solo líneas FAIL. Una explosión no es un
+// superviviente. El portón sí lo caza: el recuento leído cae a cero, por
+// debajo del suelo de 18. Cuarto corolario, otra vez: el veredicto salía de
+// la señal equivocada.
+//
+// Lo que SÍ queda en pie, y medido: esa comprobación se llama «se pintan las
+// tarjetas» y cuenta `article.card` SIN DISTINGUIR, con umbral «más de
+// cinco». Con las de herramienta vacías la página conserva ONCE tarjetas de
+// planta, que son también `article.card`, así que su condición pasaría igual
+// si el arnés llegara hasta ella. Es un listón flojo con un nombre que promete
+// más que lo que mira. Aquí las tarjetas se cuentan por rejilla y se exige UNA
+// POR HERRAMIENTA, que es lo que el nombre dice.
 //
 // ── EL CAREO ──────────────────────────────────────────────────────────
 // La pieza principal de este banco no es ninguna de esas. Es que

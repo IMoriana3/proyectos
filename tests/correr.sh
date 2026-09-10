@@ -143,11 +143,13 @@ declare -A PISO=(
   # potencia redondeada siempre a entero, el orden por nombre invertido, la
   # cuenta de estados contando doble y la búsqueda mirando solo el nombre.
   #
-  # Y el CONTROL POSITIVO encontró una comprobación cuyo NOMBRE miente: con
-  # `cardHTML` devolviendo cadena vacía —todas las tarjetas de herramienta en
-  # blanco— `test_index` seguía verde, incluida la llamada «se pintan las
-  # tarjetas». Cuenta `article.card` sin distinguir, y las de PLANTA solas ya
-  # pasan de cinco. Aquí se cuentan por rejilla.
+  # El CONTROL POSITIVO encontró además un listón flojo: la comprobación
+  # llamada «se pintan las tarjetas» cuenta `article.card` SIN DISTINGUIR y
+  # pide «más de cinco», y con las de herramienta vacías quedan ONCE de planta,
+  # que también son `article.card`. (Primero escribí que `test_index` seguía
+  # VERDE con ese mutante: era falso y el fallo era de mi medición — el arnés
+  # revienta y da cero comprobaciones leídas, que el portón sí caza. Queda
+  # dicho aquí porque una nota equivocada envejece peor que ninguna.)
   [test_portada.js]=42
   # El hueco de `sim-solar.html` NO era «no la abre nadie»: `test_buscador.js`
   # sí corre `solarGeom` y `singleaxis` de esta ficha en el navegador —romper
