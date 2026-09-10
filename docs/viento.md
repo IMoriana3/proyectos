@@ -280,7 +280,7 @@ El largo se toma, por orden de calidad del dato:
 
 ### Bifila: un motor mueve DOS filas
 
-El seguidor canónico es **bífilo**: dos filas separadas el paso entre filas —6 m en El Burgo y
+El seguidor canónico es una **bífila**: dos filas separadas el paso entre filas —6 m en El Burgo y
 Ayora, 6,25 en Túnez, 5,50 en Bagnarelli— unidas por el eje de transmisión, con **un** motor. Se
 dibujaba **una sola**, así que la planta salía con la mitad de filas de las que tiene y el doble de
 pasillo entre ellas. Con `filaZ` 0 —Páramo, que es monofila— las dos coinciden y sale una, que es lo
