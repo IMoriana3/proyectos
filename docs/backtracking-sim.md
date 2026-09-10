@@ -393,6 +393,14 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-10 · las bielas también en Ayora** — Ignacio: *«lo del visor con bielas y tal aplícalo en
+  Ayora»*. El visor emparejaba las dos vigas de un seguidor por el sufijo `-E/-W` del id, que es el de
+  San José; en Ayora las dos filas se llaman `HD-1-0`/`HD-1-1` y se quedaban sin biela. Ahora el
+  seguidor es el id sin su último tramo y la pareja son sus dos filas, una de cada lado: **Ayora 754
+  bielas**, San José 2.289 (las mismas). Ayora lleva además el cizallado E/W medido como San José
+  (p50 0,027 m · p95 0,090 · máx 0,206: ninguna viga corrida). Su «sector anómalo» es otra cosa
+  (desviación de pendiente frente al proyecto) y se conserva; el cizallado va aparte en la ficha.
+
 - **2026-09-10 · «sector anómalo» se mide de la geometría dibujada** — Ignacio: *«¿qué es sector
   anómalo en San José?»*. Son los seguidores con las dos vigas **corridas entre sí a lo largo del eje**
   más de 0,5 m (cizallado; comparten tubo, debería ser ~0). Y la marca venía de `shear.csv`, calculado
