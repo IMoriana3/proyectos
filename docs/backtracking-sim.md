@@ -393,6 +393,33 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-11 · v1.52.0 · el tilt N-S entraba en pvlib con el signo cambiado, y la pala se medía en una
+  base oblicua** — Ignacio, con una planta sintética (onda senoidal E-O + pendiente constante N-S):
+  *«me ponía en la posición del sol y veía sombras, no debería ver ninguna; había sombras que no se
+  ponían rojas»*. Dos fallos, los dos sólo con tilt N-S ≠ 0. **(1)** La app mide el tilt del eje
+  norte-arriba-positivo (así lo miden las cotas, lo dibuja el 3D y lo usan contador y oráculo); pvlib
+  —y `sol.js`, su port— lo define al revés (axis_tilt positivo baja hacia axis_azimuth). Se le pasaba
+  sin cambiar el signo y la política backtrackeaba para el terreno **espejo**: un plano llano E-O a +5°
+  amanecía con un **64 % de sombra real**, que el contador y el 3D sí veían. Se convierte ahora en la
+  única frontera con pvlib (`pvTilt`, en cada `singleaxis`/`trueTrackAngle`/`surfaceOrient`; sol.js
+  sigue siendo pvlib) y `surfaceOrient` pasa a la fórmula exacta de pvlib (la anterior sólo valía con
+  tilt ≥ 0: la pala a θ=0 miraba cuesta arriba). **(2)** El contador 3D —y su oráculo, que copiaba el
+  mismo álgebra— proyectaba el impacto sobre la cuerda con una base oblicua (uD·vD = −sin θ·sE ≠ 0):
+  a 32 m del centro de la mesa y θ=44° sobre 5° de tilt son 1,9 m de error, casi la cuerda entera.
+  En un plano uniforme a 5°, donde pvlib es exacto, cobraba un **19 % de sombra a 22° de sol**,
+  creciendo con θ; y la silueta roja se pintaba desplazada (la «sombra que no se ponía roja»). Corregido
+  en cerrado en el contador, por eliminación en el oráculo, y en la silueta. De propina, el terreno en
+  presets: `nMin` se quedaba en +∞ (sólo miraba `PRr.segs`) y el suelo era −∞ siempre; la fila sin
+  emisoras del lado del sol se saltaba el marchador; y `gMax` usaba 30 m a fuego en vez del largo
+  real de la mesa. Resultado: plano uniforme ±5° → 0 sombra a cualquier elevación, contador ≡ oráculo
+  ≡ 2.5D ≡ bruto; senoidal + tilt 5° → contador ≡ oráculo todo el día, terreno y filas de borde
+  incluidos. Comprobado en navegador desde el sol en TODAS las posiciones (3 fechas, cada 20 min, 106
+  instantes, contando píxeles rojos): antes 47 instantes con rojo visible desde el sol (peor 1.163 px,
+  21-jun 18:20, sol a 35°); después 0. Cuatro tests nuevos (guardia de `pvTilt` en toda llamada a pvlib +
+  signo en el POA; plano uniforme ±5°/8° ≡ 0 y θ(+5) < θ(0) < θ(−5) con sol en el NE; base oblicua a
+  θ=44° ≡ bruto MU=64; senoidal + tilt ≡ oráculo). **Afecta a las plantas reales**: Ayora y San José
+  llevan tilts medidos de ±2°, y sus consignas y sombras cambian en consecuencia (poco, pero bien).
+
 - **2026-09-10 · el cizallado medido también en el 3D** — Ignacio: *«aplica lo del cizallado medido
   también al 3D»*. `cotas_asbuilt.py` mide por seguidor el corrimiento del centro de una viga respecto
   del de su hermana a lo largo del eje (`sh`), de las mismas puntas que se dibujan, y la planta declara
