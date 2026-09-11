@@ -419,7 +419,20 @@ de los FPS).
   invierno austral, 8,1 h de backtracking) pairwise deja un −14,6 % de POA frente al astronómico, pero el
   astronómico pierde 0,945 kWh/m² por Martinez (5,94 % de sombra ponderada, 255 min): en neto quedan 5,97
   frente a 5,91 kWh/m², y por eso energy-optimal elige f=1 casi todo el día. El backtracking ahí apenas paga,
-  y el informe lo dice con los números.
+  y el informe lo dice con los números. **Manual por fila** (*«manual es para modificar la posición de todos
+  a la vez, si queremos hacer row a row???»*): casilla «por fila» junto al manual; el slider mueve solo la fila
+  de «fila N», las demás conservan su ángulo, y al activarla cada fila arranca en la consigna que tenía la
+  política de la escena en ese instante. **Y lo que se probó y no se subió:** Ignacio, con capturas de manual
+  frente a pairwise (*«no parece funcionar muy bien pairwise, ¿no?»*, *«lo que me preocupa es que se
+  considere óptimo que haya sombra cuando el criterio en pairwise es que no haya»*). Las capturas eran de la
+  versión anterior a la torsión (v1.52.0, la página cacheada): en la actual, 07:33 con sol a 15,8° da 0,0 %
+  (la captura decía −34° y 32,9 %) y 16:38 con sol a 9° da 12,6 % (planos 3,8 %; el resto viga y canto del
+  vecino en la tangencia, real: con 64 estaciones 6-10 % por fila). Se probó poner el contador completo
+  (estructura, 32 estaciones) como objetivo de la reparación y publicar con 32 estaciones: no mejoraba (con
+  32 estaciones ningún θ uniforme baja del 12 % ahí; el «2,5 % alcanzable» era el muestreo de 8), rompía la
+  equivalencia contador ≡ oráculo de la batería (el oráculo va a 8 estaciones) y en un caso del barrido
+  reducido la reparación salía peor en planos. Se queda el criterio de planos, declarado, y el barrido mide
+  aparte (B2) cuánta sombra publicada evitaría un θ uniforme, para decidir con números si algún día compensa.
 
 - **2026-09-11 · v1.54.0 · el tracker quebrado se puede simular: quiebro en la rótula** — Ignacio:
   *«Debemos poder simular también tracker quebrado, que aparece en el desplegable pero la realidad es que
