@@ -393,6 +393,31 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-11 · v1.53.4 · el instante de Ayora entera había pasado de 1,2 s a 5,2 s** — lo cazó el
+  CI (`test_produccion.mjs`: «la planta entera calcula el instante en menos de 3 s»), no la batería del
+  simulador, que no mide tiempos. La torsión de v1.53.0 tiene un coste que en presets de 8 filas no se
+  nota y en 295 líneas medidas sí: **(1)** todas las parejas de Ayora tienen torsión (los tilts medidos
+  nunca son iguales: mediana 0,05°, p90 0,27°, máx 1,6°), así que `pairThetaTorsion` lanzaba el
+  ray-cast 3D de la pareja en las 294, y a sol rasante barría 0,5° a 0,5° hasta el θ limpio; **(2)** la
+  pasada de reparación repetía ese ray-cast 12 × 294 veces; **(3)** el instante pedía `anglesPairwise`
+  tres veces (política, acople por mesa y referencia de los optimizadores) y `driveCoupleSafe` volvía a
+  evaluar las mismas parejas en cada iteración; **(4)** el alcance del contador, que v1.53.0 pasó de «9 m
+  a fuego» al desnivel real para no perder la sombra de la fila 5 sobre la 1 con perfil quebrado ±6°, se
+  tomaba de **toda la planta**: en Ayora (1,8 km, decenas de metros de desnivel) a sol de 8° metía cientos
+  de filas como candidatas de cada receptora. Arreglos, todos sin tocar la física salvo el que se
+  declara: las estaciones de cada pareja y `anglesPairwise` se memorizan (por firma numérica de T, no
+  por el objeto: los tests mutan T in situ; se devuelve copia); el ray-cast de la pareja solo depende de
+  (θp, θp+1) y se memoriza por esa clave dentro de una llamada (la reparación sale gratis);
+  `driveCoupleSafe` memoriza su violación por (pareja, θ, θ); y el alcance es por **pareja
+  emisora-receptora** (cota más alta de la emisora sobre la más baja de la receptora, suelo de 9 m como
+  siempre, **más una cuerda**: el rayo sale del borde de la receptora más próximo y toca la emisora pasado
+  su eje, así que recorre una cuerda menos que la distancia entre ejes — la primera versión sin la cuerda
+  perdía un 2,3 % real de la fila 4 a sol de 71° con quebrado ±6° y mesas de 133 m, y lo cazó un careo
+  contador viejo/nuevo sobre los 4.336 instantes del barrido, no la batería). Probé también un barrido
+  grueso a 2° del θ sin sombra y lo descarté: cambiaba θ en algún instante y no hacía falta. Ayora entera a
+  las 07:30: 5,2 s → 2,1 s (base 1,2 s), misma POA (149 W/m²) y mismos θ; contador nuevo ≡ viejo en los
+  4.336 instantes (0 diferencias), ≡ oráculo 0,000 pp; batería 167 y producción 51 en verde.
+
 - **2026-09-11 · v1.53.1-3 · el reto («demuéstrame que ahora funciona bien») y lo que cazó** — Ignacio:
   *«demuéstrame que ahora funciona bien, un reto para ti, en cualquiera de las variantes de terreno,
   algoritmo…»*. Seis configuraciones en el navegador real (Playwright + WebGL), cada media hora del día,
