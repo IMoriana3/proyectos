@@ -398,6 +398,33 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-11 · v1.55.1 · el huso sigue al sitio, el haz solo de la fila elegida** — Ignacio, con Arequipa y
+  21-dic: *«debe estar en hora local»* (a las 10:56 del slider, «sol bajo horizonte»). Era un bug: al cambiar la
+  fecha, `aplicaHuso` aplicaba la regla horaria peninsular (+1/+2 de Madrid) a cualquier sitio sin huso de layout,
+  pisando el −5 de Arequipa; las 10:56 eran las 04:56 reales. Ahora `husoPlanta` aplica la regla peninsular solo
+  en su sitio (lon −10…19, lat 35…48: Península, Italia) y fuera de ahí el huso estándar de la longitud
+  (`tzDeLongitud`, redondeo de lon/15; el de verano fuera de Europa, a mano); cambiar latitud o longitud arrastra
+  el huso; el `tzFijo` del layout sigue mandando; y la tarjeta del sol avisa en rojo si el huso no casa con la
+  longitud (más de 1,5 h). Comprobado: Arequipa, 21-dic, 10:56 → sol 76,5°. Test en la batería (Arequipa −5 en
+  junio y diciembre, Zaragoza +2/+1, Italia +2, tzFijo manda). **El haz de sombra** (*«¿esa sombra/proyección
+  triangular?»*): con el sol a 0,9° y azimut 114°, casi a lo largo del eje, el prisma de cada fila se estiraba
+  decenas de metros y los siete tapaban la planta; ahora se dibuja solo para la fila elegida en «fila N», con el
+  sol por encima de 1° y si la fila no está tapada entera. Y *«¿residual?»*: el margen 3D de tangencia con la
+  vecina, en mm en el plano del módulo (positivo: la sombra se queda a esa distancia de tocar; negativo:
+  contacto, «auto-sombra 3D») — el árbitro de true-3D y el «hueco al vecino» del HUD. **Luz al suelo**
+  (*«en el minimum ground light, ¿no deberíamos medir la luz en el suelo?»*): se publica la misma fracción
+  de haz directo que llega al suelo entre filas que minimiza esa política (`groundLightFrac`, el
+  `ground_light_fraction` de pvlib infinite-sheds): tarjeta «luz al suelo» en el HUD por instante, columna
+  en la tabla del día (media de filas ponderada por la DNI) y fila en el informe. **«Si es evitable, ¿por
+  qué no la evita?»**: la captura era de Row, que decide fila a fila sin coordinarse (referencia de pvlib
+  A&M 2020) y por diseño no repara; el globo lo dice ahora («no lo evita por diseño; pairwise, true-3D y
+  min ground light sí reparan»). **True-3D, base matemática** (*«deja espacio en el suelo entre filas»*):
+  bisección sobre θ por pareja hasta residual de tangencia 3D cero (el rayo del borde alto de la emisora,
+  con azimut del eje y tilt N-S, cae en el borde de la receptora); con torsión se evalúa en varias
+  estaciones y manda la más restrictiva, así que en la banda central puede quedar hueco (921 mm en la
+  captura) mientras en el extremo de la mesa el residual es cero. Y vocabulario: «módulos por mesa», no
+  «por ala» (cada viga son dos mesas a los lados del motor).
+
 - **2026-09-11 · v1.55.0 · el informe del emplazamiento** — Ignacio: *«Debemos generar un informe, del
   emplazamiento, donde aparezca cada algoritmo, justificando su funcionamiento y lo que optimiza (sombras,
   energía…) con cálculos»*. Botón «📄 Informe» en la tabla del día: abre una pestaña imprimible (o PDF desde
