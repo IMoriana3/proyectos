@@ -398,6 +398,29 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-11 · v1.55.0 · el informe del emplazamiento** — Ignacio: *«Debemos generar un informe, del
+  emplazamiento, donde aparezca cada algoritmo, justificando su funcionamiento y lo que optimiza (sombras,
+  energía…) con cálculos»*. Botón «📄 Informe» en la tabla del día: abre una pestaña imprimible (o PDF desde
+  el navegador) con **(1)** el emplazamiento y la planta —sitio, huso, albedo, sol del día, GHI/DNI/DHI del
+  día, filas, pitch, cuerda, GCR, θ máx, cara sobre eje, subcadenas, IAM, azimut del eje, accionamiento y
+  motores, terreno E-O (cotas y pendientes por vano), perfil N-S (con la rótula si la hay), implantación y lo
+  que la TCU cree tener delante—; **(2)** el resumen del día política a política (POA, Δ vs astro y vs
+  pairwise, sombra ponderada por energía, minutos con sombra, horas de BT, pérdida Martinez con la parte de
+  estructura, |θ| máx) con su «cómo leer»; **(3)** cada algoritmo con *cómo decide* (lo que hace el código de
+  `policyAngles`, no un folleto: pvlib por pareja, torsión, acople por accionamiento, reparación global,
+  bisección 3D, Deeptrack con su f, ascenso por accionamiento…), *qué optimiza* y *criterio* (sombra cero de
+  planos / contacto 3D nulo / mínima luz al suelo / argmax de la POA neta) y sus cálculos del día, incluidos
+  el pico y la peor fila con su hora y su sol, y la f media de los optimizadores; **(4)** la tabla horaria
+  (sol, DNI y por política θ de la fila central y sombra media de planta); el año y la QA si están
+  calculados; y el método con sus límites declarados. **Ni una física nueva**: todo sale de `DAY` y de la
+  misma integral `dayKpis` que la tabla del día (el test estático lo exige: el informe no puede llamar a
+  poaPlant/shadeRows/policyAngles). Comprobado en navegador con la configuración de Arequipa: cinco
+  políticas, todas las secciones, 0 errores. Y el informe ya enseña algo: en ese sitio y ese día (21-jun,
+  invierno austral, 8,1 h de backtracking) pairwise deja un −14,6 % de POA frente al astronómico, pero el
+  astronómico pierde 0,945 kWh/m² por Martinez (5,94 % de sombra ponderada, 255 min): en neto quedan 5,97
+  frente a 5,91 kWh/m², y por eso energy-optimal elige f=1 casi todo el día. El backtracking ahí apenas paga,
+  y el informe lo dice con los números.
+
 - **2026-09-11 · v1.54.0 · el tracker quebrado se puede simular: quiebro en la rótula** — Ignacio:
   *«Debemos poder simular también tracker quebrado, que aparece en el desplegable pero la realidad es que
   para poder simularlo necesitamos un terreno donde las dos mesas tengan diferente inclinación»* (y
