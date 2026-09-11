@@ -454,7 +454,8 @@ de los FPS).
   inclinado (c = (cos θ, sin θ·sin τ, −sin θ·cos τ), a = (0, cos τ, sin τ)), 200×400 muestras por mesa, seis
   líneas de álgebra vectorial sin una sola compartida con el contador. Coincide en ≤ 0,5 pp en los dos
   escenarios y cuatro ángulos. Y el barrido tiene dos métricas nuevas: **F** (convergencia de la malla) y **G**
-  (mesas fuera de su rango legítimo).
+  (mesas fuera de su rango legítimo: 80 de 12.672, todas por menos de 8° y ninguna de canto — antes las
+  había a 60–90° del seguimiento verdadero).
 
   **Lo que el revisor confirmó** recalculándolo por su cuenta: la posición solar NOAA frente a pvlib, el
   backtracking paso a paso (79,91° → 16,10° → 42,07°) con los signos correctos, el haz con el modificador de
