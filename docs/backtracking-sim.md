@@ -423,7 +423,11 @@ de los FPS).
   con azimut del eje y tilt N-S, cae en el borde de la receptora); con torsión se evalúa en varias
   estaciones y manda la más restrictiva, así que en la banda central puede quedar hueco (921 mm en la
   captura) mientras en el extremo de la mesa el residual es cero. Y vocabulario: «módulos por mesa», no
-  «por ala» (cada viga son dos mesas a los lados del motor).
+  «por ala» (cada viga son dos mesas a los lados del motor). **Y los postes** (*«mira cómo es cuando metemos
+  quiebro en rótula»*, *«los soportes perforan los módulos»*): la cabeza de cada poste se medía desde el
+  centro de la mesa y el tubo está anclado en la rótula; con mesas de ±6° eso son 1,7 m de error por poste (en
+  las plantas medidas, con tilts de décimas de grado, eran centímetros y no se veía): postes de hasta 3,7 m
+  que atravesaban la pala. Medidos desde el ancla: 52 postes, todos de 2,0 m, en la escena de la captura.
 
 - **2026-09-11 · v1.55.0 · el informe del emplazamiento** — Ignacio: *«Debemos generar un informe, del
   emplazamiento, donde aparezca cada algoritmo, justificando su funcionamiento y lo que optimiza (sombras,
