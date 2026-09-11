@@ -414,6 +414,22 @@ de los FPS).
   mesa. Barrido desde el sol en Arequipa: 0 rojo visible. Cuatro tests nuevos. Y el desplegable
   «configuración de la TCU» explicado: es lo que la TCU *cree* tener delante (pendiente por pareja /
   la ficha por seguidor / registros a 0); el contador siempre usa el terreno real.
+  **Y el «millón de pruebas»** (`tools/barrido_terrenos.mjs`: terrenos E-O × perfiles N-S ×
+  accionamientos × implantaciones × latitudes × fechas × políticas, 40 configuraciones × 3 fechas × cada
+  20 min, con invariantes y los peores casos). Encontró: **(A)** el contador podaba emisoras por alcance
+  con «9 m de altura útil» a fuego, y con torsión hay 13,6 m de desnivel entre extremos de mesa: 5,5 pp
+  contra el oráculo sin podas; ahora el alcance usa el desnivel real y la poda axial suma el
+  desplazamiento por desnivel → contador ≡ oráculo en 1.424 instantes (0,000 pp). **(B)** 2.520
+  instantes-política en que pairwise/true3d/mgl dejaban sombra que un θ uniforme evitaba: filas **no
+  adyacentes** (con Bagnarelli o tresbolillo la emisora que solapa está 2-4 filas más allá; en ondulado
+  la cresta tapa el valle por encima de la fila de en medio) y torsión. De ahí `repairNoShade` al final
+  de las tres: el contador dice de quién viene la sombra de cada fila, se arranca del mejor θ uniforme
+  del instante (memorizado, compartido por las tres) y se desciende moviendo 2° a las emisoras
+  implicadas; sin sombra de filas no entra (ni un bit en llano). Los cuatro peores: 100/96/100/94 % →
+  0/0/3,7/3,1 %; en el barrido, 2.520 → 830 fallos y el peor de 100 % a 25 %, todos a sol < 10° con
+  torsión (el resto, 489, es sombra física que ningún θ evita). Energía (optimal ≥ pairwise, optfree ≥
+  optimal), acople por motor y rango de θ: 0 violaciones en 4.224 / 11.105 / 21.120 comprobaciones.
+  Una versión reducida (seis configuraciones) va en la batería.
 
 - **2026-09-11 · v1.52.1 · en modo sol la rueda no repintaba, y la cámara baja hasta 0,5°** — Ignacio:
   *«¿no puedo hacer zoom?»*. En el modo «👁 sol» la rueda escalaba la cámara ortográfica (×1,12 por golpe)
