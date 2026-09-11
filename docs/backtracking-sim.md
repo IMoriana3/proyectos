@@ -393,6 +393,21 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-11 · careo con la producción por string** — Ignacio: *«carea con el programa de generación por
+  string que calculáis igual»*. `produccion.html` come la misma física (extrae el bloque FÍSICA PURA del
+  simulador) pero carga la planta entera, y el simulador una ventana de 80 líneas del bloque con más mesas.
+  `tools/careo_produccion.mjs` casa las líneas por su x medida y las mesas por tramo (cada planta refiere
+  el norte a su propio centro: se casa por orden y largo comprobando que el desplazamiento es el mismo en
+  toda la línea) y compara θ y POA de cada mesa, instante a instante, con el mismo sol. Ayora, 21-jun, cada
+  30 min: 79 líneas, 1.600 mesas, 48.000 comparaciones, **θ y POA idénticos bit a bit en las mesas
+  interiores** en los 30 instantes, energía POA del día por mesa con desviación 0,0000 %. La primera pasada
+  decía «difieren»: la línea 1 se salía 20° a las 19:30, y no es interior — es la gemela de accionamiento de
+  la línea 0, que en la ventana no tiene vecina al oeste y en la planta entera sí; el borde se propaga por
+  el eje de transmisión, no por la sombra, así que las líneas de borde son las dos extremas y sus gemelas
+  (0, 1, 77, 78): hasta 20° de θ al ocaso y un 1,4 % de la energía del día, declarado. Lo que producción
+  multiplica después (cadena DC del Notebook, `pStringW`) ya estaba careado contra su golden a 1e-9. La
+  herramienta vive en la batería de producción (reducida a cada 120 min) y en el README.
+
 - **2026-09-11 · v1.53.4 · el instante de Ayora entera había pasado de 1,2 s a 5,2 s** — lo cazó el
   CI (`test_produccion.mjs`: «la planta entera calcula el instante en menos de 3 s»), no la batería del
   simulador, que no mide tiempos. La torsión de v1.53.0 tiene un coste que en presets de 8 filas no se
