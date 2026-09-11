@@ -393,6 +393,28 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-11 · v1.53.0 · torsión entre vigas vecinas, «de quién viene la sombra» y el haz de sombra** —
+  Ignacio, con Arequipa (−16,6°, UTC −5), 21-jun, bifila quebrada, perfil N-S senoidal de 3° y pendiente
+  constante 5,14°: *«los algoritmos funcionan mal, ¿qué sentido tiene que el primer tracker no se tumbe?»*,
+  *«en pairwise también pasa»*. Con tilts 0°/3° alternos las vigas vecinas **no son paralelas**: la
+  vecina está 1,7 m más alta en un extremo que en el centro. El pairwise decidía con la pendiente del
+  centro y un tilt medio (lo que pvlib supone) y dejaba **22-30 % de sombra a las 07:00-07:20**. Y el
+  peor punto no es el extremo (allí el rayo pasa por delante del final de la vecina) sino a media mesa,
+  donde el θ sin sombra es −5°, pasando de cero: la fórmula de pvlib no llega. Ahora el candidato de
+  pvlib se comprueba con el ray-cast 3D de la pareja (`shadePair3DBand`, que arrastraba la misma base
+  oblicua y la cara en el eje: corregido) y, si sombrea, se barre el ángulo con signo hasta el primer θ
+  sin sombra, con una pasada de reparación entre parejas; las filas interiores toman el más
+  backtrackeado (min sg·θ), y los evaluadores rápidos (acople, shadeRows25, óptimo libre) miran la peor
+  estación. Arequipa 07:20: de 43° con 22 % a −3° con 0 %; 07:00: 3 % (era 30 %). Sin torsión no cambia
+  ni un bit (test). El 13 % residual a sol < 10° era en buena parte de las 8 estaciones del contador
+  (con 32: 0,4-2,7 %). **De quién viene la sombra**: el contador atribuye la sombra de cada fila a sus
+  emisoras y al terreno (`out.de`) y el globo lo dice («sombra 20,5 % de terreno 13 %, fila 3 8 %»),
+  que explicaba «la sombra de la fila 4 va en otra dirección»: la mitad era de la loma, que se pinta
+  como banda. **Haz de sombra** («▤ haz»): el volumen tenue del objeto que sombrea a su mancha sobre la
+  mesa. Barrido desde el sol en Arequipa: 0 rojo visible. Cuatro tests nuevos. Y el desplegable
+  «configuración de la TCU» explicado: es lo que la TCU *cree* tener delante (pendiente por pareja /
+  la ficha por seguidor / registros a 0); el contador siempre usa el terreno real.
+
 - **2026-09-11 · v1.52.1 · en modo sol la rueda no repintaba, y la cámara baja hasta 0,5°** — Ignacio:
   *«¿no puedo hacer zoom?»*. En el modo «👁 sol» la rueda escalaba la cámara ortográfica (×1,12 por golpe)
   pero no marcaba la escena como sucia, y el bucle sólo repinta cuando algo la marca: la cámara cambiaba
