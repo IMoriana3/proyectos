@@ -393,6 +393,15 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-11 · v1.52.1 · en modo sol la rueda no repintaba, y la cámara baja hasta 0,5°** — Ignacio:
+  *«¿no puedo hacer zoom?»*. En el modo «👁 sol» la rueda escalaba la cámara ortográfica (×1,12 por golpe)
+  pero no marcaba la escena como sucia, y el bucle sólo repinta cuando algo la marca: la cámara cambiaba
+  y la pantalla no. Medido con un contador de renders: en reposo 0, tras la rueda 0; ahora 1, con la
+  ortográfica. El pan en modo sol repinta también. Y la cámara del sol se clavaba en 1,5° de elevación:
+  con el sol a 0,2° (su captura del ocaso, 52 % de sombra real) se miraba desde otro sitio y el rojo se
+  veía sin ser un hallazgo. Baja al límite de validez del contador (0,5°) y el pie de la escena dice
+  desde dónde se mira («SOL a 4,3° · az 298°») y avisa cuando no es el sol.
+
 - **2026-09-11 · v1.52.0 · el tilt N-S entraba en pvlib con el signo cambiado, y la pala se medía en una
   base oblicua** — Ignacio, con una planta sintética (onda senoidal E-O + pendiente constante N-S):
   *«me ponía en la posición del sol y veía sombras, no debería ver ninguna; había sombras que no se
