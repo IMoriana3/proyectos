@@ -393,6 +393,123 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-11 · careo con la producción por string** — Ignacio: *«carea con el programa de generación por
+  string que calculáis igual»*. `produccion.html` come la misma física (extrae el bloque FÍSICA PURA del
+  simulador) pero carga la planta entera, y el simulador una ventana de 80 líneas del bloque con más mesas.
+  `tools/careo_produccion.mjs` casa las líneas por su x medida y las mesas por tramo (cada planta refiere
+  el norte a su propio centro: se casa por orden y largo comprobando que el desplazamiento es el mismo en
+  toda la línea) y compara θ y POA de cada mesa, instante a instante, con el mismo sol. Ayora, 21-jun, cada
+  30 min: 79 líneas, 1.600 mesas, 48.000 comparaciones, **θ y POA idénticos bit a bit en las mesas
+  interiores** en los 30 instantes, energía POA del día por mesa con desviación 0,0000 %. La primera pasada
+  decía «difieren»: la línea 1 se salía 20° a las 19:30, y no es interior — es la gemela de accionamiento de
+  la línea 0, que en la ventana no tiene vecina al oeste y en la planta entera sí; el borde se propaga por
+  el eje de transmisión, no por la sombra, así que las líneas de borde son las dos extremas y sus gemelas
+  (0, 1, 77, 78): hasta 20° de θ al ocaso y un 1,4 % de la energía del día, declarado. Lo que producción
+  multiplica después (cadena DC del Notebook, `pStringW`) ya estaba careado contra su golden a 1e-9. La
+  herramienta vive en la batería de producción (reducida a cada 120 min) y en el README.
+
+- **2026-09-11 · v1.53.4 · el instante de Ayora entera había pasado de 1,2 s a 5,2 s** — lo cazó el
+  CI (`test_produccion.mjs`: «la planta entera calcula el instante en menos de 3 s»), no la batería del
+  simulador, que no mide tiempos. La torsión de v1.53.0 tiene un coste que en presets de 8 filas no se
+  nota y en 295 líneas medidas sí: **(1)** todas las parejas de Ayora tienen torsión (los tilts medidos
+  nunca son iguales: mediana 0,05°, p90 0,27°, máx 1,6°), así que `pairThetaTorsion` lanzaba el
+  ray-cast 3D de la pareja en las 294, y a sol rasante barría 0,5° a 0,5° hasta el θ limpio; **(2)** la
+  pasada de reparación repetía ese ray-cast 12 × 294 veces; **(3)** el instante pedía `anglesPairwise`
+  tres veces (política, acople por mesa y referencia de los optimizadores) y `driveCoupleSafe` volvía a
+  evaluar las mismas parejas en cada iteración; **(4)** el alcance del contador, que v1.53.0 pasó de «9 m
+  a fuego» al desnivel real para no perder la sombra de la fila 5 sobre la 1 con perfil quebrado ±6°, se
+  tomaba de **toda la planta**: en Ayora (1,8 km, decenas de metros de desnivel) a sol de 8° metía cientos
+  de filas como candidatas de cada receptora. Arreglos, todos sin tocar la física salvo el que se
+  declara: las estaciones de cada pareja y `anglesPairwise` se memorizan (por firma numérica de T, no
+  por el objeto: los tests mutan T in situ; se devuelve copia); el ray-cast de la pareja solo depende de
+  (θp, θp+1) y se memoriza por esa clave dentro de una llamada (la reparación sale gratis);
+  `driveCoupleSafe` memoriza su violación por (pareja, θ, θ); y el alcance es por **pareja
+  emisora-receptora** (cota más alta de la emisora sobre la más baja de la receptora, suelo de 9 m como
+  siempre, **más una cuerda**: el rayo sale del borde de la receptora más próximo y toca la emisora pasado
+  su eje, así que recorre una cuerda menos que la distancia entre ejes — la primera versión sin la cuerda
+  perdía un 2,3 % real de la fila 4 a sol de 71° con quebrado ±6° y mesas de 133 m, y lo cazó un careo
+  contador viejo/nuevo sobre los 4.336 instantes del barrido, no la batería). Probé también un barrido
+  grueso a 2° del θ sin sombra y lo descarté: cambiaba θ en algún instante y no hacía falta. Ayora entera a
+  las 07:30: 5,2 s → 2,1 s (base 1,2 s), misma POA (149 W/m²) y mismos θ; contador nuevo ≡ viejo en los
+  4.336 instantes (0 diferencias), ≡ oráculo 0,000 pp; batería 167 y producción 51 en verde.
+
+- **2026-09-11 · v1.53.1-3 · el reto («demuéstrame que ahora funciona bien») y lo que cazó** — Ignacio:
+  *«demuéstrame que ahora funciona bien, un reto para ti, en cualquiera de las variantes de terreno,
+  algoritmo…»*. Seis configuraciones en el navegador real (Playwright + WebGL), cada media hora del día,
+  con la cámara en el ojo del sol contando píxeles rojos (sombra pintada que el sol no debería ver) y el
+  HUD leído de la política: Arequipa pendiente 5,14° + senoidal 3° bifila quebrada pairwise · Zaragoza
+  ondulado 2 m N-S 6° bifila true3d · Arequipa cresta 3 m Bagnarelli az 15° mgl · Zaragoza llano quebrado
+  3° Bagnarelli pairwise · Zaragoza valle 1 m medios ×2 az −20° true3d · Arequipa aleatorio tresbolillo
+  pairwise. **136 instantes, 0 con rojo desde el sol, 0 errores de página**; con el sol a más de 10° la
+  sombra máxima es 0 / 12,5 / 0 / 27,9 / 18,8 / 25 % (Bagnarelli y tresbolillo: la emisora que solapa
+  no es la vecina). El reto cazó dos cosas. **v1.53.1**: la primera pasada murió en las seis con
+  «Cannot access segsOf before initialization»: al mover el alcance del contador a la silueta (v1.53.0)
+  `segsOf` se usaba antes de declararse y **ninguna silueta roja se pintaba** (la batería no mira el
+  render; el reto sí). **v1.53.2**: la reparación global entraba también con planta real y cambiaba el
+  veredicto del cruce de Ayora («cero» → «cfg»): ahora es de los presets, entra con más de un 2 % y refina
+  el θ uniforme hasta 0,6°; el veredicto vuelve a «cero» por 1,12°. **Y un caso que no es fallo**:
+  Zaragoza ondulado 2 m a las 08:30 del 21-mar (sol 15°), fila 1 con **82 % de sombra de estructura y 0 %
+  de planos**, atribuida a la fila de al lado. Cuatro trazadores independientes (contador, oráculo
+  exacto, oráculo bruto con cajas y un cuarto escrito para la ocasión) dan 81-82 %: la vecina está 2 m
+  más alta a 6 m (18° de pendiente local, más que el sol), el rayo entra a 5,6° del plano de sus módulos
+  y su tubo de 12 cm proyecta una franja de 1,2 m sobre la cuerda de abajo. Ningún θ uniforme lo evita
+  (mínimo 64 % a −25°, planos 45 %) y con θ distintos por fila el mínimo con el sol delante es 17 %:
+  **la reparación sólo mira planos y no lo ve** — queda anotado como siguiente paso, no es un error del
+  contador. **v1.53.3** (*«¿cómo puede ser que energy-optimal tenga una posición diferente a true3d sin
+  BT?»*): dos capturas a las 15:23 con θ 55° en ambas pero sol 24,2° en una y 24,8° en la otra. Los
+  optimizadores no calculaban el minuto exacto (su búsqueda por instante haría lento el slider) y la
+  escena y el HUD enseñaban la muestra entera de la malla de 5 min —sol, cielo, sombra, POA de las
+  15:20— bajo el rótulo «15:23». Ahora mantienen la consigna de la malla, que es lo que hace un TCU con
+  consigna cada 5 min, la física es la del minuto pedido y el HUD lo dice («consigna de las 15:20»).
+  Batería: 166 comprobaciones.
+
+- **2026-09-11 · v1.53.0 · torsión entre vigas vecinas, «de quién viene la sombra» y el haz de sombra** —
+  Ignacio, con Arequipa (−16,6°, UTC −5), 21-jun, bifila quebrada, perfil N-S senoidal de 3° y pendiente
+  constante 5,14°: *«los algoritmos funcionan mal, ¿qué sentido tiene que el primer tracker no se tumbe?»*,
+  *«en pairwise también pasa»*. Con tilts 0°/3° alternos las vigas vecinas **no son paralelas**: la
+  vecina está 1,7 m más alta en un extremo que en el centro. El pairwise decidía con la pendiente del
+  centro y un tilt medio (lo que pvlib supone) y dejaba **22-30 % de sombra a las 07:00-07:20**. Y el
+  peor punto no es el extremo (allí el rayo pasa por delante del final de la vecina) sino a media mesa,
+  donde el θ sin sombra es −5°, pasando de cero: la fórmula de pvlib no llega. Ahora el candidato de
+  pvlib se comprueba con el ray-cast 3D de la pareja (`shadePair3DBand`, que arrastraba la misma base
+  oblicua y la cara en el eje: corregido) y, si sombrea, se barre el ángulo con signo hasta el primer θ
+  sin sombra, con una pasada de reparación entre parejas; las filas interiores toman el más
+  backtrackeado (min sg·θ), y los evaluadores rápidos (acople, shadeRows25, óptimo libre) miran la peor
+  estación. Arequipa 07:20: de 43° con 22 % a −3° con 0 %; 07:00: 3 % (era 30 %). Sin torsión no cambia
+  ni un bit (test). El 13 % residual a sol < 10° era en buena parte de las 8 estaciones del contador
+  (con 32: 0,4-2,7 %). **De quién viene la sombra**: el contador atribuye la sombra de cada fila a sus
+  emisoras y al terreno (`out.de`) y el globo lo dice («sombra 20,5 % de terreno 13 %, fila 3 8 %»),
+  que explicaba «la sombra de la fila 4 va en otra dirección»: la mitad era de la loma, que se pinta
+  como banda. **Haz de sombra** («▤ haz»): el volumen tenue del objeto que sombrea a su mancha sobre la
+  mesa. Barrido desde el sol en Arequipa: 0 rojo visible. Cuatro tests nuevos. Y el desplegable
+  «configuración de la TCU» explicado: es lo que la TCU *cree* tener delante (pendiente por pareja /
+  la ficha por seguidor / registros a 0); el contador siempre usa el terreno real.
+  **Y el «millón de pruebas»** (`tools/barrido_terrenos.mjs`: terrenos E-O × perfiles N-S ×
+  accionamientos × implantaciones × latitudes × fechas × políticas, 40 configuraciones × 3 fechas × cada
+  20 min, con invariantes y los peores casos). Encontró: **(A)** el contador podaba emisoras por alcance
+  con «9 m de altura útil» a fuego, y con torsión hay 13,6 m de desnivel entre extremos de mesa: 5,5 pp
+  contra el oráculo sin podas; ahora el alcance usa el desnivel real y la poda axial suma el
+  desplazamiento por desnivel → contador ≡ oráculo en 1.424 instantes (0,000 pp). **(B)** 2.520
+  instantes-política en que pairwise/true3d/mgl dejaban sombra que un θ uniforme evitaba: filas **no
+  adyacentes** (con Bagnarelli o tresbolillo la emisora que solapa está 2-4 filas más allá; en ondulado
+  la cresta tapa el valle por encima de la fila de en medio) y torsión. De ahí `repairNoShade` al final
+  de las tres: el contador dice de quién viene la sombra de cada fila, se arranca del mejor θ uniforme
+  del instante (memorizado, compartido por las tres) y se desciende moviendo 2° a las emisoras
+  implicadas; sin sombra de filas no entra (ni un bit en llano). Los cuatro peores: 100/96/100/94 % →
+  0/0/3,7/3,1 %; en el barrido, 2.520 → 830 fallos y el peor de 100 % a 25 %, todos a sol < 10° con
+  torsión (el resto, 489, es sombra física que ningún θ evita). Energía (optimal ≥ pairwise, optfree ≥
+  optimal), acople por motor y rango de θ: 0 violaciones en 4.224 / 11.105 / 21.120 comprobaciones.
+  Una versión reducida (seis configuraciones) va en la batería.
+
+- **2026-09-11 · v1.52.1 · en modo sol la rueda no repintaba, y la cámara baja hasta 0,5°** — Ignacio:
+  *«¿no puedo hacer zoom?»*. En el modo «👁 sol» la rueda escalaba la cámara ortográfica (×1,12 por golpe)
+  pero no marcaba la escena como sucia, y el bucle sólo repinta cuando algo la marca: la cámara cambiaba
+  y la pantalla no. Medido con un contador de renders: en reposo 0, tras la rueda 0; ahora 1, con la
+  ortográfica. El pan en modo sol repinta también. Y la cámara del sol se clavaba en 1,5° de elevación:
+  con el sol a 0,2° (su captura del ocaso, 52 % de sombra real) se miraba desde otro sitio y el rojo se
+  veía sin ser un hallazgo. Baja al límite de validez del contador (0,5°) y el pie de la escena dice
+  desde dónde se mira («SOL a 4,3° · az 298°») y avisa cuando no es el sol.
+
 - **2026-09-11 · v1.52.0 · el tilt N-S entraba en pvlib con el signo cambiado, y la pala se medía en una
   base oblicua** — Ignacio, con una planta sintética (onda senoidal E-O + pendiente constante N-S):
   *«me ponía en la posición del sol y veía sombras, no debería ver ninguna; había sombras que no se
