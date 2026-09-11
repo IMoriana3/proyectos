@@ -398,6 +398,87 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-11 · v1.56.0 · render ≡ física, medido: signo del manual, sombras al suelo sobre el terreno, silueta
+  3D por el vidrio, borde de sombra por geometría; sombra por mesa; documento teórico de los algoritmos** —
+  Ignacio, en una tarde de capturas: *«esas sombras en los paneles son incoherentes con la del suelo y con la
+  posición solar, ¿no?»*, *«hay sombras en el aire»*, *«con esa elevación y poniendo la cámara en el sol siguen
+  viéndose sombras, ¿cómo puede ser?»*, *«estoy viendo demasiados fallos obvios a simple vista, ¿no te
+  parece?»*. Sí: la física tenía oráculo y barrido, pero la capa de render solo tests estáticos. Cuatro
+  fallos, cada uno medido antes y después. **(1) Signo del manual**: el slider dice «− = este» (convención
+  TCU, la del HUD) y entraba a la física sin cruzar el signo (interna θ>0 = este): con −22° el HUD marcaba
+  +22° y la mesa miraba al oeste. Ahora `TH_DISP` en los dos sentidos (común y por fila); slider ≡ HUD, medido
+  en el navegador con −60, +60 y −22. **(2) Sombras al suelo en el aire** (corte 2D): se pintaban a la cota
+  del poste emisor; en pendiente quedaban flotando y no llegaban a la fila que sombreaban. Ahora cada borde
+  de la mesa sigue el rayo hasta tocar la polilínea del terreno (marcha de 0,25 m y bisección; recortadas al
+  encuadre) y la sombra se dibuja sobre el terreno, también la del fantasma del careo. **(3) Rojo visible
+  desde el sol en 3D**: diagnóstico por ray-cast desde la cámara del sol (píxel rojo → objeto → punto de la
+  mesa → física en ese punto): el rojo caía en las mesas sur de las filas motoras (pares) y la física decía
+  «luz». Causa: el largo de la mesa para la silueta se tomaba del bounding box de todo el modelo, y en la
+  viga del motor la TCU y el motor asoman 2,6 m por el morro; la silueta se pintaba sobre esa prolongación
+  inexistente. Ahora el bb es solo del vidrio: 8.227 → 0 píxeles rojos en el caso de la captura (rótula ±6°,
+  bt2d, Arequipa 21-dic 17:30, sol 10°). **(4) Borde por el que entra la sombra** (2D): era «el borde de
+  cara al sol»; con la mesa de espaldas al sol (manual) ese es el borde alto y la sombra salía por arriba.
+  Ahora lo decide la geometría: en la coordenada perpendicular al rayo, el borde de la receptora que cae
+  dentro de la banda de rayos de la emisora. Y el botón «sol» y el haz se esconden en 2D (*«en 2D no tiene
+  sentido lo del sol»*). **Banco nuevo en CI** (`tools/test_render_sol.mjs`, navegador): desde el sol cero
+  píxeles rojos (rótula a sol de 10°, cresta a sol de 14°), borde de entrada ≡ ray-cast 2D independiente
+  (de cara, de espaldas, y la captura de −22), slider ≡ HUD; y en la batería, tests estáticos de los cuatro
+  arreglos (177 verdes). **Excepción medida y declarada**: en presets sin quiebro la física modela la mesa
+  continua y el modelo 3D lleva el hueco del motor (0,55 m); desde el sol se ve una tira de ~0,5 m por fila a
+  través de ese hueco (la física cobra un 0,85 % de largo de más). Con quiebro en la rótula las mesas ya van
+  partidas y da cero. Pendiente: partir todas las mesas. **Sombra por mesa** (*«lo de sombra debería ser por
+  mesa, no por fila»*): el contador ya separaba cada tramo en sus dos alas (`sh.wing`); ahora el HUD y el
+  globo publican «por mesa: S x % · N y %». **«Nunca menos que energy-optimal»** (óptimo libre 40 frente a 41
+  W/m² a las 11:39 con consigna de las 11:35 y 50 % de nubes): la garantía se decide y se cumple en los
+  instantes de la rejilla (barrido C: 0 violaciones en 4.224); entre dos decisiones cada política mantiene su
+  consigna con el límite de giro y se evalúan al sol del minuto pedido, así que en un minuto intermedio el
+  orden puede cambiar 1 W/m². Explicado en el documento. **«Las inclinaciones del 3D son muy exageradas»**:
+  no lo son: el perfil «quebrado (dos aguas)» pone la mitad oeste de las filas a +v y la mitad este a −v, y
+  con líneas de 3 trackers (≈195 m) eso es ±10 m entre las dos filas centrales, una cresta real en 3D; el
+  desplegable lo dice ahora y remite al «quiebro en la rótula» para el dos aguas a lo largo de la fila. **Y
+  el documento teórico** (*«necesito un documento donde salga el desarrollo teórico de cada algoritmo, su
+  base, cálculos y render»*): `docs/algoritmos_backtracking.html`, botón «📚 Teoría» junto al informe. Marco
+  común (geometría y signos, sol, Ineichen–Perez–ASHRAE, POA por fila, contador analítico, Martinez,
+  residual, luz al suelo); un caso reproducible (Zaragoza 21-jun 07:30, pendiente 8°, 6 filas) con el pvlib
+  paso a paso (ideal 79,9° → BT plano 16,1° → BT con pendiente 42,1°; d, t, acos t), el desglose de la POA de
+  una fila (haz 248 + circunsolar 73 + cielo 34 + albedo 4; 12,9 % de sombra ⇒ 50 % de pérdida Martinez) y
+  la rejilla f del energy-optimal evaluada (316 en f=0 frente a 233…248); cada política con base, qué
+  optimiza, criterio, números en el caso A (sin torsión) y B (tilt N-S aleatorio 4°) y figuras del propio
+  simulador (corte 2D, 3D, cámara desde el sol, curvas del día); verificación con cifras (batería, barrido
+  A–E, banco de render, careo con producción) y límites conocidos. Se hizo después de cerrar los fallos de
+  render, porque sus figuras tenían que salir de un render fiel.
+
+- **2026-09-11 · v1.55.1 · el huso sigue al sitio, el haz solo de la fila elegida** — Ignacio, con Arequipa y
+  21-dic: *«debe estar en hora local»* (a las 10:56 del slider, «sol bajo horizonte»). Era un bug: al cambiar la
+  fecha, `aplicaHuso` aplicaba la regla horaria peninsular (+1/+2 de Madrid) a cualquier sitio sin huso de layout,
+  pisando el −5 de Arequipa; las 10:56 eran las 04:56 reales. Ahora `husoPlanta` aplica la regla peninsular solo
+  en su sitio (lon −10…19, lat 35…48: Península, Italia) y fuera de ahí el huso estándar de la longitud
+  (`tzDeLongitud`, redondeo de lon/15; el de verano fuera de Europa, a mano); cambiar latitud o longitud arrastra
+  el huso; el `tzFijo` del layout sigue mandando; y la tarjeta del sol avisa en rojo si el huso no casa con la
+  longitud (más de 1,5 h). Comprobado: Arequipa, 21-dic, 10:56 → sol 76,5°. Test en la batería (Arequipa −5 en
+  junio y diciembre, Zaragoza +2/+1, Italia +2, tzFijo manda). **El haz de sombra** (*«¿esa sombra/proyección
+  triangular?»*): con el sol a 0,9° y azimut 114°, casi a lo largo del eje, el prisma de cada fila se estiraba
+  decenas de metros y los siete tapaban la planta; ahora se dibuja solo para la fila elegida en «fila N», con el
+  sol por encima de 1° y si la fila no está tapada entera. Y *«¿residual?»*: el margen 3D de tangencia con la
+  vecina, en mm en el plano del módulo (positivo: la sombra se queda a esa distancia de tocar; negativo:
+  contacto, «auto-sombra 3D») — el árbitro de true-3D y el «hueco al vecino» del HUD. **Luz al suelo**
+  (*«en el minimum ground light, ¿no deberíamos medir la luz en el suelo?»*): se publica la misma fracción
+  de haz directo que llega al suelo entre filas que minimiza esa política (`groundLightFrac`, el
+  `ground_light_fraction` de pvlib infinite-sheds): tarjeta «luz al suelo» en el HUD por instante, columna
+  en la tabla del día (media de filas ponderada por la DNI) y fila en el informe. **«Si es evitable, ¿por
+  qué no la evita?»**: la captura era de Row, que decide fila a fila sin coordinarse (referencia de pvlib
+  A&M 2020) y por diseño no repara; el globo lo dice ahora («no lo evita por diseño; pairwise, true-3D y
+  min ground light sí reparan»). **True-3D, base matemática** (*«deja espacio en el suelo entre filas»*):
+  bisección sobre θ por pareja hasta residual de tangencia 3D cero (el rayo del borde alto de la emisora,
+  con azimut del eje y tilt N-S, cae en el borde de la receptora); con torsión se evalúa en varias
+  estaciones y manda la más restrictiva, así que en la banda central puede quedar hueco (921 mm en la
+  captura) mientras en el extremo de la mesa el residual es cero. Y vocabulario: «módulos por mesa», no
+  «por ala» (cada viga son dos mesas a los lados del motor). **Y los postes** (*«mira cómo es cuando metemos
+  quiebro en rótula»*, *«los soportes perforan los módulos»*): la cabeza de cada poste se medía desde el
+  centro de la mesa y el tubo está anclado en la rótula; con mesas de ±6° eso son 1,7 m de error por poste (en
+  las plantas medidas, con tilts de décimas de grado, eran centímetros y no se veía): postes de hasta 3,7 m
+  que atravesaban la pala. Medidos desde el ancla: 52 postes, todos de 2,0 m, en la escena de la captura.
+
 - **2026-09-11 · v1.55.0 · el informe del emplazamiento** — Ignacio: *«Debemos generar un informe, del
   emplazamiento, donde aparezca cada algoritmo, justificando su funcionamiento y lo que optimiza (sombras,
   energía…) con cálculos»*. Botón «📄 Informe» en la tabla del día: abre una pestaña imprimible (o PDF desde
