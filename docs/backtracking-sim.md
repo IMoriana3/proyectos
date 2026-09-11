@@ -446,7 +446,15 @@ de los FPS).
   optimiza, criterio, números en el caso A (sin torsión) y B (tilt N-S aleatorio 4°) y figuras del propio
   simulador (corte 2D, 3D, cámara desde el sol, curvas del día); verificación con cifras (batería, barrido
   A–E, banco de render, careo con producción) y límites conocidos. Se hizo después de cerrar los fallos de
-  render, porque sus figuras tenían que salir de un render fiel.
+  render, porque sus figuras tenían que salir de un render fiel. **Después, con más capturas**: *«con 2° de
+  configuración de pendientes me sale esa pendiente entre dos filas que están a 6 m»* (y la aclaración: eran
+  2 m de desnivel, no 2°). Tres cosas: (a) el chip de pendientes medía solo en el eje; ahora avisa en rojo de la
+  pendiente E-O en los extremos de fila cuando el tilt N-S difiere entre líneas vecinas (quebrado ±2° con
+  mesas de 65 m: ±21°; ±6° con líneas de 195 m: ±76°); (b) el terreno 3D prolongaba la recta cota+norte·tan(tilt)
+  de cada línea 30 m más allá de las mesas, y entre dos líneas con tilts distintos esa prolongación era una
+  montaña que nadie configuró — ahora la cota de línea se mantiene más allá de sus extremos; (c) el parámetro
+  en metros de los presets (desnivel de valle/cresta, amplitud del ondulado) lleva al lado los grados por vano
+  que produce (2 m en 8 filas ⇒ 5,4°).
 
 - **2026-09-11 · v1.55.1 · el huso sigue al sitio, el haz solo de la fila elegida** — Ignacio, con Arequipa y
   21-dic: *«debe estar en hora local»* (a las 10:56 del slider, «sol bajo horizonte»). Era un bug: al cambiar la
