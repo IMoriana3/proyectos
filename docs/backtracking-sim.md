@@ -109,7 +109,9 @@ semilla reproducible, mulberry32) **y edición directa: arrastra el poste de cua
 escena. Las pendientes se recalculan al vuelo y se acotan a ±30° (más no lo monta ningún tracker).
 
 **Longitudinal (N-S)**: perfil de **tilt del eje POR FILA** — constante · quebrado (dos aguas) ·
-senoidal · aleatorio — con su valor/amplitud. El perfil es derivado siempre de (preset, valor, nº
+senoidal · aleatorio — con su valor/amplitud, y desde v1.54 **quiebro en la rótula**, que es POR MESA:
+la mesa sur de cada viga a +v y la norte a −v (loma en la rótula si v>0, vaguada si v<0), con la misma
+estructura por mesa que una planta medida (`segTilt`/`segZ`); solo la bifila quebrada lo sigue. El perfil es derivado siempre de (preset, valor, nº
 filas): no hay estado que se pueda desfasar. La pareja toma la **media de sus dos filas** (el inverso
 exacto de la regla del core en `compute_bt_angles_rowwise`); cada fila conserva su tilt local para su
 orientación y su POA. El tilt N-S es lo que activa la ventaja del true-3D.
@@ -273,11 +275,14 @@ transmisión**. El selector cambia la mecánica y el backtracking lo respeta:
 |---|---|---|---|
 | **Monofila** | 1 por fila | independiente por fila | local de cada fila |
 | **Bifila rígida** | 1 por 2 filas | común al grupo | **medio del grupo** — un tubo de transmisión recto no se dobla; en terreno N-S quebrado los paneles quedan desalineados del terreno y el POA lo enseña |
-| **Bifila quebrada** | 1 por 2 filas | común al grupo | **local de cada fila** — el cardan transmite el giro y deja que cada fila siga su terreno |
+| **Bifila quebrada** | 1 por 2 filas | común al grupo | **local de cada fila, y de cada MESA** — el cardan transmite el giro y deja que cada fila (y con el perfil «quiebro en la rótula», cada mesa) siga su terreno |
 
 Con nº impar de filas la última va con motor propio (unidad completa, regla del layout). La escena
 dibuja la transmisión entre los postes del grupo, el motor (cuadrado ámbar) y los cardanes (puntos) en
-la quebrada; el pill de la geometría dice los motores (= `n_motors`, el SSOT de la casa).
+la quebrada; el pill de la geometría dice los motores (= `n_motors`, el SSOT de la casa). Con el perfil
+«quiebro en la rótula» la rígida y la monofila llevan el tubo recto al tilt medio (0) y el pill lo dice
+(«quiebro en la rótula NO seguido: tubo recto al tilt medio»); el suelo 3D lleva la loma igualmente y los
+postes de los extremos crecen (drapeado).
 
 **El backtracking de una bifila se resuelve a nivel de ACCIONAMIENTO, no de fila** — y esto lo descubrió
 la propia QA: el min(|θ|) del grupo NO basta. Aplanar una fila mueve su borde hacia el vecino y ensancha
@@ -392,6 +397,48 @@ de los FPS).
   calientes (cargar Ayora pasó de 27 s a ~10-15 s; la mayor parte es energy-optimal sobre 80 líneas).
 
 ## Historial
+
+- **2026-09-11 · v1.54.0 · el tracker quebrado se puede simular: quiebro en la rótula** — Ignacio:
+  *«Debemos poder simular también tracker quebrado, que aparece en el desplegable pero la realidad es que
+  para poder simularlo necesitamos un terreno donde las dos mesas tengan diferente inclinación»* (y
+  *«no lo llames morro, llámalo rótula»*). Tenía razón: en los presets cada viga era UN tramo con UN tilt,
+  y solo las plantas medidas (Ayora, San José) traen las dos mesas de cada viga con su tilt y su cota
+  (`segTilt`/`segZ`), así que «bifila quebrada» en presets se comportaba igual que la rígida. Nuevo perfil
+  N-S **«Quiebro en la rótula»**: la mesa sur a +v y la norte a −v (loma en la rótula si v>0, vaguada si
+  v<0), con el hueco del motor entre ellas. `rotulaMesas` (física pura) parte cada tramo en sus dos mesas y
+  publica por mesa lo mismo que `plantFromCotas` de una planta medida —tilt, cota de los dos extremos
+  (continua en la rótula), lado, rótula, pareja gemela y accionamiento (las cuatro mesas de un tracker, un
+  motor, un θ)—, de modo que contador, políticas por mesa, 3D y silueta la comen sin distinguirla. Para eso
+  la cota por mesa pasa a viajar en T (`T.segZ`, también en las plantas reales) y los siete consumidores
+  que leían `T.real.segZ` leen `T.segZ`: el ray-cast de la pareja, el contador (cota, suelo, gMax), `segZAt`,
+  la silueta roja, la colocación de mesas y ejes en 3D (con la rótula como ancla) y el perfil del suelo.
+  **Solo la bifila quebrada sigue el quiebro** (el cardan deja que cada mesa lleve su tilt); rígida y
+  monofila llevan el tubo recto al tilt medio (0) —identidad bit a bit con el camino por línea, como con
+  v=0— y la página lo dice en el pill («quiebro en la rótula NO seguido: tubo recto al tilt medio») y en
+  la tarjeta de tilt; el suelo 3D sí lleva la loma en los dos casos, y con la rígida los postes de los
+  extremos crecen (drapeado). Comprobado en navegador: quebrada con ±4° en llano, 6 filas: cada viga son dos
+  mesas de ±4° continuas en la rótula, 3 motores, las cuatro mesas de cada tracker al mismo θ, 0 % de
+  sombra con sol ≥ 10° (48 % a las 06:40: la loma tapa el extremo bajo de la mesa, terreno real). Tests: la
+  estructura por mesa (tilt ≡ atan2 de sus cotas, continuidad, lados, gemelas, accionamiento; rígida,
+  monofila y v=0 devuelven null), contador ≡ oráculo con el quiebro (el oráculo del test también lee
+  `T.segZ`), θ común por tracker y astro por mesa distinto en sur y norte, y el estático de la UI. El
+  barrido de terrenos incluye el preset (semilla 7: contador ≡ oráculo 0,000 pp en 1.417 instantes, 0
+  violaciones de energía, acople y rango). Vocabulario: rótula, no morro (queda un `segMorro` interno de
+  las plantas medidas, declarado). **Y tres cosas más de la misma tarde:** (1) *«¿por qué tienen
+  diferentes cajas?»* — energy-optimal enseñaba la tarjeta «f elegida» y el óptimo libre no, porque elige
+  una fracción por accionamiento y no había una sola que enseñar; ahora el óptimo libre publica su
+  fracción como el otro (un número si ganó el óptimo común, el rango por accionamiento si no) y la
+  tarjeta sale en los dos. (2) *«¿Por qué pone inevitable? Inevitables son las que a 0° no se pueden
+  evitar, pero en este caso el tracker anterior está inclinado»* — el globo decía «inevitable» cuando
+  pairwise también dejaba sombra, y eso no es inevitable, es un fallo de pairwise (torsión, emisoras no
+  adyacentes a sol bajo). Ahora, en presets, se barre un θ uniforme para toda la planta de 5° en 5°
+  (el 0° incluido) con el contador publicado: «evitable: a X° quedaría 0 %», «evitable en su mayor
+  parte: a X° quedaría Y %; ese resto no lo evita ningún θ uniforme» o «inevitable a este sol: ni a 0°
+  ni con ningún θ uniforme (mínimo Y % a X°)»; los optimizadores añaden que aceptan sombra cuando la POA
+  lo paga; en planta medida (segundos por barrido) se dice lo que hace pairwise sin llamarlo inevitable.
+  (3) *«El selector de políticas ponlo arriba en horizontal»*: el panel Políticas sale de la columna
+  izquierda y va encima de la escena, a todo el ancho, con las casillas en fila (se envuelven en dos) y
+  la descripción también en el tooltip.
 
 - **2026-09-11 · careo con la producción por string** — Ignacio: *«carea con el programa de generación por
   string que calculáis igual»*. `produccion.html` come la misma física (extrae el bloque FÍSICA PURA del
