@@ -393,6 +393,36 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-11 · v1.53.1-3 · el reto («demuéstrame que ahora funciona bien») y lo que cazó** — Ignacio:
+  *«demuéstrame que ahora funciona bien, un reto para ti, en cualquiera de las variantes de terreno,
+  algoritmo…»*. Seis configuraciones en el navegador real (Playwright + WebGL), cada media hora del día,
+  con la cámara en el ojo del sol contando píxeles rojos (sombra pintada que el sol no debería ver) y el
+  HUD leído de la política: Arequipa pendiente 5,14° + senoidal 3° bifila quebrada pairwise · Zaragoza
+  ondulado 2 m N-S 6° bifila true3d · Arequipa cresta 3 m Bagnarelli az 15° mgl · Zaragoza llano quebrado
+  3° Bagnarelli pairwise · Zaragoza valle 1 m medios ×2 az −20° true3d · Arequipa aleatorio tresbolillo
+  pairwise. **136 instantes, 0 con rojo desde el sol, 0 errores de página**; con el sol a más de 10° la
+  sombra máxima es 0 / 12,5 / 0 / 27,9 / 18,8 / 25 % (Bagnarelli y tresbolillo: la emisora que solapa
+  no es la vecina). El reto cazó dos cosas. **v1.53.1**: la primera pasada murió en las seis con
+  «Cannot access segsOf before initialization»: al mover el alcance del contador a la silueta (v1.53.0)
+  `segsOf` se usaba antes de declararse y **ninguna silueta roja se pintaba** (la batería no mira el
+  render; el reto sí). **v1.53.2**: la reparación global entraba también con planta real y cambiaba el
+  veredicto del cruce de Ayora («cero» → «cfg»): ahora es de los presets, entra con más de un 2 % y refina
+  el θ uniforme hasta 0,6°; el veredicto vuelve a «cero» por 1,12°. **Y un caso que no es fallo**:
+  Zaragoza ondulado 2 m a las 08:30 del 21-mar (sol 15°), fila 1 con **82 % de sombra de estructura y 0 %
+  de planos**, atribuida a la fila de al lado. Cuatro trazadores independientes (contador, oráculo
+  exacto, oráculo bruto con cajas y un cuarto escrito para la ocasión) dan 81-82 %: la vecina está 2 m
+  más alta a 6 m (18° de pendiente local, más que el sol), el rayo entra a 5,6° del plano de sus módulos
+  y su tubo de 12 cm proyecta una franja de 1,2 m sobre la cuerda de abajo. Ningún θ uniforme lo evita
+  (mínimo 64 % a −25°, planos 45 %) y con θ distintos por fila el mínimo con el sol delante es 17 %:
+  **la reparación sólo mira planos y no lo ve** — queda anotado como siguiente paso, no es un error del
+  contador. **v1.53.3** (*«¿cómo puede ser que energy-optimal tenga una posición diferente a true3d sin
+  BT?»*): dos capturas a las 15:23 con θ 55° en ambas pero sol 24,2° en una y 24,8° en la otra. Los
+  optimizadores no calculaban el minuto exacto (su búsqueda por instante haría lento el slider) y la
+  escena y el HUD enseñaban la muestra entera de la malla de 5 min —sol, cielo, sombra, POA de las
+  15:20— bajo el rótulo «15:23». Ahora mantienen la consigna de la malla, que es lo que hace un TCU con
+  consigna cada 5 min, la física es la del minuto pedido y el HUD lo dice («consigna de las 15:20»).
+  Batería: 166 comprobaciones.
+
 - **2026-09-11 · v1.53.0 · torsión entre vigas vecinas, «de quién viene la sombra» y el haz de sombra** —
   Ignacio, con Arequipa (−16,6°, UTC −5), 21-jun, bifila quebrada, perfil N-S senoidal de 3° y pendiente
   constante 5,14°: *«los algoritmos funcionan mal, ¿qué sentido tiene que el primer tracker no se tumbe?»*,
