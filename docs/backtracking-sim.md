@@ -398,6 +398,14 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-11 · v1.56.1 · el huso guardado se corrige al arrancar** — Ignacio, con Arequipa y v1.56.0 recién
+  desplegada: *«¿hora local? ¿12:51 amanecen los trackers?»*, con la tarjeta del sol en rojo («huso UTC+2 no casa
+  con la longitud ≈UTC−5»). La página restauraba el huso guardado (+2, de antes de que el huso siguiera al
+  sitio) junto con la latitud y longitud de Arequipa, y como nada cambiaba lat/lon nadie recalculaba el huso:
+  las 12:51 eran las 05:51 reales. Ahora, al arrancar, si el huso guardado se aleja más de 1,5 h del del sitio
+  manda el sitio (si está cerca, verano/invierno elegido a mano, se respeta). Reproducido en navegador con ese
+  guardado: arranca en −5. Test en la batería (180).
+
 - **2026-09-11 · v1.56.0 · render ≡ física, medido: signo del manual, sombras al suelo sobre el terreno, silueta
   3D por el vidrio, borde de sombra por geometría; sombra por mesa; documento teórico de los algoritmos** —
   Ignacio, en una tarde de capturas: *«esas sombras en los paneles son incoherentes con la del suelo y con la
