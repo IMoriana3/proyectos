@@ -398,6 +398,75 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-11 · v1.57.1 · segunda y tercera vuelta de la auditoría externa: el rango legítimo frente al
+  acoplamiento, el árbitro que premiaba no recibir luz, y el barrido que ahora bloquea** — el mismo revisor
+  volvió dos veces más. La segunda pasada elevó a crítico lo que en v1.57.0 ya estaba a medio cerrar; la
+  tercera confirmó recalculándolo que los cuatro graves estaban resueltos y dejó tres vivos. Están los tres
+  corregidos, y uno deja una lección que vale para todo el simulador.
+
+  **La lección, primero, porque es la que más lejos llega.** En el instante que destapó el vicio, la mesa
+  puesta de espaldas al sol **sombreaba menos** que la bien orientada: 38,8 % frente a 43,2 %. No es una
+  paradoja, es aritmética: a 90° de incidencia no hay haz que sombrear. Dicho en general, **un árbitro que
+  mide sombra óptica premia estructuralmente no recibir luz**. Por eso la reparación arbitra ahora por
+  energía y no por sombra, y por eso la métrica B2 del barrido —que compara contra el mejor θ uniforme sin
+  exigirle recibir haz— hereda el mismo sesgo y queda declarada como cota optimista: no es cautela de
+  estilo, es la misma raíz.
+
+  **El recorte al cono de haz (segunda vuelta).** Quedaban instantes de crepúsculo donde la paralela al
+  terreno *ya está de espaldas*: con el sol a 9,3° y seguimiento verdadero en −83,4°, el tope del rango daba
+  θ = +10°, que son 93,1° de incidencia. El recorte se hace en cerrado, sin barrer: para un seguidor de un
+  eje, cos AOI = cos(θ − ψ)·cos λ con sin λ = **s**·**a**, de donde «AOI ≤ 88°» es exactamente
+  |θ − ψ| ≤ acos(cos 88° / cos λ). En ese instante el tope pasa de +10° a +4,6°, con 88,1° de incidencia.
+
+  **R1, el rango frente al accionamiento quebrado (tercera vuelta).** Su métrica G marcaba 22 violaciones de
+  3.159 instantes-política, todas con accionamiento quebrado y con el sol hasta a 30°. Su diagnóstico era la
+  mitad. Las dos causas: el rango de la fila era la **unión** de los de sus dos parejas, y el cono de haz no
+  es de la pareja sino **de la fila** (su propio tilt de eje), así que una fila entre dos vanos de pendiente
+  distinta heredaba el tope del vecino; y la reparación devolvía la consigna entrante intacta cuando no
+  había sombra seria. En su caso (Arequipa · valle 2 · senoidal 2° · quebrado · 21-jun 20:40Z, sol 20,9°) el
+  acoplamiento rígido manda las cuatro primeras filas a +9,5° y las filas 2 y 3 tienen su rango en …+2°:
+  recortarlas deja **la misma sombra —cero— y sube el POA de planta de 315 a 335 W/m²**. No era sólo postura
+  ilegítima, era energía perdida. La regla: se recorta el grupo de accionamiento entero, para no romper el θ
+  común, y se acepta sólo si no empeora ni la sombra ni la energía; recortar una fila que ya recibe haz
+  *puede* meterle sombra, y eso rompería el contrato de las políticas sin sombra (lo cazó el caso bifila de
+  la batería). La excepción es la fila de espaldas, donde manda la energía sola.
+
+  **El barrido bloquea.** Hasta aquí imprimía las violaciones y salía con código 0 — «G no es un gate, es un
+  informe», en palabras del revisor: un invariante roto llegaba a publicarse con el gate en verde. Ahora
+  rompe con A (contador ≡ oráculo), B, C, D, E, G y con la métrica nueva H cuando el sol pasa de 10°.
+
+  **Métrica H**, el invariante físico que hay detrás de G: el ángulo de incidencia del haz sobre la pala
+  *publicada*. Bloquea con el sol por encima de 10°, que es donde se juega la energía; por debajo informa su
+  residuo, medido y declarado — instantes sueltos entre 5° y 10° donde recortar cuesta energía de planta y
+  la fila produce difusa sola, por debajo de 15 W/m².
+
+  **R2, la etiqueta del test de convergencia.** El test de ≤0,7 pp es de Ayora, media de planta y 8
+  estaciones por diseño; su título se leía como una promesa general que la malla adaptativa no da (el
+  revisor midió 2,63 pp por fila en presets con torsión). Ahora se llama por su alcance y otro test fija la
+  cota donde él la mide: por fila, |publicado − MV 128| ≤ 3 pp, y ninguna mancha de más del 2 % publicada
+  por debajo de su mitad. La consecuencia operativa, que es lo que un lector hará con el número: **la sombra
+  publicada por fila no sirve para umbrales de decisión más finos que ±3 pp**. Apretar la malla a una
+  estación cada 1,5 m se ha dejado sin hacer por coste medido: un día de 8 filas con torsión pasa de 0,2 a
+  1,1 s con la malla actual.
+
+  **R3, fila sacrificada.** El óptimo libre puede aparcar una fila de espaldas al sol para que sus vecinas
+  lo vean: bajo el modelo es legítimo y gana energía de planta (224 frente a 186 W/m² en el caso que
+  reportó), pero es una consigna que sale hacia una TCU y que nadie espera. Se declara en el HUD («Filas
+  sacrificadas», con su ángulo de incidencia) y sale marcada en el CSV de consignas, columna `sacrificada`,
+  con DNI > 100 W/m².
+
+  **Lo que queda declarado, con su alcance.** El oráculo exacto de la batería construye su geometría a
+  través del oráculo de podas: el careo A valida **las podas y el álgebra de intervalos, no la geometría del
+  modelo**; esa corrección descansa hoy en la métrica F (contra una malla de 128 estaciones) y en la
+  auditoría externa. Y la pala del contador sigue siendo un paralelogramo con la cuerda en el plano
+  transversal en vez de un rectángulo perpendicular al tubo: 0,07° de desviación de normal con 4° de tilt y
+  0,41° con 10°, que no mueve ninguna cifra publicada.
+
+  **Medido en el caso del revisor** (torsión N-S aleatoria de 4°, día entero): la energía de true-3D pasa de
+  −31 % frente al astronómico a −13 %; los instantes con una fila de espaldas al sol, de 19/27/30 a 0; los
+  colapsos de POA con el sol por encima de 20°, de 20 a 0; y su instante de las 09:30, de 65 a 586 W/m². La
+  batería queda en 190 comprobaciones.
+
 - **2026-09-11 · v1.57.0 · la auditoría externa, incorporada: estaciones adaptativas, rango legítimo de las
   políticas sin sombra, veto contra el pairwise publicado y cielo claro como pvlib** — Ignacio pidió un prompt
   para que otra sesión auditara la plataforma, y el informe volvió con cuatro hallazgos de fondo. El revisor no
