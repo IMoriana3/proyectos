@@ -398,6 +398,74 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-11 · v1.57.0 · la auditoría externa, incorporada: estaciones adaptativas, rango legítimo de las
+  políticas sin sombra, veto contra el pairwise publicado y cielo claro como pvlib** — Ignacio pidió un prompt
+  para que otra sesión auditara la plataforma, y el informe volvió con cuatro hallazgos de fondo. El revisor no
+  se fio de nada: extrajo el bloque de física y lo corrió con su propio arnés, recalculó el caso de referencia
+  con pvlib 0.15.2 y escribió un ray-cast 3D en numpy con la rotación exacta del rectángulo sobre el eje
+  inclinado. Los cuatro eran ciertos y los cuatro están corregidos y medidos.
+
+  **H1, el muestreo axial.** El contador tomaba 8 estaciones por mesa, fijas. En una mesa de 65 m con torsión
+  N-S entre vecinas eso es una cada 8 m, y la sombra se cuela entre ellas: en el caso de referencia una mancha
+  de 6,3 % (convergida) salía 3,3 %, y a −20° una de 4,5 % salía **0,0 %** — la política publicaba «sin sombra»
+  una fila sombreada. Peor: el oráculo de la batería, que existe justo para cazar esto, usaba **las mismas 8
+  estaciones**, así que llevaba desde siempre confirmando el error (métrica A: 0,000 pp). Ahora la malla es
+  adaptativa: una estación cada 4 m, cada 2 m si dos filas vecinas difieren ≥ 0,5° de tilt, el doble con el sol
+  por debajo de 6° (donde el barrido midió las mayores diferencias), entre 8 y 64. Va también en la reparación,
+  en el evaluador por pareja y en el oráculo. Las plantas medidas (Ayora, San José) se quedan en 8: allí las
+  vigas son casi paralelas, está medido que basta (≤ 0,7 pp frente a 32, +0,007 % anual) y manda el tope de 3 s
+  del instante de la planta entera. Métrica **F** nueva en el barrido: peor |Δ| frente a 128 estaciones 2,43 pp
+  y **ninguna** mancha de más del 2 % publicada por debajo de su mitad.
+
+  **H2, las mesas de canto.** Este es el grande. Las políticas «sin sombra» buscan el θ que no sombrea barriendo
+  el rango mecánico entero, y girar más allá de la horizontal *en contra* del sol también «quita sombra»:
+  levanta el borde bajo fuera de la sombra de la vecina. El barrido se iba hacia allí hasta dejar la mesa casi
+  paralela al rayo, con ángulo de incidencia de 90°: sombra cero porque **no hay haz que sombrear**. El revisor
+  lo midió con el sol a 23° y a 36° —no «a sol rasante», media mañana y media tarde— y POA de 54 W/m² donde el
+  astronómico daba 713. Ninguna TCU recibiría esa consigna. Ahora todo candidato vive en el **rango legítimo**
+  de su unidad de accionamiento: entre el seguimiento verdadero y la **paralela al terreno**, con la horizontal
+  siempre dentro y 2° de margen (que es donde converge el propio backtracking de pvlib a sol rasante; un primer
+  intento con «|θ−ψ| ≤ 85°» dejaba fuera la horizontal con el sol a 4° y el barrido lo cazó). Y como el rango es
+  por **unidad de accionamiento** —la intersección de los de sus filas—, la bifila conserva su θ común, que es
+  un invariante. Dos salvaguardas más: una **restitución** que devuelve a su consigna de partida las unidades
+  que el arranque uniforme movió sin ganar nada de sombra, y una **guardia de energía** que impide publicar un
+  candidato que ni logra la garantía ni mejora la sombra a la mitad y encima rinde menos POA. Lo que no se puede
+  evitar se publica como **irreducible** en el HUD, y el Martinez lo cobra: en el caso de referencia con torsión,
+  13,4 % declarado con POA 105, donde antes se leía «0 %» con POA 38. El efecto en el barrido es grande: los
+  fallos de política de la métrica B caen de **654 a 2** sobre 12.672 instantes-política (y la «sombra física
+  que ningún θ evita» sube a 3.116, que es exactamente la cifra que estaba escondida detrás de las posturas de
+  canto).
+
+  **H3, la garantía del optimizador.** «Energy-optimal nunca rinde menos que pairwise» se vetaba contra el
+  pairwise *sin reparar*, que no es el que se publica: difieren en 17 de los 90 instantes del día del caso de
+  referencia. La garantía se cumplía —el barrido nunca vio una violación— pero era empírica, no construida.
+  Ahora el pairwise publicado entra como tercer candidato del veto exacto, en energy-optimal y en óptimo libre.
+
+  **H4, el cielo claro.** `clearskyIneichen` aplicaba siempre el realce de Perez, exp(0,01·am^1,8), y el
+  comentario decía «el de pvlib»: pvlib lo trae **desactivado** por defecto porque sobreestima con masa de aire
+  alta. A 9° de sol eso son 101 W/m² de GHI en vez de 80 y 53 de DHI en vez de 32 — un 67 % de más justo en las
+  horas donde vive el backtracking. Ahora va apagado, como pvlib, y se puede pedir a sabiendas. Zaragoza,
+  21-jun 07:30, TL 3,5, 300 m: 80,2 / 300,3 / 31,7 frente a los 80,1 / 300,2 / 31,7 de pvlib 0.15.2. Los valores
+  de referencia de la batería, del banco de nubosidad y el Pnom del caso de recorte de producción, actualizados.
+
+  **Y el oráculo, que era el que fallaba de raíz.** El «oráculo independiente» compartía con el contador la
+  geometría, las estaciones y el álgebra de intervalos: servía para las podas, no para validar el modelo ni la
+  convergencia. La batería lleva ahora uno **de verdad**: rectángulos con la rotación exacta sobre el eje
+  inclinado (c = (cos θ, sin θ·sin τ, −sin θ·cos τ), a = (0, cos τ, sin τ)), 200×400 muestras por mesa, seis
+  líneas de álgebra vectorial sin una sola compartida con el contador. Coincide en ≤ 0,5 pp en los dos
+  escenarios y cuatro ángulos. Y el barrido tiene dos métricas nuevas: **F** (convergencia de la malla) y **G**
+  (mesas fuera de su rango legítimo: 80 de 12.672, todas por menos de 8° y ninguna de canto — antes las
+  había a 60–90° del seguimiento verdadero).
+
+  **Lo que el revisor confirmó** recalculándolo por su cuenta: la posición solar NOAA frente a pvlib, el
+  backtracking paso a paso (79,91° → 16,10° → 42,07°) con los signos correctos, el haz con el modificador de
+  ángulo (248,4 W/m², clavado), el reparto de Perez, el Martinez, las degeneraciones del terreno uniforme, la
+  fracción analítica de cuerda y que el contador *convergido* coincide con su ray-cast en ≤ 0,1 pp. Su
+  veredicto sobre la física de fondo fue que es sólida; lo que falló fue la discretización, el rango de
+  búsqueda, la construcción de una garantía y un parámetro de cielo claro. El documento teórico lleva ahora las
+  cifras nuevas y una sección §8 con la auditoría entera: hallazgo, qué se hizo y qué se midió.
+  Batería 186 · producción 52 · nubosidad 83 · render 10 · barrido A 0,000 pp y C/D/E sin violaciones.
+
 - **2026-09-11 · v1.56.1 · el huso guardado se corrige al arrancar** — Ignacio, con Arequipa y v1.56.0 recién
   desplegada: *«¿hora local? ¿12:51 amanecen los trackers?»*, con la tarjeta del sol en rojo («huso UTC+2 no casa
   con la longitud ≈UTC−5»). La página restauraba el huso guardado (+2, de antes de que el huso siguiera al
