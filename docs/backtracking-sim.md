@@ -398,6 +398,63 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-11 · v1.57.2 · cuarta vuelta de la auditoría externa: el mismo vicio por quinta y sexta vez, y
+  el sexto estaba en el banco que juzga** — el revisor volvió por cuarta vez sobre la versión publicada. Ya
+  no había hallazgos nuevos de física: había **el mismo defecto de siempre en dos sitios más**, y el segundo
+  cambia cómo hay que leer todo lo anterior.
+
+  **El quinto sitio: el vicio con permiso escrito.** La guardia de energía de `repairNoShade` existía desde
+  v1.57.0, pero con excepciones, y la primera decía literalmente *«se acepta siempre que LOGRE la garantía»*.
+  Es decir: cuando el árbitro óptico gane, que gane a cualquier precio. Los cuatro casos anteriores eran el
+  vicio actuando por omisión —nadie había puesto un término de haz—; éste actuaba **por autorización
+  expresa**, y por eso sobrevivió a las cuatro correcciones: cada una añadía una guardia y esta cláusula la
+  desactivaba. Medido sobre v1.57.1 (`09b25da`), bifila y quebrado con el sol a 12° al oeste: publicaba
+  **2,5D cero con 64,4 W/m² de planta** cuando su propia consigna de partida daba **137,7 con 50 % de
+  sombra**. Compraba su promesa con **el 53 % de la producción**. La guardia es ahora incondicional.
+  **La regla que queda, y vale para revisar código futuro: toda excepción a una guardia de energía es una
+  puerta al mismo vicio.** No es «falta un término de energía» —eso ya se sabía—: es que una guardia con
+  excepciones no es una guardia.
+
+  **El sexto sitio: el banco que juzga.** La métrica B del barrido —y su gemela en la batería— preguntaba
+  «¿había un θ uniforme con menos sombra?» midiendo **sombra óptica a secas**. Medido: en «valle 1 ·
+  quebrado · sol 25°», el θ uniforme que baja la sombra del 32,9 % al 15,2 % publica **298,7 W/m² de planta
+  frente a los 662,1** de la consigna publicada. El banco exigía tirar más de la mitad de la producción para
+  enseñar menos sombra. La diferencia con los otros cinco no es de grado: un defecto en `repairNoShade`
+  produce consignas malas **y el banco lo caza**; un defecto en el criterio de B marca como fallo consignas
+  buenas y, si el signo cae del otro lado, bendice las malas. **Un banco con el vicio dentro empuja el código
+  hacia el defecto**, porque quien corrige, corrige hacia lo que el test pide. Consecuencia que hay que decir
+  entera: **los ceros de B desde v1.53 hasta v1.57.1 no eran evidencia de que las políticas estuvieran
+  sanas**. B mide lo que dice medir **desde v1.57.2**, y sólo desde entonces sus ceros son información.
+
+  **El residuo irreducible del accionamiento, que es lo más útil que ha salido de la sesión.** Al quitar
+  aquella cláusula apareció algo que el simulador nunca había contado y que no es de ninguna política: en ese
+  mismo instante **la fórmula acoplada ya traía 50,50 % de sombra 2,5D**. El accionamiento rígido impone un θ
+  común a dos filas que pvlib pondría a ángulos distintos, porque sus vigas tienen tilts distintos. Dicho como
+  propiedad del sistema: **con bifila rígida o quebrada y torsión entre las dos filas del tracker, la ausencia
+  de sombra no es alcanzable por construcción, y la política sólo puede elegir dónde ponerla.** La QA llevaba
+  versiones pidiéndole cuentas a la política por una limitación del motor. Es argumento de diseño, no nota al
+  pie: quien decida entre monofila y bifila en terreno con relieve a lo largo de fila tiene aquí una cifra.
+  La métrica I del barrido la publica.
+
+  **Y el evaluador rápido, fuera de los criterios.** El 2,5D lee cero donde la mesa mira casi de canto —211 de
+  430 candidatos del caso B difieren más de 5 pp del contador exacto— y guiaba dos cosas: la búsqueda de los
+  optimizadores y el criterio del propio `anglesPairwise` con torsión, que barría hasta el primer θ con 2,5D
+  cero y por tanto **llevaba el sesgo hacia el canto dentro del criterio que elige**. La búsqueda pasa al
+  contador exacto: **+19 % de tiempo y la misma energía**, que leído al derecho significa que era el veto
+  quien sostenía la corrección, no la búsqueda. Y el criterio de pairwise se acota al **cono de haz**, aplicado
+  donde nace la consigna en vez de tres capas más arriba: un θ que no recibe haz nunca fue una solución
+  legítima a «no tener sombra». El ancla de pvlib no se mueve — 42,08° en el caso A y 0,0000° de degeneración
+  en terreno uniforme.
+
+  Además: `barrido_terrenos.mjs` **entra en la CI** con dos semillas, dentro de `needs` de la puerta requerida
+  (existía desde v1.53 y no lo corría nadie: ya había un paso llamado «barrido», el de RF, y leyendo el log
+  aparecía en verde). Invariantes nuevos **J** —el óptimo publicado es el mejor **de su rejilla** con el
+  contador exacto, por construcción desde ahora— e **I** —distribución de 2,5D del pairwise publicado—. `AOI_HAZ`
+  = 88° en una sola constante. La marca `sinReparar` viaja en lo que se devuelve, no en lo que entra. Y la QA
+  exige lo que cada pieza promete: θ común por grupo, que todo θ elegido reciba haz, y que lo publicado no
+  pierda energía frente a la fórmula — la sombra 2,5D dejó de ser contrato y pasó a ser métrica, que es lo que
+  siempre fue.
+
 - **2026-09-11 · v1.57.1 · segunda y tercera vuelta de la auditoría externa: el rango legítimo frente al
   acoplamiento, el árbitro que premiaba no recibir luz, y el barrido que ahora bloquea** — el mismo revisor
   volvió dos veces más. La segunda pasada elevó a crítico lo que en v1.57.0 ya estaba a medio cerrar; la
