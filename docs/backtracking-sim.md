@@ -398,6 +398,69 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-12 · v1.57.3 + v1.58.0 · el render dibujaba con un sol que la física no usa, y el probador** —
+  una captura de Ignacio (El Burgo I, 21-jun, 06:33 local, **sol 0,28°**, DNI 2 W/m², azimut de eje 25°) con
+  un trozo rojo aislado en la punta de una fila que el contador daba casi a cero, y una sombra rara en la
+  primera mesa. «Pero esa sombra de la primera mesa es muy rara…».
+
+  **El hallazgo.** El contador **se clava en 0,5° de elevación** desde v1.36, y con razón: por debajo el
+  ray-cast no es fiable —a 0,35° la sombra de una fila mide 980 m y cualquier error de milímetros en la cota
+  se convierte en decenas de metros de mancha—. Pero la silueta roja del 3D, la luz que proyecta el sombreado
+  gris y el rayo crítico seguían pidiendo la elevación **cruda**. Medido en ese instante: el largo de sombra
+  de una fila es **1.213 m con el sol real (0,28°) y 688 m con el sol que usa la física (0,5°)**; la fila 3
+  salía **pintada al 29,7 % y calculada al 2,5 %**, y la fila 0 **pintada al 56,3 % frente a 42,8 %**. No
+  fallaba la física ni fallaba el render: **es que no compartían el mismo sol**. Séptima aparición del patrón
+  de toda esta auditoría —dos piezas correctas mirando cosas distintas— y el mismo remedio que `AOI_HAZ` y
+  `E_EMPATE_W`: una constante, `EL_MIN_FIS`, y una sola función `elFisica(g)` por la que pasan los dos.
+
+  **Por qué nadie lo había visto, dicho entero.** El banco de render que se presume «desde el sol, cero
+  rojo» sólo prueba con el sol a 10° y a 14°. Por debajo de 0,5° **no había mirado nadie nunca**. Un banco
+  verde no dice que la pieza esté bien: dice que está bien donde el banco mira, y **el alcance del banco es
+  parte del resultado**. Es la misma lección que la métrica B de v1.57.2, ahora por el lado del régimen
+  cubierto en vez del criterio usado.
+
+  **La autoauditoría: tres costuras más del mismo tipo.** «Por favor, autoauditate, que no haya más cantadas
+  como esa». Buscando la misma **forma** de fallo —dos piezas que deberían mirar lo mismo y no lo miran— en
+  vez de repasar funciones sueltas, aparecieron tres: **(1)** el **corte 2D** calculaba su rayo crítico con
+  `trueTrackAngle(g.zen, …)` en crudo mientras la sombra publicada sale del cenit clavado; **(2)** la **cámara
+  del sol** tenía **su propia `const EL_MIN = 0.5`** —una copia del suelo de validez con el valor escrito
+  aparte, justo lo que v1.57.1 dejó documentado que no había que volver a hacer—; **(3)** había **dos barridos
+  de torsión con topes distintos**: `pairThetaTorsion` se acota con `rangoHaz` —el rango legítimo entero— y el
+  barrido de dentro de `anglesPairwise` sólo con el cono de haz, sin el rango, así que podía pasarse de la
+  paralela al terreno. Ahora los dos llaman a la misma función. El ancla de pvlib no se mueve: **42,08°** en
+  el caso de referencia y **0,0000°** de degeneración en terreno uniforme.
+
+  **v1.58: el probador.** «¿Dónde está el probador?». Hasta aquí, la comprobación de que una consigna es
+  buena vivía sólo en los bancos: el barrido de 40 configuraciones y la batería. Un usuario delante de la
+  pantalla no tenía forma de exigirle cuentas a lo que está viendo. El botón **«✓ certificar»** toma el
+  instante y la política en pantalla, **barre el conjunto factible por fuerza bruta** —barrido uniforme a
+  0,5° más cada unidad de accionamiento movida sola— **midiendo con el contador exacto**, y publica un
+  certificado: veredicto (**óptimo / empatado / mejorable**), los dos números de lo publicado (sombra y POA),
+  la consigna mejor si la hay y por cuánto, **el precio de la elección**, el conjunto factible con el motivo
+  de cada límite (tope mecánico, cono de haz, paralela al terreno), y su alcance y sus sellos (versión,
+  malla, paso, contador, banda de empate).
+
+  **Las tres condiciones que lo hacen un probador y no un adorno**, fijadas como test para que no se
+  erosionen: **no comparte la búsqueda con la política** —no puede llamar a `anglesPairwise`, `repairNoShade`
+  ni `driveCoupleSafe`: sería juez y parte—; **puede decir que no** —existe el veredicto `mejorable` y hay un
+  caso que lo produce—; y **publica dos números con estatus de no dominado**, nunca una puntuación única que
+  esconda el canje.
+
+  **El precio de la elección salió de su propia prueba de fuego, y ésa es la lección.** La primera versión no
+  discriminaba (34 casos frente a 36). El motivo: **la dominancia sola no caza un canje mal hecho.** El
+  defecto de v1.57.1 —publicar 64,4 W/m² con sombra cero teniendo 137,7 disponibles— tiene *menos sombra y
+  menos energía*, así que **ningún candidato domina a otro** y el frente no dice nada. Hacía falta medir el
+  canje, no el orden: cuánta energía cuesta la sombra que se compra. Con esa medida, instantes en que la
+  consigna cuesta más del 50 % de la energía disponible: **130 en `09b25da` frente a 76 hoy**. Y una
+  corrección al encargo del auditor, porque el rigor va en las dos direcciones: **los 46 fallos de B y el
+  true-3D del 98,5 % que él atribuye a `09b25da` no estaban ahí** —aparecieron en árboles intermedios—, así
+  que su prueba de fuego, tal como está enunciada, no mide lo que él cree.
+
+  Batería **194 comprobaciones**, incluidos dos tests por cadena que se quedaron viejos al unificar las
+  constantes y que se han reescrito contra lo que de verdad importa: que ningún sitio del render dibuje con
+  el sol crudo, que el corte 2D no vuelva al cenit crudo, y que la cámara del sol no vuelva a tener su propia
+  copia del suelo de validez.
+
 - **2026-09-11 · v1.57.2 · cuarta vuelta de la auditoría externa: el mismo vicio por quinta y sexta vez, y
   el sexto estaba en el banco que juzga** — el revisor volvió por cuarta vez sobre la versión publicada. Ya
   no había hallazgos nuevos de física: había **el mismo defecto de siempre en dos sitios más**, y el segundo
