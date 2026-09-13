@@ -398,6 +398,61 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-13 · v1.61 · el lazo entero, y por qué subir la banda muerta «mejoraba» la sombra** —
+  El core tiene un lazo de control canónico con **dos** mitades —banda muerta y velocidad— y este
+  simulador implementaba sólo la segunda: `computeDay` decía *«lo que la planta HACE: la consigna
+  limitada a la velocidad del tracker»*, y la velocidad es la mitad. `overcast.html`, de la misma
+  casa, ya espejaba las dos («Canónicos del core: deadband 1,0° · slew 0,17°/s»). Dos simuladores
+  nuestros con lazos distintos: el defecto recurrente de esta auditoría —**dos piezas correctas
+  mirando a fuentes distintas**— por novena vez. El valor no es nuestro: 1,0° es el canónico del
+  core, y la TCU lo lleva en el registro **41061** con 45 pulsos por defecto (la constante
+  pulsos/grado es del accionamiento y no vive en este repo, como ya declara `export_config_tcu`).
+  Ahora `lazoControl` aplica banda muerta **y luego** velocidad, en el orden de `apply_control_loop`,
+  en los cinco sitios donde se publica lo que la planta hace. El certificador se queda con el
+  limitador desnudo a propósito: juzga si una consigna es **alcanzable**, no si el motor arranca.
+  Medido sobre un día y tres terrenos: la energía no cae (333.984 → 334.029 W/m²), la sombra baja
+  0,18 pp y **los arranques de motor caen un 13 %**.
+
+  **Pero al medirlo apareció una contradicción, y no se abrió PR hasta entenderla**: con el sol
+  rasante, subir la banda muerta **bajaba** la sombra. *«Es contradictorio, sin eso no abrimos PR ni
+  mergeamos.»* Tenía razón en no dejarlo pasar. El camino hasta la causa, con las equivocaciones
+  incluidas, porque son parte de lo que se aprendió:
+
+  1. *«La banda muerta mantiene juntas a las filas vecinas»* — **refutado** al medir: la dispersión
+     entre filas sube (2,701° → 2,805°), no baja.
+  2. *«La emisora principal `de[0]` no es la mayor»* — **refutado**: 0 fallos de 184.
+  3. *«El descenso de `repairNoShade` se mueve a 2° y la corrección que hace falta es de 0,43° a
+     0,93°: no puede hacerla»* — **cierto, y es un defecto real**, pero **no era la explicación**: con
+     y sin el arreglo, la consigna de las 19:05Z sale idéntica. Se corrige igual, por su cuenta
+     (abajo), pero se dijo claro que no cerraba el caso.
+  4. **La causa, medida**: con el sol rasante la consigna **no la decide el backtracking, la decide
+     el recorte**. `conoHaz` acota θ al cono donde el módulo aún recibe haz (AOI ≤ 88°). Ese techo
+     **cae más deprisa que el sol** —la fila 3 pasa de 2,75° a 1,81° en cinco minutos— mientras el
+     backtracking, con sombras cada vez más largas, pide **subir**. Van en direcciones opuestas, y a
+     las 19:05Z (sol 5,1°) **las ocho filas salen pegadas al techo**. La banda muerta no acierta:
+     **esquiva el recorte**. Congela la consigna de cinco minutos antes —cuyo techo era más alto— y
+     la deja **por encima** del de ahora, en 7 de sus 8 filas. Apuntando fuera del haz se sombrea
+     menos, claro.
+
+  Y la mitad que lo convierte en un espejismo y no en un defecto: **esa «mejora» no gana energía**.
+  De los 22 instantes (de 543) en que la banda muerta baja la sombra, gana POA en 11 y la pierde en
+  11, con **−0,57 W/m² de media**, y todos juntos valen el **0,136 %** de la POA del día; por encima
+  de 20° de elevación no mejora ni empeora **ni un solo instante**. Es el caso de libro de que
+  *sombra cero tiene dos soluciones —apuntar bien o no apuntar—* y de que, fuera de su régimen de
+  validez, la sombra deja de medir calidad. Por eso el recorte se queda como está, el hallazgo queda
+  escrito **junto a `conoHaz`**, que es donde vive la causa, y un banco nuevo lo fija por las dos
+  mitades: que con el sol rasante la consigna se pega al techo, y que la consigna que lo supera baja
+  la sombra **sin** ganar energía. Si algún día ganara energía, el banco rompe: entonces el recorte
+  sí sería un defecto y habría que ir a por él.
+
+  De propina, el defecto del punto 3 se arregla con su propia medida: **el descenso de
+  `repairNoShade` ya no se rinde, afina el paso** (2° → 0,5° → 0,1°). Es la única pieza que ve la
+  sombra de las filas **no adyacentes** —con el sol entre 5° y 10° el **52,7 %** de la sombra que
+  queda viene de ellas, frente al 8,1 % por encima de 20°— y las correcciones que hacen falta ahí
+  son de décimas, por debajo de su propio paso. Medido sobre 540 instantes contra la versión de 2°
+  fijos: cambia el 12 % de las consignas, baja la sombra de la peor fila en 24 instantes y la sube
+  en 2 (peor caso +0,4 pp), y **la POA del día sube un 0,0875 %** — más que la banda muerta entera.
+
 - **2026-09-13 · v1.60 · la política busca a 0,1°, la resolución de mando — y el precio de saberlo** —
   *«Debe buscar cada 0,1°. Si no busca no va a mandar a esa posición.»* El argumento es correcto y toca
   **cuatro** sitios: 0,5° en los dos barridos de torsión, **2,5°** en el uniforme del no-dominado de
