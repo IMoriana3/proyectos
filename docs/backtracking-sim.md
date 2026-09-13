@@ -398,6 +398,77 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-13 · v1.59 · la promesa vieja no sobrevive a su corrección, y el probador certificaba
+  posturas que el actuador no alcanza** — cuatro arreglos, todos salidos de preguntas de Ignacio
+  delante de la pantalla, y los cuatro de la misma forma: **dos piezas mirando a fuentes distintas.**
+
+  **La etiqueta que prometía lo que el código ya no hace.** El selector decía de pairwise *«sombra de
+  PLANOS cero garantizada»*. Medido en el barrido: **6 instantes con sol ≥ 20°** en que la fórmula
+  acoplada llega a **2,5D cero** y lo publicado se aparta hasta el **65 %**, porque apartarse gana hasta
+  **91,1 W/m² de planta** —ya netos del Martinez de esa sombra—. Desde que la guardia de energía es
+  incondicional (v1.57.2) pairwise **busca** no-sombra; no la **garantiza**. La etiqueta se había quedado
+  detrás de su propia corrección, y la lee el usuario en el desplegable.
+
+  **La métrica I, partida en dos, porque sumaba fenómenos contrarios.** *Residuo*: la fórmula trae ya el
+  mismo 2,5D —el accionamiento rígido no puede hacerlo mejor—, **51 casos, 7 con sol ≥ 20°**. *Canje*: la
+  fórmula llega a cero y la política se aparta porque gana energía, **96 casos, 6 con sol alto, 275,0 W/m²
+  ganados**. Un solo número decía «incumple su garantía» tanto cuando no podía como cuando no quería. Y la
+  línea que de verdad vigila: **canjes que PIERDEN energía, 0** en 4.224 instantes — la prueba de que los
+  96 apartamientos son elecciones pagadas y no el vicio de siempre.
+
+  **El precio de la promesa**, simétrico del precio de la elección: cuánto costaría quedarse en la postura
+  menos sombreada del factible. Sin él, quien ve una política «sin sombra» publicando un 19 % no sabe si es
+  que no podía o que no quería. Medido: lo publicado da 0,2 % con 906,6 W/m² y la postura limpia 0,0 % con
+  620,4 — **la promesa costaba 286,2 W/m², el 32 %**.
+
+  **«¿Por qué pone pairwise cuando es manual?»** El valor salía del mando y el rótulo del selector. Y
+  colgado de ese mismo selector iba algo peor: el sufijo **«irreducible: ningún θ que reciba haz la evita»**,
+  que la pantalla estampaba sobre un ángulo escrito a mano. *Irreducible* es el resultado de una **búsqueda**;
+  a un ángulo manual no lo ha barrido nadie. **Afirmar sobre un número que no se ha calculado es la única
+  cosa que esta casa no hace**, y llevaba versiones haciéndolo. De ahí salió el arreglo de fondo:
+  **`certifica()` juzga una CONSIGNA, no el nombre de una política** — el mando, una consigna de una TCU, lo
+  que sea—, y cuando juzga un mando lo dice sin adornos: *«ninguno declarado: es un mando, no una política»*,
+  con dominancia de Pareto pura.
+
+  **«En mi manual no hay sombras en toda la planta.»** El manual por fila arrancaba en
+  `DAY.pol[key].ang[timeIndex()]` —la muestra de la malla de 5 min— mientras que fuera de la malla la escena
+  es el **minuto exacto**: al marcar «por fila» a las 21:01 las filas arrancaban en la consigna de las 21:00
+  y la planta saltaba a una postura que no era de nadie, con el HUD atribuyéndosela a la escena. Ahora hay
+  `consignaEscena(key)`.
+
+  **«¿La velocidad se tiene en cuenta?» — no lo estaba, y es el hallazgo más de fondo.** En las 110 líneas de
+  `certifica` la única aparición de «anterior» era una palabra dentro de un comentario: el probador
+  **certificaba una POSTURA como si fuera un MOVIMIENTO** y podía proponer una consigna a 18° de donde está
+  la planta sin saber si el actuador llega. Ahora cada candidato pasa por el **mismo `slewLimit` que usa la
+  escena**, con `TRACKER_SLEW` (0,17 °/s, spec del actuador) — no un número inventado —, y el que no llega
+  **no puede dominar**: sale con su propia tarjeta, *«gana en los números, pero no se puede llegar ahí… no es
+  una alternativa: es un deseo»*.
+
+  **Y el alcance, declarado entero.** El certificado dice ahora las dos cosas que callaba: que su repertorio
+  de candidatos **nunca prueba dos unidades movidas a la vez en direcciones distintas** —así que «óptimo»
+  significa *«no he encontrado nada mejor entre lo que sé mirar»*, bastante menos de lo que parecía—, y que
+  **el desgaste y el número de maniobras no se modelan**: una consigna que gane unos W/m² yendo y viniendo
+  cada minuto sale «mejor» aquí y es peor en la planta real.
+
+  **Lo que se investigó y NO era un fallo, dicho porque el alcance de una investigación también es
+  resultado.** «No hay rojo en mi imagen», con el HUD marcando 96,8 %. Reproducida la escena en navegador
+  (aleatorio semilla 7, 21-jun 21:01, sol 5,8° az 297°, filas 1-2-3 a −7°): fila 3 al **0,0 %** y máxima de
+  planta **96,8 %**, clavado a la décima. Y el render no miente — dibuja **1 malla / 6 vértices y 546 píxeles
+  rojos** en la fila 2, frente a 17 mallas y 2.336 de la política: hay rojo, pero es un solo parche y esa
+  fila se ve casi de canto. **Contador y proyección coinciden fila a fila.** Por el camino cayeron dos
+  hipótesis mías, las dos por medición: una sonda que contaba geometría en el sitio equivocado y la idea de
+  que el material fuera a una cara (es `DoubleSide` en las 13 mallas).
+
+  **Lo que sí enseña el careo, y es lo que contesta la pregunta original:** la consigna manual deja limpia la
+  fila 3 **echándole la sombra entera a la fila 2**, y la planta pasa de **44,0 a 39,5 W/m²**. Barrido a 0,1°
+  sobre 5.041 combinaciones: la fila 3 sólo sale limpia con las vecinas en una ventana de **1,1° × 3,3°**, y
+  **en las 408 combinaciones que lo consiguen la planta produce exactamente lo mismo**. No hay una posición
+  manual mejor por ahí cerca: hay una ventana de un grado que compra sombra cero en una fila a cambio de casi
+  apagar la de al lado.
+
+  Batería **199**. Los dos barridos de 40 configuraciones en verde sobre la física nueva: A·B·C·D·E·G duros,
+  `B por política: {}`, J sin violaciones, `exit=0` en las dos semillas.
+
 - **2026-09-12 · v1.57.3 + v1.58.0 · el render dibujaba con un sol que la física no usa, y el probador** —
   una captura de Ignacio (El Burgo I, 21-jun, 06:33 local, **sol 0,28°**, DNI 2 W/m², azimut de eje 25°) con
   un trozo rojo aislado en la punta de una fila que el contador daba casi a cero, y una sombra rara en la
