@@ -398,6 +398,72 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-13 · v1.60 · la política busca a 0,1°, la resolución de mando — y el precio de saberlo** —
+  *«Debe buscar cada 0,1°. Si no busca no va a mandar a esa posición.»* El argumento es correcto y toca
+  **cuatro** sitios: 0,5° en los dos barridos de torsión, **2,5°** en el uniforme del no-dominado de
+  `repairNoShade`, y 0,5° en el empuje de la reparación con torsión. Cada uno con el valor escrito aparte —
+  el mismo vicio de siempre. Ahora es una constante, `PASO_BUSQ`.
+
+  **Esta entrada se escribe con los números CORREGIDOS, no con los que dije primero**, porque la medición
+  desmintió dos titulares míos y eso es parte del resultado.
+
+  **Primer error: medí el eje equivocado.** Dije que no compensaba tras medir el barrido uniforme aislado y
+  sólo en **energía**. El criterio de esa búsqueda no es energía: es **sombra sujeta a no perder energía**, y
+  el barrido que de verdad decide es el de torsión.
+
+  **Segundo error: «mejor en los dos ejes» es falso.** Repartido por elevación solar, sobre 270 instantes de
+  tres terrenos:
+
+  | sol | instantes | cambian | mayor salto | Δsombra | ΔPOA | POA del tramo |
+  |---|---|---|---|---|---|---|
+  | 0–5° | 18 | 8 | **9,62°** | +0,230 pp | +0,35 | 97 |
+  | 5–10° | 18 | 14 | 1,15° | **+2,094 pp** | −1,22 | 726 |
+  | 10–20° | 36 | 25 | 0,40° | −0,387 pp | +12,12 | 6.033 |
+  | 20–90° | 198 | 74 | 0,40° | +0,145 pp | **+47,01** | 160.072 |
+
+  En **energía** sí mejora, y donde debe: +47 W/m² en el tramo de sol alto. Pero ese tramo produce 160.072,
+  o sea **+0,035 %**. En **sombra** es un empate revuelto: mejora en 10–20° y **empeora** en 5–10°. El
+  «−0,044 pp» que publiqué era la media de signos cruzados y escondía el tramo malo.
+
+  **Y el «46 % de las consignas» era de INSTANTES**, no de consignas de fila. Por fila son **359 de 2.160
+  (16,6 %)**, con **mediana de 0,2°**. El salto de 9,62° tampoco es «el caso que más vale la pena», como
+  llegué a decir: está a **sol 1,3°**, donde la planta hace 0,5 W/m², y no sale del paso fino sino de que
+  `repairNoShade` toma otro camino con la rejilla nueva.
+
+  **Se mergeó con esa ganancia en la mano — +0,035 % — por decisión de Ignacio y por una razón de principio,
+  no de rendimiento: *lo más preciso posible*.** Buscar a 0,5° cuando el actuador se manda a 0,1° es buscar
+  donde no se puede mandar.
+
+  **El coste, que es la otra mitad de la historia.** A 0,1° puro el instante de Ayora entera (751 trackers,
+  torsión en las 294 parejas) pasó de 2,x s a **4.073 ms** y rompió el tope de 3 s del banco de producción; y
+  los dos barridos de 40 configuraciones fueron **cancelados** al llegar a su tope de 45 min, con lo que la
+  puerta requerida falló **sin que nadie llegara a comprobar un invariante**. Ningún tope se tocó: se hizo
+  barata la búsqueda. Los dos barridos van ahora **en dos tramos** —recorren grueso y refinan a 0,1° alrededor
+  de los mejores—, con su aproximación declarada dentro del código: difiere del barrido exacto en **7 de 450
+  consignas (1,56 %)**, como mucho 0,227°. Antes de construirla se midió lo que la sostiene: de 1.400
+  barridos, 3 no monótonos (0,2 %) y **una** ventana limpia más corta que el paso grueso. Y el reparto del
+  coste, medido: de 9 min 21 s a **3 min 48 s** en cuatro configuraciones — el 75 % se lo llevaba el uniforme.
+
+  **El precio permanente, dicho para que conste:** los barridos de CI pasan de ~15 a **~27 minutos**.
+
+  **El cuarto sitio lo cazó el propio test nuevo**, que exige que no quede ningún paso suelto: saltó con un
+  `sg*0.5` que yo había dado por revisado, y al mirarlo resultó **no ser un barrido sino un empuje** dentro de
+  un bucle con tope de 12 iteraciones. Bajarlo a 0,1° sin tocar el tope habría recortado el alcance de la
+  reparación de **6° a 1,2°**. El tope se escala a 60 y el alcance se conserva.
+
+  **El probador barre también a 0,1°**, con la vecindad de ±4° intacta: 196 candidatos y 158 ms frente a 977
+  y 287 ms — sólo 1,8×, no 5×, porque el contador memoiza. El motivo lo dio la escena de la captura anterior:
+  su ventana limpia medía **1,1°**, dos puntos de la rejilla de 0,5°.
+
+  **Y lo que NO está modelado, que sale de aquí y queda anotado como lo siguiente:** el simulador **no tiene
+  banda muerta**. Lo único que limita el movimiento es la velocidad del actuador. Con una banda muerta de 0,5°
+  en la TCU, de las 359 consignas que cambian **llegarían al campo 5**; las otras 354 son micromovimientos de
+  dos décimas que ninguna TCU ejecutaría — y que el probador tampoco sabe penalizar, porque el desgaste no se
+  modela.
+
+  Batería **201** · producción **52** · los dos barridos de 40 configuraciones en verde (26 y 27 min), con
+  A·B·C·D·E·G duros, `B por política: {}`, J sin violaciones y H sin ningún arreglo gratis sin coger.
+
 - **2026-09-13 · v1.59 · la promesa vieja no sobrevive a su corrección, y el probador certificaba
   posturas que el actuador no alcanza** — cuatro arreglos, todos salidos de preguntas de Ignacio
   delante de la pantalla, y los cuatro de la misma forma: **dos piezas mirando a fuentes distintas.**
