@@ -40,7 +40,7 @@ copiadas literales, que backtracking.html** — una física, dos simuladores. Lo
 | Nube → irradiancia | escenario de `test_diffuse_policies.py` | GHI = claro·(1−0,70·cc): a cc=1 queda el **30 % del claro, 100 % difuso** — el overcast canónico del test del core. DNI = claro·(1−cc)³ |
 | Meteo real | Open-Meteo (ERA5 / ICON-GFS) | GHI/DNI/DHI y nubosidad **medidas**; radiación horaria = media de la hora precedente → timestamp centrado −30 min |
 | Escena 3D | `seguidor.js` (fuente única del modelo, la misma que el gemelo y backtracking.html) | sombras por shadow-map; sol por DNI, hemisferio por DHI (la difusa ES la luz ambiente); nube por zona; sin WebGL cae al corte 2D |
-| Coste de maniobra | `motor_energy.py` (bandas de flota) + `gemelo-digital/sim/fisica.js` (curva I(θ)) | Wh/° por **amplitud** de maniobra, de 14.759 maniobras reales. Un movimiento es un **tramo contiguo** de giro (una rampa de 55° es 1, no 55), con ε = 0,05° de ruido de encoder. El modelo del ensayo (E₀+k·\|Δθ\|) **no se usa**: dominio \|Δθ\| ≥ 20°, el core da NaN por debajo — ver §2.1 |
+| Coste de maniobra | `motor_energy.py` `AJUSTE_FLOTA` | **E = 0,0901 + 0,0447·\|Δθ\|**, ajustado sobre 14.759 maniobras reales: cada arranque cuesta 0,0901 Wh explícitamente. Un movimiento es un **tramo contiguo** de giro (una rampa de 55° es 1, no 55), con ε = 0,05° de ruido de encoder. El modelo del ENSAYO (misma forma, otro intercepto) **no se usa**: dominio \|Δθ\| ≥ 20°, el core da NaN por debajo. Las **bandas** por amplitud y la **curva I(θ)** del gemelo quedan seleccionables como contraste — ver §2.1 |
 | Reposo de la TCU | `tcu.py` `TCU_IDLE_W` | 0,64 W constantes (ni los 5 W viejos ni los 0,45 de `tcu_compare`); igual de día que de noche, y **fuera de las filas** porque no depende de la política |
 | Zonal por NCU | extensión propia (estilo Zonal Diffuse de Nextracker) | el frente cruza la planta con retardo por zona; GLOBAL = un sensor de planta decide un θ común, ZONAL = cada NCU con su señal. Para `continuous`, zonal ≥ global **por construcción** (argmax local paso a paso) — la QA lo exige; para las políticas con histéresis es una medición |
 
@@ -156,34 +156,44 @@ Desde v1.20.0 la tabla no solo dice lo que cada política **gana**, sino lo que 
 **arranques de motor**, **grados de maniobra** y **vatios-hora de batería**. El modelo de motor no
 se estima: es medida de campo, espejada de `solargpt_core/motor_energy.py`.
 
-La decisión metodológica importa. El modelo más preciso de la casa —el del ensayo,
-`E = E₀ + k·|Δθ|` sobre 8 barridos instrumentados de ±55°— **no se usa**, a propósito: su dominio
-es `|Δθ| ≥ 20°` y el core devuelve `NaN` por debajo, porque su término fijo sale de barridos de
-110° y extrapolarlo a micro-maniobras se equivoca **×27**, medido contra 106 TCUs. Las maniobras
-de un tracker en operación son de 1–2°, que las fija la banda muerta. Se usa el modelo que sí
-cubre ese régimen: las **bandas de flota**, Wh/° según la amplitud de cada maniobra, ajustadas
-sobre **14.759 maniobras reales** (El Burgo, 106 TCUs).
+La decisión metodológica importa, y hubo que corregirla una vez. **El modelo del ensayo**
+(`E = E₀ + k·|Δθ|` sobre 8 barridos instrumentados de ±55°) es el más preciso de la casa y **no se
+usa**, a propósito: su dominio es `|Δθ| ≥ 20°` y el core devuelve `NaN` por debajo, porque su
+término fijo sale de barridos de 110° y extrapolarlo a micro-maniobras se equivoca **×27**, medido
+contra 106 TCUs. Las maniobras de un tracker en operación son de 1–2°, que las fija la banda
+muerta.
 
-| amplitud | n | Wh/° |
-|---|---|---|
-| < 1° | 8.335 | 0,2262 |
-| 1–2° | 5.171 | 0,0880 |
-| 2–5° | 1.177 | 0,0701 |
-| > 5° | 76 | 0,0653 |
+Se usa el modelo que sí cubre ese régimen: **el mismo modelo de dos términos, pero ajustado sobre
+las 14.759 maniobras reales** de flota (El Burgo, 106 TCUs), que el core publica como
+`AJUSTE_FLOTA`:
 
-El coste por grado se **multiplica por 3,5** al achicarse la maniobra: ahí está medido, y no
-supuesto, el precio de arrancar el motor. Es lo que convierte el chattering de un argumento
-cualitativo en una factura.
+> **E = 0,0901 + 0,0447·|Δθ|**  [Wh]
+
+Su intercepto es **27 veces menor** que el del ensayo, y esa distancia es precisamente la medida
+de cuánto se separan los dos regímenes. Cada arranque cuesta **0,0901 Wh explícitamente**, así que
+dos políticas con el mismo recorrido se separan *exactamente* en `(nº de arranques) × 0,0901`. Eso
+es lo que convierte el chattering de un argumento cualitativo en una factura, y lo que hace que
+«movimientos» sea una columna y no un adorno.
+
+**Por qué NO las bandas, aunque salgan del mismo sitio.** La primera versión usaba la medida en
+bruto agrupada por amplitud (0,2262 Wh/° por debajo de 1° · 0,0880 de 1–2° · 0,0701 de 2–5° ·
+0,0653 por encima). Reproduce el día de flota por construcción, pero es una **función escalón**:
+*dentro* de una banda el coste es estrictamente proporcional a los grados, así que duplicar los
+arranques no cuesta nada. Medido: 240° troceados en maniobras de 20° y de 10° dan **15,67 Wh los
+dos** —el doble de arranques, cero coste extra—, y 0,8° frente a 0,5° dan 54,29 los dos. Con ese
+modelo la columna de movimientos podía doblarse sin que la de energía moviera un dígito, que era
+exactamente lo que la tabla existía para evitar. Las bandas se quedan como contraste seleccionable
+y declarado, no como modelo por defecto.
 
 Medido sobre 21-jun en Gorraiz con cielo cubierto al 95 % y decisión cada 10 min:
 
-| política | movimientos | recorrido | motor | Δ motor |
-|---|---|---|---|---|
-| pvlib (baseline) | 79 | 229° | 16,22 Wh | — |
-| `diffuse_flat` | 32 | 148° | 10,04 Wh | −38 % |
-| `diffuse_poa_switch` | 21 | 110° | 7,47 Wh | −54 % |
-| `diffuse_limited` | 28 | 97° | 6,71 Wh | −59 % |
-| `diffuse_continuous` | 19 | 95° | 6,45 Wh | −60 % |
+| política | movimientos | recorrido | arranque | giro | motor | Δ motor |
+|---|---|---|---|---|---|---|
+| pvlib (baseline) | 79 | 229° | 7,12 Wh | 10,25 Wh | 17,37 Wh | — |
+| `diffuse_flat` | 32 | 148° | 2,88 | 6,64 | 9,52 Wh | −45 % |
+| `diffuse_limited` | 28 | 97° | 2,52 | 4,33 | 6,86 Wh | −61 % |
+| `diffuse_poa_switch` | 21 | 110° | 1,89 | 4,94 | 6,83 Wh | −61 % |
+| `diffuse_continuous` | 19 | 95° | 1,71 | 4,26 | 5,98 Wh | −66 % |
 
 O sea que **en cielo cubierto las políticas de difusa ganan energía y ahorran batería a la vez**.
 No es un compromiso: tumbarse deja de perseguir un sol que no está, y no perseguirlo es
@@ -193,20 +203,24 @@ idénticas — la primera comprobación que hay que exigirle a esto.
 **Tres cautelas, porque este número se presta a citarse mal.**
 
 1. **«Movimientos» no es una constante del tracker, sino del ciclo de control.** Con el mismo día
-   y el mismo recorrido, bajar la decisión de 30′ a 1′ lleva de 28 a 178 arranques y la factura de
-   15 a 20 Wh; con banda muerta de 0,5° llega a 277 arranques y 43,5 Wh. Citar un número de
-   movimientos sin decir el ciclo de decisión y la banda muerta no significa nada.
+   y el mismo recorrido, bajar la decisión de 30′ a 1′ lleva de **28 a 178 arranques** y la factura
+   de **12,80 a 26,23 Wh**. El desglose enseña por qué, y es la ventaja de tener dos términos: el
+   de **giro se queda clavado en 10,25 Wh** —el recorrido no cambia— y **toda** la diferencia está
+   en el de arranque, que va de 2,52 a 16,04 Wh. Citar un número de movimientos sin decir el ciclo
+   de decisión y la banda muerta no significa nada.
 2. **El recorrido sí es robusto** (±2 % en todo ese barrido). Es el número que se puede citar
    fuera, y es además el proxy de desgaste que usa el core.
 3. **El reposo de la TCU no está en las filas**: 0,64 W = 15,4 Wh/día, del orden del propio
    consumo de motor. Es idéntico para todas las políticas, así que sumarlo aguaría justo la
    columna que existe para separarlas — pero para **dimensionar** batería hay que contarlo.
 
-Un contraste que conviene no vender como validación: a decisión 5′ y banda muerta 1° el simulador
-da 145 movimientos y 19,0 Wh/día, y la flota de El Burgo midió 145 maniobras y 19,2 Wh/día. El
-recorrido, en cambio, no cuadra (229,8° frente a 112,9°), así que la coincidencia en vatios-hora
-es en buena parte casual —el doble de grados a la mitad de coste por grado— y se deja anotada
-como tal.
+**Careo contra el día que midió la flota.** El Burgo registró 145 maniobras, 112,9° y 19,2 Wh/día
+por TCU. El modelo sobre esos mismos datos da `145 × 0,0901 + 112,9 × 0,0447 = 18,11 Wh`, un
+**−5,7 %** frente a lo medido: el ajuste se sostiene en su propio terreno. Un día simulado a
+decisión 5′ sale en 23,34 Wh, y la diferencia es **entera y explicable**: el término de arranque es
+idéntico (145 movimientos en los dos casos, 13,06 Wh), y lo que cambia es el recorrido —229,8°
+frente a 112,9°—, porque el día simulado incluye el barrido completo ±55° más las transiciones de
+stow. No es una discrepancia del modelo, son dos días distintos.
 
 ## 3 · La competencia
 
@@ -297,7 +311,7 @@ de §4 se sostiene sobre NREL y sobre los dos papers de arriba.
    llueve.
 3. **El argumento de O&M va con la energía, no contra ella.** La objeción natural a cualquier
    política de difusa es «me mueves el tracker más». Medido (§ 2.1), es al revés: en cielo
-   cubierto todas ahorran entre un **38 % y un 60 %** del consumo de motor del día, porque
+   cubierto todas ahorran entre un **45 % y un 66 %** del consumo de motor del día, porque
    tumbarse es dejar de perseguir. Con cielo despejado no intervienen y el coste es idéntico al
    de no hacer nada. Para un tracker autónomo —45 W de panel y 153,6 Wh de batería— eso no es un
    detalle: es la diferencia entre una función que cabe en el balance energético y una que no.
