@@ -214,13 +214,93 @@ idénticas — la primera comprobación que hay que exigirle a esto.
    consumo de motor. Es idéntico para todas las políticas, así que sumarlo aguaría justo la
    columna que existe para separarlas — pero para **dimensionar** batería hay que contarlo.
 
-**Careo contra el día que midió la flota.** El Burgo registró 145 maniobras, 112,9° y 19,2 Wh/día
-por TCU. El modelo sobre esos mismos datos da `145 × 0,0901 + 112,9 × 0,0447 = 18,11 Wh`, un
-**−5,7 %** frente a lo medido: el ajuste se sostiene en su propio terreno. Un día simulado a
-decisión 5′ sale en 23,34 Wh, y la diferencia es **entera y explicable**: el término de arranque es
-idéntico (145 movimientos en los dos casos, 13,06 Wh), y lo que cambia es el recorrido —229,8°
-frente a 112,9°—, porque el día simulado incluye el barrido completo ±55° más las transiciones de
-stow. No es una discrepancia del modelo, son dos días distintos.
+### 2.2 · Careo contra campo: qué queda avalado y qué no
+
+El día de referencia es El Burgo, 2026-08-16, 106 TCUs (`scripts/audit/careo_motor_flota.py`).
+Auditado magnitud a magnitud, **las tres cifras de campo no tienen el mismo estatus**, y esto
+cambia la conclusión que figuraba aquí en v1.20.1:
+
+| magnitud de campo | cómo se calcula | ¿sirve de referencia? |
+|---|---|---|
+| **19,2 Wh/día** | `Σ V·I·dt` sobre **todo** el día, sin máscara | **Sí.** Es una integral directa |
+| 145 maniobras | rachas de `motor_state` a 11 s | **No como tal.** Ver abajo |
+| 112,9° de recorrido | `Σ|Δang|` **enmascarado** por `motor_state` | **No.** No es el recorrido |
+| 0,1699 Wh/° | 19,2 ÷ 112,9 | **No.** Numerador completo, denominador incompleto |
+
+**Los 112,9° no pueden ser el recorrido del seguidor.** Es un argumento de geometría, sin modelo
+de motor ni definición de maniobra de por medio: ese día el seguidor va de −54,4° a +54,3° y aparca
+a +5° (rango ±55° confirmado en `elburgo_tcu.json`), luego recorre **como mínimo**
+`108,6 + 49,3 + 59,4 = 217,3°`. El log da 112,9°, **la mitad del suelo**. La causa está en el
+script: `trav = Σ|diff(ang)|[on]` aplica la máscara de `motor_state` al vector de diferencias, así
+que el desplazamiento ocurrido en intervalos cuya muestra de cierre no viene marcada ON **se
+descarta**. Con rachas de 1,1 muestras de media, eso es la mayor parte.
+
+*Consecuencia para la casa, más allá de este simulador*: el «coste real por grado» de
+`docs/fase-2l-motor-energia.md` (0,1699 Wh/°) está **inflado ~2×** por el denominador. La cifra
+defendible es 19,2 ÷ ~220° ≈ **0,087 Wh/°**. Conviene llevarlo a quien mantiene ese análisis.
+
+**El recuento de maniobras abarca un factor 45 según la definición**, y las tres están en uso en
+casa: 19/TCU (episodios de movimiento, del auditor de campo) · 145/TCU (rachas de `motor_state`) ·
+864/TCU (variación de ángulo, que cuenta ruido de encoder). El simulador cuenta **episodios**, la
+misma definición que el auditor. El intercepto `0,0901 Wh` se ajustó bajo la definición de
+**rachas**. Multiplicar uno por otro es mezclar unidades, y se nota en el reparto:
+
+| | arranque | giro | total |
+|---|---:|---:|---:|
+| campo, base rachas (145 man., 112,9°) | 13,06 Wh · 72 % | 5,05 Wh · 28 % | 18,11 Wh |
+| modelo, base episodios (73 man., 226,7°) | 6,58 Wh · 39 % | 10,14 Wh · 61 % | 16,71 Wh |
+
+**El total cuadra; el reparto está invertido.** Los dos errores se compensan en parte —menos
+arranques contra más grados—, así que el total es utilizable y el desglose no. En la aplicación el
+desglose se muestra etiquetado como interno del modelo.
+
+**El careo que sí vale**, mismo sitio y misma fecha, por el total:
+
+| ciclo de decisión | movs | recorrido | motor | vs 19,2 Wh |
+|---|---:|---:|---:|---:|
+| 5′ | 143 | 229,2° | 23,13 Wh | +20 % |
+| **10′** | **73** | **226,7°** | **16,71 Wh** | **−13 %** |
+| 15′ | 51 | 229,6° | 14,86 Wh | −23 % |
+| 30′ | 27 | 222,1° | 12,36 Wh | −36 % |
+
+El día medido cae **dentro** del abanico del modelo, entre 5′ y 15′ de ciclo de decisión. Eso es
+todo lo que se puede afirmar: el modelo es compatible con la medida, no está calibrado contra ella.
+
+**Banda de incertidumbre de la comparación entre políticas** (overcast, 10′). Según se pondere el
+recorrido o los arranques, el ahorro de cada política se mueve así:
+
+| política | solo giro | total | solo arranques |
+|---|---:|---:|---:|
+| `diffuse_flat` | −38 % | **−47 %** | −60 % |
+| `diffuse_poa_switch` | −52 % | **−60 %** | −73 % |
+| `diffuse_continuous` | −59 % | **−66 %** | −75 % |
+
+**El signo y el orden son robustos; la magnitud tiene una banda de aproximadamente un tercio.**
+Fuera de casa conviene citar «las políticas de difusa reducen el consumo de motor entre un 40 % y
+un 70 % en días cubiertos», no un número con dos decimales.
+
+### 2.3 · Lo que este simulador NO responde (y dónde vive)
+
+Tres cosas que un director de O&M preguntaría y que esta herramienta no puede contestar:
+
+1. **Desgaste mecánico.** `travel_deg` es un *proxy* y no hay en toda la casa un modelo que lo
+   convierta en intervalo de servicio: ni curva L10, ni horas-motor a fallo, ni ciclos nominales
+   del reductor. A 145 maniobras/día son ~53.000/año y ~1,3 M en 25 años, sin nada con qué
+   compararlo. «Menos movimientos, menos desgaste» es direccionalmente cierto y **cuantitativamente
+   no sostenido**.
+2. **Balance energético, no consumo.** Aquí se mide lo que el motor gasta. La pregunta que decide
+   es si el SoC se mantiene sobre el 30 % que dispara la defensa a 55°, y eso depende también de la
+   carga —panel de 45 W, ~40,5 W tras rendimientos, y en día cubierto un tercio—. Vive en
+   `gemelo-digital/bateria.html`, con serie horaria 2013-2024.
+3. **Tiempo de motor encendido.** El campo registra 2.011 s con 1.094 mA de mediana, **por debajo**
+   de la corriente de régimen del ensayo (1.471-1.525 mA): el motor pasa buena parte del tiempo
+   fuera de punto de trabajo, con `motor_pwm` mediano al 66,4 %. El modelo deriva el tiempo de
+   `recorrido / 0,17 °/s` (1.334 s) y **no representa ese régimen**. La columna «minutos de motor»
+   es optimista y no sirve para cálculos térmicos ni de ciclo de trabajo.
+
+**Reproducibilidad.** Los logs de flota no están versionados (son dato de planta), así que la cifra
+de campo no se puede recalcular desde el repositorio: se toma del informe. Para un expediente de
+auditoría eso es una dependencia externa que hay que declarar.
 
 ## 3 · La competencia
 
@@ -311,7 +391,8 @@ de §4 se sostiene sobre NREL y sobre los dos papers de arriba.
    llueve.
 3. **El argumento de O&M va con la energía, no contra ella.** La objeción natural a cualquier
    política de difusa es «me mueves el tracker más». Medido (§ 2.1), es al revés: en cielo
-   cubierto todas ahorran entre un **45 % y un 66 %** del consumo de motor del día, porque
+   cubierto todas ahorran entre un **40 % y un 70 %** del consumo de motor del día (banda, no cifra
+   exacta: ver §2.2), porque
    tumbarse es dejar de perseguir. Con cielo despejado no intervienen y el coste es idéntico al
    de no hacer nada. Para un tracker autónomo —45 W de panel y 153,6 Wh de batería— eso no es un
    detalle: es la diferencia entre una función que cabe en el balance energético y una que no.
