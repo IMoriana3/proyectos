@@ -398,6 +398,29 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-16 · v1.65 · el mando manual no puede pedir un ángulo que el actuador no da** —
+  Reportado en la revisión del 3D, junto a las demás: *«límite de giro ±55°»* y el mando manual
+  marcando **−56°**. La física estaba **bien** —`sceneInstant` recorta a `mx` antes de tocar nada, y
+  el banco de signos ya lo comprobaba—; el que mentía era el **número**. El `<input type=range>` nacía
+  con `min/max` **±60 fijos**, escritos en el HTML, y su rótulo escribe lo que le arrastras: con el
+  tope en 55, el HUD decía −56 mientras la mesa estaba en −55. Render≠física otra vez, y de la especie
+  más dañina, porque lo que parece es que **el tope no se respeta**.
+
+  **El arreglo no es recortar por detrás.** Dejar que el mando llegue a 56 y que la mesa se quede en
+  55 es exactamente lo que confunde. El tope es del **actuador**, así que el mando no debe poder
+  pedirlo: el **recorrido del propio slider** pasa a ser el tope configurado, y si el tope baja
+  estando fuera, el valor se recorta con él en vez de quedarse colgado. Enganchado a los **tres**
+  sitios que escriben θ máx —el campo de configuración, el preset de planta y el de layout real— más
+  el arranque, que es por donde se colaba: hasta ahora nadie tocaba el slider al cambiar el tope.
+
+  Banco **en el navegador**, no sobre el texto del fichero: baja el tope, intenta pasarse, y exige que
+  **slider, rótulo y θ del HUD** digan los tres lo mismo y que ninguno pase del tope, más el caso de
+  bajar el tope con el mando fuera. Antes del arreglo, **3 fallos de 15**; después, **15/15**. Y de
+  paso salió un detalle que explica por qué esto no se cazó antes: la página escucha los campos de
+  configuración por `change`, no por `input` —es lo que dispara el navegador al salir del campo—, y
+  mi primera versión del banco fallaba por eso. El banco estaba mal, no la página; queda escrito en el
+  banco para que el siguiente no repita el rodeo.
+
 - **2026-09-16 · v1.64 · el certificado deja de llamar «mejor» a lo que no lo es y de escribir ceros que no lo son, las coordenadas se piden a su fuente, y el número de versión vuelve a decir la verdad** —
   Tres cosas, y las tres son el mismo vicio: **una pieza afirmando más de lo que sostiene**.
 
