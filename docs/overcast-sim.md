@@ -57,7 +57,7 @@ copiadas literales, que backtracking.html** — una física, dos simuladores. Lo
 La QA exige los mismos contratos que `test_diffuse_policies.py`: flat ENTRA (flag y θ=0) en
 overcast con el tracker inclinado; continuous ≥ pvlib **en cada paso**; el pulso de 15 min no
 conmuta; el dwell bloquea la re-entrada con la señal viva; los bordes de conmutación caen en el
-mismo instante físico a 5/10/15 min; enter_ratio imposible ⇒ jamás conmuta; ghi_min gigante ⇒
+mismo instante físico a 1/5/10/15 min; enter_ratio imposible ⇒ jamás conmuta; ghi_min gigante ⇒
 passthrough; NaN en GHI ⇒ passthrough sin NaN en la salida.
 
 ## ¿Y el óptimo anisótropo? Medido, y descartado
@@ -185,15 +185,21 @@ modelo la columna de movimientos podía doblarse sin que la de energía moviera 
 exactamente lo que la tabla existía para evitar. Las bandas se quedan como contraste seleccionable
 y declarado, no como modelo por defecto.
 
-Medido sobre 21-jun en Gorraiz con cielo cubierto al 95 % y decisión cada 10 min:
+Medido sobre 21-jun en Gorraiz con cielo cubierto al 95 %, **ciclo de decisión de 1 min**, que es
+el que usa la TCU en campo (desde v1.21.0 es el valor por defecto de la aplicación; el 10 min del
+core legacy sigue seleccionable para carear):
 
 | política | movimientos | recorrido | arranque | giro | motor | Δ motor |
 |---|---|---|---|---|---|---|
-| pvlib (baseline) | 79 | 229° | 7,12 Wh | 10,25 Wh | 17,37 Wh | — |
-| `diffuse_flat` | 32 | 148° | 2,88 | 6,64 | 9,52 Wh | −45 % |
-| `diffuse_limited` | 28 | 97° | 2,52 | 4,33 | 6,86 Wh | −61 % |
-| `diffuse_poa_switch` | 21 | 110° | 1,89 | 4,94 | 6,83 Wh | −61 % |
-| `diffuse_continuous` | 19 | 95° | 1,71 | 4,26 | 5,98 Wh | −66 % |
+| pvlib (baseline) | 178 | 228° | 16,04 Wh | 10,19 Wh | 26,23 Wh | — |
+| `diffuse_flat` | 69 | 159° | 6,22 | 7,12 | 13,33 Wh | −49 % |
+| `diffuse_limited` | 64 | 104° | 5,77 | 4,64 | 10,40 Wh | −60 % |
+| `diffuse_poa_switch` | 54 | 128° | 4,87 | 5,73 | 10,60 Wh | −60 % |
+| `diffuse_continuous` | 44 | 104° | 3,96 | 4,64 | 8,60 Wh | −67 % |
+
+A 10 min de ciclo los **ahorros** salen −47/−61/−60/−66 %: la comparación entre políticas se mueve
+entre uno y cuatro puntos, que es lo que la hace citable. Los **vatios-hora absolutos**, en cambio,
+casi se duplican al pasar de 10 min a 1 min, y por eso nunca se citan sin decir el ciclo.
 
 O sea que **en cielo cubierto las políticas de difusa ganan energía y ahorran batería a la vez**.
 No es un compromiso: tumbarse deja de perseguir un sol que no está, y no perseguirlo es
@@ -256,15 +262,34 @@ desglose se muestra etiquetado como interno del modelo.
 
 **El careo que sí vale**, mismo sitio y misma fecha, por el total:
 
-| ciclo de decisión | movs | recorrido | motor | vs 19,2 Wh |
-|---|---:|---:|---:|---:|
-| 5′ | 143 | 229,2° | 23,13 Wh | +20 % |
-| **10′** | **73** | **226,7°** | **16,71 Wh** | **−13 %** |
-| 15′ | 51 | 229,6° | 14,86 Wh | −23 % |
-| 30′ | 27 | 222,1° | 12,36 Wh | −36 % |
+| ciclo de decisión | movs | recorrido | arranque | giro | motor | vs 19,2 Wh |
+|---|---:|---:|---:|---:|---:|---:|
+| **1′ (la TCU real)** | **177** | **226,9°** | **15,95** | **10,14** | **26,09 Wh** | **+36 %** |
+| 5′ | 143 | 229,2° | 12,88 | 10,24 | 23,13 Wh | +20 % |
+| 10′ | 73 | 226,7° | 6,58 | 10,14 | 16,71 Wh | −13 % |
+| 15′ | 51 | 229,6° | 4,60 | 10,27 | 14,86 Wh | −23 % |
+| 30′ | 27 | 222,1° | 2,43 | 9,93 | 12,36 Wh | −36 % |
 
-El día medido cae **dentro** del abanico del modelo, entre 5′ y 15′ de ciclo de decisión. Eso es
-todo lo que se puede afirmar: el modelo es compatible con la medida, no está calibrado contra ella.
+**Al ciclo real, el modelo SOBREESTIMA un 36 %**, y conviene decirlo así en vez de elegir el ciclo
+que mejor cuadra. Hasta v1.21.0 la aplicación venía por defecto a 10 min y este careo salía −13 %,
+que era un acuerdo cómodo y engañoso: no se elige la física para que encaje el número.
+
+La desviación es además **trazable**, y sale de las dos mitades del modelo:
+
+- **Arranques**: 15,95 Wh contra los 13,06 del ajuste sobre 145 rachas. El simulador cuenta **177**
+  episodios donde el log marcó 145: el término fijo se cobra más veces de las que el ajuste vio.
+- **Giro**: 10,14 Wh contra 5,05. Aquí no falla el modelo sino el dato de campo — los 112,9° están
+  enmascarados y el recorrido real del día ronda los 227° (ver el suelo geométrico, arriba).
+
+Corrigiendo solo el denominador enmascarado, el propio ajuste sobre el recorrido verdadero daría
+`145 × 0,0901 + 227 × 0,0447 = 23,2 Wh` contra los 19,2 integrados: el ajuste ya sobreestima un
+**21 %** por sí mismo cuando se le da el recorrido real. Es decir que buena parte del +36 % **no es
+del simulador**, sino de aplicar un ajuste construido sobre trayectorias enmascaradas a una
+trayectoria completa.
+
+**Conclusión operativa**: los vatios-hora absolutos de la tabla son una **cota superior**, no una
+predicción calibrada. Lo que se compara entre filas sí es sólido: entre 1 min y 10 min de ciclo, el
+ahorro de cada política se mueve **uno a cuatro puntos**.
 
 **Banda de incertidumbre de la comparación entre políticas** (overcast, 10′). Según se pondere el
 recorrido o los arranques, el ahorro de cada política se mueve así:
