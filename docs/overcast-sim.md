@@ -111,6 +111,30 @@ El HUD muestra el término `DNI·cos z` explícito para que los dos sumandos se 
 verifica a 2,8e-17 W/m² en la batería, junto con que la difusa **suba** al nublarse (114 → 466 W/m²
 a cc 0,6): si no subiera, el modelo de nubes estaría perdiendo energía en vez de dispersarla.
 
+## El informe del emplazamiento
+
+Botón **📄 Informe** en la tabla del día: abre una pestaña lista para imprimir o guardar en PDF.
+Mismo patrón que el informe del [Simulador de Backtracking](backtracking-sim.md) y la misma regla —
+**todo sale de lo ya calculado**, ni una física nueva ni un número que no esté en pantalla.
+
+Nueve secciones: emplazamiento y configuración · el cielo del día · el resumen política a política ·
+**cada política con cómo decide, qué optimiza, su criterio y sus nueve cifras del día** · el coste de
+maniobra con la procedencia del modelo · el diario de decisiones · el zonal y el año si están
+calculados · la validación · y el método con sus límites.
+
+Dos cosas que lo hacen defendible delante de un tercero:
+
+- **Las explicaciones son las del código que las ejecuta**, no un folleto. La cota lleva ficha propia
+  y dice de sí misma que no es servible como consigna.
+- **Termina en los límites declarados**, y la batería lo exige: que los vatios-hora absolutos son
+  cota superior y no predicción calibrada, que el «% del día activa» no es comparable entre filas,
+  que no hay modelo de desgaste, que aquí se mide consumo y no balance de batería, y que la POA
+  absoluta sale optimista por fila aislada. Un informe que no dice dónde deja de valer es peor que no
+  tenerlo.
+
+El diario del informe y el de pantalla salen de **la misma pieza** (`diarioRows`): dos montajes del
+mismo relato es como se acaba con una pantalla y un PDF que no coinciden.
+
 ## El cielo del día
 
 Tres fuentes: **pintar** la nubosidad con el ratón (tira de 288 bines de 5 min), **presets**
