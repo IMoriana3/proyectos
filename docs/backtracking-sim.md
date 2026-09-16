@@ -398,6 +398,57 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-16 · v1.67 · el accionamiento de cada planta ya estaba declarado, y la página miraba en otro sitio** —
+  Reportado en la revisión del 3D: *«El Burgo/Bagnarelli monofila — revisar todos»*. Revisándolos
+  apareció que el semipaso de fila, `filaZ`, **ya está declarado en casi todos los layouts**, y el
+  cargador sólo leía `geometria.bifila`, que lo traen tres. Cargar una bífila como monofila **divide el
+  GCR por dos** —el parámetro que manda en el backtracking— y quita el acople que obliga a las dos
+  filas de un motor a compartir θ.
+
+  El mismo número vive en hasta **tres sitios** según el layout: `geometria.filaZ` (El Burgo), la raíz
+  (Polvorín, Benante, Panbianco, Páramo, Catania) y `mesa.filaZ` (Fayón, y duplicado en los demás).
+  Ahora se leen los tres y no se inventa ninguno: sin declaración sigue siendo «no declarado». Que el
+  dato esté escrito tres veces es un defecto **de los datos**, y queda dicho sin tocarlo.
+
+  Careado contra el paso entre líneas que mide el propio cargador, **encaja en las nueve plantas**. Y
+  el cero de Páramo es un dato, no un hueco: su layout lo razona —*«filaZ = 0 porque el bloque es 1V
+  (una fila). Cuadra con la cartera: trk_mono 396, trk_bi 0»*—, así que la página pasa a decir
+  **MONOFILA DECLARADA** en vez de «no declarado».
+
+  **Medido, sin tocar un solo dato:**
+
+  ```
+  Fayón      14 → 28 filas · 12,00 → 6,00 m · GCR 0,199 → 0,397
+  Polvorín   39 → 78 filas ·  9,00 → 4,50 m · GCR 0,265 → 0,529
+  Benante    45 → 90 filas · 10,48 → 5,24 m · GCR 0,227 → 0,455
+  Panbianco  46 → 92 filas · 10,48 → 5,24 m · GCR 0,227 → 0,455
+  El Burgo y Páramo: NO se mueven
+  ```
+
+  **Y el accionamiento pasa a ser de cada SEGUIDOR**, no de la planta entera, porque una planta puede
+  llevar de los dos: la cartera cuenta Polvorín como 117 bifila + 2 monofila y su layout marca esos dos
+  por su nombre (`tp: "Mono 31+31"`, exactamente dos de 119). Un monofila da **una** fila en el eje y
+  **sin grupo**, que es justo lo que la física entiende por monofila: una fila que no está en ningún
+  grupo **es** su propia unidad de accionamiento.
+
+  **Quién queda fuera, y por qué — medido, no afirmado.** *Túnez* sale con **GCR 0,762**, el doble del
+  canónico: sus 19 seguidores van en dos bandas a 12,50 m desplazadas 6,25 m y el agrupador las junta
+  como una sola rejilla; y de paso, el código decía que Túnez es «instalación FIJA» y **es falso** —el
+  índice la da con `fija:false`, la cartera le cuenta 19 seguidores bifila y su layout documenta la
+  fija del norte **aparte**, fuera de la lista de seguidores—, otra afirmación a mano contra su fuente.
+  *Bagnarelli* carga **6 filas de 34** porque la agrupación va por la `x` del DWG y lleva el **eje a
+  23,7°**; proyectando perpendicular su paso sale 11,00 m clavado. *Catania* declara que «cada entrada
+  de `trackers` es UNA FILA (un tubo)»: ahí no se expande, se empareja. Las tres piden tocar el
+  **agrupador** y van aparte.
+
+  Banco nuevo en el navegador, por comportamiento: carga cada planta y exige el GCR que sale de su
+  `filaZ`, sus parejas de un motor y que ninguna fila se quede sin el suyo. El **caso mixto** no lo
+  ejercita ningún dato real —los dos monofila de Polvorín caen fuera de la sub-rejilla dominante, y la
+  propia página lo dice: «se simula la dominante (56 % de los seguidores)»—, así que va con un layout
+  **sintético**: una línea con bífilas y un monofila tiene que dar **tres** filas, la del monofila en el
+  eje y sin motor compartido. **17/17**, y **12 fallos de 17** desarmando sólo la lectura. Batería del
+  simulador: **211**.
+
 - **2026-09-16 · v1.66 · la mesa de espaldas al sol no lleva sombra roja, lleva «sin directa»** —
   Otro de los defectos de la revisión del 3D. Medido en el navegador con la escena real (San José,
   bifila quebrada, rótula 6°, 21-jun 07:20, mando manual a +45° con ψ = +78,3°, **AOI 123,3°**):
