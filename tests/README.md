@@ -197,7 +197,7 @@ disciplina vale lo que valga la puerta.
 
 ```bash
 python3 -m http.server 8099                # servir el repo (en otra terminal)
-bash tests/correr.sh                       # los 21 · 1.630 comprobaciones · ~17 min
+bash tests/correr.sh                       # los 22 · 1.643 comprobaciones · ~17 min
 bash tests/correr.sh viento                # solo los que casen con el patrón
 ```
 
@@ -247,6 +247,16 @@ mediría el reloj, que es el fallo que ya costó tres PR atascados con el pin de
 
 ### Los arneses, uno a uno (comprobaciones medidas el 2026-09-09)
 
+> **De dónde sale el 1.643, dicho porque este repo no transcribe números.** Son las **1.630**
+> de la corrida completa del 2026-09-09 más las **13** de `test_versiones_app.mjs`, medidas el
+> 2026-09-16 y en sus tres modos. Lo que **no** se hizo fue volver a medir los veintiún
+> anteriores JUNTOS: en el contenedor donde se añadió el arnés nuevo, los de navegador ni
+> arrancan —`playwright@1.62.1` pide el build `chromium-1234` y su descarga está bloqueada
+> allí—, así que publicaron 0 comprobaciones y el corredor los dio en rojo por el piso, que es
+> justo lo que debe hacer. O sea que **este total hereda cualquier deriva** que alguno de los
+> veintiún haya tenido desde el 9. La corrida de CI sí los mide todos; si su recuento no cuadra
+> con esta línea, manda CI y esta línea se corrige.
+
 ```bash
 npm install playwright                     # el navegador ya está en /opt/pw-browsers
 python3 -m http.server 8099                # servir el repo (en otra terminal)
@@ -272,4 +282,41 @@ node tests/test_ejecucion_traza.mjs        # 61 comprobaciones, la máquina de e
 node tests/test_layout.js                  # 201 comprobaciones, careo del generador de layout
 node tests/test_layout_ui.js               # 182 comprobaciones, el generador en Chromium
 node tests/test_zonas_mixto.js             # 106 comprobaciones, el reparto por zonas
+node tests/test_versiones_app.mjs          # 13 comprobaciones, la tarjeta contra la app (cruza repos)
 ```
+
+### La tarjeta contra la app, y por qué manda `main` y no Pages
+
+`test_versiones_app.mjs` cierra un hueco que **costó el mismo defecto dos veces el mismo día**.
+La versión de `backtracking.html` se quedó **dos versiones atrás** —`v1.61.0` con la v1.62 y la
+v1.63 ya dentro—, así que la etiqueta de la página y el **informe del emplazamiento que exporta
+el usuario** anunciaban una versión que el fichero ya no era. Se destapó de casualidad, al ir a
+subir la tarjeta. Y horas después la tarjeta de `overcast.html` iba a subir a `v1.24.0` con la
+app diciendo `v1.23.0`.
+
+Nadie podía cazarlo: **el Panel vive en este repo y las apps en otro**. Ningún banco de allí
+alcanza la tarjeta, y aquí no había nada que leyera la app.
+
+**El careo se hace contra el fichero en `main`, no contra la página publicada.** Pages va por
+detrás de `main` unos minutos después de cada merge, así que carear contra él pondría esto en
+rojo **justo al publicar** —el momento en que más se mira— por un retardo que no es un defecto.
+El retardo se informa por separado, que es donde vale algo: dice lo que el usuario está viendo
+ahora mismo. Un rojo falso recurrente se acaba ignorando, y un check que se ignora ya no es una
+puerta.
+
+**De dónde sale la app**, por orden: checkout hermano (gratis y sin red) y, si no está,
+`raw.githubusercontent` sobre `main`. Sin ninguno de los dos **no se aprueba en silencio**: la
+regla se ejercita igual sobre sus seis combinaciones y la salida declara que el careo no
+ocurrió — el patrón de `test_granizo_espejo.mjs`, por la misma razón. Y **el nombre de la
+comprobación lleva el modo**: en degradado dice «NO SE HA CAREADO (sin fuente)», porque la
+primera versión publicaba «OK la tarjeta dice lo mismo que la app» sin haber comparado nada, y
+leída por encima pasaba por careo hecho. Las dos rutas —hermano y red— se ejercitan con
+`CAREO_SIN_HERMANO=1` y `CAREO_SIN_RED=1`, para que la que corre en CI no se descubra rota el
+día que hace falta.
+
+**El hueco que queda, con su tamaño.** Solo se puede carear una app que declare su versión de
+forma legible por máquina, y hoy eso son **2 de las 20 tarjetas publicadas** — precisamente los
+dos simuladores, que es donde el defecto ocurrió. El arnés **imprime las otras 18 por su
+nombre** en cada tirada, con la versión que la tarjeta declara, para que la cobertura sea un
+dato a la vista y no una suposición. Cerrarlo del todo no es trabajo de aquí: pasa por que cada
+app publique su versión en un sitio fijo.
