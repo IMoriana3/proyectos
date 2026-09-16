@@ -101,6 +101,35 @@ async function esperaListo(pg) {
     return n;
   });
   check('el lienzo pinta mesas (píxeles verdes)', verdes > 300, verdes);
+
+  // ── EL PUNTO DE VISTA ES EL DEL MAPA ────────────────────────────────────────────────────
+  // La y de mundo es NORTE y la de pantalla crece hacia ABAJO: sin cambiar el signo, la
+  // planta salía ESPEJADA N-S respecto al mapa del Generador — «¿por qué el punto de vista
+  // no es el mismo?» (2026-09-16). Dos comprobaciones, porque la vista GIRA:
+  check('a giro 0, el norte queda ARRIBA en el lienzo', await page.evaluate(() => {
+    VISTA.ang = 0;
+    const n = pV([TR.cx, TR.cy + 50]), s = pV([TR.cx, TR.cy - 50]);
+    return n[1] < s[1];
+  }), 'el norte cae por debajo del sur: espejo N-S');
+  // y girada NO se vuelve espejo: la quiralidad este×norte se conserva con cualquier ángulo
+  // (una rotación honesta la mantiene; un espejo la invierte — es lo que distingue «lo veo
+  // girado» de «lo veo del revés», que fue el parte)
+  check('girar la vista no la convierte en espejo (quiralidad este×norte)', await page.evaluate(() => {
+    VISTA.ang = 1.1;
+    const o = pV([TR.cx, TR.cy]), e = pV([TR.cx + 50, TR.cy]), n = pV([TR.cx, TR.cy + 50]);
+    const cruz = (e[0] - o[0]) * (n[1] - o[1]) - (e[1] - o[1]) * (n[0] - o[0]);
+    VISTA.ang = 0;
+    return cruz < 0;
+  }), 'cruz ≥ 0: la vista está espejada');
+  // la brújula existe y se pinta: como la vista gira, el norte no es fijo en pantalla y sin
+  // flecha un giro casual se lee como este mismo bug
+  check('la brújula se pinta en el lienzo', await page.evaluate(() => {
+    VISTA.ang = 0; dibuja();
+    const c = document.getElementById('lienzo'), d = Math.min(devicePixelRatio || 1, 2);
+    const im = c.getContext('2d').getImageData(0, 0, Math.round(64 * d), Math.round(72 * d)).data;
+    let n = 0; for (let i = 0; i < im.length; i += 4) if (im[i] > 150 && im[i + 1] > 150 && im[i + 2] > 150) n++;
+    return n > 5;
+  }), 'sin píxeles claros en la esquina de la brújula');
   // y lo pintado SE VE: el velo de error está apagado de verdad (un display propio en CSS pisa
   // el atributo hidden, y ya nos tapó la página entera una vez mientras este banco miraba solo
   // el buffer del canvas — esto mira lo compuesto)
@@ -194,6 +223,15 @@ async function esperaListo(pg) {
     JSON.stringify({ mejor: ee.mejorEner, base: ee.baseEner }));
   const barraE = await pageE.evaluate(() => document.getElementById('barra').textContent);
   check('y la barra dice de quién es la parcela', barraE.includes('parcela del Generador') && barraE.includes('A'), barraE.slice(0, 90));
+  // con la parcela del USUARIO la vista es LA DEL MAPA: norte arriba, sin giro y sin
+  // tumbado («sigue girado», 2026-09-16 — la brújula no bastaba). El giro y el falso 3D
+  // quedan para los sites sintéticos, que no tienen mapa con el que carearse.
+  check('con encargo, la vista es la del mapa: plana, sin giro y a una escala', await pageE.evaluate(() => {
+    if (!VISTA.plano || VISTA.ang !== 0) return false;
+    const o = pV([TR.cx, TR.cy]), n = pV([TR.cx, TR.cy + 50]), e = pV([TR.cx + 50, TR.cy]);
+    const v = o[1] - n[1], h = e[0] - o[0];        // 50 m en pantalla, por eje
+    return v > 0 && Math.abs(v - h) < 1e-6;        // norte arriba y MISMA escala que el este
+  }), 'la vista del encargo sigue girada o tumbada');
   // con el eje torcido, la mejora EXISTE y hay que encontrarla
   check('con el eje torcido, el buscador SI encuentra algo mejor que la base',
     ee.mejorEner > ee.baseEner * 1.0005, JSON.stringify({ mejor: ee.mejorEner, base: ee.baseEner }));

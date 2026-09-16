@@ -241,7 +241,13 @@ function nuevoSite(mismaParcela){
   OPC=0;MEJOR=null;BASE_REF=null;ULTIMO=null;KWS=[];GAPS=[];DESDE=0;NUBE=[];SERIE=[];
   OFF=[0,0];   // el origen UTM del dibujo es DE CADA PARCELA: sin esto, tras cambiar de site las mesas salían corridas si conducía PASO()
   HIST={giro:new Array(15).fill(null),vial:new Map()};
-  VISTA.ang=(SITE*.7)%(2*Math.PI);
+  /* Con la parcela del USUARIO (encargo o layout real) la vista es LA DEL
+     MAPA: norte arriba, sin giro y sin tumbado — dos partes seguidos de «no
+     es el mismo punto de vista» (2026-09-16). El giro lento y el falso 3D
+     del vídeo quedan para los sites sintéticos, que no tienen mapa con el
+     que carearse. */
+  VISTA.plano=!!(ENCARGO||REAL);
+  VISTA.ang=VISTA.plano?0:(SITE*.7)%(2*Math.PI);
   encuadra();
 }
 
@@ -318,7 +324,14 @@ function pV(p){ // metros → pantalla, con vista girada y tumbada
   const a=VISTA.ang,c=Math.cos(a),s=Math.sin(a);
   const x=(p[0]-TR.cx)*c-(p[1]-TR.cy)*s,y=(p[0]-TR.cx)*s+(p[1]-TR.cy)*c;
   const escala=Math.min((innerWidth-340)/(TR.ancho*1.35),innerHeight/(TR.alto*1.9))||1;
-  return [innerWidth/2-130+x*escala,innerHeight/2+y*escala*.55-y*0.0002*escala*escala];
+  /* la y de mundo es NORTE (metros) y la de pantalla crece hacia ABAJO: sin
+     cambiarle el signo la planta sale ESPEJADA N-S respecto al mapa del
+     Generador («¿por qué el punto de vista no es el mismo?», 2026-09-16) */
+  const sy=-y;
+  /* en vista plana (parcela del usuario) no hay tumbado ni perspectiva:
+     planta pura, como el mapa */
+  const t=VISTA.plano?1:.55, k=VISTA.plano?0:0.0002;
+  return [innerWidth/2-130+x*escala,innerHeight/2+sy*escala*t-sy*k*escala*escala];
 }
 function traza(pts,cerrar){CX.beginPath();pts.forEach((p,i)=>{const q=pV(p);i?CX.lineTo(q[0],q[1]):CX.moveTo(q[0],q[1]);});if(cerrar)CX.closePath();}
 
@@ -339,6 +352,23 @@ function dibuja(){
     CX.lineWidth=f>=1?1.1:1.4;CX.stroke();});
   (u.r.descartadas||[]).forEach(st=>{if(!st.utm)return;const p=st.utm.map(loc);
     traza(p,true);CX.strokeStyle="rgba(239,95,107,"+(0.55+0.35*Math.sin(t))+")";CX.lineWidth=2;CX.stroke();});
+  brujula();
+}
+/* Brújula: la vista GIRA despacio, así que el norte no es fijo en pantalla.
+   La flecha se deriva de la MISMA proyección que pinta la planta (pV), no de
+   VISTA.ang aparte: si alguien toca la proyección, la brújula lo cuenta. */
+function brujula(){
+  const c0=pV([TR.cx,TR.cy]),c1=pV([TR.cx,TR.cy+10]);
+  let dx=c1[0]-c0[0],dy=c1[1]-c0[1];const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
+  const bx=30,by=40,R=15;
+  CX.strokeStyle="rgba(231,238,244,.55)";CX.lineWidth=1.2;
+  CX.beginPath();CX.moveTo(bx-dx*R,by-dy*R);CX.lineTo(bx+dx*R,by+dy*R);CX.stroke();
+  CX.beginPath();
+  CX.moveTo(bx+dx*R,by+dy*R);CX.lineTo(bx+dx*R-dx*5+dy*3.2,by+dy*R-dy*5-dx*3.2);
+  CX.moveTo(bx+dx*R,by+dy*R);CX.lineTo(bx+dx*R-dx*5-dy*3.2,by+dy*R-dy*5+dx*3.2);
+  CX.stroke();
+  CX.fillStyle="rgba(231,238,244,.8)";CX.font="600 10px "+getComputedStyle(document.body).getPropertyValue("--mono");
+  CX.fillText("N",bx+dx*(R+9)-3,by+dy*(R+9)+3.5);
 }
 /* structures.utm viene en UTM absolutas; el origen local se mide una vez por site */
 let OFF=[0,0];
@@ -441,7 +471,7 @@ function vuelta(now){
     if(ULTIMO&&!OFF[0])mideOff(ULTIMO.r);
     if(!QUIETO&&!ENCARGO&&now-ultAvance>12000){REAL=null;nuevoSite();ultAvance=now;}
   }
-  VISTA.ang+=.0009;
+  if(!VISTA.plano)VISTA.ang+=.0009;
   if(LAY&&PARCELA){dibuja();if(now-ultPanel>230){panel();barra();ultPanel=now;}}
   requestAnimationFrame(vuelta);
 }
