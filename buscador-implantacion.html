@@ -241,7 +241,13 @@ function nuevoSite(mismaParcela){
   OPC=0;MEJOR=null;BASE_REF=null;ULTIMO=null;KWS=[];GAPS=[];DESDE=0;NUBE=[];SERIE=[];
   OFF=[0,0];   // el origen UTM del dibujo es DE CADA PARCELA: sin esto, tras cambiar de site las mesas salían corridas si conducía PASO()
   HIST={giro:new Array(15).fill(null),vial:new Map()};
-  VISTA.ang=(SITE*.7)%(2*Math.PI);
+  /* Con la parcela del USUARIO (encargo o layout real) la vista es LA DEL
+     MAPA: norte arriba, sin giro y sin tumbado — dos partes seguidos de «no
+     es el mismo punto de vista» (2026-09-16). El giro lento y el falso 3D
+     del vídeo quedan para los sites sintéticos, que no tienen mapa con el
+     que carearse. */
+  VISTA.plano=!!(ENCARGO||REAL);
+  VISTA.ang=VISTA.plano?0:(SITE*.7)%(2*Math.PI);
   encuadra();
 }
 
@@ -322,7 +328,10 @@ function pV(p){ // metros → pantalla, con vista girada y tumbada
      cambiarle el signo la planta sale ESPEJADA N-S respecto al mapa del
      Generador («¿por qué el punto de vista no es el mismo?», 2026-09-16) */
   const sy=-y;
-  return [innerWidth/2-130+x*escala,innerHeight/2+sy*escala*.55-sy*0.0002*escala*escala];
+  /* en vista plana (parcela del usuario) no hay tumbado ni perspectiva:
+     planta pura, como el mapa */
+  const t=VISTA.plano?1:.55, k=VISTA.plano?0:0.0002;
+  return [innerWidth/2-130+x*escala,innerHeight/2+sy*escala*t-sy*k*escala*escala];
 }
 function traza(pts,cerrar){CX.beginPath();pts.forEach((p,i)=>{const q=pV(p);i?CX.lineTo(q[0],q[1]):CX.moveTo(q[0],q[1]);});if(cerrar)CX.closePath();}
 
@@ -462,7 +471,7 @@ function vuelta(now){
     if(ULTIMO&&!OFF[0])mideOff(ULTIMO.r);
     if(!QUIETO&&!ENCARGO&&now-ultAvance>12000){REAL=null;nuevoSite();ultAvance=now;}
   }
-  VISTA.ang+=.0009;
+  if(!VISTA.plano)VISTA.ang+=.0009;
   if(LAY&&PARCELA){dibuja();if(now-ultPanel>230){panel();barra();ultPanel=now;}}
   requestAnimationFrame(vuelta);
 }

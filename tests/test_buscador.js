@@ -223,6 +223,15 @@ async function esperaListo(pg) {
     JSON.stringify({ mejor: ee.mejorEner, base: ee.baseEner }));
   const barraE = await pageE.evaluate(() => document.getElementById('barra').textContent);
   check('y la barra dice de quién es la parcela', barraE.includes('parcela del Generador') && barraE.includes('A'), barraE.slice(0, 90));
+  // con la parcela del USUARIO la vista es LA DEL MAPA: norte arriba, sin giro y sin
+  // tumbado («sigue girado», 2026-09-16 — la brújula no bastaba). El giro y el falso 3D
+  // quedan para los sites sintéticos, que no tienen mapa con el que carearse.
+  check('con encargo, la vista es la del mapa: plana, sin giro y a una escala', await pageE.evaluate(() => {
+    if (!VISTA.plano || VISTA.ang !== 0) return false;
+    const o = pV([TR.cx, TR.cy]), n = pV([TR.cx, TR.cy + 50]), e = pV([TR.cx + 50, TR.cy]);
+    const v = o[1] - n[1], h = e[0] - o[0];        // 50 m en pantalla, por eje
+    return v > 0 && Math.abs(v - h) < 1e-6;        // norte arriba y MISMA escala que el este
+  }), 'la vista del encargo sigue girada o tumbada');
   // con el eje torcido, la mejora EXISTE y hay que encontrarla
   check('con el eje torcido, el buscador SI encuentra algo mejor que la base',
     ee.mejorEner > ee.baseEner * 1.0005, JSON.stringify({ mejor: ee.mejorEner, base: ee.baseEner }));
