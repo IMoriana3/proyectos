@@ -398,6 +398,43 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-16 · v1.66 · la mesa de espaldas al sol no lleva sombra roja, lleva «sin directa»** —
+  Otro de los defectos de la revisión del 3D. Medido en el navegador con la escena real (San José,
+  bifila quebrada, rótula 6°, 21-jun 07:20, mando manual a +45° con ψ = +78,3°, **AOI 123,3°**):
+
+  ```
+  sombra %  : 45,2   0    0   45,2  45,2   0    0    0
+  POA fila  : 33,7 33,7 33,7 33,7 33,7 33,7 33,7 33,7    ← las OCHO, iguales
+  ```
+
+  La página publicaba **45,2 % de sombra** en tres filas y la POA de fila era **la misma en las
+  ocho**, sombreadas y sin sombrear. Con el haz entrando por detrás no hay directa que sombrear: ese
+  rojo **no cuesta un vatio**.
+
+  **El arreglo no es quitar el rojo.** El rojo *parcial* dice algo peor que «de más»: dice que el
+  resto de la mesa **sí** está produciendo con haz, y es falso —la cara no recibe directa en **ningún**
+  punto—. Así que se marca la mesa **entera**, con color propio (gris azulado; el rojo es sombra de un
+  vecino) y el HUD diciendo su AOI. **Marcar, no esconder**, que es la regla de la casa. Y la marca ya
+  no depende de que alguien sombree: una mesa de espaldas está sin directa aunque no la tape nadie.
+
+  **El alcance, medido antes de tocar.** Barrido de un día, tres terrenos, ocho políticas: de **1.739
+  filas con sombra publicada, CERO** tienen la cara de espaldas. El rango legítimo de cada unidad ya
+  cierra ese vicio —está escrito en su comentario, con sus números, desde la v1.57.1—. El defecto vive
+  sólo en el **mando manual**, que es capa de vista, y es exactamente donde se reportó.
+
+  **Y el defecto de siempre, otra vez.** La fórmula del AOI estaba escrita **tres veces**: el rango
+  legítimo, la escena y la tarjeta «Filas sacrificadas». Tres copias que podían desalinearse sin que
+  nada lo cazara. Ahora hay **una** función y las tres cuelgan de ella; la conversión al marco local de
+  la mesa también se saca aparte, para que la marca use la misma que la silueta roja.
+
+  Banco nuevo en el navegador, y **busca su testigo** en vez de clavarlo a una hora y un ángulo —un
+  caso fijo se rompe en cuanto la sección anterior deja la escena en otro sitio, sin que el defecto
+  haya vuelto—. Exige las dos mitades: de espaldas, cero silueta roja, marca presente y el HUD
+  diciéndolo; de cara y con sombra de verdad, el rojo **sigue** —el arreglo no puede servir para callar
+  sombra que sí cuesta—. Careado en rojo desarmando sólo la decisión de la escena: **79 mallas rojas**
+  sobre una mesa a AOI 120,5° con 78,4 % de sombra publicada. Después, **20/20**. Batería del
+  simulador: **211**.
+
 - **2026-09-16 · v1.65 · el mando manual no puede pedir un ángulo que el actuador no da** —
   Reportado en la revisión del 3D, junto a las demás: *«límite de giro ±55°»* y el mando manual
   marcando **−56°**. La física estaba **bien** —`sceneInstant` recorta a `mx` antes de tocar nada, y
