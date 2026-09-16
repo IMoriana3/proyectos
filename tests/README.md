@@ -197,7 +197,7 @@ disciplina vale lo que valga la puerta.
 
 ```bash
 python3 -m http.server 8099                # servir el repo (en otra terminal)
-bash tests/correr.sh                       # los 40 · 2.308 comprobaciones · ~8 min en el runner
+bash tests/correr.sh                       # los 40 · 2.296 comprobaciones · ~12 min en el runner
 bash tests/correr.sh viento                # solo los que casen con el patrón
 ```
 
@@ -247,17 +247,24 @@ mediría el reloj, que es el fallo que ya costó tres PR atascados con el pin de
 
 ### Los arneses, uno a uno (comprobaciones medidas el 2026-09-09)
 
-> **De dónde sale el 2.308, y una corrección.** Estos números salen de la **corrida de CI del
-> 2026-09-16** (run 35115559513): 39 arneses verdes con 2.295 comprobaciones leídas, más las
-> **13** de `test_versiones_app.mjs`, que en esa tirada salió rojo publicando 12.
+> **De dónde sale el 2.296, y tres números equivocados por el camino.** Estos salen de la
+> **corrida de CI del 2026-09-16** (run 35116763627), la primera con los 40 arneses en verde:
+> `40 arneses verdes · 2296 comprobaciones leídas`, medidos en 12 min de runner.
 >
-> La línea anterior decía **«los 21 · 1.630»** y era de la corrida del 2026-09-09. Estaba muy
-> vieja: la suite había pasado de 21 arneses a 40 y de 1.630 comprobaciones a 2.308 sin que
-> esta línea se enterara. Se escribió primero **«22 · 1.643»** —las 1.630 de entonces más las
-> 13 nuevas— con el aviso de que el total heredaba cualquier deriva y que mandaba CI; CI lo
-> desmintió en la siguiente tirada y la línea se corrigió con su recuento. Queda dicho porque
-> es el mismo fallo que vigila `test_versiones_app.mjs`, aquí en la documentación: **un número
-> transcrito envejece en silencio**. Si CI vuelve a no cuadrar con esta línea, manda CI.
+> Los tres intentos anteriores, porque el recorrido es el aviso:
+>
+> 1. **«los 21 · 1.630»**, de la corrida del 2026-09-09. La suite había pasado a 40 arneses sin
+>    que esta línea se enterara: casi el doble, y nadie lo vio.
+> 2. **«22 · 1.643»** — las 1.630 de entonces más las 13 del arnés nuevo. Aritmética sobre un
+>    número viejo. Iba con el aviso de que heredaba cualquier deriva y que mandaba CI.
+> 3. **«40 · 2.308»** — las 2.295 que leyó la tirada del run 35115559513 más 13. También
+>    aritmética: en esa tirada el arnés nuevo salió **rojo publicando 12**, así que el total
+>    verde no era 2.295 + 13. Lo desmintió la primera tirada que corrió entera en verde.
+>
+> Tres veces el mismo fallo, y es **el que vigila `test_versiones_app.mjs`**, aquí en la
+> documentación: **un número transcrito —o calculado sobre uno transcrito— envejece en
+> silencio**. Este sale de una tirada completa y verde, que es la única que puede darlo. Si CI
+> vuelve a no cuadrar con esta línea, **manda CI**.
 
 ```bash
 npm install playwright                     # el navegador ya está en /opt/pw-browsers
