@@ -398,6 +398,49 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-16 · v1.62 · la escena recorre la trayectoria, no la improvisa — el slew que no se respetaba** —
+  Reportado con capturas: **21:14 θ 34,9° → 21:15 θ 55,0°**. Son 20,1° en un minuto y con 0,17 °/s el
+  motor da 10,2°. El render enseñaba la planta moviéndose al doble de lo que puede. Medido antes de
+  tocar nada, sobre un día completo (1.050 minutos, 8 filas, pendiente 8°): **pairwise** salto máximo
+  10,20° y **cero** violaciones; **óptimo libre** salto máximo **77,68°** y **catorce** violaciones —
+  siete veces y media el motor.
+
+  La causa tenía **dos capas**, y la segunda no la esperaba. La primera: `consignaEscena` calculaba
+  cada minuto intermedio desde la muestra de la malla con un `dt` que **crece** —60, 120, 180 s…—, así
+  que la serie no era una trayectoria sino *«dónde estarías si salieras de la muestra y anduvieras N
+  minutos»*; si la consigna cambia entre dos minutos, los dos saltos no se encadenan. La firma del
+  defecto eran saltos de **20,40°, justo 2×10,2**, entre dos minutos **intermedios seguidos**, no sólo
+  en la frontera con la malla. Al integrar minuto a minuto quedaban siete violaciones, todas en la
+  frontera, y con ellas la raíz: **el lazo del día corre a paso de `STEP_MIN`**, y un solo paso de
+  300 s autoriza **51° de golpe**. Esos 51° son legítimos en cinco minutos, pero el reloj avanza de
+  **minuto** en minuto y los enseñaba en uno. Medido: la escena integrada llegaba a separarse **67,48°**
+  de la curva publicada. La escena no era el defecto: era el **revelador**.
+
+  Ahora la escena **interpola entre las dos muestras que rodean al minuto**. `slewLimit` mueve a
+  velocidad constante, así que la interpolación *es* la trayectoria cuando el motor satura y es
+  conservadora cuando llega antes al objetivo; en los dos casos ningún par de minutos consecutivos se
+  separa más de `|Δmuestra|/STEP_MIN ≤ SLEW·60`. No recalcula política: lee lo que `computeDay` ya
+  publicó. Después: pairwise 4,37° y óptimo libre **10,20°**, cero violaciones, y **separación de la
+  curva del día 0°** — no cambia ni un número.
+
+  **Un criterio que cambia, y se dice**: la escena ya **no recalcula la política** en el minuto exacto.
+  La consigna se manda cada `STEP_MIN` y entre mandos el tracker se mueve hacia la vigente — interpolar
+  es lo que la planta **hace**; recalcular simulaba un mando minutal que la simulación del día no
+  asume, y de ahí salían los 67°.
+
+  La **física no se toca**: el hash de `FÍSICA PURA` sigue siendo `ab68121c521a`, idéntico al de v1.61,
+  porque el arreglo vive entero en la capa de aplicación. Las anclas se comprobaron igualmente y están
+  todas en su sitio, **BT con pendiente 42,08°** incluida — la que faltaba por verificar desde v1.61 y
+  que fallaba por la sonda, no por el código: no pulsaba «Aplicar preset».
+
+  Y una **deuda pagada**: el banco de v1.59 se rompió **por tercera vez** por estar pinchado a *nombres*
+  de función (exigía `m%STEP_MIN===0`, `policyAngles(` y `lazoControl(` en el texto) sin que el producto
+  tuviera nada malo — v1.61 ya lo había reescrito por lo mismo. Ahora se comprueba por **comportamiento**:
+  el minuto intermedio no puede quedarse pegado a la muestra y tiene que caer entre sus dos muestras. La
+  exigencia por nombre se retira, y lo que protegía lo cubre un banco nuevo que **mide** la velocidad en
+  vez de leerla: recorre un día de minutos sobre muestras sintéticas con saltos de 50° y exige que
+  ningún par consecutivo pase de `SLEW·60`. Batería: 205 comprobaciones en verde.
+
 - **2026-09-13 · v1.61 · el lazo entero, y por qué subir la banda muerta «mejoraba» la sombra** —
   El core tiene un lazo de control canónico con **dos** mitades —banda muerta y velocidad— y este
   simulador implementaba sólo la segunda: `computeDay` decía *«lo que la planta HACE: la consigna
