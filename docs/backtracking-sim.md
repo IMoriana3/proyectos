@@ -398,7 +398,7 @@ de los FPS).
 
 ## Historial
 
-- **2026-09-16 · v1.64 · el certificado deja de llamar «mejor» a lo que no lo es, las coordenadas se piden a su fuente, y el número de versión vuelve a decir la verdad** —
+- **2026-09-16 · v1.64 · el certificado deja de llamar «mejor» a lo que no lo es y de escribir ceros que no lo son, las coordenadas se piden a su fuente, y el número de versión vuelve a decir la verdad** —
   Tres cosas, y las tres son el mismo vicio: **una pieza afirmando más de lo que sostiene**.
 
   **El certificado.** Con EMPATADO en la cabecera, anunciaba debajo «Hay una consigna mejor» con la
@@ -440,11 +440,31 @@ de los FPS).
   costaba **−2,55 %** de producción del día y en el peor caso tiraba el **67 %** de la planta (450,1 →
   148,7 W/m²) para llevar una fila del 4,5 % al 0,1 %; el vicio de pagar la promesa apagando la luz, y
   encima sin cumplirla. El segundo —cero estricto— **no cambia nada**: con tolerancia de cero real no
-  existe ninguna postura adicional sin sombra en el conjunto que mira la política. De ahí sale el
-  hallazgo que sí vale: el certificado **sí** encuentra posturas de 0,0 % porque busca en un conjunto
-  mucho más ancho —todo el factible a 0,1° y cada unidad movida sola ±4°— mientras la reparación sólo
-  prueba θ uniforme y su descenso. **La postura existe; la política no la busca donde está.** El
-  arreglo no es el criterio sino el conjunto de candidatos, y queda pendiente.
+  existe ninguna postura adicional sin sombra en el conjunto que mira la política.
+
+  **Y la conclusión que saqué de ahí era falsa, así que se cuenta entera.** Escribí que el certificado
+  *sí* encontraba posturas de 0,0 % porque busca en un conjunto mucho más ancho —todo el factible a
+  0,1° y cada unidad movida sola ±4°— y que por tanto *«la postura existe y la política no la busca
+  donde está»*. Fui a buscarla para arreglar el conjunto de candidatos. **No está.** Medido sobre 344
+  instantes, 104 con sombra publicada: llegan a cero moviendo **una** unidad sola —lo que barre el
+  probador— **0**; moviendo **varias** a la vez, **0**; sombra irreducible, **104, el 100 %**. No había
+  ninguna postura sin sombra que encontrar.
+
+  Lo que había era un **redondeo**. El certificado escribía *«la postura MENOS sombreada del factible
+  deja **0.0 %** de sombra»* con `toFixed(1)`, y un **0,04 %** se imprime «0.0 %». La postura sin
+  sombra no la encontraba el probador: la **inventaba el formato**, y sobre ese cero falso construí
+  una tarde de investigación persiguiendo algo que no existe. Es **la misma familia** que el «0.0 pp
+  menos de sombra · **-0.0** W/m²» de más arriba, en el mismo panel y arreglado el mismo día: un número
+  redondeado afirmando más de lo que es. Ahora los cinco porcentajes de sombra del certificado y la
+  diferencia de sombra del canje pasan por un formateador único que **nunca escribe como cero un valor
+  que no lo es**: por debajo de la banda dice «<0,05», y el cero de verdad se escribe 0. Banco nuevo
+  por comportamiento —coge el formateador que usa la pintura y exige la propiedad, y prohíbe que ningún
+  porcentaje de sombra vuelva a redondearse a mano en el certificado—. Batería: **210 comprobaciones**.
+
+  Queda en pie, y sin resolver, la pregunta de verdad: en esos 104 instantes la sombra es irreducible
+  dentro del factible, así que *«los que eliminan sombras no deben tener sombras»* **no se puede
+  cumplir** ahí moviendo la planta. Lo que se puede exigir es que se **diga** —y el certificado ya lo
+  dice, ahora con el número correcto— en vez de fabricar un cero.
 
 - **2026-09-16 · v1.62 · la escena recorre la trayectoria, no la improvisa — el slew que no se respetaba** —
   Reportado con capturas: **21:14 θ 34,9° → 21:15 θ 55,0°**. Son 20,1° en un minuto y con 0,17 °/s el
