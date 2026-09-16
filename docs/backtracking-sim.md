@@ -398,6 +398,54 @@ de los FPS).
 
 ## Historial
 
+- **2026-09-16 · v1.64 · el certificado deja de llamar «mejor» a lo que no lo es, las coordenadas se piden a su fuente, y el número de versión vuelve a decir la verdad** —
+  Tres cosas, y las tres son el mismo vicio: **una pieza afirmando más de lo que sostiene**.
+
+  **El certificado.** Con EMPATADO en la cabecera, anunciaba debajo «Hay una consigna mejor» con la
+  **misma sombra** (98,3 %) y **menos POA** (11,2 frente a 11,3), y el margen se delataba solo: *«0.0 pp
+  menos de sombra · **-0.0** W/m² de energía»* — un signo menos detrás de la palabra mejor. Dos causas:
+  la sección se pintaba **siempre** que el probador devolviera un candidato, sin mirar el veredicto; y
+  ese candidato se elige por **sombra**, no por dominancia, así que puede tener menos sombra *y menos
+  energía*, que es un **canje** y no una mejora. Ahora el rótulo sale de comparar los dos ejes contra
+  sus bandas —`E_EMPATE_W`, la del propio probador, y 0,05 pp, la resolución con la que se escribe la
+  sombra—: **mejor** sólo si gana en uno sin perder en el otro, **CANJE** si gana en uno y pierde en el
+  otro, **equivalente** dentro de las bandas. Y los márgenes que redondeaban a un «0.0» limpio se
+  escriben como «menos de ±0,05», que es lo que son.
+
+  **Las coordenadas.** *«¿Por qué no me coge las coordenadas de algunos proyectos?»* La página llevaba
+  una tabla **a mano con cinco plantas** mientras `plantas_indice.json` declara en su cabecera ser *«la
+  FUENTE del huso, del código de cartera y de las coordenadas: quien las necesite las pide de aquí»*.
+  De sus 12 plantas, **siete** no estaban —bagnarelli, benante, catania, dicayagua, panbianco,
+  **páramo** y polvorín— y al elegirlas no pasaba **nada, en silencio**: se quedaban las coordenadas de
+  la planta **anterior**, así que el HUD decía Páramo y el cálculo iba en El Burgo. Y de las cinco que
+  sí estaban, **Túnez estaba mal por unos 3 km**. Una copia no sólo incompleta: **desfasada**, que es lo
+  que le pasa a las copias. Ahora se lee el índice, y sin coordenadas **no se tocan** lat/lon y **se
+  dice**: *«lo que se calcule ahora NO es esta planta»*.
+
+  **El número de versión.** `VER` llevaba congelado en **v1.61.0** con cuatro merges por encima (#669
+  Páramo, #670, #671 las sombras, #672 la casilla del lazo) mientras el historial iba ya por v1.63. Se
+  nota fuera: las capturas venían rotuladas v1.61.0 cuando ya tenían cambios más nuevos, y eso hace
+  perder tiempo al diagnosticar sobre qué versión se está mirando. Puesto en **v1.64.0**, alineado con
+  lo ya publicado.
+
+  Dos bancos nuevos, por comportamiento. El del certificado prueba el caso reportado, los dos canjes,
+  las tres formas de mejora y los dos lados de la banda; la decisión vive aparte de la pintura para
+  poder probarla sin levantar el probador —1.700 candidatos por instante, y barrerlo costó más de 40
+  minutos para 34 instantes—. El de las coordenadas **prohíbe la copia**: falla si aparecen
+  coordenadas de cualquier planta del índice escritas a mano. Batería: **209 comprobaciones**.
+
+  **Lo que se midió y se descartó, que también es resultado.** Sobre la regla *«los que eliminan
+  sombras no deben tener sombras»* se probaron dos criterios. El primero —mínima sombra siempre— se
+  descartó con sus números: no ganaba **ni un** instante de sombra cero (242 de 344, los mismos),
+  costaba **−2,55 %** de producción del día y en el peor caso tiraba el **67 %** de la planta (450,1 →
+  148,7 W/m²) para llevar una fila del 4,5 % al 0,1 %; el vicio de pagar la promesa apagando la luz, y
+  encima sin cumplirla. El segundo —cero estricto— **no cambia nada**: con tolerancia de cero real no
+  existe ninguna postura adicional sin sombra en el conjunto que mira la política. De ahí sale el
+  hallazgo que sí vale: el certificado **sí** encuentra posturas de 0,0 % porque busca en un conjunto
+  mucho más ancho —todo el factible a 0,1° y cada unidad movida sola ±4°— mientras la reparación sólo
+  prueba θ uniforme y su descenso. **La postura existe; la política no la busca donde está.** El
+  arreglo no es el criterio sino el conjunto de candidatos, y queda pendiente.
+
 - **2026-09-16 · v1.62 · la escena recorre la trayectoria, no la improvisa — el slew que no se respetaba** —
   Reportado con capturas: **21:14 θ 34,9° → 21:15 θ 55,0°**. Son 20,1° en un minuto y con 0,17 °/s el
   motor da 10,2°. El render enseñaba la planta moviéndose al doble de lo que puede. Medido antes de
