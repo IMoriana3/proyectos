@@ -179,6 +179,19 @@ declare -A PISO=(
   # refracción anulada. Este banco los mata 4, 5 y 3.
   [test_solar.js]=73
   [test_sizing.js]=115
+  # 13, y MEDIDO en los TRES modos —con checkout hermano, por `main` sobre
+  # HTTPS y sin ninguno de los dos— porque el recuento no cambia entre ellos:
+  # en degradado no desaparecen comprobaciones, cambia lo que dice la etiqueta.
+  # Eso es a propósito. Si el modo degradado publicara menos, el piso tendría
+  # que bajarse al peor caso y entonces dejaría de vigilar el bueno.
+  #
+  # Nace de un defecto que ocurrió DOS VECES y que nadie podía cazar: la
+  # versión de `backtracking.html` se quedó dos versiones atrás y el informe
+  # que exporta el usuario salía firmado con una que ya no era; y el mismo día,
+  # la tarjeta de `overcast.html` iba a subir a v1.24.0 con la app en v1.23.0.
+  # El Panel vive aquí y las apps en otro repo, así que ningún banco de allí
+  # puede carear la tarjeta y aquí no había nada que leyera la app.
+  [test_versiones_app.mjs]=13
   # Nace de un hueco MEDIDO: con el `hold` de la histéresis puesto a cero en
   # la llamada real, los diez arneses que abren la ficha —539 comprobaciones—
   # se quedaron verdes. La histéresis se podía borrar y el repo no lo notaba.
