@@ -318,7 +318,11 @@ function pV(p){ // metros → pantalla, con vista girada y tumbada
   const a=VISTA.ang,c=Math.cos(a),s=Math.sin(a);
   const x=(p[0]-TR.cx)*c-(p[1]-TR.cy)*s,y=(p[0]-TR.cx)*s+(p[1]-TR.cy)*c;
   const escala=Math.min((innerWidth-340)/(TR.ancho*1.35),innerHeight/(TR.alto*1.9))||1;
-  return [innerWidth/2-130+x*escala,innerHeight/2+y*escala*.55-y*0.0002*escala*escala];
+  /* la y de mundo es NORTE (metros) y la de pantalla crece hacia ABAJO: sin
+     cambiarle el signo la planta sale ESPEJADA N-S respecto al mapa del
+     Generador («¿por qué el punto de vista no es el mismo?», 2026-09-16) */
+  const sy=-y;
+  return [innerWidth/2-130+x*escala,innerHeight/2+sy*escala*.55-sy*0.0002*escala*escala];
 }
 function traza(pts,cerrar){CX.beginPath();pts.forEach((p,i)=>{const q=pV(p);i?CX.lineTo(q[0],q[1]):CX.moveTo(q[0],q[1]);});if(cerrar)CX.closePath();}
 
@@ -339,6 +343,23 @@ function dibuja(){
     CX.lineWidth=f>=1?1.1:1.4;CX.stroke();});
   (u.r.descartadas||[]).forEach(st=>{if(!st.utm)return;const p=st.utm.map(loc);
     traza(p,true);CX.strokeStyle="rgba(239,95,107,"+(0.55+0.35*Math.sin(t))+")";CX.lineWidth=2;CX.stroke();});
+  brujula();
+}
+/* Brújula: la vista GIRA despacio, así que el norte no es fijo en pantalla.
+   La flecha se deriva de la MISMA proyección que pinta la planta (pV), no de
+   VISTA.ang aparte: si alguien toca la proyección, la brújula lo cuenta. */
+function brujula(){
+  const c0=pV([TR.cx,TR.cy]),c1=pV([TR.cx,TR.cy+10]);
+  let dx=c1[0]-c0[0],dy=c1[1]-c0[1];const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
+  const bx=30,by=40,R=15;
+  CX.strokeStyle="rgba(231,238,244,.55)";CX.lineWidth=1.2;
+  CX.beginPath();CX.moveTo(bx-dx*R,by-dy*R);CX.lineTo(bx+dx*R,by+dy*R);CX.stroke();
+  CX.beginPath();
+  CX.moveTo(bx+dx*R,by+dy*R);CX.lineTo(bx+dx*R-dx*5+dy*3.2,by+dy*R-dy*5-dx*3.2);
+  CX.moveTo(bx+dx*R,by+dy*R);CX.lineTo(bx+dx*R-dx*5-dy*3.2,by+dy*R-dy*5+dx*3.2);
+  CX.stroke();
+  CX.fillStyle="rgba(231,238,244,.8)";CX.font="600 10px "+getComputedStyle(document.body).getPropertyValue("--mono");
+  CX.fillText("N",bx+dx*(R+9)-3,by+dy*(R+9)+3.5);
 }
 /* structures.utm viene en UTM absolutas; el origen local se mide una vez por site */
 let OFF=[0,0];

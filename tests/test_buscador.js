@@ -101,6 +101,35 @@ async function esperaListo(pg) {
     return n;
   });
   check('el lienzo pinta mesas (píxeles verdes)', verdes > 300, verdes);
+
+  // ── EL PUNTO DE VISTA ES EL DEL MAPA ────────────────────────────────────────────────────
+  // La y de mundo es NORTE y la de pantalla crece hacia ABAJO: sin cambiar el signo, la
+  // planta salía ESPEJADA N-S respecto al mapa del Generador — «¿por qué el punto de vista
+  // no es el mismo?» (2026-09-16). Dos comprobaciones, porque la vista GIRA:
+  check('a giro 0, el norte queda ARRIBA en el lienzo', await page.evaluate(() => {
+    VISTA.ang = 0;
+    const n = pV([TR.cx, TR.cy + 50]), s = pV([TR.cx, TR.cy - 50]);
+    return n[1] < s[1];
+  }), 'el norte cae por debajo del sur: espejo N-S');
+  // y girada NO se vuelve espejo: la quiralidad este×norte se conserva con cualquier ángulo
+  // (una rotación honesta la mantiene; un espejo la invierte — es lo que distingue «lo veo
+  // girado» de «lo veo del revés», que fue el parte)
+  check('girar la vista no la convierte en espejo (quiralidad este×norte)', await page.evaluate(() => {
+    VISTA.ang = 1.1;
+    const o = pV([TR.cx, TR.cy]), e = pV([TR.cx + 50, TR.cy]), n = pV([TR.cx, TR.cy + 50]);
+    const cruz = (e[0] - o[0]) * (n[1] - o[1]) - (e[1] - o[1]) * (n[0] - o[0]);
+    VISTA.ang = 0;
+    return cruz < 0;
+  }), 'cruz ≥ 0: la vista está espejada');
+  // la brújula existe y se pinta: como la vista gira, el norte no es fijo en pantalla y sin
+  // flecha un giro casual se lee como este mismo bug
+  check('la brújula se pinta en el lienzo', await page.evaluate(() => {
+    VISTA.ang = 0; dibuja();
+    const c = document.getElementById('lienzo'), d = Math.min(devicePixelRatio || 1, 2);
+    const im = c.getContext('2d').getImageData(0, 0, Math.round(64 * d), Math.round(72 * d)).data;
+    let n = 0; for (let i = 0; i < im.length; i += 4) if (im[i] > 150 && im[i + 1] > 150 && im[i + 2] > 150) n++;
+    return n > 5;
+  }), 'sin píxeles claros en la esquina de la brújula');
   // y lo pintado SE VE: el velo de error está apagado de verdad (un display propio en CSS pisa
   // el atributo hidden, y ya nos tapó la página entera una vez mientras este banco miraba solo
   // el buffer del canvas — esto mira lo compuesto)
