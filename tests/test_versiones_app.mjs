@@ -18,14 +18,18 @@
 // no es un defecto. El retardo SE INFORMA aparte, que es donde vale algo:
 // dice lo que el usuario está viendo ahora mismo.
 //
-// DE DÓNDE SALE LA APP, por orden: checkout hermano (gratis y sin red), luego
-// `main` por HTTPS. Si no hay ninguno, NO se aprueba en silencio: la regla se
+// DE DÓNDE SALE LA APP, por orden: checkout hermano —leyendo su ref
+// `origin/main`, NO su árbol de trabajo— y luego `main` por HTTPS. Las dos
+// vías responden lo mismo porque las dos leen main; leer el disco del hermano
+// sería leer la rama que otro tenga puesta.
+// Si no hay ninguna, NO se aprueba en silencio: la regla se
 // ejercita igual sobre sus combinaciones y la salida DECLARA que el careo no
 // ocurrió — el patrón de `test_granizo_espejo.mjs`, por la misma razón.
 //
 //   node tests/test_versiones_app.mjs
 //   CAREO_SIN_RED=1 node tests/test_versiones_app.mjs   (solo hermano)
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -140,13 +144,31 @@ for (const c of CAREABLES) {
   const card = publicadas.find(p => p.url === c.url);
   const tarjeta = card ? card.version : null;
 
-  // el interruptor existe para poder EJERCITAR la vía de red en una máquina que
-  // tiene el hermano al lado: sin él, la ruta que de verdad corre en CI no se
-  // prueba nunca y se descubre rota el día que hace falta
-  const hermano = path.join(RAIZ, '..', c.repo, c.fichero);
+  /* DEL HERMANO SE LEE `origin/main`, NO SU ÁRBOL DE TRABAJO. La primera
+     versión leía el fichero del disco y eso NO es lo que este arnés dice
+     comparar: el árbol de trabajo es la rama que el desarrollador tenga
+     puesta. Lo cazó él mismo a los diez minutos de existir —rojo en local
+     («la tarjeta dice v1.64.0 y el fichero en main dice v1.63.0») con el
+     hermano en una rama vieja, mientras por red salía verde—, y el modo de
+     fallo peligroso es el contrario: una rama que ya lleva el bump daría
+     VERDE con main todavía sin él. Se lee la ref, como hace
+     `test_integridad.js` con `git show origin/main:index.html`.
+     El interruptor existe para poder EJERCITAR la vía de red en una máquina
+     que tiene el hermano al lado: sin él, la ruta que de verdad corre en CI
+     no se prueba nunca y se descubre rota el día que hace falta. */
+  const hermano = path.join(RAIZ, '..', c.repo);
   let enMain = null, via = null;
-  if (process.env.CAREO_SIN_HERMANO !== '1' && fs.existsSync(hermano)) {
-    enMain = verDe(fs.readFileSync(hermano, 'utf8')); via = 'checkout hermano'; conHermano++;
+  const delHermano = () => {
+    if (process.env.CAREO_SIN_HERMANO === '1') return null;
+    if (!fs.existsSync(path.join(hermano, '.git'))) return null;
+    try {
+      return execFileSync('git', ['-C', hermano, 'show', 'origin/main:' + c.fichero],
+                          { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    } catch { return null; }
+  };
+  const txtHermano = delHermano();
+  if (txtHermano !== null) {
+    enMain = verDe(txtHermano); via = 'hermano, ref origin/main'; conHermano++;
   } else {
     const txt = await bajar(`https://raw.githubusercontent.com/IMoriana3/${c.repo}/main/${c.fichero}`);
     if (txt !== null) { enMain = verDe(txt); via = 'main por HTTPS'; conRed++; }

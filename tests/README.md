@@ -197,7 +197,7 @@ disciplina vale lo que valga la puerta.
 
 ```bash
 python3 -m http.server 8099                # servir el repo (en otra terminal)
-bash tests/correr.sh                       # los 22 · 1.643 comprobaciones · ~17 min
+bash tests/correr.sh                       # los 40 · 2.308 comprobaciones · ~8 min en el runner
 bash tests/correr.sh viento                # solo los que casen con el patrón
 ```
 
@@ -247,15 +247,17 @@ mediría el reloj, que es el fallo que ya costó tres PR atascados con el pin de
 
 ### Los arneses, uno a uno (comprobaciones medidas el 2026-09-09)
 
-> **De dónde sale el 1.643, dicho porque este repo no transcribe números.** Son las **1.630**
-> de la corrida completa del 2026-09-09 más las **13** de `test_versiones_app.mjs`, medidas el
-> 2026-09-16 y en sus tres modos. Lo que **no** se hizo fue volver a medir los veintiún
-> anteriores JUNTOS: en el contenedor donde se añadió el arnés nuevo, los de navegador ni
-> arrancan —`playwright@1.62.1` pide el build `chromium-1234` y su descarga está bloqueada
-> allí—, así que publicaron 0 comprobaciones y el corredor los dio en rojo por el piso, que es
-> justo lo que debe hacer. O sea que **este total hereda cualquier deriva** que alguno de los
-> veintiún haya tenido desde el 9. La corrida de CI sí los mide todos; si su recuento no cuadra
-> con esta línea, manda CI y esta línea se corrige.
+> **De dónde sale el 2.308, y una corrección.** Estos números salen de la **corrida de CI del
+> 2026-09-16** (run 35115559513): 39 arneses verdes con 2.295 comprobaciones leídas, más las
+> **13** de `test_versiones_app.mjs`, que en esa tirada salió rojo publicando 12.
+>
+> La línea anterior decía **«los 21 · 1.630»** y era de la corrida del 2026-09-09. Estaba muy
+> vieja: la suite había pasado de 21 arneses a 40 y de 1.630 comprobaciones a 2.308 sin que
+> esta línea se enterara. Se escribió primero **«22 · 1.643»** —las 1.630 de entonces más las
+> 13 nuevas— con el aviso de que el total heredaba cualquier deriva y que mandaba CI; CI lo
+> desmintió en la siguiente tirada y la línea se corrigió con su recuento. Queda dicho porque
+> es el mismo fallo que vigila `test_versiones_app.mjs`, aquí en la documentación: **un número
+> transcrito envejece en silencio**. Si CI vuelve a no cuadrar con esta línea, manda CI.
 
 ```bash
 npm install playwright                     # el navegador ya está en /opt/pw-browsers
@@ -304,8 +306,12 @@ El retardo se informa por separado, que es donde vale algo: dice lo que el usuar
 ahora mismo. Un rojo falso recurrente se acaba ignorando, y un check que se ignora ya no es una
 puerta.
 
-**De dónde sale la app**, por orden: checkout hermano (gratis y sin red) y, si no está,
-`raw.githubusercontent` sobre `main`. Sin ninguno de los dos **no se aprueba en silencio**: la
+**De dónde sale la app**, por orden: checkout hermano —leyendo su ref **`origin/main`**, no su
+árbol de trabajo— y, si no está, `raw.githubusercontent` sobre `main`. Esa distinción no es
+teórica: la primera versión leía el fichero del disco y **el propio arnés se cazó a los diez
+minutos de existir**, con rojo en local (el hermano en una rama vieja) y verde por red. El modo
+de fallo peligroso es el contrario — una rama que ya lleva el bump daría **verde** con `main`
+todavía sin él. Se lee la ref, como hace `test_integridad.js` con `git show origin/main:index.html`. Sin ninguno de los dos **no se aprueba en silencio**: la
 regla se ejercita igual sobre sus seis combinaciones y la salida declara que el careo no
 ocurrió — el patrón de `test_granizo_espejo.mjs`, por la misma razón. Y **el nombre de la
 comprobación lleva el modo**: en degradado dice «NO SE HA CAREADO (sin fuente)», porque la
