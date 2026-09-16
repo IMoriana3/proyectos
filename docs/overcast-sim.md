@@ -42,6 +42,7 @@ copiadas literales, que backtracking.html** — una física, dos simuladores. Lo
 | Escena 3D | `seguidor.js` (fuente única del modelo, la misma que el gemelo y backtracking.html) | sombras por shadow-map; sol por DNI, hemisferio por DHI (la difusa ES la luz ambiente); nube por zona; sin WebGL cae al corte 2D |
 | Coste de maniobra | `motor_energy.py` `AJUSTE_FLOTA` | **E = 0,0901 + 0,0447·\|Δθ\|**, ajustado sobre 14.759 maniobras reales: cada arranque cuesta 0,0901 Wh explícitamente. Un movimiento es un **tramo contiguo** de giro (una rampa de 55° es 1, no 55), con ε = 0,05° de ruido de encoder. El modelo del ENSAYO (misma forma, otro intercepto) **no se usa**: dominio \|Δθ\| ≥ 20°, el core da NaN por debajo. Las **bandas** por amplitud y la **curva I(θ)** del gemelo quedan seleccionables como contraste — ver §2.1 |
 | Reposo de la TCU | `tcu.py` `TCU_IDLE_W` | 0,64 W constantes (ni los 5 W viejos ni los 0,45 de `tcu_compare`); igual de día que de noche, y **fuera de las filas** porque no depende de la política |
+| Accionamiento de la planta | `<planta>_layout.json` → `geometria.bifila` | **El layout manda, no una tabla en la app.** Bifila = cada unidad son DOS filas a ±filaZ. Bagnarelli figuraba monofila porque el dato se copió del sim de BT, que lo dedujo de un `filaZ 0` que el layout ya había corregido — y había una prueba exigiendo el valor equivocado. La QA ya no fija literales: carea REALMETA contra `geometria.bifila` de cada layout remedido |
 | Zonal por NCU | extensión propia (estilo Zonal Diffuse de Nextracker) | el frente cruza la planta con retardo por zona; GLOBAL = un sensor de planta decide un θ común, ZONAL = cada NCU con su señal. Para `continuous`, zonal ≥ global **por construcción** (argmax local paso a paso) — la QA lo exige; para las políticas con histéresis es una medición |
 
 ## Las cinco políticas (mismos nombres que el core)
@@ -57,7 +58,7 @@ copiadas literales, que backtracking.html** — una física, dos simuladores. Lo
 La QA exige los mismos contratos que `test_diffuse_policies.py`: flat ENTRA (flag y θ=0) en
 overcast con el tracker inclinado; continuous ≥ pvlib **en cada paso**; el pulso de 15 min no
 conmuta; el dwell bloquea la re-entrada con la señal viva; los bordes de conmutación caen en el
-mismo instante físico a 5/10/15 min; enter_ratio imposible ⇒ jamás conmuta; ghi_min gigante ⇒
+mismo instante físico a 1/5/10/15 min; enter_ratio imposible ⇒ jamás conmuta; ghi_min gigante ⇒
 passthrough; NaN en GHI ⇒ passthrough sin NaN en la salida.
 
 ## ¿Y el óptimo anisótropo? Medido, y descartado
@@ -82,9 +83,57 @@ difusa (1,2 %) y una décima parte del coste del tránsito (0,42 %/año).
 
 **Conclusión: no hay quinta política.** Lo que la app trae es la cota, en una casilla aparte, apagada
 por defecto y rotulada «NO es del core» — con su fila en la tabla y el hueco explícito frente a
-`continuous`. Sirve para *enseñar* que la política del core está pegada al techo, no para servirse
-como consigna. La batería exige que ese hueco siga por debajo del 0,1 %: si algún día creciera, la
+`continuous`. Desde v1.22.0 también **se puede elegir en la escena** para ver su curva de θ y su
+estado en el HUD: estaba en la tabla pero no en el desplegable, o sea que se podía calcular y no
+mirar. Mirarla no es servirla. Lo que no tiene es **diario**, y el panel lo dice en vez de
+fabricarle uno: la cota no decide, *resuelve* un argmax sin umbral ni memoria, así que no hay
+maniobra que justificar. Sirve para *enseñar* que la política del core está pegada al techo, no para
+servirse como consigna. La batería exige que ese hueco siga por debajo del 0,1 %: si algún día creciera, la
 prueba lo caza y entonces sí tocaría llevar el barrido fino al core.
+
+## Cómo se lee la tabla del día (y qué NO es comparable entre filas)
+
+Tres columnas se prestan a leerse mal, y las tres llevan el sentido escrito desde v1.22.0:
+
+- **«% del día activa» no es comparable entre políticas.** Cada una activa con su propio criterio,
+  así que el número cuenta cosas distintas en cada fila: `flat` y `poa_switch` van a 0° (**PLANO**),
+  `limited` **RETIENE** el ángulo previo y `continuous` elige un ángulo **intermedio**. Por eso
+  `limited` puede marcar un 59 % sin estar plana ni un minuto. La celda lleva ahora el modo al lado.
+- **«% batería gastada» es consumo, no ahorro.** El Δ verde de la columna de motor sí es ahorro
+  frente a pvlib; el % de batería es lo que se va.
+- **«°/mov» es la relación entre movimientos y recorrido** (amplitud media de cada maniobra), y es
+  la que fija el precio: medido en flota, el coste por grado se multiplica por **3,5** al bajar de
+  5° a menos de 1°. Dos políticas con el mismo recorrido cuestan distinto si una lo trocea más.
+
+Y una del HUD: **GHI, DNI y DHI no suman como parece**. El cierre es `GHI = DNI·cos z + DHI` —el haz
+llega inclinado y solo aporta su proyección horizontal—, así que 850 + 117 ≠ 855 no es un descuadre.
+El HUD muestra el término `DNI·cos z` explícito para que los dos sumandos se lean. El cierre se
+verifica a 2,8e-17 W/m² en la batería, junto con que la difusa **suba** al nublarse (114 → 466 W/m²
+a cc 0,6): si no subiera, el modelo de nubes estaría perdiendo energía en vez de dispersarla.
+
+## El informe del emplazamiento
+
+Botón **📄 Informe** en la tabla del día: abre una pestaña lista para imprimir o guardar en PDF.
+Mismo patrón que el informe del [Simulador de Backtracking](backtracking-sim.md) y la misma regla —
+**todo sale de lo ya calculado**, ni una física nueva ni un número que no esté en pantalla.
+
+Nueve secciones: emplazamiento y configuración · el cielo del día · el resumen política a política ·
+**cada política con cómo decide, qué optimiza, su criterio y sus nueve cifras del día** · el coste de
+maniobra con la procedencia del modelo · el diario de decisiones · el zonal y el año si están
+calculados · la validación · y el método con sus límites.
+
+Dos cosas que lo hacen defendible delante de un tercero:
+
+- **Las explicaciones son las del código que las ejecuta**, no un folleto. La cota lleva ficha propia
+  y dice de sí misma que no es servible como consigna.
+- **Termina en los límites declarados**, y la batería lo exige: que los vatios-hora absolutos son
+  cota superior y no predicción calibrada, que el «% del día activa» no es comparable entre filas,
+  que no hay modelo de desgaste, que aquí se mide consumo y no balance de batería, y que la POA
+  absoluta sale optimista por fila aislada. Un informe que no dice dónde deja de valer es peor que no
+  tenerlo.
+
+El diario del informe y el de pantalla salen de **la misma pieza** (`diarioRows`): dos montajes del
+mismo relato es como se acaba con una pantalla y un PDF que no coinciden.
 
 ## El cielo del día
 
@@ -185,15 +234,21 @@ modelo la columna de movimientos podía doblarse sin que la de energía moviera 
 exactamente lo que la tabla existía para evitar. Las bandas se quedan como contraste seleccionable
 y declarado, no como modelo por defecto.
 
-Medido sobre 21-jun en Gorraiz con cielo cubierto al 95 % y decisión cada 10 min:
+Medido sobre 21-jun en Gorraiz con cielo cubierto al 95 %, **ciclo de decisión de 1 min**, que es
+el que usa la TCU en campo (desde v1.21.0 es el valor por defecto de la aplicación; el 10 min del
+core legacy sigue seleccionable para carear):
 
 | política | movimientos | recorrido | arranque | giro | motor | Δ motor |
 |---|---|---|---|---|---|---|
-| pvlib (baseline) | 79 | 229° | 7,12 Wh | 10,25 Wh | 17,37 Wh | — |
-| `diffuse_flat` | 32 | 148° | 2,88 | 6,64 | 9,52 Wh | −45 % |
-| `diffuse_limited` | 28 | 97° | 2,52 | 4,33 | 6,86 Wh | −61 % |
-| `diffuse_poa_switch` | 21 | 110° | 1,89 | 4,94 | 6,83 Wh | −61 % |
-| `diffuse_continuous` | 19 | 95° | 1,71 | 4,26 | 5,98 Wh | −66 % |
+| pvlib (baseline) | 178 | 228° | 16,04 Wh | 10,19 Wh | 26,23 Wh | — |
+| `diffuse_flat` | 69 | 159° | 6,22 | 7,12 | 13,33 Wh | −49 % |
+| `diffuse_limited` | 64 | 104° | 5,77 | 4,64 | 10,40 Wh | −60 % |
+| `diffuse_poa_switch` | 54 | 128° | 4,87 | 5,73 | 10,60 Wh | −60 % |
+| `diffuse_continuous` | 44 | 104° | 3,96 | 4,64 | 8,60 Wh | −67 % |
+
+A 10 min de ciclo los **ahorros** salen −47/−61/−60/−66 %: la comparación entre políticas se mueve
+entre uno y cuatro puntos, que es lo que la hace citable. Los **vatios-hora absolutos**, en cambio,
+casi se duplican al pasar de 10 min a 1 min, y por eso nunca se citan sin decir el ciclo.
 
 O sea que **en cielo cubierto las políticas de difusa ganan energía y ahorran batería a la vez**.
 No es un compromiso: tumbarse deja de perseguir un sol que no está, y no perseguirlo es
@@ -256,15 +311,34 @@ desglose se muestra etiquetado como interno del modelo.
 
 **El careo que sí vale**, mismo sitio y misma fecha, por el total:
 
-| ciclo de decisión | movs | recorrido | motor | vs 19,2 Wh |
-|---|---:|---:|---:|---:|
-| 5′ | 143 | 229,2° | 23,13 Wh | +20 % |
-| **10′** | **73** | **226,7°** | **16,71 Wh** | **−13 %** |
-| 15′ | 51 | 229,6° | 14,86 Wh | −23 % |
-| 30′ | 27 | 222,1° | 12,36 Wh | −36 % |
+| ciclo de decisión | movs | recorrido | arranque | giro | motor | vs 19,2 Wh |
+|---|---:|---:|---:|---:|---:|---:|
+| **1′ (la TCU real)** | **177** | **226,9°** | **15,95** | **10,14** | **26,09 Wh** | **+36 %** |
+| 5′ | 143 | 229,2° | 12,88 | 10,24 | 23,13 Wh | +20 % |
+| 10′ | 73 | 226,7° | 6,58 | 10,14 | 16,71 Wh | −13 % |
+| 15′ | 51 | 229,6° | 4,60 | 10,27 | 14,86 Wh | −23 % |
+| 30′ | 27 | 222,1° | 2,43 | 9,93 | 12,36 Wh | −36 % |
 
-El día medido cae **dentro** del abanico del modelo, entre 5′ y 15′ de ciclo de decisión. Eso es
-todo lo que se puede afirmar: el modelo es compatible con la medida, no está calibrado contra ella.
+**Al ciclo real, el modelo SOBREESTIMA un 36 %**, y conviene decirlo así en vez de elegir el ciclo
+que mejor cuadra. Hasta v1.21.0 la aplicación venía por defecto a 10 min y este careo salía −13 %,
+que era un acuerdo cómodo y engañoso: no se elige la física para que encaje el número.
+
+La desviación es además **trazable**, y sale de las dos mitades del modelo:
+
+- **Arranques**: 15,95 Wh contra los 13,06 del ajuste sobre 145 rachas. El simulador cuenta **177**
+  episodios donde el log marcó 145: el término fijo se cobra más veces de las que el ajuste vio.
+- **Giro**: 10,14 Wh contra 5,05. Aquí no falla el modelo sino el dato de campo — los 112,9° están
+  enmascarados y el recorrido real del día ronda los 227° (ver el suelo geométrico, arriba).
+
+Corrigiendo solo el denominador enmascarado, el propio ajuste sobre el recorrido verdadero daría
+`145 × 0,0901 + 227 × 0,0447 = 23,2 Wh` contra los 19,2 integrados: el ajuste ya sobreestima un
+**21 %** por sí mismo cuando se le da el recorrido real. Es decir que buena parte del +36 % **no es
+del simulador**, sino de aplicar un ajuste construido sobre trayectorias enmascaradas a una
+trayectoria completa.
+
+**Conclusión operativa**: los vatios-hora absolutos de la tabla son una **cota superior**, no una
+predicción calibrada. Lo que se compara entre filas sí es sólido: entre 1 min y 10 min de ciclo, el
+ahorro de cada política se mueve **uno a cuatro puntos**.
 
 **Banda de incertidumbre de la comparación entre políticas** (overcast, 10′). Según se pondere el
 recorrido o los arranques, el ahorro de cada política se mueve así:
