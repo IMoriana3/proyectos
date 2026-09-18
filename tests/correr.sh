@@ -71,6 +71,18 @@ declare -A PISO=(
   # guardado en CADA carga, y `publishSpecs` escribe `factiun_plantas`, el
   # registro que LEEN los demás visores.
   [test_cartera.js]=45
+  # EL PANEL LEYENDO LA BASE DE LA CARTERA, no su buzón de localStorage. La
+  # librería de Supabase va SUSTITUIDA por una de mentira, y eso es a propósito:
+  # un banco con credenciales de verdad se pondría rojo el día que cambie una
+  # contraseña, y lo que hay que comprobar es el código de este repo. Lo que NO
+  # cubre —que la cuenta real vea las filas reales— está dicho en su cabecera.
+  #
+  # Lo que sujeta: que sin sesión el Panel NO se traiga el CDN (arranca sin red,
+  # es un PWA), que la base mande sobre el buzón, y que los tres finales que no
+  # son «ha ido bien» digan cuál es: sin sesión, sesión con cero filas, o sin
+  # red. Se arreglan de tres maneras distintas y un «no se pudo» genérico no
+  # dice cuál.
+  [test_cartera_en_vivo.js]=32
   [test_comparador.js]=304
   [test_comparador_3d.js]=247
   [test_comparador_sitio.js]=36
@@ -85,7 +97,13 @@ declare -A PISO=(
   # SCADA solo de la lista escrita a mano, 2; abrirlo para cualquier estado, 1;
   # inventarse «En marcha» sin cartera, 6; no abrir la tarjeta, 1; y falsear la
   # potencia de la ficha, 1.
-  [test_ficha_planta.js]=30
+  #
+  # La 31 es la ALTURA: el distintivo le partía la línea a Páramo y esa tarjeta
+  # crecía 22 px sobre las de su fila. Se compara la misma página con y sin el
+  # distintivo —no «que todas midan igual»— porque Dicayagua ya era más alta
+  # antes de esto y una comprobación que la incluyera estaría roja por algo
+  # ajeno. Sin el recorte de la línea, cae.
+  [test_ficha_planta.js]=31
   # 8 y no 9 A PROPÓSITO, y esto es un HUECO DECLARADO, no un listón flojo.
   #
   # CORREGIDO: la primera versión de esta nota decía que la novena
