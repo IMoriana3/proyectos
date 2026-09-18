@@ -12,6 +12,7 @@
 //   python3 -m http.server 8099       # servir el repo (en otra terminal)
 //   node tests/test_pwa.js
 const { chromium } = require('playwright');
+const { EXEC } = require('./pw_navegador.js');   // dónde está el chromium, en un solo sitio
 const fs = require('fs');
 const path = require('path');
 
@@ -30,7 +31,7 @@ function check(nombre, valor, esperado) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
+  const browser = await chromium.launch({ executablePath: EXEC });
   const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 }, serviceWorkers: 'allow' });
   const page = await ctx.newPage();
   // La API de releases no pinta nada aqui: se corta para no gastar el limite.

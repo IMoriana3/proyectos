@@ -266,6 +266,7 @@ declare -A PISO=(
   [test_viento_steppers.js]=17
   [test_viento_sello.js]=17
   [test_viento_sitio.js]=52
+  [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )
 

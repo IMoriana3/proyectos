@@ -15,6 +15,7 @@
 //   node tests/test_viento_sitio.js            (necesita el servidor en :8099)
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const { chromium } = require('playwright');
+const { EXEC } = require('./pw_navegador.js');   // dónde está el chromium, en un solo sitio
 const RAIZ = path.join(__dirname, '..');
 const BASE = process.env.BASE_URL || 'http://localhost:8099';
 let ok = 0, ko = 0;
@@ -127,7 +128,7 @@ check('lo que no es fecha se devuelve tal cual',
 
 // ── 2) la ficha abierta: teclear, elegir, y que cambien las coordenadas ──
 (async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
+  const browser = await chromium.launch({ executablePath: EXEC });
   const page = await browser.newPage();
   const errores = [];
   page.on('pageerror', e => errores.push(String(e)));

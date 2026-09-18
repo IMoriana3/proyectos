@@ -17,6 +17,7 @@
 //   python3 -m http.server 8099                # servir el repo (en otra terminal)
 //   node tests/test_buscador.js
 const { chromium } = require('playwright');
+const { EXEC } = require('./pw_navegador.js');   // dónde está el chromium, en un solo sitio
 const BASE = process.env.BASE || 'http://localhost:8099';
 let ok = 0, ko = 0;
 const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); }
@@ -38,7 +39,7 @@ async function esperaListo(pg) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
+  const browser = await chromium.launch({ executablePath: EXEC });
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   const fallos = [];
   page.on('pageerror', e => fallos.push(e.message));
