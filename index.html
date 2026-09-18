@@ -553,6 +553,34 @@ body{
    ===================================================================== */
 const PROJECTS = [
   {
+    name: "Núcleo de cálculo SolarGPT",
+    status: "live",
+    objetivo: "La autoridad física de la casa: transposición POA (Perez), backtracking, lazo de control del seguidor y modelo de motor. De aquí cuelgan el cuaderno, Streamlit, los dos simuladores del navegador y el gemelo — cuando uno de ellos discrepa del core, el defecto es que hay dos contratos.",
+    stack: "Python · pvlib · pandas/numpy · pytest (≈5.950 comprobaciones) · paridad JS↔core careada a 1e-9 contra el bloque de física de los simuladores",
+    url: "",                                                  // no hay página: es la librería que los demás importan
+    repo: "https://github.com/IMoriana3/SolarGPTfull",
+    updated: "2026-09-18",
+    version: "contrato direccional 2.0.0",
+    docId: "",
+    docUrl: "https://github.com/IMoriana3/SolarGPTfull/blob/main/solargpt/docs/tracker_route_map.md",
+    download: "",
+    uso: [
+      "El lazo de control canónico vive en solargpt_core/direction.py (DirectionalController) y todo lo demás lo consume por ahí: apply_control_loop de tracker.py es una envoltura que delega.",
+      "Las constantes canónicas (banda muerta 1,0°, slew 0,17 °/s, tope ±55°) salen de bankable_config.py, no se teclean en cada consumidor.",
+      "Cualquier cambio numérico que la plataforma enseñe exige causa física escrita en docs/tracker_route_map.md §6 y el golden actualizado en el MISMO commit; el propio banco de la ruta lo bloquea si falta.",
+      "Para correr la suite en local hacen falta dos cosas o salen rojos fantasma: el clon hermano cobertura-zigbee en el commit que pide BLOQUE_COMMIT (tools/parity_js_core.py) y scikit-learn instalado."
+    ],
+    pendientes: [
+      { done:false, text:"Tope de backtracking de DOS lados para pendiente: el de hoy es de un solo lado y deja 2 pasos con sombra que sí añade el lazo (medido a 8°)" },
+      { done:false, text:"La difusa isótropa no la reduce el perfil de horizonte del terreno: medido, pero antes hay que ver de dónde sale la DHI (si es medida en el sitio, restarla sería doble conteo)" },
+      { done:false, text:"El generador de goldens que el banco de la ruta cita en su mensaje de error (tests.golden.gen_tracker_route) no existe en el repo" }
+    ],
+    historial: [
+      { date:"2026-09-18", ver:"el adelanto NO cruza el backtracking (#248)", note:"EL TOPE FALTABA DETRÁS DEL LAZO. El eje ADELANTA —va a la consigna MÁS un margen, «nosotros adelantamos al sol un grado, es decir, hacemos movimientos de dos grados», as-built confirmado por Ignacio— y eso, cuando la consigna es la de backtracking (cuyo único trabajo es que la sombra no llegue al vecino), se la comía: 21 pasos de 288 con sombra en LLANO, hasta el 11,5 % de una fila, y no solo con el sol rasante. `clamp_to_backtrack` ya existía y su propio docstring lo llama «non-negotiable», pero se aplicaba ANTES del lazo, que es donde no sirve: el margen del adelanto se añade DESPUÉS. Aplicado tras el lazo, el llano vuelve a sombra CERO. EL ADELANTO SIGUE EXISTIENDO, y es la mitad que hay que entender: el tope no lo cancela, recorta solo el lado que aumenta |θ|, que es el que tapa al vecino; medido en horas de sol, |θ|−|consigna| máximo +0,000000° mientras |θ−consigna| sigue llegando a 1,0000° —el margen entero, hacia plano, donde en llano no sombrea—. (De noche el desvío llega a 5°: es el aparcamiento nocturno, y ese +5° me hizo dudar del propio tope hasta separar día de noche.) ESTO CONTRADECÍA UNA DECISIÓN YA MERGEADA y no se pisó en silencio: otra sesión había visto la MISMA sombra y la había fijado en un banco —«pasarse sombrea por definición: eso no se niega, se mide»— razonando bien sobre una premisa que resultó falsa, la de que el TCU se adelanta mire lo que mire. Se preguntó, se confirmó que el backtracking es un tope, y su banco se REESCRIBIÓ en vez de borrarse, conservando lo que lo hacía bueno (comprueba el MECANISMO, no solo el resultado) con tres asertos que solo tienen dientes juntos: que el adelanto sigue ahí, que nunca aumenta |θ| sobre la consigna, y que por eso el llano da cero. GOLDENS: POA anual de la ruta 2551,598 → 2550,642 (−0,037 %), tracker de junio y diciembre abajo, y los de FIJA sin mover un decimal — que es la comprobación de que el cambio está donde dice estar, porque una estructura fija no tiene lazo que adelantar. Causa física en docs/tracker_route_map.md §6.3. DECLARADO: el tope es de UN SOLO LADO; en pendiente también sombrea aplanarse de más y por ahí quedan 2 pasos (de 9 con sombra a 8°, los otros 7 sombrean con el eje EXACTAMENTE en la consigna y ya existían)." },
+      { date:"2026-09-16", ver:"contrato direccional 2.0.0 · el eje ADELANTA al sol", note:"NO ES DE ESTA LÍNEA DE TRABAJO: entró por los PR #245/#246 y la entrada la escribe quien lo hizo si quiere más detalle. Se apunta porque es la ley de la que cuelga todo lo de arriba y dejarla sin nada al lado sería un hueco. El lazo dejó de ir A la consigna y pasa a adelantarla un margen en el sentido de la marcha, con el destino enclavado y la inversión pidiendo estrictamente más que el margen (sin esas dos, el eje aparcado queda a un margen exacto de la consigna y entra en chatter). CURIOSIDAD QUE VALE LA PENA APUNTAR: esta misma ley se implementó por DUPLICADO y en paralelo en dos sesiones, y al carearlas salieron IDÉNTICAS BIT A BIT —0 de 525.600 instantes distintos en un año a paso de 1 minuto—. El duplicado se retiró; la coincidencia exacta dice algo bueno de la ley. Y midiendo la tercera página (backtracking.html) apareció que el signo del coste en arranques CAMBIA con la rejilla: +200 % a paso de 10 min y −42 % a 1 min. La TCU decide cada minuto, así que el adelanto AHORRA arranques (169/día → 99), no los cuesta." }
+    ]
+  },
+  {
     name: "Careo SolarGPT ↔ PVSyst",
     status: "live",
     objetivo: "Tarjeta de comparativa y validación de la auditoría POA + energía frente a PVSyst: transposición por componente (Fleming +0,12 %), cadena por etapa con el hallazgo térmico Uc/Uv, El Burgo I (astronomía/backtracking) y Vadorada (careo automático sin config manual: GlobInc +0,03 %, E_Grid −0,99 % con bifacial). Veredictos por hallazgo.",
