@@ -75,6 +75,17 @@ declare -A PISO=(
   [test_comparador_3d.js]=247
   [test_comparador_sitio.js]=36
   [test_ejecucion_traza.mjs]=61
+  # La ficha de planta y el acceso al SCADA. El piso son las 30 MEDIDAS, y lo
+  # que de verdad sujeta son dos: «una planta SIN COMENZAR no gana sala de
+  # control» y las cinco de «sin cartera no se inventa un estado». Sin esas, el
+  # botón dejaría de significar nada y el Panel podría mandar a alguien a operar
+  # una planta apoyándose en un estado que nadie ha publicado.
+  #
+  # MEDIDO contra los seis mutantes: quitar el distintivo mata 5; devolver el
+  # SCADA solo de la lista escrita a mano, 2; abrirlo para cualquier estado, 1;
+  # inventarse «En marcha» sin cartera, 6; no abrir la tarjeta, 1; y falsear la
+  # potencia de la ficha, 1.
+  [test_ficha_planta.js]=30
   # 8 y no 9 A PROPÓSITO, y esto es un HUECO DECLARADO, no un listón flojo.
   #
   # CORREGIDO: la primera versión de esta nota decía que la novena
