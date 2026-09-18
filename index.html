@@ -267,6 +267,14 @@ body{
 .pest{display:inline-flex;align-items:center;gap:6px;margin-left:9px;vertical-align:1px;
   font-family:var(--mono);font-size:.64rem;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--e)}
 .pest .led{width:7px;height:7px;background:var(--e);box-shadow:0 0 6px var(--e)}
+/* LA LÍNEA DE UBICACIÓN, SIEMPRE UNA. Con el distintivo detrás, a Páramo —«Villamañán · León ·
+   España»— y a El Polvorín se les iba a dos líneas y esas dos tarjetas crecían 21 px sobre las de
+   su fila: exactamente la altura desigual que este fichero lleva evitando en tres sitios. Ahora la
+   ubicación se recorta con puntos suspensivos y el distintivo no se parte nunca; el texto entero
+   sigue estando en el `title`. */
+.pcard .ploc{display:flex;align-items:baseline;gap:0;white-space:nowrap;overflow:hidden}
+.pcard .plugar{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pcard .pest{flex:none}
 /* La ficha de la planta no es el historial de un proyecto: una sola columna se lee mejor que tres
    pares de clave-valor repartidos a lo ancho de la fila entera. */
 .pdetail{grid-template-columns:minmax(0,520px)}
@@ -274,6 +282,20 @@ body{
    a 420 px cada uno. Se acotan al mismo ancho que la ficha: lo que cambia al abrir es que aparece la
    ficha, no el tamaño de los botones. */
 .card.open .pviews{max-width:520px}
+/* EL ACCESO A LA BASE. `order:9` como el enlace de la Cartera técnica, para que los dos queden
+   juntos a la derecha de la línea en vez de pegados al recuento. */
+.db-acceso{order:9;display:inline-flex;align-items:center;gap:8px;font-family:var(--sans);text-transform:none;letter-spacing:0}
+.db-acceso .btn{font-size:.74rem;padding:4px 10px}
+.db-acceso .db-nota{font-family:var(--mono);font-size:.68rem;color:var(--muted-2);letter-spacing:.02em}
+.db-acceso .db-nota.mal{color:var(--build)}
+.db-acceso .db-nota.bien{color:var(--live)}
+.db-form{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.db-form input{font:inherit;font-size:.74rem;font-family:var(--sans);padding:4px 8px;width:168px;
+  color:var(--text);background:var(--panel-2);border:1px solid var(--line-soft);border-radius:7px}
+.db-form input:focus-visible{outline:2px solid var(--accent);outline-offset:-1px}
+/* De dónde sale lo que enseña la ficha: la base es de ahora, el buzón es de la última vez que
+   alguien abrió la cartera aquí. Decirlo es la diferencia entre un dato y un dato de hace un mes. */
+.dfuente{font-family:var(--mono);font-size:.64rem;color:var(--muted-2);margin-top:9px;letter-spacing:.02em}
 
 /* ---------- DETAIL (expanded) ---------- */
 /* LA FICHA ABIERTA OCUPA TODA LA REJILLA. Cerrada es una tarjeta de una columna, pero abierta se
@@ -458,7 +480,7 @@ body{
 <main class="wrap">
 
   <section class="plants-sec">
-    <h2 class="sec-title">Proyectos · plantas <span class="cnt" id="plants-cnt"></span><a class="tabla-link" href="cartera-tabla.html" title="Ficha técnica editable de todas las plantas">▦ Cartera técnica</a></h2>
+    <h2 class="sec-title">Proyectos · plantas <span class="cnt" id="plants-cnt"></span><span class="db-acceso" id="db-acceso"></span><a class="tabla-link" href="cartera-tabla.html" title="Ficha técnica editable de todas las plantas">▦ Cartera técnica</a></h2>
     <div class="plants" id="plants"></div>
   </section>
 
@@ -2133,20 +2155,126 @@ tick(); setInterval(tick,1000);
    Páramo está a 0 en la cartera —no tiene aún el dato— y en ese caso no se pinta nada: un «0 MW»
    sería peor que no decir nada. */
 const SPECS = (function(){ try{ return JSON.parse(localStorage.getItem('factiun_plantas')||'null')||{}; }catch(e){ return {}; } })();
-/* La ficha de la cartera para esta planta, si la cartera se ha abierto alguna vez en este
-   navegador. Misma búsqueda que usa la potencia: por número de proyecto y, si no, por el de
-   cartera —El Burgo es 23003 en el DWG y 24002 en la hoja—. */
-function specDe(pl){ return SPECS[String(pl.code)] || (pl.codCartera ? SPECS[String(pl.codCartera)] : null) || null; }
 
-/* ESTADO DE PUESTA EN MARCHA. No se copia aquí: lo teclea la cartera en su columna «Estado PEM» y
-   lo reparte en `factiun_plantas`. Sus tres valores son los del desplegable de esa hoja, y los
-   colores, los que ya usa el Panel para sus proyectos. Sin cartera abierta no hay estado, y
-   entonces NO se pinta ninguno: inventarse un «En marcha» sería exactamente lo contrario de lo
-   que hace falta para decidir si se entra a la sala de control. */
-const PEM_COLOR = { 'En marcha':'var(--live)', 'En proceso':'var(--build)', 'Sin comenzar':'var(--idle)' };
+/* ═══ LA BASE DE LA CARTERA, EN VIVO ═══════════════════════════════════════════════════════════
+   `factiun_plantas` es un BUZÓN, no la fuente: lo escribe `cartera-tabla.html` al guardar, así que
+   solo tiene lo que hubiera la última vez que alguien abrió esa página en ESTE navegador. Quien no
+   la abra nunca no ve estado ninguno, y quien la abriera hace un mes ve el de hace un mes.
+
+   La fuente es la base de la cartera (Supabase). Aquí se lee EN VIVO, y manda sobre el buzón.
+
+   POR QUÉ HAY QUE ENTRAR. Todas las tablas de la cartera llevan sus políticas `to authenticated`
+   —su README lo dice: «la anon key es pública por diseño; no da acceso a los datos sin login»—, así
+   que sin sesión la consulta no da error: devuelve CERO FILAS. Y la sesión de la cartera no vale,
+   porque ella vive en otro origen (workers.dev) y el Panel en imoriana3.github.io.
+
+   Y por eso el acceso es SOLO PARA ESTO: el Panel se abre igual que siempre sin entrar, con sus
+   tarjetas, sus vistas y el buzón si lo hay. Lo único que espera es el estado y la ficha.
+
+   La clave es la «publishable» de la cartera, pública por diseño y sin valor sin sesión. La
+   librería NO se carga al arrancar: solo cuando hay sesión guardada o cuando se pulsa Entrar, para
+   que el Panel siga arrancando sin depender de un CDN (y sin conexión, que es un PWA). */
+const CARTERA_DB = { url:"https://icqiwmbbeoeswbcbgflc.supabase.co",
+                     key:"sb_publishable_lOmQfLA1rv7Jg0N3vjzcOA_qnbatn2p",
+                     lib:"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" };
+/* Los nombres de la base NO son los del buzón: la cartera llama `estado` a lo que el buzón reparte
+   como `estado_pem`, `mwdc` a `pdc`, `lng` a `lon`… Se traduce aquí, en un solo sitio, para que el
+   resto del Panel siga leyendo una sola forma. */
+function delaBase(r){
+  const n = v => (v===''||v==null) ? null : (isFinite(+v) ? +v : null);
+  const pri = v => { const m=String(v==null?'':v).match(/\d+/); return m?parseInt(m[0],10):null; };
+  return { cod:r.code, nproy:String(r.code), nombre:r.proyecto||'', estado_pem:r.estado||'',
+           pac:n(r.mwac), pdc:n(r.mwdc), cantidad:n(r.n_modulos), wmod:n(r.pot_modulo),
+           mods:pri(r.string_cfg), pitch:(r.pitch==null?'':String(r.pitch)),
+           trk_total:n(r.trackers), trk_bi:n(r.trackers_bifila), trk_mono:n(r.trackers_monofila),
+           ncu_eth:n(r.ncu_eth), ncu_fo:n(r.ncu_fo), lat:n(r.lat), lon:n(r.lng), pais:r.pais||'' };
+}
+const DB = { sb:null, filas:null, estado:'fuera', aviso:'' };   // estado: fuera · entrando · dentro · error
+
+/* La sesión de supabase-js se guarda en localStorage con esta forma. Se mira A MANO antes de
+   cargar nada: si no hay sesión, el Panel no se trae el CDN para averiguarlo. */
+function haySesionGuardada(){
+  try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i);
+        if(/^sb-.*-auth-token$/.test(k||'')) return true; } }catch(e){}
+  return false;
+}
+function cargaLib(){
+  if (window.supabase) return Promise.resolve();
+  return new Promise((ok,mal)=>{ const s=document.createElement('script');
+    s.src=CARTERA_DB.lib; s.onload=()=>ok(); s.onerror=()=>mal(new Error('no se ha podido cargar la librería'));
+    document.head.appendChild(s); });
+}
+async function cliente(){
+  await cargaLib();
+  if (!DB.sb) DB.sb = window.supabase.createClient(CARTERA_DB.url, CARTERA_DB.key);
+  return DB.sb;
+}
+/* Trae las plantas. Se distinguen los tres finales a propósito, porque se arreglan de tres maneras
+   distintas y un «no se pudo» genérico no dice cuál: sin sesión, sin red, o CON sesión y cero filas
+   —que no es un fallo de conexión sino que esa cuenta no ve esa tabla—. */
+async function traeDeLaBase(){
+  const sb = await cliente();
+  const { data:ses } = await sb.auth.getSession();
+  if (!ses || !ses.session) return { ok:false, motivo:'sin sesión' };
+  const { data, error } = await sb.from('plantas')
+    .select('code,proyecto,estado,mwac,mwdc,n_modulos,pot_modulo,string_cfg,pitch,trackers,trackers_bifila,trackers_monofila,ncu_eth,ncu_fo,lat,lng,pais');
+  if (error) return { ok:false, motivo:error.message || 'la base ha dicho que no' };
+  const filas = data || [];
+  if (!filas.length) return { ok:false, motivo:'la sesión es válida pero esta cuenta no ve ninguna planta' };
+  const map = {}; filas.forEach(r=>{ if(r.code!=null&&String(r.code).trim()!=='') map[String(r.code)] = delaBase(r); });
+  return { ok:true, map, n:filas.length };
+}
+async function conecta(email, clave){
+  DB.estado='entrando'; DB.aviso=''; pintaAcceso();
+  try{
+    const sb = await cliente();
+    if (email){
+      const { error } = await sb.auth.signInWithPassword({ email, password:clave });
+      if (error) throw new Error(/invalid/i.test(error.message||'') ? 'correo o contraseña que la cartera no reconoce' : error.message);
+    }
+    const r = await traeDeLaBase();
+    if (!r.ok) throw new Error(r.motivo);
+    DB.filas = r.map; DB.estado='dentro'; DB.aviso = r.n + ' plantas';
+  }catch(e){
+    DB.estado = 'error'; DB.aviso = e && e.message ? e.message : 'no se ha podido leer la base';
+    DB.filas = null;
+  }
+  pintaAcceso(); renderPlants();
+}
+async function desconecta(){
+  try{ if (DB.sb) await DB.sb.auth.signOut(); }catch(e){}
+  DB.filas=null; DB.estado='fuera'; DB.aviso=''; pintaAcceso(); renderPlants();
+}
+
+/* La ficha de la cartera para esta planta. Manda LA BASE, y el buzón queda de respaldo para quien
+   no entre: así el Panel no pierde nada de lo que ya hacía. La búsqueda es la misma de siempre —por
+   número de proyecto y, si no, por el de cartera: El Burgo es 23003 en el DWG y 24002 en la hoja—. */
+function specDe(pl){
+  const f = DB.filas;
+  if (f) { const v = f[String(pl.code)] || (pl.codCartera ? f[String(pl.codCartera)] : null); if (v) return v; }
+  return SPECS[String(pl.code)] || (pl.codCartera ? SPECS[String(pl.codCartera)] : null) || null;
+}
+/* De dónde sale lo que se está enseñando. Importa decirlo: la base es de ahora mismo y el buzón es
+   de la última vez que alguien abrió la cartera en este navegador, que puede ser de hace un mes. */
+function fuenteDe(pl){
+  const f = DB.filas;
+  if (f && (f[String(pl.code)] || (pl.codCartera && f[String(pl.codCartera)]))) return 'base';
+  return specDe(pl) ? 'buzon' : null;
+}
+
+/* ESTADO DE PUESTA EN MARCHA. No se copia aquí: lo teclea la cartera en su columna «Estado PEM».
+   El color y el «está viva» se deciden con la MISMA regla que usa la propia cartera para pintar su
+   mapa y su cronograma —`/marcha/i` y `/proceso/i`, no una lista de textos exactos—, porque el
+   valor lo escribe una persona en un desplegable y una lista cerrada aquí se rompería el día que
+   alguien añada una opción. Sin cartera —ni base ni buzón— NO se pinta ninguno: inventarse un «En
+   marcha» sería exactamente lo contrario de lo que hace falta para decidir si se entra a la sala
+   de control. */
 function estadoPEM(pl){
   const s = specDe(pl), e = s && s.estado_pem ? String(s.estado_pem).trim() : '';
-  return e ? { txt:e, color:(PEM_COLOR[e]||'var(--idle)'), viva:(e==='En marcha'||e==='En proceso') } : null;
+  if (!e) return null;
+  const marcha = /marcha/i.test(e), proceso = /proceso/i.test(e);
+  return { txt:e, color:(marcha ? 'var(--live)' : proceso ? 'var(--build)' : 'var(--idle)'),
+           viva:(marcha || proceso) };
 }
 /* EL SCADA DE UNA PLANTA VIVA. Hasta ahora la sala de control salía SOLO si esta ficha traía el
    enlace escrito a mano, y esa lista se quedó descolgada del dato: San José lo tenía con la cartera
@@ -2172,8 +2300,9 @@ function potenciaDC(pl){
 /* LA FICHA DE LA PLANTA. La tarjeta cerrada solo cabe para el número, el nombre, la potencia y la
    ubicación; todo lo demás lo tiene la cartera y no se veía sin abrir otra página. Se despliega
    como las de los proyectos —mismo botón, mismo `.detail`, misma rejilla `.kv`— y lo que enseña
-   sale ENTERO de `factiun_plantas`: aquí no se copia ni un número, así que o está al día o no
-   está. Si la cartera no se ha abierto en este navegador se dice, con el enlace para abrirla. */
+   sale ENTERO de la cartera: aquí no se copia ni un número, así que o está al día o no está. La
+   ficha dice además DE DÓNDE sale, porque no es lo mismo la base —de ahora— que el buzón, que es
+   de la última vez que alguien abrió la cartera en este navegador. */
 const numES = (v,d) => (v==null||v==='') ? '' : (+v).toFixed(d==null?0:d).replace(/\.?0+$/,'').replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
 function fichaPlanta(pl){
   const s = specDe(pl), st = estadoPEM(pl), f = [];
@@ -2201,9 +2330,15 @@ function fichaPlanta(pl){
   const salaTxt = pl.views.scada ? 'Sala de control' : (st && st.viva ? 'Sala de control · la abre el estado' : '');
   const sala = url ? `<div style="margin-top:12px"><a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">${esc(salaTxt)} →</a></div>` : '';
   if (!s) return `<div class="dgroup"><div class="dlabel">Ficha</div>
-      <p class="obj" style="margin:0">La ficha completa —estado de puesta en marcha, potencias, módulos, seguidores y NCU— la publica la
-      <a href="cartera-tabla.html" style="color:var(--demo)">Cartera técnica</a>. Ábrela una vez en este navegador y el Panel la lee de ahí.</p>${sala}</div>`;
-  return `<div class="dgroup"><div class="dlabel">Ficha de la cartera</div><dl class="kv">${f.join('')}</dl>${sala}</div>`;
+      <p class="obj" style="margin:0">La ficha completa —estado de puesta en marcha, potencias, módulos, seguidores y NCU— vive en la cartera.
+      Conéctala con el botón <b>▲ Conectar la cartera</b> de arriba y se lee en vivo, o abre una vez la
+      <a href="cartera-tabla.html" style="color:var(--demo)">Cartera técnica</a> en este navegador.</p>${sala}</div>`;
+  /* De dónde sale, dicho en la propia ficha: «en vivo» y «guardado» se leen distinto, y el segundo
+     puede tener semanas. */
+  const fte = fuenteDe(pl) === 'base'
+    ? `<div class="dfuente">▲ de la base de la cartera, en vivo</div>`
+    : `<div class="dfuente">guardado de la última vez que se abrió la Cartera técnica aquí · conéctala arriba para leerla en vivo</div>`;
+  return `<div class="dgroup"><div class="dlabel">Ficha de la cartera</div><dl class="kv">${f.join('')}</dl>${fte}${sala}</div>`;
 }
 function plantCardHTML(pl){
   const arrow='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 17 17 7M9 7h8v8"/></svg>';
@@ -2222,12 +2357,42 @@ function plantCardHTML(pl){
     <button class="card-toggle pcard-toggle" aria-expanded="false" title="Ver la ficha de ${esc(pl.name)}">
       <span class="chev">›</span>
       <div class="phead">${pl.oferta ? '<span class="pcode oferta" title="Proyecto en oferta: aún no está firmado ni tiene número de proyecto">OFERTA</span>' : `<span class="pcode">${esc(pl.code)}</span>`}<h3 class="name">${esc(pl.name)}<span class="pdc">${esc(potenciaDC(pl))}</span></h3></div>
-      <p class="obj">${esc(pl.loc)}${chip}</p>
+      <p class="obj ploc" title="${esc(pl.loc)}"><span class="plugar">${esc(pl.loc)}</span>${chip}</p>
     </button>
     <div class="pviews">${btns}</div>
     <div class="detail pdetail" hidden>${fichaPlanta(pl)}</div>
   </article>`;
 }
+/* EL ACCESO, en la cabecera de la sección. Vive en un solo sitio y no en cada tarjeta: es una
+   sesión del Panel entero, no de una planta. Mientras no se entra, todo lo demás funciona igual. */
+function pintaAcceso(){
+  const el = document.getElementById('db-acceso'); if(!el) return;
+  if (DB.estado === 'dentro'){
+    el.innerHTML = `<span class="db-nota bien">▲ cartera en vivo · ${esc(DB.aviso)}</span>`
+                 + `<button class="btn" id="db-salir">Salir</button>`;
+    el.querySelector('#db-salir').onclick = desconecta;
+    return;
+  }
+  if (DB.estado === 'entrando'){ el.innerHTML = `<span class="db-nota">conectando con la cartera…</span>`; return; }
+  const mal = DB.estado === 'error' ? `<span class="db-nota mal" title="${esc(DB.aviso)}">▲ ${esc(DB.aviso)}</span>` : '';
+  el.innerHTML = mal + `<button class="btn" id="db-entrar" title="Lee el estado y la ficha de cada planta directamente de la base de la cartera. El Panel funciona igual sin entrar.">▲ Conectar la cartera</button>`;
+  el.querySelector('#db-entrar').onclick = ()=>{
+    /* Un <form> de verdad: así el gestor de contraseñas del navegador lo reconoce y el Enter
+       envía. La contraseña NO se guarda en ningún sitio del Panel — lo que se queda es el testigo
+       de sesión que escribe la propia librería de la cartera. */
+    el.innerHTML = `<form class="db-form" id="db-form" autocomplete="on">
+        <input type="email" id="db-mail" placeholder="correo de la cartera" autocomplete="username" required>
+        <input type="password" id="db-pass" placeholder="contraseña" autocomplete="current-password" required>
+        <button class="btn primary" type="submit">Entrar</button>
+        <button class="btn" type="button" id="db-cancel">Cancelar</button>
+      </form>`;
+    el.querySelector('#db-cancel').onclick = ()=>{ DB.estado='fuera'; DB.aviso=''; pintaAcceso(); };
+    el.querySelector('#db-form').onsubmit = ev => { ev.preventDefault();
+      conecta(el.querySelector('#db-mail').value.trim(), el.querySelector('#db-pass').value); };
+    el.querySelector('#db-mail').focus();
+  };
+}
+
 /* Ordenadas por NÚMERO DE PROYECTO, que es como se las nombra en la casa. El array se deja en su
    orden histórico —tocarlo es donde se han perdido tarjetas dos veces— y se ordena una copia. */
 /* Las que están EN OFERTA van al final: no tienen número de proyecto —lo da la cartera al
@@ -2257,6 +2422,11 @@ renderGauges();
 renderChips();
 renderGrid();
 refrescarReleases();   // no bloquea el pintado: si tarda o falla, la ficha ya esta puesta
+pintaAcceso();
+/* Si ya se entró alguna vez en este navegador, la sesión sigue guardada y el Panel se pone al día
+   SOLO, sin preguntar nada. Va al final y sin `await` por lo mismo que las releases: la página no
+   espera a la red para salir, y si la base no contesta se queda lo que ya hay en pantalla. */
+if (haySesionGuardada()) conecta(null, null);
 </script>
 
 <!-- ============================ APP INSTALABLE ============================

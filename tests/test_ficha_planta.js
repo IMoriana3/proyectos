@@ -117,6 +117,26 @@ const CARTERA = {
     const f2 = await abre('El Burgo');   // segundo clic
     check('y volviendo a pinchar se cierra', !f2.abierta && f2.expand === 'false', f2);
 
+    /* LA ALTURA UNIFORME, que este repo lleva cuidando en tres sitios del CSS. El distintivo va
+       detrás de la ubicación, y a Páramo —«Villamañán · León · España»— le partía la línea: esa
+       tarjeta crecía 28 px sobre las de su fila.
+       Se compara la MISMA página con el distintivo y sin él, en vez de exigir que todas midan
+       igual: hay una tarjeta que ya era más alta antes de esto —Dicayagua, cuyo nombre parte la
+       cabecera— y una comprobación que la incluyera estaría roja por algo que no es suyo.
+       A 1.500 px, que es donde la rejilla pasa a cuatro columnas y las tarjetas se estrechan: a
+       1.400 hay tres, caben más anchas y el defecto no se reproduce. */
+    await page.setViewportSize({ width: 1500, height: 1000 });
+    await page.waitForTimeout(150);
+    const mide = () => page.evaluate(() => [...document.querySelectorAll('.pcard:not(.open)')]
+      .map(c => Math.round(c.getBoundingClientRect().height)));
+    const conChip = await mide();
+    await page.addStyleTag({ content: '.pest{display:none!important}' });
+    await page.waitForTimeout(150);
+    const sinChip = await mide();
+    const crecidas = conChip.map((h, i) => h - sinChip[i]).filter(d => d !== 0);
+    check('el distintivo de estado no cambia la altura de ninguna tarjeta',
+      crecidas.length === 0, { conChip, sinChip });
+
     check('sin errores de JS', errs.length === 0, errs);
     await page.close();
   }
