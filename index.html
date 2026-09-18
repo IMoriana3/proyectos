@@ -259,6 +259,21 @@ body{
 /* Sin sufijo: el " · no disp." doblaba el ancho del botón gris y recortado a " ·" quedaba un punto
    colgando. El borde discontinuo y el color apagado ya dicen que no está, y el title lo explica. */
 .pviews .btn.off{opacity:.55}
+/* El botón que abre la ficha de la planta no trae padding propio: la tarjeta ya lo pone, y con los
+   dos la cabecera se iba 18 px hacia dentro. */
+.pcard-toggle{padding:0}
+/* El estado de puesta en marcha, con el mismo led que llevan los proyectos. El color entra por
+   `--e` para no tocar el `--c` de la tarjeta, que es el que pinta el borde al pasar por encima. */
+.pest{display:inline-flex;align-items:center;gap:6px;margin-left:9px;vertical-align:1px;
+  font-family:var(--mono);font-size:.64rem;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--e)}
+.pest .led{width:7px;height:7px;background:var(--e);box-shadow:0 0 6px var(--e)}
+/* La ficha de la planta no es el historial de un proyecto: una sola columna se lee mejor que tres
+   pares de clave-valor repartidos a lo ancho de la fila entera. */
+.pdetail{grid-template-columns:minmax(0,520px)}
+/* Abierta, la tarjeta pasa a fila entera (`.card.open`) y con ella los botones de vista se estiraban
+   a 420 px cada uno. Se acotan al mismo ancho que la ficha: lo que cambia al abrir es que aparece la
+   ficha, no el tamaño de los botones. */
+.card.open .pviews{max-width:520px}
 
 /* ---------- DETAIL (expanded) ---------- */
 /* LA FICHA ABIERTA OCUPA TODA LA REJILLA. Cerrada es una tarjeta de una columna, pero abierta se
@@ -2118,6 +2133,34 @@ tick(); setInterval(tick,1000);
    Páramo está a 0 en la cartera —no tiene aún el dato— y en ese caso no se pinta nada: un «0 MW»
    sería peor que no decir nada. */
 const SPECS = (function(){ try{ return JSON.parse(localStorage.getItem('factiun_plantas')||'null')||{}; }catch(e){ return {}; } })();
+/* La ficha de la cartera para esta planta, si la cartera se ha abierto alguna vez en este
+   navegador. Misma búsqueda que usa la potencia: por número de proyecto y, si no, por el de
+   cartera —El Burgo es 23003 en el DWG y 24002 en la hoja—. */
+function specDe(pl){ return SPECS[String(pl.code)] || (pl.codCartera ? SPECS[String(pl.codCartera)] : null) || null; }
+
+/* ESTADO DE PUESTA EN MARCHA. No se copia aquí: lo teclea la cartera en su columna «Estado PEM» y
+   lo reparte en `factiun_plantas`. Sus tres valores son los del desplegable de esa hoja, y los
+   colores, los que ya usa el Panel para sus proyectos. Sin cartera abierta no hay estado, y
+   entonces NO se pinta ninguno: inventarse un «En marcha» sería exactamente lo contrario de lo
+   que hace falta para decidir si se entra a la sala de control. */
+const PEM_COLOR = { 'En marcha':'var(--live)', 'En proceso':'var(--build)', 'Sin comenzar':'var(--idle)' };
+function estadoPEM(pl){
+  const s = specDe(pl), e = s && s.estado_pem ? String(s.estado_pem).trim() : '';
+  return e ? { txt:e, color:(PEM_COLOR[e]||'var(--idle)'), viva:(e==='En marcha'||e==='En proceso') } : null;
+}
+/* EL SCADA DE UNA PLANTA VIVA. Hasta ahora la sala de control salía SOLO si esta ficha traía el
+   enlace escrito a mano, y esa lista se quedó descolgada del dato: San José lo tenía con la cartera
+   diciendo «Sin comenzar», y Fayón, Túnez y Bagnarelli no lo tenían estando las tres «En marcha».
+   Ahora el enlace escrito manda —es el que alguien puso a propósito— y, si no lo hay, lo abre el
+   estado. El nombre que se manda es el de la CARTERA, que es con el que ella tiene los registros;
+   si esa planta no tuviera ninguno, su SCADA lo dice («sin datos») en vez de enseñar otra. */
+function urlScada(pl){
+  if (pl.views.scada) return pl.views.scada;
+  const st = estadoPEM(pl); if (!st || !st.viva) return "";
+  const s = specDe(pl);
+  return CARTERA + "scada.html?planta=" + encodeURIComponent((s && s.nombre) || pl.name);
+}
+
 function potenciaDC(pl){
   const viva = SPECS[String(pl.code)] || (pl.codCartera ? SPECS[String(pl.codCartera)] : null);
   const v = (viva && viva.pdc != null && viva.pdc !== '') ? +viva.pdc : (pl.pdc != null ? +pl.pdc : null);
@@ -2126,10 +2169,46 @@ function potenciaDC(pl){
      que la cartera sí tiene, y a esta escala esa décima es medio megavatio. */
   return " · " + (v < 100 ? v.toFixed(2).replace(/\.?0+$/,'').replace('.',',') : String(Math.round(v))) + " MWdc";
 }
+/* LA FICHA DE LA PLANTA. La tarjeta cerrada solo cabe para el número, el nombre, la potencia y la
+   ubicación; todo lo demás lo tiene la cartera y no se veía sin abrir otra página. Se despliega
+   como las de los proyectos —mismo botón, mismo `.detail`, misma rejilla `.kv`— y lo que enseña
+   sale ENTERO de `factiun_plantas`: aquí no se copia ni un número, así que o está al día o no
+   está. Si la cartera no se ha abierto en este navegador se dice, con el enlace para abrirla. */
+const numES = (v,d) => (v==null||v==='') ? '' : (+v).toFixed(d==null?0:d).replace(/\.?0+$/,'').replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+function fichaPlanta(pl){
+  const s = specDe(pl), st = estadoPEM(pl), f = [];
+  const fila = (k,v) => { if(v!=null && v!=='' ) f.push(`<dt>${esc(k)}</dt><dd>${v}</dd>`); };
+  if (st) fila('Estado PEM', `<span style="color:${st.color}">${esc(st.txt)}</span>`);
+  if (s) {
+    if (s.pac != null && s.pac > 0) fila('Potencia AC', esc(numES(s.pac,2)) + ' MW');
+    if (s.pdc != null && s.pdc > 0) fila('Potencia DC', esc(numES(s.pdc,2)) + ' MWdc');
+    if (s.cantidad) fila('Módulos', esc(numES(s.cantidad)) + (s.wmod ? ' × ' + esc(numES(s.wmod)) + ' W' : ''));
+    if (s.mods) fila('String', esc(numES(s.mods)) + ' módulos');
+    if (s.pitch) fila('Paso entre filas', esc(String(s.pitch)) + ' m');
+    if (s.trk_total) {
+      const rep = [s.trk_bi ? esc(numES(s.trk_bi)) + ' bífilas' : '', s.trk_mono ? esc(numES(s.trk_mono)) + ' monofilas' : ''].filter(Boolean).join(' · ');
+      fila('Seguidores', esc(numES(s.trk_total)) + (rep ? ` <span style="color:var(--muted-2)">(${rep})</span>` : ''));
+    }
+    if (s.ncu_eth || s.ncu_fo) fila('NCU', [s.ncu_eth ? s.ncu_eth + ' Ethernet' : '', s.ncu_fo ? s.ncu_fo + ' fibra' : ''].filter(Boolean).map(esc).join(' · '));
+    /* Las coordenadas van con PUNTO decimal aunque el resto de la ficha use coma: de aquí se
+       copian y se pegan en un mapa, y con coma no las traga ninguno. */
+    if (s.lat != null && s.lon != null) fila('Coordenadas', esc((+s.lat).toFixed(5)) + ', ' + esc((+s.lon).toFixed(5)));
+    /* El número de cartera solo se enseña cuando NO es el de proyecto: son dos numeraciones y El
+       Burgo es el caso que lo demuestra (23003 en el DWG, 24002 en la hoja). */
+    if (s.cod != null && String(s.cod) !== String(s.nproy)) fila('Nº de cartera', esc(String(s.cod)));
+  }
+  const url = urlScada(pl);
+  const salaTxt = pl.views.scada ? 'Sala de control' : (st && st.viva ? 'Sala de control · la abre el estado' : '');
+  const sala = url ? `<div style="margin-top:12px"><a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">${esc(salaTxt)} →</a></div>` : '';
+  if (!s) return `<div class="dgroup"><div class="dlabel">Ficha</div>
+      <p class="obj" style="margin:0">La ficha completa —estado de puesta en marcha, potencias, módulos, seguidores y NCU— la publica la
+      <a href="cartera-tabla.html" style="color:var(--demo)">Cartera técnica</a>. Ábrela una vez en este navegador y el Panel la lee de ahí.</p>${sala}</div>`;
+  return `<div class="dgroup"><div class="dlabel">Ficha de la cartera</div><dl class="kv">${f.join('')}</dl>${sala}</div>`;
+}
 function plantCardHTML(pl){
   const arrow='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 17 17 7M9 7h8v8"/></svg>';
   const btns = PLANT_VIEWS.map(v=>{
-    const url = pl.views[v.key];
+    const url = v.key==='scada' ? urlScada(pl) : pl.views[v.key];
     /* Sin la flecha: repetida seis veces por tarjeta se comía ~36 px de cada fila, y era lo que
        hacía que a unas plantas los botones les cupieran en dos filas y a otras no — de ahí que las
        tarjetas salieran de alturas distintas. Que abre en otra pestaña ya lo dice el title. */
@@ -2137,10 +2216,16 @@ function plantCardHTML(pl){
     if(v.core) return `<span class="btn off" title="${esc(v.label)} no disponible para ${esc(pl.name)}">${v.label}</span>`;
     return "";
   }).join("");
+  const st = estadoPEM(pl);
+  const chip = st ? `<span class="pest" style="--e:${st.color}" title="Estado de puesta en marcha, según la Cartera técnica"><i class="led"></i>${esc(st.txt)}</span>` : '';
   return `<article class="card pcard" style="--c:var(--demo)">
-    <div class="phead">${pl.oferta ? '<span class="pcode oferta" title="Proyecto en oferta: aún no está firmado ni tiene número de proyecto">OFERTA</span>' : `<span class="pcode">${esc(pl.code)}</span>`}<h3 class="name">${esc(pl.name)}<span class="pdc">${esc(potenciaDC(pl))}</span></h3></div>
-    <p class="obj">${esc(pl.loc)}</p>
+    <button class="card-toggle pcard-toggle" aria-expanded="false" title="Ver la ficha de ${esc(pl.name)}">
+      <span class="chev">›</span>
+      <div class="phead">${pl.oferta ? '<span class="pcode oferta" title="Proyecto en oferta: aún no está firmado ni tiene número de proyecto">OFERTA</span>' : `<span class="pcode">${esc(pl.code)}</span>`}<h3 class="name">${esc(pl.name)}<span class="pdc">${esc(potenciaDC(pl))}</span></h3></div>
+      <p class="obj">${esc(pl.loc)}${chip}</p>
+    </button>
     <div class="pviews">${btns}</div>
+    <div class="detail pdetail" hidden>${fichaPlanta(pl)}</div>
   </article>`;
 }
 /* Ordenadas por NÚMERO DE PROYECTO, que es como se las nombra en la casa. El array se deja en su
@@ -2152,6 +2237,17 @@ function renderPlants(){
   const el=document.getElementById("plants");
   if(el){
     el.innerHTML = PLANTS_ORD.map(plantCardHTML).join("");
+    /* Se despliega como las tarjetas de proyecto. Los botones de vista quedan FUERA del botón que
+       abre, así que abrir la ficha y entrar a una vista no se pisan. */
+    el.querySelectorAll(".pcard-toggle").forEach(btn=>{
+      btn.onclick = ()=>{
+        const card = btn.closest(".card"), det = card.querySelector(".pdetail");
+        const abierta = !det.hidden;
+        det.hidden = abierta;
+        card.classList.toggle("open", !abierta);
+        btn.setAttribute("aria-expanded", String(!abierta));
+      };
+    });
   }
   const c=document.getElementById("plants-cnt"); if(c) c.textContent = "· "+PLANTS.length;
 }
