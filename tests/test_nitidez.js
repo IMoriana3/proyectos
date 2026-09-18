@@ -29,7 +29,7 @@
 //   python3 -m http.server 8099
 //   node tests/test_nitidez.js
 const { chromium } = require('playwright');
-
+const { EXEC } = require('./pw_navegador.js');   // dónde está el chromium, en un solo sitio
 const BASE = process.env.BASE || 'http://localhost:8099';
 let ok = 0, ko = 0;
 const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); }
@@ -93,7 +93,7 @@ const PAGINAS = [
 const MINIMO = 1.9;
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
+  const browser = await chromium.launch({ executablePath: EXEC });
   let totalLienzos = 0;
   for (const [pag, esperados, antes] of PAGINAS) {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 2 });

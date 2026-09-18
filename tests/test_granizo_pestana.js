@@ -9,6 +9,7 @@
 //
 //   node tests/test_granizo_pestana.js      (necesita el servidor en :8099)
 const { chromium } = require('playwright');
+const { EXEC } = require('./pw_navegador.js');   // dónde está el chromium, en un solo sitio
 const BASE = process.env.BASE_URL || 'http://localhost:8099';
 const HAIL_DEFENSIVOS = ['HAIL_STOW_PREDICTIVO', 'HAIL_STOW_REACTIVO',
   'EMERGENCIA', 'HAIL_STOW_CONFIRMADO', 'MANTENIMIENTO_DE_POSICIÓN'];
@@ -17,7 +18,7 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
   else { ko++; console.log('FAIL ' + n + (extra ? ' -> ' + extra : '')); } };
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
+  const browser = await chromium.launch({ executablePath: EXEC });
   const page = await browser.newPage();
   const errores = [];
   page.on('pageerror', e => errores.push(String(e)));

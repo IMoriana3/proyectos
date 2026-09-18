@@ -47,6 +47,7 @@
 //   python3 -m http.server 8099
 //   node tests/test_portada.js
 const { chromium } = require('playwright');
+const { EXEC } = require('./pw_navegador.js');   // dónde está el chromium, en un solo sitio
 const fs = require('fs'), path = require('path'), vm = require('vm');
 
 const BASE = process.env.BASE || 'http://localhost:8099';
@@ -94,7 +95,7 @@ check('y sigue teniendo su respaldo escrito a mano (`pdc` por planta)',
       /pdc\s*:/.test(idx));
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
+  const browser = await chromium.launch({ executablePath: EXEC });
   const page0 = await browser.newPage();
   await page0.goto(BASE + '/index.html', { waitUntil: 'networkidle' });
 

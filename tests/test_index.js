@@ -10,7 +10,7 @@
 //   python3 -m http.server 8099       # servir el repo (en otra terminal)
 //   node tests/test_index.js
 const { chromium } = require('playwright');
-
+const { EXEC } = require('./pw_navegador.js');   // dónde está el chromium, en un solo sitio
 const BASE = process.env.BASE || 'http://localhost:8099';
 let ok = 0, ko = 0;
 function check(nombre, valor, esperado) {
@@ -39,7 +39,7 @@ async function abrir(browser, respuesta) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
+  const browser = await chromium.launch({ executablePath: EXEC });
 
   // ---------- la release manda sobre lo escrito a mano ----------
   let page = await abrir(browser, { tag_name: 'toolbox-v12.7', published_at: '2026-09-01T10:00:00Z' });

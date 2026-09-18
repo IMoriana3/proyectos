@@ -26,6 +26,7 @@
 //
 //   node tests/test_viento_reproductor.js      (necesita el servidor en :8099)
 const { chromium } = require('playwright');
+const { EXEC } = require('./pw_navegador.js');   // dónde está el chromium, en un solo sitio
 const BASE = process.env.BASE_URL || 'http://localhost:8099';
 let ok = 0, ko = 0;
 const check = (n, c, x) => { if (c) { ok++; console.log('OK   ' + n); }
@@ -56,7 +57,7 @@ const meteoSint = () => {
 const UN_PASO = `1.001 / pasosPorSegundo(TL.window.step_minutes, +document.getElementById('tspeed').value)`;
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
+  const browser = await chromium.launch({ executablePath: EXEC });
   const page = await browser.newPage();
   const errores = [];
   page.on('pageerror', e => errores.push(String(e)));

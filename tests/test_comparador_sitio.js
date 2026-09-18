@@ -30,7 +30,7 @@ const URL = process.env.URL || 'http://127.0.0.1:8099/comparador-estructuras.htm
 // Nadie lo vio en meses porque nadie lo corrió fuera de esa máquina; lo cazó la
 // primera tirada de `arneses` en GitHub Actions. `undefined` deja que Playwright
 // use el navegador que él mismo instaló, que es lo que hace el resto de arneses.
-const EXEC = process.env.PW_CHROMIUM || process.env.CHROMIUM_PATH || undefined;
+const { EXEC } = require('./pw_navegador.js');   // dónde está el chromium, en un solo sitio
 let ok = 0, ko = 0;
 const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); }
   else { ko++; console.log('FAIL ' + n + (extra ? ' -> ' + extra : '')); } };

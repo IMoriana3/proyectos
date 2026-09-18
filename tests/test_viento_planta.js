@@ -14,6 +14,7 @@
 //
 //   node tests/test_viento_planta.js        (necesita el servidor en :8099)
 const { chromium } = require('playwright');
+const { EXEC } = require('./pw_navegador.js');   // dónde está el chromium, en un solo sitio
 const BASE = process.env.BASE_URL || 'http://localhost:8099';
 let ok = 0, ko = 0;
 const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); }
@@ -27,7 +28,7 @@ const LAYOUT = {
 };
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
+  const browser = await chromium.launch({ executablePath: EXEC });
   const page = await browser.newPage();
   const errores = [];
   page.on('pageerror', e => errores.push(String(e)));
