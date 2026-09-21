@@ -559,6 +559,20 @@ representativa por estructura, no una planta simulada fila a fila. Sin haber com
 nada y se dice por qué: no se fabrica un color. Y es **POA**, no DC: el desacoplo eléctrico sigue
 sin estar en ninguna cifra.
 
+### El mando dice lo que puede hacer
+
+Reportado como **«no se colorea»**, y era cierto. La casilla se dejaba encender **sin haber
+comparado**, momento en el que no hay ni un número que pintar, y la razón vivía en un párrafo
+*debajo* del selector de escala. El texto decía la verdad y el mando la contradecía; entre los dos
+gana el mando, porque es el que se mira. Un aviso no arregla un control que promete una acción que
+no puede ejecutar.
+
+Ahora la casilla y el selector **están apagados mientras no hay comparación**, la razón va en la
+propia etiqueta (« — hace falta comparar el año») y el aviso de la leyenda se lee **sin necesidad
+de marcar nada** — si se escondiera detrás de un mando que no se puede marcar, no podría verse
+nunca. Se enciende solo cuando hay cifras. El banco mide el **estado del mando**, no el texto:
+apagado sin números, encendido con ellos.
+
 ### El bug que apareció al hacerlo
 
 Para pintar hay que saber **qué media viga del dibujo es qué mesa del cálculo**, y eso estaba

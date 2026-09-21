@@ -408,7 +408,7 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       </div>
       <div class="tline" style="margin-top:6px;flex-wrap:wrap">
         <label class="chk" title="Pinta cada MESA según lo que produce, como la ficha de producción de cobertura-zigbee. Azul = la que menos, rojo = la que más. Una mesa es un string. Hace falta haber comparado: sin números no se pinta nada.">
-          <input type="checkbox" id="colProd"> 🎨 color por producción</label>
+          <input type="checkbox" id="colProd"> 🎨 color por producción<span class="sn" id="colProdFalta"></span></label>
         <select id="cscale" class="btn" title="Cómo se reparte la rampa. FIEL: de 0 al máximo — el color es proporcional a lo que produce cada mesa, así que un conjunto parejo sale de un color. CONTRASTE: estira mín→máx de la vista para mirar diferencias finas, y entonces exagera.">
           <option value="abs" selected>escala fiel (0 → máx)</option>
           <option value="rel">contraste (mín → máx)</option>
@@ -4167,8 +4167,19 @@ function esDescendiente(o,g){for(var p=o;p;p=p.parent)if(p===g)return true;retur
 function pintaProduccion(){
   if(!TD||!BLOQUES.length)return;
   var cfg=cfgActual();
-  var on=!!($('colProd')&&$('colProd').checked);
-  var modo=($('cscale')&&$('cscale').value)||'abs';
+  /* EL MANDO DICE LO QUE PUEDE HACER. Sin comparar no hay producción que
+     pintar, y hasta aquí eso se decía en un párrafo DEBAJO del selector
+     mientras la casilla seguía encendiéndose y no pasaba nada: un mando que
+     promete una acción que no puede ejecutar. Se apaga y se dice en su propia
+     etiqueta, que es donde se mira. Reportado como «no se colorea», y tenía
+     razón: el mensaje estaba, pero el mando lo contradecía. */
+  var hayDatos=!!(REP&&REP.filas&&REP.filas.some(function(f){return f.neta>0;}));
+  var cb=$('colProd'), sel=$('cscale'), falta=$('colProdFalta');
+  if(cb)cb.disabled=!hayDatos;
+  if(sel)sel.disabled=!hayDatos;
+  if(falta)falta.textContent=hayDatos?'':' — hace falta comparar el año';
+  var on=!!(cb&&cb.checked&&hayDatos);
+  var modo=(sel&&sel.value)||'abs';
   var todo=[];
   BLOQUES.forEach(function(B){
     var v=on?produccionPorMesa(B,cfg):null;
@@ -4196,20 +4207,25 @@ function pintaProduccion(){
       t.malla.material=m; t.malla.userData.matProd=m;
     });
   }
-  leyendaProd(on,R,todo);
+  leyendaProd(on,R,todo,hayDatos);
 }
 /* LA LEYENDA DICE QUÉ SIGNIFICA EL COLOR, y con la escala de contraste dice
    además desde dónde arranca la rampa: sin eso, dos capturas de la misma
    planta con escalas distintas se leen como plantas distintas. */
-function leyendaProd(on,R,todo){
+function leyendaProd(on,R,todo,hayDatos){
   var el=$('legProd'); if(!el)return;
-  if(!on){el.style.display='none'; el.innerHTML=''; return;}
-  el.style.display='';
-  if(!R){
+  /* El aviso sale SIEMPRE que no hay números, esté la casilla como esté: es la
+     razón de que el mando esté apagado, y esconderla detrás de un mando que no
+     se puede marcar la dejaría sin poder leerse nunca. */
+  if(!hayDatos){
+    el.style.display='';
     el.innerHTML='<span class="sn">Sin comparar no hay producción que pintar: dale a '+
-      '<b>Comparar el año</b> y la escena se colorea. No se pinta un color inventado.</span>';
+      '<b>Comparar el año</b> y esto se enciende. No se pinta un color inventado.</span>';
     return;
   }
+  if(!on){el.style.display='none'; el.innerHTML=''; return;}
+  el.style.display='';
+  if(!R)return;
   var stops=[]; for(var i=0;i<=8;i++)stops.push(prodColor(i/8)+' '+(i*12.5)+'%');
   var n=todo.length, mn=Math.min.apply(null,todo.map(function(t){return t.kwh;}));
   var mx=Math.max.apply(null,todo.map(function(t){return t.kwh;}));

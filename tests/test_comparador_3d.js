@@ -1945,6 +1945,14 @@ const SONDA = `(() => {
     // tira: si no, esto mediría el caso CON números y daría verde sin mirar
     // lo que dice mirar.
     window.REP = null;
+    // El mando se mide ANTES de tocarlo: sin comparar tiene que estar apagado y
+    // decir por qué. Esto es lo que faltaba cuando se reportó «no se colorea»:
+    // la casilla se dejaba encender y la razón vivía en un párrafo de abajo.
+    pintaProduccion();
+    out.mandoSin = { cb: document.getElementById('colProd').disabled,
+                     sel: document.getElementById('cscale').disabled,
+                     etiq: document.getElementById('colProdFalta').textContent.trim(),
+                     legSinMarcar: document.getElementById('legProd').textContent.trim() };
     document.getElementById('colProd').checked = true;
     pintaProduccion();
     out.sinComparar = { tenidas: vidrios().filter(v => v.propio).length,
@@ -1959,6 +1967,9 @@ const SONDA = `(() => {
     if (!window.REP) return Object.assign(out, { error: 'no llegó REP' });
     out.escenario = { quiebro: cfgActual().quiebro, claves: elegidas() };
     pintaProduccion();
+    out.mandoCon = { cb: document.getElementById('colProd').disabled,
+                     sel: document.getElementById('cscale').disabled,
+                     etiq: document.getElementById('colProdFalta').textContent.trim() };
     out.conAno = {};
     BLOQUES.forEach(B => {
       const t = (B.prod || []).map(x => ({ kwh: +x.kwh.toFixed(1), plano: x.plano,
@@ -1994,6 +2005,27 @@ const SONDA = `(() => {
   check('  y se dice por qué en vez de callarse',
     /Comparar el año/.test((colProd.sinComparar || {}).nota || ''),
     (colProd.sinComparar || {}).nota);
+  /* EL MANDO DICE LO QUE PUEDE HACER. Reportado como «no se colorea»: la
+     casilla se encendía sin comparar y no pasaba nada, porque la razón estaba
+     en un párrafo DEBAJO del selector. Un mando que promete una acción que no
+     puede ejecutar miente aunque el texto diga la verdad, así que aquí se mide
+     el ESTADO del mando, no el texto: apagado sin números, encendido con
+     ellos. El aviso, además, tiene que poder leerse SIN marcar la casilla —
+     si no, esconderlo detrás de un mando que no se puede marcar lo dejaría
+     sin poder verse nunca. */
+  check('  sin comparar el mando está APAGADO: no se puede encender lo que no hace nada',
+    colProd.mandoSin && colProd.mandoSin.cb === true && colProd.mandoSin.sel === true,
+    JSON.stringify(colProd.mandoSin));
+  check('  y la razón va en su propia etiqueta, no solo en un párrafo de abajo',
+    /hace falta comparar/i.test((colProd.mandoSin || {}).etiq || ''),
+    (colProd.mandoSin || {}).etiq);
+  check('  y el aviso se lee sin marcar la casilla (si no, no se vería nunca)',
+    /Comparar el año/.test((colProd.mandoSin || {}).legSinMarcar || ''),
+    ((colProd.mandoSin || {}).legSinMarcar || '').slice(0, 90));
+  check('  tras comparar el mando se ENCIENDE y la etiqueta deja de excusarse',
+    colProd.mandoCon && colProd.mandoCon.cb === false &&
+    colProd.mandoCon.sel === false && colProd.mandoCon.etiq === '',
+    JSON.stringify(colProd.mandoCon));
   /* Y que el escenario es el que se pidió, no el que quedó de antes: un test
      que mide otro caso da verde sin medir lo que dice. */
   check('el caso comparado es el de este test (quiebro y estructuras)',
