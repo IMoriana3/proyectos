@@ -4178,7 +4178,11 @@ function pintaProduccion(){
   if(cb)cb.disabled=!hayDatos;
   if(sel)sel.disabled=!hayDatos;
   if(falta)falta.textContent=hayDatos?'':' — hace falta comparar el año';
-  var on=!!(cb&&cb.checked&&hayDatos);
+  /* `on` NO vuelve a mirar `hayDatos`: sin números `produccionPorMesa` no
+     devuelve nada y no hay con qué pintar, así que el cinturón no decide
+     ningún caso — su mutante sobrevivió 0/270. Lo que sujeta la propiedad es
+     la comprobación «sin haber comparado no se pinta NADA», no este `&&`. */
+  var on=!!(cb&&cb.checked);
   var modo=(sel&&sel.value)||'abs';
   var todo=[];
   BLOQUES.forEach(function(B){
