@@ -84,7 +84,12 @@ declare -A PISO=(
   # dice cuál.
   [test_cartera_en_vivo.js]=32
   [test_comparador.js]=304
-  [test_comparador_3d.js]=247
+  # LA ESCENA, EN CHROMIUM DE VERDAD. Sube de 247 a 266 con el color por
+  # producción: 19 comprobaciones nuevas, entre ellas las que sujetan que el
+  # color de cada mesa corresponde a SU número. Dejar el piso en 247 las haría
+  # desaparecer sin que nada cantase — que es justo lo que un piso existe para
+  # impedir. Los pisos se miden, y éste sale de la tirada de este cambio.
+  [test_comparador_3d.js]=266
   [test_comparador_sitio.js]=36
   [test_ejecucion_traza.mjs]=61
   # La ficha de planta y el acceso al SCADA. El piso son las 30 MEDIDAS, y lo

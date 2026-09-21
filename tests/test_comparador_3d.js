@@ -1922,6 +1922,206 @@ const SONDA = `(() => {
   check('  y recentrar la devuelve, así que el aviso se apaga',
     encuadre.trasRecentrar === '', encuadre.trasRecentrar);
 
+
+  // ── COLOR POR PRODUCCIÓN ───────────────────────────────────────────────────
+  // Lo mismo que hace `produccion.html` de cobertura-zigbee: cada mesa pintada
+  // según lo que produce. Un 3D bonito que apunte mal es peor que no tenerlo, y
+  // aquí «apuntar mal» tiene una forma concreta y silenciosa: pintar de rojo la
+  // mesa MALA. Por eso lo que se mide no es que haya colores, sino que el color
+  // de cada mesa corresponde a SU número.
+  const colProd = await p.evaluate(async () => {
+    const set = (id, v) => { const e = document.getElementById(id);
+      if (e) { e.value = v; e.dispatchEvent(new Event('change')); } };
+    const marca = ks => document.querySelectorAll('#structs input[type=checkbox]')
+      .forEach(c => { c.checked = ks.includes(c.value); });
+    const vidrios = () => { const r = []; BLOQUES.forEach(B => B.filas.forEach(u =>
+      mallasDeMesa(u).forEach(o => r.push({ k: B.key, hex: o.material.color.getHexString(),
+                                            propio: !!o.userData.matProd })))); return r; };
+    const out = {};
+    marca(['tracker_queb', 'fija_ew', 'fija_proyecto']);
+    set('source', 'clearsky'); set('quiebro', 20); set('lat', 37.3891);
+    // 1) sin comparar: no hay producción, así que NO se pinta y se dice.
+    // `REP` viene puesto de pruebas anteriores de este fichero, así que se
+    // tira: si no, esto mediría el caso CON números y daría verde sin mirar
+    // lo que dice mirar.
+    window.REP = null;
+    document.getElementById('colProd').checked = true;
+    pintaProduccion();
+    out.sinComparar = { tenidas: vidrios().filter(v => v.propio).length,
+                        nota: document.getElementById('legProd').textContent.trim() };
+    // 2) con el año comparado. Se TIRA el REP anterior antes de pedir uno nuevo:
+    // en este fichero ya han corrido otras pruebas, así que `window.REP` viene
+    // puesto y el bucle de espera salía al instante — careando el escenario de
+    // OTRO test (sin quiebro, con otras estructuras) y leyendo `mesas` en null.
+    window.REP = null;
+    document.getElementById('run').click();
+    for (let i = 0; i < 120 && !window.REP; i++) await new Promise(r => setTimeout(r, 500));
+    if (!window.REP) return Object.assign(out, { error: 'no llegó REP' });
+    out.escenario = { quiebro: cfgActual().quiebro, claves: elegidas() };
+    pintaProduccion();
+    out.conAno = {};
+    BLOQUES.forEach(B => {
+      const t = (B.prod || []).map(x => ({ kwh: +x.kwh.toFixed(1), plano: x.plano,
+                                           hex: x.malla.material.color.getHexString() }));
+      out.conAno[B.key] = { mesas: t, colores: [...new Set(t.map(x => x.hex))].length,
+                            valores: [...new Set(t.map(x => x.kwh))].length };
+    });
+    const f = REP.filas.find(x => x.key === 'tracker_queb');
+    out.mesasQueb = f.mesas.map(x => +x.toFixed(1));
+    // 3) apagarlo devuelve el material de origen (sin fugas)
+    document.getElementById('colProd').checked = false; pintaProduccion();
+    out.apagado = { tenidas: vidrios().filter(v => v.propio).length,
+                    unico: [...new Set(vidrios().map(v => v.hex))].length };
+    // 4) las dos escalas, sobre el MISMO caso
+    document.getElementById('colProd').checked = true;
+    set('cscale', 'abs'); pintaProduccion();
+    const abs = vidrios().map(v => v.hex).join(',');
+    set('cscale', 'rel'); pintaProduccion();
+    const rel = vidrios().map(v => v.hex).join(',');
+    out.escalas = { distintas: abs !== rel,
+                    notaRel: document.getElementById('legProd').textContent.trim() };
+    set('cscale', 'abs'); pintaProduccion();
+    out.escalas.notaAbs = document.getElementById('legProd').textContent.trim();
+    out.escalas.anclaEnCero = rangoColor(2000, 3000, 'abs').lo === 0;
+    return out;
+  });
+  check('la escena tiene el mando de color por producción y arranca APAGADO',
+    await p.evaluate(() => { const e = document.getElementById('colProd');
+      return !!e && e.defaultChecked === false; }));
+  check('sin haber comparado no se pinta NADA: no se inventa un color',
+    colProd.sinComparar && colProd.sinComparar.tenidas === 0,
+    JSON.stringify(colProd.sinComparar));
+  check('  y se dice por qué en vez de callarse',
+    /Comparar el año/.test((colProd.sinComparar || {}).nota || ''),
+    (colProd.sinComparar || {}).nota);
+  /* Y que el escenario es el que se pidió, no el que quedó de antes: un test
+     que mide otro caso da verde sin medir lo que dice. */
+  check('el caso comparado es el de este test (quiebro y estructuras)',
+    colProd.escenario && colProd.escenario.quiebro === 20 &&
+    colProd.escenario.claves.indexOf('tracker_queb') >= 0,
+    JSON.stringify(colProd.escenario));
+  check('comparado el año, cada estructura pinta sus mesas',
+    !colProd.error && colProd.conAno && Object.keys(colProd.conAno).length === 3,
+    colProd.error || JSON.stringify(Object.keys(colProd.conAno || {})));
+  // Una fija monoinclinada tiene UNA mesa por fila y todas sus filas producen lo
+  // mismo en este modelo: un solo color, y eso es la verdad, no un fallo.
+  check('la fija sale de UN color: en campo uniforme sus filas producen lo mismo',
+    colProd.conAno && colProd.conAno.fija_proyecto &&
+    colProd.conAno.fija_proyecto.colores === 1 &&
+    colProd.conAno.fija_proyecto.valores === 1,
+    JSON.stringify((colProd.conAno || {}).fija_proyecto));
+  // El quebrado es el caso que esta vista existe para enseñar: sus dos mesas NO
+  // captan lo mismo, y eso es lo que decide si un string a caballo de la rótula
+  // sale penalizado.
+  check('el QUEBRADO pinta sus dos mesas distinto: es lo que esta vista enseña',
+    colProd.conAno && colProd.conAno.tracker_queb &&
+    colProd.conAno.tracker_queb.colores === 2,
+    JSON.stringify((colProd.conAno || {}).tracker_queb));
+  /* EL MAPEO, que es lo único que puede fallar en silencio. `mesas[0]` es el
+     plano de eje+q/2 —el que más cae hacia el ECUADOR— y tiene que ser el que
+     la escena pinta en la media viga del ecuador. Si se cruzara, la escena
+     diría que produce más la mesa que produce menos. */
+  const qColor = (colProd.conAno || {}).tracker_queb || { mesas: [] };
+  const p0 = qColor.mesas.find(m => m.plano === 0), p1 = qColor.mesas.find(m => m.plano === 1);
+  check('  y cada mesa lleva SU número: el plano 0 es el de `mesas[0]`',
+    p0 && p1 && Math.abs(p0.kwh - colProd.mesasQueb[0]) < 0.2 &&
+    Math.abs(p1.kwh - colProd.mesasQueb[1]) < 0.2,
+    JSON.stringify([p0, p1, colProd.mesasQueb]));
+  check('  y la que cae hacia el ECUADOR es la que más produce (' +
+    (p0 ? p0.kwh : '?') + ' contra ' + (p1 ? p1.kwh : '?') + ' kWh/m²)',
+    p0 && p1 && p0.kwh > p1.kwh, JSON.stringify([p0, p1]));
+  check('apagarlo devuelve el material de origen, sin dejar mesas teñidas',
+    colProd.apagado && colProd.apagado.tenidas === 0 && colProd.apagado.unico === 1,
+    JSON.stringify(colProd.apagado));
+  check('las dos escalas pintan distinto, que es para lo que están',
+    colProd.escalas && colProd.escalas.distintas);
+  check('la escala fiel ANCLA en cero y lo dice, que es su razón de ser',
+    colProd.escalas && colProd.escalas.anclaEnCero &&
+    /fiel/i.test(colProd.escalas.notaAbs) && /cero/i.test(colProd.escalas.notaAbs),
+    (colProd.escalas || {}).notaAbs && colProd.escalas.notaAbs.slice(0, 140));
+  check('  y la de contraste DICE que arranca del mínimo y exagera',
+    /contraste/i.test((colProd.escalas || {}).notaRel || '') &&
+    /exagera/i.test((colProd.escalas || {}).notaRel || ''),
+    ((colProd.escalas || {}).notaRel || '').slice(0, 160));
+
+  /* HEMISFERIO SUR — el régimen donde el reparto puede romperse, y donde ESTABA
+     roto. El código asignaba siempre `medias[1] → eje+q/2` con el razonamiento
+     hecho «en el hemisferio norte»; medido, la inclinación hacia el ecuador de
+     cada media viga se INTERCAMBIA al cruzar el ecuador, así que en el sur la
+     escena dibujaba cada mesa con el ángulo de la OTRA — y ahora, además,
+     la habría pintado con el color de la otra. */
+  const hemi = await p.evaluate(async () => {
+    const set = (id, v) => { const e = document.getElementById(id);
+      if (e) { e.value = v; e.dispatchEvent(new Event('change')); } };
+    const mide = () => {
+      const c = cfgActual(), B = BLOQUES.find(x => x.key === 'tracker_queb');
+      const u = B.filas[0]; u.updateWorldMatrix(true, true);
+      const eq = new THREE.Vector3(0, 0, c.lat >= 0 ? 1 : -1);
+      const caida = g => { const e = new THREE.Vector3(1, 0, 0).applyQuaternion(
+          g.parent.getWorldQuaternion(new THREE.Quaternion())).normalize();
+        return Math.atan(-e.y * Math.sign(e.dot(eq)) / Math.hypot(e.x, e.z)) * 180 / Math.PI; };
+      const ej = FIS.ejesMitades(c, FIS.spec('tracker_queb'));
+      /* EL CIERRE NO CIRCULAR. Lo de arriba usa `mediaDePlano` para saber cuál
+         es cuál, así que si ese mapeo se cruzara, la etiqueta se cruzaría con
+         él y el careo seguiría cuadrando. Aquí la media viga del ecuador se
+         determina APARTE —midiendo cuál de las dos cae más hacia el ecuador— y
+         se mira qué kWh lleva pintada dentro. */
+      let mejor = null;
+      [u.medias[0], u.medias[1]].forEach(g => {
+        const d = caida(g);
+        if (!mejor || d > mejor.d) mejor = { g: g, d: d };
+      });
+      const dentro = (B.prod || []).filter(t => {
+        for (let q = t.malla; q; q = q.parent) if (q === mejor.g) return true;
+        return false; });
+      return { lat: c.lat, ejes: ej,
+               ecuadorKwh: dentro.length ? +dentro[0].kwh.toFixed(1) : null,
+               mesas: (REP && REP.filas.find(x => x.key === 'tracker_queb') || {}).mesas,
+               caidaPlano0: +caida(mediaDePlano(u, c, 0)).toFixed(2),
+               caidaPlano1: +caida(mediaDePlano(u, c, 1)).toFixed(2),
+               thetaPlano0: +(mediaDePlano(u, c, 0).rotation.x * 180 / Math.PI).toFixed(3),
+               thetaPlano1: +(mediaDePlano(u, c, 1).rotation.x * 180 / Math.PI).toFixed(3) };
+    };
+    document.querySelectorAll('#structs input[type=checkbox]')
+      .forEach(c => { c.checked = (c.value === 'tracker_queb'); });
+    set('quiebro', 20);
+    /* CON EL SOL ARRIBA. La escena venía de otra prueba y a 33 S había quedado
+       de noche: las dos mesas a θ=0, que es cierto y no prueba nada — un test
+       de distinción exige un mundo donde la distinción exista. */
+    set('fecha', '2023-06-21'); const h = document.getElementById('hora');
+    h.value = 720; h.dispatchEvent(new Event('input'));
+    document.getElementById('colProd').checked = true;
+    set('lat', 37.3891); construyeMundo(); actualiza3D(); pintaProduccion();
+    const N = mide();
+    set('lat', -33.0);   construyeMundo(); actualiza3D(); pintaProduccion();
+    const S = mide();
+    return { N: N, S: S };
+  });
+  [['norte', hemi.N], ['sur', hemi.S]].forEach(([nm, m]) => {
+    check('en el hemisferio ' + nm + ' la mesa del plano 0 cae hacia el ECUADOR ' +
+      '(' + m.caidaPlano0 + '° contra ' + m.caidaPlano1 + '°)',
+      Math.abs(m.caidaPlano0 - m.ejes[0]) < 0.05 &&
+      Math.abs(m.caidaPlano1 - m.ejes[1]) < 0.05,
+      JSON.stringify(m));
+  });
+  /* El cierre: la media viga que MÁS cae hacia el ecuador —determinada aparte,
+     sin `mediaDePlano`— tiene que llevar pintado el kWh de `mesas[0]`. Con el
+     mapeo cruzado, esto se cae aunque las etiquetas internas cuadren. */
+  check('la media viga del ecuador lleva pintado el kWh del plano 0, en el norte',
+    hemi.N.mesas && hemi.N.ecuadorKwh != null &&
+    Math.abs(hemi.N.ecuadorKwh - hemi.N.mesas[0]) < 0.2,
+    JSON.stringify([hemi.N.ecuadorKwh, hemi.N.mesas]));
+  check('y en el sur también, que es donde el reparto estaba cruzado',
+    hemi.S.mesas && hemi.S.ecuadorKwh != null &&
+    Math.abs(hemi.S.ecuadorKwh - hemi.S.mesas[0]) < 0.2,
+    JSON.stringify([hemi.S.ecuadorKwh, hemi.S.mesas]));
+  check('y a esa hora el sol está ARRIBA, o lo de abajo no mediría nada',
+    Math.abs(hemi.S.thetaPlano0) + Math.abs(hemi.S.thetaPlano1) > 1e-6,
+    JSON.stringify(hemi.S));
+  check('y las dos mesas del quebrado NO llevan el mismo ángulo de seguimiento',
+    Math.abs(hemi.S.thetaPlano0 - hemi.S.thetaPlano1) > 1e-6,
+    JSON.stringify(hemi.S));
+
   check('sin errores de JS', errs.length === 0, errs.join(' | '));
   await b.close();
   console.log('\n' + (ko ? 'FALLOS: ' + ko + ' (de ' + (ok + ko) + ')' : 'OK — ' + ok + '/' + ok + ' comprobaciones'));

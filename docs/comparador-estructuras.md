@@ -536,6 +536,39 @@ transposición NEGATIVA—, que es la firma de una geometría imposible, no de u
   sombra que no tiene (medido más arriba: 0,005 puntos con la geometría de esta ficha).
 * No hay bifacialidad ni suciedad: campo monofacial.
 
+## Color por producción
+
+Lo mismo que hace `produccion.html` de `cobertura-zigbee`: cada **mesa** pintada según lo que capta
+al año, azul la que menos y rojo la que más. La rampa es la suya, portada literal (`prodColor`,
+familia turbo), para que las dos fichas se lean igual. La unidad es la mesa porque en la
+nomenclatura de la casa **una mesa es un string**, y porque es lo que el cálculo publica por
+separado: un quebrado corre sus dos mesas aparte y una dos aguas sus dos paños.
+
+**La escala se ancla a CERO por defecto**, y eso también viene de allí con su motivo: estirar la
+rampa siempre de mínimo a máximo pinta un arcoíris cuando todo está casi igual. «Contraste» estira
+mín→máx para diferencias finas y la leyenda dice entonces desde dónde arranca.
+
+**Lo que esta vista enseña de verdad** es la diferencia entre estructuras y, dentro de un
+**quebrado** o de una **dos aguas**, entre sus dos mesas — que es la que decide si un string a
+caballo de la rótula sale penalizado, y que la tabla promedia. Medido en Sevilla con 20° de
+quiebro: 3035 kWh/m² la mesa que cae hacia el ecuador contra 2642 la que cae hacia el polo.
+
+**Y lo que NO enseña, dicho en la leyenda**: todas las filas de una misma estructura salen del
+mismo color porque en este modelo *producen lo mismo* — es un campo uniforme con una fila
+representativa por estructura, no una planta simulada fila a fila. Sin haber comparado no se pinta
+nada y se dice por qué: no se fabrica un color. Y es **POA**, no DC: el desacoplo eléctrico sigue
+sin estar en ninguna cifra.
+
+### El bug que apareció al hacerlo
+
+Para pintar hay que saber **qué media viga del dibujo es qué mesa del cálculo**, y eso estaba
+escrito a pelo (`medias[1] → eje+q/2`) con el razonamiento hecho «en el hemisferio norte». Medido
+sobre la escena: la inclinación hacia el ecuador de cada media viga **se intercambia al cruzar el
+ecuador** (±10° con quiebro 20°, a 37,4 N y a 33 S), así que en el hemisferio sur la escena
+dibujaba **cada mesa con el ángulo de la otra** — y, de haberlo dejado, la habría pintado también
+con el color de la otra. Ahora va por `mediaDePlano`, con la medición escrita al lado y tests en
+los dos hemisferios, que es el régimen donde puede romperse.
+
 ## La escena 3D
 
 Un bloque por estructura, **todos al mismo sol y sobre el mismo suelo**, con tres filas al pitch

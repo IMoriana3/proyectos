@@ -406,9 +406,23 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         <input type="range" id="hora" min="0" max="1439" step="5" value="720">
         <span class="hhmm" id="hlbl">12:00</span>
       </div>
+      <div class="tline" style="margin-top:6px;flex-wrap:wrap">
+        <label class="chk" title="Pinta cada MESA según lo que produce, como la ficha de producción de cobertura-zigbee. Azul = la que menos, rojo = la que más. Una mesa es un string. Hace falta haber comparado: sin números no se pinta nada.">
+          <input type="checkbox" id="colProd"> 🎨 color por producción</label>
+        <select id="cscale" class="btn" title="Cómo se reparte la rampa. FIEL: de 0 al máximo — el color es proporcional a lo que produce cada mesa, así que un conjunto parejo sale de un color. CONTRASTE: estira mín→máx de la vista para mirar diferencias finas, y entonces exagera.">
+          <option value="abs" selected>escala fiel (0 → máx)</option>
+          <option value="rel">contraste (mín → máx)</option>
+        </select>
+      </div>
+      <div id="legProd" style="margin-top:8px;display:none"></div>
       <div id="escRead" class="readout" style="margin-top:10px"></div>
       <p class="note" id="escNote">Cada bloque es una estructura, con su pitch y su GCR, al mismo
-        sol y sobre el mismo suelo. Mueve la hora y mira las <b>sombras entre filas</b>: es lo que
+        sol y sobre el mismo suelo. <b>«Color por producción»</b> pinta cada <b>mesa</b> según lo
+        que capta al año —azul la que menos, rojo la que más, como la ficha de producción—, y hace
+        falta haber comparado: sin números no se pinta nada. Donde más se ve es en el
+        <b>quebrado</b> y en las <b>dos aguas</b>, que corren sus dos mesas por separado y no
+        captan lo mismo; las filas de una misma estructura salen todas igual porque en este modelo
+        <i>lo son</i> —campo uniforme, una fila representativa—. Mueve la hora y mira las <b>sombras entre filas</b>: es lo que
         el backtracking existe para evitar, y lo que la columna «pérdida sombra» de la tabla mide.
         <b>Las de la fija hay que ir a buscarlas</b>: una fija mira al ecuador, así que tira la
         sombra hacia el polo — al fondo desde esta vista y detrás de sus propias filas. Órbita
@@ -3180,6 +3194,7 @@ function render(){
     (REP.avisos||[]).map(function(a){return '<div class="warn" style="margin-top:12px">⚠ '+esc(a)+'</div>';}).join('');
   drawTabla(base); drawMeses(); drawRank();
   actualiza3D();                 // la escena pasa del tilt estimado al del año
+  pintaProduccion();             // y ya hay producción que pintar
   $('tblCard').style.display='';$('mesCard').style.display='';
 }
 function ro(k,v,s){return '<div class="ro"><div class="k">'+esc(k)+'</div><div class="v">'+esc(v)+(s?' <small>'+esc(s)+'</small>':'')+'</div></div>';}
@@ -3301,7 +3316,8 @@ function avisoMesas(que){
       : 'el corte entre strings cae en la rótula: <b>ninguno la cruza</b>, cada mesa alimenta los '+
         'suyos y el desacoplo se queda entre strings, que pesa mucho menos que dentro de uno.')+
     ' Ese desacoplo es <b>DC</b> y esta comparación es de POA: no está contado en ninguna cifra '+
-    'de la tabla.';
+    'de la tabla. Las dos mesas se ven en la escena marcando <b>«color por producción»</b>: la que '+
+    'cae hacia el ecuador sale más caliente.';
 }
 function avisoBacktracking(f){
   var bt=null,nb=null;
@@ -4056,6 +4072,172 @@ function sueloRelieve(lado,T){
    filas se repiten hacia el ESTE, y en una fija de filas E-O se repiten hacia
    el SUR. Dibujarlas todas en la misma dirección sería enseñar una sombra que
    no existe.                                                                  */
+/* ═════════ COLOR POR PRODUCCIÓN ═══════════════════════════════════════════
+   Lo mismo que hace `produccion.html` de cobertura-zigbee: pintar cada string
+   según lo que produce, para verlo de un vistazo en vez de leerlo en una
+   tabla. Aquí la unidad es la MESA, que es lo mismo —en la nomenclatura de la
+   casa una mesa ES un string— y es además la unidad que el cálculo publica por
+   separado: un quebrado corre sus dos mesas aparte y una dos aguas sus dos
+   paños, y cada uno tiene su POA.
+
+   LA RAMPA es puerto literal de `prodColor` de `cobertura-zigbee/
+   backtracking.html`: la misma familia turbo que la carta solar de la casa, y
+   la misma que consume `produccion.html`. Azul = el que menos, rojo = el que
+   más. Copiarla en vez de inventar otra es lo que hace que las dos fichas se
+   lean igual.                                                                */
+var PROD_RAMP=[[48,18,59],[69,91,205],[62,155,254],[24,214,203],[72,248,130],
+               [164,252,59],[226,220,56],[254,163,49],[239,89,17],[122,4,3]];
+function prodColor(x){
+  var v=Math.max(0,Math.min(1,x))*(PROD_RAMP.length-1);
+  var i=Math.floor(v), f=v-i, a=PROD_RAMP[i], b=PROD_RAMP[Math.min(i+1,PROD_RAMP.length-1)];
+  return 'rgb('+[0,1,2].map(function(k){return Math.round(a[k]+f*(b[k]-a[k]));}).join(',')+')';
+}
+/* LA ESCALA, y esto también viene de allí con su motivo. Estirar la rampa
+   siempre del mínimo al máximo de la vista pinta un arcoíris cuando todo está
+   casi igual: si las estructuras marcadas se parecen al 1 %, la escena diría
+   que unas producen el doble que otras. Por defecto se ANCLA A CERO —el color
+   es proporcional a lo que produce cada mesa, y un conjunto parejo sale de un
+   color—, y «contraste» estira mín→máx para mirar diferencias finas; entonces
+   la leyenda dice desde dónde arranca. */
+function rangoColor(mn,mx,modo){
+  if(modo==='rel')return {lo:mn,hi:Math.max(mx,mn+1e-9),rel:true};
+  return {lo:Math.min(0,mn),hi:Math.max(mx,1e-9),rel:false};
+}
+/* ¿QUÉ MEDIA VIGA ES QUÉ MESA DEL CÁLCULO? No se supone por el nombre: está
+   MEDIDO. `FIS.ejesMitades` devuelve [eje+q/2, eje−q/2] y el plano 0 es el que
+   más cae hacia el ECUADOR. Sondeando la escena con quiebro 20°, la
+   inclinación hacia el ecuador de cada media sale ±10° y las dos se
+   INTERCAMBIAN al cruzar el ecuador: a 37,4 N el plano 0 es `medias[1]` (la
+   del sur) y a 33 S es `medias[0]` (la del norte).
+   Esto importa dos veces: para el ÁNGULO con que se dibuja cada mesa y para el
+   COLOR con que se pinta. Con el mapeo cruzado la escena pintaría de rojo la
+   mesa mala, que es peor que no pintarla. */
+function mediaDePlano(u,cfg,plano){
+  if(!u||!u.medias)return null;
+  var ecuador=(cfg.lat>=0)?u.medias[1]:u.medias[0];
+  var polo=(cfg.lat>=0)?u.medias[0]:u.medias[1];
+  return plano===0?ecuador:polo;
+}
+/* Las mallas de MÓDULO de una fila, una por mesa. Se identifican por su
+   material —el vidrio es uno solo y compartido— y no por su sitio en el árbol,
+   que cambia con la familia: una fija lleva una, una dos aguas dos (sus paños)
+   y un seguidor dos (las dos mesas de su tubo, que es lo que es una fila). */
+function mallasDeMesa(u){
+  var out=[];
+  u.traverse(function(o){ if(o.isMesh&&o.userData.esVidrio)out.push(o); });
+  return out;
+}
+/* LA PRODUCCIÓN DE CADA MESA, y `null` cuando no la hay.
+
+   NO SE FABRICA EN EL RENDER: sin haber comparado no hay POA de nada, así que
+   no se pinta y se dice por qué. Y donde el modelo no distingue tampoco se
+   inventa: este comparador corre UNA fila representativa por estructura sobre
+   campo uniforme, así que todas las filas dibujadas de una misma estructura
+   producen lo mismo — y salen del mismo color, que es la verdad. Lo que SÍ
+   difiere, y es lo que esta vista enseña, es entre estructuras y, dentro de un
+   quebrado o una dos aguas, entre sus dos mesas. */
+function produccionPorMesa(B,cfg){
+  if(!REP||!REP.filas)return null;
+  var f=null; REP.filas.forEach(function(x){if(x.key===B.key)f=x;});
+  if(!f||!(f.neta>0))return null;
+  return B.filas.map(function(u){
+    var m=mallasDeMesa(u);
+    if(!f.mesas||f.mesas.length!==2||m.length!==2)
+      return m.map(function(o){return {malla:o,kwh:f.neta,plano:null};});
+    /* Dos mesas con POA propia. El reparto es el mismo que el de los ángulos
+       —`mediaDePlano` para el quebrado— y para la dos aguas el plano 0 es el
+       paño que mira hacia donde apila las filas (`+thEW`), que es el que
+       `spinPair[0]` bascula en positivo. */
+    var porPlano;
+    if(u.medias)porPlano=[mediaDePlano(u,cfg,0),mediaDePlano(u,cfg,1)];
+    else if(u.spinPair)porPlano=[u.spinPair[0],u.spinPair[1]];
+    else porPlano=null;
+    if(!porPlano)return m.map(function(o){return {malla:o,kwh:f.neta,plano:null};});
+    return m.map(function(o){
+      var p=(porPlano[0]&&esDescendiente(o,porPlano[0]))?0
+           :((porPlano[1]&&esDescendiente(o,porPlano[1]))?1:null);
+      return {malla:o,kwh:(p==null)?f.neta:f.mesas[p],plano:p};
+    });
+  }).reduce(function(a,b){return a.concat(b);},[]);
+}
+function esDescendiente(o,g){for(var p=o;p;p=p.parent)if(p===g)return true;return false;}
+
+/* Pinta —o despinta— la escena. Se llama al construir el mundo, al mover los
+   mandos y al terminar una comparación, que es cuando aparecen los números. */
+function pintaProduccion(){
+  if(!TD||!BLOQUES.length)return;
+  var cfg=cfgActual();
+  var on=!!($('colProd')&&$('colProd').checked);
+  var modo=($('cscale')&&$('cscale').value)||'abs';
+  var todo=[];
+  BLOQUES.forEach(function(B){
+    var v=on?produccionPorMesa(B,cfg):null;
+    B.prod=v; if(v)todo=todo.concat(v);
+  });
+  /* Primero se devuelve todo a su material de origen: así apagar el color, o
+     cambiar de escala, no deja mesas teñidas de la pasada anterior. */
+  BLOQUES.forEach(function(B){
+    B.filas.forEach(function(u){
+      mallasDeMesa(u).forEach(function(o){
+        if(o.userData.matProd){o.userData.matProd.dispose(); delete o.userData.matProd;}
+        if(o.userData.matBase)o.material=o.userData.matBase;
+      });
+    });
+  });
+  var R=null;
+  if(on&&todo.length){
+    var vals=todo.map(function(t){return t.kwh;});
+    R=rangoColor(Math.min.apply(null,vals),Math.max.apply(null,vals),modo);
+    todo.forEach(function(t){
+      var x=(R.hi>R.lo)?(t.kwh-R.lo)/(R.hi-R.lo):1;
+      var c=new THREE.Color(prodColor(x));
+      var m=t.malla.userData.matBase.clone();
+      m.color=c; m.emissive=c.clone().multiplyScalar(0.16);
+      t.malla.material=m; t.malla.userData.matProd=m;
+    });
+  }
+  leyendaProd(on,R,todo);
+}
+/* LA LEYENDA DICE QUÉ SIGNIFICA EL COLOR, y con la escala de contraste dice
+   además desde dónde arranca la rampa: sin eso, dos capturas de la misma
+   planta con escalas distintas se leen como plantas distintas. */
+function leyendaProd(on,R,todo){
+  var el=$('legProd'); if(!el)return;
+  if(!on){el.style.display='none'; el.innerHTML=''; return;}
+  el.style.display='';
+  if(!R){
+    el.innerHTML='<span class="sn">Sin comparar no hay producción que pintar: dale a '+
+      '<b>Comparar el año</b> y la escena se colorea. No se pinta un color inventado.</span>';
+    return;
+  }
+  var stops=[]; for(var i=0;i<=8;i++)stops.push(prodColor(i/8)+' '+(i*12.5)+'%');
+  var n=todo.length, mn=Math.min.apply(null,todo.map(function(t){return t.kwh;}));
+  var mx=Math.max.apply(null,todo.map(function(t){return t.kwh;}));
+  var dif=(mx>0)?((1-mn/mx)*100):0;
+  el.innerHTML=
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+      '<span class="sn">'+fmt(R.lo,0)+'</span>'+
+      '<span style="flex:1;min-width:120px;height:10px;border-radius:5px;'+
+        'background:linear-gradient(90deg,'+stops.join(',')+')"></span>'+
+      '<span class="sn">'+fmt(R.hi,0)+' kWh/m²</span>'+
+    '</div>'+
+    '<div class="sn" style="margin-top:4px">'+
+      (R.rel?'Escala de <b>contraste</b>: la rampa arranca en el mínimo de la vista ('+
+             fmt(R.lo,0)+'), no en cero, así que exagera diferencias pequeñas — mira el '+
+             'número antes de sacar conclusiones. '
+           :'Escala <b>fiel</b>: la rampa arranca en cero, así que el color es proporcional '+
+             'a lo que produce cada mesa y un conjunto parejo sale de un color. ')+
+      'Se pintan <b>'+n+' mesa'+(n===1?'':'s')+'</b> (una mesa = un string), de '+fmt(mn,0)+
+      ' a '+fmt(mx,0)+' kWh/m² — <b>'+fmt(dif,1)+' %</b> entre la que menos y la que más. '+
+      '<b>Todas las filas de una misma estructura salen igual y es la verdad</b>: este '+
+      'comparador corre UNA fila representativa por estructura sobre campo uniforme. Lo que '+
+      'sí difiere es entre estructuras y, dentro de un <b>quebrado</b> o de una <b>dos '+
+      'aguas</b>, entre sus dos mesas — que es lo que esta vista deja ver de un vistazo. '+
+      'Y es <b>POA</b>: el desacoplo eléctrico de un string a caballo de la rótula sigue sin '+
+      'estar en ninguna cifra.'+
+    '</div>';
+}
+
 function construyeMundo(){
   if(!TD)return;
   if(MUNDO){TD.sc.remove(MUNDO); MUNDO.traverse(function(o){if(o.geometry)o.geometry.dispose();});}
@@ -4202,6 +4384,13 @@ function construyeMundo(){
         uno.position.y=cotaFila(0,d);
         uno.rotation.z=rollZ;                            // la fila sigue el terreno
       }
+      /* Las mallas de MÓDULO, marcadas al construir: se reconocen por llevar el
+         material de vidrio, que es uno solo y compartido. Se marca la MALLA y
+         no el material porque al teñir por producción cada mesa se lleva su
+         propia copia, y entonces el material ya no sirve para reconocerla. */
+      uno.traverse(function(o){
+        if(o.isMesh&&o.material===mats.glass){o.userData.esVidrio=true; o.userData.matBase=mats.glass;}
+      });
       grupo.add(uno); filas.push(uno);
     }
     /* Y el eje que une cada par: de la corona de la motriz a la de su gemela. */
@@ -4333,6 +4522,11 @@ function construyeMundo(){
      y lo que enseña no es información, es contaminación entre casos. */
   var alt=D.postH+D.modH/2*Math.sin(55*Math.PI/180);
   TD.elevMinSombra=Math.atan(alt/Math.max(6,sep-largo))*180/Math.PI*0.8;
+  /* Y el color por producción, que muere con el mundo viejo: las mallas son
+     otras. Va aquí y no en `actualiza3D` a propósito — lo que pinta es la
+     producción del AÑO, no la hora, y teñir en cada fotograma clonaría un
+     material por mesa sesenta veces por segundo. */
+  pintaProduccion();
 }
 
 /* ── LO QUE SE SALE DEL ENCUADRE, DICHO ──
@@ -4414,12 +4608,16 @@ function actualiza3D(){
            calcula SU ángulo de seguimiento —y su retroceso— con la misma
            función que la tabla. Dibujar las dos al mismo ángulo sería enseñar
            un seguidor que no es el que se ha calculado.
-           El reparto: `ejesMitades` da [eje+q/2, eje−q/2] y la media que cae
-           hacia el norte —la que se aleja del ecuador en el hemisferio norte—
-           es la de eje−q/2. */
+           El reparto va por `mediaDePlano`, que sabe de hemisferios. Aquí
+           estaba escrito a pelo —`medias[1] → eje+q/2`— con el razonamiento
+           hecho «en el hemisferio norte», y en el SUR eso dibuja cada mesa con
+           el ángulo de la OTRA. Medido antes de tocarlo: con quiebro 20°, la
+           inclinación hacia el ecuador de cada media sale ±10° y las dos se
+           INTERCAMBIAN al cruzar el ecuador (37,4 N contra 33 S). */
         if(u.medias){
           var ejM=FIS.ejesMitades(cfg,spec);
-          [[u.medias[0],ejM[ejM.length-1]],[u.medias[1],ejM[0]]].forEach(function(par){
+          [[mediaDePlano(u,cfg,1),ejM[ejM.length-1]],
+           [mediaDePlano(u,cfg,0),ejM[0]]].forEach(function(par){
             var Pm=par[1]?FIS.psTSAT(S.el,S.az,par[1],cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
             var thm=(elDeg>0)?FIS.theta(Pm.ps,B.gcr,cfg.maxang,spec.bt,cfg.btLlano?0:B.cruz,cfg.contrasol):0;
             par[0].rotation.x=thm*FIS.D2R;
@@ -4568,6 +4766,12 @@ CAMPOS_GEOM.forEach(function(id){
 });
 $('hora').oninput=actualiza3D;
 $('fecha').onchange=actualiza3D;
+/* El color no depende del sol ni de la hora —es la producción del AÑO—, así
+   que se repinta solo cuando cambian sus mandos o cuando aparecen números
+   nuevos, no en cada fotograma. */
+['colProd','cscale'].forEach(function(id){
+  var el=$(id); if(el)el.addEventListener('change',pintaProduccion);
+});
 $('play').onclick=function(){PLAY=!PLAY;this.textContent=PLAY?'❚❚':'▶';};
 vigilaLienzos();
 </script>
