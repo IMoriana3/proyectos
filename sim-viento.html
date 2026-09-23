@@ -18,6 +18,11 @@
     --ancho:min(2560px,96vw);
     /* una estrategia = un color, y el mismo en tabla, barras, escena y series */
     --a1:#fbbd23; --a2:#f87272; --b1:#5aa9ff; --b2:#36d399; --base:#9bb0c6;
+    /* Superficie de un menú que FLOTA sobre una tarjeta. Es su propio color y
+       no uno prestado porque cae sobre DOS fondos a la vez —la tarjeta
+       (--card) y el hueco del input (--bg2)— y tiene que distinguirse de los
+       dos o se lee lo de abajo a través. */
+    --flota:#18222e; --flota-hi:#22303f;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.55 system-ui,-apple-system,'Segoe UI',sans-serif;padding-bottom:60px;font-variant-numeric:tabular-nums}
@@ -52,7 +57,7 @@
      implementa: un hueco declarado se lee mejor que una pestaña que no hace
      nada. */
   .tabs{display:flex;gap:6px;padding:0 18px 12px;flex-wrap:wrap}
-  .tabs button{background:var(--panel-2);border:1px solid var(--line2);color:var(--muted);
+  .tabs button{background:var(--bg2);border:1px solid var(--line2);color:var(--muted);
     border-radius:9px;padding:7px 14px;font:inherit;font-size:.88rem;cursor:pointer}
   .tabs button.on{background:var(--bg2);border-color:var(--accent);color:var(--tx)}
   .tabs button:disabled{opacity:.42;cursor:not-allowed}
@@ -78,17 +83,17 @@
      la tarjeta no da un salto cada vez que aparece un resultado. */
   .sitiobox{position:relative}
   .sitiores{position:absolute;left:0;right:0;top:100%;z-index:40;margin-top:3px;
-    background:var(--panel-2);border:1px solid var(--line2);border-radius:9px;
+    background:var(--flota);border:1px solid var(--line2);border-radius:9px;
     box-shadow:0 12px 28px rgba(0,0,0,.45);max-height:280px;overflow:auto}
-  .sitiores .it{padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--line-soft)}
+  .sitiores .it{padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--line)}
   .sitiores .it:last-child{border-bottom:0}
-  .sitiores .it:hover,.sitiores .it.on{background:var(--bg2)}
+  .sitiores .it:hover,.sitiores .it.on{background:var(--flota-hi)}
   .sitiores .it b{font-weight:600}
-  .sitiores .it .co{font-family:var(--mono);font-size:.68rem;color:var(--muted-2)}
+  .sitiores .it .co{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
   .sitiores .gr{padding:4px 10px;font-family:var(--mono);font-size:.6rem;
     letter-spacing:.11em;text-transform:uppercase;color:var(--muted);
     background:var(--bg2);position:sticky;top:0}
-  .sitiores .aviso{padding:7px 10px;font-size:.78rem;color:var(--muted-2)}
+  .sitiores .aviso{padding:7px 10px;font-size:.78rem;color:var(--muted)}
   .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
   .lab{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
   .lab .field{margin-bottom:0}
@@ -307,7 +312,7 @@
         <label class="chk"><input type="checkbox" class="st" value="B2" checked> <b>B2</b> · cara al sol · 2 umbrales</label>
       </div>
 
-      <div style="margin:14px 0 4px;border-top:1px solid var(--bd);padding-top:12px">
+      <div style="margin:14px 0 4px;border-top:1px solid var(--line);padding-top:12px">
         <label class="chk"><input type="checkbox" id="pas" checked> <b>Pasivo</b> · la fila de perímetro se suelta sola</label>
       </div>
       <div id="pasBox">
@@ -648,15 +653,15 @@ function engineOffMsg(){
     'Factiun_plataforma.ipynb en Colab</a> → menú <i>Entorno de ejecución</i> → <i>Ejecutar todo</i>.<br>'+
     '&nbsp;&nbsp;b. Al final imprime una URL <code>https://…trycloudflare.com</code>.<br>'+
     '&nbsp;&nbsp;c. Clic en el indicador <b>«motor»</b> de la barra de arriba y pega esa URL.<br>'+
-    '&nbsp;&nbsp;<span style="color:var(--muted-2)">La URL cambia cada vez que reejecutas el cuaderno.</span><br><br>'+
+    '&nbsp;&nbsp;<span style="color:var(--muted)">La URL cambia cada vez que reejecutas el cuaderno.</span><br><br>'+
     '<b>2 · En tu máquina</b> — <code>cd server &amp;&amp; ./run.sh</code> en el repo del motor '+
     '(escucha en <code>127.0.0.1:8765</code> y la ficha lo encuentra sola).'+
     '</div>';
 }
 
 function localBanner(){
-  return '<div class="warn" style="margin-bottom:12px;border-color:var(--line);background:var(--panel-2)">'+
-    '<b style="color:var(--muted)">Calculado en el navegador.</b> <span style="color:var(--muted-2)">'+
+  return '<div class="warn" style="margin-bottom:12px;border-color:var(--line);background:var(--bg2)">'+
+    '<b style="color:var(--muted)">Calculado en el navegador.</b> <span style="color:var(--muted)">'+
     'Posición solar por declinación + ecuación del tiempo, seguimiento con backtracking '+
     '(Anderson-Mikofski) y transposición <b>isotrópica</b>; las cuatro máquinas de estado son el '+
     'puerto exacto de las canónicas. Lo que NO lleva y sí lleva el motor Python: Perez, sombreado '+
@@ -2627,7 +2632,7 @@ function fillRosa(){
     return '<option value="'+r[0]+'">'+(r[0]===''?'— sin dirección —':r[1]+' ('+r[0]+'°)')+'</option>';}).join('');
 }
 function renderGusts(){
-  if(!GUSTS.length){$('gtbl').innerHTML='<tbody><tr><td colspan="8" style="color:var(--muted-2);font-size:12px;padding:10px 4px">'+
+  if(!GUSTS.length){$('gtbl').innerHTML='<tbody><tr><td colspan="8" style="color:var(--muted);font-size:12px;padding:10px 4px">'+
     'Sin rachas inyectadas: se simula el viento de fondo tal cual.</td></tr></tbody>';
     if(typeof labHint==='function')labHint();return;}
   var h='<thead><tr><th>Cuándo <span class="sn" style="margin:0">'+esc(tzSigla())+'</span></th><th>Pico km/h</th><th>Duración min</th><th>Forma</th><th>Viene de</th><th>×</th><th>cada h</th><th></th></tr></thead><tbody>';
@@ -2730,7 +2735,7 @@ async function careo(){
     var fila=function(k,ve,vl,dec,uni){
       var d=(ve!=null&&vl!=null)?vl-ve:null;
       return '<tr><td>'+esc(k)+'</td><td>'+fmt(ve,dec)+'</td><td>'+fmt(vl,dec)+'</td>'+
-        '<td style="color:'+(Math.abs(d||0)<=(dec>2?0.05:2)?'var(--live)':'var(--build)')+'">'+
+        '<td style="color:'+(Math.abs(d||0)<=(dec>2?0.05:2)?'var(--ok)':'var(--warn)')+'">'+
         (d>0?'+':'')+fmt(d,dec)+' '+esc(uni||'')+'</td></tr>';
     };
     var h='<table><thead><tr><th>Careo con la corrida congelada del motor</th>'+
@@ -5211,7 +5216,7 @@ function meteoTag(){
     var vivo=(Math.abs(c.lat-(+$('lat').value))<1e-4&&Math.abs(c.lon-(+$('lon').value))<1e-4);
     sello=' · <b>en pantalla:</b> '+(+c.lat).toFixed(4)+', '+(+c.lon).toFixed(4)+
       ' · '+c.year+(c.year1&&c.year1!==c.year?'–'+c.year1:'')+
-      (vivo?'':' <span style="color:var(--build)">— las casillas dicen '+
+      (vivo?'':' <span style="color:var(--warn)">— las casillas dicen '+
         (+$('lat').value).toFixed(4)+', '+(+$('lon').value).toFixed(4)+
         ': vuelve a simular</span>');
   }

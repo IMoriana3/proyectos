@@ -84,6 +84,29 @@ declare -A PISO=(
   # dice cuál.
   [test_cartera_en_vivo.js]=32
   [test_comparador.js]=304
+  # UNA VARIABLE CSS QUE NO EXISTE NO FALLA: DEJA LA PROPIEDAD COMO ESTABA.
+  # `background:var(--panel-2)` con `--panel-2` sin definir no es un error —la
+  # declaración se descarta y la propiedad se queda con lo heredado—, así que
+  # nadie se entera: ni la consola, ni el validador, ni los cuarenta arneses
+  # que ya había.
+  #
+  # MEDIDO el 2026-09-23 en el navegador, antes de arreglar nada: el
+  # desplegable del buscador de emplazamiento salía con `background-color:
+  # rgba(0,0,0,0)` —la lista encima de los campos de latitud y longitud— y sus
+  # separadores en `rgb(234,244,255)`, que es el color del TEXTO. Eran tres
+  # variables copiadas de `sim-solar.html`, que tiene otra paleta.
+  #
+  # Y una peor, que no se ve: el careo pintaba su columna de diferencia con
+  # `var(--live)` si coincide y `var(--build)` si no. Ninguna de las dos existe
+  # en esa ficha, así que las dos ramas salían del mismo color heredado — un
+  # veredicto codificado en color que no codificaba nada.
+  #
+  # Seis mutantes, los seis verificados aplicados: quitar `--flota` mata 2,
+  # `--flota-hi` 2, el separador 3, devolver el careo a `--live`/`--build` 2,
+  # la coordenada 2, y pintar las dos ramas del careo del MISMO color 1 —éste
+  # sobrevive al guard estático, porque el color existe, y es el único que lo
+  # caza—. Las seis predicciones se escribieron antes y salieron clavadas.
+  [test_css_variables.js]=35
   # LA ESCENA, EN CHROMIUM DE VERDAD. Sube de 247 a 266 con el color por
   # producción: 19 comprobaciones nuevas, entre ellas las que sujetan que el
   # color de cada mesa corresponde a SU número. Dejar el piso en 247 las haría
