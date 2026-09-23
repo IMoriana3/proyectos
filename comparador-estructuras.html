@@ -4116,7 +4116,7 @@ function cotaTerreno(x,z,T){
        simétrico: así las dos quedan justo a eje±quiebro/2 y la viga quebrada
        se apoya en el suelo en vez de rozarlo. */
     var sq=x*(T.ex||0)+z*(T.ez||0);
-    if(T.qPer>1)sq-=T.qPer*Math.round(sq/T.qPer);   // una cumbrera por bloque
+    if(T.qPer>1){sq-=(T.qFase||0); sq-=T.qPer*Math.round(sq/T.qPer);}
     y+=sq*(sq>0?(T.kN||0):(T.kS||0));
   }
   return y;
@@ -4472,6 +4472,7 @@ function construyeMundo(){
      de manual. */
   T.qPer=T.q?Math.abs(sep*(ux*T.ex+uz*T.ez)):0;
   var x0=-(keys.length-1)*sep/2, anchoTot=(keys.length-1)*sep+largo;
+  T.qFase=T.q?(x0*(ux*T.ex+uz*T.ez)):0;
 
   keys.forEach(function(k,i){
     var spec=FIS.spec(k); if(!spec)return;
@@ -4817,6 +4818,16 @@ function actualiza3D(){
            declara otro valor, la lectura lo dice — no se dibuja una cosa y se
            calcula otra en silencio. */
         u.rotation.x=B.rollX;
+        /* APOYAR ES LO ÚLTIMO. Las hincas se midieron al construir el bloque,
+           pero aquí acaban de cambiar los giros de los que dependen —el roll
+           de la fila y, en un quebrado, la inclinación de cada media viga—,
+           así que hay que volver a apoyarlas contra el mundo YA definitivo.
+           Medido con las 8 estructuras y 25° al 120 con 16° de quiebro: 17,8 m
+           de desvío recién construido, 4,5 m tras el primer repintado y 0 al
+           volver a apoyar. No se veía porque con SIETE estructuras el desvío
+           salía 0 por casualidad de dónde caía la rejilla de cumbreras: hizo
+           falta una octava para que la casualidad dejara de tapar el fallo. */
+        u.ponSuelo();
       });
     }else if(spec.fam==='fija_ew'){
       B.filas.forEach(function(u){

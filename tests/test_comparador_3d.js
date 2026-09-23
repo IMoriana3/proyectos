@@ -1016,6 +1016,64 @@ const SONDA = `(() => {
       Math.abs(pies[caso].peor) < 0.05,
       JSON.stringify(pies[caso]));
   });
+  /* ── Y QUE NO DEPENDA DE CUÁNTAS ESTRUCTURAS HAYA ──────────────────────
+     Esto salió al meter la OCTAVA estructura (la dos aguas en valle): con 7 el
+     peor desvío era 0 y con 8, 4,5 m. Dos causas encadenadas, y cada una
+     decide casos —medido quitándolas de una en una—:
+
+       · la rejilla de cumbreras del terreno se anclaba en el ORIGEN DEL MUNDO
+         y los bloques van en `x0 + i·sep` con `x0` centrado, así que su fase
+         es `(n−1)/2` periodos: con `n` impar es entera y cada bloque cae sobre
+         su cumbrera POR CASUALIDAD; con `n` par quedan todos a media cumbrera,
+         sobre el quiebro del diente de sierra. Sin este arreglo: −2,46 m.
+       · y las hincas se apoyaban al CONSTRUIR el bloque, antes de que
+         `actualiza3D` fijara los giros de los que dependen. Sin este arreglo:
+         −4,5 m (y −17,8 m recién construido, antes del primer repintado).
+
+     Las fijas no lo acusaban porque calculan cada hinca desde el terreno; sólo
+     los seguidores, que apoyan la fila entera, se quedaban en el aire. Por eso
+     se barre el NÚMERO de estructuras marcadas: la paridad era lo que tapaba
+     el fallo, así que se mide en par y en impar. */
+  const paridad = await p.evaluate(() => {
+    const s = (id, v) => { const e = document.getElementById(id); e.value = String(v);
+      e.dispatchEvent(new Event('change', { bubbles: true })); };
+    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
+    const todas = [...document.querySelectorAll('.st')].map(c => c.value);
+    const peor = () => { const T = TERRENO_3D; let w = 0;
+      BLOQUES.forEach(B => B.filas.forEach(u => { u.updateWorldMatrix(true, true);
+        const cand = []; u.children.forEach(o => { if (o.isMesh) cand.push(o);
+          else if (o.children) o.children.forEach(x => { if (x.isMesh) cand.push(x); }); });
+        cand.forEach(o => { const pr = o.geometry.parameters || {};
+          if (Math.abs(pr.width - 0.16) > 1e-6 && Math.abs(pr.width - 0.18) > 1e-6) return;
+          const c = new THREE.Box3().setFromObject(o);
+          const d = c.min.y - cotaTerreno((c.min.x + c.max.x) / 2, (c.min.z + c.max.z) / 2, T);
+          if (Math.abs(d) > Math.abs(w)) w = d; }); })); return +w.toFixed(3); };
+    const r = {};
+    for (let n = 2; n <= todas.length; n++) {
+      const cl = todas.slice(0, n);
+      document.querySelectorAll('.st').forEach(c => { c.checked = cl.includes(c.value); });
+      s('pend', 25); s('pendAz', 120); s('quiebro', 16);
+      construyeMundo(); actualiza3D();
+      r['n' + n] = { peor: peor(), bloques: BLOQUES.length,
+                     tk: BLOQUES.filter(B => /^tracker/.test(B.key)).length };
+    }
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
+    s('pend', 0); s('quiebro', 0); construyeMundo(); actualiza3D();
+    return r;
+  });
+  const ns = Object.keys(paridad);
+  check('con la caída torcida, ninguna hinca flota sea cual sea el NÚMERO de ' +
+    'estructuras marcadas (' + ns.length + ' recuentos, ' +
+    ns.filter(k => paridad[k].tk > 0).length + ' con seguidores)',
+    ns.every(k => Math.abs(paridad[k].peor) < 0.05),
+    JSON.stringify(ns.map(k => k + ':' + paridad[k].peor)));
+  /* Y que el barrido llegue de verdad al régimen donde el fallo vivía: sin
+     seguidores dentro no prueba nada, porque las fijas nunca lo acusaron. */
+  check('  y el barrido cubre recuentos PARES e IMPARES con seguidores dentro',
+    ns.filter(k => paridad[k].tk > 0 && +k.slice(1) % 2 === 0).length >= 2 &&
+    ns.filter(k => paridad[k].tk > 0 && +k.slice(1) % 2 === 1).length >= 2,
+    JSON.stringify(ns.map(k => k + ':tk' + paridad[k].tk)));
+
   /* Y el caso que lo rompía: con la caída NO ⊥ a las filas, la línea de bloques
      se separa de una cumbrera única y los bloques quedaban en el aire —30 m
      medidos, con hincas de 32—. La cumbrera se repite con el paso de los
