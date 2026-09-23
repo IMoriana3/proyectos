@@ -682,6 +682,74 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   // la ficha correcta; queda como aviso de que una desigualdad estricta de más
   // es una afirmación sobre el mundo, no una formalidad.
 
+
+  // ══════════════════════════════════════════════════════════════════
+  //  4quater) UN PERIODO MÁS CORTO QUE EL PASO NO SE PUEDE MEDIR
+  // ══════════════════════════════════════════════════════════════════
+  // DATO DE CAMPO: el anemómetro registra cada segundo y el poleo NCU→TCU ronda
+  // los 12–15 s. Con esos números la ficha se metía en un silencio caro: el
+  // lazo en vivo avanza el reloj a saltos, y MEDIDO en este navegador el paso
+  // simulado es 0,1 s a ×1 · 6 s a ×60 · 30 s a ×300 · 90 s a ×900 · 360 s a
+  // ×3600. Una rejilla de 1 s con un paso de 30 s publica en TODOS los pasos:
+  // es la identidad. El usuario teclea 1 s, la ficha no mide 1 s y nadie se
+  // entera — el cronómetro da de menos y parece que la cadena no cuesta nada.
+  //
+  // (El paso depende de la máquina: el lazo va a la cadencia del navegador, no
+  // a la velocidad elegida. Por eso la ficha compara contra el paso MEDIDO del
+  // último fotograma y no contra uno calculado del factor, y por eso este banco
+  // tampoco fija los números de la tabla de arriba: fija la PROPIEDAD.)
+  const vientoFuente = fuenteViento;
+  check('los valores de partida son los del equipo: 1 s de muestreo',
+        /id="latMues"[^>]*value="1"/.test(vientoFuente));
+  check('… y 15 s de poleo NCU→TCU, el extremo largo del 12–15',
+        /id="latSond"[^>]*value="15"/.test(vientoFuente));
+
+  // LA AFIRMACIÓN QUE HACE EL AVISO, comprobada aparte y sin navegar: con un
+  // paso mayor o igual que el periodo, la rejilla ES la identidad. Si esto no
+  // valiera, el aviso estaría mintiendo aunque saliera cuando toca.
+  const identidad = await page.evaluate(() => {
+    const c = LOC.cadenaViva({ ventana_s: 0, muestreo_s: 1, sondeo_s: 0, arranque_s: 0 });
+    const ent = [3, 11, 4, 19, 7], sal = ent.map(v => c.ve(v, 30));
+    return { ent, sal };
+  });
+  check('con el paso por encima del periodo, la rejilla es la IDENTIDAD',
+        identidad.sal.join(',') === identidad.ent.join(','),
+        identidad.ent + ' -> ' + identidad.sal);
+
+  const aPaso = async (vel) => page.evaluate(async (vel) => {
+    document.getElementById('lat_on').checked = true;
+    document.getElementById('latVent').value = '600';
+    document.getElementById('latMues').value = '1';
+    document.getElementById('latSond').value = '15';
+    document.getElementById('latArr').value = '5';
+    latUI();
+    document.getElementById('lSpeed').value = vel;
+    if (!LIVE.run) document.getElementById('lPlay').click();
+    await new Promise(r => setTimeout(r, 900));
+    const t = document.getElementById('cronoBox').textContent;
+    const o = { paso: LIVE.dtPaso, finos: periodosFinos(), dice: /no se resuelve/.test(t), txt: t };
+    if (LIVE.run) document.getElementById('lPlay').click();
+    return o;
+  }, vel);
+
+  const rapido = await aPaso('3600');
+  check('a ×3600 el paso se come el muestreo de 1 s', rapido.paso > 1, rapido.paso);
+  check('y la ficha lo DICE en vez de tragárselo',
+        rapido.dice && rapido.finos.some(f => /muestreo/.test(f)),
+        JSON.stringify(rapido.finos));
+  // SE LEE EL TEXTO RENDERIZADO, no `periodosFinos()`: lo que le importa al que
+  // mira la ficha es lo que la caja DICE. Preguntarle al estado interno dejaba
+  // pasar un mutante que calculaba bien la lista y no la pintaba.
+  check('y lo dice del sondeo de 15 s también, que a esa velocidad tampoco cabe',
+        rapido.dice && /sondeo/.test(rapido.txt.split('no se resuelve')[1] || ''),
+        JSON.stringify(rapido.finos));
+
+  // CONTROL POSITIVO: un aviso que saliera SIEMPRE no avisaría de nada.
+  const lento = await aPaso('1');
+  check('control · a ×1 el paso baja por debajo del periodo', lento.paso < 1, lento.paso);
+  check('control · y entonces NO avisa de nada',
+        !lento.dice && lento.finos.length === 0, JSON.stringify(lento.finos));
+
   // ══════════════════════════════════════════════════════════════════
   //  5) LAS DECLARACIONES
   // ══════════════════════════════════════════════════════════════════
