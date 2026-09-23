@@ -2255,32 +2255,48 @@ const SONDA = `(() => {
      hincas asomando POR ENCIMA del vidrio. Los dos paños giran a +θ y −θ, y a
      los postes se les pasaba el MISMO θ a los dos, así que el paño de bajada
      recibía la geometría del de subida. No se mide «se ve raro»: se lanza un
-     rayo vertical desde cada cabeza de poste contra SU panel y se mide la
-     distancia con signo. Negativa = la cabeza queda debajo del vidrio, que es
-     donde tiene que estar; positiva = asoma. Se barre el tilt porque el error
-     era `2·a·sen θ` y en llano no se ve: a 5° eran 6 cm y a 35°, 54. */
+     rayo vertical desde cada VÉRTICE DE LA TAPA contra SU panel y se mide la
+     distancia con signo. Negativa = por debajo del vidrio, que es donde tiene
+     que estar; positiva = asoma. Se barre el tilt porque en llano no se ve.
+
+     POR QUÉ LOS VÉRTICES Y NO EL EJE. La primera versión de esto medía el EJE
+     del poste — UN punto — y daba verde mientras en pantalla se veían las
+     cabezas sobre los módulos. Lo cazó Ignacio mirando una captura mía. La
+     tapa es CUADRADA y HORIZONTAL y el panel va inclinado: llevar el eje al
+     plano deja la esquina de aguas abajo fuera, `(lado/2)·|tan t|`, y el eje
+     es justo el único punto que estaba bien. Medido entonces, en las tres
+     familias fijas y en el 100 % de los postes: 0,5 cm a 20°, 2,0 a 30°,
+     3,8 a 40°. Un punto no mide un sólido. */
   const hincasEW = await p.evaluate(() => {
     const set = (id, v) => { const e = document.getElementById(id);
       if (e) { e.value = v; e.dispatchEvent(new Event('change')); } };
     document.querySelectorAll('#structs input[type=checkbox]')
       .forEach(c => { c.checked = (c.value === 'fija_ew'); });
+    document.dispatchEvent(new Event('change'));
     const mide = () => {
       const B = BLOQUES.find(x => x.key === 'fija_ew');
       if (!B || !B.filas.length) return null;
       const u = B.filas[0]; u.updateWorldMatrix(true, true);
       return [0, 1].map(i => {
-        const mesa = u.children[i], tops = [];
+        const mesa = u.children[i], panel = mesa.spin.children[0];
+        panel.updateWorldMatrix(true, false);
+        const rc = new THREE.Raycaster(); let postes = 0, cortados = 0, peor = -9;
         mesa.children.forEach(o => {
-          if (o.isMesh && o.geometry.parameters && o.geometry.parameters.width === 0.16)
-            tops.push(new THREE.Vector3(0, 0.5, 0).applyMatrix4(o.matrixWorld)); });
-        const panel = mesa.spin.children[0], rc = new THREE.Raycaster(), d = [];
-        tops.forEach(t => {
-          rc.set(new THREE.Vector3(t.x, t.y + 5, t.z), new THREE.Vector3(0, -1, 0));
-          const h = rc.intersectObject(panel, true);
-          if (h.length) d.push(t.y - h[0].point.y); });
+          const g = o.geometry && o.geometry.parameters;
+          if (!(o.isMesh && g && g.width === 0.16)) return;
+          postes++;
+          const pos = o.geometry.attributes.position; let pm = -9, vio = false;
+          for (let k = 0; k < pos.count; k++) {
+            if (Math.abs(pos.getY(k) - 0.5) > 1e-9) continue;   // solo la TAPA
+            const w = new THREE.Vector3(pos.getX(k), pos.getY(k), pos.getZ(k))
+                        .applyMatrix4(o.matrixWorld);
+            rc.set(new THREE.Vector3(w.x, w.y + 5, w.z), new THREE.Vector3(0, -1, 0));
+            const h = rc.intersectObject(panel, false);
+            if (h.length) { vio = true; const d = w.y - h[0].point.y; if (d > pm) pm = d; } }
+          if (vio) cortados++;
+          if (pm > peor) peor = pm; });
         return { pano: i, rot: +(mesa.spin.rotation.x * 180 / Math.PI).toFixed(1),
-                 postes: tops.length, cortan: d.length,
-                 peor: d.length ? +Math.max.apply(null, d).toFixed(4) : null };
+                 postes: postes, cortan: cortados, peor: +peor.toFixed(4) };
       });
     };
     const o = {};
@@ -2300,11 +2316,19 @@ const SONDA = `(() => {
   check('NINGUNA hinca asoma por encima del módulo, en ninguno de los dos paños',
     [5, 20, 35, 45].every(t => hincasEW['t' + t].every(x => x.peor < 0)),
     JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['t' + t].map(x => x.peor)])));
-  /* Y que quede METIDA, no rozando: la cabeza va bajo el vidrio, a media
-     altura de panel. Si sólo se pidiera «< 0», dejar la cabeza a 0,1 mm del
-     plano pasaría — y a ojo eso es exactamente lo que se veía mal. */
-  check('  y queda METIDA bajo el vidrio, no rozando el plano',
-    [5, 20, 35, 45].every(t => hincasEW['t' + t].every(x => x.peor < -0.02)),
+  /* Y con MARGEN, no a ras. El umbral no puede ser el de antes («< −0,02»):
+     aquélla era la holgura del EJE, y con la esquina medida esa holgura no
+     existe ni debe existir — la tapa se hunde lo justo, porque hundirla más
+     dejaría el poste colgando de un palmo bajo el panel a 40°. Lo que se exige
+     es que haya margen de verdad y que NO dependa del tilt: si volviera a
+     depender, es que alguien ha vuelto a igualar un punto en vez del sólido. */
+  check('  y con margen real, no a ras del plano',
+    [5, 20, 35, 45].every(t => hincasEW['t' + t].every(x => x.peor < -0.002)),
+    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['t' + t].map(x => x.peor)])));
+  check('  y ese margen NO crece con el tilt: se hunde lo justo en todos',
+    (() => { const v = [5, 20, 35, 45].map(t => Math.min.apply(null,
+        hincasEW['t' + t].map(x => x.peor)));
+      return Math.max.apply(null, v) - Math.min.apply(null, v) < 0.02; })(),
     JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['t' + t].map(x => x.peor)])));
 
   check('sin errores de JS', errs.length === 0, errs.join(' | '));

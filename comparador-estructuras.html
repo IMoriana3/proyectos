@@ -3913,8 +3913,11 @@ function seguidor3D(mats,escalaEje,motriz,largoFila,quiebro,quiebroTerr){
    escoraba la mesa entera con el suelo, que es lo que hace un seguidor, no una
    fija: el tilt dibujado dejaba de ser el tecleado. */
 function mesaFija3D(mats,largo,ancho){
+  /* Medidas con nombre porque `ponTilt` tiene que hacer cuentas con ellas: la
+     cabeza del poste es CUADRADA y HORIZONTAL, y el panel va inclinado. */
+  var LADO_POSTE=0.16, ESP_PANEL=0.045;
   var D=Seguidor.DIMS, wrap=new THREE.Group(), spin=new THREE.Group();
-  var panel=new THREE.Mesh(new THREE.BoxGeometry(largo,0.045,ancho),mats.glass);
+  var panel=new THREE.Mesh(new THREE.BoxGeometry(largo,ESP_PANEL,ancho),mats.glass);
   panel.castShadow=true; panel.receiveShadow=true; spin.add(panel);
   var viga=new THREE.Mesh(new THREE.BoxGeometry(largo,D.tube*0.7,D.tube*0.7),mats.steel);
   viga.position.y=-0.13; viga.castShadow=true; spin.add(viga);
@@ -3933,7 +3936,7 @@ function mesaFija3D(mats,largo,ancho){
   for(var ip=0;ip<nP;ip++){
     var x=x0+ip*dP;
     [-a,a].forEach(function(zp){
-      var p=new THREE.Mesh(new THREE.BoxGeometry(.16,1,.16),mats.steel);
+      var p=new THREE.Mesh(new THREE.BoxGeometry(LADO_POSTE,1,LADO_POSTE),mats.steel);
       p.castShadow=true; p.userData={x:x,zp:zp}; wrap.add(p); postes.push(p);
     });
   }
@@ -3949,13 +3952,25 @@ function mesaFija3D(mats,largo,ancho){
   var _v=new THREE.Vector3(), _q=new THREE.Quaternion(), _s=new THREE.Vector3();
   wrap.ponTilt=function(tRad){
     var st=Math.sin(tRad||0), ct=Math.cos(tRad||0);
+    /* LA CABEZA NO ES UN PUNTO. Llevar el EJE del poste al plano del panel deja
+       la esquina de aguas abajo POR ENCIMA de él: la tapa es horizontal y el
+       panel no, así que la cabeza sobresale `(lado/2)·|tan t|` y el canto del
+       vidrio solo lo tapa hasta unos 15°. Medido antes de tocarlo, en las TRES
+       familias fijas y en el 100 % de los postes: 0,5 cm a 20°, 2,0 cm a 30° y
+       3,8 cm a 40°. Eso es lo que se veía como pestañas oscuras sobre los
+       módulos, y el banco daba verde porque medía el EJE — un punto, justo el
+       único que estaba bien. Se hunde la cabeza lo justo para que la esquina
+       peor quede bajo la CARA del panel; el resto queda dentro del canto o
+       debajo, que es donde vive un casquillo de verdad. */
+    var baja=Math.max(0,(LADO_POSTE/2)*Math.abs(st/(ct||1e-6))
+                        -(ESP_PANEL/2)/Math.max(ct,1e-6))+0.003;
     var corta=Infinity, larga=-Infinity, nocabe=false;
     wrap.updateWorldMatrix(true,false);
     wrap.matrixWorld.decompose(_v,_q,_s);
     var qInv=_q.clone().invert();
     postes.forEach(function(p){
       var x=p.userData.x, zp=p.userData.zp;
-      var yTecho=D.postH-zp*st, zh=zp*ct;              // borde de la mesa
+      var yTecho=D.postH-zp*st-baja, zh=zp*ct;         // borde de la mesa
       var W=new THREE.Vector3(x,yTecho,zh).applyMatrix4(wrap.matrixWorld);
       var h=W.y-cotaTerreno(W.x,W.z,TERRENO_3D);
       if(h<0.25){h=0.25; nocabe=true;}
