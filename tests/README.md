@@ -197,7 +197,7 @@ disciplina vale lo que valga la puerta.
 
 ```bash
 python3 -m http.server 8099                # servir el repo (en otra terminal)
-bash tests/correr.sh                       # los 40 · 2.296 comprobaciones · ~12 min en el runner
+bash tests/correr.sh                       # los 45 · 2.539 comprobaciones · ~17 min en el runner
 bash tests/correr.sh viento                # solo los que casen con el patrón
 ```
 
@@ -245,11 +245,71 @@ este repo ignora `package.json` a propósito y su `.gitignore` escribe el motivo
 veredicto de la puerta dependería de lo que npm publicase esa mañana — no mediría el repo,
 mediría el reloj, que es el fallo que ya costó tres PR atascados con el pin del bloque JS.
 
+## El último tramo: el workflow `pages`
+
+Todo lo de arriba prueba **el árbol**. Lo que el usuario abre es otra cosa, y hasta el
+2026-09-23 no lo miraba nadie:
+
+```
+main verde ──✅──> pages-build-deployment ──✅──> ¿lo sirve Pages?
+                                                   └── NADIE MIRA
+```
+
+**No es una pega de rigor.** Al fusionar el cronómetro (#498) su despliegue de Pages salió
+**`cancelled`**: llevaba seis minutos en cola cuando entró la #499 y el suyo lo adelantó. Aquel
+día no se perdió nada —se verificó que `01c4ab7` es ancestro de `15e7b47` y que el fichero es el
+mismo byte a byte— pero quedó demostrado que **el despliegue de un commit puede no ocurrir nunca
+con todos sus checks en verde**, porque ninguno mira lo publicado.
+
+`tools/test_pages_cronometro.mjs` lo cierra: sondea la URL publicada hasta que sirva **este**
+fichero y solo entonces conduce el cronómetro en esa página. El careo es por **sha-256 del
+cuerpo servido** y no por número de versión, porque `sim-viento.html` no declara ninguno legible
+(lo mismo que ya está anotado sobre su tarjeta).
+
+```bash
+node tools/test_pages_cronometro.mjs                              # contra Pages
+PAGES_BASE=http://localhost:8111 PAGES_ESPERA_S=0 node tools/…    # contra un servidor propio
+```
+
+**Va FUERA del portón, declarado en `FUERA_DEL_PORTON`, y por un motivo concreto:** Pages va por
+detrás de `main` unos minutos tras cada merge, así que el arnés **espera** hasta diez minutos.
+Cobrarle esa espera a cada PR sería un peaje por un retardo que no es un defecto — el mismo
+razonamiento que `test_versiones_app.mjs` ya escribió para el careo de versiones. Lo lanza
+`.github/workflows/pages.yml` en `push` a `main` (que es cuando importa si el despliegue llegó)
+y dos veces al día (que es cuando ya no mira nadie).
+
+**Cuatro estados y los cuatro distintos**, porque colapsar dos es lo que lo convertiría en
+adorno: `al_dia` → se conduce y se juzga · `retardo` → se espera, y al agotar el plazo ROJO ·
+`no_publicado` (404) → ROJO y **no se reintenta**, que no mejora esperando · `sin_respuesta` →
+ROJO diciendo que es de red y no del contenido.
+
+Cuatro mutantes, los cuatro verificados aplicados y con el recuento predicho antes de medir:
+`veredicto` siempre «al día» mata **6**, el sondeo que no reintenta **2**, el 404 reintentado
+**1**, y carear por **longitud** en vez de por sha **3**. Ese último es el que justifica que los
+cuerpos sintéticos de la batería —`nuevo` y `viejo`— midan **lo mismo**: si midieran distinto,
+un careo por longitud pasaría y el mutante sobreviviría.
+
+> *Límite declarado.* El `fetch` contra `imoriana3.github.io` **no se ha ejercitado nunca** en la
+> máquina donde se escribió: su proxy de salida lo deniega con `connect_rejected` (403 del
+> gateway a CONNECT). Lo que sí se ejercitó, y a propósito: la regla es una función pura con su
+> batería, el sondeo corre contra un **transporte de mentira** (los cinco casos, incluido «tarda
+> y acaba llegando», que contra el servicio real no se puede provocar), y el navegador se condujo
+> contra los bytes que GitHub publica de `main` —traídos por `raw.githubusercontent.com`, que sí
+> es alcanzable— servidos desde un directorio limpio: **21 de 21**. Queda sin ejercitar el
+> `fetch` a `github.io` y nada más. En CI sí es alcanzable, y la primera tirada lo dirá.
+
 ### Los arneses, uno a uno (comprobaciones medidas el 2026-09-09)
 
-> **De dónde sale el 2.408, y cuatro números equivocados por el camino.** Este sale de una
-> **corrida completa y verde del 2026-09-23**, la primera con los 43 arneses en verde:
-> `43 arneses verdes · 2408 comprobaciones leídas`.
+> **De dónde sale el 2.539, y cinco números equivocados por el camino.** Este sale de una
+> **corrida completa y verde del 2026-09-23**, sobre `15e7b47`:
+> `45 arneses verdes · 2539 comprobaciones leídas`.
+>
+> **La quinta vez que esta línea envejeció fue la mía, y sin excusa:** el PR #498 añadió DOS
+> arneses —`test_css_variables.js` y `test_viento_latencia.js`, 35 y 71 comprobaciones— y les
+> puso su piso en `correr.sh` sin tocar este número, que se quedó en `43 · 2408`. Los pisos son
+> mecanismo y esta línea es prosa, así que la prosa es la que se cae: es exactamente el defecto
+> que el propio repo acaba de cerrar quitándole a las tarjetas del Panel la copia de la versión.
+> Aquí no hay mecanismo que lo impida y por eso vuelve a pasar — queda dicho en vez de tapado.
 >
 > **Y sale de una tirada LOCAL, no de CI, que es peor procedencia y por eso se dice.** La línea
 > anterior venía de un run de CI. Ésta no: se midió en el contenedor donde se escribió el cambio.
