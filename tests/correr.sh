@@ -470,6 +470,7 @@ declare -A FUERA_DEL_PORTON=(
   [tools/test_cartera_dwg.mjs]="carea contra el DWG; necesita el repo cobertura-zigbee al lado"
   [tools/test_ancho.mjs]="medida de diseño; necesita playwright-core y páginas de otros repos"
   [tools/test_nitidez.mjs]="informe sin veredicto (sale 0 siempre); además clava la ruta del navegador de este contenedor"
+  [tools/test_pages_cronometro.mjs]="juzga la página PUBLICADA, no el árbol: sondea Pages hasta 10 min a que sirva este fichero. Lo lanza .github/workflows/pages.yml, aparte de la puerta, porque esa espera no se le cobra a cada PR"
 )
 
 mkdir -p "$LOGS"

@@ -1,0 +1,75 @@
+# EL ÚLTIMO TRAMO, QUE NO VIGILABA NADIE.
+#
+# `arneses.yml` prueba el ÁRBOL: sirve los ficheros en :8099 y los interroga.
+# Eso deja fuera lo único que el usuario toca — la página que Pages sirve. La
+# cadena era:
+#
+#     main verde ──✅──> pages-build-deployment ──✅──> ¿lo sirve Pages?
+#                                                        └── NADIE MIRA
+#
+# Y el modo de fallo no es hipotético. El 2026-09-23, al fusionar el cronómetro
+# (#498), su despliegue de Pages salió **`cancelled`**: llevaba seis minutos en
+# cola cuando entró la #499 y el suyo lo adelantó. Aquel día no se perdió nada
+# —se verificó que `01c4ab7` es ancestro de `15e7b47` y que el fichero es el
+# mismo— pero quedó demostrado que el despliegue de un commit puede no ocurrir
+# nunca **con todos sus checks en verde**, porque ninguno mira lo publicado.
+#
+# POR QUÉ VA APARTE DE `arneses.yml` y no como un job más: este trabajo ESPERA.
+# Pages va por detrás de `main` unos minutos tras cada merge, así que el arnés
+# sondea hasta diez minutos a que la página servida sea la de este árbol. Meter
+# esa espera en la puerta que bloquea los PR sería cobrarle diez minutos a cada
+# rama por un retardo que no es un defecto.
+#
+# Y POR QUÉ SÍ CORRE EN `push` a main además de por horas: es justo después de
+# fusionar cuando importa saber si el despliegue llegó. El `schedule` cubre lo
+# otro — que Pages siga sirviéndolo mañana, cuando ya nadie está mirando.
+name: pages
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Dos veces al día. No es un número mágico: el sondeo de cada tirada ya
+    # cubre la ventana posterior a un merge, así que esto solo tiene que cazar
+    # que lo publicado deje de estar bien SIN que nadie empuje nada.
+    - cron: '17 6,18 * * *'
+  workflow_dispatch:
+
+# Si llegan dos merges seguidos, manda el último: el anterior ya no es lo que
+# Pages va a acabar sirviendo, y esperar diez minutos por un árbol superado es
+# tirar minutos de runner. Al revés que en `arneses.yml`, donde cada commit de
+# main corre entero porque ahí lo que se mide es EL COMMIT; aquí se mide LO
+# PUBLICADO, y publicado solo va a haber uno.
+concurrency:
+  group: pages-publicado
+  cancel-in-progress: true
+
+jobs:
+  publicado:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Anclado a la misma versión que `arneses.yml` y por el mismo motivo: con
+      # `@latest` el veredicto dependería de lo que npm publicase esta mañana.
+      # Al subirla, súbela en los dos sitios.
+      - name: dependencias
+        run: npm install --no-save --no-audit --no-fund playwright@1.62.1
+
+      - name: navegador
+        run: npx playwright install chromium
+
+      # El arnés sondea la URL publicada hasta que sirva ESTE árbol, y solo
+      # entonces conduce el cronómetro. El veredicto sale de su recuento y de
+      # su código de salida, que aquí sí coinciden porque no hay tubería.
+      - name: el cronómetro, en la página publicada
+        env:
+          PAGES_BASE: https://imoriana3.github.io/proyectos
+          PAGES_ESPERA_S: '600'
+          PAGES_INTERVALO_S: '20'
+        run: node tools/test_pages_cronometro.mjs
