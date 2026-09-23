@@ -150,7 +150,51 @@ banco vigile; prueba que el mutante no llegó.**
 
 ---
 
-## 4 · La puerta agregadora
+## 4 · El mismo mecanismo fuera de la CI: los agregados
+
+Esto no es una manía de la integración continua. **Un número correcto calculado
+sobre el conjunto equivocado** es el mismo fallo, y hace el mismo daño: produce
+una cifra tranquilizadora, con todos sus decimales bien, sobre algo que nadie ha
+mirado.
+
+La pregunta es idéntica a la del alcance: **¿sobre qué se ha calculado esto, y de
+cuánto?**
+
+### Cuatro que estuvieron a punto de publicarse
+
+| el número | parecía decir | lo que pasaba de verdad |
+|---|---|---|
+| **p50 = 0,00 m** de error del DEM | «el DEM es perfecto» | promediado sobre toda la malla, donde los dos ficheros son **el mismo DEM por construcción**: el empalme sólo actúa cerca de las filas. Restringido a ≤30 m de un seguidor: **0,78 m** en Ayora y **1,20** en San José |
+| **media +1,1 dB** del careo de El Burgo | «el motor está centrado» | esconde **+27,1 dB** con 0 filas cruzadas y **−28,4** con 24. Los dos errores se compensan en la media y la media no valida nada |
+| **el relieve, agregado** | un dB de relieve «de la planta» | las bandas van de **0,000 a 8,438 de mediana** y hasta 23,8 de máximo: promediarlas da el número que uno quiera según cuántos vanos cortos tenga la muestra, y la muestra la elige la malla, no la física |
+| **100 % de mutaciones corridas** | «todas vigiladas» | 100 % **de los bancos que tienen tabla**. Borrando un bloque entero pasa de «140 de 140» a «134 de 134» — 100 % igualmente — y sigue verde |
+
+El cuarto es de la propia CI y los tres primeros son de física, y por eso vale la
+pena tenerlos juntos: **es el mismo mecanismo**. La media, el percentil y el
+porcentaje son todos agregados, y un agregado sin su denominador y sin decir
+sobre qué población se ha tomado no es un resultado — es una impresión con
+decimales.
+
+### La regla
+
+> Un agregado se publica **con su n y con su población**, y **separado por la
+> variable que tenga estructura fuerte** (banda de vano, filas cruzadas, zona
+> donde el dato es distinto). Si hace falta un solo número, que sea por
+> categoría y con su n; nunca uno solo.
+
+Y el aviso que acompaña a los tres primeros, escrito en su sitio
+(`Siting/TERRENO_FUENTE.md`): **ESTA TABLA NO SE AGREGA. NUNCA.**
+
+### Cómo se cazaron los cuatro
+
+Ninguno revisando el cálculo: **careándolo con lo que uno acababa de afirmar.**
+Un p50 de 0,00 m dicho en voz alta suena a «el DEM es perfecto», y eso es
+increíble para un DEM de 7 m de píxel — ir a ver por qué salía cero fue lo que
+destapó que el denominador estaba mal.
+
+---
+
+## 5 · La puerta agregadora
 
 Un repo con varios jobs necesita **un solo check** que mire a todos, con `needs`
 de cada uno:
@@ -171,7 +215,7 @@ no es un aviso. Y meterlo en el `if` sería una puerta de mentira, porque su
 
 ---
 
-## 5 · Inventario (2026-09-23)
+## 6 · Inventario (2026-09-23)
 
 | repo | puerta agregadora | corredor con piso | alcance de la CI |
 |---|---|---|---|
@@ -196,7 +240,29 @@ no es un aviso. Y meterlo en el `if` sería una puerta de mentira, porque su
 
 ---
 
-## 6 · La lista de comprobación, para un repo nuevo
+## 7 · El enlace a este documento, comprobado
+
+Un original y enlaces desde cada repo; dos copias divergen. Pero **un enlace
+roto a la guía de puertas sería el chiste final**, así que el enlace también es
+una puerta: `docs/enlace_guia.sh`, en cada repo, con una línea en su CI.
+
+Y se rige por lo que dice este documento:
+
+- **publica su alcance** — cuántos `.md` ha mirado, cuántos traen el enlace;
+- resuelve el fichero en el clon de `proyectos` que haya al lado, **el del pin**
+  si el repo lo fija: eso lo hace verificable desde fuera y no sólo legible;
+- si no hay clon, lo trae con `--depth 1` (proyectos es público, 2 s);
+- **sin enlace es ROJO** —el repo debería tenerlo— y el enlace apuntando a algo
+  que no está, también;
+- **sin red y sin clon es `rc = 2`**, no verde: el enlace puede estar bien o
+  roto y no se ha podido saber.
+
+Probado por los tres caminos: documento ausente del clon → rojo; repo sin
+enlace → rojo; sin clon y sin red → `rc = 2`.
+
+---
+
+## 8 · La lista de comprobación, para un repo nuevo
 
 - [ ] ¿Hay una **puerta agregadora** con `needs` de todos los jobs, y `!= success`?
 - [ ] ¿Cada banco tiene un **piso medido**, y un banco nuevo sin él sale rojo?
