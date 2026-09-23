@@ -711,8 +711,13 @@ const SONDA = `(() => {
       return { total: +(Math.acos(Math.min(1, n.y)) * 180 / Math.PI).toFixed(2),
                ns: +ns.toFixed(2), nH: nH,
                pisan: +peor.toFixed(2), nocabe: !!BLOQUES[0].hincas.nocabe,
-               hincas: [+BLOQUES[0].hincas.corta.toFixed(2),
-                        +BLOQUES[0].hincas.larga.toFixed(2)] };
+               /* SIN REDONDEAR A 2 DECIMALES. Se restan entre sí más abajo y
+                  dos redondeos de 5 mm cada uno hacían bailar la desviación
+                  ±1 cm — justo el orden del umbral, así que el veredicto lo
+                  decidía el milímetro y no la física. Se guarda entero y se
+                  redondea al IMPRIMIR, que es donde el redondeo no decide. */
+               hincas: [+BLOQUES[0].hincas.corta.toFixed(4),
+                        +BLOQUES[0].hincas.larga.toFixed(4)] };
     };
     const r = { llano: mide(0, 180), ns: mide(12, 180), eo: mide(12, 90),
                 eo30: mide(30, 90) };
@@ -745,20 +750,36 @@ const SONDA = `(() => {
   /* LAS HINCAS. Una mesa fija apoya en DOS líneas de postes y el propio tilt las
      hace distintas: con 2,4 m de mesa a 25°, un metro entre la de delante y la
      de detrás. Eso es de la ESTRUCTURA y está también en llano. */
-  const difH = f => +(f.hincas[1] - f.hincas[0]).toFixed(2);
+  /* SIN REDONDEAR. Estaba a `.toFixed(2)` y se comparaba con `< 0.05`: el
+     umbral caía JUSTO sobre la rejilla del redondeo, así que una diferencia
+     real de 4,6 cm podía leerse 0,05 y fallar, o 0,04 y pasar, según el
+     milímetro. Un umbral no se pone donde el redondeo decide. */
+  const difH = f => f.hincas[1] - f.hincas[0];
   check('la fija apoya en DOS líneas de postes, y el tilt las hace distintas (' +
-    fijaPend.llano.hincas.join('–') + ' m ya en llano)',
+    fijaPend.llano.hincas.map(x => x.toFixed(2)).join('–') + ' m ya en llano)',
     fijaPend.llano.nH >= 16 && difH(fijaPend.llano) > 0.5,
     JSON.stringify(fijaPend.llano));
   /* Lo que NO puede pasar es que la pendiente A LO LARGO las estire: para eso
      la fila sigue el terreno. Antes, con 12° sobre 65 m, iban de 0,25 a 8,74 m
      —y la mesa entraba CINCO METROS en el suelo por un extremo—. */
+  const desv = f => Math.abs(difH(f) - difH(fijaPend.llano));
   check('y la pendiente A LO LARGO ya no las estira: la fila sigue el terreno (' +
-    fijaPend.eo.hincas.join('–') + ' m con 12°, ' +
-    fijaPend.eo30.hincas.join('–') + ' m con 30°)',
+    fijaPend.eo.hincas.map(x => x.toFixed(2)).join('–') + ' m con 12°, ' +
+    fijaPend.eo30.hincas.map(x => x.toFixed(2)).join('–') + ' m con 30°; desvía ' +
+    desv(fijaPend.eo).toFixed(3) + ' y ' + desv(fijaPend.eo30).toFixed(3) + ' m)',
+    /* El umbral vuelve a ser el original (5 cm). Lo subí a 8 cuando esto
+       falló, y era el reflejo equivocado: no fallaba por el umbral sino porque
+       las hincas se redondeaban ANTES de restarse. Quitado el redondeo, la
+       desviación real sale 0,008 y 0,045 m —idénticas con y sin el hundido de
+       la cabeza, que es la prueba de que ese cambio no toca esta propiedad— y
+       pasa de forma determinista. Queda 5 mm de margen: si un día vuelve a
+       ponerse roja, es geometría, no ruido. */
     Math.abs(difH(fijaPend.eo) - difH(fijaPend.llano)) < 0.05 &&
     Math.abs(difH(fijaPend.eo30) - difH(fijaPend.llano)) < 0.05,
-    JSON.stringify([fijaPend.llano.hincas, fijaPend.eo.hincas, fijaPend.eo30.hincas]));
+    JSON.stringify({llano:fijaPend.llano.hincas, eo:fijaPend.eo.hincas,
+      eo30:fijaPend.eo30.hincas,
+      desviacion:[+Math.abs(difH(fijaPend.eo)-difH(fijaPend.llano)).toFixed(4),
+                  +Math.abs(difH(fijaPend.eo30)-difH(fijaPend.llano)).toFixed(4)]}));
   check('  ni con 30°, que es donde antes había que bancalear: ninguna hinca imposible',
     !fijaPend.eo.nocabe && !fijaPend.eo30.nocabe,
     JSON.stringify([fijaPend.eo.nocabe, fijaPend.eo30.nocabe]));
@@ -768,7 +789,8 @@ const SONDA = `(() => {
      mesa, de modo que el poste bajo sube y el alto baja—, y eso es real: lo que
      no puede es crecer. */
   check('y con la pendiente ⊥ a sus filas (N-S) no crecen: si acaso se acercan (' +
-    fijaPend.ns.hincas.join('–') + ' contra ' + fijaPend.llano.hincas.join('–') + ' m)',
+    fijaPend.ns.hincas.map(x => x.toFixed(2)).join('–') + ' contra ' +
+    fijaPend.llano.hincas.map(x => x.toFixed(2)).join('–') + ' m)',
     difH(fijaPend.ns) <= difH(fijaPend.llano) + 0.05,
     JSON.stringify([fijaPend.llano.hincas, fijaPend.ns.hincas]));
 

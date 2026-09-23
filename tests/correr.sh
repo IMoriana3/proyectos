@@ -100,7 +100,12 @@ declare -A PISO=(
   # (3, contando caracteres; sin ellas el muro vuelve solo). Salen menos de la
   # suma porque las 4 del mando apagado se han reescrito: lo que sujetaban era
   # el apaño, no la propiedad.
-  [test_comparador_3d.js]=279
+  # 279 -> 280: las cabezas de las hincas asomaban sobre los módulos y el banco
+  # daba verde porque medía EL EJE del poste, un punto —justo el único bien
+  # puesto—. Ahora mide los cuatro vértices de la tapa, y se añade que el margen
+  # no crezca con el tilt: si vuelve a crecer, es que alguien ha igualado otra
+  # vez un punto en vez del sólido.
+  [test_comparador_3d.js]=280
   [test_comparador_sitio.js]=36
   [test_ejecucion_traza.mjs]=61
   # La ficha de planta y el acceso al SCADA. El piso son las 30 MEDIDAS, y lo
