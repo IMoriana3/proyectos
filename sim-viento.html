@@ -915,6 +915,39 @@ LOC.mudos=function(lat,dtS){
   return fuera;
 };
 
+/* HASTA DÓNDE PUEDE ESTAR EQUIVOCADO EL AÑO CUANDO LA CADENA NO CABE EN EL PASO.
+   Decir «no cambia nada» es cierto sobre el CÁLCULO y falso sobre el MUNDO: la
+   cadena existe, lo que pasa es que su efecto vive por debajo de la resolución
+   de la serie. Dejarlo ahí sería cambiar una afirmación falsa por un silencio,
+   y el silencio también se paga: el que lee no sabe si lo que no se ve es
+   despreciable o es el resultado.
+
+   Así que se ACOTA, y la cota es de las que no se pueden discutir:
+
+     · lo más tarde que puede empezar una maniobra es la suma de los cuatro —la
+       media tarda como mucho su ventana en cruzar, cada rejilla espera como
+       mucho su periodo, y el arranque es fijo—, que es el mismo «peor caso»
+       que enseña el panel;
+     · durante esa espera el eje está donde estaba, así que se desvía como mucho
+       ese tiempo por la velocidad del hierro;
+     · y eso ocurre DOS veces por episodio (al plegar y al volver), no en todo
+       el año.
+
+   El resultado es un techo, no una estimación: el efecto real es menor, porque
+   una rejilla rara vez espera su periodo entero y porque durante esos segundos
+   la POA no está perdida del todo. Si el techo sale despreciable, está
+   demostrado que lo es; si sale grande, es que este paso de serie no vale para
+   este equipo y hay que decirlo con un número. */
+LOC.cotaCadena=function(lat,episodios,horasSol,slew){
+  lat=lat||LOC.LATENCIA;
+  var peor=(+lat.ventana_s||0)+(+lat.muestreo_s||0)+(+lat.sondeo_s||0)+(+lat.arranque_s||0);
+  var ev=Math.max(0,+episodios||0), sol=Math.max(0,+horasSol||0);
+  var seg=2*ev*peor;                       // dos maniobras por episodio
+  return { peor_s:peor, maniobras:2*ev, segundos:seg,
+           grados:peor*(+slew||0.17),
+           frac_sol:(sol>0?seg/(sol*3600):null) };
+};
+
 LOC.latenciaViva=function(lat){
   return !!(lat&&((+lat.ventana_s>0)||(+lat.muestreo_s>0)||
                   (+lat.sondeo_s>0)||(+lat.arranque_s>0)));
@@ -3445,6 +3478,23 @@ function bannerLatencia(){
   var paso=(dtS<60)?(fmt(dtS,dtS<1?2:0)+' s'):(fmt(dtS/60,0)+' min');
   var cuatro='media del anem\u00f3metro '+fmt(L.ventana_s,0)+' s, muestreo '+fmt(L.muestreo_s,0)+
     ' s, sondeo '+fmt(L.sondeo_s,0)+' s, arranque '+fmt(L.arranque_s,0)+' s';
+  /* LA COTA, cuando hay informe del que sacarla. Se coge el caso con MÁS
+     episodios: el techo tiene que valer para todos, no para el más cómodo. */
+  var cota=null;
+  if(REP&&REP.cases&&REP.meteo){
+    var ev=0; for(var k in REP.cases)if(REP.cases[k]&&REP.cases[k].n_events>ev)ev=REP.cases[k].n_events;
+    cota=LOC.cotaCadena(L,ev,REP.meteo.daylight_hours,(REP.config&&REP.config.slew_deg_s)||0.17);
+  }
+  var frase=cota&&cota.frac_sol!=null
+    ? ' <b>Y hasta d\u00f3nde puede estar equivocado</b>: lo m\u00e1s tarde que puede arrancar una '+
+      'maniobra son '+fmt(cota.peor_s,0)+' s \u2014'+fmt(cota.grados,1)+'\u00b0 de eje a 0,17 \u00b0/s\u2014, '+
+      'y eso ocurre dos veces por episodio: '+fmt(cota.maniobras,0)+' maniobras \u00d7 '+
+      fmt(cota.peor_s,0)+' s = '+fmt(cota.segundos/60,0)+' min sobre '+fmt(REP.meteo.daylight_hours,0)+
+      ' h de sol, o sea <b>como mucho el '+fmt(cota.frac_sol*100,3)+' %</b> del a\u00f1o con el eje '+
+      'fuera de sitio. Es un TECHO, no una estimaci\u00f3n: el efecto real es menor, porque una '+
+      'rejilla rara vez espera su periodo entero y porque en esos segundos la POA no se pierde '+
+      'entera.'
+    : '';
   if(dtS&&mudos.length===4)
     return '<div class="noval"><b>La cadena que has puesto no cambia NADA en este a\u00f1o</b> \u2014 '+
       cuatro+', y la serie va a pasos de '+paso+'. Los cuatro caen por debajo de '+
@@ -3452,7 +3502,7 @@ function bannerLatencia(){
       'bit igual que sin cadena, y S\u00cd es comparable con el motor can\u00f3nico. Para ver lo que la '+
       'cadena hace de verdad hay que mirarla donde ocurre \u2014 el <b>cron\u00f3metro del panel en '+
       'vivo</b>, a \u00d71 \u2014, o bajar el paso de la serie por debajo de estos segundos, que con '+
-      'meteo horaria interpolada no es cosa de esta ficha.</div>';
+      'meteo horaria interpolada no es cosa de esta ficha.'+frase+'</div>';
   if(dtS&&mudos.length)
     return '<div class="noval"><b>Este a\u00f1o lleva la cadena de latencia puesta, pero no entera</b> '+
       '\u2014 '+cuatro+', y la serie va a pasos de '+paso+'. No llega a ese paso '+

@@ -873,6 +873,77 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   check('y con la cadena a medias sigue diciendo que NO son comparables',
         /no.{0,4}son.{0,4}comparables/i.test(limpio(banners.medias)));
 
+  // ══════════════════════════════════════════════════════════════════
+  //  5ter) LA COTA: NO PODER VERLO NO ES LO MISMO QUE NO SABER CUÁNTO ES
+  // ══════════════════════════════════════════════════════════════════
+  // Decir «no cambia nada» es cierto sobre el CÁLCULO y falso sobre el MUNDO.
+  // Dejarlo ahí cambiaba una afirmación falsa por un silencio, y el silencio
+  // también se paga: quien lee no sabe si lo que no se ve es despreciable o es
+  // el resultado. Así que se acota.
+  //
+  // LA COTA SÓLO ES VÁLIDA DONDE SE ENSEÑA, y eso hay que dejarlo escrito: cubre
+  // el RETRASO de la maniobra, no el cambio de decisión. Una media larga no
+  // retrasa, CAMBIA —puede borrar un episodio entero, y eso no lo acota este
+  // techo—. Se pinta únicamente en la rama en que los cuatro son mudos, donde la
+  // media, por debajo del paso, no puede esconder nada.
+  const COTA = await page.evaluate(() => {
+    const L = { ventana_s: 3, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 };
+    return {
+      normal: LOC.cotaCadena(L, 31, 4380, 0.17),
+      sinEpisodios: LOC.cotaCadena(L, 0, 4380, 0.17),
+      sinSol: LOC.cotaCadena(L, 31, 0, 0.17),
+      // el peor caso es la SUMA de los cuatro, no el mayor de ellos
+      suma: LOC.cotaCadena({ ventana_s: 10, muestreo_s: 20, sondeo_s: 30, arranque_s: 40 },
+                           1, 1, 0.17).peor_s,
+    };
+  });
+  check('la cota suma los CUATRO, no se queda con el mayor', COTA.suma === 100, COTA.suma);
+  check('y son dos maniobras por episodio, no una', COTA.normal.maniobras === 62, COTA.normal.maniobras);
+  check('los segundos son maniobras × peor caso', COTA.normal.segundos === 62 * 24, COTA.normal.segundos);
+  check('y los grados, peor caso × velocidad del hierro',
+        cerca(COTA.normal.grados, 24 * 0.17, 1e-9), COTA.normal.grados);
+  check('la fracción del año sale contra las horas de SOL, no contra las 8760',
+        cerca(COTA.normal.frac_sol, (62 * 24) / (4380 * 3600), 1e-12), COTA.normal.frac_sol);
+  // DEGENERADOS: un año sin episodios y un sitio sin sol no pueden dar NaN ni
+  // infinito en un informe. Un `0/0` impreso es peor que no imprimir nada.
+  check('sin episodios, la cota es cero y no un NaN',
+        COTA.sinEpisodios.segundos === 0 && COTA.sinEpisodios.frac_sol === 0,
+        JSON.stringify(COTA.sinEpisodios));
+  // EL DETALLE NO PUEDE MENTIR SOBRE LO QUE MIDIÓ: `JSON.stringify(Infinity)`
+  // devuelve `null`, así que el mutante que quitaba la guarda salía rojo
+  // enseñando `"frac_sol":null` — exactamente el valor que la comprobación
+  // exige. Un rojo que se explica con la prueba de que estaba verde es peor que
+  // un rojo sin detalle. Se imprime con `String`, que sí dice "Infinity".
+  check('sin horas de sol, la fracción es null y no un infinito',
+        COTA.sinSol.frac_sol === null, String(COTA.sinSol.frac_sol));
+
+  const conCota = await page.evaluate(() => {
+    const L = { ventana_s: 3, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 };
+    const hacer = cases => { REP = { config: { latencia: L, slew_deg_s: 0.17 },
+      meteo: { dt_h: 1 / 60, daylight_hours: 4380 }, cases: cases };
+      return bannerLatencia().replace(/<[^>]*>/g, '').replace(/\s+/g, ' '); };
+    return {
+      muchos: hacer({ A1: { n_events: 12 }, A2: { n_events: 31 }, B1: { n_events: 9 } }),
+      // el mismo informe con el caso gordo QUITADO: la cota tiene que bajar
+      pocos: hacer({ A1: { n_events: 12 }, B1: { n_events: 9 } }),
+      // y sin `cases` no se inventa una cota
+      sinCasos: (() => { REP = { config: { latencia: L }, meteo: { dt_h: 1 / 60 } };
+        return bannerLatencia().replace(/<[^>]*>/g, '').replace(/\s+/g, ' '); })(),
+    };
+  });
+  check('el año pone la cota con un número, no con un adjetivo',
+        /como mucho el 0[.,]009 %/.test(conCota.muchos), conCota.muchos.slice(-200));
+  check('y la saca del caso con MÁS episodios, no del primero que pilla',
+        /62 maniobras/.test(conCota.muchos) && /24 maniobras/.test(conCota.pocos),
+        conCota.pocos.slice(-140));
+  check('dice que es un TECHO y no una estimación',
+        /TECHO/.test(conCota.muchos) && /efecto real es menor/.test(conCota.muchos));
+  check('sin informe del que sacarla, no se inventa una cota',
+        !/como mucho el/.test(conCota.sinCasos) && /no cambia NADA/.test(conCota.sinCasos),
+        conCota.sinCasos.slice(-120));
+  check('y la cota NO aparece donde no vale: con la cadena a medias, no se pinta',
+        !/como mucho el/.test(limpio(banners.medias)));
+
   check('ninguna excepción en la página durante todo el banco',
         errores.length === 0, errores.join(' · '));
 

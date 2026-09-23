@@ -471,7 +471,41 @@ declare -A PISO=(
   # fotogramas. Un banco que a veces falla solo no sirve para medir: el primer
   # rojo que sale ya no se sabe de quién es. Ahora esperan a la CONDICIÓN, y se
   # comprobó con tres tiradas seguidas antes de volver a mutar.
-  [test_viento_latencia.js]=112
+  #
+  # SUBIDO A 124 con LA COTA. Decir «no cambia nada» era cierto sobre el
+  # CÁLCULO y falso sobre el MUNDO: la cadena existe, lo que pasa es que su
+  # efecto vive por debajo de la resolución de la serie. Dejarlo ahí cambiaba
+  # una afirmación falsa por un SILENCIO, y el silencio también se paga: quien
+  # lee no sabe si lo que no se ve es despreciable o es el resultado.
+  #
+  # Ahora se acota, y la cota es de las que no se discuten: lo más tarde que
+  # puede arrancar una maniobra es la suma de los cuatro, eso ocurre DOS veces
+  # por episodio, y se compara con las horas de SOL. Con 3/1/15/5 y 31
+  # episodios sobre 4.380 h: 24 s por maniobra · 4,1° de eje · 62 maniobras ·
+  # 25 min · <b>0,009 %</b> del año. Es un TECHO, no una estimación.
+  #
+  # Y SU LÍMITE, escrito: la cota cubre el RETRASO, no el cambio de decisión.
+  # Una media larga no retrasa, CAMBIA —puede borrar un episodio entero— y eso
+  # este techo no lo acota. Por eso se pinta SÓLO en la rama en que los cuatro
+  # son mudos, donde la media, por debajo del paso, no puede esconder nada. Hay
+  # comprobación de que no aparece en la rama «a medias».
+  #
+  # MUTANTES, predicciones antes de medir. Tres de cuatro:
+  #
+  #   R1 una maniobra por episodio, no dos ... predije 4 · mata 3
+  #   R2 el peor caso como MÁXIMO, no suma ... predije 5 · mata 5 ✓
+  #   R3 dividir por horas y no por segundos . predije 2 · mata 2 ✓
+  #   R4 quitar la guarda del sitio sin sol .. predije 1 · mata 1 ✓
+  #
+  # R1: conté «dos maniobras por episodio» entre las víctimas después de haber
+  # razonado que sobrevive —`maniobras` es otro campo y el mutante no lo
+  # tocaba—. Aritmética mía, no del banco.
+  #
+  # Y R4 destapó que MI PROPIO DETALLE DE FALLO mentía: `JSON.stringify` de un
+  # `Infinity` devuelve `null`, así que el rojo salía enseñando `frac_sol:null`
+  # —justo el valor que la comprobación exige—. Un rojo que se explica con la
+  # prueba de que estaba verde es peor que un rojo sin detalle. Va con `String`.
+  [test_viento_latencia.js]=124
   [test_viento_meteo.js]=33
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,
