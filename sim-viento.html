@@ -333,7 +333,7 @@
       </div>
       <div id="latBox" style="display:none">
         <div class="two">
-          <div class="field"><label>Media del anemómetro (s)</label><input id="latVent" type="number" step="10" min="0" value="600"></div>
+          <div class="field"><label>Media del anemómetro (s)</label><input id="latVent" type="number" step="1" min="0" value="3"></div>
           <div class="field"><label>Muestreo NCU←HSU (s)</label><input id="latMues" type="number" step="1" min="0" value="1"></div>
         </div>
         <div class="two">
@@ -893,6 +893,26 @@ LOC.vientoVisto=function(ws,dtS,lat){
 LOC.ordenEnElEje=function(orden,dtS,lat){
   lat=lat||LOC.LATENCIA;
   return LOC.retardo(LOC.rejilla(orden,dtS,lat.sondeo_s),dtS,lat.arranque_s);
+};
+
+/* QUÉ PARÁMETROS DE LA CADENA NO HACEN NADA CON ESTE PASO DE SERIE.
+   Una ventana de 3 s sobre una serie de 1 min no promedia nada, y un sondeo de
+   15 s sobre 60 no retiene nada: las primitivas devuelven EL MISMO OBJETO, que
+   es la identidad exacta. El problema no es que no hagan nada —es correcto que
+   no lo hagan— sino que el informe diga «estos números no son comparables»
+   cuando son bit a bit los mismos. Eso es una afirmación falsa de éxito.
+
+   NO SE REPITEN AQUÍ LOS UMBRALES (`k>1`, `p>dt`, `k>0`): se le PREGUNTA a cada
+   primitiva con una sonda y se mira si devuelve su entrada. Así no puede
+   desincronizarse de ellas el día que cambie un redondeo. */
+LOC.mudos=function(lat,dtS){
+  lat=lat||LOC.LATENCIA;
+  var s=new Float64Array(8), fuera=[];
+  if(+lat.ventana_s>0&&LOC.mediaMovil(s,dtS,lat.ventana_s)===s)fuera.push('la media del anem\u00f3metro');
+  if(+lat.muestreo_s>0&&LOC.rejilla(s,dtS,lat.muestreo_s)===s)fuera.push('el muestreo NCU\u2190HSU');
+  if(+lat.sondeo_s>0&&LOC.rejilla(s,dtS,lat.sondeo_s)===s)fuera.push('el sondeo NCU\u2192TCU');
+  if(+lat.arranque_s>0&&LOC.retardo(s,dtS,lat.arranque_s)===s)fuera.push('el arranque del motor');
+  return fuera;
 };
 
 LOC.latenciaViva=function(lat){
@@ -3412,6 +3432,35 @@ function bannerLatencia(){
     return '<p class="note">Cadena de latencia <b>apagada</b>: el único retardo simulado es el '+
       'del hierro (0,17 °/s), como en toda corrida anterior de esta ficha y como en el motor '+
       'canónico. Los números son comparables con los dos.</p>';
+  /* EL PASO DE LA SERIE MANDA. Con los cuatro parámetros por debajo de él la
+     cadena es la identidad EXACTA y el año sale igual que sin ella: decir
+     entonces «no son comparables» sería mentir en el informe, y en la
+     dirección cara — el que lo lea creerá que está viendo el efecto de la
+     cadena cuando no hay ninguno. */
+  var dtS=(REP&&REP.meteo&&REP.meteo.dt_h)?REP.meteo.dt_h*3600:null;
+  var mudos=dtS?LOC.mudos(L,dtS):[];
+  // Por debajo del minuto, «pasos de 0 min». El paso de la serie es el número
+  // contra el que se compara todo lo de abajo: enseñarlo redondeado a cero lo
+  // volvería absurdo justo en el caso en que la cadena SÍ se resuelve.
+  var paso=(dtS<60)?(fmt(dtS,dtS<1?2:0)+' s'):(fmt(dtS/60,0)+' min');
+  var cuatro='media del anem\u00f3metro '+fmt(L.ventana_s,0)+' s, muestreo '+fmt(L.muestreo_s,0)+
+    ' s, sondeo '+fmt(L.sondeo_s,0)+' s, arranque '+fmt(L.arranque_s,0)+' s';
+  if(dtS&&mudos.length===4)
+    return '<div class="noval"><b>La cadena que has puesto no cambia NADA en este a\u00f1o</b> \u2014 '+
+      cuatro+', y la serie va a pasos de '+paso+'. Los cuatro caen por debajo de '+
+      'ese paso, as\u00ed que las tres rejillas son la <b>identidad exacta</b>: este a\u00f1o sale bit a '+
+      'bit igual que sin cadena, y S\u00cd es comparable con el motor can\u00f3nico. Para ver lo que la '+
+      'cadena hace de verdad hay que mirarla donde ocurre \u2014 el <b>cron\u00f3metro del panel en '+
+      'vivo</b>, a \u00d71 \u2014, o bajar el paso de la serie por debajo de estos segundos, que con '+
+      'meteo horaria interpolada no es cosa de esta ficha.</div>';
+  if(dtS&&mudos.length)
+    return '<div class="noval"><b>Este a\u00f1o lleva la cadena de latencia puesta, pero no entera</b> '+
+      '\u2014 '+cuatro+', y la serie va a pasos de '+paso+'. No llega a ese paso '+
+      (mudos.length>1?'lo que has puesto en: ':'lo que has puesto en ')+mudos.join(', ')+', '+
+      'as\u00ed que eso es la identidad exacta y no toca el resultado. Lo dem\u00e1s s\u00ed: la m\u00e1quina '+
+      'decide sobre el viento <b>publicado</b> y estos n\u00fameros <b>no son comparables</b> con el '+
+      'motor can\u00f3nico. Las horas sobre umbral, el m\u00e1ximo del a\u00f1o y la r\u00e1faga de cada '+
+      'episodio siguen siendo del viento que <b>sopla</b>.</div>';
   return '<div class="noval"><b>Este año lleva la cadena de latencia puesta</b> — media del '+
     'anemómetro '+fmt(L.ventana_s,0)+' s, muestreo '+fmt(L.muestreo_s,0)+' s, sondeo '+
     fmt(L.sondeo_s,0)+' s, arranque '+fmt(L.arranque_s,0)+' s. La máquina de estados decide '+
