@@ -559,7 +559,69 @@ representativa por estructura, no una planta simulada fila a fila. Sin haber com
 nada y se dice por qué: no se fabrica un color. Y es **POA**, no DC: el desacoplo eléctrico sigue
 sin estar en ninguna cifra.
 
-### El mando dice lo que puede hacer
+### El color es del INSTANTE, no sólo del año
+
+Reportado dos veces, y la segunda dejó claro que la primera la había arreglado
+mal: **«sigue sin colorear los strings, solo para anual»**. El color nació atado
+al resultado de comparar el año, así que la escena —que se ve desde que se abre—
+no podía pintar nada hasta que hubiera una comparación. Mi primer arreglo fue
+apagar el mando mientras no la hubiera: honesto, y sin resolver el problema, que
+era que **no se podía pintar lo que la escena está enseñando**.
+
+Ahora hay dos fuentes y la de por defecto es la que siempre existe:
+
+| fuente | de dónde sale | unidad |
+|---|---|---|
+| **instante** (por defecto) | lo que capta cada mesa en el momento que enseña la escena, con **cielo claro** | W/m² |
+| **año** | la comparación, con su meteo | kWh/m² |
+
+El mando ya no se apaga nunca: lo que se desactiva es la **opción del año**, que
+es la que puede no tener números. Y la unidad sigue a la fuente, porque los dos
+valores son del mismo orden (≈900 W/m² contra ≈2900 kWh/m²) y una etiqueta
+equivocada no cantaría.
+
+**El instante enseña lo que el año promedia.** Medido en Sevilla con 20° de
+tilt: la **dos aguas** reparte 313,9 contra 775,3 W/m² entre sus dos paños a las
+16 h, y a las 10 h se invierte (957,9 contra 667,7). Esa es la razón de ser de
+una estructura este-oeste, y en la cifra anual desaparece. Mueve la hora y el
+color se mueve con ella.
+
+**Y no hay dos físicas.** El instante sale de `FIS.paso`, que es exactamente el
+cálculo que el año hacía dentro de su bucle, sacado fuera: `FIS.corre` lo llama
+8 760 veces y la escena una. Escribir una segunda cuenta para el color habría
+sido el camino corto para que la tabla y la escena acabaran diciendo cosas
+distintas. La extracción se verificó con el careo dorado contra el núcleo: 304
+de 304, sin mover un número.
+
+De noche no se pinta nada y se dice por qué.
+
+### Los soportes atravesaban los módulos
+
+Reportado mirando la escena. En la dos aguas los dos paños giran a `+θ` y `−θ`,
+pero a los postes se les pasaba **el mismo `θ` a los dos**, así que el paño de
+bajada recibía la geometría del de subida. Medido antes de tocarlo, lanzando un
+rayo vertical desde cada cabeza de poste contra su propio panel:
+
+| tilt E-O | paño +θ | paño −θ |
+|---|---|---|
+| 5° | −0,023 m (bajo el vidrio) | **+0,064** asomando / −0,109 sin llegar |
+| 20° | −0,024 m | **+0,315** / −0,363 |
+| 35° | −0,027 m | **+0,541** / −0,596 |
+
+Es `2·a·sen θ` exacto. Ahora el poste lee el tilt **del propio paño**
+(`m.spin.rotation.x`) en vez de recibirlo aparte, que es la única forma de que
+no se puedan volver a desincronizar.
+
+### Demasiado texto bajo la escena
+
+También reportado. La ficha explica mucho y eso no se recorta —lo que no se
+puede modelar hay que decirlo— pero 3 836 caracteres bajo la escena son la forma
+cara de no decir nada, porque no se leen. Partido: 766 visibles y el resto en
+tres plegables, cerrados, cada uno con su resumen. No se ha borrado una palabra.
+El banco cuenta los caracteres de las dos mitades por separado: si sólo midiera
+lo visible, borrar lo plegado pasaría en verde.
+
+### El mando dice lo que puede hacer (primer intento)
 
 Reportado como **«no se colorea»**, y era cierto. La casilla se dejaba encender **sin haber
 comparado**, momento en el que no hay ni un número que pintar, y la razón vivía en un párrafo

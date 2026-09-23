@@ -93,7 +93,14 @@ declare -A PISO=(
   # sin comparar, encendido tras comparar). Salen de un fallo reportado —
   # «no se colorea» — en el que el texto decía la verdad y el mando la
   # contradecía; el piso sube para que no puedan volver a irse en silencio.
-  [test_comparador_3d.js]=270
+  # 270 -> 279, de tres cosas reportadas mirando la escena: los soportes de la
+  # dos aguas atravesando los módulos (4, con el rayo contra el vidrio), el
+  # color del INSTANTE —el mando ya no se apaga porque ya no hace falta— y sus
+  # unidades y su noche (5), y que el texto bajo la escena deje de ser un muro
+  # (3, contando caracteres; sin ellas el muro vuelve solo). Salen menos de la
+  # suma porque las 4 del mando apagado se han reescrito: lo que sujetaban era
+  # el apaño, no la propiedad.
+  [test_comparador_3d.js]=279
   [test_comparador_sitio.js]=36
   [test_ejecucion_traza.mjs]=61
   # La ficha de planta y el acceso al SCADA. El piso son las 30 MEDIDAS, y lo

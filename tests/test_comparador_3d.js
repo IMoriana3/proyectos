@@ -231,13 +231,30 @@ const SONDA = `(() => {
   // proyectan— pero una fija mira al ecuador y tira la sombra hacia el POLO,
   // o sea al fondo desde la cámara y detrás de sus propias filas. Se comprueba
   // que proyecta de verdad, y que la ficha avisa de dónde hay que buscarla.
+  /* El texto de la escena vive en dos sitios desde que el muro se plegó: la
+     nota corta, siempre visible, y los `<details>`. Lo que se mide es lo que
+     la ficha DICE, así que la sonda mira los dos. */
+  await p.evaluate(() => { window.textoEscena = () =>
+    [document.getElementById('escNote')].concat(
+      [...document.querySelectorAll('#escCard details.plg')]
+    ).map(e => e ? e.textContent : '').join(' ')
+     /* Con los espacios APLANADOS. Lo que se mide es lo que la ficha dice, y
+        una frase partida por el salto de línea del fuente («al\n fondo») la
+        sigue diciendo: sin esto, mover una coma en el HTML pone en rojo una
+        comprobación sobre el contenido. */
+     .replace(/\s+/g, ' ').trim(); });
   const proy = await p.evaluate(() => {
     const out = {};
     BLOQUES.forEach(B => { let c = 0, t = 0;
       B.filas[0].traverse(o => { if (o.isMesh) { t++; if (o.castShadow) c++; } });
       out[B.key] = [c, t]; });
     return { out, suelo: TD.suelo.receiveShadow,
-             nota: document.getElementById('escNote').textContent };
+             /* TODO lo que la ficha dice bajo la escena, esté a la vista o
+                plegado: la nota corta más los plegables. Cuando el muro se
+                partió en `<details>` estas comprobaciones cazaron el
+                movimiento, que es para lo que están — pero lo que sujetan es
+                que la frase SIGA DICHA, no en qué etiqueta vive. */
+             nota: textoEscena() };
   });
   check('todas las mallas de la fija proyectan sombra (' + proy.out.fija_optima.join('/') + ')',
     proy.out.fija_optima[0] === proy.out.fija_optima[1] && proy.out.fija_optima[0] > 0,
@@ -1269,7 +1286,7 @@ const SONDA = `(() => {
     Math.sign(mira.find(m => m.az === 90).cara) === 1, JSON.stringify(mira));
 
   // ── el texto: por qué el terreno es uno y las componentes no ──
-  const porQue = await p.evaluate(() => document.getElementById('escNote').textContent);
+  const porQue = await p.evaluate(() => textoEscena());
   const plano = porQue.replace(/\s+/g, ' ');
   check('la escena dice que el terreno es UNO, con su azimut',
     /uno solo/i.test(plano) && /azimut/i.test(plano), plano.slice(-520));
@@ -1282,6 +1299,36 @@ const SONDA = `(() => {
     plano.slice(-260));
   check('y que el eje inclinado de un TSAT debería ser esa misma componente',
     /un eje no se inclina en el aire/i.test(plano), plano.slice(-320));
+
+  /* ── Y QUE NO VUELVA A SER UN MURO ──────────────────────────────────────
+     Reportado: «demasiado texto bajo escena». La ficha explica mucho y eso no
+     se recorta —lo que no se puede modelar hay que decirlo— pero un muro de
+     3 800 caracteres bajo la escena es la forma cara de no decir nada, porque
+     no se lee. Se partió: lo esencial a la vista y el resto a un clic. Sin
+     esta comprobación, el muro vuelve solo: cada cosa que se explique se
+     añadirá al párrafo de arriba, que es donde está el cursor.
+     El tope sale de la medida de este cambio (766) con holgura, y las dos
+     mitades se miden por separado a propósito: si sólo se midiera lo visible,
+     borrar lo plegado pasaría en verde. */
+  const muro = await p.evaluate(() => {
+    const n = document.getElementById('escNote');
+    const d = [...document.querySelectorAll('#escCard details.plg')];
+    return { visible: n.textContent.replace(/\s+/g, ' ').trim().length,
+             plegables: d.length,
+             abiertos: d.filter(x => x.open).length,
+             plegado: d.map(x => x.textContent.replace(/\s+/g, ' ').trim().length)
+                       .reduce((a, b) => a + b, 0),
+             resumenes: d.map(x => x.querySelector('summary').textContent.trim()) };
+  });
+  check('bajo la escena lo VISIBLE es corto (' + muro.visible + ' caracteres)',
+    muro.visible > 0 && muro.visible < 1100, JSON.stringify(muro));
+  check('  y lo largo sigue estando, plegado y cerrado (' + muro.plegado + ' caracteres en ' +
+    muro.plegables + ')',
+    muro.plegables >= 3 && muro.plegado > 2000 && muro.abiertos === 0,
+    JSON.stringify(muro));
+  check('  y cada plegable dice de qué va antes de abrirlo',
+    muro.resumenes.length >= 3 && muro.resumenes.every(t => t.length > 12),
+    JSON.stringify(muro.resumenes));
 
   check('la cuña de la primera versión no ha vuelto',
     (await p.evaluate(() => typeof taludTSAT === 'undefined')) === true);
@@ -1945,18 +1992,24 @@ const SONDA = `(() => {
     // tira: si no, esto mediría el caso CON números y daría verde sin mirar
     // lo que dice mirar.
     window.REP = null;
-    // El mando se mide ANTES de tocarlo: sin comparar tiene que estar apagado y
-    // decir por qué. Esto es lo que faltaba cuando se reportó «no se colorea»:
-    // la casilla se dejaba encender y la razón vivía en un párrafo de abajo.
+    // SIN COMPARAR SE PINTA IGUAL, del instante. Es el fallo que se reportó dos
+    // veces: el color nacía atado al año, así que la escena —que se ve desde
+    // que se abre— no podía pintar nada hasta comparar. Lo que se mide aquí es
+    // que el mando NO se apaga (el instante se sabe siempre) y que lo que se
+    // desactiva es la opción del AÑO, que es la que puede no tener números.
+    set('cfuente', 'inst');
     pintaProduccion();
     out.mandoSin = { cb: document.getElementById('colProd').disabled,
                      sel: document.getElementById('cscale').disabled,
-                     etiq: document.getElementById('colProdFalta').textContent.trim(),
-                     legSinMarcar: document.getElementById('legProd').textContent.trim() };
+                     opAno: document.getElementById('cfuente')
+                              .querySelector('option[value="ano"]').disabled,
+                     txtAno: document.getElementById('cfuente')
+                              .querySelector('option[value="ano"]').textContent };
     document.getElementById('colProd').checked = true;
     pintaProduccion();
     out.sinComparar = { tenidas: vidrios().filter(v => v.propio).length,
-                        nota: document.getElementById('legProd').textContent.trim() };
+                        nota: document.getElementById('legProd').textContent.trim(),
+                        vals: [...new Set((BLOQUES[0].prod || []).map(x => +x.val.toFixed(2)))] };
     // 2) con el año comparado. Se TIRA el REP anterior antes de pedir uno nuevo:
     // en este fichero ya han corrido otras pruebas, así que `window.REP` viene
     // puesto y el bucle de espera salía al instante — careando el escenario de
@@ -1967,12 +2020,14 @@ const SONDA = `(() => {
     if (!window.REP) return Object.assign(out, { error: 'no llegó REP' });
     out.escenario = { quiebro: cfgActual().quiebro, claves: elegidas() };
     pintaProduccion();
-    out.mandoCon = { cb: document.getElementById('colProd').disabled,
-                     sel: document.getElementById('cscale').disabled,
-                     etiq: document.getElementById('colProdFalta').textContent.trim() };
+    set('cfuente', 'ano');
+    out.mandoCon = { opAno: document.getElementById('cfuente')
+                              .querySelector('option[value="ano"]').disabled,
+                     txtAno: document.getElementById('cfuente')
+                              .querySelector('option[value="ano"]').textContent };
     out.conAno = {};
     BLOQUES.forEach(B => {
-      const t = (B.prod || []).map(x => ({ kwh: +x.kwh.toFixed(1), plano: x.plano,
+      const t = (B.prod || []).map(x => ({ kwh: +x.val.toFixed(1), plano: x.plano,
                                            hex: x.malla.material.color.getHexString() }));
       out.conAno[B.key] = { mesas: t, colores: [...new Set(t.map(x => x.hex))].length,
                             valores: [...new Set(t.map(x => x.kwh))].length };
@@ -1999,32 +2054,69 @@ const SONDA = `(() => {
   check('la escena tiene el mando de color por producción y arranca APAGADO',
     await p.evaluate(() => { const e = document.getElementById('colProd');
       return !!e && e.defaultChecked === false; }));
-  check('sin haber comparado no se pinta NADA: no se inventa un color',
-    colProd.sinComparar && colProd.sinComparar.tenidas === 0,
-    JSON.stringify(colProd.sinComparar));
-  check('  y se dice por qué en vez de callarse',
-    /Comparar el año/.test((colProd.sinComparar || {}).nota || ''),
-    (colProd.sinComparar || {}).nota);
-  /* EL MANDO DICE LO QUE PUEDE HACER. Reportado como «no se colorea»: la
-     casilla se encendía sin comparar y no pasaba nada, porque la razón estaba
-     en un párrafo DEBAJO del selector. Un mando que promete una acción que no
-     puede ejecutar miente aunque el texto diga la verdad, así que aquí se mide
-     el ESTADO del mando, no el texto: apagado sin números, encendido con
-     ellos. El aviso, además, tiene que poder leerse SIN marcar la casilla —
-     si no, esconderlo detrás de un mando que no se puede marcar lo dejaría
-     sin poder verse nunca. */
-  check('  sin comparar el mando está APAGADO: no se puede encender lo que no hace nada',
-    colProd.mandoSin && colProd.mandoSin.cb === true && colProd.mandoSin.sel === true,
+  /* EL COLOR NO DEPENDE DE HABER COMPARADO. Reportado dos veces —«no se
+     colorea», «sigue sin colorear los strings, solo para anual»—. La primera
+     vez lo tapé apagando el mando, que arreglaba el síntoma: un mando honesto
+     que seguía sin poder pintar lo que la escena enseña. Lo que se mide ahora
+     es lo contrario de antes: que SÍ se pinta sin comparar, con números de
+     verdad y distintos entre estructuras. */
+  check('SIN comparar el mando se puede encender: el instante se sabe siempre',
+    colProd.mandoSin && colProd.mandoSin.cb === false && colProd.mandoSin.sel === false,
     JSON.stringify(colProd.mandoSin));
-  check('  y la razón va en su propia etiqueta, no solo en un párrafo de abajo',
-    /hace falta comparar/i.test((colProd.mandoSin || {}).etiq || ''),
-    (colProd.mandoSin || {}).etiq);
-  check('  y el aviso se lee sin marcar la casilla (si no, no se vería nunca)',
-    /Comparar el año/.test((colProd.mandoSin || {}).legSinMarcar || ''),
-    ((colProd.mandoSin || {}).legSinMarcar || '').slice(0, 90));
-  check('  tras comparar el mando se ENCIENDE y la etiqueta deja de excusarse',
-    colProd.mandoCon && colProd.mandoCon.cb === false &&
-    colProd.mandoCon.sel === false && colProd.mandoCon.etiq === '',
+  check('  y lo que se desactiva es la opción del AÑO, que es la que no tiene números',
+    colProd.mandoSin && colProd.mandoSin.opAno === true &&
+    /comparar/i.test(colProd.mandoSin.txtAno || ''),
+    JSON.stringify(colProd.mandoSin));
+  check('  sin comparar SÍ se pinta, y con números de verdad, no con un relleno',
+    colProd.sinComparar && colProd.sinComparar.tenidas > 0 &&
+    colProd.sinComparar.vals.length > 0 &&
+    colProd.sinComparar.vals.every(v => v > 0),
+    JSON.stringify(colProd.sinComparar));
+  check('  y la leyenda declara que es el INSTANTE y con cielo claro',
+    /instante/i.test((colProd.sinComparar || {}).nota || '') &&
+    /cielo claro/i.test((colProd.sinComparar || {}).nota || ''),
+    ((colProd.sinComparar || {}).nota || '').slice(0, 120));
+  /* LA UNIDAD SIGUE A LA FUENTE, Y DE NOCHE NO SE PINTA. Dos propiedades que
+     se midieron a mano al hacer esto y que sin comprobación se pierden. La
+     unidad importa porque los dos números son del mismo orden (≈900 W/m² y
+     ≈2900 kWh/m²): una etiqueta equivocada no cantaría, y es exactamente el
+     tipo de cifra que miente sin equivocarse en nada. */
+  const fuentes = await p.evaluate(async () => {
+    const g = id => document.getElementById(id);
+    const set = (id, v) => { const e = g(id); if (e) { e.value = v; e.dispatchEvent(new Event('change')); } };
+    g('colProd').checked = true;
+    const leo = () => g('legProd').textContent.replace(/\s+/g, ' ');
+    const pintadas = () => (BLOQUES || []).reduce((a, B) => a + (B.prod || []).length, 0);
+    const o = {};
+    set('fecha', '2023-06-21');
+    g('hora').value = 720; actualiza3D();
+    set('cfuente', 'inst'); o.inst = { txt: leo(), n: pintadas() };
+    set('cfuente', 'ano');  o.ano  = { txt: leo(), n: pintadas() };
+    // y la NOCHE, con la fuente del instante
+    set('cfuente', 'inst');
+    g('hora').value = 60; actualiza3D();
+    o.noche = { txt: leo(), n: pintadas(),
+                tenidas: (BLOQUES || []).reduce((a, B) => { let k = 0;
+                  B.filas.forEach(u => mallasDeMesa(u).forEach(m => { if (m.userData.matProd) k++; }));
+                  return a + k; }, 0) };
+    g('hora').value = 720; actualiza3D();
+    return o;
+  });
+  check('con la fuente del INSTANTE la leyenda dice W/m², no kWh',
+    fuentes.inst && fuentes.inst.n > 0 &&
+    /W\/m²/.test(fuentes.inst.txt) && !/kWh/.test(fuentes.inst.txt),
+    (fuentes.inst || {}).txt);
+  check('  y con la del AÑO dice kWh/m²: la unidad sigue a la fuente',
+    fuentes.ano && fuentes.ano.n > 0 && /kWh\/m²/.test(fuentes.ano.txt),
+    (fuentes.ano || {}).txt);
+  check('de noche no se pinta NADA y se dice que el sol está bajo el horizonte',
+    fuentes.noche && fuentes.noche.n === 0 && fuentes.noche.tenidas === 0 &&
+    /bajo el horizonte/i.test(fuentes.noche.txt),
+    JSON.stringify(fuentes.noche));
+
+  check('  tras comparar, la opción del año se habilita',
+    colProd.mandoCon && colProd.mandoCon.opAno === false &&
+    !/comparar/i.test(colProd.mandoCon.txtAno || ''),
     JSON.stringify(colProd.mandoCon));
   /* Y que el escenario es el que se pidió, no el que quedó de antes: un test
      que mide otro caso da verde sin medir lo que dice. */
@@ -2107,7 +2199,7 @@ const SONDA = `(() => {
         for (let q = t.malla; q; q = q.parent) if (q === mejor.g) return true;
         return false; });
       return { lat: c.lat, ejes: ej,
-               ecuadorKwh: dentro.length ? +dentro[0].kwh.toFixed(1) : null,
+               ecuadorKwh: dentro.length ? +dentro[0].val.toFixed(1) : null,
                mesas: (REP && REP.filas.find(x => x.key === 'tracker_queb') || {}).mesas,
                caidaPlano0: +caida(mediaDePlano(u, c, 0)).toFixed(2),
                caidaPlano1: +caida(mediaDePlano(u, c, 1)).toFixed(2),
@@ -2123,6 +2215,10 @@ const SONDA = `(() => {
     set('fecha', '2023-06-21'); const h = document.getElementById('hora');
     h.value = 720; h.dispatchEvent(new Event('input'));
     document.getElementById('colProd').checked = true;
+    /* La fuente se PIDE, no se hereda: el oráculo de abajo es `REP.mesas`, así
+       que hay que pintar del AÑO. Con la fuente del instante esto compararía
+       W/m² contra kWh/m² y fallaría por la razón equivocada. */
+    set('cfuente', 'ano');
     set('lat', 37.3891); construyeMundo(); actualiza3D(); pintaProduccion();
     const N = mide();
     set('lat', -33.0);   construyeMundo(); actualiza3D(); pintaProduccion();
@@ -2153,6 +2249,63 @@ const SONDA = `(() => {
   check('y las dos mesas del quebrado NO llevan el mismo ángulo de seguimiento',
     Math.abs(hemi.S.thetaPlano0 - hemi.S.thetaPlano1) > 1e-6,
     JSON.stringify(hemi.S));
+
+  /* ── LOS SOPORTES NO ATRAVIESAN LOS MÓDULOS ─────────────────────────────
+     Reportado mirando la escena: en la dos aguas se veían las cabezas de las
+     hincas asomando POR ENCIMA del vidrio. Los dos paños giran a +θ y −θ, y a
+     los postes se les pasaba el MISMO θ a los dos, así que el paño de bajada
+     recibía la geometría del de subida. No se mide «se ve raro»: se lanza un
+     rayo vertical desde cada cabeza de poste contra SU panel y se mide la
+     distancia con signo. Negativa = la cabeza queda debajo del vidrio, que es
+     donde tiene que estar; positiva = asoma. Se barre el tilt porque el error
+     era `2·a·sen θ` y en llano no se ve: a 5° eran 6 cm y a 35°, 54. */
+  const hincasEW = await p.evaluate(() => {
+    const set = (id, v) => { const e = document.getElementById(id);
+      if (e) { e.value = v; e.dispatchEvent(new Event('change')); } };
+    document.querySelectorAll('#structs input[type=checkbox]')
+      .forEach(c => { c.checked = (c.value === 'fija_ew'); });
+    const mide = () => {
+      const B = BLOQUES.find(x => x.key === 'fija_ew');
+      if (!B || !B.filas.length) return null;
+      const u = B.filas[0]; u.updateWorldMatrix(true, true);
+      return [0, 1].map(i => {
+        const mesa = u.children[i], tops = [];
+        mesa.children.forEach(o => {
+          if (o.isMesh && o.geometry.parameters && o.geometry.parameters.width === 0.16)
+            tops.push(new THREE.Vector3(0, 0.5, 0).applyMatrix4(o.matrixWorld)); });
+        const panel = mesa.spin.children[0], rc = new THREE.Raycaster(), d = [];
+        tops.forEach(t => {
+          rc.set(new THREE.Vector3(t.x, t.y + 5, t.z), new THREE.Vector3(0, -1, 0));
+          const h = rc.intersectObject(panel, true);
+          if (h.length) d.push(t.y - h[0].point.y); });
+        return { pano: i, rot: +(mesa.spin.rotation.x * 180 / Math.PI).toFixed(1),
+                 postes: tops.length, cortan: d.length,
+                 peor: d.length ? +Math.max.apply(null, d).toFixed(4) : null };
+      });
+    };
+    const o = {};
+    [5, 20, 35, 45].forEach(t => { set('tiltEW', String(t)); actualiza3D(); o['t' + t] = mide(); });
+    return o;
+  });
+  /* Primero: que el rayo ENCUENTRE el panel. Sin esto, un poste que se fuera a
+     tomar viento daría «no asoma» por no cortar nada — verde sin medir. */
+  check('la sonda de hincas ve los dos paños y todos sus postes cortan su panel',
+    [5, 20, 35, 45].every(t => (hincasEW['t' + t] || []).length === 2 &&
+      hincasEW['t' + t].every(x => x.postes >= 4 && x.cortan === x.postes)),
+    JSON.stringify(hincasEW.t20));
+  check('  y los dos paños van a +θ y −θ, que es donde el fallo vivía',
+    [5, 20, 35, 45].every(t => Math.abs(hincasEW['t' + t][0].rot + hincasEW['t' + t][1].rot) < 1e-6 &&
+      Math.abs(hincasEW['t' + t][0].rot) > 1e-6),
+    JSON.stringify([hincasEW.t5.map(x => x.rot), hincasEW.t45.map(x => x.rot)]));
+  check('NINGUNA hinca asoma por encima del módulo, en ninguno de los dos paños',
+    [5, 20, 35, 45].every(t => hincasEW['t' + t].every(x => x.peor < 0)),
+    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['t' + t].map(x => x.peor)])));
+  /* Y que quede METIDA, no rozando: la cabeza va bajo el vidrio, a media
+     altura de panel. Si sólo se pidiera «< 0», dejar la cabeza a 0,1 mm del
+     plano pasaría — y a ojo eso es exactamente lo que se veía mal. */
+  check('  y queda METIDA bajo el vidrio, no rozando el plano',
+    [5, 20, 35, 45].every(t => hincasEW['t' + t].every(x => x.peor < -0.02)),
+    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['t' + t].map(x => x.peor)])));
 
   check('sin errores de JS', errs.length === 0, errs.join(' | '));
   await b.close();

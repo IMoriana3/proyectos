@@ -99,6 +99,18 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
 .ro .v small{font-size:12px;color:var(--muted);font-weight:400}
 canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:10px;margin-top:6px}
 .note{font-size:12px;color:var(--muted-2);margin-top:10px;line-height:1.55}
+/* PLEGABLES. La ficha explica mucho y eso no se recorta —lo que no se puede
+   modelar hay que decirlo— pero debajo de la escena se había convertido en un
+   muro que nadie lee, que es la forma cara de no decir nada. Lo importante
+   queda a la vista y el resto, a un clic. */
+details.plg{margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
+details.plg>summary{cursor:pointer;color:var(--muted);font-size:12px;
+  list-style:none;user-select:none}
+details.plg>summary::-webkit-details-marker{display:none}
+details.plg>summary::before{content:"▸ ";color:var(--accent)}
+details.plg[open]>summary::before{content:"▾ "}
+details.plg>summary:hover{color:var(--text)}
+details.plg .cuerpo{font-size:12px;color:var(--muted-2);line-height:1.55;margin-top:6px}
 .note code,.warn code{color:var(--muted);background:var(--panel-2);padding:1px 5px;border-radius:5px;font-family:var(--mono)}
 .warn{font-size:12.5px;line-height:1.55;border:1px solid var(--build);background:rgba(246,166,35,.08);border-radius:10px;padding:10px 12px;margin-bottom:12px;color:var(--text)}
 .engmsg{font-size:13px;line-height:1.6;border:1px solid var(--line);background:var(--panel-2);border-radius:10px;padding:13px 15px}
@@ -407,8 +419,12 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         <span class="hhmm" id="hlbl">12:00</span>
       </div>
       <div class="tline" style="margin-top:6px;flex-wrap:wrap">
-        <label class="chk" title="Pinta cada MESA según lo que produce, como la ficha de producción de cobertura-zigbee. Azul = la que menos, rojo = la que más. Una mesa es un string. Hace falta haber comparado: sin números no se pinta nada.">
-          <input type="checkbox" id="colProd"> 🎨 color por producción<span class="sn" id="colProdFalta"></span></label>
+        <label class="chk" title="Pinta cada MESA según lo que capta. Azul la que menos, rojo la que más. Una mesa es un string.">
+          <input type="checkbox" id="colProd"> 🎨 color por producción</label>
+        <select id="cfuente" class="btn" title="Qué número se pinta. INSTANTE: lo que capta cada mesa en el momento que enseña la escena, con cielo claro — se sabe siempre, sin comparar. AÑO: el de la comparación, con su meteo.">
+          <option value="inst" selected>del instante (cielo claro)</option>
+          <option value="ano">del año comparado</option>
+        </select>
         <select id="cscale" class="btn" title="Cómo se reparte la rampa. FIEL: de 0 al máximo — el color es proporcional a lo que produce cada mesa, así que un conjunto parejo sale de un color. CONTRASTE: estira mín→máx de la vista para mirar diferencias finas, y entonces exagera.">
           <option value="abs" selected>escala fiel (0 → máx)</option>
           <option value="rel">contraste (mín → máx)</option>
@@ -417,46 +433,49 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
       <div id="legProd" style="margin-top:8px;display:none"></div>
       <div id="escRead" class="readout" style="margin-top:10px"></div>
       <p class="note" id="escNote">Cada bloque es una estructura, con su pitch y su GCR, al mismo
-        sol y sobre el mismo suelo. <b>«Color por producción»</b> pinta cada <b>mesa</b> según lo
-        que capta al año —azul la que menos, rojo la que más, como la ficha de producción—, y hace
-        falta haber comparado: sin números no se pinta nada. Donde más se ve es en el
-        <b>quebrado</b> y en las <b>dos aguas</b>, que corren sus dos mesas por separado y no
-        captan lo mismo; las filas de una misma estructura salen todas igual porque en este modelo
-        <i>lo son</i> —campo uniforme, una fila representativa—. Mueve la hora y mira las <b>sombras entre filas</b>: es lo que
-        el backtracking existe para evitar, y lo que la columna «pérdida sombra» de la tabla mide.
-        <b>Las de la fija hay que ir a buscarlas</b>: una fija mira al ecuador, así que tira la
-        sombra hacia el polo — al fondo desde esta vista y detrás de sus propias filas. Órbita
-        hacia el otro lado, o deja marcadas menos estructuras para que el encuadre se acerque.
-        Las del seguidor caen de lado y se ven de frente.
-        <b>Las filas se adaptan al terreno</b>: se inclinan lo que se inclina el suelo <i>a lo
-        largo</i> de ellas — eso es lo que hace un eje que sigue el terreno, y lo que hacen las
-        hincas de una fija al replantearse. En la dirección del pitch, en cambio, se
+        sol y sobre el mismo suelo. <b>Mueve la hora</b> y mira las <b>sombras entre filas</b>: es
+        lo que el backtracking existe para evitar, y lo que la columna «pérdida sombra» de la tabla
+        mide. <b>«Color por producción»</b> pinta cada <b>mesa</b> —una mesa es un string— por lo
+        que capta: del <b>instante</b> que ves, sin haber comparado nada, o del <b>año</b> una vez
+        comparado. Donde más se ve es en el <b>quebrado</b> y en las <b>dos aguas</b>, que corren
+        sus dos mesas por separado; las filas de una misma estructura salen todas igual porque en
+        este modelo <i>lo son</i> —campo uniforme, una fila representativa—.</p>
+      <details class="plg"><summary>Las sombras de la fija hay que ir a buscarlas</summary>
+        <div class="cuerpo">Una fija mira al ecuador, así que tira la sombra hacia el polo — al
+        fondo desde esta vista y detrás de sus propias filas. Órbita hacia el otro lado, o deja
+        marcadas menos estructuras para que el encuadre se acerque. Las del seguidor caen de lado
+        y se ven de frente.</div></details>
+      <details class="plg"><summary>Terreno e hincas: una fija no sigue el terreno</summary>
+        <div class="cuerpo"><b>Las filas se adaptan al terreno</b>: se inclinan lo que se inclina
+        el suelo <i>a lo largo</i> de ellas — eso es lo que hace un eje que sigue el terreno, y lo
+        que hacen las hincas de una fija al replantearse. En la dirección del pitch, en cambio, se
         <b>escalonan</b> a distinta cota sin cambiar el tilt: la pendiente la tiene el terreno, no
         la estructura. Y una <b>fija no sigue el terreno</b>: se monta al tilt de proyecto y lo que
         compensa la pendiente a lo largo de sus filas es la <b>longitud de las hincas</b> — 12° de
         cuesta y la mesa sigue a 25°. Cada lectura de fija dice el rango de hinca que sale: es lo
         que dice si esa estructura se puede montar de una pieza o hay que <b>bancalear</b>. El
-        seguidor sí sigue el terreno a lo largo de su eje, porque eso es un eje inclinado.
-        <b>El azimut de la estructura</b> es cosa aparte del terreno: se declara como <b>desvío</b>
-        (0 = la fija al ecuador y el eje norte-sur, positivo hacia el oeste) y cada familia lleva el
-        suyo. Girar la estructura cambia <b>cuánta pendiente ve</b>: con el terreno cayendo al sur y
-        16°, girar la fija 30° le baja la ⊥ a 13,9° y girar el eje del seguidor 20° se la sube de 0°
-        a 5,6°.
-        <b>El terreno</b> es <b>uno solo</b>: la pendiente del emplazamiento con su
-        <b>azimut</b>, y todas las estructuras montadas sobre ese mismo plano — por eso van
-        alineadas sobre la <b>curva de nivel</b> y la cámara se pone cuesta abajo. Lo que cambia
-        con la estructura no es el terreno, es la <b>componente</b> que ve: la ⊥ a sus filas es la
-        que sombrea (el <i>cross_axis_slope</i>) y la que sale en cada lectura; la que corre a lo
-        largo de las filas no sombrea, pero hay que absorberla con las hincas, con bancales o
-        inclinando el eje. Y son distintas porque las filas corren hacia lados distintos: las de
-        una fija este-oeste, las de un seguidor norte-sur. <b>Con el terreno cayendo al sur, la
-        fija ve toda la pendiente y el seguidor ninguna</b> — la ve entera a lo largo del eje. Eso
-        no es un defecto de la comparación: es la razón por la que en un sitio real una estructura
-        se monta y la otra no. Y el «eje inclinado °» de un TSAT debería ser justo esa componente a lo
-        largo del eje — un eje no se inclina en el aire—, y lo lleva <b>todo</b> seguidor: cada lectura
-        dice cuánto se inclina el suyo con el terreno. Por eso <b>no hay una fila de «eje
+        seguidor sí sigue el terreno a lo largo de su eje, porque eso es un eje inclinado.</div></details>
+      <details class="plg"><summary>El azimut, y qué componente de la pendiente ve cada estructura</summary>
+        <div class="cuerpo"><b>El azimut de la estructura</b> es cosa aparte del terreno: se declara
+        como <b>desvío</b> (0 = la fija al ecuador y el eje norte-sur, positivo hacia el oeste) y
+        cada familia lleva el suyo. Girar la estructura cambia <b>cuánta pendiente ve</b>: con el
+        terreno cayendo al sur y 16°, girar la fija 30° le baja la ⊥ a 13,9° y girar el eje del
+        seguidor 20° se la sube de 0° a 5,6°.
+        <b>El terreno</b> es <b>uno solo</b>: la pendiente del emplazamiento con su <b>azimut</b>,
+        y todas las estructuras montadas sobre ese mismo plano — por eso van alineadas sobre la
+        <b>curva de nivel</b> y la cámara se pone cuesta abajo. Lo que cambia con la estructura no
+        es el terreno, es la <b>componente</b> que ve: la ⊥ a sus filas es la que sombrea (el
+        <i>cross_axis_slope</i>) y la que sale en cada lectura; la que corre a lo largo de las
+        filas no sombrea, pero hay que absorberla con las hincas, con bancales o inclinando el eje.
+        Y son distintas porque las filas corren hacia lados distintos: las de una fija este-oeste,
+        las de un seguidor norte-sur. <b>Con el terreno cayendo al sur, la fija ve toda la
+        pendiente y el seguidor ninguna</b> — la ve entera a lo largo del eje. Eso no es un defecto
+        de la comparación: es la razón por la que en un sitio real una estructura se monta y la
+        otra no. Y el «eje inclinado °» de un TSAT debería ser justo esa componente a lo largo del
+        eje — un eje no se inclina en el aire—, y lo lleva <b>todo</b> seguidor: cada lectura dice
+        cuánto se inclina el suyo con el terreno. Por eso <b>no hay una fila de «eje
         inclinado»</b>: un seguidor sobre terreno que cae a lo largo de su eje YA es un seguidor de
-        eje inclinado, y en llano no hay eje que inclinar.</p>
+        eje inclinado, y en llano no hay eje que inclinar.</div></details>
     </div>
     <!-- ═════════ SIZING (columna ancha: la ventana hay que LEERLA) ═════════ -->
     <div class="card">
@@ -1508,6 +1527,100 @@ FIS.CATALOGO=[
 ];
 FIS.spec=function(key){for(var i=0;i<FIS.CATALOGO.length;i++)if(FIS.CATALOGO[i].key===key)return FIS.CATALOGO[i];return null;};
 
+/* ── UN INSTANTE de una estructura: sus planos, con su POA ────────────────
+   Esto NO es física nueva: es exactamente lo que el año hacía dentro de su
+   bucle, sacado fuera. Existe porque la escena tiene que poder pintar lo que
+   está ENSEÑANDO sin haber corrido el año, y escribir una segunda cuenta para
+   el color habría dejado dos físicas en la casa —la de la tabla y la del
+   color— que es justo lo que esta ficha lleva todo el hilo evitando. Hay una
+   sola, `FIS.corre` la llama 8760 veces y la escena una.
+   `pre` es lo que no depende del instante y sale de `FIS.prepara`.          */
+FIS.prepara=function(spec,cfg,tiltForzado){
+  var G=cfg.geomDe(spec);
+  return {G:G, gcr:G.gcr, pitch:G.pitch,
+          /* La pendiente que ve ESTA familia: la componente ⊥ a SUS filas de
+             la pendiente del sitio, no la del sitio entera. */
+          cruz:FIS.cruz(cfg,spec),
+          tilt:(tiltForzado!=null)?tiltForzado:(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt),
+          axT:FIS.ejeTilt(cfg,spec),
+          /* Para la monoinclinada, la caída a lo largo de SUS filas (este-oeste). */
+          lFija:(spec.fam==='fija')?FIS.largoFija(cfg):{tilt:0,alongAz:0},
+          /* Las MITADES del eje. En todo lo que no sea un quebrado sobre
+             terreno quebrado es una sola, y entonces esto es exactamente lo de
+             siempre. */
+          ejes:FIS.ejesMitades(cfg,spec)};
+};
+FIS.paso=function(spec,cfg,pre,S,bh,dh,gh,e0){
+  var G=pre.G, gcr=pre.gcr, pitch=pre.pitch, cruz=pre.cruz,
+      tilt=pre.tilt, axT=pre.axT, lFija=pre.lFija, ejes=pre.ejes;
+  var P0, planos, salida=[];
+  if(spec.fam==='tracker'){
+    /* La proyección con eje inclinado la decide el ÁNGULO, no la etiqueta del
+       catálogo: si el eje está inclinado —lo diga el catálogo o lo ponga el
+       terreno— hay que proyectar con el marco girado. Preguntando por
+       `spec.tsat` se calculaba plano un eje que la escena dibujaba
+       inclinado.
+       Y un QUEBRADO tiene DOS ejes, uno por mesa, así que cada plano se lleva
+       SU proyección y SU eje: su ángulo de backtracking, su sombra y su
+       inclinación de superficie salen de los suyos. En todo lo demás la lista
+       tiene un elemento y esto es exactamente lo de siempre. */
+    planos=ejes.map(function(ax){
+      var Pm=ax?FIS.psTSAT(S.el,S.az,ax,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
+      /* El backtracking va CON la pendiente ⊥ a las filas — pvlib, y el core
+         desde SolarGPT v1.70.0—, y por ahí entra el careo.
+         `btLlano` es un DIAGNÓSTICO, no una alternativa: calcula el ángulo
+         como si el campo fuese llano, que es lo que hacía el core hasta ese
+         día. No es el modelo de nadie; está para poder ver de un vistazo lo
+         que cuesta backtrackear mal en un campo en cuesta, que es un número
+         que quiere cualquiera que herede uno. Por eso va desmarcado. */
+      return {th:FIS.theta(Pm.ps,gcr,cfg.maxang,spec.bt,cfg.btLlano?0:cruz,cfg.contrasol),
+              P:Pm, ax:ax};
+    });
+    P0=planos[0].P;
+  }else if(spec.fam==='fija_ew'){
+    /* Aguas al este y al oeste. Con la cumbrera inclinada por el terreno el
+       marco de proyección es el mismo que el de un eje inclinado: si no, se
+       dibujaría una cumbrera en cuesta y se calcularía otra horizontal. */
+    P0=axT?FIS.psTSAT(S.el,S.az,axT,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
+    var thEW=FIS.thMesa(tilt,axT);
+    planos=[{th:thEW,P:P0,ax:axT},{th:-thEW,P:P0,ax:axT}];
+  }else{
+    /* La fila sigue el terreno a lo largo (este-oeste) y la mesa se tumba sus
+       grados sobre ELLA: el mismo marco girado que un eje inclinado. Si la
+       escena la rodara y la física no, sería otra vez dibujar una cosa y
+       calcular otra. */
+    P0=FIS.psFija(S.el,S.az,cfg.lat,cfg,lFija.tilt,lFija.alongAz);
+    planos=[{th:FIS.thMesa(tilt,lFija.tilt),P:P0,ax:lFija.tilt}];
+  }
+  for(var k=0;k<planos.length;k++){
+    var pl=planos[k], t=pl.th;
+    /* Las aguas enfrentadas tienen su propia geometría de sombra: el
+       obstáculo es la CUMBRERA de la vecina, no su borde alto. Mismo reparto
+       que hace el core, que llama a `shaded_fraction_dos_aguas` en vez de al
+       modelo de fila. */
+    var fsh=spec.sinSombra?0
+           :(spec.fam==='fija_ew'
+               ?FIS.shadeEW(pl.P.ps,t,pitch,G.altoColector,cruz)
+               :FIS.shade  (pl.P.ps,t,pitch,G.altoColector,cruz));
+    /* El cielo que le sobrevive al vecino. En una dos aguas cada paño ve su
+       propia fila de cobertizos de MEDIO colector, de ahí el gcr/2 —
+       verificado, no aproximado—. Mismo reparto que hace el core. */
+    var tSup=FIS.tiltSup(t,pl.ax);
+    var gcrMask=G.altoColector/pitch;
+    if(spec.fam==='fija_ew')gcrMask/=2;
+    /* `sinSombra` significa TRANSPOSICIÓN PURA, y el cielo que tapa la
+       vecina también es sombreado entre filas: si se dejara puesto, el
+       barrido «sin sombra» del tilt óptimo sabría de vecinas y dejaría de
+       ser lo que dice ser. Es el mismo criterio del core, cuyo
+       `_optimal_tilt` corre sin enmascarar. */
+    var rCielo=(spec.sinMascara||spec.sinSombra)?1:FIS.skyMask(tSup,gcrMask);
+    var P=FIS.poa(pl.P.ps,pl.P.rho,t,tSup,bh,dh,gh,cfg.albedo,fsh,
+                  Math.sin(S.el),e0,rCielo);
+      salida.push({th:t, neta:P.neta, ideal:P.ideal, fsh:fsh});
+    }
+  return {planos:salida, P0:P0};
+};
+
 /* ── Una estructura sobre el año ──────────────────────────────────────────
    `M` es la meteo ya descargada {t[],ghi[],dhi[],dni[]}; `cfg` la geometría.
    Devuelve kWh/m² de módulo (neta e ideal) y el reparto mensual.            */
@@ -1518,10 +1631,8 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
      el GCR sale de la APERTURA —«GCR = aperture/pitch», §03.T0— y el sombreado
      entre filas del ALTO DE COLECTOR, que es lo que físicamente tapa e incluye
      los gaps. Con 1V son el mismo número; con 2V ya no. */
-  var G=cfg.geomDe(spec), gcr=G.gcr, pitch=G.pitch;
-  /* La pendiente que ve ESTA familia: la componente ⊥ a SUS filas de la
-     pendiente del sitio, no la del sitio entera. */
-  var cruz=FIS.cruz(cfg,spec);
+  var pre=FIS.prepara(spec,cfg,tiltForzado);
+  var G=pre.G, gcr=pre.gcr, pitch=pre.pitch, cruz=pre.cruz, tilt=pre.tilt;
   var dtH=(n>1)?((M.t[1]-M.t[0])/3600000):1;
   var neta=0, ideal=0, mes=new Float64Array(12);
   /* θ ACUMULADO, para que el careo pueda LOCALIZAR. Sin esto, un careo contra
@@ -1533,86 +1644,19 @@ FIS.corre=function(spec,M,cfg,tiltForzado){
      ángulo nocturno no es un dato: es un relleno, y promediarlo mezclaría dos
      convenios distintos con el core. */
   var thAbs=0, nDia=0, thSerie=[], porPlano=null;
-  var tilt=(tiltForzado!=null)?tiltForzado:(spec.fam==='fija_ew'?cfg.tiltEW:cfg.tilt);
-  var axT=FIS.ejeTilt(cfg,spec);
-  /* Y para la monoinclinada, la caída a lo largo de SUS filas (este-oeste). */
-  var lFija=(spec.fam==='fija')?FIS.largoFija(cfg):{tilt:0,alongAz:0};
-  /* Las MITADES del eje. En todo lo que no sea un quebrado sobre terreno
-     quebrado es una sola, y entonces esto es exactamente lo de siempre. */
-  var ejes=FIS.ejesMitades(cfg,spec);
   for(var i=0;i<n;i++){
     var S=FIS.sun(M.t[i],latR,cfg.lon);
     if(S.el<=0){ thSerie.push(null); continue; }   // hueco declarado, no ausencia
-    var bh=M.dni[i], dh=M.dhi[i], gh=M.ghi[i], e0=FIS.E0(M.t[i]), P0, planos;
-    var sN=0,sI=0;
-    if(spec.fam==='tracker'){
-      /* La proyección con eje inclinado la decide el ÁNGULO, no la etiqueta del
-         catálogo: si el eje está inclinado —lo diga el catálogo o lo ponga el
-         terreno— hay que proyectar con el marco girado. Preguntando por
-         `spec.tsat` se calculaba plano un eje que la escena dibujaba
-         inclinado.
-         Y un QUEBRADO tiene DOS ejes, uno por mesa, así que cada plano se lleva
-         SU proyección y SU eje: su ángulo de backtracking, su sombra y su
-         inclinación de superficie salen de los suyos. En todo lo demás la lista
-         tiene un elemento y esto es exactamente lo de siempre. */
-      planos=ejes.map(function(ax){
-        var Pm=ax?FIS.psTSAT(S.el,S.az,ax,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
-        /* El backtracking va CON la pendiente ⊥ a las filas — pvlib, y el core
-           desde SolarGPT v1.70.0—, y por ahí entra el careo.
-           `btLlano` es un DIAGNÓSTICO, no una alternativa: calcula el ángulo
-           como si el campo fuese llano, que es lo que hacía el core hasta ese
-           día. No es el modelo de nadie; está para poder ver de un vistazo lo
-           que cuesta backtrackear mal en un campo en cuesta, que es un número
-           que quiere cualquiera que herede uno. Por eso va desmarcado. */
-        return {th:FIS.theta(Pm.ps,gcr,cfg.maxang,spec.bt,cfg.btLlano?0:cruz,cfg.contrasol),
-                P:Pm, ax:ax};
-      });
-      P0=planos[0].P;
-    }else if(spec.fam==='fija_ew'){
-      /* Aguas al este y al oeste. Con la cumbrera inclinada por el terreno el
-         marco de proyección es el mismo que el de un eje inclinado: si no, se
-         dibujaría una cumbrera en cuesta y se calcularía otra horizontal. */
-      P0=axT?FIS.psTSAT(S.el,S.az,axT,cfg.lat,cfg):FIS.psTracker(S.el,S.az,cfg);
-      var thEW=FIS.thMesa(tilt,axT);
-      planos=[{th:thEW,P:P0,ax:axT},{th:-thEW,P:P0,ax:axT}];
-    }else{
-      /* La fila sigue el terreno a lo largo (este-oeste) y la mesa se tumba sus
-         grados sobre ELLA: el mismo marco girado que un eje inclinado. Si la
-         escena la rodara y la física no, sería otra vez dibujar una cosa y
-         calcular otra. */
-      P0=FIS.psFija(S.el,S.az,cfg.lat,cfg,lFija.tilt,lFija.alongAz);
-      planos=[{th:FIS.thMesa(tilt,lFija.tilt),P:P0,ax:lFija.tilt}];
-    }
+    var gh=M.ghi[i];
+    var R=FIS.paso(spec,cfg,pre,S,M.dni[i],M.dhi[i],gh,FIS.E0(M.t[i]));
+    var planos=R.planos, sN=0, sI=0;
     for(var k=0;k<planos.length;k++){
-      var pl=planos[k], t=pl.th;
-      /* Las aguas enfrentadas tienen su propia geometría de sombra: el
-         obstáculo es la CUMBRERA de la vecina, no su borde alto. Mismo reparto
-         que hace el core, que llama a `shaded_fraction_dos_aguas` en vez de al
-         modelo de fila. */
-      var fsh=spec.sinSombra?0
-             :(spec.fam==='fija_ew'
-                 ?FIS.shadeEW(pl.P.ps,t,pitch,G.altoColector,cruz)
-                 :FIS.shade  (pl.P.ps,t,pitch,G.altoColector,cruz));
-      /* El cielo que le sobrevive al vecino. En una dos aguas cada paño ve su
-         propia fila de cobertizos de MEDIO colector, de ahí el gcr/2 —
-         verificado, no aproximado—. Mismo reparto que hace el core. */
-      var tSup=FIS.tiltSup(t,pl.ax);
-      var gcrMask=G.altoColector/pitch;
-      if(spec.fam==='fija_ew')gcrMask/=2;
-      /* `sinSombra` significa TRANSPOSICIÓN PURA, y el cielo que tapa la
-         vecina también es sombreado entre filas: si se dejara puesto, el
-         barrido «sin sombra» del tilt óptimo sabría de vecinas y dejaría de
-         ser lo que dice ser. Es el mismo criterio del core, cuyo
-         `_optimal_tilt` corre sin enmascarar. */
-      var rCielo=(spec.sinMascara||spec.sinSombra)?1:FIS.skyMask(tSup,gcrMask);
-      var P=FIS.poa(pl.P.ps,pl.P.rho,t,tSup,bh,dh,gh,cfg.albedo,fsh,
-                    Math.sin(S.el),e0,rCielo);
-      sN+=P.neta; sI+=P.ideal;
+      sN+=planos[k].neta; sI+=planos[k].ideal;
       /* Y la de CADA plano por separado. En un quebrado las dos mesas no
          captan lo mismo —tienen inclinaciones distintas— y esa diferencia es la
          que decide si un string que cruce la rótula sale penalizado. Promediada
          desaparece, y es justo lo que hay que poder mirar. */
-      if(planos.length>1){ if(!porPlano)porPlano=[0,0]; porPlano[k]+=P.neta*dtH/1000; }
+      if(planos.length>1){ if(!porPlano)porPlano=[0,0]; porPlano[k]+=planos[k].neta*dtH/1000; }
     }
     sN/=planos.length; sI/=planos.length;             // dos aguas = misma superficie, media
     /* En una fija a dos aguas los dos planos son +tilt y −tilt: su |θ| es el
@@ -1834,14 +1878,22 @@ FIS.fetchYear=function(lat,lon,year){
 };
 /* Cielo claro: sin red. Sin nubes la POA absoluta sale por encima de cualquier
    año real — sirve para comparar estructuras entre sí, no en absoluto. */
+/* ── Cielo claro en UN instante ──
+   La fórmula vivía COPIADA en los dos generadores de serie, y ahora la
+   necesita también la escena para poder pintar el instante que enseña. Tres
+   copias de una fórmula son tres sitios donde corregirla y dos donde olvidarse,
+   así que vive una vez y la llaman los tres. */
+FIS.cieloClaroEn=function(elRad){
+  if(!(elRad>0))return {ghi:0,dhi:0,dni:0};
+  var g=1000*Math.pow(Math.sin(elRad),1.15), d=g*0.14;
+  return {ghi:g, dhi:d, dni:(g-d)/Math.max(Math.sin(elRad),0.087)};
+};
 FIS.clearsky=function(lat,lon,year){
   var latR=lat*FIS.D2R,t0=Date.UTC(year,0,1),n=8760;
   var o={t:new Array(n),ghi:new Float64Array(n),dhi:new Float64Array(n),dni:new Float64Array(n),source:'clearsky'};
   for(var i=0;i<n;i++){
-    var d=new Date(t0+i*3600e3),P=FIS.sun(d,latR,lon);
-    var g=P.el>0?1000*Math.pow(Math.sin(P.el),1.15):0;
-    o.t[i]=d; o.ghi[i]=g; o.dhi[i]=g*0.14;
-    o.dni[i]=P.el>0?(g-g*0.14)/Math.max(Math.sin(P.el),0.087):0;
+    var d=new Date(t0+i*3600e3),P=FIS.sun(d,latR,lon),C=FIS.cieloClaroEn(P.el);
+    o.t[i]=d; o.ghi[i]=C.ghi; o.dhi[i]=C.dhi; o.dni[i]=C.dni;
   }
   return Promise.resolve(o);
 };
@@ -1858,10 +1910,8 @@ FIS.clearsky=function(lat,lon,year){
 FIS.clearskyCorto=function(lat,lon,year){
   var latR=lat*FIS.D2R, t=[], ghi=[], dhi=[], dni=[];
   for(var m=0;m<12;m++)for(var h=0;h<24;h++){
-    var d=new Date(Date.UTC(year,m,15,h)), P=FIS.sun(d,latR,lon);
-    var g=P.el>0?1000*Math.pow(Math.sin(P.el),1.15):0;
-    t.push(d); ghi.push(g); dhi.push(g*0.14);
-    dni.push(P.el>0?(g-g*0.14)/Math.max(Math.sin(P.el),0.087):0);
+    var d=new Date(Date.UTC(year,m,15,h)), P=FIS.sun(d,latR,lon), C=FIS.cieloClaroEn(P.el);
+    t.push(d); ghi.push(C.ghi); dhi.push(C.dhi); dni.push(C.dni);
   }
   return {t:t, ghi:Float64Array.from(ghi), dhi:Float64Array.from(dhi),
           dni:Float64Array.from(dni), source:'clearsky-12d'};
@@ -4136,29 +4186,56 @@ function mallasDeMesa(u){
    producen lo mismo — y salen del mismo color, que es la verdad. Lo que SÍ
    difiere, y es lo que esta vista enseña, es entre estructuras y, dentro de un
    quebrado o una dos aguas, entre sus dos mesas. */
-function produccionPorMesa(B,cfg){
-  if(!REP||!REP.filas)return null;
-  var f=null; REP.filas.forEach(function(x){if(x.key===B.key)f=x;});
-  if(!f||!(f.neta>0))return null;
+/* El reparto malla -> mesa, que es el MISMO se mire el año o el instante: lo
+   que cambia es de dónde salen los números, no a qué mesa van. Tenerlo dos
+   veces habría sido el camino corto para que el color del instante y el del
+   año acabaran señalando mesas distintas. */
+function repartePorMesa(B,cfg,total,porPlano){
   return B.filas.map(function(u){
     var m=mallasDeMesa(u);
-    if(!f.mesas||f.mesas.length!==2||m.length!==2)
-      return m.map(function(o){return {malla:o,kwh:f.neta,plano:null};});
+    if(!porPlano||porPlano.length!==2||m.length!==2)
+      return m.map(function(o){return {malla:o,val:total,plano:null};});
     /* Dos mesas con POA propia. El reparto es el mismo que el de los ángulos
        —`mediaDePlano` para el quebrado— y para la dos aguas el plano 0 es el
        paño que mira hacia donde apila las filas (`+thEW`), que es el que
        `spinPair[0]` bascula en positivo. */
-    var porPlano;
-    if(u.medias)porPlano=[mediaDePlano(u,cfg,0),mediaDePlano(u,cfg,1)];
-    else if(u.spinPair)porPlano=[u.spinPair[0],u.spinPair[1]];
-    else porPlano=null;
-    if(!porPlano)return m.map(function(o){return {malla:o,kwh:f.neta,plano:null};});
+    var g;
+    if(u.medias)g=[mediaDePlano(u,cfg,0),mediaDePlano(u,cfg,1)];
+    else if(u.spinPair)g=[u.spinPair[0],u.spinPair[1]];
+    else g=null;
+    if(!g)return m.map(function(o){return {malla:o,val:total,plano:null};});
     return m.map(function(o){
-      var p=(porPlano[0]&&esDescendiente(o,porPlano[0]))?0
-           :((porPlano[1]&&esDescendiente(o,porPlano[1]))?1:null);
-      return {malla:o,kwh:(p==null)?f.neta:f.mesas[p],plano:p};
+      var p=(g[0]&&esDescendiente(o,g[0]))?0:((g[1]&&esDescendiente(o,g[1]))?1:null);
+      return {malla:o,val:(p==null)?total:porPlano[p],plano:p};
     });
   }).reduce(function(a,b){return a.concat(b);},[]);
+}
+/* EL AÑO: lo que salió de comparar. */
+function produccionPorMesa(B,cfg){
+  if(!REP||!REP.filas)return null;
+  var f=null; REP.filas.forEach(function(x){if(x.key===B.key)f=x;});
+  if(!f||!(f.neta>0))return null;
+  return repartePorMesa(B,cfg,f.neta,(f.mesas&&f.mesas.length===2)?f.mesas:null);
+}
+/* EL INSTANTE: lo que capta cada mesa en el momento que enseña la escena.
+   Sale de `FIS.paso`, que es LA MISMA cuenta que hace el año — no hay una
+   física para la tabla y otra para el color; el careo dorado la sujeta. La
+   irradiancia es de CIELO CLARO, que es lo único que se puede saber sin bajar
+   meteo, y eso se dice en la leyenda: un color que no declara de dónde sale es
+   un color inventado.
+   Esto es lo que faltaba. El color existía sólo para el año, así que la escena
+   —que se ve desde que se abre— no podía pintar nada hasta comparar, y quien
+   encendía el mando no veía suceder nada. Reportado dos veces. */
+function produccionInstantePorMesa(B,cfg){
+  if(!ESC_SOL||!(ESC_SOL.elDeg>0))return null;      // de noche no hay qué pintar
+  var C=FIS.cieloClaroEn(ESC_SOL.S.el);
+  if(!(C.ghi>0))return null;
+  var R=FIS.paso(B.spec,cfg,FIS.prepara(B.spec,cfg,B.tiltEsc),
+                 ESC_SOL.S,C.dni,C.dhi,C.ghi,FIS.E0(ESC_SOL.t));
+  var pl=R.planos, tot=0;
+  for(var i=0;i<pl.length;i++)tot+=pl[i].neta;
+  return repartePorMesa(B,cfg,tot/pl.length,
+    (pl.length===2)?[pl[0].neta,pl[1].neta]:null);
 }
 function esDescendiente(o,g){for(var p=o;p;p=p.parent)if(p===g)return true;return false;}
 
@@ -4167,26 +4244,31 @@ function esDescendiente(o,g){for(var p=o;p;p=p.parent)if(p===g)return true;retur
 function pintaProduccion(){
   if(!TD||!BLOQUES.length)return;
   var cfg=cfgActual();
-  /* EL MANDO DICE LO QUE PUEDE HACER. Sin comparar no hay producción que
-     pintar, y hasta aquí eso se decía en un párrafo DEBAJO del selector
-     mientras la casilla seguía encendiéndose y no pasaba nada: un mando que
-     promete una acción que no puede ejecutar. Se apaga y se dice en su propia
-     etiqueta, que es donde se mira. Reportado como «no se colorea», y tenía
-     razón: el mensaje estaba, pero el mando lo contradecía. */
-  var hayDatos=!!(REP&&REP.filas&&REP.filas.some(function(f){return f.neta>0;}));
-  var cb=$('colProd'), sel=$('cscale'), falta=$('colProdFalta');
-  if(cb)cb.disabled=!hayDatos;
-  if(sel)sel.disabled=!hayDatos;
-  if(falta)falta.textContent=hayDatos?'':' — hace falta comparar el año';
-  /* `on` NO vuelve a mirar `hayDatos`: sin números `produccionPorMesa` no
-     devuelve nada y no hay con qué pintar, así que el cinturón no decide
-     ningún caso — su mutante sobrevivió 0/270. Lo que sujeta la propiedad es
-     la comprobación «sin haber comparado no se pinta NADA», no este `&&`. */
+  /* DOS FUENTES, Y LA POR DEFECTO ES LA QUE SIEMPRE HAY. El color nació
+     atado al año, así que la escena —que se ve desde que se abre— no podía
+     pintar nada hasta comparar: el mando se encendía y no sucedía nada.
+     Primero lo tapé apagando el mando, que arreglaba el síntoma y dejaba el
+     problema: lo que había que poder pintar era LO QUE LA ESCENA ENSEÑA. El
+     instante se calcula siempre, así que el mando ya no necesita apagarse; el
+     que puede no tener números es EL AÑO, y por eso es su opción la que se
+     desactiva hasta que se compara. */
+  var hayAno=!!(REP&&REP.filas&&REP.filas.some(function(f){return f.neta>0;}));
+  var fu=$('cfuente'), cb=$('colProd'), sel=$('cscale');
+  if(fu){
+    var opAno=fu.querySelector('option[value="ano"]');
+    if(opAno){
+      opAno.disabled=!hayAno;
+      opAno.textContent=hayAno?'del año comparado':'del año — hay que comparar';
+    }
+    if(!hayAno&&fu.value==='ano')fu.value='inst';   // no se queda en la que no hay
+  }
+  var fuente=(fu&&fu.value)||'inst';
+  var deNoche=(fuente==='inst')&&!(ESC_SOL&&ESC_SOL.elDeg>0);
   var on=!!(cb&&cb.checked);
   var modo=(sel&&sel.value)||'abs';
   var todo=[];
   BLOQUES.forEach(function(B){
-    var v=on?produccionPorMesa(B,cfg):null;
+    var v=on?(fuente==='ano'?produccionPorMesa(B,cfg):produccionInstantePorMesa(B,cfg)):null;
     B.prod=v; if(v)todo=todo.concat(v);
   });
   /* Primero se devuelve todo a su material de origen: así apagar el color, o
@@ -4201,45 +4283,47 @@ function pintaProduccion(){
   });
   var R=null;
   if(on&&todo.length){
-    var vals=todo.map(function(t){return t.kwh;});
+    var vals=todo.map(function(t){return t.val;});
     R=rangoColor(Math.min.apply(null,vals),Math.max.apply(null,vals),modo);
     todo.forEach(function(t){
-      var x=(R.hi>R.lo)?(t.kwh-R.lo)/(R.hi-R.lo):1;
+      var x=(R.hi>R.lo)?(t.val-R.lo)/(R.hi-R.lo):1;
       var c=new THREE.Color(prodColor(x));
       var m=t.malla.userData.matBase.clone();
       m.color=c; m.emissive=c.clone().multiplyScalar(0.16);
       t.malla.material=m; t.malla.userData.matProd=m;
     });
   }
-  leyendaProd(on,R,todo,hayDatos);
+  leyendaProd(on,R,todo,fuente,deNoche);
 }
 /* LA LEYENDA DICE QUÉ SIGNIFICA EL COLOR, y con la escala de contraste dice
    además desde dónde arranca la rampa: sin eso, dos capturas de la misma
    planta con escalas distintas se leen como plantas distintas. */
-function leyendaProd(on,R,todo,hayDatos){
+function leyendaProd(on,R,todo,fuente,deNoche){
   var el=$('legProd'); if(!el)return;
-  /* El aviso sale SIEMPRE que no hay números, esté la casilla como esté: es la
-     razón de que el mando esté apagado, y esconderla detrás de un mando que no
-     se puede marcar la dejaría sin poder leerse nunca. */
-  if(!hayDatos){
-    el.style.display='';
-    el.innerHTML='<span class="sn">Sin comparar no hay producción que pintar: dale a '+
-      '<b>Comparar el año</b> y esto se enciende. No se pinta un color inventado.</span>';
-    return;
-  }
   if(!on){el.style.display='none'; el.innerHTML=''; return;}
   el.style.display='';
+  /* El ÚNICO caso que queda sin nada que pintar: el instante de noche. No se
+     inventa un color ni se deja la escena teñida de la hora anterior; se dice
+     y se espera. */
+  if(deNoche){
+    el.innerHTML='<span class="sn">El sol está <b>bajo el horizonte</b> a esta hora: '+
+      'no hay producción que pintar. Mueve la hora, o pinta <b>del año comparado</b>.</span>';
+    return;
+  }
   if(!R)return;
   var stops=[]; for(var i=0;i<=8;i++)stops.push(prodColor(i/8)+' '+(i*12.5)+'%');
-  var n=todo.length, mn=Math.min.apply(null,todo.map(function(t){return t.kwh;}));
-  var mx=Math.max.apply(null,todo.map(function(t){return t.kwh;}));
+  var n=todo.length, mn=Math.min.apply(null,todo.map(function(t){return t.val;}));
+  var mx=Math.max.apply(null,todo.map(function(t){return t.val;}));
+  /* LA UNIDAD SIGUE A LA FUENTE. Un número en W/m² con «kWh/m²» al lado es una
+     cifra que miente sin equivocarse en nada. */
+  var uni=(fuente==='ano')?' kWh/m²':' W/m²';
   var dif=(mx>0)?((1-mn/mx)*100):0;
   el.innerHTML=
     '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
       '<span class="sn">'+fmt(R.lo,0)+'</span>'+
       '<span style="flex:1;min-width:120px;height:10px;border-radius:5px;'+
         'background:linear-gradient(90deg,'+stops.join(',')+')"></span>'+
-      '<span class="sn">'+fmt(R.hi,0)+' kWh/m²</span>'+
+      '<span class="sn">'+fmt(R.hi,0)+uni+'</span>'+
     '</div>'+
     '<div class="sn" style="margin-top:4px">'+
       (R.rel?'Escala de <b>contraste</b>: la rampa arranca en el mínimo de la vista ('+
@@ -4248,13 +4332,16 @@ function leyendaProd(on,R,todo,hayDatos){
            :'Escala <b>fiel</b>: la rampa arranca en cero, así que el color es proporcional '+
              'a lo que produce cada mesa y un conjunto parejo sale de un color. ')+
       'Se pintan <b>'+n+' mesa'+(n===1?'':'s')+'</b> (una mesa = un string), de '+fmt(mn,0)+
-      ' a '+fmt(mx,0)+' kWh/m² — <b>'+fmt(dif,1)+' %</b> entre la que menos y la que más. '+
+      ' a '+fmt(mx,0)+uni+' — <b>'+fmt(dif,1)+' %</b> entre la que menos y la que más. '+
+      (fuente==='ano'
+        ?'Es el <b>año comparado</b>, con su meteo. '
+        :'Es el <b>instante</b> que enseña la escena, con <b>cielo claro</b>: es lo único '+
+         'que se sabe sin bajar meteo, y por eso se dice. Mueve la hora y el color se mueve. ')+
       '<b>Todas las filas de una misma estructura salen igual y es la verdad</b>: este '+
       'comparador corre UNA fila representativa por estructura sobre campo uniforme. Lo que '+
       'sí difiere es entre estructuras y, dentro de un <b>quebrado</b> o de una <b>dos '+
-      'aguas</b>, entre sus dos mesas — que es lo que esta vista deja ver de un vistazo. '+
-      'Y es <b>POA</b>: el desacoplo eléctrico de un string a caballo de la rótula sigue sin '+
-      'estar en ninguna cifra.'+
+      'aguas</b>, entre sus dos mesas. Y es <b>POA</b>: el desacoplo eléctrico de un string '+
+      'a caballo de la rótula sigue sin estar en ninguna cifra.'+
     '</div>';
 }
 
@@ -4657,8 +4744,16 @@ function actualiza3D(){
         u.spinPair[0].rotation.x= thE;
         u.spinPair[1].rotation.x=-thE;
         /* Los postes de cada paño no miden lo mismo entre sí: los separa el
-           propio tilt. Se recalculan cuando se pone. */
-        if(u.children)u.children.forEach(function(m){if(m.ponTilt)m.ponTilt(thE);});
+           propio tilt. Se recalculan cuando se pone, Y CADA PAÑO CON EL SUYO:
+           los dos van a +thE y −thE, y pasarles el mismo a los dos ponía la
+           cabeza del poste del paño de bajada donde estaría si subiera. Medido
+           antes de tocarlo (paño −θ, contra el vidrio por trazado vertical):
+           +6,4 cm asomando a 5° de tilt, +31,5 cm a 20° y +54,1 cm a 35°, con
+           el otro lado colgando 10,9 / 36,3 / 59,6 cm sin llegar a la mesa. Es
+           `2·a·sen θ` exacto, y es lo que se veía: los soportes atravesando los
+           módulos. El tilt se lee DEL PROPIO PAÑO en vez de pasarse aparte,
+           que es la única forma de que no se puedan volver a desincronizar. */
+        u.children.forEach(function(m){if(m.ponTilt)m.ponTilt(m.spin.rotation.x);});
         /* Se MUTA, no se reemplaza: la lectura guarda una referencia a este
            objeto desde que se construyó el bloque, y cambiarlo por otro dejaba
            publicando el rango de antes de poner el tilt. */
@@ -4686,6 +4781,12 @@ function actualiza3D(){
       });
       th=tOpt;
     }
+    /* EL TILT QUE SE ESTÁ DIBUJANDO, apuntado para que el color del instante
+       salga de la MISMA estructura que hay en pantalla y no de la tecleada:
+       en la fija «óptima» son distintas (aquí va la estimada, o la del año si
+       ya se comparó). En un seguidor no hay tilt que forzar —el θ lo calcula
+       `FIS.paso` con la misma función que esta escena—, y por eso es null. */
+    B.tiltEsc=(spec.fam==='tracker')?null:th;
     /* La envolvente del bloque, con las filas ya giradas: es lo que decide si
        ha quedado fuera del encuadre. */
     B.caja=new THREE.Box3();
@@ -4722,7 +4823,14 @@ function actualiza3D(){
              (B.hincas.nocabe?': hay que bancalear':''):''))));
   });
   $('escRead').innerHTML=ro.join('');
+  /* El sol de ESTE instante, guardado para el color: la escena ya lo ha
+     calculado y volver a calcularlo sería tener dos soles. */
+  ESC_SOL={S:S, t:t, elDeg:elDeg};
+  /* Y se repinta, porque el color del instante cambia con la hora: si no, al
+     mover el deslizador la escena enseñaría un sol y el color de otro. */
+  pintaProduccion();
 }
+var ESC_SOL=null;
 function roEsc(k,v,s){return '<div class="ro"><div class="k">'+esc(k)+'</div><div class="v">'+
   esc(v)+(s?' <small>'+esc(s)+'</small>':'')+'</div></div>';}
 /* Si ya se ha comparado, la fija «óptima» se dibuja con SU tilt, no con el de
@@ -4789,7 +4897,7 @@ $('fecha').onchange=actualiza3D;
 /* El color no depende del sol ni de la hora —es la producción del AÑO—, así
    que se repinta solo cuando cambian sus mandos o cuando aparecen números
    nuevos, no en cada fotograma. */
-['colProd','cscale'].forEach(function(id){
+['colProd','cfuente','cscale'].forEach(function(id){
   var el=$(id); if(el)el.addEventListener('change',pintaProduccion);
 });
 $('play').onclick=function(){PLAY=!PLAY;this.textContent=PLAY?'❚❚':'▶';};
