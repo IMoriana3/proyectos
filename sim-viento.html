@@ -5063,7 +5063,7 @@ function avisoFinos(){
   var f=periodosFinos(); if(!f.length)return '';
   return '<div class="pie" style="color:var(--warn)"><b>A esta velocidad no se resuelve '+
     (f.length>1?'lo que has puesto en: ':'lo que has puesto en ')+f.join(', ')+'.</b> '+
-    'El paso de la simulaci\u00f3n es de '+fmt(LIVE.dtPaso,2)+' s, m\u00e1s largo que ese periodo, '+
+    'El paso de la simulaci\u00f3n es de '+fmt(LIVE.dtPaso,1)+' s, m\u00e1s largo que ese periodo, '+
     'as\u00ed que la rejilla publica en TODOS los pasos y sale la identidad: el cron\u00f3metro '+
     'te dar\u00e1 de menos. Baja el reloj a <b>\u00d71</b> para medirlo.</div>';
 }
