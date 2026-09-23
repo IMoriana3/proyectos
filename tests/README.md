@@ -247,9 +247,22 @@ mediría el reloj, que es el fallo que ya costó tres PR atascados con el pin de
 
 ### Los arneses, uno a uno (comprobaciones medidas el 2026-09-09)
 
-> **De dónde sale el 2.296, y tres números equivocados por el camino.** Estos salen de la
-> **corrida de CI del 2026-09-16** (run 35116763627), la primera con los 40 arneses en verde:
-> `40 arneses verdes · 2296 comprobaciones leídas`, medidos en 12 min de runner.
+> **De dónde sale el 2.408, y cuatro números equivocados por el camino.** Este sale de una
+> **corrida completa y verde del 2026-09-23**, la primera con los 43 arneses en verde:
+> `43 arneses verdes · 2408 comprobaciones leídas`.
+>
+> **Y sale de una tirada LOCAL, no de CI, que es peor procedencia y por eso se dice.** La línea
+> anterior venía de un run de CI. Ésta no: se midió en el contenedor donde se escribió el cambio.
+> Sigue valiendo la regla de abajo —**manda CI**— y esta línea se corrige con el número del
+> primer run de CI que cierre entero en verde.
+>
+> **La corrida que la precede también enseña algo, y no es del repo.** La tirada anterior en esta
+> misma máquina dio `42 arneses verdes` con `test_viento_sitio.js` en rojo por un
+> `waitForSelector: Timeout 5000ms`. No era el arnés ni el cambio: había **otro Chromium con
+> WebGL corriendo en paralelo** en otro repo, y el control a solas dio 52/52. Un banco de
+> navegador midiendo contra un reloj de 5 s mide también con quién comparte la CPU — por eso el
+> total sale de una tirada **con nada más en marcha**, y por eso conviene no fiarse de un rojo
+> de navegador sin repetirlo solo.
 >
 > Los tres intentos anteriores, porque el recorrido es el aviso:
 >
@@ -260,10 +273,14 @@ mediría el reloj, que es el fallo que ya costó tres PR atascados con el pin de
 > 3. **«40 · 2.308»** — las 2.295 que leyó la tirada del run 35115559513 más 13. También
 >    aritmética: en esa tirada el arnés nuevo salió **rojo publicando 12**, así que el total
 >    verde no era 2.295 + 13. Lo desmintió la primera tirada que corrió entera en verde.
+> 4. **«40 · 2.296»**, la línea que esto sustituye: correcta el día que se escribió y **dos
+>    arneses vieja** al leerla hoy. No se equivocó nadie al ponerla — envejeció, que es lo que
+>    le pasa a un número copiado, y es exactamente el defecto por el que el Panel acaba de dejar
+>    de copiar la versión de sus apps en este mismo cambio.
 >
-> Tres veces el mismo fallo, y es **el que vigila `test_versiones_app.mjs`**, aquí en la
+> Cuatro veces el mismo fallo, y es **el que vigilaba `test_versiones_app.mjs`**, aquí en la
 > documentación: **un número transcrito —o calculado sobre uno transcrito— envejece en
-> silencio**. Este sale de una tirada completa y verde, que es la única que puede darlo. Si CI
+> silencio**. Éste sale de una tirada completa y verde, que es la única que puede darlo. Si CI
 > vuelve a no cuadrar con esta línea, **manda CI**.
 
 ```bash
