@@ -278,7 +278,7 @@ mediría el reloj, que es el fallo que ya costó tres PR atascados con el pin de
 >    le pasa a un número copiado, y es exactamente el defecto por el que el Panel acaba de dejar
 >    de copiar la versión de sus apps en este mismo cambio.
 >
-> Cuatro veces el mismo fallo, y es **el que vigilaba `test_versiones_app.mjs`**, aquí en la
+> Cuatro veces el mismo fallo **en esta línea**, y es **el que vigilaba `test_versiones_app.mjs`**, aquí en la
 > documentación: **un número transcrito —o calculado sobre uno transcrito— envejece en
 > silencio**. Éste sale de una tirada completa y verde, que es la única que puede darlo. Si CI
 > vuelve a no cuadrar con esta línea, **manda CI**.
@@ -290,7 +290,7 @@ node tests/test_index.js                   # 28 comprobaciones
 node tests/test_pwa.js                     # 21 comprobaciones (PWA)
 node tests/test_integridad.js              # 7 comprobaciones, sin navegador
 node tests/test_comparador.js              # 304 comprobaciones, careo contra el core (quebrado incluido) y barridos
-node tests/test_comparador_3d.js           # 266 comprobaciones, escena 3D, color por producción, equipos, sizing y barridos
+node tests/test_comparador_3d.js           # 279 comprobaciones, escena 3D, color por producción, equipos, sizing y barridos
 node tests/test_sizing.js                  # 115 comprobaciones, careo del dimensionado eléctrico
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
 node tests/test_buscador.js                # 55 comprobaciones, el buscador de implantaciones
@@ -315,7 +315,7 @@ node tests/test_versiones_app.mjs          # 18 comprobaciones, el puntero de la
 
 **Este arnés hacía otra pregunta, y la pregunta era el síntoma.** Nació para carear dos números:
 el escrito a mano en la tarjeta del Panel y el que declara la app (`const VER`). Cazó deriva real
-**cuatro veces en una semana** —v1.63, v1.64, v1.68 y el salto de v1.70 a v1.76— y las cuatro
+**cinco veces en una semana** —v1.63, v1.64, v1.68, el salto de v1.70 a v1.76, y la v1.77.0— y las cinco
 **después** de que ocurriera, no antes. Un número copiado a mano solo puede envejecer: un careo
 acorta la ventana, no la cierra.
 
@@ -382,7 +382,7 @@ lectura funcionase.
 
 **El hueco que queda, con su tamaño.** Solo puede resolverse un puntero a una app que declare su
 versión de forma legible por máquina, y hoy eso son **2 de las 20 tarjetas publicadas** —
-precisamente los dos simuladores, que es donde el defecto ocurrió las cuatro veces. El arnés
+precisamente los dos simuladores, que es donde el defecto ocurrió las cinco veces. El arnés
 **imprime las otras 18 por su nombre** en cada tirada, marcando cuáles llevan el número escrito a
 mano, para que la cobertura sea un dato a la vista y no una suposición. Y dos de esas copias son
 ya **afirmaciones que nadie puede comprobar**: `sim-viento.html` no contiene la cadena `1.26` en

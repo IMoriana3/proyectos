@@ -2,10 +2,14 @@
 //
 // ESTE ARNÉS HACÍA OTRA PREGUNTA, Y LA PREGUNTA ERA EL SÍNTOMA. Nació para
 // carear DOS números: el escrito a mano en la tarjeta del Panel y el que
-// declara la app (`const VER`). Cazó deriva real cuatro veces en una semana
-// —v1.63, v1.64, v1.68 y el salto de v1.70 a v1.76— y las cuatro DESPUÉS de
-// que ocurriera. Un número copiado a mano solo puede envejecer: un careo
-// acorta la ventana, no la cierra.
+// declara la app (`const VER`). Cazó deriva real CINCO veces en una semana
+// —v1.63, v1.64, v1.68, el salto de v1.70 a v1.76, y la v1.77.0— y las cinco
+// DESPUÉS de que ocurriera. Un número copiado a mano solo puede envejecer: un
+// careo acorta la ventana, no la cierra.
+//
+// La quinta ocurrió con este arnés ya reescrito y su PR abierto: hubo que
+// subir la tarjeta a mano a v1.77.0 para devolver el careo a verde, y ese
+// commit dio CONFLICTO con la línea que lo elimina.
 //
 // Así que el Panel dejó de copiarlo. Las tarjetas de las apps que declaran su
 // versión de forma legible por máquina ya no llevan `version:`, llevan
@@ -148,7 +152,7 @@ check('y NO se lo inventa cuando la declaración no está',
 /* LO QUE ESTE ARNÉS CUBRE, DECLARADO. Solo puede resolverse un puntero a una
    app que declare su version de forma legible por máquina, y hoy eso son los
    dos simuladores —que son, no por casualidad, donde el defecto ocurrió las
-   cuatro veces—. Las demás tarjetas publicadas escriben su version en prosa o
+   cinco veces—. Las demás tarjetas publicadas escriben su version en prosa o
    no la escriben. */
 const CAREABLES = [
   { url: 'https://imoriana3.github.io/cobertura-zigbee/overcast.html',
