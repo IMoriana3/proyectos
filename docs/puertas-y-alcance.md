@@ -185,12 +185,46 @@ decimales.
 Y el aviso que acompaña a los tres primeros, escrito en su sitio
 (`Siting/TERRENO_FUENTE.md`): **ESTA TABLA NO SE AGREGA. NUNCA.**
 
-### Cómo se cazaron los cuatro
+### La regla del resultado demasiado bueno
 
-Ninguno revisando el cálculo: **careándolo con lo que uno acababa de afirmar.**
-Un p50 de 0,00 m dicho en voz alta suena a «el DEM es perfecto», y eso es
-increíble para un DEM de 7 m de píxel — ir a ver por qué salía cero fue lo que
-destapó que el denominador estaba mal.
+> **Un resultado demasiado bueno es un defecto hasta que se demuestre lo
+> contrario.** Cero exacto, 100 %, error nulo, perfecto: antes de publicarlos,
+> **comprobar el denominador y la población**. En los cuatro casos el número era
+> correcto; lo que estaba mal era **sobre qué se calculó**.
+
+Ninguno se cazó revisando el cálculo: **careándolo con lo que uno acababa de
+afirmar**. Un p50 de 0,00 m dicho en voz alta suena a «el DEM es perfecto», y
+eso es increíble para un DEM de 7 m de píxel — ir a ver por qué salía cero fue
+lo que destapó que el denominador estaba mal.
+
+Por eso la regla se aplica **antes de publicar**, no después: el momento en que
+el número suena demasiado bien es el único aviso que va a haber.
+
+### Y fuera de los números: la fuente equivocada
+
+El mismo mecanismo se da sin ningún agregado de por medio. Comprobando si ocho
+repos habían subido sus cambios, la comprobación fue:
+
+```
+git log --oneline origin/<rama>..HEAD     # «1 commit sin empujar»
+```
+
+La pregunta era **la correcta**. La fuente, no: `origin/<rama>` es una **ref
+local de seguimiento**, y en un clon superficial puede no actualizarse nunca. El
+commit estaba en el remoto desde el principio. La fuente buena es la que
+pregunta al remoto:
+
+```
+git ls-remote origin <rama>               # la verdad
+```
+
+Falso positivo esta vez —hacer ruido sobre algo que estaba bien— pero el fallo
+simétrico es el que importa: **con la ref local adelantada, la misma
+comprobación habría dicho «todo subido» sobre algo que no lo estaba.**
+
+> Antes de creerse una comprobación, preguntar de dónde saca el dato. Una caché,
+> una ref local, un fichero generado y un comentario son fuentes que **pueden
+> haber dejado de ser ciertas** sin que nada avise.
 
 ---
 
