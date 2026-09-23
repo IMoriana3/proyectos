@@ -130,6 +130,86 @@ async function abrir(browser, respuesta) {
   check('la doc no da error', doc.includes('Documentacion no disponible'), 'false');
   await page.close();
 
+  // ---------- LA VERSION DE LAS APPS SALE DE LA APP, NO DE LA TARJETA ----------
+  // Las tarjetas de los dos simuladores ya no escriben su numero: llevan
+  // `verEnApp: true` y el Panel lo LEE del fichero de la app. Aqui se prueba
+  // que de verdad lo lee, y sobre todo que cuando NO puede leerlo no se
+  // inventa nada — que es la parte que antes no existia, porque el numero
+  // estaba escrito y siempre habia algo que pintar aunque fuera mentira.
+  const URL_BT = 'https://imoriana3.github.io/cobertura-zigbee/backtracking.html';
+  const APPS   = 'https://imoriana3.github.io/cobertura-zigbee/*';
+
+  // Abre el Panel con las apps simuladas. `cuerpo` es el HTML que devuelven
+  // (string) o el codigo HTTP con el que fallan (numero). `previo` siembra
+  // localStorage como si este navegador ya las hubiera leido antes.
+  async function abrirConApps(cuerpo, previo) {
+    const pg = await browser.newPage();
+    pg.route('https://api.github.com/repos/*/*/releases/latest', r => r.fulfill({ status: 403, body: '{}' }));
+    pg.route(APPS, r => typeof cuerpo === 'number'
+      ? r.fulfill({ status: cuerpo, body: '' })
+      : r.fulfill({ status: 200, contentType: 'text/html', body: cuerpo }));
+    await pg.addInitScript(([u, v]) => {
+      try { localStorage.clear(); if (v) localStorage.setItem('ver:' + u, JSON.stringify(v)); } catch (e) {}
+    }, [URL_BT, previo || null]);
+    await pg.goto(BASE + '/index.html', { waitUntil: 'networkidle' });
+    return pg;
+  }
+  // Espera a que el chip deje de decir «...», PERO SIN REVENTAR. Con un
+  // `waitForFunction` a secas, desconectar el lector daba «Timeout 5000ms
+  // exceeded» y nada mas: rojo, si, pero sin decir que habia pintado en su
+  // lugar, que es el unico dato que ahorra la tarde. Si no llega a tiempo se
+  // devuelve lo que haya y lo dice la comprobacion de abajo, con su valor.
+  async function estable(pg, nombre) {
+    try {
+      await pg.waitForFunction(n => {
+        const c = [...document.querySelectorAll('article.card')].find(x => x.querySelector('.name')?.textContent.trim() === n);
+        const t = c && c.querySelector('.ver')?.textContent.trim();
+        return t && t !== '...';
+      }, nombre, { timeout: 5000 });
+    } catch (e) { /* lo cuenta el check, con el texto real */ }
+    return chipDe(pg, nombre);
+  }
+  const chipDe = async (pg, nombre) => pg.evaluate(n => {
+    const c = [...document.querySelectorAll('article.card')].find(x => x.querySelector('.name')?.textContent.trim() === n);
+    const v = c && c.querySelector('.ver');
+    return v ? { txt: v.textContent.trim(), pend: v.classList.contains('pend') } : { txt: '(sin chip)', pend: null };
+  }, nombre);
+
+  // 1) la app responde -> el chip dice LO QUE DICE LA APP.
+  //    EL CONTROL QUE HACE QUE ESTO PRUEBE ALGO: 'v9.9.9' no esta escrito en
+  //    index.html, asi que si aparece solo ha podido venir del fetch. Sin
+  //    esta linea la comprobacion pasaria igual con el numero copiado.
+  const idxSrc = require('fs').readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8');
+  check('el numero de la prueba NO esta escrito en el Panel', idxSrc.includes('v9.9.9'), 'false');
+  page = await abrirConApps("<html><script>\nconst VER='v9.9.9';\n</script></html>");
+  const chipBT = await estable(page, 'Simulador de backtracking');
+  check('la version sale de la app', chipBT.txt, 'v9.9.9');
+  check('y no va marcada como dudosa', chipBT.pend, 'false');
+  check('la lectura se cachea', JSON.parse(await page.evaluate(u => localStorage.getItem('ver:' + u), URL_BT)).ver, 'v9.9.9');
+  // el control de al lado: una tarjeta SIN puntero sigue pintando su literal
+  check('una tarjeta sin puntero sigue con su numero escrito',
+        (await chipDe(page, 'Producción 3D por string')).txt.length > 0, 'true');
+  await page.close();
+
+  // 2) la app no responde y este navegador no la habia leido nunca ->
+  //    LO DICE. No pinta un numero, porque no tiene ninguno que sea suyo.
+  page = await abrirConApps(404);
+  await page.waitForTimeout(700);
+  let c1 = await chipDe(page, 'Simulador de backtracking');
+  check('sin app y sin lectura previa, lo declara', c1.txt, 'version no leida');
+  check('y no se inventa un numero', /\d/.test(c1.txt), 'false');
+  check('y no cachea nada', await page.evaluate(u => localStorage.getItem('ver:' + u), URL_BT), 'null');
+  await page.close();
+
+  // 3) la app no responde pero este navegador YA la habia leido -> ensena la
+  //    ultima lectura MARCADA, que no es lo mismo que ensenarla a secas.
+  page = await abrirConApps(500, { t: Date.now() - 7 * 3600 * 1000, ver: 'v7.7.7' });
+  await page.waitForTimeout(700);
+  c1 = await chipDe(page, 'Simulador de backtracking');
+  check('sin app pero con lectura previa, ensena la ultima', c1.txt.startsWith('v7.7.7'), 'true');
+  check('y la marca como no comprobada', c1.pend, 'true');
+  await page.close();
+
   await browser.close();
   console.log('');
   if (ko) { console.log(ko + ' PRUEBAS FALLIDAS (' + ok + ' OK)'); process.exit(1); }

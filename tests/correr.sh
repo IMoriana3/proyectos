@@ -173,7 +173,13 @@ declare -A PISO=(
   [test_granizo_espejo.mjs]=8
   [test_granizo_pestana.js]=28
   [test_granizo_traza.mjs]=30
-  [test_index.js]=18
+  # 18 -> 28: el Panel dejo de COPIAR la version de las apps y pasa a LEERLA
+  # del fichero de la app, asi que hay tres estados nuevos que pintar y los
+  # tres se prueban en navegador: leida, no leida, y ultima lectura marcada.
+  # El que justifica el bloque es el segundo: antes el numero estaba escrito
+  # y siempre habia algo que pintar aunque fuera mentira, asi que «no he
+  # podido leerlo» no era un caso que pudiera ocurrir.
+  [test_index.js]=28
   [test_integridad.js]=7
   [test_layout.js]=201
   [test_layout_ui.js]=182
@@ -236,7 +242,13 @@ declare -A PISO=(
   # la tarjeta de `overcast.html` iba a subir a v1.24.0 con la app en v1.23.0.
   # El Panel vive aquí y las apps en otro repo, así que ningún banco de allí
   # puede carear la tarjeta y aquí no había nada que leyera la app.
-  [test_versiones_app.mjs]=13
+  # 13 -> 18: ese careo ya no existe, porque el defecto que cazaba tampoco.
+  # Las tarjetas de las dos apps ya no llevan el numero: llevan un puntero
+  # (`verEnApp`) y el Panel lo lee de la app. El arnes cambia de pregunta —de
+  # «son iguales estos dos numeros» a «sigue resolviendo el puntero»— y gana
+  # cinco comprobaciones: que las tarjetas apuntan en vez de copiar (2), y
+  # que la regla con la que el Panel lee se extrae de el y funciona (3).
+  [test_versiones_app.mjs]=18
   # Nace de un hueco MEDIDO: con el `hold` de la histéresis puesto a cero en
   # la llamada real, los diez arneses que abren la ficha —539 comprobaciones—
   # se quedaron verdes. La histéresis se podía borrar y el repo no lo notaba.
