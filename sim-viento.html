@@ -334,7 +334,7 @@
       <div id="latBox" style="display:none">
         <div class="two">
           <div class="field"><label>Media del anemómetro (s)</label><input id="latVent" type="number" step="10" min="0" value="600"></div>
-          <div class="field"><label>Muestreo (s)</label><input id="latMues" type="number" step="1" min="0" value="60"></div>
+          <div class="field"><label>Muestreo NCU←HSU (s)</label><input id="latMues" type="number" step="1" min="0" value="60"></div>
         </div>
         <div class="two">
           <div class="field"><label>Sondeo NCU→TCU (s)</label><input id="latSond" type="number" step="1" min="0" value="30"></div>
@@ -347,8 +347,9 @@
           Lo que falta es todo lo de antes, y ahí está casi toda la espera.</p>
         <p class="nota">La <b>media</b> no retrasa la decisión: puede <b>cambiarla</b>. Con una media
           de 10 minutos, una racha de cuatro puede no cruzar el umbral <b>nunca</b>. El
-          <b>muestreo</b> y el <b>sondeo</b> son rejillas —el cruce se ve en la siguiente muestra,
-          la orden sale en el siguiente sondeo—, así que no son retardos fijos: lo que se espera
+          <b>muestreo</b> (NCU←HSU) y el <b>sondeo</b> (NCU→TCU) son rejillas, y son <b>dos
+          enlaces distintos</b>: uno para enterarse y otro para mandar. El cruce se ve en la
+          siguiente muestra, la orden sale en el siguiente sondeo, así que no son retardos fijos: lo que se espera
           depende de dónde caiga el suceso dentro del periodo. El <b>arranque</b> sí es tiempo
           muerto fijo.</p>
         <p class="nota">Los cuatro son <b>parámetros declarados</b>, no medidas de un equipo: esto
@@ -431,7 +432,7 @@
         <div class="timerow">
           <button class="btn small acc" id="lPlay">▶ Correr el tiempo</button>
           <span class="t" id="lClock">—</span>
-          <select id="lSpeed"><option value="60">×60</option><option value="300" selected>×300</option>
+          <select id="lSpeed"><option value="1">×1</option><option value="60">×60</option><option value="300" selected>×300</option>
             <option value="900">×900</option><option value="3600">×3600</option></select>
         </div>
         <div class="lab" style="margin-top:9px">
@@ -811,8 +812,9 @@ LOC.control=function(tgt,dtS,maxang,slew,dead){
         los últimos segundos. Con una media de 10 minutos, un escalón de 30 a
         80 km/h tarda minutos en cruzar el umbral — y una racha corta puede no
         cruzarlo NUNCA. Esto no retrasa la decisión: puede CAMBIARLA;
-     2. y la publica cada cierto tiempo (MUESTREO), así que el cruce se ve en
-        la siguiente muestra, no cuando ocurre;
+     2. y la NCU la LEE cada cierto tiempo (MUESTREO, el enlace NCU←HSU), así
+        que el cruce se ve en la siguiente muestra, no cuando ocurre — y una
+        racha que entra y sale entre dos lecturas no se ve NUNCA;
      3. la orden viaja de la NCU a la TCU en un ciclo de SONDEO, que es otra
         rejilla: se emite ahora y llega en el siguiente sondeo;
      4. y el motor tiene un TIEMPO MUERTO de arranque (soltar freno, rampa).
@@ -879,7 +881,8 @@ LOC.vientoVisto=function(ws,dtS,lat){
   return LOC.rejilla(LOC.mediaMovil(ws,dtS,lat.ventana_s),dtS,lat.muestreo_s);
 };
 
-/* La orden que LLEGA al eje: espera al sondeo y luego el motor arranca. */
+/* La orden que llega a la TCU y se ejecuta: espera al sondeo y luego el motor
+   arranca. El instante que sale de aquí incluye las DOS esperas. */
 LOC.ordenEnElEje=function(orden,dtS,lat){
   lat=lat||LOC.LATENCIA;
   return LOC.retardo(LOC.rejilla(orden,dtS,lat.sondeo_s),dtS,lat.arranque_s);
@@ -934,7 +937,7 @@ LOC.cadenaViva=function(lat){
       avanza(dtS);
       return pub;
     },
-    /* La orden que ha LLEGADO al eje. El sondeo es rejilla; el arranque es
+    /* La orden que la TCU ya está EJECUTANDO. El sondeo es rejilla; el arranque es
        una cola con sello de tiempo, que es lo que permite que una orden nueva
        no adelante a la que ya venía en camino. */
     llega:function(orden,dtS){
@@ -1869,7 +1872,7 @@ LOC.stepper=function(kind,cfg){
       // trazos, y que aquí faltaba.
       //
       // Y con la cadena puesta son TRES: lo que la máquina manda (`orden`), lo
-      // que ha LLEGADO al eje (`ordenEje`) y dónde está el eje (`theta`). El
+      // que la TCU ya EJECUTA (`ordenEje`) y dónde está el eje (`theta`). El
       // cronómetro vive justo en esas dos diferencias.
       return {mode:st,theta:th,orden:nt,ordenEje:ntEje};
     }
@@ -4882,15 +4885,43 @@ function tiles(ang,modos,poa,poaBase,dpct,orden){
 }
 
 /* ═══════════ MODO EN VIVO ═══════════ */
+/* EL BOTÓN ES UNA VISTA DE `LIVE.run`, NO UNA SEGUNDA COPIA SUYA.
+   Este rótulo se escribía SOLO en el manejador del clic, así que cualquier
+   otro camino que tocara `LIVE.run` lo dejaba mintiendo. Y había dos: montar
+   la escena (cambiar de planta, el nº de trackers, las filas, el pasivo) y
+   encender la latencia — los dos llaman a `liveInit`.
+   REPORTADO Y MEDIDO: con el reloj corriendo, tocar el nº de trackers dejaba
+   `LIVE.run=false` con el botón diciendo «❚❚ Pausa»; el siguiente clic —el que
+   uno da para PAUSAR— lo ponía a `true` y el reloj ARRANCABA. Medido: 725 →
+   726,5 min después de «pausar». Por el otro camino pasa lo contrario, y es
+   igual de malo: encender la latencia PARA el reloj en silencio.
+   Con una sola función que lo pinta desde el estado, el rótulo no puede
+   desincronizarse: no hay dos sitios que puedan discrepar. */
+function pintaPlay(){
+  var b=$('lPlay'); if(!b||!LIVE)return;
+  b.textContent=LIVE.run?'❚❚ Pausa':'▶ Correr el tiempo';
+  b.className='btn small'+(LIVE.run?'':' acc');
+}
+
 function liveInit(){
   var c=cfgStow();
-  LIVE={t:0, v:+$('lV').value/3.6, dir:+$('lD').value, run:false, steppers:{}, ang:{}, modos:{}, orden:{},
+  /* EL RELOJ SOBREVIVE AL REMONTE. Cambiar el nº de trackers o encender la
+     latencia es tocar un PARÁMETRO, no pedir que se pare el tiempo: pararlo
+     era un efecto colateral de reconstruir el estado, no una decisión. Lo que
+     sí se reconstruye es todo lo demás —steppers, ángulos, cadenas—, que es
+     para lo que se llama a esta función. */
+  var corria=!!(LIVE&&LIVE.run);
+  LIVE={t:0, v:+$('lV').value/3.6, dir:+$('lD').value, run:corria, steppers:{}, ang:{}, modos:{}, orden:{},
         ordenEje:{}, minF:+$('lH').value, simPrev:null,
         /* UNA cadena de MEDIDA para toda la planta —el anemómetro es uno— y
            UNA DE ORDEN POR ESTRATEGIA, porque cada TCU recibe la suya. Meter
            las cinco en la misma rejilla de sondeo las haría llegar todas en el
            mismo instante, que es una coincidencia del modelo y no del sitio. */
         lat:c.lat, cadMedida:LOC.cadenaViva(c.lat), cadOrden:{},
+        /* LA MARCA: un 0/1 que viaja por una cadena GEMELA de la de la orden.
+           Sirve para saber CUÁNDO lo que la TCU ejecuta ya viene de una
+           decisión de abanderar, y no para calcular nada. Ver `cronoTick`. */
+        cadMarca:{}, marcaEje:{},
         crono:cronoNuevo()};
   vivos().forEach(function(S){
     // el límite de mediodía es de las B (abanderan hacia el SOL); en las A el
@@ -4902,13 +4933,19 @@ function liveInit(){
       LIVE.steppers[S]=LOC.stepperPasivo(c);
     }else{
       var cad=LOC.cadenaViva(c.lat); LIVE.cadOrden[S]=cad;
+      // Gemela de la anterior: misma `lat`, mismo reloj (nace en t=0 y la
+      // adelanta el mismo `dt` en el mismo paso), luego misma fase de rejilla
+      // y misma cola de arranque. Por eso la marca llega EXACTAMENTE cuando
+      // llega la orden, sin depender de cuánto valga la orden.
+      LIVE.cadMarca[S]=LOC.cadenaViva(c.lat);
       LIVE.steppers[S]=LOC.stepper(S[1],Object.assign({},c,{
         noon:(S[0]==='B'?c.noon:0),
         llega:function(o,dtS){return cad.llega(o,dtS);}}));
     }
-    LIVE.ang[S]=0;LIVE.modos[S]='IDLE';LIVE.orden[S]=0;LIVE.ordenEje[S]=0;});
+    LIVE.ang[S]=0;LIVE.modos[S]='IDLE';LIVE.orden[S]=0;LIVE.ordenEje[S]=0;
+    LIVE.marcaEje[S]=0;});
   LIVE.ang.BASE=0; LIVE.modos.BASE='SEGUIMIENTO';
-  liveLbl(); pintaCrono();
+  liveLbl(); pintaPlay(); pintaCrono();
 }
 
 /* ─────────── EL CRONÓMETRO ───────────
@@ -4924,14 +4961,36 @@ function liveInit(){
      t0   el viento que SOPLA cruza el umbral 1
      tVe  el viento PUBLICADO lo cruza                        (media + muestreo)
      tOrd la máquina sale de IDLE                             (decide)
-     tLle la orden CAMBIA en el eje                           (sondeo + arranque)
+     tLle la orden de abanderar ya se EJECUTA en la TCU       (sondeo + arranque)
      tFin el eje llega a la consigna, dentro de la banda muerta   (0,17 °/s)
 
-   `tLle` se mide por CAMBIO de la orden en el eje y no comparándola con un
-   valor esperado: en abanderamiento parcial la consigna persigue al sol y
-   nunca es constante, así que un careo contra un ángulo fijo solo funcionaría
-   en el caso pleno. */
-function cronoNuevo(){ return {fase:'espera', t0:null, tVe:null, por:{}, prevV:null, ultima:null}; }
+   CÓMO SE MARCA `tLle`, que es lo único difícil de esta función. No sirve
+   comparar la orden con un ángulo esperado (en abanderamiento PARCIAL la
+   consigna persigue al sol y nunca es constante), y tampoco sirve mirar si la
+   orden CAMBIÓ respecto de la de antes — que es lo que hacía la primera
+   versión y está MAL por dos motivos distintos, los dos medidos:
+
+     · REPORTADO por el usuario —«¿y 9 minutazos???»— con los cuatro
+       parámetros a CERO: A1 y B1 decían +9 min 37 s y «en posición —»,
+       mientras A2 y B2 decían +1,0 s. Sin cadena, la máquina reacciona en el
+       MISMO paso en que el viento cruza, así que la orden «de antes» ya era la
+       de abanderamiento y el cambio no se veía nunca. A2 y B2 se salvaban por
+       casualidad: en parcial la consigna se mueve sola al paso siguiente.
+     · Y LO CONTRARIO, que encontró el banco al conducir la página en otra hora
+       del día: en SEGUIMIENTO la orden también cambia sola: la mueve el sol. Si
+       un borde de rejilla de sondeo caía entre el paso anterior y el de la
+       decisión, la orden «había cambiado» y el cronómetro daba la llegada por
+       buena antes de tiempo: 180 s en vez de 270 s, según la FASE de la
+       rejilla. Un criterio con carrera, que a veces acierta.
+
+   Lo que se hace en su lugar no mira el VALOR de la orden: se manda un 0/1 por
+   una cadena GEMELA de la de la orden —misma latencia, mismo reloj, misma fase
+   de rejilla— con 0 mientras la máquina sigue en IDLE y 1 desde que decide
+   abanderar. Cuando esa marca sale por el otro lado, lo que la TCU ejecuta ya
+   viene de la decisión. Es exacto en los dos regímenes, vale igual para el
+   abanderamiento pleno y el parcial, y no lo puede engañar el sol. */
+function cronoNuevo(){ return {fase:'espera', t0:null, tVe:null, por:{}, prevV:null,
+                               ultima:null}; }
 
 function cronoTick(simNow,vTrue,vVisto,T1){
   var C=LIVE.crono; if(!C)return;
@@ -4945,12 +5004,21 @@ function cronoTick(simNow,vTrue,vVisto,T1){
     if(C.tVe===null&&vVisto>T1)C.tVe=simNow;
     vivos().forEach(function(S){
       if(S==='PASIVO')return;
-      var p=C.por[S]||(C.por[S]={tOrd:null,tLle:null,tFin:null,ejeAnt:null});
+      var p=C.por[S]||(C.por[S]={tOrd:null,tLle:null,tFin:null});
       var modo=LIVE.modos[S], eje=LIVE.ordenEje[S], th=LIVE.ang[S];
-      if(p.tOrd===null){ p.ejeAnt=eje; if(modo!=='IDLE')p.tOrd=simNow; return; }
+      // DECIDE: el primer paso en que sale de seguimiento. Si la estrategia ya
+      // estaba abanderada cuando el viento volvió a cruzar, no hay maniobra que
+      // cronometrar y la fila se queda en «—», que es lo cierto.
+      if(p.tOrd===null){
+        if(modo==='IDLE')return;
+        p.tOrd=simNow;
+      }
+      // LLEGA: cuando sale la marca por la cadena gemela. Sin `return` en el
+      // camino de éxito, porque con la cadena a cero la marca sale en el MISMO
+      // paso y ese caso hay que poder cerrarlo entero.
       if(p.tLle===null){
-        if(Math.abs(eje-p.ejeAnt)>1e-9)p.tLle=simNow;
-        return;
+        if(LIVE.marcaEje[S]>0)p.tLle=simNow;
+        else return;
       }
       if(p.tFin===null&&Math.abs(th-eje)<=LOC.DEADBAND)p.tFin=simNow;
     });
@@ -4987,7 +5055,7 @@ function pintaCrono(){
   var h='<div class="ttl">Cronómetro · desde que el viento cruza '+uml+'</div>';
   if(!D){
     h+='<div class="esp">Sube el viento por encima de '+uml+' con el reloj corriendo y '+
-       'se mide la maniobra entera: cuándo lo ve el anemómetro, cuándo llega la orden al eje '+
+       'se mide la maniobra entera: cuándo lo ve el anemómetro, cuándo llega la orden a la TCU '+
        'y cuándo para el eje.</div>';
     if(!LOC.latenciaViva(LIVE.lat))
       h+='<div class="pie">Con la <b>latencia apagada</b> solo hay un retardo que medir, el del '+
@@ -5004,7 +5072,7 @@ function pintaCrono(){
   vs.forEach(function(S){
     var p=D.por[S]||{};
     var lle=(p.tLle!=null)?(p.tLle-D.t0):null, fin=(p.tFin!=null)?(p.tFin-D.t0):null;
-    h+='<tr><td><b style="color:'+(COL[S]||'var(--tx)')+'">'+S+'</b> · la orden llega al eje</td>'+
+    h+='<tr><td><b style="color:'+(COL[S]||'var(--tx)')+'">'+S+'</b> · la orden llega a la TCU</td>'+
        '<td class="t">'+(lle!=null?'+'+seg(lle):'—')+'</td>'+
        '<td class="por">sondeo '+fmt(LIVE.lat.sondeo_s,0)+' s · arranque '+fmt(LIVE.lat.arranque_s,0)+' s</td></tr>';
     h+='<tr class="tot"><td><b style="color:'+(COL[S]||'var(--tx)')+'">'+S+'</b> · en posición</td>'+
@@ -5020,6 +5088,9 @@ function pintaCrono(){
     h+='<div class="pie">El anemómetro <b>nunca llegó a ver</b> el cruce: la racha se apagó antes '+
        'de que la media la subiera por encima del umbral. La media no retrasa la decisión, '+
        'la <b>cambia</b>.</div>';
+  h+='<div class="pie">El instante de la <b>TCU</b> incluye su arranque: es cuando ya está '+
+     '<b>ejecutando</b> la orden, no cuando el mensaje entra por la radio. Lo que va después es '+
+     'recorrido de hierro a 0,17 °/s.</div>';
   h+='<div class="pie">El <b>pasivo</b> no sale aquí y no es un olvido: no lo manda un motor, lo '+
      'suelta la carga, así que no espera sondeo ni arranque — y su umbral es otro.'+
      (LIVE.run?'':' <b>Reloj parado</b>: el cronómetro no avanza.')+'</div>';
@@ -5192,6 +5263,10 @@ function liveTick(dtReal){
     LIVE.ang[S]=r.theta; LIVE.modos[S]=r.mode;
     LIVE.orden[S]=(r.orden!=null?r.orden:r.theta);
     LIVE.ordenEje[S]=(r.ordenEje!=null?r.ordenEje:LIVE.orden[S]);
+    // Una sola llamada por paso y con el MISMO dt que la cadena de la orden:
+    // si se llamara dos veces o con otro dt, los dos relojes se separarían y
+    // la marca dejaría de significar nada.
+    if(LIVE.cadMarca[S])LIVE.marcaEje[S]=LIVE.cadMarca[S].llega(r.mode==='IDLE'?0:1,dt);
     if(S==='PASIVO'){
       /* La POA del pasivo es la de la PLANTA, no la de la fila suelta: la
          interior sigue operando. Enseñar la de la fila aquí daría una pérdida
@@ -5608,8 +5683,7 @@ $('mFit').onclick=function(){
 $('lDate').addEventListener('change',function(){liveLbl();if(MODO==='live')liveTick(0.001);});
 $('lPlay').onclick=function(){
   if(!LIVE)liveInit();
-  LIVE.run=!LIVE.run; this.textContent=LIVE.run?'❚❚ Pausa':'▶ Correr el tiempo';
-  this.className='btn small'+(LIVE.run?'':' acc');
+  LIVE.run=!LIVE.run; pintaPlay();
 };
 $('gadd').onclick=function(){addGust($('gpreset').value);};
 $('pas').onchange=function(){
