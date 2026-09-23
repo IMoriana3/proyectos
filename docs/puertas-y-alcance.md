@@ -118,6 +118,26 @@ Merece detenerse en tres:
   comentario 170 líneas por encima de la invocación real. Daba «0 de 24
   mutaciones corridas» — un titular falso.
 
+### Y los guardias nuevos son puertas también
+
+Al aplicarles la misma pregunta, **dos de los cuatro** la fallaban, y uno de
+ellos era el comprobador de alcance por segunda vez:
+
+| guardia | tenía | ahora |
+|---|---|---|
+| corredor con pisos | ✅ un banco nuevo sin piso ya salía rojo | + publica alcance y se para si hay bancos fuera del barrido |
+| envoltorio de recuentos | ❌ formato ilegible salía **ROJO** | `rc = 2`, y el mensaje prohíbe bajar el piso por eso |
+| censo MIDE/NO COMPROBADO/ROJO | ❌ no sabía **cuántos esperaba** | lleva `ESPERADOS` y se para en 3 de 4 |
+| `alcance_mutaciones` | ❌ **100 % sobre un conjunto que podía encoger** | publica el denominador, con piso de bancos con tabla |
+
+El último es el más ilustrativo del documento entero: decía «140 de 140
+mutaciones» y, borrando un bloque `MUTACIONES` completo, pasaba a «134 de 134»
+—**100 % igualmente**— y seguía verde.
+
+*(Y una más, del propio proceso de medirlos: la comprobación de si el censo
+sabía cuántos esperaba buscó el «4» en su bloque y lo encontró dentro de un
+`%-44s`. Respondió «sí» cuando era «no». Nueve en un día.)*
+
 ### Un aviso que sale de probarlas
 
 Una **mutación que no casa con el código** es `rc = 2`, no «no cazada». Al mutar
