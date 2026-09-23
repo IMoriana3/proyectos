@@ -84,6 +84,29 @@ declare -A PISO=(
   # dice cuál.
   [test_cartera_en_vivo.js]=32
   [test_comparador.js]=304
+  # UNA VARIABLE CSS QUE NO EXISTE NO FALLA: DEJA LA PROPIEDAD COMO ESTABA.
+  # `background:var(--panel-2)` con `--panel-2` sin definir no es un error —la
+  # declaración se descarta y la propiedad se queda con lo heredado—, así que
+  # nadie se entera: ni la consola, ni el validador, ni los cuarenta arneses
+  # que ya había.
+  #
+  # MEDIDO el 2026-09-23 en el navegador, antes de arreglar nada: el
+  # desplegable del buscador de emplazamiento salía con `background-color:
+  # rgba(0,0,0,0)` —la lista encima de los campos de latitud y longitud— y sus
+  # separadores en `rgb(234,244,255)`, que es el color del TEXTO. Eran tres
+  # variables copiadas de `sim-solar.html`, que tiene otra paleta.
+  #
+  # Y una peor, que no se ve: el careo pintaba su columna de diferencia con
+  # `var(--live)` si coincide y `var(--build)` si no. Ninguna de las dos existe
+  # en esa ficha, así que las dos ramas salían del mismo color heredado — un
+  # veredicto codificado en color que no codificaba nada.
+  #
+  # Seis mutantes, los seis verificados aplicados: quitar `--flota` mata 2,
+  # `--flota-hi` 2, el separador 3, devolver el careo a `--live`/`--build` 2,
+  # la coordenada 2, y pintar las dos ramas del careo del MISMO color 1 —éste
+  # sobrevive al guard estático, porque el color existe, y es el único que lo
+  # caza—. Las seis predicciones se escribieron antes y salieron clavadas.
+  [test_css_variables.js]=35
   # LA ESCENA, EN CHROMIUM DE VERDAD. Sube de 247 a 266 con el color por
   # producción: 19 comprobaciones nuevas, entre ellas las que sujetan que el
   # color de cada mesa corresponde a SU número. Dejar el piso en 247 las haría
@@ -282,6 +305,53 @@ declare -A PISO=(
   # multiplicado por 3,6. Los arneses no estaban flojos: INTERCEPTAN la API y
   # contestan ellos, así que la URL pedida les da igual — y un contrato con un
   # servicio de fuera solo se vigila mirando lo que se PIDE.
+  # LA CADENA DE LATENCIA Y EL CRONÓMETRO. Hasta ahora la ficha modelaba UN
+  # retardo, el del hierro a 0,17 °/s, y con ese solo el reloj de una maniobra
+  # es `|Δθ|/0,17` — de cabeza—. Lo que faltaba es lo de ANTES: la media del
+  # anemómetro, su muestreo, el sondeo NCU→TCU y el arranque del motor.
+  #
+  # MEDIDO sobre una fixture de tres días (temporal largo + punta de una hora),
+  # meteo horaria a 1 min, A2: con media de 7.200 s el coste del abanderamiento
+  # pasa de −10,129 % a −4,703 % —LA MITAD— y con umbral a 70 km/h y media de
+  # 3.600 s un episodio DESAPARECE (2 → 1). Mientras tanto `hours_over_t1` no
+  # se mueve: el viento sopló lo mismo y la máquina no llegó a verlo. Esa es la
+  # distinción que el banco vigila — el viento que SOPLA describe el sitio, el
+  # que se PUBLICA decide.
+  #
+  # OCHO MUTANTES, los ocho verificados aplicados, y el recuento predicho antes
+  # de medir. Tres acertados y tres fallados, que van dichos porque una
+  # predicción ajustada después no es una predicción:
+  #
+  #   media dividiendo siempre por k ..... predije 3 · mató 3
+  #   media acumulada (no causal) ........ predije 9 · mató 4  ← ver abajo
+  #   rejilla desfasada un paso .......... predije 5 · mató 8
+  #   retardo de k+1 ..................... predije 3 · mató 3
+  #   decidir sobre el viento que sopla .. predije 4 · mató 0  ← ver abajo
+  #   horas sobre umbral sobre lo visto .. predije 5 · mató 3
+  #   el cronómetro para al llegar la orden  predije 2 · mató 2
+  #   el motor canónico no se rechaza .... predije 2 · mató 2
+  #
+  # Los dos marcados eran defectos MÍOS, cada uno de una clase distinta:
+  #
+  #  · el de la media acumulada sobrevivía a las dos comprobaciones de la rampa
+  #    porque en los cuatro índices que miraban, una ventana móvil y un
+  #    acumulado dan los MISMOS números. El fixture no contenía el mecanismo
+  #    que el test decía vigilar. Se separan en la BAJADA —la ventana suelta lo
+  #    viejo, el acumulado se queda arriba— y con esa comprobación añadida mata
+  #    5, que era lo predicho para la versión corregida;
+  #  · el de «decidir sobre el viento que sopla» lo apliqué sobre `LOC.single`
+  #    y el banco corre A2/B2, que van por `LOC.dual`: mutante verificado
+  #    aplicado, en una rama que nadie pisa. Eso no es un test flojo, es un
+  #    mutante mal puesto. Repetido donde toca mata 4, lo predicho.
+  #
+  # Y dos cosas que el propio banco encontró mientras se escribía: el careo
+  # entre la serie y la cadena incremental cazó un desfase de un paso —la
+  # cadena viva avanzaba el reloj ANTES de resolver la muestra, así que
+  # publicaba un paso antes que la serie: 22 de diferencia máxima, el salto
+  # entero de la señal— y su control positivo cazó que el fixture ponía los
+  # escalones justo en los bordes de la rejilla, donde el muestreo es la
+  # identidad y dos de los siete careos comparaban dos series sin tocar.
+  [test_viento_latencia.js]=71
   [test_viento_meteo.js]=33
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,

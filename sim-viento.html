@@ -18,6 +18,11 @@
     --ancho:min(2560px,96vw);
     /* una estrategia = un color, y el mismo en tabla, barras, escena y series */
     --a1:#fbbd23; --a2:#f87272; --b1:#5aa9ff; --b2:#36d399; --base:#9bb0c6;
+    /* Superficie de un menú que FLOTA sobre una tarjeta. Es su propio color y
+       no uno prestado porque cae sobre DOS fondos a la vez —la tarjeta
+       (--card) y el hueco del input (--bg2)— y tiene que distinguirse de los
+       dos o se lee lo de abajo a través. */
+    --flota:#18222e; --flota-hi:#22303f;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.55 system-ui,-apple-system,'Segoe UI',sans-serif;padding-bottom:60px;font-variant-numeric:tabular-nums}
@@ -52,7 +57,7 @@
      implementa: un hueco declarado se lee mejor que una pestaña que no hace
      nada. */
   .tabs{display:flex;gap:6px;padding:0 18px 12px;flex-wrap:wrap}
-  .tabs button{background:var(--panel-2);border:1px solid var(--line2);color:var(--muted);
+  .tabs button{background:var(--bg2);border:1px solid var(--line2);color:var(--muted);
     border-radius:9px;padding:7px 14px;font:inherit;font-size:.88rem;cursor:pointer}
   .tabs button.on{background:var(--bg2);border-color:var(--accent);color:var(--tx)}
   .tabs button:disabled{opacity:.42;cursor:not-allowed}
@@ -78,17 +83,17 @@
      la tarjeta no da un salto cada vez que aparece un resultado. */
   .sitiobox{position:relative}
   .sitiores{position:absolute;left:0;right:0;top:100%;z-index:40;margin-top:3px;
-    background:var(--panel-2);border:1px solid var(--line2);border-radius:9px;
+    background:var(--flota);border:1px solid var(--line2);border-radius:9px;
     box-shadow:0 12px 28px rgba(0,0,0,.45);max-height:280px;overflow:auto}
-  .sitiores .it{padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--line-soft)}
+  .sitiores .it{padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--line)}
   .sitiores .it:last-child{border-bottom:0}
-  .sitiores .it:hover,.sitiores .it.on{background:var(--bg2)}
+  .sitiores .it:hover,.sitiores .it.on{background:var(--flota-hi)}
   .sitiores .it b{font-weight:600}
-  .sitiores .it .co{font-family:var(--mono);font-size:.68rem;color:var(--muted-2)}
+  .sitiores .it .co{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
   .sitiores .gr{padding:4px 10px;font-family:var(--mono);font-size:.6rem;
     letter-spacing:.11em;text-transform:uppercase;color:var(--muted);
     background:var(--bg2);position:sticky;top:0}
-  .sitiores .aviso{padding:7px 10px;font-size:.78rem;color:var(--muted-2)}
+  .sitiores .aviso{padding:7px 10px;font-size:.78rem;color:var(--muted)}
   .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
   .lab{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
   .lab .field{margin-bottom:0}
@@ -112,6 +117,22 @@
   .timerow input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}
   .timerow .t{font-family:var(--mono);font-size:.9rem;color:var(--accent);min-width:120px;text-align:right}
   .timerow select{background:var(--bg2);border:1px solid var(--line2);color:var(--tx);border-radius:8px;padding:6px 8px;font:inherit;font-size:.8rem}
+  /* El cronómetro. Monoespaciado y alineado a la derecha porque lo que se lee
+     es una COLUMNA DE TIEMPOS: con proporcional los minutos no cuadran y hay
+     que buscarlos uno a uno. */
+  .crono{margin-top:10px;background:var(--bg2);border:1px solid var(--line);
+    border-radius:10px;padding:10px 12px}
+  .crono .ttl{font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+  .crono table{font-size:.8rem}
+  .crono td{border-bottom:1px solid var(--line);padding:4px 6px}
+  .crono tr:last-child td{border-bottom:0}
+  .crono td.t{font-family:var(--mono);color:var(--tx)}
+  .crono td.por{font-family:var(--mono);font-size:.7rem;color:var(--muted);text-align:left}
+  .crono tr.tot td{font-weight:600}
+  .crono tr.tot td.t{color:var(--accent);font-size:.95rem}
+  .crono .esp{font-size:.8rem;color:var(--muted)}
+  .crono .pie{font-size:.75rem;color:var(--muted);margin-top:7px;line-height:1.5}
   table{border-collapse:collapse;width:100%;font-size:.84rem}
   th,td{border-bottom:1px solid var(--line);padding:6px 9px;text-align:right;white-space:nowrap}
   th{font-family:var(--mono);font-size:.62rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);vertical-align:bottom}
@@ -307,7 +328,38 @@
         <label class="chk"><input type="checkbox" class="st" value="B2" checked> <b>B2</b> · cara al sol · 2 umbrales</label>
       </div>
 
-      <div style="margin:14px 0 4px;border-top:1px solid var(--bd);padding-top:12px">
+      <div style="margin:14px 0 4px;border-top:1px solid var(--line);padding-top:12px">
+        <label class="chk"><input type="checkbox" id="lat_on"> <b>Latencia de la cadena</b> · lo que pasa antes de que el eje se mueva</label>
+      </div>
+      <div id="latBox" style="display:none">
+        <div class="two">
+          <div class="field"><label>Media del anemómetro (s)</label><input id="latVent" type="number" step="10" min="0" value="600"></div>
+          <div class="field"><label>Muestreo (s)</label><input id="latMues" type="number" step="1" min="0" value="60"></div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Sondeo NCU→TCU (s)</label><input id="latSond" type="number" step="1" min="0" value="30"></div>
+          <div class="field"><label>Arranque del motor (s)</label><input id="latArr" type="number" step="1" min="0" value="5"></div>
+        </div>
+        <div class="ro" id="latTot" style="margin-top:8px;font-size:.8rem"></div>
+        <p class="nota" id="latCota"></p>
+        <p class="nota">Hasta aquí la ficha modelaba <b>un</b> retardo: el del hierro, 0,17 °/s.
+          Con solo ése, el reloj de un abanderamiento es <b>|Δθ| / 0,17</b> y se hace de cabeza.
+          Lo que falta es todo lo de antes, y ahí está casi toda la espera.</p>
+        <p class="nota">La <b>media</b> no retrasa la decisión: puede <b>cambiarla</b>. Con una media
+          de 10 minutos, una racha de cuatro puede no cruzar el umbral <b>nunca</b>. El
+          <b>muestreo</b> y el <b>sondeo</b> son rejillas —el cruce se ve en la siguiente muestra,
+          la orden sale en el siguiente sondeo—, así que no son retardos fijos: lo que se espera
+          depende de dónde caiga el suceso dentro del periodo. El <b>arranque</b> sí es tiempo
+          muerto fijo.</p>
+        <p class="nota">Los cuatro son <b>parámetros declarados</b>, no medidas de un equipo: esto
+          simula y explica, no lee ni escribe en ninguna NCU. Y separan dos series que antes eran
+          una sola — el viento que <b>sopla</b> (horas sobre umbral, máximos, ráfaga del episodio,
+          y la suelta del pasivo, que es mecánica) y el que la máquina <b>ve</b>, que es el único
+          que decide. Con la casilla apagada las dos son la misma y el año sale bit a bit como
+          antes.</p>
+      </div>
+
+      <div style="margin:14px 0 4px;border-top:1px solid var(--line);padding-top:12px">
         <label class="chk"><input type="checkbox" id="pas" checked> <b>Pasivo</b> · la fila de perímetro se suelta sola</label>
       </div>
       <div id="pasBox">
@@ -392,6 +444,12 @@
           <div class="field"><label>Fecha</label>
             <input id="lDate" type="date" value="2023-06-21"></div>
         </div>
+        <!-- EL CRONÓMETRO. No predice: MIDE. Cada instante que enseña sale de
+             la simulación —el viento que sopla, el que se publica, la orden que
+             llega, el eje que para—, no de sumar los cuatro parámetros. Si
+             sumara, diría lo mismo con la latencia puesta a mano y no haría
+             falta simular nada. -->
+        <div id="cronoBox" class="crono" style="display:none"></div>
       </div>
 
       <div class="timerow" id="epCtl" style="display:none">
@@ -648,15 +706,15 @@ function engineOffMsg(){
     'Factiun_plataforma.ipynb en Colab</a> → menú <i>Entorno de ejecución</i> → <i>Ejecutar todo</i>.<br>'+
     '&nbsp;&nbsp;b. Al final imprime una URL <code>https://…trycloudflare.com</code>.<br>'+
     '&nbsp;&nbsp;c. Clic en el indicador <b>«motor»</b> de la barra de arriba y pega esa URL.<br>'+
-    '&nbsp;&nbsp;<span style="color:var(--muted-2)">La URL cambia cada vez que reejecutas el cuaderno.</span><br><br>'+
+    '&nbsp;&nbsp;<span style="color:var(--muted)">La URL cambia cada vez que reejecutas el cuaderno.</span><br><br>'+
     '<b>2 · En tu máquina</b> — <code>cd server &amp;&amp; ./run.sh</code> en el repo del motor '+
     '(escucha en <code>127.0.0.1:8765</code> y la ficha lo encuentra sola).'+
     '</div>';
 }
 
 function localBanner(){
-  return '<div class="warn" style="margin-bottom:12px;border-color:var(--line);background:var(--panel-2)">'+
-    '<b style="color:var(--muted)">Calculado en el navegador.</b> <span style="color:var(--muted-2)">'+
+  return '<div class="warn" style="margin-bottom:12px;border-color:var(--line);background:var(--bg2)">'+
+    '<b style="color:var(--muted)">Calculado en el navegador.</b> <span style="color:var(--muted)">'+
     'Posición solar por declinación + ecuación del tiempo, seguimiento con backtracking '+
     '(Anderson-Mikofski) y transposición <b>isotrópica</b>; las cuatro máquinas de estado son el '+
     'puerto exacto de las canónicas. Lo que NO lleva y sí lleva el motor Python: Perez, sombreado '+
@@ -740,6 +798,166 @@ LOC.control=function(tgt,dtS,maxang,slew,dead){
     out[i]=Math.max(-maxang,Math.min(maxang,des));
   }
   return out;
+};
+
+/* ═══════════ LA CADENA DE LATENCIA ═══════════
+   Hasta aquí la ficha modelaba UN retardo: el del hierro, `LOC.control`, que
+   recorre la maniobra a 0,17 °/s. Y con ese solo, el reloj de un
+   abanderamiento es `|Δθ| / 0,17` — un número que se hace de cabeza y que la
+   tarjeta ya predice. Lo que NO estaba es todo lo que pasa ANTES de que el eje
+   empiece a moverse, que es donde vive casi toda la espera real:
+
+     1. el anemómetro no publica el viento instantáneo, publica una MEDIA de
+        los últimos segundos. Con una media de 10 minutos, un escalón de 30 a
+        80 km/h tarda minutos en cruzar el umbral — y una racha corta puede no
+        cruzarlo NUNCA. Esto no retrasa la decisión: puede CAMBIARLA;
+     2. y la publica cada cierto tiempo (MUESTREO), así que el cruce se ve en
+        la siguiente muestra, no cuando ocurre;
+     3. la orden viaja de la NCU a la TCU en un ciclo de SONDEO, que es otra
+        rejilla: se emite ahora y llega en el siguiente sondeo;
+     4. y el motor tiene un TIEMPO MUERTO de arranque (soltar freno, rampa).
+
+   Nada de esto escribe en una NCU ni habla Modbus: es simulación, y los cuatro
+   números son parámetros que el usuario declara, no medidas de un equipo.
+
+   TRES PRIMITIVAS, y cada una es la IDENTIDAD cuando su parámetro vale 0. Eso
+   no es elegancia: es lo que hace que con la latencia apagada —el defecto— la
+   simulación del año y el careo con el motor canónico salgan BIT A BIT como
+   antes. El motor Python no tiene cadena de latencia; si el defecto la metiera,
+   el careo empezaría a discrepar y la culpa parecería suya. */
+LOC.LATENCIA={ventana_s:0, muestreo_s:0, sondeo_s:0, arranque_s:0};
+
+/* MEDIA MÓVIL causal sobre los últimos `ventanaS`. Causal y no centrada: un
+   promedio centrado usa dato del futuro, que es justo lo que un anemómetro no
+   tiene. Al principio de la serie la ventana está a medias y se promedia lo
+   que hay — no se rellena con nada. */
+LOC.mediaMovil=function(a,dtS,ventanaS){
+  var k=Math.round((+ventanaS||0)/dtS);
+  if(!(k>1))return a;                       // identidad exacta
+  var n=a.length,out=new Float64Array(n),s=0;
+  for(var i=0;i<n;i++){
+    s+=a[i];
+    if(i>=k)s-=a[i-k];
+    out[i]=s/Math.min(i+1,k);
+  }
+  return out;
+};
+
+/* REJILLA (muestreo y retención): el valor solo se refresca en los instantes
+   múltiplos de `periodoS`; entre medias se mantiene el último publicado. Es lo
+   que hace que el cruce se vea tarde, y cuánto tarde depende de dónde caiga
+   dentro del periodo — no es un retardo fijo, y por eso se modela como
+   rejilla y no como un desplazamiento. */
+LOC.rejilla=function(a,dtS,periodoS){
+  var p=+periodoS||0;
+  if(!(p>dtS))return a;                     // identidad exacta
+  var n=a.length,out=new Float64Array(n),ult=a[0],prox=0;
+  for(var i=0;i<n;i++){
+    var t=i*dtS;
+    if(t>=prox){ult=a[i];prox=(Math.floor(t/p)+1)*p;}
+    out[i]=ult;
+  }
+  return out;
+};
+
+/* RETARDO puro: el tiempo muerto del arranque, que sí es fijo. Los primeros
+   pasos repiten el valor inicial — antes del arranque no hay orden anterior
+   que sostener, y la serie empieza en régimen. */
+LOC.retardo=function(a,dtS,segundos){
+  var k=Math.round((+segundos||0)/dtS);
+  if(!(k>0))return a;                       // identidad exacta
+  var n=a.length,out=new Float64Array(n);
+  for(var i=0;i<n;i++)out[i]=a[Math.max(0,i-k)];
+  return out;
+};
+
+/* El viento que la máquina VE: primero promedia, luego publica. Ese orden es
+   el del instrumento y no da igual — publicar y luego promediar promediaría
+   muestras ya retenidas y aplanaría de más. */
+LOC.vientoVisto=function(ws,dtS,lat){
+  lat=lat||LOC.LATENCIA;
+  return LOC.rejilla(LOC.mediaMovil(ws,dtS,lat.ventana_s),dtS,lat.muestreo_s);
+};
+
+/* La orden que LLEGA al eje: espera al sondeo y luego el motor arranca. */
+LOC.ordenEnElEje=function(orden,dtS,lat){
+  lat=lat||LOC.LATENCIA;
+  return LOC.retardo(LOC.rejilla(orden,dtS,lat.sondeo_s),dtS,lat.arranque_s);
+};
+
+LOC.latenciaViva=function(lat){
+  return !!(lat&&((+lat.ventana_s>0)||(+lat.muestreo_s>0)||
+                  (+lat.sondeo_s>0)||(+lat.arranque_s>0)));
+};
+
+/* ── La misma cadena, paso a paso ──
+   El modo en vivo no tiene serie que recorrer: recibe el viento del deslizador
+   ahora mismo. Esto es la versión incremental de las tres primitivas de
+   arriba, y que las dos digan lo mismo NO se supone: `test_viento_latencia.js`
+   les da la misma entrada y exige el mismo resultado. Dos implementaciones de
+   la misma regla es la forma más fácil de que se separen, y aquí la de arriba
+   decide la energía del año y ésta decide lo que se ve en pantalla. */
+LOC.cadenaViva=function(lat){
+  lat=lat||LOC.LATENCIA;
+  var t=0, buf=[], pub=null, prox=0;            // medida
+  var oPub=null, oProx=0, cola=[], ini=null, llegado=null;   // orden
+  /* EL RELOJ LO LLEVA CADA CADENA, y avanza DESPUÉS de resolver la muestra, no
+     antes. No es un detalle: la serie uniforme trata la muestra `i` como el
+     instante `i·dt`, o sea que la PRIMERA está en t=0. Con un `avanza()`
+     externo llamado antes, la primera muestra caía en t=dt y las rejillas
+     publicaban un paso ANTES que la serie — el careo dio 22 de diferencia
+     máxima, que es el salto entero de la señal. Con el reloj dentro, el orden
+     de llamada no se puede equivocar desde fuera. */
+  var avanza=function(dtS){t+=dtS;};
+  return {
+    get t(){return t;},
+    /* Lo que el anemómetro publica ahora mismo. `dtS` entra porque el lazo en
+       vivo corre a la cadencia del navegador y los pasos NO son uniformes: la
+       media va PESADA POR TIEMPO, que es la misma definición de la serie
+       uniforme cuando todos los pasos miden igual. */
+    ve:function(v,dtS){
+      var W=+lat.ventana_s||0;
+      if(W>0){
+        buf.push({t:t,dt:dtS,v:v});
+        // `>=` y no `>`: con `>` la ventana se queda con UNA muestra de más
+        // (k+1 en vez de k) y la media sale de otra ventana que la de la serie
+        // uniforme. Un desfase de una muestra no se ve en pantalla y habría
+        // separado las dos implementaciones en silencio; lo dijo el careo.
+        while(buf.length>1&&(t-buf[0].t)>=W)buf.shift();
+        var sw=0,sv=0;
+        for(var i=0;i<buf.length;i++){sw+=buf[i].dt;sv+=buf[i].v*buf[i].dt;}
+        v=sw>0?sv/sw:v;
+      }
+      var P=+lat.muestreo_s||0;
+      if(!(P>0)){avanza(dtS);return v;}
+      if(pub===null||t>=prox){pub=v;prox=(Math.floor(t/P)+1)*P;}
+      avanza(dtS);
+      return pub;
+    },
+    /* La orden que ha LLEGADO al eje. El sondeo es rejilla; el arranque es
+       una cola con sello de tiempo, que es lo que permite que una orden nueva
+       no adelante a la que ya venía en camino. */
+    llega:function(orden,dtS){
+      var P=+lat.sondeo_s||0, A=+lat.arranque_s||0;
+      var emitida=orden;
+      if(P>0){ if(oPub===null||t>=oProx){oPub=orden;oProx=(Math.floor(t/P)+1)*P;}
+               emitida=oPub; }
+      if(!(A>0)){avanza(dtS);return emitida;}
+      // El primer valor visto es el que se sostiene mientras no haya llegado
+      // nada: antes del arranque no hay orden anterior que mantener, y es la
+      // misma convención que `LOC.retardo`, que en los primeros pasos repite
+      // el inicial. Si aquí se devolviera la orden de AHORA, el arranque no
+      // costaría nada en el primer segundo y las dos implementaciones
+      // discreparían justo en el instante que el cronómetro mide.
+      if(ini===null)ini=emitida;
+      cola.push({t:t+A,v:emitida});
+      var ult=null;
+      while(cola.length&&cola[0].t<=t)ult=cola.shift().v;
+      if(ult!==null)llegado=ult;
+      avanza(dtS);
+      return (llegado===null?ini:llegado);
+    }
+  };
 };
 
 /* POA isotrópica en el plano girado θ (convención core: + = este) */
@@ -1631,8 +1849,14 @@ LOC.stepper=function(kind,cfg){
         else{ns='IDLE';nt=tgt;}
       }
       st=ns;
+      /* ENTRE LA ORDEN Y EL EJE va la cadena de latencia, si la hay: la orden
+         espera al sondeo y el motor tarda en arrancar. `cfg.llega` es el
+         gancho —identidad cuando no se pasa— y por eso la máquina de estados
+         de arriba no se entera de que existe: decide igual, y lo que cambia es
+         CUÁNDO su decisión llega al hierro. */
+      var ntEje=cfg.llega?cfg.llega(nt,dtS):nt;
       // el eje se mueve a su velocidad, no salta: 0,17 °/s
-      var d=nt-th, maxD=LOC.SLEW*dtS;
+      var d=ntEje-th, maxD=LOC.SLEW*dtS;
       if(Math.abs(d)>cfg.dead||Math.abs(d)>maxD||st!=='IDLE'){
         if(Math.abs(d)>maxD)d=(d>0?maxD:-maxD);
         th=Math.max(-full,Math.min(full,th+d));
@@ -1643,7 +1867,11 @@ LOC.stepper=function(kind,cfg){
       // 0,0°» y lee que el abanderamiento no se ha dado. Se ha dado: no ha
       // LLEGADO. Es la misma distinción que la gráfica de θ ya enseña con dos
       // trazos, y que aquí faltaba.
-      return {mode:st,theta:th,orden:nt};
+      //
+      // Y con la cadena puesta son TRES: lo que la máquina manda (`orden`), lo
+      // que ha LLEGADO al eje (`ordenEje`) y dónde está el eje (`theta`). El
+      // cronómetro vive justo en esas dos diferencias.
+      return {mode:st,theta:th,orden:nt,ordenEje:ntEje};
     }
   };
 };
@@ -2126,6 +2354,14 @@ LOC.run=function(cfg,onStep){
     var tieneDir=false;
     if(wd)for(var iw=0;iw<n;iw++)if(!isNaN(wd[iw])){tieneDir=true;break;}
     var T1=cfg.threshold_1_kmh/3.6,T2=cfg.threshold_2_kmh/3.6,full=cfg.tracker.max_angle_deg;
+    /* EL VIENTO QUE SOPLA Y EL QUE LA MÁQUINA VE son dos series distintas, y
+       la distinción es la mitad de lo que aporta la cadena de latencia.
+       `ws` —el que sopla— sigue mandando en todo lo que describe el SITIO:
+       horas sobre umbral, máximo del año, ráfaga de cada episodio, Gumbel, y
+       la suelta del PASIVO, que es mecánica y no espera a ningún sondeo.
+       `wsVisto` manda solo en lo que DECIDE: las máquinas de estados.
+       Con la latencia apagada las dos series son el mismo objeto. */
+    var wsVisto=LOC.vientoVisto(ws,dtH*3600,cfg.latencia);
     // sol, θ de seguimiento y POA de la línea base
     var el=new Float64Array(n),azs=new Float64Array(n),azp=new Float64Array(n),
         thB=new Float64Array(n),poaB=new Float64Array(n),bh=new Float64Array(n);
@@ -2150,8 +2386,8 @@ LOC.run=function(cfg,onStep){
       // el límite de mediodía es de las B (abanderar hacia el sol); en las A
       // el lado lo manda el viento y la regla no aplica.
       var noon=(S[0]==='B')?(+cfg.noon_limit_deg||0):0;
-      if(S[1]==='1')R=LOC.single(thB,ws,az,T1,full,noon);
-      else R=LOC.dual(thB,ws,az,T1,T2,cfg.partial_stow_min_abs_deg,full,dtH*3600,
+      if(S[1]==='1')R=LOC.single(thB,wsVisto,az,T1,full,noon);
+      else R=LOC.dual(thB,wsVisto,az,T1,T2,cfg.partial_stow_min_abs_deg,full,dtH*3600,
                       cfg.destow_hold_minutes,cfg.partial_park_minutes,1.0,noon);
       // La ORDEN se guarda antes de pasar por el lazo. Son dos cosas distintas
       // y la gráfica de θ enseña las dos: la máquina de estados manda un
@@ -2159,7 +2395,12 @@ LOC.run=function(cfg,onStep){
       // tarda minutos. Sin la consigna no se puede ver esa diferencia, que es
       // justo lo que hace que la POA caiga en rampa y no de golpe.
       var orden=Float64Array.from(R.theta);
-      R.theta=LOC.control(R.theta,dtH*3600,full,cfg.slew_deg_s,cfg.deadband_deg);
+      /* Entre la ORDEN y el EJE va el resto de la cadena: la orden espera al
+         sondeo y el motor tarda en arrancar. Se guarda `orden` ANTES —es lo
+         que la máquina mandó— y lo que entra al lazo es lo que LLEGÓ. Con la
+         latencia apagada son el mismo objeto y el resultado no se mueve. */
+      var ordenEje=LOC.ordenEnElEje(R.theta,dtH*3600,cfg.latencia);
+      R.theta=LOC.control(ordenEje,dtH*3600,full,cfg.slew_deg_s,cfg.deadband_deg);
       var poa=new Float64Array(n),d=new Float64Array(n);
       for(var j=0;j<n;j++){poa[j]=LOC.poa(R.theta[j],el[j],azs[j],bh[j],M.dhi[j],M.ghi[j]);d[j]=poa[j]-poaB[j];}
       // episodios: racha continua con modo ≠ IDLE (el hold cuenta dentro)
@@ -2356,6 +2597,11 @@ LOC.run=function(cfg,onStep){
         destow_hold_minutes:cfg.destow_hold_minutes,partial_park_minutes:cfg.partial_park_minutes,
         noon_limit_deg:(+cfg.noon_limit_deg||0),
         passive:(cfg.passive||null),
+        /* La latencia viaja en el resultado SIEMPRE, también cuando está a
+           cero. Una salida que solo declara lo que no es por defecto obliga a
+           adivinar si la ausencia es «apagado» o «esta versión no lo tenía». */
+        latencia:Object.assign({},LOC.LATENCIA,cfg.latencia||{}),
+        latencia_activa:LOC.latenciaViva(cfg.latencia),
         tracker:cfg.tracker},
       baseline:{poa_kwh_m2:Math.round(eB*1000)/1000,poa_monthly_kwh_m2:monthly(poaB)},
       cases:cases, timeline:TLo};
@@ -2627,7 +2873,7 @@ function fillRosa(){
     return '<option value="'+r[0]+'">'+(r[0]===''?'— sin dirección —':r[1]+' ('+r[0]+'°)')+'</option>';}).join('');
 }
 function renderGusts(){
-  if(!GUSTS.length){$('gtbl').innerHTML='<tbody><tr><td colspan="8" style="color:var(--muted-2);font-size:12px;padding:10px 4px">'+
+  if(!GUSTS.length){$('gtbl').innerHTML='<tbody><tr><td colspan="8" style="color:var(--muted);font-size:12px;padding:10px 4px">'+
     'Sin rachas inyectadas: se simula el viento de fondo tal cual.</td></tr></tbody>';
     if(typeof labHint==='function')labHint();return;}
   var h='<thead><tr><th>Cuándo <span class="sn" style="margin:0">'+esc(tzSigla())+'</span></th><th>Pico km/h</th><th>Duración min</th><th>Forma</th><th>Viene de</th><th>×</th><th>cada h</th><th></th></tr></thead><tbody>';
@@ -2684,11 +2930,12 @@ function scenario(){
 /* ===================== ESTADO ===================== */
 var REP=null, SEL=null, MULTI=null, HSU=null;
 var IDS=['lat','lon','year','source','step','wh','maxang','gcr','pitch','axaz','t1','t2','pmin','hold','park','noon','nTrk','filasTrk','pasV','pasModo','pasL',
+         'latVent','latMues','latSond','latArr',
          'wbase','wk','wA','wseed','wdir','stn','stp0','stp1','std0','std1','stseed','escena'];
 function saveCfg(){
   try{var c={};IDS.forEach(function(i){c[i]=$(i).value;});
     c.bt=$('bt').checked; c.wgust=$('wgust').checked; c.wcyc=$('wcyc').checked; c.gusts=GUSTS;
-    c.pas=$('pas').checked; c.pasV2=1;
+    c.pas=$('pas').checked; c.pasV2=1; c.lat_on=$('lat_on').checked;
     c.sitio=SITIO;   // el rótulo tiene que sobrevivir a recargar
     c.st=[].slice.call(document.querySelectorAll('.st')).filter(function(e){return e.checked;}).map(function(e){return e.value;});
     localStorage.setItem('factiun_viento_cfg',JSON.stringify(c));}catch(e){}
@@ -2707,6 +2954,7 @@ function loadCfg(){
        UNA vez y se marca; a partir de ahí manda lo que elija. */
     if(!c.pasV2){c.pas=true;}
     if(c.pas!=null){$('pas').checked=!!c.pas;$('pasBox').style.display=c.pas?'':'none';}
+    if(c.lat_on!=null){$('lat_on').checked=!!c.lat_on;$('latBox').style.display=c.lat_on?'':'none';}
     if(c.st)[].forEach.call(document.querySelectorAll('.st'),function(e){e.checked=c.st.indexOf(e.value)>=0;});
   }catch(e){}
 }
@@ -2730,7 +2978,7 @@ async function careo(){
     var fila=function(k,ve,vl,dec,uni){
       var d=(ve!=null&&vl!=null)?vl-ve:null;
       return '<tr><td>'+esc(k)+'</td><td>'+fmt(ve,dec)+'</td><td>'+fmt(vl,dec)+'</td>'+
-        '<td style="color:'+(Math.abs(d||0)<=(dec>2?0.05:2)?'var(--live)':'var(--build)')+'">'+
+        '<td style="color:'+(Math.abs(d||0)<=(dec>2?0.05:2)?'var(--ok)':'var(--warn)')+'">'+
         (d>0?'+':'')+fmt(d,dec)+' '+esc(uni||'')+'</td></tr>';
     };
     var h='<table><thead><tr><th>Careo con la corrida congelada del motor</th>'+
@@ -2787,6 +3035,7 @@ async function run(){
     wind_height_m:(+$('wh').value>0?+$('wh').value:null),
     resample_minutes:($('step').value?+$('step').value:null),
     slew_deg_s:LOC.SLEW, deadband_deg:LOC.DEADBAND,
+    latencia:cfgLat(),
     wind_scenario:scenario(),
     timeline:{hours:16, max_steps:240},
     top_events:12, include_trace:true
@@ -2798,6 +3047,20 @@ async function run(){
       'aquí mismo, en el navegador.')+'</p>';
   try{
     if(usaMotor){
+      /* EL MOTOR CANÓNICO NO TIENE CADENA DE LATENCIA, y callarlo sería el
+         peor de los dos silencios posibles: el motor ignoraría la clave, el
+         informe saldría con el sello de «canónico» y los números serían los de
+         siempre. O sea, la latencia encendida en pantalla y ausente en el
+         resultado. Se para antes de pedir nada. */
+      if(LOC.latenciaViva(body.latencia)){
+        out.innerHTML='<div class="noval"><b>La latencia de la cadena no la simula el motor '+
+          'canónico.</b> Ese motor no tiene media del anemómetro, ni muestreo, ni sondeo, ni '+
+          'arranque: ignoraría los cuatro y devolvería el resultado de siempre — con el sello de '+
+          'canónico puesto. Elige <b>En el navegador</b> para simular con latencia, o apágala para '+
+          'volver al motor.</div>';
+        ['run','runM'].forEach(function(b){if($(b)){$(b).disabled=false;$(b).textContent='Simular el año';}});
+        return;
+      }
       var r=await fetch(ENGINE+'/windstow',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
       REP=await r.json(); MULTI=null;
@@ -3122,6 +3385,33 @@ function best(){ // la que menos POA pierde
   return b;
 }
 
+/* LO QUE ESTE AÑO LLEVA DENTRO, DICHO EN EL RESULTADO. Con la cadena
+   encendida los números dejan de ser comparables con el motor canónico —que no
+   la tiene— y con cualquier corrida anterior de esta misma ficha. Eso no se
+   deduce mirando la pantalla: el informe sale exactamente igual, con otros
+   números. Un resultado que cambia de significado sin decirlo es la forma más
+   barata de que alguien compare dos capturas y saque la conclusión contraria.
+
+   Va también cuando está APAGADA, en una línea, por lo mismo: «no lo declara»
+   y «lo declara a cero» se leen igual si solo se habla cuando hay algo que
+   contar. */
+function bannerLatencia(){
+  var L=(REP&&REP.config&&REP.config.latencia)||null;
+  if(!L)return '';
+  if(!LOC.latenciaViva(L))
+    return '<p class="note">Cadena de latencia <b>apagada</b>: el único retardo simulado es el '+
+      'del hierro (0,17 °/s), como en toda corrida anterior de esta ficha y como en el motor '+
+      'canónico. Los números son comparables con los dos.</p>';
+  return '<div class="noval"><b>Este año lleva la cadena de latencia puesta</b> — media del '+
+    'anemómetro '+fmt(L.ventana_s,0)+' s, muestreo '+fmt(L.muestreo_s,0)+' s, sondeo '+
+    fmt(L.sondeo_s,0)+' s, arranque '+fmt(L.arranque_s,0)+' s. La máquina de estados decide '+
+    'sobre el viento <b>publicado</b>, no sobre el que sopla, así que no solo abandera más '+
+    'tarde: puede <b>no abanderar</b> rachas que antes cruzaban el umbral. Estos números '+
+    '<b>no son comparables</b> con el motor canónico ni con una corrida de esta ficha sin '+
+    'latencia. Las horas sobre umbral, el máximo del año y la ráfaga de cada episodio siguen '+
+    'siendo del viento que <b>sopla</b>: describen el sitio, no la máquina.</div>';
+}
+
 function render(){
   var m=REP.meteo, w=REP.wind, base=REP.baseline;
   /* La zona va en el rótulo del contexto: una captura de esta ficha tiene que
@@ -3140,7 +3430,7 @@ function render(){
     'factor <b>'+fmt(w.scale_applied,3)+'</b> sobre el dato de 10 m'+
     (m.resample_minutes?' · meteo interpolada a <b>'+m.resample_minutes+' min</b>':'')+
     (m.has_wind_direction?'':' · <b>sin dirección de viento en la fuente</b>: A1/A2 resuelven con 180° fijos')+
-    '.</p>';
+    '.</p>'+bannerLatencia();
   var sc=w.scenario;
   if(sc){
     var ap=(sc.events_applied||[]),sk=(sc.events_skipped||[]);
@@ -3707,8 +3997,18 @@ function denomPas(){
   e.innerHTML='Se suelta <b>1 fila de '+filas+'</b> ('+n+' trackers × '+f+') = '+
     '<b>'+fmt(fr,2)+' %</b> del campo. Con 1 tracker sería el '+fmt(100/f,0)+' %.';
 }
+/* Los cuatro de la cadena, en UN sitio. Con la casilla apagada salen los
+   CEROS y no los valores tecleados: apagar tiene que devolver exactamente el
+   comportamiento anterior, no «el anterior más o menos». */
+function cfgLat(){
+  if(!$('lat_on').checked)return {ventana_s:0,muestreo_s:0,sondeo_s:0,arranque_s:0};
+  return {ventana_s:Math.max(0,+$('latVent').value||0),
+          muestreo_s:Math.max(0,+$('latMues').value||0),
+          sondeo_s:Math.max(0,+$('latSond').value||0),
+          arranque_s:Math.max(0,+$('latArr').value||0)};
+}
 function cfgStow(){
-  return {full:+$('maxang').value, pmin:+$('pmin').value,
+  return {lat:cfgLat(), full:+$('maxang').value, pmin:+$('pmin').value,
     T1:(+$('t1').value)/3.6, T2:(+$('t2').value)/3.6,
     holdS:(+$('hold').value)*60, parkS:(+$('park').value)*60, dead:LOC.DEADBAND,
     noon:+$('noon').value,
@@ -4585,15 +4885,145 @@ function tiles(ang,modos,poa,poaBase,dpct,orden){
 function liveInit(){
   var c=cfgStow();
   LIVE={t:0, v:+$('lV').value/3.6, dir:+$('lD').value, run:false, steppers:{}, ang:{}, modos:{}, orden:{},
-        minF:+$('lH').value, simPrev:null};
+        ordenEje:{}, minF:+$('lH').value, simPrev:null,
+        /* UNA cadena de MEDIDA para toda la planta —el anemómetro es uno— y
+           UNA DE ORDEN POR ESTRATEGIA, porque cada TCU recibe la suya. Meter
+           las cinco en la misma rejilla de sondeo las haría llegar todas en el
+           mismo instante, que es una coincidencia del modelo y no del sitio. */
+        lat:c.lat, cadMedida:LOC.cadenaViva(c.lat), cadOrden:{},
+        crono:cronoNuevo()};
   vivos().forEach(function(S){
     // el límite de mediodía es de las B (abanderan hacia el SOL); en las A el
     // lado lo manda el viento, así que su stepper va con la regla apagada.
-    LIVE.steppers[S]=(S==='PASIVO')?LOC.stepperPasivo(c)
-                    :LOC.stepper(S[1],Object.assign({},c,{noon:(S[0]==='B'?c.noon:0)}));
-    LIVE.ang[S]=0;LIVE.modos[S]='IDLE';LIVE.orden[S]=0;});
+    if(S==='PASIVO'){
+      // El pasivo NO lleva cadena, y no es un olvido: no lo manda un motor, lo
+      // suelta la carga. No espera sondeo ni arranque, y el viento que lo
+      // suelta es el que SOPLA, no el que publica el anemómetro.
+      LIVE.steppers[S]=LOC.stepperPasivo(c);
+    }else{
+      var cad=LOC.cadenaViva(c.lat); LIVE.cadOrden[S]=cad;
+      LIVE.steppers[S]=LOC.stepper(S[1],Object.assign({},c,{
+        noon:(S[0]==='B'?c.noon:0),
+        llega:function(o,dtS){return cad.llega(o,dtS);}}));
+    }
+    LIVE.ang[S]=0;LIVE.modos[S]='IDLE';LIVE.orden[S]=0;LIVE.ordenEje[S]=0;});
   LIVE.ang.BASE=0; LIVE.modos.BASE='SEGUIMIENTO';
-  liveLbl();
+  liveLbl(); pintaCrono();
+}
+
+/* ─────────── EL CRONÓMETRO ───────────
+   Mide UNA maniobra de principio a fin, y los cinco instantes son MEDIDOS
+   sobre la simulación, no calculados sumando los parámetros. La diferencia no
+   es de estilo: si el total saliera de sumar la media, el muestreo, el sondeo,
+   el arranque y `|Δθ|/0,17`, el cronómetro sería una calculadora con el
+   resultado escrito de antemano, y no enseñaría lo único que de verdad hay que
+   ver — que el retardo de una rejilla DEPENDE DE DÓNDE CAIGA EL SUCESO dentro
+   del periodo, y que con una media larga el umbral puede no cruzarse nunca.
+
+   Los instantes:
+     t0   el viento que SOPLA cruza el umbral 1
+     tVe  el viento PUBLICADO lo cruza                        (media + muestreo)
+     tOrd la máquina sale de IDLE                             (decide)
+     tLle la orden CAMBIA en el eje                           (sondeo + arranque)
+     tFin el eje llega a la consigna, dentro de la banda muerta   (0,17 °/s)
+
+   `tLle` se mide por CAMBIO de la orden en el eje y no comparándola con un
+   valor esperado: en abanderamiento parcial la consigna persigue al sol y
+   nunca es constante, así que un careo contra un ángulo fijo solo funcionaría
+   en el caso pleno. */
+function cronoNuevo(){ return {fase:'espera', t0:null, tVe:null, por:{}, prevV:null, ultima:null}; }
+
+function cronoTick(simNow,vTrue,vVisto,T1){
+  var C=LIVE.crono; if(!C)return;
+  if(C.prevV===null){C.prevV=vTrue;return;}
+  // ARRANQUE: el flanco del viento REAL, no el publicado. El cronómetro empieza
+  // a contar cuando sopla, que es lo que hace visible el retardo de la medida.
+  if(C.fase==='espera'&&C.prevV<=T1&&vTrue>T1){
+    C.fase='corre'; C.t0=simNow; C.tVe=null; C.por={};
+  }
+  if(C.fase==='corre'){
+    if(C.tVe===null&&vVisto>T1)C.tVe=simNow;
+    vivos().forEach(function(S){
+      if(S==='PASIVO')return;
+      var p=C.por[S]||(C.por[S]={tOrd:null,tLle:null,tFin:null,ejeAnt:null});
+      var modo=LIVE.modos[S], eje=LIVE.ordenEje[S], th=LIVE.ang[S];
+      if(p.tOrd===null){ p.ejeAnt=eje; if(modo!=='IDLE')p.tOrd=simNow; return; }
+      if(p.tLle===null){
+        if(Math.abs(eje-p.ejeAnt)>1e-9)p.tLle=simNow;
+        return;
+      }
+      if(p.tFin===null&&Math.abs(th-eje)<=LOC.DEADBAND)p.tFin=simNow;
+    });
+    // La maniobra se da por CERRADA cuando todas las que vigila han llegado.
+    var vs=vivos().filter(function(S){return S!=='PASIVO';});
+    if(vs.length&&vs.every(function(S){return C.por[S]&&C.por[S].tFin!=null;})){
+      C.ultima={t0:C.t0,tVe:C.tVe,por:C.por,uml:T1};
+      C.fase='hecha';
+    }
+  }
+  // Rearme: solo cuando el viento REAL baja del umbral. Así una racha que sube
+  // y baja alrededor del umbral no reinicia el reloj a cada oscilación.
+  if(vTrue<=T1&&C.fase!=='espera'){
+    if(C.fase==='corre'&&C.t0!=null)C.ultima={t0:C.t0,tVe:C.tVe,por:C.por,uml:T1,cortada:true};
+    C.fase='espera'; C.t0=null; C.tVe=null; C.por={};
+  }
+  C.prevV=vTrue;
+}
+
+function seg(s){
+  if(s==null||!isFinite(s))return '—';
+  if(s<90)return fmt(s,s<10?1:0)+' s';
+  var m=Math.floor(s/60);
+  return m+' min '+fmt(s-m*60,0)+' s';
+}
+
+function pintaCrono(){
+  var caja=$('cronoBox'); if(!caja)return;
+  if(MODO!=='live'||!LIVE){caja.style.display='none';return;}
+  caja.style.display='';
+  var C=LIVE.crono, D=(C.fase==='corre')?{t0:C.t0,tVe:C.tVe,por:C.por,uml:(+$('t1').value)/3.6}:C.ultima;
+  var enVuelo=(C.fase==='corre');
+  var uml=fmt(+$('t1').value,0)+' km/h';
+  var h='<div class="ttl">Cronómetro · desde que el viento cruza '+uml+'</div>';
+  if(!D){
+    h+='<div class="esp">Sube el viento por encima de '+uml+' con el reloj corriendo y '+
+       'se mide la maniobra entera: cuándo lo ve el anemómetro, cuándo llega la orden al eje '+
+       'y cuándo para el eje.</div>';
+    if(!LOC.latenciaViva(LIVE.lat))
+      h+='<div class="pie">Con la <b>latencia apagada</b> solo hay un retardo que medir, el del '+
+         'hierro a 0,17 °/s — que es el que la tarjeta ya predice. Enciéndela en '+
+         '<b>⚑ Abanderamiento</b> para que el cronómetro tenga algo más que contar.</div>';
+    caja.innerHTML=h; return;
+  }
+  var det=(D.tVe!=null)?(D.tVe-D.t0):null;
+  h+='<table><tbody>';
+  h+='<tr><td>lo ve el anemómetro</td><td class="t">'+
+     (D.tVe!=null?'+'+seg(det):'todavía no')+'</td>'+
+     '<td class="por">media '+fmt(LIVE.lat.ventana_s,0)+' s · muestreo '+fmt(LIVE.lat.muestreo_s,0)+' s</td></tr>';
+  var vs=vivos().filter(function(S){return S!=='PASIVO';});
+  vs.forEach(function(S){
+    var p=D.por[S]||{};
+    var lle=(p.tLle!=null)?(p.tLle-D.t0):null, fin=(p.tFin!=null)?(p.tFin-D.t0):null;
+    h+='<tr><td><b style="color:'+(COL[S]||'var(--tx)')+'">'+S+'</b> · la orden llega al eje</td>'+
+       '<td class="t">'+(lle!=null?'+'+seg(lle):'—')+'</td>'+
+       '<td class="por">sondeo '+fmt(LIVE.lat.sondeo_s,0)+' s · arranque '+fmt(LIVE.lat.arranque_s,0)+' s</td></tr>';
+    h+='<tr class="tot"><td><b style="color:'+(COL[S]||'var(--tx)')+'">'+S+'</b> · en posición</td>'+
+       '<td class="t">'+(fin!=null?'+'+seg(fin):(enVuelo?'en camino':'—'))+'</td>'+
+       '<td class="por">'+(fin!=null&&lle!=null?'recorrido '+seg(fin-lle)+' a 0,17 °/s':'')+'</td></tr>';
+  });
+  h+='</tbody></table>';
+  if(D.cortada)
+    h+='<div class="pie">El viento bajó del umbral <b>antes</b> de que la maniobra terminara: '+
+       'lo que se ve es hasta dónde llegó. No es un fallo del reloj, es el caso — y es justo '+
+       'el que una media larga produce.</div>';
+  if(D.tVe==null&&!enVuelo)
+    h+='<div class="pie">El anemómetro <b>nunca llegó a ver</b> el cruce: la racha se apagó antes '+
+       'de que la media la subiera por encima del umbral. La media no retrasa la decisión, '+
+       'la <b>cambia</b>.</div>';
+  h+='<div class="pie">El <b>pasivo</b> no sale aquí y no es un olvido: no lo manda un motor, lo '+
+     'suelta la carga, así que no espera sondeo ni arranque — y su umbral es otro.'+
+     (LIVE.run?'':' <b>Reloj parado</b>: el cronómetro no avanza.')+'</div>';
+  caja.innerHTML=h;
 }
 /* «día 172» no lo lee nadie: la fecha sí. El control es un selector de fecha
    y el reloj la enseña como se dice en voz alta (21 jun · 12:00). */
@@ -4747,12 +5177,21 @@ function liveTick(dtReal){
   LIVE.orden.BASE=tgt;
   var poa={}, bh=(P.el>0?900*Math.pow(Math.sin(P.el),1.15):0), dh=bh*0.16;
   poa.BASE=LOC.poa(LIVE.ang.BASE,P.el,P.az,bh,dh,bh+dh);
+  /* EL VIENTO QUE SE PUBLICA. `LIVE.v` es el que sopla —el del deslizador— y
+     esto es lo que el anemómetro entrega a la máquina. Con la latencia apagada
+     son el mismo número. La cadena de medida es UNA para toda la planta: el
+     anemómetro es uno. */
+  var vVisto=LIVE.cadMedida.ve(LIVE.v,dt);
+  LIVE.vVisto=vVisto;
   vivos().forEach(function(S){
     var az=(S[0]==='A')?LIVE.dir:P.azp;
+    // Al PASIVO le llega el viento que SOPLA: la suelta es mecánica y no pasa
+    // por el anemómetro ni por la TCU.
     var r=(S==='PASIVO')?LIVE.steppers[S].step(tgt,LIVE.v,dt)
-                        :LIVE.steppers[S].step(tgt,LIVE.v,az,dt);
+                        :LIVE.steppers[S].step(tgt,vVisto,az,dt);
     LIVE.ang[S]=r.theta; LIVE.modos[S]=r.mode;
     LIVE.orden[S]=(r.orden!=null?r.orden:r.theta);
+    LIVE.ordenEje[S]=(r.ordenEje!=null?r.ordenEje:LIVE.orden[S]);
     if(S==='PASIVO'){
       /* La POA del pasivo es la de la PLANTA, no la de la fila suelta: la
          interior sigue operando. Enseñar la de la fila aquí daría una pérdida
@@ -4765,7 +5204,13 @@ function liveTick(dtReal){
   });
   ponSol(P.el/LOC.D2R,P.azp,LIVE.v,LIVE.dir);
   pintaEscena(LIVE.ang,LIVE.modos,poa,poa.BASE);
-  if(!liveTick._n||(liveTick._n++%6===0))tiles(LIVE.ang,LIVE.modos,poa,poa.BASE,null,LIVE.orden);
+  // El cronómetro va DESPUÉS de mover a todo el mundo: mide el estado ya
+  // avanzado de este paso, no el del anterior.
+  if(dt>0)cronoTick(simNow,LIVE.v,vVisto,(+$('t1').value)/3.6);
+  if(!liveTick._n||(liveTick._n++%6===0)){
+    tiles(LIVE.ang,LIVE.modos,poa,poa.BASE,null,LIVE.orden);
+    pintaCrono();
+  }
   liveTick._n=(liveTick._n||1)+1;
 }
 
@@ -5169,6 +5614,33 @@ $('lPlay').onclick=function(){
 $('gadd').onclick=function(){addGust($('gpreset').value);};
 $('pas').onchange=function(){
   $('pasBox').style.display=this.checked?'':'none'; saveCfg(); montaEscena();};
+/* Cambiar la latencia REMONTA el modo en vivo: las cadenas llevan estado
+   —la ventana de la media, la rejilla del sondeo, la cola del arranque— y
+   cambiarles los parámetros por debajo dejaría medio episodio medido con una
+   configuración y medio con otra. El cronómetro es lo primero que mentiría. */
+function latUI(){
+  var on=$('lat_on').checked;
+  $('latBox').style.display=on?'':'none';
+  var L=cfgLat();
+  /* `.tag` es un RÓTULO —monoespaciado y en mayúsculas—, y ahí metí tres líneas
+     de prosa: en pantalla salía un párrafo a gritos y costaba leerlo. La
+     explicación se va a una nota normal, debajo, y en la caja queda solo el
+     número con su nombre, que es para lo que sirve. */
+  $('latTot').innerHTML=on
+    ? '<span class="k">PEOR CASO ANTES DE QUE EL EJE SE MUEVA</span><div class="v">'+
+      fmt(L.ventana_s+L.muestreo_s+L.sondeo_s+L.arranque_s,0)+' s</div>'
+    : '';
+  $('latCota').innerHTML=on
+    ? 'Ese número es una <b>cota</b>, no lo que va a medir el cronómetro: las dos rejillas '+
+      'esperan lo que les falte para el siguiente borde, no el periodo entero, y la media '+
+      'puede no cruzar el umbral nunca. Por eso se <b>mide</b> y no se suma.'
+    : '';
+  if(MODO==='live'){liveInit();liveTick(0.001);}
+  pintaCrono();
+}
+$('lat_on').onchange=function(){saveCfg();latUI();};
+['latVent','latMues','latSond','latArr'].forEach(function(i){
+  $(i).addEventListener('change',function(){saveCfg();latUI();});});
 /* El lado fijo y el lado del viento no son la misma casuística, y conviene que
    se note al elegir: con el fijo el número manda; con el del viento el número
    solo dice CUÁNTO se tumba, y el signo lo pone el rumbo. */
@@ -5211,7 +5683,7 @@ function meteoTag(){
     var vivo=(Math.abs(c.lat-(+$('lat').value))<1e-4&&Math.abs(c.lon-(+$('lon').value))<1e-4);
     sello=' · <b>en pantalla:</b> '+(+c.lat).toFixed(4)+', '+(+c.lon).toFixed(4)+
       ' · '+c.year+(c.year1&&c.year1!==c.year?'–'+c.year1:'')+
-      (vivo?'':' <span style="color:var(--build)">— las casillas dicen '+
+      (vivo?'':' <span style="color:var(--warn)">— las casillas dicen '+
         (+$('lat').value).toFixed(4)+', '+(+$('lon').value).toFixed(4)+
         ': vuelve a simular</span>');
   }
@@ -5624,6 +6096,7 @@ fijaTZ(SITIO&&SITIO.tz,+$('lon').value); renderGusts();
   var y=+$('year').value||2023; $('lDate').value=y+'-06-21'; })();
 denomPas();
 pasModoUI();
+latUI();
 montaEscena();
 detectEngine().then(loadPresets);
 </script>
