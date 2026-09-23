@@ -93,8 +93,14 @@ const SONDA = `(() => {
   // estructura que el N-S. Sigue en FIS.CATALOGO porque el careo lo corre.
   for (const c of await p.$$('.st')) if (!(await c.isChecked())) await c.check();
   await p.waitForTimeout(600);
-  check('un bloque por estructura marcada (7 en la ficha, 8 en el catálogo)',
-    (await p.evaluate(() => BLOQUES.length)) === 7);
+  /* 8 en la ficha desde que la dos aguas entra con sus DOS formas (pico y
+     valle) como estructuras del catálogo; 9 en el catálogo contando el TSAT,
+     que no se ofrece. El número no se escribe a mano: se cuenta de la propia
+     lista, que es lo que impide que este piso se quede atrás otra vez. */
+  const nOfrecidas = (await p.$$('.st')).length;
+  check('un bloque por estructura marcada (' + nOfrecidas + ' en la ficha)',
+    (await p.evaluate(() => BLOQUES.length)) === nOfrecidas,
+    'bloques ' + (await p.evaluate(() => BLOQUES.length)) + ' vs ofrecidas ' + nOfrecidas);
   check('y el TSAT no se ofrece: sería el mismo seguidor',
     (await p.evaluate(() => [...document.querySelectorAll('.st')]
       .every(c => c.value !== 'tracker_tsat'))) === true);
@@ -599,8 +605,9 @@ const SONDA = `(() => {
       f.lejos.every(g => Math.abs(g.gx - gx) < 0.3 && Math.abs(g.gz - gz) < 0.3),
       JSON.stringify(f.lejos));
   });
-  check('y las siete estructuras se apoyan en él a la misma cota (curva de nivel)',
-    suelo.diagonal.bloques.length === 7 &&
+  check('y TODAS las estructuras se apoyan en él a la misma cota (curva de nivel, ' +
+    suelo.diagonal.bloques.length + ' bloques)',
+    suelo.diagonal.bloques.length >= 7 &&
     suelo.diagonal.bloques.every(b => Math.abs(b.y) < 1e-6 && Math.abs(b.suelo) < 1e-6),
     JSON.stringify(suelo.diagonal.bloques.map(b => b.k + ':' + b.suelo)));
 
@@ -1009,6 +1016,64 @@ const SONDA = `(() => {
       Math.abs(pies[caso].peor) < 0.05,
       JSON.stringify(pies[caso]));
   });
+  /* ── Y QUE NO DEPENDA DE CUÁNTAS ESTRUCTURAS HAYA ──────────────────────
+     Esto salió al meter la OCTAVA estructura (la dos aguas en valle): con 7 el
+     peor desvío era 0 y con 8, 4,5 m. Dos causas encadenadas, y cada una
+     decide casos —medido quitándolas de una en una—:
+
+       · la rejilla de cumbreras del terreno se anclaba en el ORIGEN DEL MUNDO
+         y los bloques van en `x0 + i·sep` con `x0` centrado, así que su fase
+         es `(n−1)/2` periodos: con `n` impar es entera y cada bloque cae sobre
+         su cumbrera POR CASUALIDAD; con `n` par quedan todos a media cumbrera,
+         sobre el quiebro del diente de sierra. Sin este arreglo: −2,46 m.
+       · y las hincas se apoyaban al CONSTRUIR el bloque, antes de que
+         `actualiza3D` fijara los giros de los que dependen. Sin este arreglo:
+         −4,5 m (y −17,8 m recién construido, antes del primer repintado).
+
+     Las fijas no lo acusaban porque calculan cada hinca desde el terreno; sólo
+     los seguidores, que apoyan la fila entera, se quedaban en el aire. Por eso
+     se barre el NÚMERO de estructuras marcadas: la paridad era lo que tapaba
+     el fallo, así que se mide en par y en impar. */
+  const paridad = await p.evaluate(() => {
+    const s = (id, v) => { const e = document.getElementById(id); e.value = String(v);
+      e.dispatchEvent(new Event('change', { bubbles: true })); };
+    const antes = [...document.querySelectorAll('.st')].map(c => c.checked);
+    const todas = [...document.querySelectorAll('.st')].map(c => c.value);
+    const peor = () => { const T = TERRENO_3D; let w = 0;
+      BLOQUES.forEach(B => B.filas.forEach(u => { u.updateWorldMatrix(true, true);
+        const cand = []; u.children.forEach(o => { if (o.isMesh) cand.push(o);
+          else if (o.children) o.children.forEach(x => { if (x.isMesh) cand.push(x); }); });
+        cand.forEach(o => { const pr = o.geometry.parameters || {};
+          if (Math.abs(pr.width - 0.16) > 1e-6 && Math.abs(pr.width - 0.18) > 1e-6) return;
+          const c = new THREE.Box3().setFromObject(o);
+          const d = c.min.y - cotaTerreno((c.min.x + c.max.x) / 2, (c.min.z + c.max.z) / 2, T);
+          if (Math.abs(d) > Math.abs(w)) w = d; }); })); return +w.toFixed(3); };
+    const r = {};
+    for (let n = 2; n <= todas.length; n++) {
+      const cl = todas.slice(0, n);
+      document.querySelectorAll('.st').forEach(c => { c.checked = cl.includes(c.value); });
+      s('pend', 25); s('pendAz', 120); s('quiebro', 16);
+      construyeMundo(); actualiza3D();
+      r['n' + n] = { peor: peor(), bloques: BLOQUES.length,
+                     tk: BLOQUES.filter(B => /^tracker/.test(B.key)).length };
+    }
+    document.querySelectorAll('.st').forEach((c, i) => { c.checked = antes[i]; });
+    s('pend', 0); s('quiebro', 0); construyeMundo(); actualiza3D();
+    return r;
+  });
+  const ns = Object.keys(paridad);
+  check('con la caída torcida, ninguna hinca flota sea cual sea el NÚMERO de ' +
+    'estructuras marcadas (' + ns.length + ' recuentos, ' +
+    ns.filter(k => paridad[k].tk > 0).length + ' con seguidores)',
+    ns.every(k => Math.abs(paridad[k].peor) < 0.05),
+    JSON.stringify(ns.map(k => k + ':' + paridad[k].peor)));
+  /* Y que el barrido llegue de verdad al régimen donde el fallo vivía: sin
+     seguidores dentro no prueba nada, porque las fijas nunca lo acusaron. */
+  check('  y el barrido cubre recuentos PARES e IMPARES con seguidores dentro',
+    ns.filter(k => paridad[k].tk > 0 && +k.slice(1) % 2 === 0).length >= 2 &&
+    ns.filter(k => paridad[k].tk > 0 && +k.slice(1) % 2 === 1).length >= 2,
+    JSON.stringify(ns.map(k => k + ':tk' + paridad[k].tk)));
+
   /* Y el caso que lo rompía: con la caída NO ⊥ a las filas, la línea de bloques
      se separa de una cumbrera única y los bloques quedaban en el aire —30 m
      medidos, con hincas de 32—. La cumbrera se repite con el paso de los
@@ -2295,8 +2360,8 @@ const SONDA = `(() => {
     document.querySelectorAll('#structs input[type=checkbox]')
       .forEach(c => { c.checked = (c.value === 'fija_ew'); });
     document.dispatchEvent(new Event('change'));
-    const mide = () => {
-      const B = BLOQUES.find(x => x.key === 'fija_ew');
+    const mide = (clave) => {
+      const B = BLOQUES.find(x => x.key === (clave || 'fija_ew'));
       if (!B || !B.filas.length) return null;
       const u = B.filas[0]; u.updateWorldMatrix(true, true);
       return [0, 1].map(i => {
@@ -2325,13 +2390,20 @@ const SONDA = `(() => {
     // LAS DOS FORMAS. Una dos aguas se monta en pico o en valle, y la escena
     // tiene que dibujar la que se calcula: hasta hoy dibujaba un valle mientras
     // la tabla calculaba un pico, y eso se vio MIRANDO, no corriendo nada.
-    ['pico', 'valle'].forEach(f => { set('formaEW', f);
+    // La forma ya no es un mando: es la ESTRUCTURA que se marca, así que aquí
+    // se marca una u otra — que es exactamente lo que hará quien las caree.
+    ({ pico: 'fija_ew', valle: 'fija_ew_valle' });
+    ['pico', 'valle'].forEach(f => {
+      const clave = (f === 'pico') ? 'fija_ew' : 'fija_ew_valle';
+      document.querySelectorAll('#structs input[type=checkbox]')
+        .forEach(c => { c.checked = (c.value === clave); });
+      document.dispatchEvent(new Event('change'));
       [5, 20, 35, 45].forEach(t => {
         set('tiltEW', String(t)); actualiza3D();
-        o[f + t] = mide();
+        o[f + t] = mide(clave);
         // y la forma dibujada, medida en el marco de la fila: el borde
         // interior por encima del alero es PICO; por debajo, VALLE.
-        const B = BLOQUES.find(x => x.key === 'fija_ew'), u = B.filas[0];
+        const B = BLOQUES.find(x => x.key === clave), u = B.filas[0];
         u.updateWorldMatrix(true, true);
         const m = u.children[0].spin.children[0]; m.updateWorldMatrix(true, false);
         const d = m.geometry.parameters.depth, pts = [];
@@ -2344,7 +2416,9 @@ const SONDA = `(() => {
         // comprobación habría leído `null` sin enterarse de por qué.
         o['cumbrera_' + f + t] = +(pts[1].y - pts[0].y).toFixed(3);
       }); });
-    set('formaEW', 'pico');
+    document.querySelectorAll('#structs input[type=checkbox]')
+      .forEach(c => { c.checked = (c.value === 'fija_ew'); });
+    document.dispatchEvent(new Event('change'));
     return o;
   });
   /* Primero: que el rayo ENCUENTRE el panel. Sin esto, un poste que se fuera a

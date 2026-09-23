@@ -132,7 +132,12 @@ if (MAN) {
   /* Re-fijado al entrar el QUEBRADO en el catálogo del core (SolarGPT #185).
      El golden se regeneró contra `main` y el generador VERIFICA que ese commit
      esté en `main` antes de escribir — el guard que nació de PORTAL-BUG-01. */
-  const CORE_PIN = { version: '1.75.0', commit: '0c7cccef' };
+  /* Re-fijado al entrar las DOS FORMAS de la dos aguas en el catálogo del core
+     (SolarGPT #270, v1.87.0): `fija_ew` pasa a ser el PICO explícito y aparece
+     `fija_ew_valle`. El PICO NO SE MUEVE —72,8 kWh/m² y −13,96 por ciento, las
+     mismas cifras que el golden anterior—, así que lo único que cambia del
+     fixture es que hay una fila más. */
+  const CORE_PIN = { version: '1.87.0', commit: 'bb046e32' };
   check('el golden corresponde al core fijado (v' + CORE_PIN.version + ')',
     MAN.core.version === CORE_PIN.version,
     'golden v' + MAN.core.version + ' vs pin v' + CORE_PIN.version +
@@ -1774,6 +1779,23 @@ FIS.psTSAT = psTSATBueno;
 // pico: se vio mirando la escena, no corriendo nada. Lo que se mide aquí es que
 // los dos modelos existen, que se distinguen, y que el de siempre no se ha
 // movido — porque cambiar el defecto movería en silencio todo lo publicado.
+check('el catálogo trae las DOS formas como estructuras, no como un ajuste',
+  (() => { const p = FIS.spec('fija_ew'), v = FIS.spec('fija_ew_valle');
+    return !!p && !!v && p.formaEW === 'pico' && v.formaEW === 'valle' &&
+           /PICO/.test(p.label) && /VALLE/.test(v.label); })(),
+  JSON.stringify(FIS.CATALOGO.filter(x => x.fam === 'fija_ew').map(x => [x.key, x.formaEW])));
+/* Y que sean LA MISMA MESA menos la forma: si difirieran en algo más, la
+   comparación dejaría de medir la forma y mediría esa otra cosa. Se comparan
+   TODOS los campos del spec, no una lista escrita a mano — una lista se queda
+   corta en cuanto alguien añade un campo. */
+{
+  const p = FIS.spec('fija_ew'), v = FIS.spec('fija_ew_valle');
+  const libres = ['key', 'label', 'nota', 'formaEW'];
+  const difieren = [...new Set([...Object.keys(p), ...Object.keys(v)])]
+    .filter(c => !libres.includes(c) && p[c] !== v[c]);
+  check('  y son la MISMA mesa menos la forma (todos los campos, no una lista)',
+    difieren.length === 0, JSON.stringify(difieren));
+}
 check('la física conoce las DOS formas y el defecto es el PICO',
   JSON.stringify(FIS.FORMAS_EW) === '["pico","valle"]' &&
   FIS.shadeEW(60, 20, 5, 2.4, 0) === FIS.shadeEW(60, 20, 5, 2.4, 0, 'pico'),
@@ -1819,8 +1841,8 @@ check('el cielo del VALLE no mira el paso y tapa más que el del pico',
    los dos modelos. Medido con el trazador: a 30° el valle capta ~5 % menos. */
 {
   const c2 = Object.assign({}, cfg, { tiltEW: 30 });
-  const pico = FIS.corre(FIS.spec('fija_ew'), M, Object.assign({}, c2, { formaEW: 'pico' }));
-  const valle = FIS.corre(FIS.spec('fija_ew'), M, Object.assign({}, c2, { formaEW: 'valle' }));
+  const pico = FIS.corre(FIS.spec('fija_ew'), M, c2);
+  const valle = FIS.corre(FIS.spec('fija_ew_valle'), M, c2);
   const dif = 100 * (valle.neta - pico.neta) / pico.neta;
   check('y en el AÑO el valle capta bastante menos que el pico (' +
     dif.toFixed(2) + ' %)', dif < -2 && dif > -12,

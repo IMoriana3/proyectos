@@ -69,6 +69,14 @@ LAT, LON = 37.3891, -5.9845          # Sevilla — el sitio por defecto de la fi
 YEAR = 2023
 DIAS = [f"{YEAR}-{m:02d}-15" for m in range(1, 13)]
 ESTRUCTURAS = ["fija_optima", "fija_proyecto", "fija_ew",
+               # El VALLE entra desde que el core tiene las dos formas de la
+               # dos aguas como entradas de catálogo (SolarGPT v1.87.0). No es
+               # una variante decorativa: en pico la sombra es entre filas y el
+               # paso la quita, en valle es de la mesa consigo misma y el paso
+               # no la toca, así que el careo tiene que cubrir las dos o una de
+               # ellas correría sólo en el navegador — que es justo el hueco
+               # que tenían los quebrados hasta v1.71.0.
+               "fija_ew_valle",
                "tracker_hsat", "tracker_hsat_nobt",
                # Los QUEBRADOS entran desde que el core los tiene (SolarGPT
                # v1.71.0). Antes eran un hueco declarado de la ficha: los corría
