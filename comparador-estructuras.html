@@ -4228,8 +4228,11 @@ function produccionPorMesa(B,cfg){
    encendía el mando no veía suceder nada. Reportado dos veces. */
 function produccionInstantePorMesa(B,cfg){
   if(!ESC_SOL||!(ESC_SOL.elDeg>0))return null;      // de noche no hay qué pintar
+  /* Sin un segundo corte por GHI: con el sol sobre el horizonte el cielo claro
+     da irradiancia por construcción, así que ese `if` no decidía ningún caso
+     —su mutante sobrevivió 0/279— y un guarda que mide cero se lee como
+     portante sin serlo. Lo que tapa la noche es el guarda de arriba. */
   var C=FIS.cieloClaroEn(ESC_SOL.S.el);
-  if(!(C.ghi>0))return null;
   var R=FIS.paso(B.spec,cfg,FIS.prepara(B.spec,cfg,B.tiltEsc),
                  ESC_SOL.S,C.dni,C.dhi,C.ghi,FIS.E0(ESC_SOL.t));
   var pl=R.planos, tot=0;
