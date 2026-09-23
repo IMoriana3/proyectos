@@ -247,9 +247,22 @@ mediría el reloj, que es el fallo que ya costó tres PR atascados con el pin de
 
 ### Los arneses, uno a uno (comprobaciones medidas el 2026-09-09)
 
-> **De dónde sale el 2.296, y tres números equivocados por el camino.** Estos salen de la
-> **corrida de CI del 2026-09-16** (run 35116763627), la primera con los 40 arneses en verde:
-> `40 arneses verdes · 2296 comprobaciones leídas`, medidos en 12 min de runner.
+> **De dónde sale el 2.408, y cuatro números equivocados por el camino.** Este sale de una
+> **corrida completa y verde del 2026-09-23**, la primera con los 43 arneses en verde:
+> `43 arneses verdes · 2408 comprobaciones leídas`.
+>
+> **Y sale de una tirada LOCAL, no de CI, que es peor procedencia y por eso se dice.** La línea
+> anterior venía de un run de CI. Ésta no: se midió en el contenedor donde se escribió el cambio.
+> Sigue valiendo la regla de abajo —**manda CI**— y esta línea se corrige con el número del
+> primer run de CI que cierre entero en verde.
+>
+> **La corrida que la precede también enseña algo, y no es del repo.** La tirada anterior en esta
+> misma máquina dio `42 arneses verdes` con `test_viento_sitio.js` en rojo por un
+> `waitForSelector: Timeout 5000ms`. No era el arnés ni el cambio: había **otro Chromium con
+> WebGL corriendo en paralelo** en otro repo, y el control a solas dio 52/52. Un banco de
+> navegador midiendo contra un reloj de 5 s mide también con quién comparte la CPU — por eso el
+> total sale de una tirada **con nada más en marcha**, y por eso conviene no fiarse de un rojo
+> de navegador sin repetirlo solo.
 >
 > Los tres intentos anteriores, porque el recorrido es el aviso:
 >
@@ -260,20 +273,24 @@ mediría el reloj, que es el fallo que ya costó tres PR atascados con el pin de
 > 3. **«40 · 2.308»** — las 2.295 que leyó la tirada del run 35115559513 más 13. También
 >    aritmética: en esa tirada el arnés nuevo salió **rojo publicando 12**, así que el total
 >    verde no era 2.295 + 13. Lo desmintió la primera tirada que corrió entera en verde.
+> 4. **«40 · 2.296»**, la línea que esto sustituye: correcta el día que se escribió y **dos
+>    arneses vieja** al leerla hoy. No se equivocó nadie al ponerla — envejeció, que es lo que
+>    le pasa a un número copiado, y es exactamente el defecto por el que el Panel acaba de dejar
+>    de copiar la versión de sus apps en este mismo cambio.
 >
-> Tres veces el mismo fallo, y es **el que vigila `test_versiones_app.mjs`**, aquí en la
+> Cuatro veces el mismo fallo **en esta línea**, y es **el que vigilaba `test_versiones_app.mjs`**, aquí en la
 > documentación: **un número transcrito —o calculado sobre uno transcrito— envejece en
-> silencio**. Este sale de una tirada completa y verde, que es la única que puede darlo. Si CI
+> silencio**. Éste sale de una tirada completa y verde, que es la única que puede darlo. Si CI
 > vuelve a no cuadrar con esta línea, **manda CI**.
 
 ```bash
 npm install playwright                     # el navegador ya está en /opt/pw-browsers
 python3 -m http.server 8099                # servir el repo (en otra terminal)
-node tests/test_index.js                   # 18 comprobaciones
+node tests/test_index.js                   # 28 comprobaciones
 node tests/test_pwa.js                     # 21 comprobaciones (PWA)
 node tests/test_integridad.js              # 7 comprobaciones, sin navegador
 node tests/test_comparador.js              # 304 comprobaciones, careo contra el core (quebrado incluido) y barridos
-node tests/test_comparador_3d.js           # 266 comprobaciones, escena 3D, color por producción, equipos, sizing y barridos
+node tests/test_comparador_3d.js           # 279 comprobaciones, escena 3D, color por producción, equipos, sizing y barridos
 node tests/test_sizing.js                  # 115 comprobaciones, careo del dimensionado eléctrico
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
 node tests/test_buscador.js                # 55 comprobaciones, el buscador de implantaciones
@@ -291,45 +308,85 @@ node tests/test_ejecucion_traza.mjs        # 61 comprobaciones, la máquina de e
 node tests/test_layout.js                  # 201 comprobaciones, careo del generador de layout
 node tests/test_layout_ui.js               # 182 comprobaciones, el generador en Chromium
 node tests/test_zonas_mixto.js             # 106 comprobaciones, el reparto por zonas
-node tests/test_versiones_app.mjs          # 13 comprobaciones, la tarjeta contra la app (cruza repos)
+node tests/test_versiones_app.mjs          # 18 comprobaciones, el puntero de la tarjeta a la app (cruza repos)
 ```
 
-### La tarjeta contra la app, y por qué manda `main` y no Pages
+### El puntero de la tarjeta a la app, y por qué el Panel lee Pages y el arnés `main`
 
-`test_versiones_app.mjs` cierra un hueco que **costó el mismo defecto dos veces el mismo día**.
-La versión de `backtracking.html` se quedó **dos versiones atrás** —`v1.61.0` con la v1.62 y la
-v1.63 ya dentro—, así que la etiqueta de la página y el **informe del emplazamiento que exporta
-el usuario** anunciaban una versión que el fichero ya no era. Se destapó de casualidad, al ir a
-subir la tarjeta. Y horas después la tarjeta de `overcast.html` iba a subir a `v1.24.0` con la
-app diciendo `v1.23.0`.
+**Este arnés hacía otra pregunta, y la pregunta era el síntoma.** Nació para carear dos números:
+el escrito a mano en la tarjeta del Panel y el que declara la app (`const VER`). Cazó deriva real
+**cinco veces en una semana** —v1.63, v1.64, v1.68, el salto de v1.70 a v1.76, y la v1.77.0— y las cinco
+**después** de que ocurriera, no antes. Un número copiado a mano solo puede envejecer: un careo
+acorta la ventana, no la cierra.
 
-Nadie podía cazarlo: **el Panel vive en este repo y las apps en otro**. Ningún banco de allí
-alcanza la tarjeta, y aquí no había nada que leyera la app.
+**Así que el Panel dejó de copiarlo.** Las tarjetas de las dos apps que declaran su versión de
+forma legible por máquina ya no llevan `version:`, llevan `verEnApp: true`, y el número lo **lee**
+la página del fichero de la app al pintarse. Con eso desaparece la clase entera de defecto: no
+hay dos números que puedan discrepar porque solo hay uno.
 
-**El careo se hace contra el fichero en `main`, no contra la página publicada.** Pages va por
-detrás de `main` unos minutos después de cada merge, así que carear contra él pondría esto en
-rojo **justo al publicar** —el momento en que más se mira— por un retardo que no es un defecto.
-El retardo se informa por separado, que es donde vale algo: dice lo que el usuario está viendo
-ahora mismo. Un rojo falso recurrente se acaba ignorando, y un check que se ignora ya no es una
-puerta.
+**El Panel lee Pages; el arnés, `main`. Y es a propósito.** Son preguntas distintas:
+
+| | lee | por qué |
+|---|---|---|
+| el Panel | Pages | el número describe la app que el usuario va a **abrir al pulsar**, y ésa es la publicada. Si Pages va retrasada, lo honesto es decir la versión retrasada |
+| el arnés | `main` | Pages va unos minutos por detrás tras cada merge; exigírselo pondría esto en rojo **justo al publicar**, por un retardo que no es un defecto. El retardo se informa aparte |
+
+Un rojo falso recurrente se acaba ignorando, y un check que se ignora ya no es una puerta.
+
+**Es mismo origen, no hay CORS.** El Panel se sirve en `imoriana3.github.io/proyectos/` y las apps
+en `imoriana3.github.io/<repo>/`: mismo esquema, mismo host, mismo puerto — la ruta no entra en el
+origen.
+
+**Lo que cuesta, medido.** No hay endpoint barato, así que se baja el fichero entero:
+`backtracking.html` 588.485 B y `overcast.html` 299.483 B, **887.968 B entre las dos**, con caché
+de 6 h en `localStorage`. Una petición de rango sería más barata, pero `const VER` está en el byte
+47.073 de una y en el 145.363 de la otra y ese desplazamiento se mueve con cada edición; y **no
+está medido** si Pages sirve `206`, así que no se hace.
+
+**Y si no se puede leer, no se inventa.** Las tarjetas con `release:` guardan a propósito el valor
+escrito a mano como respaldo; aquí no, porque el valor escrito a mano es justo lo que se está
+quitando. El respaldo es la **última lectura de ese navegador**, marcada como tal, y si no hay
+ninguna la tarjeta dice que no la ha podido leer. Una casilla vacía que lo declara es mejor que un
+número que quizá miente — y ese tercer estado **antes no podía ocurrir**, porque el número estaba
+escrito y siempre había algo que pintar aunque fuera falso.
+
+**Una sola definición de la regla, y es la del Panel.** La expresión que busca `VER` se **extrae**
+de `index.html`; no se copia al arnés. Si se copiara, el día que cambie el formato de la
+declaración el arnés seguiría verde leyendo con la regla vieja mientras el Panel se queda a
+oscuras — que es exactamente el defecto que este fichero existe para impedir, cometido por el
+fichero mismo.
+
+**Lo que queda por vigilar, que no es lo mismo y es menos.** Un puntero también se rompe, solo que
+de otras maneras: que la app deje de declarar `VER` donde la regla lo busca (y entonces nadie se
+entera, porque ya no hay nada que discrepe), que la url deje de servir ese fichero, o que alguien
+vuelva a escribir `version:` al lado del puntero «por si acaso». Las tres se comprueban, y las
+cuatro comprobaciones nuevas se **vieron en rojo con mutantes** antes de darlas por buenas.
 
 **De dónde sale la app**, por orden: checkout hermano —leyendo su ref **`origin/main`**, no su
 árbol de trabajo— y, si no está, `raw.githubusercontent` sobre `main`. Esa distinción no es
 teórica: la primera versión leía el fichero del disco y **el propio arnés se cazó a los diez
 minutos de existir**, con rojo en local (el hermano en una rama vieja) y verde por red. El modo
 de fallo peligroso es el contrario — una rama que ya lleva el bump daría **verde** con `main`
-todavía sin él. Se lee la ref, como hace `test_integridad.js` con `git show origin/main:index.html`. Sin ninguno de los dos **no se aprueba en silencio**: la
-regla se ejercita igual sobre sus seis combinaciones y la salida declara que el careo no
-ocurrió — el patrón de `test_granizo_espejo.mjs`, por la misma razón. Y **el nombre de la
-comprobación lleva el modo**: en degradado dice «NO SE HA CAREADO (sin fuente)», porque la
-primera versión publicaba «OK la tarjeta dice lo mismo que la app» sin haber comparado nada, y
-leída por encima pasaba por careo hecho. Las dos rutas —hermano y red— se ejercitan con
-`CAREO_SIN_HERMANO=1` y `CAREO_SIN_RED=1`, para que la que corre en CI no se descubra rota el
-día que hace falta.
+todavía sin él. Sin ninguno de los dos **no se aprueba en silencio**: la regla se ejercita igual
+sobre sus combinaciones y la salida declara que la resolución no ocurrió — el patrón de
+`test_granizo_espejo.mjs`, por la misma razón. Y **el nombre de la comprobación lleva el modo**:
+en degradado dice «NO SE HA RESUELTO (sin fuente)», porque la primera versión publicaba un «OK»
+sin haber comparado nada, y leída por encima pasaba por comprobación hecha. Las dos rutas se
+ejercitan con `CAREO_SIN_HERMANO=1` y `CAREO_SIN_RED=1`.
 
-**El hueco que queda, con su tamaño.** Solo se puede carear una app que declare su versión de
-forma legible por máquina, y hoy eso son **2 de las 20 tarjetas publicadas** — precisamente los
-dos simuladores, que es donde el defecto ocurrió. El arnés **imprime las otras 18 por su
-nombre** en cada tirada, con la versión que la tarjeta declara, para que la cobertura sea un
-dato a la vista y no una suposición. Cerrarlo del todo no es trabajo de aquí: pasa por que cada
-app publique su versión en un sitio fijo.
+**Que el Panel lo pinta, se prueba en navegador.** `test_index.js` monta la app simulada y
+comprueba los tres estados: leída, no leída, y última lectura marcada. El control que hace que eso
+pruebe algo es que el número de la prueba —`v9.9.9`— **no está escrito en `index.html`**, y el
+arnés lo verifica leyendo el fichero: si apareciera copiado, la comprobación pasaría sin que la
+lectura funcionase.
+
+**El hueco que queda, con su tamaño.** Solo puede resolverse un puntero a una app que declare su
+versión de forma legible por máquina, y hoy eso son **2 de las 20 tarjetas publicadas** —
+precisamente los dos simuladores, que es donde el defecto ocurrió las cinco veces. El arnés
+**imprime las otras 18 por su nombre** en cada tirada, marcando cuáles llevan el número escrito a
+mano, para que la cobertura sea un dato a la vista y no una suposición. Y dos de esas copias son
+ya **afirmaciones que nadie puede comprobar**: `sim-viento.html` no contiene la cadena `1.26` en
+ninguna parte y `comparador-estructuras.html` no contiene `1.58`, así que sus tarjetas declaran
+una versión que la app no dice en ningún sitio. Cerrarlo del todo no es trabajo de aquí: pasa por
+que cada app publique su versión en un sitio fijo, y entonces su tarjeta pasa a apuntar como estas
+dos.

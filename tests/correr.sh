@@ -112,7 +112,18 @@ declare -A PISO=(
   # color de cada mesa corresponde a SU número. Dejar el piso en 247 las haría
   # desaparecer sin que nada cantase — que es justo lo que un piso existe para
   # impedir. Los pisos se miden, y éste sale de la tirada de este cambio.
-  [test_comparador_3d.js]=266
+  # 266 -> 270: 4 comprobaciones sobre el ESTADO del mando de color (apagado
+  # sin comparar, encendido tras comparar). Salen de un fallo reportado —
+  # «no se colorea» — en el que el texto decía la verdad y el mando la
+  # contradecía; el piso sube para que no puedan volver a irse en silencio.
+  # 270 -> 279, de tres cosas reportadas mirando la escena: los soportes de la
+  # dos aguas atravesando los módulos (4, con el rayo contra el vidrio), el
+  # color del INSTANTE —el mando ya no se apaga porque ya no hace falta— y sus
+  # unidades y su noche (5), y que el texto bajo la escena deje de ser un muro
+  # (3, contando caracteres; sin ellas el muro vuelve solo). Salen menos de la
+  # suma porque las 4 del mando apagado se han reescrito: lo que sujetaban era
+  # el apaño, no la propiedad.
+  [test_comparador_3d.js]=279
   [test_comparador_sitio.js]=36
   [test_ejecucion_traza.mjs]=61
   # La ficha de planta y el acceso al SCADA. El piso son las 30 MEDIDAS, y lo
@@ -185,7 +196,13 @@ declare -A PISO=(
   [test_granizo_espejo.mjs]=8
   [test_granizo_pestana.js]=28
   [test_granizo_traza.mjs]=30
-  [test_index.js]=18
+  # 18 -> 28: el Panel dejo de COPIAR la version de las apps y pasa a LEERLA
+  # del fichero de la app, asi que hay tres estados nuevos que pintar y los
+  # tres se prueban en navegador: leida, no leida, y ultima lectura marcada.
+  # El que justifica el bloque es el segundo: antes el numero estaba escrito
+  # y siempre habia algo que pintar aunque fuera mentira, asi que «no he
+  # podido leerlo» no era un caso que pudiera ocurrir.
+  [test_index.js]=28
   [test_integridad.js]=7
   [test_layout.js]=201
   [test_layout_ui.js]=182
@@ -248,7 +265,13 @@ declare -A PISO=(
   # la tarjeta de `overcast.html` iba a subir a v1.24.0 con la app en v1.23.0.
   # El Panel vive aquí y las apps en otro repo, así que ningún banco de allí
   # puede carear la tarjeta y aquí no había nada que leyera la app.
-  [test_versiones_app.mjs]=13
+  # 13 -> 18: ese careo ya no existe, porque el defecto que cazaba tampoco.
+  # Las tarjetas de las dos apps ya no llevan el numero: llevan un puntero
+  # (`verEnApp`) y el Panel lo lee de la app. El arnes cambia de pregunta —de
+  # «son iguales estos dos numeros» a «sigue resolviendo el puntero»— y gana
+  # cinco comprobaciones: que las tarjetas apuntan en vez de copiar (2), y
+  # que la regla con la que el Panel lee se extrae de el y funciona (3).
+  [test_versiones_app.mjs]=18
   # Nace de un hueco MEDIDO: con el `hold` de la histéresis puesto a cero en
   # la llamada real, los diez arneses que abren la ficha —539 comprobaciones—
   # se quedaron verdes. La histéresis se podía borrar y el repo no lo notaba.

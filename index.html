@@ -204,6 +204,7 @@ body{
 .meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:13px 18px 0}
 .tag{font-family:var(--mono);font-size:.7rem;color:var(--muted);border:1px solid var(--line-soft);border-radius:6px;padding:3px 8px;background:var(--panel-2)}
 .ver{font-family:var(--mono);font-size:.7rem;color:var(--muted-2);margin-left:auto;letter-spacing:.04em}
+.ver.pend{opacity:.6;font-style:italic;letter-spacing:0}
 
 .foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px 18px;flex-wrap:wrap}
 .upd{font-family:var(--mono);font-size:.72rem;color:var(--muted-2);letter-spacing:.02em;display:flex;align-items:center;gap:7px}
@@ -706,7 +707,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/cobertura-zigbee/backtracking.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-09-23",
-    version: "v1.77.0",
+    verEnApp: true,            // la version NO se copia aqui: se LEE de la app (const VER). Ver leerVersiones()
     docId: "backtracking-sim",
     docUrl: "",
     uso: [
@@ -723,7 +724,8 @@ const PROJECTS = [
       { done:true,  text:"Export CSV de θ(t) por política para la TCU Toolbox (hecho v1.17.0: el día al minuto, con la configuración entera en la cabecera y verificado re-integrando el propio fichero)" }
     ],
     historial: [
-      { date:"2026-09-23", ver:"v1.77.0 el óptimo busca y veta con la métrica que se cobra", note:"v1.77.0 · PR #716 de cobertura-zigbee. Hasta la v1.76, `anglesOptimal` y `anglesOptimalFree` BUSCABAN Y VETABAN con la POA por LÍNEA, y en una planta con cotas se les COBRABA con la de por MESA: el óptimo se elegía con una métrica y se puntuaba con otra. Ahora la búsqueda y el veto van por mesa, en una sola pasada, acoplados con el accionamiento real. NO LO DETALLO MÁS PORQUE NO ES MÍO: la tarjeta se pone al día aquí para que el Panel no anuncie una versión que ya no es la de la app —es lo único que este repo puede afirmar—, y el porqué completo vive en el commit de allí. QUEDA DICHO EL HUECO, que es de mecanismo y no de esta entrada: esta tarjeta se escribe A MANO en un repo distinto del de la app, así que envejece sola cada vez que la otra publica. Lo caza `tests/test_versiones_app.mjs`, que es lo que la puso en rojo hoy; lo que no hay es nada que la actualice." },
+      { date:"2026-09-23", ver:"la tarjeta deja de copiar el numero: lo LEE de la app", note:"SIN SUBIR VERSION DE LA APP: no cambia una linea de backtracking.html. Cambia el PANEL. CINCO VECES EN UNA SEMANA se quedo atras el numero de esta tarjeta —v1.63, v1.64, v1.68, el salto de v1.70 a v1.76, y la v1.77.0— y las cinco lo destapo `tests/test_versiones_app.mjs` DESPUES, no antes. LA QUINTA ENTRO CON ESTE CAMBIO YA ESCRITO Y SU PR ABIERTO: el PR #496 tuvo que subir la tarjeta a mano a v1.77.0 para devolver el careo a verde, y al mergearse dio CONFLICTO con la linea que lo elimina. No hay mejor prueba de que el problema es el mecanismo y no el descuido de nadie. Esa es la cuenta que obliga a mirar el mecanismo en vez de la ultima vez: un numero copiado a mano solo puede envejecer, y un careo acorta la ventana pero no la cierra. Peor, la ventana caia siempre en el mismo sitio —entre el merge de la app y el siguiente que tocara el Panel—, que es justo cuando alguien mira la captura para saber sobre que version esta diagnosticando. AHORA LA TARJETA NO LLEVA EL NUMERO: lleva `verEnApp: true`, y el Panel lo lee del fichero de la app al pintarse. Desaparece la clase entera de defecto, porque no hay dos numeros que puedan discrepar. EL PANEL LEE PAGES Y EL ARNES LEE MAIN, y es a proposito: el numero de la tarjeta describe la app que el usuario va a ABRIR al pulsar, o sea la publicada, mientras que el arnes carea contra main porque Pages va unos minutos por detras tras cada merge y exigirselo lo pondria rojo justo al publicar. Es mismo origen —imoriana3.github.io las dos— asi que no hay CORS. Cuesta 887.968 B entre las dos apps (588.485 + 299.483), con cache de 6 h; el rango HTTP seria mas barato pero `const VER` esta en el byte 47.073 de una y el 145.363 de la otra y eso se mueve, y NO esta medido si Pages sirve 206, asi que no se hace. Y SI NO SE PUEDE LEER, NO SE INVENTA: la tarjeta dice «version no leida», o ensena la ultima lectura de ese navegador MARCADA como no comprobada. Ese tercer estado antes no podia ocurrir, porque el numero estaba escrito y siempre habia algo que pintar aunque fuera falso. LO QUE VIGILA EL ARNES CAMBIA DE PREGUNTA —de «son iguales estos dos numeros» a «sigue resolviendo el puntero»— y la regla con la que el Panel lee se EXTRAE de index.html en vez de copiarse al arnes: copiarla habria repetido el mismo defecto dentro del fichero que existe para impedirlo. Cuatro mutantes en rojo antes de darlo por bueno: quitar el puntero, volver a poner la copia al lado, renombrar la regla, y que la app deje de declarar VER. Y UN MUTANTE MIO SALIO VERDE POR ESTAR MAL HECHO: lo escribi por numero de linea y una regla de CSS anadida mas arriba lo habia desplazado uno, asi que no toco nada y lo lei como «el arnes no lo caza». Rehecho por contenido, rojo. Es el mismo vicio del puntero de linea que acabo de arreglar en el documento del otro repo, cometido aqui a los diez minutos. DE PASO, DOS AFIRMACIONES QUE NADIE PUEDE COMPROBAR, encontradas al medir la cobertura: sim-viento.html no contiene la cadena 1.26 en ninguna parte y comparador-estructuras.html no contiene 1.58, o sea que sus tarjetas declaran una version que la app no dice en ningun sitio. No se tocan aqui —no es esta linea de trabajo— pero quedan nombradas. Bancos: test_versiones_app 13 -> 18, test_index 18 -> 28 (los tres estados, en navegador, con la app simulada)." },
+      { date:"2026-09-23", ver:"v1.77.0 el óptimo busca y veta con la métrica que se cobra", note:"v1.77.0 · BUSCABA CON UNA MÉTRICA Y SE LE COBRABA CON OTRA. Hasta la v1.76, `anglesOptimal` y `anglesOptimalFree` buscaban el ángulo Y APLICABAN SU VETO con la POA por LÍNEA, mientras que en una planta con cotas la puntuación que se les cobra es la de por MESA. No es una imprecisión: es optimizar contra un criterio distinto del que decide, y por eso la política «óptima» podía perder contra `pairwise` en la métrica publicada. Ahora `anglesOptimalSeg` y `anglesOptimalFreeSeg` buscan y vetan en UNA pasada con `poaPlantSeg`, con los extremos del huso por mesa y acoplados al accionamiento real; `segCmd` sigue siendo la única fuente del mando por mesa, y dice más en vez de calcularse dos veces. EL CIERRE SE CUMPLE POR ENCIMA DE LO PEDIDO: el criterio era «optimal ≥ pairwise por mesa dentro de la banda de empate» y no hizo falta la banda — CERO pérdidas en las tres geometrías (61 a 0, 16 a 0, 19 a 0 de 86) y el día pasa de negativo a positivo en las tres. La rama por línea queda intacta y se COMPRUEBA que lo queda: +13,7221 % en las seis celdas, al cuarto decimal. Y LO MÁS ÚTIL DE TODO ESTO ES LA PUERTA RE-BASELINADA: la medida de #710 NO reproducía sobre main —61 de 86 en vez de 58, y el denominador de 29 del control desaparecido— y en vez de darlo por ruido se midió la causa: con la agregación anterior a #707 reaparecen las SIETE cifras al cuarto decimal (58/86, −0,5103 %, 29/86, 15/29, −0,3482 %, 18/86, −0,3060 %). Es #707 y nada más. La puerta se re-baselina con la advertencia PEGADA: sobre main el control `sinTorsion` ya NO aísla la torsión, así que «16 de 86» no es comparable con «15 de 29» — una cifra que se sigue publicando sin decir eso se lee como si fuera la misma. Banco nuevo con DOS tests nulos y un control negativo que se ve fallar por 0,6880 W/m², catorce veces la banda de empate. Y tres bancos que se ataban a la ORTOGRAFÍA, corregidos para vigilar lo que el código HACE — incluido el que acababa de escribir, que caducó en una hora." },
       { date:"2026-09-23", ver:"v1.76.0 la rampa de color se ancla a cero, y la regla de escala es UNA", note:"v1.76.0 · SALE DE UNA PREGUNTA DE IGNACIO: «¿y si los trackers los coloreamos igual que en produccion.html, en función de la generación de cada uno?». LA GENERACIÓN NO CAMBIARÍA LO QUE SE VE, y eso se midió ANTES de tocar nada. Lo que esta página pinta ya no es POA cruda: es `poaR`, que lleva dentro la pérdida ELÉCTRICA de los diodos de paso, que es la no linealidad gorda. Lo único que añadiría la generación por fila es la temperatura de célula. Medido sobre terreno ondulado (8 filas, pendientes 0 / 2,5 / 5 / 3 / −2 / −4,5 / −1 / 1,5°, 21-jun) con t_cell Faiman + γ PVWatts: máximo 0,005 de rampa (medio por ciento), el ORDEN no cambia en NINGUNA hora, y el efecto real es comprimir el reparto (191,9 → 176,8 W/m²). La temperatura es monótona con la POA —calienta más lo que más recibe— así que aprieta la escala sin adelantar a nadie. LO QUE SÍ DIFERÍA ERA LA ESCALA, y ahí produccion.html tenía razón. Su v1.18 ya se comió el susto: la rampa se estiraba SIEMPRE de mín a máx, así que a mediodía —sin sombra, todas al 99 %, 15 W/m² de rango sobre 1.009— la planta salía en ARCOÍRIS. Este simulador se había quedado con el mín→máx. Medido aquí: a mediodía el rango es exactamente 0, y a las 17 h reparte un 6,4 % de diferencia por toda la rampa. Ahora hay selector: FIEL (de 0 al máximo, por defecto, el color proporcional a lo que produce cada mesa) y CONTRASTE (mín→máx para inspeccionar diferencias finas, con la leyenda diciendo qué tramo del máximo abarca). Y UNA SEGUNDA PIEZA QUE NO ESTABA A LA VISTA. produccion.html no normaliza si la dispersión baja del 0,1 % del máximo, porque con la planta uniforme el rango es polvo de coma flotante (1e-13). Este simulador comparaba `pmax > pmin` a secas —y 1e-13 > 0 es cierto—, así que dos mesas que producían EXACTAMENTE lo mismo salían en extremos opuestos del arcoíris. LA REGLA VIVE EN FÍSICA PURA, no copiada en cada página: `rangoColor` y `normProd`, que es de donde produccion.html las extrae ahora. Batería 211. PR #717." },
       { date:"2026-09-20", ver:"v1.75.0 la planta pesa cada mesa por su largo", note:"v1.75.0 · NO ES DE ESTA LINEA DE TRABAJO: entró por el PR #707, y la entrada la escribe quien lo hizo si quiere más detalle. Se apunta aquí porque la tarjeta TIENE que decir la versión que dice la app, y dejar el número subido sin nada al lado sería un hueco en el historial. Lo que trae, según su propio commit: `poaPlantSeg` ponderaba por largo DENTRO de cada línea y después promediaba las líneas SIN PONDERAR; ahora cada mesa pesa su largo en el acumulado de planta —en Ayora eso son líneas de 147,74 a 1.185,51 m y de 4 a 36 mesas, un factor 8 que antes se ignoraba—. La métrica por LÍNEA no cambia (ahí no hay mesas que pesar) y que ponderar líneas por su largo sería otro cambio distinto queda escrito como NO MEDIDO, en el código. La agregación anterior se publica AL LADO durante un ciclo —serie, KPI y una tercera columna en la tabla del día— para que nadie vea moverse un 2 % sin poder comprobar de dónde sale. El θ ejecutado y el POA de cada mesa son los mismos: cambia la agregación." },
       { date:"2026-09-19", ver:"v1.72.0-v1.74.0 las dos metricas, la promesa acotada y la version otra vez atras", note:"v1.72.0 → v1.74.0 · NO ES DE ESTA LINEA DE TRABAJO: entraron por el PR #703, y las entradas las escribe quien las hizo si quiere más detalle. Tres saltos la misma noche; se apuntan porque la tarjeta TIENE que decir la versión que dice la app. Según sus propios commits: (v1.74.0) la página publica LAS DOS métricas de POA en vez de elegir una callada. `poaPlantSeg` usa tilt, sombra y largo de CADA MESA; `poaPlant` los de la LÍNEA, promediando líneas sin ponderar. No son dos precisiones de lo mismo, son dos AGREGACIONES, y el orden entre políticas depende de cuál se mire: `optimal` gana por línea en 86 de 86 instantes y PIERDE por mesa en 58 de 86. Hasta la v1.73 la página elegía una según hubiera `segTilt` y no lo decía. (v1.73.0) la interfaz deja de prometer lo que el código no cumple: la nota del bifila decía que reducir el módulo de θ desde un ángulo de backtracking nunca crea sombra —la regla del LLANO, y está MEDIDA COMO FALSA: contraejemplo en 75 de 200 instantes del barrido con la semilla 1 y en 68 de 200 con la 7, y el peor llega a 91,4 % de fracción sombreada con el módulo MENOR—; y «pairwise garantiza sombra cero» pasa a «la BUSCA, no la garantiza». (v1.72.0) la etiqueta `VER`, otra vez atrás: los comentarios ya hablaban de la v1.72 y VER seguía en v1.71.0. Lo cazó el mismo banco que la vez anterior, la misma noche." },
@@ -863,7 +865,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/cobertura-zigbee/overcast.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-09-19",
-    version: "v1.26.2",
+    verEnApp: true,            // idem: el numero vive en la app, no en la tarjeta
     docId: "overcast-sim",
     docUrl: "",
     uso: [
@@ -2024,6 +2026,20 @@ function cardHTML(p){
     : `<span class="btn off" title="Añade la URL de despliegue en el array PROJECTS">Sin URL</span>`;
   const repo = p.repo ? `<a class="btn" href="${esc(p.repo)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Repo</a>` : ``;
   const dl = p.download ? `<a class="btn" href="${esc(p.download)}" onclick="event.stopPropagation()" download><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>Paquete</a>` : ``;
+/* EL CHIP DE VERSION DICE DE DONDE SALE EL NUMERO. Una tarjeta con `verEnApp`
+   no guarda el numero, asi que tiene tres estados que NO se pueden pintar
+   igual: leyendo, leido, y no he podido leerlo. El tercero es el que importa:
+   antes no existia porque el numero estaba escrito y siempre habia algo que
+   pintar —aunque fuera mentira—. */
+function verChip(p){
+  if(!p.verEnApp) return p.version ? `<span class="ver">${esc(p.version)}</span>` : "";
+  if(p.version === undefined)
+    return `<span class="ver pend" title="Leyendo la version de la app...">...</span>`;
+  if(!p.version)
+    return `<span class="ver pend" title="No se ha podido leer la version de ${esc(p.url)}. Esta tarjeta no guarda una copia del numero a proposito: prefiere no decir nada a decir uno viejo.">version no leida</span>`;
+  if(p.verFresca) return `<span class="ver">${esc(p.version)}</span>`;
+  return `<span class="ver pend" title="Leida el ${esc(p.verLeida)} en este navegador. Ahora no se ha podido comprobar, asi que puede haberse quedado atras.">${esc(p.version)} (ult.)</span>`;
+}
   return `<article class="card s-${p.status} ${opened?'open':''}" style="--c:${st.color}">
     <button class="card-toggle" aria-expanded="${opened}" aria-controls="${id}">
       <span class="chev">▸</span>
@@ -2031,7 +2047,7 @@ function cardHTML(p){
       <h2 class="name">${esc(p.name)}</h2>
       <p class="obj">${esc(p.objetivo)}</p>
     </button>
-    <div class="meta"><span class="tag">${esc(p.stack)}</span>${p.version?`<span class="ver">${esc(p.version)}</span>`:""}</div>
+    <div class="meta"><span class="tag">${esc(p.stack)}</span>${verChip(p)}</div>
     <div class="foot"><span class="upd">act. ${esc(p.updated||"—")}</span><span class="acts">${docBtn}${open}${repo}${dl}</span></div>
     ${detailHTML(p)}
   </article>`;
@@ -2103,6 +2119,83 @@ async function refrescarReleases(){
     }catch(e){ /* se queda lo escrito a mano */ }
   }));
   if(algo) renderGrid();   // 'act.' ordena las tarjetas: hay que repintar la rejilla entera
+}
+
+/* ---------- LA VERSION DE LAS APPS, LEIDA DE LA APP ----------
+   El numero de version de una app NO se copia en su tarjeta: se lee del
+   fichero de la app. CINCO veces en una semana la copia se quedo atras
+   —v1.63, v1.64, v1.68, el salto de v1.70 a v1.76, y la v1.77.0— y las cinco
+   lo destapo el arnes `tests/test_versiones_app.mjs` DESPUES, no antes. Un
+   numero copiado a mano solo puede envejecer; el arnes acorta la ventana, no
+   la cierra.
+
+   LA QUINTA OCURRIO CON ESTE CAMBIO YA ESCRITO Y SU PR ABIERTO: el #496 tuvo
+   que subir la tarjeta a mano a v1.77.0 para devolver el careo a verde, y al
+   mergearse dio CONFLICTO con esta misma linea. No hay mejor prueba de que el
+   problema es el mecanismo y no el descuido de nadie.
+
+   SE LEE PAGES, NO `main`, y es lo contrario de lo que hace el arnes. El
+   arnes carea contra main a proposito, porque Pages va unos minutos por
+   detras despues de cada merge y eso no es un defecto. Aqui la pregunta es
+   otra: este numero describe la app que el usuario va a ABRIR al pulsar el
+   boton, y esa es la de Pages. Si Pages va retrasada, el Panel debe decir la
+   version retrasada — que es la que hay al otro lado del enlace.
+
+   ES MISMO ORIGEN, no hay CORS: el Panel se sirve en
+   imoriana3.github.io/proyectos/ y las apps en imoriana3.github.io/<repo>/.
+   Mismo esquema, mismo host, mismo puerto; la ruta no entra en el origen.
+
+   LO QUE CUESTA, MEDIDO: no hay endpoint barato para esto, asi que se baja el
+   fichero entero — backtracking.html 588.485 B y overcast.html 299.483 B,
+   887.968 B entre las dos. Por eso la cache de 6 h (la misma constante que
+   las releases, por otro motivo: alli era el limite de la API, aqui son
+   bytes). Una peticion de rango seria mas barata, pero `const VER` esta en el
+   byte 47.073 de una y en el 145.363 de la otra y ese offset se mueve con
+   cada edicion, asi que habria que pedir un trozo a ojo y reintentar entero
+   cuando no cayera dentro. NO MEDIDO si Pages sirve 206, asi que no se hace.
+
+   Y SI NO SE PUEDE LEER, NO SE INVENTA. Las tarjetas con `release:` guardan a
+   proposito el valor escrito a mano como respaldo; aqui no, porque el valor
+   escrito a mano es justo lo que se esta quitando. El respaldo es la ULTIMA
+   LECTURA de este navegador, marcada como tal, y si no hay ninguna la tarjeta
+   dice que no la ha podido leer. Una casilla vacia que lo declara es mejor
+   que un numero que quiza mienta. */
+const VER_RE_APP = /^const VER\s*=\s*['"]([^'"]+)['"]/m;
+
+function verCache(url){
+  try{
+    const r = JSON.parse(localStorage.getItem("ver:"+url) || "null");
+    return (r && r.ver) ? r : null;
+  }catch(e){ return null; }
+}
+async function verDeApp(url){
+  const c = verCache(url);
+  if(c && (Date.now() - c.t) < REL_TTL) return { ver:c.ver, fresca:true };
+  let txt = null;
+  try{
+    const res = await fetch(url, {cache:"no-cache"});
+    if(res.ok) txt = await res.text();
+  }catch(e){ /* sin red: se cae al respaldo de abajo */ }
+  const m = txt && txt.match(VER_RE_APP);
+  if(m){
+    const r = { t: Date.now(), ver: m[1] };
+    try{ localStorage.setItem("ver:"+url, JSON.stringify(r)); }catch(e){}
+    return { ver:r.ver, fresca:true };
+  }
+  // no se pudo leer AHORA: la ultima lectura de este navegador, marcada
+  if(c) return { ver:c.ver, fresca:false, t:c.t };
+  return { ver:"", fresca:false };
+}
+async function leerVersiones(){
+  const conApp = PROJECTS.filter(p => p.verEnApp && p.url);
+  if(!conApp.length) return;
+  await Promise.all(conApp.map(async p => {
+    const r = await verDeApp(p.url);
+    p.version   = r.ver;
+    p.verFresca = r.fresca;
+    p.verLeida  = r.t ? new Date(r.t).toISOString().slice(0,10) : "";
+  }));
+  renderGrid();
 }
 
 /* ---------- DOC READER ---------- */
@@ -2461,6 +2554,7 @@ renderGauges();
 renderChips();
 renderGrid();
 refrescarReleases();   // no bloquea el pintado: si tarda o falla, la ficha ya esta puesta
+leerVersiones();       // idem: la tarjeta se pinta con "..." y el numero entra cuando llega
 pintaAcceso();
 /* Si ya se entró alguna vez en este navegador, la sesión sigue guardada y el Panel se pone al día
    SOLO, sin preguntar nada. Va al final y sin `await` por lo mismo que las releases: la página no
