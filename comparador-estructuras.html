@@ -312,14 +312,6 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
         <div class="field"><label>Tilt de proyecto °</label><input id="tilt" type="number" step="0.5" value="25"></div>
         <div class="field"><label>Tilt dos aguas °</label><input id="tiltEW" type="number" step="0.5" value="12"></div>
       </div>
-      <div class="field">
-        <label>Forma de la dos aguas
-          <span class="uni" title="PICO: cumbrera arriba, los dos paños caen hacia fuera. La mesa no se tapa a sí misma, así que toda la sombra es entre filas y separar filas la quita. VALLE: limahoya abajo, los paños caen hacia dentro. El borde exterior sube y tapa a su propio paño, así que la sombra es de la mesa consigo misma y el paso NO la quita. No son dos dibujos: son dos modelos.">?</span></label>
-        <select id="formaEW">
-          <option value="pico" selected>Pico · cumbrera arriba</option>
-          <option value="valle">Valle · limahoya abajo</option>
-        </select>
-      </div>
       <div class="two">
         <div class="field"><label>Desvío del azimut °</label>
           <input id="desvFija" type="number" step="1" value="0"
@@ -1549,8 +1541,16 @@ FIS.CATALOGO=[
    nota:'Monoinclinada al ecuador; el tilt sale del barrido anual.'},
   {key:'fija_proyecto',    label:'Fija · tilt de proyecto',         fam:'fija',
    nota:'Monoinclinada al ecuador con el tilt que fije el proyecto.'},
-  {key:'fija_ew',          label:'Fija · Este-Oeste (dos aguas)',   fam:'fija_ew',
-   nota:'Se promedian los dos planos, de igual superficie. La sombra entre filas NO es la de fila 1D —con aguas enfrentadas el obstáculo es la CUMBRERA de la vecina—: va por su propio modelo, arbitrado con trazado de rayos.'},
+  /* LAS DOS FORMAS SON DOS ESTRUCTURAS, no dos ajustes de una. La forma vive
+     aquí, en el catálogo, porque la pregunta de quien elige entre un pico y un
+     valle es cuál capta más EN SU SITIO — y eso se contesta con las dos filas
+     juntas en la misma tabla, no corriendo dos veces y acordándose. */
+  {key:'fija_ew',          label:'Fija · Este-Oeste (dos aguas en PICO)', fam:'fija_ew',
+   formaEW:'pico',
+   nota:'Cumbrera arriba: los dos paños caen hacia fuera. Se promedian los dos planos, de igual superficie. La sombra entre filas NO es la de fila 1D —con aguas enfrentadas el obstáculo es la CUMBRERA de la vecina—: va por su propio modelo, arbitrado con trazado de rayos. La mesa no se tapa a sí misma, así que separar filas quita su sombra.'},
+  {key:'fija_ew_valle',    label:'Fija · Este-Oeste (dos aguas en VALLE)', fam:'fija_ew',
+   formaEW:'valle',
+   nota:'Limahoya abajo: los dos paños caen hacia dentro. MISMA mesa y mismo paso que la de pico —lo único que cambia es la forma— y por eso se pueden carear línea contra línea. Su sombra es PROPIA: el borde exterior sube y tapa a su propio paño, así que el paso NO la quita (0,6120 trazando con vecinas contra 0,6112 sin ellas). Capta 2,15 % menos que el pico a 20° y 5,36 % menos a 30°.'},
   {key:'tracker_hsat',     label:'Tracker 1 eje N-S · backtracking',fam:'tracker', bt:true,
    nota:'HSAT canónico: eje horizontal N-S, backtracking activo.'},
   {key:'tracker_hsat_nobt',label:'Tracker 1 eje N-S · sin backtracking',fam:'tracker', bt:false,
@@ -1651,7 +1651,7 @@ FIS.paso=function(spec,cfg,pre,S,bh,dh,gh,e0){
        modelo de fila. */
     var fsh=spec.sinSombra?0
            :(spec.fam==='fija_ew'
-               ?FIS.shadeEW(pl.P.ps,t,pitch,G.altoColector,cruz,cfg.formaEW)
+               ?FIS.shadeEW(pl.P.ps,t,pitch,G.altoColector,cruz,spec.formaEW)
                :FIS.shade  (pl.P.ps,t,pitch,G.altoColector,cruz));
     /* El cielo que le sobrevive al vecino. En una dos aguas cada paño ve su
        propia fila de cobertizos de MEDIO colector, de ahí el gcr/2 —
@@ -1661,7 +1661,7 @@ FIS.paso=function(spec,cfg,pre,S,bh,dh,gh,e0){
     /* En una dos aguas en PICO cada paño ve su propia fila de cobertizos de
        MEDIO colector, de ahí el gcr/2. En VALLE no hay gcr que valga: quien
        tapa es el borde de la propia mesa, y va por `skyMaskValle`. */
-    var valle=(spec.fam==='fija_ew'&&cfg.formaEW==='valle');
+    var valle=(spec.fam==='fija_ew'&&spec.formaEW==='valle');
     if(spec.fam==='fija_ew')gcrMask/=2;
     /* `sinSombra` significa TRANSPOSICIÓN PURA, y el cielo que tapa la
        vecina también es sombreado entre filas: si se dejara puesto, el
@@ -2322,10 +2322,6 @@ function cfgActual(){
     lat:+$('lat').value, lon:+$('lon').value, albedo:+$('albedo').value,
     fija:F, tracker:K, gcr:K.gcr,
     maxang:+$('maxang').value, tilt:+$('tilt').value, tiltEW:+$('tiltEW').value,
-    /* LA FORMA DE LA DOS AGUAS: pico (cumbrera arriba) o valle (limahoya
-       abajo). No es un adorno del dibujo — son dos modelos de sombra y de
-       cielo distintos, y por eso viaja en la configuración. */
-    formaEW:(($('formaEW')||{}).value)||'pico',
     pend:+$('pend').value, pendAz:+$('pendAz').value,
     desvFija:+$('desvFija').value, desvEje:+$('desvEje').value,
     quiebro:+$('quiebro').value,
@@ -2508,7 +2504,7 @@ function refrescaGeom(){
 }
 var CAMPOS_GEOM=['fxModL','fxModW','fxWp','fxTabla','fxPitch','fxModsStr','fxNStr','fxGapMod','fxGapMot',
                  'tkModL','tkModW','tkWp','tkTabla','tkPitch','tkModsStr','tkNStr','tkGapMod','tkGapMot',
-                 'tkFilas','tilt','tiltEW','formaEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend','pendAz','desvFija','desvEje','btLlano','contrasol','quiebro'];
+                 'tkFilas','tilt','tiltEW','maxang','axtilt','igualar','albedo','lat','lon','mwp','pend','pendAz','desvFija','desvEje','btLlano','contrasol','quiebro'];
 CAMPOS_GEOM.forEach(function(id){
   var el=$(id); if(!el)return;
   el.addEventListener('input',refrescaGeom); el.addEventListener('change',refrescaGeom);
@@ -4830,8 +4826,8 @@ function actualiza3D(){
            revés hace PICO. Hasta hoy iba siempre positivo, así que la escena
            dibujaba un valle mientras la tabla calculaba un pico — dibujar una
            cosa y calcular otra, que es lo que esta ficha no se permite. Ahora
-           las dos salen de `cfg.formaEW`. */
-        var sgF=(cfg.formaEW==='valle')?1:-1;
+           las dos salen de la ESTRUCTURA, que es donde vive la forma. */
+        var sgF=(spec.formaEW==='valle')?1:-1;
         u.spinPair[0].rotation.x= sgF*thE;
         u.spinPair[1].rotation.x=-sgF*thE;
         /* Los postes de cada paño no miden lo mismo entre sí: los separa el

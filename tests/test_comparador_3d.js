@@ -93,8 +93,14 @@ const SONDA = `(() => {
   // estructura que el N-S. Sigue en FIS.CATALOGO porque el careo lo corre.
   for (const c of await p.$$('.st')) if (!(await c.isChecked())) await c.check();
   await p.waitForTimeout(600);
-  check('un bloque por estructura marcada (7 en la ficha, 8 en el catálogo)',
-    (await p.evaluate(() => BLOQUES.length)) === 7);
+  /* 8 en la ficha desde que la dos aguas entra con sus DOS formas (pico y
+     valle) como estructuras del catálogo; 9 en el catálogo contando el TSAT,
+     que no se ofrece. El número no se escribe a mano: se cuenta de la propia
+     lista, que es lo que impide que este piso se quede atrás otra vez. */
+  const nOfrecidas = (await p.$$('.st')).length;
+  check('un bloque por estructura marcada (' + nOfrecidas + ' en la ficha)',
+    (await p.evaluate(() => BLOQUES.length)) === nOfrecidas,
+    'bloques ' + (await p.evaluate(() => BLOQUES.length)) + ' vs ofrecidas ' + nOfrecidas);
   check('y el TSAT no se ofrece: sería el mismo seguidor',
     (await p.evaluate(() => [...document.querySelectorAll('.st')]
       .every(c => c.value !== 'tracker_tsat'))) === true);
@@ -599,8 +605,9 @@ const SONDA = `(() => {
       f.lejos.every(g => Math.abs(g.gx - gx) < 0.3 && Math.abs(g.gz - gz) < 0.3),
       JSON.stringify(f.lejos));
   });
-  check('y las siete estructuras se apoyan en él a la misma cota (curva de nivel)',
-    suelo.diagonal.bloques.length === 7 &&
+  check('y TODAS las estructuras se apoyan en él a la misma cota (curva de nivel, ' +
+    suelo.diagonal.bloques.length + ' bloques)',
+    suelo.diagonal.bloques.length >= 7 &&
     suelo.diagonal.bloques.every(b => Math.abs(b.y) < 1e-6 && Math.abs(b.suelo) < 1e-6),
     JSON.stringify(suelo.diagonal.bloques.map(b => b.k + ':' + b.suelo)));
 
@@ -2295,8 +2302,8 @@ const SONDA = `(() => {
     document.querySelectorAll('#structs input[type=checkbox]')
       .forEach(c => { c.checked = (c.value === 'fija_ew'); });
     document.dispatchEvent(new Event('change'));
-    const mide = () => {
-      const B = BLOQUES.find(x => x.key === 'fija_ew');
+    const mide = (clave) => {
+      const B = BLOQUES.find(x => x.key === (clave || 'fija_ew'));
       if (!B || !B.filas.length) return null;
       const u = B.filas[0]; u.updateWorldMatrix(true, true);
       return [0, 1].map(i => {
@@ -2325,13 +2332,20 @@ const SONDA = `(() => {
     // LAS DOS FORMAS. Una dos aguas se monta en pico o en valle, y la escena
     // tiene que dibujar la que se calcula: hasta hoy dibujaba un valle mientras
     // la tabla calculaba un pico, y eso se vio MIRANDO, no corriendo nada.
-    ['pico', 'valle'].forEach(f => { set('formaEW', f);
+    // La forma ya no es un mando: es la ESTRUCTURA que se marca, así que aquí
+    // se marca una u otra — que es exactamente lo que hará quien las caree.
+    ({ pico: 'fija_ew', valle: 'fija_ew_valle' });
+    ['pico', 'valle'].forEach(f => {
+      const clave = (f === 'pico') ? 'fija_ew' : 'fija_ew_valle';
+      document.querySelectorAll('#structs input[type=checkbox]')
+        .forEach(c => { c.checked = (c.value === clave); });
+      document.dispatchEvent(new Event('change'));
       [5, 20, 35, 45].forEach(t => {
         set('tiltEW', String(t)); actualiza3D();
-        o[f + t] = mide();
+        o[f + t] = mide(clave);
         // y la forma dibujada, medida en el marco de la fila: el borde
         // interior por encima del alero es PICO; por debajo, VALLE.
-        const B = BLOQUES.find(x => x.key === 'fija_ew'), u = B.filas[0];
+        const B = BLOQUES.find(x => x.key === clave), u = B.filas[0];
         u.updateWorldMatrix(true, true);
         const m = u.children[0].spin.children[0]; m.updateWorldMatrix(true, false);
         const d = m.geometry.parameters.depth, pts = [];
@@ -2344,7 +2358,9 @@ const SONDA = `(() => {
         // comprobación habría leído `null` sin enterarse de por qué.
         o['cumbrera_' + f + t] = +(pts[1].y - pts[0].y).toFixed(3);
       }); });
-    set('formaEW', 'pico');
+    document.querySelectorAll('#structs input[type=checkbox]')
+      .forEach(c => { c.checked = (c.value === 'fija_ew'); });
+    document.dispatchEvent(new Event('change'));
     return o;
   });
   /* Primero: que el rayo ENCUENTRE el panel. Sin esto, un poste que se fuera a
