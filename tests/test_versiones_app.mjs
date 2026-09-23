@@ -1,30 +1,47 @@
-// LA TARJETA CONTRA LA APP — el careo que cruza repositorios y que no existía.
+// EL PUNTERO DE LA TARJETA A LA APP — que siga resolviendo.
 //
-// La versión de `backtracking.html` se quedó DOS versiones atrás (v1.61.0 con
-// la v1.62 y la v1.63 dentro) y nadie lo notó: la etiqueta de la página y el
-// informe del emplazamiento que exporta el usuario anunciaban una versión que
-// el fichero ya no era. Se destapó de casualidad, al ir a subir la tarjeta.
-// Y volvió a pasar el mismo día con `overcast.html`: la tarjeta iba a subir a
-// v1.24.0 con la app diciendo v1.23.0.
+// ESTE ARNÉS HACÍA OTRA PREGUNTA, Y LA PREGUNTA ERA EL SÍNTOMA. Nació para
+// carear DOS números: el escrito a mano en la tarjeta del Panel y el que
+// declara la app (`const VER`). Cazó deriva real cuatro veces en una semana
+// —v1.63, v1.64, v1.68 y el salto de v1.70 a v1.76— y las cuatro DESPUÉS de
+// que ocurriera. Un número copiado a mano solo puede envejecer: un careo
+// acorta la ventana, no la cierra.
 //
-// Dos veces el mismo defecto porque NADIE lo vigilaba: el Panel vive en este
-// repo y las apps en otro, así que ningún banco de allí puede carear la
-// tarjeta, y aquí no había nada que leyera la app.
+// Así que el Panel dejó de copiarlo. Las tarjetas de las apps que declaran su
+// versión de forma legible por máquina ya no llevan `version:`, llevan
+// `verEnApp: true`, y el número lo LEE la página de la app al pintarse. Con
+// eso desaparece la clase entera de defecto: no hay dos números que puedan
+// discrepar porque solo hay uno.
+//
+// LO QUE QUEDA POR VIGILAR, QUE NO ES LO MISMO Y ES MENOS. Un puntero también
+// se rompe, solo que de otras maneras:
+//
+//   · la app deja de declarar `VER` donde la regla lo busca (se renombra, se
+//     mueve fuera del bloque, cambia de comillas) -> el Panel se queda sin
+//     numero y NADIE se entera, porque no hay nada que discrepe;
+//   · la tarjeta apunta a una url que ya no sirve ese fichero;
+//   · alguien vuelve a escribir `version:` al lado del puntero «por si acaso»
+//     y la copia entra por la puerta de atrás.
+//
+// UNA SOLA DEFINICIÓN DE LA REGLA, Y ES LA DEL PANEL. La expresión que busca
+// `VER` se EXTRAE de `index.html`, no se copia aquí. Si se copiara, el día que
+// cambie el formato de la declaración este arnés seguiría verde leyendo con la
+// regla vieja mientras el Panel se queda a oscuras — que es exactamente el
+// defecto que este fichero existe para impedir, cometido por el fichero mismo.
 //
 // QUÉ MANDA, Y POR QUÉ NO ES PAGES. El careo se hace contra el fichero en
-// `main`, no contra la página publicada. Pages va por detrás de `main` unos
-// minutos después de cada merge, así que carear contra él pondría esto en
-// ROJO justo al publicar —el momento en que más se mira— por un retardo que
-// no es un defecto. El retardo SE INFORMA aparte, que es donde vale algo:
-// dice lo que el usuario está viendo ahora mismo.
+// `main`. Pages va por detrás de `main` unos minutos después de cada merge,
+// así que exigirle a Pages pondría esto en ROJO justo al publicar por un
+// retardo que no es un defecto. El retardo SE INFORMA aparte.
+//
+// (El Panel, en cambio, lee PAGES a propósito: el número que enseña describe
+// la app que el usuario va a abrir al pulsar, y ésa es la publicada. Las dos
+// elecciones son distintas porque las preguntas son distintas.)
 //
 // DE DÓNDE SALE LA APP, por orden: checkout hermano —leyendo su ref
-// `origin/main`, NO su árbol de trabajo— y luego `main` por HTTPS. Las dos
-// vías responden lo mismo porque las dos leen main; leer el disco del hermano
-// sería leer la rama que otro tenga puesta.
-// Si no hay ninguna, NO se aprueba en silencio: la regla se
-// ejercita igual sobre sus combinaciones y la salida DECLARA que el careo no
-// ocurrió — el patrón de `test_granizo_espejo.mjs`, por la misma razón.
+// `origin/main`, NO su árbol de trabajo— y luego `main` por HTTPS. Si no hay
+// ninguna, NO se aprueba en silencio: la regla se ejercita igual sobre sus
+// combinaciones y la salida DECLARA que el careo no ocurrió.
 //
 //   node tests/test_versiones_app.mjs
 //   CAREO_SIN_RED=1 node tests/test_versiones_app.mjs   (solo hermano)
@@ -43,21 +60,25 @@ const check = (n, cond, extra) => {
 };
 
 /* LA REGLA, pura. `null` = en orden; si no, el motivo.
-   - tarjeta sin version: mal, no hay nada que carear y la tarjeta lo calla;
-   - sin poder leer main: NO se aprueba, se declara (lo hace el que llama);
-   - app sin VER: mal, esa tarjeta no se puede sostener;
-   - distintas: mal, y el mensaje lleva LAS DOS para no tener que ir a mirar. */
-export function veredictoVersion({ tarjeta, enMain }) {
-  if (!tarjeta) return 'la tarjeta no declara version';
-  if (enMain === null || enMain === undefined) return null;   // careo no hecho
-  if (!enMain) return 'la app no declara VER: la tarjeta no se puede carear';
-  if (tarjeta !== enMain) return `la tarjeta dice ${tarjeta} y el fichero en main dice ${enMain}`;
+   - puntero Y copia: sobra la copia, es la vía de vuelta del defecto;
+   - ni puntero ni copia: la tarjeta no dice nada de su version;
+   - solo copia: legítimo — hay apps que no declaran version legible, y
+     fingir que entran aquí sería peor que dejar el hueco a la vista;
+   - puntero sin poder leer main: NO se aprueba, se declara (lo hace el que
+     llama);
+   - puntero y la app no declara VER: mal, el puntero no resuelve y el Panel
+     se queda sin número. */
+export function veredictoTarjeta({ copia, puntero, enMain }) {
+  if (puntero && copia) return `la tarjeta apunta a la app Y guarda una copia (${copia}): sobra la copia`;
+  if (!puntero && !copia) return 'la tarjeta no declara version ni de donde leerla';
+  if (!puntero) return null;                                  // copia legítima
+  if (enMain === null || enMain === undefined) return null;    // careo no hecho
+  if (!enMain) return 'la app no declara VER donde la regla del Panel lo busca: el puntero no resuelve';
   return null;
 }
 
 /* El retardo de publicación NO es un defecto del repo, así que va por un canal
-   distinto: informa, no suspende. Separarlo de la regla de arriba es lo que
-   evita el rojo falso de los minutos siguientes a cada merge. */
+   distinto: informa, no suspende. */
 export function veredictoPages({ enMain, enPages }) {
   if (!enMain || !enPages) return 'no comprobado';
   if (enMain === enPages) return 'al día';
@@ -65,30 +86,34 @@ export function veredictoPages({ enMain, enPages }) {
 }
 
 // ── las combinaciones, sin disco ni red ──────────────────────────────────
-check('tarjeta sin version -> mal',
-      veredictoVersion({ tarjeta: null, enMain: 'v1.0.0' }) !== null);
-check('sin poder leer main -> no se aprueba ni se suspende: se declara',
-      veredictoVersion({ tarjeta: 'v1.0.0', enMain: null }) === null);
-check('app sin VER -> mal',
-      /no declara VER/.test(veredictoVersion({ tarjeta: 'v1.0.0', enMain: '' })));
-check('tarjeta por DELANTE de la app -> mal (el defecto que pasó dos veces)',
-      /v1\.24\.0.*v1\.23\.0/.test(veredictoVersion(
-        { tarjeta: 'v1.24.0', enMain: 'v1.23.0' })));
-check('tarjeta por DETRÁS de la app -> también mal',
-      veredictoVersion({ tarjeta: 'v1.62', enMain: 'v1.63.0' }) !== null);
-check('iguales -> bien',
-      veredictoVersion({ tarjeta: 'v1.24.0', enMain: 'v1.24.0' }) === null);
+check('puntero + copia -> mal, sobra la copia (la vía de vuelta del defecto)',
+      /sobra la copia/.test(veredictoTarjeta(
+        { copia: 'v1.76.0', puntero: true, enMain: 'v1.76.0' })));
+check('ni puntero ni copia -> mal',
+      veredictoTarjeta({ copia: null, puntero: false, enMain: null }) !== null);
+check('solo copia -> legitimo: hay apps sin version legible',
+      veredictoTarjeta({ copia: '1.26', puntero: false, enMain: null }) === null);
+check('puntero sin poder leer main -> no se aprueba ni se suspende: se declara',
+      veredictoTarjeta({ copia: null, puntero: true, enMain: null }) === null);
+check('puntero y la app NO declara VER -> mal, el puntero no resuelve',
+      /no resuelve/.test(veredictoTarjeta(
+        { copia: null, puntero: true, enMain: '' })));
+check('puntero y la app declara VER -> bien',
+      veredictoTarjeta({ copia: null, puntero: true, enMain: 'v1.76.0' }) === null);
 check('Pages por detrás de main NO es rojo, se informa',
       /retardo de publicación/.test(veredictoPages(
         { enMain: 'v1.24.0', enPages: 'v1.23.0' })));
 
-// ── las tarjetas del Panel, leídas del propio index.html ─────────────────
+// ── el Panel, leído de su propio index.html ──────────────────────────────
 const idx = fs.readFileSync(path.join(RAIZ, 'index.html'), 'utf8');
-function tarjetas() {
+function bloquesInline() {
   const re = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi;
   let m; const src = [];
   while ((m = re.exec(idx))) src.push(m[1]);
-  const blk = src.find(c => /const PROJECTS\s*=\s*\[/.test(c));
+  return src;
+}
+function tarjetas() {
+  const blk = bloquesInline().find(c => /const PROJECTS\s*=\s*\[/.test(c));
   if (!blk) return null;
   const i = blk.indexOf('const PROJECTS');
   let d = 0, j = blk.indexOf('[', i), k = j;
@@ -102,31 +127,57 @@ function tarjetas() {
 const CARDS = tarjetas();
 check('index.html publica su lista de tarjetas', Array.isArray(CARDS) && CARDS.length > 0);
 
-/* LO QUE ESTE ARNÉS CUBRE, DECLARADO. Solo se puede carear una app que declare
-   su version de forma legible por máquina, y hoy eso son los dos simuladores
-   —que son, no por casualidad, donde el defecto ocurrió las dos veces—. Las
-   demás tarjetas publicadas escriben su version en prosa o no la escriben, y
-   fingir que entran aquí seria peor que dejar el hueco a la vista. */
+/* LA REGLA DEL PANEL, EXTRAÍDA — no copiada. Si mañana `VER_RE_APP` deja de
+   existir o cambia de nombre, esto se pone rojo aquí mismo en vez de dejar al
+   arnés leyendo con una regla que el Panel ya no usa. */
+function reglaDelPanel() {
+  const blk = bloquesInline().find(c => /const VER_RE_APP\s*=/.test(c));
+  if (!blk) return null;
+  const m = blk.match(/const VER_RE_APP\s*=\s*(\/(?:\\.|\[(?:\\.|[^\]])*\]|[^/\\])+\/[a-z]*)/);
+  if (!m) return null;
+  try { return eval(m[1]); } catch { return null; }   // eslint-disable-line no-eval
+}
+const VER_RE = reglaDelPanel();
+check('el Panel publica la regla con la que lee la version, y se extrae de ahí',
+      VER_RE instanceof RegExp, 'no se encontró VER_RE_APP en index.html');
+check('esa regla, ejercitada: saca el número de una declaración como la real',
+      VER_RE && (("x\nconst VER='v1.76.0';\n").match(VER_RE) || [])[1] === 'v1.76.0');
+check('y NO se lo inventa cuando la declaración no está',
+      VER_RE && !("const OTRA='v1.0.0';").match(VER_RE));
+
+/* LO QUE ESTE ARNÉS CUBRE, DECLARADO. Solo puede resolverse un puntero a una
+   app que declare su version de forma legible por máquina, y hoy eso son los
+   dos simuladores —que son, no por casualidad, donde el defecto ocurrió las
+   cuatro veces—. Las demás tarjetas publicadas escriben su version en prosa o
+   no la escriben. */
 const CAREABLES = [
   { url: 'https://imoriana3.github.io/cobertura-zigbee/overcast.html',
     repo: 'cobertura-zigbee', fichero: 'overcast.html' },
   { url: 'https://imoriana3.github.io/cobertura-zigbee/backtracking.html',
     repo: 'cobertura-zigbee', fichero: 'backtracking.html' },
 ];
-const VER_RE = /^const VER\s*=\s*['"]([^'"]+)['"]/m;
 
 const publicadas = (CARDS || []).filter(p => p.url && /imoriana3\.github\.io/.test(p.url));
 for (const c of CAREABLES)
   check('la tarjeta de ' + c.fichero + ' sigue en el Panel',
         publicadas.some(p => p.url === c.url), 'nadie publica esa url');
 
+/* Y QUE APUNTEN, que es lo que este cambio compra. Sin esta línea se podría
+   volver a la copia tarjeta a tarjeta sin que nada se queje. */
+for (const c of CAREABLES) {
+  const card = publicadas.find(p => p.url === c.url);
+  check('la tarjeta de ' + c.fichero + ' LEE la version de la app, no la copia',
+        !!(card && card.verEnApp),
+        card ? 'verEnApp=' + JSON.stringify(card.verEnApp) : 'sin tarjeta');
+}
+
 const sinCarear = publicadas.filter(p => !CAREABLES.some(c => c.url === p.url));
 console.log('     ── cobertura: ' + CAREABLES.length + ' de ' + publicadas.length +
-            ' tarjetas publicadas se carean. Las otras ' + sinCarear.length +
-            ' no declaran su version legible por máquina:');
+            ' tarjetas publicadas leen su version de la app. Las otras ' +
+            sinCarear.length + ' no declaran una version legible por máquina:');
 for (const p of sinCarear)
   console.log('        · ' + p.url.replace('https://imoriana3.github.io/', '') +
-              (p.version ? ' (tarjeta: ' + p.version + ')' : ' (tarjeta sin version)'));
+              (p.version ? ' (tarjeta: ' + p.version + ', escrita a mano)' : ' (tarjeta sin version)'));
 
 // ── de dónde sale la app: hermano primero, main después ──────────────────
 const SIN_RED = process.env.CAREO_SIN_RED === '1';
@@ -137,25 +188,23 @@ async function bajar(url) {
     return r.ok ? await r.text() : null;
   } catch { return null; }
 }
-const verDe = txt => { const m = txt && txt.match(VER_RE); return m ? m[1] : ''; };
+const verDe = txt => { const m = txt && VER_RE && txt.match(VER_RE); return m ? m[1] : ''; };
 
-let careadas = 0, conHermano = 0, conRed = 0;
+let resueltos = 0, conHermano = 0, conRed = 0;
 for (const c of CAREABLES) {
   const card = publicadas.find(p => p.url === c.url);
-  const tarjeta = card ? card.version : null;
+  const copia = card ? card.version : null;
+  const puntero = !!(card && card.verEnApp);
 
   /* DEL HERMANO SE LEE `origin/main`, NO SU ÁRBOL DE TRABAJO. La primera
      versión leía el fichero del disco y eso NO es lo que este arnés dice
      comparar: el árbol de trabajo es la rama que el desarrollador tenga
-     puesta. Lo cazó él mismo a los diez minutos de existir —rojo en local
-     («la tarjeta dice v1.64.0 y el fichero en main dice v1.63.0») con el
-     hermano en una rama vieja, mientras por red salía verde—, y el modo de
-     fallo peligroso es el contrario: una rama que ya lleva el bump daría
-     VERDE con main todavía sin él. Se lee la ref, como hace
-     `test_integridad.js` con `git show origin/main:index.html`.
+     puesta. Lo cazó él mismo a los diez minutos de existir, y el modo de fallo
+     peligroso es el contrario: una rama que ya lleva el bump daría VERDE con
+     main todavía sin él.
      El interruptor existe para poder EJERCITAR la vía de red en una máquina
-     que tiene el hermano al lado: sin él, la ruta que de verdad corre en CI
-     no se prueba nunca y se descubre rota el día que hace falta. */
+     que tiene el hermano al lado: sin él, la ruta que de verdad corre en CI no
+     se prueba nunca y se descubre rota el día que hace falta. */
   const hermano = path.join(RAIZ, '..', c.repo);
   let enMain = null, via = null;
   const delHermano = () => {
@@ -173,34 +222,34 @@ for (const c of CAREABLES) {
     const txt = await bajar(`https://raw.githubusercontent.com/IMoriana3/${c.repo}/main/${c.fichero}`);
     if (txt !== null) { enMain = verDe(txt); via = 'main por HTTPS'; conRed++; }
   }
-  if (enMain !== null) careadas++;
+  if (enMain !== null) resueltos++;
 
   /* EL NOMBRE DE LA COMPROBACIÓN LLEVA EL MODO. En degradado esta línea decía
-     «OK la tarjeta dice lo mismo que la app» SIN haber comparado nada: leída
-     por encima —que es como se leen 1.600 líneas de arnés— pasa por careo
-     hecho. Un verde que miente sobre lo que hizo es peor que un hueco. */
-  const v = veredictoVersion({ tarjeta, enMain });
+     «OK ...» SIN haber leído nada: leída por encima —que es como se leen 1.600
+     líneas de arnés— pasa por comprobación hecha. Un verde que miente sobre lo
+     que hizo es peor que un hueco. */
+  const v = veredictoTarjeta({ copia, puntero, enMain });
   check(enMain === null
-          ? 'la tarjeta de ' + c.fichero + ' NO SE HA CAREADO (sin fuente): solo se exige que declare version'
-          : 'la tarjeta de ' + c.fichero + ' dice lo mismo que la app',
+          ? 'el puntero de ' + c.fichero + ' NO SE HA RESUELTO (sin fuente): solo se exige que la tarjeta no guarde copia'
+          : 'el puntero de ' + c.fichero + ' resuelve: la app declara su version donde el Panel la busca',
         v === null, v);
-  console.log('     ── ' + c.fichero + ': tarjeta ' + (tarjeta || '—') +
+  console.log('     ── ' + c.fichero + ': tarjeta ' + (puntero ? 'apunta a la app' : 'copia ' + (copia || '—')) +
               (enMain === null
-                ? ' · SIN fuente: no se ha podido carear (modo declarado, no aprobado)'
-                : ' · app ' + (enMain || '—') + ' (' + via + ')'));
+                ? ' · SIN fuente: no se ha podido resolver (modo declarado, no aprobado)'
+                : ' · main declara ' + (enMain || '—') + ' (' + via + ')'));
 
-  // y lo que el usuario ve AHORA, que no suspende a nadie
+  // y lo que el usuario ve AHORA, que es de donde lee el Panel y no suspende
   const pag = await bajar(c.url);
-  console.log('        Pages: ' + (pag === null
-    ? 'no alcanzable desde aquí (no suspende: el careo lo decide main)'
+  console.log('        Pages (de donde lee el Panel): ' + (pag === null
+    ? 'no alcanzable desde aquí (no suspende: el puntero lo decide main)'
     : veredictoPages({ enMain, enPages: verDe(pag) })));
 }
 
 /* El modo degradado se DECLARA y además se cuenta, para que «no se pudo
-   carear» no pueda pasar por «careado y bien» al leer la salida por encima. */
-console.log('     ── careo real en ' + careadas + ' de ' + CAREABLES.length +
+   resolver» no pueda pasar por «resuelto y bien» al leer la salida por encima. */
+console.log('     ── puntero resuelto en ' + resueltos + ' de ' + CAREABLES.length +
             ' apps (' + conHermano + ' por checkout hermano, ' + conRed + ' por main) ──');
-check('el modo del careo queda declarado en la salida', true);
+check('el modo de la resolución queda declarado en la salida', true);
 
 console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko) : '\nOK — ' + ok + '/' + ok + ' comprobaciones');
 process.exit(ko ? 1 : 0);
