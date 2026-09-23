@@ -421,6 +421,268 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
         /pasivo/i.test(CR.txt), CR.txt.slice(-120));
 
   // ══════════════════════════════════════════════════════════════════
+  //  4bis) EL BOTÓN NO PUEDE MENTIR SOBRE EL RELOJ
+  // ══════════════════════════════════════════════════════════════════
+  // REPORTADO: «pauso pero sigue corriendo el tiempo». Y era literal.
+  //
+  // El rótulo del botón se escribía SOLO en el manejador del clic, así que era
+  // una SEGUNDA COPIA de `LIVE.run` y no una vista suya. Cualquier otro camino
+  // que tocara el estado lo dejaba desincronizado, y había dos: montar la
+  // escena (planta, nº de trackers, filas, pasivo) y encender la latencia —
+  // los dos llaman a `liveInit`, que ponía `run:false`.
+  //
+  // MEDIDO antes de arreglarlo, con el reloj corriendo:
+  //
+  //   tras cambiar el nº de trackers ... LIVE.run=false · botón «❚❚ Pausa»
+  //   tras pulsar el botón (¡a pausar!) . LIVE.run=true  · el reloj ARRANCA
+  //   el reloj tras «pausar» ........... 725 -> 726,5 min
+  //
+  // Y por el otro camino, al revés y igual de malo: encender la latencia
+  // PARABA el reloj en silencio dejando el botón en «❚❚ Pausa».
+  //
+  // Esto no es cosmética y por eso vive en el banco del cronómetro: lo que el
+  // cronómetro mide son SEGUNDOS DE RELOJ SIMULADO, y su propio pie dice
+  // «reloj parado: el cronómetro no avanza». Con el botón mintiendo, esa línea
+  // miente con él.
+  //
+  // Se prueba la PROPIEDAD —el rótulo se deduce del estado— en los caminos que
+  // la rompieron, no la implementación.
+  // UN SOLO DUEÑO DEL RÓTULO, y se comprueba en el FUENTE porque es ahí donde
+  // se rompe. Las comprobaciones de comportamiento de abajo recorren los dos
+  // caminos que fallaron; ésta prohíbe que nazca un tercero — que es como
+  // apareció éste. Sin ella, el día que alguien vuelva a escribir el rótulo en
+  // un manejador nuevo, el banco solo lo vería si ese camino concreto está
+  // entre los que recorre.
+  const fuenteViento = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, '..', 'sim-viento.html'), 'utf8');
+  const escritores = (fuenteViento.match(/lPlay'\)[^;\n]*\.textContent\s*=|b\.textContent\s*=/g) || []);
+  check('el rótulo del botón lo escribe UN SOLO sitio', escritores.length === 1,
+        escritores.length + ': ' + escritores.join(' · '));
+  check('y ese sitio es `pintaPlay`, que lo DEDUCE de LIVE.run',
+        /function pintaPlay\(\)\s*\{[\s\S]{0,300}?LIVE\.run\s*\?/.test(fuenteViento));
+
+  // MUTANTE QUE SOBREVIVE, DECLARADO. Quitar la llamada a `pintaPlay()` de
+  // DENTRO de `liveInit` no pone rojo nada de este banco, y es correcto que no
+  // lo ponga: desde que `liveInit` PRESERVA el reloj (`run:corria`), el estado
+  // no cambia al remontar, así que no hay rótulo que refrescar. Esa llamada es
+  // hoy un cinturón sobre los tirantes.
+  //
+  // No se quita, y el motivo va escrito para que no se lea como descuido: es
+  // lo que hace cierta la frase «el botón es una vista del estado» el día que
+  // alguien vuelva a tocar `run` dentro de `liveInit` — que es exactamente lo
+  // que hacía la versión con el defecto. Lo que SÍ puede ponerse rojo hoy es
+  // la propiedad de arriba (un solo dueño del rótulo) y el comportamiento de
+  // abajo por los dos caminos que fallaron.
+  //
+  // Medido: de cuatro mutantes, éste es el único que sobrevive. Los otros tres
+  // matan 5, 2 y 7.
+
+  const lee = () => page.evaluate(() => ({
+    run: LIVE.run,
+    dicePausa: /Pausa/.test(document.getElementById('lPlay').textContent),
+    minF: LIVE.minF,
+  }));
+  const coherente = m => m.run === m.dicePausa;
+
+  await page.evaluate(() => { document.getElementById('lat_on').checked = false; latUI(); });
+  check('al abrir, el botón ofrece CORRER y el reloj está parado',
+        await lee().then(m => coherente(m) && m.run === false));
+
+  await page.click('#lPlay');
+  check('al pulsarlo, corre y el botón ofrece PAUSAR',
+        await lee().then(m => coherente(m) && m.run === true));
+
+  // PUERTA 1: remontar la escena. El nº de trackers es un parámetro de la
+  // PLANTA, no una orden de parar el tiempo.
+  await page.evaluate(() => {
+    const e = document.getElementById('nTrk');
+    e.value = String((+e.value || 10) + 2);
+    e.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForTimeout(400);
+  const trasTrk = await lee();
+  check('cambiar el nº de trackers NO desincroniza el botón', coherente(trasTrk),
+        'run=' + trasTrk.run + ' botón dice Pausa=' + trasTrk.dicePausa);
+  check('y no para el reloj: tocar un parámetro no es pedir una pausa',
+        trasTrk.run === true, String(trasTrk.run));
+
+  // PUERTA 2: encender la latencia. Es la que el propio autor abrió al añadir
+  // el cronómetro, así que la vigila el banco del cronómetro.
+  await page.evaluate(() => { document.getElementById('lat_on').checked = true; latUI(); });
+  await page.waitForTimeout(400);
+  const trasLat = await lee();
+  check('encender la latencia tampoco desincroniza el botón', coherente(trasLat),
+        'run=' + trasLat.run + ' botón dice Pausa=' + trasLat.dicePausa);
+  check('ni para el reloj en silencio', trasLat.run === true, String(trasLat.run));
+
+  // Y LO QUE EL USUARIO PULSA: que PAUSAR pare de verdad. Se mide el reloj
+  // simulado antes y después, no el rótulo — el rótulo es justo lo que mentía.
+  await page.click('#lPlay');
+  const paradoA = (await lee()).minF;
+  await page.waitForTimeout(900);
+  const paradoB = await lee();
+  check('pulsar PAUSA para el reloj de verdad', paradoB.minF === paradoA,
+        paradoA + ' -> ' + paradoB.minF);
+  check('y el botón vuelve a ofrecer correr', coherente(paradoB) && paradoB.run === false);
+
+  // CONTROL POSITIVO: si el reloj no avanzara NUNCA, la comprobación de arriba
+  // saldría verde sin medir nada.
+  await page.click('#lPlay');
+  const corriendoA = (await lee()).minF;
+  await page.waitForTimeout(900);
+  check('control · con el reloj suelto, el tiempo SÍ avanza',
+        (await lee()).minF > corriendoA, corriendoA);
+  await page.click('#lPlay');
+
+  // ══════════════════════════════════════════════════════════════════
+  //  4ter) LA CADENA A EN_CERO: EL RÉGIMEN QUE ESTE BANCO NO CONDUCÍA
+  // ══════════════════════════════════════════════════════════════════
+  // REPORTADO: «¿Y 9 minutazos???». Con los cuatro parámetros a EN_CERO, el
+  // cronómetro decía que la orden tardaba +9 min 37 s en llegar a la TCU en A1
+  // y B1 —y «en posición —»—, mientras A2 y B2, en el mismo tirón, daban
+  // +1,0 s. Nueve minutos de retardo en una cadena que no retarda nada.
+  //
+  // EL MECANISMO: `tLle` se marca cuando la orden en la TCU CAMBIA respecto de
+  // la que había en seguimiento. La referencia se tomaba en el mismo paso en
+  // que la máquina decide, y con la cadena a cero ese paso YA TRAE la orden de
+  // abanderamiento: la referencia nacía igual a lo que se esperaba ver cambiar,
+  // así que el instante no se marcaba nunca. A2 y B2 se salvaban por un motivo
+  // que no era mérito suyo — en abanderamiento PARCIAL la consigna persigue al
+  // sol y se mueve sola al paso siguiente.
+  //
+  // EL HUECO DEL BANCO, que es lo que se cierra aquí y no el defecto: la
+  // sección 4 conduce el cronómetro SIEMPRE con la cadena puesta (300/60/60/30)
+  // y lee UNA estrategia, la primera. Las dos mitades del defecto caían justo
+  // fuera de lo que se conducía: el régimen a cero, y la diferencia ENTRE
+  // estrategias. Un banco que solo visita un régimen no dice nada del otro.
+  //
+  // Se conduce la página de verdad porque el defecto vivía en el acoplamiento
+  // entre el bucle en vivo y el cronómetro —quién mueve a quién antes de quién—
+  // y eso no aparece llamando a `cronoTick` con números a mano.
+  const episodio = async (L) => {
+    await page.evaluate((L) => {
+      // EL VIENTO BAJA PRIMERO, y el orden importa: `latUI` remonta la escena y
+      // da un paso de simulación con el viento QUE HAYA en el deslizador. Si
+      // queda el del episodio anterior, la escena nace ya abanderada — medido:
+      // A1..B2 aparecían en FULL_STOW antes de empezar a cronometrar nada.
+      document.getElementById('lSpeed').value = '900';
+      const v = document.getElementById('lV');
+      v.value = '20'; v.dispatchEvent(new Event('input', { bubbles: true }));
+      document.getElementById('lat_on').checked = true;
+      document.getElementById('latVent').value = String(L[0]);
+      document.getElementById('latMues').value = String(L[1]);
+      document.getElementById('latSond').value = String(L[2]);
+      document.getElementById('latArr').value = String(L[3]);
+      latUI();
+      if (!LIVE.run) document.getElementById('lPlay').click();
+    }, L);
+    // SE CRONOMETRA DESDE SEGUIMIENTO, y hay que esperarlo, no suponerlo: las
+    // de dos umbrales no vuelven de un abanderamiento en cuanto amaina —
+    // sostienen el pliegue (DESTOW_HOLD). Si el viento se sube antes de que
+    // bajen, no hay maniobra que medir y las filas salen en «—», que es cierto
+    // pero no es lo que se quiere probar aquí. Medido: sin esta espera, A2 y B2
+    // llegaban a la sección todavía plegadas de la sección 4.
+    const desdeSeguimiento = await page.waitForFunction(
+      () => vivos().filter(S => S !== 'PASIVO').every(S => LIVE.modos[S] === 'IDLE'),
+      null, { timeout: 25000 }).then(() => true).catch(() => false);
+    await page.evaluate(() => {
+      const v = document.getElementById('lV');
+      v.value = '95'; v.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    // Se espera con red: si un mutante deja una estrategia sin marcar nunca, la
+    // fase no llega a `hecha` y un `waitForFunction` pelado reventaría el banco
+    // entero — un arnés que muere no dice CUÁNTO se rompió. Se recoge lo que
+    // haya y que fallen las comprobaciones, que es lo que se está midiendo.
+    const cerro = await page.waitForFunction(
+      () => window.LIVE && LIVE.crono && LIVE.crono.fase === 'hecha',
+      null, { timeout: 25000 }).then(() => true).catch(() => false);
+    const R = await page.evaluate(() => {
+      const C = LIVE.crono, D = C.ultima || { t0: C.t0, tVe: C.tVe, por: C.por };
+      const o = { det: (D.tVe != null && D.t0 != null) ? D.tVe - D.t0 : null, por: {} };
+      Object.keys(D.por || {}).forEach(S => {
+        const p = D.por[S] || {};
+        o.por[S] = { lle: p.tLle == null ? null : p.tLle - D.t0,
+                     fin: p.tFin == null ? null : p.tFin - D.t0 };
+      });
+      return o;
+    });
+    await page.evaluate(() => { if (LIVE.run) document.getElementById('lPlay').click(); });
+    R.cerro = cerro; R.desdeSeguimiento = desdeSeguimiento;
+    return R;
+  };
+  const resumen = R => Object.keys(R.por).sort().map(
+    S => S + ' ' + R.por[S].lle + '/' + R.por[S].fin).join(' · ');
+
+  const EN_CERO = await episodio([0, 0, 0, 0]);
+  const nombres = Object.keys(EN_CERO.por).sort();
+  // SIN ESTO, TODO LO DE ABAJO ES VACUO: `every` sobre una lista vacía es
+  // verde, y `every` sobre una sola estrategia no puede ver una diferencia
+  // ENTRE estrategias — que es justo lo que se escapó.
+  check('se conducen las CUATRO estrategias, no una', nombres.length === 4,
+        nombres.join(','));
+  check('y las cuatro arrancan desde SEGUIMIENTO, no ya plegadas',
+        EN_CERO.desdeSeguimiento);
+  check('a cero, el episodio se cierra solo: todas llegan a posición', EN_CERO.cerro,
+        resumen(EN_CERO));
+  check('a cero, el anemómetro ve el viento en el mismo paso', EN_CERO.det === 0,
+        EN_CERO.det);
+  check('a cero, la orden llega a la TCU en el mismo paso EN TODAS',
+        nombres.length === 4 && nombres.every(S => EN_CERO.por[S].lle === 0),
+        resumen(EN_CERO));
+  check('y ninguna se queda sin «en posición»',
+        nombres.length === 4 && nombres.every(S => EN_CERO.por[S].fin > 0),
+        resumen(EN_CERO));
+  // LA COMPROBACIÓN QUE HABRÍA CAZADO EL DEFECTO TAL COMO SE VIO: no que el
+  // número sea 0, sino que las cuatro digan LO MISMO. Con el defecto, A1 y B1
+  // decían 577 s y A2 y B2 decían 1 s — y esa discrepancia es visible aunque
+  // uno no sepa cuál de los dos números es el bueno.
+  const lles = nombres.map(S => EN_CERO.por[S].lle);
+  // `every` sobre nulos y `Set` de un solo nulo son verdes: el mutante que
+  // reintroduce el defecto deja las CUATRO sin marcar, y «todas iguales» lo
+  // aprobaba. Lo dijo la batería, no la lectura. Por eso se exige además que
+  // sean números: no hay acuerdo entre cuatro silencios.
+  check('a cero, las cuatro marcan el MISMO instante de llegada',
+        lles.every(v => typeof v === 'number') && new Set(lles).size === 1,
+        lles.join(' · '));
+
+  // CONTROL POSITIVO. Sin él, «llega en el mismo paso» lo aprueba también un
+  // cronómetro que escriba `tLle = tOrd` sin mirar nada: hay que enseñar que
+  // con la cadena puesta el mismo camino da un número DISTINTO de cero.
+  const CONLAT = await episodio([300, 60, 60, 30]);
+  const nomL = Object.keys(CONLAT.por).sort();
+  check('control · con la cadena puesta, ver el viento ya cuesta', CONLAT.det > 0,
+        CONLAT.det);
+  check('control · y la orden tarda en llegar a la TCU EN LAS CUATRO',
+        nomL.length === 4 && nomL.every(S => CONLAT.por[S].lle - CONLAT.det >= 30),
+        'det ' + CONLAT.det + ' · ' + resumen(CONLAT));
+  // NUNCA ANTES: el eje no puede estar en posición antes de que la orden entre.
+  // Es la desigualdad que siempre tiene que valer, y por eso va con `>=`.
+  // Y CON LOS DOS NÚMEROS EXIGIDOS: `180 >= null` es CIERTO en JavaScript, así
+  // que sin esto un mutante que dejaba la llegada sin marcar pasaba por aquí
+  // tan tranquilo. Es la segunda vez en esta misma sección que un nulo se cuela
+  // por una comparación; la primera fue un `Set` de cuatro nulos.
+  check('control · ninguna llega a posición ANTES de que la orden entre',
+        nomL.length === 4 && nomL.every(S =>
+          typeof CONLAT.por[S].fin === 'number' && typeof CONLAT.por[S].lle === 'number' &&
+          CONLAT.por[S].fin >= CONLAT.por[S].lle),
+        resumen(CONLAT));
+  // Y LA QUE NO ES VACUA: alguna tiene que TARDAR en recorrer, o el cronómetro
+  // estaría midiendo una maniobra instantánea y no se notaría.
+  check('control · y al menos una tarda de verdad en recorrer',
+        nomL.some(S => CONLAT.por[S].fin - CONLAT.por[S].lle > 60),
+        resumen(CONLAT));
+  // HALLAZGO, y fue este banco el que lo dijo al exigir de más: A2 y B2 marcan
+  // «en posición» EN EL MISMO INSTANTE en que la orden entra — 270/270 frente a
+  // 270/450 de A1 y B1. No es un cero sospechoso: es que la media móvil cruza
+  // T1 bastante antes que T2, así que las de DOS umbrales ya habían plegado con
+  // el abanderamiento parcial y no les quedaba recorrido cuando llegó el pleno.
+  // Dicho de otro modo, y es el argumento operativo del segundo umbral: el
+  // recorrido caro se hace ANTES, con tiempo, y no contra el reloj de la racha.
+  // La comprobación de arriba pedía `fin > lle` en las cuatro y salía roja con
+  // la ficha correcta; queda como aviso de que una desigualdad estricta de más
+  // es una afirmación sobre el mundo, no una formalidad.
+
+  // ══════════════════════════════════════════════════════════════════
   //  5) LAS DECLARACIONES
   // ══════════════════════════════════════════════════════════════════
   // El motor canónico no tiene cadena: ignoraría los cuatro parámetros y

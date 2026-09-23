@@ -197,7 +197,7 @@ disciplina vale lo que valga la puerta.
 
 ```bash
 python3 -m http.server 8099                # servir el repo (en otra terminal)
-bash tests/correr.sh                       # los 45 · 2.539 comprobaciones · ~17 min en el runner
+bash tests/correr.sh                       # los 45 · 2.568 comprobaciones · ~17 min en el runner
 bash tests/correr.sh viento                # solo los que casen con el patrón
 ```
 
@@ -300,9 +300,13 @@ un careo por longitud pasaría y el mutante sobreviviría.
 
 ### Los arneses, uno a uno (comprobaciones medidas el 2026-09-09)
 
-> **De dónde sale el 2.539, y cinco números equivocados por el camino.** Este sale de una
-> **corrida completa y verde del 2026-09-23**, sobre `15e7b47`:
-> `45 arneses verdes · 2539 comprobaciones leídas`.
+> **De dónde sale el 2.568, y cinco números equivocados por el camino.** Este sale de una
+> **corrida completa y verde del 2026-09-23**, sobre `03bf301` más el cronómetro:
+> `45 arneses verdes · 2568 comprobaciones leídas`. De las 29 que suben, **22 son mías**
+> —`test_viento_latencia.js`, de 71 a 93, al cubrir el régimen SIN latencia (el que dejó pasar
+> el «¿y 9 minutazos???») y el botón de pausa— y **7 entraron con el #502**, en
+> `test_comparador.js` (312→317) y `test_comparador_3d.js` (283→285). Se separan porque
+> atribuirse las siete ajenas sería la misma clase de número inventado que esta caja persigue.
 >
 > **La quinta vez que esta línea envejeció fue la mía, y sin excusa:** el PR #498 añadió DOS
 > arneses —`test_css_variables.js` y `test_viento_latencia.js`, 35 y 71 comprobaciones— y les
@@ -349,8 +353,8 @@ python3 -m http.server 8099                # servir el repo (en otra terminal)
 node tests/test_index.js                   # 28 comprobaciones
 node tests/test_pwa.js                     # 21 comprobaciones (PWA)
 node tests/test_integridad.js              # 7 comprobaciones, sin navegador
-node tests/test_comparador.js              # 312 comprobaciones, careo contra el core (quebrado incluido) y barridos
-node tests/test_comparador_3d.js           # 283 comprobaciones, escena 3D, color por producción, equipos, sizing y barridos
+node tests/test_comparador.js              # 317 comprobaciones, careo contra el core (quebrado incluido) y barridos
+node tests/test_comparador_3d.js           # 285 comprobaciones, escena 3D, color por producción, equipos, sizing y barridos
 node tests/test_sizing.js                  # 115 comprobaciones, careo del dimensionado eléctrico
 node tests/test_comparador_sitio.js        # 36 comprobaciones, el buscador de emplazamiento
 node tests/test_buscador.js                # 55 comprobaciones, el buscador de implantaciones
@@ -361,6 +365,8 @@ node tests/test_viento_planta.js           # 35 comprobaciones, la planta en fra
 node tests/test_viento_sello.js            # 17 comprobaciones, el informe declara con qué coordenadas se calculó
 node tests/test_viento_reproductor.js      # 18 comprobaciones, pasar de la barra sigue en el tiempo
 node tests/test_viento_rafaga_medida.js    # 29 comprobaciones, la ráfaga MEDIDA manda, y Open-Meteo la pide sin riesgo
+node tests/test_viento_latencia.js         # 93 comprobaciones, la cadena de latencia y el cronómetro (con y SIN cadena)
+node tests/test_css_variables.js           # 35 comprobaciones, ninguna ficha usa una variable CSS que no define
 node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core
 node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo
 node tests/test_granizo_pestana.js         # 28 comprobaciones, la pestaña de granizo en Chromium

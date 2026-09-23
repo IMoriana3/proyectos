@@ -359,7 +359,46 @@ declare -A PISO=(
   # entero de la señal— y su control positivo cazó que el fixture ponía los
   # escalones justo en los bordes de la rejilla, donde el muestreo es la
   # identidad y dos de los siete careos comparaban dos series sin tocar.
-  [test_viento_latencia.js]=71
+  #
+  # SUBIDO A 93 al cerrar dos defectos que REPORTÓ EL USUARIO y uno que encontró
+  # el propio banco:
+  #
+  #   · «pauso pero sigue corriendo el tiempo». El rótulo del botón era una
+  #     SEGUNDA COPIA de `LIVE.run`, no una vista suya; remontar la escena o
+  #     encender la latencia lo desincronizaban y el clic siguiente —el de
+  #     pausar— ARRANCABA el reloj. Medido: 725 → 726,5 min «tras pausar».
+  #   · «¿y 9 minutazos???». Con los cuatro parámetros a CERO el cronómetro
+  #     daba +9 min 37 s de llegada a la TCU en A1 y B1, y «—» en posición.
+  #   · Y EL QUE SALIÓ AL CONDUCIR ESTO: el criterio de «la orden llegó» miraba
+  #     si la orden había CAMBIADO. En seguimiento la orden cambia sola, la
+  #     mueve el sol, así que un borde de rejilla entre el paso anterior y el de
+  #     la decisión daba la llegada por buena antes de tiempo — 180 s en vez de
+  #     270 s, según la FASE de la rejilla. Un criterio con carrera. Ahora la
+  #     llegada se marca con una MARCA 0/1 que viaja por una cadena gemela.
+  #
+  # BATERÍA DE MUTANTES, con las predicciones escritas ANTES de medir. Las
+  # cuatro fallaron, y se dejan escritas porque el número que uno espera es una
+  # afirmación sobre lo que el banco vigila, no un adorno:
+  #
+  #   M1 borrar la marca del bucle en vivo ..... predije 8 · MATA EL ARNÉS
+  #   M2 volver al criterio viejo («cambió») ... predije 9 · mata 3 → 4
+  #   M3 adelantar la gemela dos veces por paso  predije 1 · mata 4
+  #   M4 quitar el `else return` de la llegada . predije 2 · mata 3 → 4
+  #
+  # M1 no da recuento: la sección 4 espera la maniobra con un `waitForFunction`
+  # pelado y el arnés muere por timeout. La puerta sale ROJA igual, que es lo
+  # que importa, pero sin decir cuánto se rompió.
+  #
+  # Y LAS DOS FLECHAS SON EL VERDADERO HALLAZGO de la batería: dos
+  # comprobaciones mías eran VACUAS con la llegada sin marcar, las dos por lo
+  # mismo —un nulo colado por una comparación— y ninguna se veía leyendo:
+  #
+  #   «las cuatro marcan el mismo instante» ... `Set` de cuatro `null`: tamaño 1
+  #   «ninguna en posición antes de la orden» . `180 >= null` es CIERTO en JS
+  #
+  # Exigido que sean números, M2 y M4 pasaron de 3 a 4. El recuento del banco no
+  # se mueve: lo que cambia es de qué sirve.
+  [test_viento_latencia.js]=93
   [test_viento_meteo.js]=33
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,
