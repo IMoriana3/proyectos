@@ -334,10 +334,10 @@
       <div id="latBox" style="display:none">
         <div class="two">
           <div class="field"><label>Media del anemómetro (s)</label><input id="latVent" type="number" step="10" min="0" value="600"></div>
-          <div class="field"><label>Muestreo NCU←HSU (s)</label><input id="latMues" type="number" step="1" min="0" value="60"></div>
+          <div class="field"><label>Muestreo NCU←HSU (s)</label><input id="latMues" type="number" step="1" min="0" value="1"></div>
         </div>
         <div class="two">
-          <div class="field"><label>Sondeo NCU→TCU (s)</label><input id="latSond" type="number" step="1" min="0" value="30"></div>
+          <div class="field"><label>Sondeo NCU→TCU (s)</label><input id="latSond" type="number" step="1" min="0" value="15"></div>
           <div class="field"><label>Arranque del motor (s)</label><input id="latArr" type="number" step="1" min="0" value="5"></div>
         </div>
         <div class="ro" id="latTot" style="margin-top:8px;font-size:.8rem"></div>
@@ -352,6 +352,13 @@
           siguiente muestra, la orden sale en el siguiente sondeo, así que no son retardos fijos: lo que se espera
           depende de dónde caiga el suceso dentro del periodo. El <b>arranque</b> sí es tiempo
           muerto fijo.</p>
+        <p class="nota">Los valores de partida no son redondos porque salen de un equipo real: el
+          anemómetro <b>registra cada segundo</b>, y el poleo de la NCU a la TCU ronda los
+          <b>12–15 s</b>. Ahí va puesto el extremo largo, 15, porque una rejilla se cobra
+          <b>hasta</b> su periodo y no de media: lo que se espera es cualquier cosa entre 0 y 15 s
+          según dónde caiga la decisión dentro del ciclo. Y con esos dos números la cuenta
+          cambia de dueño: el muestreo y el sondeo suman segundos, y quien manda es
+          <b>la media</b>.</p>
         <p class="nota">Los cuatro son <b>parámetros declarados</b>, no medidas de un equipo: esto
           simula y explica, no lee ni escribe en ninguna NCU. Y separan dos series que antes eran
           una sola — el viento que <b>sopla</b> (horas sobre umbral, máximos, ráfaga del episodio,
@@ -5045,6 +5052,31 @@ function seg(s){
   return m+' min '+fmt(s-m*60,0)+' s';
 }
 
+/* QUÉ PARÁMETROS DECLARADOS SON MÁS CORTOS QUE EL PASO DE LA SIMULACIÓN.
+   Una rejilla de periodo P con un paso dt>=P publica en todos los pasos: es la
+   identidad, y el número tecleado no pinta nada. Lo mismo la media y el
+   arranque. Callarlo sería el silencio más caro de los dos posibles — el
+   usuario teclea 1 s, la ficha no mide 1 s y nadie se entera.
+   Se compara contra el paso MEDIDO del último fotograma, no contra uno sacado
+   de la velocidad: el lazo va a la cadencia del navegador. */
+function avisoFinos(){
+  var f=periodosFinos(); if(!f.length)return '';
+  return '<div class="pie" style="color:var(--warn)"><b>A esta velocidad no se resuelve '+
+    (f.length>1?'lo que has puesto en: ':'lo que has puesto en ')+f.join(', ')+'.</b> '+
+    'El paso de la simulaci\u00f3n es de '+fmt(LIVE.dtPaso,1)+' s, m\u00e1s largo que ese periodo, '+
+    'as\u00ed que la rejilla publica en TODOS los pasos y sale la identidad: el cron\u00f3metro '+
+    'te dar\u00e1 de menos. Baja el reloj a <b>\u00d71</b> para medirlo.</div>';
+}
+
+function periodosFinos(){
+  var d=(LIVE&&LIVE.dtPaso)||0; if(!(d>0))return [];
+  var L=LIVE.lat||{}, fuera=[];
+  [['la media del anemómetro',L.ventana_s],['el muestreo NCU←HSU',L.muestreo_s],
+   ['el sondeo NCU→TCU',L.sondeo_s],['el arranque del motor',L.arranque_s]
+  ].forEach(function(x){ if((+x[1]>0)&&(+x[1]<=d))fuera.push(x[0]); });
+  return fuera;
+}
+
 function pintaCrono(){
   var caja=$('cronoBox'); if(!caja)return;
   if(MODO!=='live'||!LIVE){caja.style.display='none';return;}
@@ -5061,6 +5093,7 @@ function pintaCrono(){
       h+='<div class="pie">Con la <b>latencia apagada</b> solo hay un retardo que medir, el del '+
          'hierro a 0,17 °/s — que es el que la tarjeta ya predice. Enciéndela en '+
          '<b>⚑ Abanderamiento</b> para que el cronómetro tenga algo más que contar.</div>';
+    h+=avisoFinos();
     caja.innerHTML=h; return;
   }
   var det=(D.tVe!=null)?(D.tVe-D.t0):null;
@@ -5091,6 +5124,7 @@ function pintaCrono(){
   h+='<div class="pie">El instante de la <b>TCU</b> incluye su arranque: es cuando ya está '+
      '<b>ejecutando</b> la orden, no cuando el mensaje entra por la radio. Lo que va después es '+
      'recorrido de hierro a 0,17 °/s.</div>';
+  h+=avisoFinos();
   h+='<div class="pie">El <b>pasivo</b> no sale aquí y no es un olvido: no lo manda un motor, lo '+
      'suelta la carga, así que no espera sondeo ni arranque — y su umbral es otro.'+
      (LIVE.run?'':' <b>Reloj parado</b>: el cronómetro no avanza.')+'</div>';
@@ -5281,6 +5315,11 @@ function liveTick(dtReal){
   pintaEscena(LIVE.ang,LIVE.modos,poa,poa.BASE);
   // El cronómetro va DESPUÉS de mover a todo el mundo: mide el estado ya
   // avanzado de este paso, no el del anterior.
+  /* EL PASO SIMULADO DE ESTE FOTOGRAMA, guardado para poder DECIR cuando una
+     rejilla declarada es más corta que él. Se guarda el medido y no uno
+     calculado de la velocidad: el lazo va a la cadencia del navegador, así
+     que ×300 no son 300 s por segundo — medido, son unos 66. */
+  if(dt>0)LIVE.dtPaso=dt;
   if(dt>0)cronoTick(simNow,LIVE.v,vVisto,(+$('t1').value)/3.6);
   if(!liveTick._n||(liveTick._n++%6===0)){
     tiles(LIVE.ang,LIVE.modos,poa,poa.BASE,null,LIVE.orden);

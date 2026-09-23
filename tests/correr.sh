@@ -406,7 +406,36 @@ declare -A PISO=(
   #
   # Exigido que sean números, M2 y M4 pasaron de 3 a 4. El recuento del banco no
   # se mueve: lo que cambia es de qué sirve.
-  [test_viento_latencia.js]=93
+  #
+  # SUBIDO A 101 con los números del equipo de verdad: el anemómetro registra
+  # CADA SEGUNDO y el poleo NCU→TCU ronda los 12–15 s. Con esos valores la ficha
+  # se metía en un silencio caro. El lazo en vivo avanza a saltos, y MEDIDO en
+  # este navegador el paso simulado es 0,1 s a ×1 · 6 s a ×60 · 30 s a ×300 ·
+  # 90 s a ×900 · 360 s a ×3600. Una rejilla de 1 s con un paso de 30 s publica
+  # en TODOS los pasos: es la identidad. El usuario tecleaba 1 s, la ficha no
+  # medía 1 s, el cronómetro daba de menos y nadie se enteraba. Ahora la ficha
+  # NOMBRA los periodos que no caben en el paso y dice a qué velocidad sí caben.
+  #
+  # El paso depende de la máquina —el lazo va a la cadencia del navegador, no a
+  # la velocidad elegida—, así que ni la ficha ni el banco fijan esos números:
+  # la ficha compara contra el paso MEDIDO del último fotograma y el banco fija
+  # la PROPIEDAD, con su control positivo a ×1.
+  #
+  # MUTANTES, predicciones escritas antes de medir. Tres de cuatro, y la que
+  # falló fue culpa del mutante:
+  #
+  #   N1 no pintar el aviso ................... predije 2 · mata 2 ✓
+  #   N2 la comparación al revés (>= por <=) .. predije 3 · mata 3 ✓
+  #   N3 no guardar el paso medido ............ predije 4 · mata 4 ✓
+  #   N4 volver a los valores redondos ........ predije 2 · mata 1
+  #
+  # N4: predije 2 contando con que cambiaba el muestreo Y el sondeo, y el
+  # mutante sólo cambiaba el muestreo. El banco vigila los dos por separado; el
+  # que estaba mal medido era yo.
+  # Y N1 destapó una comprobación floja: preguntaba por `periodosFinos()`, el
+  # estado interno, en vez de por lo que la caja PINTA. Un mutante que calcula
+  # bien la lista y no la enseña dejaba al usuario igual de a oscuras.
+  [test_viento_latencia.js]=101
   [test_viento_meteo.js]=33
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,

@@ -197,7 +197,7 @@ disciplina vale lo que valga la puerta.
 
 ```bash
 python3 -m http.server 8099                # servir el repo (en otra terminal)
-bash tests/correr.sh                       # los 45 · 2.568 comprobaciones · ~17 min en el runner
+bash tests/correr.sh                       # los 45 · 2.577 comprobaciones · ~17 min en el runner
 bash tests/correr.sh viento                # solo los que casen con el patrón
 ```
 
@@ -300,13 +300,19 @@ un careo por longitud pasaría y el mutante sobreviviría.
 
 ### Los arneses, uno a uno (comprobaciones medidas el 2026-09-09)
 
-> **De dónde sale el 2.568, y cinco números equivocados por el camino.** Este sale de una
-> **corrida completa y verde del 2026-09-23**, sobre `03bf301` más el cronómetro:
-> `45 arneses verdes · 2568 comprobaciones leídas`, y **2569 desde este cambio**, que suma una
-> a `test_versiones_app.mjs` (18 → 19). Ese +1 es ARITMÉTICA, no una tirada nueva: se corrió ese
-> arnés solo, no la suite entera, y así queda dicho en vez de dejar que el número pase por
-> medido — que es justo el vicio que esta caja lleva cinco veces documentando.
-> De las 29 que suben respecto a la línea anterior, **22 son mías**
+> **De dónde sale el 2.577, y cinco números equivocados por el camino.** Este sale de una
+> **corrida completa y verde del 2026-09-23** sobre el árbol de esta rama ya con `main` dentro
+> (`03d70ce` + el aviso de resolución): `45 arneses verdes · 2577 comprobaciones leídas`.
+>
+> **Y aquí se cruzaron dos ramas, que es justo lo que esta caja documenta.** La línea de `main`
+> decía `2568`, y **2569 por aritmética** tras subir `test_versiones_app.mjs` de 18 a 19 —lo dijo
+> ella misma: se corrió ese arnés solo, no la suite—. Ésta no suma nada a nada: se midió la
+> suite entera sobre el árbol fusionado, así que se queda el número medido y desaparece el
+> sumado. Del tramo de esta rama, 8 son de `test_viento_latencia.js` (93→101), al meter los
+> valores del equipo real —1 s de muestreo, 12–15 s de poleo— y el aviso de cuando el paso de
+> la simulación es más largo que ellos.
+>
+> Del tramo anterior, de las 29 que subieron, **22 son mías**
 > —`test_viento_latencia.js`, de 71 a 93, al cubrir el régimen SIN latencia (el que dejó pasar
 > el «¿y 9 minutazos???») y el botón de pausa— y **7 entraron con el #502**, en
 > `test_comparador.js` (312→317) y `test_comparador_3d.js` (283→285). Se separan porque
@@ -369,7 +375,7 @@ node tests/test_viento_planta.js           # 35 comprobaciones, la planta en fra
 node tests/test_viento_sello.js            # 17 comprobaciones, el informe declara con qué coordenadas se calculó
 node tests/test_viento_reproductor.js      # 18 comprobaciones, pasar de la barra sigue en el tiempo
 node tests/test_viento_rafaga_medida.js    # 29 comprobaciones, la ráfaga MEDIDA manda, y Open-Meteo la pide sin riesgo
-node tests/test_viento_latencia.js         # 93 comprobaciones, la cadena de latencia y el cronómetro (con y SIN cadena)
+node tests/test_viento_latencia.js         # 101 comprobaciones, la cadena de latencia y el cronómetro (con y SIN cadena)
 node tests/test_css_variables.js           # 35 comprobaciones, ninguna ficha usa una variable CSS que no define
 node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core
 node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo
@@ -378,7 +384,7 @@ node tests/test_ejecucion_traza.mjs        # 61 comprobaciones, la máquina de e
 node tests/test_layout.js                  # 201 comprobaciones, careo del generador de layout
 node tests/test_layout_ui.js               # 182 comprobaciones, el generador en Chromium
 node tests/test_zonas_mixto.js             # 106 comprobaciones, el reparto por zonas
-node tests/test_versiones_app.mjs          # 18 comprobaciones, el puntero de la tarjeta a la app (cruza repos)
+node tests/test_versiones_app.mjs          # 19 comprobaciones, el puntero de la tarjeta a la app (cruza repos)
 ```
 
 ### El puntero de la tarjeta a la app, y por qué el Panel lee Pages y el arnés `main`
