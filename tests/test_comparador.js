@@ -1768,5 +1768,64 @@ check('MUTANTE: con el eje mirando al polo, el TSAT deja de ganar',
   'mutado ' + mutTsat.neta.toFixed(1) + ' vs HSAT ' + mutHsat.neta.toFixed(1));
 FIS.psTSAT = psTSATBueno;
 
+// ── 6d) LA DOS AGUAS TIENE DOS FORMAS, Y NO SON EL MISMO MODELO ──
+// Una fija E-O se monta en PICO (cumbrera arriba) o en VALLE (limahoya abajo).
+// Las dos existen en campo. Hasta hoy la ficha DIBUJABA un valle y CALCULABA un
+// pico: se vio mirando la escena, no corriendo nada. Lo que se mide aquí es que
+// los dos modelos existen, que se distinguen, y que el de siempre no se ha
+// movido — porque cambiar el defecto movería en silencio todo lo publicado.
+check('la física conoce las DOS formas y el defecto es el PICO',
+  JSON.stringify(FIS.FORMAS_EW) === '["pico","valle"]' &&
+  FIS.shadeEW(60, 20, 5, 2.4, 0) === FIS.shadeEW(60, 20, 5, 2.4, 0, 'pico'),
+  JSON.stringify(FIS.FORMAS_EW));
+check('  y una forma que no existe se NIEGA en vez de elegir una',
+  (() => { try { FIS.shadeEW(60, 20, 5, 2.4, 0, 'tejado'); return false; }
+           catch (e) { return /forma/.test(e.message); } })());
+/* LA PROPIEDAD QUE SEPARA LAS DOS FORMAS, y la razón de tener dos modelos y no
+   un factor: en un PICO la mesa no se tapa a sí misma y toda la sombra es entre
+   filas, así que el paso la quita; en un VALLE el borde exterior sube y tapa a
+   su propio paño, así que el paso NO la toca. Medido trazando rayos con vecinas
+   y sin ellas: el valle da 0,6120 con ellas y 0,6112 sin ellas. */
+{
+  const ps = 90 - 12, beta = 30, cw = 2.4;
+  const v = [3.5, 5, 8, 12].map(p => FIS.shadeEW(ps, beta, p, cw, 0, 'valle'));
+  const q = [3.5, 5, 8, 12].map(p => FIS.shadeEW(ps, beta, p, cw, 0, 'pico'));
+  check('en VALLE la sombra es PROPIA: el paso no la toca (' +
+    v.map(x => x.toFixed(4)).join(' ') + ')',
+    Math.max(...v) - Math.min(...v) < 1e-12 && v[0] > 0.2, JSON.stringify(v));
+  check('  y en PICO es ENTRE FILAS: afloja con el paso (' +
+    q.map(x => x.toFixed(4)).join(' ') + ')',
+    q[0] > q[3] + 0.05, JSON.stringify(q));
+  check('  y donde importa —sol bajo, paño de cara— el valle sombrea MÁS',
+    [8, 12, 20].every(psi =>
+      FIS.shadeEW(90 - psi, beta, 7, cw, 0, 'valle') >
+      FIS.shadeEW(90 - psi, beta, 7, cw, 0, 'pico')));
+  check('  y con el sol alto ninguna de las dos sombrea: no es un sesgo fijo',
+    FIS.shadeEW(90 - 60, beta, 7, cw, 0, 'valle') === 0 &&
+    FIS.shadeEW(90 - 60, beta, 7, cw, 0, 'pico') === 0);
+}
+/* EL CIELO TAMBIÉN DEPENDE DE LA FORMA. `skyMaskValle` no lleva gcr a
+   propósito: quien levanta el horizonte es el borde de la propia mesa. Se exige
+   además que tape MÁS que el pico, para que no pueda colarse una función que no
+   hace nada y pase por buena. */
+check('el cielo del VALLE no mira el paso y tapa más que el del pico',
+  [20, 30, 40].every(b => {
+    const v = FIS.skyMaskValle(b);
+    return v > 0.5 && v < 1 && [0.34, 0.48, 0.69].every(g => v < FIS.skyMask(b, g / 2));
+  }),
+  JSON.stringify([20, 30, 40].map(b => [b, +FIS.skyMaskValle(b).toFixed(4),
+                                        +FIS.skyMask(b, 0.24).toFixed(4)])));
+/* Y QUE LA DIFERENCIA SEA DE BULTO EN ENERGÍA, que es lo que justifica tener
+   los dos modelos. Medido con el trazador: a 30° el valle capta ~5 % menos. */
+{
+  const c2 = Object.assign({}, cfg, { tiltEW: 30 });
+  const pico = FIS.corre(FIS.spec('fija_ew'), M, Object.assign({}, c2, { formaEW: 'pico' }));
+  const valle = FIS.corre(FIS.spec('fija_ew'), M, Object.assign({}, c2, { formaEW: 'valle' }));
+  const dif = 100 * (valle.neta - pico.neta) / pico.neta;
+  check('y en el AÑO el valle capta bastante menos que el pico (' +
+    dif.toFixed(2) + ' %)', dif < -2 && dif > -12,
+    'pico ' + pico.neta.toFixed(1) + ' · valle ' + valle.neta.toFixed(1));
+}
+
 console.log('\n' + (ko ? 'FALLOS: ' + ko + ' (de ' + (ok + ko) + ')' : 'OK — ' + ok + '/' + ok + ' comprobaciones'));
 process.exit(ko ? 1 : 0);

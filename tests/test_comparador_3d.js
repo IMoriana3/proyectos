@@ -2322,22 +2322,44 @@ const SONDA = `(() => {
       });
     };
     const o = {};
-    [5, 20, 35, 45].forEach(t => { set('tiltEW', String(t)); actualiza3D(); o['t' + t] = mide(); });
+    // LAS DOS FORMAS. Una dos aguas se monta en pico o en valle, y la escena
+    // tiene que dibujar la que se calcula: hasta hoy dibujaba un valle mientras
+    // la tabla calculaba un pico, y eso se vio MIRANDO, no corriendo nada.
+    ['pico', 'valle'].forEach(f => { set('formaEW', f);
+      [5, 20, 35, 45].forEach(t => {
+        set('tiltEW', String(t)); actualiza3D();
+        o[f + t] = mide();
+        // y la forma dibujada, medida en el marco de la fila: el borde
+        // interior por encima del alero es PICO; por debajo, VALLE.
+        const B = BLOQUES.find(x => x.key === 'fija_ew'), u = B.filas[0];
+        u.updateWorldMatrix(true, true);
+        const m = u.children[0].spin.children[0]; m.updateWorldMatrix(true, false);
+        const d = m.geometry.parameters.depth, pts = [];
+        [-d / 2, d / 2].forEach(dz => {
+          const w = new THREE.Vector3(0, 0, dz).applyMatrix4(m.matrixWorld);
+          pts.push(u.worldToLocal(w.clone())); });
+        pts.sort((a, b) => a.z - b.z);
+        // aparte, NO colgada del array: al serializar el resultado del
+        // navegador, un array pierde las propiedades que no son índices —y la
+        // comprobación habría leído `null` sin enterarse de por qué.
+        o['cumbrera_' + f + t] = +(pts[1].y - pts[0].y).toFixed(3);
+      }); });
+    set('formaEW', 'pico');
     return o;
   });
   /* Primero: que el rayo ENCUENTRE el panel. Sin esto, un poste que se fuera a
      tomar viento daría «no asoma» por no cortar nada — verde sin medir. */
   check('la sonda de hincas ve los dos paños y todos sus postes cortan su panel',
-    [5, 20, 35, 45].every(t => (hincasEW['t' + t] || []).length === 2 &&
-      hincasEW['t' + t].every(x => x.postes >= 4 && x.cortan === x.postes)),
-    JSON.stringify(hincasEW.t20));
+    [5, 20, 35, 45].every(t => (hincasEW['pico' + t] || []).length === 2 &&
+      hincasEW['pico' + t].every(x => x.postes >= 4 && x.cortan === x.postes)),
+    JSON.stringify(hincasEW.pico20));
   check('  y los dos paños van a +θ y −θ, que es donde el fallo vivía',
-    [5, 20, 35, 45].every(t => Math.abs(hincasEW['t' + t][0].rot + hincasEW['t' + t][1].rot) < 1e-6 &&
-      Math.abs(hincasEW['t' + t][0].rot) > 1e-6),
-    JSON.stringify([hincasEW.t5.map(x => x.rot), hincasEW.t45.map(x => x.rot)]));
+    [5, 20, 35, 45].every(t => Math.abs(hincasEW['pico' + t][0].rot + hincasEW['pico' + t][1].rot) < 1e-6 &&
+      Math.abs(hincasEW['pico' + t][0].rot) > 1e-6),
+    JSON.stringify([hincasEW.pico5.map(x => x.rot), hincasEW.pico45.map(x => x.rot)]));
   check('NINGUNA hinca asoma por encima del módulo, en ninguno de los dos paños',
-    [5, 20, 35, 45].every(t => hincasEW['t' + t].every(x => x.peor < 0)),
-    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['t' + t].map(x => x.peor)])));
+    [5, 20, 35, 45].every(t => hincasEW['pico' + t].every(x => x.peor < 0)),
+    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['pico' + t].map(x => x.peor)])));
   /* Y con MARGEN, no a ras. El umbral no puede ser el de antes («< −0,02»):
      aquélla era la holgura del EJE, y con la esquina medida esa holgura no
      existe ni debe existir — la tapa se hunde lo justo, porque hundirla más
@@ -2345,13 +2367,33 @@ const SONDA = `(() => {
      es que haya margen de verdad y que NO dependa del tilt: si volviera a
      depender, es que alguien ha vuelto a igualar un punto en vez del sólido. */
   check('  y con margen real, no a ras del plano',
-    [5, 20, 35, 45].every(t => hincasEW['t' + t].every(x => x.peor < -0.002)),
-    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['t' + t].map(x => x.peor)])));
+    [5, 20, 35, 45].every(t => hincasEW['pico' + t].every(x => x.peor < -0.002)),
+    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['pico' + t].map(x => x.peor)])));
+  /* ── LA ESCENA DIBUJA LA FORMA QUE SE CALCULA ───────────────────────────
+     Reportado mirando la escena: se dibujaba un valle y se calculaba un pico.
+     No era que el valle estuviera mal —las dos formas existen— sino que la
+     ficha mezclaba una con la otra sin decirlo. Medido entonces: la cumbrera
+     salía 0,68 m POR DEBAJO del alero a 35°. Ahora las dos salen del mismo
+     mando, y aquí se exige el signo en las dos. */
+  check('en PICO la cumbrera queda POR ENCIMA del alero, y crece con el tilt',
+    [5, 20, 35, 45].every(t => hincasEW['cumbrera_pico' + t] > 0) &&
+    hincasEW.cumbrera_pico45 > hincasEW.cumbrera_pico5 + 0.3,
+    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['cumbrera_pico' + t]])));
+  check('  y en VALLE por DEBAJO, con el mismo tamaño cambiado de signo',
+    [5, 20, 35, 45].every(t =>
+      Math.abs(hincasEW['cumbrera_valle' + t] + hincasEW['cumbrera_pico' + t]) < 1e-6 &&
+      hincasEW['cumbrera_valle' + t] < 0),
+    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['cumbrera_valle' + t]])));
+  check('  y las hincas siguen sin asomar en NINGUNA de las dos formas',
+    ['pico', 'valle'].every(f => [5, 20, 35, 45].every(t =>
+      hincasEW[f + t].every(x => x.peor < -0.002))),
+    JSON.stringify(['pico', 'valle'].map(f =>
+      [f, [5, 20, 35, 45].map(t => Math.max.apply(null, hincasEW[f + t].map(x => x.peor)))])));
   check('  y ese margen NO crece con el tilt: se hunde lo justo en todos',
     (() => { const v = [5, 20, 35, 45].map(t => Math.min.apply(null,
-        hincasEW['t' + t].map(x => x.peor)));
+        hincasEW['pico' + t].map(x => x.peor)));
       return Math.max.apply(null, v) - Math.min.apply(null, v) < 0.02; })(),
-    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['t' + t].map(x => x.peor)])));
+    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['pico' + t].map(x => x.peor)])));
 
   check('sin errores de JS', errs.length === 0, errs.join(' | '));
   await b.close();

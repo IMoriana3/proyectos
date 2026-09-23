@@ -559,6 +559,52 @@ representativa por estructura, no una planta simulada fila a fila. Sin haber com
 nada y se dice por qué: no se fabrica un color. Y es **POA**, no DC: el desacoplo eléctrico sigue
 sin estar en ninguna cifra.
 
+### La dos aguas puede ser PICO o VALLE, y no son el mismo modelo
+
+Se vio **mirando la escena**: la ficha dibujaba un valle y calculaba un pico. El
+valle no estaba mal —las dos formas existen en campo— pero mezclar una con otra
+sin decirlo sí. Y la diferencia no es de dibujo:
+
+| | de dónde sale la sombra | ¿la quita el paso? |
+|---|---|---|
+| **pico** (cumbrera arriba) | entre filas | **sí** |
+| **valle** (limahoya abajo) | de la mesa consigo misma | **no** |
+
+Trazando con vecinas y sin ellas: el valle da **0,6120 con ellas y 0,6112 sin
+ellas** —iguales al cuarto decimal—; el pico da **0,0000** sin vecinas. Esa es
+una diferencia de naturaleza antes que de tamaño: en un pico el diseño se
+arregla con paso y en un valle sólo con inclinación.
+
+En energía, cielo claro sobre Sevilla con mesa de 2,4 m:
+
+| tilt | POA pico | POA valle | diferencia | pérdida pico | pérdida valle |
+|---|---|---|---|---|---|
+| 10° | 2028–2031 | 2021–2022 | −0,3 a −0,4 % | 0,03–0,15 % | 0,46–0,48 % |
+| 20° | 1983–2000 | 1951–1953 | −1,6 a −2,4 % | 0,18–1,00 % | 2,52–2,61 % |
+| 30° | 1910–1948 | 1829–1833 | −4,2 a −5,9 % | 0,57–2,49 % | 6,43–6,61 % |
+
+A 30° y 7 m de paso la columna «pérdida sombra» decía **0,57 % donde hay
+6,43 %**: once veces por debajo para quien tenga un valle.
+
+**El cielo también depende de la forma**, y casi se me pasa. `skyMaskValle` **no
+lleva gcr**, y eso es el resultado: quien levanta el horizonte es el borde
+exterior de la propia mesa. Que la vecina no entre no es observación sino
+demostración —exigiría paso menor que el ancho de mesa, o sea filas solapadas—.
+Lo escribí primero **con** un término de vecina inventado y **empeoró** la
+medida (0,7668 contra 0,7825 a 50°); así se vio que sobraba. A 40° el valle deja
+0,8675 del cielo contra 0,9770 del pico.
+
+**Cómo se arbitró.** Un trazado de rayos parametrizado en la forma, sin una línea
+de álgebra compartida con la fórmula, **validado primero reproduciendo el pico**
+(840 casos, peor desvío 4,1e-4 contra una rejilla de 5,0e-4) y sólo entonces
+usado para juzgar el valle (1 500 casos, 3,6e-4). El cielo, contra una
+integración del factor de vista hecha aparte que reproduce el del pico al cuarto
+decimal en 12 geometrías. La ficha y el núcleo cuadran bit a bit en 1 800 casos.
+
+**El defecto sigue siendo el pico** y hay comprobación que lo exige: cambiarlo
+movería en silencio todo lo publicado. Una forma que no existe se niega en vez
+de elegir una.
+
 ### El color es del INSTANTE, no sólo del año
 
 Reportado dos veces, y la segunda dejó claro que la primera la había arreglado

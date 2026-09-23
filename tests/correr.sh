@@ -83,7 +83,8 @@ declare -A PISO=(
   # red. Se arreglan de tres maneras distintas y un «no se pudo» genérico no
   # dice cuál.
   [test_cartera_en_vivo.js]=32
-  [test_comparador.js]=304
+  # 304 -> 312: las DOS formas de la dos aguas, su cielo y la diferencia en el año.
+  [test_comparador.js]=312
   # LA ESCENA, EN CHROMIUM DE VERDAD. Sube de 247 a 266 con el color por
   # producción: 19 comprobaciones nuevas, entre ellas las que sujetan que el
   # color de cada mesa corresponde a SU número. Dejar el piso en 247 las haría
@@ -105,7 +106,9 @@ declare -A PISO=(
   # puesto—. Ahora mide los cuatro vértices de la tapa, y se añade que el margen
   # no crezca con el tilt: si vuelve a crecer, es que alguien ha igualado otra
   # vez un punto en vez del sólido.
-  [test_comparador_3d.js]=280
+  # 280 -> 283: la dos aguas puede ser PICO o VALLE y la escena tiene que
+  # dibujar la que se calcula (antes dibujaba valle y calculaba pico).
+  [test_comparador_3d.js]=283
   [test_comparador_sitio.js]=36
   [test_ejecucion_traza.mjs]=61
   # La ficha de planta y el acceso al SCADA. El piso son las 30 MEDIDAS, y lo
