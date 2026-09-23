@@ -302,7 +302,11 @@ un careo por longitud pasaría y el mutante sobreviviría.
 
 > **De dónde sale el 2.568, y cinco números equivocados por el camino.** Este sale de una
 > **corrida completa y verde del 2026-09-23**, sobre `03bf301` más el cronómetro:
-> `45 arneses verdes · 2568 comprobaciones leídas`. De las 29 que suben, **22 son mías**
+> `45 arneses verdes · 2568 comprobaciones leídas`, y **2569 desde este cambio**, que suma una
+> a `test_versiones_app.mjs` (18 → 19). Ese +1 es ARITMÉTICA, no una tirada nueva: se corrió ese
+> arnés solo, no la suite entera, y así queda dicho en vez de dejar que el número pase por
+> medido — que es justo el vicio que esta caja lleva cinco veces documentando.
+> De las 29 que suben respecto a la línea anterior, **22 son mías**
 > —`test_viento_latencia.js`, de 71 a 93, al cubrir el régimen SIN latencia (el que dejó pasar
 > el «¿y 9 minutazos???») y el botón de pausa— y **7 entraron con el #502**, en
 > `test_comparador.js` (312→317) y `test_comparador_3d.js` (283→285). Se separan porque
