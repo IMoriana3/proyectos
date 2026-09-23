@@ -279,7 +279,15 @@ declare -A PISO=(
   # «son iguales estos dos numeros» a «sigue resolviendo el puntero»— y gana
   # cinco comprobaciones: que las tarjetas apuntan en vez de copiar (2), y
   # que la regla con la que el Panel lee se extrae de el y funciona (3).
-  [test_versiones_app.mjs]=18
+  # 18 -> 19: el hueco que queda —las tarjetas que siguen copiando— pasa de
+  # CONTARSE a MEDIRSE. De las 18 publicadas sin puntero, las de este mismo
+  # repo tienen su fichero al lado, asi que se mira si el numero de la tarjeta
+  # aparece siquiera como texto en la app. Salieron tres respuestas donde antes
+  # habia una: 2 con el numero escrito dentro (careables a mano), 2 SIN rastro
+  # ninguno —sim-viento.html no contiene «1.26» y comparador-estructuras.html
+  # no contiene «1.58»: su tarjeta lleva un libro de versiones propio del
+  # Panel, sin contrapartida— y 14 en otros repos, no mirables desde aqui.
+  [test_versiones_app.mjs]=19
   # Nace de un hueco MEDIDO: con el `hold` de la histéresis puesto a cero en
   # la llamada real, los diez arneses que abren la ficha —539 comprobaciones—
   # se quedaron verdes. La histéresis se podía borrar y el repo no lo notaba.

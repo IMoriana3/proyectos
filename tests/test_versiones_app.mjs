@@ -179,9 +179,45 @@ const sinCarear = publicadas.filter(p => !CAREABLES.some(c => c.url === p.url));
 console.log('     ── cobertura: ' + CAREABLES.length + ' de ' + publicadas.length +
             ' tarjetas publicadas leen su version de la app. Las otras ' +
             sinCarear.length + ' no declaran una version legible por máquina:');
-for (const p of sinCarear)
-  console.log('        · ' + p.url.replace('https://imoriana3.github.io/', '') +
-              (p.version ? ' (tarjeta: ' + p.version + ', escrita a mano)' : ' (tarjeta sin version)'));
+/* Y NO TODAS LAS COPIAS SON IGUAL DE CIEGAS, así que el hueco se MIDE en vez
+   de contarse. De las tarjetas sin puntero, las de este mismo repo tienen su
+   fichero al lado: se puede mirar si el número que la tarjeta escribe aparece
+   SIQUIERA como texto en la app. Hay tres respuestas distintas y hasta ahora
+   salían todas iguales en la lista:
+
+     · la app no declara version legible PERO el número está escrito dentro
+       (en un comentario, en el pie): alguien puede carearlo a mano;
+     · el número NO aparece en ninguna parte de la app: la tarjeta lleva un
+       libro de versiones PROPIO, del Panel, sin contrapartida — nada, ni una
+       persona, puede comprobarlo contra el fichero;
+     · la tarjeta no escribe número.
+
+   Encontrado al medir la cobertura: `sim-viento.html` no contiene «1.26» y
+   `comparador-estructuras.html` no contiene «1.58». No es que el número sea
+   falso —cada uno es consecuente con el historial de SU tarjeta— es que su
+   única fuente es la tarjeta. Se DECLARA con su tamaño; arreglarlo es hacer
+   que esas apps declaren `VER`, y eso no se hace inventando el número. */
+const AQUI_URL = 'https://imoriana3.github.io/proyectos/';
+let sinRastro = 0, conRastro = 0, noMirables = 0;
+for (const p of sinCarear) {
+  const corta = p.url.replace('https://imoriana3.github.io/', '');
+  let nota;
+  if (!p.version) { nota = '(tarjeta sin version)'; noMirables++; }
+  else if (!p.url.startsWith(AQUI_URL)) { nota = '(tarjeta: ' + p.version + ', escrita a mano · fichero en otro repo, no se mira desde aqui)'; noMirables++; }
+  else {
+    const f = path.join(RAIZ, p.url.slice(AQUI_URL.length));
+    if (!fs.existsSync(f)) { nota = '(tarjeta: ' + p.version + ' · la url no tiene fichero en este repo)'; noMirables++; }
+    else if (fs.readFileSync(f, 'utf8').includes(p.version)) {
+      nota = '(tarjeta: ' + p.version + ', escrita a mano · el numero SI aparece en la app: careable a mano)'; conRastro++;
+    } else {
+      nota = '(tarjeta: ' + p.version + ' · el numero NO aparece en la app: libro de versiones propio del Panel, sin contrapartida)'; sinRastro++;
+    }
+  }
+  console.log('        · ' + corta + ' ' + nota);
+}
+console.log('     ── de esas ' + sinCarear.length + ': ' + conRastro + ' con el numero escrito en la app, ' +
+            sinRastro + ' SIN rastro ninguno, ' + noMirables + ' no mirables desde este repo ──');
+check('el hueco de las tarjetas sin puntero queda medido, no solo contado', true);
 
 // ── de dónde sale la app: hermano primero, main después ──────────────────
 const SIN_RED = process.env.CAREO_SIN_RED === '1';
