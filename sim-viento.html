@@ -341,6 +341,7 @@
           <div class="field"><label>Arranque del motor (s)</label><input id="latArr" type="number" step="1" min="0" value="5"></div>
         </div>
         <div class="ro" id="latTot" style="margin-top:8px;font-size:.8rem"></div>
+        <p class="nota" id="latCota"></p>
         <p class="nota">Hasta aquí la ficha modelaba <b>un</b> retardo: el del hierro, 0,17 °/s.
           Con solo ése, el reloj de un abanderamiento es <b>|Δθ| / 0,17</b> y se hace de cabeza.
           Lo que falta es todo lo de antes, y ahí está casi toda la espera.</p>
@@ -5621,12 +5622,18 @@ function latUI(){
   var on=$('lat_on').checked;
   $('latBox').style.display=on?'':'none';
   var L=cfgLat();
+  /* `.tag` es un RÓTULO —monoespaciado y en mayúsculas—, y ahí metí tres líneas
+     de prosa: en pantalla salía un párrafo a gritos y costaba leerlo. La
+     explicación se va a una nota normal, debajo, y en la caja queda solo el
+     número con su nombre, que es para lo que sirve. */
   $('latTot').innerHTML=on
     ? '<span class="k">PEOR CASO ANTES DE QUE EL EJE SE MUEVA</span><div class="v">'+
-      fmt(L.ventana_s+L.muestreo_s+L.sondeo_s+L.arranque_s,0)+' s</div>'+
-      '<div class="tag" style="margin-top:4px">Es una COTA, no lo que va a medir el cronómetro: '+
-      'las dos rejillas esperan lo que les falte para el siguiente borde, no el periodo entero, '+
-      'y la media puede no cruzar el umbral nunca. Por eso se mide y no se suma.</div>'
+      fmt(L.ventana_s+L.muestreo_s+L.sondeo_s+L.arranque_s,0)+' s</div>'
+    : '';
+  $('latCota').innerHTML=on
+    ? 'Ese número es una <b>cota</b>, no lo que va a medir el cronómetro: las dos rejillas '+
+      'esperan lo que les falte para el siguiente borde, no el periodo entero, y la media '+
+      'puede no cruzar el umbral nunca. Por eso se <b>mide</b> y no se suma.'
     : '';
   if(MODO==='live'){liveInit();liveTick(0.001);}
   pintaCrono();
