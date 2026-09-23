@@ -83,7 +83,8 @@ declare -A PISO=(
   # red. Se arreglan de tres maneras distintas y un «no se pudo» genérico no
   # dice cuál.
   [test_cartera_en_vivo.js]=32
-  [test_comparador.js]=304
+  # 304 -> 312: las DOS formas de la dos aguas, su cielo y la diferencia en el año.
+  [test_comparador.js]=312
   # UNA VARIABLE CSS QUE NO EXISTE NO FALLA: DEJA LA PROPIEDAD COMO ESTABA.
   # `background:var(--panel-2)` con `--panel-2` sin definir no es un error —la
   # declaración se descarta y la propiedad se queda con lo heredado—, así que
@@ -123,7 +124,14 @@ declare -A PISO=(
   # (3, contando caracteres; sin ellas el muro vuelve solo). Salen menos de la
   # suma porque las 4 del mando apagado se han reescrito: lo que sujetaban era
   # el apaño, no la propiedad.
-  [test_comparador_3d.js]=279
+  # 279 -> 280: las cabezas de las hincas asomaban sobre los módulos y el banco
+  # daba verde porque medía EL EJE del poste, un punto —justo el único bien
+  # puesto—. Ahora mide los cuatro vértices de la tapa, y se añade que el margen
+  # no crezca con el tilt: si vuelve a crecer, es que alguien ha igualado otra
+  # vez un punto en vez del sólido.
+  # 280 -> 283: la dos aguas puede ser PICO o VALLE y la escena tiene que
+  # dibujar la que se calcula (antes dibujaba valle y calculaba pico).
+  [test_comparador_3d.js]=283
   [test_comparador_sitio.js]=36
   [test_ejecucion_traza.mjs]=61
   # La ficha de planta y el acceso al SCADA. El piso son las 30 MEDIDAS, y lo

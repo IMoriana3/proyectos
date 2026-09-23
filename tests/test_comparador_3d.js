@@ -711,8 +711,13 @@ const SONDA = `(() => {
       return { total: +(Math.acos(Math.min(1, n.y)) * 180 / Math.PI).toFixed(2),
                ns: +ns.toFixed(2), nH: nH,
                pisan: +peor.toFixed(2), nocabe: !!BLOQUES[0].hincas.nocabe,
-               hincas: [+BLOQUES[0].hincas.corta.toFixed(2),
-                        +BLOQUES[0].hincas.larga.toFixed(2)] };
+               /* SIN REDONDEAR A 2 DECIMALES. Se restan entre sí más abajo y
+                  dos redondeos de 5 mm cada uno hacían bailar la desviación
+                  ±1 cm — justo el orden del umbral, así que el veredicto lo
+                  decidía el milímetro y no la física. Se guarda entero y se
+                  redondea al IMPRIMIR, que es donde el redondeo no decide. */
+               hincas: [+BLOQUES[0].hincas.corta.toFixed(4),
+                        +BLOQUES[0].hincas.larga.toFixed(4)] };
     };
     const r = { llano: mide(0, 180), ns: mide(12, 180), eo: mide(12, 90),
                 eo30: mide(30, 90) };
@@ -745,20 +750,36 @@ const SONDA = `(() => {
   /* LAS HINCAS. Una mesa fija apoya en DOS líneas de postes y el propio tilt las
      hace distintas: con 2,4 m de mesa a 25°, un metro entre la de delante y la
      de detrás. Eso es de la ESTRUCTURA y está también en llano. */
-  const difH = f => +(f.hincas[1] - f.hincas[0]).toFixed(2);
+  /* SIN REDONDEAR. Estaba a `.toFixed(2)` y se comparaba con `< 0.05`: el
+     umbral caía JUSTO sobre la rejilla del redondeo, así que una diferencia
+     real de 4,6 cm podía leerse 0,05 y fallar, o 0,04 y pasar, según el
+     milímetro. Un umbral no se pone donde el redondeo decide. */
+  const difH = f => f.hincas[1] - f.hincas[0];
   check('la fija apoya en DOS líneas de postes, y el tilt las hace distintas (' +
-    fijaPend.llano.hincas.join('–') + ' m ya en llano)',
+    fijaPend.llano.hincas.map(x => x.toFixed(2)).join('–') + ' m ya en llano)',
     fijaPend.llano.nH >= 16 && difH(fijaPend.llano) > 0.5,
     JSON.stringify(fijaPend.llano));
   /* Lo que NO puede pasar es que la pendiente A LO LARGO las estire: para eso
      la fila sigue el terreno. Antes, con 12° sobre 65 m, iban de 0,25 a 8,74 m
      —y la mesa entraba CINCO METROS en el suelo por un extremo—. */
+  const desv = f => Math.abs(difH(f) - difH(fijaPend.llano));
   check('y la pendiente A LO LARGO ya no las estira: la fila sigue el terreno (' +
-    fijaPend.eo.hincas.join('–') + ' m con 12°, ' +
-    fijaPend.eo30.hincas.join('–') + ' m con 30°)',
+    fijaPend.eo.hincas.map(x => x.toFixed(2)).join('–') + ' m con 12°, ' +
+    fijaPend.eo30.hincas.map(x => x.toFixed(2)).join('–') + ' m con 30°; desvía ' +
+    desv(fijaPend.eo).toFixed(3) + ' y ' + desv(fijaPend.eo30).toFixed(3) + ' m)',
+    /* El umbral vuelve a ser el original (5 cm). Lo subí a 8 cuando esto
+       falló, y era el reflejo equivocado: no fallaba por el umbral sino porque
+       las hincas se redondeaban ANTES de restarse. Quitado el redondeo, la
+       desviación real sale 0,008 y 0,045 m —idénticas con y sin el hundido de
+       la cabeza, que es la prueba de que ese cambio no toca esta propiedad— y
+       pasa de forma determinista. Queda 5 mm de margen: si un día vuelve a
+       ponerse roja, es geometría, no ruido. */
     Math.abs(difH(fijaPend.eo) - difH(fijaPend.llano)) < 0.05 &&
     Math.abs(difH(fijaPend.eo30) - difH(fijaPend.llano)) < 0.05,
-    JSON.stringify([fijaPend.llano.hincas, fijaPend.eo.hincas, fijaPend.eo30.hincas]));
+    JSON.stringify({llano:fijaPend.llano.hincas, eo:fijaPend.eo.hincas,
+      eo30:fijaPend.eo30.hincas,
+      desviacion:[+Math.abs(difH(fijaPend.eo)-difH(fijaPend.llano)).toFixed(4),
+                  +Math.abs(difH(fijaPend.eo30)-difH(fijaPend.llano)).toFixed(4)]}));
   check('  ni con 30°, que es donde antes había que bancalear: ninguna hinca imposible',
     !fijaPend.eo.nocabe && !fijaPend.eo30.nocabe,
     JSON.stringify([fijaPend.eo.nocabe, fijaPend.eo30.nocabe]));
@@ -768,7 +789,8 @@ const SONDA = `(() => {
      mesa, de modo que el poste bajo sube y el alto baja—, y eso es real: lo que
      no puede es crecer. */
   check('y con la pendiente ⊥ a sus filas (N-S) no crecen: si acaso se acercan (' +
-    fijaPend.ns.hincas.join('–') + ' contra ' + fijaPend.llano.hincas.join('–') + ' m)',
+    fijaPend.ns.hincas.map(x => x.toFixed(2)).join('–') + ' contra ' +
+    fijaPend.llano.hincas.map(x => x.toFixed(2)).join('–') + ' m)',
     difH(fijaPend.ns) <= difH(fijaPend.llano) + 0.05,
     JSON.stringify([fijaPend.llano.hincas, fijaPend.ns.hincas]));
 
@@ -2255,57 +2277,123 @@ const SONDA = `(() => {
      hincas asomando POR ENCIMA del vidrio. Los dos paños giran a +θ y −θ, y a
      los postes se les pasaba el MISMO θ a los dos, así que el paño de bajada
      recibía la geometría del de subida. No se mide «se ve raro»: se lanza un
-     rayo vertical desde cada cabeza de poste contra SU panel y se mide la
-     distancia con signo. Negativa = la cabeza queda debajo del vidrio, que es
-     donde tiene que estar; positiva = asoma. Se barre el tilt porque el error
-     era `2·a·sen θ` y en llano no se ve: a 5° eran 6 cm y a 35°, 54. */
+     rayo vertical desde cada VÉRTICE DE LA TAPA contra SU panel y se mide la
+     distancia con signo. Negativa = por debajo del vidrio, que es donde tiene
+     que estar; positiva = asoma. Se barre el tilt porque en llano no se ve.
+
+     POR QUÉ LOS VÉRTICES Y NO EL EJE. La primera versión de esto medía el EJE
+     del poste — UN punto — y daba verde mientras en pantalla se veían las
+     cabezas sobre los módulos. Lo cazó Ignacio mirando una captura mía. La
+     tapa es CUADRADA y HORIZONTAL y el panel va inclinado: llevar el eje al
+     plano deja la esquina de aguas abajo fuera, `(lado/2)·|tan t|`, y el eje
+     es justo el único punto que estaba bien. Medido entonces, en las tres
+     familias fijas y en el 100 % de los postes: 0,5 cm a 20°, 2,0 a 30°,
+     3,8 a 40°. Un punto no mide un sólido. */
   const hincasEW = await p.evaluate(() => {
     const set = (id, v) => { const e = document.getElementById(id);
       if (e) { e.value = v; e.dispatchEvent(new Event('change')); } };
     document.querySelectorAll('#structs input[type=checkbox]')
       .forEach(c => { c.checked = (c.value === 'fija_ew'); });
+    document.dispatchEvent(new Event('change'));
     const mide = () => {
       const B = BLOQUES.find(x => x.key === 'fija_ew');
       if (!B || !B.filas.length) return null;
       const u = B.filas[0]; u.updateWorldMatrix(true, true);
       return [0, 1].map(i => {
-        const mesa = u.children[i], tops = [];
+        const mesa = u.children[i], panel = mesa.spin.children[0];
+        panel.updateWorldMatrix(true, false);
+        const rc = new THREE.Raycaster(); let postes = 0, cortados = 0, peor = -9;
         mesa.children.forEach(o => {
-          if (o.isMesh && o.geometry.parameters && o.geometry.parameters.width === 0.16)
-            tops.push(new THREE.Vector3(0, 0.5, 0).applyMatrix4(o.matrixWorld)); });
-        const panel = mesa.spin.children[0], rc = new THREE.Raycaster(), d = [];
-        tops.forEach(t => {
-          rc.set(new THREE.Vector3(t.x, t.y + 5, t.z), new THREE.Vector3(0, -1, 0));
-          const h = rc.intersectObject(panel, true);
-          if (h.length) d.push(t.y - h[0].point.y); });
+          const g = o.geometry && o.geometry.parameters;
+          if (!(o.isMesh && g && g.width === 0.16)) return;
+          postes++;
+          const pos = o.geometry.attributes.position; let pm = -9, vio = false;
+          for (let k = 0; k < pos.count; k++) {
+            if (Math.abs(pos.getY(k) - 0.5) > 1e-9) continue;   // solo la TAPA
+            const w = new THREE.Vector3(pos.getX(k), pos.getY(k), pos.getZ(k))
+                        .applyMatrix4(o.matrixWorld);
+            rc.set(new THREE.Vector3(w.x, w.y + 5, w.z), new THREE.Vector3(0, -1, 0));
+            const h = rc.intersectObject(panel, false);
+            if (h.length) { vio = true; const d = w.y - h[0].point.y; if (d > pm) pm = d; } }
+          if (vio) cortados++;
+          if (pm > peor) peor = pm; });
         return { pano: i, rot: +(mesa.spin.rotation.x * 180 / Math.PI).toFixed(1),
-                 postes: tops.length, cortan: d.length,
-                 peor: d.length ? +Math.max.apply(null, d).toFixed(4) : null };
+                 postes: postes, cortan: cortados, peor: +peor.toFixed(4) };
       });
     };
     const o = {};
-    [5, 20, 35, 45].forEach(t => { set('tiltEW', String(t)); actualiza3D(); o['t' + t] = mide(); });
+    // LAS DOS FORMAS. Una dos aguas se monta en pico o en valle, y la escena
+    // tiene que dibujar la que se calcula: hasta hoy dibujaba un valle mientras
+    // la tabla calculaba un pico, y eso se vio MIRANDO, no corriendo nada.
+    ['pico', 'valle'].forEach(f => { set('formaEW', f);
+      [5, 20, 35, 45].forEach(t => {
+        set('tiltEW', String(t)); actualiza3D();
+        o[f + t] = mide();
+        // y la forma dibujada, medida en el marco de la fila: el borde
+        // interior por encima del alero es PICO; por debajo, VALLE.
+        const B = BLOQUES.find(x => x.key === 'fija_ew'), u = B.filas[0];
+        u.updateWorldMatrix(true, true);
+        const m = u.children[0].spin.children[0]; m.updateWorldMatrix(true, false);
+        const d = m.geometry.parameters.depth, pts = [];
+        [-d / 2, d / 2].forEach(dz => {
+          const w = new THREE.Vector3(0, 0, dz).applyMatrix4(m.matrixWorld);
+          pts.push(u.worldToLocal(w.clone())); });
+        pts.sort((a, b) => a.z - b.z);
+        // aparte, NO colgada del array: al serializar el resultado del
+        // navegador, un array pierde las propiedades que no son índices —y la
+        // comprobación habría leído `null` sin enterarse de por qué.
+        o['cumbrera_' + f + t] = +(pts[1].y - pts[0].y).toFixed(3);
+      }); });
+    set('formaEW', 'pico');
     return o;
   });
   /* Primero: que el rayo ENCUENTRE el panel. Sin esto, un poste que se fuera a
      tomar viento daría «no asoma» por no cortar nada — verde sin medir. */
   check('la sonda de hincas ve los dos paños y todos sus postes cortan su panel',
-    [5, 20, 35, 45].every(t => (hincasEW['t' + t] || []).length === 2 &&
-      hincasEW['t' + t].every(x => x.postes >= 4 && x.cortan === x.postes)),
-    JSON.stringify(hincasEW.t20));
+    [5, 20, 35, 45].every(t => (hincasEW['pico' + t] || []).length === 2 &&
+      hincasEW['pico' + t].every(x => x.postes >= 4 && x.cortan === x.postes)),
+    JSON.stringify(hincasEW.pico20));
   check('  y los dos paños van a +θ y −θ, que es donde el fallo vivía',
-    [5, 20, 35, 45].every(t => Math.abs(hincasEW['t' + t][0].rot + hincasEW['t' + t][1].rot) < 1e-6 &&
-      Math.abs(hincasEW['t' + t][0].rot) > 1e-6),
-    JSON.stringify([hincasEW.t5.map(x => x.rot), hincasEW.t45.map(x => x.rot)]));
+    [5, 20, 35, 45].every(t => Math.abs(hincasEW['pico' + t][0].rot + hincasEW['pico' + t][1].rot) < 1e-6 &&
+      Math.abs(hincasEW['pico' + t][0].rot) > 1e-6),
+    JSON.stringify([hincasEW.pico5.map(x => x.rot), hincasEW.pico45.map(x => x.rot)]));
   check('NINGUNA hinca asoma por encima del módulo, en ninguno de los dos paños',
-    [5, 20, 35, 45].every(t => hincasEW['t' + t].every(x => x.peor < 0)),
-    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['t' + t].map(x => x.peor)])));
-  /* Y que quede METIDA, no rozando: la cabeza va bajo el vidrio, a media
-     altura de panel. Si sólo se pidiera «< 0», dejar la cabeza a 0,1 mm del
-     plano pasaría — y a ojo eso es exactamente lo que se veía mal. */
-  check('  y queda METIDA bajo el vidrio, no rozando el plano',
-    [5, 20, 35, 45].every(t => hincasEW['t' + t].every(x => x.peor < -0.02)),
-    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['t' + t].map(x => x.peor)])));
+    [5, 20, 35, 45].every(t => hincasEW['pico' + t].every(x => x.peor < 0)),
+    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['pico' + t].map(x => x.peor)])));
+  /* Y con MARGEN, no a ras. El umbral no puede ser el de antes («< −0,02»):
+     aquélla era la holgura del EJE, y con la esquina medida esa holgura no
+     existe ni debe existir — la tapa se hunde lo justo, porque hundirla más
+     dejaría el poste colgando de un palmo bajo el panel a 40°. Lo que se exige
+     es que haya margen de verdad y que NO dependa del tilt: si volviera a
+     depender, es que alguien ha vuelto a igualar un punto en vez del sólido. */
+  check('  y con margen real, no a ras del plano',
+    [5, 20, 35, 45].every(t => hincasEW['pico' + t].every(x => x.peor < -0.002)),
+    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['pico' + t].map(x => x.peor)])));
+  /* ── LA ESCENA DIBUJA LA FORMA QUE SE CALCULA ───────────────────────────
+     Reportado mirando la escena: se dibujaba un valle y se calculaba un pico.
+     No era que el valle estuviera mal —las dos formas existen— sino que la
+     ficha mezclaba una con la otra sin decirlo. Medido entonces: la cumbrera
+     salía 0,68 m POR DEBAJO del alero a 35°. Ahora las dos salen del mismo
+     mando, y aquí se exige el signo en las dos. */
+  check('en PICO la cumbrera queda POR ENCIMA del alero, y crece con el tilt',
+    [5, 20, 35, 45].every(t => hincasEW['cumbrera_pico' + t] > 0) &&
+    hincasEW.cumbrera_pico45 > hincasEW.cumbrera_pico5 + 0.3,
+    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['cumbrera_pico' + t]])));
+  check('  y en VALLE por DEBAJO, con el mismo tamaño cambiado de signo',
+    [5, 20, 35, 45].every(t =>
+      Math.abs(hincasEW['cumbrera_valle' + t] + hincasEW['cumbrera_pico' + t]) < 1e-6 &&
+      hincasEW['cumbrera_valle' + t] < 0),
+    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['cumbrera_valle' + t]])));
+  check('  y las hincas siguen sin asomar en NINGUNA de las dos formas',
+    ['pico', 'valle'].every(f => [5, 20, 35, 45].every(t =>
+      hincasEW[f + t].every(x => x.peor < -0.002))),
+    JSON.stringify(['pico', 'valle'].map(f =>
+      [f, [5, 20, 35, 45].map(t => Math.max.apply(null, hincasEW[f + t].map(x => x.peor)))])));
+  check('  y ese margen NO crece con el tilt: se hunde lo justo en todos',
+    (() => { const v = [5, 20, 35, 45].map(t => Math.min.apply(null,
+        hincasEW['pico' + t].map(x => x.peor)));
+      return Math.max.apply(null, v) - Math.min.apply(null, v) < 0.02; })(),
+    JSON.stringify([5, 20, 35, 45].map(t => [t, hincasEW['pico' + t].map(x => x.peor)])));
 
   check('sin errores de JS', errs.length === 0, errs.join(' | '));
   await b.close();
