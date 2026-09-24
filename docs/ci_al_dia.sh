@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+#
+# EL ÚLTIMO CI DE CADA REPO, ANTES DE EMPEZAR A TRABAJAR.
+#
+# ═══ POR QUÉ EXISTE ═══
+#
+# El 2026-09-24 se descubrió que el CI de `siting` llevaba CINCO CORRIDAS
+# SEGUIDAS EN ROJO —288 a 292— por una línea de continuación que se partió al
+# añadir cuatro mutaciones. Diecisiete mutaciones declaradas dejaron de
+# correrse, el paso moría con `command not found` y exit 127, y se siguió
+# trabajando y empujando encima durante un día entero.
+#
+# La línea partida fue el defecto. Que pasaran cinco corridas sin que nada
+# avisara es OTRA COSA, y es peor: una puerta que nadie mira no es una puerta.
+# Da igual lo bien construida que esté.
+#
+# Este fichero es el mínimo para que no vuelva. No es una puerta de CI: es lo
+# PRIMERO que se hace al abrir una sesión, y su respuesta se dice en voz alta
+# antes de tocar nada. Es barato a propósito —una llamada por repo— porque una
+# comprobación cara al arrancar se acaba saltando.
+#
+#   bash docs/ci_al_dia.sh              # todos los repos declarados
+#   bash docs/ci_al_dia.sh siting       # sólo los que casen con el patrón
+#
+# ═══ LOS TRES ESTADOS, AQUÍ TAMBIÉN ═══
+#
+#   rc = 0   se ha mirado y todo está en verde
+#   rc = 1   se ha mirado y hay algo en rojo
+#   rc = 2   NO SE HA PODIDO MIRAR (sin red, sin token, sin permiso)
+#
+# El 2 no es un 0 amable: «no he podido comprobar el CI» y «el CI está bien»
+# son afirmaciones distintas, y confundirlas es exactamente lo que este
+# fichero viene a impedir.
+#
+set -o pipefail
+DUENYO="${DUENYO_GH:-IMoriana3}"
+
+# ── LOS REPOS, DECLARADOS ────────────────────────────────────────────────
+# Escritos a mano A PROPÓSITO: una lista sacada de la API traería repos que no
+# son de esta suite y escondería el día que uno deje de estar. Si se añade un
+# repo al trabajo y no se añade aquí, este fichero no lo mira — y por eso
+# publica su ALCANCE abajo, para que el hueco se vea.
+REPOS=(
+  proyectos siting cobertura-zigbee scada gemelo-digital
+  visores checklist-solar-v2 gorraiz-dashboard solargptfull
+  factiun-cartera cobertura-rf-fv
+)
+# `visores` se llamaba `visor-san-jose`. El nombre viejo responde 301 y GitHub
+# redirige a `/repositories/{id}`, que el proxy de estas sesiones no deja pasar:
+# o sea que con el nombre viejo el repo salía como «NO MIRADO» y un CI en rojo
+# podía esconderse ahí. Queda escrito para que nadie lo vuelva a poner.
+PISO=8            # MEDIDO: menos repos consultados que esto es no haber mirado
+
+PATRON="${1:-}"
+TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+if [ -z "$TOKEN" ]; then
+  echo "NO SE HA PODIDO MIRAR: no hay GITHUB_TOKEN ni GH_TOKEN en el entorno."
+  echo "Esto NO es un verde: es que no se ha comprobado el CI de ningún repo."
+  exit 2
+fi
+
+# `-L` NO es decoración: un repo renombrado responde 301 y sin seguir la
+# redirección sale como «no responde o no hay permiso» — o sea, un repo rojo
+# podría esconderse detrás de un cambio de nombre. Pasó con `visor-san-jose`
+# la primera vez que se corrió esto.
+api() { curl -sSL --max-time 20 -H "Authorization: Bearer $TOKEN" \
+        -H "Accept: application/vnd.github+json" "$1" 2>/dev/null; }
+
+printf '%-20s %-10s %-9s %-10s  %s\n' repo rama corrida estado título
+printf '%-20s %-10s %-9s %-10s  %s\n' '--------------------' '----------' '---------' '----------' '------'
+
+mirados=0; rojos=0; nc=0; lista_rojos=""
+for r in "${REPOS[@]}"; do
+  [ -n "$PATRON" ] && [[ "$r" != *"$PATRON"* ]] && continue
+  rama=$(api "https://api.github.com/repos/$DUENYO/$r" | \
+         python3 -c 'import sys,json;print(json.load(sys.stdin).get("default_branch",""))' 2>/dev/null)
+  if [ -z "$rama" ]; then
+    printf '%-20s %-10s %-9s %-10s  %s\n' "$r" "?" "-" "⚠ NO MIRADO" "no responde o no hay permiso"
+    nc=$((nc+1)); continue
+  fi
+  linea=$(api "https://api.github.com/repos/$DUENYO/$r/actions/runs?branch=$rama&per_page=1" | \
+    python3 -c '
+import sys,json
+try: d=json.load(sys.stdin).get("workflow_runs",[])
+except Exception: print("|||"); raise SystemExit
+if not d: print("-|sin corridas|-|")
+else:
+    x=d[0]
+    est = x["conclusion"] if x["status"]=="completed" else x["status"]
+    print("%s|%s|%s|%s" % (x["run_number"], est, x["created_at"][:10], x["display_title"][:44]))' 2>/dev/null)
+  IFS='|' read -r num est fecha titulo <<< "$linea"
+  mirados=$((mirados+1))
+  case "$est" in
+    success)            icono="✅ verde" ;;
+    "sin corridas")     icono="— sin CI"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
+    in_progress|queued) icono="… en marcha" ;;
+    "")                 icono="⚠ NO MIRADO"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
+    *)                  icono="❌ $est"; rojos=$((rojos+1)); lista_rojos="$lista_rojos $r#$num" ;;
+  esac
+  printf '%-20s %-10s %-9s %-10s  %s\n' "$r" "${rama:0:10}" "${num:-–}" "$icono" "${titulo:-}"
+done
+
+echo ""
+# ── EL ALCANCE, Y EL PISO QUE NO APLICA CUANDO SE PIDE UN TROZO ──────────
+# El piso existe para que una corrida COMPLETA que mire poco salga con 2. Pero
+# `ci_al_dia.sh siting` es pedir un trozo a propósito, y con el piso puesto
+# salía SIEMPRE con 2 — o sea que el modo documentado en la cabecera no servía
+# para nada. Se vio probándolo, no leyéndolo.
+# Con patrón el piso no aplica, y a cambio NUNCA se dice «todos en verde»:
+# se dice cuántos de los que casan, que es lo único que se ha mirado.
+if [ -n "$PATRON" ]; then
+  echo "alcance PARCIAL A PROPÓSITO (patrón «$PATRON»): $mirados de ${#REPOS[@]} repos · $nc sin poder mirar"
+else
+  echo "alcance: $mirados repos consultados de ${#REPOS[@]} declarados (piso $PISO) · $nc sin poder mirar"
+fi
+if [ -z "$PATRON" ] && [ "$mirados" -lt "$PISO" ]; then
+  echo "ALCANCE INSUFICIENTE: se han podido mirar $mirados y el piso son $PISO."
+  echo "Una puerta verde afirma dos cosas: «he mirado» y «está bien». Esto no ha mirado."
+  exit 2
+fi
+if [ -n "$lista_rojos" ]; then
+  echo "EN ROJO:$lista_rojos"
+  echo "Díselo al usuario ANTES de ponerte a trabajar, y no des por cerrada ninguna"
+  echo "tarea de esos repos hasta ver cerrar su corrida."
+  exit 1
+fi
+if [ "$nc" != "0" ]; then
+  echo "$nc repo(s) no se han podido mirar. Eso NO es un verde entero: dilo."
+  exit 2
+fi
+if [ -n "$PATRON" ]; then
+  echo "los $mirados que casan con «$PATRON», en verde. El RESTO no se ha mirado."
+else
+  echo "todos en verde. Ahora sí."
+fi

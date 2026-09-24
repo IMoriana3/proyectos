@@ -123,6 +123,13 @@ jobs:
           done
           curl -sf -o /dev/null http://localhost:8099/index.html
 
+      # LA PUERTA DEL ENLACE, EN EL REPO QUE GUARDA EL ORIGINAL. Se copió a
+      # siete repos y aquí no estaba: el único sitio donde el documento vive de
+      # verdad era el único que no comprobaba su enlace. Lo cazó la propia
+      # puerta al correrla a mano el 24-09.
+      - name: el enlace a la guía de puertas apunta a algo que existe
+        run: bash docs/enlace_guia.sh
+
       - name: correr los arneses
         run: bash tests/correr.sh
 

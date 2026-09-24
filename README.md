@@ -5,6 +5,19 @@
 ## Qué es
 Una página única (`index.html`) que lista los proyectos desde el array `PROJECTS` y muestra, por tarjeta, estado / objetivo / stack / accesos (deploy, repo, documentación, descargable). El motor Markdown va **incrustado** (sin CDN): el botón **Documentación** carga `docs/<docId>.md` o un `docUrl` remoto (README del repo).
 
+## Cómo se sabe que algo está bien aquí
+
+`docs/puertas-y-alcance.md` — el estándar de puertas y alcance de los ocho
+repos de la suite: qué es un verde, por qué el vacío es un error y no un
+aprobado, y las cuatro lecciones que salieron de puertas que pasaban la prueba
+clásica sin estar mirando lo que decían mirar. Vive aquí porque dos repos ya
+clonan éste por pin, así que el enlace es COMPROBABLE desde fuera y no sólo
+legible: `docs/enlace_guia.sh` lo verifica en cada repo, con su paso de CI.
+
+Y antes de ponerse a trabajar: `bash docs/ci_al_dia.sh` — el último CI de la
+rama principal de cada repo de la suite, en una tabla. Existe porque el CI de
+`siting` estuvo cinco corridas seguidas en rojo sin que nadie se enterara.
+
 ## Funcionalidades
 - Tarjetas por proyecto con estado (Producción / En desarrollo / Demo / Pausado / Deprecado), búsqueda, filtros y orden.
 - Documentación embebida: `docId` → `docs/<docId>.md`, o `docUrl` → README del repo.
