@@ -952,13 +952,47 @@ ficheros):
 |---|---|---|
 | `fetch-depth: 0` | **rc 0** | **10** ✔ |
 | `--deepen=200` + `fetch` de la base | rc 0 | 10 ✔ |
-| `fetch` de las dos puntas *(la propuesta)* | rc 128, `no merge base` | 0 ✗ |
+| `fetch` de las dos puntas, **a tres puntos** *(la propuesta)* | rc 128, `no merge base` | 0 ✗ |
 | `--unshallow` sólo de la rama base | rc 128 | 0 ✗ |
 
-Se eligió `fetch-depth: 0` y no el `--deepen=N`, que también pasa: **la `N` es un
-número a ojo**. Ahonda lo justo hoy y se queda corta el día que un PR salga de
-una base más vieja, cuando ya nadie recuerde de dónde salió. Un umbral sin
-procedencia es un rojo futuro sin explicación.
+**Ojo con leer esa tercera fila de más**, que es el remate de abajo: dice que
+falla *traer las dos puntas y comparar a **tres** puntos*. Traer **sólo la base**
+y comparar **a dos puntos contra HEAD** es otra cosa, y **sí funciona**.
+
+### Y el remate, que llegó después y es el que cierra la lección
+
+Todo lo de arriba es verdad y **no bastaba**, porque el banco donde lo medí
+**no reproducía la CI**. Saqué a profundidad 1 el *sha de la cabeza*, cuando lo
+que `actions/checkout` saca en un `pull_request` es **la merge ref**. Sale el
+mismo `fatal`, así que el banco parecía fiel. No lo era.
+
+Y la diferencia importa, porque en la merge ref **HEAD ya es el merge commit**
+—base + PR—, o sea que la base **es un ancestro de HEAD**. Entonces:
+
+| forma | qué pide | en la merge ref |
+|---|---|---|
+| `git diff --check "$base...$head"` | el **ancestro común** de dos puntas sueltas | falla: no lo hay |
+| `git diff --check "$base" HEAD` | nada: compara dos árboles | **rc 0**, y saca justo lo que el PR añade |
+
+Traer **sólo el commit base** y comparar **a dos puntos contra HEAD** funciona,
+cuesta un commit en vez de la historia entera, y es lo que acabó entrando. Mi
+tabla de cuatro variantes lo había descartado **sin haberlo probado**: yo medí
+`$base...$head` a *tres* puntos. **No es la misma variante.** Un «no funciona»
+sobre algo parecido no es un «no funciona».
+
+Así que la misma lección se cumplió dos veces seguidas y la segunda contra mí:
+primero por no probar el arreglo, y después **probando el arreglo en un entorno
+que no era el de verdad** y no darme cuenta. Reproducir el entorno no es
+invocarlo: es comprobar que lo que se reprodujo **es lo que allí hay**. Un banco
+que da el mismo error por otro camino es un banco que miente con la respuesta
+correcta.
+
+Y de propina, el argumento con el que justifiqué `fetch-depth: 0` frente al
+`--deepen=N` —«en este workflow ya se clona entero en otros jobs»— **era falso**:
+el otro job también hace `checkout@v4` sin `fetch-depth`. Me inventé el dato que
+abarataba mi propuesta, en el mismo texto donde estaba explicando que un arreglo
+hay que verlo funcionar. El razonamiento contra la `N` a ojo sigue en pie por sí
+solo; el dato que le puse al lado, no.
 
 ### La segunda mitad: UN AVISO SIN NÚMERO NO PROTEGE DE NADA
 
@@ -1158,6 +1192,8 @@ enlace → rojo; sin clon y sin red → `rc = 2`.
 - [ ] ¿Se comprueba el **sha de cada copia fijada JUSTO DESPUÉS de mergear** lo que ese candado vigila? Un merge opera sobre bytes; si normaliza uno, el rojo sale mañana en otro repo con el rastro frío. (§3)
 - [ ] Y el cruce que lo comprueba: ¿**falla** ante un formato que no conoce, o se lo salta? Saltárselo publica un verde de lo que sí miró. (§3)
 - [ ] De cada arreglo que se propone: ¿se ha **visto funcionar**, o se da por bueno por construcción? Y si se escribió «aquí no se puede probar», ¿se **intentó reproducir el entorno** antes de escribirlo? Casi siempre se puede; si no, se dice **qué lo impide**. (§3 decies)
+- [ ] Y del banco donde se probó: ¿es **el entorno de verdad**, o uno parecido? Que dé el mismo error no lo demuestra — puede darlo por otro camino. Comprobar **qué ref, qué profundidad, qué está presente**, no sólo que el síntoma coincide. (§3 decies)
+- [ ] Antes de escribir un parche: ¿se ha mirado si **alguien ya lo arregló**? Listar los PR abiertos del repo cuesta una llamada; un duplicado cuesta el trabajo de los dos. (§3 decies)
 - [ ] De cada aviso que se da: ¿lleva **número**? Un riesgo sin tamaño no se puede pesar, se parece a haber mirado y no lo es. Si se puede medir, se mide antes de avisar. (§3 decies)
 
 ---
