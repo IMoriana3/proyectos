@@ -188,6 +188,45 @@ segundo de apuntarse como «regla dormida».
 Y al revés: **un mutante que no modela lo que dice modelar no prueba que el
 banco vigile; prueba que el mutante no llegó.**
 
+### Un guardia puede ACERTAR EL VEREDICTO Y EQUIVOCAR LA CAUSA
+
+**Y cuesta casi lo mismo que fallar el veredicto.** Manda a mirar donde no es,
+gasta la mirada que se le pidió, y —lo peor— **enseña a desconfiar de sus
+rojos**, que es cómo muere una guardia sin que nadie la borre.
+
+**El caso (2026-09-24).** Después de mergear `solargptfull` #274, `reconcilia.sh`
+sacó **ROJO** listando **diez ficheros** como «la rama aporta esto y no está en
+main», y recomendó abrir un PR nuevo con ellos. Comprobado a mano, fichero a
+fichero: **cero diferían**. Todo estaba dentro.
+
+El veredicto —«no te fíes, mira»— no era descabellado. La causa que dio era
+falsa. Lo que pasaba es que el PR se había actualizado **desde el servidor**
+—el botón «Update branch», o la API—, y ese commit de fusión **nace en el
+remoto**. El clon local se quedó uno por detrás, y la guardia comparaba una rama
+rancia contra un `main` al día.
+
+**Y es el mismo mecanismo que la ref local rancia de hace unos días:**
+
+> **Preguntar a una referencia LOCAL en vez de al remoto.**
+
+En `reconcilia.sh` estaba hecho bien para `main` —`fetch` explícito, y `rc = 2`
+si no se puede— y no estaba hecho para **la propia rama**. Media pregunta contra
+datos frescos y media contra datos viejos: eso no da media respuesta, da una
+respuesta entera y equivocada.
+
+**La regla:**
+
+> Antes de comparar dos referencias, comprobar que **las dos** están al día. Y
+> si una no lo está, eso no es un hallazgo sobre el trabajo: es `rc = 2`, porque
+> **la pregunta no se puede contestar desde una copia vieja**.
+
+**Y el remedio también hay que acertarlo, que es la segunda mitad.** El primer
+arreglo decía «haz `git merge --ff-only`»… que **falla** cuando la local y la
+remota han divergido, que es el caso real que apareció en `cobertura-zigbee` al
+probarlo (2 commits de cada lado). Acertar el veredicto y equivocar el remedio
+es la misma avería un escalón más abajo. Ahora distingue los dos casos, y **el
+consejo se probó ejecutándolo** en vez de darlo por bueno.
+
 ---
 
 ## 3 bis · Una puerta que nadie mira no es una puerta
@@ -1089,6 +1128,70 @@ De ahí que mirar antes no sea sólo ahorro de esfuerzo. **Mirar antes es lo que
 impide llegar a la mesa con algo que defender**, que es el estado en el que se
 argumenta hacia atrás.
 
+## 3 duodecies · La decimotercera: LO QUE TU PROPIO ERROR TE ESTÁ DICIENDO
+
+Las doce anteriores son sobre puertas y sobre remedios. Ésta es sobre **la barra
+de error**: dos maneras de equivocarla que no se ven mirando el número de en
+medio, y que salieron las dos del mismo sitio —un banco **sintético**, donde la
+respuesta se conoce y por eso se puede carear el error contra la verdad.
+
+### Primera · EL ERROR MEDIO IGUAL AL ERROR ABSOLUTO MEDIO DELATA SESGO PURO
+
+**La regla:**
+
+> Si el error medio y el error **absoluto** medio salen (casi) iguales, no hay
+> dispersión: **todos los casos fallan en el mismo sentido**. Eso es un sesgo, y
+> un sesgo **no se corrige inflando la barra de error** — se corrige
+> **encontrando qué falta en el modelo**.
+
+Es un diagnóstico de una línea y separa dos averías que se parecen en la salida
+y no tienen nada que ver:
+
+| | error medio | |err| medio | qué es |
+|---|---:|---:|---|
+| dispersión | ~0 | grande | ruido: la barra de error **es** la respuesta |
+| **sesgo** | **grande** | **igual de grande** | falta física: la barra **tapa** la respuesta |
+
+**El caso (2026-09-24).** El útil que saca el arranque de cada TCU en un stow
+daba `sesgo medio = 0,520 s` y `|err| medio = 0,520 s`. Idénticos. No era ruido
+de muestreo: **faltaba algo en el modelo**.
+
+Y lo que faltaba se lee solo en cuanto se acepta que es sesgo: se extrapolaba la
+rampa de giro hasta el ángulo de **la última muestra quieta**, y ese ángulo está
+**viejo** — entre esa muestra y el arranque, la TCU **seguía siguiendo al sol**.
+Extrapolar hasta un ángulo estancado lleva la rampa demasiado lejos, y como la
+rampa baja, «demasiado lejos» es **siempre** «demasiado tarde». Siempre en el
+mismo sentido: eso es un sesgo.
+
+El arreglo no fue una corrección ni una tolerancia mayor: **el arranque es el
+cruce de dos rectas**, la de seguimiento y la de giro. Así el seguimiento deja
+de ser un error y pasa a ser parte del modelo. Medido: **0,520 s → 0,008 s**.
+
+### Segunda · UN ERROR DE CUANTIZACIÓN NO SE PROMEDIA COMO RUIDO
+
+**La regla:**
+
+> Las muestras consecutivas de una señal cuantizada caen en el **mismo escalón o
+> en el de al lado**, así que su error **no es independiente**: desplaza el
+> ajuste **en bloque**. Dividirlo por `n` —como se hace con el ruido— es
+> **atribuirse una precisión que no se tiene**.
+
+La fórmula de mínimos cuadrados de toda la vida supone residuos independientes.
+Los de una escalera no lo son: son **estructura**, no ruido. Y la consecuencia
+va en la dirección peligrosa — el ajuste sale **demasiado seguro de sí mismo**.
+
+**Medido, en el mismo útil:** con la sigma de mínimos cuadrados a secas, sólo
+**32 de 40** casos caían dentro de 2 sigma, cuando 2 sigma tiene que cubrir
+~95 %. El útil acertaba y **se atribuía diez veces menos error del que tenía**.
+
+Y el arreglo tuvo su propia versión equivocada, que es la que da la regla: el
+primer suelo de cuantización se escribió como `q²/12 · (1/n₁ + 1/n₂)`, o sea
+**promediando**. No mordió. Sin el `1/n` —una recta entera desplazada un escalón
+completo, que es la hipótesis conservadora— la cobertura vuelve a donde debe.
+
+Es hermana de la décima (§3 nonies): allí el instrumento cuantiza y **el listón
+lo tapa**; aquí el instrumento cuantiza y **la barra de error lo tapa**.
+
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
 Esto no es una manía de la integración continua. **Un número correcto calculado
@@ -1254,6 +1357,10 @@ enlace → rojo; sin clon y sin red → `rc = 2`.
 - [ ] Y del banco donde se probó: ¿es **el entorno de verdad**, o uno parecido? Que dé el mismo error no lo demuestra — puede darlo por otro camino. Comprobar **qué ref, qué profundidad, qué está presente**, no sólo que el síntoma coincide. (§3 decies)
 - [ ] Antes de escribir un parche: ¿se ha mirado si **alguien ya lo arregló**? Listar los PR abiertos del repo cuesta una llamada. (§3 undecies)
 - [ ] Y si el parche propio **compite** con otro: releer los argumentos con los que se defiende. ¿Alguno es un dato que **no se ha comprobado** y que justo hace ganar al propio? Ahí es donde aparece el razonamiento hacia atrás. (§3 undecies)
+- [ ] De cada guardia que saca un rojo: ¿la **causa** que da es la de verdad, o sólo acertó el veredicto? Y antes de comparar dos referencias, ¿están **las dos** al día? Una local rancia contra una remota fresca da hallazgos fantasma, y eso es `rc = 2`, no un hallazgo. (§3)
+- [ ] Y el **remedio** que propone el guardia: ¿se ha ejecutado? Un consejo que falla en el caso real (`--ff-only` sobre ramas divergidas) es la misma avería un escalón más abajo. (§3)
+- [ ] Al mirar el error de una medida: ¿el error medio y el **absoluto** medio son iguales? Entonces es **sesgo**, y se arregla buscando qué falta en el modelo, **no** ensanchando la barra. (§3 duodecies)
+- [ ] Y si lo que se mide viene **cuantizado**: ¿la incertidumbre se está dividiendo por `n`? Los errores de una escalera **no se promedian**: desplazan el ajuste en bloque. (§3 duodecies)
 - [ ] De cada aviso que se da: ¿lleva **número**? Un riesgo sin tamaño no se puede pesar, se parece a haber mirado y no lo es. Si se puede medir, se mide antes de avisar. (§3 decies)
 
 ---
