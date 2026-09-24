@@ -462,6 +462,65 @@ valiendo**, con dos condiciones:
   lea «verde» como «funciona». Lo mismo que hace el censo de bancos cuando dice
   que mira si un banco está declarado en la CI, no si la corrida terminó.
 
+## 3 quinquies · Lo que se queda fuera de `main` sin que nadie lo note
+
+Las puertas de arriba vigilan el código. Ésta vigila el **bucle de trabajo**, y
+falla igual de callada.
+
+El bucle termina en `git checkout -B <rama> origin/main`. Ese comando **tira en
+silencio todo commit de la rama que no esté en main**. Cuando el PR se fusionó
+con *squash*, el contenido sí está en main aunque los commits no, y tirarlos es
+correcto — por eso el paso existe. Pero si se siguió commiteando **después** de
+abrir el PR, o el PR se fusionó con una cabeza anterior, ese trabajo desaparece
+sin una palabra.
+
+### El caso, del 2026-09-24, y la ironía que trae dentro
+
+El PR **#511** de `proyectos` se fusionó con la cabeza `19f64fc7`. Después se
+empujaron a la **misma rama** dos commits:
+
+| commit | qué traía | ¿entró en main? |
+|---|---|---|
+| `09069af` | **la quinta lección** (apagada a propósito ≠ rota) | **no** |
+| `c81cd9c` | el censo de CI marcando «SIN MINUTOS» | **no** |
+
+Se descubrió **por casualidad**: el PR siguiente salió con conflicto y sin
+ninguna corrida de CI —GitHub no arranca los flujos de un PR que no puede
+fusionar—, y al mirar por qué apareció el hueco. Nada lo vigilaba.
+
+La ironía, que conviene dejar escrita: uno de los dos commits perdidos era
+**justo la lección de leer el fichero entero antes de tocar nada**.
+
+Y el modo de fallo es el mismo de siempre: **el vacío pareció normal**. Cero
+corridas de CI en un PR se lee igual que «todavía no han empezado», y el
+documento se leía entero y coherente porque lo que faltaba no dejaba hueco
+visible — una sección que no está no se echa de menos.
+
+### La comprobación barata, y no es la que yo iba a proponer
+
+Lo primero que se me ocurrió fue que el PR **declarase qué ficheros toca** y
+carearlo con lo que entró en main. Es más caro y más frágil: hay que mantener la
+declaración, y no cubre el caso de commits empujados después.
+
+**Mirar el CONTENIDO lo cubre entero y cabe en una línea:**
+
+```
+git diff origin/main <rama>     vacío  ->  todo lo de la rama está en main
+                            no vacío  ->  hay trabajo que NO está publicado
+```
+
+No mira commits —que el squash aplana a propósito— sino ficheros. Está en
+`docs/reconcilia.sh`, con los tres códigos de siempre: **0** se puede reconciliar
+sin perder nada · **1** hay contenido fuera · **2** no se ha podido comprobar
+(sin red, comparar contra un `main` viejo daría un verde que no significa nada).
+
+Corrido sobre el caso de hoy nombra **exactamente los dos commits perdidos**.
+
+**Y un detalle que salió al probarla:** la primera versión se negaba también con
+ficheros **sin seguir**, y se disparó con su propio fichero recién escrito.
+`checkout -B` no toca lo que no está seguido. Lo peligroso son las
+modificaciones de ficheros **seguidos**.
+
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
 Esto no es una manía de la integración continua. **Un número correcto calculado
