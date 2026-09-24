@@ -275,64 +275,62 @@ el `|| echo 000` que parecía prudente producía `HTTP 000000`, que no casaba co
 ningún caso y caía al comodín. El caso «sin red» —el más probable de los tres—
 era el único que no se reconocía.
 
-### Y una tercera: que la respuesta sea del repo que se preguntó
+### Y una tercera: RESPUESTAS RANCIAS, y una corrección mía
 
-El censo publicó una vez `cobertura-rf-fv#4 failure`. Ese repo **no tiene
-ninguna corrida número 4** —comprobado sobre sus doce últimas— y el 4 era el
-número de `factiun-cartera`, la fila justo anterior.
+El censo publicó una vez `cobertura-rf-fv#4 failure` cuando su última corrida
+era la `#41 success`. **Escribí aquí que el `4` era el número de
+`factiun-cartera`, la fila justo anterior, y que parecía un cruce de
+variables. Era falso**, y lo desmontó mirar el historial completo del repo en
+vez de sus doce últimas corridas:
 
-> **LA CAUSA SIGUE SIN EXPLICAR.** La comprobación de abajo lo caza si vuelve,
-> pero cazarlo no es lo mismo que saber qué pasó, y conviene no confundir las
-> dos cosas. Si reaparece, esto es para poder ENCADENARLO en vez de
-> investigarlo de cero.
->
-> | | |
-> |---|---|
-> | cuándo | 2026-09-24, ~09:33 UTC |
-> | qué se publicó | `EN ROJO: gemelo-digital#136 solargptfull#927 cobertura-rf-fv#4` |
-> | fila afectada | `cobertura-rf-fv`, la **última** de la lista |
-> | el número | `4`, que es el de `factiun-cartera` — la fila **justo anterior** |
-> | contexto | corrió encadenado tras un `git push --force-with-lease`, en el mismo comando compuesto |
->
-> **Descartado, con la prueba:**
->
-> - **arrastre de variables entre iteraciones** — `IFS='|' read -r num est fecha titulo <<< ""` deja las cuatro VACÍAS aunque tuvieran valor antes, probado a mano con `num=4; est=success` puestos delante. Una `linea` vacía habría dado `NO MIRADO`, no un rojo;
-> - **la API devolviendo mal** — tres consultas seguidas a la URL exacta del censo devuelven `total_count: 51` y `#41 bancos completed success`, las tres;
-> - **una corrida real con ese número** — las doce últimas de `cobertura-rf-fv`, de todos sus workflows y todas sus ramas, van de la #33 a la #41. Ninguna es la 4;
-> - **confusión con el workflow de `pages`** — las de `pages` de ese repo son #35, #36 y #37.
->
-> **No descartado:** un cruce en la capa de red o de proxy entre dos peticiones
-> encadenadas. No hay forma de probarlo desde aquí, y por eso la comprobación
-> nueva mira el contenido de la respuesta y no la fontanería.
+    #4   bancos  failure  2026-09-09  rama=main   ← existe, y es de ESE repo
+    #15  pages   success  2026-08-28  rama=main   ← también, y también salió
 
-**No sé qué lo produjo.**
+No era el número de otro repo: era **una corrida vieja del repo correcto**. Y
+volvió a pasar dos veces más en la misma sesión, siempre igual: el endpoint
+`actions/runs` devuelve de vez en cuando una **página entera de corridas
+antiguas** como si fueran las últimas.
 
-Lo tentador es apuntarlo como transitorio y seguir. Pero un censo que puede
-equivocarse de repo es **peor que no tenerlo**, porque su error se lee como un
-hallazgo: alguien se pasa la mañana persiguiendo un fallo que no existe, y la
-próxima vez que el censo diga algo raro nadie se lo cree.
+Eso cambia el arreglo por completo:
 
-Así que cada respuesta declara de qué repo es y se carea con el que se
-preguntó. Si no cuadra, la fila sale `NO MIRADO` diciendo de cuál dice ser, y
-no un veredicto sobre el repo equivocado.
+- **ordenar por fecha no sirve** — la página entera es vieja, así que la más
+  nueva de una página rancia sigue siendo rancia;
+- **el careo de identidad tampoco** — la respuesta ES del repo que se preguntó;
+- **lo que sí sirve es carearla con la CABEZA DE LA RAMA.** Si el `head_sha` de
+  la corrida no es el de la punta de la rama, esa corrida no dice nada sobre el
+  código de hoy, venga de donde venga. Y entonces el censo NO da veredicto:
+  dice `NO MIRADO` con el sha y la fecha de lo que ha leído.
 
-Es la misma idea que los agregados, aplicada a la ENTRADA de una puerta en vez
-de a su salida: antes de creerse el número, comprobar sobre qué está calculado.
-Aquí la pregunta no es «¿cuántos?» sino «¿de quién?».
+Sobre la causa: **sigue sin explicar**. No reproduce a demanda —25 consultas
+idénticas seguidas devuelven la buena las 25—, y lo único que se puede decir es
+que las tres veces llegó una respuesta coherente pero caduca, lo que apunta a
+una caché en el camino y no a un fallo del censo.
 
-### Y una comprobación de mutaciones que sí ejecuta
+**Y un reintento, exactamente uno, sólo para esto.** Cuando la corrida no es de
+la cabeza, se vuelve a preguntar una vez. Eso separa lo transitorio de lo real
+sin tapar nada: `gorraiz-dashboard` dio una corrida de marzo una vez y luego 20
+de 20 correctas —transitorio—; `factiun-cartera` da la de junio SIEMPRE, y ahí
+no hay nada que reintentar. **Un rojo no se reintenta nunca**: el reintento
+sirve para decidir si se ha leído bien, no para buscar otra respuesta.
 
-`alcance_mutaciones.mjs` ya no busca los nombres en el texto del workflow:
-extrae el script del paso, sustituye el corredor por un registrador y lo
-EJECUTA. Lo que salga de ahí son los pares (banco, mutación) que la CI pasa de
-verdad. Probado en negativo por tres vías —continuación rota (rc = 127),
-argumento vacío, y una clave quitada del paso—, las tres rojas.
+### Lo que encontró en cuanto se puso
 
-Y como `tests/correr.sh` corre bancos pero NO mutaciones, un cambio en el motor
-puede dejar el ANCLA de una mutación apuntando a código que ya no existe con
-todos los bancos en verde. Pasó el mismo día con `terrenoDeygout`. Por eso hay
-`tools/correr_mutaciones.sh`, que extrae y ejecuta el mismo paso de la CI —no
-una segunda lista, que se separaría de la primera en una semana—.
+`factiun-cartera` — **el repo de donde sale el patrón del piso**, el que este
+documento cita como origen de la regla — lleva desde el **17 de junio** sin una
+sola corrida de CI sobre `main`. Y su workflow de bancos, con sus 19 ficheros
+de prueba:
+
+- se dispara **sólo con `workflow_dispatch`**: no corre ni al empujar ni en un
+  PR, sólo cuando alguien le da a un botón;
+- ha corrido **cinco veces en su vida**, las cinco el 2026-09-18, las cinco
+  sobre una rama, y **las cinco en rojo**.
+
+O sea que el patrón que le hemos copiado a ese repo —«verde es salir con 0 **y**
+sin fallos **y** publicando al menos `PISO` comprobaciones»— nunca ha llegado a
+aplicarse allí de forma automática, y la única vez que se corrió no pasó.
+
+Es la cuarta lección aplicándose a su propia fuente: **una puerta que nadie
+mira no es una puerta**, y da igual que la puerta esté bien escrita.
 
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
