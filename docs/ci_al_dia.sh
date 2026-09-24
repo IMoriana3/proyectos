@@ -129,28 +129,62 @@ for r in "${REPOS[@]}"; do
   # un hallazgo. Así que cada respuesta declara de qué repo es y se carea con
   # el que se preguntó. Si no cuadra, sale NO MIRADO con el motivo, no un
   # veredicto sobre el repo equivocado.
-  linea=$(api "https://api.github.com/repos/$DUENYO/$r/actions/runs?branch=$rama&per_page=1" | \
-    REPO_ESPERADO="$r" python3 -c '
+  # LA CABEZA DE LA RAMA, para saber si la corrida es DE ESTE CÓDIGO.
+  cabeza=$(api "https://api.github.com/repos/$DUENYO/$r/commits/$rama" | \
+           python3 -c 'import sys,json;print(json.load(sys.stdin).get("sha","")[:40])' 2>/dev/null)
+  ultima() { api "https://api.github.com/repos/$DUENYO/$1/actions/runs?branch=$2&per_page=10" | \
+    CABEZA="$3" \
+    REPO_ESPERADO="$1" python3 -c '
 import sys, json, os
 esperado = os.environ.get("REPO_ESPERADO", "")
+cabeza = os.environ.get("CABEZA", "")
 try: d = json.load(sys.stdin).get("workflow_runs", [])
 except Exception: print("|||"); raise SystemExit
 if not d:
     print("-|sin corridas|-|")
 else:
+    # NO SE COGE `d[0]`: se ORDENA aquí por fecha. El endpoint ha devuelto dos
+    # veces una corrida de semanas atrás como si fuera la última (ver la
+    # cabecera), y pedir diez y ordenarlas quita la parte del problema que sea
+    # de ordenación. La que sea de caché la caza el careo de abajo.
+    d.sort(key=lambda z: z.get("created_at", ""), reverse=True)
     x = d[0]
     dice = ((x.get("repository") or {}).get("name") or "").lower()
     if dice and esperado and dice != esperado.lower():
         print("-|OTRO REPO|-|la respuesta dice ser de «%s»" % dice)
     else:
         est = x["conclusion"] if x["status"] == "completed" else x["status"]
-        print("%s|%s|%s|%s" % (x["run_number"], est, x["created_at"][:10], x["display_title"][:44]))' 2>/dev/null)
+        titulo = x["display_title"][:44]
+        # ¿ES DE ESTE CÓDIGO? Si la corrida no es de la cabeza de la rama, su
+        # veredicto es sobre OTRO commit, y eso hay que decirlo: puede ser una
+        # respuesta rancia, o puede ser que el último empuje no disparara nada
+        # —que es lo que pasa en repos cuyo workflow sólo corre en `main`—.
+        if cabeza and x.get("head_sha") and x["head_sha"] != cabeza:
+            titulo = "NO ES DE LA CABEZA (%s, %s) · %s" % (x["head_sha"][:7], x["created_at"][:10], titulo[:20])
+            est = "rancia:" + str(est)
+        print("%s|%s|%s|%s" % (x["run_number"], est, x["created_at"][:10], titulo))' 2>/dev/null; }
+
+  # UN REINTENTO, Y SÓLO PARA ESTO. La respuesta ha llegado RANCIA tres veces en
+  # una sesión —una página entera de corridas viejas del repo correcto, así que
+  # ordenar por fecha no ayuda—, y un reintento separa lo transitorio de lo
+  # real: `gorraiz-dashboard` dio una corrida de marzo una vez y luego 20 de 20
+  # correctas; `factiun-cartera` da la de junio SIEMPRE, porque su CI de verdad
+  # lleva desde junio sin correr sobre `main`.
+  #
+  # Esto NO es «reintentar hasta que salga verde»: el reintento sólo se usa
+  # cuando la corrida no es de la cabeza, y si la segunda tampoco lo es, se
+  # publica NO MIRADO con las dos fechas. Un rojo nunca se reintenta.
+  linea=$(ultima "$r" "$rama" "$cabeza")
+  case "$linea" in
+    *"|rancia:"*) linea=$(ultima "$r" "$rama" "$cabeza") ;;
+  esac
   IFS='|' read -r num est fecha titulo <<< "$linea"
   mirados=$((mirados+1))
   case "$est" in
     success)            icono="✅ verde" ;;
     "sin corridas")     icono="— sin CI"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
     "OTRO REPO")        icono="⚠ NO MIRADO"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
+    rancia:*)           icono="⚠ NO MIRADO"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
     in_progress|queued) icono="… en marcha" ;;
     "")                 icono="⚠ NO MIRADO"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
     *)                  icono="❌ $est"; rojos=$((rojos+1)); lista_rojos="$lista_rojos $r#$num" ;;
