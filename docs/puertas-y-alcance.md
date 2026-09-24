@@ -190,6 +190,105 @@ banco vigile; prueba que el mutante no llegó.**
 
 ---
 
+## 3 bis · Una puerta que nadie mira no es una puerta
+
+Los tres tipos de arriba son fallos DE la puerta. Éste no: la puerta puede
+estar perfecta —bien construida, con su piso, su alcance publicado y su
+negativa probada— y no servir para nada, porque nadie está mirando lo que dice.
+
+**El caso, del 2026-09-24.** Al añadir cuatro mutaciones al corredor de
+`siting`, se partió una línea de continuación: `py_refl_pol \ \` y la
+siguiente sin barra. Bash leyó los diecisiete nombres que venían detrás como
+ÓRDENES, no como argumentos:
+
+    py_sin_guarda: command not found
+    Process completed with exit code 127
+
+Consecuencias, medidas:
+
+| | |
+|---|---|
+| mutaciones declaradas que dejaron de correrse | **17** |
+| corridas de CI seguidas en rojo | **5** (288 a 292) |
+| tiempo con el CI rojo | un día entero |
+| lo que decía el auditor de alcance | «140 de 140» |
+
+Y el auditor no mentía por estar mal escrito: comprobaba que las claves
+**aparecieran** en el YAML. Aparecer no es correrse. El útil escrito
+precisamente para cazar alcances parciales tenía dentro el defecto que caza.
+
+**Los dos defectos, que no son el mismo.** La línea partida es un error de
+edición: se arregla en un minuto y no vuelve a pasar igual. Que pasaran CINCO
+corridas sin que nada avisara es otra cosa, y es peor, porque no depende de
+ese error concreto: cualquier otro habría durado lo mismo.
+
+### Lo mínimo que lo cierra
+
+Dos costumbres, y una de ellas es un comando para que no dependa de acordarse:
+
+1. **Al empezar**, `bash docs/ci_al_dia.sh`: el último CI de la rama principal
+   de cada repo de la suite, en una tabla, y se dice en voz alta ANTES de tocar
+   nada. Es barato a propósito —una llamada por repo—, porque una comprobación
+   cara al arrancar se acaba saltando. Tiene los tres estados: rojo es rojo, y
+   un repo que no se ha podido consultar sale `NO MIRADO`, no verde.
+2. **Al empujar**, una tarea no está cerrada hasta ver cerrar su corrida. Un
+   `git push` que sale bien no dice nada sobre la CI: sólo dice que el objeto
+   llegó.
+
+La primera vez que se corrió `ci_al_dia.sh` encontró dos cosas que nadie sabía:
+`gemelo-digital` con su despliegue de Pages en rojo desde el 23-09, y el caso
+de abajo.
+
+### El repo renombrado: cuando la LISTA de lo vigilado se queda vieja
+
+Todo lo anterior es «esta puerta mira poco de lo que hay». Éste es un escalón
+más arriba: **la lista de lo que se vigila puede quedarse vieja y nada avisa**.
+
+`visor-san-jose` pasó a llamarse `visores`. Con el nombre viejo, GitHub
+responde `301` y redirige a `/repositories/{id}`, una ruta que el proxy de
+estas sesiones no deja pasar. Resultado: el censo lo daba por «no responde», o
+sea lo mismo que un repo caído — y un repo caído se persigue, pero uno que
+lleva semanas en «no responde» se acaba leyendo como ruido. Su CI dejó de
+mirarse sin que nada lo dijera.
+
+Dos arreglos, y el segundo es el que importa:
+
+1. **Distinguir el porqué.** «No responde» tapaba tres cosas distintas, y ahora
+   se separan con el código medido, no supuesto:
+
+   | | |
+   |---|---|
+   | `301` | **RENOMBRADO** — hay que buscar el nombre nuevo y corregir la lista |
+   | `403` | sin permiso **o** no existe: el proxy devuelve el mismo código para los dos, y eso se DICE en vez de elegir uno |
+   | `404` | no existe (fuera de este proxy) |
+   | `000` | **RED** — no se ha llegado a hablar con GitHub |
+
+2. **Exigir que respondan TODOS los declarados.** El piso dice «has mirado
+   bastantes»; esto dice otra cosa: «has mirado **todos los que dices
+   vigilar**». Si responden 10 de 11, el censo sale con `rc = 2` nombrando cuál
+   falta y por qué, aunque los diez estén en verde. Un hueco en la lista no es
+   un verde con una nota al pie.
+
+Y una cosa salió de PROBARLO y no de leerlo: con un host inválido, `curl`
+imprime `000` por `-w` **y además** sale con código distinto de cero, así que
+el `|| echo 000` que parecía prudente producía `HTTP 000000`, que no casaba con
+ningún caso y caía al comodín. El caso «sin red» —el más probable de los tres—
+era el único que no se reconocía.
+
+### Y una comprobación de mutaciones que sí ejecuta
+
+`alcance_mutaciones.mjs` ya no busca los nombres en el texto del workflow:
+extrae el script del paso, sustituye el corredor por un registrador y lo
+EJECUTA. Lo que salga de ahí son los pares (banco, mutación) que la CI pasa de
+verdad. Probado en negativo por tres vías —continuación rota (rc = 127),
+argumento vacío, y una clave quitada del paso—, las tres rojas.
+
+Y como `tests/correr.sh` corre bancos pero NO mutaciones, un cambio en el motor
+puede dejar el ANCLA de una mutación apuntando a código que ya no existe con
+todos los bancos en verde. Pasó el mismo día con `terrenoDeygout`. Por eso hay
+`tools/correr_mutaciones.sh`, que extrae y ejecuta el mismo paso de la CI —no
+una segunda lista, que se separaría de la primera en una semana—.
+
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
 Esto no es una manía de la integración continua. **Un número correcto calculado
