@@ -75,10 +75,27 @@ if [ -n "$SUCIO" ]; then
   exit 1
 fi
 
-DIF=$(git diff --stat "$MAIN" "$CAB" 2>/dev/null)
 ADELANTE=$(git rev-list --count "$MAIN".."$CAB" 2>/dev/null)
 DETRAS=$(git rev-list --count "$CAB".."$MAIN" 2>/dev/null)
+# DOS PREGUNTAS DISTINTAS, Y HACEN FALTA LAS DOS. Me equivoqué en las dos
+# direcciones antes de dar con esto:
+#
+#   DECIDIR  -> `git diff main rama` (dos puntos). ¿Difiere el contenido de la
+#               rama del de main? Vacío = todo lo suyo está dentro, CON SQUASH O
+#               SIN ÉL, que es para lo que existe esta guardia. Usar aquí la base
+#               común daba ROJO en toda rama recién mergeada por squash: sus
+#               commits no son ancestros, pero su contenido sí está.
+#   CONTAR   -> `merge-base..HEAD`. Qué APORTA la rama. El de dos puntos enseña
+#               además, como si fueran borrados suyos, todo lo que main ha
+#               añadido por su lado: con una rama 36 commits por detrás son 2.996
+#               líneas «borradas» que nadie ha borrado.
+#
+# Así que se decide con el primero y se INFORMA con el segundo.
+COMUN=$(git merge-base "$MAIN" "$CAB" 2>/dev/null)
+DIF=$(git diff --stat "$MAIN" "$CAB" 2>/dev/null)
+APORTA=$(git diff --stat "$COMUN" "$CAB" 2>/dev/null)
 echo "commits la rama va $ADELANTE por delante y $DETRAS por detrás"
+[ -n "$COMUN" ] && echo "base común $(git rev-parse --short "$COMUN") ($(git log -1 --format=%ci "$COMUN" 2>/dev/null | cut -c1-16))"
 echo
 
 # UN FALSO POSITIVO QUE ENCONTRÓ EL PRIMER BARRIDO DE LOS ONCE REPOS: con la rama
@@ -128,9 +145,9 @@ if [ -z "$DIF" ]; then
   exit 0
 fi
 
-echo "ROJO · HAY CONTENIDO DE LA RAMA QUE NO ESTÁ EN origin/$BASE."
+echo "ROJO · LA RAMA APORTA ESTO Y NO ESTÁ EN origin/$BASE:"
 echo
-echo "$DIF" | sed 's/^/    /'
+echo "$APORTA" | sed 's/^/    /'
 echo
 echo "    NO reconcilies: \`git checkout -B $RAMA origin/$BASE\` tira esto sin avisar."
 echo "    Los commits que lo traen:"
