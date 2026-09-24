@@ -607,13 +607,59 @@ por normalidad**, y en estos repos eso son tres cosas concretas:
    Y un rojo confirmado **no se degrada** a «no comprobado» (§1).
 3. **Que alguien pregunte por el vacío, solo y pronto.** Un hueco que aparece
    por casualidad al tercer día no está cubierto. Por eso `docs/al_empezar.sh`
-   corre **al empezar cada sesión** y hace las dos preguntas que ninguna CI hace:
-   *¿cuál fue el último CI de `main` de cada repo?* y *¿hay trabajo subido que no
-   esté en `main`?*
+   corre **al empezar cada sesión** y hace las **tres** preguntas que ninguna CI
+   hace: *¿cuál fue el último CI de `main` de cada repo?*, *¿hay trabajo subido
+   que no esté en `main`?* y *¿sigue cada copia fijada cuadrando con su
+   candado?*
 
 Y una cuarta, de forma: **cuando un número salga redondo o un hueco salga
 limpio, preguntar de qué está hecho** — la regla del resultado demasiado bueno
 (§4) es esta misma lección mirada desde el otro lado.
+
+### El sha del candado se comprueba DESPUÉS DEL MERGE, no mañana
+
+**Un candado afirma sobre bytes y un merge opera sobre bytes.** Si el squash
+normaliza un salto de línea, un `\r\n`, un byte final de fichero, la copia
+fijada de otro repo deja de cuadrar — y eso no sale a la luz al mergear: sale
+**al día siguiente**, en la CI de un repo distinto, con el rastro ya frío y sin
+nada que apunte al merge de ayer.
+
+El 2026-09-24 se mergeó un cambio del canon de radio por squash y el sha se
+comprobó **inmediatamente después**, contra la copia fijada y contra lo que el
+candado declara. Las tres coincidían, así que no hubo hallazgo — y esa es
+justamente la comprobación que se tiende a no hacer: la que casi siempre sale
+bien.
+
+> **La regla: el careo del candado va en la misma tanda que el merge, no en la
+> siguiente sesión.** Y como acordarse no es un mecanismo, lo pregunta también
+> `docs/candados.py`, solo, en cada arranque.
+
+### Y el candado que NO se comprobó: dicho, no contado
+
+El primer cruce de candados que escribí entendía dos formatos —`copias: [...]`
+y `copia: {...}}`— y `seguidor.lock.json` usa un tercero (`modelo` + `sha256`
+arriba). El bucle **no lo tocaba**, así que el informe decía *«siete de siete
+verdes»* y eran **seis**.
+
+Se publicó como **«no comprobado»** en vez de contarlo entre los verificados, y
+esa parte está bien: **seis de siete con el séptimo nombrado vale más que un
+siete que no lo es**. Pero decirlo no es el arreglo —
+
+> **un cruce que se salta en silencio lo que no entiende es esta misma lección
+> con otro traje**: el formato desconocido no deja rastro, y el verde que
+> publica es de lo que sí miró.
+
+Así que `docs/candados.py` **sale con `rc = 2` ante un formato que no reconoce**,
+lo nombra y dice sus claves. No lo salta. Probado en negativo, con los cinco
+casos: candado que cuadra (0) · fichero cambiado y candado viejo (1) · **formato
+desconocido (2)** · fichero que el candado nombra y no existe (**1**, no 2: un
+rojo confirmado no se degrada) · y cero candados (2, porque el vacío no es
+verde).
+
+Ese cuarto caso salió mal a la primera —devolvía 2— por preguntar «¿he careado
+alguna?» **antes** que «¿alguna está mal?». Es el mismo defecto de orden que
+`copiaQueFalta` tuvo esa misma mañana, cometido otra vez al escribir la
+comprobación que lo vigila. Lo cazó su propio control negativo.
 
 ## 3 septies · La octava: UNA MEDIDA LLEVA SU ENTORNO DENTRO
 
@@ -752,6 +798,93 @@ Y de ahí sale la obligación que la cierra: **un verde que no se mueve es una
 afirmación que hay que justificar**, igual que la regla del resultado demasiado
 bueno (§4). «Mutó y siguió verde» no es un resultado; es una pregunta sin
 contestar.
+
+## 3 nonies · La décima: EL INSTRUMENTO CUANTIZA Y EL LISTÓN LO TAPA
+
+**La regla:**
+
+> Antes de fijar una tolerancia, comprobar **si lo que se compara ya viene
+> cuantizado**. Si lo está, la tolerancia **no dice nada de la física: dice el
+> tamaño del escalón**.
+>
+> Dos valores redondeados a 2 decimales **no pueden diferir menos de 0,01**, así
+> que un careo sobre ellos es **ciego por debajo del paso** — y su verde no
+> significa «coinciden», significa «coinciden hasta donde el instrumento llega».
+>
+> El careo se hace **ANTES del redondeo, sobre el valor crudo**. Si el redondeo
+> es parte de lo que se entrega, se carea **aparte**, como segundo caso, con su
+> convenio declarado.
+
+Es una familia nueva y no un caso: las nueve anteriores son sobre puertas que
+miran mal o donde no deben. Ésta es sobre una puerta que mira **bien** y cuyo
+**instrumento** no tiene resolución para lo que se le pide.
+
+### El caso (2026-09-24)
+
+El careo JS↔Python del modelo de radio tenía **un** listón, `0,01 dB`, con este
+argumento en el fuente:
+
+> *el JS redondea a 2 decimales en `predictLink`; se compara con esa granularidad
+> para no acusar al port de un `toFixed()`*
+
+**El motivo era falso.** Redondean **los dos**:
+
+```js
+marginDb: +margin.toFixed(2)     // JS
+```
+```python
+"margin_db": round(margin, 2)    # Python
+```
+
+No hay asimetría que perdonar. Lo que hay es que el careo compara **dos valores
+ya redondeados**.
+
+Y debajo había una asimetría **de verdad**, que ese comentario no vio: `toFixed`
+redondea **medio hacia arriba** y el `round()` de Python es **bancario**. Medido:
+
+| valor | Python | JS |
+|---|---|---|
+| `0,125` | **0,12** | **0,13** |
+
+En un empate exacto son **0,01 dB de diferencia real** en un número publicado.
+
+### Lo que lo destapó fue un resultado demasiado bueno
+
+Nadie fue a buscarlo. El careo daba **`0,000e+00` exacto** donde, con un solo
+lado redondeando, tocarían ~0,005. **Un cero exacto ahí es sospechoso antes de
+ser una buena noticia** — es la regla del resultado demasiado bueno (§4),
+aplicada al **instrumento** en vez de al dato.
+
+### Y lo que escondía, medido
+
+Quitado el redondeo y careando el margen crudo, sobre los mismos 400 casos:
+
+| | casos que difieren | peor diferencia |
+|---|---|---|
+| margen **publicado** (redondeado) | **0 de 400** | 0,000e+00 |
+| margen **crudo** | **294 de 400** | 2,827e-10 |
+
+No es que la física cambiara: **el instrumento estaba ciego por debajo del
+escalón y lo daba por igualdad exacta**. Y la diferencia cruda resultó ser
+*exactamente* el suelo de la pérdida de dos rayos —el término que domina el
+margen—, o sea que ni siquiera era deriva: era ruido de plataforma que no se
+podía ver.
+
+**El listón viejo, además, estaba ocho órdenes de magnitud por encima** de las
+diferencias reales de las demás funciones (1e-15 a 1e-10 frente a 1e-2). Un
+listón así no es un guard, es un adorno — y aquí venía con dos defectos
+encadenados: demasiado alto, y sobre un valor que no podía bajar de él.
+
+### Probado en negativo
+
+| mutante | careo viejo | careo nuevo |
+|---|---|---|
+| `+1e-6 dB` en `fspl_db` | **lo dejaba pasar** | **`rc = 1`** |
+| `+0,001 dB` en el margen | **invisible**: por debajo del paso | **`rc = 1`** |
+
+El segundo es el que da la regla: una deriva de una milésima de dB era
+**estructuralmente indetectable**, no porque el listón fuera generoso sino
+porque el instrumento no llegaba.
 
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
@@ -911,6 +1044,9 @@ enlace → rojo; sin clon y sin red → `rc = 2`.
 - [ ] ¿Cada piso está **medido en el mismo entorno en que corre**? Y si el alcance encoge según lo que haya en la máquina, ¿lo **declara** el banco, y un alcance sin medir sale `rc = 2` en vez de caer al valor por defecto? (§3 septies)
 - [ ] Y de cada puerta: **rómpela** (¿reacciona?) **y deprívala** (¿se entera de que no ha mirado?). Las dos, no una.
 - [ ] Y de cada mutación: ¿**casó**, y además **cayó en el camino que la puerta recorre**? Un verde que no se mueve es una pregunta sin contestar, no un resultado. (§3 octies)
+- [ ] Antes de fijar una tolerancia: ¿lo que se compara **ya viene cuantizado** (redondeado, truncado, discretizado)? Si lo está, el careo va **sobre el valor crudo**, y el publicado se carea aparte con su convenio declarado. Una tolerancia sobre un valor cuantizado mide el escalón, no la física. (§3 nonies)
+- [ ] ¿Se comprueba el **sha de cada copia fijada JUSTO DESPUÉS de mergear** lo que ese candado vigila? Un merge opera sobre bytes; si normaliza uno, el rojo sale mañana en otro repo con el rastro frío. (§3)
+- [ ] Y el cruce que lo comprueba: ¿**falla** ante un formato que no conoce, o se lo salta? Saltárselo publica un verde de lo que sí miró. (§3)
 
 ---
 
