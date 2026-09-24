@@ -197,7 +197,7 @@ disciplina vale lo que valga la puerta.
 
 ```bash
 python3 -m http.server 8099                # servir el repo (en otra terminal)
-bash tests/correr.sh                       # los 45 · 2.600 comprobaciones · ~17 min en el runner
+bash tests/correr.sh                       # los 45 · 2.609 comprobaciones · ~17 min en el runner
 bash tests/correr.sh viento                # solo los que casen con el patrón
 ```
 
@@ -262,7 +262,13 @@ mismo byte a byte— pero quedó demostrado que **el despliegue de un commit pue
 con todos sus checks en verde**, porque ninguno mira lo publicado.
 
 `tools/test_pages_cronometro.mjs` lo cierra: sondea la URL publicada hasta que sirva **este**
-fichero y solo entonces conduce el cronómetro en esa página. El careo es por **sha-256 del
+fichero y solo entonces conduce el cronómetro en esa página. **Y desde el 24-sep carea las
+nueve**, no una: el modo de fallo que persigue —despliegue cancelado, Pages sirviendo lo de
+ayer— no distingue ficheros, y si alguien toca sólo `layout.html` no había nada mirando. La
+lista sale del **disco**, no de una constante, para que una ficha nueva entre sola — con una
+guarda de que son nueve o más, porque un bucle vacío sale verde. Las ocho restantes se leen
+una vez y no se sondean: cuando la primera está al día el despliegue ya terminó, que Pages
+publica el sitio entero de una vez. El careo es por **sha-256 del
 cuerpo servido** y no por número de versión, porque `sim-viento.html` no declara ninguno legible
 (lo mismo que ya está anotado sobre su tarjeta).
 
@@ -300,9 +306,9 @@ un careo por longitud pasaría y el mutante sobreviviría.
 
 ### Los arneses, uno a uno (comprobaciones medidas el 2026-09-09)
 
-> **De dónde sale el 2.600, y cinco números equivocados por el camino.** Este sale de una
+> **De dónde sale el 2.609, y cinco números equivocados por el camino.** Este sale de una
 > **corrida completa y verde del 2026-09-23** sobre el árbol de esta rama ya con `main` dentro
-> (`3dbca1c` + la cadena que no cabe en el paso, más su cota): `45 arneses verdes · 2600 comprobaciones
+> (`0f42a04` + el cierre de los tres huecos): `45 arneses verdes · 2609 comprobaciones
 > leídas`. Las 11 últimas son de `test_viento_latencia.js` (101→112), al meter el cuarto dato
 > de campo —la NCU decide sobre el viento a **3 s**, la ráfaga— y descubrir que con los cuatro
 > valores reales la cadena entera es la **identidad exacta** sobre una serie minutal, mientras
@@ -381,7 +387,7 @@ node tests/test_viento_planta.js           # 35 comprobaciones, la planta en fra
 node tests/test_viento_sello.js            # 17 comprobaciones, el informe declara con qué coordenadas se calculó
 node tests/test_viento_reproductor.js      # 18 comprobaciones, pasar de la barra sigue en el tiempo
 node tests/test_viento_rafaga_medida.js    # 29 comprobaciones, la ráfaga MEDIDA manda, y Open-Meteo la pide sin riesgo
-node tests/test_viento_latencia.js         # 124 comprobaciones, la cadena de latencia y el cronómetro (con y SIN cadena)
+node tests/test_viento_latencia.js         # 133 comprobaciones, la cadena de latencia y el cronómetro (con y SIN cadena)
 node tests/test_css_variables.js           # 35 comprobaciones, ninguna ficha usa una variable CSS que no define
 node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core
 node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo

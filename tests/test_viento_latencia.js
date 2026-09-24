@@ -769,6 +769,126 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   check('control · y entonces NO avisa de nada',
         !lento.dice && lento.finos.length === 0, JSON.stringify(lento.finos));
 
+
+  // ══════════════════════════════════════════════════════════════════
+  //  4quinquies) LA MANIOBRA QUE SE QUEDA A MEDIAS
+  // ══════════════════════════════════════════════════════════════════
+  // El caso que el propio cronómetro declaraba y nadie conducía: el viento baja
+  // del umbral ANTES de que el eje llegue. No es un fallo del reloj, es el caso
+  // — y es justo el que una media larga produce.
+  //
+  // Y al conducirlo apareció un defecto de los de promesa incumplida: el pie
+  // decía «lo que se ve es hasta dónde llegó» y la tabla no enseñaba NINGÚN
+  // número — la fila ponía «—» y su columna iba vacía. Ahora dice los grados
+  // hechos sobre los que había por delante, los dos MEDIDOS sobre la escena.
+  const corte = await page.evaluate(async () => {
+    const esperar = async (cond, ms) => { const t0 = Date.now();
+      while (Date.now() - t0 < ms) { if (cond()) return true;
+        await new Promise(r => setTimeout(r, 40)); } return cond(); };
+    const v = document.getElementById('lV');
+    const pon = x => { v.value = String(x); v.dispatchEvent(new Event('input', { bubbles: true })); };
+    pon(20);
+    document.getElementById('lat_on').checked = true;
+    document.getElementById('latVent').value = '300';
+    document.getElementById('latMues').value = '60';
+    document.getElementById('latSond').value = '60';
+    document.getElementById('latArr').value = '30';
+    latUI();
+    // ×60 Y NO ×900: a ×900 un fotograma son ~90 s de simulación, o sea 15° de
+    // eje a 0,17 °/s, y el recorrido entero de esta escena eran 14,4° — la
+    // maniobra terminaba en UN paso y no había nada que cortar. Medido: las
+    // cinco comprobaciones del corte en rojo con la ficha correcta y `lle/fin`
+    // valiendo 270/360, o sea una maniobra completa. Para cronometrar un corte
+    // hace falta que el paso sea mucho menor que el recorrido.
+    document.getElementById('lSpeed').value = '60';
+    if (!LIVE.run) document.getElementById('lPlay').click();
+    // NO BASTA CON QUE LAS MÁQUINAS ESTÉN EN SEGUIMIENTO: el cronómetro arranca
+    // con un FLANCO, y para que haya flanco tiene que haber visto antes un paso
+    // POR DEBAJO del umbral. Al esperar sólo los modos, la condición ya se
+    // cumplía —venían en IDLE de la sección anterior— y el viento subía en el
+    // mismo fotograma: `prevV` nacía valiendo 95 y el episodio no empezaba
+    // nunca. Medido: las siete comprobaciones de abajo en rojo con la ficha
+    // correcta, y el diagnóstico decía `fase: 'espera'` con todo en su sitio.
+    const desdeSeg = await esperar(() =>
+      vivos().filter(S => S !== 'PASIVO').every(S => LIVE.modos[S] === 'IDLE') &&
+      LIVE.crono.prevV != null && LIVE.crono.prevV <= (+document.getElementById('t1').value) / 3.6,
+      25000);
+    pon(95);
+    // SE ESPERA A QUE EL EJE HAYA RECORRIDO ALGO antes de cortar. Cortar en el
+    // mismo paso en que entra la orden da «0° de 39°»: cierto, pero no contiene
+    // el mecanismo — un fixture que no lo contiene no valida nada.
+    const anduvo = await esperar(() => {
+      const C = LIVE.crono; if (!C || !C.por) return false;
+      return Object.keys(C.por).some(S => C.por[S].thLle != null &&
+        Math.abs((C.por[S].thUlt || 0) - C.por[S].thLle) > 3);
+    }, 40000);
+    pon(5);
+    const cerro = await esperar(() => LIVE.crono.ultima && LIVE.crono.ultima.cortada, 25000);
+    // Y A QUE LA CAJA LO HAYA PINTADO: `pintaCrono` repinta uno de cada seis
+    // fotogramas, así que leer el texto en el instante del corte devolvía la
+    // tabla ANTERIOR, con la maniobra todavía en vuelo. Es la segunda vez en
+    // este fichero que ese repintado muerde; la primera fue en la sección del
+    // aviso de resolución. Se espera al TEXTO, que es lo que se va a afirmar.
+    const pintado = await esperar(
+      () => /baj\u00f3 del umbral/.test(document.getElementById('cronoBox').textContent), 8000);
+    const D = LIVE.crono.ultima || {};
+    const por = {};
+    Object.keys(D.por || {}).forEach(S => { const q = D.por[S];
+      por[S] = { lle: q.tLle == null ? null : q.tLle - D.t0,
+                 fin: q.tFin == null ? null : q.tFin - D.t0,
+                 hecho: (q.thLle != null && q.thUlt != null) ? Math.abs(q.thUlt - q.thLle) : null,
+                 total: (q.thLle != null && q.ejeUlt != null) ? Math.abs(q.ejeUlt - q.thLle) : null };
+    });
+    if (LIVE.run) document.getElementById('lPlay').click();
+    return { desdeSeg, anduvo, cerro, pintado, cortada: !!D.cortada, por,
+             _dbg: { minF: LIVE.minF, run: LIVE.run, v: LIVE.v, vVisto: LIVE.vVisto,
+                     modos: JSON.parse(JSON.stringify(LIVE.modos)), fase: LIVE.crono.fase,
+                     vel: document.getElementById('lSpeed').value },
+             txt: document.getElementById('cronoBox').textContent.replace(/\s+/g, ' ') };
+  });
+  const nomC = Object.keys(corte.por).sort();
+
+  console.log('     ── corte MEDIDO · ' + nomC.map(S =>
+    S + ' ' + fmtN(corte.por[S].hecho) + '° de ' + fmtN(corte.por[S].total)).join(' · '));
+  check('el fixture arranca desde seguimiento, el eje se mueve y la caja repinta',
+        corte.desdeSeg && corte.anduvo && corte.pintado,
+        JSON.stringify({ desdeSeg: corte.desdeSeg, anduvo: corte.anduvo, pintado: corte.pintado }));
+  check('el episodio se cierra como CORTADO, no como hecho',
+        corte.cerro && corte.cortada, JSON.stringify({ cerro: corte.cerro, cortada: corte.cortada }));
+  check('la orden SÍ había llegado a la TCU antes del corte',
+        nomC.length === 4 && nomC.every(S => typeof corte.por[S].lle === 'number'),
+        JSON.stringify(nomC.map(S => corte.por[S].lle)));
+  check('y ninguna marca «en posición»: el eje no llegó',
+        nomC.length === 4 && nomC.every(S => corte.por[S].fin === null),
+        JSON.stringify(nomC.map(S => corte.por[S].fin)));
+  // LO QUE HIZO EL EJE, que es la promesa que el pie hacía y la tabla no
+  // cumplía. Estrictamente entre 0 y el total: si fuera 0 no habría recorrido
+  // nada y si fuera el total habría llegado — y entonces no estaría cortada.
+  check('se sabe CUÁNTO recorrió: ni cero ni el total',
+        nomC.length === 4 && nomC.every(S => corte.por[S].hecho > 0 &&
+          corte.por[S].hecho < corte.por[S].total),
+        JSON.stringify(nomC.map(S => fmtN(corte.por[S].hecho) + '/' + fmtN(corte.por[S].total))));
+  check('y la tabla lo DICE, no deja el guión solo',
+        /se quedó en \d+° de \d+°/.test(corte.txt),
+        corte.txt.slice(0, 160));
+  // Y LOS NÚMEROS DE LA TABLA SON LOS MEDIDOS, no dos dígitos cualesquiera.
+  // Sin esto, un cronómetro que pintara siempre «0° de 25°» pasaba: la forma
+  // de la frase es lo fácil de acertar, el valor es lo que cuesta.
+  const pares = [...corte.txt.matchAll(/se quedó en (\d+)° de (\d+)°/g)]
+    .map(m => [+m[1], +m[2]]);
+  const esperados = nomC.map(S => [Math.round(corte.por[S].hecho), Math.round(corte.por[S].total)]);
+  check('y los grados que pinta son los que midió la escena',
+        pares.length === 4 &&
+        esperados.every(e => pares.some(v => v[0] === e[0] && v[1] === e[1])),
+        JSON.stringify({ tabla: pares, medido: esperados }));
+  check('el pie explica que fue el viento al bajar, no el reloj',
+        /bajó del umbral/.test(corte.txt) && /No es un fallo del reloj/.test(corte.txt));
+  // CONTROL POSITIVO: en la maniobra ENTERA esa columna dice otra cosa. Sin
+  // esto, un «se quedó en» pegado siempre pasaría por bueno.
+  check('control · en una maniobra entera la columna dice el RECORRIDO, no un «se quedó»',
+        /recorrido .* a 0,17/.test(CR.txt) && !/se quedó en/.test(CR.txt),
+        CR.txt.slice(0, 140));
+
   // ══════════════════════════════════════════════════════════════════
   //  5) LAS DECLARACIONES
   // ══════════════════════════════════════════════════════════════════
