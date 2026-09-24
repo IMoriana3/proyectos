@@ -390,6 +390,78 @@ tenerla. Lo que sí queda:
   observación y no como defecto**, y recuerda mirar la cabecera del flujo antes
   de tocarlo.
 
+## 3 quater · Una puerta que busca un NOMBRE en el fuente vigila la prosa
+
+**La regla, y va antes que los casos porque es lo que hay que llevarse:**
+
+> Buscar un nombre en el código fuente comprueba que **alguien escribió algo**,
+> no que **el código lo haga**. Un comentario, una cadena de texto o una
+> variable con ese nombre la satisfacen igual que la llamada de verdad.
+>
+> La comprobación buena es **ejecutar y ver el efecto**, y son dos, no una:
+>
+> 1. **sin la dependencia, el código SE PARA** — no sigue a medias;
+> 2. **si la dependencia cambia, el resultado CAMBIA CON ELLA.**
+>
+> La segunda es la que no se puede fingir: una copia local del cálculo pasa la
+> primera y falla la segunda.
+
+Es una regla, no una anécdota, y se ha pagado dos veces — **en las dos
+direcciones**.
+
+### Falso verde: el nombre estaba en un comentario (2026-09-24)
+
+Al hacer que los dos puertos de `cobertura-rf-fv` tomaran las primitivas del
+canon, la puerta que lo vigilaba miraba si `web/zigbee_pv_model.js` nombraba
+`radio_pv_model.js`. **Daba verde con el `require` arrancado**: el nombre seguía
+saliendo en la cabecera del fichero y en el texto del mensaje de error.
+
+Lo que la arregló no fue afinar el patrón, fue **cambiar de pregunta**:
+
+```
+sin el canon, el puerto SE PARA (no calcula con medio motor)
+toca el canon una primitiva: la del puerto CAMBIA CON ELLA
+```
+
+La mutación `puertoSinGuardia` —quitar el `if (!RPV) throw`— la caza **sólo** la
+primera. Ninguna comprobación de texto la veía.
+
+### Falso rojo, y luego falso verde: `UseBasicParsing`, el mismo defecto al revés
+
+`Cobertura-Zigbee/tools/gate_ps1_planta.py` exige que todo `Invoke-WebRequest`
+lleve `-UseBasicParsing` (sin él, PowerShell 5.1 parsea con el motor de Internet
+Explorer y en una máquina sin IE revienta). La puerta buscaba los dos nombres en
+el texto, y falló por los dos lados:
+
+- **se señaló a sí misma**: el comentario que explica por qué hace falta
+  `-UseBasicParsing` nombra `Invoke-WebRequest`, y la puerta lo contó como una
+  llamada — un rojo que no era un rojo;
+- **y dejó pasar lo que vigilaba**: un fichero cuyo COMENTARIO nombrara
+  `UseBasicParsing` pasaba aunque el código no lo pusiera.
+
+Las dos se vieron **probando la puerta en rojo, que para eso se prueba**, y las
+dos se arreglaron quitando los comentarios antes de mirar. Ahí no cabía ejecutar
+—es un `.ps1` que corre en el PC de una planta, con 5.1 y sin instalar nada— así
+que la puerta se quedó en heurística **y lo dice en su propio comentario**, con
+el job de Windows detrás como red.
+
+**Y un tercero, de la misma familia:** al mutar `-UseBasicParsing` con un `sed`
+que buscaba el guion, la mutación **no casó** —en el splat va
+`UseBasicParsing = $true`, sin guion— y la puerta salió verde. Un mutante que no
+llega no prueba que el banco vigile: prueba que el mutante no llegó. Por eso
+`rc = 2` no es «no cazada», es **«no comprobada»**.
+
+### Cuándo vale mirar el texto, y cómo decirlo
+
+No siempre se puede ejecutar. Cuando no se pueda, la puerta de texto **sigue
+valiendo**, con dos condiciones:
+
+- **quitar los comentarios antes de mirar** — las tres averías de arriba son la
+  misma línea que falta;
+- **decir en la salida que mira la DECLARACIÓN y no el efecto**, para que nadie
+  lea «verde» como «funciona». Lo mismo que hace el censo de bancos cuando dice
+  que mira si un banco está declarado en la CI, no si la corrida terminó.
+
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
 Esto no es una manía de la integración continua. **Un número correcto calculado
