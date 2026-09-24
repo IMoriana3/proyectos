@@ -92,7 +92,14 @@ if [ -z "$DIF" ]; then
     echo "reconciliando…"
     git checkout -B "$RAMA" "origin/$BASE" || exit 2
     echo "hecho: $RAMA = origin/$BASE ($(git rev-parse --short HEAD))"
-    echo "El empujón siguiente necesita --force-with-lease."
+    echo
+    echo "  Y EL EMPUJÓN, CON EL SEGURO EXPLÍCITO. El \`checkout -B\` acaba de dejar"
+    echo "  el upstream apuntando a origin/$BASE, así que un --force-with-lease a"
+    echo "  secas compara contra la referencia EQUIVOCADA y sale «stale info» aunque"
+    echo "  la rama local y la remota coincidan. Medido el 2026-09-24, en rf-fv:"
+    echo
+    echo "    REM=\$(git ls-remote origin $RAMA | cut -f1)"
+    echo "    git push --force-with-lease=$RAMA:\$REM origin HEAD:$RAMA"
   else
     echo "        Para hacerlo: bash docs/reconcilia.sh --hacerlo"
   fi
