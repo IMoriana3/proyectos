@@ -47,9 +47,19 @@ for c in ../proyectos ../Proyectos; do
     exit 0
   fi
   if [ -d "$c" ]; then
-    echo "ROJO · hay un clon en $c y NO trae $DOC"
-    echo "       o el documento se ha movido, o el pin apunta a un commit anterior a él."
-    exit 1
+    # UN CLON FIJADO NO ES AUTORIDAD SOBRE SI EL ENLACE ESTÁ ROTO HOY.
+    # Aquí ponía `exit 1`, y el propio mensaje nombraba la explicación buena sin
+    # hacerle caso: «o el pin apunta a un commit anterior a él». Es justo lo que
+    # pasa en `solargptfull`, cuya CI clona `proyectos` en el commit del PIN
+    # —elegido para el careo de paridad JS↔core, no HEAD—: la puerta salió ROJA
+    # en su primera corrida diciendo que el documento no existe, existiendo.
+    #
+    # La pregunta que esta puerta contesta es «¿el enlace apunta a algo que HOY
+    # está en proyectos?», y de eso opina proyectos al día, no el clon de al
+    # lado. El clon vale de ATAJO cuando sí lo trae; cuando no, no concluye y se
+    # baja a comprobarlo contra HEAD, abajo.
+    echo "el clon de $c no trae $DOC — puede estar fijado a un commit anterior."
+    echo "  No decide: se comprueba contra proyectos al día."
   fi
 done
 
