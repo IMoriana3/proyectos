@@ -505,7 +505,42 @@ declare -A PISO=(
   # `Infinity` devuelve `null`, así que el rojo salía enseñando `frac_sol:null`
   # —justo el valor que la comprobación exige—. Un rojo que se explica con la
   # prueba de que estaba verde es peor que un rojo sin detalle. Va con `String`.
-  [test_viento_latencia.js]=124
+  #
+  # SUBIDO A 133 al conducir por fin LA MANIOBRA QUE SE QUEDA A MEDIAS — el
+  # viento baja del umbral antes de que el eje llegue. El cronómetro ya la
+  # declaraba y nadie la conducía.
+  #
+  # Y al conducirla apareció un defecto de promesa incumplida: el pie decía
+  # «lo que se ve es hasta dónde llegó» y la tabla no enseñaba NINGÚN número
+  # —la fila ponía «—» y su columna iba vacía—. Ahora dice los grados hechos
+  # sobre los que había por delante, los dos medidos sobre la escena.
+  #
+  # TRES VECES SE CAYÓ EL FIXTURE ANTES DE MEDIR NADA, y las tres por el mismo
+  # vicio —suponer en vez de esperar—, así que quedan escritas:
+  #
+  #   1. esperar sólo a que las máquinas estén en IDLE se cumplía AL INSTANTE
+  #      (venían así de la sección anterior), el viento subía en el mismo
+  #      fotograma y `prevV` nacía valiendo 95: sin flanco no hay episodio. Las
+  #      siete comprobaciones en rojo con la ficha correcta;
+  #   2. a ×900 un fotograma son ~90 s de simulación, o sea 15° de eje, y el
+  #      recorrido entero eran 14,4°: la maniobra terminaba en UN paso y no
+  #      había nada que cortar. Va a ×60;
+  #   3. y leer la caja en el instante del corte devolvía la tabla ANTERIOR,
+  #      porque `pintaCrono` repinta uno de cada seis fotogramas. Segunda vez
+  #      que ese repintado muerde en este fichero.
+  #
+  # MUTANTES, predicciones antes de medir. Tres de cuatro:
+  #
+  #   S1 borrar la rama del corte ............ predije 2 · mata 2 ✓
+  #   S2 congelar `thUlt` (recorrido = 0) .... predije 1 · mata 7
+  #   S3 decir siempre «lleva» ............... predije 2 · mata 2 ✓
+  #   S4 nunca superar la banda muerta ....... predije 2 · mata 2 ✓
+  #
+  # S2: congelar `thUlt` rompe LA ESPERA DEL PROPIO FIXTURE, que se apoya en ese
+  # mismo estado para saber cuándo cortar, así que se cae la sección entera. El
+  # rojo es legítimo pero llega por el fixture y no por la afirmación; queda
+  # dicho porque un recuento alto por acoplamiento no es un banco más fuerte.
+  [test_viento_latencia.js]=133
   [test_viento_meteo.js]=33
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,

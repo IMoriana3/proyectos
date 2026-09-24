@@ -5110,7 +5110,7 @@ function cronoTick(simNow,vTrue,vVisto,T1){
     if(C.tVe===null&&vVisto>T1)C.tVe=simNow;
     vivos().forEach(function(S){
       if(S==='PASIVO')return;
-      var p=C.por[S]||(C.por[S]={tOrd:null,tLle:null,tFin:null});
+      var p=C.por[S]||(C.por[S]={tOrd:null,tLle:null,tFin:null,thLle:null,thUlt:null,ejeUlt:null});
       var modo=LIVE.modos[S], eje=LIVE.ordenEje[S], th=LIVE.ang[S];
       // DECIDE: el primer paso en que sale de seguimiento. Si la estrategia ya
       // estaba abanderada cuando el viento volvió a cruzar, no hay maniobra que
@@ -5126,6 +5126,13 @@ function cronoTick(simNow,vTrue,vVisto,T1){
         if(LIVE.marcaEje[S]>0)p.tLle=simNow;
         else return;
       }
+      /* POR DÓNDE IBA. El pie dice «lo que se ve es hasta dónde llegó» y la
+         tabla no enseñaba ningún número: prometía un dato y dejaba un guión.
+         Se apunta el ángulo en el instante en que la orden entra —de ahí
+         arranca el recorrido— y el último visto, que al cortarse es donde se
+         quedó. Son dos números medidos, no una estimación del avance. */
+      if(p.thLle==null)p.thLle=th;
+      p.thUlt=th; p.ejeUlt=eje;
       if(p.tFin===null&&Math.abs(th-eje)<=LOC.DEADBAND)p.tFin=simNow;
     });
     // La maniobra se da por CERRADA cuando todas las que vigila han llegado.
@@ -5207,9 +5214,19 @@ function pintaCrono(){
     h+='<tr><td><b style="color:'+(COL[S]||'var(--tx)')+'">'+S+'</b> · la orden llega a la TCU</td>'+
        '<td class="t">'+(lle!=null?'+'+seg(lle):'—')+'</td>'+
        '<td class="por">sondeo '+fmt(LIVE.lat.sondeo_s,0)+' s · arranque '+fmt(LIVE.lat.arranque_s,0)+' s</td></tr>';
+    /* LA COLUMNA DE LA DERECHA EN LOS TRES CASOS, y el tercero es el que
+       faltaba: si la racha se apagó a medio camino, se dice cuánto hizo el eje
+       de lo que tenía por delante. Un guión solo no es una medida. */
+    var por='';
+    if(fin!=null&&lle!=null)por='recorrido '+seg(fin-lle)+' a 0,17 °/s';
+    else if(p.thLle!=null&&p.thUlt!=null&&p.ejeUlt!=null){
+      var hecho=Math.abs(p.thUlt-p.thLle), total=Math.abs(p.ejeUlt-p.thLle);
+      if(total>LOC.DEADBAND)
+        por=(D.cortada?'se quedó en ':'lleva ')+fmt(hecho,0)+'° de '+fmt(total,0)+'°';
+    }
     h+='<tr class="tot"><td><b style="color:'+(COL[S]||'var(--tx)')+'">'+S+'</b> · en posición</td>'+
        '<td class="t">'+(fin!=null?'+'+seg(fin):(enVuelo?'en camino':'—'))+'</td>'+
-       '<td class="por">'+(fin!=null&&lle!=null?'recorrido '+seg(fin-lle)+' a 0,17 °/s':'')+'</td></tr>';
+       '<td class="por">'+por+'</td></tr>';
   });
   h+='</tbody></table>';
   if(D.cortada)

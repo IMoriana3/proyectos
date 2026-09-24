@@ -205,6 +205,48 @@ check('Pages sirve el MISMO fichero que este árbol', R.estado === 'al_dia',
           ? 'responde pero no publica ' + FICHA
           : 'no contesta (red o política de salida de esta máquina)');
 
+// ══════════════════════════════════════════════════════════════════
+//  LAS OTRAS OCHO, QUE IBAN SIN RED
+// ══════════════════════════════════════════════════════════════════
+// Este arnés nació vigilando UNA ficha —la del cronómetro, que era la pieza
+// nueva— y eso dejaba ocho fuera. El modo de fallo que persigue (main verde,
+// despliegue cancelado, Pages sirviendo lo de ayer) no distingue ficheros: si
+// le pasa a `sim-viento.html` le pasa a todas, y si alguien toca sólo
+// `layout.html` no había nada mirando.
+//
+// LA LISTA SALE DEL DISCO, no de una constante: una ficha nueva entra sola.
+// Una lista escrita a mano envejece igual que la prosa que este repo lleva
+// cinco veces corrigiendo.
+//
+// Y NO SE SONDEA CADA UNA: cuando la de arriba ya está al día, el despliegue
+// terminó —Pages publica el sitio entero de una vez, no fichero a fichero—, así
+// que basta una lectura. Sondear nueve por separado serían nueve esperas de
+// diez minutos por un retardo que es uno solo.
+const FICHAS = fs.readdirSync(RAIZ)
+  .filter(f => f.endsWith('.html'))
+  .sort();
+// GUARDA: si el filtro se rompiera, el bucle de abajo no comprobaría nada y
+// saldría verde. Un banco vacío es peor que un banco rojo.
+check('se vigilan las nueve fichas del repo, no una', FICHAS.length >= 9,
+      FICHAS.length + ': ' + FICHAS.join(' '));
+check('y entre ellas está la que se conduce entera', FICHAS.includes(FICHA));
+
+if (R.estado === 'al_dia') {
+  for (const f of FICHAS) {
+    if (f === FICHA) continue;           // ésa ya se ha careado sondeando
+    const mio = sha(fs.readFileSync(path.join(RAIZ, f), 'utf8'));
+    let suyo = null, estado = 'red';
+    try {
+      const r = await fetch(PAGES + '/' + f, { cache: 'no-store' });
+      estado = r.ok ? 200 : r.status;
+      if (r.ok) suyo = sha(await r.text());
+    } catch (e) { estado = 'red'; }
+    check('Pages sirve el mismo ' + f + ' que este árbol', suyo === mio,
+          estado !== 200 ? 'estado ' + estado
+            : 'árbol ' + mio.slice(0, 12) + ' · publicado ' + suyo.slice(0, 12));
+  }
+}
+
 if (R.estado === 'al_dia') {
   // EL CRONÓMETRO, CONDUCIDO EN LA PÁGINA PUBLICADA. Lo que se exige aquí es
   // lo mismo que `tests/test_viento_latencia.js` exige sobre el árbol, pero
