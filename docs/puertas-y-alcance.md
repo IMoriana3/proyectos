@@ -275,6 +275,51 @@ el `|| echo 000` que parecía prudente producía `HTTP 000000`, que no casaba co
 ningún caso y caía al comodín. El caso «sin red» —el más probable de los tres—
 era el único que no se reconocía.
 
+### Y una tercera: que la respuesta sea del repo que se preguntó
+
+El censo publicó una vez `cobertura-rf-fv#4 failure`. Ese repo **no tiene
+ninguna corrida número 4** —comprobado sobre sus doce últimas— y el 4 era el
+número de `factiun-cartera`, la fila justo anterior.
+
+> **LA CAUSA SIGUE SIN EXPLICAR.** La comprobación de abajo lo caza si vuelve,
+> pero cazarlo no es lo mismo que saber qué pasó, y conviene no confundir las
+> dos cosas. Si reaparece, esto es para poder ENCADENARLO en vez de
+> investigarlo de cero.
+>
+> | | |
+> |---|---|
+> | cuándo | 2026-09-24, ~09:33 UTC |
+> | qué se publicó | `EN ROJO: gemelo-digital#136 solargptfull#927 cobertura-rf-fv#4` |
+> | fila afectada | `cobertura-rf-fv`, la **última** de la lista |
+> | el número | `4`, que es el de `factiun-cartera` — la fila **justo anterior** |
+> | contexto | corrió encadenado tras un `git push --force-with-lease`, en el mismo comando compuesto |
+>
+> **Descartado, con la prueba:**
+>
+> - **arrastre de variables entre iteraciones** — `IFS='|' read -r num est fecha titulo <<< ""` deja las cuatro VACÍAS aunque tuvieran valor antes, probado a mano con `num=4; est=success` puestos delante. Una `linea` vacía habría dado `NO MIRADO`, no un rojo;
+> - **la API devolviendo mal** — tres consultas seguidas a la URL exacta del censo devuelven `total_count: 51` y `#41 bancos completed success`, las tres;
+> - **una corrida real con ese número** — las doce últimas de `cobertura-rf-fv`, de todos sus workflows y todas sus ramas, van de la #33 a la #41. Ninguna es la 4;
+> - **confusión con el workflow de `pages`** — las de `pages` de ese repo son #35, #36 y #37.
+>
+> **No descartado:** un cruce en la capa de red o de proxy entre dos peticiones
+> encadenadas. No hay forma de probarlo desde aquí, y por eso la comprobación
+> nueva mira el contenido de la respuesta y no la fontanería.
+
+**No sé qué lo produjo.**
+
+Lo tentador es apuntarlo como transitorio y seguir. Pero un censo que puede
+equivocarse de repo es **peor que no tenerlo**, porque su error se lee como un
+hallazgo: alguien se pasa la mañana persiguiendo un fallo que no existe, y la
+próxima vez que el censo diga algo raro nadie se lo cree.
+
+Así que cada respuesta declara de qué repo es y se carea con el que se
+preguntó. Si no cuadra, la fila sale `NO MIRADO` diciendo de cuál dice ser, y
+no un veredicto sobre el repo equivocado.
+
+Es la misma idea que los agregados, aplicada a la ENTRADA de una puerta en vez
+de a su salida: antes de creerse el número, comprobar sobre qué está calculado.
+Aquí la pregunta no es «¿cuántos?» sino «¿de quién?».
+
 ### Y una comprobación de mutaciones que sí ejecuta
 
 `alcance_mutaciones.mjs` ya no busca los nombres en el texto del workflow:
