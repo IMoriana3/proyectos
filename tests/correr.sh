@@ -435,7 +435,77 @@ declare -A PISO=(
   # Y N1 destapó una comprobación floja: preguntaba por `periodosFinos()`, el
   # estado interno, en vez de por lo que la caja PINTA. Un mutante que calcula
   # bien la lista y no la enseña dejaba al usuario igual de a oscuras.
-  [test_viento_latencia.js]=101
+  #
+  # SUBIDO A 112 con el cuarto dato de campo, y es el que más cambia: la NCU
+  # decide sobre el viento a TRES SEGUNDOS —la ráfaga—, no sobre la media de
+  # diez minutos del estándar meteorológico. Con 3 / 1 / 15 / 5 el peor caso son
+  # 24 s, y 20 de esos 24 son poleo más arranque: la medida casi no filtra.
+  #
+  # Y AHÍ SALTÓ EL DEFECTO GORDO, que no estaba en la cadena sino en el informe.
+  # La serie anual va a pasos de 1 min. Los cuatro parámetros caen por debajo de
+  # ese paso, así que las primitivas devuelven EL MISMO OBJETO —identidad
+  # exacta, medido con `===`— y el año sale bit a bit igual que sin cadena. El
+  # banner seguía declarando «estos números NO son comparables». Eso no es un
+  # aviso de más: es una afirmación FALSA en la dirección cara, porque quien lo
+  # lea creerá que está viendo el efecto de la cadena cuando no hay ninguno.
+  #
+  # `LOC.mudos` no repite los umbrales de las primitivas (`k>1`, `p>dt`, `k>0`):
+  # les PREGUNTA con una sonda y mira si devuelven su entrada. Así no puede
+  # desincronizarse de ellas el día que cambie un redondeo.
+  #
+  # MUTANTES, predicciones antes de medir. Tres de cuatro:
+  #
+  #   Q1 `mudos` no encuentra nunca nada ...... predije 5 · mata 5 ✓
+  #   Q2 se cae la rama de «no cambia nada» ... predije 3 · mata 3 ✓
+  #   Q3 la sonda de la media, invertida ...... predije 5 · mata 7
+  #   Q4 vuelve la media de 600 s ............. predije 1 · mata 1 ✓
+  #
+  # Q3: razé que la rama «a medias» sobreviviría, y no. Con la sonda invertida,
+  # una media de 600 s sobre pasos de 60 pasa a contarse como MUDA, así que ese
+  # banner se va también a la rama de «no cambia nada» y caen sus dos. Error de
+  # razón mío, no del banco.
+  #
+  # Y LA PRIMERA TIRADA DE ESA BATERÍA DIO 9, no 7. Las dos de más no eran del
+  # mutante: eran dos comprobaciones mías que leían la caja del cronómetro tras
+  # una espera FIJA de 900 ms, y `pintaCrono` repinta uno de cada seis
+  # fotogramas. Un banco que a veces falla solo no sirve para medir: el primer
+  # rojo que sale ya no se sabe de quién es. Ahora esperan a la CONDICIÓN, y se
+  # comprobó con tres tiradas seguidas antes de volver a mutar.
+  #
+  # SUBIDO A 124 con LA COTA. Decir «no cambia nada» era cierto sobre el
+  # CÁLCULO y falso sobre el MUNDO: la cadena existe, lo que pasa es que su
+  # efecto vive por debajo de la resolución de la serie. Dejarlo ahí cambiaba
+  # una afirmación falsa por un SILENCIO, y el silencio también se paga: quien
+  # lee no sabe si lo que no se ve es despreciable o es el resultado.
+  #
+  # Ahora se acota, y la cota es de las que no se discuten: lo más tarde que
+  # puede arrancar una maniobra es la suma de los cuatro, eso ocurre DOS veces
+  # por episodio, y se compara con las horas de SOL. Con 3/1/15/5 y 31
+  # episodios sobre 4.380 h: 24 s por maniobra · 4,1° de eje · 62 maniobras ·
+  # 25 min · <b>0,009 %</b> del año. Es un TECHO, no una estimación.
+  #
+  # Y SU LÍMITE, escrito: la cota cubre el RETRASO, no el cambio de decisión.
+  # Una media larga no retrasa, CAMBIA —puede borrar un episodio entero— y eso
+  # este techo no lo acota. Por eso se pinta SÓLO en la rama en que los cuatro
+  # son mudos, donde la media, por debajo del paso, no puede esconder nada. Hay
+  # comprobación de que no aparece en la rama «a medias».
+  #
+  # MUTANTES, predicciones antes de medir. Tres de cuatro:
+  #
+  #   R1 una maniobra por episodio, no dos ... predije 4 · mata 3
+  #   R2 el peor caso como MÁXIMO, no suma ... predije 5 · mata 5 ✓
+  #   R3 dividir por horas y no por segundos . predije 2 · mata 2 ✓
+  #   R4 quitar la guarda del sitio sin sol .. predije 1 · mata 1 ✓
+  #
+  # R1: conté «dos maniobras por episodio» entre las víctimas después de haber
+  # razonado que sobrevive —`maniobras` es otro campo y el mutante no lo
+  # tocaba—. Aritmética mía, no del banco.
+  #
+  # Y R4 destapó que MI PROPIO DETALLE DE FALLO mentía: `JSON.stringify` de un
+  # `Infinity` devuelve `null`, así que el rojo salía enseñando `frac_sol:null`
+  # —justo el valor que la comprobación exige—. Un rojo que se explica con la
+  # prueba de que estaba verde es peor que un rojo sin detalle. Va con `String`.
+  [test_viento_latencia.js]=124
   [test_viento_meteo.js]=33
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,

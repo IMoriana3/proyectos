@@ -703,6 +703,12 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
         /id="latMues"[^>]*value="1"/.test(vientoFuente));
   check('… y 15 s de poleo NCU→TCU, el extremo largo del 12–15',
         /id="latSond"[^>]*value="15"/.test(vientoFuente));
+  // LA VENTANA DE LA RÁFAGA, que es el cuarto dato de campo: la NCU decide sobre
+  // el viento a TRES SEGUNDOS, no sobre la media de diez minutos del estándar
+  // meteorológico. Cambia quién manda en la cadena: con 3 s la medida casi no
+  // filtra, y los 20 s de poleo más arranque son casi toda la espera.
+  check('… y 3 s de media: la NCU decide sobre la RÁFAGA, no sobre diez minutos',
+        /id="latVent"[^>]*value="3"/.test(vientoFuente));
 
   // LA AFIRMACIÓN QUE HACE EL AVISO, comprobada aparte y sin navegar: con un
   // paso mayor o igual que el periodo, la rejilla ES la identidad. Si esto no
@@ -725,7 +731,20 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
     latUI();
     document.getElementById('lSpeed').value = vel;
     if (!LIVE.run) document.getElementById('lPlay').click();
-    await new Promise(r => setTimeout(r, 900));
+    // SE ESPERA A LA CONDICIÓN, no un rato fijo: `pintaCrono` repinta uno de
+    // cada seis fotogramas, así que 900 ms era una apuesta — y la perdí. Una
+    // batería de mutantes dio 9 muertos donde había 5, y las cuatro de más eran
+    // esta espera, no el mutante. Un banco que a veces falla solo no sirve para
+    // medir nada: el primer rojo que sale ya no se sabe de quién es.
+    const listo = async (cond, ms) => { const t0 = Date.now();
+      while (Date.now() - t0 < ms) { if (cond()) return true;
+        await new Promise(r => setTimeout(r, 50)); } return cond(); };
+    await listo(() => LIVE.dtPaso > 0, 3000);
+    // y a que la caja haya repintado con ESTE paso ya medido
+    await listo(() => {
+      const hay = periodosFinos().length > 0;
+      return hay === /no se resuelve/.test(document.getElementById('cronoBox').textContent);
+    }, 3000);
     const t = document.getElementById('cronoBox').textContent;
     const o = { paso: LIVE.dtPaso, finos: periodosFinos(), dice: /no se resuelve/.test(t), txt: t };
     if (LIVE.run) document.getElementById('lPlay').click();
@@ -772,10 +791,21 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
         /no la simula el motor/i.test(rechazo.txt) && /sondeo/i.test(rechazo.txt),
         rechazo.txt.slice(0, 130));
 
+  // EL PASO DE LA SERIE FORMA PARTE DEL BANNER, así que se le pasa: sin `meteo`
+  // el banner no puede saber contra qué comparar y cae a la rama de siempre.
+  // Antes se le pasaba sin él y la comprobación de abajo aprobaba un camino que
+  // en la ficha no ocurre nunca.
   const banners = await page.evaluate(() => {
-    const hacer = lat => { REP = { config: { latencia: lat } }; return bannerLatencia(); };
-    return { cero: hacer({ ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 }),
-             viva: hacer({ ventana_s: 600, muestreo_s: 60, sondeo_s: 30, arranque_s: 5 }) };
+    const hacer = (lat, dtH) => { REP = { config: { latencia: lat }, meteo: { dt_h: dtH } };
+      return bannerLatencia(); };
+    return {
+      cero: hacer({ ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 }, 1 / 60),
+      viva: hacer({ ventana_s: 1800, muestreo_s: 300, sondeo_s: 300, arranque_s: 120 }, 1 / 60),
+      // LOS NÚMEROS DEL EQUIPO sobre la serie minutal: los cuatro por debajo del paso.
+      real: hacer({ ventana_s: 3, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 }, 1 / 60),
+      // Y a medias: la media de 10 min sí se resuelve, el resto no.
+      medias: hacer({ ventana_s: 600, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 }, 1 / 60),
+    };
   });
   check('el año declara la cadena TAMBIÉN cuando está apagada',
         /apagada/i.test(banners.cero) && /comparables/i.test(banners.cero),
@@ -784,10 +814,135 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
         /no.{0,4}son.{0,4}comparables/i.test(banners.viva.replace(/<[^>]*>/g, '')),
         banners.viva.replace(/<[^>]*>/g, '').slice(0, 140));
   check('el aviso repite los cuatro números, no dice «con latencia» y ya',
-        /600/.test(banners.viva) && /60/.test(banners.viva) &&
-        /30/.test(banners.viva) && /5/.test(banners.viva));
+        /1800/.test(banners.viva) && /300/.test(banners.viva) && /120/.test(banners.viva));
   check('y recuerda que las horas sobre umbral siguen siendo del viento que sopla',
         /sopla/i.test(banners.viva));
+
+  // ══════════════════════════════════════════════════════════════════
+  //  5bis) LA CADENA QUE NO CABE EN EL PASO DE LA SERIE
+  // ══════════════════════════════════════════════════════════════════
+  // DATO DE CAMPO, el último de los cuatro: la NCU decide sobre el viento a
+  // TRES SEGUNDOS — la ráfaga, no la media de diez minutos. Con 3 / 1 / 15 / 5
+  // y la serie anual a pasos de 1 min, LOS CUATRO caen por debajo del paso y las
+  // primitivas devuelven EL MISMO OBJETO: la cadena es la identidad exacta.
+  //
+  // Y el año seguía declarando «estos números NO son comparables». Eso no es un
+  // aviso de más: es una afirmación FALSA en el informe, y en la dirección
+  // cara — quien lo lea creerá que está viendo el efecto de la cadena cuando no
+  // hay ninguno. Una afirmación falsa de éxito es peor que un silencio.
+  const dtMin = 60;
+  const mudez = await page.evaluate((dtS) => {
+    const real = { ventana_s: 3, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 };
+    const gorda = { ventana_s: 1800, muestreo_s: 300, sondeo_s: 300, arranque_s: 120 };
+    const a = new Float64Array(64); for (let i = 0; i < 64; i++) a[i] = (i < 20 ? 4 : 28) + (i % 5);
+    return {
+      real: LOC.mudos(real, dtS), gorda: LOC.mudos(gorda, dtS),
+      // LA AFIRMACIÓN, medida aparte: con esos cuatro la serie sale INTACTA.
+      mismaMedida: LOC.vientoVisto(a, dtS, real) === a,
+      mismaOrden: LOC.ordenEnElEje(a, dtS, real) === a,
+      // Y con la cadena gorda NO sale intacta, o lo de arriba no diría nada.
+      gordaCambia: LOC.vientoVisto(a, dtS, gorda) !== a,
+      // A un paso fino, los mismos cuatro números SÍ hacen algo.
+      finoHabla: LOC.mudos(real, 1).length,
+    };
+  }, dtMin);
+  check('a paso de 1 min, los cuatro números del equipo son MUDOS',
+        mudez.real.length === 4, JSON.stringify(mudez.real));
+  check('y la serie sale intacta: el mismo objeto, no una copia parecida',
+        mudez.mismaMedida && mudez.mismaOrden);
+  check('control · una cadena gruesa SÍ mueve la serie', mudez.gordaCambia);
+  check('control · y a paso de 1 s esos mismos cuatro ya no son todos mudos',
+        mudez.finoHabla < 4, mudez.finoHabla);
+  check('control · de la cadena gruesa no es mudo NINGUNO a 1 min',
+        mudez.gorda.length === 0, JSON.stringify(mudez.gorda));
+
+  const limpio = t => t.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ');
+  check('el año DICE que esa cadena no cambia nada',
+        /no cambia NADA/.test(limpio(banners.real)), limpio(banners.real).slice(0, 120));
+  check('y se desdice de lo contrario: dice que SÍ es comparable',
+        /SÍ es comparable/.test(limpio(banners.real)) &&
+        !/no.{0,4}son.{0,4}comparables/i.test(limpio(banners.real)),
+        limpio(banners.real).slice(0, 200));
+  check('y manda a mirarlo donde sí ocurre: el cronómetro, a ×1',
+        /cronómetro/.test(limpio(banners.real)) && /×1/.test(limpio(banners.real)));
+  check('con la cadena a medias, nombra SOLO lo que no llega al paso',
+        /pero no entera/.test(limpio(banners.medias)) &&
+        /muestreo/.test(limpio(banners.medias)) &&
+        !/la media del an/.test(limpio(banners.medias).split('No llega a ese paso')[1] || ''),
+        limpio(banners.medias).slice(0, 220));
+  check('y con la cadena a medias sigue diciendo que NO son comparables',
+        /no.{0,4}son.{0,4}comparables/i.test(limpio(banners.medias)));
+
+  // ══════════════════════════════════════════════════════════════════
+  //  5ter) LA COTA: NO PODER VERLO NO ES LO MISMO QUE NO SABER CUÁNTO ES
+  // ══════════════════════════════════════════════════════════════════
+  // Decir «no cambia nada» es cierto sobre el CÁLCULO y falso sobre el MUNDO.
+  // Dejarlo ahí cambiaba una afirmación falsa por un silencio, y el silencio
+  // también se paga: quien lee no sabe si lo que no se ve es despreciable o es
+  // el resultado. Así que se acota.
+  //
+  // LA COTA SÓLO ES VÁLIDA DONDE SE ENSEÑA, y eso hay que dejarlo escrito: cubre
+  // el RETRASO de la maniobra, no el cambio de decisión. Una media larga no
+  // retrasa, CAMBIA —puede borrar un episodio entero, y eso no lo acota este
+  // techo—. Se pinta únicamente en la rama en que los cuatro son mudos, donde la
+  // media, por debajo del paso, no puede esconder nada.
+  const COTA = await page.evaluate(() => {
+    const L = { ventana_s: 3, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 };
+    return {
+      normal: LOC.cotaCadena(L, 31, 4380, 0.17),
+      sinEpisodios: LOC.cotaCadena(L, 0, 4380, 0.17),
+      sinSol: LOC.cotaCadena(L, 31, 0, 0.17),
+      // el peor caso es la SUMA de los cuatro, no el mayor de ellos
+      suma: LOC.cotaCadena({ ventana_s: 10, muestreo_s: 20, sondeo_s: 30, arranque_s: 40 },
+                           1, 1, 0.17).peor_s,
+    };
+  });
+  check('la cota suma los CUATRO, no se queda con el mayor', COTA.suma === 100, COTA.suma);
+  check('y son dos maniobras por episodio, no una', COTA.normal.maniobras === 62, COTA.normal.maniobras);
+  check('los segundos son maniobras × peor caso', COTA.normal.segundos === 62 * 24, COTA.normal.segundos);
+  check('y los grados, peor caso × velocidad del hierro',
+        cerca(COTA.normal.grados, 24 * 0.17, 1e-9), COTA.normal.grados);
+  check('la fracción del año sale contra las horas de SOL, no contra las 8760',
+        cerca(COTA.normal.frac_sol, (62 * 24) / (4380 * 3600), 1e-12), COTA.normal.frac_sol);
+  // DEGENERADOS: un año sin episodios y un sitio sin sol no pueden dar NaN ni
+  // infinito en un informe. Un `0/0` impreso es peor que no imprimir nada.
+  check('sin episodios, la cota es cero y no un NaN',
+        COTA.sinEpisodios.segundos === 0 && COTA.sinEpisodios.frac_sol === 0,
+        JSON.stringify(COTA.sinEpisodios));
+  // EL DETALLE NO PUEDE MENTIR SOBRE LO QUE MIDIÓ: `JSON.stringify(Infinity)`
+  // devuelve `null`, así que el mutante que quitaba la guarda salía rojo
+  // enseñando `"frac_sol":null` — exactamente el valor que la comprobación
+  // exige. Un rojo que se explica con la prueba de que estaba verde es peor que
+  // un rojo sin detalle. Se imprime con `String`, que sí dice "Infinity".
+  check('sin horas de sol, la fracción es null y no un infinito',
+        COTA.sinSol.frac_sol === null, String(COTA.sinSol.frac_sol));
+
+  const conCota = await page.evaluate(() => {
+    const L = { ventana_s: 3, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 };
+    const hacer = cases => { REP = { config: { latencia: L, slew_deg_s: 0.17 },
+      meteo: { dt_h: 1 / 60, daylight_hours: 4380 }, cases: cases };
+      return bannerLatencia().replace(/<[^>]*>/g, '').replace(/\s+/g, ' '); };
+    return {
+      muchos: hacer({ A1: { n_events: 12 }, A2: { n_events: 31 }, B1: { n_events: 9 } }),
+      // el mismo informe con el caso gordo QUITADO: la cota tiene que bajar
+      pocos: hacer({ A1: { n_events: 12 }, B1: { n_events: 9 } }),
+      // y sin `cases` no se inventa una cota
+      sinCasos: (() => { REP = { config: { latencia: L }, meteo: { dt_h: 1 / 60 } };
+        return bannerLatencia().replace(/<[^>]*>/g, '').replace(/\s+/g, ' '); })(),
+    };
+  });
+  check('el año pone la cota con un número, no con un adjetivo',
+        /como mucho el 0[.,]009 %/.test(conCota.muchos), conCota.muchos.slice(-200));
+  check('y la saca del caso con MÁS episodios, no del primero que pilla',
+        /62 maniobras/.test(conCota.muchos) && /24 maniobras/.test(conCota.pocos),
+        conCota.pocos.slice(-140));
+  check('dice que es un TECHO y no una estimación',
+        /TECHO/.test(conCota.muchos) && /efecto real es menor/.test(conCota.muchos));
+  check('sin informe del que sacarla, no se inventa una cota',
+        !/como mucho el/.test(conCota.sinCasos) && /no cambia NADA/.test(conCota.sinCasos),
+        conCota.sinCasos.slice(-120));
+  check('y la cota NO aparece donde no vale: con la cadena a medias, no se pinta',
+        !/como mucho el/.test(limpio(banners.medias)));
 
   check('ninguna excepción en la página durante todo el banco',
         errores.length === 0, errores.join(' · '));
