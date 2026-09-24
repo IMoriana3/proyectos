@@ -279,8 +279,32 @@ era el único que no se reconocía.
 
 El censo publicó una vez `cobertura-rf-fv#4 failure`. Ese repo **no tiene
 ninguna corrida número 4** —comprobado sobre sus doce últimas— y el 4 era el
-número de `factiun-cartera`, la fila justo anterior. No reprodujo: la lectura
-de variables resetea bien y la API devuelve `#41 success` de forma consistente.
+número de `factiun-cartera`, la fila justo anterior.
+
+> **LA CAUSA SIGUE SIN EXPLICAR.** La comprobación de abajo lo caza si vuelve,
+> pero cazarlo no es lo mismo que saber qué pasó, y conviene no confundir las
+> dos cosas. Si reaparece, esto es para poder ENCADENARLO en vez de
+> investigarlo de cero.
+>
+> | | |
+> |---|---|
+> | cuándo | 2026-09-24, ~09:33 UTC |
+> | qué se publicó | `EN ROJO: gemelo-digital#136 solargptfull#927 cobertura-rf-fv#4` |
+> | fila afectada | `cobertura-rf-fv`, la **última** de la lista |
+> | el número | `4`, que es el de `factiun-cartera` — la fila **justo anterior** |
+> | contexto | corrió encadenado tras un `git push --force-with-lease`, en el mismo comando compuesto |
+>
+> **Descartado, con la prueba:**
+>
+> - **arrastre de variables entre iteraciones** — `IFS='|' read -r num est fecha titulo <<< ""` deja las cuatro VACÍAS aunque tuvieran valor antes, probado a mano con `num=4; est=success` puestos delante. Una `linea` vacía habría dado `NO MIRADO`, no un rojo;
+> - **la API devolviendo mal** — tres consultas seguidas a la URL exacta del censo devuelven `total_count: 51` y `#41 bancos completed success`, las tres;
+> - **una corrida real con ese número** — las doce últimas de `cobertura-rf-fv`, de todos sus workflows y todas sus ramas, van de la #33 a la #41. Ninguna es la 4;
+> - **confusión con el workflow de `pages`** — las de `pages` de ese repo son #35, #36 y #37.
+>
+> **No descartado:** un cruce en la capa de red o de proxy entre dos peticiones
+> encadenadas. No hay forma de probarlo desde aquí, y por eso la comprobación
+> nueva mira el contenido de la respuesta y no la fontanería.
+
 **No sé qué lo produjo.**
 
 Lo tentador es apuntarlo como transitorio y seguir. Pero un censo que puede
