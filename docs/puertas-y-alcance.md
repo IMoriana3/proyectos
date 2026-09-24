@@ -332,6 +332,195 @@ aplicarse allí de forma automática, y la única vez que se corrió no pasó.
 Es la cuarta lección aplicándose a su propia fuente: **una puerta que nadie
 mira no es una puerta**, y da igual que la puerta esté bien escrita.
 
+## 3 ter · La quinta: apagada A PROPÓSITO no es lo mismo que rota
+
+Las cuatro anteriores son sobre lo que una puerta mira, o sobre que nadie la
+mire. Ésta es sobre **confundir un estado con un defecto**.
+
+El censo de CI encontró que `factiun-cartera` no tenía corridas sobre `main`
+desde junio y que su flujo de bancos sólo se disparaba a mano, con 19 ficheros
+de prueba detrás. Diagnóstico inmediato: descuido. Se abrió un PR de tres
+líneas poniendo `push`/`pull_request`, y se fusionó.
+
+**No era un descuido.** Era una decisión medida, tomada seis días antes y
+escrita en la cabecera de ese mismo fichero, **doce líneas por encima del
+bloque `on:` que se editó**:
+
+> ⚠ ESTE FLUJO NO SE DISPARA SOLO, Y ES A PROPÓSITO.
+> Este repo es PRIVADO… no hay minutos y no se van a poner (decisión del dueño,
+> 18-09). Medido antes de decidirlo: CINCO tiradas… el trabajo se crea y muere
+> en 2 s SIN que se le asigne runner (runner_id 0, cero pasos, logs 404).
+> Dejarlo en `push`/`pull_request` significaba una **X roja PERMANENTE** en cada
+> PR y en main, de un flujo que no llega a ejecutar una sola comprobación. Eso
+> no es una puerta: **es enseñar a ignorar los rojos**.
+
+Con los cinco identificadores de tirada listados. Y la predicción se cumplió en
+la primera corrida tras el cambio: cuatro segundos, sin runner, cero pasos.
+
+### Las dos cosas que hay dentro
+
+**Primera: el censo mide ESTADO, no INTENCIÓN.** «Sin CI automática» y «CI
+apagada a propósito» dan exactamente la misma lectura, y la diferencia decide
+si hay algo que arreglar o no hay nada. Un censo que sólo ve el estado produce
+diagnósticos seguros y equivocados — y son peores que no tener censo, porque
+llegan con la autoridad de un número.
+
+**Segunda, y es de leer, no de medir:** el fichero se leyó con un `sed` que
+empezaba en la línea donde el `grep` había encontrado `on:`. Las doce líneas de
+encima —que lo explicaban entero, con sus cinco tiradas— no se miraron. Es la
+segunda lección otra vez, «mira donde no debe», aplicada a **leer** en vez de a
+comprobar: se miró exactamente la parte que se esperaba que importara.
+
+### Qué NO arregla esto, y por qué conviene decirlo
+
+La reacción natural es proponer una comprobación: *que el PR declare qué
+ficheros toca y se caree con lo que entró en `main`*. Es una buena idea para
+otro problema —un squash que se traga un cambio— pero **aquí no habría cazado
+nada**: no se perdió ningún fichero ni ningún commit. Todo llegó. Lo que falló
+fue leer una decisión que estaba escrita.
+
+Contra eso no hay comprobación barata, y decir que la hay sería peor que no
+tenerla. Lo que sí queda:
+
+- **una decisión deliberada se declara EN EL SITIO donde se toca**, no sólo en
+  el commit — el commit lo lee quien busca, la cabecera la lee quien edita;
+- **antes de «arreglar» una puerta apagada, leer el fichero ENTERO.** No desde
+  donde casó el patrón: entero;
+- y el censo, cuando ve un repo sin corridas automáticas, **lo dice como
+  observación y no como defecto**, y recuerda mirar la cabecera del flujo antes
+  de tocarlo.
+
+## 3 quater · Una puerta que busca un NOMBRE en el fuente vigila la prosa
+
+**La regla, y va antes que los casos porque es lo que hay que llevarse:**
+
+> Buscar un nombre en el código fuente comprueba que **alguien escribió algo**,
+> no que **el código lo haga**. Un comentario, una cadena de texto o una
+> variable con ese nombre la satisfacen igual que la llamada de verdad.
+>
+> La comprobación buena es **ejecutar y ver el efecto**, y son dos, no una:
+>
+> 1. **sin la dependencia, el código SE PARA** — no sigue a medias;
+> 2. **si la dependencia cambia, el resultado CAMBIA CON ELLA.**
+>
+> La segunda es la que no se puede fingir: una copia local del cálculo pasa la
+> primera y falla la segunda.
+
+Es una regla, no una anécdota, y se ha pagado dos veces — **en las dos
+direcciones**.
+
+### Falso verde: el nombre estaba en un comentario (2026-09-24)
+
+Al hacer que los dos puertos de `cobertura-rf-fv` tomaran las primitivas del
+canon, la puerta que lo vigilaba miraba si `web/zigbee_pv_model.js` nombraba
+`radio_pv_model.js`. **Daba verde con el `require` arrancado**: el nombre seguía
+saliendo en la cabecera del fichero y en el texto del mensaje de error.
+
+Lo que la arregló no fue afinar el patrón, fue **cambiar de pregunta**:
+
+```
+sin el canon, el puerto SE PARA (no calcula con medio motor)
+toca el canon una primitiva: la del puerto CAMBIA CON ELLA
+```
+
+La mutación `puertoSinGuardia` —quitar el `if (!RPV) throw`— la caza **sólo** la
+primera. Ninguna comprobación de texto la veía.
+
+### Falso rojo, y luego falso verde: `UseBasicParsing`, el mismo defecto al revés
+
+`Cobertura-Zigbee/tools/gate_ps1_planta.py` exige que todo `Invoke-WebRequest`
+lleve `-UseBasicParsing` (sin él, PowerShell 5.1 parsea con el motor de Internet
+Explorer y en una máquina sin IE revienta). La puerta buscaba los dos nombres en
+el texto, y falló por los dos lados:
+
+- **se señaló a sí misma**: el comentario que explica por qué hace falta
+  `-UseBasicParsing` nombra `Invoke-WebRequest`, y la puerta lo contó como una
+  llamada — un rojo que no era un rojo;
+- **y dejó pasar lo que vigilaba**: un fichero cuyo COMENTARIO nombrara
+  `UseBasicParsing` pasaba aunque el código no lo pusiera.
+
+Las dos se vieron **probando la puerta en rojo, que para eso se prueba**, y las
+dos se arreglaron quitando los comentarios antes de mirar. Ahí no cabía ejecutar
+—es un `.ps1` que corre en el PC de una planta, con 5.1 y sin instalar nada— así
+que la puerta se quedó en heurística **y lo dice en su propio comentario**, con
+el job de Windows detrás como red.
+
+**Y un tercero, de la misma familia:** al mutar `-UseBasicParsing` con un `sed`
+que buscaba el guion, la mutación **no casó** —en el splat va
+`UseBasicParsing = $true`, sin guion— y la puerta salió verde. Un mutante que no
+llega no prueba que el banco vigile: prueba que el mutante no llegó. Por eso
+`rc = 2` no es «no cazada», es **«no comprobada»**.
+
+### Cuándo vale mirar el texto, y cómo decirlo
+
+No siempre se puede ejecutar. Cuando no se pueda, la puerta de texto **sigue
+valiendo**, con dos condiciones:
+
+- **quitar los comentarios antes de mirar** — las tres averías de arriba son la
+  misma línea que falta;
+- **decir en la salida que mira la DECLARACIÓN y no el efecto**, para que nadie
+  lea «verde» como «funciona». Lo mismo que hace el censo de bancos cuando dice
+  que mira si un banco está declarado en la CI, no si la corrida terminó.
+
+## 3 quinquies · Lo que se queda fuera de `main` sin que nadie lo note
+
+Las puertas de arriba vigilan el código. Ésta vigila el **bucle de trabajo**, y
+falla igual de callada.
+
+El bucle termina en `git checkout -B <rama> origin/main`. Ese comando **tira en
+silencio todo commit de la rama que no esté en main**. Cuando el PR se fusionó
+con *squash*, el contenido sí está en main aunque los commits no, y tirarlos es
+correcto — por eso el paso existe. Pero si se siguió commiteando **después** de
+abrir el PR, o el PR se fusionó con una cabeza anterior, ese trabajo desaparece
+sin una palabra.
+
+### El caso, del 2026-09-24, y la ironía que trae dentro
+
+El PR **#511** de `proyectos` se fusionó con la cabeza `19f64fc7`. Después se
+empujaron a la **misma rama** dos commits:
+
+| commit | qué traía | ¿entró en main? |
+|---|---|---|
+| `09069af` | **la quinta lección** (apagada a propósito ≠ rota) | **no** |
+| `c81cd9c` | el censo de CI marcando «SIN MINUTOS» | **no** |
+
+Se descubrió **por casualidad**: el PR siguiente salió con conflicto y sin
+ninguna corrida de CI —GitHub no arranca los flujos de un PR que no puede
+fusionar—, y al mirar por qué apareció el hueco. Nada lo vigilaba.
+
+La ironía, que conviene dejar escrita: uno de los dos commits perdidos era
+**justo la lección de leer el fichero entero antes de tocar nada**.
+
+Y el modo de fallo es el mismo de siempre: **el vacío pareció normal**. Cero
+corridas de CI en un PR se lee igual que «todavía no han empezado», y el
+documento se leía entero y coherente porque lo que faltaba no dejaba hueco
+visible — una sección que no está no se echa de menos.
+
+### La comprobación barata, y no es la que yo iba a proponer
+
+Lo primero que se me ocurrió fue que el PR **declarase qué ficheros toca** y
+carearlo con lo que entró en main. Es más caro y más frágil: hay que mantener la
+declaración, y no cubre el caso de commits empujados después.
+
+**Mirar el CONTENIDO lo cubre entero y cabe en una línea:**
+
+```
+git diff origin/main <rama>     vacío  ->  todo lo de la rama está en main
+                            no vacío  ->  hay trabajo que NO está publicado
+```
+
+No mira commits —que el squash aplana a propósito— sino ficheros. Está en
+`docs/reconcilia.sh`, con los tres códigos de siempre: **0** se puede reconciliar
+sin perder nada · **1** hay contenido fuera · **2** no se ha podido comprobar
+(sin red, comparar contra un `main` viejo daría un verde que no significa nada).
+
+Corrido sobre el caso de hoy nombra **exactamente los dos commits perdidos**.
+
+**Y un detalle que salió al probarla:** la primera versión se negaba también con
+ficheros **sin seguir**, y se disparó con su propio fichero recién escrito.
+`checkout -B` no toca lo que no está seguido. Lo peligroso son las
+modificaciones de ficheros **seguidos**.
+
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
 Esto no es una manía de la integración continua. **Un número correcto calculado
