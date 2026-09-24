@@ -138,6 +138,46 @@ mutaciones» y, borrando un bloque `MUTACIONES` completo, pasaba a «134 de 134�
 sabía cuántos esperaba buscó el «4» en su bloque y lo encontró dentro de un
 `%-44s`. Respondió «sí» cuando era «no». Nueve en un día.)*
 
+### Los TRES tipos de fallo de una puerta
+
+Hasta aquí van dos. Hay un tercero, y no se encuentra mirando la puerta.
+
+| | qué pasa | cómo se caza |
+|---|---|---|
+| **no reacciona** | la puerta no salta cuando debía | rómpela a propósito |
+| **mira donde no debe** | salta bien sobre lo poco que mira | publica su **alcance** |
+| **reacciona de más** | salta también donde NO debía | **otro banco**, en otra parte del sistema |
+
+El tercero es distinto de los dos primeros porque **la puerta está bien en su
+propio caso**. Es correcta, dispara cuando toca, tiene su negativa probada — y
+además rompe algo que nadie le había preguntado.
+
+**El caso, de este mismo día.** Al meter la NCU en el careo, el motor le puso
+la altura de antena de un seguidor (0,505 m en vez de 3,15) y tres enlaces
+salieron «acierto» calculados mal. El arreglo trajo una puerta:
+
+> un nodo que **no es un seguidor** y no declara su antena, no se evalúa.
+
+Correcta en su caso, con su banco y su negativa. Y el mapa de cobertura pasa
+puntos `{x, y}` **pelados** a propósito: son receptores hipotéticos del raster,
+no equipos. La puerta los mataba a todos — **0 de 500 enlaces con margen en las
+cuatro plantas**.
+
+No lo vio el banco de la puerta, que estaba verde. Lo vio `test_rf_panel.js`,
+que mide otra cosa en otro sitio. La regla buena resultó ser más estrecha: *«se
+declara equipo y no dice su antena»*, y entonces el raster sigue igual.
+
+**Lo que se lleva de aquí:**
+
+- una puerta nueva no está probada con su propio banco en verde: hay que correr
+  **los del resto del sistema**, y el corredor con piso es lo que lo hace
+  barato;
+- cuando una puerta nueva pone algo en rojo, la primera pregunta no es «¿qué
+  hay que arreglar?» sino **«¿es la puerta la que está mal?»**;
+- y las reglas formuladas en negativo —«todo lo que no sea X»— son las que más
+  se pasan de frenada: barren casos legítimos que nadie tenía en la cabeza al
+  escribirlas.
+
 ### Un aviso que sale de probarlas
 
 Una **mutación que no casa con el código** es `rc = 2`, no «no cazada». Al mutar
