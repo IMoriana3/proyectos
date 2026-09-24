@@ -886,6 +886,116 @@ El segundo es el que da la regla: una deriva de una milésima de dB era
 **estructuralmente indetectable**, no porque el listón fuera generoso sino
 porque el instrumento no llegaba.
 
+## 3 decies · La undécima: UN ARREGLO QUE NADIE HA VISTO FUNCIONAR NO ES UN ARREGLO
+
+**La regla:**
+
+> Un arreglo propuesto y no visto funcionar es **una hipótesis con forma de
+> solución**, y se entrega diciéndolo.
+>
+> Y antes de escribir «esto no se puede probar aquí», hay que **intentar
+> reproducir el entorno**. Casi siempre se puede. Si de verdad no se puede, se
+> dice **qué lo impide** — no que no se puede.
+
+Las diez anteriores son sobre puertas. Ésta es sobre el **remedio**: es la
+cuarta —«una puerta que nadie mira no es una puerta»— vista del otro lado. Allí,
+el guard que nadie ejecuta. Aquí, el **arreglo** que nadie ejecuta.
+
+Y el fallo no es el que parece. No fue proponer un parche sin probarlo: eso,
+dicho, es honesto y a veces es lo único que hay. Fue **afirmar que no se podía
+probar** cuando sí se podía, y usar esa afirmación como permiso para no
+intentarlo. Una frase que cierra la puerta por la que iba a entrar la
+comprobación.
+
+### El caso (2026-09-24)
+
+`solargptfull #274` salía rojo en un paso **previo y ajeno**, `Check committed
+diff whitespace`. Diagnosticado: `actions/checkout@v4` sin `fetch-depth` saca la
+merge ref a profundidad 1, y `A...B` no pide las dos puntas sino **el ancestro
+común**, que en un clon superficial no existe. Se propusieron dos parches, y con
+el segundo escribí esto:
+
+> *la **B** no la he podido probar —exige empujarla y ver una corrida— y depende
+> de que el servidor admita `fetch` por SHA suelto.*
+
+**Reproducir ese entorno eran treinta segundos**, sin empujar nada:
+
+```
+git init && git remote add origin … && git fetch --depth=1 origin $HEAD && git checkout FETCH_HEAD
+  fatal: Invalid symmetric difference expression a11ab1a4…39290d0d
+  rc = 128
+```
+
+El mismo `fatal` y el mismo `rc` que la corrida, **clavados**. Y sobre ese banco,
+la opción B:
+
+```
+git fetch --no-tags --depth=1 origin $BASE $HEAD
+  * branch  a11ab1a4… -> FETCH_HEAD      ← el fetch FUNCIONA
+  * branch  39290d0d… -> FETCH_HEAD      ← las dos puntas llegan de verdad
+git diff --check "$BASE...$HEAD"
+  fatal: …: no merge base
+  rc = 128
+```
+
+**No funciona.** Y ahí está lo que la hacía plausible: el `fetch` no se queja y
+las dos puntas llegan. Pero el clon sigue superficial, así que los dos commits
+existen **como objetos sin historia detrás**. La opción B **cambia el mensaje de
+error y nada más** —de «no sé resolver la expresión» a «no hay base común»—:
+mismo rojo, mismo `rc`, cero espacios comprobados. Un parche que **parece haber
+hecho su trabajo**, porque su primer comando sale bien.
+
+Medidas las cuatro variantes en el mismo banco (el clon completo ve **10**
+ficheros):
+
+| variante | `diff --check` | ficheros |
+|---|---|---|
+| `fetch-depth: 0` | **rc 0** | **10** ✔ |
+| `--deepen=200` + `fetch` de la base | rc 0 | 10 ✔ |
+| `fetch` de las dos puntas *(la propuesta)* | rc 128, `no merge base` | 0 ✗ |
+| `--unshallow` sólo de la rama base | rc 128 | 0 ✗ |
+
+Se eligió `fetch-depth: 0` y no el `--deepen=N`, que también pasa: **la `N` es un
+número a ojo**. Ahonda lo justo hoy y se queda corta el día que un PR salga de
+una base más vieja, cuando ya nadie recuerde de dónde salió. Un umbral sin
+procedencia es un rojo futuro sin explicación.
+
+### La segunda mitad: UN AVISO SIN NÚMERO NO PROTEGE DE NADA
+
+En el mismo comentario avisé de que, al arreglarlo, el paso *«puede sacar
+espacios acumulados que nadie ha visto nunca»*. Sonaba prudente. Era **prudencia
+sin medir**, que es otra cosa.
+
+Medido después, el paso compara `base...head`: mira **sólo las líneas que el PR
+toca**, no el árbol. La suciedad parada en ficheros que nadie edita no sale.
+
+| | |
+|---|---:|
+| squashes recientes que habrían salido rojo con el arreglo | **0 de 25** |
+| hallazgos reales en el árbol | 448.909 |
+| ficheros donde viven | **36** — 19 de dato, más un CSS de terceros |
+
+**La regla:**
+
+> Un aviso sin número **no protege de nada y estorba la decisión**: pone un
+> riesgo sobre la mesa sin su tamaño, y quien decide no puede pesarlo. Si el
+> aviso se puede medir, se mide **antes** de darlo. Si no se puede, se dice qué
+> falta para medirlo.
+
+Un «puede pasar algo malo» no acotado se parece mucho a haber mirado, y no lo es.
+
+### Y la novena, otra vez, en el control de la propia puerta
+
+Al negativar el arreglo —porque esa puerta **nunca se había visto morder**— el
+cuarto control pretendía probar que la suciedad heredada **no** sale. Añadí una
+línea sucia a un fichero *«que el PR no toca»*… con lo cual el PR **sí** lo
+tocaba. Salió rojo, que es lo correcto, y **no probaba nada de lo que quería
+probar**: es la novena, cometida mientras se comprobaba otra cosa.
+
+Rehecho como debía —fichero con **3 hallazgos ya presentes en `main`**, tocando
+una línea limpia— dio `rc 0` **comparando 1 fichero, no el vacío**. Sin esa
+segunda parte, un `rc 0` por no haber mirado nada habría pasado por confirmación.
+
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
 Esto no es una manía de la integración continua. **Un número correcto calculado
@@ -1047,6 +1157,8 @@ enlace → rojo; sin clon y sin red → `rc = 2`.
 - [ ] Antes de fijar una tolerancia: ¿lo que se compara **ya viene cuantizado** (redondeado, truncado, discretizado)? Si lo está, el careo va **sobre el valor crudo**, y el publicado se carea aparte con su convenio declarado. Una tolerancia sobre un valor cuantizado mide el escalón, no la física. (§3 nonies)
 - [ ] ¿Se comprueba el **sha de cada copia fijada JUSTO DESPUÉS de mergear** lo que ese candado vigila? Un merge opera sobre bytes; si normaliza uno, el rojo sale mañana en otro repo con el rastro frío. (§3)
 - [ ] Y el cruce que lo comprueba: ¿**falla** ante un formato que no conoce, o se lo salta? Saltárselo publica un verde de lo que sí miró. (§3)
+- [ ] De cada arreglo que se propone: ¿se ha **visto funcionar**, o se da por bueno por construcción? Y si se escribió «aquí no se puede probar», ¿se **intentó reproducir el entorno** antes de escribirlo? Casi siempre se puede; si no, se dice **qué lo impide**. (§3 decies)
+- [ ] De cada aviso que se da: ¿lleva **número**? Un riesgo sin tamaño no se puede pesar, se parece a haber mirado y no lo es. Si se puede medir, se mide antes de avisar. (§3 decies)
 
 ---
 
