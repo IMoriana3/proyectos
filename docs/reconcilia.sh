@@ -75,6 +75,74 @@ if [ -n "$SUCIO" ]; then
   exit 1
 fi
 
+# ══ ¿Y EL CLON, ESTÁ AL DÍA CON SU PROPIA REMOTA? ═══════════════════════════
+#
+# ESTO ACERTABA EL VEREDICTO Y EQUIVOCABA LA CAUSA, que cuesta casi lo mismo
+# que fallar el veredicto: manda a mirar donde no es, y enseña a desconfiar de
+# sus rojos.
+#
+# Pasó el 2026-09-24, después de mergear `solargptfull` #274. Esta guardia sacó
+# ROJO listando DIEZ ficheros como «la rama aporta esto y no está en main», y
+# recomendó abrir un PR nuevo con ellos. Comprobado a mano fichero a fichero:
+# CERO diferían, todo estaba dentro. Lo que pasaba es que el PR se había
+# actualizado DESDE EL SERVIDOR —el botón «Update branch» de GitHub, o
+# `update_pull_request_branch` por API— y ese commit de fusión nace en el
+# remoto. El clon local se quedó uno por detrás, y esto comparaba una rama
+# rancia contra un main al día.
+#
+# Y es el MISMO MECANISMO que la ref local rancia de hace unos días: preguntar
+# a una referencia LOCAL en vez de al remoto. Arriba se hace bien con `main`
+# —hay un `fetch` explícito y un rc = 2 si no se puede— y aquí no se hacía con
+# la propia rama. La mitad de la pregunta iba contra datos frescos y la otra
+# mitad contra datos viejos.
+#
+# Sale rc = 2 y no rc = 1 a propósito: no es que haya trabajo fuera, es que
+# ESTA PREGUNTA NO SE PUEDE CONTESTAR desde una copia vieja.
+if git ls-remote --heads origin "$RAMA" 2>/dev/null | grep -q .; then
+  if ! git fetch origin "$RAMA" --quiet 2>/dev/null; then
+    echo
+    echo "SIN COMPROBAR: no se ha podido traer origin/$RAMA (¿sin red?)."
+    echo "Comparar una rama local contra un main al día da hallazgos fantasma."
+    exit 2
+  fi
+  REM=$(git rev-parse --verify -q "origin/$RAMA" 2>/dev/null)
+  if [ -n "$REM" ] && [ "$REM" != "$CAB" ]; then
+    SOLO_REMOTA=$(git rev-list --count "$CAB".."$REM" 2>/dev/null)
+    if [ "${SOLO_REMOTA:-0}" != "0" ]; then
+      SOLO_LOCAL=$(git rev-list --count "$REM".."$CAB" 2>/dev/null)
+      echo
+      echo "SIN COMPROBAR: TU CLON VA POR DETRÁS DE SU PROPIA REMOTA."
+      echo
+      echo "    local    $RAMA          $(echo "$CAB" | cut -c1-8)"
+      echo "    remota   origin/$RAMA   $(echo "$REM" | cut -c1-8)"
+      echo
+      # EL REMEDIO NO ES EL MISMO EN LOS DOS CASOS, y confundirlos sería repetir
+      # el defecto que esto viene a arreglar: acertar el veredicto y equivocar
+      # la causa. `--ff-only` es correcto cuando el clon sólo va POR DETRÁS, y
+      # FALLA cuando han divergido — ahí hay que decidir, no avanzar.
+      if [ "${SOLO_LOCAL:-0}" = "0" ]; then
+        echo "    la remota tiene $SOLO_REMOTA commit(s) que tu clon no tiene. Sólo vas por detrás."
+        echo
+        echo "    HAZ ESTO:  git fetch origin $RAMA && git merge --ff-only origin/$RAMA"
+      else
+        echo "    HAN DIVERGIDO: la remota tiene $SOLO_REMOTA commit(s) que tu clon no tiene,"
+        echo "    y tu clon $SOLO_LOCAL que ella no. Un \`--ff-only\` aquí FALLA, y un"
+        echo "    \`checkout -B\` tiraría los tuyos."
+        echo
+        echo "    MIRA PRIMERO QUÉ HAY DE CADA LADO, y decide:"
+        echo "      git log --oneline $CAB..$REM      # lo que sólo tiene la remota"
+        echo "      git log --oneline $REM..$CAB      # lo que sólo tienes tú"
+      fi
+      echo
+      echo "    Y NO te creas un rojo de esta guardia hasta entonces: comparando"
+      echo "    una rama rancia contra un main al día salen APORTES FANTASMA —"
+      echo "    ficheros que parecen no estar en main y sí están—. Pasa siempre"
+      echo "    que la rama se actualiza desde el servidor («Update branch»)."
+      exit 2
+    fi
+  fi
+fi
+
 ADELANTE=$(git rev-list --count "$MAIN".."$CAB" 2>/dev/null)
 DETRAS=$(git rev-list --count "$CAB".."$MAIN" 2>/dev/null)
 # NINGUNO DE LOS DOS DIFFS DECIDE BIEN. Los probé los dos y los dos fallan, en
