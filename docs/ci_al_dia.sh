@@ -66,17 +66,56 @@ fi
 api() { curl -sSL --max-time 20 -H "Authorization: Bearer $TOKEN" \
         -H "Accept: application/vnd.github+json" "$1" 2>/dev/null; }
 
+# ── POR QUÉ UN REPO «NO RESPONDE»: RED, PERMISO O RENOMBRADO ──────────────
+# La primera versión de esto decía «no responde o no hay permiso» para los tres
+# casos, y con eso un repo RENOMBRADO desaparece del radar en silencio: sale
+# igual que uno caído, nadie lo persigue, y su CI deja de mirarse sin que nada
+# avise. Pasó con `visor-san-jose` → `visores` el 2026-09-24.
+#
+# Los códigos están MEDIDOS en este entorno, no supuestos:
+#   200  bien
+#   301  RENOMBRADO. GitHub redirige a `/repositories/{id}` y el proxy de estas
+#        sesiones no deja pasar esa ruta, así que el nombre nuevo NO se puede
+#        sacar de aquí: hay que buscarlo y corregir la lista a mano.
+#   403  sin permiso O no existe. El proxy devuelve el MISMO 403 para «el repo
+#        no está en el alcance de esta sesión» y para «ese repo no existe», así
+#        que aquí no se distinguen — y se dice, en vez de elegir uno.
+#   404  no existe (fuera de este proxy).
+#   000  RED: no se ha llegado a hablar con GitHub.
+# OJO CON EL `|| echo 000`: curl YA imprime `000` cuando no llega a hablar con
+# el servidor, y ADEMÁS sale con código != 0, así que el `||` añadía un segundo
+# y salía «HTTP 000000», que no casa con ningún caso y caía al comodín. Salió
+# probándolo con un host inválido, no leyéndolo.
+sonda() {
+  local c
+  c=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 \
+      -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" \
+      "https://api.github.com/repos/$DUENYO/$1" 2>/dev/null)
+  echo "${c:-000}"
+}
+porque() {
+  case "$1" in
+    301) echo "RENOMBRADO · corrige la lista de este fichero" ;;
+    403) echo "sin permiso o no existe (el proxy da el mismo 403 para los dos)" ;;
+    404) echo "no existe" ;;
+    000|"") echo "RED · no se ha llegado a hablar con GitHub" ;;
+    *) echo "HTTP $1" ;;
+  esac
+}
+
 printf '%-20s %-10s %-9s %-10s  %s\n' repo rama corrida estado título
 printf '%-20s %-10s %-9s %-10s  %s\n' '--------------------' '----------' '---------' '----------' '------'
 
-mirados=0; rojos=0; nc=0; lista_rojos=""
+mirados=0; rojos=0; nc=0; lista_rojos=""; renombrados=""; declarados=0
 for r in "${REPOS[@]}"; do
   [ -n "$PATRON" ] && [[ "$r" != *"$PATRON"* ]] && continue
+  declarados=$((declarados+1))
   rama=$(api "https://api.github.com/repos/$DUENYO/$r" | \
          python3 -c 'import sys,json;print(json.load(sys.stdin).get("default_branch",""))' 2>/dev/null)
   if [ -z "$rama" ]; then
-    printf '%-20s %-10s %-9s %-10s  %s\n' "$r" "?" "-" "⚠ NO MIRADO" "no responde o no hay permiso"
-    nc=$((nc+1)); continue
+    cod=$(sonda "$r")
+    printf '%-20s %-10s %-9s %-10s  %s\n' "$r" "?" "-" "⚠ NO MIRADO" "$(porque "$cod")"
+    nc=$((nc+1)); [ "$cod" = "301" ] && renombrados="$renombrados $r"; continue
   fi
   linea=$(api "https://api.github.com/repos/$DUENYO/$r/actions/runs?branch=$rama&per_page=1" | \
     python3 -c '
@@ -116,6 +155,20 @@ fi
 if [ -z "$PATRON" ] && [ "$mirados" -lt "$PISO" ]; then
   echo "ALCANCE INSUFICIENTE: se han podido mirar $mirados y el piso son $PISO."
   echo "Una puerta verde afirma dos cosas: «he mirado» y «está bien». Esto no ha mirado."
+  exit 2
+fi
+# ── LOS QUE RESPONDEN TIENEN QUE SER LOS DECLARADOS ──────────────────────
+# El piso dice «has mirado bastantes». Esto dice otra cosa: «has mirado TODOS
+# los que dices vigilar». La lista puede quedarse vieja —un repo renombrado, uno
+# que cambia de dueño, uno archivado— y sin esta comprobación el censo sigue
+# saliendo verde con un hueco dentro. Es alcance otra vez.
+if [ "$mirados" != "$declarados" ]; then
+  echo "LA LISTA NO CUADRA: responden $mirados de los $declarados declarados."
+  [ -n "$renombrados" ] && echo "  RENOMBRADO(S):$renombrados — busca el nombre nuevo y corrígelo en REPOS."
+  echo "  Un repo de la lista que no responde NO se ha comprobado. Eso no es un verde:"
+  echo "  la lista de repos vigilados se queda vieja sin que nada avise, y su CI deja"
+  echo "  de mirarse en silencio."
+  [ -n "$lista_rojos" ] && echo "  (y además, EN ROJO:$lista_rojos)"
   exit 2
 fi
 if [ -n "$lista_rojos" ]; then

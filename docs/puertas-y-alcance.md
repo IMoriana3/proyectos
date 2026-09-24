@@ -236,11 +236,44 @@ Dos costumbres, y una de ellas es un comando para que no dependa de acordarse:
    llegó.
 
 La primera vez que se corrió `ci_al_dia.sh` encontró dos cosas que nadie sabía:
-`gemelo-digital` con su despliegue de Pages en rojo, y un repo que salía como
-«no responde» porque **lo habían renombrado** —`visor-san-jose` → `visores`— y
-GitHub redirige el nombre viejo a una ruta que el proxy no deja pasar. Un repo
-renombrado desaparecía del radar en silencio, que es la misma avería otra vez a
-otra escala.
+`gemelo-digital` con su despliegue de Pages en rojo desde el 23-09, y el caso
+de abajo.
+
+### El repo renombrado: cuando la LISTA de lo vigilado se queda vieja
+
+Todo lo anterior es «esta puerta mira poco de lo que hay». Éste es un escalón
+más arriba: **la lista de lo que se vigila puede quedarse vieja y nada avisa**.
+
+`visor-san-jose` pasó a llamarse `visores`. Con el nombre viejo, GitHub
+responde `301` y redirige a `/repositories/{id}`, una ruta que el proxy de
+estas sesiones no deja pasar. Resultado: el censo lo daba por «no responde», o
+sea lo mismo que un repo caído — y un repo caído se persigue, pero uno que
+lleva semanas en «no responde» se acaba leyendo como ruido. Su CI dejó de
+mirarse sin que nada lo dijera.
+
+Dos arreglos, y el segundo es el que importa:
+
+1. **Distinguir el porqué.** «No responde» tapaba tres cosas distintas, y ahora
+   se separan con el código medido, no supuesto:
+
+   | | |
+   |---|---|
+   | `301` | **RENOMBRADO** — hay que buscar el nombre nuevo y corregir la lista |
+   | `403` | sin permiso **o** no existe: el proxy devuelve el mismo código para los dos, y eso se DICE en vez de elegir uno |
+   | `404` | no existe (fuera de este proxy) |
+   | `000` | **RED** — no se ha llegado a hablar con GitHub |
+
+2. **Exigir que respondan TODOS los declarados.** El piso dice «has mirado
+   bastantes»; esto dice otra cosa: «has mirado **todos los que dices
+   vigilar**». Si responden 10 de 11, el censo sale con `rc = 2` nombrando cuál
+   falta y por qué, aunque los diez estén en verde. Un hueco en la lista no es
+   un verde con una nota al pie.
+
+Y una cosa salió de PROBARLO y no de leerlo: con un host inválido, `curl`
+imprime `000` por `-w` **y además** sale con código distinto de cero, así que
+el `|| echo 000` que parecía prudente producía `HTTP 000000`, que no casaba con
+ningún caso y caía al comodín. El caso «sin red» —el más probable de los tres—
+era el único que no se reconocía.
 
 ### Y una comprobación de mutaciones que sí ejecuta
 
