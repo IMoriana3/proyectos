@@ -81,6 +81,28 @@ DETRAS=$(git rev-list --count "$CAB".."$MAIN" 2>/dev/null)
 echo "commits la rama va $ADELANTE por delante y $DETRAS por detrás"
 echo
 
+# UN FALSO POSITIVO QUE ENCONTRÓ EL PRIMER BARRIDO DE LOS ONCE REPOS: con la rama
+# DETRÁS de main y sin ningún commit propio, `git diff` sale lleno —main ha
+# avanzado— y esta guardia gritaba «hay contenido fuera» sin poder nombrar un solo
+# commit. No hay nada que perder: si la rama no va por delante, TODOS sus commits
+# están en main por definición. Lo que decide es el número de commits propios; el
+# diff sólo manda cuando los hay.
+if [ "$ADELANTE" = "0" ]; then
+  echo "VERDE · la rama no va por delante de origin/$BASE: no hay nada suyo que perder."
+  if [ "$DETRAS" != "0" ]; then
+    echo "        (va $DETRAS commits POR DETRÁS: reconciliar es ponerla al día.)"
+  fi
+  if [ "$HACERLO" = "1" ]; then
+    echo
+    echo "reconciliando…"
+    git checkout -B "$RAMA" "origin/$BASE" || exit 2
+    echo "hecho: $RAMA = origin/$BASE ($(git rev-parse --short HEAD))"
+  else
+    echo "        Para hacerlo: bash docs/reconcilia.sh --hacerlo"
+  fi
+  exit 0
+fi
+
 if [ -z "$DIF" ]; then
   echo "VERDE · el contenido de la rama está ENTERO en origin/$BASE."
   if [ "$ADELANTE" != "0" ]; then
