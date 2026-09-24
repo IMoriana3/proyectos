@@ -117,21 +117,40 @@ for r in "${REPOS[@]}"; do
     printf '%-20s %-10s %-9s %-10s  %s\n' "$r" "?" "-" "⚠ NO MIRADO" "$(porque "$cod")"
     nc=$((nc+1)); [ "$cod" = "301" ] && renombrados="$renombrados $r"; continue
   fi
+  # LA RESPUESTA TIENE QUE SER DE ESTE REPO, Y ESO SE COMPRUEBA.
+  # El 2026-09-24 el censo publicó una vez «cobertura-rf-fv#4 failure». Ese
+  # repo no tiene ninguna corrida número 4 —comprobado sobre sus doce últimas—
+  # y el 4 era el número de `factiun-cartera`, la fila JUSTO ANTERIOR. No
+  # reprodujo: `read` resetea bien sus variables y la API devuelve #41 success
+  # de forma consistente. O sea que no sé qué lo produjo.
+  #
+  # Lo que NO se hace es apuntarlo como transitorio y seguir: un censo que se
+  # puede equivocar de repo es peor que no tenerlo, porque el error se lee como
+  # un hallazgo. Así que cada respuesta declara de qué repo es y se carea con
+  # el que se preguntó. Si no cuadra, sale NO MIRADO con el motivo, no un
+  # veredicto sobre el repo equivocado.
   linea=$(api "https://api.github.com/repos/$DUENYO/$r/actions/runs?branch=$rama&per_page=1" | \
-    python3 -c '
-import sys,json
-try: d=json.load(sys.stdin).get("workflow_runs",[])
+    REPO_ESPERADO="$r" python3 -c '
+import sys, json, os
+esperado = os.environ.get("REPO_ESPERADO", "")
+try: d = json.load(sys.stdin).get("workflow_runs", [])
 except Exception: print("|||"); raise SystemExit
-if not d: print("-|sin corridas|-|")
+if not d:
+    print("-|sin corridas|-|")
 else:
-    x=d[0]
-    est = x["conclusion"] if x["status"]=="completed" else x["status"]
-    print("%s|%s|%s|%s" % (x["run_number"], est, x["created_at"][:10], x["display_title"][:44]))' 2>/dev/null)
+    x = d[0]
+    dice = ((x.get("repository") or {}).get("name") or "").lower()
+    if dice and esperado and dice != esperado.lower():
+        print("-|OTRO REPO|-|la respuesta dice ser de «%s»" % dice)
+    else:
+        est = x["conclusion"] if x["status"] == "completed" else x["status"]
+        print("%s|%s|%s|%s" % (x["run_number"], est, x["created_at"][:10], x["display_title"][:44]))' 2>/dev/null)
   IFS='|' read -r num est fecha titulo <<< "$linea"
   mirados=$((mirados+1))
   case "$est" in
     success)            icono="✅ verde" ;;
     "sin corridas")     icono="— sin CI"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
+    "OTRO REPO")        icono="⚠ NO MIRADO"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
     in_progress|queued) icono="… en marcha" ;;
     "")                 icono="⚠ NO MIRADO"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
     *)                  icono="❌ $est"; rojos=$((rojos+1)); lista_rojos="$lista_rojos $r#$num" ;;

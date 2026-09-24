@@ -275,6 +275,27 @@ el `|| echo 000` que parecía prudente producía `HTTP 000000`, que no casaba co
 ningún caso y caía al comodín. El caso «sin red» —el más probable de los tres—
 era el único que no se reconocía.
 
+### Y una tercera: que la respuesta sea del repo que se preguntó
+
+El censo publicó una vez `cobertura-rf-fv#4 failure`. Ese repo **no tiene
+ninguna corrida número 4** —comprobado sobre sus doce últimas— y el 4 era el
+número de `factiun-cartera`, la fila justo anterior. No reprodujo: la lectura
+de variables resetea bien y la API devuelve `#41 success` de forma consistente.
+**No sé qué lo produjo.**
+
+Lo tentador es apuntarlo como transitorio y seguir. Pero un censo que puede
+equivocarse de repo es **peor que no tenerlo**, porque su error se lee como un
+hallazgo: alguien se pasa la mañana persiguiendo un fallo que no existe, y la
+próxima vez que el censo diga algo raro nadie se lo cree.
+
+Así que cada respuesta declara de qué repo es y se carea con el que se
+preguntó. Si no cuadra, la fila sale `NO MIRADO` diciendo de cuál dice ser, y
+no un veredicto sobre el repo equivocado.
+
+Es la misma idea que los agregados, aplicada a la ENTRADA de una puerta en vez
+de a su salida: antes de creerse el número, comprobar sobre qué está calculado.
+Aquí la pregunta no es «¿cuántos?» sino «¿de quién?».
+
 ### Y una comprobación de mutaciones que sí ejecuta
 
 `alcance_mutaciones.mjs` ya no busca los nombres en el texto del workflow:
