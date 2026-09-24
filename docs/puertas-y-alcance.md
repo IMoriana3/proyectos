@@ -753,6 +753,93 @@ afirmación que hay que justificar**, igual que la regla del resultado demasiado
 bueno (§4). «Mutó y siguió verde» no es un resultado; es una pregunta sin
 contestar.
 
+## 3 nonies · La décima: EL INSTRUMENTO CUANTIZA Y EL LISTÓN LO TAPA
+
+**La regla:**
+
+> Antes de fijar una tolerancia, comprobar **si lo que se compara ya viene
+> cuantizado**. Si lo está, la tolerancia **no dice nada de la física: dice el
+> tamaño del escalón**.
+>
+> Dos valores redondeados a 2 decimales **no pueden diferir menos de 0,01**, así
+> que un careo sobre ellos es **ciego por debajo del paso** — y su verde no
+> significa «coinciden», significa «coinciden hasta donde el instrumento llega».
+>
+> El careo se hace **ANTES del redondeo, sobre el valor crudo**. Si el redondeo
+> es parte de lo que se entrega, se carea **aparte**, como segundo caso, con su
+> convenio declarado.
+
+Es una familia nueva y no un caso: las nueve anteriores son sobre puertas que
+miran mal o donde no deben. Ésta es sobre una puerta que mira **bien** y cuyo
+**instrumento** no tiene resolución para lo que se le pide.
+
+### El caso (2026-09-24)
+
+El careo JS↔Python del modelo de radio tenía **un** listón, `0,01 dB`, con este
+argumento en el fuente:
+
+> *el JS redondea a 2 decimales en `predictLink`; se compara con esa granularidad
+> para no acusar al port de un `toFixed()`*
+
+**El motivo era falso.** Redondean **los dos**:
+
+```js
+marginDb: +margin.toFixed(2)     // JS
+```
+```python
+"margin_db": round(margin, 2)    # Python
+```
+
+No hay asimetría que perdonar. Lo que hay es que el careo compara **dos valores
+ya redondeados**.
+
+Y debajo había una asimetría **de verdad**, que ese comentario no vio: `toFixed`
+redondea **medio hacia arriba** y el `round()` de Python es **bancario**. Medido:
+
+| valor | Python | JS |
+|---|---|---|
+| `0,125` | **0,12** | **0,13** |
+
+En un empate exacto son **0,01 dB de diferencia real** en un número publicado.
+
+### Lo que lo destapó fue un resultado demasiado bueno
+
+Nadie fue a buscarlo. El careo daba **`0,000e+00` exacto** donde, con un solo
+lado redondeando, tocarían ~0,005. **Un cero exacto ahí es sospechoso antes de
+ser una buena noticia** — es la regla del resultado demasiado bueno (§4),
+aplicada al **instrumento** en vez de al dato.
+
+### Y lo que escondía, medido
+
+Quitado el redondeo y careando el margen crudo, sobre los mismos 400 casos:
+
+| | casos que difieren | peor diferencia |
+|---|---|---|
+| margen **publicado** (redondeado) | **0 de 400** | 0,000e+00 |
+| margen **crudo** | **294 de 400** | 2,827e-10 |
+
+No es que la física cambiara: **el instrumento estaba ciego por debajo del
+escalón y lo daba por igualdad exacta**. Y la diferencia cruda resultó ser
+*exactamente* el suelo de la pérdida de dos rayos —el término que domina el
+margen—, o sea que ni siquiera era deriva: era ruido de plataforma que no se
+podía ver.
+
+**El listón viejo, además, estaba ocho órdenes de magnitud por encima** de las
+diferencias reales de las demás funciones (1e-15 a 1e-10 frente a 1e-2). Un
+listón así no es un guard, es un adorno — y aquí venía con dos defectos
+encadenados: demasiado alto, y sobre un valor que no podía bajar de él.
+
+### Probado en negativo
+
+| mutante | careo viejo | careo nuevo |
+|---|---|---|
+| `+1e-6 dB` en `fspl_db` | **lo dejaba pasar** | **`rc = 1`** |
+| `+0,001 dB` en el margen | **invisible**: por debajo del paso | **`rc = 1`** |
+
+El segundo es el que da la regla: una deriva de una milésima de dB era
+**estructuralmente indetectable**, no porque el listón fuera generoso sino
+porque el instrumento no llegaba.
+
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
 Esto no es una manía de la integración continua. **Un número correcto calculado
@@ -911,6 +998,7 @@ enlace → rojo; sin clon y sin red → `rc = 2`.
 - [ ] ¿Cada piso está **medido en el mismo entorno en que corre**? Y si el alcance encoge según lo que haya en la máquina, ¿lo **declara** el banco, y un alcance sin medir sale `rc = 2` en vez de caer al valor por defecto? (§3 septies)
 - [ ] Y de cada puerta: **rómpela** (¿reacciona?) **y deprívala** (¿se entera de que no ha mirado?). Las dos, no una.
 - [ ] Y de cada mutación: ¿**casó**, y además **cayó en el camino que la puerta recorre**? Un verde que no se mueve es una pregunta sin contestar, no un resultado. (§3 octies)
+- [ ] Antes de fijar una tolerancia: ¿lo que se compara **ya viene cuantizado** (redondeado, truncado, discretizado)? Si lo está, el careo va **sobre el valor crudo**, y el publicado se carea aparte con su convenio declarado. Una tolerancia sobre un valor cuantizado mide el escalón, no la física. (§3 nonies)
 
 ---
 
