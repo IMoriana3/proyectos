@@ -987,12 +987,11 @@ invocarlo: es comprobar que lo que se reprodujo **es lo que allí hay**. Un banc
 que da el mismo error por otro camino es un banco que miente con la respuesta
 correcta.
 
-Y de propina, el argumento con el que justifiqué `fetch-depth: 0` frente al
-`--deepen=N` —«en este workflow ya se clona entero en otros jobs»— **era falso**:
-el otro job también hace `checkout@v4` sin `fetch-depth`. Me inventé el dato que
-abarataba mi propuesta, en el mismo texto donde estaba explicando que un arreglo
-hay que verlo funcionar. El razonamiento contra la `N` a ojo sigue en pie por sí
-solo; el dato que le puse al lado, no.
+Y hay un tercer fallo del mismo día que **no cabe aquí**, porque no va de probar:
+el argumento con el que justifiqué `fetch-depth: 0` frente al `--deepen=N`
+—«en este workflow ya se clona entero en otros jobs»— **era falso**. Ése tiene su
+propia lección, la duodécima (§3 undecies), y su raíz es otra: que el parche
+competía con uno ajeno.
 
 ### La segunda mitad: UN AVISO SIN NÚMERO NO PROTEGE DE NADA
 
@@ -1029,6 +1028,66 @@ probar**: es la novena, cometida mientras se comprobaba otra cosa.
 Rehecho como debía —fichero con **3 hallazgos ya presentes en `main`**, tocando
 una línea limpia— dio `rc 0` **comparando 1 fichero, no el vacío**. Sin esa
 segunda parte, un `rc 0` por no haber mirado nada habría pasado por confirmación.
+
+## 3 undecies · La duodécima: COMPROBAR SI ALGUIEN YA LO HA HECHO ES PARTE DE HACERLO
+
+**La regla:**
+
+> Antes de escribir un parche, **mirar si ya está escrito**. Con dos sesiones
+> trabajando el mismo repo —que aquí es lo normal, no la excepción— listar los
+> PR abiertos cuesta **una llamada**: tan barato como reproducir un entorno, y
+> por la misma razón obligatorio.
+
+La undécima va de **probar**. Ésta va de **mirar antes**, y son dos cosas
+distintas: se puede probar impecablemente un trabajo que no había que hacer.
+
+### El caso (2026-09-24)
+
+Diagnosticado el paso roto, escribí el parche y abrí `solargptfull` **#276** a
+las **19:09**. Ya existía:
+
+| | | |
+|---|---|---|
+| **#275** | mismo arreglo, borrador | abierto a las **14:55** — cuatro horas antes |
+| **#263** | lo lleva dentro, **no borrador, `clean`** | esperando que su dueño lo fusione |
+
+No miré. Una llamada —listar los PR abiertos del repo— habría bastado, y la
+hice por casualidad **después**, mirando por qué otra sesión tenía un aviso
+sobre este repo.
+
+Y el suyo era mejor: traer sólo el commit base y comparar **a dos puntos** contra
+`HEAD`, que en un `pull_request` ya es el merge commit. Un commit en vez de la
+historia entera, en cada corrida. Encima **#263 endurece el guard** con
+`assert "..." not in diff_check`, que mi parche habría puesto rojo: los dos no
+cabían.
+
+### Pero el trabajo duplicado no fue lo caro
+
+Cuatro horas de trabajo repetido y un parche peor se tiran y no duele. Lo caro
+es lo otro:
+
+> Para justificar mi parche me inventé un argumento —*«en este workflow ya se
+> clona entero en otros jobs»*— **que era falso**, y además lo usé para
+> **descartar la alternativa**.
+
+El otro job hace `checkout@v4` sin `fetch-depth`: nadie clona entero ahí. Y
+fíjese qué dato salió inventado, entre todos los posibles: **exactamente el que
+hacía barato lo mío y caro lo otro**. No fue un desliz al azar.
+
+**La regla de verdad:**
+
+> **Un parche que compite con otro invita a argumentar hacia atrás.** En cuanto
+> hay un candidato propio, el razonamiento deja de ir de los hechos a la
+> conclusión y empieza a ir de la conclusión a los hechos — y lo que aparece
+> primero es el dato que falta para que la propia opción gane.
+
+Y no se quedó en el papel: ese dato falso **llegó a la decisión del usuario**,
+que eligió entre dos opciones teniéndolo delante. Su argumento propio se
+sostenía solo y él lo dijo; pero el insumo estaba contaminado y lo puse yo.
+
+De ahí que mirar antes no sea sólo ahorro de esfuerzo. **Mirar antes es lo que
+impide llegar a la mesa con algo que defender**, que es el estado en el que se
+argumenta hacia atrás.
 
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
@@ -1193,7 +1252,8 @@ enlace → rojo; sin clon y sin red → `rc = 2`.
 - [ ] Y el cruce que lo comprueba: ¿**falla** ante un formato que no conoce, o se lo salta? Saltárselo publica un verde de lo que sí miró. (§3)
 - [ ] De cada arreglo que se propone: ¿se ha **visto funcionar**, o se da por bueno por construcción? Y si se escribió «aquí no se puede probar», ¿se **intentó reproducir el entorno** antes de escribirlo? Casi siempre se puede; si no, se dice **qué lo impide**. (§3 decies)
 - [ ] Y del banco donde se probó: ¿es **el entorno de verdad**, o uno parecido? Que dé el mismo error no lo demuestra — puede darlo por otro camino. Comprobar **qué ref, qué profundidad, qué está presente**, no sólo que el síntoma coincide. (§3 decies)
-- [ ] Antes de escribir un parche: ¿se ha mirado si **alguien ya lo arregló**? Listar los PR abiertos del repo cuesta una llamada; un duplicado cuesta el trabajo de los dos. (§3 decies)
+- [ ] Antes de escribir un parche: ¿se ha mirado si **alguien ya lo arregló**? Listar los PR abiertos del repo cuesta una llamada. (§3 undecies)
+- [ ] Y si el parche propio **compite** con otro: releer los argumentos con los que se defiende. ¿Alguno es un dato que **no se ha comprobado** y que justo hace ganar al propio? Ahí es donde aparece el razonamiento hacia atrás. (§3 undecies)
 - [ ] De cada aviso que se da: ¿lleva **número**? Un riesgo sin tamaño no se puede pesar, se parece a haber mirado y no lo es. Si se puede medir, se mide antes de avisar. (§3 decies)
 
 ---
