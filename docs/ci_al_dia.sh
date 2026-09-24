@@ -213,7 +213,11 @@ else:
   #
   # Se mira sólo a los jobs que FALLARON, y hacen falta los dos: un job
   # `skipped` también sale con runner nulo y cero pasos, y no significa nada.
-  if [ -n "$idrun" ] && ! echo "$est" | grep -qE '^(success|in_progress|queued|rancia:)'; then
+  # LA FIRMA MANDA SOBRE LA ANTIGÜEDAD. Una corrida sin minutos dice más que
+  # «no es de la cabeza»: la segunda es cierta pero no explica nada, y en un
+  # repo cuyo flujo está a mano A PROPÓSITO sería permanente y se leería como
+  # ruido. Así que se mira la firma también en las rancias, y si aparece, gana.
+  if [ -n "$idrun" ] && ! echo "$est" | grep -qE '^(success|in_progress|queued)'; then
     firma=$(api "https://api.github.com/repos/$DUENYO/$r/actions/runs/$idrun/jobs" | \
       python3 -c '
 import sys, json
@@ -222,7 +226,13 @@ except Exception: j = []
 malos = [x for x in j if x.get("conclusion") == "failure"]
 if malos and all(not (x.get("runner_name") or "") and not x.get("steps") for x in malos):
     print("sin_runner")' 2>/dev/null)
-    [ "$firma" = "sin_runner" ] && { est="infra:$est"; titulo="NUNCA HUBO RUNNER (0 pasos, ${dur}s) · $titulo"; }
+    if [ "$firma" = "sin_runner" ]; then
+      case "$est" in
+        rancia:*) titulo="SIN MINUTOS: nunca hubo runner · y además la corrida NO es de la cabeza" ;;
+        *)        titulo="SIN MINUTOS: nunca hubo runner (0 pasos, ${dur}s) · $titulo" ;;
+      esac
+      est="infra:$est"
+    fi
   fi
 
   mirados=$((mirados+1))
@@ -231,7 +241,7 @@ if malos and all(not (x.get("runner_name") or "") and not x.get("steps") for x i
     "sin corridas")     icono="— sin CI"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
     "OTRO REPO")        icono="⚠ NO MIRADO"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
     rancia:*)           icono="⚠ NO MIRADO"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
-    infra:*)            icono="🔌 SIN RUNNER"; infra="$infra $r#$num" ;;
+    infra:*)            icono="🔌 SIN MINUTOS"; infra="$infra $r#$num" ;;
     in_progress|queued) icono="… en marcha" ;;
     "")                 icono="⚠ NO MIRADO"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
     *)                  icono="❌ $est"; rojos=$((rojos+1)); lista_rojos="$lista_rojos $r#$num" ;;
@@ -272,7 +282,7 @@ if [ "$mirados" != "$declarados" ]; then
   exit 2
 fi
 if [ -n "$infra" ]; then
-  echo "SIN RUNNER (no es fallo de código):$infra"
+  echo "SIN MINUTOS — no es fallo de código:$infra"
   echo "  El job falló SIN RUNNER y SIN PASOS: no llegó a despacharse, no corrió ni"
   echo "  el checkout, y sus logs no existen. No es la duración lo que lo dice —uno"
   echo "  tarda 4 s y otro 54—, es que nunca hubo runner."
