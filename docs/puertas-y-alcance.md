@@ -607,13 +607,59 @@ por normalidad**, y en estos repos eso son tres cosas concretas:
    Y un rojo confirmado **no se degrada** a «no comprobado» (§1).
 3. **Que alguien pregunte por el vacío, solo y pronto.** Un hueco que aparece
    por casualidad al tercer día no está cubierto. Por eso `docs/al_empezar.sh`
-   corre **al empezar cada sesión** y hace las dos preguntas que ninguna CI hace:
-   *¿cuál fue el último CI de `main` de cada repo?* y *¿hay trabajo subido que no
-   esté en `main`?*
+   corre **al empezar cada sesión** y hace las **tres** preguntas que ninguna CI
+   hace: *¿cuál fue el último CI de `main` de cada repo?*, *¿hay trabajo subido
+   que no esté en `main`?* y *¿sigue cada copia fijada cuadrando con su
+   candado?*
 
 Y una cuarta, de forma: **cuando un número salga redondo o un hueco salga
 limpio, preguntar de qué está hecho** — la regla del resultado demasiado bueno
 (§4) es esta misma lección mirada desde el otro lado.
+
+### El sha del candado se comprueba DESPUÉS DEL MERGE, no mañana
+
+**Un candado afirma sobre bytes y un merge opera sobre bytes.** Si el squash
+normaliza un salto de línea, un `\r\n`, un byte final de fichero, la copia
+fijada de otro repo deja de cuadrar — y eso no sale a la luz al mergear: sale
+**al día siguiente**, en la CI de un repo distinto, con el rastro ya frío y sin
+nada que apunte al merge de ayer.
+
+El 2026-09-24 se mergeó un cambio del canon de radio por squash y el sha se
+comprobó **inmediatamente después**, contra la copia fijada y contra lo que el
+candado declara. Las tres coincidían, así que no hubo hallazgo — y esa es
+justamente la comprobación que se tiende a no hacer: la que casi siempre sale
+bien.
+
+> **La regla: el careo del candado va en la misma tanda que el merge, no en la
+> siguiente sesión.** Y como acordarse no es un mecanismo, lo pregunta también
+> `docs/candados.py`, solo, en cada arranque.
+
+### Y el candado que NO se comprobó: dicho, no contado
+
+El primer cruce de candados que escribí entendía dos formatos —`copias: [...]`
+y `copia: {...}}`— y `seguidor.lock.json` usa un tercero (`modelo` + `sha256`
+arriba). El bucle **no lo tocaba**, así que el informe decía *«siete de siete
+verdes»* y eran **seis**.
+
+Se publicó como **«no comprobado»** en vez de contarlo entre los verificados, y
+esa parte está bien: **seis de siete con el séptimo nombrado vale más que un
+siete que no lo es**. Pero decirlo no es el arreglo —
+
+> **un cruce que se salta en silencio lo que no entiende es esta misma lección
+> con otro traje**: el formato desconocido no deja rastro, y el verde que
+> publica es de lo que sí miró.
+
+Así que `docs/candados.py` **sale con `rc = 2` ante un formato que no reconoce**,
+lo nombra y dice sus claves. No lo salta. Probado en negativo, con los cinco
+casos: candado que cuadra (0) · fichero cambiado y candado viejo (1) · **formato
+desconocido (2)** · fichero que el candado nombra y no existe (**1**, no 2: un
+rojo confirmado no se degrada) · y cero candados (2, porque el vacío no es
+verde).
+
+Ese cuarto caso salió mal a la primera —devolvía 2— por preguntar «¿he careado
+alguna?» **antes** que «¿alguna está mal?». Es el mismo defecto de orden que
+`copiaQueFalta` tuvo esa misma mañana, cometido otra vez al escribir la
+comprobación que lo vigila. Lo cazó su propio control negativo.
 
 ## 3 septies · La octava: UNA MEDIDA LLEVA SU ENTORNO DENTRO
 
@@ -999,6 +1045,8 @@ enlace → rojo; sin clon y sin red → `rc = 2`.
 - [ ] Y de cada puerta: **rómpela** (¿reacciona?) **y deprívala** (¿se entera de que no ha mirado?). Las dos, no una.
 - [ ] Y de cada mutación: ¿**casó**, y además **cayó en el camino que la puerta recorre**? Un verde que no se mueve es una pregunta sin contestar, no un resultado. (§3 octies)
 - [ ] Antes de fijar una tolerancia: ¿lo que se compara **ya viene cuantizado** (redondeado, truncado, discretizado)? Si lo está, el careo va **sobre el valor crudo**, y el publicado se carea aparte con su convenio declarado. Una tolerancia sobre un valor cuantizado mide el escalón, no la física. (§3 nonies)
+- [ ] ¿Se comprueba el **sha de cada copia fijada JUSTO DESPUÉS de mergear** lo que ese candado vigila? Un merge opera sobre bytes; si normaliza uno, el rojo sale mañana en otro repo con el rastro frío. (§3)
+- [ ] Y el cruce que lo comprueba: ¿**falla** ante un formato que no conoce, o se lo salta? Saltárselo publica un verde de lo que sí miró. (§3)
 
 ---
 

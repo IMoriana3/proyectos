@@ -110,15 +110,40 @@ if [ "$SOLO" != "ci" ]; then
   echo
 fi
 
+# ══════════════════════════════════════════════════════════════════════
+#  3 · ¿SIGUE CADA COPIA FIJADA CUADRANDO CON SU CANDADO?
+# ══════════════════════════════════════════════════════════════════════
+#
+# La tercera pregunta que ninguna CI hace, por la misma razón que las otras
+# dos: cada repo carea SUS copias, y nadie mira el conjunto. Un candado es una
+# afirmación sobre bytes y envejece — la copia del gemelo se quedó dos meses
+# por detrás con su doctrina escrita en la cabecera.
+#
+# Y va aquí, además, por algo que pasó el 2026-09-24: un canon se mergeó por
+# squash y su sha lo comprobé de casualidad, porque me acordé. Un merge opera
+# sobre bytes; si normaliza uno, el careo de otro repo sale rojo mañana con el
+# rastro frío. Esto lo pregunta SOLO, todos los días.
+echo "══════════════════════════════════════════════════════════════════════"
+echo " 3 · ¿SIGUE CADA COPIA FIJADA CUADRANDO CON SU CANDADO?"
+echo "══════════════════════════════════════════════════════════════════════"
+if [ -f "$AQUI/candados.py" ]; then
+  python3 "$AQUI/candados.py" --raiz "$BASE" 2>&1 | sed 's/^/  /'
+  rc_cand=${PIPESTATUS[0]}
+else
+  echo "  SIN COMPROBAR: no está docs/candados.py al lado."
+  rc_cand=2
+fi
+echo
+
 # ── EL VEREDICTO, JUNTO ──────────────────────────────────────────────────
 echo "══════════════════════════════════════════════════════════════════════"
-if [ "$rc_ci" = "1" ] || [ "$rc_ramas" = "1" ]; then
+if [ "$rc_ci" = "1" ] || [ "$rc_ramas" = "1" ] || [ "$rc_cand" = "1" ]; then
   echo " VEREDICTO: HAY ALGO. Díselo al usuario ANTES de ponerte a trabajar."
   exit 1
 fi
-if [ "$rc_ci" = "2" ] || [ "$rc_ramas" = "2" ]; then
+if [ "$rc_ci" = "2" ] || [ "$rc_ramas" = "2" ] || [ "$rc_cand" = "2" ]; then
   echo " VEREDICTO: ALGO NO SE HA PODIDO MIRAR. Eso NO es un verde."
   exit 2
 fi
-echo " VEREDICTO: CI en verde y nada fuera de main. Adelante."
+echo " VEREDICTO: CI en verde, nada fuera de main y los candados cuadran."
 exit 0
