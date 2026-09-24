@@ -226,11 +226,21 @@ ese error concreto: cualquier otro habría durado lo mismo.
 
 Dos costumbres, y una de ellas es un comando para que no dependa de acordarse:
 
-1. **Al empezar**, `bash docs/ci_al_dia.sh`: el último CI de la rama principal
-   de cada repo de la suite, en una tabla, y se dice en voz alta ANTES de tocar
-   nada. Es barato a propósito —una llamada por repo—, porque una comprobación
-   cara al arrancar se acaba saltando. Tiene los tres estados: rojo es rojo, y
-   un repo que no se ha podido consultar sale `NO MIRADO`, no verde.
+1. **Al empezar**, `bash docs/al_empezar.sh` — **una sola orden**, que corre los
+   dos guardias de arranque y da un veredicto junto:
+   - `ci_al_dia.sh`: el último CI de la rama principal de cada repo de la suite,
+     en una tabla, en voz alta ANTES de tocar nada. Barato a propósito —una
+     llamada por repo—, porque una comprobación cara al arrancar se acaba
+     saltando. Con los tres estados: rojo es rojo, y un repo que no se ha podido
+     consultar sale `NO MIRADO`, no verde.
+   - `reconcilia.sh` sobre **todos** los repos: ¿hay trabajo subido que **no
+     esté en `main`**? Se añadió cuando se vio que dos commits llevaban tres días
+     fuera sin que nada lo dijera (§3 quinquies). **Un hueco que aparece por
+     casualidad al tercer día no está cubierto.**
+
+   Los dos leen la MISMA lista de repos (`docs/repos.sh`): dos listas es una
+   lista que se queda vieja, y el día que se añada un repo a una sola, el otro
+   guardia deja de mirarlo sin que nadie se entere.
 2. **Al empujar**, una tarea no está cerrada hasta ver cerrar su corrida. Un
    `git push` que sale bien no dice nada sobre la CI: sólo dice que el objeto
    llegó.
@@ -520,6 +530,56 @@ Corrido sobre el caso de hoy nombra **exactamente los dos commits perdidos**.
 ficheros **sin seguir**, y se disparó con su propio fichero recién escrito.
 `checkout -B` no toca lo que no está seguido. Lo peligroso son las
 modificaciones de ficheros **seguidos**.
+
+## 3 sexies · La séptima: EL VACÍO SE LEE COMO NORMAL
+
+Las seis lecciones anteriores son sobre puertas que miran mal. Ésta es sobre
+**algo que no está**, y por eso es la más difícil de ver: **una ausencia no deja
+rastro**. Un valor equivocado chirría; un hueco, no.
+
+> **Cero corridas de CI** parece «todavía no han empezado».
+> **Una sección que falta** no se echa de menos.
+> **Un commit que no llegó** no deja rastro en ninguna parte.
+> **Un dato que no está** se lee igual que uno que nadie ha mirado.
+
+### Los cuatro casos, y son la misma forma
+
+| lo que había | cómo se leyó | lo que era |
+|---|---|---|
+| un PR con **0 check-runs** | «aún no han arrancado» | **conflicto de fusión**: GitHub no arranca los flujos de un PR que no puede fusionar |
+| el documento **sin la quinta lección** | completo y coherente | dos commits que nunca entraron en `main` |
+| `09069af` y `c81cd9c` **fuera de main** | nada: no hay dónde mirarlo | `checkout -B` los tiró sin una palabra |
+| 568 enlaces con `relieve_perfil_no_cubre_el_vano` | «esos vanos no tienen terreno» | **sí lo tenían**: los rechazaba un déficit de 2,13e-13 m |
+
+El cuarto es el más caro y el que mejor lo explica. `recortaPerfil` comparaba
+`largo < D` a secas y dejaba **568 de 6.036 enlaces reales (9,4 %) sin término de
+relieve, con el terreno delante**, desde que el terreno entró en la aplicación.
+**Los 17 bancos estaban verdes, las 43 mutaciones rojas y la paridad verde.**
+
+Y no por estar mal hechos: **ningún banco tenía un caso donde el perfil llegara
+al vano salvo por un último bit**, porque a nadie se le ocurre escribir ese caso
+a mano. Lo que lo cazó fue poner una puerta NUEVA y **ver que no disparaba donde
+tenía que disparar**: Benante tenía 146 enlaces por debajo de 100 m y la puerta
+sólo saltaba en 139. Ir a ver por qué faltaban siete destapó el picómetro.
+
+### El antídoto: que el vacío CUESTE algo
+
+No se arregla mirando más. Se arregla haciendo que la ausencia **no pueda pasar
+por normalidad**, y en estos repos eso son tres cosas concretas:
+
+1. **El piso.** Un banco que no publica cuántas comprobaciones ha hecho no puede
+   salir verde. «El vacío es ERROR, no PASS» — §2.
+2. **El `rc = 2`.** «No he podido mirar» es un estado propio, no un cero amable.
+   Y un rojo confirmado **no se degrada** a «no comprobado» (§1).
+3. **Que alguien pregunte por el vacío, solo y pronto.** Un hueco que aparece
+   por casualidad al tercer día no está cubierto. Por eso `docs/al_empezar.sh`
+   corre **al empezar cada sesión** y hace las dos preguntas que ninguna CI hace:
+   *¿cuál fue el último CI de `main` de cada repo?* y *¿hay trabajo subido que no
+   esté en `main`?*
+
+Y una cuarta, de forma: **cuando un número salga redondo o un hueco salga
+limpio, preguntar de qué está hecho** — la regla del resultado demasiado bueno
+(§4) es esta misma lección mirada desde el otro lado.
 
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 

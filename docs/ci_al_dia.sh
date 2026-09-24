@@ -40,16 +40,12 @@ DUENYO="${DUENYO_GH:-IMoriana3}"
 # son de esta suite y escondería el día que uno deje de estar. Si se añade un
 # repo al trabajo y no se añade aquí, este fichero no lo mira — y por eso
 # publica su ALCANCE abajo, para que el hueco se vea.
-REPOS=(
-  proyectos siting cobertura-zigbee scada gemelo-digital
-  visores checklist-solar-v2 gorraiz-dashboard solargptfull
-  factiun-cartera cobertura-rf-fv
-)
-# `visores` se llamaba `visor-san-jose`. El nombre viejo responde 301 y GitHub
-# redirige a `/repositories/{id}`, que el proxy de estas sesiones no deja pasar:
-# o sea que con el nombre viejo el repo salía como «NO MIRADO» y un CI en rojo
-# podía esconderse ahí. Queda escrito para que nadie lo vuelva a poner.
-PISO=8            # MEDIDO: menos repos consultados que esto es no haber mirado
+# La lista vive en `repos.sh`, al lado: la comparten este guardia y
+# `al_empezar.sh`, y dos copias es una copia que se queda vieja.
+_AQUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+. "$_AQUI/repos.sh" || { echo "NO SE HA PODIDO MIRAR: falta $_AQUI/repos.sh, que trae la lista de repos."; exit 2; }
+PISO="$PISO_REPOS"
 
 PATRON="${1:-}"
 TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
