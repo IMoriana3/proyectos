@@ -416,8 +416,42 @@ tenerla. Lo que sí queda:
 > La segunda es la que no se puede fingir: una copia local del cálculo pasa la
 > primera y falla la segunda.
 
-Es una regla, no una anécdota, y se ha pagado dos veces — **en las dos
-direcciones**.
+Es una regla, no una anécdota, y se ha pagado **tres** veces — en las dos
+direcciones, y la tercera de la forma más incómoda posible.
+
+### El mejor caso que tiene esta lección: la escribí y la cometí a la vez
+
+En `Cobertura-Zigbee`, el banco `test_hsus_gw.mjs` carea las HSU de los layouts
+contra la hoja que escribe la toolbox de `SCADA`. Llevaba desde siempre saliendo
+con `0` **sin carear ninguna**, porque la hoja no estaba; el comentario del
+propio workflow lo decía en voz alta — *«que conste que hoy no vigila nada»*— y
+el código de salida decía lo contrario.
+
+Al arreglarlo escribí esto en el fuente, de mi puño, **dentro del PR que
+establece esta lección**:
+
+> `SCADA es PUBLICO: la CI lo clona, asi que esta rama solo salta cuando de`
+> `verdad no esta.`
+
+**Era falso.** El job `datos` hacía un `actions/checkout` pelado y no clonaba
+nada. Escribí la afirmación en prosa y **no la ejecuté nunca**: exactamente lo
+que esta lección prohíbe, cometido por quien la estaba redactando.
+
+No lo cazó ninguna puerta. Lo cazó **correr el banco en un árbol sin hermanos al
+lado**, que es como corre la CI, y verlo salir con `rc = 2`.
+
+Y lo que importa es cómo se arregló, porque había dos salidas y sólo una es
+buena:
+
+| | qué hace | qué deja |
+|---|---|---|
+| borrar la frase | el fuente deja de mentir | el banco sigue sin carear nada |
+| **hacerla verdad** | la CI clona `SCADA` (público, 2,6 MB) al lado | **22 HSU careadas de verdad, 33 comprobaciones** |
+
+**El arreglo bueno no fue borrar la frase, fue hacerla verdad.** Una afirmación
+falsa en un comentario es un síntoma; lo que había debajo era una puerta que no
+vigilaba. Quitar el síntoma la habría dejado igual de apagada y con mejor
+aspecto.
 
 ### Falso verde: el nombre estaba en un comentario (2026-09-24)
 
@@ -581,6 +615,144 @@ Y una cuarta, de forma: **cuando un número salga redondo o un hueco salga
 limpio, preguntar de qué está hecho** — la regla del resultado demasiado bueno
 (§4) es esta misma lección mirada desde el otro lado.
 
+## 3 septies · La octava: UNA MEDIDA LLEVA SU ENTORNO DENTRO
+
+**La regla:**
+
+> Un piso, un tiempo o un recuento **medidos en un sitio no valen en otro**. El
+> mismo banco **con el repo hermano al lado y sin él son dos bancos distintos**.
+>
+> El número correcto en el entorno equivocado **se lee como una medida y no lo
+> es**.
+>
+> Quien mide **declara dónde midió**. Quien compara **exige que el alcance
+> coincida**. Y un alcance que nadie ha medido **sale `rc = 2`, nunca cae al
+> valor por defecto**.
+
+Es la séptima lección con un disfraz nuevo: el hueco no está en los datos, está
+en **el contexto de la medida**, y por eso no se ve — el número está ahí,
+redondo y con aspecto de dato.
+
+### El caso (2026-09-24), y lo que destapó
+
+`Cobertura-Zigbee/tools/test_anual_motor.mjs` tenía un piso de **19**. Lo medí
+en mi máquina, donde `SolarGPTfull` está clonado al lado. En CI publicó **14** y
+el envoltorio lo puso rojo.
+
+La reacción barata —bajar el piso a 14— habría tapado lo de verdad grave, que
+sólo se ve mirando el banco entero:
+
+| sección | qué comprueba | ¿corre en CI? |
+|---|---|---|
+| maniobras | cómo se segmenta un arranque | sí |
+| coste | la aritmética, **con un modelo INVENTADO de números redondos escrito en el propio banco** (`k=0,05`, `e0=1,0`…) | sí |
+| **canario cruzado** | que las constantes **reales** medidas (`0,0489` · `1,222` · `0,0615` · `2,425` · `0,0901` · `0,0447` sobre 14.759 maniobras) salen del fuente del core | **no** |
+
+En CI el banco verificaba **que sabe multiplicar**, se saltaba la única sección
+que ata esos números al modelo medido de verdad, y remataba con:
+
+```
+✓ 14 comprobaciones, todas bien
+```
+
+**«Todas bien» sobre el subconjunto que sí corrió.** El piso de 14 lo habría
+bendecido para siempre.
+
+Y el hermano no se puede traer: `SolarGPTfull` es **privado y ocupa 820 MB**.
+Que no se pueda arreglar trayendo el entorno es justamente por lo que hace falta
+la regla; si siempre se pudiera, bastaría con traerlo.
+
+### Cómo se declara, y dónde vive cada cosa
+
+El reparto no es un detalle de implementación, es lo que impide una segunda
+copia que se quede vieja:
+
+| | quién lo sabe | dónde vive |
+|---|---|---|
+| **la condición** (¿está el hermano?) | el banco, que es el único que sabe qué le falta | en el banco, una línea `[alcance] <nombre>` |
+| **los números** (14 aquí, 19 allí) | quien los midió | en la tabla de pisos, donde se ven en el diff |
+
+Y la parte que casi se me escapa: **un alcance que la tabla no conozca sale con
+`rc = 2`**. Si mañana el banco aprende a correr recortado de otra manera, eso es
+un entorno que **nadie ha medido**, y un entorno sin medir no puede pasar por
+verde cayendo al piso base. Es el mismo principio que el `rc = 2` de §1, aplicado
+al *dónde* en vez de al *qué*.
+
+También cambia lo que el banco puede decir de sí mismo. «Todas bien» tiene que
+significar «he mirado **todo** y está bien», así que cuando el alcance encoge lo
+dice con las dos mitades:
+
+```
+✓ 14 comprobaciones, todas bien — y 5 SIN CORRER (el canario cruzado, sin el core al lado)
+```
+
+### Probado en negativo
+
+| prueba | resultado |
+|---|---|
+| quitar la línea `[alcance]` | piso 19 → **`rc = 1`** |
+| declarar un alcance que la tabla no conoce | **`rc = 2`** |
+| mover una constante del canario donde SÍ corre | **`rc = 1`** |
+
+La primera es la que sostiene el invento: **la declaración es de carga**. Si
+alguien la borra «por limpiar ruido», el banco vuelve a exigir 19 y se pone rojo.
+
+## 3 octies · La novena: UNA MUTACIÓN QUE NO TOCA LO QUE LA PUERTA MIRA NO PRUEBA NADA
+
+**La regla:**
+
+> Ya teníamos «**la mutación que no casa es `rc = 2`, no cazada**» (§3 quater).
+> Esto es el escalón siguiente, y es peor porque tiene mejor aspecto: la
+> mutación **casa**, **se aplica**, el fichero cambia de verdad — y aun así el
+> verde significa **«no has tocado nada»**, no «la puerta aguanta».
+>
+> Pasa cuando se muta **un campo que el banco no lee**.
+>
+> El remedio: la mutación se verifica **sobre el campo que el banco lee de
+> verdad**, y **si el verde no cambia hay que demostrar por qué antes de darlo
+> por bueno**.
+
+### El caso (2026-09-24)
+
+Probando en negativo el careo de HSU contra la hoja de la toolbox, muté
+`plantas[0]` del fichero de Ayora **dos veces** —primero el índice de NCU, luego
+el puerto del gateway—. Las dos salieron verdes, y estuve a un paso de anotar
+«la puerta aguanta».
+
+Lo que pasaba es que el banco sólo mira las entradas de la hoja **que traen
+`rsu`**, y `plantas[0]` no la trae:
+
+```js
+for (const [k, n] of (p.rsu || []).entries()) { … }   // sin `rsu`, no entra nunca
+```
+
+Repetida sobre `plantas[1]`, que sí la trae, la caza a la primera y por los dos
+lados:
+
+```
+FALLA  HSU 1 (US)   hoja: NCU  7 GW 1   layout: NCU  2 GW 1   ← otra NCU
+FALLA  HSU 1 (US)   hoja: NCU  2 GW 2   layout: NCU  2 GW 1   ← otro gateway
+```
+
+### Por qué es distinta de la de §3 quater, y por qué engaña más
+
+| | la de §3 quater | ésta |
+|---|---|---|
+| el `sed` | **no casa**: el fichero no cambia | **casa**: el fichero cambia |
+| se nota | sí, si se mira el diff del mutante | **no**: el diff enseña un cambio real |
+| lo que sale | verde | verde |
+| lo que significa | «el mutante no llegó» | «llegó donde la puerta no mira» |
+
+La primera se detecta comprobando que el `sed` tocó algo. Ésta **no**: hay que
+comprobar que tocó **lo que se lee**. Por eso la regla no es «verifica que la
+mutación se aplicó», es **«verifica que la mutación cayó en el camino que la
+puerta recorre»**.
+
+Y de ahí sale la obligación que la cierra: **un verde que no se mueve es una
+afirmación que hay que justificar**, igual que la regla del resultado demasiado
+bueno (§4). «Mutó y siguió verde» no es un resultado; es una pregunta sin
+contestar.
+
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
 Esto no es una manía de la integración continua. **Un número correcto calculado
@@ -736,7 +908,9 @@ enlace → rojo; sin clon y sin red → `rc = 2`.
 - [ ] ¿«No comprobado» sale **distinto** de «comprobado y pasa» en todos los sitios donde se informa?
 - [ ] ¿Un formato de salida ilegible sale **`rc = 2`** y no rojo?
 - [ ] ¿El **agregador sabe cuántos** debería haber contado?
+- [ ] ¿Cada piso está **medido en el mismo entorno en que corre**? Y si el alcance encoge según lo que haya en la máquina, ¿lo **declara** el banco, y un alcance sin medir sale `rc = 2` en vez de caer al valor por defecto? (§3 septies)
 - [ ] Y de cada puerta: **rómpela** (¿reacciona?) **y deprívala** (¿se entera de que no ha mirado?). Las dos, no una.
+- [ ] Y de cada mutación: ¿**casó**, y además **cayó en el camino que la puerta recorre**? Un verde que no se mueve es una pregunta sin contestar, no un resultado. (§3 octies)
 
 ---
 
