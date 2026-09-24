@@ -77,23 +77,41 @@ fi
 
 ADELANTE=$(git rev-list --count "$MAIN".."$CAB" 2>/dev/null)
 DETRAS=$(git rev-list --count "$CAB".."$MAIN" 2>/dev/null)
-# DOS PREGUNTAS DISTINTAS, Y HACEN FALTA LAS DOS. Me equivoqué en las dos
-# direcciones antes de dar con esto:
+# NINGUNO DE LOS DOS DIFFS DECIDE BIEN. Los probé los dos y los dos fallan, en
+# direcciones opuestas:
 #
-#   DECIDIR  -> `git diff main rama` (dos puntos). ¿Difiere el contenido de la
-#               rama del de main? Vacío = todo lo suyo está dentro, CON SQUASH O
-#               SIN ÉL, que es para lo que existe esta guardia. Usar aquí la base
-#               común daba ROJO en toda rama recién mergeada por squash: sus
-#               commits no son ancestros, pero su contenido sí está.
-#   CONTAR   -> `merge-base..HEAD`. Qué APORTA la rama. El de dos puntos enseña
-#               además, como si fueran borrados suyos, todo lo que main ha
-#               añadido por su lado: con una rama 36 commits por detrás son 2.996
-#               líneas «borradas» que nadie ha borrado.
+#   merge-base..HEAD  daba ROJO en toda rama recién mergeada POR SQUASH: sus
+#                     commits no son ancestros de main, pero su contenido sí
+#                     está dentro. Medido en `scada` y `gemelo-digital`.
+#   main..rama        (dos puntos) da ROJO en toda rama que va POR DETRÁS: el
+#                     texto NUEVO de main aparece como «inserción» de la rama,
+#                     que es el texto VIEJO. Medido en `factiun-cartera`, 1 por
+#                     delante y 7 por detrás: 11 inserciones que no eran suyas.
 #
-# Así que se decide con el primero y se INFORMA con el segundo.
+# LA PREGUNTA BUENA es otra, y es la que esta guardia quería hacer desde el
+# principio: ¿lo que la rama APORTA ya está igual en main? Así que se toman los
+# ficheros que la rama toca sobre su base común —eso sí lo dice bien
+# `merge-base..HEAD`— y se compara, FICHERO A FICHERO, la versión de la rama
+# contra la de main. Si todas coinciden, no hay nada que perder, con squash o
+# sin él y esté la rama por detrás lo que esté.
+#
+# UN FALSO ROJO QUE SE QUEDA, Y A PROPÓSITO: si la rama tocó un fichero y main
+# lo cambió DESPUÉS por otra razón, las versiones difieren y esto avisa aunque
+# el trabajo de la rama sí entrara. Es el lado seguro: un rojo de más cuesta una
+# mirada, un verde de más pierde trabajo.
 COMUN=$(git merge-base "$MAIN" "$CAB" 2>/dev/null)
-DIF=$(git diff --stat "$MAIN" "$CAB" 2>/dev/null)
 APORTA=$(git diff --stat "$COMUN" "$CAB" 2>/dev/null)
+DIF=""
+if [ -n "$COMUN" ]; then
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    a=$(git show "$MAIN:$f" 2>/dev/null | git hash-object --stdin 2>/dev/null)
+    b=$(git show "$CAB:$f"  2>/dev/null | git hash-object --stdin 2>/dev/null)
+    [ "$a" != "$b" ] && DIF="$DIF$f"$'\n'
+  done <<EOF
+$(git diff --name-only "$COMUN" "$CAB" 2>/dev/null)
+EOF
+fi
 echo "commits la rama va $ADELANTE por delante y $DETRAS por detrás"
 [ -n "$COMUN" ] && echo "base común $(git rev-parse --short "$COMUN") ($(git log -1 --format=%ci "$COMUN" 2>/dev/null | cut -c1-16))"
 echo
