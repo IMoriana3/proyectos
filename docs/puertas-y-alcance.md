@@ -332,6 +332,64 @@ aplicarse allí de forma automática, y la única vez que se corrió no pasó.
 Es la cuarta lección aplicándose a su propia fuente: **una puerta que nadie
 mira no es una puerta**, y da igual que la puerta esté bien escrita.
 
+## 3 ter · La quinta: apagada A PROPÓSITO no es lo mismo que rota
+
+Las cuatro anteriores son sobre lo que una puerta mira, o sobre que nadie la
+mire. Ésta es sobre **confundir un estado con un defecto**.
+
+El censo de CI encontró que `factiun-cartera` no tenía corridas sobre `main`
+desde junio y que su flujo de bancos sólo se disparaba a mano, con 19 ficheros
+de prueba detrás. Diagnóstico inmediato: descuido. Se abrió un PR de tres
+líneas poniendo `push`/`pull_request`, y se fusionó.
+
+**No era un descuido.** Era una decisión medida, tomada seis días antes y
+escrita en la cabecera de ese mismo fichero, **doce líneas por encima del
+bloque `on:` que se editó**:
+
+> ⚠ ESTE FLUJO NO SE DISPARA SOLO, Y ES A PROPÓSITO.
+> Este repo es PRIVADO… no hay minutos y no se van a poner (decisión del dueño,
+> 18-09). Medido antes de decidirlo: CINCO tiradas… el trabajo se crea y muere
+> en 2 s SIN que se le asigne runner (runner_id 0, cero pasos, logs 404).
+> Dejarlo en `push`/`pull_request` significaba una **X roja PERMANENTE** en cada
+> PR y en main, de un flujo que no llega a ejecutar una sola comprobación. Eso
+> no es una puerta: **es enseñar a ignorar los rojos**.
+
+Con los cinco identificadores de tirada listados. Y la predicción se cumplió en
+la primera corrida tras el cambio: cuatro segundos, sin runner, cero pasos.
+
+### Las dos cosas que hay dentro
+
+**Primera: el censo mide ESTADO, no INTENCIÓN.** «Sin CI automática» y «CI
+apagada a propósito» dan exactamente la misma lectura, y la diferencia decide
+si hay algo que arreglar o no hay nada. Un censo que sólo ve el estado produce
+diagnósticos seguros y equivocados — y son peores que no tener censo, porque
+llegan con la autoridad de un número.
+
+**Segunda, y es de leer, no de medir:** el fichero se leyó con un `sed` que
+empezaba en la línea donde el `grep` había encontrado `on:`. Las doce líneas de
+encima —que lo explicaban entero, con sus cinco tiradas— no se miraron. Es la
+segunda lección otra vez, «mira donde no debe», aplicada a **leer** en vez de a
+comprobar: se miró exactamente la parte que se esperaba que importara.
+
+### Qué NO arregla esto, y por qué conviene decirlo
+
+La reacción natural es proponer una comprobación: *que el PR declare qué
+ficheros toca y se caree con lo que entró en `main`*. Es una buena idea para
+otro problema —un squash que se traga un cambio— pero **aquí no habría cazado
+nada**: no se perdió ningún fichero ni ningún commit. Todo llegó. Lo que falló
+fue leer una decisión que estaba escrita.
+
+Contra eso no hay comprobación barata, y decir que la hay sería peor que no
+tenerla. Lo que sí queda:
+
+- **una decisión deliberada se declara EN EL SITIO donde se toca**, no sólo en
+  el commit — el commit lo lee quien busca, la cabecera la lee quien edita;
+- **antes de «arreglar» una puerta apagada, leer el fichero ENTERO.** No desde
+  donde casó el patrón: entero;
+- y el censo, cuando ve un repo sin corridas automáticas, **lo dice como
+  observación y no como defecto**, y recuerda mirar la cabecera del flujo antes
+  de tocarlo.
+
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
 Esto no es una manía de la integración continua. **Un número correcto calculado

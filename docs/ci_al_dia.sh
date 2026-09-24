@@ -106,7 +106,7 @@ porque() {
 printf '%-20s %-10s %-9s %-10s  %s\n' repo rama corrida estado título
 printf '%-20s %-10s %-9s %-10s  %s\n' '--------------------' '----------' '---------' '----------' '------'
 
-mirados=0; rojos=0; nc=0; lista_rojos=""; renombrados=""; declarados=0
+mirados=0; rojos=0; nc=0; lista_rojos=""; renombrados=""; declarados=0; infra=""
 for r in "${REPOS[@]}"; do
   [ -n "$PATRON" ] && [[ "$r" != *"$PATRON"* ]] && continue
   declarados=$((declarados+1))
@@ -155,6 +155,16 @@ else:
     else:
         est = x["conclusion"] if x["status"] == "completed" else x["status"]
         titulo = x["display_title"][:44]
+        # LA DURACION, para separar «el código falla» de «nunca hubo runner».
+        dur = ""
+        try:
+            import datetime as _dt
+            _a = _dt.datetime.fromisoformat(x["run_started_at"].replace("Z", "+00:00"))
+            _b = _dt.datetime.fromisoformat(x["updated_at"].replace("Z", "+00:00"))
+            dur = str(int((_b - _a).total_seconds()))
+        except Exception:
+            dur = ""
+        idjob = str(x.get("id", ""))
         # ¿ES DE ESTE CÓDIGO? Si la corrida no es de la cabeza de la rama, su
         # veredicto es sobre OTRO commit, y eso hay que decirlo: puede ser una
         # respuesta rancia, o puede ser que el último empuje no disparara nada
@@ -162,7 +172,8 @@ else:
         if cabeza and x.get("head_sha") and x["head_sha"] != cabeza:
             titulo = "NO ES DE LA CABEZA (%s, %s) · %s" % (x["head_sha"][:7], x["created_at"][:10], titulo[:20])
             est = "rancia:" + str(est)
-        print("%s|%s|%s|%s" % (x["run_number"], est, x["created_at"][:10], titulo))' 2>/dev/null; }
+            dur = dur or "" 
+        print("%s|%s|%s|%s|%s|%s" % (x["run_number"], est, x["created_at"][:10], dur, idjob, titulo))' 2>/dev/null; }
 
   # UN REINTENTO, Y SÓLO PARA ESTO. La respuesta ha llegado RANCIA tres veces en
   # una sesión —una página entera de corridas viejas del repo correcto, así que
@@ -178,13 +189,49 @@ else:
   case "$linea" in
     *"|rancia:"*) linea=$(ultima "$r" "$rama" "$cabeza") ;;
   esac
-  IFS='|' read -r num est fecha titulo <<< "$linea"
+  IFS='|' read -r num est fecha dur idrun titulo <<< "$linea"
+
+  # ══ «NUNCA HUBO RUNNER» NO ES UN FALLO DE CÓDIGO ═════════════════════════
+  #
+  # Medido el 2026-09-24. Los dos repos PRIVADOS de la suite dan esta firma y
+  # ninguno de los nueve públicos:
+  #
+  #   factiun-cartera   runner=''  pasos=0   corrida de   4 s
+  #   solargptfull      runner=''  pasos=0   corrida de  54 s
+  #   gemelo-digital    runner='GitHub Actions 1000019148'  pasos=5   ← rojo REAL
+  #
+  # El job no llega a despacharse: no corre ni `actions/checkout`, y los logs
+  # devuelven 404 porque nunca se escribieron. Los minutos de repos privados se
+  # facturan y los de públicos no, así que esto apunta a minutos agotados o a un
+  # límite de gasto — cosa de la cuenta, no del código. Leerlo como «rojo» manda
+  # a alguien a buscar un defecto que no existe.
+  #
+  # EL CRITERIO NO ES LA DURACIÓN, Y ESO SE APRENDIÓ PROBÁNDOLO. La primera
+  # versión exigía «menos de 10 s», y con eso `solargptfull` —que tarda 54— se
+  # leía como rojo de código durante horas. Lo que manda es que el job NO TENGA
+  # RUNNER y NO TENGA PASOS; el tiempo es incidental.
+  #
+  # Se mira sólo a los jobs que FALLARON, y hacen falta los dos: un job
+  # `skipped` también sale con runner nulo y cero pasos, y no significa nada.
+  if [ -n "$idrun" ] && ! echo "$est" | grep -qE '^(success|in_progress|queued|rancia:)'; then
+    firma=$(api "https://api.github.com/repos/$DUENYO/$r/actions/runs/$idrun/jobs" | \
+      python3 -c '
+import sys, json
+try: j = json.load(sys.stdin).get("jobs", [])
+except Exception: j = []
+malos = [x for x in j if x.get("conclusion") == "failure"]
+if malos and all(not (x.get("runner_name") or "") and not x.get("steps") for x in malos):
+    print("sin_runner")' 2>/dev/null)
+    [ "$firma" = "sin_runner" ] && { est="infra:$est"; titulo="NUNCA HUBO RUNNER (0 pasos, ${dur}s) · $titulo"; }
+  fi
+
   mirados=$((mirados+1))
   case "$est" in
     success)            icono="✅ verde" ;;
     "sin corridas")     icono="— sin CI"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
     "OTRO REPO")        icono="⚠ NO MIRADO"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
     rancia:*)           icono="⚠ NO MIRADO"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
+    infra:*)            icono="🔌 SIN RUNNER"; infra="$infra $r#$num" ;;
     in_progress|queued) icono="… en marcha" ;;
     "")                 icono="⚠ NO MIRADO"; mirados=$((mirados-1)); nc=$((nc+1)) ;;
     *)                  icono="❌ $est"; rojos=$((rojos+1)); lista_rojos="$lista_rojos $r#$num" ;;
@@ -223,6 +270,17 @@ if [ "$mirados" != "$declarados" ]; then
   echo "  de mirarse en silencio."
   [ -n "$lista_rojos" ] && echo "  (y además, EN ROJO:$lista_rojos)"
   exit 2
+fi
+if [ -n "$infra" ]; then
+  echo "SIN RUNNER (no es fallo de código):$infra"
+  echo "  El job falló SIN RUNNER y SIN PASOS: no llegó a despacharse, no corrió ni"
+  echo "  el checkout, y sus logs no existen. No es la duración lo que lo dice —uno"
+  echo "  tarda 4 s y otro 54—, es que nunca hubo runner."
+  echo "  Los minutos de repos PRIVADOS se facturan y los de públicos no. Se mira en"
+  echo "  Settings → Billing → Actions, no en el código."
+  echo "  Y ANTES DE «ARREGLAR» NADA: lee la cabecera ENTERA del flujo. Una puerta"
+  echo "  apagada a propósito se lee igual que una rota, y la diferencia suele estar"
+  echo "  escrita justo encima del bloque \`on:\` — no desde donde casó tu patrón."
 fi
 if [ -n "$lista_rojos" ]; then
   echo "EN ROJO:$lista_rojos"
