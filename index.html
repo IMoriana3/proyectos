@@ -1582,14 +1582,14 @@ const PROJECTS = [
     stack: "PowerShell · Modbus TCP · offline",
     url: "",                                                  // no hay deploy: se ejecuta en el portátil de campo
     repo: "https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox",
-    updated: "2026-08-07",
-    version: "11.4",
+    updated: "2026-09-25",
+    version: "11.88",
     docId: "tcu-toolbox",
     docUrl: "",
-    download: "https://github.com/IMoriana3/scada/releases/latest",   // ZIP con la version en el nombre (TCU_Toolbox_vX.Y.zip)
+    download: "https://github.com/IMoriana3/scada/releases/tag/toolbox-v11.88",   // release verificada de esta revision
     release: "IMoriana3/scada",                                      // version y fecha en vivo: ver refrescarReleases()
     uso: [
-      "Descarga el ZIP desde la release (botón Paquete): el fichero lleva la versión en el nombre (TCU_Toolbox_v11.4.zip). Copia la carpeta tcu-toolbox al portátil de campo.",
+      "Descarga el ZIP desde la release (botón Paquete): el fichero lleva la versión en el nombre (TCU_Toolbox_v11.88.zip). Copia la carpeta tcu-toolbox al portátil de campo.",
       "Doble clic en TCU_Toolbox.bat (sin instalar nada). Las entradas \"(auto)\" resuelven solas el puerto de cada TCU.",
       "Las plantas viajan en plantas/<planta>.json (o CSV) — se exportan desde la página IPs de esta misma plataforma, o se regeneran desde el Excel maestro."
     ],
@@ -2093,8 +2093,17 @@ const REL_TTL = 6 * 3600 * 1000;
 function relCache(repo){
   try{
     const r = JSON.parse(localStorage.getItem("rel:"+repo) || "null");
+    // Una cache anterior no debe rebajar la revision ya publicada de Toolbox.
+    if(repo === "IMoriana3/scada" && r && compararVersion(r.ver, "11.88") < 0) return null;
     return (r && r.ver && (Date.now() - r.t) < REL_TTL) ? r : null;
   }catch(e){ return null; }
+}
+function compararVersion(a, b){
+  const x=String(a).split(".").map(Number), y=String(b).split(".").map(Number);
+  for(let i=0;i<Math.max(x.length,y.length);i++){
+    const d=(x[i]||0)-(y[i]||0); if(d) return d;
+  }
+  return 0;
 }
 async function releaseDe(repo){
   const c = relCache(repo);
@@ -2118,9 +2127,11 @@ async function refrescarReleases(){
   await Promise.all(conRelease.map(async p => {
     try{
       const r = await releaseDe(p.release);
+      if(p.release === "IMoriana3/scada" && compararVersion(r.ver, "11.88") < 0) return;
       if(r.ver !== p.version || r.fecha !== p.updated){
         p.version = r.ver; p.updated = r.fecha; algo = true;
       }
+      if(p.release === "IMoriana3/scada") p.download = "https://github.com/IMoriana3/scada/releases/tag/toolbox-v"+encodeURIComponent(r.ver);
     }catch(e){ /* se queda lo escrito a mano */ }
   }));
   if(algo) renderGrid();   // 'act.' ordena las tarjetas: hay que repintar la rejilla entera
