@@ -1583,13 +1583,13 @@ const PROJECTS = [
     url: "",                                                  // no hay deploy: se ejecuta en el portátil de campo
     repo: "https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox",
     updated: "2026-09-26",
-    version: "11.90",
+    version: "11.91",
     docId: "tcu-toolbox",
     docUrl: "",
-    download: "https://github.com/IMoriana3/scada/releases/tag/toolbox-v11.90",   // release verificada de esta revision
+    download: "https://github.com/IMoriana3/scada/releases/tag/toolbox-v11.91",   // release verificada de esta revision
     release: "IMoriana3/scada",                                      // version y fecha en vivo: ver refrescarReleases()
     uso: [
-      "Descarga el ZIP desde la release (botón Paquete): el fichero lleva la versión en el nombre (TCU_Toolbox_v11.90.zip). Copia la carpeta tcu-toolbox al portátil de campo.",
+      "Descarga el ZIP desde la release (botón Paquete): el fichero lleva la versión en el nombre (TCU_Toolbox_v11.91.zip). Copia la carpeta tcu-toolbox al portátil de campo.",
       "Doble clic en TCU_Toolbox.bat (sin instalar nada). Las entradas \"(auto)\" resuelven solas el puerto de cada TCU.",
       "Las plantas viajan en plantas/<planta>.json (o CSV) — se exportan desde la página IPs de esta misma plataforma, o se regeneran desde el Excel maestro."
     ],
@@ -2094,7 +2094,7 @@ function relCache(repo){
   try{
     const r = JSON.parse(localStorage.getItem("rel:"+repo) || "null");
     // Una cache anterior no debe rebajar la revision ya publicada de Toolbox.
-    if(repo === "IMoriana3/scada" && r && compararVersion(r.ver, "11.90") < 0) return null;
+    if(repo === "IMoriana3/scada" && r && compararVersion(r.ver, "11.91") < 0) return null;
     return (r && r.ver && (Date.now() - r.t) < REL_TTL) ? r : null;
   }catch(e){ return null; }
 }
@@ -2127,7 +2127,7 @@ async function refrescarReleases(){
   await Promise.all(conRelease.map(async p => {
     try{
       const r = await releaseDe(p.release);
-      if(p.release === "IMoriana3/scada" && compararVersion(r.ver, "11.90") < 0) return;
+      if(p.release === "IMoriana3/scada" && compararVersion(r.ver, "11.91") < 0) return;
       if(r.ver !== p.version || r.fecha !== p.updated){
         p.version = r.ver; p.updated = r.fecha; algo = true;
       }
