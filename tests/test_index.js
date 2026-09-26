@@ -56,13 +56,20 @@ async function abrir(browser, respuesta) {
   await page.close();
 
   // ---------- tags con otras formas ----------
-  page = await abrir(browser, { tag_name: 'v3.1', published_at: '2026-01-02T00:00:00Z' });
+  page = await abrir(browser, { tag_name: 'v11.89', published_at: '2026-10-02T00:00:00Z' });
   card = await tarjetaToolbox(page);
   await page.waitForFunction(() => {
     const c = [...document.querySelectorAll('article.card')].find(x => x.querySelector('.name')?.textContent.includes('TCU Toolbox'));
-    return c && c.querySelector('.ver')?.textContent === '3.1';
+    return c && c.querySelector('.ver')?.textContent === '11.89';
   }, null, { timeout: 5000 });
-  check('tag v3.1 sin prefijo', await card.locator('.ver').textContent(), '3.1');
+  check('tag v11.89 sin prefijo', await card.locator('.ver').textContent(), '11.89');
+  await page.close();
+
+  // Una respuesta atrasada de /latest no debe rebajar la revision publicada.
+  page = await abrir(browser, { tag_name: 'toolbox-v11.87', published_at: '2026-09-25T00:00:00Z' });
+  card = await tarjetaToolbox(page);
+  await page.waitForTimeout(700);
+  check('release anterior no rebaja la tarjeta', await card.locator('.ver').textContent(), '11.88');
   await page.close();
 
   // ---------- si la API falla, se queda lo escrito a mano ----------
@@ -120,7 +127,7 @@ async function abrir(browser, respuesta) {
   check('el detalle abre', await card.locator('.detail').isVisible(), 'true');
   check('con su historial', await card.locator('.log li').count() > 0, 'true');
   // el boton Paquete apunta a la release, no a un ZIP con la version pegada
-  check('descarga a releases/latest', await card.locator('a.btn[download]').getAttribute('href'), 'https://github.com/IMoriana3/scada/releases/latest');
+  check('descarga a toolbox-v11.88', await card.locator('a.btn[download]').getAttribute('href'), 'https://github.com/IMoriana3/scada/releases/tag/toolbox-v11.88');
   // y la documentacion carga
   await card.locator('button.btn.docs').click();
   await page.waitForSelector('#reader.open', { timeout: 5000 });
