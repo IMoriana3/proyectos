@@ -41,35 +41,54 @@ async function abrir(browser, respuesta) {
 (async () => {
   const browser = await chromium.launch({ executablePath: EXEC });
 
+  // El contrato es «release nueva / respuesta atrasada / sin API», no una
+  // versión histórica fija. Las fixtures deben seguir a la tarjeta vigente:
+  // v11.89 dejó de ser una actualización cuando se publicó v11.93.
+  const inicio = await abrir(browser, 403);
+  const publicada = await inicio.evaluate(() => {
+    const p = PROJECTS.find(p => p.release === 'IMoriana3/scada');
+    return { version: p.version };
+  });
+  await inicio.close();
+  if (!/^\d+(?:\.\d+)*$/.test(publicada.version)) throw new Error('Versión de Toolbox no comparable');
+  const partes = publicada.version.split('.').map(Number);
+  const nueva = (partes[0] + 1) + '.7', sinPrefijo = (partes[0] + 1) + '.8';
+  const anterior = partes.slice();
+  let i = anterior.length - 1;
+  while (i > 0 && anterior[i] === 0) { anterior[i] = 999; i--; }
+  if (anterior[i] === 0) throw new Error('Hace falta una versión anterior para probar el rechazo');
+  anterior[i]--;
+  const atrasada = anterior.join('.');
+
   // ---------- la release manda sobre lo escrito a mano ----------
-  let page = await abrir(browser, { tag_name: 'toolbox-v12.7', published_at: '2026-09-01T10:00:00Z' });
+  let page = await abrir(browser, { tag_name: 'toolbox-v' + nueva, published_at: '2026-09-01T10:00:00Z' });
   let card = await tarjetaToolbox(page);
-  await page.waitForFunction(() => {
+  await page.waitForFunction(v => {
     const c = [...document.querySelectorAll('article.card')].find(x => x.querySelector('.name')?.textContent.includes('TCU Toolbox'));
-    return c && c.querySelector('.ver')?.textContent === '12.7';
-  }, null, { timeout: 5000 });
-  check('version de la release', await card.locator('.ver').textContent(), '12.7');
+    return c && c.querySelector('.ver')?.textContent === v;
+  }, nueva, { timeout: 5000 });
+  check('version de la release', await card.locator('.ver').textContent(), nueva);
   check('fecha de la release', await card.locator('.upd').textContent(), 'act. 2026-09-01');
   // y queda cacheada para no gastar el limite de la API en cada recarga
   const cache = await page.evaluate(() => localStorage.getItem('rel:IMoriana3/scada'));
-  check('la release se cachea', JSON.parse(cache).ver, '12.7');
+  check('la release se cachea', JSON.parse(cache).ver, nueva);
   await page.close();
 
   // ---------- tags con otras formas ----------
-  page = await abrir(browser, { tag_name: 'v11.89', published_at: '2026-10-02T00:00:00Z' });
+  page = await abrir(browser, { tag_name: 'v' + sinPrefijo, published_at: '2026-10-02T00:00:00Z' });
   card = await tarjetaToolbox(page);
-  await page.waitForFunction(() => {
+  await page.waitForFunction(v => {
     const c = [...document.querySelectorAll('article.card')].find(x => x.querySelector('.name')?.textContent.includes('TCU Toolbox'));
-    return c && c.querySelector('.ver')?.textContent === '11.89';
-  }, null, { timeout: 5000 });
-  check('tag v11.89 sin prefijo', await card.locator('.ver').textContent(), '11.89');
+    return c && c.querySelector('.ver')?.textContent === v;
+  }, sinPrefijo, { timeout: 5000 });
+  check('tag sin prefijo toolbox', await card.locator('.ver').textContent(), sinPrefijo);
   await page.close();
 
   // Una respuesta atrasada de /latest no debe rebajar la revision publicada.
-  page = await abrir(browser, { tag_name: 'toolbox-v11.87', published_at: '2026-09-25T00:00:00Z' });
+  page = await abrir(browser, { tag_name: 'toolbox-v' + atrasada, published_at: '2026-09-25T00:00:00Z' });
   card = await tarjetaToolbox(page);
   await page.waitForTimeout(700);
-  check('release anterior no rebaja la tarjeta', await card.locator('.ver').textContent(), '11.88');
+  check('release anterior no rebaja la tarjeta', await card.locator('.ver').textContent(), publicada.version);
   await page.close();
 
   // ---------- si la API falla, se queda lo escrito a mano ----------
@@ -127,7 +146,7 @@ async function abrir(browser, respuesta) {
   check('el detalle abre', await card.locator('.detail').isVisible(), 'true');
   check('con su historial', await card.locator('.log li').count() > 0, 'true');
   // el boton Paquete apunta a la release, no a un ZIP con la version pegada
-  check('descarga a toolbox-v11.88', await card.locator('a.btn[download]').getAttribute('href'), 'https://github.com/IMoriana3/scada/releases/tag/toolbox-v11.88');
+  check('descarga a la release publicada', await card.locator('a.btn[download]').getAttribute('href'), 'https://github.com/IMoriana3/scada/releases/tag/toolbox-v' + publicada.version);
   // y la documentacion carga
   await card.locator('button.btn.docs').click();
   await page.waitForSelector('#reader.open', { timeout: 5000 });

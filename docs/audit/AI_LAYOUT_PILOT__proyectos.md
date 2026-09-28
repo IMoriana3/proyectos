@@ -41,6 +41,20 @@ No se extrapola este ejemplo a otras parcelas ni se afirma que sea el óptimo.
 PR #528 sigue en borrador; sin merge ni despliegue. El bloqueo previo del preflight global
 y el CI rojo de la base descritos al final siguen sin resolverse en este alcance.
 
+## Preparación de publicación · control del Panel
+
+La tirada remota 36444106510 del commit 9be2220 pasó 46 arneses; el único rojo fue
+`test_index.js`, detenido tras tres comprobaciones al esperar 11.89 aunque la Toolbox
+publicada en la tarjeta ya era 11.93. Es el defecto de la base identificado anteriormente.
+Se corrigen únicamente sus fixtures: versión nueva, tag sin prefijo y versión anterior se
+construyen respecto a la tarjeta vigente. La descarga debe corresponder a esa versión.
+Se mantienen las 28 comprobaciones y su piso, incluyendo rechazo de respuestas atrasadas.
+No se cambia la tarjeta ni la política de versiones para conseguir verde.
+
+La sintaxis y `git diff --check` pasan. En esta reanudación no hay Chromium local y las
+descargas no entregan un archivo válido; el resultado funcional de esta corrección debe
+venir de la nueva tirada de CI. El preflight global sigue sin alcance sobre los otros repos.
+
 ---
 
 # Piloto de búsqueda de implantaciones — 2026-09-28
