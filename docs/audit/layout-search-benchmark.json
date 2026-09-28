@@ -1,0 +1,1332 @@
+{
+  "schema": "factiun.layout-search-benchmark.v1",
+  "date": "2026-09-28T12:54:28.369Z",
+  "model": "layout-offset-gp-v1",
+  "scope": "all 15 cases from existing Python/browser parity corpus; online fit per case; no field or energy claim",
+  "comparison": "same outer evaluation budget; baseline nested sweep cost and all fitting included in elapsedMs",
+  "rows": [
+    {
+      "case": "rect 600x450 · tracker bifila 1V/28",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 32928,
+          "score": 32928,
+          "baselineKwp": 20744.64,
+          "kWp": 20744.64,
+          "elapsedMs": 1114.696427,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 32928,
+          "score": 32928,
+          "baselineKwp": 20744.64,
+          "kWp": 20744.64,
+          "elapsedMs": 1059.749077,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · tracker bifila 1V/28",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 32928,
+          "score": 32928,
+          "baselineKwp": 20744.64,
+          "kWp": 20744.64,
+          "elapsedMs": 991.0063949999999,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 32928,
+          "score": 32928,
+          "baselineKwp": 20744.64,
+          "kWp": 20744.64,
+          "elapsedMs": 891.6635679999995,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · tracker bifila 1V/28",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 32928,
+          "score": 32928,
+          "baselineKwp": 20744.64,
+          "kWp": 20744.64,
+          "elapsedMs": 948.7449200000001,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 32928,
+          "score": 32928,
+          "baselineKwp": 20744.64,
+          "kWp": 20744.64,
+          "elapsedMs": 975.0015020000001,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · tracker monofila",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 33264,
+          "score": 33264,
+          "baselineKwp": 20956.32,
+          "kWp": 20956.32,
+          "elapsedMs": 919.2808569999997,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 33264,
+          "score": 33264,
+          "baselineKwp": 20956.32,
+          "kWp": 20956.32,
+          "elapsedMs": 864.265558,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · tracker monofila",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 33264,
+          "score": 33264,
+          "baselineKwp": 20956.32,
+          "kWp": 20956.32,
+          "elapsedMs": 904.3714860000009,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 33264,
+          "score": 33264,
+          "baselineKwp": 20956.32,
+          "kWp": 20956.32,
+          "elapsedMs": 876.1328590000012,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · tracker monofila",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 33264,
+          "score": 33264,
+          "baselineKwp": 20956.32,
+          "kWp": 20956.32,
+          "elapsedMs": 860.658958,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 33264,
+          "score": 33264,
+          "baselineKwp": 20956.32,
+          "kWp": 20956.32,
+          "elapsedMs": 871.2225859999999,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect girado 35° · tracker bifila",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 29970.618520013402,
+          "score": 29970.618520013402,
+          "baselineKwp": 18910.08,
+          "kWp": 18910.08,
+          "elapsedMs": 1119.8725020000002,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 29970.618520013402,
+          "score": 30083.030878203816,
+          "baselineKwp": 18910.08,
+          "kWp": 18980.64,
+          "elapsedMs": 1108.8916370000006,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect girado 35° · tracker bifila",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 29970.618520013402,
+          "score": 29970.618520013402,
+          "baselineKwp": 18910.08,
+          "kWp": 18910.08,
+          "elapsedMs": 1091.1095919999989,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 29970.618520013402,
+          "score": 29972.80657872093,
+          "baselineKwp": 18910.08,
+          "kWp": 18910.08,
+          "elapsedMs": 1102.2390799999994,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect girado 35° · tracker bifila",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 29970.618520013402,
+          "score": 29970.618520013402,
+          "baselineKwp": 18910.08,
+          "kWp": 18910.08,
+          "elapsedMs": 1161.7233109999997,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 29970.618520013402,
+          "score": 29970.618520013402,
+          "baselineKwp": 18910.08,
+          "kWp": 18910.08,
+          "elapsedMs": 1229.3443420000003,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · fija 2V/20 pitch 4",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": null,
+          "score": null,
+          "baselineKwp": 69300,
+          "kWp": null,
+          "elapsedMs": 1563.720019999997,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 24,
+          "fallbackSteps": 15
+        },
+        "random": {
+          "baselineScore": null,
+          "score": null,
+          "baselineKwp": 69300,
+          "kWp": null,
+          "elapsedMs": 1578.5441810000011,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 24,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · fija 2V/20 pitch 4",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": null,
+          "score": null,
+          "baselineKwp": 69300,
+          "kWp": null,
+          "elapsedMs": 1496.4898280000016,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 24,
+          "fallbackSteps": 15
+        },
+        "random": {
+          "baselineScore": null,
+          "score": null,
+          "baselineKwp": 69300,
+          "kWp": null,
+          "elapsedMs": 1498.683979999998,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 24,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · fija 2V/20 pitch 4",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": null,
+          "score": null,
+          "baselineKwp": 69300,
+          "kWp": null,
+          "elapsedMs": 1473.9964089999994,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 24,
+          "fallbackSteps": 15
+        },
+        "random": {
+          "baselineScore": null,
+          "score": null,
+          "baselineKwp": 69300,
+          "kWp": null,
+          "elapsedMs": 1495.0616809999992,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 24,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · multi-talla 28/14/7",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 35937,
+          "score": 35937,
+          "baselineKwp": 22702.68,
+          "kWp": 22702.68,
+          "elapsedMs": 999.9849830000021,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 35937,
+          "score": 35937,
+          "baselineKwp": 22702.68,
+          "kWp": 22702.68,
+          "elapsedMs": 924.7993330000027,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · multi-talla 28/14/7",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 35937,
+          "score": 35937,
+          "baselineKwp": 22702.68,
+          "kWp": 22702.68,
+          "elapsedMs": 939.0620049999998,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 35937,
+          "score": 35937,
+          "baselineKwp": 22702.68,
+          "kWp": 22702.68,
+          "elapsedMs": 1014.5078910000011,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · multi-talla 28/14/7",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 35937,
+          "score": 35937,
+          "baselineKwp": 22702.68,
+          "kWp": 22702.68,
+          "elapsedMs": 1061.5820490000006,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 35937,
+          "score": 35937,
+          "baselineKwp": 22702.68,
+          "kWp": 22702.68,
+          "elapsedMs": 1018.9078179999997,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · vial E-O cada 5 filas",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 29232,
+          "score": 29232,
+          "baselineKwp": 18416.16,
+          "kWp": 18416.16,
+          "elapsedMs": 900.6379900000029,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 29232,
+          "score": 29232,
+          "baselineKwp": 18416.16,
+          "kWp": 18416.16,
+          "elapsedMs": 810.5665909999952,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · vial E-O cada 5 filas",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 29232,
+          "score": 29232,
+          "baselineKwp": 18416.16,
+          "kWp": 18416.16,
+          "elapsedMs": 821.4924009999959,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 29232,
+          "score": 29232,
+          "baselineKwp": 18416.16,
+          "kWp": 18416.16,
+          "elapsedMs": 873.5546850000028,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · vial E-O cada 5 filas",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 29232,
+          "score": 29232,
+          "baselineKwp": 18416.16,
+          "kWp": 18416.16,
+          "elapsedMs": 864.4628489999959,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 29232,
+          "score": 29232,
+          "baselineKwp": 18416.16,
+          "kWp": 18416.16,
+          "elapsedMs": 883.349553,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "parcela en L · tracker monofila",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 25840.056171750002,
+          "score": 25840.056171750002,
+          "baselineKwp": 16299.36,
+          "kWp": 16299.36,
+          "elapsedMs": 862.0829709999962,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 25840.056171750002,
+          "score": 25840.056171750002,
+          "baselineKwp": 16299.36,
+          "kWp": 16299.36,
+          "elapsedMs": 885.845730999994,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "parcela en L · tracker monofila",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 25840.056171750002,
+          "score": 25840.056171750002,
+          "baselineKwp": 16299.36,
+          "kWp": 16299.36,
+          "elapsedMs": 893.9570370000001,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 25840.056171750002,
+          "score": 25840.056171750002,
+          "baselineKwp": 16299.36,
+          "kWp": 16299.36,
+          "elapsedMs": 889.2152129999959,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "parcela en L · tracker monofila",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 25840.056171750002,
+          "score": 25840.056171750002,
+          "baselineKwp": 16299.36,
+          "kWp": 16299.36,
+          "elapsedMs": 867.016352000006,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 25840.056171750002,
+          "score": 25840.056171750002,
+          "baselineKwp": 16299.36,
+          "kWp": 16299.36,
+          "elapsedMs": 967.5021970000016,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect girado 35° · BIFILA multi-talla 28/14/7",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 35354.13016922451,
+          "score": 35383.89555907109,
+          "baselineKwp": 22349.88,
+          "kWp": 22367.52,
+          "elapsedMs": 1310.5912860000026,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 35354.13016922451,
+          "score": 35383.89555907109,
+          "baselineKwp": 22349.88,
+          "kWp": 22367.52,
+          "elapsedMs": 1263.721037999996,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect girado 35° · BIFILA multi-talla 28/14/7",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 35354.13016922451,
+          "score": 35383.89555907109,
+          "baselineKwp": 22349.88,
+          "kWp": 22367.52,
+          "elapsedMs": 1259.0995079999993,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 35354.13016922451,
+          "score": 35383.89555907109,
+          "baselineKwp": 22349.88,
+          "kWp": 22367.52,
+          "elapsedMs": 1416.6459030000042,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect girado 35° · BIFILA multi-talla 28/14/7",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 35354.13016922451,
+          "score": 35380.163748931205,
+          "baselineKwp": 22349.88,
+          "kWp": 22367.52,
+          "elapsedMs": 1358.289217000005,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 35354.13016922451,
+          "score": 35380.163748931205,
+          "baselineKwp": 22349.88,
+          "kWp": 22367.52,
+          "elapsedMs": 1379.576740000004,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "parcela en L · BIFILA multi-talla 28/14/7",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 27539.60420734956,
+          "score": 27539.60420734956,
+          "baselineKwp": 17428.32,
+          "kWp": 17428.32,
+          "elapsedMs": 1099.9858010000025,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 27539.60420734956,
+          "score": 27539.60420734956,
+          "baselineKwp": 17428.32,
+          "kWp": 17428.32,
+          "elapsedMs": 1051.0162610000043,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "parcela en L · BIFILA multi-talla 28/14/7",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 27539.60420734956,
+          "score": 27539.60420734956,
+          "baselineKwp": 17428.32,
+          "kWp": 17428.32,
+          "elapsedMs": 1043.7690430000002,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 27539.60420734956,
+          "score": 27539.60420734956,
+          "baselineKwp": 17428.32,
+          "kWp": 17428.32,
+          "elapsedMs": 1019.326946000001,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "parcela en L · BIFILA multi-talla 28/14/7",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 27539.60420734956,
+          "score": 27539.60420734956,
+          "baselineKwp": 17428.32,
+          "kWp": 17428.32,
+          "elapsedMs": 1067.8176079999976,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 27539.60420734956,
+          "score": 27539.60420734956,
+          "baselineKwp": 17428.32,
+          "kWp": 17428.32,
+          "elapsedMs": 1025.923695999998,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · BIFILA multi-talla 28/14",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 35574,
+          "score": 35574,
+          "baselineKwp": 22473.36,
+          "kWp": 22473.36,
+          "elapsedMs": 996.9852329999994,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 35574,
+          "score": 35574,
+          "baselineKwp": 22473.36,
+          "kWp": 22473.36,
+          "elapsedMs": 1076.1086419999992,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · BIFILA multi-talla 28/14",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 35574,
+          "score": 35574,
+          "baselineKwp": 22473.36,
+          "kWp": 22473.36,
+          "elapsedMs": 1065.8069800000012,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 35574,
+          "score": 35574,
+          "baselineKwp": 22473.36,
+          "kWp": 22473.36,
+          "elapsedMs": 1054.738218999999,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · BIFILA multi-talla 28/14",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 35574,
+          "score": 35574,
+          "baselineKwp": 22473.36,
+          "kWp": 22473.36,
+          "elapsedMs": 1073.9464360000056,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 35574,
+          "score": 35574,
+          "baselineKwp": 22473.36,
+          "kWp": 22473.36,
+          "elapsedMs": 1053.5528720000002,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · FIJA multi-talla 28/14",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 55440,
+          "score": 55440,
+          "baselineKwp": 34927.2,
+          "kWp": 34927.2,
+          "elapsedMs": 1107.5450810000038,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 55440,
+          "score": 55440,
+          "baselineKwp": 34927.2,
+          "kWp": 34927.2,
+          "elapsedMs": 1127.505290000001,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · FIJA multi-talla 28/14",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 55440,
+          "score": 55440,
+          "baselineKwp": 34927.2,
+          "kWp": 34927.2,
+          "elapsedMs": 1117.6458149999962,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 55440,
+          "score": 55440,
+          "baselineKwp": 34927.2,
+          "kWp": 34927.2,
+          "elapsedMs": 1113.6760970000032,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · FIJA multi-talla 28/14",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 55440,
+          "score": 55440,
+          "baselineKwp": 34927.2,
+          "kWp": 34927.2,
+          "elapsedMs": 1154.7889649999997,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 55440,
+          "score": 55440,
+          "baselineKwp": 34927.2,
+          "kWp": 34927.2,
+          "elapsedMs": 1230.5880059999909,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · hueco central de 120x120",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 29376.109091473867,
+          "score": 29376.109091473867,
+          "baselineKwp": 18522,
+          "kWp": 18522,
+          "elapsedMs": 2127.10167199999,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 29376.109091473867,
+          "score": 29376.109091473867,
+          "baselineKwp": 18522,
+          "kWp": 18522,
+          "elapsedMs": 1873.7605049999984,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · hueco central de 120x120",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 29376.109091473867,
+          "score": 29376.109091473867,
+          "baselineKwp": 18522,
+          "kWp": 18522,
+          "elapsedMs": 1981.392251000012,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 29376.109091473867,
+          "score": 29376.109091473867,
+          "baselineKwp": 18522,
+          "kWp": 18522,
+          "elapsedMs": 1946.2115810000105,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 600x450 · hueco central de 120x120",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 29376.109091473867,
+          "score": 29376.109091473867,
+          "baselineKwp": 18522,
+          "kWp": 18522,
+          "elapsedMs": 1927.389863000004,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 29376.109091473867,
+          "score": 29376.109091473867,
+          "baselineKwp": 18522,
+          "kWp": 18522,
+          "elapsedMs": 2001.6649679999973,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 300x300 · setback 15 m",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 10080,
+          "score": 10080,
+          "baselineKwp": 6350.4,
+          "kWp": 6350.4,
+          "elapsedMs": 542.7685039999924,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 10080,
+          "score": 10080,
+          "baselineKwp": 6350.4,
+          "kWp": 6350.4,
+          "elapsedMs": 478.39595199999167,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 300x300 · setback 15 m",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 10080,
+          "score": 10080,
+          "baselineKwp": 6350.4,
+          "kWp": 6350.4,
+          "elapsedMs": 512.602522000001,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 10080,
+          "score": 10080,
+          "baselineKwp": 6350.4,
+          "kWp": 6350.4,
+          "elapsedMs": 479.77122199999576,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "rect 300x300 · setback 15 m",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 10080,
+          "score": 10080,
+          "baselineKwp": 6350.4,
+          "kWp": 6350.4,
+          "elapsedMs": 560.8727040000085,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 10080,
+          "score": 10080,
+          "baselineKwp": 6350.4,
+          "kWp": 6350.4,
+          "elapsedMs": 519.2652149999922,
+          "evaluations": 24,
+          "improved": false,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "PARCELA REAL · Finca dibujada (irregular, cóncava)",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 33142.34318582148,
+          "score": 33207.74320010231,
+          "baselineKwp": 20956.32,
+          "kWp": 20991.6,
+          "elapsedMs": 1215.8111400000053,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 33142.34318582148,
+          "score": 33234.19169064542,
+          "baselineKwp": 20956.32,
+          "kWp": 21009.24,
+          "elapsedMs": 1248.4997939999885,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "PARCELA REAL · Finca dibujada (irregular, cóncava)",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 33142.34318582148,
+          "score": 33234.49550222732,
+          "baselineKwp": 20956.32,
+          "kWp": 21009.24,
+          "elapsedMs": 1148.4992730000085,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 33142.34318582148,
+          "score": 33234.49550222732,
+          "baselineKwp": 20956.32,
+          "kWp": 21009.24,
+          "elapsedMs": 1130.4770839999983,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "PARCELA REAL · Finca dibujada (irregular, cóncava)",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 33142.34318582148,
+          "score": 33211.15101267744,
+          "baselineKwp": 20956.32,
+          "kWp": 20991.6,
+          "elapsedMs": 1134.6402329999983,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 33142.34318582148,
+          "score": 33174.341449299915,
+          "baselineKwp": 20956.32,
+          "kWp": 20973.96,
+          "elapsedMs": 1119.6374459999934,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "PARCELA REAL · Larraga (Navarra)",
+      "seed": 20260929,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 3424.2624239130687,
+          "score": 3538.072067322815,
+          "baselineKwp": 2187.36,
+          "kWp": 2257.92,
+          "elapsedMs": 1632.287698,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 3424.2624239130687,
+          "score": 3538.072067322815,
+          "baselineKwp": 2187.36,
+          "kWp": 2257.92,
+          "elapsedMs": 1694.478912000006,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "PARCELA REAL · Larraga (Navarra)",
+      "seed": 20260930,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 3424.2624239130687,
+          "score": 3538.072067322815,
+          "baselineKwp": 2187.36,
+          "kWp": 2257.92,
+          "elapsedMs": 1775.280190000005,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 3424.2624239130687,
+          "score": 3538.072067322815,
+          "baselineKwp": 2187.36,
+          "kWp": 2257.92,
+          "elapsedMs": 1628.5522280000005,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    },
+    {
+      "case": "PARCELA REAL · Larraga (Navarra)",
+      "seed": 20260931,
+      "budget": 24,
+      "results": {
+        "gp": {
+          "baselineScore": 3424.2624239130687,
+          "score": 3538.072067322815,
+          "baselineKwp": 2187.36,
+          "kWp": 2257.92,
+          "elapsedMs": 1637.4369599999918,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        },
+        "random": {
+          "baselineScore": 3424.2624239130687,
+          "score": 3538.072067322815,
+          "baselineKwp": 2187.36,
+          "kWp": 2257.92,
+          "elapsedMs": 1600.8317010000028,
+          "evaluations": 24,
+          "improved": true,
+          "invalid": 0,
+          "fallbackSteps": 0
+        }
+      }
+    }
+  ],
+  "summary": {
+    "runs": 45,
+    "comparable": 42,
+    "noValidLayout": 3,
+    "gpBetter": 1,
+    "randomBetter": 3,
+    "ties": 38,
+    "gpImprovesBaseline": 9
+  },
+  "environment": {
+    "node": "v24.19.0",
+    "platform": "linux"
+  },
+  "provenance": {
+    "fixtureSha256": "973c4885545ba78b92eab043823ce2756c4c952790a62bcadcea9b2fa5bb16ed",
+    "optimizerSha256": "b88d35cfd44a2310ce91f6d9c0db3ca68a84a0d4e9079a28c73f4c26338c9734",
+    "baseCommit": "01466722ac8745d79cf7827fc9b1cabb871a6186"
+  }
+}

@@ -95,6 +95,18 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 ## Puntos abiertos (escribir aquí lo que afecte al otro)
 
+- **[IA implantaciones · 2026-09-28] Optimizar unificado, rama codex/layout-ml-offset-pilot.**
+  v1.10.0 integra X/Y y comparación en el Buscador existente; retira el panel piloto y los
+  barridos independientes del Generador. Un botón Optimizar, azimut/disposición/X/Y,
+  aleatorio por defecto, GP experimental y barrido angular con rango/paso. Un criterio:
+  kWp × factor solar relativo existente; no es energía anual. Solo ganan resultados
+  reales con QA. Aplicar conserva precisión y exige que el proyecto no haya cambiado.
+  Una parcela, un montaje, navegador; generación ordinaria, BT, difusa, batería y Plant
+  conservan sus contratos. Índice: solo versión, uso e historial del Generador. SW v173.
+  Se mantiene el benchmark histórico de offsets, que NO valida superioridad del nuevo
+  GP conjunto. Evidencia y límites en docs/audit/AI_LAYOUT_PILOT__proyectos.md.
+  Sin merge ni despliegue.
+
 - **[Sesión Proyectos → Notebook / Streamlit] `POST /dem` no devuelve la extensión de la rejilla, y
   sin eso el horizonte no se puede calcular en el navegador.** Se ha traído a `sim-solar.html` casi
   todo `solargpt_core/sunearth.py`, pero **el horizonte del MDT y la pérdida por horizonte se

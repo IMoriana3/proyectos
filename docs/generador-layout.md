@@ -6,6 +6,47 @@
 **Abre y genera**: `generador-layout.html` en este repo, sin levantar nada.
 El motor SolarGPT es opcional y da el número canónico.
 
+## Un único Optimizar — v1.10.0
+
+En **Implantación**, pulsa **Optimizar**. Abre el buscador existente con la parcela y
+configuración actuales. Allí se reúnen azimut del eje, alineado/tresbolillo, origen X/Y y
+el barrido de ángulos. **Generar** ejecuta los valores del formulario sin lanzar otro barrido.
+
+1. Elige **Aleatorio** (inicial), **Aprendizaje GP · experimental** o **Barrido de ángulos**.
+   En los dos primeros puedes fijar azimut, disposición u origen desmarcando cada variable.
+   El barrido recorre Desde/Hasta/Paso, con Hasta exclusivo, y conserva disposición/origen.
+2. Pulsa **Buscar**. Las 48, 128 o 256 evaluaciones incluyen la referencia exacta. **Pausar**
+   conserva lo evaluado; **Buscar** reinicia con la misma semilla visible. La referencia
+   participa en la elección: ningún candidato peor puede sustituirla.
+3. Compara módulos, mesas, kWp, factor solar e índice relativo. Las tablas muestran azimut
+   de eje y filas, disposición, pitch, retranqueo, GCR, origen y centrado adicional. El reparto
+   por tallas explica los módulos y mesas. **Ver referencia / Ver propuesta** cambia el mapa.
+4. **Aplicar al generador** envía los parámetros. Al volver, pulsa **Generar** para obtener
+   el layout y sus salidas. El origen se guarda con toda su precisión en campos y sesión.
+   Si cambia el proyecto durante la búsqueda, se rechaza la propuesta y hay que repetirla.
+5. **Descargar comparación** guarda configuración, semilla, opciones, candidato ganador,
+   ambas geometrías resumidas y la traza de evaluaciones/predicciones/tiempos. El tiempo
+   transcurrido incluye pausas; cada evaluación mide cálculo y ponderación solar.
+
+Todos los métodos usan el mismo **kWp × factor solar de orientación** del buscador.
+El factor usa el seguimiento de `sim-solar.html`, con cielo claro y referencia N-S;
+**no predice producción anual**, ni incorpora TMY, difusa, temperatura o suciedad.
+En fija se conserva orientación y se compara kWp. Sin modelo solar se bloquea el giro
+explícitamente. Se mantienen pitch, tallas, retranqueo, exclusiones y reglas de viales;
+los viales automáticos pueden cambiar de posición con el layout y se revisan en el mapa.
+
+El GP aprende durante esta búsqueda, con resultados del mismo motor geométrico. No requiere
+mediciones nuevas. Solo puede ganar un candidato calculado y con QA aceptado. **Sigue
+experimental:** no hay evidencia de ventaja consistente ni garantía de óptimo global.
+El banco histórico de offsets no valida la nueva búsqueda conjunta de cuatro variables.
+El port al navegador mantiene sus tolerancias documentadas frente al motor Python.
+
+Alcance de Optimizar: una parcela y un montaje en navegador. Mixto, varias parcelas y API
+siguen disponibles en la generación habitual. La API no admite un origen explícito y lo
+rechaza visiblemente. Pausar actúa entre evaluaciones completas del motor.
+
+Evidencia: [AI_LAYOUT_PILOT__proyectos.md](audit/AI_LAYOUT_PILOT__proyectos.md).
+
 ---
 
 ## Qué pregunta contesta, y cuál no
@@ -183,14 +224,11 @@ cortos seguidos que ocupan más que un medio») convertida en luz roja.
 
 ## Barridos de orientación
 
-Las dos casillas que el cuaderno ofrece por separado —**«Optimizar azimuth (90–270)»** y
-**«Optimizar ángulo de grid»** con su rango y paso— son aquí el mismo motor, igual que en el core
-(`optimize_grid_angle` se llama a sí mismo con cada ángulo y se queda con el de más kWp).
-
-Cuesta lo que cuesta: son **N layouts completos**, no una fórmula. 36 ángulos ≈ 3 s, con barra de
-progreso y cediendo el hilo cada dos pasos para que la ficha no se congele. Al terminar, el azimut
-ganador **se escribe en el formulario** —enseñar un layout que no se corresponde con lo que dicen
-las casillas sería mentir— y el pie dice cuánto se gana frente al que tenías.
+El barrido se configura en **Optimizar → Barrido de ángulos**. Prueba cada azimut
+con el motor existente y compara con la referencia usando el mismo criterio de la búsqueda
+conjunta. Conserva disposición y origen, y permite ver y aplicar el resultado antes de generar.
+El presupuesto limita las evaluaciones; si el rango contiene más ángulos, aumenta el presupuesto.
+La función pura `LAY.barrido` sigue disponible para los bancos de paridad del motor.
 
 ## Exclusiones de línea
 

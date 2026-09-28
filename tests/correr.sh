@@ -59,7 +59,7 @@ PATRON="${1:-}"
 # aquí y el cambio aparece en el diff, que es justo lo que un recuento que
 # nadie fija no consigue.
 declare -A PISO=(
-  [test_buscador.js]=55
+  [test_buscador.js]=59
   [test_careo_pvsyst.js]=11
   # La cartera del usuario NO la probaba nadie: de los 33 arneses, el único que
   # nombraba `cartera-tabla.html` era `test_pwa.js`, y lo que hacía con ella era
@@ -212,6 +212,8 @@ declare -A PISO=(
   # podido leerlo» no era un caso que pudiera ocurrir.
   [test_index.js]=28
   [test_integridad.js]=7
+  [test_layout_search.js]=22
+  [test_layout_search_ui.js]=32
   [test_layout.js]=201
   [test_layout_ui.js]=182
   # LOS LIENZOS A LA DENSIDAD DE LA PANTALLA. Un `<canvas>` con el búfer más
