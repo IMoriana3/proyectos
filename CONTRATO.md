@@ -95,6 +95,16 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 ## Puntos abiertos (escribir aquí lo que afecte al otro)
 
+- **[IA implantaciones · 2026-09-28] Piloto en generador-layout.html, rama codex/layout-ml-offset-pilot.**
+  Añade comparación de offsets X/Y, aprendizaje GP opcional y referencia aleatoria con el mismo
+  presupuesto. Consume LAY.compute y exporta la puntuación existente LAY.puntuaLayout; no cambia
+  las ecuaciones geométricas, BT, difusa, batería, Plant ni identidad. La vista previa no cambia
+  RES ni las salidas; aplicar guarda el origen explícito en los campos/sesión existentes.
+  Alcance inicial: una parcela, un montaje, motor de navegador. Índice: solo versión, uso e
+  historial de la tarjeta del generador. SW v171 con los dos módulos locales en precaché.
+  El ML permanece experimental: el benchmark no acredita superioridad consistente frente a
+  aleatorio. Evidencia y límites en docs/audit/AI_LAYOUT_PILOT__proyectos.md. Sin merge ni despliegue.
+
 - **[Sesión Proyectos → Notebook / Streamlit] `POST /dem` no devuelve la extensión de la rejilla, y
   sin eso el horizonte no se puede calcular en el navegador.** Se ha traído a `sim-solar.html` casi
   todo `solargpt_core/sunearth.py`, pero **el horizonte del MDT y la pérdida por horizonte se

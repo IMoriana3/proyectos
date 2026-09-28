@@ -6,6 +6,43 @@
 **Abre y genera**: `generador-layout.html` en este repo, sin levantar nada.
 El motor SolarGPT es opcional y da el número canónico.
 
+## Comparar implantaciones — piloto v1.9.0
+
+Dentro de **Implantación**, abre **Comparar implantaciones · piloto**. La búsqueda prueba
+desplazamientos X/Y de la rejilla, conservando orientación, pitch, tallas, setback, exclusiones
+y parámetros de viales. Los viales dibujados como exclusiones permanecen fijos; los viales
+automáticos siguen la misma regla de distribución del generador y se revisan en el mapa.
+
+1. Elige **Aleatorio** o **Aprendizaje**, y 16, 24 o 48 evaluaciones, incluida la referencia.
+2. **Comparar alternativas** calcula de nuevo la referencia y evalúa candidatos con el mismo
+   LAY.compute de esta página. Se conserva el mejor resultado observado que supera su QA.
+3. Compara módulos, mesas, kWp y puntuación. **Ver propuesta** cambia solo la vista del mapa;
+   las salidas siguen representando la implantación actual hasta **Aplicar propuesta**.
+4. Al aplicar, el origen X/Y queda en **Parámetros avanzados** y en la sesión. **Generar**
+   reproduce la propuesta, y GeoJSON/DXF/KML/3D consumen el resultado aplicado.
+5. **Descargar comparación JSON** guarda input, semilla, versión, dominio, evaluaciones reales,
+   predicciones previas a cada evaluación y tiempos, incluyendo ajuste del modelo. Si cambias
+   el proyecto, la propuesta se invalida y hay que repetir la comparación.
+
+El aprendizaje ajusta un proceso gaussiano durante la búsqueda sobre ESTA parcela. No hay
+datos de campo adicionales ni un modelo físico nuevo. Su incertidumbre orienta qué probar;
+no es una probabilidad calibrada de seguridad o construibilidad. La puntuación es la ya usada
+por el motor: módulos con penalizaciones por tallas cortas, huérfanas, recortes y fragmentación.
+
+**Aleatorio es la opción inicial.** El aprendizaje queda disponible para evaluación: todavía
+no ha demostrado una ventaja consistente frente a esa referencia. Las cifras del piloto son
+geometría/potencia instalada, no energía ni garantía de óptimo global. El motor de navegador
+sigue siendo el port con las tolerancias de paridad documentadas; el piloto no certifica
+igualdad de cada candidato con Python.
+
+Alcance: una parcela y un montaje. Mixto, varias parcelas y cálculo por API conservan sus rutas
+habituales y no pasan por este piloto. Tampoco se combina con el barrido de orientación. La
+regeneración por API no admite un origen explícito del piloto: usa Navegador o desactiva ese
+origen antes de solicitar el cálculo canónico. Detener actúa entre evaluaciones; una evaluación
+del motor que ya ha empezado termina antes de devolver el control.
+
+Benchmark y resultados: [AI_LAYOUT_PILOT__proyectos.md](audit/AI_LAYOUT_PILOT__proyectos.md).
+
 ---
 
 ## Qué pregunta contesta, y cuál no

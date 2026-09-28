@@ -394,6 +394,8 @@ node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espe
 node tests/test_granizo_pestana.js         # 28 comprobaciones, la pestaña de granizo en Chromium
 node tests/test_ejecucion_traza.mjs        # 61 comprobaciones, la máquina de ejecución del §10.2
 node tests/test_layout.js                  # 201 comprobaciones, careo del generador de layout
+node tests/test_layout_search.js           # 22 comprobaciones, búsqueda ML/aleatoria y contrato de ganador observado
+node tests/test_layout_search_ui.js        # 21 comprobaciones, comparar/ver/aplicar/regenerar/caducar, límite de API y geometría inválida
 node tests/test_layout_ui.js               # 182 comprobaciones, el generador en Chromium
 node tests/test_zonas_mixto.js             # 106 comprobaciones, el reparto por zonas
 node tests/test_versiones_app.mjs          # 19 comprobaciones, el puntero de la tarjeta a la app (cruza repos)
