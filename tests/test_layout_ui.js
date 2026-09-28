@@ -626,21 +626,19 @@ const cajaLienzo = async page => {
   await page.uncheck('#forceComplete');
   await page.fill('#mods', '28');
 
-  // ── barrido de orientación ──
-  await page.check('#optGrid');
-  await page.fill('#gridFrom', '0'); await page.fill('#gridTo', '90'); await page.fill('#gridStep', '30');
-  await page.evaluate(() => { document.querySelector('#hint').textContent = ''; });
-  await page.click('#genBtn');
-  await page.waitForFunction(() => /barrido/.test(document.querySelector('#hint').textContent),
-    null, { timeout: 60000 });
-  check('el barrido corre y dice cuánto ha tardado',
-    /barrido \d/.test(await page.textContent('#hint')), await page.textContent('#hint'));
-  check('y deja el azimut ganador escrito en el formulario',
-    await page.evaluate(() => Math.abs(+document.querySelector('#panelAz').value - RES.stats.grid_angle_deg) < 1));
-  check('con la traza de todos los ángulos probados',
-    await page.evaluate(() => (RES.stats.sweep || []).length === 3),
-    JSON.stringify(await page.evaluate(() => (RES.stats.sweep || []).map(x => x.az))));
-  await page.uncheck('#optGrid');
+  // El barrido vive en el único Optimizar, con el mismo criterio y comparación.
+  const [sweepPage]=await Promise.all([page.waitForEvent('popup'),page.click('#optBtn')]);
+  await sweepPage.waitForFunction(()=>typeof CFGP!=='undefined'&&CFGP);
+  await sweepPage.selectOption('#searchMethod','grid');
+  await sweepPage.fill('#gridFrom','0');await sweepPage.fill('#gridTo','90');await sweepPage.fill('#gridStep','30');
+  await sweepPage.click('#searchRun');
+  await sweepPage.waitForFunction(()=>PAUSA&&OPC>0);
+  const sweep=await sweepPage.evaluate(()=>LayoutSearchUI.report());
+  check('el barrido se ejecuta en el único optimizador',sweep.method==='grid'&&sweep.evaluations<=4);
+  check('la propuesta de barrido es una evaluación real',sweep.bestIteration!==null&&sweep.trace[sweep.bestIteration].valid);
+  check('se trazan todos los ángulos del rango, sin perder la referencia',
+    [0,30,60].every(a=>sweep.trace.some(t=>t.panelAz===a))&&sweep.trace[0].stage==='baseline');
+  await sweepPage.close();
 
   // ── MDT: elevación, pendientes medidas y filtro por pendiente ──
   // El servicio de elevación se simula: el banco no puede depender de Open-Meteo

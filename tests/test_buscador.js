@@ -258,8 +258,8 @@ async function esperaListo(pg) {
   pageB.on('pageerror', e => fallos.push('encargo N-S: ' + e.message));
   await pageB.evaluate(() => localStorage.removeItem('buscador_mejor')).catch(() => {});
   await pageB.goto(BASE + '/buscador-implantacion.html?encargo=1&quieto=1&semilla=42-42');
-  await pageB.waitForFunction(() => window.LAY && window.LAY.compute, null, { timeout: 30000 });
-  await pageB.evaluate(() => { localStorage.removeItem('buscador_mejor'); PASO(60); });
+  await esperaListo(pageB);
+  await pageB.evaluate(() => { localStorage.removeItem('buscador_mejor'); $('searchXY').checked=false; nuevoSite(true); PASO(60); });
   const eb = await pageB.evaluate(() => ESTADO());
   const barraB = await pageB.evaluate(() => document.getElementById('barra').textContent);
   check('con el eje ya en N-S, la base sigue ganando', Math.abs(eb.mejorEner - eb.baseEner) < 1e-9,
@@ -279,7 +279,7 @@ async function esperaListo(pg) {
   const pageC = await ctx.newPage();
   pageC.on('pageerror', e => fallos.push('encargo az bajo: ' + e.message));
   await pageC.goto(BASE + '/buscador-implantacion.html?encargo=1&quieto=1&semilla=42-42');
-  await pageC.waitForFunction(() => window.LAY && window.LAY.compute, null, { timeout: 30000 });
+  await esperaListo(pageC);
   const az20 = await pageC.evaluate(() => { const o = []; for (let i = 0; i < 80; i++) { PASO(1); o.push([ULTIMO.giro, ULTIMO.az]); } return o; });
   check('el caso se prueba de verdad: hay giros que se salen por debajo de 0',
     az20.some(x => 20 + x[0] < 0), JSON.stringify(az20.map(x => +x[0].toFixed(0)).slice(0, 8)));
@@ -306,7 +306,7 @@ async function esperaListo(pg) {
   // sin barrido: la gracia del caso es que la BASE no venga ya optimizada, y así se puede
   // comprobar la ida y vuelta entera. Con barrido, la ficha ya elige el azimut ella sola.
   await pageG.evaluate(() => {
-    document.getElementById('optAz').checked = false; document.getElementById('optGrid').checked = false;
+    // Generar ya no contiene un barrido independiente.
     document.getElementById('panelAz').value = 90; document.getElementById('axis').value = 0;
   });
   await pageG.evaluate(() => { document.querySelector('#hint').textContent = ''; document.querySelector('#genBtn').click(); });
@@ -316,7 +316,7 @@ async function esperaListo(pg) {
   const pageD = await ctx.newPage();
   pageD.on('pageerror', e => fallos.push('diagonal: ' + e.message));
   await pageD.goto(BASE + '/buscador-implantacion.html?encargo=1&quieto=1&semilla=9-9');
-  await pageD.waitForFunction(() => window.LAY && window.LAY.compute, null, { timeout: 30000 });
+  await esperaListo(pageD);
   await pageD.evaluate(() => PASO(80));
   const ed = await pageD.evaluate(() => ESTADO());
   check('en una parcela diagonal SÍ encuentra mejora, y grande', ed.mejorEner > ed.baseEner * 1.05 && ed.mejorGiro > 5,
@@ -352,7 +352,7 @@ async function esperaListo(pg) {
   // el barrido propio de la ficha se APAGA: si no, al generar re-barre y pisa el azimut que
   // acaba de traer el buscador — prometía una planta y salía otra
   check('y el barrido de la ficha queda apagado, para respetar el azimut aplicado',
-    await pageG.evaluate(() => !document.getElementById('optAz').checked && !document.getElementById('optGrid').checked), true);
+    await pageG.evaluate(() => !document.getElementById('optAz') && !document.getElementById('optGrid')), true);
 
   // ── Y EL CAREO QUE FALTABA: que al GENERAR salgan los kWp que el buscador prometió. Sin esto
   //    el puente podía poner los mandos «bien» y dar otra planta, y nadie se enteraba. Es la
@@ -372,7 +372,7 @@ async function esperaListo(pg) {
     document.getElementById('optBtn').click(); });
   const pageF = await ctx.newPage();
   await pageF.goto(BASE + '/buscador-implantacion.html?encargo=1&quieto=1&semilla=7-7');
-  await pageF.waitForFunction(() => window.LAY && window.LAY.compute, null, { timeout: 30000 });
+  await esperaListo(pageF);
   await pageF.evaluate(() => PASO(8));
   const ef = await pageF.evaluate(() => ESTADO());
   check('en fija no se gira nada', ef.encargo === true && ef.gira === false && ef.mejorGiro === 0,
@@ -390,9 +390,9 @@ async function esperaListo(pg) {
   const bTexto = await pageF.evaluate(() => document.getElementById('barra').textContent);
   check('la base se enseña con SU rendimiento, no solo con los MWp',
     /base\s+6[.,]14 MWp\s*×\s*96[.,]8\s*%/.test(bTexto), bTexto.slice(0, 160));
-  check('el porcentaje dice de que es: de ENERGIA', bTexto.includes('% de energía'), bTexto.slice(-160));
-  check('y cuadra con las dos energias', /\+1[.,]9 % de energía|\+1[.,]9% de energía/.test(bTexto),
-    (bTexto.match(/\+[\d.,]+ ?% de energía/) || [''])[0]);
+  check('el porcentaje dice de que es: del ÍNDICE SOLAR', bTexto.includes('% de índice solar'), bTexto.slice(-160));
+  check('y cuadra con las dos energias', /\+1[.,]9 % de índice solar|\+1[.,]9% de índice solar/.test(bTexto),
+    (bTexto.match(/\+[\d.,]+ ?% de índice solar/) || [''])[0]);
   check('con menos potencia que la base, se DICE al lado',
     /-1[.,]3\s*% de potencia/.test(bTexto) && /\+3[.,]1 puntos de rendimiento/.test(bTexto),
     (bTexto.match(/\([^)]*potencia[^)]*\)/) || [''])[0]);

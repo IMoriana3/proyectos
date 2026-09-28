@@ -1,3 +1,48 @@
+# Optimizar unificado — v1.10.0 · 2026-09-28
+
+La petición «déjanos solo uno» reúne el piloto y el optimizador anterior en
+`buscador-implantacion.html`. El Generador conserva un único botón Optimizar y deja de
+lanzar barridos independientes al generar. No cambian las ecuaciones de colocación.
+
+- Búsqueda conjunta de azimut, disposición y origen X/Y. Se pueden bloquear variables.
+  Aleatorio por defecto, GP experimental y barrido angular explícito. Los dos primeros
+  comparten candidatos iniciales, dominio y objetivo. Semilla visible y reinicio reproducible.
+- Un solo criterio: kWp × factor solar de orientación del buscador existente, extraído de
+  `sim-solar.html`. Es un índice de cielo claro, no una predicción anual. Fija mantiene
+  orientación y compara kWp. Sin solar disponible se bloquea girar y se declara.
+- Solo resultados calculados y aceptados por el QA del motor pueden ganar. Referencia
+  exacta primero, presupuesto incluyendo esa referencia, pausa y comparación descargable.
+- Se comparan azimut del eje y filas/paneles, disposición, pitch, retranqueo, GCR, origen,
+  centrado, módulos, mesas, kWp, factor e índice solar. Mapa con norte arriba para parcelas
+  reales, referencia/propuesta y controles accesibles en móvil.
+- Aplicar mantiene precisión completa del origen y azimut. Un identificador y firma del
+  encargo impiden aplicar a un proyecto distinto o cambiado. Generar reproduce las mismas
+  geometrías de mesa; origen persiste en sesión y la API lo rechaza si no lo soporta.
+- Se conservan restricciones de viales; se retira la antigua gráfica de «coste de cada vial»
+  porque comparaba layouts con otras variables cambiadas y no aislaba ese coste.
+- `tools/build_layout_preview.cjs` empaqueta generador y optimizador con sus fuentes
+  canónicas en un HTML de revisión. Funciona localmente sin red; no apunta al buscador viejo.
+
+El GP sigue experimental. El benchmark histórico de offsets de abajo **no valida la
+superioridad de esta nueva búsqueda conjunta**. Su API antigua `LayoutSearch.run` se
+conserva para reproducir ese banco; no aparece como un segundo flujo de producto.
+
+Validación v1.10.0: **649 comprobaciones locales correctas**: layout 201, UI del generador
+182 (incluye barrido trasladado), mixto 106, buscador 59, búsqueda histórica 22, UI unificada
+32, integridad 7, PWA 21 y versiones 19.
+El caso de UI unificada comprueba igualdad exacta de todas las mesas tras aplicar/generar,
+precisión de offsets, caducidad de proyecto, descarga, pausa, móvil, fija, ausencia de solar
+y rechazo de geometría inválida. Revisión visual a 1440×1000 y 390×844.
+La copia descargable pasa apertura local sin red, 48 evaluaciones y regeneración exacta,
+sin excepciones JavaScript. Ejemplo: 33.264 → 33.292 módulos, 20.956,32 → 20.973,96 kWp;
+eje 0° → 3,4°, X 0 → −0,8841542489826679 m, Y 0 → 2,96766060590744 m.
+No se extrapola este ejemplo a otras parcelas ni se afirma que sea el óptimo.
+
+PR #528 sigue en borrador; sin merge ni despliegue. El bloqueo previo del preflight global
+y el CI rojo de la base descritos al final siguen sin resolverse en este alcance.
+
+---
+
 # Piloto de búsqueda de implantaciones — 2026-09-28
 
 **Decisión: disponible para evaluación, ML experimental. Aleatorio es la opción inicial.**

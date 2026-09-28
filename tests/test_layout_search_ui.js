@@ -2,122 +2,94 @@
 const {chromium}=require('playwright');
 const {EXEC}=require('./pw_navegador.js');
 const {cases}=require('./layout_search_cases.cjs');
-const assert=require('assert/strict');
-const fs=require('fs');
+const assert=require('assert/strict'),fs=require('fs');
 const BASE=process.env.BASE||'http://localhost:8099';
-let ok=0;
-function check(n,v){assert.ok(v,n);ok++;console.log('OK   '+n);}
+let ok=0;function check(n,v){assert.ok(v,n);ok++;console.log('OK   '+n);}
 (async()=>{
-  const browser=await chromium.launch({executablePath:EXEC});
-  try{
-    const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
-    page.on('pageerror',e=>errors.push(e.message));
-    await page.route('**/*',route=>route.request().url().startsWith(BASE)?route.continue():route.abort());
-    await page.goto(BASE+'/generador-layout.html');
-    await page.locator('#aiPanel').evaluate(el=>el.open=true);
-    check('el piloto está integrado en el generador existente',await page.locator('#aiRun').isVisible());
-    check('el ML sin ventaja consistente no se activa por defecto',await page.inputValue('#aiMethod')==='random');
-    await page.selectOption('#aiMethod','gp');
-    const cfg=cases().find(c=>c.name.includes('Finca dibujada')).config;
-    await page.evaluate(c=>{
-      $('parcelMode').value='geojson';PARCEL=c.coords;HOLES=c.holes;EXCL=c.exclusions;
-      const fields={mount:c.mount,table:c.table,mods:c.mods.join(','),modLen:c.modLen,modWid:c.modWid,modWp:c.moduleWp,
-        pitchTrk:c.pitch,setback:c.setback,panelAz:c.panelAz,bifila:c.bifila?'1':'0',gapMod:c.gapModules,
-        gapMotor:c.gapMotor,gapNs:c.gapNs,roadEvery:c.roadEvery,roadW:c.roadW,roadNsEvery:c.roadNsEvery,
-        roadNsW:c.roadNsW,mode:c.mode,minStructs:c.minStructs,rowOffset:c.rowOffset};
-      Object.entries(fields).forEach(([k,v])=>$(k).value=v);
-      $('alignGrid').checked=c.alignGrid;$('center').checked=c.center;$('orto').checked=false;encaja();
-    },cfg);
-    const fixed=await page.evaluate(()=>JSON.stringify(readCfg()));
-    await page.click('#aiRun');
-    await page.waitForFunction(()=>!$('aiRun').disabled,{timeout:30000});
-    check('la búsqueda produce una comparación de resultados reales',await page.locator('#aiResults').isVisible()&&await page.locator('#aiMetrics tr').count()===4);
-    check('comparar no cambia los parámetros del proyecto',await page.evaluate(()=>JSON.stringify(readCfg()))===fixed);
-    check('el caso de parcela existente encuentra una mejora',!(await page.locator('#aiApply').isDisabled()));
-    const row=async key=>page.locator('#aiDesign tr[data-key="'+key+'"] td').allTextContents();
-    check('la comparación muestra ambos azimuts conservados',
-      (await row('axisAz')).slice(1).join('|')==='0,00|0,00'&&
-      (await row('panelAz')).slice(1).join('|')==='90,00|90,00');
-    const [download]=await Promise.all([page.waitForEvent('download'),page.click('#aiExport')]);
-    const report=JSON.parse(fs.readFileSync(await download.path(),'utf8'));
-    const bestTrace=report.trace[report.bestIteration];
-    check('los offsets mostrados y exportados son los evaluados, no valores por defecto',
-      report.comparison.reference.xOffsetM===report.trace[0].xOffsetM&&
-      report.comparison.proposal.xOffsetM===bestTrace.xOffsetM&&
-      report.comparison.proposal.yOffsetM===bestTrace.yOffsetM&&
-      (await row('xOffsetM'))[2]===bestTrace.xOffsetM.toLocaleString('es-ES',{minimumFractionDigits:3,maximumFractionDigits:3})&&
-      (await row('yOffsetM'))[2]===bestTrace.yOffsetM.toLocaleString('es-ES',{minimumFractionDigits:3,maximumFractionDigits:3}));
-    check('se declaran los parámetros que cambian y la ganancia de capacidad',
-      /Cambian: Origen X \(m\), Origen Y \(m\)/.test(await page.textContent('#aiChanges'))&&
-      /\+112 módulos · -4 mesas · \+70,56 kWp \(\+0,34 %\)/.test(await page.textContent('#aiGain')));
-    check('el desglose por talla explica módulos y mesas de ambos resultados',
-      [report.comparison.reference,report.comparison.proposal].every(s=>
-        Object.entries(s.bySize).reduce((v,[size,n])=>v+Number(size)*n,0)===s.modules&&
-        Object.values(s.bySize).reduce((v,n)=>v+n,0)===s.structures)&&
-      (await page.locator('#aiSizes tr[data-key="size-28"] td').allTextContents()).slice(1).join('|')==='1116|1124');
-    const baseline=await page.evaluate(()=>JSON.stringify(LAY.toGeoJSON(RES)));
-    await page.click('#aiViewBest');
-    check('la vista previa no cambia el layout exportable',await page.evaluate(()=>JSON.stringify(LAY.toGeoJSON(RES)))===baseline);
-    check('la propuesta se dibuja mediante el renderer existente',await page.evaluate(()=>LayoutSearchUI.preview&&LayoutSearchUI.preview.stats.modules>=RES.stats.modules));
-    await page.click('#aiViewBase');
-    check('se puede volver a la referencia',/referencia original/.test(await page.textContent('#aiViewStatus')));
-    await page.click('#aiApply');
-    const applied=await page.evaluate(()=>JSON.stringify(LAY.toGeoJSON(RES)));
-    check('aplicar cambia el layout y guarda el origen explícito',applied!==baseline&&await page.isChecked('#originManual'));
-    check('no se modifica orientación, pitch, talla ni exclusiones',await page.evaluate(before=>{
-      const now=readCfg();delete now._xOff;delete now._yOff;return JSON.stringify(now)===before;
-    },fixed));
-    const session=await page.evaluate(()=>estadoSesion());
-    const oldSession=JSON.parse(JSON.stringify(session));
-    delete oldSession.checks.originManual;delete oldSession.campos.originX;delete oldSession.campos.originY;
-    await page.evaluate(st=>aplicaSesion(st),oldSession);
-    check('una sesión antigua conserva el origen automático',!(await page.isChecked('#originManual')));
-    await page.evaluate(st=>aplicaSesion(st),session);
-    await page.click('#genBtn');
-    await page.waitForFunction(()=>!$('genBtn').disabled);
-    check('Generar reproduce exactamente la propuesta aplicada',await page.evaluate(()=>JSON.stringify(LAY.toGeoJSON(RES)))===applied);
-    await page.evaluate(st=>aplicaSesion(st),session);
-    check('el guardado de sesión conserva el origen',await page.isChecked('#originManual')&&await page.inputValue('#originX')===session.campos.originX);
-    await page.evaluate(()=>{$('calc').querySelector('[value="core"]').disabled=false;$('calc').value='core';});
-    await page.click('#genBtn');await page.waitForFunction(()=>!$('genBtn').disabled);
-    check('la API no descarta silenciosamente el origen aplicado',/no admite el origen explícito/.test(await page.textContent('#foot')));
-    await page.evaluate(()=>{$('calc').value='js';});
-    await page.evaluate(()=>{$('originManual').checked=false;});
-    await page.click('#aiRun');await page.waitForFunction(()=>!$('aiRun').disabled,{timeout:30000});
-    await page.fill('#setback','8');
-    check('cambiar el proyecto invalida la propuesta anterior',await page.isDisabled('#aiApply')&&/ha cambiado/.test(await page.textContent('#aiStatus')));
-    check('una propuesta caducada no permanece en el mapa',await page.evaluate(()=>LayoutSearchUI.preview===null));
-    await page.click('#aiRun');await page.click('#aiStop');
-    await page.waitForFunction(()=>!$('aiRun').disabled,{timeout:30000});
-    check('Detener devuelve el control de la interfaz',await page.isEnabled('#genBtn')&&/Detenida/.test(await page.textContent('#aiStatus')));
-    await page.evaluate(()=>{$('optAz').checked=true;});await page.click('#aiRun');
-    check('se respeta el límite de orientación fija',/Desactiva el barrido/.test(await page.textContent('#aiStatus')));
-    await page.evaluate(()=>{$('optAz').checked=false;PARCELAS.push({ext:PARCEL,holes:[]});});await page.click('#aiRun');
-    check('varias parcelas quedan fuera del piloto de forma visible',/una parcela y un montaje/.test(await page.textContent('#aiStatus')));
-    check('la nueva UI no provoca excepciones JavaScript',errors.length===0);
-    await page.evaluate(()=>{PARCELAS=[];$('setback').value=5;});await page.click('#aiRun');
-    await page.waitForFunction(()=>!$('aiRun').disabled,{timeout:30000});
-    if(process.env.LAYOUT_SCREENSHOT){await page.locator('#aiPanel').screenshot({path:process.env.LAYOUT_SCREENSHOT});}
-    const accepted=await page.evaluate(()=>JSON.stringify(LAY.toGeoJSON(RES)));
-    await page.evaluate(()=>{$('pitchTrk').value='1';});await page.click('#aiRun');
-    await page.waitForFunction(()=>!$('aiRun').disabled,{timeout:30000});
-    check('ninguna geometría válida se declara y no sustituye el layout aceptado',
-      /ninguna implantación supera/.test(await page.textContent('#aiStatus'))&&await page.isDisabled('#aiApply')&&
-      await page.isDisabled('#aiViewBase')&&await page.evaluate(()=>JSON.stringify(LAY.toGeoJSON(RES)))===accepted);
-    check('sin resultados válidos la comparación no inventa ángulos ni ganancias',
-      (await row('panelAz')).slice(1).join('|')==='—|—'&&/Sin dos resultados válidos/.test(await page.textContent('#aiGain')));
-    await page.evaluate(()=>{$('pitchTrk').value=6;$('axis').value=27.5;syncAz();
-      $('originManual').checked=true;$('originX').value=1.125;$('originY').value=-0.375;$('aiBudget').value=16;});
-    await page.click('#aiRun');await page.waitForFunction(()=>!$('aiRun').disabled,{timeout:30000});
-    check('una orientación distinta y un origen manual se muestran desde la referencia real',
-      (await row('axisAz')).slice(1).join('|')==='27,50|27,50'&&
-      (await row('panelAz')).slice(1).join('|')==='117,50|117,50'&&
-      (await row('xOffsetM'))[1]==='1,125'&&(await row('yOffsetM'))[1]==='-0,375');
-    await page.evaluate(()=>{$('mount').value='fija';syncAz();$('pitchFija').value=6;
-      $('azRowsFija').value=201.25;$('originManual').checked=false;});
-    await page.click('#aiRun');await page.waitForFunction(()=>!$('aiRun').disabled,{timeout:30000});
-    check('en fija se muestra el azimut de sus paneles y no se inventa un eje de seguidor',
-      (await row('panelAz')).slice(1).join('|')==='201,25|201,25'&&await page.locator('#aiDesign tr[data-key="axisAz"]').count()===0);
-    console.log('\n'+ok+' OK · 0 FALLOS');
-  }finally{await browser.close();}
+ const browser=await chromium.launch({executablePath:EXEC});
+ try{
+  const context=await browser.newContext({viewport:{width:1440,height:1000}}),errors=[];
+  context.on('page',p=>p.on('pageerror',e=>errors.push(e.message)));
+  await context.route('**/*',r=>r.request().url().startsWith(BASE)?r.continue():r.abort());
+  const gen=await context.newPage();await gen.goto(BASE+'/generador-layout.html');
+  const cfg=cases().find(c=>c.name.includes('Finca dibujada')).config;
+  await gen.evaluate(c=>{
+   $('parcelMode').value='geojson';PARCEL=c.coords;HOLES=c.holes;EXCL=c.exclusions;
+   const f={mount:c.mount,table:c.table,mods:c.mods.join(','),modLen:c.modLen,modWid:c.modWid,modWp:c.moduleWp,
+    pitchTrk:c.pitch,setback:c.setback,panelAz:c.panelAz,bifila:c.bifila?'1':'0',gapMod:c.gapModules,
+    gapMotor:c.gapMotor,gapNs:c.gapNs,roadEvery:c.roadEvery,roadW:c.roadW,roadNsEvery:c.roadNsEvery,
+    roadNsW:c.roadNsW,mode:c.mode,minStructs:c.minStructs,rowOffset:c.rowOffset};
+   Object.entries(f).forEach(([k,v])=>$(k).value=v);$('alignGrid').checked=c.alignGrid;
+   $('center').checked=c.center;$('orto').checked=false;
+   $('axis').value=27.5;syncAz();$('originManual').checked=true;$('originX').value=1.125;$('originY').value=-.375;
+   const open=window.open;window.open=(url,target)=>open.call(window,url+'&quieto=1&semilla=42-42',target);
+  },cfg);
+  await gen.click('#genBtn');await gen.waitForFunction(()=>!$('genBtn').disabled);
+  const baseline=await gen.evaluate(()=>JSON.stringify(RES.structures.map(s=>[s.utm,s.mods])));
+  const before=await gen.evaluate(()=>JSON.stringify(readCfg()));
+  check('hay un único punto de optimización en el generador',await gen.locator('#optBtn').count()===1&&await gen.locator('#aiPanel,#optAz,#optGrid').count()===0);
+  const [page]=await Promise.all([gen.waitForEvent('popup'),gen.click('#optBtn')]);
+  await page.waitForFunction(()=>typeof CFGP!=='undefined'&&CFGP&&window.LayoutSearchUI);
+  check('el botón abre el optimizador existente con el proyecto completo',await page.evaluate(()=>ENCARGO.coords.length>3&&CFGP._xOff===1.125));
+  check('el aprendizaje experimental no se activa por defecto',await page.inputValue('#searchMethod')==='random');
+  await page.selectOption('#searchMethod','gp');await page.click('#searchRun');
+  await page.waitForFunction(()=>PAUSA&&OPC===48,null,{timeout:60000});
+  let report=await page.evaluate(()=>LayoutSearchUI.report());
+  check('el presupuesto incluye la referencia y se respeta',report.evaluations===48&&report.trace[0].stage==='baseline');
+  check('el GP aprende del mismo objetivo que compara la interfaz',report.objective==='kWp * canonical_clear_sky_orientation_factor'&&report.trace.some(t=>t.stage==='gp'&&t.predictionBeforeEvaluation));
+  check('la mejor propuesta es real, válida y nunca empeora la referencia',report.trace[report.bestIteration].valid&&report.comparison.proposal.score>=report.comparison.reference.score);
+  check('comparar no cambia el proyecto ni su layout aceptado',await gen.evaluate(()=>JSON.stringify(readCfg()))===before&&await gen.evaluate(()=>JSON.stringify(RES.structures.map(s=>[s.utm,s.mods])))===baseline);
+  const row=key=>page.locator('#searchDesign tr[data-key="'+key+'"] td').allTextContents();
+  check('la referencia enseña su eje, azimut y origen reales',(await row('axisAz'))[1]==='27,50'&&(await row('panelAz'))[1]==='117,50'&&(await row('xOffsetM'))[1]==='1,125');
+  const best=report.trace[report.bestIteration];
+  check('se muestran los valores del candidato que realmente ganó',report.comparison.proposal.panelAz===best.panelAz&&report.comparison.proposal.xOffsetM===best.xOffsetM&&report.comparison.proposal.yOffsetM===best.yOffsetM);
+  check('el desglose por tallas explica módulos y mesas',[report.comparison.reference,report.comparison.proposal].every(s=>Object.entries(s.bySize).reduce((n,[size,count])=>n+Number(size)*count,0)===s.modules&&Object.values(s.bySize).reduce((n,v)=>n+v,0)===s.structures));
+  check('los porcentajes distinguen capacidad e índice solar',/kWp/.test(await page.textContent('#searchGain'))&&/Índice solar/.test(await page.textContent('#searchGain'))&&/no es una previsión/.test(await page.textContent('#objective')));
+  await page.click('#viewBase');check('se puede ver la referencia',await page.evaluate(()=>VIEW_RESULT==='base'));
+  await page.click('#viewBest');check('se puede ver la propuesta',await page.evaluate(()=>VIEW_RESULT==='best'));
+  const [download]=await Promise.all([page.waitForEvent('download'),page.click('#searchExport')]);
+  const exported=JSON.parse(fs.readFileSync(await download.path(),'utf8'));
+  check('el informe descarga la comparación y la traza completas',exported.bestIteration===report.bestIteration&&exported.trace.length===48&&exported.input.panelAz===117.5);
+  const expected=await page.evaluate(()=>JSON.stringify(MEJOR.r.structures.map(s=>[s.utm,s.mods])));
+  check('la mejora permite aplicar el resultado',await page.isEnabled('#searchApply'));
+  await page.click('#searchApply');await gen.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  check('aplicar conserva toda la precisión del origen',await gen.isChecked('#originManual')&&Number(await gen.inputValue('#originX'))===best.xOffsetM&&Number(await gen.inputValue('#originY'))===best.yOffsetM);
+  await gen.click('#genBtn');await gen.waitForFunction(()=>!$('genBtn').disabled);
+  check('Generar reproduce exactamente las mesas calculadas',await gen.evaluate(()=>JSON.stringify(RES.structures.map(s=>[s.utm,s.mods])))===expected);
+  check('la orientación declarada coincide con la aplicada',await gen.evaluate(()=>Math.abs(RES.stats.axis_azimuth_deg-(RES.stats.panel_az_deg-90))<1e-8));
+  const session=await gen.evaluate(()=>estadoSesion()),old=JSON.parse(JSON.stringify(session));
+  delete old.checks.originManual;delete old.campos.originX;delete old.campos.originY;
+  await gen.evaluate(st=>aplicaSesion(st),old);check('una sesión antigua conserva el origen automático',!await gen.isChecked('#originManual'));
+  await gen.evaluate(st=>aplicaSesion(st),session);check('la sesión actual conserva los offsets aplicados',await gen.isChecked('#originManual')&&Number(await gen.inputValue('#originX'))===best.xOffsetM);
+  await gen.evaluate(()=>{$('calc').querySelector('[value="core"]').disabled=false;$('calc').value='core';});
+  await gen.click('#genBtn');await gen.waitForFunction(()=>!$('genBtn').disabled);
+  check('la API no descarta silenciosamente el origen explícito',/no admite el origen explícito/.test(await gen.textContent('#foot')));
+  await gen.evaluate(()=>{$('calc').value='js';$('axis').value=48;syncAz();});
+  const [stale]=await Promise.all([gen.waitForEvent('popup'),gen.click('#optBtn')]);
+  await stale.waitForFunction(()=>typeof CFGP!=='undefined'&&CFGP&&window.LayoutSearchUI);
+  await stale.evaluate(()=>PASO(48));
+  await gen.fill('#setback','8');await stale.click('#searchApply');await gen.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  check('un proyecto modificado rechaza una propuesta antigua',/proyecto ha cambiado/.test(await gen.textContent('#hint'))&&await gen.inputValue('#setback')==='8');
+  await stale.close();
+  await page.selectOption('#searchMethod','random');
+  check('cambiar el método pausa e invalida la aplicación pendiente',await page.isDisabled('#searchApply')&&/Opciones cambiadas/.test(await page.textContent('#searchStatus')));
+  await page.selectOption('#searchBudget','256');await page.click('#searchRun');await page.click('#searchPause');
+  check('Pausar devuelve el control conservando lo ya evaluado',await page.evaluate(()=>PAUSA&&OPC>0&&OPC<256));
+  await page.setViewportSize({width:390,height:844});
+  check('en móvil los controles siguen accesibles',await page.locator('#searchRun').isVisible()&&await page.locator('#searchMethod').isVisible());
+  check('el mapa móvil conserva una escala positiva y uniforme',await page.evaluate(()=>{const o=pV([TR.cx,TR.cy]),e=pV([TR.cx+10,TR.cy]),n=pV([TR.cx,TR.cy+10]);return e[0]>o[0]&&o[1]>n[1]&&Math.abs(e[0]-o[0]-(o[1]-n[1]))<1e-8;}));
+  await page.setViewportSize({width:1440,height:1000});
+  await page.evaluate(()=>{CFGP.pitch=1;ENCARGO=Object.assign({},CFGP);nuevoSite(true);PASO(12);});
+  check('ninguna geometría inválida puede aplicarse',await page.evaluate(()=>!MEJOR)&&await page.isDisabled('#searchApply'));
+  check('sin resultados válidos no se inventan ganancias ni ángulos',(await row('panelAz')).slice(1).join('|')==='—|—'&&/Sin dos resultados válidos/.test(await page.textContent('#searchGain')));
+  await page.evaluate(c=>{ENCARGO=Object.assign({},c,{mount:'fija',panelAz:201.25,pitch:6});nuevoSite(true);PASO(12);},cfg);
+  check('en fija se conserva el azimut de paneles y no se inventa un eje',await page.evaluate(()=>TRACE.every(t=>t.panelAz===201.25))&&await page.locator('#searchDesign tr[data-key="axisAz"]').count()===0);
+  await page.evaluate(c=>{ENCARGO=c;SOL=null;nuevoSite(true);PASO(12);},cfg);
+  check('sin modelo solar se bloquea girar y se declara el criterio disponible',await page.isDisabled('#searchAz')&&await page.evaluate(()=>TRACE.every(t=>t.panelAz===AZ0))&&/azimut bloqueado/.test(await page.textContent('#objective')));
+  await gen.evaluate(()=>{PARCELAS.push({ext:PARCEL,holes:[]});$('optBtn').click();});
+  check('el alcance de una parcela y un montaje es visible',/una parcela y un montaje/.test(await gen.textContent('#hint')));
+  check('la UI no provoca excepciones JavaScript',errors.length===0);
+  if(process.env.LAYOUT_SCREENSHOT){await page.screenshot({path:process.env.LAYOUT_SCREENSHOT});}
+  console.log('\n'+ok+' OK · 0 FALLOS');
+ }finally{await browser.close();}
 })().catch(e=>{console.error('FAIL '+e.stack);process.exitCode=1;});

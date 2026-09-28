@@ -157,11 +157,6 @@ canvas.panning{cursor:grabbing}
 .sizes td:first-child,.sizes th:first-child{text-align:left}
 .busy{color:var(--build);font-family:var(--mono);font-size:12px}
 /* Comparación IA dentro de la misma ficha, legible en la columna estrecha. */
-#aiResults table{width:100%;border-collapse:collapse;table-layout:fixed;font:12px/1.45 var(--sans);margin:10px 0}
-#aiResults th,#aiResults td{padding:7px 4px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
-#aiResults th:first-child,#aiResults td:first-child{width:36%;text-align:left}
-#aiResults .aiChanged td:last-child{font-weight:600;background:color-mix(in srgb,var(--accent) 12%,transparent)}
-#aiResults .tip{font:12px/1.5 var(--sans);color:var(--muted);margin:8px 0}
 #aiGain,#aiChanges{color:var(--text)}
 #aiStatus,#aiViewStatus{font:12px/1.5 var(--sans);text-transform:none;letter-spacing:0}
 #aiProgress{accent-color:var(--accent)}
@@ -177,7 +172,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.9.1</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.10.0</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -449,60 +444,7 @@ canvas.panning{cursor:grabbing}
       <label class="chk"><input type="checkbox" id="alignGrid" checked> Alinear a rejilla global
         <span class="tip" style="display:block;margin:2px 0 0">Marcada: columnas rectas, como el cuaderno y Streamlit — pero en lindes diagonales deja huecos donde caben trackers. Desmarcada: cada fila ancla en su linde.</span></label>
       <button class="btn" id="genBtn">▶ Generar implantación</button>
-      <button class="btn" id="optBtn" title="Barre miles de variantes de giro, tresbolillo y viales sobre ESTA parcela con ESTA mesa, en el Buscador de implantaciones; allí, la tecla A trae el mejor de vuelta a estos mandos">◱ Optimizar</button>
-      <details class="adv" id="aiPanel" style="margin-top:12px">
-        <summary>Comparar implantaciones · piloto</summary>
-        <div class="body">
-          <p class="note">Optimiza el origen X/Y de la rejilla con las decisiones actuales de diseño.
-            Piloto para <b>una parcela y un montaje, en navegador</b>.</p>
-          <div class="two">
-            <div class="field"><label for="aiMethod">Método</label><select id="aiMethod">
-              <option value="random">Aleatorio</option><option value="gp">Aprendizaje</option>
-            </select></div>
-            <div class="field"><label for="aiBudget">Evaluaciones</label><select id="aiBudget">
-              <option value="16">16</option><option value="24" selected>24</option><option value="48">48</option>
-            </select></div>
-          </div>
-          <div class="btnrow"><button class="btn small" id="aiRun">Comparar alternativas</button>
-            <button class="btn ghost small" id="aiStop" disabled>Detener</button></div>
-          <p class="tag" id="aiStatus" role="status" aria-live="polite">Sin ejecutar · se conserva la implantación actual si no mejora.</p>
-          <progress id="aiProgress" max="24" value="0" style="width:100%;display:none" aria-label="Progreso de la búsqueda"></progress>
-          <div id="aiResults" hidden>
-            <table aria-label="Comparación de implantaciones"><thead><tr><th>Resultado</th><th>Referencia</th><th>Propuesta</th></tr></thead>
-              <tbody id="aiMetrics"></tbody></table>
-            <p class="note" id="aiGain"></p>
-            <table aria-label="Parámetros de referencia y propuesta"><thead><tr><th>Parámetro</th><th>Referencia</th><th>Propuesta</th></tr></thead>
-              <tbody id="aiDesign"></tbody></table>
-            <p class="note" id="aiChanges"></p>
-            <p class="tip">Azimuts respecto al norte geográfico: N 0°, E 90°, S 180°, O 270°. En seguidores, filas = eje + 90°.
-              X es longitudinal a las mesas/trackers y Y es transversal, en su marco local; son desplazamientos de la rejilla antes del centrado.</p>
-            <details class="adv" id="aiSizesDetail"><summary>Mesas por talla</summary><div class="body">
-              <table aria-label="Mesas por número de módulos"><thead><tr><th>Talla</th><th>Referencia</th><th>Propuesta</th></tr></thead>
-                <tbody id="aiSizes"></tbody></table>
-              <p class="tip">La búsqueda puede colocar más módulos con menos mesas si aprovecha mejor las tallas grandes.</p>
-            </div></details>
-            <div class="btnrow"><button class="btn ghost small" id="aiViewBase">Ver referencia</button>
-              <button class="btn ghost small" id="aiViewBest" disabled>Ver propuesta</button>
-              <button class="btn small" id="aiApply" disabled>Aplicar propuesta</button></div>
-            <p class="tag" id="aiViewStatus">El mapa y las salidas muestran la implantación actual.</p>
-            <button class="btn ghost small" id="aiExport">Descargar comparación JSON</button>
-          </div>
-          <details class="adv"><summary>Qué aprende y cómo se comprueba</summary><div class="body">
-            <p class="note">El modelo se ajusta durante esta búsqueda con los resultados de esta parcela.
-              Conserva orientación, pitch, tallas, setback, exclusiones y parámetros de viales.
-              El presupuesto incluye la referencia actual. Aleatorio permite comparar con una búsqueda sin aprendizaje.
-              El aprendizaje sigue en evaluación: aún no ha demostrado una ventaja consistente frente a esa referencia.
-              La puntuación existente favorece módulos y penaliza tallas cortas y fragmentación.
-              La comprobación es la del motor portado al navegador: <b>no acredita energía, obra civil ni un óptimo global</b>.
-              El informe incluye configuración, evaluaciones y tiempos. No requiere mediciones nuevas.</p>
-          </div></details>
-        </div>
-      </details>
-      <div id="prog" style="display:none;margin-top:8px">
-        <div style="height:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:4px;overflow:hidden">
-          <div id="progBar" style="height:100%;width:0;background:var(--accent);transition:width .12s"></div></div>
-        <p class="tag" id="progTxt" style="margin-top:4px">—</p>
-      </div>
+      <button class="btn" id="optBtn" title="Busca azimut, disposición y origen X/Y; compara la referencia y la propuesta antes de aplicarla">◱ Optimizar</button>
       <div class="field" style="margin-top:10px"><label>Cálculo</label>
         <select id="calc"><option value="js">Navegador (motor portado)</option><option value="core" disabled>Motor SolarGPT (canónico)</option></select>
         <div class="tip">El navegador calcula solo; el motor SolarGPT es el número canónico y se activa al detectarlo.</div></div>
@@ -538,14 +480,7 @@ canvas.panning{cursor:grabbing}
         <p class="tip">X/Y en el marco de las filas. Desmarcado: origen y barrido existentes. Aplicar una propuesta guarda aquí su origen para poder regenerarla.</p>
         <label class="chk"><input type="checkbox" id="forceComplete"> Forzar strings completos</label>
         <p class="note" style="margin-top:0">Descarta las estructuras de talla <b>menor</b> que la principal, que son las que dejan un string a medias. Con talla única no hay nada que descartar. <b>Ojo:</b> en el cuaderno esta casilla hoy no hace nada — el motor la pasa por las llamadas y la mete en la clave de caché, pero no toca la colocación.</p>
-        <label class="chk"><input type="checkbox" id="optAz"> Optimizar azimut (barrido 90–270°)</label>
-        <label class="chk"><input type="checkbox" id="optGrid"> Optimizar ángulo de grid</label>
-        <div class="three" id="gridSweepBox" style="display:none">
-          <div class="field"><label>Desde °</label><input id="gridFrom" type="number" step="5" value="0"></div>
-          <div class="field"><label>Hasta °</label><input id="gridTo" type="number" step="5" value="180"></div>
-          <div class="field"><label>Paso °</label><input id="gridStep" type="number" step="1" value="5"></div>
-        </div>
-        <p class="note" style="margin-top:0">Los barridos son <b>N layouts completos</b>, no una fórmula: 36 ángulos son unos tres segundos. El core hace exactamente lo mismo y se queda con el de más kWp.</p>
+        <p class="note">La búsqueda de azimut, disposición y origen se configura en <b>Optimizar</b>.</p>
       </div>
       </details>
     </div>
@@ -2440,7 +2375,6 @@ $('zOut').onclick=function(){zoomBoton(-0.75);};
 $('fit').onclick=function(){encaja();draw();};
 $('orto').onchange=function(){draw();};
 ['render','showDisc','showAxis'].forEach(function(id){$(id).onchange=function(){draw();};});
-$('optGrid').onchange=function(){$('gridSweepBox').style.display=this.checked?'':'none';};
 
 /* ── dibujo sobre el lienzo: parcela o exclusión ── */
 var drawing=false, drawDest='parcela';   // 'parcela' | 'exclusion' | 'linea'
@@ -2845,7 +2779,7 @@ addEventListener('resize',function(){ if(ajustaLienzo()){ varitaReset(); draw();
 
 /* ── el repintado ── */
 function draw(){
-  drawLayout(window.LayoutSearchUI&&window.LayoutSearchUI.preview||RES);
+  drawLayout(RES);
 }
 function drawLayout(RES){
   var cv=$('cv'),ctx=cv.getContext('2d');
@@ -3965,7 +3899,6 @@ function fmt(v,d){return (v==null||!isFinite(v))?'—':v.toLocaleString('es-ES',
 function ro(k,v,s){return '<div class="ro"><div class="k">'+k+'</div><div class="v">'+v+(s?' <small>'+s+'</small>':'')+'</div></div>';}
 
 async function generar(){
-  if(window.LayoutSearchUI)window.LayoutSearchUI.reset();
   buildParcel();
   if(!PARCEL||PARCEL.length<3){$('foot').innerHTML='<span style="color:var(--build)">Define primero la parcela.</span>';return;}
   var cfg=readCfg();
@@ -3975,7 +3908,7 @@ async function generar(){
   try{
     var modo=$('mount').value;
     if(cfg._yOff!==undefined&&$('calc').value==='core')
-      throw new Error('El motor por API no admite el origen explícito del piloto. Usa Navegador o desactiva «Usar origen de rejilla explícito».');
+      throw new Error('El motor por API no admite el origen explícito. Usa Navegador o desactiva «Usar origen de rejilla explícito».');
     if(modo==='mixto'){
       /* El MODO manda (2026-08-28): antes las zonas se colaban siempre que
          existieran, y en modo mono se ignoraban... al revés. Ahora: Mixto
@@ -3984,8 +3917,6 @@ async function generar(){
          corren mono-montaje y AVISAN si hay zonas definidas que se ignoran. */
       if($('calc').value==='core'&&ENGINE)
         throw new Error('el motor canónico no calcula el layout MIXTO todavía: pon Cálculo en «Navegador».');
-      if($('optAz').checked||$('optGrid').checked)
-        throw new Error('el barrido de azimut/rejilla no corre sobre el layout MIXTO: desmárcalo.');
       if(!MIX_ZONAS.length)
         throw new Error('el modo MIXTO necesita zonas: propón el reparto por pendiente o importa un GeoJSON con el montaje de cada una.');
       cfg.rellenoFija=!!($('mixRellenoFija')&&$('mixRellenoFija').checked);
@@ -3993,7 +3924,6 @@ async function generar(){
       pintar(RES,'navegador · MIXTO · '+MIX_ZONAS.length+' zonas');
     }
     else if($('calc').value==='core'&&ENGINE){ await generarCore(cfg); }
-    else if($('optAz').checked||$('optGrid').checked){ await generarBarrido(cfg); }
     else {
       RES=computaTodas(cfg); Object.assign(RES.stats,cfg.decl);
       pintar(RES,'navegador · '+(modo==='fija'?'FIJA':'TRACKER'));
@@ -5061,99 +4991,6 @@ $('mixProponer').onclick=function(){
 };
 $('mixLimpiar').onclick=function(){MIX_ZONAS=[];MIX_PROP=null;mixPinta();};
 
-/* EL RENDIMIENTO DEL EJE, para que el barrido compare ENERGÍA y no potencia instalada.
-   En seguidores las filas van perpendiculares al eje (panelAz = eje + 90), así que barrer el
-   azimut es barrer la orientación del EJE — que quiere ser N-S. Quedarse con el de más kWp
-   premiaba llenar la parcela en diagonal: más módulos y peor planta. Eso se vio en una parcela
-   de verdad («cómo va a ser esto la mejor opción», 2026-09-08).
-
-   f(A) = ∫ DNI·cos(AOI) del año con el eje en A, entre lo mismo con el eje N-S. El ángulo del
-   seguidor lo da `singleaxis` de sim-solar.html —EXTRAÍDO, no copiado: es el port literal de
-   overcast, con su backtracking y su tope— y la DNI es de cielo claro por masa de aire, que es
-   lo que hace pesar el mediodía más que el amanecer. NO entra: difusa, TMY del sitio, terreno,
-   suciedad ni temperatura. Es un factor RELATIVO entre orientaciones, no una previsión.
-
-   En montaje FIJO no se pondera: allí el azimut de filas es el de los PANELES y este modelo,
-   que es de seguidor de un eje, no lo describe. Y si el modelo no se puede cargar, se devuelve
-   null y el barrido se comporta como siempre: mejor sin ponderar que ponderando a ojo. */
-var _SOLC=null;
-async function cargaSolar(){
-  if(_SOLC!==null)return _SOLC;
-  try{
-    var h=await (await fetch('sim-solar.html')).text();
-    var a=h.match(/MOTOR SOLAR — inicio[\s\S]*?\*\/([\s\S]*?)\/\* ═+ MOTOR SOLAR — fin/);
-    var b=h.match(/SEGUIMIENTO — inicio[\s\S]*?\*\/([\s\S]*?)\/\* ═+ SEGUIMIENTO — fin/);
-    _SOLC=(a&&b)?(new Function(a[1]+b[1]+';return {solarGeom:solarGeom,singleaxis:singleaxis};'))():false;
-  }catch(e){_SOLC=false;}
-  return _SOLC;
-}
-async function pesoRendimiento(cfg){
-  if(cfg.mount==='fija')return null;
-  var S=await cargaSolar(); if(!S)return null;
-  var c=cfg.coords||[]; if(c.length<3)return null;
-  var lat=c.reduce(function(s,p){return s+p[1];},0)/c.length,
-      lon=c.reduce(function(s,p){return s+p[0];},0)/c.length;
-  var gcr=(cfg.decl&&cfg.decl.collector_height_m&&cfg.pitch)?cfg.decl.collector_height_m/cfg.pitch:0.4;
-  var maxA=(cfg.decl&&cfg.decl.max_angle_deg)||55, bt=!cfg.decl||cfg.decl.backtrack!==false;
-  var soles=[];
-  for(var mes=0;mes<12;mes++)for(var min=0;min<1440;min+=15){
-    var g=S.solarGeom(Date.UTC(2026,mes,15,0,0,0)+min*60000-lon/15*3600000,lat,lon);
-    if(g.elevation<3)continue;
-    var zen=90-g.elevation,am=1/Math.cos(zen*Math.PI/180);
-    soles.push({zen:zen,az:g.azimuth,dni:1000*Math.pow(0.7,Math.pow(am,0.678))});
-  }
-  if(!soles.length)return null;
-  function suma(A){
-    var s=0,R=Math.PI/180;
-    for(var i=0;i<soles.length;i++){
-      var q=soles[i];
-      var th=S.singleaxis(q.zen,q.az,{axisTilt:0,axisAz:A,maxAngle:maxA,backtrack:bt,gcr:gcr,crossAxisTilt:0});
-      if(!isFinite(th))continue;
-      var sz=Math.sin(q.zen*R),st=Math.sin(th*R),ct=Math.cos(th*R);
-      var cos=sz*Math.sin(q.az*R)*(st*Math.cos(A*R))+sz*Math.cos(q.az*R)*(-st*Math.sin(A*R))+Math.cos(q.zen*R)*ct;
-      if(cos>0)s+=q.dni*cos;
-    }
-    return s;
-  }
-  var ref=suma(0)||1,cache={};
-  return function(panelAz){
-    /* el eje es una RECTA: 100° y −80° son la misma orientación */
-    var A=Math.round(((panelAz-90)%180+180)%180-90);
-    if(cache[A]==null)cache[A]=suma(A)/ref;
-    return cache[A];
-  };
-}
-
-/* Barrido de orientación. La casilla de azimut es el rango 90–270 del cuaderno;
-   la de ángulo de grid, el rango y el paso que se teclean. Si están las dos, el
-   rango explícito manda — es el más específico. */
-async function generarBarrido(cfg){
-  var desde=90,hasta=270,paso=5;
-  if($('optGrid').checked){desde=+$('gridFrom').value;hasta=+$('gridTo').value;paso=+$('gridStep').value||5;}
-  $('prog').style.display='';$('progBar').style.width='0';
-  var t0=Date.now();
-  var peso=await pesoRendimiento(cfg);
-  var mejor=await LAY.barrido(cfg,{desde:desde,hasta:hasta,paso:paso,computa:computaTodas,peso:peso,onPaso:async function(i,n,ang,kwp){
-    $('progBar').style.width=(100*i/n).toFixed(1)+'%';
-    $('progTxt').textContent='barriendo '+ang.toFixed(0)+'° · '+i+'/'+n+' · mejor hasta ahora '+
-      (kwp/1000).toFixed(2)+' MWp';
-    if(i%2===0)await new Promise(function(r){setTimeout(r,0);});   // deja respirar al navegador
-  }});
-  $('prog').style.display='none';
-  if(!mejor){$('foot').innerHTML='<span style="color:var(--dead)">El barrido no encontró ningún layout.</span>';return;}
-  RES=mejor; Object.assign(RES.stats,cfg.decl);
-  // El azimut ganador se escribe en el formulario: si no, la ficha enseñaría un
-  // layout que no se corresponde con lo que dicen sus casillas.
-  $('panelAz').value=RES.stats.grid_angle_deg.toFixed(0);
-  pintar(RES,'navegador · barrido '+Math.round((Date.now()-t0)/100)/10+' s');
-  var _rd=RES.stats.grid_rend;
-  $('foot').innerHTML+=' · <b>Barrido:</b> mejor azimut '+RES.stats.grid_angle_deg.toFixed(0)+'°'+
-    (RES.stats.grid_angle_gain_pct?(' ('+(RES.stats.grid_angle_gain_pct>=0?'+':'')+RES.stats.grid_angle_gain_pct.toFixed(1)+' % frente al que tenías)'):'')+
-    (_rd!=null&&_rd!==1
-      ? ' — elegido por ENERGÍA: este eje rinde el '+(_rd*100).toFixed(1)+' % de un eje N-S, y aun así gana'
-      : (_rd===1?' — eje N-S, rendimiento pleno':' — por potencia instalada: sin modelo de rendimiento del eje'))+'.';
-}
-
 async function generarCore(cfg){
   var ring=cfg.coords.slice(); ring.push(cfg.coords[0]);
   var body={cfg:{coords_lonlat:ring, pitch_m:cfg.pitch, panel_az_deg:cfg.panelAz, setback_m:cfg.setback,
@@ -5240,41 +5077,40 @@ function pintar(res,fuente){
   autoguarda();
 }
 $('genBtn').onclick=generar;
-/* ===== puente con el Buscador de implantaciones =====
-   «Optimizar» deja en localStorage (buscador_encargo) la MISMA cfg que come el motor —parcela,
-   agujeros, exclusiones y mesa tal cual está el panel— y abre el buscador con ?encargo=1. Allí
-   la tecla A deja el mejor en buscador_mejor; al VOLVER a esta pestaña (focus) esos tres mandos
-   entran en el panel y se avisa por el hint: materializarlo sigue siendo cosa de «Generar»,
-   que aquí no se genera nada sin pedirlo. */
+/* Un único optimizador. El encargo fija el proyecto; aplicar exige que siga
+   siendo el mismo y conserva los números completos del candidato calculado. */
+var OPT_ENCARGO=null;
+function firmaOpt(){return JSON.stringify({cfg:readCfg(),parcelas:PARCELAS,zonas:MIX_ZONAS,
+  calc:$('calc').value,parcela:['parcelMode','lat','lon','pw','ph','prot','geotxt'].map(function(id){return $(id).value;})});}
 $('optBtn').onclick=function(){
   if(!PARCEL||PARCEL.length<3){$('hint').textContent='sin parcela: define una antes de optimizar';return;}
-  localStorage.setItem('buscador_encargo',JSON.stringify({de:'generador',fecha:Date.now(),cfg:readCfg()}));
+  if(PARCELAS.length||$('mount').value==='mixto'){
+    $('hint').textContent='Optimizar requiere una parcela y un montaje. Generar admite el conjunto.';return;}
+  if($('calc').value!=='js'){$('hint').textContent='Selecciona Cálculo en Navegador para optimizar con este motor.';return;}
+  OPT_ENCARGO={de:'generador',id:Date.now().toString(36)+'-'+Math.random().toString(36).slice(2),
+    fecha:Date.now(),cfg:readCfg(),firma:firmaOpt()};
+  localStorage.removeItem('buscador_mejor');
+  localStorage.setItem('buscador_encargo',JSON.stringify(OPT_ENCARGO));
   window.open('buscador-implantacion.html?encargo=1','_blank');
 };
 addEventListener('focus',function(){
   var t=localStorage.getItem('buscador_mejor');if(!t)return;
   var m;try{m=JSON.parse(t);}catch(e){localStorage.removeItem('buscador_mejor');return;}
+  if(!OPT_ENCARGO||m.encargoId!==OPT_ENCARGO.id)return;
   localStorage.removeItem('buscador_mejor');
-  /* El EJE primero: aquí panelAz SE DERIVA del eje (syncAz: filas ⟂ eje), así que poner solo el
-     azimut de filas dejaría un layout que declara un eje que no es el suyo —y de `decl` comen el
-     3D, el backtracking y los simuladores—. Con el eje puesto, los dos quedan de acuerdo. */
-  if(m.axis!=null)$('axis').value=Math.round(m.axis*10)/10;
-  if(m.panelAz!=null)$('panelAz').value=Math.round(m.panelAz*10)/10;
-  if(m.rowOffset)$('rowOffset').value=m.rowOffset;
-  if(m.roadNsEvery!=null)$('roadNsEvery').value=m.roadNsEvery;
-  /* Y SE APAGA EL BARRIDO. Esta ficha barre el azimut por su cuenta al generar y ESCRIBE el
-     ganador en la casilla: con el barrido puesto, el azimut que acaba de traer el buscador se
-     pisaba y lo que salía no era lo prometido (se vio: prometía 14.958 kWp y salían 16.158).
-     Aplicar un azimut concreto y volver a barrerlo son cosas incompatibles; manda lo aplicado,
-     y se dice para que no parezca que la casilla se ha desmarcado sola. */
-  var _barria=$('optAz').checked||$('optGrid').checked;
-  if(_barria){$('optAz').checked=false;$('optGrid').checked=false;
-    $('gridSweepBox').style.display='none';}
-  $('hint').textContent='mandos del buscador puestos — eje '+(m.axis!=null?m.axis.toFixed(1):'?')+'° '+
-    (m.rend!=null?'('+(m.rend*100).toFixed(1)+'% de rendimiento) ':'')+'· '+
-    (m.rowOffset==='half'?'tresbolillo':'alineado')+(m.roadNsEvery?' · vial c/'+m.roadNsEvery:'')+
-    ' · '+Math.round(m.kwp||0).toLocaleString('es-ES')+' kWp'+
-    (_barria?' · BARRIDO APAGADO para respetar este azimut':'')+': pulsa Generar para verlo';
+  if(OPT_ENCARGO.firma!==firmaOpt()){
+    $('hint').textContent='El proyecto ha cambiado: repite Optimizar antes de aplicar la propuesta.';return;}
+  if(![m.panelAz,m.xOffsetM,m.yOffsetM,m.kwp].every(Number.isFinite)){
+    $('hint').textContent='La propuesta no contiene una configuración completa.';return;}
+  if($('mount').value==='fija')$('azRowsFija').value=m.panelAz;
+  else $('axis').value=m.axis;
+  $('panelAz').value=m.panelAz;
+  $('rowOffset').value=m.rowOffset;
+  $('originManual').checked=true;$('originX').value=m.xOffsetM;$('originY').value=m.yOffsetM;
+  OPT_ENCARGO=null;autoguarda();
+  $('hint').textContent='Propuesta aplicada a los mandos · azimut '+m.panelAz+'° · origen X '+
+    m.xOffsetM.toFixed(3)+' m / Y '+m.yOffsetM.toFixed(3)+' m · '+
+    Math.round(m.kwp).toLocaleString('es-ES')+' kWp: pulsa Generar para verlo';
 });
 
 /* ═════════════════ CHECKLIST ANTES DE CONGELAR (§02.5i) ═════════════════
@@ -5476,12 +5312,12 @@ var SES_CAMPOS=['lat','lon','pw','ph','prot','parcelMode','geotxt','parcelName',
   'albedo','albedoT','slopeNs','slopeEw','demSrc','demN','demMargen','slopeMax',
   'pitch','setback','gcrObj','axis','panelAz','mode','bifila',
   'gapMod','gapMotor','gapNs','roadEvery','roadW','roadNsEvery','roadNsW','minStructs','rowOffset',
-  'gridFrom','gridTo','gridStep','render','calc','gateStrings','gateKwp',
+  'render','calc','gateStrings','gateKwp',
   /* v1.6.10: la lista se habia quedado VIEJA — los panes por montaje (v1.6.2+)
      y sus campos nuevos no se persistian y volvian a defaults al recargar */
   'pitchTrk','pitchFija','slopeTrkEw','slopeTrkNs','slopeFijaEw','slopeFijaNs',
   'tableFija','azRowsFija','mixMinArea','mixMinAreaFija','originX','originY'];
-var SES_CHECKS=['alignGrid','center','forceComplete','optAz','optGrid','demOff','demUse','orto','showDisc','showAxis','mixRellenoFija','originManual'];
+var SES_CHECKS=['alignGrid','center','forceComplete','demOff','demUse','orto','showDisc','showAxis','mixRellenoFija','originManual'];
 
 function estadoSesion(){
   var st={v:SES_V, guardada:null, campos:{}, checks:{}};
@@ -5515,7 +5351,6 @@ function aplicaSesion(st){
   $('paneRect').style.display=m==='rect'?'':'none';
   $('paneGeo').style.display=m==='geojson'?'':'none';
   $('paneDraw').style.display=m==='draw'?'':'none';
-  $('gridSweepBox').style.display=$('optGrid').checked?'':'none';
   if(m==='rect')buildParcel();
   pintaSitio();pintaBotonesDibujo();pintaParcelas();pintaCosteDem();tagParcel();
   if(DEM)aplicaDEM();
@@ -5525,7 +5360,6 @@ function aplicaSesion(st){
 }
 var _sesT=null;
 function autoguarda(){
-  if(window.LayoutSearchUI)window.LayoutSearchUI.check();
   if(_sesT)clearTimeout(_sesT);
   _sesT=setTimeout(function(){
     try{var st=estadoSesion();st.guardada=new Date().toISOString();
@@ -5871,7 +5705,5 @@ $('d3Btn').onclick=function(){
 loadPlants();syncAz();pintaBotonesDibujo();pintaCosteDem();buildParcel();encaja();draw();detectEngine();
 if(restauraSesion())encaja(),draw();
 </script>
-<script src="lib/layout-search.js"></script>
-<script src="lib/layout-search-ui.js"></script>
 </body>
 </html>

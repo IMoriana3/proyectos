@@ -6,47 +6,46 @@
 **Abre y genera**: `generador-layout.html` en este repo, sin levantar nada.
 El motor SolarGPT es opcional y da el número canónico.
 
-## Comparar implantaciones — piloto v1.9.1
+## Un único Optimizar — v1.10.0
 
-Dentro de **Implantación**, abre **Comparar implantaciones · piloto**. La búsqueda prueba
-desplazamientos X/Y de la rejilla, conservando orientación, pitch, tallas, setback, exclusiones
-y parámetros de viales. Los viales dibujados como exclusiones permanecen fijos; los viales
-automáticos siguen la misma regla de distribución del generador y se revisan en el mapa.
+En **Implantación**, pulsa **Optimizar**. Abre el buscador existente con la parcela y
+configuración actuales. Allí se reúnen azimut del eje, alineado/tresbolillo, origen X/Y y
+el barrido de ángulos. **Generar** ejecuta los valores del formulario sin lanzar otro barrido.
 
-1. Elige **Aleatorio** o **Aprendizaje**, y 16, 24 o 48 evaluaciones, incluida la referencia.
-2. **Comparar alternativas** calcula de nuevo la referencia y evalúa candidatos con el mismo
-   LAY.compute de esta página. Se conserva el mejor resultado observado que supera su QA.
-3. Compara módulos, mesas, kWp y puntuación, con su diferencia de capacidad instalada.
-   La tabla de parámetros muestra azimut del eje (seguidores), azimut de filas, pitch,
-   retranqueo, GCR y origen X/Y de referencia y propuesta. Si el motor aplica centrado
-   adicional, muestra también ese desplazamiento. Se destacan los valores modificados;
-   **Mesas por talla** explica el reparto de módulos. Estos datos viajan en el JSON.
-   **Ver propuesta** cambia solo la vista del mapa;
-   las salidas siguen representando la implantación actual hasta **Aplicar propuesta**.
-4. Al aplicar, el origen X/Y queda en **Parámetros avanzados** y en la sesión. **Generar**
-   reproduce la propuesta, y GeoJSON/DXF/KML/3D consumen el resultado aplicado.
-5. **Descargar comparación JSON** guarda input, semilla, versión, dominio, evaluaciones reales,
-   predicciones previas a cada evaluación y tiempos, incluyendo ajuste del modelo. Si cambias
-   el proyecto, la propuesta se invalida y hay que repetir la comparación.
+1. Elige **Aleatorio** (inicial), **Aprendizaje GP · experimental** o **Barrido de ángulos**.
+   En los dos primeros puedes fijar azimut, disposición u origen desmarcando cada variable.
+   El barrido recorre Desde/Hasta/Paso, con Hasta exclusivo, y conserva disposición/origen.
+2. Pulsa **Buscar**. Las 48, 128 o 256 evaluaciones incluyen la referencia exacta. **Pausar**
+   conserva lo evaluado; **Buscar** reinicia con la misma semilla visible. La referencia
+   participa en la elección: ningún candidato peor puede sustituirla.
+3. Compara módulos, mesas, kWp, factor solar e índice relativo. Las tablas muestran azimut
+   de eje y filas, disposición, pitch, retranqueo, GCR, origen y centrado adicional. El reparto
+   por tallas explica los módulos y mesas. **Ver referencia / Ver propuesta** cambia el mapa.
+4. **Aplicar al generador** envía los parámetros. Al volver, pulsa **Generar** para obtener
+   el layout y sus salidas. El origen se guarda con toda su precisión en campos y sesión.
+   Si cambia el proyecto durante la búsqueda, se rechaza la propuesta y hay que repetirla.
+5. **Descargar comparación** guarda configuración, semilla, opciones, candidato ganador,
+   ambas geometrías resumidas y la traza de evaluaciones/predicciones/tiempos. El tiempo
+   transcurrido incluye pausas; cada evaluación mide cálculo y ponderación solar.
 
-El aprendizaje ajusta un proceso gaussiano durante la búsqueda sobre ESTA parcela. No hay
-datos de campo adicionales ni un modelo físico nuevo. Su incertidumbre orienta qué probar;
-no es una probabilidad calibrada de seguridad o construibilidad. La puntuación es la ya usada
-por el motor: módulos con penalizaciones por tallas cortas, huérfanas, recortes y fragmentación.
+Todos los métodos usan el mismo **kWp × factor solar de orientación** del buscador.
+El factor usa el seguimiento de `sim-solar.html`, con cielo claro y referencia N-S;
+**no predice producción anual**, ni incorpora TMY, difusa, temperatura o suciedad.
+En fija se conserva orientación y se compara kWp. Sin modelo solar se bloquea el giro
+explícitamente. Se mantienen pitch, tallas, retranqueo, exclusiones y reglas de viales;
+los viales automáticos pueden cambiar de posición con el layout y se revisan en el mapa.
 
-**Aleatorio es la opción inicial.** El aprendizaje queda disponible para evaluación: todavía
-no ha demostrado una ventaja consistente frente a esa referencia. Las cifras del piloto son
-geometría/potencia instalada, no energía ni garantía de óptimo global. El motor de navegador
-sigue siendo el port con las tolerancias de paridad documentadas; el piloto no certifica
-igualdad de cada candidato con Python.
+El GP aprende durante esta búsqueda, con resultados del mismo motor geométrico. No requiere
+mediciones nuevas. Solo puede ganar un candidato calculado y con QA aceptado. **Sigue
+experimental:** no hay evidencia de ventaja consistente ni garantía de óptimo global.
+El banco histórico de offsets no valida la nueva búsqueda conjunta de cuatro variables.
+El port al navegador mantiene sus tolerancias documentadas frente al motor Python.
 
-Alcance: una parcela y un montaje. Mixto, varias parcelas y cálculo por API conservan sus rutas
-habituales y no pasan por este piloto. Tampoco se combina con el barrido de orientación. La
-regeneración por API no admite un origen explícito del piloto: usa Navegador o desactiva ese
-origen antes de solicitar el cálculo canónico. Detener actúa entre evaluaciones; una evaluación
-del motor que ya ha empezado termina antes de devolver el control.
+Alcance de Optimizar: una parcela y un montaje en navegador. Mixto, varias parcelas y API
+siguen disponibles en la generación habitual. La API no admite un origen explícito y lo
+rechaza visiblemente. Pausar actúa entre evaluaciones completas del motor.
 
-Benchmark y resultados: [AI_LAYOUT_PILOT__proyectos.md](audit/AI_LAYOUT_PILOT__proyectos.md).
+Evidencia: [AI_LAYOUT_PILOT__proyectos.md](audit/AI_LAYOUT_PILOT__proyectos.md).
 
 ---
 
@@ -225,14 +224,11 @@ cortos seguidos que ocupan más que un medio») convertida en luz roja.
 
 ## Barridos de orientación
 
-Las dos casillas que el cuaderno ofrece por separado —**«Optimizar azimuth (90–270)»** y
-**«Optimizar ángulo de grid»** con su rango y paso— son aquí el mismo motor, igual que en el core
-(`optimize_grid_angle` se llama a sí mismo con cada ángulo y se queda con el de más kWp).
-
-Cuesta lo que cuesta: son **N layouts completos**, no una fórmula. 36 ángulos ≈ 3 s, con barra de
-progreso y cediendo el hilo cada dos pasos para que la ficha no se congele. Al terminar, el azimut
-ganador **se escribe en el formulario** —enseñar un layout que no se corresponde con lo que dicen
-las casillas sería mentir— y el pie dice cuánto se gana frente al que tenías.
+El barrido se configura en **Optimizar → Barrido de ángulos**. Prueba cada azimut
+con el motor existente y compara con la referencia usando el mismo criterio de la búsqueda
+conjunta. Conserva disposición y origen, y permite ver y aplicar el resultado antes de generar.
+El presupuesto limita las evaluaciones; si el rango contiene más ángulos, aumenta el presupuesto.
+La función pura `LAY.barrido` sigue disponible para los bancos de paridad del motor.
 
 ## Exclusiones de línea
 
