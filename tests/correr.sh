@@ -213,7 +213,7 @@ declare -A PISO=(
   [test_index.js]=28
   [test_integridad.js]=7
   [test_layout_search.js]=22
-  [test_layout_search_ui.js]=21
+  [test_layout_search_ui.js]=28
   [test_layout.js]=201
   [test_layout_ui.js]=182
   # LOS LIENZOS A LA DENSIDAD DE LA PANTALLA. Un `<canvas>` con el búfer más

@@ -101,7 +101,9 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
   las ecuaciones geométricas, BT, difusa, batería, Plant ni identidad. La vista previa no cambia
   RES ni las salidas; aplicar guarda el origen explícito en los campos/sesión existentes.
   Alcance inicial: una parcela, un montaje, motor de navegador. Índice: solo versión, uso e
-  historial de la tarjeta del generador. SW v171 con los dos módulos locales en precaché.
+  historial de la tarjeta del generador. SW v172 con los dos módulos locales en precaché.
+  v1.9.1 muestra parámetros de cada resultado (azimuts, pitch, retranqueo, GCR y origen),
+  diferencias de capacidad y mesas por talla; también en el JSON. No cambia la búsqueda.
   El ML permanece experimental: el benchmark no acredita superioridad consistente frente a
   aleatorio. Evidencia y límites en docs/audit/AI_LAYOUT_PILOT__proyectos.md. Sin merge ni despliegue.
 

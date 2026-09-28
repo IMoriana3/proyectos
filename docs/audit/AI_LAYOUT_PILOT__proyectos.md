@@ -72,7 +72,7 @@ desarrollo; comparar contra aleatorio a igual presupuesto y tiempo; exigir mejor
 en calidad o tiempo sin regresión geométrica. Si no aparece esa ventaja, conservar la
 búsqueda simple. Winter, difusa y BT siguen siendo entregas posteriores dentro de sus HTML.
 
-## Verificación de esta entrega
+## Verificación de la entrega inicial v1.9.0
 
 | Arnés | Comprobaciones correctas |
 |---|---:|
@@ -103,3 +103,40 @@ del token en shell y del conjunto de clones/candados esperado. Se verificaron la
 el árbol, las ramas y el CI de proyectos con la conexión GitHub disponible. Ese resultado
 no acredita el censo global de otros repositorios. Entrega aislada para revisión, sin
 merge ni despliegue.
+
+## Revisión v1.9.1 — datos de la comparación
+
+La captura del usuario mostraba únicamente módulos, mesas, kWp y puntuación. Se
+reprodujo con el ejemplo Finca dibujada, método GP, 48 evaluaciones y semilla 20260928:
+
+| Parámetro | Referencia | Propuesta |
+|---|---:|---:|
+| Azimut del eje | 0° | 0° |
+| Azimut de filas | 90° | 90° |
+| Pitch | 6 m | 6 m |
+| Retranqueo | 5 m | 5 m |
+| Origen X | 0 m | +1,990095279 m |
+| Origen Y | 0 m | −0,727437145 m |
+| Mesas de 28 módulos | 1116 | 1124 |
+| Mesas de 14 módulos | 104 | 100 |
+| Mesas de 7 módulos | 80 | 72 |
+
+No cambia la orientación. El desplazamiento mejora la colocación: +112 módulos,
+−4 mesas y +70,56 kWp (+0,34 % de capacidad instalada). La tabla ampliada muestra
+azimuts, pitch, retranqueo, GCR y offsets evaluados; añade el centrado adicional
+cuando existe, destaca cambios y desglosa mesas por talla. Los mismos valores
+se incluyen en `report.comparison`. En fija no se muestra un eje de tracker.
+
+El origen de la referencia se obtiene de la evaluación, incluyendo el barrido
+automático o un origen manual previo; no se supone que siempre sea cero. El
+azimut se lee del resultado geométrico del motor, no de un campo declarado que
+pueda diferir de la colocación. No hay cambios en el optimizador ni en la física.
+
+El arnés de la UI pasa de 21 a **28 comprobaciones correctas**, incluyendo orientación
+no cardinal, origen manual, JSON descargado, desglose por talla, fija y ausencia de
+datos válidos. La validación de la búsqueda de v1.9.0 sigue siendo la de arriba;
+esta revisión no repite el benchmark porque el optimizador no se ha modificado.
+Además, integridad (7) y versiones (19) correctas: **54 comprobaciones ejecutadas
+en esta revisión**. Copia descargable v1.9.1 comprobada abriéndola como fichero
+local sin red: comparar 48 evaluaciones, mostrar parámetros, aplicar y regenerar
+la misma geometría, sin excepciones JavaScript. Tabla revisada visualmente a 320 px.

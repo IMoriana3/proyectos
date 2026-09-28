@@ -3,6 +3,7 @@ const {chromium}=require('playwright');
 const {EXEC}=require('./pw_navegador.js');
 const {cases}=require('./layout_search_cases.cjs');
 const assert=require('assert/strict');
+const fs=require('fs');
 const BASE=process.env.BASE||'http://localhost:8099';
 let ok=0;
 function check(n,v){assert.ok(v,n);ok++;console.log('OK   '+n);}
@@ -33,6 +34,27 @@ function check(n,v){assert.ok(v,n);ok++;console.log('OK   '+n);}
     check('la búsqueda produce una comparación de resultados reales',await page.locator('#aiResults').isVisible()&&await page.locator('#aiMetrics tr').count()===4);
     check('comparar no cambia los parámetros del proyecto',await page.evaluate(()=>JSON.stringify(readCfg()))===fixed);
     check('el caso de parcela existente encuentra una mejora',!(await page.locator('#aiApply').isDisabled()));
+    const row=async key=>page.locator('#aiDesign tr[data-key="'+key+'"] td').allTextContents();
+    check('la comparación muestra ambos azimuts conservados',
+      (await row('axisAz')).slice(1).join('|')==='0,00|0,00'&&
+      (await row('panelAz')).slice(1).join('|')==='90,00|90,00');
+    const [download]=await Promise.all([page.waitForEvent('download'),page.click('#aiExport')]);
+    const report=JSON.parse(fs.readFileSync(await download.path(),'utf8'));
+    const bestTrace=report.trace[report.bestIteration];
+    check('los offsets mostrados y exportados son los evaluados, no valores por defecto',
+      report.comparison.reference.xOffsetM===report.trace[0].xOffsetM&&
+      report.comparison.proposal.xOffsetM===bestTrace.xOffsetM&&
+      report.comparison.proposal.yOffsetM===bestTrace.yOffsetM&&
+      (await row('xOffsetM'))[2]===bestTrace.xOffsetM.toLocaleString('es-ES',{minimumFractionDigits:3,maximumFractionDigits:3})&&
+      (await row('yOffsetM'))[2]===bestTrace.yOffsetM.toLocaleString('es-ES',{minimumFractionDigits:3,maximumFractionDigits:3}));
+    check('se declaran los parámetros que cambian y la ganancia de capacidad',
+      /Cambian: Origen X \(m\), Origen Y \(m\)/.test(await page.textContent('#aiChanges'))&&
+      /\+112 módulos · -4 mesas · \+70,56 kWp \(\+0,34 %\)/.test(await page.textContent('#aiGain')));
+    check('el desglose por talla explica módulos y mesas de ambos resultados',
+      [report.comparison.reference,report.comparison.proposal].every(s=>
+        Object.entries(s.bySize).reduce((v,[size,n])=>v+Number(size)*n,0)===s.modules&&
+        Object.values(s.bySize).reduce((v,n)=>v+n,0)===s.structures)&&
+      (await page.locator('#aiSizes tr[data-key="size-28"] td').allTextContents()).slice(1).join('|')==='1116|1124');
     const baseline=await page.evaluate(()=>JSON.stringify(LAY.toGeoJSON(RES)));
     await page.click('#aiViewBest');
     check('la vista previa no cambia el layout exportable',await page.evaluate(()=>JSON.stringify(LAY.toGeoJSON(RES)))===baseline);
@@ -82,6 +104,20 @@ function check(n,v){assert.ok(v,n);ok++;console.log('OK   '+n);}
     check('ninguna geometría válida se declara y no sustituye el layout aceptado',
       /ninguna implantación supera/.test(await page.textContent('#aiStatus'))&&await page.isDisabled('#aiApply')&&
       await page.isDisabled('#aiViewBase')&&await page.evaluate(()=>JSON.stringify(LAY.toGeoJSON(RES)))===accepted);
+    check('sin resultados válidos la comparación no inventa ángulos ni ganancias',
+      (await row('panelAz')).slice(1).join('|')==='—|—'&&/Sin dos resultados válidos/.test(await page.textContent('#aiGain')));
+    await page.evaluate(()=>{$('pitchTrk').value=6;$('axis').value=27.5;syncAz();
+      $('originManual').checked=true;$('originX').value=1.125;$('originY').value=-0.375;$('aiBudget').value=16;});
+    await page.click('#aiRun');await page.waitForFunction(()=>!$('aiRun').disabled,{timeout:30000});
+    check('una orientación distinta y un origen manual se muestran desde la referencia real',
+      (await row('axisAz')).slice(1).join('|')==='27,50|27,50'&&
+      (await row('panelAz')).slice(1).join('|')==='117,50|117,50'&&
+      (await row('xOffsetM'))[1]==='1,125'&&(await row('yOffsetM'))[1]==='-0,375');
+    await page.evaluate(()=>{$('mount').value='fija';syncAz();$('pitchFija').value=6;
+      $('azRowsFija').value=201.25;$('originManual').checked=false;});
+    await page.click('#aiRun');await page.waitForFunction(()=>!$('aiRun').disabled,{timeout:30000});
+    check('en fija se muestra el azimut de sus paneles y no se inventa un eje de seguidor',
+      (await row('panelAz')).slice(1).join('|')==='201,25|201,25'&&await page.locator('#aiDesign tr[data-key="axisAz"]').count()===0);
     console.log('\n'+ok+' OK · 0 FALLOS');
   }finally{await browser.close();}
 })().catch(e=>{console.error('FAIL '+e.stack);process.exitCode=1;});

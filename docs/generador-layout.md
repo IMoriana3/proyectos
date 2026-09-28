@@ -6,7 +6,7 @@
 **Abre y genera**: `generador-layout.html` en este repo, sin levantar nada.
 El motor SolarGPT es opcional y da el número canónico.
 
-## Comparar implantaciones — piloto v1.9.0
+## Comparar implantaciones — piloto v1.9.1
 
 Dentro de **Implantación**, abre **Comparar implantaciones · piloto**. La búsqueda prueba
 desplazamientos X/Y de la rejilla, conservando orientación, pitch, tallas, setback, exclusiones
@@ -16,7 +16,12 @@ automáticos siguen la misma regla de distribución del generador y se revisan e
 1. Elige **Aleatorio** o **Aprendizaje**, y 16, 24 o 48 evaluaciones, incluida la referencia.
 2. **Comparar alternativas** calcula de nuevo la referencia y evalúa candidatos con el mismo
    LAY.compute de esta página. Se conserva el mejor resultado observado que supera su QA.
-3. Compara módulos, mesas, kWp y puntuación. **Ver propuesta** cambia solo la vista del mapa;
+3. Compara módulos, mesas, kWp y puntuación, con su diferencia de capacidad instalada.
+   La tabla de parámetros muestra azimut del eje (seguidores), azimut de filas, pitch,
+   retranqueo, GCR y origen X/Y de referencia y propuesta. Si el motor aplica centrado
+   adicional, muestra también ese desplazamiento. Se destacan los valores modificados;
+   **Mesas por talla** explica el reparto de módulos. Estos datos viajan en el JSON.
+   **Ver propuesta** cambia solo la vista del mapa;
    las salidas siguen representando la implantación actual hasta **Aplicar propuesta**.
 4. Al aplicar, el origen X/Y queda en **Parámetros avanzados** y en la sesión. **Generar**
    reproduce la propuesta, y GeoJSON/DXF/KML/3D consumen el resultado aplicado.

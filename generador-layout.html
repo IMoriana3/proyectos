@@ -160,6 +160,9 @@ canvas.panning{cursor:grabbing}
 #aiResults table{width:100%;border-collapse:collapse;table-layout:fixed;font:12px/1.45 var(--sans);margin:10px 0}
 #aiResults th,#aiResults td{padding:7px 4px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
 #aiResults th:first-child,#aiResults td:first-child{width:36%;text-align:left}
+#aiResults .aiChanged td:last-child{font-weight:600;background:color-mix(in srgb,var(--accent) 12%,transparent)}
+#aiResults .tip{font:12px/1.5 var(--sans);color:var(--muted);margin:8px 0}
+#aiGain,#aiChanges{color:var(--text)}
 #aiStatus,#aiViewStatus{font:12px/1.5 var(--sans);text-transform:none;letter-spacing:0}
 #aiProgress{accent-color:var(--accent)}
 </style>
@@ -174,7 +177,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.9.0</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.9.1</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -465,9 +468,20 @@ canvas.panning{cursor:grabbing}
           <p class="tag" id="aiStatus" role="status" aria-live="polite">Sin ejecutar · se conserva la implantación actual si no mejora.</p>
           <progress id="aiProgress" max="24" value="0" style="width:100%;display:none" aria-label="Progreso de la búsqueda"></progress>
           <div id="aiResults" hidden>
-            <table aria-label="Comparación de implantaciones"><thead><tr><th>Resultado</th><th>Actual</th><th>Propuesta</th></tr></thead>
+            <table aria-label="Comparación de implantaciones"><thead><tr><th>Resultado</th><th>Referencia</th><th>Propuesta</th></tr></thead>
               <tbody id="aiMetrics"></tbody></table>
-            <div class="btnrow"><button class="btn ghost small" id="aiViewBase">Ver actual</button>
+            <p class="note" id="aiGain"></p>
+            <table aria-label="Parámetros de referencia y propuesta"><thead><tr><th>Parámetro</th><th>Referencia</th><th>Propuesta</th></tr></thead>
+              <tbody id="aiDesign"></tbody></table>
+            <p class="note" id="aiChanges"></p>
+            <p class="tip">Azimuts respecto al norte geográfico: N 0°, E 90°, S 180°, O 270°. En seguidores, filas = eje + 90°.
+              X es longitudinal a las mesas/trackers y Y es transversal, en su marco local; son desplazamientos de la rejilla antes del centrado.</p>
+            <details class="adv" id="aiSizesDetail"><summary>Mesas por talla</summary><div class="body">
+              <table aria-label="Mesas por número de módulos"><thead><tr><th>Talla</th><th>Referencia</th><th>Propuesta</th></tr></thead>
+                <tbody id="aiSizes"></tbody></table>
+              <p class="tip">La búsqueda puede colocar más módulos con menos mesas si aprovecha mejor las tallas grandes.</p>
+            </div></details>
+            <div class="btnrow"><button class="btn ghost small" id="aiViewBase">Ver referencia</button>
               <button class="btn ghost small" id="aiViewBest" disabled>Ver propuesta</button>
               <button class="btn small" id="aiApply" disabled>Aplicar propuesta</button></div>
             <p class="tag" id="aiViewStatus">El mapa y las salidas muestran la implantación actual.</p>
