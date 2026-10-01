@@ -158,6 +158,7 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
   <h1>Comparador de estructuras</h1>
   <span class="sub">¿fija o seguidor en <b>este</b> sitio?</span>
   <span class="engine off" id="engine"><span class="led"></span><span id="engineTxt">detectando motor…</span></span>
+  <span class="sn" id="verlbl"></span>
   <span class="brand">FACTIUN</span>
 </div>
 
@@ -560,6 +561,14 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
 <script src="seguidor.js"></script>
 <script>
 "use strict";
+/* LA VERSIÓN LA DECLARA LA APP, no su tarjeta del Panel. Hasta hoy el número
+   del comparador vivía SÓLO en la tarjeta —un libro de versiones propio, sin
+   contrapartida aquí— y el careo de versiones lo decía midiéndolo: «el número
+   NO aparece en la app». Con esto el Panel lo LEE de aquí y la tarjeta deja de
+   poder decir una cosa mientras la ficha es otra, que es el defecto que ese
+   careo existe para cazar. El formato es el de la casa (`const VER` a
+   principio de línea) porque es el que lee `VER_RE_APP`. */
+const VER='v1.66';
 function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function fmt(v,d){return (v==null||!isFinite(v))?'—':(+v).toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d});}
@@ -4958,6 +4967,7 @@ function avanzaHora(dt){
 }
 
 /* ===================== ARRANQUE ===================== */
+$('verlbl').textContent='comparador-estructuras.html '+VER;
 pintaEstructuras(); loadPlants(); refrescaGeom(); detectEngine();
 /* El catálogo se pide la PRIMERA VEZ que alguien toca la tarjeta de Equipos.
    Bajarlo al abrir sería castigar con 3 MB a quien viene solo a comparar

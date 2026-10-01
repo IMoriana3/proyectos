@@ -159,6 +159,12 @@ const CAREABLES = [
     repo: 'cobertura-zigbee', fichero: 'overcast.html' },
   { url: 'https://imoriana3.github.io/cobertura-zigbee/backtracking.html',
     repo: 'cobertura-zigbee', fichero: 'backtracking.html' },
+  /* El comparador entra el 2026-10-01: hasta ese día su tarjeta llevaba un
+     libro de versiones PROPIO —«1.58», que no aparecía en ninguna parte del
+     fichero— y fue este mismo arnés quien lo midió y lo dejó dicho. Ahora la
+     ficha declara `const VER`, así que puede carearse como las otras dos. */
+  { url: 'https://imoriana3.github.io/proyectos/comparador-estructuras.html',
+    repo: 'proyectos', fichero: 'comparador-estructuras.html' },
 ];
 
 const publicadas = (CARDS || []).filter(p => p.url && /imoriana3\.github\.io/.test(p.url));
@@ -192,11 +198,18 @@ console.log('     ── cobertura: ' + CAREABLES.length + ' de ' + publicadas.l
        persona, puede comprobarlo contra el fichero;
      · la tarjeta no escribe número.
 
-   Encontrado al medir la cobertura: `sim-viento.html` no contiene «1.26» y
-   `comparador-estructuras.html` no contiene «1.58». No es que el número sea
+   Encontrado al medir la cobertura: `sim-viento.html` no contenía «1.26» y
+   `comparador-estructuras.html` no contenía «1.58». No es que el número fuese
    falso —cada uno es consecuente con el historial de SU tarjeta— es que su
-   única fuente es la tarjeta. Se DECLARA con su tamaño; arreglarlo es hacer
-   que esas apps declaren `VER`, y eso no se hace inventando el número. */
+   única fuente era la tarjeta. Se DECLARA con su tamaño; arreglarlo es hacer
+   que esas apps declaren `VER`, y eso no se hace inventando el número.
+
+   EL COMPARADOR YA LO HACE (2026-10-01): declara `VER`, su tarjeta pasa a
+   `verEnApp` y entra arriba, en CAREABLES. Las siete versiones que se le
+   habían ido sin registrar se apuntaron en su historial en vez de saltar de
+   1.58 a un número redondo — el desfase empezó el 2026-08-28 y nadie se
+   enteró en cinco semanas, que es exactamente lo que este arnés existe para
+   que no vuelva a pasar. `sim-viento.html` sigue sin declararla. */
 const AQUI_URL = 'https://imoriana3.github.io/proyectos/';
 let sinRastro = 0, conRastro = 0, noMirables = 0;
 for (const p of sinCarear) {
