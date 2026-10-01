@@ -1371,6 +1371,57 @@ Un job declarado como informativo (`continue-on-error` a nivel de job) se deja
 no es un aviso. Y meterlo en el `if` sería una puerta de mentira, porque su
 `result` es `success` aunque falle.
 
+### 5 bis · El NOMBRE que la protección de rama carea (2026-10-01)
+
+Una puerta agregadora no sirve de nada si al declararla obligatoria se escribe
+mal su nombre, y ese nombre **no es el que la web enseña**.
+
+La lista de checks de una PR muestra `workflow / job` — en `Proyectos`,
+`arneses / navegador`. Pero lo que la protección de rama carea es el nombre del
+**check run**, que es el del **job**:
+
+```
+navegador          ← esto es lo que hay que escribir
+arneses / navegador   ← esto NO existe como check
+```
+
+Comprobado por las dos puntas, que es como se comprueba un nombre:
+
+- en `.github/workflows/arneses.yml`, `name: arneses` (línea 17) y el job
+  `navegador:` (línea 48);
+- y la API de checks de una PR devuelve `check_runs[].name = "navegador"`.
+
+**POR QUÉ ESTE ERROR ES DE LOS CAROS.** Un check obligatorio que no existe no
+da un error de configuración: se queda *esperando*. Todas las PR del repo
+quedan bloqueadas con un «Expected — Waiting for status to be reported» que no
+nombra la causa, y la rama **parece** mejor protegida que nunca. Es la séptima
+lección de este documento —EL VACÍO SE LEE COMO NORMAL— aplicada al ajuste en
+vez de al banco: no falla, calla.
+
+**LO QUE NO PUEDE SER OBLIGATORIO, y conviene saberlo antes de buscarlo.** Un
+workflow que sólo corre en `push` a `main` no produce ningún check en una PR,
+así que no puede exigirse. En `Proyectos` es el caso de `pages`, y es a
+propósito: lo publicado se vigila DESPUÉS del merge, porque su espera de diez
+minutos a que Pages despliegue no es un defecto y cobrársela a cada rama sería
+un peaje. Una puerta que mide lo PUBLICADO no puede vivir en la puerta que mide
+el COMMIT.
+
+**«Require branches to be up to date»: tiene coste y aquí se gana.** Obliga a
+actualizar cada PR cuando `main` se mueve. A cambio caza el fallo que ninguna
+otra cosa caza: el 2026-10-01, una rama puso en verde su propia copia mientras
+rompía un guard que vivía en `main` —`test_granizo_pestana.js` exigía que la
+pestaña de Nieve fuera un botón DESACTIVADO, y la rama la había llenado—. La
+puerta local salió verde porque el guard viejo no estaba en esa copia. Con esta
+casilla puesta, eso no llega a `main` sin verse.
+
+**Y LA DEBILIDAD DE ESTE APARTADO, dicha.** Este ajuste **no vive en el repo**:
+no hay fichero que lo contenga ni arnés que lo compruebe, porque leerlo pide una
+llamada autenticada de administrador que la CI no tiene. Así que esta sección es
+prosa sobre un estado que puede cambiar sin que nadie se entere — exactamente la
+clase de número copiado a mano que el §6 persigue. Queda dicho en vez de
+tapado: **si alguien quita el check obligatorio, este documento seguirá
+afirmando que está puesto.**
+
 ---
 
 ## 6 · Inventario (2026-09-23)
