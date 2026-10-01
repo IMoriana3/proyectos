@@ -688,25 +688,33 @@
           <tr><td>activa</td><td class="t">espesor &gt; 10 cm</td></tr>
           <tr><td>desactiva</td><td class="t">espesor &lt; 2 cm</td></tr>
           <tr><td>posición de defensa</td><td class="t">55° E o W</td></tr>
-          <tr><td>qué lado</td><td class="t">el más cercano</td></tr>
+          <tr><td>qué lado · documento</td><td class="t">el más cercano a la mesa</td></tr>
+          <tr><td>qué lado · <b>esta ficha</b></td><td class="t"><b>como el viento: el del sol</b></td></tr>
           <tr><td>prioridad</td><td class="t">3.ª · pierde contra el viento</td></tr>
         </tbody></table>
         <p class="note">La banda es <b>ancha a propósito</b>: entre 2 y 10 cm el estado se
           <b>sostiene</b>, así que una nevada que oscile alrededor de un solo umbral no mete y
           saca a la flota. Y <b>no hay temporizador de vuelta</b> como en el viento — aquí
           decide el espesor, no el reloj.</p>
-        <p class="note" style="margin-bottom:0">El lado lo elige la cercanía, y eso <b>no es
-          ninguna</b> de las cuatro estrategias de la pestaña de viento: las A eligen por el
-          rumbo del viento y las B por el sol. Ante una amenaza lo que se minimiza es el
-          <b>tiempo</b> hasta estar defendido.</p>
+        <p class="note" style="margin-bottom:0"><b>Aquí la ficha se separa del documento, a
+          propósito.</b> El documento pide el lado más cercano <b>a la mesa</b>; esta ficha usa
+          el más cercano <b>al sol</b>, con la regla de mediodía — la misma que las estrategias
+          <b>B</b> de viento. Lo decidió el mantenedor: la nieve debe comportarse como el viento.
+          Y <b>tiene un coste</b>, que se enseña al lado en vez de dejarlo invisible: la regla de
+          mediodía manda al oeste una mesa casi plana, o sea que a veces pide <b>más</b>
+          recorrido que el lado de al lado.</p>
       </div>
 
       <div class="card">
         <h2>◉ El sensor <span class="sn" id="nEstadoVivo">—</span></h2>
         <div class="field"><label>Espesor medido <span id="nCmLbl">0 cm</span></label>
           <input id="nCm" type="range" min="0" max="25" step="0.5" value="0"></div>
-        <div class="field"><label>Dónde está la mesa al activarse <span id="nThLbl">0°</span></label>
-          <input id="nTh" type="range" min="-55" max="55" step="1" value="0"></div>
+        <div class="field"><label>Hora del sitio <span id="nThLbl">12:00</span></label>
+          <input id="nTh" type="range" min="0" max="1435" step="5" value="720"></div>
+        <p class="note" style="margin-top:0;margin-bottom:6px">El lado lo decide <b>el sol</b>, no
+          dónde esté la mesa, así que lo que hay que poder mover es la hora. La mesa está donde
+          el seguimiento la tenga a esa hora — fecha y emplazamiento, los de la pestaña de
+          viento.</p>
         <div id="nSalida"></div>
       </div>
     </div>
@@ -1015,17 +1023,14 @@ LOC.ordenEnElEje=function(orden,dtS,lat){
    posible. Y no es la medida de campo que pide el informe: es lo que sale de
    la cadena declarada. Sirve para saber si el número tecleado se queda corto,
    no para sustituir el ensayo. */
-/* EL LADO MÁS CERCANO, que es la regla de la planta y NO la de ninguna de las
-   cuatro estrategias canónicas de esta ficha.
+/* EL LADO MÁS CERCANO A LA MESA. Es lo que dice LITERALMENTE el documento de
+   planta —«55° E or W indistinctly, whichever is closer to the tracker position
+   at the moment of activation»— y NO es lo que esta ficha aplica.
 
-   Las A eligen el lado por el RUMBO DEL VIENTO y las B por el SOL. El criterio
-   del documento de planta es otro: «55° E or W indistinctly, whichever is
-   closer to the tracker position at the moment of activation». O sea, el que
-   menos recorrido pida desde donde esté la mesa.
-
-   Y tiene sentido operativo, que es lo que lo hace creíble: ante una amenaza lo
-   que se minimiza es el TIEMPO hasta estar defendido, no la orientación
-   respecto al viento ni al sol. Es la misma cuenta que el T_necesario.
+   SE CONSERVA A PROPÓSITO, aunque no decida nada: sirve de CONTRASTE. La
+   pestaña de nieve enseña al lado lo que habría costado esta regla, porque la
+   que sí se aplica —la del sol, ver abajo— a veces cuesta más recorrido, y ese
+   coste no debería quedar invisible.
 
    El empate —mesa en 0°— lo resuelve la propia palabra del documento:
    «indistinctly». Se toma el positivo y queda dicho que es arbitrario, no
@@ -1046,6 +1051,28 @@ LOC.ladoMasCercano=function(theta,full){
 
    `prev` es el estado anterior, y es lo que convierte esto en histéresis de
    verdad: sin él, un valor de 5 cm no se podría resolver. */
+/* EL LADO QUE SÍ SE APLICA, Y LA DIVERGENCIA CON EL DOCUMENTO, DICHA.
+
+   El documento de planta pide el lado más cercano A LA MESA. Esta ficha aplica
+   el más cercano AL SOL con la regla de mediodía — la misma que las estrategias
+   B de viento, `noonFlip`: si el sol mandaría al este pero la consigna está
+   entre 0° y el límite, se va al oeste.
+
+   NO ES UN DESCUIDO NI UNA INTERPRETACIÓN: lo decidió el mantenedor, que es
+   quien conoce la planta, al decir que la nieve debe comportarse como el
+   viento. Queda escrito porque dentro de un año alguien va a comparar la ficha
+   con el documento y va a encontrar dos reglas distintas; que la diferencia
+   esté explicada es la diferencia entre una decisión y un defecto.
+
+   Y TIENE UN COSTE QUE SE PUEDE MEDIR: la regla de mediodía manda al oeste una
+   mesa que está casi plana, o sea que a veces pide MÁS recorrido que ir al lado
+   de al lado. La pestaña enseña los dos números para que ese coste se vea en
+   segundos y no se discuta de memoria. */
+LOC.ladoNieve=function(azSolar,consigna,noonLim,full){
+  var sg=LOC.noonFlip(LOC.sign(azSolar),consigna,noonLim);
+  return sg*Math.abs(+full||0);
+};
+
 LOC.NIEVE_ON_CM=10;
 LOC.NIEVE_OFF_CM=2;
 LOC.nieveEstado=function(cm,prev){
@@ -6551,54 +6578,72 @@ $('tabNieve').onclick = function () { gTab('nieve'); };
 var NIEVE_PREV = 'SEGUIMIENTO';
 
 function nPinta() {
-  var cm = +$('nCm').value, th = +$('nTh').value;
+  var cm = +$('nCm').value, min = +$('nTh').value;
   $('nCmLbl').textContent = fmt(cm, 1) + ' cm';
-  $('nThLbl').textContent = fmt(th, 0) + '\u00b0';
+  $('nThLbl').textContent = hhmm(min);
+
+  /* EL SOL, POR EL MISMO CAMINO QUE EL PANEL EN VIVO. Fecha y emplazamiento se
+     toman de la pestaña de viento: dos fuentes para el mismo sitio acabarían
+     divergiendo, y entonces el lado dependería de qué pestaña miras. */
+  var latR = (+$('lat').value) * LOC.D2R, lon = +$('lon').value;
+  var when = new Date(U(fechaLive().getTime() + min * 60000));
+  var P = LOC.sun(when, latR, lon);
+  var full = +$('maxang').value || 55;
+  var tgt = LOC.theta(P.el, P.az, +$('gcr').value, full, $('bt').checked);
+  var noon = +$('noon').value || 0;
 
   var est = LOC.nieveEstado(cm, NIEVE_PREV);
   var entra = (est === 'NIEVE' && NIEVE_PREV !== 'NIEVE');
   NIEVE_PREV = est;
   var enBanda = (cm >= LOC.NIEVE_OFF_CM && cm <= LOC.NIEVE_ON_CM);
 
-  $('nEstadoVivo').textContent = est;
-  var defensa = LOC.ladoMasCercano(th, +$('maxang').value || 55);
+  $('nEstadoVivo').textContent = est + (P.el > 0 ? '' : ' · de noche');
+  var defensa = LOC.ladoNieve(P.azp, tgt, noon, full);
+  var cercano = LOC.ladoMasCercano(tgt, full);
+  var recSol = Math.abs(defensa - tgt), recCerca = Math.abs(cercano - tgt);
 
   var h = '<table class="crono"><tbody>' +
     '<tr><td>estado</td><td class="t" style="color:' +
       (est === 'NIEVE' ? 'var(--warn)' : 'var(--ok)') + '"><b>' + est + '</b></td></tr>' +
+    '<tr><td>la mesa, siguiendo</td><td class="t">' + fmt(tgt, 0) + '\u00b0</td></tr>' +
     '<tr><td>consigna</td><td class="t">' +
       (est === 'NIEVE' ? fmt(defensa, 0) + '\u00b0' : 'seguimiento') + '</td></tr>' +
     '</tbody></table>';
 
-  /* LA BANDA, DICHA CUANDO SE ESTÁ DENTRO. Es donde el estado NO lo decide el
-     valor sino lo que había antes, y eso en pantalla se lee como un fallo si
-     no se explica: el mismo número puede dar dos estados distintos. */
   if (enBanda)
     h += '<p class="note" style="color:var(--warn)"><b>Dentro de la banda</b> (' +
       LOC.NIEVE_OFF_CM + '\u201310 cm): aqu\u00ed el estado <b>no lo decide este n\u00famero</b>, lo ' +
       'decide el que hab\u00eda antes. Con el mismo espesor la flota puede estar plegada o ' +
       'siguiendo, seg\u00fan por d\u00f3nde haya venido. No es una indefinici\u00f3n: es lo que impide ' +
       'que una nevada que ronde un umbral meta y saque a la flota.</p>';
-  if (est === 'NIEVE')
-    h += '<p class="note">Se pliega a <b>' + fmt(defensa, 0) + '\u00b0</b> porque la mesa estaba en ' +
-      fmt(th, 0) + '\u00b0 y ese es el lado m\u00e1s cercano' +
-      (th === 0 ? ' \u2014 con la mesa en 0\u00b0 hay EMPATE, y lo resuelve la palabra del documento: ' +
-        '<i>indistinctly</i>. Que salga el positivo es convenio de esta ficha, no deducci\u00f3n.' : '.') +
-      '</p>';
+
+  /* EL COSTE DE LA REGLA, EN GRADOS. Cuando el lado del sol no es el lado de al
+     lado, la diferencia es recorrido de más — y recorrido de más es tiempo de
+     más hasta estar defendida. Se enseña siempre que difieran, no sólo cuando
+     el número queda bonito. */
+  if (est === 'NIEVE' && Math.abs(defensa - cercano) > 1e-9)
+    h += '<p class="note" style="color:var(--warn)"><b>Aqu\u00ed las dos reglas no coinciden.</b> ' +
+      'Por el sol se va a ' + fmt(defensa, 0) + '\u00b0 \u2014' + fmt(recSol, 0) + '\u00b0 de recorrido\u2014; ' +
+      'el documento habr\u00eda ido a ' + fmt(cercano, 0) + '\u00b0, que son ' + fmt(recCerca, 0) + '\u00b0. ' +
+      '<b>' + fmt(recSol - recCerca, 0) + '\u00b0 de m\u00e1s</b>, o sea ' +
+      fmt((recSol - recCerca) / LOC.SLEW, 0) + ' s m\u00e1s tarde defendida. Es el precio de que ' +
+      'la nieve se comporte como el viento, y se paga a mediod\u00eda.';
+  else if (est === 'NIEVE')
+    h += '<p class="note">A esta hora <b>las dos reglas coinciden</b>: el lado del sol es tambi\u00e9n ' +
+      'el m\u00e1s cercano a la mesa, as\u00ed que la diferencia no cuesta nada.</p>';
   if (entra)
-    h += '<p class="note">\u2191 Acaba de <b>entrar</b> en nieve. La consigna se fija con la posici\u00f3n ' +
-      'que ten\u00eda <b>en ese instante</b>: moverla despu\u00e9s no cambia el lado, y por eso este ' +
-      'control dice \u00abd\u00f3nde est\u00e1 la mesa AL ACTIVARSE\u00bb.</p>';
+    h += '<p class="note">\u2191 Acaba de <b>entrar</b> en nieve.</p>';
+  if (P.el <= 0)
+    h += '<p class="note">Con el <b>sol bajo el horizonte</b> el lado del sol deja de significar ' +
+      'lo que significa de d\u00eda. El documento no dice qu\u00e9 hacer de noche con la nieve, y el ' +
+      '<b>modo noche</b> de su tabla ven\u00eda sin valores. Queda dicho: esto es extrapolaci\u00f3n.</p>';
   $('nSalida').innerHTML = h;
 
-  // el tiempo hasta estar defendida, con el ángulo que acaba de salir
-  var T = LOC.tNecesario(tnecLeeCadena(),
-    Math.abs(defensa - th), LOC.SLEW);
+  var T = LOC.tNecesario(tnecLeeCadena(), recSol, LOC.SLEW);
   $('nTnec').innerHTML = tnecTabla(T, !$('lat_on').checked) +
-    '<p class="note" style="margin-bottom:0">Recorrido <b>real</b>, no el peor caso: desde ' +
-    fmt(th, 0) + '\u00b0 hasta ' + fmt(defensa, 0) + '\u00b0. El peor caso de esta planta es venir del ' +
-    'extremo contrario, ' + fmt(LOC.recorridoPeor(defensa, +$('maxang').value || 55), 0) +
-    '\u00b0, y la regla del lado m\u00e1s cercano existe precisamente para que eso no pase.</p>';
+    '<p class="note" style="margin-bottom:0">Recorrido <b>real</b> a esta hora: de ' +
+    fmt(tgt, 0) + '\u00b0 a ' + fmt(defensa, 0) + '\u00b0. El peor caso de esta planta \u2014venir del ' +
+    'extremo contrario\u2014 son ' + fmt(LOC.recorridoPeor(defensa, full), 0) + '\u00b0.</p>';
 }
 ['nCm', 'nTh'].forEach(function (i) { if ($(i)) $(i).addEventListener('input', nPinta); });
 

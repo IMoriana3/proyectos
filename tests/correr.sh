@@ -279,7 +279,40 @@ declare -A PISO=(
   # cambia el recorrido y tumba también el check del tiempo; y en U4 conté de
   # más porque la línea del peor caso se pinta aparte y no se mueve. Predecir
   # bien pide mirar qué más toca cada mutante, no sólo a qué apunta.
-  [test_amenaza_maniobra.js]=38
+  #
+  # SUBIDO A 42: EL LADO DE LA NIEVE NO ES EL DEL DOCUMENTO, y eso hay que
+  # vigilarlo con más cuidado que si lo fuera.
+  #
+  # El documento de planta pide «whichever is closer to the tracker position».
+  # La ficha aplica el lado del SOL con la regla de mediodía —la de las
+  # estrategias B de viento— porque lo decidió el mantenedor: la nieve debe
+  # comportarse como el viento. No es interpretación mía y por eso va escrito en
+  # la ficha, en la pestaña y aquí: dentro de un año alguien comparará las dos
+  # cosas y encontrará reglas distintas.
+  #
+  # LO QUE CUESTA, MEDIDO, porque una decisión sin su precio no se puede
+  # discutir: la regla de mediodía manda al oeste una mesa casi plana, así que a
+  # veces pide más recorrido. A las 11:30 son 63° frente a 47° — 17° de más, o
+  # sea 98 s más tarde defendida. La pestaña lo enseña siempre que difieran.
+  #
+  # MUTANTES, predicciones antes de medir. Dos de cuatro:
+  #
+  #   V1 quitar la regla de mediodía ......... predije 3 · mata 3 ✓
+  #   V2 el lado del sol, invertido .......... predije 4 · mata 8
+  #   V3 no enseñar el coste cuando difieren . predije 2 · mata 2 ✓
+  #   V4 volver al lado del documento ........ predije 4 · mata 2
+  #
+  # V4 ES EL HALLAZGO, y no por el número: ignorar la corrección del mantenedor
+  # y volver a la regla del documento sólo pone rojas DOS comprobaciones, porque
+  # las dos reglas COINCIDEN casi todo el día. La diferencia sólo existe en la
+  # ventana de mediodía. Un banco que probara horas al azar la vería una de cada
+  # tantas; por eso el fixture conduce las 11:30 a propósito y no una hora
+  # bonita. Cuando dos reglas se parecen, el banco tiene que ir A BUSCAR dónde
+  # se separan.
+  #
+  # V2: predije 4 y mata 8 — el mismo vicio de la tanda anterior, no contar el
+  # solape. Invertir el lado tumba también todas las comprobaciones de pantalla.
+  [test_amenaza_maniobra.js]=42
   [test_granizo_traza.mjs]=30
   # 18 -> 28: el Panel dejo de COPIAR la version de las apps y pasa a LEERLA
   # del fichero de la app, asi que hay tres estados nuevos que pintar y los

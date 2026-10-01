@@ -214,16 +214,18 @@ const cerca = (a, b, tol) => Number.isFinite(a) && Math.abs(a - b) <= tol;
         /calibra el cero/i.test(N.sinSaber));
 
   // EL RECORRIDO DE LA HISTÉRESIS, que es la comprobación central.
-  const paso = (cm, th) => page.evaluate(([cm, th]) => {
+  // `nTh` pasó de ser un ángulo a ser la HORA: el lado lo decide el sol, así
+  // que lo que hay que poder mover es el reloj y no la mesa.
+  const paso = (cm, min) => page.evaluate(([cm, min]) => {
     const c = document.getElementById('nCm'), t = document.getElementById('nTh');
-    if (th != null) { t.value = String(th); t.dispatchEvent(new Event('input', { bubbles: true })); }
+    if (min != null) { t.value = String(min); t.dispatchEvent(new Event('input', { bubbles: true })); }
     c.value = String(cm); c.dispatchEvent(new Event('input', { bubbles: true }));
     return { est: document.getElementById('nEstadoVivo').textContent.trim(),
              txt: document.getElementById('nSalida').textContent.replace(/\s+/g, ' '),
              tnec: document.getElementById('nTnec').textContent.replace(/\s+/g, ' ') };
-  }, [cm, th]);
+  }, [cm, min]);
 
-  const h0 = await paso(0, 20);
+  const h0 = await paso(0, 600);
   const h5sube = await paso(5);
   const h12 = await paso(12);
   const h5baja = await paso(5);
@@ -243,28 +245,70 @@ const cerca = (a, b, tol) => Number.isFinite(a) && Math.abs(a - b) <= tol;
         /Dentro de la banda/.test(h5baja.txt) && /lo decide el que hab\u00eda antes/.test(h5baja.txt),
         h5baja.txt.slice(0, 140));
 
-  // EL LADO MÁS CERCANO, que no es el de ninguna estrategia de la ficha.
-  const L = await page.evaluate(() => ({
-    pos: LOC.ladoMasCercano(20, 55), neg: LOC.ladoMasCercano(-3, 55),
-    cero: LOC.ladoMasCercano(0, 55), lejos: LOC.ladoMasCercano(-54, 55),
+  // ══════════════════════════════════════════════════════════════════
+  //  EL LADO: LA FICHA SE SEPARA DEL DOCUMENTO, Y SE MIDE LO QUE CUESTA
+  // ══════════════════════════════════════════════════════════════════
+  // El documento de planta pide el lado más cercano A LA MESA. La ficha aplica
+  // el más cercano AL SOL con la regla de mediodía —la de las estrategias B de
+  // viento— porque así lo decidió el mantenedor: la nieve debe comportarse como
+  // el viento.
+  //
+  // ESO NO SE PRUEBA SOLO COMPROBANDO QUE SALE EL ÁNGULO DEL SOL. Lo que hay
+  // que vigilar es que la DIVERGENCIA siga dicha y que su COSTE siga a la
+  // vista: una regla que pide más recorrido es una flota defendida más tarde, y
+  // ese número es el único que convierte la decisión en algo discutible con
+  // datos en vez de con memoria.
+  const LD = await page.evaluate(() => ({
+    // mañana: sol al este, consigna lejos del cero -> no hay flip
+    manana: LOC.ladoNieve(100, 45, 10, 55),
+    // mediodía: el sol aún manda al este pero la consigna está en la banda
+    flip: LOC.ladoNieve(100, 5, 10, 55),
+    // y sin regla de mediodía (límite 0) ese mismo caso NO voltea
+    sinRegla: LOC.ladoNieve(100, 5, 0, 55),
+    tarde: LOC.ladoNieve(260, -45, 10, 55),
+    // justo fuera de la banda, no voltea
+    borde: LOC.ladoNieve(100, 10.5, 10, 55),
+    cerca: { pos: LOC.ladoMasCercano(20, 55), neg: LOC.ladoMasCercano(-3, 55),
+             cero: LOC.ladoMasCercano(0, 55) },
   }));
-  check('desde el lado positivo se pliega al positivo', L.pos === 55, L.pos);
-  check('y desde el negativo al negativo, aunque sea por 3°', L.neg === -55, L.neg);
-  check('a 54° del borde negativo, sigue siendo el negativo', L.lejos === -55, L.lejos);
-  check('el empate en 0° lo resuelve el convenio declarado, no un azar',
-        L.cero === 55, L.cero);
+  check('por la mañana, el lado del sol es el este', LD.manana === 55, LD.manana);
+  check('por la tarde, el oeste', LD.tarde === -55, LD.tarde);
+  check('con la mesa casi plana, la regla de MEDIODÍA la manda al oeste',
+        LD.flip === -55, LD.flip);
+  // CONTROL: sin esa regla el mismo caso NO voltea. Sin él, un `ladoNieve` que
+  // devolviera siempre el oeste cerca del cero pasaría por bueno.
+  check('control · sin regla de mediodía, ese mismo caso se queda al este',
+        LD.sinRegla === 55, LD.sinRegla);
+  check('control · y pasada la banda tampoco voltea', LD.borde === 55, LD.borde);
+  // La del documento se conserva para contrastar, y tiene que seguir viva.
+  check('la regla del documento sigue calculable, para poder contrastarla',
+        LD.cerca.pos === 55 && LD.cerca.neg === -55 && LD.cerca.cero === 55,
+        JSON.stringify(LD.cerca));
 
-  const izq = await paso(15, -40);
-  check('con la mesa a la izquierda, la defensa es la izquierda',
-        /-55/.test(izq.txt), izq.txt.slice(0, 120));
-  // Y LO QUE ESA REGLA COMPRA, que es el motivo de que exista: el recorrido es
-  // el REAL y no el peor, y la ficha enseña los dos para que se vea la
-  // diferencia.
-  check('el tiempo sale del recorrido REAL, no del peor caso',
-        /recorrido 15\u00b0/.test(izq.tnec), izq.tnec.slice(0, 200));
-  check('y enseña el peor caso al lado, que es contra lo que se compara',
-        /110\u00b0/.test(izq.tnec) && /lado m\u00e1s cercano existe/.test(izq.tnec),
-        izq.tnec.slice(-170));
+  // EN PANTALLA: que la divergencia esté dicha y que el coste salga en segundos.
+  const med = await paso(15, 690);       // 11:30 — la mesa dentro de la banda
+  check('a mediodía la pantalla dice que las dos reglas NO coinciden',
+        /no coinciden/.test(med.txt), med.txt.slice(0, 160));
+  check('y pone el precio en grados Y en segundos, no en adjetivos',
+        /\d+\u00b0 de m\u00e1s/.test(med.txt) && /\d+ s m\u00e1s tarde defendida/.test(med.txt),
+        med.txt.slice(0, 220));
+  const tarde = await paso(15, 1020);    // 17:00 — las dos coinciden
+  check('y cuando coinciden, lo dice también en vez de callar',
+        /las dos reglas coinciden/.test(tarde.txt), tarde.txt.slice(0, 140));
+  check('la divergencia con el documento está declarada en la pestaña',
+        /se separa del documento/.test(N.sinSaber) &&
+        /m\u00e1s cercano <?b?>?al sol|m\u00e1s cercano .{0,12}al sol/.test(N.sinSaber),
+        N.sinSaber.slice(0, 0) || 'no aparece');
+
+  // Y DE NOCHE, que es extrapolación y hay que decirlo: el documento no dice
+  // qué hacer, y su fila de «modo noche» venía sin valores.
+  // EL DESLIZADOR LLEGA A LA NOCHE, y no llegaba: nacía en 05:00, que el 21 de
+  // junio ya es de día. Un simulador de nieve que no se pueda poner de noche
+  // deja fuera la mitad de las nevadas.
+  const noche = await paso(15, 60);
+  check('de noche avisa de que el lado del sol ya no significa lo mismo',
+        /sol bajo el horizonte/.test(noche.txt) && /extrapolaci\u00f3n/.test(noche.txt),
+        noche.txt.slice(-180));
 
   check('ninguna excepción en la página durante todo el banco',
         errores.length === 0, errores.join(' · '));
