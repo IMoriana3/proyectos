@@ -675,68 +675,67 @@
 
 <div id="panelNieve" style="display:none">
 <div class="wrap">
-  <p class="noval"><b>⚠ AQUÍ NO HAY MÁQUINA DE NIEVE, y no es un olvido.</b> El viento tiene sus
-    umbrales y su Rev01.4; el granizo tiene el §10.1 con sus doce estados. La nieve <b>no tiene
-    documento</b> en esta casa: lo único escrito es su sitio en la jerarquía de mando y qué bit
-    la publica. Inventar aquí un umbral sería exactamente lo que el §19 prohíbe —
-    <i>«ningún valor provisional se presenta como validado»</i>.</p>
+  <p class="noval"><b>⚠ ESTOS NÚMEROS SON DE UN DOCUMENTO DE PLANTA, no de esta ficha.</b>
+    Los aportó el usuario y aquí se tratan como <b>criterio declarado</b>: 10 cm para activar,
+    2 cm para desactivar, 55° al lado más cercano. No se han medido en campo ni se han careado
+    contra ningún log de planta. Y el informe del que sale el resto de esta ficha sigue siendo
+    un <b>borrador para discusión interna, no apto para uso operativo ni comercial</b>.</p>
   <div class="cols">
     <div>
       <div class="card">
-        <h2>❄ Lo único que sí está escrito <span class="sn">SP3</span></h2>
+        <h2>❄ El criterio, literal <span class="sn">SP3 · sensor de nieve</span></h2>
         <table class="crono"><tbody>
-          <tr><td>prioridad</td><td class="t">3.ª de 8</td></tr>
-          <tr><td>qué la dispara</td><td class="t">alarma de la HSU</td></tr>
-          <tr><td>o a mano</td><td class="t"><code>force_sp_3</code></td></tr>
-          <tr><td>dónde se publica</td><td class="t">30001 bits 15:13 = 3</td></tr>
-          <tr><td>quién la mide</td><td class="t">la HSU del viento</td></tr>
+          <tr><td>activa</td><td class="t">espesor &gt; 10 cm</td></tr>
+          <tr><td>desactiva</td><td class="t">espesor &lt; 2 cm</td></tr>
+          <tr><td>posición de defensa</td><td class="t">55° E o W</td></tr>
+          <tr><td>qué lado</td><td class="t">el más cercano</td></tr>
+          <tr><td>prioridad</td><td class="t">3.ª · pierde contra el viento</td></tr>
         </tbody></table>
-        <p class="note">La jerarquía entera, de más a menos: seta › viento SP1 › <b>nieve SP3</b>
-          › limpieza SP4 › forzados › batería › manual › auto. Y la mide <b>la misma estación
-          que el viento</b>, con su cero de nieve calibrable — un cero mal puesto es una alarma
-          que no llega o que no se va.</p>
-        <p class="note" style="margin-bottom:0">Sale de <code>docs/simulador-tcu.md</code> y
-          <code>docs/tcu-toolbox.md</code>. Es <b>dónde manda</b> y <b>cómo se publica</b>, no
-          <b>cuándo</b> ni <b>a dónde</b>: ni umbral de espesor, ni tasa de acumulación, ni
-          ángulo de nieve, ni criterio de vuelta a seguimiento.</p>
+        <p class="note">La banda es <b>ancha a propósito</b>: entre 2 y 10 cm el estado se
+          <b>sostiene</b>, así que una nevada que oscile alrededor de un solo umbral no mete y
+          saca a la flota. Y <b>no hay temporizador de vuelta</b> como en el viento — aquí
+          decide el espesor, no el reloj.</p>
+        <p class="note" style="margin-bottom:0">El lado lo elige la cercanía, y eso <b>no es
+          ninguna</b> de las cuatro estrategias de la pestaña de viento: las A eligen por el
+          rumbo del viento y las B por el sol. Ante una amenaza lo que se minimiza es el
+          <b>tiempo</b> hasta estar defendido.</p>
       </div>
 
       <div class="card">
-        <h2>⚠ Lo que falta, con su nombre <span class="sn">SIN VALOR, a propósito</span></h2>
-        <p class="note" style="margin-top:0">Se listan vacíos, como hace el §19 con los suyos.
-          <b>Teclear un número aquí no lo valida</b>: lo convierte en un supuesto tuyo, y la
-          ficha lo tratará como tal.</p>
-        <div id="nParams"></div>
-        <p class="note" style="margin-bottom:0" id="nFaltan"></p>
+        <h2>◉ El sensor <span class="sn" id="nEstadoVivo">—</span></h2>
+        <div class="field"><label>Espesor medido <span id="nCmLbl">0 cm</span></label>
+          <input id="nCm" type="range" min="0" max="25" step="0.5" value="0"></div>
+        <div class="field"><label>Dónde está la mesa al activarse <span id="nThLbl">0°</span></label>
+          <input id="nTh" type="range" min="-55" max="55" step="1" value="0"></div>
+        <div id="nSalida"></div>
       </div>
     </div>
 
     <div>
       <div class="card">
-        <h2>⏱ Lo único que esta ficha SÍ puede calcular</h2>
-        <p class="note" style="margin-top:0">Cuánto tarda la mesa en estar en el ángulo de nieve
-          <b>desde que se ordena</b>. No depende de ningún umbral — depende del camino de la
-          orden, que son los <b>mismos cables</b> que los del viento y los del granizo, y del
-          recorrido del hierro. Por eso se puede dar sin inventar nada.</p>
-        <div class="two">
-          <div class="field"><label>Ángulo de nieve (°)</label>
-            <input id="nAng" type="number" step="1" value="" placeholder="SIN VALOR"></div>
-          <div class="field"><label>Carrera del eje ± (°)</label>
-            <input id="nCarrera" type="number" step="1" value="55"></div>
-        </div>
+        <h2>⏱ Cuánto tarda en estar defendida</h2>
+        <p class="note" style="margin-top:0">Desde que la NCU emite hasta que la mesa está en el
+          ángulo de nieve. El camino de la orden son los <b>mismos cables</b> que los del viento
+          y los del granizo, y se toma de <b>⚑ Abanderamiento</b>.</p>
         <div id="nTnec"></div>
       </div>
 
       <div class="card">
-        <h2>⊘ Lo que esta pestaña NO hace</h2>
-        <p class="note" style="margin-top:0">No decide. No hay máquina de estados, no hay
-          diagrama y no hay diario — y no los hay porque no hay de dónde sacarlos, no porque
-          falte tiempo. Cuando aparezca el documento con los umbrales, el ángulo y los criterios
-          de salida, esta pestaña se parecerá a la de granizo. Hasta entonces dice qué sabe,
-          qué no, y calcula lo único que no depende de lo que no sabe.</p>
-        <p class="note" style="margin-bottom:0">Y una cosa que SÍ se sabe y conviene no perder:
-          la nieve <b>pierde contra el viento</b>. Si las dos alarmas coinciden manda el SP1, así
-          que un ángulo de nieve que estorbe al abanderamiento no se va a aplicar cuando sople.</p>
+        <h2>⊘ Lo que esta pestaña sigue sin saber</h2>
+        <p class="note" style="margin-top:0">El documento da el <b>qué</b> y no el <b>cómo se
+          mide</b>. Queda sin declarar, y se lista para que se pueda pedir:</p>
+        <ul class="note" style="margin-top:0">
+          <li><b>La cadencia del sensor de nieve.</b> El anemómetro declara su lectura de 1 s;
+            el de nieve, nada. Aquí el espesor se trata como un valor que ya viene dado.</li>
+          <li><b>Si el espesor es el del suelo o el del módulo.</b> No es lo mismo: un módulo a
+            55° descarga solo y el suelo no.</li>
+          <li><b>Cada cuánto se calibra el cero</b> de ese sensor — la caja de herramientas de
+            la NCU lo nombra, el criterio no lo fija. Un cero corrido es una alarma que no
+            llega o que no se va.</li>
+        </ul>
+        <p class="note" style="margin-bottom:0">Y el <b>granizo</b> y el <b>modo noche</b> venían
+          en la misma tabla del documento <b>con sus filas y sin sus valores</b>. El granizo
+          tiene su pestaña con la máquina del §10.1; el modo noche no está en esta ficha.</p>
       </div>
     </div>
   </div>
@@ -1016,6 +1015,47 @@ LOC.ordenEnElEje=function(orden,dtS,lat){
    posible. Y no es la medida de campo que pide el informe: es lo que sale de
    la cadena declarada. Sirve para saber si el número tecleado se queda corto,
    no para sustituir el ensayo. */
+/* EL LADO MÁS CERCANO, que es la regla de la planta y NO la de ninguna de las
+   cuatro estrategias canónicas de esta ficha.
+
+   Las A eligen el lado por el RUMBO DEL VIENTO y las B por el SOL. El criterio
+   del documento de planta es otro: «55° E or W indistinctly, whichever is
+   closer to the tracker position at the moment of activation». O sea, el que
+   menos recorrido pida desde donde esté la mesa.
+
+   Y tiene sentido operativo, que es lo que lo hace creíble: ante una amenaza lo
+   que se minimiza es el TIEMPO hasta estar defendido, no la orientación
+   respecto al viento ni al sol. Es la misma cuenta que el T_necesario.
+
+   El empate —mesa en 0°— lo resuelve la propia palabra del documento:
+   «indistinctly». Se toma el positivo y queda dicho que es arbitrario, no
+   deducido. */
+LOC.ladoMasCercano=function(theta,full){
+  var f=Math.abs(+full||0), t=+theta||0;
+  return (t<0)?-f:f;       // empate en 0: positivo, por convenio declarado
+};
+
+/* LA MÁQUINA DE NIEVE: dos estados y un disparador de Schmitt.
+
+   Del documento de planta, literal: activa cuando el sensor pasa de 10 cm,
+   desactiva cuando baja de 2 cm. La banda es ANCHA a propósito —ocho
+   centímetros— y eso no es un detalle: entre 2 y 10 cm el estado se SOSTIENE,
+   así que una nevada que oscile alrededor de un solo umbral no haría entrar y
+   salir a la flota. No hay temporizador de vuelta como en el viento: aquí lo
+   que decide es el espesor, no el reloj.
+
+   `prev` es el estado anterior, y es lo que convierte esto en histéresis de
+   verdad: sin él, un valor de 5 cm no se podría resolver. */
+LOC.NIEVE_ON_CM=10;
+LOC.NIEVE_OFF_CM=2;
+LOC.nieveEstado=function(cm,prev){
+  var v=+cm;
+  if(!isFinite(v))return prev||'SEGUIMIENTO';
+  if(v>LOC.NIEVE_ON_CM)return 'NIEVE';
+  if(v<LOC.NIEVE_OFF_CM)return 'SEGUIMIENTO';
+  return prev||'SEGUIMIENTO';          // en la banda manda lo que ya había
+};
+
 LOC.tNecesario=function(lat,grados,slew){
   lat=lat||LOC.LATENCIA;
   var sond=Math.max(0,+lat.sondeo_s||0), arr=Math.max(0,+lat.arranque_s||0);
@@ -6497,71 +6537,70 @@ function gTab(cual) {
   $('tabGranizo').className = (cual === 'granizo') ? 'on' : '';
   $('tabNieve').className = (cual === 'nieve') ? 'on' : '';
   if (cual === 'granizo') { if (!GJULIO) gArranca(); gTnecPinta(); }
-  if (cual === 'nieve') { nPintaParams(); nTnecPinta(); }
+  if (cual === 'nieve') nPinta();
 }
 $('tabViento').onclick = function () { gTab('viento'); };
 $('tabGranizo').onclick = function () { gTab('granizo'); };
 $('tabNieve').onclick = function () { gTab('nieve'); };
 
 /* ─────────── NIEVE ───────────
-   Lo que falta, listado con su nombre y SIN VALOR. No es decoración: el §19 de
-   granizo hace exactamente esto con catorce de sus diecisiete, y la razón es la
-   misma — un hueco con nombre se puede pedir, un hueco sin nombre se olvida.
-   Lo que NO se hace es inventar una máquina alrededor de ellos. */
-var NIEVE_FALTA = [
-  ['umbral_espesor_cm', 'Espesor que dispara el SP3', 'cm'],
-  ['umbral_tasa_cm_h', 'Tasa de acumulación', 'cm/h'],
-  ['temp_max_c', 'Temperatura por debajo de la cual cuenta como nieve', '°C'],
-  ['angulo_nieve_deg', 'Ángulo de nieve', '°'],
-  ['t_min_permanencia_min', 'Permanencia mínima antes de volver', 'min'],
-  ['criterio_vuelta', 'Qué devuelve la mesa a seguimiento', '—'],
-  ['cero_nieve_calibracion', 'Cada cuánto se calibra el cero de la HSU', '—']
-];
-function nPintaParams() {
-  var h = '';
-  NIEVE_FALTA.forEach(function (f) {
-    h += '<div class="field"><label>' + esc(f[1]) +
-      ' <span class="sn" style="margin:0">' + esc(f[2]) + ' · SIN VALOR</span></label>' +
-      '<input class="np" data-k="' + f[0] + '" type="text" value="" placeholder="SIN VALOR"></div>';
-  });
-  $('nParams').innerHTML = h;
-  nCuenta();
-}
-function nCuenta() {
-  var v = [].filter.call(document.querySelectorAll('.np'), function (e) {
-    return e.value.trim() !== ''; }).length;
-  $('nFaltan').innerHTML = v === 0
-    ? '<b>Siete sin valor de siete.</b> Ninguno sale de un documento de esta casa.'
-    : '<b>' + v + ' de ' + NIEVE_FALTA.length + (v === 1 ? ' relleno' : ' rellenos') + '</b>, y ' +
-      (v === 1 ? 'es un <b>supuesto tuyo</b>' : 'son <b>supuestos tuyos</b>') + ': no ' +
-      (v === 1 ? 'viene' : 'vienen') + ' de ningún informe. La ficha no ' +
-      (v === 1 ? 'lo' : 'los') + ' va a tratar de otra manera por estar ' +
-      (v === 1 ? 'escrito' : 'escritos') + '.';
-}
-/* El ángulo de nieve nace VACÍO y no con el del viento: coger 55° «porque es lo
-   que hay» sería inventar el dato que falta y enseñarlo con pinta de bueno. */
-function nTnecPinta() {
-  var caja = $('nTnec'); if (!caja) return;
-  var ang = $('nAng').value.trim();
-  if (ang === '') {
-    caja.innerHTML = '<p class="note" style="color:var(--warn)"><b>Sin ángulo de nieve no hay ' +
-      'maniobra que calcular.</b> Y no se pone el del viento por defecto: 55° «porque es lo que ' +
-      'hay» sería inventar justo el dato que falta, y enseñarlo con pinta de bueno. Escríbelo ' +
-      'arriba y sale el número — sabiendo que el ángulo lo pones tú.</p>';
-    return;
-  }
+   La máquina es de dos estados y por eso no hay diagrama: dibujar doce cajas
+   para dos sería hacerla parecer lo que no es. Lo que sí hay es el disparador
+   de Schmitt con su banda, el lado más cercano, y el tiempo hasta estar
+   defendida — que es lo único que esta ficha añade al criterio. */
+var NIEVE_PREV = 'SEGUIMIENTO';
+
+function nPinta() {
+  var cm = +$('nCm').value, th = +$('nTh').value;
+  $('nCmLbl').textContent = fmt(cm, 1) + ' cm';
+  $('nThLbl').textContent = fmt(th, 0) + '\u00b0';
+
+  var est = LOC.nieveEstado(cm, NIEVE_PREV);
+  var entra = (est === 'NIEVE' && NIEVE_PREV !== 'NIEVE');
+  NIEVE_PREV = est;
+  var enBanda = (cm >= LOC.NIEVE_OFF_CM && cm <= LOC.NIEVE_ON_CM);
+
+  $('nEstadoVivo').textContent = est;
+  var defensa = LOC.ladoMasCercano(th, +$('maxang').value || 55);
+
+  var h = '<table class="crono"><tbody>' +
+    '<tr><td>estado</td><td class="t" style="color:' +
+      (est === 'NIEVE' ? 'var(--warn)' : 'var(--ok)') + '"><b>' + est + '</b></td></tr>' +
+    '<tr><td>consigna</td><td class="t">' +
+      (est === 'NIEVE' ? fmt(defensa, 0) + '\u00b0' : 'seguimiento') + '</td></tr>' +
+    '</tbody></table>';
+
+  /* LA BANDA, DICHA CUANDO SE ESTÁ DENTRO. Es donde el estado NO lo decide el
+     valor sino lo que había antes, y eso en pantalla se lee como un fallo si
+     no se explica: el mismo número puede dar dos estados distintos. */
+  if (enBanda)
+    h += '<p class="note" style="color:var(--warn)"><b>Dentro de la banda</b> (' +
+      LOC.NIEVE_OFF_CM + '\u201310 cm): aqu\u00ed el estado <b>no lo decide este n\u00famero</b>, lo ' +
+      'decide el que hab\u00eda antes. Con el mismo espesor la flota puede estar plegada o ' +
+      'siguiendo, seg\u00fan por d\u00f3nde haya venido. No es una indefinici\u00f3n: es lo que impide ' +
+      'que una nevada que ronde un umbral meta y saque a la flota.</p>';
+  if (est === 'NIEVE')
+    h += '<p class="note">Se pliega a <b>' + fmt(defensa, 0) + '\u00b0</b> porque la mesa estaba en ' +
+      fmt(th, 0) + '\u00b0 y ese es el lado m\u00e1s cercano' +
+      (th === 0 ? ' \u2014 con la mesa en 0\u00b0 hay EMPATE, y lo resuelve la palabra del documento: ' +
+        '<i>indistinctly</i>. Que salga el positivo es convenio de esta ficha, no deducci\u00f3n.' : '.') +
+      '</p>';
+  if (entra)
+    h += '<p class="note">\u2191 Acaba de <b>entrar</b> en nieve. La consigna se fija con la posici\u00f3n ' +
+      'que ten\u00eda <b>en ese instante</b>: moverla despu\u00e9s no cambia el lado, y por eso este ' +
+      'control dice \u00abd\u00f3nde est\u00e1 la mesa AL ACTIVARSE\u00bb.</p>';
+  $('nSalida').innerHTML = h;
+
+  // el tiempo hasta estar defendida, con el ángulo que acaba de salir
   var T = LOC.tNecesario(tnecLeeCadena(),
-    LOC.recorridoPeor(+ang, +$('nCarrera').value), LOC.SLEW);
-  caja.innerHTML = tnecTabla(T, !$('lat_on').checked) +
-    '<p class="note" style="margin-bottom:0">Ése es el tiempo desde que la NCU emite hasta que ' +
-    'la mesa está en ' + fmt(+ang, 0) + '°, en el peor caso. <b>Cuándo emitirla no lo sabe esta ' +
-    'ficha</b>: eso es el umbral que falta.</p>';
+    Math.abs(defensa - th), LOC.SLEW);
+  $('nTnec').innerHTML = tnecTabla(T, !$('lat_on').checked) +
+    '<p class="note" style="margin-bottom:0">Recorrido <b>real</b>, no el peor caso: desde ' +
+    fmt(th, 0) + '\u00b0 hasta ' + fmt(defensa, 0) + '\u00b0. El peor caso de esta planta es venir del ' +
+    'extremo contrario, ' + fmt(LOC.recorridoPeor(defensa, +$('maxang').value || 55), 0) +
+    '\u00b0, y la regla del lado m\u00e1s cercano existe precisamente para que eso no pase.</p>';
 }
-document.addEventListener('input', function (e) {
-  if (!e.target) return;
-  if (e.target.classList.contains('np')) nCuenta();
-  if (['nAng', 'nCarrera'].indexOf(e.target.id) >= 0) nTnecPinta();
-});
+['nCm', 'nTh'].forEach(function (i) { if ($(i)) $(i).addEventListener('input', nPinta); });
 
 /* Al abrir la pestaña se traen los valores de julio del MISMO sitio que la
    tabla —el demo generado por el core—, para no teclearlos aquí. Y la tabla

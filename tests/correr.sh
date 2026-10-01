@@ -246,7 +246,40 @@ declare -A PISO=(
   #
   # T4: olvidé que el careo del número pintado contra la función también lo caza
   # —10,8 min frente a 11,1—, así que son tres y no dos. Aritmética mía.
-  [test_amenaza_maniobra.js]=30
+  #
+  # SUBIDO A 38 con LA MÁQUINA DE NIEVE DE VERDAD. Llegó el criterio de planta
+  # —activa por encima de 10 cm, desactiva por debajo de 2, defensa a 55° al
+  # lado MÁS CERCANO— y la pestaña pasó de declarar siete huecos a tener
+  # máquina. El guard que pedía que NO inventara se puso rojo, que es lo que
+  # tenía que hacer; se le cambió la afirmación en vez de borrarlo.
+  #
+  # LA BANDA DE OCHO CENTÍMETROS ES EL MECANISMO. Entre 2 y 10 el estado lo
+  # decide EL ANTERIOR, así que un banco que sólo probara 0 y 12 cm daría verde
+  # contra un simple umbral. El recorrido entra en la banda por los DOS lados y
+  # exige respuestas DISTINTAS al mismo 5 cm — eso es lo que distingue una
+  # histéresis de un umbral, y es la única comprobación que no se puede falsear
+  # con un número bien elegido.
+  #
+  # Y EL LADO MÁS CERCANO NO ES NINGUNA DE LAS CUATRO ESTRATEGIAS de la ficha:
+  # las A eligen por el rumbo del viento y las B por el sol. El criterio de
+  # planta minimiza el RECORRIDO, y lo que compra se mide: con la mesa en −40°
+  # la defensa está a 15° —1,8 min— frente a los 110° del peor caso —11,1 min—.
+  # Un factor 6 en tiempo de defensa.
+  #
+  # MUTANTES, predicciones antes de medir. UNA DE CUATRO:
+  #
+  #   U1 desactivar también a 10 cm (umbral) .. predije 3 · mata 4
+  #   U2 el lado, siempre el positivo ......... predije 3 · mata 4
+  #   U3 los dos umbrales invertidos ......... predije 4 · mata 4 ✓
+  #   U4 el peor caso en vez del recorrido ... predije 2 · mata 1
+  #
+  # Las tres fallidas tienen el MISMO vicio y por eso van juntas: no cuento el
+  # SOLAPE entre comprobaciones propias. En U1 olvidé que el careo estático de
+  # los umbrales contra el fuente también lo caza; en U2, que cambiar el lado
+  # cambia el recorrido y tumba también el check del tiempo; y en U4 conté de
+  # más porque la línea del peor caso se pinta aparte y no se mueve. Predecir
+  # bien pide mirar qué más toca cada mutante, no sólo a qué apunta.
+  [test_amenaza_maniobra.js]=38
   [test_granizo_traza.mjs]=30
   # 18 -> 28: el Panel dejo de COPIAR la version de las apps y pasa a LEERLA
   # del fichero de la app, asi que hay tres estados nuevos que pintar y los
