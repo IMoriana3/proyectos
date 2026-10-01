@@ -84,7 +84,11 @@ declare -A PISO=(
   # dice cuál.
   [test_cartera_en_vivo.js]=32
   # 304 -> 312: las DOS formas de la dos aguas, su cielo y la diferencia en el año.
-  [test_comparador.js]=312
+  # 312 -> 317: las DOS formas de la dos aguas entraron como entradas del
+  # CATÁLOGO (pico y valle) con sus comprobaciones, y el piso se quedó atrás en
+  # el mismo commit que las añadió. Lo cazó un repaso, no el banco: un piso que
+  # no sube deja que se vayan en silencio, que es justo contra lo que existe.
+  [test_comparador.js]=317
   # UNA VARIABLE CSS QUE NO EXISTE NO FALLA: DEJA LA PROPIEDAD COMO ESTABA.
   # `background:var(--panel-2)` con `--panel-2` sin definir no es un error —la
   # declaración se descarta y la propiedad se queda con lo heredado—, así que
@@ -131,7 +135,10 @@ declare -A PISO=(
   # vez un punto en vez del sólido.
   # 280 -> 283: la dos aguas puede ser PICO o VALLE y la escena tiene que
   # dibujar la que se calcula (antes dibujaba valle y calculaba pico).
-  [test_comparador_3d.js]=283
+  # 283 -> 285: el barrido del NÚMERO de estructuras marcadas, que es el que
+  # sujeta que las hincas no floten con la rejilla de cumbreras en fase par.
+  # Mismo despiste que arriba, mismo commit.
+  [test_comparador_3d.js]=285
   [test_comparador_sitio.js]=36
   [test_ejecucion_traza.mjs]=61
   # La ficha de planta y el acceso al SCADA. El piso son las 30 MEDIDAS, y lo
