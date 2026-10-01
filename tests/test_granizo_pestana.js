@@ -28,8 +28,19 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
   await page.waitForSelector('#tabGranizo', { timeout: 15000 });
   check('la ficha tiene pestañas Viento y Granizo',
         (await page.$('#tabViento')) !== null && (await page.$('#tabGranizo')) !== null);
-  check('y el hueco de Nieve va DECLARADO, no como pestaña muerta',
-        await page.$eval('#tabs button:disabled', e => /pendiente/i.test(e.textContent)));
+  /* AQUÍ HABÍA UN GUARD DEL HUECO DE NIEVE, y cumplió: exigía que la tercera
+     pestaña fuera un botón DESACTIVADO con su motivo, para que nadie dejara una
+     pestaña muerta en su sitio. El 2026-10-01 el hueco se llenó —la pestaña
+     existe y hace una cosa concreta— y el guard se puso rojo, que es justo lo
+     que tenía que hacer.
+     No se borra: se le cambia la afirmación. Lo que ahora hay que vigilar es
+     que esa pestaña NO INVENTE la máquina que no existe, y eso lo lleva
+     `tests/test_amenaza_maniobra.js`. Aquí queda lo que a esta pestaña le toca:
+     que la tercera exista y que sea de nieve. */
+  check('y la tercera pestaña ya no es un hueco: existe y es la de Nieve',
+        (await page.$('#tabNieve')) !== null &&
+        (await page.$eval('#tabNieve', e => /nieve/i.test(e.textContent))) &&
+        (await page.$$('#tabs button:disabled')).length === 0);
   check('el panel de viento sigue siendo el que se ve al abrir',
         await page.$eval('#panelGranizo', e => e.style.display === 'none'));
 

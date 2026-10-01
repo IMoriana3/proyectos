@@ -223,7 +223,7 @@
 <div class="tabs" id="tabs">
   <button id="tabViento" class="on">🌬️ Viento</button>
   <button id="tabGranizo">⛨ Granizo</button>
-  <button disabled title="Hueco declarado: la máquina de nieve no está implementada. Una pestaña que no hace nada se lee peor que un hueco dicho.">❄ Nieve · pendiente</button>
+  <button id="tabNieve">❄ Nieve</button>
 </div>
 
 <div id="panelViento">
@@ -620,6 +620,25 @@
         <div id="gParams"></div>
         <button class="btn small" id="gReset" style="margin-top:8px">↺ Volver a los de julio</button>
       </div>
+
+      <div class="card">
+        <h2>⏱ T_necesario, calculado <span class="sn">§9.1 · pendiente de medir en campo</span></h2>
+        <p class="note" style="margin-top:0">El §9.1 pide este número y lo deja <b>pendiente de
+          medir en campo</b>; mientras tanto la máquina decide con el que hay tecleado arriba.
+          Esto <b>no es esa medida</b>: es lo que sale de la cadena declarada y del ángulo
+          declarado, en el <b>peor caso</b>. Sirve para ver si el número tecleado se queda
+          corto, no para sustituir el ensayo.</p>
+        <div class="two">
+          <div class="field"><label>Ángulo de granizo (°)</label>
+            <input id="gAng" type="number" step="1" value="55"></div>
+          <div class="field"><label>Carrera del eje ± (°)</label>
+            <input id="gCarrera" type="number" step="1" value="55"></div>
+        </div>
+        <p class="note">El ángulo <b>no es de esta ficha</b>: el §9.3 se lo asigna a Estructuras,
+          y aquí entra como dato declarado. El sondeo y el arranque se toman de
+          <b>⚑ Abanderamiento</b>: son el mismo camino de la orden, los mismos cables.</p>
+        <div id="gTnec"></div>
+      </div>
     </div>
 
     <div>
@@ -653,6 +672,76 @@
   </div>
 </div>
 </div><!-- /panelGranizo -->
+
+<div id="panelNieve" style="display:none">
+<div class="wrap">
+  <p class="noval"><b>⚠ AQUÍ NO HAY MÁQUINA DE NIEVE, y no es un olvido.</b> El viento tiene sus
+    umbrales y su Rev01.4; el granizo tiene el §10.1 con sus doce estados. La nieve <b>no tiene
+    documento</b> en esta casa: lo único escrito es su sitio en la jerarquía de mando y qué bit
+    la publica. Inventar aquí un umbral sería exactamente lo que el §19 prohíbe —
+    <i>«ningún valor provisional se presenta como validado»</i>.</p>
+  <div class="cols">
+    <div>
+      <div class="card">
+        <h2>❄ Lo único que sí está escrito <span class="sn">SP3</span></h2>
+        <table class="crono"><tbody>
+          <tr><td>prioridad</td><td class="t">3.ª de 8</td></tr>
+          <tr><td>qué la dispara</td><td class="t">alarma de la HSU</td></tr>
+          <tr><td>o a mano</td><td class="t"><code>force_sp_3</code></td></tr>
+          <tr><td>dónde se publica</td><td class="t">30001 bits 15:13 = 3</td></tr>
+          <tr><td>quién la mide</td><td class="t">la HSU del viento</td></tr>
+        </tbody></table>
+        <p class="note">La jerarquía entera, de más a menos: seta › viento SP1 › <b>nieve SP3</b>
+          › limpieza SP4 › forzados › batería › manual › auto. Y la mide <b>la misma estación
+          que el viento</b>, con su cero de nieve calibrable — un cero mal puesto es una alarma
+          que no llega o que no se va.</p>
+        <p class="note" style="margin-bottom:0">Sale de <code>docs/simulador-tcu.md</code> y
+          <code>docs/tcu-toolbox.md</code>. Es <b>dónde manda</b> y <b>cómo se publica</b>, no
+          <b>cuándo</b> ni <b>a dónde</b>: ni umbral de espesor, ni tasa de acumulación, ni
+          ángulo de nieve, ni criterio de vuelta a seguimiento.</p>
+      </div>
+
+      <div class="card">
+        <h2>⚠ Lo que falta, con su nombre <span class="sn">SIN VALOR, a propósito</span></h2>
+        <p class="note" style="margin-top:0">Se listan vacíos, como hace el §19 con los suyos.
+          <b>Teclear un número aquí no lo valida</b>: lo convierte en un supuesto tuyo, y la
+          ficha lo tratará como tal.</p>
+        <div id="nParams"></div>
+        <p class="note" style="margin-bottom:0" id="nFaltan"></p>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>⏱ Lo único que esta ficha SÍ puede calcular</h2>
+        <p class="note" style="margin-top:0">Cuánto tarda la mesa en estar en el ángulo de nieve
+          <b>desde que se ordena</b>. No depende de ningún umbral — depende del camino de la
+          orden, que son los <b>mismos cables</b> que los del viento y los del granizo, y del
+          recorrido del hierro. Por eso se puede dar sin inventar nada.</p>
+        <div class="two">
+          <div class="field"><label>Ángulo de nieve (°)</label>
+            <input id="nAng" type="number" step="1" value="" placeholder="SIN VALOR"></div>
+          <div class="field"><label>Carrera del eje ± (°)</label>
+            <input id="nCarrera" type="number" step="1" value="55"></div>
+        </div>
+        <div id="nTnec"></div>
+      </div>
+
+      <div class="card">
+        <h2>⊘ Lo que esta pestaña NO hace</h2>
+        <p class="note" style="margin-top:0">No decide. No hay máquina de estados, no hay
+          diagrama y no hay diario — y no los hay porque no hay de dónde sacarlos, no porque
+          falte tiempo. Cuando aparezca el documento con los umbrales, el ángulo y los criterios
+          de salida, esta pestaña se parecerá a la de granizo. Hasta entonces dice qué sabe,
+          qué no, y calcula lo único que no depende de lo que no sabe.</p>
+        <p class="note" style="margin-bottom:0">Y una cosa que SÍ se sabe y conviene no perder:
+          la nieve <b>pierde contra el viento</b>. Si las dos alarmas coinciden manda el SP1, así
+          que un ángulo de nieve que estorbe al abanderamiento no se va a aplicar cuando sople.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /panelNieve -->
 
 <!-- Librerías LOCALES (sin CDN, offline) y el MODELO REAL del seguidor: `seguidor.js` es
      la fuente única que ya comparten el Gemelo Digital y Cobertura 3D, copiada aquí idéntica
@@ -905,6 +994,45 @@ LOC.ordenEnElEje=function(orden,dtS,lat){
    NO SE REPITEN AQUÍ LOS UMBRALES (`k>1`, `p>dt`, `k>0`): se le PREGUNTA a cada
    primitiva con una sonda y se mira si devuelve su entrada. Así no puede
    desincronizarse de ellas el día que cambie un redondeo. */
+/* T_NECESARIO: LO QUE TARDA LA FLOTA EN ESTAR EN POSICIÓN DESDE QUE SE ORDENA.
+   El §9.1 lo pide y lo deja «PENDIENTE DE MEDIR EN CAMPO», y mientras tanto la
+   máquina de amenaza decide con un número TECLEADO: su reloj de Capa 2 compara
+   el tiempo disponible contra `factor × (T_necesario + margen)`. Si ese
+   T_necesario es más corto que la maniobra real, la máquina cruza creyendo que
+   le da tiempo — y el error no sale por ninguna parte, porque nadie carea las
+   dos cosas.
+
+   QUÉ ENTRA Y QUÉ NO, que es la mitad del asunto:
+
+     · SÍ el sondeo NCU→TCU y el arranque del motor: son el camino de la ORDEN,
+       y son los mismos cables para viento, granizo o nieve;
+     · SÍ el recorrido del hierro a su velocidad;
+     · NO la media del anemómetro ni su muestreo: eso es cómo se ENTERA la
+       máquina de viento, y la de granizo no se entera por ahí — se entera por
+       radar, CAPE y célula, que son sus capas 1 y 2.
+
+   Es un PEOR CASO: el sondeo se cobra su periodo entero (puede ser menos) y el
+   recorrido es el que se le pase, que para una cota debe ser el más largo
+   posible. Y no es la medida de campo que pide el informe: es lo que sale de
+   la cadena declarada. Sirve para saber si el número tecleado se queda corto,
+   no para sustituir el ensayo. */
+LOC.tNecesario=function(lat,grados,slew){
+  lat=lat||LOC.LATENCIA;
+  var sond=Math.max(0,+lat.sondeo_s||0), arr=Math.max(0,+lat.arranque_s||0);
+  var v=(+slew>0?+slew:LOC.SLEW), g=Math.max(0,+grados||0);
+  var rec=(v>0?g/v:0);
+  return { sondeo_s:sond, arranque_s:arr, grados:g, recorrido_s:rec,
+           total_s:sond+arr+rec, total_min:(sond+arr+rec)/60 };
+};
+
+/* EL RECORRIDO MÁS LARGO POSIBLE hasta el ángulo de defensa. Si la mesa puede
+   estar en cualquier punto de su carrera, el peor caso es venir del extremo
+   contrario — y para una cota de seguridad ese es el único número honesto. */
+LOC.recorridoPeor=function(anguloDefensa,maxAng){
+  var d=+anguloDefensa||0, m=Math.abs(+maxAng||0);
+  return Math.max(Math.abs(d-m),Math.abs(d+m));
+};
+
 LOC.mudos=function(lat,dtS){
   lat=lat||LOC.LATENCIA;
   var s=new Float64Array(8), fuera=[];
@@ -5997,6 +6125,70 @@ function gLeeParams() {
   return o;
 }
 
+/* LA TABLA DE LA MANIOBRA, COMPARTIDA POR GRANIZO Y NIEVE, porque el camino de
+   la orden es el mismo: la NCU sondea a la TCU y el motor arranca igual, sea
+   cual sea la amenaza que haya decidido. Lo único que cambia entre las dos
+   pestañas es el ángulo de defensa y quién decide ir a él. */
+function tnecLeeCadena() {
+  return { sondeo_s: Math.max(0, +$('latSond').value || 0),
+           arranque_s: Math.max(0, +$('latArr').value || 0) };
+}
+function tnecTabla(T, apagada) {
+  var fila = function (k, v) {
+    return '<tr><td>' + k + '</td><td class="t">' + v + '</td></tr>'; };
+  var h = '';
+  if (apagada)
+    h += '<p class="note">La casilla de latencia est\u00e1 <b>apagada</b> en \u2691 Abanderamiento \u2014 eso ' +
+         'dice que el <b>a\u00f1o de viento</b> no la simula, no que el equipo no tenga poleo. Aqu\u00ed se ' +
+         'usan los valores declarados igualmente, porque la orden viaja por los mismos cables.</p>';
+  return h + '<table class="crono"><tbody>' +
+    fila('sondeo NCU\u2192TCU', fmt(T.sondeo_s, 0) + ' s') +
+    fila('arranque del motor', fmt(T.arranque_s, 0) + ' s') +
+    fila('recorrido ' + fmt(T.grados, 0) + '\u00b0 a ' + fmt(LOC.SLEW, 2) + ' \u00b0/s',
+         fmt(T.recorrido_s, 0) + ' s') +
+    '<tr class="tot"><td><b>T_necesario, peor caso</b></td><td class="t"><b>' +
+    fmt(T.total_min, 1) + ' min</b></td></tr>' +
+    '</tbody></table>';
+}
+
+/* EL CAREO ENTRE LO TECLEADO Y LA MANIOBRA. La máquina de Capa 2 compara el
+   tiempo disponible contra `factor × (T_necesario + margen)`; si T_necesario se
+   queda corto, ese guard entero queda flojo y la máquina cruza creyendo que le
+   da tiempo. Aquí se pone al lado el número que sale de la cadena declarada.
+   El veredicto es sobre el PEOR CASO, y por eso «alcanza» no quiere decir
+   «medido»: quiere decir que el número tecleado no se queda corto ni siquiera
+   contra la maniobra más larga que admite esta carrera. */
+function gTnecPinta() {
+  var caja = $('gTnec'); if (!caja) return;
+  /* SE LEEN LOS CAMPOS, NO `cfgLat()`. Esa función devuelve ceros cuando la
+     casilla de ⚑ Abanderamiento está apagada, y esa casilla dice si el AÑO DE
+     VIENTO simula la cadena — no si el equipo tiene poleo. El camino de la
+     orden existe se simule o no, así que apagarla aquí haría que T_necesario
+     saliera 20 s más corto de lo declarado, que es justo el error que esta
+     tarjeta existe para cazar. */
+  var lat = tnecLeeCadena();
+  var apagada = !$('lat_on').checked;
+  var ang = +$('gAng').value, car = +$('gCarrera').value;
+  var rec = LOC.recorridoPeor(ang, car);
+  var T = LOC.tNecesario(lat, rec, LOC.SLEW);
+  var decl = gLeeParams().t_necesario_min;
+  var h = tnecTabla(T, apagada);
+  if (decl == null)
+    h += '<p class="note"><b>No hay T_necesario tecleado</b> con el que carear: el \u00a719 lo deja ' +
+         'sin valor a prop\u00f3sito y aqu\u00ed sigue vac\u00edo. La m\u00e1quina no puede correr sin \u00e9l.</p>';
+  else if (decl < T.total_min)
+    h += '<p class="note" style="color:var(--warn)"><b>El n\u00famero tecleado se queda corto</b>: ' +
+         fmt(decl, 1) + ' min declarados frente a ' + fmt(T.total_min, 1) + ' min de maniobra en el ' +
+         'peor caso. El reloj de la Capa 2 compara contra <b>factor \u00d7 (T_necesario + margen)</b>, ' +
+         'as\u00ed que con un T_necesario corto ese guard queda flojo y la m\u00e1quina puede cruzar ' +
+         'creyendo que le da tiempo.</p>';
+  else
+    h += '<p class="note"><b>El n\u00famero tecleado alcanza</b>: ' + fmt(decl, 1) + ' min declarados ' +
+         'frente a ' + fmt(T.total_min, 1) + ' min de maniobra en el peor caso. \u00abAlcanza\u00bb no es ' +
+         '\u00abmedido\u00bb: el \u00a79.1 sigue pidiendo el ensayo de campo.</p>';
+  caja.innerHTML = h;
+}
+
 /* El banner va en la UI, no solo en el JSON: quien mira la pantalla es quien
    tiene que enterarse de que estos números no están validados. */
 function gBanner(procedencia, validado) {
@@ -6285,18 +6477,91 @@ $('gFuente').onchange = function () {
 };
 $('gPos').oninput = function () { gPinta(+this.value); };
 $('gRun').onclick = gCorre;
-$('gReset').onclick = function () { if (GJULIO) gPintaParams(GJULIO); };
+/* Se repinta con lo que le afecta: el ángulo, la carrera, los parámetros de la
+   máquina (de ahí sale el T_necesario tecleado) y la cadena de latencia, que
+   vive en la otra pestaña pero es el mismo camino de la orden. */
+['gAng','gCarrera'].forEach(function(i){
+  if($(i))$(i).addEventListener('input',gTnecPinta); });
+document.addEventListener('input',function(e){
+  if(e.target&&(e.target.classList.contains('gp')||
+     ['latVent','latMues','latSond','latArr','lat_on'].indexOf(e.target.id)>=0))gTnecPinta(); });
+document.addEventListener('change',function(e){
+  if(e.target&&['latSond','latArr','lat_on'].indexOf(e.target.id)>=0)gTnecPinta(); });
+$('gReset').onclick = function () { if (GJULIO) { gPintaParams(GJULIO); gTnecPinta(); } };
 
 function gTab(cual) {
-  var g = (cual === 'granizo');
-  $('panelViento').style.display = g ? 'none' : '';
-  $('panelGranizo').style.display = g ? '' : 'none';
-  $('tabViento').className = g ? '' : 'on';
-  $('tabGranizo').className = g ? 'on' : '';
-  if (g && !GJULIO) gArranca();
+  $('panelViento').style.display = (cual === 'viento') ? '' : 'none';
+  $('panelGranizo').style.display = (cual === 'granizo') ? '' : 'none';
+  $('panelNieve').style.display = (cual === 'nieve') ? '' : 'none';
+  $('tabViento').className = (cual === 'viento') ? 'on' : '';
+  $('tabGranizo').className = (cual === 'granizo') ? 'on' : '';
+  $('tabNieve').className = (cual === 'nieve') ? 'on' : '';
+  if (cual === 'granizo') { if (!GJULIO) gArranca(); gTnecPinta(); }
+  if (cual === 'nieve') { nPintaParams(); nTnecPinta(); }
 }
 $('tabViento').onclick = function () { gTab('viento'); };
 $('tabGranizo').onclick = function () { gTab('granizo'); };
+$('tabNieve').onclick = function () { gTab('nieve'); };
+
+/* ─────────── NIEVE ───────────
+   Lo que falta, listado con su nombre y SIN VALOR. No es decoración: el §19 de
+   granizo hace exactamente esto con catorce de sus diecisiete, y la razón es la
+   misma — un hueco con nombre se puede pedir, un hueco sin nombre se olvida.
+   Lo que NO se hace es inventar una máquina alrededor de ellos. */
+var NIEVE_FALTA = [
+  ['umbral_espesor_cm', 'Espesor que dispara el SP3', 'cm'],
+  ['umbral_tasa_cm_h', 'Tasa de acumulación', 'cm/h'],
+  ['temp_max_c', 'Temperatura por debajo de la cual cuenta como nieve', '°C'],
+  ['angulo_nieve_deg', 'Ángulo de nieve', '°'],
+  ['t_min_permanencia_min', 'Permanencia mínima antes de volver', 'min'],
+  ['criterio_vuelta', 'Qué devuelve la mesa a seguimiento', '—'],
+  ['cero_nieve_calibracion', 'Cada cuánto se calibra el cero de la HSU', '—']
+];
+function nPintaParams() {
+  var h = '';
+  NIEVE_FALTA.forEach(function (f) {
+    h += '<div class="field"><label>' + esc(f[1]) +
+      ' <span class="sn" style="margin:0">' + esc(f[2]) + ' · SIN VALOR</span></label>' +
+      '<input class="np" data-k="' + f[0] + '" type="text" value="" placeholder="SIN VALOR"></div>';
+  });
+  $('nParams').innerHTML = h;
+  nCuenta();
+}
+function nCuenta() {
+  var v = [].filter.call(document.querySelectorAll('.np'), function (e) {
+    return e.value.trim() !== ''; }).length;
+  $('nFaltan').innerHTML = v === 0
+    ? '<b>Siete sin valor de siete.</b> Ninguno sale de un documento de esta casa.'
+    : '<b>' + v + ' de ' + NIEVE_FALTA.length + (v === 1 ? ' relleno' : ' rellenos') + '</b>, y ' +
+      (v === 1 ? 'es un <b>supuesto tuyo</b>' : 'son <b>supuestos tuyos</b>') + ': no ' +
+      (v === 1 ? 'viene' : 'vienen') + ' de ningún informe. La ficha no ' +
+      (v === 1 ? 'lo' : 'los') + ' va a tratar de otra manera por estar ' +
+      (v === 1 ? 'escrito' : 'escritos') + '.';
+}
+/* El ángulo de nieve nace VACÍO y no con el del viento: coger 55° «porque es lo
+   que hay» sería inventar el dato que falta y enseñarlo con pinta de bueno. */
+function nTnecPinta() {
+  var caja = $('nTnec'); if (!caja) return;
+  var ang = $('nAng').value.trim();
+  if (ang === '') {
+    caja.innerHTML = '<p class="note" style="color:var(--warn)"><b>Sin ángulo de nieve no hay ' +
+      'maniobra que calcular.</b> Y no se pone el del viento por defecto: 55° «porque es lo que ' +
+      'hay» sería inventar justo el dato que falta, y enseñarlo con pinta de bueno. Escríbelo ' +
+      'arriba y sale el número — sabiendo que el ángulo lo pones tú.</p>';
+    return;
+  }
+  var T = LOC.tNecesario(tnecLeeCadena(),
+    LOC.recorridoPeor(+ang, +$('nCarrera').value), LOC.SLEW);
+  caja.innerHTML = tnecTabla(T, !$('lat_on').checked) +
+    '<p class="note" style="margin-bottom:0">Ése es el tiempo desde que la NCU emite hasta que ' +
+    'la mesa está en ' + fmt(+ang, 0) + '°, en el peor caso. <b>Cuándo emitirla no lo sabe esta ' +
+    'ficha</b>: eso es el umbral que falta.</p>';
+}
+document.addEventListener('input', function (e) {
+  if (!e.target) return;
+  if (e.target.classList.contains('np')) nCuenta();
+  if (['nAng', 'nCarrera'].indexOf(e.target.id) >= 0) nTnecPinta();
+});
 
 /* Al abrir la pestaña se traen los valores de julio del MISMO sitio que la
    tabla —el demo generado por el core—, para no teclearlos aquí. Y la tabla
@@ -6306,7 +6571,7 @@ async function gArranca() {
     var D = await gSerie();
     GJULIO = D.muestras && GDEMO ? GDEMO.parametros.valores : null;
     GTABLA = D.transiciones_tabla;
-    if (GJULIO) gPintaParams(GJULIO);
+    if (GJULIO) { gPintaParams(GJULIO); gTnecPinta(); }
     gBanner(D.procedencia, false);
     gDiagrama([], null);
     $('gDiagNota').innerHTML = 'La tabla del diagrama sale del core: ' +

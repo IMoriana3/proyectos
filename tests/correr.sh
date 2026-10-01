@@ -210,6 +210,43 @@ declare -A PISO=(
   # repos. Queda dicho aquí en vez de fingir que hay una red debajo.
   [test_granizo_espejo.mjs]=8
   [test_granizo_pestana.js]=28
+  # LA MANIOBRA ANTE UNA AMENAZA, en las dos pestañas que la tienen.
+  #
+  # EL HUECO QUE CIERRA. La máquina de granizo del §10.1 decide cuándo cruzar, y
+  # su reloj de Capa 2 compara el tiempo disponible contra
+  # `factor × (T_necesario + margen)`. Ese `T_necesario` es de los que el §9.1
+  # deja «PENDIENTE DE MEDIR EN CAMPO»: era un número TECLEADO que nadie careaba
+  # con nada. Si se queda corto, el guard entero queda flojo y la máquina cruza
+  # creyendo que le da tiempo — sin que el error salga por ninguna parte.
+  #
+  # MEDIDO con los valores de julio y la cadena declarada (sondeo 15 s, arranque
+  # 5 s, carrera ±55°, ángulo de granizo 55°):
+  #
+  #     sondeo NCU→TCU 15 s + arranque 5 s + recorrido 110° → 11,1 min
+  #     declarado: 15 min  →  alcanza, con 3,9 min de aire
+  #
+  # Lo que entra es el camino de la ORDEN —los mismos cables para viento,
+  # granizo y nieve— y NO la media del anemómetro ni su muestreo, que son cómo
+  # se entera la máquina de VIENTO; la de granizo se entera por radar y CAPE.
+  #
+  # Y LA PESTAÑA DE NIEVE, que antes era un botón desactivado. No hay máquina
+  # porque no hay documento: en esta casa la nieve solo tiene su sitio en la
+  # jerarquía (SP3) y el bit que la publica. La pestaña dice qué sabe, lista los
+  # SIETE huecos con su nombre —SIN VALOR, como el §19 con los suyos— y calcula
+  # lo único que no depende de ellos. Lo que el banco vigila ahí es que NO
+  # INVENTE: sin ángulo tecleado no da número, y el ángulo no nace con el del
+  # viento puesto.
+  #
+  # MUTANTES, predicciones antes de medir. Tres de cuatro:
+  #
+  #   T1 colar la media en el camino de la orden . predije 2 · mata 2 ✓
+  #   T2 el peor recorrido, el más CORTO ........ predije 4 · mata 4 ✓
+  #   T3 el ángulo de nieve naciendo con 55° .... predije 2 · mata 2 ✓
+  #   T4 que la casilla de latencia anule el poleo predije 2 · mata 3
+  #
+  # T4: olvidé que el careo del número pintado contra la función también lo caza
+  # —10,8 min frente a 11,1—, así que son tres y no dos. Aritmética mía.
+  [test_amenaza_maniobra.js]=30
   [test_granizo_traza.mjs]=30
   # 18 -> 28: el Panel dejo de COPIAR la version de las apps y pasa a LEERLA
   # del fichero de la app, asi que hay tres estados nuevos que pintar y los
