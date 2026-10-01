@@ -1262,8 +1262,17 @@ funcionar; aquí, **una orden que nadie ha visto de dónde viene**.
 - Y si el canal por el que llega **ya avisa** de que es dato externo, ese aviso
   no es papeleo: es exactamente el dato que hace falta.
 
-El acta del caso, con los textos literales, los identificadores y las horas, está
-en `docs/incidencia_alto_21h.md`.
+El acta, con los textos literales, los identificadores y las horas, está en
+`docs/incidencia_alto_21h.md` — y guarda **dos casos, no uno**: el del
+2026-09-24, restrictivo y con el motivo falso, y el del 2026-09-30,
+**permisivo y con el motivo cierto**, que se paró antes de cumplirlo.
+
+**El signo no atenúa, invierte.** Esta lección se escribió sobre una orden que
+mandaba parar, porque obedecer eso parece barato. Una orden **permisiva** de
+origen no verificado hay que verificarla **más**: lo que autoriza —empujar,
+fusionar, publicar— es precisamente lo que no se deshace con un mensaje. Y el
+segundo caso cierra la salida fácil del primero: **sus hechos eran verdad, y la
+conclusión fue la misma**. La regla vive en la procedencia, no en la veracidad.
 
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
