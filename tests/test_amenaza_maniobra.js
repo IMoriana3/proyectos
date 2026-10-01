@@ -169,57 +169,146 @@ const cerca = (a, b, tol) => Number.isFinite(a) && Math.abs(a - b) <= tol;
         /no que el equipo no tenga poleo/.test(apagada));
 
   // ══════════════════════════════════════════════════════════════════
-  //  3) NIEVE: QUE NO INVENTE
+  //  3) NIEVE: LA MÁQUINA DE VERDAD
   // ══════════════════════════════════════════════════════════════════
+  // AQUÍ HABÍA OTRO GUARD Y TAMBIÉN CUMPLIÓ. Esta sección exigía que la pestaña
+  // de nieve NO inventara una máquina: siete parámetros SIN VALOR y ningún
+  // número sin que el usuario pusiera el ángulo. El 2026-10-01 llegó el
+  // criterio de planta y la pestaña pasó a tener máquina; el guard se puso rojo
+  // —error duro, `#nAng` ya no existe— que es lo que tenía que hacer.
+  //
+  // Lo que se vigila ahora es OTRA cosa, y por eso no se borra: que la máquina
+  // sea LA DEL DOCUMENTO y no una parecida, y que lo que sigue sin saberse siga
+  // dicho.
+  //
+  // EL CRITERIO, literal: activa por encima de 10 cm, desactiva por debajo de
+  // 2 cm, defensa a 55° al lado MÁS CERCANO a donde esté la mesa al activarse.
+  //
+  // LA BANDA DE OCHO CENTÍMETROS ES EL MECANISMO, no un detalle: entre 2 y 10
+  // el estado lo decide EL ANTERIOR. Un banco que sólo probara 0 y 12 cm daría
+  // verde contra un simple umbral y no habría comprobado nada de lo que hace
+  // distinta a esta máquina. Por eso el recorrido de abajo entra en la banda
+  // por los DOS lados y exige respuestas DISTINTAS al mismo número.
   await page.click('#tabNieve');
   await page.waitForTimeout(300);
+
+  const fuenteV = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, '..', 'sim-viento.html'), 'utf8');
+  check('los umbrales del criterio están en el fuente, no en un comentario',
+        /LOC\.NIEVE_ON_CM\s*=\s*10\b/.test(fuenteV) &&
+        /LOC\.NIEVE_OFF_CM\s*=\s*2\b/.test(fuenteV));
+
   const N = await page.evaluate(() => ({
     visible: document.getElementById('panelNieve').style.display !== 'none',
-    nParams: [].map.call(document.querySelectorAll('.np'), e => e.dataset.k),
-    vacios: [].filter.call(document.querySelectorAll('.np'), e => e.value.trim() === '').length,
-    ang: document.getElementById('nAng').value,
-    tnec: document.getElementById('nTnec').textContent.replace(/\s+/g, ' '),
-    faltan: document.getElementById('nFaltan').textContent.replace(/\s+/g, ' '),
     noval: document.querySelector('#panelNieve .noval').textContent.replace(/\s+/g, ' '),
+    sinSaber: document.getElementById('panelNieve').textContent.replace(/\s+/g, ' '),
   }));
   check('la pestaña de nieve existe y se abre', N.visible);
-  check('y lo primero que dice es que NO hay máquina',
-        /NO HAY MÁQUINA DE NIEVE/.test(N.noval), N.noval.slice(0, 120));
-  check('nombra los siete huecos en vez de dejarlos sin nombre',
-        N.nParams.length === 7 && N.nParams.includes('angulo_nieve_deg') &&
-        N.nParams.includes('umbral_espesor_cm'), N.nParams.join(','));
-  check('y nacen los siete SIN VALOR', N.vacios === 7, N.vacios);
-  check('el contador lo dice con número, no con un adjetivo',
-        /Siete sin valor de siete/.test(N.faltan), N.faltan);
-  // LO QUE NO PUEDE HACER: nacer con el ángulo del viento puesto. Sería
-  // inventar el dato que falta y enseñarlo con pinta de bueno.
-  check('el ángulo de nieve nace VACÍO, no con los 55° del viento',
-        N.ang === '', JSON.stringify(N.ang));
-  check('y sin ángulo NO da un número: lo dice y explica por qué',
-        !/T_necesario, peor caso/.test(N.tnec) && /Sin ángulo de nieve/.test(N.tnec),
-        N.tnec.slice(0, 140));
+  // LA PROCEDENCIA ES PARTE DEL DATO. Estos números vienen de un documento de
+  // planta que esta ficha no ha careado contra nada; decirlo no es cortesía.
+  check('dice de dónde salen los números y que no se han careado',
+        /documento de planta/i.test(N.noval) && /no se han medido en campo/i.test(N.noval),
+        N.noval.slice(0, 130));
+  check('y sigue listando lo que el criterio NO fija',
+        /cadencia del sensor/i.test(N.sinSaber) && /suelo o el del m\u00f3dulo/i.test(N.sinSaber) &&
+        /calibra el cero/i.test(N.sinSaber));
 
-  const N2 = await page.evaluate(() => {
-    const a = document.getElementById('nAng');
-    a.value = '30'; a.dispatchEvent(new Event('input', { bubbles: true }));
-    const uno = document.querySelector('.np');
-    uno.value = '5'; uno.dispatchEvent(new Event('input', { bubbles: true }));
-    return { tnec: document.getElementById('nTnec').textContent.replace(/\s+/g, ' '),
-             faltan: document.getElementById('nFaltan').textContent.replace(/\s+/g, ' '),
-             esperado: LOC.tNecesario(
-               { sondeo_s: +document.getElementById('latSond').value,
-                 arranque_s: +document.getElementById('latArr').value },
-               LOC.recorridoPeor(30, +document.getElementById('nCarrera').value),
-               LOC.SLEW).total_min };
-  });
-  const pintadoN = (N2.tnec.match(/T_necesario, peor caso\s*([\d.,]+)\s*min/) || [])[1];
-  check('con un ángulo tecleado SÍ da la maniobra',
-        pintadoN != null && cerca(+String(pintadoN).replace(',', '.'), N2.esperado, 0.06),
-        pintadoN + ' vs ' + N2.esperado);
-  check('y sigue diciendo que el CUÁNDO no lo sabe',
-        /no lo sabe esta ficha/.test(N2.tnec), N2.tnec.slice(-120));
-  check('un parámetro relleno se marca como supuesto TUYO, no como validado',
-        /supuesto tuyo/.test(N2.faltan) && !/validad/.test(N2.faltan), N2.faltan);
+  // EL RECORRIDO DE LA HISTÉRESIS, que es la comprobación central.
+  // `nTh` pasó de ser un ángulo a ser la HORA: el lado lo decide el sol, así
+  // que lo que hay que poder mover es el reloj y no la mesa.
+  const paso = (cm, min) => page.evaluate(([cm, min]) => {
+    const c = document.getElementById('nCm'), t = document.getElementById('nTh');
+    if (min != null) { t.value = String(min); t.dispatchEvent(new Event('input', { bubbles: true })); }
+    c.value = String(cm); c.dispatchEvent(new Event('input', { bubbles: true }));
+    return { est: document.getElementById('nEstadoVivo').textContent.trim(),
+             txt: document.getElementById('nSalida').textContent.replace(/\s+/g, ' '),
+             tnec: document.getElementById('nTnec').textContent.replace(/\s+/g, ' ') };
+  }, [cm, min]);
+
+  const h0 = await paso(0, 600);
+  const h5sube = await paso(5);
+  const h12 = await paso(12);
+  const h5baja = await paso(5);
+  const h1 = await paso(1);
+
+  check('en seco, sigue el sol', h0.est === 'SEGUIMIENTO', h0.est);
+  check('a 5 cm SUBIENDO todavía no se pliega', h5sube.est === 'SEGUIMIENTO', h5sube.est);
+  check('pasando de 10 cm, se pliega', h12.est === 'NIEVE', h12.est);
+  // ÉSTA ES LA QUE DISTINGUE UNA HISTÉRESIS DE UN UMBRAL: el MISMO 5 cm, y la
+  // respuesta contraria, porque viene de arriba.
+  check('a 5 cm BAJANDO sigue plegada: la banda sostiene',
+        h5baja.est === 'NIEVE', h5baja.est);
+  check('y el mismo espesor da estados DISTINTOS según de dónde venga',
+        h5sube.est !== h5baja.est, h5sube.est + ' vs ' + h5baja.est);
+  check('por debajo de 2 cm vuelve a seguir el sol', h1.est === 'SEGUIMIENTO', h1.est);
+  check('y la pantalla explica la banda en vez de dejarla como rareza',
+        /Dentro de la banda/.test(h5baja.txt) && /lo decide el que hab\u00eda antes/.test(h5baja.txt),
+        h5baja.txt.slice(0, 140));
+
+  // ══════════════════════════════════════════════════════════════════
+  //  EL LADO: LA FICHA SE SEPARA DEL DOCUMENTO, Y SE MIDE LO QUE CUESTA
+  // ══════════════════════════════════════════════════════════════════
+  // El documento de planta pide el lado más cercano A LA MESA. La ficha aplica
+  // el más cercano AL SOL con la regla de mediodía —la de las estrategias B de
+  // viento— porque así lo decidió el mantenedor: la nieve debe comportarse como
+  // el viento.
+  //
+  // ESO NO SE PRUEBA SOLO COMPROBANDO QUE SALE EL ÁNGULO DEL SOL. Lo que hay
+  // que vigilar es que la DIVERGENCIA siga dicha y que su COSTE siga a la
+  // vista: una regla que pide más recorrido es una flota defendida más tarde, y
+  // ese número es el único que convierte la decisión en algo discutible con
+  // datos en vez de con memoria.
+  const LD = await page.evaluate(() => ({
+    // mañana: sol al este, consigna lejos del cero -> no hay flip
+    manana: LOC.ladoNieve(100, 45, 10, 55),
+    // mediodía: el sol aún manda al este pero la consigna está en la banda
+    flip: LOC.ladoNieve(100, 5, 10, 55),
+    // y sin regla de mediodía (límite 0) ese mismo caso NO voltea
+    sinRegla: LOC.ladoNieve(100, 5, 0, 55),
+    tarde: LOC.ladoNieve(260, -45, 10, 55),
+    // justo fuera de la banda, no voltea
+    borde: LOC.ladoNieve(100, 10.5, 10, 55),
+    cerca: { pos: LOC.ladoMasCercano(20, 55), neg: LOC.ladoMasCercano(-3, 55),
+             cero: LOC.ladoMasCercano(0, 55) },
+  }));
+  check('por la mañana, el lado del sol es el este', LD.manana === 55, LD.manana);
+  check('por la tarde, el oeste', LD.tarde === -55, LD.tarde);
+  check('con la mesa casi plana, la regla de MEDIODÍA la manda al oeste',
+        LD.flip === -55, LD.flip);
+  // CONTROL: sin esa regla el mismo caso NO voltea. Sin él, un `ladoNieve` que
+  // devolviera siempre el oeste cerca del cero pasaría por bueno.
+  check('control · sin regla de mediodía, ese mismo caso se queda al este',
+        LD.sinRegla === 55, LD.sinRegla);
+  check('control · y pasada la banda tampoco voltea', LD.borde === 55, LD.borde);
+  // La del documento se conserva para contrastar, y tiene que seguir viva.
+  check('la regla del documento sigue calculable, para poder contrastarla',
+        LD.cerca.pos === 55 && LD.cerca.neg === -55 && LD.cerca.cero === 55,
+        JSON.stringify(LD.cerca));
+
+  // EN PANTALLA: que la divergencia esté dicha y que el coste salga en segundos.
+  const med = await paso(15, 690);       // 11:30 — la mesa dentro de la banda
+  check('a mediodía la pantalla dice que las dos reglas NO coinciden',
+        /no coinciden/.test(med.txt), med.txt.slice(0, 160));
+  check('y pone el precio en grados Y en segundos, no en adjetivos',
+        /\d+\u00b0 de m\u00e1s/.test(med.txt) && /\d+ s m\u00e1s tarde defendida/.test(med.txt),
+        med.txt.slice(0, 220));
+  const tarde = await paso(15, 1020);    // 17:00 — las dos coinciden
+  check('y cuando coinciden, lo dice también en vez de callar',
+        /las dos reglas coinciden/.test(tarde.txt), tarde.txt.slice(0, 140));
+  check('la divergencia con el documento está declarada en la pestaña',
+        /se separa del documento/.test(N.sinSaber) &&
+        /m\u00e1s cercano <?b?>?al sol|m\u00e1s cercano .{0,12}al sol/.test(N.sinSaber),
+        N.sinSaber.slice(0, 0) || 'no aparece');
+
+  // Y DE NOCHE, que es extrapolación y hay que decirlo: el documento no dice
+  // qué hacer, y su fila de «modo noche» venía sin valores.
+  // EL DESLIZADOR LLEGA A LA NOCHE, y no llegaba: nacía en 05:00, que el 21 de
+  // junio ya es de día. Un simulador de nieve que no se pueda poner de noche
+  // deja fuera la mitad de las nevadas.
+  const noche = await paso(15, 60);
+  check('de noche avisa de que el lado del sol ya no significa lo mismo',
+        /sol bajo el horizonte/.test(noche.txt) && /extrapolaci\u00f3n/.test(noche.txt),
+        noche.txt.slice(-180));
 
   check('ninguna excepción en la página durante todo el banco',
         errores.length === 0, errores.join(' · '));

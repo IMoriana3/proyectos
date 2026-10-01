@@ -197,7 +197,7 @@ disciplina vale lo que valga la puerta.
 
 ```bash
 python3 -m http.server 8099                # servir el repo (en otra terminal)
-bash tests/correr.sh                       # los 48 · 2.694 comprobaciones · ~17 min en el runner
+bash tests/correr.sh                       # los 48 · 2.710 comprobaciones · ~17 min en el runner
 bash tests/correr.sh viento                # solo los que casen con el patrón
 ```
 
@@ -306,9 +306,9 @@ un careo por longitud pasaría y el mutante sobreviviría.
 
 ### Los arneses, uno a uno (comprobaciones medidas el 2026-09-09)
 
-> **De dónde sale el 2.694, y cinco números equivocados por el camino.** Este sale de una
+> **De dónde sale el 2.710, y cinco números equivocados por el camino.** Este sale de una
 > **corrida completa y verde del 2026-09-23** sobre el árbol de esta rama ya con `main` dentro
-> (`2ea9d08` + granizo y nieve): `48 arneses verdes · 2694 comprobaciones
+> (`817ed74` + la máquina de nieve): `48 arneses verdes · 2710 comprobaciones
 > leídas`. Las 11 últimas son de `test_viento_latencia.js` (101→112), al meter el cuarto dato
 > de campo —la NCU decide sobre el viento a **3 s**, la ráfaga— y descubrir que con los cuatro
 > valores reales la cadena entera es la **identidad exacta** sobre una serie minutal, mientras
@@ -387,12 +387,12 @@ node tests/test_viento_planta.js           # 35 comprobaciones, la planta en fra
 node tests/test_viento_sello.js            # 17 comprobaciones, el informe declara con qué coordenadas se calculó
 node tests/test_viento_reproductor.js      # 18 comprobaciones, pasar de la barra sigue en el tiempo
 node tests/test_viento_rafaga_medida.js    # 29 comprobaciones, la ráfaga MEDIDA manda, y Open-Meteo la pide sin riesgo
-node tests/test_viento_latencia.js         # 133 comprobaciones, la cadena de latencia y el cronómetro (con y SIN cadena)
+node tests/test_viento_latencia.js         # 134 comprobaciones, la cadena de latencia y el cronómetro (con y SIN cadena)
 node tests/test_css_variables.js           # 35 comprobaciones, ninguna ficha usa una variable CSS que no define
 node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core
 node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo
 node tests/test_granizo_pestana.js         # 28 comprobaciones, la pestaña de granizo en Chromium
-node tests/test_amenaza_maniobra.js        # 30 comprobaciones, cuánto tarda la maniobra (granizo y nieve)
+node tests/test_amenaza_maniobra.js        # 42 comprobaciones, la maniobra ante una amenaza (granizo y nieve)
 node tests/test_ejecucion_traza.mjs        # 61 comprobaciones, la máquina de ejecución del §10.2
 node tests/test_layout.js                  # 201 comprobaciones, careo del generador de layout
 node tests/test_layout_search.js           # 22 comprobaciones, búsqueda ML/aleatoria y contrato de ganador observado

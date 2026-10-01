@@ -246,7 +246,73 @@ declare -A PISO=(
   #
   # T4: olvidé que el careo del número pintado contra la función también lo caza
   # —10,8 min frente a 11,1—, así que son tres y no dos. Aritmética mía.
-  [test_amenaza_maniobra.js]=30
+  #
+  # SUBIDO A 38 con LA MÁQUINA DE NIEVE DE VERDAD. Llegó el criterio de planta
+  # —activa por encima de 10 cm, desactiva por debajo de 2, defensa a 55° al
+  # lado MÁS CERCANO— y la pestaña pasó de declarar siete huecos a tener
+  # máquina. El guard que pedía que NO inventara se puso rojo, que es lo que
+  # tenía que hacer; se le cambió la afirmación en vez de borrarlo.
+  #
+  # LA BANDA DE OCHO CENTÍMETROS ES EL MECANISMO. Entre 2 y 10 el estado lo
+  # decide EL ANTERIOR, así que un banco que sólo probara 0 y 12 cm daría verde
+  # contra un simple umbral. El recorrido entra en la banda por los DOS lados y
+  # exige respuestas DISTINTAS al mismo 5 cm — eso es lo que distingue una
+  # histéresis de un umbral, y es la única comprobación que no se puede falsear
+  # con un número bien elegido.
+  #
+  # Y EL LADO MÁS CERCANO NO ES NINGUNA DE LAS CUATRO ESTRATEGIAS de la ficha:
+  # las A eligen por el rumbo del viento y las B por el sol. El criterio de
+  # planta minimiza el RECORRIDO, y lo que compra se mide: con la mesa en −40°
+  # la defensa está a 15° —1,8 min— frente a los 110° del peor caso —11,1 min—.
+  # Un factor 6 en tiempo de defensa.
+  #
+  # MUTANTES, predicciones antes de medir. UNA DE CUATRO:
+  #
+  #   U1 desactivar también a 10 cm (umbral) .. predije 3 · mata 4
+  #   U2 el lado, siempre el positivo ......... predije 3 · mata 4
+  #   U3 los dos umbrales invertidos ......... predije 4 · mata 4 ✓
+  #   U4 el peor caso en vez del recorrido ... predije 2 · mata 1
+  #
+  # Las tres fallidas tienen el MISMO vicio y por eso van juntas: no cuento el
+  # SOLAPE entre comprobaciones propias. En U1 olvidé que el careo estático de
+  # los umbrales contra el fuente también lo caza; en U2, que cambiar el lado
+  # cambia el recorrido y tumba también el check del tiempo; y en U4 conté de
+  # más porque la línea del peor caso se pinta aparte y no se mueve. Predecir
+  # bien pide mirar qué más toca cada mutante, no sólo a qué apunta.
+  #
+  # SUBIDO A 42: EL LADO DE LA NIEVE NO ES EL DEL DOCUMENTO, y eso hay que
+  # vigilarlo con más cuidado que si lo fuera.
+  #
+  # El documento de planta pide «whichever is closer to the tracker position».
+  # La ficha aplica el lado del SOL con la regla de mediodía —la de las
+  # estrategias B de viento— porque lo decidió el mantenedor: la nieve debe
+  # comportarse como el viento. No es interpretación mía y por eso va escrito en
+  # la ficha, en la pestaña y aquí: dentro de un año alguien comparará las dos
+  # cosas y encontrará reglas distintas.
+  #
+  # LO QUE CUESTA, MEDIDO, porque una decisión sin su precio no se puede
+  # discutir: la regla de mediodía manda al oeste una mesa casi plana, así que a
+  # veces pide más recorrido. A las 11:30 son 63° frente a 47° — 17° de más, o
+  # sea 98 s más tarde defendida. La pestaña lo enseña siempre que difieran.
+  #
+  # MUTANTES, predicciones antes de medir. Dos de cuatro:
+  #
+  #   V1 quitar la regla de mediodía ......... predije 3 · mata 3 ✓
+  #   V2 el lado del sol, invertido .......... predije 4 · mata 8
+  #   V3 no enseñar el coste cuando difieren . predije 2 · mata 2 ✓
+  #   V4 volver al lado del documento ........ predije 4 · mata 2
+  #
+  # V4 ES EL HALLAZGO, y no por el número: ignorar la corrección del mantenedor
+  # y volver a la regla del documento sólo pone rojas DOS comprobaciones, porque
+  # las dos reglas COINCIDEN casi todo el día. La diferencia sólo existe en la
+  # ventana de mediodía. Un banco que probara horas al azar la vería una de cada
+  # tantas; por eso el fixture conduce las 11:30 a propósito y no una hora
+  # bonita. Cuando dos reglas se parecen, el banco tiene que ir A BUSCAR dónde
+  # se separan.
+  #
+  # V2: predije 4 y mata 8 — el mismo vicio de la tanda anterior, no contar el
+  # solape. Invertir el lado tumba también todas las comprobaciones de pantalla.
+  [test_amenaza_maniobra.js]=42
   [test_granizo_traza.mjs]=30
   # 18 -> 28: el Panel dejo de COPIAR la version de las apps y pasa a LEERLA
   # del fichero de la app, asi que hay tres estados nuevos que pintar y los
@@ -483,9 +549,13 @@ declare -A PISO=(
   # bien la lista y no la enseña dejaba al usuario igual de a oscuras.
   #
   # SUBIDO A 112 con el cuarto dato de campo, y es el que más cambia: la NCU
-  # decide sobre el viento a TRES SEGUNDOS —la ráfaga—, no sobre la media de
-  # diez minutos del estándar meteorológico. Con 3 / 1 / 15 / 5 el peor caso son
-  # 24 s, y 20 de esos 24 son poleo más arranque: la medida casi no filtra.
+  # decide sobre el viento a UN SEGUNDO, no sobre la media de diez minutos del
+  # estándar meteorológico. (Primero se dijo «3 s»; luego llegó la tabla de la
+  # planta y dice literal «for anemometer readings >40 km/h (1 sec)». Manda el
+  # documento, y queda dicho que el valor cambió.) Con 1 / 1 / 15 / 5 el peor
+  # caso son 22 s, y 20 de esos 22 son poleo más arranque: con la ventana IGUAL
+  # que el muestreo, la cadena de medida no filtra NADA — la máquina decide
+  # sobre la lectura cruda.
   #
   # Y AHÍ SALTÓ EL DEFECTO GORDO, que no estaba en la cadena sino en el informe.
   # La serie anual va a pasos de 1 min. Los cuatro parámetros caen por debajo de
@@ -526,7 +596,7 @@ declare -A PISO=(
   #
   # Ahora se acota, y la cota es de las que no se discuten: lo más tarde que
   # puede arrancar una maniobra es la suma de los cuatro, eso ocurre DOS veces
-  # por episodio, y se compara con las horas de SOL. Con 3/1/15/5 y 31
+  # por episodio, y se compara con las horas de SOL. Con 1/1/15/5 y 31
   # episodios sobre 4.380 h: 24 s por maniobra · 4,1° de eje · 62 maniobras ·
   # 25 min · <b>0,009 %</b> del año. Es un TECHO, no una estimación.
   #
@@ -586,7 +656,19 @@ declare -A PISO=(
   # mismo estado para saber cuándo cortar, así que se cae la sección entera. El
   # rojo es legítimo pero llega por el fixture y no por la afirmación; queda
   # dicho porque un recuento alto por acoplamiento no es un banco más fuerte.
-  [test_viento_latencia.js]=133
+  #
+  # SUBIDO A 134 al bajar la ventana del anemómetro de 3 s a 1 s — la tabla de
+  # la planta lo dice literal: «for anemometer readings >40 km/h (1 sec)».
+  #
+  # Y AL CAMBIARLO SE PUSIERON ROJAS TRES COMPROBACIONES MÍAS, cada una con un
+  # número distinto y ninguna diciendo por qué: llevaban el peor caso escrito a
+  # mano como 24 —los 3+1+15+5 de entonces— repetido en tres sitios. Ahora la
+  # suma se hace UNA vez (`PEOR`), sigue siendo un oráculo independiente —se
+  # suma a mano, no se le pide a `cotaCadena`, que es lo que se comprueba— y de
+  # paso se gana una comprobación: que el peor caso ES la suma de los cuatro
+  # declarados. Un literal repetido no es un oráculo más fuerte, es tres sitios
+  # donde envejecer.
+  [test_viento_latencia.js]=134
   [test_viento_meteo.js]=33
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,

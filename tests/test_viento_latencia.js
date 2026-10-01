@@ -703,12 +703,16 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
         /id="latMues"[^>]*value="1"/.test(vientoFuente));
   check('… y 15 s de poleo NCU→TCU, el extremo largo del 12–15',
         /id="latSond"[^>]*value="15"/.test(vientoFuente));
-  // LA VENTANA DE LA RÁFAGA, que es el cuarto dato de campo: la NCU decide sobre
-  // el viento a TRES SEGUNDOS, no sobre la media de diez minutos del estándar
-  // meteorológico. Cambia quién manda en la cadena: con 3 s la medida casi no
-  // filtra, y los 20 s de poleo más arranque son casi toda la espera.
-  check('… y 3 s de media: la NCU decide sobre la RÁFAGA, no sobre diez minutos',
-        /id="latVent"[^>]*value="3"/.test(vientoFuente));
+  // LA VENTANA DE LA MEDIDA, y es la que más ha bailado. Primero se dijo «3
+  // segundos»; luego apareció la tabla de la planta y dice, literal, «for
+  // anemometer readings >40 km/h (1 sec)». Manda el documento: 1 s.
+  //
+  // Y NO ES UN AJUSTE COSMÉTICO. Con 1 s la ventana es IGUAL que el muestreo, o
+  // sea que la cadena de medida NO FILTRA NADA: la máquina decide sobre la
+  // lectura cruda y cualquier racha que cruce 40 km/h un segundo la abandera.
+  // Toda la espera se va al camino de la ORDEN — poleo 15 s más arranque 5.
+  check('… y 1 s de media: el criterio es la lectura cruda, no una media',
+        /id="latVent"[^>]*value="1"/.test(vientoFuente));
 
   // LA AFIRMACIÓN QUE HACE EL AVISO, comprobada aparte y sin navegar: con un
   // paso mayor o igual que el periodo, la rejilla ES la identidad. Si esto no
@@ -922,7 +926,7 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
       cero: hacer({ ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 }, 1 / 60),
       viva: hacer({ ventana_s: 1800, muestreo_s: 300, sondeo_s: 300, arranque_s: 120 }, 1 / 60),
       // LOS NÚMEROS DEL EQUIPO sobre la serie minutal: los cuatro por debajo del paso.
-      real: hacer({ ventana_s: 3, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 }, 1 / 60),
+      real: hacer({ ventana_s: 1, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 }, 1 / 60),
       // Y a medias: la media de 10 min sí se resuelve, el resto no.
       medias: hacer({ ventana_s: 600, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 }, 1 / 60),
     };
@@ -941,10 +945,16 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   // ══════════════════════════════════════════════════════════════════
   //  5bis) LA CADENA QUE NO CABE EN EL PASO DE LA SERIE
   // ══════════════════════════════════════════════════════════════════
-  // DATO DE CAMPO, el último de los cuatro: la NCU decide sobre el viento a
-  // TRES SEGUNDOS — la ráfaga, no la media de diez minutos. Con 3 / 1 / 15 / 5
-  // y la serie anual a pasos de 1 min, LOS CUATRO caen por debajo del paso y las
-  // primitivas devuelven EL MISMO OBJETO: la cadena es la identidad exacta.
+  // DATO DE CAMPO, el último de los cuatro: la NCU decide sobre el viento a UN
+  // SEGUNDO —la lectura cruda, no la media de diez minutos del estándar—, y con
+  // la ventana IGUAL que el muestreo la cadena de medida no filtra nada. Con
+  // 1 / 1 / 15 / 5 y la serie anual a pasos de 1 min, LOS CUATRO caen por debajo
+  // del paso y las primitivas devuelven EL MISMO OBJETO: identidad exacta.
+  //
+  // (El valor bajó de 3 s a 1 s cuando llegó la tabla de la planta, que lo dice
+  //  literal: «for anemometer readings >40 km/h (1 sec)». Lo que NO cambia es
+  //  nada de lo que se mide aquí: con 3 o con 1, los cuatro siguen por debajo
+  //  del paso de la serie. Si hubiera cambiado, este banco lo habría dicho.)
   //
   // Y el año seguía declarando «estos números NO son comparables». Eso no es un
   // aviso de más: es una afirmación FALSA en el informe, y en la dirección
@@ -952,7 +962,7 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   // hay ninguno. Una afirmación falsa de éxito es peor que un silencio.
   const dtMin = 60;
   const mudez = await page.evaluate((dtS) => {
-    const real = { ventana_s: 3, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 };
+    const real = { ventana_s: 1, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 };
     const gorda = { ventana_s: 1800, muestreo_s: 300, sondeo_s: 300, arranque_s: 120 };
     const a = new Float64Array(64); for (let i = 0; i < 64; i++) a[i] = (i < 20 ? 4 : 28) + (i % 5);
     return {
@@ -1007,7 +1017,7 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   // techo—. Se pinta únicamente en la rama en que los cuatro son mudos, donde la
   // media, por debajo del paso, no puede esconder nada.
   const COTA = await page.evaluate(() => {
-    const L = { ventana_s: 3, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 };
+    const L = { ventana_s: 1, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 };
     return {
       normal: LOC.cotaCadena(L, 31, 4380, 0.17),
       sinEpisodios: LOC.cotaCadena(L, 0, 4380, 0.17),
@@ -1017,13 +1027,23 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
                            1, 1, 0.17).peor_s,
     };
   });
+  /* EL PEOR CASO ESPERADO SE ESCRIBE UNA VEZ Y SUMANDO, no repetido como
+     literal en tres sitios. Estaba a 24 —los 3+1+15+5 de entonces— y al bajar la
+     ventana del anemómetro a 1 s se pusieron rojas las TRES, cada una con un
+     número distinto y ninguna diciendo por qué.
+     Sigue siendo un oráculo independiente: la suma se hace AQUÍ, a mano, no se
+     le pide a `cotaCadena` — que es justo lo que se está comprobando. */
+  const PEOR = 1 + 1 + 15 + 5;            // ventana + muestreo + sondeo + arranque
   check('la cota suma los CUATRO, no se queda con el mayor', COTA.suma === 100, COTA.suma);
   check('y son dos maniobras por episodio, no una', COTA.normal.maniobras === 62, COTA.normal.maniobras);
-  check('los segundos son maniobras × peor caso', COTA.normal.segundos === 62 * 24, COTA.normal.segundos);
+  check('el peor caso es la suma de los cuatro declarados',
+        COTA.normal.peor_s === PEOR, COTA.normal.peor_s + ' vs ' + PEOR);
+  check('los segundos son maniobras × peor caso', COTA.normal.segundos === 62 * PEOR,
+        COTA.normal.segundos);
   check('y los grados, peor caso × velocidad del hierro',
-        cerca(COTA.normal.grados, 24 * 0.17, 1e-9), COTA.normal.grados);
+        cerca(COTA.normal.grados, PEOR * 0.17, 1e-9), COTA.normal.grados);
   check('la fracción del año sale contra las horas de SOL, no contra las 8760',
-        cerca(COTA.normal.frac_sol, (62 * 24) / (4380 * 3600), 1e-12), COTA.normal.frac_sol);
+        cerca(COTA.normal.frac_sol, (62 * PEOR) / (4380 * 3600), 1e-12), COTA.normal.frac_sol);
   // DEGENERADOS: un año sin episodios y un sitio sin sol no pueden dar NaN ni
   // infinito en un informe. Un `0/0` impreso es peor que no imprimir nada.
   check('sin episodios, la cota es cero y no un NaN',
@@ -1038,7 +1058,7 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
         COTA.sinSol.frac_sol === null, String(COTA.sinSol.frac_sol));
 
   const conCota = await page.evaluate(() => {
-    const L = { ventana_s: 3, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 };
+    const L = { ventana_s: 1, muestreo_s: 1, sondeo_s: 15, arranque_s: 5 };
     const hacer = cases => { REP = { config: { latencia: L, slew_deg_s: 0.17 },
       meteo: { dt_h: 1 / 60, daylight_hours: 4380 }, cases: cases };
       return bannerLatencia().replace(/<[^>]*>/g, '').replace(/\s+/g, ' '); };
