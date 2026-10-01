@@ -549,9 +549,13 @@ declare -A PISO=(
   # bien la lista y no la enseña dejaba al usuario igual de a oscuras.
   #
   # SUBIDO A 112 con el cuarto dato de campo, y es el que más cambia: la NCU
-  # decide sobre el viento a TRES SEGUNDOS —la ráfaga—, no sobre la media de
-  # diez minutos del estándar meteorológico. Con 3 / 1 / 15 / 5 el peor caso son
-  # 24 s, y 20 de esos 24 son poleo más arranque: la medida casi no filtra.
+  # decide sobre el viento a UN SEGUNDO, no sobre la media de diez minutos del
+  # estándar meteorológico. (Primero se dijo «3 s»; luego llegó la tabla de la
+  # planta y dice literal «for anemometer readings >40 km/h (1 sec)». Manda el
+  # documento, y queda dicho que el valor cambió.) Con 1 / 1 / 15 / 5 el peor
+  # caso son 22 s, y 20 de esos 22 son poleo más arranque: con la ventana IGUAL
+  # que el muestreo, la cadena de medida no filtra NADA — la máquina decide
+  # sobre la lectura cruda.
   #
   # Y AHÍ SALTÓ EL DEFECTO GORDO, que no estaba en la cadena sino en el informe.
   # La serie anual va a pasos de 1 min. Los cuatro parámetros caen por debajo de
@@ -592,7 +596,7 @@ declare -A PISO=(
   #
   # Ahora se acota, y la cota es de las que no se discuten: lo más tarde que
   # puede arrancar una maniobra es la suma de los cuatro, eso ocurre DOS veces
-  # por episodio, y se compara con las horas de SOL. Con 3/1/15/5 y 31
+  # por episodio, y se compara con las horas de SOL. Con 1/1/15/5 y 31
   # episodios sobre 4.380 h: 24 s por maniobra · 4,1° de eje · 62 maniobras ·
   # 25 min · <b>0,009 %</b> del año. Es un TECHO, no una estimación.
   #
@@ -652,7 +656,19 @@ declare -A PISO=(
   # mismo estado para saber cuándo cortar, así que se cae la sección entera. El
   # rojo es legítimo pero llega por el fixture y no por la afirmación; queda
   # dicho porque un recuento alto por acoplamiento no es un banco más fuerte.
-  [test_viento_latencia.js]=133
+  #
+  # SUBIDO A 134 al bajar la ventana del anemómetro de 3 s a 1 s — la tabla de
+  # la planta lo dice literal: «for anemometer readings >40 km/h (1 sec)».
+  #
+  # Y AL CAMBIARLO SE PUSIERON ROJAS TRES COMPROBACIONES MÍAS, cada una con un
+  # número distinto y ninguna diciendo por qué: llevaban el peor caso escrito a
+  # mano como 24 —los 3+1+15+5 de entonces— repetido en tres sitios. Ahora la
+  # suma se hace UNA vez (`PEOR`), sigue siendo un oráculo independiente —se
+  # suma a mano, no se le pide a `cotaCadena`, que es lo que se comprueba— y de
+  # paso se gana una comprobación: que el peor caso ES la suma de los cuatro
+  # declarados. Un literal repetido no es un oráculo más fuerte, es tres sitios
+  # donde envejecer.
+  [test_viento_latencia.js]=134
   [test_viento_meteo.js]=33
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,

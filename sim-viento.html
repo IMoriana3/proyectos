@@ -333,7 +333,7 @@
       </div>
       <div id="latBox" style="display:none">
         <div class="two">
-          <div class="field"><label>Media del anemómetro (s)</label><input id="latVent" type="number" step="1" min="0" value="3"></div>
+          <div class="field"><label>Media del anemómetro (s)</label><input id="latVent" type="number" step="1" min="0" value="1"></div>
           <div class="field"><label>Muestreo NCU←HSU (s)</label><input id="latMues" type="number" step="1" min="0" value="1"></div>
         </div>
         <div class="two">
@@ -353,8 +353,9 @@
           depende de dónde caiga el suceso dentro del periodo. El <b>arranque</b> sí es tiempo
           muerto fijo.</p>
         <p class="nota">Los valores de partida no son redondos porque salen de un equipo real: el
-          anemómetro <b>registra cada segundo</b>, y el poleo de la NCU a la TCU ronda los
-          <b>12–15 s</b>. Ahí va puesto el extremo largo, 15, porque una rejilla se cobra
+          anemómetro <b>registra cada segundo</b> y el criterio de stow se decide sobre esa
+          <b>lectura de 1 s</b> —así lo dice la tabla de la planta: <i>«for anemometer readings
+          &gt;40 km/h (1 sec)»</i>—, y el poleo de la NCU a la TCU ronda los <b>12–15 s</b>. Ahí va puesto el extremo largo, 15, porque una rejilla se cobra
           <b>hasta</b> su periodo y no de media: lo que se espera es cualquier cosa entre 0 y 15 s
           según dónde caiga la decisión dentro del ciclo. Y con esos dos números la cuenta
           cambia de dueño: el muestreo y el sondeo suman segundos, y quien manda es
