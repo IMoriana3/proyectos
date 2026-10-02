@@ -35,6 +35,70 @@ El viento manda sobre manual, que es como se comporta el equipo real.
 
 **Las averías de eje son físicas y la alarma se deduce.** Eje calado: no gira, el motor pega corriente de calado y salta la sobrecorriente software (41040) casi al instante. Eje duro: gira arrastrándose sin llegar al disparo, y se detecta por la vía lenta —ventana de 41039, tres reintentos de 41065— hasta el bit de eje bloqueado. Dos averías, dos caminos, como el firmware.
 
+## El diagnóstico que ya tenemos es ciego a este defecto
+
+Consecuencia directa del párrafo de arriba, y **no es hipotética: está en producción.**
+
+El colector del SCADA clasifica la salud de cada TCU —y con ella el color del mapa—
+así (`scada`, `collector/decode.py`, líneas 128-129, leído el 2026-10-02):
+
+```python
+tilt, target = fields.get("tilt_angle"), fields.get("target_angle")
+if tilt is not None and target is not None and abs(tilt - target) > 5.0:
+    ...                                    # -> warn
+```
+
+Los dos valores los publica **el mismo TCU**, y el lazo se cierra sobre la medida. Así
+que ante un encoder descalibrado esa diferencia vale ≈ 0: no hay `warn`, el seguidor
+sale **verde** en el mapa, y la mesa está 3° torcida. Es el caso D.1.1 del Anexo 4 —y
+la razón de que ese ensayo pida instrumento externo— ocurriendo con el SCADA
+conforme.
+
+**El residuo es ciego justo a la avería que más cuesta ver.** No es inútil: lo que sí
+detecta es un fallo de **lazo** —no llega a la consigna—, que es una avería distinta.
+Lo que no puede detectar es un fallo de **referencia**: la consigna se cumple sobre un
+cero equivocado.
+
+**Y el nombre lo esconde.** `docs/scada.md` describe el estado `ok` como «ángulo
+**real** ≈ objetivo». No hay ningún ángulo real en esa comparación: `tilt_angle` es el
+**medido**. Mientras la tabla lo llame real, el punto ciego es invisible al leerla.
+
+**Lo que sí lo ve: comparar el ÁNGULO, no el error.** A la misma marca de tiempo, todas
+las TCU de una NCU deberían estar al mismo θ salvo por el terreno. La descalibrada
+declara 3° distintos de sus vecinas **con error propio nulo**:
+
+| residuo | detecta | NO detecta |
+|---|---|---|
+| `tilt_angle` vs `target_angle` (hoy) | fallo de **lazo** | fallo de **referencia** |
+| `tilt_angle` vs **vecinos de su NCU** | fallo de **referencia** | un desajuste común a toda la NCU (se mueven todas juntas) |
+
+Son dos residuos, no uno, y hoy van mezclados bajo un umbral que promete de más. La
+maquinaria para el segundo no hay que inventarla: el SCADA ya sirve `tilt_angle` por
+TCU con su `ncu` como tag (`tracker_status` en InfluxDB), que es exactamente el corte
+que hace falta.
+
+**El fixture tiene la misma trampa, y es la más fácil de cometer.** Un banco que
+inyecte el sesgo en el ángulo **real** no ejercita nada: equivale a suponer que el TCU
+es honesto y publica su propia desviación. Hay que inyectarlo en la **medida** —el
+offset de 41058, el desajuste de montaje— que es justo lo que este simulador mantiene
+separado. El instrumento que valide el diagnóstico tiene que **poder mentir igual que
+miente el equipo**.
+
+Para eso este simulador vale más que cualquier fixture inventado: planta entera,
+jerarquía real, mapa Modbus real, y averías por dos caminos físicos distintos. El «eje
+duro» —gira arrastrándose sin llegar al disparo— es el caso difícil, y aquí se
+provoca.
+
+> **PROCEDENCIA, y una ironía que merece quedar escrita.** El razonamiento sale de una
+> rama abandonada (`claude/ia-g6b1he`, commit `624dc08e7`, 21-08-2026) que escribió un
+> paquete `solargpt_ml` con este residuo dentro y luego, al leer este documento, se
+> autocorrigió. **Ese paquete no existe**: en `SolarGPTfull/solargpt` están
+> `solargpt_core`, `solargpt_geo` y `solargpt_research`, y nada más (comprobado por
+> API, 2026-10-02). O sea que la rama se reprochaba un defecto de un código que nunca
+> llegó a existir — y el mismo defecto llevaba meses **en el que sí existe**, decidiendo
+> el color del mapa. Lo que falta por hacer está en el repo `scada`, no aquí; esta
+> sección solo se asegura de que no vuelva a pasar desapercibido.
+
 ## De dónde salen los números
 
 Ninguna constante se escribe a mano. `sim/fisica.js` y `sim/modbus-map.js` los **genera** un script desde sus fuentes, y el generador **coteja lo que aparece en más de un sitio y se niega a escribir si divergen**:
