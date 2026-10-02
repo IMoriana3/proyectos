@@ -400,6 +400,7 @@ node tests/test_layout_search_ui.js        # 32 comprobaciones, optimizador úni
 node tests/test_layout_ui.js               # 182 comprobaciones, el generador en Chromium
 node tests/test_zonas_mixto.js             # 106 comprobaciones, el reparto por zonas
 node tests/test_versiones_app.mjs          # 19 comprobaciones, el puntero de la tarjeta a la app (cruza repos)
+node tests/test_puerta_configurada.mjs     # 48 comprobaciones sin red / 50 con red, la CONFIGURACIÓN de la puerta de main (ruleset, dispensas, y que el check obligatorio nombre un job que existe)
 ```
 
 ### El puntero de la tarjeta a la app, y por qué el Panel lee Pages y el arnés `main`

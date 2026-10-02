@@ -710,6 +710,54 @@ declare -A PISO=(
   [test_viento_steppers.js]=17
   [test_viento_sello.js]=17
   [test_viento_sitio.js]=52
+  # LA CONFIGURACIÓN DE LA PUERTA, que hasta hoy era prosa en
+  # `docs/puertas-y-alcance.md` §5 bis — y ese apartado declaraba su propia
+  # debilidad diciendo que leerla «pide una llamada autenticada de
+  # administrador que la CI no tiene». ERA FALSO: el repo es público y
+  # `api.github.com/repos/IMoriana3/proyectos` y `/rulesets/<id>` dan 200 SIN
+  # credencial. Lo que faltaba no era un permiso, era haberlo intentado.
+  #
+  # EL PISO ES EL DE SIN RED (48), no el de con red (50), y es a propósito: si
+  # fuera 50, una caída de api.github.com o un 403 por límite de peticiones
+  # pondría la puerta entera en rojo por algo que no es un defecto de este
+  # repo. Las dos que faltan son «la configuración VIVA no tiene faltas» y «la
+  # VIVA no deriva del golden».
+  #
+  # Y CINCO DE LAS 48 son de una pieza que NO se ha podido probar entera: si
+  # alguien pone un `GITHUB_TOKEN` flojo, un 401/403 reintenta en anónimo. El
+  # 401 real no se provoca desde el contenedor de desarrollo —el proxy de
+  # egreso devuelve 200 incluso con un token inválido, y `curl -v` demuestra
+  # que la cabecera sí sale—, así que lo ejercitado es la DECISIÓN, extraída a
+  # función pura, en sus cinco combinaciones. El viaje queda sin ejercitar y
+  # dicho. (El workflow NO pasa el token, justamente para no depender de eso.)
+  #
+  # Y ESO SIGNIFICA QUE EL HUECO ES REAL: sin red, una configuración cambiada a
+  # mano pasaría. El arnés lo imprime con esas palabras —«HUECO ABIERTO: nadie
+  # ha comprobado que lo vivo siga pareciéndose al golden»— en vez de dejar que
+  # el verde lo tape. En CI hay red, así que el modo normal es el de 40.
+  #
+  # Y EL CLON TIENE QUE SER EL REPO: en un fork, leer la API de
+  # `IMoriana3/proyectos` y aprobarlo sería un verde falso sobre una puerta que
+  # no es la suya. Si el `origin` no es ése, la lectura viva se declina con el
+  # motivo. VERIFICADO sobre un clon de verdad con el origin cambiado: 48
+  # comprobaciones, lectura declinada, hueco declarado.
+  #
+  # MEDIDO con seis mutantes, los seis verificados aplicados y las SEIS
+  # predicciones clavadas (10 bajas): renombrar el job del workflow mata 1,
+  # darle un `name:` al job 1 —que le cambia el nombre del check run y deja el
+  # obligatorio huérfano—, el golden con `delete_branch_on_merge:false` 1, el
+  # golden exigiendo «arneses / navegador» 3, el golden con un actor con
+  # dispensa 2, y un `normaliza()` que no ordena 2.
+  #
+  # LA PRIMERA TIRADA NO FUE ASÍ, y queda escrito porque el arreglo salió de
+  # ahí: predije 1/3/2 para esos tres y mataron 2/6/5. El exceso no era mala
+  # suerte, era un defecto de tres comprobaciones que decían «apagar X NO es
+  # falta de la regla» y estaban escritas como `faltas.length === 0`. Eso no
+  # comprueba lo que afirma: cualquier falta metida en el golden las ponía
+  # rojas las tres sin que lo suyo hubiera cambiado. Ahora comparan contra la
+  # LÍNEA BASE del golden. Y la del booleano construía su fixture DESDE el
+  # golden, así que un golden mutado le vaciaba el mecanismo: ahora es literal.
+  [test_puerta_configurada.mjs]=48
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )

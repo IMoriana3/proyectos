@@ -1414,13 +1414,88 @@ pestaña de Nieve fuera un botón DESACTIVADO, y la rama la había llenado—. L
 puerta local salió verde porque el guard viejo no estaba en esa copia. Con esta
 casilla puesta, eso no llega a `main` sin verse.
 
-**Y LA DEBILIDAD DE ESTE APARTADO, dicha.** Este ajuste **no vive en el repo**:
-no hay fichero que lo contenga ni arnés que lo compruebe, porque leerlo pide una
-llamada autenticada de administrador que la CI no tiene. Así que esta sección es
-prosa sobre un estado que puede cambiar sin que nadie se entere — exactamente la
-clase de número copiado a mano que el §6 persigue. Queda dicho en vez de
-tapado: **si alguien quita el check obligatorio, este documento seguirá
-afirmando que está puesto.**
+**LA DEBILIDAD QUE ESTE APARTADO DECLARÓ, Y LA FRASE FALSA QUE LLEVABA DENTRO.**
+Aquí decía: «este ajuste **no vive en el repo**: no hay fichero que lo contenga
+ni arnés que lo compruebe, porque leerlo pide una llamada autenticada de
+administrador que la CI no tiene». La primera mitad era verdad. **La segunda era
+falsa**, y conviene ver de qué tipo de error se trata: no comprobé si se podía
+leer, deduje que no por el tipo de dato que es. Un ajuste de administración
+*suena* a que pide credenciales de administrador.
+
+El repo es **público**, y los dos objetos se leen **sin credencial ninguna**:
+
+```
+curl https://api.github.com/repos/IMoriana3/proyectos          -> 200
+curl https://api.github.com/repos/IMoriana3/proyectos/rulesets -> 200
+```
+
+Dentro vienen `bypass_actors`, los contextos exigidos,
+`strict_required_status_checks_policy` y `delete_branch_on_merge`: todo lo que
+esta sección describía de palabra. Lo que faltaba no era un permiso, **era
+haberlo intentado**. Es la decimocuarta lección de este documento —una
+instrucción restrictiva también hay que verificarla— cometida sobre un límite
+que yo mismo me había inventado.
+
+### 5 ter · Lo que cierra la debilidad: `tests/test_puerta_configurada.mjs` (2026-10-02)
+
+El arnés hace **tres cosas distintas**, y conviene no confundirlas porque solo
+una de las tres necesita red:
+
+| | qué comprueba | red |
+|---|---|---|
+| **A · la regla** | qué tiene que cumplir una configuración para que la puerta sea una puerta, sobre configuraciones **sintéticas** | no |
+| **B · el careo** | que lo vivo no derive de `tests/goldens/puerta_main.json`, que es la configuración **medida** | sí |
+| **C · el nombre** | que el contexto exigido (`navegador`) corresponda a un **job real** de `arneses.yml` | no |
+
+**C es la que más vale y la que menos lo parece.** El fallo de §5 bis —escribir
+un nombre que no existe— tiene una segunda puerta de entrada que el ajuste no
+ve: **renombrar el job**. O más fino todavía, añadirle un `name:`, porque el
+nombre del check run es `jobs.<id>.name` si está y el `<id>` si no. Las dos
+cosas dejan el check obligatorio huérfano y todas las PR del repo esperando
+para siempre un «Expected — Waiting for status to be reported». Medido: las dos
+mutaciones matan esa comprobación, y antes de este arnés **nada en el repo las
+impedía**.
+
+**POR QUÉ LA REGLA NO EXIGE `allow_auto_merge`.** Porque no es integridad, es
+comodidad: apagarla no deja la puerta peor. Lo que sí hace la regla es
+**avisar** de una combinación que muerde —check en modo estricto + auto-merge
+armado: el auto-merge nativo no actualiza la rama, así que si se fusiona otra PR
+antes, la que tenía auto-merge se queda parada—. El aviso **no suspende**, y
+está probado en las dos direcciones: aparece con las dos cosas puestas y
+desaparece al quitar cualquiera. Un aviso que no puede dejar de salir no informa
+de nada.
+
+**EL HUECO QUE QUEDA, con su número.** El piso de `correr.sh` es **48**, que es
+el recuento **sin red** — no 50, el de con red. Si fuera 50, una caída de
+`api.github.com` o un 403 por límite de peticiones pondría la puerta entera en
+rojo por algo que no es un defecto de este repo. El precio de esa elección es
+exacto y es éste: **sin red, una configuración cambiada a mano pasaría.** El
+arnés lo imprime con esas palabras —`HUECO ABIERTO: nadie ha comprobado que lo
+vivo siga pareciéndose al golden`— en vez de dejar que el verde lo tape, igual
+que `test_versiones_app.mjs` declara su careo sin hermano.
+
+**Y UNA PIEZA SIN PROBAR DEL TODO, dicha.** Si alguien pasa un `GITHUB_TOKEN`
+flojo, un 401/403 reintenta en anónimo —un token con permisos insuficientes es
+*peor* que ninguno sobre un repo público—. Ese 401 **no se puede provocar desde
+el contenedor de desarrollo**: con un token inválido la API devuelve 200 porque
+el proxy de egreso lo intercepta, y `curl -v` demuestra que la cabecera sí sale.
+Así que lo ejercitado es la **decisión**, extraída a función pura y probada en
+sus cinco combinaciones; el viaje queda sin ejercitar. El workflow no pasa
+ningún token, precisamente para no depender de eso.
+
+**Y EL CLON TIENE QUE SER EL REPO.** El golden describe la puerta de **un**
+repo. En un fork, leer la API de `IMoriana3/proyectos` y aprobarlo sería un
+verde falso sobre una puerta que no es la suya — el fork tendrá su propia
+configuración, probablemente ninguna. Así que si el `origin` del clon no es ese
+repo, la lectura viva **se declina con el motivo** en vez de leer la de otro.
+Verificado sobre un clon real con el `origin` cambiado.
+
+**LO QUE SIGUE SIN VIGILAR, para que no se lea como cerrado.** El golden fija lo
+que el golden nombra: `default_branch`, `delete_branch_on_merge`,
+`allow_auto_merge` y el ruleset entero. **Un campo nuevo que GitHub añada mañana
+no es deriva** —si lo fuera, este arnés se pondría rojo cada vez que GitHub
+amplíe su API, que no es un defecto de este repo—, así que un ajuste nuevo y
+relevante entraría sin que nada cantase hasta que alguien lo añada al golden.
 
 ---
 

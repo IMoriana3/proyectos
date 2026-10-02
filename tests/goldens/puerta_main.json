@@ -1,0 +1,64 @@
+{
+  "_que": "La configuración MEDIDA de la puerta de main. La vigila tests/test_puerta_configurada.mjs.",
+  "_como": "curl https://api.github.com/repos/IMoriana3/proyectos y /rulesets/<id> — sin credencial: el repo es público y los dos dan 200.",
+  "_cuando": "medido el 2026-10-02",
+  "_si_cambia": "si el cambio es a propósito, se actualiza ESTE fichero y aparece en el diff. Para eso existe: el ajuste vive fuera del repo y así deja rastro dentro.",
+  "repo": "IMoriana3/proyectos",
+  "repositorio": {
+    "default_branch": "main",
+    "delete_branch_on_merge": true,
+    "allow_auto_merge": true
+  },
+  "ruleset": {
+    "name": "puerta de main",
+    "target": "branch",
+    "enforcement": "active",
+    "conditions": {
+      "ref_name": {
+        "exclude": [],
+        "include": [
+          "~DEFAULT_BRANCH"
+        ]
+      }
+    },
+    "bypass_actors": [],
+    "rules": [
+      {
+        "type": "deletion"
+      },
+      {
+        "type": "non_fast_forward"
+      },
+      {
+        "type": "pull_request",
+        "parameters": {
+          "required_approving_review_count": 0,
+          "dismiss_stale_reviews_on_push": false,
+          "required_reviewers": [],
+          "require_code_owner_review": false,
+          "require_last_push_approval": false,
+          "required_review_thread_resolution": false,
+          "require_extra_approval_for_unattributed_changes": true,
+          "allowed_merge_methods": [
+            "merge",
+            "squash",
+            "rebase"
+          ]
+        }
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": true,
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "navegador",
+              "integration_id": 15368
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
