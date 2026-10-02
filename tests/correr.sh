@@ -209,7 +209,31 @@ declare -A PISO=(
   # fichero se renombra, esta línea envejece y solo la caza quien lea los dos
   # repos. Queda dicho aquí en vez de fingir que hay una red debajo.
   [test_granizo_espejo.mjs]=8
-  [test_granizo_pestana.js]=28
+  # 28 -> 31: VDE PASA A SER EL DEFAULT, y eso tiene una consecuencia MEDIDA
+  # sobre la serie de demostración que conviene no tapar: su granizo son 1,6 cm
+  # (16 mm) CONSTANTES en 63 muestras, así que pasa el 1,0 de julio en las 63 y
+  # el 1,9 de VDE en NINGUNA. El caso de demostración del informe NO llegaría a
+  # defensa con el criterio de VDE — sus 16 mm caen justo entre los dos
+  # umbrales, que es la banda donde el criterio decide.
+  #
+  # Se comprueba en vez de taparse, y la dinámica se sigue probando con los
+  # criterios de JULIO —el régimen para el que ese episodio se construyó, y lo
+  # dice el nombre de su propia comprobación—, pulsando su botón a propósito.
+  #
+  # Y SE AFIRMA LO QUE SE SABE: no «no escala», sino «no llega a DEFENSA». La
+  # pre-alerta se dispara con `cape >= umbral || prob >= umbral` y ninguno de los
+  # dos mira el tamaño, así que puede haber vigilancia igual. Afirmar de más
+  # habría puesto este arnés rojo por una frase mía y no por un defecto.
+  # 31 -> 36: el selector de intervalo en navegador, y sobre todo LA RAMA QUE EL
+  # DEMO NO PISA. El aviso del intervalo renombrado sólo se pinta con una serie
+  # que no sea horaria, o sea nunca con los datos de hoy —el demo lo genera el
+  # core y el core sólo tiene `hail_1h_cm`—, y yo lo escribí usando `f1()`, que
+  # vive DENTRO del bloque de física y no existe en la ficha. Habría reventado el
+  # día que llegara el dato bueno sin que ningún arnés lo hubiera visto antes. Así
+  # que esa rama se pisa a mano con una serie sintética: sintética para una
+  # COMPROBACIÓN es legítimo, sintética para enseñarla como dato sería inventar
+  # resolución. Medido 36 con el fichero congelado (md5 dc7bb1d0).
+  [test_granizo_pestana.js]=36
   # LA MANIOBRA ANTE UNA AMENAZA, en las dos pestañas que la tienen.
   #
   # EL HUECO QUE CIERRA. La máquina de granizo del §10.1 decide cuándo cruzar, y
@@ -313,7 +337,15 @@ declare -A PISO=(
   # V2: predije 4 y mata 8 — el mismo vicio de la tanda anterior, no contar el
   # solape. Invertir el lado tumba también todas las comprobaciones de pantalla.
   [test_amenaza_maniobra.js]=42
-  [test_granizo_traza.mjs]=30
+  # 30 -> 31: una guarda de AUTOCONTENCIÓN. El bloque GRANIZO-FÍSICA se extrae
+  # solo, sin la ficha alrededor, así que no puede nombrar nada de fuera —y eso
+  # el `compila` no lo ve: `LOC.algo()` dentro de una función compila sin
+  # problema y revienta al LLAMARLA, con el careo ya en marcha. Pasó: al meter el
+  # intervalo de Meteomatics puse `LOC.intervaloDeLaSerie()` dentro de `simula` y
+  # el arnés murió con un ReferenceError en vez de dar un rojo con su nombre. La
+  # guarda mira el código sin comentarios y corta ahí mismo. Mutante: devolver
+  # `LOC.campoGranizo('1h')` al bloque — 1 baja, limpia y nombrada.
+  [test_granizo_traza.mjs]=31
   # 18 -> 28: el Panel dejo de COPIAR la version de las apps y pasa a LEERLA
   # del fichero de la app, asi que hay tres estados nuevos que pintar y los
   # tres se prueban en navegador: leida, no leida, y ultima lectura marcada.
@@ -783,6 +815,104 @@ declare -A PISO=(
   # LÍNEA BASE del golden. Y la del booleano construía su fixture DESDE el
   # golden, así que un golden mutado le vaciaba el mecanismo: ahora es literal.
   [test_puerta_configurada.mjs]=54
+  # LA ESTRATEGIA DE VIENTO × GRANIZO, que es lo que el informe NO cubre: qué se
+  # hace cuando las dos amenazas piden lados distintos. Sale de la estrategia
+  # operativa propuesta a la empresa (2026-10), que adapta a TIEMPOS los
+  # criterios en DISTANCIAS de VDE Americas. NO está aprobada y la ficha lo dice.
+  #
+  # CORRE EN NODO, SIN NAVEGADOR, y eso es la decisión de diseño: la decisión
+  # entera vive en funciones puras dentro de `sim-viento.html` y este banco las
+  # EXTRAE del fichero. Los otros tres bancos de la ficha necesitan Chromium, así
+  # que su mecanismo no se puede ejercitar donde no haya navegador; el de aquí sí
+  # —y de hecho se midió aquí, donde el chromium que pide la versión fijada no se
+  # puede bajar.
+  #
+  # LA EXTRACCIÓN SE VIGILA ANTES DE USARLA, porque es el riesgo del método: un
+  # `indexOf` que no encuentra nada devuelve un trozo vacío y el banco pasaría a
+  # probar NADA saliendo verde. Y el corte no puede ser «hasta la última función
+  # que me interesa»: `granizoPlan` llama a `ladoNieve`, que llama a `noonFlip` y
+  # a `sign`, 200 líneas más abajo. La primera versión cortaba antes y daba un
+  # `LOC` que evaluaba bien y reventaba al usarlo. Ahora el final es el MÁXIMO de
+  # todos los marcadores y se exige que estén las trece.
+  #
+  # LO QUE AÑADE A LA PROPUESTA, y es lo que un criterio escrito no puede decir:
+  # si la maniobra CABE en el margen, y qué se CEDE cuando no se va al lado bueno.
+  # De ahí salió un hallazgo para la reunión: con 29 min de margen de viento la
+  # regla manda al lado malo, pero el cruce HABRÍA cabido (11,1 min). O sea que
+  # los 30 min no son el límite físico —ése son 11— sino colchón para el error de
+  # la previsión. El banco fija las dos cosas por separado.
+  #
+  # MEDIDO con seis mutantes, los seis verificados aplicados (27 bajas), y CUATRO
+  # predicciones de seis: el lado al revés mata 9 (predije 10), la precedencia
+  # invertida 2, quitar «cabe» 2, el más cercano siempre al este 10 (predije 5),
+  # quitar «cede» 3, y una matriz que ignora el theta de su fila 1. Los dos
+  # fallos son de recuento mío —uno de más y cinco de menos—, y el de menos es el
+  # vicio de siempre: no cuento el solape entre mis propias comprobaciones.
+  #
+  # Y DOS COMPROBACIONES NACIERON FLOJAS, arregladas antes de medir: una comparaba
+  # `plan !== plan` —identidad de objetos, que difiere siempre— así que pasaba
+  # igual si la matriz ignoraba el theta de su fila; y dos accedían a `p.cede.x`
+  # sin guardia, de modo que un mutante reventaba el banco en vez de ponerlo rojo
+  # con mensaje. Los mutantes M4 y M6 matan por esos arreglos.
+  #
+  # 57 -> 70: LOS VALORES DE VDE, que manda VDE por decisión del mantenedor. Dos
+  # números y una trampa de unidades en cada uno:
+  #   · 19 mm van al campo como **1,9**, porque está en cm y se compara con
+  #     `m.hail_1h_cm`. Un 19 ahí serían 19 CENTÍMETROS y la máquina no
+  #     dispararía jamás: no da error, deja de disparar. El mutante que escribe
+  #     19 mata 4.
+  #   · y el 30 % de VDE NO es el de tormenta. VDE dice «≥30 % de granizo severo
+  #     de al menos 19 mm»; `umbral_prob_tstorm_pct` se compara con
+  #     `m.prob_tstorm_pct` y entra en un OR con el CAPE. Son magnitudes
+  #     distintas: una tormenta al 30 % es mucho más frecuente que un granizo de
+  #     19 mm al 30 %, así que bajar ese campo de 40 a 30 AFLOJARÍA el disparo,
+  #     al revés de lo que VDE pretende. El 30 va a `umbral_probabilidad_pct`,
+  #     el hueco que el core ya tiene reservado y que hoy nadie consume: queda
+  #     GUARDADO Y DECLARADO, no aplicado, y es lo que hay que pedirle a
+  #     Meteomatics. El mutante que lo pone en la tormenta mata 2.
+  # Y lo declarado-no-aplicado NO viaja en el POST al motor: la clave es del core
+  # pero allí vale null y no hay motor en este entorno para ver qué hace con un
+  # valor puesto. Cuatro mutantes más, las CUATRO predicciones clavadas (8 bajas).
+  #
+  # 70 -> 94: EL INTERVALO DEL PRODUCTO DE GRANIZO, que estaba clavado a `hail_1h`
+  # en cuatro sitios. Meteomatics lo sirve como `hail_<intervalo>:cm` con
+  # 10min/20min/30min/1h/3h/6h/12h/24h, y el intervalo NO es formato:
+  #   · un máximo de UNA HORA no dice CUÁNDO: un 1,6 cm puede ser dentro de 5
+  #     minutos o dentro de 55, y la estrategia decide justo en esa frontera
+  #     (≥60 min maniobra completa, <60 reducida). El dato era más grueso que la
+  #     decisión que alimenta, y ahora la ficha avisa cuando eso pasa;
+  #   · y un máximo de una hora es MÁS PERMISIVO contra el mismo umbral, porque
+  #     recoge el pico de toda la ventana. Comparar 1h con 10min sobre 19 mm no
+  #     es comparar lo mismo.
+  # Se ofrece SOLO lo que la serie trae: ofrecer los ocho del catálogo sobre una
+  # serie que tiene uno sería un control que miente. Y de un máximo horario NO se
+  # saca el de diez minutos: fingirlo sería inventar resolución que el dato no
+  # tiene, y queda dicho en el fuente.
+  #
+  # CUATRO MUTANTES, y la primera tirada salió 0 DE 4 EN PREDICCIONES —todas
+  # estimadas en vez de trazadas check por check—. Lo que esa tirada sí destapó es
+  # que el mutante más GRAVE mataba solo 1: «el preferido manda aunque no esté»
+  # haría que la máquina leyera `hail_10min_cm` en una serie que solo trae
+  # `hail_1h_cm`, o sea undefined reportado como «sin producto de granizo»:
+  # perder la señal entera en silencio. Se añadió una comprobación de
+  # CONSECUENCIA —que el campo devuelto encuentre el dato de verdad en la serie—
+  # y con ella las cuatro predicciones salen clavadas (7 bajas).
+  #
+  # 94 -> 107: `LOC.sirveGranizo()`. El intervalo salió de DENTRO de la máquina,
+  # donde lo había puesto mal, y pasó a servirse antes de entrar: la máquina es
+  # espejo del core y el core sólo conoce `hail_1h_cm`; si la máquina resolviera
+  # intervalos sabría más que su original y el careo —cuyos casos sólo traen el
+  # campo horario— se quedaría ciego a la diferencia. Las 13 nuevas prueban que
+  # la casilla única queda alimentada, que el campo de origen NO se queda puesto
+  # (el `Muestra` del core es un dataclass), que la serie original no se toca, y
+  # la de CONSECUENCIA: que la máquina ENCUENTRA el dato donde lo busca. Y la 13ª:
+  # un agujero en el campo fino deja la casilla vacía en vez de rellenarla con el
+  # máximo horario, que mezclaría dos resoluciones en la misma serie sin decirlo.
+  # Cinco mutantes, predije 5+4+2+1+3=15 bajas y salieron 5+4+2+1+5=17: fallé el
+  # último. Mutar la copia a `copia=m` ensucia la muestra EN SITIO, y la suciedad
+  # se arrastra a las comprobaciones de abajo que reusan la misma serie mixta.
+  # No conté el acoplamiento entre comprobaciones por estado compartido.
+  [test_granizo_estrategia.mjs]=107
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )

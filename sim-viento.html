@@ -615,11 +615,33 @@
       <div class="card">
         <h2>⚙ Parámetros <span class="sn">§19 · sin valores del informe</span></h2>
         <p class="note" style="margin-top:0">El §19 publica 17 y deja <b>14 «SIN VALOR» a
-          propósito</b>: <i>«Ningún valor provisional se presenta como validado»</i>. Estos son los
-          <b>criterios de trabajo de julio de 2026</b>, que <b>no son del informe</b>. Edita y vuelve
-          a correr sobre la misma serie.</p>
+          propósito</b>: <i>«Ningún valor provisional se presenta como validado»</i>. La base son los
+          <b>criterios de trabajo de julio de 2026</b>, que <b>no son del informe</b> — y encima, donde
+          <b>VDE Americas</b> habla, <b>manda VDE</b>: tamaño <b>1,9 cm (19 mm)</b> en vez del 1,0 de
+          julio. El <b>30 %</b> de VDE es la probabilidad de <b>ese tamaño</b>, no de tormenta, y la
+          serie <b>no trae esa variable</b>: queda <b>guardado y declarado, no aplicado</b> — es lo
+          que hay que pedirle a Meteomatics. La probabilidad de tormenta se queda en el 40 de julio,
+          porque VDE no habla de ese número. Edita y vuelve a correr sobre la misma serie.</p>
+        <p class="noval" style="margin-bottom:0">Y una consecuencia <b>medida</b>, que conviene ver
+          antes de correr: el granizo del <b>episodio de demostración son 1,6 cm (16 mm) constantes</b>
+          —63 muestras—, así que pasa el <b>1,0 de julio en las 63</b> y el <b>1,9 de VDE en ninguna</b>.
+          Con el criterio de VDE <b>este caso no escala</b>: la máquina se queda en NORMAL y no hay nada
+          que ver encenderse. No es un fallo, es VDE siendo más estricto justo en la banda donde el
+          criterio decide. Pulsa <b>↺ los de julio</b> para ver la máquina funcionando.</p>
+        <div class="field"><label>Intervalo del producto de granizo
+            <span class="sn" style="margin:0">Meteomatics: hail_&lt;intervalo&gt;:cm</span></label>
+          <select id="gIntervalo"></select></div>
+        <p class="note" style="margin-top:0"><b>Hoy sólo habrá 1h que elegir, y no es un fallo del
+          selector.</b> Las dos series que esta ficha sabe hacer —la del demo y la del demo sobre el
+          viento del emplazamiento— las genera el núcleo, y el núcleo sólo tiene el campo horario.
+          Los otros siete se encenderán cuando entre una serie que de verdad los traiga: un volcado
+          de Meteomatics por fichero, o la consulta en vivo, que es fase posterior. De un máximo
+          horario no se saca el de diez minutos: fingirlo sería inventar resolución que el dato no
+          tiene, así que el selector preferirá apagarse antes que mentir.</p>
+        <p class="note" id="gIntervaloNota" style="margin-top:0"></p>
         <div id="gParams"></div>
-        <button class="btn small" id="gReset" style="margin-top:8px">↺ Volver a los de julio</button>
+        <button class="btn small" id="gVDE" style="margin-top:8px">↺ Los de VDE</button>
+        <button class="btn small" id="gReset" style="margin-top:8px">↺ Los de julio, sin VDE</button>
       </div>
 
       <div class="card">
@@ -639,6 +661,51 @@
           y aquí entra como dato declarado. El sondeo y el arranque se toman de
           <b>⚑ Abanderamiento</b>: son el mismo camino de la orden, los mismos cables.</p>
         <div id="gTnec"></div>
+      </div>
+
+      <div class="card">
+        <h2>⚔ Viento × granizo, el caso a caso <span class="sn">estrategia propuesta · NO del informe</span></h2>
+        <p class="note" style="margin-top:0">Lo que el informe no cubre: qué se hace cuando las dos
+          amenazas piden cosas distintas. Esto es la <b>estrategia operativa propuesta</b> (adapta a
+          TIEMPOS los criterios en DISTANCIAS de <b>VDE Americas</b> — preventivo a &lt;48 km con
+          ≥30&nbsp;% de granizo ≥19&nbsp;mm, directo a &lt;8 km) y <b>no está aprobada</b>. Lo que la
+          ficha añade es si la maniobra <b>cabe en el margen</b>, que es lo que un criterio escrito
+          no puede decir solo.</p>
+        <div class="two">
+          <div class="field"><label>Granizo puede llegar en (min)</label>
+            <input id="xHail" type="range" min="0" max="180" step="5" value="90">
+            <span class="sn" id="xHailV">90 min</span></div>
+          <div class="field"><label>Viento ahora (km/h)</label>
+            <input id="xVnow" type="range" min="0" max="80" step="1" value="15">
+            <span class="sn" id="xVnowV">15 km/h</span></div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Pasa de 40 km/h en (min · vacío = no previsto)</label>
+            <input id="xV40" type="number" step="5" placeholder="no previsto"></div>
+          <div class="field"><label>Viento previsto, viene del (°)</label>
+            <input id="xAz" type="range" min="0" max="359" step="5" value="270">
+            <span class="sn" id="xAzV">270° · oeste</span></div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Eje ahora (°) · + es ESTE</label>
+            <input id="xTheta" type="range" min="-55" max="55" step="1" value="-55">
+            <span class="sn" id="xThetaV">−55° · oeste</span></div>
+          <div class="field"><label>Nieve (cm · 0 = no hay)</label>
+            <input id="xNieve" type="number" step="1" value="0" min="0"></div>
+        </div>
+        <div id="xVeredicto"></div>
+        <p class="note" style="margin-bottom:0">Los umbrales —60 min, 30 min, 40 y 60 km/h— son los
+          <b>propuestos</b>, y la propia propuesta dice que habría que replantearlos si cambian los
+          valores de viento. Se editan en el bloque <code>LOC.GRZ</code>.</p>
+      </div>
+
+      <div class="card">
+        <h2>▦ El espacio entero, de un golpe</h2>
+        <p class="note" style="margin-top:0">Filas: dónde está el eje <b>ahora</b>. Columnas: qué
+          hace el viento. Cada celda, para el granizo del deslizador de arriba: el caso, a dónde va,
+          si <b>cruza por 0°</b> —lo que VDE dice que no se haga delante de una tormenta rápida— y si
+          <b>cabe</b>. Mueve el granizo y mira cuándo el espacio cambia de color.</p>
+        <div id="xMatriz"></div>
       </div>
     </div>
 
@@ -744,7 +811,14 @@
         </ul>
         <p class="note" style="margin-bottom:0">Y el <b>granizo</b> y el <b>modo noche</b> venían
           en la misma tabla del documento <b>con sus filas y sin sus valores</b>. El granizo
-          tiene su pestaña con la máquina del §10.1; el modo noche no está en esta ficha.</p>
+          tiene su pestaña con la máquina del §10.1 y, desde el 2026-10, la <b>estrategia
+          operativa de viento × granizo</b> con su matriz de casos. El <b>modo noche</b> ya tiene
+          su valor —<b>5° al ESTE</b>, confirmado por el mantenedor del core el 2026-08-17 y por
+          el usuario el 2026-10-02— y esta ficha <b>duerme al lado contrario a propósito</b>:
+          copia el −5,0 de <code>compute_tracker_poa_v2</code>, que es la posición <b>espejo</b> de
+          la real y está <b>pendiente de corregir en la Fase 2.I</b> del core, con su guard puesto
+          como alarma. Cambiarlo aquí antes pondría la ficha por delante de esa decisión y rompería
+          el careo. El detalle está en <code>LOC.NIGHT</code>.</p>
       </div>
     </div>
   </div>
@@ -847,7 +921,24 @@ function localBanner(){
    Convención de signo: la del core/pvlib, θ>0 = tumbado al ESTE. */
 var LOC={
   D2R:Math.PI/180,
-  NIGHT:-5.0,            // posición nocturna en convención del core (la misma que compute_tracker_poa_v2)
+  /* POSICIÓN NOCTURNA: ESTE VALOR ESTÁ EN EL LADO CONTRARIO AL DE LA PLANTA, Y
+     SE DEJA ASÍ A PROPÓSITO. En esta convención —la del core/pvlib, θ>0 = ESTE,
+     verificado EJECUTANDO: a las 7:00 del 21-jun esta ficha da θ=+55— un −5,0
+     son 5° al OESTE. El dato de planta es 5° al ESTE: lo dijo el mantenedor del
+     core el 2026-08-17 y lo confirmó el usuario el 2026-10-02.
+     Se copia de `compute_tracker_poa_v2`, que lleva el mismo −5,0 y lo documenta
+     como «la convención TCU escrita en un campo de convención core… la posición
+     ESPEJO de la real», con su guard
+     (`test_night_beam_guard.py::test_night_position_deg_sigue_valiendo_MENOS_5`)
+     mantenido a propósito como «la alarma que hará visible el cambio cuando
+     llegue», y la corrección **aplazada a la Fase 2.I** porque «cambiar el signo
+     mueve dónde duermen físicamente los seguidores y merece su propio
+     delta-golden». Mientras, `tracker.CANONICAL_NIGHT_STOW_DEG` vale +5,0: el
+     core lleva DOS constantes de signo opuesto y las dos con test.
+     Esta ficha NO va por delante de esa decisión: espeja el core para que el
+     careo siga significando algo, y lo DICE en vez de callarlo. Cuando la Fase
+     2.I cambie el signo allí, aquí se cambia a +5,0 en el mismo commit. */
+  NIGHT:-5.0,
   ALBEDO:0.20,
   OM:'shortwave_radiation,diffuse_radiation,direct_normal_irradiance,temperature_2m,windspeed_10m,winddirection_10m',
   /* La RÁFAGA va aparte y no pegada a la lista de arriba a propósito: se pide
@@ -1096,6 +1187,356 @@ LOC.tNecesario=function(lat,grados,slew){
 /* EL RECORRIDO MÁS LARGO POSIBLE hasta el ángulo de defensa. Si la mesa puede
    estar en cualquier punto de su carrera, el peor caso es venir del extremo
    contrario — y para una cota de seguridad ese es el único número honesto. */
+/* ─── LA ESTRATEGIA DE GRANIZO, EN TIEMPOS Y NO EN DISTANCIAS ──────────────
+   ESTO NO ES DEL INFORME. Es la estrategia operativa propuesta a la empresa
+   (2026-10), que adapta los criterios de VDE Americas —que trabaja en
+   DISTANCIAS: preventivo a <48 km con ≥30 % de granizo severo ≥19 mm, directo
+   a <8 km— a una lógica de TIEMPOS. Y la traducción tiene motivo: una célula a
+   48 km puede tardar una hora o veinte minutos según a qué velocidad venga, así
+   que la distancia no dice si la maniobra cabe. Lo que lo dice es:
+
+     · cuánto falta para que el granizo pueda llegar,
+     · cuánto falta para que el viento pase de 40 km/h,
+     · y cuánto necesita el eje para llegar a su sitio  ->  LOC.tNecesario.
+
+   LO QUE VDE INSISTE, y es lo que ordena los casos: «stow early and stow
+   often», y cuando no hay margen, «a good default hail alert response is to
+   stow PV modules at the nearest maximum tilt angle as quickly as possible» —
+   con el aviso expreso de NO cruzar por 0° delante de una tormenta rápida. El
+   0° es el peor sitio donde estar: ni defendido del granizo ni del viento.
+
+   LOS CINCO CASOS, y el orden importa porque el viento que YA sopla manda:
+
+     4· viento en planta > 40        -> no se cruza; dentro de la banda de
+                                        pre-stow. A 60, viento segura más
+                                        cercana y manda la estrategia de viento.
+     3· granizo a < 60 min           -> defensa más cercana, sin cruzar.
+     2· granizo ≥ 60 y viento >40
+        previsto en < 30 min         -> viento segura más cercana, sin cruzar:
+                                        no se asume el riesgo de estar en 0°
+                                        cuando llegue la racha.
+     1· granizo ≥ 60 y el viento no
+        aprieta en 30 min            -> lado favorable, SE PUEDE cruzar por 0°,
+                                        y la maniobra tiene que acabar antes de
+                                        que el viento pase de 40.
+     5· salida                       -> no se desabandera hasta que la amenaza
+                                        termine Y el viento lo permita; como
+                                        criterio inicial, 60 min desde el
+                                        último aviso.
+
+   LOS CASOS 3 Y 4 NO SE PELEAN, y conviene verlo: la defensa de granizo son
+   55°, que está DENTRO de la banda de pre-stow de viento (30–55°). Así que ir
+   al 55° del lado en que ya estás satisface los dos a la vez. Si algún día la
+   defensa se saliera de esa banda, dejarían de ser compatibles — y hay una
+   comprobación que lo vigila. */
+LOC.GRZ={hail_min:60, viento_min:30, v_prestow:40, v_stow:60, salida_min:60};
+
+/* LOS VALORES DE VDE, Y MANDAN ELLOS (decisión del mantenedor, 2026-10-02).
+   El §19 del informe deja 14 de 17 parámetros «SIN VALOR» a propósito, y lo que
+   la máquina traía eran «criterios de trabajo de julio» que no son del informe.
+   Donde VDE Americas habla, se pone VDE.
+
+   LOS 19 mm VAN EN cm, QUE ES LA UNIDAD DEL CAMPO: 1,9 y no 19. El campo se
+   compara con `m.hail_1h_cm`, así que un 19 ahí serían 19 CENTÍMETROS de granizo
+   y la máquina no dispararía jamás. Es la clase de error que no da error.
+   Sustituye al 1,0 cm de julio, que el informe marca «candidato 1, no aprobado».
+
+   Y EL 30 % NO ES EL DE TORMENTA, aunque sea la tentación obvia. VDE dice
+   «probabilidad ≥30 % de granizo severo de al menos 19 mm»; el campo
+   `umbral_prob_tstorm_pct` se compara con `m.prob_tstorm_pct`, que es
+   probabilidad de TORMENTA, y entra en un OR con el CAPE. Son magnitudes
+   distintas: una tormenta al 30 % es mucho más frecuente que un granizo de
+   19 mm al 30 %, así que bajar ese campo de 40 a 30 AFLOJARÍA el disparo
+   —justo al revés de lo que VDE pretende—. Por eso el 30 % va a
+   `umbral_probabilidad_pct`, que es el hueco que el core ya tiene reservado
+   para esto y que hoy vale null… y que NADIE CONSUME todavía, porque la serie
+   no trae la variable. Queda GUARDADO Y DECLARADO, no aplicado, y la ficha lo
+   dice: es exactamente lo que hay que pedirle a Meteomatics —la probabilidad
+   de superar 10, 19 o 25 mm—. El día que esa variable entre en la serie, el
+   umbral ya está puesto.
+
+   El de tormenta se queda en el 40 de julio: VDE no habla de ese número y
+   cambiarlo por el suyo sería ponerle la etiqueta de VDE a otra cosa. */
+/* EL INTERVALO DEL PRODUCTO DE GRANIZO, Y POR QUÉ IMPORTA MÁS DE LO QUE PARECE.
+   Meteomatics sirve el tamaño máximo como `hail_<intervalo>:cm`, con intervalos
+   de 10min, 20min, 30min, 1h, 3h, 6h, 12h y 24h. La ficha leía `hail_1h_cm` a
+   pelo, en cuatro sitios, y eso tiene dos consecuencias que no son de estilo:
+
+   · UN MÁXIMO DE UNA HORA NO DICE CUÁNDO. `hail_1h` es el mayor tamaño de toda
+     la hora, así que un 1,6 cm puede ser dentro de 5 minutos o dentro de 55. Y
+     nuestra estrategia decide justo por eso: maniobra completa si el granizo
+     está a ≥60 min, reducida si está a <60. Con grano horario esa frontera no se
+     puede situar — el dato que la alimenta es más grueso que la decisión que
+     toma. Los 10 minutos existen precisamente para eso.
+   · Y UN MÁXIMO DE UNA HORA ES MÁS PERMISIVO que uno de diez minutos contra el
+     mismo umbral, porque el máximo de una ventana grande recoge el pico de toda
+     ella. O sea que el intervalo no es un detalle de formato: cambia cuándo
+     dispara el criterio de 19 mm. Comparar 1h con 10min sobre el mismo umbral
+     NO es comparar lo mismo.
+
+   Así que el intervalo deja de estar clavado: se declara, se elige, y la ficha
+   dice cuál ha usado. Lo que NO se hace es convertir unos en otros — de un
+   máximo horario no se puede sacar el de diez minutos, y fingirlo sería
+   inventar resolución que el dato no tiene. */
+LOC.GRANIZO_INTERVALOS=['10min','20min','30min','1h','3h','6h','12h','24h'];
+
+LOC.campoGranizo=function(iv){ return 'hail_'+iv+'_cm'; };
+
+/* Minutos de cada intervalo, para poder ordenarlos de fino a grueso y para
+   avisar cuando el intervalo es MÁS LARGO que el margen que alimenta. */
+LOC.minutosIntervalo=function(iv){
+  var m=String(iv||'').match(/^(\d+)(min|h)$/);
+  if(!m)return null;
+  return +m[1]*(m[2]==='h'?60:1);
+};
+
+/* QUÉ INTERVALOS TRAE DE VERDAD LA SERIE, que no es lo mismo que qué intervalos
+   existen en el catálogo. Devuelve los disponibles de fino a grueso y el que se
+   va a usar: el preferido si está, y si no el MÁS FINO que haya — nunca uno que
+   la serie no traiga, porque eso sería leer undefined y llamarlo «sin granizo».
+   `null` en `intervalo` significa que la serie no trae producto de granizo en
+   absoluto, que es distinto de traerlo y valer cero. */
+LOC.intervaloDeLaSerie=function(muestras,preferido){
+  var hay=[];
+  LOC.GRANIZO_INTERVALOS.forEach(function(iv){
+    var k=LOC.campoGranizo(iv);
+    for(var i=0;i<(muestras||[]).length;i++){
+      if(muestras[i]&&muestras[i][k]!==undefined&&muestras[i][k]!==null){hay.push(iv);return;}
+    }
+  });
+  var usa=(preferido&&hay.indexOf(preferido)>=0)?preferido:(hay.length?hay[0]:null);
+  return {disponibles:hay, intervalo:usa, campo:(usa?LOC.campoGranizo(usa):null),
+          preferido_no_disponible:!!(preferido&&hay.indexOf(preferido)<0)};
+};
+
+/* EL AVISO: el intervalo no puede ser más largo que el margen que alimenta. Si
+   la estrategia decide a 30 minutos y el producto es horario, el dato no puede
+   situar esa frontera. Mismo razonamiento que el aviso del paso de simulación
+   frente a los periodos de la cadena de latencia, y por el mismo motivo. */
+LOC.intervaloGrueso=function(iv,margen_min){
+  var m=LOC.minutosIntervalo(iv);
+  return (m!==null&&margen_min>0&&m>margen_min);
+};
+
+/* SERVIR EL GRANIZO A LA MÁQUINA · aquí se junta todo lo anterior.
+
+   La máquina —espejo del core— lee UNA casilla, `hail_1h_cm`. Esta función
+   elige qué intervalo de Meteomatics la alimenta y devuelve la serie ya servida.
+   Fuera de la máquina a propósito: el core no sabe de intervalos, y un espejo
+   que supiera más que su original dejaría de poder carearse.
+
+   Y LO DICE EN VOZ ALTA. Si la casilla `hail_1h_cm` acaba llevando el máximo de
+   `hail_10min`, el umbral de 1,9 cm ya no se está midiendo contra el máximo de
+   una hora: se mide contra el de diez minutos, que es MENOR O IGUAL —el máximo
+   de la hora es el mayor de sus seis tramos—. O sea que al afinar el intervalo
+   el disparo se vuelve MÁS difícil, no más fácil, y en cambio se gana saber
+   CUÁNDO. Las dos cosas son ciertas a la vez y ninguna es gratis; por eso
+   `renombrada` viaja de vuelta y la ficha lo escribe junto a la traza en vez de
+   dejar que el diario diga «hail_1h» sobre un dato que no lo es.
+
+   No añade claves a las muestras: la serie va también al motor Python, cuyo
+   `Muestra` es un dataclass y se construye con las claves que conoce. */
+LOC.sirveGranizo=function(muestras,preferido){
+  var iv=LOC.intervaloDeLaSerie(muestras,preferido);
+  var destino=LOC.campoGranizo('1h');
+  var servidas=(muestras||[]).map(function(m){
+    if(!m) return m;
+    if(!iv.campo||iv.campo===destino) return m;
+    var copia={}; for(var k in m) if(k!==iv.campo) copia[k]=m[k];
+    /* SI ESA MUESTRA NO TRAE EL CAMPO FINO, LA CASILLA SE QUEDA VACÍA, y queda
+       vacía A PROPÓSITO aunque esa muestra tuviera el valor horario: rellenar el
+       hueco con el máximo de la hora mezclaría dos resoluciones dentro de la
+       misma serie sin decirlo, y nadie podría luego leer la traza y saber qué
+       intervalo contestó en cada paso. Un hueco, en cambio, el core sabe
+       tratarlo: el §8-H dice que un dato ausente no es cero y no desescala. */
+    copia[destino]=m[iv.campo];
+    return copia;
+  });
+  return {muestras:servidas, intervalo:iv.intervalo, campo:iv.campo,
+          disponibles:iv.disponibles, preferido_no_disponible:iv.preferido_no_disponible,
+          renombrada:!!(iv.campo&&iv.campo!==destino)};
+};
+
+LOC.VDE={
+  umbral_tamano_granizo_cm:1.9,     // 19 mm · VDE, severo
+  umbral_probabilidad_pct:30,       // ≥30 % de ESE tamaño · VDE · GUARDADO, NO APLICADO
+  _aplicados:['umbral_tamano_granizo_cm'],
+  _declarados:['umbral_probabilidad_pct'],
+  _de:'VDE Americas · preventivo a <48 km con ≥30 % de granizo ≥19 mm, directo a <8 km'
+};
+
+/* Los valores de julio con VDE encima, que es lo que la máquina usa por
+   defecto desde hoy. Puro para que el banco pueda carear las dos tablas sin
+   abrir la ficha. */
+/* LO DECLARADO-NO-APLICADO NO VIAJA AL MOTOR. `umbral_probabilidad_pct` es una
+   clave del propio core —viene en el fichero que él genera— pero allí vale null
+   y no he podido probar qué hace con un valor puesto: no hay motor en este
+   entorno. Mandarlo sería empujar un cambio que no he visto funcionar, y no hace
+   falta: el valor está guardado para cuando la variable entre en la serie, no
+   para que el motor lo use hoy. Así que se quita del cuerpo del POST y se queda
+   en la ficha. */
+LOC.sinDeclarados=function(p){
+  var o={}; for(var k in (p||{}))
+    if(LOC.VDE._declarados.indexOf(k)<0 && k.charAt(0)!=='_')o[k]=p[k];
+  return o;
+};
+
+LOC.paramsVDE=function(julio){
+  var o={}; for(var k in (julio||{}))o[k]=julio[k];
+  o.umbral_tamano_granizo_cm=LOC.VDE.umbral_tamano_granizo_cm;
+  o.umbral_probabilidad_pct=LOC.VDE.umbral_probabilidad_pct;
+  return o;
+};
+
+/* EL LADO FAVORABLE ES LO ÚNICO DE AQUÍ QUE HE DEDUCIDO YO, y va dicho porque
+   equivocarlo son 110°. La estrategia dice «dando la espalda al viento
+   previsto». Un seguidor a +55° (tumbado al este) presenta su cara al este y su
+   espalda al oeste; así que con viento del OESTE la espalda queda al viento
+   tumbándose al ESTE. O sea: se tumba al lado CONTRARIO de donde viene el
+   viento. No es un dato de planta ni del informe: es el razonamiento
+   geométrico, y si la planta lo hace al revés esto hay que negarlo. El panel lo
+   enseña para que un error de signo se vea en vez de esconderse. */
+LOC.ladoEspaldaAlViento=function(azViento){
+  var a=((+azViento%360)+360)%360;          // 0=N, 90=E, 180=S, 270=O
+  if(a>180) return +1;                      // viento del oeste -> espalda al oeste: al ESTE
+  if(a<180 && a>0) return -1;               // viento del este  -> al OESTE
+  return null;                              // norte o sur puros: la componente E/O es cero
+};
+
+/* EL PLAN, puro. Devuelve el caso, el destino, si cruza por 0°, cuánto tarda y
+   —lo que de verdad añade esta ficha— SI CABE en el margen. Un criterio que
+   dice a dónde ir pero no si llegas a tiempo es media respuesta. */
+LOC.granizoPlan=function(e){
+  var U=e.umbrales||LOC.GRZ;
+  var def=Math.abs(+e.defensa||0), pre=Math.abs(+e.preMin||0);
+  var th=+e.theta||0, v=Math.max(0,+e.vAhora||0), slew=(+e.slew>0?+e.slew:LOC.SLEW);
+  var lat=e.lat||LOC.LATENCIA;
+  var tH=(e.tHail===null||e.tHail===undefined)?null:Math.max(0,+e.tHail);
+  var tV=(e.tV40===null||e.tV40===undefined)?null:Math.max(0,+e.tV40);
+  var cerca=LOC.ladoMasCercano(th,def);
+  var r={caso:0,nombre:'',destino:null,cruzaCero:false,cruceAutorizado:false,
+         T:null,margen:null,cabe:null,manda:'granizo',motivo:''};
+
+  if(v>=U.v_stow){
+    r.caso=4; r.nombre='viento ≥ '+U.v_stow+' km/h: viento segura más cercana';
+    r.destino=cerca; r.manda='viento';
+    r.motivo='a partir de aquí manda la estrategia de viento, no el granizo';
+  } else if(v>U.v_prestow){
+    r.caso=4; r.nombre='viento > '+U.v_prestow+' km/h: dentro de la banda de pre-stow';
+    // La banda limita el RANGO, no fija una posición: si ya estás dentro no te
+    // mueves, y si estás por debajo subes al borde de tu propio lado.
+    var mag=Math.min(def,Math.max(pre,Math.abs(th)));
+    r.destino=(th<0?-mag:mag); r.manda='viento';
+    r.motivo='con el viento ya apretando no se cruza por 0° bajo ningún concepto';
+  } else if(tH===null){
+    r.caso=5; r.nombre='sin amenaza de granizo';
+    var desde=(e.minDesdeAviso===null||e.minDesdeAviso===undefined)?null:+e.minDesdeAviso;
+    if(desde!==null&&desde<U.salida_min){
+      r.destino=cerca;
+      r.motivo='se mantiene el abanderamiento: faltan '+(U.salida_min-desde).toFixed(0)+
+               ' min de los '+U.salida_min+' desde el último aviso';
+    } else {
+      r.motivo=(desde===null?'nada que decidir':
+        'pasados los '+U.salida_min+' min, puede desabanderar SI el viento lo permite');
+    }
+  } else if(tH<U.hail_min){
+    r.caso=3; r.nombre='granizo a < '+U.hail_min+' min: defensa más cercana';
+    r.destino=cerca; r.margen=tH;
+    r.motivo='no se busca el lado bueno: se prioriza acabar (VDE, «nearest maximum tilt»)';
+  } else if(tV!==null&&tV<U.viento_min){
+    r.caso=2; r.nombre='granizo con margen, pero el viento aprieta en < '+U.viento_min+' min';
+    r.destino=cerca; r.margen=tV;
+    r.motivo='no compensa cruzar por 0° con la racha encima a mitad de recorrido';
+  } else {
+    r.caso=1; r.nombre='maniobra completa al lado favorable';
+    r.cruceAutorizado=true;
+    var lado=(e.ladoFavorable===1||e.ladoFavorable===-1)?e.ladoFavorable
+             :LOC.ladoEspaldaAlViento(e.azViento);
+    r.destino=(lado===null?cerca:lado*def);
+    r.margen=(tV===null?tH:Math.min(tH,tV));
+    r.motivo='hay margen para elegir lado'+(lado===null?
+      ' pero el viento previsto no tiene componente E/O: se va al más cercano':'');
+  }
+
+  if(r.destino!==null){
+    r.cruzaCero=(th>0&&r.destino<0)||(th<0&&r.destino>0);
+    r.T=LOC.tNecesario(lat,Math.abs(r.destino-th),slew);
+    if(r.margen!==null)r.cabe=(r.T.total_min<=r.margen);
+  }
+
+  /* EL CONTRASTE: QUÉ SE CEDE. Es el caso que de verdad duele y el que esta
+     ficha existe para enseñar — abanderado a un lado y el viento llegando del
+     otro. Los casos 2, 3 y 4 mandan al lado MÁS CERCANO, que puede no ser el
+     favorable; decir solo «ve al más cercano» esconde el precio. Aquí se dice:
+     cuántos grados y cuántos minutos habría costado el lado bueno, y que no se
+     va por falta de margen y no por capricho. */
+  var ladoIdeal=(e.ladoFavorable===1||e.ladoFavorable===-1)?e.ladoFavorable
+                 :LOC.ladoEspaldaAlViento(e.azViento);
+  r.ladoIdeal=ladoIdeal;
+  r.destinoIdeal=(ladoIdeal===null?null:ladoIdeal*def);
+  if(r.destinoIdeal!==null&&r.destino!==null&&r.destinoIdeal!==r.destino){
+    var Ti=LOC.tNecesario(lat,Math.abs(r.destinoIdeal-th),slew);
+    r.cede={grados:Math.abs(r.destinoIdeal-r.destino),
+            min_extra:Ti.total_min-r.T.total_min,
+            cruzaria:(th>0&&r.destinoIdeal<0)||(th<0&&r.destinoIdeal>0),
+            cabria:(r.margen===null?null:Ti.total_min<=r.margen)};
+  } else r.cede=null;
+
+  /* Y LA NIEVE, SI ESTÁ. Las tres máquinas pueden pedir lados distintos a la
+     vez y el documento no dice qué hacer con eso. La nieve pide el lado del SOL
+     (con el giro de mediodía); el granizo, la espalda al viento. Cuando no
+     coinciden, aquí no se inventa una prioridad: se DICE que no coinciden y se
+     deja la decisión fuera. Un simulador que resolviera solo un conflicto que
+     la planta no ha resuelto estaría enseñando una política que no existe. */
+  if(e.nieveCm!==null&&e.nieveCm!==undefined){
+    var est=LOC.nieveEstado(+e.nieveCm,e.nievePrev||'SEGUIMIENTO');
+    r.nieve={estado:est,destino:null,deAcuerdo:null};
+    if(est==='NIEVE'){
+      r.nieve.destino=LOC.ladoNieve(e.azSolar,th,
+        (e.noonLim===null||e.noonLim===undefined)?10:e.noonLim,def);
+      r.nieve.deAcuerdo=(r.destino!==null&&
+        ((r.nieve.destino>0)===(r.destino>0)));
+    }
+  } else r.nieve=null;
+  return r;
+};
+
+/* LA MATRIZ: el espacio de casos de un golpe, no un punto cada vez.
+   Filas = dónde está el eje AHORA. Columnas = qué hace el viento. Para un
+   granizo dado, cada celda dice el caso, a dónde va, si cruza por 0° y si cabe.
+   Puro a propósito: el panel solo lo pinta, así que el mecanismo se puede
+   ejercitar sin navegador. */
+LOC.granizoMatriz=function(base,situaciones,escenarios){
+  return situaciones.map(function(si){
+    return {situacion:si, celdas:escenarios.map(function(es){
+      var e={}; for(var k in base)e[k]=base[k];
+      e.theta=si.theta;
+      for(var k2 in es)if(k2!=='nombre')e[k2]=es[k2];
+      return {escenario:es, plan:LOC.granizoPlan(e)};
+    })};
+  });
+};
+
+/* Los ejes por defecto de la matriz. Las situaciones son las tres que importan
+   —en un extremo, en el otro, y cerca del plano— y los escenarios recorren la
+   frontera de cada umbral por los dos lados, que es donde un criterio se rompe
+   si está mal puesto. */
+LOC.grzSituaciones=function(def){
+  return [{nombre:'abanderado al ESTE (+'+def+'°)',theta:+def},
+          {nombre:'siguiendo, casi plano (+5°)',theta:5},
+          {nombre:'siguiendo, casi plano (−5°)',theta:-5},
+          {nombre:'abanderado al OESTE (−'+def+'°)',theta:-def}];
+};
+LOC.grzEscenarios=function(U){
+  U=U||LOC.GRZ;
+  return [{nombre:'en calma, sin viento previsto',vAhora:5,tV40:null,azViento:270},
+          {nombre:'viento del OESTE en '+(U.viento_min+15)+' min',vAhora:15,tV40:U.viento_min+15,azViento:270},
+          {nombre:'viento del ESTE en '+(U.viento_min+15)+' min',vAhora:15,tV40:U.viento_min+15,azViento:90},
+          {nombre:'viento del OESTE en '+(U.viento_min-15)+' min',vAhora:25,tV40:U.viento_min-15,azViento:270},
+          {nombre:'ya soplando a '+(U.v_prestow+5)+' km/h',vAhora:U.v_prestow+5,tV40:0,azViento:270},
+          {nombre:'ya soplando a '+(U.v_stow+5)+' km/h',vAhora:U.v_stow+5,tV40:0,azViento:270}];
+};
+
 LOC.recorridoPeor=function(anguloDefensa,maxAng){
   var d=+anguloDefensa||0, m=Math.abs(+maxAng||0);
   return Math.max(Math.abs(d-m),Math.abs(d+m));
@@ -1677,6 +2118,14 @@ var HAIL = (function () {
     var dtMin = (o.dt_min === undefined || o.dt_min === null) ? 1 : +o.dt_min;
     var estado = o.estado_inicial || E.NORMAL;
     var pend = { clave: null, desde: null, hasta: null, n: 0, ultima: '' };
+    /* LA CASILLA DEL GRANIZO ES UNA Y SE LLAMA `hail_1h_cm`, porque así se llama
+       en el core y este bloque lo copia. El intervalo de Meteomatics que de
+       verdad alimenta esa casilla se elige FUERA, en `LOC.sirveGranizo()`, antes
+       de entrar aquí. No es pereza: si la máquina resolviera el intervalo por su
+       cuenta tendría una capacidad que el core no tiene, el careo de
+       `test_granizo_traza.mjs` no podría verla —los casos del core sólo traen
+       `hail_1h_cm`— y el espejo empezaría a separarse del original sin que nadie
+       lo notara. Darle el intervalo a la máquina es un cambio DEL CORE. */
     var c = {
       persistencia_granizo: 0, persistencia_calma: 0, persistencia_limpio: 0,
       pasos_en_estado: 0, minutos_en_defensa: 0, minutos_envolvente: 0,
@@ -6159,7 +6608,8 @@ function gParamsDef() {
     t_necesario_min: ['T_necesario', 'min', '§9.1 · PENDIENTE DE MEDIR EN CAMPO'],
     factor_t_necesario: ['Factor del reloj', '—', '§9.1 · «2 (criterio inicial)»'],
     margen_temporal_min: ['Margen temporal', 'min', '§9.1'],
-    umbral_tamano_granizo_cm: ['Tamaño de granizo', 'cm', '§8-A · «candidato 1 (no aprobado)»'],
+    umbral_tamano_granizo_cm: ['Tamaño de granizo', 'cm', 'VDE · 19 mm = 1,9 cm (julio: 1,0)'],
+    umbral_probabilidad_pct: ['Prob. de ESE tamaño', '%', 'VDE · 30 % · GUARDADO, NO APLICADO: la serie no trae la variable'],
     umbral_prob_tstorm_pct: ['Prob. tormenta', '%', 'criterio de julio'],
     umbral_cape_j_kg: ['CAPE', 'J/kg', 'criterio de julio'],
     persistencia_n: ['Persistencia', 'n', '§8-G'],
@@ -6367,6 +6817,10 @@ function gPinta(i) {
 function gContadoresDe(muestras, p, dtMin) {
   var out = [], dwell = 0, limpio = 0, seco = 0, estado = 'NORMAL';
   var sim = HAIL.simula(muestras, p, { dt_min: dtMin });
+  /* NO RESUELVE NINGÚN INTERVALO: recibe la serie ya servida por
+     `LOC.sirveGranizo()`, igual que la máquina, y lee la misma casilla que ella.
+     Antes esto volvía a resolver el intervalo por su cuenta, y dos sitios que
+     resuelven lo mismo por separado son dos sitios que pueden discrepar. */
   for (var i = 0; i < muestras.length; i++) {
     var m = muestras[i];
     var calmo = (m.cape_j_kg != null || m.prob_tstorm_pct != null)
@@ -6387,6 +6841,13 @@ async function gCorre() {
   try {
     var D = await gSerie();
     var p = gLeeParams(), dtMin = D.dt_min || 1;
+    /* SE SIRVE AQUÍ, UNA VEZ, Y DE AQUÍ PARA ABAJO YA NO HAY INTERVALOS: la
+       máquina local, el POST al motor y los contadores reciben todos la MISMA
+       serie servida, así que no pueden discrepar sobre qué dato miraron. Y es
+       también lo que hace que el selector controle algo de verdad: sin esta
+       línea se movería y la máquina seguiría leyendo lo mismo. */
+    var SRV = LOC.sirveGranizo(D.muestras, GRZ_IV_PREF);
+    var muestras = SRV.muestras;
     var falta = HAIL.faltantes(p);
     if (falta.length) throw new Error('faltan parámetros y el Rev01.4 §19 no los da: ' + falta.join(', '));
     var modo = $('gModo').value, res = null, donde = '';
@@ -6394,7 +6855,7 @@ async function gCorre() {
       try {
         var r = await fetch(ENGINE + '/hailstow', {
           method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ muestras: D.muestras, parametros: p, dt_min: dtMin })
+          body: JSON.stringify({ muestras: muestras, parametros: LOC.sinDeclarados(p), dt_min: dtMin })
         });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         var j = await r.json();
@@ -6407,14 +6868,14 @@ async function gCorre() {
       }
     }
     if (!res) {
-      var L = HAIL.simula(D.muestras, p, { dt_min: dtMin });
+      var L = HAIL.simula(muestras, p, { dt_min: dtMin });
       res = { estados: L.estados, transiciones: L.transiciones, diario: L.diario,
               not_modeled: D.not_modeled || [],
               parametros: { validado: false, procedencia: D.procedencia, valores: p } };
       donde = 'aquí, en el navegador (bloque GRANIZO-FÍSICA)';
     }
-    res.t = D.muestras.map(function (m) { return m.t; });
-    res.contadores = gContadoresDe(D.muestras, p, dtMin);
+    res.t = muestras.map(function (m) { return m.t; });
+    res.contadores = gContadoresDe(muestras, p, dtMin);
     GRAN = res;
     GTABLA = D.transiciones_tabla;
     gBanner(res.parametros.procedencia, res.parametros.validado);
@@ -6543,6 +7004,13 @@ $('gFile').onchange = function () {
 $('gFuente').onchange = function () {
   $('gFileBox').style.display = (this.value === 'file') ? '' : 'none';
 };
+$('gIntervalo').onchange = function () {
+  GRZ_IV_PREF = this.value || null;
+  /* Por `window.` y no a secas: se asigna en el primer run, y antes de eso un
+     identificador suelto lanzaría ReferenceError —y hay un arnés que exige que
+     esta ficha no lance errores de JS—. */
+  if (window.GRAN_MUESTRAS) gIntervaloPinta(window.GRAN_MUESTRAS);
+};
 $('gPos').oninput = function () { gPinta(+this.value); };
 $('gRun').onclick = gCorre;
 /* Se repinta con lo que le afecta: el ángulo, la carrera, los parámetros de la
@@ -6555,7 +7023,166 @@ document.addEventListener('input',function(e){
      ['latVent','latMues','latSond','latArr','lat_on'].indexOf(e.target.id)>=0))gTnecPinta(); });
 document.addEventListener('change',function(e){
   if(e.target&&['latSond','latArr','lat_on'].indexOf(e.target.id)>=0)gTnecPinta(); });
+/* `gReset` SIGUE SIGNIFICANDO JULIO, y el de VDE es un botón nuevo. La primera
+   versión de esto le dio a `gReset` el valor de VDE, y eso invertía el
+   significado de un control que llevaba ahí desde el principio —y que el arnés
+   de navegador pulsa por su id esperando los de julio—. Renombrar lo que hace un
+   botón sin renombrar el botón es la forma barata de romper a quien lo use.
+   El contraste se conserva a propósito: sin el botón de julio, la diferencia que
+   introduce VDE dejaría de ser medible y pasaría a ser una creencia. */
 $('gReset').onclick = function () { if (GJULIO) { gPintaParams(GJULIO); gTnecPinta(); } };
+$('gVDE').onclick = function () { if (GJULIO) { gPintaParams(LOC.paramsVDE(GJULIO)); gTnecPinta(); } };
+
+/* ─────────── VIENTO × GRANIZO: el panel ───────────
+   Solo PINTA. Toda la decisión está en `LOC.granizoPlan` y `LOC.granizoMatriz`,
+   que son puras y tienen su banco en `tests/test_granizo_estrategia.mjs` —
+   corre en nodo, sin navegador, así que el mecanismo se ejercita aunque esta
+   parte no se pueda abrir. */
+function xRosa(a){
+  var n=((+a%360)+360)%360;
+  if(n>=337.5||n<22.5)return 'norte'; if(n<67.5)return 'noreste'; if(n<112.5)return 'este';
+  if(n<157.5)return 'sureste'; if(n<202.5)return 'sur'; if(n<247.5)return 'suroeste';
+  if(n<292.5)return 'oeste'; return 'noroeste';
+}
+function xLee(){
+  var v=function(id){return +$(id).value;};
+  var tv=$('xV40').value.trim();
+  return {tHail:v('xHail'), vAhora:v('xVnow'), tV40:(tv===''?null:+tv), azViento:v('xAz'),
+          theta:v('xTheta'), nieveCm:(v('xNieve')>0?v('xNieve'):null), nievePrev:'NIEVE',
+          azSolar:v('xAz'), noonLim:+($('noon')||{value:10}).value,
+          defensa:Math.abs(+($('gAng')||{value:55}).value)||55,
+          preMin:Math.abs(+($('pmin')||{value:30}).value)||30,
+          slew:LOC.SLEW, lat:tnecLeeCadena()};
+}
+function xPinta(){
+  var e=xLee();
+  $('xHailV').textContent=e.tHail+' min';
+  $('xVnowV').textContent=e.vAhora+' km/h';
+  $('xAzV').textContent=e.azViento+'\u00b0 \u00b7 '+xRosa(e.azViento);
+  $('xThetaV').textContent=fmt(e.theta,0)+'\u00b0 \u00b7 '+(e.theta>0?'este':e.theta<0?'oeste':'plano');
+
+  var p=LOC.granizoPlan(e);
+  var col=(p.cabe===false)?'var(--err)':(p.caso===1?'var(--ok)':'var(--warn)');
+  var h='<div style="border-left:3px solid '+col+';background:var(--bg2);padding:8px 10px;'+
+        'border-radius:4px;margin:6px 0"><b>Caso '+p.caso+'</b> \u00b7 '+p.nombre+
+        '<br><span class="sn">'+p.motivo+'</span></div>';
+  if(p.destino===null){
+    h+='<p class="note">No ordena ángulo: '+p.motivo+'.</p>';
+  } else {
+    h+='<table class="t"><tr><th>va a</th><th>recorrido</th><th>cruza 0\u00b0</th>'+
+       '<th>tarda</th><th>margen</th><th></th></tr><tr>'+
+       '<td><b>'+fmt(p.destino,0)+'\u00b0</b> ('+(p.destino>0?'este':'oeste')+')</td>'+
+       '<td>'+fmt(Math.abs(p.destino-e.theta),0)+'\u00b0</td>'+
+       '<td>'+(p.cruzaCero?'<b style="color:var(--err)">S\u00cd</b>':'no')+
+       (p.cruceAutorizado?'':' <span class="sn">(prohibido)</span>')+'</td>'+
+       '<td>'+fmt(p.T.total_min,1)+' min</td>'+
+       '<td>'+(p.margen===null?'\u2014':fmt(p.margen,0)+' min')+'</td>'+
+       '<td>'+(p.cabe===null?'<span class="sn">no aplica</span>':
+         p.cabe?'<b style="color:var(--ok)">CABE</b>':'<b style="color:var(--err)">NO CABE</b>')+
+       '</td></tr></table>';
+  }
+  /* LO QUE SE CEDE, y la distinción que esta ficha añade: «no cabe» y «la regla
+     lo prohíbe aunque cabría» no son lo mismo, y un criterio escrito no puede
+     separarlas porque no sabe cuánto tarda el eje. */
+  if(p.cede){
+    h+='<p class="note">El lado favorable era <b>'+fmt(p.destinoIdeal,0)+'\u00b0</b> y no se va: '+
+       'cuesta <b>'+fmt(p.cede.grados,0)+'\u00b0 m\u00e1s</b> y '+fmt(p.cede.min_extra,1)+
+       ' min m\u00e1s'+(p.cede.cruzaria?', cruzando por 0\u00b0':'')+'. '+
+       (p.cede.cabria===true
+         ? '<b>Y habr\u00eda cabido en el margen</b> \u2014 no se renuncia porque no quepa, sino '+
+           'porque la regla de los '+LOC.GRZ.viento_min+' min deja ese colch\u00f3n al error de la '+
+           'previsi\u00f3n. El l\u00edmite f\u00edsico son '+fmt(p.T.total_min+p.cede.min_extra,1)+' min.'
+         : p.cede.cabria===false ? 'Y <b>no habr\u00eda cabido</b>: aqu\u00ed la regla y la '+
+           'aritm\u00e9tica dicen lo mismo.' : '')+'</p>';
+  }
+  if(p.nieve&&p.nieve.estado==='NIEVE'){
+    h+='<p class="note">Y hay <b>nieve</b> ('+e.nieveCm+' cm, estado NIEVE): pide <b>'+
+       fmt(p.nieve.destino,0)+'\u00b0</b> \u2014 el lado del <b>sol</b>, con el giro de mediod\u00eda. '+
+       (p.nieve.deAcuerdo?'Coincide con lo que pide el granizo.':
+        '<b style="color:var(--err)">NO coincide</b> con lo que pide el granizo. El documento no fija '+
+        'prioridad entre las dos, y esta ficha no se la inventa: lo dice y deja la decisi\u00f3n fuera.')+
+       '</p>';
+  }
+  $('xVeredicto').innerHTML=h;
+
+  var def=e.defensa, base={};
+  for(var k in e)base[k]=e[k];
+  var M=LOC.granizoMatriz(base,LOC.grzSituaciones(def),LOC.grzEscenarios());
+  var esc=LOC.grzEscenarios();
+  var t='<table class="t"><tr><th>eje ahora \u2193 \u00b7 viento \u2192</th>';
+  esc.forEach(function(x){t+='<th style="font-weight:400;font-size:11px">'+x.nombre+'</th>';});
+  t+='</tr>';
+  M.forEach(function(f){
+    t+='<tr><td style="font-size:11px">'+f.situacion.nombre+'</td>';
+    f.celdas.forEach(function(c){
+      var q=c.plan;
+      var bg=(q.cabe===false)?'rgba(224,50,44,.18)':(q.cruzaCero?'rgba(242,169,0,.16)':'transparent');
+      t+='<td style="background:'+bg+';font-size:11px">c'+q.caso+' \u00b7 <b>'+fmt(q.destino,0)+
+         '\u00b0</b>'+(q.cruzaCero?' \u00b7 cruza':'')+(q.cabe===false?' \u00b7 <b>no cabe</b>':'')+'</td>';
+    });
+    t+='</tr>';
+  });
+  t+='</table><p class="note" style="margin-bottom:0">\u00c1mbar: cruza por 0\u00b0. '+
+     'Rojo: no cabe en el margen. Los escenarios recorren la frontera de cada umbral por los dos '+
+     'lados, que es donde un criterio mal puesto se rompe.</p>';
+  $('xMatriz').innerHTML=t;
+}
+document.addEventListener('input',function(ev){
+  if(ev.target&&['xHail','xVnow','xV40','xAz','xTheta','xNieve'].indexOf(ev.target.id)>=0)xPinta(); });
+document.addEventListener('change',function(ev){
+  if(ev.target&&['xV40','xNieve'].indexOf(ev.target.id)>=0)xPinta(); });
+
+/* ─────────── EL INTERVALO DEL PRODUCTO DE GRANIZO ───────────
+   Solo ofrece los que la SERIE trae. Ofrecer los ocho del catálogo sobre una
+   serie que solo tiene uno sería un control que miente: elegirías 10min y
+   seguirías leyendo la hora, sin que nada lo dijera. */
+function gIntervaloPinta(muestras){
+  var sel=$('gIntervalo'); if(!sel)return;
+  var iv=LOC.intervaloDeLaSerie(muestras||[], GRZ_IV_PREF);
+  var h='';
+  LOC.GRANIZO_INTERVALOS.forEach(function(x){
+    var hay=iv.disponibles.indexOf(x)>=0;
+    h+='<option value="'+x+'"'+(hay?'':' disabled')+(x===iv.intervalo?' selected':'')+'>'+
+       x+(hay?'':' \u00b7 no est\u00e1 en esta serie')+'</option>';
+  });
+  sel.innerHTML=h;
+
+  var n=$('gIntervaloNota'); if(!n)return;
+  if(!iv.intervalo){
+    n.innerHTML='<b>Esta serie no trae producto de granizo.</b> La m\u00e1quina dir\u00e1 ' +
+      '\u00absin producto de granizo\u00bb, que es la verdad y no un cero.';
+    return;
+  }
+  var min=LOC.minutosIntervalo(iv.intervalo);
+  var t='Usando <b>hail_'+iv.intervalo+'</b>. Trae: <b>'+iv.disponibles.join(', ')+'</b>.';
+  /* EL AVISO QUE JUSTIFICA TODO ESTO: la estrategia decide a 60 y a 30 minutos, y
+     un m\u00e1ximo de ventana m\u00e1s larga que el margen no puede situar esa frontera. */
+  if(LOC.intervaloGrueso(iv.intervalo, LOC.GRZ.viento_min)){
+    t+=' <b style="color:var(--warn)">El intervalo ('+min+' min) es m\u00e1s largo que el margen '+
+       'de '+LOC.GRZ.viento_min+' min de la estrategia</b>: un m\u00e1ximo de '+min+' min no dice '+
+       'si el granizo llega dentro de 5 o dentro de '+(min-5)+', y la decisi\u00f3n cuelga de eso. '+
+       'Los 10 min existen para esto.';
+  }
+  if(iv.preferido_no_disponible){
+    t+=' <b>Pediste '+GRZ_IV_PREF+' y la serie no lo trae</b>: se usa el m\u00e1s fino que hay. '+
+       'De un m\u00e1ximo horario NO se saca el de diez minutos \u2014 fingirlo ser\u00eda inventar '+
+       'resoluci\u00f3n que el dato no tiene.';
+  }
+  /* LO QUE EL DIARIO NO PUEDE DECIR POR S\u00cd MISMO. La m\u00e1quina es espejo del core y
+     escribe \u00abhail_1h\u00bb porque el core escribe eso; cuando la casilla la alimenta
+     otro intervalo, el texto de la traza se queda corto y hay que decirlo aqu\u00ed.
+     Y el sentido importa: el m\u00e1ximo de la hora es el mayor de sus tramos, luego
+     afinar el intervalo hace el disparo M\u00c1S dif\u00edcil, no m\u00e1s f\u00e1cil. */
+  if(iv.intervalo!=='1h'){
+    t+=' <b>La traza dir\u00e1 \u00abhail_1h\u00bb</b> aunque la casilla lleve el m\u00e1ximo de '+
+       'hail_'+iv.intervalo+': el diario es literal del core, que s\u00f3lo conoce el campo '+
+       'horario. Y el umbral de '+fmt(LOC.VDE.umbral_tamano_granizo_cm,1)+' cm se est\u00e1 midiendo '+
+       'contra el m\u00e1ximo de '+min+' min, que es menor o igual que el de la hora: con '+
+       'intervalo fino se defiende MENOS a igual umbral, y en cambio se sabe cu\u00e1ndo.';
+  }
+  n.innerHTML=t;
+}
+var GRZ_IV_PREF=null;      // lo que el usuario ha pedido; null = el más fino que haya
 
 function gTab(cual) {
   $('panelViento').style.display = (cual === 'viento') ? '' : 'none';
@@ -6564,7 +7191,7 @@ function gTab(cual) {
   $('tabViento').className = (cual === 'viento') ? 'on' : '';
   $('tabGranizo').className = (cual === 'granizo') ? 'on' : '';
   $('tabNieve').className = (cual === 'nieve') ? 'on' : '';
-  if (cual === 'granizo') { if (!GJULIO) gArranca(); gTnecPinta(); }
+  if (cual === 'granizo') { if (!GJULIO) gArranca(); gTnecPinta(); xPinta(); }
   if (cual === 'nieve') nPinta();
 }
 $('tabViento').onclick = function () { gTab('viento'); };
@@ -6656,7 +7283,8 @@ async function gArranca() {
     var D = await gSerie();
     GJULIO = D.muestras && GDEMO ? GDEMO.parametros.valores : null;
     GTABLA = D.transiciones_tabla;
-    if (GJULIO) { gPintaParams(GJULIO); gTnecPinta(); }
+    if (GJULIO) { gPintaParams(LOC.paramsVDE(GJULIO)); gTnecPinta(); }
+    gIntervaloPinta((D && D.muestras) || []);
     gBanner(D.procedencia, false);
     gDiagrama([], null);
     $('gDiagNota').innerHTML = 'La tabla del diagrama sale del core: ' +

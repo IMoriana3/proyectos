@@ -389,10 +389,11 @@ node tests/test_viento_reproductor.js      # 18 comprobaciones, pasar de la barr
 node tests/test_viento_rafaga_medida.js    # 29 comprobaciones, la ráfaga MEDIDA manda, y Open-Meteo la pide sin riesgo
 node tests/test_viento_latencia.js         # 134 comprobaciones, la cadena de latencia y el cronómetro (con y SIN cadena)
 node tests/test_css_variables.js           # 35 comprobaciones, ninguna ficha usa una variable CSS que no define
-node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS vs core
+node tests/test_granizo_traza.mjs          # 31 comprobaciones, traza exacta JS vs core
 node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo
-node tests/test_granizo_pestana.js         # 28 comprobaciones, la pestaña de granizo en Chromium
+node tests/test_granizo_pestana.js         # 36 comprobaciones, la pestaña de granizo en Chromium
 node tests/test_amenaza_maniobra.js        # 42 comprobaciones, la maniobra ante una amenaza (granizo y nieve)
+node tests/test_granizo_estrategia.mjs     # 107 comprobaciones, viento × granizo: los cinco casos, qué se cede y si cabe (en NODO, sin navegador)
 node tests/test_ejecucion_traza.mjs        # 61 comprobaciones, la máquina de ejecución del §10.2
 node tests/test_layout.js                  # 201 comprobaciones, careo del generador de layout
 node tests/test_layout_search.js           # 22 comprobaciones, búsqueda ML/aleatoria y contrato de ganador observado
