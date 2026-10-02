@@ -205,6 +205,16 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
     await page.waitForFunction(() => window.REP && REP.timeline, { timeout: 90000 });
     await page.click('text=⛨ Granizo'); await page.waitForTimeout(400);
     await page.selectOption('#gFuente', 'viento'); await page.waitForTimeout(200);
+    // LOS DE JULIO, Y HAY QUE PEDIRLOS: este bloque hace un `reload` completo, y
+    // al recargar la ficha arranca con su default, que desde el 2026-10 es VDE.
+    // Con el 1,9 cm de VDE el granizo del demo (1,6 cm) no escala, así que no
+    // habría tránsito que vetar y estas dos comprobaciones medirían el vacío
+    // —medido: 0 vetos y 0 órdenes—. Lo que se prueba aquí es el VETO DEL VIENTO
+    // sobre las señales de granizo del demo, y eso necesita que el granizo
+    // escale: su régimen es el de julio y ahora se declara en vez de heredarse.
+    // Un arnés que depende de cuál sea el default por casualidad es frágil dos
+    // veces: se rompe cuando el default cambia, y no dice qué necesitaba.
+    await page.click('#gReset'); await page.waitForTimeout(200);
     await page.click('#gRun'); await page.waitForTimeout(2500);
     return page.evaluate(() => ({
       // el sostenido de las muestras tiene que SER el del informe, no un valor
