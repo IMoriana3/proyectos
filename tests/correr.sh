@@ -224,7 +224,16 @@ declare -A PISO=(
   # pre-alerta se dispara con `cape >= umbral || prob >= umbral` y ninguno de los
   # dos mira el tamaño, así que puede haber vigilancia igual. Afirmar de más
   # habría puesto este arnés rojo por una frase mía y no por un defecto.
-  [test_granizo_pestana.js]=31
+  # 31 -> 36: el selector de intervalo en navegador, y sobre todo LA RAMA QUE EL
+  # DEMO NO PISA. El aviso del intervalo renombrado sólo se pinta con una serie
+  # que no sea horaria, o sea nunca con los datos de hoy —el demo lo genera el
+  # core y el core sólo tiene `hail_1h_cm`—, y yo lo escribí usando `f1()`, que
+  # vive DENTRO del bloque de física y no existe en la ficha. Habría reventado el
+  # día que llegara el dato bueno sin que ningún arnés lo hubiera visto antes. Así
+  # que esa rama se pisa a mano con una serie sintética: sintética para una
+  # COMPROBACIÓN es legítimo, sintética para enseñarla como dato sería inventar
+  # resolución. Medido 36 con el fichero congelado (md5 dc7bb1d0).
+  [test_granizo_pestana.js]=36
   # LA MANIOBRA ANTE UNA AMENAZA, en las dos pestañas que la tienen.
   #
   # EL HUECO QUE CIERRA. La máquina de granizo del §10.1 decide cuándo cruzar, y
