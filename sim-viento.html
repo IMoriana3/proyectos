@@ -622,9 +622,15 @@
           serie <b>no trae esa variable</b>: queda <b>guardado y declarado, no aplicado</b> — es lo
           que hay que pedirle a Meteomatics. La probabilidad de tormenta se queda en el 40 de julio,
           porque VDE no habla de ese número. Edita y vuelve a correr sobre la misma serie.</p>
+        <p class="noval" style="margin-bottom:0">Y una consecuencia <b>medida</b>, que conviene ver
+          antes de correr: el granizo del <b>episodio de demostración son 1,6 cm (16 mm) constantes</b>
+          —63 muestras—, así que pasa el <b>1,0 de julio en las 63</b> y el <b>1,9 de VDE en ninguna</b>.
+          Con el criterio de VDE <b>este caso no escala</b>: la máquina se queda en NORMAL y no hay nada
+          que ver encenderse. No es un fallo, es VDE siendo más estricto justo en la banda donde el
+          criterio decide. Pulsa <b>↺ los de julio</b> para ver la máquina funcionando.</p>
         <div id="gParams"></div>
-        <button class="btn small" id="gReset" style="margin-top:8px">↺ Los de VDE</button>
-        <button class="btn small" id="gJulio" style="margin-top:8px">↺ Los de julio, sin VDE</button>
+        <button class="btn small" id="gVDE" style="margin-top:8px">↺ Los de VDE</button>
+        <button class="btn small" id="gReset" style="margin-top:8px">↺ Los de julio, sin VDE</button>
       </div>
 
       <div class="card">
@@ -6879,11 +6885,15 @@ document.addEventListener('input',function(e){
      ['latVent','latMues','latSond','latArr','lat_on'].indexOf(e.target.id)>=0))gTnecPinta(); });
 document.addEventListener('change',function(e){
   if(e.target&&['latSond','latArr','lat_on'].indexOf(e.target.id)>=0)gTnecPinta(); });
-$('gReset').onclick = function () { if (GJULIO) { gPintaParams(LOC.paramsVDE(GJULIO)); gTnecPinta(); } };
-/* El botón de julio SIN VDE se conserva: es el contraste, y sirve para ver qué
-   cambia el criterio de VDE sobre la misma serie. Si desapareciera, la
-   diferencia dejaría de ser medible y pasaría a ser una creencia. */
-$('gJulio').onclick = function () { if (GJULIO) { gPintaParams(GJULIO); gTnecPinta(); } };
+/* `gReset` SIGUE SIGNIFICANDO JULIO, y el de VDE es un botón nuevo. La primera
+   versión de esto le dio a `gReset` el valor de VDE, y eso invertía el
+   significado de un control que llevaba ahí desde el principio —y que el arnés
+   de navegador pulsa por su id esperando los de julio—. Renombrar lo que hace un
+   botón sin renombrar el botón es la forma barata de romper a quien lo use.
+   El contraste se conserva a propósito: sin el botón de julio, la diferencia que
+   introduce VDE dejaría de ser medible y pasaría a ser una creencia. */
+$('gReset').onclick = function () { if (GJULIO) { gPintaParams(GJULIO); gTnecPinta(); } };
+$('gVDE').onclick = function () { if (GJULIO) { gPintaParams(LOC.paramsVDE(GJULIO)); gTnecPinta(); } };
 
 /* ─────────── VIENTO × GRANIZO: el panel ───────────
    Solo PINTA. Toda la decisión está en `LOC.granizoPlan` y `LOC.granizoMatriz`,

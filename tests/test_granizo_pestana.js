@@ -72,6 +72,37 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
   check('y sus valores salen del demo generado por el core',
         await page.evaluate(() => GJULIO && GJULIO.t_sin_precipitacion_min === 15));
 
+  // ── VDE ES EL DEFAULT, Y ESTE EPISODIO NO ESCALA CON ÉL ──────────────
+  // Desde el 2026-10 la ficha arranca con los valores de VDE encima de los de
+  // julio, porque manda VDE. Y eso tiene una consecuencia MEDIDA sobre esta
+  // serie: el granizo del episodio de demostración son 1,6 cm (16 mm)
+  // constantes, así que pasa el 1,0 de julio en sus 63 muestras y el 1,9 de VDE
+  // en NINGUNA. La máquina se queda en NORMAL y no hay dinámica que mirar.
+  //
+  // No es un fallo y no se tapa: se comprueba. Lo que viene DESPUÉS prueba la
+  // dinámica con los criterios de JULIO —que es el régimen para el que este
+  // episodio se construyó, y lo dice el nombre de su propia comprobación— así
+  // que aquí se pulsa el botón de julio a propósito.
+  check('al abrir, el tamaño es el de VDE (1,9 cm = 19 mm)',
+        await page.$eval('#gParams .gp[data-k="umbral_tamano_granizo_cm"]', e => +e.value) === 1.9);
+  await page.click('#gRun');
+  await page.waitForFunction(
+    () => document.getElementById('gTimelineCard').style.display !== 'none',
+    { timeout: 30000 });
+  // SE AFIRMA LO QUE SE SABE, y «no escala» NO se sabe: la pre-alerta de esta
+  // máquina se dispara con `cape >= umbral || prob >= umbral` y ninguno de los
+  // dos mira el tamaño del granizo, así que con VDE puede haber estados de
+  // vigilancia igual. Lo que el tamaño decide es llegar a DEFENSA, y eso es lo
+  // que se exige aquí. Afirmar de más habría puesto este arnés rojo por una
+  // frase mía, no por un defecto.
+  const estadosVDE = await page.evaluate(() => GRAN ? GRAN.estados.slice() : null);
+  check('y con VDE este episodio NO llega a defensa: su granizo son 16 mm, bajo los 19',
+        !!estadosVDE && !estadosVDE.some(e => HAIL_DEFENSIVOS.includes(e)),
+        estadosVDE ? [...new Set(estadosVDE)].join(',') : 'sin GRAN');
+  check('la ficha lo DICE en vez de dejar la pantalla vacía sin motivo',
+        /1,6 cm \(16 mm\)/.test(await page.$eval('#panelGranizo', e => e.textContent)));
+  await page.click('#gReset');            // los de julio: a partir de aquí, dinámica
+
   // ── correr ───────────────────────────────────────────────────────────
   await page.click('#gRun');
   await page.waitForFunction(

@@ -209,7 +209,22 @@ declare -A PISO=(
   # fichero se renombra, esta línea envejece y solo la caza quien lea los dos
   # repos. Queda dicho aquí en vez de fingir que hay una red debajo.
   [test_granizo_espejo.mjs]=8
-  [test_granizo_pestana.js]=28
+  # 28 -> 31: VDE PASA A SER EL DEFAULT, y eso tiene una consecuencia MEDIDA
+  # sobre la serie de demostración que conviene no tapar: su granizo son 1,6 cm
+  # (16 mm) CONSTANTES en 63 muestras, así que pasa el 1,0 de julio en las 63 y
+  # el 1,9 de VDE en NINGUNA. El caso de demostración del informe NO llegaría a
+  # defensa con el criterio de VDE — sus 16 mm caen justo entre los dos
+  # umbrales, que es la banda donde el criterio decide.
+  #
+  # Se comprueba en vez de taparse, y la dinámica se sigue probando con los
+  # criterios de JULIO —el régimen para el que ese episodio se construyó, y lo
+  # dice el nombre de su propia comprobación—, pulsando su botón a propósito.
+  #
+  # Y SE AFIRMA LO QUE SE SABE: no «no escala», sino «no llega a DEFENSA». La
+  # pre-alerta se dispara con `cape >= umbral || prob >= umbral` y ninguno de los
+  # dos mira el tamaño, así que puede haber vigilancia igual. Afirmar de más
+  # habría puesto este arnés rojo por una frase mía y no por un defecto.
+  [test_granizo_pestana.js]=31
   # LA MANIOBRA ANTE UNA AMENAZA, en las dos pestañas que la tienen.
   #
   # EL HUECO QUE CIERRA. La máquina de granizo del §10.1 decide cuándo cruzar, y
