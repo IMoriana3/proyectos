@@ -328,7 +328,15 @@ declare -A PISO=(
   # V2: predije 4 y mata 8 — el mismo vicio de la tanda anterior, no contar el
   # solape. Invertir el lado tumba también todas las comprobaciones de pantalla.
   [test_amenaza_maniobra.js]=42
-  [test_granizo_traza.mjs]=30
+  # 30 -> 31: una guarda de AUTOCONTENCIÓN. El bloque GRANIZO-FÍSICA se extrae
+  # solo, sin la ficha alrededor, así que no puede nombrar nada de fuera —y eso
+  # el `compila` no lo ve: `LOC.algo()` dentro de una función compila sin
+  # problema y revienta al LLAMARLA, con el careo ya en marcha. Pasó: al meter el
+  # intervalo de Meteomatics puse `LOC.intervaloDeLaSerie()` dentro de `simula` y
+  # el arnés murió con un ReferenceError en vez de dar un rojo con su nombre. La
+  # guarda mira el código sin comentarios y corta ahí mismo. Mutante: devolver
+  # `LOC.campoGranizo('1h')` al bloque — 1 baja, limpia y nombrada.
+  [test_granizo_traza.mjs]=31
   # 18 -> 28: el Panel dejo de COPIAR la version de las apps y pasa a LEERLA
   # del fichero de la app, asi que hay tres estados nuevos que pintar y los
   # tres se prueban en navegador: leida, no leida, y ultima lectura marcada.
@@ -856,7 +864,46 @@ declare -A PISO=(
   # Y lo declarado-no-aplicado NO viaja en el POST al motor: la clave es del core
   # pero allí vale null y no hay motor en este entorno para ver qué hace con un
   # valor puesto. Cuatro mutantes más, las CUATRO predicciones clavadas (8 bajas).
-  [test_granizo_estrategia.mjs]=70
+  #
+  # 70 -> 94: EL INTERVALO DEL PRODUCTO DE GRANIZO, que estaba clavado a `hail_1h`
+  # en cuatro sitios. Meteomatics lo sirve como `hail_<intervalo>:cm` con
+  # 10min/20min/30min/1h/3h/6h/12h/24h, y el intervalo NO es formato:
+  #   · un máximo de UNA HORA no dice CUÁNDO: un 1,6 cm puede ser dentro de 5
+  #     minutos o dentro de 55, y la estrategia decide justo en esa frontera
+  #     (≥60 min maniobra completa, <60 reducida). El dato era más grueso que la
+  #     decisión que alimenta, y ahora la ficha avisa cuando eso pasa;
+  #   · y un máximo de una hora es MÁS PERMISIVO contra el mismo umbral, porque
+  #     recoge el pico de toda la ventana. Comparar 1h con 10min sobre 19 mm no
+  #     es comparar lo mismo.
+  # Se ofrece SOLO lo que la serie trae: ofrecer los ocho del catálogo sobre una
+  # serie que tiene uno sería un control que miente. Y de un máximo horario NO se
+  # saca el de diez minutos: fingirlo sería inventar resolución que el dato no
+  # tiene, y queda dicho en el fuente.
+  #
+  # CUATRO MUTANTES, y la primera tirada salió 0 DE 4 EN PREDICCIONES —todas
+  # estimadas en vez de trazadas check por check—. Lo que esa tirada sí destapó es
+  # que el mutante más GRAVE mataba solo 1: «el preferido manda aunque no esté»
+  # haría que la máquina leyera `hail_10min_cm` en una serie que solo trae
+  # `hail_1h_cm`, o sea undefined reportado como «sin producto de granizo»:
+  # perder la señal entera en silencio. Se añadió una comprobación de
+  # CONSECUENCIA —que el campo devuelto encuentre el dato de verdad en la serie—
+  # y con ella las cuatro predicciones salen clavadas (7 bajas).
+  #
+  # 94 -> 107: `LOC.sirveGranizo()`. El intervalo salió de DENTRO de la máquina,
+  # donde lo había puesto mal, y pasó a servirse antes de entrar: la máquina es
+  # espejo del core y el core sólo conoce `hail_1h_cm`; si la máquina resolviera
+  # intervalos sabría más que su original y el careo —cuyos casos sólo traen el
+  # campo horario— se quedaría ciego a la diferencia. Las 13 nuevas prueban que
+  # la casilla única queda alimentada, que el campo de origen NO se queda puesto
+  # (el `Muestra` del core es un dataclass), que la serie original no se toca, y
+  # la de CONSECUENCIA: que la máquina ENCUENTRA el dato donde lo busca. Y la 13ª:
+  # un agujero en el campo fino deja la casilla vacía en vez de rellenarla con el
+  # máximo horario, que mezclaría dos resoluciones en la misma serie sin decirlo.
+  # Cinco mutantes, predije 5+4+2+1+3=15 bajas y salieron 5+4+2+1+5=17: fallé el
+  # último. Mutar la copia a `copia=m` ensucia la muestra EN SITIO, y la suciedad
+  # se arrastra a las comprobaciones de abajo que reusan la misma serie mixta.
+  # No conté el acoplamiento entre comprobaciones por estado compartido.
+  [test_granizo_estrategia.mjs]=107
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )

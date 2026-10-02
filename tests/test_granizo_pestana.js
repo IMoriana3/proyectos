@@ -261,6 +261,44 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
   check('y que la racha es derivada, no medida',
         /racha no viene medida/i.test(fuerte.nm), fuerte.nm.slice(0, 200));
 
+  // ── EL SELECTOR DE INTERVALO, Y SOBRE TODO LA RAMA QUE EL DEMO NO PISA ──
+  // El demo lo genera el core y el core sólo conoce `hail_1h_cm`, así que con la
+  // serie de demostración el aviso del intervalo renombrado NUNCA se pinta. Eso
+  // es justo lo que lo hace peligroso: escribí ese aviso usando `f1()`, que vive
+  // DENTRO del bloque GRANIZO-FÍSICA y no existe aquí fuera, y la rama habría
+  // reventado con `f1 is not defined` el día que llegara una serie de 10 min —sin
+  // que ningún arnés lo hubiera visto antes—. Así que se pisa a mano, con una
+  // serie sintética: sintética para una COMPROBACIÓN es legítimo; sintética para
+  // enseñársela al usuario como dato sería inventar resolución.
+  const iv10 = await page.evaluate(() => {
+    try {
+      gIntervaloPinta([{ hail_10min_cm: 1.6 }, { hail_10min_cm: 0.2 }]);
+      const s = document.getElementById('gIntervalo');
+      return { nota: document.getElementById('gIntervaloNota').textContent,
+               sel: s.value,
+               apagadas: [...s.options].filter((o) => o.disabled).map((o) => o.value) };
+    } catch (e) { return { error: e.message }; }
+  });
+  check('con una serie de 10 min el selector la usa y no revienta',
+        !iv10.error && iv10.sel === '10min', iv10.error || iv10.sel);
+  check('…y se ofrece SÓLO lo que la serie trae: el resto, apagado',
+        !iv10.error && iv10.apagadas.indexOf('1h') >= 0 && iv10.apagadas.indexOf('10min') < 0,
+        JSON.stringify(iv10.apagadas || []));
+  check('…y la ficha avisa de que la traza seguirá diciendo «hail_1h»',
+        /hail_1h/.test(iv10.nota || '') && /hail_10min/.test(iv10.nota || ''),
+        (iv10.nota || '').slice(0, 180));
+  check('…y de que a igual umbral se defiende MENOS, no más',
+        /menor o igual|MENOS/.test(iv10.nota || ''), (iv10.nota || '').slice(0, 220));
+
+  const ivNada = await page.evaluate(() => {
+    try { gIntervaloPinta([{ cape_j_kg: 900 }]);
+          return { nota: document.getElementById('gIntervaloNota').textContent };
+    } catch (e) { return { error: e.message }; }
+  });
+  check('y una serie sin producto de granizo lo dice, en vez de pintar un cero',
+        !ivNada.error && /no trae producto de granizo/i.test(ivNada.nota || ''),
+        ivNada.error || (ivNada.nota || '').slice(0, 140));
+
   check('la ficha no lanza errores de JS', errores.length === 0, errores.join(' | '));
   await browser.close();
   console.log(ko ? '\nFALLOS: ' + ko + ' de ' + (ok + ko) : '\nOK — ' + ok + '/' + ok + ' comprobaciones');

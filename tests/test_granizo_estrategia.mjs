@@ -43,7 +43,8 @@ const check = (n, cond, extra) => {
 const html = fs.readFileSync(FICHA, 'utf8');
 const NECESARIAS = ['GRZ', 'ladoEspaldaAlViento', 'granizoPlan', 'granizoMatriz',
                     'grzSituaciones', 'grzEscenarios', 'tNecesario', 'recorridoPeor',
-                    'ladoMasCercano', 'ladoNieve', 'nieveEstado', 'noonFlip', 'sign'];
+                    'ladoMasCercano', 'ladoNieve', 'nieveEstado', 'noonFlip', 'sign',
+                    'sirveGranizo'];
 const i = html.indexOf('var LOC={');
 let k = -1;
 for (const n of NECESARIAS) {
@@ -243,6 +244,121 @@ check('pero sí todo lo demás, el tamaño incluido',
   && alMotor.otro === 7);
 check('y la ficha DICE que el 30 % no es el de tormenta',
   /no es el de tormenta/i.test(html) && /GUARDADO, NO APLICADO/.test(html));
+
+console.log('── el intervalo del producto de granizo ──');
+check('el catálogo son los ocho de Meteomatics, con 10min el primero',
+  LOC.GRANIZO_INTERVALOS.length === 8 && LOC.GRANIZO_INTERVALOS[0] === '10min'
+  && LOC.GRANIZO_INTERVALOS.indexOf('1h') === 3, LOC.GRANIZO_INTERVALOS.join(','));
+check('el campo se arma como lo nombra la API', LOC.campoGranizo('10min') === 'hail_10min_cm');
+check('y el horario igual', LOC.campoGranizo('1h') === 'hail_1h_cm');
+check('los minutos de 10min son 10', LOC.minutosIntervalo('10min') === 10);
+check('y los de 1h son 60', LOC.minutosIntervalo('1h') === 60);
+check('un intervalo inventado no da minutos', LOC.minutosIntervalo('7x') === null);
+
+// SE OFRECE LO QUE LA SERIE TRAE, no el catálogo. Una serie con solo 1h no puede
+// dar 10min, y fingirlo sería leer undefined y llamarlo «sin granizo».
+const soloHora = [{ hail_1h_cm: 1.6 }, {}, { hail_1h_cm: null }];
+let r = LOC.intervaloDeLaSerie(soloHora);
+check('serie con solo 1h: solo 1h disponible', JSON.stringify(r.disponibles) === '["1h"]');
+check('…y es el que usa', r.intervalo === '1h' && r.campo === 'hail_1h_cm');
+const mixta = [{ hail_1h_cm: 1.6 }, { hail_10min_cm: 1.9 }];
+r = LOC.intervaloDeLaSerie(mixta);
+check('con 10min y 1h disponibles, gana el MÁS FINO sin pedirlo',
+  r.intervalo === '10min', r.intervalo);
+check('y los lista de fino a grueso', JSON.stringify(r.disponibles) === '["10min","1h"]');
+r = LOC.intervaloDeLaSerie(mixta, '1h');
+check('el preferido manda si está', r.intervalo === '1h');
+check('…y entonces no se avisa de nada', r.preferido_no_disponible === false);
+r = LOC.intervaloDeLaSerie(soloHora, '10min');
+check('pedir uno que no está NO lo inventa: cae al que hay',
+  r.intervalo === '1h' && r.campo === 'hail_1h_cm');
+check('…y lo DICE', r.preferido_no_disponible === true);
+// LA CONSECUENCIA, no solo la bandera. Si el preferido ganara aunque no esté, el
+// campo resuelto sería `hail_10min_cm`, la máquina leería undefined y diría «sin
+// producto de granizo»: perdería la señal ENTERA en silencio. Lo que hay que
+// exigir es que el campo devuelto encuentre el dato de verdad en la serie.
+check('y el campo devuelto SÍ encuentra el dato en esa serie',
+  soloHora.some(m => m[r.campo] !== undefined && m[r.campo] !== null), r.campo);
+r = LOC.intervaloDeLaSerie([{ cape_j_kg: 900 }, {}]);
+check('serie sin producto de granizo: intervalo null, que no es cero',
+  r.intervalo === null && r.campo === null && r.disponibles.length === 0);
+check('una serie vacía tampoco se inventa nada',
+  LOC.intervaloDeLaSerie([]).intervalo === null);
+
+// EL AVISO, en sus dos lados: un intervalo más largo que el margen que alimenta
+// no puede situar la frontera que ese margen define.
+check('1h es más grueso que el margen de 30 min: avisa',
+  LOC.intervaloGrueso('1h', 30) === true);
+check('10min no lo es: no avisa', LOC.intervaloGrueso('10min', 30) === false);
+check('30min contra 30 min justo NO avisa: igual no es más grueso',
+  LOC.intervaloGrueso('30min', 30) === false);
+check('sin margen no hay aviso que dar', LOC.intervaloGrueso('1h', 0) === false);
+
+console.log('── servir el granizo a la máquina (la casilla es UNA) ──');
+// POR QUÉ ESTO EXISTE. La máquina es espejo del core y el core sólo conoce
+// `hail_1h_cm`. Darle intervalos a la máquina la haría saber más que su original
+// y el careo de `test_granizo_traza.mjs` —cuyos casos sólo traen el campo
+// horario— se quedaría ciego a la diferencia. Así que el intervalo se resuelve
+// aquí, FUERA, y lo que entra en la máquina ya viene servido.
+// Esto NO es hipotético: la primera versión metió `LOC.intervaloDeLaSerie()`
+// dentro de `simula`, y el careo murió con un ReferenceError.
+let sv = LOC.sirveGranizo(soloHora, null);
+check('serie ya horaria: no renombra nada', sv.renombrada === false && sv.intervalo === '1h');
+check('…y devuelve las MISMAS muestras, sin copiarlas por gusto',
+  sv.muestras[0] === soloHora[0], 'identidad de objeto');
+
+const soloDiez = [{ hail_10min_cm: 1.6, cape_j_kg: 900 }, { hail_10min_cm: 0.4 }];
+sv = LOC.sirveGranizo(soloDiez, null);
+check('serie de 10min: la casilla del core queda alimentada',
+  sv.muestras[0].hail_1h_cm === 1.6 && sv.muestras[1].hail_1h_cm === 0.4);
+check('…y lo dice (renombrada), que es lo que la ficha escribe junto a la traza',
+  sv.renombrada === true && sv.intervalo === '10min' && sv.campo === 'hail_10min_cm');
+check('…sin dejar el campo de origen puesto: el `Muestra` del core es un dataclass',
+  sv.muestras[0].hail_10min_cm === undefined);
+check('…y sin perder el resto de la muestra', sv.muestras[0].cape_j_kg === 900);
+// LA COMPROBACIÓN DE CONSECUENCIA: que el nombre esté bien no basta, lo que
+// importa es que la máquina ENCUENTRE el dato donde lo busca. Se mide con la
+// misma función que resuelve la serie, sobre la serie ya servida.
+check('…y la máquina, que sólo mira hail_1h_cm, lo encuentra',
+  LOC.intervaloDeLaSerie(sv.muestras).intervalo === '1h');
+check('…sin tocar la serie original, que la ficha reusa para pintar el selector',
+  soloDiez[0].hail_1h_cm === undefined && soloDiez[0].hail_10min_cm === 1.6);
+
+// SERIE MIXTA: aquí se ve que el selector manda de verdad. El mismo dato, dos
+// intervalos, dos valores distintos en la casilla única.
+const mix2 = [{ hail_1h_cm: 2.4, hail_10min_cm: 1.1 }];
+check('mixta pidiendo 10min: la casilla lleva el de 10min, NO el horario',
+  LOC.sirveGranizo(mix2, '10min').muestras[0].hail_1h_cm === 1.1);
+check('mixta pidiendo 1h: la casilla lleva el horario y no se renombra nada',
+  LOC.sirveGranizo(mix2, '1h').muestras[0].hail_1h_cm === 2.4
+  && LOC.sirveGranizo(mix2, '1h').renombrada === false);
+// Y el sentido del cambio, que es el que hay que tener en la cabeza: el máximo de
+// la hora es el mayor de sus tramos, luego afinar el intervalo baja el valor que
+// se compara contra el umbral y hace el disparo MÁS difícil, no más fácil.
+check('afinar el intervalo NO afloja el umbral: el valor servido es menor',
+  LOC.sirveGranizo(mix2, '10min').muestras[0].hail_1h_cm
+  < LOC.sirveGranizo(mix2, '1h').muestras[0].hail_1h_cm);
+
+// SERIE CON AGUJEROS en el campo fino: la casilla se queda vacía en esa muestra,
+// y vacía incluso si esa muestra traía el valor horario. Rellenar el hueco con el
+// máximo de la hora mezclaría dos resoluciones en la misma serie sin decirlo; un
+// hueco el core sí sabe tratarlo (§8-H: ausente no es cero y no desescala).
+sv = LOC.sirveGranizo([{ hail_10min_cm: 1.1, hail_1h_cm: 2.4 }, { hail_1h_cm: 2.4 }], '10min');
+check('agujero en el campo fino: la casilla queda vacía, no se rellena con la hora',
+  sv.muestras[0].hail_1h_cm === 1.1 && sv.muestras[1].hail_1h_cm === undefined,
+  JSON.stringify(sv.muestras));
+
+sv = LOC.sirveGranizo([{ cape_j_kg: 900 }, null], null);
+check('sin producto de granizo no inventa casilla ni revienta con un hueco',
+  sv.renombrada === false && sv.intervalo === null
+  && sv.muestras[0].hail_1h_cm === undefined && sv.muestras[1] === null);
+check('y el margen del que se avisa es el de la estrategia, 30 min',
+  LOC.GRZ.viento_min === 30);
+// Y QUE LA FICHA LO DIGA, no solo lo calcule.
+check('la ficha dice que un máximo horario no sitúa el granizo dentro de la hora',
+  /NO DICE CU\u00c1NDO|no dice cu\u00e1ndo/i.test(html) || /dentro de 5 minutos o dentro de 55/.test(html));
+check('y que de un máximo horario no se saca el de diez minutos',
+  /inventar\s+resoluci\u00f3n que el dato no tiene/.test(html));
 
 console.log('── la posición nocturna, declarada y no corregida ──');
 // Queda fijado a propósito: la ficha espeja el −5,0 del core, que es la posición

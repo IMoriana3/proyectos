@@ -628,6 +628,17 @@
           Con el criterio de VDE <b>este caso no escala</b>: la máquina se queda en NORMAL y no hay nada
           que ver encenderse. No es un fallo, es VDE siendo más estricto justo en la banda donde el
           criterio decide. Pulsa <b>↺ los de julio</b> para ver la máquina funcionando.</p>
+        <div class="field"><label>Intervalo del producto de granizo
+            <span class="sn" style="margin:0">Meteomatics: hail_&lt;intervalo&gt;:cm</span></label>
+          <select id="gIntervalo"></select></div>
+        <p class="note" style="margin-top:0"><b>Hoy sólo habrá 1h que elegir, y no es un fallo del
+          selector.</b> Las dos series que esta ficha sabe hacer —la del demo y la del demo sobre el
+          viento del emplazamiento— las genera el núcleo, y el núcleo sólo tiene el campo horario.
+          Los otros siete se encenderán cuando entre una serie que de verdad los traiga: un volcado
+          de Meteomatics por fichero, o la consulta en vivo, que es fase posterior. De un máximo
+          horario no se saca el de diez minutos: fingirlo sería inventar resolución que el dato no
+          tiene, así que el selector preferirá apagarse antes que mentir.</p>
+        <p class="note" id="gIntervaloNota" style="margin-top:0"></p>
         <div id="gParams"></div>
         <button class="btn small" id="gVDE" style="margin-top:8px">↺ Los de VDE</button>
         <button class="btn small" id="gReset" style="margin-top:8px">↺ Los de julio, sin VDE</button>
@@ -1246,6 +1257,106 @@ LOC.GRZ={hail_min:60, viento_min:30, v_prestow:40, v_stow:60, salida_min:60};
 
    El de tormenta se queda en el 40 de julio: VDE no habla de ese número y
    cambiarlo por el suyo sería ponerle la etiqueta de VDE a otra cosa. */
+/* EL INTERVALO DEL PRODUCTO DE GRANIZO, Y POR QUÉ IMPORTA MÁS DE LO QUE PARECE.
+   Meteomatics sirve el tamaño máximo como `hail_<intervalo>:cm`, con intervalos
+   de 10min, 20min, 30min, 1h, 3h, 6h, 12h y 24h. La ficha leía `hail_1h_cm` a
+   pelo, en cuatro sitios, y eso tiene dos consecuencias que no son de estilo:
+
+   · UN MÁXIMO DE UNA HORA NO DICE CUÁNDO. `hail_1h` es el mayor tamaño de toda
+     la hora, así que un 1,6 cm puede ser dentro de 5 minutos o dentro de 55. Y
+     nuestra estrategia decide justo por eso: maniobra completa si el granizo
+     está a ≥60 min, reducida si está a <60. Con grano horario esa frontera no se
+     puede situar — el dato que la alimenta es más grueso que la decisión que
+     toma. Los 10 minutos existen precisamente para eso.
+   · Y UN MÁXIMO DE UNA HORA ES MÁS PERMISIVO que uno de diez minutos contra el
+     mismo umbral, porque el máximo de una ventana grande recoge el pico de toda
+     ella. O sea que el intervalo no es un detalle de formato: cambia cuándo
+     dispara el criterio de 19 mm. Comparar 1h con 10min sobre el mismo umbral
+     NO es comparar lo mismo.
+
+   Así que el intervalo deja de estar clavado: se declara, se elige, y la ficha
+   dice cuál ha usado. Lo que NO se hace es convertir unos en otros — de un
+   máximo horario no se puede sacar el de diez minutos, y fingirlo sería
+   inventar resolución que el dato no tiene. */
+LOC.GRANIZO_INTERVALOS=['10min','20min','30min','1h','3h','6h','12h','24h'];
+
+LOC.campoGranizo=function(iv){ return 'hail_'+iv+'_cm'; };
+
+/* Minutos de cada intervalo, para poder ordenarlos de fino a grueso y para
+   avisar cuando el intervalo es MÁS LARGO que el margen que alimenta. */
+LOC.minutosIntervalo=function(iv){
+  var m=String(iv||'').match(/^(\d+)(min|h)$/);
+  if(!m)return null;
+  return +m[1]*(m[2]==='h'?60:1);
+};
+
+/* QUÉ INTERVALOS TRAE DE VERDAD LA SERIE, que no es lo mismo que qué intervalos
+   existen en el catálogo. Devuelve los disponibles de fino a grueso y el que se
+   va a usar: el preferido si está, y si no el MÁS FINO que haya — nunca uno que
+   la serie no traiga, porque eso sería leer undefined y llamarlo «sin granizo».
+   `null` en `intervalo` significa que la serie no trae producto de granizo en
+   absoluto, que es distinto de traerlo y valer cero. */
+LOC.intervaloDeLaSerie=function(muestras,preferido){
+  var hay=[];
+  LOC.GRANIZO_INTERVALOS.forEach(function(iv){
+    var k=LOC.campoGranizo(iv);
+    for(var i=0;i<(muestras||[]).length;i++){
+      if(muestras[i]&&muestras[i][k]!==undefined&&muestras[i][k]!==null){hay.push(iv);return;}
+    }
+  });
+  var usa=(preferido&&hay.indexOf(preferido)>=0)?preferido:(hay.length?hay[0]:null);
+  return {disponibles:hay, intervalo:usa, campo:(usa?LOC.campoGranizo(usa):null),
+          preferido_no_disponible:!!(preferido&&hay.indexOf(preferido)<0)};
+};
+
+/* EL AVISO: el intervalo no puede ser más largo que el margen que alimenta. Si
+   la estrategia decide a 30 minutos y el producto es horario, el dato no puede
+   situar esa frontera. Mismo razonamiento que el aviso del paso de simulación
+   frente a los periodos de la cadena de latencia, y por el mismo motivo. */
+LOC.intervaloGrueso=function(iv,margen_min){
+  var m=LOC.minutosIntervalo(iv);
+  return (m!==null&&margen_min>0&&m>margen_min);
+};
+
+/* SERVIR EL GRANIZO A LA MÁQUINA · aquí se junta todo lo anterior.
+
+   La máquina —espejo del core— lee UNA casilla, `hail_1h_cm`. Esta función
+   elige qué intervalo de Meteomatics la alimenta y devuelve la serie ya servida.
+   Fuera de la máquina a propósito: el core no sabe de intervalos, y un espejo
+   que supiera más que su original dejaría de poder carearse.
+
+   Y LO DICE EN VOZ ALTA. Si la casilla `hail_1h_cm` acaba llevando el máximo de
+   `hail_10min`, el umbral de 1,9 cm ya no se está midiendo contra el máximo de
+   una hora: se mide contra el de diez minutos, que es MENOR O IGUAL —el máximo
+   de la hora es el mayor de sus seis tramos—. O sea que al afinar el intervalo
+   el disparo se vuelve MÁS difícil, no más fácil, y en cambio se gana saber
+   CUÁNDO. Las dos cosas son ciertas a la vez y ninguna es gratis; por eso
+   `renombrada` viaja de vuelta y la ficha lo escribe junto a la traza en vez de
+   dejar que el diario diga «hail_1h» sobre un dato que no lo es.
+
+   No añade claves a las muestras: la serie va también al motor Python, cuyo
+   `Muestra` es un dataclass y se construye con las claves que conoce. */
+LOC.sirveGranizo=function(muestras,preferido){
+  var iv=LOC.intervaloDeLaSerie(muestras,preferido);
+  var destino=LOC.campoGranizo('1h');
+  var servidas=(muestras||[]).map(function(m){
+    if(!m) return m;
+    if(!iv.campo||iv.campo===destino) return m;
+    var copia={}; for(var k in m) if(k!==iv.campo) copia[k]=m[k];
+    /* SI ESA MUESTRA NO TRAE EL CAMPO FINO, LA CASILLA SE QUEDA VACÍA, y queda
+       vacía A PROPÓSITO aunque esa muestra tuviera el valor horario: rellenar el
+       hueco con el máximo de la hora mezclaría dos resoluciones dentro de la
+       misma serie sin decirlo, y nadie podría luego leer la traza y saber qué
+       intervalo contestó en cada paso. Un hueco, en cambio, el core sabe
+       tratarlo: el §8-H dice que un dato ausente no es cero y no desescala. */
+    copia[destino]=m[iv.campo];
+    return copia;
+  });
+  return {muestras:servidas, intervalo:iv.intervalo, campo:iv.campo,
+          disponibles:iv.disponibles, preferido_no_disponible:iv.preferido_no_disponible,
+          renombrada:!!(iv.campo&&iv.campo!==destino)};
+};
+
 LOC.VDE={
   umbral_tamano_granizo_cm:1.9,     // 19 mm · VDE, severo
   umbral_probabilidad_pct:30,       // ≥30 % de ESE tamaño · VDE · GUARDADO, NO APLICADO
@@ -1265,7 +1376,8 @@ LOC.VDE={
    para que el motor lo use hoy. Así que se quita del cuerpo del POST y se queda
    en la ficha. */
 LOC.sinDeclarados=function(p){
-  var o={}; for(var k in (p||{}))if(LOC.VDE._declarados.indexOf(k)<0)o[k]=p[k];
+  var o={}; for(var k in (p||{}))
+    if(LOC.VDE._declarados.indexOf(k)<0 && k.charAt(0)!=='_')o[k]=p[k];
   return o;
 };
 
@@ -2006,6 +2118,14 @@ var HAIL = (function () {
     var dtMin = (o.dt_min === undefined || o.dt_min === null) ? 1 : +o.dt_min;
     var estado = o.estado_inicial || E.NORMAL;
     var pend = { clave: null, desde: null, hasta: null, n: 0, ultima: '' };
+    /* LA CASILLA DEL GRANIZO ES UNA Y SE LLAMA `hail_1h_cm`, porque así se llama
+       en el core y este bloque lo copia. El intervalo de Meteomatics que de
+       verdad alimenta esa casilla se elige FUERA, en `LOC.sirveGranizo()`, antes
+       de entrar aquí. No es pereza: si la máquina resolviera el intervalo por su
+       cuenta tendría una capacidad que el core no tiene, el careo de
+       `test_granizo_traza.mjs` no podría verla —los casos del core sólo traen
+       `hail_1h_cm`— y el espejo empezaría a separarse del original sin que nadie
+       lo notara. Darle el intervalo a la máquina es un cambio DEL CORE. */
     var c = {
       persistencia_granizo: 0, persistencia_calma: 0, persistencia_limpio: 0,
       pasos_en_estado: 0, minutos_en_defensa: 0, minutos_envolvente: 0,
@@ -6697,6 +6817,10 @@ function gPinta(i) {
 function gContadoresDe(muestras, p, dtMin) {
   var out = [], dwell = 0, limpio = 0, seco = 0, estado = 'NORMAL';
   var sim = HAIL.simula(muestras, p, { dt_min: dtMin });
+  /* NO RESUELVE NINGÚN INTERVALO: recibe la serie ya servida por
+     `LOC.sirveGranizo()`, igual que la máquina, y lee la misma casilla que ella.
+     Antes esto volvía a resolver el intervalo por su cuenta, y dos sitios que
+     resuelven lo mismo por separado son dos sitios que pueden discrepar. */
   for (var i = 0; i < muestras.length; i++) {
     var m = muestras[i];
     var calmo = (m.cape_j_kg != null || m.prob_tstorm_pct != null)
@@ -6717,6 +6841,13 @@ async function gCorre() {
   try {
     var D = await gSerie();
     var p = gLeeParams(), dtMin = D.dt_min || 1;
+    /* SE SIRVE AQUÍ, UNA VEZ, Y DE AQUÍ PARA ABAJO YA NO HAY INTERVALOS: la
+       máquina local, el POST al motor y los contadores reciben todos la MISMA
+       serie servida, así que no pueden discrepar sobre qué dato miraron. Y es
+       también lo que hace que el selector controle algo de verdad: sin esta
+       línea se movería y la máquina seguiría leyendo lo mismo. */
+    var SRV = LOC.sirveGranizo(D.muestras, GRZ_IV_PREF);
+    var muestras = SRV.muestras;
     var falta = HAIL.faltantes(p);
     if (falta.length) throw new Error('faltan parámetros y el Rev01.4 §19 no los da: ' + falta.join(', '));
     var modo = $('gModo').value, res = null, donde = '';
@@ -6724,7 +6855,7 @@ async function gCorre() {
       try {
         var r = await fetch(ENGINE + '/hailstow', {
           method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ muestras: D.muestras, parametros: LOC.sinDeclarados(p), dt_min: dtMin })
+          body: JSON.stringify({ muestras: muestras, parametros: LOC.sinDeclarados(p), dt_min: dtMin })
         });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         var j = await r.json();
@@ -6737,14 +6868,14 @@ async function gCorre() {
       }
     }
     if (!res) {
-      var L = HAIL.simula(D.muestras, p, { dt_min: dtMin });
+      var L = HAIL.simula(muestras, p, { dt_min: dtMin });
       res = { estados: L.estados, transiciones: L.transiciones, diario: L.diario,
               not_modeled: D.not_modeled || [],
               parametros: { validado: false, procedencia: D.procedencia, valores: p } };
       donde = 'aquí, en el navegador (bloque GRANIZO-FÍSICA)';
     }
-    res.t = D.muestras.map(function (m) { return m.t; });
-    res.contadores = gContadoresDe(D.muestras, p, dtMin);
+    res.t = muestras.map(function (m) { return m.t; });
+    res.contadores = gContadoresDe(muestras, p, dtMin);
     GRAN = res;
     GTABLA = D.transiciones_tabla;
     gBanner(res.parametros.procedencia, res.parametros.validado);
@@ -6873,6 +7004,13 @@ $('gFile').onchange = function () {
 $('gFuente').onchange = function () {
   $('gFileBox').style.display = (this.value === 'file') ? '' : 'none';
 };
+$('gIntervalo').onchange = function () {
+  GRZ_IV_PREF = this.value || null;
+  /* Por `window.` y no a secas: se asigna en el primer run, y antes de eso un
+     identificador suelto lanzaría ReferenceError —y hay un arnés que exige que
+     esta ficha no lance errores de JS—. */
+  if (window.GRAN_MUESTRAS) gIntervaloPinta(window.GRAN_MUESTRAS);
+};
 $('gPos').oninput = function () { gPinta(+this.value); };
 $('gRun').onclick = gCorre;
 /* Se repinta con lo que le afecta: el ángulo, la carrera, los parámetros de la
@@ -6994,6 +7132,58 @@ document.addEventListener('input',function(ev){
 document.addEventListener('change',function(ev){
   if(ev.target&&['xV40','xNieve'].indexOf(ev.target.id)>=0)xPinta(); });
 
+/* ─────────── EL INTERVALO DEL PRODUCTO DE GRANIZO ───────────
+   Solo ofrece los que la SERIE trae. Ofrecer los ocho del catálogo sobre una
+   serie que solo tiene uno sería un control que miente: elegirías 10min y
+   seguirías leyendo la hora, sin que nada lo dijera. */
+function gIntervaloPinta(muestras){
+  var sel=$('gIntervalo'); if(!sel)return;
+  var iv=LOC.intervaloDeLaSerie(muestras||[], GRZ_IV_PREF);
+  var h='';
+  LOC.GRANIZO_INTERVALOS.forEach(function(x){
+    var hay=iv.disponibles.indexOf(x)>=0;
+    h+='<option value="'+x+'"'+(hay?'':' disabled')+(x===iv.intervalo?' selected':'')+'>'+
+       x+(hay?'':' \u00b7 no est\u00e1 en esta serie')+'</option>';
+  });
+  sel.innerHTML=h;
+
+  var n=$('gIntervaloNota'); if(!n)return;
+  if(!iv.intervalo){
+    n.innerHTML='<b>Esta serie no trae producto de granizo.</b> La m\u00e1quina dir\u00e1 ' +
+      '\u00absin producto de granizo\u00bb, que es la verdad y no un cero.';
+    return;
+  }
+  var min=LOC.minutosIntervalo(iv.intervalo);
+  var t='Usando <b>hail_'+iv.intervalo+'</b>. Trae: <b>'+iv.disponibles.join(', ')+'</b>.';
+  /* EL AVISO QUE JUSTIFICA TODO ESTO: la estrategia decide a 60 y a 30 minutos, y
+     un m\u00e1ximo de ventana m\u00e1s larga que el margen no puede situar esa frontera. */
+  if(LOC.intervaloGrueso(iv.intervalo, LOC.GRZ.viento_min)){
+    t+=' <b style="color:var(--warn)">El intervalo ('+min+' min) es m\u00e1s largo que el margen '+
+       'de '+LOC.GRZ.viento_min+' min de la estrategia</b>: un m\u00e1ximo de '+min+' min no dice '+
+       'si el granizo llega dentro de 5 o dentro de '+(min-5)+', y la decisi\u00f3n cuelga de eso. '+
+       'Los 10 min existen para esto.';
+  }
+  if(iv.preferido_no_disponible){
+    t+=' <b>Pediste '+GRZ_IV_PREF+' y la serie no lo trae</b>: se usa el m\u00e1s fino que hay. '+
+       'De un m\u00e1ximo horario NO se saca el de diez minutos \u2014 fingirlo ser\u00eda inventar '+
+       'resoluci\u00f3n que el dato no tiene.';
+  }
+  /* LO QUE EL DIARIO NO PUEDE DECIR POR S\u00cd MISMO. La m\u00e1quina es espejo del core y
+     escribe \u00abhail_1h\u00bb porque el core escribe eso; cuando la casilla la alimenta
+     otro intervalo, el texto de la traza se queda corto y hay que decirlo aqu\u00ed.
+     Y el sentido importa: el m\u00e1ximo de la hora es el mayor de sus tramos, luego
+     afinar el intervalo hace el disparo M\u00c1S dif\u00edcil, no m\u00e1s f\u00e1cil. */
+  if(iv.intervalo!=='1h'){
+    t+=' <b>La traza dir\u00e1 \u00abhail_1h\u00bb</b> aunque la casilla lleve el m\u00e1ximo de '+
+       'hail_'+iv.intervalo+': el diario es literal del core, que s\u00f3lo conoce el campo '+
+       'horario. Y el umbral de '+fmt(LOC.VDE.umbral_tamano_granizo_cm,1)+' cm se est\u00e1 midiendo '+
+       'contra el m\u00e1ximo de '+min+' min, que es menor o igual que el de la hora: con '+
+       'intervalo fino se defiende MENOS a igual umbral, y en cambio se sabe cu\u00e1ndo.';
+  }
+  n.innerHTML=t;
+}
+var GRZ_IV_PREF=null;      // lo que el usuario ha pedido; null = el más fino que haya
+
 function gTab(cual) {
   $('panelViento').style.display = (cual === 'viento') ? '' : 'none';
   $('panelGranizo').style.display = (cual === 'granizo') ? '' : 'none';
@@ -7094,6 +7284,7 @@ async function gArranca() {
     GJULIO = D.muestras && GDEMO ? GDEMO.parametros.valores : null;
     GTABLA = D.transiciones_tabla;
     if (GJULIO) { gPintaParams(LOC.paramsVDE(GJULIO)); gTnecPinta(); }
+    gIntervaloPinta((D && D.muestras) || []);
     gBanner(D.procedencia, false);
     gDiagrama([], null);
     $('gDiagNota').innerHTML = 'La tabla del diagrama sale del core: ' +

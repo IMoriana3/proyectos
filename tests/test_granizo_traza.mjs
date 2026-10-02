@@ -93,6 +93,23 @@ check('y NO lleva una línea de DOM dentro',
       !/document\.|window\.|getElementById|querySelector/.test(m[1]),
       'la física tiene que poder correr sin página');
 
+// NI NADA DE FUERA DEL BLOQUE, que es un modo de romperlo que el `compila` no ve:
+// `LOC.algo()` dentro de una función no falla al compilar, falla al LLAMAR, y en
+// este arnés eso salía como un ReferenceError que mataba el proceso —no como un
+// rojo— porque el careo ya iba corriendo. Pasó de verdad: al meter el intervalo
+// de Meteomatics puse `LOC.intervaloDeLaSerie()` dentro de `simula`. Se comprueba
+// sobre el código SIN COMENTARIOS, porque el bloque sí nombra a `LOC` al explicar
+// que el intervalo se resuelve fuera, y esa mención es correcta.
+const sinCom = m[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+const FUERA = ['LOC', 'ENGINE', 'GRZ_IV_PREF', 'GJULIO', 'GDEMO', 'CORE'];
+const colados = FUERA.filter((n) => new RegExp('\\b' + n + '\\s*[.(\\[]').test(sinCom));
+check('ni usa nada definido FUERA del bloque', colados.length === 0,
+      colados.length ? 'se ha colado: ' + colados.join(', ') : 'autocontenido');
+// Y se corta aquí, como con la extracción: si algo de fuera se ha colado, el
+// careo de abajo va a morir con un ReferenceError a mitad y el diagnóstico se
+// perdería debajo de la pila. Mejor el rojo con su nombre.
+if (colados.length) { console.log('\nFALLOS: ' + ko); process.exit(1); }
+
 const ctx = { console };
 vm.createContext(ctx);
 try { vm.runInContext(m[1], ctx); }
