@@ -1414,27 +1414,45 @@ pestaña de Nieve fuera un botón DESACTIVADO, y la rama la había llenado—. L
 puerta local salió verde porque el guard viejo no estaba en esa copia. Con esta
 casilla puesta, eso no llega a `main` sin verse.
 
-**LA DEBILIDAD QUE ESTE APARTADO DECLARÓ, Y LA FRASE FALSA QUE LLEVABA DENTRO.**
+**LA DEBILIDAD QUE ESTE APARTADO DECLARÓ, Y DOS ERRORES SEGUIDOS SOBRE ELLA.**
 Aquí decía: «este ajuste **no vive en el repo**: no hay fichero que lo contenga
 ni arnés que lo compruebe, porque leerlo pide una llamada autenticada de
-administrador que la CI no tiene». La primera mitad era verdad. **La segunda era
-falsa**, y conviene ver de qué tipo de error se trata: no comprobé si se podía
-leer, deduje que no por el tipo de dato que es. Un ajuste de administración
-*suena* a que pide credenciales de administrador.
+administrador que la CI no tiene».
 
-El repo es **público**, y los dos objetos se leen **sin credencial ninguna**:
+**Primer error, el original:** eso es una media verdad, y la parte falsa no se
+midió, se dedujo — un ajuste de administración *suena* a que pide credenciales
+de administrador.
+
+**Segundo error, el mío al corregirlo, y es el instructivo.** Escribí aquí que
+la frase era falsa y que los dos objetos «se leen sin credencial ninguna»,
+apoyándome en dos `curl` que daban 200. **Esas peticiones no eran anónimas: el
+proxy de egreso del contenedor las autentica.** Se ve sin ambigüedad:
 
 ```
-curl https://api.github.com/repos/IMoriana3/proyectos          -> 200
-curl https://api.github.com/repos/IMoriana3/proyectos/rulesets -> 200
+curl -D - https://api.github.com/repos/IMoriana3/proyectos
+  X-Ratelimit-Limit: 15000        <- el anónimo son 60
+curl https://api.github.com/user
+  login: IMoriana3
 ```
 
-Dentro vienen `bypass_actors`, los contextos exigidos,
-`strict_required_status_checks_policy` y `delete_branch_on_merge`: todo lo que
-esta sección describía de palabra. Lo que faltaba no era un permiso, **era
-haberlo intentado**. Es la decimocuarta lección de este documento —una
-instrucción restrictiva también hay que verificarla— cometida sobre un límite
-que yo mismo me había inventado.
+O sea que **medí, pero medí otra cosa**. El razonamiento que falla es tentador y
+conviene nombrarlo: *yo no he mandado ningún token, por lo tanto la petición es
+anónima*. No se sigue. Entre mi `curl` y GitHub hay una pieza que puede añadir
+credenciales, y la había.
+
+**LO QUE ES VERDAD, y lo estableció la primera tirada del arnés en CI** —el
+único sitio de esta historia donde hubo una petición realmente anónima—:
+
+| objeto | anónimo | por qué |
+|---|---|---|
+| `/rulesets` y `/rulesets/<id>` | **sí** | en el runner, sin token, el ruleset entero llegó y pasó la regla |
+| `delete_branch_on_merge`, `allow_auto_merge` | **no** | son de la representación **completa** del repositorio, que GitHub solo da a quien tiene escritura; sin token llegaron `undefined` |
+
+Así que §5 bis **tenía razón para esos dos campos** y se equivocaba solo sobre
+el ruleset. La decimocuarta lección —una instrucción restrictiva también hay que
+verificarla— sigue aplicando, y ahora con una coda: **verificarla con el
+instrumento adecuado**. Un entorno que te ayuda sin decírtelo convierte una
+medida en una suposición con aspecto de medida.
 
 ### 5 ter · Lo que cierra la debilidad: `tests/test_puerta_configurada.mjs` (2026-10-02)
 
@@ -1465,8 +1483,8 @@ está probado en las dos direcciones: aparece con las dos cosas puestas y
 desaparece al quitar cualquiera. Un aviso que no puede dejar de salir no informa
 de nada.
 
-**EL HUECO QUE QUEDA, con su número.** El piso de `correr.sh` es **48**, que es
-el recuento **sin red** — no 50, el de con red. Si fuera 50, una caída de
+**EL HUECO QUE QUEDA, con su número.** El piso de `correr.sh` es **54**, que es
+el recuento **sin red** — no 57, el de con red. Si fuera 57, una caída de
 `api.github.com` o un 403 por límite de peticiones pondría la puerta entera en
 rojo por algo que no es un defecto de este repo. El precio de esa elección es
 exacto y es éste: **sin red, una configuración cambiada a mano pasaría.** El
@@ -1489,6 +1507,15 @@ verde falso sobre una puerta que no es la suya — el fork tendrá su propia
 configuración, probablemente ninguna. Así que si el `origin` del clon no es ese
 repo, la lectura viva **se declina con el motivo** en vez de leer la de otro.
 Verificado sobre un clon real con el `origin` cambiado.
+
+**LO QUE CI PUEDE Y NO PUEDE MIRAR, con su consecuencia.** El workflow pasa el
+`GITHUB_TOKEN` a propósito, porque sin él esos dos campos no llegan. Puede que
+con él tampoco —los permisos del token de Actions no son los de una cuenta de
+administrador—, y el arnés está escrito para que las dos cosas estén bien: lo
+que la respuesta no trae se **declara como no mirado**, y un valor presente y
+distinto sí es deriva. Un token flojo (401/403) cae a anónimo y también se
+declara. Así esto solo puede añadir cobertura, nunca volverse un rojo del
+entorno.
 
 **LO QUE SIGUE SIN VIGILAR, para que no se lea como cerrado.** El golden fija lo
 que el golden nombra: `default_branch`, `delete_branch_on_merge`,

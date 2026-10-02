@@ -713,17 +713,33 @@ declare -A PISO=(
   # LA CONFIGURACIÓN DE LA PUERTA, que hasta hoy era prosa en
   # `docs/puertas-y-alcance.md` §5 bis — y ese apartado declaraba su propia
   # debilidad diciendo que leerla «pide una llamada autenticada de
-  # administrador que la CI no tiene». ERA FALSO: el repo es público y
-  # `api.github.com/repos/IMoriana3/proyectos` y `/rulesets/<id>` dan 200 SIN
-  # credencial. Lo que faltaba no era un permiso, era haberlo intentado.
+  # administrador que la CI no tiene».
   #
-  # EL PISO ES EL DE SIN RED (48), no el de con red (50), y es a propósito: si
-  # fuera 50, una caída de api.github.com o un 403 por límite de peticiones
+  # ESO ERA UNA MEDIA VERDAD, Y MI PRIMERA CORRECCIÓN FUE UNA FALSEDAD
+  # DISTINTA. Escribí que los dos objetos «dan 200 SIN credencial» porque los
+  # leí con `curl` desde el contenedor de desarrollo y salieron. No eran
+  # anónimos: el proxy de egreso los AUTENTICA. Se ve en la cabecera
+  # —`X-Ratelimit-Limit: 15000`, no 60— y `api.github.com/user` devuelve
+  # `login: IMoriana3`. O sea que medí, pero medí otra cosa, y lo di por
+  # anónimo porque no había mandado token.
+  #
+  # LO QUE ES VERDAD, y lo estableció la tirada #1 de este arnés en CI:
+  #   · `/rulesets` y `/rulesets/<id>` SÍ se leen anónimos (en CI, sin token,
+  #     el ruleset entero llegó bien y pasó la regla);
+  #   · `delete_branch_on_merge` y `allow_auto_merge` NO: son de la
+  #     representación COMPLETA del repositorio, que GitHub solo da a quien
+  #     tiene escritura. Sin token llegaron `undefined`.
+  # Así que §5 bis tenía razón PARA ESOS DOS CAMPOS y se equivocaba solo sobre
+  # el ruleset. Su ausencia se declara como «no mirado» en vez de suspender; un
+  # valor presente y distinto sí es deriva.
+  #
+  # EL PISO ES EL DE SIN RED (54), no el de con red (57), y es a propósito: si
+  # fuera 57, una caída de api.github.com o un 403 por límite de peticiones
   # pondría la puerta entera en rojo por algo que no es un defecto de este
   # repo. Las dos que faltan son «la configuración VIVA no tiene faltas» y «la
   # VIVA no deriva del golden».
   #
-  # Y CINCO DE LAS 48 son de una pieza que NO se ha podido probar entera: si
+  # Y CINCO DE LAS 54 son de una pieza que NO se ha podido probar entera: si
   # alguien pone un `GITHUB_TOKEN` flojo, un 401/403 reintenta en anónimo. El
   # 401 real no se provoca desde el contenedor de desarrollo —el proxy de
   # egreso devuelve 200 incluso con un token inválido, y `curl -v` demuestra
@@ -742,7 +758,16 @@ declare -A PISO=(
   # motivo. VERIFICADO sobre un clon de verdad con el origin cambiado: 48
   # comprobaciones, lectura declinada, hueco declarado.
   #
-  # MEDIDO con seis mutantes, los seis verificados aplicados y las SEIS
+  # UN MUTANTE QUE SOLO MUERE EN CI, dicho porque es una ceguera del entorno de
+  # desarrollo y no del arnés: quitar la lista de campos solo-con-credencial
+  # —justo la regresión que puso roja la tirada #1— mata CERO aquí, porque el
+  # proxy autentica y los campos llegan. En CI mata 1. Lo que sí se ejercita
+  # localmente es el MECANISMO, por fixture: `separaAusentes` se prueba con un
+  # objeto vivo al que le falta el campo. Por eso el fixture tiene que contener
+  # el mecanismo y no heredarlo de lo que vigila — aquí es literalmente la
+  # diferencia entre cubrirlo y no cubrirlo.
+  #
+  # MEDIDO con siete mutantes, los siete verificados aplicados y las SIETE
   # predicciones clavadas (10 bajas): renombrar el job del workflow mata 1,
   # darle un `name:` al job 1 —que le cambia el nombre del check run y deja el
   # obligatorio huérfano—, el golden con `delete_branch_on_merge:false` 1, el
@@ -757,7 +782,7 @@ declare -A PISO=(
   # rojas las tres sin que lo suyo hubiera cambiado. Ahora comparan contra la
   # LÍNEA BASE del golden. Y la del booleano construía su fixture DESDE el
   # golden, así que un golden mutado le vaciaba el mecanismo: ahora es literal.
-  [test_puerta_configurada.mjs]=48
+  [test_puerta_configurada.mjs]=54
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )

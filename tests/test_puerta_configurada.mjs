@@ -4,15 +4,29 @@
 // check `navegador` en `main`, y terminaba declarando su propia debilidad:
 // «este ajuste NO vive en el repo: no hay fichero que lo contenga ni arnés que
 // lo compruebe, porque leerlo pide una llamada autenticada de administrador que
-// la CI no tiene». **La segunda mitad de esa frase era falsa.** El repo es
-// público y los dos objetos se leen SIN credencial:
+// la CI no tiene».
 //
-//   curl https://api.github.com/repos/IMoriana3/proyectos
-//   curl https://api.github.com/repos/IMoriana3/proyectos/rulesets
+// LA PRIMERA VERSIÓN DE ESTE ENCABEZADO DECÍA QUE ESA FRASE ERA FALSA, Y SE
+// EQUIVOCABA A SU VEZ. Afirmé que los dos objetos «se leen SIN credencial»
+// porque los traje con `curl` desde el contenedor de desarrollo y dieron 200.
+// No eran anónimos: **el proxy de egreso los autentica**. Se ve en la cabecera
+// —`X-Ratelimit-Limit: 15000`, no los 60 del anónimo— y en que
+// `api.github.com/user` devuelve `login: IMoriana3`. Medí de verdad, pero medí
+// otra cosa; «no mandé token» no es lo mismo que «la petición fue anónima».
 //
-// Medido el 2026-10-02: HTTP 200 las dos, con `bypass_actors`, los contextos
-// exigidos y `delete_branch_on_merge` dentro. O sea que lo que faltaba no era
-// un permiso, era haberlo intentado. Este fichero es la consecuencia.
+// LO QUE ES VERDAD, establecido por la tirada #1 de este arnés en CI, que es
+// donde sí hay una petición anónima:
+//
+//   · `/rulesets` y `/rulesets/<id>` SÍ se leen anónimos: sin token, en el
+//     runner, el ruleset entero llegó bien y pasó la regla;
+//   · `delete_branch_on_merge` y `allow_auto_merge` NO. Son de la
+//     representación COMPLETA del repositorio, que GitHub solo devuelve a quien
+//     tiene acceso de escritura. Sin token llegaron `undefined`, y el careo
+//     contra el golden salió rojo con esos dos campos nombrados.
+//
+// O sea que §5 bis tenía razón PARA ESOS DOS CAMPOS y se equivocaba solo sobre
+// el ruleset. Este fichero es la consecuencia, y lo que no se puede leer se
+// DECLARA como no mirado en vez de suspender ni, peor, pasar por mirado.
 //
 // LAS TRES COSAS QUE HACE, Y SON DISTINTAS:
 //
@@ -161,6 +175,28 @@ export function deriva(esperado, vivo, ruta = '') {
   }
   if (esperado !== vivo) salidas.push(`${ruta}: vale ${JSON.stringify(vivo)} y el golden declara ${JSON.stringify(esperado)}`);
   return salidas;
+}
+
+/* ─── LO QUE SOLO SE VE CON CREDENCIAL ───────────────────────────────────
+   `delete_branch_on_merge` y `allow_auto_merge` NO vienen en la respuesta
+   anónima: son parte de la representación completa del repositorio, que GitHub
+   solo devuelve a quien tiene acceso de escritura. El ruleset sí se lee
+   anónimo. Medido en CI, que es donde se vio: sin token, esos dos llegaron
+   `undefined` mientras el ruleset entero llegó bien.
+
+   Así que su AUSENCIA no es deriva —si lo fuera, la puerta estaría roja en
+   cada tirada de CI sin token— pero un valor PRESENTE y distinto sí lo es, y
+   lo que no se ha podido mirar se DECLARA en vez de contarse como mirado. */
+export function separaAusentes(esperado, vivo, soloConCredencial) {
+  const filtrado = {}, ausentes = [];
+  for (const k of Object.keys(esperado)) {
+    if (soloConCredencial.includes(k) && (vivo === null || vivo === undefined || vivo[k] === undefined)) {
+      ausentes.push(k);
+    } else {
+      filtrado[k] = esperado[k];
+    }
+  }
+  return { filtrado, ausentes };
 }
 
 /* EL ORDEN DE LAS REGLAS NO ES PARTE DEL AJUSTE. GitHub las devuelve en el
@@ -322,6 +358,28 @@ check('sin normalizar, el orden SÍ se notaría (prueba de que el normalizador h
       GOLDEN.ruleset.rules.length > 1 &&
       deriva(GOLDEN.ruleset, { ...GOLDEN.ruleset, rules: GOLDEN.ruleset.rules.slice().reverse() }).length > 0);
 
+/* FIXTURES LITERALES, no sacados del golden. Es la segunda vez en este mismo
+   fichero que hace falta decirlo: si el fixture se construye DESDE lo que
+   vigila, mutar el golden le vacía el mecanismo y la comprobación se pone roja
+   sin que lo suyo haya cambiado. La primera vez lo cazaron los mutantes; ésta
+   se vio al releer. */
+const SOLO = ['delete_branch_on_merge', 'allow_auto_merge'];
+const ESPERA = { default_branch: 'main', delete_branch_on_merge: true, allow_auto_merge: true };
+let sa = separaAusentes(ESPERA, { default_branch: 'main' }, SOLO);
+check('un campo solo-con-credencial AUSENTE no entra en el careo', !('delete_branch_on_merge' in sa.filtrado));
+check('…y queda nombrado en la lista de no mirados', sa.ausentes.includes('delete_branch_on_merge'));
+const VIVO_DISTINTO = { default_branch: 'main', delete_branch_on_merge: false, allow_auto_merge: true };
+sa = separaAusentes(ESPERA, VIVO_DISTINTO, SOLO);
+check('un campo solo-con-credencial PRESENTE y distinto SÍ se carea',
+      deriva(sa.filtrado, VIVO_DISTINTO).some(x => x.includes('delete_branch_on_merge')));
+check('…y entonces no se declara como no mirado', sa.ausentes.length === 0, JSON.stringify(sa.ausentes));
+sa = separaAusentes(ESPERA, {}, SOLO);
+check('un campo que NO es solo-con-credencial sigue siendo deriva si falta',
+      deriva(sa.filtrado, {}).some(x => x.includes('default_branch')));
+check('el golden nombra qué campos necesitan credencial',
+      Array.isArray(GOLDEN._solo_con_credencial) && GOLDEN._solo_con_credencial.length === 2,
+      JSON.stringify(GOLDEN._solo_con_credencial));
+
 console.log('── C · el nombre, careado contra el workflow (sin red) ──');
 const YML = path.join(RAIZ, '.github', 'workflows', 'arneses.yml');
 const jobs = jobsDe(fs.readFileSync(YML, 'utf8'));
@@ -444,12 +502,20 @@ if (process.env.PUERTA_SIN_RED) {
         const vivo = { repo: rRepo.dato, ruleset: rDet.dato };
         const v = veredictoPuerta(vivo);
         check('la configuración VIVA no tiene ninguna falta', v.faltas.length === 0, JSON.stringify(v.faltas));
+        const { filtrado, ausentes } = separaAusentes(
+          GOLDEN.repositorio, rRepo.dato, GOLDEN._solo_con_credencial || []);
         const d = [
-          ...deriva(GOLDEN.repositorio, rRepo.dato, 'repo'),
+          ...deriva(filtrado, rRepo.dato, 'repo'),
           ...deriva(normaliza(GOLDEN.ruleset), normaliza(rDet.dato), 'ruleset'),
         ];
         check('la configuración VIVA no deriva del golden', d.length === 0,
               d.join(' · ') + '  (si el cambio es a propósito, actualiza tests/goldens/puerta_main.json)');
+        if (ausentes.length) {
+          console.log('     ── NO MIRADOS (la respuesta no los trae, hace falta credencial con escritura): ' +
+                      ausentes.join(', ') + ' ──');
+        }
+        check('los campos que la lectura no trae quedan declarados, no contados como mirados',
+              ausentes.every(k => GOLDEN._solo_con_credencial.includes(k)), JSON.stringify(ausentes));
         for (const a of v.avisos) console.log('     ── aviso: ' + a);
       }
     }

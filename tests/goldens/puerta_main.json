@@ -60,5 +60,10 @@
         }
       }
     ]
-  }
+  },
+  "_solo_con_credencial": [
+    "delete_branch_on_merge",
+    "allow_auto_merge"
+  ],
+  "_ojo": "delete_branch_on_merge y allow_auto_merge NO vienen en la respuesta anónima: son de la representación completa, que GitHub solo da a quien tiene escritura. El ruleset sí se lee anónimo. Su ausencia se declara; un valor distinto sí es deriva."
 }
