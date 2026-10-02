@@ -783,6 +783,46 @@ declare -A PISO=(
   # LÍNEA BASE del golden. Y la del booleano construía su fixture DESDE el
   # golden, así que un golden mutado le vaciaba el mecanismo: ahora es literal.
   [test_puerta_configurada.mjs]=54
+  # LA ESTRATEGIA DE VIENTO × GRANIZO, que es lo que el informe NO cubre: qué se
+  # hace cuando las dos amenazas piden lados distintos. Sale de la estrategia
+  # operativa propuesta a la empresa (2026-10), que adapta a TIEMPOS los
+  # criterios en DISTANCIAS de VDE Americas. NO está aprobada y la ficha lo dice.
+  #
+  # CORRE EN NODO, SIN NAVEGADOR, y eso es la decisión de diseño: la decisión
+  # entera vive en funciones puras dentro de `sim-viento.html` y este banco las
+  # EXTRAE del fichero. Los otros tres bancos de la ficha necesitan Chromium, así
+  # que su mecanismo no se puede ejercitar donde no haya navegador; el de aquí sí
+  # —y de hecho se midió aquí, donde el chromium que pide la versión fijada no se
+  # puede bajar.
+  #
+  # LA EXTRACCIÓN SE VIGILA ANTES DE USARLA, porque es el riesgo del método: un
+  # `indexOf` que no encuentra nada devuelve un trozo vacío y el banco pasaría a
+  # probar NADA saliendo verde. Y el corte no puede ser «hasta la última función
+  # que me interesa»: `granizoPlan` llama a `ladoNieve`, que llama a `noonFlip` y
+  # a `sign`, 200 líneas más abajo. La primera versión cortaba antes y daba un
+  # `LOC` que evaluaba bien y reventaba al usarlo. Ahora el final es el MÁXIMO de
+  # todos los marcadores y se exige que estén las trece.
+  #
+  # LO QUE AÑADE A LA PROPUESTA, y es lo que un criterio escrito no puede decir:
+  # si la maniobra CABE en el margen, y qué se CEDE cuando no se va al lado bueno.
+  # De ahí salió un hallazgo para la reunión: con 29 min de margen de viento la
+  # regla manda al lado malo, pero el cruce HABRÍA cabido (11,1 min). O sea que
+  # los 30 min no son el límite físico —ése son 11— sino colchón para el error de
+  # la previsión. El banco fija las dos cosas por separado.
+  #
+  # MEDIDO con seis mutantes, los seis verificados aplicados (27 bajas), y CUATRO
+  # predicciones de seis: el lado al revés mata 9 (predije 10), la precedencia
+  # invertida 2, quitar «cabe» 2, el más cercano siempre al este 10 (predije 5),
+  # quitar «cede» 3, y una matriz que ignora el theta de su fila 1. Los dos
+  # fallos son de recuento mío —uno de más y cinco de menos—, y el de menos es el
+  # vicio de siempre: no cuento el solape entre mis propias comprobaciones.
+  #
+  # Y DOS COMPROBACIONES NACIERON FLOJAS, arregladas antes de medir: una comparaba
+  # `plan !== plan` —identidad de objetos, que difiere siempre— así que pasaba
+  # igual si la matriz ignoraba el theta de su fila; y dos accedían a `p.cede.x`
+  # sin guardia, de modo que un mutante reventaba el banco en vez de ponerlo rojo
+  # con mensaje. Los mutantes M4 y M6 matan por esos arreglos.
+  [test_granizo_estrategia.mjs]=57
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )
