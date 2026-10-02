@@ -822,7 +822,26 @@ declare -A PISO=(
   # igual si la matriz ignoraba el theta de su fila; y dos accedían a `p.cede.x`
   # sin guardia, de modo que un mutante reventaba el banco en vez de ponerlo rojo
   # con mensaje. Los mutantes M4 y M6 matan por esos arreglos.
-  [test_granizo_estrategia.mjs]=57
+  #
+  # 57 -> 70: LOS VALORES DE VDE, que manda VDE por decisión del mantenedor. Dos
+  # números y una trampa de unidades en cada uno:
+  #   · 19 mm van al campo como **1,9**, porque está en cm y se compara con
+  #     `m.hail_1h_cm`. Un 19 ahí serían 19 CENTÍMETROS y la máquina no
+  #     dispararía jamás: no da error, deja de disparar. El mutante que escribe
+  #     19 mata 4.
+  #   · y el 30 % de VDE NO es el de tormenta. VDE dice «≥30 % de granizo severo
+  #     de al menos 19 mm»; `umbral_prob_tstorm_pct` se compara con
+  #     `m.prob_tstorm_pct` y entra en un OR con el CAPE. Son magnitudes
+  #     distintas: una tormenta al 30 % es mucho más frecuente que un granizo de
+  #     19 mm al 30 %, así que bajar ese campo de 40 a 30 AFLOJARÍA el disparo,
+  #     al revés de lo que VDE pretende. El 30 va a `umbral_probabilidad_pct`,
+  #     el hueco que el core ya tiene reservado y que hoy nadie consume: queda
+  #     GUARDADO Y DECLARADO, no aplicado, y es lo que hay que pedirle a
+  #     Meteomatics. El mutante que lo pone en la tormenta mata 2.
+  # Y lo declarado-no-aplicado NO viaja en el POST al motor: la clave es del core
+  # pero allí vale null y no hay motor en este entorno para ver qué hace con un
+  # valor puesto. Cuatro mutantes más, las CUATRO predicciones clavadas (8 bajas).
+  [test_granizo_estrategia.mjs]=70
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )

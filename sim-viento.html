@@ -615,11 +615,16 @@
       <div class="card">
         <h2>⚙ Parámetros <span class="sn">§19 · sin valores del informe</span></h2>
         <p class="note" style="margin-top:0">El §19 publica 17 y deja <b>14 «SIN VALOR» a
-          propósito</b>: <i>«Ningún valor provisional se presenta como validado»</i>. Estos son los
-          <b>criterios de trabajo de julio de 2026</b>, que <b>no son del informe</b>. Edita y vuelve
-          a correr sobre la misma serie.</p>
+          propósito</b>: <i>«Ningún valor provisional se presenta como validado»</i>. La base son los
+          <b>criterios de trabajo de julio de 2026</b>, que <b>no son del informe</b> — y encima, donde
+          <b>VDE Americas</b> habla, <b>manda VDE</b>: tamaño <b>1,9 cm (19 mm)</b> en vez del 1,0 de
+          julio. El <b>30 %</b> de VDE es la probabilidad de <b>ese tamaño</b>, no de tormenta, y la
+          serie <b>no trae esa variable</b>: queda <b>guardado y declarado, no aplicado</b> — es lo
+          que hay que pedirle a Meteomatics. La probabilidad de tormenta se queda en el 40 de julio,
+          porque VDE no habla de ese número. Edita y vuelve a correr sobre la misma serie.</p>
         <div id="gParams"></div>
-        <button class="btn small" id="gReset" style="margin-top:8px">↺ Volver a los de julio</button>
+        <button class="btn small" id="gReset" style="margin-top:8px">↺ Los de VDE</button>
+        <button class="btn small" id="gJulio" style="margin-top:8px">↺ Los de julio, sin VDE</button>
       </div>
 
       <div class="card">
@@ -1208,6 +1213,62 @@ LOC.tNecesario=function(lat,grados,slew){
    defensa se saliera de esa banda, dejarían de ser compatibles — y hay una
    comprobación que lo vigila. */
 LOC.GRZ={hail_min:60, viento_min:30, v_prestow:40, v_stow:60, salida_min:60};
+
+/* LOS VALORES DE VDE, Y MANDAN ELLOS (decisión del mantenedor, 2026-10-02).
+   El §19 del informe deja 14 de 17 parámetros «SIN VALOR» a propósito, y lo que
+   la máquina traía eran «criterios de trabajo de julio» que no son del informe.
+   Donde VDE Americas habla, se pone VDE.
+
+   LOS 19 mm VAN EN cm, QUE ES LA UNIDAD DEL CAMPO: 1,9 y no 19. El campo se
+   compara con `m.hail_1h_cm`, así que un 19 ahí serían 19 CENTÍMETROS de granizo
+   y la máquina no dispararía jamás. Es la clase de error que no da error.
+   Sustituye al 1,0 cm de julio, que el informe marca «candidato 1, no aprobado».
+
+   Y EL 30 % NO ES EL DE TORMENTA, aunque sea la tentación obvia. VDE dice
+   «probabilidad ≥30 % de granizo severo de al menos 19 mm»; el campo
+   `umbral_prob_tstorm_pct` se compara con `m.prob_tstorm_pct`, que es
+   probabilidad de TORMENTA, y entra en un OR con el CAPE. Son magnitudes
+   distintas: una tormenta al 30 % es mucho más frecuente que un granizo de
+   19 mm al 30 %, así que bajar ese campo de 40 a 30 AFLOJARÍA el disparo
+   —justo al revés de lo que VDE pretende—. Por eso el 30 % va a
+   `umbral_probabilidad_pct`, que es el hueco que el core ya tiene reservado
+   para esto y que hoy vale null… y que NADIE CONSUME todavía, porque la serie
+   no trae la variable. Queda GUARDADO Y DECLARADO, no aplicado, y la ficha lo
+   dice: es exactamente lo que hay que pedirle a Meteomatics —la probabilidad
+   de superar 10, 19 o 25 mm—. El día que esa variable entre en la serie, el
+   umbral ya está puesto.
+
+   El de tormenta se queda en el 40 de julio: VDE no habla de ese número y
+   cambiarlo por el suyo sería ponerle la etiqueta de VDE a otra cosa. */
+LOC.VDE={
+  umbral_tamano_granizo_cm:1.9,     // 19 mm · VDE, severo
+  umbral_probabilidad_pct:30,       // ≥30 % de ESE tamaño · VDE · GUARDADO, NO APLICADO
+  _aplicados:['umbral_tamano_granizo_cm'],
+  _declarados:['umbral_probabilidad_pct'],
+  _de:'VDE Americas · preventivo a <48 km con ≥30 % de granizo ≥19 mm, directo a <8 km'
+};
+
+/* Los valores de julio con VDE encima, que es lo que la máquina usa por
+   defecto desde hoy. Puro para que el banco pueda carear las dos tablas sin
+   abrir la ficha. */
+/* LO DECLARADO-NO-APLICADO NO VIAJA AL MOTOR. `umbral_probabilidad_pct` es una
+   clave del propio core —viene en el fichero que él genera— pero allí vale null
+   y no he podido probar qué hace con un valor puesto: no hay motor en este
+   entorno. Mandarlo sería empujar un cambio que no he visto funcionar, y no hace
+   falta: el valor está guardado para cuando la variable entre en la serie, no
+   para que el motor lo use hoy. Así que se quita del cuerpo del POST y se queda
+   en la ficha. */
+LOC.sinDeclarados=function(p){
+  var o={}; for(var k in (p||{}))if(LOC.VDE._declarados.indexOf(k)<0)o[k]=p[k];
+  return o;
+};
+
+LOC.paramsVDE=function(julio){
+  var o={}; for(var k in (julio||{}))o[k]=julio[k];
+  o.umbral_tamano_granizo_cm=LOC.VDE.umbral_tamano_granizo_cm;
+  o.umbral_probabilidad_pct=LOC.VDE.umbral_probabilidad_pct;
+  return o;
+};
 
 /* EL LADO FAVORABLE ES LO ÚNICO DE AQUÍ QUE HE DEDUCIDO YO, y va dicho porque
    equivocarlo son 110°. La estrategia dice «dando la espalda al viento
@@ -6421,7 +6482,8 @@ function gParamsDef() {
     t_necesario_min: ['T_necesario', 'min', '§9.1 · PENDIENTE DE MEDIR EN CAMPO'],
     factor_t_necesario: ['Factor del reloj', '—', '§9.1 · «2 (criterio inicial)»'],
     margen_temporal_min: ['Margen temporal', 'min', '§9.1'],
-    umbral_tamano_granizo_cm: ['Tamaño de granizo', 'cm', '§8-A · «candidato 1 (no aprobado)»'],
+    umbral_tamano_granizo_cm: ['Tamaño de granizo', 'cm', 'VDE · 19 mm = 1,9 cm (julio: 1,0)'],
+    umbral_probabilidad_pct: ['Prob. de ESE tamaño', '%', 'VDE · 30 % · GUARDADO, NO APLICADO: la serie no trae la variable'],
     umbral_prob_tstorm_pct: ['Prob. tormenta', '%', 'criterio de julio'],
     umbral_cape_j_kg: ['CAPE', 'J/kg', 'criterio de julio'],
     persistencia_n: ['Persistencia', 'n', '§8-G'],
@@ -6656,7 +6718,7 @@ async function gCorre() {
       try {
         var r = await fetch(ENGINE + '/hailstow', {
           method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ muestras: D.muestras, parametros: p, dt_min: dtMin })
+          body: JSON.stringify({ muestras: D.muestras, parametros: LOC.sinDeclarados(p), dt_min: dtMin })
         });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         var j = await r.json();
@@ -6817,7 +6879,11 @@ document.addEventListener('input',function(e){
      ['latVent','latMues','latSond','latArr','lat_on'].indexOf(e.target.id)>=0))gTnecPinta(); });
 document.addEventListener('change',function(e){
   if(e.target&&['latSond','latArr','lat_on'].indexOf(e.target.id)>=0)gTnecPinta(); });
-$('gReset').onclick = function () { if (GJULIO) { gPintaParams(GJULIO); gTnecPinta(); } };
+$('gReset').onclick = function () { if (GJULIO) { gPintaParams(LOC.paramsVDE(GJULIO)); gTnecPinta(); } };
+/* El botón de julio SIN VDE se conserva: es el contraste, y sirve para ver qué
+   cambia el criterio de VDE sobre la misma serie. Si desapareciera, la
+   diferencia dejaría de ser medible y pasaría a ser una creencia. */
+$('gJulio').onclick = function () { if (GJULIO) { gPintaParams(GJULIO); gTnecPinta(); } };
 
 /* ─────────── VIENTO × GRANIZO: el panel ───────────
    Solo PINTA. Toda la decisión está en `LOC.granizoPlan` y `LOC.granizoMatriz`,
@@ -7017,7 +7083,7 @@ async function gArranca() {
     var D = await gSerie();
     GJULIO = D.muestras && GDEMO ? GDEMO.parametros.valores : null;
     GTABLA = D.transiciones_tabla;
-    if (GJULIO) { gPintaParams(GJULIO); gTnecPinta(); }
+    if (GJULIO) { gPintaParams(LOC.paramsVDE(GJULIO)); gTnecPinta(); }
     gBanner(D.procedencia, false);
     gDiagrama([], null);
     $('gDiagNota').innerHTML = 'La tabla del diagrama sale del core: ' +

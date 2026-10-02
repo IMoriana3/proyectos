@@ -393,7 +393,7 @@ node tests/test_granizo_traza.mjs          # 30 comprobaciones, traza exacta JS 
 node tests/test_granizo_espejo.mjs         # 9 comprobaciones, el guard del espejo
 node tests/test_granizo_pestana.js         # 28 comprobaciones, la pestaña de granizo en Chromium
 node tests/test_amenaza_maniobra.js        # 42 comprobaciones, la maniobra ante una amenaza (granizo y nieve)
-node tests/test_granizo_estrategia.mjs     # 57 comprobaciones, viento × granizo: los cinco casos, qué se cede y si cabe (en NODO, sin navegador)
+node tests/test_granizo_estrategia.mjs     # 70 comprobaciones, viento × granizo: los cinco casos, qué se cede y si cabe (en NODO, sin navegador)
 node tests/test_ejecucion_traza.mjs        # 61 comprobaciones, la máquina de ejecución del §10.2
 node tests/test_layout.js                  # 201 comprobaciones, careo del generador de layout
 node tests/test_layout_search.js           # 22 comprobaciones, búsqueda ML/aleatoria y contrato de ganador observado

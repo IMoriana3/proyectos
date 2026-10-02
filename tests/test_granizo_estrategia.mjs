@@ -212,6 +212,38 @@ const Mapurado = LOC.granizoMatriz({ ...BASE, tHail: 3, vAhora: 5 },
 check('con el granizo a 3 min hay celdas que NO caben',
   Mapurado.some(f => f.celdas.some(c => c.plan.cabe === false)));
 
+console.log('── los valores de VDE: lo aplicado y lo declarado ──');
+// A PELO, no derivados de LOC.VDE: si el caso se construye desde la constante
+// que vigila, se mueve con ella. Tercera vez que lo escribo en un banco hoy.
+check('el tamaño son 1,9 cm, que es como se escriben 19 mm en ESE campo',
+  LOC.VDE.umbral_tamano_granizo_cm === 1.9, String(LOC.VDE.umbral_tamano_granizo_cm));
+check('NO son 19: el campo está en cm y 19 cm no dispararían nunca',
+  LOC.VDE.umbral_tamano_granizo_cm < 5);
+check('la probabilidad de ESE tamaño son 30 %', LOC.VDE.umbral_probabilidad_pct === 30);
+check('el tamaño se APLICA', LOC.VDE._aplicados.indexOf('umbral_tamano_granizo_cm') >= 0);
+check('la probabilidad se DECLARA, no se aplica',
+  LOC.VDE._declarados.indexOf('umbral_probabilidad_pct') >= 0
+  && LOC.VDE._aplicados.indexOf('umbral_probabilidad_pct') < 0);
+
+const JULIO = { umbral_tamano_granizo_cm: 1.0, umbral_prob_tstorm_pct: 40, otro: 7 };
+const V = LOC.paramsVDE(JULIO);
+check('VDE pisa el tamaño de julio', V.umbral_tamano_granizo_cm === 1.9);
+check('y añade la probabilidad que julio no tenía', V.umbral_probabilidad_pct === 30);
+check('la probabilidad de TORMENTA se queda en el 40 de julio: VDE no habla de eso',
+  V.umbral_prob_tstorm_pct === 40);
+check('y no toca nada más', V.otro === 7);
+check('paramsVDE no muta el objeto de julio',
+  JULIO.umbral_tamano_granizo_cm === 1.0 && JULIO.umbral_probabilidad_pct === undefined);
+
+const alMotor = LOC.sinDeclarados(V);
+check('al motor NO le viaja lo declarado-no-aplicado',
+  alMotor.umbral_probabilidad_pct === undefined, JSON.stringify(alMotor));
+check('pero sí todo lo demás, el tamaño incluido',
+  alMotor.umbral_tamano_granizo_cm === 1.9 && alMotor.umbral_prob_tstorm_pct === 40
+  && alMotor.otro === 7);
+check('y la ficha DICE que el 30 % no es el de tormenta',
+  /no es el de tormenta/i.test(html) && /GUARDADO, NO APLICADO/.test(html));
+
 console.log('── la posición nocturna, declarada y no corregida ──');
 // Queda fijado a propósito: la ficha espeja el −5,0 del core, que es la posición
 // ESPEJO de la real (5° al ESTE) y está pendiente de la Fase 2.I allí. Si alguien
