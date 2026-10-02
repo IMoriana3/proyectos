@@ -56,33 +56,59 @@ conforme.
 
 **El residuo es ciego justo a la avería que más cuesta ver.** No es inútil: lo que sí
 detecta es un fallo de **lazo** —no llega a la consigna—, que es una avería distinta.
-Lo que no puede detectar es un fallo de **referencia**: la consigna se cumple sobre un
-cero equivocado.
+Lo que no puede detectar es nada que viva en el **cero** desde el que mide, ni ninguna
+consigna equivocada que el equipo persiga con fidelidad.
 
 **Y el nombre lo esconde.** `docs/scada.md` describe el estado `ok` como «ángulo
 **real** ≈ objetivo». No hay ningún ángulo real en esa comparación: `tilt_angle` es el
 **medido**. Mientras la tabla lo llame real, el punto ciego es invisible al leerla.
 
-**Lo que sí lo ve: comparar el ÁNGULO, no el error.** A la misma marca de tiempo, todas
-las TCU de una NCU deberían estar al mismo θ salvo por el terreno. La descalibrada
-declara 3° distintos de sus vecinas **con error propio nulo**:
+**CORRECCIÓN DE ESTA SECCIÓN, Y ES DE LAS QUE HAY QUE DEJAR A LA VISTA.** Aquí escribí
+—y se fusionó en `main` el 2026-10-02— que la cura era «comparar el ÁNGULO contra los
+vecinos de su NCU, porque la descalibrada declara 3° distintos de sus vecinas con error
+propio nulo». **Eso es falso**, y la aritmética lo dice en dos líneas:
+
+```
+medida      m_i = r_i + b_i        (b = sesgo de calibración)
+el lazo lleva m_i -> t_i           (cierra SOBRE LA MEDIDA)
+misma NCU, mismo instante          t_i = T para todas
+                                   => m_i ~ T en TODAS, también en la descalibrada
+```
+
+O sea que su ángulo **publicado** coincide con el de sus vecinas; lo que difiere es el
+real, `r_i = T − b_i`, que no se publica. **Ningún residuo calculado sobre los datos del
+equipo puede ver un sesgo de encoder** — es el mismo dato que el lazo ya absorbió. El
+error que cometí tiene nombre: **contradije la línea que estaba extendiendo**, porque
+tres párrafos más arriba este mismo documento ya decía que el D.1.1 «necesita
+instrumento externo». Y lo escribí sin montar el fixture: al ir a construirlo para el
+banco, no se pudo montar, y ahí salió.
+
+**LO QUE SÍ AÑADE COMPARAR CONTRA VECINAS, que no es poco y estaba sin vigilar:** una
+consigna que no es la de este instante. Una TCU con el seguimiento **congelado**
+persigue fielmente el objetivo de hace tres horas, así que `|tilt − target| ≈ 0`, sale
+verde, y sus vecinas están 17° más allá. Lo mismo con un reloj propio desviado, unas
+coordenadas o límites mal configurados, o un forzado viejo que nadie retiró.
 
 | residuo | detecta | NO detecta |
 |---|---|---|
-| `tilt_angle` vs `target_angle` (hoy) | fallo de **lazo** | fallo de **referencia** |
-| `tilt_angle` vs **vecinos de su NCU** | fallo de **referencia** | un desajuste común a toda la NCU (se mueven todas juntas) |
+| `tilt_angle` vs `target_angle` (lo que había) | fallo de **lazo**: no llega a su consigna | fallo de **consigna** |
+| `tilt_angle` vs **mediana de sus vecinas de NCU** | consigna de otro instante o de otro sitio | un **sesgo de encoder** (lo absorbe el lazo) · un desajuste común a toda la NCU |
+| instrumento externo (**D.1.1**) | el **sesgo de encoder** | — |
 
-Son dos residuos, no uno, y hoy van mezclados bajo un umbral que promete de más. La
-maquinaria para el segundo no hay que inventarla: el SCADA ya sirve `tilt_angle` por
-TCU con su `ncu` como tag (`tracker_status` en InfluxDB), que es exactamente el corte
-que hace falta.
+Son **tres** instrumentos para tres preguntas, y el tercero no es software. La
+maquinaria del segundo no hay que inventarla: el SCADA ya sirve `tilt_angle` por TCU con
+su `ncu` como tag (`tracker_status` en InfluxDB), que es exactamente el corte que hace
+falta — y **ya está hecho**: `scada`, `desvios_entre_vecinos()` en `collector/decode.py`,
+con 39 comprobaciones y seis mutantes en `tools/test_health_vecinos.py`.
 
-**El fixture tiene la misma trampa, y es la más fácil de cometer.** Un banco que
-inyecte el sesgo en el ángulo **real** no ejercita nada: equivale a suponer que el TCU
-es honesto y publica su propia desviación. Hay que inyectarlo en la **medida** —el
-offset de 41058, el desajuste de montaje— que es justo lo que este simulador mantiene
-separado. El instrumento que valide el diagnóstico tiene que **poder mentir igual que
-miente el equipo**.
+**EL FIXTURE TIENE LA MISMA TRAMPA, y fue lo que destapó el error de arriba.** Un banco
+que inyecte el sesgo en el ángulo **real** no ejercita nada: equivale a suponer que el
+TCU es honesto y publica su propia desviación. Hay que inyectarlo en la **medida** —el
+offset de 41058, el desajuste de montaje—, que es justo lo que este simulador mantiene
+separado. Y al hacerlo así se ve lo que la prosa no dejaba ver: el lazo lo absorbe y el
+dato publicado no se mueve. **El instrumento que valide un diagnóstico tiene que poder
+mentir igual que miente el equipo** — y si al montarlo el caso no se puede construir,
+eso no es un problema del fixture: es la respuesta.
 
 Para eso este simulador vale más que cualquier fixture inventado: planta entera,
 jerarquía real, mapa Modbus real, y averías por dos caminos físicos distintos. El «eje
