@@ -35,18 +35,25 @@ function saca(firma, cierre) {
 }
 const alias = saca('LOC.CSV_ALIAS={', '\n};');
 const parse = saca('LOC.parseCSV=function(txt){');
-check('la tabla de alias y el parser siguen en el HTML',
-      !!alias && !!parse, (alias ? '' : 'CSV_ALIAS ') + (parse ? '' : 'parseCSV'));
-if (!alias || !parse) { console.log('\nFALLOS: ' + ko); process.exit(1); }
-check('lo extraído tiene cuerpo (' + (alias.length + parse.length) + ' chars)',
-      alias.length + parse.length > 1500);
+// `unidadCabecera` entra en la extracción porque el parser LA LLAMA: sin ella
+// el bloque extraído no es el parser, es un trozo. Lo enseñó este propio banco
+// al ponerse rojo entero el día que se añadió —«LOC.unidadCabecera is not a
+// function» en catorce comprobaciones— y ese rojo estaba BIEN.
+const unidad = saca('LOC.unidadCabecera=function(cab){');
+check('la tabla de alias, el lector de unidad y el parser siguen en el HTML',
+      !!alias && !!parse && !!unidad,
+      (alias ? '' : 'CSV_ALIAS ') + (parse ? '' : 'parseCSV ') + (unidad ? '' : 'unidadCabecera'));
+if (!alias || !parse || !unidad) { console.log('\nFALLOS: ' + ko); process.exit(1); }
+check('lo extraído tiene cuerpo (' + (alias.length + parse.length + unidad.length) + ' chars)',
+      alias.length + parse.length + unidad.length > 1500);
 
 const ctx = { console, LOC: {} };
 vm.createContext(ctx);
-try { vm.runInContext(alias + '\n' + parse, ctx); }
+try { vm.runInContext(alias + '\n' + unidad + '\n' + parse, ctx); }
 catch (e) { check('el bloque compila en Node', false, e.message); }
 const LOC = ctx.LOC;
 check('queda expuesto el parser', typeof LOC.parseCSV === 'function');
+check('y el lector de unidad de la cabecera', typeof LOC.unidadCabecera === 'function');
 
 // ── el generador de ficheros de mentira ───────────────────────────────
 // Con 30 filas: el parser exige al menos 24 con fecha válida, así que un
@@ -159,6 +166,78 @@ check('justo por debajo del corte sigue siendo m/s', bajo.unidad === 'm/s',
 check('y justo por encima pasa a km/h', alto.unidad === 'km/h',
       alto.unidad + ' · ' + alto.ws[0]);
 
+// ── 5b) LA UNIDAD DECLARADA MANDA SOBRE LA DEDUCIDA ───────────────────
+// EL DEFECTO, MEDIDO el 2026-10-03. El heurístico de arriba lleva años
+// acertando con los exports de SCADA porque traen rachas y cruzan el 45. Pero
+// un año de reanálisis NO lo cruza: se metió en la ficha un año de ERA5 de
+// Open-Meteo en km/h —de los que este repo y el hermano ya tienen horneados—
+// con p98 de 26, y el parser lo declaró «m/s». 48,2 km/h de máximo anual
+// entraron como 48,2 m/s = 173 km/h. Un 3,6x sobre la serie entera, en
+// silencio y con cara de viento.
+//
+// Y EL DATO ESTABA EN EL FICHERO: las cabeceras reales escriben la unidad
+// —este mismo banco, más arriba, usa «Velocidad viento (m/s)» como ejemplo de
+// cabecera de verdad— y el parser la tiraba. Lo que se cierra aquí es ese
+// orden: primero lo declarado, y sólo se deduce si no hay nada declarado.
+//
+// LO QUE ESTO **NO** HACE, y conviene que conste: no adivina mejor. Un fichero
+// SIN declarar sigue leyéndose con el heurístico de siempre —invertirlo
+// rompería todos los ficheros en m/s, que son la mayoría—. Lo que cambia es
+// que la duda deja de ser invisible.
+
+// a) declarada km/h POR DEBAJO del corte: el caso que falló de verdad.
+//    Sin la declaración, 18 a 24 se leerían como m/s y nadie se enteraría.
+const decKmh = intenta(csv({ cab: ['time', 'wind_speed (km/h)', 'wind_direction'],
+                             ws: i => String(18 + (i % 7)) })).r;
+check('la cabecera que declara km/h manda aunque el p98 NO cruce el corte',
+      decKmh.unidad === 'km/h' && Math.abs(decKmh.ws[0] - 18 / 3.6) < 1e-6,
+      decKmh.unidad + ' · ' + decKmh.ws[0]);
+
+// b) y al revés, que es la prueba de que manda DE VERDAD: declarada m/s POR
+//    ENCIMA del corte. Aquí el heurístico diría km/h y se le lleva la contraria.
+const decMs = intenta(csv({ cab: ['time', 'Velocidad viento (m/s)', 'wind_direction'],
+                            ws: i => String(46 + (i % 5)) })).r;
+check('la cabecera que declara m/s manda aunque el p98 SÍ cruce el corte',
+      decMs.unidad === 'm/s' && Math.abs(decMs.ws[0] - 46) < 1e-9,
+      decMs.unidad + ' · ' + decMs.ws[0]);
+
+// c) de qué camino salió la unidad, porque un número sin procedencia no se
+//    puede discutir con nadie.
+check('se publica si la unidad vino declarada o deducida',
+      decKmh.unidad_como === 'declarada en la cabecera' &&
+      rMs.unidad_como === 'deducida del p98',
+      decKmh.unidad_como + ' / ' + rMs.unidad_como);
+check('y el p98 con el que se decidió', typeof rMs.unidad_p98 === 'number',
+      String(rMs.unidad_p98));
+
+// d) LA REGRESIÓN del fichero que falló: sin declarar y con el p98 del ERA5.
+//    El número NO cambia —se sigue leyendo m/s— y eso es lo correcto; lo que
+//    cambia es que sale marcado como dudoso en vez de pasar callando.
+const era5 = intenta(csv({ cab: ['time', 'wind_speed_10m', 'wind_direction'],
+                           ws: i => String(20 + (i % 9)) })).r;
+check('un año tipo ERA5 sin unidad declarada se marca DUDOSO',
+      era5.unidad_dudosa === true && era5.unidad === 'm/s',
+      era5.unidad + ' · dudosa=' + era5.unidad_dudosa + ' · p98=' + era5.unidad_p98);
+
+// e) con declaración no hay duda que valga, y f) un año normal en m/s tampoco
+//    la levanta: una alarma que salta siempre no es una alarma.
+check('declarada la unidad, no se marca duda', decKmh.unidad_dudosa === false);
+// Y ESTA FUE LA QUE CORRIGIÓ EL NÚMERO. La franja empezó en p98>=11 y esta
+// comprobación se encendió a la primera: el fixture corriente de 5 a 11 m/s
+// tiene el p98 en 11 clavado. El suelo subió a 16 por eso, no por gusto.
+check('y un año corriente en m/s (p98 = 11) tampoco la levanta',
+      rMs.unidad_dudosa === false,
+      'p98=' + rMs.unidad_p98);
+
+// g) EL GUIÓN BAJO, que es como viene media planta. Con \b —el borde
+//    obvio— «viento_kmh» no casa, porque el guión bajo es carácter de palabra.
+check('«viento_kmh» se reconoce (el borde no puede ser \\b)',
+      LOC.unidadCabecera('viento_kmh') === 'km/h',
+      String(LOC.unidadCabecera('viento_kmh')));
+check('y una cabecera sin unidad devuelve null, no una inventada',
+      LOC.unidadCabecera('wind_speed_10m') === null &&
+      LOC.unidadCabecera('viento') === null);
+
 // ── 6) NÚMEROS Y RANGOS ───────────────────────────────────────────────
 // El separador es PUNTO Y COMA, y no es un detalle: un fichero con coma
 // decimal no puede usar la coma de separador, se partiría el campo en dos. Mi
@@ -207,7 +286,7 @@ check('y menos de 24 filas válidas se rechaza con el recuento',
 // midiendo lo que dice medir.
 const ctxM = { console, LOC: {} };
 vm.createContext(ctxM);
-vm.runInContext(alias + '\n' + parse.replace('return b.n-a.n;', 'return a.n-b.n;'), ctxM);
+vm.runInContext(alias + '\n' + unidad + '\n' + parse.replace('return b.n-a.n;', 'return a.n-b.n;'), ctxM);
 let mut = null;
 try { ctxM.LOC.parseCSV(csv({})); } catch (e) { mut = String(e && e.message || e); }
 check('MUTANTE: con el separador menos frecuente el fichero deja de leerse',

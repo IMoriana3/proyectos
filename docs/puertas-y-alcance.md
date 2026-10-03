@@ -1509,6 +1509,159 @@ Un job declarado como informativo (`continue-on-error` a nivel de job) se deja
 no es un aviso. Y meterlo en el `if` sería una puerta de mentira, porque su
 `result` es `success` aunque falle.
 
+### 5 bis · El NOMBRE que la protección de rama carea (2026-10-01)
+
+Una puerta agregadora no sirve de nada si al declararla obligatoria se escribe
+mal su nombre, y ese nombre **no es el que la web enseña**.
+
+La lista de checks de una PR muestra `workflow / job` — en `Proyectos`,
+`arneses / navegador`. Pero lo que la protección de rama carea es el nombre del
+**check run**, que es el del **job**:
+
+```
+navegador          ← esto es lo que hay que escribir
+arneses / navegador   ← esto NO existe como check
+```
+
+Comprobado por las dos puntas, que es como se comprueba un nombre:
+
+- en `.github/workflows/arneses.yml`, `name: arneses` (línea 17) y el job
+  `navegador:` (línea 48);
+- y la API de checks de una PR devuelve `check_runs[].name = "navegador"`.
+
+**POR QUÉ ESTE ERROR ES DE LOS CAROS.** Un check obligatorio que no existe no
+da un error de configuración: se queda *esperando*. Todas las PR del repo
+quedan bloqueadas con un «Expected — Waiting for status to be reported» que no
+nombra la causa, y la rama **parece** mejor protegida que nunca. Es la séptima
+lección de este documento —EL VACÍO SE LEE COMO NORMAL— aplicada al ajuste en
+vez de al banco: no falla, calla.
+
+**LO QUE NO PUEDE SER OBLIGATORIO, y conviene saberlo antes de buscarlo.** Un
+workflow que sólo corre en `push` a `main` no produce ningún check en una PR,
+así que no puede exigirse. En `Proyectos` es el caso de `pages`, y es a
+propósito: lo publicado se vigila DESPUÉS del merge, porque su espera de diez
+minutos a que Pages despliegue no es un defecto y cobrársela a cada rama sería
+un peaje. Una puerta que mide lo PUBLICADO no puede vivir en la puerta que mide
+el COMMIT.
+
+**«Require branches to be up to date»: tiene coste y aquí se gana.** Obliga a
+actualizar cada PR cuando `main` se mueve. A cambio caza el fallo que ninguna
+otra cosa caza: el 2026-10-01, una rama puso en verde su propia copia mientras
+rompía un guard que vivía en `main` —`test_granizo_pestana.js` exigía que la
+pestaña de Nieve fuera un botón DESACTIVADO, y la rama la había llenado—. La
+puerta local salió verde porque el guard viejo no estaba en esa copia. Con esta
+casilla puesta, eso no llega a `main` sin verse.
+
+**LA DEBILIDAD QUE ESTE APARTADO DECLARÓ, Y DOS ERRORES SEGUIDOS SOBRE ELLA.**
+Aquí decía: «este ajuste **no vive en el repo**: no hay fichero que lo contenga
+ni arnés que lo compruebe, porque leerlo pide una llamada autenticada de
+administrador que la CI no tiene».
+
+**Primer error, el original:** eso es una media verdad, y la parte falsa no se
+midió, se dedujo — un ajuste de administración *suena* a que pide credenciales
+de administrador.
+
+**Segundo error, el mío al corregirlo, y es el instructivo.** Escribí aquí que
+la frase era falsa y que los dos objetos «se leen sin credencial ninguna»,
+apoyándome en dos `curl` que daban 200. **Esas peticiones no eran anónimas: el
+proxy de egreso del contenedor las autentica.** Se ve sin ambigüedad:
+
+```
+curl -D - https://api.github.com/repos/IMoriana3/proyectos
+  X-Ratelimit-Limit: 15000        <- el anónimo son 60
+curl https://api.github.com/user
+  login: IMoriana3
+```
+
+O sea que **medí, pero medí otra cosa**. El razonamiento que falla es tentador y
+conviene nombrarlo: *yo no he mandado ningún token, por lo tanto la petición es
+anónima*. No se sigue. Entre mi `curl` y GitHub hay una pieza que puede añadir
+credenciales, y la había.
+
+**LO QUE ES VERDAD, y lo estableció la primera tirada del arnés en CI** —el
+único sitio de esta historia donde hubo una petición realmente anónima—:
+
+| objeto | anónimo | por qué |
+|---|---|---|
+| `/rulesets` y `/rulesets/<id>` | **sí** | en el runner, sin token, el ruleset entero llegó y pasó la regla |
+| `delete_branch_on_merge`, `allow_auto_merge` | **no** | son de la representación **completa** del repositorio, que GitHub solo da a quien tiene escritura; sin token llegaron `undefined` |
+
+Así que §5 bis **tenía razón para esos dos campos** y se equivocaba solo sobre
+el ruleset. La decimocuarta lección —una instrucción restrictiva también hay que
+verificarla— sigue aplicando, y ahora con una coda: **verificarla con el
+instrumento adecuado**. Un entorno que te ayuda sin decírtelo convierte una
+medida en una suposición con aspecto de medida.
+
+### 5 ter · Lo que cierra la debilidad: `tests/test_puerta_configurada.mjs` (2026-10-02)
+
+El arnés hace **tres cosas distintas**, y conviene no confundirlas porque solo
+una de las tres necesita red:
+
+| | qué comprueba | red |
+|---|---|---|
+| **A · la regla** | qué tiene que cumplir una configuración para que la puerta sea una puerta, sobre configuraciones **sintéticas** | no |
+| **B · el careo** | que lo vivo no derive de `tests/goldens/puerta_main.json`, que es la configuración **medida** | sí |
+| **C · el nombre** | que el contexto exigido (`navegador`) corresponda a un **job real** de `arneses.yml` | no |
+
+**C es la que más vale y la que menos lo parece.** El fallo de §5 bis —escribir
+un nombre que no existe— tiene una segunda puerta de entrada que el ajuste no
+ve: **renombrar el job**. O más fino todavía, añadirle un `name:`, porque el
+nombre del check run es `jobs.<id>.name` si está y el `<id>` si no. Las dos
+cosas dejan el check obligatorio huérfano y todas las PR del repo esperando
+para siempre un «Expected — Waiting for status to be reported». Medido: las dos
+mutaciones matan esa comprobación, y antes de este arnés **nada en el repo las
+impedía**.
+
+**POR QUÉ LA REGLA NO EXIGE `allow_auto_merge`.** Porque no es integridad, es
+comodidad: apagarla no deja la puerta peor. Lo que sí hace la regla es
+**avisar** de una combinación que muerde —check en modo estricto + auto-merge
+armado: el auto-merge nativo no actualiza la rama, así que si se fusiona otra PR
+antes, la que tenía auto-merge se queda parada—. El aviso **no suspende**, y
+está probado en las dos direcciones: aparece con las dos cosas puestas y
+desaparece al quitar cualquiera. Un aviso que no puede dejar de salir no informa
+de nada.
+
+**EL HUECO QUE QUEDA, con su número.** El piso de `correr.sh` es **54**, que es
+el recuento **sin red** — no 57, el de con red. Si fuera 57, una caída de
+`api.github.com` o un 403 por límite de peticiones pondría la puerta entera en
+rojo por algo que no es un defecto de este repo. El precio de esa elección es
+exacto y es éste: **sin red, una configuración cambiada a mano pasaría.** El
+arnés lo imprime con esas palabras —`HUECO ABIERTO: nadie ha comprobado que lo
+vivo siga pareciéndose al golden`— en vez de dejar que el verde lo tape, igual
+que `test_versiones_app.mjs` declara su careo sin hermano.
+
+**Y UNA PIEZA SIN PROBAR DEL TODO, dicha.** Si alguien pasa un `GITHUB_TOKEN`
+flojo, un 401/403 reintenta en anónimo —un token con permisos insuficientes es
+*peor* que ninguno sobre un repo público—. Ese 401 **no se puede provocar desde
+el contenedor de desarrollo**: con un token inválido la API devuelve 200 porque
+el proxy de egreso lo intercepta, y `curl -v` demuestra que la cabecera sí sale.
+Así que lo ejercitado es la **decisión**, extraída a función pura y probada en
+sus cinco combinaciones; el viaje queda sin ejercitar. El workflow no pasa
+ningún token, precisamente para no depender de eso.
+
+**Y EL CLON TIENE QUE SER EL REPO.** El golden describe la puerta de **un**
+repo. En un fork, leer la API de `IMoriana3/proyectos` y aprobarlo sería un
+verde falso sobre una puerta que no es la suya — el fork tendrá su propia
+configuración, probablemente ninguna. Así que si el `origin` del clon no es ese
+repo, la lectura viva **se declina con el motivo** en vez de leer la de otro.
+Verificado sobre un clon real con el `origin` cambiado.
+
+**LO QUE CI PUEDE Y NO PUEDE MIRAR, con su consecuencia.** El workflow pasa el
+`GITHUB_TOKEN` a propósito, porque sin él esos dos campos no llegan. Puede que
+con él tampoco —los permisos del token de Actions no son los de una cuenta de
+administrador—, y el arnés está escrito para que las dos cosas estén bien: lo
+que la respuesta no trae se **declara como no mirado**, y un valor presente y
+distinto sí es deriva. Un token flojo (401/403) cae a anónimo y también se
+declara. Así esto solo puede añadir cobertura, nunca volverse un rojo del
+entorno.
+
+**LO QUE SIGUE SIN VIGILAR, para que no se lea como cerrado.** El golden fija lo
+que el golden nombra: `default_branch`, `delete_branch_on_merge`,
+`allow_auto_merge` y el ruleset entero. **Un campo nuevo que GitHub añada mañana
+no es deriva** —si lo fuera, este arnés se pondría rojo cada vez que GitHub
+amplíe su API, que no es un defecto de este repo—, así que un ajuste nuevo y
+relevante entraría sin que nada cantase hasta que alguien lo añada al golden.
+
 ---
 
 ## 6 · Inventario (2026-09-23)

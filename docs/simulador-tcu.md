@@ -35,6 +35,96 @@ El viento manda sobre manual, que es como se comporta el equipo real.
 
 **Las averías de eje son físicas y la alarma se deduce.** Eje calado: no gira, el motor pega corriente de calado y salta la sobrecorriente software (41040) casi al instante. Eje duro: gira arrastrándose sin llegar al disparo, y se detecta por la vía lenta —ventana de 41039, tres reintentos de 41065— hasta el bit de eje bloqueado. Dos averías, dos caminos, como el firmware.
 
+## El diagnóstico que ya tenemos es ciego a este defecto
+
+Consecuencia directa del párrafo de arriba, y **no es hipotética: está en producción.**
+
+El colector del SCADA clasifica la salud de cada TCU —y con ella el color del mapa—
+así (`scada`, `collector/decode.py`, líneas 128-129, leído el 2026-10-02):
+
+```python
+tilt, target = fields.get("tilt_angle"), fields.get("target_angle")
+if tilt is not None and target is not None and abs(tilt - target) > 5.0:
+    ...                                    # -> warn
+```
+
+Los dos valores los publica **el mismo TCU**, y el lazo se cierra sobre la medida. Así
+que ante un encoder descalibrado esa diferencia vale ≈ 0: no hay `warn`, el seguidor
+sale **verde** en el mapa, y la mesa está 3° torcida. Es el caso D.1.1 del Anexo 4 —y
+la razón de que ese ensayo pida instrumento externo— ocurriendo con el SCADA
+conforme.
+
+**El residuo es ciego justo a la avería que más cuesta ver.** No es inútil: lo que sí
+detecta es un fallo de **lazo** —no llega a la consigna—, que es una avería distinta.
+Lo que no puede detectar es nada que viva en el **cero** desde el que mide, ni ninguna
+consigna equivocada que el equipo persiga con fidelidad.
+
+**Y el nombre lo esconde.** `docs/scada.md` describe el estado `ok` como «ángulo
+**real** ≈ objetivo». No hay ningún ángulo real en esa comparación: `tilt_angle` es el
+**medido**. Mientras la tabla lo llame real, el punto ciego es invisible al leerla.
+
+**CORRECCIÓN DE ESTA SECCIÓN, Y ES DE LAS QUE HAY QUE DEJAR A LA VISTA.** Aquí escribí
+—y se fusionó en `main` el 2026-10-02— que la cura era «comparar el ÁNGULO contra los
+vecinos de su NCU, porque la descalibrada declara 3° distintos de sus vecinas con error
+propio nulo». **Eso es falso**, y la aritmética lo dice en dos líneas:
+
+```
+medida      m_i = r_i + b_i        (b = sesgo de calibración)
+el lazo lleva m_i -> t_i           (cierra SOBRE LA MEDIDA)
+misma NCU, mismo instante          t_i = T para todas
+                                   => m_i ~ T en TODAS, también en la descalibrada
+```
+
+O sea que su ángulo **publicado** coincide con el de sus vecinas; lo que difiere es el
+real, `r_i = T − b_i`, que no se publica. **Ningún residuo calculado sobre los datos del
+equipo puede ver un sesgo de encoder** — es el mismo dato que el lazo ya absorbió. El
+error que cometí tiene nombre: **contradije la línea que estaba extendiendo**, porque
+tres párrafos más arriba este mismo documento ya decía que el D.1.1 «necesita
+instrumento externo». Y lo escribí sin montar el fixture: al ir a construirlo para el
+banco, no se pudo montar, y ahí salió.
+
+**LO QUE SÍ AÑADE COMPARAR CONTRA VECINAS, que no es poco y estaba sin vigilar:** una
+consigna que no es la de este instante. Una TCU con el seguimiento **congelado**
+persigue fielmente el objetivo de hace tres horas, así que `|tilt − target| ≈ 0`, sale
+verde, y sus vecinas están 17° más allá. Lo mismo con un reloj propio desviado, unas
+coordenadas o límites mal configurados, o un forzado viejo que nadie retiró.
+
+| residuo | detecta | NO detecta |
+|---|---|---|
+| `tilt_angle` vs `target_angle` (lo que había) | fallo de **lazo**: no llega a su consigna | fallo de **consigna** |
+| `tilt_angle` vs **mediana de sus vecinas de NCU** | consigna de otro instante o de otro sitio | un **sesgo de encoder** (lo absorbe el lazo) · un desajuste común a toda la NCU |
+| instrumento externo (**D.1.1**) | el **sesgo de encoder** | — |
+
+Son **tres** instrumentos para tres preguntas, y el tercero no es software. La
+maquinaria del segundo no hay que inventarla: el SCADA ya sirve `tilt_angle` por TCU con
+su `ncu` como tag (`tracker_status` en InfluxDB), que es exactamente el corte que hace
+falta — y **ya está hecho**: `scada`, `desvios_entre_vecinos()` en `collector/decode.py`,
+con 39 comprobaciones y seis mutantes en `tools/test_health_vecinos.py`.
+
+**EL FIXTURE TIENE LA MISMA TRAMPA, y fue lo que destapó el error de arriba.** Un banco
+que inyecte el sesgo en el ángulo **real** no ejercita nada: equivale a suponer que el
+TCU es honesto y publica su propia desviación. Hay que inyectarlo en la **medida** —el
+offset de 41058, el desajuste de montaje—, que es justo lo que este simulador mantiene
+separado. Y al hacerlo así se ve lo que la prosa no dejaba ver: el lazo lo absorbe y el
+dato publicado no se mueve. **El instrumento que valide un diagnóstico tiene que poder
+mentir igual que miente el equipo** — y si al montarlo el caso no se puede construir,
+eso no es un problema del fixture: es la respuesta.
+
+Para eso este simulador vale más que cualquier fixture inventado: planta entera,
+jerarquía real, mapa Modbus real, y averías por dos caminos físicos distintos. El «eje
+duro» —gira arrastrándose sin llegar al disparo— es el caso difícil, y aquí se
+provoca.
+
+> **PROCEDENCIA, y una ironía que merece quedar escrita.** El razonamiento sale de una
+> rama abandonada (`claude/ia-g6b1he`, commit `624dc08e7`, 21-08-2026) que escribió un
+> paquete `solargpt_ml` con este residuo dentro y luego, al leer este documento, se
+> autocorrigió. **Ese paquete no existe**: en `SolarGPTfull/solargpt` están
+> `solargpt_core`, `solargpt_geo` y `solargpt_research`, y nada más (comprobado por
+> API, 2026-10-02). O sea que la rama se reprochaba un defecto de un código que nunca
+> llegó a existir — y el mismo defecto llevaba meses **en el que sí existe**, decidiendo
+> el color del mapa. Lo que falta por hacer está en el repo `scada`, no aquí; esta
+> sección solo se asegura de que no vuelva a pasar desapercibido.
+
 ## De dónde salen los números
 
 Ninguna constante se escribe a mano. `sim/fisica.js` y `sim/modbus-map.js` los **genera** un script desde sus fuentes, y el generador **coteja lo que aparece en más de un sitio y se niega a escribir si divergen**:

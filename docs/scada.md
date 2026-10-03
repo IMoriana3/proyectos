@@ -55,13 +55,30 @@ El colector clasifica cada TCU en uno de cinco estados, que determinan el color 
 
 | Estado | Color | Significado |
 |---|---|---|
-| `ok` | Verde | Comunica, sin alarmas, ángulo real ≈ objetivo |
-| `warn` | Ámbar | Alarma no crítica, `system_ok`=0, o desviación >5° entre ángulo real y objetivo |
+| `ok` | Verde | Comunica, sin alarmas, ángulo **medido** ≈ objetivo |
+| `warn` | Ámbar | Alarma no crítica, `system_ok`=0, o desviación >5° entre ángulo **medido** y objetivo |
 | `alarm` | Rojo | Alarma crítica: eje bloqueado, sobrecorriente de motor, batería crítica, stop, fuera de rango |
 | `offline` | Gris | Sin `lastComm` o antigüedad >5 min |
 | sin datos | Gris claro | El seguidor existe en el plano pero la API no devolvió telemetría suya |
 
 El estado de comunicaciones lo da la propia NCU mediante el registro `lastComm` por TCU (timestamp Unix), no se infiere.
+
+> **«Medido», no «real», y la corrección importa.** Esta tabla decía «ángulo real ≈
+> objetivo». No hay ningún ángulo real en esa comparación: `tilt_angle` es lo que el
+> TCU **mide**, y el lazo se cierra sobre esa medida. La consecuencia es que un
+> encoder descalibrado da `abs(tilt - target)` ≈ 0 y sale **verde** con la mesa
+> torcida. Mientras la tabla lo llamara «real», el punto ciego era invisible al leerla.
+>
+> **Y el sesgo de encoder no lo arregla ningún residuo sobre estos datos**, aunque la
+> primera versión de esta nota lo diera a entender: el lazo lleva la medida al objetivo
+> en todas, así que la descalibrada publica el mismo ángulo que sus vecinas. Para eso
+> está el ensayo **D.1.1** del Anexo 4, con instrumento externo. Lo que sí se ha
+> cerrado —en `scada`, [PR #288](https://github.com/IMoriana3/scada/pull/288)— es la
+> otra mitad, que estaba sin vigilar: una **consigna** de otro instante o de otro sitio
+> (seguimiento congelado, reloj o configuración divergente), comparando el ángulo
+> contra la mediana de sus vecinas de NCU. El desarrollo, con la corrección de mi
+> afirmación falsa a la vista, está en
+> [`simulador-tcu.md`](simulador-tcu.md#el-diagnóstico-que-ya-tenemos-es-ciego-a-este-defecto).
 
 ## Uso
 

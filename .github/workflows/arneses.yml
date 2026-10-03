@@ -130,7 +130,23 @@ jobs:
       - name: el enlace a la guía de puertas apunta a algo que existe
         run: bash docs/enlace_guia.sh
 
+      # EL TOKEN VA A PROPÓSITO, y la razón se midió en la tirada #1 de este
+      # arnés. `test_puerta_configurada.mjs` lee la configuración de la puerta
+      # por la API. El ruleset se lee ANÓNIMO, pero `delete_branch_on_merge` y
+      # `allow_auto_merge` son de la representación COMPLETA del repositorio,
+      # que GitHub solo devuelve a quien tiene escritura: sin token llegaron
+      # `undefined` y el careo contra el golden salió rojo.
+      #
+      # Con el token puede que lleguen y puede que no —depende de los permisos
+      # del `GITHUB_TOKEN` de este repo, que no es lo mismo que una cuenta de
+      # administrador—, y el arnés está escrito para que las dos cosas estén
+      # bien: lo que la respuesta no trae se DECLARA como no mirado en vez de
+      # suspender. Si el token resultara flojo (401/403), el arnés reintenta en
+      # anónimo y también lo declara. O sea que esto solo puede AÑADIR
+      # cobertura, nunca convertirse en un rojo por el entorno.
       - name: correr los arneses
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash tests/correr.sh
 
       # Los logs completos sobreviven al runner: sin ellos, un rojo obliga a

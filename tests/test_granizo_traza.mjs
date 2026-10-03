@@ -93,6 +93,23 @@ check('y NO lleva una línea de DOM dentro',
       !/document\.|window\.|getElementById|querySelector/.test(m[1]),
       'la física tiene que poder correr sin página');
 
+// NI NADA DE FUERA DEL BLOQUE, que es un modo de romperlo que el `compila` no ve:
+// `LOC.algo()` dentro de una función no falla al compilar, falla al LLAMAR, y en
+// este arnés eso salía como un ReferenceError que mataba el proceso —no como un
+// rojo— porque el careo ya iba corriendo. Pasó de verdad: al meter el intervalo
+// de Meteomatics puse `LOC.intervaloDeLaSerie()` dentro de `simula`. Se comprueba
+// sobre el código SIN COMENTARIOS, porque el bloque sí nombra a `LOC` al explicar
+// que el intervalo se resuelve fuera, y esa mención es correcta.
+const sinCom = m[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+const FUERA = ['LOC', 'ENGINE', 'GRZ_IV_PREF', 'GJULIO', 'GDEMO', 'CORE'];
+const colados = FUERA.filter((n) => new RegExp('\\b' + n + '\\s*[.(\\[]').test(sinCom));
+check('ni usa nada definido FUERA del bloque', colados.length === 0,
+      colados.length ? 'se ha colado: ' + colados.join(', ') : 'autocontenido');
+// Y se corta aquí, como con la extracción: si algo de fuera se ha colado, el
+// careo de abajo va a morir con un ReferenceError a mitad y el diagnóstico se
+// perdería debajo de la pila. Mejor el rojo con su nombre.
+if (colados.length) { console.log('\nFALLOS: ' + ko); process.exit(1); }
+
 const ctx = { console };
 vm.createContext(ctx);
 try { vm.runInContext(m[1], ctx); }
@@ -115,6 +132,70 @@ check('los requeridos son los mismos que exige el core',
   try { H.simula(D.casos[0].muestras, {}); } catch (e) { lanzó = /no arranca/.test(e.message); }
   check('sin parámetros se niega a correr, y dice cuáles faltan', lanzó);
 })();
+
+// ── LOS DEL CONTRATO NO MUEVEN LA MÁQUINA ────────────────────────────────
+// `LOC.CONTRATO` publica las decisiones de Factiun sobre los parámetros que el
+// §19 deja «SIN VALOR», y el bloque afirma de sí mismo que HOY NINGUNO LO LEE
+// NINGUNA MÁQUINA. Eso es una afirmación comprobable, y una afirmación falsa de
+// inocuidad sería peor que no decir nada: si mañana alguien conecta uno de estos
+// a un criterio, la ficha seguiría prometiendo que no cambian nada. Así que se
+// carea la traza CON y SIN ellos, sobre los mismos casos del core.
+const mc = html.match(/LOC\.CONTRATO=\{[\s\S]*?\n\};/);
+check('el bloque CONTRATO se encuentra en la ficha', !!mc);
+if (mc) {
+  let C = null;
+  try { C = (new Function('var LOC={};' + mc[0] + ' return LOC.CONTRATO;'))(); }
+  catch (e) { check('y se puede evaluar', false, e.message); }
+  if (C) {
+    const puestos = C._decididos.filter((k) => C[k] !== null && C[k] !== undefined);
+    check('hay valores decididos que meter en la máquina (' + puestos.length + ')',
+          puestos.length >= 5, puestos.join(','));
+    const conContrato = Object.assign({}, D.parametros);
+    for (const k of puestos) conContrato[k] = C[k];
+    // LOS CASOS DEL CORE NO BASTAN PARA ESTO, y conviene que quede escrito por
+    // qué: su único valor de granizo es 1,6 contra un umbral de 1,0, o sea 60 % de
+    // holgura. Una comparación sobre ellos deja pasar cualquier acoplamiento que
+    // mueva un umbral menos de eso — lo medí: un mutante que multiplicaba el
+    // umbral por 1,5 al leer `horizonte_vigilancia_h` NO lo detectaba. El fixture
+    // tiene que contener el mecanismo, y un fixture construido para carear la
+    // traza no está construido para medir sensibilidad.
+    // Así que se añaden SONDAS pegadas a los umbrales: con el dato justo en el
+    // umbral, cualquier perturbación —arriba o abajo— cambia el resultado.
+    const sonda = (f) => {
+      const ms = [];
+      for (let i = 0; i < 6; i++) ms.push({
+        hail_1h_cm: +(D.parametros.umbral_tamano_granizo_cm * f).toFixed(4),
+        cape_j_kg: D.parametros.umbral_cape_j_kg,
+        prob_tstorm_pct: D.parametros.umbral_prob_tstorm_pct,
+        viento_sostenido_ms: 2, viento_racha_ms: 3, precipitacion: false,
+        soc_pct: 90
+      });
+      return ms;
+    };
+    const lotes = D.casos.map((c) => ({ nombre: c.nombre, muestras: c.muestras, dt_min: c.dt_min }))
+      .concat([{ nombre: 'sonda · justo EN el umbral', muestras: sonda(1), dt_min: 1 },
+               { nombre: 'sonda · justo BAJO el umbral', muestras: sonda(0.99), dt_min: 1 },
+               { nombre: 'sonda · justo SOBRE el umbral', muestras: sonda(1.01), dt_min: 1 }]);
+    let movidos = [];
+    for (const c of lotes) {
+      const a = H.simula(c.muestras, D.parametros, { dt_min: c.dt_min });
+      const b = H.simula(c.muestras, conContrato, { dt_min: c.dt_min });
+      if (JSON.stringify([a.estados, a.transiciones, a.diario]) !==
+          JSON.stringify([b.estados, b.transiciones, b.diario])) movidos.push(c.nombre);
+    }
+    check('y NINGUNO mueve la traza en ' + lotes.length + ' lotes (casos del core + 3 sondas)',
+          movidos.length === 0,
+          movidos.length ? 'mueven: ' + movidos.join(', ')
+                         : 'estados, transiciones y diario idénticos');
+    // Y la sonda tiene que ser SENSIBLE de verdad: si estar en el umbral o bajo él
+    // diera la misma traza, la sonda no estaría sondeando nada.
+    const sEn = H.simula(sonda(1), D.parametros, { dt_min: 1 });
+    const sBajo = H.simula(sonda(0.99), D.parametros, { dt_min: 1 });
+    check('…y la sonda DISTINGUE estar en el umbral de estar bajo él (si no, no sondea)',
+          JSON.stringify(sEn.transiciones) !== JSON.stringify(sBajo.transiciones),
+          'en=' + sEn.transiciones.length + ' bajo=' + sBajo.transiciones.length);
+  }
+}
 
 // ── LA TRAZA, caso por caso ──────────────────────────────────────────────
 for (const c of D.casos) {
