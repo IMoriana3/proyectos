@@ -1229,7 +1229,16 @@ LOC.tNecesario=function(lat,grados,slew){
    al 55° del lado en que ya estás satisface los dos a la vez. Si algún día la
    defensa se saliera de esa banda, dejarían de ser compatibles — y hay una
    comprobación que lo vigila. */
-LOC.GRZ={hail_min:60, viento_min:30, v_prestow:40, v_stow:60, salida_min:60};
+LOC.GRZ={hail_min:60, viento_min:30, v_prestow:40, v_stow:60, salida_min:60,
+         racha_cruce:40};
+/* `racha_cruce` COMPARTE EL NÚMERO 40 CON `v_prestow` Y NO ES UN DUPLICADO: son
+   magnitudes distintas sobre la misma cifra. `v_prestow` se mide contra el viento
+   SOSTENIDO y reparte los casos; `racha_cruce` se mide contra la RACHA y prohíbe
+   atravesar la banda de pre-stow. Lo pidió Iñaki así el 3-oct-2026 —«es racha»— y
+   la diferencia no es cosmética: con el modelo de racha de esta ficha un sostenido
+   de 30 km/h ya da rachas de más de 50, así que el caso 1 se autorizaba con un
+   viento que esta restricción prohíbe. Tenerlos separados es lo que arregla eso.
+   Si algún día se separan los números, que se separen; hoy coinciden y punto. */
 
 /* LOS VALORES DE VDE, Y MANDAN ELLOS (decisión del mantenedor, 2026-10-02).
    El §19 del informe deja 14 de 17 parámetros «SIN VALOR» a propósito, y lo que
@@ -1507,6 +1516,67 @@ LOC.ladoEspaldaAlViento=function(azViento){
 /* EL PLAN, puro. Devuelve el caso, el destino, si cruza por 0°, cuánto tarda y
    —lo que de verdad añade esta ficha— SI CABE en el margen. Un criterio que
    dice a dónde ir pero no si llegas a tiempo es media respuesta. */
+/* SEGUNDOS DENTRO DE LA BANDA de pre-stow al ir de `desde` a `hasta`. No es «cruza
+   o no cruza»: se mide el solape del recorrido con [−b, +b] y se divide por la
+   velocidad del eje. La frontera `b` es el MISMO `pmin` del pre-stow (30° por
+   defecto), no un número nuevo — la planta ya tenía declarada esa frontera y meter
+   otra habría sido dos cifras para el mismo criterio.
+
+   POR QUÉ HACE FALTA UN TIEMPO Y NO UN BOOLEANO: cruzar de −55° a +55° son 50°
+   dentro de la banda, que a 0,17 °/s son 294 s = 4,9 min, el 45 % del recorrido
+   completo. El resto de la maniobra se puede hacer con viento alto; ese tramo no.
+   Guardarlo como sí/no mezclaba los dos riesgos en el mismo saco. */
+/* LA RACHA MEDIANA QUE CORRESPONDE A UN SOSTENIDO, con el MISMO modelo que usa
+   `LOC.gust()` para generar la serie del año: ti = 0,14·(0,75 + 5,6/u) y
+   racha = u·(1 + 3,5·ti·g), evaluado en g = 1 (la mediana del factor aleatorio).
+
+   ESTO NO ES UNA MEDIDA, es la conversión que esta ficha ya usaba escondida dentro
+   del generador de series. Sacarla aquí sirve para dos cosas: que los escenarios de
+   la matriz tengan una racha coherente con el resto de la ficha en vez de números
+   puestos a mano, y que se pueda ver el factor, que es el dato incómodo — a 25 km/h
+   sostenidos salen 44 de racha, factor 1,76. Los factores típicos sobre terreno
+   abierto están en 1,3–1,5, así que este modelo es agresivo a viento flojo (el
+   término 5,6/u se dispara). QUEDA DICHO: si la racha de planta no se parece a
+   esto, el que sobra es el modelo, no el anemómetro. */
+LOC.rachaMediana=function(v_kmh){
+  var u=Math.max(0.5,(+v_kmh||0)/3.6);
+  var ti=0.14*(0.75+5.6/u);
+  return u*(1+3.5*ti)*3.6;
+};
+
+/* CUÁNDO LA RACHA ALCANZA UN UMBRAL, dado el sostenido de ahora y en cuánto llegará
+   a `v_prestow`. Hace dos cosas declaradas:
+     1· invierte `rachaMediana` para saber qué sostenido produce esa racha (22,0 km/h
+        para una racha de 40, con este modelo), y
+     2· supone que el sostenido sube LINEALMENTE de `vAhora` a `v_prestow` en `tV40`
+        minutos. Eso es una rampa inventada, no una previsión: sirve para que el
+        explorador de la ficha pueda razonar sin pedir un dato que nadie tiene, y por
+        eso la pantalla dice que la racha es DERIVADA.
+   Devuelve 0 si la racha ya está en el umbral, y null si no hay previsión de viento
+   —que es lo mismo que `tV40 = null` ha significado siempre aquí: nadie anuncia
+   amenaza, no que no pueda haberla—. */
+LOC.tRachaUmbral=function(vAhora,tV40,umbral,vFinal){
+  var u=(+umbral>0?+umbral:LOC.GRZ.racha_cruce), v0=Math.max(0,+vAhora||0);
+  if(LOC.rachaMediana(v0)>=u) return 0;
+  if(tV40===null||tV40===undefined) return null;
+  var vf=(+vFinal>0?+vFinal:LOC.GRZ.v_prestow);
+  /* el sostenido que da esa racha, por bisección: `rachaMediana` es monótona */
+  var lo=0, hi=200;
+  for(var i=0;i<60;i++){ var m=(lo+hi)/2; if(LOC.rachaMediana(m)<u) lo=m; else hi=m; }
+  var vUmbral=lo;
+  if(vUmbral<=v0) return 0;
+  if(vUmbral>=vf) return null;              // la rampa no llega a cruzarlo
+  var t=Math.max(0,+tV40)*(vUmbral-v0)/(vf-v0);
+  return t;
+};
+
+LOC.tEnBanda=function(desde,hasta,slew,borde){
+  var b=Math.abs(+borde||0), v=(+slew>0?+slew:LOC.SLEW);
+  var a=Math.min(+desde,+hasta), z=Math.max(+desde,+hasta);
+  var g=Math.max(0,Math.min(z,b)-Math.max(a,-b));
+  return {grados:g, seg:(v>0?g/v:0), min:(v>0?g/v/60:0)};
+};
+
 LOC.granizoPlan=function(e){
   var U=e.umbrales||LOC.GRZ;
   var def=Math.abs(+e.defensa||0), pre=Math.abs(+e.preMin||0);
@@ -1514,6 +1584,19 @@ LOC.granizoPlan=function(e){
   var lat=e.lat||LOC.LATENCIA;
   var tH=(e.tHail===null||e.tHail===undefined)?null:Math.max(0,+e.tHail);
   var tV=(e.tV40===null||e.tV40===undefined)?null:Math.max(0,+e.tV40);
+  /* LA RACHA, APARTE DEL SOSTENIDO. `rachaAhora` es la de ahora y `tRacha` los
+     minutos hasta que alcance `racha_cruce`.
+
+     LOS DOS NULL NO SIGNIFICAN LO MISMO, y la asimetría es deliberada:
+       · `rachaAhora = null` es CEGUERA —no hay medida de racha— y veta el cruce.
+         Es la regla §8-H: un dato ausente no concede permiso.
+       · `tRacha = null` es AUSENCIA DE PREVISIÓN —nadie anuncia que la racha vaya a
+         llegar al umbral— y NO veta. Misma convención que `tV40 = null`, que esta
+         función ya trataba así desde antes; usar dos reglas distintas para la misma
+         forma de entrada habría sido la trampa.
+     O sea: no saber CÓMO ESTÁ ahora ciega; no saber QUÉ VENDRÁ no inventa amenaza. */
+  var rA=(e.rachaAhora===null||e.rachaAhora===undefined)?null:Math.max(0,+e.rachaAhora);
+  var tR=(e.tRacha===null||e.tRacha===undefined)?null:Math.max(0,+e.tRacha);
   var cerca=LOC.ladoMasCercano(th,def);
   var r={caso:0,nombre:'',destino:null,cruzaCero:false,cruceAutorizado:false,
          T:null,margen:null,cabe:null,manda:'granizo',motivo:''};
@@ -1549,14 +1632,40 @@ LOC.granizoPlan=function(e){
     r.destino=cerca; r.margen=tV;
     r.motivo='no compensa cruzar por 0° con la racha encima a mitad de recorrido';
   } else {
-    r.caso=1; r.nombre='maniobra completa al lado favorable';
-    r.cruceAutorizado=true;
     var lado=(e.ladoFavorable===1||e.ladoFavorable===-1)?e.ladoFavorable
              :LOC.ladoEspaldaAlViento(e.azViento);
-    r.destino=(lado===null?cerca:lado*def);
-    r.margen=(tV===null?tH:Math.min(tH,tV));
-    r.motivo='hay margen para elegir lado'+(lado===null?
-      ' pero el viento previsto no tiene componente E/O: se va al más cercano':'');
+    var dIdeal=(lado===null?cerca:lado*def);
+    var cruzaria=(th>0&&dIdeal<0)||(th<0&&dIdeal>0);
+    /* EL VETO DE RACHA, Y SÓLO SI DE VERDAD SE VA A ATRAVESAR LA BANDA. Si el lado
+       favorable es el que ya ocupa, no hay banda que cruzar y la racha no pinta
+       nada aquí: vetarlo también habría sido prohibir por si acaso. */
+    var enB=cruzaria?LOC.tEnBanda(th,dIdeal,slew,pre):null;
+    var vetoRacha=false, porQue='';
+    if(cruzaria){
+      if(rA===null){ vetoRacha=true; porQue='sin dato de racha no se autoriza atravesar la banda'; }
+      else if(rA>=U.racha_cruce){ vetoRacha=true;
+        porQue='la racha ya está en '+rA.toFixed(0)+' km/h ≥ '+U.racha_cruce; }
+      /* `enB&&` no es paranoia: sin él esta línea depende de que la guarda
+         `if(cruzaria)` de arriba siga existiendo, y el día que alguien la mueva
+         esto no se pone rojo, REVIENTA — un mutante lo demostró. */
+      else if(tR!==null&&enB&&tR<enB.min){ vetoRacha=true;
+        porQue='la racha llega a '+U.racha_cruce+' km/h en '+tR.toFixed(0)+
+               ' min y atravesar la banda de ±'+pre+'° cuesta '+enB.min.toFixed(1)+' min'; }
+    }
+    if(vetoRacha){
+      r.caso=2; r.nombre='hay margen, pero la RACHA prohíbe atravesar la banda';
+      r.destino=cerca; r.margen=(tV===null?tH:Math.min(tH,tV));
+      r.tEnBanda=enB; r.manda='viento';
+      r.motivo=porQue+': se va al más cercano sin pasar por el medio';
+    } else {
+      r.caso=1; r.nombre='maniobra completa al lado favorable';
+      r.cruceAutorizado=true;
+      r.destino=dIdeal; r.tEnBanda=enB;
+      r.margen=(tV===null?tH:Math.min(tH,tV));
+      r.motivo='hay margen para elegir lado'+(lado===null?
+        ' pero el viento previsto no tiene componente E/O: se va al más cercano':'')+
+        (cruzaria?' y la racha permite los '+enB.min.toFixed(1)+' min dentro de la banda':'');
+    }
   }
 
   if(r.destino!==null){
@@ -1630,12 +1739,18 @@ LOC.grzSituaciones=function(def){
 };
 LOC.grzEscenarios=function(U){
   U=U||LOC.GRZ;
-  return [{nombre:'en calma, sin viento previsto',vAhora:5,tV40:null,azViento:270},
-          {nombre:'viento del OESTE en '+(U.viento_min+15)+' min',vAhora:15,tV40:U.viento_min+15,azViento:270},
-          {nombre:'viento del ESTE en '+(U.viento_min+15)+' min',vAhora:15,tV40:U.viento_min+15,azViento:90},
-          {nombre:'viento del OESTE en '+(U.viento_min-15)+' min',vAhora:25,tV40:U.viento_min-15,azViento:270},
-          {nombre:'ya soplando a '+(U.v_prestow+5)+' km/h',vAhora:U.v_prestow+5,tV40:0,azViento:270},
-          {nombre:'ya soplando a '+(U.v_stow+5)+' km/h',vAhora:U.v_stow+5,tV40:0,azViento:270}];
+  /* LA RACHA DE CADA ESCENARIO SE DERIVA DE SU SOSTENIDO con `LOC.rachaMediana`, no
+     se pone a mano: así la matriz no puede contar una historia que el modelo de
+     viento de esta misma ficha no sostendría. Y el efecto se ve: el escenario de
+     25 km/h sostenidos da 44 de racha, o sea que CRUZAR QUEDA VETADO ahí — que es
+     exactamente la restricción de planta y no un fallo de la matriz. */
+  var R=function(v){ return LOC.rachaMediana(v); };
+  return [{nombre:'en calma, sin viento previsto',vAhora:5,rachaAhora:R(5),tV40:null,tRacha:null,azViento:270},
+          {nombre:'viento del OESTE en '+(U.viento_min+15)+' min',vAhora:15,rachaAhora:R(15),tV40:U.viento_min+15,tRacha:U.viento_min+15,azViento:270},
+          {nombre:'viento del ESTE en '+(U.viento_min+15)+' min',vAhora:15,rachaAhora:R(15),tV40:U.viento_min+15,tRacha:U.viento_min+15,azViento:90},
+          {nombre:'viento del OESTE en '+(U.viento_min-15)+' min',vAhora:25,rachaAhora:R(25),tV40:U.viento_min-15,tRacha:U.viento_min-15,azViento:270},
+          {nombre:'ya soplando a '+(U.v_prestow+5)+' km/h',vAhora:U.v_prestow+5,rachaAhora:R(U.v_prestow+5),tV40:0,tRacha:0,azViento:270},
+          {nombre:'ya soplando a '+(U.v_stow+5)+' km/h',vAhora:U.v_stow+5,rachaAhora:R(U.v_stow+5),tV40:0,tRacha:0,azViento:270}];
 };
 
 LOC.recorridoPeor=function(anguloDefensa,maxAng){
@@ -7148,7 +7263,14 @@ function xRosa(a){
 function xLee(){
   var v=function(id){return +$(id).value;};
   var tv=$('xV40').value.trim();
-  return {tHail:v('xHail'), vAhora:v('xVnow'), tV40:(tv===''?null:+tv), azViento:v('xAz'),
+  var vN=v('xVnow'), tV=(tv===''?null:+tv);
+  /* LA RACHA ES DERIVADA, NO MEDIDA, y la pantalla lo dice. Se saca del sostenido con
+     el modelo de racha de esta misma ficha para que el explorador pueda razonar sin
+     un campo más; el día que haya racha de anemómetro, entra por aquí y se quita
+     esta derivación. */
+  return {tHail:v('xHail'), vAhora:vN, tV40:tV, azViento:v('xAz'),
+          rachaAhora:LOC.rachaMediana(vN),
+          tRacha:LOC.tRachaUmbral(vN,tV,LOC.GRZ.racha_cruce),
           theta:v('xTheta'), nieveCm:(v('xNieve')>0?v('xNieve'):null), nievePrev:'NIEVE',
           azSolar:v('xAz'), noonLim:+($('noon')||{value:10}).value,
           defensa:Math.abs(+($('gAng')||{value:55}).value)||55,
