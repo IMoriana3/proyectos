@@ -44,7 +44,7 @@ const html = fs.readFileSync(FICHA, 'utf8');
 const NECESARIAS = ['GRZ', 'ladoEspaldaAlViento', 'granizoPlan', 'granizoMatriz',
                     'grzSituaciones', 'grzEscenarios', 'tNecesario', 'recorridoPeor',
                     'ladoMasCercano', 'ladoNieve', 'nieveEstado', 'noonFlip', 'sign',
-                    'sirveGranizo'];
+                    'sirveGranizo', 'CONTRATO'];
 const i = html.indexOf('var LOC={');
 let k = -1;
 for (const n of NECESARIAS) {
@@ -293,6 +293,47 @@ check('10min no lo es: no avisa', LOC.intervaloGrueso('10min', 30) === false);
 check('30min contra 30 min justo NO avisa: igual no es más grueso',
   LOC.intervaloGrueso('30min', 30) === false);
 check('sin margen no hay aviso que dar', LOC.intervaloGrueso('1h', 0) === false);
+
+console.log('── los del contrato de vigilancia (decisión de Factiun) ──');
+// El §19 deja 14 de 17 en «SIN VALOR» por política. Este bloque NO cambia esa
+// tabla: es la capa de quien decide operar. Y lo que se comprueba aquí no son los
+// números por sí mismos —un número no se puede «probar»— sino la ESTRUCTURA que
+// impide que mañana se lean como criterio del informe: que cada decidido tenga
+// regla escrita, que cada nulo tenga motivo escrito, y que NINGUNO esté aplicado.
+const C = LOC.CONTRATO;
+check('los cinco decididos son los acordados',
+  C.frecuencia_consulta_s === 300 && C.timeout_api_s === 30
+  && C.edad_max_dato_s === 5400 && C.buffer_espacial_km === 48
+  && C.horizonte_vigilancia_h === 6,
+  [C.frecuencia_consulta_s, C.timeout_api_s, C.edad_max_dato_s,
+   C.buffer_espacial_km, C.horizonte_vigilancia_h].join(' · '));
+check('y los cuatro nulos son nulos de verdad, no cero ni cadena vacía',
+  C._nulos.every((k) => C[k] === null), JSON.stringify(C._nulos.map((k) => C[k])));
+check('NINGUNO está aplicado, que es lo que hace honesto al bloque',
+  Array.isArray(C._aplicados) && C._aplicados.length === 0,
+  JSON.stringify(C._aplicados));
+// Las dos listas tienen que cubrir exactamente las claves de valor, o un parámetro
+// podría colarse sin regla ni motivo — el modo silencioso de este bloque.
+const clavesValor = Object.keys(C).filter((k) => k.charAt(0) !== '_');
+check('las listas cubren TODAS las claves de valor, sin colarse ninguna',
+  clavesValor.length === C._decididos.length + C._nulos.length
+  && clavesValor.every((k) => C._decididos.indexOf(k) >= 0 || C._nulos.indexOf(k) >= 0),
+  clavesValor.length + ' claves vs ' + (C._decididos.length + C._nulos.length));
+check('cada decidido lleva su REGLA escrita, no sólo el número',
+  C._decididos.every((k) => typeof C._reglas[k] === 'string' && C._reglas[k].length > 80),
+  C._decididos.filter((k) => !C._reglas[k] || C._reglas[k].length <= 80).join(','));
+check('cada nulo lleva su MOTIVO escrito',
+  C._nulos.every((k) => typeof C._porque[k] === 'string' && C._porque[k].length > 60),
+  C._nulos.filter((k) => !C._porque[k] || C._porque[k].length <= 60).join(','));
+// El suelo de ttl_orden_s no es un gusto: sale de la cinemática, y si alguien
+// cambia el recorrido o la velocidad sin recalcularlo, esto se pone rojo.
+check('el suelo de ttl_orden_s es el recorrido completo, calculado y no puesto a mano',
+  Math.abs(C._suelo_ttl_orden_s - 110 / 0.17) < 1,
+  C._suelo_ttl_orden_s + ' vs ' + (110 / 0.17).toFixed(1));
+check('y el buffer de VDE es coherente con el margen de granizo de la estrategia',
+  Math.abs(C.buffer_espacial_km / (LOC.GRZ.hail_min / 60) - 48) < 0.5,
+  'velocidad de célula implícita: ' +
+  (C.buffer_espacial_km / (LOC.GRZ.hail_min / 60)).toFixed(1) + ' km/h');
 
 console.log('── servir el granizo a la máquina (la casilla es UNA) ──');
 // POR QUÉ ESTO EXISTE. La máquina es espejo del core y el core sólo conoce

@@ -1365,6 +1365,107 @@ LOC.VDE={
   _de:'VDE Americas · preventivo a <48 km con ≥30 % de granizo ≥19 mm, directo a <8 km'
 };
 
+/* ─────────── LOS DEL CONTRATO DE VIGILANCIA · DECISIÓN DE FACTIUN ───────────
+
+   El §19 del Rev01.4 lista 17 parámetros y deja 14 en «SIN VALOR». Eso NO es un
+   olvido del informe, es su política, y por eso aquí no se toca la tabla del core:
+   el informe sigue diciendo lo que dice. Lo que hay en este bloque es otra cosa —
+   las decisiones de ingeniería de Factiun del 3-oct-2026, con la regla con la que
+   se eligió cada una, para que mañana se pueda discutir la REGLA y no sólo el
+   número.
+
+   AVISO QUE IMPORTA MÁS QUE LOS VALORES: de estos diez, HOY NINGUNO LO LEE
+   NINGUNA MÁQUINA. En el core son campos opcionales declarados y en la ficha no
+   entran en ningún criterio, así que ponerlos aquí no cambia una sola transición
+   —hay un arnés que lo comprueba careando la traza con y sin ellos—. Son
+   documentales, y el riesgo de lo documental es justo que luego se lea como
+   criterio acordado sin que nadie recuerde de dónde salió. De ahí las reglas.
+
+   Los cuatro que siguen nulos lo están A PROPÓSITO y por motivos distintos:
+   tres son del fabricante (Firmware) y uno no tiene ni vocabulario definido. */
+LOC.CONTRATO={
+  /* Decididos. Cada uno con su regla en `_reglas`. */
+  frecuencia_consulta_s:300,        // §7   · Software
+  timeout_api_s:30,                 // §12  · Software
+  edad_max_dato_s:5400,             // §6.5 · Software+Meteo · provisional: 1,5 × refresco
+  buffer_espacial_km:48,            // §8.3 · Software+Meteo · VDE
+  horizonte_vigilancia_h:6,         // §7   · Meteo · PROVISIONAL, depende del error con la antelación
+
+  /* Nulos a propósito. `_porque` dice por qué cada uno. */
+  calidad_minima:null,              // §6.5 · Software · falta el VOCABULARIO, no el número
+  n_retry:null,                     // §10.2 · Firmware · el ÚNICO que una máquina lee
+  ventana_recuperacion_s:null,      // §12,§13 · Firmware
+  ttl_orden_s:null,                 // §13  · Firmware+Electrónica
+
+  _decididos:['frecuencia_consulta_s','timeout_api_s','edad_max_dato_s',
+              'buffer_espacial_km','horizonte_vigilancia_h'],
+  _nulos:['calidad_minima','n_retry','ventana_recuperacion_s','ttl_orden_s'],
+  _aplicados:[],                    // NINGUNO. Ver el aviso de arriba.
+  _reglas:{
+    frecuencia_consulta_s:
+      'Nunca más lento que la mitad del margen más estrecho de la estrategia '+
+      '(30 min → ≤900 s). 300 s acota a 5 min el retraso en DESCUBRIR una pasada '+
+      'nueva, que el modelo no anuncia: consultar al ritmo del refresco puede '+
+      'dejar el dato nuevo dormido casi una hora.',
+    timeout_api_s:
+      '≤1/10 del periodo de consulta, y el presupuesto de reintentos cabe dentro '+
+      'de un ciclo. ~15× la respuesta normal de una API meteo, así que no salta '+
+      'por jitter. OJO: encadena con regla_datos_ausentes=conservador, o sea que '+
+      'un timeout ESCALA protección — no es neutro.',
+    edad_max_dato_s:
+      '1,5 × refresco del modelo. El suelo lo fija el refresco y NO el gusto: con '+
+      '«sin dato» en conservador, una caducidad corta deja la planta en defensa '+
+      'permanente, que no es prudencia sino perder el año. CONTRADICCIÓN '+
+      'DECLARADA: si el producto es horario, el suelo (5.400 s) supera al techo '+
+      '(1.800 s, el margen de la rama de 30 min) y NO existe valor válido — esa '+
+      'rama se decide con dato de hasta una hora. Se acepta y se dice, o se exige '+
+      'producto más rápido. Misma forma que el asunto del intervalo: un producto '+
+      'grueso no resuelve una frontera fina.',
+    buffer_espacial_km:
+      'Se adopta VDE. Y la cuenta cuadra con los tiempos del email: 48 km a '+
+      '48 km/h son 60 min (=GRZ.hail_min) y 8 km a 48 km/h son 10 min, contra los '+
+      '10,8 min del recorrido completo (110° a 0,17 °/s). Las distancias de VDE y '+
+      'nuestros tiempos son el MISMO criterio en otra unidad. CAVEAT: esos '+
+      '~48 km/h son traslación de célula (flujo en altura), no el viento a 8 m de '+
+      'los umbrales de 40/60 km/h — la coincidencia numérica no es prueba. Y el '+
+      'radio es SUSTITUTO del tiempo: si hay ETA, manda el ETA.',
+    horizonte_vigilancia_h:
+      'Suelo calculado con la propia estrategia: 60 min de decisión + 10,8 min de '+
+      'maniobra + 15 min de margen temporal ≈ 1,5 h; por debajo, el horizonte no '+
+      'cubre su propia maniobra. El techo lo fija el error con la antelación, que '+
+      'es propiedad del producto y no decisión nuestra —por eso el §19 pone de '+
+      'dueño a Meteo—. 6 h es 4× el suelo y se queda donde una previsión de '+
+      'convección todavía dice algo. NO CERRADO.'
+  },
+  _porque:{
+    calidad_minima:
+      'Es un enum, el único de los 17 que no es magnitud, y no hay vocabulario: '+
+      'no consta que el proveedor entregue un indicador de calidad por muestra, y '+
+      'el §19 lo pide sin enumerar valores. Poner "buena" sería inventar un enum '+
+      'contra el que alguien escribiría código. Mientras no haya indicador, la '+
+      'admisión de la muestra se apoya en lo comprobable por nosotros: que el '+
+      'campo exista, sea numérico, esté en rango físico y no pase de '+
+      'edad_max_dato_s. Lo que no pase, es «sin dato», y «sin dato» ya escala por '+
+      'el §8-H. PREGUNTA ABIERTA al proveedor.',
+    n_retry:
+      'Dueño Firmware, PENDIENTE DE ENSAYO, y es el ÚNICO de los diez que una '+
+      'máquina LEE: la de ejecución lo exige y topa los reintentos con él. Darle '+
+      'número aquí la haría correr sobre una cifra inventada, que es exactamente '+
+      'lo que su negativa a arrancar protege.',
+    ventana_recuperacion_s:
+      'Dueño Firmware (§12, §13). Sin ensayo no hay de dónde sacarlo, y no se '+
+      'deduce de la cinemática.',
+    ttl_orden_s:
+      'Dueño Firmware+Electrónica (§13). No lo fijamos, pero sí aportamos un '+
+      'SUELO que sale de la cinemática: la orden no puede caducar antes de poder '+
+      'cumplirse, y el recorrido completo son 648 s (110° a 0,17 °/s), así que '+
+      'ttl_orden_s ≥ 648 s. Eso se le entrega a Firmware como restricción.'
+  },
+  _de:'Decisión de ingeniería de Factiun · 3-oct-2026 · el §19 los deja SIN VALOR y '+
+      'esa tabla NO se toca: esto es otra capa, la de quien decide operar.',
+  _suelo_ttl_orden_s:648             // 110° / 0,17 °/s · restricción para Firmware
+};
+
 /* Los valores de julio con VDE encima, que es lo que la máquina usa por
    defecto desde hoy. Puro para que el banco pueda carear las dos tablas sin
    abrir la ficha. */
