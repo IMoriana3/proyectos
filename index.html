@@ -130,19 +130,19 @@ button{font:inherit;color:inherit}
 .bar-nav{display:flex;gap:2px;flex-wrap:wrap}
 .bar-nav a{font-family:var(--display);font-size:.74rem;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);text-decoration:none;padding:6px 10px;border-bottom:1px solid transparent}
 .bar-nav a:hover{color:var(--text);border-bottom-color:var(--line)}
-.clock{font-family:var(--mono);font-size:.95rem;font-weight:500;color:var(--amb);letter-spacing:.04em;text-align:right}
+.clock{font-family:var(--mono);font-size:.84rem;font-weight:500;color:var(--muted);letter-spacing:.04em;text-align:right}
 .clock small{color:var(--muted-2);font-family:var(--display);font-size:.66rem;display:block;letter-spacing:.18em;text-transform:uppercase;font-weight:500}
 
-.gauges{display:flex;gap:1px;background:var(--line);border:1px solid var(--line)}
+.gauges{display:flex;gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);opacity:.9}
 .gauge{
-  font-family:var(--mono);font-size:.74rem;font-weight:500;cursor:pointer;
-  display:flex;align-items:center;gap:7px;padding:5px 10px;
+  font-family:var(--mono);font-size:.7rem;font-weight:500;cursor:pointer;
+  display:flex;align-items:center;gap:6px;padding:4px 9px;
   border:0;background:var(--panel-2);color:var(--muted);transition:color .15s,background .15s;
 }
 .gauge:hover{color:var(--text);background:var(--panel-hi)}
 .gauge.on{color:var(--text);background:var(--panel-hi);box-shadow:inset 0 -2px 0 var(--c)}
 .gauge .n{font-weight:500}
-.gauge .dot{width:7px;height:7px;background:var(--c)}
+.gauge .dot{width:6px;height:6px;background:var(--c);opacity:.85}
 .gauge .n{color:var(--text);font-weight:600}
 
 /* botón instalar / armazón */
@@ -209,6 +209,8 @@ body.presenta .solo-pres{display:inline-block}
 .hero-src{grid-column:1/-1;font-size:.68rem;color:var(--muted-2);line-height:1.6;padding:10px 20px 12px;border-top:1px solid var(--line);background:var(--panel-2)}
 .hero-src b{color:var(--muted);font-weight:500}
 .hero-src a{color:var(--muted);text-decoration:underline;text-decoration-color:var(--line)}
+.hero-src .masinfo{font:inherit;color:var(--amb);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:var(--amb-dim)}
+.hero-src .largo:not([hidden]){display:block;margin-top:6px}
 @media (max-width:980px){
   .hero-in{grid-template-columns:1fr}
   .hero-scene{border-right:0;border-bottom:1px solid var(--line)}
@@ -220,8 +222,9 @@ body.presenta .solo-pres{display:inline-block}
 }
 
 /* ---------- CABECERAS DE SECCIÓN ---------- */
-.sec-title{font-family:var(--display);font-size:.84rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--text);margin:30px 0 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.sec-title::after{content:"";flex:1;height:1px;background:var(--line-soft);order:5}
+.sec-title{font-family:var(--display);font-size:1.1rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--text);margin:36px 0 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.sec-title::after{content:"";flex:1;height:2px;background:var(--line);order:5}
+.plants-sec{padding-bottom:18px;border-bottom:1px solid var(--line-soft);margin-bottom:10px}
 .sec-title .cnt{font-family:var(--mono);color:var(--muted);letter-spacing:.04em;font-weight:500}
 /* los accesos rápidos de la cabecera son secundarios: serigrafía, no naranja; el naranja se reserva
    para el plano, el estado Producción, la acción principal y las cifras vivas */
@@ -323,9 +326,15 @@ body.presenta .solo-pres{display:inline-block}
 .pcode{font-family:var(--mono);font-size:1.05rem;font-weight:500;color:var(--muted);letter-spacing:0;flex:none}
 .pcode.oferta{color:var(--fos);letter-spacing:.1em;font-size:.8rem;font-family:var(--display)}
 .pcard .pdc{font-family:var(--mono);font-size:.72rem;font-weight:500;color:var(--muted);letter-spacing:0;white-space:nowrap;margin-left:8px}
-.pviews{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:12px 18px 0 20px}
-.pviews .btn{font-size:.7rem;padding:5px 6px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;justify-content:center}
-.pviews .btn.off{opacity:.55}
+/* las vistas, como una fila de pestañas pequeñas: seis botones iguales por doce tarjetas eran setenta
+   botones en la primera pantalla. SCADA es la única que pesa. */
+.pviews{display:flex;flex-wrap:wrap;align-items:center;gap:0 2px;margin:10px 18px 0 20px;border-top:1px solid var(--line-soft);padding-top:4px}
+.pviews .btn{font-size:.66rem;padding:7px 5px 6px;letter-spacing:.08em;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap}
+.pviews .btn:hover{color:var(--amb);background:transparent;border-bottom-color:var(--amb)}
+.pviews .btn.off{opacity:.45;border-bottom-color:transparent}
+.pviews .btn[title^="SCADA"]{margin-left:auto;border:1px solid var(--amb-dim);color:var(--amb);padding:5px 11px;background:var(--panel-2)}
+.pviews .btn[title^="SCADA"]:hover{background:var(--panel-hi);border-color:var(--amb)}
+.pviews .btn.off[title^="SCADA"]{border:1px dashed var(--line-soft);color:var(--muted-2)}
 .pcard-toggle{padding:0}
 .pest{display:inline-flex;align-items:center;gap:6px;margin-left:9px;vertical-align:1px;
   font-family:var(--display);font-size:.68rem;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--e)}
@@ -334,7 +343,7 @@ body.presenta .solo-pres{display:inline-block}
 .pcard .plugar{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .pcard .pest{flex:none}
 .pdetail{grid-template-columns:minmax(0,520px);margin:12px 0 0}
-.card.open .pviews{max-width:520px}
+.card.open .pviews{max-width:560px}
 
 /* cartera en vivo: el acceso forma parte del argumento, va en la cabecera y visible */
 .db-acceso{order:9;display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);text-transform:none;letter-spacing:0;font-weight:400}
@@ -350,13 +359,17 @@ body.presenta .solo-pres{display:inline-block}
 
 /* ---------- FICHA ABIERTA ---------- */
 .card.open{grid-column:1/-1}
-.detail{border-top:1px solid var(--line-soft);padding:16px 18px 18px 20px;background:var(--panel-2);
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0 26px;align-items:start}
+.detail{border-top:1px solid var(--line-soft);padding:18px 20px 20px;background:var(--panel-2);
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 32px;align-items:start}
 .detail[hidden]{display:none}
-.dgroup{margin-bottom:15px}
-.dgroup:last-child{margin-bottom:0}
-.detail .dgroup:last-child:nth-child(n+4){grid-column:span 2}
-@media (max-width:1100px){ .detail .dgroup:last-child:nth-child(n+4){grid-column:auto} }
+.dgroup{margin-bottom:14px;min-width:0}
+.dlog{grid-column:1/-1;margin-bottom:0}
+.dlog summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+.dlog summary::-webkit-details-marker{display:none}
+.dlog summary::before{content:"▸";color:var(--muted-2);transition:transform .15s}
+.dlog[open] summary::before{transform:rotate(90deg)}
+.dlog .log{margin-top:10px}
+@media (max-width:760px){ .detail{grid-template-columns:1fr} }
 .dlabel{font-family:var(--display);font-size:.7rem;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--muted-2);margin-bottom:8px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-family:var(--mono);font-size:.76rem}
 .kv dt{color:var(--muted-2)}
@@ -368,7 +381,8 @@ body.presenta .solo-pres{display:inline-block}
 .uso li{font-size:.88rem;color:var(--muted);line-height:1.5;padding-left:16px;position:relative;margin-bottom:5px}
 .uso li::before{content:"›";position:absolute;left:2px;color:var(--amb)}
 .todo{list-style:none}
-.todo li{font-family:var(--mono);font-size:.76rem;line-height:1.5;display:flex;gap:9px;align-items:flex-start;margin-bottom:5px;color:var(--text)}
+.todo li{font-family:var(--sans);font-size:.88rem;line-height:1.5;display:flex;gap:9px;align-items:flex-start;margin-bottom:5px;color:var(--text)}
+.todo .box{font-family:var(--mono)}
 .todo .box{flex:none;margin-top:1px;color:var(--muted-2)}
 .todo .done{color:var(--amb)}
 .todo li.is-done span:last-child{color:var(--muted-2);text-decoration:line-through}
@@ -2246,7 +2260,9 @@ function detailHTML(p){
   const kv = `<dl class="kv">${linkRow("URL", p.url)}${linkRow("Repo", p.repo)}<dt>Stack</dt><dd>${esc(p.stack)}</dd></dl>`;
   const uso = (p.uso&&p.uso.length) ? `<div class="dgroup"><div class="dlabel">Uso / Despliegue</div><ul class="uso">${p.uso.map(u=>`<li>${esc(u)}</li>`).join("")}</ul></div>` : "";
   const pend = (p.pendientes&&p.pendientes.length) ? `<div class="dgroup"><div class="dlabel">Pendientes</div><ul class="todo">${p.pendientes.map(t=>`<li class="${t.done?'is-done':''}"><span class="box ${t.done?'done':''}">${t.done?'✓':'☐'}</span><span>${esc(t.text)}</span></li>`).join("")}</ul></div>` : "";
-  const log = (p.historial&&p.historial.length) ? `<div class="dgroup"><div class="dlabel">Historial</div><ul class="log">${p.historial.map(h=>`<li><span class="ld">${esc(h.date)}</span>${h.ver?`<span class="lv">${esc(h.ver)}</span>`:""}<span class="ln">${esc(h.note)}</span></li>`).join("")}</ul></div>` : "";
+  /* El historial va PLEGADO: es el bloque largo y en la ficha abierta tapaba lo que se consulta
+     (URL, uso, pendientes). Sigue en el DOM entero, sólo cambia que hay que desplegarlo. */
+  const log = (p.historial&&p.historial.length) ? `<details class="dgroup dlog"><summary class="dlabel">Historial · ${p.historial.length}</summary><ul class="log">${p.historial.map(h=>`<li><span class="ld">${esc(h.date)}</span>${h.ver?`<span class="lv">${esc(h.ver)}</span>`:""}<span class="ln">${esc(h.note)}</span></li>`).join("")}</ul></details>` : "";
   const opened = state.open.has(p.name);
   return `<div class="detail" id="${id}" ${opened?"":"hidden"}>${kv}${uso}${pend}${log}</div>`;
 }
@@ -3141,9 +3157,13 @@ if (haySesionGuardada()) conecta(null, null);
   if(btnPres) btnPres.addEventListener('click',()=>{ const on=!document.body.classList.contains('presenta'); presenta(on,true); if(on) $('hero').scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'}); });
 
   const F=D.fuente;
-  $('hero-src').innerHTML='<b>De dónde sale:</b> relieve de '+F.relieve+' · filas de '+F.layout+' · '+F.muestreo+' · relieve exagerado ×'+ZEX+' en pantalla · '
-    +'sol con el algoritmo NOAA de <a href="sim-solar.html">sim-solar.html</a> a la hora de Europe/Madrid · seguidor de eje N-S horizontal con backtracking plano, GCR '+num(D.gcr,3)+' y tope ±'+LIM+'°: '
-    +'el núcleo tiene nueve políticas y el terreno inclina cada fila de forma distinta; aquí se enseña una sola, a modo de instrumento.';
+  $('hero-src').innerHTML='<b>De dónde sale:</b> relieve as-built de Ayora · '+D.filas.length+' seguidores del layout · sol NOAA a la hora de Europe/Madrid · backtracking plano, GCR '+num(D.gcr,3)+' · '
+    +'<button type="button" class="masinfo" aria-expanded="false">ver detalle</button>'
+    +'<span class="largo" hidden>Relieve de '+F.relieve+' · filas de '+F.layout+' · '+F.muestreo+' · relieve exagerado ×'+ZEX+' en pantalla · '
+    +'sol con el algoritmo NOAA de <a href="sim-solar.html">sim-solar.html</a> · seguidor de eje N-S horizontal con backtracking plano y tope ±'+LIM+'°: '
+    +'el núcleo tiene nueve políticas y el terreno inclina cada fila de forma distinta; aquí se enseña una sola, a modo de instrumento.</span>';
+  const masinfo=$('hero-src').querySelector('.masinfo'), largo=$('hero-src').querySelector('.largo');
+  masinfo.addEventListener('click',()=>{ const on=largo.hidden; largo.hidden=!on; masinfo.setAttribute('aria-expanded',String(on)); masinfo.textContent=on?'menos':'ver detalle'; });
   render();
 })();
 </script>
