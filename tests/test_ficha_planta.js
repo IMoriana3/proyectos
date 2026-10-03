@@ -58,8 +58,13 @@ const CARTERA = {
     if (!c) return null;
     const sc = [...c.querySelectorAll('.pviews a, .pviews span')].find(x => x.textContent.trim() === 'SCADA');
     const pe = c.querySelector('.pest');
+    /* Los colores de referencia se LEEN de la paleta del propio panel (`--live`, `--build`), no se
+       copian aquí: lo que se vigila es que el estado lleve el MISMO color que ese estado tiene en el
+       resto del panel, y eso tiene que seguir siendo verdad aunque la paleta cambie. */
+    const ref = {}; ['live','build','idle'].forEach(k => { const s = document.createElement('span');
+      s.style.color = 'var(--' + k + ')'; document.body.appendChild(s); ref[k] = getComputedStyle(s).color; s.remove(); });
     return { estado: pe ? pe.textContent.trim() : null,
-             color: pe ? getComputedStyle(pe).color : null,
+             color: pe ? getComputedStyle(pe).color : null, ref,
              scada: sc ? (sc.tagName === 'A' ? sc.getAttribute('href') : 'APAGADO') : 'NO ESTÁ' };
   }, nombre);
 
@@ -69,13 +74,13 @@ const CARTERA = {
 
     const burgo = await tarjeta(page, 'El Burgo');
     check('la planta en marcha enseña su estado', burgo.estado === 'En marcha', burgo);
-    check('y en verde, como el resto del panel', burgo.color === 'rgb(54, 211, 153)', burgo.color);
+    check('y con el color de Producción, como el resto del panel', burgo.color === burgo.ref.live, [burgo.color, burgo.ref.live]);
     check('el enlace de SCADA escrito a mano NO se toca',
       burgo.scada === 'https://factiun-cartera.imoriana3.workers.dev/scada.html?planta=el%20burgo%20i', burgo.scada);
 
     const ayora = await tarjeta(page, 'Ayora');
     check('la planta en proceso enseña su estado', ayora.estado === 'En proceso', ayora);
-    check('y en ámbar', ayora.color === 'rgb(246, 166, 35)', ayora.color);
+    check('y con el color de En desarrollo', ayora.color === ayora.ref.build, [ayora.color, ayora.ref.build]);
     check('y tiene sala de control', /^https:.*scada\.html\?planta=ayora$/.test(ayora.scada), ayora.scada);
 
     // el caso que no existía: en marcha, sin enlace escrito, la abre el ESTADO
