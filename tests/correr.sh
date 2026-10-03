@@ -936,7 +936,35 @@ declare -A PISO=(
   # silencioso de este bloque), que NINGUNO esté aplicado, que el suelo de
   # `ttl_orden_s` salga de la cinemática (110°/0,17 °/s) y no de un gusto, y que el
   # buffer de VDE siga siendo coherente con el margen de granizo de la estrategia.
-  [test_granizo_estrategia.mjs]=115
+  #
+  # 115 -> 135: EL VETO DE RACHA SOBRE LA BANDA DE PRE-STOW. Restricción de planta
+  # (Iñaki, 3-oct-2026): «no podemos permitir que a 40 km/h o más pase entre 0 y 25
+  # grados», simétrica y de RACHA. Al mirarlo resultó que la frontera YA EXISTÍA —el
+  # `pmin` del pre-stow, 30°, más estricto que los 25 que había dicho— así que no se
+  # añadió ninguna constante de ángulo: se dejó el 30. Él mismo lo vio antes de que
+  # se publicara nada («esto es lo que ya hace el simulador en uno de los casos»), y
+  # la propuesta de banda nueva se retiró sin llegar al repo.
+  #
+  # LO QUE SÍ FALTABA, y es el cambio: `granizoPlan` manejaba UN SOLO viento y
+  # comparaba con él tanto el 40 como el 60. Si el 40 es de racha, el caso 1
+  # autorizaba cruces que la planta prohíbe —con 30 km/h sostenidos la racha mediana
+  # ya pasa de 50—. Ahora la racha va aparte, y el cruce exige que no alcance el
+  # umbral mientras dure el tramo DENTRO de la banda: 60° a 0,17 °/s son 5,9 min, el
+  # 45 % del recorrido completo, que es lo que un booleano `cruzaCero` escondía.
+  #
+  # LA ASIMETRÍA DE LOS DOS NULL, que es lo que se puede leer mal: `rachaAhora=null`
+  # es CEGUERA y veta (§8-H); `tRacha=null` es AUSENCIA DE PREVISIÓN y no veta, misma
+  # convención que `tV40=null` tenía desde antes.
+  #
+  # Cinco mutantes. Predije 1 baja cada uno y la cuarta salió 0: mutar la guarda
+  # `if(cruzaria)` no daba rojo, REVENTABA con «Cannot read properties of null», y mi
+  # recuento por líneas FAIL no lo veía. El fallo era de mi código de producción, que
+  # dependía de esa guarda para no desreferenciar null; con `enB&&` da rojo limpio.
+  # Y la quinta —usar `def` en vez de `pre` como borde— sobrevivía porque ninguna
+  # comprobación fijaba qué borde usa `granizoPlan`: ahora lo fija una racha que
+  # llega a los 8 min, que cabe con 30° (5,9) y vetaría con 55° (10,8). Tras los dos
+  # arreglos: 5/5 y 6 bajas, los cinco llegando a su veredicto.
+  [test_granizo_estrategia.mjs]=135
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )
