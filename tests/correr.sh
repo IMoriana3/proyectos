@@ -461,7 +461,18 @@ declare -A PISO=(
   # reenganche por cruce mataron CERO cada uno. El de CSV no es un hueco de
   # banco sino de CAMINO: cuelga del manejador de subida, que ningún arnés
   # dispara — y se cierra igual, porque el código existe y decide.
-  [test_viento_csv.js]=31
+  #
+  # 2026-10-03, +10: LA UNIDAD DECLARADA. El heurístico «p98>45 ⇒ km/h» leyó un
+  # año de ERA5 de Open-Meteo en km/h —p98 de 26, no cruza— como m/s: 48,2 km/h
+  # de máximo anual entraron como 48,2 m/s = 173 km/h, y la pantalla declaró
+  # «m/s». Un 3,6x sobre toda la serie sin que nada chirríe. El arreglo no
+  # adivina mejor: lee la unidad que la cabecera YA traía y, cuando no la trae y
+  # las dos lecturas son creíbles, marca la duda en vez de elegir callando.
+  # MUTANTES, los cuatro predichos antes de medir y los cuatro acertados: la
+  # declaración deja de mandar (2), la declaración invertida (2), la duda nunca
+  # se publica (1) y los bordes con \b en vez de [^a-z] (1 — con \b,
+  # «viento_kmh», que es como viene media planta, deja de casar).
+  [test_viento_csv.js]=41
   [test_viento_ejes.js]=77
   # Las dos fuentes sintéticas INVENTAN datos a propósito, y lo que este arnés
   # vigila sobre todo es que lo DECLAREN: viento cero y rumbo NaN en el cielo

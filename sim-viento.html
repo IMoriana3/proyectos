@@ -2894,6 +2894,32 @@ LOC.CSV_ALIAS={
   temp:['temp','temp_air','temperatura','t_amb','tamb','temperature'],
   ghi:['ghi','irradiancia','irradiance','global','shortwave_radiation']
 };
+/* ── LA UNIDAD QUE EL FICHERO DECLARA MANDA SOBRE LA QUE YO DEDUZCO ──
+   El parser decidía la escala de TODO con un solo heurístico: si el p98 del
+   viento pasa de 45, es km/h. Es razonable y lleva años acertando con los
+   exports de SCADA, que traen rachas. Pero falla justo donde más duele y en
+   silencio: MEDIDO el 2026-10-03 con un año de ERA5 de Open-Meteo —de los que
+   este repo y el hermano ya tienen horneados— en km/h, cuyo p98 ronda los 26.
+   No cruza el corte, así que el parser lo leyó como m/s y declaró «m/s» en
+   pantalla: 48,2 km/h de máximo anual entraron como 48,2 m/s = 173 km/h. Un
+   3,6x sobre toda la serie, y nada chirría, porque un viento 3,6 veces mayor
+   sigue pareciendo viento. Lo único que cambia es cuántas horas abandera el
+   seguidor — es decir, el resultado entero de la ficha.
+
+   Y el dato para no equivocarse YA VENÍA en el fichero: las cabeceras reales
+   la escriben («Velocidad viento (m/s)», «wind_speed_10m (km/h)»), y el
+   parser la tiraba al normalizar. Se lee primero lo DECLARADO y sólo se
+   deduce cuando no hay nada declarado — el mismo orden que esta ficha aplica
+   en la ráfaga, donde la medida manda sobre el modelo.
+
+   Los bordes van con [^a-z] y no con \b porque el guión bajo es carácter de
+   palabra: con \b, «viento_kmh» —que es como viene media planta— no casaba. */
+LOC.unidadCabecera=function(cab){
+  var s=String(cab||'').toLowerCase(), B='(^|[^a-z])', E='([^a-z]|$)';
+  if(new RegExp(B+'(km\\s*/\\s*h|kmh|kph)'+E).test(s))return 'km/h';
+  if(new RegExp(B+'(m\\s*/\\s*s|mps|ms-1)'+E).test(s))return 'm/s';
+  return null;
+};
 LOC.parseCSV=function(txt){
   var lin=txt.replace(/\r/g,'').split('\n').filter(function(l){return l.trim().length;});
   if(lin.length<3)throw new Error('el fichero tiene menos de tres líneas');
@@ -2919,14 +2945,31 @@ LOC.parseCSV=function(txt){
     tp.push(num(idx.temp)); gh.push(num(idx.ghi));
   }
   if(t.length<24)throw new Error('solo he podido leer '+t.length+' filas con fecha válida');
-  // orden y unidades: si la mediana pasa de 30, el viento viene en km/h
   var ord=t.map(function(_,i){return i;}).sort(function(a,b){return t[a]-t[b];});
   var m=ws.slice().filter(function(v){return isFinite(v);}).sort(function(a,b){return a-b;});
-  var kmh=(m.length&&m[Math.floor(m.length*0.98)]>45);
+  /* UNIDADES. Primero lo que diga la cabecera; si no dice nada, el heurístico
+     de siempre: p98 por encima de 45 es km/h. Y cuando NO hay declaración y
+     las dos lecturas son creíbles, se marca la duda en vez de elegir callando
+     —que es el fallo que esto viene a cerrar—. La franja dudosa es p98 entre
+     16 y 45, y el 16 lo puso el banco, no yo: empecé en 11 y la primera
+     comprobación que se encendió fue la de un año CORRIENTE de 5 a 11 m/s,
+     cuyo p98 es exactamente 11. Una alarma que salta en el caso normal no es
+     una alarma. Las dos poblaciones apenas se solapan: un año en m/s tiene el
+     p98 entre 7 y 12 (El Burgo 8,6; Madrid 7,3, medidos), y el mismo año en
+     km/h lo tiene entre 25 y 45. Por encima de 16 m/s de p98 —58 km/h
+     sostenidos el 2 % del año, que no es ninguna planta— la lectura en km/h
+     es la más creíble; por debajo, la de m/s. */
+  var p98=(m.length?m[Math.floor(m.length*0.98)]:NaN);
+  var decl=LOC.unidadCabecera(cab[idx.ws]);
+  var kmh=(decl?decl==='km/h':(m.length&&p98>45));
   var f=kmh?1/3.6:1;
   var o={t:[],ghi:new Float64Array(t.length),dhi:new Float64Array(t.length),dni:new Float64Array(t.length),
          temp:new Float64Array(t.length),ws:new Float64Array(t.length),wd:new Float64Array(t.length),
          gust:new Float64Array(t.length),source:'hsu',unidad:(kmh?'km/h':'m/s'),
+         unidad_declarada:decl,
+         unidad_como:(decl?'declarada en la cabecera':'deducida del p98'),
+         unidad_p98:(isFinite(p98)?Math.round(p98*10)/10:null),
+         unidad_dudosa:(!decl&&isFinite(p98)&&p98>=16&&p98<=45),
          tiene_rafaga:gu.some(function(v){return isFinite(v);})};
   ord.forEach(function(j,k){
     o.t[k]=t[j];
@@ -2988,6 +3031,8 @@ LOC.resample=function(M,stepMin){
      aunque el CSV las trajera. Un dato que se pierde al cambiar de paso es
      peor que uno que no se lee, porque el que lo pasó lo vio en pantalla. */
   var o={t:new Array(n),source:M.source,unidad:M.unidad,
+         unidad_declarada:M.unidad_declarada,unidad_como:M.unidad_como,
+         unidad_p98:M.unidad_p98,unidad_dudosa:M.unidad_dudosa,
          tiene_rafaga:M.tiene_rafaga};
   ['ghi','dhi','dni','temp','ws'].forEach(function(k){o[k]=new Float64Array(n);});
   o.wd=new Float64Array(n);
@@ -3514,7 +3559,8 @@ LOC.run=function(cfg,onStep){
         threshold_1_ms:T1,threshold_2_ms:T2,
         threshold_1_kmh:cfg.threshold_1_kmh,threshold_2_kmh:cfg.threshold_2_kmh,
         daily_max_kmh:daily,daily_t0:M.t[0].toISOString(),scenario:SC.meta,
-        rosa:rosa, unidad_origen:M.unidad||null, tiene_rafaga:!!M.tiene_rafaga},
+        rosa:rosa, unidad_origen:M.unidad||null, unidad_como:M.unidad_como||null,
+        unidad_dudosa:!!M.unidad_dudosa, tiene_rafaga:!!M.tiene_rafaga},
       config:{slew_deg_s:(cfg.slew_deg_s==null?LOC.SLEW:cfg.slew_deg_s),
         deadband_deg:(cfg.deadband_deg==null?LOC.DEADBAND:cfg.deadband_deg),
         partial_stow_min_abs_deg:cfg.partial_stow_min_abs_deg,full_stow_deg:full,
@@ -6664,8 +6710,16 @@ $('csv').onchange=function(){
       var d0=HSU.t[0],d1=HSU.t[HSU.t.length-1];
       $('out').innerHTML='<div class="warn"><b>HSU cargada.</b> '+HSU.t.length+' muestras de '+
         fechaCorta(L(d0))+' '+L(d0).getUTCFullYear()+' a '+fechaCorta(L(d1))+' '+L(d1).getUTCFullYear()+
-        ' · viento leído en <b>'+HSU.unidad+'</b>'+
-        (HSU.tiene_rafaga?' · trae ráfaga':' · sin ráfaga')+'. Pulsa <b>Simular</b>.</div>';
+        ' · viento leído en <b>'+HSU.unidad+'</b> ('+esc(HSU.unidad_como||'')+
+          (HSU.unidad_p98!=null?', p98 = '+fmt(HSU.unidad_p98,1):'')+')'+
+        (HSU.tiene_rafaga?' · trae ráfaga':' · sin ráfaga')+'. Pulsa <b>Simular</b>.'+
+        /* LA DUDA SE ENSEÑA. Sin esto, el 3,6x entra en silencio y con cara de
+           viento: es exactamente el fallo que se midió con un año de ERA5. */
+        (HSU.unidad_dudosa?'<br><b>Y no estoy seguro de la unidad.</b> La cabecera no la '+
+          'declara y el p98 ('+fmt(HSU.unidad_p98,1)+') es creíble en las dos lecturas: '+
+          'si el fichero viniera en km/h, todo el viento entraría 3,6 veces más alto y '+
+          'nada chirriaría. Escribe la unidad en la cabecera de la columna de viento '+
+          '—«viento (km/h)» o «wind_speed (m/s)»— y dejo de adivinar.':'')+'</div>';
     }catch(e){
       HSU=null;
       $('out').innerHTML='<div class="engmsg err"><b>No he podido leer ese CSV.</b><br>'+esc(e.message)+
