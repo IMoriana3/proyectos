@@ -183,7 +183,7 @@ body.presenta .solo-pres{display:inline-block}
     repeating-linear-gradient(90deg,rgba(184,195,206,.07) 0 1px,transparent 1px 13px)}
 .hero-scene{min-height:440px}
 .hero-scene canvas{position:absolute;inset:0;display:block;width:100%;height:100%;max-width:100%}
-.hero-tesis{position:absolute;left:0;top:0;right:0;padding:16px 18px 28px;pointer-events:none;background:linear-gradient(180deg,rgba(14,24,38,.88) 0%,rgba(14,24,38,.55) 70%,transparent 100%)}
+.hero-tesis{position:absolute;left:0;top:0;right:0;padding:16px 18px 44px;pointer-events:none;background:linear-gradient(180deg,rgba(14,24,38,.94) 0%,rgba(14,24,38,.78) 62%,transparent 100%)}
 .hero-tesis h2{font-family:var(--display);font-weight:500;font-size:clamp(1.25rem,2.1vw,1.7rem);letter-spacing:.02em;line-height:1.1;color:var(--text);max-width:19ch;text-wrap:balance}
 .hero-tesis p{font-family:var(--mono);font-size:.74rem;color:var(--muted);margin-top:8px;max-width:40ch}
 .hero-legend{position:absolute;left:18px;bottom:14px;right:18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.68rem;color:var(--muted-2);pointer-events:none}
@@ -305,10 +305,10 @@ body.presenta .solo-pres{display:inline-block}
 .tag{font-family:var(--mono);font-size:.68rem;color:var(--muted);border:1px solid var(--line-soft);padding:2px 7px;background:var(--panel-2)}
 .ver{font-family:var(--mono);font-size:.72rem;color:var(--muted);letter-spacing:.02em}
 .ver::before{content:"·";color:var(--muted-2);margin-right:8px}
-.ver.pend{color:var(--muted-2);letter-spacing:0}
+.ver.pend{color:var(--muted);letter-spacing:0}
 
 .foot{display:flex;align-items:center;gap:10px;padding:10px 18px 16px 20px;flex-wrap:wrap;margin-top:auto}
-.upd{font-family:var(--mono);font-size:.72rem;color:var(--muted-2);letter-spacing:.02em}
+.upd{font-family:var(--mono);font-size:.72rem;color:var(--muted);letter-spacing:.02em}
 .acts{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;justify-content:flex-end}
 .btn{font-family:var(--display);font-size:.74rem;font-weight:500;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;cursor:pointer;
   display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border:1px solid var(--line);color:var(--text);background:var(--panel-2);transition:background .15s,color .15s,border-color .15s}
@@ -2485,6 +2485,8 @@ function buildReader(md, name, statusKey){
   $readerName.textContent = name;
   $readerStatus.textContent = st.label;
   $readerBody.innerHTML = renderMd(md);
+  // sólo esquemas inofensivos: un README remoto no puede colar un enlace javascript:
+  $readerBody.querySelectorAll('a[href]').forEach(a => { if(!/^(https?:|mailto:|#|\.{0,2}\/|[\w.-]+(\.md|\.html|\/|$))/i.test(a.getAttribute('href').trim())) a.removeAttribute('href'); });
   const heads = $readerBody.querySelectorAll("h2, h3");
   const items = [];
   heads.forEach((h,i)=>{ const hid = "doc-h-"+i; h.id = hid; items.push({lvl: h.tagName==="H3"?3:2, text:h.textContent, id:hid}); });
@@ -2505,7 +2507,7 @@ function buildReader(md, name, statusKey){
 /* Cada apertura lleva su número: una respuesta tardía de un documento anterior (o de uno cerrado)
    ya no pinta encima del que se está leyendo. */
 let docSeq = 0;
-const FONDO = () => document.querySelectorAll('header.bar, main, footer.pie');
+const FONDO = () => document.querySelectorAll('header.bar, section.hero, main, footer.pie');
 async function openDoc(path, name, statusKey){
   const mia = ++docSeq;
   lastFocus = document.activeElement;
@@ -2735,7 +2737,7 @@ function fichaPlanta(pl){
     if (s.cod != null && String(s.cod) !== String(s.nproy)) fila('Nº de cartera', esc(String(s.cod)));
   }
   const url = urlScada(pl);
-  const salaTxt = pl.views.scada ? 'Sala de control' : (st && st.viva ? 'Sala de control · la abre el estado' : '');
+  const salaTxt = (pl.views && pl.views.scada) ? 'Sala de control' : (st && st.viva ? 'Sala de control · la abre el estado' : '');
   const sala = url ? `<div style="margin-top:12px"><a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">${esc(salaTxt)} →</a></div>` : '';
   if (!s) return `<div class="dgroup"><div class="dlabel">Ficha</div>
       <p class="obj" style="margin:0">La ficha completa —estado de puesta en marcha, potencias, módulos, seguidores y NCU— vive en la cartera.
@@ -3013,7 +3015,7 @@ if (haySesionGuardada()) conecta(null, null);
   }
 
   /* ---------- proyección de la escena ---------- */
-  const ctx=cv.getContext('2d'); if(!ctx) return; let W=cv.width, H=cv.height;
+  const ctx=cv.getContext('2d'); let W=cv.width, H=cv.height;
   const YAW=-18*RAD, ALT=46*RAD, ZEX=1.6;   // vista desde el sur-suroeste, elevada; relieve exagerado ×1,6 (declarado en la fuente)
   const cy_=Math.cos(YAW), sy_=Math.sin(YAW), sa=Math.sin(ALT), ca=Math.cos(ALT);
   const zr=D.zmax-D.zmin;
@@ -3056,6 +3058,7 @@ if (haySesionGuardada()) conecta(null, null);
   }
 
   function escena(g, th){
+    if(!ctx) return;   // sin lienzo 2D no hay escena, pero las lecturas y el modo presentación siguen
     const dia=g.elevation>0;
     const el=g.elevation*RAD, az=g.azimuth*RAD;
     const sv=[Math.sin(az)*Math.cos(el), Math.cos(az)*Math.cos(el), Math.sin(el)];
@@ -3112,14 +3115,14 @@ if (haySesionGuardada()) conecta(null, null);
     const X=m=>(m/1440*600).toFixed(1), Y=t=>(75-t*(60/60)).toFixed(1);  // ±60° → ±60 px
     const poly=a=>a.map(p=>X(p[0])+','+Y(Math.max(-60,Math.min(60,p[1])))).join(' ');
     let h='';
-    [[-LIM,'−'+LIM+'°'],[0,'0°'],[LIM,'+'+LIM+'°']].forEach(([v,l])=>{ h+='<line x1="0" x2="600" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="#27405F" stroke-width="1"/><text x="3" y="'+(+Y(v)-3)+'" font-size="13" fill="#7F8EA1" font-family="JetBrains Mono,monospace">'+l+'</text>'; });
-    [6,12,18].forEach(hh=>{ h+='<line y1="0" y2="150" x1="'+X(hh*60)+'" x2="'+X(hh*60)+'" stroke="#27405F"/><text x="'+(+X(hh*60)+3)+'" y="146" font-size="13" fill="#7F8EA1" font-family="JetBrains Mono,monospace">'+hh+' h</text>'; });
+    [[-LIM,'−'+LIM+'°'],[0,'0°'],[LIM,'+'+LIM+'°']].forEach(([v,l])=>{ h+='<line x1="0" x2="600" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="#27405F" stroke-width="1"/><text x="3" y="'+(+Y(v)-3)+'" font-size="15" fill="#7F8EA1" font-family="JetBrains Mono,monospace">'+l+'</text>'; });
+    [6,12,18].forEach(hh=>{ h+='<line y1="0" y2="150" x1="'+X(hh*60)+'" x2="'+X(hh*60)+'" stroke="#27405F"/><text x="'+(+X(hh*60)+3)+'" y="146" font-size="15" fill="#7F8EA1" font-family="JetBrains Mono,monospace">'+hh+' h</text>'; });
     h+='<polyline points="'+poly(ide)+'" fill="none" stroke="#68C0D8" stroke-width="1" stroke-dasharray="3 4"/>';
     h+='<polyline points="'+poly(pts)+'" fill="none" stroke="#F09030" stroke-width="1.6"/>';
     h+='<line x1="'+X(curMin)+'" x2="'+X(curMin)+'" y1="0" y2="150" stroke="rgba(240,144,48,.35)"/>';
     h+='<circle cx="'+X(curMin)+'" cy="'+Y(Math.max(-60,Math.min(60,cur)))+'" r="3.5" fill="#F09030"/>';
-    h+='<text x="597" y="14" text-anchor="end" font-size="13" fill="#68C0D8" font-family="JetBrains Mono,monospace">- - ideal sin backtracking</text>';
-    h+='<text x="597" y="30" text-anchor="end" font-size="13" fill="#F09030" font-family="JetBrains Mono,monospace">— ejecutado</text>';
+    h+='<text x="597" y="16" text-anchor="end" font-size="15" fill="#68C0D8" font-family="JetBrains Mono,monospace">- - ideal sin backtracking</text>';
+    h+='<text x="597" y="34" text-anchor="end" font-size="15" fill="#F09030" font-family="JetBrains Mono,monospace">— ejecutado</text>';
     trace.innerHTML=h;
   }
 
@@ -3155,6 +3158,9 @@ if (haySesionGuardada()) conecta(null, null);
     const t0=performance.now(), dur=live?1400:220;
     (function paso(now){ let k=Math.min(1,(now-t0)/dur); k=1-Math.pow(1-k,3); dibujado=desde+(hasta-desde)*k; escena(g,dibujado); if(k<1) tween=requestAnimationFrame(paso); else tween=null; })(t0);
   }
+  // las anclas de la barra: el margen de scroll sigue a la altura real de la barra fija
+  const barra=document.querySelector('.bar');
+  if(barra){ const ajusta=()=>{ document.documentElement.style.scrollPaddingTop=(barra.offsetHeight+12)+'px'; }; ajusta(); if('ResizeObserver' in window) new ResizeObserver(ajusta).observe(barra); }
   $('h-min').addEventListener('input',()=>{ live=false; tMs=msDeMinuto(Date.now(),+$('h-min').value); render(); });
   $('h-now').addEventListener('click',()=>{ live=true; tMs=Date.now(); render(); });
   setInterval(()=>{ if(live){ tMs=Date.now(); render(); } },60000);
