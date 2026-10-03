@@ -1,0 +1,202 @@
+# Barrido de ramas muertas · se dispara A MANO desde la pestaña Actions
+#
+# POR QUÉ ESTO ES UN WORKFLOW Y NO UN SCRIPT: el borrado de refs no se puede hacer
+# desde la sesión en la nube de Claude —su proxy lo bloquea con 403 por las dos
+# vías, `gh api -X DELETE` y `git push --delete`— y el mantenedor no siempre tiene
+# una máquina con `git` y `gh` delante. Aquí el que borra es el runner de GitHub con
+# el `GITHUB_TOKEN` del repo, y lo único que hace falta es un navegador.
+#
+# CÓMO SE USA
+#   Actions -> «Barrer ramas muertas» -> Run workflow
+#     · dejándolo en blanco: EN SECO, enseña la lista y no borra nada
+#     · escribiendo BORRAR en el campo: borra
+#
+# QUÉ PUEDE BORRAR: EXACTAMENTE las 75 ramas de la lista de abajo y ninguna más.
+# No descubre ramas por su cuenta a propósito: una lista explícita, medida y
+# revisada no puede sorprender a nadie, y un barrido que se calcula solo sí.
+#
+# CÓMO SE DECIDIÓ LA LISTA (medida el 3-oct-2026, 78 ramas en el repo):
+#   · 69 con PR fusionado
+#   ·  4 sin PR y sin un solo commit propio (ahead=0 contra main, comprobado)
+#   ·  1 claude/pisos-comparador — su cambio YA está en main palabra por palabra
+#   ·  1 claude/ia-g6b1he — su documento se rescató en #541; lo único que queda
+#        suyo es la consola `ia.html`, abandonada por un motivo documentado
+#
+# Se decidió por el ESTADO DEL PR y no por `git rev-list`: con squash merge el
+# commit de la rama no es antecesor de main, así que rev-list dice «sin fusionar» de
+# ramas que sí lo están. Ese error ya se cometió una vez.
+#
+# QUÉ NO BORRA, y la guarda de abajo lo impone:
+#   · main
+#   · codex/auditar-interfaces-y-logica-de-dominio  -> PR #493 ABIERTO
+#   · claude/golden-comparador-ogmx4r               -> cerrado SIN fusionar, con
+#                                                      trabajo que no está en main
+#
+# RECUPERAR una rama borrada: el log de la tirada imprime el SHA de cada una antes
+# de borrarla, así que queda en el historial de Actions. Para devolverla:
+#   gh api -X POST repos/${{ github.repository }}/git/refs \
+#          -f ref=refs/heads/<rama> -f sha=<sha>
+#
+# Este fichero se puede borrar cuando el barrido esté hecho: es una herramienta de
+# una vez, no parte de la puerta.
+name: Barrer ramas muertas
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmar:
+        description: 'Escribe BORRAR para borrar de verdad. En blanco = en seco.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  barrer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Barrer
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONFIRMAR: ${{ inputs.confirmar }}
+        run: |
+          set -uo pipefail
+          REPO='${{ github.repository }}'
+          HAZLO=0; [ "$CONFIRMAR" = "BORRAR" ] && HAZLO=1
+          if [ "$HAZLO" = "0" ]; then
+            echo "### EN SECO · no se borra nada" >> "$GITHUB_STEP_SUMMARY"
+            echo "Para borrar: vuelve a lanzarlo escribiendo **BORRAR** en el campo." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          RAMAS=$(cat <<'LISTA'
+          claude/arreglo-luces
+          claude/backtracking-6th1im
+          claude/battery-management-g2oko9
+          claude/buscador-sitio
+          claude/c1-veto-viento-granizo
+          claude/c2-proteccion-parcial
+          claude/canto-01-rama-degenerada
+          claude/canvas-nitido
+          claude/careo-layout-cuantizado
+          claude/centinela-01-liston-obsoleto
+          claude/comparador-estructuras-mxn6x4
+          claude/consigna-en-camino
+          claude/contrato-windstow
+          claude/coverage-simulator-tracker-1kskvi
+          claude/decimales-y-rotulo
+          claude/dreamy-gauss-i6ec5k
+          claude/eje-transmision
+          claude/friendly-faraday-50rjuq
+          claude/gemelo-digital-plantas-solares-9n56m6
+          claude/generic-names-instructions-w255gi
+          claude/grafica-theta
+          claude/herramientas-offline-mejora-c6lznd
+          claude/horas-locales
+          claude/huella-franjas
+          claude/imoriana3-solargpt-audit-6httmf
+          claude/informe-declara-sitio
+          claude/layout-generator-ogmx4r
+          claude/loving-galileo-adcosy
+          claude/medidor-trafico-n6qmso
+          claude/network-designer-ncu-issue-dellw8
+          claude/nieve-sp3
+          claude/overcast-tracker-simulator-s0dz9l
+          claude/panes-visibles-ogmx4r
+          claude/pasivo-episodios
+          claude/pasivo-lado-viento-nan
+          claude/pasivo-render-proporcion
+          claude/pasivo-suelta-en-la-tabla
+          claude/pasivo-una-fila
+          claude/pisos-comparador
+          claude/pitch-pendiente-por-montaje-ogmx4r
+          claude/planta-bandas
+          claude/rafaga-por-hora
+          claude/reparto-linde-obligatoria-ogmx4r
+          claude/repro-sombras
+          claude/reproductor-arranque
+          claude/reproductor-fotogramas
+          claude/reproductor-velocidad
+          claude/responsive-layout-6-tools-8cak7k
+          claude/seed-desde-navegador
+          claude/setback-linde-generador-ogmx4r
+          claude/simulador-tcu-24ubzk
+          claude/sombra-01-horizonte-del-campo
+          claude/sombra-por-bloque
+          claude/sonda-giro
+          claude/stoic-dijkstra-yvvk4o
+          claude/stow-granizo-js
+          claude/topographic-survey-trackers-o3auni
+          claude/varita-moteado-ogmx4r
+          claude/youthful-lamport-a1euh9
+          claude/zonas-generador-fix-ogmx4r
+          claude/zonas-generador-ogmx4r
+          codex/layout-ml-offset-pilot
+          codex/toolbox-card-v1188
+          codex/toolbox-card-v1189
+          codex/toolbox-card-v1190
+          codex/toolbox-card-v1191
+          codex/toolbox-card-v1192
+          codex/toolbox-history-v1193
+          fix/careo-cadena-intermedia
+          fix/careo-theta-desde-la-ficha
+          fix/cielo-01-perez
+          fix/portal-bug-01-structures-parity
+          fix/selector-contrasol
+          fix/sol-01-posicion-solar
+          claude/ia-g6b1he
+          LISTA
+          )
+
+          # GUARDA: las reservadas no pueden estar en la lista. Si alguien edita
+          # este fichero y mete una por error, la tirada se para antes de tocar nada.
+          for prohibida in main \
+              codex/auditar-interfaces-y-logica-de-dominio \
+              claude/golden-comparador-ogmx4r; do
+            if grep -qx "$prohibida" <<< "$RAMAS"; then
+              echo "::error::'$prohibida' está en la lista y es una rama RESERVADA. Abortado sin tocar nada."
+              exit 1
+            fi
+          done
+
+          n=0; ok=0; mal=0; ausente=0
+          while IFS= read -r r; do
+            r="$(echo "$r" | tr -d '[:space:]')"
+            [ -z "$r" ] && continue
+            n=$((n + 1))
+            # El SHA ANTES de borrar, para que quede en el log y la rama se pueda
+            # devolver. Sin esto el borrado sería irreversible en la práctica.
+            sha=$(gh api "repos/$REPO/git/ref/heads/$r" --jq .object.sha 2>/dev/null)
+            if [ -z "$sha" ]; then
+              echo "  ya no existe   $r"; ausente=$((ausente + 1)); continue
+            fi
+            if [ "$HAZLO" = "0" ]; then
+              echo "  [seco] $r  $sha"; continue
+            fi
+            if gh api -X DELETE "repos/$REPO/git/refs/heads/$r" >/dev/null 2>&1; then
+              echo "  borrada  $r  $sha"; ok=$((ok + 1))
+            else
+              echo "  FALLO    $r  $sha"; mal=$((mal + 1))
+            fi
+          done <<< "$RAMAS"
+
+          echo
+          if [ "$HAZLO" = "0" ]; then
+            echo "$n en la lista · $ausente ya no existían. NADA BORRADO."
+            echo "- **$n** ramas en la lista, **$ausente** ya no existían" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "$ok borradas · $mal fallos · $ausente ya no existían · de $n"
+            {
+              echo "### Barrido hecho"
+              echo "- borradas: **$ok**"
+              echo "- fallos: **$mal**"
+              echo "- ya no existían: **$ausente**"
+              echo "- en la lista: **$n**"
+              echo ""
+              echo "Los SHA de cada rama están en el log de este paso, por si hay que devolver alguna."
+            } >> "$GITHUB_STEP_SUMMARY"
+            [ "$mal" -eq 0 ] || exit 1
+          fi
+          quedan=$(gh api "repos/$REPO/branches?per_page=100" --jq 'length')
+          echo "ramas que quedan en el repo: $quedan"
+          echo "- ramas que quedan: **$quedan**" >> "$GITHUB_STEP_SUMMARY"
