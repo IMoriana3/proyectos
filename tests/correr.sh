@@ -345,7 +345,22 @@ declare -A PISO=(
   # el arnés murió con un ReferenceError en vez de dar un rojo con su nombre. La
   # guarda mira el código sin comentarios y corta ahí mismo. Mutante: devolver
   # `LOC.campoGranizo('1h')` al bloque — 1 baja, limpia y nombrada.
-  [test_granizo_traza.mjs]=31
+  #
+  # 31 -> 35: `LOC.CONTRATO` afirma de sí mismo que HOY NINGUNO de los parámetros
+  # del §19 que publica lo lee ninguna máquina. Eso es comprobable, y una
+  # afirmación falsa de inocuidad sería peor que callarse: si mañana alguien
+  # conecta uno a un criterio, la ficha seguiría prometiendo que no cambia nada.
+  # Se carea la traza CON y SIN ellos.
+  # Y aquí fallé una predicción de forma instructiva: el primer mutante —que la
+  # máquina LEYERA `horizonte_vigilancia_h` para subir el umbral un 50 %— predije
+  # 1 baja y dio 0. Los casos del core traen un único valor de granizo, 1,6, contra
+  # umbral 1,0: 60 % de holgura, así que un umbral movido a 1,5 sigue disparando y
+  # la comparación no veía nada. El fixture debe contener el mecanismo, y uno
+  # construido para carear la traza no está construido para medir sensibilidad. Con
+  # tres SONDAS pegadas al umbral (en, bajo, sobre) el mismo mutante da 1 baja y
+  # nombra la sonda. Hay además una comprobación de que la sonda distingue estar en
+  # el umbral de estar bajo él: una sonda insensible no sondea nada.
+  [test_granizo_traza.mjs]=35
   # 18 -> 28: el Panel dejo de COPIAR la version de las apps y pasa a LEERLA
   # del fichero de la app, asi que hay tres estados nuevos que pintar y los
   # tres se prueban en navegador: leida, no leida, y ultima lectura marcada.
@@ -912,7 +927,16 @@ declare -A PISO=(
   # último. Mutar la copia a `copia=m` ensucia la muestra EN SITIO, y la suciedad
   # se arrastra a las comprobaciones de abajo que reusan la misma serie mixta.
   # No conté el acoplamiento entre comprobaciones por estado compartido.
-  [test_granizo_estrategia.mjs]=107
+  #
+  # 107 -> 115: `LOC.CONTRATO`, las decisiones de Factiun sobre los parámetros que
+  # el §19 deja «SIN VALOR». No se comprueban los números —un número no se prueba—
+  # sino la estructura que impide que mañana se lean como criterio del informe:
+  # que cada decidido lleve REGLA escrita, cada nulo lleve MOTIVO escrito, que las
+  # dos listas cubran todas las claves (un parámetro sin regla ni motivo es el modo
+  # silencioso de este bloque), que NINGUNO esté aplicado, que el suelo de
+  # `ttl_orden_s` salga de la cinemática (110°/0,17 °/s) y no de un gusto, y que el
+  # buffer de VDE siga siendo coherente con el margen de granizo de la estrategia.
+  [test_granizo_estrategia.mjs]=115
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )
