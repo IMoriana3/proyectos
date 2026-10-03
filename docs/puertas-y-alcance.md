@@ -1336,6 +1336,26 @@ hacerlo*): aquélla es del lado del trabajo, ésta del lado del dato.
   discutir**: en los dos casos de este día la indicación era correcta y la
   ausencia afirmada era mía.
 
+### La prima hermana, que ya estaba escrita en el §5 bis
+
+El 2026-10-02, en otro encargo de esta misma cartera, se afirmó que dos objetos
+de la API «se leen sin credencial ninguna», apoyándose en dos `curl` que daban
+200. **Las peticiones no eran anónimas: el proxy de egreso del contenedor las
+autentica** —`X-Ratelimit-Limit: 15000` cuando el anónimo son 60—. Allí quedó
+nombrado así: **«medí, pero medí otra cosa»**.
+
+Las dos cosas son la misma familia y conviene verlas juntas, porque **fallan en
+pasos distintos de la misma frase**:
+
+| | lo que se afirmó | qué falló |
+|---|---|---|
+| §5 bis, 02-10 | «se lee sin credencial» | **se midió otra cosa**: había una pieza en medio que añadía la credencial |
+| aquí, 03-10 | «no existe en ningún repo» | **no se midió**: se buscó donde tenía sentido y se dio por buscado |
+
+O sea que una afirmación puede caer por **medir mal** o por **no medir** — y la
+segunda es más fácil de colar, porque **no deja rastro de intento**. Un `curl`
+equivocado al menos existe en el historial; una búsqueda que no se hizo, no.
+
 ## 3 quindecies · La decimosexta: AL ARREGLAR UN NÚMERO MALO, NO ARRASTRES EL BUENO DE AL LADO
 
 **La regla:**
