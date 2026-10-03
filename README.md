@@ -20,9 +20,12 @@ rama principal de cada repo de la suite, en una tabla. Existe porque el CI de
 
 ## La portada
 
-Dirección «Instrumento»: grafito mate, serigrafía en Barlow Condensed, cifras en JetBrains Mono y un
-solo color de emisión (ámbar). Las fuentes están **autoalojadas** en `assets/fonts/` (OFL) para que
-la app siga abriendo sin red. Cada tarjeta de herramienta lleva su **pictograma** de línea (`PICTOS`,
+Piel «Célula»: el panel está hecho de módulo fotovoltaico. Azul-negro de célula, *fingers* y
+busbars de plata en las cabeceras, y los colores del logo de Factiun: naranja (#F09030) como único
+color de emisión, azul claro (#68C0D8) para lo que está en desarrollo y rojo coral (#E84858) sólo para
+alarma; franja de advertencia eléctrica en las plantas en marcha. Serigrafía en Barlow Condensed y
+cifras en JetBrains Mono, **autoalojadas** en `assets/fonts/` (OFL) para que la app siga abriendo sin
+red. Cada tarjeta de herramienta lleva su **pictograma** de línea (`PICTOS`,
 elegido por el nombre de la ficha). Por defecto la portada es trabajo: plantas (con la cartera en
 vivo), herramientas y el pie con las reglas de la casa.
 

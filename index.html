@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#1A1B1A">
+<meta name="theme-color" content="#132238">
 <link rel="icon" href="favicon.svg">
 <title>Panel de Proyectos — Factiun</title>
 
@@ -59,25 +59,29 @@
    toda variable usada exista en esta ficha.
    ====================================================================== */
 :root{
-  --void:#151615;        /* fondo de página */
-  --panel:#1A1B1A;       /* módulo de panel */
-  --panel-2:#171817;     /* hueco / entrada */
-  --panel-hi:#222321;    /* chasis en relieve */
-  --line:#363735;
-  --line-soft:#2A2B29;
-  --text:#D9DAD3;        /* serigrafía clara */
-  --muted:#9C9D95;
-  --muted-2:#6F7069;
+  /* PIEL «CÉLULA»: el panel está hecho de módulo fotovoltaico. Azul-negro de célula, fingers y
+     busbars de plata, y los colores del logo de Factiun: naranja como único color de emisión,
+     azul claro para lo que está en desarrollo y rojo coral sólo para alarma. */
+  --void:#0E1826;        /* fondo de página: azul-negro de célula */
+  --panel:#132238;       /* módulo de panel */
+  --panel-2:#101D30;     /* hueco / entrada */
+  --panel-hi:#1A2D48;    /* chasis en relieve */
+  --line:#27405F;
+  --line-soft:#1E3250;
+  --text:#DCE3EB;        /* serigrafía clara */
+  --muted:#8C9AAB;
+  --muted-2:#627386;
 
-  --amb:#F2A93B;         /* display: el único color de emisión */
-  --amb-dim:#9C6E2A;
-  --fos:#8FA58C;         /* fósforo apagado */
-  --alm:#D64A2E;         /* alarma */
+  --amb:#F09030;         /* naranja Factiun: el único color de emisión */
+  --amb-dim:#9A5E20;
+  --fos:#68C0D8;         /* azul claro Factiun: en desarrollo / secundario */
+  --alm:#E84858;         /* rojo coral Factiun: alarma */
+  --plata:#B8C3CE;       /* fingers y busbars */
 
   --live:var(--amb);
   --build:var(--fos);
-  --demo:#B5B6AE;
-  --idle:#6F7069;
+  --demo:var(--plata);
+  --idle:#627386;
   --dead:var(--alm);
 
   --accent:var(--amb);
@@ -98,7 +102,7 @@ body{
   min-height:100vh;line-height:1.5;-webkit-font-smoothing:antialiased;
   font-variant-numeric:tabular-nums;
 }
-::selection{background:var(--amb);color:#1A1B1A}
+::selection{background:var(--amb);color:#0E1826}
 a{color:var(--amb)}
 button{font:inherit;color:inherit}
 :focus-visible{outline:1px solid var(--amb);outline-offset:2px}
@@ -109,12 +113,12 @@ button{font:inherit;color:inherit}
 .wrap{max-width:min(2560px,96vw);margin:0 auto;padding:0 22px}
 
 /* ---------- BARRA DE INSTRUMENTO ---------- */
-.bar{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line)}
+.bar{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:2px solid var(--amb)}
 .bar-inner{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:10px 0;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:14px}
-.sigil{width:36px;height:36px;flex:none;border:1px solid var(--line);background:var(--panel-hi);display:grid;place-items:center}
-.sigil svg{width:20px;height:20px}
-.title-block h1{font-family:var(--display);font-size:1.05rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;line-height:1.1;color:var(--text)}
+.sigil{width:40px;height:36px;flex:none;display:grid;place-items:center}
+.sigil svg{width:40px;height:34px}
+.title-block h1{font-family:var(--display);font-size:1.05rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;line-height:1.1;color:var(--text)}
 .eyebrow{font-family:var(--display);font-size:.68rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:7px;margin-bottom:3px}
 .online{width:7px;height:7px;background:var(--amb);flex:none}
 .bar-right{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
@@ -147,7 +151,7 @@ button{font:inherit;color:inherit}
 .instmsg.on{display:flex}
 .instmsg strong{display:block;color:var(--text);font-family:var(--display);font-size:.95rem;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
 .instmsg b{color:var(--text)}
-.instmsg button{font-family:var(--display);font-size:.78rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#1A1B1A;background:var(--amb);border:0;padding:8px 13px;cursor:pointer;flex:none}
+.instmsg button{font-family:var(--display);font-size:.78rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#0E1826;background:var(--amb);border:0;padding:8px 13px;cursor:pointer;flex:none}
 .instmsg .x{background:transparent;color:var(--muted-2);border:1px solid var(--line);padding:8px 11px}
 @media (max-width:560px){ .inst span{display:none} .inst{padding:7px 10px} .clock{display:none} .bar-right{gap:10px} .bar-nav a{padding:6px 7px;font-size:.7rem} }
 
@@ -160,13 +164,17 @@ body.presenta .solo-pres{display:inline-block}
   color:var(--muted);background:var(--panel-2);border:1px solid var(--line);padding:6px 12px;cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s,background .15s}
 .pres svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .pres:hover{color:var(--text);border-color:var(--muted)}
-.pres[aria-pressed="true"]{color:#1A1B1A;background:var(--amb);border-color:var(--amb)}
+.pres[aria-pressed="true"]{color:#0E1826;background:var(--amb);border-color:var(--amb)}
 @media (max-width:560px){ .pres span{display:none} .pres{padding:7px 10px} }
 
 /* ---------- HERO: EL INSTRUMENTO EN MARCHA ---------- */
 .hero{border-bottom:1px solid var(--line);background:var(--void);scroll-margin-top:62px}
 .hero-in{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(360px,.9fr);gap:0;border-left:1px solid var(--line);border-right:1px solid var(--line)}
 .hero-scene{position:relative;min-width:0;border-right:1px solid var(--line);background:var(--panel-2)}
+/* el vidrio del módulo: un brillo diagonal y los fingers, por encima del relieve */
+.hero-scene::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(115deg,rgba(255,255,255,.06),transparent 38%,transparent 62%,rgba(255,255,255,.035)),
+    repeating-linear-gradient(90deg,rgba(184,195,206,.07) 0 1px,transparent 1px 13px)}
 .hero-scene{min-height:440px}
 .hero-scene canvas{position:absolute;inset:0;display:block;width:100%;height:100%;max-width:100%}
 .hero-tesis{position:absolute;left:18px;top:16px;right:18px;pointer-events:none}
@@ -225,7 +233,7 @@ body.presenta .solo-pres{display:inline-block}
 .chip{font-family:var(--display);font-size:.74rem;font-weight:500;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;
   padding:7px 12px;color:var(--muted);border:0;background:var(--panel-2);transition:color .15s,background .15s}
 .chip:hover{color:var(--text);background:var(--panel-hi)}
-.chip.on{color:#1A1B1A;background:var(--amb)}
+.chip.on{color:#0E1826;background:var(--amb)}
 .sort{display:flex;align-items:center;gap:9px;margin-left:auto}
 .sort label{font-family:var(--display);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2)}
 .sort select{font-family:var(--mono);font-size:.78rem;color:var(--text);background:var(--panel-2);border:1px solid var(--line);padding:7px 28px 7px 10px;cursor:pointer;outline:none;appearance:none;
@@ -240,6 +248,12 @@ body.presenta .solo-pres{display:inline-block}
    queda al final de la última fila es fondo de página y no una losa gris */
 .card{position:relative;background:var(--panel);transition:background .15s;display:flex;flex-direction:column;outline:1px solid var(--line)}
 .card::before{content:"";position:absolute;top:0;left:0;width:3px;height:100%;background:var(--c);opacity:.9}
+/* la cabecera de cada módulo lleva los fingers de la célula y un busbar de plata debajo */
+.card::after{content:"";position:absolute;top:0;left:3px;right:0;height:44px;pointer-events:none;
+  background-image:repeating-linear-gradient(90deg,rgba(184,195,206,.11) 0 1px,transparent 1px 13px);
+  border-bottom:1px solid rgba(184,195,206,.22)}
+/* planta EN MARCHA: franja de advertencia eléctrica, sólo donde hay tensión */
+.pcard:has(.pest[style*="--live"])::before{width:5px;background:repeating-linear-gradient(135deg,var(--amb) 0 7px,var(--void) 7px 14px);opacity:1}
 .card:hover{background:var(--panel-hi)}
 
 .card-toggle{display:block;width:100%;text-align:left;cursor:pointer;background:none;border:none;color:inherit;font:inherit;padding:16px 18px 4px 20px}
@@ -460,13 +474,16 @@ body.presenta .solo-pres{display:inline-block}
   <div class="wrap bar-inner">
     <div class="brand">
       <div class="sigil" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#F2A93B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 15h16"/><path d="M12 15V9"/><path d="M5 9l14-4"/><circle cx="12" cy="15" r="1.2" fill="#F2A93B" stroke="none"/><path d="M8 20h8"/>
+        <!-- el símbolo de Factiun: naranja, rojo coral y azul claro superpuestos -->
+        <svg viewBox="0 0 48 40" aria-hidden="true">
+          <rect x="1" y="17" width="30" height="14" rx="7" transform="rotate(-38 16 24)" fill="#F09030"/>
+          <circle cx="25" cy="15" r="11" fill="#E84858"/>
+          <rect x="19" y="9" width="28" height="14" rx="7" transform="rotate(-38 33 16)" fill="#68C0D8" opacity=".94"/>
         </svg>
       </div>
       <div class="title-block">
-        <div class="eyebrow"><span class="online" aria-hidden="true"></span> Factiun · en línea</div>
-        <h1>Panel de Proyectos</h1>
+        <div class="eyebrow"><span class="online" aria-hidden="true"></span> Panel de proyectos · en línea</div>
+        <h1>Factiun</h1>
       </div>
     </div>
     <div class="bar-right">
@@ -619,7 +636,7 @@ body.presenta .solo-pres{display:inline-block}
         <a href="https://github.com/IMoriana3/factiun-cartera" target="_blank" rel="noopener">factiun-cartera</a>
       </div>
       <div class="note">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6F7069" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#627386" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
         <span>Para añadir o actualizar un proyecto, edita el array <code>PROJECTS</code> al inicio de este archivo.<br>
         Para adjuntar su documentación, crea <code>docs/&lt;docId&gt;.md</code> con el README y pon ese <code>docId</code> en el proyecto. El botón Documentación lo carga desde ahí.</span>
       </div>
@@ -2966,8 +2983,8 @@ if (haySesionGuardada()) conecta(null, null);
   filas.sort((a,b)=>rot(b.x,b.n,0)[1]-rot(a.x,a.n,0)[1]);
   const EJE=1.2, HW=2.384/2*3;   // ancho de mesa exagerado ×3 para que se vea el giro a esta escala
   const lerp=(a,b,t)=>a+(b-a)*t;
-  function gris(t){ // grafito oscuro → grafito claro
-    return 'rgb('+Math.round(lerp(26,78,t))+','+Math.round(lerp(27,79,t))+','+Math.round(lerp(25,73,t))+')';
+  function gris(t){ // azul-negro de célula → azul grisáceo
+    return 'rgb('+Math.round(lerp(16,72,t))+','+Math.round(lerp(28,90,t))+','+Math.round(lerp(46,118,t))+')';
   }
 
   function escena(g, th){
@@ -2989,14 +3006,14 @@ if (haySesionGuardada()) conecta(null, null);
       ctx.beginPath(); ctx.moveTo(p0[0],p0[1]); ctx.lineTo(p1[0],p1[1]); ctx.lineTo(p2[0],p2[1]); ctx.lineTo(p3[0],p3[1]); ctx.closePath(); ctx.fill(); ctx.stroke();
     }
     // retícula del relieve, cada 4 nodos
-    ctx.strokeStyle='rgba(242,169,59,.09)'; ctx.lineWidth=1;
+    ctx.strokeStyle='rgba(240,144,48,.09)'; ctx.lineWidth=1;
     for(let j=0;j<D.nn;j+=4){ ctx.beginPath(); for(let i=0;i<D.nx;i++){ const p=P[j][i]; i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); } ctx.stroke(); }
     for(let i=0;i<D.nx;i+=4){ ctx.beginPath(); for(let j=0;j<D.nn;j++){ const p=P[j][i]; j?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]); } ctx.stroke(); }
     // filas: la cara de cada mesa, girada θ sobre el eje N-S
     const thr=th*RAD, nx=-Math.sin(thr), nz=Math.cos(thr);
     const ilum=dia?Math.max(0,nx*sv[0]+nz*sv[2]):0;
     const dxw=HW*Math.cos(thr), dzw=HW*Math.sin(thr);
-    const tinta=dia?'rgba(242,169,59,'+(0.30+0.70*ilum).toFixed(3)+')':'rgba(181,182,174,.40)';
+    const tinta=dia?'rgba(240,144,48,'+(0.30+0.70*ilum).toFixed(3)+')':'rgba(184,195,206,.40)';
     ctx.fillStyle=tinta; ctx.strokeStyle=tinta; ctx.lineCap='butt';
     // ancho mínimo de 2,2 px: a 0,4 px/m una mesa de 2,4 m desaparecería; la cara girada va encima
     ctx.lineWidth=Math.max(2.2, 2*HW*s*Math.abs(Math.cos(thr)));
@@ -3010,12 +3027,12 @@ if (haySesionGuardada()) conecta(null, null);
     const cxw=(xs[0]+xs[1])/2, cnw=(ns[0]+ns[1])/2, R=1500, HS=H*0.40;
     const cielo=(gg)=>{ const e=gg.elevation*RAD, a=gg.azimuth*RAD; const p=proj(cxw+R*Math.sin(a)*Math.cos(e), cnw+R*Math.cos(a)*Math.cos(e), 0); return [p[0], p[1]-Math.sin(e)*HS]; };
     if(window.__heroCamino){
-      ctx.strokeStyle='rgba(242,169,59,.30)'; ctx.setLineDash([3,5]); ctx.lineWidth=1; ctx.beginPath();
+      ctx.strokeStyle='rgba(240,144,48,.30)'; ctx.setLineDash([3,5]); ctx.lineWidth=1; ctx.beginPath();
       let first=true; window.__heroCamino.forEach(gg=>{ const q=cielo(gg); first?ctx.moveTo(q[0],q[1]):ctx.lineTo(q[0],q[1]); first=false; }); ctx.stroke(); ctx.setLineDash([]);
     }
     const sp=cielo(g);
     ctx.beginPath(); ctx.arc(sp[0],sp[1],7,0,Math.PI*2);
-    if(dia){ ctx.fillStyle='#F2A93B'; ctx.fill(); } else { ctx.strokeStyle='rgba(242,169,59,.35)'; ctx.lineWidth=1.5; ctx.stroke(); }
+    if(dia){ ctx.fillStyle='#F09030'; ctx.fill(); } else { ctx.strokeStyle='rgba(240,144,48,.35)'; ctx.lineWidth=1.5; ctx.stroke(); }
   }
 
   /* ---------- traza del día ---------- */
@@ -3027,14 +3044,14 @@ if (haySesionGuardada()) conecta(null, null);
     const X=m=>(m/1440*600).toFixed(1), Y=t=>(75-t*(60/60)).toFixed(1);  // ±60° → ±60 px
     const poly=a=>a.map(p=>X(p[0])+','+Y(Math.max(-60,Math.min(60,p[1])))).join(' ');
     let h='';
-    [[-LIM,'−'+LIM+'°'],[0,'0°'],[LIM,'+'+LIM+'°']].forEach(([v,l])=>{ h+='<line x1="0" x2="600" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="#363735" stroke-width="1"/><text x="3" y="'+(+Y(v)-3)+'" font-size="9" fill="#6F7069" font-family="JetBrains Mono,monospace">'+l+'</text>'; });
-    [6,12,18].forEach(hh=>{ h+='<line y1="0" y2="150" x1="'+X(hh*60)+'" x2="'+X(hh*60)+'" stroke="#363735"/><text x="'+(+X(hh*60)+3)+'" y="146" font-size="9" fill="#6F7069" font-family="JetBrains Mono,monospace">'+hh+' h</text>'; });
-    h+='<polyline points="'+poly(ide)+'" fill="none" stroke="#8FA58C" stroke-width="1" stroke-dasharray="3 4"/>';
-    h+='<polyline points="'+poly(pts)+'" fill="none" stroke="#F2A93B" stroke-width="1.6"/>';
-    h+='<line x1="'+X(curMin)+'" x2="'+X(curMin)+'" y1="0" y2="150" stroke="rgba(242,169,59,.35)"/>';
-    h+='<circle cx="'+X(curMin)+'" cy="'+Y(Math.max(-60,Math.min(60,cur)))+'" r="3.5" fill="#F2A93B"/>';
-    h+='<text x="597" y="12" text-anchor="end" font-size="9" fill="#8FA58C" font-family="JetBrains Mono,monospace">- - ideal sin backtracking</text>';
-    h+='<text x="597" y="24" text-anchor="end" font-size="9" fill="#F2A93B" font-family="JetBrains Mono,monospace">— ejecutado</text>';
+    [[-LIM,'−'+LIM+'°'],[0,'0°'],[LIM,'+'+LIM+'°']].forEach(([v,l])=>{ h+='<line x1="0" x2="600" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="#27405F" stroke-width="1"/><text x="3" y="'+(+Y(v)-3)+'" font-size="9" fill="#627386" font-family="JetBrains Mono,monospace">'+l+'</text>'; });
+    [6,12,18].forEach(hh=>{ h+='<line y1="0" y2="150" x1="'+X(hh*60)+'" x2="'+X(hh*60)+'" stroke="#27405F"/><text x="'+(+X(hh*60)+3)+'" y="146" font-size="9" fill="#627386" font-family="JetBrains Mono,monospace">'+hh+' h</text>'; });
+    h+='<polyline points="'+poly(ide)+'" fill="none" stroke="#68C0D8" stroke-width="1" stroke-dasharray="3 4"/>';
+    h+='<polyline points="'+poly(pts)+'" fill="none" stroke="#F09030" stroke-width="1.6"/>';
+    h+='<line x1="'+X(curMin)+'" x2="'+X(curMin)+'" y1="0" y2="150" stroke="rgba(240,144,48,.35)"/>';
+    h+='<circle cx="'+X(curMin)+'" cy="'+Y(Math.max(-60,Math.min(60,cur)))+'" r="3.5" fill="#F09030"/>';
+    h+='<text x="597" y="12" text-anchor="end" font-size="9" fill="#68C0D8" font-family="JetBrains Mono,monospace">- - ideal sin backtracking</text>';
+    h+='<text x="597" y="24" text-anchor="end" font-size="9" fill="#F09030" font-family="JetBrains Mono,monospace">— ejecutado</text>';
     trace.innerHTML=h;
   }
 
