@@ -22,13 +22,16 @@ rama principal de cada repo de la suite, en una tabla. Existe porque el CI de
 
 Dirección «Instrumento»: grafito mate, serigrafía en Barlow Condensed, cifras en JetBrains Mono y un
 solo color de emisión (ámbar). Las fuentes están **autoalojadas** en `assets/fonts/` (OFL) para que
-la app siga abriendo sin red. Arriba, el **hero**: el relieve real de Ayora con sus 751 seguidores,
-inclinados según la posición del sol a la hora de la planta —el mismo algoritmo NOAA de
-`sim-solar.html`— con backtracking plano (GCR 0,397, tope ±55°). Los datos (`HERO_AYORA`, al final de
-`index.html`) los genera `tools/hero_ayora.py` a partir de `ayora_relieve.json` y `ayora_layout.json`
-de cobertura-zigbee, y el propio hero dice de dónde salen. Debajo: plantas (con la cartera en vivo),
-herramientas, «Cómo se verifica» (careos y la cadena parcela → kWh, construida desde `PROJECTS`) y el
-pie con las reglas de la casa.
+la app siga abriendo sin red. Cada tarjeta de herramienta lleva su **pictograma** de línea (`PICTOS`,
+elegido por el nombre de la ficha). Por defecto la portada es trabajo: plantas (con la cartera en
+vivo), herramientas y el pie con las reglas de la casa.
+
+**Modo presentación** (botón de la barra; el navegador lo recuerda): despliega el escaparate para
+enseñar el panel a un cliente —el **hero** con el relieve real de Ayora y sus 751 seguidores
+inclinados según el sol a la hora de la planta (algoritmo NOAA de `sim-solar.html`, backtracking
+plano con GCR 0,397 y tope ±55°) y la tira de **careos**—. Los datos del hero (`HERO_AYORA`, al final
+de `index.html`) los genera `tools/hero_ayora.py` a partir de `ayora_relieve.json` y
+`ayora_layout.json` de cobertura-zigbee, y el propio hero dice de dónde salen.
 
 ## Funcionalidades
 - Tarjetas por proyecto con estado (Producción / En desarrollo / Demo / Pausado / Deprecado), búsqueda, filtros y orden.
