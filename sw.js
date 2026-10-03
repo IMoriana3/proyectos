@@ -13,7 +13,7 @@
    - api.github.com y demás orígenes: NI SE TOCAN. Sin red fallan igual que ahora,
      que es lo que el panel ya sabe manejar (mantiene lo escrito a mano).
    Al cambiar CACHE se tira la anterior entera: es la forma de publicar cambios. */
-const CACHE = "factiun-panel-v173";
+const CACHE = "factiun-panel-v174";
 
 /* Rutas relativas al scope (/proyectos/ en Pages, / al servirlo en local). */
 const SHELL = [
@@ -34,7 +34,17 @@ const SHELL = [
   "assets/icon-192.png",
   "assets/icon-512.png",
   "assets/icon-maskable-512.png",
-  "assets/apple-touch-icon.png"
+  "assets/apple-touch-icon.png",
+  "assets/fonts/JetBrainsMono-400-latin.woff2",
+  "assets/fonts/JetBrainsMono-400-latin-ext.woff2",
+  "assets/fonts/JetBrainsMono-500-latin.woff2",
+  "assets/fonts/JetBrainsMono-500-latin-ext.woff2",
+  "assets/fonts/JetBrainsMono-600-latin.woff2",
+  "assets/fonts/JetBrainsMono-600-latin-ext.woff2",
+  "assets/fonts/BarlowCondensed-500-latin.woff2",
+  "assets/fonts/BarlowCondensed-500-latin-ext.woff2",
+  "assets/fonts/BarlowCondensed-600-latin.woff2",
+  "assets/fonts/BarlowCondensed-600-latin-ext.woff2"
 ];
 
 self.addEventListener("install", e => {

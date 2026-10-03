@@ -18,6 +18,18 @@ Y antes de ponerse a trabajar: `bash docs/ci_al_dia.sh` — el último CI de la
 rama principal de cada repo de la suite, en una tabla. Existe porque el CI de
 `siting` estuvo cinco corridas seguidas en rojo sin que nadie se enterara.
 
+## La portada
+
+Dirección «Instrumento»: grafito mate, serigrafía en Barlow Condensed, cifras en JetBrains Mono y un
+solo color de emisión (ámbar). Las fuentes están **autoalojadas** en `assets/fonts/` (OFL) para que
+la app siga abriendo sin red. Arriba, el **hero**: el relieve real de Ayora con sus 751 seguidores,
+inclinados según la posición del sol a la hora de la planta —el mismo algoritmo NOAA de
+`sim-solar.html`— con backtracking plano (GCR 0,397, tope ±55°). Los datos (`HERO_AYORA`, al final de
+`index.html`) los genera `tools/hero_ayora.py` a partir de `ayora_relieve.json` y `ayora_layout.json`
+de cobertura-zigbee, y el propio hero dice de dónde salen. Debajo: plantas (con la cartera en vivo),
+herramientas, «Cómo se verifica» (careos y la cadena parcela → kWh, construida desde `PROJECTS`) y el
+pie con las reglas de la casa.
+
 ## Funcionalidades
 - Tarjetas por proyecto con estado (Producción / En desarrollo / Demo / Pausado / Deprecado), búsqueda, filtros y orden.
 - Documentación embebida: `docId` → `docs/<docId>.md`, o `docUrl` → README del repo.
@@ -29,7 +41,7 @@ rama principal de cada repo de la suite, en una tabla. Existe porque el CI de
 - **Descargable**: deja el ZIP en `assets/` y apunta el campo `download`.
 
 ## Stack
-HTML/CSS/JS sin framework (un único `index.html`) · motor Markdown (marked) incrustado · GitHub Pages.
+HTML/CSS/JS sin framework (un único `index.html`) · motor Markdown (marked) incrustado · fuentes autoalojadas (OFL) · GitHub Pages.
 
 ## App instalable (PWA)
 El Panel se **instala** como aplicación (escritorio y móvil) y **abre sin red**.
