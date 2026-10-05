@@ -138,7 +138,10 @@
   .eventmaster .top{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,.55fr);gap:9px;align-items:end}
   .eventtrack{position:relative;margin-top:8px;padding:0 9px}
   .eventtrack>input[type=range]{display:block;width:100%;margin:0;accent-color:var(--accent)}
-  .eventline{height:50px;position:relative;margin:8px 0 2px;border-top:2px solid var(--line2)}
+  /* El range deja aproximadamente medio pulgar libre en cada extremo. La
+     línea usa el mismo inset para que T=-30/T=180 y la aguja coincidan con el
+     centro real del thumb, no solo con el ancho exterior del input. */
+  .eventline{height:50px;position:relative;margin:8px 8px 2px;border-top:2px solid var(--line2)}
   .eventline .mark{position:absolute;top:-5px;transform:translateX(-50%);min-width:8px;text-align:center}
   .eventline .mark i{display:block;width:9px;height:9px;border-radius:50%;background:var(--tx2);margin:0 auto 3px;border:2px solid var(--bg2)}
   .eventline .mark b{display:block;font-family:var(--mono);font-size:.56rem;color:var(--muted);white-space:nowrap;font-weight:500}
