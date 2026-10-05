@@ -3105,10 +3105,16 @@ LOC.eventoMarcas=function(cfg){
     var after=isFinite(+cfg.hail_after_min)?Math.max(0,+cfg.hail_after_min):15;
     var hold=isFinite(+cfg.hail_exit_hold_min)?Math.max(0,+cfg.hail_exit_hold_min):LOC.GRZ.salida_min;
     var clearAt=(+cfg.hail_eta0_min||0)+after;
-    add((+cfg.hail_eta0_min||0)-lead,'hail','inicia defensa granizo');
-    add(cfg.hail_eta0_min,'hail','llega granizo');
-    add(clearAt,'hail','all-clear granizo');
-    add(clearAt+hold,'hail','fin retención granizo');
+    var gate=LOC.granizoLiveAmenaza(true,+cfg.hail_mm||0,+cfg.hail_prob_pct||0);
+    if(gate.activa){
+      add((+cfg.hail_eta0_min||0)-lead,'hail','inicia defensa granizo');
+      add(cfg.hail_eta0_min,'hail','llega granizo');
+      add(clearAt,'hail','all-clear granizo');
+      add(clearAt+hold,'hail','fin retención granizo');
+    }else{
+      add(cfg.hail_eta0_min,'hail','señal granizo bajo umbral');
+      add(clearAt,'hail','fin señal granizo');
+    }
   }
   if(cfg.snow_on){
     add(cfg.snow_start_min,'snow','entra nieve');
@@ -3491,8 +3497,13 @@ LOC.incVerifica=function(caso,cfg,sim,sim2){
     ks.every(function(k){return maxW.modos[k]==='FULL_STOW';}),JSON.stringify(maxW.modos));
   if(tag==='passive_release')add('racha sobre suelta libera PASIVO',
     F.some(function(f){return f.modos.PASIVO==='SUELTA';}),'sin SUELTA');
-  if(tag==='hail_size_below'||tag==='hail_prob_below')add('granizo sub-criterio no ordena defensa',
-    !F.some(function(f){return ks.some(function(k){return f.modos[k]==='HAIL_STOW';});}),'apareció HAIL_STOW');
+  if(tag==='hail_size_below'||tag==='hail_prob_below'){
+    add('granizo sub-criterio no ordena defensa',
+      !F.some(function(f){return ks.some(function(k){return f.modos[k]==='HAIL_STOW';});}),'apareció HAIL_STOW');
+    add('granizo sub-criterio no anuncia falsamente inicio de defensa',
+      !(sim.marks||[]).some(function(m){return m.label==='inicia defensa granizo';}),
+      JSON.stringify(sim.marks||[]));
+  }
   if(tag==='hail_watch')add('ETA lead+1 permanece en VIGILANCIA en T0',
     ks.every(function(k){return f0.info[k]&&f0.info[k].fuente==='VIGILANCIA GRANIZO'&&f0.modos[k]==='IDLE';}),
     JSON.stringify(f0.info));
