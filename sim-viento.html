@@ -5385,7 +5385,7 @@ var PALA=0x1b3a6b;
 var LAYOUTS='https://imoriana3.github.io/cobertura-zigbee/';
 var ESC=null;     // {kind, bloques[], planta{...}}
 var LIVE=null;    // vista del frame actual
-var EVENTO={enabled:true,sim:null,current:null,pos:0,run:false,acc:0,rebuildTimer:null,applyingPreset:false};
+var EVENTO={enabled:false,sim:null,current:null,pos:0,run:false,acc:0,rebuildTimer:null,applyingPreset:false};
 
 function has3D(){return typeof THREE!=='undefined'&&THREE.OrbitControls&&typeof Seguidor!=='undefined';}
 function vivos(){return strategies().concat($('pas').checked?['PASIVO']:[]);}
@@ -6304,14 +6304,12 @@ function tiles(ang,modos,poa,poaBase,dpct,orden){
    Con una sola función que lo pinta desde el estado, el rótulo no puede
    desincronizarse: no hay dos sitios que puedan discrepar. */
 function pintaPlay(){
-  var b=$('lPlay'); if(!b)return;
-  var run=(EVENTO&&EVENTO.enabled)?EVENTO.run:!!(LIVE&&LIVE.run);
-  b.textContent=run?'❚❚ Pausa':'▶ Reproducir';
-  b.className='btn small'+(run?'':' acc');
+  var b=$('lPlay'); if(!b||!LIVE)return;
+  b.textContent=LIVE.run?'❚❚ Pausa':'▶ Correr el tiempo';
+  b.className='btn small'+(LIVE.run?'':' acc');
 }
 
 function liveInit(){
-  if(EVENTO&&EVENTO.enabled){eventoRebuild();return;}
   var c=cfgStow();
   /* EL RELOJ SOBREVIVE AL REMONTE. Cambiar el nº de trackers o encender la
      latencia es tocar un PARÁMETRO, no pedir que se pare el tiempo: pararlo
@@ -6789,24 +6787,24 @@ function aplicaPresetEvento(k){
 
 function liveLbl(){
   var v=+$('lV').value,d=+$('lD').value,m=+$('lH').value;
-  $('lVlbl').textContent=v+' km/h';$('lVPeakLbl').textContent=(+$('lVPeak').value)+' km/h';
-  $('lDlbl').textContent=compass(d)+' · '+d+'°';$('lHlbl').textContent=hhmm(m);
-  if(EVENTO&&EVENTO.current)$('lClock').textContent=fechaHoraLocal(EVENTO.current.iso)+' · T '+
-    (EVENTO.current.t_min>=0?'+':'')+EVENTO.current.t_min+' min';
-  else $('lClock').textContent=fechaCorta(fechaLive())+' · '+hhmm(m);
-  if(LIVE&&!EVENTO.enabled){LIVE.v=v/3.6;LIVE.dir=d;}
+  $('lVlbl').textContent=v+' km/h';
+  $('lDlbl').textContent=compass(d)+' · '+d+'°';
+  $('lHlbl').textContent=hhmm(m);
+  $('lClock').textContent=fechaCorta(fechaLive())+' · '+hhmm(m);
+  if(LIVE){LIVE.v=v/3.6;LIVE.dir=d;}
+  /* si el viento rola, cambia QUE borde esta expuesto: hay que rehacerlo aqui, que es
+     el unico sitio por donde pasa un cambio de rumbo. Los rotulos se remontan solo si
+     de verdad cambio algo, para no rehacer la escena a cada grado. */
   if(typeof actualizaExpuesto==='function'&&actualizaExpuesto(d)&&ESC&&ESC.etiquetas){
     ESC.mundo&&ESC.mundo.remove(ESC.etiquetas); ESC.etiquetas=null; montaBandas();
   }
 }
 function hailLivePinta(){
   if(!$('lHailStatus'))return;
-  var on=(EVENTO&&EVENTO.current)?EVENTO.current.hail_on:$('lHailOn').checked;
-  var A=LOC.granizoLiveAmenaza(on,+$('lHailMm').value,+$('lHailProb').value);
+  var A=LOC.granizoLiveAmenaza($('lHailOn').checked,+$('lHailMm').value,+$('lHailProb').value);
   $('lHailMmV').textContent=fmt(+$('lHailMm').value,0)+' mm';
   $('lHailProbV').textContent=fmt(+$('lHailProb').value,0)+' %';
-  var eta=(EVENTO&&EVENTO.current)?EVENTO.current.hail_eta_min:
-    ((LIVE&&LIVE.hailEtaF!=null)?LIVE.hailEtaF:+$('lHailEta').value);
+  var eta=(LIVE&&LIVE.hailEtaF!=null)?LIVE.hailEtaF:+$('lHailEta').value;
   $('lHailEtaV').textContent=fmt(eta,eta<10?1:0)+' min';
   var h=(A.activa?'<b style="color:var(--warn)">AMENAZA ACTIVA</b> · ':'')+esc(A.motivo)+'. ';
   if(LIVE&&LIVE.hailPlans){
@@ -6827,7 +6825,6 @@ function hhmm(min){min=((min%1440)+1440)%1440;var h=Math.floor(min/60),mm=Math.r
   return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm;}
 
 function liveTick(dtReal){
-  if(EVENTO&&EVENTO.enabled){eventoTick(dtReal);return;}
   if(!LIVE||!TD||!ESC)return;
   var fac=LIVE.run?(+$('lSpeed').value||300):0, dtS=dtReal*fac;
   /* El minuto se lleva en FLOTANTE aparte del deslizador. El deslizador solo
