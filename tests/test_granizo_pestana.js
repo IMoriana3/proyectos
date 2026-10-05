@@ -169,7 +169,7 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
   //
   // El régimen importa en las DOS direcciones: con viento flojo el veto no debe
   // dispararse, o «vetó» dejaría de significar nada.
-  const meteoPico = pico => {
+  const meteoPico = (pico, base = 5) => {
     const n = 8760, h = { time: [], shortwave_radiation: [], diffuse_radiation: [],
       direct_normal_irradiance: [], temperature_2m: [], windspeed_10m: [],
       winddirection_10m: [] };
@@ -180,17 +180,17 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
       h.shortwave_radiation.push(el * 900); h.diffuse_radiation.push(el * 130);
       h.direct_normal_irradiance.push(el * 700); h.temperature_2m.push(15);
       const dist = Math.abs(i - 4380);              // un temporal a mitad de año
-      h.windspeed_10m.push(5 + (dist < 40 ? pico * Math.exp(-dist / 12) : 0));
+      h.windspeed_10m.push(base + (dist < 40 ? pico * Math.exp(-dist / 12) : 0));
       h.winddirection_10m.push(225);
     }
     return { hourly: h };
   };
 
-  const corre = async pico => {
+  const corre = async (pico, base = 5) => {
     await page.unroute('**/archive-api.open-meteo.com/**').catch(() => {});
     await page.route('**/archive-api.open-meteo.com/**', r => r.fulfill({
       status: 200, contentType: 'application/json',
-      body: JSON.stringify(meteoPico(pico)) }));
+      body: JSON.stringify(meteoPico(pico, base)) }));
     // 90 s y no los 30 de por defecto. La recarga cae justo después de una
     // corrida de un año a paso MINUTAL, y en un runner de dos núcleos esa
     // cuenta sigue ocupando el hilo principal cuando se pide el reload: en CI
@@ -230,6 +230,8 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
       offsetViento: +window.GRAN_VIENTO_OFFSET || 0,
       picoSostenido: Math.max.apply(null, (window.GRAN_MUESTRAS || [{viento_sostenido_ms:0}])
         .map(m => m.viento_sostenido_ms)),
+      picoRacha: Math.max.apply(null, (window.GRAN_MUESTRAS || [{viento_racha_ms:0}])
+        .map(m => m.viento_racha_ms)),
       vetos: (GRAN.diario || []).filter(l => /veto|envolvente|LOCKOUT|NO-ACCIÓN/i.test(l)).length,
       ordenes: (GRAN.transiciones || []).filter(t => /STOW|EMERGENCIA/.test(t.a || t.destino || '')).length,
       fuente: (GRAN.parametros && GRAN.parametros.procedencia) || '',
@@ -237,7 +239,12 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
     }));
   };
 
-  const fuerte = await corre(22), flojo = await corre(3);
+  /* El caso flojo tiene que ser flojo TAMBIÉN para la racha derivada. Con el
+     modelo Cook/IEC declarado, 25–30 km/h sostenidos ya pueden superar 40 km/h
+     de racha; usar ese régimen como «sin veto» era una contradicción del propio
+     test, que antes quedaba escondida porque la ventana decimada no caía sobre
+     su máximo. 2 + 1 m/s deja tanto sostenido como racha claramente por debajo. */
+  const fuerte = await corre(22, 5), flojo = await corre(1, 2);
 
   check('con temporal, el viento VETA el tránsito de granizo (' + fuerte.vetos +
         ' vetos, ' + fuerte.ordenes + ' órdenes)',
@@ -245,8 +252,11 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
         JSON.stringify(fuerte).slice(0, 160));
 
   check('y con viento flojo el tránsito SÍ se ordena (' + flojo.vetos + ' vetos, ' +
-        flojo.ordenes + ' órdenes)', flojo.ordenes > 0 && flojo.vetos === 0,
-        'sin este caso, «vetó» pasaría por no haber nada que ordenar');
+        flojo.ordenes + ' órdenes)', flojo.ordenes > 0 && flojo.vetos === 0
+        && flojo.picoRacha * 3.6 < 40,
+        'entrada: sostenido ' + (flojo.picoSostenido * 3.6).toFixed(0) +
+        ' km/h · racha ' + (flojo.picoRacha * 3.6).toFixed(0) +
+        ' km/h; sin este caso, «vetó» pasaría por no haber nada que ordenar');
 
   check('el viento SOSTENIDO de las muestras es el del informe, no un relleno (' +
         'pico ' + (fuerte.picoSostenido * 3.6).toFixed(0) + ' km/h)',
