@@ -22,6 +22,11 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   await page.evaluate(()=>{eventoRebuild(0);});
   await page.waitForFunction(()=>window.EVENTO&&EVENTO.sim&&EVENTO.sim.frames.length>200,{timeout:30000});
 
+  check('Evento es la vista principal y los ajustes avanzados nacen plegados',
+    await page.$eval('#eventCtl',e=>e.style.display!=='none') &&
+    await page.$eval('#mEvent',e=>e.classList.contains('acc')) &&
+    await page.$eval('#eAdv',e=>!e.open));
+
   const ui=await page.evaluate(()=>({
     min:+eTime.min,max:+eTime.max,step:+eTime.step,
     presets:[...ePreset.options].map(o=>o.value),
@@ -144,6 +149,22 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('si nieve y granizo piden el mismo lado, se combinan',
     snow.agree.src==='GRANIZO + NIEVE'&&snow.agree.mode==='MULTI_STOW',
     JSON.stringify(snow.agree));
+
+  // Controles de reproducción: play y paso exacto de un minuto.
+  const ctl=await page.evaluate(async()=>{
+    aplicaPresetEvento('wind_ramp');eventoAplica(0);EVENTO.run=false;EVENTO.acc=0;
+    eSpeed.value='30';
+    ePlay.click();
+    await new Promise(r=>setTimeout(r,650));
+    ePlay.click();
+    const trasPlay=EVENTO.pos;
+    eventoAplica(12);ePrev.click();const p11=EVENTO.pos;eNext.click();const p12=EVENTO.pos;
+    return {trasPlay,p11,p12};
+  });
+  check('play hace avanzar el tiempo del slider en minutos simulados',
+    ctl.trasPlay>=10&&ctl.trasPlay<=30,JSON.stringify(ctl));
+  check('−1/+1 mueven exactamente un minuto',
+    ctl.p11===11&&ctl.p12===12,JSON.stringify(ctl));
 
   // UI: marcas, resumen y detalle por estrategia.
   const pinta=await page.evaluate(()=>{
