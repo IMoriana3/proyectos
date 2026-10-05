@@ -240,8 +240,10 @@ check('sin granizo, el mismo stepper conserva el comportamiento de viento',
 check('la escena EN VIVO expone tamaño, probabilidad y ETA del granizo',
       ['lHailOn','lHailMm','lHailProb','lHailEta','lHailStatus']
         .every(id => html.includes('id="' + id + '"')));
-check('y liveTick entrega hailExt como quinto argumento al stepper controlado',
-      html.includes("LIVE.steppers[S].step(tgt,vVisto,az,dt,hailExt)"));
+check('y liveTick entrega el destino conjunto como quinto argumento, incluso si manda viento',
+      html.includes("LIVE.steppers[S].step(tgt,vVisto,az,dt,hailExt)")
+      && html.includes("if(hailPlan.destino!=null&&LIVE.hailEver)")
+      && html.includes("hailPlan.manda==='granizo'"));
 
 // ── MUTANTE ───────────────────────────────────────────────────────────
 // El defecto medido, reproducido aquí: el `hold` a cero. Si este banco no lo
