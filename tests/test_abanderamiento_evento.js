@@ -103,6 +103,17 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('tras el all-clear NO desabandera de golpe: sigue el hold de salida',
     hail.hold.on===false&&hail.hold.src==='GRANIZO'&&hail.hold.caso===5,JSON.stringify(hail.hold));
 
+  const sub=await page.evaluate(()=>{
+    aplicaPresetEvento('hail_near');
+    eHailMm.value='16';eHailProb.value='80';
+    eventoRebuild(50);
+    const f=EVENTO.sim.frames.find(x=>x.t_min===50);
+    return {src:f.info.A1.fuente,mode:f.modos.A1,caso:f.info.A1.hail_case,on:f.hail_on};
+  });
+  check('granizo sub-VDE no deja un hold fantasma después de pasar',
+    sub.on===false&&sub.src==='SEGUIMIENTO'&&sub.caso===5&&sub.mode==='IDLE',
+    JSON.stringify(sub));
+
   const hw=await page.evaluate(()=>{
     aplicaPresetEvento('hail_wind');
     const f=EVENTO.sim.frames.find(x=>x.info.A1&&x.info.A1.fuente==='VIENTO × GRANIZO');
