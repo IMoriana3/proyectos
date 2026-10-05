@@ -7252,6 +7252,7 @@ async function incEjecuta(casos){
   if(INCLEM.corriendo)return;
   INCLEM.corriendo=true;$('incRun').disabled=true;$('incOne').disabled=true;
   $('incRun').textContent='Ejecutando…';INCLEM.casos=casos;INCLEM.resultados=[];incPinta();
+  var error=null;
   try{
     var base=incBaseCfg(),ctx=incCtxUI();
     for(var i=0;i<casos.length;i++){
@@ -7262,15 +7263,14 @@ async function incEjecuta(casos){
       INCLEM.resultados.push({caso:caso,ver:ver});
       if((i%3)===2){incPinta();await new Promise(function(r){setTimeout(r,0);});}
     }
-  }catch(e){
-    $('incSummary').innerHTML='<div class="ro fail"><div class="k">Error de configuración</div><div class="v">'+esc(e.message)+'</div></div>';
-  }finally{
-    INCLEM.corriendo=false;$('incRun').disabled=false;$('incOne').disabled=false;
-    $('incRun').textContent='✓ Demostrar con batería';incPinta();
-  }
+  }catch(e){error=e;}
+  INCLEM.corriendo=false;$('incRun').disabled=false;$('incOne').disabled=false;
+  $('incRun').textContent='✓ Demostrar con batería';incPinta();
+  if(error)$('incSummary').innerHTML='<div class="ro fail"><div class="k">Error de configuración</div><div class="v">'+esc(error.message)+'</div></div>';
 }
 function incCargaCaso(caso){
   var base=incBaseCfg(),c=LOC.resuelveInclemencia(caso,base),p=c.profile;
+  var remontaPasivo=!!(c.passive&&!$('pas').checked);
   EVENTO.applyingPreset=true;$('ePreset').value='manual';
   $('eV').value=p.wind_base_kmh;$('eVPeak').value=p.wind_peak_kmh;$('eD').value=p.wind_dir_deg;
   $('eWindStart').value=p.wind_start_min;$('eWindRamp').value=p.wind_ramp_min;$('eWindHold').value=p.wind_hold_min;
@@ -7280,10 +7280,10 @@ function incCargaCaso(caso){
   $('eHailEta').value=p.hail_eta0_min;$('eHailLead').value=p.hail_lead_min;
   $('eSnowOn').checked=!!p.snow_on;$('eSnowCm').value=p.snow_cm;
   $('eSnowStart').value=p.snow_start_min;$('eSnowClear').value=p.snow_clear_min;
-  if(c.passive&&!$('pas').checked){$('pas').checked=true;$('pasBox').style.display='';}
+  if(remontaPasivo){$('pas').checked=true;$('pasBox').style.display='';}
   EVENTO.applyingPreset=false;eventoLbl();
   var go=function(){eventoRebuild(c.probe_t);var card=$('cv3dCard');if(card&&card.scrollIntoView)card.scrollIntoView({behavior:'smooth',block:'start'});};
-  if(c.passive&&ESC&&ESC.kind==='cmp'&&!casos().includes('PASIVO')){montaEscena().then(go);}else go();
+  if(remontaPasivo)montaEscena().then(go);else go();
 }
 function incExporta(){
   if(!INCLEM.resultados.length)return;
