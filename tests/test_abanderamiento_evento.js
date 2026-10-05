@@ -33,6 +33,9 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   }));
   check('slider maestro es MINUTAL y cubre T−30…T+180',
     ui.min===-30&&ui.max===180&&ui.step===1,JSON.stringify(ui));
+  check('slider y línea temporal comparten el mismo contenedor de referencia',
+    await page.evaluate(()=>eTime.parentElement===eEventLine.parentElement &&
+      eTime.parentElement.classList.contains('eventtrack')));
   check('la simulación interna es de 1 s aunque el slider sea de 1 min',
     ui.dt===1&&ui.frames===211&&ui.first===-30&&ui.last===180,JSON.stringify(ui));
   check('hay presets de viento, racha, granizo, nieve, combinado y pasivo',
@@ -55,15 +58,18 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
 
   // Determinismo del scrub.
   const det=await page.evaluate(()=>{
+    const f0=EVENTO.sim.frames.find(x=>x.t_min===0), f80=EVENTO.sim.frames.find(x=>x.t_min===80);
     eventoAplica(80);
     const a=JSON.stringify({ang:LIVE.ang,modos:LIVE.modos,orden:LIVE.orden,info:LIVE.info});
     eventoAplica(-5);eventoAplica(80);
     const b=JSON.stringify({ang:LIVE.ang,modos:LIVE.modos,orden:LIVE.orden,info:LIVE.info});
-    return {igual:a===b,label:eTimeLbl.textContent,clock:eClock.textContent};
+    return {igual:a===b,label:eTimeLbl.textContent,top:eTimeTop.textContent,clock:eClock.textContent,
+      esperado:fechaHoraLocal(f80.iso),origen:fechaHoraLocal(f0.iso),origenCtl:eHlbl.textContent};
   });
   check('ir atrás y volver al mismo minuto da EXACTAMENTE el mismo estado',det.igual,JSON.stringify(det));
-  check('el slider dice el T relativo y el reloj absoluto a la vez',
-    /T \+80/.test(det.label)&&/T \+80/.test(det.clock),JSON.stringify(det));
+  check('T y la HORA ACTUAL avanzan juntos; el control T=0 queda como origen',
+    /T \+80/.test(det.label)&&/T \+80/.test(det.top)&&det.clock===det.esperado&&
+    det.clock!==det.origen&&det.origenCtl.length>0,JSON.stringify(det));
 
   // Ráfaga: explícitamente selecciona la hipótesis de T1/T2 contra racha.
   const gust=await page.evaluate(()=>{
@@ -86,25 +92,46 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('preset pasivo suelta por carga de racha, no por orden TCU',
     pas.modo==='SUELTA'&&pas.fuente==='PASIVO'&&pas.g>90,JSON.stringify(pas));
 
-  // Granizo lejos / inminente.
+  // Granizo lejos / inminente. Una señal severa lejana se VIGILA, no se ejecuta.
   const hail=await page.evaluate(()=>{
     aplicaPresetEvento('hail_far');
-    const far=EVENTO.sim.frames.find(x=>x.t_min===0);
+    const far=EVENTO.sim.frames.find(x=>x.t_min===0);       // ETA 90, lead 60
+    const start=EVENTO.sim.frames.find(x=>x.t_min===30);    // ETA 60: arranca defensa
     aplicaPresetEvento('hail_near');
     const near=EVENTO.sim.frames.find(x=>x.t_min===0);
     const hold=EVENTO.sim.frames.find(x=>x.t_min===50);
     return {
-      far:{src:far.info.A1.fuente,mode:far.modos.A1,eta:far.hail_eta_min,caso:far.info.A1.hail_case},
+      far:{src:far.info.A1.fuente,mode:far.modos.A1,eta:far.hail_eta_min,prot:far.info.A1.proteccion},
+      start:{src:start.info.A1.fuente,mode:start.modos.A1,eta:start.hail_eta_min,caso:start.info.A1.hail_case},
       near:{src:near.info.A1.fuente,mode:near.modos.A1,eta:near.hail_eta_min,caso:near.info.A1.hail_case},
       hold:{src:hold.info.A1.fuente,on:hold.hail_on,caso:hold.info.A1.hail_case}
     };
   });
-  check('granizo lejos entra por caso 1 y mueve el MISMO tracker',
-    hail.far.src==='GRANIZO'&&hail.far.mode==='HAIL_STOW'&&hail.far.caso===1,JSON.stringify(hail.far));
+  check('granizo lejos (ETA 90 > lead 60) queda en VIGILANCIA y NO mueve',
+    hail.far.src==='VIGILANCIA GRANIZO'&&hail.far.mode==='IDLE'&&hail.far.prot==='VIGILANCIA',
+    JSON.stringify(hail.far));
+  check('al llegar a ETA 60 empieza la defensa en el MISMO tracker',
+    hail.start.src==='GRANIZO'&&hail.start.mode==='HAIL_STOW'&&hail.start.caso===1,
+    JSON.stringify(hail.start));
   check('granizo inminente entra por caso 3',
     hail.near.src==='GRANIZO'&&hail.near.caso===3,JSON.stringify(hail.near));
   check('tras el all-clear NO desabandera de golpe: sigue el hold de salida',
     hail.hold.on===false&&hail.hold.src==='GRANIZO'&&hail.hold.caso===5,JSON.stringify(hail.hold));
+
+  const lead=await page.evaluate(()=>{
+    aplicaPresetEvento('hail_far');
+    eHailLead.value='30'; eventoRebuild(0);
+    const t30=EVENTO.sim.frames.find(x=>x.t_min===30); // ETA 60: aún vigilancia
+    const t60=EVENTO.sim.frames.find(x=>x.t_min===60); // ETA 30: defensa
+    const marks=[...document.querySelectorAll('#eEventLine .mark b')].map(x=>x.textContent);
+    return {lead:+eHailLead.value,t30:{src:t30.info.A1.fuente,mode:t30.modos.A1,eta:t30.hail_eta_min},
+      t60:{src:t60.info.A1.fuente,mode:t60.modos.A1,eta:t60.hail_eta_min},marks};
+  });
+  check('la antelación de granizo es CONFIGURABLE y gobierna la orden',
+    lead.lead===30&&lead.t30.src==='VIGILANCIA GRANIZO'&&lead.t30.mode==='IDLE'&&
+    lead.t60.src==='GRANIZO'&&lead.t60.mode==='HAIL_STOW',JSON.stringify(lead));
+  check('esa misma antelación mueve la marca de inicio de defensa en la timeline',
+    lead.marks.some(x=>/inicia defensa granizo/.test(x)&&/T\+60/.test(x)),lead.marks.join(' | '));
 
   const sub=await page.evaluate(()=>{
     aplicaPresetEvento('hail_near');
@@ -171,7 +198,10 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
       marks:document.querySelectorAll('#eEventLine .mark').length,
       now:document.querySelector('#eEventNow')?.style.left||'',
       summary:eEventSummary.textContent,
-      tiles:tiles?document.getElementById('tiles').textContent:''
+      tiles:document.getElementById('tiles').textContent,
+      windHud:TD&&TD.windHud?TD.windHud.textContent:'',
+      hailHud:TD&&TD.hailHud?TD.hailHud.textContent:'',
+      hailFx:TD&&TD.hailFx?TD.hailFx.className:''
     };
   });
   check('timeline dibuja eventos y la aguja del minuto actual',
@@ -179,6 +209,13 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('resumen enseña viento, racha, granizo, nieve y hora',
     /Viento/.test(pinta.summary)&&/racha/.test(pinta.summary)&&/Granizo/.test(pinta.summary)&&/Nieve/.test(pinta.summary),
     pinta.summary);
+  check('la dirección de viento se lee como VIENE DE y VA HACIA, también en el 3D',
+    /VIENE DE/.test(pinta.summary)&&/VA HACIA/.test(pinta.summary)&&
+    /VIENTO/.test(pinta.windHud)&&/VIENE DE/.test(pinta.windHud)&&/VA HACIA/.test(pinta.windHud),
+    pinta.windHud);
+  check('el granizo tiene presencia visual y estado legible en la escena',
+    /GRANIZO/.test(pinta.hailHud)&&/VIGILANCIA|DEFENSA ACTIVA|ENCIMA/.test(pinta.hailHud)&&
+    /hailfx on/.test(pinta.hailFx),JSON.stringify({hud:pinta.hailHud,fx:pinta.hailFx}));
   check('las tarjetas dicen quién manda y el estado de protección',
     /VIENTO × GRANIZO|GRANIZO|VIENTO/.test(pinta.tiles)&&/TRÁNSITO|POSICIÓN|MODELADO|SEGUIMIENTO/.test(pinta.tiles),
     pinta.tiles.slice(0,300));
