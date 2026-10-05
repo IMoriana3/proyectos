@@ -425,8 +425,8 @@
     <div class="card" id="cv3dCard">
       <h2>Escena <span class="sn" id="c3hint">viento a mano · el seguidor a 0,17 °/s</span>
         <span style="display:flex;gap:6px;margin-left:8px">
-          <button class="btn small" id="mEvent">Evento</button>
-          <button class="btn small acc" id="mLive">En vivo</button>
+          <button class="btn small acc" id="mEvent">Evento</button>
+          <button class="btn small" id="mLive">En vivo</button>
           <button class="btn small" id="mEp" title="La ventana del episodio más caro del año (hay que simular antes)">Episodio</button>
           <button class="btn small" id="mFit" title="Volver al encuadre inicial">Encuadrar</button>
         </span></h2>
@@ -5380,7 +5380,7 @@ function drawEvents(c){
 
    Marco del mundo: x = este, y = arriba, z = −norte. El seguidor canónico
    tiene su tubo en +X local, así que entra girado 90°. */
-var TD=null, TL=null, TPOS=0, PLAY=false, MODO='live';
+var TD=null, TL=null, TPOS=0, PLAY=false, MODO='event';
 var NFILAS=2, PITCH=6.0, BLOQUE=34;
 var MODO_COL={IDLE:0x000000, PARTIAL_STOW:0xfbbd23, FULL_STOW:0xf87272, DESTOW_HOLD:0x9bb0c6,
   SUELTA:0xa78bfa, HAIL_STOW:0x5aa9ff, SNOW_STOW:0xc7d2fe, MULTI_STOW:0x36d399, CONFLICT:0xf472b6};
