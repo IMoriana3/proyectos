@@ -7877,6 +7877,10 @@ EVENT_CORE_IDS.forEach(function(id){
   var e=$(id);if(!e)return;
   e.addEventListener('change',function(){if(MODO==='event')eventoProgramaRebuild(false);});
 });
+$('incOne').onclick=incGeneraUno;
+$('incRun').onclick=incCorre;
+$('incJson').onclick=incExportJSON;
+$('incCsv').onclick=incExportCSV;
 $('gadd').onclick=function(){addGust($('gpreset').value);};
 $('pas').onchange=function(){
   $('pasBox').style.display=this.checked?'':'none'; saveCfg(); montaEscena();};
