@@ -3372,11 +3372,11 @@ LOC.catalogoInclemencias=function(ctx){
   p.hail_mm=hm+5;p.hail_prob_pct=hp+30;p.wind_base_kmh=t1+5;p.wind_peak_kmh=t1+5;
   add('hail_wind','combinado','Granizo con viento ya sobre T1','wind_hail',5,p);
 
-  p=base();p.hail_on=true;p.hail_eta0_min=Math.max(0,Math.min(lead,30));
+  p=base();p.hail_on=true;p.hail_eta0_min=lead;
   p.hail_mm=hm+5;p.hail_prob_pct=hp+30;p.snow_on=true;p.snow_cm=sn+5;
   add('snow_hail_conflict','combinado','Nieve + granizo, lados opuestos','conflict',1,p,{relation:'conflict'});
 
-  p=base();p.hail_on=true;p.hail_eta0_min=Math.max(0,Math.min(lead,30));
+  p=base();p.hail_on=true;p.hail_eta0_min=lead;
   p.hail_mm=hm+5;p.hail_prob_pct=hp+30;p.snow_on=true;p.snow_cm=sn+5;
   add('snow_hail_same','combinado','Nieve + granizo, mismo lado','multi',1,p,{relation:'same'});
 
