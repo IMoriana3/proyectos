@@ -453,6 +453,23 @@
           <div class="field"><label>Fecha</label>
             <input id="lDate" type="date" value="2023-06-21"></div>
         </div>
+        <div class="crono" id="lHailBox">
+          <div class="ttl">⛨ Granizo sintético · sobre ESTA misma escena</div>
+          <label class="chk"><input type="checkbox" id="lHailOn">
+            Inyectar amenaza de <b>granizo</b> en el control del abanderamiento</label>
+          <div class="lab">
+            <div class="field"><label>Tamaño máximo <span id="lHailMmV">22 mm</span></label>
+              <input id="lHailMm" type="range" min="0" max="60" step="1" value="22"></div>
+            <div class="field"><label>Prob. ≥19 mm <span id="lHailProbV">70 %</span></label>
+              <input id="lHailProb" type="range" min="0" max="100" step="1" value="70"></div>
+            <div class="field"><label>Puede llegar en <span id="lHailEtaV">90 min</span></label>
+              <input id="lHailEta" type="range" min="0" max="180" step="1" value="90"></div>
+          </div>
+          <p class="note" id="lHailStatus" style="margin-bottom:0">
+            Apagado. Al activarlo, la amenaza entra por la <b>misma NCU→TCU</b> y mueve
+            el <b>mismo eje</b> a 0,17 °/s; no es otra animación.
+          </p>
+        </div>
         <!-- EL CRONÓMETRO. No predice: MIDE. Cada instante que enseña sale de
              la simulación —el viento que sopla, el que se publica, la orden que
              llega, el eje que para—, no de sumar los cuatro parámetros. Si
@@ -694,6 +711,7 @@
             <input id="xNieve" type="number" step="1" value="0" min="0"></div>
         </div>
         <div id="xVeredicto"></div>
+        <button class="btn acc" id="xToLive" style="margin-top:6px">▶ Ver esta amenaza moviendo los trackers</button>
         <p class="note" style="margin-bottom:0">Los umbrales —60 min, 30 min, 40 y 60 km/h— son los
           <b>propuestos</b>, y la propia propuesta dice que habría que replantearlos si cambian los
           valores de viento. Se editan en el bloque <code>LOC.GRZ</code>.</p>
@@ -1709,6 +1727,31 @@ LOC.granizoPlan=function(e){
     }
   } else r.nieve=null;
   return r;
+};
+
+/* PUENTE DEL GRANIZO SINTÉTICO AL MISMO CONTROL EN VIVO.
+   No crea otra máquina. Solo decide si el episodio sintético supera el gate VDE
+   que sí podemos declarar aquí (tamaño y probabilidad) y, si lo supera, alimenta
+   granizoPlan, que ya resuelve viento × granizo, lado, cruce y margen. */
+LOC.granizoLiveAmenaza=function(on,tamanoMm,probPct){
+  var mm=Math.max(0,+tamanoMm||0), pr=Math.max(0,+probPct||0);
+  var umMm=10*((LOC.VDE&&LOC.VDE.umbral_tamano_granizo_cm)||1.9);
+  var umPr=(LOC.VDE&&LOC.VDE.umbral_probabilidad_pct)||30;
+  if(!on)return {activa:false,tamano_mm:mm,prob_pct:pr,umbral_mm:umMm,umbral_prob_pct:umPr,
+                 motivo:'granizo sintético apagado'};
+  if(mm<umMm)return {activa:false,tamano_mm:mm,prob_pct:pr,umbral_mm:umMm,umbral_prob_pct:umPr,
+                    motivo:mm.toFixed(0)+' mm < '+umMm.toFixed(0)+' mm'};
+  if(pr<umPr)return {activa:false,tamano_mm:mm,prob_pct:pr,umbral_mm:umMm,umbral_prob_pct:umPr,
+                    motivo:pr.toFixed(0)+' % < '+umPr.toFixed(0)+' % para granizo ≥'+umMm.toFixed(0)+' mm'};
+  return {activa:true,tamano_mm:mm,prob_pct:pr,umbral_mm:umMm,umbral_prob_pct:umPr,
+          motivo:mm.toFixed(0)+' mm · '+pr.toFixed(0)+' %: amenaza VDE activa'};
+};
+LOC.granizoLivePlan=function(e){
+  var a=LOC.granizoLiveAmenaza(!!e.hailOn,e.hailMm,e.hailProb);
+  var q={}; for(var k in e)q[k]=e[k];
+  q.tHail=a.activa?Math.max(0,+e.tHail||0):null;
+  var p=LOC.granizoPlan(q); p.amenaza=a;
+  return p;
 };
 
 /* LA MATRIZ: el espacio de casos de un golpe, no un punto cada vez.
@@ -2749,7 +2792,7 @@ LOC.stepper=function(kind,cfg){
   var clip=function(t,sg){return sg>0?Math.max(pmin,Math.min(full,t)):Math.max(-full,Math.min(-pmin,t));};
   return {
     get mode(){return st;}, get theta(){return th;},
-    step:function(tgt,ws,az,dtS){
+    step:function(tgt,ws,az,dtS,ext){
       var sg=LOC.noonFlip(LOC.sign(az),tgt,cfg.noon), ns, nt;
       if(kind==='1'){
         if(ws>T1){ns='FULL_STOW';nt=sg*full;}else{ns='IDLE';nt=tgt;}
@@ -2771,6 +2814,14 @@ LOC.stepper=function(kind,cfg){
         if(st==='PARTIAL_STOW'||st==='FULL_STOW'){ns='DESTOW_HOLD';hold=cfg.holdS;nt=last;}
         else if(st==='DESTOW_HOLD'){hold-=dtS;if(hold<=0){ns='IDLE';nt=tgt;}else{ns='DESTOW_HOLD';nt=last;}}
         else{ns='IDLE';nt=tgt;}
+      }
+      /* EL GRANIZO NO TIENE OTRO MOTOR. La política viento×granizo puede
+         sustituir la consigna, pero lo hace AQUÍ, antes de la misma cadena
+         NCU→TCU y del mismo hierro. */
+      if(ext&&ext.destino!==null&&ext.destino!==undefined){
+        ns=ext.mode||'HAIL_STOW';
+        nt=Math.max(-full,Math.min(full,+ext.destino));
+        hold=0; park=false; last=nt;
       }
       st=ns;
       /* ENTRE LA ORDEN Y EL EJE va la cadena de latencia, si la hay: la orden
@@ -4991,8 +5042,8 @@ function drawEvents(c){
    tiene su tubo en +X local, así que entra girado 90°. */
 var TD=null, TL=null, TPOS=0, PLAY=false, MODO='live';
 var NFILAS=2, PITCH=6.0, BLOQUE=34;
-var MODO_COL={IDLE:0x000000, PARTIAL_STOW:0xfbbd23, FULL_STOW:0xf87272, DESTOW_HOLD:0x9bb0c6, SUELTA:0xa78bfa};
-var MODO_INT={IDLE:0, PARTIAL_STOW:.42, FULL_STOW:.5, DESTOW_HOLD:.3, SUELTA:.45};
+var MODO_COL={IDLE:0x000000, PARTIAL_STOW:0xfbbd23, FULL_STOW:0xf87272, DESTOW_HOLD:0x9bb0c6, SUELTA:0xa78bfa, HAIL_STOW:0x5aa9ff};
+var MODO_INT={IDLE:0, PARTIAL_STOW:.42, FULL_STOW:.5, DESTOW_HOLD:.3, SUELTA:.45, HAIL_STOW:.52};
 var PALA=0x1b3a6b;
 var LAYOUTS='https://imoriana3.github.io/cobertura-zigbee/';
 var ESC=null;     // {kind, bloques[], planta{...}}
@@ -5935,6 +5986,7 @@ function liveInit(){
            Sirve para saber CUÁNDO lo que la TCU ejecuta ya viene de una
            decisión de abanderar, y no para calcular nada. Ver `cronoTick`. */
         cadMarca:{}, marcaEje:{},
+        hailEtaF:+$('lHailEta').value, hailEver:false, hailClearMin:null, hailPlans:{},
         crono:cronoNuevo()};
   vivos().forEach(function(S){
     // el límite de mediodía es de las B (abanderan hacia el SOL); en las A el
@@ -5958,7 +6010,7 @@ function liveInit(){
     LIVE.ang[S]=0;LIVE.modos[S]='IDLE';LIVE.orden[S]=0;LIVE.ordenEje[S]=0;
     LIVE.marcaEje[S]=0;});
   LIVE.ang.BASE=0; LIVE.modos.BASE='SEGUIMIENTO';
-  liveLbl(); pintaPlay(); pintaCrono();
+  liveLbl(); pintaPlay(); pintaCrono(); hailLivePinta();
 }
 
 /* ─────────── EL CRONÓMETRO ───────────
@@ -6257,6 +6309,27 @@ function liveLbl(){
     ESC.mundo&&ESC.mundo.remove(ESC.etiquetas); ESC.etiquetas=null; montaBandas();
   }
 }
+function hailLivePinta(){
+  if(!$('lHailStatus'))return;
+  var A=LOC.granizoLiveAmenaza($('lHailOn').checked,+$('lHailMm').value,+$('lHailProb').value);
+  $('lHailMmV').textContent=fmt(+$('lHailMm').value,0)+' mm';
+  $('lHailProbV').textContent=fmt(+$('lHailProb').value,0)+' %';
+  var eta=(LIVE&&LIVE.hailEtaF!=null)?LIVE.hailEtaF:+$('lHailEta').value;
+  $('lHailEtaV').textContent=fmt(eta,eta<10?1:0)+' min';
+  var h=(A.activa?'<b style="color:var(--warn)">AMENAZA ACTIVA</b> · ':'')+esc(A.motivo)+'. ';
+  if(LIVE&&LIVE.hailPlans){
+    var ps=[];
+    vivos().forEach(function(k){
+      if(k==='PASIVO')return;
+      var p=LIVE.hailPlans[k];
+      if(p&&p.destino!=null)ps.push('<b>'+k+'</b> → '+fmt(p.destino,0)+'° · c'+p.caso);
+    });
+    if(ps.length)h+=ps.join(' · ')+'. ';
+  }
+  h+='La orden usa la <b>misma NCU→TCU</b>, el mismo slew de <b>0,17 °/s</b> y el mismo eje.';
+  $('lHailStatus').innerHTML=h;
+}
+
 function compass(a){var d=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];return d[Math.round(a/22.5)%16];}
 function hhmm(min){min=((min%1440)+1440)%1440;var h=Math.floor(min/60),mm=Math.round(min%60);
   return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm;}
@@ -6311,12 +6384,47 @@ function liveTick(dtReal){
      anemómetro es uno. */
   var vVisto=LIVE.cadMedida.ve(LIVE.v,dt);
   LIVE.vVisto=vVisto;
+
+  /* El episodio de granizo comparte este reloj. Mientras la amenaza está activa,
+     el ETA baja con el tiempo simulado; al desaparecer, arranca el hold de salida
+     de granizoPlan en vez de desabanderar de golpe. */
+  var hGate=LOC.granizoLiveAmenaza($('lHailOn').checked,+$('lHailMm').value,+$('lHailProb').value);
+  if(LIVE.hailEtaF==null)LIVE.hailEtaF=+$('lHailEta').value;
+  if(hGate.activa){
+    LIVE.hailEver=true; LIVE.hailClearMin=0;
+    if(dt>0)LIVE.hailEtaF=Math.max(0,LIVE.hailEtaF-dt/60);
+  }else if(LIVE.hailEver&&dt>0){
+    LIVE.hailClearMin=(LIVE.hailClearMin==null?0:LIVE.hailClearMin)+dt/60;
+  }
+  $('lHailEta').value=Math.round(LIVE.hailEtaF);
+
   vivos().forEach(function(S){
-    var az=(S[0]==='A')?LIVE.dir:P.azp;
+    var az=(S[0]==='A')?LIVE.dir:P.azp, hailPlan=null, hailExt=null;
+    if(S!=='PASIVO'){
+      hailPlan=LOC.granizoLivePlan({
+        hailOn:$('lHailOn').checked, hailMm:+$('lHailMm').value, hailProb:+$('lHailProb').value,
+        tHail:LIVE.hailEtaF, minDesdeAviso:(LIVE.hailEver&&!hGate.activa?LIVE.hailClearMin:null),
+        theta:LIVE.ang[S], vAhora:LIVE.v*3.6,
+        tV40:(LIVE.v*3.6>LOC.GRZ.v_prestow?0:null), azViento:LIVE.dir,
+        rachaAhora:LOC.rachaMediana(LIVE.v*3.6), tRacha:null,
+        defensa:Math.abs(+($('gAng')||{value:55}).value)||55,
+        preMin:+$('pmin').value, slew:LOC.SLEW, lat:tnecLeeCadena()
+      });
+      LIVE.hailPlans[S]=hailPlan;
+      /* Si hay contexto de granizo, se respeta SIEMPRE el destino del plan,
+         también cuando `manda` es viento: justo ahí el plan prohíbe cruzar 0°.
+         El modo conserva quién manda; el destino conserva la seguridad conjunta. */
+      if(hailPlan.destino!=null&&LIVE.hailEver){
+        var hMode=(hailPlan.manda==='granizo')?'HAIL_STOW':
+                  (LIVE.v*3.6>=LOC.GRZ.v_stow?'FULL_STOW':'PARTIAL_STOW');
+        hailExt={destino:hailPlan.destino,mode:hMode};
+      }
+    }
     // Al PASIVO le llega el viento que SOPLA: la suelta es mecánica y no pasa
-    // por el anemómetro ni por la TCU.
+    // por el anemómetro ni por la TCU. El granizo se inyecta en los casos
+    // CONTROLADOS; no se finge que un desembrague pasivo sea una orden TCU.
     var r=(S==='PASIVO')?LIVE.steppers[S].step(tgt,LIVE.v,dt)
-                        :LIVE.steppers[S].step(tgt,vVisto,az,dt);
+                        :LIVE.steppers[S].step(tgt,vVisto,az,dt,hailExt);
     LIVE.ang[S]=r.theta; LIVE.modos[S]=r.mode;
     LIVE.orden[S]=(r.orden!=null?r.orden:r.theta);
     LIVE.ordenEje[S]=(r.ordenEje!=null?r.ordenEje:LIVE.orden[S]);
@@ -6336,6 +6444,7 @@ function liveTick(dtReal){
   });
   ponSol(P.el/LOC.D2R,P.azp,LIVE.v,LIVE.dir);
   pintaEscena(LIVE.ang,LIVE.modos,poa,poa.BASE);
+  hailLivePinta();
   // El cronómetro va DESPUÉS de mover a todo el mundo: mide el estado ya
   // avanzado de este paso, no el del anterior.
   /* EL PASO SIMULADO DE ESTE FOTOGRAMA, guardado para poder DECIR cuando una
@@ -6634,7 +6743,8 @@ function setModo(m){
       'entran en parcial y por encima de <b>'+fmt(+$('t2').value,0)+'</b> se abanderan del todo. El eje '+
       'gira a <b>0,17 °/s</b>, así que una maniobra a ±55° tarda minutos: se ve la rampa, no un salto. '+
       'La POA de este modo es de <b>cielo claro</b> —no hay meteo detrás— y sirve para comparar los '+
-      'casos entre sí en el instante que elijas, no para sacar un número anual: para eso está el otro modo.';
+      'casos entre sí en el instante que elijas, no para sacar un número anual: para eso está el otro modo. '+
+      'Debajo puedes inyectar <b>granizo sintético</b>: no abre otra escena; toma el mando de estos mismos trackers.';
   }
   else{
     PLAY=false;$('play').textContent='▶ Reproducir';EPACC=0;build3D();
@@ -6660,6 +6770,14 @@ $('run').onclick=run; $('runM').onclick=run;
    dijera cómo llegaban al 3D. La respuesta era «pulsa Simular el año», que
    está arriba del todo y no se ve desde aquí. */
 $('labRun').onclick=function(){$('run').click();};
+['lHailOn','lHailMm','lHailProb'].forEach(function(id){
+  $(id).addEventListener('input',function(){hailLivePinta();});
+  $(id).addEventListener('change',function(){hailLivePinta();});
+});
+$('lHailEta').addEventListener('input',function(){
+  if(LIVE)LIVE.hailEtaF=+this.value;
+  hailLivePinta();
+});
 function labHint(){
   var n=GUSTS.filter(function(g){return g.peak>0;}).length;
   var st=+$('stn').value||0;
@@ -7474,6 +7592,15 @@ function gTab(cual) {
 $('tabViento').onclick = function () { gTab('viento'); };
 $('tabGranizo').onclick = function () { gTab('granizo'); };
 $('tabNieve').onclick = function () { gTab('nieve'); };
+$('xToLive').onclick=function(){
+  $('lHailOn').checked=true;
+  $('lHailMm').value=Math.max(22,10*((LOC.VDE&&LOC.VDE.umbral_tamano_granizo_cm)||1.9));
+  $('lHailProb').value=Math.max(70,(LOC.VDE&&LOC.VDE.umbral_probabilidad_pct)||30);
+  $('lHailEta').value=$('xHail').value;
+  $('lV').value=$('xVnow').value; $('lD').value=$('xAz').value;
+  gTab('viento'); setModo('live'); liveInit(); hailLivePinta(); liveTick(0.001);
+  var c=$('cv3dCard'); if(c&&c.scrollIntoView)c.scrollIntoView({behavior:'smooth',block:'start'});
+};
 
 /* ─────────── NIEVE ───────────
    La máquina es de dos estados y por eso no hay diagrama: dibujar doce cajas

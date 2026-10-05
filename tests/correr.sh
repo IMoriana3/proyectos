@@ -450,7 +450,7 @@ declare -A PISO=(
   # Nace de un hueco MEDIDO: con el `hold` de la histéresis puesto a cero en
   # la llamada real, los diez arneses que abren la ficha —539 comprobaciones—
   # se quedaron verdes. La histéresis se podía borrar y el repo no lo notaba.
-  [test_viento_abanderamiento.js]=33
+  [test_viento_abanderamiento.js]=40
   # De la batería de mutación del 2026-09-10: SIETE mutantes sobre mecanismos
   # que ningún arnés nombraba —Gumbel, lazo de control, denominador del pasivo—
   # mataron CERO comprobaciones contra los 238 de los arneses de viento. Estos
@@ -975,7 +975,7 @@ declare -A PISO=(
   # comprobación fijaba qué borde usa `granizoPlan`: ahora lo fija una racha que
   # llega a los 8 min, que cabe con 30° (5,9) y vetaría con 55° (10,8). Tras los dos
   # arreglos: 5/5 y 6 bajas, los cinco llegando a su veredicto.
-  [test_granizo_estrategia.mjs]=135
+  [test_granizo_estrategia.mjs]=143
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )
