@@ -5668,6 +5668,7 @@ var LAYOUTS='https://imoriana3.github.io/cobertura-zigbee/';
 var ESC=null;     // {kind, bloques[], planta{...}}
 var LIVE=null;    // vista del frame actual
 var EVENTO={enabled:true,sim:null,current:null,pos:0,run:false,acc:0,rebuildTimer:null,applyingPreset:false};
+var INC={cases:[],results:[],running:false,opts:null};
 
 function has3D(){return typeof THREE!=='undefined'&&THREE.OrbitControls&&typeof Seguidor!=='undefined';}
 function vivos(){return strategies().concat($('pas').checked?['PASIVO']:[]);}
@@ -7133,6 +7134,136 @@ function aplicaPresetEvento(k){
     $('eD').value=(hailSide>0?270:90);
   }
   EVENTO.applyingPreset=false;eventoLbl();eventoRebuild(0);
+}
+
+/* ═══════════ GENERADOR DE INCLEMENCIAS · interfaz ═══════════ */
+function incBaseCfg(){
+  var c=eventoCfgUI();
+  c.strategies=['A1','A2','B1','B2'];
+  if(!c.passive)c.passive={pRel:(+$('pasV').value||90)/3.6,pSide:+$('pasL').value||-55,pTol:1,mode:$('pasModo').value};
+  c.passive_frac=LOC.fracExpuesta(nTrk(),filasTrk(),1);
+  return c;
+}
+function incCfgCaso(caso,base){
+  var c=Object.assign({},base||incBaseCfg());
+  c.strategies=['A1','A2','B1','B2'];
+  c.control_signal=caso.signal||'mean';
+  c.profile=Object.assign({},caso.profile);
+  c.passive=Object.assign({},(base&&base.passive)||c.passive||{
+    pRel:(+$('pasV').value||90)/3.6,pSide:+$('pasL').value||-55,pTol:1,mode:$('pasModo').value});
+  return c;
+}
+function incPerfilTexto(p){
+  var a=['viento '+fmt(p.wind_base_kmh,0)+'→'+fmt(p.wind_peak_kmh,0)+' km/h'];
+  if(p.gust_duration_min>0)a.push('racha '+fmt(p.gust_peak_kmh,0));
+  if(p.hail_on)a.push('granizo '+fmt(p.hail_mm,1)+' mm · ETA '+fmt(p.hail_eta0_min,0)+' · lead '+fmt(p.hail_lead_min,0));
+  if(p.snow_on)a.push('nieve '+fmt(p.snow_cm,1)+' cm');
+  return a.join(' · ');
+}
+function incRender(){
+  var R=INC.results||[],pass=R.filter(function(x){return x.verdict.ok;}).length,
+      fail=R.length-pass,checks=R.reduce(function(a,x){return a+x.verdict.total;},0),
+      bad=R.reduce(function(a,x){return a+x.verdict.fail;},0);
+  $('incSummary').innerHTML=R.length
+    ? '<div class="ro"><div class="k">Casos</div><div class="v">'+R.length+'</div></div>'+
+      '<div class="ro"><div class="k">PASS</div><div class="v" style="color:var(--ok)">'+pass+'</div></div>'+
+      '<div class="ro"><div class="k">FAIL</div><div class="v" style="color:'+(fail?'var(--err)':'var(--ok)')+'">'+fail+'</div></div>'+
+      '<div class="ro"><div class="k">Checks</div><div class="v">'+(checks-bad)+'/'+checks+'</div></div>'
+    : '';
+  var h='<thead><tr><th>Caso</th><th>Familia</th><th>Inclemencia</th><th>Checks</th><th>Veredicto</th><th></th></tr></thead><tbody>';
+  R.forEach(function(x,i){
+    var bads=x.verdict.checks.filter(function(q){return !q.ok;}).map(function(q){return q.name;});
+    h+='<tr><td><b>'+esc(x.case.id)+'</b><br><span class="sn">'+x.case.seed+'</span></td>'+
+      '<td>'+esc(x.case.family)+'<br><span class="sn">'+esc(x.case.mode)+'</span></td>'+
+      '<td style="text-align:left;white-space:normal;min-width:240px"><b>'+esc(x.case.name)+'</b><br>'+
+        '<span class="sn">'+esc(incPerfilTexto(x.case.profile))+'</span>'+
+        (bads.length?'<br><span style="color:var(--err)">'+esc(bads.join(' · '))+'</span>':'')+'</td>'+
+      '<td>'+ (x.verdict.total-x.verdict.fail)+'/'+x.verdict.total+'</td>'+
+      '<td class="'+(x.verdict.ok?'ok':'fail')+'">'+(x.verdict.ok?'PASS':'FAIL')+'</td>'+
+      '<td><button class="btn small incSee" data-i="'+i+'">Ver</button></td></tr>';
+  });
+  $('incTable').innerHTML=h+'</tbody>';
+  [].forEach.call(document.querySelectorAll('.incSee'),function(b){
+    b.onclick=function(){incVerCaso(+this.dataset.i);};
+  });
+  $('incJson').disabled=!R.length;$('incCsv').disabled=!R.length;
+}
+function incOpts(){
+  return {mode:$('incMode').value,family:$('incFamily').value,severity:$('incSeverity').value,
+    seed:+$('incSeed').value||1,n:Math.max(1,Math.min(100,+$('incN').value||1))};
+}
+function incAplicaCampos(caso){
+  var p=caso.profile;
+  EVENTO.applyingPreset=true;$('ePreset').value='manual';
+  $('eV').value=p.wind_base_kmh;$('eVPeak').value=p.wind_peak_kmh;$('eD').value=p.wind_dir_deg;
+  $('eWindStart').value=p.wind_start_min;$('eWindRamp').value=p.wind_ramp_min;$('eWindHold').value=p.wind_hold_min;
+  $('eGust').value=p.gust_peak_kmh;$('eGustAt').value=p.gust_at_min;$('eGustDur').value=p.gust_duration_min;
+  $('eSignal').value=caso.signal||'mean';
+  $('eHailOn').checked=!!p.hail_on;$('eHailMm').value=p.hail_mm;$('eHailProb').value=p.hail_prob_pct;
+  $('eHailEta').value=p.hail_eta0_min;$('eHailLead').value=p.hail_lead_min;
+  $('eSnowOn').checked=!!p.snow_on;$('eSnowCm').value=p.snow_cm;$('eSnowStart').value=p.snow_start_min;$('eSnowClear').value=p.snow_clear_min;
+  EVENTO.applyingPreset=false;eventoLbl();
+}
+function incVerCaso(i){
+  var x=INC.results[i];if(!x)return;
+  ['A1','A2','B1','B2'].forEach(function(k){
+    var q=document.querySelector('.st[value="'+k+'"]');if(q)q.checked=true;});
+  $('pas').checked=true;$('pasBox').style.display='';
+  incAplicaCampos(x.case);eventoRebuild(0);
+  var bad=x.verdict.checks.filter(function(q){return !q.ok;});
+  $('incNote').innerHTML='<b>'+esc(x.case.id)+' · '+esc(x.case.name)+'</b> · '+(x.verdict.ok?
+    '<span style="color:var(--ok)">PASS</span>':'<span style="color:var(--err)">FAIL</span>')+
+    ' · seed '+x.case.seed+(bad.length?' · '+esc(bad.map(function(q){return q.name+': '+q.detail;}).join(' | ')):'');
+  var c=$('cv3dCard');if(c&&c.scrollIntoView)c.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function incGeneraUno(){
+  var o=incOpts(),base=incBaseCfg(),c=LOC.incGenera(o,INC.cases.length,base);
+  INC.cases.push(c);incAplicaCampos(c);eventoRebuild(0);
+  $('incNote').innerHTML='Generado <b>'+esc(c.id)+' · '+esc(c.name)+'</b> · seed '+c.seed+
+    '. Se ha cargado en la escena; aún no es un PASS hasta ejecutar la batería/verificador.';
+  return c;
+}
+async function incCorre(){
+  if(INC.running)return;
+  INC.running=true;var o=incOpts(),base=incBaseCfg();
+  INC.opts=o;INC.cases=[];INC.results=[];
+  $('incRun').disabled=true;$('incOne').disabled=true;$('incJson').disabled=true;$('incCsv').disabled=true;
+  $('incNote').textContent='Ejecutando 0/'+o.n+'…';
+  for(var i=0;i<o.n;i++){
+    var c=LOC.incGenera(o,i,base),cfg=incCfgCaso(c,base);
+    var sim=LOC.simulaEvento(cfg),sim2=LOC.simulaEvento(cfg);
+    var v=LOC.incVerifica(c,cfg,sim,sim2);
+    INC.cases.push(c);INC.results.push({case:c,verdict:v});
+    if(i%3===2||i===o.n-1){
+      $('incNote').textContent='Ejecutando '+(i+1)+'/'+o.n+'…';
+      incRender();await new Promise(function(res){setTimeout(res,0);});
+    }
+  }
+  INC.running=false;$('incRun').disabled=false;$('incOne').disabled=false;
+  var fails=INC.results.filter(function(x){return !x.verdict.ok;}).length;
+  $('incNote').innerHTML='<b>Batería terminada.</b> '+INC.results.length+' casos · '+
+    (fails?'<span style="color:var(--err)">'+fails+' FAIL</span>':'<span style="color:var(--ok)">0 FAIL</span>')+
+    '. Cada FAIL se puede reproducir con «Ver» usando la misma seed.';
+  incRender();
+}
+function incDescarga(nombre,txt,tipo){
+  var b=new Blob([txt],{type:tipo||'text/plain'}),u=URL.createObjectURL(b),a=document.createElement('a');
+  a.href=u;a.download=nombre;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},1000);
+}
+function incExportJSON(){
+  var o={schema:'factiun-inclemencias-v1',generated_at:new Date().toISOString(),options:INC.opts,results:INC.results};
+  incDescarga('inclemencias-'+((INC.opts&&INC.opts.seed)||'seed')+'.json',JSON.stringify(o,null,2),'application/json');
+}
+function incExportCSV(){
+  var q=function(v){v=String(v==null?'':v);return '"'+v.replace(/"/g,'""')+'"';};
+  var h=['id','seed','mode','family','tag','name','verdict','checks_ok','checks_total','wind_base_kmh','wind_peak_kmh','wind_dir_deg',
+    'gust_peak_kmh','hail_on','hail_mm','hail_prob_pct','hail_eta_min','hail_lead_min','snow_on','snow_cm','failed_checks'];
+  var rows=[h.map(q).join(',')];
+  INC.results.forEach(function(x){var p=x.case.profile,v=x.verdict,b=v.checks.filter(function(c){return !c.ok;}).map(function(c){return c.name;}).join(' | ');
+    rows.push([x.case.id,x.case.seed,x.case.mode,x.case.family,x.case.tag,x.case.name,v.ok?'PASS':'FAIL',v.total-v.fail,v.total,
+      p.wind_base_kmh,p.wind_peak_kmh,p.wind_dir_deg,p.gust_peak_kmh,p.hail_on,p.hail_mm,p.hail_prob_pct,p.hail_eta0_min,p.hail_lead_min,
+      p.snow_on,p.snow_cm,b].map(q).join(','));});
+  incDescarga('inclemencias-'+((INC.opts&&INC.opts.seed)||'seed')+'.csv',rows.join('\n'),'text/csv');
 }
 
 function liveLbl(){
