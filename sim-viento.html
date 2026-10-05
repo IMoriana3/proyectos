@@ -7402,6 +7402,11 @@ $('ePlay').onclick=function(){
   if(EVENTO.pos>=EVENTO.sim.tmax)eventoAplica(EVENTO.sim.tmin);
   EVENTO.run=!EVENTO.run;EVENTO.acc=0;pintaEventPlay();
 };
+var EVENT_CORE_IDS=['lat','lon','t1','t2','pmin','hold','park','noon','maxang','gcr','bt','pasModo'];
+EVENT_CORE_IDS.forEach(function(id){
+  var e=$(id);if(!e)return;
+  e.addEventListener('change',function(){if(MODO==='event')eventoProgramaRebuild(false);});
+});
 $('gadd').onclick=function(){addGust($('gpreset').value);};
 $('pas').onchange=function(){
   $('pasBox').style.display=this.checked?'':'none'; saveCfg(); montaEscena();};
@@ -7427,6 +7432,7 @@ function latUI(){
       'puede no cruzar el umbral nunca. Por eso se <b>mide</b> y no se suma.'
     : '';
   if(MODO==='live'){liveInit();liveTick(0.001);}
+  else if(MODO==='event')eventoRebuild(EVENTO.pos);
   pintaCrono();
 }
 $('lat_on').onchange=function(){saveCfg();latUI();};
@@ -7455,7 +7461,9 @@ $('pasModo').addEventListener('change',function(){saveCfg();pasModoUI();});
 ['nTrk','filasTrk'].forEach(function(i){
   $(i).addEventListener('change',function(){saveCfg();denomPas();montaEscena();});});
 ['pasV','pasL'].forEach(function(i){
-  $(i).addEventListener('change',function(){saveCfg();if(MODO==='live')liveTick(0.001);});});
+  $(i).addEventListener('change',function(){
+    saveCfg();if(MODO==='live')liveTick(0.001);else if(MODO==='event')eventoRebuild(EVENTO.pos);
+  });});
 $('gpreset').onchange=function(){if(this.value){addGust(this.value);this.value='';}};
 ['wgust','wcyc'].forEach(function(i){$(i).addEventListener('change',saveCfg);});
 $('wbase').addEventListener('change',function(){saveCfg();});
@@ -8122,13 +8130,13 @@ $('tabViento').onclick = function () { gTab('viento'); };
 $('tabGranizo').onclick = function () { gTab('granizo'); };
 $('tabNieve').onclick = function () { gTab('nieve'); };
 $('xToLive').onclick=function(){
-  $('lHailOn').checked=true;
-  $('lHailMm').value=Math.max(22,10*((LOC.VDE&&LOC.VDE.umbral_tamano_granizo_cm)||1.9));
-  $('lHailProb').value=Math.max(70,(LOC.VDE&&LOC.VDE.umbral_probabilidad_pct)||30);
-  $('lHailEta').value=$('xHail').value;
-  $('lV').value=$('xVnow').value; $('lVPeak').value=$('xVnow').value; $('lD').value=$('xAz').value;
-  $('lPreset').value='manual';
-  gTab('viento'); setModo('live'); eventoRebuild(0); hailLivePinta();
+  $('eHailOn').checked=true;
+  $('eHailMm').value=Math.max(22,10*((LOC.VDE&&LOC.VDE.umbral_tamano_granizo_cm)||1.9));
+  $('eHailProb').value=Math.max(70,(LOC.VDE&&LOC.VDE.umbral_probabilidad_pct)||30);
+  $('eHailEta').value=$('xHail').value;
+  $('eV').value=$('xVnow').value;$('eVPeak').value=$('xVnow').value;$('eD').value=$('xAz').value;
+  $('ePreset').value='manual';
+  gTab('viento');setModo('event');eventoRebuild(0);
   var c=$('cv3dCard'); if(c&&c.scrollIntoView)c.scrollIntoView({behavior:'smooth',block:'start'});
 };
 
