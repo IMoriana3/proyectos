@@ -15,8 +15,9 @@
 //
 // Y los dos límites, que van medidos y no supuestos:
 //   · la serie del año se RETIENE al paso que el reproductor puede enseñar.
-//     Con cálculo minutal, la ventana de 16 h conserva sus 960 minutos: el
-//     deslizador tiene que poder seleccionar 11:41 entre 11:40 y 11:42, sin
+//     Con cálculo minutal, la ventana de 16 h conserva cada minuto (961
+//     muestras contando ambos extremos): el deslizador puede seleccionar 11:41
+//     entre 11:40 y 11:42, sin
 //     introducir un muestreo oculto de 4 min. El paso queda declarado en
 //     `window.step_minutes`.
 //   · por el camino del MOTOR el informe llega por HTTP y NO trae serie: ahí no
