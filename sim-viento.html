@@ -7597,6 +7597,7 @@ $('xToLive').onclick=function(){
   $('lHailMm').value=Math.max(22,10*((LOC.VDE&&LOC.VDE.umbral_tamano_granizo_cm)||1.9));
   $('lHailProb').value=Math.max(70,(LOC.VDE&&LOC.VDE.umbral_probabilidad_pct)||30);
   $('lHailEta').value=$('xHail').value;
+  $('lV').value=$('xVnow').value; $('lD').value=$('xAz').value;
   gTab('viento'); setModo('live'); liveInit(); hailLivePinta(); liveTick(0.001);
   var c=$('cv3dCard'); if(c&&c.scrollIntoView)c.scrollIntoView({behavior:'smooth',block:'start'});
 };
