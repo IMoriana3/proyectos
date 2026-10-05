@@ -117,6 +117,21 @@
   .timerow input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}
   .timerow .t{font-family:var(--mono);font-size:.9rem;color:var(--accent);min-width:120px;text-align:right}
   .timerow select{background:var(--bg2);border:1px solid var(--line2);color:var(--tx);border-radius:8px;padding:6px 8px;font:inherit;font-size:.8rem}
+  .eventmaster{margin-top:10px;background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:11px 12px}
+  .eventmaster .top{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,1fr);gap:9px;align-items:end}
+  .eventline{height:48px;position:relative;margin:7px 6px 2px;border-top:2px solid var(--line2)}
+  .eventline .mark{position:absolute;top:-5px;transform:translateX(-50%);min-width:8px;text-align:center}
+  .eventline .mark i{display:block;width:9px;height:9px;border-radius:50%;background:var(--tx2);margin:0 auto 3px;border:2px solid var(--bg2)}
+  .eventline .mark b{display:block;font-family:var(--mono);font-size:.56rem;color:var(--muted);white-space:nowrap;font-weight:500}
+  .eventline .now{position:absolute;top:-9px;bottom:0;width:2px;background:var(--accent);transform:translateX(-50%);pointer-events:none}
+  .eventsummary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:8px}
+  .eventsummary .e{border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0}
+  .eventsummary .e b{display:block;font-size:.78rem}
+  .eventsummary .e span{display:block;color:var(--muted);font-size:.7rem;white-space:normal}
+  .eventadv{margin-top:9px;border-top:1px solid var(--line);padding-top:8px}
+  .eventadv summary{cursor:pointer;color:var(--tx2);font-family:var(--mono);font-size:.7rem}
+  .eventadv .subgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:9px}
+  @media(max-width:640px){.eventmaster .top{grid-template-columns:1fr}.eventline .mark b{font-size:.5rem}.eventsummary{grid-template-columns:1fr 1fr}}
   /* El cronómetro. Monoespaciado y alineado a la derecha porque lo que se lee
      es una COLUMNA DE TIEMPOS: con proporcional los minutos no cuadran y hay
      que buscarlos uno a uno. */
@@ -410,7 +425,8 @@
     <div class="card" id="cv3dCard">
       <h2>Escena <span class="sn" id="c3hint">viento a mano · el seguidor a 0,17 °/s</span>
         <span style="display:flex;gap:6px;margin-left:8px">
-          <button class="btn small acc" id="mLive">En vivo</button>
+          <button class="btn small acc" id="mEvent">Evento</button>
+          <button class="btn small" id="mLive">En vivo</button>
           <button class="btn small" id="mEp" title="La ventana del episodio más caro del año (hay que simular antes)">Episodio</button>
           <button class="btn small" id="mFit" title="Volver al encuadre inicial">Encuadrar</button>
         </span></h2>
@@ -436,7 +452,7 @@
 
       <!-- EN VIVO: el viento a mano. Es lo que convierte la escena en algo que
            se puede toquetear sin esperar a que termine un año entero. -->
-      <div id="liveCtl">
+      <div id="liveCtl" style="display:none">
         <div class="timerow">
           <button class="btn small acc" id="lPlay">▶ Correr el tiempo</button>
           <span class="t" id="lClock">—</span>
@@ -476,6 +492,92 @@
              sumara, diría lo mismo con la latencia puesta a mano y no haría
              falta simular nada. -->
         <div id="cronoBox" class="crono" style="display:none"></div>
+      </div>
+
+      <div id="eventCtl">
+        <div class="eventmaster">
+          <div class="top">
+            <div class="field" style="margin:0"><label>Escenario</label>
+              <select id="ePreset">
+                <option value="manual">Manual · tú defines las amenazas</option>
+                <optgroup label="Viento">
+                  <option value="wind_ramp" selected>Viento creciente · cruza T1 y T2</option>
+                  <option value="gust">Ráfaga corta · 95 km/h</option>
+                  <option value="passive">Pasivo · racha de desembrague</option>
+                </optgroup>
+                <optgroup label="Granizo">
+                  <option value="hail_far">Granizo · 22 mm · ETA 90 min</option>
+                  <option value="hail_near">Granizo inminente · ETA 20 min</option>
+                  <option value="hail_wind">Granizo + viento contrario</option>
+                </optgroup>
+                <optgroup label="Nieve">
+                  <option value="snow">Nieve · 15 cm</option>
+                  <option value="snow_hail">Nieve + granizo · conflicto de lado</option>
+                  <option value="snow_hail_same">Nieve + granizo · mismo lado</option>
+                </optgroup>
+              </select></div>
+            <div class="two">
+              <div class="field" style="margin:0"><label>T=0 · hora <span id="eHlbl">12:00</span></label>
+                <input id="eH" type="range" min="0" max="1439" step="1" value="720"></div>
+              <div class="field" style="margin:0"><label>T=0 · fecha</label>
+                <input id="eDate" type="date" value="2023-06-21"></div>
+            </div>
+          </div>
+          <div class="timerow">
+            <button class="btn small acc" id="ePlay">▶ Reproducir</button>
+            <button class="btn small" id="ePrev" title="Un minuto atrás">−1</button>
+            <input type="range" id="eTime" min="-30" max="180" step="1" value="0">
+            <button class="btn small" id="eNext" title="Un minuto adelante">+1</button>
+            <span class="t" id="eTimeLbl">T = 0 min</span>
+            <select id="eSpeed"><option value="1">1 min/s</option><option value="5" selected>5 min/s</option>
+              <option value="15">15 min/s</option><option value="30">30 min/s</option></select>
+          </div>
+          <div class="eventline" id="eEventLine"></div>
+          <div class="eventsummary" id="eEventSummary"></div>
+          <span class="t" id="eClock" style="display:block;text-align:left;min-width:0;margin-top:4px">—</span>
+        </div>
+
+        <details class="eventadv" id="eAdv">
+          <summary>Ajustes del escenario · abrir para editar</summary>
+          <div class="subgrid">
+            <div class="field"><label>Viento base <span id="eVlbl">15 km/h</span></label>
+              <input id="eV" type="range" min="0" max="140" step="1" value="15"></div>
+            <div class="field"><label>Viento pico <span id="eVPeakLbl">70 km/h</span></label>
+              <input id="eVPeak" type="range" min="0" max="140" step="1" value="70"></div>
+            <div class="field"><label>Viene de <span id="eDlbl">O · 270°</span></label>
+              <input id="eD" type="range" min="0" max="359" step="5" value="270"></div>
+            <div class="field"><label>Empieza a subir en T (min)</label><input id="eWindStart" type="number" step="1" value="0"></div>
+            <div class="field"><label>Subida / bajada (min)</label><input id="eWindRamp" type="number" step="1" min="0" value="20"></div>
+            <div class="field"><label>Meseta (min)</label><input id="eWindHold" type="number" step="1" min="0" value="30"></div>
+            <div class="field"><label>Pico de racha (km/h)</label><input id="eGust" type="number" step="1" min="0" value="70"></div>
+            <div class="field"><label>Ráfaga centrada en T (min)</label><input id="eGustAt" type="number" step="1" value="0"></div>
+            <div class="field"><label>Duración racha (min)</label><input id="eGustDur" type="number" step="1" min="0" value="0"></div>
+            <div class="field"><label>T1/T2 comparan contra</label>
+              <select id="eSignal"><option value="mean" selected>viento medio · criterio base</option>
+                <option value="gust">racha · hipótesis de comparación</option></select></div>
+          </div>
+          <div class="crono">
+            <div class="ttl">⛨ Granizo</div>
+            <label class="chk"><input type="checkbox" id="eHailOn"> Activar señal de <b>granizo</b></label>
+            <div class="lab">
+              <div class="field"><label>Tamaño máximo <span id="eHailMmV">22 mm</span></label>
+                <input id="eHailMm" type="range" min="0" max="60" step="1" value="22"></div>
+              <div class="field"><label>Prob. ≥19 mm <span id="eHailProbV">70 %</span></label>
+                <input id="eHailProb" type="range" min="0" max="100" step="1" value="70"></div>
+              <div class="field"><label>ETA en T=0 <span id="eHailEtaV">90 min</span></label>
+                <input id="eHailEta" type="range" min="0" max="180" step="1" value="90"></div>
+            </div>
+          </div>
+          <div class="crono">
+            <div class="ttl">❄ Nieve</div>
+            <label class="chk"><input type="checkbox" id="eSnowOn"> Activar espesor de <b>nieve</b></label>
+            <div class="lab">
+              <div class="field"><label>Espesor (cm)</label><input id="eSnowCm" type="number" min="0" step="1" value="15"></div>
+              <div class="field"><label>Entra en T (min)</label><input id="eSnowStart" type="number" step="1" value="0"></div>
+              <div class="field"><label>Despeja en T (min)</label><input id="eSnowClear" type="number" step="1" value="120"></div>
+            </div>
+          </div>
+        </details>
       </div>
 
       <div class="timerow" id="epCtl" style="display:none">
@@ -1991,7 +2093,9 @@ LOC.dual=function(thT,ws,az,T1,T2,pmin,full,dtS,holdMin,parkMin,dead,noon){
    de verlo así: se suelta con la racha y NO vuelve cuando amaina — se queda
    ahí hasta que el seguimiento pasa por su ángulo, que puede ser horas. */
 LOC.stepperPasivo=function(cfg){
-  var suelta=false, th=0, side=cfg.pSide, tol=cfg.pTol||1, rel=cfg.pRel, full=cfg.full;
+  var suelta=false,
+      th=(cfg.initialTheta===null||cfg.initialTheta===undefined)?0:+cfg.initialTheta,
+      side=cfg.pSide, tol=cfg.pTol||1, rel=cfg.pRel, full=cfg.full;
   /* `prev` guarda el objetivo del paso anterior para poder detectar el CRUCE.
      Sin él esta máquina reengancha solo por proximidad, y `LOC.pasivo` —que
      resuelve exactamente lo mismo sobre la serie entera— lleva el criterio de
@@ -2012,11 +2116,11 @@ LOC.stepperPasivo=function(cfg){
     // acabar en el mismo angulo que un stow ordenado, por causas distintas, y
     // por eso tampoco comparte su color.
     get mode(){return suelta?'SUELTA':'IDLE';}, get theta(){return th;},
-    step:function(tgt,ws,dtS){
+    step:function(tgt,ws,dtS,sideNow){
       var cruza=(prev!=null&&suelta&&(prev-side)*(tgt-side)<=0);
       if(suelta&&(cruza||Math.abs(tgt-side)<=tol))suelta=false;
       prev=tgt;
-      if(!suelta&&ws>rel)suelta=true;
+      if(!suelta&&ws>rel){ if(sideNow!==null&&sideNow!==undefined)side=+sideNow; suelta=true; }
       if(suelta)th=side;
       else{var d=tgt-th,m=LOC.SLEW*dtS;if(Math.abs(d)>m)d=(d>0?m:-m);
            th=Math.max(-full,Math.min(full,th+d));}
@@ -2787,7 +2891,8 @@ LOC.gumbel=function(maximos){
    siendo los de verdad y no una imitación suelta. */
 LOC.stepper=function(kind,cfg){
   var full=cfg.full, pmin=cfg.pmin, T1=cfg.T1, T2=cfg.T2;
-  var st='IDLE', hold=0, last=0, park=false, parkLeft=0, parkTh=0, parkSg=0, th=0;
+  var st='IDLE', hold=0, last=0, park=false, parkLeft=0, parkTh=0, parkSg=0,
+      th=(cfg.initialTheta===null||cfg.initialTheta===undefined)?0:+cfg.initialTheta;
   var inSec=function(t,sg,m){return sg>0?(t>=pmin+m):(t<=-(pmin+m));};
   var clip=function(t,sg){return sg>0?Math.max(pmin,Math.min(full,t)):Math.max(-full,Math.min(-pmin,t));};
   return {
@@ -2849,6 +2954,241 @@ LOC.stepper=function(kind,cfg){
       return {mode:st,theta:th,orden:nt,ordenEje:ntEje};
     }
   };
+};
+
+/* ═══════════ REPRODUCTOR CANÓNICO DE EVENTOS DE ABANDERAMIENTO ═══════════
+   Un slider temporal que sólo cambia el dibujo es una animación, no una
+   simulación. Este bloque reconstruye SIEMPRE el evento desde T_MIN hasta el
+   minuto pedido con paso interno de 1 s. Por eso ir de T=+80 a T=-5 y volver a
+   +80 da exactamente el mismo estado: no depende de por dónde se haya arrastrado
+   la barra ni del frame-rate del navegador.
+
+   La interfaz de arriba sólo construye `cfg`; aquí no hay DOM. Eso permite
+   ejercitar Viento, Ráfaga, Granizo, Nieve, combinaciones y pasivo sin abrir
+   Chromium, y obliga a que el 3D sea un consumidor del resultado. */
+LOC.EVENT_TMIN=-30;
+LOC.EVENT_TMAX=180;
+
+LOC.eventoPerfil=function(cfg,tMin){
+  cfg=cfg||{};
+  var w0=Math.max(0,+cfg.wind_base_kmh||0), wp=Math.max(0,+cfg.wind_peak_kmh||w0);
+  var ini=isFinite(+cfg.wind_start_min)?+cfg.wind_start_min:0;
+  var ramp=Math.max(0,+cfg.wind_ramp_min||0), hold=Math.max(0,+cfg.wind_hold_min||0);
+  var finSub=ini+ramp, finHold=finSub+hold, finBaja=finHold+ramp;
+  var w=w0;
+  if(tMin>=ini){
+    if(ramp>0&&tMin<finSub)w=w0+(wp-w0)*(tMin-ini)/ramp;
+    else if(tMin<finHold||ramp===0)w=wp;
+    else if(ramp>0&&tMin<finBaja)w=wp+(w0-wp)*(tMin-finHold)/ramp;
+    else w=w0;
+  }
+
+  /* La ráfaga es una señal APARTE. Puede alimentar T1/T2 sólo si el usuario
+     selecciona explícitamente ese criterio; por defecto T1/T2 siguen mirando la
+     media, que es como están declarados. El pasivo sí recibe la ráfaga porque su
+     disparo es carga mecánica. */
+  var gp=Math.max(w,+cfg.gust_peak_kmh||0);
+  var ga=isFinite(+cfg.gust_at_min)?+cfg.gust_at_min:0;
+  var gd=Math.max(0,+cfg.gust_duration_min||0);
+  var gust=w;
+  if(gd>0){
+    var x=Math.abs(tMin-ga)/(gd/2);
+    if(x<=1)gust=Math.max(w,w+(gp-w)*(1-x));
+  }
+
+  /* El ETA de granizo se declara en T=0. Se considera señal viva desde el
+     principio de la ventana hasta 15 min después de la llegada; a partir de ahí
+     empieza el criterio de salida de `granizoPlan` (60 min por defecto). */
+  var hEta=Math.max(0,+cfg.hail_eta0_min||0);
+  var hailRaw=!!cfg.hail_on && tMin<=hEta+15;
+  var hailEta=Math.max(0,hEta-tMin);
+
+  var snow=0;
+  if(cfg.snow_on){
+    var ns=isFinite(+cfg.snow_start_min)?+cfg.snow_start_min:0;
+    var nc=isFinite(+cfg.snow_clear_min)?+cfg.snow_clear_min:120;
+    if(tMin>=ns&&tMin<nc)snow=Math.max(0,+cfg.snow_cm||0);
+  }
+  return {wind_kmh:w,gust_kmh:gust,dir_deg:isFinite(+cfg.wind_dir_deg)?+cfg.wind_dir_deg:270,
+          hail_on:hailRaw,hail_eta_min:hailEta,hail_mm:Math.max(0,+cfg.hail_mm||0),
+          hail_prob_pct:Math.max(0,+cfg.hail_prob_pct||0),snow_cm:snow};
+};
+
+LOC.eventoMarcas=function(cfg){
+  cfg=cfg||{}; var m=[{t:0,k:'T0',label:'T=0'}];
+  var add=function(t,k,l){if(isFinite(+t)&&+t>=LOC.EVENT_TMIN&&+t<=LOC.EVENT_TMAX)m.push({t:+t,k:k,label:l});};
+  if((+cfg.wind_peak_kmh||0)!=(+cfg.wind_base_kmh||0)){
+    add(cfg.wind_start_min,'wind','sube viento');
+    add((+cfg.wind_start_min||0)+(+cfg.wind_ramp_min||0),'wind','pico viento');
+    add((+cfg.wind_start_min||0)+(+cfg.wind_ramp_min||0)+(+cfg.wind_hold_min||0),'wind','empieza a bajar');
+  }
+  if((+cfg.gust_duration_min||0)>0)add(cfg.gust_at_min,'gust','pico racha');
+  if(cfg.hail_on){
+    add(cfg.hail_eta0_min,'hail','llega granizo');
+    add((+cfg.hail_eta0_min||0)+15,'hail','all-clear granizo');
+  }
+  if(cfg.snow_on){
+    add(cfg.snow_start_min,'snow','entra nieve');
+    add(cfg.snow_clear_min,'snow','nieve despejada');
+  }
+  m.sort(function(a,b){return a.t-b.t;});
+  return m;
+};
+
+LOC.simulaEvento=function(cfg){
+  cfg=cfg||{};
+  var tMin=isFinite(+cfg.tmin)?+cfg.tmin:LOC.EVENT_TMIN;
+  var tMax=isFinite(+cfg.tmax)?+cfg.tmax:LOC.EVENT_TMAX;
+  var dt=Math.max(1,Math.round(+cfg.dt_s||1));
+  var latR=(+cfg.lat||0)*LOC.D2R, lon=+cfg.lon||0;
+  var full=Math.abs(+cfg.full||55), gcr=+cfg.gcr||0.397, bt=cfg.bt!==false;
+  var ks=(cfg.strategies&&cfg.strategies.length)?cfg.strategies.slice():['A1','A2','B1','B2'];
+  var n=Math.floor((tMax-tMin)*60/dt)+1, prof=new Array(n), wind=new Float64Array(n),
+      gust=new Float64Array(n);
+  var k,i,t;
+  for(i=0;i<n;i++){
+    t=tMin+i*dt/60; prof[i]=LOC.eventoPerfil(cfg.profile||{},t);
+    wind[i]=prof[i].wind_kmh; gust[i]=prof[i].gust_kmh;
+  }
+
+  /* Próximo cruce de 40 km/h, hacia atrás, para que `granizoPlan` conozca el
+     margen futuro sin buscar O(n) en cada segundo. */
+  var nextW=new Int32Array(n),nextG=new Int32Array(n),nw=-1,ng=-1;
+  for(i=n-1;i>=0;i--){
+    if(wind[i]>=LOC.GRZ.v_prestow)nw=i;
+    if(gust[i]>=LOC.GRZ.racha_cruce)ng=i;
+    nextW[i]=nw; nextG[i]=ng;
+  }
+
+  var when0=new Date((+cfg.origin_utc_ms||Date.now())+tMin*60000);
+  var P0=LOC.sun(when0,latR,lon), tgt0=LOC.theta(P0.el,P0.az,gcr,full,bt);
+  var stow=cfg.stow||{}, lat=stow.lat||LOC.LATENCIA;
+  var cadMed=LOC.cadenaViva(lat), steppers={}, cadOrden={}, ang={BASE:tgt0},
+      modos={BASE:'SEGUIMIENTO'}, orden={BASE:tgt0}, ordenEje={BASE:tgt0},
+      snowPrev={}, hailEver=false,hailClearSec=null;
+
+  ks.forEach(function(S){
+    var c=LOC.cadenaViva(lat); cadOrden[S]=c; snowPrev[S]='SEGUIMIENTO';
+    steppers[S]=LOC.stepper(S[1],{
+      full:full,pmin:+stow.pmin||30,T1:+stow.T1||40/3.6,T2:+stow.T2||60/3.6,
+      holdS:+stow.holdS||0,parkS:+stow.parkS||0,dead:(stow.dead==null?LOC.DEADBAND:+stow.dead),
+      noon:(S[0]==='B'?(+stow.noon||0):0),initialTheta:tgt0,
+      llega:function(o,d){return c.llega(o,d);}
+    });
+    ang[S]=tgt0;modos[S]='IDLE';orden[S]=tgt0;ordenEje[S]=tgt0;
+  });
+  var pas=null;
+  if(cfg.passive){
+    pas=LOC.stepperPasivo({
+      full:full,pSide:+cfg.passive.pSide||-full,pTol:+cfg.passive.pTol||1,
+      pRel:+cfg.passive.pRel||90/3.6,initialTheta:tgt0
+    });
+    ang.PASIVO=tgt0;modos.PASIVO='IDLE';orden.PASIVO=tgt0;ordenEje.PASIVO=tgt0;
+  }
+
+  var frames=[], baseTh=tgt0, lastHail=false;
+  var sig=String(cfg.control_signal||'mean').toLowerCase();
+  for(i=0;i<n;i++){
+    var pr=prof[i], sec=i*dt, rel=tMin+sec/60;
+    var when=new Date((+cfg.origin_utc_ms||Date.now())+rel*60000);
+    var P=LOC.sun(when,latR,lon), tgt=LOC.theta(P.el,P.az,gcr,full,bt);
+    var dB=tgt-baseTh,mx=LOC.SLEW*dt;if(Math.abs(dB)>mx)dB=(dB>0?mx:-mx);
+    baseTh=Math.max(-full,Math.min(full,baseTh+dB));
+    ang.BASE=baseTh;orden.BASE=tgt;ordenEje.BASE=tgt;modos.BASE='SEGUIMIENTO';
+
+    var signalKmh=(sig==='gust')?pr.gust_kmh:pr.wind_kmh;
+    var vVisto=cadMed.ve(signalKmh/3.6,dt);
+    /* El reloj de salida nace sólo si la amenaza LLEGÓ A ACTIVAR protección.
+       Una señal de 16 mm existe meteorológicamente, pero con el gate VDE de
+       19 mm + 30 % no justifica ni stow ni 60 min de hold posterior. */
+    var hailGate=LOC.granizoLiveAmenaza(pr.hail_on,pr.hail_mm,pr.hail_prob_pct);
+    if(hailGate.activa){hailEver=true;hailClearSec=null;}
+    else if(lastHail&&!hailGate.activa&&hailEver)hailClearSec=0;
+    else if(hailEver&&hailClearSec!==null)hailClearSec+=dt;
+    lastHail=hailGate.activa;
+
+    var info={BASE:{fuente:'SEGUIMIENTO',motivo:'referencia sin abanderar',proteccion:'referencia'}};
+    ks.forEach(function(S){
+      var az=(S[0]==='A')?pr.dir_deg:P.azp;
+      var tV=(nextW[i]>=0)?(nextW[i]-i)*dt/60:null;
+      var tR=(nextG[i]>=0)?(nextG[i]-i)*dt/60:null;
+      var hail=LOC.granizoLivePlan({
+        hailOn:pr.hail_on,hailMm:pr.hail_mm,hailProb:pr.hail_prob_pct,tHail:pr.hail_eta_min,
+        minDesdeAviso:(hailEver&&!pr.hail_on&&hailClearSec!==null?hailClearSec/60:null),
+        theta:ang[S],vAhora:pr.wind_kmh,tV40:tV,azViento:pr.dir_deg,
+        rachaAhora:pr.gust_kmh,tRacha:tR,defensa:Math.abs(+cfg.hail_defense_deg||full),
+        preMin:+stow.pmin||30,slew:LOC.SLEW,lat:lat
+      });
+      var ne=LOC.nieveEstado(pr.snow_cm,snowPrev[S]);snowPrev[S]=ne;
+      var snowTarget=(ne==='NIEVE')?LOC.ladoNieve(P.azp,ang[S],+stow.noon||0,full):null;
+      var windActive=vVisto>(+stow.T1||40/3.6), ext=null, fuente='',motivo='';
+
+      if(hail.destino!=null&&hailEver){
+        if(ne==='NIEVE'&&hail.manda!=='viento'){
+          if((hail.destino>0)===(snowTarget>0)){
+            ext={destino:hail.destino,mode:'MULTI_STOW'};
+            fuente='GRANIZO + NIEVE';motivo='las dos amenazas piden el mismo lado';
+          }else{
+            ext={destino:ang[S],mode:'CONFLICT'};
+            fuente='NO MODELADO';motivo='granizo pide '+hail.destino.toFixed(0)+'° y nieve '+snowTarget.toFixed(0)+'°: prioridad no definida';
+          }
+        }else{
+          var hm=(hail.manda==='granizo')?'HAIL_STOW':
+                 (pr.wind_kmh>=LOC.GRZ.v_stow?'FULL_STOW':'PARTIAL_STOW');
+          ext={destino:hail.destino,mode:hm};
+          fuente=(hail.manda==='granizo')?'GRANIZO':'VIENTO × GRANIZO';
+          motivo=hail.motivo;
+        }
+      }else if(ne==='NIEVE'){
+        if(windActive){
+          fuente='VIENTO';motivo='viento tiene prioridad sobre nieve';
+        }else{
+          ext={destino:snowTarget,mode:'SNOW_STOW'};
+          fuente='NIEVE';motivo='espesor '+pr.snow_cm.toFixed(0)+' cm > '+LOC.NIEVE_ON_CM+' cm';
+        }
+      }
+
+      var rr=steppers[S].step(tgt,vVisto,az,dt,ext);
+      ang[S]=rr.theta;modos[S]=rr.mode;orden[S]=rr.orden;ordenEje[S]=rr.ordenEje;
+      if(!fuente){
+        fuente=(rr.mode==='IDLE')?'SEGUIMIENTO':'VIENTO';
+        motivo=(rr.mode==='IDLE')?'sin amenaza activa':rr.mode.replace(/_/g,' ').toLowerCase();
+      }
+      var rem=Math.abs(rr.orden-rr.theta)/Math.max(LOC.SLEW,1e-9)/60;
+      info[S]={fuente:fuente,motivo:motivo,target:rr.orden,remaining_min:rem,
+               proteccion:(rr.mode==='CONFLICT'?'NO MODELADO':
+                 (Math.abs(rr.orden-rr.theta)<=LOC.DEADBAND?'EN POSICIÓN':'EN TRÁNSITO')),
+               hail_case:hail.caso,snow_state:ne};
+    });
+
+    if(pas){
+      var pSideNow=(cfg.passive.mode==='viento')
+        ? ((LOC.ladoEspaldaAlViento(pr.dir_deg)||((+cfg.passive.pSide||-full)<0?-1:1))*full)
+        : null;
+      var rp=pas.step(tgt,pr.gust_kmh/3.6,dt,pSideNow);
+      ang.PASIVO=rp.theta;modos.PASIVO=rp.mode;orden.PASIVO=rp.orden;ordenEje.PASIVO=rp.orden;
+      info.PASIVO={fuente:(rp.mode==='SUELTA'?'PASIVO':'SEGUIMIENTO'),
+        motivo:(rp.mode==='SUELTA'?'fila exterior desembragada por carga de racha':'acoplado'),
+        target:rp.orden,remaining_min:0,proteccion:(rp.mode==='SUELTA'?'SUELTA':'SEGUIMIENTO')};
+    }
+
+    if(Math.abs((rel-Math.round(rel)))<dt/120){
+      var bh=(P.el>0?900*Math.pow(Math.sin(P.el),1.15):0),dh=bh*.16,poa={};
+      poa.BASE=LOC.poa(ang.BASE,P.el,P.az,bh,dh,bh+dh);
+      ks.forEach(function(S){poa[S]=LOC.poa(ang[S],P.el,P.az,bh,dh,bh+dh);});
+      if(pas){
+        var pf=LOC.poa(ang.PASIVO,P.el,P.az,bh,dh,bh+dh), frac=Math.max(0,Math.min(1,+cfg.passive_frac||0));
+        poa.PASIVO=(1-frac)*poa.BASE+frac*pf;
+      }
+      frames.push({t_min:Math.round(rel),iso:when.toISOString(),sun_el:P.el/LOC.D2R,sun_az:P.azp,
+        wind_ms:pr.wind_kmh/3.6,gust_ms:pr.gust_kmh/3.6,wind_dir:pr.dir_deg,
+        hail_eta_min:pr.hail_eta_min,hail_on:pr.hail_on,snow_cm:pr.snow_cm,
+        ang:Object.assign({},ang),modos:Object.assign({},modos),orden:Object.assign({},orden),
+        ordenEje:Object.assign({},ordenEje),poa:poa,info:info});
+    }
+  }
+  return {frames:frames,marks:LOC.eventoMarcas(cfg.profile||{}),tmin:tMin,tmax:tMax,
+          dt_s:dt,control_signal:sig};
 };
 
 /* ── Meteo ── */
@@ -5040,14 +5380,17 @@ function drawEvents(c){
 
    Marco del mundo: x = este, y = arriba, z = −norte. El seguidor canónico
    tiene su tubo en +X local, así que entra girado 90°. */
-var TD=null, TL=null, TPOS=0, PLAY=false, MODO='live';
+var TD=null, TL=null, TPOS=0, PLAY=false, MODO='event';
 var NFILAS=2, PITCH=6.0, BLOQUE=34;
-var MODO_COL={IDLE:0x000000, PARTIAL_STOW:0xfbbd23, FULL_STOW:0xf87272, DESTOW_HOLD:0x9bb0c6, SUELTA:0xa78bfa, HAIL_STOW:0x5aa9ff};
-var MODO_INT={IDLE:0, PARTIAL_STOW:.42, FULL_STOW:.5, DESTOW_HOLD:.3, SUELTA:.45, HAIL_STOW:.52};
+var MODO_COL={IDLE:0x000000, PARTIAL_STOW:0xfbbd23, FULL_STOW:0xf87272, DESTOW_HOLD:0x9bb0c6,
+  SUELTA:0xa78bfa, HAIL_STOW:0x5aa9ff, SNOW_STOW:0xc7d2fe, MULTI_STOW:0x36d399, CONFLICT:0xf472b6};
+var MODO_INT={IDLE:0, PARTIAL_STOW:.42, FULL_STOW:.5, DESTOW_HOLD:.3,
+  SUELTA:.45, HAIL_STOW:.52, SNOW_STOW:.42, MULTI_STOW:.5, CONFLICT:.55};
 var PALA=0x1b3a6b;
 var LAYOUTS='https://imoriana3.github.io/cobertura-zigbee/';
 var ESC=null;     // {kind, bloques[], planta{...}}
-var LIVE=null;    // {t, steppers, base, v, dir}
+var LIVE=null;    // vista del frame actual
+var EVENTO={enabled:true,sim:null,current:null,pos:0,run:false,acc:0,rebuildTimer:null,applyingPreset:false};
 
 function has3D(){return typeof THREE!=='undefined'&&THREE.OrbitControls&&typeof Seguidor!=='undefined';}
 function vivos(){return strategies().concat($('pas').checked?['PASIVO']:[]);}
@@ -5159,7 +5502,7 @@ function init3D(){
       var w=h.clientWidth,hh=h.clientHeight;
       if(w&&(TD.w!==w||TD.h!==hh)){TD.w=w;TD.h=hh;rd.setSize(w,hh,false);cam.aspect=w/hh;cam.updateProjectionMatrix();}
       var dt=Math.min(0.1,((now||performance.now())-last)/1000); last=now||performance.now();
-      if(MODO==='live')liveTick(dt); else if(MODO==='ep')epTick(dt);
+      if(MODO==='live')liveTick(dt); else if(MODO==='event')eventoTick(dt); else if(MODO==='ep')epTick(dt);
       TD.ct.update(); rd.render(sc,cam);})(performance.now());
   }catch(e){TD=null;}
 }
@@ -5922,7 +6265,7 @@ function enCamino(k,ang,orden){
   // que señalar es una maniobra pendiente, no el retardo natural del lazo.
   if(Math.abs(d)<2)return '';
   var seg=Math.abs(d)/LOC.SLEW, txt=(seg>=90?fmt(seg/60,1)+' min':fmt(seg,0)+' s');
-  var parado=(MODO==='live'&&LIVE&&!LIVE.run);
+  var parado=(MODO==='live'&&LIVE&&!LIVE.run)||(MODO==='event'&&!EVENTO.run);
   return ' <span class="sn" style="margin:0;color:var(--warn)">→ ordenado '+
     fmt(orden[k],0)+'° · en camino, '+txt+' a 0,17 °/s'+
     (parado?' · <b>reloj parado</b>':'')+'</span>';
@@ -5934,11 +6277,15 @@ function tiles(ang,modos,poa,poaBase,dpct,orden){
     var p=poa?poa[k]:null, d=(poa&&k!=='BASE')?(p-poaBase):null;
     h+='<div class="tile" style="border-left-color:'+col+'">'+
       '<div class="n"><span class="dot" style="background:'+col+'"></span>'+(k==='BASE'?'Sin abanderar':k)+'</div>'+
-      '<div class="m">'+esc((modos[k]||'IDLE').replace('_',' ').toLowerCase())+' · θ '+fmt(ang[k],1)+'°'+
+      '<div class="m">'+esc((modos[k]||'IDLE').replace(/_/g,' ').toLowerCase())+' · θ '+fmt(ang[k],1)+'°'+
         enCamino(k,ang,orden)+
         (k==='PASIVO'&&LIVE&&LIVE.fracPas!=null
           ? ' <span class="sn" style="margin:0">fila suelta · planta = '+fmt(100*LIVE.fracPas,1)+' % del campo</span>'
           : '')+'</div>'+
+      (LIVE&&LIVE.info&&LIVE.info[k]
+        ? '<div class="d"><b>'+esc(LIVE.info[k].fuente||'')+'</b> · '+esc(LIVE.info[k].proteccion||'')+
+          (LIVE.info[k].remaining_min>0.02?' · faltan '+fmt(LIVE.info[k].remaining_min,1)+' min':'')+
+          '<br><span class="sn" style="margin:0">'+esc(LIVE.info[k].motivo||'')+'</span></div>' : '')+
       (p!=null?'<div class="p">'+fmt(p,0)+' <small>W/m²</small></div>':'')+
       (k==='BASE'?'<div class="d" style="color:var(--muted)">referencia</div>':
         (d!=null?'<div class="d" style="color:'+(d<-1?'var(--err)':(d>1?'var(--ok)':'var(--muted)'))+'">'+
@@ -6295,6 +6642,168 @@ function fechaCorta(d){return d.getUTCDate()+' '+MESES3[d.getUTCMonth()];}
 function fechaISO(d){
   return d.getUTCFullYear()+'-'+('0'+(d.getUTCMonth()+1)).slice(-2)+'-'+('0'+d.getUTCDate()).slice(-2);
 }
+var EVENT_PRESETS={
+  wind_ramp:{v:15,vp:70,ws:0,wr:20,wh:30,g:70,ga:0,gd:0,signal:'mean',hail:false,eta:90,snow:false},
+  gust:{v:25,vp:25,ws:0,wr:0,wh:180,g:95,ga:0,gd:4,signal:'gust',hail:false,eta:90,snow:false},
+  passive:{v:20,vp:20,ws:0,wr:0,wh:180,g:105,ga:0,gd:6,signal:'mean',hail:false,eta:90,snow:false},
+  hail_far:{v:15,vp:15,ws:0,wr:0,wh:180,g:30,ga:0,gd:0,signal:'mean',hail:true,eta:90,snow:false},
+  hail_near:{v:15,vp:15,ws:0,wr:0,wh:180,g:30,ga:0,gd:0,signal:'mean',hail:true,eta:20,snow:false},
+  hail_wind:{v:15,vp:48,ws:10,wr:10,wh:45,g:60,ga:25,gd:10,signal:'mean',hail:true,eta:90,snow:false},
+  snow:{v:10,vp:10,ws:0,wr:0,wh:180,g:18,ga:0,gd:0,signal:'mean',hail:false,eta:90,snow:true,scm:15,ss:0,sc:120},
+  snow_hail:{v:10,vp:10,ws:0,wr:0,wh:180,g:20,ga:0,gd:0,signal:'mean',hail:true,eta:90,snow:true,scm:15,ss:0,sc:120},
+  snow_hail_same:{v:10,vp:10,ws:0,wr:0,wh:180,g:20,ga:0,gd:0,signal:'mean',hail:true,eta:90,snow:true,scm:15,ss:0,sc:120}
+};
+
+function fechaEvento(){
+  var v=$('eDate').value,p=(v||'2023-06-21').split('-');
+  return new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));
+}
+function eventoLbl(){
+  var v=+$('eV').value,d=+$('eD').value,m=+$('eH').value;
+  $('eVlbl').textContent=v+' km/h';$('eVPeakLbl').textContent=(+$('eVPeak').value)+' km/h';
+  $('eDlbl').textContent=compass(d)+' · '+d+'°';$('eHlbl').textContent=hhmm(m);
+}
+
+function eventoCfgUI(){
+  var c=cfgStow(),msPared=fechaEvento().getTime()+(+$('eH').value||0)*60000;
+  var vs=vivos(),control=vs.filter(function(k){return k!=='PASIVO';});
+  return {tmin:LOC.EVENT_TMIN,tmax:LOC.EVENT_TMAX,dt_s:1,
+    origin_utc_ms:U(msPared),lat:+$('lat').value,lon:+$('lon').value,
+    gcr:+$('gcr').value,full:+$('maxang').value,bt:$('bt').checked,
+    strategies:control,control_signal:$('eSignal').value,
+    stow:{lat:c.lat,pmin:c.pmin,T1:c.T1,T2:c.T2,holdS:c.holdS,parkS:c.parkS,dead:c.dead,noon:c.noon},
+    hail_defense_deg:Math.abs(+($('gAng')||{value:55}).value)||55,
+    passive:$('pas').checked?{pRel:(+$('pasV').value)/3.6,pSide:+$('pasL').value,pTol:1,
+      mode:$('pasModo').value}:null,
+    passive_frac:$('pas').checked?LOC.fracExpuesta(nTrk(),filasTrk(),1):0,
+    profile:{wind_base_kmh:+$('eV').value,wind_peak_kmh:+$('eVPeak').value,
+      wind_start_min:+$('eWindStart').value,wind_ramp_min:+$('eWindRamp').value,
+      wind_hold_min:+$('eWindHold').value,wind_dir_deg:+$('eD').value,
+      gust_peak_kmh:+$('eGust').value,gust_at_min:+$('eGustAt').value,
+      gust_duration_min:+$('eGustDur').value,
+      hail_on:$('eHailOn').checked,hail_mm:+$('eHailMm').value,
+      hail_prob_pct:+$('eHailProb').value,hail_eta0_min:+$('eHailEta').value,
+      snow_on:$('eSnowOn').checked,snow_cm:+$('eSnowCm').value,
+      snow_start_min:+$('eSnowStart').value,snow_clear_min:+$('eSnowClear').value}};
+}
+
+function pintaEventPlay(){
+  var b=$('ePlay');if(!b)return;
+  b.textContent=EVENTO.run?'❚❚ Pausa':'▶ Reproducir';
+  b.className='btn small'+(EVENTO.run?'':' acc');
+}
+
+function eventoPintaLinea(){
+  var box=$('eEventLine');if(!box||!EVENTO.sim)return;
+  var sim=EVENTO.sim,marks=sim.marks.slice(),frames=sim.frames;
+  var sig=$('eSignal').value,t1=+$('t1').value,t2=+$('t2').value;
+  var addCruce=function(lim,k,label){
+    for(var q=0;q<frames.length;q++){
+      var v=(sig==='gust'?frames[q].gust_ms:frames[q].wind_ms)*3.6;
+      if(v>lim){marks.push({t:frames[q].t_min,k:k,label:label});return;}
+    }
+  };
+  addCruce(t1,'t1','cruza T1');addCruce(t2,'t2','cruza T2');
+  marks.sort(function(a,b){return a.t-b.t;});
+  var den=sim.tmax-sim.tmin||1,h='';
+  marks.forEach(function(m){
+    var x=100*(m.t-sim.tmin)/den;
+    h+='<span class="mark '+esc(m.k)+'" style="left:'+Math.max(0,Math.min(100,x)).toFixed(2)+'%">'+
+       '<i></i><b>'+esc(m.label)+'<br>T'+(m.t>=0?'+':'')+fmt(m.t,0)+'</b></span>';
+  });
+  h+='<span class="now" id="eEventNow"></span>';box.innerHTML=h;
+}
+
+function eventoResumen(fr){
+  if(!fr)return;
+  var signal=$('eSignal').value==='gust'?'racha':'media';
+  var gate=LOC.granizoLiveAmenaza(fr.hail_on,+$('eHailMm').value,+$('eHailProb').value);
+  $('eHailMmV').textContent=fmt(+$('eHailMm').value,0)+' mm';
+  $('eHailProbV').textContent=fmt(+$('eHailProb').value,0)+' %';
+  $('eHailEtaV').textContent=fmt(fr.hail_eta_min,fr.hail_eta_min<10?1:0)+' min';
+  $('eEventSummary').innerHTML=
+    '<div class="e"><b>Viento '+fmt(fr.wind_ms*3.6,0)+' km/h</b><span>racha '+fmt(fr.gust_ms*3.6,0)+
+      ' · T1/T2 miran '+signal+'</span></div>'+
+    '<div class="e"><b>Granizo '+(gate.activa?'ACTIVO':'—')+'</b><span>'+
+      (fr.hail_on?'ETA '+fmt(fr.hail_eta_min,0)+' min · '+fmt(+$('eHailMm').value,0)+' mm':'sin señal')+'</span></div>'+
+    '<div class="e"><b>Nieve '+fmt(fr.snow_cm,0)+' cm</b><span>'+
+      (fr.snow_cm>LOC.NIEVE_ON_CM?'sobre umbral de entrada':'sin activación')+'</span></div>'+
+    '<div class="e"><b>'+fechaHoraLocal(fr.iso)+'</b><span>dirección '+compass(fr.wind_dir)+' · '+fmt(fr.wind_dir,0)+'°</span></div>';
+}
+
+function eventoAplica(t){
+  if(!EVENTO.sim||!EVENTO.sim.frames.length)return;
+  var sim=EVENTO.sim,tt=Math.max(sim.tmin,Math.min(sim.tmax,Math.round(+t||0)));
+  var ix=Math.max(0,Math.min(sim.frames.length-1,tt-sim.tmin)),fr=sim.frames[ix];
+  EVENTO.pos=fr.t_min;EVENTO.current=fr;
+  $('eTime').value=fr.t_min;
+  $('eTimeLbl').textContent='T '+(fr.t_min>0?'+':fr.t_min<0?'−':'= ')+(fr.t_min?Math.abs(fr.t_min):0)+' min';
+  var now=$('eEventNow');if(now)now.style.left=(100*(fr.t_min-sim.tmin)/(sim.tmax-sim.tmin)).toFixed(2)+'%';
+  $('eClock').textContent=fechaHoraLocal(fr.iso)+' · T '+(fr.t_min>=0?'+':'')+fr.t_min+' min';
+
+  LIVE=LIVE||{};LIVE.run=false;LIVE.ang=fr.ang;LIVE.modos=fr.modos;LIVE.orden=fr.orden;
+  LIVE.ordenEje=fr.ordenEje;LIVE.info=fr.info;LIVE.v=fr.wind_ms;LIVE.gust=fr.gust_ms;
+  LIVE.dir=fr.wind_dir;LIVE.lat=cfgLat();LIVE.fracPas=$('pas').checked?LOC.fracExpuesta(nTrk(),filasTrk(),1):null;
+  if(TD&&ESC){
+    ponSol(fr.sun_el,fr.sun_az,fr.wind_ms,fr.wind_dir);
+    pintaEscena(fr.ang,fr.modos,fr.poa,fr.poa.BASE);
+    tiles(fr.ang,fr.modos,fr.poa,fr.poa.BASE,null,fr.orden);
+  }
+  eventoResumen(fr);pintaEventPlay();
+}
+
+function eventoRebuild(pos){
+  if(!EVENTO.enabled)return;
+  var run=EVENTO.run,old=(pos==null?EVENTO.pos:+pos);
+  EVENTO.sim=LOC.simulaEvento(eventoCfgUI());EVENTO.run=run;EVENTO.acc=0;
+  eventoPintaLinea();eventoAplica(old);
+}
+
+function eventoProgramaRebuild(manual){
+  if(manual&&!EVENTO.applyingPreset)$('ePreset').value='manual';
+  clearTimeout(EVENTO.rebuildTimer);
+  EVENTO.rebuildTimer=setTimeout(function(){eventoRebuild();},100);
+}
+
+function eventoTick(dtReal){
+  if(!EVENTO.enabled)return;
+  if(!EVENTO.sim){eventoRebuild();return;}
+  if(!EVENTO.run)return;
+  EVENTO.acc+=(+dtReal||0)*(+$('eSpeed').value||5);
+  var dm=Math.floor(EVENTO.acc);
+  if(dm>0){
+    EVENTO.acc-=dm;var nxt=EVENTO.pos+dm;
+    if(nxt>=EVENTO.sim.tmax){nxt=EVENTO.sim.tmax;EVENTO.run=false;}
+    eventoAplica(nxt);
+  }
+}
+
+function aplicaPresetEvento(k){
+  if(k==='manual'){eventoRebuild(0);return;}
+  var p=EVENT_PRESETS[k];if(!p)return;
+  EVENTO.applyingPreset=true;
+  $('eV').value=p.v;$('eVPeak').value=p.vp;$('eWindStart').value=p.ws;
+  $('eWindRamp').value=p.wr;$('eWindHold').value=p.wh;$('eGust').value=p.g;
+  $('eGustAt').value=p.ga;$('eGustDur').value=p.gd;$('eSignal').value=p.signal;
+  $('eHailOn').checked=!!p.hail;$('eHailMm').value=22;$('eHailProb').value=70;$('eHailEta').value=p.eta;
+  $('eSnowOn').checked=!!p.snow;$('eSnowCm').value=(p.scm==null?15:p.scm);
+  $('eSnowStart').value=(p.ss==null?0:p.ss);$('eSnowClear').value=(p.sc==null?120:p.sc);
+  if(k==='passive'){$('pas').checked=true;$('pasBox').style.display='';}
+  if(k==='snow_hail'||k==='snow_hail_same'){
+    var msPared=fechaEvento().getTime()+(+$('eH').value||0)*60000;
+    var P=LOC.sun(new Date(U(msPared)),(+$('lat').value||0)*LOC.D2R,+$('lon').value||0);
+    var tgt=LOC.theta(P.el,P.az,+$('gcr').value,+$('maxang').value,$('bt').checked);
+    var snowSide=LOC.ladoNieve(P.azp,tgt,+$('noon').value,+$('maxang').value)>0?1:-1;
+    /* Los nombres del preset expresan el RESULTADO buscado. El signo del granizo
+       sale del rumbo con `ladoEspaldaAlViento`, así que aquí se elige el lado
+       que debe PEDIR el granizo, no se vuelve a invertir mentalmente el viento.
+       El banco encontró la primera versión exactamente al revés. */
+    var hailSide=(k==='snow_hail')?snowSide:-snowSide;
+    $('eD').value=(hailSide>0?270:90);
+  }
+  EVENTO.applyingPreset=false;eventoLbl();eventoRebuild(0);
+}
+
 function liveLbl(){
   var v=+$('lV').value,d=+$('lD').value,m=+$('lH').value;
   $('lVlbl').textContent=v+' km/h';
@@ -6723,35 +7232,43 @@ async function montaEscena(){
   // planta real, y su estado tiene que aplicarse a la escena recién montada.
   bandasUI();
   if(MODO==='live'){liveInit();liveTick(0.001);}
+  else if(MODO==='event'){EVENTO.enabled=true;eventoRebuild(EVENTO.pos);}
   else if(TL)update3D(TPOS);
 }
 function setModo(m){
   if(m==='ep'&&!(REP&&REP.timeline)){
     $('c3note').innerHTML='<b style="color:var(--warn)">Todavía no hay episodio</b>: pulsa '+
-      '<b>Simular el año</b> y vuelve. Mientras tanto, el modo en vivo no necesita nada.';
+      '<b>Simular el año</b> y vuelve. Evento y En vivo no necesitan un año previo.';
     return;
   }
-  MODO=m;
+  MODO=m;EVENTO.enabled=(m==='event');
+  if(m!=='event')EVENTO.run=false;
+  $('mEvent').className='btn small'+(m==='event'?' acc':'');
   $('mLive').className='btn small'+(m==='live'?' acc':'');
   $('mEp').className='btn small'+(m==='ep'?' acc':'');
+  $('eventCtl').style.display=(m==='event')?'':'none';
   $('liveCtl').style.display=(m==='live')?'':'none';
   $('epCtl').style.display=(m==='ep')?'':'none';
-  if(m==='live'){
+
+  if(m==='event'){
+    eventoLbl();eventoRebuild(EVENTO.pos);
+    $('c3hint').textContent=(ESC&&ESC.kind==='planta')?ESC.info:'evento · slider minutal · motor a 1 s';
+    $('c3note').innerHTML='El <b>slider T−30…T+180</b> reconstruye el evento desde el principio a '+
+      '<b>paso interno de 1 s</b>: arrastrar hacia atrás y volver al mismo minuto da el mismo estado. '+
+      'Los presets cubren viento, racha, granizo, nieve, combinaciones y pasivo. Las tarjetas dicen '+
+      '<b>quién manda</b>, consigna, ejecutado, tiempo restante y si la posición se ha alcanzado. '+
+      'Cuando granizo y nieve piden lados opuestos sale <b>NO MODELADO</b>: no se inventa una prioridad.';
+  }else if(m==='live'){
     liveInit();
     $('c3hint').textContent=(ESC&&ESC.kind==='planta')?ESC.info:'viento a mano · el seguidor a 0,17 °/s';
-    $('c3note').innerHTML='Sube el viento y mira: por encima de <b>'+fmt(+$('t1').value,0)+' km/h</b> '+
-      'entran en parcial y por encima de <b>'+fmt(+$('t2').value,0)+'</b> se abanderan del todo. El eje '+
-      'gira a <b>0,17 °/s</b>, así que una maniobra a ±55° tarda minutos: se ve la rampa, no un salto. '+
-      'La POA de este modo es de <b>cielo claro</b> —no hay meteo detrás— y sirve para comparar los '+
-      'casos entre sí en el instante que elijas, no para sacar un número anual: para eso está el otro modo. '+
-      'Debajo puedes inyectar <b>granizo sintético</b>: no abre otra escena; toma el mando de estos mismos trackers.';
-  }
-  else{
+    $('c3note').innerHTML='Laboratorio fino: mueve viento, rumbo y hora directamente. Aquí se ven la '+
+      '<b>media, muestreo, sondeo, arranque y slew</b> a la resolución del reloj del navegador. '+
+      'Se conserva aparte del modo Evento porque sirve para medir retardos sub-minuto y fases de rejilla.';
+  }else{
     PLAY=false;$('play').textContent='▶ Reproducir';EPACC=0;build3D();
     $('c3note').innerHTML='Ventana <b>común</b> a todos los casos: el mismo viento y el mismo sol '+
       'para todos, y un θ por estrategia. La barra de cada bloque es su <b>POA en ese instante</b> y '+
-      'el fantasma gris la del seguidor sin abanderar. La pala se tiñe según el modo (ámbar parcial, '+
-      'rojo total, gris el hold de histéresis).';
+      'el fantasma gris la del seguidor sin abanderar. La pala se tiñe según el modo.';
   }
 }
 
@@ -6810,7 +7327,7 @@ function bandasUI(){
       ESC.bandaKs.length + ' estrategias</b>: es la misma planta pintada ' +
       ESC.bandaKs.length + ' veces sobre su geometría, para carearlas sobre el terreno real'
     : '· ahora mismo la planta entera se mueve con <b>una</b> estrategia (la del selector de abajo)';
-  if(REP&&TL)update3D(TPOS); else if(MODO==='live')liveTick(0.001);
+  if(REP&&TL&&MODO==='ep')update3D(TPOS); else if(MODO==='live')liveTick(0.001); else if(MODO==='event')eventoAplica(EVENTO.pos);
 }
 $('bandas').addEventListener('change',bandasUI);
 $('careoBtn').onclick=careo;
@@ -6859,6 +7376,7 @@ $('tpos').oninput=function(){if(PLAY)playToggle();update3D(+this.value);};
    y la única forma de regresar al episodio sería cambiar de modo. */
 $('tprev').onclick=function(){if(PLAY)playToggle();correVentana(-1);};
 $('tnext').onclick=function(){if(PLAY)playToggle();correVentana(1);};
+$('mEvent').onclick=function(){setModo('event');};
 $('mLive').onclick=function(){setModo('live');};
 $('mEp').onclick=function(){setModo('ep');};
 $('escena').onchange=function(){montaEscena();saveCfg();};
@@ -6873,6 +7391,30 @@ $('lPlay').onclick=function(){
   if(!LIVE)liveInit();
   LIVE.run=!LIVE.run; pintaPlay();
 };
+// Evento: controles propios, sin tocar el laboratorio En vivo.
+['eH','eDate'].forEach(function(id){$(id).addEventListener('input',function(){eventoLbl();eventoProgramaRebuild(false);});});
+$('eDate').addEventListener('change',function(){eventoLbl();eventoProgramaRebuild(false);});
+var EVENT_INPUTS=['eV','eVPeak','eD','eWindStart','eWindRamp','eWindHold','eGust','eGustAt','eGustDur',
+  'eSignal','eHailOn','eHailMm','eHailProb','eHailEta','eSnowOn','eSnowCm','eSnowStart','eSnowClear'];
+EVENT_INPUTS.forEach(function(id){
+  var e=$(id);if(!e)return;
+  e.addEventListener('input',function(){eventoLbl();eventoProgramaRebuild(true);});
+  e.addEventListener('change',function(){eventoLbl();eventoProgramaRebuild(true);});
+});
+$('ePreset').addEventListener('change',function(){aplicaPresetEvento(this.value);});
+$('eTime').addEventListener('input',function(){EVENTO.run=false;EVENTO.acc=0;eventoAplica(+this.value);});
+$('ePrev').onclick=function(){EVENTO.run=false;eventoAplica(EVENTO.pos-1);};
+$('eNext').onclick=function(){EVENTO.run=false;eventoAplica(EVENTO.pos+1);};
+$('ePlay').onclick=function(){
+  if(!EVENTO.sim)eventoRebuild();
+  if(EVENTO.pos>=EVENTO.sim.tmax)eventoAplica(EVENTO.sim.tmin);
+  EVENTO.run=!EVENTO.run;EVENTO.acc=0;pintaEventPlay();
+};
+var EVENT_CORE_IDS=['lat','lon','t1','t2','pmin','hold','park','noon','maxang','gcr','bt','pasModo'];
+EVENT_CORE_IDS.forEach(function(id){
+  var e=$(id);if(!e)return;
+  e.addEventListener('change',function(){if(MODO==='event')eventoProgramaRebuild(false);});
+});
 $('gadd').onclick=function(){addGust($('gpreset').value);};
 $('pas').onchange=function(){
   $('pasBox').style.display=this.checked?'':'none'; saveCfg(); montaEscena();};
@@ -6898,6 +7440,7 @@ function latUI(){
       'puede no cruzar el umbral nunca. Por eso se <b>mide</b> y no se suma.'
     : '';
   if(MODO==='live'){liveInit();liveTick(0.001);}
+  else if(MODO==='event')eventoRebuild(EVENTO.pos);
   pintaCrono();
 }
 $('lat_on').onchange=function(){saveCfg();latUI();};
@@ -6926,7 +7469,9 @@ $('pasModo').addEventListener('change',function(){saveCfg();pasModoUI();});
 ['nTrk','filasTrk'].forEach(function(i){
   $(i).addEventListener('change',function(){saveCfg();denomPas();montaEscena();});});
 ['pasV','pasL'].forEach(function(i){
-  $(i).addEventListener('change',function(){saveCfg();if(MODO==='live')liveTick(0.001);});});
+  $(i).addEventListener('change',function(){
+    saveCfg();if(MODO==='live')liveTick(0.001);else if(MODO==='event')eventoRebuild(EVENTO.pos);
+  });});
 $('gpreset').onchange=function(){if(this.value){addGust(this.value);this.value='';}};
 ['wgust','wcyc'].forEach(function(i){$(i).addEventListener('change',saveCfg);});
 $('wbase').addEventListener('change',function(){saveCfg();});
@@ -7593,12 +8138,13 @@ $('tabViento').onclick = function () { gTab('viento'); };
 $('tabGranizo').onclick = function () { gTab('granizo'); };
 $('tabNieve').onclick = function () { gTab('nieve'); };
 $('xToLive').onclick=function(){
-  $('lHailOn').checked=true;
-  $('lHailMm').value=Math.max(22,10*((LOC.VDE&&LOC.VDE.umbral_tamano_granizo_cm)||1.9));
-  $('lHailProb').value=Math.max(70,(LOC.VDE&&LOC.VDE.umbral_probabilidad_pct)||30);
-  $('lHailEta').value=$('xHail').value;
-  $('lV').value=$('xVnow').value; $('lD').value=$('xAz').value;
-  gTab('viento'); setModo('live'); liveInit(); hailLivePinta(); liveTick(0.001);
+  $('eHailOn').checked=true;
+  $('eHailMm').value=Math.max(22,10*((LOC.VDE&&LOC.VDE.umbral_tamano_granizo_cm)||1.9));
+  $('eHailProb').value=Math.max(70,(LOC.VDE&&LOC.VDE.umbral_probabilidad_pct)||30);
+  $('eHailEta').value=$('xHail').value;
+  $('eV').value=$('xVnow').value;$('eVPeak').value=$('xVnow').value;$('eD').value=$('xAz').value;
+  $('ePreset').value='manual';
+  gTab('viento');setModo('event');eventoRebuild(0);
   var c=$('cv3dCard'); if(c&&c.scrollIntoView)c.scrollIntoView({behavior:'smooth',block:'start'});
 };
 
