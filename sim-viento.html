@@ -589,6 +589,8 @@
                 <input id="eHailProb" type="range" min="0" max="100" step="1" value="70"></div>
               <div class="field"><label>ETA en T=0 <span id="eHailEtaV">90 min</span></label>
                 <input id="eHailEta" type="range" min="0" max="180" step="1" value="90"></div>
+              <div class="field"><label>Iniciar defensa cuando ETA ≤ <span id="eHailLeadV">60 min</span></label>
+                <input id="eHailLead" type="range" min="0" max="180" step="1" value="60"></div>
             </div>
           </div>
           <div class="crono">
@@ -3047,7 +3049,8 @@ LOC.eventoMarcas=function(cfg){
   }
   if((+cfg.gust_duration_min||0)>0)add(cfg.gust_at_min,'gust','pico racha');
   if(cfg.hail_on){
-    add((+cfg.hail_eta0_min||0)-LOC.GRZ.hail_min,'hail','inicia defensa granizo');
+    var lead=isFinite(+cfg.hail_lead_min)?Math.max(0,+cfg.hail_lead_min):LOC.GRZ.hail_min;
+    add((+cfg.hail_eta0_min||0)-lead,'hail','inicia defensa granizo');
     add(cfg.hail_eta0_min,'hail','llega granizo');
     add((+cfg.hail_eta0_min||0)+15,'hail','all-clear granizo');
   }
@@ -3130,7 +3133,9 @@ LOC.simulaEvento=function(cfg){
        y se prepara, pero el tracker sigue produciendo. La defensa arranca al
        entrar en la ventana de 60 min; ahí se congela el lado elegido para que
        al segundo siguiente (ETA 59:59) el caso reactivo no dé media vuelta. */
-    var hailReady=hailGate.activa&&pr.hail_eta_min<=LOC.GRZ.hail_min;
+    var hailLead=isFinite(+((cfg.profile||{}).hail_lead_min))?
+      Math.max(0,+cfg.profile.hail_lead_min):LOC.GRZ.hail_min;
+    var hailReady=hailGate.activa&&pr.hail_eta_min<=hailLead;
     if(hailReady){hailEver=true;hailClearSec=null;}
     else if(lastHail&&!hailGate.activa&&hailEver)hailClearSec=0;
     else if(hailEver&&hailClearSec!==null)hailClearSec+=dt;
@@ -3141,12 +3146,13 @@ LOC.simulaEvento=function(cfg){
       var az=(S[0]==='A')?pr.dir_deg:P.azp;
       var tV=(nextW[i]>=0)?(nextW[i]-i)*dt/60:null;
       var tR=(nextG[i]>=0)?(nextG[i]-i)*dt/60:null;
+      var hailU={};for(var hu in LOC.GRZ)hailU[hu]=LOC.GRZ[hu];hailU.hail_min=hailLead;
       var hail=LOC.granizoLivePlan({
         hailOn:pr.hail_on,hailMm:pr.hail_mm,hailProb:pr.hail_prob_pct,tHail:pr.hail_eta_min,
         minDesdeAviso:(hailEver&&!pr.hail_on&&hailClearSec!==null?hailClearSec/60:null),
         theta:ang[S],vAhora:pr.wind_kmh,tV40:tV,azViento:pr.dir_deg,
         rachaAhora:pr.gust_kmh,tRacha:tR,defensa:Math.abs(+cfg.hail_defense_deg||full),
-        preMin:+stow.pmin||30,slew:LOC.SLEW,lat:lat
+        preMin:+stow.pmin||30,slew:LOC.SLEW,lat:lat,umbrales:hailU
       });
       var ne=LOC.nieveEstado(pr.snow_cm,snowPrev[S]);snowPrev[S]=ne;
       var snowTarget=(ne==='NIEVE')?LOC.ladoNieve(P.azp,ang[S],+stow.noon||0,full):null;
@@ -3185,7 +3191,7 @@ LOC.simulaEvento=function(cfg){
       if(!fuente){
         if(hailGate.activa&&!hailEver&&rr.mode==='IDLE'){
           fuente='VIGILANCIA GRANIZO';
-          motivo='ETA '+pr.hail_eta_min.toFixed(0)+' min > '+LOC.GRZ.hail_min+
+          motivo='ETA '+pr.hail_eta_min.toFixed(0)+' min > '+hailLead+
                  ' min: señal severa, pero aún sin orden de defensa';
         }else{
           fuente=(rr.mode==='IDLE')?'SEGUIMIENTO':'VIENTO';
@@ -6320,7 +6326,7 @@ function actualizaMeteo3D(fr){
         (fr.hail_eta_min<=0?'ENCIMA':(fr.hail_defense_active?'DEFENSA ACTIVA':'VIGILANCIA'));
       TD.hailHud.innerHTML='<b>GRANIZO · '+estado+'</b><br>'+
         fmt(+$('eHailMm').value,0)+' mm · ETA '+fmt(fr.hail_eta_min,0)+' min'+
-        (!fr.hail_defense_active&&severe?'<br>sin orden hasta ETA ≤ '+LOC.GRZ.hail_min+' min':'');
+        (!fr.hail_defense_active&&severe?'<br>sin orden hasta ETA ≤ '+fmt(+$('eHailLead').value,0)+' min':'');
     }
   }
   if(TD.hailFx){
@@ -6769,6 +6775,7 @@ function eventoCfgUI(){
       gust_duration_min:+$('eGustDur').value,
       hail_on:$('eHailOn').checked,hail_mm:+$('eHailMm').value,
       hail_prob_pct:+$('eHailProb').value,hail_eta0_min:+$('eHailEta').value,
+      hail_lead_min:+$('eHailLead').value,
       snow_on:$('eSnowOn').checked,snow_cm:+$('eSnowCm').value,
       snow_start_min:+$('eSnowStart').value,snow_clear_min:+$('eSnowClear').value}};
 }
@@ -6807,6 +6814,7 @@ function eventoResumen(fr){
   $('eHailMmV').textContent=fmt(+$('eHailMm').value,0)+' mm';
   $('eHailProbV').textContent=fmt(+$('eHailProb').value,0)+' %';
   $('eHailEtaV').textContent=fmt(fr.hail_eta_min,fr.hail_eta_min<10?1:0)+' min';
+  $('eHailLeadV').textContent=fmt(+$('eHailLead').value,0)+' min';
   var hEstado=!gate.activa?'—':(fr.hail_eta_min<=0?'ENCIMA':(fr.hail_defense_active?'DEFENSA ACTIVA':'VIGILANCIA'));
   var hacia=(((+fr.wind_dir||0)+180)%360+360)%360;
   $('eEventSummary').innerHTML=
@@ -6879,6 +6887,7 @@ function aplicaPresetEvento(k){
   $('eWindRamp').value=p.wr;$('eWindHold').value=p.wh;$('eGust').value=p.g;
   $('eGustAt').value=p.ga;$('eGustDur').value=p.gd;$('eSignal').value=p.signal;
   $('eHailOn').checked=!!p.hail;$('eHailMm').value=22;$('eHailProb').value=70;$('eHailEta').value=p.eta;
+  $('eHailLead').value=(p.hlead==null?60:p.hlead);
   $('eSnowOn').checked=!!p.snow;$('eSnowCm').value=(p.scm==null?15:p.scm);
   $('eSnowStart').value=(p.ss==null?0:p.ss);$('eSnowClear').value=(p.sc==null?120:p.sc);
   if(k==='passive'){$('pas').checked=true;$('pasBox').style.display='';}
@@ -7488,7 +7497,7 @@ $('lPlay').onclick=function(){
 ['eH','eDate'].forEach(function(id){$(id).addEventListener('input',function(){eventoLbl();eventoProgramaRebuild(false);});});
 $('eDate').addEventListener('change',function(){eventoLbl();eventoProgramaRebuild(false);});
 var EVENT_INPUTS=['eV','eVPeak','eD','eWindStart','eWindRamp','eWindHold','eGust','eGustAt','eGustDur',
-  'eSignal','eHailOn','eHailMm','eHailProb','eHailEta','eSnowOn','eSnowCm','eSnowStart','eSnowClear'];
+  'eSignal','eHailOn','eHailMm','eHailProb','eHailEta','eHailLead','eSnowOn','eSnowCm','eSnowStart','eSnowClear'];
 EVENT_INPUTS.forEach(function(id){
   var e=$(id);if(!e)return;
   e.addEventListener('input',function(){eventoLbl();eventoProgramaRebuild(true);});
