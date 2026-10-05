@@ -6,6 +6,7 @@
 //
 //   node tests/test_generador_inclemencias.js
 const { chromium } = require('playwright');
+const fs = require('fs');
 const { EXEC } = require('./pw_navegador.js');
 const BASE = process.env.BASE_URL || 'http://localhost:8099';
 let ok=0,ko=0;
@@ -113,22 +114,33 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('al terminar habilita export JSON y CSV',!ui.jsonOff&&!ui.csvOff);
 
   // "Ver" carga exactamente el caso en el simulador.
+  await page.fill('#t1','77');   // mutamos el contexto después de la batería
   await page.click('#incTable tbody tr:nth-child(8) .incSee');
   const visto=await page.evaluate(()=>{
     const c=INC.results[7].case,p=c.profile;
     return {tag:c.tag,preset:ePreset.value,v:+eV.value,vp:+eVPeak.value,dir:+eD.value,
       hail:eHailOn.checked,eta:+eHailEta.value,lead:+eHailLead.value,snow:eSnowOn.checked,
+      t1:+t1.value,t1Banco:INC.baseCfg.stow.T1*3.6,
       sim:!!(EVENTO.sim&&EVENTO.sim.frames.length===211)};
   });
   check('«Ver» carga el caso exacto en la escena y lo vuelve a simular',
     visto.preset==='manual'&&visto.sim&&visto.tag==='hail_watch'&&visto.hail,
     JSON.stringify(visto));
+  check('«Ver» restaura también el contexto físico de la batería',
+    Math.abs(visto.t1-visto.t1Banco)<1e-9&&visto.t1!==77,JSON.stringify(visto));
 
   // Los dos exports deben producir descargas reales.
   const djson=page.waitForEvent('download');await page.click('#incJson');const dj=await djson;
   const dcsv=page.waitForEvent('download');await page.click('#incCsv');const dc=await dcsv;
   check('exporta JSON reproducible',/inclemencias-2601001\.json$/.test(dj.suggestedFilename()),dj.suggestedFilename());
   check('exporta CSV de resultados',/inclemencias-2601001\.csv$/.test(dc.suggestedFilename()),dc.suggestedFilename());
+  const jp=await dj.path(),cp=await dc.path();
+  const jj=JSON.parse(fs.readFileSync(jp,'utf8')),cc=fs.readFileSync(cp,'utf8').trim().split(/\r?\n/);
+  check('el JSON guarda seed, contexto y configuración base',
+    jj.schema==='factiun-inclemencias-v1'&&jj.options.seed===2601001&&jj.context&&jj.base_config&&jj.results.length===15,
+    JSON.stringify({schema:jj.schema,options:jj.options,context:jj.context,n:jj.results&&jj.results.length}));
+  check('el CSV contiene cabecera + los 15 resultados',
+    cc.length===16&&/failed_checks/.test(cc[0]),'líneas '+cc.length);
 
   check('la ficha no lanza errores JS',errores.length===0,errores.join(' | '));
   await browser.close();
