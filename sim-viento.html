@@ -117,6 +117,21 @@
   .timerow input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}
   .timerow .t{font-family:var(--mono);font-size:.9rem;color:var(--accent);min-width:120px;text-align:right}
   .timerow select{background:var(--bg2);border:1px solid var(--line2);color:var(--tx);border-radius:8px;padding:6px 8px;font:inherit;font-size:.8rem}
+  .eventmaster{margin-top:10px;background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:11px 12px}
+  .eventmaster .top{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,1fr);gap:9px;align-items:end}
+  .eventline{height:48px;position:relative;margin:7px 6px 2px;border-top:2px solid var(--line2)}
+  .eventline .mark{position:absolute;top:-5px;transform:translateX(-50%);min-width:8px;text-align:center}
+  .eventline .mark i{display:block;width:9px;height:9px;border-radius:50%;background:var(--tx2);margin:0 auto 3px;border:2px solid var(--bg2)}
+  .eventline .mark b{display:block;font-family:var(--mono);font-size:.56rem;color:var(--muted);white-space:nowrap;font-weight:500}
+  .eventline .now{position:absolute;top:-9px;bottom:0;width:2px;background:var(--accent);transform:translateX(-50%);pointer-events:none}
+  .eventsummary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:8px}
+  .eventsummary .e{border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0}
+  .eventsummary .e b{display:block;font-size:.78rem}
+  .eventsummary .e span{display:block;color:var(--muted);font-size:.7rem;white-space:normal}
+  .eventadv{margin-top:9px;border-top:1px solid var(--line);padding-top:8px}
+  .eventadv summary{cursor:pointer;color:var(--tx2);font-family:var(--mono);font-size:.7rem}
+  .eventadv .subgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:9px}
+  @media(max-width:640px){.eventmaster .top{grid-template-columns:1fr}.eventline .mark b{font-size:.5rem}.eventsummary{grid-template-columns:1fr 1fr}}
   /* El cronómetro. Monoespaciado y alineado a la derecha porque lo que se lee
      es una COLUMNA DE TIEMPOS: con proporcional los minutos no cuadran y hay
      que buscarlos uno a uno. */
@@ -437,39 +452,98 @@
       <!-- EN VIVO: el viento a mano. Es lo que convierte la escena en algo que
            se puede toquetear sin esperar a que termine un año entero. -->
       <div id="liveCtl">
-        <div class="timerow">
-          <button class="btn small acc" id="lPlay">▶ Correr el tiempo</button>
-          <span class="t" id="lClock">—</span>
-          <select id="lSpeed"><option value="1">×1</option><option value="60">×60</option><option value="300" selected>×300</option>
-            <option value="900">×900</option><option value="3600">×3600</option></select>
-        </div>
-        <div class="lab" style="margin-top:9px">
-          <div class="field"><label>Viento <span id="lVlbl">0 km/h</span></label>
-            <input id="lV" type="range" min="0" max="140" step="1" value="0"></div>
-          <div class="field"><label>Viene de <span id="lDlbl">O · 270°</span></label>
-            <input id="lD" type="range" min="0" max="359" step="5" value="270"></div>
-          <div class="field"><label>Hora <span id="lHlbl">12:00</span></label>
-            <input id="lH" type="range" min="0" max="1439" step="1" value="720"></div>
-          <div class="field"><label>Fecha</label>
-            <input id="lDate" type="date" value="2023-06-21"></div>
-        </div>
-        <div class="crono" id="lHailBox">
-          <div class="ttl">⛨ Granizo sintético · sobre ESTA misma escena</div>
-          <label class="chk"><input type="checkbox" id="lHailOn">
-            Inyectar amenaza de <b>granizo</b> en el control del abanderamiento</label>
-          <div class="lab">
-            <div class="field"><label>Tamaño máximo <span id="lHailMmV">22 mm</span></label>
-              <input id="lHailMm" type="range" min="0" max="60" step="1" value="22"></div>
-            <div class="field"><label>Prob. ≥19 mm <span id="lHailProbV">70 %</span></label>
-              <input id="lHailProb" type="range" min="0" max="100" step="1" value="70"></div>
-            <div class="field"><label>Puede llegar en <span id="lHailEtaV">90 min</span></label>
-              <input id="lHailEta" type="range" min="0" max="180" step="1" value="90"></div>
+        <div class="eventmaster">
+          <div class="top">
+            <div class="field" style="margin:0"><label>Escenario</label>
+              <select id="lPreset">
+                <option value="manual">Manual · tú defines las amenazas</option>
+                <optgroup label="Viento">
+                  <option value="wind_ramp">Viento creciente · cruza T1 y T2</option>
+                  <option value="gust">Ráfaga corta · 95 km/h</option>
+                  <option value="passive">Pasivo · racha de desembrague</option>
+                </optgroup>
+                <optgroup label="Granizo">
+                  <option value="hail_far">Granizo · 22 mm · ETA 90 min</option>
+                  <option value="hail_near">Granizo inminente · ETA 20 min</option>
+                  <option value="hail_wind">Granizo + viento contrario</option>
+                </optgroup>
+                <optgroup label="Nieve">
+                  <option value="snow">Nieve · 15 cm</option>
+                  <option value="snow_hail">Nieve + granizo · arbitraje</option>
+                </optgroup>
+              </select></div>
+            <div class="two">
+              <div class="field" style="margin:0"><label>T=0 · hora <span id="lHlbl">12:00</span></label>
+                <input id="lH" type="range" min="0" max="1439" step="1" value="720"></div>
+              <div class="field" style="margin:0"><label>T=0 · fecha</label>
+                <input id="lDate" type="date" value="2023-06-21"></div>
+            </div>
           </div>
-          <p class="note" id="lHailStatus" style="margin-bottom:0">
-            Apagado. Al activarlo, la amenaza entra por la <b>misma NCU→TCU</b> y mueve
-            el <b>mismo eje</b> a 0,17 °/s; no es otra animación.
-          </p>
+          <div class="timerow">
+            <button class="btn small acc" id="lPlay">▶ Reproducir</button>
+            <button class="btn small" id="lPrev" title="Un minuto atrás">−1</button>
+            <input type="range" id="lTime" min="-30" max="180" step="1" value="0">
+            <button class="btn small" id="lNext" title="Un minuto adelante">+1</button>
+            <span class="t" id="lTimeLbl">T = 0 min</span>
+            <select id="lEventSpeed"><option value="1">1 min/s</option><option value="5" selected>5 min/s</option>
+              <option value="15">15 min/s</option><option value="30">30 min/s</option></select>
+            <select id="lSpeed" style="display:none"><option value="300" selected>×300</option></select>
+          </div>
+          <div class="eventline" id="lEventLine"></div>
+          <div class="eventsummary" id="lEventSummary"></div>
+          <span class="t" id="lClock" style="display:block;text-align:left;min-width:0;margin-top:4px">—</span>
         </div>
+
+        <details class="eventadv" id="lEventAdv">
+          <summary>Ajustes del escenario · abrir para editar</summary>
+          <div class="subgrid">
+            <div class="field"><label>Viento base <span id="lVlbl">15 km/h</span></label>
+              <input id="lV" type="range" min="0" max="140" step="1" value="15"></div>
+            <div class="field"><label>Viento pico <span id="lVPeakLbl">65 km/h</span></label>
+              <input id="lVPeak" type="range" min="0" max="140" step="1" value="65"></div>
+            <div class="field"><label>Viene de <span id="lDlbl">O · 270°</span></label>
+              <input id="lD" type="range" min="0" max="359" step="5" value="270"></div>
+            <div class="field"><label>Empieza a subir en T (min)</label>
+              <input id="lWindStart" type="number" step="1" value="0"></div>
+            <div class="field"><label>Subida / bajada (min)</label>
+              <input id="lWindRamp" type="number" step="1" min="0" value="20"></div>
+            <div class="field"><label>Meseta (min)</label>
+              <input id="lWindHold" type="number" step="1" min="0" value="30"></div>
+            <div class="field"><label>Pico de racha (km/h)</label>
+              <input id="lGust" type="number" step="1" min="0" value="15"></div>
+            <div class="field"><label>Racha centrada en T (min)</label>
+              <input id="lGustAt" type="number" step="1" value="0"></div>
+            <div class="field"><label>Duración racha (min)</label>
+              <input id="lGustDur" type="number" step="1" min="0" value="0"></div>
+            <div class="field"><label>T1/T2 comparan contra</label>
+              <select id="lSignal"><option value="mean" selected>viento medio · criterio base</option>
+                <option value="gust">racha · hipótesis de comparación</option></select></div>
+          </div>
+
+          <div class="crono" id="lHailBox">
+            <div class="ttl">⛨ Granizo</div>
+            <label class="chk"><input type="checkbox" id="lHailOn"> Activar señal de <b>granizo</b></label>
+            <div class="lab">
+              <div class="field"><label>Tamaño máximo <span id="lHailMmV">22 mm</span></label>
+                <input id="lHailMm" type="range" min="0" max="60" step="1" value="22"></div>
+              <div class="field"><label>Prob. ≥19 mm <span id="lHailProbV">70 %</span></label>
+                <input id="lHailProb" type="range" min="0" max="100" step="1" value="70"></div>
+              <div class="field"><label>ETA en T=0 <span id="lHailEtaV">90 min</span></label>
+                <input id="lHailEta" type="range" min="0" max="180" step="1" value="90"></div>
+            </div>
+            <p class="note" id="lHailStatus" style="margin-bottom:0"></p>
+          </div>
+
+          <div class="crono">
+            <div class="ttl">❄ Nieve</div>
+            <label class="chk"><input type="checkbox" id="lSnowOn"> Activar espesor de <b>nieve</b></label>
+            <div class="lab">
+              <div class="field"><label>Espesor (cm)</label><input id="lSnowCm" type="number" min="0" step="1" value="15"></div>
+              <div class="field"><label>Entra en T (min)</label><input id="lSnowStart" type="number" step="1" value="0"></div>
+              <div class="field"><label>Despeja en T (min)</label><input id="lSnowClear" type="number" step="1" value="120"></div>
+            </div>
+          </div>
+        </details>
         <!-- EL CRONÓMETRO. No predice: MIDE. Cada instante que enseña sale de
              la simulación —el viento que sopla, el que se publica, la orden que
              llega, el eje que para—, no de sumar los cuatro parámetros. Si
