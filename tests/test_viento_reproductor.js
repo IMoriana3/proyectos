@@ -17,8 +17,9 @@
 //   · la serie del año se RETIENE al paso que el reproductor puede enseñar.
 //     Con cálculo minutal, la ventana de 16 h conserva cada minuto (961
 //     muestras contando ambos extremos): el deslizador puede seleccionar 11:41
-//     entre 11:40 y 11:42, sin
-//     introducir un muestreo oculto de 4 min. El paso queda declarado en
+//     entre 11:40 y 11:42, sin introducir un muestreo oculto de varios minutos.
+//     El banco fuerza además un episodio de 96 h: «minutal» no puede depender
+//     de que la ventana se quede en las 16 h nominales. El paso queda declarado en
 //     `window.step_minutes`.
 //   · por el camino del MOTOR el informe llega por HTTP y NO trae serie: ahí no
 //     se puede correr la ventana, los botones se apagan y el rótulo lo DICE. Un
@@ -48,7 +49,11 @@ const meteoSint = () => {
     const el = Math.max(0, Math.sin((i % 24 - 6) / 12 * Math.PI));
     h.shortwave_radiation.push(el * 900); h.diffuse_radiation.push(el * 130);
     h.direct_normal_irradiance.push(el * 700); h.temperature_2m.push(15);
-    h.windspeed_10m.push(8 + 9 * Math.sin(i / 5) + 8 * Math.sin(i / 733));
+    // Episodio largo determinista (96 h) para vigilar el caso que rompía el
+    // slider: la ventana crece mucho más allá de las 16 h nominales y AUN ASÍ
+    // debe conservar cada minuto si el cálculo es minutal.
+    const largo = i >= 3000 && i < 3096;
+    h.windspeed_10m.push(largo ? 24 : 8 + 9 * Math.sin(i / 5) + 8 * Math.sin(i / 733));
     h.winddirection_10m.push(225);
   }
   return { hourly: h };
@@ -81,6 +86,7 @@ const UN_PASO = `1.001 / pasosPorSegundo(TL.window.step_minutes, +document.getEl
     sliderStep: +document.getElementById('tpos').step,
     dtTimelineMin: REP.timeline.t.length > 1
       ? (Date.parse(REP.timeline.t[1]) - Date.parse(REP.timeline.t[0])) / 6e4 : null,
+    windowHours: (Date.parse(REP.timeline.window.end) - Date.parse(REP.timeline.window.start)) / 36e5,
   }));
   check('la serie del año se retiene y NO viaja en el informe',
         base.tieneSrc && !base.enJSON, JSON.stringify(base));
@@ -92,6 +98,9 @@ const UN_PASO = `1.001 / pasosPorSegundo(TL.window.step_minutes, +document.getEl
         && Math.abs(base.dtTimelineMin - 1) < 1e-6,
         JSON.stringify({ sliderStep: base.sliderStep, paso: base.win.step_minutes,
                          dtTimelineMin: base.dtTimelineMin }));
+  check('también es minutal cuando el episodio hace crecer la ventana más de un día',
+        base.windowHours > 24 && Math.abs(base.win.step_minutes - 1) < 1e-6,
+        JSON.stringify({ windowHours: base.windowHours, paso: base.win.step_minutes }));
 
   await page.click('#mEp');
   await page.waitForTimeout(600);
