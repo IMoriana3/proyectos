@@ -6242,11 +6242,15 @@ function tiles(ang,modos,poa,poaBase,dpct,orden){
     var p=poa?poa[k]:null, d=(poa&&k!=='BASE')?(p-poaBase):null;
     h+='<div class="tile" style="border-left-color:'+col+'">'+
       '<div class="n"><span class="dot" style="background:'+col+'"></span>'+(k==='BASE'?'Sin abanderar':k)+'</div>'+
-      '<div class="m">'+esc((modos[k]||'IDLE').replace('_',' ').toLowerCase())+' · θ '+fmt(ang[k],1)+'°'+
+      '<div class="m">'+esc((modos[k]||'IDLE').replace(/_/g,' ').toLowerCase())+' · θ '+fmt(ang[k],1)+'°'+
         enCamino(k,ang,orden)+
         (k==='PASIVO'&&LIVE&&LIVE.fracPas!=null
           ? ' <span class="sn" style="margin:0">fila suelta · planta = '+fmt(100*LIVE.fracPas,1)+' % del campo</span>'
           : '')+'</div>'+
+      (LIVE&&LIVE.info&&LIVE.info[k]
+        ? '<div class="d"><b>'+esc(LIVE.info[k].fuente||'')+'</b> · '+esc(LIVE.info[k].proteccion||'')+
+          (LIVE.info[k].remaining_min>0.02?' · faltan '+fmt(LIVE.info[k].remaining_min,1)+' min':'')+
+          '<br><span class="sn" style="margin:0">'+esc(LIVE.info[k].motivo||'')+'</span></div>' : '')+
       (p!=null?'<div class="p">'+fmt(p,0)+' <small>W/m²</small></div>':'')+
       (k==='BASE'?'<div class="d" style="color:var(--muted)">referencia</div>':
         (d!=null?'<div class="d" style="color:'+(d<-1?'var(--err)':(d>1?'var(--ok)':'var(--muted)'))+'">'+
@@ -6270,12 +6274,14 @@ function tiles(ang,modos,poa,poaBase,dpct,orden){
    Con una sola función que lo pinta desde el estado, el rótulo no puede
    desincronizarse: no hay dos sitios que puedan discrepar. */
 function pintaPlay(){
-  var b=$('lPlay'); if(!b||!LIVE)return;
-  b.textContent=LIVE.run?'❚❚ Pausa':'▶ Correr el tiempo';
-  b.className='btn small'+(LIVE.run?'':' acc');
+  var b=$('lPlay'); if(!b)return;
+  var run=(EVENTO&&EVENTO.enabled)?EVENTO.run:!!(LIVE&&LIVE.run);
+  b.textContent=run?'❚❚ Pausa':'▶ Reproducir';
+  b.className='btn small'+(run?'':' acc');
 }
 
 function liveInit(){
+  if(EVENTO&&EVENTO.enabled){eventoRebuild();return;}
   var c=cfgStow();
   /* EL RELOJ SOBREVIVE AL REMONTE. Cambiar el nº de trackers o encender la
      latencia es tocar un PARÁMETRO, no pedir que se pare el tiempo: pararlo
@@ -6603,26 +6609,162 @@ function fechaCorta(d){return d.getUTCDate()+' '+MESES3[d.getUTCMonth()];}
 function fechaISO(d){
   return d.getUTCFullYear()+'-'+('0'+(d.getUTCMonth()+1)).slice(-2)+'-'+('0'+d.getUTCDate()).slice(-2);
 }
+var EVENT_PRESETS={
+  wind_ramp:{v:15,vp:70,ws:0,wr:20,wh:30,g:70,ga:0,gd:0,signal:'mean',hail:false,eta:90,snow:false},
+  gust:{v:25,vp:25,ws:0,wr:0,wh:180,g:95,ga:0,gd:4,signal:'gust',hail:false,eta:90,snow:false},
+  passive:{v:20,vp:20,ws:0,wr:0,wh:180,g:105,ga:0,gd:6,signal:'mean',hail:false,eta:90,snow:false},
+  hail_far:{v:15,vp:15,ws:0,wr:0,wh:180,g:30,ga:0,gd:0,signal:'mean',hail:true,eta:90,snow:false},
+  hail_near:{v:15,vp:15,ws:0,wr:0,wh:180,g:30,ga:0,gd:0,signal:'mean',hail:true,eta:20,snow:false},
+  hail_wind:{v:15,vp:48,ws:10,wr:10,wh:45,g:60,ga:25,gd:10,signal:'mean',hail:true,eta:90,snow:false},
+  snow:{v:10,vp:10,ws:0,wr:0,wh:180,g:18,ga:0,gd:0,signal:'mean',hail:false,eta:90,snow:true,scm:15,ss:0,sc:120},
+  snow_hail:{v:10,vp:10,ws:0,wr:0,wh:180,g:20,ga:0,gd:0,signal:'mean',hail:true,eta:45,snow:true,scm:15,ss:0,sc:120}
+};
+
+function eventoCfgUI(){
+  var c=cfgStow(), msPared=fechaLive().getTime()+(+$('lH').value||0)*60000;
+  var vs=vivos(), control=vs.filter(function(k){return k!=='PASIVO';});
+  return {tmin:LOC.EVENT_TMIN,tmax:LOC.EVENT_TMAX,dt_s:1,
+    origin_utc_ms:U(msPared),lat:+$('lat').value,lon:+$('lon').value,
+    gcr:+$('gcr').value,full:+$('maxang').value,bt:$('bt').checked,
+    strategies:control,control_signal:$('lSignal').value,
+    stow:{lat:c.lat,pmin:c.pmin,T1:c.T1,T2:c.T2,holdS:c.holdS,parkS:c.parkS,dead:c.dead,noon:c.noon},
+    hail_defense_deg:Math.abs(+($('gAng')||{value:55}).value)||55,
+    passive:$('pas').checked?{pRel:(+$('pasV').value)/3.6,pSide:+$('pasL').value,pTol:1,
+      mode:$('pasModo').value}:null,
+    passive_frac:$('pas').checked?LOC.fracExpuesta(nTrk(),filasTrk(),1):0,
+    profile:{wind_base_kmh:+$('lV').value,wind_peak_kmh:+$('lVPeak').value,
+      wind_start_min:+$('lWindStart').value,wind_ramp_min:+$('lWindRamp').value,
+      wind_hold_min:+$('lWindHold').value,wind_dir_deg:+$('lD').value,
+      gust_peak_kmh:+$('lGust').value,gust_at_min:+$('lGustAt').value,
+      gust_duration_min:+$('lGustDur').value,
+      hail_on:$('lHailOn').checked,hail_mm:+$('lHailMm').value,
+      hail_prob_pct:+$('lHailProb').value,hail_eta0_min:+$('lHailEta').value,
+      snow_on:$('lSnowOn').checked,snow_cm:+$('lSnowCm').value,
+      snow_start_min:+$('lSnowStart').value,snow_clear_min:+$('lSnowClear').value}};
+}
+
+function eventoPintaLinea(){
+  var box=$('lEventLine');if(!box||!EVENTO.sim)return;
+  var sim=EVENTO.sim, marks=sim.marks.slice(), frames=sim.frames;
+  var sig=$('lSignal').value, t1=+$('t1').value,t2=+$('t2').value;
+  var addCruce=function(lim,k,label){
+    for(var i=0;i<frames.length;i++){
+      var v=(sig==='gust'?frames[i].gust_ms:frames[i].wind_ms)*3.6;
+      if(v>lim){marks.push({t:frames[i].t_min,k:k,label:label});return;}
+    }
+  };
+  addCruce(t1,'t1','cruza T1'); addCruce(t2,'t2','cruza T2');
+  marks.sort(function(a,b){return a.t-b.t;});
+  var den=sim.tmax-sim.tmin||1,h='';
+  marks.forEach(function(m){
+    var x=100*(m.t-sim.tmin)/den;
+    h+='<span class="mark '+esc(m.k)+'" style="left:'+Math.max(0,Math.min(100,x)).toFixed(2)+'%">'+
+       '<i></i><b>'+esc(m.label)+'<br>T'+(m.t>=0?'+':'')+fmt(m.t,0)+'</b></span>';
+  });
+  h+='<span class="now" id="lEventNow"></span>';
+  box.innerHTML=h;
+}
+
+function eventoResumen(fr){
+  if(!fr)return;
+  var signal=$('lSignal').value==='gust'?'racha':'media';
+  var gate=LOC.granizoLiveAmenaza(fr.hail_on,+$('lHailMm').value,+$('lHailProb').value);
+  $('lEventSummary').innerHTML=
+    '<div class="e"><b>Viento '+fmt(fr.wind_ms*3.6,0)+' km/h</b><span>racha '+fmt(fr.gust_ms*3.6,0)+
+      ' · T1/T2 miran '+signal+'</span></div>'+
+    '<div class="e"><b>Granizo '+(gate.activa?'ACTIVO':'—')+'</b><span>'+
+      (fr.hail_on?'ETA '+fmt(fr.hail_eta_min,0)+' min · '+fmt(+$('lHailMm').value,0)+' mm':'sin señal')+'</span></div>'+
+    '<div class="e"><b>Nieve '+fmt(fr.snow_cm,0)+' cm</b><span>'+
+      (fr.snow_cm>LOC.NIEVE_ON_CM?'sobre umbral de entrada':'sin activación')+'</span></div>'+
+    '<div class="e"><b>'+fechaHoraLocal(fr.iso)+'</b><span>dirección '+compass(fr.wind_dir)+' · '+fmt(fr.wind_dir,0)+'°</span></div>';
+}
+
+function eventoAplica(t){
+  if(!EVENTO.sim||!EVENTO.sim.frames.length)return;
+  var sim=EVENTO.sim, tt=Math.max(sim.tmin,Math.min(sim.tmax,Math.round(+t||0)));
+  var ix=Math.max(0,Math.min(sim.frames.length-1,tt-sim.tmin)), fr=sim.frames[ix];
+  EVENTO.pos=fr.t_min;EVENTO.current=fr;
+  $('lTime').value=fr.t_min;
+  $('lTimeLbl').textContent='T '+(fr.t_min>0?'+':fr.t_min<0?'−':'= ')+
+    (fr.t_min?Math.abs(fr.t_min):0)+' min';
+  var now=$('lEventNow');if(now)now.style.left=(100*(fr.t_min-sim.tmin)/(sim.tmax-sim.tmin)).toFixed(2)+'%';
+  $('lClock').textContent=fechaHoraLocal(fr.iso)+' · T '+(fr.t_min>=0?'+':'')+fr.t_min+' min';
+
+  LIVE=LIVE||{};LIVE.run=EVENTO.run;LIVE.ang=fr.ang;LIVE.modos=fr.modos;LIVE.orden=fr.orden;
+  LIVE.ordenEje=fr.ordenEje;LIVE.info=fr.info;LIVE.v=fr.wind_ms;LIVE.gust=fr.gust_ms;
+  LIVE.dir=fr.wind_dir;LIVE.hailEtaF=fr.hail_eta_min;LIVE.lat=cfgLat();
+  LIVE.fracPas=$('pas').checked?LOC.fracExpuesta(nTrk(),filasTrk(),1):null;
+
+  if(TD&&ESC){
+    ponSol(fr.sun_el,fr.sun_az,fr.wind_ms,fr.wind_dir);
+    pintaEscena(fr.ang,fr.modos,fr.poa,fr.poa.BASE);
+    tiles(fr.ang,fr.modos,fr.poa,fr.poa.BASE,null,fr.orden);
+  }
+  eventoResumen(fr);hailLivePinta();pintaPlay();
+  $('cronoBox').style.display='none';
+}
+
+function eventoRebuild(pos){
+  if(!EVENTO.enabled)return;
+  var run=EVENTO.run, old=(pos==null?EVENTO.pos:+pos);
+  EVENTO.sim=LOC.simulaEvento(eventoCfgUI());EVENTO.run=run;EVENTO.acc=0;
+  eventoPintaLinea();eventoAplica(old);
+}
+
+function eventoProgramaRebuild(manual){
+  if(manual&&!EVENTO.applyingPreset)$('lPreset').value='manual';
+  clearTimeout(EVENTO.rebuildTimer);
+  EVENTO.rebuildTimer=setTimeout(function(){eventoRebuild();},100);
+}
+
+function eventoTick(dtReal){
+  if(!EVENTO.enabled)return false;
+  if(!EVENTO.sim){eventoRebuild();return true;}
+  if(!EVENTO.run)return true;
+  EVENTO.acc+=(+dtReal||0)*(+$('lEventSpeed').value||5);
+  var dm=Math.floor(EVENTO.acc);
+  if(dm>0){
+    EVENTO.acc-=dm;var nxt=EVENTO.pos+dm;
+    if(nxt>=EVENTO.sim.tmax){nxt=EVENTO.sim.tmax;EVENTO.run=false;}
+    eventoAplica(nxt);
+  }
+  return true;
+}
+
+function aplicaPresetEvento(k){
+  if(k==='manual'){eventoRebuild(0);return;}
+  var p=EVENT_PRESETS[k];if(!p)return;
+  EVENTO.applyingPreset=true;
+  $('lV').value=p.v;$('lVPeak').value=p.vp;$('lWindStart').value=p.ws;
+  $('lWindRamp').value=p.wr;$('lWindHold').value=p.wh;$('lGust').value=p.g;
+  $('lGustAt').value=p.ga;$('lGustDur').value=p.gd;$('lSignal').value=p.signal;
+  $('lHailOn').checked=!!p.hail;$('lHailMm').value=22;$('lHailProb').value=70;$('lHailEta').value=p.eta;
+  $('lSnowOn').checked=!!p.snow;$('lSnowCm').value=(p.scm==null?15:p.scm);
+  $('lSnowStart').value=(p.ss==null?0:p.ss);$('lSnowClear').value=(p.sc==null?120:p.sc);
+  if(k==='passive'){$('pas').checked=true;$('pasBox').style.display='';}
+  EVENTO.applyingPreset=false;liveLbl();eventoRebuild(0);
+}
+
 function liveLbl(){
   var v=+$('lV').value,d=+$('lD').value,m=+$('lH').value;
-  $('lVlbl').textContent=v+' km/h';
-  $('lDlbl').textContent=compass(d)+' · '+d+'°';
-  $('lHlbl').textContent=hhmm(m);
-  $('lClock').textContent=fechaCorta(fechaLive())+' · '+hhmm(m);
-  if(LIVE){LIVE.v=v/3.6;LIVE.dir=d;}
-  /* si el viento rola, cambia QUE borde esta expuesto: hay que rehacerlo aqui, que es
-     el unico sitio por donde pasa un cambio de rumbo. Los rotulos se remontan solo si
-     de verdad cambio algo, para no rehacer la escena a cada grado. */
+  $('lVlbl').textContent=v+' km/h';$('lVPeakLbl').textContent=(+$('lVPeak').value)+' km/h';
+  $('lDlbl').textContent=compass(d)+' · '+d+'°';$('lHlbl').textContent=hhmm(m);
+  if(EVENTO&&EVENTO.current)$('lClock').textContent=fechaHoraLocal(EVENTO.current.iso)+' · T '+
+    (EVENTO.current.t_min>=0?'+':'')+EVENTO.current.t_min+' min';
+  else $('lClock').textContent=fechaCorta(fechaLive())+' · '+hhmm(m);
+  if(LIVE&&!EVENTO.enabled){LIVE.v=v/3.6;LIVE.dir=d;}
   if(typeof actualizaExpuesto==='function'&&actualizaExpuesto(d)&&ESC&&ESC.etiquetas){
     ESC.mundo&&ESC.mundo.remove(ESC.etiquetas); ESC.etiquetas=null; montaBandas();
   }
 }
 function hailLivePinta(){
   if(!$('lHailStatus'))return;
-  var A=LOC.granizoLiveAmenaza($('lHailOn').checked,+$('lHailMm').value,+$('lHailProb').value);
+  var on=(EVENTO&&EVENTO.current)?EVENTO.current.hail_on:$('lHailOn').checked;
+  var A=LOC.granizoLiveAmenaza(on,+$('lHailMm').value,+$('lHailProb').value);
   $('lHailMmV').textContent=fmt(+$('lHailMm').value,0)+' mm';
   $('lHailProbV').textContent=fmt(+$('lHailProb').value,0)+' %';
-  var eta=(LIVE&&LIVE.hailEtaF!=null)?LIVE.hailEtaF:+$('lHailEta').value;
+  var eta=(EVENTO&&EVENTO.current)?EVENTO.current.hail_eta_min:
+    ((LIVE&&LIVE.hailEtaF!=null)?LIVE.hailEtaF:+$('lHailEta').value);
   $('lHailEtaV').textContent=fmt(eta,eta<10?1:0)+' min';
   var h=(A.activa?'<b style="color:var(--warn)">AMENAZA ACTIVA</b> · ':'')+esc(A.motivo)+'. ';
   if(LIVE&&LIVE.hailPlans){
@@ -6643,6 +6785,7 @@ function hhmm(min){min=((min%1440)+1440)%1440;var h=Math.floor(min/60),mm=Math.r
   return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm;}
 
 function liveTick(dtReal){
+  if(EVENTO&&EVENTO.enabled){eventoTick(dtReal);return;}
   if(!LIVE||!TD||!ESC)return;
   var fac=LIVE.run?(+$('lSpeed').value||300):0, dtS=dtReal*fac;
   /* El minuto se lleva en FLOTANTE aparte del deslizador. El deslizador solo
