@@ -222,10 +222,12 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
       // desapercibido porque la racha —derivada del mismo viento— vetaría igual.
       sostenidoOk: (() => {
         const w = REP.timeline.wind_ms, ms = window.GRAN_MUESTRAS || [];
+        const off = +window.GRAN_VIENTO_OFFSET || 0;
         if (!ms.length) return null;
         return ms.every((m, i) => Math.abs(m.viento_sostenido_ms -
-          w[Math.min(w.length - 1, i)]) < 0.02);
+          w[Math.min(w.length - 1, off + i)]) < 0.02);
       })(),
+      offsetViento: +window.GRAN_VIENTO_OFFSET || 0,
       picoSostenido: Math.max.apply(null, (window.GRAN_MUESTRAS || [{viento_sostenido_ms:0}])
         .map(m => m.viento_sostenido_ms)),
       vetos: (GRAN.diario || []).filter(l => /veto|envolvente|LOCKOUT|NO-ACCIÓN/i.test(l)).length,
@@ -249,8 +251,8 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
   check('el viento SOSTENIDO de las muestras es el del informe, no un relleno (' +
         'pico ' + (fuerte.picoSostenido * 3.6).toFixed(0) + ' km/h)',
         fuerte.sostenidoOk === true && fuerte.picoSostenido > 15,
-        'si se falsea el sostenido, la racha vetaría igual y el fallo pasaría: ' +
-        'hay que mirar el valor, no solo el efecto');
+        'offset ' + fuerte.offsetViento + ' · si se falsea el sostenido, la racha vetaría igual ' +
+        'y el fallo pasaría: hay que mirar el valor, no solo el efecto');
 
   check('la procedencia dice que el granizo es del demo y el viento del sitio',
         /demo/i.test(fuerte.fuente) && /viento/i.test(fuerte.fuente), fuerte.fuente);
