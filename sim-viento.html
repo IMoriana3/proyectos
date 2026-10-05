@@ -3285,6 +3285,189 @@ LOC.simulaEvento=function(cfg){
           dt_s:dt,control_signal:sig};
 };
 
+/* ═══════════ GENERADOR DE INCLEMENCIAS + VERIFICADOR ═══════════
+   No genera sólo ejemplos: el modo adversarial coloca los casos a ambos lados
+   de las fronteras que deciden (T1/T2, granizo, ETA, nieve, pasivo) y el
+   verificador comprueba propiedades independientes de la presentación. */
+LOC.incFirma=function(sim){
+  if(!sim||!sim.frames)return '';
+  return sim.frames.map(function(f){
+    var ks=Object.keys(f.ang||{}).sort();
+    return [f.t_min,Math.round((f.wind_ms||0)*360),
+      ks.map(function(k){return k+':'+Math.round((f.ang[k]||0)*1000)+':'+(f.modos[k]||'');}).join('|')]
+      .join('/');
+  }).join(';');
+};
+
+LOC.incContexto=function(cfg){
+  var st=cfg.stow||{}, p=cfg.profile||{}, full=Math.abs(+cfg.full||55);
+  return {T1:(+st.T1||40/3.6)*3.6,T2:(+st.T2||60/3.6)*3.6,
+    pRel:cfg.passive?((+cfg.passive.pRel||90/3.6)*3.6):90,
+    full:full,noon:+st.noon||0,lat:+cfg.lat||0,lon:+cfg.lon||0,
+    origin:+cfg.origin_utc_ms||Date.now(),gcr:+cfg.gcr||0.397,bt:cfg.bt!==false,
+    hailLead:isFinite(+p.hail_lead_min)?Math.max(0,+p.hail_lead_min):LOC.GRZ.hail_min};
+};
+
+LOC.incGenera=function(opts,index,baseCfg){
+  opts=opts||{};index=index||0;baseCfg=baseCfg||{};
+  var C=LOC.incContexto(baseCfg),seed=((+opts.seed||1)+(index*0x9E3779B9))>>>0,r=LOC.rng(seed);
+  var rnd=function(a,b){return a+(b-a)*r();}, pick=function(a){return a[Math.floor(r()*a.length)%a.length];};
+  var family=opts.family||'all',mode=opts.mode||'random',sev=opts.severity||'mixed';
+  var fams=family==='all'?['wind','gust','hail','snow','combined']:[family];
+  var fam=pick(fams), eps=.2, tag='', name='', signal='mean';
+  var p={wind_base_kmh:10,wind_peak_kmh:10,wind_dir_deg:Math.round(rnd(0,359)),
+    wind_start_min:0,wind_ramp_min:10,wind_hold_min:35,
+    gust_peak_kmh:10,gust_at_min:0,gust_duration_min:0,
+    hail_on:false,hail_mm:0,hail_prob_pct:0,hail_eta0_min:90,hail_lead_min:C.hailLead,
+    snow_on:false,snow_cm:0,snow_start_min:0,snow_clear_min:120};
+
+  if(mode==='adversarial'){
+    var A=[
+      ['wind','wind_t1_equal','Viento exactamente en T1'],
+      ['wind','wind_t1_plus','Viento T1 + ε'],
+      ['wind','wind_t2_equal','Viento exactamente en T2'],
+      ['wind','wind_t2_plus','Viento T2 + ε'],
+      ['gust','passive_release','Ráfaga justo sobre suelta pasiva'],
+      ['hail','hail_size_below','Granizo justo bajo 19 mm'],
+      ['hail','hail_prob_below','Granizo severo con probabilidad justo baja'],
+      ['hail','hail_watch','Granizo severo · ETA lead + 1'],
+      ['hail','hail_boundary','Granizo severo · ETA = lead'],
+      ['hail','hail_near','Granizo inminente'],
+      ['snow','snow_equal','Nieve exactamente en 10 cm'],
+      ['snow','snow_plus','Nieve 10 cm + ε'],
+      ['combined','conflict','Granizo + nieve · lados opuestos'],
+      ['combined','agree','Granizo + nieve · mismo lado'],
+      ['combined','hail_wind','Granizo + viento dentro de pre-stow']
+    ];
+    var allowed=A.filter(function(x){return family==='all'||x[0]===family;});
+    var a=allowed[index%allowed.length];fam=a[0];tag=a[1];name=a[2];
+    p.wind_dir_deg=270;
+    if(tag.indexOf('wind_')===0){
+      p.wind_base_kmh=Math.max(0,C.T1-15);p.wind_start_min=-15;p.wind_ramp_min=5;p.wind_hold_min=80;
+      p.wind_peak_kmh=tag==='wind_t1_equal'?C.T1:
+        tag==='wind_t1_plus'?C.T1+eps:tag==='wind_t2_equal'?C.T2:C.T2+eps;
+      p.gust_peak_kmh=p.wind_peak_kmh;
+    }else if(tag==='passive_release'){
+      p.wind_base_kmh=Math.max(5,C.T1-15);p.wind_peak_kmh=p.wind_base_kmh;
+      p.gust_peak_kmh=C.pRel+1;p.gust_at_min=0;p.gust_duration_min=12;
+    }else if(tag.indexOf('hail_')===0){
+      p.hail_on=true;p.hail_prob_pct=70;p.hail_mm=22;p.wind_base_kmh=8;p.wind_peak_kmh=8;
+      if(tag==='hail_size_below')p.hail_mm=18.9;
+      if(tag==='hail_prob_below')p.hail_prob_pct=29.9;
+      p.hail_eta0_min=tag==='hail_watch'?C.hailLead+1:
+        tag==='hail_boundary'?C.hailLead:tag==='hail_near'?Math.min(10,C.hailLead):Math.min(20,C.hailLead);
+    }else if(tag==='snow_equal'||tag==='snow_plus'){
+      p.snow_on=true;p.snow_cm=tag==='snow_equal'?10:10.1;p.wind_base_kmh=5;p.wind_peak_kmh=5;
+    }else if(tag==='conflict'||tag==='agree'){
+      p.hail_on=true;p.hail_mm=25;p.hail_prob_pct=80;p.hail_eta0_min=Math.min(30,C.hailLead);
+      p.snow_on=true;p.snow_cm=15;p.wind_base_kmh=5;p.wind_peak_kmh=5;
+      var P=LOC.sun(new Date(C.origin),(C.lat||0)*LOC.D2R,C.lon||0);
+      var th=LOC.theta(P.el,P.az,C.gcr,C.full,C.bt);
+      var snowSide=LOC.ladoNieve(P.azp,th,C.noon,C.full)>0?1:-1;
+      var hailSide=(tag==='agree')?snowSide:-snowSide;
+      p.wind_dir_deg=hailSide>0?270:90;
+    }else if(tag==='hail_wind'){
+      p.hail_on=true;p.hail_mm=25;p.hail_prob_pct=80;p.hail_eta0_min=Math.min(30,C.hailLead);
+      p.wind_base_kmh=C.T1+1;p.wind_peak_kmh=Math.min(C.T2-1,C.T1+5);
+      p.wind_start_min=-15;p.wind_ramp_min=5;p.wind_hold_min=80;p.gust_peak_kmh=p.wind_peak_kmh;
+    }
+  }else{
+    var mult=sev==='mild'?.7:sev==='severe'?1.15:sev==='extreme'?1.45:rnd(.7,1.4);
+    if(fam==='wind'){
+      p.wind_base_kmh=rnd(0,Math.max(5,C.T1*.7));p.wind_peak_kmh=Math.min(140,rnd(C.T1*.75,C.T2*1.45)*mult);
+      p.wind_start_min=rnd(-15,25);p.wind_ramp_min=rnd(2,30);p.wind_hold_min=rnd(5,70);p.gust_peak_kmh=p.wind_peak_kmh;
+      tag='random_wind';name='Viento aleatorio';
+    }else if(fam==='gust'){
+      p.wind_base_kmh=rnd(5,Math.max(10,C.T1*.8));p.wind_peak_kmh=p.wind_base_kmh;
+      p.gust_peak_kmh=Math.min(150,rnd(C.T1,C.pRel*1.35)*mult);p.gust_at_min=rnd(-5,45);p.gust_duration_min=rnd(2,18);
+      signal=r()<.35?'gust':'mean';tag='random_gust';name='Ráfaga aleatoria';
+    }else if(fam==='hail'){
+      p.hail_on=true;p.hail_mm=rnd(10,45)*mult;p.hail_prob_pct=rnd(5,100);
+      p.hail_eta0_min=rnd(0,180);p.hail_lead_min=rnd(10,120);p.wind_base_kmh=rnd(0,C.T1*.7);p.wind_peak_kmh=p.wind_base_kmh;
+      tag='random_hail';name='Granizo aleatorio';
+    }else if(fam==='snow'){
+      p.snow_on=true;p.snow_cm=rnd(0,28)*mult;p.snow_start_min=rnd(-10,30);p.snow_clear_min=rnd(60,180);
+      p.wind_base_kmh=rnd(0,C.T1*.7);p.wind_peak_kmh=p.wind_base_kmh;tag='random_snow';name='Nieve aleatoria';
+    }else{
+      p.wind_base_kmh=rnd(0,C.T1*1.15);p.wind_peak_kmh=Math.min(130,rnd(p.wind_base_kmh,C.T2*1.35)*mult);
+      p.wind_start_min=rnd(-10,20);p.wind_ramp_min=rnd(2,25);p.wind_hold_min=rnd(10,70);
+      p.gust_peak_kmh=Math.max(p.wind_peak_kmh,rnd(C.T1,C.pRel*1.25));p.gust_at_min=rnd(0,50);p.gust_duration_min=rnd(0,15);
+      p.hail_on=r()<.72;p.hail_mm=rnd(12,40);p.hail_prob_pct=rnd(10,100);p.hail_eta0_min=rnd(5,150);p.hail_lead_min=rnd(20,100);
+      p.snow_on=r()<.55;p.snow_cm=rnd(0,22);p.snow_start_min=rnd(-5,30);p.snow_clear_min=rnd(70,180);
+      tag='random_combined';name='Combinado aleatorio';
+    }
+  }
+  return {id:(mode==='adversarial'?'A':'R')+String(index+1).padStart(3,'0'),
+    seed:seed,index:index,mode:mode,family:fam,severity:sev,tag:tag,name:name,signal:signal,profile:p};
+};
+
+LOC.incVerifica=function(caso,cfg,sim,sim2){
+  var checks=[],fail=0;
+  var add=function(n,ok,d){checks.push({name:n,ok:!!ok,detail:ok?'':String(d||'')});if(!ok)fail++;};
+  var F=sim&&sim.frames||[],C=LOC.incContexto(cfg),ks=(cfg.strategies||[]).slice();
+  add('traza completa',F.length===211&&F[0].t_min===LOC.EVENT_TMIN&&F[F.length-1].t_min===LOC.EVENT_TMAX,
+      'frames '+F.length);
+  add('determinista',!sim2||LOC.incFirma(sim)===LOC.incFirma(sim2),'misma entrada produjo otra traza');
+
+  var finito=true,bounds=true,slew=true,poa=true;
+  for(var i=0;i<F.length;i++){
+    var f=F[i];
+    Object.keys(f.ang||{}).forEach(function(k){
+      if(!isFinite(f.ang[k])||!isFinite(f.orden[k]))finito=false;
+      if(Math.abs(f.ang[k])>C.full+.02)bounds=false;
+      if(k!=='PASIVO'&&i>0&&Math.abs(f.ang[k]-F[i-1].ang[k])>LOC.SLEW*60+.05)slew=false;
+      if(f.poa&&(!isFinite(f.poa[k])||f.poa[k]<-.001))poa=false;
+    });
+    Object.keys(f.info||{}).forEach(function(k){
+      var q=f.info[k]||{};
+      if(q.proteccion==='NO MODELADO'&&f.modos[k]!=='CONFLICT')finito=false;
+      if(f.modos[k]==='CONFLICT'&&q.fuente!=='NO MODELADO')finito=false;
+      if(f.modos[k]==='HAIL_STOW'&&!f.hail_defense_active)finito=false;
+    });
+  }
+  add('valores finitos y contratos de estado',finito);
+  add('límites mecánicos',bounds);
+  add('slew controlado ≤ 0,17 °/s',slew);
+  add('POA finita y no negativa',poa);
+
+  var f0=F.find(function(x){return x.t_min===0;})||F[0];
+  var maxW=F.reduce(function(a,b){return (b.wind_ms>a.wind_ms)?b:a;},F[0]||{wind_ms:0});
+  var modes=function(f){return ks.map(function(k){return f.modos[k];});};
+  var has=function(f,m){return modes(f).indexOf(m)>=0;};
+  var tag=caso.tag||'';
+  if(tag==='wind_t1_equal')add('T1 exacto no dispara >T1',!has(maxW,'FULL_STOW')&&!has(maxW,'PARTIAL_STOW'),modes(maxW));
+  if(tag==='wind_t1_plus')add('T1+ε: 1 umbral FULL y 2 umbrales PARTIAL',
+    (!f0.modos.A1||maxW.modos.A1==='FULL_STOW')&&(!f0.modos.A2||maxW.modos.A2==='PARTIAL_STOW'),
+    JSON.stringify(maxW.modos));
+  if(tag==='wind_t2_equal')add('T2 exacto: A2/B2 siguen parciales',
+    (!maxW.modos.A2||maxW.modos.A2==='PARTIAL_STOW')&&(!maxW.modos.B2||maxW.modos.B2==='PARTIAL_STOW'),JSON.stringify(maxW.modos));
+  if(tag==='wind_t2_plus')add('T2+ε lleva controlados a FULL',
+    ks.every(function(k){return maxW.modos[k]==='FULL_STOW';}),JSON.stringify(maxW.modos));
+  if(tag==='passive_release')add('racha sobre suelta libera PASIVO',
+    F.some(function(f){return f.modos.PASIVO==='SUELTA';}),'sin SUELTA');
+  if(tag==='hail_size_below'||tag==='hail_prob_below')add('granizo sub-criterio no ordena defensa',
+    !F.some(function(f){return ks.some(function(k){return f.modos[k]==='HAIL_STOW';});}),'apareció HAIL_STOW');
+  if(tag==='hail_watch')add('ETA lead+1 permanece en VIGILANCIA en T0',
+    ks.every(function(k){return f0.info[k]&&f0.info[k].fuente==='VIGILANCIA GRANIZO'&&f0.modos[k]==='IDLE';}),
+    JSON.stringify(f0.info));
+  if(tag==='hail_boundary')add('ETA = lead inicia defensa',
+    ks.some(function(k){return f0.modos[k]==='HAIL_STOW'&&f0.info[k].fuente==='GRANIZO';}),JSON.stringify(f0.modos));
+  if(tag==='hail_near')add('granizo inminente usa caso 3',
+    ks.some(function(k){return f0.info[k]&&f0.info[k].hail_case===3;}),JSON.stringify(f0.info));
+  if(tag==='snow_equal')add('10 cm exactos NO activan >10',
+    !F.some(function(f){return ks.some(function(k){return f.modos[k]==='SNOW_STOW';});}),'apareció SNOW_STOW');
+  if(tag==='snow_plus')add('10 cm+ε activa nieve',
+    F.some(function(f){return ks.some(function(k){return f.modos[k]==='SNOW_STOW';});}),'sin SNOW_STOW');
+  if(tag==='conflict')add('lados opuestos se declaran NO MODELADO',
+    F.some(function(f){return ks.some(function(k){return f.modos[k]==='CONFLICT'&&f.info[k].fuente==='NO MODELADO';});}),'sin CONFLICT');
+  if(tag==='agree')add('mismo lado combina amenazas',
+    F.some(function(f){return ks.some(function(k){return f.modos[k]==='MULTI_STOW'&&f.info[k].fuente==='GRANIZO + NIEVE';});}),'sin MULTI_STOW');
+  if(tag==='hail_wind')add('viento+granizo entra en arbitraje conjunto',
+    F.some(function(f){return ks.some(function(k){return f.info[k]&&f.info[k].fuente==='VIENTO × GRANIZO';});}),'sin arbitraje');
+
+  return {ok:fail===0,fail:fail,total:checks.length,checks:checks};
+};
+
 /* ── Meteo ── */
 LOC.fetchYear=function(lat,lon,year,year1,sinRafaga){
   var y1=year1||year;
