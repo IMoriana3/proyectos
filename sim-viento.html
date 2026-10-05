@@ -3098,10 +3098,14 @@ LOC.simulaEvento=function(cfg){
 
     var signalKmh=(sig==='gust')?pr.gust_kmh:pr.wind_kmh;
     var vVisto=cadMed.ve(signalKmh/3.6,dt);
-    if(pr.hail_on){hailEver=true;hailClearSec=null;}
-    else if(lastHail&&!pr.hail_on)hailClearSec=0;
-    else if(hailClearSec!==null)hailClearSec+=dt;
-    lastHail=pr.hail_on;
+    /* El reloj de salida nace sólo si la amenaza LLEGÓ A ACTIVAR protección.
+       Una señal de 16 mm existe meteorológicamente, pero con el gate VDE de
+       19 mm + 30 % no justifica ni stow ni 60 min de hold posterior. */
+    var hailGate=LOC.granizoLiveAmenaza(pr.hail_on,pr.hail_mm,pr.hail_prob_pct);
+    if(hailGate.activa){hailEver=true;hailClearSec=null;}
+    else if(lastHail&&!hailGate.activa&&hailEver)hailClearSec=0;
+    else if(hailEver&&hailClearSec!==null)hailClearSec+=dt;
+    lastHail=hailGate.activa;
 
     var info={BASE:{fuente:'SEGUIMIENTO',motivo:'referencia sin abanderar',proteccion:'referencia'}};
     ks.forEach(function(S){
