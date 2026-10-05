@@ -3077,7 +3077,10 @@ LOC.eventoPerfil=function(cfg,tMin){
      salida, también configurable. */
   var hEta=Math.max(0,+cfg.hail_eta0_min||0);
   var hAfter=isFinite(+cfg.hail_after_min)?Math.max(0,+cfg.hail_after_min):15;
-  var hailRaw=!!cfg.hail_on && tMin<=hEta+hAfter;
+  /* Intervalo semiabierto: la señal está viva ANTES del instante all-clear.
+     Así la marca de all-clear y el estado RETENCION coinciden en el mismo
+     segundo, sin un frame frontera que todavía diga IMPACTO. */
+  var hailRaw=!!cfg.hail_on && tMin<hEta+hAfter;
   var hailEta=Math.max(0,hEta-tMin);
 
   var snow=0;
@@ -3513,17 +3516,17 @@ LOC.incVerifica=function(caso,cfg,sim,sim2){
     ks.some(function(k){return f0.info[k]&&f0.info[k].hail_case===3;}),JSON.stringify(f0.info));
   if(tag==='hail_lifecycle'){
     var at=function(t){return F.find(function(f){return f.t_min===t;});};
-    var q0=at(0),q5=at(5),q25=at(25),q32=at(32),q33=at(33),q44=at(44),q45=at(45);
+    var q0=at(0),q5=at(5),q25=at(25),q31=at(31),q32=at(32),q43=at(43),q44=at(44);
     add('ciclo granizo: vigilancia → defensa → impacto → retención → liberado',
       q0&&q0.hail_phase==='VIGILANCIA'&&q5&&q5.hail_phase==='DEFENSA'&&
-      q25&&q25.hail_phase==='IMPACTO'&&q32&&q32.hail_phase==='IMPACTO'&&
-      q33&&q33.hail_phase==='RETENCION'&&q44&&q44.hail_phase==='RETENCION'&&
-      q45&&q45.hail_phase==='LIBERADO',
-      [q0,q5,q25,q32,q33,q44,q45].map(function(x){return x&&x.t_min+':'+x.hail_phase;}).join(' | '));
+      q25&&q25.hail_phase==='IMPACTO'&&q31&&q31.hail_phase==='IMPACTO'&&
+      q32&&q32.hail_phase==='RETENCION'&&q43&&q43.hail_phase==='RETENCION'&&
+      q44&&q44.hail_phase==='LIBERADO',
+      [q0,q5,q25,q31,q32,q43,q44].map(function(x){return x&&x.t_min+':'+x.hail_phase;}).join(' | '));
     add('duraciones configurables gobiernan all-clear y hold',
-      q33&&q33.hail_exit_hold_min===12&&q33.hail_hold_remaining_min>11&&
-      q44&&q44.hail_hold_remaining_min>0&&q45&&!q45.hail_defense_active,
-      JSON.stringify(q45&&{phase:q45.hail_phase,active:q45.hail_defense_active,hold:q45.hail_hold_remaining_min}));
+      q32&&q32.hail_exit_hold_min===12&&Math.abs(q32.hail_hold_remaining_min-12)<.02&&
+      q43&&q43.hail_hold_remaining_min>0&&q44&&!q44.hail_defense_active,
+      JSON.stringify(q44&&{phase:q44.hail_phase,active:q44.hail_defense_active,hold:q44.hail_hold_remaining_min}));
   }
   if(tag==='snow_equal')add('10 cm exactos NO activan >10',
     !F.some(function(f){return ks.some(function(k){return f.modos[k]==='SNOW_STOW';});}),'apareció SNOW_STOW');
