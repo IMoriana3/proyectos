@@ -7219,18 +7219,32 @@ function gSerieSobreViento() {
   var pph = Math.max(1, Math.round(60 / (TLw.window.step_minutes || 60)));
   var raf = LOC.gust(Float64Array.from(wsBase), 42, pph);
   var dem = GDEMO.demo.muestras;
+  /* EL DEMO SE SUPERPONE AL PEOR VIENTO, NO AL PRINCIPIO DE LA VENTANA.
+     Antes se copiaban sin más wsBase[0..N]. Eso solo parecía correcto mientras
+     el timeline estaba decimado: 120 muestras de 4 min cubrían 8 h y alcanzaban
+     el pico central. Al hacer el slider realmente minutal, esas mismas 120
+     muestras cubren 2 h y se quedan en el hombro del episodio. Era un BUG de
+     alineación oculto por el muestreo de la interfaz.
+     La pregunta declarada es «si este granizo hubiera caído durante el peor
+     viento del episodio», así que centramos el tramo de igual longitud alrededor
+     del máximo sostenido, respetando los bordes de la ventana. */
+  var iPico=0;
+  for(var iw=1;iw<wsBase.length;iw++)if(wsBase[iw]>wsBase[iPico])iPico=iw;
+  var ini=Math.max(0,Math.min(Math.max(0,wsBase.length-dem.length),
+                              iPico-Math.floor(dem.length/2)));
   var ms = dem.map(function (m, i) {
-    var k = Math.min(wsBase.length - 1, i);      // el episodio, sobre la ventana
+    var k = Math.min(wsBase.length - 1, ini + i);
     var o = {};
     for (var key in m) o[key] = m[key];
     o.viento_sostenido_ms = Math.round(wsBase[k] * 100) / 100;
     o.viento_racha_ms = Math.round(raf[k] * 100) / 100;
     return o;
   });
-  /* se expone la serie compuesta para que el banco pueda mirar el VALOR y no solo
-     el efecto: falsear el sostenido dejaría el veto disparándose por la racha, y un
-     test que solo mire «hubo veto» no vería el fallo. */
+  /* Se exponen la serie y SU OFFSET para que el banco pueda mirar el valor real,
+     no solo el efecto. El offset es parte de la evidencia de alineación, no del
+     contrato del informe. */
   window.GRAN_MUESTRAS = ms;
+  window.GRAN_VIENTO_OFFSET = ini;
   var pico = Math.max.apply(null, ms.map(function (m) { return m.viento_racha_ms; }));
   return {
     muestras: ms, dt_min: GDEMO.demo.dt_min,
