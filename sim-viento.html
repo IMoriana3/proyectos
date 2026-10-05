@@ -5390,7 +5390,7 @@ var PALA=0x1b3a6b;
 var LAYOUTS='https://imoriana3.github.io/cobertura-zigbee/';
 var ESC=null;     // {kind, bloques[], planta{...}}
 var LIVE=null;    // vista del frame actual
-var EVENTO={enabled:false,sim:null,current:null,pos:0,run:false,acc:0,rebuildTimer:null,applyingPreset:false};
+var EVENTO={enabled:true,sim:null,current:null,pos:0,run:false,acc:0,rebuildTimer:null,applyingPreset:false};
 
 function has3D(){return typeof THREE!=='undefined'&&THREE.OrbitControls&&typeof Seguidor!=='undefined';}
 function vivos(){return strategies().concat($('pas').checked?['PASIVO']:[]);}
