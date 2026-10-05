@@ -6794,7 +6794,11 @@ function aplicaPresetEvento(k){
     var P=LOC.sun(new Date(U(msPared)),(+$('lat').value||0)*LOC.D2R,+$('lon').value||0);
     var tgt=LOC.theta(P.el,P.az,+$('gcr').value,+$('maxang').value,$('bt').checked);
     var snowSide=LOC.ladoNieve(P.azp,tgt,+$('noon').value,+$('maxang').value)>0?1:-1;
-    var hailSide=(k==='snow_hail')?-snowSide:snowSide;
+    /* Los nombres del preset expresan el RESULTADO buscado. El signo del granizo
+       sale del rumbo con `ladoEspaldaAlViento`, así que aquí se elige el lado
+       que debe PEDIR el granizo, no se vuelve a invertir mentalmente el viento.
+       El banco encontró la primera versión exactamente al revés. */
+    var hailSide=(k==='snow_hail')?snowSide:-snowSide;
     $('eD').value=(hailSide>0?270:90);
   }
   EVENTO.applyingPreset=false;eventoLbl();eventoRebuild(0);
