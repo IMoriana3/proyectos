@@ -469,7 +469,8 @@
                 </optgroup>
                 <optgroup label="Nieve">
                   <option value="snow">Nieve · 15 cm</option>
-                  <option value="snow_hail">Nieve + granizo · arbitraje</option>
+                  <option value="snow_hail">Nieve + granizo · conflicto de lado</option>
+                  <option value="snow_hail_same">Nieve + granizo · mismo lado</option>
                 </optgroup>
               </select></div>
             <div class="two">
@@ -6620,7 +6621,8 @@ var EVENT_PRESETS={
   hail_near:{v:15,vp:15,ws:0,wr:0,wh:180,g:30,ga:0,gd:0,signal:'mean',hail:true,eta:20,snow:false},
   hail_wind:{v:15,vp:48,ws:10,wr:10,wh:45,g:60,ga:25,gd:10,signal:'mean',hail:true,eta:90,snow:false},
   snow:{v:10,vp:10,ws:0,wr:0,wh:180,g:18,ga:0,gd:0,signal:'mean',hail:false,eta:90,snow:true,scm:15,ss:0,sc:120},
-  snow_hail:{v:10,vp:10,ws:0,wr:0,wh:180,g:20,ga:0,gd:0,signal:'mean',hail:true,eta:45,snow:true,scm:15,ss:0,sc:120}
+  snow_hail:{v:10,vp:10,ws:0,wr:0,wh:180,g:20,ga:0,gd:0,signal:'mean',hail:true,eta:90,snow:true,scm:15,ss:0,sc:120},
+  snow_hail_same:{v:10,vp:10,ws:0,wr:0,wh:180,g:20,ga:0,gd:0,signal:'mean',hail:true,eta:90,snow:true,scm:15,ss:0,sc:120}
 };
 
 function eventoCfgUI(){
@@ -6745,6 +6747,17 @@ function aplicaPresetEvento(k){
   $('lSnowOn').checked=!!p.snow;$('lSnowCm').value=(p.scm==null?15:p.scm);
   $('lSnowStart').value=(p.ss==null?0:p.ss);$('lSnowClear').value=(p.sc==null?120:p.sc);
   if(k==='passive'){$('pas').checked=true;$('pasBox').style.display='';}
+  /* Los dos presets combinados fuerzan deliberadamente el arbitraje de lado:
+     uno hace que nieve y granizo discrepen y el otro que coincidan. Se deriva
+     del sol de T=0, no de un rumbo puesto a mano que sólo funcionaría a una hora. */
+  if(k==='snow_hail'||k==='snow_hail_same'){
+    var msPared=fechaLive().getTime()+(+$('lH').value||0)*60000;
+    var P=LOC.sun(new Date(U(msPared)),(+$('lat').value||0)*LOC.D2R,+$('lon').value||0);
+    var tgt=LOC.theta(P.el,P.az,+$('gcr').value,+$('maxang').value,$('bt').checked);
+    var snowSide=LOC.ladoNieve(P.azp,tgt,+$('noon').value,+$('maxang').value)>0?1:-1;
+    var hailSide=(k==='snow_hail')?-snowSide:snowSide;
+    $('lD').value=(hailSide>0?270:90);
+  }
   EVENTO.applyingPreset=false;liveLbl();eventoRebuild(0);
 }
 
