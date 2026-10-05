@@ -16,13 +16,15 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   const page=await browser.newPage();
   const errores=[];page.on('pageerror',e=>errores.push(String(e)));
   await page.goto(BASE+'/sim-viento.html',{waitUntil:'domcontentloaded'});
-  await page.waitForSelector('#lTime',{timeout:15000});
+  await page.waitForSelector('#mEvent',{timeout:15000});
+  await page.click('#mEvent');
+  await page.waitForSelector('#eTime',{timeout:15000});
   await page.evaluate(()=>{eventoRebuild(0);});
   await page.waitForFunction(()=>window.EVENTO&&EVENTO.sim&&EVENTO.sim.frames.length>200,{timeout:30000});
 
   const ui=await page.evaluate(()=>({
-    min:+lTime.min,max:+lTime.max,step:+lTime.step,
-    presets:[...lPreset.options].map(o=>o.value),
+    min:+eTime.min,max:+eTime.max,step:+eTime.step,
+    presets:[...ePreset.options].map(o=>o.value),
     frames:EVENTO.sim.frames.length,dt:EVENTO.sim.dt_s,
     first:EVENTO.sim.frames[0].t_min,last:EVENTO.sim.frames.at(-1).t_min
   }));
@@ -54,7 +56,7 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     const a=JSON.stringify({ang:LIVE.ang,modos:LIVE.modos,orden:LIVE.orden,info:LIVE.info});
     eventoAplica(-5);eventoAplica(80);
     const b=JSON.stringify({ang:LIVE.ang,modos:LIVE.modos,orden:LIVE.orden,info:LIVE.info});
-    return {igual:a===b,label:lTimeLbl.textContent,clock:lClock.textContent};
+    return {igual:a===b,label:eTimeLbl.textContent,clock:eClock.textContent};
   });
   check('ir atrás y volver al mismo minuto da EXACTAMENTE el mismo estado',det.igual,JSON.stringify(det));
   check('el slider dice el T relativo y el reloj absoluto a la vez',
@@ -136,9 +138,9 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   const pinta=await page.evaluate(()=>{
     aplicaPresetEvento('hail_wind');eventoAplica(25);
     return {
-      marks:document.querySelectorAll('#lEventLine .mark').length,
-      now:document.querySelector('#lEventNow')?.style.left||'',
-      summary:lEventSummary.textContent,
+      marks:document.querySelectorAll('#eEventLine .mark').length,
+      now:document.querySelector('#eEventNow')?.style.left||'',
+      summary:eEventSummary.textContent,
       tiles:tiles?document.getElementById('tiles').textContent:''
     };
   });
