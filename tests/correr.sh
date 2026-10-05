@@ -59,7 +59,7 @@ PATRON="${1:-}"
 # aquí y el cambio aparece en el diff, que es justo lo que un recuento que
 # nadie fija no consigue.
 declare -A PISO=(
-  [test_generador_inclemencias.js]=23
+  [test_generador_inclemencias.js]=26
   [test_abanderamiento_evento.js]=31
   [test_buscador.js]=59
   [test_careo_pvsyst.js]=11
