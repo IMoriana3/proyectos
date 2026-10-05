@@ -113,13 +113,32 @@
   .viz3d{width:100%;height:440px;background:var(--bg2);border:1px solid var(--line);border-radius:10px;overflow:hidden;position:relative}
   .viz3d canvas{display:block;height:100%;border:0;border-radius:0;margin:0}
   .viz3d .hint3d{position:absolute;left:10px;bottom:8px;font-family:var(--mono);font-size:.64rem;color:var(--muted);pointer-events:none;background:rgba(11,15,20,.7);padding:2px 7px;border-radius:6px}
+  .meteo3d{position:absolute;z-index:8;pointer-events:none;font-family:var(--mono);font-size:.68rem;
+    line-height:1.35;background:rgba(11,15,20,.82);border:1px solid var(--line2);border-radius:8px;
+    padding:5px 8px;backdrop-filter:blur(3px);max-width:46%}
+  .meteo3d b{color:var(--tx);font-weight:700}
+  .meteo3d.wind{left:10px;top:10px;border-color:#5aa9ff}
+  .meteo3d.hail{right:10px;top:10px;text-align:right;border-color:#9bb0c6}
+  .hailfx{position:absolute;z-index:7;right:7%;top:48px;width:150px;height:110px;pointer-events:none;
+    opacity:0;transition:opacity .2s,transform .2s;transform:scale(.75);transform-origin:top right}
+  .hailfx.on{opacity:.9}
+  .hailfx.near{transform:scale(1)}
+  .hailfx .cloud{position:absolute;right:18px;top:0;font-size:58px;line-height:1;color:#718096;
+    text-shadow:0 4px 12px rgba(0,0,0,.55)}
+  .hailfx .stone{position:absolute;top:48px;width:5px;height:9px;border-radius:50%;
+    background:#d8ecff;opacity:.9;animation:hailfall .9s linear infinite}
+  .hailfx.watch .stone{display:none}
+  @keyframes hailfall{0%{transform:translateY(0);opacity:.95}100%{transform:translateY(58px);opacity:.1}}
+  @media(prefers-reduced-motion:reduce){.hailfx .stone{animation:none}}
   .timerow{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
   .timerow input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}
   .timerow .t{font-family:var(--mono);font-size:.9rem;color:var(--accent);min-width:120px;text-align:right}
   .timerow select{background:var(--bg2);border:1px solid var(--line2);color:var(--tx);border-radius:8px;padding:6px 8px;font:inherit;font-size:.8rem}
   .eventmaster{margin-top:10px;background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:11px 12px}
-  .eventmaster .top{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,1fr);gap:9px;align-items:end}
-  .eventline{height:48px;position:relative;margin:7px 6px 2px;border-top:2px solid var(--line2)}
+  .eventmaster .top{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,.55fr);gap:9px;align-items:end}
+  .eventtrack{position:relative;margin-top:8px;padding:0 9px}
+  .eventtrack>input[type=range]{display:block;width:100%;margin:0;accent-color:var(--accent)}
+  .eventline{height:50px;position:relative;margin:8px 0 2px;border-top:2px solid var(--line2)}
   .eventline .mark{position:absolute;top:-5px;transform:translateX(-50%);min-width:8px;text-align:center}
   .eventline .mark i{display:block;width:9px;height:9px;border-radius:50%;background:var(--tx2);margin:0 auto 3px;border:2px solid var(--bg2)}
   .eventline .mark b{display:block;font-family:var(--mono);font-size:.56rem;color:var(--muted);white-space:nowrap;font-weight:500}
@@ -516,30 +535,34 @@
                   <option value="snow_hail_same">Nieve + granizo · mismo lado</option>
                 </optgroup>
               </select></div>
-            <div class="two">
-              <div class="field" style="margin:0"><label>T=0 · hora <span id="eHlbl">12:00</span></label>
-                <input id="eH" type="range" min="0" max="1439" step="1" value="720"></div>
-              <div class="field" style="margin:0"><label>T=0 · fecha</label>
-                <input id="eDate" type="date" value="2023-06-21"></div>
+            <div class="ro" style="margin:0">
+              <div class="k">Instante actual</div>
+              <div class="v" id="eClock">21 jun · 12:00</div>
+              <div class="sn" id="eTimeTop" style="margin:2px 0 0">T = 0 min</div>
             </div>
           </div>
           <div class="timerow">
             <button class="btn small acc" id="ePlay">▶ Reproducir</button>
             <button class="btn small" id="ePrev" title="Un minuto atrás">−1</button>
-            <input type="range" id="eTime" min="-30" max="180" step="1" value="0">
             <button class="btn small" id="eNext" title="Un minuto adelante">+1</button>
             <span class="t" id="eTimeLbl">T = 0 min</span>
             <select id="eSpeed"><option value="1">1 min/s</option><option value="5" selected>5 min/s</option>
               <option value="15">15 min/s</option><option value="30">30 min/s</option></select>
           </div>
-          <div class="eventline" id="eEventLine"></div>
+          <div class="eventtrack">
+            <input type="range" id="eTime" min="-30" max="180" step="1" value="0">
+            <div class="eventline" id="eEventLine"></div>
+          </div>
           <div class="eventsummary" id="eEventSummary"></div>
-          <span class="t" id="eClock" style="display:block;text-align:left;min-width:0;margin-top:4px">—</span>
         </div>
 
         <details class="eventadv" id="eAdv">
           <summary>Ajustes del escenario · abrir para editar</summary>
           <div class="subgrid">
+            <div class="field"><label>Origen T=0 · hora <span id="eHlbl">12:00</span></label>
+              <input id="eH" type="range" min="0" max="1439" step="1" value="720"></div>
+            <div class="field"><label>Origen T=0 · fecha</label>
+              <input id="eDate" type="date" value="2023-06-21"></div>
             <div class="field"><label>Viento base <span id="eVlbl">15 km/h</span></label>
               <input id="eV" type="range" min="0" max="140" step="1" value="15"></div>
             <div class="field"><label>Viento pico <span id="eVPeakLbl">70 km/h</span></label>
