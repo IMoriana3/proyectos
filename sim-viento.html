@@ -7176,6 +7176,126 @@ function aplicaPresetEvento(k){
   EVENTO.applyingPreset=false;eventoLbl();eventoRebuild(0);
 }
 
+/* ═══════════ GENERADOR DE INCLEMENCIAS · UI ═══════════ */
+var INCLEM={casos:[],resultados:[],corriendo:false};
+
+function incCtxUI(){
+  return {t1:+$('t1').value,t2:+$('t2').value,passive_release:+$('pasV').value,
+    hail_lead:+$('eHailLead').value,
+    hail_mm:10*((LOC.VDE&&LOC.VDE.umbral_tamano_granizo_cm)||1.9),
+    hail_prob:(LOC.VDE&&LOC.VDE.umbral_probabilidad_pct)||30,
+    snow_on:LOC.NIEVE_ON_CM,full:+$('maxang').value};
+}
+function incOptsUI(n){
+  return {modo:$('incMode').value,familia:$('incFam').value,severidad:$('incSev').value,
+    seed:(+$('incSeed').value>>>0)||1,n:(n==null?Math.max(1,Math.min(100,+$('incN').value||25)):n),
+    ctx:incCtxUI()};
+}
+function incGenera(n){
+  var o=incOptsUI(n);
+  if(n===1&&o.modo==='adversarial'){
+    var todos=LOC.generaInclemencias(Object.assign({},o,{n:100}));
+    /* 100 hace que el catálogo se repita: se toma solo la primera vuelta y la
+       seed elige cuál. Así "generar un caso" no devuelve siempre el primero. */
+    var vistos={},cat=todos.filter(function(c){if(vistos[c.id])return false;vistos[c.id]=1;return true;});
+    return [cat[o.seed%cat.length]];
+  }
+  return LOC.generaInclemencias(o);
+}
+function incBaseCfg(){
+  var b=eventoCfgUI();
+  /* La batería certifica LAS CUATRO políticas aunque el usuario haya ocultado
+     alguna en la escena. Ocultar una estrategia no puede convertirla en no
+     probada sin decirlo. */
+  b.strategies=['A1','A2','B1','B2'];
+  return b;
+}
+function incDescribe(c){
+  var p=c.profile||{},q=[];
+  if(p.wind_peak_kmh>p.wind_base_kmh+.1)q.push('viento '+fmt(p.wind_base_kmh,0)+'→'+fmt(p.wind_peak_kmh,0));
+  else q.push('viento '+fmt(p.wind_base_kmh,0));
+  if(p.gust_duration_min>0)q.push('racha '+fmt(p.gust_peak_kmh,0));
+  if(p.hail_on)q.push('granizo '+fmt(p.hail_mm,0)+' mm · ETA '+fmt(p.hail_eta0_min,0));
+  if(p.snow_on)q.push('nieve '+fmt(p.snow_cm,0)+' cm');
+  return q.join(' · ');
+}
+function incPinta(){
+  var R=INCLEM.resultados||[],pass=R.filter(function(x){return x.ver.pass;}).length,
+      fail=R.length-pass,checks=R.reduce(function(a,x){return a+x.ver.checks.length;},0);
+  $('incExport').disabled=!R.length;
+  $('incSummary').innerHTML=R.length
+    ? '<div class="ro '+(fail?'fail':'pass')+'"><div class="k">Veredicto</div><div class="v">'+
+        (fail?('⚠ '+fail+' FAIL'):'✓ TODO PASS')+'</div></div>'+
+      '<div class="ro"><div class="k">Casos</div><div class="v">'+R.length+'</div></div>'+
+      '<div class="ro"><div class="k">Checks</div><div class="v">'+checks+'</div></div>'+
+      '<div class="ro"><div class="k">Seed</div><div class="v">'+esc(String((+$('incSeed').value>>>0)||1))+'</div></div>'
+    : '<div class="ro"><div class="k">Estado</div><div class="v">Sin batería</div></div>';
+
+  if(!R.length){$('incTable').innerHTML='';return;}
+  var h='<thead><tr><th>#</th><th>Caso</th><th>Entradas</th><th>Resultado</th><th>Checks</th><th></th></tr></thead><tbody>';
+  R.forEach(function(x,i){
+    var malos=x.ver.checks.filter(function(c){return !c.ok;});
+    var why=malos.length?malos.map(function(c){return c.id+': '+c.detalle;}).join(' · '):
+      x.ver.checks.map(function(c){return c.id;}).join(' · ');
+    var a=x.ver.actual||{};
+    h+='<tr><td>'+(i+1)+'</td><td><b>'+esc(x.caso.label)+'</b><br><span class="sn">'+
+      esc(x.caso.familia)+' · '+esc(x.caso.oracle)+'</span></td>'+
+      '<td>'+esc(incDescribe(x.caso))+'</td>'+
+      '<td><span class="'+(x.ver.pass?'pass':'fail')+'">'+(x.ver.pass?'PASS':'FAIL')+'</span><br>'+
+      '<span class="incwhy">'+esc((a.modo||'')+(a.fuente?' · '+a.fuente:''))+'</span></td>'+
+      '<td><span class="incwhy">'+esc(why)+'</span></td>'+
+      '<td><button class="btn small incReplay" data-i="'+i+'">▶ Ver</button></td></tr>';
+  });
+  $('incTable').innerHTML=h+'</tbody>';
+}
+async function incEjecuta(casos){
+  if(INCLEM.corriendo)return;
+  INCLEM.corriendo=true;$('incRun').disabled=true;$('incOne').disabled=true;
+  $('incRun').textContent='Ejecutando…';INCLEM.casos=casos;INCLEM.resultados=[];incPinta();
+  try{
+    var base=incBaseCfg(),ctx=incCtxUI();
+    for(var i=0;i<casos.length;i++){
+      var caso=LOC.resuelveInclemencia(casos[i],base);
+      var cfg=LOC.configInclemencia(base,caso,ctx);
+      var sim=LOC.simulaEvento(cfg),sim2=LOC.simulaEvento(cfg);
+      var ver=LOC.verificaInclemencia(caso,sim,cfg,sim2);
+      INCLEM.resultados.push({caso:caso,ver:ver});
+      if((i%3)===2){incPinta();await new Promise(function(r){setTimeout(r,0);});}
+    }
+  }catch(e){
+    $('incSummary').innerHTML='<div class="ro fail"><div class="k">Error de configuración</div><div class="v">'+esc(e.message)+'</div></div>';
+  }finally{
+    INCLEM.corriendo=false;$('incRun').disabled=false;$('incOne').disabled=false;
+    $('incRun').textContent='✓ Demostrar con batería';incPinta();
+  }
+}
+function incCargaCaso(caso){
+  var base=incBaseCfg(),c=LOC.resuelveInclemencia(caso,base),p=c.profile;
+  EVENTO.applyingPreset=true;$('ePreset').value='manual';
+  $('eV').value=p.wind_base_kmh;$('eVPeak').value=p.wind_peak_kmh;$('eD').value=p.wind_dir_deg;
+  $('eWindStart').value=p.wind_start_min;$('eWindRamp').value=p.wind_ramp_min;$('eWindHold').value=p.wind_hold_min;
+  $('eGust').value=p.gust_peak_kmh;$('eGustAt').value=p.gust_at_min;$('eGustDur').value=p.gust_duration_min;
+  $('eSignal').value=c.signal||'mean';
+  $('eHailOn').checked=!!p.hail_on;$('eHailMm').value=p.hail_mm;$('eHailProb').value=p.hail_prob_pct;
+  $('eHailEta').value=p.hail_eta0_min;$('eHailLead').value=p.hail_lead_min;
+  $('eSnowOn').checked=!!p.snow_on;$('eSnowCm').value=p.snow_cm;
+  $('eSnowStart').value=p.snow_start_min;$('eSnowClear').value=p.snow_clear_min;
+  if(c.passive&&!$('pas').checked){$('pas').checked=true;$('pasBox').style.display='';}
+  EVENTO.applyingPreset=false;eventoLbl();
+  var go=function(){eventoRebuild(c.probe_t);var card=$('cv3dCard');if(card&&card.scrollIntoView)card.scrollIntoView({behavior:'smooth',block:'start'});};
+  if(c.passive&&ESC&&ESC.kind==='cmp'&&!casos().includes('PASIVO')){montaEscena().then(go);}else go();
+}
+function incExporta(){
+  if(!INCLEM.resultados.length)return;
+  var out={version:1,generated_at:new Date().toISOString(),seed:(+$('incSeed').value>>>0)||1,
+    contexto:incCtxUI(),modo:$('incMode').value,familia:$('incFam').value,severidad:$('incSev').value,
+    resultados:INCLEM.resultados.map(function(x){return {caso:x.caso,verificacion:x.ver};})};
+  var blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+  var u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;
+  a.download='abanderamiento_inclemencias_seed_'+out.seed+'.json';a.click();
+  setTimeout(function(){URL.revokeObjectURL(u);},1000);
+}
+
 function liveLbl(){
   var v=+$('lV').value,d=+$('lD').value,m=+$('lH').value;
   $('lVlbl').textContent=v+' km/h';
@@ -7774,6 +7894,18 @@ EVENT_INPUTS.forEach(function(id){
   e.addEventListener('change',function(){eventoLbl();eventoProgramaRebuild(true);});
 });
 $('ePreset').addEventListener('change',function(){aplicaPresetEvento(this.value);});
+$('incOne').onclick=async function(){
+  try{var cc=incGenera(1);await incEjecuta(cc);if(INCLEM.resultados.length)incCargaCaso(INCLEM.resultados[0].caso);}
+  catch(e){$('incSummary').innerHTML='<div class="ro fail"><div class="k">Error</div><div class="v">'+esc(e.message)+'</div></div>';}
+};
+$('incRun').onclick=async function(){try{await incEjecuta(incGenera());}catch(e){
+  $('incSummary').innerHTML='<div class="ro fail"><div class="k">Error</div><div class="v">'+esc(e.message)+'</div></div>'; }};
+$('incExport').onclick=incExporta;
+$('incTable').onclick=function(e){var b=e.target.closest&&e.target.closest('.incReplay');if(!b)return;
+  var i=+b.dataset.i;if(INCLEM.resultados[i])incCargaCaso(INCLEM.resultados[i].caso);};
+['incMode','incFam','incSev','incSeed','incN'].forEach(function(id){$(id).addEventListener('change',function(){
+  INCLEM.casos=[];INCLEM.resultados=[];incPinta();});});
+
 $('eTime').addEventListener('input',function(){EVENTO.run=false;EVENTO.acc=0;eventoAplica(+this.value);});
 $('ePrev').onclick=function(){EVENTO.run=false;eventoAplica(EVENTO.pos-1);};
 $('eNext').onclick=function(){EVENTO.run=false;eventoAplica(EVENTO.pos+1);};
@@ -8626,6 +8758,7 @@ fijaTZ(SITIO&&SITIO.tz,+$('lon').value); renderGusts();
 denomPas();
 pasModoUI();
 latUI();
+incPinta();
 montaEscena();
 detectEngine().then(loadPresets);
 </script>
