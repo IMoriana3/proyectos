@@ -1991,7 +1991,9 @@ LOC.dual=function(thT,ws,az,T1,T2,pmin,full,dtS,holdMin,parkMin,dead,noon){
    de verlo así: se suelta con la racha y NO vuelve cuando amaina — se queda
    ahí hasta que el seguimiento pasa por su ángulo, que puede ser horas. */
 LOC.stepperPasivo=function(cfg){
-  var suelta=false, th=0, side=cfg.pSide, tol=cfg.pTol||1, rel=cfg.pRel, full=cfg.full;
+  var suelta=false,
+      th=(cfg.initialTheta===null||cfg.initialTheta===undefined)?0:+cfg.initialTheta,
+      side=cfg.pSide, tol=cfg.pTol||1, rel=cfg.pRel, full=cfg.full;
   /* `prev` guarda el objetivo del paso anterior para poder detectar el CRUCE.
      Sin él esta máquina reengancha solo por proximidad, y `LOC.pasivo` —que
      resuelve exactamente lo mismo sobre la serie entera— lleva el criterio de
@@ -2787,7 +2789,8 @@ LOC.gumbel=function(maximos){
    siendo los de verdad y no una imitación suelta. */
 LOC.stepper=function(kind,cfg){
   var full=cfg.full, pmin=cfg.pmin, T1=cfg.T1, T2=cfg.T2;
-  var st='IDLE', hold=0, last=0, park=false, parkLeft=0, parkTh=0, parkSg=0, th=0;
+  var st='IDLE', hold=0, last=0, park=false, parkLeft=0, parkTh=0, parkSg=0,
+      th=(cfg.initialTheta===null||cfg.initialTheta===undefined)?0:+cfg.initialTheta;
   var inSec=function(t,sg,m){return sg>0?(t>=pmin+m):(t<=-(pmin+m));};
   var clip=function(t,sg){return sg>0?Math.max(pmin,Math.min(full,t)):Math.max(-full,Math.min(-pmin,t));};
   return {
@@ -2849,6 +2852,231 @@ LOC.stepper=function(kind,cfg){
       return {mode:st,theta:th,orden:nt,ordenEje:ntEje};
     }
   };
+};
+
+/* ═══════════ REPRODUCTOR CANÓNICO DE EVENTOS DE ABANDERAMIENTO ═══════════
+   Un slider temporal que sólo cambia el dibujo es una animación, no una
+   simulación. Este bloque reconstruye SIEMPRE el evento desde T_MIN hasta el
+   minuto pedido con paso interno de 1 s. Por eso ir de T=+80 a T=-5 y volver a
+   +80 da exactamente el mismo estado: no depende de por dónde se haya arrastrado
+   la barra ni del frame-rate del navegador.
+
+   La interfaz de arriba sólo construye `cfg`; aquí no hay DOM. Eso permite
+   ejercitar Viento, Ráfaga, Granizo, Nieve, combinaciones y pasivo sin abrir
+   Chromium, y obliga a que el 3D sea un consumidor del resultado. */
+LOC.EVENT_TMIN=-30;
+LOC.EVENT_TMAX=180;
+
+LOC.eventoPerfil=function(cfg,tMin){
+  cfg=cfg||{};
+  var w0=Math.max(0,+cfg.wind_base_kmh||0), wp=Math.max(0,+cfg.wind_peak_kmh||w0);
+  var ini=isFinite(+cfg.wind_start_min)?+cfg.wind_start_min:0;
+  var ramp=Math.max(0,+cfg.wind_ramp_min||0), hold=Math.max(0,+cfg.wind_hold_min||0);
+  var finSub=ini+ramp, finHold=finSub+hold, finBaja=finHold+ramp;
+  var w=w0;
+  if(tMin>=ini){
+    if(ramp>0&&tMin<finSub)w=w0+(wp-w0)*(tMin-ini)/ramp;
+    else if(tMin<finHold||ramp===0)w=wp;
+    else if(ramp>0&&tMin<finBaja)w=wp+(w0-wp)*(tMin-finHold)/ramp;
+    else w=w0;
+  }
+
+  /* La ráfaga es una señal APARTE. Puede alimentar T1/T2 sólo si el usuario
+     selecciona explícitamente ese criterio; por defecto T1/T2 siguen mirando la
+     media, que es como están declarados. El pasivo sí recibe la ráfaga porque su
+     disparo es carga mecánica. */
+  var gp=Math.max(w,+cfg.gust_peak_kmh||0);
+  var ga=isFinite(+cfg.gust_at_min)?+cfg.gust_at_min:0;
+  var gd=Math.max(0,+cfg.gust_duration_min||0);
+  var gust=w;
+  if(gd>0){
+    var x=Math.abs(tMin-ga)/(gd/2);
+    if(x<=1)gust=Math.max(w,w+(gp-w)*(1-x));
+  }
+
+  /* El ETA de granizo se declara en T=0. Se considera señal viva desde el
+     principio de la ventana hasta 15 min después de la llegada; a partir de ahí
+     empieza el criterio de salida de `granizoPlan` (60 min por defecto). */
+  var hEta=Math.max(0,+cfg.hail_eta0_min||0);
+  var hailRaw=!!cfg.hail_on && tMin<=hEta+15;
+  var hailEta=Math.max(0,hEta-tMin);
+
+  var snow=0;
+  if(cfg.snow_on){
+    var ns=isFinite(+cfg.snow_start_min)?+cfg.snow_start_min:0;
+    var nc=isFinite(+cfg.snow_clear_min)?+cfg.snow_clear_min:120;
+    if(tMin>=ns&&tMin<nc)snow=Math.max(0,+cfg.snow_cm||0);
+  }
+  return {wind_kmh:w,gust_kmh:gust,dir_deg:isFinite(+cfg.wind_dir_deg)?+cfg.wind_dir_deg:270,
+          hail_on:hailRaw,hail_eta_min:hailEta,hail_mm:Math.max(0,+cfg.hail_mm||0),
+          hail_prob_pct:Math.max(0,+cfg.hail_prob_pct||0),snow_cm:snow};
+};
+
+LOC.eventoMarcas=function(cfg){
+  cfg=cfg||{}; var m=[{t:0,k:'T0',label:'T=0'}];
+  var add=function(t,k,l){if(isFinite(+t)&&+t>=LOC.EVENT_TMIN&&+t<=LOC.EVENT_TMAX)m.push({t:+t,k:k,label:l});};
+  if((+cfg.wind_peak_kmh||0)!=(+cfg.wind_base_kmh||0)){
+    add(cfg.wind_start_min,'wind','sube viento');
+    add((+cfg.wind_start_min||0)+(+cfg.wind_ramp_min||0),'wind','pico viento');
+    add((+cfg.wind_start_min||0)+(+cfg.wind_ramp_min||0)+(+cfg.wind_hold_min||0),'wind','empieza a bajar');
+  }
+  if((+cfg.gust_duration_min||0)>0)add(cfg.gust_at_min,'gust','pico racha');
+  if(cfg.hail_on){
+    add(cfg.hail_eta0_min,'hail','llega granizo');
+    add((+cfg.hail_eta0_min||0)+15,'hail','all-clear granizo');
+  }
+  if(cfg.snow_on){
+    add(cfg.snow_start_min,'snow','entra nieve');
+    add(cfg.snow_clear_min,'snow','nieve despejada');
+  }
+  m.sort(function(a,b){return a.t-b.t;});
+  return m;
+};
+
+LOC.simulaEvento=function(cfg){
+  cfg=cfg||{};
+  var tMin=isFinite(+cfg.tmin)?+cfg.tmin:LOC.EVENT_TMIN;
+  var tMax=isFinite(+cfg.tmax)?+cfg.tmax:LOC.EVENT_TMAX;
+  var dt=Math.max(1,Math.round(+cfg.dt_s||1));
+  var latR=(+cfg.lat||0)*LOC.D2R, lon=+cfg.lon||0;
+  var full=Math.abs(+cfg.full||55), gcr=+cfg.gcr||0.397, bt=cfg.bt!==false;
+  var ks=(cfg.strategies&&cfg.strategies.length)?cfg.strategies.slice():['A1','A2','B1','B2'];
+  var n=Math.floor((tMax-tMin)*60/dt)+1, prof=new Array(n), wind=new Float64Array(n),
+      gust=new Float64Array(n);
+  var k,i,t;
+  for(i=0;i<n;i++){
+    t=tMin+i*dt/60; prof[i]=LOC.eventoPerfil(cfg.profile||{},t);
+    wind[i]=prof[i].wind_kmh; gust[i]=prof[i].gust_kmh;
+  }
+
+  /* Próximo cruce de 40 km/h, hacia atrás, para que `granizoPlan` conozca el
+     margen futuro sin buscar O(n) en cada segundo. */
+  var nextW=new Int32Array(n),nextG=new Int32Array(n),nw=-1,ng=-1;
+  for(i=n-1;i>=0;i--){
+    if(wind[i]>=LOC.GRZ.v_prestow)nw=i;
+    if(gust[i]>=LOC.GRZ.racha_cruce)ng=i;
+    nextW[i]=nw; nextG[i]=ng;
+  }
+
+  var when0=new Date((+cfg.origin_utc_ms||Date.now())+tMin*60000);
+  var P0=LOC.sun(when0,latR,lon), tgt0=LOC.theta(P0.el,P0.az,gcr,full,bt);
+  var stow=cfg.stow||{}, lat=stow.lat||LOC.LATENCIA;
+  var cadMed=LOC.cadenaViva(lat), steppers={}, cadOrden={}, ang={BASE:tgt0},
+      modos={BASE:'SEGUIMIENTO'}, orden={BASE:tgt0}, ordenEje={BASE:tgt0},
+      snowPrev={}, hailEver=false,hailClearSec=null;
+
+  ks.forEach(function(S){
+    var c=LOC.cadenaViva(lat); cadOrden[S]=c; snowPrev[S]='SEGUIMIENTO';
+    steppers[S]=LOC.stepper(S[1],{
+      full:full,pmin:+stow.pmin||30,T1:+stow.T1||40/3.6,T2:+stow.T2||60/3.6,
+      holdS:+stow.holdS||0,parkS:+stow.parkS||0,dead:(stow.dead==null?LOC.DEADBAND:+stow.dead),
+      noon:(S[0]==='B'?(+stow.noon||0):0),initialTheta:tgt0,
+      llega:function(o,d){return c.llega(o,d);}
+    });
+    ang[S]=tgt0;modos[S]='IDLE';orden[S]=tgt0;ordenEje[S]=tgt0;
+  });
+  var pas=null;
+  if(cfg.passive){
+    pas=LOC.stepperPasivo({
+      full:full,pSide:+cfg.passive.pSide||-full,pTol:+cfg.passive.pTol||1,
+      pRel:+cfg.passive.pRel||90/3.6,initialTheta:tgt0
+    });
+    ang.PASIVO=tgt0;modos.PASIVO='IDLE';orden.PASIVO=tgt0;ordenEje.PASIVO=tgt0;
+  }
+
+  var frames=[], baseTh=tgt0, lastHail=false;
+  var sig=String(cfg.control_signal||'mean').toLowerCase();
+  for(i=0;i<n;i++){
+    var pr=prof[i], sec=i*dt, rel=tMin+sec/60;
+    var when=new Date((+cfg.origin_utc_ms||Date.now())+rel*60000);
+    var P=LOC.sun(when,latR,lon), tgt=LOC.theta(P.el,P.az,gcr,full,bt);
+    var dB=tgt-baseTh,mx=LOC.SLEW*dt;if(Math.abs(dB)>mx)dB=(dB>0?mx:-mx);
+    baseTh=Math.max(-full,Math.min(full,baseTh+dB));
+    ang.BASE=baseTh;orden.BASE=tgt;ordenEje.BASE=tgt;modos.BASE='SEGUIMIENTO';
+
+    var signalKmh=(sig==='gust')?pr.gust_kmh:pr.wind_kmh;
+    var vVisto=cadMed.ve(signalKmh/3.6,dt);
+    if(pr.hail_on){hailEver=true;hailClearSec=null;}
+    else if(lastHail&&!pr.hail_on)hailClearSec=0;
+    else if(hailClearSec!==null)hailClearSec+=dt;
+    lastHail=pr.hail_on;
+
+    var info={BASE:{fuente:'SEGUIMIENTO',motivo:'referencia sin abanderar',proteccion:'referencia'}};
+    ks.forEach(function(S){
+      var az=(S[0]==='A')?pr.dir_deg:P.azp;
+      var tV=(nextW[i]>=0)?(nextW[i]-i)*dt/60:null;
+      var tR=(nextG[i]>=0)?(nextG[i]-i)*dt/60:null;
+      var hail=LOC.granizoLivePlan({
+        hailOn:pr.hail_on,hailMm:pr.hail_mm,hailProb:pr.hail_prob_pct,tHail:pr.hail_eta_min,
+        minDesdeAviso:(hailEver&&!pr.hail_on&&hailClearSec!==null?hailClearSec/60:null),
+        theta:ang[S],vAhora:pr.wind_kmh,tV40:tV,azViento:pr.dir_deg,
+        rachaAhora:pr.gust_kmh,tRacha:tR,defensa:Math.abs(+cfg.hail_defense_deg||full),
+        preMin:+stow.pmin||30,slew:LOC.SLEW,lat:lat
+      });
+      var ne=LOC.nieveEstado(pr.snow_cm,snowPrev[S]);snowPrev[S]=ne;
+      var snowTarget=(ne==='NIEVE')?LOC.ladoNieve(P.azp,ang[S],+stow.noon||0,full):null;
+      var windActive=vVisto>(+stow.T1||40/3.6), ext=null, fuente='',motivo='';
+
+      if(hail.destino!=null&&hailEver){
+        if(ne==='NIEVE'&&hail.manda!=='viento'){
+          if((hail.destino>0)===(snowTarget>0)){
+            ext={destino:hail.destino,mode:'MULTI_STOW'};
+            fuente='GRANIZO + NIEVE';motivo='las dos amenazas piden el mismo lado';
+          }else{
+            ext={destino:ang[S],mode:'CONFLICT'};
+            fuente='NO MODELADO';motivo='granizo pide '+hail.destino.toFixed(0)+'° y nieve '+snowTarget.toFixed(0)+'°: prioridad no definida';
+          }
+        }else{
+          var hm=(hail.manda==='granizo')?'HAIL_STOW':
+                 (pr.wind_kmh>=LOC.GRZ.v_stow?'FULL_STOW':'PARTIAL_STOW');
+          ext={destino:hail.destino,mode:hm};
+          fuente=(hail.manda==='granizo')?'GRANIZO':'VIENTO × GRANIZO';
+          motivo=hail.motivo;
+        }
+      }else if(ne==='NIEVE'){
+        if(windActive){
+          fuente='VIENTO';motivo='viento tiene prioridad sobre nieve';
+        }else{
+          ext={destino:snowTarget,mode:'SNOW_STOW'};
+          fuente='NIEVE';motivo='espesor '+pr.snow_cm.toFixed(0)+' cm > '+LOC.NIEVE_ON_CM+' cm';
+        }
+      }
+
+      var rr=steppers[S].step(tgt,vVisto,az,dt,ext);
+      ang[S]=rr.theta;modos[S]=rr.mode;orden[S]=rr.orden;ordenEje[S]=rr.ordenEje;
+      if(!fuente){
+        fuente=(rr.mode==='IDLE')?'SEGUIMIENTO':'VIENTO';
+        motivo=(rr.mode==='IDLE')?'sin amenaza activa':rr.mode.replace(/_/g,' ').toLowerCase();
+      }
+      var rem=Math.abs(rr.orden-rr.theta)/Math.max(LOC.SLEW,1e-9)/60;
+      info[S]={fuente:fuente,motivo:motivo,target:rr.orden,remaining_min:rem,
+               proteccion:(rr.mode==='CONFLICT'?'NO MODELADO':
+                 (Math.abs(rr.orden-rr.theta)<=LOC.DEADBAND?'EN POSICIÓN':'EN TRÁNSITO')),
+               hail_case:hail.caso,snow_state:ne};
+    });
+
+    if(pas){
+      var rp=pas.step(tgt,pr.gust_kmh/3.6,dt);
+      ang.PASIVO=rp.theta;modos.PASIVO=rp.mode;orden.PASIVO=rp.orden;ordenEje.PASIVO=rp.orden;
+      info.PASIVO={fuente:(rp.mode==='SUELTA'?'PASIVO':'SEGUIMIENTO'),
+        motivo:(rp.mode==='SUELTA'?'fila exterior desembragada por carga de racha':'acoplado'),
+        target:rp.orden,remaining_min:0,proteccion:(rp.mode==='SUELTA'?'SUELTA':'SEGUIMIENTO')};
+    }
+
+    if(Math.abs((rel-Math.round(rel)))<dt/120){
+      var bh=(P.el>0?900*Math.pow(Math.sin(P.el),1.15):0),dh=bh*.16,poa={};
+      poa.BASE=LOC.poa(ang.BASE,P.el,P.az,bh,dh,bh+dh);
+      ks.forEach(function(S){poa[S]=LOC.poa(ang[S],P.el,P.az,bh,dh,bh+dh);});
+      if(pas)poa.PASIVO=LOC.poa(ang.PASIVO,P.el,P.az,bh,dh,bh+dh);
+      frames.push({t_min:Math.round(rel),iso:when.toISOString(),sun_el:P.el/LOC.D2R,sun_az:P.azp,
+        wind_ms:pr.wind_kmh/3.6,gust_ms:pr.gust_kmh/3.6,wind_dir:pr.dir_deg,
+        hail_eta_min:pr.hail_eta_min,hail_on:pr.hail_on,snow_cm:pr.snow_cm,
+        ang:Object.assign({},ang),modos:Object.assign({},modos),orden:Object.assign({},orden),
+        ordenEje:Object.assign({},ordenEje),poa:poa,info:info});
+    }
+  }
+  return {frames:frames,marks:LOC.eventoMarcas(cfg.profile||{}),tmin:tMin,tmax:tMax,
+          dt_s:dt,control_signal:sig};
 };
 
 /* ── Meteo ── */
