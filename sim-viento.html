@@ -4007,7 +4007,11 @@ async function run(){
     slew_deg_s:LOC.SLEW, deadband_deg:LOC.DEADBAND,
     latencia:cfgLat(),
     wind_scenario:scenario(),
-    timeline:{hours:16, max_steps:240},
+    /* El slider del episodio es una herramienta de inspección, no solo de reproducción:
+       cuando el cálculo es minutal tiene que poder caer en CADA minuto de las 16 h.
+       El antiguo tope de 240 pasos forzaba stride=4 y hacía imposible seleccionar
+       11:41 entre 11:40 y 11:44 aunque la simulación sí se hubiese calculado a 1 min. */
+    timeline:{hours:16, max_steps:16*60},
     top_events:12, include_trace:true
   };
   ['run','runM'].forEach(function(b){$(b).disabled=true;$(b).textContent='Simulando…';});
