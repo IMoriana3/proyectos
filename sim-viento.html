@@ -3518,6 +3518,16 @@ LOC.run=function(cfg,onStep){
       t0=Date.parse(peor.start)-pad;t1=Date.parse(peor.end)+pad;}
     else{var mid=M.t[Math.floor(n/2)];t0=Date.UTC(mid.getUTCFullYear(),mid.getUTCMonth(),mid.getUTCDate());
       t1=t0+hrs*3600e3;}
+    /* EL SLIDER NO PUEDE BORRAR RESOLUCIÓN QUE EL CÁLCULO SÍ TIENE.
+       `hours` es un MÍNIMO de contexto: si el episodio dura tres o cuatro días,
+       la ventana crece para contenerlo. Por eso no basta con pedir 961 muestras
+       para las 16 h nominales. Cuando el cálculo es minutal, elevamos el tope al
+       número de instantes que caben en la ventana REAL; así `LOC.ventana` queda
+       con stride=1 y las flechas del range pueden ir 11:40 → 11:41 → 11:42.
+       Con cálculo a 5/10/15/60 min no inventamos minutos que no existen. */
+    if(dtH>0 && dtH*60<=1.000001){
+      maxSteps=Math.max(maxSteps,Math.ceil((t1-t0)/(dtH*3600e3))+1);
+    }
     var SRC={t:M.t,el:el,azp:azp,ws:ws,wd:wd,thB:thB,poaB:poaB,series:series,dtH:dtH,
              max_steps:maxSteps};
     /* Si la ventana pedida no pilla dato, el informe cae a las primeras
@@ -4009,9 +4019,10 @@ async function run(){
     wind_scenario:scenario(),
     /* El slider del episodio es una herramienta de inspección, no solo de reproducción:
        cuando el cálculo es minutal tiene que poder caer en CADA minuto de las 16 h.
-       Son 961 muestras contando ambos extremos; con 960, el intervalo inclusivo
-       todavía dispararía stride=2. El antiguo tope de 240 imponía un muestreo
-       grueso y hacía imposible seleccionar 11:41 aunque el cálculo fuese a 1 min. */
+       Son 961 muestras contando ambos extremos en la ventana nominal. Si un
+       episodio dura más de 16 h, LOC.run amplía este tope hasta cubrir la ventana
+       REAL sin decimarla. El antiguo tope de 240 imponía un muestreo de varios
+       minutos y hacía imposible seleccionar 11:41 aunque el cálculo fuese a 1 min. */
     timeline:{hours:16, max_steps:16*60+1},
     top_events:12, include_trace:true
   };
