@@ -6411,8 +6411,14 @@ function liveTick(dtReal){
         preMin:+$('pmin').value, slew:LOC.SLEW, lat:tnecLeeCadena()
       });
       LIVE.hailPlans[S]=hailPlan;
-      if(hailPlan.destino!=null&&hailPlan.manda==='granizo')
-        hailExt={destino:hailPlan.destino,mode:'HAIL_STOW'};
+      /* Si hay contexto de granizo, se respeta SIEMPRE el destino del plan,
+         también cuando `manda` es viento: justo ahí el plan prohíbe cruzar 0°.
+         El modo conserva quién manda; el destino conserva la seguridad conjunta. */
+      if(hailPlan.destino!=null&&LIVE.hailEver){
+        var hMode=(hailPlan.manda==='granizo')?'HAIL_STOW':
+                  (LIVE.v*3.6>=LOC.GRZ.v_stow?'FULL_STOW':'PARTIAL_STOW');
+        hailExt={destino:hailPlan.destino,mode:hMode};
+      }
     }
     // Al PASIVO le llega el viento que SOPLA: la suelta es mecánica y no pasa
     // por el anemómetro ni por la TCU. El granizo se inyecta en los casos
