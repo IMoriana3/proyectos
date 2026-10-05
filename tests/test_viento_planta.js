@@ -36,6 +36,9 @@ const LAYOUT = {
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(LAYOUT) }));
   await page.goto(BASE + '/sim-viento.html', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#escena', { timeout: 15000 });
+  // Evento es la vista principal; este banco mide específicamente el laboratorio En vivo.
+  await page.click('#mLive');
+  await page.waitForSelector('#liveCtl', { state: 'visible', timeout: 15000 });
 
   check('con la comparativa, el control de franjas NO se ofrece',
         await page.$eval('#bandasBox', e => e.style.display === 'none'),
@@ -183,7 +186,10 @@ const LAYOUT = {
   // 0,17 °/s y cruzar de un límite al otro son casi once minutos.
   await page.uncheck('#bandas');
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('#lV', { timeout: 15000 });
+  await page.waitForSelector('#mLive', { timeout: 15000 });
+  await page.click('#mLive');
+  await page.waitForSelector('#liveCtl', { state: 'visible', timeout: 15000 });
+  await page.waitForSelector('#lV', { state: 'visible', timeout: 15000 });
   await page.fill('#lV', '111'); await page.dispatchEvent('#lV', 'input');
   await page.waitForTimeout(900);
   const parado = await page.$$eval('#tiles .tile', ns => ns.map(n =>
