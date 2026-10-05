@@ -458,7 +458,7 @@
               <select id="lPreset">
                 <option value="manual">Manual · tú defines las amenazas</option>
                 <optgroup label="Viento">
-                  <option value="wind_ramp">Viento creciente · cruza T1 y T2</option>
+                  <option value="wind_ramp" selected>Viento creciente · cruza T1 y T2</option>
                   <option value="gust">Ráfaga corta · 95 km/h</option>
                   <option value="passive">Pasivo · racha de desembrague</option>
                 </optgroup>
@@ -501,7 +501,7 @@
             <div class="field"><label>Viento base <span id="lVlbl">15 km/h</span></label>
               <input id="lV" type="range" min="0" max="140" step="1" value="15"></div>
             <div class="field"><label>Viento pico <span id="lVPeakLbl">65 km/h</span></label>
-              <input id="lVPeak" type="range" min="0" max="140" step="1" value="65"></div>
+              <input id="lVPeak" type="range" min="0" max="140" step="1" value="70"></div>
             <div class="field"><label>Viene de <span id="lDlbl">O · 270°</span></label>
               <input id="lD" type="range" min="0" max="359" step="5" value="270"></div>
             <div class="field"><label>Empieza a subir en T (min)</label>
@@ -511,7 +511,7 @@
             <div class="field"><label>Meseta (min)</label>
               <input id="lWindHold" type="number" step="1" min="0" value="30"></div>
             <div class="field"><label>Pico de racha (km/h)</label>
-              <input id="lGust" type="number" step="1" min="0" value="15"></div>
+              <input id="lGust" type="number" step="1" min="0" value="70"></div>
             <div class="field"><label>Racha centrada en T (min)</label>
               <input id="lGustAt" type="number" step="1" value="0"></div>
             <div class="field"><label>Duración racha (min)</label>
