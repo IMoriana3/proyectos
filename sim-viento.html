@@ -3353,6 +3353,14 @@ LOC.incGenera=function(opts,index,baseCfg){
     }else if(tag==='passive_release'){
       p.wind_base_kmh=Math.max(5,C.T1-15);p.wind_peak_kmh=p.wind_base_kmh;
       p.gust_peak_kmh=C.pRel+1;p.gust_at_min=0;p.gust_duration_min=12;
+    }else if(tag==='hail_wind'){
+      /* OJO: esta rama va ANTES del genérico hail_*.
+         Si no, "hail_wind" entra como granizo puro a 8 km/h y el adversarial
+         nunca pisa el arbitraje conjunto que dice comprobar. */
+      p.hail_on=true;p.hail_mm=25;p.hail_prob_pct=80;p.hail_eta0_min=Math.min(30,C.hailLead);
+      p.wind_base_kmh=Math.max(LOC.GRZ.v_prestow+1,C.T1+1);
+      p.wind_peak_kmh=Math.min(LOC.GRZ.v_stow-1,Math.max(p.wind_base_kmh,C.T1+5));
+      p.wind_start_min=-15;p.wind_ramp_min=5;p.wind_hold_min=80;p.gust_peak_kmh=p.wind_peak_kmh;
     }else if(tag.indexOf('hail_')===0){
       p.hail_on=true;p.hail_prob_pct=70;p.hail_mm=22;p.wind_base_kmh=8;p.wind_peak_kmh=8;
       if(tag==='hail_size_below')p.hail_mm=18.9;
@@ -3369,10 +3377,6 @@ LOC.incGenera=function(opts,index,baseCfg){
       var snowSide=LOC.ladoNieve(P.azp,th,C.noon,C.full)>0?1:-1;
       var hailSide=(tag==='agree')?snowSide:-snowSide;
       p.wind_dir_deg=hailSide>0?270:90;
-    }else if(tag==='hail_wind'){
-      p.hail_on=true;p.hail_mm=25;p.hail_prob_pct=80;p.hail_eta0_min=Math.min(30,C.hailLead);
-      p.wind_base_kmh=C.T1+1;p.wind_peak_kmh=Math.min(C.T2-1,C.T1+5);
-      p.wind_start_min=-15;p.wind_ramp_min=5;p.wind_hold_min=80;p.gust_peak_kmh=p.wind_peak_kmh;
     }
   }else{
     var mult=sev==='mild'?.7:sev==='severe'?1.15:sev==='extreme'?1.45:rnd(.7,1.4);
