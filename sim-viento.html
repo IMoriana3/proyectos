@@ -153,6 +153,18 @@
   .eventadv{margin-top:9px;border-top:1px solid var(--line);padding-top:8px}
   .eventadv summary{cursor:pointer;color:var(--tx2);font-family:var(--mono);font-size:.7rem}
   .eventadv .subgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:9px}
+  .incgen{margin-top:10px;border-color:#5aa9ff}
+  .incgen .tools{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+  .incgen .tools .btn{width:auto}
+  .incsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:7px;margin-top:9px}
+  .incsum .ro.pass{border-color:var(--ok)}
+  .incsum .ro.fail{border-color:var(--err)}
+  .inctable{margin-top:8px;max-height:320px;overflow:auto}
+  .inctable td{font-size:.72rem;white-space:normal;vertical-align:top}
+  .inctable .pass{color:var(--ok);font-weight:700}
+  .inctable .fail{color:var(--err);font-weight:700}
+  .inctable button{width:auto;padding:3px 7px;font-size:.7rem}
+  .incwhy{font-family:var(--mono);font-size:.62rem;color:var(--muted);line-height:1.45}
   @media(max-width:640px){.eventmaster .top{grid-template-columns:1fr}.eventline .mark b{font-size:.5rem}.eventsummary{grid-template-columns:1fr 1fr}}
   /* El cronómetro. Monoespaciado y alineado a la derecha porque lo que se lee
      es una COLUMNA DE TIEMPOS: con proporcional los minutos no cuadran y hay
@@ -557,6 +569,41 @@
             <div class="eventline" id="eEventLine"></div>
           </div>
           <div class="eventsummary" id="eEventSummary"></div>
+        </div>
+
+        <div class="crono incgen" id="incBox">
+          <div class="ttl">⚡ Generador de inclemencias · red team del simulador</div>
+          <div class="lab">
+            <div class="field"><label>Modo</label><select id="incMode">
+              <option value="adversarial" selected>Adversarial · busca fronteras</option>
+              <option value="aleatorio">Aleatorio reproducible</option>
+              <option value="mixto">Mixto · fronteras + aleatorio</option>
+            </select></div>
+            <div class="field"><label>Familia</label><select id="incFam">
+              <option value="todas" selected>Todas</option>
+              <option value="viento">Viento</option><option value="racha">Ráfaga / pasivo</option>
+              <option value="granizo">Granizo</option><option value="nieve">Nieve</option>
+              <option value="combinado">Combinado</option>
+            </select></div>
+            <div class="field"><label>Severidad aleatoria</label><select id="incSev">
+              <option value="mixta" selected>Mixta</option><option value="suave">Suave</option>
+              <option value="media">Media</option><option value="severa">Severa</option>
+              <option value="extrema">Extrema</option>
+            </select></div>
+            <div class="field"><label>Semilla</label><input id="incSeed" type="number" step="1" value="20261005"></div>
+            <div class="field"><label>Casos de la batería</label><input id="incN" type="number" min="1" max="100" step="1" value="25"></div>
+          </div>
+          <div class="tools">
+            <button class="btn" id="incOne">🎲 Generar un caso</button>
+            <button class="btn acc" id="incRun">✓ Demostrar con batería</button>
+            <button class="btn" id="incExport" disabled>↓ Exportar JSON</button>
+          </div>
+          <p class="note" style="margin-bottom:0">Usa los <b>T1/T2, umbral pasivo, lead de granizo,
+            nieve, carrera y latencias que tienes configurados</b>. En modo adversarial fuerza fronteras
+            como T1±1, ETA=lead±1, granizo subumbral y nieve justo en 10/11 cm. Cada caso se contrasta
+            contra un <b>oráculo independiente</b> y además contra invariantes de límites y determinismo.</p>
+          <div class="incsum" id="incSummary"></div>
+          <div class="scroll inctable"><table id="incTable"></table></div>
         </div>
 
         <details class="eventadv" id="eAdv">
