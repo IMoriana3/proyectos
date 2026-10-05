@@ -84,8 +84,8 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     return {
       t1eq:max(w1).modos,t1plus:max(w2).modos,
       hailBoundary:f0(hb).modos.A1,hailWatch:{m:f0(hw).modos.A1,src:f0(hw).info.A1.fuente},
-      lifecycle:{p:hl.c.profile,ph:[0,5,25,32,33,44,45].map(t=>[t,at(hl,t).hail_phase]),
-        hold33:at(hl,33).hail_hold_remaining_min,active45:at(hl,45).hail_defense_active,
+      lifecycle:{p:hl.c.profile,ph:[0,5,25,31,32,43,44].map(t=>[t,at(hl,t).hail_phase]),
+        hold32:at(hl,32).hail_hold_remaining_min,active44:at(hl,44).hail_defense_active,
         marks:hl.s.marks.filter(m=>m.k==='hail').map(m=>[m.t,m.label])},
       snowEq:se.s.frames.some(f=>f.modos.A1==='SNOW_STOW'),snowPlus:sp.s.frames.some(f=>f.modos.A1==='SNOW_STOW'),
       conflict:cf.s.frames.some(f=>f.modos.A1==='CONFLICT'),agree:ag.s.frames.some(f=>f.modos.A1==='MULTI_STOW'),
@@ -100,8 +100,9 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     frontera.hailBoundary==='HAIL_STOW'&&frontera.hailWatch.m==='IDLE'&&frontera.hailWatch.src==='VIGILANCIA GRANIZO',
     JSON.stringify(frontera));
   check('lifecycle configurable recorre vigilancia → defensa → impacto → retención → liberado',
-    JSON.stringify(frontera.lifecycle.ph)===JSON.stringify([[0,'VIGILANCIA'],[5,'DEFENSA'],[25,'IMPACTO'],[32,'IMPACTO'],[33,'RETENCION'],[44,'RETENCION'],[45,'LIBERADO']])&&
-    frontera.lifecycle.p.hail_after_min===7&&frontera.lifecycle.p.hail_exit_hold_min===12&&frontera.lifecycle.hold33>11&&!frontera.lifecycle.active45,
+    JSON.stringify(frontera.lifecycle.ph)===JSON.stringify([[0,'VIGILANCIA'],[5,'DEFENSA'],[25,'IMPACTO'],[31,'IMPACTO'],[32,'RETENCION'],[43,'RETENCION'],[44,'LIBERADO']])&&
+    frontera.lifecycle.p.hail_after_min===7&&frontera.lifecycle.p.hail_exit_hold_min===12&&
+    Math.abs(frontera.lifecycle.hold32-12)<.02&&!frontera.lifecycle.active44,
     JSON.stringify(frontera.lifecycle));
   check('timeline de granizo marca inicio, llegada, all-clear y fin de retención con los tiempos configurados',
     JSON.stringify(frontera.lifecycle.marks)===JSON.stringify([[5,'inicia defensa granizo'],[25,'llega granizo'],[32,'all-clear granizo'],[44,'fin retención granizo']]),
