@@ -3293,8 +3293,11 @@ LOC.incFirma=function(sim){
   if(!sim||!sim.frames)return '';
   return sim.frames.map(function(f){
     var ks=Object.keys(f.ang||{}).sort();
-    return [f.t_min,Math.round((f.wind_ms||0)*360),
-      ks.map(function(k){return k+':'+Math.round((f.ang[k]||0)*1000)+':'+(f.modos[k]||'');}).join('|')]
+    return [f.t_min,Math.round((f.wind_ms||0)*360),Math.round((f.gust_ms||0)*360),
+      f.hail_phase||'',Math.round((f.snow_cm||0)*100),
+      ks.map(function(k){var inf=(f.info&&f.info[k])||{};
+        return k+':'+Math.round((f.ang[k]||0)*1000)+':'+Math.round((f.orden[k]||0)*1000)+
+          ':'+(f.modos[k]||'')+':'+(inf.fuente||'')+':'+(inf.proteccion||'');}).join('|')]
       .join('/');
   }).join(';');
 };
@@ -3423,6 +3426,13 @@ LOC.incVerifica=function(caso,cfg,sim,sim2){
       if(q.proteccion==='NO MODELADO'&&f.modos[k]!=='CONFLICT')finito=false;
       if(f.modos[k]==='CONFLICT'&&q.fuente!=='NO MODELADO')finito=false;
       if(f.modos[k]==='HAIL_STOW'&&!f.hail_defense_active)finito=false;
+      /* Una amenaza severa pero todavía FUERA del lead no puede mover por
+         granizo. Se acota a frames sin nieve ni viento sobre T1 para no
+         confundir una orden de otra política con una orden de granizo. */
+      var lead=(cfg.profile&&isFinite(+cfg.profile.hail_lead_min))?+cfg.profile.hail_lead_min:LOC.GRZ.hail_min;
+      if(f.hail_gate&&f.hail_eta_min>lead&&f.snow_cm<=LOC.NIEVE_ON_CM&&
+         (f.wind_ms*3.6)<=C.T1+.001&&
+         (f.modos[k]==='HAIL_STOW'||f.modos[k]==='MULTI_STOW'))finito=false;
     });
   }
   add('valores finitos y contratos de estado',finito);
@@ -5668,7 +5678,7 @@ var LAYOUTS='https://imoriana3.github.io/cobertura-zigbee/';
 var ESC=null;     // {kind, bloques[], planta{...}}
 var LIVE=null;    // vista del frame actual
 var EVENTO={enabled:true,sim:null,current:null,pos:0,run:false,acc:0,rebuildTimer:null,applyingPreset:false};
-var INC={cases:[],results:[],running:false,opts:null};
+var INC={cases:[],results:[],running:false,opts:null,baseCfg:null,context:null};
 
 function has3D(){return typeof THREE!=='undefined'&&THREE.OrbitControls&&typeof Seguidor!=='undefined';}
 function vivos(){return strategies().concat($('pas').checked?['PASIVO']:[]);}
@@ -7204,8 +7214,20 @@ function incAplicaCampos(caso){
   $('eSnowOn').checked=!!p.snow_on;$('eSnowCm').value=p.snow_cm;$('eSnowStart').value=p.snow_start_min;$('eSnowClear').value=p.snow_clear_min;
   EVENTO.applyingPreset=false;eventoLbl();
 }
+function incAplicaContexto(base){
+  if(!base)return;var st=base.stow||{},pa=base.passive||{};
+  if(base.lat!=null)$('lat').value=base.lat;if(base.lon!=null)$('lon').value=base.lon;
+  if(base.full!=null)$('maxang').value=base.full;if(base.gcr!=null)$('gcr').value=base.gcr;
+  $('bt').checked=base.bt!==false;
+  if(st.T1!=null)$('t1').value=st.T1*3.6;if(st.T2!=null)$('t2').value=st.T2*3.6;
+  if(st.pmin!=null)$('pmin').value=st.pmin;if(st.holdS!=null)$('hold').value=st.holdS/60;
+  if(st.parkS!=null)$('park').value=st.parkS/60;if(st.noon!=null)$('noon').value=st.noon;
+  if(pa.pRel!=null)$('pasV').value=pa.pRel*3.6;if(pa.pSide!=null)$('pasL').value=pa.pSide;
+  if(pa.mode)$('pasModo').value=pa.mode;
+}
 function incVerCaso(i){
   var x=INC.results[i];if(!x)return;
+  incAplicaContexto(INC.baseCfg);
   ['A1','A2','B1','B2'].forEach(function(k){
     var q=document.querySelector('.st[value="'+k+'"]');if(q)q.checked=true;});
   $('pas').checked=true;$('pasBox').style.display='';
@@ -7226,7 +7248,8 @@ function incGeneraUno(){
 async function incCorre(){
   if(INC.running)return;
   INC.running=true;var o=incOpts(),base=incBaseCfg();
-  INC.opts=o;INC.cases=[];INC.results=[];
+  INC.opts=o;INC.baseCfg=JSON.parse(JSON.stringify(base));INC.context=LOC.incContexto(base);
+  INC.cases=[];INC.results=[];
   $('incRun').disabled=true;$('incOne').disabled=true;$('incJson').disabled=true;$('incCsv').disabled=true;
   $('incNote').textContent='Ejecutando 0/'+o.n+'…';
   for(var i=0;i<o.n;i++){
@@ -7251,7 +7274,8 @@ function incDescarga(nombre,txt,tipo){
   a.href=u;a.download=nombre;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},1000);
 }
 function incExportJSON(){
-  var o={schema:'factiun-inclemencias-v1',generated_at:new Date().toISOString(),options:INC.opts,results:INC.results};
+  var o={schema:'factiun-inclemencias-v1',generated_at:new Date().toISOString(),options:INC.opts,
+    context:INC.context,base_config:INC.baseCfg,results:INC.results};
   incDescarga('inclemencias-'+((INC.opts&&INC.opts.seed)||'seed')+'.json',JSON.stringify(o,null,2),'application/json');
 }
 function incExportCSV(){
