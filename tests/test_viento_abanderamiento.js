@@ -237,9 +237,11 @@ rh = sh.step(0, 11, 90, 60);
 check('sin granizo, el mismo stepper conserva el comportamiento de viento',
       rh.mode === 'FULL_STOW' && rh.orden === 55, JSON.stringify(rh));
 
-check('la escena EN VIVO expone tamaño, probabilidad y ETA del granizo',
+check('la escena EN VIVO expone tamaño, probabilidad y ETA, y recibe el viento del caso',
       ['lHailOn','lHailMm','lHailProb','lHailEta','lHailStatus']
-        .every(id => html.includes('id="' + id + '"')));
+        .every(id => html.includes('id="' + id + '"'))
+      && html.includes("$('lV').value=$('xVnow').value")
+      && html.includes("$('lD').value=$('xAz').value"));
 check('y liveTick entrega el destino conjunto como quinto argumento, incluso si manda viento',
       html.includes("LIVE.steppers[S].step(tgt,vVisto,az,dt,hailExt)")
       && html.includes("if(hailPlan.destino!=null&&LIVE.hailEver)")
