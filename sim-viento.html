@@ -3359,7 +3359,7 @@ LOC.incGenera=function(opts,index,baseCfg){
     }else if(tag==='snow_equal'||tag==='snow_plus'){
       p.snow_on=true;p.snow_cm=tag==='snow_equal'?10:10.1;p.wind_base_kmh=5;p.wind_peak_kmh=5;
     }else if(tag==='conflict'||tag==='agree'){
-      p.hail_on=true;p.hail_mm=25;p.hail_prob_pct=80;p.hail_eta0_min=Math.min(30,C.hailLead);
+      p.hail_on=true;p.hail_mm=25;p.hail_prob_pct=80;p.hail_eta0_min=C.hailLead;
       p.snow_on=true;p.snow_cm=15;p.wind_base_kmh=5;p.wind_peak_kmh=5;
       var P=LOC.sun(new Date(C.origin),(C.lat||0)*LOC.D2R,C.lon||0);
       var th=LOC.theta(P.el,P.az,C.gcr,C.full,C.bt);
