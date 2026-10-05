@@ -21,8 +21,8 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   await page.waitForFunction(()=>window.EVENTO&&EVENTO.sim&&EVENTO.sim.frames.length>200,{timeout:30000});
 
   check('la UI del generador existe dentro del modo Evento',
-    ['incMode','incFam','incSev','incSeed','incN','incOne','incRun','incExport','incSummary','incTable']
-      .every(id=>!!document.getElementById(id)));
+    await page.evaluate(()=>['incMode','incFam','incSev','incSeed','incN','incOne','incRun','incExport','incSummary','incTable']
+      .every(id=>!!document.getElementById(id))));
 
   const puro=await page.evaluate(()=>{
     const ctx=incCtxUI();
