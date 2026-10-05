@@ -41,7 +41,8 @@ const check = (n, cond, extra) => {
    extracción con un rojo escondido dentro. Así que el final es el MÁXIMO de
    todos los marcadores que hacen falta, y después se exige que estén TODAS. */
 const html = fs.readFileSync(FICHA, 'utf8');
-const NECESARIAS = ['GRZ', 'ladoEspaldaAlViento', 'granizoPlan', 'granizoMatriz',
+const NECESARIAS = ['GRZ', 'VDE', 'ladoEspaldaAlViento', 'granizoPlan', 'granizoMatriz',
+                    'granizoLiveAmenaza', 'granizoLivePlan',
                     'grzSituaciones', 'grzEscenarios', 'tNecesario', 'recorridoPeor',
                     'ladoMasCercano', 'ladoNieve', 'nieveEstado', 'noonFlip', 'sign',
                     'sirveGranizo', 'CONTRATO'];
@@ -486,6 +487,48 @@ check('la ficha dice que un máximo horario no sitúa el granizo dentro de la ho
   /NO DICE CU\u00c1NDO|no dice cu\u00e1ndo/i.test(html) || /dentro de 5 minutos o dentro de 55/.test(html));
 check('y que de un máximo horario no se saca el de diez minutos',
   /inventar\s+resoluci\u00f3n que el dato no tiene/.test(html));
+
+console.log('── el granizo sintético entra en el MISMO control en vivo ──');
+let ga = LOC.granizoLiveAmenaza(true, 16, 80);
+check('16 mm NO activa el gate VDE aunque la probabilidad sea alta',
+  ga.activa === false && ga.umbral_mm === 19, JSON.stringify(ga));
+ga = LOC.granizoLiveAmenaza(true, 22, 20);
+check('22 mm con sólo 20 % tampoco activa: faltan los dos criterios',
+  ga.activa === false && ga.umbral_prob_pct === 30, JSON.stringify(ga));
+ga = LOC.granizoLiveAmenaza(true, 22, 70);
+check('22 mm y 70 % sí activan la amenaza sintética',
+  ga.activa === true, JSON.stringify(ga));
+check('apagado significa apagado aunque el episodio sea severo',
+  LOC.granizoLiveAmenaza(false, 40, 100).activa === false);
+
+let gl = LOC.granizoLivePlan({ hailOn:true, hailMm:22, hailProb:70,
+  theta:-55, tHail:20, vAhora:5, tV40:null, azViento:270,
+  rachaAhora:LOC.rachaMediana(5), tRacha:null, defensa:55, preMin:30,
+  slew:0.17, lat:LAT });
+check('granizo a 20 min entra por el caso 3 y NO cruza: va al extremo cercano',
+  gl.amenaza.activa && gl.caso === 3 && gl.destino === -55 && !gl.cruzaCero,
+  JSON.stringify(gl));
+
+gl = LOC.granizoLivePlan({ hailOn:true, hailMm:22, hailProb:70,
+  theta:-55, tHail:90, vAhora:15, tV40:null, azViento:270,
+  rachaAhora:LOC.rachaMediana(15), tRacha:null, defensa:55, preMin:30,
+  slew:0.17, lat:LAT });
+check('con 90 min y viento tranquilo puede elegir el lado favorable',
+  gl.caso === 1 && gl.destino === 55 && gl.cruceAutorizado === true,
+  JSON.stringify(gl));
+
+gl = LOC.granizoLivePlan({ hailOn:true, hailMm:16, hailProb:80,
+  theta:-20, tHail:20, vAhora:5, tV40:null, azViento:270,
+  rachaAhora:LOC.rachaMediana(5), defensa:55, preMin:30, slew:0.17, lat:LAT });
+check('un episodio sub-19 mm no se cuela al plan como amenaza',
+  gl.amenaza.activa === false && gl.destino === null, JSON.stringify(gl));
+
+gl = LOC.granizoLivePlan({ hailOn:false, hailMm:22, hailProb:70,
+  theta:-40, tHail:20, minDesdeAviso:20, vAhora:5, tV40:null, azViento:270,
+  rachaAhora:LOC.rachaMediana(5), defensa:55, preMin:30, slew:0.17, lat:LAT });
+check('al quitar la amenaza, el hold de salida se conserva y no desabandera de golpe',
+  gl.caso === 5 && gl.destino === -55 && /faltan 40 min/.test(gl.motivo),
+  JSON.stringify(gl));
 
 console.log('── la posición nocturna, declarada y no corregida ──');
 // Queda fijado a propósito: la ficha espeja el −5,0 del core, que es la posición
