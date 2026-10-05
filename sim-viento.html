@@ -425,6 +425,7 @@
     <div class="card" id="cv3dCard">
       <h2>Escena <span class="sn" id="c3hint">viento a mano · el seguidor a 0,17 °/s</span>
         <span style="display:flex;gap:6px;margin-left:8px">
+          <button class="btn small" id="mEvent">Evento</button>
           <button class="btn small acc" id="mLive">En vivo</button>
           <button class="btn small" id="mEp" title="La ventana del episodio más caro del año (hay que simular antes)">Episodio</button>
           <button class="btn small" id="mFit" title="Volver al encuadre inicial">Encuadrar</button>
@@ -5497,7 +5498,7 @@ function init3D(){
       var w=h.clientWidth,hh=h.clientHeight;
       if(w&&(TD.w!==w||TD.h!==hh)){TD.w=w;TD.h=hh;rd.setSize(w,hh,false);cam.aspect=w/hh;cam.updateProjectionMatrix();}
       var dt=Math.min(0.1,((now||performance.now())-last)/1000); last=now||performance.now();
-      if(MODO==='live')liveTick(dt); else if(MODO==='ep')epTick(dt);
+      if(MODO==='live')liveTick(dt); else if(MODO==='event')eventoTick(dt); else if(MODO==='ep')epTick(dt);
       TD.ct.update(); rd.render(sc,cam);})(performance.now());
   }catch(e){TD=null;}
 }
@@ -6260,7 +6261,7 @@ function enCamino(k,ang,orden){
   // que señalar es una maniobra pendiente, no el retardo natural del lazo.
   if(Math.abs(d)<2)return '';
   var seg=Math.abs(d)/LOC.SLEW, txt=(seg>=90?fmt(seg/60,1)+' min':fmt(seg,0)+' s');
-  var parado=(MODO==='live'&&LIVE&&!LIVE.run);
+  var parado=(MODO==='live'&&LIVE&&!LIVE.run)||(MODO==='event'&&!EVENTO.run);
   return ' <span class="sn" style="margin:0;color:var(--warn)">→ ordenado '+
     fmt(orden[k],0)+'° · en camino, '+txt+' a 0,17 °/s'+
     (parado?' · <b>reloj parado</b>':'')+'</span>';
@@ -7223,37 +7224,43 @@ async function montaEscena(){
   // planta real, y su estado tiene que aplicarse a la escena recién montada.
   bandasUI();
   if(MODO==='live'){liveInit();liveTick(0.001);}
+  else if(MODO==='event'){EVENTO.enabled=true;eventoRebuild(EVENTO.pos);}
   else if(TL)update3D(TPOS);
 }
 function setModo(m){
   if(m==='ep'&&!(REP&&REP.timeline)){
     $('c3note').innerHTML='<b style="color:var(--warn)">Todavía no hay episodio</b>: pulsa '+
-      '<b>Simular el año</b> y vuelve. Mientras tanto, el modo en vivo no necesita nada.';
+      '<b>Simular el año</b> y vuelve. Evento y En vivo no necesitan un año previo.';
     return;
   }
-  MODO=m;
+  MODO=m;EVENTO.enabled=(m==='event');
+  if(m!=='event')EVENTO.run=false;
+  $('mEvent').className='btn small'+(m==='event'?' acc':'');
   $('mLive').className='btn small'+(m==='live'?' acc':'');
   $('mEp').className='btn small'+(m==='ep'?' acc':'');
+  $('eventCtl').style.display=(m==='event')?'':'none';
   $('liveCtl').style.display=(m==='live')?'':'none';
   $('epCtl').style.display=(m==='ep')?'':'none';
-  if(m==='live'){
+
+  if(m==='event'){
+    eventoLbl();eventoRebuild(EVENTO.pos);
+    $('c3hint').textContent=(ESC&&ESC.kind==='planta')?ESC.info:'evento · slider minutal · motor a 1 s';
+    $('c3note').innerHTML='El <b>slider T−30…T+180</b> reconstruye el evento desde el principio a '+
+      '<b>paso interno de 1 s</b>: arrastrar hacia atrás y volver al mismo minuto da el mismo estado. '+
+      'Los presets cubren viento, racha, granizo, nieve, combinaciones y pasivo. Las tarjetas dicen '+
+      '<b>quién manda</b>, consigna, ejecutado, tiempo restante y si la posición se ha alcanzado. '+
+      'Cuando granizo y nieve piden lados opuestos sale <b>NO MODELADO</b>: no se inventa una prioridad.';
+  }else if(m==='live'){
     liveInit();
     $('c3hint').textContent=(ESC&&ESC.kind==='planta')?ESC.info:'viento a mano · el seguidor a 0,17 °/s';
-    $('c3note').innerHTML='Sube el viento y mira: por encima de <b>'+fmt(+$('t1').value,0)+' km/h</b> '+
-      'entran en parcial y por encima de <b>'+fmt(+$('t2').value,0)+'</b> se abanderan del todo. El eje '+
-      'gira a <b>0,17 °/s</b>, así que una maniobra a ±55° tarda minutos: se ve la rampa, no un salto. '+
-      'La POA de este modo es de <b>cielo claro</b> —no hay meteo detrás— y sirve para comparar los '+
-      'casos entre sí en el instante que elijas, no para sacar un número anual: para eso está el otro modo. '+
-      'El <b>slider T−30…T+180</b> reconstruye el evento a paso interno de 1 s: puedes ir hacia atrás y volver '+
-      'sin cambiar el resultado. Los presets cubren viento, racha, granizo, nieve, combinaciones y pasivo; '+
-      'los ajustes finos están plegados debajo del timeline.';
-  }
-  else{
+    $('c3note').innerHTML='Laboratorio fino: mueve viento, rumbo y hora directamente. Aquí se ven la '+
+      '<b>media, muestreo, sondeo, arranque y slew</b> a la resolución del reloj del navegador. '+
+      'Se conserva aparte del modo Evento porque sirve para medir retardos sub-minuto y fases de rejilla.';
+  }else{
     PLAY=false;$('play').textContent='▶ Reproducir';EPACC=0;build3D();
     $('c3note').innerHTML='Ventana <b>común</b> a todos los casos: el mismo viento y el mismo sol '+
       'para todos, y un θ por estrategia. La barra de cada bloque es su <b>POA en ese instante</b> y '+
-      'el fantasma gris la del seguidor sin abanderar. La pala se tiñe según el modo (ámbar parcial, '+
-      'rojo total, gris el hold de histéresis).';
+      'el fantasma gris la del seguidor sin abanderar. La pala se tiñe según el modo.';
   }
 }
 
@@ -7272,6 +7279,14 @@ $('run').onclick=run; $('runM').onclick=run;
    dijera cómo llegaban al 3D. La respuesta era «pulsa Simular el año», que
    está arriba del todo y no se ve desde aquí. */
 $('labRun').onclick=function(){$('run').click();};
+['lHailOn','lHailMm','lHailProb'].forEach(function(id){
+  $(id).addEventListener('input',function(){hailLivePinta();});
+  $(id).addEventListener('change',function(){hailLivePinta();});
+});
+$('lHailEta').addEventListener('input',function(){
+  if(LIVE)LIVE.hailEtaF=+this.value;
+  hailLivePinta();
+});
 function labHint(){
   var n=GUSTS.filter(function(g){return g.peak>0;}).length;
   var st=+$('stn').value||0;
@@ -7304,7 +7319,7 @@ function bandasUI(){
       ESC.bandaKs.length + ' estrategias</b>: es la misma planta pintada ' +
       ESC.bandaKs.length + ' veces sobre su geometría, para carearlas sobre el terreno real'
     : '· ahora mismo la planta entera se mueve con <b>una</b> estrategia (la del selector de abajo)';
-  if(REP&&TL)update3D(TPOS); else if(MODO==='live')liveTick(0.001);
+  if(REP&&TL&&MODO==='ep')update3D(TPOS); else if(MODO==='live')liveTick(0.001); else if(MODO==='event')eventoAplica(EVENTO.pos);
 }
 $('bandas').addEventListener('change',bandasUI);
 $('careoBtn').onclick=careo;
@@ -7353,6 +7368,7 @@ $('tpos').oninput=function(){if(PLAY)playToggle();update3D(+this.value);};
    y la única forma de regresar al episodio sería cambiar de modo. */
 $('tprev').onclick=function(){if(PLAY)playToggle();correVentana(-1);};
 $('tnext').onclick=function(){if(PLAY)playToggle();correVentana(1);};
+$('mEvent').onclick=function(){setModo('event');};
 $('mLive').onclick=function(){setModo('live');};
 $('mEp').onclick=function(){setModo('ep');};
 $('escena').onchange=function(){montaEscena();saveCfg();};
@@ -7360,25 +7376,31 @@ $('mFit').onclick=function(){
   if(!TD||!TD.encuadre)return;
   TD.cam.position.copy(TD.encuadre.pos); TD.ct.target.copy(TD.encuadre.tgt); TD.ct.update();
 };
-['lH','lDate'].forEach(function(i){$(i).addEventListener('input',function(){
-  liveLbl();eventoProgramaRebuild(false);});});
-$('lDate').addEventListener('change',function(){liveLbl();eventoProgramaRebuild(false);});
-
-var EVENT_INPUTS=['lV','lVPeak','lD','lWindStart','lWindRamp','lWindHold','lGust','lGustAt','lGustDur',
-  'lSignal','lHailOn','lHailMm','lHailProb','lHailEta','lSnowOn','lSnowCm','lSnowStart','lSnowClear'];
+['lV','lD','lH','lDate'].forEach(function(i){$(i).addEventListener('input',function(){
+  liveLbl(); if(MODO==='live')liveTick(0.001);});});
+$('lDate').addEventListener('change',function(){liveLbl();if(MODO==='live')liveTick(0.001);});
+$('lPlay').onclick=function(){
+  if(!LIVE)liveInit();
+  LIVE.run=!LIVE.run; pintaPlay();
+};
+// Evento: controles propios, sin tocar el laboratorio En vivo.
+['eH','eDate'].forEach(function(id){$(id).addEventListener('input',function(){eventoLbl();eventoProgramaRebuild(false);});});
+$('eDate').addEventListener('change',function(){eventoLbl();eventoProgramaRebuild(false);});
+var EVENT_INPUTS=['eV','eVPeak','eD','eWindStart','eWindRamp','eWindHold','eGust','eGustAt','eGustDur',
+  'eSignal','eHailOn','eHailMm','eHailProb','eHailEta','eSnowOn','eSnowCm','eSnowStart','eSnowClear'];
 EVENT_INPUTS.forEach(function(id){
   var e=$(id);if(!e)return;
-  e.addEventListener('input',function(){liveLbl();hailLivePinta();eventoProgramaRebuild(true);});
-  e.addEventListener('change',function(){liveLbl();hailLivePinta();eventoProgramaRebuild(true);});
+  e.addEventListener('input',function(){eventoLbl();eventoProgramaRebuild(true);});
+  e.addEventListener('change',function(){eventoLbl();eventoProgramaRebuild(true);});
 });
-$('lPreset').addEventListener('change',function(){aplicaPresetEvento(this.value);});
-$('lTime').addEventListener('input',function(){EVENTO.run=false;EVENTO.acc=0;eventoAplica(+this.value);});
-$('lPrev').onclick=function(){EVENTO.run=false;eventoAplica(EVENTO.pos-1);};
-$('lNext').onclick=function(){EVENTO.run=false;eventoAplica(EVENTO.pos+1);};
-$('lPlay').onclick=function(){
+$('ePreset').addEventListener('change',function(){aplicaPresetEvento(this.value);});
+$('eTime').addEventListener('input',function(){EVENTO.run=false;EVENTO.acc=0;eventoAplica(+this.value);});
+$('ePrev').onclick=function(){EVENTO.run=false;eventoAplica(EVENTO.pos-1);};
+$('eNext').onclick=function(){EVENTO.run=false;eventoAplica(EVENTO.pos+1);};
+$('ePlay').onclick=function(){
   if(!EVENTO.sim)eventoRebuild();
   if(EVENTO.pos>=EVENTO.sim.tmax)eventoAplica(EVENTO.sim.tmin);
-  EVENTO.run=!EVENTO.run;EVENTO.acc=0;pintaPlay();
+  EVENTO.run=!EVENTO.run;EVENTO.acc=0;pintaEventPlay();
 };
 $('gadd').onclick=function(){addGust($('gpreset').value);};
 $('pas').onchange=function(){
