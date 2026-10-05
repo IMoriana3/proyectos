@@ -149,18 +149,18 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     JSON.stringify(snow.agree));
 
   // Controles de reproducción: play y paso exacto de un minuto.
-  const ctl=await page.evaluate(async()=>{
+  const ctl=await page.evaluate(()=>{
     aplicaPresetEvento('wind_ramp');eventoAplica(0);EVENTO.run=false;EVENTO.acc=0;
     eSpeed.value='30';
-    ePlay.click();
-    await new Promise(r=>setTimeout(r,650));
-    ePlay.click();
+    ePlay.click();                 // el botón activa el reproductor
+    eventoTick(0.5);              // 0,5 s reales × 30 min/s = 15 min exactos
+    ePlay.click();                 // y lo pausa
     const trasPlay=EVENTO.pos;
     eventoAplica(12);ePrev.click();const p11=EVENTO.pos;eNext.click();const p12=EVENTO.pos;
     return {trasPlay,p11,p12};
   });
   check('play hace avanzar el tiempo del slider en minutos simulados',
-    ctl.trasPlay>=10&&ctl.trasPlay<=30,JSON.stringify(ctl));
+    ctl.trasPlay===15,JSON.stringify(ctl));
   check('−1/+1 mueven exactamente un minuto',
     ctl.p11===11&&ctl.p12===12,JSON.stringify(ctl));
 
