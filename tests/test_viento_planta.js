@@ -421,6 +421,8 @@ const LAYOUT = {
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(GIRADA) }));
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#escena', { timeout: 15000 });
+  await page.click('#mLive');
+  await page.waitForSelector('#liveCtl', { state: 'visible', timeout: 15000 });
   await page.selectOption('#escena', 'fayon');
   await page.waitForFunction(() => window.ESC && ESC.kind === 'planta', { timeout: 25000 });
   await page.check('#bandas');
