@@ -17,15 +17,13 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   const errores=[];page.on('pageerror',e=>errores.push(String(e)));
   await page.goto(BASE+'/sim-viento.html',{waitUntil:'domcontentloaded'});
   await page.waitForSelector('#mEvent',{timeout:15000});
-  await page.click('#mEvent');
-  await page.waitForSelector('#eTime',{timeout:15000});
-  await page.evaluate(()=>{eventoRebuild(0);});
-  await page.waitForFunction(()=>window.EVENTO&&EVENTO.sim&&EVENTO.sim.frames.length>200,{timeout:30000});
-
   check('Evento es la vista principal y los ajustes avanzados nacen plegados',
     await page.$eval('#eventCtl',e=>e.style.display!=='none') &&
     await page.$eval('#mEvent',e=>e.classList.contains('acc')) &&
     await page.$eval('#eAdv',e=>!e.open));
+  await page.waitForSelector('#eTime',{state:'visible',timeout:15000});
+  await page.evaluate(()=>{eventoRebuild(0);});
+  await page.waitForFunction(()=>window.EVENTO&&EVENTO.sim&&EVENTO.sim.frames.length>200,{timeout:30000});
 
   const ui=await page.evaluate(()=>({
     min:+eTime.min,max:+eTime.max,step:+eTime.step,
