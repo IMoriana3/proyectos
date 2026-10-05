@@ -3242,6 +3242,226 @@ LOC.simulaEvento=function(cfg){
           dt_s:dt,control_signal:sig};
 };
 
+/* ═══════════ GENERADOR / RED TEAM DE INCLEMENCIAS ═══════════
+   Generar números aleatorios no demuestra nada. Cada caso lleva un ORÁCULO
+   independiente de la máquina: la batería sabe de antemano qué propiedad
+   debería cumplirse (por ejemplo T1+1 -> A1 FULL / A2 PARTIAL, ETA>lead ->
+   vigilancia sin orden, nieve=10 cm -> no entra y 11 -> sí). Después se
+   ejecuta `simulaEvento` y se contrasta.
+
+   Además se comprueban invariantes que no dependen del caso: valores finitos,
+   límites mecánicos, cobertura temporal y determinismo al repetir la misma
+   entrada. El objetivo de ADVERsarial es encontrar un rojo, no fabricar verdes. */
+LOC.inclemenciaBase=function(ctx){
+  ctx=ctx||{};
+  return {wind_base_kmh:10,wind_peak_kmh:10,wind_dir_deg:270,
+    wind_start_min:0,wind_ramp_min:0,wind_hold_min:180,
+    gust_peak_kmh:10,gust_at_min:0,gust_duration_min:0,
+    hail_on:false,hail_mm:(+ctx.hail_mm||19)+3,
+    hail_prob_pct:(+ctx.hail_prob||30)+20,hail_eta0_min:90,
+    hail_lead_min:Math.max(0,+ctx.hail_lead||0),
+    snow_on:false,snow_cm:0,snow_start_min:0,snow_clear_min:120};
+};
+
+LOC.catalogoInclemencias=function(ctx){
+  ctx=ctx||{};
+  var t1=+ctx.t1, t2=+ctx.t2, pr=+ctx.passive_release,
+      lead=Math.max(0,+ctx.hail_lead||0), hm=Math.max(0,+ctx.hail_mm||19),
+      hp=Math.max(0,+ctx.hail_prob||30), sn=Math.max(0,+ctx.snow_on||10);
+  if(!(t1>=0)||!(t2>t1))throw new Error('El generador necesita T2 > T1 (ahora T1='+t1+', T2='+t2+').');
+  if(!(pr>0))throw new Error('El umbral pasivo debe ser > 0 km/h.');
+  var base=function(){return LOC.inclemenciaBase(ctx);}, out=[],p,mid=(t1+t2)/2;
+  var add=function(id,fam,label,oracle,probe,profile,extra){
+    var c={id:id,familia:fam,label:label,oracle:oracle,probe_t:probe,profile:profile};
+    if(extra)for(var k in extra)c[k]=extra[k];out.push(c);
+  };
+
+  p=base();p.wind_base_kmh=Math.max(0,t1-1);p.wind_peak_kmh=p.wind_base_kmh;
+  add('wind_t1_minus','viento','Viento justo bajo T1','wind_idle',30,p);
+
+  p=base();p.wind_base_kmh=Math.max(0,t1-5);p.wind_peak_kmh=mid;
+  p.wind_ramp_min=2;p.wind_hold_min=120;
+  add('wind_between','viento','Viento entre T1 y T2','wind_partial',30,p);
+
+  p=base();p.wind_base_kmh=Math.max(0,t1-5);p.wind_peak_kmh=t2+1;
+  p.wind_ramp_min=2;p.wind_hold_min=120;
+  add('wind_t2_plus','viento','Viento justo sobre T2','wind_full',30,p);
+
+  p=base();p.wind_base_kmh=Math.max(0,Math.min(t1-5,20));p.wind_peak_kmh=p.wind_base_kmh;
+  p.gust_peak_kmh=pr+8;p.gust_at_min=0;p.gust_duration_min=12;
+  add('gust_passive','racha','Ráfaga que debe soltar el pasivo','passive_release',0,p,{passive:true,signal:'mean'});
+
+  p=base();p.hail_on=true;p.hail_eta0_min=lead+30;p.hail_mm=hm+3;p.hail_prob_pct=hp+20;
+  add('hail_watch','granizo','Granizo severo todavía lejano','hail_watch',0,p);
+
+  p=base();p.hail_on=true;p.hail_eta0_min=lead+1;p.hail_mm=hm+3;p.hail_prob_pct=hp+20;
+  add('hail_lead_plus_1','granizo','Granizo a lead + 1 min','hail_watch',0,p);
+
+  p=base();p.hail_on=true;p.hail_eta0_min=lead;p.hail_mm=hm+3;p.hail_prob_pct=hp+20;
+  add('hail_lead_exact','granizo','Granizo exactamente en el inicio de defensa','hail_defense',0,p);
+
+  p=base();p.hail_on=true;p.hail_eta0_min=Math.max(0,lead/3);p.hail_mm=hm+5;p.hail_prob_pct=hp+30;
+  add('hail_near','granizo','Granizo inminente','hail_case3',0,p);
+
+  p=base();p.hail_on=true;p.hail_eta0_min=Math.max(0,Math.min(lead,30));
+  p.hail_mm=Math.max(0,hm-1);p.hail_prob_pct=Math.min(100,hp+30);
+  add('hail_size_below','granizo','Granizo 1 mm bajo el umbral','hail_sub',0,p);
+
+  p=base();p.hail_on=true;p.hail_eta0_min=Math.max(0,Math.min(lead,30));
+  p.hail_mm=hm+5;p.hail_prob_pct=Math.max(0,hp-1);
+  add('hail_prob_below','granizo','Probabilidad 1 punto bajo el umbral','hail_sub',0,p);
+
+  p=base();p.hail_on=true;p.hail_eta0_min=Math.min(Math.max(5,lead/3),30);
+  p.hail_mm=hm+5;p.hail_prob_pct=hp+30;
+  add('hail_exit_hold','granizo','Salida de granizo con hold','hail_hold',50,p);
+
+  p=base();p.snow_on=true;p.snow_cm=sn;p.snow_start_min=0;p.snow_clear_min=120;
+  add('snow_exact','nieve','Nieve exactamente en el umbral','snow_idle',10,p);
+
+  p=base();p.snow_on=true;p.snow_cm=sn+1;p.snow_start_min=0;p.snow_clear_min=120;
+  add('snow_plus','nieve','Nieve 1 cm sobre el umbral','snow_stow',10,p);
+
+  p=base();p.hail_on=true;p.hail_eta0_min=Math.max(0,Math.min(lead,30));
+  p.hail_mm=hm+5;p.hail_prob_pct=hp+30;p.wind_base_kmh=t1+5;p.wind_peak_kmh=t1+5;
+  add('hail_wind','combinado','Granizo con viento ya sobre T1','wind_hail',5,p);
+
+  p=base();p.hail_on=true;p.hail_eta0_min=Math.max(0,Math.min(lead,30));
+  p.hail_mm=hm+5;p.hail_prob_pct=hp+30;p.snow_on=true;p.snow_cm=sn+5;
+  add('snow_hail_conflict','combinado','Nieve + granizo, lados opuestos','conflict',1,p,{relation:'conflict'});
+
+  p=base();p.hail_on=true;p.hail_eta0_min=Math.max(0,Math.min(lead,30));
+  p.hail_mm=hm+5;p.hail_prob_pct=hp+30;p.snow_on=true;p.snow_cm=sn+5;
+  add('snow_hail_same','combinado','Nieve + granizo, mismo lado','multi',1,p,{relation:'same'});
+
+  return out;
+};
+
+LOC.resuelveInclemencia=function(caso,cfg){
+  var c=JSON.parse(JSON.stringify(caso)),p=c.profile;
+  if(c.relation){
+    var tt=isFinite(+c.probe_t)?+c.probe_t:0;
+    var when=new Date((+cfg.origin_utc_ms||Date.now())+tt*60000);
+    var P=LOC.sun(when,(+cfg.lat||0)*LOC.D2R,+cfg.lon||0);
+    var th=LOC.theta(P.el,P.az,+cfg.gcr||0.397,Math.abs(+cfg.full||55),cfg.bt!==false);
+    var snowSide=LOC.ladoNieve(P.azp,th,(cfg.stow&&+cfg.stow.noon)||0,Math.abs(+cfg.full||55))>0?1:-1;
+    var hailSide=(c.relation==='same')?snowSide:-snowSide;
+    p.wind_dir_deg=(hailSide>0?270:90);
+  }
+  return c;
+};
+
+LOC.generaInclemencias=function(opts){
+  opts=opts||{};var n=Math.max(1,Math.min(100,Math.round(+opts.n||1)));
+  var seed=(+opts.seed>>>0)||1,r=LOC.rng(seed),cat=LOC.catalogoInclemencias(opts.ctx||{});
+  var fam=String(opts.familia||'todas'),modo=String(opts.modo||'aleatorio');
+  if(fam!=='todas')cat=cat.filter(function(c){return c.familia===fam;});
+  if(!cat.length)throw new Error('No hay casos para la familia '+fam+'.');
+  var sev=String(opts.severidad||'mixta'),sk={suave:.25,media:.5,severa:.75,extrema:1}[sev]||(.25+.75*r());
+  var out=[];
+  for(var i=0;i<n;i++){
+    var src;
+    if(modo==='adversarial')src=cat[i%cat.length];
+    else if(modo==='mixto'&&i<Math.min(cat.length,Math.ceil(n/2)))src=cat[i%cat.length];
+    else src=cat[Math.floor(r()*cat.length)];
+    var c=JSON.parse(JSON.stringify(src));
+    c.seed=seed;c.index=i;c.uid=seed+'-'+i+'-'+c.id;
+    if(modo!=='adversarial'){
+      var p=c.profile,j=(r()-.5)*2,amp=sk;
+      /* Se varía DENTRO del régimen del oráculo: nunca se cruza sin querer el
+         umbral que el propio caso pretende probar. */
+      if(c.oracle==='wind_idle')p.wind_base_kmh=p.wind_peak_kmh=Math.max(0,(opts.ctx.t1||40)-(1+6*amp*r()));
+      if(c.oracle==='wind_partial'){
+        var a=(+opts.ctx.t1||40)+1,b=(+opts.ctx.t2||60)-1;
+        p.wind_peak_kmh=a+(b-a)*(.15+.7*r());
+      }
+      if(c.oracle==='wind_full')p.wind_peak_kmh=(+opts.ctx.t2||60)+(1+25*amp*r());
+      if(c.oracle==='passive_release')p.gust_peak_kmh=(+opts.ctx.passive_release||90)+(3+35*amp*r());
+      if(c.oracle==='hail_watch')p.hail_eta0_min=(+opts.ctx.hail_lead||60)+(2+90*amp*r());
+      if(/^hail_/.test(c.oracle)&&c.oracle!=='hail_sub'){
+        p.hail_mm=(+opts.ctx.hail_mm||19)+(1+20*amp*r());
+        p.hail_prob_pct=Math.min(100,(+opts.ctx.hail_prob||30)+(2+50*amp*r()));
+      }
+      if(c.oracle==='snow_stow')p.snow_cm=(+opts.ctx.snow_on||10)+(1+25*amp*r());
+      c.label+=' · r'+(i+1);
+      c.random_jitter=j;
+    }
+    out.push(c);
+  }
+  return out;
+};
+
+LOC.configInclemencia=function(base,caso,ctx){
+  var cfg={};for(var k in base)cfg[k]=base[k];
+  cfg.profile=JSON.parse(JSON.stringify(caso.profile));
+  cfg.control_signal=caso.signal||'mean';
+  if(caso.passive){
+    cfg.passive=base.passive||{pRel:(+ctx.passive_release||90)/3.6,pSide:-Math.abs(+base.full||55),pTol:1,mode:'fijo'};
+    cfg.passive_frac=(base.passive_frac>0?base.passive_frac:.05);
+  }else{cfg.passive=null;cfg.passive_frac=0;}
+  return cfg;
+};
+
+LOC.firmaEvento=function(sim,t){
+  if(!sim||!sim.frames||!sim.frames.length)return '';
+  var fr=sim.frames.find(function(x){return x.t_min===t;})||sim.frames[0];
+  return JSON.stringify({t:fr.t_min,ang:fr.ang,modos:fr.modos,orden:fr.orden,
+    src:Object.keys(fr.info||{}).reduce(function(o,k){o[k]=fr.info[k].fuente;return o;},{}),
+    wind:fr.wind_ms,gust:fr.gust_ms,hail:fr.hail_phase,snow:fr.snow_cm});
+};
+
+LOC.verificaInclemencia=function(caso,sim,cfg,sim2){
+  var checks=[],add=function(id,ok,detalle){checks.push({id:id,ok:!!ok,detalle:detalle||''});};
+  var frames=(sim&&sim.frames)||[],full=Math.abs(+cfg.full||55),probe=+caso.probe_t||0;
+  var fr=frames.find(function(x){return x.t_min===probe;})||frames[0];
+  var ks=fr?Object.keys(fr.ang||{}):[];
+  add('timeline',!!frames.length&&frames[0].t_min===sim.tmin&&frames[frames.length-1].t_min===sim.tmax,
+      frames.length?(frames[0].t_min+'…'+frames[frames.length-1].t_min):'sin frames');
+  var finitos=!!fr&&frames.every(function(x){
+    return Object.keys(x.ang||{}).every(function(k){return isFinite(x.ang[k])&&isFinite(x.orden[k]);});
+  });
+  add('finitos',finitos,'ángulos/órdenes numéricos');
+  var limites=!!fr&&frames.every(function(x){
+    return Object.keys(x.ang||{}).every(function(k){return Math.abs(x.ang[k])<=full+1e-6&&Math.abs(x.orden[k])<=full+1e-6;});
+  });
+  add('limites',limites,'±'+full+'°');
+  if(sim2)add('determinismo',LOC.firmaEvento(sim,probe)===LOC.firmaEvento(sim2,probe),'misma entrada, misma firma');
+
+  var I=fr&&fr.info||{},M=fr&&fr.modos||{};
+  var a1=I.A1||{},a2=I.A2||{},m1=M.A1,m2=M.A2;
+  switch(caso.oracle){
+    case 'wind_idle': add('oraculo',m1==='IDLE'&&m2==='IDLE','A1='+m1+' A2='+m2);break;
+    case 'wind_partial': add('oraculo',m1==='FULL_STOW'&&m2==='PARTIAL_STOW','A1='+m1+' A2='+m2);break;
+    case 'wind_full': add('oraculo',m1==='FULL_STOW'&&m2==='FULL_STOW','A1='+m1+' A2='+m2);break;
+    case 'passive_release':
+      add('oraculo',M.PASIVO==='SUELTA'&&((I.PASIVO||{}).fuente==='PASIVO'),'PASIVO='+M.PASIVO);break;
+    case 'hail_watch':
+      add('oraculo',m1==='IDLE'&&a1.fuente==='VIGILANCIA GRANIZO'&&a1.proteccion==='VIGILANCIA',
+          a1.fuente+' / '+m1);break;
+    case 'hail_defense':
+      add('oraculo',m1==='HAIL_STOW'&&a1.fuente==='GRANIZO','A1='+m1+' '+a1.fuente);break;
+    case 'hail_case3':
+      add('oraculo',m1==='HAIL_STOW'&&a1.fuente==='GRANIZO'&&a1.hail_case===3,
+          'caso='+a1.hail_case+' '+m1);break;
+    case 'hail_sub':
+      add('oraculo',m1==='IDLE'&&a1.fuente==='SEGUIMIENTO','A1='+m1+' '+a1.fuente);break;
+    case 'hail_hold':
+      add('oraculo',!fr.hail_on&&a1.fuente==='GRANIZO'&&a1.hail_case===5,
+          'hail_on='+fr.hail_on+' caso='+a1.hail_case+' '+a1.fuente);break;
+    case 'snow_idle': add('oraculo',m1==='IDLE','A1='+m1);break;
+    case 'snow_stow': add('oraculo',m1==='SNOW_STOW'&&a1.fuente==='NIEVE','A1='+m1+' '+a1.fuente);break;
+    case 'wind_hail':
+      add('oraculo',a1.fuente==='VIENTO × GRANIZO','A1='+m1+' '+a1.fuente);break;
+    case 'conflict':
+      add('oraculo',m1==='CONFLICT'&&a1.fuente==='NO MODELADO'&&a1.proteccion==='NO MODELADO',
+          'A1='+m1+' '+a1.fuente);break;
+    case 'multi':
+      add('oraculo',m1==='MULTI_STOW'&&a1.fuente==='GRANIZO + NIEVE','A1='+m1+' '+a1.fuente);break;
+    default:add('oraculo',false,'oráculo desconocido '+caso.oracle);
+  }
+  return {pass:checks.every(function(x){return x.ok;}),checks:checks,probe:probe,
+          actual:(fr?{modo:m1,fuente:a1.fuente||'',proteccion:a1.proteccion||''}:null)};
+};
+
 /* ── Meteo ── */
 LOC.fetchYear=function(lat,lon,year,year1,sinRafaga){
   var y1=year1||year;
