@@ -2088,11 +2088,11 @@ LOC.stepperPasivo=function(cfg){
     // acabar en el mismo angulo que un stow ordenado, por causas distintas, y
     // por eso tampoco comparte su color.
     get mode(){return suelta?'SUELTA':'IDLE';}, get theta(){return th;},
-    step:function(tgt,ws,dtS){
+    step:function(tgt,ws,dtS,sideNow){
       var cruza=(prev!=null&&suelta&&(prev-side)*(tgt-side)<=0);
       if(suelta&&(cruza||Math.abs(tgt-side)<=tol))suelta=false;
       prev=tgt;
-      if(!suelta&&ws>rel)suelta=true;
+      if(!suelta&&ws>rel){ if(sideNow!==null&&sideNow!==undefined)side=+sideNow; suelta=true; }
       if(suelta)th=side;
       else{var d=tgt-th,m=LOC.SLEW*dtS;if(Math.abs(d)>m)d=(d>0?m:-m);
            th=Math.max(-full,Math.min(full,th+d));}
@@ -3130,7 +3130,10 @@ LOC.simulaEvento=function(cfg){
     });
 
     if(pas){
-      var rp=pas.step(tgt,pr.gust_kmh/3.6,dt);
+      var pSideNow=(cfg.passive.mode==='viento')
+        ? ((LOC.ladoEspaldaAlViento(pr.dir_deg)||((+cfg.passive.pSide||-full)<0?-1:1))*full)
+        : null;
+      var rp=pas.step(tgt,pr.gust_kmh/3.6,dt,pSideNow);
       ang.PASIVO=rp.theta;modos.PASIVO=rp.mode;orden.PASIVO=rp.orden;ordenEje.PASIVO=rp.orden;
       info.PASIVO={fuente:(rp.mode==='SUELTA'?'PASIVO':'SEGUIMIENTO'),
         motivo:(rp.mode==='SUELTA'?'fila exterior desembragada por carga de racha':'acoplado'),
@@ -5344,12 +5347,15 @@ function drawEvents(c){
    tiene su tubo en +X local, así que entra girado 90°. */
 var TD=null, TL=null, TPOS=0, PLAY=false, MODO='live';
 var NFILAS=2, PITCH=6.0, BLOQUE=34;
-var MODO_COL={IDLE:0x000000, PARTIAL_STOW:0xfbbd23, FULL_STOW:0xf87272, DESTOW_HOLD:0x9bb0c6, SUELTA:0xa78bfa, HAIL_STOW:0x5aa9ff};
-var MODO_INT={IDLE:0, PARTIAL_STOW:.42, FULL_STOW:.5, DESTOW_HOLD:.3, SUELTA:.45, HAIL_STOW:.52};
+var MODO_COL={IDLE:0x000000, PARTIAL_STOW:0xfbbd23, FULL_STOW:0xf87272, DESTOW_HOLD:0x9bb0c6,
+  SUELTA:0xa78bfa, HAIL_STOW:0x5aa9ff, SNOW_STOW:0xc7d2fe, MULTI_STOW:0x36d399, CONFLICT:0xf472b6};
+var MODO_INT={IDLE:0, PARTIAL_STOW:.42, FULL_STOW:.5, DESTOW_HOLD:.3,
+  SUELTA:.45, HAIL_STOW:.52, SNOW_STOW:.42, MULTI_STOW:.5, CONFLICT:.55};
 var PALA=0x1b3a6b;
 var LAYOUTS='https://imoriana3.github.io/cobertura-zigbee/';
 var ESC=null;     // {kind, bloques[], planta{...}}
-var LIVE=null;    // {t, steppers, base, v, dir}
+var LIVE=null;    // vista del frame actual
+var EVENTO={enabled:true,sim:null,current:null,pos:0,run:false,acc:0,rebuildTimer:null,applyingPreset:false};
 
 function has3D(){return typeof THREE!=='undefined'&&THREE.OrbitControls&&typeof Seguidor!=='undefined';}
 function vivos(){return strategies().concat($('pas').checked?['PASIVO']:[]);}
