@@ -106,6 +106,9 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   page.on('pageerror', e => errores.push(String(e)));
   await page.goto(BASE + '/sim-viento.html', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#run', { timeout: 20000 });
+  // Evento es la vista principal del producto; este banco mide el laboratorio fino.
+  await page.click('#mLive');
+  await page.waitForSelector('#liveCtl', { state: 'visible', timeout: 15000 });
 
   check('la ficha expone la cadena entera', await page.evaluate(() =>
     ['mediaMovil', 'rejilla', 'retardo', 'vientoVisto', 'ordenEnElEje',
