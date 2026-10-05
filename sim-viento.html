@@ -153,6 +153,16 @@
   .eventadv{margin-top:9px;border-top:1px solid var(--line);padding-top:8px}
   .eventadv summary{cursor:pointer;color:var(--tx2);font-family:var(--mono);font-size:.7rem}
   .eventadv .subgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:9px}
+  .incgen{margin-top:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg2);padding:10px 12px}
+  .incgen .head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .incgen .head b{font-size:.86rem}
+  .incgen .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+  .incgen .actions .btn{width:auto}
+  .incsummary{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:7px;margin-top:9px}
+  .incsummary .ro{margin:0}
+  .inctable td,.inctable th{font-size:.7rem}
+  .inctable .ok{color:var(--ok);font-weight:700}.inctable .fail{color:var(--err);font-weight:700}
+  .inctable button{width:auto;padding:3px 7px}
   @media(max-width:640px){.eventmaster .top{grid-template-columns:1fr}.eventline .mark b{font-size:.5rem}.eventsummary{grid-template-columns:1fr 1fr}}
   /* El cronómetro. Monoespaciado y alineado a la derecha porque lo que se lee
      es una COLUMNA DE TIEMPOS: con proporcional los minutos no cuadran y hay
@@ -605,6 +615,39 @@
               <div class="field"><label>Despeja en T (min)</label><input id="eSnowClear" type="number" step="1" value="120"></div>
             </div>
           </div>
+        </details>
+
+        <details class="incgen" id="incGen">
+          <summary class="head"><b>⚡ Generador de inclemencias · batería de falsación</b>
+            <span class="sn" style="margin:0">misma física · seed reproducible · PASS/FAIL</span></summary>
+          <div class="subgrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin-top:10px">
+            <div class="field"><label>Modo</label><select id="incMode">
+              <option value="random">Aleatorio reproducible</option>
+              <option value="adversarial" selected>Adversarial · busca bordes</option>
+            </select></div>
+            <div class="field"><label>Familia</label><select id="incFamily">
+              <option value="all" selected>Todas</option><option value="wind">Viento</option>
+              <option value="gust">Ráfaga</option><option value="hail">Granizo</option>
+              <option value="snow">Nieve</option><option value="combined">Combinado</option>
+            </select></div>
+            <div class="field"><label>Severidad</label><select id="incSeverity">
+              <option value="mixed" selected>Mixta</option><option value="mild">Suave</option>
+              <option value="severe">Severa</option><option value="extreme">Extrema</option>
+            </select></div>
+            <div class="field"><label>Semilla</label><input id="incSeed" type="number" step="1" value="2601001"></div>
+            <div class="field"><label>Nº casos</label><input id="incN" type="number" min="1" max="100" step="1" value="25"></div>
+          </div>
+          <div class="actions">
+            <button class="btn small" id="incOne">Generar 1 caso</button>
+            <button class="btn small acc" id="incRun">▶ Ejecutar batería</button>
+            <button class="btn small" id="incJson" disabled>Exportar JSON</button>
+            <button class="btn small" id="incCsv" disabled>Exportar CSV</button>
+          </div>
+          <p class="note" id="incNote">El modo adversarial concentra casos alrededor de T1/T2, umbrales de granizo/nieve,
+            ETA de defensa, cambio de lado, racha de suelta y conflictos. Un caso <b>NO MODELADO</b> puede ser PASS si el
+            simulador lo detecta explícitamente en vez de inventar una política.</p>
+          <div class="incsummary" id="incSummary"></div>
+          <div class="scroll" style="margin-top:9px"><table class="inctable" id="incTable"></table></div>
         </details>
       </div>
 
