@@ -6299,6 +6299,41 @@ function ponSol(elDeg,azDeg,vms,dirDeg){
   }else TD.wind.visible=false;
 }
 
+/* Meteo LEÍBLE dentro de la escena. La flecha 3D enseña hacia dónde VA el
+   aire, pero la entrada de proyecto está expresada como de dónde VIENE. Las
+   dos se escriben a la vez para que 270° no obligue a hacer geometría mental.
+   El granizo no inventa rumbo de célula: solo enseña severidad, ETA y fase. */
+function actualizaMeteo3D(fr){
+  if(!TD||!fr)return;
+  var kmh=Math.max(0,(+fr.wind_ms||0)*3.6), de=((+fr.wind_dir%360)+360)%360, hacia=(de+180)%360;
+  if(TD.windHud){
+    TD.windHud.style.display=kmh>.3?'':'none';
+    TD.windHud.innerHTML='<b>VIENTO '+fmt(kmh,0)+' km/h</b><br>VIENE DE '+
+      compass(de)+' · '+fmt(de,0)+'° → VA HACIA '+compass(hacia)+' · '+fmt(hacia,0)+'°';
+  }
+  var hailOn=!!fr.hail_on, severe=!!fr.hail_gate;
+  if(TD.hailHud){
+    if(!hailOn){TD.hailHud.style.display='none';}
+    else{
+      TD.hailHud.style.display='';
+      var estado=!severe?'SIN UMBRAL':
+        (fr.hail_eta_min<=0?'ENCIMA':(fr.hail_defense_active?'DEFENSA ACTIVA':'VIGILANCIA'));
+      TD.hailHud.innerHTML='<b>GRANIZO · '+estado+'</b><br>'+
+        fmt(+$('eHailMm').value,0)+' mm · ETA '+fmt(fr.hail_eta_min,0)+' min'+
+        (!fr.hail_defense_active&&severe?'<br>sin orden hasta ETA ≤ '+LOC.GRZ.hail_min+' min':'');
+    }
+  }
+  if(TD.hailFx){
+    if(!hailOn||!severe){TD.hailFx.className='hailfx';}
+    else{
+      var cl='hailfx on';
+      if(fr.hail_eta_min<=10)cl+=' near';
+      if(fr.hail_eta_min>0)cl+=' watch';
+      TD.hailFx.className=cl;
+    }
+  }
+}
+
 /* La CONSIGNA y lo EJECUTADO son dos cosas, y la tarjeta las enseñaba juntas
    sin decirlo: «full stow · θ 0,0°» con el reloj parado se lee como que el
    abanderamiento no se ha dado. Se ha dado — no ha LLEGADO. El eje va a
@@ -6772,14 +6807,18 @@ function eventoResumen(fr){
   $('eHailMmV').textContent=fmt(+$('eHailMm').value,0)+' mm';
   $('eHailProbV').textContent=fmt(+$('eHailProb').value,0)+' %';
   $('eHailEtaV').textContent=fmt(fr.hail_eta_min,fr.hail_eta_min<10?1:0)+' min';
+  var hEstado=!gate.activa?'—':(fr.hail_eta_min<=0?'ENCIMA':(fr.hail_defense_active?'DEFENSA ACTIVA':'VIGILANCIA'));
+  var hacia=(((+fr.wind_dir||0)+180)%360+360)%360;
   $('eEventSummary').innerHTML=
     '<div class="e"><b>Viento '+fmt(fr.wind_ms*3.6,0)+' km/h</b><span>racha '+fmt(fr.gust_ms*3.6,0)+
       ' · T1/T2 miran '+signal+'</span></div>'+
-    '<div class="e"><b>Granizo '+(gate.activa?'ACTIVO':'—')+'</b><span>'+
-      (fr.hail_on?'ETA '+fmt(fr.hail_eta_min,0)+' min · '+fmt(+$('eHailMm').value,0)+' mm':'sin señal')+'</span></div>'+
+    '<div class="e"><b>Granizo '+hEstado+'</b><span>'+
+      (fr.hail_on?'ETA '+fmt(fr.hail_eta_min,0)+' min · '+fmt(+$('eHailMm').value,0)+' mm'+
+        (!fr.hail_defense_active&&gate.activa?' · sin orden todavía':''):'sin señal')+'</span></div>'+
     '<div class="e"><b>Nieve '+fmt(fr.snow_cm,0)+' cm</b><span>'+
       (fr.snow_cm>LOC.NIEVE_ON_CM?'sobre umbral de entrada':'sin activación')+'</span></div>'+
-    '<div class="e"><b>'+fechaHoraLocal(fr.iso)+'</b><span>dirección '+compass(fr.wind_dir)+' · '+fmt(fr.wind_dir,0)+'°</span></div>';
+    '<div class="e"><b>'+fechaHoraLocal(fr.iso)+'</b><span>viento VIENE DE '+compass(fr.wind_dir)+' · '+
+      fmt(fr.wind_dir,0)+'° → VA HACIA '+compass(hacia)+' · '+fmt(hacia,0)+'°</span></div>';
 }
 
 function eventoAplica(t){
@@ -6788,15 +6827,18 @@ function eventoAplica(t){
   var ix=Math.max(0,Math.min(sim.frames.length-1,tt-sim.tmin)),fr=sim.frames[ix];
   EVENTO.pos=fr.t_min;EVENTO.current=fr;
   $('eTime').value=fr.t_min;
-  $('eTimeLbl').textContent='T '+(fr.t_min>0?'+':fr.t_min<0?'−':'= ')+(fr.t_min?Math.abs(fr.t_min):0)+' min';
+  var tTxt='T '+(fr.t_min>0?'+':fr.t_min<0?'−':'= ')+(fr.t_min?Math.abs(fr.t_min):0)+' min';
+  $('eTimeLbl').textContent=tTxt;
+  if($('eTimeTop'))$('eTimeTop').textContent=tTxt;
   var now=$('eEventNow');if(now)now.style.left=(100*(fr.t_min-sim.tmin)/(sim.tmax-sim.tmin)).toFixed(2)+'%';
-  $('eClock').textContent=fechaHoraLocal(fr.iso)+' · T '+(fr.t_min>=0?'+':'')+fr.t_min+' min';
+  $('eClock').textContent=fechaHoraLocal(fr.iso);
 
   LIVE=LIVE||{};LIVE.run=false;LIVE.ang=fr.ang;LIVE.modos=fr.modos;LIVE.orden=fr.orden;
   LIVE.ordenEje=fr.ordenEje;LIVE.info=fr.info;LIVE.v=fr.wind_ms;LIVE.gust=fr.gust_ms;
   LIVE.dir=fr.wind_dir;LIVE.lat=cfgLat();LIVE.fracPas=$('pas').checked?LOC.fracExpuesta(nTrk(),filasTrk(),1):null;
   if(TD&&ESC){
     ponSol(fr.sun_el,fr.sun_az,fr.wind_ms,fr.wind_dir);
+    actualizaMeteo3D(fr);
     pintaEscena(fr.ang,fr.modos,fr.poa,fr.poa.BASE);
     tiles(fr.ang,fr.modos,fr.poa,fr.poa.BASE,null,fr.orden);
   }
