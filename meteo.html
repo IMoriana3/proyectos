@@ -80,6 +80,29 @@ pre{font-size:.69rem;white-space:pre-wrap;word-break:break-word;background:var(-
   </div>
   <div class="card span7"><h2>Resumen por fuente</h2><div class="tablewrap"><table><thead><tr><th>Fuente</th><th>GHI kWh/m²·a</th><th>DNI</th><th>DHI</th><th>T media °C</th><th>Viento m/s</th></tr></thead><tbody id="cmpBody"><tr><td colspan="6">Sin comparativa.</td></tr></tbody></table></div></div>
 
+  <div class="sectiontitle">Importar · validar · otras fuentes</div>
+  <div class="card span6">
+    <h2>Importar meteo propio / PVSyst</h2>
+    <div class="row"><label><span class="k">Fichero</span><input id="meteoFile" type="file" accept=".csv,.xlsx,.xls,.xlsm"></label><label><span class="k">Zona horaria de entrada</span><input id="tzInput" value="UTC" placeholder="UTC / Europe/Madrid"></label></div>
+    <p><button id="importBtn">Importar y normalizar con SolarGPT</button></p>
+    <div class="statusline" id="importStatus">CSV con timestamp + variables canónicas/aliases, o Excel exportado por PVSyst.</div>
+    <div class="metricgrid" style="margin-top:10px"><div class="metric">Origen<b id="impOrigin">—</b></div><div class="metric">Filas<b id="impRows">—</b></div><div class="metric">Columnas<b id="impCols">—</b></div><div class="metric">Año screening<b id="impYear">—</b></div></div>
+  </div>
+  <div class="card span6">
+    <h2>Catálogo de fuentes SolarGPT</h2>
+    <div class="tablewrap" style="max-height:260px"><table><thead><tr><th>Fuente</th><th>Tipo</th><th>Uso</th><th>Estado</th></tr></thead><tbody>
+      <tr><td>Open-Meteo / ERA5</td><td>Histórico + forecast</td><td>Multianual, TMY propio, operación</td><td>Gratis · canónico</td></tr>
+      <tr><td>PVGIS</td><td>TMY + hourly</td><td>Recurso solar, contraste</td><td>Gratis · canónico</td></tr>
+      <tr><td>NASA POWER</td><td>Histórico/clima</td><td>Fallback y contraste</td><td>Gratis · canónico</td></tr>
+      <tr><td>WeatherNext 3</td><td>Forecast ensemble</td><td>P10/P50/P90, riesgo predictivo</td><td>Adapter · acceso pendiente</td></tr>
+      <tr><td>CAMS Radiation</td><td>Satélite</td><td>Irradiancia/DNI de contraste</td><td>Opcional · credencial en motor</td></tr>
+      <tr><td>NSRDB / NREL</td><td>TMY + años</td><td>Américas / validación</td><td>Opcional · key gratuita en motor</td></tr>
+      <tr><td>Solcast</td><td>Live / forecast corto</td><td>Validación reciente</td><td>Opcional · nunca para TMY multianual</td></tr>
+      <tr><td>PVSyst Excel / CSV</td><td>Fichero</td><td>Careo bancable</td><td>Importable aquí</td></tr>
+    </tbody></table></div>
+    <p class="note">Las credenciales de CAMS/NSRDB/Solcast se quedan en el motor SolarGPT. <strong>Nunca</strong> se guardan en GitHub Pages.</p>
+  </div>
+
   <div class="sectiontitle">Descargas · informe · reutilización</div>
   <div class="card span6">
     <h2>Descargar datos</h2>
@@ -180,6 +203,18 @@ async function compare(){
 }
 async function dl(dataset){try{status("Preparando descarga…");await blobPost("/meteo/download",{...payload(),dataset,mode:dataset==="tmy_pvgis"?"pvgis":"sandia",base_year:+$("baseYear").value,smooth:true,series:false});status("Descarga generada.","ok")}catch(e){status(e.message,"bad")}}
 async function report(){try{status("Generando informe…");await blobPost("/meteo/report",{...payload(),title:$("reportTitle").value,include_tmy:true,tmy_mode:$("reportTmy").value,base_year:+$("baseYear").value});status("Informe generado. Ábrelo e imprime a PDF si lo necesitas.","ok")}catch(e){status(e.message,"bad")}}
+async function fileB64(file){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]||"");r.onerror=()=>ko(r.error);r.readAsDataURL(file)})}
+async function importFile(){
+  const file=$("meteoFile").files[0];if(!file){$("importStatus").textContent="Selecciona un CSV o Excel PVSyst.";$("importStatus").className="statusline bad";return}
+  try{
+    $("importStatus").textContent="Importando y normalizando…";$("importStatus").className="statusline";
+    const j=await post("/meteo/import",{filename:file.name,content_base64:await fileB64(file),lat:+$("lat").value,lon:+$("lon").value,tz_input:$("tzInput").value||"UTC",series:false});
+    $("impOrigin").textContent=j.origin||"—";$("impRows").textContent=(j.rows??0).toLocaleString("es-ES");$("impCols").textContent=(j.columns||[]).length;$("impYear").textContent=j.representative_year_screening??"—";
+    $("importStatus").textContent=(j.filename||file.name)+" · "+(j.columns||[]).join(", ");$("importStatus").className="statusline ok";
+    if((j.annual||[]).length){renderYears({source:j.origin,n_years:j.annual.length,rows:j.rows,annual:j.annual,representative_year_screening:j.representative_year_screening})}
+  }catch(e){$("importStatus").textContent=e.message;$("importStatus").className="statusline bad"}
+}
+$("importBtn").onclick=importFile;
 $("nowBtn").onclick=loadNow;$("yearsBtn").onclick=analyzeYears;$("tmyBtn").onclick=buildTmy;$("compareBtn").onclick=compare;$("dlHist").onclick=()=>dl("historical");$("dlSandia").onclick=()=>dl("tmy_sandia");$("dlPvgis").onclick=()=>dl("tmy_pvgis");$("reportBtn").onclick=report;
 $("wn").onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text());const m=fromWeatherNextSummary(Array.isArray(j)?j[0]:j);paint(m);$("wnStatus").textContent="WeatherNext importado · "+(m.timestamp||"sin timestamp");$("wnStatus").className="statusline ok"}catch(err){$("wnStatus").textContent=err.message;$("wnStatus").className="statusline bad"}};
 ["lat","lon","y0","y1","source"].forEach(id=>$(id).addEventListener("change",saveSite));
