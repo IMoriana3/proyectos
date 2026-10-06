@@ -8,12 +8,12 @@ SolarGPT Python sigue siendo la referencia contra la que se certifica el mirror 
 
 ## Emplazamientos
 
-El selector reutiliza la misma fuente que el resto de Factiun:
+Hay dos rutas de selección, sin duplicar la lista de proyectos:
 
-1. `localStorage.factiun_plantas`, publicado por la Cartera;
-2. si no existe o está incompleto, la semilla `SEED` de `cartera-tabla.html`.
+1. **Nuestros proyectos** reutiliza `localStorage.factiun_plantas`, publicado por la Cartera, y si falta o está incompleto completa desde la semilla `SEED` de `cartera-tabla.html`.
+2. **Buscar cualquier emplazamiento** usa Open-Meteo Geocoding sin credenciales. Con dos o más caracteres ofrece hasta 8 coincidencias y, al elegir una, fija nombre, país/región, latitud, longitud, cota y zona horaria. Ejemplos: Helsinki, Montreal o Arequipa.
 
-No hay una tercera lista de plantas mantenida a mano. El valor persistido es el código estable de Cartera/proyecto, no la posición del elemento en el desplegable. Se conserva un modo **Manual / coordenadas libres**.
+No hay una tercera lista de plantas mantenida a mano. Los proyectos propios persisten por su código estable; los emplazamientos externos persisten como un registro geocodificado separado. Se conserva además el modo **Manual / coordenadas libres**.
 
 ## Arquitectura
 
