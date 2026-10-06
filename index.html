@@ -2601,7 +2601,24 @@ tick(); setInterval(tick,1000);
    dice la potencia desde el primer momento y se pone al día sola en cuanto la cartera publique.
    Páramo está a 0 en la cartera —no tiene aún el dato— y en ese caso no se pinta nada: un «0 MW»
    sería peor que no decir nada. */
-const SPECS = (function(){ try{ return JSON.parse(localStorage.getItem('factiun_plantas')||'null')||{}; }catch(e){ return {}; } })();
+/* El buzón puede venir de una versión antigua de la Cartera técnica. Estas
+   dos correcciones migran SOLO los valores legacy conocidos del 06-10-2026:
+   Ayora ya está En marcha y San José es la que sigue En proceso. La base en
+   vivo, cuando hay sesión, sigue mandando sobre todo esto. */
+function corrigeSpecsGuardados(map){
+  map=map&&typeof map==="object"?map:{};
+  let cambia=false;
+  const fija=(cod,de,a)=>{const r=map[String(cod)];if(r&&r.estado_pem===de){r.estado_pem=a;cambia=true;}};
+  fija("24025","En proceso","En marcha");
+  fija("24019","Sin comenzar","En proceso");
+  if(cambia){try{localStorage.setItem("factiun_plantas",JSON.stringify(map));}catch(e){}}
+  return map;
+}
+function specsGuardados(){
+  try{return corrigeSpecsGuardados(JSON.parse(localStorage.getItem('factiun_plantas')||"null")||{});}
+  catch(e){return {};}
+}
+let SPECS=specsGuardados();
 
 /* ═══ LA BASE DE LA CARTERA, EN VIVO ═══════════════════════════════════════════════════════════
    `factiun_plantas` es un BUZÓN, no la fuente: lo escribe `cartera-tabla.html` al guardar, así que
@@ -2692,6 +2709,13 @@ async function desconecta(){
   try{ if (DB.sb) await DB.sb.auth.signOut(); }catch(e){}
   DB.filas=null; DB.estado='fuera'; DB.aviso=''; pintaAcceso(); renderPlants();
 }
+/* Si Cartera técnica se guarda en otra pestaña, el portal se refresca sin
+   exigir recarga manual. */
+window.addEventListener("storage",e=>{
+  if(e.key!=="factiun_plantas")return;
+  SPECS=specsGuardados();
+  if(typeof renderPlants==="function")renderPlants();
+});
 
 /* La ficha de la cartera para esta planta. Manda LA BASE, y el buzón queda de respaldo para quien
    no entre: así el Panel no pierde nada de lo que ya hacía. La búsqueda es la misma de siempre —por

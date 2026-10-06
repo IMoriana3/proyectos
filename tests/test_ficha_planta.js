@@ -6,8 +6,8 @@
 //      demás —potencias, módulos, seguidores, NCU, estado de puesta en marcha— vive en la cartera
 //      y había que abrir otra página para verlo. Ahora la tarjeta se despliega.
 //   2. La sala de control salía SOLO si la ficha traía el enlace escrito a mano, y esa lista se
-//      había descolgado del dato: San José lo tenía con la cartera diciendo «Sin comenzar», y
-//      Fayón, Túnez y Bagnarelli no lo tenían estando las tres «En marcha». Ahora lo abre el
+//      había descolgado del dato: Fayón, Túnez y Bagnarelli no lo tenían estando «En marcha».
+//      San José, en cambio, está ahora «En proceso» y Ayora ya «En marcha». Lo abre el
 //      estado, sin quitar ningún enlace de los que ya había.
 //   3. Y lo que este banco vigila por encima de todo: QUE NO SE INVENTE UN ESTADO. El estado lo
 //      publica la cartera en `factiun_plantas` (localStorage del mismo origen). Si esa página no
@@ -26,15 +26,15 @@ const check = (n, cond, extra) => {
   else { ko++; console.log('FAIL ' + n + (extra !== undefined ? ' -> ' + JSON.stringify(extra) : '')); }
 };
 
-/* La cartera de mentira lleva los TRES estados que existen y, a propósito, una planta «En marcha»
-   que NO tiene enlace escrito a mano (Fayón) y una «Sin comenzar» que SÍ lo tiene (San José): son
-   los dos casos donde el estado y la lista escrita discrepan. */
+/* La cartera de mentira lleva los TRES estados que existen y refleja el estado actual conocido:
+   Ayora En marcha, San José En proceso. Fayón queda como caso «En marcha» sin enlace escrito a mano
+   y Páramo como «Sin comenzar» sin sala automática. */
 const CARTERA = {
   '24002': { cod:24002, nproy:'23003', nombre:'El Burgo I', estado_pem:'En marcha',
              pac:11, pdc:13.95856, cantidad:23072, wmod:605, mods:28, pitch:'6',
              trk_total:215, trk_bi:215, trk_mono:0, ncu_eth:1, ncu_fo:1, lat:41.57634, lon:-0.79814 },
-  '24025': { cod:24025, nproy:'24025', nombre:'Ayora',    estado_pem:'En proceso',   pdc:52.52296, trk_total:754 },
-  '24019': { cod:24019, nproy:'24019', nombre:'San José', estado_pem:'Sin comenzar', pdc:177.984,  trk_total:2289 },
+  '24025': { cod:24025, nproy:'24025', nombre:'Ayora',    estado_pem:'En marcha',    pdc:52.52296, trk_total:754 },
+  '24019': { cod:24019, nproy:'24019', nombre:'San José', estado_pem:'En proceso',   pdc:177.984,  trk_total:2289 },
   '24007': { cod:24007, nproy:'24007', nombre:'Fayón',    estado_pem:'En marcha',    pdc:1.25664,  trk_total:24 },
   '25019': { cod:25019, nproy:'25019', nombre:'Paramo',   estado_pem:'Sin comenzar', trk_total:396 },
 };
@@ -79,9 +79,13 @@ const CARTERA = {
       burgo.scada === 'https://factiun-cartera.imoriana3.workers.dev/scada.html?planta=el%20burgo%20i', burgo.scada);
 
     const ayora = await tarjeta(page, 'Ayora');
-    check('la planta en proceso enseña su estado', ayora.estado === 'En proceso', ayora);
-    check('y con el color de En desarrollo', ayora.color === ayora.ref.build, [ayora.color, ayora.ref.build]);
+    check('Ayora ya figura EN MARCHA', ayora.estado === 'En marcha', ayora);
+    check('y con el color de Producción', ayora.color === ayora.ref.live, [ayora.color, ayora.ref.live]);
     check('y tiene sala de control', /^https:.*scada\.html\?planta=ayora$/.test(ayora.scada), ayora.scada);
+
+    const sj = await tarjeta(page, 'San José');
+    check('San José es la planta EN PROCESO', sj.estado === 'En proceso', sj);
+    check('y usa el color de En desarrollo', sj.color === sj.ref.build, [sj.color, sj.ref.build]);
 
     // el caso que no existía: en marcha, sin enlace escrito, la abre el ESTADO
     const fayon = await tarjeta(page, 'Fayón');
