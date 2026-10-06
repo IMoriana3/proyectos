@@ -586,12 +586,127 @@ function paintNow(m){
   set("over",m.overcast_probability);set("wrisk",m.wind_stow_risk);set("hail",m.hail_risk_proxy);
   $("bo").style.width=((m.overcast_probability||0)*100)+"%";$("bw").style.width=((m.wind_stow_risk||0)*100)+"%";$("bh").style.width=((m.hail_risk_proxy||0)*100)+"%";
 }
+
+function siteContractObject(){
+  return {
+    id:SITE?.carteraCode||SITE?.code||null,
+    code:SITE?.code||null,name:siteName(),
+    lat:+$("lat").value,lon:+$("lon").value,
+    tz:SITE?.tz||"UTC",elevation_m:SITE?.elevation_m??null
+  };
+}
+function datasetFromForecast(rows){
+  const source=rows?.[0]?.source||"unknown";
+  return {
+    source:source==="weathernext3"?"WeatherNext 3":"Open-Meteo forecast",
+    source_id:source,lat:+$("lat").value,lon:+$("lon").value,
+    kind:"forecast",rows:(rows||[]).map(r=>({...r,t:r.timestamp||r.t}))
+  };
+}
+function render72(summary){
+  FORECAST72=summary;
+  const m=summary?.metrics||{};
+  $("opWindMax").textContent=fmt(m.max_wind_ms,1)+" m/s";
+  $("opGustMax").textContent=fmt(m.max_gust_ms,1)+" m/s";
+  $("opTempMin").textContent=fmt(m.min_temp_c,1)+" °C";
+  $("opRainSum").textContent=fmt(m.precip_total_mm,1)+" mm";
+  const ev=summary?.events||[];
+  $("opEvents").innerHTML=ev.length?ev.map(x=>{
+    const d=x.at?new Date(x.at):null,when=d&&!isNaN(d)?d.toLocaleString("es-ES",{timeZone:SITE?.tz||"UTC",weekday:"short",day:"2-digit",hour:"2-digit",minute:"2-digit"}):"—";
+    return '<div class="op-event"><b>'+esc(x.label)+'</b><small>'+esc(when)+' · '+esc(x.severity)+'</small></div>';
+  }).join(""):'<div class="op-event"><b>Sin umbrales relevantes</b><small>No se detectan eventos con los umbrales de supervisión en la ventana.</small></div>';
+}
+function currentUncertainty(){
+  const source=CURRENT?.source_id||FORECAST?.[0]?.source||"";
+  return weatherUncertaintyBudget({
+    sourceId:source,
+    crossSourceRmsPct:LAST_COMPARE?.rms?.ghi_pct,
+    adaptationSigma:ADAPTED?.uncertainty?.irradiance_sigma
+  });
+}
+function renderUncertainty(){
+  WEATHER_UNCERTAINTY=currentUncertainty();
+  const u=WEATHER_UNCERTAINTY||{},pct=x=>Number.isFinite(x)?fmt(100*x,2)+"%":"—";
+  $("uncBase").textContent=pct(u.base_source_sigma);
+  $("uncCross").textContent=pct(u.cross_source_rms_sigma);
+  $("uncAdapt").textContent=pct(u.adaptation_sigma);
+  $("uncUse").textContent=pct(u.resource_sigma);
+  $("uncStatus").textContent=u.resource_sigma==null
+    ?"No hay una σ calibrada para esta fuente; no se inventa. Añade comparación multi-fuente, medida de sitio u override en el motor."
+    :"σ de recurso usada: "+pct(u.resource_sigma)+" · "+u.rule;
+}
+function renderContract(ref,pkg=null){
+  const r=ref||activeWeatherRef();
+  $("wcKind").textContent=r?.kind||"—";$("wcSource").textContent=r?.source?.id||r?.source?.label||"—";
+  $("wcHash").textContent=r?.dataset_hash||r?.qa?.dataset_hash||"—";$("wcQa").textContent=r?.qa?.status||"—";
+  $("wcStep").textContent=Number.isFinite(r?.temporal?.operational_resolution_min)?r.temporal.operational_resolution_min+" min":"—";
+  $("wcTz").textContent=r?.site?.timezone||r?.temporal?.timezone||"—";$("wcRows").textContent=(r?.qa?.rows??pkg?.rows?.length??"—").toLocaleString?.("es-ES")||String(r?.qa?.rows??"—");
+  $("wcFallback").textContent=(r?.source?.fallback_level??0)+(r?.source?.fallback_reason?" · "+r.source.fallback_reason:"");
+  $("wcStatus").textContent=r?.contract_id?"Activo: "+r.contract_id+" · todos los consumidores deben registrar este contract_id/hash.":"Sin contrato activo publicado.";
+}
+async function publishDatasetContract(dataset,kind,{provenance={},spatial=null}={}){
+  if(!dataset?.rows?.length)return null;
+  renderUncertainty();
+  const site=siteContractObject(),tz=site.tz||"UTC";
+  const pkg=await buildWeatherContract({
+    dataset:{...dataset,kind},kind,site,timezone:tz,
+    provenance:{...provenance,source_id:dataset.source_id||provenance.source_id||dataset.source},
+    uncertainty:WEATHER_UNCERTAINTY||{},spatial
+  });
+  const ref=await publishWeatherContract(pkg,{activate:true});
+  ACTIVE_CONTRACT=pkg;renderContract(ref,pkg);return {pkg,ref};
+}
+async function publishForecastContract(){
+  if(!FORECAST?.length)return null;
+  const ds=datasetFromForecast(FORECAST),src=FORECAST[0]?.source||"openmeteo";
+  return publishDatasetContract(ds,"forecast",{
+    provenance:{
+      provider:src==="weathernext3"?"Google WeatherNext 3":"Open-Meteo",
+      model:src==="weathernext3"?"WeatherNext 3":null,
+      retrieved_at_utc:new Date().toISOString(),
+      valid_from_utc:ds.rows[0]?.t||null,valid_to_utc:ds.rows.at(-1)?.t||null,
+      fallback_level:src==="weathernext3"?0:1,
+      fallback_reason:src==="weathernext3"?null:"WeatherNext live not configured/available"
+    },
+    spatial:SPATIAL
+  });
+}
+async function applyForecast(rows,label="Forecast"){
+  if(!rows?.length)throw new Error("forecast sin filas");
+  FORECAST=rows;
+  const now=Date.now(),m=rows.reduce((a,b)=>Math.abs(Date.parse(b.timestamp||b.t)-now)<Math.abs(Date.parse(a.timestamp||a.t)-now)?b:a,rows[0]);
+  paintNow(m);render72(forecastOperationalSummary(rows,{hours:72}));renderUncertainty();
+  await publishForecastContract();
+  status(label+" · "+(m.timestamp||m.t)+" · "+siteName(),"ok");
+}
+async function runSpatial(){
+  $("spatialBtn").disabled=true;$("spatialBtn").textContent="Analizando…";
+  try{
+    SPATIAL=await fetchSpatialForecast({lat:+$("lat").value,lon:+$("lon").value,radiusKm:+$("spatialRadius").value,forecastDays:3});
+    const x=SPATIAL.maxima||{};
+    $("spWind").textContent=fmt(x.wind_spread_ms,2)+" m/s";$("spGust").textContent=fmt(x.gust_spread_ms,2)+" m/s";
+    $("spTemp").textContent=fmt(x.temp_spread_c,2)+" °C";$("spGhi").textContent=fmt(x.ghi_spread_wm2,0)+" W/m²";
+    $("spatialPoints").innerHTML=(SPATIAL.points||[]).map(p=>'<span>'+esc(p.id)+' · '+fmt(p.lat,4)+', '+fmt(p.lon,4)+'</span>').join("");
+    await publishForecastContract();
+  }catch(e){status("Meteo espacial: "+e.message,"bad")}
+  finally{$("spatialBtn").disabled=false;$("spatialBtn").textContent="Analizar 5 puntos";}
+}
 async function loadNow(){
   status("Cargando forecast de "+siteName()+"…","work");
+  const lat=+$("lat").value,lon=+$("lon").value;
+  let wnEndpoint="";try{wnEndpoint=localStorage.getItem("factiun_weathernext_endpoint")||"";}catch(e){}
+  if(wnEndpoint){
+    try{
+      const rows=await fetchWeatherNextProxy({endpoint:wnEndpoint,lat,lon,hours:72});
+      $("wnStatus").textContent="WeatherNext 3 LIVE · endpoint autenticado · "+rows.length+" pasos";$("wnStatus").className="statusline ok";
+      await applyForecast(rows,"WeatherNext 3 live");return;
+    }catch(e){
+      $("wnStatus").textContent="WeatherNext live no disponible ("+e.message+") · fallback Open-Meteo";$("wnStatus").className="statusline bad";
+    }
+  }
   try{
-    const rows=await fetchOpenMeteo({lat:+$("lat").value,lon:+$("lon").value,forecastDays:3});
-    const now=Date.now(),m=rows.reduce((a,b)=>Math.abs(Date.parse(b.timestamp)-now)<Math.abs(Date.parse(a.timestamp)-now)?b:a,rows[0]);
-    paintNow(m);status("Forecast Open-Meteo · "+m.timestamp+" · "+siteName(),"ok");
+    const rows=await fetchOpenMeteo({lat,lon,forecastDays:3});
+    await applyForecast(rows,"Forecast Open-Meteo");
   }catch(e){status("Forecast: "+e.message,"bad")}
 }
 
@@ -608,7 +723,9 @@ async function analyzeYears(){
     let raw=await fetchHistorical({...p,progress:(k,n,y)=>status("Descargando "+y+" · "+k+"/"+n+"…","work")});
     status("Aplicando QA BSRN, plausibilidad y hash…","work");
     CURRENT=await prepareDataset(raw);ADAPTED=null;PREPARED=null;$("adaptUse").disabled=true;$("prepDl").disabled=true;
-    renderYears(CURRENT);renderCoreVisuals();status("Histórico listo · "+CURRENT.rows.length.toLocaleString("es-ES")+" filas · QA "+CURRENT.qa.status,"ok");
+    renderYears(CURRENT);renderCoreVisuals();renderUncertainty();
+    await publishDatasetContract(CURRENT,"historical",{provenance:{provider:CURRENT.source,retrieved_at_utc:new Date().toISOString(),operational_resolution_min:null}});
+    status("Histórico listo · "+CURRENT.rows.length.toLocaleString("es-ES")+" filas · QA "+CURRENT.qa.status,"ok");
   }catch(e){status("Histórico: "+e.message,"bad")}
 }
 function renderTmy(){
@@ -630,7 +747,9 @@ async function buildTmy(){
       const z=buildTmySandia(CURRENT.rows,{baseYear:+$("baseYear").value,smooth:true});
       TMY={source:"Sandia TMY · "+CURRENT.source,lat:CURRENT.lat,lon:CURRENT.lon,rows:z.rows,info:z.info};
     }
-    PREPARED=null;$("prepDl").disabled=true;renderTmy();status("TMY listo · "+TMY.rows.length.toLocaleString("es-ES")+" filas","ok");
+    PREPARED=null;$("prepDl").disabled=true;renderTmy();renderUncertainty();
+    await publishDatasetContract(TMY,"tmy",{provenance:{provider:TMY.source,retrieved_at_utc:new Date().toISOString()}});
+    status("TMY listo · "+TMY.rows.length.toLocaleString("es-ES")+" filas","ok");
   }catch(e){status("TMY: "+e.message,"bad")}
 }
 
@@ -644,7 +763,8 @@ async function compare(){
       const s=k=>a.reduce((x,r)=>x+(Number.isFinite(r[k])?r[k]:0),0),av=k=>{const v=a.map(r=>r[k]).filter(Number.isFinite);return v.length?v.reduce((x,y)=>x+y,0)/v.length:null};
       return '<tr><td>'+esc(n)+'</td><td>'+fmt(s("GHI"),0)+'</td><td>'+fmt(s("DNI"),0)+'</td><td>'+fmt(s("DHI"),0)+'</td><td>'+fmt(av("Tamb"),1)+'</td><td>'+fmt(av("Wind"),2)+'</td></tr>';
     }).join("")||'<tr><td colspan="6">Ninguna fuente respondió.</td></tr>';
-    drawBarChart($("vizCompareSources"),comparisonMonthly(j.results),{title:"GHI mensual por fuente",yLabel:"kWh/m²",labels:MONTHS,height:270});status(j.failed.length?"Comparativa terminada con "+j.failed.length+" fuente(s) fallida(s).":"Comparativa terminada.","ok");
+    drawBarChart($("vizCompareSources"),comparisonMonthly(j.results),{title:"GHI mensual por fuente",yLabel:"kWh/m²",labels:MONTHS,height:270});renderUncertainty();if(CURRENT)await publishDatasetContract(CURRENT,"historical",{provenance:{provider:CURRENT.source,retrieved_at_utc:new Date().toISOString()}});
+    status(j.failed.length?"Comparativa terminada con "+j.failed.length+" fuente(s) fallida(s).":"Comparativa terminada.","ok");
   }catch(e){status("Comparativa: "+e.message,"bad")}
 }
 
@@ -711,6 +831,7 @@ async function siteAdapt(){
     const mini=[["timestamp","GHI"],...tab.slice(1).map(r=>[r[tix],r[cix]])],meas=tableToMeteo(mini,{lat:CURRENT.lat,lon:CURRENT.lon,tz:$("adaptTz").value||"UTC"});
     const z=adaptSite(CURRENT.rows,meas,{longKey:"ghi_wm2",measuredKey:"ghi_wm2",method:$("adaptMethod").value,monthly:$("adaptMonthly").checked});
     ADAPTED={...CURRENT,source:CURRENT.source+" → adaptado a sitio",rows:z.rows,adaptation:z.result,uncertainty:z.uncertainty};
+    renderUncertainty();
     const b=z.result.before,a=z.result.after,u=z.uncertainty;
     $("adaptMbe").textContent=fmt(b.mbe_pct,1)+"→"+fmt(a.mbe_pct,1)+"%";$("adaptRmse").textContent=fmt(a.rmse_pct,1)+"%";$("adaptR2").textContent=fmt(a.r2,3);$("adaptSigma").textContent=fmt(u.irradiance_sigma*100,2)+"%";
     $("adaptStatus").textContent="Columna: "+headers[cix]+" · solapamiento "+z.result.overlap_months+" meses / "+z.result.overlap_points+" puntos"+(z.result.extrapolated?" · EXTRAPOLACIÓN":"");$("adaptStatus").className="statusline "+(z.result.extrapolated?"bad":"ok");$("adaptUse").disabled=false;
