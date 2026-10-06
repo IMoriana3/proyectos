@@ -2613,7 +2613,7 @@ function corrigeSpecsGuardados(map){
   return map;
 }
 function specsGuardados(){
-  try{return corrigeSpecsGuardados(JSON.parse(localStorage.getItem("factiun_plantas")||"null")||{});}
+  try{return corrigeSpecsGuardados(JSON.parse(localStorage.getItem('factiun_plantas')||"null")||{});}
   catch(e){return {};}
 }
 let SPECS=specsGuardados();
