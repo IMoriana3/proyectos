@@ -14,7 +14,7 @@ Una sola capa meteorológica para todo Factiun/SolarGPT. Los simuladores y visor
 
 ## Contrato v1
 
-`lib/meteo.js` normaliza: GHI, DNI, DHI, temperatura, punto de rocío, viento, dirección, racha, viento 100 m, nubosidad por capas, precipitación y presión. Mantiene provenance y permite P10/P50/P90.
+`lib/meteo.js` normaliza: GHI, FDIR, DNI, DHI, temperatura, punto de rocío, viento, dirección, racha, viento 100 m, nubosidad por capas, precipitación y presión. Mantiene provenance y permite P10/P50/P90.
 
 Derivados iniciales: fracción difusa, probabilidad de overcast, wind watch, riesgo predictivo de stow, freeze risk y proxy convectivo/granizo.
 
@@ -46,6 +46,6 @@ WeatherNext puede anticipar viento, cielo cubierto, precipitación o riesgo conv
 
 ## WeatherNext 3
 
-Las variables de superficie útiles para FV incluyen viento 10/100 m, cobertura de nubes, irradiancia solar descendente/directa, precipitación, temperatura, punto de rocío y presión. Para análisis geoespacial Google expone estadísticas de ensemble precalculadas P10/P25/P50/P75/P90.
+Las variables de superficie útiles para FV incluyen viento 10/100 m, cobertura de nubes, irradiancia solar descendente y FDIR, precipitación, temperatura, punto de rocío y presión. Para análisis geoespacial Google expone estadísticas de ensemble precalculadas P10/P25/P50/P75/P90.
 
 El forecast se usa como capa predictiva. La instrumentación de planta conserva la función de protección.
