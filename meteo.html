@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#132238">
+<title>Análisis meteorológico — Factiun</title>
+<style>
+:root{--bg:#0E1826;--p:#132238;--p2:#101D30;--line:#27405F;--tx:#DCE3EB;--mut:#8C9AAB;--a:#F09030;--b:#68C0D8;--r:#E84858;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx)}header{padding:18px 22px;border-bottom:2px solid var(--a);background:var(--p);position:sticky;top:0;z-index:5}h1{margin:0;font-size:1.2rem;letter-spacing:.08em;text-transform:uppercase}header p{margin:5px 0 0;color:var(--mut);font-size:.86rem}.wrap{max-width:1500px;margin:auto;padding:20px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}.card{background:var(--p);border:1px solid var(--line);padding:14px}.card h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;color:var(--mut);margin:0 0 10px}.big{font-size:2rem;color:var(--a);font-variant-numeric:tabular-nums}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.k{font-size:.72rem;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}.v{font-family:ui-monospace,monospace;margin-top:2px}.ok{color:var(--a)}.info{color:var(--b)}.bad{color:var(--r)}input,select,button{width:100%;padding:9px 10px;background:var(--p2);color:var(--tx);border:1px solid var(--line)}button{cursor:pointer;border-color:var(--a);color:var(--a)}table{width:100%;border-collapse:collapse;font-size:.82rem}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--mut);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em}.wide{grid-column:1/-1}.src{font-size:.76rem;color:var(--mut);line-height:1.5}.pill{display:inline-block;border:1px solid var(--line);padding:2px 6px;margin:2px;font-size:.7rem}.consumers a{color:var(--a);text-decoration:none}.bar{height:7px;background:var(--p2);border:1px solid var(--line);margin-top:5px}.bar i{display:block;height:100%;background:var(--a);width:0}.note{color:var(--mut);font-size:.78rem;line-height:1.5}
+</style>
+</head>
+<body>
+<header><h1>☁ Análisis meteorológico</h1><p>Una sola capa meteo para producción, difusa, viento, granizo, batería, stow y gemelo digital. Forecast ≠ safety local.</p></header>
+<main class="wrap">
+<section class="grid">
+  <div class="card"><h2>Emplazamiento</h2><div class="row"><label><span class="k">Lat</span><input id="lat" type="number" step="0.0001" value="42.8125"></label><label><span class="k">Lon</span><input id="lon" type="number" step="0.0001" value="-1.6458"></label></div><p><button id="load">Cargar meteo gratuita</button></p><div class="src" id="status">Open-Meteo como fuente gratuita inmediata. WeatherNext 3 entra por el mismo contrato cuando esté habilitado.</div></div>
+  <div class="card"><h2>Régimen solar</h2><div class="big" id="ghi">—</div><div class="k">GHI W/m²</div><div class="row"><div><div class="k">DNI</div><div class="v" id="dni">—</div></div><div><div class="k">DHI</div><div class="v" id="dhi">—</div></div></div><div class="k" style="margin-top:10px">Prob. difusa / overcast</div><div class="bar"><i id="bo"></i></div><div class="v" id="over">—</div></div>
+  <div class="card"><h2>Viento</h2><div class="big" id="wind">—</div><div class="k">m/s a 10 m</div><div class="row"><div><div class="k">Ráfaga</div><div class="v" id="gust">—</div></div><div><div class="k">Dirección</div><div class="v" id="wd">—</div></div></div><div class="k" style="margin-top:10px">Riesgo stow predictivo</div><div class="bar"><i id="bw"></i></div><div class="v" id="wrisk">—</div></div>
+  <div class="card"><h2>Atmósfera</h2><div class="row"><div><div class="k">Temperatura</div><div class="v" id="temp">—</div></div><div><div class="k">Punto rocío</div><div class="v" id="dew">—</div></div><div><div class="k">Precipitación</div><div class="v" id="rain">—</div></div><div><div class="k">Nubosidad</div><div class="v" id="cloud">—</div></div></div><div class="k" style="margin-top:10px">Proxy convectivo / granizo</div><div class="bar"><i id="bh"></i></div><div class="v" id="hail">—</div><div class="note">Solo screening meteorológico: no es detector ni orden de seguridad.</div></div>
+
+  <div class="card wide"><h2>Contrato meteorológico canónico</h2><table><thead><tr><th>Familia</th><th>Variables</th><th>Fuentes</th><th>Consumidores</th></tr></thead><tbody>
+  <tr><td>Solar</td><td>GHI · DNI · DHI · nubosidad baja/media/alta</td><td>WeatherNext 3 · Open-Meteo · PVGIS · NASA · clear-sky</td><td>Producción · radiación difusa · backtracking energético · batería</td></tr>
+  <tr><td>Viento</td><td>10 m · 100 m · dirección · ráfaga</td><td>WeatherNext 3 · Open-Meteo · HSU/SCADA</td><td>Wind stow · abanderamiento · gemelo · QA</td></tr>
+  <tr><td>Hidrometeoros</td><td>precipitación · proxy granizo · freeze risk</td><td>WeatherNext 3 · Open-Meteo · sensores planta</td><td>Granizo · winter mode · recovery</td></tr>
+  <tr><td>Térmica</td><td>Tª · punto de rocío · presión</td><td>WeatherNext 3 · Open-Meteo · HSU</td><td>Producción · batería · diagnóstico sensor</td></tr>
+  <tr><td>Probabilístico</td><td>P10 · P25 · P50 · P75 · P90</td><td>WeatherNext 3</td><td>Pre-stow · forecast de producción · incertidumbre</td></tr>
+  </tbody></table></div>
+
+  <div class="card wide consumers"><h2>Tarjetas que consumen esta capa</h2>
+    <span class="pill"><a href="sim-viento.html">Viento / Granizo</a></span>
+    <span class="pill"><a href="sim-solar.html">Sol & Simulación</a></span>
+    <span class="pill"><a href="https://imoriana3.github.io/cobertura-zigbee/overcast.html">Radiación difusa</a></span>
+    <span class="pill">Batería</span><span class="pill">Producción 3D</span><span class="pill">Gemelo digital</span><span class="pill">SCADA</span>
+    <p class="note">Regla: las interfaces no reinterpretan la meteo. Reciben el mismo objeto normalizado y cada dominio calcula únicamente su política propia.</p>
+  </div>
+
+  <div class="card wide"><h2>WeatherNext 3</h2><p class="src">Proveedor preferente de forecast probabilístico. Resolución superficial ~0,1° para viento, nubosidad, precipitación e irradiancia; resumen de ensemble P10/P25/P50/P75/P90. Se usa para anticipación y escenarios. HSU/SCADA mantienen la autoridad de seguridad local.</p><label><span class="k">Importar fila/resumen WeatherNext JSON</span><input type="file" id="wn" accept=".json,application/json"></label></div>
+</section>
+<p class="src" style="margin-top:18px"><a href="index.html" style="color:var(--a)">← Panel Factiun</a> · contrato <code>lib/meteo.js</code> v1.0.0</p>
+</main>
+<script type="module">
+import {fetchOpenMeteo,fromWeatherNextSummary} from "./lib/meteo.js";
+const $=id=>document.getElementById(id), fmt=(v,d=1)=>v==null||!isFinite(v)?"—":Number(v).toFixed(d);
+function paint(m){
+  $("ghi").textContent=fmt(m.ghi_wm2,0); $("dni").textContent=fmt(m.dni_wm2,0)+" W/m²"; $("dhi").textContent=fmt(m.dhi_wm2,0)+" W/m²";
+  $("wind").textContent=fmt(m.wind_ms,1); $("gust").textContent=fmt(m.gust_ms,1)+" m/s"; $("wd").textContent=fmt(m.wind_dir_deg,0)+"°";
+  $("temp").textContent=fmt(m.temp_c,1)+" °C"; $("dew").textContent=fmt(m.dewpoint_c,1)+" °C"; $("rain").textContent=fmt(m.precip_mm,1)+" mm"; $("cloud").textContent=fmt((m.cloud_total??0)*100,0)+" %";
+  const set=(id,v)=>{$(id).textContent=v==null?"—":Math.round(v*100)+" %"};
+  set("over",m.overcast_probability); set("wrisk",m.wind_stow_risk); set("hail",m.hail_risk_proxy);
+  $("bo").style.width=((m.overcast_probability||0)*100)+"%"; $("bw").style.width=((m.wind_stow_risk||0)*100)+"%"; $("bh").style.width=((m.hail_risk_proxy||0)*100)+"%";
+  $("status").textContent=(m.source||"meteo")+" · "+(m.timestamp||"sin timestamp")+" · schema "+m.schema_version;
+}
+$("load").onclick=async()=>{
+  $("status").textContent="Cargando…";
+  try{
+    const rows=await fetchOpenMeteo({lat:+$("lat").value,lon:+$("lon").value,forecastDays:3});
+    const now=Date.now(); let m=rows.reduce((a,b)=>Math.abs(Date.parse(b.timestamp)-now)<Math.abs(Date.parse(a.timestamp)-now)?b:a,rows[0]);
+    paint(m);
+  }catch(e){$("status").textContent=e.message}
+};
+$("wn").onchange=async e=>{
+  try{const j=JSON.parse(await e.target.files[0].text()); paint(fromWeatherNextSummary(Array.isArray(j)?j[0]:j));}
+  catch(err){$("status").textContent="WeatherNext JSON: "+err.message}
+};
+$("load").click();
+</script>
+</body></html>
