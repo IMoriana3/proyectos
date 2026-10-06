@@ -3498,14 +3498,22 @@ LOC.incGenera=function(opts,index,baseCfg){
     }else if(tag==='passive_release'){
       p.wind_base_kmh=Math.max(5,C.T1-15);p.wind_peak_kmh=p.wind_base_kmh;
       p.gust_peak_kmh=C.pRel+1;p.gust_at_min=0;p.gust_duration_min=12;
-    }else if(tag==='hail_wind'){
-      /* OJO: esta rama va ANTES del genérico hail_*.
-         Si no, "hail_wind" entra como granizo puro a 8 km/h y el adversarial
-         nunca pisa el arbitraje conjunto que dice comprobar. */
-      p.hail_on=true;p.hail_mm=25;p.hail_prob_pct=80;p.hail_eta0_min=Math.min(30,C.hailLead);
-      p.wind_base_kmh=Math.max(LOC.GRZ.v_prestow+1,C.T1+1);
-      p.wind_peak_kmh=Math.min(LOC.GRZ.v_stow-1,Math.max(p.wind_base_kmh,C.T1+5));
-      p.wind_start_min=-15;p.wind_ramp_min=5;p.wind_hold_min=80;p.gust_peak_kmh=p.wind_peak_kmh;
+    }else if(tag==='hail_wind'||tag==='hail_wind_missing'){
+      /* Estas ramas van ANTES del genérico hail_* porque necesitan arbitraje
+         conjunto real. hail_wind_missing además hace amainar el viento tras
+         activar para demostrar que existe un target de granizo de respaldo. */
+      p.hail_on=true;p.hail_mm=25;p.hail_prob_pct=80;p.hail_lead_min=30;p.hail_eta0_min=20;
+      if(tag==='hail_wind_missing'){
+        p.wind_base_kmh=8;
+        p.wind_peak_kmh=Math.min(LOC.GRZ.v_stow-1,Math.max(LOC.GRZ.v_prestow+5,C.T1+5));
+        p.wind_start_min=-15;p.wind_ramp_min=5;p.wind_hold_min=15;p.gust_peak_kmh=p.wind_peak_kmh;
+        p.hail_updates=[{at_min:5,kind:'missing'}];
+      }else{
+        p.hail_eta0_min=Math.min(30,C.hailLead);
+        p.wind_base_kmh=Math.max(LOC.GRZ.v_prestow+1,C.T1+1);
+        p.wind_peak_kmh=Math.min(LOC.GRZ.v_stow-1,Math.max(p.wind_base_kmh,C.T1+5));
+        p.wind_start_min=-15;p.wind_ramp_min=5;p.wind_hold_min=80;p.gust_peak_kmh=p.wind_peak_kmh;
+      }
     }else if(tag.indexOf('hail_')===0){
       p.hail_on=true;p.hail_prob_pct=70;p.hail_mm=22;p.wind_base_kmh=8;p.wind_peak_kmh=8;
       if(tag==='hail_size_below')p.hail_mm=18.9;
@@ -3738,6 +3746,10 @@ LOC.incVerifica=function(caso,cfg,sim,sim2){
       e29.hail_phase==='LIBERADO'&&e30.hail_phase==='DEFENSA'&&e30.orden.A1<0,
       JSON.stringify({o0:e0&&e0.orden.A1,p24:e24&&e24.hail_phase,o30:e30&&e30.orden.A1}));
   }
+  if(tag==='hail_wind_missing')add('si viento manda al activar, existe target granizo de respaldo al perder dato',
+    at(10)&&at(10).hail_phase==='SIN_DATO_PROTEGIDO'&&at(10).hail_defense_active&&
+    ks.every(function(k){return at(10).modos[k]==='HAIL_STOW'||at(10).modos[k]==='FULL_STOW'||at(10).modos[k]==='PARTIAL_STOW';}),
+    JSON.stringify(at(10)&&{phase:at(10).hail_phase,m:at(10).modos,o:at(10).orden}));
   if(tag==='snow_equal')add('10 cm exactos NO activan >10',
     !F.some(function(f){return ks.some(function(k){return f.modos[k]==='SNOW_STOW';});}),'apareció SNOW_STOW');
   if(tag==='snow_plus')add('10 cm+ε activa nieve',
