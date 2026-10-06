@@ -81,6 +81,47 @@ pre{font-size:.69rem;white-space:pre-wrap;word-break:break-word;background:var(-
   </div>
   <div class="card span7"><h2>Resumen por fuente</h2><div class="tablewrap"><table><thead><tr><th>Fuente</th><th>GHI kWh/m²·a</th><th>DNI</th><th>DHI</th><th>T media °C</th><th>Viento m/s</th></tr></thead><tbody id="cmpBody"><tr><td colspan="6">Sin comparativa.</td></tr></tbody></table></div></div>
 
+  <div class="sectiontitle">QA avanzado · riesgos climáticos · adaptación</div>
+  <div class="card span6">
+    <h2>QA avanzado del dataset</h2>
+    <p class="note">Mismos oráculos del core: plausibilidad física, cierre de componentes, climatología PVGIS y detección de convención horaria.</p>
+    <p><button id="qaBtn">Ejecutar QA avanzado</button></p>
+    <div class="metricgrid"><div class="metric">Semáforo<b id="qaGate">—</b></div><div class="metric">PVGIS anual Δ<b id="qaPvgis">—</b></div><div class="metric">Desfase<b id="qaShift">—</b></div><div class="metric">Fiable<b id="qaReliable">—</b></div></div>
+    <div class="tablewrap" style="margin-top:10px;max-height:220px"><table><thead><tr><th>Check</th><th>Severidad</th><th>Detalle</th><th>Valor</th></tr></thead><tbody id="qaBody"><tr><td colspan="4">Sin ejecutar.</td></tr></tbody></table></div>
+  </div>
+  <div class="card span6">
+    <h2>Estadística canónica</h2>
+    <div class="tablewrap" style="max-height:300px"><table><thead><tr><th>Variable</th><th>Min</th><th>Max</th><th>Media</th><th>P50</th><th>P99</th><th>NaN</th><th>Ceros</th></tr></thead><tbody id="statsBody"><tr><td colspan="8">Se calcula con QA avanzado.</td></tr></tbody></table></div>
+    <p class="note">Sirve para detectar unidades erróneas, outliers y series degradadas antes de construir TMY o simular.</p>
+  </div>
+
+  <div class="card span4">
+    <h2>Riesgo climatológico de granizo</h2>
+    <div class="row"><label><span class="k">Vida útil años</span><input id="hailLife" type="number" value="25" min="1" max="60"></label><label><span class="k">λ manual opcional</span><input id="hailLambda" type="number" step="0.01" min="0" placeholder="vacío = climatología"></label></div>
+    <p><button id="hailBtn">Evaluar riesgo de diseño</button></p>
+    <div class="metricgrid"><div class="metric">Nivel<b id="hailTier">—</b></div><div class="metric">λ/año<b id="hailLamOut">—</b></div><div class="metric">Retorno<b id="hailReturn">—</b></div><div class="metric">P vida útil<b id="hailLifeP">—</b></div></div>
+    <div class="statusline" id="hailStatus">Es riesgo climatológico de diseño, no detección horaria ni orden de stow.</div>
+  </div>
+
+  <div class="card span4">
+    <h2>Viento sintético · fallback declarado</h2>
+    <div class="row3"><label><span class="k">Weibull k</span><input id="windK" type="number" step="0.1" value="2.0"></label><label><span class="k">Escala A m/s</span><input id="windA" type="number" step="0.1" value="6.5"></label><label><span class="k">Seed</span><input id="windSeed" type="number" value="42"></label></div>
+    <label class="note"><input id="windCyclone" type="checkbox" style="width:auto"> incluir escenario ciclónico sintético</label>
+    <p><button id="windSynthBtn">Generar año sintético</button></p>
+    <div class="metricgrid"><div class="metric">Media<b id="windMean">—</b></div><div class="metric">P99<b id="windP99">—</b></div><div class="metric">Máx<b id="windMax">—</b></div><div class="metric">Ráfaga máx<b id="windGustMax">—</b></div></div>
+    <div class="statusline" id="windSynthStatus">Nunca se presenta como medida ni se usa para informe bankable.</div>
+  </div>
+
+  <div class="card span4">
+    <h2>Adaptación de sitio</h2>
+    <label><span class="k">CSV medido en planta</span><input id="adaptFile" type="file" accept=".csv,.txt"></label>
+    <div class="row3" style="margin-top:7px"><label><span class="k">Columna medida</span><input id="adaptCol" placeholder="vacío = autodetectar"></label><label><span class="k">TZ</span><input id="adaptTz" value="UTC"></label><label><span class="k">Método</span><select id="adaptMethod"><option value="bias">bias</option><option value="regression">regression</option><option value="quantile">quantile</option></select></label></div>
+    <label class="note"><input id="adaptMonthly" type="checkbox" checked style="width:auto"> coeficientes mes a mes</label>
+    <p><button id="adaptBtn">Adaptar serie larga al sitio</button></p>
+    <div class="metricgrid"><div class="metric">MBE antes→después<b id="adaptMbe">—</b></div><div class="metric">RMSE<b id="adaptRmse">—</b></div><div class="metric">R²<b id="adaptR2">—</b></div><div class="metric">σ irradiancia<b id="adaptSigma">—</b></div></div>
+    <div class="statusline" id="adaptStatus">La incertidumbre residual puede sustituir el 3 % de catálogo en P90 cuando hay solapamiento medido suficiente.</div>
+  </div>
+
   <div class="sectiontitle">Importar · validar · otras fuentes</div>
   <div class="card span6">
     <h2>Importar meteo propio / PVSyst</h2>
@@ -205,6 +246,46 @@ async function compare(){
 }
 async function dl(dataset){try{status("Preparando descarga…");await blobPost("/meteo/download",{...payload(),dataset,mode:dataset==="tmy_pvgis"?"pvgis":"sandia",base_year:+$("baseYear").value,smooth:true,series:false});status("Descarga generada.","ok")}catch(e){status(e.message,"bad")}}
 async function report(){try{status("Generando informe…");await blobPost("/meteo/report",{...payload(),title:$("reportTitle").value,include_tmy:true,tmy_mode:$("reportTmy").value,base_year:+$("baseYear").value});status("Informe generado. Ábrelo e imprime a PDF si lo necesitas.","ok")}catch(e){status(e.message,"bad")}}
+async function advancedQa(){
+  status("Ejecutando QA avanzado…");
+  try{
+    const j=await post("/meteo/qa",{...payload(),validate_pvgis_climatology:true,estimate_timestamp_shift:true});
+    $("qaGate").textContent=j.gate||"—";
+    $("qaPvgis").textContent=j.monthly_vs_pvgis?.annual_diff_pct!=null?fmt(j.monthly_vs_pvgis.annual_diff_pct,1)+"%":"—";
+    $("qaShift").textContent=j.timestamp_shift?.shift_min!=null?fmt(j.timestamp_shift.shift_min,1)+" min":"—";
+    $("qaReliable").textContent=j.timestamp_shift?.reliable===true?"sí":j.timestamp_shift?.reliable===false?"no":"—";
+    $("qaBody").innerHTML=(j.findings||[]).map(x=>'<tr><td>'+esc(x.check||x.code||"?")+'</td><td>'+esc(x.severity||"—")+'</td><td style="white-space:normal;text-align:left">'+esc(x.message||"")+'</td><td>'+esc(x.value??"—")+'</td></tr>').join("")||'<tr><td colspan="4">Sin hallazgos: plausibilidad OK.</td></tr>';
+    $("statsBody").innerHTML=Object.entries(j.stats||{}).map(([k,v])=>'<tr><td>'+esc(k)+'</td><td>'+fmt(v.min,2)+'</td><td>'+fmt(v.max,2)+'</td><td>'+fmt(v.mean,2)+'</td><td>'+fmt(v.p50,2)+'</td><td>'+fmt(v.p99,2)+'</td><td>'+fmt(v.nan_pct,2)+'%</td><td>'+fmt(v.zeros_pct,2)+'%</td></tr>').join("")||'<tr><td colspan="8">Sin estadísticas.</td></tr>';
+    status("QA avanzado terminado · semáforo "+(j.gate||"?"),j.gate==="ROJO"?"bad":"ok");
+  }catch(e){status(e.message,"bad")}
+}
+async function hailRisk(){
+  try{
+    $("hailStatus").textContent="Evaluando…";$("hailStatus").className="statusline";
+    const raw=$("hailLambda").value.trim();
+    const j=await post("/meteo/hail-risk",{lat:+$("lat").value,lon:+$("lon").value,design_life_yr:+$("hailLife").value,lambda_override:raw===""?null:+raw});
+    const r=j.risk||{};$("hailTier").textContent=(r.tier||"—").toUpperCase();$("hailLamOut").textContent=fmt(r.lambda_yr,3);$("hailReturn").textContent=r.return_period_yr!=null?fmt(r.return_period_yr,1)+" a":"—";$("hailLifeP").textContent=r.p_lifetime!=null?fmt(r.p_lifetime*100,1)+"%":"—";
+    $("hailStatus").textContent="Fuente: "+(r.source||"—")+" · banda λ "+fmt(r.lambda_lo,3)+"–"+fmt(r.lambda_hi,3)+" /año";$("hailStatus").className="statusline ok";
+  }catch(e){$("hailStatus").textContent=e.message;$("hailStatus").className="statusline bad"}
+}
+async function windSynth(){
+  try{
+    $("windSynthStatus").textContent="Generando…";$("windSynthStatus").className="statusline";
+    const j=await post("/meteo/wind-synth",{lat:+$("lat").value,year:+$("baseYear").value,k:+$("windK").value,A:+$("windA").value,seed:+$("windSeed").value,with_cyclone:$("windCyclone").checked,with_gust:true});
+    $("windMean").textContent=fmt(j.mean_ms,2)+" m/s";$("windP99").textContent=fmt(j.p99_ms,2)+" m/s";$("windMax").textContent=fmt(j.max_ms,2)+" m/s";$("windGustMax").textContent=fmt(j.gust_max_ms,2)+" m/s";
+    $("windSynthStatus").textContent=j.not_modeled||"Viento sintético generado.";$("windSynthStatus").className="statusline ok";
+  }catch(e){$("windSynthStatus").textContent=e.message;$("windSynthStatus").className="statusline bad"}
+}
+async function siteAdapt(){
+  const file=$("adaptFile").files[0];if(!file){$("adaptStatus").textContent="Selecciona el CSV medido.";$("adaptStatus").className="statusline bad";return}
+  try{
+    $("adaptStatus").textContent="Adaptando…";$("adaptStatus").className="statusline";
+    const j=await post("/meteo/site-adapt",{...payload(),filename:file.name,content_base64:await fileB64(file),measured_column:$("adaptCol").value.trim()||null,tz_input:$("adaptTz").value||"UTC",long_column:"ghi",method:$("adaptMethod").value,monthly:$("adaptMonthly").checked});
+    const r=j.result||{},b=r.before||{},a=r.after||{},u=j.uncertainty||{};
+    $("adaptMbe").textContent=fmt(b.mbe_pct,1)+"→"+fmt(a.mbe_pct,1)+"%";$("adaptRmse").textContent=fmt(a.rmse_pct,1)+"%";$("adaptR2").textContent=fmt(a.r2,3);$("adaptSigma").textContent=u.irradiance_sigma!=null?fmt(u.irradiance_sigma*100,2)+"%":"—";
+    $("adaptStatus").textContent="Solapamiento "+(r.overlap_months??"—")+" meses / "+(r.overlap_points??"—")+" puntos"+(r.extrapolated?" · EXTRAPOLACIÓN en meses sin medida":"")+".";$("adaptStatus").className="statusline "+(r.extrapolated?"bad":"ok");
+  }catch(e){$("adaptStatus").textContent=e.message;$("adaptStatus").className="statusline bad"}
+}
 async function fileB64(file){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]||"");r.onerror=()=>ko(r.error);r.readAsDataURL(file)})}
 async function importFile(){
   const file=$("meteoFile").files[0];if(!file){$("importStatus").textContent="Selecciona un CSV o Excel PVSyst.";$("importStatus").className="statusline bad";return}
@@ -216,6 +297,7 @@ async function importFile(){
     if((j.annual||[]).length){renderYears({source:j.origin,n_years:j.annual.length,rows:j.rows,annual:j.annual,representative_year_screening:j.representative_year_screening})}
   }catch(e){$("importStatus").textContent=e.message;$("importStatus").className="statusline bad"}
 }
+$("qaBtn").onclick=advancedQa;$("hailBtn").onclick=hailRisk;$("windSynthBtn").onclick=windSynth;$("adaptBtn").onclick=siteAdapt;
 $("importBtn").onclick=importFile;
 $("nowBtn").onclick=loadNow;$("yearsBtn").onclick=analyzeYears;$("tmyBtn").onclick=buildTmy;$("compareBtn").onclick=compare;$("dlHist").onclick=()=>dl("historical");$("dlSandia").onclick=()=>dl("tmy_sandia");$("dlPvgis").onclick=()=>dl("tmy_pvgis");$("reportBtn").onclick=report;
 $("wn").onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text());const m=fromWeatherNextSummary(Array.isArray(j)?j[0]:j);paint(m);$("wnStatus").textContent="WeatherNext importado · "+(m.timestamp||"sin timestamp");$("wnStatus").className="statusline ok"}catch(err){$("wnStatus").textContent=err.message;$("wnStatus").className="statusline bad"}};
