@@ -1944,7 +1944,7 @@ LOC.granizoPlan=function(e){
    que sí podemos declarar aquí (tamaño y probabilidad) y, si lo supera, alimenta
    granizoPlan, que ya resuelve viento × granizo, lado, cruce y margen. */
 LOC.granizoLiveAmenaza=function(on,tamanoMm,probPct){
-  var mm=Math.max(0,+tamanoMm||0), pr=Math.max(0,+probPct||0);
+  var mm=Math.max(0,+tamanoMm||0), pr=Math.max(0,Math.min(100,+probPct||0));
   var umMm=10*((LOC.VDE&&LOC.VDE.umbral_tamano_granizo_cm)||1.9);
   var umPr=(LOC.VDE&&LOC.VDE.umbral_probabilidad_pct)||30;
   if(!on)return {activa:false,tamano_mm:mm,prob_pct:pr,umbral_mm:umMm,umbral_prob_pct:umPr,
@@ -3081,10 +3081,11 @@ LOC.hailForecastAt=function(cfg,tMin){
   cfg=cfg||{};tMin=+tMin||0;
   var after=isFinite(+cfg.hail_after_min)?Math.max(0,+cfg.hail_after_min):15;
   var st={known:true,on:!!cfg.hail_on,mm:Math.max(0,+cfg.hail_mm||0),
-    prob_pct:Math.max(0,+cfg.hail_prob_pct||0),eta_ref:Math.max(0,+cfg.hail_eta0_min||0),
+    prob_pct:Math.max(0,Math.min(100,+cfg.hail_prob_pct||0)),eta_ref:Math.max(0,+cfg.hail_eta0_min||0),
     ref_t:0,dir_deg:isFinite(+cfg.wind_dir_deg)?+cfg.wind_dir_deg:270,
     update_index:-1,update_kind:'initial',update_at_min:0};
-  var ups=(cfg.hail_updates||[]).map(function(u,i){
+  var rawUps=Array.isArray(cfg.hail_updates)?cfg.hail_updates:[];
+  var ups=rawUps.map(function(u,i){
     var q={};for(var k in (u||{}))q[k]=u[k];q._i=i;return q;
   }).filter(function(u){return isFinite(+u.at_min);})
     .sort(function(a,b){return (+a.at_min)-(+b.at_min)||a._i-b._i;});
@@ -3104,7 +3105,7 @@ LOC.hailForecastAt=function(cfg,tMin){
     st.known=true;st.on=(u.on===undefined||u.on===null)?true:!!u.on;
     st.ref_t=at;st.eta_ref=isFinite(+u.eta_min)?Math.max(0,+u.eta_min):etaNow;
     if(isFinite(+u.mm))st.mm=Math.max(0,+u.mm);
-    if(isFinite(+u.prob_pct))st.prob_pct=Math.max(0,+u.prob_pct);
+    if(isFinite(+u.prob_pct))st.prob_pct=Math.max(0,Math.min(100,+u.prob_pct));
     if(isFinite(+u.dir_deg))st.dir_deg=((+u.dir_deg%360)+360)%360;
   }
   var eta=st.known?Math.max(0,st.eta_ref-(tMin-st.ref_t)):null;
@@ -3267,6 +3268,10 @@ LOC.simulaEvento=function(cfg){
     var hailLead=isFinite(+((cfg.profile||{}).hail_lead_min))?
       Math.max(0,+cfg.profile.hail_lead_min):LOC.GRZ.hail_min;
     var hailReady=!!(hailKnown&&hailGate.activa&&pr.hail_eta_min!==null&&pr.hail_eta_min<=hailLead);
+    /* LIBERADO describe el cierre del episodio anterior, no una memoria eterna.
+       Una amenaza nueva, aunque todavía esté FUERA del lead, abre un episodio
+       de vigilancia nuevo y debe borrar esa etiqueta antes de que pueda retirarse. */
+    if(hailKnown&&hailGate.activa&&!hailProtected&&hailReleased)hailReleased=false;
     if(!hailKnown){
       if(hailProtected)hailClearSec=null; // evidencia de all-clear invalidada
     }else if(hailReady){
@@ -3480,6 +3485,7 @@ LOC.incGenera=function(opts,index,baseCfg){
       ['hail','hail_prob_reforecast','Probabilidad cruza 30 % por reforecast'],
       ['hail','hail_size_reforecast','Tamaño cruza 19 mm por reforecast'],
       ['hail','hail_second_episode','Segundo episodio recalcula lado tras liberación'],
+      ['hail','hail_second_watch_withdraw','Segundo aviso solo en vigilancia y retirada limpia'],
       ['combined','hail_wind_missing','Viento manda al activar + pérdida de dato al amainar'],
       ['snow','snow_equal','Nieve exactamente en 10 cm'],
       ['snow','snow_plus','Nieve 10 cm + ε'],
@@ -3551,6 +3557,10 @@ LOC.incGenera=function(opts,index,baseCfg){
       }else if(tag==='hail_second_episode'){
         p.hail_lead_min=20;p.hail_eta0_min=20;p.hail_after_min=1;p.hail_exit_hold_min=3;p.wind_dir_deg=270;
         p.hail_updates=[{at_min:30,kind:'update',eta_min:20,mm:22,prob_pct:70,dir_deg:90}];
+      }else if(tag==='hail_second_watch_withdraw'){
+        p.hail_lead_min=20;p.hail_eta0_min=20;p.hail_after_min=1;p.hail_exit_hold_min=3;p.wind_dir_deg=270;
+        p.hail_updates=[{at_min:30,kind:'update',eta_min:90,mm:22,prob_pct:70,dir_deg:90},
+          {at_min:35,kind:'withdraw'}];
       }else p.hail_eta0_min=tag==='hail_watch'?C.hailLead+1:
         tag==='hail_boundary'?C.hailLead:tag==='hail_near'?Math.min(10,C.hailLead):Math.min(20,C.hailLead);
     }else if(tag==='snow_equal'||tag==='snow_plus'){
@@ -3746,6 +3756,10 @@ LOC.incVerifica=function(caso,cfg,sim,sim2){
       e29.hail_phase==='LIBERADO'&&e30.hail_phase==='DEFENSA'&&e30.orden.A1<0,
       JSON.stringify({o0:e0&&e0.orden.A1,p24:e24&&e24.hail_phase,o30:e30&&e30.orden.A1}));
   }
+  if(tag==='hail_second_watch_withdraw')add('un segundo aviso fuera de lead no hereda LIBERADO al retirarse',
+    at(29)&&at(29).hail_phase==='LIBERADO'&&at(30)&&at(30).hail_phase==='VIGILANCIA'&&
+    at(35)&&at(35).hail_phase==='SIN SEÑAL'&&!at(35).hail_defense_active,
+    JSON.stringify([at(29)&&at(29).hail_phase,at(30)&&at(30).hail_phase,at(35)&&at(35).hail_phase]));
   if(tag==='hail_wind_missing')add('si viento manda al activar, existe target granizo de respaldo al perder dato',
     at(10)&&at(10).hail_phase==='SIN_DATO_PROTEGIDO'&&at(10).hail_defense_active&&
     ks.every(function(k){return at(10).modos[k]==='HAIL_STOW'||at(10).modos[k]==='FULL_STOW'||at(10).modos[k]==='PARTIAL_STOW';}),
