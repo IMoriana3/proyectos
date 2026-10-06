@@ -196,27 +196,28 @@ let PLANTS=[],SITE=null,CURRENT=null,TMY=null,ADAPTED=null,PREPARED=null;
 function status(msg,kind=""){$("workStatus").textContent=msg;$("workStatus").className="statusline "+kind}
 function cfg(){return {lat:+$("lat").value,lon:+$("lon").value,year_start:+$("y0").value,year_end:+$("y1").value,source:$("source").value}}
 function siteName(){return SITE?((SITE.code?SITE.code+" · ":"")+SITE.name):"Manual"}
+function plantKey(p){return p?String(p.carteraCode||p.code||p.name||""):"";}
 function saveCfg(){
-  try{localStorage.setItem("factiun_meteo_cfg",JSON.stringify({...cfg(),plant:$("plantSel").value}));}catch(e){}
+  try{localStorage.setItem("factiun_meteo_cfg",JSON.stringify({...cfg(),plant:plantKey(SITE)}));}catch(e){}
 }
 function restoreCfg(){
   try{
-    const x=JSON.parse(localStorage.getItem("factiun_meteo_cfg")||"null");if(!x)return;
+    const x=JSON.parse(localStorage.getItem("factiun_meteo_cfg")||"null");if(!x)return "";
     if(x.lat!=null)$("lat").value=x.lat;if(x.lon!=null)$("lon").value=x.lon;
     if(x.year_start)$("y0").value=x.year_start;if(x.year_end)$("y1").value=x.year_end;if(x.source)$("source").value=x.source;
-    return x.plant||"";
+    return String(x.plant||"");
   }catch(e){return ""}
 }
 async function initPlants(){
   const saved=restoreCfg();
   PLANTS=await loadFactiunPlants();
   const q=(new URLSearchParams(location.search).get("planta")||"").toLowerCase();
-  $("plantSel").innerHTML='<option value="">Manual / coordenadas libres</option>'+PLANTS.map((p,i)=>'<option value="'+i+'">'+esc((p.code?p.code+" · ":"")+p.name+(p.location?" — "+p.location:""))+'</option>').join("");
+  $("plantSel").innerHTML='<option value="">Manual / coordenadas libres</option>'+PLANTS.map(p=>'<option value="'+esc(plantKey(p))+'">'+esc((p.code?p.code+" · ":"")+p.name+(p.location?" — "+p.location:""))+'</option>').join("");
   let idx=-1;
   if(q)idx=PLANTS.findIndex(p=>(p.name+" "+p.code+" "+p.carteraCode).toLowerCase().includes(q));
-  if(idx<0&&saved!=="")idx=+saved;
+  if(idx<0&&saved)idx=PLANTS.findIndex(p=>plantKey(p)===saved);
   if(!(idx>=0&&PLANTS[idx]))idx=PLANTS.findIndex(p=>p.name==="El Burgo I");
-  if(idx>=0){$("plantSel").value=String(idx);choosePlant(idx,false);}else choosePlant(-1,false);
+  if(idx>=0){$("plantSel").value=plantKey(PLANTS[idx]);choosePlant(idx,false);}else choosePlant(-1,false);
 }
 function choosePlant(i,refresh=true){
   SITE=(i>=0&&PLANTS[i])?PLANTS[i]:null;
@@ -231,7 +232,7 @@ function choosePlant(i,refresh=true){
   $("siteStatus").textContent=SITE?"Emplazamiento tomado de la Cartera / factiun_plantas. Puedes retocar lat/lon sin alterar la ficha de planta.":"Modo manual.";
   saveCfg();if(refresh)loadNow();
 }
-$("plantSel").onchange=()=>choosePlant($("plantSel").value===""?-1:+$("plantSel").value);
+$("plantSel").onchange=()=>{const key=$("plantSel").value;choosePlant(key===""?-1:PLANTS.findIndex(p=>plantKey(p)===key));};
 ["lat","lon","y0","y1","source"].forEach(id=>$(id).addEventListener("change",saveCfg));
 
 function paintNow(m){
