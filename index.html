@@ -589,7 +589,7 @@ body.presenta .solo-pres{display:inline-block}
     <div class="plants" id="plants"></div>
   </section>
 
-  <h2 class="sec-title" id="herramientas">Herramientas · crear nuevo<a class="tabla-link" href="generador-layout.html" title="Generación de la implantación completa —filas, mesas y seguidores— en el navegador">▦ Generador de implantaciones</a><a class="tabla-link" href="buscador-implantacion.html" title="Miles de variantes de implantación en vivo, con el MISMO motor del generador: giro de filas, tresbolillo y viales; lo mejor en verde, las descartadas en rojo">◱ Buscador de implantaciones</a><a class="tabla-link" href="layout.html" title="Representación de la implantación devuelta por el motor de cálculo o de un GeoJSON externo">▦ Explorador</a><a class="tabla-link" href="sim-solar.html" title="Cálculo de la geometría solar (elevación, azimut y sombra) y simulación de producción">☉ Sol &amp; Simulación</a><a class="tabla-link" href="sim-viento.html" title="Abanderamiento por viento: POA perdida, número de abanderamientos y tiempo acumulado">⚑ Viento</a><a class="tabla-link" href="comparador-estructuras.html" title="Comparación entre estructura fija y seguidor: POA por tipo de estructura, por m² de módulo y de suelo">🏗 Estructuras</a></h2>
+  <h2 class="sec-title" id="herramientas">Herramientas · crear nuevo<a class="tabla-link" href="generador-layout.html" title="Generación de la implantación completa —filas, mesas y seguidores— en el navegador">▦ Generador de implantaciones</a><a class="tabla-link" href="buscador-implantacion.html" title="Miles de variantes de implantación en vivo, con el MISMO motor del generador: giro de filas, tresbolillo y viales; lo mejor en verde, las descartadas en rojo">◱ Buscador de implantaciones</a><a class="tabla-link" href="layout.html" title="Representación de la implantación devuelta por el motor de cálculo o de un GeoJSON externo">▦ Explorador</a><a class="tabla-link" href="sim-solar.html" title="Cálculo de la geometría solar (elevación, azimut y sombra) y simulación de producción">☉ Sol &amp; Simulación</a><a class="tabla-link" href="meteo.html" title="Meteo transversal: forecast, irradiancia, viento, nubosidad, precipitación y riesgos">☁ Meteo</a><a class="tabla-link" href="sim-viento.html" title="Abanderamiento por viento: POA perdida, número de abanderamientos y tiempo acumulado">⚑ Viento</a><a class="tabla-link" href="comparador-estructuras.html" title="Comparación entre estructura fija y seguidor: POA por tipo de estructura, por m² de módulo y de suelo">🏗 Estructuras</a></h2>
   <div class="controls">
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -1168,6 +1168,39 @@ const PROJECTS = [
       { date:"2026-08-14", ver:"v1.2", note:"Cielo con la receta de backtracking.html (alba/ocaso rojizos, noche azul marino) agrisado por la cobertura y con el disco solar velado; la pala del 3D persigue la consigna a la velocidad real del actuador (0,17 °/s en tiempo simulado); stow nocturno del proyecto: los trackers duermen a 5° al ESTE (−5° en convención TCU), configurable; slider minutal con el sol al minuto exacto. QA 45 en Node." },
       { date:"2026-08-14", ver:"v1.1", note:"Escena 3D real con el modelo del seguidor de la casa (seguidor.js, sombras, nube por zona, luz solar por DNI y hemisferio por DHI; fallback corte 2D) y ZONAL por NCU: el frente cruza la planta y cada NCU decide con su señal — en el día de frentes, flat global +0,37 % → zonal +1,15 %. QA 30 en página, 43 en Node." },
       { date:"2026-08-14", ver:"v1.0", note:"Primera versión: las 4 políticas de difusa del core + baseline, escenario canónico del test como preset, Open-Meteo (ERA5/previsión/EN VIVO), lazo deadband+slew con su coste medido, anual por mezcla de cielos. QA 27 en página, 38 en Node. La doc incorpora el estudio de competencia y papers." }
+    ]
+  },
+  {
+    name: "Análisis meteorológico",
+    status: "build",
+    objetivo: "Weather Workbench transversal de SolarGPT/Factiun: históricos multi-año, búsqueda de años representativos, TMY Sandia/Finkelstein-Schafer y PVGIS, comparación de fuentes, forecast, importación PVSyst/CSV, descargas e informes. Es la interfaz única del dominio meteo que alimentará producción, difusa, viento/granizo, batería, winter mode, SCADA, gemelo y P50/P90.",
+    stack: "HTML · SolarGPT engine API · solargpt_core.meteo · TMY Sandia/FS · PVGIS · Open-Meteo/ERA5 · NASA POWER · WeatherNext 3 · PVSyst import",
+    url: "meteo.html",
+    repo: "https://github.com/imoriana3/proyectos",
+    updated: "2026-10-06",
+    version: "0.3.0",
+    docId: "meteo",
+    docUrl: "",
+    uso: [
+      "Selecciona emplazamiento, fuente y rango de años; analiza GHI/DNI/DHI, temperatura, viento, precipitación, completitud y localiza años cercanos a la mediana.",
+      "Construye un TMY propio con Sandia/Finkelstein-Schafer —selección mes a mes— o descarga el TMY de PVGIS; muestra año seleccionado y FS de cada mes.",
+      "Compara PVGIS-SARAH3, PVGIS-ERA5, NASA POWER y Open-Meteo; el RMS GHI conserva su papel como entrada de incertidumbre P50/P90.",
+      "Descarga histórico o TMY en CSV, importa CSV/Excel PVSyst mediante el loader canónico y genera un informe meteorológico trazable.",
+      "Ejecuta QA avanzado, validación vs climatología PVGIS, detección de desfase horario, riesgo climatológico de granizo, viento sintético declarado y adaptación de sitio con medición.",
+      "Sin motor sigue disponible el forecast gratuito de Open-Meteo y la importación de resúmenes WeatherNext; con motor usa siempre el core, sin duplicar algoritmos en JS."
+    ],
+    pendientes: [
+      { done:true, text:"Workbench: años, TMY Sandia/PVGIS, comparación multi-fuente, CSV e informe conectados al API del motor." },
+      { done:true, text:"Importación CSV y Excel PVSyst mediante el loader canónico de SolarGPT." },
+      { done:false, text:"Conectar WeatherNext 3 live mediante backend/ETL gratuito y caché por planta; ahora el adapter admite resumen JSON." },
+      { done:false, text:"Exponer CAMS/NSRDB/Solcast en el workbench cuando sus credenciales estén configuradas en el motor." },
+      { done:false, text:"Migrar viento/granizo, radiación difusa, producción, batería, gemelo y SCADA para consumir exclusivamente el contrato meteo común." },
+      { done:false, text:"Certificar parity de unidades, timestamps, provenance y fallos de fuente entre todos los consumidores." }
+    ],
+    historial: [
+      { date:"2026-10-06", ver:"0.3.0", note:"Paridad funcional ampliada con Meteo de SolarGPT: QA avanzado, climatología PVGIS, desfase horario, riesgo de granizo, viento sintético y adaptación de sitio medida→serie larga." },
+      { date:"2026-10-06", ver:"0.2.0", note:"Weather Workbench completo: histórico multi-año, screening anual, TMY Sandia/FS y PVGIS, comparativa de fuentes, import PVSyst/CSV, descargas e informe; la interfaz llama al dominio meteo canónico de SolarGPT." },
+      { date:"2026-10-06", ver:"0.1.0", note:"Nace la capa meteorológica transversal: Open-Meteo operativo, contrato normalizado y adapter de resumen WeatherNext 3." }
     ]
   },
   {
