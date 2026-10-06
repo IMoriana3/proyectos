@@ -1,4 +1,5 @@
 // LA CARTERA: migra los datos del usuario y publica el registro de plantas —
+// Revalidación del PR contra el main vigente: 06-10-2026.
 // y no la probaba nadie.
 //
 // `cartera-tabla.html` es la tabla de plantas de Factiun. Vive en el navegador
