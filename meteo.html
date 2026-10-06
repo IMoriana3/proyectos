@@ -96,7 +96,7 @@ footer{color:var(--muted2);font-size:11px;padding-top:20px}
   <h2>Fuentes integradas</h2>
   <div class="srcgrid">
     <div class="src"><strong>Open-Meteo forecast <span class="badge live">ACTIVO</span></strong><p>Temperatura, humedad, lluvia/nieve, nubes, GHI/DNI/DHI, viento, dirección, ráfagas, CAPE y cota de congelación.</p></div>
-    <div class="src"><strong>Open-Meteo ERA5 <span class="badge live">ACTIVO</span></strong><p>Reanálisis para replay, validación y estudios históricos.</p></div>
+    <div class="src"><strong>Open-Meteo ERA5 <span class="badge live">ACTIVO</span></strong><p>Reanálisis para replay, validación y estudios históricos. No aporta CAPE/cota de congelación: el riesgo convectivo queda marcado como no evaluado.</p></div>
     <div class="src"><strong>WeatherNext 3 <span class="badge wait" id="wnBadge">ADAPTER</span></strong><p>Ensemble AI: viento, irradiancia, precipitación, nubes, temperatura y presión. Requiere acceso Google y proxy sin secretos en el navegador.</p></div>
     <div class="src"><strong>HSU / SCADA <span class="badge">MEDIDO</span></strong><p>La medida local manda para seguridad y puede entrar por CSV o por el collector/SCADA.</p></div>
     <div class="src"><strong>PVGIS / NASA POWER <span class="badge">ENGINE</span></strong><p>Fuentes históricas ya ofrecidas por Viento; se mantienen como adapters del motor canónico.</p></div>
@@ -170,7 +170,9 @@ function renderSignals(){
   h+=sig(x.wind_risk==='stow'?'alarm':x.wind_risk==='watch'?'watch':'ok','Viento · '+String(x.wind_risk).toUpperCase(),'máx '+fmt(x.max_wind_10m_ms,1)+' m/s · ráfaga '+fmt(x.max_gust_10m_ms,1)+' m/s');
   h+=sig((x.mean_diffuse_fraction||0)>.65?'watch':'ok','Régimen difuso','fracción DHI/GHI media '+fmt(x.mean_diffuse_fraction,2)+' · nubes '+fmt(x.mean_cloud_cover_pct,0)+' %');
   h+=sig(x.freeze_risk==='watch'?'watch':'ok','Winter / hielo',x.freeze_risk==='watch'?'precipitación con temperatura cercana a 0 °C':'sin señal combinada en 24 h');
-  h+=sig(x.hail_ingredients_heuristic?'watch':'ok','Ingredientes convectivos',x.hail_ingredients_heuristic?'CAPE + precipitación + cota de congelación: revisar granizo':'sin señal heurística destacada');
+  h+=x.hail_inputs_available
+    ? sig(x.hail_ingredients_heuristic?'watch':'ok','Ingredientes convectivos',x.hail_ingredients_heuristic?'CAPE + precipitación + cota de congelación: revisar granizo':'sin señal heurística destacada')
+    : sig('','Ingredientes convectivos · NO DISPONIBLE','esta fuente no aporta CAPE y cota de congelación; granizo no se ha evaluado');
   h+=sig('ok','Carga solar 24 h',fmt(x.solar_whm2_24h,0)+' Wh/m² GHI previsto');
   $('signals').innerHTML=h;
 }
