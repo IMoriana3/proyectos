@@ -1179,7 +1179,7 @@ const PROJECTS = [
     url: "meteo.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-10-06",
-    version: "0.6.0",
+    version: "0.7.0",
     docId: "meteo",
     docUrl: "",
     uso: [
@@ -1189,7 +1189,7 @@ const PROJECTS = [
       "Compara PVGIS-SARAH3, PVGIS-ERA5, NASA POWER y Open-Meteo; importa CSV/Excel PVSyst y adapta GHI a medición del sitio.",
       "Ejecuta QA avanzado, climatología PVGIS, desfase horario, granizo de diseño, viento sintético declarado e interpolación con guardrail de memoria.",
       "Descarga el dataset que realmente está en memoria y genera un informe meteorológico trazable imprimible a PDF.",
-      "Visualiza resumen mensual, serie diaria, zoom horario local, cockpit 6-paneles, climatología DOY, rosa de vientos, extremos/heladas, nieve, granizo, viento sintético y comparativa GHI; el informe incrusta estas gráficas como PNG."
+      "Visualiza resumen mensual, serie diaria, zoom horario local, cockpit 6-paneles, climatología DOY, rosa de vientos, extremos/heladas, nieve, granizo, viento sintético, comparativa GHI y mapas interactivos Windy/Ventusky sincronizados con el emplazamiento; el informe incrusta las gráficas canónicas como PNG."
     ],
     pendientes: [
       { done:true, text:"Eliminar dependencia obligatoria del motor SolarGPT: histórico, TMY, QA, importación, adaptación, descargas e informes corren en navegador." },
@@ -1200,6 +1200,7 @@ const PROJECTS = [
       { done:false, text:"Cerrar certificación diferencial JS↔Python para TMY/QA/extremos con golden datasets compartidos." }
     ],
     historial: [
+      { date:"2026-10-06", ver:"0.7.0", note:"WINDY + VENTUSKY: dos mapas interactivos externos sincronizados con la planta, ciudad o coordenadas manuales. Se usan como contraste visual operativo y quedan explícitamente fuera del contrato meteo canónico y de las decisiones de CONTROL." },
       { date:"2026-10-06", ver:"0.6.0", note:"BUSCADOR GLOBAL DE EMPLAZAMIENTOS: autocompletado con Open-Meteo Geocoding; permite escribir cualquier ciudad o municipio, elegir entre coincidencias y cargar automáticamente latitud, longitud, país, cota y zona horaria. Se conserva el selector de proyectos Factiun y el emplazamiento externo queda persistido." },
       { date:"2026-10-06", ver:"0.5.0", note:"PARIDAD VISUAL METEO: se portan las familias gráficas de SolarGPT al navegador autónomo — mensual, serie diaria, zoom local, cockpit 6 paneles, climatología DOY, rosa de vientos, extremos y heladas, nieve, curva de granizo, viento sintético y comparación de fuentes. Los informes incrustan los canvas como PNG." },
       { date:"2026-10-06", ver:"0.4.0", note:"AUTÓNOMO Y A TODO ANCHO: desaparece el requisito de Motor SolarGPT; nuevo meteo-browser.js ejecuta histórico, QA, TMY, comparación, PVSyst/CSV, adaptación, viento/granizo, interpolación, descargas e informe. El emplazamiento sale de la Cartera y el banco fija ancho >1.800 px a viewport 1.920." },
