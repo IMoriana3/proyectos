@@ -574,7 +574,7 @@ function visualReportHtml(){
     ["Rosa de los vientos","vizWindRose"],["Histograma de temperatura","vizTempHist"],["Nieve mensual","vizSnowMonth"],
     ["Riesgo acumulado de granizo","vizHailCurve"],["Viento sintético","vizWindSynth"],["Comparación de fuentes","vizCompareSources"]
   ];
-  const cards=figs.map(([name,id])=>{const cv=$(id);if(!cv||!cv.width||!cv.height)return "";let url="";try{url=cv.toDataURL("image/png")}catch(e){return ""}return '<figure><figcaption>'+esc(name)+'</figcaption><img src="'+url+'" alt="'+esc(name)+'"></figure>';}).filter(Boolean).join("");
+  const cards=figs.map(([name,id])=>{const cv=$(id);if(!cv||cv.dataset.drawn!=="1"||!cv.width||!cv.height)return "";let url="";try{url=cv.toDataURL("image/png")}catch(e){return ""}return '<figure><figcaption>'+esc(name)+'</figcaption><img src="'+url+'" alt="'+esc(name)+'"></figure>';}).filter(Boolean).join("");
   if(!cards)return "";
   return '<h2>Visual analytics</h2><div class="viz-report">'+cards+'</div><style>.viz-report{display:grid;grid-template-columns:1fr 1fr;gap:12px}.viz-report figure{margin:0;border:1px solid #d8dee8;padding:8px;break-inside:avoid}.viz-report figcaption{font-weight:700;font-size:12px;margin-bottom:6px}.viz-report img{width:100%;height:auto;display:block}@media print{.viz-report{grid-template-columns:1fr 1fr}}</style>';
 }
