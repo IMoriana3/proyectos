@@ -122,6 +122,15 @@ La señal convectiva **no es una predicción de granizo ni un aviso oficial**.
 ## Próxima integración
 
 1. Configurar adapter WeatherNext con credenciales fuera del navegador.
-2. Hacer que Viento, Difusa y Batería consulten primero FactiunMeteo.latest() y publiquen cualquier serie que descarguen.
+2. **Hecho en integración:** Viento, Radiación difusa y Batería consumen/publican WeatherState compatible con fallback al comportamiento previo.
 3. Añadir provenance/version al payload que viaje al engine.
 4. Golden dataset común para comparar la misma hora/planta entre tarjetas.
+5. Extender el adapter WeatherNext con percentiles P10/P50/P90 y ensemble completo cuando el acceso de Google quede habilitado.
+
+
+## Reglas de compatibilidad entre consumidores
+
+- **Viento** puede reutilizar un año ERA5 únicamente si coinciden proveedor, coordenadas y fechas completas.
+- **Radiación difusa** exige GHI + DNI + DHI para reutilizar una serie. No interpreta la radiación directa superficial de WeatherNext como DNI.
+- **Batería** exige GHI + DHI y puede reutilizar forecast o ERA5; publica además PVSyst con POA y ángulo cuando existen.
+- Toda ausencia del bus se trata como cache miss: ninguna herramienta pierde su ruta anterior por red, CSV, SCADA o sintético.
