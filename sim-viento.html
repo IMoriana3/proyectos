@@ -1059,6 +1059,7 @@
 <script src="lib/three.min.js"></script>
 <script src="lib/OrbitControls.js"></script>
 <script src="seguidor.js"></script>
+<script src="lib/meteo-bus.js"></script>
 <script>
 'use strict';
 function $(id){return document.getElementById(id);}
@@ -3786,15 +3787,89 @@ LOC.incVerifica=function(caso,cfg,sim,sim2){
 };
 
 /* ── Meteo ── */
+/* WeatherState v1: esta ficha deja de ser una isla. Publica la serie que usa y,
+   si otra tarjeta ya dejó EXACTAMENTE el mismo año/emplazamiento de ERA5 en el
+   buzón compartido, la reutiliza. Si el bus no carga, todo sigue como antes. */
+LOC.toWeatherState=function(M,lat,lon,meta){
+  if(!M||!M.t)return null;
+  var pts=new Array(M.t.length);
+  for(var i=0;i<M.t.length;i++){
+    pts[i]={
+      time:(M.t[i] instanceof Date?M.t[i]:new Date(M.t[i])).toISOString(),
+      ghi_wm2:(M.ghi&&isFinite(M.ghi[i]))?+M.ghi[i]:null,
+      dni_wm2:(M.dni&&isFinite(M.dni[i]))?+M.dni[i]:null,
+      dhi_wm2:(M.dhi&&isFinite(M.dhi[i]))?+M.dhi[i]:null,
+      temperature_c:(M.temp&&isFinite(M.temp[i]))?+M.temp[i]:null,
+      wind_speed_10m_ms:(M.ws&&isFinite(M.ws[i]))?+M.ws[i]:null,
+      wind_direction_10m_deg:(M.wd&&isFinite(M.wd[i]))?+M.wd[i]:null,
+      wind_gust_10m_ms:(M.gust&&isFinite(M.gust[i]))?+M.gust[i]:null
+    };
+  }
+  var m={provider:(meta&&meta.provider)||'openmeteo_era5',mode:(meta&&meta.mode)||'archive',
+         lat:+lat,lon:+lon,retrieved_at:new Date().toISOString(),resolution_minutes:60,
+         producer:'sim-viento.html'};
+  if(meta)Object.keys(meta).forEach(function(k){m[k]=meta[k];});
+  return {schema:'weather-state.v1',meta:m,points:pts};
+};
+LOC.publicaMeteo=function(M,lat,lon,meta){
+  try{
+    if(!window.FactiunMeteo)return;
+    var d=LOC.toWeatherState(M,lat,lon,meta); if(d)window.FactiunMeteo.publish(d);
+  }catch(e){ /* cache auxiliar: nunca tumba la simulación */ }
+};
+LOC.desdeWeatherState=function(d){
+  if(!d||!Array.isArray(d.points)||!d.points.length)return null;
+  var P=d.points,n=P.length,o={t:new Array(n),ghi:new Float64Array(n),dhi:new Float64Array(n),
+    dni:new Float64Array(n),temp:new Float64Array(n),ws:new Float64Array(n),wd:new Float64Array(n),
+    source:'open_meteo',weather_state_cache:true};
+  var tieneG=false;
+  for(var i=0;i<n;i++)if(P[i].wind_gust_10m_ms!=null&&isFinite(+P[i].wind_gust_10m_ms)){tieneG=true;break;}
+  if(tieneG)o.gust=new Float64Array(n);
+  for(i=0;i<n;i++){
+    var p=P[i],dt=new Date(p.time); if(isNaN(dt))return null;
+    o.t[i]=dt;
+    o.ghi[i]=p.ghi_wm2==null?0:+p.ghi_wm2;
+    o.dhi[i]=p.dhi_wm2==null?0:+p.dhi_wm2;
+    o.dni[i]=p.dni_wm2==null?0:+p.dni_wm2;
+    o.temp[i]=p.temperature_c==null?15:+p.temperature_c;
+    o.ws[i]=p.wind_speed_10m_ms==null?0:+p.wind_speed_10m_ms;
+    o.wd[i]=p.wind_direction_10m_deg==null?NaN:+p.wind_direction_10m_deg;
+    if(o.gust)o.gust[i]=p.wind_gust_10m_ms==null?NaN:+p.wind_gust_10m_ms;
+  }
+  o.tiene_rafaga=!!o.gust;
+  return o;
+};
+LOC.cachedYear=function(lat,lon,year,year1){
+  try{
+    if(!window.FactiunMeteo)return null;
+    var d=window.FactiunMeteo.latest({provider:'openmeteo_era5',lat:+lat,lon:+lon});
+    if(!d||!d.meta)return null;
+    var y1=year1||year,ini=year+'-01-01',fin=y1+'-12-31';
+    if(d.meta.start_date!==ini||d.meta.end_date!==fin)return null;
+    var min=24*330*(y1-year+1);
+    if(!d.points||d.points.length<min)return null;
+    return LOC.desdeWeatherState(d);
+  }catch(e){return null;}
+};
 LOC.fetchYear=function(lat,lon,year,year1,sinRafaga){
   var y1=year1||year;
+  if(!sinRafaga){
+    var cache=LOC.cachedYear(lat,lon,year,y1);
+    if(cache)return Promise.resolve(cache);
+  }
   var vars=LOC.OM+(sinRafaga?'':','+LOC.OM_RAFAGA);
   var u='https://archive-api.open-meteo.com/v1/archive?latitude='+lat+'&longitude='+lon+
     '&start_date='+year+'-01-01&end_date='+y1+'-12-31&hourly='+vars+
     '&windspeed_unit=ms&timezone=UTC';
   return fetch(u).then(function(r){
     if(!r.ok)throw new Error('Open-Meteo HTTP '+r.status);return r.json();
-  }).then(function(j){ return LOC._omParse(j,sinRafaga); },
+  }).then(function(j){
+    return LOC._omParse(j,sinRafaga).then(function(M){
+      LOC.publicaMeteo(M,lat,lon,{provider:'openmeteo_era5',mode:'archive',
+        start_date:year+'-01-01',end_date:y1+'-12-31'});
+      return M;
+    });
+  },
   function(e){
     /* EL REINTENTO SIN RÁFAGA, que es lo que hace SEGURA la petición optimista.
        Si el servicio no reconoce `wind_gusts_10m`, la consulta falla ENTERA —no
@@ -5020,12 +5095,16 @@ async function run(){
       if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
       REP=await r.json(); MULTI=null;
     }else{
-      if(src==='hsu')body.meteoPre=LOC.completaHSU(HSU,body.lat,body.lon);
+      if(src==='hsu'){
+        body.meteoPre=LOC.completaHSU(HSU,body.lat,body.lon);
+        LOC.publicaMeteo(body.meteoPre,body.lat,body.lon,{provider:'hsu_csv',mode:'measured'});
+      }
       else if(src==='hsuscada'){
         var u=$('scadaUrl').value.trim();
         if(!u)throw new Error('pon la URL del SCADA de planta');
         out.innerHTML='<p class="note">Pidiendo el histórico de las HSU al SCADA…</p>';
         body.meteoPre=LOC.completaHSU(await LOC.fetchHSU(u,+$('scadaH').value),body.lat,body.lon);
+        LOC.publicaMeteo(body.meteoPre,body.lat,body.lon,{provider:'hsu_scada',mode:'measured_live',source_url:u});
       }
       var multi=(+$('year1').value>+$('year').value)&&!esHSU;
       if(multi){
