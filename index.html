@@ -254,8 +254,8 @@ body.presenta .solo-pres{display:inline-block}
 .sort select:focus{border-color:var(--amb)}
 
 /* ---------- REJILLAS Y MÓDULOS (tarjetas) ---------- */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;align-items:stretch;margin-bottom:34px}
-.plants{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:8px;align-items:stretch}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;align-items:stretch;margin-bottom:34px}
+.plants{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;margin-bottom:8px;align-items:stretch}
 /* la línea de separación la dibuja cada módulo (outline en el hueco de 1 px): así el hueco que
    queda al final de la última fila es fondo de página y no una losa gris */
 .card{position:relative;background:linear-gradient(180deg,var(--panel-hi),var(--panel) 42%);border:1px solid var(--line);transition:border-color .15s;display:flex;flex-direction:column;overflow:hidden}
@@ -2078,6 +2078,7 @@ const PLANTS = [
       layout2d:   SITE+"cobertura-zigbee/plano.html?planta=elburgo",
       topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=elburgo",
       cobertura:  SITE+"cobertura-zigbee/index.html?planta=elburgo",
+      asbuilt:    SITE+"visores/asbuilt/?planta=elburgo",
       scada:      CARTERA+"scada.html?planta=el%20burgo%20i",
   }},
   { name:"Ayora", code:"24025", pdc:52.52296, loc:"Valencia · España", views:{
