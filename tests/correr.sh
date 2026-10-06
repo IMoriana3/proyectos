@@ -978,10 +978,10 @@ declare -A PISO=(
   # llega a los 8 min, que cabe con 30° (5,9) y vetaría con 55° (10,8). Tras los dos
   # arreglos: 5/5 y 6 bajas, los cinco llegando a su veredicto.
   [test_granizo_estrategia.mjs]=143
-  # Weather Workbench autónomo: 32 contratos puros + 4 de navegador real
-  # (cartera, El Burgo, ancho efectivo y sello autónomo). Medido por diseño:
-  # si el smoke de navegador no llega, publica menos de 36 y la puerta cae.
-  [test_meteo_browser.mjs]=36
+  # Weather Workbench autónomo: 35 contratos puros —incluido golden TMY
+  # derivado del core Python— + 4 de navegador real (cartera, El Burgo,
+  # ancho efectivo y sello autónomo). Si el smoke no llega, el piso cae.
+  [test_meteo_browser.mjs]=39
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )
