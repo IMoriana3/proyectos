@@ -359,8 +359,10 @@ function plantKey(p){return p?String(p.carteraCode||p.code||p.name||""):"";}
 function externalMapUrls(lat=+$("lat").value,lon=+$("lon").value){
   if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
   const la=Number(lat).toFixed(5),lo=Number(lon).toFixed(5),name=siteName()||"Factiun";
-  const windy="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=7&overlay=wind&product=ecmwf&level=surface&lat="+encodeURIComponent(la)+"&lon="+encodeURIComponent(lo)+"&message=true";
-  const ventusky="https://embed.ventusky.com/?p="+encodeURIComponent(la+";"+lo+";7")+"&l=wind-10m&w=soft&pin="+encodeURIComponent(la+";"+lo+";dot;"+name);
+  const windyLayer=$("windyLayer")?.value||"wind",windyModel=$("windyModel")?.value||"ecmwf";
+  const ventLayer=$("ventuskyLayer")?.value||"wind-10m";
+  const windy="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=7&overlay="+encodeURIComponent(windyLayer)+"&product="+encodeURIComponent(windyModel)+"&level=surface&lat="+encodeURIComponent(la)+"&lon="+encodeURIComponent(lo)+"&message=true";
+  const ventusky="https://embed.ventusky.com/?p="+encodeURIComponent(la+";"+lo+";7")+"&l="+encodeURIComponent(ventLayer)+"&w=soft&pin="+encodeURIComponent(la+";"+lo+";dot;"+name);
   return {windy,ventusky,label:la+", "+lo};
 }
 function refreshExternalMaps(){
@@ -810,7 +812,8 @@ async function importFile(){
     else{const z=workbookToMeteo(globalThis.XLSX,await file.arrayBuffer(),{lat:+$("lat").value,lon:+$("lon").value,tz:$("tzInput").value||"UTC"});rows=z.rows;origin="PVSyst/Excel · "+z.sheet;}
     if(!rows.length)throw new Error("no se obtuvieron filas");
     const ys=rows.map(r=>new Date(r.t).getUTCFullYear()),raw={source:origin,source_id:"upload",lat:+$("lat").value,lon:+$("lon").value,year_start:Math.min(...ys),year_end:Math.max(...ys),rows};
-    CURRENT=await prepareDataset(raw);ADAPTED=null;PREPARED=null;renderYears(CURRENT);renderCoreVisuals();
+    CURRENT=await prepareDataset(raw);ADAPTED=null;PREPARED=null;renderYears(CURRENT);renderCoreVisuals();renderUncertainty();
+    await publishDatasetContract(CURRENT,"historical",{provenance:{provider:origin,retrieved_at_utc:new Date().toISOString()}});
     $("impOrigin").textContent=origin;$("impRows").textContent=CURRENT.rows.length.toLocaleString("es-ES");$("impCols").textContent=Object.keys(CURRENT.rows[0]||{}).length;$("impYear").textContent=CURRENT.representative_year_screening??"—";
     $("importStatus").textContent=file.name+" · QA "+CURRENT.qa.status+" · dataset activo";$("importStatus").className="statusline ok";status("Fichero importado y convertido en dataset activo.","ok");
   }catch(e){$("importStatus").textContent=e.message;$("importStatus").className="statusline bad"}
@@ -839,14 +842,21 @@ async function siteAdapt(){
 }
 async function useAdapted(){
   if(!ADAPTED)return;
-  status("Aplicando QA a la serie adaptada…","work");CURRENT=await prepareDataset({...ADAPTED,qa:undefined,annual:undefined,representative_year_screening:undefined});renderYears(CURRENT);renderCoreVisuals();$("adaptUse").disabled=true;status("Serie adaptada = dataset activo.","ok");
+  status("Aplicando QA a la serie adaptada…","work");
+  const unc=ADAPTED.uncertainty;
+  CURRENT=await prepareDataset({...ADAPTED,qa:undefined,annual:undefined,representative_year_screening:undefined});
+  CURRENT.uncertainty=unc;renderYears(CURRENT);renderCoreVisuals();renderUncertainty();
+  await publishDatasetContract(CURRENT,"historical",{provenance:{provider:CURRENT.source,retrieved_at_utc:new Date().toISOString()}});
+  $("adaptUse").disabled=true;status("Serie adaptada = dataset activo · contrato republicado.","ok");
 }
 
 function prep(){
   try{
     const src=$("prepWhich").value==="tmy"?TMY:CURRENT;if(!src)throw new Error($("prepWhich").value==="tmy"?"Construye primero un TMY.":"No hay histórico activo.");
     const z=interpolateRows(src.rows,{stepMin:+$("prepStep").value});PREPARED={...src,source:src.source+" → "+z.report.step_min+" min",rows:z.rows,interpolation:z.report};
-    $("prepBefore").textContent=z.report.rows_before.toLocaleString("es-ES");$("prepAfter").textContent=z.report.rows_after.toLocaleString("es-ES");$("prepStepOut").textContent=z.report.step_min+" min";$("prepDelta").textContent=z.report.deviation_pct!=null?fmt(z.report.deviation_pct,3)+"%":"—";$("prepDl").disabled=false;status("Dataset interpolado en memoria. Revisa Δ GHI antes de usarlo.","ok");
+    $("prepBefore").textContent=z.report.rows_before.toLocaleString("es-ES");$("prepAfter").textContent=z.report.rows_after.toLocaleString("es-ES");$("prepStepOut").textContent=z.report.step_min+" min";$("prepDelta").textContent=z.report.deviation_pct!=null?fmt(z.report.deviation_pct,3)+"%":"—";$("prepDl").disabled=false;
+    publishDatasetContract(PREPARED,"prepared",{provenance:{provider:PREPARED.source,retrieved_at_utc:new Date().toISOString(),operational_resolution_min:z.report.step_min,interpolated:true}}).catch(()=>{});
+    status("Dataset interpolado en memoria · WeatherContract prepared publicado. Revisa Δ GHI antes de usarlo.","ok");
   }catch(e){status("Interpolación: "+e.message,"bad")}
 }
 
@@ -866,16 +876,28 @@ function visualReportHtml(){
 function fileB64(file){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]||"");r.onerror=()=>ko(r.error);r.readAsDataURL(file)})}
 
 $("nowBtn").onclick=loadNow;$("yearsBtn").onclick=analyzeYears;$("tmyBtn").onclick=buildTmy;$("compareBtn").onclick=compare;$("qaBtn").onclick=advancedQa;$("hailBtn").onclick=doHail;$("hailLife").addEventListener("change",doHail);$("hailLambda").addEventListener("change",doHail);$("windSynthBtn").onclick=doWind;$("importBtn").onclick=importFile;$("adaptBtn").onclick=siteAdapt;$("adaptUse").onclick=useAdapted;$("prepBtn").onclick=prep;
+$("spatialBtn").onclick=runSpatial;
+["windyLayer","windyModel","ventuskyLayer"].forEach(id=>$(id).addEventListener("change",refreshExternalMaps));
+$("wnCfgBtn").onclick=()=>{
+  let cur="";try{cur=localStorage.getItem("factiun_weathernext_endpoint")||"";}catch(e){}
+  const v=prompt("Endpoint autenticado WeatherNext 3 (sin /forecast).\nDéjalo vacío para borrar la configuración.",cur);
+  if(v===null)return;
+  try{if(v.trim())localStorage.setItem("factiun_weathernext_endpoint",v.trim().replace(/\/+$/,""));else localStorage.removeItem("factiun_weathernext_endpoint");}catch(e){}
+  loadNow();
+};
 $("clearCache").onclick=async()=>{await clearHttpCache();status("Caché HTTP meteorológica vaciada.","ok")};
 $("prepDl").onclick=()=>PREPARED&&downloadText(toCsv(PREPARED.rows),"meteo_preparado.csv","text/csv;charset=utf-8");
 $("dlHist").onclick=()=>CURRENT?downloadText(toCsv(CURRENT.rows),"meteo_"+(CURRENT.year_start??"")+"-"+(CURRENT.year_end??"")+".csv","text/csv;charset=utf-8"):status("No hay histórico activo.","bad");
 $("dlTmy").onclick=()=>TMY?downloadText(toCsv(TMY.rows),"tmy_factiun.csv","text/csv;charset=utf-8"):status("No hay TMY calculado.","bad");
 $("dlJson").onclick=()=>CURRENT?downloadText(JSON.stringify(CURRENT,null,2),"meteo_factiun.json","application/json;charset=utf-8"):status("No hay dataset activo.","bad");
-$("reportBtn").onclick=()=>{if(!CURRENT){status("No hay dataset activo para el informe.","bad");return;}let h=reportHtml({title:$("reportTitle").value,dataset:CURRENT,tmy:$("reportTmy").value==="yes"?TMY:null,siteName:siteName()});h=h.replace("</body>",visualReportHtml()+"</body>");downloadText(h,"informe_meteo_"+siteName().replace(/[^\w-]+/g,"_")+".html","text/html;charset=utf-8")};
-$("wn").onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text()),m=fromWeatherNextSummary(Array.isArray(j)?j[0]:j);paintNow(m);$("wnStatus").textContent="WeatherNext importado · "+(m.timestamp||"sin timestamp");$("wnStatus").className="statusline ok"}catch(err){$("wnStatus").textContent=err.message;$("wnStatus").className="statusline bad"}};
+$("dlPvsyst").onclick=()=>{const ds=PREPARED||TMY||CURRENT;if(!ds){status("No hay dataset para exportar a PVSyst.","bad");return;}downloadText(toPvsystCsv(ds.rows,{siteName:siteName(),timezone:SITE?.tz||"UTC"}),"meteo_pvsyst_"+siteName().replace(/[^\w-]+/g,"_")+".csv","text/csv;charset=utf-8")};
+$("dlManifest").onclick=()=>{const ds=PREPARED||CURRENT||TMY;if(!ds){status("No hay dataset activo para manifest.","bad");return;}const ref=activeWeatherRef(ds===TMY?"tmy":PREPARED?"prepared":"historical")||activeWeatherRef();const m=bankableManifest(ds,{siteName:siteName(),timezone:SITE?.tz||"UTC",uncertainty:WEATHER_UNCERTAINTY,spatial:SPATIAL,forecast:FORECAST72,contractRef:ref});downloadText(JSON.stringify(m,null,2),"manifest_meteo_"+siteName().replace(/[^\w-]+/g,"_")+".json","application/json;charset=utf-8")};
+$("dlContract").onclick=async()=>{const ref=activeWeatherRef();if(!ref){status("No hay WeatherContract activo.","bad");return;}const pkg=ACTIVE_CONTRACT||await loadActiveWeatherContract();if(!pkg){status("La referencia activa no tiene paquete en caché.","bad");return;}downloadText(JSON.stringify(pkg,null,2),"weather_contract_"+pkg.contract_id+".json","application/json;charset=utf-8")};
+$("reportBtn").onclick=()=>{if(!CURRENT){status("No hay dataset activo para el informe.","bad");return;}let h=reportHtml({title:$("reportTitle").value,dataset:CURRENT,tmy:$("reportTmy").value==="yes"?TMY:null,siteName:siteName()});const ref=activeWeatherRef("historical")||activeWeatherRef();const man=bankableManifest(CURRENT,{siteName:siteName(),timezone:SITE?.tz||"UTC",uncertainty:WEATHER_UNCERTAINTY,spatial:SPATIAL,forecast:FORECAST72,contractRef:ref});h=h.replace("</body>",visualReportHtml()+"<h2>Bankable manifest</h2><pre>"+esc(JSON.stringify(man,null,2))+"</pre></body>");downloadText(h,"informe_meteo_"+siteName().replace(/[^\w-]+/g,"_")+".html","text/html;charset=utf-8")};
+$("wn").onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text()),src=Array.isArray(j)?j:(j.rows||j.forecast||j.data||[j]),rows=src.map(fromWeatherNextSummary).filter(x=>x.timestamp);if(!rows.length)throw new Error("JSON WeatherNext sin filas válidas");$("wnStatus").textContent="WeatherNext JSON · "+rows.length+" pasos";$("wnStatus").className="statusline ok";await applyForecast(rows,"WeatherNext JSON")}catch(err){$("wnStatus").textContent=err.message;$("wnStatus").className="statusline bad"}};
 
 await initPlants();
-refreshExternalMaps();
+refreshExternalMaps();renderUncertainty();renderContract(activeWeatherRef());
 await loadNow();
 </script>
 </body></html>
