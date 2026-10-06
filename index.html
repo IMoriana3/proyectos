@@ -1179,7 +1179,7 @@ const PROJECTS = [
     url: "meteo.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-10-06",
-    version: "0.7.0",
+    version: "0.8.0",
     docId: "meteo",
     docUrl: "",
     uso: [
@@ -1187,19 +1187,22 @@ const PROJECTS = [
       "Descarga históricos multi-año de Open-Meteo, PVGIS o NASA; aplica QA BSRN, plausibilidad, hash y screening anual sin levantar ningún motor.",
       "Construye TMY propio Sandia/Finkelstein-Schafer mes a mes o TMY PVGIS; muestra los 12 años elegidos y sus FS.",
       "Compara PVGIS-SARAH3, PVGIS-ERA5, NASA POWER y Open-Meteo; importa CSV/Excel PVSyst y adapta GHI a medición del sitio.",
-      "Ejecuta QA avanzado, climatología PVGIS, desfase horario, granizo de diseño, viento sintético declarado e interpolación con guardrail de memoria.",
-      "Descarga el dataset que realmente está en memoria y genera un informe meteorológico trazable imprimible a PDF.",
+      "Ejecuta QA avanzado, climatología PVGIS, desfase horario, granizo de diseño, viento sintético declarado, forecast operativo 72 h, meteo espacial e interpolación con guardrail de memoria.",
+      "Publica WeatherContract v2 por tipo (forecast/historical/TMY/prepared), descarga CSV/JSON/PVSyst/manifest y genera un informe meteorológico trazable imprimible a PDF.",
       "Visualiza resumen mensual, serie diaria, zoom horario local, cockpit 6-paneles, climatología DOY, rosa de vientos, extremos/heladas, nieve, granizo, viento sintético, comparativa GHI y mapas interactivos Windy/Ventusky sincronizados con el emplazamiento; el informe incrusta las gráficas canónicas como PNG."
     ],
     pendientes: [
       { done:true, text:"Eliminar dependencia obligatoria del motor SolarGPT: histórico, TMY, QA, importación, adaptación, descargas e informes corren en navegador." },
       { done:true, text:"Selector de emplazamiento conectado a factiun_plantas + semilla canónica de la Cartera y layout a 96vw / 2560 px." },
+      { done:true, text:"WeatherContract v2 browser: paquete versionado con hash, TZ, provenance, QA, incertidumbre, spatial y referencias activas por tipo en Cache Storage." },
+      { done:true, text:"Forecast operativo 72 h, incertidumbre para P50/P90, muestreo espacial 5 puntos y export bankable PVSyst + manifest.json." },
       { done:false, text:"Conectar WeatherNext 3 live mediante acceso Google; mientras tanto admite resumen JSON sin bloquear el resto del workbench." },
       { done:false, text:"CAMS/NSRDB/Solcast: habilitar opcionalmente sin exponer credenciales en GitHub Pages." },
       { done:false, text:"Migrar viento/granizo, radiación difusa, producción, batería, gemelo y SCADA para consumir exclusivamente el contrato meteo común." },
       { done:false, text:"Cerrar certificación diferencial JS↔Python para TMY/QA/extremos con golden datasets compartidos." }
     ],
     historial: [
+      { date:"2026-10-06", ver:"0.8.0", note:"WEATHER CONTRACT: contrato browser v2 compartido por tipo, forecast operativo 72 h, trazabilidad visible, incertidumbre meteo para P50/P90, muestreo espacial, WeatherNext live por proxy autenticado y export PVSyst/manifest/WeatherContract." },
       { date:"2026-10-06", ver:"0.7.0", note:"WINDY + VENTUSKY: dos mapas interactivos externos sincronizados con la planta, ciudad o coordenadas manuales. Se usan como contraste visual operativo y quedan explícitamente fuera del contrato meteo canónico y de las decisiones de CONTROL." },
       { date:"2026-10-06", ver:"0.6.0", note:"BUSCADOR GLOBAL DE EMPLAZAMIENTOS: autocompletado con Open-Meteo Geocoding; permite escribir cualquier ciudad o municipio, elegir entre coincidencias y cargar automáticamente latitud, longitud, país, cota y zona horaria. Se conserva el selector de proyectos Factiun y el emplazamiento externo queda persistido." },
       { date:"2026-10-06", ver:"0.5.0", note:"PARIDAD VISUAL METEO: se portan las familias gráficas de SolarGPT al navegador autónomo — mensual, serie diaria, zoom local, cockpit 6 paneles, climatología DOY, rosa de vientos, extremos y heladas, nieve, curva de granizo, viento sintético y comparación de fuentes. Los informes incrustan los canvas como PNG." },

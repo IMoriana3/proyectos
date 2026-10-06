@@ -299,7 +299,8 @@
       </div>
       <div class="field"><label>Fuente del viento</label>
         <select id="source">
-          <option value="openmeteo">Open-Meteo (ERA5) · reanálisis</option>
+          <option value="contract" selected>WeatherContract activo · compartido</option>
+          <option value="openmeteo">Open-Meteo (ERA5) · reanálisis directo (fallback)</option>
           <option value="hsu">HSU de la planta · CSV</option>
           <option value="hsuscada">HSU de la planta · SCADA en vivo</option>
           <option value="pvgis">PVGIS horario</option>
@@ -2923,7 +2924,9 @@ LOC.runMulti=function(cfg,onPaso){
   var lat=cfg.lat, lon=cfg.lon;
   var cs=(cfg.source==='clearsky'||cfg.meteo_mode==='clearsky');
   var pre= cfg.meteoPre ? Promise.resolve(cfg.meteoPre)
-         : cs ? LOC.clearsky(lat,lon,y0) : LOC.fetchYear(lat,lon,y0,y1);
+         : cs ? LOC.clearsky(lat,lon,y0)
+         : cfg.source==='contract' ? LOC.contractOrFallback(lat,lon,y0,y1)
+         : LOC.fetchYear(lat,lon,y0,y1);
   return pre.then(function(M){
     var anos=[],idx={};
     for(var i=0;i<M.t.length;i++){
@@ -2935,9 +2938,11 @@ LOC.runMulti=function(cfg,onPaso){
     anos.forEach(function(y,k){
       p=p.then(function(){
         if(onPaso)onPaso(k+1,anos.length,y);
-        var a=idx[y][0],b=idx[y][1]+1, sub={source:M.source,unidad:M.unidad,tiene_rafaga:M.tiene_rafaga};
+        var a=idx[y][0],b=idx[y][1]+1, sub={source:M.source,unidad:M.unidad,tiene_rafaga:M.tiene_rafaga,
+          contract_id:M.contract_id,dataset_hash:M.dataset_hash,contract_timezone:M.contract_timezone,
+          contract_fallback_reason:M.contract_fallback_reason};
         sub.t=M.t.slice(a,b);
-        ['ghi','dhi','dni','temp','ws','wd'].forEach(function(c){sub[c]=M[c].slice(a,b);});
+        ['ghi','dhi','dni','temp','ws','wd','gust'].forEach(function(c){if(M[c])sub[c]=M[c].slice(a,b);});
         return LOC.run(Object.assign({},cfg,{year:y,meteoPre:sub,
           timeline:(k===0?cfg.timeline:null), include_trace:(k===0)}));
       }).then(function(R){
@@ -3786,6 +3791,45 @@ LOC.incVerifica=function(caso,cfg,sim,sim2){
 };
 
 /* ── Meteo ── */
+/* WeatherContract v2 es la primera opción. El fetcher Open-Meteo de esta ficha
+   queda como FALLBACK explícito para operar si aún no se ha publicado un
+   histórico desde el Weather Workbench. */
+LOC.fromWeatherContract=function(pkg,year,year1){
+  if(!pkg||pkg.schema_version!=='2.0.0'||!Array.isArray(pkg.rows))
+    throw new Error('WeatherContract v2 histórico no disponible');
+  var y0=+year,y1=+(year1||year),rr=pkg.rows.filter(function(r){
+    var y=new Date(r.t).getUTCFullYear();return y>=y0&&y<=y1;
+  });
+  if(!rr.length)throw new Error('WeatherContract activo no cubre '+y0+(y1!==y0?'–'+y1:''));
+  var n=rr.length,o={t:new Array(n),ghi:new Float64Array(n),dhi:new Float64Array(n),
+    dni:new Float64Array(n),temp:new Float64Array(n),ws:new Float64Array(n),
+    wd:new Float64Array(n),gust:new Float64Array(n)};
+  var anyGust=false;
+  for(var i=0;i<n;i++){
+    var r=rr[i];o.t[i]=new Date(r.t);o.ghi[i]=Math.max(0,+r.ghi_wm2||0);
+    o.dhi[i]=Math.max(0,+r.dhi_wm2||0);o.dni[i]=Math.max(0,+r.dni_wm2||0);
+    o.temp[i]=isFinite(+r.temp_c)?+r.temp_c:15;o.ws[i]=Math.max(0,+r.wind_ms||0);
+    o.wd[i]=isFinite(+r.wind_dir_deg)?+r.wind_dir_deg:NaN;
+    o.gust[i]=isFinite(+r.gust_ms)?Math.max(0,+r.gust_ms):NaN;if(isFinite(o.gust[i]))anyGust=true;
+  }
+  o.source='weather_contract';o.contract_id=pkg.contract_id;o.dataset_hash=pkg.qa&&pkg.qa.dataset_hash;
+  o.contract_timezone=(pkg.site&&pkg.site.timezone)||(pkg.temporal&&pkg.temporal.timezone)||'UTC';
+  o.unidad='m/s';o.tiene_rafaga=anyGust;
+  return o;
+};
+LOC.fetchWeatherContract=async function(year,year1){
+  var mod=await import('./lib/weather-contract.js');
+  var pkg=await mod.loadActiveWeatherContract('historical');
+  return LOC.fromWeatherContract(pkg,year,year1);
+};
+LOC.contractOrFallback=async function(lat,lon,year,year1){
+  try{return await LOC.fetchWeatherContract(year,year1);}
+  catch(e){
+    var M=await LOC.fetchYear(lat,lon,year,year1);
+    M.source='open_meteo_fallback';M.contract_fallback_reason=String(e&&e.message||e);
+    return M;
+  }
+};
 LOC.fetchYear=function(lat,lon,year,year1,sinRafaga){
   var y1=year1||year;
   var vars=LOC.OM+(sinRafaga?'':','+LOC.OM_RAFAGA);
@@ -5020,7 +5064,12 @@ async function run(){
       if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,300));}
       REP=await r.json(); MULTI=null;
     }else{
-      if(src==='hsu')body.meteoPre=LOC.completaHSU(HSU,body.lat,body.lon);
+      if(src==='contract'){
+        body.meteoPre=await LOC.contractOrFallback(body.lat,body.lon,body.year,body.year1);
+        if(body.meteoPre.source==='open_meteo_fallback')
+          out.innerHTML='<p class="note">WeatherContract no disponible/cobertura insuficiente · fallback Open-Meteo declarado: '+esc(body.meteoPre.contract_fallback_reason)+'</p>';
+      }
+      else if(src==='hsu')body.meteoPre=LOC.completaHSU(HSU,body.lat,body.lon);
       else if(src==='hsuscada'){
         var u=$('scadaUrl').value.trim();
         if(!u)throw new Error('pon la URL del SCADA de planta');
@@ -5042,7 +5091,10 @@ async function run(){
        simular no debe mover el sello, porque los numeros de la tabla siguen siendo los
        del sitio anterior. */
     REP.corrida={lat:body.lat,lon:body.lon,year:body.year,year1:body.year1,
-                 fuente:body.source||body.meteo_mode||'openmeteo'};
+                 fuente:(body.meteoPre&&body.meteoPre.source)||body.source||body.meteo_mode||'openmeteo',
+                 weather_contract_id:body.meteoPre&&body.meteoPre.contract_id||null,
+                 weather_dataset_hash:body.meteoPre&&body.meteoPre.dataset_hash||null,
+                 weather_fallback_reason:body.meteoPre&&body.meteoPre.contract_fallback_reason||null};
     meteoTag();          /* el sello se rehace AQUI: si no, enseña el de la corrida
                             anterior, que es exactamente el fallo que viene a evitar */
     render();
@@ -8344,7 +8396,7 @@ function meteoTag(){
   var f=$('source').value;
   var base=(f==='clearsky')
     ? 'Cielo claro calculado aquí · sin nubes: la POA absoluta sale alta'
-    : ({openmeteo:'Open-Meteo (ERA5)',pvgis:'PVGIS horario',nasa:'NASA POWER'}[f]||f)+
+    : ({contract:'WeatherContract v2 compartido',openmeteo:'Open-Meteo (ERA5)',pvgis:'PVGIS horario',nasa:'NASA POWER'}[f]||f)+
       ' · viento y dirección horarios';
   /* y el SELLO de lo que hay en pantalla: coordenadas y año de la corrida que produjo
      la tabla. Si no coincide con las casillas, se dice — que es justo el caso en el

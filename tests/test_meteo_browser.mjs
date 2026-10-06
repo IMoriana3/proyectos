@@ -7,6 +7,10 @@ const code=fs.readFileSync(path.join(__dirname,"../lib/meteo-browser.js"),"utf8"
 const M=await import("data:text/javascript;base64,"+Buffer.from(code).toString("base64"));
 const vizCode=fs.readFileSync(path.join(__dirname,"../lib/meteo-viz.js"),"utf8");
 const V=await import("data:text/javascript;base64,"+Buffer.from(vizCode).toString("base64"));
+const meteoCode=fs.readFileSync(path.join(__dirname,"../lib/meteo.js"),"utf8");
+const WX=await import("data:text/javascript;base64,"+Buffer.from(meteoCode).toString("base64"));
+const contractCode=fs.readFileSync(path.join(__dirname,"../lib/weather-contract.js"),"utf8");
+const WC=await import("data:text/javascript;base64,"+Buffer.from(contractCode).toString("base64"));
 
 let fails=0,oks=0;
 function check(name,cond,detail=""){
@@ -15,7 +19,7 @@ function check(name,cond,detail=""){
 }
 function near(a,b,tol=1e-9){return Number.isFinite(a)&&Math.abs(a-b)<=tol;}
 
-check("versión browser core 0.7.0",M.WORKBENCH_VERSION==="0.7.0");
+check("versión browser core 0.8.0",M.WORKBENCH_VERSION==="0.8.0");
 
 let geocodeUrl="";
 const geo=await M.searchPlaces("Montréal",{
@@ -31,6 +35,27 @@ check("geocoder normaliza un emplazamiento válido",geo.length===1&&geo[0].name=
 check("geocoder conserva zona horaria y país",geo[0].tz==="America/Toronto"&&geo[0].country==="Canadá");
 check("geocoder codifica unicode en la consulta",geocodeUrl.includes("Montr%C3%A9al"),geocodeUrl);
 check("geocoder no consulta con menos de 2 caracteres",(await M.searchPlaces("M",{fetchImpl:async()=>{throw new Error("no debe llamar")}})).length===0);
+
+const forecast72=WX.forecastOperationalSummary([
+  {timestamp:"2026-10-06T00:00:00Z",wind_ms:5,gust_ms:7,temp_c:8,precip_mm:0,cape_jkg:100,snowfall_cm:0,cloud_total:.2},
+  {timestamp:"2026-10-06T01:00:00Z",wind_ms:13,gust_ms:18,temp_c:-1,precip_mm:6,cape_jkg:900,snowfall_cm:.3,cloud_total:.9}
+],{hours:72});
+check("72h detecta eventos operativos",forecast72.events.length>=5,"events="+forecast72.events.length);
+check("72h conserva métricas de viento/temperatura",forecast72.metrics.max_gust_ms===18&&forecast72.metrics.min_temp_c===-1);
+
+const wcFixture={source:"Open-Meteo / ERA5",source_id:"openmeteo",lat:42.8,lon:-1.6,qa:{status:"PASS",hash:"abc123"},rows:[
+  {t:"2024-01-01T00:00:00Z",ghi_wm2:0,dni_wm2:0,dhi_wm2:0,temp_c:4,wind_ms:2},
+  {t:"2024-01-01T01:00:00Z",ghi_wm2:10,dni_wm2:5,dhi_wm2:5,temp_c:3,wind_ms:3}
+]};
+const wc=await WC.buildWeatherContract({dataset:wcFixture,kind:"historical",site:{id:"X",name:"Test",tz:"Europe/Madrid"},timezone:"Europe/Madrid"});
+check("WeatherContract v2 versionado",wc.schema_version==="2.0.0");
+check("WeatherContract conserva hash QA",wc.qa.dataset_hash==="abc123");
+check("WeatherContract fija política WEATHER/CONTROL",wc.consumer_policy.weather_informs_control===true&&wc.consumer_policy.control_decides===true);
+const ub=M.weatherUncertaintyBudget({sourceId:"openmeteo",crossSourceRmsPct:8,adaptationSigma:.02});
+check("incertidumbre usa el término conservador mayor",near(ub.resource_sigma,.08));
+check("export PVSyst contiene cabecera canónica",M.toPvsystCsv(wcFixture.rows,{siteName:"Test"}).includes("GlobHor;DiffHor;DNI;T_Amb;WindVel"));
+const man=M.bankableManifest(wcFixture,{siteName:"Test",timezone:"Europe/Madrid",uncertainty:ub,contractRef:{schema_version:"2.0.0",contract_id:"x",dataset_hash:"abc123"}});
+check("manifest bankable lleva contract_id y hash",man.provenance.contract_id==="x"&&man.dataset.dataset_hash==="abc123");
 
 function syntheticYears(){
   const rows=[];
@@ -213,6 +238,10 @@ check("HTML incluye buscador global de emplazamientos",html.includes('id="placeQ
 check("TMY usa tabla flexible hasta el fondo",html.includes("tmy-card")&&html.includes("tmy-table"));
 check("granizo visual tiene nota dinámica",html.includes('id="vizHailNote"'));
 check("HTML integra Windy y Ventusky",html.includes('id="windyMap"')&&html.includes('id="ventuskyMap"')&&html.includes("embed.windy.com")&&html.includes("embed.ventusky.com"));
+check("HTML contiene supervisión 72h y WeatherContract",html.includes('id="opEvents"')&&html.includes('id="wcStatus"'));
+check("HTML contiene meteo espacial e incertidumbre",html.includes('id="spatialBtn"')&&html.includes('id="uncUse"'));
+check("HTML ofrece export bankable",html.includes('id="dlPvsyst"')&&html.includes('id="dlManifest"')&&html.includes('id="dlContract"'));
+check("HTML configura capas Windy/Ventusky",html.includes('id="windyLayer"')&&html.includes('id="windyModel"')&&html.includes('id="ventuskyLayer"'));
 check("HTML contiene rosa de vientos",html.includes('id="vizWindRose"'));
 check("HTML contiene cockpit 6 paneles",["vizCockpitGhi","vizCockpitDni","vizCockpitDhi","vizCockpitTemp","vizCockpitWind","vizCockpitKt"].every(id=>html.includes('id="'+id+'"')));
 check("informe incrusta visuales como PNG",html.includes("visualReportHtml")&&html.includes('toDataURL("image/png")'));
@@ -266,6 +295,11 @@ try{
   check("workbench aprovecha >1800 px a 1920",width>1800,"width="+width);
   const badge=await page.locator(".badge").first().innerText();
   check("cabecera visible dice autónomo",/Autónomo/i.test(badge));
+  await page.waitForFunction(()=>document.querySelector("#wcStatus")?.textContent.includes("Activo:"),{timeout:10000});
+  const activeRef=await page.evaluate(()=>JSON.parse(localStorage.getItem("factiun_weather_contract_active_v2")||"null"));
+  check("forecast publica WeatherContract activo",activeRef?.schema_version==="2.0.0"&&activeRef?.kind==="forecast");
+  check("forecast WeatherContract conserva TZ",!!activeRef?.site?.timezone);
+  check("72h se pinta al cargar",!/—/.test(await page.locator("#opWindMax").innerText()));
   await page.locator("#placeQuery").fill("Helsinki");
   await page.waitForSelector("#placeResults .place-option",{timeout:10000});
   check("buscador global ofrece coincidencias",await page.locator("#placeResults .place-option").count()>=2);
@@ -278,6 +312,11 @@ try{
   const ventuskySrc=await page.locator("#ventuskyMap").getAttribute("src");
   check("Windy sigue las coordenadas de Helsinki",windySrc?.includes("lat=60.16952")&&windySrc?.includes("lon=24.93545"),windySrc||"");
   check("Ventusky sigue las coordenadas de Helsinki",ventuskySrc?.includes("60.16952%3B24.93545%3B7"),ventuskySrc||"");
+  await page.locator("#windyLayer").selectOption("rain");
+  await page.locator("#windyModel").selectOption("gfs");
+  check("Windy aplica capa/modelo seleccionados",(await page.locator("#windyMap").getAttribute("src")).includes("overlay=rain")&&(await page.locator("#windyMap").getAttribute("src")).includes("product=gfs"));
+  await page.locator("#ventuskyLayer").selectOption("cape");
+  check("Ventusky aplica capa CAPE",(await page.locator("#ventuskyMap").getAttribute("src")).includes("l=cape"));
 
   await page.locator("#y0").fill("2024");await page.locator("#y1").fill("2024");
   await page.locator("#yearsBtn").click();
@@ -292,6 +331,9 @@ try{
       return set.size;
     });
   }
+  await page.locator("#spatialBtn").click();
+  await page.waitForFunction(()=>document.querySelectorAll("#spatialPoints span").length===5,{timeout:15000});
+  check("meteo espacial genera cinco puntos",await page.locator("#spatialPoints span").count()===5);
   check("granizo se dibuja automáticamente sin pulsar el botón",(await diversity("vizHailCurve"))>5);
   check("granizo visual explica el emplazamiento",/λ/.test(await page.locator("#vizHailNote").innerText()));
   const tmyMax=await page.locator(".tmy-card .tmy-table").evaluate(el=>getComputedStyle(el).maxHeight);
