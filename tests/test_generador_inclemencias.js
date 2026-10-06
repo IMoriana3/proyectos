@@ -57,11 +57,11 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('misma seed + índice genera exactamente el mismo caso',repro.igual,JSON.stringify(repro));
   check('cambiar la seed cambia el caso',repro.distinto,JSON.stringify(repro));
 
-  // Los 26 patrones adversariales. Una vuelta entera cubre fronteras + reforecast.
+  // Los 27 patrones adversariales. Una vuelta entera cubre fronteras + reforecast.
   const adv=await page.evaluate(()=>{
-    const b=incBaseCfg(),o={mode:'adversarial',family:'all',severity:'mixed',seed:2601001,n:26};
+    const b=incBaseCfg(),o={mode:'adversarial',family:'all',severity:'mixed',seed:2601001,n:27};
     const out=[];
-    for(let i=0;i<26;i++){
+    for(let i=0;i<27;i++){
       const c=LOC.incGenera(o,i,b),cfg=incCfgCaso(c,b);
       const s1=LOC.simulaEvento(cfg),s2=LOC.simulaEvento(cfg),v=LOC.incVerifica(c,cfg,s1,s2);
       out.push({id:c.id,tag:c.tag,name:c.name,ok:v.ok,fail:v.fail,total:v.total,
@@ -70,9 +70,9 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     return out;
   });
   const tags=adv.map(x=>x.tag);
-  check('la vuelta adversarial cubre las 26 fronteras distintas',
-    new Set(tags).size===26,JSON.stringify(tags));
-  check('las 26 fronteras salen PASS',
+  check('la vuelta adversarial cubre las 27 fronteras distintas',
+    new Set(tags).size===27,JSON.stringify(tags));
+  check('las 27 fronteras salen PASS',
     adv.every(x=>x.ok),JSON.stringify(adv.filter(x=>!x.ok)));
   check('cada caso publica invariantes universales + su regla específica',
     adv.every(x=>x.total>=8),adv.map(x=>x.tag+':'+x.total).join(' | '));
@@ -89,17 +89,18 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
       .every(has),tags.join(','));
   check('incluye nieve 10 exactos y 10+ε',has('snow_equal')&&has('snow_plus'));
   check('incluye conflicto, acuerdo y arbitraje viento×granizo',
-    has('conflict')&&has('agree')&&has('hail_wind'),tags.join(','));
+    has('conflict')&&has('agree')&&has('hail_wind')&&has('hail_wind_missing'),tags.join(','));
 
   // Prueba independiente de algunas respuestas, no sólo del verificador.
   const frontera=await page.evaluate(()=>{
-    const b=incBaseCfg(),o={mode:'adversarial',family:'all',severity:'mixed',seed:2601001,n:26};
-    const get=tag=>{for(let i=0;i<26;i++){const c=LOC.incGenera(o,i,b);if(c.tag===tag){
+    const b=incBaseCfg(),o={mode:'adversarial',family:'all',severity:'mixed',seed:2601001,n:27};
+    const get=tag=>{for(let i=0;i<27;i++){const c=LOC.incGenera(o,i,b);if(c.tag===tag){
       const s=LOC.simulaEvento(incCfgCaso(c,b));return {c,s};}}};
     const w1=get('wind_t1_equal'),w2=get('wind_t1_plus'),hb=get('hail_boundary'),hw=get('hail_watch'),hl=get('hail_lifecycle');
     const ha=get('hail_eta_advance'),hd=get('hail_eta_delay'),ww=get('hail_withdraw_watch'),wa=get('hail_withdraw_active');
     const rh=get('hail_reactivate_hold'),mw=get('hail_missing_watch'),ma=get('hail_missing_active');
     const pr=get('hail_prob_reforecast'),sr=get('hail_size_reforecast'),ep=get('hail_second_episode');
+    const wm=get('hail_wind_missing');
     const se=get('snow_equal'),sp=get('snow_plus'),cf=get('conflict'),ag=get('agree'),pa=get('passive_release');
     const max=f=>f.s.frames.reduce((a,x)=>x.wind_ms>a.wind_ms?x:a,f.s.frames[0]);
     const f0=x=>x.s.frames.find(f=>f.t_min===0),at=(x,t)=>x.s.frames.find(f=>f.t_min===t);
@@ -120,6 +121,7 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
         prob:[at(pr,4).hail_defense_active,at(pr,5).hail_phase],
         size:[at(sr,4).hail_defense_active,at(sr,5).hail_phase],
         episode:[at(ep,0).orden.A1,at(ep,24).hail_phase,at(ep,30).orden.A1,at(ep,30).hail_phase],
+        windMissing:[at(wm,0).modos.A1,at(wm,10).hail_phase,at(wm,10).hail_defense_active,at(wm,10).modos.A1],
         updateMarks:ha.s.marks.filter(m=>m.k==='hailupd').map(m=>[m.t,m.label])
       },
       snowEq:se.s.frames.some(f=>f.modos.A1==='SNOW_STOW'),snowPlus:sp.s.frames.some(f=>f.modos.A1==='SNOW_STOW'),
@@ -180,6 +182,10 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('timeline separa el reforecast de las transiciones físicas',
     JSON.stringify(frontera.reforecast.updateMarks)===JSON.stringify([[10,'reforecast granizo #1']]),
     JSON.stringify(frontera.reforecast.updateMarks));
+  check('si viento manda al activar, al amainar con dato ausente sigue existiendo defensa',
+    frontera.reforecast.windMissing[1]==='SIN_DATO_PROTEGIDO'&&frontera.reforecast.windMissing[2]&&
+    ['HAIL_STOW','PARTIAL_STOW','FULL_STOW'].includes(frontera.reforecast.windMissing[3]),
+    JSON.stringify(frontera.reforecast.windMissing));
   check('10 cm exactos no activan nieve y 10+ε sí',!frontera.snowEq&&frontera.snowPlus,JSON.stringify(frontera));
   check('conflicto, acuerdo y pasivo aparecen como estados distintos',
     frontera.conflict&&frontera.agree&&frontera.passive,JSON.stringify(frontera));
@@ -191,16 +197,16 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   await page.fill('#incSeed','2601001');
   await page.fill('#incN','26');
   await page.click('#incRun');
-  await page.waitForFunction(()=>window.INC&&!INC.running&&INC.results.length===26,{timeout:180000});
+  await page.waitForFunction(()=>window.INC&&!INC.running&&INC.results.length===27,{timeout:180000});
   const ui=await page.evaluate(()=>({
     n:INC.results.length,pass:INC.results.filter(x=>x.verdict.ok).length,
     fail:INC.results.filter(x=>!x.verdict.ok).length,
     rows:document.querySelectorAll('#incTable tbody tr').length,
     summary:incSummary.textContent,jsonOff:incJson.disabled,csvOff:incCsv.disabled
   }));
-  check('la batería UI ejecuta los 26 casos',ui.n===26&&ui.rows===26,JSON.stringify(ui));
+  check('la batería UI ejecuta los 26 casos',ui.n===27&&ui.rows===27,JSON.stringify(ui));
   check('la batería UI demuestra 26 PASS / 0 FAIL',
-    ui.pass===26&&ui.fail===0&&/26/.test(ui.summary),JSON.stringify(ui));
+    ui.pass===27&&ui.fail===0&&/27/.test(ui.summary),JSON.stringify(ui));
   check('al terminar habilita export JSON y CSV',!ui.jsonOff&&!ui.csvOff);
 
   // "Ver" carga exactamente el caso en el simulador.
@@ -237,10 +243,10 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   const jp=await dj.path(),cp=await dc.path();
   const jj=JSON.parse(fs.readFileSync(jp,'utf8')),cc=fs.readFileSync(cp,'utf8').trim().split(/\r?\n/);
   check('el JSON guarda seed, contexto y configuración base',
-    jj.schema==='factiun-inclemencias-v1'&&jj.options.seed===2601001&&jj.context&&jj.base_config&&jj.results.length===26,
+    jj.schema==='factiun-inclemencias-v1'&&jj.options.seed===2601001&&jj.context&&jj.base_config&&jj.results.length===27,
     JSON.stringify({schema:jj.schema,options:jj.options,context:jj.context,n:jj.results&&jj.results.length}));
-  check('el CSV contiene cabecera + los 26 resultados',
-    cc.length===27&&/failed_checks/.test(cc[0]),'líneas '+cc.length);
+  check('el CSV contiene cabecera + los 27 resultados',
+    cc.length===28&&/failed_checks/.test(cc[0]),'líneas '+cc.length);
 
   check('la ficha no lanza errores JS',errores.length===0,errores.join(' | '));
   await browser.close();
