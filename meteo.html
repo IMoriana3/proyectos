@@ -60,7 +60,8 @@ pre{font-size:.69rem;white-space:pre-wrap;word-break:break-word;background:var(-
   <div class="card span7">
     <h2>Años históricos</h2>
     <div class="metricgrid"><div class="metric">Años<b id="nYears">—</b></div><div class="metric">Año screening<b id="repYear">—</b></div><div class="metric">Fuente<b id="histSource">—</b></div><div class="metric">Filas<b id="histRows">—</b></div></div>
-    <p class="note">El “año screening” solo ayuda a localizar años cercanos a la mediana. <strong>No es el TMY.</strong> El TMY de SolarGPT selecciona mes a mes mediante Sandia/Finkelstein-Schafer.</p>
+    <div class="metricgrid" style="margin-top:7px"><div class="metric">QA canónico<b id="qaStatus">—</b></div><div class="metric">BSRN retiradas<b id="qaBsrn">—</b></div><div class="metric">NaN irradiancia<b id="qaNan">—</b></div><div class="metric">Hash dataset<b id="qaHash" style="font-size:.72rem">—</b></div></div>
+    <p class="note">El “año screening” solo ayuda a localizar años cercanos a la mediana. <strong>No es el TMY.</strong> El TMY de SolarGPT selecciona mes a mes mediante Sandia/Finkelstein-Schafer. El histórico pasa por QA BSRN/provenance antes de mostrarse.</p>
     <div class="tablewrap"><table><thead><tr><th>Año</th><th>GHI</th><th>DNI</th><th>DHI</th><th>T media</th><th>Viento</th><th>Precip.</th><th>Completitud</th><th>Dist.</th></tr></thead><tbody id="yearsBody"><tr><td colspan="9">Pulsa “Analizar años”.</td></tr></tbody></table></div>
   </div>
   <div class="card span5">
@@ -179,6 +180,7 @@ async function loadNow(){
 }
 function renderYears(j){
   lastYears=j;$("nYears").textContent=j.n_years??"—";$("repYear").textContent=j.representative_year_screening??"—";$("histSource").textContent=j.source??"—";$("histRows").textContent=(j.rows??0).toLocaleString("es-ES");
+  $("qaStatus").textContent=j.qa?.status??"—";$("qaBsrn").textContent=j.qa?.bsrn_outliers_removed??"—";$("qaNan").textContent=j.qa?.nan_pct!=null?fmt(j.qa.nan_pct,2)+"%":"—";$("qaHash").textContent=j.provenance?.data_hash??"—";
   $("yearsBody").innerHTML=(j.annual||[]).map(r=>'<tr class="'+(r.year===j.representative_year_screening?"pick":"")+'"><td>'+r.year+'</td><td>'+fmt(r.ghi_kwh_m2,0)+'</td><td>'+fmt(r.dni_kwh_m2,0)+'</td><td>'+fmt(r.dhi_kwh_m2,0)+'</td><td>'+fmt(r.temp_mean_c,1)+'</td><td>'+fmt(r.wind_mean_ms,2)+'</td><td>'+fmt(r.precip_mm,0)+'</td><td>'+fmt(r.completeness_pct,1)+'%</td><td>'+fmt((r.annual_closeness_score??0)*100,2)+'%</td></tr>').join("")||'<tr><td colspan="9">Sin años.</td></tr>';
 }
 async function analyzeYears(){
