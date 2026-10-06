@@ -353,7 +353,7 @@ function renderDayVisual(){
 }
 function renderCoreVisuals(){
   if(!CURRENT?.rows?.length)return;
-  const rows=CURRENT.rows,tz=SITE?.tz||"UTC",mt=monthlyTable(rows,tz);
+  const rows=CURRENT.rows,tz=SITE?.tz||"UTC",mt=monthlyTable(rows,"UTC");
   $("vizMonthlyBody").innerHTML=mt.map(x=>'<tr><td>'+x.month+'</td><td>'+fmt(x.ghi,1)+'</td><td>'+fmt(x.dni,1)+'</td><td>'+fmt(x.dhi,1)+'</td><td>'+fmt(x.tmean,1)+'</td><td>'+fmt(x.tmin,1)+'</td><td>'+fmt(x.tmax,1)+'</td><td>'+fmt(x.wind,1)+'</td><td>'+fmt(x.snow,1)+'</td></tr>').join("");
   const ds=dailyMeanSeries(rows),dateLabels=ds.length?[shortDate(ds[0].date),"",shortDate(ds[Math.floor(ds.length/2)]?.date),"",shortDate(ds.at(-1)?.date)]:[];
   drawLineChart($("vizDailySeries"),[
@@ -397,7 +397,7 @@ function renderCoreVisuals(){
   $("vizHotBody").innerHTML=te.hot.map(x=>'<tr><td>T &gt; '+x.threshold+'°C</td><td>'+x.hours+'</td><td>'+fmt(x.pct,2)+'%</td></tr>').join("");
   $("vizColdDaysBody").innerHTML=coldDaysByMonth(rows,tz).map(x=>'<tr><td>Tmin &lt; '+x.threshold+'°C</td>'+x.months.map(v=>'<td>'+fmt(v,1)+'</td>').join("")+'<td>'+fmt(x.months.reduce((a,b)=>a+b,0),1)+'</td></tr>').join("");
 
-  const sn=snowSummary(rows,tz);$("vizSnowTotal").textContent=fmt(sn.total,0)+" cm"+(sn.annualize?" / "+fmt(sn.total/sn.years,0)+" cm/año":"");$("vizSnowDays").textContent=sn.days+(sn.annualize?" · "+fmt(sn.days/sn.years,0)+"/año":"");$("vizSnowDepth").textContent=sn.maxDepth==null?"sin dato":fmt(sn.maxDepth,1)+" cm";
+  const sn=snowSummary(rows,"UTC");$("vizSnowTotal").textContent=fmt(sn.total,0)+" cm"+(sn.annualize?" / "+fmt(sn.total/sn.years,0)+" cm/año":"");$("vizSnowDays").textContent=sn.days+(sn.annualize?" · "+fmt(sn.days/sn.years,0)+"/año":"");$("vizSnowDepth").textContent=sn.maxDepth==null?"sin dato":fmt(sn.maxDepth,1)+" cm";
   drawBarChart($("vizSnowMonth"),[{label:sn.annualize?"Nieve media anual":"Nieve del periodo",values:sn.months}],{title:"Nieve nueva por mes",yLabel:"cm",labels:MONTHS,height:245});
   $("vizSnowNote").textContent=sn.years<.98?"Periodo <1 año: no se anualiza la nieve.":"Periodo "+fmt(sn.years,1)+" años · snowfall en cm; snow_depth en m→cm.";
 
