@@ -3082,7 +3082,8 @@ LOC.hailForecastAt=function(cfg,tMin){
   var after=isFinite(+cfg.hail_after_min)?Math.max(0,+cfg.hail_after_min):15;
   var st={known:true,on:!!cfg.hail_on,mm:Math.max(0,+cfg.hail_mm||0),
     prob_pct:Math.max(0,Math.min(100,+cfg.hail_prob_pct||0)),eta_ref:Math.max(0,+cfg.hail_eta0_min||0),
-    ref_t:0,dir_deg:isFinite(+cfg.wind_dir_deg)?+cfg.wind_dir_deg:270,
+    ref_t:0,dir_deg:isFinite(+cfg.hail_wind_dir_deg)?+cfg.hail_wind_dir_deg:
+      (isFinite(+cfg.wind_dir_deg)?+cfg.wind_dir_deg:270),
     update_index:-1,update_kind:'initial',update_at_min:0};
   var rawUps=Array.isArray(cfg.hail_updates)?cfg.hail_updates:[];
   var ups=rawUps.map(function(u,i){
@@ -3147,7 +3148,8 @@ LOC.eventoPerfil=function(cfg,tMin){
     var nc=isFinite(+cfg.snow_clear_min)?+cfg.snow_clear_min:120;
     if(tMin>=ns&&tMin<nc)snow=Math.max(0,+cfg.snow_cm||0);
   }
-  return {wind_kmh:w,gust_kmh:gust,dir_deg:hf.dir_deg,
+  return {wind_kmh:w,gust_kmh:gust,
+          dir_deg:isFinite(+cfg.wind_dir_deg)?+cfg.wind_dir_deg:270,hail_dir_deg:hf.dir_deg,
           hail_known:hf.known,hail_on:hf.on,hail_eta_min:hf.eta_min,
           hail_mm:hf.mm,hail_prob_pct:hf.prob_pct,hail_update_index:hf.update_index,
           hail_update_kind:hf.update_kind,hail_update_at_min:hf.update_at_min,
@@ -3304,7 +3306,7 @@ LOC.simulaEvento=function(cfg){
         hailOn:hailKnown&&pr.hail_on,hailMm:pr.hail_mm,hailProb:pr.hail_prob_pct,
         tHail:(hailKnown?pr.hail_eta_min:null),
         minDesdeAviso:(hailProtected&&hailKnown&&!hailGate.activa&&hailClearSec!==null?hailClearSec/60:null),
-        theta:ang[S],vAhora:pr.wind_kmh,tV40:tV,azViento:pr.dir_deg,
+        theta:ang[S],vAhora:pr.wind_kmh,tV40:tV,azViento:pr.hail_dir_deg,
         rachaAhora:pr.gust_kmh,tRacha:tR,defensa:Math.abs(+cfg.hail_defense_deg||full),
         preMin:+stow.pmin||30,slew:LOC.SLEW,lat:lat,umbrales:hailU
       });
@@ -3394,7 +3396,7 @@ LOC.simulaEvento=function(cfg){
         poa.PASIVO=(1-frac)*poa.BASE+frac*pf;
       }
       frames.push({t_min:Math.round(rel),iso:when.toISOString(),sun_el:P.el/LOC.D2R,sun_az:P.azp,
-        wind_ms:pr.wind_kmh/3.6,gust_ms:pr.gust_kmh/3.6,wind_dir:pr.dir_deg,
+        wind_ms:pr.wind_kmh/3.6,gust_ms:pr.gust_kmh/3.6,wind_dir:pr.dir_deg,hail_dir:pr.hail_dir_deg,
         hail_known:hailKnown,hail_eta_min:pr.hail_eta_min,hail_on:pr.hail_on,
         hail_mm:pr.hail_mm,hail_prob_pct:pr.hail_prob_pct,hail_gate:hailGate.activa,
         hail_gate_reason:hailGate.motivo||'',hail_update_index:pr.hail_update_index,
@@ -3425,6 +3427,7 @@ LOC.incFirma=function(sim){
   return sim.frames.map(function(f){
     var ks=Object.keys(f.ang||{}).sort();
     return [f.t_min,Math.round((f.wind_ms||0)*360),Math.round((f.gust_ms||0)*360),
+      Math.round((f.wind_dir||0)*10),Math.round((f.hail_dir||0)*10),
       f.hail_phase||'',f.hail_known===false?'?':'K',f.hail_on?'ON':'OFF',
       f.hail_gate?'G':'-',Math.round((f.hail_eta_min||0)*100),Math.round((f.hail_mm||0)*100),
       Math.round((f.hail_prob_pct||0)*100),f.hail_update_index==null?'':f.hail_update_index,
@@ -7404,7 +7407,8 @@ function eventoResumen(fr){
   else if(fase==='IMPACTO')hDetalle=origen+' · granizo sobre planta · señal activa';
   else if(fase==='RETENCION')hDetalle='all-clear válido · quedan '+fmt(fr.hail_hold_remaining_min,1)+' min de retención';
   else if(fase==='LIBERADO')hDetalle='all-clear cumplido · puede volver si el viento lo permite';
-  var met=known?(fmt(fr.hail_mm,1)+' mm · '+fmt(fr.hail_prob_pct,0)+' % · ETA '+fmt(fr.hail_eta_min,0)+' min'):'último dato no válido';
+  var met=known?(fmt(fr.hail_mm,1)+' mm · '+fmt(fr.hail_prob_pct,0)+' % · ETA '+fmt(fr.hail_eta_min,0)+
+    ' min · viento previsto '+compass(fr.hail_dir)+' '+fmt(fr.hail_dir,0)+'°'):'último dato no válido';
   var hacia=(((+fr.wind_dir||0)+180)%360+360)%360;
   $('eEventSummary').innerHTML=
     '<div class="e"><b>Viento '+fmt(fr.wind_ms*3.6,0)+' km/h</b><span>racha '+fmt(fr.gust_ms*3.6,0)+
