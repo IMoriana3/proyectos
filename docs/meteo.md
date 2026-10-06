@@ -125,6 +125,17 @@ Muestra:
 
 El RMS de GHI conserva su papel como input de incertidumbre meteo para P50/P90.
 
+## QA avanzado y herramientas climáticas
+
+El workbench reutiliza también funciones que ya existían en la página Meteo de SolarGPT:
+
+- **Plausibilidad** con `solargpt_core.plausibility.check_meteo`: índice temporal, huecos, rangos físicos, cierre GHI≈DNI·cos(z)+DHI, energía diaria/anual y cadencia.
+- **Climatología PVGIS** mediante `validate_meteo_monthly_vs_pvgis`.
+- **Desfase horario** mediante `estimate_timestamp_shift`, útil para detectar convenciones end-of-hour/centro de intervalo.
+- **Riesgo climatológico de granizo** mediante `solargpt_core.hail.assess_hail`. Es riesgo de diseño, no detección horaria.
+- **Viento sintético** mediante `solargpt_core.wind_synth.synthetic_wind_year`. Queda declarado como fallback de simulación y nunca como dato medido/bankable.
+- **Adaptación de sitio** mediante `solargpt_core.site_adaptation.adapt_series`: corrige la serie larga con medición solapada y devuelve MBE, RMSE, R², KSI, extrapolación estacional y la incertidumbre residual que puede alimentar P90.
+
 ## Descarga e informes
 
 La tarjeta permite descargar:
