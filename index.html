@@ -589,7 +589,7 @@ body.presenta .solo-pres{display:inline-block}
     <div class="plants" id="plants"></div>
   </section>
 
-  <h2 class="sec-title" id="herramientas">Herramientas · crear nuevo<a class="tabla-link" href="generador-layout.html" title="Generación de la implantación completa —filas, mesas y seguidores— en el navegador">▦ Generador de implantaciones</a><a class="tabla-link" href="buscador-implantacion.html" title="Miles de variantes de implantación en vivo, con el MISMO motor del generador: giro de filas, tresbolillo y viales; lo mejor en verde, las descartadas en rojo">◱ Buscador de implantaciones</a><a class="tabla-link" href="layout.html" title="Representación de la implantación devuelta por el motor de cálculo o de un GeoJSON externo">▦ Explorador</a><a class="tabla-link" href="sim-solar.html" title="Cálculo de la geometría solar (elevación, azimut y sombra) y simulación de producción">☉ Sol &amp; Simulación</a><a class="tabla-link" href="sim-viento.html" title="Abanderamiento por viento: POA perdida, número de abanderamientos y tiempo acumulado">⚑ Viento</a><a class="tabla-link" href="comparador-estructuras.html" title="Comparación entre estructura fija y seguidor: POA por tipo de estructura, por m² de módulo y de suelo">🏗 Estructuras</a></h2>
+  <h2 class="sec-title" id="herramientas">Herramientas · crear nuevo<a class="tabla-link" href="generador-layout.html" title="Generación de la implantación completa —filas, mesas y seguidores— en el navegador">▦ Generador de implantaciones</a><a class="tabla-link" href="buscador-implantacion.html" title="Miles de variantes de implantación en vivo, con el MISMO motor del generador: giro de filas, tresbolillo y viales; lo mejor en verde, las descartadas en rojo">◱ Buscador de implantaciones</a><a class="tabla-link" href="layout.html" title="Representación de la implantación devuelta por el motor de cálculo o de un GeoJSON externo">▦ Explorador</a><a class="tabla-link" href="sim-solar.html" title="Cálculo de la geometría solar (elevación, azimut y sombra) y simulación de producción">☉ Sol &amp; Simulación</a><a class="tabla-link" href="meteo.html" title="Meteo transversal: forecast, irradiancia, viento, nubosidad, precipitación y riesgos">☁ Meteo</a><a class="tabla-link" href="sim-viento.html" title="Abanderamiento por viento: POA perdida, número de abanderamientos y tiempo acumulado">⚑ Viento</a><a class="tabla-link" href="comparador-estructuras.html" title="Comparación entre estructura fija y seguidor: POA por tipo de estructura, por m² de módulo y de suelo">🏗 Estructuras</a></h2>
   <div class="controls">
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -1168,6 +1168,33 @@ const PROJECTS = [
       { date:"2026-08-14", ver:"v1.2", note:"Cielo con la receta de backtracking.html (alba/ocaso rojizos, noche azul marino) agrisado por la cobertura y con el disco solar velado; la pala del 3D persigue la consigna a la velocidad real del actuador (0,17 °/s en tiempo simulado); stow nocturno del proyecto: los trackers duermen a 5° al ESTE (−5° en convención TCU), configurable; slider minutal con el sol al minuto exacto. QA 45 en Node." },
       { date:"2026-08-14", ver:"v1.1", note:"Escena 3D real con el modelo del seguidor de la casa (seguidor.js, sombras, nube por zona, luz solar por DNI y hemisferio por DHI; fallback corte 2D) y ZONAL por NCU: el frente cruza la planta y cada NCU decide con su señal — en el día de frentes, flat global +0,37 % → zonal +1,15 %. QA 30 en página, 43 en Node." },
       { date:"2026-08-14", ver:"v1.0", note:"Primera versión: las 4 políticas de difusa del core + baseline, escenario canónico del test como preset, Open-Meteo (ERA5/previsión/EN VIVO), lazo deadband+slew con su coste medido, anual por mezcla de cielos. QA 27 en página, 38 en Node. La doc incorpora el estudio de competencia y papers." }
+    ]
+  },
+  {
+    name: "Análisis meteorológico",
+    status: "build",
+    objetivo: "Capa meteorológica transversal de SolarGPT/Factiun: unifica forecast, reanálisis y medida de planta para que producción, radiación difusa, viento/granizo, batería, winter mode, SCADA y gemelo consuman el mismo contrato. WeatherNext 3 aporta forecast probabilístico; HSU/SCADA conservan la autoridad de safety local.",
+    stack: "HTML · ES modules · lib/meteo.js · WeatherNext 3 (adapter) · Open-Meteo · HSU/SCADA · PVGIS · NASA POWER",
+    url: "meteo.html",
+    repo: "https://github.com/imoriana3/proyectos",
+    updated: "2026-10-06",
+    version: "0.1.0",
+    docId: "meteo",
+    docUrl: "",
+    uso: [
+      "Elige coordenadas y carga meteo gratuita: hoy usa Open-Meteo bajo el contrato canónico, sin duplicar unidades ni semántica.",
+      "Consulta en una sola vista GHI/DNI/DHI, temperatura, punto de rocío, viento, racha, dirección, nubosidad, precipitación y riesgos derivados.",
+      "Importa un resumen WeatherNext 3 JSON P10/P50/P90: entra por el mismo schema que las otras fuentes.",
+      "Usa esta tarjeta como inventario de qué variable alimenta cada consumidor: difusa, viento/granizo, producción, batería, gemelo y SCADA."
+    ],
+    pendientes: [
+      { done:true, text:"Contrato meteo común v1 en lib/meteo.js y dashboard meteo.html." },
+      { done:false, text:"Cablear adapter WeatherNext 3 real mediante backend/ETL gratuito y cache de planta." },
+      { done:false, text:"Migrar sim-viento.html y radiación difusa al contrato común sin cambiar su física/control." },
+      { done:false, text:"Añadir parity tests de unidades, timestamps y provenance entre todos los consumidores." }
+    ],
+    historial: [
+      { date:"2026-10-06", ver:"0.1.0", note:"Nace la capa meteorológica transversal: Open-Meteo operativo, contrato normalizado y adapter de resumen WeatherNext 3." }
     ]
   },
   {
