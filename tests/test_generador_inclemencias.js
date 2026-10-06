@@ -147,6 +147,13 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   }));
   check('probabilidad se acota a 0–100 % y hail_updates malformado no tumba el resolver',
     sane.p0.prob_pct===100&&sane.p0.update_index===-1&&sane.p1.prob_pct===100,JSON.stringify(sane));
+  const dirs=await page.evaluate(()=>{
+    const p={wind_dir_deg:270,hail_on:true,hail_mm:22,hail_prob_pct:70,hail_eta0_min:90,hail_after_min:15,
+      hail_updates:[{at_min:10,kind:'update',eta_min:20,mm:22,prob_pct:70,dir_deg:90}]};
+    const x=LOC.eventoPerfil(p,10);return {wind:x.dir_deg,hail:x.hail_dir_deg};
+  });
+  check('reforecast de rumbo cambia solo el viento PREVISTO de granizo, no el viento medido del wind-stow',
+    dirs.wind===270&&dirs.hail===90,JSON.stringify(dirs));
 
   check('T1 exacto no dispara y T1+ε separa A1 FULL / A2 PARTIAL',
     frontera.t1eq.A1==='IDLE'&&frontera.t1eq.A2==='IDLE'&&
