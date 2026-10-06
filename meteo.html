@@ -19,9 +19,9 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
 .projectrow{display:grid;grid-template-columns:minmax(100px,1fr) minmax(100px,1fr);gap:7px}.projectwide,.place-search{grid-column:1/-1}.place-search{position:relative}.place-results{position:absolute;z-index:30;left:0;right:0;top:100%;margin-top:3px;max-height:280px;overflow:auto;background:var(--p2);border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.28)}.place-results[hidden]{display:none}.place-option{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);padding:9px 10px;color:var(--tx);background:var(--p2)}.place-option:last-child{border-bottom:0}.place-option:hover,.place-option[aria-selected="true"]{background:var(--ph);color:var(--a)}.place-option b{display:block;font-size:.8rem;color:inherit}.place-option small{display:block;margin-top:2px;color:var(--mut);font-size:.68rem}.place-empty{padding:10px;color:var(--mut);font-size:.72rem}.projectmeta{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.projectmeta span{border:1px solid var(--line);background:var(--p2);padding:3px 6px;font-size:.67rem;color:var(--mut)}.projectmeta b{color:var(--tx);font-weight:600}
 .sourcestatus{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.sourcechip{border:1px solid var(--line);padding:6px 8px;background:var(--p2);font-size:.68rem;color:var(--mut)}.sourcechip b{display:block;color:var(--tx);font-size:.72rem}.sourcechip.on{border-left:3px solid var(--ok)}.sourcechip.wait{border-left:3px solid var(--a)}
 .chart{display:block;width:100%;height:260px;background:var(--p2);border:1px solid var(--line)}
-.chart.tall{height:430px}.chartgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.chartbox{background:var(--p2);border:1px solid var(--line);padding:7px;min-width:0}.chartbox h3{margin:0 0 6px;color:var(--mut);font-size:.66rem;text-transform:uppercase;letter-spacing:.08em}.viztools{display:flex;gap:7px;align-items:end;flex-wrap:wrap;margin-bottom:8px}.viztools label{min-width:160px;flex:0 1 220px}.vizmetric{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:8px}.vizmetric>div{background:var(--p2);padding:7px;font-size:.67rem;color:var(--mut)}.vizmetric b{display:block;color:var(--a);font:600 .9rem ui-monospace,monospace;margin-top:3px}.split2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tmy-card{display:flex;flex-direction:column}.tmy-card .tmy-table{flex:1;min-height:250px;max-height:none;margin-top:8px}.tmy-card .tmy-table table{height:auto}
+.chart.tall{height:430px}.chartgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.chartbox{background:var(--p2);border:1px solid var(--line);padding:7px;min-width:0}.chartbox h3{margin:0 0 6px;color:var(--mut);font-size:.66rem;text-transform:uppercase;letter-spacing:.08em}.viztools{display:flex;gap:7px;align-items:end;flex-wrap:wrap;margin-bottom:8px}.viztools label{min-width:160px;flex:0 1 220px}.vizmetric{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:8px}.vizmetric>div{background:var(--p2);padding:7px;font-size:.67rem;color:var(--mut)}.vizmetric b{display:block;color:var(--a);font:600 .9rem ui-monospace,monospace;margin-top:3px}.split2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tmy-card{display:flex;flex-direction:column}.tmy-card .tmy-table{flex:1;min-height:250px;max-height:none;margin-top:8px}.tmy-card .tmy-table table{height:auto}.external-maps{display:grid;grid-template-columns:1fr 1fr;gap:10px}.external-map-card{background:var(--p2);border:1px solid var(--line);min-width:0}.external-map-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line)}.external-map-head b{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase}.external-map-head span{font-size:.66rem;color:var(--mut)}.external-map{display:block;width:100%;height:520px;border:0;background:#0b1420}.external-map-note{padding:7px 10px;color:var(--mut);font-size:.69rem;line-height:1.4}
 @media(max-width:1450px){.span4{grid-column:span 8}.span5,.span6,.span7,.span8,.span9,.span10,.span11{grid-column:span 8}}
-@media(max-width:1000px){.chartgrid{grid-template-columns:1fr 1fr}.split2{grid-template-columns:1fr}}\n@media(max-width:820px){.wrap{width:96vw}.span4,.span5,.span6,.span7,.span8,.span9,.span10,.span11{grid-column:1/-1}.row3,.row4,.metricgrid,.sourcestatus{grid-template-columns:1fr 1fr}.projectrow{grid-template-columns:1fr 1fr}header{position:static}}
+@media(max-width:1000px){.chartgrid{grid-template-columns:1fr 1fr}.split2,.external-maps{grid-template-columns:1fr}}\n@media(max-width:820px){.wrap{width:96vw}.span4,.span5,.span6,.span7,.span8,.span9,.span10,.span11{grid-column:1/-1}.row3,.row4,.metricgrid,.sourcestatus{grid-template-columns:1fr 1fr}.projectrow{grid-template-columns:1fr 1fr}header{position:static}}
 @media(max-width:520px){.chartgrid{grid-template-columns:1fr}.row,.row3,.row4,.metricgrid,.sourcestatus,.projectrow{grid-template-columns:1fr}.projectwide,.place-search{grid-column:auto}}
 </style>
 </head>
@@ -72,6 +72,23 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
   <div class="card span4"><h2>Viento</h2><div class="big" id="wind">—</div><div class="k">m/s a 10 m</div><div class="row"><div><div class="k">Ráfaga</div><div class="v" id="gust">—</div></div><div><div class="k">Dirección</div><div class="v" id="wd">—</div></div></div><div class="k" style="margin-top:9px">Riesgo stow predictivo</div><div class="bar"><i id="bw"></i></div><div class="v" id="wrisk">—</div></div>
   <div class="card span4"><h2>Atmósfera</h2><div class="row"><div><div class="k">Temperatura</div><div class="v" id="temp">—</div></div><div><div class="k">Punto rocío</div><div class="v" id="dew">—</div></div><div><div class="k">Precipitación</div><div class="v" id="rain">—</div></div><div><div class="k">Nubosidad</div><div class="v" id="cloud">—</div></div></div><div class="k" style="margin-top:9px">Proxy convectivo / granizo</div><div class="bar"><i id="bh"></i></div><div class="v" id="hail">—</div></div>
   <div class="card span4"><h2>WeatherNext 3</h2><p class="note"><strong>Forecast probabilístico.</strong> La tarjeta funciona sin él; cuando haya acceso live entrará por el mismo contrato.</p><label><span class="k">Importar resumen JSON</span><input type="file" id="wn" accept=".json,application/json"></label><div class="statusline" id="wnStatus">Importación JSON disponible · live pendiente de credenciales Google.</div></div>
+
+  <div class="sectiontitle">Mapas operativos externos · mismo emplazamiento</div>
+  <div class="card wide">
+    <div class="external-maps">
+      <div class="external-map-card">
+        <div class="external-map-head"><b>Windy</b><span id="windyCoords">—</span></div>
+        <iframe id="windyMap" class="external-map" title="Windy · mapa meteorológico del emplazamiento" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        <div class="external-map-note">Mapa interactivo externo. Úsalo para contraste rápido de viento, rachas, precipitación, temperatura y otros campos; no sustituye el dataset canónico de Factiun.</div>
+      </div>
+      <div class="external-map-card">
+        <div class="external-map-head"><b>Ventusky</b><span id="ventuskyCoords">—</span></div>
+        <iframe id="ventuskyMap" class="external-map" title="Ventusky · mapa meteorológico del emplazamiento" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        <div class="external-map-note">Mapa interactivo externo centrado en el mismo punto. Sirve como segunda lectura visual independiente; CONTROL no toma decisiones desde este iframe.</div>
+      </div>
+    </div>
+    <p class="note">Ambos mapas siguen automáticamente la planta, ciudad o coordenadas manuales seleccionadas arriba. Son <strong>visualización de contraste</strong>; Batería, Winter mode, producción y demás consumidores siguen leyendo el contrato meteorológico común.</p>
+  </div>
 
   <div class="sectiontitle">Buscador de años · TMY</div>
   <div class="card span10">
@@ -302,6 +319,20 @@ function status(msg,kind=""){$("workStatus").textContent=msg;$("workStatus").cla
 function cfg(){return {lat:+$("lat").value,lon:+$("lon").value,year_start:+$("y0").value,year_end:+$("y1").value,source:$("source").value}}
 function siteName(){return SITE?((SITE.code?SITE.code+" · ":"")+SITE.name):"Manual"}
 function plantKey(p){return p?String(p.carteraCode||p.code||p.name||""):"";}
+function externalMapUrls(lat=+$("lat").value,lon=+$("lon").value){
+  if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
+  const la=Number(lat).toFixed(5),lo=Number(lon).toFixed(5),name=siteName()||"Factiun";
+  const windy="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=7&overlay=wind&product=ecmwf&level=surface&lat="+encodeURIComponent(la)+"&lon="+encodeURIComponent(lo)+"&message=true";
+  const ventusky="https://embed.ventusky.com/?p="+encodeURIComponent(la+";"+lo+";7")+"&l=wind-10m&w=soft&pin="+encodeURIComponent(la+";"+lo+";dot;"+name);
+  return {windy,ventusky,label:la+", "+lo};
+}
+function refreshExternalMaps(){
+  const u=externalMapUrls();
+  if(!u)return;
+  if($("windyMap").getAttribute("src")!==u.windy)$("windyMap").src=u.windy;
+  if($("ventuskyMap").getAttribute("src")!==u.ventusky)$("ventuskyMap").src=u.ventusky;
+  $("windyCoords").textContent=u.label;$("ventuskyCoords").textContent=u.label;
+}
 function customSitePayload(){
   if(SITE?.kind!=="geocoded")return null;
   return {
@@ -380,14 +411,14 @@ function selectPlace(i,refresh=true){
   $("plantSel").value="";
   $("placeQuery").value=p.location||p.name;
   $("lat").value=p.lat.toFixed(5);$("lon").value=p.lon.toFixed(5);
-  hidePlaceResults();renderSiteMeta();saveCfg();doHail();if(refresh)loadNow();
+  hidePlaceResults();renderSiteMeta();saveCfg();doHail();refreshExternalMaps();if(refresh)loadNow();
 }
 function restoreCustomSite(p){
   SITE={...p,lat:+p.lat,lon:+p.lon,kind:"geocoded"};
   $("plantSel").value="";
   $("placeQuery").value=SITE.location||SITE.name||"";
   $("lat").value=SITE.lat.toFixed(5);$("lon").value=SITE.lon.toFixed(5);
-  renderSiteMeta();saveCfg();doHail();
+  renderSiteMeta();saveCfg();doHail();refreshExternalMaps();
 }
 async function initPlants(){
   const saved=restoreCfg();
@@ -411,7 +442,7 @@ function choosePlant(i,refresh=true){
   $("placeQuery").value="";
   hidePlaceResults();
   if(SITE&&Number.isFinite(SITE.lat)&&Number.isFinite(SITE.lon)){$("lat").value=SITE.lat.toFixed(5);$("lon").value=SITE.lon.toFixed(5);}
-  renderSiteMeta();saveCfg();doHail();if(refresh)loadNow();
+  renderSiteMeta();saveCfg();doHail();refreshExternalMaps();if(refresh)loadNow();
 }
 $("plantSel").onchange=()=>{const key=$("plantSel").value;choosePlant(key===""?-1:PLANTS.findIndex(p=>plantKey(p)===key));};
 $("placeQuery").addEventListener("input",()=>{
@@ -428,7 +459,7 @@ $("placeQuery").addEventListener("keydown",e=>{
 });
 document.addEventListener("pointerdown",e=>{if(!e.target.closest(".place-search"))hidePlaceResults();});
 ["lat","lon","y0","y1","source"].forEach(id=>$(id).addEventListener("change",saveCfg));
-["lat","lon"].forEach(id=>$(id).addEventListener("change",()=>{SITE=null;renderSiteMeta("Modo manual · coordenadas modificadas.");doHail();}));
+["lat","lon"].forEach(id=>$(id).addEventListener("change",()=>{SITE=null;renderSiteMeta("Modo manual · coordenadas modificadas.");doHail();refreshExternalMaps();}));
 
 function shortDate(s){return s?String(s).slice(5):"—";}
 function renderDayVisual(){
@@ -686,6 +717,7 @@ $("reportBtn").onclick=()=>{if(!CURRENT){status("No hay dataset activo para el i
 $("wn").onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text()),m=fromWeatherNextSummary(Array.isArray(j)?j[0]:j);paintNow(m);$("wnStatus").textContent="WeatherNext importado · "+(m.timestamp||"sin timestamp");$("wnStatus").className="statusline ok"}catch(err){$("wnStatus").textContent=err.message;$("wnStatus").className="statusline bad"}};
 
 await initPlants();
+refreshExternalMaps();
 await loadNow();
 </script>
 </body></html>
