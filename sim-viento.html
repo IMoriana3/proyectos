@@ -626,7 +626,7 @@
                 <div class="field"><label>ETA nuevo (min)</label><input id="eHailR1Eta" type="number" min="0" max="180" step="1" value="20"></div>
                 <div class="field"><label>Tamaño (mm)</label><input id="eHailR1Mm" type="number" min="0" max="80" step="0.1" value="22"></div>
                 <div class="field"><label>Prob. ≥19 mm (%)</label><input id="eHailR1Prob" type="number" min="0" max="100" step="0.1" value="70"></div>
-                <div class="field"><label>Viene de (°)</label><input id="eHailR1Dir" type="number" min="0" max="359" step="1" value="270"></div>
+                <div class="field"><label>Viento previsto viene de (°)</label><input id="eHailR1Dir" type="number" min="0" max="359" step="1" value="270"></div>
               </div>
               <div class="subgrid">
                 <label class="chk"><input type="checkbox" id="eHailR2On"> Reforecast #2</label>
@@ -639,7 +639,7 @@
                 <div class="field"><label>ETA nuevo (min)</label><input id="eHailR2Eta" type="number" min="0" max="180" step="1" value="20"></div>
                 <div class="field"><label>Tamaño (mm)</label><input id="eHailR2Mm" type="number" min="0" max="80" step="0.1" value="22"></div>
                 <div class="field"><label>Prob. ≥19 mm (%)</label><input id="eHailR2Prob" type="number" min="0" max="100" step="0.1" value="70"></div>
-                <div class="field"><label>Viene de (°)</label><input id="eHailR2Dir" type="number" min="0" max="359" step="1" value="270"></div>
+                <div class="field"><label>Viento previsto viene de (°)</label><input id="eHailR2Dir" type="number" min="0" max="359" step="1" value="270"></div>
               </div>
             </details>
           </div>
@@ -3307,11 +3307,15 @@ LOC.simulaEvento=function(cfg){
       var snowTarget=(ne==='NIEVE')?LOC.ladoNieve(P.azp,ang[S],+stow.noon||0,full):null;
       var windActive=vVisto>(+stow.T1||40/3.6), ext=null, fuente='',motivo='';
 
-      /* Solo se congela una decisión de GRANIZO. Si en el instante de entrada
-         manda viento, no convertimos accidentalmente ese lado en política de
-         granizo para cuando el viento baje. */
-      if(hailReady&&hailProtected&&hail.manda==='granizo'&&hailTarget[S]==null&&hail.destino!=null)
-        hailTarget[S]=hail.destino;
+      /* Se congela el target real de granizo. Si al activar manda viento, se
+         guarda aparte el máximo tilt MÁS CERCANO como fallback de granizo: no
+         copiamos el target del viento y tampoco dejamos un hueco de seguridad
+         si luego amaina mientras el dato de granizo está ausente. */
+      if(hailReady&&hailProtected&&hailTarget[S]==null){
+        if(hail.manda==='granizo'&&hail.destino!=null)hailTarget[S]=hail.destino;
+        else if(hail.manda==='viento')
+          hailTarget[S]=LOC.ladoMasCercano(ang[S],Math.abs(+cfg.hail_defense_deg||full));
+      }
 
       if(hailProtected){
         var hDest=(hail.manda==='viento')?hail.destino:
@@ -3476,6 +3480,7 @@ LOC.incGenera=function(opts,index,baseCfg){
       ['hail','hail_prob_reforecast','Probabilidad cruza 30 % por reforecast'],
       ['hail','hail_size_reforecast','Tamaño cruza 19 mm por reforecast'],
       ['hail','hail_second_episode','Segundo episodio recalcula lado tras liberación'],
+      ['combined','hail_wind_missing','Viento manda al activar + pérdida de dato al amainar'],
       ['snow','snow_equal','Nieve exactamente en 10 cm'],
       ['snow','snow_plus','Nieve 10 cm + ε'],
       ['combined','conflict','Granizo + nieve · lados opuestos'],
