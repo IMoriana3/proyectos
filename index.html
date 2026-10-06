@@ -1179,7 +1179,7 @@ const PROJECTS = [
     url: "https://imoriana3.github.io/proyectos/meteo.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-10-06",
-    version: "1.0.0",
+    version: "1.0.1",
     docId: "meteo",
     docUrl: "",
     download: "",
@@ -1192,10 +1192,12 @@ const PROJECTS = [
     ],
     pendientes: [
       { done:false, text:"Configurar el adapter WeatherNext 3 con el acceso experimental de Google, fuera del navegador." },
-      { done:false, text:"Hacer que Viento, Radiación difusa y Batería consulten/publicen weather-state.v1 antes de descargar su propia copia." },
+      { done:true, text:"Viento conectado a weather-state.v1: reutiliza ERA5 exacto y publica ERA5, HSU CSV y HSU SCADA." },
+      { done:true, text:"Radiación difusa y Batería conectadas en sus repos: reutilizan/publican WeatherState compatible; Batería publica también PVSyst." },
       { done:false, text:"Añadir golden dataset común planta/hora para certificar paridad de meteo entre interfaces." }
     ],
     historial: [
+      { date:"2026-10-06", ver:"1.0.1", note:"WeatherState v1 conectado a Viento; integración equivalente preparada en Radiación difusa y Batería, con guards de compatibilidad para no mezclar WeatherNext direct-beam con DNI." },
       { date:"2026-10-06", ver:"1.0.0", note:"Nueva tarjeta meteorológica transversal: Open-Meteo forecast/ERA5, import HSU/PVSyst, WeatherNext adapter, cache compartida, forecast horario y señales operativas derivadas." }
     ]
   },
