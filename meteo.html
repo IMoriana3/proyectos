@@ -212,16 +212,21 @@ async function initPlants(){
   const saved=restoreCfg();
   PLANTS=await loadFactiunPlants();
   const q=(new URLSearchParams(location.search).get("planta")||"").toLowerCase();
-  $("plantSel").innerHTML='<option value="">Manual / coordenadas libres</option>'+PLANTS.map(p=>'<option value="'+esc(plantKey(p))+'">'+esc((p.code?p.code+" · ":"")+p.name+(p.location?" — "+p.location:""))+'</option>').join("");
+  $("plantSel").innerHTML='<option value="">Manual / coordenadas libres</option>'+PLANTS.map(p=>{
+    const ready=Number.isFinite(p.lat)&&Number.isFinite(p.lon);
+    return '<option value="'+esc(plantKey(p))+'"'+(ready?'':' disabled')+'>'+
+      esc((p.code?p.code+" · ":"")+p.name+(p.location?" — "+p.location:"")+(ready?"":" — sin coordenadas"))+'</option>';
+  }).join("");
   let idx=-1;
   if(q)idx=PLANTS.findIndex(p=>(p.name+" "+p.code+" "+p.carteraCode).toLowerCase().includes(q));
   if(idx<0&&saved)idx=PLANTS.findIndex(p=>plantKey(p)===saved);
-  if(!(idx>=0&&PLANTS[idx]))idx=PLANTS.findIndex(p=>p.name==="El Burgo I");
+  if(!(idx>=0&&PLANTS[idx]&&Number.isFinite(PLANTS[idx].lat)&&Number.isFinite(PLANTS[idx].lon)))
+    idx=PLANTS.findIndex(p=>p.name==="El Burgo I"&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
   if(idx>=0){$("plantSel").value=plantKey(PLANTS[idx]);choosePlant(idx,false);}else choosePlant(-1,false);
 }
 function choosePlant(i,refresh=true){
   SITE=(i>=0&&PLANTS[i])?PLANTS[i]:null;
-  if(SITE){$("lat").value=SITE.lat.toFixed(5);$("lon").value=SITE.lon.toFixed(5);}
+  if(SITE&&Number.isFinite(SITE.lat)&&Number.isFinite(SITE.lon)){$("lat").value=SITE.lat.toFixed(5);$("lon").value=SITE.lon.toFixed(5);}
   $("projectMeta").innerHTML=SITE?[
     SITE.code?'<span>Proyecto <b>'+esc(SITE.code)+'</b></span>':'',
     SITE.carteraCode&&SITE.carteraCode!==SITE.code?'<span>Cartera <b>'+esc(SITE.carteraCode)+'</b></span>':'',
