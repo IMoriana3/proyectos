@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#132238">
+<title>Análisis meteorológico — Factiun</title>
+<style>
+:root{--void:#0E1826;--panel:#132238;--panel2:#101D30;--hi:#1A2D48;--line:#27405F;--text:#DCE3EB;--muted:#8C9AAB;--muted2:#6F8299;--amb:#F09030;--fos:#68C0D8;--red:#E84858;--ok:#9CCB7B;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--void);color:var(--text);font:14px/1.45 var(--sans);min-height:100vh}
+a{color:var(--amb)}button,input,select{font:inherit}.wrap{width:min(1500px,96vw);margin:auto}
+header{position:sticky;top:0;z-index:10;background:var(--panel);border-bottom:2px solid var(--amb)}
+.bar{display:flex;align-items:center;gap:14px;padding:12px 0;flex-wrap:wrap}.brand{font-weight:800;letter-spacing:.08em;text-transform:uppercase}.brand small{display:block;color:var(--muted);font:10px var(--mono);letter-spacing:.12em}.spacer{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:8px 11px;cursor:pointer}.btn:hover{border-color:var(--amb)}.btn.primary{background:var(--amb);color:var(--void);border-color:var(--amb);font-weight:700}.btn.ghost{color:var(--muted)}
+main{padding:22px 0 60px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.card{background:var(--panel);border:1px solid var(--line);padding:16px;min-width:0}.span12{grid-column:span 12}.span8{grid-column:span 8}.span6{grid-column:span 6}.span4{grid-column:span 4}.span3{grid-column:span 3}
+h1,h2,h3{margin:0}h1{font-size:22px}h2{font-size:15px;text-transform:uppercase;letter-spacing:.08em}h3{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.sub{color:var(--muted);margin:6px 0 0}.ey{color:var(--amb);font:11px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.controls{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-top:14px}.f label{display:block;color:var(--muted);font-size:11px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em}.f input,.f select{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);padding:8px}.status{font:12px var(--mono);color:var(--muted);margin-top:10px;min-height:18px}.status b{color:var(--amb)}
+.metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--line);margin-top:14px;border:1px solid var(--line)}.metric{background:var(--panel2);padding:12px;min-width:0}.metric .k{font:10px var(--mono);color:var(--muted);text-transform:uppercase}.metric .v{font:25px var(--mono);color:var(--amb);margin-top:5px;white-space:nowrap}.metric .u{font-size:10px;color:var(--muted2)}
+.signal{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}.signal:first-of-type{border-top:0}.lamp{width:9px;height:9px;margin-top:5px;background:var(--muted2);flex:none}.lamp.ok{background:var(--ok)}.lamp.watch{background:var(--amb)}.lamp.alarm{background:var(--red)}.signal b{display:block}.signal small{color:var(--muted)}
+canvas{width:100%;height:190px;background:var(--panel2);border:1px solid var(--line);display:block}.chart-title{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.legend{font:10px var(--mono);color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}th{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em}td.mono{font-family:var(--mono)}.scroll{overflow:auto;max-height:440px}
+.pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.pill{border:1px solid var(--line);padding:4px 7px;font:10px var(--mono);color:var(--muted)}.pill.on{color:var(--amb);border-color:var(--amb)}.pill.warn{color:var(--red);border-color:var(--red)}
+details{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}summary{cursor:pointer;color:var(--muted)}.note{color:var(--muted);font-size:12px}.warnbox{border-left:3px solid var(--amb);background:var(--panel2);padding:10px 12px;color:var(--muted)}.warnbox b{color:var(--text)}
+.file{margin-top:8px;width:100%;color:var(--muted)}
+.srcgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}.src{background:var(--panel2);border:1px solid var(--line);padding:10px}.src strong{display:flex;justify-content:space-between;gap:8px}.src p{margin:5px 0 0;color:var(--muted);font-size:12px}.badge{font:10px var(--mono);color:var(--fos)}.badge.live{color:var(--ok)}.badge.wait{color:var(--amb)}
+footer{color:var(--muted2);font-size:11px;padding-top:20px}
+@media(max-width:1000px){.span8,.span6,.span4,.span3{grid-column:span 12}.metrics{grid-template-columns:repeat(3,1fr)}.controls{grid-template-columns:repeat(2,1fr)}.controls .go{grid-column:1/-1}.srcgrid{grid-template-columns:1fr}}
+@media(max-width:560px){.metrics{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header><div class="wrap bar">
+  <div class="brand"><small>SolarGPT / Factiun</small>Análisis meteorológico</div>
+  <div class="spacer"></div>
+  <a class="btn ghost" href="index.html">← Panel</a>
+  <a class="btn ghost" href="sim-viento.html">Viento / granizo</a>
+</div></header>
+<main class="wrap">
+<div class="grid">
+<section class="card span12">
+  <div class="ey">weather-state.v1 · fuente transversal</div>
+  <h1>Meteo de planta: medida, reanálisis y predicción</h1>
+  <p class="sub">Una sola serie normalizada para Viento/Granizo, Radiación difusa, Batería, Tracking/BT, Twin y SCADA. La seguridad en tiempo real sigue dependiendo de la instrumentación local.</p>
+  <div class="controls">
+    <div class="f"><label>Planta / emplazamiento</label><select id="plant"><option value="">Coordenadas manuales</option></select></div>
+    <div class="f"><label>Latitud</label><input id="lat" type="number" step=".0001" value="41.5763"></div>
+    <div class="f"><label>Longitud</label><input id="lon" type="number" step=".0001" value="-0.7981"></div>
+    <div class="f"><label>Fuente</label><select id="provider"><option value="openmeteo_forecast">Open-Meteo · previsión</option><option value="openmeteo_era5">Open-Meteo · ERA5</option><option value="weathernext3">WeatherNext 3</option></select></div>
+    <div class="f"><label>Horizonte</label><select id="days"><option value="3">3 días</option><option value="7">7 días</option><option value="15" selected>15 días</option></select></div>
+    <div class="go"><button class="btn primary" id="load">Cargar meteo</button></div>
+  </div>
+  <div class="status" id="status">Preparado.</div>
+  <div class="metrics">
+    <div class="metric"><div class="k">Temperatura</div><div class="v" id="mTemp">—</div><div class="u">°C</div></div>
+    <div class="metric"><div class="k">Viento 10 m</div><div class="v" id="mWind">—</div><div class="u">m/s</div></div>
+    <div class="metric"><div class="k">Ráfaga</div><div class="v" id="mGust">—</div><div class="u">m/s</div></div>
+    <div class="metric"><div class="k">GHI</div><div class="v" id="mGhi">—</div><div class="u">W/m²</div></div>
+    <div class="metric"><div class="k">Nubes</div><div class="v" id="mCloud">—</div><div class="u">%</div></div>
+    <div class="metric"><div class="k">Precip.</div><div class="v" id="mPrec">—</div><div class="u">mm/h</div></div>
+  </div>
+</section>
+
+<section class="card span4">
+  <h2>Señales operativas · próximas 24 h</h2>
+  <div id="signals">
+    <div class="signal"><span class="lamp"></span><div><b>Sin datos</b><small>Carga una fuente meteorológica.</small></div></div>
+  </div>
+  <details><summary>Umbrales de trabajo</summary>
+    <div class="controls" style="grid-template-columns:1fr 1fr;margin-top:10px">
+      <div class="f"><label>Wind watch · m/s</label><input id="tWatch" type="number" step=".1" value="11.1"></div>
+      <div class="f"><label>Wind stow · m/s</label><input id="tStow" type="number" step=".1" value="16.7"></div>
+    </div>
+    <p class="note">Estos umbrales solo clasifican el forecast. No ordenan un stow.</p>
+  </details>
+</section>
+
+<section class="card span8">
+  <div class="chart-title"><h2>Irradiancia y régimen difuso</h2><div class="legend">GHI · DNI · DHI</div></div><canvas id="cSolar"></canvas>
+</section>
+<section class="card span6">
+  <div class="chart-title"><h2>Viento</h2><div class="legend">10 m · ráfaga</div></div><canvas id="cWind"></canvas>
+</section>
+<section class="card span6">
+  <div class="chart-title"><h2>Cielo y precipitación</h2><div class="legend">nubosidad · mm/h</div></div><canvas id="cSky"></canvas>
+</section>
+
+<section class="card span12">
+  <h2>Forecast horario</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>UTC</th><th>Temp</th><th>Viento</th><th>Ráfaga</th><th>Dir</th><th>GHI</th><th>DNI</th><th>DHI</th><th>Nubes</th><th>Precip.</th><th>Nieve</th><th>CAPE</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="12">Sin datos.</td></tr></tbody>
+  </table></div>
+</section>
+
+<section class="card span6">
+  <h2>Fuentes integradas</h2>
+  <div class="srcgrid">
+    <div class="src"><strong>Open-Meteo forecast <span class="badge live">ACTIVO</span></strong><p>Temperatura, humedad, lluvia/nieve, nubes, GHI/DNI/DHI, viento, dirección, ráfagas, CAPE y cota de congelación.</p></div>
+    <div class="src"><strong>Open-Meteo ERA5 <span class="badge live">ACTIVO</span></strong><p>Reanálisis para replay, validación y estudios históricos.</p></div>
+    <div class="src"><strong>WeatherNext 3 <span class="badge wait" id="wnBadge">ADAPTER</span></strong><p>Ensemble AI: viento, irradiancia, precipitación, nubes, temperatura y presión. Requiere acceso Google y proxy sin secretos en el navegador.</p></div>
+    <div class="src"><strong>HSU / SCADA <span class="badge">MEDIDO</span></strong><p>La medida local manda para seguridad y puede entrar por CSV o por el collector/SCADA.</p></div>
+    <div class="src"><strong>PVGIS / NASA POWER <span class="badge">ENGINE</span></strong><p>Fuentes históricas ya ofrecidas por Viento; se mantienen como adapters del motor canónico.</p></div>
+    <div class="src"><strong>PVSyst CSV <span class="badge">LOCAL</span></strong><p>La batería ya usa GlobEff/POA, T_Amb, DiffHor y PhiAng. Esta tarjeta acepta CSV para compartir una serie medida/simulada.</p></div>
+  </div>
+  <div style="margin-top:12px">
+    <label class="btn" for="csv">Importar CSV HSU / PVSyst</label><input class="file" id="csv" type="file" accept=".csv,.txt,.tsv">
+  </div>
+</section>
+
+<section class="card span6">
+  <h2>Consumidores del mismo WeatherState</h2>
+  <table>
+    <thead><tr><th>Tarjeta</th><th>Qué consume</th><th>Para qué</th></tr></thead>
+    <tbody>
+      <tr><td><a href="sim-viento.html">Viento / granizo / nieve</a></td><td>viento, dirección, ráfagas, precipitación, temperatura</td><td>pre-stow, replay, adversarial</td></tr>
+      <tr><td><a href="https://imoriana3.github.io/cobertura-zigbee/overcast.html">Radiación difusa</a></td><td>GHI, DNI, DHI, nubosidad</td><td>overcast y coste de maniobra</td></tr>
+      <tr><td><a href="https://imoriana3.github.io/gemelo-digital/bateria.html">Batería</a></td><td>GHI/DHI, temperatura, viento</td><td>SOC, carga, winter mode</td></tr>
+      <tr><td>Tracking / BT</td><td>irradiancia y régimen de cielo</td><td>valor de movimiento; la geometría BT sigue independiente</td></tr>
+      <tr><td>SCADA / Twin</td><td>forecast + medida</td><td>sanity checks, replay, contexto de alarmas</td></tr>
+    </tbody>
+  </table>
+  <div class="pills"><span class="pill on">NORMALIZED</span><span class="pill on">PROVENANCE</span><span class="pill on">CACHE COMPARTIDA</span><span class="pill">1 h forecast</span></div>
+</section>
+
+<section class="card span12">
+  <h2>WeatherNext 3 · configuración</h2>
+  <div class="warnbox"><b>No se mete ninguna credencial de Google en GitHub Pages.</b> La página llama a un adapter/proxy read-only. Hasta configurarlo, todo lo demás funciona con Open-Meteo. WeatherNext es experimental y no sustituye avisos oficiales ni el lazo de seguridad local.</div>
+  <div class="controls" style="grid-template-columns:1fr auto;margin-top:12px">
+    <div class="f"><label>URL adapter WeatherNext</label><input id="wnProxy" type="url" placeholder="https://.../weathernext"></div>
+    <div class="go"><button class="btn" id="saveProxy">Guardar</button></div>
+  </div>
+  <p class="note">Contrato esperado: JSON con <code>points[]</code> y nombres WeatherNext 3 o ya normalizados. El bus convierte K→°C, J/m²→W/m² y m→mm cuando procede.</p>
+</section>
+</div>
+<footer>Factiun · Análisis meteorológico · WeatherState v1. La predicción es contexto supervisor; instrumentación local y políticas CONTROL conservan la autoridad operativa.</footer>
+</main>
+<script src="lib/meteo-bus.js"></script>
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id);},D=null;
+function fmt(v,n){return v==null||!isFinite(v)?'—':Number(v).toFixed(n==null?1:n);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function setStatus(s,err){$('status').innerHTML=err?'<span style="color:var(--red)">'+esc(s)+'</span>':s;}
+function loadPlants(){
+  var raw={};try{raw=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){}
+  var opts=[];
+  Object.keys(raw).forEach(function(k){
+    var p=raw[k]||{},lat=Number(p.lat!=null?p.lat:p.latitude),lon=Number(p.lon!=null?p.lon:(p.lng!=null?p.lng:p.longitude));
+    if(isFinite(lat)&&isFinite(lon))opts.push({name:p.name||k,lat:lat,lon:lon});
+  });
+  opts.sort(function(a,b){return a.name.localeCompare(b.name,'es');});
+  opts.forEach(function(p){var o=document.createElement('option');o.value=p.lat+','+p.lon;o.textContent=p.name;$('plant').appendChild(o);});
+}
+$('plant').onchange=function(){if(!this.value)return;var a=this.value.split(',');$('lat').value=a[0];$('lon').value=a[1];};
+function nearest(points){
+  var now=Date.now(),best=null,bd=Infinity;
+  points.forEach(function(p){var t=Date.parse(p.time),d=Math.abs(t-now);if(isFinite(t)&&d<bd){bd=d;best=p;}});
+  return best||points[0]||{};
+}
+function setMetric(id,v,n){$(id).textContent=fmt(v,n);}
+function renderMetrics(){
+  var p=nearest(D.points||[]);
+  setMetric('mTemp',p.temperature_c,1);setMetric('mWind',p.wind_speed_10m_ms,1);setMetric('mGust',p.wind_gust_10m_ms,1);
+  setMetric('mGhi',p.ghi_wm2,0);setMetric('mCloud',p.cloud_cover_pct,0);setMetric('mPrec',p.precipitation_mm,1);
+}
+function sig(cls,title,text){return '<div class="signal"><span class="lamp '+cls+'"></span><div><b>'+esc(title)+'</b><small>'+esc(text)+'</small></div></div>';}
+function renderSignals(){
+  var x=FactiunMeteo.derive(D,{wind_watch_ms:Number($('tWatch').value),wind_stow_ms:Number($('tStow').value)}),h='';
+  h+=sig(x.wind_risk==='stow'?'alarm':x.wind_risk==='watch'?'watch':'ok','Viento · '+String(x.wind_risk).toUpperCase(),'máx '+fmt(x.max_wind_10m_ms,1)+' m/s · ráfaga '+fmt(x.max_gust_10m_ms,1)+' m/s');
+  h+=sig((x.mean_diffuse_fraction||0)>.65?'watch':'ok','Régimen difuso','fracción DHI/GHI media '+fmt(x.mean_diffuse_fraction,2)+' · nubes '+fmt(x.mean_cloud_cover_pct,0)+' %');
+  h+=sig(x.freeze_risk==='watch'?'watch':'ok','Winter / hielo',x.freeze_risk==='watch'?'precipitación con temperatura cercana a 0 °C':'sin señal combinada en 24 h');
+  h+=sig(x.hail_ingredients_heuristic?'watch':'ok','Ingredientes convectivos',x.hail_ingredients_heuristic?'CAPE + precipitación + cota de congelación: revisar granizo':'sin señal heurística destacada');
+  h+=sig('ok','Carga solar 24 h',fmt(x.solar_whm2_24h,0)+' Wh/m² GHI previsto');
+  $('signals').innerHTML=h;
+}
+function bounds(arr){
+  var v=arr.filter(function(x){return x!=null&&isFinite(x);});if(!v.length)return [0,1];
+  var a=Math.min.apply(null,v),b=Math.max.apply(null,v);if(a===b)b=a+1;return [a,b];
+}
+function draw(id,series){
+  var cv=$(id),r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1,w=Math.max(300,Math.round(r.width*dpr)),h=Math.round(190*dpr);
+  cv.width=w;cv.height=h;var c=cv.getContext('2d'),pad=28*dpr;
+  c.clearRect(0,0,w,h);c.strokeStyle='#27405F';c.lineWidth=1*dpr;
+  for(var j=0;j<5;j++){var y=pad+(h-2*pad)*j/4;c.beginPath();c.moveTo(pad,y);c.lineTo(w-pad,y);c.stroke();}
+  var all=[];series.forEach(function(s){all=all.concat(s.values);});var b=bounds(all),n=Math.max.apply(null,series.map(function(s){return s.values.length;}));
+  var colors=['#F09030','#68C0D8','#DCE3EB','#E84858'];
+  series.forEach(function(s,si){c.strokeStyle=colors[si%colors.length];c.lineWidth=1.5*dpr;c.beginPath();var started=false;
+    s.values.forEach(function(v,i){if(v==null||!isFinite(v))return;var x=pad+(w-2*pad)*(n<=1?0:i/(n-1)),y=h-pad-(h-2*pad)*(v-b[0])/(b[1]-b[0]);if(!started){c.moveTo(x,y);started=true;}else c.lineTo(x,y);});c.stroke();});
+  c.fillStyle='#8C9AAB';c.font=(10*dpr)+'px monospace';c.fillText(fmt(b[1],0),3*dpr,12*dpr);c.fillText(fmt(b[0],0),3*dpr,h-6*dpr);
+}
+function renderCharts(){
+  var pts=(D.points||[]).slice(0,24*7);
+  draw('cSolar',[{values:pts.map(function(p){return p.ghi_wm2;})},{values:pts.map(function(p){return p.dni_wm2!=null?p.dni_wm2:p.direct_beam_wm2;})},{values:pts.map(function(p){return p.dhi_wm2;})}]);
+  draw('cWind',[{values:pts.map(function(p){return p.wind_speed_10m_ms;})},{values:pts.map(function(p){return p.wind_gust_10m_ms;})}]);
+  draw('cSky',[{values:pts.map(function(p){return p.cloud_cover_pct;})},{values:pts.map(function(p){return p.precipitation_mm==null?0:p.precipitation_mm*10;})}]);
+}
+function renderRows(){
+  var pts=(D.points||[]).slice(0,96),h='';
+  pts.forEach(function(p){h+='<tr><td class="mono">'+esc(String(p.time||'').replace('T',' ').replace('Z',''))+'</td><td>'+fmt(p.temperature_c,1)+'</td><td>'+fmt(p.wind_speed_10m_ms,1)+'</td><td>'+fmt(p.wind_gust_10m_ms,1)+'</td><td>'+fmt(p.wind_direction_10m_deg,0)+'</td><td>'+fmt(p.ghi_wm2,0)+'</td><td>'+fmt(p.dni_wm2!=null?p.dni_wm2:p.direct_beam_wm2,0)+'</td><td>'+fmt(p.dhi_wm2,0)+'</td><td>'+fmt(p.cloud_cover_pct,0)+'</td><td>'+fmt(p.precipitation_mm,1)+'</td><td>'+fmt(p.snowfall_cm,1)+'</td><td>'+fmt(p.cape_jkg,0)+'</td></tr>';});
+  $('rows').innerHTML=h||'<tr><td colspan="12">Sin filas.</td></tr>';
+}
+function render(d){
+  D=d;renderMetrics();renderSignals();renderCharts();renderRows();
+  var m=d.meta||{};setStatus('<b>'+esc(m.provider||'fuente')+'</b> · '+esc(String(m.lat))+', '+esc(String(m.lon))+' · '+(d.points||[]).length+' horas · recuperado '+esc(m.retrieved_at||''));
+}
+async function load(){
+  var lat=Number($('lat').value),lon=Number($('lon').value),provider=$('provider').value,days=Number($('days').value);
+  $('load').disabled=true;setStatus('Cargando '+provider+'…');
+  try{
+    var d;
+    if(provider==='weathernext3')d=await FactiunMeteo.fetchWeatherNext({lat:lat,lon:lon,hours:Math.min(360,days*24)});
+    else if(provider==='openmeteo_era5'){
+      var end=new Date(Date.now()-3*86400000),start=new Date(end.getTime()-(days-1)*86400000);
+      d=await FactiunMeteo.fetchOpenMeteo({lat:lat,lon:lon,mode:'archive',start_date:start.toISOString().slice(0,10),end_date:end.toISOString().slice(0,10)});
+    }else d=await FactiunMeteo.fetchOpenMeteo({lat:lat,lon:lon,mode:'forecast',forecast_days:Math.min(16,days)});
+    render(d);
+  }catch(e){setStatus(e.message||String(e),true);}finally{$('load').disabled=false;}
+}
+$('load').onclick=load;$('tWatch').onchange=function(){if(D)renderSignals();};$('tStow').onchange=function(){if(D)renderSignals();};
+$('saveProxy').onclick=function(){var c=FactiunMeteo.setConfig({weathernext_proxy_url:$('wnProxy').value.trim()});$('wnBadge').textContent=c.weathernext_proxy_url?'CONFIGURADO':'ADAPTER';setStatus(c.weathernext_proxy_url?'Adapter WeatherNext guardado.':'Adapter WeatherNext vacío.');};
+$('csv').onchange=function(){
+  var f=this.files&&this.files[0];if(!f)return;var rd=new FileReader();
+  rd.onload=function(){try{var d=FactiunMeteo.importCSV(rd.result,{provider:'hsu_csv',lat:Number($('lat').value),lon:Number($('lon').value),filename:f.name});render(d);}catch(e){setStatus(e.message||String(e),true);}};rd.readAsText(f);
+};
+window.addEventListener('resize',function(){if(D)renderCharts();});
+loadPlants();var cfg=FactiunMeteo.getConfig();$('wnProxy').value=cfg.weathernext_proxy_url||'';$('wnBadge').textContent=cfg.weathernext_proxy_url?'CONFIGURADO':'ADAPTER';
+var cached=FactiunMeteo.latest();if(cached)render(cached);
+})();
+</script>
+</body></html>
