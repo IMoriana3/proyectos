@@ -57,11 +57,11 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('misma seed + índice genera exactamente el mismo caso',repro.igual,JSON.stringify(repro));
   check('cambiar la seed cambia el caso',repro.distinto,JSON.stringify(repro));
 
-  // Los 27 patrones adversariales. Una vuelta entera cubre fronteras + reforecast.
+  // Los 28 patrones adversariales. Una vuelta entera cubre fronteras + reforecast.
   const adv=await page.evaluate(()=>{
-    const b=incBaseCfg(),o={mode:'adversarial',family:'all',severity:'mixed',seed:2601001,n:27};
+    const b=incBaseCfg(),o={mode:'adversarial',family:'all',severity:'mixed',seed:2601001,n:28};
     const out=[];
-    for(let i=0;i<27;i++){
+    for(let i=0;i<28;i++){
       const c=LOC.incGenera(o,i,b),cfg=incCfgCaso(c,b);
       const s1=LOC.simulaEvento(cfg),s2=LOC.simulaEvento(cfg),v=LOC.incVerifica(c,cfg,s1,s2);
       out.push({id:c.id,tag:c.tag,name:c.name,ok:v.ok,fail:v.fail,total:v.total,
@@ -70,9 +70,9 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     return out;
   });
   const tags=adv.map(x=>x.tag);
-  check('la vuelta adversarial cubre las 27 fronteras distintas',
-    new Set(tags).size===27,JSON.stringify(tags));
-  check('las 27 fronteras salen PASS',
+  check('la vuelta adversarial cubre las 28 fronteras distintas',
+    new Set(tags).size===28,JSON.stringify(tags));
+  check('las 28 fronteras salen PASS',
     adv.every(x=>x.ok),JSON.stringify(adv.filter(x=>!x.ok)));
   check('cada caso publica invariantes universales + su regla específica',
     adv.every(x=>x.total>=8),adv.map(x=>x.tag+':'+x.total).join(' | '));
@@ -85,22 +85,22 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     ['hail_size_below','hail_prob_below','hail_watch','hail_boundary','hail_near','hail_lifecycle'].every(has),tags.join(','));
   check('incluye reforecast ETA, retirada, reactivación, sin dato, cruces de gate y segundo episodio',
     ['hail_eta_advance','hail_eta_delay','hail_withdraw_watch','hail_withdraw_active','hail_reactivate_hold',
-     'hail_missing_watch','hail_missing_active','hail_prob_reforecast','hail_size_reforecast','hail_second_episode']
-      .every(has),tags.join(','));
+     'hail_missing_watch','hail_missing_active','hail_prob_reforecast','hail_size_reforecast','hail_second_episode',
+     'hail_second_watch_withdraw'].every(has),tags.join(','));
   check('incluye nieve 10 exactos y 10+ε',has('snow_equal')&&has('snow_plus'));
   check('incluye conflicto, acuerdo y arbitraje viento×granizo',
     has('conflict')&&has('agree')&&has('hail_wind')&&has('hail_wind_missing'),tags.join(','));
 
   // Prueba independiente de algunas respuestas, no sólo del verificador.
   const frontera=await page.evaluate(()=>{
-    const b=incBaseCfg(),o={mode:'adversarial',family:'all',severity:'mixed',seed:2601001,n:27};
-    const get=tag=>{for(let i=0;i<27;i++){const c=LOC.incGenera(o,i,b);if(c.tag===tag){
+    const b=incBaseCfg(),o={mode:'adversarial',family:'all',severity:'mixed',seed:2601001,n:28};
+    const get=tag=>{for(let i=0;i<28;i++){const c=LOC.incGenera(o,i,b);if(c.tag===tag){
       const s=LOC.simulaEvento(incCfgCaso(c,b));return {c,s};}}};
     const w1=get('wind_t1_equal'),w2=get('wind_t1_plus'),hb=get('hail_boundary'),hw=get('hail_watch'),hl=get('hail_lifecycle');
     const ha=get('hail_eta_advance'),hd=get('hail_eta_delay'),ww=get('hail_withdraw_watch'),wa=get('hail_withdraw_active');
     const rh=get('hail_reactivate_hold'),mw=get('hail_missing_watch'),ma=get('hail_missing_active');
     const pr=get('hail_prob_reforecast'),sr=get('hail_size_reforecast'),ep=get('hail_second_episode');
-    const wm=get('hail_wind_missing');
+    const sw=get('hail_second_watch_withdraw'),wm=get('hail_wind_missing');
     const se=get('snow_equal'),sp=get('snow_plus'),cf=get('conflict'),ag=get('agree'),pa=get('passive_release');
     const max=f=>f.s.frames.reduce((a,x)=>x.wind_ms>a.wind_ms?x:a,f.s.frames[0]);
     const f0=x=>x.s.frames.find(f=>f.t_min===0),at=(x,t)=>x.s.frames.find(f=>f.t_min===t);
@@ -121,6 +121,7 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
         prob:[at(pr,4).hail_defense_active,at(pr,5).hail_phase],
         size:[at(sr,4).hail_defense_active,at(sr,5).hail_phase],
         episode:[at(ep,0).orden.A1,at(ep,24).hail_phase,at(ep,30).orden.A1,at(ep,30).hail_phase],
+        secondWatch:[at(sw,29).hail_phase,at(sw,30).hail_phase,at(sw,35).hail_phase,at(sw,35).hail_defense_active],
         windMissing:[at(wm,0).modos.A1,at(wm,10).hail_phase,at(wm,10).hail_defense_active,at(wm,10).modos.A1],
         updateMarks:ha.s.marks.filter(m=>m.k==='hailupd').map(m=>[m.t,m.label])
       },
@@ -140,6 +141,12 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     resolver[1].update_index===0&&resolver[1].eta_min===20&&resolver[1].mm===25&&resolver[1].prob_pct===80&&resolver[1].dir_deg===90&&
     resolver[2].eta_min===11&&resolver[3].known===false&&resolver[3].eta_min===null,
     JSON.stringify(resolver));
+  const sane=await page.evaluate(()=>({
+    p0:LOC.hailForecastAt({hail_on:true,hail_prob_pct:180,hail_mm:22,hail_eta0_min:20,hail_updates:{bad:true}},0),
+    p1:LOC.granizoLiveAmenaza(true,22,180)
+  }));
+  check('probabilidad se acota a 0–100 % y hail_updates malformado no tumba el resolver',
+    sane.p0.prob_pct===100&&sane.p0.update_index===-1&&sane.p1.prob_pct===100,JSON.stringify(sane));
 
   check('T1 exacto no dispara y T1+ε separa A1 FULL / A2 PARTIAL',
     frontera.t1eq.A1==='IDLE'&&frontera.t1eq.A2==='IDLE'&&
@@ -179,6 +186,10 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     frontera.reforecast.episode[0]>0&&frontera.reforecast.episode[1]==='LIBERADO'&&
     frontera.reforecast.episode[2]<0&&frontera.reforecast.episode[3]==='DEFENSA',
     JSON.stringify(frontera.reforecast.episode));
+  check('un segundo aviso solo en vigilancia borra LIBERADO y una retirada queda SIN SEÑAL',
+    frontera.reforecast.secondWatch[0]==='LIBERADO'&&frontera.reforecast.secondWatch[1]==='VIGILANCIA'&&
+    frontera.reforecast.secondWatch[2]==='SIN SEÑAL'&&!frontera.reforecast.secondWatch[3],
+    JSON.stringify(frontera.reforecast.secondWatch));
   check('timeline separa el reforecast de las transiciones físicas',
     JSON.stringify(frontera.reforecast.updateMarks)===JSON.stringify([[10,'reforecast granizo #1']]),
     JSON.stringify(frontera.reforecast.updateMarks));
@@ -195,18 +206,18 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   await page.selectOption('#incMode','adversarial');
   await page.selectOption('#incFamily','all');
   await page.fill('#incSeed','2601001');
-  await page.fill('#incN','26');
+  await page.fill('#incN','28');
   await page.click('#incRun');
-  await page.waitForFunction(()=>window.INC&&!INC.running&&INC.results.length===27,{timeout:180000});
+  await page.waitForFunction(()=>window.INC&&!INC.running&&INC.results.length===28,{timeout:180000});
   const ui=await page.evaluate(()=>({
     n:INC.results.length,pass:INC.results.filter(x=>x.verdict.ok).length,
     fail:INC.results.filter(x=>!x.verdict.ok).length,
     rows:document.querySelectorAll('#incTable tbody tr').length,
     summary:incSummary.textContent,jsonOff:incJson.disabled,csvOff:incCsv.disabled
   }));
-  check('la batería UI ejecuta los 26 casos',ui.n===27&&ui.rows===27,JSON.stringify(ui));
-  check('la batería UI demuestra 26 PASS / 0 FAIL',
-    ui.pass===27&&ui.fail===0&&/27/.test(ui.summary),JSON.stringify(ui));
+  check('la batería UI ejecuta los 28 casos',ui.n===28&&ui.rows===28,JSON.stringify(ui));
+  check('la batería UI demuestra 28 PASS / 0 FAIL',
+    ui.pass===28&&ui.fail===0&&/28/.test(ui.summary),JSON.stringify(ui));
   check('al terminar habilita export JSON y CSV',!ui.jsonOff&&!ui.csvOff);
 
   // "Ver" carga exactamente el caso en el simulador.
@@ -243,10 +254,10 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   const jp=await dj.path(),cp=await dc.path();
   const jj=JSON.parse(fs.readFileSync(jp,'utf8')),cc=fs.readFileSync(cp,'utf8').trim().split(/\r?\n/);
   check('el JSON guarda seed, contexto y configuración base',
-    jj.schema==='factiun-inclemencias-v1'&&jj.options.seed===2601001&&jj.context&&jj.base_config&&jj.results.length===27,
+    jj.schema==='factiun-inclemencias-v1'&&jj.options.seed===2601001&&jj.context&&jj.base_config&&jj.results.length===28,
     JSON.stringify({schema:jj.schema,options:jj.options,context:jj.context,n:jj.results&&jj.results.length}));
-  check('el CSV contiene cabecera + los 27 resultados',
-    cc.length===28&&/failed_checks/.test(cc[0]),'líneas '+cc.length);
+  check('el CSV contiene cabecera + los 28 resultados',
+    cc.length===29&&/failed_checks/.test(cc[0]),'líneas '+cc.length);
 
   check('la ficha no lanza errores JS',errores.length===0,errores.join(' | '));
   await browser.close();
