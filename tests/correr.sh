@@ -982,7 +982,7 @@ declare -A PISO=(
   # los goldens TMY y el smoke de Cartera/ancho, fija las 11 familias visuales
   # de Meteo: mensual, serie diaria, zoom, cockpit 6-paneles, DOY, rosa,
   # extremos térmicos/heladas, nieve, granizo, viento sintético y comparación.
-  [test_meteo_browser.mjs]=72
+  [test_meteo_browser.mjs]=73
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )
