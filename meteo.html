@@ -157,6 +157,8 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
       <div class="tablewrap"><table><thead><tr><th>Frío</th><th>Horas/año</th><th>%</th></tr></thead><tbody id="vizColdBody"><tr><td colspan="3">—</td></tr></tbody></table></div>
       <div class="tablewrap"><table><thead><tr><th>Calor</th><th>Horas/año</th><th>%</th></tr></thead><tbody id="vizHotBody"><tr><td colspan="3">—</td></tr></tbody></table></div>
     </div>
+    <h3 style="font-size:.7rem;color:var(--mut);margin:10px 0 6px">Días/mes con Tmin bajo umbral · climatología</h3>
+    <div class="tablewrap"><table><thead><tr><th>Umbral</th><th>Ene</th><th>Feb</th><th>Mar</th><th>Abr</th><th>May</th><th>Jun</th><th>Jul</th><th>Ago</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dic</th><th>Total</th></tr></thead><tbody id="vizColdDaysBody"><tr><td colspan="14">—</td></tr></tbody></table></div>
   </div>
 
   <div class="card span8">
@@ -276,9 +278,9 @@ import {
   toCsv,downloadText,reportHtml,clearHttpCache
 } from "./lib/meteo-browser.js";
 import {
-  VIZ_VERSION,MONTHS,monthlyTable,dailyMeanSeries,dayProfile,peakDay,
+  VIZ_VERSION,MONTHS,monthlyTable,dailyMeanSeries,dayProfile,peakDay,localDayKey,localHour,
   cockpitMetrics,dailyClimatology,windRoseData,drawWindRose,windSpeedTable,
-  temperatureExtremes,drawTemperatureHistogram,snowSummary,drawLineChart,
+  temperatureExtremes,drawTemperatureHistogram,coldDaysByMonth,snowSummary,drawLineChart,
   drawBarChart,drawHailRisk,windDailyMax,comparisonMonthly
 } from "./lib/meteo-viz.js";
 
@@ -341,28 +343,28 @@ $("plantSel").onchange=()=>{const key=$("plantSel").value;choosePlant(key===""?-
 function shortDate(s){return s?String(s).slice(5):"—";}
 function renderDayVisual(){
   if(!CURRENT?.rows?.length)return;
-  let date=$("vizDay").value;
-  if(!date){date=peakDay(CURRENT.rows,"ghi_wm2")||CURRENT.rows[0].t.slice(0,10);$("vizDay").value=date;}
-  const p=dayProfile(CURRENT.rows,date),labels=p.map((r,i)=>{const h=new Date(r.t).getUTCHours();return (h%3===0)?String(h).padStart(2,"0")+"h":"";});
+  const tz=SITE?.tz||"UTC";let date=$("vizDay").value;
+  if(!date){date=peakDay(CURRENT.rows,"ghi_wm2",tz)||localDayKey(CURRENT.rows[0].t,tz);$("vizDay").value=date;}
+  const p=dayProfile(CURRENT.rows,date,tz),labels=p.map(r=>{const h=localHour(r.t,tz);return (h%3===0)?String(h).padStart(2,"0")+"h":"";});
   drawLineChart($("vizDayProfile"),[
     {label:"GHI",values:p.map(r=>r.ghi_wm2)},{label:"DNI",values:p.map(r=>r.dni_wm2)},{label:"DHI",values:p.map(r=>r.dhi_wm2)}
-  ],{title:"Perfil horario · "+date+" · "+(SITE?.tz||"UTC")+" (eje de datos UTC)",yLabel:"W/m²",xLabels:labels,height:280,zero:true});
+  ],{title:"Perfil horario · "+date+" · hora local "+tz,yLabel:"W/m²",xLabels:labels,height:280,zero:true});
   $("vizDayNote").textContent=p.length?date+" · "+p.length+" puntos · atajos equivalentes a SolarGPT Meteo.":"Sin datos para "+date;
 }
 function renderCoreVisuals(){
   if(!CURRENT?.rows?.length)return;
-  const rows=CURRENT.rows,mt=monthlyTable(rows);
+  const rows=CURRENT.rows,tz=SITE?.tz||"UTC",mt=monthlyTable(rows,tz);
   $("vizMonthlyBody").innerHTML=mt.map(x=>'<tr><td>'+x.month+'</td><td>'+fmt(x.ghi,1)+'</td><td>'+fmt(x.dni,1)+'</td><td>'+fmt(x.dhi,1)+'</td><td>'+fmt(x.tmean,1)+'</td><td>'+fmt(x.tmin,1)+'</td><td>'+fmt(x.tmax,1)+'</td><td>'+fmt(x.wind,1)+'</td><td>'+fmt(x.snow,1)+'</td></tr>').join("");
   const ds=dailyMeanSeries(rows),dateLabels=ds.length?[shortDate(ds[0].date),"",shortDate(ds[Math.floor(ds.length/2)]?.date),"",shortDate(ds.at(-1)?.date)]:[];
   drawLineChart($("vizDailySeries"),[
     {label:"GHI",values:ds.map(x=>x.ghi)},{label:"DNI",values:ds.map(x=>x.dni)},{label:"DHI",values:ds.map(x=>x.dhi)}
   ],{title:"Media diaria del periodo completo",yLabel:"W/m²",xLabels:dateLabels,height:290,zero:true});
 
-  const first=rows[0].t.slice(0,10),last=rows.at(-1).t.slice(0,10);$("vizDay").min=first;$("vizDay").max=last;
-  if(!$("vizDay").value||$("vizDay").value<first||$("vizDay").value>last)$("vizDay").value=peakDay(rows,"ghi_wm2")||first;
+  const first=localDayKey(rows[0].t,tz),last=localDayKey(rows.at(-1).t,tz);$("vizDay").min=first;$("vizDay").max=last;
+  if(!$("vizDay").value||$("vizDay").value<first||$("vizDay").value>last)$("vizDay").value=peakDay(rows,"ghi_wm2",tz)||first;
   renderDayVisual();
 
-  const cp=cockpitMetrics(rows);
+  const cp=cockpitMetrics(rows,CURRENT.lat,tz);
   drawBarChart($("vizCockpitGhi"),[{label:"GHI",values:cp.ghi}],{title:"GHI · anual "+fmt(cp.ghi.reduce((a,b)=>a+(b||0),0),0)+" kWh/m²",yLabel:"kWh/m²",labels:MONTHS,height:230});
   drawBarChart($("vizCockpitDni"),[{label:"DNI",values:cp.dni}],{title:"DNI · anual "+fmt(cp.dni.reduce((a,b)=>a+(b||0),0),0)+" kWh/m²",yLabel:"kWh/m²",labels:MONTHS,height:230});
   drawBarChart($("vizCockpitDhi"),[{label:"DHI",values:cp.dhi}],{title:"DHI · anual "+fmt(cp.dhi.reduce((a,b)=>a+(b||0),0),0)+" kWh/m²",yLabel:"kWh/m²",labels:MONTHS,height:230});
@@ -374,7 +376,7 @@ function renderCoreVisuals(){
   ],{title:"Viento mensual",yLabel:"km/h",xLabels:MONTHS,height:230,zero:true});
   drawBarChart($("vizCockpitKt"),[{label:"kt",values:cp.kt}],{title:"Índice claridad · haz/(haz+difusa)",yLabel:"kt",labels:MONTHS,height:230,yMin:0,yMax:1.05});
 
-  const cl=dailyClimatology(rows),monthTicks=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const cl=dailyClimatology(rows,tz),monthTicks=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
   drawLineChart($("vizClimIrr"),[
     {label:"GHI",values:cl.map(x=>x.ghi)},{label:"DNI",values:cl.map(x=>x.dni)},{label:"DHI",values:cl.map(x=>x.dhi)}
   ],{title:"Pico diario típico",yLabel:"W/m²",xLabels:monthTicks,height:255,zero:true});
@@ -393,23 +395,25 @@ function renderCoreVisuals(){
   const te=temperatureExtremes(rows);drawTemperatureHistogram($("vizTempHist"),te);
   $("vizColdBody").innerHTML=te.cold.map(x=>'<tr><td>T &lt; '+x.threshold+'°C</td><td>'+x.hours+'</td><td>'+fmt(x.pct,2)+'%</td></tr>').join("");
   $("vizHotBody").innerHTML=te.hot.map(x=>'<tr><td>T &gt; '+x.threshold+'°C</td><td>'+x.hours+'</td><td>'+fmt(x.pct,2)+'%</td></tr>').join("");
+  $("vizColdDaysBody").innerHTML=coldDaysByMonth(rows,tz).map(x=>'<tr><td>Tmin &lt; '+x.threshold+'°C</td>'+x.months.map(v=>'<td>'+fmt(v,1)+'</td>').join("")+'<td>'+fmt(x.months.reduce((a,b)=>a+b,0),1)+'</td></tr>').join("");
 
-  const sn=snowSummary(rows);$("vizSnowTotal").textContent=fmt(sn.total,0)+" cm"+(sn.annualize?" / "+fmt(sn.total/sn.years,0)+" cm/año":"");$("vizSnowDays").textContent=sn.days+(sn.annualize?" · "+fmt(sn.days/sn.years,0)+"/año":"");$("vizSnowDepth").textContent=sn.maxDepth==null?"sin dato":fmt(sn.maxDepth,1)+" cm";
+  const sn=snowSummary(rows,tz);$("vizSnowTotal").textContent=fmt(sn.total,0)+" cm"+(sn.annualize?" / "+fmt(sn.total/sn.years,0)+" cm/año":"");$("vizSnowDays").textContent=sn.days+(sn.annualize?" · "+fmt(sn.days/sn.years,0)+"/año":"");$("vizSnowDepth").textContent=sn.maxDepth==null?"sin dato":fmt(sn.maxDepth,1)+" cm";
   drawBarChart($("vizSnowMonth"),[{label:sn.annualize?"Nieve media anual":"Nieve del periodo",values:sn.months}],{title:"Nieve nueva por mes",yLabel:"cm",labels:MONTHS,height:245});
   $("vizSnowNote").textContent=sn.years<.98?"Periodo <1 año: no se anualiza la nieve.":"Periodo "+fmt(sn.years,1)+" años · snowfall en cm; snow_depth en m→cm.";
 
   if(LAST_HAIL)drawHailRisk($("vizHailCurve"),LAST_HAIL);
   if(LAST_WIND_SYNTH)drawLineChart($("vizWindSynth"),[
-    {label:"Máx diario",values:windDailyMax(LAST_WIND_SYNTH.wind_speed,+$("baseYear").value)},
+    {label:"Máx diario",values:windDailyMax(LAST_WIND_SYNTH.wind_speed)},
     {label:"T1 40",values:Array(Math.ceil(LAST_WIND_SYNTH.wind_speed.length/24)).fill(40)},
     {label:"T2 60",values:Array(Math.ceil(LAST_WIND_SYNTH.wind_speed.length/24)).fill(60)}
-  ],{title:"Viento sintético · máximos diarios",yLabel:"m/s",xLabels:MONTHS,height:250,zero:true});
+  ],{title:"Viento sintético · máximos diarios",yLabel:"km/h",xLabels:MONTHS,height:250,zero:true});
   if(LAST_COMPARE)drawBarChart($("vizCompareSources"),comparisonMonthly(LAST_COMPARE.results),{title:"GHI mensual por fuente",yLabel:"kWh/m²",labels:MONTHS,height:270});
 }
 function selectDayShortcut(){
   if(!CURRENT?.rows?.length)return;const v=$("vizDayShortcut").value;if(!v)return;
-  if(v==="ghi")$("vizDay").value=peakDay(CURRENT.rows,"ghi_wm2")||$("vizDay").value;
-  else if(v==="dni")$("vizDay").value=peakDay(CURRENT.rows,"dni_wm2")||$("vizDay").value;
+  const tz=SITE?.tz||"UTC";
+  if(v==="ghi")$("vizDay").value=peakDay(CURRENT.rows,"ghi_wm2",tz)||$("vizDay").value;
+  else if(v==="dni")$("vizDay").value=peakDay(CURRENT.rows,"dni_wm2",tz)||$("vizDay").value;
   else{const mid=new Date(CURRENT.rows[Math.floor(CURRENT.rows.length/2)].t).getUTCFullYear(),md=v==="jun"?"06-21":v==="dec"?"12-21":"03-20";$("vizDay").value=mid+"-"+md;}
   renderDayVisual();
 }
@@ -508,7 +512,7 @@ function doHail(){
 }
 function doWind(){
   try{
-    const r=syntheticWindYear({year:+$("baseYear").value,k:+$("windK").value,A:+$("windA").value,lat:+$("lat").value,seed:+$("windSeed").value,withCyclone:$("windCyclone").checked,withGust:true});LAST_WIND_SYNTH=r;drawLineChart($("vizWindSynth"),[{label:"Máx diario",values:windDailyMax(r.wind_speed,+$("baseYear").value)},{label:"T1 40",values:Array(Math.ceil(r.wind_speed.length/24)).fill(40)},{label:"T2 60",values:Array(Math.ceil(r.wind_speed.length/24)).fill(60)}],{title:"Viento sintético · máximos diarios",yLabel:"m/s",xLabels:MONTHS,height:250,zero:true});
+    const r=syntheticWindYear({year:+$("baseYear").value,k:+$("windK").value,A:+$("windA").value,lat:+$("lat").value,seed:+$("windSeed").value,withCyclone:$("windCyclone").checked,withGust:true});LAST_WIND_SYNTH=r;drawLineChart($("vizWindSynth"),[{label:"Máx diario",values:windDailyMax(r.wind_speed)},{label:"T1 40",values:Array(Math.ceil(r.wind_speed.length/24)).fill(40)},{label:"T2 60",values:Array(Math.ceil(r.wind_speed.length/24)).fill(60)}],{title:"Viento sintético · máximos diarios",yLabel:"km/h",xLabels:MONTHS,height:250,zero:true});
     $("windMean").textContent=fmt(r.mean_ms,2)+" m/s";$("windP99").textContent=fmt(r.p99_ms,2)+" m/s";$("windMax").textContent=fmt(r.max_ms,2)+" m/s";$("windGustMax").textContent=fmt(r.gust_max_ms,2)+" m/s";$("windSynthStatus").textContent=r.not_modeled;$("windSynthStatus").className="statusline ok";
   }catch(e){$("windSynthStatus").textContent=e.message;$("windSynthStatus").className="statusline bad"}
 }
