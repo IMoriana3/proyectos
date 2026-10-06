@@ -73,6 +73,31 @@ check("golden Python→JS selecciona 2021 en los 12 meses",Object.values(goldenT
 check("golden FS meses impares coincide con Python",near(goldenTmy.info.fs_scores[1],0.07801785714285715,1e-12));
 check("golden FS meses pares coincide con Python",near(goldenTmy.info.fs_scores[2],0.07867857142857144,1e-12));
 
+// Golden del suavizado de frontera mensual del core Python:
+// np.convolve(vals,w,"same") / convolve(ones,w,"same"), ventana ±6 h.
+const smoothRows=[];
+for(const year of [2021,2022]){
+  const start=Date.UTC(year,0,1);
+  for(let h=0;h<8760;h++){
+    const t=new Date(start+h*3600000),d=Math.floor(h/24)+1,hour=h%24;
+    const sun=Math.max(0,Math.sin(Math.PI*(hour-6)/12));
+    const season=.75+.25*Math.max(0,Math.sin(2*Math.PI*(d-80)/365));
+    const ghi=800*sun*season,dni=500*sun*season;
+    smoothRows.push({
+      t:t.toISOString(),ghi_wm2:ghi,dni_wm2:dni,
+      dhi_wm2:Math.max(0,ghi-dni*Math.max(0,Math.sin(Math.PI*(hour-6)/12))),
+      temp_c:14+8*Math.sin(2*Math.PI*(h/24-170)/365),
+      dewpoint_c:8,wind_ms:4+Math.sin(2*Math.PI*(h%24)/24)
+    });
+  }
+}
+const smoothTmy=M.buildTmySandia(smoothRows,{baseYear:2023,smooth:true});
+const byT=new Map(smoothTmy.rows.map(r=>[r.t,r]));
+check("golden smoothing selecciona 2021 en los 12 meses",Object.values(smoothTmy.info.months_selected).every(y=>y===2021));
+check("golden smoothing temperatura Jan31 18h",near(byT.get("2023-01-31T18:00:00.000Z")?.temp_c,8.570961793523486,1e-12));
+check("golden smoothing viento Feb01 00h",near(byT.get("2023-02-01T00:00:00.000Z")?.wind_ms,3.919254128517461,1e-12));
+check("golden smoothing viento Feb01 06h",near(byT.get("2023-02-01T06:00:00.000Z")?.wind_ms,4.755285718095659,1e-12));
+
 const bad=years.slice(0,48).map(x=>({...x}));
 bad[12].ghi_wm2=5000;bad[12].dni_wm2=5000;bad[12].dhi_wm2=2000;
 const filtered=M.applyBsrn(bad,40,-3);
