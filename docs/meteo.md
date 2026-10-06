@@ -94,6 +94,64 @@ El «año screening» es solo un atajo para localizar un año cercano a la clima
 
 Puede descargarse y usarse directamente como alternativa externa.
 
+## Paridad visual con Meteo de SolarGPT
+
+La v0.5 incorpora `lib/meteo-viz.js`, una capa Canvas HiDPI sin dependencias externas. El objetivo es que el workbench autónomo no sea visualmente más pobre que la página Meteo de SolarGPT.
+
+Se portan estas familias:
+
+1. **Resumen mensual climatológico**: GHI/DNI/DHI, T media/mín/máx, viento y nieve.
+2. **Serie completa**: media diaria GHI/DNI/DHI.
+3. **Zoom diario**: perfil horario con día pico GHI/DNI y solsticios/equinoccio; usa la hora local del emplazamiento.
+4. **Meteo Cockpit de 6 paneles**:
+   - GHI mensual;
+   - DNI mensual;
+   - DHI mensual;
+   - temperatura mensual media/mín/máx;
+   - viento mensual media/máxima;
+   - índice de claridad `kt = haz_horiz / (haz_horiz + DHI)`.
+5. **Climatología diaria DOY**:
+   - picos GHI/DNI/DHI;
+   - banda térmica;
+   - viento típico y máximo absoluto, con T1=40 km/h y T2=60 km/h.
+6. **Rosa de los vientos**:
+   - 16 sectores;
+   - bins de velocidad `<5`, `5–15`, `15–30`, `30–50`, `50–80`, `>80 km/h`;
+   - tabla de horas/año y porcentaje por banda.
+7. **Temperaturas extremas**:
+   - histograma;
+   - horas/año bajo 0/-5/-10/-15/-20/-30 °C;
+   - horas/año sobre 25/30/35/40 °C;
+   - climatología mensual de días con Tmin bajo 0/-5/-10/-20 °C.
+8. **Nieve**:
+   - nieve nueva mensual;
+   - acumulado del periodo;
+   - días con nieve;
+   - manto máximo cuando `snow_depth` existe.
+9. **Granizo**: curva acumulada de `P(≥1)` con banda λ÷2,5 … λ×2,5.
+10. **Viento sintético**: máximo diario en km/h y umbrales T1/T2.
+11. **Comparación de fuentes**: GHI mensual de cada proveedor en una misma gráfica.
+
+Las agrupaciones mensuales/diarias que dependen del calendario usan la **zona horaria del emplazamiento**, no UTC, cuando SolarGPT también lo hace.
+
+### Informes
+
+El informe HTML incrusta las visualizaciones disponibles como PNG base64. El fichero descargado queda autocontenido y puede imprimirse a PDF sin red.
+
+### Guard de regresión
+
+`tests/test_meteo_browser.mjs` comprueba:
+
+- agregados de las familias visuales;
+- rosa de 16 sectores y suma 100 %;
+- unidades km/h;
+- TZ local;
+- nieve, extremos, `kt` y heladas;
+- presencia de todos los canvas;
+- render real en Chromium mediante diversidad de píxeles;
+- curva de granizo y viento sintético;
+- exportación de visuales en el informe.
+
 ## QA
 
 El navegador ejecuta:
