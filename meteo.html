@@ -4,304 +4,399 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#132238">
 <title>Análisis meteorológico — Factiun</title>
+<script src="lib/xlsx.full.min.js"></script>
 <style>
-:root{--bg:#0E1826;--p:#132238;--p2:#101D30;--ph:#1A2D48;--line:#27405F;--tx:#DCE3EB;--mut:#8C9AAB;--a:#F09030;--b:#68C0D8;--r:#E84858;--silver:#B8C3CE;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color-scheme:dark}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-variant-numeric:tabular-nums}a{color:var(--a)}
-header{padding:14px 22px;border-bottom:2px solid var(--a);background:var(--p);position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-header h1{margin:0;font-size:1.05rem;letter-spacing:.10em;text-transform:uppercase}header p{margin:3px 0 0;color:var(--mut);font-size:.78rem}.headcopy{flex:1;min-width:280px}.engine{display:flex;align-items:center;gap:7px;font-size:.72rem;color:var(--mut)}.led{width:8px;height:8px;background:var(--r)}.engine.on .led{background:var(--a)}.engine.on{color:var(--tx)}
-.wrap{max-width:1550px;margin:auto;padding:18px}.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px}.card{background:var(--p);border:1px solid var(--line);padding:14px;min-width:0}.span3{grid-column:span 3}.span4{grid-column:span 4}.span5{grid-column:span 5}.span6{grid-column:span 6}.span7{grid-column:span 7}.wide{grid-column:1/-1}
-.card h2{font-size:.74rem;text-transform:uppercase;letter-spacing:.13em;color:var(--mut);margin:0 0 10px}.card h3{font-size:.88rem;margin:13px 0 7px}.big{font-size:1.8rem;color:var(--a);font-family:ui-monospace,monospace}.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.k{font-size:.66rem;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}.v{font-family:ui-monospace,monospace;margin-top:2px}.src,.note{font-size:.73rem;color:var(--mut);line-height:1.5}.note strong{color:var(--tx)}
-input,select,button{width:100%;padding:8px 9px;background:var(--p2);color:var(--tx);border:1px solid var(--line);font:inherit}button{cursor:pointer;color:var(--a)}button:hover{border-color:var(--a);background:var(--ph)}button.secondary{color:var(--tx)}button:disabled{opacity:.45;cursor:not-allowed}.actions{display:flex;gap:7px;flex-wrap:wrap}.actions button{width:auto;min-width:130px}
-table{width:100%;border-collapse:collapse;font-size:.76rem}th,td{padding:6px 7px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}th{color:var(--mut);font-size:.64rem;text-transform:uppercase;letter-spacing:.06em;position:sticky;top:0;background:var(--p)}.tablewrap{overflow:auto;max-height:360px;border:1px solid var(--line)}tr.pick td{color:var(--a);background:rgba(240,144,48,.06)}
-.pill{display:inline-block;border:1px solid var(--line);padding:3px 7px;margin:2px;font-size:.68rem;color:var(--mut)}.pill b{color:var(--tx)}.consumer a{text-decoration:none}.statusline{padding:8px 10px;background:var(--p2);border-left:3px solid var(--line);font-size:.72rem;color:var(--mut);margin-top:8px}.statusline.ok{border-color:var(--a);color:var(--tx)}.statusline.bad{border-color:var(--r)}
-.bar{height:7px;background:var(--p2);border:1px solid var(--line);margin-top:5px}.bar i{display:block;height:100%;background:var(--a);width:0}.metricgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}.metric{background:var(--p2);padding:9px}.metric b{display:block;color:var(--a);font-family:ui-monospace,monospace;font-size:1rem;margin-top:4px}
-.checks{display:flex;gap:12px;flex-wrap:wrap}.checks label{font-size:.75rem;color:var(--mut)}.checks input{width:auto;vertical-align:-1px}.sectiontitle{grid-column:1/-1;margin:14px 0 -2px;font-size:.78rem;color:var(--silver);text-transform:uppercase;letter-spacing:.16em;border-bottom:1px solid var(--line);padding-bottom:7px}
-pre{font-size:.69rem;white-space:pre-wrap;word-break:break-word;background:var(--p2);padding:10px;border:1px solid var(--line);max-height:250px;overflow:auto}
-@media(max-width:1050px){.span3,.span4,.span5,.span6,.span7{grid-column:span 6}}@media(max-width:680px){.span3,.span4,.span5,.span6,.span7{grid-column:1/-1}.row,.row3,.metricgrid{grid-template-columns:1fr 1fr}header{position:static}}
+:root{--bg:#0E1826;--p:#132238;--p2:#101D30;--ph:#1A2D48;--line:#27405F;--tx:#DCE3EB;--mut:#8C9AAB;--a:#F09030;--b:#68C0D8;--r:#E84858;--ok:#62C88A;--silver:#B8C3CE;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--bg);color:var(--tx);font-variant-numeric:tabular-nums}a{color:var(--a)}
+header{padding:11px max(2vw,18px);border-bottom:2px solid var(--a);background:var(--p);position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{margin:0;font-size:1.02rem;letter-spacing:.10em;text-transform:uppercase}header p{margin:3px 0 0;color:var(--mut);font-size:.76rem}.headcopy{flex:1;min-width:300px}.badge{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--p2);padding:5px 9px;font-size:.7rem;color:var(--mut)}.badge i{width:7px;height:7px;background:var(--ok);display:inline-block}.badge strong{color:var(--tx)}
+.wrap{width:min(2560px,96vw);margin:0 auto;padding:15px 0 45px}.grid{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:11px}.card{background:var(--p);border:1px solid var(--line);padding:13px;min-width:0}.span4{grid-column:span 4}.span5{grid-column:span 5}.span6{grid-column:span 6}.span7{grid-column:span 7}.span8{grid-column:span 8}.span9{grid-column:span 9}.span10{grid-column:span 10}.span11{grid-column:span 11}.wide{grid-column:1/-1}
+.card h2{font-size:.72rem;text-transform:uppercase;letter-spacing:.13em;color:var(--mut);margin:0 0 9px}.big{font-size:1.75rem;color:var(--a);font-family:ui-monospace,monospace}.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.row4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.k{font-size:.64rem;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}.v{font-family:ui-monospace,monospace;margin-top:2px}.note{font-size:.71rem;color:var(--mut);line-height:1.45}.note strong{color:var(--tx)}
+input,select,button{width:100%;padding:7px 8px;background:var(--p2);color:var(--tx);border:1px solid var(--line);font:inherit;font-size:.78rem}button{cursor:pointer;color:var(--a)}button:hover{border-color:var(--a);background:var(--ph)}button.secondary{color:var(--tx)}button:disabled{opacity:.45;cursor:not-allowed}.actions{display:flex;gap:6px;flex-wrap:wrap}.actions button{width:auto;min-width:118px}
+table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}th{color:var(--mut);font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;position:sticky;top:0;background:var(--p)}.tablewrap{overflow:auto;max-height:340px;border:1px solid var(--line)}tr.pick td{color:var(--a);background:rgba(240,144,48,.06)}
+.pill{display:inline-block;border:1px solid var(--line);padding:3px 7px;margin:2px;font-size:.67rem;color:var(--mut)}.pill b{color:var(--tx)}.consumer a{text-decoration:none}.statusline{padding:7px 9px;background:var(--p2);border-left:3px solid var(--line);font-size:.7rem;color:var(--mut);margin-top:7px;min-height:30px}.statusline.ok{border-color:var(--ok);color:var(--tx)}.statusline.bad{border-color:var(--r);color:var(--tx)}.statusline.work{border-color:var(--a);color:var(--tx)}
+.bar{height:7px;background:var(--p2);border:1px solid var(--line);margin-top:5px}.bar i{display:block;height:100%;background:var(--a);width:0}.metricgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}.metric{background:var(--p2);padding:8px;min-width:0}.metric b{display:block;color:var(--a);font-family:ui-monospace,monospace;font-size:.94rem;margin-top:3px;overflow:hidden;text-overflow:ellipsis}.checks{display:flex;gap:12px;flex-wrap:wrap}.checks label{font-size:.72rem;color:var(--mut)}.checks input{width:auto;vertical-align:-1px}.sectiontitle{grid-column:1/-1;margin:13px 0 -2px;font-size:.74rem;color:var(--silver);text-transform:uppercase;letter-spacing:.16em;border-bottom:1px solid var(--line);padding-bottom:6px}
+.projectrow{display:grid;grid-template-columns:minmax(260px,1.5fr) minmax(100px,.55fr) minmax(100px,.55fr);gap:7px}.projectmeta{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.projectmeta span{border:1px solid var(--line);background:var(--p2);padding:3px 6px;font-size:.67rem;color:var(--mut)}.projectmeta b{color:var(--tx);font-weight:600}
+.sourcestatus{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.sourcechip{border:1px solid var(--line);padding:6px 8px;background:var(--p2);font-size:.68rem;color:var(--mut)}.sourcechip b{display:block;color:var(--tx);font-size:.72rem}.sourcechip.on{border-left:3px solid var(--ok)}.sourcechip.wait{border-left:3px solid var(--a)}
+@media(max-width:1450px){.span4{grid-column:span 8}.span5,.span6,.span7,.span8,.span9,.span10,.span11{grid-column:span 8}}
+@media(max-width:820px){.wrap{width:96vw}.span4,.span5,.span6,.span7,.span8,.span9,.span10,.span11{grid-column:1/-1}.row3,.row4,.metricgrid,.sourcestatus{grid-template-columns:1fr 1fr}.projectrow{grid-template-columns:1fr 1fr}.projectrow>label:first-child{grid-column:1/-1}header{position:static}}
+@media(max-width:520px){.row,.row3,.row4,.metricgrid,.sourcestatus,.projectrow{grid-template-columns:1fr}.projectrow>label:first-child{grid-column:auto}}
 </style>
 </head>
 <body>
 <header>
-  <div class="headcopy"><h1>☁ Análisis meteorológico</h1><p>Centro meteo de SolarGPT: forecast, históricos, TMY, comparación de fuentes, descargas, informes y datos para el resto de herramientas.</p></div>
-  <div class="engine" id="engineState"><span class="led"></span><span id="engineText">motor: comprobando…</span></div>
-  <button id="engineCfg" style="width:auto;padding:6px 9px">Motor SolarGPT</button>
+  <div class="headcopy"><h1>☁ Análisis meteorológico</h1><p>Weather Workbench autónomo de Factiun · históricos, TMY, QA, fuentes, adaptación, descargas e informes.</p></div>
+  <span class="badge"><i></i><span><strong>Autónomo</strong> · navegador</span></span>
+  <span class="badge">meteo-core JS <b id="coreVer">—</b></span>
   <a href="index.html" style="font-size:.72rem">← Panel</a>
 </header>
 
 <main class="wrap"><section class="grid">
   <div class="sectiontitle">Emplazamiento · fuente · periodo</div>
-  <div class="card span4">
-    <h2>Emplazamiento</h2>
-    <div class="row"><label><span class="k">Latitud</span><input id="lat" type="number" step="0.0001" value="42.8125"></label><label><span class="k">Longitud</span><input id="lon" type="number" step="0.0001" value="-1.6458"></label></div>
-    <div class="statusline" id="siteStatus">Coordenadas libres. Después se conectará también al Plant Package.</div>
+
+  <div class="card span6">
+    <h2>Proyecto / emplazamiento</h2>
+    <div class="projectrow">
+      <label><span class="k">Nuestros proyectos</span><select id="plantSel"><option value="">Cargando cartera…</option></select></label>
+      <label><span class="k">Latitud</span><input id="lat" type="number" step="0.0001" value="41.5763"></label>
+      <label><span class="k">Longitud</span><input id="lon" type="number" step="0.0001" value="-0.7981"></label>
+    </div>
+    <div class="projectmeta" id="projectMeta"></div>
+    <div class="statusline" id="siteStatus">La lista usa <code>factiun_plantas</code> y, si falta, lee la semilla de la Cartera del propio repo.</div>
   </div>
-  <div class="card span4">
+
+  <div class="card span5">
     <h2>Histórico canónico</h2>
     <div class="row3">
       <label><span class="k">Fuente</span><select id="source"><option value="openmeteo">Open-Meteo / ERA5</option><option value="pvgis">PVGIS hourly</option><option value="nasa">NASA POWER</option></select></label>
       <label><span class="k">Desde</span><input id="y0" type="number" min="1980" max="2100" value="2015"></label>
       <label><span class="k">Hasta</span><input id="y1" type="number" min="1980" max="2100" value="2025"></label>
     </div>
-    <div class="statusline">El motor cachea por fuente + sitio + rango. Repetir un análisis no vuelve a descargarlo.</div>
+    <div class="statusline">Cada año descargado queda cacheado por el navegador cuando el proveedor permite Cache Storage.</div>
   </div>
-  <div class="card span4">
+
+  <div class="card span5">
     <h2>Acciones principales</h2>
-    <div class="actions"><button id="nowBtn">Ahora / forecast</button><button id="yearsBtn">Analizar años</button><button id="tmyBtn">Construir TMY</button></div>
-    <div class="statusline" id="workStatus">La vista instantánea funciona sin motor. Histórico/TMY usa el core SolarGPT para no duplicar algoritmos.</div>
+    <div class="actions"><button id="nowBtn">Ahora / forecast</button><button id="yearsBtn">Analizar años</button><button id="tmyBtn">Construir TMY</button><button id="clearCache" class="secondary">Vaciar caché</button></div>
+    <div class="statusline" id="workStatus">No requiere servidor ni Colab.</div>
   </div>
 
   <div class="sectiontitle">Ahora / forecast</div>
-  <div class="card span3"><h2>Régimen solar</h2><div class="big" id="ghi">—</div><div class="k">GHI W/m²</div><div class="row"><div><div class="k">DNI / FDIR</div><div class="v" id="dni">—</div></div><div><div class="k">DHI</div><div class="v" id="dhi">—</div></div></div><div class="k" style="margin-top:10px">Prob. difusa / overcast</div><div class="bar"><i id="bo"></i></div><div class="v" id="over">—</div></div>
-  <div class="card span3"><h2>Viento</h2><div class="big" id="wind">—</div><div class="k">m/s a 10 m</div><div class="row"><div><div class="k">Ráfaga</div><div class="v" id="gust">—</div></div><div><div class="k">Dirección</div><div class="v" id="wd">—</div></div></div><div class="k" style="margin-top:10px">Riesgo stow predictivo</div><div class="bar"><i id="bw"></i></div><div class="v" id="wrisk">—</div></div>
-  <div class="card span3"><h2>Atmósfera</h2><div class="row"><div><div class="k">Temperatura</div><div class="v" id="temp">—</div></div><div><div class="k">Punto rocío</div><div class="v" id="dew">—</div></div><div><div class="k">Precipitación</div><div class="v" id="rain">—</div></div><div><div class="k">Nubosidad</div><div class="v" id="cloud">—</div></div></div><div class="k" style="margin-top:10px">Proxy convectivo / granizo</div><div class="bar"><i id="bh"></i></div><div class="v" id="hail">—</div></div>
-  <div class="card span3"><h2>WeatherNext 3</h2><p class="note"><strong>Forecast probabilístico.</strong> Se integra por el mismo contrato y nunca sustituye HSU/SCADA en safety.</p><label><span class="k">Importar resumen JSON</span><input type="file" id="wn" accept=".json,application/json"></label><div class="statusline" id="wnStatus">Adapter preparado. Conexión live pendiente de acceso WeatherNext/Google Cloud.</div></div>
+  <div class="card span4"><h2>Régimen solar</h2><div class="big" id="ghi">—</div><div class="k">GHI W/m²</div><div class="row"><div><div class="k">DNI / FDIR</div><div class="v" id="dni">—</div></div><div><div class="k">DHI</div><div class="v" id="dhi">—</div></div></div><div class="k" style="margin-top:9px">Prob. difusa / overcast</div><div class="bar"><i id="bo"></i></div><div class="v" id="over">—</div></div>
+  <div class="card span4"><h2>Viento</h2><div class="big" id="wind">—</div><div class="k">m/s a 10 m</div><div class="row"><div><div class="k">Ráfaga</div><div class="v" id="gust">—</div></div><div><div class="k">Dirección</div><div class="v" id="wd">—</div></div></div><div class="k" style="margin-top:9px">Riesgo stow predictivo</div><div class="bar"><i id="bw"></i></div><div class="v" id="wrisk">—</div></div>
+  <div class="card span4"><h2>Atmósfera</h2><div class="row"><div><div class="k">Temperatura</div><div class="v" id="temp">—</div></div><div><div class="k">Punto rocío</div><div class="v" id="dew">—</div></div><div><div class="k">Precipitación</div><div class="v" id="rain">—</div></div><div><div class="k">Nubosidad</div><div class="v" id="cloud">—</div></div></div><div class="k" style="margin-top:9px">Proxy convectivo / granizo</div><div class="bar"><i id="bh"></i></div><div class="v" id="hail">—</div></div>
+  <div class="card span4"><h2>WeatherNext 3</h2><p class="note"><strong>Forecast probabilístico.</strong> La tarjeta funciona sin él; cuando haya acceso live entrará por el mismo contrato.</p><label><span class="k">Importar resumen JSON</span><input type="file" id="wn" accept=".json,application/json"></label><div class="statusline" id="wnStatus">Importación JSON disponible · live pendiente de credenciales Google.</div></div>
 
   <div class="sectiontitle">Buscador de años · TMY</div>
-  <div class="card span7">
+  <div class="card span10">
     <h2>Años históricos</h2>
     <div class="metricgrid"><div class="metric">Años<b id="nYears">—</b></div><div class="metric">Año screening<b id="repYear">—</b></div><div class="metric">Fuente<b id="histSource">—</b></div><div class="metric">Filas<b id="histRows">—</b></div></div>
-    <div class="metricgrid" style="margin-top:7px"><div class="metric">QA canónico<b id="qaStatus">—</b></div><div class="metric">BSRN retiradas<b id="qaBsrn">—</b></div><div class="metric">NaN irradiancia<b id="qaNan">—</b></div><div class="metric">Hash dataset<b id="qaHash" style="font-size:.72rem">—</b></div></div>
-    <p class="note">El “año screening” solo ayuda a localizar años cercanos a la mediana. <strong>No es el TMY.</strong> El TMY de SolarGPT selecciona mes a mes mediante Sandia/Finkelstein-Schafer. El histórico pasa por QA BSRN/provenance antes de mostrarse.</p>
+    <div class="metricgrid" style="margin-top:6px"><div class="metric">QA canónico<b id="qaStatus">—</b></div><div class="metric">BSRN retiradas<b id="qaBsrn">—</b></div><div class="metric">Hallazgos<b id="qaFindings">—</b></div><div class="metric">Hash dataset<b id="qaHash" style="font-size:.69rem">—</b></div></div>
+    <p class="note">El “año screening” es solo un cribado anual por cercanía a las medianas. <strong>No es el TMY.</strong> El TMY Sandia selecciona mes a mes.</p>
     <div class="tablewrap"><table><thead><tr><th>Año</th><th>GHI</th><th>DNI</th><th>DHI</th><th>T media</th><th>Viento</th><th>Precip.</th><th>Completitud</th><th>Dist.</th></tr></thead><tbody id="yearsBody"><tr><td colspan="9">Pulsa “Analizar años”.</td></tr></tbody></table></div>
   </div>
-  <div class="card span5">
+  <div class="card span6">
     <h2>Typical Meteorological Year</h2>
     <div class="row"><label><span class="k">Método</span><select id="tmyMode"><option value="sandia">Mis años · Sandia / FS</option><option value="pvgis">PVGIS TMY</option></select></label><label><span class="k">Año base índice</span><input id="baseYear" type="number" value="2023"></label></div>
-    <div class="metricgrid" style="margin-top:10px"><div class="metric">Método<b id="tmyMethod">—</b></div><div class="metric">Filas<b id="tmyRows">—</b></div><div class="metric">GHI<b id="tmyGhi">—</b></div><div class="metric">Años fuente<b id="tmyNyears">—</b></div></div>
-    <div class="tablewrap" style="margin-top:10px;max-height:250px"><table><thead><tr><th>Mes</th><th>Año elegido</th><th>FS</th></tr></thead><tbody id="tmyBody"><tr><td colspan="3">Sin TMY calculado.</td></tr></tbody></table></div>
+    <div class="metricgrid" style="margin-top:8px"><div class="metric">Método<b id="tmyMethod">—</b></div><div class="metric">Filas<b id="tmyRows">—</b></div><div class="metric">GHI<b id="tmyGhi">—</b></div><div class="metric">Años fuente<b id="tmyNyears">—</b></div></div>
+    <div class="tablewrap" style="margin-top:8px;max-height:250px"><table><thead><tr><th>Mes</th><th>Año elegido</th><th>FS</th></tr></thead><tbody id="tmyBody"><tr><td colspan="3">Sin TMY calculado.</td></tr></tbody></table></div>
   </div>
 
   <div class="sectiontitle">Comparativa multi-fuente</div>
-  <div class="card span5">
+  <div class="card span6">
     <h2>PVGIS · NASA · Open-Meteo</h2>
     <div class="checks"><label><input type="checkbox" class="cmp" value="PVGIS-SARAH3" checked> PVGIS-SARAH3</label><label><input type="checkbox" class="cmp" value="PVGIS-ERA5"> PVGIS-ERA5</label><label><input type="checkbox" class="cmp" value="NASA-POWER" checked> NASA POWER</label><label><input type="checkbox" class="cmp" value="Open-Meteo ERA5" checked> Open-Meteo ERA5</label></div>
     <p><button id="compareBtn">Descargar y comparar fuentes</button></p>
     <div class="metricgrid"><div class="metric">RMS GHI<b id="rmsGhi">—</b></div><div class="metric">RMS Tamb<b id="rmsTemp">—</b></div><div class="metric">RMS viento<b id="rmsWind">—</b></div><div class="metric">Fallos<b id="cmpFail">—</b></div></div>
-    <p class="note">El RMS GHI puede alimentar la incertidumbre meteo del P50/P90, como ya hace SolarGPT.</p>
+    <p class="note">El RMS de GHI sigue siendo una señal útil de incertidumbre meteo para P50/P90.</p>
   </div>
-  <div class="card span7"><h2>Resumen por fuente</h2><div class="tablewrap"><table><thead><tr><th>Fuente</th><th>GHI kWh/m²·a</th><th>DNI</th><th>DHI</th><th>T media °C</th><th>Viento m/s</th></tr></thead><tbody id="cmpBody"><tr><td colspan="6">Sin comparativa.</td></tr></tbody></table></div></div>
+  <div class="card span10"><h2>Resumen por fuente</h2><div class="tablewrap"><table><thead><tr><th>Fuente</th><th>GHI kWh/m²·a</th><th>DNI</th><th>DHI</th><th>T media °C</th><th>Viento m/s</th></tr></thead><tbody id="cmpBody"><tr><td colspan="6">Sin comparativa.</td></tr></tbody></table></div></div>
 
-  <div class="sectiontitle">QA avanzado · riesgos climáticos · adaptación</div>
-  <div class="card span6">
-    <h2>QA avanzado del dataset</h2>
-    <p class="note">Mismos oráculos del core: plausibilidad física, cierre de componentes, climatología PVGIS y detección de convención horaria.</p>
-    <p><button id="qaBtn">Ejecutar QA avanzado</button></p>
-    <div class="metricgrid"><div class="metric">Semáforo<b id="qaGate">—</b></div><div class="metric">PVGIS anual Δ<b id="qaPvgis">—</b></div><div class="metric">Desfase<b id="qaShift">—</b></div><div class="metric">Fiable<b id="qaReliable">—</b></div></div>
-    <div class="tablewrap" style="margin-top:10px;max-height:220px"><table><thead><tr><th>Check</th><th>Severidad</th><th>Detalle</th><th>Valor</th></tr></thead><tbody id="qaBody"><tr><td colspan="4">Sin ejecutar.</td></tr></tbody></table></div>
+  <div class="sectiontitle">QA avanzado</div>
+  <div class="card span9">
+    <h2>Plausibilidad · climatología PVGIS · convención horaria</h2>
+    <div class="actions"><button id="qaBtn">Ejecutar QA avanzado</button></div>
+    <div class="metricgrid" style="margin-top:8px"><div class="metric">Semáforo<b id="qaGate">—</b></div><div class="metric">PVGIS anual Δ<b id="qaPvgis">—</b></div><div class="metric">Desfase<b id="qaShift">—</b></div><div class="metric">Fiable<b id="qaReliable">—</b></div></div>
+    <div class="tablewrap" style="margin-top:8px;max-height:220px"><table><thead><tr><th>Check</th><th>Severidad</th><th>Detalle</th><th>Valor</th></tr></thead><tbody id="qaBody"><tr><td colspan="4">Sin ejecutar.</td></tr></tbody></table></div>
   </div>
-  <div class="card span6">
+  <div class="card span7">
     <h2>Estadística canónica</h2>
     <div class="tablewrap" style="max-height:300px"><table><thead><tr><th>Variable</th><th>Min</th><th>Max</th><th>Media</th><th>P50</th><th>P99</th><th>NaN</th><th>Ceros</th></tr></thead><tbody id="statsBody"><tr><td colspan="8">Se calcula con QA avanzado.</td></tr></tbody></table></div>
-    <p class="note">Sirve para detectar unidades erróneas, outliers y series degradadas antes de construir TMY o simular.</p>
   </div>
 
-  <div class="card span4">
+  <div class="sectiontitle">Riesgos climáticos · adaptación</div>
+  <div class="card span5">
     <h2>Riesgo climatológico de granizo</h2>
     <div class="row"><label><span class="k">Vida útil años</span><input id="hailLife" type="number" value="25" min="1" max="60"></label><label><span class="k">λ manual opcional</span><input id="hailLambda" type="number" step="0.01" min="0" placeholder="vacío = climatología"></label></div>
     <p><button id="hailBtn">Evaluar riesgo de diseño</button></p>
     <div class="metricgrid"><div class="metric">Nivel<b id="hailTier">—</b></div><div class="metric">λ/año<b id="hailLamOut">—</b></div><div class="metric">Retorno<b id="hailReturn">—</b></div><div class="metric">P vida útil<b id="hailLifeP">—</b></div></div>
-    <div class="statusline" id="hailStatus">Es riesgo climatológico de diseño, no detección horaria ni orden de stow.</div>
+    <div class="statusline" id="hailStatus">Riesgo climatológico de diseño; no detección horaria ni orden de stow.</div>
   </div>
-
-  <div class="card span4">
+  <div class="card span5">
     <h2>Viento sintético · fallback declarado</h2>
     <div class="row3"><label><span class="k">Weibull k</span><input id="windK" type="number" step="0.1" value="2.0"></label><label><span class="k">Escala A m/s</span><input id="windA" type="number" step="0.1" value="6.5"></label><label><span class="k">Seed</span><input id="windSeed" type="number" value="42"></label></div>
     <label class="note"><input id="windCyclone" type="checkbox" style="width:auto"> incluir escenario ciclónico sintético</label>
     <p><button id="windSynthBtn">Generar año sintético</button></p>
     <div class="metricgrid"><div class="metric">Media<b id="windMean">—</b></div><div class="metric">P99<b id="windP99">—</b></div><div class="metric">Máx<b id="windMax">—</b></div><div class="metric">Ráfaga máx<b id="windGustMax">—</b></div></div>
-    <div class="statusline" id="windSynthStatus">Nunca se presenta como medida ni se usa para informe bankable.</div>
+    <div class="statusline" id="windSynthStatus">Nunca se presenta como medida ni se usa para un informe bankable.</div>
   </div>
-
-  <div class="card span4">
+  <div class="card span6">
     <h2>Adaptación de sitio</h2>
     <label><span class="k">CSV medido en planta</span><input id="adaptFile" type="file" accept=".csv,.txt"></label>
-    <div class="row3" style="margin-top:7px"><label><span class="k">Columna medida</span><input id="adaptCol" placeholder="vacío = autodetectar"></label><label><span class="k">TZ</span><input id="adaptTz" value="UTC"></label><label><span class="k">Método</span><select id="adaptMethod"><option value="bias">bias</option><option value="regression">regression</option><option value="quantile">quantile</option></select></label></div>
+    <div class="row3" style="margin-top:7px"><label><span class="k">Columna medida</span><input id="adaptCol" placeholder="vacío = primera numérica"></label><label><span class="k">TZ</span><input id="adaptTz" value="UTC"></label><label><span class="k">Método</span><select id="adaptMethod"><option value="bias">bias</option><option value="regression">regression</option><option value="quantile">quantile</option></select></label></div>
     <label class="note"><input id="adaptMonthly" type="checkbox" checked style="width:auto"> coeficientes mes a mes</label>
-    <p><button id="adaptBtn">Adaptar serie larga al sitio</button></p>
-    <div class="metricgrid"><div class="metric">MBE antes→después<b id="adaptMbe">—</b></div><div class="metric">RMSE<b id="adaptRmse">—</b></div><div class="metric">R²<b id="adaptR2">—</b></div><div class="metric">σ irradiancia<b id="adaptSigma">—</b></div></div>
-    <div class="statusline" id="adaptStatus">La incertidumbre residual puede sustituir el 3 % de catálogo en P90 cuando hay solapamiento medido suficiente.</div>
+    <div class="actions" style="margin-top:8px"><button id="adaptBtn">Adaptar serie larga</button><button id="adaptUse" class="secondary" disabled>Usar corregida</button></div>
+    <div class="metricgrid" style="margin-top:8px"><div class="metric">MBE antes→después<b id="adaptMbe">—</b></div><div class="metric">RMSE<b id="adaptRmse">—</b></div><div class="metric">R²<b id="adaptR2">—</b></div><div class="metric">σ irradiancia<b id="adaptSigma">—</b></div></div>
+    <div class="statusline" id="adaptStatus">La incertidumbre residual puede alimentar P90 cuando hay solapamiento medido suficiente.</div>
   </div>
 
-  <div class="sectiontitle">Importar · validar · otras fuentes</div>
+  <div class="sectiontitle">Importar · preparar dataset · fuentes</div>
   <div class="card span6">
     <h2>Importar meteo propio / PVSyst</h2>
-    <div class="row"><label><span class="k">Fichero</span><input id="meteoFile" type="file" accept=".csv,.xlsx,.xls,.xlsm"></label><label><span class="k">Zona horaria de entrada</span><input id="tzInput" value="UTC" placeholder="UTC / Europe/Madrid"></label></div>
-    <p><button id="importBtn">Importar y normalizar con SolarGPT</button></p>
-    <div class="statusline" id="importStatus">CSV con timestamp + variables canónicas/aliases, o Excel exportado por PVSyst.</div>
-    <div class="metricgrid" style="margin-top:10px"><div class="metric">Origen<b id="impOrigin">—</b></div><div class="metric">Filas<b id="impRows">—</b></div><div class="metric">Columnas<b id="impCols">—</b></div><div class="metric">Año screening<b id="impYear">—</b></div></div>
+    <div class="row"><label><span class="k">Fichero</span><input id="meteoFile" type="file" accept=".csv,.xlsx,.xls,.xlsm"></label><label><span class="k">Zona horaria entrada</span><input id="tzInput" value="UTC" placeholder="UTC / Europe/Madrid"></label></div>
+    <p><button id="importBtn">Importar y normalizar</button></p>
+    <div class="statusline" id="importStatus">CSV con timestamp + variables reconocibles, o Excel exportado por PVSyst. El fichero no sale del navegador.</div>
+    <div class="metricgrid" style="margin-top:8px"><div class="metric">Origen<b id="impOrigin">—</b></div><div class="metric">Filas<b id="impRows">—</b></div><div class="metric">Columnas<b id="impCols">—</b></div><div class="metric">Año screening<b id="impYear">—</b></div></div>
   </div>
-  <div class="card span6">
-    <h2>Catálogo de fuentes SolarGPT</h2>
-    <div class="tablewrap" style="max-height:260px"><table><thead><tr><th>Fuente</th><th>Tipo</th><th>Uso</th><th>Estado</th></tr></thead><tbody>
-      <tr><td>Open-Meteo / ERA5</td><td>Histórico + forecast</td><td>Multianual, TMY propio, operación</td><td>Gratis · canónico</td></tr>
-      <tr><td>PVGIS</td><td>TMY + hourly</td><td>Recurso solar, contraste</td><td>Gratis · canónico</td></tr>
-      <tr><td>NASA POWER</td><td>Histórico/clima</td><td>Fallback y contraste</td><td>Gratis · canónico</td></tr>
-      <tr><td>WeatherNext 3</td><td>Forecast ensemble</td><td>P10/P50/P90, riesgo predictivo</td><td>Adapter · acceso pendiente</td></tr>
-      <tr><td>CAMS Radiation</td><td>Satélite</td><td>Irradiancia/DNI de contraste</td><td>Opcional · credencial en motor</td></tr>
-      <tr><td>NSRDB / NREL</td><td>TMY + años</td><td>Américas / validación</td><td>Opcional · key gratuita en motor</td></tr>
-      <tr><td>Solcast</td><td>Live / forecast corto</td><td>Validación reciente</td><td>Opcional · nunca para TMY multianual</td></tr>
-      <tr><td>PVSyst Excel / CSV</td><td>Fichero</td><td>Careo bancable</td><td>Importable aquí</td></tr>
-    </tbody></table></div>
-    <p class="note">Las credenciales de CAMS/NSRDB/Solcast se quedan en el motor SolarGPT. <strong>Nunca</strong> se guardan en GitHub Pages.</p>
+  <div class="card span5">
+    <h2>Interpolar / preparar</h2>
+    <div class="row"><label><span class="k">Dataset</span><select id="prepWhich"><option value="current">Histórico activo</option><option value="tmy">TMY</option></select></label><label><span class="k">Paso</span><select id="prepStep"><option value="1">1 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></label></div>
+    <div class="actions" style="margin-top:8px"><button id="prepBtn">Interpolar</button><button id="prepDl" class="secondary" disabled>Descargar preparado</button></div>
+    <div class="metricgrid" style="margin-top:8px"><div class="metric">Antes<b id="prepBefore">—</b></div><div class="metric">Después<b id="prepAfter">—</b></div><div class="metric">Paso<b id="prepStepOut">—</b></div><div class="metric">Δ GHI<b id="prepDelta">—</b></div></div>
+    <p class="note">Guardrail de navegador: no genera más de 650.000 filas. Para multi-año, construye primero un TMY.</p>
+  </div>
+  <div class="card span5">
+    <h2>Estado de fuentes</h2>
+    <div class="sourcestatus">
+      <div class="sourcechip on"><b>Open-Meteo</b>histórico + forecast</div>
+      <div class="sourcechip on"><b>PVGIS</b>hourly + TMY</div>
+      <div class="sourcechip on"><b>NASA POWER</b>hourly + climatología</div>
+      <div class="sourcechip wait"><b>WeatherNext 3</b>JSON ahora · live después</div>
+    </div>
+    <p class="note">CAMS, NSRDB y Solcast requieren credenciales. No se incrustan claves en la página pública.</p>
   </div>
 
   <div class="sectiontitle">Descargas · informe · reutilización</div>
-  <div class="card span6">
+  <div class="card span8">
     <h2>Descargar datos</h2>
-    <div class="actions"><button id="dlHist">CSV histórico</button><button id="dlSandia">CSV TMY Sandia</button><button id="dlPvgis">CSV TMY PVGIS</button></div>
-    <p class="note">CSV canónico con timestamp UTC para reutilizar offline o cargar en otros módulos. La descarga histórica conserva el rango seleccionado.</p>
+    <div class="actions"><button id="dlHist">CSV histórico activo</button><button id="dlTmy">CSV TMY</button><button id="dlJson" class="secondary">JSON activo</button></div>
+    <p class="note">Todo sale del dataset que está realmente en memoria; no se reconstruye al descargar.</p>
   </div>
-  <div class="card span6">
+  <div class="card span8">
     <h2>Informe meteorológico</h2>
-    <div class="row"><label><span class="k">Título</span><input id="reportTitle" value="Informe meteorológico SolarGPT"></label><label><span class="k">TMY incluido</span><select id="reportTmy"><option value="sandia">Sandia / FS</option><option value="pvgis">PVGIS</option></select></label></div>
-    <p><button id="reportBtn">Generar y descargar informe</button></p>
-    <p class="note">Informe trazable con serie anual, TMY, años/meses seleccionados y provenance/QA. HTML imprimible directamente a PDF.</p>
+    <div class="row"><label><span class="k">Título</span><input id="reportTitle" value="Informe meteorológico Factiun"></label><label><span class="k">Incluir TMY</span><select id="reportTmy"><option value="yes">Sí</option><option value="no">No</option></select></label></div>
+    <p><button id="reportBtn">Generar informe HTML</button></p>
+    <p class="note">Incluye emplazamiento, fuente, periodo, tabla anual, QA/hash y selección Sandia cuando exista. Se imprime a PDF desde el navegador.</p>
   </div>
 
   <div class="card wide consumer">
     <h2>Consumidores del mismo contrato meteorológico</h2>
-    <span class="pill"><a href="sim-viento.html">Viento / granizo</a></span>
-    <span class="pill"><a href="sim-solar.html">Sol & simulación</a></span>
-    <span class="pill"><a href="https://imoriana3.github.io/cobertura-zigbee/overcast.html">Radiación difusa</a></span>
-    <span class="pill"><b>Producción 3D</b></span><span class="pill"><b>Batería</b></span><span class="pill"><b>Winter mode</b></span><span class="pill"><b>Gemelo digital</b></span><span class="pill"><b>SCADA</b></span><span class="pill"><b>P50/P90</b></span>
-    <p class="note">Objetivo de migración: ninguna de estas herramientas vuelve a implementar fetch, unidades o normalización. Todas consumen el dominio meteo canónico de SolarGPT.</p>
+    <span class="pill"><a href="sim-viento.html">Viento / granizo</a></span><span class="pill"><a href="sim-solar.html">Sol & simulación</a></span><span class="pill"><a href="https://imoriana3.github.io/cobertura-zigbee/overcast.html">Radiación difusa</a></span><span class="pill"><b>Producción 3D</b></span><span class="pill"><b>Batería</b></span><span class="pill"><b>Winter mode</b></span><span class="pill"><b>Gemelo digital</b></span><span class="pill"><b>SCADA</b></span><span class="pill"><b>P50/P90</b></span>
+    <p class="note">La siguiente fase es que estas herramientas consuman este mismo contrato/dataset en vez de mantener fetchers meteorológicos propios.</p>
   </div>
-
-  <div class="card wide"><h2>Contrato</h2><div class="tablewrap" style="max-height:none"><table><thead><tr><th>Familia</th><th>Variables</th><th>Fuentes</th><th>Uso</th></tr></thead><tbody>
-  <tr><td>Solar</td><td>GHI · FDIR · DNI · DHI · cloud layers</td><td>WeatherNext 3 · Open-Meteo · PVGIS · NASA</td><td>POA · producción · difusa · batería</td></tr>
-  <tr><td>Viento</td><td>10 m · 100 m · dirección · ráfaga</td><td>WeatherNext 3 · Open-Meteo · HSU/SCADA</td><td>pre-stow · stow local · abanderamiento</td></tr>
-  <tr><td>Hidrometeoros</td><td>precipitación · nieve · CAPE · hail proxy</td><td>Open-Meteo · WeatherNext · sensores</td><td>granizo · winter · recovery</td></tr>
-  <tr><td>Térmica</td><td>Tª · rocío · RH · presión</td><td>todas</td><td>producción · térmico · diagnóstico</td></tr>
-  <tr><td>Probabilístico</td><td>P10 · P25 · P50 · P75 · P90</td><td>WeatherNext 3</td><td>forecast · riesgo · incertidumbre</td></tr>
-  </tbody></table></div></div>
 </section></main>
 
 <script type="module">
 import {fetchOpenMeteo,fromWeatherNextSummary} from "./lib/meteo.js";
+import {
+  WORKBENCH_VERSION,loadFactiunPlants,fetchHistorical,prepareDataset,annualStats,
+  buildTmySandia,fetchPvgisTmy,compareSources,plausibility,statsTable,
+  validateMonthlyVsPvgis,estimateTimestampShift,hailRisk,syntheticWindYear,
+  csvToTable,tableToMeteo,csvToMeteo,workbookToMeteo,adaptSite,interpolateRows,
+  toCsv,downloadText,reportHtml,clearHttpCache
+} from "./lib/meteo-browser.js";
+
 const $=id=>document.getElementById(id);
 const fmt=(v,d=1)=>v==null||!isFinite(v)?"—":Number(v).toFixed(d);
 const esc=s=>String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
-let engineOK=false, lastYears=null, lastTmy=null;
-function engineBase(){try{return (localStorage.getItem("factiun_engine_url")||"http://127.0.0.1:8765").replace(/\/+$/,"")}catch(e){return "http://127.0.0.1:8765"}}
-function payload(){return {lat:+$("lat").value,lon:+$("lon").value,year_start:+$("y0").value,year_end:+$("y1").value,source:$("source").value}}
-function saveSite(){try{localStorage.setItem("factiun_meteo_site",JSON.stringify(payload()))}catch(e){}}
-function restoreSite(){try{const x=JSON.parse(localStorage.getItem("factiun_meteo_site")||"null");if(!x)return;if(x.lat!=null)$("lat").value=x.lat;if(x.lon!=null)$("lon").value=x.lon;if(x.year_start)$("y0").value=x.year_start;if(x.year_end)$("y1").value=x.year_end;if(x.source)$("source").value=x.source}catch(e){}}
+$("coreVer").textContent=WORKBENCH_VERSION;
+
+let PLANTS=[],SITE=null,CURRENT=null,TMY=null,ADAPTED=null,PREPARED=null;
+
 function status(msg,kind=""){$("workStatus").textContent=msg;$("workStatus").className="statusline "+kind}
-async function health(){
-  const box=$("engineState");
-  try{const r=await fetch(engineBase()+"/health",{cache:"no-store"});if(!r.ok)throw 0;const j=await r.json();engineOK=!!j.ok;box.classList.toggle("on",engineOK);$("engineText").textContent="motor: "+(engineOK?"conectado":"respuesta sin core");}
-  catch(e){engineOK=false;box.classList.remove("on");$("engineText").textContent="motor: no conectado"}
+function cfg(){return {lat:+$("lat").value,lon:+$("lon").value,year_start:+$("y0").value,year_end:+$("y1").value,source:$("source").value}}
+function siteName(){return SITE?((SITE.code?SITE.code+" · ":"")+SITE.name):"Manual"}
+function plantKey(p){return p?String(p.carteraCode||p.code||p.name||""):"";}
+function saveCfg(){
+  try{localStorage.setItem("factiun_meteo_cfg",JSON.stringify({...cfg(),plant:plantKey(SITE)}));}catch(e){}
 }
-$("engineCfg").onclick=()=>{const cur=engineBase();const u=prompt("URL del motor SolarGPT\nLocal: http://127.0.0.1:8765\nColab: pega el túnel https://…trycloudflare.com",cur);if(u===null)return;try{localStorage.setItem("factiun_engine_url",u.trim()||"http://127.0.0.1:8765")}catch(e){}health()};
-async function post(path,data){
-  if(!engineOK)throw new Error("Conecta el motor SolarGPT para esta operación.");
-  const r=await fetch(engineBase()+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
-  if(!r.ok)throw new Error((await r.text()).slice(0,500)||("HTTP "+r.status));
-  return r.json();
+function restoreCfg(){
+  try{
+    const x=JSON.parse(localStorage.getItem("factiun_meteo_cfg")||"null");if(!x)return "";
+    if(x.lat!=null)$("lat").value=x.lat;if(x.lon!=null)$("lon").value=x.lon;
+    if(x.year_start)$("y0").value=x.year_start;if(x.year_end)$("y1").value=x.year_end;if(x.source)$("source").value=x.source;
+    return String(x.plant||"");
+  }catch(e){return ""}
 }
-async function blobPost(path,data){
-  if(!engineOK)throw new Error("Conecta el motor SolarGPT para descargar.");
-  const r=await fetch(engineBase()+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
-  if(!r.ok)throw new Error((await r.text()).slice(0,500)||("HTTP "+r.status));
-  const blob=await r.blob();let name="descarga";
-  const cd=r.headers.get("Content-Disposition")||"";const m=cd.match(/filename="?([^"]+)"?/i);if(m)name=m[1];
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+async function initPlants(){
+  const saved=restoreCfg();
+  PLANTS=await loadFactiunPlants();
+  const q=(new URLSearchParams(location.search).get("planta")||"").toLowerCase();
+  $("plantSel").innerHTML='<option value="">Manual / coordenadas libres</option>'+PLANTS.map(p=>{
+    const ready=Number.isFinite(p.lat)&&Number.isFinite(p.lon);
+    return '<option value="'+esc(plantKey(p))+'"'+(ready?'':' disabled')+'>'+
+      esc((p.code?p.code+" · ":"")+p.name+(p.location?" — "+p.location:"")+(ready?"":" — sin coordenadas"))+'</option>';
+  }).join("");
+  let idx=-1;
+  if(q)idx=PLANTS.findIndex(p=>(p.name+" "+p.code+" "+p.carteraCode).toLowerCase().includes(q));
+  if(idx<0&&saved)idx=PLANTS.findIndex(p=>plantKey(p)===saved);
+  if(!(idx>=0&&PLANTS[idx]&&Number.isFinite(PLANTS[idx].lat)&&Number.isFinite(PLANTS[idx].lon)))
+    idx=PLANTS.findIndex(p=>p.name==="El Burgo I"&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+  if(idx>=0){$("plantSel").value=plantKey(PLANTS[idx]);choosePlant(idx,false);}else choosePlant(-1,false);
 }
-function paint(m){
+function choosePlant(i,refresh=true){
+  SITE=(i>=0&&PLANTS[i])?PLANTS[i]:null;
+  if(SITE&&Number.isFinite(SITE.lat)&&Number.isFinite(SITE.lon)){$("lat").value=SITE.lat.toFixed(5);$("lon").value=SITE.lon.toFixed(5);}
+  $("projectMeta").innerHTML=SITE?[
+    SITE.code?'<span>Proyecto <b>'+esc(SITE.code)+'</b></span>':'',
+    SITE.carteraCode&&SITE.carteraCode!==SITE.code?'<span>Cartera <b>'+esc(SITE.carteraCode)+'</b></span>':'',
+    SITE.pdc!=null?'<span>Pdc <b>'+fmt(SITE.pdc,3)+' MWp</b></span>':'',
+    SITE.location?'<span><b>'+esc(SITE.location)+'</b></span>':'',
+    SITE.tz?'<span>TZ <b>'+esc(SITE.tz)+'</b></span>':''
+  ].join(""):'<span><b>Manual</b> · coordenadas libres</span>';
+  $("siteStatus").textContent=SITE?"Emplazamiento tomado de la Cartera / factiun_plantas. Puedes retocar lat/lon sin alterar la ficha de planta.":"Modo manual.";
+  saveCfg();if(refresh)loadNow();
+}
+$("plantSel").onchange=()=>{const key=$("plantSel").value;choosePlant(key===""?-1:PLANTS.findIndex(p=>plantKey(p)===key));};
+["lat","lon","y0","y1","source"].forEach(id=>$(id).addEventListener("change",saveCfg));
+
+function paintNow(m){
   $("ghi").textContent=fmt(m.ghi_wm2,0);$("dni").textContent=fmt(m.dni_wm2??m.fdir_wm2,0)+" W/m² "+(m.dni_wm2!=null?"DNI":m.fdir_wm2!=null?"FDIR":"");$("dhi").textContent=fmt(m.dhi_wm2,0)+" W/m²";
   $("wind").textContent=fmt(m.wind_ms,1);$("gust").textContent=fmt(m.gust_ms,1)+" m/s";$("wd").textContent=fmt(m.wind_dir_deg,0)+"°";
   $("temp").textContent=fmt(m.temp_c,1)+" °C";$("dew").textContent=fmt(m.dewpoint_c,1)+" °C";$("rain").textContent=fmt(m.precip_mm,1)+" mm";$("cloud").textContent=fmt((m.cloud_total??0)*100,0)+" %";
-  const set=(id,v)=>{$(id).textContent=v==null?"—":Math.round(v*100)+" %"};set("over",m.overcast_probability);set("wrisk",m.wind_stow_risk);set("hail",m.hail_risk_proxy);
+  const set=(id,v)=>$(id).textContent=v==null?"—":Math.round(v*100)+" %";
+  set("over",m.overcast_probability);set("wrisk",m.wind_stow_risk);set("hail",m.hail_risk_proxy);
   $("bo").style.width=((m.overcast_probability||0)*100)+"%";$("bw").style.width=((m.wind_stow_risk||0)*100)+"%";$("bh").style.width=((m.hail_risk_proxy||0)*100)+"%";
 }
 async function loadNow(){
-  saveSite();status("Cargando forecast gratuito…");
-  try{const rows=await fetchOpenMeteo({lat:+$("lat").value,lon:+$("lon").value,forecastDays:3});const now=Date.now();const m=rows.reduce((a,b)=>Math.abs(Date.parse(b.timestamp)-now)<Math.abs(Date.parse(a.timestamp)-now)?b:a,rows[0]);paint(m);status((m.source||"meteo")+" · "+m.timestamp+" · schema "+m.schema_version,"ok");}
-  catch(e){status(e.message,"bad")}
+  status("Cargando forecast de "+siteName()+"…","work");
+  try{
+    const rows=await fetchOpenMeteo({lat:+$("lat").value,lon:+$("lon").value,forecastDays:3});
+    const now=Date.now(),m=rows.reduce((a,b)=>Math.abs(Date.parse(b.timestamp)-now)<Math.abs(Date.parse(a.timestamp)-now)?b:a,rows[0]);
+    paintNow(m);status("Forecast Open-Meteo · "+m.timestamp+" · "+siteName(),"ok");
+  }catch(e){status("Forecast: "+e.message,"bad")}
 }
-function renderYears(j){
-  lastYears=j;$("nYears").textContent=j.n_years??"—";$("repYear").textContent=j.representative_year_screening??"—";$("histSource").textContent=j.source??"—";$("histRows").textContent=(j.rows??0).toLocaleString("es-ES");
-  $("qaStatus").textContent=j.qa?.status??"—";$("qaBsrn").textContent=j.qa?.bsrn_outliers_removed??"—";$("qaNan").textContent=j.qa?.nan_pct!=null?fmt(j.qa.nan_pct,2)+"%":"—";$("qaHash").textContent=j.provenance?.data_hash??"—";
-  $("yearsBody").innerHTML=(j.annual||[]).map(r=>'<tr class="'+(r.year===j.representative_year_screening?"pick":"")+'"><td>'+r.year+'</td><td>'+fmt(r.ghi_kwh_m2,0)+'</td><td>'+fmt(r.dni_kwh_m2,0)+'</td><td>'+fmt(r.dhi_kwh_m2,0)+'</td><td>'+fmt(r.temp_mean_c,1)+'</td><td>'+fmt(r.wind_mean_ms,2)+'</td><td>'+fmt(r.precip_mm,0)+'</td><td>'+fmt(r.completeness_pct,1)+'%</td><td>'+fmt((r.annual_closeness_score??0)*100,2)+'%</td></tr>').join("")||'<tr><td colspan="9">Sin años.</td></tr>';
+
+function renderYears(ds){
+  const a=ds.annual||[];
+  $("nYears").textContent=a.length;$("repYear").textContent=ds.representative_year_screening??"—";$("histSource").textContent=ds.source||"—";$("histRows").textContent=(ds.rows?.length||0).toLocaleString("es-ES");
+  $("qaStatus").textContent=ds.qa?.status||"—";$("qaBsrn").textContent=ds.qa?.bsrn_outliers_removed??"—";$("qaFindings").textContent=(ds.qa?.findings||[]).length;$("qaHash").textContent=ds.qa?.hash||"—";
+  $("yearsBody").innerHTML=a.map(r=>'<tr class="'+(r.year===ds.representative_year_screening?"pick":"")+'"><td>'+r.year+'</td><td>'+fmt(r.ghi_kwh_m2,0)+'</td><td>'+fmt(r.dni_kwh_m2,0)+'</td><td>'+fmt(r.dhi_kwh_m2,0)+'</td><td>'+fmt(r.temp_mean_c,1)+'</td><td>'+fmt(r.wind_mean_ms,2)+'</td><td>'+fmt(r.precip_mm,0)+'</td><td>'+fmt(r.completeness_pct,1)+'%</td><td>'+fmt((r.annual_closeness_score??0)*100,2)+'%</td></tr>').join("")||'<tr><td colspan="9">Sin datos.</td></tr>';
 }
 async function analyzeYears(){
-  saveSite();status("Analizando años con el core SolarGPT…");
-  try{const j=await post("/meteo/years",payload());renderYears(j);status("Histórico analizado. TMY sigue siendo una operación separada.","ok");}
-  catch(e){status(e.message,"bad")}
+  saveCfg();status("Descargando histórico…","work");
+  try{
+    const p=cfg();
+    let raw=await fetchHistorical({...p,progress:(k,n,y)=>status("Descargando "+y+" · "+k+"/"+n+"…","work")});
+    status("Aplicando QA BSRN, plausibilidad y hash…","work");
+    CURRENT=await prepareDataset(raw);ADAPTED=null;PREPARED=null;$("adaptUse").disabled=true;$("prepDl").disabled=true;
+    renderYears(CURRENT);status("Histórico listo · "+CURRENT.rows.length.toLocaleString("es-ES")+" filas · QA "+CURRENT.qa.status,"ok");
+  }catch(e){status("Histórico: "+e.message,"bad")}
 }
-function renderTmy(j){
-  lastTmy=j;const info=j.info||{},sum=j.summary||{};$("tmyMethod").textContent=info.method||j.mode||"—";$("tmyRows").textContent=(j.rows??0).toLocaleString("es-ES");$("tmyGhi").textContent=fmt(sum.ghi_kwh_m2,0)+" kWh/m²";$("tmyNyears").textContent=info.n_years??"—";
-  const ms=info.months_selected||{},fs=info.fs_scores||{};let h="";for(let m=1;m<=12;m++){const y=ms[m]??ms[String(m)],s=fs[m]??fs[String(m)];if(y!=null)h+='<tr><td>'+m+'</td><td>'+y+'</td><td>'+fmt(s,4)+'</td></tr>'}$("tmyBody").innerHTML=h||'<tr><td colspan="3">PVGIS entrega el TMY ya construido; no expone selección Sandia por mes.</td></tr>';
+function renderTmy(){
+  if(!TMY)return;
+  const s=annualStats(TMY.rows).annual[0]||{},i=TMY.info||{};
+  $("tmyMethod").textContent=i.method||TMY.source||"—";$("tmyRows").textContent=TMY.rows.length.toLocaleString("es-ES");$("tmyGhi").textContent=fmt(s.ghi_kwh_m2,0)+" kWh/m²";$("tmyNyears").textContent=i.n_years??"—";
+  let h="";if(i.months_selected)for(let m=1;m<=12;m++)h+='<tr><td>'+m+'</td><td>'+esc(i.months_selected[m]??"—")+'</td><td>'+fmt(i.fs_scores?.[m],4)+'</td></tr>';
+  $("tmyBody").innerHTML=h||'<tr><td colspan="3">TMY proporcionado por PVGIS; no hay selección Sandia por mes.</td></tr>';
 }
 async function buildTmy(){
-  saveSite();status("Construyendo TMY con el motor canónico…");
-  try{const p={...payload(),mode:$("tmyMode").value,base_year:+$("baseYear").value,smooth:true,series:false};const j=await post("/meteo/tmy",p);renderTmy(j);status("TMY construido: "+(j.info?.method||j.mode)+".","ok");}
-  catch(e){status(e.message,"bad")}
+  try{
+    status("Construyendo TMY…","work");
+    if($("tmyMode").value==="pvgis"){
+      const rows=await fetchPvgisTmy(+$("lat").value,+$("lon").value);
+      TMY={source:"PVGIS TMY",lat:+$("lat").value,lon:+$("lon").value,rows,info:{method:"PVGIS TMY",rows:rows.length,n_years:null}};
+    }else{
+      if(!CURRENT)await analyzeYears();
+      if(!CURRENT)throw new Error("no hay histórico activo");
+      const z=buildTmySandia(CURRENT.rows,{baseYear:+$("baseYear").value,smooth:true});
+      TMY={source:"Sandia TMY · "+CURRENT.source,lat:CURRENT.lat,lon:CURRENT.lon,rows:z.rows,info:z.info};
+    }
+    PREPARED=null;$("prepDl").disabled=true;renderTmy();status("TMY listo · "+TMY.rows.length.toLocaleString("es-ES")+" filas","ok");
+  }catch(e){status("TMY: "+e.message,"bad")}
 }
+
 async function compare(){
-  status("Descargando y comparando fuentes…");
-  try{const sources=[...document.querySelectorAll(".cmp:checked")].map(x=>x.value);if(sources.length<1)throw new Error("Selecciona al menos una fuente.");const j=await post("/meteo/compare",{lat:+$("lat").value,lon:+$("lon").value,sources});$("rmsGhi").textContent=j.rms?.ghi_pct!=null?fmt(j.rms.ghi_pct,2)+"%":"—";$("rmsTemp").textContent=j.rms?.tamb_c!=null?fmt(j.rms.tamb_c,2)+" °C":"—";$("rmsWind").textContent=j.rms?.wind_ms!=null?fmt(j.rms.wind_ms,2)+" m/s":"—";$("cmpFail").textContent=(j.failed||[]).length;
-    $("cmpBody").innerHTML=Object.entries(j.annual||{}).map(([n,r])=>'<tr><td>'+esc(n)+'</td><td>'+fmt(r.ghi_kwh_m2,0)+'</td><td>'+fmt(r.dni_kwh_m2,0)+'</td><td>'+fmt(r.dhi_kwh_m2,0)+'</td><td>'+fmt(r.temp_mean_c,1)+'</td><td>'+fmt(r.wind_mean_ms,2)+'</td></tr>').join("")||'<tr><td colspan="6">Ninguna fuente respondió.</td></tr>';status("Comparativa terminada.","ok");}
-  catch(e){status(e.message,"bad")}
+  status("Comparando fuentes…","work");
+  try{
+    const sources=[...document.querySelectorAll(".cmp:checked")].map(x=>x.value);if(sources.length<1)throw new Error("selecciona al menos una fuente");
+    const j=await compareSources(+$("lat").value,+$("lon").value,{openStart:+$("y0").value,openEnd:+$("y1").value,sources});
+    $("rmsGhi").textContent=j.rms.ghi_pct!=null?fmt(j.rms.ghi_pct,2)+"%":"—";$("rmsTemp").textContent=j.rms.tamb_c!=null?fmt(j.rms.tamb_c,2)+" °C":"—";$("rmsWind").textContent=j.rms.wind_ms!=null?fmt(j.rms.wind_ms,2)+" m/s":"—";$("cmpFail").textContent=j.failed.length;
+    $("cmpBody").innerHTML=Object.entries(j.results).map(([n,a])=>{
+      const s=k=>a.reduce((x,r)=>x+(Number.isFinite(r[k])?r[k]:0),0),av=k=>{const v=a.map(r=>r[k]).filter(Number.isFinite);return v.length?v.reduce((x,y)=>x+y,0)/v.length:null};
+      return '<tr><td>'+esc(n)+'</td><td>'+fmt(s("GHI"),0)+'</td><td>'+fmt(s("DNI"),0)+'</td><td>'+fmt(s("DHI"),0)+'</td><td>'+fmt(av("Tamb"),1)+'</td><td>'+fmt(av("Wind"),2)+'</td></tr>';
+    }).join("")||'<tr><td colspan="6">Ninguna fuente respondió.</td></tr>';
+    status(j.failed.length?"Comparativa terminada con "+j.failed.length+" fuente(s) fallida(s).":"Comparativa terminada.","ok");
+  }catch(e){status("Comparativa: "+e.message,"bad")}
 }
-async function dl(dataset){try{status("Preparando descarga…");await blobPost("/meteo/download",{...payload(),dataset,mode:dataset==="tmy_pvgis"?"pvgis":"sandia",base_year:+$("baseYear").value,smooth:true,series:false});status("Descarga generada.","ok")}catch(e){status(e.message,"bad")}}
-async function report(){try{status("Generando informe…");await blobPost("/meteo/report",{...payload(),title:$("reportTitle").value,include_tmy:true,tmy_mode:$("reportTmy").value,base_year:+$("baseYear").value});status("Informe generado. Ábrelo e imprime a PDF si lo necesitas.","ok")}catch(e){status(e.message,"bad")}}
+
 async function advancedQa(){
-  status("Ejecutando QA avanzado…");
   try{
-    const j=await post("/meteo/qa",{...payload(),validate_pvgis_climatology:true,estimate_timestamp_shift:true});
-    $("qaGate").textContent=j.gate||"—";
-    $("qaPvgis").textContent=j.monthly_vs_pvgis?.annual_diff_pct!=null?fmt(j.monthly_vs_pvgis.annual_diff_pct,1)+"%":"—";
-    $("qaShift").textContent=j.timestamp_shift?.shift_min!=null?fmt(j.timestamp_shift.shift_min,1)+" min":"—";
-    $("qaReliable").textContent=j.timestamp_shift?.reliable===true?"sí":j.timestamp_shift?.reliable===false?"no":"—";
-    $("qaBody").innerHTML=(j.findings||[]).map(x=>'<tr><td>'+esc(x.check||x.code||"?")+'</td><td>'+esc(x.severity||"—")+'</td><td style="white-space:normal;text-align:left">'+esc(x.message||"")+'</td><td>'+esc(x.value??"—")+'</td></tr>').join("")||'<tr><td colspan="4">Sin hallazgos: plausibilidad OK.</td></tr>';
-    $("statsBody").innerHTML=Object.entries(j.stats||{}).map(([k,v])=>'<tr><td>'+esc(k)+'</td><td>'+fmt(v.min,2)+'</td><td>'+fmt(v.max,2)+'</td><td>'+fmt(v.mean,2)+'</td><td>'+fmt(v.p50,2)+'</td><td>'+fmt(v.p99,2)+'</td><td>'+fmt(v.nan_pct,2)+'%</td><td>'+fmt(v.zeros_pct,2)+'%</td></tr>').join("")||'<tr><td colspan="8">Sin estadísticas.</td></tr>';
-    status("QA avanzado terminado · semáforo "+(j.gate||"?"),j.gate==="ROJO"?"bad":"ok");
-  }catch(e){status(e.message,"bad")}
+    if(!CURRENT)await analyzeYears();if(!CURRENT)throw new Error("no hay dataset activo");
+    status("QA avanzado: PVGIS + desfase + estadística…","work");
+    const findings=plausibility(CURRENT.rows,CURRENT.lat,CURRENT.lon),pv=await validateMonthlyVsPvgis(CURRENT.rows,CURRENT.lat,CURRENT.lon),shift=estimateTimestampShift(CURRENT.rows,CURRENT.lat,CURRENT.lon),st=statsTable(CURRENT.rows);
+    const gate=findings.some(x=>x.severity==="fail")?"ROJO":findings.some(x=>x.severity==="warn")?"AMARILLO":"VERDE";
+    $("qaGate").textContent=gate;$("qaPvgis").textContent=fmt(pv.annual_diff_pct,1)+"%";$("qaShift").textContent=shift.shift_min!=null?fmt(shift.shift_min,1)+" min":"—";$("qaReliable").textContent=shift.reliable?"sí":"no";
+    $("qaBody").innerHTML=findings.map(x=>'<tr><td>'+esc(x.check)+'</td><td>'+esc(x.severity)+'</td><td style="white-space:normal;text-align:left">'+esc(x.message)+'</td><td>'+esc(x.value??"—")+'</td></tr>').join("")||'<tr><td colspan="4">Sin hallazgos.</td></tr>';
+    $("statsBody").innerHTML=Object.entries(st).map(([k,v])=>'<tr><td>'+esc(k)+'</td><td>'+fmt(v.min,2)+'</td><td>'+fmt(v.max,2)+'</td><td>'+fmt(v.mean,2)+'</td><td>'+fmt(v.p50,2)+'</td><td>'+fmt(v.p99,2)+'</td><td>'+fmt(v.nan_pct,2)+'%</td><td>'+fmt(v.zeros_pct,2)+'%</td></tr>').join("");
+    status("QA avanzado terminado · "+gate+" · PVGIS "+pv.status,"ok");
+  }catch(e){status("QA: "+e.message,"bad")}
 }
-async function hailRisk(){
+
+function doHail(){
   try{
-    $("hailStatus").textContent="Evaluando…";$("hailStatus").className="statusline";
-    const raw=$("hailLambda").value.trim();
-    const j=await post("/meteo/hail-risk",{lat:+$("lat").value,lon:+$("lon").value,design_life_yr:+$("hailLife").value,lambda_override:raw===""?null:+raw});
-    const r=j.risk||{};$("hailTier").textContent=(r.tier||"—").toUpperCase();$("hailLamOut").textContent=fmt(r.lambda_yr,3);$("hailReturn").textContent=r.return_period_yr!=null?fmt(r.return_period_yr,1)+" a":"—";$("hailLifeP").textContent=r.p_lifetime!=null?fmt(r.p_lifetime*100,1)+"%":"—";
-    $("hailStatus").textContent="Fuente: "+(r.source||"—")+" · banda λ "+fmt(r.lambda_lo,3)+"–"+fmt(r.lambda_hi,3)+" /año";$("hailStatus").className="statusline ok";
+    const raw=$("hailLambda").value.trim(),r=hailRisk(+$("lat").value,+$("lon").value,{life:+$("hailLife").value,lambdaOverride:raw===""?null:+raw});
+    $("hailTier").textContent=r.tier.toUpperCase();$("hailLamOut").textContent=fmt(r.lambda_yr,3);$("hailReturn").textContent=isFinite(r.return_period_yr)?fmt(r.return_period_yr,1)+" a":"—";$("hailLifeP").textContent=fmt(r.p_lifetime*100,1)+"%";
+    $("hailStatus").textContent="Fuente: "+r.source+" · banda λ "+fmt(r.lambda_lo,3)+"–"+fmt(r.lambda_hi,3)+" /año";$("hailStatus").className="statusline ok";
   }catch(e){$("hailStatus").textContent=e.message;$("hailStatus").className="statusline bad"}
 }
-async function windSynth(){
+function doWind(){
   try{
-    $("windSynthStatus").textContent="Generando…";$("windSynthStatus").className="statusline";
-    const j=await post("/meteo/wind-synth",{lat:+$("lat").value,year:+$("baseYear").value,k:+$("windK").value,A:+$("windA").value,seed:+$("windSeed").value,with_cyclone:$("windCyclone").checked,with_gust:true});
-    $("windMean").textContent=fmt(j.mean_ms,2)+" m/s";$("windP99").textContent=fmt(j.p99_ms,2)+" m/s";$("windMax").textContent=fmt(j.max_ms,2)+" m/s";$("windGustMax").textContent=fmt(j.gust_max_ms,2)+" m/s";
-    $("windSynthStatus").textContent=j.not_modeled||"Viento sintético generado.";$("windSynthStatus").className="statusline ok";
+    const r=syntheticWindYear({year:+$("baseYear").value,k:+$("windK").value,A:+$("windA").value,lat:+$("lat").value,seed:+$("windSeed").value,withCyclone:$("windCyclone").checked,withGust:true});
+    $("windMean").textContent=fmt(r.mean_ms,2)+" m/s";$("windP99").textContent=fmt(r.p99_ms,2)+" m/s";$("windMax").textContent=fmt(r.max_ms,2)+" m/s";$("windGustMax").textContent=fmt(r.gust_max_ms,2)+" m/s";$("windSynthStatus").textContent=r.not_modeled;$("windSynthStatus").className="statusline ok";
   }catch(e){$("windSynthStatus").textContent=e.message;$("windSynthStatus").className="statusline bad"}
 }
+
+async function importFile(){
+  const file=$("meteoFile").files[0];if(!file){$("importStatus").textContent="Selecciona un fichero.";$("importStatus").className="statusline bad";return}
+  try{
+    $("importStatus").textContent="Importando…";$("importStatus").className="statusline work";
+    let rows,origin;
+    if(/\.csv$/i.test(file.name)){rows=csvToMeteo(await file.text(),{lat:+$("lat").value,lon:+$("lon").value,tz:$("tzInput").value||"UTC"});origin="CSV";}
+    else{const z=workbookToMeteo(globalThis.XLSX,await file.arrayBuffer(),{lat:+$("lat").value,lon:+$("lon").value,tz:$("tzInput").value||"UTC"});rows=z.rows;origin="PVSyst/Excel · "+z.sheet;}
+    if(!rows.length)throw new Error("no se obtuvieron filas");
+    const ys=rows.map(r=>new Date(r.t).getUTCFullYear()),raw={source:origin,source_id:"upload",lat:+$("lat").value,lon:+$("lon").value,year_start:Math.min(...ys),year_end:Math.max(...ys),rows};
+    CURRENT=await prepareDataset(raw);ADAPTED=null;PREPARED=null;renderYears(CURRENT);
+    $("impOrigin").textContent=origin;$("impRows").textContent=CURRENT.rows.length.toLocaleString("es-ES");$("impCols").textContent=Object.keys(CURRENT.rows[0]||{}).length;$("impYear").textContent=CURRENT.representative_year_screening??"—";
+    $("importStatus").textContent=file.name+" · QA "+CURRENT.qa.status+" · dataset activo";$("importStatus").className="statusline ok";status("Fichero importado y convertido en dataset activo.","ok");
+  }catch(e){$("importStatus").textContent=e.message;$("importStatus").className="statusline bad"}
+}
+
 async function siteAdapt(){
   const file=$("adaptFile").files[0];if(!file){$("adaptStatus").textContent="Selecciona el CSV medido.";$("adaptStatus").className="statusline bad";return}
   try{
-    $("adaptStatus").textContent="Adaptando…";$("adaptStatus").className="statusline";
-    const j=await post("/meteo/site-adapt",{...payload(),filename:file.name,content_base64:await fileB64(file),measured_column:$("adaptCol").value.trim()||null,tz_input:$("adaptTz").value||"UTC",long_column:"ghi",method:$("adaptMethod").value,monthly:$("adaptMonthly").checked});
-    const r=j.result||{},b=r.before||{},a=r.after||{},u=j.uncertainty||{};
-    $("adaptMbe").textContent=fmt(b.mbe_pct,1)+"→"+fmt(a.mbe_pct,1)+"%";$("adaptRmse").textContent=fmt(a.rmse_pct,1)+"%";$("adaptR2").textContent=fmt(a.r2,3);$("adaptSigma").textContent=u.irradiance_sigma!=null?fmt(u.irradiance_sigma*100,2)+"%":"—";
-    $("adaptStatus").textContent="Solapamiento "+(r.overlap_months??"—")+" meses / "+(r.overlap_points??"—")+" puntos"+(r.extrapolated?" · EXTRAPOLACIÓN en meses sin medida":"")+".";$("adaptStatus").className="statusline "+(r.extrapolated?"bad":"ok");
+    if(!CURRENT)await analyzeYears();if(!CURRENT)throw new Error("no hay serie larga activa");
+    const tab=csvToTable(await file.text()),headers=(tab[0]||[]).map(String);
+    const tix=headers.findIndex(x=>/^(timestamp|datetime|date|fecha|time|time_utc|hora)$/i.test(x.trim()));
+    if(tix<0)throw new Error("CSV medido sin columna temporal");
+    let cix=$("adaptCol").value.trim()?headers.findIndex(x=>x===$("adaptCol").value.trim()):-1;
+    if(cix<0){
+      for(let j=0;j<headers.length;j++){if(j===tix)continue;const vals=tab.slice(1,30).map(r=>+String(r[j]??"").replace(",",".")).filter(Number.isFinite);if(vals.length>=2){cix=j;break;}}
+    }
+    if(cix<0)throw new Error("no encuentro columna numérica medida");
+    const mini=[["timestamp","GHI"],...tab.slice(1).map(r=>[r[tix],r[cix]])],meas=tableToMeteo(mini,{lat:CURRENT.lat,lon:CURRENT.lon,tz:$("adaptTz").value||"UTC"});
+    const z=adaptSite(CURRENT.rows,meas,{longKey:"ghi_wm2",measuredKey:"ghi_wm2",method:$("adaptMethod").value,monthly:$("adaptMonthly").checked});
+    ADAPTED={...CURRENT,source:CURRENT.source+" → adaptado a sitio",rows:z.rows,adaptation:z.result,uncertainty:z.uncertainty};
+    const b=z.result.before,a=z.result.after,u=z.uncertainty;
+    $("adaptMbe").textContent=fmt(b.mbe_pct,1)+"→"+fmt(a.mbe_pct,1)+"%";$("adaptRmse").textContent=fmt(a.rmse_pct,1)+"%";$("adaptR2").textContent=fmt(a.r2,3);$("adaptSigma").textContent=fmt(u.irradiance_sigma*100,2)+"%";
+    $("adaptStatus").textContent="Columna: "+headers[cix]+" · solapamiento "+z.result.overlap_months+" meses / "+z.result.overlap_points+" puntos"+(z.result.extrapolated?" · EXTRAPOLACIÓN":"");$("adaptStatus").className="statusline "+(z.result.extrapolated?"bad":"ok");$("adaptUse").disabled=false;
   }catch(e){$("adaptStatus").textContent=e.message;$("adaptStatus").className="statusline bad"}
 }
-async function fileB64(file){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]||"");r.onerror=()=>ko(r.error);r.readAsDataURL(file)})}
-async function importFile(){
-  const file=$("meteoFile").files[0];if(!file){$("importStatus").textContent="Selecciona un CSV o Excel PVSyst.";$("importStatus").className="statusline bad";return}
-  try{
-    $("importStatus").textContent="Importando y normalizando…";$("importStatus").className="statusline";
-    const j=await post("/meteo/import",{filename:file.name,content_base64:await fileB64(file),lat:+$("lat").value,lon:+$("lon").value,tz_input:$("tzInput").value||"UTC",series:false});
-    $("impOrigin").textContent=j.origin||"—";$("impRows").textContent=(j.rows??0).toLocaleString("es-ES");$("impCols").textContent=(j.columns||[]).length;$("impYear").textContent=j.representative_year_screening??"—";
-    $("importStatus").textContent=(j.filename||file.name)+" · "+(j.columns||[]).join(", ");$("importStatus").className="statusline ok";
-    if((j.annual||[]).length){renderYears({source:j.origin,n_years:j.annual.length,rows:j.rows,annual:j.annual,representative_year_screening:j.representative_year_screening})}
-  }catch(e){$("importStatus").textContent=e.message;$("importStatus").className="statusline bad"}
+async function useAdapted(){
+  if(!ADAPTED)return;
+  status("Aplicando QA a la serie adaptada…","work");CURRENT=await prepareDataset({...ADAPTED,qa:undefined,annual:undefined,representative_year_screening:undefined});renderYears(CURRENT);$("adaptUse").disabled=true;status("Serie adaptada = dataset activo.","ok");
 }
-$("qaBtn").onclick=advancedQa;$("hailBtn").onclick=hailRisk;$("windSynthBtn").onclick=windSynth;$("adaptBtn").onclick=siteAdapt;
-$("importBtn").onclick=importFile;
-$("nowBtn").onclick=loadNow;$("yearsBtn").onclick=analyzeYears;$("tmyBtn").onclick=buildTmy;$("compareBtn").onclick=compare;$("dlHist").onclick=()=>dl("historical");$("dlSandia").onclick=()=>dl("tmy_sandia");$("dlPvgis").onclick=()=>dl("tmy_pvgis");$("reportBtn").onclick=report;
-$("wn").onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text());const m=fromWeatherNextSummary(Array.isArray(j)?j[0]:j);paint(m);$("wnStatus").textContent="WeatherNext importado · "+(m.timestamp||"sin timestamp");$("wnStatus").className="statusline ok"}catch(err){$("wnStatus").textContent=err.message;$("wnStatus").className="statusline bad"}};
-["lat","lon","y0","y1","source"].forEach(id=>$(id).addEventListener("change",saveSite));
-restoreSite();await health();loadNow();
+
+function prep(){
+  try{
+    const src=$("prepWhich").value==="tmy"?TMY:CURRENT;if(!src)throw new Error($("prepWhich").value==="tmy"?"Construye primero un TMY.":"No hay histórico activo.");
+    const z=interpolateRows(src.rows,{stepMin:+$("prepStep").value});PREPARED={...src,source:src.source+" → "+z.report.step_min+" min",rows:z.rows,interpolation:z.report};
+    $("prepBefore").textContent=z.report.rows_before.toLocaleString("es-ES");$("prepAfter").textContent=z.report.rows_after.toLocaleString("es-ES");$("prepStepOut").textContent=z.report.step_min+" min";$("prepDelta").textContent=z.report.deviation_pct!=null?fmt(z.report.deviation_pct,3)+"%":"—";$("prepDl").disabled=false;status("Dataset interpolado en memoria. Revisa Δ GHI antes de usarlo.","ok");
+  }catch(e){status("Interpolación: "+e.message,"bad")}
+}
+
+function fileB64(file){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]||"");r.onerror=()=>ko(r.error);r.readAsDataURL(file)})}
+
+$("nowBtn").onclick=loadNow;$("yearsBtn").onclick=analyzeYears;$("tmyBtn").onclick=buildTmy;$("compareBtn").onclick=compare;$("qaBtn").onclick=advancedQa;$("hailBtn").onclick=doHail;$("windSynthBtn").onclick=doWind;$("importBtn").onclick=importFile;$("adaptBtn").onclick=siteAdapt;$("adaptUse").onclick=useAdapted;$("prepBtn").onclick=prep;
+$("clearCache").onclick=async()=>{await clearHttpCache();status("Caché HTTP meteorológica vaciada.","ok")};
+$("prepDl").onclick=()=>PREPARED&&downloadText(toCsv(PREPARED.rows),"meteo_preparado.csv","text/csv;charset=utf-8");
+$("dlHist").onclick=()=>CURRENT?downloadText(toCsv(CURRENT.rows),"meteo_"+(CURRENT.year_start??"")+"-"+(CURRENT.year_end??"")+".csv","text/csv;charset=utf-8"):status("No hay histórico activo.","bad");
+$("dlTmy").onclick=()=>TMY?downloadText(toCsv(TMY.rows),"tmy_factiun.csv","text/csv;charset=utf-8"):status("No hay TMY calculado.","bad");
+$("dlJson").onclick=()=>CURRENT?downloadText(JSON.stringify(CURRENT,null,2),"meteo_factiun.json","application/json;charset=utf-8"):status("No hay dataset activo.","bad");
+$("reportBtn").onclick=()=>{if(!CURRENT){status("No hay dataset activo para el informe.","bad");return;}const h=reportHtml({title:$("reportTitle").value,dataset:CURRENT,tmy:$("reportTmy").value==="yes"?TMY:null,siteName:siteName()});downloadText(h,"informe_meteo_"+siteName().replace(/[^\w-]+/g,"_")+".html","text/html;charset=utf-8")};
+$("wn").onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text()),m=fromWeatherNextSummary(Array.isArray(j)?j[0]:j);paintNow(m);$("wnStatus").textContent="WeatherNext importado · "+(m.timestamp||"sin timestamp");$("wnStatus").className="statusline ok"}catch(err){$("wnStatus").textContent=err.message;$("wnStatus").className="statusline bad"}};
+
+await initPlants();
+await loadNow();
 </script>
 </body></html>

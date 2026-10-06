@@ -1,183 +1,175 @@
-# Análisis meteorológico — Weather Workbench transversal
+# Análisis meteorológico — Weather Workbench autónomo
 
 ## Objetivo
 
-La tarjeta **Análisis meteorológico** es la interfaz única del dominio Meteo de SolarGPT/Factiun.
+`meteo.html` es la interfaz meteorológica transversal de Factiun/SolarGPT. Desde v0.4 funciona **directamente en el navegador**: no requiere levantar SolarGPT, Colab ni un servidor local para histórico, TMY, QA, comparación de fuentes, importación, adaptación, descargas o informes.
 
-No es un visor aislado. Debe cubrir el ciclo completo:
+SolarGPT Python sigue siendo la referencia contra la que se certifica el mirror JS; ya no es una dependencia de ejecución de la interfaz.
 
-1. localizar/definir emplazamiento;
-2. obtener forecast, históricos y TMY;
-3. comparar fuentes;
-4. validar/normalizar datos;
-5. buscar años representativos;
-6. construir TMY propio;
-7. importar ficheros de cliente/PVSyst;
-8. descargar datasets canónicos;
-9. generar informes trazables;
-10. alimentar al resto de herramientas SolarGPT.
+## Emplazamientos
 
-## Regla de arquitectura
+El selector reutiliza la misma fuente que el resto de Factiun:
 
-**WEATHER informa. CONTROL decide.**
+1. `localStorage.factiun_plantas`, publicado por la Cartera;
+2. si no existe o está incompleto, la semilla `SEED` de `cartera-tabla.html`.
 
-La capa meteorológica puede anticipar viento, radiación, nubosidad, precipitación o riesgo convectivo, pero no sustituye sensores locales, HSU/SCADA ni interlocks.
+No hay una tercera lista de plantas mantenida a mano. El valor persistido es el código estable de Cartera/proyecto, no la posición del elemento en el desplegable. Se conserva un modo **Manual / coordenadas libres**.
 
-La interfaz no debe reimplementar la física ni los algoritmos meteorológicos del core. Cuando el motor SolarGPT está conectado, la tarjeta llama a sus endpoints; sin motor solo quedan disponibles las funciones que pueden funcionar de manera segura en navegador (forecast Open-Meteo e import de resumen WeatherNext JSON).
+## Arquitectura
 
-## Motor SolarGPT
+```text
+Cartera / factiun_plantas
+          │
+          ▼
+      meteo.html
+          │
+          ▼
+  lib/meteo-browser.js
+          │
+ ┌────────┼─────────┐
+ ▼        ▼         ▼
+Open-    PVGIS     NASA
+Meteo              POWER
+ │
+ ├─ histórico multi-año
+ ├─ QA / BSRN / plausibilidad
+ ├─ TMY Sandia-FS
+ ├─ comparación de fuentes
+ ├─ import CSV / PVSyst
+ ├─ adaptación de sitio
+ ├─ interpolación
+ ├─ granizo / viento sintético
+ ├─ descargas
+ └─ informes
+```
 
-La ampliación de server/app.py expone:
+**WEATHER informa; CONTROL decide.** Forecast, reanálisis y riesgo meteorológico no sustituyen HSU/SCADA ni interlocks de seguridad.
 
-- POST /meteo/years: histórico multi-año + KPIs por año + screening de representatividad.
-- POST /meteo/tmy: TMY propio Sandia/Finkelstein-Schafer o TMY PVGIS.
-- POST /meteo/compare: comparación PVGIS/NASA/Open-Meteo + RMS.
-- POST /meteo/download: CSV histórico o TMY.
-- POST /meteo/report: informe HTML trazable e imprimible a PDF.
-- POST /meteo/import: normalización de CSV y Excel PVSyst.
+## Fuentes sin credenciales
 
-La descarga multi-año usa la caché de solargpt_core.meteo.load_meteo_cached; el TMY propio usa build_tmy_sandia; el TMY PVGIS usa solargpt_core.pvgis.fetch_pvgis_tmy.
+### Open-Meteo / ERA5
 
-## Años y TMY
+- forecast inmediato;
+- histórico horario multi-año;
+- irradiancia, temperatura, rocío, viento, dirección, humedad, presión, precipitación, nieve, CAPE y weather code;
+- caché HTTP del navegador por año.
 
-### Screening de año completo
+### PVGIS
 
-La tabla anual calcula GHI/DNI/DHI, temperatura media, viento, precipitación, completitud y una distancia a las medianas multi-año.
+- histórico horario;
+- TMY;
+- TMY SARAH3 / ERA5 para comparación climatológica.
 
-El año con menor distancia se presenta como **screening** para localizar rápidamente un año representativo.
+### NASA POWER
 
-**No es el TMY.**
+- histórico horario;
+- climatología mensual para comparación.
 
-### TMY canónico
+### WeatherNext 3
 
-El TMY propio usa el método Sandia/Finkelstein-Schafer del core y selecciona el año más típico **mes a mes**. La interfaz muestra los 12 años/meses elegidos y el estadístico FS.
+El contrato distingue **FDIR de DNI**. Hoy puede importarse un resumen JSON. La conexión live queda pendiente de credenciales/acceso Google y no bloquea ninguna otra función.
 
-También puede pedirse el TMY publicado por PVGIS.
+CAMS, NSRDB y Solcast se mantienen como fuentes opcionales futuras: sus credenciales nunca deben quedar embebidas en GitHub Pages.
 
-## Fuentes
+## Histórico y screening anual
 
-| Fuente | Rol | Credenciales | TMY/multianual |
-|---|---|---|---|
-| Open-Meteo / ERA5 | histórico + forecast + fallback | no | sí / TMY propio |
-| PVGIS | TMY + hourly + recurso solar | no | sí |
-| NASA POWER | histórico/climatología + fallback | no | histórico |
-| WeatherNext 3 | forecast ensemble probabilístico | acceso Google | forecast Pxx |
-| CAMS Radiation | irradiancia satélite | credencial en motor | histórico |
-| NSRDB / NREL | TMY + años de validación | key gratuita en motor | sí |
-| Solcast | live/forecast corto | key en motor | no multianual |
-| PVSyst Excel / CSV | fichero de referencia | no | importación |
+El histórico activo se normaliza a un objeto horario canónico y se analiza año a año:
 
-Las credenciales nunca se guardan en GitHub Pages.
+- GHI / DNI / DHI anual;
+- temperatura media;
+- viento medio;
+- precipitación;
+- completitud;
+- distancia a las medianas multi-año.
 
-## Contrato v1
+El «año screening» es solo un atajo para localizar un año cercano a la climatología. **No es el TMY.**
 
-lib/meteo.js representa la capa ligera del navegador. Normaliza:
+## TMY
 
-- GHI
-- FDIR
-- DNI
-- DHI
-- temperatura
-- punto de rocío
-- viento 10 m
-- viento 100 m
-- dirección
-- ráfaga
-- nubosidad por capas
-- precipitación
-- presión
-- P10/P50/P90
-- provenance
+### Sandia / Finkelstein-Schafer
 
-Derivados iniciales:
+`buildTmySandia` selecciona el año más típico **mes a mes** mediante CDF empírica y estadístico FS, usando los pesos contractuales del dominio meteo. La interfaz muestra año elegido y FS para los 12 meses.
 
-- fracción difusa
-- probabilidad de overcast
-- wind watch
-- riesgo predictivo de stow
-- freeze risk
-- proxy convectivo/granizo
+### PVGIS TMY
 
-FDIR y DNI se mantienen separados. WeatherNext FDIR no se renombra a DNI.
+Puede descargarse y usarse directamente como alternativa externa.
+
+## QA
+
+El navegador ejecuta:
+
+- filtro BSRN de dos niveles;
+- negativos y máximos físicos;
+- NaN y completitud;
+- cierre `GHI ≈ DNI·cos(z)+DHI`;
+- rangos de temperatura/viento;
+- climatología mensual contra PVGIS;
+- estimación de desfase horario frente a un clear-sky browser;
+- estadísticas min/max/media/P50/P99;
+- hash SHA-256 corto del dataset preparado.
+
+Las rutinas están escritas para series de cientos de miles de filas sin usar spreads que desborden el stack de JavaScript.
 
 ## Importación
 
-### Excel PVSyst
-
-Se procesa mediante solargpt_core.pvsyst_meteo.load_pvsyst_meteo_xlsx, incluida la detección de hoja/cabecera, aliases, timestamp y reconstrucción de DNI cuando corresponde.
-
 ### CSV
 
-Se admite un CSV con columna temporal y columnas canónicas/aliases reconocidos por SolarGPT. El backend normaliza mediante el core.
+Se detecta delimitador y aliases de timestamp, GHI/DHI/DNI, temperatura y viento. La zona horaria declarada se transforma a UTC.
 
-## Comparativa multi-fuente
+### Excel / PVSyst
 
-Reutiliza solargpt_core.meteo_compare.compare_meteo_sources.
+Se usa SheetJS local (`lib/xlsx.full.min.js`). Se elige la hoja con más datos, se detecta la fila de cabecera y se mapean aliases PVSyst. Si no hay DNI pero sí GHI/DHI o BeamHor, se reconstruye con la geometría solar del sitio.
 
-Muestra:
+El fichero permanece en el navegador.
 
-- GHI/DNI/DHI anual por fuente;
-- temperatura y viento;
-- RMS de GHI;
-- RMS térmico;
-- RMS de viento;
-- fuentes fallidas explícitamente.
+## Adaptación de sitio
 
-El RMS de GHI conserva su papel como input de incertidumbre meteo para P50/P90.
+Una serie medida puede corregir la serie larga mediante:
 
-## QA avanzado y herramientas climáticas
+- bias;
+- regresión;
+- quantile mapping;
+- coeficientes globales o mensuales.
 
-El workbench reutiliza también funciones que ya existían en la página Meteo de SolarGPT:
+Se muestran MBE, RMSE, R², meses/puntos de solapamiento, meses extrapolados y una sigma residual para el presupuesto P90.
 
-- **Plausibilidad** con `solargpt_core.plausibility.check_meteo`: índice temporal, huecos, rangos físicos, cierre GHI≈DNI·cos(z)+DHI, energía diaria/anual y cadencia.
-- **Climatología PVGIS** mediante `validate_meteo_monthly_vs_pvgis`.
-- **Desfase horario** mediante `estimate_timestamp_shift`, útil para detectar convenciones end-of-hour/centro de intervalo.
-- **Riesgo climatológico de granizo** mediante `solargpt_core.hail.assess_hail`. Es riesgo de diseño, no detección horaria.
-- **Viento sintético** mediante `solargpt_core.wind_synth.synthetic_wind_year`. Queda declarado como fallback de simulación y nunca como dato medido/bankable.
-- **Adaptación de sitio** mediante `solargpt_core.site_adaptation.adapt_series`: corrige la serie larga con medición solapada y devuelve MBE, RMSE, R², KSI, extrapolación estacional y la incertidumbre residual que puede alimentar P90.
+## Interpolación
 
-## Descarga e informes
+Puede preparar una serie a 1, 5, 10 o 15 minutos con guardrail de 650.000 filas.
 
-La tarjeta permite descargar:
+Se interpolan variables continuas (irradiancia, temperatura, viento, humedad, presión). **No se fabrica resolución subhoraria de acumulados**: precipitación, lluvia, nieve nueva y showers permanecen solo en sus timestamps originales y el informe lo declara.
 
-- histórico multi-año canónico CSV;
-- TMY Sandia CSV;
-- TMY PVGIS CSV.
+## Riesgos y sintéticos
 
-El informe meteorológico incluye:
+- Granizo: riesgo climatológico Poisson de diseño con override de lambda y banda de incertidumbre. No es detector operativo.
+- Viento sintético: Weibull + AR(1) + modulación diurna/estacional + cola ciclónica opcional. Siempre se declara como sintético y no bankable.
 
-- emplazamiento y periodo;
-- KPIs año a año;
-- screening anual;
-- TMY y meses seleccionados;
-- FS;
-- provenance/QA;
-- metodología y advertencia forecast ≠ safety.
+## Descargas e informe
 
-## Consumidores
+Se descarga exactamente el dataset activo en memoria:
 
-El mismo dominio meteo debe alimentar:
+- histórico;
+- TMY;
+- preparado/interpolado;
+- JSON.
 
-- simulador de radiación difusa;
-- viento / abanderamiento;
-- granizo;
+El informe HTML incorpora emplazamiento, fuente, periodo, tabla anual, QA/hash y selección de meses del TMY. Puede imprimirse a PDF desde el navegador.
+
+## Paridad y certificación
+
+El browser core es un **mirror** del dominio Python, no una nueva autoridad física. El CI de `proyectos` vigila contratos puros y el comportamiento real de la página. Queda como P0 de certificación cerrar golden datasets diferenciales JS↔Python para TMY, QA y extremos antes de declarar equivalencia numérica completa.
+
+## Consumidores pendientes de migración
+
+El objetivo es que consuman el mismo contrato meteorológico:
+
+- radiación difusa;
+- viento / granizo;
 - winter mode;
 - batería;
 - producción 3D;
-- POA / generación;
 - backtracking energético;
 - gemelo digital;
-- SCADA y plausibilidad de sensores;
+- SCADA;
 - P50/P90;
-- bankable runs;
 - QA/certificación.
-
-## Migración pendiente
-
-1. Migrar sim-viento.html al contrato común sin cambiar máquinas de estado.
-2. Migrar radiación difusa.
-3. Migrar producción 3D y batería.
-4. Hacer que gemelo y SCADA consuman el mismo objeto normalizado.
-5. Conectar WeatherNext 3 live mediante backend/ETL gratuito y caché por planta.
-6. Exponer CAMS/NSRDB/Solcast desde el workbench cuando estén configurados en el motor.
-7. Añadir tests de parity de unidades, timestamps, provenance y fallos de fuente.
