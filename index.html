@@ -1173,33 +1173,34 @@ const PROJECTS = [
   {
     name: "Análisis meteorológico",
     status: "build",
-    objetivo: "Weather Workbench transversal de SolarGPT/Factiun: históricos multi-año, búsqueda de años representativos, TMY Sandia/Finkelstein-Schafer y PVGIS, comparación de fuentes, forecast, importación PVSyst/CSV, descargas e informes. Es la interfaz única del dominio meteo que alimentará producción, difusa, viento/granizo, batería, winter mode, SCADA, gemelo y P50/P90.",
-    stack: "HTML · SolarGPT engine API · solargpt_core.meteo · TMY Sandia/FS · PVGIS · Open-Meteo/ERA5 · NASA POWER · WeatherNext 3 · PVSyst import",
+    objetivo: "Weather Workbench autónomo de Factiun: selecciona nuestras plantas desde la Cartera, descarga y audita históricos, busca años representativos, construye TMY Sandia/Finkelstein-Schafer o PVGIS, compara fuentes, importa PVSyst/CSV, adapta series a medida de planta, interpola, descarga datasets y genera informes. Funciona directamente en el navegador; SolarGPT queda como referencia de paridad, no como servidor obligatorio.",
+    stack: "HTML · ES modules · lib/meteo-browser.js · SheetJS local · Open-Meteo/ERA5 · PVGIS · NASA POWER · WeatherNext 3 adapter · Cache Storage",
     url: "meteo.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-10-06",
-    version: "0.3.0",
+    version: "0.4.0",
     docId: "meteo",
     docUrl: "",
     uso: [
-      "Selecciona emplazamiento, fuente y rango de años; analiza GHI/DNI/DHI, temperatura, viento, precipitación, completitud y localiza años cercanos a la mediana.",
-      "Construye un TMY propio con Sandia/Finkelstein-Schafer —selección mes a mes— o descarga el TMY de PVGIS; muestra año seleccionado y FS de cada mes.",
-      "Compara PVGIS-SARAH3, PVGIS-ERA5, NASA POWER y Open-Meteo; el RMS GHI conserva su papel como entrada de incertidumbre P50/P90.",
-      "Descarga histórico o TMY en CSV, importa CSV/Excel PVSyst mediante el loader canónico y genera un informe meteorológico trazable.",
-      "Ejecuta QA avanzado, validación vs climatología PVGIS, detección de desfase horario, riesgo climatológico de granizo, viento sintético declarado y adaptación de sitio con medición.",
-      "Sin motor sigue disponible el forecast gratuito de Open-Meteo y la importación de resúmenes WeatherNext; con motor usa siempre el core, sin duplicar algoritmos en JS."
+      "Elige una planta del desplegable de la Cartera —o modo manual— y la ficha toma sus coordenadas, potencia, emplazamiento y zona horaria.",
+      "Descarga históricos multi-año de Open-Meteo, PVGIS o NASA; aplica QA BSRN, plausibilidad, hash y screening anual sin levantar ningún motor.",
+      "Construye TMY propio Sandia/Finkelstein-Schafer mes a mes o TMY PVGIS; muestra los 12 años elegidos y sus FS.",
+      "Compara PVGIS-SARAH3, PVGIS-ERA5, NASA POWER y Open-Meteo; importa CSV/Excel PVSyst y adapta GHI a medición del sitio.",
+      "Ejecuta QA avanzado, climatología PVGIS, desfase horario, granizo de diseño, viento sintético declarado e interpolación con guardrail de memoria.",
+      "Descarga el dataset que realmente está en memoria y genera un informe meteorológico trazable imprimible a PDF."
     ],
     pendientes: [
-      { done:true, text:"Workbench: años, TMY Sandia/PVGIS, comparación multi-fuente, CSV e informe conectados al API del motor." },
-      { done:true, text:"Importación CSV y Excel PVSyst mediante el loader canónico de SolarGPT." },
-      { done:false, text:"Conectar WeatherNext 3 live mediante backend/ETL gratuito y caché por planta; ahora el adapter admite resumen JSON." },
-      { done:false, text:"Exponer CAMS/NSRDB/Solcast en el workbench cuando sus credenciales estén configuradas en el motor." },
+      { done:true, text:"Eliminar dependencia obligatoria del motor SolarGPT: histórico, TMY, QA, importación, adaptación, descargas e informes corren en navegador." },
+      { done:true, text:"Selector de emplazamiento conectado a factiun_plantas + semilla canónica de la Cartera y layout a 96vw / 2560 px." },
+      { done:false, text:"Conectar WeatherNext 3 live mediante acceso Google; mientras tanto admite resumen JSON sin bloquear el resto del workbench." },
+      { done:false, text:"CAMS/NSRDB/Solcast: habilitar opcionalmente sin exponer credenciales en GitHub Pages." },
       { done:false, text:"Migrar viento/granizo, radiación difusa, producción, batería, gemelo y SCADA para consumir exclusivamente el contrato meteo común." },
-      { done:false, text:"Certificar parity de unidades, timestamps, provenance y fallos de fuente entre todos los consumidores." }
+      { done:false, text:"Cerrar certificación diferencial JS↔Python para TMY/QA/extremos con golden datasets compartidos." }
     ],
     historial: [
+      { date:"2026-10-06", ver:"0.4.0", note:"AUTÓNOMO Y A TODO ANCHO: desaparece el requisito de Motor SolarGPT; nuevo meteo-browser.js ejecuta histórico, QA, TMY, comparación, PVSyst/CSV, adaptación, viento/granizo, interpolación, descargas e informe. El emplazamiento sale de la Cartera y el banco fija ancho >1.800 px a viewport 1.920." },
       { date:"2026-10-06", ver:"0.3.0", note:"Paridad funcional ampliada con Meteo de SolarGPT: QA avanzado, climatología PVGIS, desfase horario, riesgo de granizo, viento sintético y adaptación de sitio medida→serie larga." },
-      { date:"2026-10-06", ver:"0.2.0", note:"Weather Workbench completo: histórico multi-año, screening anual, TMY Sandia/FS y PVGIS, comparativa de fuentes, import PVSyst/CSV, descargas e informe; la interfaz llama al dominio meteo canónico de SolarGPT." },
+      { date:"2026-10-06", ver:"0.2.0", note:"Weather Workbench completo: histórico multi-año, screening anual, TMY Sandia/FS y PVGIS, comparativa de fuentes, import PVSyst/CSV, descargas e informe." },
       { date:"2026-10-06", ver:"0.1.0", note:"Nace la capa meteorológica transversal: Open-Meteo operativo, contrato normalizado y adapter de resumen WeatherNext 3." }
     ]
   },
