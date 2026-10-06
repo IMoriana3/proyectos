@@ -46,6 +46,33 @@ check("TMY Sandia tiene 8760 filas",tmy.rows.length===8760,"rows="+tmy.rows.leng
 check("TMY selecciona los 12 meses",Object.keys(tmy.info.months_selected).length===12);
 check("TMY declara dos años fuente",tmy.info.n_years===2);
 
+// Golden derivado de solargpt_core.meteo.build_tmy_sandia (Python).
+// Fixture de 120 h por mes × 2 años; pesos canónicos. Los números se congelan
+// para que un refactor JS no cambie el criterio FS en silencio.
+const goldenRows=[];
+for(const year of [2021,2022]){
+  for(let month=1;month<=12;month++){
+    const start=Date.UTC(year,month-1,1);
+    for(let h=0;h<120;h++){
+      const x=h/119,shape=year===2021?x:x*x;
+      const off=year===2021?(month%2)*8:((month+1)%2)*8;
+      goldenRows.push({
+        t:new Date(start+h*3600000).toISOString(),
+        ghi_wm2:100+500*shape+off,
+        dni_wm2:200+600*shape+off*.8,
+        dhi_wm2:50+180*shape+off*.3,
+        temp_c:5+20*shape+off*.1,
+        dewpoint_c:1+10*shape+off*.05,
+        wind_ms:2+5*shape+off*.02
+      });
+    }
+  }
+}
+const goldenTmy=M.buildTmySandia(goldenRows,{baseYear:2023,smooth:false});
+check("golden Python→JS selecciona 2021 en los 12 meses",Object.values(goldenTmy.info.months_selected).every(y=>y===2021));
+check("golden FS meses impares coincide con Python",near(goldenTmy.info.fs_scores[1],0.07801785714285715,1e-12));
+check("golden FS meses pares coincide con Python",near(goldenTmy.info.fs_scores[2],0.07867857142857144,1e-12));
+
 const bad=years.slice(0,48).map(x=>({...x}));
 bad[12].ghi_wm2=5000;bad[12].dni_wm2=5000;bad[12].dhi_wm2=2000;
 const filtered=M.applyBsrn(bad,40,-3);
