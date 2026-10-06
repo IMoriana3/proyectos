@@ -3327,7 +3327,11 @@ LOC.simulaEvento=function(cfg){
       if(hailProtected){
         var hDest=(hail.manda==='viento')?hail.destino:
           (hailTarget[S]!=null?hailTarget[S]:hail.destino);
-        var hSrc=!hailKnown?'GRANIZO · SIN DATO':(!hailGate.activa?'GRANIZO · RETENCIÓN':'GRANIZO');
+        /* `fuente` es contrato estable para consumidores/tests: la fase vive
+           en hail_phase y el detalle en motivo/proteccion. No versionamos la
+           fuente como "GRANIZO · RETENCIÓN" porque rompe el contrato sin aportar
+           información nueva. */
+        var hSrc=!hailKnown?'GRANIZO · SIN DATO':'GRANIZO';
         if(hDest!=null&&ne==='NIEVE'&&hail.manda!=='viento'){
           if((hDest>0)===(snowTarget>0)){
             ext={destino:hDest,mode:'MULTI_STOW'};
