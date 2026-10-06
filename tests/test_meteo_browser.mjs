@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const code=fs.readFileSync(path.join(__dirname,"../lib/meteo-browser.js"),"utf8");
 const M=await import("data:text/javascript;base64,"+Buffer.from(code).toString("base64"));
+const vizCode=fs.readFileSync(path.join(__dirname,"../lib/meteo-viz.js"),"utf8");
+const V=await import("data:text/javascript;base64,"+Buffer.from(vizCode).toString("base64"));
 
 let fails=0,oks=0;
 function check(name,cond,detail=""){
@@ -29,7 +31,10 @@ function syntheticYears(){
         t:t.toISOString(),ghi_wm2:ghi,dni_wm2:dni,dhi_wm2:dhi,
         temp_c:14+8*Math.sin(2*Math.PI*(h/24-170)/365),
         dewpoint_c:8,wind_ms:4+Math.sin(2*Math.PI*(h%24)/24),
-        precip_mm:(h%401===0?1:0)
+        wind_dir_deg:(h*17)%360,
+        precip_mm:(h%401===0?1:0),
+        snowfall_cm:(h<24*20&&h%24===5?0.5:0),
+        snow_depth_m:(h<24*20?0.03:0)
       });
     }
   }
@@ -40,6 +45,37 @@ const ast=M.annualStats(years);
 check("annualStats devuelve dos años",ast.annual.length===2);
 check("screening anual resuelve un año real",[2021,2022].includes(ast.representative_year_screening));
 check("GHI anual positivo",ast.annual.every(x=>x.ghi_kwh_m2>0));
+
+check("visual layer v1",V.VIZ_VERSION==="1.0.0");
+const vm=V.monthlyClimatology(years,"Europe/Madrid");
+check("visual mensual tiene 12 meses",vm.length===12);
+check("visual mensual GHI positivo",vm.some(x=>x.ghi>0));
+const vd=V.dailyMeanSeries(years);
+check("visual serie diaria tiene 730 días",vd.length===730,"n="+vd.length);
+const vpeak=V.peakDay(years,"ghi_wm2","Europe/Madrid");
+check("visual día pico usa fecha local",/^202[12]-\d\d-\d\d$/.test(vpeak),vpeak);
+const vprof=V.dayProfile(years,vpeak,"Europe/Madrid");
+check("visual perfil local tiene 23-25 puntos",vprof.length>=23&&vprof.length<=25,"n="+vprof.length);
+const vcl=V.dailyClimatology(years,"Europe/Madrid");
+check("visual climatología DOY tiene 366 puntos",vcl.length===366,"n="+vcl.length);
+const vrose=V.windRoseData(years);
+check("rosa usa todas las horas con rumbo",vrose.total===years.length,"n="+vrose.total);
+check("rosa tiene 16 sectores",vrose.freq.length===16);
+check("rosa suma 100%",Math.abs(vrose.freq.flat().reduce((a,b)=>a+b,0)-100)<1e-8);
+const vtemp=V.temperatureExtremes(years);
+check("histograma térmico tiene 60 bins",vtemp.hist.length===60);
+check("extremos térmicos tienen 6 fríos + 4 cálidos",vtemp.cold.length===6&&vtemp.hot.length===4);
+const vsnow=V.snowSummary(years,"Europe/Madrid");
+check("nieve visual detecta acumulado y manto",vsnow.total>0&&vsnow.maxDepth===3,"snow="+vsnow.total+" depth="+vsnow.maxDepth);
+const vcp=V.cockpitMetrics(years,41.5763,"Europe/Madrid");
+check("cockpit devuelve 6 familias de 12 meses",["ghi","dni","dhi","tmean","windmean","kt"].every(k=>vcp[k].length===12));
+check("kt del cockpit queda entre 0 y 1",vcp.kt.filter(Number.isFinite).every(x=>x>=0&&x<=1));
+const vcold=V.coldDaysByMonth(years,"Europe/Madrid");
+check("heladas mensuales: 4 umbrales × 12 meses",vcold.length===4&&vcold.every(x=>x.months.length===12));
+const vwd=V.windDailyMax(years.slice(0,8784).map(r=>r.wind_ms));
+check("viento sintético visual devuelve máximos diarios en km/h",vwd.length===366&&Math.max(...vwd)>10);
+const vcmp=V.comparisonMonthly({A:Array.from({length:12},(_,i)=>({month:i+1,GHI:100+i})),B:Array.from({length:12},(_,i)=>({month:i+1,GHI:90+i}))});
+check("comparación visual conserva 2 fuentes × 12 meses",vcmp.length===2&&vcmp.every(x=>x.values.length===12));
 
 const tmy=M.buildTmySandia(years,{baseYear:2023,smooth:false});
 check("TMY Sandia tiene 8760 filas",tmy.rows.length===8760,"rows="+tmy.rows.length);
@@ -157,6 +193,9 @@ const html=fs.readFileSync(path.join(__dirname,"../meteo.html"),"utf8");
 check("HTML ya no ofrece Motor SolarGPT",!html.includes("Motor SolarGPT"));
 check("HTML declara modo autónomo",html.includes("Autónomo"));
 check("HTML importa meteo-browser.js",html.includes("./lib/meteo-browser.js"));
+check("HTML importa meteo-viz.js",html.includes("./lib/meteo-viz.js"));
+check("HTML contiene rosa de vientos",html.includes('id="vizWindRose"'));
+check("HTML contiene cockpit 6 paneles",["vizCockpitGhi","vizCockpitDni","vizCockpitDhi","vizCockpitTemp","vizCockpitWind","vizCockpitKt"].every(id=>html.includes('id="'+id+'"')));
 
 try{
   const {chromium}=await import("playwright");
@@ -171,6 +210,25 @@ try{
       shortwave_radiation:[500],direct_normal_irradiance:[650],diffuse_radiation:[100],surface_pressure:[1010]
     }})
   }));
+  await page.route("https://archive-api.open-meteo.com/**",route=>{
+    const n=24*10,start=Date.UTC(2024,0,1),time=[],ghi=[],temp=[],wind=[],dir=[],snow=[],depth=[];
+    for(let i=0;i<n;i++){
+      const d=new Date(start+i*3600000),h=i%24;
+      time.push(d.toISOString().slice(0,16));
+      ghi.push(h>=8&&h<=16?120:0);
+      temp.push(6+8*Math.sin(2*Math.PI*(h-8)/24));
+      wind.push(4+2*Math.sin(2*Math.PI*h/24));
+      dir.push((i*19)%360);
+      snow.push(i<48&&h===5?0.5:0);
+      depth.push(i<72?0.03:0);
+    }
+    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({hourly:{
+      time,shortwave_radiation:ghi,temperature_2m:temp,wind_speed_10m:wind,wind_direction_10m:dir,
+      snowfall:snow,snow_depth:depth,precipitation:Array(n).fill(0),rain:Array(n).fill(0),
+      relative_humidity_2m:Array(n).fill(60),surface_pressure:Array(n).fill(1010),
+      showers:Array(n).fill(0),cape:Array(n).fill(0),weather_code:Array(n).fill(1)
+    }})});
+  });
   await page.goto((process.env.BASE_URL||process.env.BASE||"http://localhost:8099")+"/meteo.html",{waitUntil:"domcontentloaded"});
   await page.waitForFunction(()=>document.querySelectorAll("#plantSel option").length>5,{timeout:10000});
   const options=await page.locator("#plantSel option").allTextContents();
@@ -180,6 +238,30 @@ try{
   check("workbench aprovecha >1800 px a 1920",width>1800,"width="+width);
   const badge=await page.locator(".badge").first().innerText();
   check("cabecera visible dice autónomo",/Autónomo/i.test(badge));
+
+  await page.locator("#y0").fill("2024");await page.locator("#y1").fill("2024");
+  await page.locator("#yearsBtn").click();
+  await page.waitForFunction(()=>document.querySelector("#workStatus")?.textContent.includes("Histórico listo"),{timeout:20000});
+  check("visual mensual pinta 12 filas",await page.locator("#vizMonthlyBody tr").count()===12);
+  check("rosa informa horas con dirección",/horas con dirección/.test(await page.locator("#vizWindRoseNote").innerText()));
+
+  async function diversity(id){
+    return page.locator("#"+id).evaluate(cv=>{
+      const d=cv.getContext("2d").getImageData(0,0,cv.width,cv.height).data,set=new Set(),step=Math.max(4,Math.floor(d.length/6000/4)*4);
+      for(let i=0;i<d.length;i+=step)set.add(d[i]+","+d[i+1]+","+d[i+2]+","+d[i+3]);
+      return set.size;
+    });
+  }
+  check("cockpit GHI dibuja canvas real",(await diversity("vizCockpitGhi"))>4);
+  check("rosa dibuja canvas polar real",(await diversity("vizWindRose"))>6);
+  check("histograma térmico dibuja canvas real",(await diversity("vizTempHist"))>5);
+  check("zoom diario se actualiza",!/—/.test(await page.locator("#vizDayNote").innerText()));
+
+  await page.locator("#hailBtn").click();
+  check("curva acumulada de granizo dibuja",(await diversity("vizHailCurve"))>5);
+  await page.locator("#windSynthBtn").click();
+  check("máximo diario de viento sintético dibuja",(await diversity("vizWindSynth"))>5);
+
   await browser.close();
 }catch(e){
   check("browser smoke arranca",false,e.message);
