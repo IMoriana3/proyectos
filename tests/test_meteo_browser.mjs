@@ -196,6 +196,7 @@ check("HTML importa meteo-browser.js",html.includes("./lib/meteo-browser.js"));
 check("HTML importa meteo-viz.js",html.includes("./lib/meteo-viz.js"));
 check("HTML contiene rosa de vientos",html.includes('id="vizWindRose"'));
 check("HTML contiene cockpit 6 paneles",["vizCockpitGhi","vizCockpitDni","vizCockpitDhi","vizCockpitTemp","vizCockpitWind","vizCockpitKt"].every(id=>html.includes('id="'+id+'"')));
+check("informe incrusta visuales como PNG",html.includes("visualReportHtml")&&html.includes('toDataURL("image/png")'));
 
 try{
   const {chromium}=await import("playwright");
