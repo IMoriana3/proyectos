@@ -1173,27 +1173,31 @@ const PROJECTS = [
   {
     name: "Análisis meteorológico",
     status: "build",
-    objetivo: "Capa meteorológica transversal de SolarGPT/Factiun: unifica forecast, reanálisis y medida de planta para que producción, radiación difusa, viento/granizo, batería, winter mode, SCADA y gemelo consuman el mismo contrato. WeatherNext 3 aporta forecast probabilístico; HSU/SCADA conservan la autoridad de safety local.",
-    stack: "HTML · ES modules · lib/meteo.js · WeatherNext 3 (adapter) · Open-Meteo · HSU/SCADA · PVGIS · NASA POWER",
+    objetivo: "Weather Workbench transversal de SolarGPT/Factiun: históricos multi-año, búsqueda de años representativos, TMY Sandia/Finkelstein-Schafer y PVGIS, comparación de fuentes, forecast, importación PVSyst/CSV, descargas e informes. Es la interfaz única del dominio meteo que alimentará producción, difusa, viento/granizo, batería, winter mode, SCADA, gemelo y P50/P90.",
+    stack: "HTML · SolarGPT engine API · solargpt_core.meteo · TMY Sandia/FS · PVGIS · Open-Meteo/ERA5 · NASA POWER · WeatherNext 3 · PVSyst import",
     url: "meteo.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-10-06",
-    version: "0.1.0",
+    version: "0.2.0",
     docId: "meteo",
     docUrl: "",
     uso: [
-      "Elige coordenadas y carga meteo gratuita: hoy usa Open-Meteo bajo el contrato canónico, sin duplicar unidades ni semántica.",
-      "Consulta en una sola vista GHI/DNI/DHI, temperatura, punto de rocío, viento, racha, dirección, nubosidad, precipitación y riesgos derivados.",
-      "Importa un resumen WeatherNext 3 JSON P10/P50/P90: entra por el mismo schema que las otras fuentes.",
-      "Usa esta tarjeta como inventario de qué variable alimenta cada consumidor: difusa, viento/granizo, producción, batería, gemelo y SCADA."
+      "Selecciona emplazamiento, fuente y rango de años; analiza GHI/DNI/DHI, temperatura, viento, precipitación, completitud y localiza años cercanos a la mediana.",
+      "Construye un TMY propio con Sandia/Finkelstein-Schafer —selección mes a mes— o descarga el TMY de PVGIS; muestra año seleccionado y FS de cada mes.",
+      "Compara PVGIS-SARAH3, PVGIS-ERA5, NASA POWER y Open-Meteo; el RMS GHI conserva su papel como entrada de incertidumbre P50/P90.",
+      "Descarga histórico o TMY en CSV, importa CSV/Excel PVSyst mediante el loader canónico y genera un informe meteorológico trazable.",
+      "Sin motor sigue disponible el forecast gratuito de Open-Meteo y la importación de resúmenes WeatherNext; con motor usa siempre el core, sin duplicar algoritmos en JS."
     ],
     pendientes: [
-      { done:true, text:"Contrato meteo común v1 en lib/meteo.js y dashboard meteo.html." },
-      { done:false, text:"Cablear adapter WeatherNext 3 real mediante backend/ETL gratuito y cache de planta." },
-      { done:false, text:"Migrar sim-viento.html y radiación difusa al contrato común sin cambiar su física/control." },
-      { done:false, text:"Añadir parity tests de unidades, timestamps y provenance entre todos los consumidores." }
+      { done:true, text:"Workbench: años, TMY Sandia/PVGIS, comparación multi-fuente, CSV e informe conectados al API del motor." },
+      { done:true, text:"Importación CSV y Excel PVSyst mediante el loader canónico de SolarGPT." },
+      { done:false, text:"Conectar WeatherNext 3 live mediante backend/ETL gratuito y caché por planta; ahora el adapter admite resumen JSON." },
+      { done:false, text:"Exponer CAMS/NSRDB/Solcast en el workbench cuando sus credenciales estén configuradas en el motor." },
+      { done:false, text:"Migrar viento/granizo, radiación difusa, producción, batería, gemelo y SCADA para consumir exclusivamente el contrato meteo común." },
+      { done:false, text:"Certificar parity de unidades, timestamps, provenance y fallos de fuente entre todos los consumidores." }
     ],
     historial: [
+      { date:"2026-10-06", ver:"0.2.0", note:"Weather Workbench completo: histórico multi-año, screening anual, TMY Sandia/FS y PVGIS, comparativa de fuentes, import PVSyst/CSV, descargas e informe; la interfaz llama al dominio meteo canónico de SolarGPT." },
       { date:"2026-10-06", ver:"0.1.0", note:"Nace la capa meteorológica transversal: Open-Meteo operativo, contrato normalizado y adapter de resumen WeatherNext 3." }
     ]
   },
