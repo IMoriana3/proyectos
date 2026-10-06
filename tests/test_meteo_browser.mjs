@@ -15,7 +15,22 @@ function check(name,cond,detail=""){
 }
 function near(a,b,tol=1e-9){return Number.isFinite(a)&&Math.abs(a-b)<=tol;}
 
-check("versión browser core 0.4.0",M.WORKBENCH_VERSION==="0.4.0");
+check("versión browser core 0.6.0",M.WORKBENCH_VERSION==="0.6.0");
+
+let geocodeUrl="";
+const geo=await M.searchPlaces("Montréal",{
+  fetchImpl:async url=>{
+    geocodeUrl=String(url);
+    return {ok:true,json:async()=>({results:[
+      {id:6077243,name:"Montréal",latitude:45.50884,longitude:-73.58781,elevation:216,country:"Canadá",country_code:"CA",admin1:"Quebec",timezone:"America/Toronto",population:1762949},
+      {id:123,name:"Sin coordenadas",country:"Canadá"}
+    ]})};
+  }
+});
+check("geocoder normaliza un emplazamiento válido",geo.length===1&&geo[0].name==="Montréal"&&near(geo[0].lat,45.50884));
+check("geocoder conserva zona horaria y país",geo[0].tz==="America/Toronto"&&geo[0].country==="Canadá");
+check("geocoder codifica unicode en la consulta",geocodeUrl.includes("Montr%C3%A9al"),geocodeUrl);
+check("geocoder no consulta con menos de 2 caracteres",(await M.searchPlaces("M",{fetchImpl:async()=>{throw new Error("no debe llamar")}})).length===0);
 
 function syntheticYears(){
   const rows=[];
@@ -194,6 +209,9 @@ check("HTML ya no ofrece Motor SolarGPT",!html.includes("Motor SolarGPT"));
 check("HTML declara modo autónomo",html.includes("Autónomo"));
 check("HTML importa meteo-browser.js",html.includes("./lib/meteo-browser.js"));
 check("HTML importa meteo-viz.js",html.includes("./lib/meteo-viz.js"));
+check("HTML incluye buscador global de emplazamientos",html.includes('id="placeQuery"')&&html.includes('id="placeResults"'));
+check("TMY usa tabla flexible hasta el fondo",html.includes("tmy-card")&&html.includes("tmy-table"));
+check("granizo visual tiene nota dinámica",html.includes('id="vizHailNote"'));
 check("HTML contiene rosa de vientos",html.includes('id="vizWindRose"'));
 check("HTML contiene cockpit 6 paneles",["vizCockpitGhi","vizCockpitDni","vizCockpitDhi","vizCockpitTemp","vizCockpitWind","vizCockpitKt"].every(id=>html.includes('id="'+id+'"')));
 check("informe incrusta visuales como PNG",html.includes("visualReportHtml")&&html.includes('toDataURL("image/png")'));
@@ -211,6 +229,14 @@ try{
       shortwave_radiation:[500],direct_normal_irradiance:[650],diffuse_radiation:[100],surface_pressure:[1010]
     }})
   }));
+  await page.route("https://geocoding-api.open-meteo.com/**",route=>{
+    const u=new URL(route.request().url()),q=(u.searchParams.get("name")||"").toLowerCase();
+    const results=q.includes("helsinki")?[
+      {id:658225,name:"Helsinki",latitude:60.16952,longitude:24.93545,elevation:26,country:"Finlandia",country_code:"FI",admin1:"Uusimaa",timezone:"Europe/Helsinki",population:658864},
+      {id:12345,name:"Helsinki",latitude:61.0,longitude:25.0,country:"Finlandia",country_code:"FI",admin1:"Otra región",timezone:"Europe/Helsinki"}
+    ]:[];
+    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({results})});
+  });
   await page.route("https://archive-api.open-meteo.com/**",route=>{
     const n=24*10,start=Date.UTC(2024,0,1),time=[],ghi=[],temp=[],wind=[],dir=[],snow=[],depth=[];
     for(let i=0;i<n;i++){
@@ -239,6 +265,14 @@ try{
   check("workbench aprovecha >1800 px a 1920",width>1800,"width="+width);
   const badge=await page.locator(".badge").first().innerText();
   check("cabecera visible dice autónomo",/Autónomo/i.test(badge));
+  await page.locator("#placeQuery").fill("Helsinki");
+  await page.waitForSelector("#placeResults .place-option",{timeout:10000});
+  check("buscador global ofrece coincidencias",await page.locator("#placeResults .place-option").count()>=2);
+  await page.locator("#placeResults .place-option").first().click();
+  check("seleccionar Helsinki rellena latitud",Math.abs(+(await page.locator("#lat").inputValue())-60.16952)<1e-4);
+  check("seleccionar Helsinki rellena longitud",Math.abs(+(await page.locator("#lon").inputValue())-24.93545)<1e-4);
+  check("emplazamiento global muestra TZ correcta",(await page.locator("#projectMeta").innerText()).includes("Europe/Helsinki"));
+  check("emplazamiento global deja selector de cartera en manual",(await page.locator("#plantSel").inputValue())==="");
 
   await page.locator("#y0").fill("2024");await page.locator("#y1").fill("2024");
   await page.locator("#yearsBtn").click();
@@ -253,6 +287,10 @@ try{
       return set.size;
     });
   }
+  check("granizo se dibuja automáticamente sin pulsar el botón",(await diversity("vizHailCurve"))>5);
+  check("granizo visual explica el emplazamiento",/λ/.test(await page.locator("#vizHailNote").innerText()));
+  const tmyMax=await page.locator(".tmy-card .tmy-table").evaluate(el=>getComputedStyle(el).maxHeight);
+  check("tabla TMY no conserva tope de 250px",tmyMax==="none",tmyMax);
   check("cockpit GHI dibuja canvas real",(await diversity("vizCockpitGhi"))>4);
   check("rosa dibuja canvas polar real",(await diversity("vizWindRose"))>6);
   check("histograma térmico dibuja canvas real",(await diversity("vizTempHist"))>5);
