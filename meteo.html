@@ -14,12 +14,12 @@
 <main class="wrap">
 <section class="grid">
   <div class="card"><h2>Emplazamiento</h2><div class="row"><label><span class="k">Lat</span><input id="lat" type="number" step="0.0001" value="42.8125"></label><label><span class="k">Lon</span><input id="lon" type="number" step="0.0001" value="-1.6458"></label></div><p><button id="load">Cargar meteo gratuita</button></p><div class="src" id="status">Open-Meteo como fuente gratuita inmediata. WeatherNext 3 entra por el mismo contrato cuando esté habilitado.</div></div>
-  <div class="card"><h2>Régimen solar</h2><div class="big" id="ghi">—</div><div class="k">GHI W/m²</div><div class="row"><div><div class="k">DNI</div><div class="v" id="dni">—</div></div><div><div class="k">DHI</div><div class="v" id="dhi">—</div></div></div><div class="k" style="margin-top:10px">Prob. difusa / overcast</div><div class="bar"><i id="bo"></i></div><div class="v" id="over">—</div></div>
+  <div class="card"><h2>Régimen solar</h2><div class="big" id="ghi">—</div><div class="k">GHI W/m²</div><div class="row"><div><div class="k">DNI / FDIR</div><div class="v" id="dni">—</div></div><div><div class="k">DHI</div><div class="v" id="dhi">—</div></div></div><div class="k" style="margin-top:10px">Prob. difusa / overcast</div><div class="bar"><i id="bo"></i></div><div class="v" id="over">—</div></div>
   <div class="card"><h2>Viento</h2><div class="big" id="wind">—</div><div class="k">m/s a 10 m</div><div class="row"><div><div class="k">Ráfaga</div><div class="v" id="gust">—</div></div><div><div class="k">Dirección</div><div class="v" id="wd">—</div></div></div><div class="k" style="margin-top:10px">Riesgo stow predictivo</div><div class="bar"><i id="bw"></i></div><div class="v" id="wrisk">—</div></div>
   <div class="card"><h2>Atmósfera</h2><div class="row"><div><div class="k">Temperatura</div><div class="v" id="temp">—</div></div><div><div class="k">Punto rocío</div><div class="v" id="dew">—</div></div><div><div class="k">Precipitación</div><div class="v" id="rain">—</div></div><div><div class="k">Nubosidad</div><div class="v" id="cloud">—</div></div></div><div class="k" style="margin-top:10px">Proxy convectivo / granizo</div><div class="bar"><i id="bh"></i></div><div class="v" id="hail">—</div><div class="note">Solo screening meteorológico: no es detector ni orden de seguridad.</div></div>
 
   <div class="card wide"><h2>Contrato meteorológico canónico</h2><table><thead><tr><th>Familia</th><th>Variables</th><th>Fuentes</th><th>Consumidores</th></tr></thead><tbody>
-  <tr><td>Solar</td><td>GHI · DNI · DHI · nubosidad baja/media/alta</td><td>WeatherNext 3 · Open-Meteo · PVGIS · NASA · clear-sky</td><td>Producción · radiación difusa · backtracking energético · batería</td></tr>
+  <tr><td>Solar</td><td>GHI · FDIR · DNI · DHI · nubosidad baja/media/alta</td><td>WeatherNext 3 · Open-Meteo · PVGIS · NASA · clear-sky</td><td>Producción · radiación difusa · backtracking energético · batería</td></tr>
   <tr><td>Viento</td><td>10 m · 100 m · dirección · ráfaga</td><td>WeatherNext 3 · Open-Meteo · HSU/SCADA</td><td>Wind stow · abanderamiento · gemelo · QA</td></tr>
   <tr><td>Hidrometeoros</td><td>precipitación · proxy granizo · freeze risk</td><td>WeatherNext 3 · Open-Meteo · sensores planta</td><td>Granizo · winter mode · recovery</td></tr>
   <tr><td>Térmica</td><td>Tª · punto de rocío · presión</td><td>WeatherNext 3 · Open-Meteo · HSU</td><td>Producción · batería · diagnóstico sensor</td></tr>
@@ -42,7 +42,7 @@
 import {fetchOpenMeteo,fromWeatherNextSummary} from "./lib/meteo.js";
 const $=id=>document.getElementById(id), fmt=(v,d=1)=>v==null||!isFinite(v)?"—":Number(v).toFixed(d);
 function paint(m){
-  $("ghi").textContent=fmt(m.ghi_wm2,0); $("dni").textContent=fmt(m.dni_wm2,0)+" W/m²"; $("dhi").textContent=fmt(m.dhi_wm2,0)+" W/m²";
+  $("ghi").textContent=fmt(m.ghi_wm2,0); $("dni").textContent=fmt(m.dni_wm2??m.fdir_wm2,0)+" W/m² "+(m.dni_wm2!=null?"DNI":m.fdir_wm2!=null?"FDIR":""); $("dhi").textContent=fmt(m.dhi_wm2,0)+" W/m²";
   $("wind").textContent=fmt(m.wind_ms,1); $("gust").textContent=fmt(m.gust_ms,1)+" m/s"; $("wd").textContent=fmt(m.wind_dir_deg,0)+"°";
   $("temp").textContent=fmt(m.temp_c,1)+" °C"; $("dew").textContent=fmt(m.dewpoint_c,1)+" °C"; $("rain").textContent=fmt(m.precip_mm,1)+" mm"; $("cloud").textContent=fmt((m.cloud_total??0)*100,0)+" %";
   const set=(id,v)=>{$(id).textContent=v==null?"—":Math.round(v*100)+" %"};
