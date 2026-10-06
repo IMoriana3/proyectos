@@ -69,6 +69,16 @@ Meteo              POWER
 
 El contrato distingue **FDIR de DNI**. Hoy puede importarse un resumen JSON. La conexión live queda pendiente de credenciales/acceso Google y no bloquea ninguna otra función.
 
+### Windy y Ventusky
+
+`meteo.html` incorpora ambos como **mapas operativos externos de contraste**, sincronizados con el emplazamiento seleccionado.
+
+- **Windy** usa el embed oficial de mapa, centrado en la latitud/longitud activa.
+- **Ventusky** usa su embed oficial con la misma posición y pin de emplazamiento.
+- Se cargan de forma diferida (`loading="lazy"`) para no penalizar el arranque del workbench.
+- No se consideran proveedores del contrato meteorológico canónico y sus valores no alimentan Batería, Winter mode, Producción, P50/P90 ni CONTROL.
+- Su función es inspección visual rápida de frentes, viento, rachas, precipitación, temperatura y otros campos del proveedor.
+
 CAMS, NSRDB y Solcast se mantienen como fuentes opcionales futuras: sus credenciales nunca deben quedar embebidas en GitHub Pages.
 
 ## Histórico y screening anual
