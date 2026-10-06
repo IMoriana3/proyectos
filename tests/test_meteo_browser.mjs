@@ -15,7 +15,7 @@ function check(name,cond,detail=""){
 }
 function near(a,b,tol=1e-9){return Number.isFinite(a)&&Math.abs(a-b)<=tol;}
 
-check("versión browser core 0.6.0",M.WORKBENCH_VERSION==="0.6.0");
+check("versión browser core 0.7.0",M.WORKBENCH_VERSION==="0.7.0");
 
 let geocodeUrl="";
 const geo=await M.searchPlaces("Montréal",{
@@ -212,6 +212,7 @@ check("HTML importa meteo-viz.js",html.includes("./lib/meteo-viz.js"));
 check("HTML incluye buscador global de emplazamientos",html.includes('id="placeQuery"')&&html.includes('id="placeResults"'));
 check("TMY usa tabla flexible hasta el fondo",html.includes("tmy-card")&&html.includes("tmy-table"));
 check("granizo visual tiene nota dinámica",html.includes('id="vizHailNote"'));
+check("HTML integra Windy y Ventusky",html.includes('id="windyMap"')&&html.includes('id="ventuskyMap"')&&html.includes("embed.windy.com")&&html.includes("embed.ventusky.com"));
 check("HTML contiene rosa de vientos",html.includes('id="vizWindRose"'));
 check("HTML contiene cockpit 6 paneles",["vizCockpitGhi","vizCockpitDni","vizCockpitDhi","vizCockpitTemp","vizCockpitWind","vizCockpitKt"].every(id=>html.includes('id="'+id+'"')));
 check("informe incrusta visuales como PNG",html.includes("visualReportHtml")&&html.includes('toDataURL("image/png")'));
@@ -273,6 +274,10 @@ try{
   check("seleccionar Helsinki rellena longitud",Math.abs(+(await page.locator("#lon").inputValue())-24.93545)<1e-4);
   check("emplazamiento global muestra TZ correcta",(await page.locator("#projectMeta").innerText()).includes("Europe/Helsinki"));
   check("emplazamiento global deja selector de cartera en manual",(await page.locator("#plantSel").inputValue())==="");
+  const windySrc=await page.locator("#windyMap").getAttribute("src");
+  const ventuskySrc=await page.locator("#ventuskyMap").getAttribute("src");
+  check("Windy sigue las coordenadas de Helsinki",windySrc?.includes("lat=60.16952")&&windySrc?.includes("lon=24.93545"),windySrc||"");
+  check("Ventusky sigue las coordenadas de Helsinki",ventuskySrc?.includes("60.16952%3B24.93545%3B7"),ventuskySrc||"");
 
   await page.locator("#y0").fill("2024");await page.locator("#y1").fill("2024");
   await page.locator("#yearsBtn").click();
