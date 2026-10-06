@@ -2616,6 +2616,7 @@ function specsGuardados(){
   try{return corrigeSpecsGuardados(JSON.parse(localStorage.getItem("factiun_plantas")||"null")||{});}
   catch(e){return {};}
 }
+let SPECS=specsGuardados();
 
 /* ═══ LA BASE DE LA CARTERA, EN VIVO ═══════════════════════════════════════════════════════════
    `factiun_plantas` es un BUZÓN, no la fuente: lo escribe `cartera-tabla.html` al guardar, así que
@@ -2710,6 +2711,7 @@ async function desconecta(){
    exigir recarga manual. */
 window.addEventListener("storage",e=>{
   if(e.key!=="factiun_plantas")return;
+  SPECS=specsGuardados();
   if(typeof renderPlants==="function")renderPlants();
 });
 
@@ -2719,10 +2721,7 @@ window.addEventListener("storage",e=>{
 function specDe(pl){
   const f = DB.filas;
   if (f) { const v = f[String(pl.code)] || (pl.codCartera ? f[String(pl.codCartera)] : null); if (v) return v; }
-  /* No se congela al arrancar: si Cartera técnica actualiza el buzón en otra
-     pestaña, la siguiente pintura lo lee ya actualizado. */
-  const specs=specsGuardados();
-  return specs[String(pl.code)] || (pl.codCartera ? specs[String(pl.codCartera)] : null) || null;
+  return SPECS[String(pl.code)] || (pl.codCartera ? SPECS[String(pl.codCartera)] : null) || null;
 }
 /* De dónde sale lo que se está enseñando. Importa decirlo: la base es de ahora mismo y el buzón es
    de la última vez que alguien abrió la cartera en este navegador, que puede ser de hace un mes. */
