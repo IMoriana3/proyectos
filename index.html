@@ -746,6 +746,7 @@ const PICTOS = {
   "Mapa Modbus": '<rect x="8" y="6" width="48" height="28"/><path d="M8 13h48M8 20h48M8 27h48M20 6v28M32 6v28M44 6v28"/><rect class="af" x="33" y="21" width="10" height="5"/>',
   "Simulador de backtracking": '<circle class="a" cx="10" cy="8" r="3"/><path class="a" d="M13 11l17 11" stroke-dasharray="2 2"/><path d="M18 30l12-8M38 30l12-8M24 27v9M44 27v9M4 36h56"/>',
   "Simulador de radiación difusa": '<path d="M6 30A26 26 0 0 1 58 30"/><path d="M20 12l5 13M32 6v19M44 12l-5 13M12 21l9 7M52 21l-9 7"/><path class="a" d="M22 34h20M32 34v3"/>',
+  "Análisis meteorológico": '<path d="M12 26a9 9 0 0 1 9-9 11 11 0 0 1 21-2 8 8 0 0 1 4 15H12a6 6 0 0 1 0-12"/><path class="a" d="M7 35h28M14 39h26M38 34h18"/><path class="a" d="M48 7l3 5M55 11l-5 3"/><circle class="af" cx="47" cy="7" r="2"/>',
   "Diseño de red de comunicaciones": '<path d="M8 10v6M16 10v6M24 10v6M8 25v6M16 25v6M24 25v6M40 10v6M48 10v6M56 10v6M40 25v6M48 25v6M56 25v6"/><circle class="af" cx="32" cy="22" r="3"/><path class="a" d="M26 20a6 6 0 0 1 12 0M22 17a10 10 0 0 1 20 0"/>',
   "Alta de planta": '<path d="M6 8l40-4 12 14-6 18H10z"/><rect x="14" y="14" width="14" height="10" stroke-dasharray="2 2"/><rect class="a" x="32" y="14" width="14" height="10"/>',
   "Control de obra": '<rect x="8" y="6" width="6" height="6"/><path class="a" d="M9 9l2 2 3-4"/><path d="M18 9h30"/><rect x="8" y="17" width="6" height="6"/><path class="a" d="M9 20l2 2 3-4"/><path d="M18 20h30"/><rect x="8" y="28" width="6" height="6"/><path d="M18 31h22"/>',
@@ -1168,6 +1169,34 @@ const PROJECTS = [
       { date:"2026-08-14", ver:"v1.2", note:"Cielo con la receta de backtracking.html (alba/ocaso rojizos, noche azul marino) agrisado por la cobertura y con el disco solar velado; la pala del 3D persigue la consigna a la velocidad real del actuador (0,17 °/s en tiempo simulado); stow nocturno del proyecto: los trackers duermen a 5° al ESTE (−5° en convención TCU), configurable; slider minutal con el sol al minuto exacto. QA 45 en Node." },
       { date:"2026-08-14", ver:"v1.1", note:"Escena 3D real con el modelo del seguidor de la casa (seguidor.js, sombras, nube por zona, luz solar por DNI y hemisferio por DHI; fallback corte 2D) y ZONAL por NCU: el frente cruza la planta y cada NCU decide con su señal — en el día de frentes, flat global +0,37 % → zonal +1,15 %. QA 30 en página, 43 en Node." },
       { date:"2026-08-14", ver:"v1.0", note:"Primera versión: las 4 políticas de difusa del core + baseline, escenario canónico del test como preset, Open-Meteo (ERA5/previsión/EN VIVO), lazo deadband+slew con su coste medido, anual por mezcla de cielos. QA 27 en página, 38 en Node. La doc incorpora el estudio de competencia y papers." }
+    ]
+  },
+  {
+    name: "Análisis meteorológico",
+    status: "live",
+    objetivo: "Fuente meteorológica transversal de SolarGPT/Factiun: reúne medida, reanálisis y forecast en un WeatherState común para Viento/Granizo/Nieve, Radiación difusa, Batería, Tracking/BT, Twin y SCADA. WeatherNext 3 entra como capa predictiva experimental; la seguridad en tiempo real sigue en sensores y CONTROL.",
+    stack: "HTML autocontenido · weather-state.v1 · Open-Meteo forecast/ERA5 · HSU/PVSyst CSV · adapter WeatherNext 3 · cache localStorage compartida entre repos",
+    url: "https://imoriana3.github.io/proyectos/meteo.html",
+    repo: "https://github.com/imoriana3/proyectos",
+    updated: "2026-10-06",
+    version: "1.0.0",
+    docId: "meteo",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Selecciona planta desde factiun_plantas o introduce lat/lon; la serie se normaliza a UTC y unidades explícitas.",
+      "Open-Meteo da previsión y ERA5 para replay. HSU/PVSyst pueden entrar por CSV sin salir del navegador. PVGIS/NASA siguen disponibles a través del motor donde ya existen.",
+      "WeatherNext 3 se conecta mediante un adapter/proxy read-only: ninguna credencial de Google se guarda en GitHub Pages.",
+      "Publica el último WeatherState en factiun_meteo_bus_v1, compartido por las apps bajo imoriana3.github.io.",
+      "Deriva señales supervisoras de 24 h: wind watch/stow forecast, régimen difuso, carga solar, winter/hielo e ingredientes convectivos. Ninguna reemplaza los avisos oficiales ni los interlocks locales."
+    ],
+    pendientes: [
+      { done:false, text:"Configurar el adapter WeatherNext 3 con el acceso experimental de Google, fuera del navegador." },
+      { done:false, text:"Hacer que Viento, Radiación difusa y Batería consulten/publicen weather-state.v1 antes de descargar su propia copia." },
+      { done:false, text:"Añadir golden dataset común planta/hora para certificar paridad de meteo entre interfaces." }
+    ],
+    historial: [
+      { date:"2026-10-06", ver:"1.0.0", note:"Nueva tarjeta meteorológica transversal: Open-Meteo forecast/ERA5, import HSU/PVSyst, WeatherNext adapter, cache compartida, forecast horario y señales operativas derivadas." }
     ]
   },
   {
