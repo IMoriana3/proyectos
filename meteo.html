@@ -258,7 +258,7 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
     <h2>Informe meteorológico</h2>
     <div class="row"><label><span class="k">Título</span><input id="reportTitle" value="Informe meteorológico Factiun"></label><label><span class="k">Incluir TMY</span><select id="reportTmy"><option value="yes">Sí</option><option value="no">No</option></select></label></div>
     <p><button id="reportBtn">Generar informe HTML</button></p>
-    <p class="note">Incluye emplazamiento, fuente, periodo, tabla anual, QA/hash y selección Sandia cuando exista. Se imprime a PDF desde el navegador.</p>
+    <p class="note">Incluye emplazamiento, fuente, periodo, tabla anual, QA/hash, selección Sandia y las visualizaciones disponibles (cockpit, climatología, rosa, extremos, nieve, granizo, viento y fuentes). Se imprime a PDF desde el navegador.</p>
   </div>
 
   <div class="card wide consumer">
@@ -565,6 +565,19 @@ function prep(){
   }catch(e){status("Interpolación: "+e.message,"bad")}
 }
 
+function visualReportHtml(){
+  const figs=[
+    ["Serie diaria","vizDailySeries"],["Zoom diario","vizDayProfile"],
+    ["Cockpit · GHI","vizCockpitGhi"],["Cockpit · DNI","vizCockpitDni"],["Cockpit · DHI","vizCockpitDhi"],
+    ["Cockpit · temperatura","vizCockpitTemp"],["Cockpit · viento","vizCockpitWind"],["Cockpit · kt","vizCockpitKt"],
+    ["Climatología · irradiancia","vizClimIrr"],["Climatología · temperatura","vizClimTemp"],["Climatología · viento","vizClimWind"],
+    ["Rosa de los vientos","vizWindRose"],["Histograma de temperatura","vizTempHist"],["Nieve mensual","vizSnowMonth"],
+    ["Riesgo acumulado de granizo","vizHailCurve"],["Viento sintético","vizWindSynth"],["Comparación de fuentes","vizCompareSources"]
+  ];
+  const cards=figs.map(([name,id])=>{const cv=$(id);if(!cv||!cv.width||!cv.height)return "";let url="";try{url=cv.toDataURL("image/png")}catch(e){return ""}return '<figure><figcaption>'+esc(name)+'</figcaption><img src="'+url+'" alt="'+esc(name)+'"></figure>';}).filter(Boolean).join("");
+  if(!cards)return "";
+  return '<h2>Visual analytics</h2><div class="viz-report">'+cards+'</div><style>.viz-report{display:grid;grid-template-columns:1fr 1fr;gap:12px}.viz-report figure{margin:0;border:1px solid #d8dee8;padding:8px;break-inside:avoid}.viz-report figcaption{font-weight:700;font-size:12px;margin-bottom:6px}.viz-report img{width:100%;height:auto;display:block}@media print{.viz-report{grid-template-columns:1fr 1fr}}</style>';
+}
 function fileB64(file){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]||"");r.onerror=()=>ko(r.error);r.readAsDataURL(file)})}
 
 $("nowBtn").onclick=loadNow;$("yearsBtn").onclick=analyzeYears;$("tmyBtn").onclick=buildTmy;$("compareBtn").onclick=compare;$("qaBtn").onclick=advancedQa;$("hailBtn").onclick=doHail;$("windSynthBtn").onclick=doWind;$("importBtn").onclick=importFile;$("adaptBtn").onclick=siteAdapt;$("adaptUse").onclick=useAdapted;$("prepBtn").onclick=prep;
@@ -573,7 +586,7 @@ $("prepDl").onclick=()=>PREPARED&&downloadText(toCsv(PREPARED.rows),"meteo_prepa
 $("dlHist").onclick=()=>CURRENT?downloadText(toCsv(CURRENT.rows),"meteo_"+(CURRENT.year_start??"")+"-"+(CURRENT.year_end??"")+".csv","text/csv;charset=utf-8"):status("No hay histórico activo.","bad");
 $("dlTmy").onclick=()=>TMY?downloadText(toCsv(TMY.rows),"tmy_factiun.csv","text/csv;charset=utf-8"):status("No hay TMY calculado.","bad");
 $("dlJson").onclick=()=>CURRENT?downloadText(JSON.stringify(CURRENT,null,2),"meteo_factiun.json","application/json;charset=utf-8"):status("No hay dataset activo.","bad");
-$("reportBtn").onclick=()=>{if(!CURRENT){status("No hay dataset activo para el informe.","bad");return;}const h=reportHtml({title:$("reportTitle").value,dataset:CURRENT,tmy:$("reportTmy").value==="yes"?TMY:null,siteName:siteName()});downloadText(h,"informe_meteo_"+siteName().replace(/[^\w-]+/g,"_")+".html","text/html;charset=utf-8")};
+$("reportBtn").onclick=()=>{if(!CURRENT){status("No hay dataset activo para el informe.","bad");return;}let h=reportHtml({title:$("reportTitle").value,dataset:CURRENT,tmy:$("reportTmy").value==="yes"?TMY:null,siteName:siteName()});h=h.replace("</body>",visualReportHtml()+"</body>");downloadText(h,"informe_meteo_"+siteName().replace(/[^\w-]+/g,"_")+".html","text/html;charset=utf-8")};
 $("wn").onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text()),m=fromWeatherNextSummary(Array.isArray(j)?j[0]:j);paintNow(m);$("wnStatus").textContent="WeatherNext importado · "+(m.timestamp||"sin timestamp");$("wnStatus").className="statusline ok"}catch(err){$("wnStatus").textContent=err.message;$("wnStatus").className="statusline bad"}};
 
 await initPlants();
