@@ -3,36 +3,55 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0B0F14">
+<meta name="theme-color" content="#0E1826">
 <link rel="icon" href="favicon.svg">
 <title>Careo SolarGPT ↔ PVSyst</title>
 <!-- sin fuentes de Google: offline. Fallbacks del sistema (como el panel). -->
 <style>
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/Barlow-400-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/Barlow-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/Barlow-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/Barlow-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/Barlow-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/Barlow-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/BarlowCondensed-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/BarlowCondensed-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/BarlowCondensed-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/BarlowCondensed-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/JetBrainsMono-400-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/JetBrainsMono-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/JetBrainsMono-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/JetBrainsMono-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/JetBrainsMono-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/JetBrainsMono-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+
 /* Sistema visual del Panel de Proyectos Factiun (proyectos/index.html):
    mismo void, mismos paneles, mismos colores de estado. Identidad única
    oscura A PROPÓSITO — como el panel — con todo pintado explícito. */
 :root{
   color-scheme: dark;
-  --void:#0B0F14; --panel:#121922; --panel-2:#0F151D; --panel-hi:#18222D;
-  --line:#23303D; --line-soft:#1A2530;
-  --ink:#E7EEF4; --ink-2:#8093A4; --ink-3:#5E6F7E;
-  --live:#36D399; --build:#F6A623; --demo:#54A6FF; --dead:#D0594F;
-  --accent:#36D399; --accent-ink:#08130D;
-  --bar:#54A6FF;
-  --ok:#36D399; --ok-bg:rgba(54,211,153,.12);
-  --warn:#F6A623; --warn-bg:rgba(246,166,35,.12);
-  --bad:#D0594F; --bad-bg:rgba(208,89,79,.14);
-  --chip-bg:#18222D;
-  --focus:#36D399;
-  --radius:14px; --radius-sm:9px;
-  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --display:'Space Grotesk','IBM Plex Sans',system-ui,sans-serif;
+  --void:#0E1826; --panel:#132238; --panel-2:#101D30; --panel-hi:#1A2D48;
+  --line:#27405F; --line-soft:#1E3250;
+  --ink:#DCE3EB; --ink-2:#8C9AAB; --ink-3:#7F8EA1;
+  --live:#5BBF8A; --build:#F2C94C; --demo:#68C0D8; --dead:#E84858;
+  --accent:#F09030; --accent-ink:#1A0F04;
+  --bar:#68C0D8;
+  --ok:#5BBF8A; --ok-bg:color-mix(in srgb,#5BBF8A 14%,transparent);
+  --warn:#F2C94C; --warn-bg:color-mix(in srgb,#F2C94C 14%,transparent);
+  --bad:#E84858; --bad-bg:color-mix(in srgb,#E84858 16%,transparent);
+  --chip-bg:#1A2D48;
+  --focus:#F09030;
+  --radius:2px; --radius-sm:2px;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --display:'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif;
+  /* Piel «Célula» (la de la portada): ámbar Factiun como único color de emisión */
+  --amb:#F09030;--amb-dim:#9A5E20;--fos:#68C0D8;--alm:#E84858;--plata:#B8C3CE;
 }
 body{
   background-color:var(--void); color:var(--ink);
   background-image:
-    radial-gradient(120% 80% at 50% -10%, rgba(54,211,153,.05), transparent 60%),
+    radial-gradient(120% 80% at 50% -10%, color-mix(in srgb,var(--accent) 6%,transparent), transparent 60%),
     linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
   background-size:auto, 34px 34px, 34px 34px;
@@ -46,14 +65,14 @@ a{color:var(--accent);}
 :is(button,input):focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
 
 header.top{display:flex; flex-direction:column; gap:10px; margin-bottom:24px;}
-h1{font-family:var(--display); font-size:clamp(24px,4vw,32px); font-weight:700; margin:0; letter-spacing:-.01em; text-wrap:balance;}
+h1{font-family:var(--display); font-size:clamp(24px,4vw,32px); font-weight:600; margin:0; letter-spacing:-.01em; text-wrap:balance;}
 .sub{color:var(--ink-2); margin:0; max-width:64ch;}
 .meta{display:flex; flex-wrap:wrap; gap:8px;}
 .chip{display:inline-flex; align-items:center; gap:6px; background:var(--chip-bg);
-  border-radius:999px; padding:3px 11px; font-size:12.5px; color:var(--ink-2);}
+  border-radius:2px; padding:3px 11px; font-size:12.5px; color:var(--ink-2);}
 .chip b{color:var(--ink); font-weight:600;}
 .chip .mono{font-size:12px;}
-.mono{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums;}
+.mono{font-family:var(--mono); font-variant-numeric:tabular-nums;}
 
 section{margin-top:34px;}
 .sec-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:4px;}
@@ -72,19 +91,19 @@ td{padding:8px 14px; border-bottom:1px solid var(--line); text-align:right; whit
 tr:last-child td{border-bottom:none;}
 td:first-child{text-align:left; font-weight:500;}
 tr.total td{background:var(--panel-2); font-weight:600;}
-td.num{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums; font-size:13.5px;}
+td.num{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:13.5px;}
 td.delta{font-weight:600;}
 
 .barcell{min-width:170px;}
 .bartrack{position:relative; height:12px; width:170px; margin-left:auto; margin-right:auto;}
 .bartrack .axis{position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--line);}
 .bartrack .bar{position:absolute; top:1px; height:10px; background:var(--bar);}
-.bartrack .bar.neg{right:50%; border-radius:4px 0 0 4px;}
+.bartrack .bar.neg{right:50%; border-radius:2px 0 0 4px;}
 .bartrack .bar.pos{left:50%; border-radius:0 4px 4px 0;}
 .scale-note{color:var(--ink-3); font-size:11.5px; text-align:center; padding:6px 0 8px;}
 
 .pill{display:inline-block; font-size:11px; font-weight:600; letter-spacing:.04em;
-  border-radius:999px; padding:2px 9px;}
+  border-radius:2px; padding:2px 9px;}
 .pill.ok{color:var(--ok); background:var(--ok-bg);}
 .pill.warn{color:var(--warn); background:var(--warn-bg);}
 .pill.bad{color:var(--bad); background:var(--bad-bg);}
@@ -96,14 +115,14 @@ td.delta{font-weight:600;}
 .callout p{margin:6px 0; color:var(--ink-2); font-size:14px; max-width:72ch;}
 .kv{display:grid; grid-template-columns:max-content max-content; gap:3px 18px; margin:10px 0 4px;}
 .kv .k{color:var(--ink-2); font-size:13.5px;}
-.kv .v{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums;
+.kv .v{font-family:var(--mono); font-variant-numeric:tabular-nums;
   font-size:13.5px; text-align:right;}
 .kv .v em{font-style:normal; color:var(--ink-3);}
 
 .tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; margin-top:12px;}
 .tile{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px;}
 .tile .lbl{font-size:12px; color:var(--ink-2);}
-.tile .val{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums;
+.tile .val{font-family:var(--mono); font-variant-numeric:tabular-nums;
   font-size:21px; font-weight:600; margin-top:2px;}
 .tile .ctx{font-size:12px; color:var(--ink-3); margin-top:2px;}
 
@@ -113,7 +132,7 @@ td.delta{font-weight:600;}
 .progress b{color:var(--ink);}
 .who{display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink-2);}
 .who input{background:var(--panel); color:var(--ink); border:1px solid var(--line);
-  border-radius:7px; padding:5px 9px; font:inherit; font-size:13.5px; width:150px;}
+  border-radius:2px; padding:5px 9px; font:inherit; font-size:13.5px; width:150px;}
 .finding{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
   padding:14px 16px; margin-top:10px;}
 .finding .frow{display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;}
@@ -122,20 +141,20 @@ td.delta{font-weight:600;}
 .f-state{display:flex; align-items:center; gap:8px; flex-shrink:0;}
 .f-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:11px;}
 .f-actions input{flex:1 1 220px; background:var(--panel-2); color:var(--ink);
-  border:1px solid var(--line); border-radius:7px; padding:6px 10px; font:inherit; font-size:13.5px;}
-button{font:inherit; font-size:13px; font-weight:600; border-radius:7px; cursor:pointer;
+  border:1px solid var(--line); border-radius:2px; padding:6px 10px; font:inherit; font-size:13.5px;}
+button{font:inherit; font-size:13px; font-weight:600; border-radius:2px; cursor:pointer;
   padding:6px 13px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink);}
 button:disabled{opacity:.45; cursor:not-allowed;}
 button.primary{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
 .f-log{font-size:12.5px; color:var(--ink-3); margin-top:8px; min-height:1em;}
 .f-log b{color:var(--ink-2);}
 .offline{display:none; margin-top:12px; font-size:13px; color:var(--warn);
-  background:var(--warn-bg); border-radius:8px; padding:8px 12px;}
+  background:var(--warn-bg); border-radius:2px; padding:8px 12px;}
 
 footer{margin-top:40px; border-top:1px solid var(--line); padding-top:16px;
   color:var(--ink-2); font-size:13px;}
-footer code{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12.5px;
-  background:var(--chip-bg); border-radius:5px; padding:1px 6px; color:var(--ink);}
+footer code{font-family:var(--mono); font-size:12.5px;
+  background:var(--chip-bg); border-radius:2px; padding:1px 6px; color:var(--ink);}
 @media (prefers-reduced-motion: no-preference){
   .bartrack .bar{transition:width .3s ease;}
 }
@@ -257,7 +276,7 @@ footer code{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12.5px
 
 <section>
   <div class="sec-head"><h2>Sube tu export y carea otro proyecto</h2>
-    <span class="pill ok" style="color:var(--demo);background:rgba(84,166,255,.12)">herramienta</span></div>
+    <span class="pill ok" style="color:var(--demo);background:color-mix(in srgb,var(--demo) 14%,transparent)">herramienta</span></div>
   <p class="sec-note">El careo lo ejecuta el <b>motor canónico de SolarGPT</b> (el mismo cálculo del
   notebook y de la web — no se puede replicar aquí sin duplicar el motor, y en esta casa las réplicas
   están prohibidas). La superficie de subida es la página <b>16 · PVSyst Waterfall</b> de la app:</p>

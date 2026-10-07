@@ -3,29 +3,48 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0B0F14">
+<meta name="theme-color" content="#0E1826">
 <link rel="icon" href="favicon.svg">
 <title>Generador de implantaciones — Factiun</title>
 <!-- sin fuentes de Google: offline (fuentes del sistema) -->
 <style>
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/Barlow-400-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/Barlow-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/Barlow-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/Barlow-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/Barlow-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/Barlow-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/BarlowCondensed-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/BarlowCondensed-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/BarlowCondensed-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/BarlowCondensed-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/JetBrainsMono-400-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/JetBrainsMono-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/JetBrainsMono-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/JetBrainsMono-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/JetBrainsMono-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/JetBrainsMono-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+
 :root{
-  --void:#0B0F14; --panel:#121922; --panel-2:#0F151D; --panel-hi:#18222D;
-  --line:#23303D; --line-soft:#1A2530; --text:#E7EEF4; --muted:#8093A4; --muted-2:#5E6F7E;
-  --live:#36D399; --build:#F6A623; --demo:#54A6FF; --idle:#6A7B8B; --dead:#D0594F;
-  --accent:#36D399; --radius:14px; --radius-sm:9px;
-  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --display:'Space Grotesk','IBM Plex Sans',system-ui,sans-serif;
+  --void:#0E1826; --panel:#132238; --panel-2:#101D30; --panel-hi:#1A2D48;
+  --line:#27405F; --line-soft:#1E3250; --text:#DCE3EB; --muted:#8C9AAB; --muted-2:#7F8EA1;
+  --live:#5BBF8A; --build:#F2C94C; --demo:#68C0D8; --idle:#627386; --dead:#E84858;
+  --accent:#F09030; --radius:2px; --radius-sm:2px;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --display:'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif;
+  /* Piel «Célula» (la de la portada): ámbar Factiun como único color de emisión */
+  --amb:#F09030;--amb-dim:#9A5E20;--fos:#68C0D8;--alm:#E84858;--plata:#B8C3CE;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--void);color:var(--text);font-family:var(--sans);min-height:100vh;font-variant-numeric:tabular-nums}
 .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 18px;background:var(--panel-2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
-.bar .back{color:var(--muted);text-decoration:none;font:600 13px/1 var(--sans);padding:7px 11px;border:1px solid var(--line);border-radius:10px;white-space:nowrap}
+.bar .back{color:var(--muted);text-decoration:none;font:600 13px/1 var(--sans);padding:7px 11px;border:1px solid var(--line);border-radius:2px;white-space:nowrap}
 .bar .back:hover{color:var(--text);border-color:var(--accent)}
-.bar h1{font:700 17px/1.1 var(--display)}
+.bar h1{font:600 17px/1.1 var(--display)}
 .bar .sub{color:var(--muted);font-size:12.5px;margin-right:auto}
-.bar .brand{color:var(--accent);font:700 14px/1 var(--display);letter-spacing:.04em}
-.engine{display:flex;align-items:center;gap:7px;font-size:12px;font-family:var(--mono);padding:4px 10px;border:1px solid var(--line);border-radius:20px;background:var(--panel);cursor:pointer}
+.bar .brand{color:var(--accent);font:600 14px/1 var(--display);letter-spacing:.04em}
+.engine{display:flex;align-items:center;gap:7px;font-size:12px;font-family:var(--mono);padding:4px 10px;border:1px solid var(--line);border-radius:2px;background:var(--panel);cursor:pointer}
 .engine .led{width:9px;height:9px;border-radius:50%;background:var(--idle)}
 .engine.on .led{background:var(--live);box-shadow:0 0 7px var(--live)}
 .engine.off .led{background:var(--dead)}
@@ -64,12 +83,12 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
    que la tarjeta y al pegar ahi dentro no le quedaba recorrido ninguno —se iba con el scroll—. */
 @media(min-width:901px){ .col.map{position:sticky;top:14px} }
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
-.card h2{font:700 13px/1 var(--display);letter-spacing:.02em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card h2{font:600 13px/1 var(--display);letter-spacing:.02em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .card h2 .ic{color:var(--accent)}
 .card h2 .hint{margin-left:auto;font:400 11px var(--mono);color:var(--muted)}
 .field{margin-bottom:11px}
 .field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px;font-weight:600}
-.field input,.field select,.field textarea{width:100%;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px}
+.field input,.field select,.field textarea{width:100%;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:2px;padding:8px 10px;font:inherit;font-size:13px}
 .field textarea{font-family:var(--mono);font-size:11.5px;resize:vertical;min-height:78px}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent)}
 .field .tip{font-size:11px;color:var(--muted-2);margin-top:4px;line-height:1.45}
@@ -79,7 +98,7 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
    que el de sim-viento.html. */
 .sitiobox{position:relative}
 .sitiores{position:absolute;left:0;right:0;top:100%;z-index:40;margin-top:3px;
-  background:var(--panel-2);border:1px solid var(--line);border-radius:9px;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:2px;
   box-shadow:0 12px 28px rgba(0,0,0,.45);max-height:280px;overflow:auto}
 .sitiores .it{padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--line-soft)}
 .sitiores .it:last-child{border-bottom:0}
@@ -92,8 +111,8 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
 .sitiores .aviso{padding:7px 10px;font-size:11.5px;color:var(--muted-2)}
 .sn{font-family:var(--mono);font-size:10px;color:var(--accent);text-transform:none;letter-spacing:0}
 .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
-.btn{background:rgba(54,211,153,.12);color:var(--accent);border:1px solid var(--accent);border-radius:9px;padding:9px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;width:100%}
-.btn:hover{background:rgba(54,211,153,.2);color:#fff}
+.btn{background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent);border:1px solid var(--accent);border-radius:2px;padding:9px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;width:100%}
+.btn:hover{background:color-mix(in srgb,var(--accent) 22%,transparent);color:#fff}
 .btn:disabled{opacity:.45;cursor:default}
 .btn.ghost{background:var(--panel-2);color:var(--text);border-color:var(--line)}
 .btn.ghost:hover{background:var(--panel-hi);color:var(--text);border-color:var(--accent)}
@@ -108,45 +127,45 @@ details.adv summary::before{content:"▸";color:var(--accent);font-size:11px}
 details.adv[open] summary::before{content:"▾"}
 details.adv .body{margin-top:12px}
 .readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:10px}
-.ro{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:9px;padding:9px 11px}
+.ro{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:2px;padding:9px 11px}
 .ro .k{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-family:var(--mono)}
-.ro .v{font:700 17px/1.2 var(--display);margin-top:3px}
+.ro .v{font:600 17px/1.2 var(--display);margin-top:3px}
 .ro .v small{font-size:12px;color:var(--muted);font-weight:400}
-canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:10px;margin-top:6px;touch-action:none;cursor:grab}
+canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:2px;margin-top:6px;touch-action:none;cursor:grab}
 canvas.drawing{cursor:crosshair;border-color:var(--build)}
 canvas.panning{cursor:grabbing}
 .deriv{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:12px 0 4px}
-.deriv .d{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:8px;padding:6px 9px}
+.deriv .d{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:2px;padding:6px 9px}
 .deriv .d .k{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2);font-family:var(--mono)}
-.deriv .d .v{font:700 13.5px/1.25 var(--display);margin-top:2px}
+.deriv .d .v{font:600 13.5px/1.25 var(--display);margin-top:2px}
 .deriv .d .v small{font-size:10.5px;color:var(--muted);font-weight:400}
 .deriv .d.warn{border-color:var(--build)}
 .deriv .d.warn .v{color:var(--build)}
 .dempaneles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}
-.dempaneles .pan{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:8px;padding:6px}
-.dempaneles canvas{width:100%;height:auto;display:block;border-radius:5px;margin:0;border:0;cursor:default}
+.dempaneles .pan{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:2px;padding:6px}
+.dempaneles canvas{width:100%;height:auto;display:block;border-radius:2px;margin:0;border:0;cursor:default}
 .dempaneles .tt{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:5px;text-align:center}
 .parcelas{margin-top:9px;display:flex;flex-direction:column;gap:5px}
 .parcelas .pz{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line-soft);
-  border-radius:8px;padding:6px 9px;font-size:12px}
+  border-radius:2px;padding:6px 9px;font-size:12px}
 .parcelas .pz b{font-weight:600}
 .parcelas .pz .ha{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);margin-left:auto}
 .parcelas .pz button{background:none;border:0;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px}
 .parcelas .pz button:hover{color:var(--dead)}
 .maptools{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
 .maptools .mini{width:auto;padding:5px 10px;font-size:12px}
-.maptools .minisel{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit;font-size:12px}
+.maptools .minisel{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:2px;padding:5px 8px;font:inherit;font-size:12px}
 .maptools .mini2{margin:0;font-size:11.5px;gap:5px}
 .maptools .maphint{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);margin-left:auto}
 .note{font-size:12px;color:var(--muted-2);margin-top:10px;line-height:1.5}
-.note code{color:var(--muted);background:var(--panel-2);padding:1px 5px;border-radius:5px;font-family:var(--mono)}
+.note code{color:var(--muted);background:var(--panel-2);padding:1px 5px;border-radius:2px;font-family:var(--mono)}
 .tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);margin-top:2px}
 .avisos{display:flex;flex-direction:column;gap:7px;margin-top:12px}
-.aviso{border-radius:9px;padding:9px 12px;font-size:12.5px;line-height:1.5;background:var(--panel-2);border:1px dashed var(--line)}
+.aviso{border-radius:2px;padding:9px 12px;font-size:12.5px;line-height:1.5;background:var(--panel-2);border:1px dashed var(--line)}
 .aviso.warn{border-color:var(--build)}
 .aviso.fail{border-color:var(--dead)}
 .aviso.info{border-color:var(--demo)}
-.aviso b{font-weight:700}
+.aviso b{font-weight:600}
 .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:11.5px;color:var(--muted);font-family:var(--mono)}
 .legend span{display:flex;align-items:center;gap:6px}
 .legend i{width:14px;height:9px;border-radius:2px;display:inline-block}
@@ -556,7 +575,7 @@ canvas.panning{cursor:grabbing}
         <span><i style="background:#36D399"></i> mesa</span>
         <span><i style="background:#F6A623"></i> vial</span>
         <span><i style="background:rgba(208,89,79,.35);border:1px solid #D0594F"></i> exclusión</span>
-        <span><i style="background:rgba(128,147,164,.30);border:1px dashed #8093A4"></i> descartada</span>
+        <span><i style="background:rgba(140,154,171,.30);border:1px dashed #8C9AAB"></i> descartada</span>
         <span><i style="background:rgba(150,110,220,.30);border:1px solid rgba(150,110,220,.75)"></i> pendiente &gt; máx. tracker</span>
         <span><i style="background:rgba(80,190,205,.30);border:1px solid rgba(80,190,205,.75)"></i> pendiente &gt; máx. fija</span>
         <span id="basemapMsg" style="color:var(--muted-2)"></span>
@@ -2325,7 +2344,7 @@ function pintaRejilla(ctx,cv){
   var S=escalaMundo(), lat=u2lat(VIEW.cy);
   var mpp=156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,VIEW.z);
   var paso=50/mpp; while(paso<24)paso*=2; while(paso>240)paso/=2;
-  ctx.strokeStyle='rgba(35,48,61,.85)'; ctx.lineWidth=1; ctx.beginPath();
+  ctx.strokeStyle='rgba(39,64,95,.85)'; ctx.lineWidth=1; ctx.beginPath();
   for(var x=(CVW()/2)%paso;x<CVW();x+=paso){ctx.moveTo(x,0);ctx.lineTo(x,CVH());}
   for(var y=(CVH()/2)%paso;y<CVH();y+=paso){ctx.moveTo(0,y);ctx.lineTo(CVW(),y);}
   ctx.stroke();
@@ -2787,13 +2806,13 @@ function drawLayout(RES){
   // Una unidad de dibujo = un pixel CSS. Se pone en CADA repintado porque el
   // buffer puede haber cambiado de tamano justo arriba, y eso resetea la matriz.
   ctx.setTransform(DPRK,0,0,DPRK,0,0);
-  ctx.clearRect(0,0,CVW(),CVH());ctx.fillStyle='#0F151D';ctx.fillRect(0,0,CVW(),CVH());
+  ctx.clearRect(0,0,CVW(),CVH());ctx.fillStyle='#101D30';ctx.fillRect(0,0,CVW(),CVH());
   var hayOrto=false;
   if($('orto').checked)hayOrto=pintaOrtofoto(ctx,cv);
   if(!hayOrto)pintaRejilla(ctx,cv);
   // Velo oscuro sobre la ortofoto: sin él, las mesas verdes sobre un secarral
   // claro pierden el contraste que tienen sobre el fondo del panel.
-  if(hayOrto){ctx.fillStyle='rgba(11,15,20,.28)';ctx.fillRect(0,0,CVW(),CVH());}
+  if(hayOrto){ctx.fillStyle='rgba(14,24,38,.28)';ctx.fillRect(0,0,CVW(),CVH());}
   avisoBasemap(hayOrto);
 
   function ring(pts,fill,stroke,lw,dash){
@@ -2866,11 +2885,11 @@ function drawLayout(RES){
     var modo=$('render').value;
     var lineas=(modo==='line')||(modo==='auto'&&st.length>2500);
     if(RES.descartadas&&RES.descartadas.length&&$('showDisc').checked){
-      ctx.strokeStyle='#8093A4';ctx.lineWidth=0.8;ctx.setLineDash([3,2]);
+      ctx.strokeStyle='#8C9AAB';ctx.lineWidth=0.8;ctx.setLineDash([3,2]);
       RES.descartadas.forEach(function(d){
         var q=d.lonlat;ctx.beginPath();
         for(var k=0;k<q.length;k++){var pp=px(q[k][0],q[k][1]);k?ctx.lineTo(pp[0],pp[1]):ctx.moveTo(pp[0],pp[1]);}
-        ctx.closePath();ctx.fillStyle='rgba(128,147,164,.22)';ctx.fill();ctx.stroke();
+        ctx.closePath();ctx.fillStyle='rgba(140,154,171,.22)';ctx.fill();ctx.stroke();
       });
       ctx.setLineDash([]);
     }
@@ -2896,12 +2915,12 @@ function drawLayout(RES){
       for(var k=0;k<q.length;k++){var pp=px(q[k][0],q[k][1]);k?ctx.lineTo(pp[0],pp[1]):ctx.moveTo(pp[0],pp[1]);}
       ctx.closePath();
       ctx.fillStyle=COL_MESA;ctx.fill();
-      if(st.length<3000){ctx.strokeStyle='rgba(11,15,20,.55)';ctx.lineWidth=0.4;ctx.stroke();}
+      if(st.length<3000){ctx.strokeStyle='rgba(14,24,38,.55)';ctx.lineWidth=0.4;ctx.stroke();}
       var nm=modsDe[st[i].mods]||st[i].mods;
       var p0=px(q[0][0],q[0][1]), p1=px(q[1][0],q[1][1]);
       var pxMod=Math.hypot(p1[0]-p0[0],p1[1]-p0[1])/Math.max(nm,1);
       if(pxMod>=3&&nm>1){
-        ctx.strokeStyle='rgba(11,15,20,.45)';ctx.lineWidth=0.5;ctx.beginPath();
+        ctx.strokeStyle='rgba(14,24,38,.45)';ctx.lineWidth=0.5;ctx.beginPath();
         for(var mk=1;mk<nm;mk++){
           var f=mk/nm;
           var u=lerp(px(q[0][0],q[0][1]),px(q[1][0],q[1][1]),f);
@@ -3022,8 +3041,8 @@ function drawEscala(ctx,cv,hayOrto){
   var buenos=[1,2,5,10].map(function(f){return f*pot;}).filter(function(v){return v<=objetivo*2;});
   var L=buenos[buenos.length-1]||100, w=L/mpp;
   var y=CVH()-18;
-  if(hayOrto){ctx.fillStyle='rgba(11,15,20,.55)';ctx.fillRect(8,CVH()-40,w+22,32);}
-  ctx.strokeStyle='#8093A4';ctx.fillStyle='#B9C7D3';ctx.lineWidth=1.4;
+  if(hayOrto){ctx.fillStyle='rgba(14,24,38,.55)';ctx.fillRect(8,CVH()-40,w+22,32);}
+  ctx.strokeStyle='#8C9AAB';ctx.fillStyle='#B9C7D3';ctx.lineWidth=1.4;
   ctx.beginPath();ctx.moveTo(16,y);ctx.lineTo(16+w,y);ctx.stroke();
   ctx.beginPath();ctx.moveTo(16,y-4);ctx.lineTo(16,y+4);ctx.moveTo(16+w,y-4);ctx.lineTo(16+w,y+4);ctx.stroke();
   ctx.font='11px ui-monospace,monospace';ctx.fillText(L>=1000?(L/1000)+' km':L+' m',16,y-8);
