@@ -4503,6 +4503,16 @@ LOC.run=function(cfg,onStep){
       t0=Date.parse(peor.start)-pad;t1=Date.parse(peor.end)+pad;}
     else{var mid=M.t[Math.floor(n/2)];t0=Date.UTC(mid.getUTCFullYear(),mid.getUTCMonth(),mid.getUTCDate());
       t1=t0+hrs*3600e3;}
+    /* EL SLIDER NO PUEDE BORRAR RESOLUCIÓN QUE EL CÁLCULO SÍ TIENE.
+       `hours` es un MÍNIMO de contexto: si el episodio dura tres o cuatro días,
+       la ventana crece para contenerlo. Por eso no basta con pedir 961 muestras
+       para las 16 h nominales. Cuando el cálculo es minutal, elevamos el tope al
+       número de instantes que caben en la ventana REAL; así `LOC.ventana` queda
+       con stride=1 y las flechas del range pueden ir 11:40 → 11:41 → 11:42.
+       Con cálculo a 5/10/15/60 min no inventamos minutos que no existen. */
+    if(dtH>0 && dtH*60<=1.000001){
+      maxSteps=Math.max(maxSteps,Math.ceil((t1-t0)/(dtH*3600e3))+1);
+    }
     var SRC={t:M.t,el:el,azp:azp,ws:ws,wd:wd,thB:thB,poaB:poaB,series:series,dtH:dtH,
              max_steps:maxSteps};
     /* Si la ventana pedida no pilla dato, el informe cae a las primeras
@@ -4992,7 +5002,13 @@ async function run(){
     slew_deg_s:LOC.SLEW, deadband_deg:LOC.DEADBAND,
     latencia:cfgLat(),
     wind_scenario:scenario(),
-    timeline:{hours:16, max_steps:240},
+    /* El slider del episodio es una herramienta de inspección, no solo de reproducción:
+       cuando el cálculo es minutal tiene que poder caer en CADA minuto de las 16 h.
+       Son 961 muestras contando ambos extremos en la ventana nominal. Si un
+       episodio dura más de 16 h, LOC.run amplía este tope hasta cubrir la ventana
+       REAL sin decimarla. El antiguo tope de 240 imponía un muestreo de varios
+       minutos y hacía imposible seleccionar 11:41 aunque el cálculo fuese a 1 min. */
+    timeline:{hours:16, max_steps:16*60+1},
     top_events:12, include_trace:true
   };
   ['run','runM'].forEach(function(b){$(b).disabled=true;$(b).textContent='Simulando…';});
@@ -8731,18 +8747,32 @@ function gSerieSobreViento() {
   var pph = Math.max(1, Math.round(60 / (TLw.window.step_minutes || 60)));
   var raf = LOC.gust(Float64Array.from(wsBase), 42, pph);
   var dem = GDEMO.demo.muestras;
+  /* EL DEMO SE SUPERPONE AL PEOR VIENTO, NO AL PRINCIPIO DE LA VENTANA.
+     Antes se copiaban sin más wsBase[0..N]. Eso solo parecía correcto mientras
+     el timeline estaba decimado: 120 muestras de 4 min cubrían 8 h y alcanzaban
+     el pico central. Al hacer el slider realmente minutal, esas mismas 120
+     muestras cubren 2 h y se quedan en el hombro del episodio. Era un BUG de
+     alineación oculto por el muestreo de la interfaz.
+     La pregunta declarada es «si este granizo hubiera caído durante el peor
+     viento del episodio», así que centramos el tramo de igual longitud alrededor
+     del máximo sostenido, respetando los bordes de la ventana. */
+  var iPico=0;
+  for(var iw=1;iw<wsBase.length;iw++)if(wsBase[iw]>wsBase[iPico])iPico=iw;
+  var ini=Math.max(0,Math.min(Math.max(0,wsBase.length-dem.length),
+                              iPico-Math.floor(dem.length/2)));
   var ms = dem.map(function (m, i) {
-    var k = Math.min(wsBase.length - 1, i);      // el episodio, sobre la ventana
+    var k = Math.min(wsBase.length - 1, ini + i);
     var o = {};
     for (var key in m) o[key] = m[key];
     o.viento_sostenido_ms = Math.round(wsBase[k] * 100) / 100;
     o.viento_racha_ms = Math.round(raf[k] * 100) / 100;
     return o;
   });
-  /* se expone la serie compuesta para que el banco pueda mirar el VALOR y no solo
-     el efecto: falsear el sostenido dejaría el veto disparándose por la racha, y un
-     test que solo mire «hubo veto» no vería el fallo. */
+  /* Se exponen la serie y SU OFFSET para que el banco pueda mirar el valor real,
+     no solo el efecto. El offset es parte de la evidencia de alineación, no del
+     contrato del informe. */
   window.GRAN_MUESTRAS = ms;
+  window.GRAN_VIENTO_OFFSET = ini;
   var pico = Math.max.apply(null, ms.map(function (m) { return m.viento_racha_ms; }));
   return {
     muestras: ms, dt_min: GDEMO.demo.dt_min,
