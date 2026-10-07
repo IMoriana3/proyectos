@@ -249,6 +249,104 @@
   /* Al FINAL a propósito: `.viz3d` fija su altura arriba y, con la misma
      especificidad, manda la última regla que aparezca. */
   @media(max-width:640px){.viz3d{height:330px}}
+
+  /* ═════════ FORMATO FACTIUN ACTUAL · PARIDAD VISUAL CON meteo.html ═════════
+     Esta ficha conserva su estructura y su lógica; solo adopta el lenguaje
+     visual vigente de Proyectos: navy técnico, acento naranja, superficies
+     rectas, cabecera de herramienta y densidad de tarjetas homogénea. */
+  :root{
+    --bg:#0E1826; --bg2:#101D30; --card:#132238; --line:#27405F; --line2:#27405F;
+    --tx:#DCE3EB; --tx2:#B8C3CE; --muted:#8C9AAB; --accent:#F09030;
+    --ok:#62C88A; --warn:#F09030; --err:#E84858;
+    --flota:#101D30; --flota-hi:#1A2D48;
+  }
+  body{background:var(--bg);color:var(--tx);padding-bottom:48px}
+  header{
+    max-width:none;margin:0;padding:11px max(2vw,18px);
+    background:var(--card);border-bottom:2px solid var(--accent);
+    position:sticky;top:0;z-index:60
+  }
+  header h1{font-size:1.02rem;letter-spacing:.10em;text-transform:uppercase;margin:0}
+  header h1 .chip,header h1 .engine{text-transform:none;letter-spacing:normal}
+  header .sub{color:var(--muted);font-size:.76rem;margin-top:4px;max-width:150ch}
+  header .src{color:var(--muted);font-size:.66rem;margin-top:4px;max-width:170ch}
+  .chip{
+    color:var(--accent);border:1px solid var(--accent);border-radius:0;
+    padding:3px 7px;background:var(--bg2)
+  }
+  .engine{
+    color:var(--muted);background:var(--bg2);border:1px solid var(--line);
+    border-radius:0;padding:4px 8px
+  }
+  .engine.on .led{background:var(--ok);box-shadow:none}
+  .engine.off .led{background:var(--err)}
+  .tabs{
+    width:var(--ancho);margin:10px auto 0;padding:0;
+    border-bottom:1px solid var(--line);gap:5px
+  }
+  .tabs button{
+    border-radius:0;background:var(--bg2);border:1px solid var(--line);
+    color:var(--muted);padding:6px 12px;font-size:.76rem
+  }
+  .tabs button.on{border-color:var(--accent);color:var(--accent);background:var(--card)}
+  .wrap{width:var(--ancho);max-width:none;padding:11px 0 45px}
+  .cols{grid-template-columns:320px minmax(0,1fr);gap:11px}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:0;
+    padding:13px;margin-bottom:11px
+  }
+  .card h2{
+    margin:0 0 9px;font-size:.72rem;text-transform:uppercase;letter-spacing:.13em;
+    color:var(--muted);font-weight:700
+  }
+  .card h2 .sn{font-size:.60rem;color:var(--muted)}
+  .field label{
+    font-size:.62rem;letter-spacing:.08em;color:var(--muted);margin-bottom:3px
+  }
+  .field input,.field select,.labrow select,.gtbl input,.gtbl select{
+    background:var(--bg2);border:1px solid var(--line);border-radius:0;
+    color:var(--tx);padding:7px 8px
+  }
+  .field input:focus,.field select:focus,.labrow select:focus{
+    outline:none;border-color:var(--accent)
+  }
+  .btn{
+    border-radius:0;background:var(--bg2);border:1px solid var(--line);
+    color:var(--accent);padding:7px 10px
+  }
+  .btn:hover{border-color:var(--accent);background:var(--flota-hi)}
+  .btn.acc{border-color:var(--accent);color:var(--accent);background:var(--bg2)}
+  .tag,.pill{
+    border-radius:0;background:var(--bg2);border-color:var(--line);color:var(--muted)
+  }
+  .ro,.cont3 .c,.gsvg,canvas,.viz3d,.eventmaster,.incgen,.noval,.sitiores{
+    border-radius:0
+  }
+  .ro,.eventmaster,.incgen{background:var(--bg2);border-color:var(--line)}
+  .viz3d{height:520px;background:var(--bg2);border-color:var(--line)}
+  .viz3d .hint3d,.meteo3d{border-radius:0;background:rgba(14,24,38,.90)}
+  .meteo3d.wind{border-color:var(--accent)}
+  .meteo3d.hail{border-color:var(--silver,#B8C3CE)}
+  .eventsummary .e{border-radius:0;background:var(--bg2);border-color:var(--line)}
+  .eventline{border-color:var(--line)}
+  .eventline .now{background:var(--accent)}
+  .eventline .mark i{border-radius:0;border-color:var(--bg2)}
+  table{font-size:.74rem}
+  th{color:var(--muted)}
+  .readout,.hud{gap:6px}
+  .sitiobox .sitiores{box-shadow:0 10px 24px rgba(0,0,0,.28)}
+  .runbar{background:rgba(16,29,48,.97)!important;border-top-color:var(--line)!important}
+  @media(max-width:1450px){.cols{grid-template-columns:300px minmax(0,1fr)}.viz3d{height:470px}}
+  @media(max-width:980px){.cols{grid-template-columns:1fr}.wrap,.tabs{width:96vw}header{position:static}.viz3d{height:420px}}
+  @media(max-width:640px){
+    header{padding:11px 12px}
+    header h1{font-size:.94rem}
+    .wrap{width:96vw;padding:9px 0 90px}
+    .tabs{margin-top:8px}
+    .card{padding:11px}
+    .viz3d{height:330px}
+  }
+
 </style>
 </head>
 <body>
