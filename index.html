@@ -1866,11 +1866,11 @@ const PROJECTS = [
     stack: "PowerShell · Modbus TCP · offline",
     url: "",                                                  // no hay deploy: se ejecuta en el portátil de campo
     repo: "https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox",
-    updated: "2026-10-08",
-    version: "12.11",
+    updated: "2026-10-09",
+    version: "12.12",
     docId: "tcu-toolbox",
     docUrl: "",
-    download: "https://github.com/IMoriana3/scada/raw/releases/TCU_Toolbox_v12.11.zip",   // ZIP verificado de esta revision
+    download: "https://github.com/IMoriana3/scada/raw/releases/TCU_Toolbox_v12.12.zip",   // ZIP verificado de esta revision
     // DESDE EL 07/10/2026 EL REPO scada ES PRIVADO: la API de releases contesta 404
     // sin login, asi que refrescarReleases() ya no puede actualizar esta tarjeta
     // en vivo y se queda lo escrito aqui. Y DESDE LA v12.11 YA NO HAY RELEASES:
@@ -1881,7 +1881,7 @@ const PROJECTS = [
     // descarga pide sesion de GitHub con acceso al repo.
     release: "IMoriana3/scada",                                      // version y fecha en vivo: ver refrescarReleases()
     uso: [
-      "Descarga el ZIP con el botón Paquete (el repo es privado: pide sesión de GitHub con acceso; todas las versiones están en https://github.com/IMoriana3/scada/tree/releases). El fichero lleva la versión en el nombre (TCU_Toolbox_v12.11.zip) y trae dos carpetas: tcu-toolbox (la toolbox, el descargador de logs de NCU y el Espía Modbus) y tcu-agente (el agente remoto). Copia las dos, juntas, al portátil de campo.",
+      "Descarga el ZIP con el botón Paquete (el repo es privado: pide sesión de GitHub con acceso; todas las versiones están en https://github.com/IMoriana3/scada/tree/releases). El fichero lleva la versión en el nombre (TCU_Toolbox_v12.12.zip) y trae dos carpetas: tcu-toolbox (la toolbox, el descargador de logs de NCU y el Espía Modbus) y tcu-agente (el agente remoto). Copia las dos, juntas, al portátil de campo.",
       "Doble clic en TCU_Toolbox.bat (sin instalar nada). Las entradas \"(auto)\" resuelven solas el puerto de cada TCU.",
       "Las plantas viajan en plantas/<planta>.json (o CSV) — se exportan desde la página IPs de esta misma plataforma, o se regeneran desde el Excel maestro."
     ],
@@ -2395,7 +2395,7 @@ function relCache(repo){
   try{
     const r = JSON.parse(localStorage.getItem("rel:"+repo) || "null");
     // Una cache anterior no debe rebajar la revision ya publicada de Toolbox.
-    if(repo === "IMoriana3/scada" && r && compararVersion(r.ver, "12.11") < 0) return null;
+    if(repo === "IMoriana3/scada" && r && compararVersion(r.ver, "12.12") < 0) return null;
     return (r && r.ver && (Date.now() - r.t) < REL_TTL) ? r : null;
   }catch(e){ return null; }
 }
@@ -2428,7 +2428,7 @@ async function refrescarReleases(){
   await Promise.all(conRelease.map(async p => {
     try{
       const r = await releaseDe(p.release);
-      if(p.release === "IMoriana3/scada" && compararVersion(r.ver, "12.11") < 0) return;
+      if(p.release === "IMoriana3/scada" && compararVersion(r.ver, "12.12") < 0) return;
       if(r.ver !== p.version || r.fecha !== p.updated){
         p.version = r.ver; p.updated = r.fecha; algo = true;
       }
