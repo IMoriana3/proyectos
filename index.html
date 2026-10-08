@@ -628,7 +628,7 @@ body.presenta .solo-pres{display:inline-block}
         <span class="vs">GlobInc +0,03 %. Careo automático de la cadena por etapa, sin configuración manual, con el hallazgo térmico Uc/Uv.</span>
         <span class="go">Abrir el careo →</span>
       </a>
-      <a class="careo" href="https://imoriana3.github.io/cobertura-zigbee/terreno.html?planta=ayora&cotas=levantamiento&bt=cons" target="_blank" rel="noopener">
+      <a class="careo" href="https://cobertura-zigbee.imoriana3.workers.dev/terreno.html?planta=ayora&cotas=levantamiento&bt=cons" target="_blank" rel="noopener">
         <span class="lab">Relieve de Ayora · frente al as-built</span>
         <span class="val">0,03<small> m p50</small></span>
         <span class="vs">p95 0,11 m contra 3.004 cotas medidas. Es el relieve que mueve el hero de esta página.</span>
@@ -838,7 +838,7 @@ const PROJECTS = [
     status: "live",
     objetivo: "POA y ENERGÍA de CADA string en colores sobre el terreno 3D, igual para todas las plantas — ninguna es especial: cada string con su posición, inclinación y tilt entra al mismo motor. POA del bloque FÍSICA PURA del simulador (extraído en caliente, cero copias), cadena DC Y AC del Notebook (t_cell PVSyst-Faiman + PVWatts γ; pérdidas DC + inversor con recorte a Pnom + límite de red — apply_dc_losses / inverter_efficiency_curve / apply_grid_limit de solargpt_core, careado dígito a dígito contra el core en el QA), meteo TMY real (PVGIS) o cielo despejado, agregados día/mes/año, careo contra la MEDIDA real por inversor y exportación CSV. El θ con el que se estima es el que el tracker EJECUTA —con el lazo de la TCU: banda muerta, velocidad de actuador y ciclo—, la política de backtracking se elige entre las nueve del simulador, y la cifra por string está vigilada por un golden a 1e-9 para que no se mueva sin que nadie se entere. Con El Burgo I carga los 823 strings reales del plano y agrega por sus 36 inversores; con Ayora y San José usa las cotas z REALES de cada extremo de mesa (el mismo cargador que el simulador de BT 3D).",
     stack: "HTML offline · Three.js (libs locales) · física extraída de backtracking.html (mismo contrato de delimitadores que su QA) · seguidor.js (el modelo de tracker de la casa, instanciado a escala de planta entera) · sol.js + irradiancia.js compartidos",
-    url: "https://imoriana3.github.io/cobertura-zigbee/produccion.html",
+    url: "https://cobertura-zigbee.imoriana3.workers.dev/produccion.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-09-23",
     version: "v1.33.0",
@@ -915,7 +915,7 @@ const PROJECTS = [
     status: "live",
     objetivo: "Consulta del mapa Modbus completo de NCU, HSU y TCU, con dirección absoluta por unidad y decodificación de valores crudos en vivo.",
     stack: "HTML · sin dependencias",
-    url: "https://imoriana3.github.io/cobertura-zigbee/modbus.html",
+    url: "https://cobertura-zigbee.imoriana3.workers.dev/modbus.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-08-09",
     version: "R7",
@@ -933,7 +933,7 @@ const PROJECTS = [
     status: "live",
     objetivo: "Comparación de todas las políticas de backtracking del núcleo de cálculo sobre terreno 3D y los tres tipos de accionamiento. Ejecución offline en el navegador.",
     stack: "HTML offline · Three.js (libs locales) · Canvas · pvlib singleaxis (A&M 2020) portado a JS",
-    url: "https://imoriana3.github.io/cobertura-zigbee/backtracking.html",
+    url: "https://cobertura-zigbee.imoriana3.workers.dev/backtracking.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-09-23",
     verEnApp: true,            // la version NO se copia aqui: se LEE de la app (const VER). Ver leerVersiones()
@@ -1091,7 +1091,7 @@ const PROJECTS = [
     status: "live",
     objetivo: "Comparación de las cuatro políticas de radiación difusa del núcleo de cálculo: lo que gana cada una y lo que cuesta — arranques de motor, grados de maniobra y batería, con el modelo de motor medido en campo. Cielo manual o de Open-Meteo y zonificación por NCU.",
     stack: "HTML offline · Three.js (libs locales) + seguidor.js · Canvas · pvlib singleaxis + Ineichen + Perez portados a JS · Open-Meteo (datos, opcional)",
-    url: "https://imoriana3.github.io/cobertura-zigbee/overcast.html",
+    url: "https://cobertura-zigbee.imoriana3.workers.dev/overcast.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-09-23",
     verEnApp: true,            // idem: el numero vive en la app, no en la tarjeta
@@ -1276,7 +1276,7 @@ const PROJECTS = [
     status: "live",
     objetivo: "Alta de una planta nueva a partir de ficheros CSV o DXF: reconocimiento de los bloques de tracker por su geometría y previsualización 2D/3D. Ejecución offline.",
     stack: "HTML offline · UTM↔WGS84 · parser DXF · Three.js",
-    url: "https://imoriana3.github.io/cobertura-zigbee/crear.html",
+    url: "https://cobertura-zigbee.imoriana3.workers.dev/crear.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-06-22",
     version: "",
@@ -1478,7 +1478,7 @@ const PROJECTS = [
     status: "live",
     objetivo: "Cálculo del tráfico que el SCADA genera en la LAN de planta y del volumen que cada planta envía a la nube, con el mismo modelo de bytes que aplica el colector en operación.",
     stack: "HTML · sin dependencias · modelo en Python",
-    url: "https://imoriana3.github.io/scada/trafico.html",
+    url: "https://scada.imoriana3.workers.dev/trafico.html",
     repo: "https://github.com/imoriana3/scada",
     updated: "2026-08-19",
     version: "1.1",
@@ -1895,7 +1895,7 @@ const PROJECTS = [
     status: "build",
     objetivo: "Medición sobre imagen satélite de la cobertura Zigbee desplegada: nivel de señal, nodos sin respuesta, saltos y criticidad de cada unidad.",
     stack: "HTML · Leaflet · PowerShell (RCI/telnet) · CSV",
-    url: "https://imoriana3.github.io/cobertura-zigbee/",
+    url: "https://cobertura-zigbee.imoriana3.workers.dev/",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
     updated: "2026-06-16",
     version: "",
@@ -2069,6 +2069,12 @@ const PROJECTS = [
    Vistas extra (plano, visor, scada) solo salen si tienen URL.
    ===================================================================== */
 const SITE = "https://imoriana3.github.io/";
+/* 2026-10-08: cobertura-zigbee y scada pasaron a PRIVADOS y en el plan gratuito
+   eso los deja sin Pages (404). Se sirven desde Cloudflare, como la cartera.
+   Ya no son mismo origen que el Panel: se abren fuera de la app instalada, y la
+   versión de backtracking/overcast se lee con fetch() gracias a la CORS que
+   cobertura-zigbee manda en su _headers. */
+const COB = "https://cobertura-zigbee.imoriana3.workers.dev/";
 /* La Cartera y el SCADA no viven en GitHub Pages: van tras el login del worker */
 const CARTERA = "https://factiun-cartera.imoriana3.workers.dev/";
 const PLANTS = [
@@ -2081,47 +2087,47 @@ const PLANTS = [
      lee sin la cartera delante. */
   { name:"El Burgo I", code:"23003", codCartera:"24002", pdc:13.95856, loc:"Zaragoza · España", views:{
       siting:     SITE+"siting/?planta=burgo",
-      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=elburgo",
-      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=elburgo",
-      cobertura:  SITE+"cobertura-zigbee/index.html?planta=elburgo",
+      layout2d:   COB+"plano.html?planta=elburgo",
+      topo3d:     COB+"terreno.html?planta=elburgo",
+      cobertura:  COB+"index.html?planta=elburgo",
       asbuilt:    SITE+"visores/asbuilt/?planta=elburgo",
       scada:      CARTERA+"scada.html?planta=el%20burgo%20i",
   }},
   { name:"Ayora", code:"24025", pdc:52.52296, loc:"Valencia · España", views:{
       siting:     SITE+"siting/?planta=ayora",
-      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=ayora",
-      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=ayora&cotas=levantamiento&bt=cons",
-      cobertura:  SITE+"cobertura-zigbee/index.html?planta=ayora",
+      layout2d:   COB+"plano.html?planta=ayora",
+      topo3d:     COB+"terreno.html?planta=ayora&cotas=levantamiento&bt=cons",
+      cobertura:  COB+"index.html?planta=ayora",
       asbuilt:    SITE+"visores/asbuilt/?planta=ayora",
       scada:      CARTERA+"scada.html?planta=ayora",
   }},
   { name:"San José", code:"24019", pdc:177.984, loc:"Arequipa · Perú", views:{
       siting:     SITE+"siting/?planta=sanjose",
-      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=sanjose",
-      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=sanjose&cotas=levantamiento&bt=cons",
-      cobertura:  SITE+"cobertura-zigbee/index.html?planta=sanjose",
+      layout2d:   COB+"plano.html?planta=sanjose",
+      topo3d:     COB+"terreno.html?planta=sanjose&cotas=levantamiento&bt=cons",
+      cobertura:  COB+"index.html?planta=sanjose",
       asbuilt:    SITE+"visores/asbuilt/?planta=sanjose",
       scada:      CARTERA+"scada.html?planta=san%20jos%C3%A9",
   }},
   { name:"Fayón", code:"24007", pdc:1.25664, loc:"Zaragoza · España", views:{
       siting:     SITE+"siting/?planta=fayon",
-      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=fayon",
-      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=fayon",
-      cobertura:  SITE+"cobertura-zigbee/index.html?planta=fayon",
+      layout2d:   COB+"plano.html?planta=fayon",
+      topo3d:     COB+"terreno.html?planta=fayon",
+      cobertura:  COB+"index.html?planta=fayon",
   }},
   /* Túnez ya tiene layout (IMPLENTATION_TOPOGRAPHE.dwg + su listado de coordenadas): 19 seguidores
      2V14 bífilas, 1.064 módulos. Sigue sin escenario en siting, así que esa vista queda en gris. */
   { name:"Túnez", code:"24021", pdc:0.7448, loc:"El Hamma · Gabès · Túnez", views:{
       siting:     SITE+"siting/?planta=tunez",
-      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=tunez",
-      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=tunez",
-      cobertura:  SITE+"cobertura-zigbee/index.html?planta=tunez",
+      layout2d:   COB+"plano.html?planta=tunez",
+      topo3d:     COB+"terreno.html?planta=tunez",
+      cobertura:  COB+"index.html?planta=tunez",
   }},
   { name:"Bagnarelli", code:"24030", pdc:0.92016, loc:"Lucera · Foggia · Italia", views:{
       siting:     SITE+"siting/?planta=bagnarelli",
-      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=bagnarelli",
-      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=bagnarelli",
-      cobertura:  SITE+"cobertura-zigbee/index.html?planta=bagnarelli",
+      layout2d:   COB+"plano.html?planta=bagnarelli",
+      topo3d:     COB+"terreno.html?planta=bagnarelli",
+      cobertura:  COB+"index.html?planta=bagnarelli",
   }},
   /* EN OFERTA, sin firmar: El Naranjo Dicayagua (República Dominicana). No tiene número de proyecto
      porque el número lo da la cartera al adjudicar, así que la tarjeta lleva el distintivo OFERTA
@@ -2130,8 +2136,8 @@ const PLANTS = [
      propio, 164 curvas de nivel— pero NO siting, cobertura ni SCADA, que son de TCU/NCU y aquí no
      hay ninguna. Todo lo que se dice sale del KML de layout y de los planos de oferta. */
   { name:"El Naranjo Dicayagua", code:"", oferta:true, pdc:180.8, loc:"Santiago · República Dominicana", views:{
-      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=dicayagua",
-      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=dicayagua",
+      layout2d:   COB+"plano.html?planta=dicayagua",
+      topo3d:     COB+"terreno.html?planta=dicayagua",
   }},
   /* CATANIA (Sicilia) — EN OFERTA, sin firmar, y esta SÍ es de seguidores. Va sin número por lo
      mismo que Dicayagua: el número lo da la cartera al adjudicar. El del DWG (PR.26.203) es la
@@ -2163,7 +2169,7 @@ const PLANTS = [
      el plano no empareja no entran, y el rótulo del botón lo dice. */
   { name:"Catania", code:"", oferta:true, pdc:111.6297, loc:"Catania · Sicilia · Italia", views:{
       siting:     SITE+"siting/?planta=catania",
-      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=catania",
+      layout2d:   COB+"plano.html?planta=catania",
   }},
   /* BENANTE 25004 y PANBIANCO 25004.2 (Sicilia). Son dos plantas del MISMO emplazamiento, a 1,3 km
      una de otra y con seguidor idéntico. La cartera las trae sin potencia todavía, así que `pdc` va
@@ -2175,15 +2181,15 @@ const PLANTS = [
      cambio en ese repo, no aquí. */
   { name:"Benante", code:"25004", pdc:null, loc:"Sicilia · Italia", views:{
       siting:     SITE+"siting/?planta=benante",
-      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=benante",
-      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=benante",
-      cobertura:  SITE+"cobertura-zigbee/index.html?planta=benante",
+      layout2d:   COB+"plano.html?planta=benante",
+      topo3d:     COB+"terreno.html?planta=benante",
+      cobertura:  COB+"index.html?planta=benante",
   }},
   { name:"Panbianco", code:"25004.2", pdc:null, loc:"Sicilia · Italia", views:{
       siting:     SITE+"siting/?planta=panbianco",
-      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=panbianco",
-      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=panbianco",
-      cobertura:  SITE+"cobertura-zigbee/index.html?planta=panbianco",
+      layout2d:   COB+"plano.html?planta=panbianco",
+      topo3d:     COB+"terreno.html?planta=panbianco",
+      cobertura:  COB+"index.html?planta=panbianco",
   }},
   /* EL POLVORÍN 25082 (Badajoz). Siete tipos de seguidor en vez de dos, y dos de ellos MONOFILARES;
      el tipo lo da el nombre de bloque del DWG, que es además el reparto de string de la cartera.
@@ -2192,16 +2198,16 @@ const PLANTS = [
      la CARTERA, que es otra aplicación. En el de operación sí está dada de alta. */
   { name:"El Polvorín", code:"25082", pdc:9.15616, loc:"Badajoz · España", views:{
       siting:     SITE+"siting/?planta=polvorin",
-      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=polvorin",
-      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=polvorin",
-      cobertura:  SITE+"cobertura-zigbee/index.html?planta=polvorin",
+      layout2d:   COB+"plano.html?planta=polvorin",
+      topo3d:     COB+"terreno.html?planta=polvorin",
+      cobertura:  COB+"index.html?planta=polvorin",
   }},
   /* Páramo está a 0 en la cartera: aún no tiene la potencia. Sin dato no se pinta nada. */
   { name:"Páramo", code:"25019", pdc:null, loc:"Villamañán · León · España", views:{
       siting:     SITE+"siting/?planta=paramo",
-      layout2d:   SITE+"cobertura-zigbee/plano.html?planta=paramo",
-      topo3d:     SITE+"cobertura-zigbee/terreno.html?planta=paramo",
-      cobertura:  SITE+"cobertura-zigbee/index.html?planta=paramo",
+      layout2d:   COB+"plano.html?planta=paramo",
+      topo3d:     COB+"terreno.html?planta=paramo",
+      cobertura:  COB+"index.html?planta=paramo",
   }},
 ];
 /* Vistas de planta.
