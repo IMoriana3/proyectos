@@ -13,7 +13,7 @@
    - api.github.com y demás orígenes: NI SE TOCAN. Sin red fallan igual que ahora,
      que es lo que el panel ya sabe manejar (mantiene lo escrito a mano).
    Al cambiar CACHE se tira la anterior entera: es la forma de publicar cambios. */
-const CACHE = "factiun-panel-v173";
+const CACHE = "factiun-panel-v177";
 
 /* Rutas relativas al scope (/proyectos/ en Pages, / al servirlo en local). */
 const SHELL = [
@@ -22,6 +22,7 @@ const SHELL = [
   "cartera-tabla.html",
   "layout.html",
   "generador-layout.html",
+  "buscador-implantacion.html",
   "lib/layout-search.js",
   "lib/layout-search-ui.js",
   "sim-solar.html",
@@ -34,7 +35,23 @@ const SHELL = [
   "assets/icon-192.png",
   "assets/icon-512.png",
   "assets/icon-maskable-512.png",
-  "assets/apple-touch-icon.png"
+  "assets/apple-touch-icon.png",
+  "assets/fonts/JetBrainsMono-400-latin.woff2",
+  "assets/fonts/JetBrainsMono-400-latin-ext.woff2",
+  "assets/fonts/JetBrainsMono-500-latin.woff2",
+  "assets/fonts/JetBrainsMono-500-latin-ext.woff2",
+  "assets/fonts/JetBrainsMono-600-latin.woff2",
+  "assets/fonts/JetBrainsMono-600-latin-ext.woff2",
+  "assets/fonts/BarlowCondensed-500-latin.woff2",
+  "assets/fonts/BarlowCondensed-500-latin-ext.woff2",
+  "assets/fonts/BarlowCondensed-600-latin.woff2",
+  "assets/fonts/BarlowCondensed-600-latin-ext.woff2",
+  "assets/fonts/Barlow-400-latin.woff2",
+  "assets/fonts/Barlow-400-latin-ext.woff2",
+  "assets/fonts/Barlow-500-latin.woff2",
+  "assets/fonts/Barlow-500-latin-ext.woff2",
+  "assets/fonts/Barlow-600-latin.woff2",
+  "assets/fonts/Barlow-600-latin-ext.woff2"
 ];
 
 self.addEventListener("install", e => {
@@ -85,8 +102,11 @@ async function redPrimero(e, navegacion) {
     // El respaldo "index.html" es SOLO para navegaciones: devolvérselo a un
     // .md o a un .json sería servir una página entera donde se espera texto o
     // datos, y el consumidor lo intentaría interpretar sin enterarse.
+    // El respaldo index.html es SOLO para la portada: devolvérselo a otra ficha era enseñar el
+    // Panel con cara de esa ficha. Para el resto, el aviso de sin conexión.
+    const esPortada = navegacion && /\/(index\.html)?$/.test(new URL(e.request.url).pathname);
     const hit = await c.match(e.request) ||
-      (navegacion ? (await c.match("index.html") || await c.match("./")) : null);
+      (esPortada ? (await c.match("index.html") || await c.match("./")) : null);
     if (hit) return hit;
     if (!navegacion) return new Response("", { status: 504 });
     return new Response("<!doctype html><meta charset=utf-8><body style='background:#0B0F14;color:#E7EEF4;font:16px system-ui;padding:2rem'>Sin conexión y sin copia guardada de esta página.</body>",

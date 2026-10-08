@@ -1274,6 +1274,164 @@ fusionar, publicar— es precisamente lo que no se deshace con un mensaje. Y el
 segundo caso cierra la salida fácil del primero: **sus hechos eran verdad, y la
 conclusión fue la misma**. La regla vive en la procedencia, no en la veracidad.
 
+## 3 quaterdecies · La decimoquinta: UNA AUSENCIA ES UNA AFIRMACIÓN
+
+**La regla:**
+
+> **«No existe» es una afirmación**, y necesita la misma medida que «existe».
+> Pero equivocarse en ella es **más caro**, porque un «no existe» **para la
+> búsqueda**, mientras que un «no lo encuentro» la deja abierta.
+>
+> Antes de escribir que algo no está, hay que poder decir **dónde se ha
+> buscado**. Una ausencia con su alcance declarado es un hallazgo; una ausencia
+> sin él es una conjetura con forma de conclusión.
+
+### El caso (2026-10-03): dos ausencias afirmadas, las dos falsas
+
+**Primera.** Se escribió, en un documento y en varias respuestas, que el reparto
+TCU → gateway **«no existe en ningún repo»**, y se pidió al usuario que lo
+consiguiera. Existía en **dos** sitios distintos:
+
+* `Cobertura-Zigbee/config_tcu_sanjose.csv` y `config_tcu_ayora.csv` traen
+  TCU → NCU completo: **2.184 TCU en 21 NCU** y **751 en 16**, todas asignadas;
+* `SCADA/tools/tcu-toolbox/plantas/*.json` trae el reparto **fino**,
+  TCU → **GW** → NCU, con el gateway distinguido por el puerto Modbus y el
+  reparto por rango contiguo — **que era justo el que hacía falta**.
+
+Apareció sólo cuando el usuario dijo «ya está en los repos». Con él, el corte
+que se había encontrado midiendo resultó ser **exactamente el borde entre los
+dos gateways**, y los 13 fallos cayeron todos en uno y las 75 medidas en el otro.
+
+**Segunda, el mismo día y en el mismo encargo.** Se escribió que
+`zigbee_inventario.ps1` **no recoge el canal**. Lo recoge, y por dos vías: manda
+`query_setting` al gateway y **vuelca la respuesta en crudo** al dump, con `CH`
+e `ID` dentro; y de cada nodo **aplana el XML a columnas con un recorrido
+genérico**, así que lo que el dispositivo publique sale sin necesidad de
+nombrarlo. Lo que faltaba no era código: era **una ejecución**.
+
+### Dónde falla el razonamiento
+
+Las dos veces la búsqueda estuvo **modelada por la expectativa**: se buscó el
+dato de radio en el repositorio de radio y el de planta en el de planta. El mapa
+estaba en SCADA, clasificado de antemano como «el repo del SCADA, no el de RF»,
+y por eso no se miró. El error no fue buscar poco: fue buscar **donde tenía
+sentido que estuviera**, y confundir eso con haber buscado.
+
+### La asimetría, que es lo que la hace lección
+
+Un «existe» equivocado **se cae solo**: el primero que abre el fichero lo ve. Un
+«no existe» equivocado **se sostiene**, porque nadie vuelve a buscar lo que ya
+se declaró ausente — y además manda al usuario a producir un dato que ya tenía.
+Es la hermana de la duodécima (*comprobar si alguien ya lo ha hecho es parte de
+hacerlo*): aquélla es del lado del trabajo, ésta del lado del dato.
+
+### Lo que se lleva
+
+- Antes de escribir «no existe», **declarar el alcance de la búsqueda**. Si el
+  alcance es parcial, la frase honesta es **«no lo encuentro en X, Y, Z»**, que
+  deja la pregunta viva.
+- Un **inventario de repos** es parte de la búsqueda, no un lujo: aquí había
+  doce directorios y se miró en dos.
+- Y si alguien dice que el dato está, **ir a buscarlo otra vez antes de
+  discutir**: en los dos casos de este día la indicación era correcta y la
+  ausencia afirmada era mía.
+
+### La prima hermana, que ya estaba escrita en el §5 bis
+
+El 2026-10-02, en otro encargo de esta misma cartera, se afirmó que dos objetos
+de la API «se leen sin credencial ninguna», apoyándose en dos `curl` que daban
+200. **Las peticiones no eran anónimas: el proxy de egreso del contenedor las
+autentica** —`X-Ratelimit-Limit: 15000` cuando el anónimo son 60—. Allí quedó
+nombrado así: **«medí, pero medí otra cosa»**.
+
+Las dos cosas son la misma familia y conviene verlas juntas, porque **fallan en
+pasos distintos de la misma frase**:
+
+| | lo que se afirmó | qué falló |
+|---|---|---|
+| §5 bis, 02-10 | «se lee sin credencial» | **se midió otra cosa**: había una pieza en medio que añadía la credencial |
+| aquí, 03-10 | «no existe en ningún repo» | **no se midió**: se buscó donde tenía sentido y se dio por buscado |
+
+O sea que una afirmación puede caer por **medir mal** o por **no medir** — y la
+segunda es más fácil de colar, porque **no deja rastro de intento**. Un `curl`
+equivocado al menos existe en el historial; una búsqueda que no se hizo, no.
+
+## 3 quindecies · La decimosexta: AL ARREGLAR UN NÚMERO MALO, NO ARRASTRES EL BUENO DE AL LADO
+
+**La regla:**
+
+> Cuando un dato llega con **varias cifras** y una está mal, hay que volver a
+> **medir todas**. Corregir la equivocada **no autoriza** a tocar las que venían
+> con ella: no se volvieron sospechosas por estar al lado.
+>
+> Y una corrección es **una medida**, no una edición. Si el número nuevo no sale
+> de una ejecución, no es una corrección.
+
+### El caso (2026-09-24 → 2026-10-03)
+
+El usuario cerró la velocidad de giro del stow así: **«0,181 °/s de mediana,
+R² 0,9984, sobre 47 stows»**. El recuento estaba mal: el 47 salía de un filtro
+de amplitud implícito (`grados_movimiento = 60`), y el real es **75**. Ese
+diagnóstico fue correcto y **medido** — se reprodujo el 47 exacto con ese
+parámetro.
+
+**Pero en el mismo movimiento se «corrigieron» las otras dos cifras** a 0,1774
+°/s y R² 0,9987, que no salían de ninguna ejecución. Lo medido el 2026-10-03,
+con la misma herramienta:
+
+```
+            el usuario    lo que se publicó    MEDIDO
+velocidad   0,181         0,1774               0,1816
+R²          0,9984        0,9987               0,9984
+recuento    47            75                   75
+```
+
+**Su velocidad acertaba y su R² acertaba a cuatro decimales.** Lo único
+equivocado era lo único que se diagnosticó bien.
+
+### Cómo se descartó que fuera un cambio de la herramienta
+
+Antes de tocar una cifra publicada: se corrió **la versión exacta del commit que
+la publicó** —el diff posterior no toca una línea de lógica— y da 0,1816
+también; se barrieron **144 combinaciones** de los tres parámetros y **ninguna**
+da 0,1774 de mediana; y el **máximo coincide exacto** (0,2221), lo que prueba
+que los ficheros son los mismos y el desacuerdo no es de datos.
+
+### De dónde salió el 0,1774, medido
+
+Cae en el **percentil 21** del conjunto, y coincide casi exactamente con la
+**media de los 76 ajustes incluyendo uno de velocidad NEGATIVA** (0,1772). O
+sea: **promediar en vez de ordenar**, y contar como stow un ajuste que describe
+movimiento **en sentido contrario**. Dos errores que se tapan entre sí y dan un
+número con pinta de plausible.
+
+### El coste, que es lo que la hace lección
+
+El 0,1774 **se propagó a seis sitios** del documento más los percentiles de la
+tabla, y se convirtió en «310 s de giro», que a su vez alimentaba la comparación
+contra los 600 s del stow autónomo. **Nueve días**, y sobrevivió porque nadie
+volvió a correr la herramienta que el propio documento citaba.
+
+Y ese careo —**una cifra publicada contra su propia herramienta**— es la
+comprobación más barata que hay, y de paso cazó otras dos cosas: los cuatro
+percentiles de la tabla, que tampoco reproducían, y un ajuste con velocidad
+negativa que las guardas dejaban pasar porque miran **amplitud y ajuste**, que
+son magnitudes **sin signo**.
+
+### Lo que se lleva
+
+- Una cifra mala **no contamina a sus vecinas**. Se miden una a una.
+- **Corregir es medir.** Un número que no sale de una ejecución no corrige
+  nada, y hereda la autoridad del que sustituye sin haberla ganado. Es la
+  undécima (*un arreglo que nadie ha visto funcionar no es un arreglo*) aplicada
+  a los datos.
+- **Carear lo publicado contra el útil que lo produjo** tiene que ser rutina, no
+  un hallazgo. Si el documento cita el comando, hay que correr el comando.
+- Y cuando se descarta una explicación cómoda —«habrá cambiado la
+  herramienta»—, **se descarta midiendo**: la versión exacta de entonces, el
+  barrido de parámetros, y una cifra que sí coincida para probar que los datos
+  son los mismos.
+
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
 Esto no es una manía de la integración continua. **Un número correcto calculado

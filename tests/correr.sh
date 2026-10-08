@@ -59,6 +59,8 @@ PATRON="${1:-}"
 # aquí y el cambio aparece en el diff, que es justo lo que un recuento que
 # nadie fija no consigue.
 declare -A PISO=(
+  [test_generador_inclemencias.js]=45
+  [test_abanderamiento_evento.js]=31
   [test_buscador.js]=59
   [test_careo_pvsyst.js]=11
   # La cartera del usuario NO la probaba nadie: de los 33 arneses, el único que
@@ -450,7 +452,7 @@ declare -A PISO=(
   # Nace de un hueco MEDIDO: con el `hold` de la histéresis puesto a cero en
   # la llamada real, los diez arneses que abren la ficha —539 comprobaciones—
   # se quedaron verdes. La histéresis se podía borrar y el repo no lo notaba.
-  [test_viento_abanderamiento.js]=33
+  [test_viento_abanderamiento.js]=40
   # De la batería de mutación del 2026-09-10: SIETE mutantes sobre mecanismos
   # que ningún arnés nombraba —Gumbel, lazo de control, denominador del pasivo—
   # mataron CERO comprobaciones contra los 238 de los arneses de viento. Estos
@@ -461,7 +463,18 @@ declare -A PISO=(
   # reenganche por cruce mataron CERO cada uno. El de CSV no es un hueco de
   # banco sino de CAMINO: cuelga del manejador de subida, que ningún arnés
   # dispara — y se cierra igual, porque el código existe y decide.
-  [test_viento_csv.js]=31
+  #
+  # 2026-10-03, +10: LA UNIDAD DECLARADA. El heurístico «p98>45 ⇒ km/h» leyó un
+  # año de ERA5 de Open-Meteo en km/h —p98 de 26, no cruza— como m/s: 48,2 km/h
+  # de máximo anual entraron como 48,2 m/s = 173 km/h, y la pantalla declaró
+  # «m/s». Un 3,6x sobre toda la serie sin que nada chirríe. El arreglo no
+  # adivina mejor: lee la unidad que la cabecera YA traía y, cuando no la trae y
+  # las dos lecturas son creíbles, marca la duda en vez de elegir callando.
+  # MUTANTES, los cuatro predichos antes de medir y los cuatro acertados: la
+  # declaración deja de mandar (2), la declaración invertida (2), la duda nunca
+  # se publica (1) y los bordes con \b en vez de [^a-z] (1 — con \b,
+  # «viento_kmh», que es como viene media planta, deja de casar).
+  [test_viento_csv.js]=41
   [test_viento_ejes.js]=77
   # Las dos fuentes sintéticas INVENTAN datos a propósito, y lo que este arnés
   # vigila sobre todo es que lo DECLAREN: viento cero y rumbo NaN en el cielo
@@ -936,7 +949,40 @@ declare -A PISO=(
   # silencioso de este bloque), que NINGUNO esté aplicado, que el suelo de
   # `ttl_orden_s` salga de la cinemática (110°/0,17 °/s) y no de un gusto, y que el
   # buffer de VDE siga siendo coherente con el margen de granizo de la estrategia.
-  [test_granizo_estrategia.mjs]=115
+  #
+  # 115 -> 135: EL VETO DE RACHA SOBRE LA BANDA DE PRE-STOW. Restricción de planta
+  # (Iñaki, 3-oct-2026): «no podemos permitir que a 40 km/h o más pase entre 0 y 25
+  # grados», simétrica y de RACHA. Al mirarlo resultó que la frontera YA EXISTÍA —el
+  # `pmin` del pre-stow, 30°, más estricto que los 25 que había dicho— así que no se
+  # añadió ninguna constante de ángulo: se dejó el 30. Él mismo lo vio antes de que
+  # se publicara nada («esto es lo que ya hace el simulador en uno de los casos»), y
+  # la propuesta de banda nueva se retiró sin llegar al repo.
+  #
+  # LO QUE SÍ FALTABA, y es el cambio: `granizoPlan` manejaba UN SOLO viento y
+  # comparaba con él tanto el 40 como el 60. Si el 40 es de racha, el caso 1
+  # autorizaba cruces que la planta prohíbe —con 30 km/h sostenidos la racha mediana
+  # ya pasa de 50—. Ahora la racha va aparte, y el cruce exige que no alcance el
+  # umbral mientras dure el tramo DENTRO de la banda: 60° a 0,17 °/s son 5,9 min, el
+  # 45 % del recorrido completo, que es lo que un booleano `cruzaCero` escondía.
+  #
+  # LA ASIMETRÍA DE LOS DOS NULL, que es lo que se puede leer mal: `rachaAhora=null`
+  # es CEGUERA y veta (§8-H); `tRacha=null` es AUSENCIA DE PREVISIÓN y no veta, misma
+  # convención que `tV40=null` tenía desde antes.
+  #
+  # Cinco mutantes. Predije 1 baja cada uno y la cuarta salió 0: mutar la guarda
+  # `if(cruzaria)` no daba rojo, REVENTABA con «Cannot read properties of null», y mi
+  # recuento por líneas FAIL no lo veía. El fallo era de mi código de producción, que
+  # dependía de esa guarda para no desreferenciar null; con `enB&&` da rojo limpio.
+  # Y la quinta —usar `def` en vez de `pre` como borde— sobrevivía porque ninguna
+  # comprobación fijaba qué borde usa `granizoPlan`: ahora lo fija una racha que
+  # llega a los 8 min, que cabe con 30° (5,9) y vetaría con 55° (10,8). Tras los dos
+  # arreglos: 5/5 y 6 bajas, los cinco llegando a su veredicto.
+  [test_granizo_estrategia.mjs]=143
+  # Weather Workbench autónomo + visual parity: 72 comprobaciones. Además de
+  # los goldens TMY y el smoke de Cartera/ancho, fija las 11 familias visuales
+  # de Meteo: mensual, serie diaria, zoom, cockpit 6-paneles, DOY, rosa,
+  # extremos térmicos/heladas, nieve, granizo, viento sintético y comparación.
+  [test_meteo_browser.mjs]=73
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )

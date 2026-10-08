@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#132238">
+<title>Análisis meteorológico — Factiun</title>
+<script src="lib/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#0E1826;--p:#132238;--p2:#101D30;--ph:#1A2D48;--line:#27405F;--tx:#DCE3EB;--mut:#8C9AAB;--a:#F09030;--b:#68C0D8;--r:#E84858;--ok:#62C88A;--silver:#B8C3CE;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:var(--bg);color:var(--tx);font-variant-numeric:tabular-nums}a{color:var(--a)}
+header{padding:11px max(2vw,18px);border-bottom:2px solid var(--a);background:var(--p);position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{margin:0;font-size:1.02rem;letter-spacing:.10em;text-transform:uppercase}header p{margin:3px 0 0;color:var(--mut);font-size:.76rem}.headcopy{flex:1;min-width:300px}.badge{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--p2);padding:5px 9px;font-size:.7rem;color:var(--mut)}.badge i{width:7px;height:7px;background:var(--ok);display:inline-block}.badge strong{color:var(--tx)}
+.wrap{width:min(2560px,96vw);margin:0 auto;padding:15px 0 45px}.grid{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:11px}.card{background:var(--p);border:1px solid var(--line);padding:13px;min-width:0}.span4{grid-column:span 4}.span5{grid-column:span 5}.span6{grid-column:span 6}.span7{grid-column:span 7}.span8{grid-column:span 8}.span9{grid-column:span 9}.span10{grid-column:span 10}.span11{grid-column:span 11}.wide{grid-column:1/-1}
+.card h2{font-size:.72rem;text-transform:uppercase;letter-spacing:.13em;color:var(--mut);margin:0 0 9px}.big{font-size:1.75rem;color:var(--a);font-family:ui-monospace,monospace}.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.row4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.k{font-size:.64rem;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}.v{font-family:ui-monospace,monospace;margin-top:2px}.note{font-size:.71rem;color:var(--mut);line-height:1.45}.note strong{color:var(--tx)}
+input,select,button{width:100%;padding:7px 8px;background:var(--p2);color:var(--tx);border:1px solid var(--line);font:inherit;font-size:.78rem}button{cursor:pointer;color:var(--a)}button:hover{border-color:var(--a);background:var(--ph)}button.secondary{color:var(--tx)}button:disabled{opacity:.45;cursor:not-allowed}.actions{display:flex;gap:6px;flex-wrap:wrap}.actions button{width:auto;min-width:118px}
+table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}th{color:var(--mut);font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;position:sticky;top:0;background:var(--p)}.tablewrap{overflow:auto;max-height:340px;border:1px solid var(--line)}tr.pick td{color:var(--a);background:rgba(240,144,48,.06)}
+.pill{display:inline-block;border:1px solid var(--line);padding:3px 7px;margin:2px;font-size:.67rem;color:var(--mut)}.pill b{color:var(--tx)}.consumer a{text-decoration:none}.statusline{padding:7px 9px;background:var(--p2);border-left:3px solid var(--line);font-size:.7rem;color:var(--mut);margin-top:7px;min-height:30px}.statusline.ok{border-color:var(--ok);color:var(--tx)}.statusline.bad{border-color:var(--r);color:var(--tx)}.statusline.work{border-color:var(--a);color:var(--tx)}
+.bar{height:7px;background:var(--p2);border:1px solid var(--line);margin-top:5px}.bar i{display:block;height:100%;background:var(--a);width:0}.metricgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}.metric{background:var(--p2);padding:8px;min-width:0}.metric b{display:block;color:var(--a);font-family:ui-monospace,monospace;font-size:.94rem;margin-top:3px;overflow:hidden;text-overflow:ellipsis}.checks{display:flex;gap:12px;flex-wrap:wrap}.checks label{font-size:.72rem;color:var(--mut)}.checks input{width:auto;vertical-align:-1px}.sectiontitle{grid-column:1/-1;margin:13px 0 -2px;font-size:.74rem;color:var(--silver);text-transform:uppercase;letter-spacing:.16em;border-bottom:1px solid var(--line);padding-bottom:6px}
+.projectrow{display:grid;grid-template-columns:minmax(100px,1fr) minmax(100px,1fr);gap:7px}.projectwide,.place-search{grid-column:1/-1}.place-search{position:relative}.place-results{position:absolute;z-index:30;left:0;right:0;top:100%;margin-top:3px;max-height:280px;overflow:auto;background:var(--p2);border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.28)}.place-results[hidden]{display:none}.place-option{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);padding:9px 10px;color:var(--tx);background:var(--p2)}.place-option:last-child{border-bottom:0}.place-option:hover,.place-option[aria-selected="true"]{background:var(--ph);color:var(--a)}.place-option b{display:block;font-size:.8rem;color:inherit}.place-option small{display:block;margin-top:2px;color:var(--mut);font-size:.68rem}.place-empty{padding:10px;color:var(--mut);font-size:.72rem}.projectmeta{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.projectmeta span{border:1px solid var(--line);background:var(--p2);padding:3px 6px;font-size:.67rem;color:var(--mut)}.projectmeta b{color:var(--tx);font-weight:600}
+.sourcestatus{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.sourcechip{border:1px solid var(--line);padding:6px 8px;background:var(--p2);font-size:.68rem;color:var(--mut)}.sourcechip b{display:block;color:var(--tx);font-size:.72rem}.sourcechip.on{border-left:3px solid var(--ok)}.sourcechip.wait{border-left:3px solid var(--a)}
+.chart{display:block;width:100%;height:260px;background:var(--p2);border:1px solid var(--line)}
+.chart.tall{height:430px}.chartgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.chartbox{background:var(--p2);border:1px solid var(--line);padding:7px;min-width:0}.chartbox h3{margin:0 0 6px;color:var(--mut);font-size:.66rem;text-transform:uppercase;letter-spacing:.08em}.viztools{display:flex;gap:7px;align-items:end;flex-wrap:wrap;margin-bottom:8px}.viztools label{min-width:160px;flex:0 1 220px}.vizmetric{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:8px}.vizmetric>div{background:var(--p2);padding:7px;font-size:.67rem;color:var(--mut)}.vizmetric b{display:block;color:var(--a);font:600 .9rem ui-monospace,monospace;margin-top:3px}.split2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tmy-card{display:flex;flex-direction:column}.tmy-card .tmy-table{flex:1;min-height:250px;max-height:none;margin-top:8px}.tmy-card .tmy-table table{height:auto}.external-maps{display:grid;grid-template-columns:1fr 1fr;gap:10px}.external-map-card{background:var(--p2);border:1px solid var(--line);min-width:0}.external-map-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line)}.external-map-head b{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase}.external-map-head span{font-size:.66rem;color:var(--mut)}.external-map{display:block;width:100%;height:520px;border:0;background:#0b1420}.external-map-note{padding:7px 10px;color:var(--mut);font-size:.69rem;line-height:1.4}
+@media(max-width:1450px){.span4{grid-column:span 8}.span5,.span6,.span7,.span8,.span9,.span10,.span11{grid-column:span 8}}
+@media(max-width:1000px){.chartgrid{grid-template-columns:1fr 1fr}.split2,.external-maps{grid-template-columns:1fr}}\n@media(max-width:820px){.wrap{width:96vw}.span4,.span5,.span6,.span7,.span8,.span9,.span10,.span11{grid-column:1/-1}.row3,.row4,.metricgrid,.sourcestatus{grid-template-columns:1fr 1fr}.projectrow{grid-template-columns:1fr 1fr}header{position:static}}
+@media(max-width:520px){.chartgrid{grid-template-columns:1fr}.row,.row3,.row4,.metricgrid,.sourcestatus,.projectrow{grid-template-columns:1fr}.projectwide,.place-search{grid-column:auto}}
+</style>
+</head>
+<body>
+<header>
+  <div class="headcopy"><h1>☁ Análisis meteorológico</h1><p>Weather Workbench autónomo de Factiun · históricos, TMY, QA, fuentes, adaptación, descargas e informes.</p></div>
+  <span class="badge"><i></i><span><strong>Autónomo</strong> · navegador</span></span>
+  <span class="badge">meteo-core JS <b id="coreVer">—</b></span>
+  <a href="index.html" style="font-size:.72rem">← Panel</a>
+</header>
+
+<main class="wrap"><section class="grid">
+  <div class="sectiontitle">Emplazamiento · fuente · periodo</div>
+
+  <div class="card span6">
+    <h2>Proyecto / emplazamiento</h2>
+    <div class="projectrow">
+      <label class="projectwide"><span class="k">Nuestros proyectos</span><select id="plantSel"><option value="">Cargando cartera…</option></select></label>
+      <div class="place-search">
+        <label><span class="k">Buscar cualquier emplazamiento</span><input id="placeQuery" type="search" autocomplete="off" placeholder="Ej. Helsinki, Montreal, Arequipa…" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="placeResults"></label>
+        <div id="placeResults" class="place-results" role="listbox" hidden></div>
+      </div>
+      <label><span class="k">Latitud</span><input id="lat" type="number" step="0.0001" value="41.5763"></label>
+      <label><span class="k">Longitud</span><input id="lon" type="number" step="0.0001" value="-0.7981"></label>
+    </div>
+    <div class="projectmeta" id="projectMeta"></div>
+    <div class="statusline" id="siteStatus">La lista usa <code>factiun_plantas</code> y, si falta, lee la semilla de la Cartera del propio repo.</div>
+  </div>
+
+  <div class="card span5">
+    <h2>Histórico canónico</h2>
+    <div class="row3">
+      <label><span class="k">Fuente</span><select id="source"><option value="openmeteo">Open-Meteo / ERA5</option><option value="pvgis">PVGIS hourly</option><option value="nasa">NASA POWER</option></select></label>
+      <label><span class="k">Desde</span><input id="y0" type="number" min="1980" max="2100" value="2015"></label>
+      <label><span class="k">Hasta</span><input id="y1" type="number" min="1980" max="2100" value="2025"></label>
+    </div>
+    <div class="statusline">Cada año descargado queda cacheado por el navegador cuando el proveedor permite Cache Storage.</div>
+  </div>
+
+  <div class="card span5">
+    <h2>Acciones principales</h2>
+    <div class="actions"><button id="nowBtn">Ahora / forecast</button><button id="yearsBtn">Analizar años</button><button id="tmyBtn">Construir TMY</button><button id="clearCache" class="secondary">Vaciar caché</button></div>
+    <div class="statusline" id="workStatus">No requiere servidor ni Colab.</div>
+  </div>
+
+  <div class="sectiontitle">Ahora / forecast</div>
+  <div class="card span4"><h2>Régimen solar</h2><div class="big" id="ghi">—</div><div class="k">GHI W/m²</div><div class="row"><div><div class="k">DNI / FDIR</div><div class="v" id="dni">—</div></div><div><div class="k">DHI</div><div class="v" id="dhi">—</div></div></div><div class="k" style="margin-top:9px">Prob. difusa / overcast</div><div class="bar"><i id="bo"></i></div><div class="v" id="over">—</div></div>
+  <div class="card span4"><h2>Viento</h2><div class="big" id="wind">—</div><div class="k">m/s a 10 m</div><div class="row"><div><div class="k">Ráfaga</div><div class="v" id="gust">—</div></div><div><div class="k">Dirección</div><div class="v" id="wd">—</div></div></div><div class="k" style="margin-top:9px">Riesgo stow predictivo</div><div class="bar"><i id="bw"></i></div><div class="v" id="wrisk">—</div></div>
+  <div class="card span4"><h2>Atmósfera</h2><div class="row"><div><div class="k">Temperatura</div><div class="v" id="temp">—</div></div><div><div class="k">Punto rocío</div><div class="v" id="dew">—</div></div><div><div class="k">Precipitación</div><div class="v" id="rain">—</div></div><div><div class="k">Nubosidad</div><div class="v" id="cloud">—</div></div></div><div class="k" style="margin-top:9px">Proxy convectivo / granizo</div><div class="bar"><i id="bh"></i></div><div class="v" id="hail">—</div></div>
+  <div class="card span4"><h2>WeatherNext 3</h2><p class="note"><strong>Forecast probabilístico.</strong> La tarjeta funciona sin él; cuando haya acceso live entrará por el mismo contrato.</p><label><span class="k">Importar resumen JSON</span><input type="file" id="wn" accept=".json,application/json"></label><div class="statusline" id="wnStatus">Importación JSON disponible · live pendiente de credenciales Google.</div></div>
+
+  <div class="sectiontitle">Mapas operativos externos · mismo emplazamiento</div>
+  <div class="card wide">
+    <div class="external-maps">
+      <div class="external-map-card">
+        <div class="external-map-head"><b>Windy</b><span id="windyCoords">—</span></div>
+        <iframe id="windyMap" class="external-map" title="Windy · mapa meteorológico del emplazamiento" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        <div class="external-map-note">Mapa interactivo externo. Úsalo para contraste rápido de viento, rachas, precipitación, temperatura y otros campos; no sustituye el dataset canónico de Factiun.</div>
+      </div>
+      <div class="external-map-card">
+        <div class="external-map-head"><b>Ventusky</b><span id="ventuskyCoords">—</span></div>
+        <iframe id="ventuskyMap" class="external-map" title="Ventusky · mapa meteorológico del emplazamiento" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        <div class="external-map-note">Mapa interactivo externo centrado en el mismo punto. Sirve como segunda lectura visual independiente; CONTROL no toma decisiones desde este iframe.</div>
+      </div>
+    </div>
+    <p class="note">Ambos mapas siguen automáticamente la planta, ciudad o coordenadas manuales seleccionadas arriba. Son <strong>visualización de contraste</strong>; Batería, Winter mode, producción y demás consumidores siguen leyendo el contrato meteorológico común.</p>
+  </div>
+
+  <div class="sectiontitle">Buscador de años · TMY</div>
+  <div class="card span10">
+    <h2>Años históricos</h2>
+    <div class="metricgrid"><div class="metric">Años<b id="nYears">—</b></div><div class="metric">Año screening<b id="repYear">—</b></div><div class="metric">Fuente<b id="histSource">—</b></div><div class="metric">Filas<b id="histRows">—</b></div></div>
+    <div class="metricgrid" style="margin-top:6px"><div class="metric">QA canónico<b id="qaStatus">—</b></div><div class="metric">BSRN retiradas<b id="qaBsrn">—</b></div><div class="metric">Hallazgos<b id="qaFindings">—</b></div><div class="metric">Hash dataset<b id="qaHash" style="font-size:.69rem">—</b></div></div>
+    <p class="note">El “año screening” es solo un cribado anual por cercanía a las medianas. <strong>No es el TMY.</strong> El TMY Sandia selecciona mes a mes.</p>
+    <div class="tablewrap"><table><thead><tr><th>Año</th><th>GHI</th><th>DNI</th><th>DHI</th><th>T media</th><th>Viento</th><th>Precip.</th><th>Completitud</th><th>Dist.</th></tr></thead><tbody id="yearsBody"><tr><td colspan="9">Pulsa “Analizar años”.</td></tr></tbody></table></div>
+  </div>
+  <div class="card span6 tmy-card">
+    <h2>Typical Meteorological Year</h2>
+    <div class="row"><label><span class="k">Método</span><select id="tmyMode"><option value="sandia">Mis años · Sandia / FS</option><option value="pvgis">PVGIS TMY</option></select></label><label><span class="k">Año base índice</span><input id="baseYear" type="number" value="2023"></label></div>
+    <div class="metricgrid" style="margin-top:8px"><div class="metric">Método<b id="tmyMethod">—</b></div><div class="metric">Filas<b id="tmyRows">—</b></div><div class="metric">GHI<b id="tmyGhi">—</b></div><div class="metric">Años fuente<b id="tmyNyears">—</b></div></div>
+    <div class="tablewrap tmy-table"><table><thead><tr><th>Mes</th><th>Año elegido</th><th>FS</th></tr></thead><tbody id="tmyBody"><tr><td colspan="3">Sin TMY calculado.</td></tr></tbody></table></div>
+  </div>
+
+  <div class="sectiontitle">Comparativa multi-fuente</div>
+  <div class="card span6">
+    <h2>PVGIS · NASA · Open-Meteo</h2>
+    <div class="checks"><label><input type="checkbox" class="cmp" value="PVGIS-SARAH3" checked> PVGIS-SARAH3</label><label><input type="checkbox" class="cmp" value="PVGIS-ERA5"> PVGIS-ERA5</label><label><input type="checkbox" class="cmp" value="NASA-POWER" checked> NASA POWER</label><label><input type="checkbox" class="cmp" value="Open-Meteo ERA5" checked> Open-Meteo ERA5</label></div>
+    <p><button id="compareBtn">Descargar y comparar fuentes</button></p>
+    <div class="metricgrid"><div class="metric">RMS GHI<b id="rmsGhi">—</b></div><div class="metric">RMS Tamb<b id="rmsTemp">—</b></div><div class="metric">RMS viento<b id="rmsWind">—</b></div><div class="metric">Fallos<b id="cmpFail">—</b></div></div>
+    <p class="note">El RMS de GHI sigue siendo una señal útil de incertidumbre meteo para P50/P90.</p>
+  </div>
+  <div class="card span10"><h2>Resumen por fuente</h2><div class="tablewrap"><table><thead><tr><th>Fuente</th><th>GHI kWh/m²·a</th><th>DNI</th><th>DHI</th><th>T media °C</th><th>Viento m/s</th></tr></thead><tbody id="cmpBody"><tr><td colspan="6">Sin comparativa.</td></tr></tbody></table></div></div>
+
+  <div class="sectiontitle">Visual analytics · paridad SolarGPT</div>
+
+  <div class="card wide" id="vizMonthlyCard">
+    <h2>📅 Resumen mensual climatológico</h2>
+    <div class="tablewrap" style="max-height:360px"><table><thead><tr><th>Mes</th><th>GHI kWh/m²</th><th>DNI</th><th>DHI</th><th>T media °C</th><th>T mín</th><th>T máx</th><th>Viento km/h</th><th>Nieve cm</th></tr></thead><tbody id="vizMonthlyBody"><tr><td colspan="9">Analiza un histórico para generar las visualizaciones.</td></tr></tbody></table></div>
+  </div>
+
+  <div class="card wide">
+    <h2>📈 Serie completa · media diaria</h2>
+    <canvas id="vizDailySeries" class="chart" aria-label="Serie diaria GHI DNI DHI"></canvas>
+  </div>
+
+  <div class="card wide">
+    <h2>🔍 Zoom día · perfil horario</h2>
+    <div class="viztools">
+      <label><span class="k">Día</span><input id="vizDay" type="date"></label>
+      <label><span class="k">Atajo</span><select id="vizDayShortcut"><option value="">—</option><option value="ghi">Día pico GHI</option><option value="dni">Día pico DNI</option><option value="jun">Solsticio 21 Jun</option><option value="dec">Solsticio 21 Dic</option><option value="mar">Equinoccio 20 Mar</option></select></label>
+    </div>
+    <canvas id="vizDayProfile" class="chart" aria-label="Perfil horario del día seleccionado"></canvas>
+    <p class="note" id="vizDayNote">—</p>
+  </div>
+
+  <div class="card wide">
+    <h2>🛰️ Meteo Cockpit · panorámica climatológica</h2>
+    <div class="chartgrid">
+      <div class="chartbox"><h3>GHI mensual</h3><canvas id="vizCockpitGhi" class="chart"></canvas></div>
+      <div class="chartbox"><h3>DNI mensual</h3><canvas id="vizCockpitDni" class="chart"></canvas></div>
+      <div class="chartbox"><h3>DHI mensual</h3><canvas id="vizCockpitDhi" class="chart"></canvas></div>
+      <div class="chartbox"><h3>Temperatura mensual</h3><canvas id="vizCockpitTemp" class="chart"></canvas></div>
+      <div class="chartbox"><h3>Viento · media vs máxima</h3><canvas id="vizCockpitWind" class="chart"></canvas></div>
+      <div class="chartbox"><h3>Índice de claridad kt</h3><canvas id="vizCockpitKt" class="chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card wide">
+    <h2>📆 Climatología diaria · perfil típico anual</h2>
+    <div class="chartgrid">
+      <div class="chartbox"><h3>Irradiancia pico diaria</h3><canvas id="vizClimIrr" class="chart"></canvas></div>
+      <div class="chartbox"><h3>Temperatura diaria</h3><canvas id="vizClimTemp" class="chart"></canvas></div>
+      <div class="chartbox"><h3>Viento diario · típico y extremo</h3><canvas id="vizClimWind" class="chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card span8">
+    <h2>🌹 Rosa de los vientos</h2>
+    <canvas id="vizWindRose" class="chart tall" aria-label="Rosa de los vientos"></canvas>
+    <p class="note" id="vizWindRoseNote">Necesita viento + dirección.</p>
+  </div>
+  <div class="card span8">
+    <h2>Viento · horas por banda</h2>
+    <div class="tablewrap"><table><thead><tr><th>Rango km/h</th><th>Horas/año</th><th>% tiempo</th></tr></thead><tbody id="vizWindBins"><tr><td colspan="3">—</td></tr></tbody></table></div>
+  </div>
+
+  <div class="card span8">
+    <h2>❄️🔥 Temperaturas extremas</h2>
+    <canvas id="vizTempHist" class="chart" aria-label="Histograma de temperatura"></canvas>
+  </div>
+  <div class="card span8">
+    <h2>Horas/año bajo / sobre umbral</h2>
+    <div class="split2">
+      <div class="tablewrap"><table><thead><tr><th>Frío</th><th>Horas/año</th><th>%</th></tr></thead><tbody id="vizColdBody"><tr><td colspan="3">—</td></tr></tbody></table></div>
+      <div class="tablewrap"><table><thead><tr><th>Calor</th><th>Horas/año</th><th>%</th></tr></thead><tbody id="vizHotBody"><tr><td colspan="3">—</td></tr></tbody></table></div>
+    </div>
+    <h3 style="font-size:.7rem;color:var(--mut);margin:10px 0 6px">Días/mes con Tmin bajo umbral · climatología</h3>
+    <div class="tablewrap"><table><thead><tr><th>Umbral</th><th>Ene</th><th>Feb</th><th>Mar</th><th>Abr</th><th>May</th><th>Jun</th><th>Jul</th><th>Ago</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dic</th><th>Total</th></tr></thead><tbody id="vizColdDaysBody"><tr><td colspan="14">—</td></tr></tbody></table></div>
+  </div>
+
+  <div class="card span8">
+    <h2>❄️ Análisis de nieve</h2>
+    <div class="vizmetric"><div>Nieve acumulada<b id="vizSnowTotal">—</b></div><div>Días con nieve<b id="vizSnowDays">—</b></div><div>Manto máximo<b id="vizSnowDepth">—</b></div></div>
+    <canvas id="vizSnowMonth" class="chart"></canvas>
+    <p class="note" id="vizSnowNote">Open-Meteo es la fuente principal para snowfall/snow_depth.</p>
+  </div>
+  <div class="card span8">
+    <h2>🧊 Riesgo acumulado de granizo</h2>
+    <canvas id="vizHailCurve" class="chart"></canvas>
+    <p class="note" id="vizHailNote">Se calcula automáticamente para el emplazamiento seleccionado. Banda λ÷2,5 … λ×2,5; riesgo de diseño, no detector operativo.</p>
+  </div>
+
+  <div class="card span8">
+    <h2>💨 Viento sintético · máximo diario</h2>
+    <canvas id="vizWindSynth" class="chart"></canvas>
+    <p class="note">Weibull + AR(1), declarado sintético/no bankable. Líneas T1=40 y T2=60 km/h.</p>
+  </div>
+  <div class="card span8">
+    <h2>⚖️ Comparación mensual GHI por fuente</h2>
+    <canvas id="vizCompareSources" class="chart"></canvas>
+    <p class="note">Se actualiza al ejecutar “Descargar y comparar fuentes”.</p>
+  </div>
+
+  <div class="sectiontitle">QA avanzado</div>
+  <div class="card span9">
+    <h2>Plausibilidad · climatología PVGIS · convención horaria</h2>
+    <div class="actions"><button id="qaBtn">Ejecutar QA avanzado</button></div>
+    <div class="metricgrid" style="margin-top:8px"><div class="metric">Semáforo<b id="qaGate">—</b></div><div class="metric">PVGIS anual Δ<b id="qaPvgis">—</b></div><div class="metric">Desfase<b id="qaShift">—</b></div><div class="metric">Fiable<b id="qaReliable">—</b></div></div>
+    <div class="tablewrap" style="margin-top:8px;max-height:220px"><table><thead><tr><th>Check</th><th>Severidad</th><th>Detalle</th><th>Valor</th></tr></thead><tbody id="qaBody"><tr><td colspan="4">Sin ejecutar.</td></tr></tbody></table></div>
+  </div>
+  <div class="card span7">
+    <h2>Estadística canónica</h2>
+    <div class="tablewrap" style="max-height:300px"><table><thead><tr><th>Variable</th><th>Min</th><th>Max</th><th>Media</th><th>P50</th><th>P99</th><th>NaN</th><th>Ceros</th></tr></thead><tbody id="statsBody"><tr><td colspan="8">Se calcula con QA avanzado.</td></tr></tbody></table></div>
+  </div>
+
+  <div class="sectiontitle">Riesgos climáticos · adaptación</div>
+  <div class="card span5">
+    <h2>Riesgo climatológico de granizo</h2>
+    <div class="row"><label><span class="k">Vida útil años</span><input id="hailLife" type="number" value="25" min="1" max="60"></label><label><span class="k">λ manual opcional</span><input id="hailLambda" type="number" step="0.01" min="0" placeholder="vacío = climatología"></label></div>
+    <p><button id="hailBtn">Evaluar riesgo de diseño</button></p>
+    <div class="metricgrid"><div class="metric">Nivel<b id="hailTier">—</b></div><div class="metric">λ/año<b id="hailLamOut">—</b></div><div class="metric">Retorno<b id="hailReturn">—</b></div><div class="metric">P vida útil<b id="hailLifeP">—</b></div></div>
+    <div class="statusline" id="hailStatus">Riesgo climatológico de diseño; no detección horaria ni orden de stow.</div>
+  </div>
+  <div class="card span5">
+    <h2>Viento sintético · fallback declarado</h2>
+    <div class="row3"><label><span class="k">Weibull k</span><input id="windK" type="number" step="0.1" value="2.0"></label><label><span class="k">Escala A m/s</span><input id="windA" type="number" step="0.1" value="6.5"></label><label><span class="k">Seed</span><input id="windSeed" type="number" value="42"></label></div>
+    <label class="note"><input id="windCyclone" type="checkbox" style="width:auto"> incluir escenario ciclónico sintético</label>
+    <p><button id="windSynthBtn">Generar año sintético</button></p>
+    <div class="metricgrid"><div class="metric">Media<b id="windMean">—</b></div><div class="metric">P99<b id="windP99">—</b></div><div class="metric">Máx<b id="windMax">—</b></div><div class="metric">Ráfaga máx<b id="windGustMax">—</b></div></div>
+    <div class="statusline" id="windSynthStatus">Nunca se presenta como medida ni se usa para un informe bankable.</div>
+  </div>
+  <div class="card span6">
+    <h2>Adaptación de sitio</h2>
+    <label><span class="k">CSV medido en planta</span><input id="adaptFile" type="file" accept=".csv,.txt"></label>
+    <div class="row3" style="margin-top:7px"><label><span class="k">Columna medida</span><input id="adaptCol" placeholder="vacío = primera numérica"></label><label><span class="k">TZ</span><input id="adaptTz" value="UTC"></label><label><span class="k">Método</span><select id="adaptMethod"><option value="bias">bias</option><option value="regression">regression</option><option value="quantile">quantile</option></select></label></div>
+    <label class="note"><input id="adaptMonthly" type="checkbox" checked style="width:auto"> coeficientes mes a mes</label>
+    <div class="actions" style="margin-top:8px"><button id="adaptBtn">Adaptar serie larga</button><button id="adaptUse" class="secondary" disabled>Usar corregida</button></div>
+    <div class="metricgrid" style="margin-top:8px"><div class="metric">MBE antes→después<b id="adaptMbe">—</b></div><div class="metric">RMSE<b id="adaptRmse">—</b></div><div class="metric">R²<b id="adaptR2">—</b></div><div class="metric">σ irradiancia<b id="adaptSigma">—</b></div></div>
+    <div class="statusline" id="adaptStatus">La incertidumbre residual puede alimentar P90 cuando hay solapamiento medido suficiente.</div>
+  </div>
+
+  <div class="sectiontitle">Importar · preparar dataset · fuentes</div>
+  <div class="card span6">
+    <h2>Importar meteo propio / PVSyst</h2>
+    <div class="row"><label><span class="k">Fichero</span><input id="meteoFile" type="file" accept=".csv,.xlsx,.xls,.xlsm"></label><label><span class="k">Zona horaria entrada</span><input id="tzInput" value="UTC" placeholder="UTC / Europe/Madrid"></label></div>
+    <p><button id="importBtn">Importar y normalizar</button></p>
+    <div class="statusline" id="importStatus">CSV con timestamp + variables reconocibles, o Excel exportado por PVSyst. El fichero no sale del navegador.</div>
+    <div class="metricgrid" style="margin-top:8px"><div class="metric">Origen<b id="impOrigin">—</b></div><div class="metric">Filas<b id="impRows">—</b></div><div class="metric">Columnas<b id="impCols">—</b></div><div class="metric">Año screening<b id="impYear">—</b></div></div>
+  </div>
+  <div class="card span5">
+    <h2>Interpolar / preparar</h2>
+    <div class="row"><label><span class="k">Dataset</span><select id="prepWhich"><option value="current">Histórico activo</option><option value="tmy">TMY</option></select></label><label><span class="k">Paso</span><select id="prepStep"><option value="1">1 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></label></div>
+    <div class="actions" style="margin-top:8px"><button id="prepBtn">Interpolar</button><button id="prepDl" class="secondary" disabled>Descargar preparado</button></div>
+    <div class="metricgrid" style="margin-top:8px"><div class="metric">Antes<b id="prepBefore">—</b></div><div class="metric">Después<b id="prepAfter">—</b></div><div class="metric">Paso<b id="prepStepOut">—</b></div><div class="metric">Δ GHI<b id="prepDelta">—</b></div></div>
+    <p class="note">Guardrail de navegador: no genera más de 650.000 filas. Para multi-año, construye primero un TMY.</p>
+  </div>
+  <div class="card span5">
+    <h2>Estado de fuentes</h2>
+    <div class="sourcestatus">
+      <div class="sourcechip on"><b>Open-Meteo</b>histórico + forecast</div>
+      <div class="sourcechip on"><b>PVGIS</b>hourly + TMY</div>
+      <div class="sourcechip on"><b>NASA POWER</b>hourly + climatología</div>
+      <div class="sourcechip wait"><b>WeatherNext 3</b>JSON ahora · live después</div>
+    </div>
+    <p class="note">CAMS, NSRDB y Solcast requieren credenciales. No se incrustan claves en la página pública.</p>
+  </div>
+
+  <div class="sectiontitle">Descargas · informe · reutilización</div>
+  <div class="card span8">
+    <h2>Descargar datos</h2>
+    <div class="actions"><button id="dlHist">CSV histórico activo</button><button id="dlTmy">CSV TMY</button><button id="dlJson" class="secondary">JSON activo</button></div>
+    <p class="note">Todo sale del dataset que está realmente en memoria; no se reconstruye al descargar.</p>
+  </div>
+  <div class="card span8">
+    <h2>Informe meteorológico</h2>
+    <div class="row"><label><span class="k">Título</span><input id="reportTitle" value="Informe meteorológico Factiun"></label><label><span class="k">Incluir TMY</span><select id="reportTmy"><option value="yes">Sí</option><option value="no">No</option></select></label></div>
+    <p><button id="reportBtn">Generar informe HTML</button></p>
+    <p class="note">Incluye emplazamiento, fuente, periodo, tabla anual, QA/hash, selección Sandia y las visualizaciones disponibles (cockpit, climatología, rosa, extremos, nieve, granizo, viento y fuentes). Se imprime a PDF desde el navegador.</p>
+  </div>
+
+  <div class="card wide consumer">
+    <h2>Consumidores del mismo contrato meteorológico</h2>
+    <span class="pill"><a href="sim-viento.html">Viento / granizo</a></span><span class="pill"><a href="sim-solar.html">Sol & simulación</a></span><span class="pill"><a href="https://cobertura-zigbee.imoriana3.workers.dev/overcast.html">Radiación difusa</a></span><span class="pill"><b>Producción 3D</b></span><span class="pill"><b>Batería</b></span><span class="pill"><b>Winter mode</b></span><span class="pill"><b>Gemelo digital</b></span><span class="pill"><b>SCADA</b></span><span class="pill"><b>P50/P90</b></span>
+    <p class="note">La siguiente fase es que estas herramientas consuman este mismo contrato/dataset en vez de mantener fetchers meteorológicos propios.</p>
+  </div>
+</section></main>
+
+<script type="module">
+import {fetchOpenMeteo,fromWeatherNextSummary} from "./lib/meteo.js";
+import {
+  WORKBENCH_VERSION,loadFactiunPlants,fetchHistorical,prepareDataset,annualStats,
+  buildTmySandia,fetchPvgisTmy,compareSources,plausibility,statsTable,searchPlaces,
+  validateMonthlyVsPvgis,estimateTimestampShift,hailRisk,syntheticWindYear,
+  csvToTable,tableToMeteo,csvToMeteo,workbookToMeteo,adaptSite,interpolateRows,
+  toCsv,downloadText,reportHtml,clearHttpCache
+} from "./lib/meteo-browser.js";
+import {
+  VIZ_VERSION,MONTHS,monthlyTable,dailyMeanSeries,dayProfile,peakDay,localDayKey,localHour,
+  cockpitMetrics,dailyClimatology,windRoseData,drawWindRose,windSpeedTable,
+  temperatureExtremes,drawTemperatureHistogram,coldDaysByMonth,snowSummary,drawLineChart,
+  drawBarChart,drawHailRisk,windDailyMax,comparisonMonthly
+} from "./lib/meteo-viz.js";
+
+const $=id=>document.getElementById(id);
+const fmt=(v,d=1)=>v==null||!isFinite(v)?"—":Number(v).toFixed(d);
+const esc=s=>String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+$("coreVer").textContent=WORKBENCH_VERSION;
+
+let PLANTS=[],SITE=null,CURRENT=null,TMY=null,ADAPTED=null,PREPARED=null;
+let LAST_COMPARE=null,LAST_HAIL=null,LAST_WIND_SYNTH=null;
+let PLACE_RESULTS=[],PLACE_ACTIVE=-1,PLACE_TIMER=null,PLACE_ABORT=null;
+document.querySelector("#coreVer").title="visual layer "+VIZ_VERSION;
+
+function status(msg,kind=""){$("workStatus").textContent=msg;$("workStatus").className="statusline "+kind}
+function cfg(){return {lat:+$("lat").value,lon:+$("lon").value,year_start:+$("y0").value,year_end:+$("y1").value,source:$("source").value}}
+function siteName(){return SITE?((SITE.code?SITE.code+" · ":"")+SITE.name):"Manual"}
+function plantKey(p){return p?String(p.carteraCode||p.code||p.name||""):"";}
+function externalMapUrls(lat=+$("lat").value,lon=+$("lon").value){
+  if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
+  const la=Number(lat).toFixed(5),lo=Number(lon).toFixed(5),name=siteName()||"Factiun";
+  const windy="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=7&overlay=wind&product=ecmwf&level=surface&lat="+encodeURIComponent(la)+"&lon="+encodeURIComponent(lo)+"&message=true";
+  const ventusky="https://embed.ventusky.com/?p="+encodeURIComponent(la+";"+lo+";7")+"&l=wind-10m&w=soft&pin="+encodeURIComponent(la+";"+lo+";dot;"+name);
+  return {windy,ventusky,label:la+", "+lo};
+}
+function refreshExternalMaps(){
+  const u=externalMapUrls();
+  if(!u)return;
+  if($("windyMap").getAttribute("src")!==u.windy)$("windyMap").src=u.windy;
+  if($("ventuskyMap").getAttribute("src")!==u.ventusky)$("ventuskyMap").src=u.ventusky;
+  $("windyCoords").textContent=u.label;$("ventuskyCoords").textContent=u.label;
+}
+function customSitePayload(){
+  if(SITE?.kind!=="geocoded")return null;
+  return {
+    kind:"geocoded",name:SITE.name,lat:SITE.lat,lon:SITE.lon,
+    country:SITE.country||"",country_code:SITE.country_code||"",
+    admin1:SITE.admin1||"",admin2:SITE.admin2||"",
+    location:SITE.location||SITE.name,tz:SITE.tz||"UTC",
+    elevation_m:SITE.elevation_m??null,source:"Open-Meteo Geocoding"
+  };
+}
+function saveCfg(){
+  try{
+    const custom=customSitePayload();
+    localStorage.setItem("factiun_meteo_cfg",JSON.stringify({...cfg(),plant:custom?"":plantKey(SITE),custom_site:custom}));
+  }catch(e){}
+}
+function restoreCfg(){
+  try{
+    const x=JSON.parse(localStorage.getItem("factiun_meteo_cfg")||"null");if(!x)return {plant:"",custom:null};
+    if(x.lat!=null)$("lat").value=x.lat;if(x.lon!=null)$("lon").value=x.lon;
+    if(x.year_start)$("y0").value=x.year_start;if(x.year_end)$("y1").value=x.year_end;if(x.source)$("source").value=x.source;
+    return {plant:String(x.plant||""),custom:x.custom_site&&Number.isFinite(+x.custom_site.lat)&&Number.isFinite(+x.custom_site.lon)?x.custom_site:null};
+  }catch(e){return {plant:"",custom:null}}
+}
+function renderSiteMeta(origin=""){
+  $("projectMeta").innerHTML=SITE?[
+    SITE.code?'<span>Proyecto <b>'+esc(SITE.code)+'</b></span>':'',
+    SITE.carteraCode&&SITE.carteraCode!==SITE.code?'<span>Cartera <b>'+esc(SITE.carteraCode)+'</b></span>':'',
+    SITE.pdc!=null?'<span>Pdc <b>'+fmt(SITE.pdc,3)+' MWp</b></span>':'',
+    SITE.location?'<span><b>'+esc(SITE.location)+'</b></span>':'',
+    SITE.tz?'<span>TZ <b>'+esc(SITE.tz)+'</b></span>':'',
+    SITE.elevation_m!=null?'<span>Cota <b>'+fmt(SITE.elevation_m,0)+' m</b></span>':''
+  ].join(""):'<span><b>Manual</b> · coordenadas libres</span>';
+  if(SITE?.kind==="geocoded")$("siteStatus").textContent="Emplazamiento global seleccionado mediante Open-Meteo Geocoding. Coordenadas y zona horaria quedan listas para todo el análisis.";
+  else $("siteStatus").textContent=SITE?"Emplazamiento tomado de la Cartera / factiun_plantas. Puedes retocar lat/lon sin alterar la ficha de planta.":(origin||"Modo manual.");
+}
+function hidePlaceResults(){
+  $("placeResults").hidden=true;$("placeQuery").setAttribute("aria-expanded","false");PLACE_ACTIVE=-1;
+}
+function setPlaceActive(i){
+  if(!PLACE_RESULTS.length)return;
+  PLACE_ACTIVE=Math.max(0,Math.min(PLACE_RESULTS.length-1,i));
+  $("placeResults").querySelectorAll(".place-option").forEach((b,j)=>b.setAttribute("aria-selected",j===PLACE_ACTIVE?"true":"false"));
+  $("placeResults").querySelector('.place-option[data-i="'+PLACE_ACTIVE+'"]')?.scrollIntoView({block:"nearest"});
+}
+function renderPlaceResults(items){
+  PLACE_RESULTS=items;PLACE_ACTIVE=-1;
+  const box=$("placeResults");
+  if(!items.length){
+    box.innerHTML='<div class="place-empty">Sin coincidencias. Prueba con ciudad + país.</div>';
+  }else{
+    box.innerHTML=items.map((p,i)=>'<button type="button" class="place-option" role="option" aria-selected="false" data-i="'+i+'"><b>'+esc(p.name)+'</b><small>'+esc([p.admin1,p.country].filter(Boolean).join(" · "))+' · '+fmt(p.lat,4)+', '+fmt(p.lon,4)+(p.tz?' · '+esc(p.tz):'')+'</small></button>').join("");
+    box.querySelectorAll(".place-option").forEach(b=>b.addEventListener("click",()=>selectPlace(+b.dataset.i)));
+  }
+  box.hidden=false;$("placeQuery").setAttribute("aria-expanded","true");
+}
+async function lookupPlaces(){
+  const q=$("placeQuery").value.trim();
+  if(q.length<2){hidePlaceResults();return;}
+  if(PLACE_ABORT)PLACE_ABORT.abort();
+  PLACE_ABORT=typeof AbortController!=="undefined"?new AbortController():null;
+  $("siteStatus").textContent="Buscando “"+q+"”…";
+  try{
+    const items=await searchPlaces(q,{count:8,language:"es",signal:PLACE_ABORT?.signal});
+    if($("placeQuery").value.trim()!==q)return;
+    renderPlaceResults(items);
+    $("siteStatus").textContent=items.length?items.length+" coincidencia(s). Elige una para fijar coordenadas y zona horaria.":"No se encontraron coincidencias para “"+q+"”.";
+  }catch(e){
+    if(e?.name==="AbortError")return;
+    hidePlaceResults();$("siteStatus").textContent="No se pudo consultar el buscador global: "+String(e?.message||e);
+  }
+}
+function selectPlace(i,refresh=true){
+  const p=PLACE_RESULTS[i];if(!p)return;
+  SITE={...p,kind:"geocoded"};
+  $("plantSel").value="";
+  $("placeQuery").value=p.location||p.name;
+  $("lat").value=p.lat.toFixed(5);$("lon").value=p.lon.toFixed(5);
+  hidePlaceResults();renderSiteMeta();saveCfg();doHail();refreshExternalMaps();if(refresh)loadNow();
+}
+function restoreCustomSite(p){
+  SITE={...p,lat:+p.lat,lon:+p.lon,kind:"geocoded"};
+  $("plantSel").value="";
+  $("placeQuery").value=SITE.location||SITE.name||"";
+  $("lat").value=SITE.lat.toFixed(5);$("lon").value=SITE.lon.toFixed(5);
+  renderSiteMeta();saveCfg();doHail();refreshExternalMaps();
+}
+async function initPlants(){
+  const saved=restoreCfg();
+  PLANTS=await loadFactiunPlants();
+  const q=(new URLSearchParams(location.search).get("planta")||"").toLowerCase();
+  $("plantSel").innerHTML='<option value="">Manual / buscar otro emplazamiento</option>'+PLANTS.map(p=>{
+    const ready=Number.isFinite(p.lat)&&Number.isFinite(p.lon);
+    return '<option value="'+esc(plantKey(p))+'"'+(ready?'':' disabled')+'>'+
+      esc((p.code?p.code+" · ":"")+p.name+(p.location?" — "+p.location:"")+(ready?"":" — sin coordenadas"))+'</option>';
+  }).join("");
+  let idx=-1;
+  if(q)idx=PLANTS.findIndex(p=>(p.name+" "+p.code+" "+p.carteraCode).toLowerCase().includes(q));
+  if(idx<0&&!q&&saved.plant)idx=PLANTS.findIndex(p=>plantKey(p)===saved.plant);
+  if(idx<0&&!q&&saved.custom){restoreCustomSite(saved.custom);return;}
+  if(!(idx>=0&&PLANTS[idx]&&Number.isFinite(PLANTS[idx].lat)&&Number.isFinite(PLANTS[idx].lon)))
+    idx=PLANTS.findIndex(p=>p.name==="El Burgo I"&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+  if(idx>=0){$("plantSel").value=plantKey(PLANTS[idx]);choosePlant(idx,false);}else choosePlant(-1,false);
+}
+function choosePlant(i,refresh=true){
+  SITE=(i>=0&&PLANTS[i])?PLANTS[i]:null;
+  $("placeQuery").value="";
+  hidePlaceResults();
+  if(SITE&&Number.isFinite(SITE.lat)&&Number.isFinite(SITE.lon)){$("lat").value=SITE.lat.toFixed(5);$("lon").value=SITE.lon.toFixed(5);}
+  renderSiteMeta();saveCfg();doHail();refreshExternalMaps();if(refresh)loadNow();
+}
+$("plantSel").onchange=()=>{const key=$("plantSel").value;choosePlant(key===""?-1:PLANTS.findIndex(p=>plantKey(p)===key));};
+$("placeQuery").addEventListener("input",()=>{
+  clearTimeout(PLACE_TIMER);
+  if($("placeQuery").value.trim().length<2){hidePlaceResults();return;}
+  PLACE_TIMER=setTimeout(lookupPlaces,280);
+});
+$("placeQuery").addEventListener("keydown",e=>{
+  if($("placeResults").hidden)return;
+  if(e.key==="ArrowDown"){e.preventDefault();setPlaceActive(PLACE_ACTIVE<0?0:PLACE_ACTIVE+1);}
+  else if(e.key==="ArrowUp"){e.preventDefault();setPlaceActive(PLACE_ACTIVE<0?PLACE_RESULTS.length-1:PLACE_ACTIVE-1);}
+  else if(e.key==="Enter"&&PLACE_RESULTS.length){e.preventDefault();selectPlace(PLACE_ACTIVE<0?0:PLACE_ACTIVE);}
+  else if(e.key==="Escape"){e.preventDefault();hidePlaceResults();}
+});
+document.addEventListener("pointerdown",e=>{if(!e.target.closest(".place-search"))hidePlaceResults();});
+["lat","lon","y0","y1","source"].forEach(id=>$(id).addEventListener("change",saveCfg));
+["lat","lon"].forEach(id=>$(id).addEventListener("change",()=>{SITE=null;renderSiteMeta("Modo manual · coordenadas modificadas.");doHail();refreshExternalMaps();}));
+
+function shortDate(s){return s?String(s).slice(5):"—";}
+function renderDayVisual(){
+  if(!CURRENT?.rows?.length)return;
+  const tz=SITE?.tz||"UTC";let date=$("vizDay").value;
+  if(!date){date=peakDay(CURRENT.rows,"ghi_wm2",tz)||localDayKey(CURRENT.rows[0].t,tz);$("vizDay").value=date;}
+  const p=dayProfile(CURRENT.rows,date,tz),labels=p.map(r=>{const h=localHour(r.t,tz);return (h%3===0)?String(h).padStart(2,"0")+"h":"";});
+  drawLineChart($("vizDayProfile"),[
+    {label:"GHI",values:p.map(r=>r.ghi_wm2)},{label:"DNI",values:p.map(r=>r.dni_wm2)},{label:"DHI",values:p.map(r=>r.dhi_wm2)}
+  ],{title:"Perfil horario · "+date+" · hora local "+tz,yLabel:"W/m²",xLabels:labels,height:280,zero:true});
+  $("vizDayNote").textContent=p.length?date+" · "+p.length+" puntos · atajos equivalentes a SolarGPT Meteo.":"Sin datos para "+date;
+}
+function renderCoreVisuals(){
+  if(!CURRENT?.rows?.length)return;
+  const rows=CURRENT.rows,tz=SITE?.tz||"UTC",mt=monthlyTable(rows,"UTC");
+  $("vizMonthlyBody").innerHTML=mt.map(x=>'<tr><td>'+x.month+'</td><td>'+fmt(x.ghi,1)+'</td><td>'+fmt(x.dni,1)+'</td><td>'+fmt(x.dhi,1)+'</td><td>'+fmt(x.tmean,1)+'</td><td>'+fmt(x.tmin,1)+'</td><td>'+fmt(x.tmax,1)+'</td><td>'+fmt(x.wind,1)+'</td><td>'+fmt(x.snow,1)+'</td></tr>').join("");
+  const ds=dailyMeanSeries(rows),dateLabels=ds.length?[shortDate(ds[0].date),"",shortDate(ds[Math.floor(ds.length/2)]?.date),"",shortDate(ds.at(-1)?.date)]:[];
+  drawLineChart($("vizDailySeries"),[
+    {label:"GHI",values:ds.map(x=>x.ghi)},{label:"DNI",values:ds.map(x=>x.dni)},{label:"DHI",values:ds.map(x=>x.dhi)}
+  ],{title:"Media diaria del periodo completo",yLabel:"W/m²",xLabels:dateLabels,height:290,zero:true});
+
+  const first=localDayKey(rows[0].t,tz),last=localDayKey(rows.at(-1).t,tz);$("vizDay").min=first;$("vizDay").max=last;
+  if(!$("vizDay").value||$("vizDay").value<first||$("vizDay").value>last)$("vizDay").value=peakDay(rows,"ghi_wm2",tz)||first;
+  renderDayVisual();
+
+  const cp=cockpitMetrics(rows,CURRENT.lat,tz);
+  drawBarChart($("vizCockpitGhi"),[{label:"GHI",values:cp.ghi}],{title:"GHI · anual "+fmt(cp.ghi.reduce((a,b)=>a+(b||0),0),0)+" kWh/m²",yLabel:"kWh/m²",labels:MONTHS,height:230});
+  drawBarChart($("vizCockpitDni"),[{label:"DNI",values:cp.dni}],{title:"DNI · anual "+fmt(cp.dni.reduce((a,b)=>a+(b||0),0),0)+" kWh/m²",yLabel:"kWh/m²",labels:MONTHS,height:230});
+  drawBarChart($("vizCockpitDhi"),[{label:"DHI",values:cp.dhi}],{title:"DHI · anual "+fmt(cp.dhi.reduce((a,b)=>a+(b||0),0),0)+" kWh/m²",yLabel:"kWh/m²",labels:MONTHS,height:230});
+  drawLineChart($("vizCockpitTemp"),[
+    {label:"Media",values:cp.tmean},{label:"Mín",values:cp.tmin},{label:"Máx",values:cp.tmax}
+  ],{title:"Temperatura mensual",yLabel:"°C",xLabels:MONTHS,height:230});
+  drawLineChart($("vizCockpitWind"),[
+    {label:"Media",values:cp.windmean},{label:"Máxima",values:cp.windmax}
+  ],{title:"Viento mensual",yLabel:"km/h",xLabels:MONTHS,height:230,zero:true});
+  drawBarChart($("vizCockpitKt"),[{label:"kt",values:cp.kt}],{title:"Índice claridad · haz/(haz+difusa)",yLabel:"kt",labels:MONTHS,height:230,yMin:0,yMax:1.05});
+
+  const cl=dailyClimatology(rows,tz),monthTicks=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  drawLineChart($("vizClimIrr"),[
+    {label:"GHI",values:cl.map(x=>x.ghi)},{label:"DNI",values:cl.map(x=>x.dni)},{label:"DHI",values:cl.map(x=>x.dhi)}
+  ],{title:"Pico diario típico",yLabel:"W/m²",xLabels:monthTicks,height:255,zero:true});
+  drawLineChart($("vizClimTemp"),[
+    {label:"Media",values:cl.map(x=>x.tmean)},{label:"Mín",values:cl.map(x=>x.tmin)},{label:"Máx",values:cl.map(x=>x.tmax)}
+  ],{title:"Temperatura diaria climatológica",yLabel:"°C",xLabels:monthTicks,height:255});
+  drawLineChart($("vizClimWind"),[
+    {label:"Media máximos",values:cl.map(x=>x.wind)},{label:"Máx absoluto",values:cl.map(x=>x.windWorst)},
+    {label:"stow T1",values:cl.map(()=>40)},{label:"stow T2",values:cl.map(()=>60)}
+  ],{title:"Viento diario",yLabel:"km/h",xLabels:monthTicks,height:255,zero:true});
+
+  const wr=windRoseData(rows);drawWindRose($("vizWindRose"),wr,{title:"Rosa de los vientos · "+siteName()});
+  $("vizWindRoseNote").textContent=wr.total?wr.total.toLocaleString("es-ES")+" horas con dirección · vmedia "+fmt(wr.meanKmh,1)+" km/h · vmax "+fmt(wr.maxKmh,0)+" km/h":"La fuente activa no contiene dirección de viento.";
+  $("vizWindBins").innerHTML=windSpeedTable(wr).map(x=>'<tr><td>'+esc(x.label)+'</td><td>'+x.hours_per_year+'</td><td>'+fmt(x.pct,2)+'%</td></tr>').join("");
+
+  const te=temperatureExtremes(rows);drawTemperatureHistogram($("vizTempHist"),te);
+  $("vizColdBody").innerHTML=te.cold.map(x=>'<tr><td>T &lt; '+x.threshold+'°C</td><td>'+x.hours+'</td><td>'+fmt(x.pct,2)+'%</td></tr>').join("");
+  $("vizHotBody").innerHTML=te.hot.map(x=>'<tr><td>T &gt; '+x.threshold+'°C</td><td>'+x.hours+'</td><td>'+fmt(x.pct,2)+'%</td></tr>').join("");
+  $("vizColdDaysBody").innerHTML=coldDaysByMonth(rows,tz).map(x=>'<tr><td>Tmin &lt; '+x.threshold+'°C</td>'+x.months.map(v=>'<td>'+fmt(v,1)+'</td>').join("")+'<td>'+fmt(x.months.reduce((a,b)=>a+b,0),1)+'</td></tr>').join("");
+
+  const sn=snowSummary(rows,"UTC");$("vizSnowTotal").textContent=fmt(sn.total,0)+" cm"+(sn.annualize?" / "+fmt(sn.total/sn.years,0)+" cm/año":"");$("vizSnowDays").textContent=sn.days+(sn.annualize?" · "+fmt(sn.days/sn.years,0)+"/año":"");$("vizSnowDepth").textContent=sn.maxDepth==null?"sin dato":fmt(sn.maxDepth,1)+" cm";
+  drawBarChart($("vizSnowMonth"),[{label:sn.annualize?"Nieve media anual":"Nieve del periodo",values:sn.months}],{title:"Nieve nueva por mes",yLabel:"cm",labels:MONTHS,height:245});
+  $("vizSnowNote").textContent=sn.years<.98?"Periodo <1 año: no se anualiza la nieve.":"Periodo "+fmt(sn.years,1)+" años · snowfall en cm; snow_depth en m→cm.";
+
+  if(LAST_HAIL)drawHailRisk($("vizHailCurve"),LAST_HAIL);
+  if(LAST_WIND_SYNTH)drawLineChart($("vizWindSynth"),[
+    {label:"Máx diario",values:windDailyMax(LAST_WIND_SYNTH.wind_speed)},
+    {label:"T1 40",values:Array(Math.ceil(LAST_WIND_SYNTH.wind_speed.length/24)).fill(40)},
+    {label:"T2 60",values:Array(Math.ceil(LAST_WIND_SYNTH.wind_speed.length/24)).fill(60)}
+  ],{title:"Viento sintético · máximos diarios",yLabel:"km/h",xLabels:MONTHS,height:250,zero:true});
+  if(LAST_COMPARE)drawBarChart($("vizCompareSources"),comparisonMonthly(LAST_COMPARE.results),{title:"GHI mensual por fuente",yLabel:"kWh/m²",labels:MONTHS,height:270});
+}
+function selectDayShortcut(){
+  if(!CURRENT?.rows?.length)return;const v=$("vizDayShortcut").value;if(!v)return;
+  const tz=SITE?.tz||"UTC";
+  if(v==="ghi")$("vizDay").value=peakDay(CURRENT.rows,"ghi_wm2",tz)||$("vizDay").value;
+  else if(v==="dni")$("vizDay").value=peakDay(CURRENT.rows,"dni_wm2",tz)||$("vizDay").value;
+  else{const mid=new Date(CURRENT.rows[Math.floor(CURRENT.rows.length/2)].t).getUTCFullYear(),md=v==="jun"?"06-21":v==="dec"?"12-21":"03-20";$("vizDay").value=mid+"-"+md;}
+  renderDayVisual();
+}
+$("vizDay").addEventListener("change",renderDayVisual);$("vizDayShortcut").addEventListener("change",selectDayShortcut);
+let _vizResize=null;window.addEventListener("resize",()=>{clearTimeout(_vizResize);_vizResize=setTimeout(()=>{if(CURRENT)renderCoreVisuals();},150);});
+
+function paintNow(m){
+  $("ghi").textContent=fmt(m.ghi_wm2,0);$("dni").textContent=fmt(m.dni_wm2??m.fdir_wm2,0)+" W/m² "+(m.dni_wm2!=null?"DNI":m.fdir_wm2!=null?"FDIR":"");$("dhi").textContent=fmt(m.dhi_wm2,0)+" W/m²";
+  $("wind").textContent=fmt(m.wind_ms,1);$("gust").textContent=fmt(m.gust_ms,1)+" m/s";$("wd").textContent=fmt(m.wind_dir_deg,0)+"°";
+  $("temp").textContent=fmt(m.temp_c,1)+" °C";$("dew").textContent=fmt(m.dewpoint_c,1)+" °C";$("rain").textContent=fmt(m.precip_mm,1)+" mm";$("cloud").textContent=fmt((m.cloud_total??0)*100,0)+" %";
+  const set=(id,v)=>$(id).textContent=v==null?"—":Math.round(v*100)+" %";
+  set("over",m.overcast_probability);set("wrisk",m.wind_stow_risk);set("hail",m.hail_risk_proxy);
+  $("bo").style.width=((m.overcast_probability||0)*100)+"%";$("bw").style.width=((m.wind_stow_risk||0)*100)+"%";$("bh").style.width=((m.hail_risk_proxy||0)*100)+"%";
+}
+async function loadNow(){
+  status("Cargando forecast de "+siteName()+"…","work");
+  try{
+    const rows=await fetchOpenMeteo({lat:+$("lat").value,lon:+$("lon").value,forecastDays:3});
+    const now=Date.now(),m=rows.reduce((a,b)=>Math.abs(Date.parse(b.timestamp)-now)<Math.abs(Date.parse(a.timestamp)-now)?b:a,rows[0]);
+    paintNow(m);status("Forecast Open-Meteo · "+m.timestamp+" · "+siteName(),"ok");
+  }catch(e){status("Forecast: "+e.message,"bad")}
+}
+
+function renderYears(ds){
+  const a=ds.annual||[];
+  $("nYears").textContent=a.length;$("repYear").textContent=ds.representative_year_screening??"—";$("histSource").textContent=ds.source||"—";$("histRows").textContent=(ds.rows?.length||0).toLocaleString("es-ES");
+  $("qaStatus").textContent=ds.qa?.status||"—";$("qaBsrn").textContent=ds.qa?.bsrn_outliers_removed??"—";$("qaFindings").textContent=(ds.qa?.findings||[]).length;$("qaHash").textContent=ds.qa?.hash||"—";
+  $("yearsBody").innerHTML=a.map(r=>'<tr class="'+(r.year===ds.representative_year_screening?"pick":"")+'"><td>'+r.year+'</td><td>'+fmt(r.ghi_kwh_m2,0)+'</td><td>'+fmt(r.dni_kwh_m2,0)+'</td><td>'+fmt(r.dhi_kwh_m2,0)+'</td><td>'+fmt(r.temp_mean_c,1)+'</td><td>'+fmt(r.wind_mean_ms,2)+'</td><td>'+fmt(r.precip_mm,0)+'</td><td>'+fmt(r.completeness_pct,1)+'%</td><td>'+fmt((r.annual_closeness_score??0)*100,2)+'%</td></tr>').join("")||'<tr><td colspan="9">Sin datos.</td></tr>';
+}
+async function analyzeYears(){
+  saveCfg();status("Descargando histórico…","work");
+  try{
+    const p=cfg();
+    let raw=await fetchHistorical({...p,progress:(k,n,y)=>status("Descargando "+y+" · "+k+"/"+n+"…","work")});
+    status("Aplicando QA BSRN, plausibilidad y hash…","work");
+    CURRENT=await prepareDataset(raw);ADAPTED=null;PREPARED=null;$("adaptUse").disabled=true;$("prepDl").disabled=true;
+    renderYears(CURRENT);renderCoreVisuals();status("Histórico listo · "+CURRENT.rows.length.toLocaleString("es-ES")+" filas · QA "+CURRENT.qa.status,"ok");
+  }catch(e){status("Histórico: "+e.message,"bad")}
+}
+function renderTmy(){
+  if(!TMY)return;
+  const s=annualStats(TMY.rows).annual[0]||{},i=TMY.info||{};
+  $("tmyMethod").textContent=i.method||TMY.source||"—";$("tmyRows").textContent=TMY.rows.length.toLocaleString("es-ES");$("tmyGhi").textContent=fmt(s.ghi_kwh_m2,0)+" kWh/m²";$("tmyNyears").textContent=i.n_years??"—";
+  let h="";if(i.months_selected)for(let m=1;m<=12;m++)h+='<tr><td>'+m+'</td><td>'+esc(i.months_selected[m]??"—")+'</td><td>'+fmt(i.fs_scores?.[m],4)+'</td></tr>';
+  $("tmyBody").innerHTML=h||'<tr><td colspan="3">TMY proporcionado por PVGIS; no hay selección Sandia por mes.</td></tr>';
+}
+async function buildTmy(){
+  try{
+    status("Construyendo TMY…","work");
+    if($("tmyMode").value==="pvgis"){
+      const rows=await fetchPvgisTmy(+$("lat").value,+$("lon").value);
+      TMY={source:"PVGIS TMY",lat:+$("lat").value,lon:+$("lon").value,rows,info:{method:"PVGIS TMY",rows:rows.length,n_years:null}};
+    }else{
+      if(!CURRENT)await analyzeYears();
+      if(!CURRENT)throw new Error("no hay histórico activo");
+      const z=buildTmySandia(CURRENT.rows,{baseYear:+$("baseYear").value,smooth:true});
+      TMY={source:"Sandia TMY · "+CURRENT.source,lat:CURRENT.lat,lon:CURRENT.lon,rows:z.rows,info:z.info};
+    }
+    PREPARED=null;$("prepDl").disabled=true;renderTmy();status("TMY listo · "+TMY.rows.length.toLocaleString("es-ES")+" filas","ok");
+  }catch(e){status("TMY: "+e.message,"bad")}
+}
+
+async function compare(){
+  status("Comparando fuentes…","work");
+  try{
+    const sources=[...document.querySelectorAll(".cmp:checked")].map(x=>x.value);if(sources.length<1)throw new Error("selecciona al menos una fuente");
+    const j=await compareSources(+$("lat").value,+$("lon").value,{openStart:+$("y0").value,openEnd:+$("y1").value,sources});LAST_COMPARE=j;
+    $("rmsGhi").textContent=j.rms.ghi_pct!=null?fmt(j.rms.ghi_pct,2)+"%":"—";$("rmsTemp").textContent=j.rms.tamb_c!=null?fmt(j.rms.tamb_c,2)+" °C":"—";$("rmsWind").textContent=j.rms.wind_ms!=null?fmt(j.rms.wind_ms,2)+" m/s":"—";$("cmpFail").textContent=j.failed.length;
+    $("cmpBody").innerHTML=Object.entries(j.results).map(([n,a])=>{
+      const s=k=>a.reduce((x,r)=>x+(Number.isFinite(r[k])?r[k]:0),0),av=k=>{const v=a.map(r=>r[k]).filter(Number.isFinite);return v.length?v.reduce((x,y)=>x+y,0)/v.length:null};
+      return '<tr><td>'+esc(n)+'</td><td>'+fmt(s("GHI"),0)+'</td><td>'+fmt(s("DNI"),0)+'</td><td>'+fmt(s("DHI"),0)+'</td><td>'+fmt(av("Tamb"),1)+'</td><td>'+fmt(av("Wind"),2)+'</td></tr>';
+    }).join("")||'<tr><td colspan="6">Ninguna fuente respondió.</td></tr>';
+    drawBarChart($("vizCompareSources"),comparisonMonthly(j.results),{title:"GHI mensual por fuente",yLabel:"kWh/m²",labels:MONTHS,height:270});status(j.failed.length?"Comparativa terminada con "+j.failed.length+" fuente(s) fallida(s).":"Comparativa terminada.","ok");
+  }catch(e){status("Comparativa: "+e.message,"bad")}
+}
+
+async function advancedQa(){
+  try{
+    if(!CURRENT)await analyzeYears();if(!CURRENT)throw new Error("no hay dataset activo");
+    status("QA avanzado: PVGIS + desfase + estadística…","work");
+    const findings=plausibility(CURRENT.rows,CURRENT.lat,CURRENT.lon),pv=await validateMonthlyVsPvgis(CURRENT.rows,CURRENT.lat,CURRENT.lon),shift=estimateTimestampShift(CURRENT.rows,CURRENT.lat,CURRENT.lon),st=statsTable(CURRENT.rows);
+    const gate=findings.some(x=>x.severity==="fail")?"ROJO":findings.some(x=>x.severity==="warn")?"AMARILLO":"VERDE";
+    $("qaGate").textContent=gate;$("qaPvgis").textContent=fmt(pv.annual_diff_pct,1)+"%";$("qaShift").textContent=shift.shift_min!=null?fmt(shift.shift_min,1)+" min":"—";$("qaReliable").textContent=shift.reliable?"sí":"no";
+    $("qaBody").innerHTML=findings.map(x=>'<tr><td>'+esc(x.check)+'</td><td>'+esc(x.severity)+'</td><td style="white-space:normal;text-align:left">'+esc(x.message)+'</td><td>'+esc(x.value??"—")+'</td></tr>').join("")||'<tr><td colspan="4">Sin hallazgos.</td></tr>';
+    $("statsBody").innerHTML=Object.entries(st).map(([k,v])=>'<tr><td>'+esc(k)+'</td><td>'+fmt(v.min,2)+'</td><td>'+fmt(v.max,2)+'</td><td>'+fmt(v.mean,2)+'</td><td>'+fmt(v.p50,2)+'</td><td>'+fmt(v.p99,2)+'</td><td>'+fmt(v.nan_pct,2)+'%</td><td>'+fmt(v.zeros_pct,2)+'%</td></tr>').join("");
+    status("QA avanzado terminado · "+gate+" · PVGIS "+pv.status,"ok");
+  }catch(e){status("QA: "+e.message,"bad")}
+}
+
+function doHail(){
+  try{
+    const lat=+$("lat").value,lon=+$("lon").value;
+    if(!Number.isFinite(lat)||!Number.isFinite(lon))throw new Error("Latitud/longitud no válidas.");
+    const raw=$("hailLambda").value.trim(),r=hailRisk(lat,lon,{life:+$("hailLife").value,lambdaOverride:raw===""?null:+raw});LAST_HAIL=r;drawHailRisk($("vizHailCurve"),r);
+    $("hailTier").textContent=r.tier.toUpperCase();$("hailLamOut").textContent=fmt(r.lambda_yr,3);$("hailReturn").textContent=isFinite(r.return_period_yr)?fmt(r.return_period_yr,1)+" a":"—";$("hailLifeP").textContent=fmt(r.p_lifetime*100,1)+"%";
+    $("hailStatus").textContent="Fuente: "+r.source+" · banda λ "+fmt(r.lambda_lo,3)+"–"+fmt(r.lambda_hi,3)+" /año";$("hailStatus").className="statusline ok";
+    $("vizHailNote").textContent="Emplazamiento "+fmt(lat,4)+", "+fmt(lon,4)+" · λ "+fmt(r.lambda_yr,3)+"/año · banda "+fmt(r.lambda_lo,3)+"–"+fmt(r.lambda_hi,3)+" · riesgo de diseño, no detector operativo.";
+  }catch(e){
+    $("hailStatus").textContent=e.message;$("hailStatus").className="statusline bad";
+    $("vizHailNote").textContent="No se puede calcular la curva de granizo hasta disponer de coordenadas válidas.";
+  }
+}
+function doWind(){
+  try{
+    const r=syntheticWindYear({year:+$("baseYear").value,k:+$("windK").value,A:+$("windA").value,lat:+$("lat").value,seed:+$("windSeed").value,withCyclone:$("windCyclone").checked,withGust:true});LAST_WIND_SYNTH=r;drawLineChart($("vizWindSynth"),[{label:"Máx diario",values:windDailyMax(r.wind_speed)},{label:"T1 40",values:Array(Math.ceil(r.wind_speed.length/24)).fill(40)},{label:"T2 60",values:Array(Math.ceil(r.wind_speed.length/24)).fill(60)}],{title:"Viento sintético · máximos diarios",yLabel:"km/h",xLabels:MONTHS,height:250,zero:true});
+    $("windMean").textContent=fmt(r.mean_ms,2)+" m/s";$("windP99").textContent=fmt(r.p99_ms,2)+" m/s";$("windMax").textContent=fmt(r.max_ms,2)+" m/s";$("windGustMax").textContent=fmt(r.gust_max_ms,2)+" m/s";$("windSynthStatus").textContent=r.not_modeled;$("windSynthStatus").className="statusline ok";
+  }catch(e){$("windSynthStatus").textContent=e.message;$("windSynthStatus").className="statusline bad"}
+}
+
+async function importFile(){
+  const file=$("meteoFile").files[0];if(!file){$("importStatus").textContent="Selecciona un fichero.";$("importStatus").className="statusline bad";return}
+  try{
+    $("importStatus").textContent="Importando…";$("importStatus").className="statusline work";
+    let rows,origin;
+    if(/\.csv$/i.test(file.name)){rows=csvToMeteo(await file.text(),{lat:+$("lat").value,lon:+$("lon").value,tz:$("tzInput").value||"UTC"});origin="CSV";}
+    else{const z=workbookToMeteo(globalThis.XLSX,await file.arrayBuffer(),{lat:+$("lat").value,lon:+$("lon").value,tz:$("tzInput").value||"UTC"});rows=z.rows;origin="PVSyst/Excel · "+z.sheet;}
+    if(!rows.length)throw new Error("no se obtuvieron filas");
+    const ys=rows.map(r=>new Date(r.t).getUTCFullYear()),raw={source:origin,source_id:"upload",lat:+$("lat").value,lon:+$("lon").value,year_start:Math.min(...ys),year_end:Math.max(...ys),rows};
+    CURRENT=await prepareDataset(raw);ADAPTED=null;PREPARED=null;renderYears(CURRENT);renderCoreVisuals();
+    $("impOrigin").textContent=origin;$("impRows").textContent=CURRENT.rows.length.toLocaleString("es-ES");$("impCols").textContent=Object.keys(CURRENT.rows[0]||{}).length;$("impYear").textContent=CURRENT.representative_year_screening??"—";
+    $("importStatus").textContent=file.name+" · QA "+CURRENT.qa.status+" · dataset activo";$("importStatus").className="statusline ok";status("Fichero importado y convertido en dataset activo.","ok");
+  }catch(e){$("importStatus").textContent=e.message;$("importStatus").className="statusline bad"}
+}
+
+async function siteAdapt(){
+  const file=$("adaptFile").files[0];if(!file){$("adaptStatus").textContent="Selecciona el CSV medido.";$("adaptStatus").className="statusline bad";return}
+  try{
+    if(!CURRENT)await analyzeYears();if(!CURRENT)throw new Error("no hay serie larga activa");
+    const tab=csvToTable(await file.text()),headers=(tab[0]||[]).map(String);
+    const tix=headers.findIndex(x=>/^(timestamp|datetime|date|fecha|time|time_utc|hora)$/i.test(x.trim()));
+    if(tix<0)throw new Error("CSV medido sin columna temporal");
+    let cix=$("adaptCol").value.trim()?headers.findIndex(x=>x===$("adaptCol").value.trim()):-1;
+    if(cix<0){
+      for(let j=0;j<headers.length;j++){if(j===tix)continue;const vals=tab.slice(1,30).map(r=>+String(r[j]??"").replace(",",".")).filter(Number.isFinite);if(vals.length>=2){cix=j;break;}}
+    }
+    if(cix<0)throw new Error("no encuentro columna numérica medida");
+    const mini=[["timestamp","GHI"],...tab.slice(1).map(r=>[r[tix],r[cix]])],meas=tableToMeteo(mini,{lat:CURRENT.lat,lon:CURRENT.lon,tz:$("adaptTz").value||"UTC"});
+    const z=adaptSite(CURRENT.rows,meas,{longKey:"ghi_wm2",measuredKey:"ghi_wm2",method:$("adaptMethod").value,monthly:$("adaptMonthly").checked});
+    ADAPTED={...CURRENT,source:CURRENT.source+" → adaptado a sitio",rows:z.rows,adaptation:z.result,uncertainty:z.uncertainty};
+    const b=z.result.before,a=z.result.after,u=z.uncertainty;
+    $("adaptMbe").textContent=fmt(b.mbe_pct,1)+"→"+fmt(a.mbe_pct,1)+"%";$("adaptRmse").textContent=fmt(a.rmse_pct,1)+"%";$("adaptR2").textContent=fmt(a.r2,3);$("adaptSigma").textContent=fmt(u.irradiance_sigma*100,2)+"%";
+    $("adaptStatus").textContent="Columna: "+headers[cix]+" · solapamiento "+z.result.overlap_months+" meses / "+z.result.overlap_points+" puntos"+(z.result.extrapolated?" · EXTRAPOLACIÓN":"");$("adaptStatus").className="statusline "+(z.result.extrapolated?"bad":"ok");$("adaptUse").disabled=false;
+  }catch(e){$("adaptStatus").textContent=e.message;$("adaptStatus").className="statusline bad"}
+}
+async function useAdapted(){
+  if(!ADAPTED)return;
+  status("Aplicando QA a la serie adaptada…","work");CURRENT=await prepareDataset({...ADAPTED,qa:undefined,annual:undefined,representative_year_screening:undefined});renderYears(CURRENT);renderCoreVisuals();$("adaptUse").disabled=true;status("Serie adaptada = dataset activo.","ok");
+}
+
+function prep(){
+  try{
+    const src=$("prepWhich").value==="tmy"?TMY:CURRENT;if(!src)throw new Error($("prepWhich").value==="tmy"?"Construye primero un TMY.":"No hay histórico activo.");
+    const z=interpolateRows(src.rows,{stepMin:+$("prepStep").value});PREPARED={...src,source:src.source+" → "+z.report.step_min+" min",rows:z.rows,interpolation:z.report};
+    $("prepBefore").textContent=z.report.rows_before.toLocaleString("es-ES");$("prepAfter").textContent=z.report.rows_after.toLocaleString("es-ES");$("prepStepOut").textContent=z.report.step_min+" min";$("prepDelta").textContent=z.report.deviation_pct!=null?fmt(z.report.deviation_pct,3)+"%":"—";$("prepDl").disabled=false;status("Dataset interpolado en memoria. Revisa Δ GHI antes de usarlo.","ok");
+  }catch(e){status("Interpolación: "+e.message,"bad")}
+}
+
+function visualReportHtml(){
+  const figs=[
+    ["Serie diaria","vizDailySeries"],["Zoom diario","vizDayProfile"],
+    ["Cockpit · GHI","vizCockpitGhi"],["Cockpit · DNI","vizCockpitDni"],["Cockpit · DHI","vizCockpitDhi"],
+    ["Cockpit · temperatura","vizCockpitTemp"],["Cockpit · viento","vizCockpitWind"],["Cockpit · kt","vizCockpitKt"],
+    ["Climatología · irradiancia","vizClimIrr"],["Climatología · temperatura","vizClimTemp"],["Climatología · viento","vizClimWind"],
+    ["Rosa de los vientos","vizWindRose"],["Histograma de temperatura","vizTempHist"],["Nieve mensual","vizSnowMonth"],
+    ["Riesgo acumulado de granizo","vizHailCurve"],["Viento sintético","vizWindSynth"],["Comparación de fuentes","vizCompareSources"]
+  ];
+  const cards=figs.map(([name,id])=>{const cv=$(id);if(!cv||cv.dataset.drawn!=="1"||!cv.width||!cv.height)return "";let url="";try{url=cv.toDataURL("image/png")}catch(e){return ""}return '<figure><figcaption>'+esc(name)+'</figcaption><img src="'+url+'" alt="'+esc(name)+'"></figure>';}).filter(Boolean).join("");
+  if(!cards)return "";
+  return '<h2>Visual analytics</h2><div class="viz-report">'+cards+'</div><style>.viz-report{display:grid;grid-template-columns:1fr 1fr;gap:12px}.viz-report figure{margin:0;border:1px solid #d8dee8;padding:8px;break-inside:avoid}.viz-report figcaption{font-weight:700;font-size:12px;margin-bottom:6px}.viz-report img{width:100%;height:auto;display:block}@media print{.viz-report{grid-template-columns:1fr 1fr}}</style>';
+}
+function fileB64(file){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]||"");r.onerror=()=>ko(r.error);r.readAsDataURL(file)})}
+
+$("nowBtn").onclick=loadNow;$("yearsBtn").onclick=analyzeYears;$("tmyBtn").onclick=buildTmy;$("compareBtn").onclick=compare;$("qaBtn").onclick=advancedQa;$("hailBtn").onclick=doHail;$("hailLife").addEventListener("change",doHail);$("hailLambda").addEventListener("change",doHail);$("windSynthBtn").onclick=doWind;$("importBtn").onclick=importFile;$("adaptBtn").onclick=siteAdapt;$("adaptUse").onclick=useAdapted;$("prepBtn").onclick=prep;
+$("clearCache").onclick=async()=>{await clearHttpCache();status("Caché HTTP meteorológica vaciada.","ok")};
+$("prepDl").onclick=()=>PREPARED&&downloadText(toCsv(PREPARED.rows),"meteo_preparado.csv","text/csv;charset=utf-8");
+$("dlHist").onclick=()=>CURRENT?downloadText(toCsv(CURRENT.rows),"meteo_"+(CURRENT.year_start??"")+"-"+(CURRENT.year_end??"")+".csv","text/csv;charset=utf-8"):status("No hay histórico activo.","bad");
+$("dlTmy").onclick=()=>TMY?downloadText(toCsv(TMY.rows),"tmy_factiun.csv","text/csv;charset=utf-8"):status("No hay TMY calculado.","bad");
+$("dlJson").onclick=()=>CURRENT?downloadText(JSON.stringify(CURRENT,null,2),"meteo_factiun.json","application/json;charset=utf-8"):status("No hay dataset activo.","bad");
+$("reportBtn").onclick=()=>{if(!CURRENT){status("No hay dataset activo para el informe.","bad");return;}let h=reportHtml({title:$("reportTitle").value,dataset:CURRENT,tmy:$("reportTmy").value==="yes"?TMY:null,siteName:siteName()});h=h.replace("</body>",visualReportHtml()+"</body>");downloadText(h,"informe_meteo_"+siteName().replace(/[^\w-]+/g,"_")+".html","text/html;charset=utf-8")};
+$("wn").onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text()),m=fromWeatherNextSummary(Array.isArray(j)?j[0]:j);paintNow(m);$("wnStatus").textContent="WeatherNext importado · "+(m.timestamp||"sin timestamp");$("wnStatus").className="statusline ok"}catch(err){$("wnStatus").textContent=err.message;$("wnStatus").className="statusline bad"}};
+
+await initPlants();
+refreshExternalMaps();
+await loadNow();
+</script>
+</body></html>

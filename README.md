@@ -18,6 +18,25 @@ Y antes de ponerse a trabajar: `bash docs/ci_al_dia.sh` — el último CI de la
 rama principal de cada repo de la suite, en una tabla. Existe porque el CI de
 `siting` estuvo cinco corridas seguidas en rojo sin que nadie se enterara.
 
+## La portada
+
+Piel «Célula»: el panel está hecho de módulo fotovoltaico. Azul-negro de célula, *fingers* y
+busbars de plata en las cabeceras, y los colores del logo de Factiun: naranja (#F09030) como único
+color de emisión, azul claro (#68C0D8) para lo que está en desarrollo y rojo coral (#E84858) sólo para
+alarma; franja de advertencia eléctrica en las plantas en marcha. Serigrafía en Barlow Condensed,
+texto en Barlow y cifras en JetBrains Mono, **autoalojadas** en `assets/fonts/` (OFL) para que la app
+siga abriendo sin red. Cada planta enseña su **plano real** de seguidores (`HUELLAS`, generado por
+`tools/huellas_plantas.py` desde los layouts de cobertura-zigbee y ligado por el nombre de la planta),
+y cada herramienta lleva su **pictograma** de línea (`PICTOS`, elegido por el nombre de la ficha). Por defecto la portada es trabajo: plantas (con la cartera en
+vivo), herramientas y el pie con las reglas de la casa.
+
+**Modo presentación** (botón de la barra; el navegador lo recuerda): despliega el escaparate para
+enseñar el panel a un cliente —el **hero** con el relieve real de Ayora y sus 751 seguidores
+inclinados según el sol a la hora de la planta (algoritmo NOAA de `sim-solar.html`, backtracking
+plano con GCR 0,397 y tope ±55°) y la tira de **careos**—. Los datos del hero (`HERO_AYORA`, al final
+de `index.html`) los genera `tools/hero_ayora.py` a partir de `ayora_relieve.json` y
+`ayora_layout.json` de cobertura-zigbee, y el propio hero dice de dónde salen.
+
 ## Funcionalidades
 - Tarjetas por proyecto con estado (Producción / En desarrollo / Demo / Pausado / Deprecado), búsqueda, filtros y orden.
 - Documentación embebida: `docId` → `docs/<docId>.md`, o `docUrl` → README del repo.
@@ -29,7 +48,7 @@ rama principal de cada repo de la suite, en una tabla. Existe porque el CI de
 - **Descargable**: deja el ZIP en `assets/` y apunta el campo `download`.
 
 ## Stack
-HTML/CSS/JS sin framework (un único `index.html`) · motor Markdown (marked) incrustado · GitHub Pages.
+HTML/CSS/JS sin framework (un único `index.html`) · motor Markdown (marked) incrustado · fuentes autoalojadas (OFL) · GitHub Pages.
 
 ## App instalable (PWA)
 El Panel se **instala** como aplicación (escritorio y móvil) y **abre sin red**.
