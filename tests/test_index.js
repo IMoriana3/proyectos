@@ -162,8 +162,8 @@ async function abrir(browser, respuesta) {
   // que de verdad lo lee, y sobre todo que cuando NO puede leerlo no se
   // inventa nada — que es la parte que antes no existia, porque el numero
   // estaba escrito y siempre habia algo que pintar aunque fuera mentira.
-  const URL_BT = 'https://imoriana3.github.io/cobertura-zigbee/backtracking.html';
-  const APPS   = 'https://imoriana3.github.io/cobertura-zigbee/*';
+  const URL_BT = 'https://cobertura-zigbee.imoriana3.workers.dev/backtracking.html';
+  const APPS   = 'https://cobertura-zigbee.imoriana3.workers.dev/*';
 
   // Abre el Panel con las apps simuladas. `cuerpo` es el HTML que devuelven
   // (string) o el codigo HTTP con el que fallan (numero). `previo` siembra

@@ -155,9 +155,9 @@ check('y NO se lo inventa cuando la declaración no está',
    cinco veces—. Las demás tarjetas publicadas escriben su version en prosa o
    no la escriben. */
 const CAREABLES = [
-  { url: 'https://imoriana3.github.io/cobertura-zigbee/overcast.html',
+  { url: 'https://cobertura-zigbee.imoriana3.workers.dev/overcast.html',
     repo: 'cobertura-zigbee', fichero: 'overcast.html' },
-  { url: 'https://imoriana3.github.io/cobertura-zigbee/backtracking.html',
+  { url: 'https://cobertura-zigbee.imoriana3.workers.dev/backtracking.html',
     repo: 'cobertura-zigbee', fichero: 'backtracking.html' },
   /* El comparador entra el 2026-10-01: hasta ese día su tarjeta llevaba un
      libro de versiones PROPIO —«1.58», que no aparecía en ninguna parte del
@@ -167,7 +167,7 @@ const CAREABLES = [
     repo: 'proyectos', fichero: 'comparador-estructuras.html' },
 ];
 
-const publicadas = (CARDS || []).filter(p => p.url && /imoriana3\.github\.io/.test(p.url));
+const publicadas = (CARDS || []).filter(p => p.url && /imoriana3\.github\.io|imoriana3\.workers\.dev/.test(p.url));
 for (const c of CAREABLES)
   check('la tarjeta de ' + c.fichero + ' sigue en el Panel',
         publicadas.some(p => p.url === c.url), 'nadie publica esa url');
@@ -213,7 +213,7 @@ console.log('     ── cobertura: ' + CAREABLES.length + ' de ' + publicadas.l
 const AQUI_URL = 'https://imoriana3.github.io/proyectos/';
 let sinRastro = 0, conRastro = 0, noMirables = 0;
 for (const p of sinCarear) {
-  const corta = p.url.replace('https://imoriana3.github.io/', '');
+  const corta = p.url.replace('https://imoriana3.github.io/', '').replace(/^https:\/\/([a-z0-9-]+)\.imoriana3\.workers\.dev\//, '$1/');
   let nota;
   if (!p.version) { nota = '(tarjeta sin version)'; noMirables++; }
   else if (!p.url.startsWith(AQUI_URL)) { nota = '(tarjeta: ' + p.version + ', escrita a mano · fichero en otro repo, no se mira desde aqui)'; noMirables++; }

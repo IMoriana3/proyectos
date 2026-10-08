@@ -1006,7 +1006,7 @@ var COORDS_FALLBACK={'24002':[41.57634,-0.79814],'24025':[39.11821,-1.15985],'24
    Si no hay red, se cae a la regla peninsular y se avisa: mejor una regla declarada que una copia
    vieja fingiendo ser un dato. */
 var INDICE=null, INDICE_PEDIDO=false;
-var LAYOUTS='https://imoriana3.github.io/cobertura-zigbee/';
+var LAYOUTS='https://cobertura-zigbee.imoriana3.workers.dev/';
 function pideIndice(){
   if(INDICE_PEDIDO)return Promise.resolve(INDICE); INDICE_PEDIDO=true;
   return fetch(LAYOUTS+'plantas_indice.json',{cache:'no-store'})
