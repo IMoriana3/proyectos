@@ -145,8 +145,9 @@ async function abrir(browser, respuesta) {
   await card.locator('.card-toggle').click();
   check('el detalle abre', await card.locator('.detail').isVisible(), 'true');
   check('con su historial', await card.locator('.log li').count() > 0, 'true');
-  // el boton Paquete apunta a la release, no a un ZIP con la version pegada
-  check('descarga a la release publicada', await card.locator('a.btn[download]').getAttribute('href'), 'https://github.com/IMoriana3/scada/releases/tag/toolbox-v' + publicada.version);
+  // el boton Paquete apunta al ZIP de esa version en la rama `releases` de scada
+  // (desde la v12.11 no hay Releases: el repo es privado y no corre Actions)
+  check('descarga al ZIP publicado', await card.locator('a.btn[download]').getAttribute('href'), 'https://github.com/IMoriana3/scada/raw/releases/TCU_Toolbox_v' + publicada.version + '.zip');
   // y la documentacion carga
   await card.locator('button.btn.docs').click();
   await page.waitForSelector('#reader.open', { timeout: 5000 });
