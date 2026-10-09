@@ -5163,8 +5163,11 @@ $('optBtn').onclick=function(){
   if(PARCELAS.length||$('mount').value==='mixto'){
     $('hint').textContent='Optimizar requiere una parcela y un montaje. Generar admite el conjunto.';return;}
   if($('calc').value!=='js'){$('hint').textContent='Selecciona Cálculo en Navegador para optimizar con este motor.';return;}
+  var cfgOpt, firmaOptActual;
+  try{ cfgOpt=readCfg(); firmaOptActual=firmaOpt(); }
+  catch(err){ $('hint').textContent='No se puede optimizar: '+(err&&err.message||err);return; }
   OPT_ENCARGO={de:'generador',id:Date.now().toString(36)+'-'+Math.random().toString(36).slice(2),
-    fecha:Date.now(),cfg:readCfg(),firma:firmaOpt()};
+    fecha:Date.now(),cfg:cfgOpt,firma:firmaOptActual};
   localStorage.removeItem('buscador_mejor');
   localStorage.setItem('buscador_encargo',JSON.stringify(OPT_ENCARGO));
   window.open('buscador-implantacion.html?encargo=1','_blank');
@@ -5174,7 +5177,10 @@ addEventListener('focus',function(){
   var m;try{m=JSON.parse(t);}catch(e){localStorage.removeItem('buscador_mejor');return;}
   if(!OPT_ENCARGO||m.encargoId!==OPT_ENCARGO.id)return;
   localStorage.removeItem('buscador_mejor');
-  if(OPT_ENCARGO.firma!==firmaOpt()){
+  var firmaActual;
+  try{firmaActual=firmaOpt();}
+  catch(err){$('hint').textContent='El proyecto ha cambiado: '+(err&&err.message||err);return;}
+  if(OPT_ENCARGO.firma!==firmaActual){
     $('hint').textContent='El proyecto ha cambiado: repite Optimizar antes de aplicar la propuesta.';return;}
   if(![m.panelAz,m.xOffsetM,m.yOffsetM,m.kwp].every(Number.isFinite)){
     $('hint').textContent='La propuesta no contiene una configuración completa.';return;}
