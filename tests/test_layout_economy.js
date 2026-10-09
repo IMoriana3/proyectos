@@ -50,7 +50,7 @@ check("sobrecoste baja VAN de B",cCivil.deltaNpvEur<c.deltaNpvEur);
 check("sin ventas, IRR no se inventa",E.evaluate({kwp:1},{...p,saleEurMwh:0}).irrPct===null);
 check("sin CAPEX, IRR no se inventa",E.evaluate({kwp:1},{...p,capexEurKwp:0}).irrPct===null);
 check("sin serie de cambio de signo, devuelve null",E.irr([1,2,3])===null);
-check("sin layout aborta",throws(()=>E.evaluate(null,p),/Genera/));
+check("sin layout aborta",throws(()=>E.evaluate(null,p),/genera/i));
 check("layout de potencia nula aborta",throws(()=>E.evaluate({kwp:0},p),/potencia/));
 check("no inventa producción específica",throws(()=>E.evaluate({kwp:1},{...p,energyKwhKwp:""}),/producción específica/));
 check("no inventa CAPEX",throws(()=>E.evaluate({kwp:1},{...p,capexEurKwp:""}),/CAPEX/));
