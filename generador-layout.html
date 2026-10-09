@@ -3970,7 +3970,13 @@ function ro(k,v,s){return '<div class="ro"><div class="k">'+k+'</div><div class=
 async function generar(){
   buildParcel();
   if(!PARCEL||PARCEL.length<3){$('foot').innerHTML='<span style="color:var(--build)">Define primero la parcela.</span>';return;}
-  var cfg=readCfg();
+  var cfg;
+  try { cfg=readCfg(); }
+  catch(err){
+    $('foot').textContent='No se pudo generar: '+(err&&err.message||err);
+    $('hint').textContent='error';
+    return;
+  }
   $('hint').innerHTML='<span class="busy">calculando…</span>';
   $('genBtn').disabled=true;
   await new Promise(function(r){setTimeout(r,20);});
