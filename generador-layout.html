@@ -172,6 +172,8 @@ canvas.panning{cursor:grabbing}
 .hydro-timeline output{font:600 11px var(--mono);min-width:56px;text-align:right}
 #hydroScene{width:100%;height:clamp(380px,58vh,750px);background:#0e1923;border:1px solid var(--line);border-radius:10px;margin-top:6px;overflow:hidden;position:relative}
 #hydroScene[hidden]{display:none!important}
+#hydroCard.hydro-target{outline:2px solid var(--demo);outline-offset:3px;scroll-margin-top:18px}
+.hydro-card-entry{font-size:12px;line-height:1.5;background:rgba(22,100,126,.13);border:1px solid var(--demo);border-radius:8px;padding:10px;margin:8px 0;color:var(--text)}
 #hydroScene .hydro-scene-note{position:absolute;top:12px;left:12px;z-index:1;pointer-events:none;background:rgba(10,20,29,.80);color:#d3e5f4;border:1px solid #375267;border-radius:6px;padding:5px 8px;font:11px var(--mono)}
 .hydro-label{font:700 13px var(--mono);color:var(--demo)}
 </style>
@@ -416,8 +418,9 @@ canvas.panning{cursor:grabbing}
 
 
     <!-- SIMULACIÓN HÍDRICA INTEGRADA: el mismo MDT, layout y exclusiones. -->
-    <div class="card" id="hydroCard">
+    <div class="card" id="hydroCard" tabindex="-1">
       <h2><span class="ic">💧</span> Hidrología e inundabilidad <span class="hint">cribado preliminar</span></h2>
+      <p id="hydroCardEntryNote" class="hydro-card-entry" hidden>Has entrado desde la tarjeta <b>«Inundaciones 3D»</b>. Esta es la misma herramienta del Generador de implantaciones: primero define una parcela y carga el MDT real, después simula y pulsa <b>💧 Agua 3D</b>. Sin MDT, no hay inundación calculada. <b>Modelo preliminar, no estudio hidráulico certificado.</b></p>
       <p class="hydro-caption">Usa el <b>MDT descargado o importado arriba</b>. Simula escorrentía superficial simplificada, reproduce la tormenta en 2D/3D y estima mesas expuestas. <b>No sustituye un estudio hidrológico/hidráulico ni permite justificar permisos.</b></p>
       <div class="three">
         <div class="field"><label>Intensidad (mm/h)</label><input id="hydroRain" type="number" value="60" min="0" max="500" step="5"></div>
@@ -5840,5 +5843,24 @@ if(restauraSesion())encaja(),draw();
 <script src="lib/hydro-generator.js"></script>
 <script src="lib/layout-economics.js"></script>
 <script src="lib/layout-economy-ui.js"></script>
+<script>
+/* Acceso desde la tarjeta Inundaciones 3D: misma app, mismo motor y MDT.
+   Nunca arranca la simulación ni crea un DEM sintético por navegar aquí. */
+(function focusHydrologyFromProjectCard(){
+  if(new URLSearchParams(window.location.search).get('herramienta')!=='agua3d')return;
+  const card=document.getElementById('hydroCard');
+  if(!card)return;
+  card.classList.add('hydro-target');
+  const note=document.getElementById('hydroCardEntryNote');
+  if(note)note.hidden=false;
+  const heading=document.querySelector('header.bar h1');
+  if(heading)heading.textContent='Inundaciones 3D · Generador de implantaciones';
+  document.title='Inundaciones 3D · Generador de implantaciones · Factiun';
+  requestAnimationFrame(function(){
+    card.scrollIntoView({block:'start',inline:'nearest'});
+    card.focus({preventScroll:true});
+  });
+})();
+</script>
 </body>
 </html>
