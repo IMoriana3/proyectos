@@ -63,6 +63,8 @@ declare -A PISO=(
   # y el navegador 25 controles sin acudir a servicios externos.
   [test_hidro.js]=56
   [test_hidro_ui.js]=25
+  # La tarjeta comparte app y motor: 21 pruebas de navegador (portal, enlace, foco, no inventar MDT).
+  [test_hidro_tarjetas.js]=21
   # Contrato económico del generador: inputs sin cifras inventadas, VAN/TIR/LCOE y A/B (incluye IRR ambiguas).
   [test_layout_economy.js]=59
   [test_generador_inclemencias.js]=45
