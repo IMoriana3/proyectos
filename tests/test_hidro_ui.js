@@ -83,6 +83,17 @@ function ck(label,yes,detail){
   await page.locator("#hydroOfficialFile").setInputFiles({name:"zona.geojson",mimeType:"application/geo+json",buffer:Buffer.from(official)});
   await page.waitForFunction(()=>/1 polígonos/.test(document.getElementById("hydroOfficialStatus").textContent),null,{timeout:5000});
   ck("importa GeoJSON en WGS84 sobre la MISMA parcela",await page.evaluate(()=>HYDRO_OFFICIAL.length===1));
+  // The external layer settings are inside an intentionally collapsed <details>.
+  // An upload via setInputFiles can work while its controls are hidden; a real
+  // user must open the expander before clicking the exclusion checkbox.
+  const externalPanel=page.locator('#hydroCard details.adv').filter({
+    has:page.locator('#hydroOfficialAvoid')
+  });
+  ck("el bloque de cartografía externa empieza plegado",
+     !(await externalPanel.evaluate(el=>el.open)));
+  await externalPanel.locator('summary').click();
+  ck("al desplegar, la exclusión oficial es visible",
+     await page.locator('#hydroOfficialAvoid').isVisible());
   await page.check("#hydroOfficialAvoid");
   ck("las zonas importadas entran al motor de exclusiones",await page.evaluate(()=>hydroExtraExclusions().length===1));
   const badGeo=JSON.stringify({type:"Feature",geometry:{type:"Polygon",coordinates:[
