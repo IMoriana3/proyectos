@@ -3855,7 +3855,9 @@ function aplicaDEM(){
     // verdades sobre la misma pendiente.
     $('slopeNs').disabled=$('slopeEw').disabled=true;
   } else { $('slopeNs').disabled=$('slopeEw').disabled=false; }
-  pintaDerivados(); pintaPanelesDEM(); draw(); autoguarda();
+  pintaDerivados(); pintaPanelesDEM();
+  if(typeof hydroCheckFresh==='function')hydroCheckFresh();
+  draw(); autoguarda();
   /* Si ya había layout, se REGENERA solo: bajar el MDT después de generar y que
      no cambiara nada se leía como «la topografía no descarta ninguna
      estructura» — descartaba, pero solo al volver a pulsar Generar. */
