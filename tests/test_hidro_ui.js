@@ -67,6 +67,8 @@ function ck(label,yes,detail){
   const gen=await page.evaluate(()=>({has:!!(RES&&RES.structures),err:document.getElementById("foot").textContent}));
   ck("genera implantación con módulo hídrico presente",gen.has,gen.err.slice(0,180));
   ck("clasifica exposición de las estructuras generadas",await page.evaluate(()=>HYDRO_EXPOSURE && HYDRO_EXPOSURE.assessed>=0));
+  await page.fill("#hydroThreshold","0.01"); // umbral GOLDEN controlado: no depende de la posición exacta de un pico
+  await page.dispatchEvent("#hydroThreshold","change");
   await page.check("#hydroAvoid");
   const ex=await page.evaluate(()=>hydroExtraExclusions());
   ck("la exclusión hídrica se transforma en zonas de layout",ex.length>0,"polígonos: "+ex.length);
