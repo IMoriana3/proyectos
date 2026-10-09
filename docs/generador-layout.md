@@ -6,6 +6,72 @@
 **Abre y genera**: `generador-layout.html` en este repo, sin levantar nada.
 El motor SolarGPT es opcional y da el número canónico.
 
+## Hidrología e inundabilidad — v1.11.0 (cribado NO certificable)
+
+El análisis está **dentro del propio Generador**: controles junto al MDT,
+capa en el mismo plano de implantación y botón **💧 Agua 3D** en la barra del
+mapa. No se ha creado una aplicación ni tarjeta independientes.
+
+### Uso
+
+1. Define la parcela e importa/descarga el **MDT** en **Terreno**. Sin
+   elevaciones numéricas no se ejecuta la simulación ni se inventa un plano.
+2. En **Hidrología e inundabilidad** configura lluvia (mm/h), duración,
+   horizonte, coeficiente de escorrentía, Manning n y borde abierto/cerrado.
+3. **Simular** reproduce calados por tiempo en la misma implantación y en
+   la escena 3D; clic en 3D consulta cota, calado actual y máximo temporal.
+4. **Generar** permite comparar las mesas, kWp y estructuras expuestas. El
+   balance de agua es visible, y las mesas sin MDT salen SIN CLASIFICAR.
+5. **Excluir** por calado máximo es opcional y reversible: el filtro se suma
+   a las exclusiones antes de implantar y jamás sustituye las áreas que el
+   usuario ha dibujado. Desmarca para recuperar la implantación normal.
+   Los máximos por celda no son necesariamente simultáneos.
+6. **Importar GeoJSON WGS84** permite representar una capa externa y,
+   separadamente, excluirla. La autenticidad y vigencia de esa capa NO
+   están verificadas automáticamente; las geometrías con agujeros se
+   rechazan para no rellenar zonas libres al crear exclusiones.
+7. **GeoJSON del riesgo** entrega polígonos de celdas con máximos; el
+   **Informe JSON** contiene entradas, fuentes, balance y exposición.
+   Todos los informes llevan estado PRELIMINAR_NO_CERTIFICADO.
+
+### Qué calcula y qué NO
+
+El núcleo puro en lib/hydro-risk.js aplica precipitación efectiva uniforme
+sobre un MDT regular, Manning local entre celdas y conservación de volumen
+(precipitación → agua almacenada + salidas). Es un **cribado 2D simplificado**.
+El render 3D (lib/hydro-viewer.js) usa Three.js local sin recalcular la física;
+el cableado de UI vive en lib/hydro-generator.js.
+
+**NO es Iber ni HEC-RAS**, ni resuelve íntegramente las ecuaciones de aguas
+someras 2D. No contiene hidrogramas/cuencas, IDF de períodos de retorno,
+alcantarillas, drenajes, cauces, muros, obstrucciones, infiltración espacial,
+calibración ni modelación as-built. La velocidad derivada por Manning es un
+proxy exploratorio y NO de proyecto. La calidad depende críticamente de la
+resolución del MDT (p.ej. los 30 m de fuentes abiertas no sirven para
+microtopografía/hincas). Los resultados no prueban que un terreno sea
+legalmente seguro frente a inundaciones.
+
+El perímetro abierto asume vertido libre: puede infraestimar calados. Para
+proyectos reales habrá que introducir terreno de ingeniería, obras de
+drenaje, condiciones de contorno correctas, comparación con cartografía
+oficial y solución calibrada en Iber/HEC-RAS 2D.
+
+**Control de vigencia:** si cambian MDT, parcela o tormenta, el análisis se
+marca obsoleto y NO se permite aplicarlo como exclusión. Se persisten los
+controles y los GeoJSON importados; los resultados hidráulicos se recalculan.
+Pruebas: tests/test_hidro.js (balance, invariantes, contrato) y
+tests/test_hidro_ui.js (flujo completo en Chromium).
+
+### Pendiente de ingeniería de detalle
+
+Integración WMS/WFS y fecha/fuente oficiales; hidrogramas e IDF; MDT de
+replanteo y drenajes; motor hidráulico 2D validado; cotejos contra
+Iber/HEC-RAS; evaluación de hincas, caminos, canalizaciones y equipos;
+optimización técnico-económica con coste de mitigación. Estos puntos no
+se presentan como implementados en la v1.11.
+
+---
+
 ## Un único Optimizar — v1.10.0
 
 En **Implantación**, pulsa **Optimizar**. Abre el buscador existente con la parcela y
