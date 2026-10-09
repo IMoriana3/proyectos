@@ -81,7 +81,7 @@ check("Manning n fuera de rango aborta", fails(()=>H.simulate(level,{...cfg,mann
 check("paso temporal fuera de rango aborta", fails(()=>H.simulate(level,{...cfg,dtSec:0}),/Paso/));
 check("horizonte menor que lluvia aborta", fails(()=>H.simulate(level,{...cfg,totalMinutes:30}),/Horizonte/));
 check("cota NaN aborta", fails(()=>H.simulate(grid(3,(r,c)=>r===1&&c===1?NaN:100),cfg),/cota/));
-check("filas de MDT malformadas abortan", fails(()=>H.simulate({lats:[1,2,3],lons:[1,2,3],z:[[1],[1],[1]]},cfg),/Filas/));
+check("filas de MDT malformadas abortan", fails(()=>H.simulate({lats:[41,41.0003,41.0006],lons:[-3,-2.9997,-2.9994],z:[[1],[1],[1]]},cfg),/Filas/));
 check("espaciado de coordenadas degenerado aborta", fails(()=>H.simulate({
   lats:[41,41,41],lons:[-1,-.999,-.998],z:[[0,0,0],[0,0,0],[0,0,0]]},cfg),/Separación/));
 const rev=H.simulate(grid(4,()=>100,true),cfg);
