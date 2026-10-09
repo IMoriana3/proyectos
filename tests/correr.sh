@@ -62,7 +62,7 @@ declare -A PISO=(
   # v1.11.0: criba hidráulica integrada; laboratorio conserva 56 invariantes
   # y el navegador 25 controles sin acudir a servicios externos.
   [test_hidro.js]=56
-  [test_hidro_ui.js]=25
+  [test_hidro_ui.js]=27
   # La tarjeta comparte app y motor: 21 pruebas de navegador (portal, enlace, foco, no inventar MDT).
   [test_hidro_tarjetas.js]=21
   # Contrato económico del generador: inputs sin cifras inventadas, VAN/TIR/LCOE y A/B (incluye IRR ambiguas).
