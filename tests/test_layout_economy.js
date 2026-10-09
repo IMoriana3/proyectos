@@ -50,6 +50,7 @@ check("sobrecoste baja VAN de B",cCivil.deltaNpvEur<c.deltaNpvEur);
 check("sin ventas, IRR no se inventa",E.evaluate({kwp:1},{...p,saleEurMwh:0}).irrPct===null);
 check("sin CAPEX, IRR no se inventa",E.evaluate({kwp:1},{...p,capexEurKwp:0}).irrPct===null);
 check("sin serie de cambio de signo, devuelve null",E.irr([1,2,3])===null);
+check("flujos con TIR múltiples se declaran ambiguos",E.irr([-100,230,-132])===null);
 check("sin layout aborta",throws(()=>E.evaluate(null,p),/genera/i));
 check("layout de potencia nula aborta",throws(()=>E.evaluate({kwp:0},p),/potencia/));
 check("no inventa producción específica",throws(()=>E.evaluate({kwp:1},{...p,energyKwhKwp:""}),/producción específica/));
@@ -62,6 +63,7 @@ check("no inventa horizonte",throws(()=>E.evaluate({kwp:1},{...p,years:""}),/vid
 check("rechaza energía negativa",throws(()=>E.evaluate({kwp:1},{...p,energyKwhKwp:-10}),/producción/));
 check("rechaza OPEX negativo",throws(()=>E.evaluate({kwp:1},{...p,opexEurKwpYear:-1}),/OPEX/));
 check("rechaza años mayores que 50",throws(()=>E.evaluate({kwp:1},{...p,years:51}),/vida/));
+check("rechaza vida útil fraccionaria sin truncar silenciosamente",throws(()=>E.evaluate({kwp:1},{...p,years:25.5}),/entero/));
 check("rechaza coste civil negativo",throws(()=>E.evaluate({kwp:1,extraCivilEur:-1},p),/civil/));
 check("rechaza tasa <= -100%",throws(()=>E.evaluate({kwp:1},{...p,discountPct:-100}),/descuento/));
 const html=fs.readFileSync(path.join(R,"generador-layout.html"),"utf8");
