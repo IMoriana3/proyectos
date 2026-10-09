@@ -63,6 +63,8 @@ declare -A PISO=(
   # y el navegador 25 controles sin acudir a servicios externos.
   [test_hidro.js]=56
   [test_hidro_ui.js]=25
+  # Contrato económico del generador: inputs sin cifras inventadas, VAN/TIR/LCOE y A/B.
+  [test_layout_economy.js]=57
   [test_generador_inclemencias.js]=45
   [test_abanderamiento_evento.js]=31
   [test_buscador.js]=59
