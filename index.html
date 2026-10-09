@@ -1593,8 +1593,8 @@ const PROJECTS = [
   {
     name: "Generador de implantaciones",
     status: "build",
-    objetivo: "Generación automática de implantaciones según el tipo de estructura y los condicionantes del terreno: filas, mesas y seguidores con pitch, setback, multi-talla, bifila, viales y exclusiones, con kWp, GCR y ocupación; incluye una criba de escorrentía preliminar integrada en 2D/3D, con exclusiones hidráulicas opcionales, y exportación GeoJSON, DXF, KML y 3D.",
-    stack: "HTML/JS local · motor de layout en el navegador (UTM + erosión exacta del setback + knapsack multi-talla) · canvas 2D/3D · criba hídrica con balance de agua y Manning local · careo contra solargpt_core.layout_v2",
+    objetivo: "Generación automática de implantaciones según el tipo de estructura y los condicionantes del terreno: filas, mesas y seguidores con pitch, setback, multi-talla, bifila, viales y exclusiones, con kWp, GCR y ocupación; criba de escorrentía preliminar 2D/3D con exclusiones hidráulicas opcionales y comparación económico-financiera A/B (VAN/TIR/LCOE) basada en hipótesis explícitas; exportación GeoJSON, DXF, KML, 3D e informes JSON.",
+    stack: "HTML/JS local · motor de layout en el navegador (UTM + erosión exacta del setback + knapsack multi-talla) · canvas 2D/3D · criba hídrica con balance de agua y Manning local · economía preliminar parametrizada (VAN/TIR/LCOE) · careo contra solargpt_core.layout_v2",
     url: "https://imoriana3.github.io/proyectos/generador-layout.html",
     repo: "https://github.com/imoriana3/proyectos",
     updated: "2026-10-09",
@@ -1603,6 +1603,7 @@ const PROJECTS = [
     docUrl: "",
     download: "",
     uso: [
+      "Viabilidad A/B sin supuestos inventados: guarda kWp de una implantación base y otra con restricciones, introduce energía específica SolarGPT/PVsyst, CAPEX, OPEX, venta, degradación, descuento y coste civil; compara VAN, TIR, LCOE y exporta JSON, con carácter no bankable.",
       "Hidrología e inundabilidad DENTRO del generador: MDT descargado o CSV, lluvia uniforme y Manning de rejilla (preliminar, NO cálculo visado), reproducción 2D/3D, calado y mesas expuestas, GeoJSON WGS84 externo no verificado, exclusión reversible por calado, informes JSON/GeoJSON y controles de vigencia y balance de masa.",
       "Un único Optimizar: azimut, alineado/tresbolillo y origen X/Y, con comparación completa, vista de referencia/propuesta y aplicación reproducible. Aleatorio por defecto, GP experimental y barrido angular. Mismo criterio: kWp × factor solar relativo; no es una previsión de energía anual. Una parcela y un montaje, motor de navegador.",
       "Fichero: generador-layout.html (este repo). GENERA EN EL NAVEGADOR: se abre y calcula sin levantar nada, como sim-viento.html y el comparador. El motor SolarGPT sigue siendo opcional y da el número canónico.",
