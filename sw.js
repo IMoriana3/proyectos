@@ -30,6 +30,8 @@ const SHELL = [
   "lib/hydro-risk.js",
   "lib/hydro-viewer.js",
   "lib/hydro-generator.js",
+  "lib/layout-economics.js",
+  "lib/layout-economy-ui.js",
   "sim-solar.html",
   "sim-viento.html",
   "comparador-estructuras.html",
