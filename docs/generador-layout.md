@@ -72,6 +72,49 @@ se presentan como implementados en la v1.11.
 
 ---
 
+## Viabilidad y comparación A/B — prediseño económico
+
+Debajo de Hidrología, **dentro del Generador**, hay una evaluación económica
+exploratoria. Utiliza los **kWp de la implantación realmente generada**, y
+exige introducir el rendimiento específico **kWh/kWp/año** procedente de
+SolarGPT/PVsyst u otro estudio, junto con CAPEX, OPEX, precio de venta,
+descuento, degradación y horizonte en años. Nunca asigna silenciosamente un
+valor supuesto al precio ni al yield. Puede sumarse un coste civil manual,
+p.ej. presupuesto de drenaje, si se dispone de él.
+
+**Evaluar** calcula producción del primer año, CAPEX, VAN, TIR, LCOE y retorno
+simple. El único motor JS está en lib/layout-economics.js; la UI que lo
+consume está en lib/layout-economy-ui.js. No replica la cadena física anual
+ni el modelo bancable de SolarGPT.
+
+**Comparar implantaciones:**
+
+1. Genera una variante sin restricciones de inundabilidad y pulsa
+   **Guardar alternativa A**. Es una captura del resultado real del layout.
+2. Activa la exclusión por calado o GeoJSON externo, vuelve a generar y pulsa
+   **Guardar alternativa B**. También puedes comparar otros cambios de diseño.
+3. Introduce las hipótesis económicas y pulsa **Evaluar / comparar**.
+   A y B muestran potencia, MWh del primer año, CAPEX, VAN, TIR y LCOE.
+4. Si el MDT, parcela o escenario de lluvia cambian, las capturas no se
+   presentan como comparación válida. Las hipótesis y snapshots de kWp
+   quedan guardados en sesión. **Descargar comparativa JSON** conserva
+   los números, entradas y procedencia para revisión.
+
+**No es un análisis bankable**: coste anual fijo en términos nominales,
+precio fijo, rendimiento anual que solo sufre degradación, descuento
+configurable, sin impuestos, deuda, perfiles horarios, clipping,
+vertidos, PPA complejo, IPC ni evaluación probabilística de pérdidas por
+inundación. El coste de obra civil se introduce, no se predice.
+Para una decisión de inversión real hay que validar con las capas
+SolarGPT de energía y finanzas, estudios de hidráulica y costes EPC
+documentados.
+
+La puerta de regresión añade tests/test_layout_economy.js (57 casos
+numéricos y contractuales con datos conocidos), además de los tests
+hidráulicos y del navegador.
+
+---
+
 ## Un único Optimizar — v1.10.0
 
 En **Implantación**, pulsa **Optimizar**. Abre el buscador existente con la parcela y
