@@ -59,9 +59,9 @@ PATRON="${1:-}"
 # aquí y el cambio aparece en el diff, que es justo lo que un recuento que
 # nadie fija no consigue.
 declare -A PISO=(
-  # v1.11.0: criba hidráulica integrada; laboratorio conserva 54 invariantes
+  # v1.11.0: criba hidráulica integrada; laboratorio conserva 56 invariantes
   # y el navegador 25 controles sin acudir a servicios externos.
-  [test_hidro.js]=54
+  [test_hidro.js]=56
   [test_hidro_ui.js]=25
   [test_generador_inclemencias.js]=45
   [test_abanderamiento_evento.js]=31
