@@ -59,6 +59,14 @@ PATRON="${1:-}"
 # aquí y el cambio aparece en el diff, que es justo lo que un recuento que
 # nadie fija no consigue.
 declare -A PISO=(
+  # v1.11.0: criba hidráulica integrada; laboratorio conserva 56 invariantes
+  # y el navegador 25 controles sin acudir a servicios externos.
+  [test_hidro.js]=56
+  [test_hidro_ui.js]=27
+  # La tarjeta comparte app y motor: 21 pruebas de navegador (portal, enlace, foco, no inventar MDT).
+  [test_hidro_tarjetas.js]=21
+  # Contrato económico del generador: inputs sin cifras inventadas, VAN/TIR/LCOE y A/B (incluye IRR ambiguas).
+  [test_layout_economy.js]=59
   [test_generador_inclemencias.js]=45
   [test_abanderamiento_evento.js]=31
   [test_buscador.js]=59

@@ -160,6 +160,22 @@ canvas.panning{cursor:grabbing}
 #aiGain,#aiChanges{color:var(--text)}
 #aiStatus,#aiViewStatus{font:12px/1.5 var(--sans);text-transform:none;letter-spacing:0}
 #aiProgress{accent-color:var(--accent)}
+
+/* Visor de agua integrado en la misma ficha, sin aplicación independiente. */
+.hydro-state{font-size:11.5px;color:var(--muted);line-height:1.5;margin:8px 0;overflow-wrap:anywhere}
+.hydro-state.warn{color:var(--build)}.hydro-state.err{color:var(--dead)}
+.hydro-results{margin:10px 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.hydro-caption{font-size:11.5px;line-height:1.5;color:var(--muted)}
+.hydro-timeline{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:9px;align-items:center;margin:12px 0}
+.hydro-timeline input{width:100%;accent-color:var(--demo)}
+.hydro-timeline button{width:auto;white-space:nowrap}
+.hydro-timeline output{font:600 11px var(--mono);min-width:56px;text-align:right}
+#hydroScene{width:100%;height:clamp(380px,58vh,750px);background:#0e1923;border:1px solid var(--line);border-radius:10px;margin-top:6px;overflow:hidden;position:relative}
+#hydroScene[hidden]{display:none!important}
+#hydroCard.hydro-target{outline:2px solid var(--demo);outline-offset:3px;scroll-margin-top:18px}
+.hydro-card-entry{font-size:12px;line-height:1.5;background:rgba(22,100,126,.13);border:1px solid var(--demo);border-radius:8px;padding:10px;margin:8px 0;color:var(--text)}
+#hydroScene .hydro-scene-note{position:absolute;top:12px;left:12px;z-index:1;pointer-events:none;background:rgba(10,20,29,.80);color:#d3e5f4;border:1px solid #375267;border-radius:6px;padding:5px 8px;font:11px var(--mono)}
+.hydro-label{font:700 13px var(--mono);color:var(--demo)}
 </style>
 </head>
 <body>
@@ -172,7 +188,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.10.0</b></span>
+  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.11.0</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -400,6 +416,91 @@ canvas.panning{cursor:grabbing}
       <p class="note" style="margin-top:8px">Cuidado con qué hace cada cosa. Estas <b>pendientes medias</b> no son un parámetro del motor —<code>compute_layout_v2</code> no las recibe e implanta en planta—, así que por sí solas no mueven ni quitan una mesa: viajan con el layout al <b>backtracking</b> (<code>cross_axis_slope_deg</code>) y a la sombra entre filas. Pero <b>el terreno sí entra en la colocación</b>, por la otra puerta y la misma que en el cuaderno: el <b>filtro de pendiente máxima</b> del MDT excluye las celdas que se pasan, y eso quita mesas.</p>
     </div>
 
+
+    <!-- SIMULACIÓN HÍDRICA INTEGRADA: el mismo MDT, layout y exclusiones. -->
+    <div class="card" id="hydroCard" tabindex="-1">
+      <h2><span class="ic">💧</span> Hidrología e inundabilidad <span class="hint">cribado preliminar</span></h2>
+      <p id="hydroCardEntryNote" class="hydro-card-entry" hidden>Has entrado desde la tarjeta <b>«Inundaciones 3D»</b>. Esta es la misma herramienta del Generador de implantaciones: primero define una parcela y carga el MDT real, después simula y pulsa <b>💧 Agua 3D</b>. Sin MDT, no hay inundación calculada. <b>Modelo preliminar, no estudio hidráulico certificado.</b></p>
+      <p class="hydro-caption">Usa el <b>MDT descargado o importado arriba</b>. Simula escorrentía superficial simplificada, reproduce la tormenta en 2D/3D y estima mesas expuestas. <b>No sustituye un estudio hidrológico/hidráulico ni permite justificar permisos.</b></p>
+      <div class="three">
+        <div class="field"><label>Intensidad (mm/h)</label><input id="hydroRain" type="number" value="60" min="0" max="500" step="5"></div>
+        <div class="field"><label>Lluvia (min)</label><input id="hydroRainMin" type="number" value="60" min="1" max="240" step="5"></div>
+        <div class="field"><label>Simulación (min)</label><input id="hydroTotal" type="number" value="120" min="1" max="360" step="10"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>Coef. escorrentía (0–1)</label><input id="hydroRunoff" type="number" value="0.7" min="0" max="1" step="0.05"></div>
+        <div class="field"><label>Manning n</label><input id="hydroManning" type="number" value="0.06" min="0.015" max="0.25" step="0.005"></div>
+      </div>
+      <label class="chk"><input id="hydroOutflow" type="checkbox" checked> Vertido libre por el perímetro del MDT (hipótesis simplificada)</label>
+      <p class="hydro-caption">Lluvia uniforme constante, sin red de drenaje/cauces ni infiltración espacial. El coeficiente descuenta lluvia efectiva; el borde abierto puede infravalorar calados reales.</p>
+      <button class="btn" id="hydroRun">▶ Simular escorrentía con el MDT</button>
+      <div id="hydroStatus" class="hydro-state" role="status">Primero descarga el MDT o carga cotas CSV. No se generan cotas artificiales.</div>
+      <div id="hydroResults" class="hydro-results" aria-live="polite"></div>
+      <div id="hydroPlayback" style="display:none">
+        <div class="hydro-timeline">
+          <button class="btn ghost small" id="hydroPlay">▶</button>
+          <input id="hydroTime" type="range" min="0" max="1" value="0" step="1" aria-label="Instante de simulación">
+          <output id="hydroTimeLbl">0 min</output>
+        </div>
+        <label class="chk"><input id="hydroOverlay" type="checkbox" checked> Mostrar calados en el plano 2D</label>
+        <div class="two">
+          <div class="field"><label>Umbral de exposición (m)</label><input type="number" id="hydroThreshold" value="0.10" min="0.01" max="5" step="0.05"></div>
+          <div class="field"><label>Máximo local</label><div id="hydroMax" class="hydro-label">—</div></div>
+        </div>
+        <label class="chk"><input id="hydroAvoid" type="checkbox"> Excluir al generar las celdas que superan el umbral de calado máximo</label>
+        <p class="hydro-caption">Exclusión opcional y reversible; no toca las áreas que hayas dibujado. Los máximos por celda no tienen por qué producirse al mismo tiempo.</p>
+        <div class="btnrow">
+          <button class="btn ghost small" id="hydroGeoExport">⤓ Riesgo GeoJSON</button>
+          <button class="btn ghost small" id="hydroReport">⤓ Informe JSON</button>
+        </div>
+      </div>
+      <details class="adv"><summary>Importar inundabilidad externa (GeoJSON)</summary>
+      <div class="body">
+        <p class="hydro-caption">Carga polígonos WGS84 proporcionados por el técnico o descargados del organismo oficial correspondiente. <b>La app no verifica autenticidad ni vigencia.</b></p>
+        <button class="btn ghost small" id="hydroOfficialBtn">⬆ Cargar GeoJSON de inundabilidad</button>
+        <input id="hydroOfficialFile" type="file" accept=".geojson,.json" style="display:none">
+        <div id="hydroOfficialStatus" class="hydro-state">Sin capa importada.</div>
+        <label class="chk"><input id="hydroOfficialOverlay" type="checkbox" checked> Mostrar polígonos externos</label>
+        <label class="chk"><input id="hydroOfficialAvoid" type="checkbox"> Excluir polígonos externos al generar</label>
+        <button class="btn ghost small" id="hydroOfficialClear">Eliminar capa externa</button>
+      </div></details>
+      <p class="hydro-caption">Criba de rejilla discreta, sensible a MDT, resolución, Manning y condiciones de contorno. Para ingeniería contrastar con cartografía oficial y un solver hidráulico 2D validado.</p>
+    </div>
+
+
+    <!-- ECONOMÍA EXPLORATORIA: para comparar layout actual contra alternativas
+         CON y SIN exclusiones hídricas. Hipótesis explícitas, no datos inventados. -->
+    <div class="card" id="economyCard">
+      <h2><span class="ic">€</span> Viabilidad y comparación económica <span class="hint">prediseño</span></h2>
+      <p class="note" style="margin-top:0">Usa la <b>potencia realmente generada</b> y las hipótesis que introduzcas. No predice la energía anual ni sustituye el cálculo bankable de SolarGPT. Compara el impacto de apartar mesas de zonas inundables.</p>
+      <div class="two">
+        <div class="field"><label>Producción específica (kWh/kWp/año)</label><input id="finYield" type="number" placeholder="Del cálculo SolarGPT/PVsyst" min="1" max="4000" step="1"></div>
+        <div class="field"><label>CAPEX (€/kWp)</label><input id="finCapex" type="number" placeholder="Hipótesis de proyecto" min="0" max="20000" step="10"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>OPEX (€/kWp/año)</label><input id="finOpex" type="number" placeholder="Hipótesis de proyecto" min="0" max="500" step="1"></div>
+        <div class="field"><label>Precio energía (€/MWh)</label><input id="finPrice" type="number" placeholder="PPA / escenario" min="0" max="2000" step="5"></div>
+      </div>
+      <div class="three">
+        <div class="field"><label>Descuento (%)</label><input id="finDiscount" type="number" min="-10" max="50" step=".5" placeholder="Introducir"></div>
+        <div class="field"><label>Degradación anual (%)</label><input id="finDeg" type="number" min="0" max="10" step=".1" placeholder="Introducir"></div>
+        <div class="field"><label>Horizonte (años)</label><input id="finYears" type="number" value="25" min="1" max="50" step="1"></div>
+      </div>
+      <div class="field"><label>Sobrecoste civil de la implantación actual (€)</label>
+        <input id="finCivil" type="number" value="0" min="0" step="1000">
+        <div class="tip">Solo si dispones de una estimación de drenajes, movimiento de tierras o mitigación. No se calcula ni se presupone automáticamente.</div>
+      </div>
+      <div class="btnrow">
+        <button class="btn ghost small" id="finBase">Guardar alternativa A</button>
+        <button class="btn ghost small" id="finRisk">Guardar alternativa B</button>
+      </div>
+      <button class="btn" id="finCalc" style="margin-top:8px">⚖ Evaluar / comparar VAN, TIR y LCOE</button>
+      <button class="btn ghost small" id="finExport" style="margin-top:7px">⤓ Descargar comparativa JSON</button>
+      <p class="hydro-state" id="finStatus">Genera una implantación y completa las hipótesis. Guarda A antes de aplicar exclusiones y B después para comparar, o compara dos configuraciones geométricas.</p>
+      <div id="finTable" class="sizes" style="margin-top:9px"></div>
+      <p class="note" style="margin-top:8px">Modelo indicativo: energía específica constante antes de degradación, precio de energía fijo y OPEX anual constante. Sin impuestos, deuda, IPC, curtailment ni perfiles horarios. Los cambios de riesgos reales necesitan valoración de ingeniería, no un ahorro simulado.</p>
+    </div>
+
     <div class="card">
       <h2><span class="ic">🧩</span> Zonas de montaje — fija y tracker a la vez</h2>
       <p class="note" style="margin-top:0">Una parcela puede no admitir seguidor entera: pendiente, forma o
@@ -531,6 +632,7 @@ canvas.panning{cursor:grabbing}
       <div class="readout" id="ro"></div>
       <div class="maptools">
         <label class="chk" style="margin:0"><input type="checkbox" id="orto" checked> Ortofoto</label>
+        <button class="btn ghost small mini" id="hydro3dBtn" disabled title="Ver escorrentía y mesas en 3D">💧 Agua 3D</button>
         <button class="btn ghost small mini" id="zIn" title="Acercar">+</button>
         <button class="btn ghost small mini" id="zOut" title="Alejar">−</button>
         <button class="btn ghost small mini" id="fit" title="Encajar la parcela en el lienzo">⤢ Encajar</button>
@@ -550,6 +652,7 @@ canvas.panning{cursor:grabbing}
         <span class="maphint" id="mapHint">arrastra para mover · rueda para acercar</span>
       </div>
       <canvas id="cv" width="1000" height="700"></canvas>
+      <div id="hydroScene" hidden><div class="hydro-scene-note">Criba hídrica · visor 3D exploratorio · arrastra para orbitar · rueda para zoom · clic para consultar</div></div>
       <div class="legend">
         <span><i style="background:rgba(84,166,255,.25);border:1px solid #54A6FF"></i> parcela</span>
         <span><i style="background:rgba(54,211,153,.10);border:1px dashed #36D399"></i> área útil (tras setback)</span>
@@ -559,6 +662,8 @@ canvas.panning{cursor:grabbing}
         <span><i style="background:rgba(128,147,164,.30);border:1px dashed #8093A4"></i> descartada</span>
         <span><i style="background:rgba(150,110,220,.30);border:1px solid rgba(150,110,220,.75)"></i> pendiente &gt; máx. tracker</span>
         <span><i style="background:rgba(80,190,205,.30);border:1px solid rgba(80,190,205,.75)"></i> pendiente &gt; máx. fija</span>
+        <span><i style="background:rgba(16,123,255,.60)"></i> calado simulado</span>
+        <span><i style="background:rgba(0,200,239,.18);border:1px solid #00c8ef"></i> capa externa</span>
         <span id="basemapMsg" style="color:var(--muted-2)"></span>
       </div>
       <div class="avisos" id="avisos"></div>
@@ -2857,6 +2962,7 @@ function drawLayout(RES){
     ctx.strokeStyle='#D0594F';ctx.lineWidth=1.4;ctx.setLineDash([5,3]);ctx.stroke();ctx.setLineDash([]);
     ctx.lineCap='butt';
   });
+  if(typeof hydroDraw2D==="function") hydroDraw2D(ctx,ring);
   if(RES){
     RES.roads.forEach(function(rd){ring(rd.lonlat,'rgba(246,166,35,.55)','rgba(246,166,35,.9)',0.8);});
     var st=RES.structures;
@@ -3786,7 +3892,9 @@ function aplicaDEM(){
     // verdades sobre la misma pendiente.
     $('slopeNs').disabled=$('slopeEw').disabled=true;
   } else { $('slopeNs').disabled=$('slopeEw').disabled=false; }
-  pintaDerivados(); pintaPanelesDEM(); draw(); autoguarda();
+  pintaDerivados(); pintaPanelesDEM();
+  if(typeof hydroCheckFresh==='function')hydroCheckFresh();
+  draw(); autoguarda();
   /* Si ya había layout, se REGENERA solo: bajar el MDT después de generar y que
      no cambiara nada se leía como «la topografía no descarta ninguna
      estructura» — descartaba, pero solo al volver a pulsar Generar. */
@@ -3861,7 +3969,7 @@ function readCfg(){
   var mods=$('mods').value.split(',').map(function(s){return parseInt(s.trim(),10);}).filter(function(v){return v>0;});
   if(!mods.length)mods=[28];
   return {
-    coords:PARCEL, holes:HOLES, exclusions:EXCL, exclLines:EXCL_LINEAS,
+    coords:PARCEL, holes:HOLES, exclusions:EXCL.concat(typeof hydroExtraExclusions==="function"?hydroExtraExclusions():[]), exclLines:EXCL_LINEAS,
     exclTopo:celdasExcluidas(), mdtFracTh:0.35,
     forceComplete:$('forceComplete').checked,
     mount:$('mount').value,
@@ -3901,7 +4009,13 @@ function ro(k,v,s){return '<div class="ro"><div class="k">'+k+'</div><div class=
 async function generar(){
   buildParcel();
   if(!PARCEL||PARCEL.length<3){$('foot').innerHTML='<span style="color:var(--build)">Define primero la parcela.</span>';return;}
-  var cfg=readCfg();
+  var cfg;
+  try { cfg=readCfg(); }
+  catch(err){
+    $('foot').textContent='No se pudo generar: '+(err&&err.message||err);
+    $('hint').textContent='error';
+    return;
+  }
   $('hint').innerHTML='<span class="busy">calculando…</span>';
   $('genBtn').disabled=true;
   await new Promise(function(r){setTimeout(r,20);});
@@ -5072,6 +5186,8 @@ function pintar(res,fuente){
     : 'No cabe ninguna estructura con estos parámetros.';
   ['expGeo','expDxf','expKml','d3Btn','expHincas','expBoq','expXyz','expDae','btnPitchBanda']
     .forEach(function(id){$(id).disabled=!st.structures;});
+  if(typeof hydroLayoutUpdated==='function')hydroLayoutUpdated();
+  if(typeof finLayoutUpdated==='function')finLayoutUpdated();
   draw();
   if(DEM)pintaPanelesDEM();
   autoguarda();
@@ -5087,8 +5203,11 @@ $('optBtn').onclick=function(){
   if(PARCELAS.length||$('mount').value==='mixto'){
     $('hint').textContent='Optimizar requiere una parcela y un montaje. Generar admite el conjunto.';return;}
   if($('calc').value!=='js'){$('hint').textContent='Selecciona Cálculo en Navegador para optimizar con este motor.';return;}
+  var cfgOpt, firmaOptActual;
+  try{ cfgOpt=readCfg(); firmaOptActual=firmaOpt(); }
+  catch(err){ $('hint').textContent='No se puede optimizar: '+(err&&err.message||err);return; }
   OPT_ENCARGO={de:'generador',id:Date.now().toString(36)+'-'+Math.random().toString(36).slice(2),
-    fecha:Date.now(),cfg:readCfg(),firma:firmaOpt()};
+    fecha:Date.now(),cfg:cfgOpt,firma:firmaOptActual};
   localStorage.removeItem('buscador_mejor');
   localStorage.setItem('buscador_encargo',JSON.stringify(OPT_ENCARGO));
   window.open('buscador-implantacion.html?encargo=1','_blank');
@@ -5098,7 +5217,10 @@ addEventListener('focus',function(){
   var m;try{m=JSON.parse(t);}catch(e){localStorage.removeItem('buscador_mejor');return;}
   if(!OPT_ENCARGO||m.encargoId!==OPT_ENCARGO.id)return;
   localStorage.removeItem('buscador_mejor');
-  if(OPT_ENCARGO.firma!==firmaOpt()){
+  var firmaActual;
+  try{firmaActual=firmaOpt();}
+  catch(err){$('hint').textContent='El proyecto ha cambiado: '+(err&&err.message||err);return;}
+  if(OPT_ENCARGO.firma!==firmaActual){
     $('hint').textContent='El proyecto ha cambiado: repite Optimizar antes de aplicar la propuesta.';return;}
   if(![m.panelAz,m.xOffsetM,m.yOffsetM,m.kwp].every(Number.isFinite)){
     $('hint').textContent='La propuesta no contiene una configuración completa.';return;}
@@ -5316,8 +5438,11 @@ var SES_CAMPOS=['lat','lon','pw','ph','prot','parcelMode','geotxt','parcelName',
   /* v1.6.10: la lista se habia quedado VIEJA — los panes por montaje (v1.6.2+)
      y sus campos nuevos no se persistian y volvian a defaults al recargar */
   'pitchTrk','pitchFija','slopeTrkEw','slopeTrkNs','slopeFijaEw','slopeFijaNs',
-  'tableFija','azRowsFija','mixMinArea','mixMinAreaFija','originX','originY'];
-var SES_CHECKS=['alignGrid','center','forceComplete','demOff','demUse','orto','showDisc','showAxis','mixRellenoFija','originManual'];
+  'tableFija','azRowsFija','mixMinArea','mixMinAreaFija','originX','originY',
+  'hydroRain','hydroRainMin','hydroTotal','hydroRunoff','hydroManning','hydroThreshold',
+  'finYield','finCapex','finOpex','finPrice','finDiscount','finDeg','finYears','finCivil'];
+var SES_CHECKS=['alignGrid','center','forceComplete','demOff','demUse','orto','showDisc','showAxis','mixRellenoFija','originManual',
+  'hydroOutflow','hydroOfficialOverlay','hydroOfficialAvoid'];
 
 function estadoSesion(){
   var st={v:SES_V, guardada:null, campos:{}, checks:{}};
@@ -5328,6 +5453,8 @@ function estadoSesion(){
   // las ZONAS del reparto tambien son sesion (2026-08-28, «las zonas de
   // fija por que no salen»): sin esto el reparto desaparecia al recargar
   st.mixZonas=MIX_ZONAS; st.mixProp=MIX_PROP;
+  st.hydroExternal=HYDRO_OFFICIAL;
+  st.finCases=FIN_CASES;
   st.view={cx:VIEW.cx,cy:VIEW.cy,z:VIEW.z};
   return st;
 }
@@ -5346,6 +5473,8 @@ function aplicaSesion(st){
   PARCELAS=st.parcelas||[]; EXCL=st.excl||[]; EXCL_LINEAS=st.exclLineas||[];
   DEM=st.dem||null; DRAW=st.draw||null;
   MIX_ZONAS=st.mixZonas||[]; MIX_PROP=st.mixProp||null;
+  HYDRO_OFFICIAL=Array.isArray(st.hydroExternal)?st.hydroExternal:[];
+  FIN_CASES=st.finCases&&typeof st.finCases==="object"?st.finCases:{A:null,B:null};
   if(st.view){VIEW.cx=st.view.cx;VIEW.cy=st.view.cy;VIEW.z=st.view.z;}
   var m=$('parcelMode').value;
   $('paneRect').style.display=m==='rect'?'':'none';
@@ -5701,9 +5830,37 @@ $('d3Btn').onclick=function(){
   window.open('../cobertura-zigbee/terreno.html?planta=custom','_blank');
 };
 
+var HYDRO_OFFICIAL=[]; // externa; se recupera desde la sesión en aplicaSesion
+var FIN_CASES={A:null,B:null};
 /* ===== arranque ===== */
 loadPlants();syncAz();pintaBotonesDibujo();pintaCosteDem();buildParcel();encaja();draw();detectEngine();
 if(restauraSesion())encaja(),draw();
+</script>
+<script src="lib/three.min.js"></script>
+<script src="lib/OrbitControls.js"></script>
+<script src="lib/hydro-risk.js"></script>
+<script src="lib/hydro-viewer.js"></script>
+<script src="lib/hydro-generator.js"></script>
+<script src="lib/layout-economics.js"></script>
+<script src="lib/layout-economy-ui.js"></script>
+<script>
+/* Acceso desde la tarjeta Inundaciones 3D: misma app, mismo motor y MDT.
+   Nunca arranca la simulación ni crea un DEM sintético por navegar aquí. */
+(function focusHydrologyFromProjectCard(){
+  if(new URLSearchParams(window.location.search).get('herramienta')!=='agua3d')return;
+  const card=document.getElementById('hydroCard');
+  if(!card)return;
+  card.classList.add('hydro-target');
+  const note=document.getElementById('hydroCardEntryNote');
+  if(note)note.hidden=false;
+  const heading=document.querySelector('header.bar h1');
+  if(heading)heading.textContent='Inundaciones 3D · Generador de implantaciones';
+  document.title='Inundaciones 3D · Generador de implantaciones · Factiun';
+  requestAnimationFrame(function(){
+    card.scrollIntoView({block:'start',inline:'nearest'});
+    card.focus({preventScroll:true});
+  });
+})();
 </script>
 </body>
 </html>
