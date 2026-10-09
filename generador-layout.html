@@ -464,6 +464,39 @@ canvas.panning{cursor:grabbing}
       <p class="hydro-caption">Criba de rejilla discreta, sensible a MDT, resolución, Manning y condiciones de contorno. Para ingeniería contrastar con cartografía oficial y un solver hidráulico 2D validado.</p>
     </div>
 
+
+    <!-- ECONOMÍA EXPLORATORIA: para comparar layout actual contra alternativas
+         CON y SIN exclusiones hídricas. Hipótesis explícitas, no datos inventados. -->
+    <div class="card" id="economyCard">
+      <h2><span class="ic">€</span> Viabilidad y comparación económica <span class="hint">prediseño</span></h2>
+      <p class="note" style="margin-top:0">Usa la <b>potencia realmente generada</b> y las hipótesis que introduzcas. No predice la energía anual ni sustituye el cálculo bankable de SolarGPT. Compara el impacto de apartar mesas de zonas inundables.</p>
+      <div class="two">
+        <div class="field"><label>Producción específica (kWh/kWp/año)</label><input id="finYield" type="number" placeholder="Del cálculo SolarGPT/PVsyst" min="1" max="4000" step="1"></div>
+        <div class="field"><label>CAPEX (€/kWp)</label><input id="finCapex" type="number" placeholder="Hipótesis de proyecto" min="0" max="20000" step="10"></div>
+      </div>
+      <div class="two">
+        <div class="field"><label>OPEX (€/kWp/año)</label><input id="finOpex" type="number" placeholder="Hipótesis de proyecto" min="0" max="500" step="1"></div>
+        <div class="field"><label>Precio energía (€/MWh)</label><input id="finPrice" type="number" placeholder="PPA / escenario" min="0" max="1000" step="5"></div>
+      </div>
+      <div class="three">
+        <div class="field"><label>Descuento (%)</label><input id="finDiscount" type="number" min="-10" max="50" step=".5" placeholder="Introducir"></div>
+        <div class="field"><label>Degradación anual (%)</label><input id="finDeg" type="number" min="0" max="10" step=".1" placeholder="Introducir"></div>
+        <div class="field"><label>Horizonte (años)</label><input id="finYears" type="number" value="25" min="1" max="50" step="1"></div>
+      </div>
+      <div class="field"><label>Sobrecoste civil de la implantación actual (€)</label>
+        <input id="finCivil" type="number" value="0" min="0" step="1000">
+        <div class="tip">Solo si dispones de una estimación de drenajes, movimiento de tierras o mitigación. No se calcula ni se presupone automáticamente.</div>
+      </div>
+      <div class="btnrow">
+        <button class="btn ghost small" id="finBase">Guardar alternativa A</button>
+        <button class="btn ghost small" id="finRisk">Guardar alternativa B</button>
+      </div>
+      <button class="btn" id="finCalc" style="margin-top:8px">⚖ Evaluar / comparar VAN, TIR y LCOE</button>
+      <p class="hydro-state" id="finStatus">Genera una implantación y completa las hipótesis. Guarda A antes de aplicar exclusiones y B después para comparar, o compara dos configuraciones geométricas.</p>
+      <div id="finTable" class="sizes" style="margin-top:9px"></div>
+      <p class="note" style="margin-top:8px">Modelo indicativo: energía específica constante antes de degradación, precio de energía fijo y OPEX anual constante. Sin impuestos, deuda, IPC, curtailment ni perfiles horarios. Los cambios de riesgos reales necesitan valoración de ingeniería, no un ahorro simulado.</p>
+    </div>
+
     <div class="card">
       <h2><span class="ic">🧩</span> Zonas de montaje — fija y tracker a la vez</h2>
       <p class="note" style="margin-top:0">Una parcela puede no admitir seguidor entera: pendiente, forma o
@@ -5149,7 +5182,8 @@ function pintar(res,fuente){
     : 'No cabe ninguna estructura con estos parámetros.';
   ['expGeo','expDxf','expKml','d3Btn','expHincas','expBoq','expXyz','expDae','btnPitchBanda']
     .forEach(function(id){$(id).disabled=!st.structures;});
-  if(typeof hydroLayoutUpdated==="function")hydroLayoutUpdated();
+  if(typeof hydroLayoutUpdated==='function')hydroLayoutUpdated();
+  if(typeof finLayoutUpdated==='function')finLayoutUpdated();
   draw();
   if(DEM)pintaPanelesDEM();
   autoguarda();
@@ -5401,7 +5435,8 @@ var SES_CAMPOS=['lat','lon','pw','ph','prot','parcelMode','geotxt','parcelName',
      y sus campos nuevos no se persistian y volvian a defaults al recargar */
   'pitchTrk','pitchFija','slopeTrkEw','slopeTrkNs','slopeFijaEw','slopeFijaNs',
   'tableFija','azRowsFija','mixMinArea','mixMinAreaFija','originX','originY',
-  'hydroRain','hydroRainMin','hydroTotal','hydroRunoff','hydroManning','hydroThreshold'];
+  'hydroRain','hydroRainMin','hydroTotal','hydroRunoff','hydroManning','hydroThreshold',
+  'finYield','finCapex','finOpex','finPrice','finDiscount','finDeg','finYears','finCivil'];
 var SES_CHECKS=['alignGrid','center','forceComplete','demOff','demUse','orto','showDisc','showAxis','mixRellenoFija','originManual',
   'hydroOutflow','hydroOfficialOverlay','hydroOfficialAvoid'];
 
@@ -5415,6 +5450,7 @@ function estadoSesion(){
   // fija por que no salen»): sin esto el reparto desaparecia al recargar
   st.mixZonas=MIX_ZONAS; st.mixProp=MIX_PROP;
   st.hydroExternal=HYDRO_OFFICIAL;
+  st.finCases=FIN_CASES;
   st.view={cx:VIEW.cx,cy:VIEW.cy,z:VIEW.z};
   return st;
 }
@@ -5434,6 +5470,7 @@ function aplicaSesion(st){
   DEM=st.dem||null; DRAW=st.draw||null;
   MIX_ZONAS=st.mixZonas||[]; MIX_PROP=st.mixProp||null;
   HYDRO_OFFICIAL=Array.isArray(st.hydroExternal)?st.hydroExternal:[];
+  FIN_CASES=st.finCases&&typeof st.finCases==="object"?st.finCases:{A:null,B:null};
   if(st.view){VIEW.cx=st.view.cx;VIEW.cy=st.view.cy;VIEW.z=st.view.z;}
   var m=$('parcelMode').value;
   $('paneRect').style.display=m==='rect'?'':'none';
@@ -5790,6 +5827,7 @@ $('d3Btn').onclick=function(){
 };
 
 var HYDRO_OFFICIAL=[]; // externa; se recupera desde la sesión en aplicaSesion
+var FIN_CASES={A:null,B:null};
 /* ===== arranque ===== */
 loadPlants();syncAz();pintaBotonesDibujo();pintaCosteDem();buildParcel();encaja();draw();detectEngine();
 if(restauraSesion())encaja(),draw();
@@ -5799,5 +5837,7 @@ if(restauraSesion())encaja(),draw();
 <script src="lib/hydro-risk.js"></script>
 <script src="lib/hydro-viewer.js"></script>
 <script src="lib/hydro-generator.js"></script>
+<script src="lib/layout-economics.js"></script>
+<script src="lib/layout-economy-ui.js"></script>
 </body>
 </html>
