@@ -227,13 +227,27 @@ MeteoFX.prototype._applyPanelSnow=function(frac){
 };
 MeteoFX.prototype._applyLight=function(storm){
   var fac=clamp(1-.42*storm,.50,1),hfac=mix(1,.78,storm);
+  /* ponSol() vuelve a escribir las intensidades base antes de cada estado nuevo.
+     Pero un slider puede llamar dos veces a setWeather() SIN pasar por ponSol.
+     Se distingue una cosa de la otra comparando con el último valor aplicado:
+     si sigue ahí, se reutiliza la base guardada; si cambió, esa es la nueva base.
+     Así una tormenta no se oscurece dos veces ni pierde el oscurecimiento cuando
+     el sol se recalcula. */
   if(this.sun){
-    var raw=this.sun.intensity/(this.lightFactor||1);
+    var cur=this.sun.intensity;
+    var raw=(this._lastSunApplied!=null&&Math.abs(cur-this._lastSunApplied)<1e-7)
+      ? this._sunBase : cur;
+    this._sunBase=raw;
     this.sun.intensity=raw*fac;
+    this._lastSunApplied=this.sun.intensity;
   }
   if(this.hemi){
-    var rawH=this.hemi.intensity/(this.hemiFactor||1);
+    var curH=this.hemi.intensity;
+    var rawH=(this._lastHemiApplied!=null&&Math.abs(curH-this._lastHemiApplied)<1e-7)
+      ? this._hemiBase : curH;
+    this._hemiBase=rawH;
     this.hemi.intensity=rawH*hfac;
+    this._lastHemiApplied=this.hemi.intensity;
   }
   this.lightFactor=fac;this.hemiFactor=hfac;
 };
