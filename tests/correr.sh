@@ -730,6 +730,10 @@ declare -A PISO=(
   # donde envejecer.
   [test_viento_latencia.js]=134
   [test_viento_meteo.js]=33
+  # La meteorología 3D no es decoración: si el campo de viento se congela, la
+  # nieve deja de acumular o una célula ETA 90 aparece encima del campo, la
+  # explicación visual contradice al motor aunque ningún cálculo falle.
+  [test_viento_fx.js]=18
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,
   # `control`, `poa`, `single`, `dual`, `pasivo`— y ninguno el MONTAJE: en qué

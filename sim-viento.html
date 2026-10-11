@@ -119,6 +119,7 @@
   .meteo3d b{color:var(--tx);font-weight:700}
   .meteo3d.wind{left:10px;top:10px;border-color:#5aa9ff}
   .meteo3d.hail{right:10px;top:10px;text-align:right;border-color:#9bb0c6}
+  .meteo3d.snow{left:10px;bottom:34px;border-color:#d7e8f5;background:rgba(18,26,38,.86)}
   .hailfx{position:absolute;z-index:7;right:7%;top:48px;width:150px;height:110px;pointer-events:none;
     opacity:0;transition:opacity .2s,transform .2s;transform:scale(.75);transform-origin:top right}
   .hailfx.on{opacity:.9}
@@ -1157,6 +1158,7 @@
 <script src="lib/three.min.js"></script>
 <script src="lib/OrbitControls.js"></script>
 <script src="seguidor.js"></script>
+<script src="sim-viento-meteo.js?v=1"></script>
 <script>
 'use strict';
 function $(id){return document.getElementById(id);}
@@ -6204,16 +6206,22 @@ function init3D(){
     hint.textContent='arrastrar: orbitar · rueda: zoom · botón dcho: desplazar';
     var windHud=document.createElement('div');windHud.className='meteo3d wind';windHud.style.display='none';
     var hailHud=document.createElement('div');hailHud.className='meteo3d hail';hailHud.style.display='none';
+    var snowHud=document.createElement('div');snowHud.className='meteo3d snow';snowHud.style.display='none';
     var hailFx=document.createElement('div');hailFx.className='hailfx';
     var cloud=document.createElement('div');cloud.className='cloud';cloud.textContent='☁';hailFx.appendChild(cloud);
     [8,22,35,48,61,74,87,31,55,79].forEach(function(x,i){
       var q=document.createElement('i');q.className='stone';q.style.left=x+'%';
       q.style.animationDelay=(-0.11*i)+'s';hailFx.appendChild(q);
     });
-    h.appendChild(hint);h.appendChild(windHud);h.appendChild(hailHud);h.appendChild(hailFx);
+    h.appendChild(hint);h.appendChild(windHud);h.appendChild(hailHud);h.appendChild(snowHud);h.appendChild(hailFx);
     TD={rd:rd,sc:sc,cam:cam,ct:ct,sun:sun,sunM:sunM,wind:wind,suelo:suelo,horiz:horiz,mundo:null,radio:420,
-        windHud:windHud,hailHud:hailHud,hailFx:hailFx,
+        windHud:windHud,hailHud:hailHud,snowHud:snowHud,hailFx:hailFx,
         hemi:hemi,skyCv:skyCv,skyTx:skyTx,skyKey:''};
+    if(typeof MeteoFX!=='undefined'){
+      try{TD.meteoFX=new MeteoFX({THREE:THREE,scene:sc,renderer:rd,camera:cam,sun:sun,hemi:hemi});
+          hailFx.style.display='none';}
+      catch(_fxe){TD.meteoFX=null;}
+    }
     TD.suelo.scale.set(900,600,1);
     var last=performance.now();
     (function loop(now){requestAnimationFrame(loop); if(!TD)return;
@@ -6221,6 +6229,8 @@ function init3D(){
       if(w&&(TD.w!==w||TD.h!==hh)){TD.w=w;TD.h=hh;rd.setSize(w,hh,false);cam.aspect=w/hh;cam.updateProjectionMatrix();}
       var dt=Math.min(0.1,((now||performance.now())-last)/1000); last=now||performance.now();
       if(MODO==='live')liveTick(dt); else if(MODO==='event')eventoTick(dt); else if(MODO==='ep')epTick(dt);
+      var fxRun=(MODO==='live')?(LIVE&&LIVE.run):(MODO==='event')?EVENTO.run:(MODO==='ep')?PLAY:true;
+      if(TD.meteoFX)TD.meteoFX.tick(fxRun?dt:0);
       TD.ct.update(); rd.render(sc,cam);})(performance.now());
   }catch(e){TD=null;}
 }
@@ -6972,13 +6982,21 @@ function ponSol(elDeg,azDeg,vms,dirDeg){
    El granizo no inventa rumbo de célula: solo enseña severidad, ETA y fase. */
 function actualizaMeteo3D(fr){
   if(!TD||!fr)return;
-  var kmh=Math.max(0,(+fr.wind_ms||0)*3.6), de=((+fr.wind_dir%360)+360)%360, hacia=(de+180)%360;
+  var kmh=Math.max(0,(+fr.wind_ms||0)*3.6),gust=Math.max(kmh,(+fr.gust_ms||0)*3.6),
+      de=((+fr.wind_dir%360)+360)%360,hacia=(de+180)%360;
   if(TD.windHud){
     TD.windHud.style.display=kmh>.3?'':'none';
-    TD.windHud.innerHTML='<b>VIENTO '+fmt(kmh,0)+' km/h</b><br>VIENE DE '+
+    TD.windHud.innerHTML='<b>VIENTO '+fmt(kmh,0)+' km/h</b><br>RACHA '+fmt(gust,0)+' km/h · VIENE DE '+
       compass(de)+' · '+fmt(de,0)+'° → VA HACIA '+compass(hacia)+' · '+fmt(hacia,0)+'°';
   }
-  var hailOn=!!fr.hail_on, known=fr.hail_known!==false, severe=!!fr.hail_gate,
+  var snowCm=Math.max(0,+fr.snow_cm||0);
+  if(TD.snowHud){
+    TD.snowHud.style.display=snowCm>.05?'':'none';
+    if(snowCm>.05)TD.snowHud.innerHTML='<b>NIEVE '+fmt(snowCm,1)+' cm</b><br>'+
+      (snowCm>LOC.NIEVE_ON_CM?'CARGA DE NIEVE · protección activa':'acumulación bajo umbral')+
+      ' · deriva con '+compass(de);
+  }
+  var hailOn=!!fr.hail_on,known=fr.hail_known!==false,severe=!!fr.hail_gate,
       fase=fr.hail_phase||'SIN SEÑAL';
   if(TD.hailHud){
     var visible=hailOn||fase==='RETENCION'||fase==='SIN_DATO'||fase==='SIN_DATO_PROTEGIDO';
@@ -6996,7 +7014,14 @@ function actualizaMeteo3D(fr){
         (known?fmt(fr.hail_mm,0)+' mm · '+fmt(fr.hail_prob_pct,0)+' % · ETA '+fmt(fr.hail_eta_min,0)+' min':'dato ausente')+extra;
     }
   }
-  if(TD.hailFx){
+  if(TD.meteoFX){
+    TD.meteoFX.setWeather({
+      windKmh:kmh,gustKmh:gust,windDirDeg:de,snowCm:snowCm,
+      hailKnown:known,hailOn:hailOn,hailGate:severe,hailPhase:fase,
+      hailMm:+fr.hail_mm||0,hailProb:+fr.hail_prob_pct||0,hailEtaMin:fr.hail_eta_min,
+      hailDirDeg:isFinite(+fr.hail_dir)?+fr.hail_dir:de
+    });
+  }else if(TD.hailFx){
     if(!known||!hailOn||!severe){TD.hailFx.className='hailfx';}
     else{
       var cl='hailfx on';
@@ -7923,6 +7948,17 @@ function liveTick(dtReal){
     }else poa[S]=LOC.poa(r.theta,P.el,P.az,bh,dh,bh+dh);
   });
   ponSol(P.el/LOC.D2R,P.azp,LIVE.v,LIVE.dir);
+  var _hHold=LOC.GRZ.salida_min,_hPhase='SIN SEÑAL';
+  if(hGate.activa)_hPhase=LIVE.hailEtaF<=0?'IMPACTO':(LIVE.hailEtaF<=LOC.GRZ.hail_min?'DEFENSA':'VIGILANCIA');
+  else if(LIVE.hailEver&&(LIVE.hailClearMin||0)<_hHold)_hPhase='RETENCION';
+  else if(LIVE.hailEver)_hPhase='LIBERADO';
+  actualizaMeteo3D({
+    wind_ms:LIVE.v,gust_ms:Math.max(LIVE.v,(LOC.rachaMediana(LIVE.v*3.6)||LIVE.v*3.6)/3.6),wind_dir:LIVE.dir,
+    snow_cm:0,hail_known:true,hail_on:$('lHailOn').checked,hail_gate:hGate.activa,hail_phase:_hPhase,
+    hail_mm:+$('lHailMm').value,hail_prob_pct:+$('lHailProb').value,hail_eta_min:LIVE.hailEtaF,
+    hail_hold_remaining_min:Math.max(0,_hHold-(LIVE.hailClearMin||0)),hail_defense_active:_hPhase==='DEFENSA'||_hPhase==='IMPACTO'||_hPhase==='RETENCION',
+    hail_dir:LIVE.dir
+  });
   pintaEscena(LIVE.ang,LIVE.modos,poa,poa.BASE);
   hailLivePinta();
   // El cronómetro va DESPUÉS de mover a todo el mundo: mide el estado ya
@@ -8048,6 +8084,9 @@ function update3D(i,sinTiles){
   for(var k in TL.cases){ang[k]=TL.cases[k].theta[i];modos[k]=TL.cases[k].mode[i];poa[k]=TL.cases[k].poa[i];
     ordn[k]=(TL.cases[k].orden?TL.cases[k].orden[i]:TL.cases[k].theta[i]);}
   ponSol(TL.sun_el[i],TL.sun_az[i],TL.wind_ms[i]||0,TL.wind_dir?TL.wind_dir[i]:null);
+  actualizaMeteo3D({wind_ms:TL.wind_ms[i]||0,gust_ms:(TL.gust_ms&&TL.gust_ms[i])||TL.wind_ms[i]||0,
+    wind_dir:(TL.wind_dir&&TL.wind_dir[i]!=null)?TL.wind_dir[i]:270,snow_cm:0,
+    hail_known:true,hail_on:false,hail_gate:false,hail_phase:'SIN SEÑAL'});
   pintaEscena(ang,modos,poa,poa.BASE);
   // El panel de tarjetas se REHACE en HTML entero, así que a 60 fotogramas por
   // segundo es la parte más cara de todo esto y la que menos se nota: el modo
@@ -8202,6 +8241,7 @@ async function montaEscena(){
   // El control de bandas se refresca DESPUÉS de montar: solo existe sobre una
   // planta real, y su estado tiene que aplicarse a la escena recién montada.
   bandasUI();
+  if(TD.meteoFX)TD.meteoFX.setBounds(TD.ct.target,Math.max(90,Math.min(1800,TD.radio*.72)));
   if(MODO==='live'){liveInit();liveTick(0.001);}
   else if(MODO==='event'){EVENTO.enabled=true;eventoRebuild(EVENTO.pos);}
   else if(TL)update3D(TPOS);

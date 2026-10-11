@@ -201,7 +201,12 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
       tiles:document.getElementById('tiles').textContent,
       windHud:TD&&TD.windHud?TD.windHud.textContent:'',
       hailHud:TD&&TD.hailHud?TD.hailHud.textContent:'',
-      hailFx:TD&&TD.hailFx?TD.hailFx.className:''
+      hailFx:TD&&TD.hailFx?TD.hailFx.className:'',
+      hail3d:TD&&TD.meteoFX?{
+        clouds:!!(TD.meteoFX.clouds&&TD.meteoFX.clouds.visible),
+        hail:!!(TD.meteoFX.hail&&TD.meteoFX.hail.visible),
+        opacity:TD.meteoFX.hail&&TD.meteoFX.hail.material?TD.meteoFX.hail.material.opacity:0
+      }:null
     };
   });
   check('timeline dibuja eventos y la aguja del minuto actual',
@@ -215,7 +220,9 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     pinta.windHud);
   check('el granizo tiene presencia visual y estado legible en la escena',
     /GRANIZO/.test(pinta.hailHud)&&/VIGILANCIA|DEFENSA ACTIVA|ENCIMA/.test(pinta.hailHud)&&
-    /hailfx on/.test(pinta.hailFx),JSON.stringify({hud:pinta.hailHud,fx:pinta.hailFx}));
+    ((pinta.hail3d&&pinta.hail3d.clouds&&pinta.hail3d.hail&&pinta.hail3d.opacity>0)||
+     /hailfx on/.test(pinta.hailFx)),
+    JSON.stringify({hud:pinta.hailHud,fx:pinta.hailFx,hail3d:pinta.hail3d}));
   check('las tarjetas dicen quién manda y el estado de protección',
     /VIENTO × GRANIZO|GRANIZO|VIENTO/.test(pinta.tiles)&&/TRÁNSITO|POSICIÓN|MODELADO|SEGUIMIENTO/.test(pinta.tiles),
     pinta.tiles.slice(0,300));
