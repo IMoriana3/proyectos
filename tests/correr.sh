@@ -421,6 +421,18 @@ declare -A PISO=(
   # el día juliano corrido un día entero, el backtracking quitado del todo y la
   # refracción anulada. Este banco los mata 4, 5 y 3.
   [test_solar.js]=73
+  # Sol & Simulación ya no descarga meteo por su cuenta: usa el WeatherContract
+  # TMY/historical del mismo emplazamiento y solo cae a Open-Meteo con fallback
+  # visible. El banco fija selección anual, ausencia≠0, lat/lon, hash/TZ y que
+  # Rápida y Bancable envían el MISMO payload inline al motor.
+  [test_solar_weather_contract.mjs]=24
+  # El bridge es la única vía explícita para llevar el mismo paquete/hash desde
+  # imoriana3.github.io a consumidores servidos en workers.dev. Se fijan origen,
+  # nonce, allowlist de tipos, esquema v2 y prohibición de postMessage wildcard.
+  [test_weather_contract_bridge.mjs]=14
+  # Vector determinista que se leerá también desde SolarGPT Python. Fija la
+  # selección Sandia/FS mes a mes, 8760 filas, timestamps, extremos y stats.
+  [test_tmy_js_python_golden.mjs]=18
   [test_sizing.js]=115
   # 13, y MEDIDO en los TRES modos —con checkout hermano, por `main` sobre
   # HTTPS y sin ninguno de los dos— porque el recuento no cambia entre ellos:
