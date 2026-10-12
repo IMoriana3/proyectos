@@ -15,6 +15,54 @@ Hay dos rutas de selección, sin duplicar la lista de proyectos:
 
 No hay una tercera lista de plantas mantenida a mano. Los proyectos propios persisten por su código estable; los emplazamientos externos persisten como un registro geocodificado separado. Se conserva además el modo **Manual / coordenadas libres**.
 
+## WeatherContract v2
+
+El workbench publica cada dataset preparado como un paquete **WeatherContract v2** en Cache Storage del origen `imoriana3.github.io`, con una referencia ligera en `localStorage`. Al compartir origen, los simuladores de otros repos publicados bajo GitHub Pages pueden leer exactamente el mismo paquete sin volver a descargar meteo.
+
+El contrato contiene:
+
+- `contract_id` y hash de dataset;
+- emplazamiento y zona horaria;
+- fuente/proveedor/modelo/run/fallback;
+- resolución original y operacional, cobertura e interpolación;
+- unidades y campos canónicos;
+- QA, completitud y BSRN;
+- incertidumbre del recurso;
+- resumen espacial cuando existe;
+- política explícita: **WEATHER informa; CONTROL decide**.
+
+Hay referencias activas separadas para `forecast`, `historical`, `tmy` y `prepared`, además de una referencia al último paquete activado.
+
+## Supervisión 72 h
+
+El forecast activo genera una ventana operativa de 72 h con máximos de viento/racha, precipitación acumulada, temperatura mínima, nieve y CAPE. Señala cruces de umbral como **avisos meteorológicos**, nunca como órdenes de control.
+
+Cuando se configura un endpoint WeatherNext 3 autenticado, el browser intenta primero WeatherNext. Si no está disponible, el fallback a Open-Meteo queda visible y registrado en el WeatherContract.
+
+## Meteo espacial
+
+La primera capa espacial usa centro + norte/sur/este/oeste a un radio configurable. Calcula spreads de viento, racha, temperatura, GHI, precipitación y nubosidad. Está declarada como aproximación geométrica; no inventa una topología NCU si no dispone de ella.
+
+## Incertidumbre y P50/P90
+
+El browser calcula una sigma de recurso conservadora usando el mayor de:
+
+- preset de la fuente;
+- RMS multi-fuente;
+- residual de adaptación a medida de sitio;
+- override explícito cuando exista.
+
+Se evita sumar en cuadratura estos términos correlacionados para no contar dos veces el mismo error de recurso. La sigma se guarda dentro del WeatherContract y del `manifest.json`.
+
+## Export bankable
+
+Además de CSV/JSON/TMY, la v0.8 exporta:
+
+- CSV compatible con flujo PVSyst;
+- `manifest.json` con provenance, hash, QA, incertidumbre, spatial y forecast;
+- WeatherContract completo en JSON;
+- informe HTML/PDF con el manifest incrustado.
+
 ## Arquitectura
 
 ```text
@@ -67,7 +115,7 @@ Meteo              POWER
 
 ### WeatherNext 3
 
-El contrato distingue **FDIR de DNI**. Hoy puede importarse un resumen JSON. La conexión live queda pendiente de credenciales/acceso Google y no bloquea ninguna otra función.
+El contrato distingue **FDIR de DNI**. Hoy puede importarse un resumen JSON. La conexión live sigue pendiente de credenciales/acceso Google, pero el workbench ya incorpora un **hook por proxy autenticado**: las credenciales no se exponen en GitHub Pages y, si el endpoint falla/no existe, se registra fallback a Open-Meteo.
 
 ### Windy y Ventusky
 
