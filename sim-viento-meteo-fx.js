@@ -165,14 +165,19 @@ function updateImpactHud(s){
   if(!severe){impactHud.style.display='none';return;}
   var rows=impactRows(s);if(!rows.length){impactHud.style.display='none';return;}
   var phase=s.impact?'IMPACTO':'PREVISIÓN · si impactase ahora';
-  var base=rows[0],h='<b>GRANIZO · '+phase+'</b> · modelo mecánico de referencia<br>'+
+  var base=rows.find(function(q){return q.k==='BASE';})||rows[0],best=Infinity,worst=-Infinity;
+  rows.forEach(function(q){best=Math.min(best,q.normal_energy_j);worst=Math.max(worst,q.normal_energy_j);});
+  var h='<b>GRANIZO · '+phase+'</b> · modelo mecánico de referencia<br>'+
     Math.round(s.mm)+' mm · masa '+base.mass_g.toFixed(1)+' g · v<sub>t</sub> '+base.vt_ms.toFixed(1)+' m/s'+
     ' · viento '+Math.max(s.wind,s.gust||0).toFixed(0)+' km/h'+
-    '<table><thead><tr><th>caso</th><th>θ</th><th>inc.</th><th>expuesto</th><th>v⊥</th><th>E⊥</th></tr></thead><tbody>';
+    '<table><thead><tr><th>caso</th><th>θ</th><th>inc.</th><th>expuesto</th><th>v⊥</th><th>E⊥</th><th>vs BASE</th></tr></thead><tbody>';
   rows.forEach(function(q){
-    h+='<tr><td>'+q.k+'</td><td>'+q.theta_deg.toFixed(0)+'°</td><td>'+q.incidence_deg.toFixed(0)+'°</td>'+
+    var red=(base.normal_energy_j>1e-9)?100*(1-q.normal_energy_j/base.normal_energy_j):null;
+    var col=Math.abs(q.normal_energy_j-best)<1e-7?'#62c88a':(Math.abs(q.normal_energy_j-worst)<1e-7?'#e84858':'inherit');
+    h+='<tr style="color:'+col+'"><td>'+q.k+'</td><td>'+q.theta_deg.toFixed(0)+'°</td><td>'+q.incidence_deg.toFixed(0)+'°</td>'+
        '<td>'+Math.round(q.exposure*100)+' %</td><td>'+q.normal_ms.toFixed(1)+' m/s</td>'+
-       '<td>'+q.normal_energy_j.toFixed(q.normal_energy_j<10?1:0)+' J</td></tr>';
+       '<td>'+q.normal_energy_j.toFixed(q.normal_energy_j<10?1:0)+' J</td>'+
+       '<td>'+(q.k==='BASE'||red===null?'—':((red>=0?'−':'+')+Math.abs(red).toFixed(0)+' %'))+'</td></tr>';
   });
   h+='</tbody></table><span style="opacity:.68">E⊥ es energía cinética de la componente normal; no es probabilidad de rotura.</span>';
   impactHud.innerHTML=h;impactHud.style.display='block';
@@ -211,7 +216,7 @@ function atmosphere(s,t){
 }
 
 /* ═════════════════════════ 3D: meteorología dentro del mundo ═════════════ */
-var F3={td:null,root:null,mundo:null,wind:null,snow:null,hail:null,dust:null,clouds:null,ground:null,
+var F3={td:null,root:null,mundo:null,wind:null,snow:null,hail:null,hailArrow:null,dust:null,clouds:null,ground:null,
         coats:[],instSnow:null,instSource:null,baseFogNear:null,baseFogFar:null};
 var MAX_WIND=190,MAX_SNOW=900,MAX_HAIL=700,MAX_DUST=280;
 
@@ -282,6 +287,12 @@ function build3D(td){
 
   F3.snow=makePoints(MAX_SNOW,0xf4f8fb,1.35,.82);root.add(F3.snow.obj);
   F3.hail=makePoints(MAX_HAIL,0xe2eff8,1.8,.92);root.add(F3.hail.obj);
+  F3.hailArrow=new THREE.ArrowHelper(new THREE.Vector3(0,-1,0),new THREE.Vector3(),30,0x9ed8ff,6,3);
+  F3.hailArrow.visible=false;
+  [F3.hailArrow.line&&F3.hailArrow.line.material,F3.hailArrow.cone&&F3.hailArrow.cone.material].forEach(function(m){
+    if(m){m.transparent=true;m.opacity=.45;m.depthWrite=false;}
+  });
+  root.add(F3.hailArrow);
   F3.dust=makePoints(MAX_DUST,0xb9a27a,1.2,.0);root.add(F3.dust.obj);
   for(i=0;i<MAX_SNOW;i++)F3.snow.p[i]=resetWorldParticle({},'snow',td);
   for(i=0;i<MAX_HAIL;i++)F3.hail.p[i]=resetWorldParticle({},'hail',td);
@@ -443,6 +454,20 @@ function updateSnow3D(td,s,dt,t){
 function updateHail3D(td,s,dt){
   var F=F3.hail,wv=worldWind(isFinite(s.hailDir)?s.hailDir:s.dir),c=td.ct.target,R=clamp(td.radio||420,80,900);
   var sev=clamp((s.mm-8)/42,.12,1),active=!!s.impact,n=Math.round((.20+.80*sev)*MAX_HAIL);
+  if(F3.hailArrow){
+    var show=s.hailOn&&s.mm>0&&(s.watch||s.impact),ref=impactMetrics(s.mm,Math.max(s.wind,s.gust||0),
+      isFinite(s.hailDir)?s.hailDir:s.dir,num('axaz',0),0),hw=worldWind(isFinite(s.hailDir)?s.hailDir:s.dir);
+    F3.hailArrow.visible=show;
+    if(show){
+      var wms=Math.max(s.wind,s.gust||0)/3.6,vd=new THREE.Vector3(hw.x*wms,-ref.vt_ms,hw.z*wms).normalize();
+      F3.hailArrow.position.set(c.x,c.y+clamp(R*.18,28,110),c.z);
+      F3.hailArrow.setDirection(vd);
+      var L=clamp(22+s.mm*.7,28,70);F3.hailArrow.setLength(L,L*.18,L*.09);
+      var op=s.impact?.95:.38;
+      if(F3.hailArrow.line&&F3.hailArrow.line.material)F3.hailArrow.line.material.opacity=op;
+      if(F3.hailArrow.cone&&F3.hailArrow.cone.material)F3.hailArrow.cone.material.opacity=op;
+    }
+  }
   F.obj.visible=active;F.mat.size=clamp(.65+s.mm/18,.9,3.8);F.mat.opacity=.86;
   if(!active)return;
   var windMs=Math.max(s.wind,(s.gust||0)*.65)/3.6;
