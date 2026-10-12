@@ -22,11 +22,23 @@ shade.id='meteoFxShade';
 Object.assign(shade.style,{position:'absolute',inset:'0',zIndex:'5',pointerEvents:'none',transition:'background .28s,box-shadow .28s'});
 host.appendChild(shade);
 
+var impactHud=document.createElement('div');
+impactHud.id='meteoImpactHud';
+impactHud.setAttribute('aria-live','polite');
+Object.assign(impactHud.style,{position:'absolute',right:'10px',bottom:'10px',zIndex:'9',pointerEvents:'none',
+  maxWidth:'min(520px,58%)',padding:'7px 9px',background:'rgba(9,16,25,.86)',border:'1px solid #4d6a88',
+  color:'#dce9f4',font:'11px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace',
+  boxShadow:'0 8px 24px rgba(0,0,0,.28)',backdropFilter:'blur(4px)',display:'none'});
+host.appendChild(impactHud);
+
 var style=document.createElement('style');
 style.textContent=
   '#view3d .hailfx{display:none!important}'+
   '#view3d.mfx-storm{box-shadow:inset 0 0 100px rgba(8,13,21,.46)}'+
   '#view3d.mfx-snow{box-shadow:inset 0 -22px 65px rgba(226,237,246,.16)}'+
+  '#meteoImpactHud table{border-collapse:collapse;width:100%;margin-top:4px}'+
+  '#meteoImpactHud th,#meteoImpactHud td{padding:2px 4px;border-bottom:1px solid rgba(120,150,180,.18);text-align:right;white-space:nowrap}'+
+  '#meteoImpactHud th:first-child,#meteoImpactHud td:first-child{text-align:left}'+
   '@media(prefers-reduced-motion:reduce){#meteoFxCanvas{opacity:.62}}';
 document.head.appendChild(style);
 
@@ -109,6 +121,61 @@ function state(){
 function worldWind(dir){
   var a=((+dir||0)%360+360)%360*Math.PI/180;
   return {x:-Math.sin(a),z:Math.cos(a)};
+}
+
+/* MODELO DE IMPACTO DE REFERENCIA.
+   - piedra esférica;
+   - densidad 900 kg/m³ (hielo compacto de referencia);
+   - aire 1,225 kg/m³;
+   - Cd=0,60 constante;
+   - velocidad terminal por equilibrio peso-drag;
+   - velocidad horizontal de la piedra = viento del frame.
+   Esto da un REFERENTE mecánico coherente, no una predicción de rotura. */
+var IMPACT_REF={rhoIce:900,rhoAir:1.225,Cd:.60,g:9.80665};
+function panelNormal(thetaDeg,axisAzDeg){
+  var t=(+thetaDeg||0)*Math.PI/180,a=(+axisAzDeg||0)*Math.PI/180;
+  /* mundo sim-viento: +X este, +Y arriba, +Z sur; azimut 0=N, 90=E. */
+  return {x:Math.cos(a)*Math.sin(t),y:Math.cos(t),z:Math.sin(a)*Math.sin(t)};
+}
+function impactMetrics(mm,windKmh,hailDirDeg,axisAzDeg,thetaDeg){
+  var D=Math.max(.001,+mm||0)/1000,r=IMPACT_REF,m= r.rhoIce*Math.PI*D*D*D/6;
+  var vt=Math.sqrt((4*r.rhoIce*D*r.g)/(3*r.rhoAir*r.Cd));
+  var w=Math.max(0,+windKmh||0)/3.6,h=worldWind(hailDirDeg),n=panelNormal(thetaDeg,axisAzDeg);
+  var vx=h.x*w,vy=-vt,vz=h.z*w,v=Math.sqrt(vx*vx+vy*vy+vz*vz);
+  /* n apunta a la cara superior. -v·n es la componente que entra contra ella. */
+  var vn=Math.max(0,-(vx*n.x+vy*n.y+vz*n.z));
+  var exposure=v>1e-9?clamp(vn/v,0,1):0;
+  var inc=exposure>0?Math.acos(clamp(exposure,-1,1))*180/Math.PI:90;
+  return {diameter_mm:+mm||0,mass_g:m*1000,vt_ms:vt,wind_ms:w,speed_ms:v,normal_ms:vn,
+          incidence_deg:inc,exposure:exposure,energy_j:.5*m*v*v,normal_energy_j:.5*m*vn*vn,
+          theta_deg:+thetaDeg||0,axis_az_deg:+axisAzDeg||0,hail_dir_deg:+hailDirDeg||0};
+}
+function impactRows(s){
+  var fr=s.frame,ang=fr&&fr.ang?fr.ang:null;if(!ang)return [];
+  var axis=num('axaz',0),dir=isFinite(s.hailDir)?s.hailDir:s.dir,rows=[];
+  Object.keys(ang).forEach(function(k){
+    if(k==='PASIVO'&&ang[k]==null)return;
+    var q=impactMetrics(s.mm,Math.max(s.wind,s.gust||0),dir,axis,ang[k]);
+    q.k=k;rows.push(q);
+  });
+  return rows;
+}
+function updateImpactHud(s){
+  var severe=s.hailOn&&s.mm>0&&(s.watch||s.impact);
+  if(!severe){impactHud.style.display='none';return;}
+  var rows=impactRows(s);if(!rows.length){impactHud.style.display='none';return;}
+  var phase=s.impact?'IMPACTO':'PREVISIÓN · si impactase ahora';
+  var base=rows[0],h='<b>GRANIZO · '+phase+'</b> · modelo mecánico de referencia<br>'+
+    Math.round(s.mm)+' mm · masa '+base.mass_g.toFixed(1)+' g · v<sub>t</sub> '+base.vt_ms.toFixed(1)+' m/s'+
+    ' · viento '+Math.max(s.wind,s.gust||0).toFixed(0)+' km/h'+
+    '<table><thead><tr><th>caso</th><th>θ</th><th>inc.</th><th>expuesto</th><th>v⊥</th><th>E⊥</th></tr></thead><tbody>';
+  rows.forEach(function(q){
+    h+='<tr><td>'+q.k+'</td><td>'+q.theta_deg.toFixed(0)+'°</td><td>'+q.incidence_deg.toFixed(0)+'°</td>'+
+       '<td>'+Math.round(q.exposure*100)+' %</td><td>'+q.normal_ms.toFixed(1)+' m/s</td>'+
+       '<td>'+q.normal_energy_j.toFixed(q.normal_energy_j<10?1:0)+' J</td></tr>';
+  });
+  h+='</tbody></table><span style="opacity:.68">E⊥ es energía cinética de la componente normal; no es probabilidad de rotura.</span>';
+  impactHud.innerHTML=h;impactHud.style.display='block';
 }
 function screenWind(dir){
   var a=(dir+90)*Math.PI/180;
@@ -442,7 +509,9 @@ function update3D(s,dt,t){
 
 var LAST_STATE=null;
 window.__simVientoMeteoFx={
-  version:2,
+  version:3,
+  impact:impactMetrics,
+  reference:Object.assign({},IMPACT_REF),
   snapshot:function(){
     return {
       bound:!!(F3.td&&F3.root&&F3.root.parent),
@@ -465,7 +534,7 @@ function frame(now){
   var dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
   x.clearRect(0,0,W,H);
   var s=state();LAST_STATE=s;
-  atmosphere(s,now);cloudsDraw(s,now);update3D(s,dt,now);
+  atmosphere(s,now);cloudsDraw(s,now);update3D(s,dt,now);updateImpactHud(s);
 }
 requestAnimationFrame(frame);
 })();
