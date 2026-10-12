@@ -144,7 +144,7 @@ function atmosphere(s,t){
 }
 
 /* ═════════════════════════ 3D: meteorología dentro del mundo ═════════════ */
-var F3={td:null,root:null,mundo:null,wind:null,snow:null,hail:null,dust:null,ground:null,
+var F3={td:null,root:null,mundo:null,wind:null,snow:null,hail:null,dust:null,clouds:null,ground:null,
         coats:[],instSnow:null,instSource:null,baseFogNear:null,baseFogFar:null};
 var MAX_WIND=190,MAX_SNOW=900,MAX_HAIL=700,MAX_DUST=280;
 
@@ -166,6 +166,26 @@ function groundSnowTexture(){
     q.fillStyle=g;q.fillRect(px-r,py-r,r*2,r*2);
   }
   var tx=new THREE.CanvasTexture(c);tx.wrapS=tx.wrapT=THREE.RepeatWrapping;tx.repeat.set(4,4);return tx;
+}
+function cloudTexture(){
+  var c=document.createElement('canvas');c.width=256;c.height=128;var q=c.getContext('2d');
+  q.clearRect(0,0,c.width,c.height);
+  var blobs=[[55,78,46,.56],[92,57,52,.66],[132,69,60,.72],[174,57,48,.62],[205,78,39,.50],[118,91,70,.62]];
+  blobs.forEach(function(b){
+    var g=q.createRadialGradient(b[0],b[1],3,b[0],b[1],b[2]);
+    g.addColorStop(0,'rgba(90,101,116,'+b[3]+')');
+    g.addColorStop(.55,'rgba(60,72,87,'+(b[3]*.72)+')');
+    g.addColorStop(1,'rgba(32,42,55,0)');
+    q.fillStyle=g;q.fillRect(b[0]-b[2],b[1]-b[2],b[2]*2,b[2]*2);
+  });
+  var tx=new THREE.CanvasTexture(c);tx.needsUpdate=true;return tx;
+}
+function resetCloud(sp,td){
+  var c=td.ct.target,R=clamp(td.radio||420,80,900);
+  sp.position.set(c.x+(rnd()*2-1)*R*1.15,clamp(R*.16,45,150)+rnd()*clamp(R*.24,40,170),
+                  c.z+(rnd()*2-1)*R*.85);
+  var sc=clamp(R*(.16+rnd()*.17),32,220);
+  sp.scale.set(sc*1.8,sc,1);sp.userData.phase=rnd()*6.28;return sp;
 }
 function makePoints(n,col,size,opacity){
   var a=new Float32Array(n*3),g=new THREE.BufferGeometry();
@@ -205,6 +225,15 @@ function build3D(td){
     polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
   var gg=new THREE.Mesh(new THREE.PlaneGeometry(1,1),gm);gg.rotation.x=-Math.PI/2;gg.position.y=.035;gg.renderOrder=3;
   root.add(gg);F3.ground={obj:gg,mat:gm};
+
+  /* Bancos de nube en el mundo 3D. Son sprites suaves, pero ocupan coordenadas reales:
+     al orbitar hay paralaje y ya no se leen como una pegatina sobre el canvas. */
+  var cg=new THREE.Group(),ctx=cloudTexture();root.add(cg);F3.clouds={obj:cg,p:[]};
+  for(i=0;i<12;i++){
+    var cm=new THREE.SpriteMaterial({map:ctx,transparent:true,opacity:0,depthWrite:false,fog:true,
+      color:0xffffff});
+    var sp=new THREE.Sprite(cm);resetCloud(sp,td);cg.add(sp);F3.clouds.p.push(sp);
+  }
 
   F3.wind.obj.frustumCulled=F3.snow.obj.frustumCulled=F3.hail.obj.frustumCulled=F3.dust.obj.frustumCulled=false;
 }
@@ -295,14 +324,14 @@ function syncGround(td,s){
 }
 function updateWind3D(td,s,dt,t){
   var F=F3.wind,wv=worldWind(s.dir),R=clamp(td.radio||420,80,900),c=td.ct.target;
-  var active=s.wind>2,n=Math.round(25+clamp(s.wind/110,0,1)*(MAX_WIND-25));
-  F.obj.visible=active;F.mat.opacity=.08+clamp(s.wind/120,0,.30);
+  var vw=Math.max(s.wind,s.gust||0),active=vw>2,n=Math.round(25+clamp(vw/110,0,1)*(MAX_WIND-25));
+  F.obj.visible=active;F.mat.opacity=.08+clamp(vw/120,0,.30);
   if(!active)return;
-  var speed=5+s.wind*.20;
+  var speed=5+vw*.20,extraGust=clamp(((s.gust||0)-s.wind)/70,0,.38);
   for(var i=0;i<MAX_WIND;i++){
     var p=F.p[i],o=i*6;
     if(i<n){
-      var gust=1+.22*Math.sin(t*.005+p.phase)+.08*Math.sin(t*.013+p.phase*2.3);
+      var gust=1+(.22+extraGust)*Math.sin(t*.005+p.phase)+(.08+extraGust*.35)*Math.sin(t*.013+p.phase*2.3);
       p.x+=wv.x*speed*dt*p.depth*gust;p.z+=wv.z*speed*dt*p.depth*gust;
       p.y+=Math.sin(t*.002+p.phase)*.18*dt;
       var dx=p.x-c.x,dz=p.z-c.z;
@@ -325,7 +354,7 @@ function updateSnow3D(td,s,dt,t){
   for(var i=0;i<MAX_SNOW;i++){
     var p=F.p[i],o=i*3;
     if(i<n){
-      var drift=(.6+s.wind*.045)*(0.4+p.depth);
+      var air=Math.max(s.wind,(s.gust||0)*.7),drift=(.6+air*.045)*(0.4+p.depth);
       p.x+=wv.x*drift*dt+Math.sin(t*.0017+p.phase)*.22*dt;
       p.z+=wv.z*drift*dt+Math.cos(t*.0013+p.phase)*.16*dt;
       p.y-=p.fall*dt*(.55+p.depth*.45);
@@ -342,7 +371,7 @@ function updateHail3D(td,s,dt){
   var sev=clamp((s.mm-8)/42,.12,1),active=!!s.impact,n=Math.round((.20+.80*sev)*MAX_HAIL);
   F.obj.visible=active;F.mat.size=clamp(.65+s.mm/18,.9,3.8);F.mat.opacity=.86;
   if(!active)return;
-  var windMs=s.wind/3.6;
+  var windMs=Math.max(s.wind,(s.gust||0)*.65)/3.6;
   for(var i=0;i<MAX_HAIL;i++){
     var p=F.p[i],o=i*3;
     if(i<n){
@@ -364,13 +393,13 @@ function updateHail3D(td,s,dt){
 }
 function updateDust3D(td,s,dt,t){
   var F=F3.dust,wv=worldWind(s.dir),c=td.ct.target,R=clamp(td.radio||420,80,900);
-  var strength=clamp((s.wind-38)/70,0,1)*(s.snow>.1?0.12:1)*(s.impact?0.35:1);
+  var vw=Math.max(s.wind,s.gust||0),strength=clamp((vw-38)/70,0,1)*(s.snow>.1?0.12:1)*(s.impact?0.35:1);
   var n=Math.round(strength*MAX_DUST);F.obj.visible=n>4;F.mat.opacity=.28*strength;F.mat.size=clamp(R/360,.8,2.2);
   if(n<=4)return;
   for(var i=0;i<MAX_DUST;i++){
     var p=F.p[i],o=i*3;
     if(i<n){
-      p.x+=wv.x*(5+s.wind*.10)*dt;p.z+=wv.z*(5+s.wind*.10)*dt;
+      p.x+=wv.x*(5+vw*.10)*dt;p.z+=wv.z*(5+vw*.10)*dt;
       p.y+=Math.sin(t*.002+p.phase)*p.lift*dt*.35;
       if(p.y<.15)p.y=.15;
       if(Math.abs(p.x-c.x)>R*1.2||Math.abs(p.z-c.z)>R*.9)resetWorldParticle(p,'dust',td);
@@ -385,9 +414,22 @@ function updateFog(td,s){
   td.sc.fog.near=F3.baseFogNear*(1-.30*clamp(storm,0,.7));
   td.sc.fog.far=F3.baseFogFar*(1-.52*clamp(storm,0,.85));
 }
+function updateCloud3D(td,s,dt,t){
+  if(!F3.clouds)return;
+  var severity=clamp((Math.max(s.wind,s.gust||0)-30)/100,0,.28)+(s.watch?.38:0)+(s.impact?.48:0)+(s.snow>0?.22:0);
+  severity=clamp(severity,0,.88);F3.clouds.obj.visible=severity>.025;
+  if(severity<=.025)return;
+  var wv=worldWind(s.dir),R=clamp(td.radio||420,80,900),cen=td.ct.target,spd=.6+Math.max(s.wind,s.gust||0)*.018;
+  F3.clouds.p.forEach(function(sp,i){
+    sp.material.opacity=clamp(.10+severity*(.34+.05*(i%4)),.08,.72);
+    sp.position.x+=wv.x*spd*dt;sp.position.z+=wv.z*spd*dt;
+    sp.position.y+=Math.sin(t*.00022+sp.userData.phase)*.04;
+    if(Math.abs(sp.position.x-cen.x)>R*1.45||Math.abs(sp.position.z-cen.z)>R*1.08)resetCloud(sp,td);
+  });
+}
 function update3D(s,dt,t){
   var td=bind3D();if(!td)return;
-  syncGround(td,s);updateCoats(s);updateWind3D(td,s,dt,t);updateSnow3D(td,s,dt,t);
+  syncGround(td,s);updateCoats(s);updateCloud3D(td,s,dt,t);updateWind3D(td,s,dt,t);updateSnow3D(td,s,dt,t);
   updateHail3D(td,s,dt);updateDust3D(td,s,dt,t);updateFog(td,s);
 }
 
