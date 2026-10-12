@@ -215,6 +215,9 @@ function disposeInstSnow(){
 }
 function scanCoats(td){
   F3.coats=[];disposeInstSnow();F3.mundo=td.mundo;
+  /* Cada mundo puede redimensionar la niebla a su extensión. Ésta es la base
+     que se restaura cuando pasa el temporal, no la del arranque de la página. */
+  if(td.sc.fog){F3.baseFogNear=td.sc.fog.near;F3.baseFogFar=td.sc.fog.far;}
   if(td.mundo){
     td.mundo.traverse(function(o){
       if(!o||!o.spin||!o.spin.isGroup||o.userData.mfxSnowBound)return;
@@ -388,11 +391,31 @@ function update3D(s,dt,t){
   updateHail3D(td,s,dt);updateDust3D(td,s,dt,t);updateFog(td,s);
 }
 
+var LAST_STATE=null;
+window.__simVientoMeteoFx={
+  version:2,
+  snapshot:function(){
+    return {
+      bound:!!(F3.td&&F3.root&&F3.root.parent),
+      frameSource:window.__simVientoMeteoFrame?'shared':'fallback',
+      windVisible:!!(F3.wind&&F3.wind.obj.visible),
+      snowVisible:!!(F3.snow&&F3.snow.obj.visible),
+      hailVisible:!!(F3.hail&&F3.hail.obj.visible),
+      dustVisible:!!(F3.dust&&F3.dust.obj.visible),
+      snowGround:F3.ground?+F3.ground.mat.opacity.toFixed(3):0,
+      snowCoats:F3.coats.length,
+      instancedSnow:!!F3.instSnow,
+      state:LAST_STATE?{wind:LAST_STATE.wind,dir:LAST_STATE.dir,snow:LAST_STATE.snow,
+        impact:LAST_STATE.impact,mm:LAST_STATE.mm,watch:LAST_STATE.watch}:null
+    };
+  }
+};
+
 function frame(now){
   requestAnimationFrame(frame);resize();
   var dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
   x.clearRect(0,0,W,H);
-  var s=state();
+  var s=state();LAST_STATE=s;
   atmosphere(s,now);cloudsDraw(s,now);update3D(s,dt,now);
 }
 requestAnimationFrame(frame);
