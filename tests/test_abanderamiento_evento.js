@@ -272,6 +272,9 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('modelo impacto: el mismo tilt distingue viento a favor y en contra de la cara',
     impact.fromEast.normal_energy_j>impact.fromWest.normal_energy_j,
     JSON.stringify({oeste:impact.fromWest.normal_energy_j,este:impact.fromEast.normal_energy_j}));
+  check('modelo impacto: si la trayectoria cruza por debajo identifica la cara TRASERA',
+    impact.fromWest.face==='TRASERA'&&impact.fromWest.normal_energy_j>0,
+    JSON.stringify(impact.fromWest));
   check('las tarjetas dicen quién manda y el estado de protección',
     /VIENTO × GRANIZO|GRANIZO|VIENTO/.test(pinta.tiles)&&/TRÁNSITO|POSICIÓN|MODELADO|SEGUIMIENTO/.test(pinta.tiles),
     pinta.tiles.slice(0,300));
