@@ -60,7 +60,7 @@ PATRON="${1:-}"
 # nadie fija no consigue.
 declare -A PISO=(
   [test_generador_inclemencias.js]=45
-  [test_abanderamiento_evento.js]=31
+  [test_abanderamiento_evento.js]=39
   [test_buscador.js]=59
   [test_careo_pvsyst.js]=11
   # La cartera del usuario NO la probaba nadie: de los 33 arneses, el único que
@@ -392,7 +392,7 @@ declare -A PISO=(
   # y daba verde. Lo delató su propia batería (el mutante del 2D sobrevivía
   # mientras el del 3D moría). Quedan DOS sin alcanzar, `extCv` y `gTl`, y está
   # dicho en el arnés.
-  [test_nitidez.js]=32
+  [test_nitidez.js]=33
   [test_pwa.js]=21
   # El careo que faltaba entre DOS FICHAS: `cartera-tabla.html` escribe
   # `factiun_plantas` con `publishSpecs` y `index.html` lo lee en `SPECS` para

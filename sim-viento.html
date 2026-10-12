@@ -1158,6 +1158,7 @@
 <script src="lib/three.min.js"></script>
 <script src="lib/OrbitControls.js"></script>
 <script src="seguidor.js"></script>
+<script src="sim-viento-meteo-fx.js"></script>
 <script>
 'use strict';
 function $(id){return document.getElementById(id);}
@@ -7022,8 +7023,14 @@ function ponSol(elDeg,azDeg,vms,dirDeg){
    aire, pero la entrada de proyecto está expresada como de dónde VIENE. Las
    dos se escriben a la vez para que 270° no obligue a hacer geometría mental.
    El granizo no inventa rumbo de célula: solo enseña severidad, ETA y fase. */
+function publicaMeteoFrame(fr){
+  if(fr)window.__simVientoMeteoFrame=fr;
+}
 function actualizaMeteo3D(fr){
   if(!TD||!fr)return;
+  /* Contrato SOLO-LECTURA para la capa meteorológica visual: publica el mismo frame
+     que ya pinta el HUD, sin crear una segunda lógica de viento/nieve/granizo. */
+  publicaMeteoFrame(fr);
   var kmh=Math.max(0,(+fr.wind_ms||0)*3.6), de=((+fr.wind_dir%360)+360)%360, hacia=(de+180)%360;
   if(TD.windHud){
     TD.windHud.style.display=kmh>.3?'':'none';
@@ -7975,6 +7982,15 @@ function liveTick(dtReal){
     }else poa[S]=LOC.poa(r.theta,P.el,P.az,bh,dh,bh+dh);
   });
   ponSol(P.el/LOC.D2R,P.azp,LIVE.v,LIVE.dir);
+  /* En vivo también publica SU estado ejecutado. Antes la capa visual caía a leer
+     sliders y podía separarse de la cadena de latencia o del reloj del propio LIVE. */
+  publicaMeteoFrame({
+    wind_ms:LIVE.v, gust_ms:LOC.rachaMediana(LIVE.v*3.6)/3.6, wind_dir:LIVE.dir,
+    hail_dir:LIVE.dir, hail_on:$('lHailOn').checked, hail_mm:+$('lHailMm').value||0,
+    hail_prob_pct:+$('lHailProb').value||0,
+    hail_phase:(hGate.activa?(LIVE.hailEtaF<=0?'IMPACTO':'VIGILANCIA'):'SIN SEÑAL'),
+    snow_cm:0, ang:Object.assign({},LIVE.ang)
+  });
   pintaEscena(LIVE.ang,LIVE.modos,poa,poa.BASE);
   hailLivePinta();
   // El cronómetro va DESPUÉS de mover a todo el mundo: mide el estado ya
@@ -8099,7 +8115,15 @@ function update3D(i,sinTiles){
   var ordn={BASE:TL.baseline.theta[i]};
   for(var k in TL.cases){ang[k]=TL.cases[k].theta[i];modos[k]=TL.cases[k].mode[i];poa[k]=TL.cases[k].poa[i];
     ordn[k]=(TL.cases[k].orden?TL.cases[k].orden[i]:TL.cases[k].theta[i]);}
-  ponSol(TL.sun_el[i],TL.sun_az[i],TL.wind_ms[i]||0,TL.wind_dir?TL.wind_dir[i]:null);
+  var epDir=TL.wind_dir?TL.wind_dir[i]:null;
+  ponSol(TL.sun_el[i],TL.sun_az[i],TL.wind_ms[i]||0,epDir);
+  /* Episodio anual: no inventa granizo ni nieve que el timeline no trae. El viento y
+     los ángulos sí son exactamente los de esta muestra reproducida. */
+  publicaMeteoFrame({
+    wind_ms:TL.wind_ms[i]||0, gust_ms:TL.gust_ms?TL.gust_ms[i]||0:0,
+    wind_dir:epDir, hail_dir:epDir, hail_on:false, hail_mm:0, hail_prob_pct:0,
+    hail_phase:'SIN SEÑAL', snow_cm:0, ang:Object.assign({},ang)
+  });
   pintaEscena(ang,modos,poa,poa.BASE);
   // El panel de tarjetas se REHACE en HTML entero, así que a 60 fotogramas por
   // segundo es la parte más cara de todo esto y la que menos se nota: el modo

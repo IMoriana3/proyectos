@@ -216,6 +216,65 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('el granizo tiene presencia visual y estado legible en la escena',
     /GRANIZO/.test(pinta.hailHud)&&/VIGILANCIA|DEFENSA ACTIVA|ENCIMA/.test(pinta.hailHud)&&
     /hailfx on/.test(pinta.hailFx),JSON.stringify({hud:pinta.hailHud,fx:pinta.hailFx}));
+
+  // La meteorología nueva no puede ser decoración suelta: vive en el THREE.Scene
+  // y consume el MISMO frame que acaba de pintar la máquina de estados.
+  const fxWind=await page.evaluate(async()=>{
+    aplicaPresetEvento('wind_ramp');eventoAplica(20);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    return window.__simVientoMeteoFx&&__simVientoMeteoFx.snapshot();
+  });
+  check('la capa meteorológica está ligada al THREE.Scene y al frame compartido',
+    fxWind&&fxWind.bound&&fxWind.frameSource==='shared'&&fxWind.windVisible,
+    JSON.stringify(fxWind));
+
+  const fxHail=await page.evaluate(async()=>{
+    aplicaPresetEvento('hail_far');eventoAplica(0);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const antes=__simVientoMeteoFx.snapshot();
+    aplicaPresetEvento('hail_near');eventoAplica(20);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const impacto=__simVientoMeteoFx.snapshot();
+    return {antes,impacto};
+  });
+  check('el granizo 3D aparece en IMPACTO, no durante la vigilancia',
+    fxHail&&!fxHail.antes.hailVisible&&fxHail.impacto.hailVisible&&fxHail.impacto.state.impact,
+    JSON.stringify(fxHail));
+
+  const fxSnow=await page.evaluate(async()=>{
+    aplicaPresetEvento('snow');eventoAplica(1);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    return __simVientoMeteoFx.snapshot();
+  });
+  check('la nieve tiene precipitación 3D, manto de suelo y recubrimiento de mesas',
+    fxSnow&&fxSnow.snowVisible&&fxSnow.snowGround>0&&(fxSnow.snowCoats>0||fxSnow.instancedSnow),
+    JSON.stringify(fxSnow));
+
+  const impact=await page.evaluate(()=> {
+    const f=window.__simVientoMeteoFx;
+    const flat=f.impact(30,0,270,0,0);
+    const tilt=f.impact(30,0,270,0,55);
+    const fromWest=f.impact(30,60,270,0,55);
+    const fromEast=f.impact(30,60,90,0,55);
+    return {flat,tilt,fromWest,fromEast};
+  });
+  check('modelo impacto: horizontal y sin viento recibe el golpe normal',
+    Math.abs(impact.flat.incidence_deg)<.01&&Math.abs(impact.flat.exposure-1)<.001&&
+    Math.abs(impact.flat.normal_energy_j-impact.flat.energy_j)<.001,
+    JSON.stringify(impact.flat));
+  check('modelo impacto: a 55° baja la exposición como cos(55°)',
+    Math.abs(impact.tilt.exposure-Math.cos(55*Math.PI/180))<.01,
+    JSON.stringify(impact.tilt));
+  check('modelo impacto: la energía normal cae con el cuadrado de la exposición sin viento',
+    Math.abs(impact.tilt.normal_energy_j/impact.tilt.energy_j-
+      Math.pow(Math.cos(55*Math.PI/180),2))<.02,
+    JSON.stringify(impact.tilt));
+  check('modelo impacto: el mismo tilt distingue viento a favor y en contra de la cara',
+    impact.fromEast.normal_energy_j>impact.fromWest.normal_energy_j,
+    JSON.stringify({oeste:impact.fromWest.normal_energy_j,este:impact.fromEast.normal_energy_j}));
+  check('modelo impacto: si la trayectoria cruza por debajo identifica la cara TRASERA',
+    impact.fromWest.face==='TRASERA'&&impact.fromWest.normal_energy_j>0,
+    JSON.stringify(impact.fromWest));
   check('las tarjetas dicen quién manda y el estado de protección',
     /VIENTO × GRANIZO|GRANIZO|VIENTO/.test(pinta.tiles)&&/TRÁNSITO|POSICIÓN|MODELADO|SEGUIMIENTO/.test(pinta.tiles),
     pinta.tiles.slice(0,300));
