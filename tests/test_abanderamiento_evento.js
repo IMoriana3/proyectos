@@ -216,6 +216,39 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('el granizo tiene presencia visual y estado legible en la escena',
     /GRANIZO/.test(pinta.hailHud)&&/VIGILANCIA|DEFENSA ACTIVA|ENCIMA/.test(pinta.hailHud)&&
     /hailfx on/.test(pinta.hailFx),JSON.stringify({hud:pinta.hailHud,fx:pinta.hailFx}));
+
+  // La meteorología nueva no puede ser decoración suelta: vive en el THREE.Scene
+  // y consume el MISMO frame que acaba de pintar la máquina de estados.
+  const fxWind=await page.evaluate(async()=>{
+    aplicaPresetEvento('wind_ramp');eventoAplica(20);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    return window.__simVientoMeteoFx&&__simVientoMeteoFx.snapshot();
+  });
+  check('la capa meteorológica está ligada al THREE.Scene y al frame compartido',
+    fxWind&&fxWind.bound&&fxWind.frameSource==='shared'&&fxWind.windVisible,
+    JSON.stringify(fxWind));
+
+  const fxHail=await page.evaluate(async()=>{
+    aplicaPresetEvento('hail_far');eventoAplica(0);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const antes=__simVientoMeteoFx.snapshot();
+    aplicaPresetEvento('hail_near');eventoAplica(20);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const impacto=__simVientoMeteoFx.snapshot();
+    return {antes,impacto};
+  });
+  check('el granizo 3D aparece en IMPACTO, no durante la vigilancia',
+    fxHail&&!fxHail.antes.hailVisible&&fxHail.impacto.hailVisible&&fxHail.impacto.state.impact,
+    JSON.stringify(fxHail));
+
+  const fxSnow=await page.evaluate(async()=>{
+    aplicaPresetEvento('snow');eventoAplica(1);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    return __simVientoMeteoFx.snapshot();
+  });
+  check('la nieve tiene precipitación 3D, manto de suelo y recubrimiento de mesas',
+    fxSnow&&fxSnow.snowVisible&&fxSnow.snowGround>0&&(fxSnow.snowCoats>0||fxSnow.instancedSnow),
+    JSON.stringify(fxSnow));
   check('las tarjetas dicen quién manda y el estado de protección',
     /VIENTO × GRANIZO|GRANIZO|VIENTO/.test(pinta.tiles)&&/TRÁNSITO|POSICIÓN|MODELADO|SEGUIMIENTO/.test(pinta.tiles),
     pinta.tiles.slice(0,300));
