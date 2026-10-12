@@ -185,7 +185,7 @@ function resetCloud(sp,td){
   sp.position.set(c.x+(rnd()*2-1)*R*1.15,clamp(R*.16,45,150)+rnd()*clamp(R*.24,40,170),
                   c.z+(rnd()*2-1)*R*.85);
   var sc=clamp(R*(.16+rnd()*.17),32,220);
-  sp.scale.set(sc*1.8,sc,1);sp.userData.phase=rnd()*6.28;return sp;
+  sp.scale.set(sc*1.8,sc,1);sp.userData.phase=rnd()*6.28;sp.userData.baseY=sp.position.y;return sp;
 }
 function makePoints(n,col,size,opacity){
   var a=new Float32Array(n*3),g=new THREE.BufferGeometry();
@@ -348,8 +348,15 @@ function updateWind3D(td,s,dt,t){
 }
 function updateSnow3D(td,s,dt,t){
   var F=F3.snow,wv=worldWind(s.dir),c=td.ct.target,R=clamp(td.radio||420,80,900);
-  var active=s.snow>.05,n=Math.round(clamp(.12+s.snow/18,.12,1)*MAX_SNOW);
-  F.obj.visible=active;F.mat.opacity=.55+clamp(s.snow/20,0,.35);F.mat.size=clamp(R/240,1.0,2.8);
+  /* El input es ESPESOR, no precipitación. Cuando el espesor aumenta se muestra
+     una nevada transitoria; si se mantiene, permanecen manto y nieve sobre la mesa
+     pero los copos desaparecen. Así el render no inventa una tasa que no existe. */
+  if(F3._lastSnow==null)F3._lastSnow=0;
+  if(s.snow>F3._lastSnow+.05)F3._snowBurst=1;
+  F3._lastSnow=s.snow;F3._snowBurst=(F3._snowBurst||0)*Math.exp(-dt/5.5);
+  var fall=clamp(F3._snowBurst,0,1),active=s.snow>.05&&fall>.035,
+      n=Math.round(clamp((.10+s.snow/18)*fall,.04,1)*MAX_SNOW);
+  F.obj.visible=active;F.mat.opacity=(.48+clamp(s.snow/20,0,.34))*fall;F.mat.size=clamp(R/240,1.0,2.8);
   if(!active)return;
   for(var i=0;i<MAX_SNOW;i++){
     var p=F.p[i],o=i*3;
@@ -423,7 +430,7 @@ function updateCloud3D(td,s,dt,t){
   F3.clouds.p.forEach(function(sp,i){
     sp.material.opacity=clamp(.10+severity*(.34+.05*(i%4)),.08,.72);
     sp.position.x+=wv.x*spd*dt;sp.position.z+=wv.z*spd*dt;
-    sp.position.y+=Math.sin(t*.00022+sp.userData.phase)*.04;
+    sp.position.y=sp.userData.baseY+Math.sin(t*.00022+sp.userData.phase)*clamp(R*.012,1.5,7);
     if(Math.abs(sp.position.x-cen.x)>R*1.45||Math.abs(sp.position.z-cen.z)>R*1.08)resetCloud(sp,td);
   });
 }
