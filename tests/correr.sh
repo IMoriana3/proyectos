@@ -426,6 +426,10 @@ declare -A PISO=(
   # visible. El banco fija selección anual, ausencia≠0, lat/lon, hash/TZ y que
   # Rápida y Bancable envían el MISMO payload inline al motor.
   [test_solar_weather_contract.mjs]=24
+  # El bridge es la única vía explícita para llevar el mismo paquete/hash desde
+  # imoriana3.github.io a consumidores servidos en workers.dev. Se fijan origen,
+  # nonce, allowlist de tipos, esquema v2 y prohibición de postMessage wildcard.
+  [test_weather_contract_bridge.mjs]=14
   [test_sizing.js]=115
   # 13, y MEDIDO en los TRES modos —con checkout hermano, por `main` sobre
   # HTTPS y sin ninguno de los dos— porque el recuento no cambia entre ellos:
