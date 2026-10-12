@@ -230,6 +230,7 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
         </div>
       </div>
       <div>
+        <div id="prodMeteo" class="note" style="margin-top:0;margin-bottom:8px">Meteo producción · buscando WeatherContract activo…</div>
         <div id="prodOut"></div>
         <div id="demOut" style="margin-top:10px"></div>
       </div>
@@ -852,18 +853,65 @@ function engineOffMsg(){
     '<p class="note">Mientras tanto, la <b>geometría solar</b> de arriba funciona offline.</p>';
 }
 var MOD=null;   // parámetros del módulo CEC elegido (de /modules)
+var WC_ENERGY=null,WC_API=null,LAST_SOLAR_WEATHER=null;
+
+function prodMeteoPinta(x){
+  var el=$('prodMeteo');if(!el)return;
+  if(!x){el.textContent='Meteo producción · sin resolver';return;}
+  if(x.mode==='inline'){
+    el.textContent='Meteo producción · '+x.stamp+' · distancia '+x.distance_km.toFixed(2)+' km';
+    el.style.color='var(--ok)';
+  }else{
+    el.textContent='Meteo producción · Open-Meteo fallback · '+x.reason;
+    el.style.color='var(--build)';
+  }
+}
+async function solarWeather(lat,lon){
+  try{
+    WC_API=WC_API||await import('./lib/weather-contract.js');
+    WC_ENERGY=WC_ENERGY||await import('./lib/weather-contract-energy.js');
+    var x=await WC_ENERGY.activeEnergyWeather(WC_API,{lat:lat,lon:lon,maxDistanceKm:5});
+    var dt=Number(x.dt_h);
+    if(!Number.isFinite(dt)||dt<=0)throw new Error('WeatherContract sin resolución temporal válida');
+    var out={mode:'inline',meteo:x.meteo,dt_h:dt,year:x.year,rows:x.rows,
+      contract_id:x.contract_id,dataset_hash:x.dataset_hash,source_id:x.source_id,
+      timezone:x.timezone,distance_km:x.distance_km,kind:x.kind,
+      stamp:WC_ENERGY.weatherContractStampText(x)};
+    LAST_SOLAR_WEATHER=out;prodMeteoPinta(out);return out;
+  }catch(e){
+    var out={mode:'openmeteo',dt_h:1,reason:String(e&&e.message||e)};
+    LAST_SOLAR_WEATHER=out;prodMeteoPinta(out);return out;
+  }
+}
+function aplicaMeteoBody(body,wx){
+  if(wx&&wx.mode==='inline'){
+    body.meteo_mode='inline';
+    body.meteo=wx.meteo;
+    body.year=wx.year;
+  }else body.meteo_mode='openmeteo';
+  return body;
+}
+function meteoResultadoNota(wx){
+  if(!wx)return 'meteo sin resolver';
+  if(wx.mode==='inline')return 'WeatherContract <b>'+String(wx.contract_id||'—')+
+    '</b> · hash <b>'+String(wx.dataset_hash||'—')+'</b> · '+wx.rows+' filas · '+wx.timezone;
+  return 'Open-Meteo <b>fallback</b> · '+String(wx.reason||'sin WeatherContract compatible');
+}
 
 async function simulate(){
   var out=$('prodOut'); $('demOut').innerHTML='';
   if(faltanCoords()){ out.innerHTML='<p class="note" style="color:#F6A623">Sin coordenadas no se simula: el emplazamiento elegido no las trae. Tecléalas arriba o rellénalas en la Cartera técnica.</p>'; return; }
   var lat=+$('lat').value,lon=+$('lon').value,kind=$('kind').value,mode=$('mode').value;
   if(!ENGINE){ out.innerHTML=engineOffMsg(); return; }
-  out.innerHTML='<p class="note">Simulando en el motor…</p>';
+  out.innerHTML='<p class="note">Resolviendo WeatherContract y simulando en el motor…</p>';
   try{
-    var j, foot;
+    var j,wx=await solarWeather(lat,lon);
     if(mode==='bancable'){
-      var body={lat:lat,lon:lon,policy:'pvlib',strict:false,meteo_mode:'openmeteo',
-        tracker:{max_angle:+$('maxang').value,gcr:+$('gcr').value,backtrack:true}};
+      var body=aplicaMeteoBody({lat:lat,lon:lon,policy:'pvlib',strict:false,
+        tracker:{max_angle:+$('maxang').value,gcr:+$('gcr').value,backtrack:true}},wx);
+      /* El pipeline bankable integra con dt_h explícito. El contrato trae su
+         resolución; Open-Meteo canónico del servidor es horario. */
+      body.dt_h=wx&&Number.isFinite(wx.dt_h)?wx.dt_h:1;
       var r=await fetch(ENGINE+'/bankable',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,180));}
       j=await r.json();
@@ -872,13 +920,14 @@ async function simulate(){
         card('Política',j.policy_name||'—','')+
         card('QA',j.qa_all_passed===true?'✓ pasa':(j.qa_all_passed===false?'✗ falla':'—'),'gates')+
         card('θ tracker',j.theta_out_summary?(Math.round(j.theta_out_summary.min)+'…'+Math.round(j.theta_out_summary.max)):'—','°')+
-        '</div><p class="note">Pipeline <b>bancable</b> · '+(kind==='fixed'?'(evalúa eje tracker)':'tracker')+'. Para fija usa modo Rápida.</p>';
+        '</div><p class="note">Pipeline <b>bancable</b> · '+(kind==='fixed'?'(evalúa eje tracker)':'tracker')+
+        ' · '+meteoResultadoNota(wx)+'. Para fija usa modo Rápida.</p>';
       return;
     }
     var sys=(kind==='fixed')?{tilt_deg:+$('tilt').value,azimuth_deg:+$('azi').value}
                             :{max_angle_deg:+$('maxang').value,gcr:+$('gcr').value,backtrack:true};
-    var body2={lat:lat,lon:lon,kind:kind,system:sys,module:moduleSpec(),
-      losses:{soiling_pct:2.0,mismatch_pct:2.0},meteo_mode:'openmeteo'};
+    var body2=aplicaMeteoBody({lat:lat,lon:lon,kind:kind,system:sys,module:moduleSpec(),
+      losses:{soiling_pct:2.0,mismatch_pct:2.0}},wx);
     var r2=await fetch(ENGINE+'/generation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body2)});
     if(!r2.ok){var t2=await r2.text();throw new Error('HTTP '+r2.status+' · '+t2.slice(0,180));}
     j=await r2.json();
@@ -887,7 +936,8 @@ async function simulate(){
       card('Yield',j.yield_kwh_kwp_y!=null?Math.round(j.yield_kwh_kwp_y):'—','kWh/kWp')+
       card('PR',j.pr_net!=null?(j.pr_net*100).toFixed(1):'—','%')+
       card('POA',j.poa_annual_kwh_m2!=null?Math.round(j.poa_annual_kwh_m2):'—','kWh/m²')+
-      '</div><p class="note">Motor SolarGPT · '+(MOD?'módulo CEC <b>'+MOD._name+'</b> · ':'')+'meteo openmeteo · '+(j.meteo_rows||'?')+' filas.</p>';
+      '</div><p class="note">Motor SolarGPT · '+(MOD?'módulo CEC <b>'+MOD._name+'</b> · ':'')+
+      meteoResultadoNota(wx)+' · '+(j.meteo_rows||'?')+' filas.</p>';
     if($('econOn').checked && j.yield_kwh_kwp_y) await runEconomy(j.yield_kwh_kwp_y, out);
   }catch(e){ out.innerHTML='<div class="engmsg">No se pudo simular: '+(e&&e.message||e)+'</div>'; }
 }
@@ -1079,6 +1129,10 @@ $('date').addEventListener('input',function(){aplicaHuso();drawSky();});   // el
 $('tz').addEventListener('input',function(){_huso=null;});                // si lo tocas tu, deja de refrescarse
 $('hour').addEventListener('input',drawSky);
 $('simBtn').onclick=simulate;
+['lat','lon'].forEach(function(id){$(id).addEventListener('change',function(){
+  LAST_SOLAR_WEATHER=null;
+  var el=$('prodMeteo');if(el){el.textContent='Meteo producción · se resolverá al simular para este emplazamiento';el.style.color='';}
+});});
 $('demBtn').onclick=relieve;
 window.addEventListener('resize',drawSky);
 loadPlants();
