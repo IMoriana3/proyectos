@@ -6973,6 +6973,9 @@ function ponSol(elDeg,azDeg,vms,dirDeg){
    El granizo no inventa rumbo de célula: solo enseña severidad, ETA y fase. */
 function actualizaMeteo3D(fr){
   if(!TD||!fr)return;
+  /* Contrato SOLO-LECTURA para la capa meteorológica visual: publica el mismo frame
+     que ya pinta el HUD, sin crear una segunda lógica de viento/nieve/granizo. */
+  window.__simVientoMeteoFrame=fr;
   var kmh=Math.max(0,(+fr.wind_ms||0)*3.6), de=((+fr.wind_dir%360)+360)%360, hacia=(de+180)%360;
   if(TD.windHud){
     TD.windHud.style.display=kmh>.3?'':'none';
