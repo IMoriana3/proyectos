@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Factiun · WeatherContract Bridge</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#0d1827;color:#eaf4ff}
+body{margin:0;display:grid;min-height:100vh;place-items:center}
+main{width:min(520px,92vw);border:1px solid #33465e;background:#132238;padding:22px;border-radius:12px}
+h1{font-size:1rem;margin:0 0 10px;color:#f09030}p{font-size:.84rem;line-height:1.5;color:#b8c3ce}
+code{color:#68c0d8}.ok{color:#78d5a6}.bad{color:#ff8a80}
+</style>
+</head>
+<body>
+<main>
+<h1>WeatherContract · transferencia</h1>
+<p id="status">Leyendo el contrato meteorológico activo…</p>
+</main>
+<script type="module">
+import {loadActiveWeatherContract} from "./lib/weather-contract.js";
+
+const status=document.getElementById("status");
+const q=new URLSearchParams(location.search);
+const kind=q.get("kind")||"forecast";
+const nonce=q.get("nonce")||"";
+const allowedKinds=new Set(["forecast","historical","tmy","prepared"]);
+
+function allowedOrigin(origin){
+  if(origin==="https://cobertura-zigbee.imoriana3.workers.dev")return true;
+  if(origin==="https://imoriana3.github.io")return true;
+  try{
+    const u=new URL(origin);
+    return (u.hostname==="127.0.0.1"||u.hostname==="localhost")&&(u.protocol==="http:"||u.protocol==="https:");
+  }catch(e){return false;}
+}
+function reply(targetOrigin,payload){
+  if(!window.opener||window.opener.closed)throw new Error("No hay ventana solicitante");
+  window.opener.postMessage({type:"factiun-weather-contract-v2",nonce,kind,...payload},targetOrigin);
+}
+async function send(targetOrigin){
+  if(!allowedOrigin(targetOrigin))throw new Error("Origen solicitante no autorizado: "+targetOrigin);
+  if(!allowedKinds.has(kind))throw new Error("Tipo de contrato no válido: "+kind);
+  const pkg=await loadActiveWeatherContract(kind);
+  if(!pkg)throw new Error("No hay WeatherContract "+kind+" activo en el Workbench");
+  if(pkg.schema_version!=="2.0.0")throw new Error("Versión de WeatherContract no soportada");
+  reply(targetOrigin,{ok:true,pkg});
+  status.className="ok";
+  status.textContent="Contrato "+kind+" enviado · "+pkg.contract_id+". Esta ventana se cerrará.";
+  setTimeout(()=>window.close(),350);
+}
+
+window.addEventListener("message",async ev=>{
+  const d=ev.data||{};
+  if(d.type!=="factiun-weather-contract-request"||d.nonce!==nonce)return;
+  try{await send(ev.origin);}
+  catch(e){
+    status.className="bad";status.textContent=String(e?.message||e);
+    try{if(allowedOrigin(ev.origin))reply(ev.origin,{ok:false,error:String(e?.message||e)});}catch(_){}
+  }
+});
+
+status.textContent="Esperando solicitud segura del consumidor · "+kind+".";
+</script>
+</body>
+</html>
