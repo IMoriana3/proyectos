@@ -41,6 +41,14 @@ check("viento queda no negativo y razonable",r.stats?.wind_ms?.min>=0&&r.stats?.
   JSON.stringify(r.stats?.wind_ms));
 check("estadísticos no tienen NaN",["ghi_wm2","dni_wm2","dhi_wm2","temp_c","wind_ms"].every(k=>
   ["min","max","mean","p50","p99"].every(q=>Number.isFinite(r.stats?.[k]?.[q]))));
+const qaIds=(r.qa_findings||[]).map(x=>x.check).sort();
+check("QA compartido detecta exactamente los casos congelados",
+  JSON.stringify(qaIds)===JSON.stringify(f.qa_vector.expected_ids.slice().sort()),
+  JSON.stringify(qaIds));
+check("QA conserva severidades fail/warn",
+  (r.qa_findings||[]).filter(x=>x.severity==="fail").length===2&&
+  (r.qa_findings||[]).filter(x=>x.severity==="warn").length===3,
+  JSON.stringify(r.qa_findings));
 
 console.log("");
 console.log((ko?"FALLA":"TODO OK")+" — "+ok+" comprobaciones"+(ko?" · "+ko+" fallos":""));
