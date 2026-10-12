@@ -430,6 +430,9 @@ declare -A PISO=(
   # imoriana3.github.io a consumidores servidos en workers.dev. Se fijan origen,
   # nonce, allowlist de tipos, esquema v2 y prohibición de postMessage wildcard.
   [test_weather_contract_bridge.mjs]=14
+  # Vector determinista que se leerá también desde SolarGPT Python. Fija la
+  # selección Sandia/FS mes a mes, 8760 filas, timestamps, extremos y stats.
+  [test_tmy_js_python_golden.mjs]=16
   [test_sizing.js]=115
   # 13, y MEDIDO en los TRES modos —con checkout hermano, por `main` sobre
   # HTTPS y sin ninguno de los dos— porque el recuento no cambia entre ellos:
