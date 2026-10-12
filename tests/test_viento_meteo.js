@@ -86,6 +86,21 @@ function respuesta(conRafaga) {
   check('la ficha expone `LOC.fetchYear` y `LOC.clearsky`',
         await page.evaluate(() => typeof LOC.fetchYear === 'function' &&
                                   typeof LOC.clearsky === 'function'));
+  check('WeatherContract es la fuente por defecto',
+        await page.$eval('#source', e => e.value) === 'contract');
+  check('la ficha expone el adaptador WeatherContract v2',
+        await page.evaluate(() => typeof LOC.fromWeatherContract === 'function' &&
+                                  typeof LOC.fetchWeatherContract === 'function'));
+  const wc = await page.evaluate(() => {
+    const p={schema_version:'2.0.0',contract_id:'wc:test',site:{timezone:'UTC'},
+      qa:{dataset_hash:'hash-test'},rows:[
+        {t:'2023-01-01T00:00:00Z',ghi_wm2:0,dhi_wm2:0,dni_wm2:0,temp_c:4,wind_ms:3,wind_dir_deg:10,gust_ms:5},
+        {t:'2023-01-01T01:00:00Z',ghi_wm2:120,dhi_wm2:40,dni_wm2:300,temp_c:5,wind_ms:7.7,wind_dir_deg:200,gust_ms:12}
+      ]};
+    const x=LOC.fromWeatherContract(p,2023,2023);
+    return {n:x.t.length,source:x.source,id:x.contract_id,hash:x.dataset_hash,wind:x.ws[1],gust:x.gust[1]};
+  });
+  check('WeatherContract conserva contract_id/hash y datos',wc.n===2&&wc.source==='weather_contract'&&wc.id==='wc:test'&&wc.hash==='hash-test'&&wc.wind===7.7&&wc.gust===12,JSON.stringify(wc));
 
   // ══════════════════════════════════════════════════════════════════
   //  1) LA URL ES EL CONTRATO

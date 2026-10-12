@@ -729,7 +729,7 @@ declare -A PISO=(
   # declarados. Un literal repetido no es un oráculo más fuerte, es tres sitios
   # donde envejecer.
   [test_viento_latencia.js]=134
-  [test_viento_meteo.js]=33
+  [test_viento_meteo.js]=36
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,
   # `control`, `poa`, `single`, `dual`, `pasivo`— y ninguno el MONTAJE: en qué
