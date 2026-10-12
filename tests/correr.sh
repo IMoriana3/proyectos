@@ -392,7 +392,7 @@ declare -A PISO=(
   # y daba verde. Lo delató su propia batería (el mutante del 2D sobrevivía
   # mientras el del 3D moría). Quedan DOS sin alcanzar, `extCv` y `gTl`, y está
   # dicho en el arnés.
-  [test_nitidez.js]=32
+  [test_nitidez.js]=33
   [test_pwa.js]=21
   # El careo que faltaba entre DOS FICHAS: `cartera-tabla.html` escribe
   # `factiun_plantas` con `publishSpecs` y `index.html` lo lee en `SPECS` para
