@@ -142,12 +142,14 @@ function impactMetrics(mm,windKmh,hailDirDeg,axisAzDeg,thetaDeg){
   var vt=Math.sqrt((4*r.rhoIce*D*r.g)/(3*r.rhoAir*r.Cd));
   var w=Math.max(0,+windKmh||0)/3.6,h=worldWind(hailDirDeg),n=panelNormal(thetaDeg,axisAzDeg);
   var vx=h.x*w,vy=-vt,vz=h.z*w,v=Math.sqrt(vx*vx+vy*vy+vz*vz);
-  /* n apunta a la cara superior. -v·n es la componente que entra contra ella. */
-  var vn=Math.max(0,-(vx*n.x+vy*n.y+vz*n.z));
+  /* El módulo tiene dos caras. El signo del producto escalar dice cuál recibe
+     el impacto; el valor absoluto da la componente normal mecánica. No se borra
+     una colisión por venir de la trasera. */
+  var dot=vx*n.x+vy*n.y+vz*n.z,face=(dot<=0?'FRONTAL':'TRASERA'),vn=Math.abs(dot);
   var exposure=v>1e-9?clamp(vn/v,0,1):0;
   var inc=exposure>0?Math.acos(clamp(exposure,-1,1))*180/Math.PI:90;
   return {diameter_mm:+mm||0,mass_g:m*1000,vt_ms:vt,wind_ms:w,speed_ms:v,normal_ms:vn,
-          incidence_deg:inc,exposure:exposure,energy_j:.5*m*v*v,normal_energy_j:.5*m*vn*vn,
+          incidence_deg:inc,exposure:exposure,face:face,energy_j:.5*m*v*v,normal_energy_j:.5*m*vn*vn,
           theta_deg:+thetaDeg||0,axis_az_deg:+axisAzDeg||0,hail_dir_deg:+hailDirDeg||0};
 }
 function impactRows(s){
@@ -170,11 +172,11 @@ function updateImpactHud(s){
   var h='<b>GRANIZO · '+phase+'</b> · modelo mecánico de referencia<br>'+
     Math.round(s.mm)+' mm · masa '+base.mass_g.toFixed(1)+' g · v<sub>t</sub> '+base.vt_ms.toFixed(1)+' m/s'+
     ' · viento '+Math.max(s.wind,s.gust||0).toFixed(0)+' km/h'+
-    '<table><thead><tr><th>caso</th><th>θ</th><th>inc.</th><th>expuesto</th><th>v⊥</th><th>E⊥</th><th>vs BASE</th></tr></thead><tbody>';
+    '<table><thead><tr><th>caso</th><th>θ</th><th>cara</th><th>inc.</th><th>expuesto</th><th>v⊥</th><th>E⊥</th><th>vs BASE</th></tr></thead><tbody>';
   rows.forEach(function(q){
     var red=(base.normal_energy_j>1e-9)?100*(1-q.normal_energy_j/base.normal_energy_j):null;
     var col=Math.abs(q.normal_energy_j-best)<1e-7?'#62c88a':(Math.abs(q.normal_energy_j-worst)<1e-7?'#e84858':'inherit');
-    h+='<tr style="color:'+col+'"><td>'+q.k+'</td><td>'+q.theta_deg.toFixed(0)+'°</td><td>'+q.incidence_deg.toFixed(0)+'°</td>'+
+    h+='<tr style="color:'+col+'"><td>'+q.k+'</td><td>'+q.theta_deg.toFixed(0)+'°</td><td>'+q.face+'</td><td>'+q.incidence_deg.toFixed(0)+'°</td>'+
        '<td>'+Math.round(q.exposure*100)+' %</td><td>'+q.normal_ms.toFixed(1)+' m/s</td>'+
        '<td>'+q.normal_energy_j.toFixed(q.normal_energy_j<10?1:0)+' J</td>'+
        '<td>'+(q.k==='BASE'||red===null?'—':((red>=0?'−':'+')+Math.abs(red).toFixed(0)+' %'))+'</td></tr>';
