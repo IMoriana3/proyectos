@@ -249,6 +249,29 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('la nieve tiene precipitación 3D, manto de suelo y recubrimiento de mesas',
     fxSnow&&fxSnow.snowVisible&&fxSnow.snowGround>0&&(fxSnow.snowCoats>0||fxSnow.instancedSnow),
     JSON.stringify(fxSnow));
+
+  const impact=await page.evaluate(()=> {
+    const f=window.__simVientoMeteoFx;
+    const flat=f.impact(30,0,270,0,0);
+    const tilt=f.impact(30,0,270,0,55);
+    const fromWest=f.impact(30,60,270,0,55);
+    const fromEast=f.impact(30,60,90,0,55);
+    return {flat,tilt,fromWest,fromEast};
+  });
+  check('modelo impacto: horizontal y sin viento recibe el golpe normal',
+    Math.abs(impact.flat.incidence_deg)<.01&&Math.abs(impact.flat.exposure-1)<.001&&
+    Math.abs(impact.flat.normal_energy_j-impact.flat.energy_j)<.001,
+    JSON.stringify(impact.flat));
+  check('modelo impacto: a 55° baja la exposición como cos(55°)',
+    Math.abs(impact.tilt.exposure-Math.cos(55*Math.PI/180))<.01,
+    JSON.stringify(impact.tilt));
+  check('modelo impacto: la energía normal cae con el cuadrado de la exposición sin viento',
+    Math.abs(impact.tilt.normal_energy_j/impact.tilt.energy_j-
+      Math.pow(Math.cos(55*Math.PI/180),2))<.02,
+    JSON.stringify(impact.tilt));
+  check('modelo impacto: el mismo tilt distingue viento a favor y en contra de la cara',
+    impact.fromEast.normal_energy_j>impact.fromWest.normal_energy_j,
+    JSON.stringify({oeste:impact.fromWest.normal_energy_j,este:impact.fromEast.normal_energy_j}));
   check('las tarjetas dicen quién manda y el estado de protección',
     /VIENTO × GRANIZO|GRANIZO|VIENTO/.test(pinta.tiles)&&/TRÁNSITO|POSICIÓN|MODELADO|SEGUIMIENTO/.test(pinta.tiles),
     pinta.tiles.slice(0,300));
