@@ -43,7 +43,24 @@ function rowsFromFixture(f){
   return rows;
 }
 
+function qaRowsFromFixture(f){
+  const q=f.qa_vector,m=q.mutations,rows=[];
+  for(let i=0;i<q.rows;i++){
+    rows.push({
+      t:new Date(Date.UTC(2025,0,1)+i*3600000).toISOString(),
+      ghi_wm2:i===m.ghi_negative_row?-5:500,
+      dni_wm2:i===m.dni_absurd_row?1200:700,
+      dhi_wm2:i<m.dhi_null_rows?null:100,
+      temp_c:i===m.temp_outlier_row?70:15,
+      wind_ms:i===m.wind_outlier_row?80:4
+    });
+  }
+  return rows;
+}
+
 const sourceRows=rowsFromFixture(fixture);
+const qaRows=qaRowsFromFixture(fixture);
+const qa=M.plausibility(qaRows,NaN,NaN);
 const tmy=M.buildTmySandia(sourceRows,{baseYear:fixture.base_year,smooth:true});
 const stats=M.statsTable(tmy.rows);
 const result={
@@ -57,6 +74,7 @@ const result={
   fs_scores:tmy.info.fs_scores,
   first_timestamp:tmy.rows[0]?.t||null,
   last_timestamp:tmy.rows.at(-1)?.t||null,
+  qa_findings:qa.map(x=>({check:x.check,severity:x.severity})),
   stats:{
     ghi_wm2:stats.ghi_wm2,
     dni_wm2:stats.dni_wm2,
