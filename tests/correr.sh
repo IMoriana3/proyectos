@@ -432,7 +432,7 @@ declare -A PISO=(
   [test_weather_contract_bridge.mjs]=14
   # Vector determinista que se leerá también desde SolarGPT Python. Fija la
   # selección Sandia/FS mes a mes, 8760 filas, timestamps, extremos y stats.
-  [test_tmy_js_python_golden.mjs]=16
+  [test_tmy_js_python_golden.mjs]=18
   [test_sizing.js]=115
   # 13, y MEDIDO en los TRES modos —con checkout hermano, por `main` sobre
   # HTTPS y sin ninguno de los dos— porque el recuento no cambia entre ellos:
