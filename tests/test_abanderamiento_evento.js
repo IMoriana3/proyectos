@@ -301,6 +301,27 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     envelope.maximum.normal_energy_j>envelope.threshold.normal_energy_j&&
     envelope.maximum.impact_flux_proxy>envelope.threshold.impact_flux_proxy,
     JSON.stringify({low:envelope.threshold,high:envelope.maximum}));
+  const faceVisual=await page.evaluate(async()=>{
+    const mk=(dir)=>({
+      wind_ms:60/3.6,gust_ms:60/3.6,wind_dir:dir,hail_dir:dir,
+      hail_on:true,hail_mm:30,hail_prob_pct:80,hail_phase:'IMPACTO',
+      snow_cm:0,ang:{BASE:55}
+    });
+    window.__simVientoMeteoFrame=mk(270);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const west=__simVientoMeteoFx.snapshot();
+    window.__simVientoMeteoFrame=mk(90);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const east=__simVientoMeteoFx.snapshot();
+    aplicaPresetEvento('wind_ramp');eventoAplica(0);
+    return {west,east};
+  });
+  check('la piel 3D enciende la cara TRASERA cuando la trayectoria llega por debajo',
+    faceVisual.west.impactFaces.BASE==='TRASERA',
+    JSON.stringify(faceVisual.west));
+  check('la piel 3D cambia a FRONTAL al invertir el rumbo de impacto',
+    faceVisual.east.impactFaces.BASE==='FRONTAL',
+    JSON.stringify(faceVisual.east));
   check('las tarjetas dicen quién manda y el estado de protección',
     /VIENTO × GRANIZO|GRANIZO|VIENTO/.test(pinta.tiles)&&/TRÁNSITO|POSICIÓN|MODELADO|SEGUIMIENTO/.test(pinta.tiles),
     pinta.tiles.slice(0,300));
