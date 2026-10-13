@@ -189,6 +189,27 @@ function impactRows(s){
   });
   return rows;
 }
+function impactCumulative(frames,axisAzDeg){
+  frames=frames||[];var sum={},seconds=0;
+  for(var i=0;i<frames.length-1;i++){
+    var f=frames[i],n=frames[i+1];
+    if(!f||f.hail_phase!=='IMPACTO'||!f.ang)continue;
+    var dt=(isFinite(+n.t_min)&&isFinite(+f.t_min))?Math.max(0,(+n.t_min-(+f.t_min))*60):0;
+    if(!(dt>0))continue;
+    var wk=Math.max(0,+f.wind_ms||0,+f.gust_ms||0)*3.6;
+    var dir=isFinite(+f.hail_dir)?+f.hail_dir:(isFinite(+f.wind_dir)?+f.wind_dir:270);
+    Object.keys(f.ang).forEach(function(k){
+      if(f.ang[k]==null)return;
+      var q=impactMetrics(+f.hail_mm||0,wk,dir,axisAzDeg,+f.ang[k]);
+      sum[k]=(sum[k]||0)+q.impact_flux_proxy*dt;
+    });
+    seconds+=dt;
+  }
+  var base=sum.BASE||0,rows=Object.keys(sum).map(function(k){
+    return {k:k,value:sum[k],vs_base:(k==='BASE'||!(base>1e-12)?null:100*(1-sum[k]/base))};
+  });
+  return {seconds:seconds,rows:rows};
+}
 function updateImpactHud(s){
   var severe=s.hailOn&&s.mm>0&&(s.watch||s.impact);
   if(!severe){impactHud.style.display='none';return;}
@@ -220,6 +241,13 @@ function updateImpactHud(s){
        '<td>'+q.normal_energy_j.toFixed(q.normal_energy_j<10?1:0)+' J</td><td>'+rr+'</td></tr>';
   });
   h+='</tbody></table><span style="opacity:.68">La envolvente usa la piedra umbral ('+thr.toFixed(0)+' mm) y la máxima; la probabilidad del forecast NO es fracción de piedras. Φ* es comparación relativa, no W/m² ni probabilidad de rotura.</span>';
+  var ev=(window.EVENTO&&EVENTO.sim&&EVENTO.sim.frames)?impactCumulative(EVENTO.sim.frames,axis):null;
+  if(ev&&ev.seconds>0){
+    var pieces=ev.rows.filter(function(q){return q.k!=='BASE'&&q.vs_base!==null;}).map(function(q){
+      return q.k+' '+(q.vs_base>=0?'−':'+')+Math.abs(q.vs_base).toFixed(0)+' %';
+    });
+    h+='<br><span style="opacity:.82"><b>Episodio completo simulado · '+(ev.seconds/60).toFixed(0)+' min:</b> carga acumulada Φ*dt vs BASE · '+pieces.join(' · ')+'</span>';
+  }
   impactHud.innerHTML=h;impactHud.style.display='block';
 }
 function screenWind(dir){
@@ -652,9 +680,10 @@ function update3D(s,dt,t){
 
 var LAST_STATE=null;
 window.__simVientoMeteoFx={
-  version:7,
+  version:8,
   impact:impactMetrics,
   trajectory:hailVelocity,
+  cumulativeImpact:impactCumulative,
   impactEnvelope:impactEnvelope,
   reference:Object.assign({},IMPACT_REF),
   snapshot:function(){
