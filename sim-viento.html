@@ -746,10 +746,13 @@
             <div class="ttl">❄ Nieve</div>
             <label class="chk"><input type="checkbox" id="eSnowOn"> Activar espesor de <b>nieve</b></label>
             <div class="lab">
-              <div class="field"><label>Espesor (cm)</label><input id="eSnowCm" type="number" min="0" step="1" value="15"></div>
-              <div class="field"><label>Entra en T (min)</label><input id="eSnowStart" type="number" step="1" value="0"></div>
-              <div class="field"><label>Despeja en T (min)</label><input id="eSnowClear" type="number" step="1" value="120"></div>
+              <div class="field"><label>Espesor máximo (cm)</label><input id="eSnowCm" type="number" min="0" step="1" value="15"></div>
+              <div class="field"><label>Empieza en T (min)</label><input id="eSnowStart" type="number" step="1" value="0"></div>
+              <div class="field"><label>Acumula durante (min)</label><input id="eSnowRamp" type="number" min="0" step="5" value="60"></div>
+              <div class="field"><label>Empieza a despejar en T (min)</label><input id="eSnowClear" type="number" step="1" value="120"></div>
+              <div class="field"><label>Deshielo / retirada (min)</label><input id="eSnowMelt" type="number" min="0" step="5" value="30"></div>
             </div>
+            <p class="note" style="margin-bottom:0">Son <b>rampas sintéticas declaradas</b>: el simulador conoce espesor, no tasa real de precipitación ni coeficiente de deslizamiento. Con 0 min conserva el escalón instantáneo anterior.</p>
           </div>
         </details>
 
@@ -3250,7 +3253,14 @@ LOC.eventoPerfil=function(cfg,tMin){
   if(cfg.snow_on){
     var ns=isFinite(+cfg.snow_start_min)?+cfg.snow_start_min:0;
     var nc=isFinite(+cfg.snow_clear_min)?+cfg.snow_clear_min:120;
-    if(tMin>=ns&&tMin<nc)snow=Math.max(0,+cfg.snow_cm||0);
+    var cm=Math.max(0,+cfg.snow_cm||0);
+    var sr=Math.max(0,+cfg.snow_accum_min||0), sm=Math.max(0,+cfg.snow_melt_min||0);
+    var levelAtClear=(sr>0)?cm*clamp((nc-ns)/sr,0,1):cm;
+    if(tMin>=ns&&tMin<nc){
+      snow=(sr>0)?cm*clamp((tMin-ns)/sr,0,1):cm;
+    }else if(tMin>=nc&&sm>0&&tMin<nc+sm){
+      snow=levelAtClear*clamp(1-(tMin-nc)/sm,0,1);
+    }
   }
   return {wind_kmh:w,gust_kmh:gust,
           dir_deg:isFinite(+cfg.wind_dir_deg)?+cfg.wind_dir_deg:270,hail_dir_deg:hf.dir_deg,
@@ -3290,8 +3300,10 @@ LOC.eventoMarcas=function(cfg,frames){
     prev=ph;
   });
   if(cfg.snow_on){
-    add(cfg.snow_start_min,'snow','entra nieve');
-    add(cfg.snow_clear_min,'snow','nieve despejada');
+    add(cfg.snow_start_min,'snow','empieza nieve');
+    if((+cfg.snow_accum_min||0)>0)add((+cfg.snow_start_min||0)+(+cfg.snow_accum_min||0),'snow','espesor máximo');
+    add(cfg.snow_clear_min,'snow','empieza a despejar');
+    if((+cfg.snow_melt_min||0)>0)add((+cfg.snow_clear_min||0)+(+cfg.snow_melt_min||0),'snow','nieve despejada');
   }
   m.sort(function(a,b){return a.t-b.t;});
   return m;
@@ -3571,7 +3583,7 @@ LOC.incGenera=function(opts,index,baseCfg){
     gust_peak_kmh:10,gust_at_min:0,gust_duration_min:0,
     hail_on:false,hail_mm:0,hail_prob_pct:0,hail_eta0_min:90,hail_lead_min:C.hailLead,
     hail_after_min:C.hailAfter,hail_exit_hold_min:C.hailHold,hail_updates:[],
-    snow_on:false,snow_cm:0,snow_start_min:0,snow_clear_min:120};
+    snow_on:false,snow_cm:0,snow_start_min:0,snow_accum_min:0,snow_clear_min:120,snow_melt_min:0};
 
   if(mode==='adversarial'){
     var A=[
@@ -7529,7 +7541,8 @@ function eventoCfgUI(){
       hail_lead_min:+$('eHailLead').value,hail_after_min:+$('eHailAfter').value,
       hail_exit_hold_min:+$('eHailHold').value,hail_updates:eventoHailUpdatesFromUI(),
       snow_on:$('eSnowOn').checked,snow_cm:+$('eSnowCm').value,
-      snow_start_min:+$('eSnowStart').value,snow_clear_min:+$('eSnowClear').value}};
+      snow_start_min:+$('eSnowStart').value,snow_accum_min:+$('eSnowRamp').value,
+      snow_clear_min:+$('eSnowClear').value,snow_melt_min:+$('eSnowMelt').value}};
 }
 
 function pintaEventPlay(){
@@ -7664,7 +7677,8 @@ function aplicaPresetEvento(k){
         $('eHailR'+n+'Prob').value=u.prob_pct;$('eHailR'+n+'Dir').value=u.dir_deg;}}
   });eventoHailUpdatesUI();
   $('eSnowOn').checked=!!p.snow;$('eSnowCm').value=(p.scm==null?15:p.scm);
-  $('eSnowStart').value=(p.ss==null?0:p.ss);$('eSnowClear').value=(p.sc==null?120:p.sc);
+  $('eSnowStart').value=(p.ss==null?0:p.ss);$('eSnowRamp').value=(p.sr==null?(p.snow?60:0):p.sr);
+  $('eSnowClear').value=(p.sc==null?120:p.sc);$('eSnowMelt').value=(p.sm==null?(p.snow?30:0):p.sm);
   if(k==='passive'){$('pas').checked=true;$('pasBox').style.display='';}
   if(k==='snow_hail'||k==='snow_hail_same'){
     var msPared=fechaEvento().getTime()+(+$('eH').value||0)*60000;
@@ -7704,7 +7718,9 @@ function incPerfilTexto(p){
   if(p.hail_on)a.push('granizo '+fmt(p.hail_mm,1)+' mm · ETA '+fmt(p.hail_eta0_min,0)+' · lead '+fmt(p.hail_lead_min,0)+
     ' · señal +'+fmt(p.hail_after_min,0)+' · hold '+fmt(p.hail_exit_hold_min,0)+
     ((p.hail_updates||[]).length?' · '+p.hail_updates.length+' reforecast':'') );
-  if(p.snow_on)a.push('nieve '+fmt(p.snow_cm,1)+' cm');
+  if(p.snow_on)a.push('nieve '+fmt(p.snow_cm,1)+' cm'+
+    ((+p.snow_accum_min||0)>0?' · acumula '+fmt(p.snow_accum_min,0)+' min':'')+
+    ((+p.snow_melt_min||0)>0?' · despeja '+fmt(p.snow_melt_min,0)+' min':''));
   return a.join(' · ');
 }
 function incRender(){
@@ -7755,7 +7771,8 @@ function incAplicaCampos(caso){
       if((u.kind||'update')==='update'){$('eHailR'+n+'Eta').value=u.eta_min;$('eHailR'+n+'Mm').value=u.mm;
         $('eHailR'+n+'Prob').value=u.prob_pct;$('eHailR'+n+'Dir').value=u.dir_deg;}}
   });eventoHailUpdatesUI();
-  $('eSnowOn').checked=!!p.snow_on;$('eSnowCm').value=p.snow_cm;$('eSnowStart').value=p.snow_start_min;$('eSnowClear').value=p.snow_clear_min;
+  $('eSnowOn').checked=!!p.snow_on;$('eSnowCm').value=p.snow_cm;$('eSnowStart').value=p.snow_start_min;
+  $('eSnowRamp').value=p.snow_accum_min||0;$('eSnowClear').value=p.snow_clear_min;$('eSnowMelt').value=p.snow_melt_min||0;
   EVENTO.applyingPreset=false;eventoLbl();
 }
 function incAplicaContexto(base){
