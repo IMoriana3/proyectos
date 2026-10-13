@@ -179,6 +179,19 @@ function impactEnvelope(maxMm,windKmh,hailDirDeg,axisAzDeg,thetaDeg){
     maximum:impactMetrics(hi,windKmh,hailDirDeg,axisAzDeg,thetaDeg)
   };
 }
+function optimalTilt(mm,windKmh,hailDirDeg,axisAzDeg,maxTiltDeg){
+  var lim=Math.max(0,Math.abs(+maxTiltDeg||0)),best=null;
+  /* Barrido fino: la función objetivo es suave y 1101 evaluaciones son irrelevantes
+     frente al render 3D. No se usa una fórmula cerrada para evitar errores de signo
+     entre azimut de eje, cara y convención de tilt. */
+  for(var i=0;i<=Math.round(lim*20)*2;i++){
+    var th=-lim+i*.05;
+    var q=impactMetrics(mm,windKmh,hailDirDeg,axisAzDeg,th);
+    if(!best||q.impact_flux_proxy<best.impact_flux_proxy){best=q;best.theta_deg=th;}
+  }
+  if(!best)return null;
+  return best;
+}
 function impactRows(s){
   var fr=s.frame,ang=fr&&fr.ang?fr.ang:null;if(!ang)return [];
   var axis=num('axaz',0),dir=isFinite(s.hailDir)?s.hailDir:s.dir,rows=[];
@@ -219,12 +232,17 @@ function updateImpactHud(s){
   rows.forEach(function(q){best=Math.min(best,q.impact_flux_proxy);worst=Math.max(worst,q.impact_flux_proxy);});
   var thr=Math.min(Math.max(0,s.mm),hailThresholdMm()),windNow=Math.max(s.wind,s.gust||0),
       axis=num('axaz',0),dir=isFinite(s.hailDir)?s.hailDir:s.dir,
+      maxTilt=Math.abs(num('maxang',55)),
+      opt=optimalTilt(s.mm,windNow,dir,axis,maxTilt),
+      optLo=optimalTilt(thr,windNow,dir,axis,maxTilt),
       baseLo=impactMetrics(thr,windNow,dir,axis,base.theta_deg);
   var rango=Math.abs(s.mm-thr)>.05?(thr.toFixed(0)+'→'+Math.round(s.mm)+' mm'):(Math.round(s.mm)+' mm');
   var h='<b>GRANIZO · '+phase+'</b> · envolvente mecánica '+rango+'<br>'+
     'piedra máxima: masa '+base.mass_g.toFixed(1)+' g · v<sub>t</sub> '+base.vt_ms.toFixed(1)+' m/s'+
     ' · viento '+windNow.toFixed(0)+' km/h · piel 3D = caso máximo'+
-    '<table><thead><tr><th>caso</th><th>θ</th><th>cara</th><th>inc.</th><th>expuesto</th><th>v⊥</th><th>E⊥ max</th><th>Φ* vs BASE</th></tr></thead><tbody>';
+    (opt?'<br><b>Óptimo físico dentro de ±'+maxTilt.toFixed(0)+'°:</b> θ '+opt.theta_deg.toFixed(1)+'° · '+opt.face+
+      ' · incidencia '+opt.incidence_deg.toFixed(1)+'° · E⊥ '+opt.normal_energy_j.toFixed(opt.normal_energy_j<10?1:0)+' J':'')+
+    '<table><thead><tr><th>caso</th><th>θ</th><th>Δθ ópt.</th><th>cara</th><th>inc.</th><th>expuesto</th><th>v⊥</th><th>E⊥ max</th><th>Φ* vs BASE</th></tr></thead><tbody>';
   rows.forEach(function(q){
     var redHi=(base.impact_flux_proxy>1e-12)?100*(1-q.impact_flux_proxy/base.impact_flux_proxy):null;
     var qLo=impactMetrics(thr,windNow,dir,axis,q.theta_deg);
@@ -236,11 +254,16 @@ function updateImpactHud(s){
       rr=(a>=0?'−':'+')+Math.abs(a).toFixed(0)+' %';
       if(Math.abs(b-a)>.6)rr+='…'+(b>=0?'−':'+')+Math.abs(b).toFixed(0)+' %';
     }
-    h+='<tr style="color:'+col+'"><td>'+q.k+'</td><td>'+q.theta_deg.toFixed(0)+'°</td><td>'+q.face+'</td><td>'+q.incidence_deg.toFixed(0)+'°</td>'+
+    var dOpt=opt?Math.abs(q.theta_deg-opt.theta_deg):null;
+    h+='<tr style="color:'+col+'"><td>'+q.k+'</td><td>'+q.theta_deg.toFixed(0)+'°</td><td>'+(dOpt==null?'—':dOpt.toFixed(1)+'°')+'</td><td>'+q.face+'</td><td>'+q.incidence_deg.toFixed(0)+'°</td>'+
        '<td>'+Math.round(q.exposure*100)+' %</td><td>'+q.normal_ms.toFixed(1)+' m/s</td>'+
        '<td>'+q.normal_energy_j.toFixed(q.normal_energy_j<10?1:0)+' J</td><td>'+rr+'</td></tr>';
   });
-  h+='</tbody></table><span style="opacity:.68">La envolvente usa la piedra umbral ('+thr.toFixed(0)+' mm) y la máxima; la probabilidad del forecast NO es fracción de piedras. Φ* es comparación relativa, no W/m² ni probabilidad de rotura.</span>';
+  h+='</tbody></table><span style="opacity:.68">La envolvente usa la piedra umbral ('+thr.toFixed(0)+' mm) y la máxima; la probabilidad del forecast NO es fracción de piedras. Φ* es comparación relativa, no W/m² ni probabilidad de rotura. El óptimo físico minimiza Φ* con el mismo vector de granizo y solo dentro del rango mecánico permitido.</span>';
+  if(opt&&optLo){
+    var same=Math.abs(opt.theta_deg-optLo.theta_deg)<.11;
+    h+='<br><span style="opacity:.76">Sensibilidad tamaño: óptimo '+thr.toFixed(0)+' mm = '+optLo.theta_deg.toFixed(1)+'° · '+Math.round(s.mm)+' mm = '+opt.theta_deg.toFixed(1)+'°'+(same?' · estable con el tamaño':' · cambia con el tamaño por la velocidad terminal')+'</span>';
+  }
   var ev=(window.EVENTO&&EVENTO.sim&&EVENTO.sim.frames)?impactCumulative(EVENTO.sim.frames,axis):null;
   if(ev&&ev.seconds>0){
     var pieces=ev.rows.filter(function(q){return q.k!=='BASE'&&q.vs_base!==null;}).map(function(q){
@@ -680,8 +703,9 @@ function update3D(s,dt,t){
 
 var LAST_STATE=null;
 window.__simVientoMeteoFx={
-  version:8,
+  version:9,
   impact:impactMetrics,
+  optimalTilt:optimalTilt,
   trajectory:hailVelocity,
   cumulativeImpact:impactCumulative,
   impactEnvelope:impactEnvelope,
