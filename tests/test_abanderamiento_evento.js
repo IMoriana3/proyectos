@@ -241,6 +241,9 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('viento 3D: el perfil vertical tiene vectores visibles en la escena',
     fxWind&&fxWind.windProfileArrows&&Math.abs(fxWind.windReferenceHeightM-4)<.01,
     JSON.stringify(fxWind));
+  check('viento 3D: la deriva de suelo usa menos velocidad que la referencia a 4 m',
+    fxWind&&fxWind.nearGroundWindKmh>0&&fxWind.nearGroundWindKmh<70,
+    JSON.stringify(fxWind));
 
   const fxHail=await page.evaluate(async()=>{
     aplicaPresetEvento('hail_far');eventoAplica(0);
