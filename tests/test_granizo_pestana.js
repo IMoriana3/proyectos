@@ -28,7 +28,7 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
   await page.waitForSelector('#tabGranizo', { timeout: 15000 });
   check('la ficha mantiene las tres áreas funcionales',
         (await page.$('#tabViento')) !== null && (await page.$('#tabGranizo')) !== null);
-  const nav = await page.$eval('#tabs button', ns => ns.map(n => n.textContent.trim()));
+  const nav = await page.evaluate(() => Array.from(document.querySelectorAll('#tabs button')).map(n => n.textContent.trim()));
   check('la navegación distingue Simulador maestro de laboratorios de lógica',
         /simulador/i.test(nav[0] || '') &&
         /granizo.*lógica/i.test(nav[1] || '') &&
