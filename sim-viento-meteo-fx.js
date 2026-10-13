@@ -31,6 +31,14 @@ Object.assign(impactHud.style,{position:'absolute',right:'10px',bottom:'10px',zI
   boxShadow:'0 8px 24px rgba(0,0,0,.28)',backdropFilter:'blur(4px)',display:'none'});
 host.appendChild(impactHud);
 
+var shearHud=document.createElement('div');
+shearHud.id='meteoShearHud';
+Object.assign(shearHud.style,{position:'absolute',left:'10px',top:'54px',zIndex:'9',pointerEvents:'none',
+  padding:'4px 7px',background:'rgba(9,16,25,.72)',border:'1px solid rgba(90,169,255,.38)',
+  color:'#a9cbe8',font:'10px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace',
+  backdropFilter:'blur(3px)',display:'none'});
+host.appendChild(shearHud);
+
 var style=document.createElement('style');
 style.textContent=
   '#view3d .hailfx{display:none!important}'+
@@ -311,7 +319,7 @@ function atmosphere(s,t){
 }
 
 /* ═════════════════════════ 3D: meteorología dentro del mundo ═════════════ */
-var F3={td:null,root:null,mundo:null,wind:null,snow:null,hail:null,hailArrow:null,dust:null,clouds:null,ground:null,
+var F3={td:null,root:null,mundo:null,wind:null,windArrows:null,snow:null,hail:null,hailArrow:null,dust:null,clouds:null,ground:null,
         impactTx:null,coats:[],instSnow:null,instSource:null,impactSkins:[],instImpact:null,instImpactSource:null,
         baseFogNear:null,baseFogFar:null};
 var MAX_WIND=190,MAX_SNOW=900,MAX_HAIL=700,MAX_DUST=280;
@@ -404,6 +412,17 @@ function build3D(td){
   var wm=new THREE.LineBasicMaterial({color:0xb8ddf3,transparent:true,opacity:.26,depthWrite:false});
   F3.wind={obj:new THREE.LineSegments(wg,wm),arr:wa,p:[],mat:wm};root.add(F3.wind.obj);
   for(var i=0;i<MAX_WIND;i++)F3.wind.p.push(resetWorldParticle({},'wind',td));
+
+  /* Tres vectores de escala para hacer visible el perfil 1/7 sin leer código. */
+  var wag=new THREE.Group();wag.name='mfx-wind-shear-arrows';root.add(wag);F3.windArrows=[];
+  for(i=0;i<3;i++){
+    var ar=new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(),10,0x79bfff,2.3,1.1);
+    [ar.line&&ar.line.material,ar.cone&&ar.cone.material].forEach(function(m){
+      if(m){m.transparent=true;m.opacity=.52;m.depthWrite=false;}
+    });
+    wag.add(ar);F3.windArrows.push(ar);
+  }
+  F3.windArrows.group=wag;
 
   F3.snow=makePoints(MAX_SNOW,0xf4f8fb,1.35,.82);root.add(F3.snow.obj);
   F3.hail=makePoints(MAX_HAIL,0xe2eff8,1.8,.92);root.add(F3.hail.obj);
@@ -612,9 +631,21 @@ function updateWind3D(td,s,dt,t){
   var F=F3.wind,wv=worldWind(s.dir),R=clamp(td.radio||420,80,900),c=td.ct.target;
   var vw=Math.max(s.wind,s.gust||0),active=vw>2,n=Math.round(25+clamp(vw/110,0,1)*(MAX_WIND-25));
   F.obj.visible=active;F.mat.opacity=.08+clamp(vw/120,0,.30);
+  var href=Math.max(.5,num('wh',4));
+  if(F3.windArrows&&F3.windArrows.group){
+    var hs=[1,href,Math.max(10,href*2)],dir3=new THREE.Vector3(wv.x,0,wv.z).normalize(),
+        side=new THREE.Vector3(-wv.z,0,wv.x),base=c.clone().add(side.multiplyScalar(clamp(R*.22,22,95)));
+    F3.windArrows.group.visible=active;
+    F3.windArrows.forEach(function(ar,j){
+      var fac=windShearFactor(hs[j],href),L=clamp(7+(vw/3.6)*fac*.55,8,34);
+      ar.position.set(base.x,hs[j],base.z);ar.setDirection(dir3);ar.setLength(L,L*.20,L*.10);
+    });
+    shearHud.style.display=active?'':'none';
+    if(active)shearHud.textContent='perfil viento 1/7 · href '+href.toFixed(1)+' m · vectores '+hs.map(function(h){return h.toFixed(h<2?1:0);}).join(' / ')+' m';
+  }
   if(!active)return;
   var speed=5+vw*.20,extraGust=clamp(((s.gust||0)-s.wind)/70,0,.38),
-      href=Math.max(.5,num('wh',4)),cross={x:-wv.z,z:wv.x};
+      cross={x:-wv.z,z:wv.x};
   for(var i=0;i<MAX_WIND;i++){
     var p=F.p[i],o=i*6;
     if(i<n){
@@ -763,6 +794,7 @@ window.__simVientoMeteoFx={
       windVisible:!!(F3.wind&&F3.wind.obj.visible),
       windReferenceHeightM:num('wh',4),
       windShearAlpha:1/7,
+      windProfileArrows:!!(F3.windArrows&&F3.windArrows.group&&F3.windArrows.group.visible),
       snowVisible:!!(F3.snow&&F3.snow.obj.visible),
       hailVisible:!!(F3.hail&&F3.hail.obj.visible),
       dustVisible:!!(F3.dust&&F3.dust.obj.visible),
