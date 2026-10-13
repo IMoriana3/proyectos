@@ -63,6 +63,8 @@ check("WeatherNext convierte precipitación m a mm",near(wn.precip_mm,.5),String
 check("WeatherNext convierte presión Pa a hPa",near(wn.pressure_hpa,1013),String(wn.pressure_hpa));
 check("WeatherNext conserva bandas p10/p50/p90",wn.p10?.wind_ms===3&&wn.p50?.wind_ms===5&&wn.p90?.wind_ms===9);
 check("WeatherNext conserva provenance BigQuery",wn.provenance?.surface==="BigQuery"&&wn.provenance?.init_time==="2026-10-13T06:00:00Z");
+const wnMissing=WX.fromWeatherNextSummary({timestamp:"2026-10-13T13:00:00Z"});
+check("WeatherNext no inventa meteo ausente",wnMissing.temp_c===null&&wnMissing.dewpoint_c===null&&wnMissing.precip_mm===null&&wnMissing.pressure_hpa===null);
 
 const wcFixture={source:"Open-Meteo / ERA5",source_id:"openmeteo",lat:42.8,lon:-1.6,qa:{status:"PASS",hash:"abc123"},rows:[
   {t:"2024-01-01T00:00:00Z",ghi_wm2:0,dni_wm2:0,dhi_wm2:0,temp_c:4,wind_ms:2},
