@@ -137,11 +137,18 @@ function panelNormal(thetaDeg,axisAzDeg){
   /* mundo sim-viento: +X este, +Y arriba, +Z sur; azimut 0=N, 90=E. */
   return {x:Math.cos(a)*Math.sin(t),y:Math.cos(t),z:Math.sin(a)*Math.sin(t)};
 }
+function hailVelocity(mm,windKmh,hailDirDeg){
+  var D=Math.max(.001,+mm||0)/1000,r=IMPACT_REF;
+  var vt=Math.sqrt((4*r.rhoIce*D*r.g)/(3*r.rhoAir*r.Cd));
+  var w=Math.max(0,+windKmh||0)/3.6,h=worldWind(hailDirDeg);
+  var vx=h.x*w,vy=-vt,vz=h.z*w;
+  return {x:vx,y:vy,z:vz,vt_ms:vt,wind_ms:w,speed_ms:Math.sqrt(vx*vx+vy*vy+vz*vz),
+          diameter_mm:+mm||0,hail_dir_deg:+hailDirDeg||0};
+}
 function impactMetrics(mm,windKmh,hailDirDeg,axisAzDeg,thetaDeg){
   var D=Math.max(.001,+mm||0)/1000,r=IMPACT_REF,m= r.rhoIce*Math.PI*D*D*D/6;
-  var vt=Math.sqrt((4*r.rhoIce*D*r.g)/(3*r.rhoAir*r.Cd));
-  var w=Math.max(0,+windKmh||0)/3.6,h=worldWind(hailDirDeg),n=panelNormal(thetaDeg,axisAzDeg);
-  var vx=h.x*w,vy=-vt,vz=h.z*w,v=Math.sqrt(vx*vx+vy*vy+vz*vz);
+  var hv=hailVelocity(mm,windKmh,hailDirDeg),n=panelNormal(thetaDeg,axisAzDeg);
+  var vt=hv.vt_ms,w=hv.wind_ms,vx=hv.x,vy=hv.y,vz=hv.z,v=hv.speed_ms;
   /* El módulo tiene dos caras. El signo del producto escalar dice cuál recibe
      el impacto; el valor absoluto da la componente normal mecánica. No se borra
      una colisión por venir de la trasera. */
@@ -566,11 +573,11 @@ function updateHail3D(td,s,dt){
   var F=F3.hail,wv=worldWind(isFinite(s.hailDir)?s.hailDir:s.dir),c=td.ct.target,R=clamp(td.radio||420,80,900);
   var sev=clamp((s.mm-8)/42,.12,1),active=!!s.impact,n=Math.round((.20+.80*sev)*MAX_HAIL);
   if(F3.hailArrow){
-    var show=s.hailOn&&s.mm>0&&(s.watch||s.impact),ref=impactMetrics(s.mm,Math.max(s.wind,s.gust||0),
-      isFinite(s.hailDir)?s.hailDir:s.dir,num('axaz',0),0),hw=worldWind(isFinite(s.hailDir)?s.hailDir:s.dir);
+    var show=s.hailOn&&s.mm>0&&(s.watch||s.impact),
+        hv=hailVelocity(s.mm,Math.max(s.wind,s.gust||0),isFinite(s.hailDir)?s.hailDir:s.dir);
     F3.hailArrow.visible=show;
     if(show){
-      var wms=Math.max(s.wind,s.gust||0)/3.6,vd=new THREE.Vector3(hw.x*wms,-ref.vt_ms,hw.z*wms).normalize();
+      var vd=new THREE.Vector3(hv.x,hv.y,hv.z).normalize();
       F3.hailArrow.position.set(c.x,c.y+clamp(R*.18,28,110),c.z);
       F3.hailArrow.setDirection(vd);
       var L=clamp(22+s.mm*.7,28,70);F3.hailArrow.setLength(L,L*.18,L*.09);
@@ -581,18 +588,18 @@ function updateHail3D(td,s,dt){
   }
   F.obj.visible=active;F.mat.size=clamp(.65+s.mm/18,.9,3.8);F.mat.opacity=.86;
   if(!active)return;
-  var windMs=Math.max(s.wind,(s.gust||0)*.65)/3.6;
+  var hvNow=hailVelocity(s.mm,Math.max(s.wind,s.gust||0),isFinite(s.hailDir)?s.hailDir:s.dir);
   for(var i=0;i<MAX_HAIL;i++){
     var p=F.p[i],o=i*3;
     if(i<n){
-      /* La componente horizontal viene del aire; la vertical domina. No es un solver
-         balístico: solo respeta la dirección y la relación de escalas. */
-      p.x+=wv.x*windMs*.50*dt*(.6+p.depth*.4);
-      p.z+=wv.z*windMs*.50*dt*(.6+p.depth*.4);
-      p.vy+=9.81*dt*.35;p.y-=p.vy*dt;
+      /* La partícula visual usa EXACTAMENTE el mismo vector que el cálculo de
+         incidencia y la flecha: velocidad terminal vertical + viento horizontal.
+         Se supone ya en régimen terminal; no se integra una segunda gravedad. */
+      p.x+=hvNow.x*dt;
+      p.z+=hvNow.z*dt;
+      p.y+=hvNow.y*dt;
       if(p.y<.04){
-        if(p.bounce<1&&p.vy>24){p.y=.05;p.vy=-p.vy*(.07+.08*rnd());p.bounce++;}
-        else {resetWorldParticle(p,'hail',td);p.y=clamp(R*.36,45,210)+rnd()*clamp(R*.15,15,80);}
+        resetWorldParticle(p,'hail',td);p.y=clamp(R*.36,45,210)+rnd()*clamp(R*.15,15,80);
       }
       if(Math.abs(p.x-c.x)>R*1.35||Math.abs(p.z-c.z)>R)
         resetWorldParticle(p,'hail',td);
@@ -645,8 +652,9 @@ function update3D(s,dt,t){
 
 var LAST_STATE=null;
 window.__simVientoMeteoFx={
-  version:6,
+  version:7,
   impact:impactMetrics,
+  trajectory:hailVelocity,
   impactEnvelope:impactEnvelope,
   reference:Object.assign({},IMPACT_REF),
   snapshot:function(){
