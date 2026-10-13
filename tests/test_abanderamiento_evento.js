@@ -301,6 +301,26 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     envelope.maximum.normal_energy_j>envelope.threshold.normal_energy_j&&
     envelope.maximum.impact_flux_proxy>envelope.threshold.impact_flux_proxy,
     JSON.stringify({low:envelope.threshold,high:envelope.maximum}));
+
+  const optimum=await page.evaluate(()=>{
+    const f=__simVientoMeteoFx;
+    return {
+      vertical:f.optimalTilt(30,0,270,0,55),
+      west:f.optimalTilt(30,60,270,0,55),
+      east:f.optimalTilt(30,60,90,0,55),
+      limited:f.optimalTilt(30,120,270,0,20)
+    };
+  });
+  check('óptimo físico: con caída vertical pura usa el máximo tilt permitido',
+    Math.abs(Math.abs(optimum.vertical.theta_deg)-55)<.06,
+    JSON.stringify(optimum.vertical));
+  check('óptimo físico: invertir el viento invierte el signo del tilt preferido',
+    optimum.west.theta_deg*optimum.east.theta_deg<0&&
+    Math.abs(Math.abs(optimum.west.theta_deg)-Math.abs(optimum.east.theta_deg))<.11,
+    JSON.stringify({west:optimum.west,east:optimum.east}));
+  check('óptimo físico: nunca sale del límite mecánico solicitado',
+    Math.abs(optimum.limited.theta_deg)<=20.0001,
+    JSON.stringify(optimum.limited));
   const faceVisual=await page.evaluate(async()=>{
     const mk=(dir)=>({
       wind_ms:60/3.6,gust_ms:60/3.6,wind_dir:dir,hail_dir:dir,
