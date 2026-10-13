@@ -95,6 +95,9 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 ## Puntos abiertos (escribir aquí lo que afecte al otro)
 
+- **[Textos de interfaz · 2026-10-12]** Revisión coordinada con `solargpt-textos-claros` en los 11 repositorios del catálogo. Se acortan las 29 descripciones de `PROJECTS` y las ayudas visibles; nombres de tarjeta, IDs, destinos, estados, versiones de herramienta e historial se conservan. Caché del panel v181. Los detalles de uso y la evidencia técnica siguen disponibles. Sin cambios de motor, datos ni permisos.
+
+
 - **[IA implantaciones · 2026-09-28] Optimizar unificado, rama codex/layout-ml-offset-pilot.**
   v1.10.0 integra X/Y y comparación en el Buscador existente; retira el panel piloto y los
   barridos independientes del Generador. Un botón Optimizar, azimut/disposición/X/Y,

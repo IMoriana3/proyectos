@@ -27,7 +27,7 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
 </head>
 <body>
 <header>
-  <div class="headcopy"><h1>☁ Análisis meteorológico</h1><p>Weather Workbench autónomo de Factiun · históricos, TMY, QA, fuentes, adaptación, descargas e informes.</p></div>
+  <div class="headcopy"><h1>☁ Análisis meteorológico</h1><p>Consulta la meteo del emplazamiento, revisa los datos y prepara tu TMY.</p></div>
   <span class="badge"><i></i><span><strong>Autónomo</strong> · navegador</span></span>
   <span class="badge">meteo-core JS <b id="coreVer">—</b></span>
   <a href="index.html" style="font-size:.72rem">← Panel</a>
@@ -52,7 +52,7 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
   </div>
 
   <div class="card span5">
-    <h2>Histórico canónico</h2>
+    <h2>Datos históricos</h2>
     <div class="row3">
       <label><span class="k">Fuente</span><select id="source"><option value="openmeteo">Open-Meteo / ERA5</option><option value="pvgis">PVGIS hourly</option><option value="nasa">NASA POWER</option></select></label>
       <label><span class="k">Desde</span><input id="y0" type="number" min="1980" max="2100" value="2015"></label>
@@ -62,16 +62,16 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
   </div>
 
   <div class="card span5">
-    <h2>Acciones principales</h2>
-    <div class="actions"><button id="nowBtn">Ahora / forecast</button><button id="yearsBtn">Analizar años</button><button id="tmyBtn">Construir TMY</button><button id="clearCache" class="secondary">Vaciar caché</button></div>
+    <h2>Consultar y preparar datos</h2>
+    <div class="actions"><button id="nowBtn">Ahora y previsión</button><button id="yearsBtn">Analizar años</button><button id="tmyBtn">Construir TMY</button><button id="clearCache" class="secondary">Vaciar caché</button></div>
     <div class="statusline" id="workStatus">No requiere servidor ni Colab.</div>
   </div>
 
-  <div class="sectiontitle">Ahora / forecast</div>
+  <div class="sectiontitle">Ahora y previsión</div>
   <div class="card span4"><h2>Régimen solar</h2><div class="big" id="ghi">—</div><div class="k">GHI W/m²</div><div class="row"><div><div class="k">DNI / FDIR</div><div class="v" id="dni">—</div></div><div><div class="k">DHI</div><div class="v" id="dhi">—</div></div></div><div class="k" style="margin-top:9px">Prob. difusa / overcast</div><div class="bar"><i id="bo"></i></div><div class="v" id="over">—</div></div>
   <div class="card span4"><h2>Viento</h2><div class="big" id="wind">—</div><div class="k">m/s a 10 m</div><div class="row"><div><div class="k">Ráfaga</div><div class="v" id="gust">—</div></div><div><div class="k">Dirección</div><div class="v" id="wd">—</div></div></div><div class="k" style="margin-top:9px">Riesgo stow predictivo</div><div class="bar"><i id="bw"></i></div><div class="v" id="wrisk">—</div></div>
   <div class="card span4"><h2>Atmósfera</h2><div class="row"><div><div class="k">Temperatura</div><div class="v" id="temp">—</div></div><div><div class="k">Punto rocío</div><div class="v" id="dew">—</div></div><div><div class="k">Precipitación</div><div class="v" id="rain">—</div></div><div><div class="k">Nubosidad</div><div class="v" id="cloud">—</div></div></div><div class="k" style="margin-top:9px">Proxy convectivo / granizo</div><div class="bar"><i id="bh"></i></div><div class="v" id="hail">—</div></div>
-  <div class="card span4"><h2>WeatherNext 3</h2><p class="note"><strong>Forecast probabilístico.</strong> JSON ya operativo; el hook live queda preparado para un endpoint autenticado sin exponer credenciales en Pages.</p><label><span class="k">Importar resumen JSON</span><input type="file" id="wn" accept=".json,application/json"></label><div class="actions" style="margin-top:7px"><button id="wnCfgBtn" class="secondary">Configurar endpoint live</button></div><div class="statusline" id="wnStatus">Importación JSON disponible · live pendiente de acceso/endpoint Google.</div></div>
+  <div class="card span4"><h2>WeatherNext 3</h2><p class="note">Previsión probabilística. Importa un resumen JSON o configura un endpoint autenticado para consultar datos en directo.</p><label><span class="k">Importar resumen JSON</span><input type="file" id="wn" accept=".json,application/json"></label><div class="actions" style="margin-top:7px"><button id="wnCfgBtn" class="secondary">Configurar endpoint live</button></div><div class="statusline" id="wnStatus">Importación JSON disponible · live pendiente de acceso/endpoint Google.</div></div>
 
   <div class="sectiontitle">Próximas 72 h · supervisión meteorológica</div>
   <div class="card span10">
@@ -122,7 +122,7 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
         <div class="external-map-note">Mapa interactivo externo centrado en el mismo punto. Sirve como segunda lectura visual independiente; CONTROL no toma decisiones desde este iframe.</div>
       </div>
     </div>
-    <p class="note">Ambos mapas siguen automáticamente la planta, ciudad o coordenadas manuales seleccionadas arriba. Son <strong>visualización de contraste</strong>; Batería, Winter mode, producción y demás consumidores siguen leyendo el contrato meteorológico común.</p>
+    <p class="note">Los mapas siguen el emplazamiento elegido y sirven para contrastar la previsión. Batería, Winter mode y producción usan los datos meteorológicos comunes.</p>
   </div>
 
   <div class="sectiontitle">Buscador de años · TMY</div>

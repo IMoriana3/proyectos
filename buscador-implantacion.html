@@ -60,7 +60,7 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
       <label><input id="searchRows" type="checkbox" checked> Alineado / tresbolillo</label><br>
       <label><input id="searchXY" type="checkbox" checked> Origen X/Y (±medio pitch)</label></div>
     <div class="three" id="searchGrid" hidden><label>Desde °<input id="gridFrom" type="number" value="90" step="any"></label><label>Hasta ° (excl.)<input id="gridTo" type="number" value="270" step="any"></label><label>Paso °<input id="gridStep" type="number" value="5" min="0.1" step="any"></label></div>
-    <p id="methodNote">La referencia entra primero. Se mantienen pitch, tallas, retranqueo, exclusiones y viales.</p>
+    <p id="methodNote">Primero se evalúa la referencia. Se conservan pitch, tallas, retranqueo, exclusiones y viales.</p>
     <div class="actions"><button id="searchRun" class="primary">Buscar</button><button id="searchPause">Pausar</button></div>
     <progress id="searchProgress" value="0" max="48" aria-label="Progreso"></progress>
     <p id="searchStatus" role="status" aria-live="polite">Preparando el motor…</p>
