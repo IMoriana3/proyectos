@@ -290,6 +290,17 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('modelo impacto: si la trayectoria cruza por debajo identifica la cara TRASERA',
     impact.fromWest.face==='TRASERA'&&impact.fromWest.normal_energy_j>0,
     JSON.stringify(impact.fromWest));
+  const envelope=await page.evaluate(()=>{
+    const e=__simVientoMeteoFx.impactEnvelope(30,40,270,0,55);
+    return e;
+  });
+  check('envolvente granizo: usa 19 mm como piedra umbral y 30 mm como máximo',
+    Math.abs(envelope.threshold_mm-19)<.01&&Math.abs(envelope.max_mm-30)<.01,
+    JSON.stringify(envelope));
+  check('envolvente granizo: la piedra máxima carga más que la umbral sin inventar distribución',
+    envelope.maximum.normal_energy_j>envelope.threshold.normal_energy_j&&
+    envelope.maximum.impact_flux_proxy>envelope.threshold.impact_flux_proxy,
+    JSON.stringify({low:envelope.threshold,high:envelope.maximum}));
   check('las tarjetas dicen quién manda y el estado de protección',
     /VIENTO × GRANIZO|GRANIZO|VIENTO/.test(pinta.tiles)&&/TRÁNSITO|POSICIÓN|MODELADO|SEGUIMIENTO/.test(pinta.tiles),
     pinta.tiles.slice(0,300));
