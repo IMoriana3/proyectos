@@ -228,6 +228,14 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     fxWind&&fxWind.bound&&fxWind.frameSource==='shared'&&fxWind.windVisible,
     JSON.stringify(fxWind));
 
+  const overlay=await page.evaluate(()=>{
+    const e=document.getElementById('meteoFxCanvas'),s=getComputedStyle(e);
+    return {bg:s.backgroundColor,border:s.borderTopWidth,margin:s.marginTop,pointer:s.pointerEvents,z:s.zIndex};
+  });
+  check('el canvas meteorológico es TRANSPARENTE y no tapa el WebGL de la planta',
+    overlay&&overlay.bg==='rgba(0, 0, 0, 0)'&&overlay.border==='0px'&&overlay.margin==='0px'&&overlay.pointer==='none',
+    JSON.stringify(overlay));
+
   const shear=await page.evaluate(()=>{
     const f=__simVientoMeteoFx.windShearFactor;
     return {atRef:f(4,4),low:f(1,4),high:f(16,4)};

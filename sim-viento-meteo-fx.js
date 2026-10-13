@@ -14,7 +14,7 @@ if(!host||document.getElementById('meteoFxCanvas'))return;
 var cv=document.createElement('canvas');
 cv.id='meteoFxCanvas';
 cv.setAttribute('aria-hidden','true');
-Object.assign(cv.style,{position:'absolute',inset:'0',width:'100%',height:'100%',zIndex:'6',pointerEvents:'none'});
+Object.assign(cv.style,{position:'absolute',inset:'0',width:'100%',height:'100%',zIndex:'6',pointerEvents:'none',background:'transparent',border:'0',margin:'0',borderRadius:'0'});
 host.appendChild(cv);
 
 var shade=document.createElement('div');
