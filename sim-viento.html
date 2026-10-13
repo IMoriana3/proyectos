@@ -3255,11 +3255,11 @@ LOC.eventoPerfil=function(cfg,tMin){
     var nc=isFinite(+cfg.snow_clear_min)?+cfg.snow_clear_min:120;
     var cm=Math.max(0,+cfg.snow_cm||0);
     var sr=Math.max(0,+cfg.snow_accum_min||0), sm=Math.max(0,+cfg.snow_melt_min||0);
-    var levelAtClear=(sr>0)?cm*clamp((nc-ns)/sr,0,1):cm;
+    var levelAtClear=(sr>0)?cm*Math.max(0,Math.min(1,(nc-ns)/sr)):cm;
     if(tMin>=ns&&tMin<nc){
-      snow=(sr>0)?cm*clamp((tMin-ns)/sr,0,1):cm;
+      snow=(sr>0)?cm*Math.max(0,Math.min(1,(tMin-ns)/sr)):cm;
     }else if(tMin>=nc&&sm>0&&tMin<nc+sm){
-      snow=levelAtClear*clamp(1-(tMin-nc)/sm,0,1);
+      snow=levelAtClear*Math.max(0,Math.min(1,1-(tMin-nc)/sm));
     }
   }
   return {wind_kmh:w,gust_kmh:gust,
