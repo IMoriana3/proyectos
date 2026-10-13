@@ -1626,7 +1626,7 @@ const PROJECTS = [
       "Acércate en 2D para ver los módulos. Las tallas se distinguen por su largo, con un mismo color. «Mód./mesa» cuenta un string y «Mód./fila», dos mesas sobre el tubo. El área útil sigue visible al girar la cuadrícula.",
       "La sesión se guarda automáticamente, también al dibujar o borrar exclusiones, con 800 ms de retardo. Al volver se restaura y se avisa. Puedes exportarla e importarla como sesion.json; se conservan montaje y azimut.",
       "La comprobación layout–sizing compara strings y kWp con una tolerancia del 5 %. Muestra PASS o FAIL y, si faltan datos, WARN. Introduce el sizing a mano o recíbelo por el canal factiun_sizing; el checklist usa este resultado.",
-      "El careo con el core compara 15 parcelas: filas, mesas y kWp con tolerancia general del 2,5 %, y área útil del 0,5 %. El caso fijo multi-talla admite un 3 % declarado; no todos los resultados son idénticos. También verifica alineado A/B y consolidación. Banco: node tests/test_layout.js.",
+      "El careo con el core compara 15 parcelas: las filas deben coincidir, salvo hasta una fila de diferencia si hay agujeros o exclusiones. La tolerancia de mesas y kWp es del 2,5 %; la de área útil, del 0,5 %. El caso fijo multi-talla admite un 3 % en mesas y kWp. También verifica alineado A/B y consolidación. Banco: node tests/test_layout.js.",
       "Las pruebas de navegador comprueban generación y dibujo, los tres modos de parcela, MDT, exportación 3D, guardado y restauración de sesiones y estados de la comprobación layout–sizing. Banco: node tests/test_layout_ui.js.",
       "Exporta GeoJSON para el Explorador, DXF de polilíneas, KML para Google Earth o abre el resultado en el visor 3D."
     ],
