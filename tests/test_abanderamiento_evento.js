@@ -322,6 +322,17 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('la piel 3D cambia a FRONTAL al invertir el rumbo de impacto',
     faceVisual.east.impactFaces.BASE==='FRONTAL',
     JSON.stringify(faceVisual.east));
+  const traj=await page.evaluate(()=>{
+    const t=__simVientoMeteoFx.trajectory(30,36,270);
+    const q=__simVientoMeteoFx.impact(30,36,270,0,0);
+    return {t,q};
+  });
+  check('trayectoria granizo: 36 km/h se representan como 10 m/s horizontales',
+    Math.abs(Math.hypot(traj.t.x,traj.t.z)-10)<.01,
+    JSON.stringify(traj.t));
+  check('trayectoria granizo: render y cálculo comparten la misma velocidad terminal',
+    Math.abs(traj.t.vt_ms-traj.q.vt_ms)<1e-9&&Math.abs(traj.t.speed_ms-traj.q.speed_ms)<1e-9,
+    JSON.stringify(traj));
   check('las tarjetas dicen quién manda y el estado de protección',
     /VIENTO × GRANIZO|GRANIZO|VIENTO/.test(pinta.tiles)&&/TRÁNSITO|POSICIÓN|MODELADO|SEGUIMIENTO/.test(pinta.tiles),
     pinta.tiles.slice(0,300));
