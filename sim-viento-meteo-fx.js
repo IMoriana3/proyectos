@@ -208,10 +208,21 @@ function windPressureRows(s){
   });
   return rows;
 }
-function updateWindPressureHud(s){
+var WIND_HUD_LAST=0,WIND_HUD_KEY='';
+function updateWindPressureHud(s,now){
   var speed=Math.max(s.wind,s.gust||0);
-  if(speed<15){windPressureHud.style.display='none';return;}
+  if(speed<15){windPressureHud.style.display='none';WIND_HUD_KEY='';return;}
+  /* La física se puede evaluar cada frame, pero reescribir una tabla DOM a 60 Hz
+     roba tiempo al laboratorio En vivo (que mide segundos de la cadena). El HUD
+     humano no necesita más de 4 Hz. Además, si nada visible cambió, no toca DOM. */
+  now=+now||performance.now();
+  if(now-WIND_HUD_LAST<250)return;
+  WIND_HUD_LAST=now;
   var rows=windPressureRows(s);if(!rows.length){windPressureHud.style.display='none';return;}
+  var key=[Math.round(s.wind*10),Math.round((s.gust||0)*10),Math.round(s.dir),
+    rows.map(function(q){return q.k+':'+Math.round(q.theta_deg*2)/2;}).join('|')].join('/');
+  if(key===WIND_HUD_KEY){windPressureHud.style.display='block';return;}
+  WIND_HUD_KEY=key;
   var rho=IMPACT_REF.rhoAir,qMean=.5*rho*Math.pow(s.wind/3.6,2),qGust=.5*rho*Math.pow((s.gust||0)/3.6,2),
       max=rows.reduce(function(a,q){return Math.max(a,q.normal_dynamic_pa);},0);
   var h='<b>VIENTO · presión dinámica</b><br>q media '+qMean.toFixed(0)+' Pa'+
@@ -761,7 +772,7 @@ function frame(now){
   var dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
   x.clearRect(0,0,W,H);
   var s=state();LAST_STATE=s;
-  atmosphere(s,now);cloudsDraw(s,now);update3D(s,dt,now);updateImpactHud(s);updateWindPressureHud(s);
+  atmosphere(s,now);cloudsDraw(s,now);update3D(s,dt,now);updateImpactHud(s);updateWindPressureHud(s,now);
 }
 requestAnimationFrame(frame);
 })();
