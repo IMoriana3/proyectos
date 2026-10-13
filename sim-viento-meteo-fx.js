@@ -595,7 +595,7 @@ function syncGround(td,s){
   }else{
     var R=clamp(td.radio||420,80,1200);g.scale.set(R*2.6,R*2.0,1);g.position.y=.012+depthM;
   }
-  F3.ground.userData.depthM=depthM;
+  F3.ground.obj.userData.depthM=depthM;
   F3.ground.mat.opacity=clamp(s.snow/18,0,.72);
   g.visible=F3.ground.mat.opacity>.01;
 }
