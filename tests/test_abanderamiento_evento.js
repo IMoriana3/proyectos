@@ -228,6 +228,17 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     fxWind&&fxWind.bound&&fxWind.frameSource==='shared'&&fxWind.windVisible,
     JSON.stringify(fxWind));
 
+  const shear=await page.evaluate(()=>{
+    const f=__simVientoMeteoFx.windShearFactor;
+    return {atRef:f(4,4),low:f(1,4),high:f(16,4)};
+  });
+  check('viento 3D: a la altura de referencia el factor de cizalladura vale 1',
+    Math.abs(shear.atRef-1)<1e-12,JSON.stringify(shear));
+  check('viento 3D: por debajo de la referencia el perfil 1/7 reduce velocidad',
+    shear.low<1&&Math.abs(shear.low-Math.pow(1/4,1/7))<1e-12,JSON.stringify(shear));
+  check('viento 3D: por encima de la referencia el perfil 1/7 aumenta velocidad',
+    shear.high>1&&Math.abs(shear.high-Math.pow(4,1/7))<1e-12,JSON.stringify(shear));
+
   const fxHail=await page.evaluate(async()=>{
     aplicaPresetEvento('hail_far');eventoAplica(0);
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
