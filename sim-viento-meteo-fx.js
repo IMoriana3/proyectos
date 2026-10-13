@@ -380,6 +380,11 @@ function makePoints(n,col,size,opacity){
 function resetWorldParticle(p,kind,td){
   var c=td.ct.target,R=clamp(td.radio||420,80,900),rx=R*1.15,rz=R*.82,h=clamp(R*.40,45,230);
   p.x=c.x+(rnd()*2-1)*rx;p.z=c.z+(rnd()*2-1)*rz;p.y=2+rnd()*h;p.phase=rnd()*6.28;p.depth=.35+rnd()*.65;
+  if(kind==='wind'){
+    /* Las trazas representan el estrato que ve la estructura, no toda la troposfera.
+       Se concentran en los primeros 35 m para que la cizalladura sea legible. */
+    p.y=.7+rnd()*Math.min(35,h);p.turb=.35+rnd()*.65;
+  }
   if(kind==='snow'){p.fall=5+rnd()*9;p.flutter=(rnd()*2-1);p.life=rnd();}
   if(kind==='hail'){p.vy=28+rnd()*28;p.bounce=0;p.life=rnd();}
   if(kind==='dust'){p.y=.2+rnd()*2.4;p.life=rnd();p.lift=.3+rnd()*1.5;}
@@ -604,17 +609,23 @@ function updateWind3D(td,s,dt,t){
   var vw=Math.max(s.wind,s.gust||0),active=vw>2,n=Math.round(25+clamp(vw/110,0,1)*(MAX_WIND-25));
   F.obj.visible=active;F.mat.opacity=.08+clamp(vw/120,0,.30);
   if(!active)return;
-  var speed=5+vw*.20,extraGust=clamp(((s.gust||0)-s.wind)/70,0,.38);
+  var speed=5+vw*.20,extraGust=clamp(((s.gust||0)-s.wind)/70,0,.38),
+      href=Math.max(.5,num('wh',4)),cross={x:-wv.z,z:wv.x};
   for(var i=0;i<MAX_WIND;i++){
     var p=F.p[i],o=i*6;
     if(i<n){
+      /* Mismo perfil de potencia α=1/7 que usa LOC.cizalla para llevar el viento
+         a la altura declarada. Aquí solo cambia la VELOCIDAD VISUAL de la traza. */
+      var shear=clamp(Math.pow(Math.max(.5,p.y)/href,1/7),.55,1.75);
       var gust=1+(.22+extraGust)*Math.sin(t*.005+p.phase)+(.08+extraGust*.35)*Math.sin(t*.013+p.phase*2.3);
-      p.x+=wv.x*speed*dt*p.depth*gust;p.z+=wv.z*speed*dt*p.depth*gust;
-      p.y+=Math.sin(t*.002+p.phase)*.18*dt;
+      var turb=(.15+extraGust*1.7)*(1-clamp(p.y/35,0,1))*p.turb;
+      p.x+=(wv.x*speed*shear*gust+cross.x*speed*turb*Math.sin(t*.009+p.phase))*dt*p.depth;
+      p.z+=(wv.z*speed*shear*gust+cross.z*speed*turb*Math.sin(t*.009+p.phase))*dt*p.depth;
+      p.y+=Math.sin(t*.002+p.phase)*(.08+.16*turb)*dt;
       var dx=p.x-c.x,dz=p.z-c.z;
-      if(Math.abs(dx)>R*1.25||Math.abs(dz)>R*.95||p.y<.5||p.y>clamp(R*.42,45,230))
+      if(Math.abs(dx)>R*1.25||Math.abs(dz)>R*.95||p.y<.45||p.y>38)
         resetWorldParticle(p,'wind',td);
-      var L=(7+s.wind*.18)*(0.5+p.depth);
+      var L=(7+s.wind*.18)*(0.5+p.depth)*shear;
       F.arr[o]=p.x;F.arr[o+1]=p.y;F.arr[o+2]=p.z;
       F.arr[o+3]=p.x-wv.x*L;F.arr[o+4]=p.y;F.arr[o+5]=p.z-wv.z*L;
     }else{
@@ -745,6 +756,8 @@ window.__simVientoMeteoFx={
       bound:!!(F3.td&&F3.root&&F3.root.parent),
       frameSource:window.__simVientoMeteoFrame?'shared':'fallback',
       windVisible:!!(F3.wind&&F3.wind.obj.visible),
+      windReferenceHeightM:num('wh',4),
+      windShearAlpha:1/7,
       snowVisible:!!(F3.snow&&F3.snow.obj.visible),
       hailVisible:!!(F3.hail&&F3.hail.obj.visible),
       dustVisible:!!(F3.dust&&F3.dust.obj.visible),
