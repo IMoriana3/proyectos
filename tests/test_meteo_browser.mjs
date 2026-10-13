@@ -43,6 +43,27 @@ const forecast72=WX.forecastOperationalSummary([
 check("72h detecta eventos operativos",forecast72.events.length>=5,"events="+forecast72.events.length);
 check("72h conserva métricas de viento/temperatura",forecast72.metrics.max_gust_ms===18&&forecast72.metrics.min_temp_c===-1);
 
+const wn=WX.fromWeatherNextSummary({
+  timestamp:"2026-10-13T12:00:00Z",lat:42.8,lon:-1.6,
+  temperature_2m_p50:282.0,dewpoint_temperature_2m_p50:277.0,
+  wind_speed_10m_p50:5.0,wind_speed_100m_p50:7.0,wind_direction_10m_p50:90.0,
+  surface_solar_radiation_downwards_1hr_p50:2160000,
+  total_sky_direct_solar_radiation_at_surface_1hr_p50:1440000,
+  total_precipitation_1hr_p50:.0005,total_cloud_cover_p50:.4,
+  low_cloud_cover_p50:.2,medium_cloud_cover_p50:.1,high_cloud_cover_p50:.1,
+  mean_sea_level_pressure_p50:101300,
+  p10:{wind_ms:3},p50:{wind_ms:5},p90:{wind_ms:9},
+  provenance:{provider:"Google WeatherNext 3",surface:"BigQuery",init_time:"2026-10-13T06:00:00Z"}
+});
+check("WeatherNext proxy conserva source y timestamp",wn.source==="weathernext3"&&wn.timestamp==="2026-10-13T12:00:00Z");
+check("WeatherNext convierte K a °C",near(wn.temp_c,8.85,1e-9),String(wn.temp_c));
+check("WeatherNext conserva dirección de viento derivada",near(wn.wind_dir_deg,90),String(wn.wind_dir_deg));
+check("WeatherNext convierte SSRD/FDIR J/m² a W/m²",near(wn.ghi_wm2,600)&&near(wn.fdir_wm2,400),wn.ghi_wm2+" / "+wn.fdir_wm2);
+check("WeatherNext convierte precipitación m a mm",near(wn.precip_mm,.5),String(wn.precip_mm));
+check("WeatherNext convierte presión Pa a hPa",near(wn.pressure_hpa,1013),String(wn.pressure_hpa));
+check("WeatherNext conserva bandas p10/p50/p90",wn.p10?.wind_ms===3&&wn.p50?.wind_ms===5&&wn.p90?.wind_ms===9);
+check("WeatherNext conserva provenance BigQuery",wn.provenance?.surface==="BigQuery"&&wn.provenance?.init_time==="2026-10-13T06:00:00Z");
+
 const wcFixture={source:"Open-Meteo / ERA5",source_id:"openmeteo",lat:42.8,lon:-1.6,qa:{status:"PASS",hash:"abc123"},rows:[
   {t:"2024-01-01T00:00:00Z",ghi_wm2:0,dni_wm2:0,dhi_wm2:0,temp_c:4,wind_ms:2},
   {t:"2024-01-01T01:00:00Z",ghi_wm2:10,dni_wm2:5,dhi_wm2:5,temp_c:3,wind_ms:3}
