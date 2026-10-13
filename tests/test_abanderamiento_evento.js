@@ -260,6 +260,9 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('la nieve tiene precipitación 3D, manto de suelo y recubrimiento de mesas',
     fxSnow&&fxSnow.snowVisible&&fxSnow.snowGround>0&&(fxSnow.snowCoats>0||fxSnow.instancedSnow),
     JSON.stringify(fxSnow));
+  check('la cota visual de nieve sigue el espesor en metros',
+    fxSnow&&Math.abs(fxSnow.snowDepthM-0.15)<.011,
+    JSON.stringify(fxSnow));
 
   const impact=await page.evaluate(()=> {
     const f=window.__simVientoMeteoFx;
