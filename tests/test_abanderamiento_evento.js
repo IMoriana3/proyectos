@@ -357,6 +357,24 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('carga acumulada: fuera de IMPACTO no integra carga ficticia',
     cumulative.quiet.seconds===0&&cumulative.quiet.rows.length===0,
     JSON.stringify(cumulative.quiet));
+  const windPressure=await page.evaluate(()=>{
+    const f=__simVientoMeteoFx.windPressure;
+    return {
+      flat:f(60,270,0,0),
+      vertical:f(60,270,0,90),
+      tilt:f(60,270,0,55)
+    };
+  });
+  check('presión viento: una mesa horizontal no recibe componente normal de viento horizontal',
+    windPressure.flat.normal_dynamic_pa<1e-6,
+    JSON.stringify(windPressure.flat));
+  check('presión viento: una mesa vertical de cara al viento recibe q⊥ = q',
+    Math.abs(windPressure.vertical.normal_dynamic_pa/windPressure.vertical.dynamic_pa-1)<.001,
+    JSON.stringify(windPressure.vertical));
+  check('presión viento: a 55° q⊥/q sigue sin²(55°)',
+    Math.abs(windPressure.tilt.normal_dynamic_pa/windPressure.tilt.dynamic_pa-
+      Math.pow(Math.sin(55*Math.PI/180),2))<.01,
+    JSON.stringify(windPressure.tilt));
   check('las tarjetas dicen quién manda y el estado de protección',
     /VIENTO × GRANIZO|GRANIZO|VIENTO/.test(pinta.tiles)&&/TRÁNSITO|POSICIÓN|MODELADO|SEGUIMIENTO/.test(pinta.tiles),
     pinta.tiles.slice(0,300));
