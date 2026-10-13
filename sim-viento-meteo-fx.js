@@ -273,6 +273,10 @@ function updateImpactHud(s){
   }
   impactHud.innerHTML=h;impactHud.style.display='block';
 }
+function windShearFactor(heightM,referenceM){
+  var h=Math.max(.5,+heightM||.5),r=Math.max(.5,+referenceM||.5);
+  return Math.pow(h/r,1/7);
+}
 function screenWind(dir){
   var a=(dir+90)*Math.PI/180;
   return {x:Math.cos(a),y:Math.sin(a)*.18};
@@ -616,7 +620,7 @@ function updateWind3D(td,s,dt,t){
     if(i<n){
       /* Mismo perfil de potencia α=1/7 que usa LOC.cizalla para llevar el viento
          a la altura declarada. Aquí solo cambia la VELOCIDAD VISUAL de la traza. */
-      var shear=clamp(Math.pow(Math.max(.5,p.y)/href,1/7),.55,1.75);
+      var shear=clamp(windShearFactor(p.y,href),.55,1.75);
       var gust=1+(.22+extraGust)*Math.sin(t*.005+p.phase)+(.08+extraGust*.35)*Math.sin(t*.013+p.phase*2.3);
       var turb=(.15+extraGust*1.7)*(1-clamp(p.y/35,0,1))*p.turb;
       p.x+=(wv.x*speed*shear*gust+cross.x*speed*turb*Math.sin(t*.009+p.phase))*dt*p.depth;
@@ -747,6 +751,7 @@ window.__simVientoMeteoFx={
   version:9,
   impact:impactMetrics,
   optimalTilt:optimalTilt,
+  windShearFactor:windShearFactor,
   trajectory:hailVelocity,
   cumulativeImpact:impactCumulative,
   impactEnvelope:impactEnvelope,
