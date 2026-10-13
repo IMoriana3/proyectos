@@ -240,6 +240,17 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('el granizo 3D aparece en IMPACTO, no durante la vigilancia',
     fxHail&&!fxHail.antes.hailVisible&&fxHail.impacto.hailVisible&&fxHail.impacto.state.impact,
     JSON.stringify(fxHail));
+  check('la carga de impacto se pinta sobre las mesas durante el episodio de granizo',
+    fxHail&&fxHail.impacto.impactSurfaceVisible&&fxHail.impacto.impactSkins>0,
+    JSON.stringify(fxHail.impacto));
+  const fxClear=await page.evaluate(async()=>{
+    aplicaPresetEvento('wind_ramp');eventoAplica(0);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    return __simVientoMeteoFx.snapshot();
+  });
+  check('la superficie de impacto desaparece cuando ya no hay episodio de granizo',
+    fxClear&&!fxClear.impactSurfaceVisible,
+    JSON.stringify(fxClear));
 
   const fxSnow=await page.evaluate(async()=>{
     aplicaPresetEvento('snow');eventoAplica(1);
@@ -269,6 +280,10 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     Math.abs(impact.tilt.normal_energy_j/impact.tilt.energy_j-
       Math.pow(Math.cos(55*Math.PI/180),2))<.02,
     JSON.stringify(impact.tilt));
+  check('modelo impacto: el proxy de carga cae como cos³(55°) sin viento',
+    Math.abs(impact.tilt.impact_flux_proxy/impact.flat.impact_flux_proxy-
+      Math.pow(Math.cos(55*Math.PI/180),3))<.025,
+    JSON.stringify({flat:impact.flat.impact_flux_proxy,tilt:impact.tilt.impact_flux_proxy}));
   check('modelo impacto: el mismo tilt distingue viento a favor y en contra de la cara',
     impact.fromEast.normal_energy_j>impact.fromWest.normal_energy_j,
     JSON.stringify({oeste:impact.fromWest.normal_energy_j,este:impact.fromEast.normal_energy_j}));
