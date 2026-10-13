@@ -159,6 +159,19 @@ function impactMetrics(mm,windKmh,hailDirDeg,axisAzDeg,thetaDeg){
           impact_flux_proxy:fluxProxy,
           theta_deg:+thetaDeg||0,axis_az_deg:+axisAzDeg||0,hail_dir_deg:+hailDirDeg||0};
 }
+function hailThresholdMm(){
+  var v=(window.LOC&&LOC.VDE&&+LOC.VDE.umbral_tamano_granizo_cm>0)?
+    10*(+LOC.VDE.umbral_tamano_granizo_cm):19;
+  return v;
+}
+function impactEnvelope(maxMm,windKmh,hailDirDeg,axisAzDeg,thetaDeg){
+  var hi=Math.max(0,+maxMm||0),lo=Math.min(hi,hailThresholdMm());
+  return {
+    threshold_mm:lo,max_mm:hi,
+    threshold:impactMetrics(lo,windKmh,hailDirDeg,axisAzDeg,thetaDeg),
+    maximum:impactMetrics(hi,windKmh,hailDirDeg,axisAzDeg,thetaDeg)
+  };
+}
 function impactRows(s){
   var fr=s.frame,ang=fr&&fr.ang?fr.ang:null;if(!ang)return [];
   var axis=num('axaz',0),dir=isFinite(s.hailDir)?s.hailDir:s.dir,rows=[];
@@ -176,19 +189,30 @@ function updateImpactHud(s){
   var phase=s.impact?'IMPACTO':'PREVISIÓN · si impactase ahora';
   var base=rows.find(function(q){return q.k==='BASE';})||rows[0],best=Infinity,worst=-Infinity;
   rows.forEach(function(q){best=Math.min(best,q.impact_flux_proxy);worst=Math.max(worst,q.impact_flux_proxy);});
-  var h='<b>GRANIZO · '+phase+'</b> · modelo mecánico de referencia<br>'+
-    Math.round(s.mm)+' mm · masa '+base.mass_g.toFixed(1)+' g · v<sub>t</sub> '+base.vt_ms.toFixed(1)+' m/s'+
-    ' · viento '+Math.max(s.wind,s.gust||0).toFixed(0)+' km/h'+
-    '<table><thead><tr><th>caso</th><th>θ</th><th>cara</th><th>inc.</th><th>expuesto</th><th>v⊥</th><th>E⊥</th><th>Φ* vs BASE</th></tr></thead><tbody>';
+  var thr=Math.min(Math.max(0,s.mm),hailThresholdMm()),windNow=Math.max(s.wind,s.gust||0),
+      axis=num('axaz',0),dir=isFinite(s.hailDir)?s.hailDir:s.dir,
+      baseLo=impactMetrics(thr,windNow,dir,axis,base.theta_deg);
+  var rango=Math.abs(s.mm-thr)>.05?(thr.toFixed(0)+'→'+Math.round(s.mm)+' mm'):(Math.round(s.mm)+' mm');
+  var h='<b>GRANIZO · '+phase+'</b> · envolvente mecánica '+rango+'<br>'+
+    'piedra máxima: masa '+base.mass_g.toFixed(1)+' g · v<sub>t</sub> '+base.vt_ms.toFixed(1)+' m/s'+
+    ' · viento '+windNow.toFixed(0)+' km/h · piel 3D = caso máximo'+
+    '<table><thead><tr><th>caso</th><th>θ</th><th>cara</th><th>inc.</th><th>expuesto</th><th>v⊥</th><th>E⊥ max</th><th>Φ* vs BASE</th></tr></thead><tbody>';
   rows.forEach(function(q){
-    var red=(base.impact_flux_proxy>1e-12)?100*(1-q.impact_flux_proxy/base.impact_flux_proxy):null;
+    var redHi=(base.impact_flux_proxy>1e-12)?100*(1-q.impact_flux_proxy/base.impact_flux_proxy):null;
+    var qLo=impactMetrics(thr,windNow,dir,axis,q.theta_deg);
+    var redLo=(baseLo.impact_flux_proxy>1e-12)?100*(1-qLo.impact_flux_proxy/baseLo.impact_flux_proxy):null;
     var col=Math.abs(q.impact_flux_proxy-best)<1e-9?'#62c88a':(Math.abs(q.impact_flux_proxy-worst)<1e-9?'#e84858':'inherit');
+    var rr='—';
+    if(q.k!=='BASE'&&redHi!==null&&redLo!==null){
+      var a=Math.min(redLo,redHi),b=Math.max(redLo,redHi);
+      rr=(a>=0?'−':'+')+Math.abs(a).toFixed(0)+' %';
+      if(Math.abs(b-a)>.6)rr+='…'+(b>=0?'−':'+')+Math.abs(b).toFixed(0)+' %';
+    }
     h+='<tr style="color:'+col+'"><td>'+q.k+'</td><td>'+q.theta_deg.toFixed(0)+'°</td><td>'+q.face+'</td><td>'+q.incidence_deg.toFixed(0)+'°</td>'+
        '<td>'+Math.round(q.exposure*100)+' %</td><td>'+q.normal_ms.toFixed(1)+' m/s</td>'+
-       '<td>'+q.normal_energy_j.toFixed(q.normal_energy_j<10?1:0)+' J</td>'+
-       '<td>'+(q.k==='BASE'||red===null?'—':((red>=0?'−':'+')+Math.abs(red).toFixed(0)+' %'))+'</td></tr>';
+       '<td>'+q.normal_energy_j.toFixed(q.normal_energy_j<10?1:0)+' J</td><td>'+rr+'</td></tr>';
   });
-  h+='</tbody></table><span style="opacity:.68">Φ* ∝ E⊥·v⊥: comparación relativa de carga si la concentración de piedras fuese la misma; no es W/m² ni probabilidad de rotura.</span>';
+  h+='</tbody></table><span style="opacity:.68">La envolvente usa la piedra umbral ('+thr.toFixed(0)+' mm) y la máxima; la probabilidad del forecast NO es fracción de piedras. Φ* es comparación relativa, no W/m² ni probabilidad de rotura.</span>';
   impactHud.innerHTML=h;impactHud.style.display='block';
 }
 function screenWind(dir){
@@ -613,8 +637,9 @@ function update3D(s,dt,t){
 
 var LAST_STATE=null;
 window.__simVientoMeteoFx={
-  version:4,
+  version:5,
   impact:impactMetrics,
+  impactEnvelope:impactEnvelope,
   reference:Object.assign({},IMPACT_REF),
   snapshot:function(){
     return {
