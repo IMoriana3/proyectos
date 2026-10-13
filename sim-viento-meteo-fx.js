@@ -308,7 +308,7 @@ function atmosphere(s,t){
 
 /* ═════════════════════════ 3D: meteorología dentro del mundo ═════════════ */
 var F3={td:null,root:null,mundo:null,wind:null,snow:null,hail:null,hailArrow:null,dust:null,clouds:null,ground:null,
-        coats:[],instSnow:null,instSource:null,impactSkins:[],instImpact:null,instImpactSource:null,
+        impactTx:null,coats:[],instSnow:null,instSource:null,impactSkins:[],instImpact:null,instImpactSource:null,
         baseFogNear:null,baseFogFar:null};
 var MAX_WIND=190,MAX_SNOW=900,MAX_HAIL=700,MAX_DUST=280;
 
@@ -319,6 +319,25 @@ function roundTexture(){
   g.addColorStop(.8,'rgba(225,238,248,.55)');g.addColorStop(1,'rgba(225,238,248,0)');
   q.fillStyle=g;q.fillRect(0,0,64,64);
   var tx=new THREE.CanvasTexture(c);tx.needsUpdate=true;return tx;
+}
+function impactTexture(){
+  var c=document.createElement('canvas');c.width=512;c.height=128;var q=c.getContext('2d');
+  q.clearRect(0,0,c.width,c.height);
+  var sr=0x8a71c3;
+  function rr(){sr^=sr<<13;sr>>>=0;sr^=sr>>>17;sr^=sr<<5;sr>>>=0;return sr/4294967296;}
+  /* Patrón espacial UNIFORME: los puntos no son impactos contados ni una tasa.
+     Solo hacen visible la cara y la intensidad relativa que ya calcula Φ*. */
+  for(var i=0;i<170;i++){
+    var px=rr()*c.width,py=rr()*c.height,r=.7+rr()*2.2,a=.20+rr()*.55;
+    q.strokeStyle='rgba(255,255,255,'+a.toFixed(3)+')';q.lineWidth=.55+rr()*.9;
+    q.beginPath();q.arc(px,py,r,0,Math.PI*2);q.stroke();
+    if(rr()>.72){
+      q.fillStyle='rgba(255,255,255,'+(a*.45).toFixed(3)+')';
+      q.beginPath();q.arc(px,py,Math.max(.35,r*.28),0,Math.PI*2);q.fill();
+    }
+  }
+  var tx=new THREE.CanvasTexture(c);tx.wrapS=tx.wrapT=THREE.RepeatWrapping;tx.repeat.set(2,1);
+  tx.anisotropy=4;return tx;
 }
 function groundSnowTexture(){
   var c=document.createElement('canvas');c.width=c.height=256;var q=c.getContext('2d');
@@ -425,6 +444,7 @@ function disposeImpactSurface(){
 }
 function scanCoats(td){
   F3.coats=[];disposeInstSnow();disposeImpactSurface();F3.mundo=td.mundo;
+  if(!F3.impactTx)F3.impactTx=impactTexture();
   /* Cada mundo puede redimensionar la niebla a su extensión. Ésta es la base
      que se restaura cuando pasa el temporal, no la del arranque de la página. */
   if(td.sc.fog){F3.baseFogNear=td.sc.fog.near;F3.baseFogFar=td.sc.fog.far;}
@@ -465,7 +485,7 @@ function scanCoats(td){
   if(E&&E.kind==='cmp'&&E.bloques&&window.Seguidor){
     var D2=Seguidor.DIMS;
     E.bloques.forEach(function(b){
-      var matI=new THREE.MeshBasicMaterial({color:0xe84858,transparent:true,opacity:0,
+      var matI=new THREE.MeshBasicMaterial({color:0xe84858,map:F3.impactTx,transparent:true,opacity:0,
         depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
         polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4});
       b.segs.forEach(function(t){
@@ -485,7 +505,7 @@ function scanCoats(td){
       });
     });
   }else if(E&&E.mesas&&E.mesas.isInstancedMesh&&E.mesas.parent){
-    var imat=new THREE.MeshBasicMaterial({color:0xe84858,transparent:true,opacity:0,depthWrite:false,
+    var imat=new THREE.MeshBasicMaterial({color:0xe84858,map:F3.impactTx,transparent:true,opacity:0,depthWrite:false,
       side:THREE.DoubleSide,blending:THREE.AdditiveBlending,polygonOffset:true,
       polygonOffsetFactor:-4,polygonOffsetUnits:-4});
     var ii=new THREE.InstancedMesh(E.mesas.geometry,imat,E.mesas.count);
@@ -722,6 +742,7 @@ window.__simVientoMeteoFx={
       snowCoats:F3.coats.length,
       instancedSnow:!!F3.instSnow,
       impactSkins:F3.impactSkins.length,
+      impactTexture:!!F3.impactTx,
       impactSurfaceVisible:F3.impactSkins.some(function(q){return q.front.visible||q.rear.visible;})||!!(F3.instImpact&&F3.instImpact.visible),
       impactFaces:F3.impactSkins.reduce(function(o,q){
         if(q.front.visible)o[q.k]='FRONTAL';else if(q.rear.visible)o[q.k]='TRASERA';return o;
