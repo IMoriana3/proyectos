@@ -737,13 +737,16 @@ function updateHail3D(td,s,dt){
 }
 function updateDust3D(td,s,dt,t){
   var F=F3.dust,wv=worldWind(s.dir),c=td.ct.target,R=clamp(td.radio||420,80,900);
-  var vw=Math.max(s.wind,s.gust||0),strength=clamp((vw-38)/70,0,1)*(s.snow>.1?0.12:1)*(s.impact?0.35:1);
+  var vw=Math.max(s.wind,s.gust||0),href=Math.max(.5,num('wh',4)),
+      groundWind=vw*windShearFactor(1,href),
+      strength=clamp((groundWind-32)/65,0,1)*(s.snow>.1?0.12:1)*(s.impact?0.35:1);
+  F3._groundWindKmh=groundWind;
   var n=Math.round(strength*MAX_DUST);F.obj.visible=n>4;F.mat.opacity=.28*strength;F.mat.size=clamp(R/360,.8,2.2);
   if(n<=4)return;
   for(var i=0;i<MAX_DUST;i++){
     var p=F.p[i],o=i*3;
     if(i<n){
-      p.x+=wv.x*(5+vw*.10)*dt;p.z+=wv.z*(5+vw*.10)*dt;
+      p.x+=wv.x*(5+groundWind*.10)*dt;p.z+=wv.z*(5+groundWind*.10)*dt;
       p.y+=Math.sin(t*.002+p.phase)*p.lift*dt*.35;
       if(p.y<.15)p.y=.15;
       if(Math.abs(p.x-c.x)>R*1.2||Math.abs(p.z-c.z)>R*.9)resetWorldParticle(p,'dust',td);
@@ -795,6 +798,7 @@ window.__simVientoMeteoFx={
       windReferenceHeightM:num('wh',4),
       windShearAlpha:1/7,
       windProfileArrows:!!(F3.windArrows&&F3.windArrows.group&&F3.windArrows.group.visible),
+      nearGroundWindKmh:+(F3._groundWindKmh||0).toFixed(2),
       snowVisible:!!(F3.snow&&F3.snow.obj.visible),
       hailVisible:!!(F3.hail&&F3.hail.obj.visible),
       dustVisible:!!(F3.dust&&F3.dust.obj.visible),
