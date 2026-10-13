@@ -587,11 +587,15 @@ function updateImpactSurfaces(s,t){
 function syncGround(td,s){
   if(!F3.ground)return;
   var g=F3.ground.obj;
+  var depthM=clamp((+s.snow||0)/100,0,.35);
   if(td.suelo){
-    g.position.x=td.suelo.position.x;g.position.z=td.suelo.position.z;g.scale.copy(td.suelo.scale);
+    g.position.x=td.suelo.position.x;g.position.z=td.suelo.position.z;
+    g.position.y=(td.suelo.position.y||0)+.012+depthM;
+    g.scale.copy(td.suelo.scale);
   }else{
-    var R=clamp(td.radio||420,80,1200);g.scale.set(R*2.6,R*2.0,1);
+    var R=clamp(td.radio||420,80,1200);g.scale.set(R*2.6,R*2.0,1);g.position.y=.012+depthM;
   }
+  F3.ground.userData.depthM=depthM;
   F3.ground.mat.opacity=clamp(s.snow/18,0,.72);
   g.visible=F3.ground.mat.opacity>.01;
 }
@@ -745,6 +749,7 @@ window.__simVientoMeteoFx={
       hailVisible:!!(F3.hail&&F3.hail.obj.visible),
       dustVisible:!!(F3.dust&&F3.dust.obj.visible),
       snowGround:F3.ground?+F3.ground.mat.opacity.toFixed(3):0,
+      snowDepthM:F3.ground&&F3.ground.obj.visible?+(F3.ground.obj.userData.depthM||0).toFixed(3):0,
       snowCoats:F3.coats.length,
       instancedSnow:!!F3.instSnow,
       impactSkins:F3.impactSkins.length,
