@@ -238,6 +238,9 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     shear.low<1&&Math.abs(shear.low-Math.pow(1/4,1/7))<1e-12,JSON.stringify(shear));
   check('viento 3D: por encima de la referencia el perfil 1/7 aumenta velocidad',
     shear.high>1&&Math.abs(shear.high-Math.pow(4,1/7))<1e-12,JSON.stringify(shear));
+  check('viento 3D: el perfil vertical tiene vectores visibles en la escena',
+    fxWind&&fxWind.windProfileArrows&&Math.abs(fxWind.windReferenceHeightM-4)<.01,
+    JSON.stringify(fxWind));
 
   const fxHail=await page.evaluate(async()=>{
     aplicaPresetEvento('hail_far');eventoAplica(0);
