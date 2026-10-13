@@ -421,6 +421,7 @@ declare -A PISO=(
   # el día juliano corrido un día entero, el backtracking quitado del todo y la
   # refracción anulada. Este banco los mata 4, 5 y 3.
   [test_solar.js]=73
+  [test_solar_weather_contract.mjs]=14
   [test_sizing.js]=115
   # 13, y MEDIDO en los TRES modos —con checkout hermano, por `main` sobre
   # HTTPS y sin ninguno de los dos— porque el recuento no cambia entre ellos:
