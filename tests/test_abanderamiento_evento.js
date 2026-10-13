@@ -333,6 +333,30 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('trayectoria granizo: render y cálculo comparten la misma velocidad terminal',
     Math.abs(traj.t.vt_ms-traj.q.vt_ms)<1e-9&&Math.abs(traj.t.speed_ms-traj.q.speed_ms)<1e-9,
     JSON.stringify(traj));
+  const cumulative=await page.evaluate(()=>{
+    const frames=[
+      {t_min:0,hail_phase:'IMPACTO',hail_mm:30,wind_ms:0,gust_ms:0,wind_dir:270,hail_dir:270,
+       ang:{BASE:0,A1:55}},
+      {t_min:1,hail_phase:'IMPACTO',hail_mm:30,wind_ms:0,gust_ms:0,wind_dir:270,hail_dir:270,
+       ang:{BASE:0,A1:55}},
+      {t_min:2,hail_phase:'RETENCION',hail_mm:30,wind_ms:0,gust_ms:0,wind_dir:270,hail_dir:270,
+       ang:{BASE:0,A1:55}}
+    ];
+    const active=__simVientoMeteoFx.cumulativeImpact(frames,0);
+    const quiet=__simVientoMeteoFx.cumulativeImpact([
+      {t_min:0,hail_phase:'DEFENSA',hail_mm:30,wind_ms:0,ang:{BASE:0,A1:55}},
+      {t_min:1,hail_phase:'RETENCION',hail_mm:30,wind_ms:0,ang:{BASE:0,A1:55}}
+    ],0);
+    return {active,quiet};
+  });
+  check('carga acumulada: un episodio constante conserva la razón cos³(55°)',
+    cumulative.active.seconds===120&&
+    Math.abs((cumulative.active.rows.find(x=>x.k==='A1').value/
+      cumulative.active.rows.find(x=>x.k==='BASE').value)-Math.pow(Math.cos(55*Math.PI/180),3))<.025,
+    JSON.stringify(cumulative.active));
+  check('carga acumulada: fuera de IMPACTO no integra carga ficticia',
+    cumulative.quiet.seconds===0&&cumulative.quiet.rows.length===0,
+    JSON.stringify(cumulative.quiet));
   check('las tarjetas dicen quién manda y el estado de protección',
     /VIENTO × GRANIZO|GRANIZO|VIENTO/.test(pinta.tiles)&&/TRÁNSITO|POSICIÓN|MODELADO|SEGUIMIENTO/.test(pinta.tiles),
     pinta.tiles.slice(0,300));
