@@ -31,6 +31,14 @@ Object.assign(impactHud.style,{position:'absolute',right:'10px',bottom:'10px',zI
   boxShadow:'0 8px 24px rgba(0,0,0,.28)',backdropFilter:'blur(4px)',display:'none'});
 host.appendChild(impactHud);
 
+var shearHud=document.createElement('div');
+shearHud.id='meteoShearHud';
+Object.assign(shearHud.style,{position:'absolute',left:'10px',top:'54px',zIndex:'9',pointerEvents:'none',
+  padding:'4px 7px',background:'rgba(9,16,25,.72)',border:'1px solid rgba(90,169,255,.38)',
+  color:'#a9cbe8',font:'10px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace',
+  backdropFilter:'blur(3px)',display:'none'});
+host.appendChild(shearHud);
+
 var style=document.createElement('style');
 style.textContent=
   '#view3d .hailfx{display:none!important}'+
@@ -273,6 +281,10 @@ function updateImpactHud(s){
   }
   impactHud.innerHTML=h;impactHud.style.display='block';
 }
+function windShearFactor(heightM,referenceM){
+  var h=Math.max(.5,+heightM||.5),r=Math.max(.5,+referenceM||.5);
+  return Math.pow(h/r,1/7);
+}
 function screenWind(dir){
   var a=(dir+90)*Math.PI/180;
   return {x:Math.cos(a),y:Math.sin(a)*.18};
@@ -307,7 +319,7 @@ function atmosphere(s,t){
 }
 
 /* ═════════════════════════ 3D: meteorología dentro del mundo ═════════════ */
-var F3={td:null,root:null,mundo:null,wind:null,snow:null,hail:null,hailArrow:null,dust:null,clouds:null,ground:null,
+var F3={td:null,root:null,mundo:null,wind:null,windArrows:null,snow:null,hail:null,hailArrow:null,dust:null,clouds:null,ground:null,
         impactTx:null,coats:[],instSnow:null,instSource:null,impactSkins:[],instImpact:null,instImpactSource:null,
         baseFogNear:null,baseFogFar:null};
 var MAX_WIND=190,MAX_SNOW=900,MAX_HAIL=700,MAX_DUST=280;
@@ -380,6 +392,11 @@ function makePoints(n,col,size,opacity){
 function resetWorldParticle(p,kind,td){
   var c=td.ct.target,R=clamp(td.radio||420,80,900),rx=R*1.15,rz=R*.82,h=clamp(R*.40,45,230);
   p.x=c.x+(rnd()*2-1)*rx;p.z=c.z+(rnd()*2-1)*rz;p.y=2+rnd()*h;p.phase=rnd()*6.28;p.depth=.35+rnd()*.65;
+  if(kind==='wind'){
+    /* Las trazas representan el estrato que ve la estructura, no toda la troposfera.
+       Se concentran en los primeros 35 m para que la cizalladura sea legible. */
+    p.y=.7+rnd()*Math.min(35,h);p.turb=.35+rnd()*.65;
+  }
   if(kind==='snow'){p.fall=5+rnd()*9;p.flutter=(rnd()*2-1);p.life=rnd();}
   if(kind==='hail'){p.vy=28+rnd()*28;p.bounce=0;p.life=rnd();}
   if(kind==='dust'){p.y=.2+rnd()*2.4;p.life=rnd();p.lift=.3+rnd()*1.5;}
@@ -395,6 +412,17 @@ function build3D(td){
   var wm=new THREE.LineBasicMaterial({color:0xb8ddf3,transparent:true,opacity:.26,depthWrite:false});
   F3.wind={obj:new THREE.LineSegments(wg,wm),arr:wa,p:[],mat:wm};root.add(F3.wind.obj);
   for(var i=0;i<MAX_WIND;i++)F3.wind.p.push(resetWorldParticle({},'wind',td));
+
+  /* Tres vectores de escala para hacer visible el perfil 1/7 sin leer código. */
+  var wag=new THREE.Group();wag.name='mfx-wind-shear-arrows';root.add(wag);F3.windArrows=[];
+  for(i=0;i<3;i++){
+    var ar=new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(),10,0x79bfff,2.3,1.1);
+    [ar.line&&ar.line.material,ar.cone&&ar.cone.material].forEach(function(m){
+      if(m){m.transparent=true;m.opacity=.52;m.depthWrite=false;}
+    });
+    wag.add(ar);F3.windArrows.push(ar);
+  }
+  F3.windArrows.group=wag;
 
   F3.snow=makePoints(MAX_SNOW,0xf4f8fb,1.35,.82);root.add(F3.snow.obj);
   F3.hail=makePoints(MAX_HAIL,0xe2eff8,1.8,.92);root.add(F3.hail.obj);
@@ -603,18 +631,36 @@ function updateWind3D(td,s,dt,t){
   var F=F3.wind,wv=worldWind(s.dir),R=clamp(td.radio||420,80,900),c=td.ct.target;
   var vw=Math.max(s.wind,s.gust||0),active=vw>2,n=Math.round(25+clamp(vw/110,0,1)*(MAX_WIND-25));
   F.obj.visible=active;F.mat.opacity=.08+clamp(vw/120,0,.30);
+  var href=Math.max(.5,num('wh',4));
+  if(F3.windArrows&&F3.windArrows.group){
+    var hs=[1,href,Math.max(10,href*2)],dir3=new THREE.Vector3(wv.x,0,wv.z).normalize(),
+        side=new THREE.Vector3(-wv.z,0,wv.x),base=c.clone().add(side.multiplyScalar(clamp(R*.22,22,95)));
+    F3.windArrows.group.visible=active;
+    F3.windArrows.forEach(function(ar,j){
+      var fac=windShearFactor(hs[j],href),L=clamp(7+(vw/3.6)*fac*.55,8,34);
+      ar.position.set(base.x,hs[j],base.z);ar.setDirection(dir3);ar.setLength(L,L*.20,L*.10);
+    });
+    shearHud.style.display=active?'':'none';
+    if(active)shearHud.textContent='perfil viento 1/7 · href '+href.toFixed(1)+' m · vectores '+hs.map(function(h){return h.toFixed(h<2?1:0);}).join(' / ')+' m';
+  }
   if(!active)return;
-  var speed=5+vw*.20,extraGust=clamp(((s.gust||0)-s.wind)/70,0,.38);
+  var speed=5+vw*.20,extraGust=clamp(((s.gust||0)-s.wind)/70,0,.38),
+      cross={x:-wv.z,z:wv.x};
   for(var i=0;i<MAX_WIND;i++){
     var p=F.p[i],o=i*6;
     if(i<n){
+      /* Mismo perfil de potencia α=1/7 que usa LOC.cizalla para llevar el viento
+         a la altura declarada. Aquí solo cambia la VELOCIDAD VISUAL de la traza. */
+      var shear=clamp(windShearFactor(p.y,href),.55,1.75);
       var gust=1+(.22+extraGust)*Math.sin(t*.005+p.phase)+(.08+extraGust*.35)*Math.sin(t*.013+p.phase*2.3);
-      p.x+=wv.x*speed*dt*p.depth*gust;p.z+=wv.z*speed*dt*p.depth*gust;
-      p.y+=Math.sin(t*.002+p.phase)*.18*dt;
+      var turb=(.15+extraGust*1.7)*(1-clamp(p.y/35,0,1))*p.turb;
+      p.x+=(wv.x*speed*shear*gust+cross.x*speed*turb*Math.sin(t*.009+p.phase))*dt*p.depth;
+      p.z+=(wv.z*speed*shear*gust+cross.z*speed*turb*Math.sin(t*.009+p.phase))*dt*p.depth;
+      p.y+=Math.sin(t*.002+p.phase)*(.08+.16*turb)*dt;
       var dx=p.x-c.x,dz=p.z-c.z;
-      if(Math.abs(dx)>R*1.25||Math.abs(dz)>R*.95||p.y<.5||p.y>clamp(R*.42,45,230))
+      if(Math.abs(dx)>R*1.25||Math.abs(dz)>R*.95||p.y<.45||p.y>38)
         resetWorldParticle(p,'wind',td);
-      var L=(7+s.wind*.18)*(0.5+p.depth);
+      var L=(7+s.wind*.18)*(0.5+p.depth)*shear;
       F.arr[o]=p.x;F.arr[o+1]=p.y;F.arr[o+2]=p.z;
       F.arr[o+3]=p.x-wv.x*L;F.arr[o+4]=p.y;F.arr[o+5]=p.z-wv.z*L;
     }else{
@@ -691,13 +737,16 @@ function updateHail3D(td,s,dt){
 }
 function updateDust3D(td,s,dt,t){
   var F=F3.dust,wv=worldWind(s.dir),c=td.ct.target,R=clamp(td.radio||420,80,900);
-  var vw=Math.max(s.wind,s.gust||0),strength=clamp((vw-38)/70,0,1)*(s.snow>.1?0.12:1)*(s.impact?0.35:1);
+  var vw=Math.max(s.wind,s.gust||0),href=Math.max(.5,num('wh',4)),
+      groundWind=vw*windShearFactor(1,href),
+      strength=clamp((groundWind-38)/70,0,1)*(s.snow>.1?0.12:1)*(s.impact?0.35:1);
+  F3._groundWindKmh=groundWind;
   var n=Math.round(strength*MAX_DUST);F.obj.visible=n>4;F.mat.opacity=.28*strength;F.mat.size=clamp(R/360,.8,2.2);
   if(n<=4)return;
   for(var i=0;i<MAX_DUST;i++){
     var p=F.p[i],o=i*3;
     if(i<n){
-      p.x+=wv.x*(5+vw*.10)*dt;p.z+=wv.z*(5+vw*.10)*dt;
+      p.x+=wv.x*(5+groundWind*.10)*dt;p.z+=wv.z*(5+groundWind*.10)*dt;
       p.y+=Math.sin(t*.002+p.phase)*p.lift*dt*.35;
       if(p.y<.15)p.y=.15;
       if(Math.abs(p.x-c.x)>R*1.2||Math.abs(p.z-c.z)>R*.9)resetWorldParticle(p,'dust',td);
@@ -736,6 +785,7 @@ window.__simVientoMeteoFx={
   version:9,
   impact:impactMetrics,
   optimalTilt:optimalTilt,
+  windShearFactor:windShearFactor,
   trajectory:hailVelocity,
   cumulativeImpact:impactCumulative,
   impactEnvelope:impactEnvelope,
@@ -745,6 +795,10 @@ window.__simVientoMeteoFx={
       bound:!!(F3.td&&F3.root&&F3.root.parent),
       frameSource:window.__simVientoMeteoFrame?'shared':'fallback',
       windVisible:!!(F3.wind&&F3.wind.obj.visible),
+      windReferenceHeightM:num('wh',4),
+      windShearAlpha:1/7,
+      windProfileArrows:!!(F3.windArrows&&F3.windArrows.group&&F3.windArrows.group.visible),
+      nearGroundWindKmh:+(F3._groundWindKmh||0).toFixed(2),
       snowVisible:!!(F3.snow&&F3.snow.obj.visible),
       hailVisible:!!(F3.hail&&F3.hail.obj.visible),
       dustVisible:!!(F3.dust&&F3.dust.obj.visible),
