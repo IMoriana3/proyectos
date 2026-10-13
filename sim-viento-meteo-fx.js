@@ -179,6 +179,19 @@ function impactEnvelope(maxMm,windKmh,hailDirDeg,axisAzDeg,thetaDeg){
     maximum:impactMetrics(hi,windKmh,hailDirDeg,axisAzDeg,thetaDeg)
   };
 }
+function optimalTilt(mm,windKmh,hailDirDeg,axisAzDeg,maxTiltDeg){
+  var lim=Math.max(0,Math.abs(+maxTiltDeg||0)),best=null;
+  /* Barrido fino: la función objetivo es suave y 1101 evaluaciones son irrelevantes
+     frente al render 3D. No se usa una fórmula cerrada para evitar errores de signo
+     entre azimut de eje, cara y convención de tilt. */
+  for(var i=0;i<=Math.round(lim*20)*2;i++){
+    var th=-lim+i*.05;
+    var q=impactMetrics(mm,windKmh,hailDirDeg,axisAzDeg,th);
+    if(!best||q.impact_flux_proxy<best.impact_flux_proxy){best=q;best.theta_deg=th;}
+  }
+  if(!best)return null;
+  return best;
+}
 function impactRows(s){
   var fr=s.frame,ang=fr&&fr.ang?fr.ang:null;if(!ang)return [];
   var axis=num('axaz',0),dir=isFinite(s.hailDir)?s.hailDir:s.dir,rows=[];
@@ -219,12 +232,17 @@ function updateImpactHud(s){
   rows.forEach(function(q){best=Math.min(best,q.impact_flux_proxy);worst=Math.max(worst,q.impact_flux_proxy);});
   var thr=Math.min(Math.max(0,s.mm),hailThresholdMm()),windNow=Math.max(s.wind,s.gust||0),
       axis=num('axaz',0),dir=isFinite(s.hailDir)?s.hailDir:s.dir,
+      maxTilt=Math.abs(num('maxang',55)),
+      opt=optimalTilt(s.mm,windNow,dir,axis,maxTilt),
+      optLo=optimalTilt(thr,windNow,dir,axis,maxTilt),
       baseLo=impactMetrics(thr,windNow,dir,axis,base.theta_deg);
   var rango=Math.abs(s.mm-thr)>.05?(thr.toFixed(0)+'→'+Math.round(s.mm)+' mm'):(Math.round(s.mm)+' mm');
   var h='<b>GRANIZO · '+phase+'</b> · envolvente mecánica '+rango+'<br>'+
     'piedra máxima: masa '+base.mass_g.toFixed(1)+' g · v<sub>t</sub> '+base.vt_ms.toFixed(1)+' m/s'+
     ' · viento '+windNow.toFixed(0)+' km/h · piel 3D = caso máximo'+
-    '<table><thead><tr><th>caso</th><th>θ</th><th>cara</th><th>inc.</th><th>expuesto</th><th>v⊥</th><th>E⊥ max</th><th>Φ* vs BASE</th></tr></thead><tbody>';
+    (opt?'<br><b>Óptimo físico dentro de ±'+maxTilt.toFixed(0)+'°:</b> θ '+opt.theta_deg.toFixed(1)+'° · '+opt.face+
+      ' · incidencia '+opt.incidence_deg.toFixed(1)+'° · E⊥ '+opt.normal_energy_j.toFixed(opt.normal_energy_j<10?1:0)+' J':'')+
+    '<table><thead><tr><th>caso</th><th>θ</th><th>Δθ ópt.</th><th>cara</th><th>inc.</th><th>expuesto</th><th>v⊥</th><th>E⊥ max</th><th>Φ* vs BASE</th></tr></thead><tbody>';
   rows.forEach(function(q){
     var redHi=(base.impact_flux_proxy>1e-12)?100*(1-q.impact_flux_proxy/base.impact_flux_proxy):null;
     var qLo=impactMetrics(thr,windNow,dir,axis,q.theta_deg);
@@ -236,11 +254,16 @@ function updateImpactHud(s){
       rr=(a>=0?'−':'+')+Math.abs(a).toFixed(0)+' %';
       if(Math.abs(b-a)>.6)rr+='…'+(b>=0?'−':'+')+Math.abs(b).toFixed(0)+' %';
     }
-    h+='<tr style="color:'+col+'"><td>'+q.k+'</td><td>'+q.theta_deg.toFixed(0)+'°</td><td>'+q.face+'</td><td>'+q.incidence_deg.toFixed(0)+'°</td>'+
+    var dOpt=opt?Math.abs(q.theta_deg-opt.theta_deg):null;
+    h+='<tr style="color:'+col+'"><td>'+q.k+'</td><td>'+q.theta_deg.toFixed(0)+'°</td><td>'+(dOpt==null?'—':dOpt.toFixed(1)+'°')+'</td><td>'+q.face+'</td><td>'+q.incidence_deg.toFixed(0)+'°</td>'+
        '<td>'+Math.round(q.exposure*100)+' %</td><td>'+q.normal_ms.toFixed(1)+' m/s</td>'+
        '<td>'+q.normal_energy_j.toFixed(q.normal_energy_j<10?1:0)+' J</td><td>'+rr+'</td></tr>';
   });
-  h+='</tbody></table><span style="opacity:.68">La envolvente usa la piedra umbral ('+thr.toFixed(0)+' mm) y la máxima; la probabilidad del forecast NO es fracción de piedras. Φ* es comparación relativa, no W/m² ni probabilidad de rotura.</span>';
+  h+='</tbody></table><span style="opacity:.68">La envolvente usa la piedra umbral ('+thr.toFixed(0)+' mm) y la máxima; la probabilidad del forecast NO es fracción de piedras. Φ* es comparación relativa, no W/m² ni probabilidad de rotura. El óptimo físico minimiza Φ* con el mismo vector de granizo y solo dentro del rango mecánico permitido.</span>';
+  if(opt&&optLo){
+    var same=Math.abs(opt.theta_deg-optLo.theta_deg)<.11;
+    h+='<br><span style="opacity:.76">Sensibilidad tamaño: óptimo '+thr.toFixed(0)+' mm = '+optLo.theta_deg.toFixed(1)+'° · '+Math.round(s.mm)+' mm = '+opt.theta_deg.toFixed(1)+'°'+(same?' · estable con el tamaño':' · cambia con el tamaño por la velocidad terminal')+'</span>';
+  }
   var ev=(window.EVENTO&&EVENTO.sim&&EVENTO.sim.frames)?impactCumulative(EVENTO.sim.frames,axis):null;
   if(ev&&ev.seconds>0){
     var pieces=ev.rows.filter(function(q){return q.k!=='BASE'&&q.vs_base!==null;}).map(function(q){
@@ -285,7 +308,7 @@ function atmosphere(s,t){
 
 /* ═════════════════════════ 3D: meteorología dentro del mundo ═════════════ */
 var F3={td:null,root:null,mundo:null,wind:null,snow:null,hail:null,hailArrow:null,dust:null,clouds:null,ground:null,
-        coats:[],instSnow:null,instSource:null,impactSkins:[],instImpact:null,instImpactSource:null,
+        impactTx:null,coats:[],instSnow:null,instSource:null,impactSkins:[],instImpact:null,instImpactSource:null,
         baseFogNear:null,baseFogFar:null};
 var MAX_WIND=190,MAX_SNOW=900,MAX_HAIL=700,MAX_DUST=280;
 
@@ -296,6 +319,25 @@ function roundTexture(){
   g.addColorStop(.8,'rgba(225,238,248,.55)');g.addColorStop(1,'rgba(225,238,248,0)');
   q.fillStyle=g;q.fillRect(0,0,64,64);
   var tx=new THREE.CanvasTexture(c);tx.needsUpdate=true;return tx;
+}
+function impactTexture(){
+  var c=document.createElement('canvas');c.width=512;c.height=128;var q=c.getContext('2d');
+  q.clearRect(0,0,c.width,c.height);
+  var sr=0x8a71c3;
+  function rr(){sr^=sr<<13;sr>>>=0;sr^=sr>>>17;sr^=sr<<5;sr>>>=0;return sr/4294967296;}
+  /* Patrón espacial UNIFORME: los puntos no son impactos contados ni una tasa.
+     Solo hacen visible la cara y la intensidad relativa que ya calcula Φ*. */
+  for(var i=0;i<170;i++){
+    var px=rr()*c.width,py=rr()*c.height,r=.7+rr()*2.2,a=.20+rr()*.55;
+    q.strokeStyle='rgba(255,255,255,'+a.toFixed(3)+')';q.lineWidth=.55+rr()*.9;
+    q.beginPath();q.arc(px,py,r,0,Math.PI*2);q.stroke();
+    if(rr()>.72){
+      q.fillStyle='rgba(255,255,255,'+(a*.45).toFixed(3)+')';
+      q.beginPath();q.arc(px,py,Math.max(.35,r*.28),0,Math.PI*2);q.fill();
+    }
+  }
+  var tx=new THREE.CanvasTexture(c);tx.wrapS=tx.wrapT=THREE.RepeatWrapping;tx.repeat.set(2,1);
+  tx.anisotropy=4;return tx;
 }
 function groundSnowTexture(){
   var c=document.createElement('canvas');c.width=c.height=256;var q=c.getContext('2d');
@@ -402,6 +444,7 @@ function disposeImpactSurface(){
 }
 function scanCoats(td){
   F3.coats=[];disposeInstSnow();disposeImpactSurface();F3.mundo=td.mundo;
+  if(!F3.impactTx)F3.impactTx=impactTexture();
   /* Cada mundo puede redimensionar la niebla a su extensión. Ésta es la base
      que se restaura cuando pasa el temporal, no la del arranque de la página. */
   if(td.sc.fog){F3.baseFogNear=td.sc.fog.near;F3.baseFogFar=td.sc.fog.far;}
@@ -417,7 +460,7 @@ function scanCoats(td){
       var a=new THREE.Mesh(geo,mat),b=new THREE.Mesh(geo.clone(),mat);
       a.position.set(D.mesaC,D.off+.046,0);b.position.set(-D.mesaC,D.off+.046,0);
       group.add(a,b);o.spin.add(group);
-      F3.coats.push({spin:o.spin,g:group,mat:mat});
+      F3.coats.push({spin:o.spin,g:group,mat:mat,span:D.modH});
     });
   }
 
@@ -442,7 +485,7 @@ function scanCoats(td){
   if(E&&E.kind==='cmp'&&E.bloques&&window.Seguidor){
     var D2=Seguidor.DIMS;
     E.bloques.forEach(function(b){
-      var matI=new THREE.MeshBasicMaterial({color:0xe84858,transparent:true,opacity:0,
+      var matI=new THREE.MeshBasicMaterial({color:0xe84858,map:F3.impactTx,transparent:true,opacity:0,
         depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
         polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4});
       b.segs.forEach(function(t){
@@ -462,7 +505,7 @@ function scanCoats(td){
       });
     });
   }else if(E&&E.mesas&&E.mesas.isInstancedMesh&&E.mesas.parent){
-    var imat=new THREE.MeshBasicMaterial({color:0xe84858,transparent:true,opacity:0,depthWrite:false,
+    var imat=new THREE.MeshBasicMaterial({color:0xe84858,map:F3.impactTx,transparent:true,opacity:0,depthWrite:false,
       side:THREE.DoubleSide,blending:THREE.AdditiveBlending,polygonOffset:true,
       polygonOffsetFactor:-4,polygonOffsetUnits:-4});
     var ii=new THREE.InstancedMesh(E.mesas.geometry,imat,E.mesas.count);
@@ -499,6 +542,12 @@ function updateCoats(s){
   for(var i=0;i<F3.coats.length;i++){
     var q=F3.coats[i],deg=q.spin.rotation.x*180/Math.PI,r=snowRetention(s.snow,deg,s.wind);
     q.g.visible=s.snow>.15&&r>.012;q.mat.opacity=.10+.84*r;
+    /* Forma visual de la descarga: al inclinar, la nieve que queda se concentra en
+       el borde BAJO de la mesa. No calcula masa ni avalancha; solo evita representar
+       una película uniforme que físicamente sería absurda a 55°. */
+    var ad=Math.min(85,Math.abs(deg)),cover=clamp(Math.pow(Math.cos(ad*Math.PI/180),1.15),.08,1),
+        sg=deg>=0?1:-1,shift=sg*(q.span||2.382)*(1-cover)/2;
+    q.g.children.forEach(function(m){m.scale.z=cover;m.position.z=shift;});
   }
   if(F3.instSnow){
     var r2=snowRetention(s.snow,frameAngle(s),s.wind);
@@ -538,11 +587,15 @@ function updateImpactSurfaces(s,t){
 function syncGround(td,s){
   if(!F3.ground)return;
   var g=F3.ground.obj;
+  var depthM=clamp((+s.snow||0)/100,0,.35);
   if(td.suelo){
-    g.position.x=td.suelo.position.x;g.position.z=td.suelo.position.z;g.scale.copy(td.suelo.scale);
+    g.position.x=td.suelo.position.x;g.position.z=td.suelo.position.z;
+    g.position.y=(td.suelo.position.y||0)+.012+depthM;
+    g.scale.copy(td.suelo.scale);
   }else{
-    var R=clamp(td.radio||420,80,1200);g.scale.set(R*2.6,R*2.0,1);
+    var R=clamp(td.radio||420,80,1200);g.scale.set(R*2.6,R*2.0,1);g.position.y=.012+depthM;
   }
+  F3.ground.obj.userData.depthM=depthM;
   F3.ground.mat.opacity=clamp(s.snow/18,0,.72);
   g.visible=F3.ground.mat.opacity>.01;
 }
@@ -680,8 +733,9 @@ function update3D(s,dt,t){
 
 var LAST_STATE=null;
 window.__simVientoMeteoFx={
-  version:8,
+  version:9,
   impact:impactMetrics,
+  optimalTilt:optimalTilt,
   trajectory:hailVelocity,
   cumulativeImpact:impactCumulative,
   impactEnvelope:impactEnvelope,
@@ -695,9 +749,11 @@ window.__simVientoMeteoFx={
       hailVisible:!!(F3.hail&&F3.hail.obj.visible),
       dustVisible:!!(F3.dust&&F3.dust.obj.visible),
       snowGround:F3.ground?+F3.ground.mat.opacity.toFixed(3):0,
+      snowDepthM:F3.ground&&F3.ground.obj.visible?+(F3.ground.obj.userData.depthM||0).toFixed(3):0,
       snowCoats:F3.coats.length,
       instancedSnow:!!F3.instSnow,
       impactSkins:F3.impactSkins.length,
+      impactTexture:!!F3.impactTx,
       impactSurfaceVisible:F3.impactSkins.some(function(q){return q.front.visible||q.rear.visible;})||!!(F3.instImpact&&F3.instImpact.visible),
       impactFaces:F3.impactSkins.reduce(function(o,q){
         if(q.front.visible)o[q.k]='FRONTAL';else if(q.rear.visible)o[q.k]='TRASERA';return o;
