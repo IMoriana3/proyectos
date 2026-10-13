@@ -8462,7 +8462,7 @@ var EVENT_INPUTS=['eV','eVPeak','eD','eWindStart','eWindRamp','eWindHold','eGust
   'eSignal','eHailOn','eHailMm','eHailProb','eHailEta','eHailLead','eHailAfter','eHailHold',
   'eHailR1On','eHailR1At','eHailR1Kind','eHailR1Eta','eHailR1Mm','eHailR1Prob','eHailR1Dir',
   'eHailR2On','eHailR2At','eHailR2Kind','eHailR2Eta','eHailR2Mm','eHailR2Prob','eHailR2Dir',
-  'eSnowOn','eSnowCm','eSnowStart','eSnowClear'];
+  'eSnowOn','eSnowCm','eSnowStart','eSnowRamp','eSnowClear','eSnowMelt'];
 EVENT_INPUTS.forEach(function(id){
   var e=$(id);if(!e)return;
   e.addEventListener('input',function(){eventoHailUpdatesUI();eventoLbl();eventoProgramaRebuild(true);});
