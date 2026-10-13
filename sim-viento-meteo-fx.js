@@ -356,7 +356,8 @@ function disposeInstSnow(){
 }
 function disposeImpactSurface(){
   F3.impactSkins.forEach(function(q){
-    if(q.g&&q.g.parent)q.g.parent.remove(q.g);
+    if(q.front&&q.front.parent)q.front.parent.remove(q.front);
+    if(q.rear&&q.rear.parent)q.rear.parent.remove(q.rear);
     if(q.mat)q.mat.dispose();
   });
   F3.impactSkins=[];
@@ -411,12 +412,18 @@ function scanCoats(td){
         polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4});
       b.segs.forEach(function(t){
         if(!t||!t.spin)return;
-        var gI=new THREE.Group();gI.name='mfx-hail-impact-'+b.k;gI.visible=false;
-        var geoI=new THREE.BoxGeometry(D2.strLen*.99,.012,D2.modH*.985);
-        var ia=new THREE.Mesh(geoI,matI),ib=new THREE.Mesh(geoI.clone(),matI);
-        ia.position.set(D2.mesaC,D2.off+.058,0);ib.position.set(-D2.mesaC,D2.off+.058,0);
-        gI.add(ia,ib);t.spin.add(gI);
-        F3.impactSkins.push({k:b.k,g:gI,mat:matI});
+        var gf=new THREE.Group(),gr=new THREE.Group();
+        gf.name='mfx-hail-impact-front-'+b.k;gr.name='mfx-hail-impact-rear-'+b.k;
+        gf.visible=gr.visible=false;
+        var geoI=new THREE.BoxGeometry(D2.strLen*.99,.010,D2.modH*.985);
+        var fa=new THREE.Mesh(geoI,matI),fb=new THREE.Mesh(geoI.clone(),matI);
+        var ra=new THREE.Mesh(geoI.clone(),matI),rb=new THREE.Mesh(geoI.clone(),matI);
+        /* El cristal del modelo mide 60 mm y está centrado en D.off. Se coloca la
+           piel 8 mm fuera de cada cara para que la propia mesa oculte la opuesta. */
+        fa.position.set(D2.mesaC,D2.off+.038,0);fb.position.set(-D2.mesaC,D2.off+.038,0);
+        ra.position.set(D2.mesaC,D2.off-.038,0);rb.position.set(-D2.mesaC,D2.off-.038,0);
+        gf.add(fa,fb);gr.add(ra,rb);t.spin.add(gf,gr);
+        F3.impactSkins.push({k:b.k,front:gf,rear:gr,mat:matI});
       });
     });
   }else if(E&&E.mesas&&E.mesas.isInstancedMesh&&E.mesas.parent){
@@ -478,7 +485,8 @@ function updateImpactSurfaces(s,t){
   var pulse=s.impact?(0.86+0.14*Math.sin(t*.018)):0.48;
   F3.impactSkins.forEach(function(q){
     var r=by[q.k],ratio=(r&&max>1e-12)?r.impact_flux_proxy/max:0;
-    q.g.visible=!!r;
+    var front=!!(r&&r.face==='FRONTAL'),rear=!!(r&&r.face==='TRASERA');
+    q.front.visible=front;q.rear.visible=rear;
     if(r){impactColour(q.mat,ratio);q.mat.opacity=(.06+.34*ratio)*pulse;}
   });
   if(F3.instImpact){
@@ -637,7 +645,7 @@ function update3D(s,dt,t){
 
 var LAST_STATE=null;
 window.__simVientoMeteoFx={
-  version:5,
+  version:6,
   impact:impactMetrics,
   impactEnvelope:impactEnvelope,
   reference:Object.assign({},IMPACT_REF),
@@ -653,7 +661,10 @@ window.__simVientoMeteoFx={
       snowCoats:F3.coats.length,
       instancedSnow:!!F3.instSnow,
       impactSkins:F3.impactSkins.length,
-      impactSurfaceVisible:F3.impactSkins.some(function(q){return q.g.visible;})||!!(F3.instImpact&&F3.instImpact.visible),
+      impactSurfaceVisible:F3.impactSkins.some(function(q){return q.front.visible||q.rear.visible;})||!!(F3.instImpact&&F3.instImpact.visible),
+      impactFaces:F3.impactSkins.reduce(function(o,q){
+        if(q.front.visible)o[q.k]='FRONTAL';else if(q.rear.visible)o[q.k]='TRASERA';return o;
+      },{}),
       state:LAST_STATE?{wind:LAST_STATE.wind,dir:LAST_STATE.dir,snow:LAST_STATE.snow,
         impact:LAST_STATE.impact,mm:LAST_STATE.mm,watch:LAST_STATE.watch}:null
     };
