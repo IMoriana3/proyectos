@@ -739,7 +739,7 @@ function updateDust3D(td,s,dt,t){
   var F=F3.dust,wv=worldWind(s.dir),c=td.ct.target,R=clamp(td.radio||420,80,900);
   var vw=Math.max(s.wind,s.gust||0),href=Math.max(.5,num('wh',4)),
       groundWind=vw*windShearFactor(1,href),
-      strength=clamp((groundWind-32)/65,0,1)*(s.snow>.1?0.12:1)*(s.impact?0.35:1);
+      strength=clamp((groundWind-38)/70,0,1)*(s.snow>.1?0.12:1)*(s.impact?0.35:1);
   F3._groundWindKmh=groundWind;
   var n=Math.round(strength*MAX_DUST);F.obj.visible=n>4;F.mat.opacity=.28*strength;F.mat.size=clamp(R/360,.8,2.2);
   if(n<=4)return;
