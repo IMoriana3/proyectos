@@ -31,6 +31,15 @@ Object.assign(impactHud.style,{position:'absolute',right:'10px',bottom:'10px',zI
   boxShadow:'0 8px 24px rgba(0,0,0,.28)',backdropFilter:'blur(4px)',display:'none'});
 host.appendChild(impactHud);
 
+var windPressureHud=document.createElement('div');
+windPressureHud.id='meteoWindPressureHud';
+windPressureHud.setAttribute('aria-live','polite');
+Object.assign(windPressureHud.style,{position:'absolute',left:'10px',bottom:'10px',zIndex:'9',pointerEvents:'none',
+  maxWidth:'min(470px,52%)',padding:'7px 9px',background:'rgba(9,16,25,.84)',border:'1px solid #3d6f93',
+  color:'#dce9f4',font:'11px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace',
+  boxShadow:'0 8px 24px rgba(0,0,0,.24)',backdropFilter:'blur(4px)',display:'none'});
+host.appendChild(windPressureHud);
+
 var style=document.createElement('style');
 style.textContent=
   '#view3d .hailfx{display:none!important}'+
@@ -39,6 +48,9 @@ style.textContent=
   '#meteoImpactHud table{border-collapse:collapse;width:100%;margin-top:4px}'+
   '#meteoImpactHud th,#meteoImpactHud td{padding:2px 4px;border-bottom:1px solid rgba(120,150,180,.18);text-align:right;white-space:nowrap}'+
   '#meteoImpactHud th:first-child,#meteoImpactHud td:first-child{text-align:left}'+
+  '#meteoWindPressureHud table{border-collapse:collapse;width:100%;margin-top:4px}'+
+  '#meteoWindPressureHud th,#meteoWindPressureHud td{padding:2px 4px;border-bottom:1px solid rgba(120,150,180,.18);text-align:right;white-space:nowrap}'+
+  '#meteoWindPressureHud th:first-child,#meteoWindPressureHud td:first-child{text-align:left}'+
   '@media(prefers-reduced-motion:reduce){#meteoFxCanvas{opacity:.62}}';
 document.head.appendChild(style);
 
@@ -178,6 +190,41 @@ function impactEnvelope(maxMm,windKmh,hailDirDeg,axisAzDeg,thetaDeg){
     threshold:impactMetrics(lo,windKmh,hailDirDeg,axisAzDeg,thetaDeg),
     maximum:impactMetrics(hi,windKmh,hailDirDeg,axisAzDeg,thetaDeg)
   };
+}
+function windPressureMetrics(windKmh,windDirDeg,axisAzDeg,thetaDeg){
+  var rho=IMPACT_REF.rhoAir,v=Math.max(0,+windKmh||0)/3.6,h=worldWind(windDirDeg),
+      n=panelNormal(thetaDeg,axisAzDeg);
+  var dot=h.x*n.x+h.z*n.z,normalFrac=Math.abs(dot),vn=v*normalFrac;
+  return {speed_ms:v,dynamic_pa:.5*rho*v*v,normal_ms:vn,normal_fraction:normalFrac,
+          normal_dynamic_pa:.5*rho*vn*vn,face:(dot<=0?'FRONTAL':'TRASERA'),
+          theta_deg:+thetaDeg||0,axis_az_deg:+axisAzDeg||0,wind_dir_deg:+windDirDeg||0};
+}
+function windPressureRows(s){
+  var fr=s.frame,ang=fr&&fr.ang?fr.ang:null;if(!ang)return [];
+  var axis=num('axaz',0),speed=Math.max(s.wind,s.gust||0),rows=[];
+  Object.keys(ang).forEach(function(k){
+    if(ang[k]==null)return;
+    var q=windPressureMetrics(speed,s.dir,axis,ang[k]);q.k=k;rows.push(q);
+  });
+  return rows;
+}
+function updateWindPressureHud(s){
+  var speed=Math.max(s.wind,s.gust||0);
+  if(speed<15){windPressureHud.style.display='none';return;}
+  var rows=windPressureRows(s);if(!rows.length){windPressureHud.style.display='none';return;}
+  var rho=IMPACT_REF.rhoAir,qMean=.5*rho*Math.pow(s.wind/3.6,2),qGust=.5*rho*Math.pow((s.gust||0)/3.6,2),
+      max=rows.reduce(function(a,q){return Math.max(a,q.normal_dynamic_pa);},0);
+  var h='<b>VIENTO · presión dinámica</b><br>q media '+qMean.toFixed(0)+' Pa'+
+    ((s.gust||0)>s.wind+.1?' · q racha '+qGust.toFixed(0)+' Pa':'')+
+    '<table><thead><tr><th>caso</th><th>θ</th><th>cara</th><th>|v·n|/v</th><th>q⊥</th><th>vs peor</th></tr></thead><tbody>';
+  rows.forEach(function(q){
+    var red=max>1e-9?100*(1-q.normal_dynamic_pa/max):0;
+    h+='<tr><td>'+q.k+'</td><td>'+q.theta_deg.toFixed(0)+'°</td><td>'+q.face+'</td>'+
+      '<td>'+Math.round(q.normal_fraction*100)+' %</td><td>'+q.normal_dynamic_pa.toFixed(0)+' Pa</td>'+
+      '<td>'+(Math.abs(q.normal_dynamic_pa-max)<.01?'—':'−'+red.toFixed(0)+' %')+'</td></tr>';
+  });
+  h+='</tbody></table><span style="opacity:.68">q⊥ = ½ρ(v·n)². Es presión dinámica normal de referencia, NO presión estructural de diseño: falta Cp.</span>';
+  windPressureHud.innerHTML=h;windPressureHud.style.display='block';
 }
 function impactRows(s){
   var fr=s.frame,ang=fr&&fr.ang?fr.ang:null;if(!ang)return [];
@@ -680,8 +727,9 @@ function update3D(s,dt,t){
 
 var LAST_STATE=null;
 window.__simVientoMeteoFx={
-  version:8,
+  version:9,
   impact:impactMetrics,
+  windPressure:windPressureMetrics,
   trajectory:hailVelocity,
   cumulativeImpact:impactCumulative,
   impactEnvelope:impactEnvelope,
@@ -713,7 +761,7 @@ function frame(now){
   var dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
   x.clearRect(0,0,W,H);
   var s=state();LAST_STATE=s;
-  atmosphere(s,now);cloudsDraw(s,now);update3D(s,dt,now);updateImpactHud(s);
+  atmosphere(s,now);cloudsDraw(s,now);update3D(s,dt,now);updateImpactHud(s);updateWindPressureHud(s);
 }
 requestAnimationFrame(frame);
 })();
