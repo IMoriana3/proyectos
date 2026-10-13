@@ -243,6 +243,14 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('la carga de impacto se pinta sobre las mesas durante el episodio de granizo',
     fxHail&&fxHail.impacto.impactSurfaceVisible&&fxHail.impacto.impactSkins>0,
     JSON.stringify(fxHail.impacto));
+  const fxClear=await page.evaluate(async()=>{
+    aplicaPresetEvento('wind_ramp');eventoAplica(0);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    return __simVientoMeteoFx.snapshot();
+  });
+  check('la superficie de impacto desaparece cuando ya no hay episodio de granizo',
+    fxClear&&!fxClear.impactSurfaceVisible,
+    JSON.stringify(fxClear));
 
   const fxSnow=await page.evaluate(async()=>{
     aplicaPresetEvento('snow');eventoAplica(1);
