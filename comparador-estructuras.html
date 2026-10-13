@@ -166,13 +166,12 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
 
 <!-- ═════════ IGUALDAD DE POTENCIA PICO ═════════ -->
 <div class="card" id="picoCard">
-  <h2>⚡ Igualdad de potencia pico <span class="sn" id="picoGob">§03.P</span></h2>
+  <h2>⚡ Potencia común <span class="sn" id="picoGob">§03.P</span></h2>
   <div class="picoRow">
     <div>
       <div class="field"><label>Potencia pico de la planta (MWp)</label>
         <input id="mwp" type="number" step="0.1" min="0" value="10"></div>
-      <p class="mini" style="margin-top:7px">La potencia del módulo va en cada configurador:
-        el pico lo fija el MÓDULO, no la estructura.</p>
+      <p class="mini" style="margin-top:7px">Define la potencia del módulo en cada configuración. La comparación mantiene los mismos MWp de planta.</p>
     </div>
     <div id="picoRead" class="readout"></div>
   </div>
@@ -225,7 +224,7 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
 
     <!-- ═════════ EQUIPOS: el catálogo CEC, dentro de la ficha ═════════ -->
     <div class="card" id="eqCard">
-      <h2>⚙ Equipos <span class="sn" id="eqGob">catálogo CEC</span></h2>
+      <h2>⚙ Equipos <span class="sn" id="eqGob">Catálogo CEC</span></h2>
       <div class="field"><label>Módulo · fabricante</label>
         <select id="mfMfr"><option value="">— cargando catálogo —</option></select></div>
       <div class="field"><label>Módulo · buscar</label>

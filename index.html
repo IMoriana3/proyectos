@@ -556,8 +556,8 @@ body.presenta .solo-pres{display:inline-block}
     <div class="hero-scene">
       <canvas id="hero-cv" width="1280" height="720" role="img" aria-label="Relieve de Ayora con las filas de seguidores inclinadas según el sol"></canvas>
       <div class="hero-tesis">
-        <h2>Simulación y control de seguidores, careados contra la planta real.</h2>
-        <p>Un núcleo de cálculo y treinta herramientas que leen de él. Lo que ves abajo es Ayora ahora mismo: la planta con el relieve mejor validado.</p>
+        <h2>Diseña, simula y revisa tus plantas.</h2>
+        <p>Abre una planta o elige una herramienta. La vista 3D muestra Ayora con su relieve validado.</p>
       </div>
       <div class="hero-legend" id="hero-legend"><span><b>Muestra: Ayora · 24025</b> · 751 seguidores · relieve as-built</span><span id="hero-sol"></span></div>
     </div>
@@ -589,7 +589,7 @@ body.presenta .solo-pres{display:inline-block}
     <div class="plants" id="plants"></div>
   </section>
 
-  <h2 class="sec-title" id="herramientas">Herramientas · crear nuevo<a class="tabla-link" href="generador-layout.html" title="Generación de la implantación completa —filas, mesas y seguidores— en el navegador">▦ Generador de implantaciones</a><a class="tabla-link" href="buscador-implantacion.html" title="Miles de variantes de implantación en vivo, con el MISMO motor del generador: giro de filas, tresbolillo y viales; lo mejor en verde, las descartadas en rojo">◱ Buscador de implantaciones</a><a class="tabla-link" href="layout.html" title="Representación de la implantación devuelta por el motor de cálculo o de un GeoJSON externo">▦ Explorador</a><a class="tabla-link" href="sim-solar.html" title="Cálculo de la geometría solar (elevación, azimut y sombra) y simulación de producción">☉ Sol &amp; Simulación</a><a class="tabla-link" href="meteo.html" title="Meteo transversal: forecast, irradiancia, viento, nubosidad, precipitación y riesgos">☁ Meteo</a><a class="tabla-link" href="sim-viento.html" title="Abanderamiento por viento: POA perdida, número de abanderamientos y tiempo acumulado">⚑ Viento</a><a class="tabla-link" href="comparador-estructuras.html" title="Comparación entre estructura fija y seguidor: POA por tipo de estructura, por m² de módulo y de suelo">🏗 Estructuras</a></h2>
+  <h2 class="sec-title" id="herramientas">Herramientas<a class="tabla-link" href="generador-layout.html" title="Generación de la implantación completa —filas, mesas y seguidores— en el navegador">▦ Generador de implantaciones</a><a class="tabla-link" href="buscador-implantacion.html" title="Miles de variantes de implantación en vivo, con el MISMO motor del generador: giro de filas, tresbolillo y viales; lo mejor en verde, las descartadas en rojo">◱ Buscador de implantaciones</a><a class="tabla-link" href="layout.html" title="Representación de la implantación devuelta por el motor de cálculo o de un GeoJSON externo">▦ Explorador</a><a class="tabla-link" href="sim-solar.html" title="Cálculo de la geometría solar (elevación, azimut y sombra) y simulación de producción">☉ Sol &amp; Simulación</a><a class="tabla-link" href="meteo.html" title="Meteo transversal: forecast, irradiancia, viento, nubosidad, precipitación y riesgos">☁ Meteo</a><a class="tabla-link" href="sim-viento.html" title="Abanderamiento por viento: POA perdida, número de abanderamientos y tiempo acumulado">⚑ Viento</a><a class="tabla-link" href="comparador-estructuras.html" title="Comparación entre estructura fija y seguidor: POA por tipo de estructura, por m² de módulo y de suelo">🏗 Estructuras</a></h2>
   <div class="controls">
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -614,7 +614,7 @@ body.presenta .solo-pres{display:inline-block}
        ficha o al visor donde se puede repetir el careo.
        ====================================================== -->
   <section class="verify" id="verifica">
-    <h2 class="sec-title">Cómo se verifica <span class="cnt">· careos</span></h2>
+    <h2 class="sec-title">Validación <span class="cnt">· comparativas</span></h2>
     <div class="careos">
       <a class="careo" href="careo-pvsyst.html">
         <span class="lab">Transposición POA · frente a PVsyst</span>
@@ -670,7 +670,7 @@ body.presenta .solo-pres{display:inline-block}
         <a href="https://github.com/IMoriana3/gemelo-digital" target="_blank" rel="noopener">gemelo-digital</a>
         <a href="https://github.com/IMoriana3/factiun-cartera" target="_blank" rel="noopener">factiun-cartera</a>
       </div>
-      <p class="colofon">Panel interno de Factiun · se instala como aplicación y abre sin red · cómo añadir un proyecto: en el comentario del cabecero de <code>index.html</code> y en el README.</p>
+      <p class="colofon">Panel interno de Factiun · Instálalo como aplicación para abrir el panel sin conexión.</p>
     </div>
   </div>
 </footer>
@@ -785,7 +785,7 @@ const PROJECTS = [
   {
     name: "Núcleo de cálculo SolarGPT",
     status: "live",
-    objetivo: "La autoridad física de la casa: transposición POA (Perez), backtracking, lazo de control del seguidor y modelo de motor. De aquí cuelgan el cuaderno, Streamlit, los dos simuladores del navegador y el gemelo — cuando uno de ellos discrepa del core, el defecto es que hay dos contratos.",
+    objetivo: "Motor común de posición solar, POA, backtracking y control del seguidor para los simuladores y el gemelo.",
     stack: "Python · pvlib · pandas/numpy · pytest (≈5.950 comprobaciones) · paridad JS↔core careada a 1e-9 contra el bloque de física de los simuladores",
     url: "",                                                  // no hay página: es la librería que los demás importan
     repo: "https://github.com/IMoriana3/SolarGPTfull",
@@ -814,7 +814,7 @@ const PROJECTS = [
   {
     name: "Careo SolarGPT ↔ PVSyst",
     status: "live",
-    objetivo: "Tarjeta de comparativa y validación de la auditoría POA + energía frente a PVSyst: transposición por componente (Fleming +0,12 %), cadena por etapa con el hallazgo térmico Uc/Uv, El Burgo I (astronomía/backtracking) y Vadorada (careo automático sin config manual: GlobInc +0,03 %, E_Grid −0,99 % con bifacial). Veredictos por hallazgo.",
+    objetivo: "Compara POA, energía y ángulos con los exports de PVSyst. Revisa las diferencias por componente y etapa.",
     stack: "HTML offline (este repo) · veredictos en localStorage con export/import JSON · números reproducibles desde scripts/audit/careo_pvsyst_poa_energia.py",
     url: "https://imoriana3.github.io/proyectos/careo-pvsyst.html",
     repo: "https://github.com/IMoriana3/proyectos",
@@ -836,7 +836,7 @@ const PROJECTS = [
   {
     name: "Producción 3D por string",
     status: "live",
-    objetivo: "POA y ENERGÍA de CADA string en colores sobre el terreno 3D, igual para todas las plantas — ninguna es especial: cada string con su posición, inclinación y tilt entra al mismo motor. POA del bloque FÍSICA PURA del simulador (extraído en caliente, cero copias), cadena DC Y AC del Notebook (t_cell PVSyst-Faiman + PVWatts γ; pérdidas DC + inversor con recorte a Pnom + límite de red — apply_dc_losses / inverter_efficiency_curve / apply_grid_limit de solargpt_core, careado dígito a dígito contra el core en el QA), meteo TMY real (PVGIS) o cielo despejado, agregados día/mes/año, careo contra la MEDIDA real por inversor y exportación CSV. El θ con el que se estima es el que el tracker EJECUTA —con el lazo de la TCU: banda muerta, velocidad de actuador y ciclo—, la política de backtracking se elige entre las nueve del simulador, y la cifra por string está vigilada por un golden a 1e-9 para que no se mueva sin que nadie se entere. Con El Burgo I carga los 823 strings reales del plano y agrega por sus 36 inversores; con Ayora y San José usa las cotas z REALES de cada extremo de mesa (el mismo cargador que el simulador de BT 3D).",
+    objetivo: "Consulta POA y energía DC/AC por string sobre el terreno 3D. Compara con la producción medida y exporta resultados.",
     stack: "HTML offline · Three.js (libs locales) · física extraída de backtracking.html (mismo contrato de delimitadores que su QA) · seguidor.js (el modelo de tracker de la casa, instanciado a escala de planta entera) · sol.js + irradiancia.js compartidos",
     url: "https://cobertura-zigbee.imoriana3.workers.dev/produccion.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
@@ -913,7 +913,7 @@ const PROJECTS = [
   {
     name: "Mapa Modbus",
     status: "live",
-    objetivo: "Consulta del mapa Modbus completo de NCU, HSU y TCU, con dirección absoluta por unidad y decodificación de valores crudos en vivo.",
+    objetivo: "Consulta registros de NCU, HSU y TCU, calcula sus direcciones y decodifica las lecturas.",
     stack: "HTML · sin dependencias",
     url: "https://cobertura-zigbee.imoriana3.workers.dev/modbus.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
@@ -931,7 +931,7 @@ const PROJECTS = [
   {
     name: "Simulador de backtracking",
     status: "live",
-    objetivo: "Comparación de todas las políticas de backtracking del núcleo de cálculo sobre terreno 3D y los tres tipos de accionamiento. Ejecución offline en el navegador.",
+    objetivo: "Compara políticas de backtracking y accionamientos sobre terreno 3D. Funciona sin conexión.",
     stack: "HTML offline · Three.js (libs locales) · Canvas · pvlib singleaxis (A&M 2020) portado a JS",
     url: "https://cobertura-zigbee.imoriana3.workers.dev/backtracking.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
@@ -1089,7 +1089,7 @@ const PROJECTS = [
   {
     name: "Simulador de radiación difusa",
     status: "live",
-    objetivo: "Comparación de las cuatro políticas de radiación difusa del núcleo de cálculo: lo que gana cada una y lo que cuesta — arranques de motor, grados de maniobra y batería, con el modelo de motor medido en campo. Cielo manual o de Open-Meteo y zonificación por NCU.",
+    objetivo: "Compara cuatro políticas de difusa: POA, movimientos y consumo de batería. Usa cielo manual u Open-Meteo y zonas por NCU.",
     stack: "HTML offline · Three.js (libs locales) + seguidor.js · Canvas · pvlib singleaxis + Ineichen + Perez portados a JS · Open-Meteo (datos, opcional)",
     url: "https://cobertura-zigbee.imoriana3.workers.dev/overcast.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
@@ -1174,7 +1174,7 @@ const PROJECTS = [
   {
     name: "Análisis meteorológico",
     status: "build",
-    objetivo: "Weather Workbench autónomo de Factiun con paridad funcional y visual frente a Meteo de SolarGPT: históricos, TMY, QA, fuentes, PVSyst/CSV, adaptación, informes y cockpit completo con series, zoom diario, climatologías, rosa de vientos, extremos térmicos, nieve, granizo y viento sintético. Funciona directamente en navegador; SolarGPT queda como referencia de certificación.",
+    objetivo: "Consulta históricos y previsiones, construye un TMY y revisa la calidad de los datos. Importa PVSyst/CSV y descarga informes.",
     stack: "HTML · ES modules · lib/meteo-browser.js · lib/meteo-viz.js · Canvas HiDPI · SheetJS local · Open-Meteo/ERA5 · PVGIS · NASA POWER · WeatherNext 3 adapter · Cache Storage",
     url: "meteo.html",
     repo: "https://github.com/imoriana3/proyectos",
@@ -1215,7 +1215,7 @@ const PROJECTS = [
   {
     name: "Diseño de red de comunicaciones",
     status: "live",
-    objetivo: "Diseño de la red de comunicaciones de una planta nueva: a partir del listado de seguidores, ubicación automática de NCU, RSU y gateways.",
+    objetivo: "Ubica NCU, RSU y gateways a partir de los seguidores de la planta y revisa la red propuesta.",
     stack: "HTML · Canvas · min-cost flow",
     url: "https://imoriana3.github.io/siting/",
     repo: "https://github.com/imoriana3/siting",
@@ -1277,7 +1277,7 @@ const PROJECTS = [
   {
     name: "Alta de planta",
     status: "live",
-    objetivo: "Alta de una planta nueva a partir de ficheros CSV o DXF: reconocimiento de los bloques de tracker por su geometría y previsualización 2D/3D. Ejecución offline.",
+    objetivo: "Crea una planta desde CSV o DXF y revisa los seguidores en 2D/3D antes de guardarla. Funciona sin conexión.",
     stack: "HTML offline · UTM↔WGS84 · parser DXF · Three.js",
     url: "https://cobertura-zigbee.imoriana3.workers.dev/crear.html",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
@@ -1295,7 +1295,7 @@ const PROJECTS = [
   {
     name: "Control de obra",
     status: "live",
-    objetivo: "Gestión de checklists de obra para plantas fotovoltaicas: construcción, calidad, punchlist, mapa y cuadro de mando.",
+    objetivo: "Sigue el avance de obra, revisa calidad y gestiona pendientes por planta.",
     stack: "HTML · Firebase (Auth/Firestore) · GitHub Pages",
     url: "https://imoriana3.github.io/checklist-solar-v2/",
     repo: "https://github.com/imoriana3/checklist-solar-v2",
@@ -1319,7 +1319,7 @@ const PROJECTS = [
   {
     name: "Informe de producción FV · Gorraiz",
     status: "live",
-    objetivo: "Generación en el navegador del informe fotovoltaico del edificio: réplica del PDF aprobado y comparativa entre periodos.",
+    objetivo: "Genera el informe de producción del edificio y compara periodos con el formato del PDF aprobado.",
     stack: "HTML · Chart.js · jsPDF · GitHub Pages",
     url: "https://imoriana3.github.io/gorraiz-dashboard/",
     repo: "https://github.com/imoriana3/gorraiz-dashboard",
@@ -1340,7 +1340,7 @@ const PROJECTS = [
   {
     name: "Visor de levantamiento",
     status: "live",
-    objetivo: "Asignación de 18.190 puntos topográficos a los 2.289 seguidores de la planta mediante flujo de coste mínimo. Ejecución offline.",
+    objetivo: "Revisa y corrige la asignación de puntos topográficos a seguidores. Funciona sin conexión.",
     stack: "HTML offline · datos NetworkX (min-cost flow)",
     url: "https://imoriana3.github.io/visores/asbuilt/?planta=sanjose",
     repo: "https://github.com/imoriana3/visores",
@@ -1361,7 +1361,7 @@ const PROJECTS = [
   {
     name: "Visor de geometría as-built",
     status: "live",
-    objetivo: "Reconstrucción de la geometría as-built de los 754 seguidores de la planta a partir de 3.069 puntos de levantamiento, con backtracking corregido por terreno.",
+    objetivo: "Revisa la geometría real de los seguidores y el backtracking corregido por terreno.",
     stack: "HTML offline · Plotly · levantamiento topográfico",
     url: "https://imoriana3.github.io/visores/asbuilt/?planta=ayora",
     repo: "https://github.com/imoriana3/visores",
@@ -1385,7 +1385,7 @@ const PROJECTS = [
   {
     name: "Gemelo digital de seguidor y control",
     status: "build",
-    objetivo: "Réplica digital del seguidor y de su unidad de control, con geometría física real y control predictivo.",
+    objetivo: "Explora el seguidor y su TCU en 3D y observa cómo responde el control.",
     stack: "HTML · 3D · FastAPI · WebSocket · Docker",
     url: "https://imoriana3.github.io/gemelo-digital/",
     repo: "https://github.com/imoriana3/gemelo-digital",
@@ -1410,7 +1410,7 @@ const PROJECTS = [
   {
     name: "Simulador de batería",
     status: "live",
-    objetivo: "Simulación anual de la gestión de la batería LiFePO4 del seguidor según la metodología del Battery Availability Study: porcentaje de tiempo no disponible, porcentaje de producción perdida y análisis rainflow en cualquier emplazamiento.",
+    objetivo: "Simula un año de batería LiFePO4: indisponibilidad, producción perdida y ciclos rainflow para el emplazamiento elegido.",
     stack: "HTML autocontenido · canvas 2D · Open-Meteo · CSV PVSyst · Leaflet",
     url: "https://imoriana3.github.io/gemelo-digital/bateria.html",
     repo: "https://github.com/imoriana3/gemelo-digital",
@@ -1442,7 +1442,7 @@ const PROJECTS = [
   {
     name: "Simulador de planta equipo a equipo",
     status: "live",
-    objetivo: "Simulación de una planta completa equipo a equipo —NCU, TCU, HSU y repetidores— con la jerarquía de control real y el mapa Modbus de los tres dispositivos en vivo. Los valores y el algoritmo proceden del núcleo de cálculo, no se replican aquí.",
+    objetivo: "Simula NCU, TCU, HSU y repetidores. Observa el control de la planta y sus registros Modbus simulados.",
     stack: "HTML autocontenido · sin dependencias · API local de SolarGPT (FastAPI)",
     url: "https://imoriana3.github.io/gemelo-digital/simulador.html",
     repo: "https://github.com/imoriana3/gemelo-digital",
@@ -1479,7 +1479,7 @@ const PROJECTS = [
   {
     name: "Medidor de tráfico",
     status: "live",
-    objetivo: "Cálculo del tráfico que el SCADA genera en la LAN de planta y del volumen que cada planta envía a la nube, con el mismo modelo de bytes que aplica el colector en operación.",
+    objetivo: "Estima el tráfico del SCADA en la LAN y las subidas a la nube según los equipos y la frecuencia de lectura.",
     stack: "HTML · sin dependencias · modelo en Python",
     url: "https://scada.imoriana3.workers.dev/trafico.html",
     repo: "https://github.com/imoriana3/scada",
@@ -1507,7 +1507,7 @@ const PROJECTS = [
   {
     name: "Comparador de estrategias de abanderamiento",
     status: "live",
-    objetivo: "Comparación de las estrategias canónicas de abanderamiento (A1/A2/B1/B2 y pasivo) frente al mismo seguidor sin abanderar: POA perdida, número de abanderamientos al año y tiempo acumulado en posición de defensa.",
+    objetivo: "Compara estrategias de abanderamiento: POA perdida, maniobras y tiempo en defensa frente al seguimiento sin abanderar.",
     stack: "HTML autocontenido · física en el navegador · canvas 2D · Three.js + seguidor.js (escena 3D) · estética de overcast/bt3d · motor SolarGPT opcional (POST /windstow)",
     url: "https://imoriana3.github.io/proyectos/sim-viento.html",
     repo: "https://github.com/imoriana3/proyectos",
@@ -1596,7 +1596,7 @@ const PROJECTS = [
   {
     name: "Generador de implantaciones",
     status: "build",
-    objetivo: "Generación automática de implantaciones según el tipo de estructura y los condicionantes del terreno: filas, mesas y seguidores con pitch, setback, multi-talla, bifila, viales y exclusiones, con kWp, GCR y ocupación, y exportación a GeoJSON, DXF, KML y 3D.",
+    objetivo: "Distribuye mesas y seguidores dentro de la parcela, respetando viales y exclusiones. Revisa kWp, GCR y ocupación; exporta a CAD o 3D.",
     stack: "HTML/JS local · motor de layout en el navegador (UTM + erosión exacta del setback + knapsack multi-talla) · canvas 2D · careo contra solargpt_core.layout_v2",
     url: "https://imoriana3.github.io/proyectos/generador-layout.html",
     repo: "https://github.com/imoriana3/proyectos",
@@ -1701,7 +1701,7 @@ const PROJECTS = [
   {
     name: "Comparador de estructuras",
     status: "live",
-    objetivo: "Comparación de estructuras en un emplazamiento a igualdad de potencia pico: siete configuraciones —fija a tilt óptimo o de proyecto, dos aguas E-O, seguidor con y sin backtracking y seguidor QUEBRADO (rótula en el actuador) con y sin backtracking— simuladas sobre la misma meteorología y el mismo terreno, con POA por m² de módulo y de suelo, número de estructuras necesarias, superficie ocupada y energía anual recibida.",
+    objetivo: "Compara siete configuraciones con los mismos MWp, meteo y terreno: irradiación, estructuras necesarias y superficie ocupada.",
     stack: "HTML autocontenido · física en el navegador (Hay-Davies + sombra geométrica + backtracking) · catálogo CEC completo (16.758 módulos + 4.910 inversores) · dimensionado eléctrico portado del core · canvas 2D · Three.js + seguidor.js (escena 3D) · estética de overcast/bt3d · motor SolarGPT opcional (POST /structures) · careo automático contra el core",
     url: "https://imoriana3.github.io/proyectos/comparador-estructuras.html",
     repo: "https://github.com/imoriana3/proyectos",
@@ -1838,7 +1838,7 @@ const PROJECTS = [
   {
     name: "Agente Modbus y collector",
     status: "build",
-    objetivo: "Componentes que se ejecutan dentro de la planta: agente Modbus de solo lectura y collector, que alimentan al SCADA y a las utilidades de campo.",
+    objetivo: "Recoge datos Modbus en modo de solo lectura y alimenta el SCADA y las herramientas de campo.",
     stack: "PowerShell · Modbus TCP · Cloudflare Tunnel · Supabase",
     url: "",                                                  // no hay deploy: corre en el PC de planta
     repo: "https://github.com/imoriana3/scada",       // privado: te funciona a ti
@@ -1865,7 +1865,7 @@ const PROJECTS = [
   {
     name: "TCU Toolbox",
     status: "live",
-    objetivo: "Herramienta offline para configurar, diagnosticar y respaldar TCUs Sunner a través del gateway Modbus de la NCU.",
+    objetivo: "Configura, diagnostica y guarda copias de las TCUs Sunner mediante el gateway Modbus de la NCU. Uso local sin conexión a internet.",
     stack: "PowerShell · Modbus TCP · offline",
     url: "",                                                  // no hay deploy: se ejecuta en el portátil de campo
     repo: "https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox",
@@ -1904,7 +1904,7 @@ const PROJECTS = [
   {
     name: "Diagnóstico de cobertura Zigbee",
     status: "build",
-    objetivo: "Medición sobre imagen satélite de la cobertura Zigbee desplegada: nivel de señal, nodos sin respuesta, saltos y criticidad de cada unidad.",
+    objetivo: "Revisa la señal medida, los saltos, los nodos sin respuesta y los puntos críticos de la red sobre el plano.",
     stack: "HTML · Leaflet · PowerShell (RCI/telnet) · CSV",
     url: "https://cobertura-zigbee.imoriana3.workers.dev/",
     repo: "https://github.com/imoriana3/cobertura-zigbee",
@@ -1932,7 +1932,7 @@ const PROJECTS = [
   {
     name: "Modelo de propagación RF",
     status: "build",
-    objetivo: "Modelo físico de propagación Zigbee 2,4 GHz entre seguidor y NCU: siting predictivo, diagnóstico de la malla desplegada y representación 3D del enlace.",
+    objetivo: "Simula enlaces Zigbee de 2,4 GHz entre seguidores y NCU. Explora cómo la geometría afecta a la cobertura.",
     stack: "HTML · three.js (seguidor.js) · Python (NumPy/NetworkX) · JS",
     url: "https://imoriana3.github.io/cobertura-rf-fv/",
     repo: "https://github.com/imoriana3/cobertura-rf-fv",
@@ -1960,7 +1960,7 @@ const PROJECTS = [
   {
     name: "Cartera de proyectos",
     status: "build",
-    objetivo: "Base de datos y cuadro de mando de los proyectos adjudicados: indicadores, gráficas, mapa mundial y tabla editable.",
+    objetivo: "Consulta y edita tus proyectos: estado, potencia, ubicación y avance.",
     stack: "HTML · Supabase (Postgres + Auth + RLS) · Chart.js · Leaflet",
     url: "https://factiun-cartera.imoriana3.workers.dev",     // interno · requiere login
     repo: "https://github.com/imoriana3/factiun-cartera",     // privado
@@ -1983,7 +1983,7 @@ const PROJECTS = [
   {
     name: "SCADA",
     status: "live",
-    objetivo: "Supervisión de la planta en operación: sinóptico sobre plano, seguimiento del día, estado de la flota y acceso al gemelo 3D.",
+    objetivo: "Consulta el estado de la planta, sigue la flota sobre el plano y abre el gemelo 3D.",
     stack: "HTML · Supabase · Chart.js · gemelo 3D (cobertura-zigbee)",
     url: "https://factiun-cartera.imoriana3.workers.dev/scada.html",   // interno · mismo login que la cartera
     repo: "https://github.com/imoriana3/factiun-cartera",     // privado
@@ -2007,7 +2007,7 @@ const PROJECTS = [
   {
     name: "Importador de logs de NCU",
     status: "live",
-    objetivo: "Carga en el SCADA de los CSV diarios de cada NCU previamente destilados: series, eventos a resolución completa y resumen. La reducción típica es de 4,7 MB a 177 KB.",
+    objetivo: "Importa los CSV diarios procesados de las NCU al SCADA: series, eventos completos y resumen.",
     stack: "HTML · Supabase (tabla telemetria)",
     url: "https://factiun-cartera.imoriana3.workers.dev/importar-logs.html",   // interno · mismo login que la cartera
     repo: "https://github.com/imoriana3/factiun-cartera",     // privado
@@ -2032,7 +2032,7 @@ const PROJECTS = [
   {
     name: "Seguimiento PEM",
     status: "live",
-    objetivo: "Registro de puesta en marcha por planta: diagnósticos, comisionado, inventarios y auditorías, con comparación frente a la visita anterior.",
+    objetivo: "Registra diagnósticos, comisionado, inventarios y auditorías. Compara cada visita con la anterior.",
     stack: "HTML · Supabase (Postgres + Auth + RLS)",
     url: "https://factiun-cartera.imoriana3.workers.dev/seguimiento-pem.html",   // interno · requiere login (mismo que la cartera)
     repo: "https://github.com/imoriana3/factiun-cartera",     // privado
@@ -2051,7 +2051,7 @@ const PROJECTS = [
   {
     name: "IPs de plantas",
     status: "live",
-    objetivo: "Tabla editable del direccionamiento por planta: NCU, gateways, esclavos, versión de firmware y accesos remotos.",
+    objetivo: "Consulta y edita IPs de NCU, gateways y esclavos, firmware y accesos remotos.",
     stack: "HTML · Supabase (Postgres + Auth + RLS)",
     url: "https://factiun-cartera.imoriana3.workers.dev/ips.html",   // interno · requiere login (mismo que la cartera)
     repo: "https://github.com/imoriana3/factiun-cartera",     // privado
