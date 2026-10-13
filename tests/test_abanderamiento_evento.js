@@ -152,22 +152,44 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('granizo + viento llega al arbitraje conjunto sin cruzar por una estrategia paralela',
     !!hw&&hw.src==='VIENTO × GRANIZO',JSON.stringify(hw));
 
-  // Nieve y los dos arbitrajes nieve/granizo.
+  // Nieve: el preset principal ya no salta a 15 cm; acumula y despeja.
+  // Los combinados mantienen escalón para aislar el arbitraje granizo+nieve.
   const snow=await page.evaluate(()=>{
     aplicaPresetEvento('snow');
-    const n=EVENTO.sim.frames.find(x=>x.t_min===1);
+    const n30=EVENTO.sim.frames.find(x=>x.t_min===30);
+    const n41=EVENTO.sim.frames.find(x=>x.t_min===41);
+    const n135=EVENTO.sim.frames.find(x=>x.t_min===135);
+    const n147=EVENTO.sim.frames.find(x=>x.t_min===147);
+    const marks=[...document.querySelectorAll('#eEventLine .mark b')].map(x=>x.textContent);
     aplicaPresetEvento('snow_hail');
     const c=EVENTO.sim.frames.find(x=>x.t_min===1);
     aplicaPresetEvento('snow_hail_same');
     const a=EVENTO.sim.frames.find(x=>x.t_min===1);
     return {
-      snow:{src:n.info.A1.fuente,mode:n.modos.A1,cm:n.snow_cm},
+      n30:{src:n30.info.A1.fuente,mode:n30.modos.A1,cm:n30.snow_cm},
+      n41:{src:n41.info.A1.fuente,mode:n41.modos.A1,cm:n41.snow_cm},
+      n135:{src:n135.info.A1.fuente,mode:n135.modos.A1,cm:n135.snow_cm},
+      n147:{src:n147.info.A1.fuente,mode:n147.modos.A1,cm:n147.snow_cm},
+      marks,
       conflict:{src:c.info.A1.fuente,mode:c.modos.A1,mot:c.info.A1.motivo},
       agree:{src:a.info.A1.fuente,mode:a.modos.A1,mot:a.info.A1.motivo}
     };
   });
-  check('nieve sola entra como SNOW_STOW',
-    snow.snow.src==='NIEVE'&&snow.snow.mode==='SNOW_STOW'&&snow.snow.cm>10,JSON.stringify(snow.snow));
+  check('nieve gradual: a 30 min lleva 7,5 cm y aún NO entra en snow stow',
+    Math.abs(snow.n30.cm-7.5)<.05&&snow.n30.src!=='NIEVE',
+    JSON.stringify(snow.n30));
+  check('nieve gradual: al superar 10 cm entra en SNOW_STOW',
+    snow.n41.cm>10&&snow.n41.src==='NIEVE'&&snow.n41.mode==='SNOW_STOW',
+    JSON.stringify(snow.n41));
+  check('nieve gradual: durante el deshielo mantiene la histéresis entre 10 y 2 cm',
+    Math.abs(snow.n135.cm-7.5)<.05&&snow.n135.src==='NIEVE',
+    JSON.stringify(snow.n135));
+  check('nieve gradual: al bajar de 2 cm abandona el estado NIEVE',
+    snow.n147.cm<2&&snow.n147.src!=='NIEVE',
+    JSON.stringify(snow.n147));
+  check('timeline de nieve distingue inicio, máximo, inicio de despeje y fin',
+    ['empieza nieve','espesor máximo','empieza a despejar','nieve despejada'].every(k=>snow.marks.some(x=>x.includes(k))),
+    snow.marks.join(' | '));
   check('nieve + granizo en lados opuestos NO inventa prioridad: sale NO MODELADO',
     snow.conflict.src==='NO MODELADO'&&snow.conflict.mode==='CONFLICT',
     JSON.stringify(snow.conflict));
