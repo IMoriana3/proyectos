@@ -460,7 +460,7 @@ function scanCoats(td){
       var a=new THREE.Mesh(geo,mat),b=new THREE.Mesh(geo.clone(),mat);
       a.position.set(D.mesaC,D.off+.046,0);b.position.set(-D.mesaC,D.off+.046,0);
       group.add(a,b);o.spin.add(group);
-      F3.coats.push({spin:o.spin,g:group,mat:mat});
+      F3.coats.push({spin:o.spin,g:group,mat:mat,span:D.modH});
     });
   }
 
@@ -542,6 +542,12 @@ function updateCoats(s){
   for(var i=0;i<F3.coats.length;i++){
     var q=F3.coats[i],deg=q.spin.rotation.x*180/Math.PI,r=snowRetention(s.snow,deg,s.wind);
     q.g.visible=s.snow>.15&&r>.012;q.mat.opacity=.10+.84*r;
+    /* Forma visual de la descarga: al inclinar, la nieve que queda se concentra en
+       el borde BAJO de la mesa. No calcula masa ni avalancha; solo evita representar
+       una película uniforme que físicamente sería absurda a 55°. */
+    var ad=Math.min(85,Math.abs(deg)),cover=clamp(Math.pow(Math.cos(ad*Math.PI/180),1.15),.08,1),
+        sg=deg>=0?1:-1,shift=sg*(q.span||2.382)*(1-cover)/2;
+    q.g.children.forEach(function(m){m.scale.z=cover;m.position.z=shift;});
   }
   if(F3.instSnow){
     var r2=snowRetention(s.snow,frameAngle(s),s.wind);
