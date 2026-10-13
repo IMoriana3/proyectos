@@ -60,7 +60,7 @@ PATRON="${1:-}"
 # nadie fija no consigue.
 declare -A PISO=(
   [test_generador_inclemencias.js]=45
-  [test_abanderamiento_evento.js]=54
+  [test_abanderamiento_evento.js]=59
   [test_buscador.js]=59
   [test_careo_pvsyst.js]=11
   # La cartera del usuario NO la probaba nadie: de los 33 arneses, el único que
