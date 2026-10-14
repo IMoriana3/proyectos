@@ -337,6 +337,33 @@ check('y con el sol alto la sombra por metro es corta',
       curva.pts[Math.round(curva.peak.min / 4)].sh < 1,
       curva.pts[Math.round(curva.peak.min / 4)].sh);
 
+// ORTO Y OCASO CON EL CRITERIO NOAA, no con la rejilla. Antes el amanecer era el
+// primer punto de la malla de 4 min con elevación aparente ≥ 0: sin el
+// semidiámetro del sol y redondeado hasta 4 min tarde, El Burgo I salía a las
+// 08:20 el 15/10/2026 cuando las efemérides (NOAA, timeanddate) dicen 08:15.
+// El oráculo es la propia definición: en el instante del orto el centro del
+// sol está a −0,833° GEOMÉTRICOS (34' de refracción + 16' de semidiámetro).
+const burgo = dc(41.57634, -0.79814, '2026-10-15', 2);
+const egOrto = sg(lu('2026-10-15', burgo.rise, 2), 41.57634, -0.79814).elevGeom;
+check('solarGeom da también la elevación geométrica, y cerca del horizonte va por debajo de la aparente',
+      typeof egOrto === 'number' && egOrto < sg(lu('2026-10-15', burgo.rise, 2), 41.57634, -0.79814).elevation);
+check('en el orto el centro del sol está a −0,833° geométricos (±0,05), que es el criterio NOAA',
+      Math.abs(egOrto + 0.8333) < 0.05, egOrto);
+check('El Burgo I amanece el 15/10/2026 a las 08:15 CEST (±1 min), como las efemérides',
+      Math.abs(burgo.rise - (8 * 60 + 15)) <= 1, burgo.rise);
+check('y se pone a las 19:23 (±1 min)', Math.abs(burgo.set - (19 * 60 + 23)) <= 1, burgo.set);
+check('el crepúsculo civil empieza con el sol a −6° (±0,05), antes del orto',
+      burgo.civIni !== null && burgo.civIni < burgo.rise &&
+      Math.abs(sg(lu('2026-10-15', burgo.civIni, 2), 41.57634, -0.79814).elevGeom + 6) < 0.05,
+      burgo.civIni);
+check('y en octubre a 41° N dura entre 25 y 35 minutos, por los dos lados',
+      burgo.rise - burgo.civIni > 25 && burgo.rise - burgo.civIni < 35 &&
+      burgo.civFin - burgo.set > 25 && burgo.civFin - burgo.set < 35,
+      [burgo.rise - burgo.civIni, burgo.civFin - burgo.set]);
+check('con sol de medianoche no hay orto, ocaso ni crepúsculo que inventar',
+      (function () { const t = dc(69.65, 18.96, '2026-06-21', 2);
+        return t.rise === null && t.set === null && t.civIni === null && t.civFin === null && t.peak.el > 0; })());
+
 // ══════════════════════════════════════════════════════════════════════
 //  8) EL TECHO DE LA SOMBRA
 // ══════════════════════════════════════════════════════════════════════
