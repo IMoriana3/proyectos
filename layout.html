@@ -88,7 +88,7 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
 <div class="wrap">
   <div class="card">
     <h2>Parcela y parámetros</h2>
-    <div class="field"><label>Planta (centro, de la cartera)</label>
+    <div class="field"><label>Planta de referencia</label>
       <select id="plant"><option value="">— manual —</option></select></div>
     <div class="two">
       <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="41.57634"></div>
@@ -108,14 +108,14 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
     <button class="btn" id="loadBtn" style="margin-top:8px;background:var(--panel-2);color:var(--text);border-color:var(--line)">⬆ Cargar GeoJSON (del notebook)</button>
     <input type="file" id="geoFile" accept=".geojson,.json" style="display:none">
     <button class="btn" id="d3Btn" style="margin-top:8px;display:none">🧊 Ver en 3D →</button>
-    <p class="note">¿SolarGPT en Colab? Clic en el indicador del motor (arriba) para pegar la URL del túnel, o usa <b>Cargar GeoJSON</b> con el fichero que exporte el notebook.</p>
+    <p class="note">Si usas Colab, pega la URL del túnel en el indicador del motor. También puedes cargar el GeoJSON exportado por el notebook.</p>
   </div>
 
   <div class="card">
     <h2>Implantación</h2>
     <div id="stats"></div>
     <canvas id="cv" width="920" height="600"></canvas>
-    <p class="note" id="foot">Elige una planta (o coords) y un rectángulo de parcela; el motor calcula la implantación (trackers/mesas) y aquí se dibuja. Necesita el motor SolarGPT (<code>./run.sh</code>).</p>
+    <p class="note" id="foot">Elige planta o coordenadas y define la parcela. SolarGPT calculará la implantación. Requiere el motor activo (./run.sh).</p>
   </div>
 </div>
 

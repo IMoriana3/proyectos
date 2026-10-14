@@ -106,6 +106,9 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   page.on('pageerror', e => errores.push(String(e)));
   await page.goto(BASE + '/sim-viento.html', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#run', { timeout: 20000 });
+  // Evento es la vista principal del producto; este banco mide el laboratorio fino.
+  await page.click('#mLive');
+  await page.waitForSelector('#liveCtl', { state: 'visible', timeout: 15000 });
 
   check('la ficha expone la cadena entera', await page.evaluate(() =>
     ['mediaMovil', 'rejilla', 'retardo', 'vientoVisto', 'ordenEnElEje',
@@ -455,11 +458,13 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   // entre los que recorre.
   const fuenteViento = require('node:fs').readFileSync(
     require('node:path').join(__dirname, '..', 'sim-viento.html'), 'utf8');
-  const escritores = (fuenteViento.match(/lPlay'\)[^;\n]*\.textContent\s*=|b\.textContent\s*=/g) || []);
-  check('el rótulo del botón lo escribe UN SOLO sitio', escritores.length === 1,
+  const iPinta = fuenteViento.indexOf('function pintaPlay(){');
+  const fPinta = iPinta >= 0 ? fuenteViento.slice(iPinta, fuenteViento.indexOf('\n}', iPinta) + 2) : '';
+  const escritores = (fPinta.match(/lPlay'\)[^;\n]*\.textContent\s*=|b\.textContent\s*=/g) || []);
+  check('el rótulo de EN VIVO lo escribe UN SOLO sitio', escritores.length === 1,
         escritores.length + ': ' + escritores.join(' · '));
   check('y ese sitio es `pintaPlay`, que lo DEDUCE de LIVE.run',
-        /function pintaPlay\(\)\s*\{[\s\S]{0,300}?LIVE\.run\s*\?/.test(fuenteViento));
+        /function pintaPlay\(\)\s*\{[\s\S]{0,300}?LIVE\.run\s*\?/.test(fPinta));
 
   // MUTANTE QUE SOBREVIVE, DECLARADO. Quitar la llamada a `pintaPlay()` de
   // DENTRO de `liveInit` no pone rojo nada de este banco, y es correcto que no

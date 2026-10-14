@@ -47,7 +47,7 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
 // mientras el del 3D moría—, que es el quinto corolario en su forma más
 // literal: la fixture no contenía el mecanismo. Así que aquí la ficha de
 // viento se CORRE, con la meteo interceptada como en los demás arneses de
-// viento, y pasa de 1 lienzo medido a 7.
+// viento, y pasa de 1 lienzo medido a 8 con la capa meteorológica.
 //
 // Quedan DOS que ni así aparecen —`extCv` (extremos) y `gTl` (línea de tiempo
 // de racha)—: piden más interacción de la que este banco hace. `extCv` necesita
@@ -57,7 +57,7 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
 // AFINADO el 2026-09-10, porque la versión anterior de esta nota decía menos de
 // lo que se sabe y eso también envejece: los OCHO lienzos 2D de la ficha se
 // dimensionan por la MISMA función, `prep2d`, y ese mecanismo sí está medido —
-// el mutante que le pone el `dpr` a 1 mata SEIS de los siete que este banco
+// el mutante que le pone el `dpr` a 1 mata SIETE de los ocho que este banco
 // alcanza. O sea que lo que falta no son dos mecanismos sin vigilar, son dos
 // INSTANCIAS del mismo mecanismo ya vigilado, en caminos que este banco no
 // recorre. Es un hueco más pequeño del que la nota anterior sugería, y sigue
@@ -79,7 +79,7 @@ const meteoSint = lat => {
 };
 const PAGINAS = [
   ['sim-solar.html', 7, null],
-  ['sim-viento.html', 7, async page => {
+  ['sim-viento.html', 8, async page => {
     await page.waitForSelector('#run', { timeout: 15000 });
     await page.click('#run');
     await page.waitForFunction(() => window.REP && REP.cases, { timeout: 120000 });
@@ -157,8 +157,8 @@ const MINIMO = 1.9;
   }
   // El total va escrito por la misma razón que el de cada página: si una ficha
 // dejara de pintar y otra ganara un panel, los recuentos por página podrían
-// cuadrar por separado. Diecinueve, medidos el 2026-09-10 con densidad 2.
-check('se han medido los diecinueve lienzos del repo', totalLienzos === 19, totalLienzos);
+// cuadrar por separado. Veinte: los 19 históricos + `meteoFxCanvas`, medido al introducir la meteorología 3D.
+check('se han medido los veinte lienzos del repo', totalLienzos === 20, totalLienzos);
 
   // ── CONTROL POSITIVO ────────────────────────────────────────────────
   // Una batería donde todo pasa puede querer decir que la batería no mide.

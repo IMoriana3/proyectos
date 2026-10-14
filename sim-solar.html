@@ -137,7 +137,7 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
     <!-- ENTRADAS -->
     <div class="card">
       <h2><span class="ic">☉</span> Emplazamiento</h2>
-      <div class="field"><label>Planta (de la cartera)</label>
+      <div class="field"><label>Planta</label>
         <select id="plant"><option value="">— manual —</option></select>
         <div class="tag" id="plantMsg"></div></div>
       <div class="two">
@@ -166,7 +166,7 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
       </div>
       <div class="readout" id="ro"></div>
       <div class="chkrow">
-        <label class="chk"><input type="checkbox" id="cMes"> los 12 arcos del mes</label>
+        <label class="chk"><input type="checkbox" id="cMes"> Recorrido mensual del sol</label>
         <label class="chk"><input type="checkbox" id="cHora"> líneas de hora (analema)</label>
         <span class="tag" style="margin-left:auto">carta solar · proyección equidistante</span>
       </div>
@@ -197,7 +197,7 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
       <h2><span class="ic">🗓</span> Amanecer, mediodía solar y atardecer <span style="margin-left:auto;font:400 11px var(--mono);color:var(--muted)">día 21 de cada mes · hora local</span></h2>
       <div id="calOut"></div>
       <div class="btnrow" style="margin-top:10px">
-        <button class="btn ghost small" id="calCsv">⬇ El año entero en CSV</button>
+        <button class="btn ghost small" id="calCsv">⬇ Descargar año en CSV</button>
       </div>
     </div>
   </div>
@@ -211,6 +211,7 @@ canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px
           <div class="field"><label>Montaje</label><select id="kind"><option value="tracker">Tracker (1 eje)</option><option value="fixed">Fija</option></select></div>
           <div class="field"><label>Modo</label><select id="mode"><option value="rapida">Rápida (PVWatts)</option><option value="bancable">Bancable (P50)</option></select></div>
         </div>
+        <div class="note" id="weatherContractStatus">Meteo anual: se intentará usar el WeatherContract TMY activo; si no existe, fallback Open-Meteo declarado.</div>
         <div class="field"><label>Módulo CEC <span style="color:var(--muted-2);font-weight:400">· motor</span></label>
           <input id="modcec" list="modlist" placeholder="busca: JA Solar, Longi, Trina…" autocomplete="off">
           <datalist id="modlist"></datalist></div>
@@ -872,6 +873,21 @@ function engineOffMsg(){
 }
 var MOD=null;   // parámetros del módulo CEC elegido (de /modules)
 
+var LAST_WEATHER_STAMP=null;
+async function annualMeteoForEngine(){
+  LAST_WEATHER_STAMP=null;
+  try{
+    var A=await import('./lib/weather-contract-engine.js');
+    var z=await A.loadAnnualContract();
+    LAST_WEATHER_STAMP=z.stamp;
+    $('weatherContractStatus').textContent='WeatherContract TMY · '+z.stamp.contract_id+' · hash '+z.stamp.dataset_hash+' · '+z.stamp.rows+' h';
+    return {meteo_mode:'inline',meteo:z.meteo,label:'WeatherContract TMY'};
+  }catch(e){
+    $('weatherContractStatus').textContent='Fallback Open-Meteo · '+String(e&&e.message||e);
+    return {meteo_mode:'openmeteo',meteo:null,label:'Open-Meteo fallback'};
+  }
+}
+
 async function simulate(){
   var out=$('prodOut'); $('demOut').innerHTML='';
   if(faltanCoords()){ out.innerHTML='<p class="note" style="color:#F2C94C">Sin coordenadas no se simula: el emplazamiento elegido no las trae. Tecléalas arriba o rellénalas en la Cartera técnica.</p>'; return; }
@@ -879,9 +895,9 @@ async function simulate(){
   if(!ENGINE){ out.innerHTML=engineOffMsg(); return; }
   out.innerHTML='<p class="note">Simulando en el motor…</p>';
   try{
-    var j, foot;
+    var j, foot, wx=await annualMeteoForEngine();
     if(mode==='bancable'){
-      var body={lat:lat,lon:lon,policy:'pvlib',strict:false,meteo_mode:'openmeteo',
+      var body={lat:lat,lon:lon,policy:'pvlib',strict:false,meteo_mode:wx.meteo_mode,meteo:wx.meteo,
         tracker:{max_angle:+$('maxang').value,gcr:+$('gcr').value,backtrack:true}};
       var r=await fetch(ENGINE+'/bankable',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
       if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' · '+t.slice(0,180));}
@@ -891,13 +907,14 @@ async function simulate(){
         card('Política',j.policy_name||'—','')+
         card('QA',j.qa_all_passed===true?'✓ pasa':(j.qa_all_passed===false?'✗ falla':'—'),'gates')+
         card('θ tracker',j.theta_out_summary?(Math.round(j.theta_out_summary.min)+'…'+Math.round(j.theta_out_summary.max)):'—','°')+
-        '</div><p class="note">Pipeline <b>bancable</b> · '+(kind==='fixed'?'(evalúa eje tracker)':'tracker')+'. Para fija usa modo Rápida.</p>';
+        '</div><p class="note">Pipeline <b>bancable</b> · '+(kind==='fixed'?'(evalúa eje tracker)':'tracker')+' · meteo '+wx.label+
+      (LAST_WEATHER_STAMP?' · '+LAST_WEATHER_STAMP.contract_id+' · hash '+LAST_WEATHER_STAMP.dataset_hash:'')+'. Para fija usa modo Rápida.</p>';
       return;
     }
     var sys=(kind==='fixed')?{tilt_deg:+$('tilt').value,azimuth_deg:+$('azi').value}
                             :{max_angle_deg:+$('maxang').value,gcr:+$('gcr').value,backtrack:true};
     var body2={lat:lat,lon:lon,kind:kind,system:sys,module:moduleSpec(),
-      losses:{soiling_pct:2.0,mismatch_pct:2.0},meteo_mode:'openmeteo'};
+      losses:{soiling_pct:2.0,mismatch_pct:2.0},meteo_mode:wx.meteo_mode,meteo:wx.meteo};
     var r2=await fetch(ENGINE+'/generation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body2)});
     if(!r2.ok){var t2=await r2.text();throw new Error('HTTP '+r2.status+' · '+t2.slice(0,180));}
     j=await r2.json();
@@ -906,7 +923,9 @@ async function simulate(){
       card('Yield',j.yield_kwh_kwp_y!=null?Math.round(j.yield_kwh_kwp_y):'—','kWh/kWp')+
       card('PR',j.pr_net!=null?(j.pr_net*100).toFixed(1):'—','%')+
       card('POA',j.poa_annual_kwh_m2!=null?Math.round(j.poa_annual_kwh_m2):'—','kWh/m²')+
-      '</div><p class="note">Motor SolarGPT · '+(MOD?'módulo CEC <b>'+MOD._name+'</b> · ':'')+'meteo openmeteo · '+(j.meteo_rows||'?')+' filas.</p>';
+      '</div><p class="note">Motor SolarGPT · '+(MOD?'módulo CEC <b>'+MOD._name+'</b> · ':'')+'meteo '+wx.label+
+      (LAST_WEATHER_STAMP?' · '+LAST_WEATHER_STAMP.contract_id+' · hash '+LAST_WEATHER_STAMP.dataset_hash:'')+
+      ' · '+(j.meteo_rows||'?')+' filas.</p>';
     if($('econOn').checked && j.yield_kwh_kwp_y) await runEconomy(j.yield_kwh_kwp_y, out);
   }catch(e){ out.innerHTML='<div class="engmsg">No se pudo simular: '+(e&&e.message||e)+'</div>'; }
 }
@@ -1025,7 +1044,7 @@ var COORDS_FALLBACK={'24002':[41.57634,-0.79814],'24025':[39.11821,-1.15985],'24
    Si no hay red, se cae a la regla peninsular y se avisa: mejor una regla declarada que una copia
    vieja fingiendo ser un dato. */
 var INDICE=null, INDICE_PEDIDO=false;
-var LAYOUTS='https://imoriana3.github.io/cobertura-zigbee/';
+var LAYOUTS='https://cobertura-zigbee.imoriana3.workers.dev/';
 function pideIndice(){
   if(INDICE_PEDIDO)return Promise.resolve(INDICE); INDICE_PEDIDO=true;
   return fetch(LAYOUTS+'plantas_indice.json',{cache:'no-store'})

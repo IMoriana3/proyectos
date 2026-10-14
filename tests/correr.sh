@@ -59,6 +59,8 @@ PATRON="${1:-}"
 # aquí y el cambio aparece en el diff, que es justo lo que un recuento que
 # nadie fija no consigue.
 declare -A PISO=(
+  [test_generador_inclemencias.js]=45
+  [test_abanderamiento_evento.js]=60
   [test_buscador.js]=59
   [test_careo_pvsyst.js]=11
   # La cartera del usuario NO la probaba nadie: de los 33 arneses, el único que
@@ -390,7 +392,7 @@ declare -A PISO=(
   # y daba verde. Lo delató su propia batería (el mutante del 2D sobrevivía
   # mientras el del 3D moría). Quedan DOS sin alcanzar, `extCv` y `gTl`, y está
   # dicho en el arnés.
-  [test_nitidez.js]=32
+  [test_nitidez.js]=33
   [test_pwa.js]=21
   # El careo que faltaba entre DOS FICHAS: `cartera-tabla.html` escribe
   # `factiun_plantas` con `publishSpecs` y `index.html` lo lee en `SPECS` para
@@ -419,6 +421,7 @@ declare -A PISO=(
   # el día juliano corrido un día entero, el backtracking quitado del todo y la
   # refracción anulada. Este banco los mata 4, 5 y 3.
   [test_solar.js]=73
+  [test_solar_weather_contract.mjs]=14
   [test_sizing.js]=115
   # 13, y MEDIDO en los TRES modos —con checkout hermano, por `main` sobre
   # HTTPS y sin ninguno de los dos— porque el recuento no cambia entre ellos:
@@ -450,7 +453,7 @@ declare -A PISO=(
   # Nace de un hueco MEDIDO: con el `hold` de la histéresis puesto a cero en
   # la llamada real, los diez arneses que abren la ficha —539 comprobaciones—
   # se quedaron verdes. La histéresis se podía borrar y el repo no lo notaba.
-  [test_viento_abanderamiento.js]=33
+  [test_viento_abanderamiento.js]=40
   # De la batería de mutación del 2026-09-10: SIETE mutantes sobre mecanismos
   # que ningún arnés nombraba —Gumbel, lazo de control, denominador del pasivo—
   # mataron CERO comprobaciones contra los 238 de los arneses de viento. Estos
@@ -727,7 +730,7 @@ declare -A PISO=(
   # declarados. Un literal repetido no es un oráculo más fuerte, es tres sitios
   # donde envejecer.
   [test_viento_latencia.js]=134
-  [test_viento_meteo.js]=33
+  [test_viento_meteo.js]=36
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,
   # `control`, `poa`, `single`, `dual`, `pasivo`— y ninguno el MONTAJE: en qué
@@ -975,7 +978,12 @@ declare -A PISO=(
   # comprobación fijaba qué borde usa `granizoPlan`: ahora lo fija una racha que
   # llega a los 8 min, que cabe con 30° (5,9) y vetaría con 55° (10,8). Tras los dos
   # arreglos: 5/5 y 6 bajas, los cinco llegando a su veredicto.
-  [test_granizo_estrategia.mjs]=135
+  [test_granizo_estrategia.mjs]=143
+  # Weather Workbench autónomo + visual parity: 72 comprobaciones. Además de
+  # los goldens TMY y el smoke de Cartera/ancho, fija las 11 familias visuales
+  # de Meteo: mensual, serie diaria, zoom, cockpit 6-paneles, DOY, rosa,
+  # extremos térmicos/heladas, nieve, granizo, viento sintético y comparación.
+  [test_meteo_browser.mjs]=73
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )
