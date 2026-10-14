@@ -17,6 +17,22 @@ No hay una tercera lista de plantas mantenida a mano. Los proyectos propios pers
 
 ## WeatherContract v2
 
+### Identidad cross-language y cross-origin
+
+El `dataset_hash` del WeatherContract se calcula con un payload JSON
+canónico común a JavaScript y Python: timestamp UTC ISO con milisegundos,
+nombres de campo del contrato, `null`/NaN omitidos y SHA-256 truncado a 24
+hex. El hash heredado de pandas se conserva en el core Python como
+`source_data_hash`, pero **no** identifica el contrato entre superficies.
+
+Cache Storage y localStorage son por origen. Por ello, un consumidor servido
+desde `*.imoriana3.workers.dev` no puede leer directamente el contrato activo
+de `imoriana3.github.io`. `weather-contract-bridge.html` resuelve esa frontera
+con un iframe del origen meteorológico y `postMessage`, limitado a orígenes
+Factiun explícitos. No introduce una segunda copia persistente: transporta el
+mismo paquete `contract_id + dataset_hash`.
+
+
 El workbench publica cada dataset preparado como un paquete **WeatherContract v2** en Cache Storage del origen `imoriana3.github.io`, con una referencia ligera en `localStorage`. Al compartir origen, los simuladores de otros repos publicados bajo GitHub Pages pueden leer exactamente el mismo paquete sin volver a descargar meteo.
 
 El contrato contiene:
