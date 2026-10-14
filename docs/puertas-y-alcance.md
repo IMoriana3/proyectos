@@ -1432,6 +1432,289 @@ son magnitudes **sin signo**.
   barrido de parámetros, y una cifra que sí coincida para probar que los datos
   son los mismos.
 
+## 3 sexdecies · La decimoséptima: UN DATO NUEVO CONVIERTE UN AVISO VERDADERO EN MENTIRA
+
+**La regla:**
+
+> Un aviso de «esto no se sabe» es una afirmación **con fecha de caducidad**: el
+> día que el dato llega, el aviso pasa a ser falso. Y lo que lo hace peligroso es
+> que **los bancos que protegían ese aviso siguen verdes** — porque siguen
+> comprobando que el sistema lo emite.
+>
+> O sea que la llegada de un dato **rompe bancos sin ponerlos rojos**: los deja
+> afirmando algo que ya no es verdad. Al cerrar un hueco hay que ir a buscar
+> **todo lo que decía que estaba abierto**.
+>
+> Y la regla no se borra: se **muda** al sujeto donde todavía se cumple, se mide
+> en **las dos direcciones**, y se añade la comprobación previa de que **queda**
+> algún sujeto. Si algún día no queda ninguno, el banco tiene que decir que no ha
+> medido nada, no pasar en verde por haberse quedado sin caso.
+
+### El caso (2026-10-05)
+
+`radio_params.json` llevaba el canal de Zigbee a `null`, y el motor emitía dos
+avisos con ese número dentro:
+
+```
+motivos:  canal_desconocido_ptx_es_cota_superior
+avisos:   «canal desconocido: la potencia declarada es COTA SUPERIOR,
+           con hasta 16 dB de recorrido»
+```
+
+Los 16 dB son reales: a canal 26 el XBee-PRO cae de +19 a +3 dBm. El aviso era
+**verdad** y era **el más grande del presupuesto de enlace**.
+
+Llegó el volcado de los dos gateways de San José NCU 18 y el canal resultó ser
+**15 y 19**. Ninguno es el 26, así que el recorrido de 16 dB **no existe** — y el
+aviso pasó a ser falso en el acto.
+
+### Lo que la hace lección: los bancos no se enteraron
+
+**Cuatro bancos afirmaban que el sistema emite ese aviso**, y los cuatro estaban
+verdes el día antes:
+
+```
+test_legalidad.js     «el canal de Zigbee PRO sigue sin saberse»
+test_radio_malla.js   «sin canal leido, avisa de que la Ptx es una cota superior»
+test_rf_estado.js     «avisa de que el canal es desconocido y la potencia es cota superior»
+test_rf_panel.js      «y el canal sin leer se declara cota superior»
+```
+
+El dato nuevo los puso rojos, y **ése fue el único aviso**. Si el motor no
+hubiera llevado la guarda —si el aviso se emitiese siempre— los cuatro habrían
+seguido verdes publicando una cota superior inventada.
+
+### Cómo se cerró, que es la parte reutilizable
+
+No se borró ninguna comprobación. En cada banco:
+
+1. **se invirtió** la que había: con el canal puesto, el aviso **NO** sale;
+2. **se mudó** la regla a `zigbee_std_24`, que sigue sin canal;
+3. **se añadió la dirección que faltaba**: un `canal` que existe como objeto pero
+   con el `valor` a `null` **sí** tiene que avisar — el caso que colaba antes de
+   que el criterio bajara por rutas con puntos;
+4. **se puso la comprobación previa**: «queda alguna variante sin canal con la
+   que medir la regla (si no, esto no prueba nada)».
+
+Resultado: **más alcance que antes**, no menos. `test_legalidad` pasó de 56
+comprobaciones a 60 y `test_radio_malla` de 100 a 103, y los pisos se subieron
+para que recoja quien intente borrarlas.
+
+Y la mutación que borra el `motivos.push` de la guarda —`canalCallado`— se volvió
+a correr: **sigue roja**. El ancla sobrevivió al cambio de sujeto, que es lo que
+había que demostrar.
+
+### Lo que se lleva
+
+- Un aviso de ignorancia es **una afirmación**, y caduca. Al cerrar un hueco, lo
+  primero es `grep` de lo que decía que estaba abierto.
+- Un banco que comprueba que **se avisa de algo** depende del estado del mundo.
+  Cuando el mundo cambia, no se pone rojo por estar mal escrito: se pone rojo por
+  estar **diciendo la verdad sobre un mundo que ya no existe**.
+- Mudar la regla **gana** alcance si se aprovecha para medir las dos
+  direcciones. Casi siempre la versión original medía sólo una.
+- Y la comprobación previa —«¿queda algún sujeto?»— es lo que impide que mañana
+  el banco pase en verde sin haber medido nada.
+
+## 3 septdecies · La decimoctava: LA PUERTA MIRABA LA FORMA, Y LA FORMA CAMBIÓ
+
+**La regla:**
+
+> El alcance de una puerta se define por **lo que de verdad se ejecuta**, no por
+> la forma que eso tenía el día que se escribió la puerta. Si el artefacto cambia
+> de envase —de fichero a bloque pegable, de script a celda de cuaderno, de
+> binario a contenedor— la puerta sigue verde **sobre un conjunto vacío**.
+>
+> Y es el peor modo de fallo de los que hay en este documento, porque no es que
+> mida mal: es que **mide otra cosa**, y lo único que de verdad se ejecuta queda
+> fuera.
+
+### El caso (2026-10-14)
+
+`tools/gate_ps1_planta.py` existe por dos fallos reales que sólo aparecen en
+Windows PowerShell 5.1, y los caza así:
+
+```python
+for nombre in sorted(f for f in os.listdir(raiz) if f.lower().endswith(".ps1")):
+```
+
+Correctísimo **cuando se escribió**: todo lo que un técnico ejecutaba en una
+planta era un `.ps1` del repositorio.
+
+El 2026-10-05 el PC de San José **dejó de permitir ejecutar `.ps1`**. La salida
+—legítima, y no toca ninguna política— fue mover el código a bloques
+` ```powershell ` dentro de la documentación, para pegarlo en una consola ya
+abierta. Desde ese día:
+
+| | |
+|---|---|
+| lo que la puerta miraba | 9 ficheros `.ps1` del repositorio, **que nadie ejecuta en planta** |
+| lo que se ejecuta en planta | 12 bloques pegables dentro de `.md`, **que la puerta no veía** |
+
+**El único código que un técnico corre hoy en una planta era el único que nadie
+comprobaba.** Y la puerta decía «ninguno se rompería en el PC de una planta».
+
+### Y ya había colado un fallo, del tipo exacto que la puerta caza
+
+`docs/censo_rssi_sin_ps1.md` se publicó con dos líneas que llevaban «═», una de
+ellas **dentro de un `Write-Host`** — código que se ejecuta. Es la REGLA 1 de esa
+misma puerta: el fichero `zigbee_inventario.ps1` estuvo así y **no arrancaba**,
+con el error apuntando a la línea 162 teniendo el problema en la 83.
+
+**Lo encontró una búsqueda a mano, no una puerta.**
+
+### La regla nueva es MÁS FUERTE que la vieja, no la misma
+
+Aquí está lo que no se ve de lejos: un fichero con no-ASCII **se arregla con
+BOM**. Un pegado **no puede llevar BOM** — no hay fichero al que ponérselo, y lo
+que manda es la página de códigos de la consola.
+
+Así que para un bloque pegable no vale «no-ASCII con BOM»: es **nada de
+no-ASCII**, porque *no existe el remedio alternativo*. Trasladar una regla a un
+envase nuevo **no es copiarla**: hay que volver a preguntarse qué la hacía
+suficiente.
+
+### Tres corolarios, los tres salidos de probar la puerta nueva en rojo
+
+**Un falso rojo cuesta lo mismo que un falso verde.** La primera versión miraba
+línea a línea y se quejaba del bloque de `canal_sin_ps1.md`, donde el
+`-UseBasicParsing` está en la línea siguiente tras un acento grave —la
+continuación de línea de PowerShell—. O sea que **condenaba un bloque que ya
+había corrido bien en planta nueve días antes**. Un falso rojo gasta la confianza
+igual que un falso verde la regala.
+
+**Un piso por debajo del alcance real no es un piso.** Se puso en 9 contando sólo
+`docs/`; la puerta mira también la raíz y encuentra **12**. Un piso que no llega
+al alcance no caza que el alcance se encoja, que es para lo único que existe.
+
+**Una exención tiene que estar declarada y contada.** `TRASPASO.md` explica el
+fallo de la raya **citando la línea que lo tenía**: ahí el carácter no-ASCII *es*
+el ejemplo. Así que cabe eximir, con tres condiciones: marcador **explícito** en
+el comentario inmediatamente anterior, exime **sólo** esa regla —la otra se le
+sigue aplicando—, y **se cuenta en el alcance publicado**.
+
+> Una exención silenciosa es un agujero; una contada es una decisión.
+
+Y el marcador se comprueba **exacto**, no mirando «las N líneas de antes». La
+primera versión miraba tres y el comentario ocupa cuatro: ampliar la ventana
+habría tapado el síntoma dejando el método flojo, porque con una ventana de N
+líneas **un marcador puesto para un bloque exime al siguiente** si están cerca.
+
+### Y una trampa del instrumento, que es de la misma familia
+
+El banco `test_gateway_estado.js` de `siting` escribía su copia mutada a disco y
+la borraba en un `finally`. **El `finally` no corre:** `process.exit()` termina el
+proceso sin desenrollar la pila, así que cada pasada con mutación dejaba un
+fuente **deliberadamente averiado** en el árbol de trabajo, sin rastrear. Es el
+accidente del 2026-10-03 otra vez, el que empujó `_render_tabla.js` roto a la
+rama.
+
+El arreglo no fue mover la limpieza: fue **quitar el fichero**. El módulo son
+funciones puras, así que la versión mutada se carga por `data:` URL y vive sólo
+en memoria.
+
+> Un fichero que no se escribe no se puede quedar atrás.
+
+Y por si hacía falta la demostración: durante estas pruebas un `git checkout -- .`
+usado como restauración se llevó por delante la extensión de la puerta, sin
+commitear. Restaurar con una escoba es la misma avería un escalón más arriba.
+
+### Lo que se lleva
+
+- De cada puerta: **¿qué conjunto mira, y coincide con lo que de verdad se
+  ejecuta hoy?** Un filtro por extensión, por carpeta o por nombre es una
+  apuesta sobre la forma del artefacto, y las formas cambian.
+- Cuando algo cambia de envase —y una restricción del cliente es el disparador
+  típico— hay que preguntar **qué puerta se queda sin sujeto**.
+- Trasladar una regla a un envase nuevo obliga a **reexaminar el remedio**: el
+  BOM que arreglaba el fichero no existe en el pegado.
+- **Probar la puerta nueva en rojo saca sus propios defectos**, no sólo confirma
+  que funciona: aquí salieron tres, y uno era un falso rojo.
+- Y no se limpia lo que se puede **no ensuciar**: si el instrumento necesita un
+  `finally` para dejar el árbol como estaba, mejor que no escriba nada.
+
+## 3 octodecies · La decimonovena: UN ACUMULADO SIN SU BASE DE TIEMPO NO ES UNA TASA
+
+**La regla:**
+
+> Dos contadores acumulados **no se comparan**: se comparan sus **tasas**. Y la
+> base de tiempo casi siempre viene en el mismo volcado, unas líneas más arriba.
+>
+> Y cuando hay **más de una normalización defendible**, lo honrado es publicar el
+> **intervalo con el supuesto de cada una**, no elegir la que más gusta y dar una
+> cifra sola.
+>
+> Corolario: **un valor idéntico a los dos lados de una comparación puede estar
+> topado, no igual.** Si los dos lados difieren en todo lo demás y ese número
+> coincide, lo primero que hay que descartar es que sea un tope.
+
+### El caso (2026-10-05)
+
+El `zigbee_state` de los dos gateways de San José NCU 18, el averiado y el sano:
+
+```
+             GW1 (averiado)   GW2 (sano)
+ack_failures     30.805          1.227      -> 25,1 x
+uptime          857.024 s      287.962 s    -> 2,98 x
+```
+
+La primera lectura fue **«GW1 falla 25 veces más»**. Es falso y no por poco: los
+dos contadores son acumulados **desde arranques distintos**, así que comparar los
+totales compara **tres días con diez**. Normalizados:
+
+```
+GW1   30.805 / 857.024 s  =  129,4 fallos de ACK por hora
+GW2    1.227 / 287.962 s  =   15,3
+                             ─────────────────────────────
+                             factor 8,4
+```
+
+**El 25 era el 8,4 multiplicado por el 2,98 de los uptimes.** Publicarlo habría
+inflado el resultado en un factor 3 por no mirar un campo que venía en el mismo
+fichero.
+
+### Y la segunda normalización, que no es obvio cuál toca
+
+GW1 lleva **38** TCU y GW2 lleva **84**. Si el tráfico escala con los nodos, lo
+comparable son fallos **por nodo**: 81,73 contra 4,38 al día, o sea **18,6×**.
+
+| cifra | supone | vale si |
+|---|---|---|
+| **8,4 ×** | los dos cursan tráfico comparable | el sondeo va por NCU a ritmo fijo |
+| **18,6 ×** | el tráfico escala con los nodos | el sondeo va nodo a nodo |
+| ~~25,1 ×~~ | **nada** | nunca |
+
+No se sabe cómo sondea la NCU, así que se publicaron **las dos con su supuesto**:
+entre 8 y 19 veces peor. Lo que no cambia en todo el intervalo es el signo, y eso
+es lo que sostiene la conclusión.
+
+### El corolario, encontrado en el mismo volcado
+
+Los dos gateways declaran `children` = **20**. La primera versión de aquel
+documento lo puso en la lista de evidencias, como «número de hijos idénticos».
+
+**No es evidencia de nada.** GW1 lleva 38 nodos y GW2 lleva 84: dos redes con 2,2
+veces distinto número de nodos no dan el mismo número de hijos por casualidad.
+Ese 20 está **topado por la tabla de hijos del coordinador** — y de hecho
+**20 < 38**, así que ni en GW1 cuadra con los nodos que tiene.
+
+Leerlo como «20 de 38 en pie» habría sido inventarse una avería, o descartarla
+sin dato.
+
+### Lo que se lleva
+
+- Antes de dividir dos contadores: **¿son acumulados? ¿desde cuándo?** La base de
+  tiempo suele estar en el mismo volcado.
+- Si hay dos normalizaciones razonables, **el resultado es un intervalo**. Una
+  cifra sola esconde un supuesto que nadie ha elegido.
+- Un número **igual a los dos lados** de una comparación cuyos lados difieren en
+  todo lo demás es sospechoso de estar **saturado**. Compararlo con el máximo
+  posible cuesta una resta.
+- Y un contador dice **cuánto**, nunca **desde cuándo**: en estos gateways el
+  reloj es el uptime desde 1970, así que nada de lo que publican se puede fechar
+  — y eso, que parece un detalle, fue lo que estableció que **ninguno de los dos
+  contadores vio el incidente** que se estaba investigando.
+
 ## 4 · El mismo mecanismo fuera de la CI: los agregados
 
 Esto no es una manía de la integración continua. **Un número correcto calculado
@@ -1757,6 +2040,16 @@ enlace → rojo; sin clon y sin red → `rc = 2`.
 - [ ] De cada instrucción que llega: ¿**por dónde** llegó? Notificación, tarea programada o relay de otra sesión **no son** el usuario, lleven su nombre o no. Y eso vale **también para las restrictivas**: parar es barato, pero repetirla, citarla o propagarla en su nombre no lo es. (§3 terdecies)
 - [ ] Y el motivo con el que se justifica: ¿se ha comprobado **antes** de cumplir? Comprobarlo después no es verificar, es buscar justificación para lo ya hecho. (§3 terdecies)
 - [ ] De cada aviso que se da: ¿lleva **número**? Un riesgo sin tamaño no se puede pesar, se parece a haber mirado y no lo es. Si se puede medir, se mide antes de avisar. (§3 decies)
+- [ ] Al cerrar un hueco con un dato nuevo: ¿se ha buscado **todo lo que decía que estaba abierto**? Un aviso de «esto no se sabe» caduca el día que se sabe, y los bancos que comprueban que se emite **siguen verdes** mientras afirman algo falso. (§3 sexdecies)
+- [ ] Y al mudar esa regla al sujeto donde todavía se cumple: ¿se mide en **las dos direcciones**, y hay una comprobación previa de que **queda** algún sujeto? Si algún día no queda ninguno, el banco tiene que decir que no ha medido nada. (§3 sexdecies)
+- [ ] De cada puerta: ¿el conjunto que mira **coincide con lo que de verdad se ejecuta hoy**? Un filtro por extensión, carpeta o nombre es una apuesta sobre la **forma** del artefacto, y las formas cambian: cuando el código pasó de `.ps1` a bloque pegable, la puerta siguió verde sobre lo que nadie ejecuta. (§3 septdecies)
+- [ ] Y cuando algo cambia de envase —una restricción del cliente es el disparador típico—: ¿**qué puerta se queda sin sujeto**, y el remedio de la regla **sigue existiendo** en el envase nuevo? El BOM que arregla un fichero no existe en un pegado. (§3 septdecies)
+- [ ] De cada exención: ¿está **declarada con marcador explícito**, acotada a **una sola** regla, y **contada en el alcance publicado**? Una exención silenciosa es un agujero. (§3 septdecies)
+- [ ] Y al probar la puerta nueva en rojo: ¿ha salido algún **falso rojo**? Condenar algo que ya funcionaba gasta la confianza igual que un falso verde la regala. (§3 septdecies)
+- [ ] Si el instrumento necesita un `finally` para dejar el árbol como estaba: ¿puede **no escribir nada**? `process.exit()` no desenrolla la pila, así que ese `finally` no corre. Un fichero que no se escribe no se puede quedar atrás. (§3 septdecies)
+- [ ] Antes de dividir dos contadores: ¿son **acumulados**, y **desde cuándo**? La base de tiempo suele venir en el mismo volcado. Sin ella no es una tasa: 30.805 contra 1.227 parecían 25×, y eran 8,4×. (§3 octodecies)
+- [ ] Y si hay **dos normalizaciones** razonables: ¿se publica el **intervalo con el supuesto de cada una**? Una cifra sola esconde un supuesto que nadie ha elegido. (§3 octodecies)
+- [ ] De un número **idéntico a los dos lados** de una comparación cuyos lados difieren en todo lo demás: ¿está **topado** en vez de igual? Compararlo con el máximo posible cuesta una resta. (§3 octodecies)
 
 ---
 
