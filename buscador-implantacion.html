@@ -3,18 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0B0F14">
+<meta name="theme-color" content="#0E1826">
 <title>Buscador de implantaciones — Factiun</title>
 <link rel="icon" href="favicon.svg">
 <style>
-:root{--void:#0B0F14;--panel:#121922;--panel-2:#0F151D;--line:#23303D;--text:#E7EEF4;--muted:#8093A4;
-  --accent:#36D399;--warn:#F2A900;--danger:#ef5f6b;
-  --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;--sans:'IBM Plex Sans',system-ui,sans-serif}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/Barlow-400-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/Barlow-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/Barlow-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/Barlow-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/Barlow-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/Barlow-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/BarlowCondensed-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/BarlowCondensed-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/BarlowCondensed-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/BarlowCondensed-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/JetBrainsMono-400-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/JetBrainsMono-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/JetBrainsMono-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/JetBrainsMono-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/JetBrainsMono-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/JetBrainsMono-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+
+:root{--void:#0E1826;--panel:#132238;--panel-2:#101D30;--line:#27405F;--text:#DCE3EB;--muted:#8C9AAB;
+  --accent:#F09030;--warn:#F2C94C;--danger:#E84858;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  /* Piel «Célula» (la de la portada): ámbar Factiun como único color de emisión */
+  --amb:#F09030;--amb-dim:#9A5E20;--fos:#68C0D8;--alm:#E84858;--plata:#B8C3CE;
+}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--void);color:var(--text);font-family:var(--sans);overflow:hidden}
 #lienzo{position:fixed;inset:0;width:100%;height:100%;display:block}
 #panel{position:fixed;top:10px;right:10px;bottom:44px;width:380px;display:flex;flex-direction:column;gap:8px;overflow:auto}
-#panel .tarj{background:rgba(15,21,29,.92);border:1px solid var(--line);border-radius:8px;padding:7px 9px 6px;flex:none}
+#panel .tarj{background:rgba(16,29,48,.92);border:1px solid var(--line);border-radius:2px;padding:7px 9px 6px;flex:none}
 #panel .tarj.crece{flex:1;min-height:60px;display:flex;flex-direction:column}
 #panel h3{font:600 9.5px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between}
 #panel h3 b{color:var(--accent);font-weight:600}
@@ -22,27 +42,27 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
 #panel .tarj.crece canvas{flex:1;min-height:0}
 #panel .tres{display:flex;justify-content:space-between;font:600 9.5px/1.2 var(--mono);margin-top:4px;color:var(--muted)}
 #panel .tres b{color:var(--accent)}
-#barra{position:fixed;left:10px;right:10px;bottom:8px;background:rgba(15,21,29,.92);border:1px solid var(--line);
-  border-radius:8px;padding:7px 12px;font:600 10.5px/1.6 var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#barra{position:fixed;left:10px;right:10px;bottom:8px;background:rgba(16,29,48,.92);border:1px solid var(--line);
+  border-radius:2px;padding:7px 12px;font:600 10.5px/1.6 var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #barra b{color:var(--text)}#barra .v{color:var(--accent)}#barra .r{color:var(--danger)}#barra .g{color:var(--muted)}
 /* ojo: un display propio PISA el atributo hidden (que actúa por display:none del UA); sin la regla
    de abajo este velo tapaba la página entera aunque estuviera hidden — pasó, 2026-09-08 */
 #aviso{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--void);z-index:9}
 #aviso[hidden]{display:none}
-#aviso div{max-width:520px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 26px;font-size:13.5px;line-height:1.6;color:var(--muted)}
+#aviso div{max-width:520px;background:var(--panel);border:1px solid var(--line);border-radius:2px;padding:22px 26px;font-size:13.5px;line-height:1.6;color:var(--muted)}
 #aviso b{color:var(--text)}
 #panel[hidden]{display:none}
 #panel .controls{padding:14px}#panel .controls h1{font-size:18px;margin-bottom:8px}
 #panel p{font-size:12px;line-height:1.5;margin:8px 0;color:var(--muted)}
-#panel label{font-size:12px;line-height:1.8}#panel select,#panel input[type=number]{width:100%;padding:7px;background:var(--void);color:var(--text);border:1px solid var(--line);border-radius:5px}
+#panel label{font-size:12px;line-height:1.8}#panel select,#panel input[type=number]{width:100%;padding:7px;background:var(--void);color:var(--text);border:1px solid var(--line);border-radius:2px}
 #panel .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}#panel .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
-#panel button{padding:8px 10px;background:var(--panel-2);border:1px solid var(--line);border-radius:5px;color:var(--text);cursor:pointer;font:12px var(--sans)}
-#panel button:disabled{opacity:.45;cursor:default}#panel .primary{background:#176246;border-color:var(--accent)}
+#panel button{padding:8px 10px;background:var(--panel-2);border:1px solid var(--line);border-radius:2px;color:var(--text);cursor:pointer;font:12px var(--sans)}
+#panel button:disabled{opacity:.45;cursor:default}#panel .primary{background:color-mix(in srgb,var(--accent) 30%,var(--panel));border-color:var(--accent)}
 #panel .actions{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0}#panel details>summary{font-size:12px;cursor:pointer;padding:6px 0}
 #panel progress{width:100%;height:7px;accent-color:var(--accent)}
 #comparison table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px;margin:10px 0}
 #comparison td,#comparison th{padding:6px 3px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
-#comparison th:first-child,#comparison td:first-child{width:42%;text-align:left}#comparison .changed td:last-child{background:#17382e;color:#9cebc9}
+#comparison th:first-child,#comparison td:first-child{width:42%;text-align:left}#comparison .changed td:last-child{background:color-mix(in srgb,var(--accent) 16%,transparent);color:#F5C089}
 #searchStatus{color:var(--text)!important}#panel [hidden]{display:none!important}
 #viewLabel{position:fixed;top:12px;left:65px;font-size:12px;color:var(--muted);background:var(--void);padding:5px}
 @media(max-width:900px){#panel{top:46%;left:8px;right:8px;bottom:44px;width:auto}#panel .telemetry{display:none}#barra{font-size:10px}}
@@ -350,14 +370,14 @@ function traza(pts,cerrar){CX.beginPath();pts.forEach((p,i)=>{const q=pV(p);i?CX
 function dibuja(){
   CX.clearRect(0,0,innerWidth,innerHeight);
   /* fondo decorativo (solo en sites sintéticos, y declarado como decoración) */
-  if(!REAL)PARCELA.deco.forEach((r,i)=>{traza(r,true);CX.fillStyle=i%3?"rgba(22,32,44,.5)":"rgba(16,34,52,.55)";CX.fill();});
-  traza(PARCELA.pts,true);CX.fillStyle="rgba(13,20,29,.96)";CX.fill();
-  CX.strokeStyle="rgba(231,238,244,.5)";CX.lineWidth=1.2;CX.stroke();
-  PARCELA.holes.forEach(h=>{traza(h,true);CX.fillStyle="rgba(9,13,19,.95)";CX.fill();CX.strokeStyle="rgba(128,147,164,.4)";CX.stroke();});
+  if(!REAL)PARCELA.deco.forEach((r,i)=>{traza(r,true);CX.fillStyle=i%3?"rgba(26,45,72,.5)":"rgba(19,34,56,.55)";CX.fill();});
+  traza(PARCELA.pts,true);CX.fillStyle="rgba(16,29,48,.96)";CX.fill();
+  CX.strokeStyle="rgba(220,227,235,.5)";CX.lineWidth=1.2;CX.stroke();
+  PARCELA.holes.forEach(h=>{traza(h,true);CX.fillStyle="rgba(11,20,33,.95)";CX.fill();CX.strokeStyle="rgba(140,154,171,.4)";CX.stroke();});
   const u=VIEW_RESULT==='base'?BASE_REF:(MEJOR||ULTIMO);if(!u||!u.r)return;
   mideOff(u.r);
   const loc=q=>[q[0]-OFF[0],q[1]-OFF[1]];
-  (u.r.roads||[]).forEach(rd=>{if(rd&&rd.length){traza(rd.map(loc),true);CX.fillStyle="rgba(128,147,164,.10)";CX.fill();}});
+  (u.r.roads||[]).forEach(rd=>{if(rd&&rd.length){traza(rd.map(loc),true);CX.fillStyle="rgba(140,154,171,.10)";CX.fill();}});
   const full=CFGP.mods[0],t=performance.now()/460;
   u.r.structures.forEach(st=>{const p=st.utm.map(loc),f=Math.min(1,(st.mods||full)/full);
     traza(p,true);
@@ -374,13 +394,13 @@ function brujula(){
   const c0=pV([TR.cx,TR.cy]),c1=pV([TR.cx,TR.cy+10]);
   let dx=c1[0]-c0[0],dy=c1[1]-c0[1];const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
   const bx=30,by=40,R=15;
-  CX.strokeStyle="rgba(231,238,244,.55)";CX.lineWidth=1.2;
+  CX.strokeStyle="rgba(220,227,235,.55)";CX.lineWidth=1.2;
   CX.beginPath();CX.moveTo(bx-dx*R,by-dy*R);CX.lineTo(bx+dx*R,by+dy*R);CX.stroke();
   CX.beginPath();
   CX.moveTo(bx+dx*R,by+dy*R);CX.lineTo(bx+dx*R-dx*5+dy*3.2,by+dy*R-dy*5-dx*3.2);
   CX.moveTo(bx+dx*R,by+dy*R);CX.lineTo(bx+dx*R-dx*5-dy*3.2,by+dy*R-dy*5+dx*3.2);
   CX.stroke();
-  CX.fillStyle="rgba(231,238,244,.8)";CX.font="600 10px "+getComputedStyle(document.body).getPropertyValue("--mono");
+  CX.fillStyle="rgba(220,227,235,.8)";CX.font="600 10px "+getComputedStyle(document.body).getPropertyValue("--mono");
   CX.fillText("N",bx+dx*(R+9)-3,by+dy*(R+9)+3.5);
 }
 /* structures.utm viene en UTM absolutas; el origen local se mide una vez por site */
@@ -400,7 +420,7 @@ function panel(){
    GAPS.forEach((v,i)=>{const a=Math.min(1,v/Math.max(...GAPS,1));
      g.fillStyle=i===GAPS.length-1?"#36D399":"rgba(54,211,153,.35)";
      g.fillRect(i*bw+1,h-4-(h-12)*a,bw-2,(h-12)*a+2);
-     g.fillStyle="#8093A4";g.font="600 7px monospace";if(v)g.fillText(v,i*bw+1,h);});}
+     g.fillStyle="#8C9AAB";g.font="600 7px monospace";if(v)g.fillText(v,i*bw+1,h);});}
   {const [g,w,h]=miniCanvas($("cGiro"));const max=Math.max(...HIST.giro.filter(x=>x!=null),1);
    HIST.giro.forEach((v,i)=>{if(v==null)return;const bw=w/15,a=v/max;
      g.fillStyle=MEJOR&&Math.floor((MEJOR.giro+90)/12)===i?"#54F096":"rgba(54,211,153,.45)";
