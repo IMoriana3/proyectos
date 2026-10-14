@@ -56,6 +56,20 @@ const CARTERA = {
   check('ningún rótulo enseña «undefined» ni «null»', opts.every(o => !/undefined|null/.test(o.text)), opts);
   check('la opción manual sigue la primera', opts[0] && opts[0].value === '' && /manual/.test(opts[0].text), opts[0]);
 
+  /* DE SERIE, HOY Y AHORA: la ficha abre en el día y la hora civiles de la planta, con el huso
+     que ella misma ha puesto, no en el solsticio de junio a las 12:00. Se calcula aquí lo mismo
+     que debería haber calculado la página, con su propio huso, y se admite el minuto de margen
+     que puede haber entre la carga y esta lectura (el deslizador va a pasos de 5 min). */
+  const ini = await page.evaluate(() => ({ date: document.getElementById('date').value,
+    hour: +document.getElementById('hour').value, tz: +document.getElementById('tz').value, now: Date.now() }));
+  const enPlanta = new Date(ini.now + ini.tz * 3600000);
+  const hoyPlanta = enPlanta.toISOString().slice(0, 10);
+  const minPlanta = enPlanta.getUTCHours() * 60 + enPlanta.getUTCMinutes();
+  const dif = Math.abs(((ini.hour - minPlanta) % 1440 + 1440) % 1440);
+  check('de serie la fecha es HOY en el reloj de la planta, no el solsticio', ini.date === hoyPlanta, ini);
+  check('y el deslizador de hora arranca en la hora actual de la planta (±5 min, paso del deslizador)',
+    Math.min(dif, 1440 - dif) <= 5, { hour: ini.hour, minPlanta });
+
   await page.selectOption('#plant', '24002');
   const coords = await page.evaluate(() => [document.getElementById('lat').value, document.getElementById('lon').value]);
   check('elegir El Burgo I por su clave trae sus coordenadas de la cartera',

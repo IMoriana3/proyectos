@@ -1137,8 +1137,23 @@ $('hour').addEventListener('input',drawSky);
 $('simBtn').onclick=simulate;
 $('demBtn').onclick=relieve;
 window.addEventListener('resize',drawSky);
+/* DE SERIE, HOY Y AHORA. La ficha abría siempre el solsticio de junio a las 12:00, que es un
+   día de laboratorio: para mirar la planta había que cambiar fecha y hora cada vez. Ahora arranca
+   en el día y la hora civiles de la planta, con el huso que la propia ficha pone para ese día.
+   Dos pasos a propósito: el huso depende del día (cambio de hora) y el día en la planta depende
+   del huso, así que primero se elige el huso con la fecha del navegador y luego se lee el reloj
+   de la planta con ese huso. El 2026-06-21 del HTML se queda sólo como respaldo sin JS. */
+function arrancaHoyAhora(){
+  var n=new Date(), pad=function(v){return (v<10?'0':'')+v;};
+  $('date').value=n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());
+  aplicaHuso(null);
+  var tz=+$('tz').value; if(!isFinite(tz))tz=0;
+  var d=new Date(Date.now()+tz*3600000);              // reloj civil de la planta, leído como UTC
+  $('date').value=d.toISOString().slice(0,10);
+  $('hour').value=Math.round((d.getUTCHours()*60+d.getUTCMinutes())/5)*5%1440;
+}
 loadPlants();
-aplicaHuso(null);
+arrancaHoyAhora();
 drawSky();
 pideIndice().then(function(){ if($('plant').value)pickPlant($('plant').value); else {aplicaHuso();drawSky();} });
 detectEngine();
