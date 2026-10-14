@@ -282,7 +282,9 @@ function solarGeom(dateUTCms,lat,lon){
   var azDen=Math.cos(latr)*Math.sin(zen*RAD), az;
   if(Math.abs(azDen)>1e-9){var azc=(Math.sin(latr)*Math.cos(zen*RAD)-Math.sin(declr))/azDen;azc=Math.max(-1,Math.min(1,azc));az=Math.acos(azc)/RAD;if(ha>0)az=(az+180)%360;else az=(540-az)%360;}
   else az=(lat>decl)?180:0;
-  return {elevation:elev+refraction(elev),azimuth:az,declination:decl};
+  /* `elevation` es la APARENTE (con refracción), que es la que se ve y la que da la sombra;
+     `elevGeom` es la geométrica, que es sobre la que se definen orto, ocaso y crepúsculos. */
+  return {elevation:elev+refraction(elev),elevGeom:elev,azimuth:az,declination:decl};
 }
 /* ═══════════════════ MOTOR SOLAR — fin ═══════════════════ */
 // instante (hora local en minutos) → ms UTC, restando el offset
@@ -293,19 +295,38 @@ function localToUTCms(dateStr,localMin,tzOff){
 }
 function compass(a){var d=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];return d[Math.round(a/22.5)%16];}
 
+/* ORTO Y OCASO COMO LOS DA NOAA, no como los daba la rejilla. Antes el amanecer era el primer
+   punto de la malla de 4 min con elevación aparente >= 0: eso ignoraba el semidiámetro del sol
+   (el orto es cuando asoma el BORDE, no el centro) y además redondeaba hasta 4 min hacia tarde.
+   Sumado, El Burgo I el 15/10 salía a las 08:20 cuando las efemérides dicen 08:15. Ahora:
+     · el orto/ocaso es el cruce de la elevación GEOMÉTRICA por −0,833° (refracción 34' +
+       semidiámetro 16'), que es exactamente el criterio del cálculo NOAA de sunrise/sunset;
+     · el crepúsculo civil empieza y acaba con el centro del sol a −6° geométricos;
+     · los cruces se interpolan linealmente entre dos puntos de la malla: el error queda por
+       debajo del medio minuto en vez de llegar a cuatro.
+   Umbrales y utilidad van DENTRO de la función a propósito: tests/test_solar.js la extrae sola,
+   emparejando llaves, y tiene que seguir corriendo sin nada de fuera. */
 function dayCurve(lat,lon,dateStr,tzOff){
-  var pts=[],peak={el:-99,min:0},rise=null,set=null,prev=null;
+  var H_ORTO=-0.8333, H_CIVIL=-6;
+  function cruce(prev,m,eg,h){ return (m-4)+4*(h-prev)/(eg-prev); }
+  var pts=[],peak={el:-99,min:0},rise=null,set=null,civIni=null,civFin=null,prev=null;
   for(var m=0;m<=1440;m+=4){
     var g=solarGeom(localToUTCms(dateStr,m,tzOff),lat,lon);
     /* sh = sombra POR METRO de altura del objeto (1/tan de la elevación). Se guarda así, y no
        la sombra ya multiplicada, para que la serie no dependa de la altura: cambiar el campo
        'obj' reescala el dibujo sin recalcular la geometría solar del día entero. */
-    pts.push({m:m,el:g.elevation,az:g.azimuth,sh:g.elevation>0?1/Math.tan(g.elevation*RAD):null});
+    pts.push({m:m,el:g.elevation,eg:g.elevGeom,az:g.azimuth,sh:g.elevation>0?1/Math.tan(g.elevation*RAD):null});
     if(g.elevation>peak.el){peak.el=g.elevation;peak.min=m;peak.az=g.azimuth;}
-    if(prev){ if(prev.el<0&&g.elevation>=0)rise=m; if(prev.el>=0&&g.elevation<0)set=m; }
-    prev={el:g.elevation};
+    if(prev){
+      var eg=g.elevGeom;
+      if(prev.eg<H_ORTO&&eg>=H_ORTO)rise=cruce(prev.eg,m,eg,H_ORTO);
+      if(prev.eg>=H_ORTO&&eg<H_ORTO)set=cruce(prev.eg,m,eg,H_ORTO);
+      if(prev.eg<H_CIVIL&&eg>=H_CIVIL)civIni=cruce(prev.eg,m,eg,H_CIVIL);
+      if(prev.eg>=H_CIVIL&&eg<H_CIVIL)civFin=cruce(prev.eg,m,eg,H_CIVIL);
+    }
+    prev={eg:g.elevGeom};
   }
-  return {pts:pts,peak:peak,rise:rise,set:set};
+  return {pts:pts,peak:peak,rise:rise,set:set,civIni:civIni,civFin:civFin};
 }
 function hhmm(min){if(min==null)return '—';min=((min%1440)+1440)%1440;var h=Math.floor(min/60),mm=Math.round(min%60);if(mm===60){mm=0;h++;}return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm;}
 
@@ -457,6 +478,13 @@ function drawSky(){
   ctx.strokeStyle='#1A2530';ctx.fillStyle='#5E6F7E';ctx.font='10px ui-monospace,monospace';ctx.lineWidth=1;
   for(var e=0;e<=90;e+=30){var yy=gy(e);ctx.beginPath();ctx.moveTo(x0,yy);ctx.lineTo(x1,yy);ctx.stroke();ctx.fillText(e+'°',4,yy+3);}
   for(var hh=0;hh<=24;hh+=6){var xx=gx(hh*60);ctx.beginPath();ctx.moveTo(xx,y0);ctx.lineTo(xx,y1);ctx.stroke();ctx.fillText((hh<10?'0':'')+hh+'h',xx-7,H-7);}
+  /* BANDA DE CREPÚSCULO CIVIL: del sol a −6° al orto, y del ocaso al sol a −6°. Es lo que
+     explica que a la hora del «amanecer» ya sea de día desde hace media hora: el orto es el
+     instante en que asoma el disco, la claridad empieza mucho antes. Sin orto (sol de
+     medianoche o noche polar) no hay banda que pintar. */
+  ctx.fillStyle='rgba(84,166,255,.10)';
+  if(CUR.civIni!=null&&CUR.rise!=null&&CUR.rise>CUR.civIni)ctx.fillRect(gx(CUR.civIni),y1,gx(CUR.rise)-gx(CUR.civIni),y0-y1);
+  if(CUR.set!=null&&CUR.civFin!=null&&CUR.civFin>CUR.set)ctx.fillRect(gx(CUR.set),y1,gx(CUR.civFin)-gx(CUR.set),y0-y1);
   // curva de elevación
   ctx.beginPath();var started=false;
   CUR.pts.forEach(function(p){var xx=gx(p.m),yy=gy(p.el);if(!started){ctx.moveTo(xx,yy);started=true;}else ctx.lineTo(xx,yy);});
@@ -520,11 +548,14 @@ function drawSky(){
   ctx.font='10px ui-monospace,monospace';ctx.textAlign='left';
   var lx=x0+8,ly=y1+11,lineas=['elevación · eje izq. (°)'];
   if(techo!=null)lineas.push('sombra de '+obj+' m · eje dcho. (m)');
+  var hayCrep=(CUR.civIni!=null&&CUR.rise!=null)||(CUR.set!=null&&CUR.civFin!=null);
+  if(hayCrep)lineas.push('crepúsculo civil · sol entre −6° y el orto');
   var lw=0;lineas.forEach(function(t){lw=Math.max(lw,ctx.measureText(t).width);});
   ctx.fillStyle='rgba(15,21,29,.88)';ctx.fillRect(lx-6,ly-12,lw+27,lineas.length*15+3);
   ctx.strokeStyle='#1A2530';ctx.lineWidth=1;ctx.strokeRect(lx-6,ly-12,lw+27,lineas.length*15+3);
   lineas.forEach(function(t,i){
-    ctx.fillStyle=i?C_SOMBRA:C_SOL;ctx.fillRect(lx,ly-4+i*15,10,2);
+    if(/crepúsculo/.test(t)){ctx.fillStyle='rgba(84,166,255,.35)';ctx.fillRect(lx,ly-8+i*15,10,9);}
+    else{ctx.fillStyle=i?C_SOMBRA:C_SOL;ctx.fillRect(lx,ly-4+i*15,10,2);}
     ctx.fillStyle='#8093A4';ctx.fillText(t,lx+15,ly+i*15);
   });
   updateReadout(g,hm);
@@ -533,7 +564,8 @@ function drawSky(){
 /* AMANECER, MEDIODIA SOLAR Y ATARDECER. Lo que en el core es sunrise_sunset_table: por dia, salida,
    paso por el meridiano, puesta, duracion y elevacion maxima. Dos diferencias que van DECLARADAS:
      · alli la hora de amanecer y atardecer sale del SPA de pvlib y aqui del mismo NOAA que usa toda esta
-       ficha, con refraccion. Entre los dos hay segundos, no minutos.
+       ficha, con el criterio NOAA de orto/ocaso (centro del sol a −0,833° geometricos) interpolado
+       en la malla de 4 min. Entre los dos queda menos de un minuto.
      · alli son los 365 dias; en la tarjeta se ensenan los doce dias 21, que es lo que se lee de un
        vistazo. El año entero se baja en CSV con el boton, y ese si trae los 365.
    El transito no se busca aparte: es el minuto de elevacion maxima que ya devuelve dayCurve. */
@@ -808,7 +840,8 @@ function updateReadout(g,hm){
     card('Elevación',(g.elevation>0?g.elevation.toFixed(1):'—'),'°')+
     card('Azimut',g.azimuth.toFixed(1),'° '+compass(g.azimuth))+
     card('Pico solar',CUR.peak.el.toFixed(1),'° · '+hhmm(CUR.peak.min))+
-    card('Amanecer / atardecer',hhmm(CUR.rise),'→ '+hhmm(CUR.set))+
+    card('Amanecer / atardecer',hhmm(CUR.rise),'→ '+hhmm(CUR.set)+
+      ((CUR.civIni!=null||CUR.civFin!=null)?'<br>crepúsculo civil '+hhmm(CUR.civIni)+' → '+hhmm(CUR.civFin):''))+
     card('Sombra obj.',shadow,sdir?('hacia '+sdir):'')+avisoTZ();
 }
 /* AVISO DE HUSO: el cálculo solar es correcto, pero si el UTC no casa con la longitud el día entero sale
