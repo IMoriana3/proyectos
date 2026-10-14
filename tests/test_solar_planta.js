@@ -70,6 +70,20 @@ const CARTERA = {
   check('y el deslizador de hora arranca en la hora actual de la planta (±5 min, paso del deslizador)',
     Math.min(dif, 1440 - dif) <= 5, { hour: ini.hour, minPlanta });
 
+  /* EL CAMBIO DE HORA POR CALENDARIO. La regla iba a días fijos (88–298), que son los domingos de
+     2026 y de ningún otro año, y daba +2 el propio domingo de octubre. El oráculo es el calendario
+     de la UE: último domingo de marzo (incluido) y último domingo de octubre (excluido). Se teclea
+     la fecha como lo haría el usuario y se lee el huso que la ficha pone sola. */
+  const husoDe = async (f) => { await page.fill('#date', f); await page.dispatchEvent('#date', 'input');
+    return +(await page.evaluate(() => document.getElementById('tz').value)); };
+  check('24/10/2026 aún es verano: +2', await husoDe('2026-10-24') === 2);
+  check('25/10/2026, domingo del cambio, ya es invierno: +1 (la regla vieja daba +2)', await husoDe('2026-10-25') === 1);
+  check('27/03/2027, víspera del cambio, es invierno: +1', await husoDe('2027-03-27') === 1);
+  check('28/03/2027, domingo del cambio, ya es verano: +2 (día 87: la regla vieja daba +1)', await husoDe('2027-03-28') === 2);
+  check('30/10/2027 aún es verano: +2 (día 303: la regla vieja daba +1)', await husoDe('2027-10-30') === 2);
+  check('31/10/2027, domingo del cambio, es invierno: +1', await husoDe('2027-10-31') === 1);
+  check('y 26/03/2028, último domingo de un marzo que empieza en miércoles, es verano: +2', await husoDe('2028-03-26') === 2);
+
   await page.selectOption('#plant', '24002');
   const coords = await page.evaluate(() => [document.getElementById('lat').value, document.getElementById('lon').value]);
   check('elegir El Burgo I por su clave trae sus coordenadas de la cartera',
