@@ -38,7 +38,8 @@ function saca(firma) {
   return j < 0 ? null : html.slice(i, j + 3);
 }
 const FIRMAS = ['LOC.sign=function(az){', 'LOC.noonFlip=function(sg,th,lim){',
-                'LOC.dual=function(thT,ws,az,T1,T2,pmin,full,dtS,holdMin,parkMin,dead,noon){'];
+                'LOC.dual=function(thT,ws,az,T1,T2,pmin,full,dtS,holdMin,parkMin,dead,noon){',
+                'LOC.stepper=function(kind,cfg){'];
 const trozos = FIRMAS.map(saca);
 check('las funciones siguen en el HTML con esa firma', trozos.every(Boolean),
       FIRMAS.filter((f, i) => !trozos[i]).join(' · '));
@@ -48,7 +49,7 @@ if (!trozos.every(Boolean)) { console.log('\nFALLOS: ' + ko); process.exit(1); }
 check('lo extraído tiene cuerpo (' + trozos.join('').length + ' chars)',
       trozos.join('').length > 1200);
 
-const ctx = { console, LOC: {} };
+const ctx = { console, LOC: { SLEW: 0.17 } };
 vm.createContext(ctx);
 try { vm.runInContext(trozos.join('\n'), ctx); }
 catch (e) { check('el bloque compila en Node', false, e.message); }
@@ -207,6 +208,46 @@ check('desde IDLE, la calma no dispara ninguna histéresis',
       R9.mode.every(m => m === 'IDLE'), R9.mode.join(','));
 check('y la orden sigue al seguimiento, sin recortes',
       R9.theta.every(v => v === 50));
+
+// ── 10) EL GRANIZO USA ESTE MISMO STEPPER Y ESTA MISMA CADENA ─────────
+// No se prueba otra animación: se prueba el mismo integrador del eje que usa
+// el viento, con una consigna externa inyectada ANTES de cfg.llega().
+check('el stepper vivo queda expuesto junto a la máquina anual',
+      typeof LOC.stepper === 'function');
+
+const cfgH = { full:55, pmin:30, T1:10, T2:20, holdS:0, parkS:0,
+               dead:1, noon:0, llega:(o) => o };
+let sh = LOC.stepper('1', cfgH);
+let rh = sh.step(0, 0, 90, 60, { destino:55, mode:'HAIL_STOW' });
+check('granizo pone modo HAIL_STOW y mueve el MISMO eje a 0,17 °/s',
+      rh.mode === 'HAIL_STOW' && Math.abs(rh.theta - 10.2) < 1e-9,
+      JSON.stringify(rh));
+check('la consigna de granizo es 55° y no un salto del ejecutado',
+      rh.orden === 55 && rh.ordenEje === 55, JSON.stringify(rh));
+
+let visto = null;
+sh = LOC.stepper('1', { ...cfgH, llega:(o) => { visto=o; return 0; } });
+rh = sh.step(0, 0, 90, 60, { destino:55, mode:'HAIL_STOW' });
+check('la orden de granizo pasa POR cfg.llega antes del hierro',
+      visto === 55 && rh.orden === 55 && rh.ordenEje === 0 && rh.theta === 0,
+      'visto=' + visto + ' · ' + JSON.stringify(rh));
+
+sh = LOC.stepper('1', cfgH);
+rh = sh.step(0, 11, 90, 60);
+check('sin granizo, el mismo stepper conserva el comportamiento de viento',
+      rh.mode === 'FULL_STOW' && rh.orden === 55, JSON.stringify(rh));
+
+check('la escena EVENTO expone tamaño, probabilidad y ETA, y recibe el viento del caso',
+      ['eHailOn','eHailMm','eHailProb','eHailEta']
+        .every(id => html.includes('id="' + id + '"'))
+      && html.includes("$('eV').value=$('xVnow').value")
+      && html.includes("$('eVPeak').value=$('xVnow').value")
+      && html.includes("$('eD').value=$('xAz').value")
+      && html.includes("setModo('event')"));
+check('y liveTick entrega el destino conjunto como quinto argumento, incluso si manda viento',
+      html.includes("LIVE.steppers[S].step(tgt,vVisto,az,dt,hailExt)")
+      && html.includes("if(hailPlan.destino!=null&&LIVE.hailEver)")
+      && html.includes("hailPlan.manda==='granizo'"));
 
 // ── MUTANTE ───────────────────────────────────────────────────────────
 // El defecto medido, reproducido aquí: el `hold` a cero. Si este banco no lo

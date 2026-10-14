@@ -285,6 +285,10 @@ if (R.estado === 'al_dia') {
       latUI();
       document.getElementById('lSpeed').value = '900';
     });
+    // La vista principal es EVENTO desde 2026-10. El cronómetro vive en EN VIVO:
+    // entrar explícitamente antes de pulsar evita confundir «botón existente»
+    // con «botón visible». Este smoke test verifica la ruta real del usuario.
+    await page.click('#mLive');
     await page.click('#lPlay');
     await page.evaluate(() => {
       const v = document.getElementById('lV');

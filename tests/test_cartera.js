@@ -1,4 +1,5 @@
 // LA CARTERA: migra los datos del usuario y publica el registro de plantas —
+// Revalidación del PR contra el main vigente: 06-10-2026.
 // y no la probaba nadie.
 //
 // `cartera-tabla.html` es la tabla de plantas de Factiun. Vive en el navegador
@@ -150,9 +151,10 @@ check('y no toca ninguna otra columna del registro',
 // ══════════════════════════════════════════════════════════════════════
 //  2) LAS CORRECCIONES CURADAS
 // ══════════════════════════════════════════════════════════════════════
-// Ayora: la cartera decía 8 HSU y el DWG dibuja diez. La corrección lleva su
-// guarda —solo si el valor guardado es el viejo— para no reescribir una
-// cartera ya corregida ni una que diga otra cosa a propósito.
+// Ayora: la cartera decía 8 HSU y el DWG dibuja diez. Además, el snapshot
+// sembrado de estados PEM quedó desfasado: Ayora pasó a En marcha y San José
+// a En proceso. Las correcciones llevan guarda —solo si el valor guardado es
+// exactamente el viejo— para no pisar una edición posterior.
 const ayoraVieja = ctx.corrigeConocidos([{ num: 24025, anem_total: 8, anem_us: 8 }])[0];
 check('Ayora con los 8 HSU viejos se corrige a los 10 del DWG',
       ayoraVieja.anem_total === 10 && ayoraVieja.anem_us === 10,
@@ -162,6 +164,16 @@ check('pero si dice otra cosa, no se toca (la guarda mira el valor viejo)',
       ayoraOtra.anem_total === 12, String(ayoraOtra.anem_total));
 check('y la corrección no alcanza a otras plantas',
       ctx.corrigeConocidos([{ num: 24002, anem_total: 8, anem_us: 8 }])[0].anem_total === 8);
+
+const ayoraEstado = ctx.corrigeConocidos([{ num: 24025, estado_pem: 'En proceso' }])[0];
+const sanJoseEstado = ctx.corrigeConocidos([{ num: 24019, estado_pem: 'Sin comenzar' }])[0];
+check('el snapshot legacy de Ayora migra de En proceso a En marcha',
+      ayoraEstado.estado_pem === 'En marcha', ayoraEstado.estado_pem);
+check('el snapshot legacy de San José migra de Sin comenzar a En proceso',
+      sanJoseEstado.estado_pem === 'En proceso', sanJoseEstado.estado_pem);
+check('pero un estado ya editado no se pisa',
+      ctx.corrigeConocidos([{ num: 24025, estado_pem: 'Sin comenzar' }])[0].estado_pem === 'Sin comenzar'
+      && ctx.corrigeConocidos([{ num: 24019, estado_pem: 'En marcha' }])[0].estado_pem === 'En marcha');
 
 // RELLENAR NO ES CORREGIR, y es la regla que hace segura esta función: de las
 // dos plantas del DWG solo se escribe lo que está VACÍO. Si el usuario tecleó
