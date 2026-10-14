@@ -144,14 +144,19 @@ El valor es vuestro; la restricción es nuestra y la dejamos dicha.
 
 > Va a los mismos que la nº 1 y puede ir en el mismo correo.
 >
-> **Esta petición tiene fecha de caducidad**, y es la única de las cinco que la tiene.
-> Lo explicamos abajo: el único histórico de viento que existe hoy vive **dentro de la
-> propia HSU** y guarda **siete días**. Lo que no se lea esta semana se pierde.
+> **La parte A tiene fecha de caducidad**, y es lo único de las cinco peticiones que la
+> tiene: el único histórico de viento que existe hoy vive **dentro de la propia HSU** y
+> guarda **siete días** rotando. Lo que no se lea esta semana se pierde.
+> La parte B no caduca, pero cada día que no esté encendida es un día que no se recoge.
 
-**De dónde salió esto.** Nuestro primer planteamiento era pedir «el histórico que ya
-está en el SCADA», y era **incorrecto**: hoy el SCADA **sólo guarda diagnósticos y
-telemetría cuando se los pedimos**, no en continuo. No hay un año esperando a que
-alguien lo exporte. Rehecha la petición sobre eso.
+**De dónde salió esto, en dos correcciones.** El primer planteamiento pedía «el
+histórico que ya está en el SCADA», y era **incorrecto**: hoy el SCADA **sólo guarda
+diagnósticos y telemetría cuando se los pedimos**, no en continuo — no hay un año
+esperando a que alguien lo exporte. Y la segunda corrección es la que salva la
+petición: **la telemetría sí se puede recoger desde la NCU y el recolector ya está
+preparado**, cada 10–15 s. Así que esto no es «pedir que alguien construya un
+histórico»: es **encender lo que ya existe** (B) y **rescatar los siete días que están a
+punto de rotar** (A).
 
 **Las cuatro HSU.** Las cuatro, no una: están repartidas por el campo y la dispersión
 entre ellas es parte de lo que queremos medir.
@@ -185,11 +190,17 @@ Se elige el día con `41300 DayDataRequest` (0 = hoy, 1 = ayer…), y **su rango
 medida que existe en todo el sistema** — todo lo demás, en el simulador y en la ficha,
 es modelo. Cada día que pasa sin leerlo, se pierde un día de racha real para siempre.
 
-**Lo que cuesta, calculado para que nadie tenga que estimarlo:** son 4 registros por
-minuto × 1.441 minutos = **5.764 registros por día y HSU**. En lecturas Modbus de 125,
-son 47 por día y HSU → **1.316 lecturas y ~315 kB** para los siete días de las cuatro.
-**Una sola vez**, no una carga permanente. Para comparar: un ciclo normal de la NCU 1 de
-El Burgo son 28 transacciones y 8,3 kB, y hace 2.880 al día.
+**Lo que cuesta, medido con el modelo de tráfico de la casa** (no estimado a ojo: el
+mismo modelo reproduce al byte la cifra documentada del ciclo completo, 28 transacciones
+y 8.346 B). Son 4 registros por minuto × 1.441 minutos = **5.764 registros por día y
+HSU**, que en lecturas Modbus de 125 son 47 transacciones y 16.555 B. Para los siete
+días de las cuatro HSU:
+
+> **1.316 transacciones y 0,46 MB. Una sola vez.**
+
+No es una carga permanente. Para comparar: el ciclo normal de seguidores de la NCU 1 ya
+mueve **24 MB al día**, todos los días. Esto es **el 2 % de un solo día** de lo que ya
+circula.
 
 **Nuestro colector hoy NO lee este bloque** — lee el valor corriente, no el datalogger.
 Así que lo que pedimos es permiso y ventana para sondearlo, o que nos lo volquéis
@@ -204,17 +215,50 @@ adivinarla.
 
 ---
 
-### B · Y a partir de ahora: que la recogida sea continua
+### B · Y desde hoy: encender la recogida continua de las cuatro HSU
 
-Si el SCADA sólo guarda cuando se le pide, dentro de un año seguiremos sin tener un año.
-**Lo que falta no es código**: el colector de `scada` ya lee `wind_speed` (f32, m/s) y
-`wind_direction` (f32, grados) de los bloques 30200 y 28000, el API ya sirve
-`/meteo/history` hasta 8.760 h, y el intervalo de meteo ya está configurado a **10 s**.
-Falta **encenderlo contra El Burgo** y dejarlo correr.
+**Esto no es un proyecto, es una configuración.** La telemetría se recoge desde la NCU y
+el recolector ya está preparado. Lo único que falta:
 
-Dicho con franqueza: **esto no nos sirve para la decisión de este mes**, sirve para que
-la de dentro de un año se tome sobre dato y no sobre modelo. Las dos cosas valen la
-pena, pero A y B no compiten: A es lo urgente, B es lo que evita volver a estar así.
+| | Qué | De quién |
+|---|---|---|
+| 1 | `driver: "simulated"` → `"modbus"` en `config/plants.yml` | nuestro, una línea |
+| 2 | **Alcance de red a las dos NCU**: `10.100.1.52:502` y `10.100.1.56:502`, `unit_id 1` — o una máquina dentro de la planta donde correr el recolector | **vuestro, y es lo único que pedimos aquí** |
+
+Todo lo demás ya está escrito y configurado: el colector lee `wind_speed` (f32, m/s) y
+`wind_direction` (f32, grados) de los bloques 30200 y 28000, las cuatro HSU están
+declaradas (`hsu_count: 2` por NCU, esclavos 230 y 231), el API sirve `/meteo/history`
+hasta 8.760 h y el intervalo de meteo ya está puesto a **10 s**.
+
+**Lo que cuesta, medido con el modelo de tráfico de la casa** —el mismo que reproduce la
+cifra documentada del ciclo completo, 28 transacciones y 8.346 B, al byte—:
+
+| Sondeo | Las 4 HSU, las 2 NCU | Al año |
+|---|---|---|
+| cada 10 s | **9,02 MB/día** | 3,29 GB |
+| cada 15 s | 6,01 MB/día | 2,19 GB |
+| cada 30 s | 3,01 MB/día | 1,10 GB |
+
+Son **2 transacciones y 522 B por ciclo y NCU**. Para comparar: el ciclo normal de
+seguidores de **una sola** NCU ya son **24 MB/día**. O sea que vigilar el viento de la
+planta entera cada 10 s cuesta **poco más de un tercio** de lo que ya cuesta sondear los
+seguidores de una NCU — y es el dato que decide si se abandera.
+
+**Y qué compra.** El registro `30003 WindSpeed_mps` es una media de **como mucho 15 s**
+(lo fija `41071`, rango 0..15). Muestreado cada 10–15 s, eso **no es la media horaria de
+un reanálisis**: es la escala a la que de verdad se dispara un abanderamiento, y viene
+con su **dirección** en cada muestra. En un par de semanas tendríamos para El Burgo lo
+que hoy no tenemos de ninguna planta.
+
+**Dicho con precisión, para no vender de más:** una muestra cada 10 s de una media de
+15 s **no es una racha de 3 s**. La racha medida de verdad sigue siendo el
+`WindSpeedMax` por minuto del apartado A. **A y B no se solapan: A es el pasado —siete
+días y se van—, B es todo lo que venga a partir de encenderlo.**
+
+**Una pregunta de paso:** las cuatro están declaradas con `hsu_extended: false`, así que
+hoy no leeríamos el bloque 28000. ¿Alguna de las cuatro tiene piranómetro? Si lo tiene,
+tendríamos también **irradiancia medida**, y el simulador dejaría de rellenarla con
+cielo claro (hoy lo hace, y lo declara en pantalla).
 
 ---
 
@@ -309,7 +353,9 @@ hay que rediseñar nada: es poner el número y correr el banco.
 - **5A** → siete días de racha MEDIDA, minuto a minuto, antes de que roten. El criterio
   de disparo deja de ser una elección nuestra, y con las cuatro HSU a la vez sabremos
   por fin si un anemómetro puede hablar por la planta.
-- **5B** → dentro de un año habrá un año. Hoy no lo habría.
+- **5B** → desde el día que se encienda, viento y dirección reales de las cuatro HSU
+  cada 10–15 s, por 9,0 MB/día. En un par de semanas hay con qué comparar las
+  estrategias sobre dato de planta, no dentro de un año.
 - **5C/5D** → T1 y T2 dejan de ser suposición nuestra, y la dirección pasa a significar
   algo. Sin el offset de veleta, «cara al viento» seguiría siendo un lado fijo
   disfrazado aunque tuviéramos la serie.
