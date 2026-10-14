@@ -313,19 +313,45 @@ ya horneados en los repos de la casa. En los 24 años salen **dos episodios en t
 | Madrid, 2 años reales de ERA5 (2019 y 2024) | 1 (sólo 2024) |
 | Sevilla, **los 20 años reales de ERA5** | **0** |
 
-**Eso no es un resultado sobre vuestras plantas: es la medida de lo que el reanálisis NO
-ve.** Una celda de ~30 km promediada a la hora no tiene rachas, y es la racha la que
-abandera. Cambiando sólo el criterio —la misma serie disparada con racha de 3 s en vez
-de con la media— Sevilla 2013 pasa de **0 a 41 episodios** y El Burgo de **1 a 197**.
-Esa racha hoy **la sintetiza un modelo nuestro**, y mientras la sintetice, las cuatro
-estrategias se comparan sobre un número que nos hemos inventado.
+**Eso no es un resultado sobre vuestras plantas: es la medida de lo que un reanálisis a
+30 km de rejilla, promediado a la hora, NO ve.** Es la racha la que abandera, y a esa
+escala no hay rachas. Cambiando sólo el criterio —la misma serie disparada con racha de
+3 s en vez de con la media— Sevilla 2013 pasa de **0 a 41 episodios** y El Burgo de **1
+a 197**.
 
-**Y la dirección, que es peor.** Ninguna de las fuentes que tenemos la trae. El
-simulador lo declara en pantalla —sin dirección, la estrategia «cara al viento» es **un
-lado fijo disfrazado**— pero declararlo no lo arregla: con dos de las cuatro estrategias
-dependiendo del lado del que sople, media comparativa está hoy apagada.
+> **Corrección, 14 de octubre.** La primera versión de este apartado decía que la racha
+> «la sintetiza un modelo nuestro» y que **ninguna de nuestras fuentes trae dirección**.
+> Lo segundo era **falso** y lo primero, incompleto. La ficha pide a Open-Meteo
+> `winddirection_10m` y `wind_gusts_10m`, y cuando el servicio las sirve manda la
+> medida, no el modelo: está escrito en su propio código («LA MEDIDA MANDA SOBRE EL
+> MODELO»). Lo que no las trae son **los CSV horneados en los repos**, que son sobre los
+> que se corrieron esos 24 años, desde una máquina sin salida a Open-Meteo. O sea que la
+> síntesis era una propiedad de **aquellas ejecuciones**, no de la herramienta. El
+> apartado queda reescrito sobre lo que sí es cierto.
 
-La HSU tiene las dos cosas. Por eso esta petición.
+**Entonces, ¿para qué la HSU, si ERA5 ya da racha y dirección?** Porque no son la misma
+magnitud, y la diferencia es justo la que decide:
+
+| | ERA5 vía Open-Meteo | HSU de El Burgo |
+|---|---|---|
+| **qué es** | producto de reanálisis de una celda de **~30 km** | medida de **vuestro** anemómetro, dentro del campo |
+| **dónde** | una celda para toda la comarca | cuatro puntos, separados 323–568 m |
+| **altura** | 10 m, que la ficha reescala a 4 m con un factor | la que esté instalada, y se puede preguntar |
+| **cadencia** | horaria | 10–15 s en vivo; **máximo por minuto** en el datalogger |
+| **dispersión en planta** | no existe: un valor para todo | **medible**, con las cuatro a la vez |
+
+Un reanálisis **no ve el relieve local; la HSU sí, porque está dentro** — y eso no lo
+decimos aquí para convenceros: está escrito en la ficha desde antes de esta petición.
+Para decidir si **estos** seguidores abanderan, una racha promediada sobre 30 km no es
+el dato; es lo mejor que hay a falta del dato.
+
+**Y lo que ERA5 no puede dar de ninguna manera: la dispersión.** Si un anemómetro puede
+hablar por la planta entera es hoy una **suposición de todo el diseño**, y las cuatro
+HSU a la vez son la única forma de comprobarla. Dos de las cuatro estrategias dependen
+del lado del que sople; sin saber cuánto difieren cuatro veletas separadas medio
+kilómetro, no sabemos qué margen tiene esa decisión.
+
+La HSU tiene las dos cosas y ERA5 no puede tenerlas. Por eso esta petición.
 
 ---
 
@@ -350,9 +376,10 @@ hay que rediseñar nada: es poner el número y correr el banco.
 - **3** → se fija el ángulo y se comprueba que siga siendo compatible con la banda de
   viento.
 - **4** → la máquina de ejecución arranca, y `ttl_orden_s` se fija por encima del suelo.
-- **5A** → siete días de racha MEDIDA, minuto a minuto, antes de que roten. El criterio
-  de disparo deja de ser una elección nuestra, y con las cuatro HSU a la vez sabremos
-  por fin si un anemómetro puede hablar por la planta.
+- **5A** → siete días de racha medida **en la planta**, minuto a minuto, antes de que
+  roten. No sustituye a la racha de ERA5: la carea contra ella, que es lo que hoy nadie
+  ha hecho. Y con las cuatro HSU a la vez sabremos por fin si un anemómetro puede hablar
+  por la planta.
 - **5B** → desde el día que se encienda, viento y dirección reales de las cuatro HSU
   cada 10–15 s, por 9,0 MB/día. En un par de semanas hay con qué comparar las
   estrategias sobre dato de planta, no dentro de un año.

@@ -1059,8 +1059,9 @@ var COORDS_FALLBACK={'24002':[41.57634,-0.79814],'24025':[39.11821,-1.15985],'24
      · si la planta tiene huso FIJO declarado, ese y no se discute. Salen de los layouts del DWG,
        que son la autoridad: sanjose -300 min (Peru), dicayagua -240 (Republica Dominicana) y
        tunez +60 (Tunez). Ninguno de los tres cambia la hora en verano.
-     · si no, la regla peninsular: UTC+2 del dia 88 al 298 y UTC+1 el resto. Vale igual para las
-       italianas, que comparten cambio de hora y huso con España.
+     · si no, la regla peninsular: UTC+2 del ultimo domingo de marzo al de octubre y UTC+1 el
+       resto (horarioPeninsular). Vale igual para las italianas, que comparten cambio de hora y
+       huso con España.
 
    Y se respeta al usuario: si ha tocado el campo a mano, NO se le pisa. Solo se refresca mientras
    siga en el ultimo valor que pusimos nosotros. */
@@ -1090,12 +1091,25 @@ function delIndice(cod){
   for(var i=0;i<INDICE.length;i++) if(String(INDICE[i].codigo)===String(cod)) return INDICE[i];
   return null;
 }
+/* EL CAMBIO DE HORA, POR CALENDARIO Y NO POR DÍAS FIJOS. La regla estaba escrita como «+2 del
+   día 88 al 298 del año», que son los últimos domingos de marzo y octubre... de 2026. En 2027 el
+   cambio cae el 28/03 y el 31/10 (días 87 y 304): la regla se equivocaba de uno a cinco días en
+   cada cambio, y además daba +2 el propio domingo de octubre, cuando desde las 03:00 ya es +1.
+   La regla de la UE es la de verdad: horario de verano desde el último domingo de marzo (día
+   incluido: el cambio es a las 02:00) hasta el último domingo de octubre (día excluido: el
+   cambio es a las 03:00). Vale igual para Italia, que comparte huso y cambio con España. Sin
+   fecha válida, verano, que es lo que daba antes (día 172). */
+function ultimoDomingo(y,mes){ var fin=new Date(Date.UTC(y,mes+1,0)); return fin.getUTCDate()-fin.getUTCDay(); }
+function horarioPeninsular(fechaISO){
+  var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(fechaISO||''); if(!m)return 2;
+  var y=+m[1],mo=+m[2],d=+m[3];
+  var verano=(mo>3&&mo<10)||(mo===3&&d>=ultimoDomingo(y,2))||(mo===10&&d<ultimoDomingo(y,9));
+  return verano?2:1;
+}
 function husoPlanta(cod,fechaISO){
   var p=delIndice(cod);
   if(p&&p.tz_fijo_min!=null)return p.tz_fijo_min/60;
-  var d=new Date((fechaISO||'')+'T12:00:00');
-  var doy=isNaN(d)?172:Math.floor((d-new Date(d.getFullYear(),0,0))/86400000);
-  return (doy>=88&&doy<=298)?2:1;
+  return horarioPeninsular(fechaISO);
 }
 var _huso=null, _husoCod=null;
 function aplicaHuso(cod){
@@ -1156,8 +1170,23 @@ $('hour').addEventListener('input',drawSky);
 $('simBtn').onclick=simulate;
 $('demBtn').onclick=relieve;
 window.addEventListener('resize',drawSky);
+/* DE SERIE, HOY Y AHORA. La ficha abría siempre el solsticio de junio a las 12:00, que es un
+   día de laboratorio: para mirar la planta había que cambiar fecha y hora cada vez. Ahora arranca
+   en el día y la hora civiles de la planta, con el huso que la propia ficha pone para ese día.
+   Dos pasos a propósito: el huso depende del día (cambio de hora) y el día en la planta depende
+   del huso, así que primero se elige el huso con la fecha del navegador y luego se lee el reloj
+   de la planta con ese huso. El 2026-06-21 del HTML se queda sólo como respaldo sin JS. */
+function arrancaHoyAhora(){
+  var n=new Date(), pad=function(v){return (v<10?'0':'')+v;};
+  $('date').value=n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());
+  aplicaHuso(null);
+  var tz=+$('tz').value; if(!isFinite(tz))tz=0;
+  var d=new Date(Date.now()+tz*3600000);              // reloj civil de la planta, leído como UTC
+  $('date').value=d.toISOString().slice(0,10);
+  $('hour').value=Math.round((d.getUTCHours()*60+d.getUTCMinutes())/5)*5%1440;
+}
 loadPlants();
-aplicaHuso(null);
+arrancaHoyAhora();
 drawSky();
 pideIndice().then(function(){ if($('plant').value)pickPlant($('plant').value); else {aplicaHuso();drawSky();} });
 detectEngine();

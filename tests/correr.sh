@@ -427,7 +427,11 @@ declare -A PISO=(
   # El desplegable de planta rotulaba la CLAVE DE CARTERA (24002) donde toda la
   # casa rotula el nº de PROYECTO (23003): la cartera ya publicaba `nproy` y
   # esta ficha no lo leía. MEDIDO: el código viejo mata 1 de 8.
-  [test_solar_planta.js]=8
+  # 8 → 10: la ficha abre en el día y la hora de la planta, no en el solsticio
+  # a las 12:00. El HTML con `value="2026-06-21"` y 720 fijos mata las 2.
+  # 10 → 17: el cambio de hora por calendario (últimos domingos de marzo y
+  # octubre) y no por días fijos de 2026. La regla vieja (88–298) mata 4.
+  [test_solar_planta.js]=17
   [test_solar_weather_contract.mjs]=14
   [test_sizing.js]=115
   # 13, y MEDIDO en los TRES modos —con checkout hermano, por `main` sobre
