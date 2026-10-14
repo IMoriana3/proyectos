@@ -1055,7 +1055,11 @@ function aplicaHuso(cod){
 function loadPlants(){
   try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
   var opts='<option value="">— manual —</option>';
-  Object.keys(PLANTS).sort().forEach(function(cod){var p=PLANTS[cod];opts+='<option value="'+cod+'">'+((p&&p.nombre)||'?')+' · '+cod+'</option>';});
+  /* SE ROTULA EL Nº DE PROYECTO, NO LA CLAVE DE CARTERA. Son dos numeraciones y El Burgo I lo
+     demuestra: 23003 en el DWG y en el siting, 24002 en la hoja de cartera. La equivalencia vive
+     en cartera-tabla.html (NPROY) y llega aquí como `nproy`; el `value` sigue siendo la clave de
+     cartera, que es la que indexa PLANTS, COORDS_FALLBACK y el índice de layouts. */
+  Object.keys(PLANTS).sort().forEach(function(cod){var p=PLANTS[cod];var np=(p&&p.nproy!=null&&String(p.nproy)!=='')?String(p.nproy):cod;opts+='<option value="'+cod+'">'+((p&&p.nombre)||'?')+' · '+np+'</option>';});
   $('plant').innerHTML=opts;
 }
 /* SIN COORDENADAS SE DICE, NO SE HEREDAN LAS DE ANTES. Esto arreglaba mal: cuando la planta no
