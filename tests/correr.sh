@@ -420,7 +420,14 @@ declare -A PISO=(
   # de valor. MEDIDO: contra los CINCO arneses que podían verlo, mataron CERO
   # el día juliano corrido un día entero, el backtracking quitado del todo y la
   # refracción anulada. Este banco los mata 4, 5 y 3.
-  [test_solar.js]=73
+  # 73 → 80: orto/ocaso con el criterio NOAA (−0,833° geométricos, interpolado) y
+  # crepúsculo civil (−6°). El código viejo (primer punto de la malla con
+  # elevación aparente ≥ 0) mata 6 de las 7 nuevas.
+  [test_solar.js]=80
+  # El desplegable de planta rotulaba la CLAVE DE CARTERA (24002) donde toda la
+  # casa rotula el nº de PROYECTO (23003): la cartera ya publicaba `nproy` y
+  # esta ficha no lo leía. MEDIDO: el código viejo mata 1 de 8.
+  [test_solar_planta.js]=8
   [test_solar_weather_contract.mjs]=14
   [test_sizing.js]=115
   # 13, y MEDIDO en los TRES modos —con checkout hermano, por `main` sobre
