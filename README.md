@@ -30,6 +30,16 @@ siga abriendo sin red. Cada planta enseña su **plano real** de seguidores (`HUE
 y cada herramienta lleva su **pictograma** de línea (`PICTOS`, elegido por el nombre de la ficha). Por defecto la portada es trabajo: plantas (con la cartera en
 vivo), herramientas y el pie con las reglas de la casa.
 
+Las herramientas (`cartera-tabla`, `comparador-estructuras`, `generador-layout`, `sim-solar`,
+`careo-pvsyst`, `buscador-implantacion`, `layout`) llevan la misma piel desde 10-2026: los mismos tokens y
+tipografías que la portada. En la tabla de la cartera los estados son **de proyecto**, como en la portada
+(en marcha en ámbar, en desarrollo en azul claro, demo en plata, baja en coral); en las demás herramientas
+los mismos nombres (`--live`, `--build`, `--dead`, `--demo`) son **resultados** y llevan la paleta fija de
+estado (bien en verde, aviso en amarillo, error en coral, información en azul claro). Las codificaciones de
+datos de los lienzos —tipos de estructura, sol y sombra, rampas de terreno, mesas— se quedan como estaban:
+son colores elegidos a propósito (algunos con comprobación de daltonismo), no piel. `sim-viento.html` sigue
+con su piel de herramienta técnica.
+
 **Modo presentación** (botón de la barra; el navegador lo recuerda): despliega el escaparate para
 enseñar el panel a un cliente —el **hero** con el relieve real de Ayora y sus 751 seguidores
 inclinados según el sol a la hora de la planta (algoritmo NOAA de `sim-solar.html`, backtracking
