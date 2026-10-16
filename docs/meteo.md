@@ -130,7 +130,19 @@ Meteo              POWER
 
 ### WeatherNext 3
 
-El contrato distingue **FDIR de DNI**. Hoy puede importarse un resumen JSON. La conexión live sigue pendiente de credenciales/acceso Google, pero el workbench ya incorpora un **hook por proxy autenticado**: las credenciales no se exponen en GitHub Pages y, si el endpoint falla/no existe, se registra fallback a Open-Meteo.
+El contrato distingue **FDIR de DNI**. Puede importarse un resumen JSON y el workbench incorpora un **hook por proxy autenticado**: las credenciales nunca se exponen en GitHub Pages y, si el endpoint falla/no existe, el fallback a Open-Meteo queda declarado.
+
+El contrato del proxy live queda fijado como:
+
+- base configurable en la UI;
+- ruta final `GET <base>/forecast?lat=<lat>&lon=<lon>&hours=72`;
+- en el bridge local SolarGPT, la base prevista es `http://127.0.0.1:8765/meteo/weathernext`, que expone `/meteo/weathernext/forecast`;
+- p50 alimenta la serie operativa; p10/p50/p90 se conservan como bandas probabilísticas;
+- temperatura K → °C, energía solar horaria J/m² → W/m², precipitación m → mm y presión Pa → hPa se convierten una sola vez en el adapter browser;
+- `wind_direction_10m_p50` se conserva en el WeatherContract cuando el proxy la deriva de los componentes u/v;
+- `init_time`, hora de forecast, superficie de acceso y demás provenance viajan con el dataset.
+
+La consulta real sigue **pendiente del allowlist/tabla enlazada/ADC de Google**. Tener el endpoint y el adapter implementados no se presenta como WeatherNext live hasta que ese acceso exista y se verifique de punta a punta.
 
 ### Windy y Ventusky
 
