@@ -54,6 +54,13 @@ const moduleOf = async name =>
     const p=parseSensorCsv("timestamp,plant,sensor,variable,value,unit\n"+A+",P,Meteo 210,irradiance_raw,-100,raw");
     const s=analyzeSensorRecords(p.records).stats[0];assert.equal(s.mean,-100);assert.equal(s.energy,null);
   });
+  check("raw de dos WFU: no comparar sin factor y unidad comprobados",()=>{
+    const p=parseSensorCsv("timestamp,plant,ncu,sensor,variable,value,unit\n"+
+      A+",P,1,WFU1,irradiance_raw,90000,raw\n"+
+      A+",P,2,WFU2,irradiance_raw,900,raw");
+    const z=analyzeSensorRecords(p.records);
+    assert.equal(z.stats.length,2);assert.equal(z.comparisons.length,0);
+  });
   check("no integrar irradiancia a través de huecos",()=>{
     const p=parseSensorCsv("timestamp,plant,sensor,variable,value,unit\n"+
       "2026-10-01T10:00:00Z,P,P1,ghi,100,W/m2\n"+
