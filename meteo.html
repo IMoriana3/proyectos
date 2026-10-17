@@ -966,14 +966,17 @@ function renderSensorAnalysis(){
     $("sensorDuplicated").textContent=(r.duplicates.identical+r.duplicates.conflicts).toLocaleString("es-ES");
     $("sensorStats").innerHTML=r.stats.length?r.stats.map(s=>'<tr><td>'+esc(sensorMetricsLabel(s.variable))+'</td><td>'+esc((s.ncu?s.ncu+" / ":"")+s.sensor)+'</td><td>'+esc(s.unit||"sin declarar")+'</td><td>'+s.count+'</td><td>'+fmt(s.min,2)+'</td><td>'+fmt(s.max,2)+'</td><td>'+fmt(s.mean,2)+'</td><td>'+fmt(s.p95,2)+'</td><td>'+esc(s.last?.slice(0,16).replace("T"," ")||"—")+'</td><td>'+s.gaps+'</td><td>'+esc(sensorExtra(s))+'</td></tr>').join(""):
       '<tr><td colspan="11">No hay lecturas válidas para este filtro.</td></tr>';
-    $("sensorCoherence").innerHTML=r.comparisons.length?r.comparisons.map(c=>'<tr><td>'+esc(c.a+" / "+c.b)+'</td><td>'+esc(sensorMetricsLabel(c.variable)+" ("+c.unit+")")+'</td><td>'+c.n+'</td><td>'+fmt(c.bias,2)+'</td><td>'+fmt(c.mae,2)+'</td><td>'+fmt(c.mismatch_pct??c.relative_difference_pct,1)+'%'+(c.mismatch_pct!=null?" desacuerdo":"")+'</td><td>'+fmt(c.correlation,3)+'</td><td>'+esc(c.n===0?"Sin solapamiento":c.metadataKnown?"Metadatos parciales":"Montaje/ventana no verificados")+'</td></tr>').join(""):
+    $("sensorCoherence").innerHTML=r.comparisons.length?r.comparisons.map(c=>'<tr><td>'+esc(c.a+" / "+c.b)+'</td><td>'+esc(sensorMetricsLabel(c.variable)+" ("+c.unit+")")+'</td><td>'+c.n+'</td><td>'+fmt(c.bias,2)+'</td><td>'+fmt(c.mae,2)+'</td><td>'+(c.mismatch_pct!=null?fmt(c.mismatch_pct,1)+"% desacuerdo":c.relative_difference_pct!=null?fmt(c.relative_difference_pct,1)+"%":"—")+'</td><td>'+fmt(c.correlation,3)+'</td><td>'+esc(c.n===0?"Sin solapamiento":c.metadataKnown?"Metadatos parciales":"Montaje/ventana no verificados")+'</td></tr>').join(""):
       '<tr><td colspan="8">No hay dos sensores comparables con lecturas solapadas. Comprueba unidad, variable, grupo y fechas.</td></tr>';
     const metric=variable||r.stats[0]?.variable||"",chart=buildSensorChart(r,metric);
     if(chart.series.length){
       drawLineChart($("sensorChart"),chart.series,{title:sensorMetricsLabel(metric)+" · datos reales",yLabel:chart.unit,
         xLabels:chart.labels,height:300,zero:false});
       $("sensorChartNote").textContent=chart.note+(r.entries.filter(x=>x.key.variable===metric).length>8?" · Se representan 8 sensores; estadísticas: todos.":"");
-    }else $("sensorChartNote").textContent="Sin muestras para la gráfica.";
+    }else {
+      const cv=$("sensorChart");cv.getContext("2d").clearRect(0,0,cv.width,cv.height);cv.dataset.drawn="0";
+      $("sensorChartNote").textContent="Sin muestras para la gráfica.";
+    }
     $("sensorExport").disabled=r.stats.length===0;
   } catch(e){sensorStatus("Error de análisis: "+String(e?.message||e),"bad");}
 }
@@ -986,7 +989,9 @@ async function loadRealSensors(){
     const collected=[],warnings={badTime:0,badValue:0,badQuality:0,badIdentity:0,assignedPlant:0},origins=[];
     for(const f of files){
       if(!/\.csv$|\.txt$/i.test(f.name))throw Error("Solo CSV/TXT para este analizador: "+f.name);
-      const z=parseSensorCsv(await f.text(),{defaultPlant:plantDefault,filename:f.name,naiveTimezone:$("sensorTimezone").value});
+      const bytes=await f.arrayBuffer();let csv=new TextDecoder("utf-8").decode(bytes);
+      if(csv.includes("\uFFFD"))csv=new TextDecoder("windows-1252").decode(bytes);
+      const z=parseSensorCsv(csv,{defaultPlant:plantDefault,filename:f.name,naiveTimezone:$("sensorTimezone").value});
       collected.push(...z.records);origins.push(f.name);
       for(const [k,v] of Object.entries(z.warnings))warnings[k]=(warnings[k]||0)+v;
     }
