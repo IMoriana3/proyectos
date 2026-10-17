@@ -997,7 +997,7 @@ function renderSensorAnalysis(){
     const metric=variable||r.stats[0]?.variable||"",chart=buildSensorChart(r,metric);
     if(chart.series.length){
       drawLineChart($("sensorChart"),chart.series,{title:sensorMetricsLabel(metric)+" · datos reales",yLabel:chart.unit,
-        xLabels:chart.labels,height:300,zero:false});
+        xLabels:chart.labels,height:300,zero:false,markers:true});
       $("sensorChartNote").textContent=chart.note+(r.entries.filter(x=>x.key.variable===metric).length>8?" · Se representan 8 sensores; estadísticas: todos.":"");
     }else {
       const cv=$("sensorChart");cv.getContext("2d").clearRect(0,0,cv.width,cv.height);cv.dataset.drawn="0";
@@ -1074,6 +1074,7 @@ async function supLoad(){
     if(!out.records.length)throw Error("No hay series medidas válidas para el periodo indicado.");
     SENSOR_RECORDS=out.records;SENSOR_LAST=null;
     SENSOR_SOURCES=out.sources.map(x=>x.fuente);SENSOR_WARNINGS=out.diagnostics;
+    $("sensorTolerance").value="0"; // Series Supabase a minuto: usar primero coincidencias exactas.
     configureSensorFilters();
     const d=out.diagnostics;
     supStatus("Supabase · "+plant+" · "+out.from+" → "+out.to+" · "+out.databaseRows+" registros consultados, "+
