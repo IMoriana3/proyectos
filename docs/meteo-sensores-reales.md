@@ -56,7 +56,7 @@ Estas no equivalen a 3.980.278 valores minutales.
 - Estadísticas por equipo: mín, máx, media, P95, lagunas, muestras y series.
 - Comparación entre pares: sesgo, error absoluto medio, diferencia relativa y
   correlación. Viento-dirección usa medias y errores angulares circulares.
-- Irradiancia raw sin transformación de unidades ni integración energética.
+- Irradiancia raw sin transformación de unidades, integración energética **ni comparación directa entre dispositivos** sin confirmar escala.
 - Informe JSON de análisis y CSV local alternativo si no hay sesión Supabase.
 - Mantiene segregados los históricos privados y los modelos meteorológicos.
 
