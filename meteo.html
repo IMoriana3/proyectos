@@ -73,6 +73,52 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
   <div class="card span4"><h2>Atmósfera</h2><div class="row"><div><div class="k">Temperatura</div><div class="v" id="temp">—</div></div><div><div class="k">Punto rocío</div><div class="v" id="dew">—</div></div><div><div class="k">Precipitación</div><div class="v" id="rain">—</div></div><div><div class="k">Nubosidad</div><div class="v" id="cloud">—</div></div></div><div class="k" style="margin-top:9px">Proxy convectivo / granizo</div><div class="bar"><i id="bh"></i></div><div class="v" id="hail">—</div></div>
   <div class="card span4"><h2>WeatherNext 3</h2><p class="note">Previsión probabilística. Importa un resumen JSON o configura un endpoint autenticado para consultar datos en directo.</p><label><span class="k">Importar resumen JSON</span><input type="file" id="wn" accept=".json,application/json"></label><div class="actions" style="margin-top:7px"><button id="wnCfgBtn" class="secondary">Configurar endpoint live</button></div><div class="statusline" id="wnStatus">Importación JSON disponible · live pendiente de acceso/endpoint Google.</div></div>
 
+  
+  <div class="sectiontitle">Mediciones reales · sensores de nuestras plantas</div>
+  <div class="card span6">
+    <h2>Cargar medidas SCADA / registrador</h2>
+    <label><span class="k">CSV de sensores (admite varios)</span><input id="sensorFiles" type="file" multiple accept=".csv,.txt,text/csv"></label>
+    <div class="row" style="margin-top:8px">
+      <label><span class="k">Fechas sin zona horaria</span><select id="sensorTimezone"><option value="reject">Exigir UTC / zona en CSV</option><option value="UTC">Interpretar como UTC (confirmado)</option></select></label>
+      <label><span class="k">Origen</span><input value="Solo medidas reales" readonly aria-label="Tipo de origen"></label>
+    </div>
+    <p class="note">Formato largo: <code>timestamp,plant,ncu,sensor,variable,value,unit</code>. También admite formato ancho: <code>PIR01.ghi[W/m2]</code>, <code>HSU01.wind_speed[m/s]</code>. Las horas deben indicar Z o desfase UTC, salvo elección expresa. Sin columna de planta se utiliza la planta seleccionada en la cabecera.</p>
+    <div class="actions"><button id="sensorLoad">Analizar medidas reales</button><button id="sensorExport" class="secondary" disabled>Exportar análisis JSON</button></div>
+    <div class="statusline" id="sensorStatus">Todavía no hay mediciones cargadas. Los datos no salen del navegador ni se mezclan con la meteo estimada.</div>
+  </div>
+  <div class="card span10">
+    <h2>Comparar sensores de una planta</h2>
+    <div class="row3">
+      <label><span class="k">Planta del fichero</span><select id="sensorPlant"><option value="">Carga primero un CSV</option></select></label>
+      <label><span class="k">Magnitud</span><select id="sensorVariable"><option value="">Todas</option></select></label>
+      <label><span class="k">Alinear instantes</span><select id="sensorTolerance"><option value="0">Coincidencia exacta</option><option value="60" selected>Hasta ±1 min</option><option value="300">Hasta ±5 min</option></select></label>
+      <label><span class="k">Desde · UTC (opcional)</span><input id="sensorFrom" type="date"></label>
+      <label><span class="k">Hasta · UTC (opcional)</span><input id="sensorTo" type="date"></label>
+    </div>
+    <div class="metricgrid" style="margin-top:9px">
+      <div class="metric">Sensores y magnitudes<b id="sensorCount">—</b></div>
+      <div class="metric">Medidas válidas<b id="sensorSamples">—</b></div>
+      <div class="metric">Pares comparados<b id="sensorPairs">—</b></div>
+      <div class="metric">Duplicados / conflictos<b id="sensorDuplicated">—</b></div>
+    </div>
+    <p class="note">Comparación por magnitud, unidad y planta, en instantes coincidentes. Los grupos, orientaciones, alturas y ventanas de media deben ser compatibles. Sin tolerancias de proyecto no se declara ningún sensor defectuoso.</p>
+  </div>
+  <div class="card wide">
+    <h2>Estadísticas de cada sensor · valores medidos</h2>
+    <div class="tablewrap"><table><thead><tr><th>Magnitud</th><th>NCU / Sensor</th><th>Unidad</th><th>Muestras</th><th>Mín</th><th>Máx</th><th>Media</th><th>P95</th><th>Última (UTC)</th><th>Huecos*</th><th>Extra</th></tr></thead><tbody id="sensorStats"><tr><td colspan="11">Carga datos reales para calcular estadísticas por sensor.</td></tr></tbody></table></div>
+    <p class="note">* Huecos detectados respecto a la cadencia mediana observada; no son disponibilidad contractual. Irradiación acumulada: integración solo de intervalos medidos continuos (kWh/m² y horas cubiertas). Nieve tipo alarma: porcentaje de muestras activas y transiciones 0→1. La media es de las muestras válidas, no una media temporal si el muestreo es irregular.</p>
+  </div>
+  <div class="card span9">
+    <h2>Histórico real por sensor</h2>
+    <canvas id="sensorChart" class="chart" aria-label="Gráfica de medidas reales"></canvas>
+    <p class="note" id="sensorChartNote">Gráfica pendiente de medidas. No se interpolan muestras faltantes.</p>
+  </div>
+  <div class="card span7">
+    <h2>Coherencia · comparación entre pares</h2>
+    <div class="tablewrap"><table><thead><tr><th>Sensores A / B</th><th>Magnitud</th><th>Puntos en común</th><th>Sesgo A−B</th><th>|Δ| media</th><th>Δ relativo</th><th>Correlación</th><th>Contexto</th></tr></thead><tbody id="sensorCoherence"><tr><td colspan="8">Sin medidas comparables.</td></tr></tbody></table></div>
+    <p class="note">La diferencia relativa se calcula sobre la magnitud media de ambos sensores; se indica «—» si el denominador es cero. Para detectores de nieve se muestra también la discrepancia entre estados. Sin datos de ubicación/altura/ventana, interpretar las diferencias con cautela.</p>
+  </div>
+
   <div class="sectiontitle">Próximas 72 h · supervisión meteorológica</div>
   <div class="card span10">
     <h2>Ventana operativa 72 h</h2>
@@ -340,6 +386,7 @@ import {
   drawBarChart,drawHailRisk,windDailyMax,comparisonMonthly
 } from "./lib/meteo-viz.js";
 import {buildWeatherContract,publishWeatherContract,activeWeatherRef,loadActiveWeatherContract,weatherManifest} from "./lib/weather-contract.js";
+import {parseSensorCsv,analyzeSensorRecords,buildSensorChart,SENSOR_ANALYSIS_VERSION} from "./lib/meteo-sensors.js";
 
 const $=id=>document.getElementById(id);
 const fmt=(v,d=1)=>v==null||!isFinite(v)?"—":Number(v).toFixed(d);
@@ -347,6 +394,7 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&g
 $("coreVer").textContent=WORKBENCH_VERSION;
 
 let PLANTS=[],SITE=null,CURRENT=null,TMY=null,ADAPTED=null,PREPARED=null;
+let SENSOR_RECORDS=[],SENSOR_LAST=null,SENSOR_WARNINGS=null,SENSOR_SOURCES=[];
 let LAST_COMPARE=null,LAST_HAIL=null,LAST_WIND_SYNTH=null;
 let FORECAST=null,FORECAST72=null,SPATIAL=null,WEATHER_UNCERTAINTY=null,ACTIVE_CONTRACT=null;
 let PLACE_RESULTS=[],PLACE_ACTIVE=-1,PLACE_TIMER=null,PLACE_ABORT=null;
@@ -874,6 +922,94 @@ function visualReportHtml(){
   return '<h2>Visual analytics</h2><div class="viz-report">'+cards+'</div><style>.viz-report{display:grid;grid-template-columns:1fr 1fr;gap:12px}.viz-report figure{margin:0;border:1px solid #d8dee8;padding:8px;break-inside:avoid}.viz-report figcaption{font-weight:700;font-size:12px;margin-bottom:6px}.viz-report img{width:100%;height:auto;display:block}@media print{.viz-report{grid-template-columns:1fr 1fr}}</style>';
 }
 function fileB64(file){return new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]||"");r.onerror=()=>ko(r.error);r.readAsDataURL(file)})}
+
+
+function sensorMetricsLabel(v){
+  return ({ghi:"GHI",poa:"POA",dni:"DNI",dhi:"DHI",wind_speed:"Viento medio",wind_gust:"Racha",
+    wind_direction:"Dirección viento",snow_alarm:"Alarma nieve",snow_depth:"Espesor nieve",snow_level:"Nivel nieve",
+    wind_level:"Nivel viento"})[v]||v;
+}
+function sensorStatus(message,kind=""){
+  $("sensorStatus").textContent=message;
+  $("sensorStatus").className="statusline "+kind;
+}
+function sensorOption(value,label){return '<option value="'+esc(value)+'">'+esc(label)+'</option>';}
+function configureSensorFilters(){
+  const plants=[...new Set(SENSOR_RECORDS.map(x=>x.plant))].sort((a,b)=>a.localeCompare(b));
+  const preferred=[SITE?.code,SITE?.carteraCode,SITE?.name].find(x=>plants.includes(x));
+  $("sensorPlant").innerHTML=plants.map(p=>sensorOption(p,p)).join("");
+  $("sensorPlant").value=preferred||plants[0]||"";
+  updateSensorVariables();
+}
+function updateSensorVariables(){
+  const plant=$("sensorPlant").value,prev=$("sensorVariable").value;
+  const metrics=[...new Set(SENSOR_RECORDS.filter(x=>x.plant===plant).map(x=>x.variable))].sort();
+  $("sensorVariable").innerHTML=sensorOption("","Todas")+metrics.map(v=>sensorOption(v,sensorMetricsLabel(v))).join("");
+  $("sensorVariable").value=metrics.includes(prev)?prev:"";
+  renderSensorAnalysis();
+}
+function sensorExtra(s){
+  if(s.variable==="snow_alarm")return fmt(s.on_pct,1)+"% ON · "+s.transitions+" transiciones";
+  if(s.energy)return fmt(s.energy.kwh_m2,2)+" kWh/m² · "+fmt(s.energy.coverage_hours,1)+" h";
+  return "—";
+}
+function renderSensorAnalysis(){
+  if(!SENSOR_RECORDS.length)return;
+  try {
+    const plant=$("sensorPlant").value,variable=$("sensorVariable").value;
+    SENSOR_LAST=analyzeSensorRecords(SENSOR_RECORDS,{plant,variable,
+      start:$("sensorFrom").value,end:$("sensorTo").value,toleranceSeconds:+$("sensorTolerance").value});
+    const r=SENSOR_LAST;
+    $("sensorCount").textContent=r.stats.length.toLocaleString("es-ES");
+    $("sensorSamples").textContent=r.records_used.toLocaleString("es-ES");
+    $("sensorPairs").textContent=r.comparisons.length.toLocaleString("es-ES");
+    $("sensorDuplicated").textContent=(r.duplicates.identical+r.duplicates.conflicts).toLocaleString("es-ES");
+    $("sensorStats").innerHTML=r.stats.length?r.stats.map(s=>'<tr><td>'+esc(sensorMetricsLabel(s.variable))+'</td><td>'+esc((s.ncu?s.ncu+" / ":"")+s.sensor)+'</td><td>'+esc(s.unit||"sin declarar")+'</td><td>'+s.count+'</td><td>'+fmt(s.min,2)+'</td><td>'+fmt(s.max,2)+'</td><td>'+fmt(s.mean,2)+'</td><td>'+fmt(s.p95,2)+'</td><td>'+esc(s.last?.slice(0,16).replace("T"," ")||"—")+'</td><td>'+s.gaps+'</td><td>'+esc(sensorExtra(s))+'</td></tr>').join(""):
+      '<tr><td colspan="11">No hay lecturas válidas para este filtro.</td></tr>';
+    $("sensorCoherence").innerHTML=r.comparisons.length?r.comparisons.map(c=>'<tr><td>'+esc(c.a+" / "+c.b)+'</td><td>'+esc(sensorMetricsLabel(c.variable)+" ("+c.unit+")")+'</td><td>'+c.n+'</td><td>'+fmt(c.bias,2)+'</td><td>'+fmt(c.mae,2)+'</td><td>'+fmt(c.mismatch_pct??c.relative_difference_pct,1)+'%'+(c.mismatch_pct!=null?" desacuerdo":"")+'</td><td>'+fmt(c.correlation,3)+'</td><td>'+esc(c.n===0?"Sin solapamiento":c.metadataKnown?"Metadatos parciales":"Montaje/ventana no verificados")+'</td></tr>').join(""):
+      '<tr><td colspan="8">No hay dos sensores comparables con lecturas solapadas. Comprueba unidad, variable, grupo y fechas.</td></tr>';
+    const metric=variable||r.stats[0]?.variable||"",chart=buildSensorChart(r,metric);
+    if(chart.series.length){
+      drawLineChart($("sensorChart"),chart.series,{title:sensorMetricsLabel(metric)+" · datos reales",yLabel:chart.unit,
+        xLabels:chart.labels,height:300,zero:false});
+      $("sensorChartNote").textContent=chart.note+(r.entries.filter(x=>x.key.variable===metric).length>8?" · Se representan 8 sensores; estadísticas: todos.":"");
+    }else $("sensorChartNote").textContent="Sin muestras para la gráfica.";
+    $("sensorExport").disabled=r.stats.length===0;
+  } catch(e){sensorStatus("Error de análisis: "+String(e?.message||e),"bad");}
+}
+async function loadRealSensors(){
+  const files=Array.from($("sensorFiles").files||[]);
+  if(!files.length){sensorStatus("Selecciona uno o varios CSV de medidas reales.","bad");return;}
+  try {
+    sensorStatus("Leyendo medidas locales…","work");
+    const plantDefault=SITE?.code||SITE?.carteraCode||SITE?.name||"";
+    const collected=[],warnings={badTime:0,badValue:0,badQuality:0,badIdentity:0,assignedPlant:0},origins=[];
+    for(const f of files){
+      if(!/\.csv$|\.txt$/i.test(f.name))throw Error("Solo CSV/TXT para este analizador: "+f.name);
+      const z=parseSensorCsv(await f.text(),{defaultPlant:plantDefault,filename:f.name,naiveTimezone:$("sensorTimezone").value});
+      collected.push(...z.records);origins.push(f.name);
+      for(const [k,v] of Object.entries(z.warnings))warnings[k]=(warnings[k]||0)+v;
+    }
+    SENSOR_RECORDS=collected;SENSOR_SOURCES=origins;SENSOR_WARNINGS=warnings;configureSensorFilters();
+    const ignored=warnings.badTime+warnings.badValue+warnings.badQuality+warnings.badIdentity;
+    sensorStatus(collected.length.toLocaleString("es-ES")+" medidas · "+new Set(collected.map(x=>x.sensor)).size+
+      " IDs de sensor · "+origins.length+" archivo(s) · "+ignored+" datos descartados"+
+      (warnings.assignedPlant?" · "+warnings.assignedPlant+" filas con planta asignada desde selección":"")+
+      ". No hay mezcla con datos modelados.",ignored?"work":"ok");
+  }catch(e){sensorStatus("Importación: "+String(e?.message||e),"bad");}
+}
+function exportRealSensorAnalysis(){
+  if(!SENSOR_LAST?.stats?.length){sensorStatus("Sin resultados para exportar.","bad");return;}
+  const {entries,...analysis}=SENSOR_LAST;
+  const payload={schema:"factiun_measured_sensor_analysis_v1",generated_at_utc:new Date().toISOString(),
+    files:SENSOR_SOURCES,warnings:SENSOR_WARNINGS,analysis};
+  const name=String($("sensorPlant").value||"planta").replace(/[^a-z0-9_-]+/gi,"_");
+  downloadText(JSON.stringify(payload,null,2),"sensores_reales_"+name+".json","application/json;charset=utf-8");
+}
+$("sensorLoad").onclick=loadRealSensors;
+$("sensorExport").onclick=exportRealSensorAnalysis;
+$("sensorPlant").onchange=updateSensorVariables;
+["sensorVariable","sensorTolerance","sensorFrom","sensorTo"].forEach(id=>$(id).addEventListener("change",renderSensorAnalysis));
 
 $("nowBtn").onclick=loadNow;$("yearsBtn").onclick=analyzeYears;$("tmyBtn").onclick=buildTmy;$("compareBtn").onclick=compare;$("qaBtn").onclick=advancedQa;$("hailBtn").onclick=doHail;$("hailLife").addEventListener("change",doHail);$("hailLambda").addEventListener("change",doHail);$("windSynthBtn").onclick=doWind;$("importBtn").onclick=importFile;$("adaptBtn").onclick=siteAdapt;$("adaptUse").onclick=useAdapted;$("prepBtn").onclick=prep;
 $("spatialBtn").onclick=runSpatial;
