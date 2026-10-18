@@ -78,3 +78,7 @@ STOW sin validar la escala y la autoridad de la señal.
 
 Se debe comprobar adicionalmente el flujo autenticado real antes de fusionar.
 No se modifica ninguna fila en Supabase ni se abre RLS a `anon`.
+
+## Verificación de pantalla completa
+
+`node tests/test_meteo_sensores_browser.js` usa Chromium y Supabase simulado (sin credenciales). Comprueba inicio de sesión, rechazo de contraseña, lectura HSU/WFU, estadísticas, comparación entre equipos, exclusión de irradiancia raw en coherencia y limpieza al cerrar sesión. La prueba no puede acreditar una cuenta autenticada real en Supabase.
