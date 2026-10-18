@@ -11,7 +11,7 @@ const moduleOf = async name =>
   const {parseSensorCsv,analyzeSensorRecords,buildSensorChart} = await moduleOf("meteo-sensors.js");
   const {normalizeSupabaseMeteo,fetchSupabaseMeteo} = await moduleOf("meteo-supabase.js");
   let checks=0;
-  const check=(name,fn)=>{fn();checks++;console.log("OK "+name)};
+  const check=(name,fn)=>{fn();checks++;console.log("OK   "+name)};
   const A="2026-10-01T00:00:00Z", B="2026-10-01T00:01:00Z", C="2026-10-01T00:02:00Z";
   check("CSV: cero verdadero != dato vacío",()=>{
     const x=parseSensorCsv("timestamp;sensor;variable;value;unit\n"+A+";P1;ghi;;W/m2\n"+B+";P1;ghi;0;W/m2",{defaultPlant:"El Burgo I"});
@@ -105,7 +105,7 @@ const moduleOf = async name =>
   }
   const found=await fetchSupabaseMeteo(client([fake]),{plant:"El Burgo I"});
   assert.equal(found.from,"2026-10-02");assert.equal(found.to,"2026-10-08");
-  assert.equal(found.records.length,2);checks++;console.log("OK Supabase login y últimos 7 días");
+  assert.equal(found.records.length,2);checks++;console.log("OK   Supabase login y últimos 7 días");
   const ui=fs.readFileSync(path.join(root,"meteo.html"),"utf8");
   check("tarjeta existente conectada y sin service_role",()=>{
     assert.ok(ui.includes('fetchSupabaseMeteo('));
