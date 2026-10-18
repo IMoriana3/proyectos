@@ -71,7 +71,7 @@ function stub(){
    await page.waitForFunction(()=>document.getElementById('supLogin')?.onclick!=null,
      null,{timeout:20000});
    check('Meteo carga los mandos de Supabase en móvil',await page.locator('#supLogin').count()===1&&await page.locator('#supLoad').count()===1);
-   check('sin sesión no inventa estadísticas',/Carga datos reales|Todavía no hay/.test(await page.locator('#sensorStats').text())||await page.locator('#sensorCount').textContent()==='—');
+   check('sin sesión no inventa estadísticas',/Carga datos reales|Todavía no hay/.test(await page.locator('#sensorStats').textContent())||await page.locator('#sensorCount').textContent()==='—');
    await page.locator('#supEmail').fill('test@factiun.example');
    await page.locator('#supPassword').fill('incorrecta');
    await page.locator('#supLogin').click();
