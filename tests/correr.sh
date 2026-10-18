@@ -995,6 +995,10 @@ declare -A PISO=(
   # de Meteo: mensual, serie diaria, zoom, cockpit 6-paneles, DOY, rosa,
   # extremos térmicos/heladas, nieve, granizo, viento sintético y comparación.
   [test_meteo_browser.mjs]=73
+  # Análisis de medidas reales: 14 verificaciones reproducibles sin credenciales.
+  # El piso cubre RLS simulada, deduplicación diaria, escala WFU raw,
+  # comparación de anemómetros, unidades y lagunas de datos.
+  [test_meteo_sensores_reales.js]=14
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )
