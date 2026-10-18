@@ -999,6 +999,9 @@ declare -A PISO=(
   # El piso cubre RLS simulada, deduplicación diaria, escala WFU raw,
   # comparación de anemómetros, unidades y lagunas de datos.
   [test_meteo_sensores_reales.js]=14
+  # Pantalla real en Chromium con autenticación y datos SUPABASE de prueba.
+  # 12 controles: acceso, HSU, WFU raw, coherencia, privacidad y cierre.
+  [test_meteo_sensores_browser.js]=12
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )
