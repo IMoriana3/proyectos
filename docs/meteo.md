@@ -509,3 +509,39 @@ El objetivo es que consuman el mismo contrato meteorológico:
 - SCADA;
 - P50/P90;
 - QA/certificación.
+
+### Integración de previsiones en el simulador · 19/10/2026
+
+El módulo meteorológico existente `meteo.html` incorpora una fuente
+WeatherNext 3 con **importación de JSON Zarr v2**, exportado desde un entorno
+con identidad Google autorizada. El lector externo no es un segundo modelo:
+simplemente selecciona la rejilla de 0,1° y conserva los cuantiles nativos.
+
+- 72 h por defecto y hasta 360 h si la ejecución GCS es sinóptica; las
+  ejecuciones intermedias se limitan a 48 h.
+- Las series P10/P50/P90 de temperatura, viento 10 m, radiación horizontal
+  y nubosidad se mantienen como cuantiles **marginales** por magnitud.
+- `lib/meteo.js::fromWeatherNextTransport` realiza una sola conversión
+  desde Kelvin / J/m² y alimenta el WeatherContract v2 canónico, incluyendo
+  hash separado del contenido probabilístico.
+- La gráfica permite seleccionar la magnitud y moverse hora a hora.
+- Botón **Comparar con Open-Meteo**: alinea por UTC exactamente, sin interpolar,
+  muestra ambas curvas y calcula sesgo y error medio absoluto como diferencias
+  **entre modelos**, no como validación frente a medidas reales. Si no coinciden
+  las horas (por ejemplo, un forecast histórico), se indica expresamente.
+- La lectura Supabase `meteo_pronosticos` utiliza RLS y el login existente;
+  ningún token Google ni clave privada se envía desde el navegador.
+- La consulta Open-Meteo se amplía hasta 16 días cuando se seleccionan 360 h.
+  Su uso empresarial debe cumplir las condiciones comerciales del proveedor:
+  no se presupone autorización gratuita por estar disponible la API.
+- La importación JSON funciona sin sincronización automática y conserva
+  el origen GCS. No modifica `telemetria` ni toma decisiones CONTROL/STOW.
+
+**Estado:** funcionalidad en la rama de Meteo, pendiente de integrar en
+`main` y verificar su despliegue. GitHub Actions ha empezado a finalizar
+jobs sin pasos; el rojo de esos runs es un bloqueo de infraestructura y no
+una sentencia de fallo de código. Las comprobaciones directas de importación
+y comparación han pasado; no equivale a un ensayo del navegador publicado.
+El bucket GCS requiere autenticación, por lo que no hay sincronización
+automática a coste adicional 0 € con los permisos actuales.
+
