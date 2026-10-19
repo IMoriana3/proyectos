@@ -39,6 +39,19 @@ sed -i 's#https://imoriana3.github.io/proyectos/#./#g' "$OUT/index.html"
 # El nuevo origen de Cloudflare tiene raíz / en vez de /proyectos/.
 sed -i 's#"id": "/proyectos/"#"id": "/"#' "$OUT/manifest.webmanifest"
 
+# Sin este archivo, Pages puede responder con la portada a URLs inexistentes.
+# El portal es multi-HTML, no una SPA con rutas virtuales.
+cat > "$OUT/404.html" <<'HTML'
+<!doctype html>
+<html lang="es"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>No encontrado · Factiun</title>
+<body style="font:16px system-ui;background:#0e1826;color:#dce3eb;padding:2rem">
+  <h1>Página no encontrada</h1><p>La ruta solicitada no existe en este portal.</p>
+  <p><a href="./" style="color:#f09030">Volver al panel</a></p>
+</body></html>
+HTML
+
 # Comprobación mínima: los HTML esperados existen y ninguna carpeta
 # exclusiva del repositorio acaba sirviéndose como recurso web.
 for required in index.html sim-viento.html cartera-tabla.html generador-layout.html                 comparador-estructuras.html manifest.webmanifest sw.js; do
