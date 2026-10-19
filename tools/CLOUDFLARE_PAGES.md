@@ -81,16 +81,37 @@ Los enlaces internos del índice que apuntaban a
 a rutas relativas durante el build. Los enlaces a **otros repositorios**
 GitHub Pages no cambian y pueden necesitar otra migración.
 
-## 5. CI pendiente al terminar la conexión
+## 5. Comprobaciones automáticas y pendientes
 
-`.github/workflows/pages.yml` y `tools/test_pages_cronometro.mjs` siguen
-probando `https://imoriana3.github.io/proyectos`, que dejó de publicarse
-al poner el repo en privado. Actualizarlos a la URL real cuando esté creada.
+`.github/workflows/pages.yml` ya comprueba el artefacto de Cloudflare y
+`https://panel-im3.pages.dev` (la URL actual), no el GitHub Pages antiguo.
 
-Si la URL Cloudflare está protegida con Access, la prueba HTTP/Playwright
-tendrá que autenticarse con un token de servicio de Cloudflare Access,
-guardado como secretos GitHub. No usar tokens en el código, archivos estáticos
-ni enlaces públicos.
+- **Paquete estático**: las páginas, librerías y documentos necesarios
+  existen; `.github`, `tests`, `tools`, `prompts` y `docs/audit`
+  no aparecen en `dist`.
+- **Acceso anónimo**: `tools/test_cloudflare_access.mjs` intenta abrir
+  portada, simuladores y ficheros de datos SIN credenciales. Requiere un
+  redireccionamiento reconocible a Cloudflare Access. Un 200, un error de
+  red o un 403 genérico no cuentan como prueba de Access.
+- **Preview**: comprobación opcional mediante `PAGES_PREVIEW_BASE`.
+  La URL concreta debe tomarse del desplegable de Cloudflare, sin inventarla.
+- **Comprobación funcional autenticada**: PENDIENTE. El antiguo
+  `tools/test_pages_cronometro.mjs` sigue siendo útil en un navegador
+  autenticado, pero no debe usarse contra la web privada como si fuese
+  pública. Si se automatiza, crear un token de servicio Access con política
+  `Service Auth` dedicada y secretos GitHub. Nunca incluir claves en HTML,
+  JavaScript público, URLs ni los logs.
+
+**Importante:** en la revisión del 19/10/2026 GitHub Actions de este
+repositorio devolvía fallos antes de asignar un runner (jobs sin pasos).
+Hay que revisar el mensaje del job en la interfaz de Actions: puede
+ser facturación, límites o permisos al pasar el repositorio a privado.
+No dar por ejecutadas ni aprobadas pruebas que no han arrancado.
+
+**Caché PWA:** `sw.js` conserva recursos HTML y datos en el dispositivo
+después de una sesión autorizada, incluso sin conexión. Cloudflare Access
+protege las solicitudes de red, no borra la caché local al cerrar sesión.
+En equipos compartidos, cerrar sesión y borrar los datos del sitio.
 
 ## 6. Referencias
 
