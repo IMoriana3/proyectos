@@ -7,14 +7,14 @@
 ## Estado de la integración
 
 - **Conexión API VRM:** verificada por el usuario el 19/10/2026; `/test` devolvió `connected:true` y registros energéticos disponibles.
-- **Versión publicada confirmada por el usuario:** `v3.3-visual` en Cloudflare mediante `/version`.
-- **Siguiente versión v3.4:** preparada en [SCADA PR #316](https://github.com/IMoriana3/scada/pull/316) con **una imagen panorámica Landblock**, basada en el mockup aprobado, sin división Agua A/B. **No desplegada todavía**; publicación y aceptación visual pendientes.
+- **Versión publicada confirmada por el usuario:** `v3.4-landblock-hero` en Cloudflare mediante `/version` (19/10/2026).
+- **v3.4 Landblock:** [SCADA PR #316](https://github.com/IMoriana3/scada/pull/316) contiene una imagen panorámica única, sin división Agua A/B. **Publicada por el usuario**; pendiente de comprobar imagen y valores reales en la Home, gráficos y CI.
 - **CI:** sin certificado verde; no dar por fusionada ni validada toda la suite.
 - **Operación:** solo lectura. Sin funciones de arranque, parada, cambio ESS, escritura Modbus ni control remoto.
 
 ## Funciones
 
-El conector consulta la energía diaria/horaria de Victron VRM, batería (SOC, tensión, corriente, temperatura y potencia cuando existe), potencia FV, MPPT individuales, inversor y cargas CA. La nueva interfaz v3.3 organiza la energía temporal arriba, KPIs medidos en columna lateral y un sinóptico Landblock con batería/cargas debajo. Avanzada ofrece curvas por dispositivo cuando VRM publica la serie.
+El conector consulta la energía diaria/horaria de Victron VRM, batería (SOC, tensión, corriente, temperatura y potencia cuando existe), potencia FV, MPPT individuales, inversor y cargas CA. La interfaz v3.4 organiza la energía temporal arriba, KPIs medidos en columna lateral y un sinóptico Landblock con batería/cargas debajo. Avanzada ofrece curvas por dispositivo cuando VRM publica la serie.
 
 La Home de la v3.4 presenta **una sola imagen Landblock** sin rótulos Agua A/B. La imagen es un **render ilustrativo aprobado**, no un plano as-built ni una fotografía de esta instalación. El detalle técnico conserva los MPPT por instancia, **sin** agruparlos artificialmente por agua ni atribuir producción a El Burgo I.
 
