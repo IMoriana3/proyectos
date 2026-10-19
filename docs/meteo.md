@@ -17,21 +17,6 @@ No hay una tercera lista de plantas mantenida a mano. Los proyectos propios pers
 
 ## WeatherContract v2
 
-### Identidad cross-language y cross-origin
-
-El `dataset_hash` del WeatherContract se calcula con un payload JSON
-canónico común a JavaScript y Python: timestamp UTC ISO con milisegundos,
-nombres de campo del contrato, `null`/NaN omitidos y SHA-256 truncado a 24
-hex. El hash heredado de pandas se conserva en el core Python como
-`source_data_hash`, pero **no** identifica el contrato entre superficies.
-
-Cache Storage y localStorage son por origen. Por ello, un consumidor servido
-desde `*.imoriana3.workers.dev` no puede leer directamente el contrato activo
-de `imoriana3.github.io`. `weather-contract-bridge.html` resuelve esa frontera
-con un iframe del origen meteorológico y `postMessage`, limitado a orígenes
-Factiun explícitos. No introduce una segunda copia persistente: transporta el
-mismo paquete `contract_id + dataset_hash`.
-
 El workbench publica cada dataset preparado como un paquete **WeatherContract v2** en Cache Storage del origen `imoriana3.github.io`, con una referencia ligera en `localStorage`. Al compartir origen, los simuladores de otros repos publicados bajo GitHub Pages pueden leer exactamente el mismo paquete sin volver a descargar meteo.
 
 El contrato contiene:
@@ -128,9 +113,229 @@ Meteo              POWER
 - histórico horario;
 - climatología mensual para comparación.
 
+### Identidad cross-language y cross-origin
+
+El `dataset_hash` del WeatherContract se calcula con un payload JSON
+canónico común a JavaScript y Python: timestamp UTC ISO con milisegundos,
+nombres de campo del contrato, `null`/NaN omitidos y SHA-256 truncado a 24
+hex. El hash heredado de pandas se conserva en el core Python como
+`source_data_hash`, pero **no** identifica el contrato entre superficies.
+
+Cache Storage y localStorage son por origen. Por ello, un consumidor servido
+desde `*.imoriana3.workers.dev` no puede leer directamente el contrato activo
+de `imoriana3.github.io`. `weather-contract-bridge.html` resuelve esa frontera
+con un iframe del origen meteorológico y `postMessage`, limitado a orígenes
+Factiun explícitos. No introduce una segunda copia persistente: transporta el
+mismo paquete `contract_id + dataset_hash`.
+
+El workbench publica cada dataset preparado como un paquete **WeatherContract v2** en Cache Storage del origen `imoriana3.github.io`, con una referencia ligera en `localStorage`. Al compartir origen, los simuladores de otros repos publicados bajo GitHub Pages pueden leer exactamente el mismo paquete sin volver a descargar meteo.
+
+El contrato contiene:
+
+- `contract_id` y hash de dataset;
+- emplazamiento y zona horaria;
+- fuente/proveedor/modelo/run/fallback;
+- resolución original y operacional, cobertura e interpolación;
+- unidades y campos canónicos;
+- QA, completitud y BSRN;
+- incertidumbre del recurso;
+- resumen espacial cuando existe;
+- política explícita: **WEATHER informa; CONTROL decide**.
+
+Hay referencias activas separadas para `forecast`, `historical`, `tmy` y `prepared`, además de una referencia al último paquete activado.
+
+## Supervisión 72 h
+
+El forecast activo genera una ventana operativa de 72 h con máximos de viento/racha, precipitación acumulada, temperatura mínima, nieve y CAPE. Señala cruces de umbral como **avisos meteorológicos**, nunca como órdenes de control.
+
+Cuando se configura un endpoint WeatherNext 3 autenticado, el browser intenta primero WeatherNext. Si no está disponible, el fallback a Open-Meteo queda visible y registrado en el WeatherContract.
+
+## Meteo espacial
+
+La primera capa espacial usa centro + norte/sur/este/oeste a un radio configurable. Calcula spreads de viento, racha, temperatura, GHI, precipitación y nubosidad. Está declarada como aproximación geométrica; no inventa una topología NCU si no dispone de ella.
+
+## Incertidumbre y P50/P90
+
+El browser calcula una sigma de recurso conservadora usando el mayor de:
+
+- preset de la fuente;
+- RMS multi-fuente;
+- residual de adaptación a medida de sitio;
+- override explícito cuando exista.
+
+Se evita sumar en cuadratura estos términos correlacionados para no contar dos veces el mismo error de recurso. La sigma se guarda dentro del WeatherContract y del `manifest.json`.
+
+## Export bankable
+
+Además de CSV/JSON/TMY, la v0.8 exporta:
+
+- CSV compatible con flujo PVSyst;
+- `manifest.json` con provenance, hash, QA, incertidumbre, spatial y forecast;
+- WeatherContract completo en JSON;
+- informe HTML/PDF con el manifest incrustado.
+
+## Arquitectura
+
+```text
+Cartera / factiun_plantas
+          │
+          ▼
+      meteo.html
+          │
+          ▼
+  lib/meteo-browser.js
+          │
+ ┌────────┼─────────┐
+ ▼        ▼         ▼
+Open-    PVGIS     NASA
+Meteo              POWER
+ │
+ ├─ histórico multi-año
+ ├─ QA / BSRN / plausibilidad
+ ├─ TMY Sandia-FS
+ ├─ comparación de fuentes
+ ├─ import CSV / PVSyst
+ ├─ adaptación de sitio
+ ├─ interpolación
+ ├─ granizo / viento sintético
+ ├─ descargas
+ └─ informes
+```
+
+**WEATHER informa; CONTROL decide.** Forecast, reanálisis y riesgo meteorológico no sustituyen HSU/SCADA ni interlocks de seguridad.
+
+## Fuentes sin credenciales
+
+
 ### WeatherNext 3
 
-El contrato distingue **FDIR de DNI**. Hoy puede importarse un resumen JSON. La conexión live sigue pendiente de credenciales/acceso Google, pero el workbench ya incorpora un **hook por proxy autenticado**: las credenciales no se exponen en GitHub Pages y, si el endpoint falla/no existe, se registra fallback a Open-Meteo.
+El contrato distingue **FDIR de DNI**. Puede importarse un resumen JSON y el workbench incorpora un **hook por proxy autenticado**: las credenciales nunca se exponen en GitHub Pages y, si el endpoint falla/no existe, el fallback a Open-Meteo queda declarado.
+
+El contrato del proxy live queda fijado como:
+
+- base configurable en la UI;
+- ruta final `GET <base>/forecast?lat=<lat>&lon=<lon>&hours=72`;
+- en el bridge local SolarGPT, la base prevista es `http://127.0.0.1:8765/meteo/weathernext`, que expone `/meteo/weathernext/forecast`;
+- p50 alimenta la serie operativa; p10/p50/p90 se conservan como bandas probabilísticas;
+- temperatura K → °C, energía solar horaria J/m² → W/m², precipitación m → mm y presión Pa → hPa se convierten una sola vez en el adapter browser;
+- `wind_direction_10m_p50` se conserva en el WeatherContract cuando el proxy la deriva de los componentes u/v;
+- `init_time`, hora de forecast, superficie de acceso y demás provenance viajan con el dataset.
+
+La solicitud de acceso de Google fue **aprobada** (correo facilitado por el propietario, 18/10/2026), pero **BigQuery Analytics Hub quedó bloqueado por el límite global de 1.000 datasets enlazados**, no por un error del navegador. La alternativa oficial seleccionada es **Cloud Storage Statistics Zarr**: el usuario confirmó navegación por el bucket `weathernext3_statistics_spatial` y un run `predictions.zarr`. La exploración inicial acreditó sólo el listado, pero **el 19/10/2026 se ha validado lectura numérica real desde Cloud Shell**, dos veces con `GCS_NUMERIC_POINT_READ_OK`: El Burgo I (`24002`), 3 horas de una ejecución histórica de 01/01/2026 y 12/12 valores P50 finitos para temperatura, viento, SSRD/GHI y nubosidad. Rejilla efectiva 41,6° / 359,2° (aprox. 2,68 km respecto al emplazamiento). Esta comprobación pertenece al lector piloto público de sólo lectura; **no** verifica el backend canónico de SolarGPT ni implica predicciones LIVE operativas.
+
+`SolarGPTfull#416` contiene el lector de GCS y mantiene el **mismo JSON** del proxy `/meteo/weathernext/forecast`; `provenance.surface` distingue `GCS` de `BigQuery` sin variar unidades ni contrato. La ejecución piloto será **manual desde Google Cloud Shell** porque GitHub Actions se quedó sin minutos y el NAS está saturado. El comprobador público de solo lectura está en `tools/weathernext_gcs_probe.py`, con launcher `tools/weathernext_gcs_cloudshell.sh`. Se limita a un punto, 3 horas y 4 variables; no ejecuta cron ni escribe a Supabase. La futura ejecución automática se plantea como Cloud Run Jobs, condicionada a validar lectura numérica, términos y costes. La eventual caché de pronósticos en Supabase deberá residir en una tabla RLS **distinta** de la telemetría medida y consumirse mediante WeatherContract v2.
+
+Estado: **GCS NUMÉRICO VERIFICADO; NO LIVE en SolarGPT**. El acceso desde el runtime canónico, CI del backend, política de costes, caché RLS y despliegue siguen pendientes. Google confirma las unidades nativas K, m/s, J/m² acumulado 1h y fracción nubosa (https://developers.google.com/weathernext/guides/models). Los históricos de más de 1 hora son CC BY 4.0; la previsión reciente/futura está sujeta a términos específicos. La medición HSU conserva autoridad operacional; WeatherNext sólo sirve como forecast experimental.
+
+### Integración WeatherNext ↔ Supabase (19/10/2026)
+
+**HECHO / BASE DE DATOS:** migración `weathernext3_forecast_cache_rls_v1` aplicada
+en `icqiwmbbeoeswbcbgflc`. Existe `public.meteo_pronosticos` con
+RLS activa, 0 filas iniciales, SELECT exclusivamente para `authenticated`
+y escritura de `service_role` en backend. `public.telemetria` no se toca.
+La tabla contiene `planta_id` referenciada a `public.plantas`, `init_time`,
+`valid_time`, `lead_hour`, `p10`, `p50`, `p90` y `provenance`.
+
+**HECHO / CÓDIGO EN RAMA, NO PUBLICADO:** `lib/meteo-forecast-cache.js`
+consulta la identidad oficial desde `plantas.code` con la sesión Supabase de
+`meteo.html`, lee únicamente la última ejecución del modelo, rechaza
+pronósticos de más de 18 h y no hace doble conversión de unidades (los cuantiles
+del cache ya están en °C, W/m², mm). `meteo.html` intenta el cache primero,
+conserva el fallback Open-Meteo y etiqueta explícitamente el origen. Al cerrar
+la sesión descarta el forecast autenticado del WeatherContract en navegador.
+Ninguna lectura del browser accede a la clave `service_role`.
+
+**PENDIENTE:** publicación de filas reales en la tabla desde entorno backend,
+validación de tests locales y navegador, completar integración de identidad
+Google en Cloud Run y costes. La fuente WeatherNext 3 **NO está live en la
+tarjeta** y la prueba Cloud Shell anterior, aunque numérica, fue del lector
+piloto, no del backend canónico. CI de GitHub sin minutos, PR se mantiene
+Draft. El forecast no es medida HSU ni autoridad de CONTROL/STOW.
+
+### Coste adicional obligatorio: 0 € (decisión 19/10/2026)
+
+**DECISIÓN INTENCIONAL:** no habilitar facturación en Google Cloud;
+no usar Cloud Run ni Cloud Scheduler, no cargar el NAS y no gastar minutos
+del repositorio privado `SolarGPTfull`.
+
+**Prueba de alternativa gratuita:** en `IMoriana3/proyectos`, que es público,
+GitHub Actions usa runners estándar gratuitos. Se creó un test efímero sin
+secretos sobre el bucket GCS de WeatherNext 3 y se ejecutó realmente:
+`39250731829` detectó que obstore intentaba obtener ADC del servidor
+Google de metadatos inexistente; `39250901753` usando explícitamente
+`GOOGLE_SKIP_SIGNATURE=true` devolvió **403 AccessDenied** para el
+objeto `predictions.zarr/.zmetadata`: no existe lectura anónima.
+El workflow efímero se eliminó tras recoger evidencia.
+
+**Consecuencia:** no se garantiza extracción automática gratuita con los
+permisos presentes. La cuenta personal aprobada sí puede ejecutar
+`tools/weathernext_gcs_cloudshell.sh` de forma interactiva en Cloud Shell,
+sin activación de billing. Para usar el pronóstico en SolarGPT, debe existir
+un mecanismo seguro de exportación/carga al contrato canónico; el acceso
+al bucket **no** debe confundirse con pronóstico publicado.
+
+**PROPUESTA pendiente de validación:** identidad técnica autorizada por Google
+con autenticación gratuita y sin token persistente en el repositorio público.
+No activar cron hasta demostrar autenticación, coste 0 y uso permitido de los
+pronósticos experimentales. No usar contraseñas personales ni claves
+`service_role` de Supabase en ficheros públicos.
+
+### Integración Zarr nativa en la pantalla Meteo (19/10/2026)
+
+**HECHO EN RAMA `#591`, NO PUBLICADO:** `meteo.html` importa directamente
+el JSON `weathernext3-zarr-point-v2` generado por
+`IMoriana3/weathernext`. El usuario descarga el fichero desde su
+Google Cloud Shell autorizado y lo selecciona en **WeatherNext 3 >
+Importar JSON**. El archivo se procesa enteramente en el navegador,
+sin introducir Google ADC ni enviar datos a servidores públicos.
+La pantalla comprueba esquema, horas 1..N completas, run class, fecha,
+coordenadas de emplazamiento (desviación <=0,05°), cantidades en escala
+original y preservación de P10/P50/P90.
+
+**ÚNICA NORMALIZACIÓN:** `lib/meteo.js` contiene
+`fromWeatherNextTransport()`, que llama al mismo
+`fromWeatherNextSummary()` usado por el proxy GCS/BigQuery. Convierte
+Kelvin a °C y energía solar J/m² por hora a W/m² **una sola vez**.
+No genera DNI/FDIR, precipitación, rachas, dirección ni granizo cuando
+WeatherNext no proporciona esos campos: quedan `null`.
+Los percentiles se conservan por **variable marginal**, no como
+escenarios físicos coherentes de viento+radiación+nubes.
+
+**PANTALLA:** un único bloque Meteo con ventana seleccionable
+**72 horas / 360 horas**, curva horaria por variable con P10/P50/P90,
+deslizador por hora, datos de cada instante y advertencia explícita
+cuando el archivo sea histórico o tenga un horizonte menor que el
+solicitado. Se mantiene el resumen operacional y el fallback Open-Meteo.
+Un `weatherNext` histórico no se presenta como tiempo actual.
+
+**WeatherContract v2 — EXTENSIÓN COMPATIBLE, PENDIENTE MASTER:**
+`lib/weather-contract.js` conserva el dataset meteorológico central,
+pero incorpora opcionalmente `forecast_quantiles.rows` y un hash
+propio. `contract_id` incluye el hash de bandas para impedir
+colisiones con el mismo P50. `browserConsumerStamp` transporta ese
+hash. La normalización `finite(null)` se corrigió porque convertía
+faltantes en ceros; incidencia **BUG** de calidad. Esta extensión
+cross-domain debe contrastarse con consumidores y contratos de
+SolarGPT antes de certificar o fusionar. **No presume** que otros
+simuladores ya consuman estos cuantiles automáticamente.
+
+**HECHO DE TESTS AISLADOS:** validación de parser y
+`WeatherContract v2` en runtime JS: 360 valores horarios conservados,
+resumen exacto 72 horas, cuantiles completos, ausencia de precipitación
+como `null`, hash independiente, y sintaxis de la interfaz.
+Se han añadido los tests
+`tests/test_meteo_weathernext_transport.mjs` y
+`tests/test_meteo_weathernext_contract.mjs`.
+El workflow GitHub Actions de pruebas focalizadas está actualmente
+bloqueado por infraestructura (job sin pasos); **no declararlo CI verde**.
+
+**PENDIENTE:** resolver la divergencia de PR `#591` respecto a
+`main`, ejecutar arneses de navegador y regresiones
+cross-domain, fusionar/publicar, validar importación real de una
+predicción reciente y conseguir carga automática a coste adicional 0 €
+con identidad Google expresamente autorizada. La caché Supabase
+`public.meteo_pronosticos` existe pero sigue sin filas, de modo que
+no hay ingestión LIVE.
 
 ### Windy y Ventusky
 
@@ -304,3 +509,39 @@ El objetivo es que consuman el mismo contrato meteorológico:
 - SCADA;
 - P50/P90;
 - QA/certificación.
+
+### Integración de previsiones en el simulador · 19/10/2026
+
+El módulo meteorológico existente `meteo.html` incorpora una fuente
+WeatherNext 3 con **importación de JSON Zarr v2**, exportado desde un entorno
+con identidad Google autorizada. El lector externo no es un segundo modelo:
+simplemente selecciona la rejilla de 0,1° y conserva los cuantiles nativos.
+
+- 72 h por defecto y hasta 360 h si la ejecución GCS es sinóptica; las
+  ejecuciones intermedias se limitan a 48 h.
+- Las series P10/P50/P90 de temperatura, viento 10 m, radiación horizontal
+  y nubosidad se mantienen como cuantiles **marginales** por magnitud.
+- `lib/meteo.js::fromWeatherNextTransport` realiza una sola conversión
+  desde Kelvin / J/m² y alimenta el WeatherContract v2 canónico, incluyendo
+  hash separado del contenido probabilístico.
+- La gráfica permite seleccionar la magnitud y moverse hora a hora.
+- Botón **Comparar con Open-Meteo**: alinea por UTC exactamente, sin interpolar,
+  muestra ambas curvas y calcula sesgo y error medio absoluto como diferencias
+  **entre modelos**, no como validación frente a medidas reales. Si no coinciden
+  las horas (por ejemplo, un forecast histórico), se indica expresamente.
+- La lectura Supabase `meteo_pronosticos` utiliza RLS y el login existente;
+  ningún token Google ni clave privada se envía desde el navegador.
+- La consulta Open-Meteo se amplía hasta 16 días cuando se seleccionan 360 h.
+  Su uso empresarial debe cumplir las condiciones comerciales del proveedor:
+  no se presupone autorización gratuita por estar disponible la API.
+- La importación JSON funciona sin sincronización automática y conserva
+  el origen GCS. No modifica `telemetria` ni toma decisiones CONTROL/STOW.
+
+**Estado:** funcionalidad en la rama de Meteo, pendiente de integrar en
+`main` y verificar su despliegue. GitHub Actions ha empezado a finalizar
+jobs sin pasos; el rojo de esos runs es un bloqueo de infraestructura y no
+una sentencia de fallo de código. Las comprobaciones directas de importación
+y comparación han pasado; no equivale a un ensayo del navegador publicado.
+El bucket GCS requiere autenticación, por lo que no hay sincronización
+automática a coste adicional 0 € con los permisos actuales.
+
