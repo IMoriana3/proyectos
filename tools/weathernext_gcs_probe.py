@@ -43,12 +43,14 @@ def point_probe(*, lat: float, lon: float, hours: int = 3,
     if not PREFIX_PATTERN.fullmatch(prefix):
         raise ValueError("Solo se aceptan ejecuciones oficiales del bucket GCS")
 
+    print("[1/3] Librerías instaladas. Preparando lector Zarr…", flush=True)
     # These imports are intentionally deferred so --help works before setup.
     import numpy as np
     import obstore
     import xarray as xr
     import zarr
 
+    print("[2/3] Abriendo metadatos del bucket Google (sin descargar la rejilla)…", flush=True)
     store = obstore.store.GCSStore(bucket=BUCKET, prefix=prefix)
     dataset = xr.open_zarr(zarr.storage.ObjectStore(store), chunks={})
     try:
@@ -66,6 +68,7 @@ def point_probe(*, lat: float, lon: float, hours: int = 3,
                               np.timedelta64(hours, "h")))
         if selected.sizes.get("lead_time", 0) == 0:
             raise RuntimeError("No hay lead times en el intervalo solicitado")
+        print("[3/3] Leyendo 3 horas de una celda meteorológica…", flush=True)
         selected = selected.load()
         samples = []
         for idx, lead in enumerate(selected["lead_time"].values):
