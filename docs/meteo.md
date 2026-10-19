@@ -133,6 +133,31 @@ La solicitud de acceso de Google fue **aprobada** (correo facilitado por el prop
 
 Estado: **GCS NUMÉRICO VERIFICADO; NO LIVE en SolarGPT**. El acceso desde el runtime canónico, CI del backend, política de costes, caché RLS y despliegue siguen pendientes. Google confirma las unidades nativas K, m/s, J/m² acumulado 1h y fracción nubosa (https://developers.google.com/weathernext/guides/models). Los históricos de más de 1 hora son CC BY 4.0; la previsión reciente/futura está sujeta a términos específicos. La medición HSU conserva autoridad operacional; WeatherNext sólo sirve como forecast experimental.
 
+### Integración WeatherNext ↔ Supabase (19/10/2026)
+
+**HECHO / BASE DE DATOS:** migración `weathernext3_forecast_cache_rls_v1` aplicada
+en `icqiwmbbeoeswbcbgflc`. Existe `public.meteo_pronosticos` con
+RLS activa, 0 filas iniciales, SELECT exclusivamente para `authenticated`
+y escritura de `service_role` en backend. `public.telemetria` no se toca.
+La tabla contiene `planta_id` referenciada a `public.plantas`, `init_time`,
+`valid_time`, `lead_hour`, `p10`, `p50`, `p90` y `provenance`.
+
+**HECHO / CÓDIGO EN RAMA, NO PUBLICADO:** `lib/meteo-forecast-cache.js`
+consulta la identidad oficial desde `plantas.code` con la sesión Supabase de
+`meteo.html`, lee únicamente la última ejecución del modelo, rechaza
+pronósticos de más de 18 h y no hace doble conversión de unidades (los cuantiles
+del cache ya están en °C, W/m², mm). `meteo.html` intenta el cache primero,
+conserva el fallback Open-Meteo y etiqueta explícitamente el origen. Al cerrar
+la sesión descarta el forecast autenticado del WeatherContract en navegador.
+Ninguna lectura del browser accede a la clave `service_role`.
+
+**PENDIENTE:** publicación de filas reales en la tabla desde entorno backend,
+validación de tests locales y navegador, completar integración de identidad
+Google en Cloud Run y costes. La fuente WeatherNext 3 **NO está live en la
+tarjeta** y la prueba Cloud Shell anterior, aunque numérica, fue del lector
+piloto, no del backend canónico. CI de GitHub sin minutos, PR se mantiene
+Draft. El forecast no es medida HSU ni autoridad de CONTROL/STOW.
+
 ### Windy y Ventusky
 
 `meteo.html` incorpora ambos como **mapas operativos externos de contraste**, sincronizados con el emplazamiento seleccionado.
