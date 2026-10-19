@@ -167,7 +167,9 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
       <option value="ghi_wm2">Radiación horizontal GHI (W/m²)</option>
       <option value="cloud_total">Nubosidad (%)</option>
     </select></label>
-    <canvas id="wnChart" class="chart" aria-label="Pronóstico horario y cuantiles disponibles"></canvas>
+    <div class="actions" style="margin-top:6px"><button id="wnCompareBtn" class="secondary">Comparar con Open-Meteo</button></div>
+    <div class="statusline" id="wnCompareStatus">Comparación opcional de pronósticos. Mismas horas UTC; ninguno representa mediciones.</div>
+    <canvas id="wnChart" class="chart" aria-label="Pronóstico horario, cuantiles disponibles y comparación opcional"></canvas>
     <div class="statusline" id="wnChartStatus">Sin curva horaria.</div>
     <label><span class="k">Instante de previsión · hora a hora</span>
       <input type="range" id="wnLead" min="1" max="72" step="1" value="1">
@@ -421,7 +423,7 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
 <script type="module">
-import {fetchOpenMeteo,fromWeatherNextSummary,fromWeatherNextTransport,forecastOperationalSummary,fetchSpatialForecast,fetchWeatherNextProxy} from "./lib/meteo.js";
+import {fetchOpenMeteo,fromWeatherNextSummary,fromWeatherNextTransport,forecastOperationalSummary,fetchSpatialForecast,fetchWeatherNextProxy,compareForecastSources} from "./lib/meteo.js";
 import {
   WORKBENCH_VERSION,loadFactiunPlants,fetchHistorical,prepareDataset,annualStats,
   buildTmySandia,fetchPvgisTmy,compareSources,plausibility,statsTable,searchPlaces,
@@ -450,6 +452,7 @@ let SENSOR_RECORDS=[],SENSOR_LAST=null,SENSOR_WARNINGS=null,SENSOR_SOURCES=[];
 let SUPABASE_METEO_CLIENT=null;
 let LAST_COMPARE=null,LAST_HAIL=null,LAST_WIND_SYNTH=null;
 let FORECAST=null,FORECAST72=null,SPATIAL=null,WEATHER_UNCERTAINTY=null,ACTIVE_CONTRACT=null;
+let FORECAST_REFERENCE=null; // Open-Meteo contrast only; never published as the active forecast
 const forecastWindowHours=()=>Number($("wnHorizon")?.value)||72;
 let PLACE_RESULTS=[],PLACE_ACTIVE=-1,PLACE_TIMER=null,PLACE_ABORT=null;
 document.querySelector("#coreVer").title="visual layer "+VIZ_VERSION;
@@ -736,6 +739,21 @@ function renderForecastCharts(){
     const values=rows.map(r=>val(r[quantile]?.[field]??(quantile==="p50"?r[field]:null)));
     if(values.some(v=>v!==null))series.push({label,values});
   }
+  if(FORECAST_REFERENCE?.length && FORECAST?.[0]?.source==="weathernext3"){
+    const comp=compareForecastSources(rows,FORECAST_REFERENCE,{field,hours:rows.length});
+    const matches=new Map(comp.pairs.map(p=>[Date.parse(p.timestamp),p.openmeteo]));
+    if(comp.overlapping_hours){
+      series.push({label:"Open-Meteo",values:rows.map(r=>matches.get(Date.parse(r.timestamp))??null)});
+      $("wnCompareStatus").textContent=comp.overlapping_hours+" horas UTC coincidentes · "+
+        "sesgo (WeatherNext − Open-Meteo) "+fmt(comp.bias,2)+" · error medio absoluto "+
+        fmt(comp.mae,2)+" "+meta[1]+". Son dos modelos, no un contraste con medidas reales.";
+      $("wnCompareStatus").className="statusline ok";
+    }else{
+      $("wnCompareStatus").textContent="No hay horas UTC coincidentes entre ambos modelos. "+
+        "Una previsión histórica no se compara con un pronóstico actual.";
+      $("wnCompareStatus").className="statusline";
+    }
+  }
   const labels=rows.map((r,i)=>{
     if(i===0 || (i+1)%24===0 || i===rows.length-1){
       return "H"+String(i+1);
@@ -834,6 +852,9 @@ async function publishForecastContract(){
 }
 async function applyForecast(rows,label="Forecast"){
   if(!rows?.length)throw new Error("forecast sin filas");
+  FORECAST_REFERENCE=null;
+  $("wnCompareStatus").textContent="Pulsa «Comparar con Open-Meteo» para contrastar las mismas horas UTC.";
+  $("wnCompareStatus").className="statusline";
   FORECAST=rows;
   const now=Date.now(),m=rows.reduce((a,b)=>Math.abs(Date.parse(b.timestamp||b.t)-now)<Math.abs(Date.parse(a.timestamp||a.t)-now)?b:a,rows[0]);
   $("wnLead").value="1";
@@ -890,6 +911,20 @@ async function loadWeatherNextCached({quiet=false}={}){
   return true;
 }
 
+async function compareWeatherNextWithOpenMeteo(){
+  if(!FORECAST?.length||FORECAST[0]?.source!=="weathernext3")
+    throw Error("Carga primero una previsión WeatherNext para comparar modelos.");
+  const initial=FORECAST;
+  const lat=+$("lat").value,lon=+$("lon").value;
+  const horizon=forecastWindowHours();
+  $("wnCompareStatus").textContent="Consultando Open-Meteo y alineando las mismas horas UTC…";
+  $("wnCompareStatus").className="statusline work";
+  const reference=await fetchOpenMeteo({lat,lon,forecastDays:horizon>72?16:4});
+  if(FORECAST!==initial||+$("lat").value!==lat||+$("lon").value!==lon)
+    throw Error("La planta o la previsión cambió durante la comparación.");
+  FORECAST_REFERENCE=reference;
+  renderForecastCharts(); // renders both models and P10/P50/P90 without changing WeatherContract
+}
 async function loadNow(){
   status("Cargando forecast de "+siteName()+"…","work");
   if(await loadWeatherNextCached({quiet:true}))return;
@@ -905,7 +940,7 @@ async function loadNow(){
     }
   }
   try{
-    const rows=await fetchOpenMeteo({lat,lon,forecastDays:3});
+    const rows=await fetchOpenMeteo({lat,lon,forecastDays:forecastWindowHours()>72?16:3});
     await applyForecast(rows,"Forecast Open-Meteo");
   }catch(e){status("Forecast: "+e.message,"bad")}
 }
@@ -1249,7 +1284,16 @@ $("nowBtn").onclick=loadNow;$("yearsBtn").onclick=analyzeYears;$("tmyBtn").oncli
 $("spatialBtn").onclick=runSpatial;
 $("wnVariable").onchange=renderForecastCharts;
 $("wnLead").oninput=renderForecastInstant;
+$("wnCompareBtn").onclick=async()=>{
+  $("wnCompareBtn").disabled=true;
+  try{await compareWeatherNextWithOpenMeteo()}
+  catch(e){$("wnCompareStatus").textContent=String(e?.message||e);
+    $("wnCompareStatus").className="statusline bad";}
+  finally{$("wnCompareBtn").disabled=false;}
+};
 $("wnHorizon").onchange=async()=>{
+  FORECAST_REFERENCE=null;
+  $("wnCompareStatus").textContent="Horizonte actualizado. Vuelve a comparar para consultar la misma ventana.";
   if(FORECAST?.length){
     if(FORECAST.length<forecastWindowHours()&&
        FORECAST[0]?.provenance?.mode==="supabase-forecast-cache")
@@ -1303,6 +1347,7 @@ $("wn").onchange=async e=>{
       rows=src.map(fromWeatherNextSummary).filter(x=>x.timestamp);
     }
     if(!rows.length)throw Error("JSON WeatherNext sin horas válidas.");
+    if(rows.length>72)$("wnHorizon").value="360";
     $("wnStatus").textContent="WeatherNext "+(native?"GCS nativo":"resumen")+" · "+
       rows.length+" horas"+(native?" · P10/P50/P90 según disponibilidad":"")+
       ". Datos importados localmente.";
