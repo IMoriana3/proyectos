@@ -127,7 +127,11 @@ El contrato del proxy live queda fijado como:
 - `wind_direction_10m_p50` se conserva en el WeatherContract cuando el proxy la deriva de los componentes u/v;
 - `init_time`, hora de forecast, superficie de acceso y demás provenance viajan con el dataset.
 
-La solicitud de acceso de Google ha sido **aprobada** (correo facilitado por el propietario, 18/10/2026). Esto no valida aún el acceso efectivo a la tabla vinculada, la cuenta usada para ADC ni la consulta en producción. La consulta real sigue **pendiente de tabla enlazada/ADC y prueba de acceso**. Tener el endpoint y el adapter implementados no se presenta como WeatherNext live hasta que ese acceso exista y se verifique de punta a punta.
+La solicitud de acceso de Google fue **aprobada** (correo facilitado por el propietario, 18/10/2026), pero **BigQuery Analytics Hub quedó bloqueado por el límite global de 1.000 datasets enlazados**, no por un error del navegador. La alternativa oficial seleccionada es **Cloud Storage Statistics Zarr**: el usuario confirmó navegación por el bucket `weathernext3_statistics_spatial` y un run `predictions.zarr`. Esta prueba acredita listado de carpetas, **no** lectura de valores numéricos desde un runtime.
+
+`SolarGPTfull#416` contiene el lector de GCS y mantiene el **mismo JSON** del proxy `/meteo/weathernext/forecast`; `provenance.surface` distingue `GCS` de `BigQuery` sin variar unidades ni contrato. La ejecución piloto será **manual en GitHub Actions**, sin NAS, sin cron y sin escritura Supabase, hasta superar prueba real de punto/coste. La eventual caché de pronósticos en Supabase deberá residir en una tabla RLS **distinta** de la telemetría medida y consumirse mediante WeatherContract v2.
+
+Estado: **NO LIVE**, con acceso GCS numérico, credenciales del runtime, CI del backend, política de costes y despliegue aún por verificar. La medición HSU conserva autoridad operacional; WeatherNext sólo sirve como forecast experimental.
 
 ### Windy y Ventusky
 
