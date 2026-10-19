@@ -28,6 +28,10 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   const ui=await page.evaluate(()=>({
     min:+eTime.min,max:+eTime.max,step:+eTime.step,
     presets:[...ePreset.options].map(o=>o.value),
+    grupos:[...ePreset.querySelectorAll('optgroup')].map(o=>o.label),
+    modos:[mEvent.textContent.trim(),mLive.textContent.trim(),mEp.textContent.trim()],
+    tabs:[...document.querySelectorAll('#tabs button')].map(o=>o.textContent.trim()),
+    chips:[...document.querySelectorAll('#eThreats .threatchip')].map(o=>o.textContent.trim()),
     frames:EVENTO.sim.frames.length,dt:EVENTO.sim.dt_s,
     first:EVENTO.sim.frames[0].t_min,last:EVENTO.sim.frames.at(-1).t_min
   }));
@@ -41,6 +45,18 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('hay presets de viento, racha, granizo, nieve, combinado y pasivo',
     ['wind_ramp','gust','hail_far','hail_near','hail_wind','snow','snow_hail','snow_hail_same','passive']
       .every(x=>ui.presets.includes(x)),ui.presets.join(','));
+  check('la interfaz nombra una sola entrada Simulador y separa los laboratorios',
+    /simulador/i.test(ui.tabs[0]||'') && /granizo.*lógica/i.test(ui.tabs[1]||'') &&
+    /nieve.*lógica/i.test(ui.tabs[2]||''), JSON.stringify(ui.tabs));
+  check('los modos distinguen escenario, manual fino y episodio anual',
+    /escenario/i.test(ui.modos[0]||'') && /manual.*vivo/i.test(ui.modos[1]||'') &&
+    /episodio anual/i.test(ui.modos[2]||''), JSON.stringify(ui.modos));
+  check('los casos se agrupan por amenaza sola o combinada',
+    ['Solo viento','Solo granizo','Solo nieve','Combinados'].every(x=>ui.grupos.includes(x)),
+    JSON.stringify(ui.grupos));
+  check('el escenario enseña explícitamente viento, granizo y nieve como entradas comunes',
+    ui.chips.length===3 && /viento/i.test(ui.chips[0]) && /granizo/i.test(ui.chips[1]) &&
+    /nieve/i.test(ui.chips[2]), JSON.stringify(ui.chips));
 
   // Viento: cruza T1 y luego T2.
   const viento=await page.evaluate(()=>{
@@ -80,6 +96,16 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   });
   check('preset racha separa media y racha, y declara que T1/T2 miran racha',
     gust.signal==='gust'&&gust.g>90&&gust.w<40,JSON.stringify(gust));
+
+  const combinado=await page.evaluate(()=>{
+    aplicaPresetEvento('hail_wind');
+    return [...document.querySelectorAll('#eThreats .threatchip')].map(e=>({
+      t:e.textContent.trim(),on:e.classList.contains('on')
+    }));
+  });
+  check('Viento + granizo se ve como DOS amenazas activas dentro del mismo simulador',
+    combinado.length===3&&combinado[0].on&&combinado[1].on&&!combinado[2].on,
+    JSON.stringify(combinado));
   check('esa racha sí dispara las estrategias controladas',
     gust.a1==='FULL_STOW'&&gust.a2==='FULL_STOW',JSON.stringify(gust));
 

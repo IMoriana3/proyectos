@@ -420,7 +420,19 @@ declare -A PISO=(
   # de valor. MEDIDO: contra los CINCO arneses que podían verlo, mataron CERO
   # el día juliano corrido un día entero, el backtracking quitado del todo y la
   # refracción anulada. Este banco los mata 4, 5 y 3.
-  [test_solar.js]=73
+  # 73 → 80: orto/ocaso con el criterio NOAA (−0,833° geométricos, interpolado) y
+  # crepúsculo civil (−6°). El código viejo (primer punto de la malla con
+  # elevación aparente ≥ 0) mata 6 de las 7 nuevas.
+  [test_solar.js]=80
+  # El desplegable de planta rotulaba la CLAVE DE CARTERA (24002) donde toda la
+  # casa rotula el nº de PROYECTO (23003): la cartera ya publicaba `nproy` y
+  # esta ficha no lo leía. MEDIDO: el código viejo mata 1 de 8.
+  # 8 → 10: la ficha abre en el día y la hora de la planta, no en el solsticio
+  # a las 12:00. El HTML con `value="2026-06-21"` y 720 fijos mata las 2.
+  # 10 → 17: el cambio de hora por calendario (últimos domingos de marzo y
+  # octubre) y no por días fijos de 2026. La regla vieja (88–298) mata 4.
+  [test_solar_planta.js]=17
+  [test_solar_weather_contract.mjs]=14
   [test_sizing.js]=115
   # 13, y MEDIDO en los TRES modos —con checkout hermano, por `main` sobre
   # HTTPS y sin ninguno de los dos— porque el recuento no cambia entre ellos:
@@ -983,6 +995,13 @@ declare -A PISO=(
   # de Meteo: mensual, serie diaria, zoom, cockpit 6-paneles, DOY, rosa,
   # extremos térmicos/heladas, nieve, granizo, viento sintético y comparación.
   [test_meteo_browser.mjs]=73
+  # Análisis de medidas reales: 14 verificaciones reproducibles sin credenciales.
+  # El piso cubre RLS simulada, deduplicación diaria, escala WFU raw,
+  # comparación de anemómetros, unidades y lagunas de datos.
+  [test_meteo_sensores_reales.js]=14
+  # Pantalla real en Chromium con autenticación y datos SUPABASE de prueba.
+  # 12 controles: acceso, HSU, WFU raw, coherencia, privacidad y cierre.
+  [test_meteo_sensores_browser.js]=12
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
 )

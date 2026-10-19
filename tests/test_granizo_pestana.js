@@ -26,8 +26,14 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
 
   // ── las pestañas ────────────────────────────────────────────────────
   await page.waitForSelector('#tabGranizo', { timeout: 15000 });
-  check('la ficha tiene pestañas Viento y Granizo',
+  check('la ficha mantiene las tres áreas funcionales',
         (await page.$('#tabViento')) !== null && (await page.$('#tabGranizo')) !== null);
+  const nav = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('#tabs button')).map(n => n.textContent.trim()));
+  check('la navegación distingue Simulador maestro de laboratorios de lógica',
+        /simulador/i.test(nav[0] || '') &&
+        /granizo.*lógica/i.test(nav[1] || '') &&
+        /nieve.*lógica/i.test(nav[2] || ''), nav.join(' | '));
   /* AQUÍ HABÍA UN GUARD DEL HUECO DE NIEVE, y cumplió: exigía que la tercera
      pestaña fuera un botón DESACTIVADO con su motivo, para que nadie dejara una
      pestaña muerta en su sitio. El 2026-10-01 el hueco se llenó —la pestaña
@@ -41,7 +47,7 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
         (await page.$('#tabNieve')) !== null &&
         (await page.$eval('#tabNieve', e => /nieve/i.test(e.textContent))) &&
         (await page.$$('#tabs button:disabled')).length === 0);
-  check('el panel de viento sigue siendo el que se ve al abrir',
+  check('el Simulador maestro sigue siendo el que se ve al abrir',
         await page.$eval('#panelGranizo', e => e.style.display === 'none'));
 
   await page.click('#tabGranizo');
@@ -49,6 +55,9 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
   check('al cambiar de pestaña se ve la de granizo',
         await page.$eval('#panelGranizo', e => e.style.display !== 'none')
         && await page.$eval('#panelViento', e => e.style.display === 'none'));
+  check('Granizo se presenta como laboratorio y el puente vuelve al Simulador',
+        /lógica de amenaza/i.test(await page.$eval('#panelGranizo h2', e => e.textContent)) &&
+        /abrir este caso en simulador/i.test(await page.$eval('#xToLive', e => e.textContent)));
 
   // ── el banner, en la UI ─────────────────────────────────────────────
   const banner = (await page.$eval('#gNoval', e => e.textContent)).trim();
