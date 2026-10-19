@@ -146,61 +146,145 @@ def gem() -> dict:
     return {"verified_bytes":False,"status":"blocked", "attempts":attempted}
 
 
+
+class HTTPRangeZip:
+    """Read-only seekable wrapper for inspecting a large remote ZIP by byte ranges.
+
+    Rejects servers that ignore Range (never downloads a multi-GB ZIP).
+    """
+    def __init__(self,url: str, expected_length: int):
+        self.url=url
+        self.size=expected_length
+        self.pos=0
+        self.cache={}
+        self.block_size=256*1024
+        self.requests=0
+
+    def seek(self, offset:int, whence:int=0):
+        base={0:0,1:self.pos,2:self.size}[whence]
+        new=base+offset
+        if new<0:raise ValueError("negative remote seek")
+        self.pos=new
+        return self.pos
+
+    def tell(self):return self.pos
+    def readable(self):return True
+    def seekable(self):return True
+    def close(self):self.cache.clear()
+
+    def _chunk(self, index:int)->bytes:
+        if index in self.cache:return self.cache[index]
+        a=index*self.block_size
+        b=min(self.size-1,a+self.block_size-1)
+        req=urllib.request.Request(self.url,headers={**HEADERS,"Range":f"bytes={a}-{b}"})
+        with urllib.request.urlopen(req,timeout=90) as r:
+            if r.status!=206 or not r.headers.get("Content-Range", "").startswith(f"bytes {a}-{b}/"):
+                raise ValueError(f"Remote server did not honor ZIP byte-range [{a},{b}]: HTTP {r.status}")
+            chunk=r.read(b-a+2)
+            if len(chunk)!=b-a+1:raise ValueError("Incomplete byte-range response")
+        self.requests+=1
+        if len(self.cache)>=20:self.cache.pop(next(iter(self.cache)))
+        self.cache[index]=chunk
+        return chunk
+
+    def read(self,n=-1):
+        if n is None or n<0:n=self.size-self.pos
+        n=min(n,max(0,self.size-self.pos))
+        out=[]
+        while n:
+            ix=self.pos//self.block_size
+            buf=self._chunk(ix)
+            off=self.pos%self.block_size
+            piece=buf[off:off+n]
+            if not piece:break
+            out.append(piece); self.pos+=len(piece); n-=len(piece)
+        return b"".join(out)
+
+
+def sample_remote_archive(file:dict)->dict:
+    """Inspect ZIP central directory and stream only first rows of selected CSVs."""
+    archive=HTTPRangeZip(file["self"],int(file["size"]))
+    try:
+        with zipfile.ZipFile(archive) as z:
+            names=[i.filename for i in z.infolist()]
+            profiles=[{"path":i.filename,"uncompressed_bytes":i.file_size,"compressed_bytes":i.compress_size} for i in z.infolist() if not i.is_dir()]
+            out={"zip_member_count":len(profiles),"zip_member_summaries":profiles[:40],"zip_range_requests":None}
+            aliases=[]
+            for tag in ("GMSEUS_Arrays_Final_2025_v2_1", "GMSEUS_Panels_Final_2025_v2_0"):
+                candidates=[n for n in names if tag.lower() in n.lower() and n.lower().endswith(".csv")]
+                if not candidates:
+                    # Some releases contain shapefiles but no independent CSV entries.
+                    candidates=[n for n in names if tag.lower() in n.lower() and n.lower().endswith(".shp")]
+                if not candidates:
+                    continue
+                selected=min(candidates,key=lambda n:z.getinfo(n).file_size)
+                result={"component":tag,"member":selected,"original_size_bytes":z.getinfo(selected).file_size}
+                with z.open(selected) as f:
+                    if selected.lower().endswith(".csv"):
+                        # Do not carry geometry payloads or names into the result: only schema,
+                        # counts of a few valid-looking feature records and coordinate prefix.
+                        wrapper=io.TextIOWrapper(f,encoding="utf-8-sig",errors="replace",newline="")
+                        reader=csv.DictReader(wrapper)
+                        cols=reader.fieldnames or []
+                        rows=[]
+                        for _,r in zip(range(4),reader):
+                            row={k:str(v)[:120] for k,v in r.items() if k and (re.search(r"^(arrayid|source|sourcetype|mount|modtype|tilt|gcr|spacing|width|length|azimuth|pitch|area|tech|crs|geometrytype)$", k, re.I) or re.search(r"sourceConf",k,re.I))}
+                            shapes=[(k,v) for k,v in r.items() if k and re.search(r"wkt|geom|polygon",k,re.I) and isinstance(v,str)]
+                            row["geometry_text_present"]=any(bool(v.strip()) for k,v in shapes)
+                            row["geometry_wkt_type"]=(re.match(r"\s*([A-Z]+)",shapes[0][1]).group(1) if shapes and re.match(r"\s*([A-Z]+)",shapes[0][1]) else None)
+                            rows.append(row)
+                        result.update({"format":"CSV","columns":cols,"first_rows":rows,"sample_count":len(rows)})
+                    else:
+                        import struct
+                        header=f.read(100)
+                        file_code=struct.unpack(">i",header[0:4])[0]
+                        shape_type=struct.unpack("<i",header[32:36])[0]
+                        extent=struct.unpack("<4d",header[36:68])
+                        sampled=[]
+                        for i in range(3):
+                            record_header=f.read(8)
+                            if len(record_header)<8:break
+                            recno,words=struct.unpack(">ii",record_header)
+                            b=f.read(words*2)
+                            if len(b)<36:break
+                            typ=struct.unpack("<i",b[0:4])[0]
+                            bbox=struct.unpack("<4d",b[4:36]) if typ in (3,5,13,15,23,25) else None
+                            sampled.append({"record":recno,"shape_type":typ,"bbox_projected_epsg6350":bbox})
+                        result.update({"format":"SHP","file_code":file_code,"shape_type":shape_type,"extent_projected_epsg6350":extent,"first_shapes":sampled,"sample_count":len(sampled)})
+                aliases.append(result)
+            out["sample_components"]=aliases
+            out["verified_geometry"]=bool(aliases) and all(x["sample_count"] for x in aliases)
+        out["zip_range_requests"]=archive.requests
+        return out
+    finally:
+        archive.close()
+
+
 def gmseus() -> dict:
     url="https://zenodo.org/api/records/21445384"
     try:
         info=json.loads(get(url,5_000_000,tries=3))
     except Exception as e:return {"verified_geometry":False,"status":"manifest-unavailable","error":str(e)[:450],"source":url}
     files=info.get("files") or []
-    manifest=[{"key":f.get("key"),"size":f.get("size"),"checksum":f.get("checksum"),"self":(f.get("links") or {}).get("self") } for f in files]
-    summary={"source":url,"manifest_checked":True,"files_count":len(manifest),"files":manifest,"verified_geometry":False}
-    candidates=[f for f in manifest if f["key"] and "array" in f["key"].lower() and not any(x in f["key"].lower() for x in ["rooftop","readme","naip"]) and f["size"] and 300<f["size"]<=120_000_000 and (f["key"].lower().endswith((".zip",".csv",".gpkg")))]
-    candidates.sort(key=lambda f:f["size"])
-    summary["selected_candidate_keys"]=[f["key"] for f in candidates]
-    for file in candidates[:2]:
+    manifest=[{"key":f.get("key"),"size":f.get("size"),"checksum":f.get("checksum"),"self":(f.get("links") or {}).get("self")} for f in files]
+    summary={"source":url,"manifest_checked":True,"files_count":len(manifest),"files":manifest,"verified_geometry":False,"status":"manifest-only"}
+    readme=next((f for f in manifest if f["key"]=="README.txt"),None)
+    if readme:
         try:
-            b=get(file["self"],121_000_000,timeout=170,tries=1)
-            exp=file["checksum"] or ""
-            if exp.startswith("md5:") and hashlib.md5(b).hexdigest()!=exp.split(":",1)[1]:raise ValueError("MD5 mismatch")
-            # Small geometry samples via CSV fields or SQLite feature properties.
-            samples=[]; members=[]
-            if b.startswith(b"PK"):
-                with zipfile.ZipFile(io.BytesIO(b)) as z:
-                    members=[{"name":it.filename,"bytes":it.file_size} for it in z.infolist()[:35]]
-                    targets=[n for n in z.namelist() if n.lower().endswith(".csv") and "array" in n.lower()]
-                    if targets:
-                        with z.open(targets[0]) as f:
-                            header=f.readline().decode("utf-8-sig",errors="replace").strip().split(",")
-                            for i in range(4):
-                                line=f.readline().decode("utf-8",errors="replace")
-                                if not line:break
-                                vals=next(csv.reader([line]))
-                                samples.append(dict(zip(header,vals)))
-            elif b.startswith(b"SQLite format 3"):
-                with tempfile.NamedTemporaryFile(suffix=".gpkg") as tmp:
-                    tmp.write(b); tmp.flush()
-                    import sqlite3
-                    con=sqlite3.connect(tmp.name)
-                    tables=con.execute("select table_name from gpkg_contents where data_type='features'").fetchall()
-                    if tables:
-                        t=tables[0][0]
-                        valid=re.fullmatch(r"[a-zA-Z0-9_]+",t)
-                        if valid:
-                            columns=[x[1] for x in con.execute(f'pragma table_info("{t}")')]
-                            geom=[x[0] for x in con.execute("select column_name from gpkg_geometry_columns where table_name=?",(t,))]
-                            cols=[c for c in columns if c not in geom]
-                            records=con.execute('select '+','.join('"'+c+'"' for c in cols[:35])+f' from "{t}" limit 4').fetchall()
-                            samples=[dict(zip(cols,rec)) for rec in records]
-                    con.close()
-            elif b[:100].count(b",")>2 or file["key"].lower().endswith(".csv"):
-                with io.StringIO(b[:800000].decode("utf-8-sig",errors="replace")) as ss:
-                    samples=list(csv.DictReader(ss))[:4]
-            geometry_fields=sorted({k for x in samples for k in x if re.search(r"geom|wkt|poly|shape|source|arrayid|mount|gcr|pitch|spacing|len|area",k,re.I)})
-            summary.update({"sample_file":file["key"],"sample_file_sha256":hashlib.sha256(b).hexdigest(),"sample_records":samples,"geometry_relevant_columns":geometry_fields, "sample_zip_members":members[:15],"verified_geometry":bool(samples),"status":"sampled" if samples else "file-downloaded-no-parse"})
-            if samples:break
-        except Exception as e:
-            summary.setdefault("candidate_errors",[]).append({"file":file["key"],"error":str(e)[:400]})
-    summary.setdefault("status","manifest-only")
+            b=get(readme["self"],500000)
+            summary["readme_sha256"]=hashlib.sha256(b).hexdigest()
+            summary["readme_md5_matches_manifest"]=(hashlib.md5(b).hexdigest()==readme["checksum"].split(":",1)[1])
+            summary["readme_sample"]="\n".join(b.decode("utf-8",errors="replace").splitlines()[:14])
+        except Exception as e:summary["readme_error"]=str(e)[:350]
+    file=next((f for f in manifest if f["key"]=="GMSEUS.zip"),None)
+    if not file:return summary
+    try:
+        evidence=sample_remote_archive(file)
+        summary.update(evidence)
+        summary["status"]="sampled-with-byte-ranges" if evidence["verified_geometry"] else "zip-directory-verified-sample-missing"
+        summary["caveats"]="No full 3.68GB ZIP checksum verified; sample via HTTP 206 ranges; no tracker attribution or redistribution rights inferred."
+    except Exception as e:
+        summary["range_error"]=f"{type(e).__name__}: {str(e)[:450]}"
     return summary
 
 
@@ -210,10 +294,12 @@ def dnv_tests() -> dict:
         wd=OUT/"dnv-sdk"
         subprocess.run(["git","clone","--depth","1","https://github.com/dnv-opensource/solarfarmer-python-sdk.git",str(wd)],check=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=90)
         head=subprocess.run(["git","rev-parse","HEAD"],cwd=wd,capture_output=True,text=True,check=True).stdout.strip()
-        install=subprocess.run(["python","-m","pip","install","-q","-e",str(wd),"pytest"],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=160)
+        install=subprocess.run(["python","-m","pip","install","-q","uv"],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=160)
         if install.returncode:return {"status":"install-failed","upstream_sha":head,"pip_log_tail":install.stdout[-1800:]}
-        run=subprocess.run(["python","-m","pytest","-q","-m","not integration","tests"],cwd=wd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,env={**os.environ,"SF_API_KEY":""},timeout=190)
-        return {"status":"passed" if not run.returncode else "failed", "upstream_sha":head,"returncode":run.returncode,"pytest_tail":run.stdout[-2200:],"note":"No commercial API simulations, integration tests deselected."}
+        sync=subprocess.run(["uv","sync","--group","test"],cwd=wd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=180)
+        if sync.returncode:return {"status":"dependency-sync-failed","upstream_sha":head,"uv_tail":sync.stdout[-1800:]}
+        run=subprocess.run(["uv","run","pytest","tests/","-q"],cwd=wd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,env={**os.environ,"SF_API_KEY":""},timeout=220)
+        return {"status":"passed" if not run.returncode else "failed", "upstream_sha":head,"returncode":run.returncode,"pytest_tail":run.stdout[-2200:],"note":"Uses official upstream uv sync --group test and uv run pytest tests/ -q; commercial API key unset."}
     except Exception as e:return {"status":"blocked","error":f"{type(e).__name__}: {str(e)[:600]}"}
 
 
