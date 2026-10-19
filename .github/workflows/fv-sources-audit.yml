@@ -1,0 +1,31 @@
+name: FV sources evidence 2026-10-19
+on:
+  push:
+    branches: [audit/fv-sources-20261019]
+    paths:
+      - 'tools/fv_sources_audit_20261019.py'
+      - '.github/workflows/fv-sources-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - name: Checkout audit script
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Fetch public data and run audits (no credentials)
+        run: python tools/fv_sources_audit_20261019.py
+      - name: Save traceable results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: factiun-fv-evidence-20261019
+          path: audit_artifacts/fv_sources_audit_result_20261019.json
+          retention-days: 7
+          if-no-files-found: warn
