@@ -7,8 +7,8 @@
 ## Estado de la integración
 
 - **Conexión API VRM:** verificada por el usuario el 19/10/2026; `/test` devolvió `connected:true` y registros energéticos disponibles.
-- **Versión confirmada en Cloudflare:** `v3.2-landblock` mediante `/version`, comprobada por el usuario.
-- **v3.3 visual:** implementada en la rama de [SCADA PR #316](https://github.com/IMoriana3/scada/pull/316), **pendiente de despliegue y validación con usuario**.
+- **Versión publicada confirmada por el usuario:** `v3.3-visual` en Cloudflare mediante `/version`.
+- **Siguiente versión v3.4:** preparada en [SCADA PR #316](https://github.com/IMoriana3/scada/pull/316) con **una imagen panorámica Landblock**, basada en el mockup aprobado, sin división Agua A/B. **No desplegada todavía**; publicación y aceptación visual pendientes.
 - **CI:** sin certificado verde; no dar por fusionada ni validada toda la suite.
 - **Operación:** solo lectura. Sin funciones de arranque, parada, cambio ESS, escritura Modbus ni control remoto.
 
@@ -16,7 +16,9 @@
 
 El conector consulta la energía diaria/horaria de Victron VRM, batería (SOC, tensión, corriente, temperatura y potencia cuando existe), potencia FV, MPPT individuales, inversor y cargas CA. La nueva interfaz v3.3 organiza la energía temporal arriba, KPIs medidos en columna lateral y un sinóptico Landblock con batería/cargas debajo. Avanzada ofrece curvas por dispositivo cuando VRM publica la serie.
 
-Las **dos aguas** de los módulos sobre apoyos Landblock corresponden a una descripción visual, no a un plano as-built. El reparto MPPT ↔ Agua A/B no está verificado y únicamente se puede asignar provisionalmente en el navegador, sin guardar cambios. Ningún dato de esta FV debe atribuirse a El Burgo I.
+La Home de la v3.4 presenta **una sola imagen Landblock** sin rótulos Agua A/B. La imagen es un **render ilustrativo aprobado**, no un plano as-built ni una fotografía de esta instalación. El detalle técnico conserva los MPPT por instancia, **sin** agruparlos artificialmente por agua ni atribuir producción a El Burgo I.
+
+La imagen hero WebP está guardada en `workers/vrm/assets/landblock_scada_hero.webp` (SCADA #316) e incrustada en el Worker como data URI para poder desplegar con un solo archivo sin exponer el repositorio privado. Los valores de la preview nunca aparecen como constantes en el SCADA.
 
 ## Límites de datos y alarmas
 
