@@ -74,8 +74,12 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
   <div class="card span4">
     <h2>WeatherNext 3 · previsión</h2>
     <p class="note">Consulta la previsión guardada para la planta elegida. Utiliza la misma sesión de Supabase de abajo; no son medidas HSU ni órdenes de STOW.</p>
+    <div class="row" style="margin-top:8px">
+      <label><span class="k">Horizonte de previsión</span><select id="wnHorizon"><option value="72" selected>72 horas</option><option value="360">15 días · 360 horas</option></select></label>
+    </div>
     <div class="actions"><button id="wnCacheBtn">Cargar WeatherNext</button><button id="wnCfgBtn" class="secondary">Proxy avanzado</button></div>
-    <label><span class="k">Importar JSON (alternativa)</span><input type="file" id="wn" accept=".json,application/json"></label>
+    <label><span class="k">Importar JSON WeatherNext · Zarr nativo o resumen</span><input type="file" id="wn" accept=".json,application/json"></label>
+    <p class="note">Importación local desde el lector GCS autorizado; el archivo no se envía a Google ni se sube a Supabase. P10/P50/P90 si están disponibles.</p>
     <div class="statusline" id="wnStatus">Fuente GCS verificada; caché de Supabase lista para consultar. Sin pronósticos recientes se usará Open-Meteo, con origen indicado.</div>
   </div>
 
@@ -147,12 +151,29 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
     <p class="note">La diferencia relativa se calcula sobre la magnitud media de ambos sensores; se indica «—» si el denominador es cero. Para detectores de nieve se muestra también la discrepancia entre estados. Sin datos de ubicación/altura/ventana, interpretar las diferencias con cautela.</p>
   </div>
 
-  <div class="sectiontitle">Próximas 72 h · supervisión meteorológica</div>
+  <div class="sectiontitle">Previsión horaria · supervisión meteorológica</div>
   <div class="card span10">
-    <h2>Ventana operativa 72 h</h2>
+    <h2 id="opWindowTitle">Ventana de previsión · 72 h</h2>
+    <div class="statusline" id="opHorizonInfo">Sin previsiones cargadas.</div>
     <div class="metricgrid"><div class="metric">Viento máx<b id="opWindMax">—</b></div><div class="metric">Ráfaga máx<b id="opGustMax">—</b></div><div class="metric">T mín<b id="opTempMin">—</b></div><div class="metric">Precipitación<b id="opRainSum">—</b></div></div>
     <div class="op-events" id="opEvents"><div class="op-event"><b>Sin forecast</b><small>Se carga al seleccionar el emplazamiento.</small></div></div>
-    <p class="note">Avisos meteorológicos de supervisión. No son órdenes de stow ni sustituyen HSU/SCADA/interlocks.</p>
+    <p class="note">Avisos meteorológicos de supervisión. No son órdenes de stow ni sustituyen HSU/SCADA/interlocks. Una variable no disponible no equivale a ausencia de peligro.</p>
+  </div>
+  <div class="card span6">
+    <h2>Curva horaria · incertidumbre</h2>
+    <label><span class="k">Magnitud</span><select id="wnVariable">
+      <option value="wind_ms">Viento a 10 m (m/s)</option>
+      <option value="temp_c">Temperatura (°C)</option>
+      <option value="ghi_wm2">Radiación horizontal GHI (W/m²)</option>
+      <option value="cloud_total">Nubosidad (%)</option>
+    </select></label>
+    <canvas id="wnChart" class="chart" aria-label="Pronóstico horario y cuantiles disponibles"></canvas>
+    <div class="statusline" id="wnChartStatus">Sin curva horaria.</div>
+    <label><span class="k">Instante de previsión · hora a hora</span>
+      <input type="range" id="wnLead" min="1" max="72" step="1" value="1">
+    </label>
+    <div class="statusline" id="wnLeadInfo">Selecciona una previsión para consultar cada hora.</div>
+    <p class="note">P10/P50/P90 son cuantiles marginales por variable, no tres escenarios meteorológicos completos. Sin interpolación temporal.</p>
   </div>
   <div class="card span6">
     <h2>WeatherContract activo</h2>
@@ -400,7 +421,7 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
 <script type="module">
-import {fetchOpenMeteo,fromWeatherNextSummary,forecastOperationalSummary,fetchSpatialForecast,fetchWeatherNextProxy} from "./lib/meteo.js";
+import {fetchOpenMeteo,fromWeatherNextSummary,fromWeatherNextTransport,forecastOperationalSummary,fetchSpatialForecast,fetchWeatherNextProxy} from "./lib/meteo.js";
 import {
   WORKBENCH_VERSION,loadFactiunPlants,fetchHistorical,prepareDataset,annualStats,
   buildTmySandia,fetchPvgisTmy,compareSources,plausibility,statsTable,searchPlaces,
@@ -429,6 +450,7 @@ let SENSOR_RECORDS=[],SENSOR_LAST=null,SENSOR_WARNINGS=null,SENSOR_SOURCES=[];
 let SUPABASE_METEO_CLIENT=null;
 let LAST_COMPARE=null,LAST_HAIL=null,LAST_WIND_SYNTH=null;
 let FORECAST=null,FORECAST72=null,SPATIAL=null,WEATHER_UNCERTAINTY=null,ACTIVE_CONTRACT=null;
+const forecastWindowHours=()=>Number($("wnHorizon")?.value)||72;
 let PLACE_RESULTS=[],PLACE_ACTIVE=-1,PLACE_TIMER=null,PLACE_ABORT=null;
 document.querySelector("#coreVer").title="visual layer "+VIZ_VERSION;
 
@@ -698,6 +720,57 @@ function render72(summary){
     return '<div class="op-event"><b>'+esc(x.label)+'</b><small>'+esc(when)+' · '+esc(x.severity)+'</small></div>';
   }).join(""):'<div class="op-event"><b>Sin umbrales relevantes</b><small>No se detectan eventos con los umbrales de supervisión en la ventana.</small></div>';
 }
+
+function renderForecastCharts(){
+  if(!FORECAST?.length)return;
+  const horizon=forecastWindowHours(),rows=FORECAST.slice(0,horizon);
+  const field=$("wnVariable").value;
+  const meta={
+    wind_ms:["Viento","m/s"],temp_c:["Temperatura","°C"],
+    ghi_wm2:["Radiación horizontal","W/m²"],cloud_total:["Nubosidad","%"]
+  }[field]||["Previsión",""];
+  const val=v=>v==null||!Number.isFinite(Number(v))?null:
+    field==="cloud_total"?Number(v)*100:Number(v);
+  const series=[];
+  for(const [quantile,label] of [["p10","P10"],["p50","P50"],["p90","P90"]]){
+    const values=rows.map(r=>val(r[quantile]?.[field]??(quantile==="p50"?r[field]:null)));
+    if(values.some(v=>v!==null))series.push({label,values});
+  }
+  const labels=rows.map((r,i)=>{
+    if(i===0 || (i+1)%24===0 || i===rows.length-1){
+      return "H"+String(i+1);
+    }
+    return "";
+  });
+  drawLineChart($("wnChart"),series,{
+    title:meta[0]+" · pronóstico horario · "+rows.length+" h",
+    yLabel:meta[1],xLabels:labels,height:260
+  });
+  const names=series.map(s=>s.label).join("/");
+  $("wnChartStatus").textContent=rows.length+" horas · "+(names||"sin valores")+
+    (rows.length<horizon?" · solo "+rows.length+" h disponibles":"")+
+    " · valores del modelo; no medidas ni órdenes de seguridad.";
+  $("opWindowTitle").textContent="Ventana de previsión · "+rows.length+" h";
+  $("opHorizonInfo").textContent=horizon>rows.length?
+    "Se solicitaron "+horizon+" h, pero solo hay "+rows.length+" h disponibles.":
+    "Serie horaria "+rows.length+" h · origen "+(FORECAST[0]?.source==="weathernext3"?"WeatherNext 3":"Open-Meteo")+".";
+  const slider=$("wnLead");
+  slider.max=String(rows.length);
+  slider.value=String(Math.max(1,Math.min(rows.length,Number(slider.value)||1)));
+  renderForecastInstant();
+}
+function renderForecastInstant(){
+  if(!FORECAST?.length)return;
+  const total=Math.min(forecastWindowHours(),FORECAST.length);
+  const i=Math.max(0,Math.min(total-1,(Number($("wnLead").value)||1)-1));
+  const r=FORECAST[i],date=new Date(r.timestamp);
+  const isHistorical=Date.parse(FORECAST.at(-1).timestamp)<Date.now()-3600000;
+  $("wnLeadInfo").textContent="Hora "+(i+1)+"/"+total+" · "+
+    date.toLocaleString("es-ES",{timeZone:SITE?.tz||"UTC"})+
+    (isHistorical?" · FORECAST HISTÓRICO, no tiempo actual":" · pronóstico, no medida");
+  paintNow(r);
+}
+
 function currentUncertainty(){
   const source=CURRENT?.source_id||FORECAST?.[0]?.source||"";
   return weatherUncertaintyBudget({
@@ -761,9 +834,14 @@ async function applyForecast(rows,label="Forecast"){
   if(!rows?.length)throw new Error("forecast sin filas");
   FORECAST=rows;
   const now=Date.now(),m=rows.reduce((a,b)=>Math.abs(Date.parse(b.timestamp||b.t)-now)<Math.abs(Date.parse(a.timestamp||a.t)-now)?b:a,rows[0]);
-  paintNow(m);render72(forecastOperationalSummary(rows,{hours:72}));renderUncertainty();
+  $("wnLead").value="1";
+  const historical=Date.parse(rows.at(-1).timestamp||rows.at(-1).t)<Date.now()-3600000;
+  paintNow(historical?{}:m);
+  render72(forecastOperationalSummary(rows,{hours:forecastWindowHours()}));
+  renderForecastCharts();renderUncertainty();
   await publishForecastContract();
-  status(label+" · "+(m.timestamp||m.t)+" · "+siteName(),"ok");
+  status(label+(historical?" · DATOS HISTÓRICOS, no previsión vigente":"")+
+    " · "+(m.timestamp||m.t)+" · "+siteName(),historical?"work":"ok");
 }
 async function runSpatial(){
   $("spatialBtn").disabled=true;$("spatialBtn").textContent="Analizando…";
@@ -785,7 +863,7 @@ async function loadWeatherNextCached({quiet=false}={}){
   }
   let out;
   try{
-    out=await fetchCachedWeatherNext(supClient(),{code,hours:72,maxAgeHours:18});
+    out=await fetchCachedWeatherNext(supClient(),{code,hours:forecastWindowHours(),maxAgeHours:18});
   }catch(e){
     const msg=String(e?.message||e);
     if(!quiet)throw e;
@@ -817,7 +895,7 @@ async function loadNow(){
   let wnEndpoint="";try{wnEndpoint=localStorage.getItem("factiun_weathernext_endpoint")||"";}catch(e){}
   if(wnEndpoint){
     try{
-      const rows=await fetchWeatherNextProxy({endpoint:wnEndpoint,lat,lon,hours:72});
+      const rows=await fetchWeatherNextProxy({endpoint:wnEndpoint,lat,lon,hours:forecastWindowHours()});
       $("wnStatus").textContent="WeatherNext 3 LIVE · endpoint autenticado · "+rows.length+" pasos";$("wnStatus").className="statusline ok";
       await applyForecast(rows,"WeatherNext 3 live");return;
     }catch(e){
@@ -1167,6 +1245,17 @@ $("sensorPlant").onchange=updateSensorVariables;
 
 $("nowBtn").onclick=loadNow;$("yearsBtn").onclick=analyzeYears;$("tmyBtn").onclick=buildTmy;$("compareBtn").onclick=compare;$("qaBtn").onclick=advancedQa;$("hailBtn").onclick=doHail;$("hailLife").addEventListener("change",doHail);$("hailLambda").addEventListener("change",doHail);$("windSynthBtn").onclick=doWind;$("importBtn").onclick=importFile;$("adaptBtn").onclick=siteAdapt;$("adaptUse").onclick=useAdapted;$("prepBtn").onclick=prep;
 $("spatialBtn").onclick=runSpatial;
+$("wnVariable").onchange=renderForecastCharts;
+$("wnLead").oninput=renderForecastInstant;
+$("wnHorizon").onchange=async()=>{
+  if(FORECAST?.length){
+    if(FORECAST.length<forecastWindowHours()&&
+       FORECAST[0]?.provenance?.mode==="supabase-forecast-cache")
+      await loadWeatherNextCached({quiet:true});
+    render72(forecastOperationalSummary(FORECAST,{hours:forecastWindowHours()}));
+    renderForecastCharts();
+  }
+};
 $("wnCacheBtn").onclick=async()=>{
   $("wnCacheBtn").disabled=true;
   try{
@@ -1194,7 +1283,33 @@ $("dlPvsyst").onclick=()=>{const ds=PREPARED||TMY||CURRENT;if(!ds){status("No ha
 $("dlManifest").onclick=()=>{const ds=PREPARED||CURRENT||TMY;if(!ds){status("No hay dataset activo para manifest.","bad");return;}const ref=activeWeatherRef(ds===TMY?"tmy":PREPARED?"prepared":"historical")||activeWeatherRef();const m=bankableManifest(ds,{siteName:siteName(),timezone:SITE?.tz||"UTC",uncertainty:WEATHER_UNCERTAINTY,spatial:SPATIAL,forecast:FORECAST72,contractRef:ref});downloadText(JSON.stringify(m,null,2),"manifest_meteo_"+siteName().replace(/[^\w-]+/g,"_")+".json","application/json;charset=utf-8")};
 $("dlContract").onclick=async()=>{const ref=activeWeatherRef();if(!ref){status("No hay WeatherContract activo.","bad");return;}const pkg=ACTIVE_CONTRACT||await loadActiveWeatherContract();if(!pkg){status("La referencia activa no tiene paquete en caché.","bad");return;}downloadText(JSON.stringify(pkg,null,2),"weather_contract_"+pkg.contract_id+".json","application/json;charset=utf-8")};
 $("reportBtn").onclick=()=>{if(!CURRENT){status("No hay dataset activo para el informe.","bad");return;}let h=reportHtml({title:$("reportTitle").value,dataset:CURRENT,tmy:$("reportTmy").value==="yes"?TMY:null,siteName:siteName()});const ref=activeWeatherRef("historical")||activeWeatherRef();const man=bankableManifest(CURRENT,{siteName:siteName(),timezone:SITE?.tz||"UTC",uncertainty:WEATHER_UNCERTAINTY,spatial:SPATIAL,forecast:FORECAST72,contractRef:ref});h=h.replace("</body>",visualReportHtml()+"<h2>Bankable manifest</h2><pre>"+esc(JSON.stringify(man,null,2))+"</pre></body>");downloadText(h,"informe_meteo_"+siteName().replace(/[^\w-]+/g,"_")+".html","text/html;charset=utf-8")};
-$("wn").onchange=async e=>{try{const j=JSON.parse(await e.target.files[0].text()),src=Array.isArray(j)?j:(j.rows||j.forecast||j.data||[j]),rows=src.map(fromWeatherNextSummary).filter(x=>x.timestamp);if(!rows.length)throw new Error("JSON WeatherNext sin filas válidas");$("wnStatus").textContent="WeatherNext JSON · "+rows.length+" pasos";$("wnStatus").className="statusline ok";await applyForecast(rows,"WeatherNext JSON")}catch(err){$("wnStatus").textContent=err.message;$("wnStatus").className="statusline bad"}};
+$("wn").onchange=async e=>{
+  try{
+    const file=e.target.files?.[0];if(!file)return;
+    if(file.size>5_000_000)throw Error("JSON demasiado grande (máximo 5 MB).");
+    const j=JSON.parse(await file.text());
+    const native=j?.transport_schema==="weathernext3-zarr-point-v2";
+    let rows;
+    if(native){
+      rows=fromWeatherNextTransport(j);
+      const lat=+$("lat").value,lon=+$("lon").value;
+      const dlat=Math.abs(rows[0].lat-lat),dlon=Math.abs(((rows[0].lon-lon+540)%360)-180);
+      if(dlat>0.05||dlon>0.05)
+        throw Error("Este pronóstico corresponde a otras coordenadas. Selecciona primero la planta correcta.");
+    }else{
+      const src=Array.isArray(j)?j:(j.rows||j.forecast||j.data||[j]);
+      rows=src.map(fromWeatherNextSummary).filter(x=>x.timestamp);
+    }
+    if(!rows.length)throw Error("JSON WeatherNext sin horas válidas.");
+    $("wnStatus").textContent="WeatherNext "+(native?"GCS nativo":"resumen")+" · "+
+      rows.length+" horas"+(native?" · P10/P50/P90 según disponibilidad":"")+
+      ". Datos importados localmente.";
+    $("wnStatus").className="statusline ok";
+    await applyForecast(rows,"WeatherNext JSON local");
+  }catch(err){
+    $("wnStatus").textContent=String(err?.message||err);$("wnStatus").className="statusline bad";
+  }finally{e.target.value="";}
+};
 
 await initPlants();
 if(SITE?.name)$("supPlant").value=SITE.name;
