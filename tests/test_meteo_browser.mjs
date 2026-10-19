@@ -64,7 +64,16 @@ check("WeatherNext convierte presión Pa a hPa",near(wn.pressure_hpa,1013),Strin
 check("WeatherNext conserva bandas p10/p50/p90",wn.p10?.wind_ms===3&&wn.p50?.wind_ms===5&&wn.p90?.wind_ms===9);
 check("WeatherNext conserva provenance BigQuery",wn.provenance?.surface==="BigQuery"&&wn.provenance?.init_time==="2026-10-13T06:00:00Z");
 const wnMissing=WX.fromWeatherNextSummary({timestamp:"2026-10-13T13:00:00Z"});
-check("WeatherNext no inventa meteo ausente",wnMissing.temp_c===null&&wnMissing.dewpoint_c===null&&wnMissing.precip_mm===null&&wnMissing.pressure_hpa===null);
+check("WeatherNext no inventa meteo ausente",wnMissing.temp_c===null&&wnMissing.dewpoint_c===null&&wnMissing.precip_mm===null&&wnMissing.pressure_hpa===null&&wnMissing.lat===null&&wnMissing.wind_ms===null);
+check("WeatherNext distingue cero real de ausencia",WX.normalizeMeteo({wind_ms:0,precip_mm:"0",temp_c:null}).wind_ms===0
+  &&WX.normalizeMeteo({wind_ms:0,precip_mm:"0",temp_c:null}).temp_c===null);
+const missingSummary=WX.forecastOperationalSummary([
+  WX.fromWeatherNextSummary({timestamp:"2026-10-13T12:00:00Z"}),
+  WX.fromWeatherNextSummary({timestamp:"2026-10-13T13:00:00Z"})
+]);
+check("sin datos no hay falsa helada ni precipitación cero",!missingSummary.events.some(e=>e.kind==="freeze")
+  &&missingSummary.metrics.min_temp_c===null&&missingSummary.metrics.precip_total_mm===null
+  &&missingSummary.metrics.max_wind_ms===null);
 
 const wcFixture={source:"Open-Meteo / ERA5",source_id:"openmeteo",lat:42.8,lon:-1.6,qa:{status:"PASS",hash:"abc123"},rows:[
   {t:"2024-01-01T00:00:00Z",ghi_wm2:0,dni_wm2:0,dhi_wm2:0,temp_c:4,wind_ms:2},
