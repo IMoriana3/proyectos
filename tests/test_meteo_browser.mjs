@@ -63,6 +63,21 @@ check("WeatherNext convierte precipitación m a mm",near(wn.precip_mm,.5),String
 check("WeatherNext convierte presión Pa a hPa",near(wn.pressure_hpa,1013),String(wn.pressure_hpa));
 check("WeatherNext conserva bandas p10/p50/p90",wn.p10?.wind_ms===3&&wn.p50?.wind_ms===5&&wn.p90?.wind_ms===9);
 check("WeatherNext conserva provenance BigQuery",wn.provenance?.surface==="BigQuery"&&wn.provenance?.init_time==="2026-10-13T06:00:00Z");
+const wnGcs=WX.fromWeatherNextSummary({
+  timestamp:"2026-10-19T07:00:00Z",lat:41.575945,lon:-0.798424,
+  temperature_2m_p50:282,wind_speed_10m_p50:5,
+  surface_solar_radiation_downwards_1hr_p50:2160000,
+  p10:{wind_ms:3},p50:{wind_ms:5},p90:{wind_ms:9},
+  provenance:{surface:"GCS",bucket:"weathernext3_statistics_spatial",
+    gcs_prefix:"weathernext_3_0_0_statistics/zarr/2026_to_present/20261019_06hr_01_preds/predictions.zarr",
+    init_time:"2026-10-19T06:00:00Z",forecast_hour:1}
+});
+check("WeatherNext GCS conserva procedencia y bandas",
+  wnGcs.provenance?.surface==="GCS" &&
+  wnGcs.provenance?.bucket==="weathernext3_statistics_spatial" &&
+  wnGcs.provenance?.forecast_hour===1 && wnGcs.p90?.wind_ms===9);
+check("WeatherNext GCS no cambia la física de conversión respecto a BigQuery",
+  near(wnGcs.temp_c,wn.temp_c,1e-9)&&near(wnGcs.ghi_wm2,wn.ghi_wm2,1e-9));
 const wnMissing=WX.fromWeatherNextSummary({timestamp:"2026-10-13T13:00:00Z"});
 check("WeatherNext no inventa meteo ausente",wnMissing.temp_c===null&&wnMissing.dewpoint_c===null&&wnMissing.precip_mm===null&&wnMissing.pressure_hpa===null&&wnMissing.lat===null&&wnMissing.wind_ms===null);
 check("WeatherNext distingue cero real de ausencia",WX.normalizeMeteo({wind_ms:0,precip_mm:"0",temp_c:null}).wind_ms===0
