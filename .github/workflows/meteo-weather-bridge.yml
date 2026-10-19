@@ -2,7 +2,7 @@ name: Meteo forecast bridge (offline)
 
 on:
   push:
-    branches: [feat/weathernext3-proxy-contract-20261013]
+    branches: [main, feat/weathernext3-proxy-contract-20261013]
     paths:
       - lib/meteo.js
       - lib/meteo-forecast-cache.js
