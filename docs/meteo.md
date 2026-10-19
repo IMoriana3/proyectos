@@ -127,7 +127,7 @@ El contrato del proxy live queda fijado como:
 - `wind_direction_10m_p50` se conserva en el WeatherContract cuando el proxy la deriva de los componentes u/v;
 - `init_time`, hora de forecast, superficie de acceso y demás provenance viajan con el dataset.
 
-La consulta real sigue **pendiente del allowlist/tabla enlazada/ADC de Google**. Tener el endpoint y el adapter implementados no se presenta como WeatherNext live hasta que ese acceso exista y se verifique de punta a punta.
+La solicitud de acceso de Google ha sido **aprobada** (correo facilitado por el propietario, 18/10/2026). Esto no valida aún el acceso efectivo a la tabla vinculada, la cuenta usada para ADC ni la consulta en producción. La consulta real sigue **pendiente de tabla enlazada/ADC y prueba de acceso**. Tener el endpoint y el adapter implementados no se presenta como WeatherNext live hasta que ese acceso exista y se verifique de punta a punta.
 
 ### Windy y Ventusky
 
