@@ -4,6 +4,10 @@
 name: WeatherNext GCS - anonymous pilot
 
 on:
+  push:
+    branches: [feat/weathernext3-proxy-contract-20261013]
+    paths:
+      - .github/workflows/weathernext-gcs-public-pilot.yml
   pull_request:
     paths:
       - .github/workflows/weathernext-gcs-public-pilot.yml
