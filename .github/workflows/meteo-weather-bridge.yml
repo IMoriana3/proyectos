@@ -6,9 +6,11 @@ on:
     paths:
       - lib/meteo.js
       - lib/meteo-forecast-cache.js
+      - lib/weather-contract.js
       - meteo.html
       - tests/test_meteo_weathernext_transport.mjs
       - tests/test_meteo_forecast_cache.mjs
+      - tests/test_meteo_weathernext_contract.mjs
       - .github/workflows/meteo-weather-bridge.yml
 
 permissions:
@@ -27,6 +29,8 @@ jobs:
         run: node tests/test_meteo_weathernext_transport.mjs
       - name: Authenticated Supabase-cache adapter (mocked)
         run: node tests/test_meteo_forecast_cache.mjs
+      - name: Preserve source quantiles in WeatherContract v2
+        run: node tests/test_meteo_weathernext_contract.mjs
       - name: UI wiring smoke without browser dependencies
         run: |
           node - <<'NODE'
