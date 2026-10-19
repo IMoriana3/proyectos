@@ -158,6 +158,34 @@ tarjeta** y la prueba Cloud Shell anterior, aunque numérica, fue del lector
 piloto, no del backend canónico. CI de GitHub sin minutos, PR se mantiene
 Draft. El forecast no es medida HSU ni autoridad de CONTROL/STOW.
 
+### Coste adicional obligatorio: 0 € (decisión 19/10/2026)
+
+**DECISIÓN INTENCIONAL:** no habilitar facturación en Google Cloud;
+no usar Cloud Run ni Cloud Scheduler, no cargar el NAS y no gastar minutos
+del repositorio privado `SolarGPTfull`.
+
+**Prueba de alternativa gratuita:** en `IMoriana3/proyectos`, que es público,
+GitHub Actions usa runners estándar gratuitos. Se creó un test efímero sin
+secretos sobre el bucket GCS de WeatherNext 3 y se ejecutó realmente:
+`39250731829` detectó que obstore intentaba obtener ADC del servidor
+Google de metadatos inexistente; `39250901753` usando explícitamente
+`GOOGLE_SKIP_SIGNATURE=true` devolvió **403 AccessDenied** para el
+objeto `predictions.zarr/.zmetadata`: no existe lectura anónima.
+El workflow efímero se eliminó tras recoger evidencia.
+
+**Consecuencia:** no se garantiza extracción automática gratuita con los
+permisos presentes. La cuenta personal aprobada sí puede ejecutar
+`tools/weathernext_gcs_cloudshell.sh` de forma interactiva en Cloud Shell,
+sin activación de billing. Para usar el pronóstico en SolarGPT, debe existir
+un mecanismo seguro de exportación/carga al contrato canónico; el acceso
+al bucket **no** debe confundirse con pronóstico publicado.
+
+**PROPUESTA pendiente de validación:** identidad técnica autorizada por Google
+con autenticación gratuita y sin token persistente en el repositorio público.
+No activar cron hasta demostrar autenticación, coste 0 y uso permitido de los
+pronósticos experimentales. No usar contraseñas personales ni claves
+`service_role` de Supabase en ficheros públicos.
+
 ### Windy y Ventusky
 
 `meteo.html` incorpora ambos como **mapas operativos externos de contraste**, sincronizados con el emplazamiento seleccionado.
