@@ -117,6 +117,7 @@ def official_electra() -> dict:
             if raw[:100].lstrip().lower().startswith((b"<!doctype",b"<html",b"<head")):
                 raise ValueError("Endpoint returned HTML, not CSV")
             result={"source":url,"downloaded":True,**stamp(raw),"note":"ELECTRA current download may have a different date than 2026-05 snapshot; name matches are candidates only."}
+            (OUT/"ELECTRA_descarga_20261019.csv").write_bytes(raw)
             if raw[:2]==b"PK":
                 with zipfile.ZipFile(io.BytesIO(raw)) as z:
                     names=[n for n in z.namelist() if n.lower().endswith((".csv",".txt"))]
@@ -175,6 +176,7 @@ def gem() -> dict:
             raw=get(url,24_000_000,120)
             md5=hashlib.md5(raw).hexdigest()
             if url.startswith("https://zenodo") and md5!=GEM_MD5: raise ValueError(f"Modelblocks checksum mismatch {md5}")
+            (OUT/"GEM_GSPT_Feb_2026.xlsx").write_bytes(raw)
             info={"verified_bytes":True,"url":url,**stamp(raw),"md5":md5,"source":"Zenodo Modelblocks 20843067 mirror, GEM February 2026", "sheets":xlsx_sheets(raw),"status":"downloaded-validated"}
             return info
         except Exception as e: attempted.append({"url":url,"error":str(e)[:400]})
@@ -371,6 +373,9 @@ def dnv_tests() -> dict:
     try:
         wd=OUT/"dnv-sdk"
         subprocess.run(["git","clone","--depth","1","https://github.com/dnv-opensource/solarfarmer-python-sdk.git",str(wd)],check=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=90)
+        pinned="6ea41efdec696f854d997fd502e7c50327bcf39f"
+        subprocess.run(["git","fetch","--depth","1","origin",pinned],cwd=wd,check=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=80)
+        subprocess.run(["git","checkout","--detach",pinned],cwd=wd,check=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=30)
         head=subprocess.run(["git","rev-parse","HEAD"],cwd=wd,capture_output=True,text=True,check=True).stdout.strip()
         install=subprocess.run(["python","-m","pip","install","-q","uv"],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=160)
         if install.returncode:return {"status":"install-failed","upstream_sha":head,"pip_log_tail":install.stdout[-1800:]}
