@@ -1178,7 +1178,7 @@ const PROJECTS = [
     stack: "HTML · ES modules · lib/meteo-browser.js · lib/meteo-viz.js · Canvas HiDPI · SheetJS local · Open-Meteo/ERA5 · PVGIS · NASA POWER · WeatherNext 3 adapter · Cache Storage",
     url: "meteo.html",
     repo: "https://github.com/imoriana3/proyectos",
-    updated: "2026-10-06",
+    updated: "2026-10-13",
     version: "0.8.0",
     docId: "meteo",
     docUrl: "",
@@ -1198,10 +1198,12 @@ const PROJECTS = [
       { done:true, text:"Forecast operativo 72 h, incertidumbre para P50/P90, muestreo espacial 5 puntos y export bankable PVSyst + manifest.json." },
       { done:false, text:"Conectar WeatherNext 3 live mediante acceso Google; mientras tanto admite resumen JSON sin bloquear el resto del workbench." },
       { done:false, text:"CAMS/NSRDB/Solcast: habilitar opcionalmente sin exponer credenciales en GitHub Pages." },
-      { done:false, text:"Migrar viento/granizo, radiación difusa, producción, batería, gemelo y SCADA para consumir exclusivamente el contrato meteo común." },
-      { done:false, text:"Cerrar certificación diferencial JS↔Python para TMY/QA/extremos con golden datasets compartidos." }
+      { done:true, text:"Viento/granizo, radiación difusa, Producción 3D y SCADA ya consumen WeatherContract v2; los fetchers legacy quedan solo como fallback declarado." },
+      { done:false, text:"Batería, política estacional y gemelo digital: implementación terminada en gemelo-digital #97; falta superar los checks cruzados del repo privado antes de fusionar." },
+      { done:false, text:"Certificación diferencial JS↔Python para TMY/QA/extremos: gate directo contra el JS real preparado en SolarGPTfull #411; pendiente de CI/merge." }
     ],
     historial: [
+      { date:"2026-10-13", ver:"0.8.0", note:"CIERRE TRANSVERSAL: WeatherContract v2 ya está fusionado en SolarGPT core, Weather Workbench, Difusa/Producción y SCADA. Batería/Winter/Gemelo están implementados pero retenidos por la puerta cruzada del repo privado; la certificación directa JS↔Python de TMY/QA/extremos está en gate separado." },
       { date:"2026-10-06", ver:"0.8.0", note:"WEATHER CONTRACT: contrato browser v2 compartido por tipo, forecast operativo 72 h, trazabilidad visible, incertidumbre meteo para P50/P90, muestreo espacial, WeatherNext live por proxy autenticado y export PVSyst/manifest/WeatherContract." },
       { date:"2026-10-06", ver:"0.7.0", note:"WINDY + VENTUSKY: dos mapas interactivos externos sincronizados con la planta, ciudad o coordenadas manuales. Se usan como contraste visual operativo y quedan explícitamente fuera del contrato meteo canónico y de las decisiones de CONTROL." },
       { date:"2026-10-06", ver:"0.6.0", note:"BUSCADOR GLOBAL DE EMPLAZAMIENTOS: autocompletado con Open-Meteo Geocoding; permite escribir cualquier ciudad o municipio, elegir entre coincidencias y cargar automáticamente latitud, longitud, país, cota y zona horaria. Se conserva el selector de proyectos Factiun y el emplazamiento externo queda persistido." },
