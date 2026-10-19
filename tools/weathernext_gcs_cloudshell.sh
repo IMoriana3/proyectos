@@ -8,7 +8,7 @@ if [[ $# -ne 2 ]]; then
 fi
 LAT="$1"
 LON="$2"
-BASE="https://raw.githubusercontent.com/IMoriana3/proyectos/feat/weathernext3-proxy-contract-20261013/tools"
+BASE="https://raw.githubusercontent.com/IMoriana3/proyectos/79edd2ebcd9dba2eff263df9fa76a102cc738cf1/tools"
 VENV="${HOME}/.cache/wn3-probe-venv"
 PROBE="${HOME}/.cache/weathernext_gcs_probe.py"
 
