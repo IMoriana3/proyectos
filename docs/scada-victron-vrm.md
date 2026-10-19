@@ -1,4 +1,4 @@
-# SCADA Victron VRM · instalación fotovoltaica
+# SCADA fija · Victron VRM
 
 **Acceso al SCADA:** [Abrir sinóptico protegido](https://factiun-vrm.imoriana3.workers.dev/panel#home)  
 **Código y seguimiento:** [IMoriana3/scada · PR #316](https://github.com/IMoriana3/scada/pull/316)  
@@ -6,9 +6,9 @@
 
 ## Qué es
 
-Una interfaz de **solo lectura** para consultar flujos energéticos de FV, consumo, batería y red, SOC e históricos por dispositivo. El sinóptico incorpora una única ilustración Landblock sin asignaciones ficticias de aguas o MPPT. La ilustración no es un plano as-built.
+SCADA de la **instalación fotovoltaica fija** integrada con Victron VRM. Es una interfaz de **solo lectura** para consultar flujos energéticos de FV, consumo, batería y red, SOC e históricos por dispositivo. El sinóptico incorpora una única ilustración Landblock sin asignaciones ficticias de aguas o MPPT. La ilustración no es un plano as-built.
 
-Es una instalación **independiente de El Burgo I** y no debe mezclarse con su SCADA de seguidores. La ficha «SCADA fija · El Burgo I» abre la instalación de El Burgo desde el SCADA de Cartera Factiun.
+Es una instalación **independiente de El Burgo I** y no debe mezclarse con su SCADA de seguidores. La ficha «SCADA seguidores · El Burgo I» abre el SCADA de seguidores (trackers) de El Burgo I, proyecto 23003, desde Cartera Factiun.
 
 ## Acceso y privacidad
 
