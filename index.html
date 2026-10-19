@@ -2005,6 +2005,33 @@ const PROJECTS = [
     ]
   },
   {
+    name: "SCADA Victron · FV provisional Landblock",
+    status: "build",
+    objetivo: "Supervisa en lectura la FV provisional Landblock de dos aguas, independiente de El Burgo I.",
+    stack: "Victron VRM API v2 · Cloudflare Worker privado · SVG · Cloudflare Access",
+    url: "https://factiun-vrm.imoriana3.workers.dev/panel",
+    repo: "https://github.com/IMoriana3/scada",
+    updated: "2026-10-19",
+    version: "v3.2 desplegada · v3.3 en validación",
+    docId: "victron-vrm",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Abrir con tu acceso autorizado de Cloudflare Access; el token Victron solo está en el Worker como Secret.",
+      "Vista de FV, batería y MPPT con medidas reales de Victron; gráficos históricos cuando VRM publica la serie.",
+      "Es una instalación provisional independiente: no es El Burgo I (14 MWp, planta 23003).",
+      "Los dos campos Landblock son conceptuales hasta verificar físicamente el reparto MPPT por agua."
+    ],
+    pendientes: [
+      { done:false, text:"Desplegar y validar visualmente v3.3 y sus gráficos frente a VRM." },
+      { done:false, text:"Confirmar la asignación física de los MPPT a cada agua y la geometría Landblock." },
+      { done:false, text:"Certificar CI y validar la ingestión de alarmas antes de declararlo SCADA definitivo." }
+    ],
+    historial: [
+      { date:"2026-10-19", ver:"v3.2 en Cloudflare / v3.3 en rama", note:"API VRM 493468 conectada; sinóptico Landblock y nuevo diseño en PR #316 de scada. Sin vínculo con planta 23003." }
+    ]
+  },
+  {
     name: "Importador de logs de NCU",
     status: "live",
     objetivo: "Importa los CSV diarios procesados de las NCU al SCADA: series, eventos completos y resumen.",
