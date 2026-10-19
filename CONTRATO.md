@@ -95,6 +95,10 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 ## Puntos abiertos (escribir aquí lo que afecte al otro)
 
+- **[SCADA Victron VRM 493468 · 2026-10-19]** Se añade **una tarjeta de herramienta** independiente `SCADA Victron · FV provisional Landblock` dentro de `PROJECTS[]`, enlazada a `https://factiun-vrm.imoriana3.workers.dev/panel` (protegido por Cloudflare Access). Documentación canónica de la tarjeta: `docs/victron-vrm.md`. NO se añade nada a `PLANTS[]`, a `PLANT_VIEWS[]` ni a `PLANT_MODULES`: esta FV provisional NO es El Burgo I 14 MWp ni el proyecto `23003`. El estado de la tarjeta es **build** porque v3.2 funciona pero la v3.3 sigue pendiente de despliegue/CI y validación de los gráficos reales. No usar el mismo título `SCADA` del aplicativo de cartera ni duplicar esta tarjeta. Esta rama se coordina con `IMoriana3/scada#316`, que es la fuente del código operativo.
+
+
+
 - **[Textos de interfaz · 2026-10-12]** Revisión coordinada con `solargpt-textos-claros` en los 11 repositorios del catálogo. Se acortan las 29 descripciones de `PROJECTS` y las ayudas visibles; nombres de tarjeta, IDs, destinos, estados, versiones de herramienta e historial se conservan. Caché del panel v181. Los detalles de uso y la evidencia técnica siguen disponibles. Sin cambios de motor, datos ni permisos.
 
 
