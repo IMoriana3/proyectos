@@ -186,6 +186,63 @@ No activar cron hasta demostrar autenticación, coste 0 y uso permitido de los
 pronósticos experimentales. No usar contraseñas personales ni claves
 `service_role` de Supabase en ficheros públicos.
 
+### Integración Zarr nativa en la pantalla Meteo (19/10/2026)
+
+**HECHO EN RAMA `#591`, NO PUBLICADO:** `meteo.html` importa directamente
+el JSON `weathernext3-zarr-point-v2` generado por
+`IMoriana3/weathernext`. El usuario descarga el fichero desde su
+Google Cloud Shell autorizado y lo selecciona en **WeatherNext 3 >
+Importar JSON**. El archivo se procesa enteramente en el navegador,
+sin introducir Google ADC ni enviar datos a servidores públicos.
+La pantalla comprueba esquema, horas 1..N completas, run class, fecha,
+coordenadas de emplazamiento (desviación <=0,05°), cantidades en escala
+original y preservación de P10/P50/P90.
+
+**ÚNICA NORMALIZACIÓN:** `lib/meteo.js` contiene
+`fromWeatherNextTransport()`, que llama al mismo
+`fromWeatherNextSummary()` usado por el proxy GCS/BigQuery. Convierte
+Kelvin a °C y energía solar J/m² por hora a W/m² **una sola vez**.
+No genera DNI/FDIR, precipitación, rachas, dirección ni granizo cuando
+WeatherNext no proporciona esos campos: quedan `null`.
+Los percentiles se conservan por **variable marginal**, no como
+escenarios físicos coherentes de viento+radiación+nubes.
+
+**PANTALLA:** un único bloque Meteo con ventana seleccionable
+**72 horas / 360 horas**, curva horaria por variable con P10/P50/P90,
+deslizador por hora, datos de cada instante y advertencia explícita
+cuando el archivo sea histórico o tenga un horizonte menor que el
+solicitado. Se mantiene el resumen operacional y el fallback Open-Meteo.
+Un `weatherNext` histórico no se presenta como tiempo actual.
+
+**WeatherContract v2 — EXTENSIÓN COMPATIBLE, PENDIENTE MASTER:**
+`lib/weather-contract.js` conserva el dataset meteorológico central,
+pero incorpora opcionalmente `forecast_quantiles.rows` y un hash
+propio. `contract_id` incluye el hash de bandas para impedir
+colisiones con el mismo P50. `browserConsumerStamp` transporta ese
+hash. La normalización `finite(null)` se corrigió porque convertía
+faltantes en ceros; incidencia **BUG** de calidad. Esta extensión
+cross-domain debe contrastarse con consumidores y contratos de
+SolarGPT antes de certificar o fusionar. **No presume** que otros
+simuladores ya consuman estos cuantiles automáticamente.
+
+**HECHO DE TESTS AISLADOS:** validación de parser y
+`WeatherContract v2` en runtime JS: 360 valores horarios conservados,
+resumen exacto 72 horas, cuantiles completos, ausencia de precipitación
+como `null`, hash independiente, y sintaxis de la interfaz.
+Se han añadido los tests
+`tests/test_meteo_weathernext_transport.mjs` y
+`tests/test_meteo_weathernext_contract.mjs`.
+El workflow GitHub Actions de pruebas focalizadas está actualmente
+bloqueado por infraestructura (job sin pasos); **no declararlo CI verde**.
+
+**PENDIENTE:** resolver la divergencia de PR `#591` respecto a
+`main`, ejecutar arneses de navegador y regresiones
+cross-domain, fusionar/publicar, validar importación real de una
+predicción reciente y conseguir carga automática a coste adicional 0 €
+con identidad Google expresamente autorizada. La caché Supabase
+`public.meteo_pronosticos` existe pero sigue sin filas, de modo que
+no hay ingestión LIVE.
+
 ### Windy y Ventusky
 
 `meteo.html` incorpora ambos como **mapas operativos externos de contraste**, sincronizados con el emplazamiento seleccionado.
