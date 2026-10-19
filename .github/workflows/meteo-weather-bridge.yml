@@ -1,0 +1,44 @@
+name: Meteo forecast bridge (offline)
+
+on:
+  push:
+    branches: [feat/weathernext3-proxy-contract-20261013]
+    paths:
+      - lib/meteo.js
+      - lib/meteo-forecast-cache.js
+      - meteo.html
+      - tests/test_meteo_weathernext_transport.mjs
+      - tests/test_meteo_forecast_cache.mjs
+      - .github/workflows/meteo-weather-bridge.yml
+
+permissions:
+  contents: read
+
+jobs:
+  forecast-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Native forecast import and 360h quantiles
+        run: node tests/test_meteo_weathernext_transport.mjs
+      - name: Authenticated Supabase-cache adapter (mocked)
+        run: node tests/test_meteo_forecast_cache.mjs
+      - name: UI wiring smoke without browser dependencies
+        run: |
+          node - <<'NODE'
+          const fs=require("fs");
+          const html=fs.readFileSync("meteo.html","utf8");
+          for(const id of ["wn","wnHorizon","wnVariable","wnChart","wnLead","wnStatus","wnCacheBtn"])
+            if(!html.includes('id="'+id+'"'))throw Error("Missing Meteo control: "+id);
+          if(!html.includes("fromWeatherNextTransport(j)"))
+            throw Error("Native WeatherNext v2 is not wired to the file importer");
+          if(!html.includes("forecastWindowHours()"))
+            throw Error("Forecast horizon is not linked to the Meteo panels");
+          if(!html.includes('type="range" id="wnLead"'))
+            throw Error("Hourly selector is missing");
+          console.log("PASS: Meteo existing card exposes native import and hourly horizon controls");
+          NODE
