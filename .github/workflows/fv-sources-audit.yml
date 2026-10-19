@@ -26,6 +26,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: factiun-fv-evidence-20261019
-          path: audit_artifacts/fv_sources_audit_result_20261019.json
+          path: |
+            audit_artifacts/fv_sources_audit_result_20261019.json
+            audit_artifacts/GEM_GSPT_Feb_2026.xlsx
+            audit_artifacts/ELECTRA_descarga_20261019.csv
           retention-days: 7
           if-no-files-found: warn
