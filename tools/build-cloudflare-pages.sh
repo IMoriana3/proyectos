@@ -11,6 +11,34 @@ if [[ ! -s index.html || ! -s manifest.webmanifest || ! -s sw.js ]]; then
 fi
 
 rm -rf -- "$OUT"
+mkdir -p "$OUT"
+
+# Fail-closed: durante la primera conexion GitHub -> Pages no se publica
+# el panel (ni datos/docs) hasta comprobar Access en el DOMINIO DE PRODUCCION.
+# El flag se configura en Variables and Secrets de Pages y solo tras validar
+# el login en ventana privada. No comprueba Access por si mismo.
+cat > "$OUT/_headers" <<'HEADERS'
+/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+HEADERS
+
+if [[ "${FACTIUN_PAGES_ACCESS_CONFIRMED:-0}" != "1" ]]; then
+  cat > "$OUT/index.html" <<'HTML'
+<!doctype html><html lang="es"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Sitio en configuración</title>
+<body style="font:16px system-ui;background:#0e1826;color:#dce3eb;padding:2rem">
+<h1>Sitio en configuración</h1>
+<p>La aplicación todavía no se ha publicado.</p>
+</body></html>
+HTML
+  cp "$OUT/index.html" "$OUT/404.html"
+  echo "Cloudflare Pages: solo pagina de mantenimiento (sin datos internos)."
+  echo "Validar Access y establecer FACTIUN_PAGES_ACCESS_CONFIRMED=1 para publicar."
+  exit 0
+fi
+
 mkdir -p "$OUT/docs"
 shopt -s nullglob
 
