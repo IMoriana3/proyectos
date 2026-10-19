@@ -30,6 +30,8 @@ jobs:
             'xarray>=2025.1,<2027' 'dask[array]>=2025.1,<2027' \
             'zarr>=3,<4' 'obstore>=0.6,<1'
       - name: One point, one hour, no Google credential
+        env:
+          GOOGLE_SKIP_SIGNATURE: "true" # obstore explicit anonymous GCS; no metadata-server auth
         run: |
           set -euo pipefail
           python tools/weathernext_gcs_probe.py \
