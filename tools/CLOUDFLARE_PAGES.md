@@ -9,12 +9,12 @@ Esta receta NO cambia la visibilidad del código.
 2. **Create application** → **Pages** → **Connect to Git**.
 3. Autorizar GitHub para **Only select repositories** y seleccionar `IMoriana3/proyectos` (si no está ya autorizado).
 4. Elegir `IMoriana3/proyectos`, rama de producción `main`.
-5. Nombre de proyecto: `proyectos-factiun` (o uno disponible; la URL final depende del nombre realmente elegido).
+5. Nombre de proyecto: `panel-im3` (o uno disponible; la URL final depende del nombre realmente elegido). Evitar nombres corporativos si no quieres aparecer en búsquedas.
 6. Framework: **None**.
 7. **Build command**: `bash tools/build-cloudflare-pages.sh`
 8. **Build output directory**: `dist`.
 9. Root directory: raíz (sin subcarpeta).
-10. **Save and Deploy**. Comprobar portada y simuladores.
+10. **Save and Deploy**. El primer despliegue enseña únicamente «Sitio en configuración», sin contenido del proyecto. Esto es intencionado hasta proteger la URL con Access.
 
 La integración GitHub→Pages permite repositorios privados y recompone la web automáticamente
 cuando `main` cambia. No configurar `.` o `/` como directorio a publicar:
@@ -47,7 +47,25 @@ La alternativa más sencilla es autenticar por correo con código de un solo uso
 de producción esté comprobado.** El HTML que se sirve en la web puede descargarse
 por cualquier visitante autorizado, igual que en cualquier web estática.
 
-## 3. Comprobar que funciona
+## 3. Activar los contenidos tras verificar Access
+
+1. Abrir la URL de producción en una **ventana privada sin sesión**: debe
+   solicitar inicio de sesión de Cloudflare Access antes de mostrar incluso
+   la página de configuración.
+2. Confirmar que un correo NO autorizado no puede entrar.
+3. En Pages → proyecto → Settings → **Variables and Secrets** añadir
+   `FACTIUN_PAGES_ACCESS_CONFIRMED` con valor `1` para **Production**.
+   Para previews, usar valor `1` solo si sus dominios están igualmente
+   protegidos; si no, mantener la página de mantenimiento en previews.
+4. Lanzar un nuevo despliegue de la rama `main` con esta configuración.
+   El script publicará entonces el panel real, simuladores y documentación.
+5. Repetir la prueba desde una ventana privada y verificar que no se puede
+   obtener `/index.html` ni `/docs/viento.md` sin autenticación.
+
+Esta variable es un **candado operativo**, no detecta automáticamente si
+Access está correctamente configurado; no activarla antes de esa comprobación.
+
+## 4. Comprobar que funciona
 
 - `/` — portada.
 - `/sim-viento.html` — abanderamiento.
@@ -63,7 +81,7 @@ Los enlaces internos del índice que apuntaban a
 a rutas relativas durante el build. Los enlaces a **otros repositorios**
 GitHub Pages no cambian y pueden necesitar otra migración.
 
-## 4. CI pendiente al terminar la conexión
+## 5. CI pendiente al terminar la conexión
 
 `.github/workflows/pages.yml` y `tools/test_pages_cronometro.mjs` siguen
 probando `https://imoriana3.github.io/proyectos`, que dejó de publicarse
@@ -74,7 +92,7 @@ tendrá que autenticarse con un token de servicio de Cloudflare Access,
 guardado como secretos GitHub. No usar tokens en el código, archivos estáticos
 ni enlaces públicos.
 
-## 5. Referencias
+## 6. Referencias
 
 - https://developers.cloudflare.com/pages/get-started/git-integration/
 - https://developers.cloudflare.com/pages/framework-guides/deploy-anything/
