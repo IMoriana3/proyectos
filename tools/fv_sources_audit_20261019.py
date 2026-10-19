@@ -107,6 +107,41 @@ def ree_crosscheck(samples: list[dict]) -> dict:
     return {"source_url":base,"checked":sum(x["checked"] for x in results), "results":results,"limitations":"No MITECO/ELECTRA original row was fetched; this only checks official REE GIS. Same identifier may represent grouped permits; points do not imply soil/trackers."}
 
 
+def official_electra() -> dict:
+    """Best-effort official MITECO CSV probe. Never call a fuzzy match verified."""
+    urls=["https://energia.serviciosmin.gob.es/Electra/descargarCSVProduccion.aspx"]
+    attempt=[]
+    for url in urls:
+        try:
+            raw=get(url,85_000_000,timeout=95,tries=1)
+            if raw[:100].lstrip().lower().startswith((b"<!doctype",b"<html",b"<head")):
+                raise ValueError("Endpoint returned HTML, not CSV")
+            result={"source":url,"downloaded":True,**stamp(raw),"note":"ELECTRA current download may have a different date than 2026-05 snapshot; name matches are candidates only."}
+            if raw[:2]==b"PK":
+                with zipfile.ZipFile(io.BytesIO(raw)) as z:
+                    names=[n for n in z.namelist() if n.lower().endswith((".csv",".txt"))]
+                    if not names:raise ValueError("ZIP has no CSV/TXT member")
+                    raw=z.read(names[0]);result["archive_member"]=names[0]
+            preview=raw[:15000].decode("utf-8-sig",errors="replace")
+            delimiter=";" if preview.count(";")>preview.count(",") else ","
+            names=("AJUSA RES","AGUAS NUEVAS SOLAR 1","CASA DE ARRIBA DE LOS LLANOS 10","EACHE MEDITERRANEA")
+            # MITECO datasets may use Latin-1 or UTF-8; preserve the raw hash.
+            decoded=raw.decode("utf-8-sig",errors="replace")
+            if decoded.count("\ufffd")>min(1000,len(decoded)//5000):decoded=raw.decode("cp1252",errors="replace")
+            rdr=csv.DictReader(io.StringIO(decoded,newline=""),delimiter=delimiter)
+            rows=[];matches=[]
+            for n,row in enumerate(rdr):
+                if n<3:rows.append({str(k)[:100]:str(v)[:150] for k,v in row.items() if k})
+                normalized=" ".join(str(v) for v in row.values() if v).upper()
+                if any(x in normalized for x in names) and len(matches)<30:
+                    matches.append({str(k)[:100]:str(v)[:200] for k,v in row.items() if k})
+                if n>350_000:raise ValueError("CSV exceeded row scan safety limit")
+            result.update({"status":"downloaded-scanned","row_count":n+1 if 'n' in locals() else 0,"fieldnames":rdr.fieldnames,"first_rows":rows,"candidate_matches":matches,"name_matches_are_proof":False})
+            return result
+        except Exception as e:
+            attempt.append({"url":url,"error":f"{type(e).__name__}: {str(e)[:450]}"})
+    return {"downloaded":False,"status":"blocked","attempts":attempt}
+
 def xlsx_sheets(raw: bytes) -> list[dict]:
     with zipfile.ZipFile(io.BytesIO(raw)) as z:
         wb=ET.fromstring(z.read("xl/workbook.xml"))
@@ -363,6 +398,7 @@ def main():
     except Exception as e:
         report["spain_derived"]={"status":"error","error":str(e)[:500]}
     report["official_ree"]=run_stage("official_ree",lambda:ree_crosscheck(snapshots[1] if snapshots else []))
+    report["official_electra"]=run_stage("official_electra",official_electra)
     report["gem_2026_02"]=run_stage("gem_2026_02",gem)
     report["gmseus_2_1"]=run_stage("gmseus_2_1",gmseus)
     report["dnv_sdk"]=run_stage("dnv_sdk",dnv_tests)
