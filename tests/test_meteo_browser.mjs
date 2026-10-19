@@ -98,6 +98,15 @@ const wc=await WC.buildWeatherContract({dataset:wcFixture,kind:"historical",site
 check("WeatherContract v2 versionado",wc.schema_version==="2.0.0");
 check("WeatherContract conserva hash QA",wc.qa.dataset_hash==="abc123");
 check("WeatherContract fija política WEATHER/CONTROL",wc.consumer_policy.weather_informs_control===true&&wc.consumer_policy.control_decides===true);
+check("WeatherContract usa vocabulario estacional canónico",wc.consumer_policy.consumers.includes("tcu_policy_season")&&!wc.consumer_policy.consumers.includes("winter_mode"));
+const parityRows=[
+  {t:"2024-01-01T00:00:00Z",ghi_wm2:0,dni_wm2:0,dhi_wm2:0,temp_c:4,wind_ms:2,cloud_total:null},
+  {t:"2024-01-01T01:00:00+00:00",ghi_wm2:10.0,dni_wm2:5.0,dhi_wm2:5.0,temp_c:3.0,wind_ms:3.0,precip_mm:0.0}
+];
+check("hash WeatherContract cross-language congelado",(await WC.weatherDatasetHash(parityRows))==="fc50729d9a2d0d4e665145cb",await WC.weatherDatasetHash(parityRows));
+const parityPayload=WC.weatherHashPayload(parityRows);
+check("null meteorológico no se convierte en cero",!("cloud_total" in parityPayload[0]),JSON.stringify(parityPayload[0]));
+check("timestamp del hash se canoniza a UTC milisegundos",parityPayload[1].t==="2024-01-01T01:00:00.000Z",parityPayload[1].t);
 const ub=M.weatherUncertaintyBudget({sourceId:"openmeteo",crossSourceRmsPct:8,adaptationSigma:.02});
 check("incertidumbre usa el término conservador mayor",near(ub.resource_sigma,.08));
 check("export PVSyst contiene cabecera canónica",M.toPvsystCsv(wcFixture.rows,{siteName:"Test"}).includes("GlobHor;DiffHor;DNI;T_Amb;WindVel"));
@@ -288,6 +297,9 @@ check("HTML integra Windy y Ventusky",html.includes('id="windyMap"')&&html.inclu
 check("HTML contiene supervisión 72h y WeatherContract",html.includes('id="opEvents"')&&html.includes('id="wcStatus"'));
 check("HTML contiene meteo espacial e incertidumbre",html.includes('id="spatialBtn"')&&html.includes('id="uncUse"'));
 check("HTML ofrece export bankable",html.includes('id="dlPvsyst"')&&html.includes('id="dlManifest"')&&html.includes('id="dlContract"'));
+const bridgeHtml=fs.readFileSync(path.join(__dirname,"../weather-contract-bridge.html"),"utf8");
+check("bridge cross-origin existe y usa postMessage",bridgeHtml.includes("factiun-weather-contract:get")&&bridgeHtml.includes("postMessage"));
+check("bridge limita orígenes y admite Cloudflare cobertura",bridgeHtml.includes("cobertura-zigbee.imoriana3.workers.dev")&&bridgeHtml.includes("origin_not_allowed"));
 check("HTML configura capas Windy/Ventusky",html.includes('id="windyLayer"')&&html.includes('id="windyModel"')&&html.includes('id="ventuskyLayer"'));
 check("HTML contiene rosa de vientos",html.includes('id="vizWindRose"'));
 check("HTML contiene cockpit 6 paneles",["vizCockpitGhi","vizCockpitDni","vizCockpitDhi","vizCockpitTemp","vizCockpitWind","vizCockpitKt"].every(id=>html.includes('id="'+id+'"')));
