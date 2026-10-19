@@ -11,6 +11,7 @@ on:
       - tests/test_meteo_weathernext_transport.mjs
       - tests/test_meteo_forecast_cache.mjs
       - tests/test_meteo_weathernext_contract.mjs
+      - tests/test_meteo_weathernext_comparison.mjs
       - .github/workflows/meteo-weather-bridge.yml
 
 permissions:
@@ -31,12 +32,14 @@ jobs:
         run: node tests/test_meteo_forecast_cache.mjs
       - name: Preserve source quantiles in WeatherContract v2
         run: node tests/test_meteo_weathernext_contract.mjs
+      - name: Compare models by UTC hour without invented measurements
+        run: node tests/test_meteo_weathernext_comparison.mjs
       - name: UI wiring smoke without browser dependencies
         run: |
           node - <<'NODE'
           const fs=require("fs");
           const html=fs.readFileSync("meteo.html","utf8");
-          for(const id of ["wn","wnHorizon","wnVariable","wnChart","wnLead","wnStatus","wnCacheBtn"])
+          for(const id of ["wn","wnHorizon","wnVariable","wnChart","wnLead","wnStatus","wnCacheBtn","wnCompareBtn","wnCompareStatus"])
             if(!html.includes('id="'+id+'"'))throw Error("Missing Meteo control: "+id);
           if(!html.includes("fromWeatherNextTransport(j)"))
             throw Error("Native WeatherNext v2 is not wired to the file importer");
