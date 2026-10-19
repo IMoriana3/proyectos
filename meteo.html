@@ -750,16 +750,18 @@ function renderForecastCharts(){
   $("wnChartStatus").textContent=rows.length+" horas · "+(names||"sin valores")+
     (rows.length<horizon?" · solo "+rows.length+" h disponibles":"")+
     " · valores del modelo; no medidas ni órdenes de seguridad.";
-  $("opWindowTitle").textContent="Ventana de previsión · "+rows.length+" h";
-  $("opHorizonInfo").textContent=horizon>rows.length?
-    "Se solicitaron "+horizon+" h, pero solo hay "+rows.length+" h disponibles.":
-    "Serie horaria "+rows.length+" h · origen "+(FORECAST[0]?.source==="weathernext3"?"WeatherNext 3":"Open-Meteo")+".";
+  const past=Date.parse(FORECAST.at(-1).timestamp)<Date.now()-3600000;
+  $("opWindowTitle").textContent=(past?"Simulación con forecast histórico":"Ventana de previsión")+" · "+rows.length+" h";
+  $("opHorizonInfo").textContent=(past?"HISTÓRICO · no representa el tiempo actual. ":"")+
+    (horizon>rows.length?
+      "Se solicitaron "+horizon+" h, pero solo hay "+rows.length+" h disponibles.":
+      "Serie horaria "+rows.length+" h · origen "+(FORECAST[0]?.source==="weathernext3"?"WeatherNext 3":"Open-Meteo")+".");
   const slider=$("wnLead");
   slider.max=String(rows.length);
   slider.value=String(Math.max(1,Math.min(rows.length,Number(slider.value)||1)));
-  renderForecastInstant();
+  renderForecastInstant(false);
 }
-function renderForecastInstant(){
+function renderForecastInstant(showHistorical=true){
   if(!FORECAST?.length)return;
   const total=Math.min(forecastWindowHours(),FORECAST.length);
   const i=Math.max(0,Math.min(total-1,(Number($("wnLead").value)||1)-1));
@@ -768,7 +770,7 @@ function renderForecastInstant(){
   $("wnLeadInfo").textContent="Hora "+(i+1)+"/"+total+" · "+
     date.toLocaleString("es-ES",{timeZone:SITE?.tz||"UTC"})+
     (isHistorical?" · FORECAST HISTÓRICO, no tiempo actual":" · pronóstico, no medida");
-  paintNow(r);
+  if(!isHistorical||showHistorical)paintNow(r);
 }
 
 function currentUncertainty(){
