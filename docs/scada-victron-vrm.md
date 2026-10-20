@@ -8,7 +8,7 @@
 
 SCADA de la **instalación fotovoltaica fija** integrada con Victron VRM. Es una interfaz de **solo lectura** para consultar flujos energéticos de FV, consumo, batería y red, SOC e históricos por dispositivo. El sinóptico incorpora una única ilustración Landblock sin asignaciones ficticias de aguas o MPPT. La ilustración no es un plano as-built.
 
-Es una instalación **independiente de El Burgo I** y no debe mezclarse con su SCADA de seguidores. La ficha «SCADA seguidores · El Burgo I» abre el SCADA de seguidores (trackers) de El Burgo I, proyecto 23003, desde Cartera Factiun.
+Es una instalación **independiente de El Burgo I** y no debe mezclarse con su SCADA de seguidores. En la sección **Plantas**, la ficha **El Burgo I (23003)** ya tiene el acceso **SCADA** para sus seguidores (trackers). No se duplica como herramienta.
 
 ## Acceso y privacidad
 
