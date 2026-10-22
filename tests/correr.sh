@@ -1092,6 +1092,7 @@ declare -A EXCLUIDOS=()
 # uno nuevo en silencio ni sobrevive una excusa al fichero que excusaba.
 declare -A FUERA_DEL_PORTON=(
   [tools/test_cartera_dwg.mjs]="carea contra el DWG; necesita el repo cobertura-zigbee al lado"
+  [tools/test_origen_catalogo.js]="carea que los doce que se pasan el catálogo de plantas por localStorage compartan ORIGEN; necesita el repo Cobertura-Zigbee al lado, donde viven cinco de ellos. HOY SALE 1 A PROPÓSITO: están en dos dominios desde la migración a Cloudflare y los cinco visores de Zigbee leen un almacén donde nadie escribe"
   [tools/test_careo_carteras.js]="carea las DOS carteras de plantas —esta y la de Supabase— para no perder nada al quedarse con una; necesita el repo factiun-cartera al lado. Sin él sale 2, NO COMPROBADO, y lo dice en la primera línea"
   [tools/test_ancho.mjs]="medida de diseño; necesita playwright-core y páginas de otros repos"
   [tools/test_nitidez.mjs]="informe sin veredicto (sale 0 siempre); además clava la ruta del navegador de este contenedor"

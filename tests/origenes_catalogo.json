@@ -1,0 +1,65 @@
+{
+  "_porque": [
+    "LA CLAVE `factiun_plantas` SOLO FUNCIONA SI TODOS COMPARTEN ORIGEN.",
+    "",
+    "`cartera-tabla.html` escribe el catálogo de plantas en localStorage y once",
+    "páginas lo leen. localStorage es POR ORIGEN: protocolo + host + puerto. Si el",
+    "que escribe y el que lee no coinciden en los tres, el que lee no ve nada —y no",
+    "falla, que es lo peor: su selector sale vacío como si no hubiera plantas.",
+    "",
+    "El comentario de `cartera-tabla.html` justificaba el mecanismo así:",
+    "«imoriana3.github.io es un único origen, así que el localStorage es común».",
+    "Era cierto cuando todo colgaba de GitHub Pages. La migración a Cloudflare",
+    "partió el sistema en dos dominios y NADIE se enteró, porque no había nada que",
+    "lo comprobara: el 2026-10-22 se confirmó que el selector de `overcast.html` no",
+    "tiene plantas.",
+    "",
+    "Este fichero existe para que mover un repo de dominio sea IMPOSIBLE de hacer",
+    "en silencio. Quien lo mueva tiene que editar aquí su origen, y entonces la",
+    "puerta canta."
+  ],
+
+  "origen_esperado": "https://panel-im3.pages.dev",
+
+  "_sobre_el_origen_esperado": [
+    "Es el origen donde vive la cartera técnica, o sea el que ESCRIBE. Todos los",
+    "que leen tienen que estar en el mismo. No vale un subdominio: `a.sitio.com`",
+    "y `b.sitio.com` son orígenes DISTINTOS para localStorage."
+  ],
+
+  "participantes": [
+    { "repo": "Proyectos", "fichero": "cartera-tabla.html",          "papel": "escribe", "origen": "https://panel-im3.pages.dev" },
+    { "repo": "Proyectos", "fichero": "index.html",                  "papel": "escribe", "origen": "https://panel-im3.pages.dev" },
+    { "repo": "Proyectos", "fichero": "layout.html",                 "papel": "lee",     "origen": "https://panel-im3.pages.dev" },
+    { "repo": "Proyectos", "fichero": "sim-solar.html",              "papel": "lee",     "origen": "https://panel-im3.pages.dev" },
+    { "repo": "Proyectos", "fichero": "sim-viento.html",             "papel": "lee",     "origen": "https://panel-im3.pages.dev" },
+    { "repo": "Proyectos", "fichero": "comparador-estructuras.html", "papel": "lee",     "origen": "https://panel-im3.pages.dev" },
+    { "repo": "Proyectos", "fichero": "generador-layout.html",       "papel": "lee",     "origen": "https://panel-im3.pages.dev" },
+
+    { "repo": "Cobertura-Zigbee", "fichero": "overcast.html",     "papel": "lee", "origen": "https://cobertura-zigbee.imoriana3.workers.dev" },
+    { "repo": "Cobertura-Zigbee", "fichero": "backtracking.html", "papel": "lee", "origen": "https://cobertura-zigbee.imoriana3.workers.dev" },
+    { "repo": "Cobertura-Zigbee", "fichero": "terreno.html",      "papel": "lee", "origen": "https://cobertura-zigbee.imoriana3.workers.dev" },
+    { "repo": "Cobertura-Zigbee", "fichero": "plano.html",        "papel": "lee", "origen": "https://cobertura-zigbee.imoriana3.workers.dev" },
+    { "repo": "Cobertura-Zigbee", "fichero": "informe.html",      "papel": "lee", "origen": "https://cobertura-zigbee.imoriana3.workers.dev" }
+  ],
+
+  "roto_conocido": {
+    "desde": "la migración de Cobertura-Zigbee a Cloudflare Workers",
+    "confirmado": "2026-10-22",
+    "como_se_confirmo": "el selector de plantas de overcast.html sale vacío",
+    "a_quien_afecta": ["overcast.html", "backtracking.html", "terreno.html", "plano.html", "informe.html"],
+    "decidido": "un solo origen: servir los cinco visores bajo el origen que escribe",
+    "pendiente_fuera_de_este_repo": [
+      "`pages.yml` construye dist/ SOLO del repo Proyectos, y su guard prohíbe publicar tools/, tests/ y .github/.",
+      "Meter los cinco visores exige checkout de un segundo repo en ese workflow, que necesita un token de lectura —el LECTURA_TOKEN quedó sin confirmar—,",
+      "o bien un dominio propio con Pages en / y el Worker en /cobertura/*, porque un Worker no se puede enrutar sobre un hostname .pages.dev.",
+      "Las dos salidas son cambios en Cloudflare, no en este código."
+    ],
+    "_por_que_sigue_declarado_roto": [
+      "Porque la puerta tiene que estar ROJA mientras lo esté la realidad. Poner",
+      "aquí el origen bueno antes de que el despliegue lo sea pondría la puerta en",
+      "verde y el sistema seguiría partido: sería exactamente el fallo que este",
+      "fichero existe para no repetir, cometido por el fichero mismo."
+    ]
+  }
+}
