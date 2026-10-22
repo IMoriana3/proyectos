@@ -1002,6 +1002,13 @@ declare -A PISO=(
   # Pantalla real en Chromium con autenticación y datos SUPABASE de prueba.
   # 12 controles: acceso, HSU, WFU raw, coherencia, privacidad y cierre.
   [test_meteo_sensores_browser.js]=12
+  # El catálogo de plantas servido como fichero. 12 comprobaciones medidas.
+  # Vigila el modo de fallo propio de un fichero generado: QUEDARSE VIEJO. Si la
+  # cartera cambia y nadie regenera, las páginas sirven el catálogo de otro día y
+  # no se nota mirándolas —enseñan plantas, sólo que las de antes—, que es peor
+  # que el selector vacío porque el vacío se ve. Comparado con el generador, no
+  # con una copia de su lógica. Probado en rojo en seis sentidos.
+  [test_catalogo_plantas.js]=12
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
   # ── LOS CUATRO DE WEATHERNEXT 3 ────────────────────────────────────────
