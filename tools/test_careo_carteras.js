@@ -126,12 +126,31 @@ function seedDelFichero(html) {
   return JSON.parse(html.slice(j, fin + 1));
 }
 
-/* El mismo dato con los nombres de campo de Supabase. Re-claveado, no
-   inventado: ni un valor se toca. */
-function reClavea(recs, MAPA) {
+/* El mismo dato con los nombres de campo de Supabase.
+ *
+ * Re-claveado, y con UNA traducción: las cinco fases. La técnica las guarda en
+ * su vocabulario de tres —«Sin empezar», «En proceso», «Terminado»— y allí son
+ * «Sí»/«No»/«En proceso». Una fila con «Terminado» en `cold_comm` no existe en
+ * Supabase, así que fabricar el lado sintético sin traducir sería compararse
+ * contra algo que no se puede dar.
+ *
+ * La primera versión no traducía porque no hacía falta: el SEED del repositorio
+ * guardaba las fases en el formato VIEJO, booleanos, y un `true` sí vale en los
+ * dos lados. Al normalizar el SEED al formato de tres estados —que es el que
+ * `migrateFases` deja en cada carga— el atajo dejó de valer y el banco lo cantó
+ * en cuatro comprobaciones a la vez. */
+function aFaseSupabase(v) {
+  return v === 'Terminado' ? 'Sí' : v === 'En proceso' ? 'En proceso' : 'No';
+}
+/* El módulo se pasa por parámetro: se carga dentro de `main()` y aquí arriba
+   todavía no existe. */
+function reClavea(recs, M) {
   return recs.map((r) => {
     const o = {};
-    for (const [ct, cs] of Object.entries(MAPA)) if (r[ct] !== undefined) o[cs] = r[ct];
+    for (const [ct, cs] of Object.entries(M.MAPA)) {
+      if (r[ct] === undefined) continue;
+      o[cs] = M.CAMPOS_FASE.has(ct) ? aFaseSupabase(M.migraFase(r[ct])) : r[ct];
+    }
     return o;
   });
 }
@@ -202,7 +221,7 @@ async function main() {
   chk('la etiqueta «Sistema control» vuelve a `control`', etiq['Sistema control'], 'control');
   chk('la etiqueta «Nº» vuelve a `code`', etiq['Nº'], 'code');
 
-  const ladoSb = reClavea(seed, M.MAPA);
+  const ladoSb = reClavea(seed, M);
   const cd = M.careoDeDatos(seed, ladoSb);
   chk('mismo dato por los dos lados: 22 y 22', [cd.plantasTecnica, cd.plantasSupabase], [22, 22]);
   chk('las 22 están en las dos', cd.enLasDos, 22);
@@ -480,7 +499,15 @@ async function main() {
   await muerde('vacioEsIgual', (Mm) => {
     /* se le quita a supabase un dato que la técnica SÍ tiene: el careo bueno
        lo canta como «se perdería», el mutado se lo traga */
-    const campo = Object.keys(seed[0]).find((k) => k in M.MAPA && seed[0][k] !== '' && seed[0][k] != null);
+    /* EL CAMPO DE LA SONDA NO PUEDE SER UNA FASE. Las cinco fases van por su
+       propia rama en `careoDeDatos`, y esta mutación toca la genérica: si la
+       sonda cae en una de ellas, la mutación no muerde ahí y el banco la
+       declara viva sin que le falte nada. Pasó al normalizar el SEED a texto:
+       cambió qué campo salía primero y la mutación «sobrevivió» sin que el
+       careo hubiera cambiado. La sonda tiene que apuntar a la rama que la
+       mutación modifica. */
+    const campo = Object.keys(seed[0]).find((k) => k in M.MAPA && !M.CAMPOS_FASE.has(k)
+      && seed[0][k] !== '' && seed[0][k] != null);
     const sbMenos = ladoSb.map((r, i) => { if (i !== 0) return r; const o = { ...r }; delete o[M.MAPA[campo]]; return o; });
     return Mm.careoDeDatos(seed, sbMenos).discrepancias.length === 0;   // mutado: no ve nada
   });
