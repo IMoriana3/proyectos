@@ -374,6 +374,9 @@
   }
 
 </style>
+<!-- El catálogo de plantas, servido por este mismo origen. `localStorage` es POR ORIGEN
+     y sigue yendo primero: un navegador que acaba de usar la cartera manda sobre el fichero. -->
+<script src="data/plantas.js"></script>
 </head>
 <body>
 <header>
@@ -4950,7 +4953,7 @@ function buscaSitio(){
 }
 
 function loadPlants(){
-  try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
+  try{PLANTS=JSON.parse((window.FACTIUN_CATALOGO_JSON&&window.FACTIUN_CATALOGO_JSON()||localStorage.getItem('factiun_plantas'))||'{}')||{};}catch(e){PLANTS={};}
   pintaSitio();
 }
 $('sitioQ').addEventListener('input',buscaSitio);

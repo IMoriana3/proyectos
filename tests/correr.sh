@@ -1009,6 +1009,16 @@ declare -A PISO=(
   # que el selector vacío porque el vacío se ve. Comparado con el generador, no
   # con una copia de su lógica. Probado en rojo en seis sentidos.
   [test_catalogo_plantas.js]=12
+  # Las SEIS páginas enganchadas a ese fichero. 15 comprobaciones medidas.
+  # Hermano del de arriba y distinto: aquél vigila que el fichero no se quede
+  # viejo, éste que alguien lo LEA. Hoy las seis funcionan por una razón que va
+  # a caducar —que `cartera-tabla.html` existe y alguien la abre—, y cuando se
+  # borre, el selector saldría vacío SIN dar error: el mismo fallo silencioso
+  # que tuvieron las cinco de Cobertura-Zigbee. Aquí la puerta llega antes que
+  # el fallo. `meteo` va aparte porque lee por `lib/meteo-browser.js`, no en la
+  # página. Probado en rojo en siete sentidos, restaurando por copia y careando
+  # por sha256.
+  [test_catalogo_servido.js]=15
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
   # ── LOS CUATRO DE WEATHERNEXT 3 ────────────────────────────────────────
