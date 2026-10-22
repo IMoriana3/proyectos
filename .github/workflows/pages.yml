@@ -29,6 +29,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Verificar enlaces visibles de Informe y SCADA Gorraiz
+        run: node tests/test_gorraiz_catalogo.mjs
+
       - name: Preparar exactamente el paquete de Cloudflare Pages
         env:
           # SOLO para generar una copia de prueba en este runner. No escribe
