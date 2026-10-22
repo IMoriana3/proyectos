@@ -750,7 +750,7 @@ const PICTOS = {
   "Diseño de red de comunicaciones": '<path d="M8 10v6M16 10v6M24 10v6M8 25v6M16 25v6M24 25v6M40 10v6M48 10v6M56 10v6M40 25v6M48 25v6M56 25v6"/><circle class="af" cx="32" cy="22" r="3"/><path class="a" d="M26 20a6 6 0 0 1 12 0M22 17a10 10 0 0 1 20 0"/>',
   "Alta de planta": '<path d="M6 8l40-4 12 14-6 18H10z"/><rect x="14" y="14" width="14" height="10" stroke-dasharray="2 2"/><rect class="a" x="32" y="14" width="14" height="10"/>',
   "Control de obra": '<rect x="8" y="6" width="6" height="6"/><path class="a" d="M9 9l2 2 3-4"/><path d="M18 9h30"/><rect x="8" y="17" width="6" height="6"/><path class="a" d="M9 20l2 2 3-4"/><path d="M18 20h30"/><rect x="8" y="28" width="6" height="6"/><path d="M18 31h22"/>',
-  "Informe de producción FV · Gorraiz": '<path d="M8 36V14l12-8 12 8v22"/><path class="a" d="M12 15l8-5M20 19l8-5"/><path class="a" d="M38 36V26M46 36V18M54 36V22"/><path d="M34 36h26"/>',
+  "Instalación cubierta Gorraiz": '<path d="M8 36V14l12-8 12 8v22"/><path class="a" d="M12 15l8-5M20 19l8-5"/><path class="a" d="M38 36V26M46 36V18M54 36V22"/><path d="M34 36h26"/>',
   "Visor de levantamiento": '<circle class="af" cx="12" cy="10" r="1.6"/><circle class="af" cx="24" cy="6" r="1.6"/><circle class="af" cx="38" cy="12" r="1.6"/><circle class="af" cx="50" cy="8" r="1.6"/><path d="M12 12v10M24 8v14M38 14v8M50 10v12" stroke-dasharray="2 2"/><path d="M8 22h48M8 30h48"/>',
   "Visor de geometría as-built": '<path d="M6 20h52" stroke-dasharray="3 3"/><path class="a" d="M6 22l8-3 8 4 8-5 8 3 8-4 8 2 4-1"/><path d="M14 19v10M30 18v10M46 17v10"/>',
   "Gemelo digital de seguidor y control": '<path d="M8 24l16-8M16 20v12M4 32h20"/><rect x="38" y="12" width="20" height="14"/><path d="M42 16h12M42 20h8"/><path class="a" d="M30 10c6-6 14-6 20-4M34 32c-6 4-14 4-20 0"/><path class="a" d="M47 3l3 3-4 2M17 34l-3-2 4-2"/>',
@@ -1318,23 +1318,28 @@ const PROJECTS = [
     ]
   },
   {
-    name: "Informe de producción FV · Gorraiz",
+    name: "Instalación cubierta Gorraiz",
     status: "live",
-    objetivo: "Genera el informe de producción del edificio y compara periodos con el formato del PDF aprobado.",
-    stack: "HTML · Chart.js · jsPDF · GitHub Pages",
+    objetivo: "Consulta el SCADA de la instalación fotovoltaica en cubierta de Gorraiz y genera informes de producción, consumo y autoconsumo.",
+    stack: "HTML · Chart.js · jsPDF · Cloudflare Workers",
     url: "https://imoriana3.github.io/gorraiz-dashboard/",
+    links: [
+      { label: "SCADA", url: "https://imoriana3.github.io/gorraiz-dashboard/scada.html" },
+      { label: "Informe", url: "https://imoriana3.github.io/gorraiz-dashboard/" }
+    ],
     repo: "https://github.com/imoriana3/gorraiz-dashboard",
-    updated: "2026-05-20",
+    updated: "2026-10-22",
     version: "",
     docId: "",
     docUrl: "https://raw.githubusercontent.com/imoriana3/gorraiz-dashboard/main/README.md",
     download: "",
     uso: [
-      "Replica las 5 páginas del PDF aprobado con función de periodo comparativo.",
-      "Exportación a PDF apaisado vía jsPDF; datos meteo desde Open-Meteo."
+      "SCADA: generación de los dos inversores, intercambio con KSTAR SPC01, históricos y contraste de medidas con advertencias de sincronización temporal.",
+      "Informe: producción, consumo y autoconsumo, comparación de periodos y exportación al PDF aprobado."
     ],
     pendientes: [],
     historial: [
+      { date:"2026-10-22", ver:"portal", note:"La ficha agrupa SCADA e Informe en dos accesos directos, mantiene el repositorio común y pasa a llamarse Instalación cubierta Gorraiz." },
       { date:"2026-05-20", ver:"", note:"Fix render Chart.js en pestaña oculta y conversión de unidades Open-Meteo." }
     ]
   },
@@ -2344,7 +2349,10 @@ function linkRow(label, href){
 
 function detailHTML(p){
   const id = "d-"+slug(p.name);
-  const kv = `<dl class="kv">${linkRow("URL", p.url)}${linkRow("Repo", p.repo)}<dt>Stack</dt><dd>${esc(p.stack)}</dd></dl>`;
+  const views = Array.isArray(p.links) && p.links.length
+    ? p.links.filter(link => link.label && link.url).map(link => linkRow(esc(link.label), link.url)).join("")
+    : linkRow("URL", p.url);
+  const kv = `<dl class="kv">${views}${linkRow("Repo", p.repo)}<dt>Stack</dt><dd>${esc(p.stack)}</dd></dl>`;
   const uso = (p.uso&&p.uso.length) ? `<div class="dgroup"><div class="dlabel">Uso / Despliegue</div><ul class="uso">${p.uso.map(u=>`<li>${esc(u)}</li>`).join("")}</ul></div>` : "";
   const pend = (p.pendientes&&p.pendientes.length) ? `<div class="dgroup"><div class="dlabel">Pendientes</div><ul class="todo">${p.pendientes.map(t=>`<li class="${t.done?'is-done':''}"><span class="box ${t.done?'done':''}">${t.done?'✓':'☐'}</span><span>${esc(t.text)}</span></li>`).join("")}</ul></div>` : "";
   /* El historial va PLEGADO: es el bloque largo y en la ficha abierta tapaba lo que se consulta
@@ -2360,9 +2368,13 @@ function cardHTML(p){
   const docBtn = hasDoc(p)
     ? `<button class="btn docs" data-doc="${esc(docPath(p))}" data-name="${esc(p.name)}" data-status="${p.status}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16a1 1 0 0 0 1 1h13"/><path d="M8 4h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H8z"/><path d="M11 8h4M11 12h4"/></svg>Documentación</button>`
     : ``;
-  const open = p.url
-    ? `<a class="btn primary" href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Abrir <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 17 17 7M9 7h8v8"/></svg></a>`
-    : `<span class="btn off" title="Añade la URL de despliegue en el array PROJECTS">Sin URL</span>`;
+  const open = Array.isArray(p.links) && p.links.some(link => link.label && link.url)
+    ? p.links.filter(link => link.label && link.url).map((link,i) =>
+        `<a class="btn ${i===0?'primary':''}" href="${esc(link.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" aria-label="Abrir ${esc(link.label)} de ${esc(p.name)}">${esc(link.label)} ↗</a>`
+      ).join("")
+    : p.url
+      ? `<a class="btn primary" href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Abrir <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 17 17 7M9 7h8v8"/></svg></a>`
+      : `<span class="btn off" title="Añade la URL de despliegue en el array PROJECTS">Sin URL</span>`;
   const repo = p.repo ? `<a class="btn" href="${esc(p.repo)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Repo</a>` : ``;
   const dl = p.download ? `<a class="btn" href="${esc(p.download)}" onclick="event.stopPropagation()" download><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>Paquete</a>` : ``;
 /* EL CHIP DE VERSION DICE DE DONDE SALE EL NUMERO. Una tarjeta con `verEnApp`
