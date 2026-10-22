@@ -237,6 +237,27 @@ async function abrir(browser, respuesta) {
   check('y la marca como no comprobada', c1.pend, 'true');
   await page.close();
 
+  // ---------- GORRAIZ: UN SOLO PROYECTO, DOS ACCESOS REALES ----------
+  // No basta con renombrar el texto: las dos URL deben salir como anchors
+  // distintos, clicables, sin colapsar la tarjeta ni tocar otras fichas.
+  page = await abrir(browser, 403);
+  const gorraiz = page.locator('article.card').filter({
+    has: page.locator('.name', { hasText: 'Instalación cubierta Gorraiz' })
+  }).first();
+  check('tarjeta Gorraiz con nombre nuevo', await gorraiz.locator('.name').textContent(), 'Instalación cubierta Gorraiz');
+  check('sin tarjeta antigua duplicada', await page.locator('article.card .name', {
+    hasText: 'Informe de producción FV · Gorraiz'
+  }).count(), 0);
+  check('enlace SCADA Gorraiz', await gorraiz.locator('.acts a', { hasText: 'SCADA' }).getAttribute('href'),
+    'https://imoriana3.github.io/gorraiz-dashboard/scada.html');
+  check('enlace Informe Gorraiz', await gorraiz.locator('.acts a', { hasText: 'Informe' }).getAttribute('href'),
+    'https://imoriana3.github.io/gorraiz-dashboard/');
+  check('dos enlaces propios visibles, no Abrir genérico',
+    await gorraiz.locator('.acts a').filter({hasText:/^(?:SCADA|Informe)/}).count(), 2);
+  check('el pictograma original sigue presente', await gorraiz.locator('.picto path').count() > 0, true);
+  check('la ficha refleja la actualización', await gorraiz.locator('.upd').textContent(), 'act. 2026-10-22');
+  await page.close();
+
   await browser.close();
   console.log('');
   if (ko) { console.log(ko + ' PRUEBAS FALLIDAS (' + ok + ' OK)'); process.exit(1); }
