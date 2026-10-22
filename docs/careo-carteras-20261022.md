@@ -202,6 +202,40 @@ Arreglado: ahora se agrupan, se declaran, y esas plantas no se carean celda a
 celda. Lo que haría falta para poder carearlas es una clave que distinga el
 emplazamiento, no sólo el proyecto.
 
+## Los sistemas de control: dos que sólo estaban en la técnica
+
+Éste es el hallazgo que la herramienta detectaba y este documento no recogía
+en su primera redacción. El careo de vocabularios lo da así:
+
+```
+sist_control → control    soloTecnica: ["TracknCO", "AiTracker"]
+```
+
+| | mecanismo | opciones |
+|---|---|---|
+| técnica (`cartera-tabla.html`) | `type:'select'` sobre `CTRL` → **`<select>` cerrado** | `Sunner`, `P4Q`, `TracknCO`, `AiTracker` |
+| Supabase (`index.html`) | panel propio, **texto libre** | `Sunner`, `P4Q` |
+
+Las dos lo hacen al revés, y de ahí salía la confusión de origen —«no me deja
+elegir todos los que hay en ese html»—: el HTML de la técnica ofrece cuatro y
+la aplicación que se usa ofrecía dos.
+
+**Dato no se perdía ninguno**: las 22 plantas llevan `sist_control: "Sunner"`,
+así que nadie usa los dos que faltaban. Lo que se perdía era el **vocabulario**,
+en silencio y sin que ninguna fila lo delatara. Es justo la clase de pérdida
+que el careo existe para ver antes de borrar, y la única que no se habría
+notado mirando los datos.
+
+**Hecho** (`factiun-cartera@aeda009`): `VOCABULARIO.control` pasa a
+`["Sunner","P4Q","TracknCO","AiTracker"]`. `test_cartera.js` fijaba la lista y
+salió en rojo con el cambio; su expectativa se actualizó al orden **medido**.
+
+Y la respuesta a la pregunta original, que no necesitaba código: en la cartera
+de Supabase **un controlador nuevo se añade escribiéndolo** en el campo
+«Sistema control» de cualquier planta. `opciones()` arma cada lista como *lo ya
+guardado ∪ el vocabulario oficial*, así que desde entonces se ofrece en todas.
+El código lo dice: «un `<select>` bloquearía estrenar un valor».
+
 ## Antes de borrar la cartera técnica
 
 1. Copiar las **tres celdas** de arriba a Supabase.
