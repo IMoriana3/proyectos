@@ -1,5 +1,8 @@
 /** Native Zarr v2 -> existing Meteo adapter. Offline data only. */
-import assert from "node:assert/strict";
+/* `assert` viene del portón: misma superficie, pero publica una línea `OK`
+   por comprobación. `tests/correr.sh` saca su veredicto de ese recuento, no
+   del código de salida, así que un banco que calla al pasar cuenta cero. */
+import {assert, veredicto} from "./porton.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
@@ -84,3 +87,5 @@ for(const bad of [
   (()=>{const p=payload(3);p.samples[1].valid_time_utc="2026-01-01T00:00:00Z";return p;})()
 ])assert.throws(()=>WX.fromWeatherNextTransport(bad));
 console.log("PASS: native Zarr v2, quantiles, exact 72/360h, null/zero and time guards");
+
+veredicto();
