@@ -751,6 +751,7 @@ const PICTOS = {
   "Alta de planta": '<path d="M6 8l40-4 12 14-6 18H10z"/><rect x="14" y="14" width="14" height="10" stroke-dasharray="2 2"/><rect class="a" x="32" y="14" width="14" height="10"/>',
   "Control de obra": '<rect x="8" y="6" width="6" height="6"/><path class="a" d="M9 9l2 2 3-4"/><path d="M18 9h30"/><rect x="8" y="17" width="6" height="6"/><path class="a" d="M9 20l2 2 3-4"/><path d="M18 20h30"/><rect x="8" y="28" width="6" height="6"/><path d="M18 31h22"/>',
   "Informe de producción FV · Gorraiz": '<path d="M8 36V14l12-8 12 8v22"/><path class="a" d="M12 15l8-5M20 19l8-5"/><path class="a" d="M38 36V26M46 36V18M54 36V22"/><path d="M34 36h26"/>',
+  "SCADA FV · Gorraiz": '<rect x="4" y="4" width="56" height="32" rx="2"/><path d="M8 30h48M12 11h18M12 17h12"/><path class="a" d="M10 27l8-6 7 3 8-10 7 4 9-9"/><circle class="af" cx="49" cy="9" r="2"/>',
   "Visor de levantamiento": '<circle class="af" cx="12" cy="10" r="1.6"/><circle class="af" cx="24" cy="6" r="1.6"/><circle class="af" cx="38" cy="12" r="1.6"/><circle class="af" cx="50" cy="8" r="1.6"/><path d="M12 12v10M24 8v14M38 14v8M50 10v12" stroke-dasharray="2 2"/><path d="M8 22h48M8 30h48"/>',
   "Visor de geometría as-built": '<path d="M6 20h52" stroke-dasharray="3 3"/><path class="a" d="M6 22l8-3 8 4 8-5 8 3 8-4 8 2 4-1"/><path d="M14 19v10M30 18v10M46 17v10"/>',
   "Gemelo digital de seguidor y control": '<path d="M8 24l16-8M16 20v12M4 32h20"/><rect x="38" y="12" width="20" height="14"/><path d="M42 16h12M42 20h8"/><path class="a" d="M30 10c6-6 14-6 20-4M34 32c-6 4-14 4-20 0"/><path class="a" d="M47 3l3 3-4 2M17 34l-3-2 4-2"/>',
@@ -1320,22 +1321,46 @@ const PROJECTS = [
   {
     name: "Informe de producción FV · Gorraiz",
     status: "live",
-    objetivo: "Genera el informe de producción del edificio y compara periodos con el formato del PDF aprobado.",
-    stack: "HTML · Chart.js · jsPDF · GitHub Pages",
+    objetivo: "Informe energético del edificio de Gorraiz: producción Solarman, importación y exportación SPC01, históricos compartidos y exportación PDF.",
+    stack: "HTML · Chart.js · jsPDF · Cloudflare Worker · histórico SQLite · GitHub Pages",
     url: "https://imoriana3.github.io/gorraiz-dashboard/",
-    repo: "https://github.com/imoriana3/gorraiz-dashboard",
-    updated: "2026-05-20",
+    repo: "https://github.com/IMoriana3/gorraiz-dashboard",
+    updated: "2026-10-23",
     version: "",
     docId: "",
-    docUrl: "https://raw.githubusercontent.com/imoriana3/gorraiz-dashboard/main/README.md",
+    docUrl: "https://raw.githubusercontent.com/IMoriana3/gorraiz-dashboard/main/README.md",
     download: "",
     uso: [
-      "Replica las 5 páginas del PDF aprobado con función de periodo comparativo.",
-      "Exportación a PDF apaisado vía jsPDF; datos meteo desde Open-Meteo."
+      "Abrir Informe desde esta ficha. La tarjeta del catálogo es solo el acceso, no contiene controles de descarga.",
+      "KSTAR SPC01: seleccionar Desde/Hasta y descargar entre 1 y 14 días cerrados. Omite los días completos ya guardados; Solarman se consulta de forma independiente.",
+      "Informe y SCADA Gorraiz consultan la misma base central; IndexedDB es la copia local. Los PDF conservan su formato aprobado."
     ],
     pendientes: [],
     historial: [
+      { date:"2026-10-23", ver:"", note:"PR #63: descarga manual de KSTAR SPC por rango de hasta 14 días desde Informe y SCADA; histórico central compartido y adquisiciones independientes." },
       { date:"2026-05-20", ver:"", note:"Fix render Chart.js en pestaña oculta y conversión de unidades Open-Meteo." }
+    ]
+  },
+  {
+    name: "SCADA FV · Gorraiz",
+    status: "live",
+    objetivo: "Sinóptico y curvas de Gorraiz: producción Solarman A+B, red SPC01, consumo estimado y contraste temporal entre fuentes.",
+    stack: "HTML · Chart.js · Cloudflare Worker · SQLite · GitHub Pages",
+    url: "https://imoriana3.github.io/gorraiz-dashboard/scada.html",
+    repo: "https://github.com/IMoriana3/gorraiz-dashboard",
+    updated: "2026-10-23",
+    version: "",
+    docId: "",
+    docUrl: "https://raw.githubusercontent.com/IMoriana3/gorraiz-dashboard/main/docs/scada.md",
+    download: "",
+    uso: [
+      "Abrir SCADA desde esta ficha; dispone de vistas generales, inversores, red, históricos, diagnóstico y contraste FV ↔ SPC.",
+      "Desde la barra superior: descargar Solarman con su cupo de un lote nuevo por hora o SPC por rango de 1 a 14 días cerrados. Ambos alimentan el mismo histórico central.",
+      "Importación de red positiva y exportación negativa en kW. Consumo estimado expresamente identificado como no validado hasta comprobar relojes."
+    ],
+    pendientes: [],
+    historial: [
+      { date:"2026-10-23", ver:"", note:"Vista propia de SCADA en el catálogo. Descar­ga KSTAR por rango, representación de exportación negativa, contraste FV/SPC y consumo estimado no validado." }
     ]
   },
   {
