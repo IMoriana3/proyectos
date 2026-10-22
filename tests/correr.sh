@@ -141,7 +141,12 @@ declare -A PISO=(
   # sujeta que las hincas no floten con la rejilla de cumbreras en fase par.
   # Mismo despiste que arriba, mismo commit.
   [test_comparador_3d.js]=285
-  [test_comparador_sitio.js]=36
+  # 36 -> 37 el 2026-10-22. Al servirse el catálogo como fichero, el primer
+  # «tunez» pasó a ser la PLANTA (Gabès) en vez del preset (centro del país, a
+  # ~190 km). El dato nuevo es el bueno, así que lo que se corrige es la
+  # expectativa; y se añade el camino del preset con uno que ninguna planta
+  # tapa, para que al crecer la cartera no deje de probarse en silencio.
+  [test_comparador_sitio.js]=37
   [test_ejecucion_traza.mjs]=61
   # La ficha de planta y el acceso al SCADA. El piso son las 30 MEDIDAS, y lo
   # que de verdad sujeta son dos: «una planta SIN COMENZAR no gana sala de
@@ -781,7 +786,12 @@ declare -A PISO=(
   # paso de una hora, 3 pasos sueltos contra 24.
   [test_viento_steppers.js]=17
   [test_viento_sello.js]=17
-  [test_viento_sitio.js]=52
+  # 52 -> 55 el 2026-10-22. Los tres que faltaban los encontró el mordedor, no
+  # yo: con 52 sobrevivían «casar sólo por cod» (San José tiene cod == nproy,
+  # así que no distingue), «no quitar el preset fundido» y «perder el
+  # paréntesis». O sea que la puerta no miraba el ÚNICO caso por el que existe:
+  # El Burgo I, planta 24002 y proyecto 23003.
+  [test_viento_sitio.js]=55
   # LA CONFIGURACIÓN DE LA PUERTA, que hasta hoy era prosa en
   # `docs/puertas-y-alcance.md` §5 bis — y ese apartado declaraba su propia
   # debilidad diciendo que leerla «pide una llamada autenticada de
@@ -1002,6 +1012,27 @@ declare -A PISO=(
   # Pantalla real en Chromium con autenticación y datos SUPABASE de prueba.
   # 12 controles: acceso, HSU, WFU raw, coherencia, privacidad y cierre.
   [test_meteo_sensores_browser.js]=12
+  # El catálogo de plantas servido como fichero. 14 comprobaciones medidas.
+  # Vigila el modo de fallo propio de un fichero generado: QUEDARSE VIEJO. Si la
+  # cartera cambia y nadie regenera, las páginas sirven el catálogo de otro día y
+  # no se nota mirándolas —enseñan plantas, sólo que las de antes—, que es peor
+  # que el selector vacío porque el vacío se ve. Comparado con el generador, no
+  # con una copia de su lógica. Probado en rojo en seis sentidos.
+  # Desde el 2026-10-22 carea además las DOS implementaciones de `publishSpecs`:
+  # la propia del generador y la que aún se recorta de la técnica. Es la prueba
+  # de que mudar esa lógica no perdió nada, y se borra el día que se borre la
+  # técnica. Probado en rojo en cinco sentidos.
+  [test_catalogo_plantas.js]=14
+  # Las SEIS páginas enganchadas a ese fichero. 15 comprobaciones medidas.
+  # Hermano del de arriba y distinto: aquél vigila que el fichero no se quede
+  # viejo, éste que alguien lo LEA. Hoy las seis funcionan por una razón que va
+  # a caducar —que `cartera-tabla.html` existe y alguien la abre—, y cuando se
+  # borre, el selector saldría vacío SIN dar error: el mismo fallo silencioso
+  # que tuvieron las cinco de Cobertura-Zigbee. Aquí la puerta llega antes que
+  # el fallo. `meteo` va aparte porque lee por `lib/meteo-browser.js`, no en la
+  # página. Probado en rojo en siete sentidos, restaurando por copia y careando
+  # por sha256.
+  [test_catalogo_servido.js]=15
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
   # ── LOS CUATRO DE WEATHERNEXT 3 ────────────────────────────────────────
@@ -1092,6 +1123,7 @@ declare -A EXCLUIDOS=()
 # uno nuevo en silencio ni sobrevive una excusa al fichero que excusaba.
 declare -A FUERA_DEL_PORTON=(
   [tools/test_cartera_dwg.mjs]="carea contra el DWG; necesita el repo cobertura-zigbee al lado"
+  [tools/test_origen_catalogo.js]="carea que los doce que se pasan el catálogo de plantas por localStorage compartan ORIGEN; necesita el repo Cobertura-Zigbee al lado, donde viven cinco de ellos. HOY SALE 1 A PROPÓSITO: están en dos dominios desde la migración a Cloudflare y los cinco visores de Zigbee leen un almacén donde nadie escribe"
   [tools/test_careo_carteras.js]="carea las DOS carteras de plantas —esta y la de Supabase— para no perder nada al quedarse con una; necesita el repo factiun-cartera al lado. Sin él sale 2, NO COMPROBADO, y lo dice en la primera línea"
   [tools/test_ancho.mjs]="medida de diseño; necesita playwright-core y páginas de otros repos"
   [tools/test_nitidez.mjs]="informe sin veredicto (sale 0 siempre); además clava la ruta del navegador de este contenedor"

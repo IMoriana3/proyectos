@@ -169,6 +169,9 @@ td.pos{color:var(--live)} td.neg{color:var(--dead)}
 .tline .hhmm{font:600 14px var(--mono);color:var(--accent);min-width:52px;text-align:right}
 .sinwebgl{padding:26px 18px;text-align:center;color:var(--muted-2);font-size:13px}
 </style>
+<!-- El catálogo de plantas, servido por este mismo origen. `localStorage` es POR ORIGEN
+     y sigue yendo primero: un navegador que acaba de usar la cartera manda sobre el fichero. -->
+<script src="data/plantas.js"></script>
 </head>
 <body>
 
@@ -2237,7 +2240,7 @@ function loadPlants(){
   /* `factiun_plantas` es donde el Panel publica la cartera (lo leen layout,
      sim-solar, el índice y el generador). El `factiun_cartera` de antes no lo
      escribía nadie. */
-  try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
+  try{PLANTS=JSON.parse((window.FACTIUN_CATALOGO_JSON&&window.FACTIUN_CATALOGO_JSON()||localStorage.getItem('factiun_plantas'))||'{}')||{};}catch(e){PLANTS={};}
   if(!Object.keys(PLANTS).length){
     try{var raw=localStorage.getItem('factiun_cartera');
       if(raw){var c=JSON.parse(raw);

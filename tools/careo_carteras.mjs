@@ -435,29 +435,51 @@ export function faseABinario(fase) {
 export function careoDeDatos(recsTec, recsSb, mapa = MAPA) {
   if (!Array.isArray(recsTec) || !recsTec.length) return null;
   if (!Array.isArray(recsSb) || !recsSb.length) return null;
-  const porTec = new Map();
-  const sinCodigoTec = [];
-  for (const r of recsTec) {
-    const k = clave(r.num);
-    if (k === null) sinCodigoTec.push(r.proyecto ?? '(sin proyecto)');
-    else porTec.set(k, r);
+  /* UN Nº CON VARIAS FILAS NO ES UN DUPLICADO QUE SE PUEDA TIRAR.
+   *
+   * La primera versión hacía `porSb.set(k, r)` en bucle, así que un código
+   * repetido se quedaba con la ÚLTIMA fila y las otras desaparecían sin
+   * ruido. Con los volcados de verdad eso pasó: el 24024 trae TRES filas en
+   * Supabase —«Alconadre · Sodeto», «· San Miguel» y «· Peralta de Alcofea»,
+   * con 19 campos y coordenadas propias cada una—. No son basura: son tres
+   * emplazamientos de un mismo proyecto. Y el careo las colapsó y comparó la
+   * planta contra una sola, que es de dónde salían seis «celdas con dato en la
+   * técnica y vacías en Supabase» que no existían.
+   *
+   * Un colapso silencioso de la clave es peor que un rojo: convierte un
+   * «no puedo comparar esto» en una afirmación falsa sobre los datos. Así que
+   * ahora se agrupan, se reportan, y esas plantas NO se carean celda a celda
+   * —no hay forma de saber contra cuál de las filas—. */
+  function agrupa(recs, campoClave) {
+    const por = new Map(), sinCodigo = [];
+    for (const r of recs) {
+      const k = clave(r[campoClave]);
+      if (k === null) { sinCodigo.push(r.proyecto ?? '(sin proyecto)'); continue; }
+      (por.get(k) ?? por.set(k, []).get(k)).push(r);
+    }
+    const repetidos = [...por.entries()].filter(([, l]) => l.length > 1)
+      .map(([code, l]) => ({ code, filas: l.length, proyectos: l.map((r) => r.proyecto ?? '') }));
+    return { por, sinCodigo, repetidos };
   }
-  const porSb = new Map();
-  const sinCodigoSb = [];
-  for (const r of recsSb) {
-    const k = clave(r.code);
-    if (k === null) sinCodigoSb.push(r.proyecto ?? '(sin proyecto)');
-    else porSb.set(k, r);
-  }
+  const gT = agrupa(recsTec, 'num'), gS = agrupa(recsSb, 'code');
+  const porTec = gT.por, porSb = gS.por;
+  const sinCodigoTec = gT.sinCodigo, sinCodigoSb = gS.sinCodigo;
+  const codigosRepetidos = { tecnica: gT.repetidos, supabase: gS.repetidos };
+  const repetidoEnAlguno = new Set([...gT.repetidos, ...gS.repetidos].map((x) => x.code));
+
   const soloTecnica = [...porTec.keys()].filter((k) => !porSb.has(k))
-    .map((k) => ({ code: k, proyecto: porTec.get(k).proyecto ?? '' }));
+    .map((k) => ({ code: k, proyecto: porTec.get(k)[0].proyecto ?? '' }));
   const soloSupabase = [...porSb.keys()].filter((k) => !porTec.has(k))
-    .map((k) => ({ code: k, proyecto: porSb.get(k).proyecto ?? '' }));
-  const enLasDos = [...porTec.keys()].filter((k) => porSb.has(k));
+    .map((k) => ({ code: k, proyecto: porSb.get(k)[0].proyecto ?? '' }));
+  /* las que están en las dos Y tienen una sola fila en cada lado: las únicas
+     que se pueden carear celda a celda sin inventarse contra cuál */
+  const enLasDos = [...porTec.keys()].filter((k) => porSb.has(k) && !repetidoEnAlguno.has(k));
+  const noCareables = [...porTec.keys()].filter((k) => porSb.has(k) && repetidoEnAlguno.has(k))
+    .map((k) => ({ code: k, proyecto: porTec.get(k)[0].proyecto ?? '' }));
 
   const discrepancias = [];
   for (const k of enLasDos) {
-    const a = porTec.get(k), b = porSb.get(k);
+    const a = porTec.get(k)[0], b = porSb.get(k)[0];
     for (const [ct, cs] of Object.entries(mapa)) {
       /* LAS CINCO FASES VAN POR OTRO CAMINO: tres estados contra dos. Se migra
          el lado de la técnica a su vocabulario de tres, se baja a sí/no para
@@ -486,6 +508,8 @@ export function careoDeDatos(recsTec, recsSb, mapa = MAPA) {
     }
   }
   return {
+    codigosRepetidos,
+    noCareables,
     plantasTecnica: porTec.size,
     plantasSupabase: porSb.size,
     enLasDos: enLasDos.length,
@@ -632,8 +656,27 @@ export function careoCompleto(ent, log = console.log) {
   const cd = careoDeDatos(recsT, vS.recs);
   log('\n═══ 2. PLANTAS ═══');
   log(`  técnica ${cd.plantasTecnica} · supabase ${cd.plantasSupabase} · en las dos ${cd.enLasDos}`);
-  if (cd.sinCodigoTec.length) { log(`  ROJO plantas sin Nº en la técnica (no se pueden carear): ${cd.sinCodigoTec.join(', ')}`); rc = 1; }
-  if (cd.sinCodigoSb.length) { log(`  ROJO plantas sin Nº en supabase (no se pueden carear): ${cd.sinCodigoSb.join(', ')}`); rc = 1; }
+  /* SIN Nº NO ES «SE PIERDE INFORMACIÓN», ES «NO PUEDO COMPARARLO». Son dos
+     cosas distintas y mezclarlas hace que el rojo deje de significar nada: una
+     planta sin código tiene sus datos enteros, lo que no tiene es con qué
+     emparejarla. Va a NO COMPROBADO, y se dice por su nombre. */
+  const sinNumero = cd.sinCodigoTec.length + cd.sinCodigoSb.length;
+  if (cd.sinCodigoTec.length) log(`  NO COMPROBADO plantas sin Nº en la técnica: ${cd.sinCodigoTec.join(', ')}`);
+  if (cd.sinCodigoSb.length) log(`  NO COMPROBADO plantas sin Nº en supabase: ${cd.sinCodigoSb.join(', ')}`);
+  /* UN Nº CON VARIAS FILAS TAMPOCO ES UN DUPLICADO. Puede ser un proyecto con
+     varios emplazamientos, y de hecho lo es: el 24024 son tres. Se dicen y no
+     se carean celda a celda, porque no hay forma de saber contra cuál. */
+  for (const lado of ['tecnica', 'supabase']) {
+    for (const r of cd.codigosRepetidos[lado]) {
+      log(`  NO COMPROBADO el Nº ${r.code} tiene ${r.filas} filas en ${lado}: ${r.proyectos.filter(Boolean).join(' · ')}`);
+      log('                 un Nº repetido puede ser un proyecto con varios emplazamientos,');
+      log('                 así que no se tira ninguna fila ni se carea la planta celda a');
+      log('                 celda: haría falta una clave que distinga el emplazamiento.');
+    }
+  }
+  if (cd.noCareables.length) {
+    log(`  ${cd.noCareables.length} plantas quedan sin carear por eso: ${cd.noCareables.map((p) => p.code).join(', ')}`);
+  }
   if (cd.soloTecnica.length) {
     log(`  ROJO ${cd.soloTecnica.length} plantas SÓLO en la técnica — se perderían al borrarla:`);
     for (const p of cd.soloTecnica) log(`        ${p.code}  ${p.proyecto}`);
@@ -675,9 +718,16 @@ export function careoCompleto(ent, log = console.log) {
   const soloEnTec = (vT || []).map((x) => x.valor).filter((v) => !(vSb || []).some((y) => y.valor.toLowerCase() === v.toLowerCase()));
   if (soloEnTec.length) { log(`  ROJO valores de control que sólo existen en la técnica: ${soloEnTec.join(', ')}`); rc = 1; }
 
-  log(rc === 0
-    ? '\nMIDE: borrar la cartera técnica no perdería ninguna planta ni ningún valor.'
-    : '\nROJO: hay información que sólo vive en la cartera técnica. Arriba está cuál.');
+  /* Y si ha habido algo que NO SE HA PODIDO carear, el veredicto no puede ser
+     un 0 limpio aunque todo lo demás cuadre: quedan plantas sin mirar. */
+  const incompleto = sinNumero > 0 || cd.noCareables.length > 0;
+  if (rc === 1) log('\nROJO: hay información que sólo vive en la cartera técnica. Arriba está cuál.');
+  else if (incompleto) {
+    log('\nNO COMPROBADO: lo careado cuadra, pero quedan plantas que no se han');
+    log('podido emparejar —sin Nº, o con un Nº que lleva varias filas—. Hasta');
+    log('resolver eso, «no se pierde nada» no está medido para todas.');
+    rc = 2;
+  } else log('\nMIDE: borrar la cartera técnica no perdería ninguna planta ni ningún valor.');
   return rc;
 }
 

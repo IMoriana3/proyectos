@@ -126,12 +126,31 @@ function seedDelFichero(html) {
   return JSON.parse(html.slice(j, fin + 1));
 }
 
-/* El mismo dato con los nombres de campo de Supabase. Re-claveado, no
-   inventado: ni un valor se toca. */
-function reClavea(recs, MAPA) {
+/* El mismo dato con los nombres de campo de Supabase.
+ *
+ * Re-claveado, y con UNA traducción: las cinco fases. La técnica las guarda en
+ * su vocabulario de tres —«Sin empezar», «En proceso», «Terminado»— y allí son
+ * «Sí»/«No»/«En proceso». Una fila con «Terminado» en `cold_comm` no existe en
+ * Supabase, así que fabricar el lado sintético sin traducir sería compararse
+ * contra algo que no se puede dar.
+ *
+ * La primera versión no traducía porque no hacía falta: el SEED del repositorio
+ * guardaba las fases en el formato VIEJO, booleanos, y un `true` sí vale en los
+ * dos lados. Al normalizar el SEED al formato de tres estados —que es el que
+ * `migrateFases` deja en cada carga— el atajo dejó de valer y el banco lo cantó
+ * en cuatro comprobaciones a la vez. */
+function aFaseSupabase(v) {
+  return v === 'Terminado' ? 'Sí' : v === 'En proceso' ? 'En proceso' : 'No';
+}
+/* El módulo se pasa por parámetro: se carga dentro de `main()` y aquí arriba
+   todavía no existe. */
+function reClavea(recs, M) {
   return recs.map((r) => {
     const o = {};
-    for (const [ct, cs] of Object.entries(MAPA)) if (r[ct] !== undefined) o[cs] = r[ct];
+    for (const [ct, cs] of Object.entries(M.MAPA)) {
+      if (r[ct] === undefined) continue;
+      o[cs] = M.CAMPOS_FASE.has(ct) ? aFaseSupabase(M.migraFase(r[ct])) : r[ct];
+    }
     return o;
   });
 }
@@ -202,7 +221,7 @@ async function main() {
   chk('la etiqueta «Sistema control» vuelve a `control`', etiq['Sistema control'], 'control');
   chk('la etiqueta «Nº» vuelve a `code`', etiq['Nº'], 'code');
 
-  const ladoSb = reClavea(seed, M.MAPA);
+  const ladoSb = reClavea(seed, M);
   const cd = M.careoDeDatos(seed, ladoSb);
   chk('mismo dato por los dos lados: 22 y 22', [cd.plantasTecnica, cd.plantasSupabase], [22, 22]);
   chk('las 22 están en las dos', cd.enLasDos, 22);
@@ -275,7 +294,12 @@ async function main() {
   chkQue('se leen los vocabularios de la técnica', vt && Object.keys(vt).length > 5);
   chkQue('se leen los vocabularios de supabase', vsb && Object.keys(vsb).length > 5);
   chk('CTRL de la técnica', vt.sist_control, ['Sunner', 'P4Q', 'TracknCO', 'AiTracker']);
-  chk('control de supabase', vsb.control, ['Sunner', 'P4Q']);
+  /* El 2026-10-22 este careo encontró que `TracknCO` y `AiTracker` sólo los
+     ofrecía la técnica, y se recuperaron en Supabase (`factiun-cartera@aeda009`)
+     ANTES de borrarla, que es para lo que existe esta herramienta. Desde
+     entonces los dos vocabularios coinciden, y eso es lo que se fija aquí. */
+  chk('control de supabase, con los dos recuperados de la técnica',
+      vsb.control, ['Sunner', 'P4Q', 'TracknCO', 'AiTracker']);
   /* ningún comentario del VOCABULARIO se cuela como campo */
   chkQue('los campos de supabase son todos claves reales', Object.keys(vsb).every((k) => esqS.includes(k)));
   /* ESTA DEFENSA NO LA EJERCITA EL FICHERO REAL: hoy ningún comentario del
@@ -292,13 +316,22 @@ async function main() {
 
   const cv = M.careoDeVocabularios(vt, vsb);
   const porCampo = Object.fromEntries(cv.filas.map((f) => [f.campo, f]));
-  chk('sist_control: TracknCO y AiTracker sólo los ofrece la técnica',
-      porCampo.sist_control.soloTecnica, ['TracknCO', 'AiTracker']);
-  chk('sist_control: supabase no ofrece ninguno que la técnica no tenga',
-      porCampo.sist_control.soloSupabase, []);
-  chk('panel_fv: «NA» sólo en la técnica', porCampo.panel_fv.soloTecnica, ['NA']);
+  /* `cv.filas` sólo lleva los campos que DISCREPAN, así que un campo puede
+     desaparecer de ahí legítimamente —es lo que pasó con `sist_control` al
+     recuperar los dos controladores—. Leerlo a pelo reventaba el arnés con un
+     TypeError, y un arnés que revienta convierte un FAIL legible en NO
+     COMPROBADO: se pierde la causa justo cuando hace falta. */
+  const fila = (c) => porCampo[c] || { campo: c, soloTecnica: 'NO DISCREPA', soloSupabase: 'NO DISCREPA' };
+  /* Ya no hay diferencia que listar en `sist_control`: los dos ofrecen los
+     mismos cuatro desde `factiun-cartera@aeda009`. Se comprueba por las DOS
+     caras —que no esté entre los que discrepan, y que las dos listas sean
+     iguales—, porque cada una por separado pasaría también si el careo dejara
+     de mirar ese campo. */
+  chk('sist_control ya no discrepa', fila('sist_control').soloTecnica, 'NO DISCREPA');
+  chk('y es porque los dos ofrecen lo mismo', vt.sist_control, vsb.control);
+  chk('panel_fv: «NA» sólo en la técnica', fila('panel_fv').soloTecnica, ['NA']);
   chk('bateria_tcu: «NA» en la técnica, «8Ah» en supabase',
-      [porCampo.bateria_tcu.soloTecnica, porCampo.bateria_tcu.soloSupabase], [['NA'], ['8Ah']]);
+      [fila('bateria_tcu').soloTecnica, fila('bateria_tcu').soloSupabase], [['NA'], ['8Ah']]);
   chk('las cinco fases salen marcadas como fase',
       cv.filas.filter((f) => f.esFase).map((f) => f.campo).sort(),
       ['cold', 'escaneo', 'hot', 'offset', 'site']);
@@ -480,7 +513,15 @@ async function main() {
   await muerde('vacioEsIgual', (Mm) => {
     /* se le quita a supabase un dato que la técnica SÍ tiene: el careo bueno
        lo canta como «se perdería», el mutado se lo traga */
-    const campo = Object.keys(seed[0]).find((k) => k in M.MAPA && seed[0][k] !== '' && seed[0][k] != null);
+    /* EL CAMPO DE LA SONDA NO PUEDE SER UNA FASE. Las cinco fases van por su
+       propia rama en `careoDeDatos`, y esta mutación toca la genérica: si la
+       sonda cae en una de ellas, la mutación no muerde ahí y el banco la
+       declara viva sin que le falte nada. Pasó al normalizar el SEED a texto:
+       cambió qué campo salía primero y la mutación «sobrevivió» sin que el
+       careo hubiera cambiado. La sonda tiene que apuntar a la rama que la
+       mutación modifica. */
+    const campo = Object.keys(seed[0]).find((k) => k in M.MAPA && !M.CAMPOS_FASE.has(k)
+      && seed[0][k] !== '' && seed[0][k] != null);
     const sbMenos = ladoSb.map((r, i) => { if (i !== 0) return r; const o = { ...r }; delete o[M.MAPA[campo]]; return o; });
     return Mm.careoDeDatos(seed, sbMenos).discrepancias.length === 0;   // mutado: no ve nada
   });
