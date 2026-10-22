@@ -1,5 +1,8 @@
 /** Optional WeatherContract v2 quantile transport; no second forecast model. */
-import assert from "node:assert/strict";
+/* `assert` viene del portón: misma superficie, pero publica una línea `OK`
+   por comprobación. `tests/correr.sh` saca su veredicto de ese recuento, no
+   del código de salida, así que un banco que calla al pasar cuenta cero. */
+import {assert, veredicto} from "./porton.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
@@ -46,3 +49,5 @@ assert.equal(legacy.rows[0].wind_ms,0);
 const snapshot=WC.browserConsumerStamp(a,"example-reader");
 assert.equal(snapshot.forecast_quantiles_hash,a.forecast_quantiles.hash);
 console.log("PASS: WeatherContract v2 quantiles retained and hashed, missing != zero");
+
+veredicto();

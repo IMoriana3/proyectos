@@ -1004,6 +1004,29 @@ declare -A PISO=(
   [test_meteo_sensores_browser.js]=12
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
+  # ── LOS CUATRO DE WEATHERNEXT 3 ────────────────────────────────────────
+  # Entraron el 2026-10-19 con `a8855b5` SIN piso, y eso no dejó un arnés mal
+  # vigilado: dejó LA PUERTA ENTERA MUDA. El guard de arriba exige que la tabla
+  # nombre a todos y sale 1 en cuanto falta uno, así que desde ese commit
+  # `correr.sh` moría antes de correr un solo banco —el paso duraba menos de un
+  # segundo contra los ~19 minutos de una corrida real— y `arneses` llevaba
+  # siete corridas rojas en main con siete commits aterrizando sin que nada
+  # votara. Un piso que falta no es un hueco local: es el portón.
+  #
+  # Y no bastaba con apuntarlos: los cuatro usaban `node:assert`, que calla al
+  # pasar, así que publicaban CERO y cualquier piso los habría puesto rojos.
+  # Ahora pasan por `tests/porton.mjs`, que conserva la superficie de `assert`
+  # y publica una línea por comprobación.
+  #
+  # Los números son de una corrida medida, no transcritos, y los cuatro se han
+  # visto MORDER: `tools/muerde_bancos_meteo.sh` rompe a propósito el código
+  # que vigilan —la canonización de la hora de pasada, el valor absoluto del
+  # error medio, una hora de menos en la serie, la versión del contrato y un
+  # cuantil ausente pasado a 0— y los cinco destrozos salen rojos.
+  [test_meteo_forecast_cache.mjs]=20
+  [test_meteo_weathernext_comparison.mjs]=26
+  [test_meteo_weathernext_contract.mjs]=21
+  [test_meteo_weathernext_transport.mjs]=39
 )
 
 # ── EL PISO TIENE QUE CUBRIR A TODOS ─────────────────────────────────────
@@ -1071,6 +1094,13 @@ declare -A FUERA_DEL_PORTON=(
   [tools/test_cartera_dwg.mjs]="carea contra el DWG; necesita el repo cobertura-zigbee al lado"
   [tools/test_ancho.mjs]="medida de diseño; necesita playwright-core y páginas de otros repos"
   [tools/test_nitidez.mjs]="informe sin veredicto (sale 0 siempre); además clava la ruta del navegador de este contenedor"
+  # Entró el 2026-10-19 con #610 SIN declarar, y era el SEGUNDO guard que tenía
+  # la puerta parada: una vez resueltos los pisos de meteo, el bucle seguía sin
+  # arrancar por este. Sonda EXTERNA sin credenciales contra el sitio publicado
+  # —comprueba que Cloudflare Access no sirva nada a un anónimo—, así que
+  # necesita red y el despliegue ya hecho. La lanza .github/workflows/pages.yml,
+  # aparte del portón, igual que el cronómetro de abajo.
+  [tools/test_cloudflare_access.mjs]="sonda externa sin credenciales contra el sitio publicado: que Access no sirva nada a un anónimo. La lanza .github/workflows/pages.yml, aparte de la puerta"
   [tools/test_pages_cronometro.mjs]="juzga la página PUBLICADA, no el árbol: sondea Pages hasta 10 min a que sirva este fichero. Lo lanza .github/workflows/pages.yml, aparte de la puerta, porque esa espera no se le cobra a cada PR"
 )
 

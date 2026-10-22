@@ -1,5 +1,8 @@
 /** Time-aligned forecast source comparison; neither model is field truth. */
-import assert from "node:assert/strict";
+/* `assert` viene del portón: misma superficie, pero publica una línea `OK`
+   por comprobación. `tests/correr.sh` saca su veredicto de ese recuento, no
+   del código de salida, así que un banco que calla al pasar cuenta cero. */
+import {assert, veredicto} from "./porton.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
@@ -25,6 +28,24 @@ assert.equal(c.pairs[0].weathernext,5);
 assert.equal(c.pairs[0].openmeteo,4);
 assert.match(c.interpretation,/modelos/);
 assert.deepEqual(c.sources,["weathernext3","openmeteo"]);
+
+/* UN CASO CON UNA DIFERENCIA NEGATIVA, PORQUE SIN ÉL `mae` Y `bias` SON EL
+ * MISMO NÚMERO Y NINGUNA DE LAS DOS ASERCIONES DE ARRIBA LO NOTARÍA.
+ *
+ * En el caso de arriba las tres diferencias son +1, +3 y +1: todas positivas,
+ * así que el valor absoluto no hace nada y bias = mae = 5/3. MEDIDO: quitarle
+ * el `Math.abs` a `mae` en lib/meteo.js dejaba este banco EN VERDE. O sea que
+ * no distinguía el error medio del sesgo, que es justo lo que esas dos
+ * métricas existen para distinguir.
+ *
+ * Con +4 y -2 se separan: el sesgo se compensa a 1 y el error medio es 3. */
+const wx2=[{timestamp:utc(1),wind_ms:9},{timestamp:utc(2),wind_ms:3}];
+const om2=[{timestamp:utc(1),wind_ms:5},{timestamp:utc(2),wind_ms:5}];
+const d=W.compareForecastSources(wx2,om2,{field:"wind_ms",hours:72});
+assert.equal(d.overlapping_hours,2);
+assert.equal(d.bias,(4+(-2))/2);
+assert.equal(d.mae,(4+2)/2);
+assert.notEqual(d.bias,d.mae);
 const solar=W.compareForecastSources(wx,om,{field:"ghi_wm2",hours:360});
 assert.equal(solar.overlapping_hours,2);
 assert.equal(solar.pairs[0].weathernext,0);
@@ -45,3 +66,5 @@ assert.equal(long.overlapping_hours,360);
 assert.equal(long.mae,1);
 assert.equal(long.last_utc,utc(360));
 console.log("PASS: source comparison aligns UTC 1..360 hours, distinguishes missing/zero and reports unbiased model deltas");
+
+veredicto();
