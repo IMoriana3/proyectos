@@ -30,6 +30,31 @@ navegador. Ya está en Supabase, así que esa víctima está recuperada.
 | `25004` Benante | `anem_total` | `4` | el campo no viene en la fila |
 | `25004.2` Panbianco | `anem_total` | `6` | el campo no viene en la fila |
 
+### Por qué son sólo tres, que es lo que no cuadra a primera vista
+
+De las 21 plantas careadas por 51 campos —1071 celdas—:
+
+| | celdas | |
+|---|---|---|
+| dicen lo mismo | 570 · 53,2 % | |
+| no dicen nada ninguna de las dos | 321 · 30,0 % | vacías, o un «no» que es lo mismo |
+| sólo lo dice Supabase | 138 · 12,9 % | se **ganan** al quedarse con ella |
+| no coinciden | 39 · 3,6 % | hay que decidir |
+| **sólo lo dice la técnica** | **3 · 0,3 %** | lo único en riesgo |
+
+Más las **10 plantas que sólo existen en Supabase**, con sus datos enteros.
+
+La técnica *parece* tener mucho más: `garantia` rellena en 16 plantas y las cinco
+fases en unas 15 cada una. Pero esos valores son `false` y «Sin empezar», que
+significan lo mismo que vacío — no son información, son la ausencia de ella
+escrita. Donde la técnica dice algo de verdad (`true`, `Terminado`), Supabase
+dice lo mismo. Así que la técnica es **casi un subconjunto** de la otra.
+
+> Un recuento hecho con «la celda no está vacía» en vez de «la celda dice algo»
+> daba **94** celdas en riesgo en lugar de 3, contando cada `false` y cada «Sin
+> empezar» como un dato. El careo tenía razón y el recuento no: cuando un
+> recuento contradice al instrumento que valida, el sospechoso es el recuento.
+
 **Por qué se perderían:** no es que Supabase tenga otro valor — es que **no tiene
 el campo**. Y no lo ha perdido hace poco: el export de la propia cartera de
 Supabase del 9 de septiembre (`Gemelo-digital/datos/cartera_20260909.csv`) ya
@@ -87,7 +112,18 @@ cambiadas:   lat 31.533333333333    lon -8.7666666666667    -> cae en Marruecos
 
 Confirmado por el usuario. Hacen falta las dos cosas: el Nº y el intercambio.
 
-## Las fechas de PEM de Túnez: NO se puede decidir con los datos
+## Las fechas de PEM de Túnez: RESUELTO — manda Supabase
+
+**La PEM de Túnez duró 4 días** (confirmado por el usuario, 2026-10-22). O sea
+que el bueno es `2026-02-06` → `2026-02-10`, el de Supabase, y **la cartera
+técnica es la que tiene el día y el mes cambiados**. Como la cartera que se
+conserva es la de Supabase, aquí no hay nada que tocar: basta con no arrastrar
+la versión de la técnica.
+
+Se deja escrito debajo lo que se intentó para decidirlo con los datos y por qué
+no bastó, porque el próximo desacuerdo de fechas se va a parecer a éste.
+
+### Lo que NO sirvió para decidirlo
 
 ```
 inicio_pem    técnica 2026-06-02     Supabase 2026-02-06
