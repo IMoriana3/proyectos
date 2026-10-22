@@ -1092,6 +1092,7 @@ declare -A EXCLUIDOS=()
 # uno nuevo en silencio ni sobrevive una excusa al fichero que excusaba.
 declare -A FUERA_DEL_PORTON=(
   [tools/test_cartera_dwg.mjs]="carea contra el DWG; necesita el repo cobertura-zigbee al lado"
+  [tools/test_careo_carteras.js]="carea las DOS carteras de plantas —esta y la de Supabase— para no perder nada al quedarse con una; necesita el repo factiun-cartera al lado. Sin él sale 2, NO COMPROBADO, y lo dice en la primera línea"
   [tools/test_ancho.mjs]="medida de diseño; necesita playwright-core y páginas de otros repos"
   [tools/test_nitidez.mjs]="informe sin veredicto (sale 0 siempre); además clava la ruta del navegador de este contenedor"
   # Entró el 2026-10-19 con #610 SIN declarar, y era el SEGUNDO guard que tenía
