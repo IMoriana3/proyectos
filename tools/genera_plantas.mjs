@@ -167,6 +167,31 @@ export function construye(html) {
 
 /* ── el fichero ──────────────────────────────────────────────────────────── */
 
+const AYUDANTE = `
+/* EL AYUDANTE QUE LEEN LAS PÁGINAS.
+ *
+ * Devuelve el catálogo como CADENA JSON, no como objeto, para que la línea de
+ * cada página cambie lo mínimo: todas hacían
+ * \`JSON.parse(localStorage.getItem('factiun_plantas')||...)\` y ahora hacen
+ * \`JSON.parse((window.FACTIUN_CATALOGO_JSON&&window.FACTIUN_CATALOGO_JSON()||localStorage.getItem('factiun_plantas'))||...)\`.
+ * Una sustitución, idéntica en las cinco, y el resto de su flujo intacto.
+ *
+ * \`localStorage\` VA PRIMERO a propósito: un navegador que acaba de usar la
+ * cartera tiene datos más frescos que este fichero, y no se le va a servir algo
+ * más viejo de lo que ya tiene. Esto es la red de abajo, no el sustituto.
+ *
+ * Y si el fichero no llegó a cargar, el \`&&\` deja la expresión en el
+ * \`localStorage\` de siempre: las páginas se comportan como antes en vez de
+ * petar con un \`undefined is not a function\`. */
+window.FACTIUN_CATALOGO_JSON = function () {
+  try {
+    var s = localStorage.getItem('factiun_plantas');
+    if (s && s !== '{}' && s !== 'null') return s;
+  } catch (e) { /* localStorage puede estar bloqueado; se sigue al fichero */ }
+  try { return JSON.stringify(window.FACTIUN_PLANTAS || {}); } catch (e) { return null; }
+};
+`;
+
 const CONFIRMADO = process.env.FACTIUN_PAGES_ACCESS_CONFIRMED === '1';
 
 export function rinde(mapa, { confirmado = CONFIRMADO, cuando = null } = {}) {
@@ -199,6 +224,7 @@ export function rinde(mapa, { confirmado = CONFIRMADO, cuando = null } = {}) {
       '  * sin plantas— en vez de romperse. Degradar no es fallar. */',
       'window.FACTIUN_PLANTAS = {};',
       'window.FACTIUN_PLANTAS_SIN_CONFIRMAR = true;',
+      AYUDANTE,
       '',
     ]).join('\n');
   }
@@ -208,6 +234,7 @@ export function rinde(mapa, { confirmado = CONFIRMADO, cuando = null } = {}) {
   return cab.concat([
     `/* ${claves.length} plantas */`,
     'window.FACTIUN_PLANTAS = ' + JSON.stringify(ordenado, null, 1) + ';',
+    AYUDANTE,
     '',
   ]).join('\n');
 }
