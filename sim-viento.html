@@ -4838,15 +4838,55 @@ function parseCoords(t){
   return {lat:la,lon:lo};
 }
 
-/* La lista local: cartera primero (es del proyecto) y presets después. */
+/* El código que encabeza un preset —«23003 · El Burgo I (Zaragoza, ES)»— es el
+   Nº DE PROYECTO, que es justo lo que el catálogo de la cartera publica en
+   `nproy`. Por eso se pueden casar sin inventar nada. */
+function codigoPreset(n){
+  var m=/^\s*([0-9][0-9.]*)\s*·/.exec(String(n==null?'':n));
+  return m?m[1]:null;
+}
+
+/* La lista local: cartera primero (es del proyecto) y presets después.
+ *
+ * ═══ POR QUÉ SE FUNDEN, Y NO SE APILAN ═══
+ *
+ * Un preset y una planta de la cartera pueden ser EL MISMO SITIO, y cada uno
+ * trae lo que el otro no: el preset, una zona horaria IANA curada; la cartera,
+ * las coordenadas de verdad y los datos de planta. El catálogo publica 18
+ * campos y NINGUNO es la zona.
+ *
+ * Mientras la cartera sólo llegaba por `localStorage` —o sea, sólo si alguien
+ * había abierto `cartera-tabla.html` en ese navegador— esto no se veía: un
+ * navegador limpio encontraba el preset y su zona. Al servirse el catálogo como
+ * fichero, la entrada de la cartera pasó delante y la página cayó a DERIVAR la
+ * hora de la longitud. Medido el 2026-10-22: El Burgo I pasaba de
+ * «UTC+2 · Europe/Madrid» a «UTC+0 · derivada de la longitud». Dos horas de
+ * error en verano, en lo que se enseña y en lo que se teclea — y la física va
+ * en UTC, así que el número seguía bien y la LECTURA era falsa, que es el fallo
+ * que más cuesta ver.
+ *
+ * Fundidos, no se pierde ninguno de los dos: coordenadas y código de la
+ * cartera, zona del preset. Y la etiqueta se queda con el paréntesis del preset
+ * («Zaragoza, ES») para que lo que antes se encontraba tecleando «burgo
+ * zaragoza» se siga encontrando. */
 function sitiosLocales(){
-  var out=[];
+  var out=[], porCodigo={}, fundidos={};
+  PRESETS.forEach(function(p){ var c=codigoPreset(p.n); if(c)porCodigo[c]=p; });
   Object.keys(PLANTS).sort().forEach(function(c){
     var p=PLANTS[c];
     if(!p||p.lat==null||p.lon==null)return;
-    out.push({n:(p.nombre||'?')+' · '+c,lat:+p.lat,lon:+p.lon,src:'Cartera',cod:c,tz:p.tz||null});
+    var np=String(p.nproy==null?c:p.nproy);
+    var pre=porCodigo[np]||porCodigo[String(c)]||null;
+    if(pre)fundidos[pre.n]=true;
+    /* el Nº de proyecto sólo se escribe cuando DIFIERE del código de planta:
+       si no, saldría «Fayón · 24007 · 24007» */
+    var suf=pre?/\(([^)]*)\)\s*$/.exec(pre.n):null;
+    out.push({n:(p.nombre||'?')+' · '+c+(np!==String(c)?' · '+np:'')+(suf?' ('+suf[1]+')':''),
+              lat:+p.lat,lon:+p.lon,src:'Cartera',cod:c,
+              tz:p.tz||(pre?pre.tz:null)});
   });
   PRESETS.forEach(function(p){
+    if(fundidos[p.n])return;
     out.push({n:p.n,lat:p.lat,lon:p.lon,src:'Presets',tz:p.tz||null});
   });
   return out;

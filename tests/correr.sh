@@ -141,7 +141,12 @@ declare -A PISO=(
   # sujeta que las hincas no floten con la rejilla de cumbreras en fase par.
   # Mismo despiste que arriba, mismo commit.
   [test_comparador_3d.js]=285
-  [test_comparador_sitio.js]=36
+  # 36 -> 37 el 2026-10-22. Al servirse el catálogo como fichero, el primer
+  # «tunez» pasó a ser la PLANTA (Gabès) en vez del preset (centro del país, a
+  # ~190 km). El dato nuevo es el bueno, así que lo que se corrige es la
+  # expectativa; y se añade el camino del preset con uno que ninguna planta
+  # tapa, para que al crecer la cartera no deje de probarse en silencio.
+  [test_comparador_sitio.js]=37
   [test_ejecucion_traza.mjs]=61
   # La ficha de planta y el acceso al SCADA. El piso son las 30 MEDIDAS, y lo
   # que de verdad sujeta son dos: «una planta SIN COMENZAR no gana sala de
@@ -781,7 +786,12 @@ declare -A PISO=(
   # paso de una hora, 3 pasos sueltos contra 24.
   [test_viento_steppers.js]=17
   [test_viento_sello.js]=17
-  [test_viento_sitio.js]=52
+  # 52 -> 55 el 2026-10-22. Los tres que faltaban los encontró el mordedor, no
+  # yo: con 52 sobrevivían «casar sólo por cod» (San José tiene cod == nproy,
+  # así que no distingue), «no quitar el preset fundido» y «perder el
+  # paréntesis». O sea que la puerta no miraba el ÚNICO caso por el que existe:
+  # El Burgo I, planta 24002 y proyecto 23003.
+  [test_viento_sitio.js]=55
   # LA CONFIGURACIÓN DE LA PUERTA, que hasta hoy era prosa en
   # `docs/puertas-y-alcance.md` §5 bis — y ese apartado declaraba su propia
   # debilidad diciendo que leerla «pide una llamada autenticada de

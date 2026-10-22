@@ -181,6 +181,30 @@ check('lo que no es fecha se devuelve tal cual',
   const tzPe = (await page.$eval('#tzLbl', e => e.textContent)).trim();
   check('elegir Arequipa pone la zona del sitio (' + tzPe + ')',
         /UTC-5/.test(tzPe) && /America\/Lima/.test(tzPe));
+
+  /* ── EL CASO QUE MOTIVÓ FUNDIR CARTERA Y PRESET ───────────────────────────
+   * San José no basta para vigilar esto: su código de planta y su Nº de
+   * proyecto son el MISMO (24019), así que un emparejamiento que mirara sólo
+   * el código seguiría acertando. Se midió: ese mutante sobrevivía.
+   *
+   * El Burgo I es el único donde difieren —planta 24002, proyecto 23003—, y es
+   * justo donde se vio el fallo: al servirse el catálogo como fichero, su
+   * entrada tapó al preset `23003 · El Burgo I (Zaragoza, ES)` y la zona pasó
+   * de `Europe/Madrid` a derivarse de la longitud. Dos horas de error en verano
+   * en lo que se enseña y en lo que se teclea. */
+  await page.fill('#sitioQ', 'burgo');
+  await page.waitForSelector('#sitioRes .it', { timeout: 5000 });
+  await page.click('#sitioRes .it');
+  const tzEs = (await page.$eval('#tzLbl', e => e.textContent)).trim();
+  check('El Burgo I (planta 24002, proyecto 23003) conserva la zona del preset (' + tzEs + ')',
+        /Europe\/Madrid/.test(tzEs) && !/derivada/.test(tzEs));
+
+  /* Y las dos consecuencias de fundirlos, que también se midieron vivas: */
+  const burgos = await page.evaluate(() => filtraSitios(sitiosLocales(), 'burgo'));
+  check('el sitio fundido sale UNA vez, no dos (cartera + preset)',
+        burgos.length === 1, JSON.stringify(burgos.map(s => s.n)));
+  check('y sigue encontrándose por lo que decía el preset («burgo zaragoza»)',
+        (await page.evaluate(() => filtraSitios(sitiosLocales(), 'burgo zaragoza').length)) === 1);
   await page.fill('#sitioQ', '41.5763, -0.7981');
   await page.waitForSelector('#sitioRes .it', { timeout: 5000 });
   await page.click('#sitioRes .it');
