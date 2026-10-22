@@ -183,15 +183,18 @@ export function careoDeEsquema(tec, sb, mapa = MAPA) {
  * importante: qué OFRECE cada una, y por tanto qué se va a teclear mal o no se
  * va a teclear.
  *
- * ═══ LA EXCEPCIÓN QUE SÍ ES PÉRDIDA DE VERDAD ═══
+ * ═══ LA EXCEPCIÓN: NO ES PÉRDIDA, ES UN REQUISITO PREVIO ═══
  *
  * Las cinco fases PEM. En la técnica son TRES estados —`FASE=['Sin empezar',
  * 'En proceso','Terminado']`, y su comentario dice «antes checkbox sí/no», o sea
  * que el tercer estado se añadió a propósito. En la de Supabase son dos:
  * `["Sí","No"]`.
  *
- * Y aquí no basta con que el campo sea texto libre, porque hay código que CUENTA
- * sobre él: `pasosPEM()` clasifica «sí» -> ●, «no» -> ○ y CUALQUIER OTRA COSA ->
+ * Y aquí hay que tener cuidado con la palabra. NO se pierde nada: el campo de
+ * allí es un <input type="text"> con desplegable propio —no un <select>— y su
+ * única normalización es SI_VIEJO={"x":"Sí"}, que sólo reescribe la equis, así
+ * que «En proceso» se guarda tal cual hoy y sin tocar nada. Lo que falla es una
+ * función de DIBUJO, y eso tiene arreglo, no duelo: `pasosPEM()` clasifica «sí» -> ●, «no» -> ○ y CUALQUIER OTRA COSA ->
  * · , que su propio comentario define como VACÍO («que no es No»). Es decir: una
  * planta con `cold_comm = "En proceso"` se dibujaría como planta SIN DATO. No se
  * perdería el texto, se perdería su significado, que es peor: el checklist
@@ -564,17 +567,25 @@ export function careoCompleto(ent, log = console.log) {
     const pierden = fases.filter((f) => f.pierdeEstados);
     if (pierden.length) {
       const f0 = pierden[0];
-      log(`  ROJO las ${pierden.length} fases PEM (${pierden.map((f) => f.campo).join(', ')})`);
-      log(`       tienen ${f0.estadosTecnica} estados en la técnica y ${f0.estadosSupabase} en supabase.`);
-      log('       Sobra un estado y no tiene a dónde ir: «En proceso». El campo de');
-      log('       allí es texto libre y el texto se podría guardar, pero `pasosPEM()`');
-      log('       clasifica «sí»->● «no»->○ y CUALQUIER OTRA COSA->· , que su propio');
-      log('       comentario define como VACÍO «que no es No». O sea que una planta');
-      log('       a medias se dibujaría como planta SIN DATO: no se perdería el');
-      log('       texto, se perdería su significado, que es peor.');
-      log('       Se arregla en la otra cartera: un tercer valor en las cinco listas');
-      log('       y un caso más en `pasosPEM()`. Hasta entonces, borrar la técnica');
-      log('       sí pierde información.');
+      log(`  AVISO las ${pierden.length} fases PEM (${pierden.map((f) => f.campo).join(', ')})`);
+      log(`       ofrecen ${f0.estadosTecnica} estados en la técnica y ${f0.estadosSupabase} en supabase.`);
+      log('       NO ES UNA PÉRDIDA, y conviene no llamarlo así: el campo de allí es');
+      log('       un <input type="text"> con desplegable propio —no un <select>— y la');
+      log('       única normalización que tiene es SI_VIEJO={"x":"Sí"}, que sólo');
+      log('       reescribe la equis. O sea que «En proceso» SE GUARDA tal cual hoy,');
+      log('       sin tocar nada, y `opciones()` lo ofrecerá en todas las plantas en');
+      log('       cuanto esté guardado en una.');
+      log('       Lo que falla es UNA FUNCIÓN DE DIBUJO: `pasosPEM()` reparte en tres');
+      log('       cestas —«sí»->● «no»->○ y CUALQUIER OTRA COSA->· — y su propio');
+      log('       comentario define esa tercera como VACÍO «que no es No». Así que la');
+      log('       planta a medias se vería como planta SIN MEDIR y el checklist');
+      log('       contaría de menos. El dato está; la casilla miente.');
+      log('       Arreglo: una cesta más en `pasosPEM()` y «En proceso» en las cinco');
+      log('       listas para que el desplegable lo ofrezca de salida. No hacen falta');
+      log('       columnas nuevas: es un tercer VALOR de las cinco que ya hay, no');
+      log('       cinco pasos más.');
+      log('       Se marca en rojo porque es un requisito ANTES de borrar, no porque');
+      log('       se pierda nada.');
       rc = 1;
     } else if (fases.length) {
       log(`  las ${fases.length} fases PEM se llaman distinto en las dos, pero las dos`);
