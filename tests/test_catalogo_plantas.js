@@ -143,6 +143,43 @@ const DEMAS = [];
 for (const c of codigos) for (const f of Object.keys(mapa[c])) if (!ESPERADOS.includes(f)) DEMAS.push(`${c}.${f}`);
 chk('el catálogo no trae ningún campo fuera de los 18 declarados', [...new Set(DEMAS.map((x) => x.split('.')[1]))], []);
 
+/* ── 5. la mudanza de `publishSpecs()`: las dos tienen que decir lo mismo ──
+ *
+ * El generador ya NO recorta su lógica de `cartera-tabla.html`: la tiene
+ * propia, porque esa página se va a borrar y un generador que recorta del
+ * muerto se queda sin saber qué publicar.
+ *
+ * Mientras la técnica exista, la recortada sigue ahí COMO CONTROL y aquí se
+ * carean sobre el SEED de verdad. «Lo he copiado con cuidado» no es una
+ * comprobación: una coma de diferencia sólo sale con los datos reales, que son
+ * los que llevan `"24/27"` en `string`, el `26126.1` numérico y el `"26126.2"`
+ * en texto.
+ *
+ * El día que se borre la técnica, esta comprobación se borra con ella. Hasta
+ * entonces es la prueba de que el traslado no perdió nada. */
+/* el generador es un módulo ESM y este arnés es CommonJS, así que el careo se
+   pide por subproceso, igual que `--comprobar` unas líneas más arriba */
+let difs;
+try {
+  difs = JSON.parse(execFileSync('node', ['--input-type=module', '-e',
+    'import {readFileSync} from "node:fs";' +
+    'const m = await import("./tools/genera_plantas.mjs");' +
+    'process.stdout.write(JSON.stringify(m.careaPublicador(readFileSync("cartera-tabla.html","utf8"))));',
+  ], { cwd: RAIZ, encoding: 'utf8' }));
+} catch (e) {
+  difs = null;
+}
+if (difs === null) {
+  console.log('FAIL el careo de publishSpecs no se pudo hacer (no se recortó la técnica)');
+  fallos.push('careo de publishSpecs NO COMPROBADO');
+} else {
+  chk('la implementación propia y la de la técnica publican lo mismo',
+    difs.map((d) => `${d.planta}: ${d.tecnica} != ${d.propio}`), []);
+  /* y el careo tiene que estar mirando algo: cero plantas careadas sería un
+     verde vacío, que es el fallo que este repo persigue */
+  chkQue('el careo ha mirado las 22 plantas', codigos.length === Object.keys(mapa).length && codigos.length > 0);
+}
+
 console.log(`\n  ${ok} comprobaciones pasadas · ${codigos.length} plantas en el catálogo`);
 if (fallos.length) { console.log(`  ROJO ${fallos.length}: ${fallos.join(' · ')}`); process.exit(1); }
 console.log('  MIDE: el catálogo servido está al día y tiene la forma que leen las páginas.');

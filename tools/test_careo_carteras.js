@@ -294,7 +294,12 @@ async function main() {
   chkQue('se leen los vocabularios de la técnica', vt && Object.keys(vt).length > 5);
   chkQue('se leen los vocabularios de supabase', vsb && Object.keys(vsb).length > 5);
   chk('CTRL de la técnica', vt.sist_control, ['Sunner', 'P4Q', 'TracknCO', 'AiTracker']);
-  chk('control de supabase', vsb.control, ['Sunner', 'P4Q']);
+  /* El 2026-10-22 este careo encontró que `TracknCO` y `AiTracker` sólo los
+     ofrecía la técnica, y se recuperaron en Supabase (`factiun-cartera@aeda009`)
+     ANTES de borrarla, que es para lo que existe esta herramienta. Desde
+     entonces los dos vocabularios coinciden, y eso es lo que se fija aquí. */
+  chk('control de supabase, con los dos recuperados de la técnica',
+      vsb.control, ['Sunner', 'P4Q', 'TracknCO', 'AiTracker']);
   /* ningún comentario del VOCABULARIO se cuela como campo */
   chkQue('los campos de supabase son todos claves reales', Object.keys(vsb).every((k) => esqS.includes(k)));
   /* ESTA DEFENSA NO LA EJERCITA EL FICHERO REAL: hoy ningún comentario del
@@ -311,13 +316,22 @@ async function main() {
 
   const cv = M.careoDeVocabularios(vt, vsb);
   const porCampo = Object.fromEntries(cv.filas.map((f) => [f.campo, f]));
-  chk('sist_control: TracknCO y AiTracker sólo los ofrece la técnica',
-      porCampo.sist_control.soloTecnica, ['TracknCO', 'AiTracker']);
-  chk('sist_control: supabase no ofrece ninguno que la técnica no tenga',
-      porCampo.sist_control.soloSupabase, []);
-  chk('panel_fv: «NA» sólo en la técnica', porCampo.panel_fv.soloTecnica, ['NA']);
+  /* `cv.filas` sólo lleva los campos que DISCREPAN, así que un campo puede
+     desaparecer de ahí legítimamente —es lo que pasó con `sist_control` al
+     recuperar los dos controladores—. Leerlo a pelo reventaba el arnés con un
+     TypeError, y un arnés que revienta convierte un FAIL legible en NO
+     COMPROBADO: se pierde la causa justo cuando hace falta. */
+  const fila = (c) => porCampo[c] || { campo: c, soloTecnica: 'NO DISCREPA', soloSupabase: 'NO DISCREPA' };
+  /* Ya no hay diferencia que listar en `sist_control`: los dos ofrecen los
+     mismos cuatro desde `factiun-cartera@aeda009`. Se comprueba por las DOS
+     caras —que no esté entre los que discrepan, y que las dos listas sean
+     iguales—, porque cada una por separado pasaría también si el careo dejara
+     de mirar ese campo. */
+  chk('sist_control ya no discrepa', fila('sist_control').soloTecnica, 'NO DISCREPA');
+  chk('y es porque los dos ofrecen lo mismo', vt.sist_control, vsb.control);
+  chk('panel_fv: «NA» sólo en la técnica', fila('panel_fv').soloTecnica, ['NA']);
   chk('bateria_tcu: «NA» en la técnica, «8Ah» en supabase',
-      [porCampo.bateria_tcu.soloTecnica, porCampo.bateria_tcu.soloSupabase], [['NA'], ['8Ah']]);
+      [fila('bateria_tcu').soloTecnica, fila('bateria_tcu').soloSupabase], [['NA'], ['8Ah']]);
   chk('las cinco fases salen marcadas como fase',
       cv.filas.filter((f) => f.esFase).map((f) => f.campo).sort(),
       ['cold', 'escaneo', 'hot', 'offset', 'site']);

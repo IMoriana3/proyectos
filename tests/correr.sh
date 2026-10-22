@@ -1002,13 +1002,17 @@ declare -A PISO=(
   # Pantalla real en Chromium con autenticación y datos SUPABASE de prueba.
   # 12 controles: acceso, HSU, WFU raw, coherencia, privacidad y cierre.
   [test_meteo_sensores_browser.js]=12
-  # El catálogo de plantas servido como fichero. 12 comprobaciones medidas.
+  # El catálogo de plantas servido como fichero. 14 comprobaciones medidas.
   # Vigila el modo de fallo propio de un fichero generado: QUEDARSE VIEJO. Si la
   # cartera cambia y nadie regenera, las páginas sirven el catálogo de otro día y
   # no se nota mirándolas —enseñan plantas, sólo que las de antes—, que es peor
   # que el selector vacío porque el vacío se ve. Comparado con el generador, no
   # con una copia de su lógica. Probado en rojo en seis sentidos.
-  [test_catalogo_plantas.js]=12
+  # Desde el 2026-10-22 carea además las DOS implementaciones de `publishSpecs`:
+  # la propia del generador y la que aún se recorta de la técnica. Es la prueba
+  # de que mudar esa lógica no perdió nada, y se borra el día que se borre la
+  # técnica. Probado en rojo en cinco sentidos.
+  [test_catalogo_plantas.js]=14
   # Las SEIS páginas enganchadas a ese fichero. 15 comprobaciones medidas.
   # Hermano del de arriba y distinto: aquél vigila que el fichero no se quede
   # viejo, éste que alguien lo LEA. Hoy las seis funcionan por una razón que va

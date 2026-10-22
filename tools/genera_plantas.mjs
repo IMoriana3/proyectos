@@ -125,8 +125,83 @@ export function recortaFuncion(html, nombre) {
   return null;
 }
 
-/* `publishSpecs()` y sus tres ayudantes, tal cual están en la página. Si allí
-   cambia qué campos se publican, aquí cambia sin tocar nada. */
+/* ── QUIÉN DEFINE EL CATÁLOGO: AHORA ESTE FICHERO ────────────────────────────
+ *
+ * Hasta el 2026-10-22 esto se recortaba de `cartera-tabla.html` con
+ * `recortaPublicador()`, y era lo correcto MIENTRAS la técnica fuera la dueña:
+ * una sola definición, y si allí cambiaban los campos, aquí cambiaban solos.
+ *
+ * Pero la decisión es dejar UNA sola cartera, la de Supabase, y borrar la
+ * técnica. Un generador que recorta su propia lógica del fichero que va a
+ * desaparecer no se puede quedar así: el día del borrado dejaría de saber qué
+ * publicar. Así que la definición se muda aquí, que es donde va a vivir.
+ *
+ * LA MUDANZA NO SE DA POR BUENA SOLA. Mientras la técnica exista, la otra
+ * implementación sigue recortándose y `careaPublicador()` las compara sobre el
+ * SEED de verdad: si difieren en una sola celda, la puerta canta. Copiar código
+ * de un sitio a otro es justo donde se cuelan las diferencias de una coma, y
+ * «lo he copiado con cuidado» no es una comprobación.
+ *
+ * El día que se borre `cartera-tabla.html`, se van con ella `recortaFuncion`,
+ * `recortaPublicador` y el careo. Lo que queda es esto. */
+
+export const NPROY = { '24002': '23003' };
+
+export function firstInt(v) {
+  const m = String(v == null ? '' : v).match(/\d+/);
+  return m ? parseInt(m[0], 10) : null;
+}
+
+export function num(v) {
+  const n = parseFloat(String(v == null ? '' : v).replace(',', '.'));
+  return isFinite(n) ? n : 0;
+}
+
+/* LOS 18 CAMPOS DEL CATÁLOGO. Transcrito de `publishSpecs()` de la técnica, con
+   sus rarezas intactas porque son deliberadas:
+     · `cod` va TAL CUAL —número o cadena—, que es como distingue `26126.1` de
+       `"26126.2"`: los tres códigos repetidos de la cartera son emplazamientos
+       distintos y colapsarlos sería mentir sobre los datos;
+     · `mods` sale de `firstInt(r.string)`, porque ahí hay cosas como `"24/27"`
+       o `"42/14"` y lo que se publica es el primer entero;
+     · `lat`/`lon`/`wmod` distinguen VACÍO (null) de cero, y `pac`/`pdc` no: un
+       cero en potencia es un dato —Páramo está a 0— y un `lat` vacío no lo es;
+     · `pac`/`pdc` se publican desde el 2026-10: antes no, y por eso ninguna
+       otra página podía decir la potencia de una planta aunque la cartera la
+       tuviera. */
+export function publicaSpecs(datos) {
+  const map = {};
+  for (const r of datos) {
+    const cod = r.num;
+    if (cod == null || String(cod).trim() === '') continue;
+    map[String(cod)] = {
+      cod: cod,
+      nproy: (NPROY[String(cod)] || String(cod)),
+      nombre: r.proyecto || '',
+      mods: firstInt(r.string),
+      pitch: (r.pitch == null ? '' : String(r.pitch)),
+      lat: (r.lat === '' || r.lat == null) ? null : num(r.lat),
+      lon: (r.lon === '' || r.lon == null) ? null : num(r.lon),
+      wmod: (r.wmod === '' || r.wmod == null) ? null : num(r.wmod),
+      pac: num(r.pac),
+      pdc: num(r.pdc),
+      trk_total: num(r.trk_total),
+      trk_bi: num(r.trk_bi),
+      trk_mono: num(r.trk_mono),
+      cantidad: num(r.cantidad),
+      ncu_eth: num(r.ncu_eth),
+      ncu_fo: num(r.ncu_fo),
+      estado_pem: r.estado_pem || '',
+      pais: r.pais || '',
+    };
+  }
+  return map;
+}
+
+/* ── EL CONTROL, QUE VIVE LO QUE VIVA LA TÉCNICA ─────────────────────────────
+ *
+ * `publishSpecs()` y sus tres ayudantes, tal cual están en la página. Ya no se
+ * usa para generar: se usa para CAREAR contra `publicaSpecs()` de arriba. */
 export function recortaPublicador(html) {
   const trozos = [];
   for (const nombre of ['firstInt', 'num', 'publishSpecs']) {
@@ -147,22 +222,49 @@ export function recortaPublicador(html) {
   } catch { return null; }
 }
 
+/* CAREO DE LAS DOS IMPLEMENTACIONES, sobre el SEED de verdad y no sobre un
+   ejemplo: una diferencia de una coma sólo sale con los datos reales, que son
+   los que llevan `"24/27"`, el `26126.1` numérico y el `"26126.2"` en texto.
+   Devuelve la lista de diferencias; vacía es que la mudanza no perdió nada.
+   `null` es NO COMPROBADO —no se pudo recortar la técnica—, que no es lo
+   mismo que «iguales» y no se cuenta como verde. */
+export function careaPublicador(html) {
+  const seed = recortaSeed(html);
+  const extraido = recortaPublicador(html);
+  if (!seed || !extraido) return null;
+  let deLaTecnica;
+  try { deLaTecnica = extraido(migraFasesDelHtml(html, seed)); } catch { return null; }
+  const propio = publicaSpecs(migraFasesDelHtml(html, seed));
+  const difs = [];
+  const claves = new Set([...Object.keys(deLaTecnica), ...Object.keys(propio)]);
+  for (const k of claves) {
+    const a = JSON.stringify(deLaTecnica[k]), b = JSON.stringify(propio[k]);
+    if (a !== b) difs.push({ planta: k, tecnica: a, propio: b });
+  }
+  return difs;
+}
+
+/* Las fases se migran igual que al cargar la página, para que lo que se carea
+   —y lo que se genera— sea lo que publicaría la aplicación y no el literal en
+   bruto. Si no se puede migrar se usa el literal: el catálogo no mira las
+   fases, así que no cambia el resultado. */
+function migraFasesDelHtml(html, seed) {
+  const mig = html.match(/function migrateFases\(a\)\{[\s\S]*?return a;\}/);
+  if (!mig) return seed;
+  try {
+    const FASE = new Function('return ' + html.match(/FASE=(\[[^\]]*\])/)[1])();
+    const FKEYS = new Function('return ' + html.match(/const FKEYS=(\[[^\]]*\])/)[1])();
+    return new Function('FASE', 'FKEYS', 'a', mig[0] + '\nreturn migrateFases(a);')(FASE, FKEYS, seed);
+  } catch { return seed; }
+}
+
 export function construye(html) {
   const seed = recortaSeed(html);
-  const pub = recortaPublicador(html);
-  if (!seed || !pub) return null;
-  /* las fases se migran igual que al cargar la página, para que el catálogo sea
-     el que publicaría la aplicación y no el del literal en bruto */
-  const mig = html.match(/function migrateFases\(a\)\{[\s\S]*?return a;\}/);
-  let datos = seed;
-  if (mig) {
-    try {
-      const FASE = new Function('return ' + html.match(/FASE=(\[[^\]]*\])/)[1])();
-      const FKEYS = new Function('return ' + html.match(/const FKEYS=(\[[^\]]*\])/)[1])();
-      datos = new Function('FASE', 'FKEYS', 'a', mig[0] + '\nreturn migrateFases(a);')(FASE, FKEYS, seed);
-    } catch { /* si no se puede migrar, se usa el literal: el catálogo no mira las fases */ }
-  }
-  try { return pub(datos); } catch { return null; }
+  if (!seed) return null;
+  /* Genera con la implementación PROPIA, no con la recortada: ésta es la que
+     va a sobrevivir al borrado de la técnica. La recortada sigue existiendo
+     como control, y `careaPublicador()` prueba que dicen lo mismo. */
+  try { return publicaSpecs(migraFasesDelHtml(html, seed)); } catch { return null; }
 }
 
 /* ── el fichero ──────────────────────────────────────────────────────────── */
