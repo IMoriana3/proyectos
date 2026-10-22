@@ -1072,7 +1072,6 @@ declare -A FUERA_DEL_PORTON=(
   [tools/test_careo_carteras.js]="carea las DOS carteras de plantas —esta y la de Supabase— para no perder nada al quedarse con una; necesita el repo factiun-cartera al lado. Sin él sale 2, NO COMPROBADO, y lo dice en la primera línea"
   [tools/test_ancho.mjs]="medida de diseño; necesita playwright-core y páginas de otros repos"
   [tools/test_nitidez.mjs]="informe sin veredicto (sale 0 siempre); además clava la ruta del navegador de este contenedor"
-  [tools/test_cloudflare_access.mjs]="sonda EXTERNA sin credenciales contra el sitio publicado: comprueba que Cloudflare Access no sirva nada a un anónimo. Lo lanza .github/workflows/pages.yml, aparte de la puerta, porque necesita red y el despliegue ya hecho"
   [tools/test_pages_cronometro.mjs]="juzga la página PUBLICADA, no el árbol: sondea Pages hasta 10 min a que sirva este fichero. Lo lanza .github/workflows/pages.yml, aparte de la puerta, porque esa espera no se le cobra a cada PR"
 )
 
