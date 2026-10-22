@@ -343,49 +343,83 @@ async function main() {
   /* ── 2 ter. LOS TRES VEREDICTOS DEL INFORME ────────────────────────────
    * Incluido el VERDE. Un verde que nunca se ha visto salir no está
    * comprobado: podría ser inalcanzable y el banco seguiría en verde, porque
-   * nunca pide el verde. Y resulta que HOY es inalcanzable con los dos
-   * ficheros de verdad, porque las fases PEM pierden un estado — así que el
-   * verde se prueba contra una copia del fichero de Supabase con un tercer
-   * estado en las cinco listas, que es como quedaría el día que se arregle. */
+   * nunca pide el verde.
+   *
+   * ═══ ESTE BLOQUE SE ESCRIBIÓ AL REVÉS Y HUBO QUE DARLE LA VUELTA ═══
+   *
+   * La primera versión decía: «el verde HOY es inalcanzable con los dos
+   * ficheros de verdad, porque las fases PEM pierden un estado», y probaba el
+   * verde contra una copia del fichero de Supabase con el tercer estado
+   * añadido —«como quedaría el día que se arregle»—.
+   *
+   * Ese día llegó el mismo día. Se arregló en `factiun-cartera`
+   * (`arreglo/checklist-pem-tercer-estado`): las cinco listas llevan ya los
+   * tres estados y `pasosPEM()` tiene su cuarta cesta. Así que la copia
+   * «arreglada» pasó a ser idéntica al original y la comprobación de que eran
+   * distintas se puso ROJA — que es exactamente lo que tenía que pasar.
+   *
+   * Es la lección de siempre: al cerrar un hueco, lo primero es buscar todo lo
+   * que decía que estaba abierto. Aquí lo decían tres comprobaciones y un
+   * fixture, y el banco las cantó en el acto.
+   *
+   * Lo que se da la vuelta: el fixture ahora deriva la versión ROTA del
+   * fichero bueno, no la buena del roto. Hace falta que siga existiendo,
+   * porque si no el camino ROJO se quedaría sin probar justo por haberlo
+   * arreglado en producción. */
   const callado = () => {};
   const volcadoTec = 'const SEED = ' + JSON.stringify(seed) + ';\n';
   const volcadoSb = aCsv(ladoSb, etiquetaDe, cols);
 
-  chk('rojo: con los ficheros de verdad y sin volcados -> 1',
-      M.careoCompleto({ htmlTecnica: htmlTec, htmlSupabase: htmlSb, volcadoTecnica: null, volcadoSupabase: null }, callado), 1);
-  chk('rojo: con los ficheros de verdad y los dos volcados -> 1',
-      M.careoCompleto({ htmlTecnica: htmlTec, htmlSupabase: htmlSb, volcadoTecnica: volcadoTec, volcadoSupabase: volcadoSb }, callado), 1);
+  /* EL ESTADO BUENO, con los dos ficheros tal cual están. Sin volcados sale 2
+     —NO COMPROBADO— porque el careo de plantas no se puede hacer sin ellos, y
+     eso NO es un pase: es «falta la mitad». Con volcados que coinciden, 0. */
+  chk('con los ficheros de verdad y sin volcados -> 2, no comprobado',
+      M.careoCompleto({ htmlTecnica: htmlTec, htmlSupabase: htmlSb, volcadoTecnica: null, volcadoSupabase: null }, callado), 2);
+  chk('VERDE: con los ficheros de verdad y los dos volcados coincidiendo -> 0',
+      M.careoCompleto({ htmlTecnica: htmlTec, htmlSupabase: htmlSb, volcadoTecnica: volcadoTec, volcadoSupabase: volcadoSb }, callado), 0);
   chk('no comprobado: html de supabase pelado -> 2',
       M.careoCompleto({ htmlTecnica: htmlTec, htmlSupabase: '<html></html>', volcadoTecnica: volcadoTec, volcadoSupabase: volcadoSb }, callado), 2);
   chk('no comprobado: html de la técnica pelado -> 2',
       M.careoCompleto({ htmlTecnica: '<html></html>', htmlSupabase: htmlSb, volcadoTecnica: volcadoTec, volcadoSupabase: volcadoSb }, callado), 2);
 
-  /* el fichero de Supabase con el tercer estado, que es el único cambio que
-     hace falta para que el careo pueda dar verde */
-  const htmlSbArreglado = htmlSb.replace(
-    'cold_comm:["Sí","No"],site:["Sí","No"],escaneo:["Sí","No"],offset_col:["Sí","No"],\n  hot_comm:["Sí","No"],',
-    'cold_comm:["Sí","En proceso","No"],site:["Sí","En proceso","No"],escaneo:["Sí","En proceso","No"],offset_col:["Sí","En proceso","No"],\n  hot_comm:["Sí","En proceso","No"],');
-  chkQue('la copia arreglada es distinta del original', htmlSbArreglado !== htmlSb);
-  const cvArr = M.careoDeVocabularios(M.vocabulariosTecnica(htmlTec), M.vocabulariosSupabase(htmlSbArreglado));
-  chk('con el tercer estado, ninguna fase pierde estados',
-      cvArr.filas.filter((f) => f.esFase && f.pierdeEstados), []);
-  chk('VERDE: fases arregladas y los dos volcados coincidiendo -> 0',
-      M.careoCompleto({ htmlTecnica: htmlTec, htmlSupabase: htmlSbArreglado, volcadoTecnica: volcadoTec, volcadoSupabase: volcadoSb }, callado), 0);
+  /* Y QUE EL ARREGLO SIGUE PUESTO. Si alguien revierte las cinco listas de
+     `factiun-cartera`, esto se pone rojo: es el guard de que el hueco no se
+     reabra sin que nadie se entere. */
+  const cvReal = M.careoDeVocabularios(M.vocabulariosTecnica(htmlTec), M.vocabulariosSupabase(htmlSb));
+  chk('las cinco fases ya NO pierden estados en el fichero de verdad',
+      cvReal.filas.filter((f) => f.esFase && f.pierdeEstados), []);
+  chk('y las dos distinguen los mismos tres estados',
+      [...new Set(cvReal.filas.filter((f) => f.esFase).map((f) => f.estadosSupabase))], [3]);
+
+  /* EL FICHERO ROTO, derivado del bueno. Al revés que antes. */
+  const htmlSbRoto = htmlSb.replace(/(cold_comm|site|escaneo|offset_col|hot_comm):\["Sí","En proceso","No"\]/g,
+    (_, c) => `${c}:["Sí","No"]`);
+  chkQue('la copia rota es distinta del original', htmlSbRoto !== htmlSb);
+  const cvRoto = M.careoDeVocabularios(M.vocabulariosTecnica(htmlTec), M.vocabulariosSupabase(htmlSbRoto));
+  chk('sin el tercer estado, las cinco fases pierden estados',
+      cvRoto.filas.filter((f) => f.esFase && f.pierdeEstados).map((f) => f.campo).sort(),
+      ['cold', 'escaneo', 'hot', 'offset', 'site']);
+  chk('ROJO: con las fases rotas, aunque los volcados coincidan -> 1',
+      M.careoCompleto({ htmlTecnica: htmlTec, htmlSupabase: htmlSbRoto, volcadoTecnica: volcadoTec, volcadoSupabase: volcadoSb }, callado), 1);
 
   /* y el verde tiene que dejar de serlo en cuanto falte UN dato: si no, el 0
      no afirma nada */
   const sinUnaPlanta = 'const SEED = ' + JSON.stringify(seed.slice(0, -1)) + ';\n';
   chk('quitar una planta del lado de supabase rompe el verde',
-      M.careoCompleto({ htmlTecnica: htmlTec, htmlSupabase: htmlSbArreglado, volcadoTecnica: volcadoTec,
+      M.careoCompleto({ htmlTecnica: htmlTec, htmlSupabase: htmlSb, volcadoTecnica: volcadoTec,
                         volcadoSupabase: aCsv(ladoSb.slice(0, -1), etiquetaDe, cols) }, callado), 1);
   chk('quitar una planta del lado de la técnica NO rompe el verde (se gana, no se pierde)',
-      M.careoCompleto({ htmlTecnica: htmlTec, htmlSupabase: htmlSbArreglado, volcadoTecnica: sinUnaPlanta,
+      M.careoCompleto({ htmlTecnica: htmlTec, htmlSupabase: htmlSb, volcadoTecnica: sinUnaPlanta,
                         volcadoSupabase: volcadoSb }, callado), 0);
   const unaEnProceso = 'const SEED = ' + JSON.stringify(tecEnProceso) + ';\n';
-  /* y sigue rompiéndolo aunque la LISTA esté arreglada: el aviso es
-     conservador a propósito, porque arreglar la lista no arregla `pasosPEM()` */
-  chk('una fase «En proceso» rompe el verde aun con la lista arreglada',
-      M.careoCompleto({ htmlTecnica: htmlTec, htmlSupabase: htmlSbArreglado, volcadoTecnica: unaEnProceso,
+  /* Una fase «En proceso» contra un «No» sigue rompiendo el verde, y ahora por
+     el motivo bueno: no es que la otra cartera no sepa expresarlo —ya sabe—,
+     es que los dos lados DISCREPAN sobre esa planta, y eso hay que decidirlo.
+     El aviso sigue siendo conservador a propósito: la herramienta no puede
+     comprobar desde aquí si `pasosPEM()` tiene su cuarta cesta, porque eso es
+     código y no vocabulario. Equivocarse hacia «revisa» no cuesta datos. */
+  chk('una fase «En proceso» contra un «No» rompe el verde',
+      M.careoCompleto({ htmlTecnica: htmlTec, htmlSupabase: htmlSb, volcadoTecnica: unaEnProceso,
                         volcadoSupabase: aCsv(sbNo, etiquetaDe, cols) }, callado), 1);
 
   /* ── 3. LAS MUTACIONES ──────────────────────────────────────────────────
