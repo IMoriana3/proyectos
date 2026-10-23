@@ -740,6 +740,7 @@ function HUELLA(pl){
 
 <script>
 const PICTOS = {
+  "Atlas FACTIUN · Plantas FV": '<ellipse class="a" cx="32" cy="20" rx="19" ry="16"/><path d="M13 20h38M32 4v32M22 7c7 8 7 18 0 26M42 7c-7 8-7 18 0 26"/><circle class="af" cx="44" cy="12" r="3"/>',
   "Análisis meteorológico": '<circle class="a" cx="17" cy="11" r="5"/><path class="a" d="M17 3v3M17 16v3M9 11H6M28 11h-3M11.3 5.3l2.1 2.1M22.7 5.3l-2.1 2.1"/><path d="M17 24h28c4 0 7-2.7 7-6.1s-2.8-6-6.2-6.1C44.2 7.8 40.4 5 36 5c-5.5 0-10 3.8-11 8.9-4.2.4-7.4 3-8 6.6"/><path d="M6 29h17c3 0 4.5-1.2 4.5-3s-1.4-3-3.5-3M6 34h22"/><path class="a" d="M34 35l5-5 5 2 6-7 8 3"/><circle class="af" cx="39" cy="30" r="1.6"/><circle class="af" cx="50" cy="25" r="1.6"/><path d="M33 36h27"/>',
   "Núcleo de cálculo SolarGPT": '<circle class="a" cx="32" cy="20" r="6"/><circle class="af" cx="32" cy="20" r="2"/><path d="M26 20H12M38 20h14M32 14V5M32 26v9"/><rect x="5" y="16" width="7" height="8"/><rect x="52" y="16" width="7" height="8"/><rect x="28" y="1" width="8" height="4"/><rect x="28" y="35" width="8" height="4"/>',
   "Careo SolarGPT ↔ PVSyst": '<path d="M6 31C14 10 24 8 32 18s18 14 26 2" stroke-dasharray="3 3"/><path class="a" d="M6 33C14 12 24 10 32 20s18 13 26 1"/>',
@@ -783,6 +784,34 @@ function PICTO(p){
    PROYECTOS  —  edita SOLO este array para mantener el panel al día.
    ===================================================================== */
 const PROJECTS = [
+  {
+    name: "Atlas FACTIUN · Plantas FV",
+    status: "live",
+    objetivo: "Explora plantas FV sobre suelo en globo y satélite; localiza fases y corrige coordenadas guardándolas en Notion.",
+    stack: "Globo 3D · imágenes satélite · Cloudflare Pages + Access · API Notion · catálogo Notion/GEM",
+    url: "https://maps-9rd.pages.dev",
+    repo: "",
+    updated: "2026-10-23",
+    version: "V9 operativa · V10 pendiente",
+    docId: "atlas-factiun",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Abre el atlas con Cloudflare Access: solo pueden editar las cuentas expresamente autorizadas.",
+      "Busca por planta o GEM phase ID y usa filtros de fabricante, seguidor, controlador y BESS. Verifica la identidad de la fase antes de corregirla.",
+      "En vista satélite, señala la ubicación y confirma: el servidor guarda las coordenadas en la ficha correcta de Notion y las vuelve a leer.",
+      "La corrección visual es aproximada, no un levantamiento topográfico. El catálogo inicial todavía procede de una exportación estática."
+    ],
+    pendientes: [
+      { done:false, text:"Publicar y validar V10: transición automática del globo al satélite HD, zoom de detalle y agrupación de marcadores." },
+      { done:false, text:"Sincronizar Notion → Atlas al recargar, para conservar en el mapa las coordenadas ya corregidas sin regenerar el catálogo." },
+      { done:false, text:"Revisar precisión de cada punto y distinguir ubicación visual, GEM y levantamiento verificado." }
+    ],
+    historial: [
+      { date:"2026-10-23", ver:"V9 · operativa", note:"Cloudflare Access y Notion conectados; lectura real de Elawan Ayora I comprobada. Primera corrección con Ceclavín confirmada por el operador." },
+      { date:"2026-10-23", ver:"V10 · preparada", note:"Paquete de zoom satélite HD disponible, sin evidencia todavía de despliegue de V10 en producción." }
+    ]
+  },
   {
     name: "Núcleo de cálculo SolarGPT",
     status: "live",
