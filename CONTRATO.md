@@ -101,6 +101,8 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 ## Puntos abiertos (escribir aquí lo que afecte al otro)
 
+- **[Atlas FACTIUN · 2026-10-23]** Nueva tarjeta `Atlas FACTIUN · Plantas FV` en `PROJECTS`, con pictograma y `docId: atlas-factiun`. Apunta a la aplicación protegida `https://maps-9rd.pages.dev`, no aloja ni replica su frontend ni sus secretos. Estado conocido: V9 operativa, V10 preparada pero no verificada en producción. El catálogo inicial es estático; la lectura de coordenadas corregidas de Notion al recargar sigue pendiente. El Panel no debe incluir ni pedir `NOTION_TOKEN` ni datos de Cloudflare Access.
+
 - **[Textos de interfaz · 2026-10-12]** Revisión coordinada con `solargpt-textos-claros` en los 11 repositorios del catálogo. Se acortan las 29 descripciones de `PROJECTS` y las ayudas visibles; nombres de tarjeta, IDs, destinos, estados, versiones de herramienta e historial se conservan. Caché del panel v181. Los detalles de uso y la evidencia técnica siguen disponibles. Sin cambios de motor, datos ni permisos.
 
 
