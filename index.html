@@ -740,6 +740,7 @@ function HUELLA(pl){
 
 <script>
 const PICTOS = {
+  "Atlas FACTIUN · Plantas FV": '<ellipse class="a" cx="32" cy="20" rx="19" ry="16"/><path d="M13 20h38M32 4v32M22 7c7 8 7 18 0 26M42 7c-7 8-7 18 0 26"/><circle class="af" cx="44" cy="12" r="3"/>',
   "Análisis meteorológico": '<circle class="a" cx="17" cy="11" r="5"/><path class="a" d="M17 3v3M17 16v3M9 11H6M28 11h-3M11.3 5.3l2.1 2.1M22.7 5.3l-2.1 2.1"/><path d="M17 24h28c4 0 7-2.7 7-6.1s-2.8-6-6.2-6.1C44.2 7.8 40.4 5 36 5c-5.5 0-10 3.8-11 8.9-4.2.4-7.4 3-8 6.6"/><path d="M6 29h17c3 0 4.5-1.2 4.5-3s-1.4-3-3.5-3M6 34h22"/><path class="a" d="M34 35l5-5 5 2 6-7 8 3"/><circle class="af" cx="39" cy="30" r="1.6"/><circle class="af" cx="50" cy="25" r="1.6"/><path d="M33 36h27"/>',
   "Núcleo de cálculo SolarGPT": '<circle class="a" cx="32" cy="20" r="6"/><circle class="af" cx="32" cy="20" r="2"/><path d="M26 20H12M38 20h14M32 14V5M32 26v9"/><rect x="5" y="16" width="7" height="8"/><rect x="52" y="16" width="7" height="8"/><rect x="28" y="1" width="8" height="4"/><rect x="28" y="35" width="8" height="4"/>',
   "Careo SolarGPT ↔ PVSyst": '<path d="M6 31C14 10 24 8 32 18s18 14 26 2" stroke-dasharray="3 3"/><path class="a" d="M6 33C14 12 24 10 32 20s18 13 26 1"/>',
@@ -783,6 +784,37 @@ function PICTO(p){
    PROYECTOS  —  edita SOLO este array para mantener el panel al día.
    ===================================================================== */
 const PROJECTS = [
+  {
+    name: "Atlas FACTIUN · Plantas FV",
+    status: "build",
+    objetivo: "Mapa mundial de plantas FV sobre suelo con globo y ortofoto: consulta fichas, ubica pendientes y prepara altas directamente en Notion.",
+    stack: "Globo 3D · satélite · Cloudflare Pages y Access · Notion (catálogo y edición)",
+    url: "https://maps-9rd.pages.dev",
+    repo: "",
+    updated: "2026-10-23",
+    version: "V14 del usuario · V14.2 candidata",
+    docId: "atlas-factiun",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Abre el Atlas existente mediante Cloudflare Access. Esta URL está documentada, pero no se ha confirmado desde aquí qué versión exacta sirve hoy.",
+      "El catálogo debe incluir todas las fichas de Notion, tengan o no GEM phase ID; las que no tienen coordenadas quedan en Pendientes de ubicar.",
+      "Al identificar una instalación en la ortofoto, la V14.2 candidata busca primero coincidencias en Notion: vincula la ficha existente o crea una nueva, sin duplicarla.",
+      "La ficha muestra emplazamiento físico, municipio, provincia, región/estado y país. «Ir al emplazamiento» usa la ubicación seleccionada, no la de una planta cercana.",
+      "Tipos de estructura: Fija, Fija dos aguas, Marquesina, Seguidor y Mixta. La ubicación visual debe conservar fuente y no sustituir coordenadas topográficas verificadas."
+    ],
+    pendientes: [
+      { done:false, text:"Publicar y validar V14.2 en Cloudflare Pages manteniendo Access; no se ha sustituido la V14 del usuario." },
+      { done:false, text:"Comprobar el catálogo Notion completo, incluidas fichas sin GEM y sin coordenadas, con paginación segura y recuento auditable." },
+      { done:false, text:"Probar altas, vínculo de ficha existente, edición y relectura reales de Notion sin duplicados." },
+      { done:false, text:"Conciliar el inventario histórico y comprobar capas, búsquedas y navegación exacta antes de cerrar V14.2." }
+    ],
+    historial: [
+      { date:"2026-10-23", ver:"V14.2 · candidata", note:"Paquete derivado de V14 con altas desde mapa, vinculación de fichas sin coordenadas y navegación exacta. Pruebas locales y simuladas; falta validar Cloudflare/Notion reales." },
+      { date:"2026-10-23", ver:"V14 · base del usuario", note:"Última versión que el usuario reconoce; no afirmar que V14.2 esté desplegada." },
+      { date:"2026-10-23", ver:"V9 · referencia histórica", note:"Primera operación de Atlas con Cloudflare Access documentada en la PR original; la versión actual detrás de la URL requiere comprobación autenticada." }
+    ]
+  },
   {
     name: "Núcleo de cálculo SolarGPT",
     status: "live",
