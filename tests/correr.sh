@@ -1000,11 +1000,11 @@ declare -A PISO=(
   # llega a los 8 min, que cabe con 30° (5,9) y vetaría con 55° (10,8). Tras los dos
   # arreglos: 5/5 y 6 bajas, los cinco llegando a su veredicto.
   [test_granizo_estrategia.mjs]=143
-  # Weather Workbench autónomo + visual parity: 72 comprobaciones. Además de
+  # Weather Workbench autónomo + visual parity: 82 comprobaciones, incluidas 9 nuevas de WeatherEx (sin red). Además de
   # los goldens TMY y el smoke de Cartera/ancho, fija las 11 familias visuales
   # de Meteo: mensual, serie diaria, zoom, cockpit 6-paneles, DOY, rosa,
   # extremos térmicos/heladas, nieve, granizo, viento sintético y comparación.
-  [test_meteo_browser.mjs]=73
+  [test_meteo_browser.mjs]=82
   # Análisis de medidas reales: 14 verificaciones reproducibles sin credenciales.
   # El piso cubre RLS simulada, deduplicación diaria, escala WFU raw,
   # comparación de anemómetros, unidades y lagunas de datos.

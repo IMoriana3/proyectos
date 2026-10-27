@@ -87,6 +87,18 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
   </div>
 
   
+  <div class="card span4">
+    <h2>WeatherEx Meteo · experimental</h2>
+    <p class="note">Comparador JSON multmodelo, solo bajo solicitud. Sin validación de API ni licencia comercial; la fuente por defecto no cambia.</p>
+    <label><span class="k">Modelo</span><select id="wxModel">
+      <option value="gfs">GFS</option><option value="ecmwf">ECMWF</option><option value="icon">ICON</option>
+    </select></label>
+    <div class="actions" style="margin-top:8px">
+      <button id="wxFetch" class="secondary">Consultar WeatherEx</button>
+      <button id="wxCompare" class="secondary">Comparar con Open-Meteo</button>
+    </div>
+    <div class="statusline" id="wxStatus">Experimento sin credenciales en navegador: solo temperatura validada en el ejemplo público. Datos ausentes no se inventan.</div>
+  </div>
   <div class="sectiontitle">Mediciones reales · sensores de nuestras plantas</div>
 
   <div class="card span8">
@@ -426,7 +438,8 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
 <script type="module">
-import {fetchOpenMeteo,fromWeatherNextSummary,fromWeatherNextTransport,forecastOperationalSummary,fetchSpatialForecast,fetchWeatherNextProxy,compareForecastSources} from "./lib/meteo.js";
+import {normalizeMeteo,fetchOpenMeteo,fromWeatherNextSummary,fromWeatherNextTransport,forecastOperationalSummary,fetchSpatialForecast,fetchWeatherNextProxy,compareForecastSources} from "./lib/meteo.js";
+import {fetchWeatherExForecast} from "./lib/meteo-weatherex.js";
 import {
   WORKBENCH_VERSION,loadFactiunPlants,fetchHistorical,prepareDataset,annualStats,
   buildTmySandia,fetchPvgisTmy,compareSources,plausibility,statsTable,searchPlaces,
@@ -708,7 +721,7 @@ function siteContractObject(){
 function datasetFromForecast(rows){
   const source=rows?.[0]?.source||"unknown";
   return {
-    source:source==="weathernext3"?"WeatherNext 3":"Open-Meteo forecast",
+    source:source==="weathernext3"?"WeatherNext 3":source==="weatherex"?"WeatherEx Meteo":"Open-Meteo forecast",
     source_id:source,lat:+$("lat").value,lon:+$("lon").value,
     kind:"forecast",rows:(rows||[]).map(r=>({...r,t:r.timestamp||r.t}))
   };
@@ -742,13 +755,13 @@ function renderForecastCharts(){
     const values=rows.map(r=>val(r[quantile]?.[field]??(quantile==="p50"?r[field]:null)));
     if(values.some(v=>v!==null))series.push({label,values});
   }
-  if(FORECAST_REFERENCE?.length && FORECAST?.[0]?.source==="weathernext3"){
+  if(FORECAST_REFERENCE?.length && ["weathernext3","weatherex"].includes(FORECAST?.[0]?.source)){
     const comp=compareForecastSources(rows,FORECAST_REFERENCE,{field,hours:rows.length});
     const matches=new Map(comp.pairs.map(p=>[Date.parse(p.timestamp),p.openmeteo]));
     if(comp.overlapping_hours){
       series.push({label:"Open-Meteo",values:rows.map(r=>matches.get(Date.parse(r.timestamp))??null)});
       $("wnCompareStatus").textContent=comp.overlapping_hours+" horas UTC coincidentes · "+
-        "sesgo (WeatherNext − Open-Meteo) "+fmt(comp.bias,2)+" · error medio absoluto "+
+        "sesgo ("+(FORECAST[0].source==="weatherex"?"WeatherEx":"WeatherNext")+" − Open-Meteo) "+fmt(comp.bias,2)+" · error medio absoluto "+
         fmt(comp.mae,2)+" "+meta[1]+". Son dos modelos, no un contraste con medidas reales.";
       $("wnCompareStatus").className="statusline ok";
     }else{
@@ -776,7 +789,7 @@ function renderForecastCharts(){
   $("opHorizonInfo").textContent=(past?"HISTÓRICO · no representa el tiempo actual. ":"")+
     (horizon>rows.length?
       "Se solicitaron "+horizon+" h, pero solo hay "+rows.length+" h disponibles.":
-      "Serie horaria "+rows.length+" h · origen "+(FORECAST[0]?.source==="weathernext3"?"WeatherNext 3":"Open-Meteo")+".");
+      "Serie horaria "+rows.length+" h · origen "+(FORECAST[0]?.source==="weathernext3"?"WeatherNext 3":FORECAST[0]?.source==="weatherex"?"WeatherEx Meteo":"Open-Meteo")+".");
   const slider=$("wnLead");
   slider.max=String(rows.length);
   slider.value=String(Math.max(1,Math.min(rows.length,Number(slider.value)||1)));
@@ -840,15 +853,15 @@ async function publishForecastContract(){
   const original=FORECAST[0]?.provenance||{};
   return publishDatasetContract(ds,"forecast",{
     provenance:{
-      provider:src==="weathernext3"?"Google WeatherNext 3":"Open-Meteo",
-      model:src==="weathernext3"?"WeatherNext 3":null,
+      provider:src==="weathernext3"?"Google WeatherNext 3":src==="weatherex"?"WeatherEx Meteo":"Open-Meteo",
+      model:src==="weathernext3"?"WeatherNext 3":src==="weatherex"?original.model:null,
       dataset_id:original.gcs_prefix||original.table||null,
       run_time_utc:original.run_time_utc||original.init_time||null,
       retrieved_at_utc:original.cached_at_utc||original.retrieved_at_utc||new Date().toISOString(),
       valid_from_utc:ds.rows[0]?.t||null,valid_to_utc:ds.rows.at(-1)?.t||null,
-      qa_status:src==="weathernext3"?"UNASSESSED":null,
-      fallback_level:src==="weathernext3"?0:1,
-      fallback_reason:src==="weathernext3"?null:"WeatherNext no disponible · fallback Open-Meteo"
+      qa_status:["weathernext3","weatherex"].includes(src)?"UNASSESSED":null,
+      fallback_level:src==="openmeteo"?1:0,
+      fallback_reason:src==="openmeteo"?"WeatherNext no disponible · fallback Open-Meteo":null
     },
     spatial:SPATIAL
   });
@@ -915,8 +928,8 @@ async function loadWeatherNextCached({quiet=false}={}){
 }
 
 async function compareWeatherNextWithOpenMeteo(){
-  if(!FORECAST?.length||FORECAST[0]?.source!=="weathernext3")
-    throw Error("Carga primero una previsión WeatherNext para comparar modelos.");
+  if(!FORECAST?.length||!["weathernext3","weatherex"].includes(FORECAST[0]?.source))
+    throw Error("Carga primero WeatherNext o WeatherEx para comparar modelos.");
   const initial=FORECAST;
   const lat=+$("lat").value,lon=+$("lon").value;
   const horizon=forecastWindowHours();
@@ -927,6 +940,30 @@ async function compareWeatherNextWithOpenMeteo(){
     throw Error("La planta o la previsión cambió durante la comparación.");
   FORECAST_REFERENCE=reference;
   renderForecastCharts(); // renders both models and P10/P50/P90 without changing WeatherContract
+}
+async function loadWeatherEx(){
+  const btn=$("wxFetch");btn.disabled=true;
+  $("wxStatus").textContent="Consultando WeatherEx (JSON experimental)…";
+  $("wxStatus").className="statusline work";
+  try{
+    const lat=+$("lat").value,lon=+$("lon").value,model=$("wxModel").value;
+    const horizon=forecastWindowHours();
+    const rows=await fetchWeatherExForecast({
+      lat,lon,model,forecastDays:horizon>72?15:3,normalizer:normalizeMeteo
+    });
+    if(+$("lat").value!==lat||+$("lon").value!==lon||$("wxModel").value!==model)
+      throw Error("La planta o el modelo ha cambiado durante la petición.");
+    // El JSON público solo acredita temperatura; no presentar gráfica de viento vacía.
+    $("wnVariable").value="temp_c";
+    await applyForecast(rows,"WeatherEx Meteo · "+model.toUpperCase());
+    $("wxStatus").textContent=rows.length+" horas UTC · "+model.toUpperCase()+
+      " · fuente externa no validada en planta. Campos sin unidad fiable quedan vacíos.";
+    $("wxStatus").className="statusline ok";
+  }catch(e){
+    const msg=String(e?.message||e);
+    $("wxStatus").textContent=msg;$("wxStatus").className="statusline bad";
+    status("WeatherEx: "+msg,"bad");
+  }finally{btn.disabled=false;}
 }
 async function loadNow(){
   status("Cargando forecast de "+siteName()+"…","work");
@@ -1322,6 +1359,13 @@ $("wnCfgBtn").onclick=()=>{
   if(v===null)return;
   try{if(v.trim())localStorage.setItem("factiun_weathernext_endpoint",v.trim().replace(/\/+$/,""));else localStorage.removeItem("factiun_weathernext_endpoint");}catch(e){}
   loadNow();
+};
+$("wxFetch").onclick=loadWeatherEx;
+$("wxCompare").onclick=async()=>{
+  try{
+    if(FORECAST?.[0]?.source!=="weatherex")throw Error("Consulta primero WeatherEx.");
+    await compareWeatherNextWithOpenMeteo();
+  }catch(e){$("wxStatus").textContent=String(e?.message||e);$("wxStatus").className="statusline bad";}
 };
 $("clearCache").onclick=async()=>{await clearHttpCache();status("Caché HTTP meteorológica vaciada.","ok")};
 $("prepDl").onclick=()=>PREPARED&&downloadText(toCsv(PREPARED.rows),"meteo_preparado.csv","text/csv;charset=utf-8");

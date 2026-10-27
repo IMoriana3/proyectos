@@ -9,6 +9,8 @@ const vizCode=fs.readFileSync(path.join(__dirname,"../lib/meteo-viz.js"),"utf8")
 const V=await import("data:text/javascript;base64,"+Buffer.from(vizCode).toString("base64"));
 const meteoCode=fs.readFileSync(path.join(__dirname,"../lib/meteo.js"),"utf8");
 const WX=await import("data:text/javascript;base64,"+Buffer.from(meteoCode).toString("base64"));
+const wxCode=fs.readFileSync(path.join(__dirname,"../lib/meteo-weatherex.js"),"utf8");
+const WXEX=await import("data:text/javascript;base64,"+Buffer.from(wxCode).toString("base64"));
 const contractCode=fs.readFileSync(path.join(__dirname,"../lib/weather-contract.js"),"utf8");
 const WC=await import("data:text/javascript;base64,"+Buffer.from(contractCode).toString("base64"));
 
@@ -20,6 +22,56 @@ function check(name,cond,detail=""){
 function near(a,b,tol=1e-9){return Number.isFinite(a)&&Math.abs(a-b)<=tol;}
 
 check("versión browser core 0.8.0",M.WORKBENCH_VERSION==="0.8.0");
+
+// WeatherEx: mock del ÚNICO contrato HTTP documentado; sin llamadas comerciales/live.
+const wxResponse={success:true,models:[
+  {model:"gfs",rows:[
+    {timestamp_ist:"2026-10-23T05:30:00+05:30",temperature:27.4,precipitation:0,wind_speed:50},
+    {timestamp_ist:"2026-10-23T06:30:00+05:30",temperature:27.0,precipitation:2,wind_speed:60}
+  ]},
+  {model:"ecmwf",rows:[
+    {timestamp_ist:"2026-10-23T05:30:00+05:30",temperature:25},
+    {timestamp_ist:"2026-10-23T06:30:00+05:30",temperature:24}
+  ]}
+]};
+const wxRows=WXEX.parseWeatherExForecast(wxResponse,{
+  model:"gfs",lat:42.8,lon:-1.6,normalizer:WX.normalizeMeteo
+});
+check("WeatherEx IST +05:30 convertido a UTC",wxRows[0].timestamp==="2026-10-23T00:00:00.000Z");
+check("WeatherEx no mezcla modelos",wxRows.length===2&&wxRows[0].temp_c===27.4&&wxRows[1].temp_c===27);
+check("WeatherEx no inventa viento/rachas/lluvia con unidades no certificadas",
+  wxRows[0].wind_ms===null&&wxRows[0].gust_ms===null&&wxRows[0].precip_mm===null);
+check("WeatherEx preserva procedencia del modelo",wxRows[0].source==="weatherex"&&wxRows[0].provenance?.model==="gfs");
+const wxEcm=WXEX.parseWeatherExForecast(wxResponse,{model:"ecmwf",lat:42.8,lon:-1.6});
+check("WeatherEx selección ECMWF aislada",wxEcm[0].temp_c===25&&wxEcm.length===2);
+let wxBadTime=false;try{WXEX.parseWeatherExForecast({
+  success:true,models:[{model:"gfs",rows:[{timestamp_ist:"2026-10-23T00:00:00",temperature:4}]}]
+},{model:"gfs",lat:42.8,lon:-1.6})}catch(e){wxBadTime=/zona horaria/.test(e.message)}
+check("WeatherEx rechaza timestamps sin offset",wxBadTime);
+let wxQuarter=false;try{WXEX.parseWeatherExForecast({
+  success:true,models:[{model:"gfs",rows:[
+    {timestamp_ist:"2026-10-23T05:30:00+05:30",temperature:4},
+    {timestamp_ist:"2026-10-23T05:45:00+05:30",temperature:5}
+  ]}]
+},{model:"gfs",lat:42.8,lon:-1.6})}catch(e){wxQuarter=/no es horaria/.test(e.message)}
+check("WeatherEx no confunde pasos 15min con horas",wxQuarter);
+let wxRequested="";
+const wxFetched=await WXEX.fetchWeatherExForecast({
+  lat:42.8,lon:-1.6,model:"gfs",forecastDays:3,normalizer:WX.normalizeMeteo,
+  fetchImpl:async (url,opts)=>{wxRequested=String(url);return {ok:true,json:async()=>wxResponse}}
+});
+check("WeatherEx GET usa ruta y parámetros oficiales",wxFetched.length===2&&
+  wxRequested.includes("/api/forecast?")&&wxRequested.includes("models=gfs")&&
+  wxRequested.includes("variables=temperature%2Cprecipitation"));
+const wxCompare=WX.compareForecastSources(wxRows,[
+  {source:"openmeteo",timestamp:wxRows[0].timestamp,temp_c:26.5},
+  {source:"openmeteo",timestamp:wxRows[1].timestamp,temp_c:26.0}
+],{field:"temp_c",hours:72});
+check("Comparativa WeatherEx conserva identidad del proveedor y no inventa referencia medida",
+  wxCompare.sources[0]==="weatherex"&&wxCompare.sources[1]==="openmeteo"&&
+  wxCompare.overlapping_hours===2&&near(wxCompare.mae,0.95));
+
+
 
 let geocodeUrl="";
 const geo=await M.searchPlaces("Montréal",{

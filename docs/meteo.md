@@ -545,3 +545,13 @@ y comparación han pasado; no equivale a un ensayo del navegador publicado.
 El bucket GCS requiere autenticación, por lo que no hay sincronización
 automática a coste adicional 0 € con los permisos actuales.
 
+
+
+## WeatherEx Meteo (experimental, 27/10/2026)
+
+- Implementación bajo revisión en el PR meteo existente #578; no está publicada en el workbench de main.
+- Fuente opcional `weatherex` (GFS, ECMWF, ICON); GET `/api/forecast` descrito en https://meteo.weatherex.ai/; no se ha podido validar una respuesta live, la autorización, las cuotas, CORS ni licencias comerciales. Nunca incluir credenciales en GitHub Pages.
+- El adaptador acepta exclusivamente fechas con offset y datos horarios consecutivos. El ejemplo oficial usa `timestamp_ist` (UTC+05:30); los 15 minutos o huecos generan error explícito y no se convierten en horas falsas.
+- Solo se integran columnas con unidades explícitas en la clave; el ejemplo `temperature` se interpreta como Celsius métrico. `precipitation` sin definición del intervalo y `wind_speed` sin unidad NO activan acumulados, STOW ni riesgos. Los campos ausentes permanecen nulos.
+- WeatherEx no sustituye WeatherNext, Open-Meteo, series históricas/TMY ni la autoridad de HSU/RSU para control. El contrato WeatherContract v2 registra source/model/UTC y QA sin certificar, con fallback Open-Meteo sin cambios.
+- Faltan: contrato OpenAPI, respuesta real con encabezados CORS, auth/precio, variables/alturas/lluvia solar confirmadas, validación de CI y permiso de uso comercial antes de pasar de experimental a operativo.
