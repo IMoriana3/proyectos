@@ -953,6 +953,8 @@ async function loadWeatherEx(){
     });
     if(+$("lat").value!==lat||+$("lon").value!==lon||$("wxModel").value!==model)
       throw Error("La planta o el modelo ha cambiado durante la petición.");
+    // El JSON público solo acredita temperatura; no presentar gráfica de viento vacía.
+    $("wnVariable").value="temp_c";
     await applyForecast(rows,"WeatherEx Meteo · "+model.toUpperCase());
     $("wxStatus").textContent=rows.length+" horas UTC · "+model.toUpperCase()+
       " · fuente externa no validada en planta. Campos sin unidad fiable quedan vacíos.";
