@@ -63,6 +63,14 @@ const wxFetched=await WXEX.fetchWeatherExForecast({
 check("WeatherEx GET usa ruta y parámetros oficiales",wxFetched.length===2&&
   wxRequested.includes("/api/forecast?")&&wxRequested.includes("models=gfs")&&
   wxRequested.includes("variables=temperature%2Cprecipitation"));
+const wxCompare=WX.compareForecastSources(wxRows,[
+  {source:"openmeteo",timestamp:wxRows[0].timestamp,temp_c:26.5},
+  {source:"openmeteo",timestamp:wxRows[1].timestamp,temp_c:26.0}
+],{field:"temp_c",hours:72});
+check("Comparativa WeatherEx conserva identidad del proveedor y no inventa referencia medida",
+  wxCompare.sources[0]==="weatherex"&&wxCompare.sources[1]==="openmeteo"&&
+  wxCompare.overlapping_hours===2&&near(wxCompare.mae,0.95));
+
 
 
 let geocodeUrl="";
