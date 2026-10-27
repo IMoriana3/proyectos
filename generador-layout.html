@@ -3,29 +3,48 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0B0F14">
+<meta name="theme-color" content="#0E1826">
 <link rel="icon" href="favicon.svg">
 <title>Generador de implantaciones — Factiun</title>
 <!-- sin fuentes de Google: offline (fuentes del sistema) -->
 <style>
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/Barlow-400-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/Barlow-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/Barlow-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/Barlow-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/Barlow-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/Barlow-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/BarlowCondensed-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/BarlowCondensed-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/BarlowCondensed-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/BarlowCondensed-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/JetBrainsMono-400-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/JetBrainsMono-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/JetBrainsMono-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/JetBrainsMono-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/JetBrainsMono-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/JetBrainsMono-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+
 :root{
-  --void:#0B0F14; --panel:#121922; --panel-2:#0F151D; --panel-hi:#18222D;
-  --line:#23303D; --line-soft:#1A2530; --text:#E7EEF4; --muted:#8093A4; --muted-2:#5E6F7E;
-  --live:#36D399; --build:#F6A623; --demo:#54A6FF; --idle:#6A7B8B; --dead:#D0594F;
-  --accent:#36D399; --radius:14px; --radius-sm:9px;
-  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --display:'Space Grotesk','IBM Plex Sans',system-ui,sans-serif;
+  --void:#0E1826; --panel:#132238; --panel-2:#101D30; --panel-hi:#1A2D48;
+  --line:#27405F; --line-soft:#1E3250; --text:#DCE3EB; --muted:#8C9AAB; --muted-2:#7F8EA1;
+  --live:#5BBF8A; --build:#F2C94C; --demo:#68C0D8; --idle:#627386; --dead:#E84858;
+  --accent:#F09030; --radius:2px; --radius-sm:2px;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --display:'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif;
+  /* Piel «Célula» (la de la portada): ámbar Factiun como único color de emisión */
+  --amb:#F09030;--amb-dim:#9A5E20;--fos:#68C0D8;--alm:#E84858;--plata:#B8C3CE;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--void);color:var(--text);font-family:var(--sans);min-height:100vh;font-variant-numeric:tabular-nums}
 .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 18px;background:var(--panel-2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
-.bar .back{color:var(--muted);text-decoration:none;font:600 13px/1 var(--sans);padding:7px 11px;border:1px solid var(--line);border-radius:10px;white-space:nowrap}
+.bar .back{color:var(--muted);text-decoration:none;font:600 13px/1 var(--sans);padding:7px 11px;border:1px solid var(--line);border-radius:2px;white-space:nowrap}
 .bar .back:hover{color:var(--text);border-color:var(--accent)}
-.bar h1{font:700 17px/1.1 var(--display)}
+.bar h1{font:600 17px/1.1 var(--display)}
 .bar .sub{color:var(--muted);font-size:12.5px;margin-right:auto}
-.bar .brand{color:var(--accent);font:700 14px/1 var(--display);letter-spacing:.04em}
-.engine{display:flex;align-items:center;gap:7px;font-size:12px;font-family:var(--mono);padding:4px 10px;border:1px solid var(--line);border-radius:20px;background:var(--panel);cursor:pointer}
+.bar .brand{color:var(--accent);font:600 14px/1 var(--display);letter-spacing:.04em}
+.engine{display:flex;align-items:center;gap:7px;font-size:12px;font-family:var(--mono);padding:4px 10px;border:1px solid var(--line);border-radius:2px;background:var(--panel);cursor:pointer}
 .engine .led{width:9px;height:9px;border-radius:50%;background:var(--idle)}
 .engine.on .led{background:var(--live);box-shadow:0 0 7px var(--live)}
 .engine.off .led{background:var(--dead)}
@@ -64,12 +83,12 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
    que la tarjeta y al pegar ahi dentro no le quedaba recorrido ninguno —se iba con el scroll—. */
 @media(min-width:901px){ .col.map{position:sticky;top:14px} }
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
-.card h2{font:700 13px/1 var(--display);letter-spacing:.02em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card h2{font:600 13px/1 var(--display);letter-spacing:.02em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .card h2 .ic{color:var(--accent)}
 .card h2 .hint{margin-left:auto;font:400 11px var(--mono);color:var(--muted)}
 .field{margin-bottom:11px}
 .field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px;font-weight:600}
-.field input,.field select,.field textarea{width:100%;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px}
+.field input,.field select,.field textarea{width:100%;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:2px;padding:8px 10px;font:inherit;font-size:13px}
 .field textarea{font-family:var(--mono);font-size:11.5px;resize:vertical;min-height:78px}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent)}
 .field .tip{font-size:11px;color:var(--muted-2);margin-top:4px;line-height:1.45}
@@ -79,7 +98,7 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
    que el de sim-viento.html. */
 .sitiobox{position:relative}
 .sitiores{position:absolute;left:0;right:0;top:100%;z-index:40;margin-top:3px;
-  background:var(--panel-2);border:1px solid var(--line);border-radius:9px;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:2px;
   box-shadow:0 12px 28px rgba(0,0,0,.45);max-height:280px;overflow:auto}
 .sitiores .it{padding:7px 10px;cursor:pointer;border-bottom:1px solid var(--line-soft)}
 .sitiores .it:last-child{border-bottom:0}
@@ -92,8 +111,8 @@ body{background:var(--void);color:var(--text);font-family:var(--sans);min-height
 .sitiores .aviso{padding:7px 10px;font-size:11.5px;color:var(--muted-2)}
 .sn{font-family:var(--mono);font-size:10px;color:var(--accent);text-transform:none;letter-spacing:0}
 .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
-.btn{background:rgba(54,211,153,.12);color:var(--accent);border:1px solid var(--accent);border-radius:9px;padding:9px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;width:100%}
-.btn:hover{background:rgba(54,211,153,.2);color:#fff}
+.btn{background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent);border:1px solid var(--accent);border-radius:2px;padding:9px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;width:100%}
+.btn:hover{background:color-mix(in srgb,var(--accent) 22%,transparent);color:#fff}
 .btn:disabled{opacity:.45;cursor:default}
 .btn.ghost{background:var(--panel-2);color:var(--text);border-color:var(--line)}
 .btn.ghost:hover{background:var(--panel-hi);color:var(--text);border-color:var(--accent)}
@@ -108,45 +127,45 @@ details.adv summary::before{content:"▸";color:var(--accent);font-size:11px}
 details.adv[open] summary::before{content:"▾"}
 details.adv .body{margin-top:12px}
 .readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:10px}
-.ro{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:9px;padding:9px 11px}
+.ro{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:2px;padding:9px 11px}
 .ro .k{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-family:var(--mono)}
-.ro .v{font:700 17px/1.2 var(--display);margin-top:3px}
+.ro .v{font:600 17px/1.2 var(--display);margin-top:3px}
 .ro .v small{font-size:12px;color:var(--muted);font-weight:400}
-canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:10px;margin-top:6px;touch-action:none;cursor:grab}
+canvas{width:100%;height:auto;display:block;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:2px;margin-top:6px;touch-action:none;cursor:grab}
 canvas.drawing{cursor:crosshair;border-color:var(--build)}
 canvas.panning{cursor:grabbing}
 .deriv{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:12px 0 4px}
-.deriv .d{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:8px;padding:6px 9px}
+.deriv .d{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:2px;padding:6px 9px}
 .deriv .d .k{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2);font-family:var(--mono)}
-.deriv .d .v{font:700 13.5px/1.25 var(--display);margin-top:2px}
+.deriv .d .v{font:600 13.5px/1.25 var(--display);margin-top:2px}
 .deriv .d .v small{font-size:10.5px;color:var(--muted);font-weight:400}
 .deriv .d.warn{border-color:var(--build)}
 .deriv .d.warn .v{color:var(--build)}
 .dempaneles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}
-.dempaneles .pan{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:8px;padding:6px}
-.dempaneles canvas{width:100%;height:auto;display:block;border-radius:5px;margin:0;border:0;cursor:default}
+.dempaneles .pan{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:2px;padding:6px}
+.dempaneles canvas{width:100%;height:auto;display:block;border-radius:2px;margin:0;border:0;cursor:default}
 .dempaneles .tt{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:5px;text-align:center}
 .parcelas{margin-top:9px;display:flex;flex-direction:column;gap:5px}
 .parcelas .pz{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line-soft);
-  border-radius:8px;padding:6px 9px;font-size:12px}
+  border-radius:2px;padding:6px 9px;font-size:12px}
 .parcelas .pz b{font-weight:600}
 .parcelas .pz .ha{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);margin-left:auto}
 .parcelas .pz button{background:none;border:0;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px}
 .parcelas .pz button:hover{color:var(--dead)}
 .maptools{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
 .maptools .mini{width:auto;padding:5px 10px;font-size:12px}
-.maptools .minisel{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit;font-size:12px}
+.maptools .minisel{background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:2px;padding:5px 8px;font:inherit;font-size:12px}
 .maptools .mini2{margin:0;font-size:11.5px;gap:5px}
 .maptools .maphint{font-family:var(--mono);font-size:10.5px;color:var(--muted-2);margin-left:auto}
 .note{font-size:12px;color:var(--muted-2);margin-top:10px;line-height:1.5}
-.note code{color:var(--muted);background:var(--panel-2);padding:1px 5px;border-radius:5px;font-family:var(--mono)}
+.note code{color:var(--muted);background:var(--panel-2);padding:1px 5px;border-radius:2px;font-family:var(--mono)}
 .tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);margin-top:2px}
 .avisos{display:flex;flex-direction:column;gap:7px;margin-top:12px}
-.aviso{border-radius:9px;padding:9px 12px;font-size:12.5px;line-height:1.5;background:var(--panel-2);border:1px dashed var(--line)}
+.aviso{border-radius:2px;padding:9px 12px;font-size:12.5px;line-height:1.5;background:var(--panel-2);border:1px dashed var(--line)}
 .aviso.warn{border-color:var(--build)}
 .aviso.fail{border-color:var(--dead)}
 .aviso.info{border-color:var(--demo)}
-.aviso b{font-weight:700}
+.aviso b{font-weight:600}
 .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:11.5px;color:var(--muted);font-family:var(--mono)}
 .legend span{display:flex;align-items:center;gap:6px}
 .legend i{width:14px;height:9px;border-radius:2px;display:inline-block}
@@ -161,6 +180,9 @@ canvas.panning{cursor:grabbing}
 #aiStatus,#aiViewStatus{font:12px/1.5 var(--sans);text-transform:none;letter-spacing:0}
 #aiProgress{accent-color:var(--accent)}
 </style>
+<!-- El catálogo de plantas, servido por este mismo origen. `localStorage` es POR ORIGEN
+     y sigue yendo primero: un navegador que acaba de usar la cartera manda sobre el fichero. -->
+<script src="data/plantas.js"></script>
 </head>
 <body>
 <header class="bar">
@@ -172,7 +194,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">implantación desde la parcela · §02.5a en el navegador · <b id="verBadge">v1.10.0</b></span>
+  <span class="sub">Distribuye mesas y seguidores en tu parcela · <b id="verBadge">v1.10.0</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -194,7 +216,7 @@ canvas.panning{cursor:grabbing}
         <input id="sitioQ" type="search" autocomplete="off" spellcheck="false"
                placeholder="Gabès, Ayora, 24019, o 33.8792, 9.8736…">
         <div id="sitioRes" class="sitiores" style="display:none"></div>
-        <div class="tip">Cartera y presets primero (van sin red), coordenadas pegadas tal cual, y si no, el geocodificador de Open-Meteo.</div>
+        <div class="tip">Busca una planta o pega coordenadas. La cartera y los presets funcionan sin conexión; Open-Meteo amplía la búsqueda.</div>
       </div>
       <div class="two">
         <div class="field"><label>Latitud °</label><input id="lat" type="number" step="0.0001" value="41.57634"></div>
@@ -214,7 +236,7 @@ canvas.panning{cursor:grabbing}
           <div class="field"><label>Alto N-S (m)</label><input id="ph" type="number" step="10" value="450"></div>
         </div>
         <div class="field"><label>Giro de la parcela (°)</label><input id="prot" type="number" step="1" value="0">
-          <div class="tip">Gira el rectángulo respecto al norte. Con giro ≠ 0 se ve lo que de verdad hace el motor en un borde oblicuo.</div></div>
+          <div class="tip">Gira el rectángulo respecto al norte para probar lindes oblicuas.</div></div>
       </div>
 
       <div id="paneGeo" style="display:none">
@@ -233,7 +255,7 @@ canvas.panning{cursor:grabbing}
       </div>
 
       <div id="paneDraw" style="display:none">
-        <p class="note" style="margin-top:0">Busca tu emplazamiento arriba, acércate con la rueda hasta ver la finca y pulsa <b>Dibujar parcela</b>: clic por vértice y <b>doble clic</b> para cerrar. Arrastrar mueve el mapa sin poner vértices.</p>
+        <p class="note" style="margin-top:0">Busca el emplazamiento y pulsa <b>Dibujar parcela</b>. Marca los vértices y haz doble clic para cerrar. Arrastra para mover el mapa.</p>
         <div class="btnrow">
           <button class="btn ghost small" id="drawStart">✏️ Dibujar parcela</button>
           <button class="btn ghost small" id="drawClear">🗑️ Limpiar</button>
@@ -253,7 +275,7 @@ canvas.panning{cursor:grabbing}
       </div>
       <div id="parcelList" class="parcelas"></div>
       <p class="tag" id="parcelTag">—</p>
-      <p class="note" style="margin-top:2px">Las <b>exclusiones</b> (§02.5c del cuaderno) son zonas donde el motor no coloca: cursos de agua, edificaciones, servidumbres. Se dibujan sobre la ortofoto en cualquiera de los tres modos, y los anillos interiores de un GeoJSON entran como exclusión sin dibujar nada.</p>
+      <p class="note" style="margin-top:2px">Dibuja <b>exclusiones</b> para cauces, edificios o servidumbres en cualquiera de los tres modos. Los agujeros del GeoJSON también quedan sin mesas.</p>
     </div>
 
     <div class="card">
@@ -266,7 +288,7 @@ canvas.panning{cursor:grabbing}
       </div>
       <div class="field"><label>Mods/string — una talla (28) o multi-talla (28, 14, 7)</label>
         <input id="mods" type="text" value="28">
-        <div class="tip">Con varias tallas el motor coloca la mayor que entra y rellena la cola con las pequeñas. Es el multi-size del cuaderno §02.5a-2.</div></div>
+        <div class="tip">Con varias tallas, coloca la mayor que cabe y completa el hueco con las pequeñas.</div></div>
       <div class="three">
         <div class="field"><label>Largo mód. (m)</label><input id="modLen" type="number" step="0.001" value="2.382"></div>
         <div class="field"><label>Ancho mód. (m)</label><input id="modWid" type="number" step="0.001" value="1.134"></div>
@@ -326,7 +348,7 @@ canvas.panning{cursor:grabbing}
         </div>
         <div class="two">
           <div class="field"><label>Tilt fijo °</label><input id="fixTilt" type="number" step="1" value="25">
-            <div class="tip">Default 25°, el típico de latitud media.</div></div>
+            <div class="tip">Valor inicial: 25°. Ajusta la inclinación al emplazamiento.</div></div>
           <!-- El albedo es del SUELO, no del montaje: vive en Terreno
                (#albedoT). Este input queda OCULTO y sincronizado — con el
                modo Mixto los dos panes van plenos y salia DUPLICADO en
@@ -336,13 +358,13 @@ canvas.panning{cursor:grabbing}
         <div class="two">
           <div class="field"><label>Azimut de filas (fija) °</label>
             <input id="azRowsFija" type="number" step="1" value="180">
-            <div class="tip">Filas E-O mirando al sur (180), lo natural en fija. Manda en las ZONAS de fija del layout mixto; sin esto heredaban el azimut del tracker y salían giradas 90°.</div></div>
+            <div class="tip">Filas E-O orientadas al sur (180°). Este azimut se aplica a las zonas fijas del montaje mixto.</div></div>
           <div class="field"></div>
         </div>
         <div class="two">
           <div class="field"><label>Tabla de la fija</label>
             <select id="tableFija"><option>1V</option><option>2V</option><option>3V</option><option>4V</option><option>1H</option><option>2H</option><option>3H</option><option>4H</option></select>
-            <div class="tip">Manda en las ZONAS de fija del layout mixto. En el layout de un solo montaje sigue mandando la Tabla de arriba — dos casillas para lo mismo discrepan, así que aquí va dicho cuál manda dónde.</div></div>
+            <div class="tip">Se aplica a las zonas fijas del montaje mixto. Con un solo montaje, usa «Tabla» arriba.</div></div>
           <div class="field"></div>
         </div>
       </div>
@@ -364,7 +386,7 @@ canvas.panning{cursor:grabbing}
         <div class="two">
           <div class="field"><label>Fuente</label>
             <select id="demSrc">
-              <option value="auto">Automática (cascada, como el cuaderno)</option>
+              <option value="auto">Automática (prueba varias fuentes)</option>
               <option value="terreno">Teselas de terreno (1–4 llamadas)</option>
               <option value="otd">Open Topo Data · SRTM30 (punto a punto)</option>
               <option value="openelev">Open-Elevation (punto a punto)</option>
@@ -377,10 +399,7 @@ canvas.panning{cursor:grabbing}
         <div class="two">
           <div class="field"><label>Margen alrededor (m)</label><input id="demMargen" type="number" step="10" value="0"></div>
           <div class="field"><label>Pendiente máx.</label>
-            <div class="tip">La pone cada montaje en su cuadro de <b>Estructura</b> (E-O y N-S por separado),
-              y con zonas manda la de cada zona. Aquí había un segundo número global que se contradecía con
-              aquéllos en silencio: filtro en 2°, límites en 15/25 y terreno a 16,3° dejaba la parcela en
-              «no implantable» sin decir por qué.</div></div>
+            <div class="tip">Ajusta los límites E-O y N-S de cada montaje en <b>Estructura</b>. Si hay zonas, se aplica el límite de cada una.</div></div>
         </div>
         <label class="chk"><input type="checkbox" id="demOff"> Desactivar el filtro de pendiente (no excluir)</label>
         <div class="btnrow">
@@ -392,31 +411,26 @@ canvas.panning{cursor:grabbing}
         <div class="deriv" id="derivDem" style="display:none"></div>
         <div id="demPaneles" class="dempaneles" style="display:none"></div>
         <label class="chk" id="demUseBox" style="display:none"><input type="checkbox" id="demUse" checked> Usar las pendientes medias del MDT (sobrescribe las de arriba)</label>
-        <p class="note" style="margin-top:0">El cuaderno (§02.5b) no tiene <i>una</i> fuente: tiene una <b>cascada por país</b> —<code>detect_country</code> → <code>sources_for_country</code>— y va cayendo a la siguiente cuando una falla. Aquí igual: <b>Automática</b> prueba las de abajo por orden y dice cuál ha servido. Las que van punto a punto (Open Topo Data y Open-Elevation son las mismas que usa el core; Open-Meteo se añadió aquí) comparten el problema del número de llamadas.</p>
-        <p class="note" style="margin-top:0"><b>Lo que aquí NO se puede tener.</b> La cascada del cuaderno incluye fuentes regionales mucho mejores que estos 30 m: <b>IGN MDT05 a 5 m</b> en España, RGE ALTI en Francia, TINITALY a 10 m en Italia, USGS 3DEP a 10 m en EE. UU. Son servicios WCS que devuelven GeoTIFF, y eso no se abre desde un navegador — como tampoco se guarda un token de OpenTopography. Para <b>replanteo</b>, el MDT bueno sigue estando en el cuaderno; esto es para ver la forma del terreno y filtrar por pendiente.</p>
-        <p class="note" style="margin-top:0"><b>Teselas de terreno</b> traen la cota codificada en el color: una imagen de 256×256 son 65.536 cotas en <b>una sola petición</b>, así que una parcela entera cabe en 1-4 llamadas. <b>Open-Meteo</b> va punto a punto (100 por llamada): con 48×48 son 24 seguidas y el servicio corta con un 429 — está bien para mallas pequeñas o como segunda opinión. Ninguna de las dos es el COP30 por OpenTopography del cuaderno, que exige clave: sirven para <b>ver la forma del terreno y filtrar por pendiente</b>, no para replanteo.</p>
+        <p class="note" style="margin-top:0"><b>Automática</b> prueba las fuentes del selector en orden e indica cuál ha respondido. Las fuentes punto a punto necesitan más llamadas cuanto mayor sea la malla.</p>
+        <p class="note" style="margin-top:0"><b>Para replanteo, usa el MDT de mayor resolución del cuaderno:</b> IGN MDT05 (5 m), RGE ALTI, TINITALY (10 m) o USGS 3DEP (10 m), según el país. Esta herramienta no incorpora esas fuentes WCS/GeoTIFF ni guarda claves de OpenTopography.</p>
+        <p class="note" style="margin-top:0"><b>Teselas de terreno:</b> suelen bastar 1–4 llamadas por parcela. <b>Open-Meteo:</b> 100 puntos por llamada; una malla de 48×48 requiere 24 y puede alcanzar el límite del servicio (429). Úsalo con mallas pequeñas o para contrastar. Ambas fuentes sirven para <b>ver el terreno y filtrar por pendiente</b>, no para replanteo; no equivalen al COP30 de OpenTopography.</p>
       </div>
       </details>
-      <p class="note" style="margin-top:8px">Cuidado con qué hace cada cosa. Estas <b>pendientes medias</b> no son un parámetro del motor —<code>compute_layout_v2</code> no las recibe e implanta en planta—, así que por sí solas no mueven ni quitan una mesa: viajan con el layout al <b>backtracking</b> (<code>cross_axis_slope_deg</code>) y a la sombra entre filas. Pero <b>el terreno sí entra en la colocación</b>, por la otra puerta y la misma que en el cuaderno: el <b>filtro de pendiente máxima</b> del MDT excluye las celdas que se pasan, y eso quita mesas.</p>
+      <p class="note" style="margin-top:8px">Las <b>pendientes medias</b> afectan al backtracking y al sombreado entre filas; por sí solas no cambian la colocación en planta. El <b>filtro de pendiente máxima del MDT</b> sí excluye celdas y retira mesas.</p>
     </div>
 
     <div class="card">
       <h2><span class="ic">🧩</span> Zonas de montaje — fija y tracker a la vez</h2>
-      <p class="note" style="margin-top:0">Una parcela puede no admitir seguidor entera: pendiente, forma o
-        criterio de proyecto. Aquí se reparte en zonas y cada una se calcula con SU montaje.
-        <b>El reparto lo decides tú</b>; el botón solo propone. Mismo motor y mismas reglas que el bloque
-        «Zonas de montaje» de Streamlit y la celda §02.5a-MIX del cuaderno.</p>
-      <p class="note" style="margin-top:0"><b>El pitch y las pendientes máximas de cada montaje están en su
-        cuadro de <span style="white-space:nowrap">▦ Estructura</span></b> —los dos cuadros están a la vista, el del otro montaje sale atenuado—. Aquí no se repiten: dos casillas para lo mismo acaban discrepando, y el que las
-        lee no sabe cuál manda.</p>
+      <p class="note" style="margin-top:0">Divide la parcela en zonas fijas y de tracker según pendiente, forma o criterio de proyecto. Cada zona se calcula con su montaje. <b>Revisa y decide el reparto</b>; el botón genera una propuesta.</p>
+      <p class="note" style="margin-top:0">Ajusta el <b>pitch y las pendientes máximas</b> de fija y tracker en <span style="white-space:nowrap">▦ Estructura</span>.</p>
       <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0">
         <input type="checkbox" id="mixRellenoFija" checked style="margin-top:3px">
-        <span class="tip" style="margin:0">Rellenar con <b>FIJA</b> los huecos donde el tracker no entra por geometría (2ª pasada sobre el sobrante real: mesas colocadas + su pasillo de pitch).</span>
+        <span class="tip" style="margin:0">Rellenar con <b>FIJA</b> los huecos entre trackers, respetando las mesas colocadas y su pasillo de pitch.</span>
       </label>
       <div class="two">
         <div class="field"><label>Área mín. zona TRACKER (m²)</label><input id="mixMinArea" type="number" step="100" value="0"></div>
         <div class="field"><label>Área mín. zona FIJA (m²)</label><input id="mixMinAreaFija" type="number" step="50" value="0">
-          <div class="tip">Por defecto SIN mínimo: se conserva toda isla, y los huecos del tracker que admiten fija entran como zonas. Sube el del montaje que quieras podar — una fila fija ronda 50–150 m² y una de tracker &gt;700.</div></div>
+          <div class="tip">Con 0 se conservan todas las zonas. Sube el mínimo de cada montaje para descartar las pequeñas. Referencia: una fila fija ocupa unos 50–150 m²; una de tracker, más de 700 m².</div></div>
       </div>
       <div class="btnrow">
         <button class="btn ghost small" id="mixProponer">📐 Proponer por pendiente</button>
@@ -424,10 +438,7 @@ canvas.panning{cursor:grabbing}
       </div>
       <p class="tag" id="mixTag">sin zonas · propón un reparto o define las tuyas</p>
       <div id="mixOut"></div>
-      <p class="note" style="margin-top:8px"><b>Alcance.</b> El reparto por pendiente necesita el MDT
-        descargado arriba: sin él no se propone nada, porque media propuesta tendría exactamente la misma
-        pinta que una buena. Y lo que no admite NINGÚN montaje no se convierte en zona: sale con sus metros
-        para que lo decidas — fabricarle un montaje sería inventar el proyecto.</p>
+      <p class="note" style="margin-top:8px"><b>Descarga el MDT antes de proponer por pendiente.</b> Las superficies que no admiten ningún montaje quedan sin asignar y se muestran en m² para que las revises.</p>
     </div>
 
     <div class="card">
@@ -442,14 +453,14 @@ canvas.panning{cursor:grabbing}
            mesas), los dos avisos del motor mandan a ella, y el usuario la
            estuvo BUSCANDO. Marcada = canónico (cuaderno/Streamlit). -->
       <label class="chk"><input type="checkbox" id="alignGrid" checked> Alinear a rejilla global
-        <span class="tip" style="display:block;margin:2px 0 0">Marcada: columnas rectas, como el cuaderno y Streamlit — pero en lindes diagonales deja huecos donde caben trackers. Desmarcada: cada fila ancla en su linde.</span></label>
+        <span class="tip" style="display:block;margin:2px 0 0">Marcada: alinea las columnas y puede dejar huecos junto a lindes diagonales. Desmarcada: cada fila empieza en su linde.</span></label>
       <button class="btn" id="genBtn">▶ Generar implantación</button>
       <button class="btn" id="optBtn" title="Busca azimut, disposición y origen X/Y; compara la referencia y la propuesta antes de aplicarla">◱ Optimizar</button>
       <div class="field" style="margin-top:10px"><label>Cálculo</label>
         <select id="calc"><option value="js">Navegador (motor portado)</option><option value="core" disabled>Motor SolarGPT (canónico)</option></select>
-        <div class="tip">El navegador calcula solo; el motor SolarGPT es el número canónico y se activa al detectarlo.</div></div>
+        <div class="tip">Calcula aquí sin servidor. Conecta el motor SolarGPT para usar el resultado canónico.</div></div>
 
-      <details class="adv"><summary>Parámetros avanzados (gaps, viales, rejilla)</summary>
+      <details class="adv"><summary>Separaciones, viales y rejilla</summary>
       <div class="body">
         <div class="three">
           <div class="field"><label>Gap mód. (m)</label><input id="gapMod" type="number" step="0.005" value="0.02"></div>
@@ -464,10 +475,10 @@ canvas.panning{cursor:grabbing}
           <div class="field"><label>Vial EN la fila cada N estr.</label><input id="roadNsEvery" type="number" step="1" value="0"></div>
           <div class="field"><label>Ancho (m)</label><input id="roadNsW" type="number" step="0.5" value="4"></div>
         </div>
-        <p class="note" style="margin-top:0">Son el <code>road_every</code> y el <code>road_ns_every</code> del cuaderno. Van referidos a las FILAS, no al norte: con filas N-S el vial «entre filas» se dibuja N-S. Se reparten simétricos alrededor del centro de la parcela.</p>
+        <p class="note" style="margin-top:0">Los viales se orientan respecto a las filas: si las filas son N-S, el vial «entre filas» también es N-S. Se reparten simétricamente desde el centro de la parcela.</p>
         <div class="two">
           <div class="field"><label>Mín. estructuras/fila</label><input id="minStructs" type="number" step="1" value="2">
-            <div class="tip">El cuaderno usa 2. Con 1 se activa la poda mediana-relativa y suele salir PEOR.</div></div>
+            <div class="tip">Valor habitual: 2. Con 1 se activa la poda relativa a la mediana y puede reducirse la ocupación.</div></div>
           <div class="field"><label>Offset de filas</label>
             <select id="rowOffset"><option value="none">Sin offset</option><option value="half">Medio paso</option></select></div>
         </div>
@@ -479,7 +490,7 @@ canvas.panning{cursor:grabbing}
         </div>
         <p class="tip">X/Y en el marco de las filas. Desmarcado: origen y barrido existentes. Aplicar una propuesta guarda aquí su origen para poder regenerarla.</p>
         <label class="chk"><input type="checkbox" id="forceComplete"> Forzar strings completos</label>
-        <p class="note" style="margin-top:0">Descarta las estructuras de talla <b>menor</b> que la principal, que son las que dejan un string a medias. Con talla única no hay nada que descartar. <b>Ojo:</b> en el cuaderno esta casilla hoy no hace nada — el motor la pasa por las llamadas y la mete en la clave de caché, pero no toca la colocación.</p>
+        <p class="note" style="margin-top:0">Descarta las tallas <b>menores</b> que la principal. Con una sola talla no cambia el resultado. <b>En el cuaderno, esta opción aún no modifica la colocación.</b></p>
         <p class="note">La búsqueda de azimut, disposición y origen se configura en <b>Optimizar</b>.</p>
       </div>
       </details>
@@ -493,22 +504,22 @@ canvas.panning{cursor:grabbing}
         <button class="btn ghost small" id="expKml" disabled>KML</button>
         <button class="btn ghost small" id="d3Btn" disabled>🧊 Ver en 3D</button>
       </div>
-      <p class="tag" style="margin-top:10px">Civil (§02.5g)</p>
+      <p class="tag" style="margin-top:10px">Obra civil</p>
       <div class="btnrow">
         <button class="btn ghost small" id="expHincas" disabled>⛏ Hincas</button>
         <button class="btn ghost small" id="expBoq" disabled>📋 Mediciones</button>
         <button class="btn ghost small" id="expXyz" disabled>⛰ Terreno PVsyst</button>
         <button class="btn ghost small" id="expDae" disabled>🧱 COLLADA</button>
         <button class="btn ghost small" id="btnPitchBanda" disabled style="grid-column:1/3">↔ Pitch requerido por banda</button>
-        <button class="btn ghost small" id="btnChecklist" style="grid-column:1/3">✔ Checklist antes de congelar (§02.5i)</button>
+        <button class="btn ghost small" id="btnChecklist" style="grid-column:1/3">✔ Revisar antes de cerrar el diseño</button>
       </div>
-      <p class="tag" style="margin-top:10px">Gate layout ↔ sizing (§06.5)</p>
+      <p class="tag" style="margin-top:10px">Comprobar layout y sizing</p>
       <div class="two" style="align-items:end">
         <div class="field" style="margin-bottom:8px"><label>Strings del sizing</label><input id="gateStrings" type="number" step="1" placeholder="n_strings_total"></div>
         <div class="field" style="margin-bottom:8px"><label>kWp del sizing</label><input id="gateKwp" type="number" step="1" placeholder="pnom_kwp"></div>
       </div>
       <div class="btnrow">
-        <button class="btn ghost small" id="btnGate" style="grid-column:1/3">⚖ Correr el gate (tolerancia 5 %)</button>
+        <button class="btn ghost small" id="btnGate" style="grid-column:1/3">⚖ Comprobar sizing (tolerancia 5 %)</button>
       </div>
       <p class="tag" style="margin-top:10px">Sesión</p>
       <div class="btnrow">
@@ -516,10 +527,10 @@ canvas.panning{cursor:grabbing}
         <button class="btn ghost small" id="sesCargar">📂 Cargar sesión</button>
       </div>
       <input type="file" id="sesFile" accept=".json" style="display:none">
-      <p class="note" style="margin-top:8px">La sesión también se guarda sola en este navegador: al volver a abrir, la ficha sigue donde estaba. El fichero es para llevarla a otro sitio o archivarla con el proyecto.</p>
+      <p class="note" style="margin-top:8px">La sesión se guarda automáticamente en este navegador. Exporta el fichero para archivarla o continuar en otro equipo.</p>
       <div class="btnrow" style="display:none">
       </div>
-      <p class="note">El GeoJSON sale en el mismo formato que lee el <a href="layout.html" style="color:var(--accent)">Explorador de layout</a> (<code>{stats, geojson}</code>). El 3D abre la planta <code>custom</code> del visor de cobertura.</p>
+      <p class="note">Abre el GeoJSON en el <a href="layout.html" style="color:var(--accent)">Explorador de layout</a> (<code>{stats, geojson}</code>). «Ver en 3D» abre tu diseño en el visor de cobertura.</p>
     </div>
 
   </div>
@@ -539,7 +550,7 @@ canvas.panning{cursor:grabbing}
              «Dibujarla sobre el lienzo» («no encuentro la varita», 2026-08-21
              — la lección de «alinear a rejilla»: si no se encuentra, está mal
              puesta). Al armarla, ella sola cambia al modo dibujo. -->
-        <button class="btn ghost small mini" id="varitaBtn" title="Propone un BORRADOR editable del contorno a partir del COLOR de la ortofoto — no es un detector de lindes: revísalo y retócalo siempre. Clics sucesivos SUMAN zonas vecinas; Alt+clic descarga la escena como fixture para el banco. La linde oficial es la del Catastro/SIGPAC.">🪄 Borrador de parcela</button>
+        <button class="btn ghost small mini" id="varitaBtn" title="Propone un contorno por el color de la ortofoto. Revísalo: la linde oficial es la de Catastro/SIGPAC. Cada clic añade zonas vecinas; Alt+clic descarga la escena para pruebas.">🪄 Borrador de parcela</button>
         <select id="render" class="minisel" title="Cómo se pintan las mesas">
           <option value="auto">Render: auto</option>
           <option value="poly">Polígonos</option>
@@ -556,14 +567,14 @@ canvas.panning{cursor:grabbing}
         <span><i style="background:#36D399"></i> mesa</span>
         <span><i style="background:#F6A623"></i> vial</span>
         <span><i style="background:rgba(208,89,79,.35);border:1px solid #D0594F"></i> exclusión</span>
-        <span><i style="background:rgba(128,147,164,.30);border:1px dashed #8093A4"></i> descartada</span>
+        <span><i style="background:rgba(140,154,171,.30);border:1px dashed #8C9AAB"></i> descartada</span>
         <span><i style="background:rgba(150,110,220,.30);border:1px solid rgba(150,110,220,.75)"></i> pendiente &gt; máx. tracker</span>
         <span><i style="background:rgba(80,190,205,.30);border:1px solid rgba(80,190,205,.75)"></i> pendiente &gt; máx. fija</span>
         <span id="basemapMsg" style="color:var(--muted-2)"></span>
       </div>
       <div class="avisos" id="avisos"></div>
       <div class="sizes" id="sizes"></div>
-      <p class="note" id="foot">Define la parcela, ajusta los parámetros y pulsa <b>Generar implantación</b>. Todo el cálculo ocurre aquí, en el navegador: no hace falta levantar nada.</p>
+      <p class="note" id="foot">Define la parcela, ajusta los parámetros y pulsa <b>Generar implantación</b>. El cálculo se ejecuta en tu navegador.</p>
     </div>
   </div>
 
@@ -1998,7 +2009,7 @@ function buscaSitio(){
 }
 
 function loadPlants(){
-  try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
+  try{PLANTS=JSON.parse((window.FACTIUN_CATALOGO_JSON&&window.FACTIUN_CATALOGO_JSON()||localStorage.getItem('factiun_plantas'))||'{}')||{};}catch(e){PLANTS={};}
   pintaSitio();
 }
 $('sitioQ').addEventListener('input',buscaSitio);
@@ -2325,7 +2336,7 @@ function pintaRejilla(ctx,cv){
   var S=escalaMundo(), lat=u2lat(VIEW.cy);
   var mpp=156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,VIEW.z);
   var paso=50/mpp; while(paso<24)paso*=2; while(paso>240)paso/=2;
-  ctx.strokeStyle='rgba(35,48,61,.85)'; ctx.lineWidth=1; ctx.beginPath();
+  ctx.strokeStyle='rgba(39,64,95,.85)'; ctx.lineWidth=1; ctx.beginPath();
   for(var x=(CVW()/2)%paso;x<CVW();x+=paso){ctx.moveTo(x,0);ctx.lineTo(x,CVH());}
   for(var y=(CVH()/2)%paso;y<CVH();y+=paso){ctx.moveTo(0,y);ctx.lineTo(CVW(),y);}
   ctx.stroke();
@@ -2787,13 +2798,13 @@ function drawLayout(RES){
   // Una unidad de dibujo = un pixel CSS. Se pone en CADA repintado porque el
   // buffer puede haber cambiado de tamano justo arriba, y eso resetea la matriz.
   ctx.setTransform(DPRK,0,0,DPRK,0,0);
-  ctx.clearRect(0,0,CVW(),CVH());ctx.fillStyle='#0F151D';ctx.fillRect(0,0,CVW(),CVH());
+  ctx.clearRect(0,0,CVW(),CVH());ctx.fillStyle='#101D30';ctx.fillRect(0,0,CVW(),CVH());
   var hayOrto=false;
   if($('orto').checked)hayOrto=pintaOrtofoto(ctx,cv);
   if(!hayOrto)pintaRejilla(ctx,cv);
   // Velo oscuro sobre la ortofoto: sin él, las mesas verdes sobre un secarral
   // claro pierden el contraste que tienen sobre el fondo del panel.
-  if(hayOrto){ctx.fillStyle='rgba(11,15,20,.28)';ctx.fillRect(0,0,CVW(),CVH());}
+  if(hayOrto){ctx.fillStyle='rgba(14,24,38,.28)';ctx.fillRect(0,0,CVW(),CVH());}
   avisoBasemap(hayOrto);
 
   function ring(pts,fill,stroke,lw,dash){
@@ -2866,11 +2877,11 @@ function drawLayout(RES){
     var modo=$('render').value;
     var lineas=(modo==='line')||(modo==='auto'&&st.length>2500);
     if(RES.descartadas&&RES.descartadas.length&&$('showDisc').checked){
-      ctx.strokeStyle='#8093A4';ctx.lineWidth=0.8;ctx.setLineDash([3,2]);
+      ctx.strokeStyle='#8C9AAB';ctx.lineWidth=0.8;ctx.setLineDash([3,2]);
       RES.descartadas.forEach(function(d){
         var q=d.lonlat;ctx.beginPath();
         for(var k=0;k<q.length;k++){var pp=px(q[k][0],q[k][1]);k?ctx.lineTo(pp[0],pp[1]):ctx.moveTo(pp[0],pp[1]);}
-        ctx.closePath();ctx.fillStyle='rgba(128,147,164,.22)';ctx.fill();ctx.stroke();
+        ctx.closePath();ctx.fillStyle='rgba(140,154,171,.22)';ctx.fill();ctx.stroke();
       });
       ctx.setLineDash([]);
     }
@@ -2896,12 +2907,12 @@ function drawLayout(RES){
       for(var k=0;k<q.length;k++){var pp=px(q[k][0],q[k][1]);k?ctx.lineTo(pp[0],pp[1]):ctx.moveTo(pp[0],pp[1]);}
       ctx.closePath();
       ctx.fillStyle=COL_MESA;ctx.fill();
-      if(st.length<3000){ctx.strokeStyle='rgba(11,15,20,.55)';ctx.lineWidth=0.4;ctx.stroke();}
+      if(st.length<3000){ctx.strokeStyle='rgba(14,24,38,.55)';ctx.lineWidth=0.4;ctx.stroke();}
       var nm=modsDe[st[i].mods]||st[i].mods;
       var p0=px(q[0][0],q[0][1]), p1=px(q[1][0],q[1][1]);
       var pxMod=Math.hypot(p1[0]-p0[0],p1[1]-p0[1])/Math.max(nm,1);
       if(pxMod>=3&&nm>1){
-        ctx.strokeStyle='rgba(11,15,20,.45)';ctx.lineWidth=0.5;ctx.beginPath();
+        ctx.strokeStyle='rgba(14,24,38,.45)';ctx.lineWidth=0.5;ctx.beginPath();
         for(var mk=1;mk<nm;mk++){
           var f=mk/nm;
           var u=lerp(px(q[0][0],q[0][1]),px(q[1][0],q[1][1]),f);
@@ -3022,8 +3033,8 @@ function drawEscala(ctx,cv,hayOrto){
   var buenos=[1,2,5,10].map(function(f){return f*pot;}).filter(function(v){return v<=objetivo*2;});
   var L=buenos[buenos.length-1]||100, w=L/mpp;
   var y=CVH()-18;
-  if(hayOrto){ctx.fillStyle='rgba(11,15,20,.55)';ctx.fillRect(8,CVH()-40,w+22,32);}
-  ctx.strokeStyle='#8093A4';ctx.fillStyle='#B9C7D3';ctx.lineWidth=1.4;
+  if(hayOrto){ctx.fillStyle='rgba(14,24,38,.55)';ctx.fillRect(8,CVH()-40,w+22,32);}
+  ctx.strokeStyle='#8C9AAB';ctx.fillStyle='#B9C7D3';ctx.lineWidth=1.4;
   ctx.beginPath();ctx.moveTo(16,y);ctx.lineTo(16+w,y);ctx.stroke();
   ctx.beginPath();ctx.moveTo(16,y-4);ctx.lineTo(16,y+4);ctx.moveTo(16+w,y-4);ctx.lineTo(16+w,y+4);ctx.stroke();
   ctx.font='11px ui-monospace,monospace';ctx.fillText(L>=1000?(L/1000)+' km':L+' m',16,y-8);

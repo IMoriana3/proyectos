@@ -169,3 +169,31 @@ jobs:
           # falta para diagnosticar. Un artefacto que no sube es un artefacto
           # que no existe.
           include-hidden-files: true
+
+  # Verifica el recorrido Meteo/Supabase en un minuto aproximado, sin esperar
+  # a los demás arneses. Usa fixtures, no credenciales ni telemetría privada.
+  # Complementa, NO sustituye, el portón completo "navegador".
+  meteo-sensores:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: dependencias
+        run: npm install --no-save --no-audit --no-fund playwright@1.62.1
+      - name: instalar Chromium
+        run: npx playwright install chromium
+      - name: servir tarjeta
+        run: |
+          python3 -m http.server 8099 --bind 127.0.0.1 >/dev/null 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:8099/meteo.html && break
+            sleep 1
+          done
+          curl -sf -o /dev/null http://localhost:8099/meteo.html
+      - name: validación del analizador y la pantalla
+        run: |
+          node tests/test_meteo_sensores_reales.js
+          node tests/test_meteo_sensores_browser.js

@@ -38,13 +38,19 @@ El Panel es **un solo fichero** y las dos sesiones escriben en él. Tres reglas 
 ### `PROJECTS[]` — una tarjeta por herramienta
 ```js
 { name, status: "live|build|demo|idle|dead", objetivo, stack,
-  url,            // deploy público (GitHub Pages) o interno (worker con login); "" si no hay
+  url,            // URL principal de compatibilidad (Informe para Gorraiz)
+  links,          // OPCIONAL: [{label:"SCADA", url:"..."}, {label:"Informe", url:"..."}]
+                  // Si existe, sustituye el botón genérico «Abrir» por sus accesos
+                  // y lista ambas URLs en la ficha desplegable
   repo, updated: "YYYY-MM-DD", version,
   docId,          // -> docs/<docId>.md  (el docId ES el nombre del fichero)
   docUrl,         // alternativa: README remoto
   download,       // ZIP en assets/
   uso: [], pendientes: [{done,text}], historial: [{date,ver,note}] }
 ```
+- **`links[]` es opcional y solo configura accesos múltiples de una misma tarjeta.**
+  No crea otra ficha ni otro proyecto; `url` sigue siendo el enlace predeterminado de compatibilidad.
+  En «Instalación cubierta Gorraiz» son los accesos SCADA e Informe del mismo repositorio.
 - **`docId` obliga a que exista `docs/<docId>.md`.** Si se borra el .md, el botón Documentación
   de esa tarjeta se queda muerto sin avisar.
 - `updated`/`version`/`historial` los mantiene quien lleva esa herramienta.
@@ -94,6 +100,11 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
   *Agente y collector · PC de planta* (que es lo que hay en ese repo) fuera de `PLANT_MODULES`.
 
 ## Puntos abiertos (escribir aquí lo que afecte al otro)
+
+- **[Atlas FACTIUN · 2026-10-23 · actualizado]** Tarjeta única `Atlas FACTIUN · Plantas FV` incluida en `PROJECTS` por PR #620, con pictograma, `docId: atlas-factiun` y enlace existente protegido `https://maps-9rd.pages.dev`. Desde la revisión: **V14** es el último paquete reconocido por el usuario, **V14.2** es candidata probada sólo localmente (Notion simulado), no desplegada; la versión servida por esa URL no se ha verificado en una sesión autenticada. Estado de la tarjeta `build` hasta validar V14.2 en Cloudflare y Notion reales. La ficha describe catálogo sin GEM, pendientes sin coordenadas, alta/vinculación sobre el mapa, ubicación exacta y 5 estructuras; la base Notion sigue como fuente única. El Panel **no** aloja Atlas, no publica el ZIP ni tokens en el repo público. La tarjeta permanece invisible en producción hasta **merge y despliegue de la PR**; no fusionar sin autorización. 
+
+- **[Textos de interfaz · 2026-10-12]** Revisión coordinada con `solargpt-textos-claros` en los 11 repositorios del catálogo. Se acortan las 29 descripciones de `PROJECTS` y las ayudas visibles; nombres de tarjeta, IDs, destinos, estados, versiones de herramienta e historial se conservan. Caché del panel v181. Los detalles de uso y la evidencia técnica siguen disponibles. Sin cambios de motor, datos ni permisos.
+
 
 - **[IA implantaciones · 2026-09-28] Optimizar unificado, rama codex/layout-ml-offset-pilot.**
   v1.10.0 integra X/Y y comparación en el Buscador existente; retira el panel piloto y los
@@ -309,6 +320,7 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 | fecha | sesión | cambio |
 |---|---|---|
+| 2026-10-22 | Proyectos | Tarjeta «Instalación cubierta Gorraiz»: el rótulo anterior solo nombraba el Informe; `PROJECTS[].links` permite dos accesos «SCADA» e «Informe» sin duplicar tarjetas, conserva `url` para compatibilidad y mantiene pictograma y documentación. |
 | 2026-08-11 | Backtracking | Creación del contrato. Restaurados `docs/ips.md` y `docs/tcu-toolbox.md`; Fayón con las claves de vista buenas. |
 | 2026-08-11 | Backtracking | Botón SCADA por planta (`scada.html?planta=…`), vista `scada` a `core`, y *Tracker SCADA · El Burgo* → *Agente y collector · PC de planta*, fuera de `PLANT_MODULES`. |
 | 2026-08-11 | Proyectos | Restauradas las seis tarjetas borradas por la #39. |

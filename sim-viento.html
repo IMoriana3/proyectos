@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0B0F14">
 <link rel="icon" href="favicon.svg">
-<title>Comparador de estrategias de abanderamiento — Factiun</title>
+<title>Simulador de abanderamiento — Factiun</title>
 <!-- sin fuentes de Google: offline (fuentes del sistema) -->
 <style>
   /* Estética de la casa: la misma que `overcast.html` y `backtracking.html` de
@@ -347,18 +347,46 @@
     .viz3d{height:330px}
   }
 
+
+  /* ARQUITECTURA VISIBLE: el usuario entra por el simulador maestro; Granizo y
+     Nieve son laboratorios de lógica, no tres simuladores independientes. */
+  .simroute{display:grid;grid-template-columns:minmax(260px,1fr) minmax(420px,1.45fr);
+    gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);
+    border-left:3px solid var(--accent);padding:10px 12px;margin-bottom:11px}
+  .simroute b{display:block;font-family:var(--mono);font-size:.64rem;letter-spacing:.12em;
+    color:var(--accent);margin-bottom:3px}
+  .simroute span{font-size:.78rem;color:var(--tx2)}
+  .simroute strong{color:var(--tx)}
+  .simroute-labs{display:grid;grid-template-columns:auto 1fr;gap:3px 9px;
+    padding-left:10px;border-left:1px solid var(--line)}
+  .simroute-labs span{font-family:var(--mono);font-size:.66rem;color:var(--tx)}
+  .simroute-labs i{font-style:normal;font-size:.7rem;color:var(--muted)}
+  .simthreats{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:9px;
+    padding:7px 8px;border:1px solid var(--line);background:var(--card)}
+  .simthreats small{margin-left:auto;color:var(--muted);font-size:.67rem}
+  .threatchip{font-family:var(--mono);font-size:.66rem;color:var(--muted);
+    border:1px solid var(--line);background:var(--bg2);padding:3px 7px}
+  .threatchip.on{color:var(--accent);border-color:var(--accent);background:rgba(240,144,48,.07)}
+  @media(max-width:980px){
+    .simroute{grid-template-columns:1fr}
+    .simroute-labs{padding-left:0;padding-top:8px;border-left:0;border-top:1px solid var(--line)}
+    .simthreats small{width:100%;margin-left:0}
+  }
+
 </style>
+<!-- El catálogo de plantas, servido por este mismo origen. `localStorage` es POR ORIGEN
+     y sigue yendo primero: un navegador que acaba de usar la cartera manda sobre el fichero. -->
+<script src="data/plantas.js"></script>
 </head>
 <body>
 <header>
-  <h1>Viento &amp; Abanderamiento <span class="chip">abanderamiento en el navegador</span>
+  <h1>Simulador de abanderamiento <span class="chip">viento · granizo · nieve</span>
     <span class="engine" id="engine" title="Clic: fijar la URL del motor (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></span></h1>
-  <div class="sub">Qué cuesta defender el seguidor: compara las cuatro estrategias canónicas de
-    abanderamiento —<b>A1 · A2 · B1 · B2</b>, cara al viento o cara al sol, con uno o dos umbrales—
-    contra el mismo seguidor <b>sin abanderar</b>. POA perdida, cuántas veces abandera al año y
-    cuánto tiempo se queda así, con un laboratorio para meterle rachas y una escena 3D donde ver a
-    los cinco casos reaccionar al mismo viento. La escena usa el MODELO del seguidor de la casa
-    (<code>seguidor.js</code>). Todo corre offline salvo la meteo.</div>
+  <div class="sub">Un único simulador mueve el <b>mismo tracker</b> con viento, granizo y nieve:
+    las amenazas entran en el mismo arbitraje, pasan por la misma cadena <b>NCU→TCU</b> y terminan
+    en una única posición física del eje. Las pestañas de Granizo y Nieve son laboratorios de
+    <b>lógica</b>: explican por qué se dispara cada amenaza, pero el movimiento conjunto se ve aquí,
+    en <b>Simulador</b>. La comparativa A1/A2/B1/B2 y el análisis anual de viento siguen debajo.</div>
   <div class="src">motor: Open-Meteo + seguimiento con backtracking (Anderson &amp; Mikofski) +
     transposición isotrópica + las máquinas de estado de <code>wind_stow_strategies</code> ·
     motor SolarGPT opcional para el número canónico ·
@@ -366,13 +394,24 @@
 </header>
 
 <div class="tabs" id="tabs">
-  <button id="tabViento" class="on">🌬️ Viento</button>
-  <button id="tabGranizo">⛨ Granizo</button>
-  <button id="tabNieve">❄ Nieve</button>
+  <button id="tabViento" class="on">⚡ Simulador</button>
+  <button id="tabGranizo">⛨ Granizo · lógica</button>
+  <button id="tabNieve">❄ Nieve · lógica</button>
 </div>
 
 <div id="panelViento">
 <div class="wrap">
+  <div class="simroute" id="simRoute">
+    <div>
+      <b>SIMULADOR MAESTRO</b>
+      <span>Combina amenazas en una sola línea temporal: <strong>viento + granizo + nieve → control → NCU → TCU → eje</strong>.</span>
+    </div>
+    <div class="simroute-labs">
+      <span>Granizo · lógica</span><i>decide si hay amenaza</i>
+      <span>Nieve · lógica</span><i>decide si entra el criterio</i>
+      <span>Simulador</span><i>resuelve quién manda y mueve el tracker</i>
+    </div>
+  </div>
 <div class="cols">
 
   <!-- ═════════ ENTRADAS ═════════ -->
@@ -554,11 +593,11 @@
   <!-- ═════════ RESULTADOS ═════════ -->
   <div>
     <div class="card" id="cv3dCard">
-      <h2>Escena <span class="sn" id="c3hint">viento a mano · el seguidor a 0,17 °/s</span>
+      <h2>⚡ Simulador multiamenaza <span class="sn" id="c3hint">viento + granizo + nieve · un solo eje</span>
         <span style="display:flex;gap:6px;margin-left:8px">
-          <button class="btn small acc" id="mEvent">Evento</button>
-          <button class="btn small" id="mLive">En vivo</button>
-          <button class="btn small" id="mEp" title="La ventana del episodio más caro del año (hay que simular antes)">Episodio</button>
+          <button class="btn small acc" id="mEvent">Escenario</button>
+          <button class="btn small" id="mLive">Manual en vivo</button>
+          <button class="btn small" id="mEp" title="La ventana del episodio más caro del año (hay que simular antes)">Episodio anual</button>
           <button class="btn small" id="mFit" title="Volver al encuadre inicial">Encuadrar</button>
         </span></h2>
       <div class="field" style="margin-bottom:9px"><label>Qué se dibuja</label>
@@ -628,22 +667,24 @@
       <div id="eventCtl">
         <div class="eventmaster">
           <div class="top">
-            <div class="field" style="margin:0"><label>Escenario</label>
+            <div class="field" style="margin:0"><label>Caso de amenazas</label>
               <select id="ePreset">
-                <option value="manual">Manual · tú defines las amenazas</option>
-                <optgroup label="Viento">
+                <option value="manual">Manual · combina viento, granizo y nieve</option>
+                <optgroup label="Solo viento">
                   <option value="wind_ramp" selected>Viento creciente · cruza T1 y T2</option>
                   <option value="gust">Ráfaga corta · 95 km/h</option>
                   <option value="passive">Pasivo · racha de desembrague</option>
                 </optgroup>
-                <optgroup label="Granizo">
+                <optgroup label="Solo granizo">
                   <option value="hail_far">Granizo · 22 mm · ETA 90 min</option>
                   <option value="hail_near">Granizo inminente · ETA 20 min</option>
                   <option value="hail_reforecast">Granizo · reforecast ETA 90→20 min</option>
-                  <option value="hail_wind">Granizo + viento contrario</option>
                 </optgroup>
-                <optgroup label="Nieve">
+                <optgroup label="Solo nieve">
                   <option value="snow">Nieve · 15 cm</option>
+                </optgroup>
+                <optgroup label="Combinados">
+                  <option value="hail_wind">Viento + granizo · conflicto de lado</option>
                   <option value="snow_hail">Nieve + granizo · conflicto de lado</option>
                   <option value="snow_hail_same">Nieve + granizo · mismo lado</option>
                 </optgroup>
@@ -653,6 +694,12 @@
               <div class="v" id="eClock">21 jun · 12:00</div>
               <div class="sn" id="eTimeTop" style="margin:2px 0 0">T = 0 min</div>
             </div>
+          </div>
+          <div class="simthreats" id="eThreats" aria-label="Amenazas configuradas en el escenario">
+            <span class="threatchip" data-threat="wind">🌬 Viento</span>
+            <span class="threatchip" data-threat="hail">⛨ Granizo</span>
+            <span class="threatchip" data-threat="snow">❄ Nieve</span>
+            <small>Las amenazas activas comparten arbitraje, NCU→TCU y el mismo eje.</small>
           </div>
           <div class="timerow">
             <button class="btn small acc" id="ePlay">▶ Reproducir</button>
@@ -915,7 +962,7 @@
   <div class="cols">
     <div>
       <div class="card">
-        <h2>⛨ Máquina de amenaza <span class="sn">Rev01.4 §10.1 · 12 estados</span></h2>
+        <h2>⛨ Granizo · lógica de amenaza <span class="sn">Rev01.4 §10.1 · 12 estados</span></h2>
         <p class="note" style="margin-top:0">Decide <b>cuándo</b> pre-alertar, cuándo cruzar y
           cuándo quedarse quieta. <b>No mueve un tracker</b> —es literal del informe— y no elige
           ángulos: el §9.3 se los asigna a Estructuras.</p>
@@ -1020,7 +1067,7 @@
             <input id="xNieve" type="number" step="1" value="0" min="0"></div>
         </div>
         <div id="xVeredicto"></div>
-        <button class="btn acc" id="xToLive" style="margin-top:6px">▶ Ver esta amenaza moviendo los trackers</button>
+        <button class="btn acc" id="xToLive" style="margin-top:6px">▶ Abrir este caso en Simulador</button>
         <p class="note" style="margin-bottom:0">Los umbrales —60 min, 30 min, 40 y 60 km/h— son los
           <b>propuestos</b>, y la propia propuesta dice que habría que replantearlos si cambian los
           valores de viento. Se editan en el bloque <code>LOC.GRZ</code>.</p>
@@ -1078,7 +1125,7 @@
   <div class="cols">
     <div>
       <div class="card">
-        <h2>❄ El criterio, literal <span class="sn">SP3 · sensor de nieve</span></h2>
+        <h2>❄ Nieve · lógica de sensor <span class="sn">SP3 · criterio declarado</span></h2>
         <table class="crono"><tbody>
           <tr><td>activa</td><td class="t">espesor &gt; 10 cm</td></tr>
           <tr><td>desactiva</td><td class="t">espesor &lt; 2 cm</td></tr>
@@ -4791,15 +4838,55 @@ function parseCoords(t){
   return {lat:la,lon:lo};
 }
 
-/* La lista local: cartera primero (es del proyecto) y presets después. */
+/* El código que encabeza un preset —«23003 · El Burgo I (Zaragoza, ES)»— es el
+   Nº DE PROYECTO, que es justo lo que el catálogo de la cartera publica en
+   `nproy`. Por eso se pueden casar sin inventar nada. */
+function codigoPreset(n){
+  var m=/^\s*([0-9][0-9.]*)\s*·/.exec(String(n==null?'':n));
+  return m?m[1]:null;
+}
+
+/* La lista local: cartera primero (es del proyecto) y presets después.
+ *
+ * ═══ POR QUÉ SE FUNDEN, Y NO SE APILAN ═══
+ *
+ * Un preset y una planta de la cartera pueden ser EL MISMO SITIO, y cada uno
+ * trae lo que el otro no: el preset, una zona horaria IANA curada; la cartera,
+ * las coordenadas de verdad y los datos de planta. El catálogo publica 18
+ * campos y NINGUNO es la zona.
+ *
+ * Mientras la cartera sólo llegaba por `localStorage` —o sea, sólo si alguien
+ * había abierto `cartera-tabla.html` en ese navegador— esto no se veía: un
+ * navegador limpio encontraba el preset y su zona. Al servirse el catálogo como
+ * fichero, la entrada de la cartera pasó delante y la página cayó a DERIVAR la
+ * hora de la longitud. Medido el 2026-10-22: El Burgo I pasaba de
+ * «UTC+2 · Europe/Madrid» a «UTC+0 · derivada de la longitud». Dos horas de
+ * error en verano, en lo que se enseña y en lo que se teclea — y la física va
+ * en UTC, así que el número seguía bien y la LECTURA era falsa, que es el fallo
+ * que más cuesta ver.
+ *
+ * Fundidos, no se pierde ninguno de los dos: coordenadas y código de la
+ * cartera, zona del preset. Y la etiqueta se queda con el paréntesis del preset
+ * («Zaragoza, ES») para que lo que antes se encontraba tecleando «burgo
+ * zaragoza» se siga encontrando. */
 function sitiosLocales(){
-  var out=[];
+  var out=[], porCodigo={}, fundidos={};
+  PRESETS.forEach(function(p){ var c=codigoPreset(p.n); if(c)porCodigo[c]=p; });
   Object.keys(PLANTS).sort().forEach(function(c){
     var p=PLANTS[c];
     if(!p||p.lat==null||p.lon==null)return;
-    out.push({n:(p.nombre||'?')+' · '+c,lat:+p.lat,lon:+p.lon,src:'Cartera',cod:c,tz:p.tz||null});
+    var np=String(p.nproy==null?c:p.nproy);
+    var pre=porCodigo[np]||porCodigo[String(c)]||null;
+    if(pre)fundidos[pre.n]=true;
+    /* el Nº de proyecto sólo se escribe cuando DIFIERE del código de planta:
+       si no, saldría «Fayón · 24007 · 24007» */
+    var suf=pre?/\(([^)]*)\)\s*$/.exec(pre.n):null;
+    out.push({n:(p.nombre||'?')+' · '+c+(np!==String(c)?' · '+np:'')+(suf?' ('+suf[1]+')':''),
+              lat:+p.lat,lon:+p.lon,src:'Cartera',cod:c,
+              tz:p.tz||(pre?pre.tz:null)});
   });
   PRESETS.forEach(function(p){
+    if(fundidos[p.n])return;
     out.push({n:p.n,lat:p.lat,lon:p.lon,src:'Presets',tz:p.tz||null});
   });
   return out;
@@ -4906,7 +4993,7 @@ function buscaSitio(){
 }
 
 function loadPlants(){
-  try{PLANTS=JSON.parse(localStorage.getItem('factiun_plantas')||'{}')||{};}catch(e){PLANTS={};}
+  try{PLANTS=JSON.parse((window.FACTIUN_CATALOGO_JSON&&window.FACTIUN_CATALOGO_JSON()||localStorage.getItem('factiun_plantas'))||'{}')||{};}catch(e){PLANTS={};}
   pintaSitio();
 }
 $('sitioQ').addEventListener('input',buscaSitio);
@@ -7478,10 +7565,25 @@ function fechaEvento(){
   var v=$('eDate').value,p=(v||'2023-06-21').split('-');
   return new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));
 }
+function eventoAmenazasUI(){
+  var box=$('eThreats');if(!box)return;
+  var t1=Math.max(0,+($('t1')||{value:40}).value||40);
+  var wind=Math.max(+$('eV').value||0,+$('eVPeak').value||0,+$('eGust').value||0)>=t1;
+  var hail=$('eHailOn').checked;
+  [1,2].forEach(function(n){
+    if($('eHailR'+n+'On').checked&&$('eHailR'+n+'Kind').value==='update')hail=true;
+  });
+  var snow=$('eSnowOn').checked;
+  [['wind',wind],['hail',hail],['snow',snow]].forEach(function(q){
+    var el=box.querySelector('[data-threat="'+q[0]+'"]');
+    if(el)el.className='threatchip'+(q[1]?' on':'');
+  });
+}
 function eventoLbl(){
   var v=+$('eV').value,d=+$('eD').value,m=+$('eH').value;
   $('eVlbl').textContent=v+' km/h';$('eVPeakLbl').textContent=(+$('eVPeak').value)+' km/h';
   $('eDlbl').textContent=compass(d)+' · '+d+'°';$('eHlbl').textContent=hhmm(m);
+  eventoAmenazasUI();
 }
 
 function eventoHailUpdatesFromUI(){
@@ -7623,6 +7725,7 @@ function eventoAplica(t){
 
 function eventoRebuild(pos){
   if(!EVENTO.enabled)return;
+  eventoAmenazasUI();
   var run=EVENTO.run,old=(pos==null?EVENTO.pos:+pos);
   EVENTO.sim=LOC.simulaEvento(eventoCfgUI());EVENTO.run=run;EVENTO.acc=0;
   eventoPintaLinea();eventoAplica(old);
@@ -8285,7 +8388,7 @@ async function montaEscena(){
 function setModo(m){
   if(m==='ep'&&!(REP&&REP.timeline)){
     $('c3note').innerHTML='<b style="color:var(--warn)">Todavía no hay episodio</b>: pulsa '+
-      '<b>Simular el año</b> y vuelve. Evento y En vivo no necesitan un año previo.';
+      '<b>Simular el año</b> y vuelve. Escenario y Manual en vivo no necesitan un año previo.';
     return;
   }
   MODO=m;EVENTO.enabled=(m==='event');
@@ -8299,7 +8402,7 @@ function setModo(m){
 
   if(m==='event'){
     eventoLbl();eventoRebuild(EVENTO.pos);
-    $('c3hint').textContent=(ESC&&ESC.kind==='planta')?ESC.info:'evento · slider minutal · motor a 1 s';
+    $('c3hint').textContent=(ESC&&ESC.kind==='planta')?ESC.info:'escenario multiamenaza · slider minutal · motor a 1 s';
     $('c3note').innerHTML='El <b>slider T−30…T+180</b> reconstruye el evento desde el principio a '+
       '<b>paso interno de 1 s</b>: arrastrar hacia atrás y volver al mismo minuto da el mismo estado. '+
       'Los presets cubren viento, racha, granizo, nieve, combinaciones y pasivo. Las tarjetas dicen '+

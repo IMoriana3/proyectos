@@ -60,7 +60,7 @@ PATRON="${1:-}"
 # nadie fija no consigue.
 declare -A PISO=(
   [test_generador_inclemencias.js]=45
-  [test_abanderamiento_evento.js]=39
+  [test_abanderamiento_evento.js]=60
   [test_buscador.js]=59
   [test_careo_pvsyst.js]=11
   # La cartera del usuario NO la probaba nadie: de los 33 arneses, el único que
@@ -141,7 +141,12 @@ declare -A PISO=(
   # sujeta que las hincas no floten con la rejilla de cumbreras en fase par.
   # Mismo despiste que arriba, mismo commit.
   [test_comparador_3d.js]=285
-  [test_comparador_sitio.js]=36
+  # 36 -> 37 el 2026-10-22. Al servirse el catálogo como fichero, el primer
+  # «tunez» pasó a ser la PLANTA (Gabès) en vez del preset (centro del país, a
+  # ~190 km). El dato nuevo es el bueno, así que lo que se corrige es la
+  # expectativa; y se añade el camino del preset con uno que ninguna planta
+  # tapa, para que al crecer la cartera no deje de probarse en silencio.
+  [test_comparador_sitio.js]=37
   [test_ejecucion_traza.mjs]=61
   # La ficha de planta y el acceso al SCADA. El piso son las 30 MEDIDAS, y lo
   # que de verdad sujeta son dos: «una planta SIN COMENZAR no gana sala de
@@ -420,7 +425,19 @@ declare -A PISO=(
   # de valor. MEDIDO: contra los CINCO arneses que podían verlo, mataron CERO
   # el día juliano corrido un día entero, el backtracking quitado del todo y la
   # refracción anulada. Este banco los mata 4, 5 y 3.
-  [test_solar.js]=73
+  # 73 → 80: orto/ocaso con el criterio NOAA (−0,833° geométricos, interpolado) y
+  # crepúsculo civil (−6°). El código viejo (primer punto de la malla con
+  # elevación aparente ≥ 0) mata 6 de las 7 nuevas.
+  [test_solar.js]=80
+  # El desplegable de planta rotulaba la CLAVE DE CARTERA (24002) donde toda la
+  # casa rotula el nº de PROYECTO (23003): la cartera ya publicaba `nproy` y
+  # esta ficha no lo leía. MEDIDO: el código viejo mata 1 de 8.
+  # 8 → 10: la ficha abre en el día y la hora de la planta, no en el solsticio
+  # a las 12:00. El HTML con `value="2026-06-21"` y 720 fijos mata las 2.
+  # 10 → 17: el cambio de hora por calendario (últimos domingos de marzo y
+  # octubre) y no por días fijos de 2026. La regla vieja (88–298) mata 4.
+  [test_solar_planta.js]=17
+  [test_solar_weather_contract.mjs]=14
   [test_sizing.js]=115
   # 13, y MEDIDO en los TRES modos —con checkout hermano, por `main` sobre
   # HTTPS y sin ninguno de los dos— porque el recuento no cambia entre ellos:
@@ -769,7 +786,12 @@ declare -A PISO=(
   # paso de una hora, 3 pasos sueltos contra 24.
   [test_viento_steppers.js]=17
   [test_viento_sello.js]=17
-  [test_viento_sitio.js]=52
+  # 52 -> 55 el 2026-10-22. Los tres que faltaban los encontró el mordedor, no
+  # yo: con 52 sobrevivían «casar sólo por cod» (San José tiene cod == nproy,
+  # así que no distingue), «no quitar el preset fundido» y «perder el
+  # paréntesis». O sea que la puerta no miraba el ÚNICO caso por el que existe:
+  # El Burgo I, planta 24002 y proyecto 23003.
+  [test_viento_sitio.js]=55
   # LA CONFIGURACIÓN DE LA PUERTA, que hasta hoy era prosa en
   # `docs/puertas-y-alcance.md` §5 bis — y ese apartado declaraba su propia
   # debilidad diciendo que leerla «pide una llamada autenticada de
@@ -983,8 +1005,59 @@ declare -A PISO=(
   # de Meteo: mensual, serie diaria, zoom, cockpit 6-paneles, DOY, rosa,
   # extremos térmicos/heladas, nieve, granizo, viento sintético y comparación.
   [test_meteo_browser.mjs]=73
+  # Análisis de medidas reales: 14 verificaciones reproducibles sin credenciales.
+  # El piso cubre RLS simulada, deduplicación diaria, escala WFU raw,
+  # comparación de anemómetros, unidades y lagunas de datos.
+  [test_meteo_sensores_reales.js]=14
+  # Pantalla real en Chromium con autenticación y datos SUPABASE de prueba.
+  # 12 controles: acceso, HSU, WFU raw, coherencia, privacidad y cierre.
+  [test_meteo_sensores_browser.js]=12
+  # El catálogo de plantas servido como fichero. 14 comprobaciones medidas.
+  # Vigila el modo de fallo propio de un fichero generado: QUEDARSE VIEJO. Si la
+  # cartera cambia y nadie regenera, las páginas sirven el catálogo de otro día y
+  # no se nota mirándolas —enseñan plantas, sólo que las de antes—, que es peor
+  # que el selector vacío porque el vacío se ve. Comparado con el generador, no
+  # con una copia de su lógica. Probado en rojo en seis sentidos.
+  # Desde el 2026-10-22 carea además las DOS implementaciones de `publishSpecs`:
+  # la propia del generador y la que aún se recorta de la técnica. Es la prueba
+  # de que mudar esa lógica no perdió nada, y se borra el día que se borre la
+  # técnica. Probado en rojo en cinco sentidos.
+  [test_catalogo_plantas.js]=14
+  # Las SEIS páginas enganchadas a ese fichero. 15 comprobaciones medidas.
+  # Hermano del de arriba y distinto: aquél vigila que el fichero no se quede
+  # viejo, éste que alguien lo LEA. Hoy las seis funcionan por una razón que va
+  # a caducar —que `cartera-tabla.html` existe y alguien la abre—, y cuando se
+  # borre, el selector saldría vacío SIN dar error: el mismo fallo silencioso
+  # que tuvieron las cinco de Cobertura-Zigbee. Aquí la puerta llega antes que
+  # el fallo. `meteo` va aparte porque lee por `lib/meteo-browser.js`, no en la
+  # página. Probado en rojo en siete sentidos, restaurando por copia y careando
+  # por sha256.
+  [test_catalogo_servido.js]=15
   [test_pw_navegador.js]=10
   [test_zonas_mixto.js]=106
+  # ── LOS CUATRO DE WEATHERNEXT 3 ────────────────────────────────────────
+  # Entraron el 2026-10-19 con `a8855b5` SIN piso, y eso no dejó un arnés mal
+  # vigilado: dejó LA PUERTA ENTERA MUDA. El guard de arriba exige que la tabla
+  # nombre a todos y sale 1 en cuanto falta uno, así que desde ese commit
+  # `correr.sh` moría antes de correr un solo banco —el paso duraba menos de un
+  # segundo contra los ~19 minutos de una corrida real— y `arneses` llevaba
+  # siete corridas rojas en main con siete commits aterrizando sin que nada
+  # votara. Un piso que falta no es un hueco local: es el portón.
+  #
+  # Y no bastaba con apuntarlos: los cuatro usaban `node:assert`, que calla al
+  # pasar, así que publicaban CERO y cualquier piso los habría puesto rojos.
+  # Ahora pasan por `tests/porton.mjs`, que conserva la superficie de `assert`
+  # y publica una línea por comprobación.
+  #
+  # Los números son de una corrida medida, no transcritos, y los cuatro se han
+  # visto MORDER: `tools/muerde_bancos_meteo.sh` rompe a propósito el código
+  # que vigilan —la canonización de la hora de pasada, el valor absoluto del
+  # error medio, una hora de menos en la serie, la versión del contrato y un
+  # cuantil ausente pasado a 0— y los cinco destrozos salen rojos.
+  [test_meteo_forecast_cache.mjs]=20
+  [test_meteo_weathernext_comparison.mjs]=26
+  [test_meteo_weathernext_contract.mjs]=21
+  [test_meteo_weathernext_transport.mjs]=39
 )
 
 # ── EL PISO TIENE QUE CUBRIR A TODOS ─────────────────────────────────────
@@ -1050,8 +1123,17 @@ declare -A EXCLUIDOS=()
 # uno nuevo en silencio ni sobrevive una excusa al fichero que excusaba.
 declare -A FUERA_DEL_PORTON=(
   [tools/test_cartera_dwg.mjs]="carea contra el DWG; necesita el repo cobertura-zigbee al lado"
+  [tools/test_origen_catalogo.js]="carea que los doce que se pasan el catálogo de plantas por localStorage compartan ORIGEN; necesita el repo Cobertura-Zigbee al lado, donde viven cinco de ellos. HOY SALE 1 A PROPÓSITO: están en dos dominios desde la migración a Cloudflare y los cinco visores de Zigbee leen un almacén donde nadie escribe"
+  [tools/test_careo_carteras.js]="carea las DOS carteras de plantas —esta y la de Supabase— para no perder nada al quedarse con una; necesita el repo factiun-cartera al lado. Sin él sale 2, NO COMPROBADO, y lo dice en la primera línea"
   [tools/test_ancho.mjs]="medida de diseño; necesita playwright-core y páginas de otros repos"
   [tools/test_nitidez.mjs]="informe sin veredicto (sale 0 siempre); además clava la ruta del navegador de este contenedor"
+  # Entró el 2026-10-19 con #610 SIN declarar, y era el SEGUNDO guard que tenía
+  # la puerta parada: una vez resueltos los pisos de meteo, el bucle seguía sin
+  # arrancar por este. Sonda EXTERNA sin credenciales contra el sitio publicado
+  # —comprueba que Cloudflare Access no sirva nada a un anónimo—, así que
+  # necesita red y el despliegue ya hecho. La lanza .github/workflows/pages.yml,
+  # aparte del portón, igual que el cronómetro de abajo.
+  [tools/test_cloudflare_access.mjs]="sonda externa sin credenciales contra el sitio publicado: que Access no sirva nada a un anónimo. La lanza .github/workflows/pages.yml, aparte de la puerta"
   [tools/test_pages_cronometro.mjs]="juzga la página PUBLICADA, no el árbol: sondea Pages hasta 10 min a que sirva este fichero. Lo lanza .github/workflows/pages.yml, aparte de la puerta, porque esa espera no se le cobra a cada PR"
 )
 

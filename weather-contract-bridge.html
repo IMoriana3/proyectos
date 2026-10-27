@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<title>Factiun WeatherContract Bridge</title>
+</head>
+<body>
+<script type="module">
+import {loadActiveWeatherContract,activeWeatherRef} from "./lib/weather-contract.js";
+
+const TYPE_GET="factiun-weather-contract:get";
+const TYPE_RESULT="factiun-weather-contract:result";
+
+function allowedOrigin(origin){
+  try{
+    const u=new URL(origin);
+    if(u.protocol==="http:"&&(u.hostname==="127.0.0.1"||u.hostname==="localhost"))return true;
+    if(u.protocol!=="https:")return false;
+    if(u.origin==="https://imoriana3.github.io")return true;
+    if(u.hostname==="cobertura-zigbee.imoriana3.workers.dev")return true;
+    if(u.hostname==="gemelo-digital.imoriana3.workers.dev")return true;
+    if(u.hostname==="scada.imoriana3.workers.dev")return true;
+    return false;
+  }catch(e){return false;}
+}
+
+addEventListener("message",async ev=>{
+  const q=ev.data;
+  if(!q||q.type!==TYPE_GET||!q.request_id)return;
+  if(!allowedOrigin(ev.origin)){
+    ev.source?.postMessage({type:TYPE_RESULT,request_id:q.request_id,ok:false,error:"origin_not_allowed"},ev.origin||"*");
+    return;
+  }
+  try{
+    const kind=q.kind==null?null:String(q.kind);
+    const pkg=await loadActiveWeatherContract(kind);
+    const ref=activeWeatherRef(kind);
+    ev.source?.postMessage({
+      type:TYPE_RESULT,request_id:q.request_id,ok:!!pkg,
+      pkg:pkg||null,ref:ref||null,error:pkg?null:"no_active_contract"
+    },ev.origin);
+  }catch(e){
+    ev.source?.postMessage({
+      type:TYPE_RESULT,request_id:q.request_id,ok:false,
+      error:String(e&&e.message||e)
+    },ev.origin);
+  }
+});
+</script>
+</body>
+</html>

@@ -117,9 +117,34 @@ check('sin texto salen los primeros, no ninguno', ctx.filtraSitios(LISTA, '').le
   const tun = await p.evaluate(() => ({ lat: +document.getElementById('lat').value,
     lon: +document.getElementById('lon').value,
     sel: document.getElementById('sitioSel').textContent }));
-  check('elegirlo rellena lat/lon (' + tun.lat + ', ' + tun.lon + ')',
-    Math.abs(tun.lat - 35.5) < 1e-6 && Math.abs(tun.lon - 10) < 1e-6, JSON.stringify(tun));
-  check('y el rótulo pasa a nombrar el sitio', tun.sel === 'Túnez', tun.sel);
+  /* MANDA LA CARTERA, NO EL PRESET, y es lo que se quiere.
+     Hasta el 2026-10-22 el catálogo sólo llegaba por `localStorage`, o sea sólo
+     si alguien había abierto `cartera-tabla.html` en ese navegador; en un
+     navegador limpio —como éste— no había ninguna planta y el primer «tunez»
+     era el preset, en 35,5/10. Ahora el catálogo se sirve como fichero y gana
+     la planta de verdad: Túnez 24021, en Gabès.
+     El preset de esta página NO es la planta: está en mitad del país, a ~190 km
+     del emplazamiento. Lo mismo le pasa a los de El Burgo I (que cae en
+     Valladolid) y San José (que cae en Sevilla, cuando la planta está en
+     Arequipa). Elegir el dato de la cartera es elegir el bueno. */
+  check('elegirlo rellena lat/lon de la PLANTA, no del preset (' + tun.lat + ', ' + tun.lon + ')',
+    Math.abs(tun.lat - 33.87878) < 1e-3 && Math.abs(tun.lon - 9.87394) < 1e-3, JSON.stringify(tun));
+  check('y el rótulo nombra el sitio con su código de planta',
+    /^Túnez · 24021/.test(tun.sel), tun.sel);
+
+  /* Y EL CAMINO DEL PRESET SIGUE CUBIERTO, con uno que ninguna planta tapa:
+     si no, al crecer la cartera esta parte dejaría de probarse sin que nadie lo
+     notara —que es justo el fallo que trajo aquí a este banco—. */
+  await p.fill('#sitioQ', 'assu');
+  await p.waitForTimeout(250);
+  await p.evaluate(() => document.querySelector('#sitioRes .it')
+    .dispatchEvent(new MouseEvent('mousedown')));
+  await p.waitForTimeout(400);
+  const asu = await p.evaluate(() => ({ lat: +document.getElementById('lat').value,
+    lon: +document.getElementById('lon').value,
+    sel: document.getElementById('sitioSel').textContent }));
+  check('un preset que ninguna planta tapa sigue eligiéndose (' + asu.lat + ', ' + asu.lon + ')',
+    Math.abs(asu.lat + 5.58) < 1e-6 && Math.abs(asu.lon + 36.91) < 1e-6, JSON.stringify(asu));
 
   // coordenadas pegadas, el camino del DWG
   await p.fill('#sitioQ', '-5.5800, -36.9100');

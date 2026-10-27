@@ -9,6 +9,8 @@ const vizCode=fs.readFileSync(path.join(__dirname,"../lib/meteo-viz.js"),"utf8")
 const V=await import("data:text/javascript;base64,"+Buffer.from(vizCode).toString("base64"));
 const meteoCode=fs.readFileSync(path.join(__dirname,"../lib/meteo.js"),"utf8");
 const WX=await import("data:text/javascript;base64,"+Buffer.from(meteoCode).toString("base64"));
+const wxCode=fs.readFileSync(path.join(__dirname,"../lib/meteo-weatherex.js"),"utf8");
+const WXEX=await import("data:text/javascript;base64,"+Buffer.from(wxCode).toString("base64"));
 const contractCode=fs.readFileSync(path.join(__dirname,"../lib/weather-contract.js"),"utf8");
 const WC=await import("data:text/javascript;base64,"+Buffer.from(contractCode).toString("base64"));
 
@@ -20,6 +22,48 @@ function check(name,cond,detail=""){
 function near(a,b,tol=1e-9){return Number.isFinite(a)&&Math.abs(a-b)<=tol;}
 
 check("versión browser core 0.8.0",M.WORKBENCH_VERSION==="0.8.0");
+
+// WeatherEx: mock del ÚNICO contrato HTTP documentado; sin llamadas comerciales/live.
+const wxResponse={success:true,models:[
+  {model:"gfs",rows:[
+    {timestamp_ist:"2026-10-23T05:30:00+05:30",temperature:27.4,precipitation:0,wind_speed:50},
+    {timestamp_ist:"2026-10-23T06:30:00+05:30",temperature:27.0,precipitation:2,wind_speed:60}
+  ]},
+  {model:"ecmwf",rows:[
+    {timestamp_ist:"2026-10-23T05:30:00+05:30",temperature:25},
+    {timestamp_ist:"2026-10-23T06:30:00+05:30",temperature:24}
+  ]}
+]};
+const wxRows=WXEX.parseWeatherExForecast(wxResponse,{
+  model:"gfs",lat:42.8,lon:-1.6,normalizer:WX.normalizeMeteo
+});
+check("WeatherEx IST +05:30 convertido a UTC",wxRows[0].timestamp==="2026-10-23T00:00:00.000Z");
+check("WeatherEx no mezcla modelos",wxRows.length===2&&wxRows[0].temp_c===27.4&&wxRows[1].temp_c===27);
+check("WeatherEx no inventa viento/rachas/lluvia con unidades no certificadas",
+  wxRows[0].wind_ms===null&&wxRows[0].gust_ms===null&&wxRows[0].precip_mm===null);
+check("WeatherEx preserva procedencia del modelo",wxRows[0].source==="weatherex"&&wxRows[0].provenance?.model==="gfs");
+const wxEcm=WXEX.parseWeatherExForecast(wxResponse,{model:"ecmwf",lat:42.8,lon:-1.6});
+check("WeatherEx selección ECMWF aislada",wxEcm[0].temp_c===25&&wxEcm.length===2);
+let wxBadTime=false;try{WXEX.parseWeatherExForecast({
+  success:true,models:[{model:"gfs",rows:[{timestamp_ist:"2026-10-23T00:00:00",temperature:4}]}]
+},{model:"gfs",lat:42.8,lon:-1.6})}catch(e){wxBadTime=/zona horaria/.test(e.message)}
+check("WeatherEx rechaza timestamps sin offset",wxBadTime);
+let wxQuarter=false;try{WXEX.parseWeatherExForecast({
+  success:true,models:[{model:"gfs",rows:[
+    {timestamp_ist:"2026-10-23T05:30:00+05:30",temperature:4},
+    {timestamp_ist:"2026-10-23T05:45:00+05:30",temperature:5}
+  ]}]
+},{model:"gfs",lat:42.8,lon:-1.6})}catch(e){wxQuarter=/no es horaria/.test(e.message)}
+check("WeatherEx no confunde pasos 15min con horas",wxQuarter);
+let wxRequested="";
+const wxFetched=await WXEX.fetchWeatherExForecast({
+  lat:42.8,lon:-1.6,model:"gfs",forecastDays:3,normalizer:WX.normalizeMeteo,
+  fetchImpl:async (url,opts)=>{wxRequested=String(url);return {ok:true,json:async()=>wxResponse}}
+});
+check("WeatherEx GET usa ruta y parámetros oficiales",wxFetched.length===2&&
+  wxRequested.includes("/api/forecast?")&&wxRequested.includes("models=gfs")&&
+  wxRequested.includes("variables=temperature%2Cprecipitation"));
+
 
 let geocodeUrl="";
 const geo=await M.searchPlaces("Montréal",{
@@ -43,6 +87,53 @@ const forecast72=WX.forecastOperationalSummary([
 check("72h detecta eventos operativos",forecast72.events.length>=5,"events="+forecast72.events.length);
 check("72h conserva métricas de viento/temperatura",forecast72.metrics.max_gust_ms===18&&forecast72.metrics.min_temp_c===-1);
 
+const wn=WX.fromWeatherNextSummary({
+  timestamp:"2026-10-13T12:00:00Z",lat:42.8,lon:-1.6,
+  temperature_2m_p50:282.0,dewpoint_temperature_2m_p50:277.0,
+  wind_speed_10m_p50:5.0,wind_speed_100m_p50:7.0,wind_direction_10m_p50:90.0,
+  surface_solar_radiation_downwards_1hr_p50:2160000,
+  total_sky_direct_solar_radiation_at_surface_1hr_p50:1440000,
+  total_precipitation_1hr_p50:.0005,total_cloud_cover_p50:.4,
+  low_cloud_cover_p50:.2,medium_cloud_cover_p50:.1,high_cloud_cover_p50:.1,
+  mean_sea_level_pressure_p50:101300,
+  p10:{wind_ms:3},p50:{wind_ms:5},p90:{wind_ms:9},
+  provenance:{provider:"Google WeatherNext 3",surface:"BigQuery",init_time:"2026-10-13T06:00:00Z"}
+});
+check("WeatherNext proxy conserva source y timestamp",wn.source==="weathernext3"&&wn.timestamp==="2026-10-13T12:00:00Z");
+check("WeatherNext convierte K a °C",near(wn.temp_c,8.85,1e-9),String(wn.temp_c));
+check("WeatherNext conserva dirección de viento derivada",near(wn.wind_dir_deg,90),String(wn.wind_dir_deg));
+check("WeatherNext convierte SSRD/FDIR J/m² a W/m²",near(wn.ghi_wm2,600)&&near(wn.fdir_wm2,400),wn.ghi_wm2+" / "+wn.fdir_wm2);
+check("WeatherNext convierte precipitación m a mm",near(wn.precip_mm,.5),String(wn.precip_mm));
+check("WeatherNext convierte presión Pa a hPa",near(wn.pressure_hpa,1013),String(wn.pressure_hpa));
+check("WeatherNext conserva bandas p10/p50/p90",wn.p10?.wind_ms===3&&wn.p50?.wind_ms===5&&wn.p90?.wind_ms===9);
+check("WeatherNext conserva provenance BigQuery",wn.provenance?.surface==="BigQuery"&&wn.provenance?.init_time==="2026-10-13T06:00:00Z");
+const wnGcs=WX.fromWeatherNextSummary({
+  timestamp:"2026-10-19T07:00:00Z",lat:41.575945,lon:-0.798424,
+  temperature_2m_p50:282,wind_speed_10m_p50:5,
+  surface_solar_radiation_downwards_1hr_p50:2160000,
+  p10:{wind_ms:3},p50:{wind_ms:5},p90:{wind_ms:9},
+  provenance:{surface:"GCS",bucket:"weathernext3_statistics_spatial",
+    gcs_prefix:"weathernext_3_0_0_statistics/zarr/2026_to_present/20261019_06hr_01_preds/predictions.zarr",
+    init_time:"2026-10-19T06:00:00Z",forecast_hour:1}
+});
+check("WeatherNext GCS conserva procedencia y bandas",
+  wnGcs.provenance?.surface==="GCS" &&
+  wnGcs.provenance?.bucket==="weathernext3_statistics_spatial" &&
+  wnGcs.provenance?.forecast_hour===1 && wnGcs.p90?.wind_ms===9);
+check("WeatherNext GCS no cambia la física de conversión respecto a BigQuery",
+  near(wnGcs.temp_c,wn.temp_c,1e-9)&&near(wnGcs.ghi_wm2,wn.ghi_wm2,1e-9));
+const wnMissing=WX.fromWeatherNextSummary({timestamp:"2026-10-13T13:00:00Z"});
+check("WeatherNext no inventa meteo ausente",wnMissing.temp_c===null&&wnMissing.dewpoint_c===null&&wnMissing.precip_mm===null&&wnMissing.pressure_hpa===null&&wnMissing.lat===null&&wnMissing.wind_ms===null);
+check("WeatherNext distingue cero real de ausencia",WX.normalizeMeteo({wind_ms:0,precip_mm:"0",temp_c:null}).wind_ms===0
+  &&WX.normalizeMeteo({wind_ms:0,precip_mm:"0",temp_c:null}).temp_c===null);
+const missingSummary=WX.forecastOperationalSummary([
+  WX.fromWeatherNextSummary({timestamp:"2026-10-13T12:00:00Z"}),
+  WX.fromWeatherNextSummary({timestamp:"2026-10-13T13:00:00Z"})
+]);
+check("sin datos no hay falsa helada ni precipitación cero",!missingSummary.events.some(e=>e.kind==="freeze")
+  &&missingSummary.metrics.min_temp_c===null&&missingSummary.metrics.precip_total_mm===null
+  &&missingSummary.metrics.max_wind_ms===null);
+
 const wcFixture={source:"Open-Meteo / ERA5",source_id:"openmeteo",lat:42.8,lon:-1.6,qa:{status:"PASS",hash:"abc123"},rows:[
   {t:"2024-01-01T00:00:00Z",ghi_wm2:0,dni_wm2:0,dhi_wm2:0,temp_c:4,wind_ms:2},
   {t:"2024-01-01T01:00:00Z",ghi_wm2:10,dni_wm2:5,dhi_wm2:5,temp_c:3,wind_ms:3}
@@ -51,6 +142,15 @@ const wc=await WC.buildWeatherContract({dataset:wcFixture,kind:"historical",site
 check("WeatherContract v2 versionado",wc.schema_version==="2.0.0");
 check("WeatherContract conserva hash QA",wc.qa.dataset_hash==="abc123");
 check("WeatherContract fija política WEATHER/CONTROL",wc.consumer_policy.weather_informs_control===true&&wc.consumer_policy.control_decides===true);
+check("WeatherContract usa vocabulario estacional canónico",wc.consumer_policy.consumers.includes("tcu_policy_season")&&!wc.consumer_policy.consumers.includes("winter_mode"));
+const parityRows=[
+  {t:"2024-01-01T00:00:00Z",ghi_wm2:0,dni_wm2:0,dhi_wm2:0,temp_c:4,wind_ms:2,cloud_total:null},
+  {t:"2024-01-01T01:00:00+00:00",ghi_wm2:10.0,dni_wm2:5.0,dhi_wm2:5.0,temp_c:3.0,wind_ms:3.0,precip_mm:0.0}
+];
+check("hash WeatherContract cross-language congelado",(await WC.weatherDatasetHash(parityRows))==="fc50729d9a2d0d4e665145cb",await WC.weatherDatasetHash(parityRows));
+const parityPayload=WC.weatherHashPayload(parityRows);
+check("null meteorológico no se convierte en cero",!("cloud_total" in parityPayload[0]),JSON.stringify(parityPayload[0]));
+check("timestamp del hash se canoniza a UTC milisegundos",parityPayload[1].t==="2024-01-01T01:00:00.000Z",parityPayload[1].t);
 const ub=M.weatherUncertaintyBudget({sourceId:"openmeteo",crossSourceRmsPct:8,adaptationSigma:.02});
 check("incertidumbre usa el término conservador mayor",near(ub.resource_sigma,.08));
 check("export PVSyst contiene cabecera canónica",M.toPvsystCsv(wcFixture.rows,{siteName:"Test"}).includes("GlobHor;DiffHor;DNI;T_Amb;WindVel"));
@@ -241,6 +341,9 @@ check("HTML integra Windy y Ventusky",html.includes('id="windyMap"')&&html.inclu
 check("HTML contiene supervisión 72h y WeatherContract",html.includes('id="opEvents"')&&html.includes('id="wcStatus"'));
 check("HTML contiene meteo espacial e incertidumbre",html.includes('id="spatialBtn"')&&html.includes('id="uncUse"'));
 check("HTML ofrece export bankable",html.includes('id="dlPvsyst"')&&html.includes('id="dlManifest"')&&html.includes('id="dlContract"'));
+const bridgeHtml=fs.readFileSync(path.join(__dirname,"../weather-contract-bridge.html"),"utf8");
+check("bridge cross-origin existe y usa postMessage",bridgeHtml.includes("factiun-weather-contract:get")&&bridgeHtml.includes("postMessage"));
+check("bridge limita orígenes y admite Cloudflare cobertura",bridgeHtml.includes("cobertura-zigbee.imoriana3.workers.dev")&&bridgeHtml.includes("origin_not_allowed"));
 check("HTML configura capas Windy/Ventusky",html.includes('id="windyLayer"')&&html.includes('id="windyModel"')&&html.includes('id="ventuskyLayer"'));
 check("HTML contiene rosa de vientos",html.includes('id="vizWindRose"'));
 check("HTML contiene cockpit 6 paneles",["vizCockpitGhi","vizCockpitDni","vizCockpitDhi","vizCockpitTemp","vizCockpitWind","vizCockpitKt"].every(id=>html.includes('id="'+id+'"')));

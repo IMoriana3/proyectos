@@ -28,6 +28,10 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   const ui=await page.evaluate(()=>({
     min:+eTime.min,max:+eTime.max,step:+eTime.step,
     presets:[...ePreset.options].map(o=>o.value),
+    grupos:[...ePreset.querySelectorAll('optgroup')].map(o=>o.label),
+    modos:[mEvent.textContent.trim(),mLive.textContent.trim(),mEp.textContent.trim()],
+    tabs:[...document.querySelectorAll('#tabs button')].map(o=>o.textContent.trim()),
+    chips:[...document.querySelectorAll('#eThreats .threatchip')].map(o=>o.textContent.trim()),
     frames:EVENTO.sim.frames.length,dt:EVENTO.sim.dt_s,
     first:EVENTO.sim.frames[0].t_min,last:EVENTO.sim.frames.at(-1).t_min
   }));
@@ -41,6 +45,18 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('hay presets de viento, racha, granizo, nieve, combinado y pasivo',
     ['wind_ramp','gust','hail_far','hail_near','hail_wind','snow','snow_hail','snow_hail_same','passive']
       .every(x=>ui.presets.includes(x)),ui.presets.join(','));
+  check('la interfaz nombra una sola entrada Simulador y separa los laboratorios',
+    /simulador/i.test(ui.tabs[0]||'') && /granizo.*lógica/i.test(ui.tabs[1]||'') &&
+    /nieve.*lógica/i.test(ui.tabs[2]||''), JSON.stringify(ui.tabs));
+  check('los modos distinguen escenario, manual fino y episodio anual',
+    /escenario/i.test(ui.modos[0]||'') && /manual.*vivo/i.test(ui.modos[1]||'') &&
+    /episodio anual/i.test(ui.modos[2]||''), JSON.stringify(ui.modos));
+  check('los casos se agrupan por amenaza sola o combinada',
+    ['Solo viento','Solo granizo','Solo nieve','Combinados'].every(x=>ui.grupos.includes(x)),
+    JSON.stringify(ui.grupos));
+  check('el escenario enseña explícitamente viento, granizo y nieve como entradas comunes',
+    ui.chips.length===3 && /viento/i.test(ui.chips[0]) && /granizo/i.test(ui.chips[1]) &&
+    /nieve/i.test(ui.chips[2]), JSON.stringify(ui.chips));
 
   // Viento: cruza T1 y luego T2.
   const viento=await page.evaluate(()=>{
@@ -80,6 +96,16 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   });
   check('preset racha separa media y racha, y declara que T1/T2 miran racha',
     gust.signal==='gust'&&gust.g>90&&gust.w<40,JSON.stringify(gust));
+
+  const combinado=await page.evaluate(()=>{
+    aplicaPresetEvento('hail_wind');
+    return [...document.querySelectorAll('#eThreats .threatchip')].map(e=>({
+      t:e.textContent.trim(),on:e.classList.contains('on')
+    }));
+  });
+  check('Viento + granizo se ve como DOS amenazas activas dentro del mismo simulador',
+    combinado.length===3&&combinado[0].on&&combinado[1].on&&!combinado[2].on,
+    JSON.stringify(combinado));
   check('esa racha sí dispara las estrategias controladas',
     gust.a1==='FULL_STOW'&&gust.a2==='FULL_STOW',JSON.stringify(gust));
 
@@ -228,6 +254,31 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     fxWind&&fxWind.bound&&fxWind.frameSource==='shared'&&fxWind.windVisible,
     JSON.stringify(fxWind));
 
+  const overlay=await page.evaluate(()=>{
+    const e=document.getElementById('meteoFxCanvas'),s=getComputedStyle(e);
+    return {bg:s.backgroundColor,border:s.borderTopWidth,margin:s.marginTop,pointer:s.pointerEvents,z:s.zIndex};
+  });
+  check('el canvas meteorológico es TRANSPARENTE y no tapa el WebGL de la planta',
+    overlay&&overlay.bg==='rgba(0, 0, 0, 0)'&&overlay.border==='0px'&&overlay.margin==='0px'&&overlay.pointer==='none',
+    JSON.stringify(overlay));
+
+  const shear=await page.evaluate(()=>{
+    const f=__simVientoMeteoFx.windShearFactor;
+    return {atRef:f(4,4),low:f(1,4),high:f(16,4)};
+  });
+  check('viento 3D: a la altura de referencia el factor de cizalladura vale 1',
+    Math.abs(shear.atRef-1)<1e-12,JSON.stringify(shear));
+  check('viento 3D: por debajo de la referencia el perfil 1/7 reduce velocidad',
+    shear.low<1&&Math.abs(shear.low-Math.pow(1/4,1/7))<1e-12,JSON.stringify(shear));
+  check('viento 3D: por encima de la referencia el perfil 1/7 aumenta velocidad',
+    shear.high>1&&Math.abs(shear.high-Math.pow(4,1/7))<1e-12,JSON.stringify(shear));
+  check('viento 3D: el perfil vertical tiene vectores visibles en la escena',
+    fxWind&&fxWind.windProfileArrows&&Math.abs(fxWind.windReferenceHeightM-4)<.01,
+    JSON.stringify(fxWind));
+  check('viento 3D: la deriva de suelo usa menos velocidad que la referencia a 4 m',
+    fxWind&&fxWind.nearGroundWindKmh>0&&fxWind.nearGroundWindKmh<70,
+    JSON.stringify(fxWind));
+
   const fxHail=await page.evaluate(async()=>{
     aplicaPresetEvento('hail_far');eventoAplica(0);
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
@@ -240,6 +291,17 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   check('el granizo 3D aparece en IMPACTO, no durante la vigilancia',
     fxHail&&!fxHail.antes.hailVisible&&fxHail.impacto.hailVisible&&fxHail.impacto.state.impact,
     JSON.stringify(fxHail));
+  check('la carga de impacto se pinta sobre las mesas durante el episodio de granizo',
+    fxHail&&fxHail.impacto.impactSurfaceVisible&&fxHail.impacto.impactSkins>0,
+    JSON.stringify(fxHail.impacto));
+  const fxClear=await page.evaluate(async()=>{
+    aplicaPresetEvento('wind_ramp');eventoAplica(0);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    return __simVientoMeteoFx.snapshot();
+  });
+  check('la superficie de impacto desaparece cuando ya no hay episodio de granizo',
+    fxClear&&!fxClear.impactSurfaceVisible,
+    JSON.stringify(fxClear));
 
   const fxSnow=await page.evaluate(async()=>{
     aplicaPresetEvento('snow');eventoAplica(1);
@@ -248,6 +310,9 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
   });
   check('la nieve tiene precipitación 3D, manto de suelo y recubrimiento de mesas',
     fxSnow&&fxSnow.snowVisible&&fxSnow.snowGround>0&&(fxSnow.snowCoats>0||fxSnow.instancedSnow),
+    JSON.stringify(fxSnow));
+  check('la cota visual de nieve sigue el espesor en metros',
+    fxSnow&&Math.abs(fxSnow.snowDepthM-0.15)<.011,
     JSON.stringify(fxSnow));
 
   const impact=await page.evaluate(()=> {
@@ -269,12 +334,103 @@ const check=(n,c,x)=>{if(c){ok++;console.log('OK   '+n);}else{ko++;console.log('
     Math.abs(impact.tilt.normal_energy_j/impact.tilt.energy_j-
       Math.pow(Math.cos(55*Math.PI/180),2))<.02,
     JSON.stringify(impact.tilt));
+  check('modelo impacto: el proxy de carga cae como cos³(55°) sin viento',
+    Math.abs(impact.tilt.impact_flux_proxy/impact.flat.impact_flux_proxy-
+      Math.pow(Math.cos(55*Math.PI/180),3))<.025,
+    JSON.stringify({flat:impact.flat.impact_flux_proxy,tilt:impact.tilt.impact_flux_proxy}));
   check('modelo impacto: el mismo tilt distingue viento a favor y en contra de la cara',
     impact.fromEast.normal_energy_j>impact.fromWest.normal_energy_j,
     JSON.stringify({oeste:impact.fromWest.normal_energy_j,este:impact.fromEast.normal_energy_j}));
   check('modelo impacto: si la trayectoria cruza por debajo identifica la cara TRASERA',
     impact.fromWest.face==='TRASERA'&&impact.fromWest.normal_energy_j>0,
     JSON.stringify(impact.fromWest));
+  const envelope=await page.evaluate(()=>{
+    const e=__simVientoMeteoFx.impactEnvelope(30,40,270,0,55);
+    return e;
+  });
+  check('envolvente granizo: usa 19 mm como piedra umbral y 30 mm como máximo',
+    Math.abs(envelope.threshold_mm-19)<.01&&Math.abs(envelope.max_mm-30)<.01,
+    JSON.stringify(envelope));
+  check('envolvente granizo: la piedra máxima carga más que la umbral sin inventar distribución',
+    envelope.maximum.normal_energy_j>envelope.threshold.normal_energy_j&&
+    envelope.maximum.impact_flux_proxy>envelope.threshold.impact_flux_proxy,
+    JSON.stringify({low:envelope.threshold,high:envelope.maximum}));
+
+  const optimum=await page.evaluate(()=>{
+    const f=__simVientoMeteoFx;
+    return {
+      vertical:f.optimalTilt(30,0,270,0,55),
+      west:f.optimalTilt(30,60,270,0,55),
+      east:f.optimalTilt(30,60,90,0,55),
+      limited:f.optimalTilt(30,120,270,0,20)
+    };
+  });
+  check('óptimo físico: con caída vertical pura usa el máximo tilt permitido',
+    Math.abs(Math.abs(optimum.vertical.theta_deg)-55)<.06,
+    JSON.stringify(optimum.vertical));
+  check('óptimo físico: invertir el viento invierte el signo del tilt preferido',
+    optimum.west.theta_deg*optimum.east.theta_deg<0&&
+    Math.abs(Math.abs(optimum.west.theta_deg)-Math.abs(optimum.east.theta_deg))<.11,
+    JSON.stringify({west:optimum.west,east:optimum.east}));
+  check('óptimo físico: nunca sale del límite mecánico solicitado',
+    Math.abs(optimum.limited.theta_deg)<=20.0001,
+    JSON.stringify(optimum.limited));
+  const faceVisual=await page.evaluate(async()=>{
+    const mk=(dir)=>({
+      wind_ms:60/3.6,gust_ms:60/3.6,wind_dir:dir,hail_dir:dir,
+      hail_on:true,hail_mm:30,hail_prob_pct:80,hail_phase:'IMPACTO',
+      snow_cm:0,ang:{BASE:55}
+    });
+    window.__simVientoMeteoFrame=mk(270);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const west=__simVientoMeteoFx.snapshot();
+    window.__simVientoMeteoFrame=mk(90);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const east=__simVientoMeteoFx.snapshot();
+    aplicaPresetEvento('wind_ramp');eventoAplica(0);
+    return {west,east};
+  });
+  check('la piel 3D enciende la cara TRASERA cuando la trayectoria llega por debajo',
+    faceVisual.west.impactFaces.BASE==='TRASERA',
+    JSON.stringify(faceVisual.west));
+  check('la piel 3D cambia a FRONTAL al invertir el rumbo de impacto',
+    faceVisual.east.impactFaces.BASE==='FRONTAL',
+    JSON.stringify(faceVisual.east));
+  const traj=await page.evaluate(()=>{
+    const t=__simVientoMeteoFx.trajectory(30,36,270);
+    const q=__simVientoMeteoFx.impact(30,36,270,0,0);
+    return {t,q};
+  });
+  check('trayectoria granizo: 36 km/h se representan como 10 m/s horizontales',
+    Math.abs(Math.hypot(traj.t.x,traj.t.z)-10)<.01,
+    JSON.stringify(traj.t));
+  check('trayectoria granizo: render y cálculo comparten la misma velocidad terminal',
+    Math.abs(traj.t.vt_ms-traj.q.vt_ms)<1e-9&&Math.abs(traj.t.speed_ms-traj.q.speed_ms)<1e-9,
+    JSON.stringify(traj));
+  const cumulative=await page.evaluate(()=>{
+    const frames=[
+      {t_min:0,hail_phase:'IMPACTO',hail_mm:30,wind_ms:0,gust_ms:0,wind_dir:270,hail_dir:270,
+       ang:{BASE:0,A1:55}},
+      {t_min:1,hail_phase:'IMPACTO',hail_mm:30,wind_ms:0,gust_ms:0,wind_dir:270,hail_dir:270,
+       ang:{BASE:0,A1:55}},
+      {t_min:2,hail_phase:'RETENCION',hail_mm:30,wind_ms:0,gust_ms:0,wind_dir:270,hail_dir:270,
+       ang:{BASE:0,A1:55}}
+    ];
+    const active=__simVientoMeteoFx.cumulativeImpact(frames,0);
+    const quiet=__simVientoMeteoFx.cumulativeImpact([
+      {t_min:0,hail_phase:'DEFENSA',hail_mm:30,wind_ms:0,ang:{BASE:0,A1:55}},
+      {t_min:1,hail_phase:'RETENCION',hail_mm:30,wind_ms:0,ang:{BASE:0,A1:55}}
+    ],0);
+    return {active,quiet};
+  });
+  check('carga acumulada: un episodio constante conserva la razón cos³(55°)',
+    cumulative.active.seconds===120&&
+    Math.abs((cumulative.active.rows.find(x=>x.k==='A1').value/
+      cumulative.active.rows.find(x=>x.k==='BASE').value)-Math.pow(Math.cos(55*Math.PI/180),3))<.025,
+    JSON.stringify(cumulative.active));
+  check('carga acumulada: fuera de IMPACTO no integra carga ficticia',
+    cumulative.quiet.seconds===0&&cumulative.quiet.rows.length===0,
+    JSON.stringify(cumulative.quiet));
   check('las tarjetas dicen quién manda y el estado de protección',
     /VIENTO × GRANIZO|GRANIZO|VIENTO/.test(pinta.tiles)&&/TRÁNSITO|POSICIÓN|MODELADO|SEGUIMIENTO/.test(pinta.tiles),
     pinta.tiles.slice(0,300));
