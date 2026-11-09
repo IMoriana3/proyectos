@@ -58,7 +58,7 @@ function rk4({mm,ms,from=270,drag='constant',fixedCd=p.cd,height=2000,dt=.2}){
     withinMorrisonSmoothSphereReDomain:drag==='morrison'?(maxRe<=1e6):null,
     naturalHailCalibrated:false,damageBOMCalibrated:false,controlsAuthorized:false};
 }
-let count=0;function check(name,fn){fn();count++;console.log('PASS '+name);}
+let count=0;function check(name,fn){fn();count++;console.log('OK   '+name);}
 check('no wind: no horizontal drift',()=>{const q=rk4({mm:30,ms:0});close(q.driftEast,0);close(q.driftSouth,0);});
 check('horizontal panel/no wind: En equals E',()=>{const q=rk4({mm:30,ms:0}),e=energy(q.v,30,0,0);close(e.En,e.E);});
 check('±55 symmetry and cos² scaling for vertical hail',()=>{const q=rk4({mm:30,ms:0});
@@ -109,7 +109,7 @@ check('applicability flags never certify hail or controller',()=>{
   assert.throws(()=>rk4({mm:30,ms:20,fixedCd:0}));
   assert.throws(()=>rk4({mm:30,ms:20,fixedCd:2}));
 });
-console.log('PASS '+count+'/14 synthetic self-checks — NOT observational validation.');
+console.log('RESUMEN '+count+'/14 synthetic self-checks — NOT observational validation.');
 for(const mm of [30,80])for(const from of [90,270])for(const drag of ['constant','morrison']){
   const r=rk4({mm,ms:20,from,drag});
   const neg=energy(r.v,mm,0,-55).En,pos=energy(r.v,mm,0,55).En;
