@@ -33,16 +33,16 @@ function energy(v,mm,axis,theta){const signed=dot(v,normal(axis,theta)),vn=Math.
   return {face:signed<=0?'FRONTAL':'TRASERA',E:.5*m*mag(v)**2,En:.5*m*vn*vn,
     // Only a relative proxy under fixed number density, not a calibrated W/m2.
     fluxProxy:.5*m*vn**3};}
-function rk4({mm,ms,from=270,drag='constant',height=2000,dt=.2}){
+function rk4({mm,ms,from=270,drag='constant',fixedCd=p.cd,height=2000,dt=.2}){
   if(!Number.isFinite(mm)||!Number.isFinite(ms)||!Number.isFinite(from)||
-     !(mm>0&&mm<=100&&ms>=0&&ms<=50&&height>0&&dt>0&&dt<=1)||
+     !(mm>0&&mm<=100&&ms>=0&&ms<=50&&height>0&&dt>0&&dt<=1&&Number.isFinite(fixedCd)&&fixedCd>=.2&&fixedCd<=1.5)||
      !['constant','morrison'].includes(drag))throw Error('outside explicit research range');
   const s=hailShape(mm),w=wind(ms,from),factor=p.air*s.A/(2*s.m);
   let y=[0,height,0,0,0,0],maxRe=0,seconds=0;
   function deriv(q){const rel=[q[3]-w[0],q[4],q[5]-w[2]],speed=mag(rel);
     if(speed===0)return [q[3],q[4],q[5],0,-p.g,0];
     const re=p.air*speed*s.d/p.mu;maxRe=Math.max(re,maxRe);
-    const cd=drag==='constant'?p.cd:morrison(re),k=-factor*cd*speed;
+    const cd=drag==='constant'?fixedCd:morrison(re),k=-factor*cd*speed;
     return [q[3],q[4],q[5],rel[0]*k,-p.g+rel[1]*k,rel[2]*k];}
   while(y[1]>0&&seconds<1000){
     const a=deriv(y),b=deriv(add(y,a,dt/2)),c=deriv(add(y,b,dt/2)),d=deriv(add(y,c,dt));
@@ -53,9 +53,10 @@ function rk4({mm,ms,from=270,drag='constant',height=2000,dt=.2}){
     y=next;seconds+=dt;
   }
   if(y[1]>0)throw Error('did not reach ground');
-  return {v:y.slice(3),seconds,driftEast:y[0],driftSouth:y[2],maxRe,
-    // Reject qualitative inference from Cd(Re) outside its stated range.
-    rangeOk:drag!=='morrison'||maxRe<=1e6};
+  return {v:y.slice(3),seconds,driftEast:y[0],driftSouth:y[2],maxRe,fixedCd:drag==='constant'?fixedCd:null,
+    // Re applicability refers ONLY to Morrison's smooth-sphere fit, never to natural hail.
+    withinMorrisonSmoothSphereReDomain:drag==='morrison'?(maxRe<=1e6):null,
+    naturalHailCalibrated:false,damageBOMCalibrated:false,controlsAuthorized:false};
 }
 let count=0;function check(name,fn){fn();count++;console.log('PASS '+name);}
 check('no wind: no horizontal drift',()=>{const q=rk4({mm:30,ms:0});close(q.driftEast,0);close(q.driftSouth,0);});
@@ -71,7 +72,7 @@ check('reversing wind reverses preferred side',()=>{
 check('projected energy never exceeds kinetic energy',()=>{
   for(const dir of [0,90,180,270,359])for(const theta of [-75,-55,0,55,75]){
     const q=rk4({mm:80,ms:30,from:dir,drag:'morrison'}),e=energy(q.v,80,0,theta);
-    assert.ok(e.En>=0&&e.En<=e.E+1e-8&&q.rangeOk);}});
+    assert.ok(e.En>=0&&e.En<=e.E+1e-8&&q.withinMorrisonSmoothSphereReDomain===true);}});
 check('RK4 step refinement converges',()=>{const x={mm:80,ms:22,from:350,drag:'morrison'};
   const a=rk4({...x,dt:.2}),b=rk4({...x,dt:.1});
   assert.ok(Math.abs(a.v[1]-b.v[1])/Math.abs(b.v[1])<.002);
@@ -84,11 +85,52 @@ check('terminal reference exact equality to existing formula',()=>{
 check('invalid inputs rejected',()=>{
   assert.throws(()=>rk4({mm:110,ms:10}));assert.throws(()=>rk4({mm:30,ms:51}));
   assert.throws(()=>rk4({mm:30,ms:10,drag:'other'}));});
-console.log('PASS '+count+'/9 synthetic self-checks — NOT observational validation.');
+check('fixed Cd=0.60 remains the default reference',()=>{
+  const a=rk4({mm:30,ms:20,from:90}),b=rk4({mm:30,ms:20,from:90,fixedCd:.60});
+  assert.ok(a.v.every((x,i)=>Math.abs(x-b.v[i])<1e-12));});
+check('fixed-Cd sensitivity changes energy without certifying damage',()=>{
+  const e=(cd,th)=>energy(rk4({mm:30,ms:20,from:90,fixedCd:cd}).v,30,0,th).En;
+  assert.ok(e(.3,55)>e(1.2,55)&&e(.3,-55)<e(1.2,-55));});
+check('normal energy can be non-monotone in Cd at oblique tilt',()=>{
+  const e=cd=>energy(rk4({mm:80,ms:20,from:90,fixedCd:cd}).v,80,0,-55).En;
+  assert.ok(e(.9)<e(.6)&&e(.9)<e(1.2));});
+check('fixed-Cd wind reversal preserves mirrored normal energy',()=>{
+  for(const cd of [.3,.45,.6,.9,1.2]){
+    const a=rk4({mm:30,ms:20,from:90,fixedCd:cd}).v;
+    const b=rk4({mm:30,ms:20,from:270,fixedCd:cd}).v;
+    close(energy(a,30,0,-55).En,energy(b,30,0,55).En,1e-8);
+  }});
+check('applicability flags never certify hail or controller',()=>{
+  for(const drag of ['constant','morrison']){
+    const x=rk4({mm:80,ms:20,from:90,drag});
+    assert.ok(x.naturalHailCalibrated===false&&!x.damageBOMCalibrated&&!x.controlsAuthorized);
+  }
+  assert.ok(rk4({mm:80,ms:20,from:90,drag:'morrison'}).withinMorrisonSmoothSphereReDomain===true);
+  assert.throws(()=>rk4({mm:30,ms:20,fixedCd:0}));
+  assert.throws(()=>rk4({mm:30,ms:20,fixedCd:2}));
+});
+console.log('PASS '+count+'/14 synthetic self-checks — NOT observational validation.');
 for(const mm of [30,80])for(const from of [90,270])for(const drag of ['constant','morrison']){
   const r=rk4({mm,ms:20,from,drag});
   const neg=energy(r.v,mm,0,-55).En,pos=energy(r.v,mm,0,55).En;
   console.log(JSON.stringify({diameter_mm:mm,wind_from_deg:from,drag,impact_ms:+mag(r.v).toFixed(2),
-    Eminus55_J:+neg.toFixed(2),Eplus55_J:+pos.toFixed(2),preferred_by_Eonly:neg<pos?-55:55,
-    max_Re:Math.round(r.maxRe),morrison_valid_range:r.rangeOk}));
+    Eminus55_J:+neg.toFixed(2),Eplus55_J:+pos.toFixed(2),lower_Eperp_side_only_not_a_target:neg<pos?-55:55,
+    max_Re:Math.round(r.maxRe),morrison_smooth_sphere_Re_domain:r.withinMorrisonSmoothSphereReDomain,
+    natural_hail_calibrated:r.naturalHailCalibrated,authorized_for_control:r.controlsAuthorized}));
+}
+
+console.log('SYNTHETIC FIXED-CD SENSITIVITY — NO PROBABILITIES, DAMAGE OR CONTROL');
+for(const mm of [30,80]){
+  const variants=[.3,.45,.6,.9,1.2].map(fixedCd=>{
+    const q=rk4({mm,ms:20,from:90,drag:'constant',fixedCd});
+    return {Cd_assumed:fixedCd,impact_ms:+mag(q.v).toFixed(3),
+      Eminus55_J:+energy(q.v,mm,0,-55).En.toFixed(4),
+      Eplus55_J:+energy(q.v,mm,0,55).En.toFixed(4)};
+  });
+  const vals=variants.map(x=>x.Eminus55_J);
+  console.log(JSON.stringify({diameter_mm:mm,wind_from_deg:90,wind_ms:20,
+    Cd_values_are_scenarios_not_probabilities:true,natural_hail_validated:false,
+    risk_of_damage_evaluated:false,control_target_evaluated:false,
+    Eminus55_min_J:Math.min(...vals),Eminus55_max_J:Math.max(...vals),
+    variants}));
 }
