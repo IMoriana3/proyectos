@@ -2273,11 +2273,14 @@ const PLANTS = [
      a 0,3 m. La POTENCIA la da ese informe, 400 MWp; el DWG no trae el módulo, así que la cifra es
      la del estudio y no una cuenta nuestra (cuadraría con módulos de ~651 W).
      CON SITING (automático, como Catania: el plano no trae red y las NCU las calcula la
-     herramienta, con los 30 CT como power blocks). El Layout 2D y la Topografía 3D están hechos en
-     cobertura-zigbee (#855), pero NO se enlazan todavía: mientras ese PR no esté fusionado y
-     desplegado, plano.html?planta=ramaditas cae en El Burgo sin avisar. Se añaden cuando lo esté. */
+     herramienta, con los 30 CT como power blocks). CON Layout 2D y Topografía 3D desde que
+     cobertura-zigbee (#855) está desplegado —comprobado en campo el 2026-11-10: plano.html?planta=
+     ramaditas abre Ramaditas y no cae en El Burgo—. Su terreno es SOLO DEM, sin validar, y así lo
+     rotula el 3D. Sin «Cobertura»: el plano no trae red de NCU, como Catania. */
   { name:"Ramaditas", code:"", oferta:true, pdc:400, loc:"Tarapacá · Chile", views:{
       siting:     SITING+"?planta=ramaditas",
+      layout2d:   COB+"plano.html?planta=ramaditas",
+      topo3d:     COB+"terreno.html?planta=ramaditas",
   }},
   /* BENANTE 25004 y PANBIANCO 25004.2 (Sicilia). Son dos plantas del MISMO emplazamiento, a 1,3 km
      una de otra y con seguidor idéntico. La cartera las trae sin potencia todavía, así que `pdc` va
