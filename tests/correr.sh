@@ -745,7 +745,10 @@ declare -A PISO=(
   # paso se gana una comprobación: que el peor caso ES la suma de los cuatro
   # declarados. Un literal repetido no es un oráculo más fuerte, es tres sitios
   # donde envejecer.
-  [test_viento_latencia.js]=134
+  # 134 -> 136: dos centinelas de flanco inicial a latencia 0 y no cero,
+  # medidos SIN esperar rAF, para detectar el crono que nace sin prevV y
+  # pierde el primer ascenso del viento antes de crear t0/orden/posición.
+  [test_viento_latencia.js]=136
   [test_viento_meteo.js]=36
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,
