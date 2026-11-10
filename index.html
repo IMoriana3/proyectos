@@ -188,18 +188,32 @@ body.presenta .solo-pres{display:inline-block}
 .hero-tesis p{font-family:var(--mono);font-size:.74rem;color:var(--muted);margin-top:8px;max-width:40ch}
 .hero-legend{position:absolute;left:18px;bottom:14px;right:18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.68rem;color:var(--muted-2);pointer-events:none}
 .hero-legend b{color:var(--muted);font-weight:500}
-.hero-panel{display:grid;grid-template-rows:auto auto auto 1fr auto;min-width:0;background:var(--panel)}
-.hero-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:14px 20px 0;flex-wrap:wrap}
+.hero-panel{display:grid;grid-template-rows:auto auto auto 1fr auto;grid-template-columns:minmax(0,1fr);min-width:0;background:var(--panel)}
+/* ↑ minmax(0,1fr): con la columna automática, un texto sin corte más ancho que el panel —la cabecera
+   de noche— ensanchaba la columna por fuera del panel y con ella la traza del día, que es de
+   proporción fija: 9 px más alta de noche. */
+/* UNA línea siempre: con `flex-wrap:wrap`, de noche «noche · posición nocturna» no cabía al lado y
+   bajaba a una segunda línea; el panel —y el 3D de al lado— crecía 29 px cada vez que se ponía el
+   sol o se recorría el día (pedido en campo: «¿por qué cambia el tamaño?»). El modo es el dato que
+   cambia y se ve entero; si falta sitio se recorta la etiqueta fija de la izquierda, con su texto
+   completo en el title. Vigilado por tests/test_hero_altura.js. */
+.hero-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:14px 20px 0;flex-wrap:nowrap}
+.hero-head>.lab:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hero-head>#h-modo{flex:none;white-space:nowrap}
 .hero-head .lab b{color:var(--amb);font-weight:500}
 .hero-big{padding:6px 20px 0}
 .hero-big .big{font-family:var(--mono);font-size:clamp(3.2rem,6.2vw,5.2rem);line-height:1;font-weight:500;letter-spacing:-.03em;color:var(--amb)}
 .hero-big .big small{font-size:.38em;color:var(--fos);letter-spacing:0;margin-left:.1em}
 .hero-big .sub{font-size:.74rem;color:var(--fos);margin-top:4px;min-height:1.2em}
-.hero-meters{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:14px}
+/* Columnas IGUALES de verdad (minmax(0,1fr)): con 1fr a secas el valor más ancho —«−57,9°» de
+   noche— ensanchaba su columna, la de la hora se estrechaba y su fecha pasaba de 3 a 2 líneas: el
+   panel cambiaba 7 px de alto entre el día y la noche. Y la línea de debajo reserva sus 3 líneas,
+   porque también cambia de largo (en vivo / recorrido manual). */
+.hero-meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:14px}
 .hero-meters .m{background:var(--panel);padding:12px 16px 12px;min-width:0}
 .hero-meters .val{font-size:1.35rem;color:var(--amb);margin:6px 0 1px;white-space:nowrap}
 .hero-meters .val.off{color:var(--fos)}
-.hero-meters .u{font-size:.66rem;color:var(--muted-2)}
+.hero-meters .u{font-size:.66rem;color:var(--muted-2);line-height:1.45;min-height:4.35em}
 .hero-trace{padding:12px 20px 0;min-width:0}
 .hero-trace svg{width:100%;height:auto;display:block;max-width:100%}
 .hero-ctl{display:flex;align-items:center;gap:12px;padding:12px 20px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
@@ -562,7 +576,7 @@ body.presenta .solo-pres{display:inline-block}
       <div class="hero-legend" id="hero-legend"><span><b>Muestra: Ayora · 24025</b> · 751 seguidores · relieve as-built</span><span id="hero-sol"></span></div>
     </div>
     <div class="hero-panel">
-      <div class="hero-head"><span class="lab">Ángulo ejecutado · fila tipo <b id="h-pol">backtracking</b></span><span class="lab" id="h-modo">—</span></div>
+      <div class="hero-head"><span class="lab" title="Ángulo ejecutado · fila tipo backtracking">Ángulo ejecutado · fila tipo <b id="h-pol">backtracking</b></span><span class="lab" id="h-modo">—</span></div>
       <div class="hero-big"><div class="big" id="h-theta">—<small>°</small></div><div class="sub" id="h-sub">calculando la posición del sol…</div></div>
       <div class="hero-meters">
         <div class="m"><span class="lab">Elevación solar</span><div class="val" id="h-elev">—</div><div class="u">grados sobre el horizonte</div></div>
@@ -3301,7 +3315,9 @@ if (haySesionGuardada()) conecta(null, null);
   function lecturas(ms, g, a){
     const p=enPlanta(ms), m=minutoEnPlanta(ms);
     $('h-theta').innerHTML=num(a.theta,1)+'<small>°</small>';
-    $('h-modo').textContent=a.modo==='NOCHE'?'noche · posición nocturna':(a.modo==='TOPE'?'tope ±'+LIM+'°':a.modo.toLowerCase());
+    // «noche» a secas: «posición nocturna» repetía la línea de debajo («la fila espera en 0°…») y, al no
+    // caber, se comía el nombre de la política de la izquierda
+    $('h-modo').textContent=a.modo==='NOCHE'?'noche':(a.modo==='TOPE'?'tope ±'+LIM+'°':a.modo.toLowerCase());
     $('h-sub').textContent=a.modo==='NOCHE'
       ? 'sol bajo el horizonte · la fila espera en 0° hasta el orto'
       : 'ideal '+num(a.ideal,1)+'°'+(a.corr>0.05?' · corrección de backtracking '+num(a.corr,1)+'°':' · sin corrección')+' · GCR '+num(D.gcr,3);
