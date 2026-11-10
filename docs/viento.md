@@ -329,6 +329,28 @@ excluya al vecino.
 En la escena de PLANTA no aplica: ahí sí hay una sola planta y la sombra entre seguidores es real —
 es la que se mira.
 
+### Tres estilos para la misma escena
+
+Arriba a la derecha de la escena hay un selector, **Natural · Maqueta · Energía**. Los tres dibujan la misma
+simulación —mismos ángulos, misma POA, mismos estados—; cambia qué se enseña. El elegido se recuerda entre visitas.
+
+| estilo | qué es | para qué |
+|---|---|---|
+| **Natural** | cielo azul con bruma en el horizonte, tierra, módulos con células y reflejo del cielo | verlo como se vería allí |
+| **Maqueta** | papel y grafito, como una maqueta de arquitecto, **cada módulo dibujado** y la **sombra en tinta azul** | leer sombras y geometría; es el que mejor sale en un informe |
+| **Energía** | escena oscura donde **cada mesa brilla en ámbar con la POA que le da la simulación**, relativa a la mayor en pantalla | ver de un vistazo qué estrategia está produciendo y cuál no |
+
+En los tres se ven **corrientes de viento**: trazos que cruzan la planta en el rumbo de la simulación y a un ritmo
+proporcional a su velocidad. **No son un cálculo de flujo**: van rectos, no se desvían en las filas ni enseñan
+abrigo. Dicen de dónde sopla y cuánto, que es lo que la flecha sola obligaba a leer en un rótulo.
+
+Dos cosas que ningún estilo toca. El **color de cada estrategia** (el pilar de su bloque) es el de la leyenda en los
+tres. Y el **estado** de una mesa —abanderada, suelta— lo sigue marcando su color de modo: en «energía» una mesa en
+bandera enseña su color de estado, no el ámbar.
+
+Todo esto vive en `ambiente.js`, un fichero compartido con el mismo criterio que `seguidor.js`. Si no carga, la
+escena se dibuja como antes de existir. Los reflejos de cielo van apagados en pantalla táctil.
+
 ## El seguidor se mueve a 0,17 °/s
 
 El eje no teletransporta. La ficha aplica el lazo de control canónico —banda muerta de 1° y

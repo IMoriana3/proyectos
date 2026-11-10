@@ -785,6 +785,17 @@ declare -A PISO=(
   # solo por proximidad mientras `pasivo` ya llevaba el criterio de cruce: a
   # paso de una hora, 3 pasos sueltos contra 24.
   [test_viento_steppers.js]=17
+  # LOS ESTILOS DE LA ESCENA (`ambiente.js`, 2026-11-10). 33 medidas. El banco
+  # no vigila que haya tres botones sino lo que hace inofensivo al selector:
+  # mismos ángulos en los tres, el color de cada estrategia intacto, el color
+  # de ESTADO por encima del ámbar, y el ámbar ordenado por la POA que le pasa
+  # la página. Seis mutantes, predicho = caído en los seis y cada uno en SU
+  # comprobación: brillo fijo (2), ámbar pisando el estado (1), pilar sin
+  # registrar como señal (3), corrientes al revés (2), sombra también en el
+  # suelo de la maqueta (1) y estilo sin guardar (1). Ese último no era un
+  # mutante inventado: el fichero nació así —`root` no existía dentro de su
+  # factoría y el try/catch se lo tragaba— y lo cazó este banco.
+  [test_viento_estilos.js]=33
   [test_viento_sello.js]=17
   # 52 -> 55 el 2026-10-22. Los tres que faltaban los encontró el mordedor, no
   # yo: con 52 sobrevivían «casar sólo por cod» (San José tiene cod == nproy,
@@ -1003,9 +1014,9 @@ declare -A PISO=(
   # Banco RK4 de I+D: 27 autocomprobaciones sintéticas, sin navegador, sin
   # meteorología real ni mando de planta. El umbral 14 es el recuento
   # publicado mediante "OK   " y evita verde falso ante un test recortado.
-  # 14 -> 27: 13 pruebas nuevas de ajuste masa/area/Cd del Theis 2020,
-  # reconstitucion de su tabla U(D), bandas de Reynolds y energia proyectada.
   # No es ensayo de impacto ni certificación del stow.
+  # 14 -> 27: 13 comprobaciones de partículas lobuladas Theis 2020,
+  # con masa, area, Cd corregido, regresiones de velocidad y Reynolds.
   [test_hail_rk4_research.mjs]=27
   # Weather Workbench autónomo + visual parity: 72 comprobaciones. Además de
   # los goldens TMY y el smoke de Cartera/ancho, fija las 11 familias visuales
