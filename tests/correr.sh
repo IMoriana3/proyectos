@@ -417,6 +417,7 @@ declare -A PISO=(
   # revienta y da cero comprobaciones leídas, que el portón sí caza. Queda
   # dicho aquí porque una nota equivocada envejece peor que ninguna.)
   [test_portada.js]=42
+  [test_hero_altura.js]=8
   # El hueco de `sim-solar.html` NO era «no la abre nadie»: `test_buscador.js`
   # sí corre `solarGeom` y `singleaxis` de esta ficha en el navegador —romper
   # `singleaxis` mata 9 allí, y romper la marca del bloque, 4—. Lo que no había
