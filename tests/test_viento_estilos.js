@@ -54,6 +54,7 @@ const LEE = `(() => ({
   estado: TD.est ? TD.est.estado() : null,
   suelo: { tipo: TD.suelo.material.type, mapa: !!TD.suelo.material.map, sombra: TD.suelo.receiveShadow },
   tinta: (() => { let v = false; TD.sc.traverse(o => { if (o.material && o.material.type === 'ShadowMaterial' && o.visible) v = true; }); return v; })(),
+  mapaMesa: (() => { const m = ESC.bloques[0].mats.glass.map; return m ? m.uuid : null; })(),
   cielo: (() => { const d = TD.skyCv.getContext('2d').getImageData(1, 2, 1, 1).data; return (d[0] + d[1] + d[2]) / 3; })(),
   bloques: ESC.bloques.map(b => ({ k: b.k,
     ang: b.segs.map(t => +t.spin.rotation.x.toFixed(6)),
@@ -91,7 +92,10 @@ const LEE = `(() => ({
   check('maqueta: el botón cambia el estilo', maq.estilo === 'maqueta', maq.estilo);
   check('maqueta: el suelo es papel (sin luz ni grano) y la sombra NO se dibuja en él', maq.suelo.tipo === 'MeshBasicMaterial' && !maq.suelo.mapa && maq.suelo.sombra === false, JSON.stringify(maq.suelo));
   check('maqueta: la sombra va en su plano de tinta', maq.tinta === true);
-  check('maqueta: mesas de grafito, sin retícula', maq.bloques.every(b => !b.mapa && b.col !== 0xffffff), JSON.stringify(maq.bloques.map(b => b.col.toString(16))));
+  // v0.3.0 de ambiente.js: la maqueta DIBUJA cada módulo (grafito con el marco a lápiz), así que la mesa
+  // lleva textura —la suya, no la de células del natural— sobre material blanco
+  check('maqueta: mesas de grafito con el módulo dibujado (textura propia, distinta de las células del natural)',
+        maq.bloques.every(b => b.mapa && b.col === 0xffffff) && maq.mapaMesa !== nat.mapaMesa, JSON.stringify({ maq: maq.mapaMesa, nat: nat.mapaMesa }));
   check('maqueta: el cielo es claro', maq.cielo > 190, 'luminancia ' + maq.cielo);
 
   // ── energía ──────────────────────────────────────────────────────────────

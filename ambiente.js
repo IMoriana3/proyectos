@@ -20,7 +20,10 @@
        existen para enseñar— no se leían contra él.
 
    Lo que hay aquí es ILUMINACIÓN Y ACABADO, no dato. Nada de este fichero
-   añade geometría, mueve un ángulo o cambia una cifra. Y no toca los colores
+   mueve un ángulo o cambia una cifra, ni añade un solo objeto de PLANTA: lo
+   que cuelga de la escena es decorado y va marcado (`userData.ambiente`:
+   tinta, horizonte, halo), para que quien cuente o mida lo pueda apartar. Y
+   en el estilo «clásico» no cuelga nada. Tampoco toca los colores
    que SIGNIFICAN algo: el tinte de cada estrategia y el brillo de una mesa
    abanderada siguen siendo del `emissive` y del color por instancia de cada
    página. Por eso tampoco hay curva de tono: desplazaría esos colores.
@@ -38,7 +41,7 @@
      su try/catch y el fichero «funcionaba»: no recordaba el estilo y daba a
      todo el mundo por escritorio. Lo cazó test_viento_estilos.js. */
   var root = (typeof self !== 'undefined') ? self : (typeof window !== 'undefined' ? window : {});
-  var A = { VERSION: '0.2.0' };
+  var A = { VERSION: '0.3.0' };
 
   /* En pantalla táctil el prefiltrado del entorno va apagado de serie: es el
      mismo criterio que Cobertura 3D (`terreno.html`), donde los reflejos son
@@ -192,16 +195,16 @@
     var suelo = opts.suelo || A.SUELO.horizonte;
     if (opts.activo === false) st.motivo = 'apagado';
     else if (!THREE.PMREMGenerator) st.motivo = 'three sin PMREMGenerator';
-    else {
-      try {
-        pm = new THREE.PMREMGenerator(renderer);
-        cv = document.createElement('canvas'); cv.width = 4; cv.height = 256;
-        tx = new THREE.CanvasTexture(cv);
-        esc = new THREE.Scene();
-        esc.add(new THREE.Mesh(new THREE.SphereGeometry(50, 24, 32),
-          new THREE.MeshBasicMaterial({ map: tx, side: THREE.BackSide, depthWrite: false, fog: false })));
-        st.ok = true;
-      } catch (e) { pm = null; st.motivo = String((e && e.message) || e); }
+    else st.ok = true;
+    /* El prefiltrado se monta la PRIMERA vez que hace falta, no al crear: una
+       escena que se queda en «clásico» no compila ni reserva nada en la GPU. */
+    function monta() {
+      pm = new THREE.PMREMGenerator(renderer);
+      cv = document.createElement('canvas'); cv.width = 4; cv.height = 256;
+      tx = new THREE.CanvasTexture(cv);
+      esc = new THREE.Scene();
+      esc.add(new THREE.Mesh(new THREE.SphereGeometry(50, 24, 32),
+        new THREE.MeshBasicMaterial({ map: tx, side: THREE.BackSide, depthWrite: false, fog: false })));
     }
     function pinta(cenit, horiz) {
       // la textura envuelve la esfera de polo a polo: el ecuador (el horizonte)
@@ -226,6 +229,7 @@
         if (now - t0 < 250) return false;
         t0 = now;
         try {
+          if (!pm) monta();
           pinta(pend[0], pend[1]);
           var nuevo = pm.fromScene(esc, 0, 0.1, 200);
           scene.environment = nuevo.texture;
@@ -238,6 +242,10 @@
           return false;
         }
       },
+      /* «clásico»: fuera el entorno, sin perder lo prefiltrado; `sigue` lo devuelve */
+      pausa: function () { scene.environment = null; },
+      sigue: function () { if (st.ok && rt) scene.environment = rt.texture; },
+      pendiente: function () { return st.ok && !!pend && pedida !== puesta; },
       apaga: function () {
         scene.environment = null;
         if (rt) { rt.dispose(); rt = null; }
@@ -251,6 +259,8 @@
      recordadas entre visitas. Ninguna cambia un ángulo ni una cifra: cambian
      qué se enseña.
 
+       clasico  · la escena tal como la monta la página, sin tocar. Solo en
+                  las páginas que lo piden (las que tienen bancos de píxeles).
        natural  · cielo, tierra, células y reflejos. Lo que se vería allí.
        maqueta  · papel y grafito, como una maqueta de arquitecto, con la
                   SOMBRA en color: aquí la sombra es el dato y no un gris.
@@ -275,39 +285,78 @@
        est.senal(material)           un color que significa: se conserva en los tres
        est.viento(centro, radio, rumboDeg, ms)
        est.tick(now, dt)             una vez por fotograma
+       est.suelo(malla)              si el suelo llega después o se rehace
        est.estilo('maqueta')         cambia; est.nombre() dice cuál hay
+
+     Y para las páginas con escena propia y bancos que la miden (v0.3.0):
+
+       { estilos:['clasico',…], porDefecto:'clasico' }   qué ofrece la página
+       { relieve:true }              el suelo es un terreno: se pinta con luz
+       { horizonteAuto:true }        en «natural», el campo sigue hasta el horizonte
+       { relleno:0.08 }              la luz ambiente que la página ya lleva
+       est.adopta(material)          la pala de la página sigue al estilo (y vuelve)
+       est.reinicia()                la página rehace su mundo con materiales nuevos
+       est.repasa()                  la página ha restaurado sus materiales por su cuenta
+       est.mesaDe(mallas, {padre, rect, y, celulas})  → asa de UNA mesa
+       est.brilla(asa, k)            en «energía» esa mesa brilla con SU k (0..1 o null)
+       est.pausa(si) / enPausa()     clásico mientras dure, sin olvidar el elegido
+       est.tinta()                   color de rótulo para el estilo (null = el de la página)
+       est.pendiente()               ¿hace falta otro fotograma? (pintado bajo demanda)
      ══════════════════════════════════════════════════════════════════════ */
   A.ESTILOS = ['natural', 'maqueta', 'energia'];
-  A.ROTULOS = { natural: 'Natural', maqueta: 'Maqueta', energia: 'Energía' };
+  A.ROTULOS = { clasico: 'Clásico', natural: 'Natural', maqueta: 'Maqueta', energia: 'Energía' };
   var CLAVE = 'factiun_estilo3d';
-  A.estiloGuardado = function () {
-    try { var v = root.localStorage.getItem(CLAVE); return A.ESTILOS.indexOf(v) >= 0 ? v : 'natural'; }
-    catch (e) { return 'natural'; }
+  A.estiloGuardado = function (lista, defecto) {
+    lista = lista || A.ESTILOS; defecto = defecto || lista[0];
+    try { var v = root.localStorage.getItem(CLAVE); return lista.indexOf(v) >= 0 ? v : defecto; }
+    catch (e) { return defecto; }
   };
-  var PAPEL = [0.937, 0.914, 0.863], GRAFITO = [0.122, 0.165, 0.227], TINTA = 0x2b3fd6;
+  var PAPEL = [0.937, 0.914, 0.863], TINTA = 0x2b3fd6;
   var NOCHE = [0.043, 0.086, 0.150], AMBAR = [1.0, 0.62, 0.10], APAGADA = [0.063, 0.100, 0.170];
 
+  /* `o.estilos` y `o.porDefecto` deciden qué ofrece cada página. Una página con
+     bancos que LEEN PÍXELES de la escena (bt3d, producción, difusa) pide
+     ['clasico', …] con 'clasico' por defecto: en ese estilo este fichero NO
+     TOCA NADA —ni suelo, ni vidrio, ni luces, ni entorno— y la escena es, bit a
+     bit, la de antes de existir. Los otros tres son elección de quien mira.
+
+     El suelo puede llegar después y cambiar (`est.suelo(malla)`): bt3d rehace
+     su terreno en cada `build3D`. Con `o.relieve` el suelo es un terreno y la
+     maqueta lo pinta con luz, para que el relieve se lea; sin él, es papel liso. */
   A.escena = function (THREE, o) {
-    var sc = o.scene, rd = o.renderer, nombre = A.estiloGuardado(), alCambiar = [];
+    var sc = o.scene, rd = o.renderer, alCambiar = [];
+    var LISTA = o.estilos || A.ESTILOS, nombre = A.estiloGuardado(LISTA, o.porDefecto), elegido = null;
     var aniso = rd.capabilities.getMaxAnisotropy ? rd.capabilities.getMaxAnisotropy() : 1;
     var cel = A.celulas(THREE, { anisotropia: aniso });
     var granoS = A.granoSuelo(THREE, { anisotropia: aniso }), granoH = A.granoSuelo(THREE, { anisotropia: aniso });
     var amb = A.entorno(THREE, rd, sc, { activo: !A.enMovil() });
     function col(c) { return new THREE.Color(c[0], c[1], c[2]); }
-    /* suelos: uno por estilo, y se cambia el material entero */
+    var Papel = o.relieve ? THREE.MeshLambertMaterial : THREE.MeshBasicMaterial;
     var mat = {
       natural: [new THREE.MeshLambertMaterial({ color: col(A.SUELO.trabajo), map: granoS }),
                 new THREE.MeshLambertMaterial({ color: col(A.SUELO.horizonte), map: granoH })],
-      maqueta: [new THREE.MeshBasicMaterial({ color: col(PAPEL) }), new THREE.MeshBasicMaterial({ color: col(PAPEL) })],
+      maqueta: [new Papel({ color: col(PAPEL) }), new Papel({ color: col(PAPEL) })],
       energia: [new THREE.MeshLambertMaterial({ color: col(NOCHE) }), new THREE.MeshLambertMaterial({ color: col(NOCHE) })]
     };
-    /* la sombra de la maqueta: un plano que SOLO dibuja sombra, en tinta azul */
-    var tinta = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShadowMaterial({ color: TINTA, opacity: 0.40 }));
-    tinta.rotation.x = -Math.PI / 2; tinta.receiveShadow = true; tinta.visible = false; sc.add(tinta);
+    /* la sombra de la maqueta: una malla que SOLO dibuja sombra, en tinta azul.
+       Comparte la geometría del suelo, así que sigue el relieve si lo hay. */
+    if (o.relieve) {
+      /* Un terreno con relieve se pinta con luz (Lambert) y con el sol rasante
+         se queda casi negro: la luz del cielo que rebota no está en el modelo.
+         Se le da un fondo propio, del mismo tono, para que la tierra siga
+         siendo tierra a las ocho de la mañana. */
+      mat.natural.forEach(function (m, i) {
+        m.emissive = col(i ? A.SUELO.horizonte : A.SUELO.trabajo); m.emissiveMap = m.map; m.emissiveIntensity = 0.42;
+      });
+    }
+    var tintaM = new THREE.ShadowMaterial({ color: TINTA, opacity: 0.40, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    var disco = null, RADIO_DISCO = 2300;
+    var suelo = null, horizonte = o.horizonte || null, tinta = null, sueloM = null, horizM = horizonte ? horizonte.material : null, metros = [1, 1];
     var rejP = new THREE.GridHelper(2400, 240, 0xcabfa9, 0xddd5c3), rejE = new THREE.GridHelper(2400, 240, 0x1d6fa8, 0x123a5c);
     rejP.material.transparent = true; rejP.material.opacity = 0.9;
     rejE.material.transparent = true; rejE.material.opacity = 0.42; rejE.material.blending = THREE.AdditiveBlending; rejE.material.depthWrite = false;
-    rejP.visible = rejE.visible = false; sc.add(rejP, rejE);
+    rejP.visible = rejE.visible = false;
+    if (!o.relieve) sc.add(rejP, rejE);      // sobre un terreno la rejilla plana lo atravesaría
 
     /* ── corrientes de viento ── */
     var NV = 520, pos = new Float32Array(NV * 6), colr = new Float32Array(NV * 6), tr = [], seed = 9173;
@@ -316,13 +365,13 @@
     var gv = new THREE.BufferGeometry();
     gv.setAttribute('position', new THREE.BufferAttribute(pos, 3)); gv.setAttribute('color', new THREE.BufferAttribute(colr, 3));
     var mv = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false });
-    var corr = new THREE.LineSegments(gv, mv); corr.frustumCulled = false; corr.visible = false; sc.add(corr);
-    var W = { c: new THREE.Vector3(), r: 300, dx: 1, dz: 0, ms: 0 };
-    var TINTE = { natural: [0.92, 0.95, 1.0], maqueta: [0.17, 0.25, 0.84], energia: [0.10, 0.62, 0.95] };
+    var corr = new THREE.LineSegments(gv, mv); corr.frustumCulled = false; corr.visible = false;   // a la escena, cuando haya viento
+    var W = { c: new THREE.Vector3(), r: 300, dx: 1, dz: 0, ms: 0, hay: false };
+    var TINTE = { clasico: [0.92, 0.95, 1.0], natural: [0.92, 0.95, 1.0], maqueta: [0.17, 0.25, 0.84], energia: [0.10, 0.62, 0.95] };
     function pintaCorrientes() {
       var t = TINTE[nombre];
       for (var i = 0; i < NV; i++) {      // cola transparente → cabeza del color del estilo
-        var k = i * 6, cola = nombre === 'energia' ? 0 : 1;
+        var k = i * 6;
         if (nombre === 'energia') { colr[k] = colr[k + 1] = colr[k + 2] = 0; }
         else { colr[k] = t[0]; colr[k + 1] = t[1]; colr[k + 2] = t[2]; }
         colr[k + 3] = t[0]; colr[k + 4] = t[1]; colr[k + 5] = t[2];
@@ -331,6 +380,7 @@
       mv.blending = nombre === 'energia' ? THREE.AdditiveBlending : THREE.NormalBlending;
       mv.opacity = nombre === 'energia' ? 0.85 : (nombre === 'maqueta' ? 0.50 : 0.38);
       mv.needsUpdate = true;
+      corr.visible = W.hay && nombre !== 'clasico';
     }
     function mueveCorrientes(dt) {
       if (!corr.visible) return;
@@ -346,40 +396,191 @@
       gv.attributes.position.needsUpdate = true;
     }
 
-    /* SEÑALES: materiales cuyo color SIGNIFICA (el pilar de cada estrategia).
-       No reflejan el cielo, y en «energía» —donde la luz de escena es tenue y
-       ámbar— se sostienen con su propio emissive para que el color siga
-       siendo el de la leyenda. */
+    /* SEÑALES: materiales cuyo color SIGNIFICA (el pilar de cada estrategia, la
+       pala de una viga que no se midió). No reflejan el cielo, y en «energía»
+       —donde la luz de escena es tenue y ámbar— se sostienen con su propio
+       emissive para que el color siga siendo el de la leyenda. */
     var senales = [];
-    function visteSenal(m) { m.envMapIntensity = 0; m.emissiveIntensity = nombre === 'energia' ? 0.95 : m.userData.emBase; }
-    var vidrios = [];
+    function visteSenal(m) {
+      var u = m.userData;
+      m.envMapIntensity = nombre === 'clasico' ? u.envBase : 0;
+      m.emissiveIntensity = nombre === 'energia' ? Math.max(0.95, u.emBase) : u.emBase;
+    }
+    /* VIDRIOS: la mesa. Cada uno guarda cómo era en la página, y «clásico» se lo devuelve entero. */
+    var vidrios = [], celMaq = null;
+    function celMaqueta() {       // la maqueta dibuja cada módulo: grafito con el marco a lápiz claro
+      if (!celMaq) celMaq = A.celulas(THREE, { celda: '#1f2a3a', junta: '#1f2a3a', corte: '#283447', marco: '#7d8796', anisotropia: aniso });
+      return celMaq;
+    }
     function visteVidrio(m) {
-      var liso = m.userData.liso;
-      if (nombre === 'natural') { m.color.setRGB(1, 1, 1); m.map = cel; m.roughness = 0.18; m.envMapIntensity = 0.75; }
-      else if (nombre === 'maqueta') { m.color.setRGB(GRAFITO[0], GRAFITO[1], GRAFITO[2]); m.map = null; m.roughness = 0.36; m.envMapIntensity = 0.35; }
+      var u = m.userData.amb0;
+      if (nombre === 'clasico') { m.color.setHex(u.color); m.map = u.map; m.roughness = u.roughness; m.envMapIntensity = u.env; }
+      else if (nombre === 'natural') { m.color.setRGB(1, 1, 1); m.map = cel; m.roughness = 0.18; m.envMapIntensity = 0.75; }
+      else if (nombre === 'maqueta') { m.color.setRGB(1, 1, 1); m.map = celMaqueta(); m.roughness = 0.36; m.envMapIntensity = 0.35; }
       else { m.color.setRGB(APAGADA[0], APAGADA[1], APAGADA[2]); m.map = null; m.roughness = 0.30; m.envMapIntensity = 0.5; }
-      if (nombre !== 'energia' && m.userData.ambar) { m.emissive.setRGB(0, 0, 0); m.emissiveIntensity = 0; m.userData.ambar = false; }
+      if (nombre !== 'energia' && m.userData.ambar) { m.emissive.setHex(u.emissive); m.emissiveIntensity = u.emInt; m.userData.ambar = false; }
       m.needsUpdate = true;
     }
+    function adopta(m) {
+      if (vidrios.indexOf(m) >= 0) return m;      // dos veces el mismo: la segunda apuntaría como «de la página» lo que ya es del estilo
+      m.userData.amb0 = { color: m.color.getHex(), map: m.map || null, roughness: m.roughness, env: m.envMapIntensity,
+                          emissive: m.emissive.getHex(), emInt: m.emissiveIntensity };
+      vidrios.push(m); visteVidrio(m); return m;
+    }
+    function visteSuelo() {
+      if (suelo) {
+        suelo.material = nombre === 'clasico' ? sueloM : mat[nombre][0];
+        suelo.receiveShadow = nombre !== 'maqueta';
+        /* la tinta existe SOLO en «maqueta»: fuera de ella no hay ni una malla
+           de más colgada del mundo de la página */
+        if (nombre === 'maqueta' && !tinta) {
+          tinta = new THREE.Mesh(suelo.geometry, tintaM); tinta.receiveShadow = true; tinta.renderOrder = 1;
+          tinta.userData.ambiente = 'tinta'; (suelo.parent || sc).add(tinta);
+          tinta.position.copy(suelo.position); tinta.quaternion.copy(suelo.quaternion); tinta.scale.copy(suelo.scale);
+        } else if (nombre !== 'maqueta' && tinta) { if (tinta.parent) tinta.parent.remove(tinta); tinta = null; }
+      }
+      if (horizonte) horizonte.material = nombre === 'clasico' ? horizM : mat[nombre][1];
+      /* El terreno de la página es un RECORTE alrededor de la planta. En
+         «natural» se le pone debajo el resto del campo, hasta el horizonte;
+         en los demás el recorte es lo que se quiere ver (una hoja, una mesa
+         de luz) y en clásico no hay nada que no sea de la página. */
+      if (o.horizonteAuto) {
+        var quiere = nombre === 'natural' && !!suelo;
+        if (quiere && !disco) {
+          granoH.repeat.set(2 * RADIO_DISCO / A.METROS_POR_GRANO, 2 * RADIO_DISCO / A.METROS_POR_GRANO);
+          disco = new THREE.Mesh(new THREE.CircleGeometry(RADIO_DISCO, 72), mat.natural[1]);
+          disco.rotation.x = -Math.PI / 2; disco.userData.ambiente = 'horizonte'; disco.raycast = function () {};
+          sc.add(disco);
+        } else if (!quiere && disco) { sc.remove(disco); disco.geometry.dispose(); disco = null; }
+        if (disco) {
+          var caja = new THREE.Box3().setFromObject(suelo);
+          disco.position.set((caja.min.x + caja.max.x) / 2, caja.min.y - 0.35, (caja.min.z + caja.max.z) / 2);
+        }
+      }
+    }
+    /* ── MESAS QUE BRILLAN CADA UNA LO SUYO ─────────────────────────────
+       En las páginas donde TODAS las mesas se pintan con un mismo material no
+       se puede dar a cada una su brillo tocando ese material. `mesaDe` apunta
+       las mallas de vidrio de UNA mesa y `brilla` les pone, solo en «energía»,
+       un material propio (clon del de la página) encendido en ámbar por k, con
+       las células en el emissive. Fuera de «energía» devuelve el de la página.
+       Y alrededor de la mesa, un HALO: un marco de luz que cae a cero a 1,1 m,
+       para que la mesa parezca fuente de luz y no una pegatina naranja. */
+    var mesasH = [], celLuz = null, haloM = null;
+    function luzCelulas() {
+      if (!celLuz) celLuz = A.celulas(THREE, { celda: '#ffffff', junta: '#a4a4a4', corte: '#6e6e6e', marco: '#262626', anisotropia: aniso });
+      return celLuz;
+    }
+    function haloDe(h) {
+      var r = h.o.rect, m = 1.1, x0 = r[0], x1 = r[1], z0 = r[2], z1 = r[3], y = 0;
+      // tres anillos: el borde de la mesa, a 0,35·m y a m. Color por vértice; el de fuera, negro (aditivo = nada)
+      var an = [0, 0.35 * m, m], P = [], I = [], i, a;
+      for (i = 0; i < 3; i++) { a = an[i]; P.push(x0 - a, y, z0 - a, x1 + a, y, z0 - a, x1 + a, y, z1 + a, x0 - a, y, z1 + a); }
+      for (i = 0; i < 2; i++) for (a = 0; a < 4; a++) {
+        var p0 = i * 4 + a, p1 = i * 4 + (a + 1) % 4, q0 = p0 + 4, q1 = p1 + 4;
+        I.push(p0, q0, p1, p1, q0, q1);
+      }
+      var g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(P), 3));
+      g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(36), 3));
+      g.setIndex(I);
+      if (!haloM) haloM = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending,
+                                                         depthWrite: false, side: THREE.DoubleSide, fog: false });
+      var malla = new THREE.Mesh(g, haloM);
+      malla.position.y = h.o.y || 0; malla.renderOrder = 1; malla.userData.ambiente = 'halo'; malla.raycast = function () {};
+      return malla;
+    }
+    function apagaMesa(h) {
+      for (var i = 0; i < h.mallas.length; i++) if (h.mallas[i].material === h.mat) h.mallas[i].material = h.base;
+      if (h.halo && h.halo.parent) h.halo.parent.remove(h.halo);
+    }
+
     function aplica() {
-      o.suelo.material = mat[nombre][0]; o.horizonte.material = mat[nombre][1];
-      o.suelo.receiveShadow = nombre !== 'maqueta';
-      tinta.visible = nombre === 'maqueta'; rejP.visible = nombre === 'maqueta'; rejE.visible = nombre === 'energia';
+      visteSuelo();
+      rejP.visible = nombre === 'maqueta'; rejE.visible = nombre === 'energia';
+      if (nombre === 'clasico') { amb.pausa(); } else amb.sigue();
       vidrios.forEach(visteVidrio); senales.forEach(visteSenal); pintaCorrientes();
+      if (nombre !== 'energia') mesasH.forEach(apagaMesa);
     }
     var api = {
       nombre: function () { return nombre; },
+      lista: function () { return LISTA.slice(); },
       estado: function () { return { estilo: nombre, entorno: amb.estado(), vidrios: vidrios.length, senales: senales.length,
-                                     corrientes: corr.visible, viento: { dx: W.dx, dz: W.dz, ms: W.ms } }; },
+                                     corrientes: corr.visible, viento: { dx: W.dx, dz: W.dz, ms: W.ms }, tinta: !!(tinta && tinta.visible) }; },
       alCambiar: function (f) { alCambiar.push(f); },
       estilo: function (n) {
-        if (A.ESTILOS.indexOf(n) < 0 || n === nombre) return;
+        if (LISTA.indexOf(n) < 0) return;
+        if (elegido !== null) { elegido = n; try { root.localStorage.setItem(CLAVE, n); } catch (e) {} return; }   // en pausa: se apunta y ya
+        if (n === nombre) return;
         nombre = n; try { root.localStorage.setItem(CLAVE, n); } catch (e) {}
         aplica(); alCambiar.forEach(function (f) { f(n); });
       },
-      /* la paleta del cielo de cada estilo, ya pintada en la cúpula de la página */
+      /* El suelo de la escena (una malla). Se puede llamar cada vez que la página
+         rehace su mundo: la tinta se cuelga del mismo padre y se va con él. */
+      suelo: function (malla) {
+        if (tinta && tinta.parent) tinta.parent.remove(tinta);
+        suelo = malla; tinta = null; sueloM = malla ? malla.material : null;
+        if (!malla) return;
+        for (var e in mat) mat[e][0].side = sueloM.side;      // la misma cara que pinta la página (hay suelos a dos caras)
+        tintaM.side = sueloM.side;
+        malla.geometry.computeBoundingBox();
+        var bb = malla.geometry.boundingBox;
+        metros = [Math.max(1, bb.max.x - bb.min.x), Math.max(1, Math.max(bb.max.z - bb.min.z, bb.max.y - bb.min.y))];
+        visteSuelo();
+      },
+      /* vacía los registros de materiales: la página que rehace su mundo crea materiales nuevos */
+      reinicia: function () {
+        vidrios.length = 0; senales.length = 0;
+        mesasH.forEach(function (h) { if (h.mat) h.mat.dispose(); if (h.halo) h.halo.geometry.dispose(); });
+        mesasH.length = 0;
+      },
+      /* Mientras dure la pausa la escena va en «clásico» y el estilo elegido se
+         guarda sin tocar lo que hay en localStorage. Para la vista que compara
+         dos mundos y solo uno de ellos es de este fichero. No avisa a `alCambiar`:
+         quien pausa está ya repintando. */
+      pausa: function (si) {
+        if (!!si === (elegido !== null)) return;
+        if (si) { elegido = nombre; nombre = LISTA.indexOf('clasico') >= 0 ? 'clasico' : nombre; }
+        else { nombre = elegido; elegido = null; }
+        aplica();
+      },
+      enPausa: function () { return elegido !== null; },
+      /* tinta de los rótulos que la página dibuja DENTRO de la escena (la flecha
+         de norte): solo la maqueta, que es clara, pide una oscura */
+      tinta: function () { return nombre === 'maqueta' ? '#1f2a39' : null; },
+      mesaDe: function (mallas, opc) {
+        var h = { mallas: mallas || [], o: opc || {}, base: mallas && mallas.length ? mallas[0].material : null, mat: null, halo: null };
+        mesasH.push(h); return h;
+      },
+      brilla: function (h, k) {
+        if (!h || !h.base) return;
+        if (nombre !== 'energia' || k == null) { apagaMesa(h); return; }
+        var q = Math.max(0, Math.min(1, k)), i;
+        if (!h.mat) {
+          h.mat = h.base.clone();
+          h.mat.color.setRGB(APAGADA[0], APAGADA[1], APAGADA[2]); h.mat.map = null;
+          h.mat.emissive.setRGB(AMBAR[0], AMBAR[1], AMBAR[2]);
+          if (h.o.celulas) h.mat.emissiveMap = luzCelulas();
+          h.mat.userData = { ambiente: 'mesa' };
+        }
+        h.mat.emissiveIntensity = 0.06 + 0.94 * q;
+        for (i = 0; i < h.mallas.length; i++) h.mallas[i].material = h.mat;
+        if (h.o.padre && h.o.rect) {
+          if (!h.halo) h.halo = haloDe(h);
+          if (h.halo.parent !== h.o.padre) h.o.padre.add(h.halo);
+          var c = h.halo.geometry.attributes.color, f = [0.55 * q, 0.16 * q, 0];
+          for (i = 0; i < 12; i++) { var w = f[i >> 2]; c.setXYZ(i, AMBAR[0] * w, AMBAR[1] * w, AMBAR[2] * w); }
+          c.needsUpdate = true;
+        }
+      },
+      /* vuelve a poner el suelo del estilo: para la página que restaura los
+         materiales de su mundo por su cuenta (los modos de diagnóstico de bt3d) */
+      repasa: function () { visteSuelo(); },
+      /* La paleta del cielo del estilo. En «clásico» devuelve null: el cielo es
+         el de la página. Si la página entregó su cúpula, además la pinta. */
       cielo: function (elDeg) {
         var c;
+        if (nombre === 'clasico') return null;
         if (nombre === 'natural') c = A.cielo(elDeg);
         else if (nombre === 'maqueta') { var k = elDeg > 0 ? 1 : 0.5; c = { cenit: [0.90 * k, 0.88 * k, 0.84 * k], horiz: [0.95 * k, 0.93 * k, 0.89 * k] }; }
         else { var w = elDeg > 0 ? Math.max(0, Math.min(1, (14 - elDeg) / 14)) : 0;
@@ -391,6 +592,7 @@
       },
       /* después de que la página ponga sus luces: la maqueta y la escena de energía llevan las suyas */
       luces: function (elDeg) {
+        if (nombre === 'clasico') return;
         if (nombre === 'natural') {       // la bóveda vuelve a los colores de la página
           if (o.hemi && o.hemiBase) { o.hemi.color.setHex(o.hemiBase[0]); o.hemi.groundColor.setHex(o.hemiBase[1]); }
           return;
@@ -399,18 +601,28 @@
         if (nombre === 'maqueta') {
           if (o.sol) { o.sol.color.setRGB(1, 0.96, 0.88); o.sol.intensity = dia ? 0.85 : 0.02; }
           if (o.hemi) { o.hemi.color.setRGB(1, 1, 1); o.hemi.groundColor.setRGB(0.91, 0.88, 0.82); o.hemi.intensity = dia ? 0.62 : 0.30; }
+          /* sobre un terreno el papel recibe luz (para que el relieve se lea):
+             la bóveda completa lo que el sol no da, y el papel en llano queda
+             igual de claro a mediodía que a las ocho */
+          if (o.relieve && o.hemi && dia) o.hemi.intensity = Math.max(0.20, Math.min(1, 1 - (o.relleno || 0) - 0.85 * Math.sin(elDeg * Math.PI / 180)));   // `relleno`: la luz ambiente que la página ya lleva
         } else {
           if (o.sol) { o.sol.color.setRGB(1, 0.77, 0.42); o.sol.intensity = dia ? 0.60 : 0.02; }
           if (o.hemi) { o.hemi.color.setRGB(0.36, 0.50, 0.71); o.hemi.groundColor.setRGB(0.02, 0.03, 0.06); o.hemi.intensity = 0.55; }
         }
       },
-      vidrio: function (liso) {
-        var m = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.25, roughness: 0.18,
-          emissive: new THREE.Color(0x000000), emissiveIntensity: 0 });
-        m.userData.liso = liso; vidrios.push(m); visteVidrio(m); return m;
+      luzClasica: function () {           // al volver a «clásico»: la bóveda, a los colores de la página
+        if (o.hemi && o.hemiBase) { o.hemi.color.setHex(o.hemiBase[0]); o.hemi.groundColor.setHex(o.hemiBase[1]); }
       },
-      senal: function (m) { m.userData.emBase = m.emissiveIntensity; senales.push(m); visteSenal(m); return m; },
-      adopta: function (m, liso) { m.userData.liso = liso; vidrios.push(m); visteVidrio(m); return m; },
+      vidrio: function (liso) {
+        var m = new THREE.MeshStandardMaterial({ color: liso == null ? 0xffffff : liso, metalness: 0.25, roughness: 0.35,
+          emissive: new THREE.Color(0x000000), emissiveIntensity: 0 });
+        return adopta(m);
+      },
+      adopta: adopta,
+      senal: function (m) {
+        m.userData.emBase = m.emissiveIntensity; m.userData.envBase = m.envMapIntensity;
+        senales.push(m); visteSenal(m); return m;
+      },
       /* En «energía» la mesa brilla en ámbar con su irradiancia relativa. Solo si
          la página no la está marcando ya con un color de ESTADO (abanderada,
          suelta…): ese emissive es suyo y manda. */
@@ -423,38 +635,49 @@
       viento: function (centro, radio, rumboDeg, ms) {
         W.c.copy(centro); W.r = Math.max(90, radio * 0.62); W.ms = ms || 0;
         if (rumboDeg != null) { var a = rumboDeg * Math.PI / 180; W.dx = -Math.sin(a); W.dz = Math.cos(a); }   // de dónde VIENE → hacia dónde va
-        corr.visible = W.ms > 0.3 && rumboDeg != null;
+        W.hay = W.ms > 0.3 && rumboDeg != null;
+        if (W.hay && !corr.parent) sc.add(corr);
+        corr.visible = W.hay && nombre !== 'clasico';
       },
+      /* ¿hace falta otro fotograma? Para las páginas que pintan bajo demanda. */
+      pendiente: function () { return nombre !== 'clasico' && (corr.visible || amb.pendiente()); },
       tick: function (now, dt) {
-        amb.refresca(now);
-        var e = o.suelo.scale, c = o.suelo.position;
-        granoS.repeat.set(e.x / A.METROS_POR_GRANO, e.y / A.METROS_POR_GRANO);
-        tinta.scale.set(e.x, e.y, 1); tinta.position.set(c.x, c.y + 0.03, c.z);
-        rejP.position.set(Math.round(c.x / 10) * 10, c.y + 0.02, Math.round(c.z / 10) * 10); rejE.position.copy(rejP.position);
+        var rehecho = nombre !== 'clasico' && amb.refresca(now);
+        if (suelo) {
+          var e = suelo.scale, c = suelo.position;
+          granoS.repeat.set(metros[0] * e.x / A.METROS_POR_GRANO, metros[1] * e.y / A.METROS_POR_GRANO);
+          if (tinta) { tinta.position.copy(c); tinta.quaternion.copy(suelo.quaternion); tinta.scale.copy(e); }
+          rejP.position.set(Math.round(c.x / 10) * 10, c.y + 0.02, Math.round(c.z / 10) * 10); rejE.position.copy(rejP.position);
+        }
         mueveCorrientes(dt || 0);
+        return rehecho;
       }
     };
     granoH.repeat.set(12000 / A.METROS_POR_GRANO, 12000 / A.METROS_POR_GRANO);
+    if (o.suelo) api.suelo(o.suelo);
     aplica();
     return api;
   };
 
-  /* El selector de estilo: el mismo en todas las páginas, arriba a la derecha de la escena. */
-  A.selector = function (contenedor, est) {
+  /* El selector de estilo: el mismo en todas las páginas. `opts.abajo` lo lleva
+     a la esquina inferior derecha, para las escenas que ya tienen mandos arriba. */
+  A.selector = function (contenedor, est, opts) {
+    opts = opts || {};
     var caja = document.createElement('div');
     caja.setAttribute('data-ambiente', 'selector');
-    caja.style.cssText = 'position:absolute;right:10px;top:10px;z-index:5;display:flex;gap:0;border-radius:6px;overflow:hidden;' +
+    caja.style.cssText = 'position:absolute;right:10px;' + (opts.abajo ? 'bottom:10px;' : 'top:10px;') +
+      'z-index:5;display:flex;gap:0;border-radius:6px;overflow:hidden;' +
       'border:1px solid rgba(140,160,190,.45);font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em';
-    var bot = {};
+    var bot = {}, lista = est.lista();
     function pinta() {
-      A.ESTILOS.forEach(function (n) {
+      lista.forEach(function (n) {
         var on = est.nombre() === n;
         bot[n].style.background = on ? '#f5a524' : 'rgba(14,24,38,.82)';
         bot[n].style.color = on ? '#0e1826' : '#dce3eb';
         bot[n].setAttribute('aria-pressed', on ? 'true' : 'false');
       });
     }
-    A.ESTILOS.forEach(function (n) {
+    lista.forEach(function (n) {
       var b = document.createElement('button'); b.type = 'button'; b.textContent = A.ROTULOS[n].toUpperCase();
       b.setAttribute('data-estilo', n); b.title = 'Estilo de la escena: ' + A.ROTULOS[n];
       b.style.cssText = 'border:0;padding:7px 10px;cursor:pointer;font:inherit;letter-spacing:inherit';

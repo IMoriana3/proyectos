@@ -337,7 +337,7 @@ simulación —mismos ángulos, misma POA, mismos estados—; cambia qué se ens
 | estilo | qué es | para qué |
 |---|---|---|
 | **Natural** | cielo azul con bruma en el horizonte, tierra, módulos con células y reflejo del cielo | verlo como se vería allí |
-| **Maqueta** | papel y grafito, como una maqueta de arquitecto, con la **sombra en tinta azul** | leer sombras y geometría; es el que mejor sale en un informe |
+| **Maqueta** | papel y grafito, como una maqueta de arquitecto, **cada módulo dibujado** y la **sombra en tinta azul** | leer sombras y geometría; es el que mejor sale en un informe |
 | **Energía** | escena oscura donde **cada mesa brilla en ámbar con la POA que le da la simulación**, relativa a la mayor en pantalla | ver de un vistazo qué estrategia está produciendo y cuál no |
 
 En los tres se ven **corrientes de viento**: trazos que cruzan la planta en el rumbo de la simulación y a un ritmo
