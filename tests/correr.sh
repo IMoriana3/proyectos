@@ -1000,11 +1000,13 @@ declare -A PISO=(
   # llega a los 8 min, que cabe con 30° (5,9) y vetaría con 55° (10,8). Tras los dos
   # arreglos: 5/5 y 6 bajas, los cinco llegando a su veredicto.
   [test_granizo_estrategia.mjs]=143
-  # Banco RK4 de I+D: 14 autocomprobaciones sintéticas, sin navegador, sin
+  # Banco RK4 de I+D: 27 autocomprobaciones sintéticas, sin navegador, sin
   # meteorología real ni mando de planta. El umbral 14 es el recuento
   # publicado mediante "OK   " y evita verde falso ante un test recortado.
+  # 14 -> 27: 13 pruebas nuevas de ajuste masa/area/Cd del Theis 2020,
+  # reconstitucion de su tabla U(D), bandas de Reynolds y energia proyectada.
   # No es ensayo de impacto ni certificación del stow.
-  [test_hail_rk4_research.mjs]=14
+  [test_hail_rk4_research.mjs]=27
   # Weather Workbench autónomo + visual parity: 72 comprobaciones. Además de
   # los goldens TMY y el smoke de Cartera/ancho, fija las 11 familias visuales
   # de Meteo: mensual, serie diaria, zoom, cockpit 6-paneles, DOY, rosa,
