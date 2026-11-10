@@ -565,7 +565,7 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   // entre el bucle en vivo y el cronómetro —quién mueve a quién antes de quién—
   // y eso no aparece llamando a `cronoTick` con números a mano.
   const episodio = async (L) => {
-    await page.evaluate((L) => {
+    const semilla = await page.evaluate((L) => {
       // EL VIENTO BAJA PRIMERO, y el orden importa: `latUI` remonta la escena y
       // da un paso de simulación con el viento QUE HAYA en el deslizador. Si
       // queda el del episodio anterior, la escena nace ya abanderada — medido:
@@ -579,7 +579,14 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
       document.getElementById('latSond').value = String(L[2]);
       document.getElementById('latArr').value = String(L[3]);
       latUI();
+      /* Se lee SIN esperar otro fotograma: es la ventana de carrera real.
+         Esperar un tick (o subir el timeout) haría invisible la causa original.
+         Tras liveInit y liveTick(0.001), simPrev acaba de establecerse pero
+         dt=0, así que el cronómetro tiene que estar ya armado. */
+      const semilla = { prevV:LIVE.crono.prevV, viento:LIVE.v,
+                        fase:LIVE.crono.fase, modos:vivos().filter(S=>S!=='PASIVO') };
       if (!LIVE.run) document.getElementById('lPlay').click();
+      return semilla;
     }, L);
     // SE CRONOMETRA DESDE SEGUIMIENTO, y hay que esperarlo, no suponerlo: las
     // de dos umbrales no vuelven de un abanderamiento en cuanto amaina —
@@ -612,13 +619,19 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
       return o;
     });
     await page.evaluate(() => { if (LIVE.run) document.getElementById('lPlay').click(); });
-    R.cerro = cerro; R.desdeSeguimiento = desdeSeguimiento;
+    R.cerro = cerro; R.desdeSeguimiento = desdeSeguimiento; R.semilla = semilla;
     return R;
   };
   const resumen = R => Object.keys(R.por).sort().map(
     S => S + ' ' + R.por[S].lle + '/' + R.por[S].fin).join(' · ');
 
   const EN_CERO = await episodio([0, 0, 0, 0]);
+  check('en latencia CERO, cronómetro registra el viento base al inicializar',
+        EN_CERO.semilla && EN_CERO.semilla.fase === 'espera'
+        && EN_CERO.semilla.modos.length === 4
+        && EN_CERO.semilla.prevV === EN_CERO.semilla.viento
+        && Math.abs(EN_CERO.semilla.viento - 20/3.6) < 1e-8,
+        JSON.stringify(EN_CERO.semilla));
   const nombres = Object.keys(EN_CERO.por).sort();
   // SIN ESTO, TODO LO DE ABAJO ES VACUO: `every` sobre una lista vacía es
   // verde, y `every` sobre una sola estrategia no puede ver una diferencia
@@ -654,6 +667,12 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   // cronómetro que escriba `tLle = tOrd` sin mirar nada: hay que enseñar que
   // con la cadena puesta el mismo camino da un número DISTINTO de cero.
   const CONLAT = await episodio([300, 60, 60, 30]);
+  check('con cadena activa, cronómetro registra el viento base sin otro tick',
+        CONLAT.semilla && CONLAT.semilla.fase === 'espera'
+        && CONLAT.semilla.modos.length === 4
+        && CONLAT.semilla.prevV === CONLAT.semilla.viento
+        && Math.abs(CONLAT.semilla.viento - 20/3.6) < 1e-8,
+        JSON.stringify(CONLAT.semilla));
   const nomL = Object.keys(CONLAT.por).sort();
   check('control · con la cadena puesta, ver el viento ya cuesta', CONLAT.det > 0,
         CONLAT.det);
