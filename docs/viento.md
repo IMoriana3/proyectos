@@ -445,3 +445,55 @@ O sea: **las maniobras y el tiempo salen exactos** —las máquinas de estado so
 absoluta se separa dos décimas por el modelo de transposición. Que es justo el reparto que uno
 querría: la ficha existe para comparar estrategias, y eso es lo que aguanta.
 
+
+
+## Banco de I+D para granizo impulsado por viento · 09/11/2026
+
+**No modifica el control ni el simulador operativo.** La capa visual
+`sim-viento-meteo-fx.js` ya expone geometría 3D, cara frontal/trasera,
+energía normal, indicador de flujo y exploración angular, suponiendo
+`Cd = 0,60` constante y velocidad terminal. Esto se conserva como
+referencia comparativa; NO es una curva de fractura del vidrio.
+
+Se añade **solo como prueba aislada** 
+`node tests/test_hail_rk4_research.mjs`, que compara:
+- modelo con `Cd=0,60` e integración Runge–Kutta de orden 4,
+- modelo de esfera lisa con `Cd(Re)` de Morrison (2013/2016),
+- ángulos −55°/+55° y viento desde 90°/270°, granizo de 30/80 mm,
+  altura de lanzamiento 2 km, viento uniforme en toda la columna.
+
+Pruebas propias: simetría sin viento, inversión de lado favorable al
+invertir viento, límite `E_perp ≤ E_total`, ley cos² para granizo
+vertical, convergencia al refinar el paso, y rechazo de entradas fuera del
+dominio declarado. **9 autocomprobaciones sintéticas**, no validación experimental.
+
+**Advertencia metodológica crítica:** la correlación de Morrison es para
+esferas lisas; el salto de arrastre cerca de la crisis de Reynolds produce
+en 80 mm resultados muy distintos a los de piedras naturales rugosas.
+No se puede trasladar ese resultado a una velocidad real, riesgo de daño,
+ni a la desviación de ~14 % publicada por Hasanpour. Falta conocer la
+correlación íntegra del paper y ensayar morfologías y densidades reales.
+
+Fuentes: [Hasanpour et al. (2026), SETA 95:105542](https://doi.org/10.1016/j.seta.2026.105542);
+[correlación Morrison para esfera lisa](https://pages.mtu.edu/~fmorriso/DataCorrelationForSphereDrag2016.pdf);
+[revisión de granizo natural y arrastre de 2026](https://doi.org/10.1175/JAMC-D-25-0173.1).
+Biblioteca/plan canónico:
+[Notion · fuente científica](https://app.notion.com/p/4136931d6436818396ded78d9c9c6ee6)
+y [R&D · Hail-aware stow policy](https://app.notion.com/p/3f16931d6436810a9f0fd44353e3b450).
+
+**Condición para evolucionar el producto:** verificar perfil vertical de
+viento, rugosidad, fusión, distribución angular de piedras y ensayos BOM;
+comprobar stow estructural con el diseño OEM, viento/granizo simultáneos,
+ETA/recorrido, ACK y posición física. No trasladar el ángulo de mínima energía
+normal a la consigna de ninguna NCU/TCU sin esa validación.
+
+
+### Revisión de seguridad metodológica · 09/11/2026 (versión actual de PR #621)
+
+La ampliación del banco a **14 autocomprobaciones sintéticas** no añade política de control. La revisión separa explícitamente `withinMorrisonSmoothSphereReDomain` de `naturalHailCalibrated=false`, `damageBOMCalibrated=false` y `controlsAuthorized=false`: **Re dentro de la correlación de esfera lisa nunca valida granizo natural**. La salida ya no denomina «ángulo preferido» al mínimo de energía normal: usa `lower_Eperp_side_only_not_a_target`, que no puede trasladarse a la estiba.
+
+Se añadió una sensibilidad sintética de **Cd constantes 0,30; 0,45; 0,60; 0,90; 1,20** en el mismo caso idealizado (2 km de altura, viento uniforme 20 m/s, 30/80 mm, eje N-S, ±55°). No es una distribución estadística, rango físico acreditado ni daño esperado. Para 80 mm y −55°, la energía normal recorre aprox. 0,017–19,318 J, **no monótonamente** con Cd, porque las componentes horizontal y vertical pueden compensarse en la proyección. El casi-cero de energía de un caso no demuestra protección: la orientación, los flujos reales de impactos y los intervalos de incertidumbre no están calibrados.
+
+**Verificación:** 14/14 autocomprobaciones pasaron ejecutando el contenido del script en una instancia JavaScript V8 aislada con una sustitución explícita del módulo de aserciones de Node. La ejecución nativa Node de esta revisión, las comprobaciones GitHub Actions y la validez externa quedan pendientes de evidencia independiente. El commit de código y los nuevos resultados están en [PR #621](https://github.com/IMoriana3/proyectos/pull/621).
+
+Fuentes contrastadas: [Morrison 2016](https://pages.mtu.edu/~fmorriso/DataCorrelationForSphereDrag2016.pdf) (esfera lisa, Re ≤10⁶); [Theis et al. 2026](https://doi.org/10.1175/JAS-D-25-0015.1) (forma/esfericidad real); [Heymsfield et al. 2026](https://doi.org/10.1175/JAMC-D-25-0173.1) (granizo seco y durante fusión).
