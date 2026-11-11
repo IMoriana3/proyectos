@@ -165,6 +165,10 @@ const CAREABLES = [
      ficha declara `const VER`, así que puede carearse como las otras dos. */
   { url: 'https://imoriana3.github.io/proyectos/comparador-estructuras.html',
     repo: 'proyectos', fichero: 'comparador-estructuras.html' },
+  /* El expediente de homologación nace el 2026-11-11 declarando `const VER`:
+     su tarjeta apunta desde el primer día y no llega a tener libro propio. */
+  { url: 'https://imoriana3.github.io/proyectos/homologacion.html',
+    repo: 'proyectos', fichero: 'homologacion.html' },
 ];
 
 const publicadas = (CARDS || []).filter(p => p.url && /imoriana3\.github\.io|imoriana3\.workers\.dev/.test(p.url));
