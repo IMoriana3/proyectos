@@ -101,6 +101,45 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   // primera clase de `LOC.run`.
   await ctx.route('**://*/**', r => r.request().url().startsWith(BASE)
     ? r.continue() : r.abort());
+  // FPS=N deja la página a N fotogramas por segundo, como el runner de CI, que rasteriza el 3D por
+  // software: requestAnimationFrame se sirve con setTimeout(1000/N). Sin la variable no cambia nada.
+  if (+process.env.FPS > 0) {
+    await ctx.addInitScript((fps) => {
+      const raf = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = (cb) => setTimeout(() => raf(cb), 1000 / fps);
+    }, +process.env.FPS);
+    console.log('FPS: la página va a ' + process.env.FPS + ' fotogramas por segundo');
+  }
+  /* ESPERAR A LA SIMULACIÓN, NO AL RELOJ DE PARED (2026-11-11). Este banco salía rojo en CI y verde
+     aquí: en el runner el 3D se rasteriza por software a pocos fotogramas por segundo, y la página
+     avanza como mucho 0,1 s de reloj real × la velocidad POR FOTOGRAMA. Las esperas de «25 s» daban
+     6 h de simulación a 60 fps y una fracción a 3 fps. Y peor, ocultaban una CARRERA: el cronómetro
+     arranca con un FLANCO —un paso con el viento por debajo del umbral y el siguiente por encima—,
+     y si entre «bajar el viento» y «subirlo» no corría ningún fotograma, `prevV` nacía valiendo 95
+     y el episodio no empezaba nunca (`det` nulo y la tabla vacía, lo mismo que en CI). La sección
+     del corte ya lo esperaba bien; `episodio` y la sección 4 no.
+     Reproducido con FPS=3 (abajo): cuatro rojas. Ahora toda espera se mide en tiempo SIMULADO o en
+     FOTOGRAMAS, y el reloj de pared queda solo como red por si el bucle se parase. */
+  await ctx.addInitScript(() => {
+    window.__fot = 0;
+    const cuenta = () => { window.__fot++; requestAnimationFrame(cuenta); };
+    requestAnimationFrame(cuenta);
+    // espera a `pred` hasta que la simulación avance `simS` segundos o pasen `fot` fotogramas
+    window.__esperaSim = (pred, { simS = null, fot = null, techoMs = 300000 } = {}) => new Promise(res => {
+      const prueba = () => { try { return !!pred(); } catch (e) { return false; } };
+      const f0 = window.__fot, t0 = Date.now(); let sim = 0, prev = null;
+      const mira = () => {
+        if (prueba()) return res(true);
+        const sp = (window.LIVE && LIVE.simPrev != null) ? LIVE.simPrev : null;
+        if (sp != null && prev != null && sp > prev && sp - prev < 86400) sim += sp - prev;   // se acumula: `LIVE` puede rehacerse
+        prev = sp;
+        if ((simS != null && sim > simS) || (fot != null && window.__fot - f0 > fot) || Date.now() - t0 > techoMs)
+          return res(prueba());
+        setTimeout(mira, 20);
+      };
+      mira();
+    });
+  });
   const page = await ctx.newPage();
   const errores = [];
   page.on('pageerror', e => errores.push(String(e)));
@@ -380,7 +419,10 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
         txtVacio.slice(0, 80));
 
   await page.click('#lPlay');
-  await page.waitForTimeout(400);
+  // El cronómetro tiene que haber visto un paso CON CALMA antes de que suba el viento: sin flanco no
+  // arranca (ver el ayudante de arriba). Antes eran 400 ms fijos, que a 3 fps es un fotograma o ninguno.
+  await page.evaluate(() => __esperaSim(() => LIVE.crono && LIVE.crono.fase === 'espera' &&
+    LIVE.crono.prevV != null && LIVE.crono.prevV <= (+document.getElementById('t1').value) / 3.6, { fot: 120 }));
   // El viento sube POR ENCIMA del umbral con el reloj ya corriendo: ése es el
   // flanco que arranca el cronómetro.
   await page.evaluate(() => {
@@ -391,9 +433,8 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   // está escrito desde el primer fotograma, así que esperarlo devolvía el
   // control con la maniobra todavía en vuelo y `tFin` a null. Un rótulo no es
   // una medida.
-  await page.waitForFunction(() =>
-    window.LIVE && LIVE.crono && LIVE.crono.fase === 'hecha',
-    null, { timeout: 30000 });
+  await page.evaluate(() => __esperaSim(() =>
+    window.LIVE && LIVE.crono && LIVE.crono.fase === 'hecha', { simS: 6 * 3600 }));
   const CR = await page.evaluate(() => {
     const C = LIVE.crono, D = C.ultima || { t0: C.t0, tVe: C.tVe, por: C.por };
     const S = Object.keys(D.por || {})[0];
@@ -504,7 +545,7 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
     e.value = String((+e.value || 10) + 2);
     e.dispatchEvent(new Event('change', { bubbles: true }));
   });
-  await page.waitForTimeout(400);
+  await page.evaluate(() => __esperaSim(() => false, { fot: 6, techoMs: 30000 }));   // unos fotogramas, no 400 ms
   const trasTrk = await lee();
   check('cambiar el nº de trackers NO desincroniza el botón', coherente(trasTrk),
         'run=' + trasTrk.run + ' botón dice Pausa=' + trasTrk.dicePausa);
@@ -514,7 +555,7 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   // PUERTA 2: encender la latencia. Es la que el propio autor abrió al añadir
   // el cronómetro, así que la vigila el banco del cronómetro.
   await page.evaluate(() => { document.getElementById('lat_on').checked = true; latUI(); });
-  await page.waitForTimeout(400);
+  await page.evaluate(() => __esperaSim(() => false, { fot: 6, techoMs: 30000 }));   // unos fotogramas, no 400 ms
   const trasLat = await lee();
   check('encender la latencia tampoco desincroniza el botón', coherente(trasLat),
         'run=' + trasLat.run + ' botón dice Pausa=' + trasLat.dicePausa);
@@ -524,7 +565,9 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   // simulado antes y después, no el rótulo — el rótulo es justo lo que mentía.
   await page.click('#lPlay');
   const paradoA = (await lee()).minF;
-  await page.waitForTimeout(900);
+  // doce FOTOGRAMAS, no 900 ms: a pocos fps en 900 ms puede no correr ninguno y el «no avanza»
+  // saldría verde sin haber mirado nada
+  await page.evaluate(() => __esperaSim(() => false, { fot: 12, techoMs: 60000 }));
   const paradoB = await lee();
   check('pulsar PAUSA para el reloj de verdad', paradoB.minF === paradoA,
         paradoA + ' -> ' + paradoB.minF);
@@ -534,7 +577,7 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   // saldría verde sin medir nada.
   await page.click('#lPlay');
   const corriendoA = (await lee()).minF;
-  await page.waitForTimeout(900);
+  await page.evaluate(() => __esperaSim(() => false, { fot: 12, techoMs: 60000 }));
   check('control · con el reloj suelto, el tiempo SÍ avanza',
         (await lee()).minF > corriendoA, corriendoA);
   await page.click('#lPlay');
@@ -587,9 +630,14 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
     // bajen, no hay maniobra que medir y las filas salen en «—», que es cierto
     // pero no es lo que se quiere probar aquí. Medido: sin esta espera, A2 y B2
     // llegaban a la sección todavía plegadas de la sección 4.
-    const desdeSeguimiento = await page.waitForFunction(
-      () => vivos().filter(S => S !== 'PASIVO').every(S => LIVE.modos[S] === 'IDLE'),
-      null, { timeout: 25000 }).then(() => true).catch(() => false);
+    // Y ADEMÁS ARMADO: el cronómetro tiene que haber visto un paso con el viento en calma
+    // (`prevV` por debajo del umbral), o la subida no es un flanco y el episodio no empieza. Es la
+    // carrera que en CI dejaba la tabla vacía; la sección del corte ya lo esperaba así.
+    const desdeSeguimiento = await page.evaluate(() => __esperaSim(() =>
+      vivos().filter(S => S !== 'PASIVO').every(S => LIVE.modos[S] === 'IDLE') &&
+      LIVE.crono && LIVE.crono.fase === 'espera' && LIVE.crono.prevV != null &&
+      LIVE.crono.prevV <= (+document.getElementById('t1').value) / 3.6,
+      { simS: 6 * 3600 }));
     await page.evaluate(() => {
       const v = document.getElementById('lV');
       v.value = '95'; v.dispatchEvent(new Event('input', { bubbles: true }));
@@ -598,9 +646,8 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
     // fase no llega a `hecha` y un `waitForFunction` pelado reventaría el banco
     // entero — un arnés que muere no dice CUÁNTO se rompió. Se recoge lo que
     // haya y que fallen las comprobaciones, que es lo que se está midiendo.
-    const cerro = await page.waitForFunction(
-      () => window.LIVE && LIVE.crono && LIVE.crono.fase === 'hecha',
-      null, { timeout: 25000 }).then(() => true).catch(() => false);
+    const cerro = await page.evaluate(() => __esperaSim(() =>
+      window.LIVE && LIVE.crono && LIVE.crono.fase === 'hecha', { simS: 6 * 3600 }));
     const R = await page.evaluate(() => {
       const C = LIVE.crono, D = C.ultima || { t0: C.t0, tVe: C.tVe, por: C.por };
       const o = { det: (D.tVe != null && D.t0 != null) ? D.tVe - D.t0 : null, por: {} };
@@ -745,15 +792,14 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
     // batería de mutantes dio 9 muertos donde había 5, y las cuatro de más eran
     // esta espera, no el mutante. Un banco que a veces falla solo no sirve para
     // medir nada: el primer rojo que sale ya no se sabe de quién es.
-    const listo = async (cond, ms) => { const t0 = Date.now();
-      while (Date.now() - t0 < ms) { if (cond()) return true;
-        await new Promise(r => setTimeout(r, 50)); } return cond(); };
-    await listo(() => LIVE.dtPaso > 0, 3000);
+    // en FOTOGRAMAS, no en ms: la caja repinta uno de cada seis, y a pocos fps 3 s no daban
+    const listo = (cond, fot) => __esperaSim(cond, { fot });
+    await listo(() => LIVE.dtPaso > 0, 60);
     // y a que la caja haya repintado con ESTE paso ya medido
     await listo(() => {
       const hay = periodosFinos().length > 0;
       return hay === /no se resuelve/.test(document.getElementById('cronoBox').textContent);
-    }, 3000);
+    }, 60);
     const t = document.getElementById('cronoBox').textContent;
     const o = { paso: LIVE.dtPaso, finos: periodosFinos(), dice: /no se resuelve/.test(t), txt: t };
     if (LIVE.run) document.getElementById('lPlay').click();
@@ -791,9 +837,8 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
   // número — la fila ponía «—» y su columna iba vacía. Ahora dice los grados
   // hechos sobre los que había por delante, los dos MEDIDOS sobre la escena.
   const corte = await page.evaluate(async () => {
-    const esperar = async (cond, ms) => { const t0 = Date.now();
-      while (Date.now() - t0 < ms) { if (cond()) return true;
-        await new Promise(r => setTimeout(r, 40)); } return cond(); };
+    // en tiempo SIMULADO (aquí va a ×60) o en fotogramas, no en ms de reloj: ver el ayudante
+    const esperar = (cond, lim) => __esperaSim(cond, lim);
     const v = document.getElementById('lV');
     const pon = x => { v.value = String(x); v.dispatchEvent(new Event('input', { bubbles: true })); };
     pon(20);
@@ -821,7 +866,7 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
     const desdeSeg = await esperar(() =>
       vivos().filter(S => S !== 'PASIVO').every(S => LIVE.modos[S] === 'IDLE') &&
       LIVE.crono.prevV != null && LIVE.crono.prevV <= (+document.getElementById('t1').value) / 3.6,
-      25000);
+      { simS: 2 * 3600 });
     pon(95);
     // SE ESPERA A QUE EL EJE HAYA RECORRIDO ALGO antes de cortar. Cortar en el
     // mismo paso en que entra la orden da «0° de 39°»: cierto, pero no contiene
@@ -830,16 +875,16 @@ const CERO = { ventana_s: 0, muestreo_s: 0, sondeo_s: 0, arranque_s: 0 };
       const C = LIVE.crono; if (!C || !C.por) return false;
       return Object.keys(C.por).some(S => C.por[S].thLle != null &&
         Math.abs((C.por[S].thUlt || 0) - C.por[S].thLle) > 3);
-    }, 40000);
+    }, { simS: 2 * 3600 });
     pon(5);
-    const cerro = await esperar(() => LIVE.crono.ultima && LIVE.crono.ultima.cortada, 25000);
+    const cerro = await esperar(() => LIVE.crono.ultima && LIVE.crono.ultima.cortada, { simS: 3600 });
     // Y A QUE LA CAJA LO HAYA PINTADO: `pintaCrono` repinta uno de cada seis
     // fotogramas, así que leer el texto en el instante del corte devolvía la
     // tabla ANTERIOR, con la maniobra todavía en vuelo. Es la segunda vez en
     // este fichero que ese repintado muerde; la primera fue en la sección del
     // aviso de resolución. Se espera al TEXTO, que es lo que se va a afirmar.
     const pintado = await esperar(
-      () => /baj\u00f3 del umbral/.test(document.getElementById('cronoBox').textContent), 8000);
+      () => /baj\u00f3 del umbral/.test(document.getElementById('cronoBox').textContent), { fot: 60 });
     const D = LIVE.crono.ultima || {};
     const por = {};
     Object.keys(D.por || {}).forEach(S => { const q = D.por[S];
