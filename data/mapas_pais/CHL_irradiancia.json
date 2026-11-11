@@ -1,0 +1,36 @@
+{
+ "pais": "Chile",
+ "iso3": "CHL",
+ "iso2": "CL",
+ "nombre_en": "Chile",
+ "variable": "irradiancia",
+ "imagen": "CHL_irradiancia.webp",
+ "rejilla": "CHL_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -94.56842,
+  -61.82979,
+  -48.15696,
+  -12.15724
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 736593,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,50°",
+ "umbral": 1800.0,
+ "media": 1829.433,
+ "p10": 1074.0365,
+ "p50": 1891.108,
+ "p90": 2524.9925,
+ "p2": 895.6033,
+ "p98": 2684.5642,
+ "min": 799.0008,
+ "max": 2722.2166,
+ "sobre_umbral": 0.5563,
+ "pixeles": 31489
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Birmania",
+ "iso3": "MMR",
+ "iso2": "MM",
+ "nombre_en": "Myanmar",
+ "variable": "viento",
+ "imagen": "MMR_viento.webp",
+ "rejilla": "MMR_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  87.09446,
+  7.01929,
+  106.25437,
+  31.13561
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 663159,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.201,
+ "p10": 1.7483,
+ "p50": 3.0901,
+ "p90": 4.7721,
+ "p2": 1.1996,
+ "p98": 5.5014,
+ "min": 0.5514,
+ "max": 9.4963,
+ "sobre_umbral": 0.0005,
+ "pixeles": 517245
+}

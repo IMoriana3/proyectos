@@ -1,0 +1,36 @@
+{
+ "pais": "Belice",
+ "iso3": "BLZ",
+ "iso2": "BZ",
+ "nombre_en": "Belize",
+ "variable": "irradiancia",
+ "imagen": "BLZ_irradiancia.webp",
+ "rejilla": "BLZ_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -89.88799,
+  15.39965,
+  -87.1316,
+  18.91076
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 22299,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1851.0282,
+ "p10": 1826.0396,
+ "p50": 1846.216,
+ "p90": 1878.8029,
+ "p2": 1821.2207,
+ "p98": 1915.2471,
+ "min": 1819.8925,
+ "max": 1975.0258,
+ "sobre_umbral": 1.0,
+ "pixeles": 198678
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Kazajistán",
+ "iso3": "KAZ",
+ "iso2": "KZ",
+ "nombre_en": "Kazakhstan",
+ "variable": "irradiancia",
+ "imagen": "KAZ_irradiancia.webp",
+ "rejilla": "KAZ_irradiancia_rejilla.json",
+ "caja": [
+  0.01436,
+  0.03,
+  0.75883,
+  0.97
+ ],
+ "encuadre": [
+  43.21064,
+  38.20867,
+  90.59144,
+  57.51354
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 2714263,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 2,25°",
+ "umbral": 1800.0,
+ "media": 1479.1991,
+ "p10": 1317.9856,
+ "p50": 1489.699,
+ "p90": 1624.2818,
+ "p2": 1213.417,
+ "p98": 1707.5981,
+ "min": 1142.7101,
+ "max": 1744.2233,
+ "sobre_umbral": 0.0,
+ "pixeles": 220523
+}

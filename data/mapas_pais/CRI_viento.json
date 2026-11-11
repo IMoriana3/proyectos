@@ -1,0 +1,36 @@
+{
+ "pais": "Costa Rica",
+ "iso3": "CRI",
+ "iso2": "CR",
+ "nombre_en": "Costa Rica",
+ "variable": "viento",
+ "imagen": "CRI_viento.webp",
+ "rejilla": "CRI_viento_rejilla.json",
+ "caja": [
+  0.0209,
+  0.03,
+  0.64892,
+  0.97
+ ],
+ "encuadre": [
+  -86.24644,
+  7.52672,
+  -82.26284,
+  11.65446
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 51151,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.7859,
+ "p10": 1.7135,
+ "p50": 3.2615,
+ "p90": 6.7982,
+ "p2": 1.1006,
+ "p98": 9.6468,
+ "min": 0.132,
+ "max": 16.8121,
+ "sobre_umbral": 0.0874,
+ "pixeles": 674653
+}

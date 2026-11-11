@@ -1,0 +1,36 @@
+{
+ "pais": "Guyana",
+ "iso3": "GUY",
+ "iso2": "GY",
+ "nombre_en": "Guyana",
+ "variable": "viento",
+ "imagen": "GUY_viento.webp",
+ "rejilla": "GUY_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -62.54624,
+  0.00627,
+  -55.33229,
+  9.59012
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 211214,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.2606,
+ "p10": 2.3209,
+ "p50": 3.0233,
+ "p90": 4.7877,
+ "p2": 1.711,
+ "p98": 6.0597,
+ "min": 0.517,
+ "max": 11.6908,
+ "sobre_umbral": 0.004,
+ "pixeles": 976960
+}

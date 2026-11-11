@@ -1,0 +1,36 @@
+{
+ "pais": "Camboya",
+ "iso3": "KHM",
+ "iso2": "KH",
+ "nombre_en": "Cambodia",
+ "variable": "viento",
+ "imagen": "KHM_viento.webp",
+ "rejilla": "KHM_viento_rejilla.json",
+ "caja": [
+  0.01931,
+  0.03,
+  0.67552,
+  0.97
+ ],
+ "encuadre": [
+  101.88966,
+  9.72956,
+  108.03428,
+  15.30502
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 181060,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.0466,
+ "p10": 2.9348,
+ "p50": 4.1301,
+ "p90": 4.944,
+ "p2": 2.2251,
+ "p98": 5.5537,
+ "min": 0.8889,
+ "max": 9.4724,
+ "sobre_umbral": 0.0015,
+ "pixeles": 1647048
+}

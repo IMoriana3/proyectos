@@ -1,0 +1,36 @@
+{
+ "pais": "Irak",
+ "iso3": "IRQ",
+ "iso2": "IQ",
+ "nombre_en": "Iraq",
+ "variable": "viento",
+ "imagen": "IRQ_viento.webp",
+ "rejilla": "IRQ_viento_rejilla.json",
+ "caja": [
+  0.02195,
+  0.03,
+  0.6312,
+  0.97
+ ],
+ "encuadre": [
+  37.99173,
+  27.73316,
+  49.34203,
+  38.53923
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 437367,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.357,
+ "p10": 4.9426,
+ "p50": 6.6492,
+ "p90": 7.2664,
+ "p2": 3.5202,
+ "p98": 7.5645,
+ "min": 1.1781,
+ "max": 12.8009,
+ "sobre_umbral": 0.2621,
+ "pixeles": 1368584
+}

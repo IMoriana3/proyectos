@@ -1,0 +1,36 @@
+{
+ "pais": "Noruega",
+ "iso3": "NOR",
+ "iso2": "NO",
+ "nombre_en": "Norway",
+ "variable": "irradiancia",
+ "imagen": "NOR_irradiancia.webp",
+ "rejilla": "NOR_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -12.0678,
+  54.46127,
+  48.07156,
+  83.15776
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 382067,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,75°",
+ "umbral": 1800.0,
+ "media": 819.1071,
+ "p10": 696.8861,
+ "p50": 820.1124,
+ "p90": 947.7533,
+ "p2": 648.6598,
+ "p98": 981.5798,
+ "min": 520.996,
+ "max": 1012.16,
+ "sobre_umbral": 0.0,
+ "pixeles": 46159
+}

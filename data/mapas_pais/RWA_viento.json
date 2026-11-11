@@ -1,0 +1,36 @@
+{
+ "pais": "Ruanda",
+ "iso3": "RWA",
+ "iso2": "RW",
+ "nombre_en": "Rwanda",
+ "variable": "viento",
+ "imagen": "RWA_viento.webp",
+ "rejilla": "RWA_viento_rejilla.json",
+ "caja": [
+  0.02044,
+  0.03,
+  0.65659,
+  0.97
+ ],
+ "encuadre": [
+  28.55724,
+  -3.30686,
+  31.18781,
+  -0.63869
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 25305,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.2057,
+ "p10": 2.4075,
+ "p50": 3.1321,
+ "p90": 4.0836,
+ "p2": 2.0218,
+ "p98": 4.952,
+ "min": 1.0807,
+ "max": 9.3765,
+ "sobre_umbral": 0.0004,
+ "pixeles": 328966
+}

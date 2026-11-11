@@ -1,0 +1,36 @@
+{
+ "pais": "Eslovaquia",
+ "iso3": "SVK",
+ "iso2": "SK",
+ "nombre_en": "Slovakia",
+ "variable": "irradiancia",
+ "imagen": "SVK_irradiancia.webp",
+ "rejilla": "SVK_irradiancia_rejilla.json",
+ "caja": [
+  0.01473,
+  0.03,
+  0.75247,
+  0.97
+ ],
+ "encuadre": [
+  16.38887,
+  47.27001,
+  22.99525,
+  50.02178
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 48458,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1155.5484,
+ "p10": 1098.5092,
+ "p50": 1162.674,
+ "p90": 1201.9184,
+ "p2": 1090.2686,
+ "p98": 1207.2354,
+ "min": 1087.3589,
+ "max": 1218.2739,
+ "sobre_umbral": 0.0,
+ "pixeles": 206780
+}

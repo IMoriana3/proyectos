@@ -1,0 +1,36 @@
+{
+ "pais": "Corea del Sur",
+ "iso3": "KOR",
+ "iso2": "KR",
+ "nombre_en": "South Korea",
+ "variable": "irradiancia",
+ "imagen": "KOR_irradiancia.webp",
+ "rejilla": "KOR_irradiancia_rejilla.json",
+ "caja": [
+  0.02256,
+  0.03,
+  0.62101,
+  0.97
+ ],
+ "encuadre": [
+  124.10905,
+  32.3293,
+  131.42523,
+  39.38408
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 98544,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1414.582,
+ "p10": 1382.4221,
+ "p50": 1414.8802,
+ "p90": 1451.3267,
+ "p2": 1368.0578,
+ "p98": 1471.8575,
+ "min": 1362.0521,
+ "max": 1484.0013,
+ "sobre_umbral": 0.0,
+ "pixeles": 201129
+}

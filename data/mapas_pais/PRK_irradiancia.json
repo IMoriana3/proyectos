@@ -1,0 +1,36 @@
+{
+ "pais": "Corea del Norte",
+ "iso3": "PRK",
+ "iso2": "KP",
+ "nombre_en": "North Korea",
+ "variable": "irradiancia",
+ "imagen": "PRK_irradiancia.webp",
+ "rejilla": "PRK_irradiancia_rejilla.json",
+ "caja": [
+  0.023,
+  0.03,
+  0.61364,
+  0.97
+ ],
+ "encuadre": [
+  123.81127,
+  36.82206,
+  131.21024,
+  43.75712
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 122379,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1401.6598,
+ "p10": 1370.9215,
+ "p50": 1404.9688,
+ "p90": 1430.031,
+ "p2": 1341.8442,
+ "p98": 1443.8382,
+ "min": 1329.4664,
+ "max": 1451.2655,
+ "sobre_umbral": 0.0,
+ "pixeles": 255597
+}

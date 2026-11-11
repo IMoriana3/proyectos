@@ -1,0 +1,36 @@
+{
+ "pais": "Indonesia",
+ "iso3": "IDN",
+ "iso2": "ID",
+ "nombre_en": "Indonesia",
+ "variable": "irradiancia",
+ "imagen": "IDN_irradiancia.webp",
+ "rejilla": "IDN_irradiancia_rejilla.json",
+ "caja": [
+  0.01285,
+  0.03,
+  0.78409,
+  0.97
+ ],
+ "encuadre": [
+  91.53485,
+  -15.84263,
+  144.64006,
+  12.09479
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1879827,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 2,50°",
+ "umbral": 1800.0,
+ "media": 1811.8934,
+ "p10": 1708.548,
+ "p50": 1784.5744,
+ "p90": 1947.6644,
+ "p2": 1672.02,
+ "p98": 2158.7271,
+ "min": 1657.4943,
+ "max": 2201.0631,
+ "sobre_umbral": 0.3778,
+ "pixeles": 54391
+}

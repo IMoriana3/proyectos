@@ -1,0 +1,36 @@
+{
+ "pais": "Montenegro",
+ "iso3": "MNE",
+ "iso2": "ME",
+ "nombre_en": "Montenegro",
+ "variable": "irradiancia",
+ "imagen": "MNE_irradiancia.webp",
+ "rejilla": "MNE_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  18.06995,
+  41.37236,
+  20.71875,
+  43.96789
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 13727,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1386.2894,
+ "p10": 1339.8586,
+ "p50": 1382.3033,
+ "p90": 1432.4899,
+ "p2": 1337.0527,
+ "p98": 1499.0498,
+ "min": 1336.413,
+ "max": 1539.2023,
+ "sobre_umbral": 0.0,
+ "pixeles": 285884
+}

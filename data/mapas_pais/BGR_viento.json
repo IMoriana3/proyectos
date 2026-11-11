@@ -1,0 +1,36 @@
+{
+ "pais": "Bulgaria",
+ "iso3": "BGR",
+ "iso2": "BG",
+ "nombre_en": "Bulgaria",
+ "variable": "viento",
+ "imagen": "BGR_viento.webp",
+ "rejilla": "BGR_viento_rejilla.json",
+ "caja": [
+  0.01637,
+  0.03,
+  0.72501,
+  0.97
+ ],
+ "encuadre": [
+  21.84434,
+  40.7581,
+  29.10421,
+  44.64843
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 112761,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.7404,
+ "p10": 3.3723,
+ "p50": 4.7245,
+ "p90": 6.1431,
+ "p2": 2.5192,
+ "p98": 6.8816,
+ "min": 0.9311,
+ "max": 10.8105,
+ "sobre_umbral": 0.0112,
+ "pixeles": 979424
+}

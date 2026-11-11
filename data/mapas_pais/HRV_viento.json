@@ -1,0 +1,36 @@
+{
+ "pais": "Croacia",
+ "iso3": "HRV",
+ "iso2": "HR",
+ "nombre_en": "Croatia",
+ "variable": "viento",
+ "imagen": "HRV_viento.webp",
+ "rejilla": "HRV_viento_rejilla.json",
+ "caja": [
+  0.02148,
+  0.03,
+  0.63911,
+  0.97
+ ],
+ "encuadre": [
+  13.02897,
+  41.75542,
+  19.88035,
+  47.12527
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 55023,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.8851,
+ "p10": 3.4762,
+ "p50": 4.7927,
+ "p90": 6.473,
+ "p2": 2.86,
+ "p98": 8.0905,
+ "min": 1.327,
+ "max": 13.5389,
+ "sobre_umbral": 0.0619,
+ "pixeles": 549964
+}

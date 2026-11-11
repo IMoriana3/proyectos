@@ -1,0 +1,36 @@
+{
+ "pais": "Zimbabue",
+ "iso3": "ZWE",
+ "iso2": "ZW",
+ "nombre_en": "Zimbabwe",
+ "variable": "irradiancia",
+ "imagen": "ZWE_irradiancia.webp",
+ "rejilla": "ZWE_irradiancia_rejilla.json",
+ "caja": [
+  0.0206,
+  0.03,
+  0.65386,
+  0.97
+ ],
+ "encuadre": [
+  24.5935,
+  -23.48255,
+  33.66864,
+  -14.66525
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 389337,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 2109.5181,
+ "p10": 2015.8904,
+ "p50": 2128.7859,
+ "p90": 2173.4548,
+ "p2": 1965.3235,
+ "p98": 2189.5861,
+ "min": 1941.8912,
+ "max": 2196.6536,
+ "sobre_umbral": 1.0,
+ "pixeles": 432421
+}

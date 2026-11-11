@@ -1,0 +1,36 @@
+{
+ "pais": "Timor Oriental",
+ "iso3": "TLS",
+ "iso2": "TL",
+ "nombre_en": "East Timor",
+ "variable": "irradiancia",
+ "imagen": "TLS_irradiancia.webp",
+ "rejilla": "TLS_irradiancia_rejilla.json",
+ "caja": [
+  0.01403,
+  0.03,
+  0.76431,
+  0.97
+ ],
+ "encuadre": [
+  123.73004,
+  -9.98123,
+  127.61324,
+  -7.71502
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 15082,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2069.7834,
+ "p10": 2041.6115,
+ "p50": 2069.2296,
+ "p90": 2101.3004,
+ "p2": 2037.9441,
+ "p98": 2114.1369,
+ "min": 2036.9808,
+ "max": 2125.7601,
+ "sobre_umbral": 1.0,
+ "pixeles": 87048
+}

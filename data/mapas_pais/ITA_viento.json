@@ -1,0 +1,36 @@
+{
+ "pais": "Italia",
+ "iso3": "ITA",
+ "iso2": "IT",
+ "nombre_en": "Italy",
+ "variable": "viento",
+ "imagen": "ITA_viento.webp",
+ "rejilla": "ITA_viento_rejilla.json",
+ "caja": [
+  0.02394,
+  0.03,
+  0.59783,
+  0.97
+ ],
+ "encuadre": [
+  5.64955,
+  34.98609,
+  19.4706,
+  48.54545
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 301185,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.5348,
+ "p10": 2.7764,
+ "p50": 4.4901,
+ "p90": 6.3409,
+ "p2": 1.9383,
+ "p98": 7.3572,
+ "min": 0.7568,
+ "max": 13.4944,
+ "sobre_umbral": 0.0332,
+ "pixeles": 699137
+}

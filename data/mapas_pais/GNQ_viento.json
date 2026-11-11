@@ -1,0 +1,36 @@
+{
+ "pais": "Guinea Ecuatorial",
+ "iso3": "GNQ",
+ "iso2": "GQ",
+ "nombre_en": "Equatorial Guinea",
+ "variable": "viento",
+ "imagen": "GNQ_viento.webp",
+ "rejilla": "GNQ_viento_rejilla.json",
+ "caja": [
+  0.0211,
+  0.03,
+  0.64552,
+  0.97
+ ],
+ "encuadre": [
+  8.12205,
+  0.44485,
+  11.63634,
+  4.19241
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 26672,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 2.4315,
+ "p10": 1.886,
+ "p50": 2.4343,
+ "p90": 2.8924,
+ "p2": 1.4993,
+ "p98": 3.6194,
+ "min": 0.4643,
+ "max": 6.1403,
+ "sobre_umbral": 0.0,
+ "pixeles": 346619
+}

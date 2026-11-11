@@ -1,0 +1,36 @@
+{
+ "pais": "Islas Malvinas",
+ "iso3": "FLK",
+ "iso2": "FK",
+ "nombre_en": "Falkland Islands",
+ "variable": "viento",
+ "imagen": "FLK_viento.webp",
+ "rejilla": "FLK_viento_rejilla.json",
+ "caja": [
+  0.01861,
+  0.03,
+  0.68731,
+  0.97
+ ],
+ "encuadre": [
+  -61.61819,
+  -52.88652,
+  -57.43428,
+  -50.60777
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 11597,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 10.527,
+ "p10": 9.585,
+ "p50": 10.4102,
+ "p90": 11.5599,
+ "p2": 9.1204,
+ "p98": 12.9366,
+ "min": 7.5606,
+ "max": 17.899,
+ "sobre_umbral": 1.0,
+ "pixeles": 241327
+}

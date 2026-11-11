@@ -1,0 +1,36 @@
+{
+ "pais": "Brasil",
+ "iso3": "BRA",
+ "iso2": "BR",
+ "nombre_en": "Brazil",
+ "variable": "viento",
+ "imagen": "BRA_viento.webp",
+ "rejilla": "BRA_viento_rejilla.json",
+ "caja": [
+  0.02209,
+  0.03,
+  0.62888,
+  0.97
+ ],
+ "encuadre": [
+  -77.15646,
+  -39.9838,
+  -31.65562,
+  10.72856
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 8472670,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.8289,
+ "p10": 2.1117,
+ "p50": 3.6942,
+ "p90": 5.7823,
+ "p2": 1.905,
+ "p98": 7.0021,
+ "min": 0.8945,
+ "max": 12.267,
+ "sobre_umbral": 0.0201,
+ "pixeles": 1383190
+}

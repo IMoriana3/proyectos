@@ -1,0 +1,2730 @@
+{
+ "AFG": {
+  "iso3": "AFG",
+  "iso2": "AF",
+  "nombre": "Afganistán",
+  "nombre_en": "Afghanistan",
+  "variables": {
+   "viento": {
+    "ficha": "AFG_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "AFG_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "AGO": {
+  "iso3": "AGO",
+  "iso2": "AO",
+  "nombre": "Angola",
+  "nombre_en": "Angola",
+  "variables": {
+   "viento": {
+    "ficha": "AGO_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "AGO_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ALB": {
+  "iso3": "ALB",
+  "iso2": "AL",
+  "nombre": "Albania",
+  "nombre_en": "Albania",
+  "variables": {
+   "viento": {
+    "ficha": "ALB_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ALB_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ARE": {
+  "iso3": "ARE",
+  "iso2": "AE",
+  "nombre": "Emiratos Árabes Unidos",
+  "nombre_en": "United Arab Emirates",
+  "variables": {
+   "viento": {
+    "ficha": "ARE_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ARE_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ARG": {
+  "iso3": "ARG",
+  "iso2": "AR",
+  "nombre": "Argentina",
+  "nombre_en": "Argentina",
+  "variables": {
+   "viento": {
+    "ficha": "ARG_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ARG_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ARM": {
+  "iso3": "ARM",
+  "iso2": "AM",
+  "nombre": "Armenia",
+  "nombre_en": "Armenia",
+  "variables": {
+   "viento": {
+    "ficha": "ARM_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ARM_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ATF": {
+  "iso3": "ATF",
+  "iso2": "TF",
+  "nombre": "Tierras Australes y Antárticas Francesas",
+  "nombre_en": "French Southern and Antarctic Lands",
+  "variables": {
+   "irradiancia": {
+    "ficha": "ATF_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "AUS": {
+  "iso3": "AUS",
+  "iso2": "AU",
+  "nombre": "Australia",
+  "nombre_en": "Australia",
+  "variables": {
+   "viento": {
+    "ficha": "AUS_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "AUS_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "AUT": {
+  "iso3": "AUT",
+  "iso2": "AT",
+  "nombre": "Austria",
+  "nombre_en": "Austria",
+  "variables": {
+   "viento": {
+    "ficha": "AUT_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "AUT_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "AZE": {
+  "iso3": "AZE",
+  "iso2": "AZ",
+  "nombre": "Azerbaiyán",
+  "nombre_en": "Azerbaijan",
+  "variables": {
+   "viento": {
+    "ficha": "AZE_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "AZE_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BDI": {
+  "iso3": "BDI",
+  "iso2": "BI",
+  "nombre": "Burundi",
+  "nombre_en": "Burundi",
+  "variables": {
+   "viento": {
+    "ficha": "BDI_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BDI_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BEL": {
+  "iso3": "BEL",
+  "iso2": "BE",
+  "nombre": "Bélgica",
+  "nombre_en": "Belgium",
+  "variables": {
+   "viento": {
+    "ficha": "BEL_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BEL_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BEN": {
+  "iso3": "BEN",
+  "iso2": "BJ",
+  "nombre": "Benín",
+  "nombre_en": "Benin",
+  "variables": {
+   "viento": {
+    "ficha": "BEN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BEN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BFA": {
+  "iso3": "BFA",
+  "iso2": "BF",
+  "nombre": "Burkina Faso",
+  "nombre_en": "Burkina Faso",
+  "variables": {
+   "viento": {
+    "ficha": "BFA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BFA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BGD": {
+  "iso3": "BGD",
+  "iso2": "BD",
+  "nombre": "Bangladés",
+  "nombre_en": "Bangladesh",
+  "variables": {
+   "viento": {
+    "ficha": "BGD_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BGD_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BGR": {
+  "iso3": "BGR",
+  "iso2": "BG",
+  "nombre": "Bulgaria",
+  "nombre_en": "Bulgaria",
+  "variables": {
+   "viento": {
+    "ficha": "BGR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BGR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BHS": {
+  "iso3": "BHS",
+  "iso2": "BS",
+  "nombre": "Bahamas",
+  "nombre_en": "The Bahamas",
+  "variables": {
+   "viento": {
+    "ficha": "BHS_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BHS_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BIH": {
+  "iso3": "BIH",
+  "iso2": "BA",
+  "nombre": "Bosnia y Herzegovina",
+  "nombre_en": "Bosnia and Herzegovina",
+  "variables": {
+   "viento": {
+    "ficha": "BIH_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BIH_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BLR": {
+  "iso3": "BLR",
+  "iso2": "BY",
+  "nombre": "Bielorrusia",
+  "nombre_en": "Belarus",
+  "variables": {
+   "viento": {
+    "ficha": "BLR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BLR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BLZ": {
+  "iso3": "BLZ",
+  "iso2": "BZ",
+  "nombre": "Belice",
+  "nombre_en": "Belize",
+  "variables": {
+   "viento": {
+    "ficha": "BLZ_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BLZ_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BOL": {
+  "iso3": "BOL",
+  "iso2": "BO",
+  "nombre": "Bolivia",
+  "nombre_en": "Bolivia",
+  "variables": {
+   "viento": {
+    "ficha": "BOL_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BOL_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BRA": {
+  "iso3": "BRA",
+  "iso2": "BR",
+  "nombre": "Brasil",
+  "nombre_en": "Brazil",
+  "variables": {
+   "viento": {
+    "ficha": "BRA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BRA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BRN": {
+  "iso3": "BRN",
+  "iso2": "BN",
+  "nombre": "Brunéi",
+  "nombre_en": "Brunei",
+  "variables": {
+   "viento": {
+    "ficha": "BRN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BRN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BTN": {
+  "iso3": "BTN",
+  "iso2": "BT",
+  "nombre": "Bután",
+  "nombre_en": "Bhutan",
+  "variables": {
+   "viento": {
+    "ficha": "BTN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BTN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "BWA": {
+  "iso3": "BWA",
+  "iso2": "BW",
+  "nombre": "Botsuana",
+  "nombre_en": "Botswana",
+  "variables": {
+   "viento": {
+    "ficha": "BWA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "BWA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "CAF": {
+  "iso3": "CAF",
+  "iso2": "CF",
+  "nombre": "República Centroafricana",
+  "nombre_en": "Central African Republic",
+  "variables": {
+   "viento": {
+    "ficha": "CAF_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "CAF_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "CAN": {
+  "iso3": "CAN",
+  "iso2": "CA",
+  "nombre": "Canadá",
+  "nombre_en": "Canada",
+  "variables": {
+   "viento": {
+    "ficha": "CAN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "CAN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "CHE": {
+  "iso3": "CHE",
+  "iso2": "CH",
+  "nombre": "Suiza",
+  "nombre_en": "Switzerland",
+  "variables": {
+   "viento": {
+    "ficha": "CHE_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "CHE_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "CHL": {
+  "iso3": "CHL",
+  "iso2": "CL",
+  "nombre": "Chile",
+  "nombre_en": "Chile",
+  "variables": {
+   "viento": {
+    "ficha": "CHL_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "CHL_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "CHN": {
+  "iso3": "CHN",
+  "iso2": "CN",
+  "nombre": "China",
+  "nombre_en": "People's Republic of China",
+  "variables": {
+   "viento": {
+    "ficha": "CHN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "CHN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "CIV": {
+  "iso3": "CIV",
+  "iso2": "CI",
+  "nombre": "Costa de Marfil",
+  "nombre_en": "Ivory Coast",
+  "variables": {
+   "viento": {
+    "ficha": "CIV_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "CIV_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "CMR": {
+  "iso3": "CMR",
+  "iso2": "CM",
+  "nombre": "Camerún",
+  "nombre_en": "Cameroon",
+  "variables": {
+   "viento": {
+    "ficha": "CMR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "CMR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "COD": {
+  "iso3": "COD",
+  "iso2": "CD",
+  "nombre": "República Democrática del Congo",
+  "nombre_en": "Democratic Republic of the Congo",
+  "variables": {
+   "viento": {
+    "ficha": "COD_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "COD_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "COG": {
+  "iso3": "COG",
+  "iso2": "CG",
+  "nombre": "República del Congo",
+  "nombre_en": "Republic of the Congo",
+  "variables": {
+   "viento": {
+    "ficha": "COG_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "COG_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "COL": {
+  "iso3": "COL",
+  "iso2": "CO",
+  "nombre": "Colombia",
+  "nombre_en": "Colombia",
+  "variables": {
+   "viento": {
+    "ficha": "COL_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "COL_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "CRI": {
+  "iso3": "CRI",
+  "iso2": "CR",
+  "nombre": "Costa Rica",
+  "nombre_en": "Costa Rica",
+  "variables": {
+   "viento": {
+    "ficha": "CRI_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "CRI_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "CUB": {
+  "iso3": "CUB",
+  "iso2": "CU",
+  "nombre": "Cuba",
+  "nombre_en": "Cuba",
+  "variables": {
+   "viento": {
+    "ficha": "CUB_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "CUB_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "CYP": {
+  "iso3": "CYP",
+  "iso2": "CY",
+  "nombre": "Chipre",
+  "nombre_en": "Cyprus",
+  "variables": {
+   "viento": {
+    "ficha": "CYP_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "CYP_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "CZE": {
+  "iso3": "CZE",
+  "iso2": "CZ",
+  "nombre": "República Checa",
+  "nombre_en": "Czech Republic",
+  "variables": {
+   "viento": {
+    "ficha": "CZE_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "CZE_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "DEU": {
+  "iso3": "DEU",
+  "iso2": "DE",
+  "nombre": "Alemania",
+  "nombre_en": "Germany",
+  "variables": {
+   "viento": {
+    "ficha": "DEU_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "DEU_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "DJI": {
+  "iso3": "DJI",
+  "iso2": "DJ",
+  "nombre": "Yibuti",
+  "nombre_en": "Djibouti",
+  "variables": {
+   "viento": {
+    "ficha": "DJI_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "DJI_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "DNK": {
+  "iso3": "DNK",
+  "iso2": "DK",
+  "nombre": "Dinamarca",
+  "nombre_en": "Denmark",
+  "variables": {
+   "viento": {
+    "ficha": "DNK_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "DNK_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "DOM": {
+  "iso3": "DOM",
+  "iso2": "DO",
+  "nombre": "República Dominicana",
+  "nombre_en": "Dominican Republic",
+  "variables": {
+   "viento": {
+    "ficha": "DOM_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "DOM_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "DZA": {
+  "iso3": "DZA",
+  "iso2": "DZ",
+  "nombre": "Argelia",
+  "nombre_en": "Algeria",
+  "variables": {
+   "viento": {
+    "ficha": "DZA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "DZA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ECU": {
+  "iso3": "ECU",
+  "iso2": "EC",
+  "nombre": "Ecuador",
+  "nombre_en": "Ecuador",
+  "variables": {
+   "viento": {
+    "ficha": "ECU_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ECU_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "EGY": {
+  "iso3": "EGY",
+  "iso2": "EG",
+  "nombre": "Egipto",
+  "nombre_en": "Egypt",
+  "variables": {
+   "viento": {
+    "ficha": "EGY_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "EGY_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ERI": {
+  "iso3": "ERI",
+  "iso2": "ER",
+  "nombre": "Eritrea",
+  "nombre_en": "Eritrea",
+  "variables": {
+   "viento": {
+    "ficha": "ERI_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ERI_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ESP": {
+  "iso3": "ESP",
+  "iso2": "ES",
+  "nombre": "España",
+  "nombre_en": "Spain",
+  "variables": {
+   "viento": {
+    "ficha": "ESP_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ESP_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "EST": {
+  "iso3": "EST",
+  "iso2": "EE",
+  "nombre": "Estonia",
+  "nombre_en": "Estonia",
+  "variables": {
+   "viento": {
+    "ficha": "EST_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "EST_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ETH": {
+  "iso3": "ETH",
+  "iso2": "ET",
+  "nombre": "Etiopía",
+  "nombre_en": "Ethiopia",
+  "variables": {
+   "viento": {
+    "ficha": "ETH_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ETH_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "FIN": {
+  "iso3": "FIN",
+  "iso2": "FI",
+  "nombre": "Finlandia",
+  "nombre_en": "Finland",
+  "variables": {
+   "viento": {
+    "ficha": "FIN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "FIN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "FJI": {
+  "iso3": "FJI",
+  "iso2": "FJ",
+  "nombre": "Fiyi",
+  "nombre_en": "Fiji",
+  "variables": {
+   "viento": {
+    "ficha": "FJI_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   }
+  }
+ },
+ "FLK": {
+  "iso3": "FLK",
+  "iso2": "FK",
+  "nombre": "Islas Malvinas",
+  "nombre_en": "Falkland Islands",
+  "variables": {
+   "viento": {
+    "ficha": "FLK_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "FLK_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "FRA": {
+  "iso3": "FRA",
+  "iso2": "FR",
+  "nombre": "Francia",
+  "nombre_en": "France",
+  "variables": {
+   "viento": {
+    "ficha": "FRA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "FRA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "GAB": {
+  "iso3": "GAB",
+  "iso2": "GA",
+  "nombre": "Gabón",
+  "nombre_en": "Gabon",
+  "variables": {
+   "viento": {
+    "ficha": "GAB_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "GAB_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "GBR": {
+  "iso3": "GBR",
+  "iso2": "GB",
+  "nombre": "Reino Unido",
+  "nombre_en": "United Kingdom",
+  "variables": {
+   "viento": {
+    "ficha": "GBR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "GBR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "GEO": {
+  "iso3": "GEO",
+  "iso2": "GE",
+  "nombre": "Georgia",
+  "nombre_en": "Georgia",
+  "variables": {
+   "viento": {
+    "ficha": "GEO_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "GEO_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "GHA": {
+  "iso3": "GHA",
+  "iso2": "GH",
+  "nombre": "Ghana",
+  "nombre_en": "Ghana",
+  "variables": {
+   "viento": {
+    "ficha": "GHA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "GHA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "GIN": {
+  "iso3": "GIN",
+  "iso2": "GN",
+  "nombre": "Guinea",
+  "nombre_en": "Guinea",
+  "variables": {
+   "viento": {
+    "ficha": "GIN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "GIN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "GMB": {
+  "iso3": "GMB",
+  "iso2": "GM",
+  "nombre": "Gambia",
+  "nombre_en": "The Gambia",
+  "variables": {
+   "viento": {
+    "ficha": "GMB_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "GMB_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "GNB": {
+  "iso3": "GNB",
+  "iso2": "GW",
+  "nombre": "Guinea-Bisáu",
+  "nombre_en": "Guinea-Bissau",
+  "variables": {
+   "viento": {
+    "ficha": "GNB_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "GNB_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "GNQ": {
+  "iso3": "GNQ",
+  "iso2": "GQ",
+  "nombre": "Guinea Ecuatorial",
+  "nombre_en": "Equatorial Guinea",
+  "variables": {
+   "viento": {
+    "ficha": "GNQ_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "GNQ_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "GRC": {
+  "iso3": "GRC",
+  "iso2": "GR",
+  "nombre": "Grecia",
+  "nombre_en": "Greece",
+  "variables": {
+   "viento": {
+    "ficha": "GRC_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "GRC_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "GRL": {
+  "iso3": "GRL",
+  "iso2": "GL",
+  "nombre": "Groenlandia",
+  "nombre_en": "Greenland",
+  "variables": {
+   "viento": {
+    "ficha": "GRL_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "GRL_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "GTM": {
+  "iso3": "GTM",
+  "iso2": "GT",
+  "nombre": "Guatemala",
+  "nombre_en": "Guatemala",
+  "variables": {
+   "viento": {
+    "ficha": "GTM_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "GTM_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "GUY": {
+  "iso3": "GUY",
+  "iso2": "GY",
+  "nombre": "Guyana",
+  "nombre_en": "Guyana",
+  "variables": {
+   "viento": {
+    "ficha": "GUY_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "GUY_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "HND": {
+  "iso3": "HND",
+  "iso2": "HN",
+  "nombre": "Honduras",
+  "nombre_en": "Honduras",
+  "variables": {
+   "viento": {
+    "ficha": "HND_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "HND_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "HRV": {
+  "iso3": "HRV",
+  "iso2": "HR",
+  "nombre": "Croacia",
+  "nombre_en": "Croatia",
+  "variables": {
+   "viento": {
+    "ficha": "HRV_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "HRV_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "HTI": {
+  "iso3": "HTI",
+  "iso2": "HT",
+  "nombre": "Haití",
+  "nombre_en": "Haiti",
+  "variables": {
+   "viento": {
+    "ficha": "HTI_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "HTI_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "HUN": {
+  "iso3": "HUN",
+  "iso2": "HU",
+  "nombre": "Hungría",
+  "nombre_en": "Hungary",
+  "variables": {
+   "viento": {
+    "ficha": "HUN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "HUN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "IDN": {
+  "iso3": "IDN",
+  "iso2": "ID",
+  "nombre": "Indonesia",
+  "nombre_en": "Indonesia",
+  "variables": {
+   "viento": {
+    "ficha": "IDN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "IDN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "IND": {
+  "iso3": "IND",
+  "iso2": "IN",
+  "nombre": "India",
+  "nombre_en": "India",
+  "variables": {
+   "viento": {
+    "ficha": "IND_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "IND_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "IRL": {
+  "iso3": "IRL",
+  "iso2": "IE",
+  "nombre": "Irlanda",
+  "nombre_en": "Ireland",
+  "variables": {
+   "viento": {
+    "ficha": "IRL_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "IRL_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "IRN": {
+  "iso3": "IRN",
+  "iso2": "IR",
+  "nombre": "Irán",
+  "nombre_en": "Iran",
+  "variables": {
+   "viento": {
+    "ficha": "IRN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "IRN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "IRQ": {
+  "iso3": "IRQ",
+  "iso2": "IQ",
+  "nombre": "Irak",
+  "nombre_en": "Iraq",
+  "variables": {
+   "viento": {
+    "ficha": "IRQ_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "IRQ_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ISL": {
+  "iso3": "ISL",
+  "iso2": "IS",
+  "nombre": "Islandia",
+  "nombre_en": "Iceland",
+  "variables": {
+   "viento": {
+    "ficha": "ISL_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ISL_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ISR": {
+  "iso3": "ISR",
+  "iso2": "IL",
+  "nombre": "Israel",
+  "nombre_en": "Israel",
+  "variables": {
+   "viento": {
+    "ficha": "ISR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ISR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ITA": {
+  "iso3": "ITA",
+  "iso2": "IT",
+  "nombre": "Italia",
+  "nombre_en": "Italy",
+  "variables": {
+   "viento": {
+    "ficha": "ITA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ITA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "JAM": {
+  "iso3": "JAM",
+  "iso2": "JM",
+  "nombre": "Jamaica",
+  "nombre_en": "Jamaica",
+  "variables": {
+   "viento": {
+    "ficha": "JAM_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "JAM_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "JOR": {
+  "iso3": "JOR",
+  "iso2": "JO",
+  "nombre": "Jordania",
+  "nombre_en": "Jordan",
+  "variables": {
+   "viento": {
+    "ficha": "JOR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "JOR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "JPN": {
+  "iso3": "JPN",
+  "iso2": "JP",
+  "nombre": "Japón",
+  "nombre_en": "Japan",
+  "variables": {
+   "viento": {
+    "ficha": "JPN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "JPN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "KAZ": {
+  "iso3": "KAZ",
+  "iso2": "KZ",
+  "nombre": "Kazajistán",
+  "nombre_en": "Kazakhstan",
+  "variables": {
+   "viento": {
+    "ficha": "KAZ_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "KAZ_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "KEN": {
+  "iso3": "KEN",
+  "iso2": "KE",
+  "nombre": "Kenia",
+  "nombre_en": "Kenya",
+  "variables": {
+   "viento": {
+    "ficha": "KEN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "KEN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "KGZ": {
+  "iso3": "KGZ",
+  "iso2": "KG",
+  "nombre": "Kirguistán",
+  "nombre_en": "Kyrgyzstan",
+  "variables": {
+   "viento": {
+    "ficha": "KGZ_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "KGZ_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "KHM": {
+  "iso3": "KHM",
+  "iso2": "KH",
+  "nombre": "Camboya",
+  "nombre_en": "Cambodia",
+  "variables": {
+   "viento": {
+    "ficha": "KHM_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "KHM_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "KOR": {
+  "iso3": "KOR",
+  "iso2": "KR",
+  "nombre": "Corea del Sur",
+  "nombre_en": "South Korea",
+  "variables": {
+   "viento": {
+    "ficha": "KOR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "KOR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "KOS": {
+  "iso3": "KOS",
+  "iso2": "XK",
+  "nombre": "Kosovo",
+  "nombre_en": "Kosovo",
+  "variables": {
+   "irradiancia": {
+    "ficha": "KOS_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "KWT": {
+  "iso3": "KWT",
+  "iso2": "KW",
+  "nombre": "Kuwait",
+  "nombre_en": "Kuwait",
+  "variables": {
+   "viento": {
+    "ficha": "KWT_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "KWT_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "LAO": {
+  "iso3": "LAO",
+  "iso2": "LA",
+  "nombre": "Laos",
+  "nombre_en": "Laos",
+  "variables": {
+   "viento": {
+    "ficha": "LAO_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "LAO_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "LBN": {
+  "iso3": "LBN",
+  "iso2": "LB",
+  "nombre": "Líbano",
+  "nombre_en": "Lebanon",
+  "variables": {
+   "viento": {
+    "ficha": "LBN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "LBN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "LBR": {
+  "iso3": "LBR",
+  "iso2": "LR",
+  "nombre": "Liberia",
+  "nombre_en": "Liberia",
+  "variables": {
+   "viento": {
+    "ficha": "LBR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "LBR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "LBY": {
+  "iso3": "LBY",
+  "iso2": "LY",
+  "nombre": "Libia",
+  "nombre_en": "Libya",
+  "variables": {
+   "viento": {
+    "ficha": "LBY_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "LBY_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "LKA": {
+  "iso3": "LKA",
+  "iso2": "LK",
+  "nombre": "Sri Lanka",
+  "nombre_en": "Sri Lanka",
+  "variables": {
+   "viento": {
+    "ficha": "LKA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "LKA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "LSO": {
+  "iso3": "LSO",
+  "iso2": "LS",
+  "nombre": "Lesoto",
+  "nombre_en": "Lesotho",
+  "variables": {
+   "viento": {
+    "ficha": "LSO_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "LSO_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "LTU": {
+  "iso3": "LTU",
+  "iso2": "LT",
+  "nombre": "Lituania",
+  "nombre_en": "Lithuania",
+  "variables": {
+   "viento": {
+    "ficha": "LTU_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "LTU_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "LVA": {
+  "iso3": "LVA",
+  "iso2": "LV",
+  "nombre": "Letonia",
+  "nombre_en": "Latvia",
+  "variables": {
+   "viento": {
+    "ficha": "LVA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "LVA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "MAR": {
+  "iso3": "MAR",
+  "iso2": "MA",
+  "nombre": "Marruecos",
+  "nombre_en": "Morocco",
+  "variables": {
+   "viento": {
+    "ficha": "MAR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "MAR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "MDA": {
+  "iso3": "MDA",
+  "iso2": "MD",
+  "nombre": "Moldavia",
+  "nombre_en": "Moldova",
+  "variables": {
+   "viento": {
+    "ficha": "MDA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "MDA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "MDG": {
+  "iso3": "MDG",
+  "iso2": "MG",
+  "nombre": "Madagascar",
+  "nombre_en": "Madagascar",
+  "variables": {
+   "viento": {
+    "ficha": "MDG_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "MDG_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "MEX": {
+  "iso3": "MEX",
+  "iso2": "MX",
+  "nombre": "México",
+  "nombre_en": "Mexico",
+  "variables": {
+   "viento": {
+    "ficha": "MEX_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "MEX_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "MKD": {
+  "iso3": "MKD",
+  "iso2": "MK",
+  "nombre": "Macedonia del Norte",
+  "nombre_en": "North Macedonia",
+  "variables": {
+   "viento": {
+    "ficha": "MKD_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "MKD_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "MLI": {
+  "iso3": "MLI",
+  "iso2": "ML",
+  "nombre": "Malí",
+  "nombre_en": "Mali",
+  "variables": {
+   "viento": {
+    "ficha": "MLI_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "MLI_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "MMR": {
+  "iso3": "MMR",
+  "iso2": "MM",
+  "nombre": "Birmania",
+  "nombre_en": "Myanmar",
+  "variables": {
+   "viento": {
+    "ficha": "MMR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "MMR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "MNE": {
+  "iso3": "MNE",
+  "iso2": "ME",
+  "nombre": "Montenegro",
+  "nombre_en": "Montenegro",
+  "variables": {
+   "viento": {
+    "ficha": "MNE_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "MNE_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "MNG": {
+  "iso3": "MNG",
+  "iso2": "MN",
+  "nombre": "Mongolia",
+  "nombre_en": "Mongolia",
+  "variables": {
+   "viento": {
+    "ficha": "MNG_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "MNG_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "MOZ": {
+  "iso3": "MOZ",
+  "iso2": "MZ",
+  "nombre": "Mozambique",
+  "nombre_en": "Mozambique",
+  "variables": {
+   "viento": {
+    "ficha": "MOZ_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "MOZ_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "MRT": {
+  "iso3": "MRT",
+  "iso2": "MR",
+  "nombre": "Mauritania",
+  "nombre_en": "Mauritania",
+  "variables": {
+   "viento": {
+    "ficha": "MRT_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "MRT_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "MWI": {
+  "iso3": "MWI",
+  "iso2": "MW",
+  "nombre": "Malaui",
+  "nombre_en": "Malawi",
+  "variables": {
+   "viento": {
+    "ficha": "MWI_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "MWI_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "MYS": {
+  "iso3": "MYS",
+  "iso2": "MY",
+  "nombre": "Malasia",
+  "nombre_en": "Malaysia",
+  "variables": {
+   "viento": {
+    "ficha": "MYS_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "MYS_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "NAM": {
+  "iso3": "NAM",
+  "iso2": "NA",
+  "nombre": "Namibia",
+  "nombre_en": "Namibia",
+  "variables": {
+   "viento": {
+    "ficha": "NAM_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "NAM_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "NCL": {
+  "iso3": "NCL",
+  "iso2": "NC",
+  "nombre": "Nueva Caledonia",
+  "nombre_en": "New Caledonia",
+  "variables": {
+   "viento": {
+    "ficha": "NCL_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "NCL_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "NER": {
+  "iso3": "NER",
+  "iso2": "NE",
+  "nombre": "Níger",
+  "nombre_en": "Niger",
+  "variables": {
+   "viento": {
+    "ficha": "NER_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "NER_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "NGA": {
+  "iso3": "NGA",
+  "iso2": "NG",
+  "nombre": "Nigeria",
+  "nombre_en": "Nigeria",
+  "variables": {
+   "viento": {
+    "ficha": "NGA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "NGA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "NIC": {
+  "iso3": "NIC",
+  "iso2": "NI",
+  "nombre": "Nicaragua",
+  "nombre_en": "Nicaragua",
+  "variables": {
+   "viento": {
+    "ficha": "NIC_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "NIC_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "NLD": {
+  "iso3": "NLD",
+  "iso2": "NL",
+  "nombre": "Países Bajos",
+  "nombre_en": "Netherlands",
+  "variables": {
+   "viento": {
+    "ficha": "NLD_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "NLD_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "NOR": {
+  "iso3": "NOR",
+  "iso2": "NO",
+  "nombre": "Noruega",
+  "nombre_en": "Norway",
+  "variables": {
+   "viento": {
+    "ficha": "NOR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "NOR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "NPL": {
+  "iso3": "NPL",
+  "iso2": "NP",
+  "nombre": "Nepal",
+  "nombre_en": "Nepal",
+  "variables": {
+   "viento": {
+    "ficha": "NPL_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "NPL_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "NZL": {
+  "iso3": "NZL",
+  "iso2": "NZ",
+  "nombre": "Nueva Zelanda",
+  "nombre_en": "New Zealand",
+  "variables": {
+   "viento": {
+    "ficha": "NZL_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "NZL_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "OMN": {
+  "iso3": "OMN",
+  "iso2": "OM",
+  "nombre": "Omán",
+  "nombre_en": "Oman",
+  "variables": {
+   "viento": {
+    "ficha": "OMN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "OMN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "PAK": {
+  "iso3": "PAK",
+  "iso2": "PK",
+  "nombre": "Pakistán",
+  "nombre_en": "Pakistan",
+  "variables": {
+   "viento": {
+    "ficha": "PAK_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "PAK_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "PAN": {
+  "iso3": "PAN",
+  "iso2": "PA",
+  "nombre": "Panamá",
+  "nombre_en": "Panama",
+  "variables": {
+   "viento": {
+    "ficha": "PAN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "PAN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "PER": {
+  "iso3": "PER",
+  "iso2": "PE",
+  "nombre": "Perú",
+  "nombre_en": "Peru",
+  "variables": {
+   "viento": {
+    "ficha": "PER_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "PER_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "PHL": {
+  "iso3": "PHL",
+  "iso2": "PH",
+  "nombre": "Filipinas",
+  "nombre_en": "Philippines",
+  "variables": {
+   "viento": {
+    "ficha": "PHL_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "PHL_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "PNG": {
+  "iso3": "PNG",
+  "iso2": "PG",
+  "nombre": "Papúa Nueva Guinea",
+  "nombre_en": "Papua New Guinea",
+  "variables": {
+   "viento": {
+    "ficha": "PNG_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "PNG_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "POL": {
+  "iso3": "POL",
+  "iso2": "PL",
+  "nombre": "Polonia",
+  "nombre_en": "Poland",
+  "variables": {
+   "viento": {
+    "ficha": "POL_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "POL_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "PRI": {
+  "iso3": "PRI",
+  "iso2": "PR",
+  "nombre": "Puerto Rico",
+  "nombre_en": "Puerto Rico",
+  "variables": {
+   "viento": {
+    "ficha": "PRI_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "PRI_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "PRK": {
+  "iso3": "PRK",
+  "iso2": "KP",
+  "nombre": "Corea del Norte",
+  "nombre_en": "North Korea",
+  "variables": {
+   "viento": {
+    "ficha": "PRK_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "PRK_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "PRT": {
+  "iso3": "PRT",
+  "iso2": "PT",
+  "nombre": "Portugal",
+  "nombre_en": "Portugal",
+  "variables": {
+   "viento": {
+    "ficha": "PRT_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "PRT_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "PRY": {
+  "iso3": "PRY",
+  "iso2": "PY",
+  "nombre": "Paraguay",
+  "nombre_en": "Paraguay",
+  "variables": {
+   "viento": {
+    "ficha": "PRY_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "PRY_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "QAT": {
+  "iso3": "QAT",
+  "iso2": "QA",
+  "nombre": "Catar",
+  "nombre_en": "Qatar",
+  "variables": {
+   "viento": {
+    "ficha": "QAT_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "QAT_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ROU": {
+  "iso3": "ROU",
+  "iso2": "RO",
+  "nombre": "Rumania",
+  "nombre_en": "Romania",
+  "variables": {
+   "viento": {
+    "ficha": "ROU_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ROU_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "RUS": {
+  "iso3": "RUS",
+  "iso2": "RU",
+  "nombre": "Rusia",
+  "nombre_en": "Russia",
+  "variables": {
+   "viento": {
+    "ficha": "RUS_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   }
+  }
+ },
+ "RWA": {
+  "iso3": "RWA",
+  "iso2": "RW",
+  "nombre": "Ruanda",
+  "nombre_en": "Rwanda",
+  "variables": {
+   "viento": {
+    "ficha": "RWA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "RWA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SAU": {
+  "iso3": "SAU",
+  "iso2": "SA",
+  "nombre": "Arabia Saudita",
+  "nombre_en": "Saudi Arabia",
+  "variables": {
+   "viento": {
+    "ficha": "SAU_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SAU_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SDN": {
+  "iso3": "SDN",
+  "iso2": "SD",
+  "nombre": "Sudán",
+  "nombre_en": "Sudan",
+  "variables": {
+   "viento": {
+    "ficha": "SDN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SDN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SEN": {
+  "iso3": "SEN",
+  "iso2": "SN",
+  "nombre": "Senegal",
+  "nombre_en": "Senegal",
+  "variables": {
+   "viento": {
+    "ficha": "SEN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SEN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SLB": {
+  "iso3": "SLB",
+  "iso2": "SB",
+  "nombre": "Islas Salomón",
+  "nombre_en": "Solomon Islands",
+  "variables": {
+   "viento": {
+    "ficha": "SLB_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SLB_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SLE": {
+  "iso3": "SLE",
+  "iso2": "SL",
+  "nombre": "Sierra Leona",
+  "nombre_en": "Sierra Leone",
+  "variables": {
+   "viento": {
+    "ficha": "SLE_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SLE_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SLV": {
+  "iso3": "SLV",
+  "iso2": "SV",
+  "nombre": "El Salvador",
+  "nombre_en": "El Salvador",
+  "variables": {
+   "viento": {
+    "ficha": "SLV_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SLV_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SOL": {
+  "iso3": "SOL",
+  "iso2": "",
+  "nombre": "Somalilandia",
+  "nombre_en": "Somaliland",
+  "variables": {
+   "irradiancia": {
+    "ficha": "SOL_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SOM": {
+  "iso3": "SOM",
+  "iso2": "SO",
+  "nombre": "Somalia",
+  "nombre_en": "Somalia",
+  "variables": {
+   "viento": {
+    "ficha": "SOM_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SOM_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SRB": {
+  "iso3": "SRB",
+  "iso2": "RS",
+  "nombre": "Serbia",
+  "nombre_en": "Serbia",
+  "variables": {
+   "viento": {
+    "ficha": "SRB_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SRB_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SSD": {
+  "iso3": "SSD",
+  "iso2": "SS",
+  "nombre": "Sudán del Sur",
+  "nombre_en": "South Sudan",
+  "variables": {
+   "viento": {
+    "ficha": "SSD_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SSD_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SUR": {
+  "iso3": "SUR",
+  "iso2": "SR",
+  "nombre": "Surinam",
+  "nombre_en": "Suriname",
+  "variables": {
+   "viento": {
+    "ficha": "SUR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SUR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SVK": {
+  "iso3": "SVK",
+  "iso2": "SK",
+  "nombre": "Eslovaquia",
+  "nombre_en": "Slovakia",
+  "variables": {
+   "viento": {
+    "ficha": "SVK_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SVK_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SVN": {
+  "iso3": "SVN",
+  "iso2": "SI",
+  "nombre": "Eslovenia",
+  "nombre_en": "Slovenia",
+  "variables": {
+   "viento": {
+    "ficha": "SVN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SVN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SWE": {
+  "iso3": "SWE",
+  "iso2": "SE",
+  "nombre": "Suecia",
+  "nombre_en": "Sweden",
+  "variables": {
+   "viento": {
+    "ficha": "SWE_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SWE_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SWZ": {
+  "iso3": "SWZ",
+  "iso2": "SZ",
+  "nombre": "Suazilandia",
+  "nombre_en": "Eswatini",
+  "variables": {
+   "viento": {
+    "ficha": "SWZ_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SWZ_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "SYR": {
+  "iso3": "SYR",
+  "iso2": "SY",
+  "nombre": "Siria",
+  "nombre_en": "Syria",
+  "variables": {
+   "viento": {
+    "ficha": "SYR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "SYR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "TCD": {
+  "iso3": "TCD",
+  "iso2": "TD",
+  "nombre": "Chad",
+  "nombre_en": "Chad",
+  "variables": {
+   "viento": {
+    "ficha": "TCD_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "TCD_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "TGO": {
+  "iso3": "TGO",
+  "iso2": "TG",
+  "nombre": "Togo",
+  "nombre_en": "Togo",
+  "variables": {
+   "viento": {
+    "ficha": "TGO_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "TGO_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "THA": {
+  "iso3": "THA",
+  "iso2": "TH",
+  "nombre": "Tailandia",
+  "nombre_en": "Thailand",
+  "variables": {
+   "viento": {
+    "ficha": "THA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "THA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "TJK": {
+  "iso3": "TJK",
+  "iso2": "TJ",
+  "nombre": "Tayikistán",
+  "nombre_en": "Tajikistan",
+  "variables": {
+   "viento": {
+    "ficha": "TJK_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "TJK_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "TKM": {
+  "iso3": "TKM",
+  "iso2": "TM",
+  "nombre": "Turkmenistán",
+  "nombre_en": "Turkmenistan",
+  "variables": {
+   "viento": {
+    "ficha": "TKM_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "TKM_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "TLS": {
+  "iso3": "TLS",
+  "iso2": "TL",
+  "nombre": "Timor Oriental",
+  "nombre_en": "East Timor",
+  "variables": {
+   "viento": {
+    "ficha": "TLS_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "TLS_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "TTO": {
+  "iso3": "TTO",
+  "iso2": "TT",
+  "nombre": "Trinidad y Tobago",
+  "nombre_en": "Trinidad and Tobago",
+  "variables": {
+   "viento": {
+    "ficha": "TTO_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "TTO_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "TUN": {
+  "iso3": "TUN",
+  "iso2": "TN",
+  "nombre": "Túnez",
+  "nombre_en": "Tunisia",
+  "variables": {
+   "viento": {
+    "ficha": "TUN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "TUN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "TUR": {
+  "iso3": "TUR",
+  "iso2": "TR",
+  "nombre": "Turquía",
+  "nombre_en": "Turkey",
+  "variables": {
+   "viento": {
+    "ficha": "TUR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "TUR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "TWN": {
+  "iso3": "TWN",
+  "iso2": "CN-TW",
+  "nombre": "República de China",
+  "nombre_en": "Taiwan",
+  "variables": {
+   "irradiancia": {
+    "ficha": "TWN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "TZA": {
+  "iso3": "TZA",
+  "iso2": "TZ",
+  "nombre": "Tanzania",
+  "nombre_en": "Tanzania",
+  "variables": {
+   "viento": {
+    "ficha": "TZA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "TZA_irradiancia.json",
+    "fuente": "ERA5 (ECMWF/Copernicus) vía Open-Meteo · 2024"
+   }
+  }
+ },
+ "UGA": {
+  "iso3": "UGA",
+  "iso2": "UG",
+  "nombre": "Uganda",
+  "nombre_en": "Uganda",
+  "variables": {
+   "viento": {
+    "ficha": "UGA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "UGA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "UKR": {
+  "iso3": "UKR",
+  "iso2": "UA",
+  "nombre": "Ucrania",
+  "nombre_en": "Ukraine",
+  "variables": {
+   "viento": {
+    "ficha": "UKR_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "UKR_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "URY": {
+  "iso3": "URY",
+  "iso2": "UY",
+  "nombre": "Uruguay",
+  "nombre_en": "Uruguay",
+  "variables": {
+   "viento": {
+    "ficha": "URY_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "URY_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "USA": {
+  "iso3": "USA",
+  "iso2": "US",
+  "nombre": "Estados Unidos",
+  "nombre_en": "United States of America",
+  "variables": {
+   "viento": {
+    "ficha": "USA_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "USA_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "UZB": {
+  "iso3": "UZB",
+  "iso2": "UZ",
+  "nombre": "Uzbekistán",
+  "nombre_en": "Uzbekistan",
+  "variables": {
+   "viento": {
+    "ficha": "UZB_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "UZB_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "VEN": {
+  "iso3": "VEN",
+  "iso2": "VE",
+  "nombre": "Venezuela",
+  "nombre_en": "Venezuela",
+  "variables": {
+   "viento": {
+    "ficha": "VEN_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "VEN_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "VNM": {
+  "iso3": "VNM",
+  "iso2": "VN",
+  "nombre": "Vietnam",
+  "nombre_en": "Vietnam",
+  "variables": {
+   "viento": {
+    "ficha": "VNM_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "VNM_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "VUT": {
+  "iso3": "VUT",
+  "iso2": "VU",
+  "nombre": "Vanuatu",
+  "nombre_en": "Vanuatu",
+  "variables": {
+   "viento": {
+    "ficha": "VUT_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "VUT_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "YEM": {
+  "iso3": "YEM",
+  "iso2": "YE",
+  "nombre": "Yemen",
+  "nombre_en": "Yemen",
+  "variables": {
+   "viento": {
+    "ficha": "YEM_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "YEM_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ZAF": {
+  "iso3": "ZAF",
+  "iso2": "ZA",
+  "nombre": "Sudáfrica",
+  "nombre_en": "South Africa",
+  "variables": {
+   "viento": {
+    "ficha": "ZAF_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ZAF_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ZMB": {
+  "iso3": "ZMB",
+  "iso2": "ZM",
+  "nombre": "Zambia",
+  "nombre_en": "Zambia",
+  "variables": {
+   "viento": {
+    "ficha": "ZMB_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ZMB_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ },
+ "ZWE": {
+  "iso3": "ZWE",
+  "iso2": "ZW",
+  "nombre": "Zimbabue",
+  "nombre_en": "Zimbabwe",
+  "variables": {
+   "viento": {
+    "ficha": "ZWE_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "ZWE_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   }
+  }
+ }
+}

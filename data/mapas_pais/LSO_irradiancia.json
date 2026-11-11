@@ -1,0 +1,36 @@
+{
+ "pais": "Lesoto",
+ "iso3": "LSO",
+ "iso2": "LS",
+ "nombre_en": "Lesotho",
+ "variable": "irradiancia",
+ "imagen": "LSO_irradiancia.webp",
+ "rejilla": "LSO_irradiancia_rejilla.json",
+ "caja": [
+  0.02189,
+  0.03,
+  0.63221,
+  0.97
+ ],
+ "encuadre": [
+  26.70215,
+  -31.1388,
+  29.73591,
+  -28.15076
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 30107,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2002.3664,
+ "p10": 1893.7531,
+ "p50": 2027.2457,
+ "p90": 2064.2711,
+ "p2": 1850.809,
+ "p98": 2074.6041,
+ "min": 1837.7606,
+ "max": 2075.7826,
+ "sobre_umbral": 1.0,
+ "pixeles": 407318
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Sudán",
+ "iso3": "SDN",
+ "iso2": "SD",
+ "nombre_en": "Sudan",
+ "variable": "viento",
+ "imagen": "SDN_viento.webp",
+ "rejilla": "SDN_viento_rejilla.json",
+ "caja": [
+  0.01943,
+  0.03,
+  0.67366,
+  0.97
+ ],
+ "encuadre": [
+  20.4659,
+  6.51439,
+  39.9474,
+  24.12331
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1855614,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 7.1898,
+ "p10": 5.7074,
+ "p50": 7.232,
+ "p90": 8.6873,
+ "p2": 4.8509,
+ "p98": 9.4785,
+ "min": 2.6157,
+ "max": 15.5905,
+ "sobre_umbral": 0.5808,
+ "pixeles": 1705624
+}

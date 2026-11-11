@@ -1,0 +1,36 @@
+{
+ "pais": "Guyana",
+ "iso3": "GUY",
+ "iso2": "GY",
+ "nombre_en": "Guyana",
+ "variable": "irradiancia",
+ "imagen": "GUY_irradiancia.webp",
+ "rejilla": "GUY_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -62.54624,
+  0.00627,
+  -55.33229,
+  9.59012
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 211214,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1857.3729,
+ "p10": 1766.6954,
+ "p50": 1862.5369,
+ "p90": 1927.7427,
+ "p2": 1732.3286,
+ "p98": 2004.3723,
+ "min": 1692.8919,
+ "max": 2082.1054,
+ "sobre_umbral": 0.7804,
+ "pixeles": 236373
+}

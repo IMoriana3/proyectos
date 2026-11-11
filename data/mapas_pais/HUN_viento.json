@@ -1,0 +1,36 @@
+{
+ "pais": "Hungría",
+ "iso3": "HUN",
+ "iso2": "HU",
+ "nombre_en": "Hungary",
+ "variable": "viento",
+ "imagen": "HUN_viento.webp",
+ "rejilla": "HUN_viento_rejilla.json",
+ "caja": [
+  0.01584,
+  0.03,
+  0.73391,
+  0.97
+ ],
+ "encuadre": [
+  15.55135,
+  45.26134,
+  23.42029,
+  48.98923
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 93201,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.5991,
+ "p10": 4.8723,
+ "p50": 5.7195,
+ "p90": 6.1678,
+ "p2": 4.01,
+ "p98": 6.5929,
+ "min": 2.2246,
+ "max": 8.6987,
+ "sobre_umbral": 0.0019,
+ "pixeles": 768770
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Venezuela",
+ "iso3": "VEN",
+ "iso2": "VE",
+ "nombre_en": "Venezuela",
+ "variable": "viento",
+ "imagen": "VEN_viento.webp",
+ "rejilla": "VEN_viento_rejilla.json",
+ "caja": [
+  0.01972,
+  0.03,
+  0.66876,
+  0.97
+ ],
+ "encuadre": [
+  -74.47719,
+  -1.19862,
+  -58.72955,
+  13.81586
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 912684,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.8272,
+ "p10": 1.7144,
+ "p50": 3.7004,
+ "p90": 5.9618,
+ "p2": 1.3711,
+ "p98": 7.4823,
+ "min": 0.4777,
+ "max": 15.6015,
+ "sobre_umbral": 0.0302,
+ "pixeles": 1261616
+}

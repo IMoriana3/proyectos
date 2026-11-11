@@ -1,0 +1,36 @@
+{
+ "pais": "México",
+ "iso3": "MEX",
+ "iso2": "MX",
+ "nombre_en": "Mexico",
+ "variable": "irradiancia",
+ "imagen": "MEX_irradiancia.webp",
+ "rejilla": "MEX_irradiancia_rejilla.json",
+ "caja": [
+  0.0164,
+  0.03,
+  0.72452,
+  0.97
+ ],
+ "encuadre": [
+  -119.55581,
+  11.63963,
+  -84.31088,
+  35.25615
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1957847,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 2,00°",
+ "umbral": 1800.0,
+ "media": 2051.881,
+ "p10": 1842.725,
+ "p50": 2126.145,
+ "p90": 2186.6512,
+ "p2": 1755.155,
+ "p98": 2221.1091,
+ "min": 1697.011,
+ "max": 2256.3481,
+ "sobre_umbral": 0.9532,
+ "pixeles": 154117
+}

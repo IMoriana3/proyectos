@@ -1,0 +1,36 @@
+{
+ "pais": "Rusia",
+ "iso3": "RUS",
+ "iso2": "RU",
+ "nombre_en": "Russia",
+ "variable": "viento",
+ "imagen": "RUS_viento.webp",
+ "rejilla": "RUS_viento_rejilla.json",
+ "caja": [
+  0.01392,
+  0.03,
+  0.76616,
+  0.97
+ ],
+ "encuadre": [
+  15.11427,
+  34.95553,
+  192.21376,
+  85.63238
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 16980200,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.9768,
+ "p10": 4.4896,
+ "p50": 5.9064,
+ "p90": 7.4918,
+ "p2": 3.6595,
+ "p98": 8.3836,
+ "min": 1.6519,
+ "max": 12.8255,
+ "sobre_umbral": 0.2145,
+ "pixeles": 378151
+}

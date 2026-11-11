@@ -1,0 +1,36 @@
+{
+ "pais": "Brunéi",
+ "iso3": "BRN",
+ "iso2": "BN",
+ "nombre_en": "Brunei",
+ "variable": "irradiancia",
+ "imagen": "BRN_irradiancia.webp",
+ "rejilla": "BRN_irradiancia_rejilla.json",
+ "caja": [
+  0.02015,
+  0.03,
+  0.66151,
+  0.97
+ ],
+ "encuadre": [
+  113.69879,
+  3.53668,
+  115.66074,
+  5.4772
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 5717,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1855.0151,
+ "p10": 1823.3562,
+ "p50": 1852.1382,
+ "p90": 1896.3565,
+ "p2": 1804.5024,
+ "p98": 1918.1062,
+ "min": 1801.9042,
+ "max": 1924.3753,
+ "sobre_umbral": 1.0,
+ "pixeles": 188382
+}

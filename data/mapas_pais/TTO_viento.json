@@ -1,0 +1,36 @@
+{
+ "pais": "Trinidad y Tobago",
+ "iso3": "TTO",
+ "iso2": "TT",
+ "nombre_en": "Trinidad and Tobago",
+ "variable": "viento",
+ "imagen": "TTO_viento.webp",
+ "rejilla": "TTO_viento_rejilla.json",
+ "caja": [
+  0.02174,
+  0.03,
+  0.63472,
+  0.97
+ ],
+ "encuadre": [
+  -62.2287,
+  9.56206,
+  -60.22208,
+  11.77106
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 5123,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.8437,
+ "p10": 3.9705,
+ "p50": 4.7569,
+ "p90": 5.8377,
+ "p2": 3.3542,
+ "p98": 6.5052,
+ "min": 1.1241,
+ "max": 10.352,
+ "sobre_umbral": 0.0112,
+ "pixeles": 67688
+}

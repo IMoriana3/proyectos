@@ -1,0 +1,36 @@
+{
+ "pais": "Bangladés",
+ "iso3": "BGD",
+ "iso2": "BD",
+ "nombre_en": "Bangladesh",
+ "variable": "irradiancia",
+ "imagen": "BGD_irradiancia.webp",
+ "rejilla": "BGD_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  87.19968,
+  19.79714,
+  93.46496,
+  27.44742
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 136904,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1660.8852,
+ "p10": 1586.3937,
+ "p50": 1654.0787,
+ "p90": 1755.8628,
+ "p2": 1566.0234,
+ "p98": 1785.4948,
+ "min": 1552.4398,
+ "max": 1819.7839,
+ "sobre_umbral": 0.0037,
+ "pixeles": 240329
+}

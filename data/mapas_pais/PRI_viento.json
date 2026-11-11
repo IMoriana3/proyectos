@@ -1,0 +1,36 @@
+{
+ "pais": "Puerto Rico",
+ "iso3": "PRI",
+ "iso2": "PR",
+ "nombre_en": "Puerto Rico",
+ "variable": "viento",
+ "imagen": "PRI_viento.webp",
+ "rejilla": "PRI_viento_rejilla.json",
+ "caja": [
+  0.01285,
+  0.03,
+  0.78409,
+  0.97
+ ],
+ "encuadre": [
+  -68.23781,
+  17.36968,
+  -64.94462,
+  19.01601
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 9006,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.2897,
+ "p10": 4.0869,
+ "p50": 5.2571,
+ "p90": 6.5452,
+ "p2": 3.2921,
+ "p98": 7.3324,
+ "min": 1.7132,
+ "max": 10.9057,
+ "sobre_umbral": 0.0417,
+ "pixeles": 123076
+}

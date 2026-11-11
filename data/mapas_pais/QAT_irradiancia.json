@@ -1,0 +1,36 @@
+{
+ "pais": "Catar",
+ "iso3": "QAT",
+ "iso2": "QA",
+ "nombre_en": "Qatar",
+ "variable": "irradiancia",
+ "imagen": "QAT_irradiancia.webp",
+ "rejilla": "QAT_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  50.14619,
+  24.07987,
+  52.22134,
+  26.5801
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 11150,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1945.5604,
+ "p10": 1904.8963,
+ "p50": 1943.4147,
+ "p90": 1988.5653,
+ "p2": 1897.1192,
+ "p98": 2035.5143,
+ "min": 1895.1454,
+ "max": 2061.2282,
+ "sobre_umbral": 1.0,
+ "pixeles": 264042
+}

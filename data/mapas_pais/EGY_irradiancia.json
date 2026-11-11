@@ -1,0 +1,36 @@
+{
+ "pais": "Egipto",
+ "iso3": "EGY",
+ "iso2": "EG",
+ "nombre_en": "Egypt",
+ "variable": "irradiancia",
+ "imagen": "EGY_irradiancia.webp",
+ "rejilla": "EGY_irradiancia_rejilla.json",
+ "caja": [
+  0.02017,
+  0.03,
+  0.66118,
+  0.97
+ ],
+ "encuadre": [
+  23.71148,
+  20.44843,
+  37.87605,
+  33.00918
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1001058,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 2301.1051,
+ "p10": 2105.2888,
+ "p50": 2326.9889,
+ "p90": 2428.8717,
+ "p2": 1982.9718,
+ "p98": 2463.4064,
+ "min": 1910.7228,
+ "max": 2480.5903,
+ "sobre_umbral": 1.0,
+ "pixeles": 510979
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Honduras",
+ "iso3": "HND",
+ "iso2": "HN",
+ "nombre_en": "Honduras",
+ "variable": "irradiancia",
+ "imagen": "HND_irradiancia.webp",
+ "rejilla": "HND_irradiancia_rejilla.json",
+ "caja": [
+  0.01519,
+  0.03,
+  0.74478,
+  0.97
+ ],
+ "encuadre": [
+  -89.86246,
+  12.41379,
+  -82.63178,
+  17.01246
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 112237,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1824.6067,
+ "p10": 1754.1682,
+ "p50": 1801.9874,
+ "p90": 1909.2625,
+ "p2": 1734.2752,
+ "p98": 2025.0252,
+ "min": 1691.0876,
+ "max": 2160.1733,
+ "sobre_umbral": 0.5176,
+ "pixeles": 187617
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Panamá",
+ "iso3": "PAN",
+ "iso2": "PA",
+ "nombre_en": "Panama",
+ "variable": "irradiancia",
+ "imagen": "PAN_irradiancia.webp",
+ "rejilla": "PAN_irradiancia_rejilla.json",
+ "caja": [
+  0.01285,
+  0.03,
+  0.78409,
+  0.97
+ ],
+ "encuadre": [
+  -83.52444,
+  6.60888,
+  -76.69207,
+  10.16613
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 74530,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1644.463,
+ "p10": 1578.1116,
+ "p50": 1641.8979,
+ "p90": 1711.3476,
+ "p2": 1545.9851,
+ "p98": 1765.2743,
+ "min": 1541.4713,
+ "max": 1840.2624,
+ "sobre_umbral": 0.0059,
+ "pixeles": 133229
+}

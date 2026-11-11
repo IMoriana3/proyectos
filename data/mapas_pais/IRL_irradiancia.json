@@ -1,0 +1,36 @@
+{
+ "pais": "Irlanda",
+ "iso3": "IRL",
+ "iso2": "IE",
+ "nombre_en": "Ireland",
+ "variable": "irradiancia",
+ "imagen": "IRL_irradiancia.webp",
+ "rejilla": "IRL_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -11.45914,
+  50.8152,
+  -5.01256,
+  55.93807
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 69445,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 995.7757,
+ "p10": 946.7035,
+ "p50": 1001.9482,
+ "p90": 1030.7353,
+ "p2": 926.6419,
+ "p98": 1069.4572,
+ "min": 920.8845,
+ "max": 1110.247,
+ "sobre_umbral": 0.0,
+ "pixeles": 265368
+}

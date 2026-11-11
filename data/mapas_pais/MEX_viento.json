@@ -1,0 +1,36 @@
+{
+ "pais": "México",
+ "iso3": "MEX",
+ "iso2": "MX",
+ "nombre_en": "Mexico",
+ "variable": "viento",
+ "imagen": "MEX_viento.webp",
+ "rejilla": "MEX_viento_rejilla.json",
+ "caja": [
+  0.0164,
+  0.03,
+  0.72452,
+  0.97
+ ],
+ "encuadre": [
+  -119.55581,
+  11.63963,
+  -84.31088,
+  35.25615
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1957847,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.4389,
+ "p10": 2.6354,
+ "p50": 4.459,
+ "p90": 6.0698,
+ "p2": 1.8564,
+ "p98": 7.1489,
+ "min": 0.8917,
+ "max": 13.6268,
+ "sobre_umbral": 0.0258,
+ "pixeles": 563911
+}

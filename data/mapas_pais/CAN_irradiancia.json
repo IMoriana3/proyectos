@@ -1,0 +1,36 @@
+{
+ "pais": "Canadá",
+ "iso3": "CAN",
+ "iso2": "CA",
+ "nombre_en": "Canada",
+ "variable": "irradiancia",
+ "imagen": "CAN_irradiancia.webp",
+ "rejilla": "CAN_irradiancia_rejilla.json",
+ "caja": [
+  0.01864,
+  0.03,
+  0.68681,
+  0.97
+ ],
+ "encuadre": [
+  -148.07668,
+  36.00386,
+  -45.54549,
+  82.0338
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 9945629,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 5,25°",
+ "umbral": 1800.0,
+ "media": 1088.8855,
+ "p10": 904.0962,
+ "p50": 1097.2363,
+ "p90": 1266.3936,
+ "p2": 838.6156,
+ "p98": 1353.199,
+ "min": 770.5203,
+ "max": 1430.8722,
+ "sobre_umbral": 0.0,
+ "pixeles": 301357
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Catar",
+ "iso3": "QAT",
+ "iso2": "QA",
+ "nombre_en": "Qatar",
+ "variable": "viento",
+ "imagen": "QAT_viento.webp",
+ "rejilla": "QAT_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  50.14619,
+  24.07987,
+  52.22134,
+  26.5801
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 11150,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.5534,
+ "p10": 6.3534,
+ "p50": 6.5816,
+ "p90": 6.7361,
+ "p2": 6.0053,
+ "p98": 6.8152,
+ "min": 5.5141,
+ "max": 7.1455,
+ "sobre_umbral": 0.0007,
+ "pixeles": 159951
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Costa de Marfil",
+ "iso3": "CIV",
+ "iso2": "CI",
+ "nombre_en": "Ivory Coast",
+ "variable": "viento",
+ "imagen": "CIV_viento.webp",
+ "rejilla": "CIV_viento_rejilla.json",
+ "caja": [
+  0.02244,
+  0.03,
+  0.62296,
+  0.97
+ ],
+ "encuadre": [
+  -9.10771,
+  3.32288,
+  -2.01734,
+  11.62002
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 320677,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.7409,
+ "p10": 3.1576,
+ "p50": 3.7129,
+ "p90": 4.3558,
+ "p2": 2.8464,
+ "p98": 4.7933,
+ "min": 1.4524,
+ "max": 8.2143,
+ "sobre_umbral": 0.0,
+ "pixeles": 1988096
+}

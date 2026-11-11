@@ -1,0 +1,36 @@
+{
+ "pais": "Togo",
+ "iso3": "TGO",
+ "iso2": "TG",
+ "nombre_en": "Togo",
+ "variable": "viento",
+ "imagen": "TGO_viento.webp",
+ "rejilla": "TGO_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -1.67422,
+  5.29497,
+  3.29046,
+  11.83981
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 56863,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.1748,
+ "p10": 3.1589,
+ "p50": 4.1887,
+ "p90": 5.1877,
+ "p2": 2.6818,
+ "p98": 5.764,
+ "min": 1.3155,
+ "max": 7.8567,
+ "sobre_umbral": 0.0003,
+ "pixeles": 566485
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Croacia",
+ "iso3": "HRV",
+ "iso2": "HR",
+ "nombre_en": "Croatia",
+ "variable": "irradiancia",
+ "imagen": "HRV_irradiancia.webp",
+ "rejilla": "HRV_irradiancia_rejilla.json",
+ "caja": [
+  0.02148,
+  0.03,
+  0.63911,
+  0.97
+ ],
+ "encuadre": [
+  13.02897,
+  41.75542,
+  19.88035,
+  47.12527
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 55023,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1342.6564,
+ "p10": 1302.4792,
+ "p50": 1327.0616,
+ "p90": 1412.6255,
+ "p2": 1295.142,
+ "p98": 1493.4838,
+ "min": 1270.4745,
+ "max": 1545.9943,
+ "sobre_umbral": 0.0,
+ "pixeles": 188981
+}

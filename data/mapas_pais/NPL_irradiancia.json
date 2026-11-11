@@ -1,0 +1,36 @@
+{
+ "pais": "Nepal",
+ "iso3": "NPL",
+ "iso2": "NP",
+ "nombre_en": "Nepal",
+ "variable": "irradiancia",
+ "imagen": "NPL_irradiancia.webp",
+ "rejilla": "NPL_irradiancia_rejilla.json",
+ "caja": [
+  0.01485,
+  0.03,
+  0.75054,
+  0.97
+ ],
+ "encuadre": [
+  79.37919,
+  25.69207,
+  88.82017,
+  30.98714
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 147105,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1768.5316,
+ "p10": 1612.4717,
+ "p50": 1754.0881,
+ "p90": 1966.6161,
+ "p2": 1527.1443,
+ "p98": 2127.9996,
+ "min": 1458.0204,
+ "max": 2217.5482,
+ "sobre_umbral": 0.3108,
+ "pixeles": 173633
+}

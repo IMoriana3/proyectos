@@ -1,0 +1,36 @@
+{
+ "pais": "Guinea-Bisáu",
+ "iso3": "GNB",
+ "iso2": "GW",
+ "nombre_en": "Guinea-Bissau",
+ "variable": "viento",
+ "imagen": "GNB_viento.webp",
+ "rejilla": "GNB_viento_rejilla.json",
+ "caja": [
+  0.01651,
+  0.03,
+  0.72259,
+  0.97
+ ],
+ "encuadre": [
+  -17.02844,
+  10.44764,
+  -13.36071,
+  13.09943
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 32830,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.5879,
+ "p10": 4.0245,
+ "p50": 4.6411,
+ "p90": 5.006,
+ "p2": 3.7888,
+ "p98": 5.2203,
+ "min": 3.2833,
+ "max": 5.825,
+ "sobre_umbral": 0.0,
+ "pixeles": 435984
+}

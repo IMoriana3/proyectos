@@ -1,0 +1,36 @@
+{
+ "pais": "Liberia",
+ "iso3": "LBR",
+ "iso2": "LR",
+ "nombre_en": "Liberia",
+ "variable": "irradiancia",
+ "imagen": "LBR_irradiancia.webp",
+ "rejilla": "LBR_irradiancia_rejilla.json",
+ "caja": [
+  0.02224,
+  0.03,
+  0.62639,
+  0.97
+ ],
+ "encuadre": [
+  -11.80355,
+  3.67233,
+  -7.05675,
+  9.15594
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 95298,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1706.6399,
+ "p10": 1659.0892,
+ "p50": 1695.4038,
+ "p90": 1772.5217,
+ "p2": 1649.7731,
+ "p98": 1835.2964,
+ "min": 1639.8144,
+ "max": 1846.5374,
+ "sobre_umbral": 0.0768,
+ "pixeles": 325638
+}

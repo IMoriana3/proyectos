@@ -1,0 +1,36 @@
+{
+ "pais": "Turquía",
+ "iso3": "TUR",
+ "iso2": "TR",
+ "nombre_en": "Turkey",
+ "variable": "viento",
+ "imagen": "TUR_viento.webp",
+ "rejilla": "TUR_viento_rejilla.json",
+ "caja": [
+  0.01285,
+  0.03,
+  0.78409,
+  0.97
+ ],
+ "encuadre": [
+  24.53131,
+  34.44015,
+  46.3089,
+  43.35283
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 780080,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.8891,
+ "p10": 3.2788,
+ "p50": 4.8674,
+ "p90": 6.515,
+ "p2": 2.4601,
+ "p98": 7.57,
+ "min": 1.0206,
+ "max": 11.0297,
+ "sobre_umbral": 0.051,
+ "pixeles": 713201
+}

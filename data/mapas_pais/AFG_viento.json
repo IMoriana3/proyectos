@@ -1,0 +1,36 @@
+{
+ "pais": "Afganistán",
+ "iso3": "AFG",
+ "iso2": "AF",
+ "nombre_en": "Afghanistan",
+ "variable": "viento",
+ "imagen": "AFG_viento.webp",
+ "rejilla": "AFG_viento_rejilla.json",
+ "caja": [
+  0.01823,
+  0.03,
+  0.69382,
+  0.97
+ ],
+ "encuadre": [
+  59.33434,
+  27.93267,
+  76.04475,
+  39.74586
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 642182,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.5603,
+ "p10": 3.311,
+ "p50": 5.3265,
+ "p90": 8.0087,
+ "p2": 2.2052,
+ "p98": 10.8922,
+ "min": 0.5364,
+ "max": 17.7475,
+ "sobre_umbral": 0.1769,
+ "pixeles": 974370
+}

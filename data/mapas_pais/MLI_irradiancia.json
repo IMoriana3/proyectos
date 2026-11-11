@@ -1,0 +1,36 @@
+{
+ "pais": "Malí",
+ "iso3": "MLI",
+ "iso2": "ML",
+ "nombre_en": "Mali",
+ "variable": "irradiancia",
+ "imagen": "MLI_irradiancia.webp",
+ "rejilla": "MLI_irradiancia_rejilla.json",
+ "caja": [
+  0.02099,
+  0.03,
+  0.64738,
+  0.97
+ ],
+ "encuadre": [
+  -13.58411,
+  7.76325,
+  5.55562,
+  27.07477
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1252724,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 2266.5329,
+ "p10": 2140.1853,
+ "p50": 2289.4126,
+ "p90": 2347.8294,
+ "p2": 2106.7284,
+ "p98": 2360.6438,
+ "min": 2064.3763,
+ "max": 2369.4655,
+ "sobre_umbral": 1.0,
+ "pixeles": 307732
+}

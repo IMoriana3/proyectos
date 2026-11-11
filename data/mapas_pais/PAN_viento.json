@@ -1,0 +1,36 @@
+{
+ "pais": "Panamá",
+ "iso3": "PAN",
+ "iso2": "PA",
+ "nombre_en": "Panama",
+ "variable": "viento",
+ "imagen": "PAN_viento.webp",
+ "rejilla": "PAN_viento_rejilla.json",
+ "caja": [
+  0.01285,
+  0.03,
+  0.78409,
+  0.97
+ ],
+ "encuadre": [
+  -83.52444,
+  6.60888,
+  -76.69207,
+  10.16613
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 74530,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.0223,
+ "p10": 2.1759,
+ "p50": 3.8608,
+ "p90": 6.1905,
+ "p2": 1.4432,
+ "p98": 7.8951,
+ "min": 0.3619,
+ "max": 14.1687,
+ "sobre_umbral": 0.0485,
+ "pixeles": 527905
+}

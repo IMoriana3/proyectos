@@ -1,0 +1,36 @@
+{
+ "pais": "Filipinas",
+ "iso3": "PHL",
+ "iso2": "PH",
+ "nombre_en": "Philippines",
+ "variable": "irradiancia",
+ "imagen": "PHL_irradiancia.webp",
+ "rejilla": "PHL_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  114.25896,
+  3.13048,
+  129.54697,
+  22.97548
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 293291,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 1809.2812,
+ "p10": 1736.5295,
+ "p50": 1810.3448,
+ "p90": 1876.8239,
+ "p2": 1708.4914,
+ "p98": 1914.7544,
+ "min": 1690.9048,
+ "max": 1970.0189,
+ "sobre_umbral": 0.561,
+ "pixeles": 76081
+}

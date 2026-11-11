@@ -1,0 +1,36 @@
+{
+ "pais": "Australia",
+ "iso3": "AUS",
+ "iso2": "AU",
+ "nombre_en": "Australia",
+ "variable": "viento",
+ "imagen": "AUS_viento.webp",
+ "rejilla": "AUS_viento_rejilla.json",
+ "caja": [
+  0.02058,
+  0.03,
+  0.65429,
+  0.97
+ ],
+ "encuadre": [
+  109.91909,
+  -48.91387,
+  156.86852,
+  -6.07417
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 7691175,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.3835,
+ "p10": 5.1912,
+ "p50": 6.5217,
+ "p90": 7.3018,
+ "p2": 4.3359,
+ "p98": 7.7155,
+ "min": 1.7518,
+ "max": 12.0601,
+ "sobre_umbral": 0.2203,
+ "pixeles": 1271099
+}

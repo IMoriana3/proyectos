@@ -1,0 +1,36 @@
+{
+ "pais": "Dinamarca",
+ "iso3": "DNK",
+ "iso2": "DK",
+ "nombre_en": "Denmark",
+ "variable": "irradiancia",
+ "imagen": "DNK_irradiancia.webp",
+ "rejilla": "DNK_irradiancia_rejilla.json",
+ "caja": [
+  0.01901,
+  0.03,
+  0.68062,
+  0.97
+ ],
+ "encuadre": [
+  7.52942,
+  54.05938,
+  15.71597,
+  58.19673
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 42696,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1039.9258,
+ "p10": 1025.5196,
+ "p50": 1036.3054,
+ "p90": 1056.886,
+ "p2": 1017.2487,
+ "p98": 1068.9584,
+ "min": 999.9772,
+ "max": 1096.0414,
+ "sobre_umbral": 0.0,
+ "pixeles": 165579
+}

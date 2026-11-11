@@ -1,0 +1,36 @@
+{
+ "pais": "Arabia Saudita",
+ "iso3": "SAU",
+ "iso2": "SA",
+ "nombre_en": "Saudi Arabia",
+ "variable": "irradiancia",
+ "imagen": "SAU_irradiancia.webp",
+ "rejilla": "SAU_irradiancia_rejilla.json",
+ "caja": [
+  0.01917,
+  0.03,
+  0.67796,
+  0.97
+ ],
+ "encuadre": [
+  32.88758,
+  13.8509,
+  57.32275,
+  34.3264
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1921725,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,75°",
+ "umbral": 1800.0,
+ "media": 2287.2771,
+ "p10": 2192.5291,
+ "p50": 2293.8718,
+ "p90": 2367.9307,
+ "p2": 2103.7579,
+ "p98": 2441.8334,
+ "min": 1966.4403,
+ "max": 2472.8041,
+ "sobre_umbral": 1.0,
+ "pixeles": 316296
+}

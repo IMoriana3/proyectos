@@ -1,0 +1,36 @@
+{
+ "pais": "Austria",
+ "iso3": "AUT",
+ "iso2": "AT",
+ "nombre_en": "Austria",
+ "variable": "irradiancia",
+ "imagen": "AUT_irradiancia.webp",
+ "rejilla": "AUT_irradiancia_rejilla.json",
+ "caja": [
+  0.01407,
+  0.03,
+  0.7636,
+  0.97
+ ],
+ "encuadre": [
+  8.91098,
+  45.89864,
+  17.75851,
+  49.42977
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 83993,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1197.7491,
+ "p10": 1171.5057,
+ "p50": 1188.0365,
+ "p90": 1235.5333,
+ "p2": 1162.9458,
+ "p98": 1262.1486,
+ "min": 1143.7869,
+ "max": 1279.4519,
+ "sobre_umbral": 0.0,
+ "pixeles": 191739
+}

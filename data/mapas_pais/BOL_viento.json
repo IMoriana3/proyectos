@@ -1,0 +1,36 @@
+{
+ "pais": "Bolivia",
+ "iso3": "BOL",
+ "iso2": "BO",
+ "nombre_en": "Bolivia",
+ "variable": "viento",
+ "imagen": "BOL_viento.webp",
+ "rejilla": "BOL_viento_rejilla.json",
+ "caja": [
+  0.02338,
+  0.03,
+  0.60721,
+  0.97
+ ],
+ "encuadre": [
+  -70.64256,
+  -25.01205,
+  -56.48959,
+  -7.82938
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1086811,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.6189,
+ "p10": 2.8429,
+ "p50": 4.5621,
+ "p90": 6.5778,
+ "p2": 1.8566,
+ "p98": 8.0656,
+ "min": 0.4292,
+ "max": 20.7188,
+ "sobre_umbral": 0.0655,
+ "pixeles": 1691729
+}

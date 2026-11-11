@@ -1,0 +1,36 @@
+{
+ "pais": "Brunéi",
+ "iso3": "BRN",
+ "iso2": "BN",
+ "nombre_en": "Brunei",
+ "variable": "viento",
+ "imagen": "BRN_viento.webp",
+ "rejilla": "BRN_viento_rejilla.json",
+ "caja": [
+  0.02015,
+  0.03,
+  0.66151,
+  0.97
+ ],
+ "encuadre": [
+  113.69879,
+  3.53668,
+  115.66074,
+  5.4772
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 5717,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 2.5221,
+ "p10": 2.0077,
+ "p50": 2.4346,
+ "p90": 3.2256,
+ "p2": 1.6714,
+ "p98": 3.7671,
+ "min": 0.8587,
+ "max": 4.6431,
+ "sobre_umbral": 0.0,
+ "pixeles": 73807
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Ghana",
+ "iso3": "GHA",
+ "iso2": "GH",
+ "nombre_en": "Ghana",
+ "variable": "irradiancia",
+ "imagen": "GHA_irradiancia.webp",
+ "rejilla": "GHA_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -4.20025,
+  3.709,
+  2.12571,
+  12.06255
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 238669,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1851.404,
+ "p10": 1698.095,
+ "p50": 1837.9411,
+ "p90": 2023.8099,
+ "p2": 1664.0974,
+ "p98": 2067.5508,
+ "min": 1643.8256,
+ "max": 2095.1167,
+ "sobre_umbral": 0.6568,
+ "pixeles": 351192
+}

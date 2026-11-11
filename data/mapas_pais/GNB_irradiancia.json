@@ -1,0 +1,36 @@
+{
+ "pais": "Guinea-Bisáu",
+ "iso3": "GNB",
+ "iso2": "GW",
+ "nombre_en": "Guinea-Bissau",
+ "variable": "irradiancia",
+ "imagen": "GNB_irradiancia.webp",
+ "rejilla": "GNB_irradiancia_rejilla.json",
+ "caja": [
+  0.01651,
+  0.03,
+  0.72259,
+  0.97
+ ],
+ "encuadre": [
+  -17.02844,
+  10.44764,
+  -13.36071,
+  13.09943
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 32830,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2063.2696,
+ "p10": 2011.3658,
+ "p50": 2073.4719,
+ "p90": 2086.7398,
+ "p2": 2004.3111,
+ "p98": 2092.3159,
+ "min": 1989.0745,
+ "max": 2095.7546,
+ "sobre_umbral": 1.0,
+ "pixeles": 221470
+}

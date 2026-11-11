@@ -1,0 +1,36 @@
+{
+ "pais": "Tailandia",
+ "iso3": "THA",
+ "iso2": "TH",
+ "nombre_en": "Thailand",
+ "variable": "irradiancia",
+ "imagen": "THA_irradiancia.webp",
+ "rejilla": "THA_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  94.08773,
+  3.25947,
+  108.91467,
+  22.51912
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 514454,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 1818.4176,
+ "p10": 1749.7259,
+ "p50": 1822.2042,
+ "p90": 1891.1448,
+ "p2": 1683.6093,
+ "p98": 1906.8611,
+ "min": 1565.0276,
+ "max": 1910.6222,
+ "sobre_umbral": 0.6196,
+ "pixeles": 143999
+}

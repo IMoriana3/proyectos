@@ -1,0 +1,36 @@
+{
+ "pais": "Nepal",
+ "iso3": "NPL",
+ "iso2": "NP",
+ "nombre_en": "Nepal",
+ "variable": "viento",
+ "imagen": "NPL_viento.webp",
+ "rejilla": "NPL_viento_rejilla.json",
+ "caja": [
+  0.01485,
+  0.03,
+  0.75054,
+  0.97
+ ],
+ "encuadre": [
+  79.37919,
+  25.69207,
+  88.82017,
+  30.98714
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 147105,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.1119,
+ "p10": 1.4199,
+ "p50": 2.7288,
+ "p90": 5.2644,
+ "p2": 0.9825,
+ "p98": 8.3007,
+ "min": 0.2628,
+ "max": 26.4197,
+ "sobre_umbral": 0.0405,
+ "pixeles": 652874
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Haití",
+ "iso3": "HTI",
+ "iso2": "HT",
+ "nombre_en": "Haiti",
+ "variable": "irradiancia",
+ "imagen": "HTI_irradiancia.webp",
+ "rejilla": "HTI_irradiancia_rejilla.json",
+ "caja": [
+  0.01903,
+  0.03,
+  0.68031,
+  0.97
+ ],
+ "encuadre": [
+  -74.78917,
+  17.54595,
+  -71.33911,
+  20.50979
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 26892,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2036.1779,
+ "p10": 1989.7978,
+ "p50": 2028.0114,
+ "p90": 2101.4648,
+ "p2": 1973.5754,
+ "p98": 2122.4065,
+ "min": 1970.4041,
+ "max": 2134.7817,
+ "sobre_umbral": 1.0,
+ "pixeles": 224791
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Jordania",
+ "iso3": "JOR",
+ "iso2": "JO",
+ "nombre_en": "Jordan",
+ "variable": "viento",
+ "imagen": "JOR_viento.webp",
+ "rejilla": "JOR_viento_rejilla.json",
+ "caja": [
+  0.02336,
+  0.03,
+  0.60759,
+  0.97
+ ],
+ "encuadre": [
+  34.60198,
+  28.52087,
+  39.63941,
+  33.95713
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 88863,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.1546,
+ "p10": 5.1725,
+ "p50": 6.2571,
+ "p90": 7.0422,
+ "p2": 4.1372,
+ "p98": 7.6356,
+ "min": 1.8901,
+ "max": 13.3305,
+ "sobre_umbral": 0.1098,
+ "pixeles": 1344307
+}

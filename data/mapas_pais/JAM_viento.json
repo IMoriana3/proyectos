@@ -1,0 +1,36 @@
+{
+ "pais": "Jamaica",
+ "iso3": "JAM",
+ "iso2": "JM",
+ "nombre_en": "Jamaica",
+ "variable": "viento",
+ "imagen": "JAM_viento.webp",
+ "rejilla": "JAM_viento_rejilla.json",
+ "caja": [
+  0.01506,
+  0.03,
+  0.74692,
+  0.97
+ ],
+ "encuadre": [
+  -78.67466,
+  17.22319,
+  -75.88798,
+  18.94509
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 11033,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.9805,
+ "p10": 3.603,
+ "p50": 4.8732,
+ "p90": 6.417,
+ "p2": 2.7633,
+ "p98": 8.0626,
+ "min": 0.7979,
+ "max": 12.8376,
+ "sobre_umbral": 0.0515,
+ "pixeles": 150727
+}

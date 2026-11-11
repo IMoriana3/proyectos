@@ -1,0 +1,36 @@
+{
+ "pais": "Bielorrusia",
+ "iso3": "BLR",
+ "iso2": "BY",
+ "nombre_en": "Belarus",
+ "variable": "viento",
+ "imagen": "BLR_viento.webp",
+ "rejilla": "BLR_viento_rejilla.json",
+ "caja": [
+  0.01992,
+  0.03,
+  0.66528,
+  0.97
+ ],
+ "encuadre": [
+  22.40133,
+  50.44771,
+  33.48384,
+  56.84584
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 207499,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.3242,
+ "p10": 5.5476,
+ "p50": 6.3752,
+ "p90": 7.0146,
+ "p2": 5.2596,
+ "p98": 7.2007,
+ "min": 4.7462,
+ "max": 8.2247,
+ "sobre_umbral": 0.1079,
+ "pixeles": 977800
+}

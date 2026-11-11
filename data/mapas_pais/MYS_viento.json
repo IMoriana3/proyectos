@@ -1,0 +1,36 @@
+{
+ "pais": "Malasia",
+ "iso3": "MYS",
+ "iso2": "MY",
+ "nombre_en": "Malaysia",
+ "variable": "viento",
+ "imagen": "MYS_viento.webp",
+ "rejilla": "MYS_viento_rejilla.json",
+ "caja": [
+  0.01285,
+  0.03,
+  0.78409,
+  0.97
+ ],
+ "encuadre": [
+  98.59523,
+  -1.79251,
+  120.81015,
+  9.86958
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 327885,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 2.4456,
+ "p10": 1.6861,
+ "p50": 2.3675,
+ "p90": 3.308,
+ "p2": 1.3775,
+ "p98": 3.9272,
+ "min": 0.7186,
+ "max": 6.5671,
+ "sobre_umbral": 0.0,
+ "pixeles": 216706
+}

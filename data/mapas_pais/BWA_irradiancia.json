@@ -1,0 +1,36 @@
+{
+ "pais": "Botsuana",
+ "iso3": "BWA",
+ "iso2": "BW",
+ "nombre_en": "Botswana",
+ "variable": "irradiancia",
+ "imagen": "BWA_irradiancia.webp",
+ "rejilla": "BWA_irradiancia_rejilla.json",
+ "caja": [
+  0.02241,
+  0.03,
+  0.62346,
+  0.97
+ ],
+ "encuadre": [
+  19.22861,
+  -28.34939,
+  30.09981,
+  -16.50641
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 579029,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 2201.3433,
+ "p10": 2132.435,
+ "p50": 2205.6762,
+ "p90": 2264.5618,
+ "p2": 2066.8613,
+ "p98": 2306.3578,
+ "min": 1997.9168,
+ "max": 2324.5383,
+ "sobre_umbral": 1.0,
+ "pixeles": 422276
+}

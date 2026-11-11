@@ -1,0 +1,36 @@
+{
+ "pais": "Georgia",
+ "iso3": "GEO",
+ "iso2": "GE",
+ "nombre_en": "Georgia",
+ "variable": "irradiancia",
+ "imagen": "GEO_irradiancia.webp",
+ "rejilla": "GEO_irradiancia_rejilla.json",
+ "caja": [
+  0.01413,
+  0.03,
+  0.7626,
+  0.97
+ ],
+ "encuadre": [
+  39.44927,
+  40.56411,
+  47.23151,
+  43.99584
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 69571,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1391.2115,
+ "p10": 1355.1552,
+ "p50": 1375.3393,
+ "p90": 1449.2571,
+ "p2": 1338.8397,
+ "p98": 1486.0233,
+ "min": 1312.3205,
+ "max": 1502.7229,
+ "sobre_umbral": 0.0,
+ "pixeles": 170394
+}

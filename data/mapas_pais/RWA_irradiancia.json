@@ -1,0 +1,36 @@
+{
+ "pais": "Ruanda",
+ "iso3": "RWA",
+ "iso2": "RW",
+ "nombre_en": "Rwanda",
+ "variable": "irradiancia",
+ "imagen": "RWA_irradiancia.webp",
+ "rejilla": "RWA_irradiancia_rejilla.json",
+ "caja": [
+  0.02044,
+  0.03,
+  0.65659,
+  0.97
+ ],
+ "encuadre": [
+  28.55724,
+  -3.30686,
+  31.18781,
+  -0.63869
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 25305,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1812.4545,
+ "p10": 1762.4028,
+ "p50": 1817.1068,
+ "p90": 1848.0957,
+ "p2": 1744.6272,
+ "p98": 1857.1718,
+ "min": 1742.2563,
+ "max": 1864.0055,
+ "sobre_umbral": 0.7462,
+ "pixeles": 373541
+}

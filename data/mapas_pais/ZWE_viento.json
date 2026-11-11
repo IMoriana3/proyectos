@@ -1,0 +1,36 @@
+{
+ "pais": "Zimbabue",
+ "iso3": "ZWE",
+ "iso2": "ZW",
+ "nombre_en": "Zimbabwe",
+ "variable": "viento",
+ "imagen": "ZWE_viento.webp",
+ "rejilla": "ZWE_viento_rejilla.json",
+ "caja": [
+  0.0206,
+  0.03,
+  0.65386,
+  0.97
+ ],
+ "encuadre": [
+  24.5935,
+  -23.48255,
+  33.66864,
+  -14.66525
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 389337,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.8562,
+ "p10": 3.6911,
+ "p50": 4.9244,
+ "p90": 5.9266,
+ "p2": 3.0811,
+ "p98": 6.5408,
+ "min": 1.1556,
+ "max": 10.8779,
+ "sobre_umbral": 0.0049,
+ "pixeles": 1746619
+}

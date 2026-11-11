@@ -1,0 +1,36 @@
+{
+ "pais": "Austria",
+ "iso3": "AUT",
+ "iso2": "AT",
+ "nombre_en": "Austria",
+ "variable": "viento",
+ "imagen": "AUT_viento.webp",
+ "rejilla": "AUT_viento_rejilla.json",
+ "caja": [
+  0.01407,
+  0.03,
+  0.7636,
+  0.97
+ ],
+ "encuadre": [
+  8.91098,
+  45.89864,
+  17.75851,
+  49.42977
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 83993,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.283,
+ "p10": 3.102,
+ "p50": 5.289,
+ "p90": 7.1884,
+ "p2": 2.3661,
+ "p98": 9.6159,
+ "min": 0.7885,
+ "max": 16.9628,
+ "sobre_umbral": 0.1163,
+ "pixeles": 552749
+}

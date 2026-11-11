@@ -1,0 +1,36 @@
+{
+ "pais": "Chile",
+ "iso3": "CHL",
+ "iso2": "CL",
+ "nombre_en": "Chile",
+ "variable": "viento",
+ "imagen": "CHL_viento.webp",
+ "rejilla": "CHL_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -94.56842,
+  -61.82979,
+  -48.15696,
+  -12.15724
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 736593,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.56,
+ "p10": 3.0677,
+ "p50": 5.718,
+ "p90": 11.3503,
+ "p2": 2.3116,
+ "p98": 14.416,
+ "min": 1.2906,
+ "max": 29.0174,
+ "sobre_umbral": 0.3449,
+ "pixeles": 159407
+}

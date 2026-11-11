@@ -1,0 +1,36 @@
+{
+ "pais": "Paraguay",
+ "iso3": "PRY",
+ "iso2": "PY",
+ "nombre_en": "Paraguay",
+ "variable": "viento",
+ "imagen": "PRY_viento.webp",
+ "rejilla": "PRY_viento_rejilla.json",
+ "caja": [
+  0.02274,
+  0.03,
+  0.61805,
+  0.97
+ ],
+ "encuadre": [
+  -63.32276,
+  -28.91486,
+  -53.57288,
+  -18.12471
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 399901,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.1335,
+ "p10": 5.4799,
+ "p50": 6.1462,
+ "p90": 6.7594,
+ "p2": 5.0198,
+ "p98": 7.1014,
+ "min": 3.5824,
+ "max": 11.2293,
+ "sobre_umbral": 0.0324,
+ "pixeles": 1610261
+}

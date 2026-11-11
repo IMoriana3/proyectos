@@ -1,0 +1,36 @@
+{
+ "pais": "Venezuela",
+ "iso3": "VEN",
+ "iso2": "VE",
+ "nombre_en": "Venezuela",
+ "variable": "irradiancia",
+ "imagen": "VEN_irradiancia.webp",
+ "rejilla": "VEN_irradiancia_rejilla.json",
+ "caja": [
+  0.01972,
+  0.03,
+  0.66876,
+  0.97
+ ],
+ "encuadre": [
+  -74.47719,
+  -1.19862,
+  -58.72955,
+  13.81586
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 912684,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 1914.979,
+ "p10": 1793.5698,
+ "p50": 1927.7445,
+ "p90": 2005.9884,
+ "p2": 1714.918,
+ "p98": 2084.6465,
+ "min": 1599.9425,
+ "max": 2252.9143,
+ "sobre_umbral": 0.8872,
+ "pixeles": 305508
+}

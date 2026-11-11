@@ -1,0 +1,36 @@
+{
+ "pais": "Mozambique",
+ "iso3": "MOZ",
+ "iso2": "MZ",
+ "nombre_en": "Mozambique",
+ "variable": "irradiancia",
+ "imagen": "MOZ_irradiancia.webp",
+ "rejilla": "MOZ_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  27.0966,
+  -29.48287,
+  43.96524,
+  -8.17423
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 788449,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 2019.4247,
+ "p10": 1950.3215,
+ "p50": 2021.6202,
+ "p90": 2086.5071,
+ "p2": 1864.4201,
+ "p98": 2110.8191,
+ "min": 1767.9319,
+ "max": 2182.3977,
+ "sobre_umbral": 0.9928,
+ "pixeles": 177114
+}

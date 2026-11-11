@@ -1,0 +1,36 @@
+{
+ "pais": "Hungría",
+ "iso3": "HUN",
+ "iso2": "HU",
+ "nombre_en": "Hungary",
+ "variable": "irradiancia",
+ "imagen": "HUN_irradiancia.webp",
+ "rejilla": "HUN_irradiancia_rejilla.json",
+ "caja": [
+  0.01584,
+  0.03,
+  0.73391,
+  0.97
+ ],
+ "encuadre": [
+  15.55135,
+  45.26134,
+  23.42029,
+  48.98923
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 93201,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1267.2939,
+ "p10": 1197.3091,
+ "p50": 1274.6419,
+ "p90": 1308.4149,
+ "p2": 1186.3316,
+ "p98": 1320.6591,
+ "min": 1180.2117,
+ "max": 1323.5872,
+ "sobre_umbral": 0.0,
+ "pixeles": 264431
+}

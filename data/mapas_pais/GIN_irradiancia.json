@@ -1,0 +1,36 @@
+{
+ "pais": "Guinea",
+ "iso3": "GIN",
+ "iso2": "GN",
+ "nombre_en": "Guinea",
+ "variable": "irradiancia",
+ "imagen": "GIN_irradiancia.webp",
+ "rejilla": "GIN_irradiancia_rejilla.json",
+ "caja": [
+  0.01806,
+  0.03,
+  0.69653,
+  0.97
+ ],
+ "encuadre": [
+  -15.67462,
+  6.3129,
+  -7.06895,
+  13.44103
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 244302,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 2007.4602,
+ "p10": 1904.0468,
+ "p50": 2011.0646,
+ "p90": 2108.386,
+ "p2": 1798.1963,
+ "p98": 2126.7954,
+ "min": 1710.9865,
+ "max": 2133.6645,
+ "sobre_umbral": 0.9795,
+ "pixeles": 278529
+}

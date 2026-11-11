@@ -1,0 +1,36 @@
+{
+ "pais": "Malaui",
+ "iso3": "MWI",
+ "iso2": "MW",
+ "nombre_en": "Malawi",
+ "variable": "viento",
+ "imagen": "MWI_viento.webp",
+ "rejilla": "MWI_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  30.40017,
+  -18.37599,
+  38.16744,
+  -8.29566
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 119398,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.9978,
+ "p10": 3.5357,
+ "p50": 4.9932,
+ "p90": 6.5195,
+ "p2": 2.5629,
+ "p98": 7.6022,
+ "min": 0.778,
+ "max": 12.4402,
+ "sobre_umbral": 0.0529,
+ "pixeles": 529447
+}

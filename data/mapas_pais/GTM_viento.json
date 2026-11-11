@@ -1,0 +1,36 @@
+{
+ "pais": "Guatemala",
+ "iso3": "GTM",
+ "iso2": "GT",
+ "nombre_en": "Guatemala",
+ "variable": "viento",
+ "imagen": "GTM_viento.webp",
+ "rejilla": "GTM_viento_rejilla.json",
+ "caja": [
+  0.02246,
+  0.03,
+  0.62271,
+  0.97
+ ],
+ "encuadre": [
+  -92.56828,
+  13.07787,
+  -87.89891,
+  18.38787
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 108811,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.6966,
+ "p10": 2.1288,
+ "p50": 3.6656,
+ "p90": 5.0705,
+ "p2": 1.4021,
+ "p98": 6.8023,
+ "min": 0.1003,
+ "max": 13.1916,
+ "sobre_umbral": 0.0168,
+ "pixeles": 1467946
+}

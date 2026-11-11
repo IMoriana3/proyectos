@@ -1,0 +1,36 @@
+{
+ "pais": "Lesoto",
+ "iso3": "LSO",
+ "iso2": "LS",
+ "nombre_en": "Lesotho",
+ "variable": "viento",
+ "imagen": "LSO_viento.webp",
+ "rejilla": "LSO_viento_rejilla.json",
+ "caja": [
+  0.02189,
+  0.03,
+  0.63221,
+  0.97
+ ],
+ "encuadre": [
+  26.70215,
+  -31.1388,
+  29.73591,
+  -28.15076
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 30107,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.9184,
+ "p10": 3.8928,
+ "p50": 5.6663,
+ "p90": 8.3374,
+ "p2": 3.1023,
+ "p98": 9.8684,
+ "min": 1.8695,
+ "max": 15.0505,
+ "sobre_umbral": 0.2571,
+ "pixeles": 448493
+}

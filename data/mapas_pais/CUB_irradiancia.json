@@ -1,0 +1,36 @@
+{
+ "pais": "Cuba",
+ "iso3": "CUB",
+ "iso2": "CU",
+ "nombre_en": "Cuba",
+ "variable": "irradiancia",
+ "imagen": "CUB_irradiancia.webp",
+ "rejilla": "CUB_irradiancia_rejilla.json",
+ "caja": [
+  0.01285,
+  0.03,
+  0.78409,
+  0.97
+ ],
+ "encuadre": [
+  -85.81495,
+  18.41449,
+  -73.26754,
+  24.55803
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 109929,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1944.6548,
+ "p10": 1902.7253,
+ "p50": 1941.1361,
+ "p90": 1986.7609,
+ "p2": 1875.4809,
+ "p98": 2028.5568,
+ "min": 1861.5507,
+ "max": 2087.4857,
+ "sobre_umbral": 1.0,
+ "pixeles": 65939
+}

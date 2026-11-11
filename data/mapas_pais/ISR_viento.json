@@ -1,0 +1,36 @@
+{
+ "pais": "Israel",
+ "iso3": "ISR",
+ "iso2": "IL",
+ "nombre_en": "Israel",
+ "variable": "viento",
+ "imagen": "ISR_viento.webp",
+ "rejilla": "ISR_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  32.82987,
+  28.86297,
+  37.30655,
+  33.95511
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 22101,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.0596,
+ "p10": 3.9786,
+ "p50": 5.0337,
+ "p90": 6.133,
+ "p2": 3.0384,
+ "p98": 7.2549,
+ "min": 1.99,
+ "max": 12.0669,
+ "sobre_umbral": 0.0259,
+ "pixeles": 319494
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Líbano",
+ "iso3": "LBN",
+ "iso2": "LB",
+ "nombre_en": "Lebanon",
+ "variable": "irradiancia",
+ "imagen": "LBN_irradiancia.webp",
+ "rejilla": "LBN_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  34.7083,
+  32.57558,
+  36.99542,
+  35.10755
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 10004,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1939.6969,
+ "p10": 1918.0369,
+ "p50": 1927.5033,
+ "p90": 1974.8386,
+ "p2": 1911.1376,
+ "p98": 2003.1015,
+ "min": 1905.5558,
+ "max": 2017.1678,
+ "sobre_umbral": 1.0,
+ "pixeles": 227657
+}

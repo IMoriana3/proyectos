@@ -1,0 +1,36 @@
+{
+ "pais": "Níger",
+ "iso3": "NER",
+ "iso2": "NE",
+ "nombre_en": "Niger",
+ "variable": "irradiancia",
+ "imagen": "NER_irradiancia.webp",
+ "rejilla": "NER_irradiancia_rejilla.json",
+ "caja": [
+  0.01861,
+  0.03,
+  0.6874,
+  0.97
+ ],
+ "encuadre": [
+  -1.11245,
+  9.80432,
+  17.23571,
+  25.17237
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1181301,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 2363.3183,
+ "p10": 2247.5996,
+ "p50": 2381.3337,
+ "p90": 2438.1554,
+ "p2": 2161.2527,
+ "p98": 2446.9859,
+ "min": 2093.2827,
+ "max": 2453.8856,
+ "sobre_umbral": 1.0,
+ "pixeles": 315447
+}

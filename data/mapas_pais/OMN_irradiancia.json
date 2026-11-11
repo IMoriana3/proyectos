@@ -1,0 +1,36 @@
+{
+ "pais": "Omán",
+ "iso3": "OMN",
+ "iso2": "OM",
+ "nombre_en": "Oman",
+ "variable": "irradiancia",
+ "imagen": "OMN_irradiancia.webp",
+ "rejilla": "OMN_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  50.80587,
+  15.08343,
+  61.01732,
+  27.75007
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 311213,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 2290.2051,
+ "p10": 2166.2994,
+ "p50": 2296.4163,
+ "p90": 2387.8032,
+ "p2": 2116.886,
+ "p98": 2397.2815,
+ "min": 2058.5322,
+ "max": 2406.9749,
+ "sobre_umbral": 1.0,
+ "pixeles": 197983
+}

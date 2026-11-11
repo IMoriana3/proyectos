@@ -1,0 +1,36 @@
+{
+ "pais": "Togo",
+ "iso3": "TGO",
+ "iso2": "TG",
+ "nombre_en": "Togo",
+ "variable": "irradiancia",
+ "imagen": "TGO_irradiancia.webp",
+ "rejilla": "TGO_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -1.67422,
+  5.29497,
+  3.29046,
+  11.83981
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 56863,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1886.8273,
+ "p10": 1792.2545,
+ "p50": 1873.8531,
+ "p90": 2013.515,
+ "p2": 1768.7281,
+ "p98": 2066.0223,
+ "min": 1736.0945,
+ "max": 2085.3263,
+ "sobre_umbral": 0.8759,
+ "pixeles": 136331
+}

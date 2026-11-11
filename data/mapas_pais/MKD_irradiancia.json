@@ -1,0 +1,36 @@
+{
+ "pais": "Macedonia del Norte",
+ "iso3": "MKD",
+ "iso2": "MK",
+ "nombre_en": "North Macedonia",
+ "variable": "irradiancia",
+ "imagen": "MKD_irradiancia.webp",
+ "rejilla": "MKD_irradiancia_rejilla.json",
+ "caja": [
+  0.02054,
+  0.03,
+  0.65487,
+  0.97
+ ],
+ "encuadre": [
+  20.14416,
+  40.36939,
+  23.30958,
+  42.79033
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 25385,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1482.7818,
+ "p10": 1424.6299,
+ "p50": 1494.2776,
+ "p90": 1528.9938,
+ "p2": 1408.6573,
+ "p98": 1539.8219,
+ "min": 1407.3853,
+ "max": 1541.6387,
+ "sobre_umbral": 0.0,
+ "pixeles": 416961
+}

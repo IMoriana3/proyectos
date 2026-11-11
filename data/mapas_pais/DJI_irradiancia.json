@@ -1,0 +1,36 @@
+{
+ "pais": "Yibuti",
+ "iso3": "DJI",
+ "iso2": "DJ",
+ "nombre_en": "Djibouti",
+ "variable": "irradiancia",
+ "imagen": "DJI_irradiancia.webp",
+ "rejilla": "DJI_irradiancia_rejilla.json",
+ "caja": [
+  0.02273,
+  0.03,
+  0.61817,
+  0.97
+ ],
+ "encuadre": [
+  41.44911,
+  10.44982,
+  43.71871,
+  13.12791
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 21848,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2229.4803,
+ "p10": 2177.611,
+ "p50": 2247.9634,
+ "p90": 2267.5505,
+ "p2": 2140.7199,
+ "p98": 2269.4818,
+ "min": 2131.1009,
+ "max": 2271.9612,
+ "sobre_umbral": 1.0,
+ "pixeles": 420022
+}

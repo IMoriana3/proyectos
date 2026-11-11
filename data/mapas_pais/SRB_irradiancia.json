@@ -1,0 +1,36 @@
+{
+ "pais": "Serbia",
+ "iso3": "SRB",
+ "iso2": "RS",
+ "nombre_en": "Serbia",
+ "variable": "irradiancia",
+ "imagen": "SRB_irradiancia.webp",
+ "rejilla": "SRB_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  18.2361,
+  41.60472,
+  23.59345,
+  46.72533
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 77629,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1357.3606,
+ "p10": 1336.6048,
+ "p50": 1351.2896,
+ "p90": 1383.5164,
+ "p2": 1315.6384,
+ "p98": 1419.1139,
+ "min": 1303.508,
+ "max": 1442.8237,
+ "sobre_umbral": 0.0,
+ "pixeles": 301065
+}

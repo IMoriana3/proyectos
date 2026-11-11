@@ -1,0 +1,36 @@
+{
+ "pais": "Armenia",
+ "iso3": "ARM",
+ "iso2": "AM",
+ "nombre_en": "Armenia",
+ "variable": "irradiancia",
+ "imagen": "ARM_irradiancia.webp",
+ "rejilla": "ARM_irradiancia_rejilla.json",
+ "caja": [
+  0.02214,
+  0.03,
+  0.62799,
+  0.97
+ ],
+ "encuadre": [
+  43.13629,
+  38.3837,
+  46.90261,
+  41.71045
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 29588,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1500.3018,
+ "p10": 1446.894,
+ "p50": 1485.7095,
+ "p90": 1568.0822,
+ "p2": 1401.5487,
+ "p98": 1630.1877,
+ "min": 1388.4938,
+ "max": 1678.4658,
+ "sobre_umbral": 0.0,
+ "pixeles": 297877
+}

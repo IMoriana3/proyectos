@@ -1,0 +1,36 @@
+{
+ "pais": "Etiopía",
+ "iso3": "ETH",
+ "iso2": "ET",
+ "nombre_en": "Ethiopia",
+ "variable": "irradiancia",
+ "imagen": "ETH_irradiancia.webp",
+ "rejilla": "ETH_irradiancia_rejilla.json",
+ "caja": [
+  0.01847,
+  0.03,
+  0.68971,
+  0.97
+ ],
+ "encuadre": [
+  31.79065,
+  1.56714,
+  49.17832,
+  16.4862
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1127376,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 2188.1966,
+ "p10": 2017.6379,
+ "p50": 2215.1578,
+ "p90": 2333.843,
+ "p2": 1902.8313,
+ "p98": 2362.4261,
+ "min": 1846.9547,
+ "max": 2396.1599,
+ "sobre_umbral": 1.0,
+ "pixeles": 312936
+}

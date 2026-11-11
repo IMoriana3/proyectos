@@ -1,0 +1,36 @@
+{
+ "pais": "Zambia",
+ "iso3": "ZMB",
+ "iso2": "ZM",
+ "nombre_en": "Zambia",
+ "variable": "irradiancia",
+ "imagen": "ZMB_irradiancia.webp",
+ "rejilla": "ZMB_irradiancia_rejilla.json",
+ "caja": [
+  0.01988,
+  0.03,
+  0.66602,
+  0.97
+ ],
+ "encuadre": [
+  21.04433,
+  -19.64925,
+  34.60975,
+  -6.81161
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 751915,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 2098.4766,
+ "p10": 2054.5591,
+ "p50": 2104.0213,
+ "p90": 2137.6907,
+ "p2": 2008.3532,
+ "p98": 2148.7348,
+ "min": 1978.9354,
+ "max": 2183.9876,
+ "sobre_umbral": 1.0,
+ "pixeles": 352839
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "República del Congo",
+ "iso3": "COG",
+ "iso2": "CG",
+ "nombre_en": "Republic of the Congo",
+ "variable": "irradiancia",
+ "imagen": "COG_irradiancia.webp",
+ "rejilla": "COG_irradiancia_rejilla.json",
+ "caja": [
+  0.02375,
+  0.03,
+  0.60102,
+  0.97
+ ],
+ "encuadre": [
+  10.51174,
+  -6.4161,
+  19.24468,
+  4.93018
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 344889,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 1654.1771,
+ "p10": 1446.4814,
+ "p50": 1700.4816,
+ "p90": 1770.073,
+ "p2": 1402.0082,
+ "p98": 1810.6496,
+ "min": 1382.8243,
+ "max": 1812.9946,
+ "sobre_umbral": 0.0518,
+ "pixeles": 275704
+}

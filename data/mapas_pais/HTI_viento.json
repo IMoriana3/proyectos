@@ -1,0 +1,36 @@
+{
+ "pais": "Haití",
+ "iso3": "HTI",
+ "iso2": "HT",
+ "nombre_en": "Haiti",
+ "variable": "viento",
+ "imagen": "HTI_viento.webp",
+ "rejilla": "HTI_viento_rejilla.json",
+ "caja": [
+  0.01903,
+  0.03,
+  0.68031,
+  0.97
+ ],
+ "encuadre": [
+  -74.78917,
+  17.54595,
+  -71.33911,
+  20.50979
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 26892,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.442,
+ "p10": 2.8134,
+ "p50": 4.253,
+ "p90": 6.3636,
+ "p2": 2.1027,
+ "p98": 7.7114,
+ "min": 0.9322,
+ "max": 13.9234,
+ "sobre_umbral": 0.0511,
+ "pixeles": 368916
+}

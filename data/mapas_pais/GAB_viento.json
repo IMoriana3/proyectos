@@ -1,0 +1,36 @@
+{
+ "pais": "Gabón",
+ "iso3": "GAB",
+ "iso2": "GA",
+ "nombre_en": "Gabon",
+ "variable": "viento",
+ "imagen": "GAB_viento.webp",
+ "rejilla": "GAB_viento_rejilla.json",
+ "caja": [
+  0.02276,
+  0.03,
+  0.61755,
+  0.97
+ ],
+ "encuadre": [
+  8.23129,
+  -4.93835,
+  14.96326,
+  3.1988
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 259968,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 2.5401,
+ "p10": 1.9529,
+ "p50": 2.4449,
+ "p90": 3.2085,
+ "p2": 1.6403,
+ "p98": 4.3974,
+ "min": 0.886,
+ "max": 6.3482,
+ "sobre_umbral": 0.0,
+ "pixeles": 1668027
+}

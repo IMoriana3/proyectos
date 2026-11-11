@@ -1,0 +1,36 @@
+{
+ "pais": "Moldavia",
+ "iso3": "MDA",
+ "iso2": "MD",
+ "nombre_en": "Moldova",
+ "variable": "viento",
+ "imagen": "MDA_viento.webp",
+ "rejilla": "MDA_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  26.21401,
+  44.97789,
+  30.53545,
+  48.90943
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 33206,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.2681,
+ "p10": 5.6351,
+ "p50": 6.307,
+ "p90": 6.8346,
+ "p2": 5.2622,
+ "p98": 7.0911,
+ "min": 3.8743,
+ "max": 8.2062,
+ "sobre_umbral": 0.0407,
+ "pixeles": 630210
+}

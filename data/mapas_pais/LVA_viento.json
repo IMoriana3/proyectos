@@ -1,0 +1,36 @@
+{
+ "pais": "Letonia",
+ "iso3": "LVA",
+ "iso2": "LV",
+ "nombre_en": "Latvia",
+ "variable": "viento",
+ "imagen": "LVA_viento.webp",
+ "rejilla": "LVA_viento_rejilla.json",
+ "caja": [
+  0.01621,
+  0.03,
+  0.7276,
+  0.97
+ ],
+ "encuadre": [
+  20.3887,
+  55.18699,
+  28.79717,
+  58.49514
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 64576,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.5985,
+ "p10": 5.9944,
+ "p50": 6.616,
+ "p90": 7.1527,
+ "p2": 5.6407,
+ "p98": 7.4825,
+ "min": 5.0267,
+ "max": 8.6606,
+ "sobre_umbral": 0.1844,
+ "pixeles": 555956
+}

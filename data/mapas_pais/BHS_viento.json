@@ -1,0 +1,36 @@
+{
+ "pais": "Bahamas",
+ "iso3": "BHS",
+ "iso2": "BS",
+ "nombre_en": "The Bahamas",
+ "variable": "viento",
+ "imagen": "BHS_viento.webp",
+ "rejilla": "BHS_viento_rejilla.json",
+ "caja": [
+  0.02233,
+  0.03,
+  0.6248,
+  0.97
+ ],
+ "encuadre": [
+  -79.80824,
+  19.94984,
+  -72.50066,
+  27.77065
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 12604,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.2928,
+ "p10": 5.5896,
+ "p50": 6.1615,
+ "p90": 7.2441,
+ "p2": 5.1699,
+ "p98": 7.5628,
+ "min": 4.5804,
+ "max": 8.0981,
+ "sobre_umbral": 0.1798,
+ "pixeles": 83967
+}

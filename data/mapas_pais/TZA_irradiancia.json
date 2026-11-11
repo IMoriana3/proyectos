@@ -1,0 +1,36 @@
+{
+ "pais": "Tanzania",
+ "iso3": "TZA",
+ "iso2": "TZ",
+ "nombre_en": "Tanzania",
+ "variable": "irradiancia",
+ "imagen": "TZA_irradiancia.webp",
+ "rejilla": "TZA_irradiancia_rejilla.json",
+ "caja": [
+  0.02136,
+  0.03,
+  0.64108,
+  0.97
+ ],
+ "encuadre": [
+  28.43076,
+  -13.45054,
+  41.33966,
+  0.51853
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 941506,
+ "fuente": "ERA5 (ECMWF/Copernicus) vía Open-Meteo · 2024",
+ "resolucion": "≈31 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 2131.2925,
+ "p10": 1986.7388,
+ "p50": 2136.4036,
+ "p90": 2267.7981,
+ "p2": 1970.0623,
+ "p98": 2307.7102,
+ "min": 1955.2133,
+ "max": 2341.6338,
+ "sobre_umbral": 1.0,
+ "pixeles": 468251
+}

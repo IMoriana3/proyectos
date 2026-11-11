@@ -1,0 +1,36 @@
+{
+ "pais": "Reino Unido",
+ "iso3": "GBR",
+ "iso2": "GB",
+ "nombre_en": "United Kingdom",
+ "variable": "viento",
+ "imagen": "GBR_viento.webp",
+ "rejilla": "GBR_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -12.55028,
+  48.21693,
+  6.14761,
+  62.37231
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 243783,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 8.2334,
+ "p10": 7.0996,
+ "p50": 8.0112,
+ "p90": 9.6715,
+ "p2": 6.605,
+ "p98": 10.9552,
+ "min": 4.3222,
+ "max": 17.2951,
+ "sobre_umbral": 0.923,
+ "pixeles": 846919
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "República Checa",
+ "iso3": "CZE",
+ "iso2": "CZ",
+ "nombre_en": "Czech Republic",
+ "variable": "irradiancia",
+ "imagen": "CZE_irradiancia.webp",
+ "rejilla": "CZE_irradiancia_rejilla.json",
+ "caja": [
+  0.01537,
+  0.03,
+  0.74184,
+  0.97
+ ],
+ "encuadre": [
+  11.53524,
+  48.07792,
+  19.37834,
+  51.46001
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 78759,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1112.9539,
+ "p10": 1079.9855,
+ "p50": 1109.7782,
+ "p90": 1145.5113,
+ "p2": 1076.7991,
+ "p98": 1153.6112,
+ "min": 1072.1785,
+ "max": 1184.3012,
+ "sobre_umbral": 0.0,
+ "pixeles": 248908
+}

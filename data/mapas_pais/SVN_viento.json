@@ -1,0 +1,36 @@
+{
+ "pais": "Eslovenia",
+ "iso3": "SVN",
+ "iso2": "SI",
+ "nombre_en": "Slovenia",
+ "variable": "viento",
+ "imagen": "SVN_viento.webp",
+ "rejilla": "SVN_viento_rejilla.json",
+ "caja": [
+  0.01892,
+  0.03,
+  0.68221,
+  0.97
+ ],
+ "encuadre": [
+  13.06526,
+  44.94364,
+  16.8153,
+  47.28396
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 20327,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.4937,
+ "p10": 2.8938,
+ "p50": 4.4114,
+ "p90": 6.1297,
+ "p2": 2.2983,
+ "p98": 7.8286,
+ "min": 0.6894,
+ "max": 15.6993,
+ "sobre_umbral": 0.0452,
+ "pixeles": 378444
+}

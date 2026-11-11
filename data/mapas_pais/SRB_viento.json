@@ -1,0 +1,36 @@
+{
+ "pais": "Serbia",
+ "iso3": "SRB",
+ "iso2": "RS",
+ "nombre_en": "Serbia",
+ "variable": "viento",
+ "imagen": "SRB_viento.webp",
+ "rejilla": "SRB_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  18.2361,
+  41.60472,
+  23.59345,
+  46.72533
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 77629,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.0443,
+ "p10": 3.7206,
+ "p50": 5.1418,
+ "p90": 6.0936,
+ "p2": 2.7822,
+ "p98": 6.7399,
+ "min": 1.1427,
+ "max": 11.9295,
+ "sobre_umbral": 0.0114,
+ "pixeles": 1396019
+}

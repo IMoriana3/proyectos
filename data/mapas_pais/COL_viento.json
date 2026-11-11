@@ -1,0 +1,36 @@
+{
+ "pais": "Colombia",
+ "iso3": "COL",
+ "iso2": "CO",
+ "nombre_en": "Colombia",
+ "variable": "viento",
+ "imagen": "COL_viento.webp",
+ "rejilla": "COL_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -81.11294,
+  -6.90925,
+  -64.78363,
+  14.807
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1135118,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 2.9081,
+ "p10": 1.7937,
+ "p50": 2.4306,
+ "p90": 4.6273,
+ "p2": 1.3678,
+ "p98": 6.3426,
+ "min": 0.4729,
+ "max": 15.6122,
+ "sobre_umbral": 0.0138,
+ "pixeles": 1030271
+}

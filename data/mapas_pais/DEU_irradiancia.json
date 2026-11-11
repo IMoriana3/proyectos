@@ -1,0 +1,36 @@
+{
+ "pais": "Alemania",
+ "iso3": "DEU",
+ "iso2": "DE",
+ "nombre_en": "Germany",
+ "variable": "irradiancia",
+ "imagen": "DEU_irradiancia.webp",
+ "rejilla": "DEU_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  4.51172,
+  46.04956,
+  16.36283,
+  55.97477
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 357674,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 1087.2708,
+ "p10": 1044.4934,
+ "p50": 1066.1877,
+ "p90": 1176.4566,
+ "p2": 1036.5831,
+ "p98": 1196.6237,
+ "min": 1028.543,
+ "max": 1212.2312,
+ "sobre_umbral": 0.0,
+ "pixeles": 364554
+}

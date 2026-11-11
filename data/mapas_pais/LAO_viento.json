@@ -1,0 +1,36 @@
+{
+ "pais": "Laos",
+ "iso3": "LAO",
+ "iso2": "LA",
+ "nombre_en": "Laos",
+ "variable": "viento",
+ "imagen": "LAO_viento.webp",
+ "rejilla": "LAO_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  99.47725,
+  12.54256,
+  108.28419,
+  23.69733
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 228114,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.7267,
+ "p10": 2.2076,
+ "p50": 3.5458,
+ "p90": 5.5444,
+ "p2": 1.6965,
+ "p98": 6.5903,
+ "min": 0.7722,
+ "max": 13.4619,
+ "sobre_umbral": 0.011,
+ "pixeles": 843923
+}

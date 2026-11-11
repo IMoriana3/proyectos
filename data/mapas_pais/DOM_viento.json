@@ -1,0 +1,36 @@
+{
+ "pais": "República Dominicana",
+ "iso3": "DOM",
+ "iso2": "DO",
+ "nombre_en": "Dominican Republic",
+ "variable": "viento",
+ "imagen": "DOM_viento.webp",
+ "rejilla": "DOM_viento_rejilla.json",
+ "caja": [
+  0.01764,
+  0.03,
+  0.70368,
+  0.97
+ ],
+ "encuadre": [
+  -72.30984,
+  17.06556,
+  -68.0286,
+  20.35769
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 48440,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.7977,
+ "p10": 3.0295,
+ "p50": 4.769,
+ "p90": 6.5377,
+ "p2": 2.0949,
+ "p98": 7.6835,
+ "min": 0.5103,
+ "max": 14.3956,
+ "sobre_umbral": 0.0524,
+ "pixeles": 664243
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Irán",
+ "iso3": "IRN",
+ "iso2": "IR",
+ "nombre_en": "Iran",
+ "variable": "irradiancia",
+ "imagen": "IRN_irradiancia.webp",
+ "rejilla": "IRN_irradiancia_rejilla.json",
+ "caja": [
+  0.0204,
+  0.03,
+  0.65727,
+  0.97
+ ],
+ "encuadre": [
+  42.47048,
+  22.70547,
+  64.86401,
+  41.83122
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1622510,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,50°",
+ "umbral": 1800.0,
+ "media": 2016.8766,
+ "p10": 1752.4719,
+ "p50": 2067.2247,
+ "p90": 2179.0592,
+ "p2": 1525.9595,
+ "p98": 2208.7486,
+ "min": 1451.9949,
+ "max": 2225.6403,
+ "sobre_umbral": 0.8754,
+ "pixeles": 371433
+}

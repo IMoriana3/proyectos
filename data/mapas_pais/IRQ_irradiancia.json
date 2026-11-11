@@ -1,0 +1,36 @@
+{
+ "pais": "Irak",
+ "iso3": "IRQ",
+ "iso2": "IQ",
+ "nombre_en": "Iraq",
+ "variable": "irradiancia",
+ "imagen": "IRQ_irradiancia.webp",
+ "rejilla": "IRQ_irradiancia_rejilla.json",
+ "caja": [
+  0.02195,
+  0.03,
+  0.6312,
+  0.97
+ ],
+ "encuadre": [
+  37.99173,
+  27.73316,
+  49.34203,
+  38.53923
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 437367,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 1985.7223,
+ "p10": 1863.9213,
+ "p50": 2000.1561,
+ "p90": 2079.69,
+ "p2": 1808.1195,
+ "p98": 2108.2949,
+ "min": 1789.7062,
+ "max": 2129.9258,
+ "sobre_umbral": 0.9885,
+ "pixeles": 377748
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Papúa Nueva Guinea",
+ "iso3": "PNG",
+ "iso2": "PG",
+ "nombre_en": "Papua New Guinea",
+ "variable": "irradiancia",
+ "imagen": "PNG_irradiancia.webp",
+ "rejilla": "PNG_irradiancia_rejilla.json",
+ "caja": [
+  0.01813,
+  0.03,
+  0.69537,
+  0.97
+ ],
+ "encuadre": [
+  139.81467,
+  -13.18661,
+  154.81547,
+  -0.59053
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 465147,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 1745.685,
+ "p10": 1687.1929,
+ "p50": 1742.7827,
+ "p90": 1800.5203,
+ "p2": 1667.7325,
+ "p98": 1854.2098,
+ "min": 1640.9344,
+ "max": 1955.4815,
+ "sobre_umbral": 0.1016,
+ "pixeles": 167541
+}

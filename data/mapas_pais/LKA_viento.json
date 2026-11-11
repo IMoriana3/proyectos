@@ -1,0 +1,36 @@
+{
+ "pais": "Sri Lanka",
+ "iso3": "LKA",
+ "iso2": "LK",
+ "nombre_en": "Sri Lanka",
+ "variable": "viento",
+ "imagen": "LKA_viento.webp",
+ "rejilla": "LKA_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  78.85081,
+  5.2988,
+  82.69528,
+  10.37639
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 66291,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.2013,
+ "p10": 3.1719,
+ "p50": 5.5197,
+ "p90": 6.6809,
+ "p2": 2.3343,
+ "p98": 7.5612,
+ "min": 0.6686,
+ "max": 15.3138,
+ "sobre_umbral": 0.0506,
+ "pixeles": 869253
+}

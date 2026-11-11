@@ -1,0 +1,36 @@
+{
+ "pais": "España",
+ "iso3": "ESP",
+ "iso2": "ES",
+ "nombre_en": "Spain",
+ "variable": "irradiancia",
+ "imagen": "ESP_irradiancia.webp",
+ "rejilla": "ESP_irradiancia_rejilla.json",
+ "caja": [
+  0.01797,
+  0.03,
+  0.69807,
+  0.97
+ ],
+ "encuadre": [
+  -10.38231,
+  34.76054,
+  5.42741,
+  44.88362
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 506884,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 1637.9639,
+ "p10": 1380.8012,
+ "p50": 1676.4696,
+ "p90": 1813.2817,
+ "p2": 1333.9569,
+ "p98": 1839.1386,
+ "min": 1321.223,
+ "max": 1857.5954,
+ "sobre_umbral": 0.1497,
+ "pixeles": 278270
+}

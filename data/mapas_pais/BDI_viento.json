@@ -1,0 +1,36 @@
+{
+ "pais": "Burundi",
+ "iso3": "BDI",
+ "iso2": "BI",
+ "nombre_en": "Burundi",
+ "variable": "viento",
+ "imagen": "BDI_viento.webp",
+ "rejilla": "BDI_viento_rejilla.json",
+ "caja": [
+  0.02325,
+  0.03,
+  0.6094,
+  0.97
+ ],
+ "encuadre": [
+  28.68689,
+  -4.94334,
+  31.13396,
+  -1.88306
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 27041,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.3789,
+ "p10": 2.3528,
+ "p50": 3.3332,
+ "p90": 4.4637,
+ "p2": 1.8473,
+ "p98": 5.2218,
+ "min": 0.9345,
+ "max": 8.0563,
+ "sobre_umbral": 0.0003,
+ "pixeles": 350689
+}

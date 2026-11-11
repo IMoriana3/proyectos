@@ -1,0 +1,36 @@
+{
+ "pais": "Bélgica",
+ "iso3": "BEL",
+ "iso2": "BE",
+ "nombre_en": "Belgium",
+ "variable": "viento",
+ "imagen": "BEL_viento.webp",
+ "rejilla": "BEL_viento_rejilla.json",
+ "caja": [
+  0.02051,
+  0.03,
+  0.6554,
+  0.97
+ ],
+ "encuadre": [
+  2.21358,
+  49.01522,
+  6.68274,
+  51.91624
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 30670,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.9672,
+ "p10": 6.1677,
+ "p50": 7.079,
+ "p90": 7.5962,
+ "p2": 5.4594,
+ "p98": 7.8622,
+ "min": 3.5397,
+ "max": 9.4106,
+ "sobre_umbral": 0.5559,
+ "pixeles": 623555
+}

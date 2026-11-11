@@ -1,0 +1,36 @@
+{
+ "pais": "Guinea",
+ "iso3": "GIN",
+ "iso2": "GN",
+ "nombre_en": "Guinea",
+ "variable": "viento",
+ "imagen": "GIN_viento.webp",
+ "rejilla": "GIN_viento_rejilla.json",
+ "caja": [
+  0.01806,
+  0.03,
+  0.69653,
+  0.97
+ ],
+ "encuadre": [
+  -15.67462,
+  6.3129,
+  -7.06895,
+  13.44103
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 244302,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.7998,
+ "p10": 2.9085,
+ "p50": 3.7944,
+ "p90": 4.6852,
+ "p2": 2.3795,
+ "p98": 5.209,
+ "min": 1.2883,
+ "max": 8.6013,
+ "sobre_umbral": 0.0001,
+ "pixeles": 1127198
+}

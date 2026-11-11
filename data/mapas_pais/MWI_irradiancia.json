@@ -1,0 +1,36 @@
+{
+ "pais": "Malaui",
+ "iso3": "MWI",
+ "iso2": "MW",
+ "nombre_en": "Malawi",
+ "variable": "irradiancia",
+ "imagen": "MWI_irradiancia.webp",
+ "rejilla": "MWI_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  30.40017,
+  -18.37599,
+  38.16744,
+  -8.29566
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 119398,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2039.938,
+ "p10": 1992.2694,
+ "p50": 2046.1922,
+ "p90": 2080.4139,
+ "p2": 1920.4902,
+ "p98": 2117.0534,
+ "min": 1886.258,
+ "max": 2131.3859,
+ "sobre_umbral": 1.0,
+ "pixeles": 120529
+}

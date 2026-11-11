@@ -1,0 +1,36 @@
+{
+ "pais": "Senegal",
+ "iso3": "SEN",
+ "iso2": "SN",
+ "nombre_en": "Senegal",
+ "variable": "viento",
+ "imagen": "SEN_viento.webp",
+ "rejilla": "SEN_viento_rejilla.json",
+ "caja": [
+  0.01782,
+  0.03,
+  0.7006,
+  0.97
+ ],
+ "encuadre": [
+  -18.0287,
+  11.60388,
+  -10.88511,
+  17.30539
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 196224,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.8768,
+ "p10": 5.0583,
+ "p50": 5.9134,
+ "p90": 6.6559,
+ "p2": 4.6083,
+ "p98": 6.8741,
+ "min": 3.387,
+ "max": 8.1564,
+ "sobre_umbral": 0.0098,
+ "pixeles": 1326729
+}

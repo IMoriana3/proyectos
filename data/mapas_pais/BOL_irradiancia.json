@@ -1,0 +1,36 @@
+{
+ "pais": "Bolivia",
+ "iso3": "BOL",
+ "iso2": "BO",
+ "nombre_en": "Bolivia",
+ "variable": "irradiancia",
+ "imagen": "BOL_irradiancia.webp",
+ "rejilla": "BOL_irradiancia_rejilla.json",
+ "caja": [
+  0.02338,
+  0.03,
+  0.60721,
+  0.97
+ ],
+ "encuadre": [
+  -70.64256,
+  -25.01205,
+  -56.48959,
+  -7.82938
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1086811,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 1897.7726,
+ "p10": 1719.1183,
+ "p50": 1800.6226,
+ "p90": 2370.9926,
+ "p2": 1638.1617,
+ "p98": 2561.2865,
+ "min": 1595.1635,
+ "max": 2649.879,
+ "sobre_umbral": 0.5038,
+ "pixeles": 378916
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Somalia",
+ "iso3": "SOM",
+ "iso2": "SO",
+ "nombre_en": "Somalia",
+ "variable": "viento",
+ "imagen": "SOM_viento.webp",
+ "rejilla": "SOM_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  39.49256,
+  -3.88597,
+  52.88986,
+  13.90508
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 471815,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.9444,
+ "p10": 5.3903,
+ "p50": 6.8336,
+ "p90": 8.8401,
+ "p2": 5.0456,
+ "p98": 9.826,
+ "min": 3.3796,
+ "max": 13.8674,
+ "sobre_umbral": 0.4422,
+ "pixeles": 613659
+}

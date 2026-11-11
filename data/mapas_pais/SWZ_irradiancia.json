@@ -1,0 +1,36 @@
+{
+ "pais": "Suazilandia",
+ "iso3": "SWZ",
+ "iso2": "SZ",
+ "nombre_en": "Eswatini",
+ "variable": "irradiancia",
+ "imagen": "SWZ_irradiancia.webp",
+ "rejilla": "SWZ_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  30.41062,
+  -27.79626,
+  32.48968,
+  -25.316
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 17112,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1796.8038,
+ "p10": 1781.479,
+ "p50": 1789.734,
+ "p90": 1820.9385,
+ "p2": 1780.264,
+ "p98": 1826.9058,
+ "min": 1778.0874,
+ "max": 1830.8666,
+ "sobre_umbral": 0.3534,
+ "pixeles": 415421
+}

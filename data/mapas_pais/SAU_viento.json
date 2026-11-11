@@ -1,0 +1,36 @@
+{
+ "pais": "Arabia Saudita",
+ "iso3": "SAU",
+ "iso2": "SA",
+ "nombre_en": "Saudi Arabia",
+ "variable": "viento",
+ "imagen": "SAU_viento.webp",
+ "rejilla": "SAU_viento_rejilla.json",
+ "caja": [
+  0.01917,
+  0.03,
+  0.67796,
+  0.97
+ ],
+ "encuadre": [
+  32.88758,
+  13.8509,
+  57.32275,
+  34.3264
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1921725,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.2785,
+ "p10": 5.4177,
+ "p50": 6.2701,
+ "p90": 7.1592,
+ "p2": 4.2724,
+ "p98": 7.7486,
+ "min": 1.725,
+ "max": 13.1514,
+ "sobre_umbral": 0.1451,
+ "pixeles": 1224345
+}

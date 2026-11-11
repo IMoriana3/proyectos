@@ -1,0 +1,36 @@
+{
+ "pais": "Rumania",
+ "iso3": "ROU",
+ "iso2": "RO",
+ "nombre_en": "Romania",
+ "variable": "irradiancia",
+ "imagen": "ROU_irradiancia.webp",
+ "rejilla": "ROU_irradiancia_rejilla.json",
+ "caja": [
+  0.01728,
+  0.03,
+  0.70964,
+  0.97
+ ],
+ "encuadre": [
+  19.48629,
+  42.91008,
+  30.45609,
+  48.9223
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 236377,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 1318.2788,
+ "p10": 1250.3969,
+ "p50": 1310.956,
+ "p90": 1400.2226,
+ "p2": 1196.9163,
+ "p98": 1424.9651,
+ "min": 1181.1139,
+ "max": 1438.1141,
+ "sobre_umbral": 0.0,
+ "pixeles": 329617
+}

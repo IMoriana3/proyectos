@@ -1,0 +1,36 @@
+{
+ "pais": "Azerbaiyán",
+ "iso3": "AZE",
+ "iso2": "AZ",
+ "nombre_en": "Azerbaijan",
+ "variable": "irradiancia",
+ "imagen": "AZE_irradiancia.webp",
+ "rejilla": "AZE_irradiancia_rejilla.json",
+ "caja": [
+  0.01909,
+  0.03,
+  0.67936,
+  0.97
+ ],
+ "encuadre": [
+  44.32523,
+  37.833,
+  50.84045,
+  42.38013
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 86250,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1467.9311,
+ "p10": 1398.8343,
+ "p50": 1462.3737,
+ "p90": 1521.8669,
+ "p2": 1334.7244,
+ "p98": 1672.4416,
+ "min": 1322.3083,
+ "max": 1714.2165,
+ "sobre_umbral": 0.0,
+ "pixeles": 283545
+}

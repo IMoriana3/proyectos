@@ -1,0 +1,36 @@
+{
+ "pais": "Bélgica",
+ "iso3": "BEL",
+ "iso2": "BE",
+ "nombre_en": "Belgium",
+ "variable": "irradiancia",
+ "imagen": "BEL_irradiancia.webp",
+ "rejilla": "BEL_irradiancia_rejilla.json",
+ "caja": [
+  0.02051,
+  0.03,
+  0.6554,
+  0.97
+ ],
+ "encuadre": [
+  2.21358,
+  49.01522,
+  6.68274,
+  51.91624
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 30670,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1113.2509,
+ "p10": 1100.3755,
+ "p50": 1108.021,
+ "p90": 1141.192,
+ "p2": 1088.8477,
+ "p98": 1144.9186,
+ "min": 1086.9891,
+ "max": 1147.2703,
+ "sobre_umbral": 0.0,
+ "pixeles": 308727
+}

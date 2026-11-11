@@ -1,0 +1,36 @@
+{
+ "pais": "Argelia",
+ "iso3": "DZA",
+ "iso2": "DZ",
+ "nombre_en": "Algeria",
+ "variable": "viento",
+ "imagen": "DZA_viento.webp",
+ "rejilla": "DZA_viento_rejilla.json",
+ "caja": [
+  0.02167,
+  0.03,
+  0.636,
+  0.97
+ ],
+ "encuadre": [
+  -10.33448,
+  16.07662,
+  13.62096,
+  39.63051
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 2308858,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 7.0195,
+ "p10": 5.8166,
+ "p50": 7.1937,
+ "p90": 7.8751,
+ "p2": 4.8549,
+ "p98": 8.6223,
+ "min": 2.1749,
+ "max": 10.948,
+ "sobre_umbral": 0.612,
+ "pixeles": 1600503
+}

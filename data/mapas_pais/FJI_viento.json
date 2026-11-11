@@ -1,0 +1,36 @@
+{
+ "pais": "Fiyi",
+ "iso3": "FJI",
+ "iso2": "FJ",
+ "nombre_en": "Fiji",
+ "variable": "viento",
+ "imagen": "FJI_viento.webp",
+ "rejilla": "FJI_viento_rejilla.json",
+ "caja": [
+  0.02249,
+  0.03,
+  0.62222,
+  0.97
+ ],
+ "encuadre": [
+  176.79392,
+  -19.67923,
+  180.3,
+  -15.72305
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 18930,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.9887,
+ "p10": 3.3868,
+ "p50": 4.8817,
+ "p90": 6.7215,
+ "p2": 2.7029,
+ "p98": 8.039,
+ "min": 1.4028,
+ "max": 14.8521,
+ "sobre_umbral": 0.0746,
+ "pixeles": 245961
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Nueva Zelanda",
+ "iso3": "NZL",
+ "iso2": "NZ",
+ "nombre_en": "New Zealand",
+ "variable": "viento",
+ "imagen": "NZL_viento.webp",
+ "rejilla": "NZL_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  164.21701,
+  -49.3384,
+  180.81565,
+  -32.59444
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 268501,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 7.1123,
+ "p10": 4.768,
+ "p50": 6.9257,
+ "p90": 9.5897,
+ "p2": 3.4525,
+ "p98": 12.3538,
+ "min": 1.3126,
+ "max": 22.6111,
+ "sobre_umbral": 0.4826,
+ "pixeles": 522776
+}

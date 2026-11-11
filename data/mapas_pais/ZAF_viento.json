@@ -1,0 +1,36 @@
+{
+ "pais": "Sudáfrica",
+ "iso3": "ZAF",
+ "iso2": "ZA",
+ "nombre_en": "South Africa",
+ "variable": "viento",
+ "imagen": "ZAF_viento.webp",
+ "rejilla": "ZAF_viento_rejilla.json",
+ "caja": [
+  0.02006,
+  0.03,
+  0.66297,
+  0.97
+ ],
+ "encuadre": [
+  15.15613,
+  -36.85323,
+  34.20692,
+  -20.34908
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1219827,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.8065,
+ "p10": 4.347,
+ "p50": 5.8426,
+ "p90": 7.1718,
+ "p2": 3.4382,
+ "p98": 8.1046,
+ "min": 1.89,
+ "max": 15.297,
+ "sobre_umbral": 0.1277,
+ "pixeles": 1255379
+}

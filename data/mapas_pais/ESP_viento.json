@@ -1,0 +1,36 @@
+{
+ "pais": "España",
+ "iso3": "ESP",
+ "iso2": "ES",
+ "nombre_en": "Spain",
+ "variable": "viento",
+ "imagen": "ESP_viento.webp",
+ "rejilla": "ESP_viento_rejilla.json",
+ "caja": [
+  0.01797,
+  0.03,
+  0.69807,
+  0.97
+ ],
+ "encuadre": [
+  -10.38231,
+  34.76054,
+  5.42741,
+  44.88362
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 506884,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.4833,
+ "p10": 4.1626,
+ "p50": 5.437,
+ "p90": 6.8849,
+ "p2": 3.2449,
+ "p98": 7.9499,
+ "min": 1.6204,
+ "max": 13.5444,
+ "sobre_umbral": 0.0863,
+ "pixeles": 854262
+}

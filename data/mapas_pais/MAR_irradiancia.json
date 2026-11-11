@@ -1,0 +1,36 @@
+{
+ "pais": "Marruecos",
+ "iso3": "MAR",
+ "iso2": "MA",
+ "nombre_en": "Morocco",
+ "variable": "irradiancia",
+ "imagen": "MAR_irradiancia.webp",
+ "rejilla": "MAR_irradiancia_rejilla.json",
+ "caja": [
+  0.0222,
+  0.03,
+  0.62701,
+  0.97
+ ],
+ "encuadre": [
+  -18.29228,
+  19.09892,
+  0.24654,
+  37.95744
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 591745,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 2082.7174,
+ "p10": 1888.43,
+ "p50": 2096.4234,
+ "p90": 2254.2215,
+ "p2": 1802.3954,
+ "p98": 2274.9506,
+ "min": 1779.1596,
+ "max": 2282.4383,
+ "sobre_umbral": 0.9836,
+ "pixeles": 171408
+}

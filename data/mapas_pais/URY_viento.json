@@ -1,0 +1,36 @@
+{
+ "pais": "Uruguay",
+ "iso3": "URY",
+ "iso2": "UY",
+ "nombre_en": "Uruguay",
+ "variable": "viento",
+ "imagen": "URY_viento.webp",
+ "rejilla": "URY_viento_rejilla.json",
+ "caja": [
+  0.02285,
+  0.03,
+  0.6161,
+  0.97
+ ],
+ "encuadre": [
+  -58.86564,
+  -35.75365,
+  -52.68455,
+  -29.41416
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 177342,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.9556,
+ "p10": 6.2841,
+ "p50": 6.9982,
+ "p90": 7.5923,
+ "p2": 5.5383,
+ "p98": 7.9792,
+ "min": 3.9709,
+ "max": 10.1673,
+ "sobre_umbral": 0.4984,
+ "pixeles": 1819028
+}

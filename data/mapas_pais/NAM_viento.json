@@ -1,0 +1,36 @@
+{
+ "pais": "Namibia",
+ "iso3": "NAM",
+ "iso2": "NA",
+ "nombre_en": "Namibia",
+ "variable": "viento",
+ "imagen": "NAM_viento.webp",
+ "rejilla": "NAM_viento_rejilla.json",
+ "caja": [
+  0.02125,
+  0.03,
+  0.64305,
+  0.97
+ ],
+ "encuadre": [
+  10.63425,
+  -30.8807,
+  26.34315,
+  -15.26989
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 822713,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.453,
+ "p10": 4.5593,
+ "p50": 5.3606,
+ "p90": 6.4654,
+ "p2": 4.0175,
+ "p98": 7.4503,
+ "min": 1.975,
+ "max": 10.9357,
+ "sobre_umbral": 0.0404,
+ "pixeles": 1219863
+}

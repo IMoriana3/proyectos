@@ -1,0 +1,36 @@
+{
+ "pais": "Bután",
+ "iso3": "BTN",
+ "iso2": "BT",
+ "nombre_en": "Bhutan",
+ "variable": "irradiancia",
+ "imagen": "BTN_irradiancia.webp",
+ "rejilla": "BTN_irradiancia_rejilla.json",
+ "caja": [
+  0.01637,
+  0.03,
+  0.72492,
+  0.97
+ ],
+ "encuadre": [
+  88.43007,
+  26.21615,
+  92.38878,
+  28.7784
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 40421,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1612.3783,
+ "p10": 1472.0944,
+ "p50": 1542.453,
+ "p90": 1906.3622,
+ "p2": 1378.8986,
+ "p98": 2002.116,
+ "min": 1333.9261,
+ "max": 2009.5687,
+ "sobre_umbral": 0.1811,
+ "pixeles": 275646
+}

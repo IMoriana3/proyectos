@@ -1,0 +1,36 @@
+{
+ "pais": "Argentina",
+ "iso3": "ARG",
+ "iso2": "AR",
+ "nombre_en": "Argentina",
+ "variable": "viento",
+ "imagen": "ARG_viento.webp",
+ "rejilla": "ARG_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -84.31541,
+  -60.37443,
+  -42.91888,
+  -17.12983
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 2782897,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 7.2422,
+ "p10": 5.1448,
+ "p50": 6.9006,
+ "p90": 10.0446,
+ "p2": 3.3358,
+ "p98": 12.544,
+ "min": 1.1192,
+ "max": 30.8721,
+ "sobre_umbral": 0.4644,
+ "pixeles": 779957
+}

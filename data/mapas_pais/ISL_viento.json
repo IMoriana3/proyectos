@@ -1,0 +1,36 @@
+{
+ "pais": "Islandia",
+ "iso3": "ISL",
+ "iso2": "IS",
+ "nombre_en": "Iceland",
+ "variable": "viento",
+ "imagen": "ISL_viento.webp",
+ "rejilla": "ISL_viento_rejilla.json",
+ "caja": [
+  0.01675,
+  0.03,
+  0.71868,
+  0.97
+ ],
+ "encuadre": [
+  -25.42286,
+  62.89433,
+  -12.61996,
+  66.97619
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 102390,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 8.8962,
+ "p10": 6.9826,
+ "p50": 8.8192,
+ "p90": 10.9024,
+ "p2": 6.0662,
+ "p98": 12.2434,
+ "min": 3.8329,
+ "max": 17.3666,
+ "sobre_umbral": 0.8978,
+ "pixeles": 478068
+}

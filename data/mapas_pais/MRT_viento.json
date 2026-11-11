@@ -1,0 +1,36 @@
+{
+ "pais": "Mauritania",
+ "iso3": "MRT",
+ "iso2": "MR",
+ "nombre_en": "Mauritania",
+ "variable": "viento",
+ "imagen": "MRT_viento.webp",
+ "rejilla": "MRT_viento_rejilla.json",
+ "caja": [
+  0.02299,
+  0.03,
+  0.61378,
+  0.97
+ ],
+ "encuadre": [
+  -18.06194,
+  12.72624,
+  -3.84085,
+  29.04256
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1036392,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 7.7924,
+ "p10": 6.8051,
+ "p50": 7.7951,
+ "p90": 8.7031,
+ "p2": 6.2587,
+ "p98": 9.4149,
+ "min": 4.6128,
+ "max": 11.678,
+ "sobre_umbral": 0.8687,
+ "pixeles": 1820370
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Yemen",
+ "iso3": "YEM",
+ "iso2": "YE",
+ "nombre_en": "Yemen",
+ "variable": "irradiancia",
+ "imagen": "YEM_irradiancia.webp",
+ "rejilla": "YEM_irradiancia_rejilla.json",
+ "caja": [
+  0.01607,
+  0.03,
+  0.73001,
+  0.97
+ ],
+ "encuadre": [
+  41.7717,
+  11.57443,
+  53.92876,
+  19.8913
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 453076,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 2402.5484,
+ "p10": 2313.4066,
+ "p50": 2414.4615,
+ "p90": 2464.9666,
+ "p2": 2252.8465,
+ "p98": 2476.2485,
+ "min": 2209.0414,
+ "max": 2480.8001,
+ "sobre_umbral": 1.0,
+ "pixeles": 268326
+}

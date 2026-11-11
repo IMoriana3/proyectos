@@ -1,0 +1,36 @@
+{
+ "pais": "Uzbekistán",
+ "iso3": "UZB",
+ "iso2": "UZ",
+ "nombre_en": "Uzbekistan",
+ "variable": "viento",
+ "imagen": "UZB_viento.webp",
+ "rejilla": "UZB_viento_rejilla.json",
+ "caja": [
+  0.01635,
+  0.03,
+  0.72537,
+  0.97
+ ],
+ "encuadre": [
+  54.60201,
+  35.84538,
+  74.52247,
+  46.73102
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 447830,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.4591,
+ "p10": 3.9155,
+ "p50": 6.9679,
+ "p90": 7.9414,
+ "p2": 2.6092,
+ "p98": 8.3323,
+ "min": 1.126,
+ "max": 11.6676,
+ "sobre_umbral": 0.4896,
+ "pixeles": 529069
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Japón",
+ "iso3": "JPN",
+ "iso2": "JP",
+ "nombre_en": "Japan",
+ "variable": "viento",
+ "imagen": "JPN_viento.webp",
+ "rejilla": "JPN_viento_rejilla.json",
+ "caja": [
+  0.0227,
+  0.03,
+  0.61866,
+  0.97
+ ],
+ "encuadre": [
+  127.22248,
+  28.68044,
+  147.20292,
+  47.55282
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 373508,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.9129,
+ "p10": 3.63,
+ "p50": 4.8224,
+ "p90": 6.2763,
+ "p2": 2.9349,
+ "p98": 7.4449,
+ "min": 1.5125,
+ "max": 13.6626,
+ "sobre_umbral": 0.0368,
+ "pixeles": 381196
+}

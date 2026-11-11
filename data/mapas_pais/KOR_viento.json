@@ -1,0 +1,36 @@
+{
+ "pais": "Corea del Sur",
+ "iso3": "KOR",
+ "iso2": "KR",
+ "nombre_en": "South Korea",
+ "variable": "viento",
+ "imagen": "KOR_viento.webp",
+ "rejilla": "KOR_viento_rejilla.json",
+ "caja": [
+  0.02256,
+  0.03,
+  0.62101,
+  0.97
+ ],
+ "encuadre": [
+  124.10905,
+  32.3293,
+  131.42523,
+  39.38408
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 98544,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.7581,
+ "p10": 3.5564,
+ "p50": 4.5914,
+ "p90": 6.2024,
+ "p2": 2.9359,
+ "p98": 7.4399,
+ "min": 1.7546,
+ "max": 12.1952,
+ "sobre_umbral": 0.036,
+ "pixeles": 744888
+}

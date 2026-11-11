@@ -1,0 +1,36 @@
+{
+ "pais": "Kosovo",
+ "iso3": "KOS",
+ "iso2": "XK",
+ "nombre_en": "Kosovo",
+ "variable": "irradiancia",
+ "imagen": "KOS_irradiancia.webp",
+ "rejilla": "KOS_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  19.7182,
+  41.36401,
+  22.07931,
+  43.68307
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 10913,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1416.3212,
+ "p10": 1382.6342,
+ "p50": 1422.6977,
+ "p90": 1439.8592,
+ "p2": 1367.793,
+ "p98": 1441.8668,
+ "min": 1360.1303,
+ "max": 1442.2296,
+ "sobre_umbral": 0.0,
+ "pixeles": 321856
+}

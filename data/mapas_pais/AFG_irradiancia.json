@@ -1,0 +1,36 @@
+{
+ "pais": "Afganistán",
+ "iso3": "AFG",
+ "iso2": "AF",
+ "nombre_en": "Afghanistan",
+ "variable": "irradiancia",
+ "imagen": "AFG_irradiancia.webp",
+ "rejilla": "AFG_irradiancia_rejilla.json",
+ "caja": [
+  0.01823,
+  0.03,
+  0.69382,
+  0.97
+ ],
+ "encuadre": [
+  59.33434,
+  27.93267,
+  76.04475,
+  39.74586
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 642182,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 2011.1671,
+ "p10": 1833.8398,
+ "p50": 2010.2454,
+ "p90": 2199.6792,
+ "p2": 1672.6095,
+ "p98": 2231.1624,
+ "min": 1632.3596,
+ "max": 2244.5611,
+ "sobre_umbral": 0.9303,
+ "pixeles": 271989
+}

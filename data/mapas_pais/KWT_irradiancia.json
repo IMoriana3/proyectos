@@ -1,0 +1,36 @@
+{
+ "pais": "Kuwait",
+ "iso3": "KWT",
+ "iso2": "KW",
+ "nombre_en": "Kuwait",
+ "variable": "irradiancia",
+ "imagen": "KWT_irradiancia.webp",
+ "rejilla": "KWT_irradiancia_rejilla.json",
+ "caja": [
+  0.02186,
+  0.03,
+  0.63268,
+  0.97
+ ],
+ "encuadre": [
+  46.23244,
+  28.05351,
+  48.73278,
+  30.51822
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 17474,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2031.9745,
+ "p10": 1937.7252,
+ "p50": 2057.935,
+ "p90": 2087.8733,
+ "p2": 1902.5381,
+ "p98": 2092.2223,
+ "min": 1891.5338,
+ "max": 2100.0083,
+ "sobre_umbral": 1.0,
+ "pixeles": 385696
+}

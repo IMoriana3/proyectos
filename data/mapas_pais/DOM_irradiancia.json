@@ -1,0 +1,36 @@
+{
+ "pais": "República Dominicana",
+ "iso3": "DOM",
+ "iso2": "DO",
+ "nombre_en": "Dominican Republic",
+ "variable": "irradiancia",
+ "imagen": "DOM_irradiancia.webp",
+ "rejilla": "DOM_irradiancia_rejilla.json",
+ "caja": [
+  0.01764,
+  0.03,
+  0.70368,
+  0.97
+ ],
+ "encuadre": [
+  -72.30984,
+  17.06556,
+  -68.0286,
+  20.35769
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 48440,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1984.1583,
+ "p10": 1923.1373,
+ "p50": 1989.6408,
+ "p90": 2032.8072,
+ "p2": 1898.4567,
+ "p98": 2061.716,
+ "min": 1892.1067,
+ "max": 2086.3027,
+ "sobre_umbral": 1.0,
+ "pixeles": 242245
+}

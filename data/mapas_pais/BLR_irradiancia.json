@@ -1,0 +1,36 @@
+{
+ "pais": "Bielorrusia",
+ "iso3": "BLR",
+ "iso2": "BY",
+ "nombre_en": "Belarus",
+ "variable": "irradiancia",
+ "imagen": "BLR_irradiancia.webp",
+ "rejilla": "BLR_irradiancia_rejilla.json",
+ "caja": [
+  0.01992,
+  0.03,
+  0.66528,
+  0.97
+ ],
+ "encuadre": [
+  22.40133,
+  50.44771,
+  33.48384,
+  56.84584
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 207499,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 1094.3995,
+ "p10": 1050.7,
+ "p50": 1090.39,
+ "p90": 1145.9656,
+ "p2": 1033.5479,
+ "p98": 1176.6722,
+ "min": 1023.3921,
+ "max": 1191.8667,
+ "sobre_umbral": 0.0,
+ "pixeles": 389520
+}

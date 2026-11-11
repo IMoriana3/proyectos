@@ -1,0 +1,36 @@
+{
+ "pais": "Dinamarca",
+ "iso3": "DNK",
+ "iso2": "DK",
+ "nombre_en": "Denmark",
+ "variable": "viento",
+ "imagen": "DNK_viento.webp",
+ "rejilla": "DNK_viento_rejilla.json",
+ "caja": [
+  0.01901,
+  0.03,
+  0.68062,
+  0.97
+ ],
+ "encuadre": [
+  7.52942,
+  54.05938,
+  15.71597,
+  58.19673
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 42696,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 8.2033,
+ "p10": 7.7746,
+ "p50": 8.1899,
+ "p90": 8.6494,
+ "p2": 7.3714,
+ "p98": 9.1494,
+ "min": 6.3212,
+ "max": 10.3455,
+ "sobre_umbral": 0.997,
+ "pixeles": 368964
+}

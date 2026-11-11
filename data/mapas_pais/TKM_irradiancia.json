@@ -1,0 +1,36 @@
+{
+ "pais": "Turkmenistán",
+ "iso3": "TKM",
+ "iso2": "TM",
+ "nombre_en": "Turkmenistan",
+ "variable": "irradiancia",
+ "imagen": "TKM_irradiancia.webp",
+ "rejilla": "TKM_irradiancia_rejilla.json",
+ "caja": [
+  0.0171,
+  0.03,
+  0.71279,
+  0.97
+ ],
+ "encuadre": [
+  51.30102,
+  33.91656,
+  67.78243,
+  43.86226
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 470850,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 1788.6333,
+ "p10": 1684.1672,
+ "p50": 1795.8553,
+ "p90": 1882.1678,
+ "p2": 1632.5548,
+ "p98": 1910.3741,
+ "min": 1585.6998,
+ "max": 1927.1979,
+ "sobre_umbral": 0.4834,
+ "pixeles": 233788
+}

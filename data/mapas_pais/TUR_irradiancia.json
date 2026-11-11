@@ -1,0 +1,36 @@
+{
+ "pais": "Turquía",
+ "iso3": "TUR",
+ "iso2": "TR",
+ "nombre_en": "Turkey",
+ "variable": "irradiancia",
+ "imagen": "TUR_irradiancia.webp",
+ "rejilla": "TUR_irradiancia_rejilla.json",
+ "caja": [
+  0.01285,
+  0.03,
+  0.78409,
+  0.97
+ ],
+ "encuadre": [
+  24.53131,
+  34.44015,
+  46.3089,
+  43.35283
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 780080,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 1682.668,
+ "p10": 1490.5959,
+ "p50": 1735.3049,
+ "p90": 1817.7556,
+ "p2": 1430.2383,
+ "p98": 1837.5891,
+ "min": 1363.434,
+ "max": 1873.3964,
+ "sobre_umbral": 0.2238,
+ "pixeles": 221507
+}

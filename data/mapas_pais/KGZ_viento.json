@@ -1,0 +1,36 @@
+{
+ "pais": "Kirguistán",
+ "iso3": "KGZ",
+ "iso2": "KG",
+ "nombre_en": "Kyrgyzstan",
+ "variable": "viento",
+ "imagen": "KGZ_viento.webp",
+ "rejilla": "KGZ_viento_rejilla.json",
+ "caja": [
+  0.01329,
+  0.03,
+  0.77665,
+  0.97
+ ],
+ "encuadre": [
+  68.34379,
+  38.53764,
+  81.14006,
+  43.83185
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 198990,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.7958,
+ "p10": 2.4844,
+ "p50": 4.3065,
+ "p90": 7.7931,
+ "p2": 1.797,
+ "p98": 10.2722,
+ "min": 0.9822,
+ "max": 21.8835,
+ "sobre_umbral": 0.159,
+ "pixeles": 569421
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Colombia",
+ "iso3": "COL",
+ "iso2": "CO",
+ "nombre_en": "Colombia",
+ "variable": "irradiancia",
+ "imagen": "COL_irradiancia.webp",
+ "rejilla": "COL_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -81.11294,
+  -6.90925,
+  -64.78363,
+  14.807
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1135118,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 1697.2167,
+ "p10": 1503.6052,
+ "p50": 1688.3222,
+ "p90": 1868.2285,
+ "p2": 1443.4138,
+ "p98": 1983.3398,
+ "min": 1404.7308,
+ "max": 2135.7502,
+ "sobre_umbral": 0.2144,
+ "pixeles": 247703
+}

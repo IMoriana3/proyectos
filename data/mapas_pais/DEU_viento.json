@@ -1,0 +1,36 @@
+{
+ "pais": "Alemania",
+ "iso3": "DEU",
+ "iso2": "DE",
+ "nombre_en": "Germany",
+ "variable": "viento",
+ "imagen": "DEU_viento.webp",
+ "rejilla": "DEU_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  4.51172,
+  46.04956,
+  16.36283,
+  55.97477
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 357674,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.3075,
+ "p10": 4.9905,
+ "p50": 6.3601,
+ "p90": 7.572,
+ "p2": 4.1716,
+ "p98": 8.2399,
+ "min": 1.5627,
+ "max": 10.8643,
+ "sobre_umbral": 0.2761,
+ "pixeles": 1685044
+}

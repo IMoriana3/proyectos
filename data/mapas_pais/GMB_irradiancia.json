@@ -1,0 +1,36 @@
+{
+ "pais": "Gambia",
+ "iso3": "GMB",
+ "iso2": "GM",
+ "nombre_en": "The Gambia",
+ "variable": "irradiancia",
+ "imagen": "GMB_irradiancia.webp",
+ "rejilla": "GMB_irradiancia_rejilla.json",
+ "caja": [
+  0.01285,
+  0.03,
+  0.78409,
+  0.97
+ ],
+ "encuadre": [
+  -17.1297,
+  12.48827,
+  -13.51871,
+  14.33672
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 10501,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2138.7125,
+ "p10": 2120.7831,
+ "p50": 2138.0979,
+ "p90": 2154.7734,
+ "p2": 2117.444,
+ "p98": 2161.5068,
+ "min": 2117.2153,
+ "max": 2164.2844,
+ "sobre_umbral": 1.0,
+ "pixeles": 74242
+}

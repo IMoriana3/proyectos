@@ -1,0 +1,36 @@
+{
+ "pais": "Suazilandia",
+ "iso3": "SWZ",
+ "iso2": "SZ",
+ "nombre_en": "Eswatini",
+ "variable": "viento",
+ "imagen": "SWZ_viento.webp",
+ "rejilla": "SWZ_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  30.41062,
+  -27.79626,
+  32.48968,
+  -25.316
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 17112,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.0366,
+ "p10": 3.9534,
+ "p50": 5.0524,
+ "p90": 6.0867,
+ "p2": 3.2436,
+ "p98": 6.8256,
+ "min": 2.0733,
+ "max": 9.7233,
+ "sobre_umbral": 0.0116,
+ "pixeles": 247801
+}

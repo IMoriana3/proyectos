@@ -1,0 +1,36 @@
+{
+ "pais": "Benín",
+ "iso3": "BEN",
+ "iso2": "BJ",
+ "nombre_en": "Benin",
+ "variable": "viento",
+ "imagen": "BEN_viento.webp",
+ "rejilla": "BEN_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -0.75693,
+  5.22424,
+  5.35423,
+  13.26519
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 116113,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.5171,
+ "p10": 3.5306,
+ "p50": 4.571,
+ "p90": 5.3728,
+ "p2": 3.1743,
+ "p98": 5.7285,
+ "min": 2.6943,
+ "max": 7.0499,
+ "sobre_umbral": 0.0,
+ "pixeles": 770674
+}

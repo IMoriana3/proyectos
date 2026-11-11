@@ -1,0 +1,36 @@
+{
+ "pais": "Eslovenia",
+ "iso3": "SVN",
+ "iso2": "SI",
+ "nombre_en": "Slovenia",
+ "variable": "irradiancia",
+ "imagen": "SVN_irradiancia.webp",
+ "rejilla": "SVN_irradiancia_rejilla.json",
+ "caja": [
+  0.01892,
+  0.03,
+  0.68221,
+  0.97
+ ],
+ "encuadre": [
+  13.06526,
+  44.94364,
+  16.8153,
+  47.28396
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 20327,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1277.8969,
+ "p10": 1262.0474,
+ "p50": 1270.8281,
+ "p90": 1302.3453,
+ "p2": 1257.7249,
+ "p98": 1315.5603,
+ "min": 1247.0685,
+ "max": 1381.2315,
+ "sobre_umbral": 0.0,
+ "pixeles": 257661
+}

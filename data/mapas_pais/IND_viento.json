@@ -1,0 +1,36 @@
+{
+ "pais": "India",
+ "iso3": "IND",
+ "iso2": "IN",
+ "nombre_en": "India",
+ "variable": "viento",
+ "imagen": "IND_viento.webp",
+ "rejilla": "IND_viento_rejilla.json",
+ "caja": [
+  0.02189,
+  0.03,
+  0.63228,
+  0.97
+ ],
+ "encuadre": [
+  65.8059,
+  3.68889,
+  99.69976,
+  39.33412
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 3150747,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.4642,
+ "p10": 3.1467,
+ "p50": 4.4712,
+ "p90": 5.7208,
+ "p2": 1.9572,
+ "p98": 6.4569,
+ "min": 0.5637,
+ "max": 14.9153,
+ "sobre_umbral": 0.0062,
+ "pixeles": 962163
+}

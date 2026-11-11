@@ -1,0 +1,36 @@
+{
+ "pais": "Eritrea",
+ "iso3": "ERI",
+ "iso2": "ER",
+ "nombre_en": "Eritrea",
+ "variable": "viento",
+ "imagen": "ERI_viento.webp",
+ "rejilla": "ERI_viento_rejilla.json",
+ "caja": [
+  0.01997,
+  0.03,
+  0.66457,
+  0.97
+ ],
+ "encuadre": [
+  35.88763,
+  11.45685,
+  43.65989,
+  18.7951
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 122538,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.7202,
+ "p10": 3.82,
+ "p50": 5.5878,
+ "p90": 7.8466,
+ "p2": 3.0359,
+ "p98": 9.5749,
+ "min": 1.5377,
+ "max": 16.9739,
+ "sobre_umbral": 0.1882,
+ "pixeles": 706657
+}

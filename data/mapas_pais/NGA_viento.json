@@ -1,0 +1,36 @@
+{
+ "pais": "Nigeria",
+ "iso3": "NGA",
+ "iso2": "NG",
+ "nombre_en": "Nigeria",
+ "variable": "viento",
+ "imagen": "NGA_viento.webp",
+ "rejilla": "NGA_viento_rejilla.json",
+ "caja": [
+  0.01903,
+  0.03,
+  0.68033,
+  0.97
+ ],
+ "encuadre": [
+  1.71117,
+  2.73486,
+  15.62984,
+  15.22543
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 907501,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.8252,
+ "p10": 3.2622,
+ "p50": 4.7943,
+ "p90": 6.4906,
+ "p2": 2.5801,
+ "p98": 6.9803,
+ "min": 0.7361,
+ "max": 11.5769,
+ "sobre_umbral": 0.0184,
+ "pixeles": 1668080
+}

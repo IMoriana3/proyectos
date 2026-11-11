@@ -1,0 +1,36 @@
+{
+ "pais": "Cuba",
+ "iso3": "CUB",
+ "iso2": "CU",
+ "nombre_en": "Cuba",
+ "variable": "viento",
+ "imagen": "CUB_viento.webp",
+ "rejilla": "CUB_viento_rejilla.json",
+ "caja": [
+  0.01285,
+  0.03,
+  0.78409,
+  0.97
+ ],
+ "encuadre": [
+  -85.81495,
+  18.41449,
+  -73.26754,
+  24.55803
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 109929,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.6788,
+ "p10": 4.5693,
+ "p50": 5.8035,
+ "p90": 6.55,
+ "p2": 3.4221,
+ "p98": 7.1592,
+ "min": 1.7346,
+ "max": 11.4154,
+ "sobre_umbral": 0.0326,
+ "pixeles": 245027
+}

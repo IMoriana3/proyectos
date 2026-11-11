@@ -1,0 +1,36 @@
+{
+ "pais": "Suiza",
+ "iso3": "CHE",
+ "iso2": "CH",
+ "nombre_en": "Switzerland",
+ "variable": "irradiancia",
+ "imagen": "CHE_irradiancia.webp",
+ "rejilla": "CHE_irradiancia_rejilla.json",
+ "caja": [
+  0.01752,
+  0.03,
+  0.70566,
+  0.97
+ ],
+ "encuadre": [
+  5.59386,
+  45.34072,
+  10.82757,
+  48.22117
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 41436,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1268.7357,
+ "p10": 1239.8308,
+ "p50": 1265.7003,
+ "p90": 1309.4183,
+ "p2": 1233.5338,
+ "p98": 1314.3402,
+ "min": 1215.6567,
+ "max": 1317.1276,
+ "sobre_umbral": 0.0,
+ "pixeles": 262162
+}
