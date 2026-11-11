@@ -68,7 +68,7 @@ declare -A PISO=(
   # abajo sean la MISMA cuenta, sacada dos veces: del dato y de lo pintado.
   # Cuatro mutantes vistos en rojo —una cifra que cuenta de menos, un filtro
   # que no filtra, la barra a partes iguales y los filtros impresos—.
-  [test_homologacion.js]=37
+  [test_homologacion.js]=43
   # La cartera del usuario NO la probaba nadie: de los 33 arneses, el único que
   # nombraba `cartera-tabla.html` era `test_pwa.js`, y lo que hacía con ella era
   # listarla en la caché. MEDIDO: un mutante que invierte la migración de fases

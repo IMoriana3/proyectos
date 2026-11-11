@@ -41,7 +41,7 @@ const hasta = script.indexOf('/* ---------- estado ---------- */');
 check('el bloque de datos está delimitado', hasta > 0);
 const caja = {};
 vm.createContext(caja);
-vm.runInContext(script.slice(0, hasta) + '\n;this.D={VER,REVISION,EV,FAM,WHO,TOOLS,REQS,FINDS,SOURCES,T};', caja);
+vm.runInContext(script.slice(0, hasta) + '\n;this.D={VER,REVISION,EV,FAM,WHO,TOOLS,REQS,FINDS,SOURCES,T,MEDIDAS};', caja);
 const D = caja.D;
 
 /* La validación va como función para poder darle un dato roto a propósito:
@@ -57,6 +57,18 @@ function validar(d) {
     for (const k of ['es', 'en', 'hes', 'hen', 'ces', 'cen'])
       if (!r[k] || String(r[k]).trim().length < 5) mal.push('nº ' + r.n + ': texto «' + k + '» vacío');
     for (const t of r.t) if (!d.TOOLS[t[0]]) mal.push('nº ' + r.n + ': herramienta desconocida «' + t[0] + '»');
+    /* LO MEDIDO EN PLANTA VA ETIQUETADO. Una cifra de planta sólo entra por `mes`/`men`, y
+       sólo con `med` apuntando a una campaña que diga planta, fuente y periodo. */
+    const M = d.MEDIDAS || {};
+    if (r.med) {
+      const m = M[r.med];
+      if (!m || !m.planta || !m.es || !m.en || !/\d{2}\/\d{2}/.test(m.periodo || '')) mal.push('nº ' + r.n + ': campaña de medida «' + r.med + '» sin planta, fuente o periodo');
+      for (const k of ['mes', 'men']) if (!r[k] || String(r[k]).trim().length < 5) mal.push('nº ' + r.n + ': medido «' + k + '» vacío');
+    } else if (r.mes || r.men) mal.push('nº ' + r.n + ': cifra medida sin campaña (`med`)');
+    /* y la etiqueta no se teclea a mano en ningún texto: se compone en un solo sitio */
+    for (const k of ['es', 'en', 'hes', 'hen', 'ces', 'cen', 'mes', 'men'])
+      for (const c of Object.keys(M)) if (String(r[k] || '').includes(M[c].periodo) || /Medido ·|Measured ·/.test(String(r[k] || '')))
+        mal.push('nº ' + r.n + ': «' + k + '» lleva la etiqueta de medida tecleada a mano');
   });
   d.FINDS.forEach((h, i) => h.r.forEach(n => {
     if (!d.REQS.some(r => r.n === n)) mal.push('hallazgo ' + (i + 1) + ' arrastra el nº ' + n + ', que no existe');
@@ -66,11 +78,24 @@ function validar(d) {
 const mal = validar(D);
 check('los ' + D.REQS.length + ' requisitos son coherentes (nivel, bloque, responsable, textos, herramientas)', !mal.length, mal.slice(0, 4).join(' · '));
 // el mismo validador, con un dato roto: tiene que cantar los cuatro
-const roto = JSON.parse(JSON.stringify({ EV: D.EV, FAM: D.FAM, WHO: D.WHO, TOOLS: D.TOOLS, REQS: D.REQS, FINDS: D.FINDS }));
+const roto = JSON.parse(JSON.stringify({ EV: D.EV, FAM: D.FAM, WHO: D.WHO, TOOLS: D.TOOLS, REQS: D.REQS, FINDS: D.FINDS, MEDIDAS: D.MEDIDAS }));
 roto.REQS[2].ev = 'probado'; roto.REQS[5].t.push(['nohay']); roto.REQS[8].hen = ''; roto.FINDS[0].r.push(999);
 const malRoto = validar(roto);
 check('el validador ve un nivel inventado, una herramienta que no existe, un texto vacío y un hallazgo colgado',
   malRoto.length === 4, malRoto.length + ' avisos: ' + malRoto.join(' · '));
+
+// y con lo medido roto de las cuatro maneras en que se puede colar una cifra sin etiqueta
+const sinEtiqueta = JSON.parse(JSON.stringify({ EV: D.EV, FAM: D.FAM, WHO: D.WHO, TOOLS: D.TOOLS, REQS: D.REQS, FINDS: D.FINDS, MEDIDAS: D.MEDIDAS }));
+const conMed = D.REQS.filter(r => r.med).map(r => r.n), sinMed = D.REQS.filter(r => !r.med).map(r => r.n);
+sinEtiqueta.REQS[conMed[0] - 1].med = 'nohay';                       // campaña que no existe
+sinEtiqueta.REQS[conMed[1] - 1].men = '';                            // medido sin su inglés
+sinEtiqueta.REQS[sinMed[0] - 1].mes = 'Medido en algún sitio: 3 s';  // cifra medida sin campaña
+sinEtiqueta.REQS[sinMed[1] - 1].hes += ' Medido · El Burgo I: 3 s.';   // etiqueta tecleada a mano fuera de la línea medida
+const malMed = validar(sinEtiqueta);
+check('el validador ve una campaña que no existe, un medido sin traducir, una cifra sin campaña y una etiqueta tecleada a mano',
+  malMed.length === 4, malMed.length + ' avisos: ' + malMed.join(' · '));
+check('hay ' + conMed.length + ' requisitos con medida de planta y todos cuelgan de una campaña con planta, fuente y periodo',
+  conMed.length >= 5 && Object.values(D.MEDIDAS).every(m => m.planta && m.es && m.en && m.periodo && m.nes && m.prog), conMed.join(','));
 
 check('hay requisitos en los nueve bloques', D.FAM.every(f => D.REQS.some(r => r.f === f.k)),
   D.FAM.filter(f => !D.REQS.some(r => r.f === f.k)).map(f => f.k).join(','));
@@ -182,8 +207,26 @@ check('la fecha de revisión es una fecha', /^\d{4}-\d{2}-\d{2}$/.test(D.REVISIO
   const p2 = await browser.newPage({ viewport: { width: 1320, height: 900 } });
   await p2.goto(BASE + '/homologacion.html?lang=en', { waitUntil: 'load' });
   check('`?lang=en` abre en inglés (para pasar el enlace a un cliente)', await p2.evaluate(() => document.documentElement.lang) === 'en');
+  const medEn = await p2.evaluate(() => [...document.querySelectorAll('.req .tag-medido')].map(x => x.textContent));
+  check('y en inglés la etiqueta también va: «Measured · El Burgo I · NCU logs · 26/05–04/10/2026»',
+    medEn.length === conMed.length && medEn.every(t => t === 'Measured · El Burgo I · NCU logs · 26/05–04/10/2026'), JSON.stringify(medEn.slice(0, 2)));
   await p2.close();
   await page.click('#langs button[data-lang="es"]');
+  /* — lo medido en planta, en pantalla: siempre detrás de su etiqueta — */
+  const med = await page.evaluate(() => ({
+    tags: [...document.querySelectorAll('.req .tag-medido')].map(x => x.textContent),
+    empieza: [...document.querySelectorAll('.req .med')].every(x => x.firstElementChild && x.firstElementChild.className === 'tag-medido'),
+    lang: document.documentElement.lang,
+    fuera: [...document.querySelectorAll('.req')].filter(x => { const c = x.cloneNode(true); c.querySelectorAll('.tag-medido').forEach(m => m.remove()); return /26\/05–04\/10\/2026|logs de NCU|Medido ·/.test(c.textContent); }).map(x => x.id),
+    r2: (document.querySelector('#r-2 .med') || { textContent: '' }).textContent, ev2: document.querySelector('#r-2').dataset.ev,
+    ev3: document.querySelector('#r-3').dataset.ev, ev19: document.querySelector('#r-19').dataset.ev,
+    titulo: (document.querySelector('#r-2 .tag-medido') || { title: '' }).title }));
+  check('cada cifra medida en planta va detrás de su etiqueta: ' + conMed.length + ' líneas, «Medido · El Burgo I · logs de NCU · 26/05–04/10/2026»',
+    med.tags.length === conMed.length && med.tags.every(t => t === 'Medido · El Burgo I · logs de NCU · 26/05–04/10/2026') && med.empieza, JSON.stringify(med.tags.slice(0, 2)));
+  check('y la etiqueta no aparece tecleada en ningún otro sitio de la ficha', med.lang === 'es' && med.fuera.length === 0, med.lang + ' ' + med.fuera.join(','));
+  check('el requisito 2 dice lo medido con su n, y los niveles son los de los datos (2 y 3 medidos, 19 simulado)',
+    /196 s de mediana/.test(med.r2) && /9\.112 maniobras/.test(med.r2) && med.ev2 === 'medido' && med.ev3 === 'medido' && med.ev19 === 'simulado'
+    && /377 alarmas/.test(med.titulo) && /abanderamientos_reales\.py/.test(med.titulo), med.r2.slice(0, 120));
 
   // ── 6 · en papel ───────────────────────────────────────────────────────
   await page.emulateMedia({ media: 'print' });
