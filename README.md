@@ -71,6 +71,12 @@ así que en una fila de fichas las acciones quedan a la misma altura. Los iconos
 de 24, trazo de 1,6, plata con un solo elemento clave en naranja; los accesos rápidos de la cabecera de
 Herramientas llevan los mismos. Una herramienta nueva sin icono sale con la célula genérica.
 
+La célula del icono va del **color de su familia** (el de los puntos del filtro, oscurecido para que el
+dibujo en blanco se lea), y al pasar el ratón la ficha se levanta y la célula se inclina como un
+seguidor. A la izquierda, la **barra lateral** es un índice de plantas y herramientas por familia, con
+un buscador «Ir a…»: el nombre lleva a la ficha (quitando los filtros si la escondían) y la flecha abre
+el programa. Por debajo de 1100 px se abre como cajón con el botón ☰ de la barra.
+
 ## Funcionalidades
 - Tarjetas por proyecto con estado (Producción / En desarrollo / Demo / Pausado / Deprecado), búsqueda, filtros y orden.
 - Documentación embebida: `docId` → `docs/<docId>.md`, o `docUrl` → README del repo.

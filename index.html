@@ -437,6 +437,79 @@ body.presenta .solo-pres{display:inline-block}
   .tool .meta{padding:0 14px 10px 18px}
 }
 
+/* ---------- EL COLOR DE LA FAMILIA (11-2026, «es un poco soso») ----------
+   La célula del icono va del color de la familia —el de los puntos del filtro, oscurecido lo justo
+   para que el dibujo en blanco se lea (≥3:1)— y el dibujo, en blanco. Así se distinguen las familias
+   de un vistazo, en la rejilla y en la barra lateral. */
+[data-fam]{--t:#6A7889}
+[data-fam="diseno"]{--t:#2797C0}
+[data-fam="simulacion"]{--t:#C98508}
+[data-fam="obra"]{--t:#D9661A}
+[data-fam="operacion"]{--t:#2E9E62}
+[data-fam="cartera"]{--t:#D63B50}
+.tool .ico,.lado .mini{--ico-bg:var(--t);background:var(--t);color:#FFFFFF;border:0;border-radius:14px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 0 rgba(0,0,0,.08)}
+.tool .ico .picto .a,.lado .mini .picto .a{stroke:#FFFFFF}
+.tool .ico .picto .ad,.lado .mini .picto .ad{stroke:#FFFFFF;fill:#FFFFFF;fill-opacity:.28}
+.tool .ico .picto .af,.lado .mini .picto .af{fill:#FFFFFF}
+.tool .ico .picto .f,.lado .mini .picto .f{fill-opacity:.2}
+.tool .ico .picto .t,.lado .mini .picto .t{opacity:.7}
+/* algo de vida: la ficha se levanta y la célula se inclina, como un seguidor buscando el sol */
+.tool{transition:transform .18s ease,box-shadow .18s ease,border-color .15s}
+.tool:hover{transform:translateY(-2px);box-shadow:0 12px 26px -16px rgba(14,24,38,.45)}
+.tool .ico{transition:transform .4s cubic-bezier(.3,1.6,.5,1)}
+.tool:hover .ico{transform:rotate(-8deg)}
+.tool.open:hover{transform:none}
+/* la ficha a la que se llega desde la barra lateral, señalada un momento */
+@keyframes resalta{0%{box-shadow:0 0 0 3px var(--t,var(--amb))}100%{box-shadow:0 0 0 3px transparent}}
+.tool.resalta{animation:resalta 1.8s ease-out}
+
+/* ---------- LA BARRA LATERAL (11-2026) ----------
+   Un índice para llegar a cada programa: las plantas y las herramientas por familia, cada una con su
+   icono. El nombre lleva a su ficha; la flecha abre el programa. En pantallas anchas va fija a la
+   izquierda; por debajo de 1100 px sale como cajón con el botón ☰ de la barra. */
+.lado-btn{display:none;align-items:center;justify-content:center;width:36px;height:34px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer}
+.lado-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.lado{display:none;flex-direction:column;background:var(--panel);border:1px solid var(--line);min-height:0}
+.lado-q{padding:12px 12px 10px;border-bottom:1px solid var(--line-soft)}
+.lado-q input{width:100%;font-family:var(--mono);font-size:.8rem;color:var(--text);background:var(--panel-2);border:1px solid var(--line);padding:8px 10px;outline:none}
+.lado-q input:focus{border-color:var(--amb)}
+.lado-lista{overflow:auto;padding:0 0 12px;overscroll-behavior:contain}
+.lado details{border-bottom:1px solid var(--line-soft)}
+.lado summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:11px 14px 9px;
+  font-family:var(--display);font-size:.72rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.lado summary::-webkit-details-marker{display:none}
+.lado summary::after{content:"▾";margin-left:auto;color:var(--muted-2);transition:transform .15s}
+.lado details:not([open]) summary::after{transform:rotate(-90deg)}
+.lado summary i{width:8px;height:8px;border-radius:50%;background:var(--t)}
+.lado summary .n{font-family:var(--mono);letter-spacing:0;font-weight:400;color:var(--muted-2)}
+.lado summary:hover{color:var(--text)}
+.lado .it{display:flex;align-items:center;gap:2px;padding:0 8px 0 10px}
+.lado .it:hover{background:var(--panel-hi)}
+.lado .va{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:5px 4px;color:var(--text);text-decoration:none;font-size:.88rem;line-height:1.25}
+.lado .va span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+.lado .mini{flex:none;width:26px;height:26px;border-radius:7px;display:grid;place-items:center}
+.lado .mini .picto{width:17px;height:17px}
+.lado .pin{flex:none;width:8px;height:8px;margin:0 9px;background:var(--amb)}
+.lado .pin.oferta{background:var(--fos)}
+.lado .ir{flex:none;width:28px;height:28px;display:grid;place-items:center;color:var(--muted-2);text-decoration:none;opacity:0;transition:opacity .12s}
+.lado .it:hover .ir,.lado .ir:focus-visible{opacity:1}
+.lado .ir:hover{color:var(--amb)}
+.lado .vacio{padding:14px;color:var(--muted-2);font-size:.85rem}
+.lado-velo{display:none}
+@media (min-width:1100px){
+  main.wrap{display:grid;grid-template-columns:272px minmax(0,1fr);column-gap:26px;align-items:start}
+  main.wrap>*:not(.lado){grid-column:2;min-width:0}
+  .lado{display:flex;grid-column:1;grid-row:1/span 40;position:sticky;top:calc(var(--bar-h,64px) + 16px);margin-top:36px;
+    max-height:calc(100vh - var(--bar-h,64px) - 32px)}
+}
+@media (max-width:1099px){
+  .lado-btn{display:inline-flex}
+  .lado.abierta{display:flex;position:fixed;left:0;top:0;bottom:0;width:min(86vw,330px);z-index:70;box-shadow:0 0 40px rgba(0,0,0,.35)}
+  .lado-velo.abierta{display:block;position:fixed;inset:0;z-index:65;background:rgba(14,24,38,.45)}
+}
+@media (hover:none){ .lado .ir{opacity:1} }
+
 /* ---------- PLANTAS ---------- */
 .pcard{padding:0 0 16px}
 .pcard .card-toggle{padding:14px 18px 2px 20px}
@@ -648,7 +721,6 @@ html[data-luz]:not([data-luz="noche"]) ::selection{color:#FFFFFF}
 html[data-luz]:not([data-luz="noche"]) .chip.on,html[data-luz]:not([data-luz="noche"]) .pres[aria-pressed="true"],html[data-luz]:not([data-luz="noche"]) .instmsg button:not(.x){color:#FFFFFF}
 html[data-luz]:not([data-luz="noche"]) .card:hover{border-color:#9FB3C8}
 /* los iconos, de día: tinta oscura sobre la célula clara (la plata de día, #6A7889, los dejaba lavados) */
-html[data-luz]:not([data-luz="noche"]) .tool .ico{color:#3F4D5C;background-image:repeating-linear-gradient(90deg,rgba(63,77,92,.05) 0 1px,transparent 1px 9px)}
 /* `:not(:hover)`: sin él, de día esta regla ganaba al relleno naranja del hover y el texto, blanco, se
    quedaba sobre blanco */
 html[data-luz]:not([data-luz="noche"]) .tool .acts .btn.primary:not(:hover){background:var(--panel)}
@@ -705,6 +777,7 @@ body,.bar,.hero-scene{transition:background-color .6s,color .6s}</style>
       </div>
     </div>
     <div class="bar-right">
+      <button class="lado-btn" id="lado-btn" type="button" aria-label="Índice de plantas y herramientas" aria-controls="lado" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       <nav class="bar-nav" aria-label="Secciones">
         <a href="#plantas">Plantas</a><a href="#herramientas">Herramientas</a><a href="#verifica" class="solo-pres">Verificación</a>
       </nav>
@@ -769,6 +842,12 @@ body,.bar,.hero-scene{transition:background-color .6s,color .6s}</style>
 
 
 <main class="wrap">
+  <!-- LA BARRA LATERAL: índice de plantas y herramientas. La pinta `renderLado`. -->
+  <aside class="lado" id="lado" aria-label="Índice de plantas y herramientas">
+    <div class="lado-q"><input id="lado-q" type="search" placeholder="Ir a…" autocomplete="off" aria-label="Buscar en el índice"></div>
+    <nav class="lado-lista" id="lado-lista"></nav>
+  </aside>
+  <div class="lado-velo" id="lado-velo"></div>
 
   <section class="plants-sec" id="plantas">
     <h2 class="sec-title">Proyectos · plantas <span class="cnt" id="plants-cnt"></span><span class="db-acceso" id="db-acceso"></span><a class="tabla-link pri" href="cartera-tabla.html" title="Ficha técnica editable de todas las plantas">▦ Cartera técnica</a></h2>
@@ -1034,6 +1113,17 @@ function PICTO(p){
   const d = PICTOS[typeof p === 'string' ? p : p.name] || PICTO_GENERICO;
   return '<svg class="picto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+d+'</svg>';
 }
+/* LAS FAMILIAS de herramientas. Una herramienta nueva que no esté aquí sale en «Otras» y se ve:
+   no se esconde. */
+const FAMILIAS = [
+  { k:'diseno', n:'Diseño y oferta', c:'#68C0D8', t:['Diseño de red de comunicaciones','Generador de implantaciones','Comparador de estructuras','Alta de planta','Modelo de propagación RF','Diagnóstico de cobertura Zigbee'] },
+  { k:'simulacion', n:'Simulación', c:'#F2C94C', t:['Núcleo de cálculo SolarGPT','Simulador de backtracking','Simulador de radiación difusa','Simulador de abanderamiento','Producción 3D por string','Careo SolarGPT ↔ PVSyst','Simulador de batería','Análisis meteorológico','Gemelo digital de seguidor y control'] },
+  { k:'obra', n:'Obra y puesta en marcha', c:'#F09030', t:['Control de obra','Seguimiento PEM','Visor de levantamiento','Visor de geometría as-built','TCU Toolbox','IPs de plantas'] },
+  { k:'operacion', n:'Operación', c:'#5BBF8A', t:['SCADA','SCADA fija · Victron VRM','Importador de logs de NCU','Medidor de tráfico','Mapa Modbus','Agente Modbus y collector','Simulador de planta equipo a equipo','Instalación cubierta Gorraiz'] },
+  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV'] }
+];
+const FAMILIA_DE = {}; FAMILIAS.forEach(f=>f.t.forEach(n=>{ FAMILIA_DE[n]=f.k; }));
+function familiaDe(p){ return FAMILIA_DE[p && p.name] || 'otras'; }
 /* los accesos rápidos de la cabecera de Herramientas, con el dibujo de su ficha */
 document.querySelectorAll('.tabla-link[data-picto]').forEach(a => a.insertAdjacentHTML('afterbegin', PICTO(a.dataset.picto)));
 </script>
@@ -2711,7 +2801,7 @@ function verChip(p){
   if(p.verFresca) return `<span class="ver">${esc(p.version)}</span>`;
   return `<span class="ver pend" title="Leida el ${esc(p.verLeida)} en este navegador. Ahora no se ha podido comprobar, asi que puede haberse quedado atras.">${esc(p.version)} (ult.)</span>`;
 }
-  return `<article class="card tool s-${p.status} ${opened?'open':''}" style="--c:${st.color}">
+  return `<article class="card tool s-${p.status} ${opened?'open':''}" id="t-${slug(p.name)}" data-fam="${typeof familiaDe==='function'?familiaDe(p):'otras'}" style="--c:${st.color}">
     <button class="card-toggle" aria-expanded="${opened}" aria-controls="${id}">
       <div class="thead">
         <span class="ico">${typeof PICTO==='function' ? PICTO(p) : ''}</span>
@@ -3690,17 +3780,6 @@ if(typeof renderPlants==='function'){
   renderPlants=function(){ const r=_renderPlantsBase.apply(this,arguments); try{ cielosPlantas(); }catch(e){ console.warn('cielos de las plantas:',e); } return r; };
 }
 
-/* LAS FAMILIAS de herramientas. Una herramienta nueva que no esté aquí sale en «Otras» y se ve:
-   no se esconde. */
-const FAMILIAS = [
-  { k:'diseno', n:'Diseño y oferta', c:'#68C0D8', t:['Diseño de red de comunicaciones','Generador de implantaciones','Comparador de estructuras','Alta de planta','Modelo de propagación RF','Diagnóstico de cobertura Zigbee'] },
-  { k:'simulacion', n:'Simulación', c:'#F2C94C', t:['Núcleo de cálculo SolarGPT','Simulador de backtracking','Simulador de radiación difusa','Simulador de abanderamiento','Producción 3D por string','Careo SolarGPT ↔ PVSyst','Simulador de batería','Análisis meteorológico','Gemelo digital de seguidor y control'] },
-  { k:'obra', n:'Obra y puesta en marcha', c:'#F09030', t:['Control de obra','Seguimiento PEM','Visor de levantamiento','Visor de geometría as-built','TCU Toolbox','IPs de plantas'] },
-  { k:'operacion', n:'Operación', c:'#5BBF8A', t:['SCADA','SCADA fija · Victron VRM','Importador de logs de NCU','Medidor de tráfico','Mapa Modbus','Agente Modbus y collector','Simulador de planta equipo a equipo','Instalación cubierta Gorraiz'] },
-  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV'] }
-];
-const FAMILIA_DE = {}; FAMILIAS.forEach(f=>f.t.forEach(n=>{ FAMILIA_DE[n]=f.k; }));
-function familiaDe(p){ return FAMILIA_DE[p && p.name] || 'otras'; }
 function renderFamilias(){
   const el=document.getElementById('familias'); if(!el || typeof TOOLS==='undefined') return;
   const hayOtras=TOOLS.some(p=>familiaDe(p)==='otras');
@@ -3730,7 +3809,69 @@ document.getElementById('luz-btn').addEventListener('click',()=>{
   try{ const u=new URL(location.href); if(LUZ.modo==='auto') u.searchParams.delete('luz'); else u.searchParams.set('luz',LUZ.modo); history.replaceState(history.state,'',u); }catch(e){}
   LUZ.aplica();
 });
-[cielosPlantas, renderFamilias, ()=>LUZ.aplica()].forEach(f=>{ try{ f(); }catch(e){ console.error(e); } });
+/* LA BARRA LATERAL: índice de plantas y herramientas (11-2026). El nombre lleva a la ficha —quitando
+   antes los filtros si la escondían— y la señala un momento; la flecha abre el programa. */
+function renderLado(){
+  const lista=document.getElementById('lado-lista'); if(!lista || typeof TOOLS==='undefined') return;
+  const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+  const q=norm((document.getElementById('lado-q')||{}).value||'').trim();
+  const casa=n=>!q || norm(n).includes(q);
+  const flecha='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>';
+  const urlDe=p=>{ const l=Array.isArray(p.links)?p.links.find(x=>x.label&&x.url):null; return l?l.url:(p.url||''); };
+  const grupo=(clave,titulo,color,filas)=>filas.length?`<details ${clave==='plantas'&&!q?'':'open'} data-fam="${clave}"><summary>${color?'<i aria-hidden="true"></i>':''}${esc(titulo)}<span class="n">${filas.length}</span></summary>${filas.join('')}</details>`:'';
+  let html='';
+  if(typeof PLANTS_ORD!=='undefined'){
+    const filas=PLANTS_ORD.filter(pl=>casa(pl.name)).map(pl=>
+      `<div class="it"><a class="va" href="#plantas" data-planta="${esc(pl.name)}"><i class="pin ${pl.oferta?'oferta':''}" aria-hidden="true"></i><span>${esc(pl.name)}</span></a></div>`);
+    html+=grupo('plantas','Plantas','',filas);
+  }
+  const fams=FAMILIAS.concat(TOOLS.some(p=>familiaDe(p)==='otras')?[{k:'otras',n:'Otras'}]:[]);
+  fams.forEach(f=>{
+    const filas=TOOLS.filter(p=>familiaDe(p)===f.k && casa(p.name)).sort((a,b)=>a.name.localeCompare(b.name,'es')).map(p=>{
+      const u=urlDe(p);
+      return `<div class="it" data-fam="${f.k}"><a class="va" href="#t-${slug(p.name)}" data-tool="${esc(p.name)}"><span class="mini">${PICTO(p)}</span><span>${esc(p.name)}</span></a>`
+        +(u?`<a class="ir" href="${esc(u)}" target="_blank" rel="noopener" aria-label="Abrir ${esc(p.name)}" title="Abrir ${esc(p.name)}">${flecha}</a>`:'')+`</div>`;
+    });
+    html+=grupo(f.k,f.n,true,filas);
+  });
+  lista.innerHTML=html||'<div class="vacio">Nada con ese nombre.</div>';
+}
+function cierraLado(){
+  ['lado','lado-velo'].forEach(id=>{ const e=document.getElementById(id); if(e) e.classList.remove('abierta'); });
+  const b=document.getElementById('lado-btn'); if(b) b.setAttribute('aria-expanded','false');
+}
+function irAHerramienta(nombre){
+  // si los filtros la esconden, se quitan: quien la pide en el índice quiere verla
+  if(!filtered().some(p=>p.name===nombre)){
+    state.q=''; state.filter='all'; state.familia='todas'; if($q) $q.value='';
+    renderChips(); renderGauges(); renderFamilias(); renderGrid();
+  }
+  const c=document.getElementById('t-'+slug(nombre)); if(!c) return;
+  c.scrollIntoView({block:'center'});
+  c.classList.remove('resalta'); void c.offsetWidth; c.classList.add('resalta');
+}
+document.getElementById('lado-lista').addEventListener('click',e=>{
+  const a=e.target.closest('a.va'); if(!a) return;
+  e.preventDefault(); cierraLado();
+  if(a.dataset.tool) irAHerramienta(a.dataset.tool);
+  else if(a.dataset.planta){
+    const c=[...document.querySelectorAll('#plants article.card')].find(x=>x.dataset.planta===a.dataset.planta);
+    if(c){ c.scrollIntoView({block:'center'}); }
+  }
+});
+document.getElementById('lado-q').addEventListener('input',renderLado);
+document.getElementById('lado-btn').addEventListener('click',()=>{
+  const l=document.getElementById('lado'), abre=!l.classList.contains('abierta');
+  l.classList.toggle('abierta',abre); document.getElementById('lado-velo').classList.toggle('abierta',abre);
+  document.getElementById('lado-btn').setAttribute('aria-expanded',String(abre));
+  if(abre) document.getElementById('lado-q').focus();
+});
+document.getElementById('lado-velo').addEventListener('click',cierraLado);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') cierraLado(); });
+/* la barra lateral se pega bajo la cabecera, que cambia de alto según el ancho */
+function altoBarra(){ const b=document.querySelector('.bar'); if(b) document.documentElement.style.setProperty('--bar-h', b.offsetHeight+'px'); }
+window.addEventListener('resize',altoBarra);
+[cielosPlantas, renderFamilias, renderLado, altoBarra, ()=>LUZ.aplica()].forEach(f=>{ try{ f(); }catch(e){ console.error(e); } });
 /* el sol se mueve: cada cinco minutos, y al volver a la pestaña, se vuelve a mirar */
 setInterval(()=>{ try{ LUZ.aplica(); cielosPlantas(); }catch(e){} }, 5*60*1000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ try{ LUZ.aplica(); cielosPlantas(); }catch(e){} } });
