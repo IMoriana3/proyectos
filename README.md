@@ -77,6 +77,13 @@ seguidor. A la izquierda, la **barra lateral** es un índice de plantas y herram
 un buscador «Ir a…»: el nombre lleva a la ficha (quitando los filtros si la escondían) y la flecha abre
 el programa. Por debajo de 1100 px se abre como cajón con el botón ☰ de la barra.
 
+**El mismo índice en cada herramienta** (`lib/indice.js`): junto al «← Panel» de cada página sale
+un botón «Índice» con el icono de color de esa herramienta, que abre el cajón con las plantas y las
+herramientas por familia (la de la página, marcada). No duplica datos: lee `PROJECTS`, `PICTOS`,
+`FAMILIAS` y `PLANTS` del propio `index.html` (sin red, de la copia del service worker); si no puede,
+no pinta nada y la página queda como estaba. Para añadirlo a una página nueva basta
+`<script src="lib/indice.js" defer></script>`.
+
 ## Funcionalidades
 - Tarjetas por proyecto con estado (Producción / En desarrollo / Demo / Pausado / Deprecado), búsqueda, filtros y orden.
 - Documentación embebida: `docId` → `docs/<docId>.md`, o `docUrl` → README del repo.
