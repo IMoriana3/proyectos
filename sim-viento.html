@@ -6404,6 +6404,18 @@ function init3D(){
       var dt=Math.min(0.1,((now||performance.now())-last)/1000); last=now||performance.now();
       if(MODO==='live')liveTick(dt); else if(MODO==='event')eventoTick(dt); else if(MODO==='ep')epTick(dt);
       if(TD.est)TD.est.tick(now||performance.now(),dt);
+      /* SOLO SE PINTA LO QUE SE VE (2026-11-11). Este bucle pintaba la escena en
+         cada fotograma aunque su pestaña estuviera oculta (en Granizo o Nieve el
+         lienzo mide 0) o la ventana minimizada. Con GPU apenas se nota; sin ella
+         -un portátil con el 3D por software, o el runner de CI, que no tiene
+         tarjeta- la escena de un año simulado se come la CPU entera y sin parar:
+         medido en Chromium headless, ~1 s de tareas largas por cada segundo de
+         reposo, y la recarga de la ficha pasaba de 8 a 88 s. Esa recarga es la que
+         tumbaba test_granizo_pestana en el runner (#630, #631, `main` ab874bb).
+         La simulación (los tick de arriba) sigue corriendo: solo se deja de dibujar
+         lo que nadie mira, y al volver a la pestaña se pinta en el siguiente
+         fotograma. */
+      if(!w||!hh||document.hidden)return;
       TD.ct.update(); rd.render(sc,cam);})(performance.now());
   }catch(e){TD=null;}
 }
