@@ -27,7 +27,7 @@ alarma; franja de advertencia eléctrica en las plantas en marcha. Serigrafía e
 texto en Barlow y cifras en JetBrains Mono, **autoalojadas** en `assets/fonts/` (OFL) para que la app
 siga abriendo sin red. Cada planta enseña su **plano real** de seguidores (`HUELLAS`, generado por
 `tools/huellas_plantas.py` desde los layouts de cobertura-zigbee y ligado por el nombre de la planta),
-y cada herramienta lleva su **pictograma** de línea (`PICTOS`, elegido por el nombre de la ficha). Por defecto la portada es trabajo: plantas (con la cartera en
+y cada herramienta lleva su **icono** de línea (`PICTOS`, elegido por el nombre de la ficha). Por defecto la portada es trabajo: plantas (con la cartera en
 vivo), herramientas y el pie con las reglas de la casa.
 
 Las herramientas (`cartera-tabla`, `comparador-estructuras`, `generador-layout`, `sim-solar`,
@@ -62,6 +62,14 @@ coordenadas y la zona horaria de `SITIO_PLANTA` son sólo para eso; una planta n
 conserva la franja de siempre. Las **herramientas** se filtran además por familia —diseño y oferta,
 simulación, obra y puesta en marcha, operación y cartera—; una herramienta nueva sin familia sale en
 «Otras» y no se esconde.
+
+**La ficha de herramienta** (11-2026) tiene una cabecera compacta —la célula con el icono, el estado, el
+nombre y «versión · fecha»—, el para qué en tres líneas como mucho y una sola fila de acciones:
+documentación, repo y paquete como pestañas, y la acción principal (abrir; si no hay nada que abrir, el
+paquete) recuadrada en naranja abajo a la derecha, como el SCADA de las plantas. El pie va pegado abajo,
+así que en una fila de fichas las acciones quedan a la misma altura. Los iconos son una familia: rejilla
+de 24, trazo de 1,6, plata con un solo elemento clave en naranja; los accesos rápidos de la cabecera de
+Herramientas llevan los mismos. Una herramienta nueva sin icono sale con la célula genérica.
 
 ## Funcionalidades
 - Tarjetas por proyecto con estado (Producción / En desarrollo / Demo / Pausado / Deprecado), búsqueda, filtros y orden.
