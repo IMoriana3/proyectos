@@ -320,6 +320,7 @@ Panel** — no sale ni arriba ni abajo. Antes de añadir un nombre, comprobar qu
 
 | fecha | sesión | cambio |
 |---|---|---|
+| 2026-11-11 | Siting | Workflow `mapas-pais-sync`: copia a `data/mapas_pais/` el paquete de láminas de la rama `mapas-pais-datos` del repo siting (cada día, a mano o al aviso de siting) con `tools/sincroniza_mapas_pais.sh`, que no copia un paquete roto ni encogido, y abre o actualiza un PR desde `mapas-pais/sync`. Necesita el secreto `MAPAS_PAIS_TOKEN` (siting es privado). |
 | 2026-11-11 | Siting | `meteo.html`: sección **Recurso del país** bajo los mapas externos — láminas de viento a 100 m y GHI del país del emplazamiento (`data/mapas_pais/`, generadas por `tools/mapa_pais.py` del repo siting), con marcador de la planta y valor frente a la media nacional. Lógica en `lib/mapas-pais.js`; el país sale de la rejilla, no del nombre. Contexto de largo plazo: no entra en el WeatherContract. `tests/test_mapas_pais.js` (piso 15). |
 | 2026-10-22 | Proyectos | Tarjeta «Instalación cubierta Gorraiz»: el rótulo anterior solo nombraba el Informe; `PROJECTS[].links` permite dos accesos «SCADA» e «Informe» sin duplicar tarjetas, conserva `url` para compatibilidad y mantiene pictograma y documentación. |
 | 2026-08-11 | Backtracking | Creación del contrato. Restaurados `docs/ips.md` y `docs/tcu-toolbox.md`; Fayón con las claves de vista buenas. |

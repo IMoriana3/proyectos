@@ -1,0 +1,91 @@
+name: mapas-pais-sync
+
+# LÁMINAS DE PAÍS DEL REPO SITING → data/mapas_pais/ DEL PANEL.
+#
+# El repo siting genera las láminas (workflow «mapas-pais», tools/mapa_pais.py)
+# y deja el paquete en su rama `mapas-pais-datos`. Este workflow la clona, la
+# copia con tools/sincroniza_mapas_pais.sh —que se niega a copiar un paquete
+# roto o encogido— y, si algo cambió, abre o actualiza un PR desde la rama
+# `mapas-pais/sync`. PR y no commit a main: así pasan los arneses como
+# cualquier otro cambio del Panel, y la fusión la decide una persona.
+#
+# CUÁNDO: cada día, a mano (Actions → mapas-pais-sync → Run workflow), y al
+# momento cuando siting termina un paquete (repository_dispatch
+# «mapas-pais-actualizado», si siting tiene el mismo secreto).
+#
+# EL SECRETO MAPAS_PAIS_TOKEN (Settings → Secrets and variables → Actions):
+# siting es PRIVADO, y el GITHUB_TOKEN de este repo no puede leerlo. Hace falta
+# un token de GitHub de grano fino con acceso a los repos `siting` y
+# `proyectos` y permisos Contents: read and write y Pull requests: read and
+# write. Con él, además, el PR que abre dispara los arneses (uno abierto con
+# el GITHUB_TOKEN no los dispararía). Sin el secreto el job se para con un
+# error que lo dice, en vez de pasar por verde sin hacer nada.
+
+on:
+  schedule:
+    - cron: "41 4 * * *"
+  workflow_dispatch:
+    inputs:
+      forzar:
+        description: "Escribe FORZAR para aceptar un paquete con menos países que el publicado"
+        default: ""
+  repository_dispatch:
+    types: [mapas-pais-actualizado]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mapas-pais-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TOKEN: ${{ secrets.MAPAS_PAIS_TOKEN }}
+    steps:
+      - name: Hace falta el secreto MAPAS_PAIS_TOKEN
+        if: env.TOKEN == ''
+        run: |
+          echo "::error::Falta el secreto MAPAS_PAIS_TOKEN. El repo siting es privado y el token de este workflow no lo puede leer: crea un token de grano fino con acceso a siting y proyectos (Contents y Pull requests: read and write) y guárdalo en Settings → Secrets and variables → Actions de este repo."
+          exit 1
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MAPAS_PAIS_TOKEN }}
+      - name: Clonar el paquete de siting
+        run: |
+          git clone -q --depth 1 --branch mapas-pais-datos \
+            "https://x-access-token:${TOKEN}@github.com/IMoriana3/siting.git" "$RUNNER_TEMP/paquete"
+          echo "ORIGEN=$(git -C "$RUNNER_TEMP/paquete" rev-parse --short HEAD)" >> "$GITHUB_ENV"
+          git -C "$RUNNER_TEMP/paquete" log -1 --format='paquete: %s (%cd)'
+      - name: Copiar a data/mapas_pais/
+        env:
+          FORZAR: ${{ github.event.inputs.forzar == 'FORZAR' && '1' || '0' }}
+        run: bash tools/sincroniza_mapas_pais.sh "$RUNNER_TEMP/paquete"
+      - name: Abrir o actualizar el PR
+        env:
+          GH_TOKEN: ${{ secrets.MAPAS_PAIS_TOKEN }}
+        run: |
+          if [ -z "$(git status --porcelain -- data/mapas_pais)" ]; then
+            echo "Sin cambios: data/mapas_pais/ ya está al día con el paquete $ORIGEN." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cambios="$(git status --porcelain -- data/mapas_pais | wc -l)"
+          rama=mapas-pais/sync
+          git checkout -q -B "$rama"
+          git add -A data/mapas_pais
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -m "Láminas de país al día con el paquete $ORIGEN de siting ($cambios ficheros)"
+          git push -q -f origin "$rama"
+          cuerpo="Copia automática de la rama \`mapas-pais-datos\` del repo siting (paquete \`$ORIGEN\`) a \`data/mapas_pais/\`: $cambios ficheros. La hace el workflow \`mapas-pais-sync\`, que antes de copiar comprueba que el paquete está entero y no trae menos países que lo publicado. Fusionar publica las láminas en la tarjeta de meteo."
+          if gh pr view "$rama" --json state -q .state 2>/dev/null | grep -q OPEN; then
+            gh pr edit "$rama" --body "$cuerpo"
+            echo "PR actualizado: $(gh pr view "$rama" --json url -q .url)" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            gh pr create --base main --head "$rama" \
+              --title "Láminas de país: al día con siting ($ORIGEN)" --body "$cuerpo"
+            echo "PR abierto: $(gh pr view "$rama" --json url -q .url)" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
