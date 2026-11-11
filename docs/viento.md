@@ -401,9 +401,10 @@ por construcción. La ficha lo **dice** en vez de pintar una fila de ceros: hay 
 **Lo primero que enseña, y no se veía.** En el banco de pruebas —un temporal de cuatro horas a
 79 km/h que pasa por el mediodía solar— las estrategias **B** (cara al sol) cambian de lado cuando el
 sol cruza el meridiano: el eje va de +55° a −55°, **10 minutos pasando por plano con el temporal
-encima**. Es una propiedad de la estrategia simulada, que elige el lado en cada paso; si el firmware
-real fija el lado al activarse, esto no ocurre en planta. Es una de las preguntas de
-`peticiones-de-dato.md` nº 7.
+encima**. Es una propiedad del canon que esta ficha porta, que elige el lado en cada paso. El módulo
+compartido `sim/viento.js` —el que usan el simulador de batería, el de planta y `terreno.html`— ya
+**fija el lado al abanderar**, y lo anota como regla del equipo real. O sea que esta ficha y aquel
+módulo no simulan lo mismo, y la exposición es lo que lo deja a la vista.
 
 **Lo que NO es.**
 
