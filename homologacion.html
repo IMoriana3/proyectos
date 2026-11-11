@@ -307,7 +307,7 @@ footer code{font-family:var(--mono); font-size:12.5px; background:var(--chip-bg)
    Para mantenerlo al día se edita SOLO el array `REQS` (y `REVISION`).
    La versión la lee el Panel de aquí: no se copia en la tarjeta.
    ===================================================================== */
-const VER='v0.1.0';
+const VER='v0.1.1';
 const REVISION='2026-11-11';
 
 /* Los cuatro niveles de evidencia, de más a menos. El orden es el de la barra
@@ -391,13 +391,13 @@ const REQS = [
    hen:'Cross-check with the canonical engine: POA within −0.23% and identical manoeuvres, with deterministic wind.',
    ces:'Repetir el careo con meteo real y contrastar el recuento con el histórico del SCADA.',
    cen:'Repeat the cross-check with real weather and compare the count against SCADA history.' },
- { n:5, f:'viento', ev:'falta', w:'codigo', t:[],
+ { n:5, f:'viento', ev:'simulado', w:'campo', t:[['viento']],
    es:'Exposición: tiempo con viento sobre umbral sin estar en bandera',
    en:'Exposure: time with wind above threshold while not yet stowed',
-   hes:'No se calcula. Las salidas miden la energía perdida, no el riesgo.',
-   hen:'Not calculated. Outputs measure lost energy, not risk.',
-   ces:'Calcular los minutos de exposición por estrategia y por evento.',
-   cen:'Compute exposure minutes per strategy and per event.' },
+   hes:'Se calcula por estrategia: minutos expuestos, en tránsito y sin orden, peor tramo y viento máximo expuesto. Solo se ve simulando a 1 min.',
+   hen:'Computed per strategy: exposed minutes, in transit and with no order, worst stretch and peak wind while exposed. Only visible when simulating at 1 min.',
+   ces:'Repetirla con viento medido de las HSU y con la cadena de latencia medida.',
+   cen:'Repeat it with measured weather-station wind and a measured latency chain.' },
  { n:6, f:'viento', ev:'falta', w:'estructuras', t:[],
    es:'Umbrales y ángulo de defensa ligados al viento de proyecto y al túnel de viento',
    en:'Thresholds and stow angle tied to design wind and wind-tunnel results',

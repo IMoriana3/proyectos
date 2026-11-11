@@ -1,6 +1,6 @@
 # Expediente de homologación
 
-*`homologacion.html` — v0.1.0, 2026-11-11. Ficha del Panel; no calcula nada: cuenta.*
+*`homologacion.html` — v0.1.1, 2026-11-11. Ficha del Panel; no calcula nada: cuenta.*
 
 ## Qué contesta
 
@@ -29,7 +29,8 @@ La escala es de **evidencia**, no de calidad de la herramienta. Un simulador
 excelente deja su requisito en «Simulado»: lo que lo sube a «Medido» es un dato del
 producto instalado.
 
-A 11/11/2026: **1 medido, 13 simulados, 10 declarados y 12 sin evidencia**.
+A 11/11/2026: **1 medido, 14 simulados, 10 declarados y 11 sin evidencia**. El requisito 5 —la
+exposición— pasó de «Falta» a «Simulado» con `sim-viento.html` v1.27.
 
 ## Los tres hallazgos
 
