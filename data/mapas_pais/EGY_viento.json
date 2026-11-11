@@ -1,0 +1,36 @@
+{
+ "pais": "Egipto",
+ "iso3": "EGY",
+ "iso2": "EG",
+ "nombre_en": "Egypt",
+ "variable": "viento",
+ "imagen": "EGY_viento.webp",
+ "rejilla": "EGY_viento_rejilla.json",
+ "caja": [
+  0.02017,
+  0.03,
+  0.66118,
+  0.97
+ ],
+ "encuadre": [
+  23.71148,
+  20.44843,
+  37.87605,
+  33.00918
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1001058,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.864,
+ "p10": 5.4641,
+ "p50": 6.8746,
+ "p90": 8.1475,
+ "p2": 4.8874,
+ "p98": 8.8621,
+ "min": 3.1564,
+ "max": 15.2664,
+ "sobre_umbral": 0.4535,
+ "pixeles": 1890544
+}

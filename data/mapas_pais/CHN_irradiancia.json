@@ -1,0 +1,36 @@
+{
+ "pais": "China",
+ "iso3": "CHN",
+ "iso2": "CN",
+ "nombre_en": "People's Republic of China",
+ "variable": "irradiancia",
+ "imagen": "CHN_irradiancia.webp",
+ "rejilla": "CHN_irradiancia_rejilla.json",
+ "caja": [
+  0.01746,
+  0.03,
+  0.70662,
+  0.97
+ ],
+ "encuadre": [
+  68.70863,
+  12.50532,
+  139.6662,
+  58.52546
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 9375239,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 3,75°",
+ "umbral": 1800.0,
+ "media": 1600.3388,
+ "p10": 1271.4443,
+ "p50": 1592.51,
+ "p90": 1958.9578,
+ "p2": 1143.7637,
+ "p98": 2072.8915,
+ "min": 1106.5219,
+ "max": 2141.4572,
+ "sobre_umbral": 0.2482,
+ "pixeles": 234630
+}

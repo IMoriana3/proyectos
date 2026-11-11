@@ -1,0 +1,36 @@
+{
+ "pais": "Tayikistán",
+ "iso3": "TJK",
+ "iso2": "TJ",
+ "nombre_en": "Tajikistan",
+ "variable": "viento",
+ "imagen": "TJK_viento.webp",
+ "rejilla": "TJK_viento_rejilla.json",
+ "caja": [
+  0.0175,
+  0.03,
+  0.70607,
+  0.97
+ ],
+ "encuadre": [
+  66.71698,
+  35.98083,
+  75.78984,
+  41.65056
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 142238,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.1235,
+ "p10": 2.4991,
+ "p50": 4.7653,
+ "p90": 8.2351,
+ "p2": 1.8075,
+ "p98": 10.8238,
+ "min": 0.7187,
+ "max": 24.2262,
+ "sobre_umbral": 0.2002,
+ "pixeles": 765264
+}

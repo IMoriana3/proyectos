@@ -1,0 +1,36 @@
+{
+ "pais": "Burkina Faso",
+ "iso3": "BFA",
+ "iso2": "BF",
+ "nombre_en": "Burkina Faso",
+ "variable": "viento",
+ "imagen": "BFA_viento.webp",
+ "rejilla": "BFA_viento_rejilla.json",
+ "caja": [
+  0.01782,
+  0.03,
+  0.70061,
+  0.97
+ ],
+ "encuadre": [
+  -6.1556,
+  8.4818,
+  3.02319,
+  15.87623
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 272769,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.5173,
+ "p10": 4.5025,
+ "p50": 5.6238,
+ "p90": 6.2944,
+ "p2": 4.0048,
+ "p98": 6.5312,
+ "min": 3.262,
+ "max": 7.7798,
+ "sobre_umbral": 0.0002,
+ "pixeles": 1158324
+}

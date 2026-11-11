@@ -1,0 +1,36 @@
+{
+ "pais": "Madagascar",
+ "iso3": "MDG",
+ "iso2": "MG",
+ "nombre_en": "Madagascar",
+ "variable": "irradiancia",
+ "imagen": "MDG_irradiancia.webp",
+ "rejilla": "MDG_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  39.83267,
+  -27.78336,
+  53.89415,
+  -10.03192
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 592984,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 2058.2923,
+ "p10": 1831.2808,
+ "p50": 2105.5661,
+ "p90": 2230.0521,
+ "p2": 1783.7893,
+ "p98": 2256.3762,
+ "min": 1752.0916,
+ "max": 2263.8109,
+ "sobre_umbral": 0.959,
+ "pixeles": 193921
+}

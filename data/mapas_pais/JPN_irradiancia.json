@@ -1,0 +1,36 @@
+{
+ "pais": "Japón",
+ "iso3": "JPN",
+ "iso2": "JP",
+ "nombre_en": "Japan",
+ "variable": "irradiancia",
+ "imagen": "JPN_irradiancia.webp",
+ "rejilla": "JPN_irradiancia_rejilla.json",
+ "caja": [
+  0.0227,
+  0.03,
+  0.61866,
+  0.97
+ ],
+ "encuadre": [
+  127.22248,
+  28.68044,
+  147.20292,
+  47.55282
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 373508,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 1327.8165,
+ "p10": 1203.4212,
+ "p50": 1326.0402,
+ "p90": 1437.9731,
+ "p2": 1179.5044,
+ "p98": 1462.0194,
+ "min": 1149.3715,
+ "max": 1492.2991,
+ "sobre_umbral": 0.0,
+ "pixeles": 103810
+}

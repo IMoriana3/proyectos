@@ -1,0 +1,36 @@
+{
+ "pais": "Camboya",
+ "iso3": "KHM",
+ "iso2": "KH",
+ "nombre_en": "Cambodia",
+ "variable": "irradiancia",
+ "imagen": "KHM_irradiancia.webp",
+ "rejilla": "KHM_irradiancia_rejilla.json",
+ "caja": [
+  0.01931,
+  0.03,
+  0.67552,
+  0.97
+ ],
+ "encuadre": [
+  101.88966,
+  9.72956,
+  108.03428,
+  15.30502
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 181060,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1879.8427,
+ "p10": 1821.8388,
+ "p50": 1889.3626,
+ "p90": 1925.1584,
+ "p2": 1732.1908,
+ "p98": 1937.8198,
+ "min": 1687.2645,
+ "max": 1944.0397,
+ "sobre_umbral": 0.9406,
+ "pixeles": 411945
+}

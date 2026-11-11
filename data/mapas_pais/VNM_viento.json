@@ -1,0 +1,36 @@
+{
+ "pais": "Vietnam",
+ "iso3": "VNM",
+ "iso2": "VN",
+ "nombre_en": "Vietnam",
+ "variable": "viento",
+ "imagen": "VNM_viento.webp",
+ "rejilla": "VNM_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  98.2907,
+  6.19747,
+  113.30037,
+  25.43837
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 328892,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.2882,
+ "p10": 2.6857,
+ "p50": 4.2803,
+ "p90": 5.8759,
+ "p2": 1.9139,
+ "p98": 7.0707,
+ "min": 0.6936,
+ "max": 12.0119,
+ "sobre_umbral": 0.0222,
+ "pixeles": 392893
+}

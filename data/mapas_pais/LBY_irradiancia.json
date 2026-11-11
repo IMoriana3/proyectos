@@ -1,0 +1,36 @@
+{
+ "pais": "Libia",
+ "iso3": "LBY",
+ "iso2": "LY",
+ "nombre_en": "Libya",
+ "variable": "irradiancia",
+ "imagen": "LBY_irradiancia.webp",
+ "rejilla": "LBY_irradiancia_rejilla.json",
+ "caja": [
+  0.02124,
+  0.03,
+  0.64323,
+  0.97
+ ],
+ "encuadre": [
+  8.01697,
+  17.30651,
+  26.42584,
+  35.09714
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1623761,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,50°",
+ "umbral": 1800.0,
+ "media": 2269.0323,
+ "p10": 2089.167,
+ "p50": 2264.4617,
+ "p90": 2453.5283,
+ "p2": 1986.1558,
+ "p98": 2487.0328,
+ "min": 1930.9403,
+ "max": 2505.8622,
+ "sobre_umbral": 1.0,
+ "pixeles": 490433
+}

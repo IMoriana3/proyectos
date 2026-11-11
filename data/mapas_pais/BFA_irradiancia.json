@@ -1,0 +1,36 @@
+{
+ "pais": "Burkina Faso",
+ "iso3": "BFA",
+ "iso2": "BF",
+ "nombre_en": "Burkina Faso",
+ "variable": "irradiancia",
+ "imagen": "BFA_irradiancia.webp",
+ "rejilla": "BFA_irradiancia_rejilla.json",
+ "caja": [
+  0.01782,
+  0.03,
+  0.70061,
+  0.97
+ ],
+ "encuadre": [
+  -6.1556,
+  8.4818,
+  3.02319,
+  15.87623
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 272769,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 2129.5924,
+ "p10": 2058.943,
+ "p50": 2128.1735,
+ "p90": 2214.0615,
+ "p2": 1939.6389,
+ "p98": 2262.4638,
+ "min": 1891.4487,
+ "max": 2292.1869,
+ "sobre_umbral": 1.0,
+ "pixeles": 277041
+}

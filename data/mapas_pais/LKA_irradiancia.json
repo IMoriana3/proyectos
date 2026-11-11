@@ -1,0 +1,36 @@
+{
+ "pais": "Sri Lanka",
+ "iso3": "LKA",
+ "iso2": "LK",
+ "nombre_en": "Sri Lanka",
+ "variable": "irradiancia",
+ "imagen": "LKA_irradiancia.webp",
+ "rejilla": "LKA_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  78.85081,
+  5.2988,
+  82.69528,
+  10.37639
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 66291,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1942.3911,
+ "p10": 1878.1533,
+ "p50": 1954.3078,
+ "p90": 1990.5459,
+ "p2": 1824.252,
+ "p98": 2024.3794,
+ "min": 1813.5951,
+ "max": 2051.4882,
+ "sobre_umbral": 1.0,
+ "pixeles": 263836
+}

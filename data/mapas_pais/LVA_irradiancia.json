@@ -1,0 +1,36 @@
+{
+ "pais": "Letonia",
+ "iso3": "LVA",
+ "iso2": "LV",
+ "nombre_en": "Latvia",
+ "variable": "irradiancia",
+ "imagen": "LVA_irradiancia.webp",
+ "rejilla": "LVA_irradiancia_rejilla.json",
+ "caja": [
+  0.01621,
+  0.03,
+  0.7276,
+  0.97
+ ],
+ "encuadre": [
+  20.3887,
+  55.18699,
+  28.79717,
+  58.49514
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 64576,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1026.4077,
+ "p10": 1008.0098,
+ "p50": 1024.242,
+ "p90": 1045.0672,
+ "p2": 998.2251,
+ "p98": 1072.8816,
+ "min": 989.5966,
+ "max": 1083.4363,
+ "sobre_umbral": 0.0,
+ "pixeles": 247707
+}

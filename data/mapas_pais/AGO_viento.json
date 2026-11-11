@@ -1,0 +1,36 @@
+{
+ "pais": "Angola",
+ "iso3": "AGO",
+ "iso2": "AO",
+ "nombre_en": "Angola",
+ "variable": "viento",
+ "imagen": "AGO_viento.webp",
+ "rejilla": "AGO_viento_rejilla.json",
+ "caja": [
+  0.02337,
+  0.03,
+  0.60731,
+  0.97
+ ],
+ "encuadre": [
+  10.74943,
+  -20.21384,
+  25.04781,
+  -2.48158
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1244654,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.1241,
+ "p10": 3.0656,
+ "p50": 4.1468,
+ "p90": 5.1161,
+ "p2": 2.3575,
+ "p98": 5.7373,
+ "min": 0.9852,
+ "max": 8.1767,
+ "sobre_umbral": 0.0001,
+ "pixeles": 1788396
+}

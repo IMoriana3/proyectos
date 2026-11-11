@@ -1,0 +1,36 @@
+{
+ "pais": "Estados Unidos",
+ "iso3": "USA",
+ "iso2": "US",
+ "nombre_en": "United States of America",
+ "variable": "irradiancia",
+ "imagen": "USA_irradiancia.webp",
+ "rejilla": "USA_irradiancia_rejilla.json",
+ "caja": [
+  0.01701,
+  0.03,
+  0.71427,
+  0.97
+ ],
+ "encuadre": [
+  -176.23025,
+  17.71483,
+  -58.88452,
+  77.89326
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 9464228,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 5,00°",
+ "umbral": 1800.0,
+ "media": 1515.7277,
+ "p10": 923.5439,
+ "p50": 1548.1336,
+ "p90": 1949.6968,
+ "p2": 861.5694,
+ "p98": 2099.0449,
+ "min": 798.4153,
+ "max": 2135.3265,
+ "sobre_umbral": 0.1883,
+ "pixeles": 122112
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Puerto Rico",
+ "iso3": "PRI",
+ "iso2": "PR",
+ "nombre_en": "Puerto Rico",
+ "variable": "irradiancia",
+ "imagen": "PRI_irradiancia.webp",
+ "rejilla": "PRI_irradiancia_rejilla.json",
+ "caja": [
+  0.01285,
+  0.03,
+  0.78409,
+  0.97
+ ],
+ "encuadre": [
+  -68.23781,
+  17.36968,
+  -64.94462,
+  19.01601
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 9006,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1938.2754,
+ "p10": 1878.889,
+ "p50": 1925.3374,
+ "p90": 2016.5081,
+ "p2": 1871.7858,
+ "p98": 2023.5308,
+ "min": 1869.9578,
+ "max": 2044.5728,
+ "sobre_umbral": 1.0,
+ "pixeles": 83492
+}

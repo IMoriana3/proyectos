@@ -1,0 +1,36 @@
+{
+ "pais": "Marruecos",
+ "iso3": "MAR",
+ "iso2": "MA",
+ "nombre_en": "Morocco",
+ "variable": "viento",
+ "imagen": "MAR_viento.webp",
+ "rejilla": "MAR_viento_rejilla.json",
+ "caja": [
+  0.0222,
+  0.03,
+  0.62701,
+  0.97
+ ],
+ "encuadre": [
+  -18.29228,
+  19.09892,
+  0.24654,
+  37.95744
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 591745,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.9064,
+ "p10": 4.0782,
+ "p50": 5.7812,
+ "p90": 7.9242,
+ "p2": 3.1768,
+ "p98": 9.2943,
+ "min": 1.5395,
+ "max": 15.7202,
+ "sobre_umbral": 0.2227,
+ "pixeles": 792025
+}

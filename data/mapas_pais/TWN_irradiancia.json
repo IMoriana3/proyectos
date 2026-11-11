@@ -1,0 +1,36 @@
+{
+ "pais": "República de China",
+ "iso3": "TWN",
+ "iso2": "CN-TW",
+ "nombre_en": "Taiwan",
+ "variable": "irradiancia",
+ "imagen": "TWN_irradiancia.webp",
+ "rejilla": "TWN_irradiancia_rejilla.json",
+ "caja": [
+  0.02161,
+  0.03,
+  0.63692,
+  0.97
+ ],
+ "encuadre": [
+  117.97955,
+  21.36336,
+  122.30538,
+  25.76101
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 36198,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1465.4693,
+ "p10": 1373.862,
+ "p50": 1423.7845,
+ "p90": 1606.9086,
+ "p2": 1353.7049,
+ "p98": 1645.5602,
+ "min": 1348.0818,
+ "max": 1677.9344,
+ "sobre_umbral": 0.0,
+ "pixeles": 188684
+}

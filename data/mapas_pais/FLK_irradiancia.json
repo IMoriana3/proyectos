@@ -1,0 +1,36 @@
+{
+ "pais": "Islas Malvinas",
+ "iso3": "FLK",
+ "iso2": "FK",
+ "nombre_en": "Falkland Islands",
+ "variable": "irradiancia",
+ "imagen": "FLK_irradiancia.webp",
+ "rejilla": "FLK_irradiancia_rejilla.json",
+ "caja": [
+  0.01861,
+  0.03,
+  0.68731,
+  0.97
+ ],
+ "encuadre": [
+  -61.61819,
+  -52.88652,
+  -57.43428,
+  -50.60777
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 11597,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1164.7888,
+ "p10": 1143.6762,
+ "p50": 1152.9482,
+ "p90": 1218.3402,
+ "p2": 1139.7818,
+ "p98": 1229.5811,
+ "min": 1138.5811,
+ "max": 1305.1903,
+ "sobre_umbral": 0.0,
+ "pixeles": 141909
+}

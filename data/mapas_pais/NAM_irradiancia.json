@@ -1,0 +1,36 @@
+{
+ "pais": "Namibia",
+ "iso3": "NAM",
+ "iso2": "NA",
+ "nombre_en": "Namibia",
+ "variable": "irradiancia",
+ "imagen": "NAM_irradiancia.webp",
+ "rejilla": "NAM_irradiancia_rejilla.json",
+ "caja": [
+  0.02125,
+  0.03,
+  0.64305,
+  0.97
+ ],
+ "encuadre": [
+  10.63425,
+  -30.8807,
+  26.34315,
+  -15.26989
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 822713,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 2308.0778,
+ "p10": 2206.3264,
+ "p50": 2320.5277,
+ "p90": 2386.2092,
+ "p2": 2166.4538,
+ "p98": 2422.4544,
+ "min": 2143.4769,
+ "max": 2434.3104,
+ "sobre_umbral": 1.0,
+ "pixeles": 319362
+}

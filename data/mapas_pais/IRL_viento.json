@@ -1,0 +1,36 @@
+{
+ "pais": "Irlanda",
+ "iso3": "IRL",
+ "iso2": "IE",
+ "nombre_en": "Ireland",
+ "variable": "viento",
+ "imagen": "IRL_viento.webp",
+ "rejilla": "IRL_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -11.45914,
+  50.8152,
+  -5.01256,
+  55.93807
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 69445,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 8.6993,
+ "p10": 7.9399,
+ "p50": 8.5965,
+ "p90": 9.5167,
+ "p2": 7.5817,
+ "p98": 10.8581,
+ "min": 5.6928,
+ "max": 18.3846,
+ "sobre_umbral": 0.9994,
+ "pixeles": 1389048
+}

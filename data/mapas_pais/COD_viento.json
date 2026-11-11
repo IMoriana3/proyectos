@@ -1,0 +1,36 @@
+{
+ "pais": "República Democrática del Congo",
+ "iso3": "COD",
+ "iso2": "CD",
+ "nombre_en": "Democratic Republic of the Congo",
+ "variable": "viento",
+ "imagen": "COD_viento.webp",
+ "rejilla": "COD_viento_rejilla.json",
+ "caja": [
+  0.02161,
+  0.03,
+  0.63688,
+  0.97
+ ],
+ "encuadre": [
+  10.68495,
+  -16.47173,
+  32.80604,
+  8.01199
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 2325240,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 2.847,
+ "p10": 1.8653,
+ "p50": 2.5443,
+ "p90": 4.2406,
+ "p2": 1.7047,
+ "p98": 5.2346,
+ "min": 0.8733,
+ "max": 9.0154,
+ "sobre_umbral": 0.001,
+ "pixeles": 1608830
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Sudán del Sur",
+ "iso3": "SSD",
+ "iso2": "SS",
+ "nombre_en": "South Sudan",
+ "variable": "irradiancia",
+ "imagen": "SSD_irradiancia.webp",
+ "rejilla": "SSD_irradiancia_rejilla.json",
+ "caja": [
+  0.018,
+  0.03,
+  0.69758,
+  0.97
+ ],
+ "encuadre": [
+  23.17761,
+  2.09405,
+  36.86478,
+  13.43779
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 626862,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 2057.723,
+ "p10": 1948.8407,
+ "p50": 2050.1039,
+ "p90": 2168.5458,
+ "p2": 1928.3138,
+ "p98": 2232.2525,
+ "min": 1873.4348,
+ "max": 2282.988,
+ "sobre_umbral": 1.0,
+ "pixeles": 278440
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Etiopía",
+ "iso3": "ETH",
+ "iso2": "ET",
+ "nombre_en": "Ethiopia",
+ "variable": "viento",
+ "imagen": "ETH_viento.webp",
+ "rejilla": "ETH_viento_rejilla.json",
+ "caja": [
+  0.01847,
+  0.03,
+  0.68971,
+  0.97
+ ],
+ "encuadre": [
+  31.79065,
+  1.56714,
+  49.17832,
+  16.4862
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1127376,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.5417,
+ "p10": 2.5792,
+ "p50": 4.3719,
+ "p90": 6.688,
+ "p2": 1.8646,
+ "p98": 7.8335,
+ "min": 0.7337,
+ "max": 15.0632,
+ "sobre_umbral": 0.0684,
+ "pixeles": 1323540
+}

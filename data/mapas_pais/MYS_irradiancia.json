@@ -1,0 +1,36 @@
+{
+ "pais": "Malasia",
+ "iso3": "MYS",
+ "iso2": "MY",
+ "nombre_en": "Malaysia",
+ "variable": "irradiancia",
+ "imagen": "MYS_irradiancia.webp",
+ "rejilla": "MYS_irradiancia_rejilla.json",
+ "caja": [
+  0.01285,
+  0.03,
+  0.78409,
+  0.97
+ ],
+ "encuadre": [
+  98.59523,
+  -1.79251,
+  120.81015,
+  9.86958
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 327885,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 1801.5078,
+ "p10": 1737.6614,
+ "p50": 1803.0865,
+ "p90": 1871.9201,
+ "p2": 1704.6536,
+ "p98": 1901.8212,
+ "min": 1672.2875,
+ "max": 1946.3078,
+ "sobre_umbral": 0.5127,
+ "pixeles": 54581
+}

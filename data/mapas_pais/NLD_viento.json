@@ -1,0 +1,36 @@
+{
+ "pais": "Países Bajos",
+ "iso3": "NLD",
+ "iso2": "NL",
+ "nombre_en": "Netherlands",
+ "variable": "viento",
+ "imagen": "NLD_viento.webp",
+ "rejilla": "NLD_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  3.03408,
+  50.26755,
+  7.51384,
+  53.93415
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 37398,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 7.6671,
+ "p10": 6.9659,
+ "p50": 7.6701,
+ "p90": 8.4048,
+ "p2": 6.49,
+ "p98": 8.8931,
+ "min": 5.5306,
+ "max": 9.6407,
+ "sobre_umbral": 0.8883,
+ "pixeles": 781489
+}

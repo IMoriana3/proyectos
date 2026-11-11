@@ -1,0 +1,36 @@
+{
+ "pais": "Emiratos Árabes Unidos",
+ "iso3": "ARE",
+ "iso2": "AE",
+ "nombre_en": "United Arab Emirates",
+ "variable": "irradiancia",
+ "imagen": "ARE_irradiancia.webp",
+ "rejilla": "ARE_irradiancia_rejilla.json",
+ "caja": [
+  0.01866,
+  0.03,
+  0.68651,
+  0.97
+ ],
+ "encuadre": [
+  51.1842,
+  22.06833,
+  56.76878,
+  26.55833
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 71085,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2182.723,
+ "p10": 2057.2967,
+ "p50": 2198.9129,
+ "p90": 2278.254,
+ "p2": 2036.3777,
+ "p98": 2283.0407,
+ "min": 2014.7586,
+ "max": 2287.3026,
+ "sobre_umbral": 1.0,
+ "pixeles": 223422
+}

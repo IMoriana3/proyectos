@@ -1,0 +1,36 @@
+{
+ "pais": "Guatemala",
+ "iso3": "GTM",
+ "iso2": "GT",
+ "nombre_en": "Guatemala",
+ "variable": "irradiancia",
+ "imagen": "GTM_irradiancia.webp",
+ "rejilla": "GTM_irradiancia_rejilla.json",
+ "caja": [
+  0.02246,
+  0.03,
+  0.62271,
+  0.97
+ ],
+ "encuadre": [
+  -92.56828,
+  13.07787,
+  -87.89891,
+  18.38787
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 108811,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1846.2762,
+ "p10": 1758.1777,
+ "p50": 1827.8435,
+ "p90": 1966.7675,
+ "p2": 1732.245,
+ "p98": 2020.0929,
+ "min": 1714.2745,
+ "max": 2052.6172,
+ "sobre_umbral": 0.675,
+ "pixeles": 396394
+}

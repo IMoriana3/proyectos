@@ -1,0 +1,36 @@
+{
+ "pais": "Kazajistán",
+ "iso3": "KAZ",
+ "iso2": "KZ",
+ "nombre_en": "Kazakhstan",
+ "variable": "viento",
+ "imagen": "KAZ_viento.webp",
+ "rejilla": "KAZ_viento_rejilla.json",
+ "caja": [
+  0.01436,
+  0.03,
+  0.75883,
+  0.97
+ ],
+ "encuadre": [
+  43.21064,
+  38.20867,
+  90.59144,
+  57.51354
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 2714263,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 7.0714,
+ "p10": 5.6689,
+ "p50": 7.3875,
+ "p90": 7.9395,
+ "p2": 3.7382,
+ "p98": 8.4066,
+ "min": 1.2988,
+ "max": 11.7323,
+ "sobre_umbral": 0.7,
+ "pixeles": 625661
+}

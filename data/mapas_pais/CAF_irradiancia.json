@@ -1,0 +1,36 @@
+{
+ "pais": "República Centroafricana",
+ "iso3": "CAF",
+ "iso2": "CF",
+ "nombre_en": "Central African Republic",
+ "variable": "irradiancia",
+ "imagen": "CAF_irradiancia.webp",
+ "rejilla": "CAF_irradiancia_rejilla.json",
+ "caja": [
+  0.01681,
+  0.03,
+  0.71763,
+  0.97
+ ],
+ "encuadre": [
+  13.34294,
+  0.83415,
+  28.48562,
+  12.22784
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 617984,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 2038.3551,
+ "p10": 1903.3241,
+ "p50": 2039.9728,
+ "p90": 2156.3325,
+ "p2": 1843.4605,
+ "p98": 2254.303,
+ "min": 1776.9822,
+ "max": 2294.8244,
+ "sobre_umbral": 0.9953,
+ "pixeles": 223349
+}

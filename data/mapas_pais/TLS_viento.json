@@ -1,0 +1,36 @@
+{
+ "pais": "Timor Oriental",
+ "iso3": "TLS",
+ "iso2": "TL",
+ "nombre_en": "East Timor",
+ "variable": "viento",
+ "imagen": "TLS_viento.webp",
+ "rejilla": "TLS_viento_rejilla.json",
+ "caja": [
+  0.01403,
+  0.03,
+  0.76431,
+  0.97
+ ],
+ "encuadre": [
+  123.73004,
+  -9.98123,
+  127.61324,
+  -7.71502
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 15082,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.746,
+ "p10": 2.0544,
+ "p50": 3.3896,
+ "p90": 5.8893,
+ "p2": 1.6044,
+ "p98": 7.2764,
+ "min": 0.5939,
+ "max": 14.0225,
+ "sobre_umbral": 0.0285,
+ "pixeles": 197655
+}

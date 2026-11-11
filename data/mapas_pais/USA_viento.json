@@ -1,0 +1,36 @@
+{
+ "pais": "Estados Unidos",
+ "iso3": "USA",
+ "iso2": "US",
+ "nombre_en": "United States of America",
+ "variable": "viento",
+ "imagen": "USA_viento.webp",
+ "rejilla": "USA_viento_rejilla.json",
+ "caja": [
+  0.01701,
+  0.03,
+  0.71427,
+  0.97
+ ],
+ "encuadre": [
+  -176.23025,
+  17.71483,
+  -58.88452,
+  77.89326
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 9464228,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.3017,
+ "p10": 4.6274,
+ "p50": 6.2112,
+ "p90": 8.0993,
+ "p2": 3.6458,
+ "p98": 9.0751,
+ "min": 1.3082,
+ "max": 14.084,
+ "sobre_umbral": 0.3248,
+ "pixeles": 317795
+}

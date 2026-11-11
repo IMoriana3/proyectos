@@ -1,0 +1,36 @@
+{
+ "pais": "Indonesia",
+ "iso3": "IDN",
+ "iso2": "ID",
+ "nombre_en": "Indonesia",
+ "variable": "viento",
+ "imagen": "IDN_viento.webp",
+ "rejilla": "IDN_viento_rejilla.json",
+ "caja": [
+  0.01285,
+  0.03,
+  0.78409,
+  0.97
+ ],
+ "encuadre": [
+  91.53485,
+  -15.84263,
+  144.64006,
+  12.09479
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1879827,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 2.6734,
+ "p10": 1.743,
+ "p50": 2.5332,
+ "p90": 3.7872,
+ "p2": 1.3796,
+ "p98": 4.8149,
+ "min": 0.7183,
+ "max": 7.527,
+ "sobre_umbral": 0.0001,
+ "pixeles": 220938
+}

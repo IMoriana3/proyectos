@@ -1,0 +1,36 @@
+{
+ "pais": "Irán",
+ "iso3": "IRN",
+ "iso2": "IR",
+ "nombre_en": "Iran",
+ "variable": "viento",
+ "imagen": "IRN_viento.webp",
+ "rejilla": "IRN_viento_rejilla.json",
+ "caja": [
+  0.0204,
+  0.03,
+  0.65727,
+  0.97
+ ],
+ "encuadre": [
+  42.47048,
+  22.70547,
+  64.86401,
+  41.83122
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1622510,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.6012,
+ "p10": 3.835,
+ "p50": 5.5508,
+ "p90": 7.3645,
+ "p2": 2.8283,
+ "p98": 8.7726,
+ "min": 0.7736,
+ "max": 15.4255,
+ "sobre_umbral": 0.1508,
+ "pixeles": 1346874
+}

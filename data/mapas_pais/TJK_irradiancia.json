@@ -1,0 +1,36 @@
+{
+ "pais": "Tayikistán",
+ "iso3": "TJK",
+ "iso2": "TJ",
+ "nombre_en": "Tajikistan",
+ "variable": "irradiancia",
+ "imagen": "TJK_irradiancia.webp",
+ "rejilla": "TJK_irradiancia_rejilla.json",
+ "caja": [
+  0.0175,
+  0.03,
+  0.70607,
+  0.97
+ ],
+ "encuadre": [
+  66.71698,
+  35.98083,
+  75.78984,
+  41.65056
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 142238,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1713.1739,
+ "p10": 1644.2634,
+ "p50": 1708.0207,
+ "p90": 1784.9061,
+ "p2": 1627.2414,
+ "p98": 1866.4631,
+ "min": 1591.8475,
+ "max": 1876.6385,
+ "sobre_umbral": 0.0688,
+ "pixeles": 231007
+}

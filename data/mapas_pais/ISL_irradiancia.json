@@ -1,0 +1,36 @@
+{
+ "pais": "Islandia",
+ "iso3": "ISL",
+ "iso2": "IS",
+ "nombre_en": "Iceland",
+ "variable": "irradiancia",
+ "imagen": "ISL_irradiancia.webp",
+ "rejilla": "ISL_irradiancia_rejilla.json",
+ "caja": [
+  0.01675,
+  0.03,
+  0.71868,
+  0.97
+ ],
+ "encuadre": [
+  -25.42286,
+  62.89433,
+  -12.61996,
+  66.97619
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 102390,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 826.0065,
+ "p10": 707.6244,
+ "p50": 807.8859,
+ "p90": 986.669,
+ "p2": 682.8958,
+ "p98": 1080.3579,
+ "min": 674.4993,
+ "max": 1107.8503,
+ "sobre_umbral": 0.0,
+ "pixeles": 282583
+}

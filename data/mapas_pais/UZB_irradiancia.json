@@ -1,0 +1,36 @@
+{
+ "pais": "Uzbekistán",
+ "iso3": "UZB",
+ "iso2": "UZ",
+ "nombre_en": "Uzbekistan",
+ "variable": "irradiancia",
+ "imagen": "UZB_irradiancia.webp",
+ "rejilla": "UZB_irradiancia_rejilla.json",
+ "caja": [
+  0.01635,
+  0.03,
+  0.72537,
+  0.97
+ ],
+ "encuadre": [
+  54.60201,
+  35.84538,
+  74.52247,
+  46.73102
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 447830,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 1674.3028,
+ "p10": 1513.71,
+ "p50": 1703.7475,
+ "p90": 1767.3356,
+ "p2": 1397.6057,
+ "p98": 1797.7402,
+ "min": 1370.6825,
+ "max": 1828.3744,
+ "sobre_umbral": 0.0162,
+ "pixeles": 164102
+}

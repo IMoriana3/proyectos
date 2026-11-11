@@ -1,0 +1,36 @@
+{
+ "pais": "Senegal",
+ "iso3": "SEN",
+ "iso2": "SN",
+ "nombre_en": "Senegal",
+ "variable": "irradiancia",
+ "imagen": "SEN_irradiancia.webp",
+ "rejilla": "SEN_irradiancia_rejilla.json",
+ "caja": [
+  0.01782,
+  0.03,
+  0.7006,
+  0.97
+ ],
+ "encuadre": [
+  -18.0287,
+  11.60388,
+  -10.88511,
+  17.30539
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 196224,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2180.0816,
+ "p10": 2121.0908,
+ "p50": 2185.7905,
+ "p90": 2243.8571,
+ "p2": 2090.1016,
+ "p98": 2259.4825,
+ "min": 2036.8658,
+ "max": 2271.9442,
+ "sobre_umbral": 1.0,
+ "pixeles": 335248
+}

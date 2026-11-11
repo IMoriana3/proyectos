@@ -1037,6 +1037,11 @@ declare -A PISO=(
   # Pantalla real en Chromium con autenticación y datos SUPABASE de prueba.
   # 12 controles: acceso, HSU, WFU raw, coherencia, privacidad y cierre.
   [test_meteo_sensores_browser.js]=12
+  # RECURSO DEL PAÍS en la tarjeta de meteo (lib/mapas-pais.js), con las
+  # láminas sustituidas por fixtures: país por rejilla y no por nombre,
+  # marcador en la caja de la ficha, «sobre/bajo la media», punto de miles,
+  # sin país, sin índice y cambio rápido de emplazamiento. MEDIDO: 15.
+  [test_mapas_pais.js]=15
   # El catálogo de plantas servido como fichero. 14 comprobaciones medidas.
   # Vigila el modo de fallo propio de un fichero generado: QUEDARSE VIEJO. Si la
   # cartera cambia y nadie regenera, las páginas sirven el catálogo de otro día y

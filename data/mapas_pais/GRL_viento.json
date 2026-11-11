@@ -1,0 +1,36 @@
+{
+ "pais": "Groenlandia",
+ "iso3": "GRL",
+ "iso2": "GL",
+ "nombre_en": "Greenland",
+ "variable": "viento",
+ "imagen": "GRL_viento.webp",
+ "rejilla": "GRL_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -79.14614,
+  56.20456,
+  -5.28792,
+  86.94456
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 2154381,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 10.1059,
+ "p10": 6.4725,
+ "p50": 10.3837,
+ "p90": 12.426,
+ "p2": 4.1117,
+ "p98": 14.598,
+ "min": 1.3546,
+ "max": 24.2374,
+ "sobre_umbral": 0.8794,
+ "pixeles": 417235
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Vietnam",
+ "iso3": "VNM",
+ "iso2": "VN",
+ "nombre_en": "Vietnam",
+ "variable": "irradiancia",
+ "imagen": "VNM_irradiancia.webp",
+ "rejilla": "VNM_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  98.2907,
+  6.19747,
+  113.30037,
+  25.43837
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 328892,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 1614.9225,
+ "p10": 1330.6885,
+ "p50": 1639.4322,
+ "p90": 1898.5941,
+ "p2": 1314.7505,
+ "p98": 1929.4317,
+ "min": 1308.1065,
+ "max": 1968.1741,
+ "sobre_umbral": 0.3203,
+ "pixeles": 91716
+}

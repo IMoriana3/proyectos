@@ -1,0 +1,36 @@
+{
+ "pais": "Papúa Nueva Guinea",
+ "iso3": "PNG",
+ "iso2": "PG",
+ "nombre_en": "Papua New Guinea",
+ "variable": "viento",
+ "imagen": "PNG_viento.webp",
+ "rejilla": "PNG_viento_rejilla.json",
+ "caja": [
+  0.01813,
+  0.03,
+  0.69537,
+  0.97
+ ],
+ "encuadre": [
+  139.81467,
+  -13.18661,
+  154.81547,
+  -0.59053
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 465147,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 2.7709,
+ "p10": 1.5483,
+ "p50": 2.5966,
+ "p90": 4.2032,
+ "p2": 1.117,
+ "p98": 5.4674,
+ "min": 0.3452,
+ "max": 10.8318,
+ "sobre_umbral": 0.0039,
+ "pixeles": 664696
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Yibuti",
+ "iso3": "DJI",
+ "iso2": "DJ",
+ "nombre_en": "Djibouti",
+ "variable": "viento",
+ "imagen": "DJI_viento.webp",
+ "rejilla": "DJI_viento_rejilla.json",
+ "caja": [
+  0.02273,
+  0.03,
+  0.61817,
+  0.97
+ ],
+ "encuadre": [
+  41.44911,
+  10.44982,
+  43.71871,
+  13.12791
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 21848,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.8551,
+ "p10": 4.8025,
+ "p50": 6.5615,
+ "p90": 9.4197,
+ "p2": 3.9164,
+ "p98": 10.5756,
+ "min": 2.3786,
+ "max": 15.0808,
+ "sobre_umbral": 0.4061,
+ "pixeles": 289017
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Burundi",
+ "iso3": "BDI",
+ "iso2": "BI",
+ "nombre_en": "Burundi",
+ "variable": "irradiancia",
+ "imagen": "BDI_irradiancia.webp",
+ "rejilla": "BDI_irradiancia_rejilla.json",
+ "caja": [
+  0.02325,
+  0.03,
+  0.6094,
+  0.97
+ ],
+ "encuadre": [
+  28.68689,
+  -4.94334,
+  31.13396,
+  -1.88306
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 27041,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1869.5115,
+ "p10": 1824.6694,
+ "p50": 1864.0449,
+ "p90": 1917.9739,
+ "p2": 1806.006,
+ "p98": 1927.0572,
+ "min": 1802.6151,
+ "max": 1943.3289,
+ "sobre_umbral": 1.0,
+ "pixeles": 352436
+}

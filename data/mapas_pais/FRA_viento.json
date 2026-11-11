@@ -1,0 +1,36 @@
+{
+ "pais": "Francia",
+ "iso3": "FRA",
+ "iso2": "FR",
+ "nombre_en": "France",
+ "variable": "viento",
+ "imagen": "FRA_viento.webp",
+ "rejilla": "FRA_viento_rejilla.json",
+ "caja": [
+  0.02147,
+  0.03,
+  0.63924,
+  0.97
+ ],
+ "encuadre": [
+  -5.93246,
+  39.81045,
+  10.70714,
+  52.44857
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 636759,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.113,
+ "p10": 4.7579,
+ "p50": 6.2149,
+ "p90": 7.3602,
+ "p2": 3.1519,
+ "p98": 8.2425,
+ "min": 0.8293,
+ "max": 15.5528,
+ "sobre_umbral": 0.1939,
+ "pixeles": 936274
+}

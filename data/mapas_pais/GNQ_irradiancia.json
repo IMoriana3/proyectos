@@ -1,0 +1,36 @@
+{
+ "pais": "Guinea Ecuatorial",
+ "iso3": "GNQ",
+ "iso2": "GQ",
+ "nombre_en": "Equatorial Guinea",
+ "variable": "irradiancia",
+ "imagen": "GNQ_irradiancia.webp",
+ "rejilla": "GNQ_irradiancia_rejilla.json",
+ "caja": [
+  0.0211,
+  0.03,
+  0.64552,
+  0.97
+ ],
+ "encuadre": [
+  8.12205,
+  0.44485,
+  11.63634,
+  4.19241
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 26672,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1551.7357,
+ "p10": 1526.5201,
+ "p50": 1548.2718,
+ "p90": 1595.2277,
+ "p2": 1454.2293,
+ "p98": 1624.9005,
+ "min": 1425.5668,
+ "max": 1631.5575,
+ "sobre_umbral": 0.0,
+ "pixeles": 191140
+}

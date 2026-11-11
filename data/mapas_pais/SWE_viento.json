@@ -1,0 +1,36 @@
+{
+ "pais": "Suecia",
+ "iso3": "SWE",
+ "iso2": "SE",
+ "nombre_en": "Sweden",
+ "variable": "viento",
+ "imagen": "SWE_viento.webp",
+ "rejilla": "SWE_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  3.32716,
+  53.15169,
+  31.94442,
+  70.95347
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 446178,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.4399,
+ "p10": 5.4737,
+ "p50": 6.3442,
+ "p90": 7.4908,
+ "p2": 4.9041,
+ "p98": 8.8796,
+ "min": 2.9637,
+ "max": 15.9069,
+ "sobre_umbral": 0.1805,
+ "pixeles": 1295843
+}

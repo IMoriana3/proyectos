@@ -1,0 +1,36 @@
+{
+ "pais": "Siria",
+ "iso3": "SYR",
+ "iso2": "SY",
+ "nombre_en": "Syria",
+ "variable": "viento",
+ "imagen": "SYR_viento.webp",
+ "rejilla": "SYR_viento_rejilla.json",
+ "caja": [
+  0.02061,
+  0.03,
+  0.65373,
+  0.97
+ ],
+ "encuadre": [
+  35.1911,
+  31.51114,
+  42.90949,
+  38.02657
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 185939,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.1281,
+ "p10": 4.5523,
+ "p50": 6.2376,
+ "p90": 7.3844,
+ "p2": 3.917,
+ "p98": 8.5671,
+ "min": 2.4768,
+ "max": 12.4426,
+ "sobre_umbral": 0.1631,
+ "pixeles": 1284398
+}

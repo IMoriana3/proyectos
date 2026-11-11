@@ -1,0 +1,36 @@
+{
+ "pais": "República Centroafricana",
+ "iso3": "CAF",
+ "iso2": "CF",
+ "nombre_en": "Central African Republic",
+ "variable": "viento",
+ "imagen": "CAF_viento.webp",
+ "rejilla": "CAF_viento_rejilla.json",
+ "caja": [
+  0.01681,
+  0.03,
+  0.71763,
+  0.97
+ ],
+ "encuadre": [
+  13.34294,
+  0.83415,
+  28.48562,
+  12.22784
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 617984,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.3304,
+ "p10": 2.639,
+ "p50": 3.2383,
+ "p90": 4.1717,
+ "p2": 2.1074,
+ "p98": 5.1301,
+ "min": 1.378,
+ "max": 7.3991,
+ "sobre_umbral": 0.0,
+ "pixeles": 954626
+}

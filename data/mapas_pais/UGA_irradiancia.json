@@ -1,0 +1,36 @@
+{
+ "pais": "Uganda",
+ "iso3": "UGA",
+ "iso2": "UG",
+ "nombre_en": "Uganda",
+ "variable": "irradiancia",
+ "imagen": "UGA_irradiancia.webp",
+ "rejilla": "UGA_irradiancia_rejilla.json",
+ "caja": [
+  0.02232,
+  0.03,
+  0.62502,
+  0.97
+ ],
+ "encuadre": [
+  29.11182,
+  -2.38639,
+  35.44311,
+  5.01698
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 241854,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 2042.8063,
+ "p10": 1851.3235,
+ "p50": 2090.3208,
+ "p90": 2191.2226,
+ "p2": 1825.2162,
+ "p98": 2232.8113,
+ "min": 1797.468,
+ "max": 2251.4359,
+ "sobre_umbral": 0.9999,
+ "pixeles": 453539
+}

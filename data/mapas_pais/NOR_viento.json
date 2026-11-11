@@ -1,0 +1,36 @@
+{
+ "pais": "Noruega",
+ "iso3": "NOR",
+ "iso2": "NO",
+ "nombre_en": "Norway",
+ "variable": "viento",
+ "imagen": "NOR_viento.webp",
+ "rejilla": "NOR_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -12.0678,
+  54.46127,
+  48.07156,
+  83.15776
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 382067,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 7.1895,
+ "p10": 5.034,
+ "p50": 7.1727,
+ "p90": 9.3394,
+ "p2": 4.058,
+ "p98": 10.5172,
+ "min": 1.8384,
+ "max": 15.7106,
+ "sobre_umbral": 0.5372,
+ "pixeles": 259059
+}

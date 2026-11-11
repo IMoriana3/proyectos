@@ -1,0 +1,36 @@
+{
+ "pais": "Madagascar",
+ "iso3": "MDG",
+ "iso2": "MG",
+ "nombre_en": "Madagascar",
+ "variable": "viento",
+ "imagen": "MDG_viento.webp",
+ "rejilla": "MDG_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  39.83267,
+  -27.78336,
+  53.89415,
+  -10.03192
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 592984,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.3263,
+ "p10": 3.5662,
+ "p50": 5.1131,
+ "p90": 7.355,
+ "p2": 2.7802,
+ "p98": 9.283,
+ "min": 1.1048,
+ "max": 18.5238,
+ "sobre_umbral": 0.1316,
+ "pixeles": 820260
+}

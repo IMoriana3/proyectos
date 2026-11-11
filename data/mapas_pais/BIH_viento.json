@@ -1,0 +1,36 @@
+{
+ "pais": "Bosnia y Herzegovina",
+ "iso3": "BIH",
+ "iso2": "BA",
+ "nombre_en": "Bosnia and Herzegovina",
+ "variable": "viento",
+ "imagen": "BIH_viento.webp",
+ "rejilla": "BIH_viento_rejilla.json",
+ "caja": [
+  0.02164,
+  0.03,
+  0.63644,
+  0.97
+ ],
+ "encuadre": [
+  15.40385,
+  42.07921,
+  19.93111,
+  45.70452
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 51827,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.4603,
+ "p10": 2.9285,
+ "p50": 4.1423,
+ "p90": 6.5668,
+ "p2": 2.2491,
+ "p98": 8.2178,
+ "min": 0.6173,
+ "max": 14.9182,
+ "sobre_umbral": 0.0694,
+ "pixeles": 931238
+}

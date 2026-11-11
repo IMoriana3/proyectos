@@ -1,0 +1,36 @@
+{
+ "pais": "Somalilandia",
+ "iso3": "SOL",
+ "iso2": "",
+ "nombre_en": "Somaliland",
+ "variable": "irradiancia",
+ "imagen": "SOL_irradiancia.webp",
+ "rejilla": "SOL_irradiancia_rejilla.json",
+ "caja": [
+  0.01477,
+  0.03,
+  0.75184,
+  0.97
+ ],
+ "encuadre": [
+  42.1439,
+  7.43613,
+  49.44246,
+  11.98927
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 167407,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2392.1553,
+ "p10": 2238.1351,
+ "p50": 2435.3441,
+ "p90": 2485.2407,
+ "p2": 2166.969,
+ "p98": 2506.1209,
+ "min": 2125.6834,
+ "max": 2513.2813,
+ "sobre_umbral": 1.0,
+ "pixeles": 264335
+}

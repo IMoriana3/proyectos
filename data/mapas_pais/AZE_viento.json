@@ -1,0 +1,36 @@
+{
+ "pais": "Azerbaiyán",
+ "iso3": "AZE",
+ "iso2": "AZ",
+ "nombre_en": "Azerbaijan",
+ "variable": "viento",
+ "imagen": "AZE_viento.webp",
+ "rejilla": "AZE_viento_rejilla.json",
+ "caja": [
+  0.01909,
+  0.03,
+  0.67936,
+  0.97
+ ],
+ "encuadre": [
+  44.32523,
+  37.833,
+  50.84045,
+  42.38013
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 86250,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.2546,
+ "p10": 2.4815,
+ "p50": 3.9101,
+ "p90": 6.7078,
+ "p2": 1.7334,
+ "p98": 8.5077,
+ "min": 0.4767,
+ "max": 16.6955,
+ "sobre_umbral": 0.0849,
+ "pixeles": 891164
+}

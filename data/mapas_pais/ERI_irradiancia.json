@@ -1,0 +1,36 @@
+{
+ "pais": "Eritrea",
+ "iso3": "ERI",
+ "iso2": "ER",
+ "nombre_en": "Eritrea",
+ "variable": "irradiancia",
+ "imagen": "ERI_irradiancia.webp",
+ "rejilla": "ERI_irradiancia_rejilla.json",
+ "caja": [
+  0.01997,
+  0.03,
+  0.66457,
+  0.97
+ ],
+ "encuadre": [
+  35.88763,
+  11.45685,
+  43.65989,
+  18.7951
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 122538,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2203.0096,
+ "p10": 2075.8689,
+ "p50": 2193.8718,
+ "p90": 2339.5849,
+ "p2": 2021.7663,
+ "p98": 2364.5724,
+ "min": 1974.7725,
+ "max": 2375.3966,
+ "sobre_umbral": 1.0,
+ "pixeles": 178257
+}

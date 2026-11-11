@@ -1,0 +1,36 @@
+{
+ "pais": "Paraguay",
+ "iso3": "PRY",
+ "iso2": "PY",
+ "nombre_en": "Paraguay",
+ "variable": "irradiancia",
+ "imagen": "PRY_irradiancia.webp",
+ "rejilla": "PRY_irradiancia_rejilla.json",
+ "caja": [
+  0.02274,
+  0.03,
+  0.61805,
+  0.97
+ ],
+ "encuadre": [
+  -63.32276,
+  -28.91486,
+  -53.57288,
+  -18.12471
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 399901,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 1806.6141,
+ "p10": 1771.0601,
+ "p50": 1813.9235,
+ "p90": 1832.9175,
+ "p2": 1758.1177,
+ "p98": 1844.865,
+ "min": 1753.7699,
+ "max": 1855.8093,
+ "sobre_umbral": 0.6523,
+ "pixeles": 351372
+}

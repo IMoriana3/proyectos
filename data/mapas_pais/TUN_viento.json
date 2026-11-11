@@ -1,0 +1,36 @@
+{
+ "pais": "Túnez",
+ "iso3": "TUN",
+ "iso2": "TN",
+ "nombre_en": "Tunisia",
+ "variable": "viento",
+ "imagen": "TUN_viento.webp",
+ "rejilla": "TUN_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  5.34781,
+  29.0903,
+  13.69615,
+  38.34148
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 156612,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.8077,
+ "p10": 5.6113,
+ "p50": 6.8244,
+ "p90": 7.8692,
+ "p2": 4.852,
+ "p98": 8.588,
+ "min": 3.3588,
+ "max": 13.1176,
+ "sobre_umbral": 0.4122,
+ "pixeles": 931595
+}

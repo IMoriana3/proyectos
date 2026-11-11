@@ -1,0 +1,36 @@
+{
+ "pais": "Angola",
+ "iso3": "AGO",
+ "iso2": "AO",
+ "nombre_en": "Angola",
+ "variable": "irradiancia",
+ "imagen": "AGO_irradiancia.webp",
+ "rejilla": "AGO_irradiancia_rejilla.json",
+ "caja": [
+  0.02337,
+  0.03,
+  0.60731,
+  0.97
+ ],
+ "encuadre": [
+  10.74943,
+  -20.21384,
+  25.04781,
+  -2.48158
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1244654,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 2014.1667,
+ "p10": 1812.1053,
+ "p50": 2033.8596,
+ "p90": 2204.0537,
+ "p2": 1655.6663,
+ "p98": 2294.1301,
+ "min": 1419.9364,
+ "max": 2358.8318,
+ "sobre_umbral": 0.9087,
+ "pixeles": 409107
+}

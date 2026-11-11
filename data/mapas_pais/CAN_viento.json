@@ -1,0 +1,36 @@
+{
+ "pais": "Canadá",
+ "iso3": "CAN",
+ "iso2": "CA",
+ "nombre_en": "Canada",
+ "variable": "viento",
+ "imagen": "CAN_viento.webp",
+ "rejilla": "CAN_viento_rejilla.json",
+ "caja": [
+  0.01864,
+  0.03,
+  0.68681,
+  0.97
+ ],
+ "encuadre": [
+  -148.07668,
+  36.00386,
+  -45.54549,
+  82.0338
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 9945629,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.7146,
+ "p10": 5.0846,
+ "p50": 6.8188,
+ "p90": 8.0709,
+ "p2": 3.8645,
+ "p98": 8.8699,
+ "min": 1.4774,
+ "max": 12.9777,
+ "sobre_umbral": 0.4422,
+ "pixeles": 635706
+}

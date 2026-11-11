@@ -1,0 +1,36 @@
+{
+ "pais": "China",
+ "iso3": "CHN",
+ "iso2": "CN",
+ "nombre_en": "People's Republic of China",
+ "variable": "viento",
+ "imagen": "CHN_viento.webp",
+ "rejilla": "CHN_viento_rejilla.json",
+ "caja": [
+  0.01746,
+  0.03,
+  0.70662,
+  0.97
+ ],
+ "encuadre": [
+  68.70863,
+  12.50532,
+  139.6662,
+  58.52546
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 9375239,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.7511,
+ "p10": 3.5544,
+ "p50": 5.6337,
+ "p90": 8.0533,
+ "p2": 2.5767,
+ "p98": 9.3634,
+ "min": 1.1032,
+ "max": 15.4959,
+ "sobre_umbral": 0.2396,
+ "pixeles": 811637
+}

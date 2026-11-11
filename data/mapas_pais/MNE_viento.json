@@ -1,0 +1,36 @@
+{
+ "pais": "Montenegro",
+ "iso3": "MNE",
+ "iso2": "ME",
+ "nombre_en": "Montenegro",
+ "variable": "viento",
+ "imagen": "MNE_viento.webp",
+ "rejilla": "MNE_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  18.06995,
+  41.37236,
+  20.71875,
+  43.96789
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 13727,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.7322,
+ "p10": 2.6832,
+ "p50": 4.5359,
+ "p90": 7.0179,
+ "p2": 1.9515,
+ "p98": 8.5977,
+ "min": 0.6171,
+ "max": 14.7206,
+ "sobre_umbral": 0.1017,
+ "pixeles": 240028
+}

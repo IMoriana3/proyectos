@@ -1,0 +1,36 @@
+{
+ "pais": "Uruguay",
+ "iso3": "URY",
+ "iso2": "UY",
+ "nombre_en": "Uruguay",
+ "variable": "irradiancia",
+ "imagen": "URY_irradiancia.webp",
+ "rejilla": "URY_irradiancia_rejilla.json",
+ "caja": [
+  0.02285,
+  0.03,
+  0.6161,
+  0.97
+ ],
+ "encuadre": [
+  -58.86564,
+  -35.75365,
+  -52.68455,
+  -29.41416
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 177342,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1743.1747,
+ "p10": 1708.7882,
+ "p50": 1749.0598,
+ "p90": 1769.8536,
+ "p2": 1685.539,
+ "p98": 1782.4181,
+ "min": 1676.1681,
+ "max": 1786.378,
+ "sobre_umbral": 0.0,
+ "pixeles": 450067
+}

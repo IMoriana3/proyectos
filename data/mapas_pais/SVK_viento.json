@@ -1,0 +1,36 @@
+{
+ "pais": "Eslovaquia",
+ "iso3": "SVK",
+ "iso2": "SK",
+ "nombre_en": "Slovakia",
+ "variable": "viento",
+ "imagen": "SVK_viento.webp",
+ "rejilla": "SVK_viento_rejilla.json",
+ "caja": [
+  0.01473,
+  0.03,
+  0.75247,
+  0.97
+ ],
+ "encuadre": [
+  16.38887,
+  47.27001,
+  22.99525,
+  50.02178
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 48458,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.0531,
+ "p10": 3.7212,
+ "p50": 5.0971,
+ "p90": 6.2174,
+ "p2": 3.0443,
+ "p98": 7.1337,
+ "min": 1.4055,
+ "max": 13.7066,
+ "sobre_umbral": 0.0237,
+ "pixeles": 574087
+}

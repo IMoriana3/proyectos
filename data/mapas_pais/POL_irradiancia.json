@@ -1,0 +1,36 @@
+{
+ "pais": "Polonia",
+ "iso3": "POL",
+ "iso2": "PL",
+ "nombre_en": "Poland",
+ "variable": "irradiancia",
+ "imagen": "POL_irradiancia.webp",
+ "rejilla": "POL_irradiancia_rejilla.json",
+ "caja": [
+  0.02101,
+  0.03,
+  0.64707,
+  0.97
+ ],
+ "encuadre": [
+  13.32238,
+  48.05892,
+  24.94469,
+  55.65653
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 313431,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 1091.0115,
+ "p10": 1063.5051,
+ "p50": 1090.9929,
+ "p90": 1117.915,
+ "p2": 1055.0432,
+ "p98": 1132.7613,
+ "min": 1051.508,
+ "max": 1166.0953,
+ "sobre_umbral": 0.0,
+ "pixeles": 497332
+}

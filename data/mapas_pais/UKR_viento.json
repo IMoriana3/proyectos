@@ -1,0 +1,36 @@
+{
+ "pais": "Ucrania",
+ "iso3": "UKR",
+ "iso2": "UA",
+ "nombre_en": "Ukraine",
+ "variable": "viento",
+ "imagen": "UKR_viento.webp",
+ "rejilla": "UKR_viento_rejilla.json",
+ "caja": [
+  0.01549,
+  0.03,
+  0.73984,
+  0.97
+ ],
+ "encuadre": [
+  20.6907,
+  44.06871,
+  41.60168,
+  53.3707
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 571999,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.5259,
+ "p10": 5.7609,
+ "p50": 6.7054,
+ "p90": 7.0526,
+ "p2": 4.7239,
+ "p98": 7.2412,
+ "min": 2.0112,
+ "max": 9.1276,
+ "sobre_umbral": 0.1466,
+ "pixeles": 689370
+}

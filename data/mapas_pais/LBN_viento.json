@@ -1,0 +1,36 @@
+{
+ "pais": "Líbano",
+ "iso3": "LBN",
+ "iso2": "LB",
+ "nombre_en": "Lebanon",
+ "variable": "viento",
+ "imagen": "LBN_viento.webp",
+ "rejilla": "LBN_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  34.7083,
+  32.57558,
+  36.99542,
+  35.10755
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 10004,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.6483,
+ "p10": 3.2308,
+ "p50": 4.4675,
+ "p90": 6.3554,
+ "p2": 2.3398,
+ "p98": 7.5556,
+ "min": 1.0328,
+ "max": 11.2661,
+ "sobre_umbral": 0.0467,
+ "pixeles": 156086
+}

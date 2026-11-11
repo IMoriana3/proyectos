@@ -1,0 +1,36 @@
+{
+ "pais": "El Salvador",
+ "iso3": "SLV",
+ "iso2": "SV",
+ "nombre_en": "El Salvador",
+ "variable": "viento",
+ "imagen": "SLV_viento.webp",
+ "rejilla": "SLV_viento_rejilla.json",
+ "caja": [
+  0.01662,
+  0.03,
+  0.72085,
+  0.97
+ ],
+ "encuadre": [
+  -90.41478,
+  12.67864,
+  -87.39319,
+  14.86537
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 20539,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.0088,
+ "p10": 2.6247,
+ "p50": 3.8388,
+ "p90": 5.5389,
+ "p2": 1.9978,
+ "p98": 7.2277,
+ "min": 0.9411,
+ "max": 12.8954,
+ "sobre_umbral": 0.0253,
+ "pixeles": 274641
+}

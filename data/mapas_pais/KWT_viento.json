@@ -1,0 +1,36 @@
+{
+ "pais": "Kuwait",
+ "iso3": "KWT",
+ "iso2": "KW",
+ "nombre_en": "Kuwait",
+ "variable": "viento",
+ "imagen": "KWT_viento.webp",
+ "rejilla": "KWT_viento_rejilla.json",
+ "caja": [
+  0.02186,
+  0.03,
+  0.63268,
+  0.97
+ ],
+ "encuadre": [
+  46.23244,
+  28.05351,
+  48.73278,
+  30.51822
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 17474,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 7.532,
+ "p10": 7.1509,
+ "p50": 7.6023,
+ "p90": 7.8999,
+ "p2": 6.2948,
+ "p98": 8.0292,
+ "min": 5.4984,
+ "max": 8.5348,
+ "sobre_umbral": 0.9281,
+ "pixeles": 258182
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Tanzania",
+ "iso3": "TZA",
+ "iso2": "TZ",
+ "nombre_en": "Tanzania",
+ "variable": "viento",
+ "imagen": "TZA_viento.webp",
+ "rejilla": "TZA_viento_rejilla.json",
+ "caja": [
+  0.02136,
+  0.03,
+  0.64108,
+  0.97
+ ],
+ "encuadre": [
+  28.43076,
+  -13.45054,
+  41.33966,
+  0.51853
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 941506,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.3733,
+ "p10": 3.0286,
+ "p50": 4.1739,
+ "p90": 6.0613,
+ "p2": 2.4679,
+ "p98": 7.6714,
+ "min": 0.8228,
+ "max": 14.9104,
+ "sobre_umbral": 0.0412,
+ "pixeles": 1934132
+}

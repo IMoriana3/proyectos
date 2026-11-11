@@ -1,0 +1,36 @@
+{
+ "pais": "Nicaragua",
+ "iso3": "NIC",
+ "iso2": "NI",
+ "nombre_en": "Nicaragua",
+ "variable": "irradiancia",
+ "imagen": "NIC_irradiancia.webp",
+ "rejilla": "NIC_irradiancia_rejilla.json",
+ "caja": [
+  0.02137,
+  0.03,
+  0.64094,
+  0.97
+ ],
+ "encuadre": [
+  -88.05025,
+  10.02268,
+  -82.76601,
+  15.63542
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 128685,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1760.0176,
+ "p10": 1638.6048,
+ "p50": 1736.9758,
+ "p90": 1922.6509,
+ "p2": 1600.2343,
+ "p98": 2050.6575,
+ "min": 1591.5251,
+ "max": 2158.8665,
+ "sobre_umbral": 0.324,
+ "pixeles": 396273
+}

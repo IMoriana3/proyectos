@@ -1,0 +1,36 @@
+{
+ "pais": "Sudán",
+ "iso3": "SDN",
+ "iso2": "SD",
+ "nombre_en": "Sudan",
+ "variable": "irradiancia",
+ "imagen": "SDN_irradiancia.webp",
+ "rejilla": "SDN_irradiancia_rejilla.json",
+ "caja": [
+  0.01943,
+  0.03,
+  0.67366,
+  0.97
+ ],
+ "encuadre": [
+  20.4659,
+  6.51439,
+  39.9474,
+  24.12331
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1855614,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,50°",
+ "umbral": 1800.0,
+ "media": 2384.1845,
+ "p10": 2221.1182,
+ "p50": 2410.7642,
+ "p90": 2504.3064,
+ "p2": 2132.625,
+ "p98": 2535.9177,
+ "min": 2010.4964,
+ "max": 2549.1213,
+ "sobre_umbral": 1.0,
+ "pixeles": 432535
+}

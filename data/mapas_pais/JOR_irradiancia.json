@@ -1,0 +1,36 @@
+{
+ "pais": "Jordania",
+ "iso3": "JOR",
+ "iso2": "JO",
+ "nombre_en": "Jordan",
+ "variable": "irradiancia",
+ "imagen": "JOR_irradiancia.webp",
+ "rejilla": "JOR_irradiancia_rejilla.json",
+ "caja": [
+  0.02336,
+  0.03,
+  0.60759,
+  0.97
+ ],
+ "encuadre": [
+  34.60198,
+  28.52087,
+  39.63941,
+  33.95713
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 88863,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2148.4868,
+ "p10": 2074.1831,
+ "p50": 2136.127,
+ "p90": 2233.7361,
+ "p2": 2032.95,
+ "p98": 2292.5386,
+ "min": 2002.0163,
+ "max": 2297.1439,
+ "sobre_umbral": 1.0,
+ "pixeles": 306848
+}

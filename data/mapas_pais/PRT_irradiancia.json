@@ -1,0 +1,36 @@
+{
+ "pais": "Portugal",
+ "iso3": "PRT",
+ "iso2": "PT",
+ "nombre_en": "Portugal",
+ "variable": "irradiancia",
+ "imagen": "PRT_irradiancia.webp",
+ "rejilla": "PRT_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -11.11935,
+  36.16006,
+  -4.58406,
+  42.87699
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 91391,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1705.797,
+ "p10": 1607.7675,
+ "p50": 1695.1765,
+ "p90": 1813.4655,
+ "p2": 1538.2409,
+ "p98": 1845.1241,
+ "min": 1481.9607,
+ "max": 1851.6379,
+ "sobre_umbral": 0.1313,
+ "pixeles": 199507
+}

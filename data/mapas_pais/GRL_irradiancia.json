@@ -1,0 +1,36 @@
+{
+ "pais": "Groenlandia",
+ "iso3": "GRL",
+ "iso2": "GL",
+ "nombre_en": "Greenland",
+ "variable": "irradiancia",
+ "imagen": "GRL_irradiancia.webp",
+ "rejilla": "GRL_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -79.14614,
+  56.20456,
+  -5.28792,
+  86.94456
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 2154381,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 3,25°",
+ "umbral": 1800.0,
+ "media": 1118.031,
+ "p10": 966.4743,
+ "p50": 1132.0491,
+ "p90": 1243.2852,
+ "p2": 900.2862,
+ "p98": 1319.8477,
+ "min": 802.1632,
+ "max": 1355.6443,
+ "sobre_umbral": 0.0,
+ "pixeles": 244631
+}

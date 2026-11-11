@@ -1,0 +1,36 @@
+{
+ "pais": "Bulgaria",
+ "iso3": "BGR",
+ "iso2": "BG",
+ "nombre_en": "Bulgaria",
+ "variable": "irradiancia",
+ "imagen": "BGR_irradiancia.webp",
+ "rejilla": "BGR_irradiancia_rejilla.json",
+ "caja": [
+  0.01637,
+  0.03,
+  0.72501,
+  0.97
+ ],
+ "encuadre": [
+  21.84434,
+  40.7581,
+  29.10421,
+  44.64843
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 112761,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1432.5433,
+ "p10": 1404.139,
+ "p50": 1429.5052,
+ "p90": 1465.03,
+ "p2": 1388.6104,
+ "p98": 1513.7702,
+ "min": 1360.5711,
+ "max": 1545.5303,
+ "sobre_umbral": 0.0,
+ "pixeles": 322810
+}

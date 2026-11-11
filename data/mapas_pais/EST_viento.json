@@ -1,0 +1,36 @@
+{
+ "pais": "Estonia",
+ "iso3": "EST",
+ "iso2": "EE",
+ "nombre_en": "Estonia",
+ "variable": "viento",
+ "imagen": "EST_viento.webp",
+ "rejilla": "EST_viento_rejilla.json",
+ "caja": [
+  0.01739,
+  0.03,
+  0.70787,
+  0.97
+ ],
+ "encuadre": [
+  21.32404,
+  57.03582,
+  28.6948,
+  60.09089
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 45819,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.7001,
+ "p10": 6.0685,
+ "p50": 6.6571,
+ "p90": 7.3438,
+ "p2": 5.8122,
+ "p98": 8.0786,
+ "min": 5.2014,
+ "max": 9.1073,
+ "sobre_umbral": 0.237,
+ "pixeles": 538982
+}

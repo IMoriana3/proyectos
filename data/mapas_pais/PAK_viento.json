@@ -1,0 +1,36 @@
+{
+ "pais": "Pakistán",
+ "iso3": "PAK",
+ "iso2": "PK",
+ "nombre_en": "Pakistan",
+ "variable": "viento",
+ "imagen": "PAK_viento.webp",
+ "rejilla": "PAK_viento_rejilla.json",
+ "caja": [
+  0.02115,
+  0.03,
+  0.64476,
+  0.97
+ ],
+ "encuadre": [
+  59.54801,
+  21.55693,
+  78.34534,
+  38.92488
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 872939,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.0256,
+ "p10": 3.3506,
+ "p50": 4.8973,
+ "p90": 6.9668,
+ "p2": 2.3842,
+ "p98": 8.1668,
+ "min": 0.5624,
+ "max": 19.3145,
+ "sobre_umbral": 0.0968,
+ "pixeles": 1130888
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Grecia",
+ "iso3": "GRC",
+ "iso2": "GR",
+ "nombre_en": "Greece",
+ "variable": "viento",
+ "imagen": "GRC_viento.webp",
+ "rejilla": "GRC_viento_rejilla.json",
+ "caja": [
+  0.02187,
+  0.03,
+  0.63256,
+  0.97
+ ],
+ "encuadre": [
+  18.93741,
+  33.84061,
+  28.92882,
+  42.70511
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 131353,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.7317,
+ "p10": 2.9105,
+ "p50": 4.3979,
+ "p90": 7.0825,
+ "p2": 2.3214,
+ "p98": 8.9239,
+ "min": 1.3185,
+ "max": 16.0669,
+ "sobre_umbral": 0.1062,
+ "pixeles": 551856
+}

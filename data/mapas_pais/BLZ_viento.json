@@ -1,0 +1,36 @@
+{
+ "pais": "Belice",
+ "iso3": "BLZ",
+ "iso2": "BZ",
+ "nombre_en": "Belize",
+ "variable": "viento",
+ "imagen": "BLZ_viento.webp",
+ "rejilla": "BLZ_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -89.88799,
+  15.39965,
+  -87.1316,
+  18.91076
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 22299,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.2653,
+ "p10": 3.2851,
+ "p50": 4.2202,
+ "p90": 5.2782,
+ "p2": 2.6754,
+ "p98": 6.2232,
+ "min": 1.0156,
+ "max": 8.4112,
+ "sobre_umbral": 0.0002,
+ "pixeles": 303116
+}

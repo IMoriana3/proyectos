@@ -1,0 +1,36 @@
+{
+ "pais": "Libia",
+ "iso3": "LBY",
+ "iso2": "LY",
+ "nombre_en": "Libya",
+ "variable": "viento",
+ "imagen": "LBY_viento.webp",
+ "rejilla": "LBY_viento_rejilla.json",
+ "caja": [
+  0.02124,
+  0.03,
+  0.64323,
+  0.97
+ ],
+ "encuadre": [
+  8.01697,
+  17.30651,
+  26.42584,
+  35.09714
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1623761,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 7.0906,
+ "p10": 6.399,
+ "p50": 7.0787,
+ "p90": 7.8119,
+ "p2": 5.69,
+ "p98": 8.3044,
+ "min": 4.1233,
+ "max": 12.7497,
+ "sobre_umbral": 0.5626,
+ "pixeles": 1840342
+}

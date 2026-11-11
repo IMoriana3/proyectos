@@ -1,0 +1,36 @@
+{
+ "pais": "Pakistán",
+ "iso3": "PAK",
+ "iso2": "PK",
+ "nombre_en": "Pakistan",
+ "variable": "irradiancia",
+ "imagen": "PAK_irradiancia.webp",
+ "rejilla": "PAK_irradiancia_rejilla.json",
+ "caja": [
+  0.02115,
+  0.03,
+  0.64476,
+  0.97
+ ],
+ "encuadre": [
+  59.54801,
+  21.55693,
+  78.34534,
+  38.92488
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 872939,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 1985.1429,
+ "p10": 1756.4622,
+ "p50": 2036.5054,
+ "p90": 2202.4521,
+ "p2": 1654.784,
+ "p98": 2222.3899,
+ "min": 1562.0278,
+ "max": 2236.2494,
+ "sobre_umbral": 0.8152,
+ "pixeles": 270088
+}

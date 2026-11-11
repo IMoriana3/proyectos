@@ -1,0 +1,36 @@
+{
+ "pais": "Botsuana",
+ "iso3": "BWA",
+ "iso2": "BW",
+ "nombre_en": "Botswana",
+ "variable": "viento",
+ "imagen": "BWA_viento.webp",
+ "rejilla": "BWA_viento_rejilla.json",
+ "caja": [
+  0.02241,
+  0.03,
+  0.62346,
+  0.97
+ ],
+ "encuadre": [
+  19.22861,
+  -28.34939,
+  30.09981,
+  -16.50641
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 579029,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.512,
+ "p10": 4.824,
+ "p50": 5.479,
+ "p90": 6.2691,
+ "p2": 4.377,
+ "p98": 6.5579,
+ "min": 3.5563,
+ "max": 7.6932,
+ "sobre_umbral": 0.0029,
+ "pixeles": 1851060
+}

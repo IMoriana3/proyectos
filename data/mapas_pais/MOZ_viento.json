@@ -1,0 +1,36 @@
+{
+ "pais": "Mozambique",
+ "iso3": "MOZ",
+ "iso2": "MZ",
+ "nombre_en": "Mozambique",
+ "variable": "viento",
+ "imagen": "MOZ_viento.webp",
+ "rejilla": "MOZ_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  27.0966,
+  -29.48287,
+  43.96524,
+  -8.17423
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 788449,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.7282,
+ "p10": 3.6933,
+ "p50": 4.7495,
+ "p90": 5.758,
+ "p2": 3.1702,
+ "p98": 6.566,
+ "min": 1.4056,
+ "max": 11.1398,
+ "sobre_umbral": 0.0066,
+ "pixeles": 747124
+}

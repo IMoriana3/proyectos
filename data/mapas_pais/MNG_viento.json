@@ -1,0 +1,36 @@
+{
+ "pais": "Mongolia",
+ "iso3": "MNG",
+ "iso2": "MN",
+ "nombre_en": "Mongolia",
+ "variable": "viento",
+ "imagen": "MNG_viento.webp",
+ "rejilla": "MNG_viento_rejilla.json",
+ "caja": [
+  0.01305,
+  0.03,
+  0.78069,
+  0.97
+ ],
+ "encuadre": [
+  85.162,
+  39.89919,
+  122.48073,
+  53.60567
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1564649,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.4967,
+ "p10": 4.6172,
+ "p50": 6.6477,
+ "p90": 8.093,
+ "p2": 3.4752,
+ "p98": 8.9178,
+ "min": 2.179,
+ "max": 14.941,
+ "sobre_umbral": 0.3944,
+ "pixeles": 573423
+}

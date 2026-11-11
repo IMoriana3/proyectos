@@ -1,0 +1,36 @@
+{
+ "pais": "Nigeria",
+ "iso3": "NGA",
+ "iso2": "NG",
+ "nombre_en": "Nigeria",
+ "variable": "irradiancia",
+ "imagen": "NGA_irradiancia.webp",
+ "rejilla": "NGA_irradiancia_rejilla.json",
+ "caja": [
+  0.01903,
+  0.03,
+  0.68033,
+  0.97
+ ],
+ "encuadre": [
+  1.71117,
+  2.73486,
+  15.62984,
+  15.22543
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 907501,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 2016.0436,
+ "p10": 1721.5993,
+ "p50": 2059.273,
+ "p90": 2228.8807,
+ "p2": 1625.6437,
+ "p98": 2260.2347,
+ "min": 1559.703,
+ "max": 2304.6734,
+ "sobre_umbral": 0.8401,
+ "pixeles": 393595
+}

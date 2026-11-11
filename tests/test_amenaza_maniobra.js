@@ -97,8 +97,14 @@ const cerca = (a, b, tol) => Number.isFinite(a) && Math.abs(a - b) <= tol;
   //  2) GRANIZO: EL CAREO CONTRA EL NÚMERO TECLEADO
   // ══════════════════════════════════════════════════════════════════
   await page.click('#tabGranizo');
+  // Se espera al CAREO, no a la palabra: el aviso provisional «No hay
+  // T_necesario tecleado…» también la contiene y se pinta antes de que lleguen
+  // los parámetros de julio (gArranca es asíncrono). En un runner lento la
+  // espera se daba por buena con ese aviso y el banco leía `undefined` (CI de
+  // la PR #637, 2026-11-11: tres rojos que en local y en main salían verdes).
   await page.waitForFunction(() => document.getElementById('gTnec') &&
-    /T_necesario/.test(document.getElementById('gTnec').textContent), null, { timeout: 20000 });
+    /T_necesario, peor caso/.test(document.getElementById('gTnec').textContent) &&
+    Number.isFinite(gLeeParams().t_necesario_min), null, { timeout: 20000 });
 
   const G = await page.evaluate(() => ({
     txt: document.getElementById('gTnec').textContent.replace(/\s+/g, ' '),

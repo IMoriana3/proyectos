@@ -1,0 +1,36 @@
+{
+ "pais": "Trinidad y Tobago",
+ "iso3": "TTO",
+ "iso2": "TT",
+ "nombre_en": "Trinidad and Tobago",
+ "variable": "irradiancia",
+ "imagen": "TTO_irradiancia.webp",
+ "rejilla": "TTO_irradiancia_rejilla.json",
+ "caja": [
+  0.02174,
+  0.03,
+  0.63472,
+  0.97
+ ],
+ "encuadre": [
+  -62.2287,
+  9.56206,
+  -60.22208,
+  11.77106
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 5123,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2019.1632,
+ "p10": 1953.86,
+ "p50": 2022.1906,
+ "p90": 2081.3897,
+ "p2": 1943.6453,
+ "p98": 2095.413,
+ "min": 1943.3516,
+ "max": 2095.7307,
+ "sobre_umbral": 1.0,
+ "pixeles": 162782
+}

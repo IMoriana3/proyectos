@@ -1,0 +1,36 @@
+{
+ "pais": "Perú",
+ "iso3": "PER",
+ "iso2": "PE",
+ "nombre_en": "Peru",
+ "variable": "viento",
+ "imagen": "PER_viento.webp",
+ "rejilla": "PER_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -84.05226,
+  -21.26713,
+  -65.96955,
+  2.53412
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1289866,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 2.8548,
+ "p10": 1.6678,
+ "p50": 2.3378,
+ "p90": 4.9774,
+ "p2": 1.2483,
+ "p98": 6.656,
+ "min": 0.4952,
+ "max": 16.4364,
+ "sobre_umbral": 0.0143,
+ "pixeles": 984065
+}

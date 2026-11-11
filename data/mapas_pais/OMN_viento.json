@@ -1,0 +1,36 @@
+{
+ "pais": "Omán",
+ "iso3": "OMN",
+ "iso2": "OM",
+ "nombre_en": "Oman",
+ "variable": "viento",
+ "imagen": "OMN_viento.webp",
+ "rejilla": "OMN_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  50.80587,
+  15.08343,
+  61.01732,
+  27.75007
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 311213,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.2912,
+ "p10": 4.6165,
+ "p50": 6.4096,
+ "p90": 7.5937,
+ "p2": 3.6462,
+ "p98": 8.7166,
+ "min": 1.5183,
+ "max": 15.2557,
+ "sobre_umbral": 0.2603,
+ "pixeles": 846799
+}

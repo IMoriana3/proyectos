@@ -1,0 +1,36 @@
+{
+ "pais": "Islas Salomón",
+ "iso3": "SLB",
+ "iso2": "SB",
+ "nombre_en": "Solomon Islands",
+ "variable": "viento",
+ "imagen": "SLB_viento.webp",
+ "rejilla": "SLB_viento_rejilla.json",
+ "caja": [
+  0.01778,
+  0.03,
+  0.7013,
+  0.97
+ ],
+ "encuadre": [
+  154.92802,
+  -12.68524,
+  163.33755,
+  -5.86543
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 27199,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.6874,
+ "p10": 2.682,
+ "p50": 3.559,
+ "p90": 4.8806,
+ "p2": 2.2024,
+ "p98": 6.058,
+ "min": 0.7346,
+ "max": 9.6243,
+ "sobre_umbral": 0.0027,
+ "pixeles": 123285
+}

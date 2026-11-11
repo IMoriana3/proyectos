@@ -1,0 +1,36 @@
+{
+ "pais": "Siria",
+ "iso3": "SYR",
+ "iso2": "SY",
+ "nombre_en": "Syria",
+ "variable": "irradiancia",
+ "imagen": "SYR_irradiancia.webp",
+ "rejilla": "SYR_irradiancia_rejilla.json",
+ "caja": [
+  0.02061,
+  0.03,
+  0.65373,
+  0.97
+ ],
+ "encuadre": [
+  35.1911,
+  31.51114,
+  42.90949,
+  38.02657
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 185939,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1940.7898,
+ "p10": 1849.8691,
+ "p50": 1927.5743,
+ "p90": 2056.1735,
+ "p2": 1823.1308,
+ "p98": 2082.279,
+ "min": 1798.0725,
+ "max": 2091.6065,
+ "sobre_umbral": 0.9982,
+ "pixeles": 378417
+}

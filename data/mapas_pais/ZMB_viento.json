@@ -1,0 +1,36 @@
+{
+ "pais": "Zambia",
+ "iso3": "ZMB",
+ "iso2": "ZM",
+ "nombre_en": "Zambia",
+ "variable": "viento",
+ "imagen": "ZMB_viento.webp",
+ "rejilla": "ZMB_viento_rejilla.json",
+ "caja": [
+  0.01988,
+  0.03,
+  0.66602,
+  0.97
+ ],
+ "encuadre": [
+  21.04433,
+  -19.64925,
+  34.60975,
+  -6.81161
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 751915,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.9022,
+ "p10": 3.5925,
+ "p50": 4.9884,
+ "p90": 6.0604,
+ "p2": 2.8322,
+ "p98": 6.8154,
+ "min": 1.5486,
+ "max": 13.2924,
+ "sobre_umbral": 0.0126,
+ "pixeles": 1470174
+}

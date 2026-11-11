@@ -1,0 +1,36 @@
+{
+ "pais": "Israel",
+ "iso3": "ISR",
+ "iso2": "IL",
+ "nombre_en": "Israel",
+ "variable": "irradiancia",
+ "imagen": "ISR_irradiancia.webp",
+ "rejilla": "ISR_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  32.82987,
+  28.86297,
+  37.30655,
+  33.95511
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 22101,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2067.3965,
+ "p10": 1975.6455,
+ "p50": 2045.8501,
+ "p90": 2196.7127,
+ "p2": 1955.6768,
+ "p98": 2221.7839,
+ "min": 1948.2652,
+ "max": 2273.9231,
+ "sobre_umbral": 1.0,
+ "pixeles": 87176
+}

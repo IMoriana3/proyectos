@@ -1,0 +1,36 @@
+{
+ "pais": "Estonia",
+ "iso3": "EST",
+ "iso2": "EE",
+ "nombre_en": "Estonia",
+ "variable": "irradiancia",
+ "imagen": "EST_irradiancia.webp",
+ "rejilla": "EST_irradiancia_rejilla.json",
+ "caja": [
+  0.01739,
+  0.03,
+  0.70787,
+  0.97
+ ],
+ "encuadre": [
+  21.32404,
+  57.03582,
+  28.6948,
+  60.09089
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 45819,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 988.5051,
+ "p10": 973.8328,
+ "p50": 987.5943,
+ "p90": 1021.3346,
+ "p2": 968.7167,
+ "p98": 1030.3629,
+ "min": 941.6556,
+ "max": 1038.6631,
+ "sobre_umbral": 0.0,
+ "pixeles": 252120
+}

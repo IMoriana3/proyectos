@@ -1,0 +1,36 @@
+{
+ "pais": "Vanuatu",
+ "iso3": "VUT",
+ "iso2": "VU",
+ "nombre_en": "Vanuatu",
+ "variable": "viento",
+ "imagen": "VUT_viento.webp",
+ "rejilla": "VUT_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  164.66167,
+  -20.71211,
+  171.36057,
+  -12.14193
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 12297,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.1087,
+ "p10": 3.5065,
+ "p50": 5.0619,
+ "p90": 6.8261,
+ "p2": 2.5934,
+ "p98": 7.9387,
+ "min": 1.2796,
+ "max": 12.453,
+ "sobre_umbral": 0.0814,
+ "pixeles": 70734
+}

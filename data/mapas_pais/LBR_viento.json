@@ -1,0 +1,36 @@
+{
+ "pais": "Liberia",
+ "iso3": "LBR",
+ "iso2": "LR",
+ "nombre_en": "Liberia",
+ "variable": "viento",
+ "imagen": "LBR_viento.webp",
+ "rejilla": "LBR_viento_rejilla.json",
+ "caja": [
+  0.02224,
+  0.03,
+  0.62639,
+  0.97
+ ],
+ "encuadre": [
+  -11.80355,
+  3.67233,
+  -7.05675,
+  9.15594
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 95298,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 2.8252,
+ "p10": 2.4601,
+ "p50": 2.79,
+ "p90": 3.222,
+ "p2": 2.2665,
+ "p98": 3.6656,
+ "min": 1.503,
+ "max": 6.7607,
+ "sobre_umbral": 0.0,
+ "pixeles": 1246538
+}

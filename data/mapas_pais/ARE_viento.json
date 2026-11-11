@@ -1,0 +1,36 @@
+{
+ "pais": "Emiratos Árabes Unidos",
+ "iso3": "ARE",
+ "iso2": "AE",
+ "nombre_en": "United Arab Emirates",
+ "variable": "viento",
+ "imagen": "ARE_viento.webp",
+ "rejilla": "ARE_viento_rejilla.json",
+ "caja": [
+  0.01866,
+  0.03,
+  0.68651,
+  0.97
+ ],
+ "encuadre": [
+  51.1842,
+  22.06833,
+  56.76878,
+  26.55833
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 71085,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.9456,
+ "p10": 5.3232,
+ "p50": 6.0184,
+ "p90": 6.5366,
+ "p2": 4.4931,
+ "p98": 6.6527,
+ "min": 1.268,
+ "max": 9.4799,
+ "sobre_umbral": 0.0029,
+ "pixeles": 820793
+}

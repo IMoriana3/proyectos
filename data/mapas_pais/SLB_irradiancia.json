@@ -1,0 +1,36 @@
+{
+ "pais": "Islas Salomón",
+ "iso3": "SLB",
+ "iso2": "SB",
+ "nombre_en": "Solomon Islands",
+ "variable": "irradiancia",
+ "imagen": "SLB_irradiancia.webp",
+ "rejilla": "SLB_irradiancia_rejilla.json",
+ "caja": [
+  0.01778,
+  0.03,
+  0.7013,
+  0.97
+ ],
+ "encuadre": [
+  154.92802,
+  -12.68524,
+  163.33755,
+  -5.86543
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 27199,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1806.4727,
+ "p10": 1788.207,
+ "p50": 1804.8689,
+ "p90": 1830.6065,
+ "p2": 1776.5732,
+ "p98": 1855.2375,
+ "min": 1757.1509,
+ "max": 1869.1138,
+ "sobre_umbral": 0.5939,
+ "pixeles": 31206
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Surinam",
+ "iso3": "SUR",
+ "iso2": "SR",
+ "nombre_en": "Suriname",
+ "variable": "irradiancia",
+ "imagen": "SUR_irradiancia.webp",
+ "rejilla": "SUR_irradiancia_rejilla.json",
+ "caja": [
+  0.02209,
+  0.03,
+  0.62886,
+  0.97
+ ],
+ "encuadre": [
+  -58.3942,
+  1.16502,
+  -53.65985,
+  6.5965
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 145124,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1915.7715,
+ "p10": 1874.9354,
+ "p50": 1914.8597,
+ "p90": 1946.6287,
+ "p2": 1849.079,
+ "p98": 2050.0301,
+ "min": 1839.2748,
+ "max": 2125.9595,
+ "sobre_umbral": 1.0,
+ "pixeles": 505443
+}

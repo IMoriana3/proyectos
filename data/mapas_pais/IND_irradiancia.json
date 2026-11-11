@@ -1,0 +1,36 @@
+{
+ "pais": "India",
+ "iso3": "IND",
+ "iso2": "IN",
+ "nombre_en": "India",
+ "variable": "irradiancia",
+ "imagen": "IND_irradiancia.webp",
+ "rejilla": "IND_irradiancia_rejilla.json",
+ "caja": [
+  0.02189,
+  0.03,
+  0.63228,
+  0.97
+ ],
+ "encuadre": [
+  65.8059,
+  3.68889,
+  99.69976,
+  39.33412
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 3150747,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 2,50°",
+ "umbral": 1800.0,
+ "media": 1860.1002,
+ "p10": 1681.7275,
+ "p50": 1877.239,
+ "p90": 2010.836,
+ "p2": 1480.8882,
+ "p98": 2087.553,
+ "min": 1405.4389,
+ "max": 2115.7886,
+ "sobre_umbral": 0.7203,
+ "pixeles": 256187
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Países Bajos",
+ "iso3": "NLD",
+ "iso2": "NL",
+ "nombre_en": "Netherlands",
+ "variable": "irradiancia",
+ "imagen": "NLD_irradiancia.webp",
+ "rejilla": "NLD_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  3.03408,
+  50.26755,
+  7.51384,
+  53.93415
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 37398,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1077.7434,
+ "p10": 1050.1671,
+ "p50": 1083.2561,
+ "p90": 1102.4015,
+ "p2": 1046.9044,
+ "p98": 1120.6642,
+ "min": 1045.7708,
+ "max": 1145.9971,
+ "sobre_umbral": 0.0,
+ "pixeles": 284634
+}

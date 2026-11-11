@@ -1,0 +1,36 @@
+{
+ "pais": "Sudáfrica",
+ "iso3": "ZAF",
+ "iso2": "ZA",
+ "nombre_en": "South Africa",
+ "variable": "irradiancia",
+ "imagen": "ZAF_irradiancia.webp",
+ "rejilla": "ZAF_irradiancia_rejilla.json",
+ "caja": [
+  0.02006,
+  0.03,
+  0.66297,
+  0.97
+ ],
+ "encuadre": [
+  15.15613,
+  -36.85323,
+  34.20692,
+  -20.34908
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1219827,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,50°",
+ "umbral": 1800.0,
+ "media": 2071.9329,
+ "p10": 1837.5101,
+ "p50": 2091.7202,
+ "p90": 2278.799,
+ "p2": 1723.911,
+ "p98": 2332.6652,
+ "min": 1659.2933,
+ "max": 2349.0539,
+ "sobre_umbral": 0.9273,
+ "pixeles": 357052
+}

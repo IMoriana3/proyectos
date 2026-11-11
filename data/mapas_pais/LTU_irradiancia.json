@@ -1,0 +1,36 @@
+{
+ "pais": "Lituania",
+ "iso3": "LTU",
+ "iso2": "LT",
+ "nombre_en": "Lithuania",
+ "variable": "irradiancia",
+ "imagen": "LTU_irradiancia.webp",
+ "rejilla": "LTU_irradiancia_rejilla.json",
+ "caja": [
+  0.01873,
+  0.03,
+  0.68531,
+  0.97
+ ],
+ "encuadre": [
+  20.45448,
+  53.40684,
+  27.27081,
+  56.8626
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 64939,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1050.1757,
+ "p10": 1031.3102,
+ "p50": 1049.2342,
+ "p90": 1071.9427,
+ "p2": 1021.7511,
+ "p98": 1075.9041,
+ "min": 1020.5429,
+ "max": 1077.8718,
+ "sobre_umbral": 0.0,
+ "pixeles": 348701
+}

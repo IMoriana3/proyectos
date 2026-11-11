@@ -1,0 +1,36 @@
+{
+ "pais": "Turkmenistán",
+ "iso3": "TKM",
+ "iso2": "TM",
+ "nombre_en": "Turkmenistan",
+ "variable": "viento",
+ "imagen": "TKM_viento.webp",
+ "rejilla": "TKM_viento_rejilla.json",
+ "caja": [
+  0.0171,
+  0.03,
+  0.71279,
+  0.97
+ ],
+ "encuadre": [
+  51.30102,
+  33.91656,
+  67.78243,
+  43.86226
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 470850,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.7828,
+ "p10": 5.5182,
+ "p50": 6.9662,
+ "p90": 7.7574,
+ "p2": 4.5522,
+ "p98": 8.3267,
+ "min": 2.5799,
+ "max": 10.8398,
+ "sobre_umbral": 0.4888,
+ "pixeles": 746436
+}

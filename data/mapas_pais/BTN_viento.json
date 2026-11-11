@@ -1,0 +1,36 @@
+{
+ "pais": "Bután",
+ "iso3": "BTN",
+ "iso2": "BT",
+ "nombre_en": "Bhutan",
+ "variable": "viento",
+ "imagen": "BTN_viento.webp",
+ "rejilla": "BTN_viento_rejilla.json",
+ "caja": [
+  0.01637,
+  0.03,
+  0.72492,
+  0.97
+ ],
+ "encuadre": [
+  88.43007,
+  26.21615,
+  92.38878,
+  28.7784
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 40421,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 2.4437,
+ "p10": 0.9739,
+ "p50": 2.0027,
+ "p90": 4.5174,
+ "p2": 0.6328,
+ "p98": 6.9635,
+ "min": 0.0656,
+ "max": 20.9257,
+ "sobre_umbral": 0.0195,
+ "pixeles": 560757
+}

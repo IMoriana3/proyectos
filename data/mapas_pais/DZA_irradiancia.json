@@ -1,0 +1,36 @@
+{
+ "pais": "Argelia",
+ "iso3": "DZA",
+ "iso2": "DZ",
+ "nombre_en": "Algeria",
+ "variable": "irradiancia",
+ "imagen": "DZA_irradiancia.webp",
+ "rejilla": "DZA_irradiancia_rejilla.json",
+ "caja": [
+  0.02167,
+  0.03,
+  0.636,
+  0.97
+ ],
+ "encuadre": [
+  -10.33448,
+  16.07662,
+  13.62096,
+  39.63051
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 2308858,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,75°",
+ "umbral": 1800.0,
+ "media": 2200.648,
+ "p10": 1944.0393,
+ "p50": 2224.7287,
+ "p90": 2369.5345,
+ "p2": 1776.5933,
+ "p98": 2417.6198,
+ "min": 1725.4074,
+ "max": 2431.9657,
+ "sobre_umbral": 0.9659,
+ "pixeles": 422959
+}

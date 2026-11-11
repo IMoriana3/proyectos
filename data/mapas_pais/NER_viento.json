@@ -1,0 +1,36 @@
+{
+ "pais": "Níger",
+ "iso3": "NER",
+ "iso2": "NE",
+ "nombre_en": "Niger",
+ "variable": "viento",
+ "imagen": "NER_viento.webp",
+ "rejilla": "NER_viento_rejilla.json",
+ "caja": [
+  0.01861,
+  0.03,
+  0.6874,
+  0.97
+ ],
+ "encuadre": [
+  -1.11245,
+  9.80432,
+  17.23571,
+  25.17237
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1181301,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.8071,
+ "p10": 5.8183,
+ "p50": 6.727,
+ "p90": 7.8693,
+ "p2": 5.2754,
+ "p98": 8.6257,
+ "min": 3.4911,
+ "max": 12.0531,
+ "sobre_umbral": 0.3694,
+ "pixeles": 1288759
+}

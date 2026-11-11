@@ -1,0 +1,36 @@
+{
+ "pais": "Mauritania",
+ "iso3": "MRT",
+ "iso2": "MR",
+ "nombre_en": "Mauritania",
+ "variable": "irradiancia",
+ "imagen": "MRT_irradiancia.webp",
+ "rejilla": "MRT_irradiancia_rejilla.json",
+ "caja": [
+  0.02299,
+  0.03,
+  0.61378,
+  0.97
+ ],
+ "encuadre": [
+  -18.06194,
+  12.72624,
+  -3.84085,
+  29.04256
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1036392,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 2288.7134,
+ "p10": 2237.3059,
+ "p50": 2296.9037,
+ "p90": 2333.1047,
+ "p2": 2217.1742,
+ "p98": 2344.4104,
+ "min": 2150.6032,
+ "max": 2352.0016,
+ "sobre_umbral": 1.0,
+ "pixeles": 397855
+}

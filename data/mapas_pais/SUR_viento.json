@@ -1,0 +1,36 @@
+{
+ "pais": "Surinam",
+ "iso3": "SUR",
+ "iso2": "SR",
+ "nombre_en": "Suriname",
+ "variable": "viento",
+ "imagen": "SUR_viento.webp",
+ "rejilla": "SUR_viento_rejilla.json",
+ "caja": [
+  0.02209,
+  0.03,
+  0.62886,
+  0.97
+ ],
+ "encuadre": [
+  -58.3942,
+  1.16502,
+  -53.65985,
+  6.5965
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 145124,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.2193,
+ "p10": 2.6422,
+ "p50": 3.0593,
+ "p90": 4.044,
+ "p2": 2.2927,
+ "p98": 5.2474,
+ "min": 1.067,
+ "max": 9.094,
+ "sobre_umbral": 0.0001,
+ "pixeles": 1891041
+}

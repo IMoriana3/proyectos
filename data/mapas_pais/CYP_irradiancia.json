@@ -1,0 +1,36 @@
+{
+ "pais": "Chipre",
+ "iso3": "CYP",
+ "iso2": "CY",
+ "nombre_en": "Cyprus",
+ "variable": "irradiancia",
+ "imagen": "CYP_irradiancia.webp",
+ "rejilla": "CYP_irradiancia_rejilla.json",
+ "caja": [
+  0.01645,
+  0.03,
+  0.7237,
+  0.97
+ ],
+ "encuadre": [
+  31.97174,
+  34.14502,
+  34.39913,
+  35.60708
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 5395,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1864.3157,
+ "p10": 1839.9422,
+ "p50": 1863.8862,
+ "p90": 1889.7508,
+ "p2": 1835.7186,
+ "p98": 1900.7899,
+ "min": 1834.8856,
+ "max": 1905.2422,
+ "sobre_umbral": 1.0,
+ "pixeles": 145227
+}

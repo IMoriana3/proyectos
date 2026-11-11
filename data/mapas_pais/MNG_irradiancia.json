@@ -1,0 +1,36 @@
+{
+ "pais": "Mongolia",
+ "iso3": "MNG",
+ "iso2": "MN",
+ "nombre_en": "Mongolia",
+ "variable": "irradiancia",
+ "imagen": "MNG_irradiancia.webp",
+ "rejilla": "MNG_irradiancia_rejilla.json",
+ "caja": [
+  0.01305,
+  0.03,
+  0.78069,
+  0.97
+ ],
+ "encuadre": [
+  85.162,
+  39.89919,
+  122.48073,
+  53.60567
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1564649,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,75°",
+ "umbral": 1800.0,
+ "media": 1591.7298,
+ "p10": 1434.8188,
+ "p50": 1596.3531,
+ "p90": 1738.4732,
+ "p2": 1370.3288,
+ "p98": 1765.9125,
+ "min": 1272.8681,
+ "max": 1783.9945,
+ "sobre_umbral": 0.0,
+ "pixeles": 195184
+}

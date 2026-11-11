@@ -1,0 +1,36 @@
+{
+ "pais": "Corea del Norte",
+ "iso3": "PRK",
+ "iso2": "KP",
+ "nombre_en": "North Korea",
+ "variable": "viento",
+ "imagen": "PRK_viento.webp",
+ "rejilla": "PRK_viento_rejilla.json",
+ "caja": [
+  0.023,
+  0.03,
+  0.61364,
+  0.97
+ ],
+ "encuadre": [
+  123.81127,
+  36.82206,
+  131.21024,
+  43.75712
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 122379,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.8984,
+ "p10": 3.3507,
+ "p50": 4.836,
+ "p90": 6.4207,
+ "p2": 2.6093,
+ "p98": 8.1145,
+ "min": 1.107,
+ "max": 16.643,
+ "sobre_umbral": 0.0572,
+ "pixeles": 951967
+}

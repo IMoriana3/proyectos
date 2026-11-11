@@ -1,0 +1,36 @@
+{
+ "pais": "Tierras Australes y Antárticas Francesas",
+ "iso3": "ATF",
+ "iso2": "TF",
+ "nombre_en": "French Southern and Antarctic Lands",
+ "variable": "irradiancia",
+ "imagen": "ATF_irradiancia.webp",
+ "rejilla": "ATF_irradiancia_rejilla.json",
+ "caja": [
+  0.02298,
+  0.03,
+  0.614,
+  0.97
+ ],
+ "encuadre": [
+  68.31012,
+  -50.20161,
+  70.86853,
+  -48.14666
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 7280,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1057.9746,
+ "p10": 952.4824,
+ "p50": 1064.4084,
+ "p90": 1161.7894,
+ "p2": 938.4627,
+ "p98": 1184.1263,
+ "min": 931.8144,
+ "max": 1196.3442,
+ "sobre_umbral": 0.0,
+ "pixeles": 257734
+}

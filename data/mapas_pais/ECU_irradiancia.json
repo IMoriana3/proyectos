@@ -1,0 +1,36 @@
+{
+ "pais": "Ecuador",
+ "iso3": "ECU",
+ "iso2": "EC",
+ "nombre_en": "Ecuador",
+ "variable": "irradiancia",
+ "imagen": "ECU_irradiancia.webp",
+ "rejilla": "ECU_irradiancia_rejilla.json",
+ "caja": [
+  0.02321,
+  0.03,
+  0.61007,
+  0.97
+ ],
+ "encuadre": [
+  -81.47587,
+  -6.04268,
+  -74.7644,
+  2.33671
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 255014,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 1480.6272,
+ "p10": 1362.4292,
+ "p50": 1465.5103,
+ "p90": 1599.037,
+ "p2": 1331.2949,
+ "p98": 1755.6989,
+ "min": 1313.181,
+ "max": 1976.2164,
+ "sobre_umbral": 0.0095,
+ "pixeles": 362189
+}

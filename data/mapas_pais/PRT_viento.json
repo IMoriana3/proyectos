@@ -1,0 +1,36 @@
+{
+ "pais": "Portugal",
+ "iso3": "PRT",
+ "iso2": "PT",
+ "nombre_en": "Portugal",
+ "variable": "viento",
+ "imagen": "PRT_viento.webp",
+ "rejilla": "PRT_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -11.11935,
+  36.16006,
+  -4.58406,
+  42.87699
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 91391,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.7406,
+ "p10": 4.5691,
+ "p50": 5.8028,
+ "p90": 6.7445,
+ "p2": 3.6835,
+ "p98": 7.6671,
+ "min": 2.0942,
+ "max": 11.1933,
+ "sobre_umbral": 0.063,
+ "pixeles": 1068234
+}

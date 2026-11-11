@@ -1,0 +1,36 @@
+{
+ "pais": "Vanuatu",
+ "iso3": "VUT",
+ "iso2": "VU",
+ "nombre_en": "Vanuatu",
+ "variable": "irradiancia",
+ "imagen": "VUT_irradiancia.webp",
+ "rejilla": "VUT_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  164.66167,
+  -20.71211,
+  171.36057,
+  -12.14193
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 12297,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1874.3744,
+ "p10": 1818.6535,
+ "p50": 1878.4455,
+ "p90": 1917.7409,
+ "p2": 1801.6392,
+ "p98": 1935.7608,
+ "min": 1800.3467,
+ "max": 1940.3549,
+ "sobre_umbral": 1.0,
+ "pixeles": 16907
+}

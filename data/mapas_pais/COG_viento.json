@@ -1,0 +1,36 @@
+{
+ "pais": "República del Congo",
+ "iso3": "COG",
+ "iso2": "CG",
+ "nombre_en": "Republic of the Congo",
+ "variable": "viento",
+ "imagen": "COG_viento.webp",
+ "rejilla": "COG_viento_rejilla.json",
+ "caja": [
+  0.02375,
+  0.03,
+  0.60102,
+  0.97
+ ],
+ "encuadre": [
+  10.51174,
+  -6.4161,
+  19.24468,
+  4.93018
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 344889,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 2.8674,
+ "p10": 2.1076,
+ "p50": 2.5502,
+ "p90": 4.2202,
+ "p2": 1.8565,
+ "p98": 5.0072,
+ "min": 1.3329,
+ "max": 7.2929,
+ "sobre_umbral": 0.0,
+ "pixeles": 1130815
+}

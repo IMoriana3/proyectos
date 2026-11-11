@@ -1,0 +1,36 @@
+{
+ "pais": "Brasil",
+ "iso3": "BRA",
+ "iso2": "BR",
+ "nombre_en": "Brazil",
+ "variable": "irradiancia",
+ "imagen": "BRA_irradiancia.webp",
+ "rejilla": "BRA_irradiancia_rejilla.json",
+ "caja": [
+  0.02209,
+  0.03,
+  0.62888,
+  0.97
+ ],
+ "encuadre": [
+  -77.15646,
+  -39.9838,
+  -31.65562,
+  10.72856
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 8472670,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 3,25°",
+ "umbral": 1800.0,
+ "media": 1878.5061,
+ "p10": 1700.0123,
+ "p50": 1866.0987,
+ "p90": 2103.9922,
+ "p2": 1647.87,
+ "p98": 2180.8402,
+ "min": 1511.3549,
+ "max": 2222.3849,
+ "sobre_umbral": 0.6553,
+ "pixeles": 336781
+}

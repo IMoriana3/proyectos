@@ -1,0 +1,36 @@
+{
+ "pais": "Albania",
+ "iso3": "ALB",
+ "iso2": "AL",
+ "nombre_en": "Albania",
+ "variable": "irradiancia",
+ "imagen": "ALB_irradiancia.webp",
+ "rejilla": "ALB_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  18.20069,
+  39.15416,
+  22.10802,
+  43.07731
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 28336,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1512.3039,
+ "p10": 1419.365,
+ "p50": 1516.3164,
+ "p90": 1600.8384,
+ "p2": 1406.5528,
+ "p98": 1657.3051,
+ "min": 1401.6296,
+ "max": 1687.6845,
+ "sobre_umbral": 0.0,
+ "pixeles": 188155
+}

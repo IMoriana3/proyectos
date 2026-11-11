@@ -1,0 +1,36 @@
+{
+ "pais": "Rumania",
+ "iso3": "ROU",
+ "iso2": "RO",
+ "nombre_en": "Romania",
+ "variable": "viento",
+ "imagen": "ROU_viento.webp",
+ "rejilla": "ROU_viento_rejilla.json",
+ "caja": [
+  0.01728,
+  0.03,
+  0.70964,
+  0.97
+ ],
+ "encuadre": [
+  19.48629,
+  42.91008,
+  30.45609,
+  48.9223
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 236377,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.9582,
+ "p10": 3.5508,
+ "p50": 5.0515,
+ "p90": 6.2764,
+ "p2": 2.8671,
+ "p98": 6.824,
+ "min": 1.2149,
+ "max": 11.4324,
+ "sobre_umbral": 0.0116,
+ "pixeles": 943449
+}

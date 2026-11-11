@@ -1,0 +1,36 @@
+{
+ "pais": "Sudán del Sur",
+ "iso3": "SSD",
+ "iso2": "SS",
+ "nombre_en": "South Sudan",
+ "variable": "viento",
+ "imagen": "SSD_viento.webp",
+ "rejilla": "SSD_viento_rejilla.json",
+ "caja": [
+  0.018,
+  0.03,
+  0.69758,
+  0.97
+ ],
+ "encuadre": [
+  23.17761,
+  2.09405,
+  36.86478,
+  13.43779
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 626862,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.4766,
+ "p10": 3.4607,
+ "p50": 4.4327,
+ "p90": 5.5697,
+ "p2": 2.9535,
+ "p98": 6.2069,
+ "min": 0.8498,
+ "max": 11.1277,
+ "sobre_umbral": 0.0019,
+ "pixeles": 1135393
+}

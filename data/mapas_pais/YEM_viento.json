@@ -1,0 +1,36 @@
+{
+ "pais": "Yemen",
+ "iso3": "YEM",
+ "iso2": "YE",
+ "nombre_en": "Yemen",
+ "variable": "viento",
+ "imagen": "YEM_viento.webp",
+ "rejilla": "YEM_viento_rejilla.json",
+ "caja": [
+  0.01607,
+  0.03,
+  0.73001,
+  0.97
+ ],
+ "encuadre": [
+  41.7717,
+  11.57443,
+  53.92876,
+  19.8913
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 453076,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.6883,
+ "p10": 3.8593,
+ "p50": 5.7498,
+ "p90": 7.3636,
+ "p2": 2.8191,
+ "p98": 8.3375,
+ "min": 0.9888,
+ "max": 15.021,
+ "sobre_umbral": 0.1616,
+ "pixeles": 1032739
+}

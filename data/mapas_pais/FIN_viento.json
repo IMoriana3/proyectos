@@ -1,0 +1,36 @@
+{
+ "pais": "Finlandia",
+ "iso3": "FIN",
+ "iso2": "FI",
+ "nombre_en": "Finland",
+ "variable": "viento",
+ "imagen": "FIN_viento.webp",
+ "rejilla": "FIN_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  14.28157,
+  58.16897,
+  37.91112,
+  71.51228
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 333059,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.3416,
+ "p10": 5.8592,
+ "p50": 6.2814,
+ "p90": 6.8458,
+ "p2": 5.638,
+ "p98": 7.6633,
+ "min": 4.8249,
+ "max": 12.0429,
+ "sobre_umbral": 0.0694,
+ "pixeles": 1603069
+}

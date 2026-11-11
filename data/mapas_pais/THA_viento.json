@@ -1,0 +1,36 @@
+{
+ "pais": "Tailandia",
+ "iso3": "THA",
+ "iso2": "TH",
+ "nombre_en": "Thailand",
+ "variable": "viento",
+ "imagen": "THA_viento.webp",
+ "rejilla": "THA_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  94.08773,
+  3.25947,
+  108.91467,
+  22.51912
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 514454,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.9575,
+ "p10": 2.7251,
+ "p50": 3.9254,
+ "p90": 5.202,
+ "p2": 2.1394,
+ "p98": 5.8006,
+ "min": 1.0824,
+ "max": 9.5868,
+ "sobre_umbral": 0.0011,
+ "pixeles": 631581
+}

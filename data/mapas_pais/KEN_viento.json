@@ -1,0 +1,36 @@
+{
+ "pais": "Kenia",
+ "iso3": "KEN",
+ "iso2": "KE",
+ "nombre_en": "Kenya",
+ "variable": "viento",
+ "imagen": "KEN_viento.webp",
+ "rejilla": "KEN_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  33.15513,
+  -6.23076,
+  42.62036,
+  6.38948
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 585703,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.3761,
+ "p10": 3.4364,
+ "p50": 5.3068,
+ "p90": 7.0421,
+ "p2": 2.5484,
+ "p98": 10.4791,
+ "min": 0.9862,
+ "max": 17.525,
+ "sobre_umbral": 0.1033,
+ "pixeles": 1689662
+}

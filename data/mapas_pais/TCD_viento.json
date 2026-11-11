@@ -1,0 +1,36 @@
+{
+ "pais": "Chad",
+ "iso3": "TCD",
+ "iso2": "TD",
+ "nombre_en": "Chad",
+ "variable": "viento",
+ "imagen": "TCD_viento.webp",
+ "rejilla": "TCD_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  10.62984,
+  4.8973,
+  26.80375,
+  25.6832
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 1266282,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.8734,
+ "p10": 4.6215,
+ "p50": 6.8847,
+ "p90": 9.144,
+ "p2": 3.7773,
+ "p98": 10.4856,
+ "min": 1.9998,
+ "max": 15.1964,
+ "sobre_umbral": 0.4768,
+ "pixeles": 1339075
+}

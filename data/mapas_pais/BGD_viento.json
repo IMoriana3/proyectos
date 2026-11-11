@@ -1,0 +1,36 @@
+{
+ "pais": "Bangladés",
+ "iso3": "BGD",
+ "iso2": "BD",
+ "nombre_en": "Bangladesh",
+ "variable": "viento",
+ "imagen": "BGD_viento.webp",
+ "rejilla": "BGD_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  87.19968,
+  19.79714,
+  93.46496,
+  27.44742
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 136904,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.0055,
+ "p10": 3.2077,
+ "p50": 4.104,
+ "p90": 4.6285,
+ "p2": 2.6671,
+ "p98": 5.1622,
+ "min": 1.5479,
+ "max": 6.1899,
+ "sobre_umbral": 0.0,
+ "pixeles": 1075708
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "El Salvador",
+ "iso3": "SLV",
+ "iso2": "SV",
+ "nombre_en": "El Salvador",
+ "variable": "irradiancia",
+ "imagen": "SLV_irradiancia.webp",
+ "rejilla": "SLV_irradiancia_rejilla.json",
+ "caja": [
+  0.01662,
+  0.03,
+  0.72085,
+  0.97
+ ],
+ "encuadre": [
+  -90.41478,
+  12.67864,
+  -87.39319,
+  14.86537
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 20539,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 2048.428,
+ "p10": 1945.0207,
+ "p50": 2055.1799,
+ "p90": 2137.4172,
+ "p2": 1908.942,
+ "p98": 2143.235,
+ "min": 1891.5944,
+ "max": 2145.6084,
+ "sobre_umbral": 1.0,
+ "pixeles": 225677
+}

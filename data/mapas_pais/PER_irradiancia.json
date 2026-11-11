@@ -1,0 +1,36 @@
+{
+ "pais": "Perú",
+ "iso3": "PER",
+ "iso2": "PE",
+ "nombre_en": "Peru",
+ "variable": "irradiancia",
+ "imagen": "PER_irradiancia.webp",
+ "rejilla": "PER_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -84.05226,
+  -21.26713,
+  -65.96955,
+  2.53412
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 1289866,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,25°",
+ "umbral": 1800.0,
+ "media": 1761.2696,
+ "p10": 1579.8136,
+ "p50": 1670.1235,
+ "p90": 2157.4508,
+ "p2": 1507.725,
+ "p98": 2340.1118,
+ "min": 1439.8862,
+ "max": 2442.4841,
+ "sobre_umbral": 0.2872,
+ "pixeles": 234492
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Bahamas",
+ "iso3": "BHS",
+ "iso2": "BS",
+ "nombre_en": "The Bahamas",
+ "variable": "irradiancia",
+ "imagen": "BHS_irradiancia.webp",
+ "rejilla": "BHS_irradiancia_rejilla.json",
+ "caja": [
+  0.02233,
+  0.03,
+  0.6248,
+  0.97
+ ],
+ "encuadre": [
+  -79.80824,
+  19.94984,
+  -72.50066,
+  27.77065
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 12604,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1932.8353,
+ "p10": 1849.908,
+ "p50": 1904.3203,
+ "p90": 2031.1497,
+ "p2": 1839.2031,
+ "p98": 2072.9788,
+ "min": 1820.8725,
+ "max": 2079.9181,
+ "sobre_umbral": 1.0,
+ "pixeles": 20947
+}

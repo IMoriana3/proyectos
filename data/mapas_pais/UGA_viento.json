@@ -1,0 +1,36 @@
+{
+ "pais": "Uganda",
+ "iso3": "UGA",
+ "iso2": "UG",
+ "nombre_en": "Uganda",
+ "variable": "viento",
+ "imagen": "UGA_viento.webp",
+ "rejilla": "UGA_viento_rejilla.json",
+ "caja": [
+  0.02232,
+  0.03,
+  0.62502,
+  0.97
+ ],
+ "encuadre": [
+  29.11182,
+  -2.38639,
+  35.44311,
+  5.01698
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 241854,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 3.6383,
+ "p10": 2.9165,
+ "p50": 3.5302,
+ "p90": 4.3902,
+ "p2": 2.2807,
+ "p98": 5.9497,
+ "min": 0.6262,
+ "max": 11.7418,
+ "sobre_umbral": 0.0025,
+ "pixeles": 1926171
+}

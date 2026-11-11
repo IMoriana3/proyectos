@@ -1,0 +1,36 @@
+{
+ "pais": "Finlandia",
+ "iso3": "FIN",
+ "iso2": "FI",
+ "nombre_en": "Finland",
+ "variable": "irradiancia",
+ "imagen": "FIN_irradiancia.webp",
+ "rejilla": "FIN_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  14.28157,
+  58.16897,
+  37.91112,
+  71.51228
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 333059,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 1,00°",
+ "umbral": 1800.0,
+ "media": 851.1377,
+ "p10": 767.9299,
+ "p50": 861.6786,
+ "p90": 913.4143,
+ "p2": 724.6094,
+ "p98": 934.8229,
+ "min": 661.3992,
+ "max": 988.8953,
+ "sobre_umbral": 0.0,
+ "pixeles": 186175
+}

@@ -1,0 +1,36 @@
+{
+ "pais": "Nueva Caledonia",
+ "iso3": "NCL",
+ "iso2": "NC",
+ "nombre_en": "New Caledonia",
+ "variable": "viento",
+ "imagen": "NCL_viento.webp",
+ "rejilla": "NCL_viento_rejilla.json",
+ "caja": [
+  0.01759,
+  0.03,
+  0.70456,
+  0.97
+ ],
+ "encuadre": [
+  163.25345,
+  -23.15818,
+  168.50649,
+  -19.19714
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 18841,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.3889,
+ "p10": 3.9888,
+ "p50": 5.261,
+ "p90": 6.9516,
+ "p2": 3.3063,
+ "p98": 8.2121,
+ "min": 1.5912,
+ "max": 12.1126,
+ "sobre_umbral": 0.094,
+ "pixeles": 239443
+}

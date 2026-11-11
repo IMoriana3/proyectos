@@ -1,0 +1,36 @@
+{
+ "pais": "Ghana",
+ "iso3": "GHA",
+ "iso2": "GH",
+ "nombre_en": "Ghana",
+ "variable": "viento",
+ "imagen": "GHA_viento.webp",
+ "rejilla": "GHA_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -4.20025,
+  3.709,
+  2.12571,
+  12.06255
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 238669,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.1686,
+ "p10": 3.1243,
+ "p50": 4.2055,
+ "p90": 5.1707,
+ "p2": 2.6658,
+ "p98": 5.8633,
+ "min": 1.7231,
+ "max": 8.8294,
+ "sobre_umbral": 0.0008,
+ "pixeles": 1461539
+}

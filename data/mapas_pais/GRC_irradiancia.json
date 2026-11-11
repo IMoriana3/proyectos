@@ -1,0 +1,36 @@
+{
+ "pais": "Grecia",
+ "iso3": "GRC",
+ "iso2": "GR",
+ "nombre_en": "Greece",
+ "variable": "irradiancia",
+ "imagen": "GRC_irradiancia.webp",
+ "rejilla": "GRC_irradiancia_rejilla.json",
+ "caja": [
+  0.02187,
+  0.03,
+  0.63256,
+  0.97
+ ],
+ "encuadre": [
+  18.93741,
+  33.84061,
+  28.92882,
+  42.70511
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 131353,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 1642.0634,
+ "p10": 1528.8972,
+ "p50": 1609.3748,
+ "p90": 1801.0002,
+ "p2": 1481.343,
+ "p98": 1867.5435,
+ "min": 1446.8353,
+ "max": 1887.9922,
+ "sobre_umbral": 0.1041,
+ "pixeles": 169177
+}

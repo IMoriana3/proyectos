@@ -1,0 +1,36 @@
+{
+ "pais": "Nueva Caledonia",
+ "iso3": "NCL",
+ "iso2": "NC",
+ "nombre_en": "New Caledonia",
+ "variable": "irradiancia",
+ "imagen": "NCL_irradiancia.webp",
+ "rejilla": "NCL_irradiancia_rejilla.json",
+ "caja": [
+  0.01759,
+  0.03,
+  0.70456,
+  0.97
+ ],
+ "encuadre": [
+  163.25345,
+  -23.15818,
+  168.50649,
+  -19.19714
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 18841,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1915.3104,
+ "p10": 1884.2614,
+ "p50": 1917.4791,
+ "p90": 1938.4853,
+ "p2": 1878.5327,
+ "p98": 1966.1271,
+ "min": 1877.3728,
+ "max": 2009.2964,
+ "sobre_umbral": 1.0,
+ "pixeles": 64196
+}

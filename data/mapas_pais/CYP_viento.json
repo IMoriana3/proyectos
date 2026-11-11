@@ -1,0 +1,36 @@
+{
+ "pais": "Chipre",
+ "iso3": "CYP",
+ "iso2": "CY",
+ "nombre_en": "Cyprus",
+ "variable": "viento",
+ "imagen": "CYP_viento.webp",
+ "rejilla": "CYP_viento_rejilla.json",
+ "caja": [
+  0.01645,
+  0.03,
+  0.7237,
+  0.97
+ ],
+ "encuadre": [
+  31.97174,
+  34.14502,
+  34.39913,
+  35.60708
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 5395,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.4762,
+ "p10": 3.518,
+ "p50": 4.5167,
+ "p90": 5.3287,
+ "p2": 2.8653,
+ "p98": 5.8349,
+ "min": 1.7376,
+ "max": 7.9085,
+ "sobre_umbral": 0.0006,
+ "pixeles": 85128
+}

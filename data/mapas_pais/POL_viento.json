@@ -1,0 +1,36 @@
+{
+ "pais": "Polonia",
+ "iso3": "POL",
+ "iso2": "PL",
+ "nombre_en": "Poland",
+ "variable": "viento",
+ "imagen": "POL_viento.webp",
+ "rejilla": "POL_viento_rejilla.json",
+ "caja": [
+  0.02101,
+  0.03,
+  0.64707,
+  0.97
+ ],
+ "encuadre": [
+  13.32238,
+  48.05892,
+  24.94469,
+  55.65653
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 313431,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.5148,
+ "p10": 5.6881,
+ "p50": 6.5981,
+ "p90": 7.2053,
+ "p2": 5.093,
+ "p98": 7.4904,
+ "min": 2.9944,
+ "max": 10.6509,
+ "sobre_umbral": 0.2243,
+ "pixeles": 1313632
+}

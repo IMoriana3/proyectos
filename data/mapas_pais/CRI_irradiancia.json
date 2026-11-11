@@ -1,0 +1,36 @@
+{
+ "pais": "Costa Rica",
+ "iso3": "CRI",
+ "iso2": "CR",
+ "nombre_en": "Costa Rica",
+ "variable": "irradiancia",
+ "imagen": "CRI_irradiancia.webp",
+ "rejilla": "CRI_irradiancia_rejilla.json",
+ "caja": [
+  0.0209,
+  0.03,
+  0.64892,
+  0.97
+ ],
+ "encuadre": [
+  -86.24644,
+  7.52672,
+  -82.26284,
+  11.65446
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 51151,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1657.9465,
+ "p10": 1565.8037,
+ "p50": 1605.7105,
+ "p90": 1866.1608,
+ "p2": 1548.2398,
+ "p98": 1941.4143,
+ "min": 1542.3774,
+ "max": 1947.6564,
+ "sobre_umbral": 0.1438,
+ "pixeles": 279479
+}

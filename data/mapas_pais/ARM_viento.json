@@ -1,0 +1,36 @@
+{
+ "pais": "Armenia",
+ "iso3": "ARM",
+ "iso2": "AM",
+ "nombre_en": "Armenia",
+ "variable": "viento",
+ "imagen": "ARM_viento.webp",
+ "rejilla": "ARM_viento_rejilla.json",
+ "caja": [
+  0.02214,
+  0.03,
+  0.62799,
+  0.97
+ ],
+ "encuadre": [
+  43.13629,
+  38.3837,
+  46.90261,
+  41.71045
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 29588,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.6503,
+ "p10": 2.7254,
+ "p50": 4.3837,
+ "p90": 7.0197,
+ "p2": 2.0242,
+ "p98": 8.6943,
+ "min": 0.5876,
+ "max": 20.435,
+ "sobre_umbral": 0.1017,
+ "pixeles": 499769
+}

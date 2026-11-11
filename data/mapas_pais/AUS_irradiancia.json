@@ -1,0 +1,36 @@
+{
+ "pais": "Australia",
+ "iso3": "AUS",
+ "iso2": "AU",
+ "nombre_en": "Australia",
+ "variable": "irradiancia",
+ "imagen": "AUS_irradiancia.webp",
+ "rejilla": "AUS_irradiancia_rejilla.json",
+ "caja": [
+  0.02058,
+  0.03,
+  0.65429,
+  0.97
+ ],
+ "encuadre": [
+  109.91909,
+  -48.91387,
+  156.86852,
+  -6.07417
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 7691175,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 3,25°",
+ "umbral": 1800.0,
+ "media": 2147.9583,
+ "p10": 1908.2437,
+ "p50": 2200.1438,
+ "p90": 2307.2644,
+ "p2": 1700.612,
+ "p98": 2331.427,
+ "min": 1342.2136,
+ "max": 2352.7639,
+ "sobre_umbral": 0.9571,
+ "pixeles": 357208
+}

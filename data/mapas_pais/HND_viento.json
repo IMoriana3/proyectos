@@ -1,0 +1,36 @@
+{
+ "pais": "Honduras",
+ "iso3": "HND",
+ "iso2": "HN",
+ "nombre_en": "Honduras",
+ "variable": "viento",
+ "imagen": "HND_viento.webp",
+ "rejilla": "HND_viento_rejilla.json",
+ "caja": [
+  0.01519,
+  0.03,
+  0.74478,
+  0.97
+ ],
+ "encuadre": [
+  -89.86246,
+  12.41379,
+  -82.63178,
+  17.01246
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 112237,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.1892,
+ "p10": 2.7812,
+ "p50": 3.9994,
+ "p90": 5.7427,
+ "p2": 2.1713,
+ "p98": 7.5995,
+ "min": 0.5317,
+ "max": 14.7667,
+ "sobre_umbral": 0.0329,
+ "pixeles": 751302
+}

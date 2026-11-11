@@ -1,0 +1,36 @@
+{
+ "pais": "Lituania",
+ "iso3": "LTU",
+ "iso2": "LT",
+ "nombre_en": "Lithuania",
+ "variable": "viento",
+ "imagen": "LTU_viento.webp",
+ "rejilla": "LTU_viento_rejilla.json",
+ "caja": [
+  0.01873,
+  0.03,
+  0.68531,
+  0.97
+ ],
+ "encuadre": [
+  20.45448,
+  53.40684,
+  27.27081,
+  56.8626
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 64939,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 6.7835,
+ "p10": 5.9995,
+ "p50": 6.8848,
+ "p90": 7.3471,
+ "p2": 5.4703,
+ "p98": 7.6482,
+ "min": 4.7338,
+ "max": 9.0144,
+ "sobre_umbral": 0.3916,
+ "pixeles": 812591
+}

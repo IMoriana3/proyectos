@@ -1,0 +1,36 @@
+{
+ "pais": "Macedonia del Norte",
+ "iso3": "MKD",
+ "iso2": "MK",
+ "nombre_en": "North Macedonia",
+ "variable": "viento",
+ "imagen": "MKD_viento.webp",
+ "rejilla": "MKD_viento_rejilla.json",
+ "caja": [
+  0.02054,
+  0.03,
+  0.65487,
+  0.97
+ ],
+ "encuadre": [
+  20.14416,
+  40.36939,
+  23.30958,
+  42.79033
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 25385,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.1413,
+ "p10": 2.6471,
+ "p50": 4.019,
+ "p90": 5.745,
+ "p2": 2.1404,
+ "p98": 6.949,
+ "min": 0.7169,
+ "max": 11.886,
+ "sobre_umbral": 0.0186,
+ "pixeles": 438602
+}

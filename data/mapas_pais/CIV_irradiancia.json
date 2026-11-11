@@ -1,0 +1,36 @@
+{
+ "pais": "Costa de Marfil",
+ "iso3": "CIV",
+ "iso2": "CI",
+ "nombre_en": "Ivory Coast",
+ "variable": "irradiancia",
+ "imagen": "CIV_irradiancia.webp",
+ "rejilla": "CIV_irradiancia_rejilla.json",
+ "caja": [
+  0.02244,
+  0.03,
+  0.62296,
+  0.97
+ ],
+ "encuadre": [
+  -9.10771,
+  3.32288,
+  -2.01734,
+  11.62002
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 320677,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,75°",
+ "umbral": 1800.0,
+ "media": 1792.6077,
+ "p10": 1664.5334,
+ "p50": 1750.1456,
+ "p90": 1966.7045,
+ "p2": 1651.4245,
+ "p98": 2011.9123,
+ "min": 1640.7399,
+ "max": 2068.4459,
+ "sobre_umbral": 0.4343,
+ "pixeles": 478577
+}

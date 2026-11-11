@@ -1,0 +1,36 @@
+{
+ "pais": "Bosnia y Herzegovina",
+ "iso3": "BIH",
+ "iso2": "BA",
+ "nombre_en": "Bosnia and Herzegovina",
+ "variable": "irradiancia",
+ "imagen": "BIH_irradiancia.webp",
+ "rejilla": "BIH_irradiancia_rejilla.json",
+ "caja": [
+  0.02164,
+  0.03,
+  0.63644,
+  0.97
+ ],
+ "encuadre": [
+  15.40385,
+  42.07921,
+  19.93111,
+  45.70452
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 51827,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1338.8324,
+ "p10": 1310.3192,
+ "p50": 1329.8419,
+ "p90": 1379.7408,
+ "p2": 1299.5276,
+ "p98": 1423.651,
+ "min": 1295.6913,
+ "max": 1507.3576,
+ "sobre_umbral": 0.0,
+ "pixeles": 398107
+}

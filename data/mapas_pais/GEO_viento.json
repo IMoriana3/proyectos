@@ -1,0 +1,36 @@
+{
+ "pais": "Georgia",
+ "iso3": "GEO",
+ "iso2": "GE",
+ "nombre_en": "Georgia",
+ "variable": "viento",
+ "imagen": "GEO_viento.webp",
+ "rejilla": "GEO_viento_rejilla.json",
+ "caja": [
+  0.01413,
+  0.03,
+  0.7626,
+  0.97
+ ],
+ "encuadre": [
+  39.44927,
+  40.56411,
+  47.23151,
+  43.99584
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 69571,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.2311,
+ "p10": 1.9889,
+ "p50": 3.9558,
+ "p90": 6.8899,
+ "p2": 1.2936,
+ "p98": 8.674,
+ "min": 0.3016,
+ "max": 18.2346,
+ "sobre_umbral": 0.0926,
+ "pixeles": 514741
+}

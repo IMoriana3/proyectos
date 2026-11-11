@@ -1,0 +1,36 @@
+{
+ "pais": "Albania",
+ "iso3": "ALB",
+ "iso2": "AL",
+ "nombre_en": "Albania",
+ "variable": "viento",
+ "imagen": "ALB_viento.webp",
+ "rejilla": "ALB_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  18.20069,
+  39.15416,
+  22.10802,
+  43.07731
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 28336,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.6269,
+ "p10": 3.09,
+ "p50": 4.4686,
+ "p90": 6.3977,
+ "p2": 2.3471,
+ "p98": 8.004,
+ "min": 0.4978,
+ "max": 15.6929,
+ "sobre_umbral": 0.057,
+ "pixeles": 484304
+}

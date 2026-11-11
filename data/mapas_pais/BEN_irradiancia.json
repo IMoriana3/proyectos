@@ -1,0 +1,36 @@
+{
+ "pais": "Benín",
+ "iso3": "BEN",
+ "iso2": "BJ",
+ "nombre_en": "Benin",
+ "variable": "irradiancia",
+ "imagen": "BEN_irradiancia.webp",
+ "rejilla": "BEN_irradiancia_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  -0.75693,
+  5.22424,
+  5.35423,
+  13.26519
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 116113,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1943.3302,
+ "p10": 1744.2043,
+ "p50": 1989.3167,
+ "p90": 2079.7848,
+ "p2": 1703.9353,
+ "p98": 2127.9331,
+ "min": 1689.7959,
+ "max": 2136.8544,
+ "sobre_umbral": 0.821,
+ "pixeles": 184821
+}

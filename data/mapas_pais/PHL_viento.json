@@ -1,0 +1,36 @@
+{
+ "pais": "Filipinas",
+ "iso3": "PHL",
+ "iso2": "PH",
+ "nombre_en": "Philippines",
+ "variable": "viento",
+ "imagen": "PHL_viento.webp",
+ "rejilla": "PHL_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  114.25896,
+  3.13048,
+  129.54697,
+  22.97548
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 293291,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.1445,
+ "p10": 2.4955,
+ "p50": 4.0125,
+ "p90": 5.9509,
+ "p2": 1.9095,
+ "p98": 7.3866,
+ "min": 0.8793,
+ "max": 13.401,
+ "sobre_umbral": 0.0304,
+ "pixeles": 312455
+}

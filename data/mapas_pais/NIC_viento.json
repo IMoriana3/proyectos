@@ -1,0 +1,36 @@
+{
+ "pais": "Nicaragua",
+ "iso3": "NIC",
+ "iso2": "NI",
+ "nombre_en": "Nicaragua",
+ "variable": "viento",
+ "imagen": "NIC_viento.webp",
+ "rejilla": "NIC_viento_rejilla.json",
+ "caja": [
+  0.02137,
+  0.03,
+  0.64094,
+  0.97
+ ],
+ "encuadre": [
+  -88.05025,
+  10.02268,
+  -82.76601,
+  15.63542
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 128685,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 5.3285,
+ "p10": 3.5816,
+ "p50": 5.0794,
+ "p90": 7.4681,
+ "p2": 2.8873,
+ "p98": 9.4284,
+ "min": 1.719,
+ "max": 17.9315,
+ "sobre_umbral": 0.1341,
+ "pixeles": 1545515
+}
