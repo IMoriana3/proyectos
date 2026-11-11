@@ -18,6 +18,52 @@
 <meta name="apple-mobile-web-app-title" content="Factiun">
 <meta name="mobile-web-app-capable" content="yes">
 <!-- Fuentes AUTOALOJADAS (assets/fonts, OFL): el panel sigue abriendo sin red. -->
+<script>
+/* ===================== LA LUZ DE LA PÁGINA LA PONE EL SOL =====================
+   De las propuestas «Célula de día» + «Sigue al sol» (11-11-2026), la misma piel que lleva siting.
+   La página tiene la luz del sol en Ayora —la planta del instrumento— o, si se está recorriendo el
+   día en el instrumento, la de esa hora: amanecer, mañana, pleno sol, tarde, ocaso o noche. De
+   noche es la piel Célula de siempre; de día, clara (CSS en «PIEL CÉLULA DE DÍA», al final del
+   <style>). Va en el <head> para que la primera pintura ya salga con su luz.
+
+   EL SOL NO SE COPIA AQUÍ. El bueno es `solarGeom` del instrumento (copia declarada de
+   sim-solar.html), que se publica en window.__solarGeom al cargar. Para la primera pintura, antes
+   de que exista, vale un TANTEO sin ecuación del tiempo (±1–2°): sólo decide claro u oscuro.
+   ?luz=dia|noche|auto en la URL lo fija, y el botón de la barra también. Nada se guarda. */
+(function(root){
+  "use strict";
+  var RADL=Math.PI/180, AYORA=[39.11821,-1.15985];
+  var ESTADOS={ amanecer:"amanecer", manana:"mañana", pleno:"pleno sol", tarde:"tarde", ocaso:"ocaso", noche:"noche" };
+  /* por debajo de −6° (crepúsculo civil) es de noche; hasta 8°, sol rasante; hasta 22°, mañana o
+     tarde; por encima, pleno sol. Mañana o tarde, según el sol esté antes o después del sur. */
+  function estado(elev,manana){ if(elev<-6) return "noche";
+    if(elev<8) return manana?"amanecer":"ocaso"; if(elev<22) return manana?"manana":"tarde"; return "pleno"; }
+  function tanteo(ms,lat,lon){ var d=new Date(ms), y0=Date.UTC(d.getUTCFullYear(),0,0);
+    var doy=(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-y0)/864e5;
+    var decl=-23.44*Math.cos(2*Math.PI*(doy+10)/365)*RADL;
+    var hs=((d.getUTCHours()+d.getUTCMinutes()/60+lon/15)%24+24)%24, H=(hs-12)*15*RADL, la=lat*RADL;
+    var e=Math.asin(Math.sin(la)*Math.sin(decl)+Math.cos(la)*Math.cos(decl)*Math.cos(H))/RADL;
+    return { elevation:e, azimuth:hs<12?90:270 }; }
+  function sol(ms,lat,lon){ return (typeof root.__solarGeom==="function")?root.__solarGeom(ms,lat,lon):tanteo(ms,lat,lon); }
+  function modoUrl(){ try{ var v=new URLSearchParams(location.search).get("luz"); return (v==="dia"||v==="noche")?v:"auto"; }catch(e){ return "auto"; } }
+  var L={ ESTADOS:ESTADOS, estado:estado, sol:sol, modo:modoUrl(), info:null, alCambiar:null, recorrido:null };
+  L.estadoEn=function(lat,lon,ms){ var g=sol(ms||Date.now(),lat,lon);
+    return { est:estado(g.elevation,g.azimuth<180), elev:g.elevation, az:g.azimuth }; };
+  L.aplica=function(){
+    var c=L.recorrido||L.estadoEn(AYORA[0],AYORA[1]);
+    var est=L.modo==="dia"?"pleno":L.modo==="noche"?"noche":c.est;
+    document.documentElement.setAttribute("data-luz",est);
+    L.info={ est:est, sol:c, modo:L.modo };
+    if(typeof L.alCambiar==="function"){ try{ L.alCambiar(L.info); }catch(e){} }
+    return L.info; };
+  /* el instrumento avisa de la hora que pinta: en directo, la página vuelve a «ahora» */
+  L.desdeInstrumento=function(g,enDirecto){
+    L.recorrido=enDirecto?null:{ est:estado(g.elevation,g.azimuth<180), elev:g.elevation, az:g.azimuth, recorrido:true };
+    L.aplica(); };
+  root.LUZ=L;
+  try{ L.aplica(); }catch(e){ document.documentElement.setAttribute("data-luz","pleno"); }
+})(window);
+</script>
 
 <!-- ============================================================= -->
 <!--  PANEL DE PROYECTOS                                           -->
@@ -515,7 +561,64 @@ body.presenta .solo-pres{display:inline-block}
   *{transition:none!important;animation:none!important}
   html{scroll-behavior:auto}
 }
-</style>
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   PIEL «CÉLULA DE DÍA» · LA LUZ LA PONE EL SOL (11-11-2026; la misma que siting, b78)
+   `LUZ` (script del <head>) escribe <html data-luz="…">. De NOCHE no se aplica nada de esto salvo
+   las piezas nuevas: es la piel Célula de siempre. De DÍA la página es clara y la barra lleva el
+   cielo de esa hora. Los colores de los DATOS —huellas, estados de proyecto, la traza— no cambian
+   de significado: el naranja sigue siendo la emisión y el coral la alarma.
+   ═══════════════════════════════════════════════════════════════════════════════════════════ */
+html[data-luz]:not([data-luz="noche"]){
+  --panel:#FFFFFF;--panel-2:#F6F8FB;--panel-hi:#EEF2F7;--line:#D9E1EA;--line-soft:#E6ECF2;
+  --text:#0E1826;--muted:#4B5A6B;--muted-2:#5D6B7B;
+  /* el naranja como TEXTO: #F09030 da 2,4:1 sobre blanco y aquí hace falta 4,5:1; #B85A0C da 4,8:1
+     y aguanta texto blanco encima. Es la misma decisión que en siting. */
+  --amb:#B85A0C;--amb-dim:#C98A4A;--fos:#1B6E86;--alm:#C02E40;--plata:#6A7889;--idle:#5D6B7B;
+  color-scheme:light;
+}
+html[data-luz="amanecer"]{--void:#FBF4EF;--cielo-a:#F6C3B0;--cielo-b:#FDE9DA;--sol:#F59A5B}
+html[data-luz="manana"]{--void:#F2F7FB;--cielo-a:#BCE0F5;--cielo-b:#EAF5FC;--sol:#FFC56B}
+html[data-luz="pleno"]{--void:#F3F6FA;--cielo-a:#CFE9F9;--cielo-b:#F7FBFE;--sol:#FFC56B}
+html[data-luz="tarde"]{--void:#FBF5EC;--cielo-a:#FFCF93;--cielo-b:#FFF0DB;--sol:#F7A23E}
+html[data-luz="ocaso"]{--void:#FBF1EC;--cielo-a:#E6A0A8;--cielo-b:#F8C9A2;--sol:#F28A4B}
+/* lo que estaba escrito en oscuro a mano, de día */
+html[data-luz]:not([data-luz="noche"]) .bar{background:linear-gradient(180deg,var(--cielo-a),var(--cielo-b))}
+html[data-luz]:not([data-luz="noche"]) ::selection{color:#FFFFFF}
+html[data-luz]:not([data-luz="noche"]) .chip.on,html[data-luz]:not([data-luz="noche"]) .pres[aria-pressed="true"],html[data-luz]:not([data-luz="noche"]) .instmsg button:not(.x){color:#FFFFFF}
+html[data-luz]:not([data-luz="noche"]) .card:hover{border-color:#9FB3C8}
+html[data-luz]:not([data-luz="noche"]) .md p,html[data-luz]:not([data-luz="noche"]) .md ul,html[data-luz]:not([data-luz="noche"]) .md ol,
+html[data-luz]:not([data-luz="noche"]) .md pre code,html[data-luz]:not([data-luz="noche"]) .md td{color:#2B3746}
+html[data-luz]:not([data-luz="noche"]) .md blockquote{color:#4A3F2A}
+/* el instrumento, de día: cielo de la hora detrás del relieve (el relieve y las filas los pinta
+   la escena con colores de tierra, ver `gris`) y el velo de la tesis, claro */
+html[data-luz]:not([data-luz="noche"]) .hero-scene{background:linear-gradient(180deg,var(--cielo-a),var(--cielo-b))}
+html[data-luz]:not([data-luz="noche"]) .hero-scene::after{background-image:linear-gradient(115deg,rgba(255,255,255,.22),transparent 38%,transparent 62%,rgba(255,255,255,.12))}
+html[data-luz]:not([data-luz="noche"]) .hero-tesis{background:linear-gradient(180deg,rgba(255,255,255,.9) 0%,rgba(255,255,255,.72) 62%,transparent 100%)}
+
+/* el botón de la luz, en la barra */
+.luz{display:inline-flex;align-items:center;gap:8px;font-family:var(--display);font-size:.74rem;font-weight:500;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text);background:transparent;border:1px solid var(--line);padding:6px 12px;min-height:32px;cursor:pointer;white-space:nowrap;transition:border-color .15s}
+.luz:hover{border-color:var(--amb)}
+.luz .luz-dot{width:11px;height:11px;border-radius:50%;flex:none;background:var(--sol,#F2C94C);box-shadow:0 0 0 3px rgba(242,201,76,.28)}
+html[data-luz="noche"] .luz .luz-dot{background:#DCE3EB;box-shadow:inset -4px -2px 0 0 #8C9AAB}
+@media (max-width:560px){ .luz .luz-txt{display:none} .luz{padding:7px 10px} }
+/* cada planta con SU cielo: la franja de la huella es el cielo de su hora local («Sigue al sol»).
+   Lo pone `cielosPlantas` después de pintar las tarjetas; sin coordenadas, la franja de siempre. */
+.mapa[data-cielo]{background-color:var(--pc-b);background-image:linear-gradient(180deg,var(--pc-a),var(--pc-b));--mt:#3F4D5C}
+.mapa[data-cielo="noche"]{--mt:#A9B6C4}
+.mapa[data-cielo] .n{color:var(--mt)}
+.mapa[data-cielo] .huella .escala path{stroke:var(--mt)}
+.mapa[data-cielo] .huella .escala text{fill:var(--mt)}
+.hora-planta{position:absolute;left:10px;top:8px;display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:99px;
+  font-family:var(--mono);font-size:.68rem;background:rgba(255,255,255,.82);color:#2B3746;pointer-events:none}
+.mapa[data-cielo="noche"] .hora-planta{background:rgba(14,24,38,.72);color:#DCE3EB}
+.hora-planta i{width:8px;height:8px;border-radius:50%;background:var(--pc-sol,#FFC56B)}
+/* las herramientas, por familias (propuesta «Célula de día»): un filtro más, al lado del de estado */
+.familias{display:flex;gap:1px;flex-wrap:wrap;width:fit-content;max-width:100%;background:var(--line);border:1px solid var(--line);margin:-6px 0 18px}
+.familias .chip i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:1px;background:var(--fc)}
+.familias .chip .n{margin-left:6px;font-family:var(--mono);letter-spacing:0;opacity:.75}
+body,.bar,.hero-scene{transition:background-color .6s,color .6s}</style>
 
 <body>
 
@@ -553,6 +656,9 @@ body.presenta .solo-pres{display:inline-block}
               title="Qué versión del armazón tiene tu navegador. Pulsa para buscar una nueva y aplicarla.">
         <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg><span id="upd-txt">armazón</span>
       </button>
+      <!-- LA LUZ: la página tiene la del sol en Ayora (o la de la hora que se recorra en el
+           instrumento). El botón pasa de automático a día fijo, noche fija y vuelta; va a la URL. -->
+      <button class="luz" id="luz-btn" type="button" title="La luz de la página sigue al sol. Pulsa para fijar día, noche o volver a automático."><span class="luz-dot" aria-hidden="true"></span><span class="luz-txt" id="luz-txt">Luz automática</span></button>
       <div class="clock"><small>Hora local</small><span id="clock">--:--:--</span></div>
     </div>
   </div>
@@ -619,6 +725,9 @@ body.presenta .solo-pres{display:inline-block}
       </select>
     </div>
   </div>
+  <!-- las herramientas por FAMILIAS (propuesta «Célula de día»): otro filtro, que se suma al de
+       estado y a la búsqueda. Lo pinta `renderFamilias`. -->
+  <div class="familias" id="familias" role="group" aria-label="Familia de herramientas"></div>
 
   <section class="grid" id="grid" aria-live="polite"></section>
 
@@ -2361,7 +2470,7 @@ const STATUS = {
   dead:  { label:"Deprecado",     color:"var(--dead)",  rank:4 }
 };
 const ORDER = ["live","build","demo","idle","dead"];
-const state = { q:"", filter:"all", sort:"recent", open:new Set() };
+const state = { q:"", filter:"all", sort:"recent", open:new Set(), familia:"todas" };
 
 const $grid   = document.getElementById("grid");
 const $chips  = document.getElementById("chips");
@@ -2399,6 +2508,8 @@ function filtered(){
   const q = norm(state.q.trim());
   let list = TOOLS.filter(p=>{
     if(state.filter!=="all" && p.status!==state.filter) return false;
+    /* la familia (ver `FAMILIAS`, al final): con «todas», que es lo de partida, no filtra nada */
+    if(state.familia && state.familia!=="todas" && typeof familiaDe==="function" && familiaDe(p)!==state.familia) return false;
     if(!q) return true;
     return norm([p.name,p.objetivo,p.stack].join(" ")).includes(q);
   });
@@ -3178,6 +3289,10 @@ if (haySesionGuardada()) conecta(null, null);
     else az=(lat>decl)?180:0;
     return {elevation:elev+refraction(elev),azimuth:az,declination:decl};
   }
+  /* la LUZ de la página (script del <head>) usa ESTE sol y no una copia: se publica, y la página
+     cambia el tanteo de arranque por el cálculo bueno */
+  window.__solarGeom=solarGeom;
+  if(window.LUZ){ try{ LUZ.aplica(); }catch(e){} }
 
   /* ---------- hora de la planta (el visitante puede estar en otra zona) ---------- */
   const TZ='Europe/Madrid';
@@ -3241,7 +3356,11 @@ if (haySesionGuardada()) conecta(null, null);
   filas.sort((a,b)=>rot(b.x,b.n,0)[1]-rot(a.x,a.n,0)[1]);
   const EJE=1.2, HW=2.384/2*3;   // ancho de mesa exagerado ×3 para que se vea el giro a esta escala
   const lerp=(a,b,t)=>a+(b-a)*t;
+  /* de día (piel «Célula de día») el relieve va en TIERRA, de la sombra de arena a la tierra al
+     sol, bajo el cielo de esa hora; de noche, el azul-negro de célula de siempre */
+  const pielDia=()=>{ const l=document.documentElement.getAttribute('data-luz'); return !!l&&l!=='noche'; };
   function gris(t){ // azul-negro de célula → azul grisáceo
+    if(pielDia()) return 'rgb('+Math.round(lerp(150,246,t))+','+Math.round(lerp(138,238,t))+','+Math.round(lerp(112,218,t))+')';
     return 'rgb('+Math.round(lerp(16,72,t))+','+Math.round(lerp(28,90,t))+','+Math.round(lerp(46,118,t))+')';
   }
 
@@ -3272,7 +3391,9 @@ if (haySesionGuardada()) conecta(null, null);
     const thr=th*RAD, nx=-Math.sin(thr), nz=Math.cos(thr);
     const ilum=dia?Math.max(0,nx*sv[0]+nz*sv[2]):0;
     const dxw=HW*Math.cos(thr), dzw=HW*Math.sin(thr);
-    const tinta=dia?'rgba(240,144,48,'+(0.30+0.70*ilum).toFixed(3)+')':'rgba(184,195,206,.40)';
+    /* sobre tierra clara el naranja de la marca se queda corto: de día, el mismo naranja más hondo */
+    const tinta=dia?(pielDia()?'rgba(196,92,12,'+(0.45+0.55*ilum).toFixed(3)+')':'rgba(240,144,48,'+(0.30+0.70*ilum).toFixed(3)+')')
+                   :(pielDia()?'rgba(43,58,85,.55)':'rgba(184,195,206,.40)');
     ctx.fillStyle=tinta; ctx.strokeStyle=tinta; ctx.lineCap='butt';
     // ancho mínimo de 2,2 px: a 0,4 px/m una mesa de 2,4 m desaparecería; la cara girada va encima
     ctx.lineWidth=Math.max(2.2, 2*HW*s*Math.abs(Math.cos(thr)));
@@ -3337,6 +3458,8 @@ if (haySesionGuardada()) conecta(null, null);
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   function render(){
     const g=solarGeom(tMs,D.lat,D.lon), a=angulo(g), m=minutoEnPlanta(tMs); ultimoG=g;
+    /* la página tiene la luz de la hora que pinta el instrumento: recorrer el día la cambia */
+    if(window.LUZ){ try{ LUZ.desdeInstrumento(g, live); }catch(e){} }
     const dia=enPlanta(tMs); const clave=dia.year+dia.month+dia.day;
     if(clave!==ultimoDia){ ultimoDia=clave; pintaTraza(tMs,m,a.theta); } else pintaTraza(tMs,m,a.theta);
     lecturas(tMs,g,a);
@@ -3348,6 +3471,8 @@ if (haySesionGuardada()) conecta(null, null);
     const t0=performance.now(), dur=live?1400:220;
     (function paso(now){ let k=Math.min(1,(now-t0)/dur); k=1-Math.pow(1-k,3); dibujado=desde+(hasta-desde)*k; escena(g,dibujado); if(k<1) tween=requestAnimationFrame(paso); else tween=null; })(t0);
   }
+  /* cuando cambia la luz de la página (el botón, el reloj) la escena se repinta con su piel */
+  window.__heroRepinta=()=>{ if(ultimoG) escena(ultimoG,dibujado); };
   // las anclas de la barra: el margen de scroll sigue a la altura real de la barra fija
   const barra=document.querySelector('.bar');
   if(barra){ const ajusta=()=>{ document.documentElement.style.scrollPaddingTop=(barra.offsetHeight+12)+'px'; }; ajusta(); if('ResizeObserver' in window) new ResizeObserver(ajusta).observe(barra); }
@@ -3378,6 +3503,91 @@ if (haySesionGuardada()) conecta(null, null);
   masinfo.addEventListener('click',()=>{ const on=largo.hidden; largo.hidden=!on; masinfo.setAttribute('aria-expanded',String(on)); masinfo.textContent=on?'menos':'ver detalle'; });
   render();
 })();
+</script>
+<script>
+/* ===================== CADA PLANTA CON SU CIELO, LAS FAMILIAS Y EL BOTÓN DE LA LUZ =====================
+   Las tres piezas de la portada que vienen de «Célula de día» + «Sigue al sol» (11-11-2026). Va al
+   final, detrás del instrumento, porque usa su sol (window.__solarGeom) y no lleva copia propia.
+   Ninguna toca la plantilla de las tarjetas: se añaden después de pintarlas. */
+
+/* Coordenadas y zona horaria, SÓLO para el cielo de cada tarjeta: la ficha la sigue mandando la
+   cartera. Las de siting cuadran con su origen UTM; El Naranjo Dicayagua va por su ciudad
+   (Santiago de los Caballeros), que para saber si allí es de día sobra. */
+const SITIO_PLANTA = {
+  "El Burgo I":[41.576,-0.798,"Europe/Madrid"], "Fayón":[41.227,0.324,"Europe/Madrid"],
+  "San José":[-16.596,-71.806,"America/Lima"], "Túnez":[33.879,9.874,"Africa/Tunis"],
+  "Ayora":[39.118,-1.160,"Europe/Madrid"], "Bagnarelli":[41.515,15.267,"Europe/Rome"],
+  "Benante":[37.376,14.904,"Europe/Rome"], "Panbianco":[37.371,14.891,"Europe/Rome"],
+  "El Polvorín":[38.840,-7.002,"Europe/Madrid"], "Páramo":[42.321,-5.600,"Europe/Madrid"],
+  "El Naranjo Dicayagua":[19.45,-70.70,"America/Santo_Domingo"], "Catania":[37.370,15.011,"Europe/Rome"],
+  "Ramaditas":[-20.802,-69.462,"America/Santiago"]
+};
+/* cielo arriba, cielo abajo y el disco: los mismos tonos que la barra de cada luz */
+const CIELO_PLANTA = { amanecer:["#F6C3B0","#FDE9DA","#F59A5B"], manana:["#BCE0F5","#EAF5FC","#FFC56B"], pleno:["#CFE9F9","#F7FBFE","#FFC56B"],
+  tarde:["#FFCF93","#FFF0DB","#F7A23E"], ocaso:["#E6A0A8","#F8C9A2","#F28A4B"], noche:["#0B1422","#1A2B45","#DCE3EB"] };
+function cielosPlantas(){
+  if(!window.LUZ) return;
+  const ahora=Date.now();
+  document.querySelectorAll('#plants .pcard').forEach(card=>{
+    const s=SITIO_PLANTA[card.dataset.planta], m=card.querySelector('.mapa'); if(!s||!m) return;
+    const c=LUZ.estadoEn(s[0],s[1],ahora), p=CIELO_PLANTA[c.est]||CIELO_PLANTA.pleno;
+    m.dataset.cielo=c.est; m.style.setProperty('--pc-a',p[0]); m.style.setProperty('--pc-b',p[1]); m.style.setProperty('--pc-sol',p[2]);
+    let hora=''; try{ hora=new Intl.DateTimeFormat('es-ES',{timeZone:s[2],hour:'2-digit',minute:'2-digit'}).format(ahora); }catch(e){}
+    let h=m.querySelector('.hora-planta'); if(!h){ h=document.createElement('span'); h.className='hora-planta'; m.appendChild(h); }
+    h.innerHTML='<i aria-hidden="true"></i>'+(hora?hora+' · ':'')+LUZ.ESTADOS[c.est];
+    m.title='Hora local en '+card.dataset.planta+' ('+s[2]+') y la luz que hay allí: sol a '+Math.round(c.elev)+'° sobre el horizonte';
+  });
+}
+/* renderPlants se envuelve, no se toca: cada vez que se repintan las tarjetas, vuelven sus cielos */
+if(typeof renderPlants==='function'){
+  const _renderPlantsBase=renderPlants;
+  renderPlants=function(){ const r=_renderPlantsBase.apply(this,arguments); try{ cielosPlantas(); }catch(e){ console.warn('cielos de las plantas:',e); } return r; };
+}
+
+/* LAS FAMILIAS de herramientas. Una herramienta nueva que no esté aquí sale en «Otras» y se ve:
+   no se esconde. */
+const FAMILIAS = [
+  { k:'diseno', n:'Diseño y oferta', c:'#68C0D8', t:['Diseño de red de comunicaciones','Generador de implantaciones','Comparador de estructuras','Alta de planta','Modelo de propagación RF','Diagnóstico de cobertura Zigbee'] },
+  { k:'simulacion', n:'Simulación', c:'#F2C94C', t:['Núcleo de cálculo SolarGPT','Simulador de backtracking','Simulador de radiación difusa','Simulador de abanderamiento','Producción 3D por string','Careo SolarGPT ↔ PVSyst','Simulador de batería','Análisis meteorológico','Gemelo digital de seguidor y control'] },
+  { k:'obra', n:'Obra y puesta en marcha', c:'#F09030', t:['Control de obra','Seguimiento PEM','Visor de levantamiento','Visor de geometría as-built','TCU Toolbox','IPs de plantas'] },
+  { k:'operacion', n:'Operación', c:'#5BBF8A', t:['SCADA','SCADA fija · Victron VRM','Importador de logs de NCU','Medidor de tráfico','Mapa Modbus','Agente Modbus y collector','Simulador de planta equipo a equipo','Instalación cubierta Gorraiz'] },
+  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV'] }
+];
+const FAMILIA_DE = {}; FAMILIAS.forEach(f=>f.t.forEach(n=>{ FAMILIA_DE[n]=f.k; }));
+function familiaDe(p){ return FAMILIA_DE[p && p.name] || 'otras'; }
+function renderFamilias(){
+  const el=document.getElementById('familias'); if(!el || typeof TOOLS==='undefined') return;
+  const hayOtras=TOOLS.some(p=>familiaDe(p)==='otras');
+  const lista=[{ k:'todas', n:'Todas' }].concat(FAMILIAS, hayOtras?[{ k:'otras', n:'Otras', c:'#8C9AAB' }]:[]);
+  el.innerHTML=lista.map(f=>{
+    const n=f.k==='todas'?TOOLS.length:TOOLS.filter(p=>familiaDe(p)===f.k).length, on=state.familia===f.k;
+    return '<button type="button" class="chip'+(on?' on':'')+'" aria-pressed="'+on+'" data-fam="'+f.k+'"'+(f.c?' style="--fc:'+f.c+'"':'')+'>'
+      +(f.c?'<i aria-hidden="true"></i>':'')+esc(f.n)+'<span class="n">'+n+'</span></button>';
+  }).join('');
+  el.querySelectorAll('button').forEach(b=>{ b.onclick=()=>{ state.familia=b.dataset.fam; renderFamilias(); renderGrid(); }; });
+}
+
+/* EL BOTÓN DE LA LUZ: automático → día fijo → noche fija → automático. Va a la URL, no al navegador. */
+LUZ.alCambiar=function(i){
+  const t=document.getElementById('luz-txt'), b=document.getElementById('luz-btn');
+  if(t&&b){
+    const e=LUZ.ESTADOS[i.est]||i.est, E=e.charAt(0).toUpperCase()+e.slice(1);
+    const sol=(i.sol&&i.sol.elev!=null)?' · sol a '+Math.round(i.sol.elev)+'°':'';
+    t.textContent=i.modo==='dia'?'Día fijo':i.modo==='noche'?'Noche fija':E+sol+(i.sol&&i.sol.recorrido?' · recorriendo el día':' en Ayora');
+    b.title='La luz de la página es la del sol en Ayora, o la de la hora que se recorra en el instrumento. Pulsa para pasar a día fijo, noche fija o automático; también con ?luz=dia, ?luz=noche o ?luz=auto en la URL.';
+    b.setAttribute('aria-label','Luz de la página: '+t.textContent+'. Pulsa para cambiar.');
+  }
+  if(typeof window.__heroRepinta==='function'){ try{ window.__heroRepinta(); }catch(err){} }
+};
+document.getElementById('luz-btn').addEventListener('click',()=>{
+  LUZ.modo={ auto:'dia', dia:'noche', noche:'auto' }[LUZ.modo]||'auto';
+  try{ const u=new URL(location.href); if(LUZ.modo==='auto') u.searchParams.delete('luz'); else u.searchParams.set('luz',LUZ.modo); history.replaceState(history.state,'',u); }catch(e){}
+  LUZ.aplica();
+});
+[cielosPlantas, renderFamilias, ()=>LUZ.aplica()].forEach(f=>{ try{ f(); }catch(e){ console.error(e); } });
+/* el sol se mueve: cada cinco minutos, y al volver a la pestaña, se vuelve a mirar */
+setInterval(()=>{ try{ LUZ.aplica(); cielosPlantas(); }catch(e){} }, 5*60*1000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ try{ LUZ.aplica(); cielosPlantas(); }catch(e){} } });
 </script>
 </body>
 </html>
