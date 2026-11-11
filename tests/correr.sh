@@ -63,6 +63,12 @@ declare -A PISO=(
   [test_abanderamiento_evento.js]=60
   [test_buscador.js]=59
   [test_careo_pvsyst.js]=11
+  # El expediente de homologación: 37 MEDIDAS el 2026-11-11. Lo que vigila es
+  # que el resumen de arriba (veredicto, barra, cifras, mapa) y las filas de
+  # abajo sean la MISMA cuenta, sacada dos veces: del dato y de lo pintado.
+  # Cuatro mutantes vistos en rojo —una cifra que cuenta de menos, un filtro
+  # que no filtra, la barra a partes iguales y los filtros impresos—.
+  [test_homologacion.js]=37
   # La cartera del usuario NO la probaba nadie: de los 33 arneses, el único que
   # nombraba `cartera-tabla.html` era `test_pwa.js`, y lo que hacía con ella era
   # listarla en la caché. MEDIDO: un mutante que invierte la migración de fases

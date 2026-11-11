@@ -84,6 +84,12 @@ herramientas por familia (la de la página, marcada). No duplica datos: lee `PRO
 no pinta nada y la página queda como estaba. Para añadirlo a una página nueva basta
 `<script src="lib/indice.js" defer></script>`.
 
+**El expediente de homologación** (`homologacion.html`, 11-2026) pone en una pantalla lo que un
+homologador de EPC pide al control del tracker: 36 requisitos, la herramienta que demuestra cada uno y
+su nivel de evidencia —medido, simulado, declarado o falta, con signo además de color—. Lleva la piel
+de las demás herramientas, cambia a inglés y se imprime en claro. Se mantiene editando solo su array
+`REQS`; el resumen se recalcula. Ver `docs/homologacion.md`.
+
 ## Funcionalidades
 - Tarjetas por proyecto con estado (Producción / En desarrollo / Demo / Pausado / Deprecado), búsqueda, filtros y orden.
 - Documentación embebida: `docId` → `docs/<docId>.md`, o `docUrl` → README del repo.

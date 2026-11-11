@@ -483,3 +483,12 @@ ninguna parte y `comparador-estructuras.html` no contiene `1.58`, así que sus t
 una versión que la app no dice en ningún sitio. Cerrarlo del todo no es trabajo de aquí: pasa por
 que cada app publique su versión en un sitio fijo, y entonces su tarjeta pasa a apuntar como estas
 dos.
+
+`test_homologacion.js` vigila el **expediente de homologación**: que el resumen de arriba —el
+veredicto, la barra, las cuatro cifras y el mapa de casillas— y las filas de abajo sean la misma
+cuenta. Los recuentos se sacan dos veces, del array `REQS` evaluado fuera del navegador y de lo
+pintado, y tienen que coincidir. Comprueba también que los filtros se sumen, que una casilla de un
+requisito escondido quite los filtros y lo enseñe, el buscador, el cambio a inglés, la impresión en
+claro y el ancho de móvil. El validador de datos se prueba contra un dato roto a propósito, y el
+arnés entero contra cuatro mutantes. **No comprueba** que el nivel asignado a cada requisito sea el
+verdadero: eso es una lectura fechada, no una medida.

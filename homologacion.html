@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0E1826">
+<link rel="icon" href="favicon.svg">
+<title>Expediente de homologación · control del tracker</title>
+<!-- sin fuentes de Google: offline. Fallbacks del sistema (como el panel). -->
+<style>
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/Barlow-400-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/Barlow-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/Barlow-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/Barlow-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/Barlow-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/Barlow-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/BarlowCondensed-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/BarlowCondensed-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/BarlowCondensed-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/BarlowCondensed-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/JetBrainsMono-400-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/JetBrainsMono-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/JetBrainsMono-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url(assets/fonts/JetBrainsMono-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/JetBrainsMono-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url(assets/fonts/JetBrainsMono-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+
+/* Sistema visual del Panel de Proyectos Factiun (proyectos/index.html): mismo
+   void, mismos paneles, mismos colores de estado. Oscura a propósito, como el
+   resto de fichas; en papel se imprime en claro. */
+:root{
+  color-scheme: dark;
+  --void:#0E1826; --panel:#132238; --panel-2:#101D30; --panel-hi:#1A2D48;
+  --line:#27405F; --line-soft:#1E3250;
+  --ink:#DCE3EB; --ink-2:#8C9AAB; --ink-3:#7F8EA1;
+  --accent:#F09030; --accent-ink:#1A0F04;
+  --chip-bg:#1A2D48; --focus:#F09030;
+  --radius:2px;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --display:'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif;
+  /* LOS CUATRO NIVELES DE EVIDENCIA. Verde, amarillo y coral son los de estado
+     del Panel. El azul NO es el `--demo` del Panel (#68C0D8): contra el verde
+     daba ΔE 11,4 con visión normal, por debajo del suelo de 15, y «medido» y
+     «simulado» son justo los dos que no se pueden confundir. Con #4F8FE0 el
+     peor par queda en 19,2 (normal) y 9,4 (deuteranopía), medido con el
+     validador de paleta sobre el panel #132238. Y nunca van solos: cada nivel
+     lleva su signo y su nombre. */
+  --ev-medido:#5BBF8A; --ev-simulado:#4F8FE0; --ev-declarado:#F2C94C; --ev-falta:#E84858;
+}
+*{box-sizing:border-box;}
+body{
+  background-color:var(--void); color:var(--ink);
+  background-image:
+    radial-gradient(120% 80% at 50% -10%, color-mix(in srgb,var(--accent) 6%,transparent), transparent 60%),
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size:auto, 34px 34px, 34px 34px;
+  background-attachment:fixed;
+  font-family:var(--sans); font-size:15px; line-height:1.5; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:22px 20px 64px;}
+a{color:var(--accent);}
+:is(button,input,a,[tabindex]):focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
+.mono{font-family:var(--mono); font-variant-numeric:tabular-nums;}
+.eyebrow{font-size:11.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3);}
+
+/* ---------- barra y cabecera ---------- */
+.bar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:18px;}
+.bar .sp{flex:1 1 auto;}
+.back{color:var(--ink-2); text-decoration:none; font-size:13.5px;}
+.back:hover{color:var(--ink);}
+button{font:inherit; font-size:13px; font-weight:600; border-radius:2px; cursor:pointer;
+  padding:6px 13px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink);}
+button:hover{background:var(--panel-hi);}
+.seg{display:inline-flex;}
+.seg button{border-radius:0; margin-left:-1px;}
+.seg button:first-child{margin-left:0; border-radius:2px 0 0 2px;}
+.seg button:last-child{border-radius:0 2px 2px 0;}
+.seg button[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+header.top{margin-bottom:22px;}
+h1{font-family:var(--display); font-size:clamp(28px,4.6vw,42px); font-weight:600; margin:2px 0 6px;
+  letter-spacing:-.01em; line-height:1.08; text-wrap:balance;}
+.sub{color:var(--ink-2); margin:0; max-width:74ch;}
+.meta{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;}
+.chip{display:inline-flex; align-items:center; gap:6px; background:var(--chip-bg);
+  border-radius:2px; padding:3px 11px; font-size:12.5px; color:var(--ink-2);}
+.chip b{color:var(--ink); font-weight:600;}
+
+section{margin-top:34px;}
+h2{font-family:var(--display); font-size:21px; font-weight:600; margin:0;}
+.sec-note{color:var(--ink-2); font-size:13.5px; margin:3px 0 12px; max-width:78ch;}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);}
+
+/* ---------- veredicto + barra de evidencia ---------- */
+.hero{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.25fr); gap:14px;}
+.verdict{padding:20px 22px; border-left:3px solid var(--accent);}
+.verdict p.big{font-family:var(--display); font-size:clamp(20px,2.4vw,26px); line-height:1.22;
+  margin:8px 0 10px; font-weight:500; text-wrap:pretty;}
+.verdict p.small{color:var(--ink-2); font-size:13.5px; margin:0;}
+.ladder{padding:20px 22px;}
+.ladder h3{margin:0 0 14px; font-size:14px; font-weight:600; color:var(--ink-2);}
+/* la barra: un solo eje (36 requisitos), segmentos con hueco de 2 px del color
+   de la superficie, extremos redondeados a 4 px */
+.stack{display:flex; gap:2px; height:24px; background:var(--panel);}
+.stack .s{min-width:6px; cursor:pointer; border:0; padding:0;}
+.stack .s:first-child{border-radius:4px 0 0 4px;}
+.stack .s:last-child{border-radius:0 4px 4px 0;}
+.stack .s:hover, .stack .s:focus-visible{filter:brightness(1.12);}
+.s.medido,.cell.medido .g,.dot.medido{background:var(--ev-medido);}
+.s.simulado,.cell.simulado .g,.dot.simulado{background:var(--ev-simulado);}
+.s.declarado,.cell.declarado .g,.dot.declarado{background:var(--ev-declarado);}
+.s.falta,.cell.falta .g,.dot.falta{background:var(--ev-falta);}
+.legend{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:14px;}
+.lv{border:1px solid var(--line-soft); background:var(--panel-2); border-radius:2px; padding:10px 12px;
+  text-align:left; cursor:pointer; width:100%; display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start;}
+.lv[aria-pressed="true"]{border-color:var(--accent);}
+.lv .n{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:26px; font-weight:600; line-height:1.1; color:var(--ink); display:block;}
+.lv .nm{display:flex; align-items:center; gap:7px; font-size:13px; font-weight:600; color:var(--ink); margin-top:4px;}
+.lv .df{display:block; font-size:12px; font-weight:400; color:var(--ink-2); margin-top:3px; line-height:1.35;}
+.dot{display:inline-grid; place-items:center; width:16px; height:16px; border-radius:2px; color:#0E1826; flex:none;}
+.dot svg, .cell .g svg{display:block;}
+
+/* ---------- mapa de evidencia: una casilla por requisito ---------- */
+.map{padding:8px 22px 14px;}
+.maprow{display:grid; grid-template-columns:minmax(150px,250px) 1fr auto; gap:14px; align-items:center;
+  padding:9px 0; border-bottom:1px solid var(--line-soft);}
+.maprow:last-child{border-bottom:0;}
+.maprow .fam{background:none; border:0; padding:0; text-align:left; font-size:14px; font-weight:500; color:var(--ink); cursor:pointer;}
+.maprow .fam:hover{color:var(--accent); background:none;}
+.maprow .fam[aria-pressed="true"]{color:var(--accent);}
+.cells{display:flex; flex-wrap:wrap; gap:4px;}
+.cell{width:30px; height:30px; padding:0; border:0; background:none; cursor:pointer; position:relative;}
+.cell .g{display:grid; place-items:center; width:100%; height:100%; border-radius:2px;
+  color:#0E1826;}
+.cell:hover .g, .cell:focus-visible .g{outline:2px solid var(--ink); outline-offset:1px;}
+.maprow .tot{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:12.5px; color:var(--ink-2); white-space:nowrap; display:flex; gap:10px;}
+.maprow .tot .tn{display:inline-flex; align-items:center; gap:4px;}
+.maprow .tot .dot{width:13px; height:13px;}
+
+/* ---------- los tres hallazgos ---------- */
+.finds{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;}
+.find{padding:16px 18px; border-top:3px solid var(--ev-falta);}
+.find .k{font-family:var(--mono); font-size:12px; color:var(--ink-3);}
+.find h3{margin:4px 0 8px; font-family:var(--display); font-size:19px; font-weight:600; line-height:1.2;}
+.find p{margin:0 0 8px; color:var(--ink-2); font-size:13.5px;}
+.find p.c{color:var(--ink); margin:0;}
+.find p.c b{color:var(--ink-3); font-size:11.5px; letter-spacing:.07em; text-transform:uppercase; font-weight:600; display:block; margin-bottom:2px;}
+
+/* ---------- filtros ---------- */
+.filters{display:flex; flex-wrap:wrap; gap:8px 18px; align-items:center; padding:12px 14px; margin-bottom:12px;}
+.fg{display:flex; flex-wrap:wrap; align-items:center; gap:6px;}
+.fg .lab{font-size:11.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); margin-right:2px;}
+.fbtn{padding:4px 10px; font-weight:500; font-size:12.5px; display:inline-flex; align-items:center; gap:6px;}
+.fbtn[aria-pressed="true"]{border-color:var(--accent); color:var(--ink); background:var(--panel-hi);}
+.filters input{background:var(--panel-2); color:var(--ink); border:1px solid var(--line); border-radius:2px;
+  padding:5px 10px; font:inherit; font-size:13.5px; width:210px;}
+.count{margin-left:auto; font-size:13px; color:var(--ink-2);}
+.count b{color:var(--ink);}
+
+/* ---------- la lista ---------- */
+.group{margin-top:18px;}
+.group h3{font-family:var(--display); font-size:17px; font-weight:600; margin:0 0 6px; display:flex; align-items:baseline; gap:10px;}
+.group h3 span{font-family:var(--mono); font-size:12px; font-weight:400; color:var(--ink-3);}
+.req{display:grid; grid-template-columns:38px minmax(0,1.55fr) minmax(0,.9fr) 118px minmax(0,1.2fr);
+  gap:14px; padding:13px 16px; border-bottom:1px solid var(--line-soft); align-items:start; scroll-margin-top:16px;}
+.req:last-child{border-bottom:0;}
+.req.flash{background:var(--panel-hi);}
+.req .num{font-family:var(--mono); font-size:13px; color:var(--ink-3); padding-top:1px;}
+.req .rq{font-weight:500;}
+.req .hoy{color:var(--ink-2); font-size:13.5px; margin-top:4px;}
+.req .tl{font-size:13px;}
+.req .tl a, .req .tl span.t{display:block; margin-bottom:3px;}
+.req .tl span.t{color:var(--ink-2);}
+.req .tl small{color:var(--ink-3);}
+.req .cl{font-size:13.5px;}
+.req .cl .who{display:inline-block; margin-top:6px; font-size:11.5px; color:var(--ink-2);
+  background:var(--chip-bg); border-radius:2px; padding:2px 8px;}
+.hd{display:none;}
+.pill{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600; color:var(--ink);
+  border-radius:2px; padding:3px 9px 3px 5px; background:var(--panel-2); border:1px solid var(--line-soft);}
+.empty{padding:22px; color:var(--ink-2); text-align:center;}
+
+/* ---------- alcance y fuentes ---------- */
+.two{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}
+.box{padding:16px 18px;}
+.box h3{margin:0 0 8px; font-size:14px; font-weight:600;}
+.box p, .box li{color:var(--ink-2); font-size:13.5px;}
+.box ul{margin:0; padding-left:18px;}
+.box li{margin-bottom:4px;}
+footer{margin-top:36px; border-top:1px solid var(--line); padding-top:14px; color:var(--ink-2); font-size:13px;}
+footer code{font-family:var(--mono); font-size:12.5px; background:var(--chip-bg); border-radius:2px; padding:1px 6px; color:var(--ink);}
+
+/* ---------- el rótulo al pasar por una marca ---------- */
+#tip{position:fixed; z-index:20; pointer-events:none; max-width:320px; background:#0A1220; color:var(--ink);
+  border:1px solid var(--line); border-radius:2px; padding:8px 10px; font-size:12.5px; line-height:1.4;
+  box-shadow:0 6px 24px rgba(0,0,0,.45); display:none;}
+#tip b{display:block; font-size:12px; color:var(--ink-2); font-weight:600; margin-bottom:2px;}
+
+@media (max-width:980px){
+  .hero,.finds,.two{grid-template-columns:1fr;}
+  .legend{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .req{grid-template-columns:34px minmax(0,1fr); gap:6px 12px;}
+  .req .tl,.req .ev,.req .cl{grid-column:2;}
+  .hd{display:block; font-size:11px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); margin:6px 0 2px;}
+  .maprow{grid-template-columns:1fr auto;}
+  .maprow .cells{grid-column:1 / -1; order:3;}
+  .count{margin-left:0;}
+}
+@media (prefers-reduced-motion: no-preference){
+  .req{transition:background-color .6s ease;}
+}
+
+/* ---------- en papel: claro, entero y sin controles ---------- */
+@media print{
+  @page{margin:13mm;}
+  :root{color-scheme:light; --void:#fff; --panel:#fff; --panel-2:#fff; --panel-hi:#fff; --line:#B9C0C8; --line-soft:#D9DEE3;
+    --ink:#111820; --ink-2:#3C4651; --ink-3:#5A6570; --accent:#8A4A08; --chip-bg:#EEF1F4;
+    /* en papel los niveles son ORDINALES en gris, de más a menos evidencia; el
+       signo y el nombre siguen llevando la identidad */
+    --ev-medido:#1F2937; --ev-simulado:#6B7280; --ev-declarado:#A3ABB5; --ev-falta:#D5DAE0;}
+  body{background:#fff; font-size:11.5px;}
+  .wrap{max-width:none; padding:0;}
+  .bar, .filters, #tip{display:none !important;}
+  .stack .s, .dot, .cell .g{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  .dot, .cell .g{color:#fff;}
+  .dot.declarado, .dot.falta, .cell.declarado .g, .cell.falta .g{color:#111820;}
+  .req, .find, .maprow, .lv{break-inside:avoid;}
+  .group h3{break-after:avoid;}
+  section{margin-top:18px;}
+  a{color:var(--ink); text-decoration:none;}
+  .req{grid-template-columns:26px minmax(0,1.5fr) minmax(0,.9fr) 92px minmax(0,1.2fr); gap:10px; padding:7px 0;}
+  .find{border-top-color:#111820;}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="bar">
+    <a class="back" href="index.html" id="back"></a>
+    <span class="sp"></span>
+    <div class="seg" role="group" id="langs" aria-label="Idioma / Language">
+      <button type="button" data-lang="es" aria-pressed="true">ES</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
+    <button type="button" id="btnPrint"></button>
+  </div>
+
+  <header class="top">
+    <span class="eyebrow" id="eyebrow"></span>
+    <h1 id="h1"></h1>
+    <p class="sub" id="sub"></p>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <section id="resumen" style="margin-top:0">
+    <div class="hero">
+      <div class="panel verdict">
+        <span class="eyebrow" id="vEyebrow"></span>
+        <p class="big" id="vBig"></p>
+        <p class="small" id="vSmall"></p>
+      </div>
+      <div class="panel ladder">
+        <h3 id="ladTitle"></h3>
+        <div class="stack" id="stack" role="group"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="mapa">
+    <h2 id="mapTitle"></h2>
+    <p class="sec-note" id="mapNote"></p>
+    <div class="panel map" id="map"></div>
+  </section>
+
+  <section id="hallazgos">
+    <h2 id="findTitle"></h2>
+    <p class="sec-note" id="findNote"></p>
+    <div class="finds" id="finds"></div>
+  </section>
+
+  <section id="lista">
+    <h2 id="listTitle"></h2>
+    <p class="sec-note" id="listNote"></p>
+    <div class="panel filters" id="filters"></div>
+    <div id="groups"></div>
+  </section>
+
+  <section id="alcance">
+    <h2 id="scopeTitle"></h2>
+    <div class="two" style="margin-top:10px">
+      <div class="panel box" id="scopeBox"></div>
+      <div class="panel box" id="srcBox"></div>
+    </div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+/* =====================================================================
+   EXPEDIENTE DE HOMOLOGACIÓN — control del tracker.
+   Para mantenerlo al día se edita SOLO el array `REQS` (y `REVISION`).
+   La versión la lee el Panel de aquí: no se copia en la tarjeta.
+   ===================================================================== */
+const VER='v0.1.0';
+const REVISION='2026-11-11';
+
+/* Los cuatro niveles de evidencia, de más a menos. El orden es el de la barra
+   y no cambia con los filtros: el color sigue al nivel, no a su posición. */
+const EV = [
+  { k:'medido',    es:'Medido',    en:'Measured',  des:'Hay dato de campo o de ensayo.',                                      den:'Field or test data exists.' },
+  { k:'simulado',  es:'Simulado',  en:'Simulated', des:'Lo demuestra un modelo, con sus límites declarados.',                den:'Shown by a model, with stated limits.' },
+  { k:'declarado', es:'Declarado', en:'Declared',  des:'Hay herramienta, parámetro o documento; falta la demostración.',     den:'A tool, parameter or document exists; proof is missing.' },
+  { k:'falta',     es:'Falta',     en:'Missing',   des:'No hay evidencia.',                                                  den:'No evidence.' }
+];
+const FAM = [
+  { k:'viento',       es:'Viento y stow',                 en:'Wind and stow' },
+  { k:'fallos',       es:'Fallos y seguridad funcional',  en:'Failures and functional safety' },
+  { k:'seguimiento',  es:'Seguimiento y backtracking',    en:'Tracking and backtracking' },
+  { k:'alimentacion', es:'Alimentación',                  en:'Power supply' },
+  { k:'comms',        es:'Comunicaciones',                en:'Communications' },
+  { k:'scada',        es:'SCADA e integración',           en:'SCADA and integration' },
+  { k:'ciber',        es:'Ciberseguridad y ciclo de vida',en:'Cybersecurity and lifecycle' },
+  { k:'granizo',      es:'Granizo y nieve',               en:'Hail and snow' },
+  { k:'pem',          es:'Puesta en marcha y fiabilidad', en:'Commissioning and reliability' }
+];
+/* Quién puede cerrar cada requisito. */
+const WHO = [
+  { k:'codigo',       es:'Código',                       en:'Code' },
+  { k:'campo',        es:'Medida o ensayo',              en:'Field or bench test' },
+  { k:'firmware',     es:'Firmware',                     en:'Firmware' },
+  { k:'estructuras',  es:'Estructuras',                  en:'Structures' },
+  { k:'cumplimiento', es:'Documentación y cumplimiento', en:'Documentation and compliance' }
+];
+/* Las herramientas, con la URL de su ficha en el Panel. Sin `url` = no tiene página que abrir. */
+const TOOLS = {
+  viento:  { es:'Simulador de abanderamiento', en:'Stow simulator',          url:'sim-viento.html' },
+  planta:  { es:'Simulador de planta',         en:'Plant simulator',         url:'https://imoriana3.github.io/gemelo-digital/simulador.html' },
+  bateria: { es:'Simulador de batería',        en:'Battery simulator',       url:'https://imoriana3.github.io/gemelo-digital/bateria.html' },
+  modbus:  { es:'Mapa Modbus',                 en:'Modbus map',              url:'https://cobertura-zigbee.imoriana3.workers.dev/modbus.html' },
+  bt:      { es:'Simulador de backtracking',   en:'Backtracking simulator',  url:'https://cobertura-zigbee.imoriana3.workers.dev/backtracking.html' },
+  difusa:  { es:'Simulador de difusa',         en:'Diffuse-light simulator', url:'https://cobertura-zigbee.imoriana3.workers.dev/overcast.html' },
+  string:  { es:'Producción por string',       en:'Per-string production',   url:'https://cobertura-zigbee.imoriana3.workers.dev/produccion.html' },
+  careo:   { es:'Careo PVsyst',                en:'PVsyst cross-check',      url:'careo-pvsyst.html' },
+  trafico: { es:'Medidor de tráfico',          en:'Traffic meter',           url:'https://scada.imoriana3.workers.dev/trafico.html' },
+  red:     { es:'Diseño de red',               en:'Network design',          url:'https://siting.pages.dev/' },
+  rf:      { es:'Modelo RF',                   en:'RF model',                url:'https://imoriana3.github.io/cobertura-rf-fv/' },
+  zigbee:  { es:'Diagnóstico Zigbee',          en:'Zigbee diagnostics',      url:'https://cobertura-zigbee.imoriana3.workers.dev/' },
+  asbuilt: { es:'Visor as-built',              en:'As-built viewer',         url:'https://imoriana3.github.io/visores/asbuilt/?planta=ayora' },
+  scada:   { es:'SCADA',                       en:'SCADA',                   url:'https://factiun-cartera.imoriana3.workers.dev/scada.html' },
+  pem:     { es:'Seguimiento PEM',             en:'Commissioning log',       url:'https://factiun-cartera.imoriana3.workers.dev/seguimiento-pem.html' },
+  ips:     { es:'IPs de plantas',              en:'Plant IP register',       url:'https://factiun-cartera.imoriana3.workers.dev/ips.html' },
+  obra:    { es:'Control de obra',             en:'Site quality control',    url:'https://imoriana3.github.io/checklist-solar-v2/' },
+  toolbox: { es:'TCU Toolbox',                 en:'TCU Toolbox',             url:'' },
+  ncusim:  { es:'ncu_simulada.py',             en:'ncu_simulada.py',         url:'' }
+};
+
+/* LOS REQUISITOS. `t` = herramientas que lo demuestran ([clave] o [clave, nota]).
+   `ev` = nivel de evidencia HOY · `w` = quién lo cierra. */
+const REQS = [
+ { n:1, f:'viento', ev:'falta', w:'firmware', t:[['viento'],['modbus','HSU']],
+   es:'Lógica de disparo de viento igual a la del firmware: niveles, tiempos, rachas y sectores',
+   en:'Wind trigger logic identical to the firmware: levels, timers, gusts and sectors',
+   hes:'El simulador corre la estrategia canónica (40/60 km/h, histéresis de 30 min). Los parámetros reales de la HSU no se cargan.',
+   hen:'The simulator runs the canonical strategy (40/60 km/h, 30 min hysteresis). The real weather-station parameters are not loaded.',
+   ces:'Simular con los parámetros leídos de la HSU de cada planta y carear la traza contra un equipo real.',
+   cen:'Simulate with the parameters read from each plant’s weather station and cross-check the trace against real hardware.' },
+ { n:2, f:'viento', ev:'simulado', w:'campo', t:[['toolbox','SAT'],['viento']],
+   es:'Tiempo a bandera medido: peor caso y dispersión',
+   en:'Measured time to stow: worst case and spread',
+   hes:'11,1 min calculados (sondeo 15 s, arranque 5 s, 110° a 0,17 °/s). 15 min declarados.',
+   hen:'11.1 min calculated (15 s polling, 5 s motor start, 110° at 0.17 °/s). 15 min declared.',
+   ces:'Cronometrar con la Toolbox desde el extremo contrario, en varios seguidores y temperaturas.',
+   cen:'Time it with the Toolbox from the opposite end stop, on several trackers and temperatures.' },
+ { n:3, f:'viento', ev:'declarado', w:'campo', t:[['viento'],['trafico']],
+   es:'Latencia medida de anemómetro a motor',
+   en:'Measured latency from anemometer to motor',
+   hes:'La cadena existe en el simulador, con valores declarados por quien simula.',
+   hen:'The chain exists in the simulator, with values declared by whoever runs it.',
+   ces:'Medir cada eslabón en un banco con TCU, NCU y HSU reales.',
+   cen:'Measure each link on a bench with a real TCU, NCU and weather station.' },
+ { n:4, f:'viento', ev:'simulado', w:'codigo', t:[['viento']],
+   es:'Coste anual del stow en el emplazamiento, con varios años',
+   en:'Annual energy cost of stow at the site, over several years',
+   hes:'Careo con el motor canónico: POA a −0,23 % y maniobras idénticas, con viento determinista.',
+   hen:'Cross-check with the canonical engine: POA within −0.23% and identical manoeuvres, with deterministic wind.',
+   ces:'Repetir el careo con meteo real y contrastar el recuento con el histórico del SCADA.',
+   cen:'Repeat the cross-check with real weather and compare the count against SCADA history.' },
+ { n:5, f:'viento', ev:'falta', w:'codigo', t:[],
+   es:'Exposición: tiempo con viento sobre umbral sin estar en bandera',
+   en:'Exposure: time with wind above threshold while not yet stowed',
+   hes:'No se calcula. Las salidas miden la energía perdida, no el riesgo.',
+   hen:'Not calculated. Outputs measure lost energy, not risk.',
+   ces:'Calcular los minutos de exposición por estrategia y por evento.',
+   cen:'Compute exposure minutes per strategy and per event.' },
+ { n:6, f:'viento', ev:'falta', w:'estructuras', t:[],
+   es:'Umbrales y ángulo de defensa ligados al viento de proyecto y al túnel de viento',
+   en:'Thresholds and stow angle tied to design wind and wind-tunnel results',
+   hes:'El simulador declara que no es un estudio de cargas. El ángulo de defensa está pendiente de Estructuras.',
+   hen:'The simulator states it is not a load study. The stow angle is pending from Structures.',
+   ces:'Ángulo y umbrales firmados por Estructuras con el informe de túnel.',
+   cen:'Angle and thresholds signed off by Structures with the wind-tunnel report.' },
+ { n:7, f:'viento', ev:'declarado', w:'campo', t:[['viento']],
+   es:'Abanderamiento pasivo: par de desembrague, dispersión y detección',
+   en:'Passive stow: release torque, spread and detection',
+   hes:'La velocidad de suelta es un sustituto declarado del par de desembrague.',
+   hen:'Release wind speed is a declared proxy for release torque.',
+   ces:'Ensayar el par y su dispersión entre unidades, y decidir cómo lo detecta el control.',
+   cen:'Test the torque and its unit-to-unit spread, and decide how the control detects it.' },
+ { n:8, f:'viento', ev:'falta', w:'firmware', t:[['modbus','HSU'],['toolbox','HSU']],
+   es:'Plausibilidad de anemómetros y regla ante dato caducado',
+   en:'Anemometer plausibility and stale-data rule',
+   hes:'El mapa publica AlarmWindSensor y lastValidWind. La regla no está documentada ni simulada.',
+   hen:'The map exposes AlarmWindSensor and lastValidWind. The rule is neither documented nor simulated.',
+   ces:'Regla de firmware ante dato caducado y comparación cruzada entre HSU.',
+   cen:'Firmware rule for stale data and cross-comparison between weather stations.' },
+
+ { n:9, f:'fallos', ev:'falta', w:'firmware', t:[['planta']],
+   es:'Comportamiento ante pérdida de NCU o de enlace',
+   en:'Behaviour on loss of NCU or radio link',
+   hes:'Existe el registro 40022, con plazo de 10 min por defecto. Ninguna herramienta lo ejercita; en el simulador las TCU sin enlace siguen en seguimiento.',
+   hen:'Register 40022 exists, with a 10 min default timeout. No tool exercises it; in the simulator, TCUs without a link keep tracking.',
+   ces:'Respuesta de firmware sobre qué hace la TCU al vencer el plazo, y un ensayo que lo enseñe.',
+   cen:'Firmware answer on what the TCU does at timeout, and a test that shows it.' },
+ { n:10, f:'fallos', ev:'simulado', w:'campo', t:[['planta']],
+   es:'Jerarquía de modos: seta, viento, nieve, limpieza, forzados, batería, manual y auto',
+   en:'Mode hierarchy: E-stop, wind, snow, cleaning, forced, battery, manual and auto',
+   hes:'Implementada en el simulador y visible en el mapa Modbus en vivo.',
+   hen:'Implemented in the simulator and visible in the live Modbus map.',
+   ces:'Ensayo presenciado sobre equipo real.',
+   cen:'Witnessed test on real hardware.' },
+ { n:11, f:'fallos', ev:'simulado', w:'campo', t:[['planta']],
+   es:'Seta de emergencia enclavada con línea normalmente cerrada',
+   en:'Latched E-stop on a normally-closed line',
+   hes:'Antirrebote, enclavamiento y rearme por 40007.13, simulados.',
+   hen:'Debounce, latching and reset via 40007.13, simulated.',
+   ces:'Ensayo presenciado en planta o en banco.',
+   cen:'Witnessed test on site or on a bench.' },
+ { n:12, f:'fallos', ev:'simulado', w:'campo', t:[['planta']],
+   es:'Averías de eje (calado y duro) con sus alarmas',
+   en:'Axis faults (stalled and stiff) with their alarms',
+   hes:'Dos caminos de detección, como el firmware: sobrecorriente y eje bloqueado.',
+   hen:'Two detection paths, as in the firmware: overcurrent and blocked axis.',
+   ces:'Ensayo presenciado en banco con eje calado y con eje duro.',
+   cen:'Witnessed bench test with a stalled and a stiff axis.' },
+ { n:13, f:'fallos', ev:'falta', w:'cumplimiento', t:[],
+   es:'Análisis de modos de fallo del control',
+   en:'Failure-mode analysis of the control system',
+   hes:'No hay.',
+   hen:'None.',
+   ces:'Redactarlo y ligar cada modo de fallo a su demostración.',
+   cen:'Write it and link each failure mode to its demonstration.' },
+
+ { n:14, f:'seguimiento', ev:'declarado', w:'campo', t:[['toolbox','SAT']],
+   es:'Precisión de seguimiento con instrumento externo (ensayo D.1.1)',
+   en:'Tracking accuracy with an external instrument (test D.1.1)',
+   hes:'La pestaña SAT de la Toolbox emite el veredicto. No se han visto actas.',
+   hen:'The Toolbox SAT tab issues the verdict. No signed reports were seen.',
+   ces:'Acta con inclinómetro externo sobre una muestra de seguidores.',
+   cen:'Signed report with an external inclinometer on a sample of trackers.' },
+ { n:15, f:'seguimiento', ev:'simulado', w:'campo', t:[['bt'],['asbuilt'],['modbus']],
+   es:'Backtracking por tracker sobre terreno real y su carga en las TCU',
+   en:'Per-tracker backtracking on real terrain, loaded into the TCUs',
+   hes:'Configuración por tracker generada para Ayora y San José.',
+   hen:'Per-tracker configuration generated for Ayora and San José.',
+   ces:'Auditar con la Toolbox que lo cargado coincide con lo diseñado.',
+   cen:'Audit with the Toolbox that what is loaded matches the design.' },
+ { n:16, f:'seguimiento', ev:'simulado', w:'campo', t:[['difusa']],
+   es:'Política de difusa y coste de maniobra',
+   en:'Diffuse-light policy and manoeuvre cost',
+   hes:'Cuatro políticas comparadas; coste de motor ajustado con 14.759 maniobras de flota.',
+   hen:'Four policies compared; motor cost fitted on 14,759 fleet manoeuvres.',
+   ces:'Contrastar la política con días medidos de planta.',
+   cen:'Check the policy against measured plant days.' },
+ { n:17, f:'seguimiento', ev:'simulado', w:'campo', t:[['careo'],['string']],
+   es:'Energía contrastada con PVsyst y con producción medida',
+   en:'Energy cross-checked with PVsyst and with measured production',
+   hes:'Careos publicados contra PVsyst; comparación por string disponible.',
+   hen:'Published cross-checks against PVsyst; per-string comparison available.',
+   ces:'Careo con producción medida por string en una planta en marcha.',
+   cen:'Cross-check against measured per-string production at an operating plant.' },
+
+ { n:18, f:'alimentacion', ev:'simulado', w:'codigo', t:[['bateria']],
+   es:'Autonomía y reserva para una bandera completa a fin de vida y temperatura mínima',
+   en:'Autonomy and reserve for a full stow at end of life and minimum temperature',
+   hes:'Año completo simulado; la curva de motor sale de 13 puntos de una sola TCU.',
+   hen:'Full year simulated; the motor curve comes from 13 points of a single TCU.',
+   ces:'Usar el ensayo de motor crudo y añadir fin de vida y temperatura mínima.',
+   cen:'Use the raw motor test and add end-of-life and minimum-temperature cases.' },
+ { n:19, f:'alimentacion', ev:'falta', w:'codigo', t:[],
+   es:'Probabilidad de no poder abanderar por SOC bajo cuando hay viento',
+   en:'Probability of being unable to stow due to low SOC during wind',
+   hes:'No se cruza la batería con el viento.',
+   hen:'Battery and wind are not analysed together.',
+   ces:'Cruzar SOC y viento del mismo año en el simulador de batería.',
+   cen:'Cross SOC and wind for the same year in the battery simulator.' },
+
+ { n:20, f:'comms', ev:'simulado', w:'campo', t:[['red'],['rf'],['zigbee']],
+   es:'Diseño de red y cobertura por planta',
+   en:'Network design and coverage per plant',
+   hes:'Modelo RF con sesgo global; campaña medida en El Burgo.',
+   hen:'RF model with a global bias; measured campaign at El Burgo.',
+   ces:'Calibrar con la campaña completa y fijar la regla de diseño.',
+   cen:'Calibrate with the full campaign and fix the design rule.' },
+ { n:21, f:'comms', ev:'declarado', w:'campo', t:[['trafico']],
+   es:'Tiempo de entrega de la orden de stow al peor nodo de la malla',
+   en:'Stow command delivery time to the worst mesh node',
+   hes:'Modelo de ocupación de aire, sin medida.',
+   hen:'Air-occupancy model, not measured.',
+   ces:'Medirlo en el nodo con más saltos, con el sondeo en marcha.',
+   cen:'Measure it at the node with most hops, with polling running.' },
+ { n:22, f:'comms', ev:'declarado', w:'firmware', t:[['toolbox']],
+   es:'Sincronización horaria automática y alarma de deriva',
+   en:'Automatic time sync and drift alarm',
+   hes:'Sincronización manual con el PC desde la Toolbox.',
+   hen:'Manual sync with the PC from the Toolbox.',
+   ces:'Confirmar con firmware la sincronización automática y añadir la alarma.',
+   cen:'Confirm automatic sync with firmware and add the alarm.' },
+
+ { n:23, f:'scada', ev:'declarado', w:'codigo', t:[['modbus']],
+   es:'Mapa Modbus como documento de interfaz versionado por firmware',
+   en:'Modbus map as an interface document versioned per firmware',
+   hes:'R7 publicado. El Burgo es anterior a R7 y no expone bloques de TCU.',
+   hen:'R7 published. El Burgo predates R7 and does not expose TCU blocks.',
+   ces:'Versionar el mapa por firmware, con las diferencias entre revisiones.',
+   cen:'Version the map per firmware, with diffs between revisions.' },
+ { n:24, f:'scada', ev:'simulado', w:'codigo', t:[['ncusim'],['planta']],
+   es:'Entorno de prueba para el integrador SCADA del EPC',
+   en:'Test environment for the EPC’s SCADA integrator',
+   hes:'Hay un esclavo Modbus TCP simulado. La escritura del mapa está en 0/31 comandos.',
+   hen:'A simulated Modbus TCP slave exists. Map write coverage is 0/31 commands.',
+   ces:'Completar la escritura y empaquetar la planta virtual.',
+   cen:'Complete the write side and package the virtual plant.' },
+ { n:25, f:'scada', ev:'declarado', w:'campo', t:[['scada'],['toolbox','SAT']],
+   es:'Disponibilidad por tracker calculada en continuo',
+   en:'Per-tracker availability computed continuously',
+   hes:'El SCADA trabaja en diferido; la Toolbox calcula D.3.4 y D.4 durante el ensayo.',
+   hen:'SCADA works in deferred mode; the Toolbox computes D.3.4 and D.4 during the test.',
+   ces:'Telemetría continua y cálculo mensual por tracker.',
+   cen:'Continuous telemetry and monthly per-tracker calculation.' },
+ { n:26, f:'scada', ev:'falta', w:'codigo', t:[],
+   es:'Informe de cada evento de stow con sello de tiempo',
+   en:'Timestamped report of every stow event',
+   hes:'Existen los CSV de NCU y la caja negra de 24 h de la HSU. No hay informe.',
+   hen:'NCU CSV logs and the weather station’s 24 h black box exist. There is no report.',
+   ces:'Generar el informe: disparo, orden, confirmación por TCU y tiempo a posición.',
+   cen:'Generate the report: trigger, command, per-TCU confirmation and time to position.' },
+ { n:27, f:'scada', ev:'falta', w:'codigo', t:[],
+   es:'Detección del ángulo real independiente del inclinómetro',
+   en:'Detection of the true angle, independent of the inclinometer',
+   hes:'El SCADA es ciego al sesgo de inclinómetro, y está documentado.',
+   hen:'SCADA is blind to inclinometer bias, and this is documented.',
+   ces:'Validar un observador independiente o un muestreo periódico con instrumento.',
+   cen:'Validate an independent observer or periodic sampling with an instrument.' },
+
+ { n:28, f:'ciber', ev:'falta', w:'cumplimiento', t:[],
+   es:'Análisis IEC 62443, RED (EN 18031) y CRA; guía de bastionado de la NCU',
+   en:'IEC 62443, RED (EN 18031) and CRA analysis; NCU hardening guide',
+   hes:'No aparece en la documentación.',
+   hen:'Not found in the documentation.',
+   ces:'Análisis de aplicabilidad y guía de bastionado.',
+   cen:'Applicability analysis and hardening guide.' },
+ { n:29, f:'ciber', ev:'declarado', w:'codigo', t:[['ips'],['toolbox']],
+   es:'Inventario de activos y firmware por planta',
+   en:'Asset and firmware inventory per plant',
+   hes:'Los datos se recogen. Falta la ficha entregable.',
+   hen:'The data is collected. The deliverable sheet is missing.',
+   ces:'Ficha por planta generada desde IPs e inventario.',
+   cen:'Per-plant sheet generated from the IP register and the inventory.' },
+ { n:30, f:'ciber', ev:'declarado', w:'firmware', t:[['toolbox','Firmware']],
+   es:'Actualización de firmware con firma, vuelta atrás y matriz de compatibilidad',
+   en:'Firmware update with signing, rollback and compatibility matrix',
+   hes:'La Toolbox planifica y verifica la campaña.',
+   hen:'The Toolbox plans and verifies the campaign.',
+   ces:'Confirmar firma y vuelta atrás con el proveedor; matriz firmware ↔ mapa.',
+   cen:'Confirm signing and rollback with the supplier; firmware ↔ map matrix.' },
+ { n:31, f:'ciber', ev:'declarado', w:'cumplimiento', t:[['toolbox']],
+   es:'Gobierno de parámetros y traza de cambios',
+   en:'Parameter governance and change trail',
+   hes:'Doble confirmación, valor anterior en el log y auditoría contra preset.',
+   hen:'Double confirmation, previous value in the log and audit against a preset.',
+   ces:'Política de roles y registro central de cambios.',
+   cen:'Role policy and a central change register.' },
+
+ { n:32, f:'granizo', ev:'simulado', w:'firmware', t:[['viento']],
+   es:'Hail stow: máquinas de amenaza y de ejecución, proveedor meteo y punto de escritura',
+   en:'Hail stow: threat and execution state machines, weather provider and write point',
+   hes:'Simulado. No hay punto donde escribir la orden. Rango de ±55°.',
+   hen:'Simulated. There is no point to write the command to. ±55° range.',
+   ces:'Punto de escritura en la NCU, proveedor meteo y parámetros de firmware.',
+   cen:'Write point on the NCU, weather provider and firmware parameters.' },
+ { n:33, f:'granizo', ev:'simulado', w:'campo', t:[['toolbox','HSU'],['planta']],
+   es:'Nieve: sensor, umbral y calibración',
+   en:'Snow: sensor, threshold and calibration',
+   hes:'Posición de nieve simulada; calibración del cero desde la Toolbox.',
+   hen:'Snow position simulated; zero calibration from the Toolbox.',
+   ces:'Ensayo de umbral y de calibración en planta.',
+   cen:'Threshold and calibration test on site.' },
+
+ { n:34, f:'pem', ev:'medido', w:'campo', t:[['toolbox','PEM'],['pem'],['obra']],
+   es:'Puesta en marcha trazable por tracker',
+   en:'Per-tracker traceable commissioning',
+   hes:'Registros de visita, con comparación entre visitas.',
+   hen:'Visit records, with visit-to-visit comparison.',
+   ces:'Mantener un registro por visita y planta.',
+   cen:'Keep one record per visit and plant.' },
+ { n:35, f:'pem', ev:'falta', w:'codigo', t:[['pem']],
+   es:'Tasas de fallo por componente y por firmware',
+   en:'Failure rates per component and per firmware',
+   hes:'Los datos existen sin explotar.',
+   hen:'The data exists but is not analysed.',
+   ces:'Cuadro de fiabilidad desde Seguimiento PEM e inventario.',
+   cen:'Reliability dashboard from the commissioning log and the inventory.' },
+ { n:36, f:'pem', ev:'falta', w:'cumplimiento', t:[],
+   es:'Matriz de cumplimiento IEC 62817 y UL 3703',
+   en:'IEC 62817 and UL 3703 compliance matrix',
+   hes:'No hay mención en la documentación del Panel.',
+   hen:'Not mentioned in the Panel documentation.',
+   ces:'Mapear cada cláusula a su evidencia.',
+   cen:'Map each clause to its evidence.' }
+];
+
+/* Los tres hallazgos que frenan la homologación. `r` = requisitos que arrastran. */
+const FINDS = [
+ { r:[1],
+   es:'Se simula la estrategia canónica, no el firmware',
+   en:'The canonical strategy is simulated, not the firmware',
+   pes:'El simulador corre A1/A2/B1/B2 con 40/60 km/h e histéresis de 30 min. El mapa de la HSU define hasta 10 niveles de viento, alarma de rachas (3 en 60 s), un plazo de posición segura de 20 min y 16 sectores. Ningún simulador nombra esos registros.',
+   pen:'The simulator runs A1/A2/B1/B2 with 40/60 km/h and a 30 min hysteresis. The weather-station map defines up to 10 wind levels, a gust alarm (3 in 60 s), a 20 min safe-position timeout and 16 sectors. No simulator references those registers.',
+   ces:'Simular con los parámetros de la HSU y carear contra equipo real.',
+   cen:'Simulate with the weather-station parameters and cross-check against real hardware.' },
+ { r:[9],
+   es:'La pérdida de comunicación no se demuestra',
+   en:'Loss of communication is not demonstrated',
+   pes:'La TCU tiene un plazo de pérdida de NCU (registro 40022) de 10 min por defecto. Ninguna herramienta lo ejercita, y en el simulador de planta las TCU sin enlace siguen en seguimiento.',
+   pen:'The TCU has an NCU-loss timeout (register 40022) of 10 min by default. No tool exercises it, and in the plant simulator TCUs without a link keep tracking.',
+   ces:'Respuesta de firmware y un ensayo que lo enseñe.',
+   cen:'A firmware answer and a test that shows it.' },
+ { r:[2,3,7,18],
+   es:'Los números clave son supuestos',
+   en:'The key numbers are assumptions',
+   pes:'Tiempo a bandera: 15 min tecleados y 11,1 calculados, ninguno medido. Latencia declarada. Suelta del pasivo como sustituto del par. Curva de motor de una sola TCU.',
+   pen:'Time to stow: 15 min typed in and 11.1 calculated, neither measured. Declared latency. Passive release as a proxy for torque. Motor curve from a single TCU.',
+   ces:'Medidas de campo y de banco.',
+   cen:'Field and bench measurements.' }
+];
+
+const SOURCES = [
+ ['EN 62817:2015 · NSAI',                   'https://shop.standards.ie/en-ie/standards/i-s-en-62817-2015-878775_saig_nsai_nsai_2088260'],
+ ['TaiyangNews · Standards for Solar Trackers', 'https://taiyangnews.info/technology/standards-for-solar-trackers'],
+ ['BSI · PNW 82-2154 (IEC 63513)',          'https://standardsdevelopment.bsigroup.com/projects/9023-08621'],
+ ['Solar Power World · DNV GL (2018)',      'https://www.solarpowerworldonline.com/2018/09/the-industry-needs-to-standardize-tracker-bankability-reports-to-reduce-investment-risk/'],
+ ['IoT Security Foundation · RED (EU) 2022/30', 'https://iotsecurityfoundation.org/wp-content/uploads/2025/09/EUROPEAN-UNION-RADIO-EQUIPMENT-DIRECTIVE-EU-RED-EXECUTIVE-BRIEF-pages-2-and-3-of-9.pdf'],
+ ['CMS · Cyber Resilience Act',             'https://cms.law/en/bel/legal-updates/ready-respond-report-the-cyber-resilience-act-s-reporting-regime-is-here'],
+ ['PV Tech · NIS2',                         'https://www.pv-tech.org/what-solar-asset-owners-need-to-know-about-cybersecurity-and-nis2-compliance/']
+];
+
+/* Los rótulos de la página, en los dos idiomas. */
+const T = {
+ es:{ back:'← Panel de Proyectos', print:'Imprimir', eyebrow:'Homologación · control',
+      h1:'Expediente de homologación',
+      sub:'Lo que un homologador de EPC pide al control del tracker, qué herramienta lo demuestra y con qué nivel de evidencia. Cada casilla lleva a su requisito.',
+      rev:'revisión', reqs:'requisitos', ver:'versión',
+      vEyebrow:'Veredicto',
+      vBig:n=>`Hoy no se aprobaría el control: ${n.medido} requisito de ${n.total} tiene medida de campo y ${n.falta} no tienen evidencia.`,
+      vSmall:'Las herramientas explican bien el control. Falta que la evidencia sea del producto instalado y no del modelo.',
+      ladTitle:n=>`${n.total} requisitos por nivel de evidencia`,
+      mapTitle:'Mapa de evidencia', mapNote:'Una casilla por requisito, agrupadas por bloque. El signo y el color dicen el nivel; pulsa una casilla para ir al requisito, o un bloque para filtrar la lista.',
+      findTitle:'Los tres hallazgos que frenan', findNote:'Los tres se cierran con datos de fuera del software.', closes:'Qué lo cierra', drags:'Arrastra',
+      listTitle:'Requisitos', listNote:'Situación leída en el código y la documentación; no es un ensayo de campo.',
+      fEv:'Evidencia', fWho:'Quién lo cierra', fFam:'Bloque', all:'Todos', search:'Buscar…', clear:'Quitar filtros',
+      shown:(a,b)=>`<b>${a}</b> de ${b} requisitos`, none:'Ningún requisito con esos filtros.',
+      hTool:'Herramienta', hEv:'Evidencia', hClose:'Qué lo cierra', noTool:'Ninguna',
+      scopeTitle:'Alcance y fuentes', scopeH:'Qué se ha revisado',
+      scope:['Revisado: código y documentación de los repos proyectos, cobertura-zigbee y gemelo-digital.',
+             'No revisado: el Panel publicado, los repos scada, siting y SolarGPTfull, ni ningún equipo real.',
+             'La aplicabilidad de RED y CRA al producto la confirma quien lleve cumplimiento.'],
+      srcH:'De dónde salen los requisitos',
+      foot:'Para actualizarlo se edita el array <code>REQS</code> de <code>homologacion.html</code> y la fecha <code>REVISION</code>.',
+      tipOf:(c,t)=>`${c} de ${t}` },
+ en:{ back:'← Project Panel', print:'Print', eyebrow:'Qualification · control',
+      h1:'Qualification dossier',
+      sub:'What an EPC’s qualification engineer asks of the tracker control system, which tool demonstrates it and with what level of evidence. Each cell leads to its requirement.',
+      rev:'review', reqs:'requirements', ver:'version',
+      vEyebrow:'Verdict',
+      vBig:n=>`The control would not be approved today: ${n.medido} requirement out of ${n.total} has field data and ${n.falta} have no evidence.`,
+      vSmall:'The tools explain the control well. The evidence still has to come from the installed product, not from the model.',
+      ladTitle:n=>`${n.total} requirements by level of evidence`,
+      mapTitle:'Evidence map', mapNote:'One cell per requirement, grouped by block. Symbol and colour give the level; select a cell to jump to the requirement, or a block to filter the list.',
+      findTitle:'The three blocking findings', findNote:'All three are closed with data from outside the software.', closes:'What closes it', drags:'Affects',
+      listTitle:'Requirements', listNote:'Status as read from code and documentation; this is not a field test.',
+      fEv:'Evidence', fWho:'Who closes it', fFam:'Block', all:'All', search:'Search…', clear:'Clear filters',
+      shown:(a,b)=>`<b>${a}</b> of ${b} requirements`, none:'No requirement matches those filters.',
+      hTool:'Tool', hEv:'Evidence', hClose:'What closes it', noTool:'None',
+      scopeTitle:'Scope and sources', scopeH:'What was reviewed',
+      scope:['Reviewed: code and documentation of the proyectos, cobertura-zigbee and gemelo-digital repositories.',
+             'Not reviewed: the published Panel, the scada, siting and SolarGPTfull repositories, or any real hardware.',
+             'Whether RED and CRA apply to the product must be confirmed by whoever owns compliance.'],
+      srcH:'Where the requirements come from',
+      foot:'To update it, edit the <code>REQS</code> array in <code>homologacion.html</code> and the <code>REVISION</code> date.',
+      tipOf:(c,t)=>`${c} of ${t}` }
+};
+
+/* ---------- estado ---------- */
+let LANG='es';
+try{ const q=new URLSearchParams(location.search).get('lang'); const s=localStorage.getItem('factiun_homologacion_lang');
+     if(q==='en'||q==='es') LANG=q; else if(s==='en'||s==='es') LANG=s; }catch(e){}
+const F={ ev:null, w:null, f:null, q:'' };
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const L=o=>o[LANG];
+const byK=(arr,k)=>arr.find(x=>x.k===k);
+function counts(list){
+  const n={ total:list.length }; EV.forEach(e=>{ n[e.k]=list.filter(r=>r.ev===e.k).length; }); return n;
+}
+function pasa(r){
+  if(F.ev && r.ev!==F.ev) return false;
+  if(F.w && r.w!==F.w) return false;
+  if(F.f && r.f!==F.f) return false;
+  if(F.q){
+    const hay=(r.es+' '+r.en+' '+r.hes+' '+r.hen+' '+r.ces+' '+r.cen+' '+r.t.map(x=>TOOLS[x[0]].es+' '+TOOLS[x[0]].en).join(' ')).toLowerCase();
+    if(!hay.includes(F.q.toLowerCase())) return false;
+  }
+  return true;
+}
+/* Los signos van dibujados, no escritos: como carácter («◐») dependían de la fuente
+   y el medio círculo salía como un borrón de 3 px. */
+const SIGNO = {
+  medido:'<circle cx="6" cy="6" r="4"/>',
+  simulado:'<circle cx="6" cy="6" r="3.7" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6 2.3a3.7 3.7 0 0 0 0 7.4z"/>',
+  declarado:'<circle cx="6" cy="6" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/>',
+  falta:'<path d="M3.1 3.1l5.8 5.8M8.9 3.1l-5.8 5.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'
+};
+const signo=(k,px)=>`<svg viewBox="0 0 12 12" width="${px}" height="${px}" fill="currentColor" aria-hidden="true">${SIGNO[k]}</svg>`;
+const dot=e=>`<span class="dot ${e.k}" aria-hidden="true">${signo(e.k,10)}</span>`;
+
+/* ---------- pintar ---------- */
+function pintaCabecera(){
+  const t=T[LANG], n=counts(REQS);
+  document.documentElement.lang=LANG;
+  document.title=t.h1+' · Factiun';
+  $('back').textContent=t.back; $('btnPrint').textContent=t.print;
+  $('eyebrow').textContent=t.eyebrow; $('h1').textContent=t.h1; $('sub').textContent=t.sub;
+  $('meta').innerHTML=`<span class="chip">${t.rev} <b class="mono">${REVISION}</b></span>`+
+    `<span class="chip"><b class="mono">${n.total}</b> ${t.reqs}</span>`+
+    `<span class="chip">${t.ver} <b class="mono">${VER}</b></span>`;
+  $('vEyebrow').textContent=t.vEyebrow; $('vBig').textContent=t.vBig(n); $('vSmall').textContent=t.vSmall;
+  $('ladTitle').textContent=t.ladTitle(n);
+  $('mapTitle').textContent=t.mapTitle; $('mapNote').textContent=t.mapNote;
+  $('findTitle').textContent=t.findTitle; $('findNote').textContent=t.findNote;
+  $('listTitle').textContent=t.listTitle; $('listNote').textContent=t.listNote;
+  $('scopeTitle').textContent=t.scopeTitle;
+  $('scopeBox').innerHTML=`<h3>${t.scopeH}</h3><ul>${t.scope.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`;
+  $('srcBox').innerHTML=`<h3>${t.srcH}</h3><ul>${SOURCES.map(s=>`<li><a href="${esc(s[1])}" target="_blank" rel="noopener">${esc(s[0])}</a></li>`).join('')}</ul>`;
+  $('foot').innerHTML=t.foot;
+  document.querySelectorAll('#langs button').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.lang===LANG)));
+}
+function pintaResumen(){
+  const t=T[LANG], n=counts(REQS);
+  $('stack').innerHTML=EV.filter(e=>n[e.k]>0).map(e=>
+    `<button type="button" class="s ${e.k}" style="flex:${n[e.k]} 1 0" data-ev="${e.k}" `+
+    `aria-label="${esc(L(e))}: ${t.tipOf(n[e.k],n.total)}" data-tip="${esc(L(e))}|${t.tipOf(n[e.k],n.total)} · ${Math.round(100*n[e.k]/n.total)} %"></button>`).join('');
+  $('legend').innerHTML=EV.map(e=>
+    `<button type="button" class="lv" data-ev="${e.k}" aria-pressed="${F.ev===e.k}">`+
+    `<span class="n">${n[e.k]}</span><span class="nm">${dot(e)}${esc(L(e))}</span>`+
+    `<span class="df">${esc(LANG==='es'?e.des:e.den)}</span></button>`).join('');
+}
+function pintaMapa(){
+  $('map').innerHTML=FAM.map(f=>{
+    const rs=REQS.filter(r=>r.f===f.k), n=counts(rs);
+    const cells=rs.map(r=>{ const e=byK(EV,r.ev);
+      return `<button type="button" class="cell ${e.k}" data-go="${r.n}" aria-label="${r.n}. ${esc(L(r))} — ${esc(L(e))}" `+
+             `data-tip="${r.n} · ${esc(L(e))}|${esc(L(r))}"><span class="g" aria-hidden="true">${signo(e.k,15)}</span></button>`; }).join('');
+    const tot=EV.filter(e=>n[e.k]>0).map(e=>`<span class="tn">${n[e.k]}${dot(e)}</span>`).join('');
+    return `<div class="maprow"><button type="button" class="fam" data-fam="${f.k}" aria-pressed="${F.f===f.k}">${esc(L(f))}</button>`+
+           `<div class="cells">${cells}</div><span class="tot" aria-hidden="true">${tot}</span></div>`;
+  }).join('');
+}
+function pintaHallazgos(){
+  const t=T[LANG];
+  $('finds').innerHTML=FINDS.map((h,i)=>
+    `<article class="panel find"><span class="k">0${i+1}</span><h3>${esc(L(h))}</h3>`+
+    `<p>${esc(LANG==='es'?h.pes:h.pen)}</p>`+
+    `<p class="c"><b>${t.closes}</b>${esc(LANG==='es'?h.ces:h.cen)}</p>`+
+    `<p style="margin-top:8px"><span class="eyebrow">${t.drags}</span> `+
+    h.r.map(n=>`<a href="#r-${n}" data-go="${n}" class="mono">${n}</a>`).join(' · ')+`</p></article>`).join('');
+}
+function pintaFiltros(){
+  const t=T[LANG];
+  const grupo=(lab,key,arr)=>`<div class="fg"><span class="lab">${lab}</span>`+
+    `<button type="button" class="fbtn" data-f="${key}" data-v="" aria-pressed="${!F[key]}">${t.all}</button>`+
+    arr.map(x=>`<button type="button" class="fbtn" data-f="${key}" data-v="${x.k}" aria-pressed="${F[key]===x.k}">${key==='ev'?dot(x):''}${esc(L(x))}</button>`).join('')+`</div>`;
+  $('filters').innerHTML=grupo(t.fEv,'ev',EV)+grupo(t.fWho,'w',WHO)+
+    `<div class="fg"><input type="search" id="q" placeholder="${t.search}" value="${esc(F.q)}" aria-label="${t.search}"></div>`+
+    `<span class="count" id="count"></span>`;
+  $('q').addEventListener('input',e=>{ F.q=e.target.value.trim(); pintaLista(); });
+}
+function pintaLista(){
+  const t=T[LANG], vis=REQS.filter(pasa);
+  const c=$('count'); if(c) c.innerHTML=t.shown(vis.length, REQS.length)+
+    ((F.ev||F.w||F.f||F.q)?` · <a href="#lista" id="clr">${t.clear}</a>`:'');
+  const html=FAM.map(f=>{
+    const rs=vis.filter(r=>r.f===f.k); if(!rs.length) return '';
+    return `<div class="group" data-group="${f.k}"><h3>${esc(L(f))} <span>${rs.length}</span></h3><div class="panel">`+
+      rs.map(r=>{ const e=byK(EV,r.ev), w=byK(WHO,r.w);
+        const tools=r.t.length? r.t.map(x=>{ const tl=TOOLS[x[0]], nota=x[1]?` <small>(${esc(x[1])})</small>`:'';
+            return tl.url? `<a href="${esc(tl.url)}"${/^https?:/.test(tl.url)?' target="_blank" rel="noopener"':''}>${esc(L(tl))}${nota}</a>`
+                         : `<span class="t">${esc(L(tl))}${nota}</span>`; }).join('')
+          : `<span class="t">${t.noTool}</span>`;
+        return `<div class="req" id="r-${r.n}" data-ev="${r.ev}">`+
+          `<div class="num">${String(r.n).padStart(2,'0')}</div>`+
+          `<div><div class="rq">${esc(L(r))}</div><div class="hoy">${esc(LANG==='es'?r.hes:r.hen)}</div></div>`+
+          `<div class="tl"><div class="hd">${t.hTool}</div>${tools}</div>`+
+          `<div class="ev"><div class="hd">${t.hEv}</div><span class="pill">${dot(e)}${esc(L(e))}</span></div>`+
+          `<div class="cl"><div class="hd">${t.hClose}</div>${esc(LANG==='es'?r.ces:r.cen)}<br><span class="who">${esc(L(w))}</span></div>`+
+        `</div>`; }).join('')+`</div></div>`;
+  }).join('');
+  $('groups').innerHTML=html || `<div class="panel empty">${t.none}</div>`;
+}
+function pintaTodo(){ pintaCabecera(); pintaResumen(); pintaMapa(); pintaHallazgos(); pintaFiltros(); pintaLista(); }
+
+/* ---------- interacción ---------- */
+function irA(n){
+  const r=REQS.find(x=>x.n===n); if(!r) return;
+  if(!pasa(r)){ F.ev=F.w=F.f=null; F.q=''; pintaResumen(); pintaMapa(); pintaFiltros(); pintaLista(); }
+  const el=$('r-'+n); if(!el) return;
+  el.scrollIntoView({ behavior:'smooth', block:'center' });
+  el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'), 1600);
+}
+document.addEventListener('click',e=>{
+  const go=e.target.closest('[data-go]');
+  if(go){ e.preventDefault(); irA(+go.dataset.go); return; }
+  const ev=e.target.closest('[data-ev].s, .lv[data-ev]');
+  if(ev){ F.ev=(F.ev===ev.dataset.ev)?null:ev.dataset.ev; pintaResumen(); pintaFiltros(); pintaLista(); return; }
+  const fam=e.target.closest('[data-fam]');
+  if(fam){ F.f=(F.f===fam.dataset.fam)?null:fam.dataset.fam; pintaMapa(); pintaLista(); $('lista').scrollIntoView({behavior:'smooth'}); return; }
+  const fb=e.target.closest('.fbtn');
+  if(fb){ F[fb.dataset.f]=fb.dataset.v||null; pintaResumen(); pintaFiltros(); pintaLista(); return; }
+  if(e.target.id==='clr'){ e.preventDefault(); F.ev=F.w=F.f=null; F.q=''; pintaResumen(); pintaMapa(); pintaFiltros(); pintaLista(); return; }
+  const lg=e.target.closest('#langs button');
+  if(lg){ LANG=lg.dataset.lang; try{ localStorage.setItem('factiun_homologacion_lang',LANG); }catch(err){} pintaTodo(); return; }
+});
+$('btnPrint').addEventListener('click',()=>window.print());
+
+/* el rótulo: una sola caja, para ratón y para teclado */
+const tip=$('tip');
+function muestraTip(el){
+  const [a,b]=(el.dataset.tip||'').split('|');
+  tip.innerHTML=`<b>${esc(a||'')}</b>${esc(b||'')}`; tip.style.display='block';
+  const r=el.getBoundingClientRect(), w=tip.offsetWidth, h=tip.offsetHeight;
+  let x=r.left+r.width/2-w/2, y=r.top-h-8;
+  x=Math.max(8, Math.min(x, innerWidth-w-8)); if(y<8) y=r.bottom+8;
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+}
+const ocultaTip=()=>{ tip.style.display='none'; };
+document.addEventListener('mouseover',e=>{ const el=e.target.closest('[data-tip]'); if(el) muestraTip(el); else ocultaTip(); });
+document.addEventListener('focusin',e=>{ const el=e.target.closest('[data-tip]'); if(el) muestraTip(el); else ocultaTip(); });
+document.addEventListener('scroll',ocultaTip,{ passive:true });
+
+pintaTodo();
+if(/^#r-\d+$/.test(location.hash)) setTimeout(()=>irA(+location.hash.slice(3)), 60);
+</script>
+<!-- el índice de plantas y herramientas, el mismo de la portada (lo pinta lib/indice.js) -->
+<script src="lib/indice.js" defer></script>
+</body>
+</html>

@@ -1,7 +1,9 @@
 # Lo que el simulador necesita de fuera, y a quién pedírselo
 
-> **3 de octubre de 2026**, ampliado el **5 de octubre** con la nº 5.
-> Cinco peticiones. Cada una dice
+> **3 de octubre de 2026**, ampliado el **5 de octubre** con la nº 5 y el **11 de
+> noviembre** con las nº 6 a 8, que salen de mirar el control como lo miraría un
+> homologador de EPC (`homologacion.html`, requisitos 1, 8 y 9).
+> Ocho peticiones. Cada una dice
 > **qué** hace falta, **por qué**, **qué decisión desbloquea** y **qué hemos hecho ya**
 > para que nadie tenga que volver a deducirlo. Están escritas para poder copiarse a un
 > correo tal cual.
@@ -364,6 +366,97 @@ ficha lo lee en local y no lo sube a ninguna parte.
 
 ---
 
+## 6 · A Firmware — qué hace la TCU cuando pierde a la NCU
+
+**Qué pedimos.** El comportamiento, no el número:
+
+- cuando vence `40022 ncu_communication_lost_timeout` (10 min por defecto, rango
+  0..1092), **¿qué hace la TCU?** ¿Sigue en seguimiento, va a una posición segura
+  —cuál—, o se queda donde está?
+- ¿y qué la devuelve al modo normal cuando el enlace vuelve?
+- qué relación tiene con `40029 zigbee_network_watchdog_timeout` (10 min) y con el
+  `41215 NetworkWatchdog` de la HSU (2 min): ¿reinician la radio, o deciden algo
+  sobre la posición?
+- y a cuánto está el `40022` **en las plantas en marcha**.
+
+**Por qué.** Es la primera pregunta de cualquier homologador de control: si la orden
+de abanderar viaja por radio y la radio se cae, ¿quién protege al seguidor? Hoy no lo
+sabemos contestar. El registro está en el mapa, pero **ninguna herramienta lo ejercita**:
+en el simulador de planta una TCU sin enlace sigue en seguimiento («pierden la Zigbee,
+no la cabeza»), y eso es una suposición nuestra, no una lectura del firmware.
+
+**Qué decide.** Si al vencer va a posición segura, el peor caso de exposición son los
+10 min del plazo más el recorrido —hasta **10,8 min** de extremo a extremo a
+0,17 °/s—, y el plazo pasa a ser un parámetro de proyecto que hay que justificar. Si
+**no** va, la protección contra viento depende entera del enlace y hay que decirlo así.
+
+**Qué nos vale como respuesta.** Dos líneas del manual de firmware, o una prueba en
+banco: apagar la NCU con una TCU en seguimiento y mirar qué hace a los 10 minutos.
+
+**Qué hemos hecho ya.** Nada que simule esto, a propósito: modelarlo sin la respuesta
+sería inventar el comportamiento que venimos a preguntar.
+
+---
+
+## 7 · A Firmware — la LÓGICA de viento de la HSU, no solo sus números
+
+> Complementa la 5C, que pide los **valores** de los umbrales. Esta pide **cómo se
+> usan**.
+
+**Qué pedimos.**
+
+- cómo se traduce el `WindLevel` (0..10) de la HSU en **posición segura** de las TCU:
+  qué nivel manda a qué SP y a qué ángulo;
+- qué papel tienen las tres alarmas `AlarmWindMid`, `Mid2` y `Mid3` frente a los diez
+  niveles: ¿son dos mecanismos, o uno es el antiguo?
+- la **alarma de rachas** (`41057`: 3 rachas en 60 s sobre `41058 WindSpeedGust_mps`):
+  ¿dispara abanderamiento por sí sola?
+- los dieciséis `WindSection1..16_deg`: ¿eligen el **lado** al que se abandera?
+- y qué manda al soltar: ¿el `OffTime_s` de cada nivel (300 s por defecto) o el
+  `41214 SafePosTimeout` (20 min)?
+
+**Por qué.** Lo que simulamos es la estrategia canónica del core —A1/A2/B1/B2, dos
+umbrales e histéresis de 30 min—, y **el producto instalado decide con otra máquina**:
+niveles con tiempo de activación de 5–10 s y de desactivación de 300 s, rachas contadas
+en ventana, sectores de dirección. Tener los números de la 5C no basta: sin saber cómo
+los combina el firmware, cargarlos en el simulador sería ponerle parámetros reales a una
+lógica que no es la suya.
+
+**Qué decide.** Si el simulador de abanderamiento puede enseñarse a un cliente como
+«esto es lo que hará su planta» o solo como «esto es lo que costaría una estrategia».
+Hoy es lo segundo.
+
+**Qué nos vale como respuesta.** El diagrama de estados de viento del firmware de la
+HSU y de la NCU, o el capítulo del manual que lo describa.
+
+**Qué hemos hecho ya.** Los registros están transcritos en el Mapa Modbus (HSU R23) con
+sus valores por defecto. Ningún simulador los lee todavía.
+
+---
+
+## 8 · A Firmware — qué pasa con un anemómetro sin dato
+
+**Qué pedimos.**
+
+- con `AlarmWindSensor` activa (fallo de comunicación con el anemómetro), o con un
+  `lastValidWind` viejo: **¿la planta abandera, sigue, o depende?** ¿A partir de cuánto
+  tiempo sin dato válido?
+- con varias HSU: ¿basta con que **una** dé nivel de viento (lo que hoy simula el
+  simulador de planta), o hay votación?
+- ¿hay alguna comprobación de **dato congelado** —el anemómetro contesta, pero siempre
+  lo mismo—?
+
+**Por qué.** Un anemómetro parado a cero es el fallo que nunca abandera. El mapa publica
+la alarma y el sello de última lectura válida, así que el dato para decidir existe; lo
+que no está escrito en ningún sitio es **la regla**.
+
+**Qué decide.** Si la protección contra viento es segura ante el fallo de su propio
+sensor. Y cuántas HSU hacen falta por planta para que lo sea.
+
+**Qué nos vale como respuesta.** La regla, en una línea por caso.
+
+---
+
 ## Lo que haremos con cada respuesta
 
 El hueco donde va cada dato **ya está declarado en el código con su regla**, así que no
@@ -386,6 +479,12 @@ hay que rediseñar nada: es poner el número y correr el banco.
 - **5C/5D** → T1 y T2 dejan de ser suposición nuestra, y la dirección pasa a significar
   algo. Sin el offset de veleta, «cara al viento» seguiría siendo un lado fijo
   disfrazado aunque tuviéramos la serie.
+- **6** → el simulador de planta gana el caso «NCU caída» con el comportamiento de
+  verdad, y el requisito 9 del expediente deja de estar sin evidencia.
+- **7** → el simulador de abanderamiento puede correr la máquina del firmware con los
+  números de la 5C, y carearse contra un equipo real.
+- **8** → se añade el anemómetro sin dato y el congelado a los casos del simulador, y
+  se sabe cuántas HSU pide cada planta.
 
 ## Y lo que seguirá faltando después
 
