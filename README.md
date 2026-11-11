@@ -47,6 +47,22 @@ plano con GCR 0,397 y tope ±55°) y la tira de **careos**—. Los datos del her
 de `index.html`) los genera `tools/hero_ayora.py` a partir de `ayora_relieve.json` y
 `ayora_layout.json` de cobertura-zigbee, y el propio hero dice de dónde salen.
 
+**La luz la pone el sol** (piel «Célula de día», 2026-11-11; la misma que siting desde b78). La página
+tiene la luz del sol en Ayora —o la de la hora que se esté recorriendo en el instrumento—: amanecer,
+mañana, pleno sol, tarde, ocaso o **noche**, que es la piel Célula de siempre. De día es clara, la
+barra lleva el cielo de esa hora y el relieve del instrumento se pinta en tonos de tierra. El sol es
+el `solarGeom` del propio instrumento (copia declarada de `sim-solar.html`), que se publica en
+`window.__solarGeom`; antes de que cargue, un tanteo sin ecuación del tiempo decide sólo claro u
+oscuro. `?luz=dia`, `?luz=noche` o `?luz=auto` lo fijan, igual que el botón de la barra; **nada se
+guarda**. De día, el naranja usado como texto es `#B85A0C`: `#F09030` da 2,4:1 sobre blanco.
+
+**Cada planta con su cielo**: la franja de la huella es el cielo de su hora local, con la hora y la luz
+que hay allí («16:45 · ocaso»). A las 16:45 de Madrid, Sicilia ya está en ocaso y Perú a pleno sol. Las
+coordenadas y la zona horaria de `SITIO_PLANTA` son sólo para eso; una planta nueva sin entrada
+conserva la franja de siempre. Las **herramientas** se filtran además por familia —diseño y oferta,
+simulación, obra y puesta en marcha, operación y cartera—; una herramienta nueva sin familia sale en
+«Otras» y no se esconde.
+
 ## Funcionalidades
 - Tarjetas por proyecto con estado (Producción / En desarrollo / Demo / Pausado / Deprecado), búsqueda, filtros y orden.
 - Documentación embebida: `docId` → `docs/<docId>.md`, o `docUrl` → README del repo.

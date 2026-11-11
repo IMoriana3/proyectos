@@ -29,6 +29,7 @@ PLANTAS = {  # nombre en PLANTS → slug del layout
     "El Burgo I": "elburgo", "Fayón": "fayon", "San José": "sanjose", "Túnez": "tunez", "Ayora": "ayora",
     "Bagnarelli": "bagnarelli", "Benante": "benante", "Panbianco": "panbianco", "Páramo": "paramo",
     "El Polvorín": "polvorin", "El Naranjo Dicayagua": "dicayagua", "Catania": "catania",
+    "Ramaditas": "ramaditas",
 }
 # módulos por ALA cuando el layout no lo dice (igual que TMODS de plano.html) y cotas medidas que
 # mandan sobre el modelo (TMEAS)
@@ -80,7 +81,11 @@ def huella(L, slug):
         rot = float(a.get('rot') or 0)
         mono = bool(z and (z.get('mono') or (z.get('ancho') and z['ancho'] < 2 * TD['filaZ'])))
         bandas = [-TD['filaZ'], TD['filaZ']] if (bif_visible and not mono) else [0.0]
-        if rot == 0 and len(bandas) == 1:
+        # 180° es el MISMO eje norte-sur con el motor mirando al otro lado (Ramaditas: la mitad de
+        # sus 10.598 monofilas): se funde igual, con el tramo invertido. Sin esto cada seguidor iba
+        # en un trazo suelto y la huella pesaba 80 KB.
+        if rot in (0.0, 180.0) and len(bandas) == 1:
+            if rot == 180.0: d0, d1 = -d1, -d0
             segs.append(('v', round(a['x']), a['n'] + d0, a['n'] + d1)); continue
         if rot == 90 and len(bandas) == 1:   # mesas este-oeste (Dicayagua): se funden a lo largo de x
             segs.append(('h', round(a['n']), a['x'] + d0, a['x'] + d1)); continue
