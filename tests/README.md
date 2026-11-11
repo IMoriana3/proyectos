@@ -492,3 +492,14 @@ requisito escondido quite los filtros y lo enseñe, el buscador, el cambio a ing
 claro y el ancho de móvil. El validador de datos se prueba contra un dato roto a propósito, y el
 arnés entero contra cuatro mutantes. **No comprueba** que el nivel asignado a cada requisito sea el
 verdadero: eso es una lectura fechada, no una medida.
+
+`test_viento_exposicion.js` vigila **la exposición** del simulador de abanderamiento: los minutos
+con el viento que sopla por encima del umbral y el eje fuera de la posición que ese umbral pide. Tres
+cosas por encima de la aritmética: que mire el viento que **sopla** y no el que la máquina ve (con una
+media de una hora la punta del día 3 no dispara nada, y esos minutos tienen que salir como «sin
+orden»); que con el paso por defecto de 15 min, donde la exposición sale 0 por construcción, la
+pantalla diga «no se puede ver» en vez de pintar ceros; y que **lea sin decidir** — con la función
+anulada el resto del informe sale idéntico, que es lo que mantiene el careo con el motor canónico.
+**No comprueba** que la exposición simulada se parezca a la de una planta, ni es una comprobación de
+cargas.
+

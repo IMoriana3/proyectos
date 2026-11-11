@@ -66,6 +66,7 @@
   .noval{margin:0 0 12px;padding:9px 12px;border-radius:9px;font-size:.83rem;
     background:rgba(251,189,35,.10);border:1px solid rgba(251,189,35,.45);color:#f0d089}
   .noval b{color:#fbbd23}
+  #expo h3 .sn{font-family:var(--mono);font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-left:8px;font-weight:400}
   .gsvg{width:100%;height:auto;background:var(--bg2);border:1px solid var(--line);
     border-radius:10px;margin-top:8px}
   .gstate{font-family:var(--mono);font-size:10.5px}
@@ -941,6 +942,7 @@
       <div class="scroll"><table id="tbl"></table></div>
       <canvas id="bars" width="880" height="230"></canvas>
       <p class="note" id="cmpNote"></p>
+      <div id="expo"></div>
     </div>
 
     <div class="card" id="thetaCard" style="display:none">
@@ -2361,6 +2363,89 @@ LOC.dual=function(thT,ws,az,T1,T2,pmin,full,dtS,holdMin,parkMin,dead,noon){
     out[i]=nt;mode[i]=ns;st=ns;
   }
   return {theta:out,mode:mode};
+};
+
+/* ═══════════ LA EXPOSICIÓN ═══════════
+   Todo lo demás de esta ficha mide lo que el abanderamiento CUESTA: POA
+   perdida, horas fuera de seguimiento. Nada medía lo que el abanderamiento
+   deja SIN CUBRIR, que es lo primero que pregunta quien tiene que aprobar el
+   control: ¿cuánto tiempo sopla el viento por encima del umbral con el
+   seguidor todavía fuera de la posición que ese umbral pide?
+
+   Eso es la exposición, y se define SIN la máquina de estados, a propósito:
+
+     · manda el viento que SOPLA (`ws`), no el que la máquina ve. Una racha que
+       la media del anemómetro se come sigue empujando al seguidor;
+     · la posición pedida sale de la regla de la estrategia, sin memoria:
+       por encima de T2 (o de T1 en las de un umbral), el límite ±full del lado
+       que toca; entre T1 y T2 en las de dos umbrales, dentro del sector
+       parcial —|θ| ≥ pmin— de ese lado. El lado es el mismo que usa la
+       máquina: `LOC.sign` del viento (A) o del sol (B), con `LOC.noonFlip`;
+     · y «en posición» es «a menos de la banda muerta del lazo»: `LOC.control`
+       no mueve el eje por una diferencia menor, así que pedir más sería contar
+       como expuesto a un seguidor que ya ha llegado.
+
+   Así la histéresis y el aparcamiento del parcial no entran: son cómo la
+   máquina LLEGA a la posición, no cuál es. Y por eso mismo la exposición ve lo
+   que la máquina no ve.
+
+   DOS CLASES, que no son el mismo problema:
+
+     · EN TRÁNSITO — la máquina ya ha ordenado (modo ≠ IDLE) y el hierro va de
+       camino a 0,17 °/s. Es el precio de la velocidad de giro;
+     · SIN ORDEN — sopla por encima del umbral y la máquina sigue en IDLE: no
+       se ha enterado. Solo puede pasar con la cadena de latencia puesta (con
+       ella apagada la máquina ve el viento que sopla), y es la peor de las
+       dos: nadie está moviendo nada.
+
+   LO QUE NO ES. No es una comprobación de cargas: aquí no hay presiones ni
+   momentos, y un minuto expuesto a 41 km/h cuenta igual que uno a 90. Para
+   eso va aparte el viento máximo que sopló estando expuesto y el ángulo en el
+   que pilló al eje, que es el par de números que sí puede mirar Estructuras.
+
+   Y NO SE VE CON CUALQUIER PASO. Si en un paso de la serie el eje puede
+   recorrer de plano al límite (`slew·dt ≥ full`), llega dentro del mismo paso
+   en que el viento cruza y la exposición sale 0 por construcción. Ese cero no
+   dice «no hay exposición»: dice «no se ve». Se marca con `resoluble:false`
+   para que la pantalla no lo enseñe como una buena noticia. */
+LOC.exposicion=function(o){
+  var n=o.theta.length, dtS=+o.dtS, dm=dtS/60, EPS=1e-9;
+  var dead=(o.dead==null?LOC.DEADBAND:+o.dead), slew=(o.slew==null?LOC.SLEW:+o.slew);
+  var tot=0,t2=0,transito=0,sinOrden=0,tramos=0,peor=0,peorI=-1,cur=0,curI=-1;
+  var wmax=-1,iw=-1,limW=0,sgW=0,epExp=0,enEp=false,epTuvo=false;
+  for(var i=0;i<n;i++){
+    var v=o.ws[i], nivel=(v>o.T2||(!o.dual&&v>o.T1))?2:(v>o.T1?1:0), exp=false, sg=0, lim=0;
+    if(nivel){
+      sg=LOC.noonFlip(LOC.sign(o.az?o.az[i]:null),o.thB[i],o.noon);
+      lim=(nivel===2)?o.full:o.pmin;
+      exp=!((lim-sg*o.theta[i])<dead+EPS);
+    }
+    var activa=(o.mode[i]!=='IDLE');
+    if(exp){
+      tot+=dm; if(v>o.T2)t2+=dm;
+      if(activa)transito+=dm; else sinOrden+=dm;
+      if(cur===0){tramos++;curI=i;}
+      cur+=dm; if(cur>peor){peor=cur;peorI=curI;}
+      if(v>wmax){wmax=v;iw=i;limW=lim;sgW=sg;}
+    }else cur=0;
+    // abanderamientos (rachas con modo ≠ IDLE) que tuvieron algún paso expuesto
+    if(activa){ if(!enEp){enEp=true;epTuvo=false;} if(exp&&!epTuvo){epTuvo=true;epExp++;} }
+    else enEp=false;
+  }
+  var r1=function(x){return Math.round(x*10)/10;};
+  var iso=function(k){return (k>=0&&o.t&&o.t[k]&&o.t[k].toISOString)?o.t[k].toISOString():null;};
+  return {
+    minutes:r1(tot), minutes_over_t2:r1(t2),
+    minutes_in_transit:r1(transito), minutes_no_order:r1(sinOrden),
+    n_stretches:tramos, n_events_exposed:epExp,
+    worst_minutes:r1(peor), worst_start:iso(peorI),
+    wind_max_kmh:(iw>=0?r1(wmax*3.6):null), wind_max_at:iso(iw),
+    angle_at_wind_max_deg:(iw>=0?r1(o.theta[iw]):null),
+    required_at_wind_max_deg:(iw>=0?r1(sgW*limW):null),
+    tolerance_deg:dead, step_s:dtS,
+    travel_s:(slew>0?Math.round(o.full/slew*10)/10:0),
+    resoluble:(slew>0&&slew*dtS<o.full)
+  };
 };
 
 /* La misma mecánica pasiva, paso a paso, para el modo en vivo. Lo interesante
@@ -4589,6 +4674,13 @@ LOC.run=function(cfg,onStep){
       var durs=evs.map(function(e){return e.hours;}).sort(function(a,b){return a-b;});
       var q=function(p){return durs.length?durs[Math.min(durs.length-1,Math.floor(p*durs.length))]:0;};
       var eC=kwh(poa),hEng=hp+hf+hh;
+      /* La exposición lee, no decide: usa el viento que SOPLA, el ángulo que el
+         eje EJECUTÓ y el modo en que estaba la máquina. No toca ninguna de las
+         series de arriba, así que con ella o sin ella el resto del informe sale
+         bit a bit igual. */
+      var expo=LOC.exposicion({ws:ws,az:az,thB:thB,theta:R.theta,mode:R.mode,t:M.t,
+        T1:T1,T2:T2,dual:(S[1]==='2'),pmin:cfg.partial_stow_min_abs_deg,full:full,noon:noon,
+        dtS:dtH*3600,dead:cfg.deadband_deg,slew:cfg.slew_deg_s});
       var byMonth=new Array(12).fill(0),evMonth=new Array(12).fill(0);
       for(j=0;j<n;j++)if(R.mode[j]!=='IDLE')byMonth[month[j]]+=dtH;
       evs.forEach(function(e){evMonth[e.month-1]++;});
@@ -4610,7 +4702,8 @@ LOC.run=function(cfg,onStep){
         n_events_partial_only:evs.filter(function(e){return !e.reached_full;}).length,
         duration_h_mean:durs.length?Math.round(1000*durs.reduce(function(a,b){return a+b;},0)/durs.length)/1000:0,
         duration_h_median:q(0.5), duration_h_p95:q(0.95), duration_h_max:durs.length?durs[durs.length-1]:0,
-        top_events:evs.slice().sort(function(a,b){return b.poa_lost_kwh_m2-a.poa_lost_kwh_m2;}).slice(0,cfg.top_events||10)
+        top_events:evs.slice().sort(function(a,b){return b.poa_lost_kwh_m2-a.poa_lost_kwh_m2;}).slice(0,cfg.top_events||10),
+        exposure:expo
       };
       series[S]={theta:R.theta,orden:orden,poa:poa,mode:R.mode,events:evs};
     });
@@ -5731,7 +5824,7 @@ function render(){
   // 0 de ancho y sale estirado (ver `prep2d`). Cada dibujo enseña además la
   // suya, así que esto es cinturón sobre tirantes.
   $('cmpCard').style.display=''; $('detCard').style.display='';
-  drawWind(); drawRecurso(); drawTable(); drawBars(); drawTheta();
+  drawWind(); drawRecurso(); drawTable(); drawExpo(); drawBars(); drawTheta();
   var k=ord(); SEL=(SEL&&k.indexOf(SEL)>=0)?SEL:b||k[0];
   $('strip').innerHTML=k.map(function(s){
     return '<span class="seg'+(s===SEL?' on':'')+'" data-s="'+s+'"><span class="dot" style="background:'+COL[s]+'"></span>'+s+'</span>';}).join('');
@@ -5981,6 +6074,71 @@ function drawTable(){
       fmt(REP.cases.PASIVO.passive.row_poa_delta_pct,2)+' %</b> y la planta un '+
       fmt(REP.cases.PASIVO.poa_delta_pct,3)+' %. Cambia el nº de trackers y ese segundo número se '+
       'mueve proporcionalmente sin que la física haya cambiado nada.'):'');
+}
+
+/* ---- exposición: viento sobre umbral con el eje fuera de posición ---- */
+/* Va en su propia tabla y no como columnas de la de arriba: aquella compara lo
+   que cada estrategia CUESTA y esta lo que deja SIN CUBRIR, y mezcladas se
+   leería el mínimo de una fila como si fuera el mismo «mejor».
+
+   TRES SALIDAS, y la que importa es la primera: si el paso de la serie no deja
+   ver la exposición, se DICE en vez de enseñar una fila de ceros. Un 0 que
+   sale de la resolución y no de la física es la forma más barata de que
+   alguien lea «sin exposición» donde pone «no se ve». */
+function drawExpo(){
+  var el=$('expo'); if(!el)return;
+  var ks=ord().filter(function(s){return REP.cases[s].exposure;});
+  if(!ks.length){
+    el.innerHTML=REP.local?'':'<p class="note"><b>Exposición:</b> el motor remoto no la calcula. '+
+      'Sale con el modelo local del navegador.</p>';
+    return;
+  }
+  var e0=REP.cases[ks[0]].exposure, w=REP.wind, c2=REP.config;
+  var paso=(e0.step_s<60)?(fmt(e0.step_s,0)+' s'):(fmt(e0.step_s/60,0)+' min');
+  var hay=ks.some(function(s){return REP.cases[s].exposure.minutes>0;});
+  var cab='<h3 style="margin:18px 0 6px;font-size:.95rem">Exposición <span class="sn">viento sobre umbral '+
+    'con el eje fuera de posición</span></h3>';
+  if(!e0.resoluble&&!hay){
+    el.innerHTML=cab+'<div class="noval" id="expoNoVe"><b>Con pasos de '+paso+' la exposición no se puede ver.</b> '+
+      'El eje recorre de plano a ±'+fmt(c2.full_stow_deg,0)+'° en '+fmt(e0.travel_s/60,1)+' min, así que llega '+
+      'dentro del mismo paso en que el viento cruza el umbral y la cuenta sale 0 por construcción. '+
+      '<b>No es un cero: es que no se ve.</b> Baja el paso de cálculo a 1 min y vuelve a simular.</div>';
+    return;
+  }
+  var h='<div class="scroll"><table id="expoTbl"><thead><tr><th>Estrategia</th>'+
+    '<th title="Minutos al año con el viento que sopla por encima del umbral y el eje fuera de la posición que ese umbral pide.">Expuesto<br>min/año</th>'+
+    '<th title="La máquina ya había ordenado y el eje iba de camino.">en tránsito<br>min</th>'+
+    '<th title="Soplaba por encima del umbral y la máquina seguía sin ordenar: no se había enterado. Solo puede pasar con la cadena de latencia puesta.">sin orden<br>min</th>'+
+    '<th title="De los minutos expuestos, los que fueron con viento por encima del umbral alto.">sobre '+fmt(w.threshold_2_kmh,0)+' km/h<br>min</th>'+
+    '<th title="Abanderamientos que tuvieron algún paso expuesto, sobre el total.">Abanderamientos<br>con exposición</th>'+
+    '<th title="La exposición seguida más larga.">Peor tramo<br>min</th>'+
+    '<th title="El viento más fuerte que sopló estando expuesto, y dónde estaba el eje en ese instante frente a dónde debía estar.">Viento máx. expuesto<br>km/h · eje ° → pedido °</th>'+
+    '</tr></thead><tbody>';
+  ks.forEach(function(s){
+    var c=REP.cases[s], e=c.exposure;
+    h+='<tr data-s="'+s+'"><td><span class="dot" style="background:'+COL[s]+'"></span><b>'+s+'</b></td>'+
+      '<td>'+fmt(e.minutes,1)+'</td><td>'+fmt(e.minutes_in_transit,1)+'</td>'+
+      '<td'+(e.minutes_no_order>0?' style="color:var(--warn)"':'')+'>'+fmt(e.minutes_no_order,1)+'</td>'+
+      '<td>'+fmt(e.minutes_over_t2,1)+'</td>'+
+      '<td>'+e.n_events_exposed+' de '+c.n_events+'</td>'+
+      '<td>'+fmt(e.worst_minutes,1)+'</td>'+
+      '<td>'+(e.wind_max_kmh==null?'—':fmt(e.wind_max_kmh,0)+' · '+fmt(e.angle_at_wind_max_deg,0)+'° → '+
+        fmt(e.required_at_wind_max_deg,0)+'°')+'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+  var nota='<p class="note" id="expoNote"><b>Exposición</b> = minutos en que el viento que <b>sopla</b> está por '+
+    'encima del umbral y el eje aún no está donde ese umbral pide: en ±'+fmt(c2.full_stow_deg,0)+'° por encima de '+
+    fmt(w.threshold_2_kmh,0)+' km/h (o de '+fmt(w.threshold_1_kmh,0)+' en las de un umbral), y dentro del sector '+
+    'parcial (|θ| ≥ '+fmt(c2.partial_stow_min_abs_deg,0)+'°) entre los dos. Tolerancia: la banda muerta del lazo, '+
+    fmt(e0.tolerance_deg,1)+'°. <b>En tránsito</b> es el eje de camino a '+fmt(c2.slew_deg_s,2)+' °/s; <b>sin orden</b> '+
+    'es que la máquina no se había enterado, y solo puede salir con la cadena de latencia puesta. '+
+    'Resolución: pasos de '+paso+' — lo que dure menos no se ve'+
+    (e0.resoluble?'':', y con este paso el eje llega al límite dentro de un solo paso: solo se ve lo que la latencia retrasa')+
+    '. <b>No es una comprobación de cargas</b>: un minuto a '+fmt(w.threshold_1_kmh+1,0)+' km/h cuenta igual que uno a 90. '+
+    'Lo que sí puede mirar Estructuras es la última columna. El viento del año es el de la fuente meteo: si es '+
+    'horario interpolado, las rachas reales no están, salvo las que metas en el laboratorio.'+
+    (REP.cases.PASIVO?' El <b>pasivo</b> no entra: se suelta solo, no espera a ninguna orden.':'')+'</p>';
+  el.innerHTML=cab+h+nota;
 }
 
 /* ---- barras: Δ POA % por estrategia ---- */

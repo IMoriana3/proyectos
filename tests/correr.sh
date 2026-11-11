@@ -753,6 +753,13 @@ declare -A PISO=(
   # declarados. Un literal repetido no es un oráculo más fuerte, es tres sitios
   # donde envejecer.
   [test_viento_latencia.js]=134
+  # La exposición: 44 MEDIDAS el 2026-11-11. Minutos con el viento que SOPLA
+  # sobre el umbral y el eje fuera de la posición que ese umbral pide. Vigila
+  # que mire el viento que sopla y no el que la máquina ve, que un cero que no
+  # se puede ver (paso de 15 min) no se pinte como un cero, y que lea sin
+  # decidir: con ella anulada el resto del informe sale idéntico. Siete
+  # mutantes vistos en rojo.
+  [test_viento_exposicion.js]=44
   [test_viento_meteo.js]=36
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,
