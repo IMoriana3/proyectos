@@ -79,6 +79,12 @@ function stub(){
    await page.locator('#supLogin').click();
    await page.waitForFunction(()=>document.getElementById('supStatus').textContent.includes('Invalid login credentials'));
    check('rechaza contraseña errónea sin leer series',/Invalid login credentials/.test(await page.locator('#supStatus').textContent()));
+   check('el acceso dice de qué cuenta habla: la de Factiun Cartera, no la de GitHub ni la de supabase.com',await page.evaluate(()=>{
+     const rot=id=>document.getElementById(id).closest('label').querySelector('.k').textContent;
+     return rot('supEmail')==='Correo de Factiun Cartera'&&rot('supPassword')==='Contraseña de Factiun Cartera'&&
+       !/Supabase/.test(document.getElementById('supEmail').placeholder+document.getElementById('supPassword').placeholder)&&
+       /correo o contraseña incorrectos\. Son los de Factiun Cartera, no los de GitHub/.test(document.getElementById('supStatus').textContent);
+   }),await page.locator('#supStatus').textContent());
    await page.locator('#supPassword').fill('clave-prueba');
    await page.locator('#supLogin').click();
    await page.waitForFunction(()=>/3 registros consultados/.test(document.getElementById('supStatus').textContent),null,{timeout:25000});
