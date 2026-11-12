@@ -1120,7 +1120,7 @@ const FAMILIAS = [
   { k:'simulacion', n:'Simulación', c:'#F2C94C', t:['Núcleo de cálculo SolarGPT','Simulador de backtracking','Simulador de radiación difusa','Simulador de abanderamiento','Producción 3D por string','Careo SolarGPT ↔ PVSyst','Simulador de batería','Análisis meteorológico','Gemelo digital de seguidor y control'] },
   { k:'obra', n:'Obra y puesta en marcha', c:'#F09030', t:['Control de obra','Seguimiento PEM','Visor de levantamiento','Visor de geometría as-built','TCU Toolbox','IPs de plantas'] },
   { k:'operacion', n:'Operación', c:'#5BBF8A', t:['SCADA','SCADA fija · Victron VRM','Importador de logs de NCU','Medidor de tráfico','Mapa Modbus','Agente Modbus y collector','Simulador de planta equipo a equipo','Instalación cubierta Gorraiz'] },
-  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV'] }
+  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV','Diccionario de datos FACTIUN','Radar FACTIUN'] }
 ];
 const FAMILIA_DE = {}; FAMILIAS.forEach(f=>f.t.forEach(n=>{ FAMILIA_DE[n]=f.k; }));
 function familiaDe(p){ return FAMILIA_DE[p && p.name] || 'otras'; }
@@ -1139,6 +1139,10 @@ const PROJECTS = [
     objetivo: "Mapa mundial de plantas FV sobre suelo con globo y ortofoto: consulta fichas, ubica pendientes y prepara altas directamente en Notion.",
     stack: "Globo 3D · satélite · Cloudflare Pages y Access · Notion (catálogo y edición)",
     url: "https://maps-9rd.pages.dev",
+    links: [
+      { label: "Abrir Atlas", url: "https://maps-9rd.pages.dev" },
+      { label: "Globo de plantas", url: "https://claude.ai/artifact/Sh4pXwsUbkoa65pe3E8FML" }
+    ],
     repo: "",
     updated: "2026-10-23",
     version: "V14 del usuario · V14.2 candidata",
@@ -1150,7 +1154,8 @@ const PROJECTS = [
       "El catálogo debe incluir todas las fichas de Notion, tengan o no GEM phase ID; las que no tienen coordenadas quedan en Pendientes de ubicar.",
       "Al identificar una instalación en la ortofoto, la V14.2 candidata busca primero coincidencias en Notion: vincula la ficha existente o crea una nueva, sin duplicarla.",
       "La ficha muestra emplazamiento físico, municipio, provincia, región/estado y país. «Ir al emplazamiento» usa la ubicación seleccionada, no la de una planta cercana.",
-      "Tipos de estructura: Fija, Fija dos aguas, Marquesina, Seguidor y Mixta. La ubicación visual debe conservar fuente y no sustituir coordenadas topográficas verificadas."
+      "Tipos de estructura: Fija, Fija dos aguas, Marquesina, Seguidor y Mixta. La ubicación visual debe conservar fuente y no sustituir coordenadas topográficas verificadas.",
+      "«Globo de plantas» abre la prueba en Claude: globo 3D con las plantas de la base 14 por país y región (fase, fiabilidad, nº o MW, PPAs año a año) sobre un volcado fechado de Notion; no lee el catálogo en vivo."
     ],
     pendientes: [
       { done:false, text:"Publicar y validar V14.2 en Cloudflare Pages manteniendo Access; no se ha sustituido la V14 del usuario." },
@@ -1159,9 +1164,71 @@ const PROJECTS = [
       { done:false, text:"Conciliar el inventario histórico y comprobar capas, búsquedas y navegación exacta antes de cerrar V14.2." }
     ],
     historial: [
+      { date:"2026-11-09", ver:"Globo de plantas · prueba", note:"Globo 3D construido en Claude sobre un volcado de la base 14 (datos, países y regiones en tres JSON); pendiente de leer el catálogo de Atlas o Supabase y de entrar en el centro de herramientas." },
       { date:"2026-10-23", ver:"V14.2 · candidata", note:"Paquete derivado de V14 con altas desde mapa, vinculación de fichas sin coordenadas y navegación exacta. Pruebas locales y simuladas; falta validar Cloudflare/Notion reales." },
       { date:"2026-10-23", ver:"V14 · base del usuario", note:"Última versión que el usuario reconoce; no afirmar que V14.2 esté desplegada." },
       { date:"2026-10-23", ver:"V9 · referencia histórica", note:"Primera operación de Atlas con Cloudflare Access documentada en la PR original; la versión actual detrás de la URL requiere comprobación autenticada." }
+    ]
+  },
+  {
+    name: "Diccionario de datos FACTIUN",
+    status: "live",
+    objetivo: "Qué significa cada campo de las bases FV de Notion (14 plantas, 13 equipos, 16A actores, 16G certificaciones, 16L ferias, software): entidad, tipo, nivel de obligatoriedad, relaciones y regla de relleno, para que todos carguen igual.",
+    stack: "HTML estático con los datos embebidos · documento fechado (corte 04/11/2026) · servido en Atlas tras Cloudflare Access",
+    url: "",
+    links: [
+      { label: "En Atlas", url: "https://maps-9rd.pages.dev/herramientas/diccionario-datos-factiun.html" },
+      { label: "En Claude", url: "https://claude.ai/artifact/WJxC21pyxCYzxE5wtkzRcx" }
+    ],
+    repo: "https://github.com/IMoriana3/Atlas/tree/main/herramientas",
+    updated: "2026-11-06",
+    version: "corte 04/11/2026",
+    docId: "",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Ábrelo desde el centro de herramientas de Atlas (Referencia → Diccionario de datos) o con el enlace «En Atlas»; pide la sesión de Cloudflare Access.",
+      "Busca por campo, entidad o base; cada fila dice el tipo Notion, si es obligatorio (C/B/A), con qué se relaciona y si lleva historial.",
+      "La auditoría de calidad de Atlas aplica estas mismas reglas al catálogo: si un campo cambia aquí, cambia allí.",
+      "La copia de claude.ai es la original con la que se hizo; la de Atlas es la que vale para el equipo."
+    ],
+    pendientes: [
+      { done:true,  text:"Subido al repo Atlas (herramientas/) y publicado con el centro de herramientas." },
+      { done:false, text:"Regenerarlo desde el esquema real de Notion en vez de a mano cuando cambie alguna base." }
+    ],
+    historial: [
+      { date:"2026-11-06", ver:"Atlas", note:"Exportado del artefacto de Claude al repo Atlas (PR #15) y enlazado desde el centro de herramientas." },
+      { date:"2026-11-04", ver:"corte", note:"Diccionario cerrado con las bases 13, 14, 16A, 16G, 16L y Radar software." }
+    ]
+  },
+  {
+    name: "Radar FACTIUN",
+    status: "live",
+    objetivo: "Radar de negocio: sociedades, personas, contratos y oportunidades del sector FV con su estado de verificación y su fase, sobre una instantánea fechada; sirve para preparar visitas y cuentas objetivo.",
+    stack: "HTML + JSON (datos y geometría propios) · instantánea del 30/10/2026 · servido en Atlas tras Cloudflare Access",
+    url: "",
+    links: [
+      { label: "En Atlas", url: "https://maps-9rd.pages.dev/herramientas/radar-factiun.html" },
+      { label: "En Claude", url: "https://claude.ai/artifact/LveTxSaJqJBW6ruSXdG6Lv" }
+    ],
+    repo: "https://github.com/IMoriana3/Atlas/tree/main/herramientas",
+    updated: "2026-11-06",
+    version: "instantánea 30/10/2026",
+    docId: "",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Ábrelo desde el centro de herramientas de Atlas (Inteligencia → Radar de negocio) o con «En Atlas».",
+      "Es una instantánea: no lee Notion en vivo. La fecha va en la cabecera; si hace falta otra, se vuelve a volcar y se sube al repo.",
+      "Las fichas de competidor de Atlas se alimentan de este mismo JSON (radar-factiun-data.json)."
+    ],
+    pendientes: [
+      { done:true,  text:"Subido al repo Atlas con sus JSON de datos y geometría (PR #16)." },
+      { done:false, text:"Decidir cadencia de refresco de la instantánea o pasar a lectura en vivo cuando el catálogo esté en Supabase." }
+    ],
+    historial: [
+      { date:"2026-11-06", ver:"Atlas", note:"Exportado del artefacto de Claude al repo Atlas; los JSON se renombraron a radar-factiun-data/-geo." },
+      { date:"2026-10-30", ver:"instantánea", note:"Volcado de datos con el que se construyó el radar." }
     ]
   },
   {
@@ -2286,6 +2353,8 @@ const PROJECTS = [
     objetivo: "Configura, diagnostica y guarda copias de las TCUs Sunner mediante el gateway Modbus de la NCU. Uso local sin conexión a internet.",
     stack: "PowerShell · Modbus TCP · offline",
     url: "",                                                  // no hay deploy: se ejecuta en el portátil de campo
+    links: [ { label: "Ficha de equipo (maqueta)", url: "https://claude.ai/artifact/UtiZwBbqJTFwBoT3kbQrHk" } ],
+    principal: "download",                                   // el ZIP sigue siendo el botón principal; la maqueta, secundario
     repo: "https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox",
     updated: "2026-11-11",
     version: "12.20",
@@ -2302,6 +2371,7 @@ const PROJECTS = [
     // descarga pide sesion de GitHub con acceso al repo.
     release: "IMoriana3/scada",                                      // version y fecha en vivo: ver refrescarReleases()
     uso: [
+      "«Ficha de equipo (maqueta)» abre en Claude el diseño de la pantalla de ficha de NCU, seguidor y estación meteo: cada ajuste en llano con su registro Modbus, cambios pendientes y escritura con copia previa. Es la especificación de lo que falta en la toolbox; no se conecta a nada.",
       "Descarga el ZIP con el botón Paquete (el repo es privado: pide sesión de GitHub con acceso; todas las versiones están en https://github.com/IMoriana3/scada/tree/releases). El fichero lleva la versión en el nombre (TCU_Toolbox_v12.20.zip) y trae dos carpetas: tcu-toolbox (la toolbox, el descargador de logs de NCU y el Espía Modbus) y tcu-agente (el agente remoto). Copia las dos, juntas, al portátil de campo.",
       "Doble clic en TCU_Toolbox.bat (sin instalar nada). Las entradas \"(auto)\" resuelven solas el puerto de cada TCU.",
       "Las plantas viajan en plantas/<planta>.json (o CSV) — se exportan desde la página IPs de esta misma plataforma, o se regeneran desde el Excel maestro."
@@ -2815,7 +2885,8 @@ function cardHTML(p){
   const repo = p.repo ? `<a class="btn" href="${esc(p.repo)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Repo</a>` : ``;
   const dl = p.download ? `<a class="btn" href="${esc(p.download)}" onclick="event.stopPropagation()" download><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>Paquete</a>` : ``;
   let sec = [docBtn, repo, dl].filter(Boolean), pri = "";
-  if(abre.length) pri = abre.shift();
+  if(p.principal === "download" && dl){ pri = dl; sec = sec.filter(x => x !== pri); }   // la ficha pide que mande el paquete
+  else if(abre.length) pri = abre.shift();
   else { pri = dl || docBtn || repo; sec = sec.filter(x => x !== pri); }
   if(pri) pri = pri.replace('class="btn', 'class="btn primary');
 /* EL CHIP DE VERSION DICE DE DONDE SALE EL NUMERO. Una tarjeta con `verEnApp`
