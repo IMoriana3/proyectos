@@ -126,6 +126,24 @@ const PESTANAS=['hoy','clima','riesgos','contexto','medidas','exportar','avanzad
     aviso:getComputedStyle(document.getElementById('avisoHistorico')).display!=='none'}));
   check('con histórico se ven las de «Clima del sitio» y el aviso se va',B.deClima>0&&B.visibles===B.deClima&&!B.aviso,B);
 
+  // Exportar: sin datos, cada descarga dice qué falta, no se puede pulsar
+  // y el botón de al lado es el que lo prepara
+  await page.goto(BASE+'/meteo.html#pestana-exportar',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>window.__meteoRedibujar,null,{timeout:15000}).catch(()=>{});
+  await page.waitForTimeout(600);
+  const D=await page.evaluate(()=>({
+    estados:['dlEstHist','dlEstTmy','dlEstPvsyst','dlEstInforme'].map(i=>[document.getElementById(i).className,document.getElementById(i).textContent]),
+    bloqueados:['dlHist','dlTmy','dlPvsyst','reportBtn'].map(i=>document.getElementById(i).disabled),
+    preparar:[...document.querySelectorAll('.dl-preparar')].map(b=>[b.dataset.preparar,b.hidden]),
+    tecnicos:!!document.querySelector('details.dl-tecnico #dlJson')&&!!document.querySelector('details.dl-tecnico #dlManifest')&&!!document.querySelector('details.dl-tecnico #dlContract')}));
+  check('sin datos, las cuatro descargas dicen qué falta',D.estados.every(([c,t])=>/falta/.test(c)&&/Falta|Primero/.test(t)),D.estados);
+  check('y sus botones no se pueden pulsar',D.bloqueados.every(Boolean),D.bloqueados);
+  check('al lado, el botón que lo prepara: analizar años',D.preparar.length===4&&D.preparar.every(([t,h])=>t==='yearsBtn'&&!h),D.preparar);
+  check('los formatos técnicos van plegados aparte',D.tecnicos);
+  await page.evaluate(()=>{window.__pulsado=0;document.getElementById('yearsBtn').onclick=()=>{window.__pulsado++;};});
+  await page.click('#dlPrepTmy');
+  check('«Analizar años» de una descarga pulsa el de arriba',await page.evaluate(()=>window.__pulsado)===1);
+
   check('sin errores de página',errores.length===0,errores);
   await browser.close();
   console.log('\n'+ok+' OK · '+ko+' FAIL');
