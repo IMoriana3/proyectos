@@ -154,6 +154,25 @@ const PESTANAS=['hoy','clima','riesgos','contexto','medidas','exportar','avanzad
   await page.click('#dlPrepTmy');
   check('«Analizar años» de una descarga pulsa el de arriba',await page.evaluate(()=>window.__pulsado)===1);
 
+  // Clima del sitio sin datos: TMY y comparativa no dejan cajas vacías
+  await page.goto(BASE+'/meteo.html#pestana-clima',{waitUntil:'domcontentloaded'});
+  await page.waitForTimeout(600);
+  const V=await page.evaluate(()=>{const vis=e=>!!e&&getComputedStyle(e).display!=='none'&&!e.closest('[data-fuera]');
+    return {tmyTabla:vis(document.querySelector('.tmy-table')),tmyVacio:vis(document.querySelector('.tmy-vacio')),
+      resumen:vis(document.getElementById('cmpBody')?.closest('.card')),grafica:vis(document.getElementById('vizCompareSources')?.closest('.card')),
+      rms:vis(document.getElementById('rmsGhi')?.closest('.metricgrid'))};});
+  check('sin TMY: la tabla vacía se pliega y queda «Construir TMY»',!V.tmyTabla&&V.tmyVacio,V);
+  check('sin comparativa: ni resumen, ni gráfica, ni RMS con rayas',!V.resumen&&!V.grafica&&!V.rms,V);
+  // Escala de los ejes: pasos redondos y desde 0 si el dato no es negativo
+  const E=await page.evaluate(async()=>{const m=await import('./lib/meteo-viz.js');return [[0,487],[-2.9,43.7],[0,0.84],[3,1066]].map(([a,b])=>m.escala(a,b));});
+  check('ejes con cifras redondas (0–500, −15–45, 0–1, 0–1200)',JSON.stringify(E)==='[[0,500],[-15,45],[0,1],[0,1200]]',E);
+  // La leyenda va en la cabecera: con una línea horizontal en lo alto del
+  // área de datos (como los umbrales de stow), no hay texto de leyenda debajo
+  const Lg=await page.evaluate(async()=>{const m=await import('./lib/meteo-viz.js');const c=document.createElement('canvas');c.style.width='600px';document.body.appendChild(c);
+    m.drawLineChart(c,[{label:'Serie',values:[0,10,20]},{label:'stow T2',values:[60,60,60]}],{title:'Prueba',height:255,zero:true});
+    const ctx=c.getContext('2d'),dpr=c.width/600,ambar=y=>{const d=ctx.getImageData(0,Math.round(y*dpr),c.width,1).data;let n=0;for(let k=0;k<d.length;k+=4)if(d[k]>200&&d[k+1]>120&&d[k+1]<170&&d[k+2]<90)n++;return n;};
+    const r={cabecera:ambar(10.5)};c.remove();return r;});
+  check('la leyenda se pinta en la cabecera, no dentro del gráfico',Lg.cabecera>0,Lg);
   check('sin errores de página',errores.length===0,errores);
   await browser.close();
   console.log('\n'+ok+' OK · '+ko+' FAIL');
