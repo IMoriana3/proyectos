@@ -1141,7 +1141,7 @@ const PROJECTS = [
     url: "https://maps-9rd.pages.dev",
     links: [
       { label: "Abrir Atlas", url: "https://maps-9rd.pages.dev" },
-      { label: "Globo de plantas", url: "https://claude.ai/artifact/Sh4pXwsUbkoa65pe3E8FML" }
+      { label: "Globo de plantas", url: "https://maps-9rd.pages.dev/herramientas/globo-plantas.html" }
     ],
     repo: "",
     updated: "2026-10-23",
@@ -1155,7 +1155,7 @@ const PROJECTS = [
       "Al identificar una instalación en la ortofoto, la V14.2 candidata busca primero coincidencias en Notion: vincula la ficha existente o crea una nueva, sin duplicarla.",
       "La ficha muestra emplazamiento físico, municipio, provincia, región/estado y país. «Ir al emplazamiento» usa la ubicación seleccionada, no la de una planta cercana.",
       "Tipos de estructura: Fija, Fija dos aguas, Marquesina, Seguidor y Mixta. La ubicación visual debe conservar fuente y no sustituir coordenadas topográficas verificadas.",
-      "«Globo de plantas» abre la prueba en Claude: globo 3D con las plantas de la base 14 por país y región (fase, fiabilidad, nº o MW, PPAs año a año) sobre un volcado fechado de Notion; no lee el catálogo en vivo."
+      "«Globo de plantas» abre en Atlas (tras Access) el globo 3D con las plantas de la base 14 por país y región (fase, fiabilidad, nº o MW, PPAs año a año) sobre un volcado fechado de Notion; no lee el catálogo en vivo."
     ],
     pendientes: [
       { done:false, text:"Publicar y validar V14.2 en Cloudflare Pages manteniendo Access; no se ha sustituido la V14 del usuario." },
@@ -1164,7 +1164,7 @@ const PROJECTS = [
       { done:false, text:"Conciliar el inventario histórico y comprobar capas, búsquedas y navegación exacta antes de cerrar V14.2." }
     ],
     historial: [
-      { date:"2026-11-09", ver:"Globo de plantas · prueba", note:"Globo 3D construido en Claude sobre un volcado de la base 14 (datos, países y regiones en tres JSON); pendiente de leer el catálogo de Atlas o Supabase y de entrar en el centro de herramientas." },
+      { date:"2026-11-12", ver:"Globo de plantas · instantánea", note:"Globo 3D sobre un volcado de la base 14 del 09/11/2026 (datos, países y regiones en tres JSON), en el centro de herramientas de Atlas con las librerías servidas desde el repo; pendiente de leer el catálogo en vivo (Supabase)." },
       { date:"2026-10-23", ver:"V14.2 · candidata", note:"Paquete derivado de V14 con altas desde mapa, vinculación de fichas sin coordenadas y navegación exacta. Pruebas locales y simuladas; falta validar Cloudflare/Notion reales." },
       { date:"2026-10-23", ver:"V14 · base del usuario", note:"Última versión que el usuario reconoce; no afirmar que V14.2 esté desplegada." },
       { date:"2026-10-23", ver:"V9 · referencia histórica", note:"Primera operación de Atlas con Cloudflare Access documentada en la PR original; la versión actual detrás de la URL requiere comprobación autenticada." }
@@ -1177,8 +1177,7 @@ const PROJECTS = [
     stack: "HTML estático con los datos embebidos · documento fechado (corte 04/11/2026) · servido en Atlas tras Cloudflare Access",
     url: "",
     links: [
-      { label: "En Atlas", url: "https://maps-9rd.pages.dev/herramientas/diccionario-datos-factiun.html" },
-      { label: "En Claude", url: "https://claude.ai/artifact/WJxC21pyxCYzxE5wtkzRcx" }
+      { label: "Abrir en Atlas", url: "https://maps-9rd.pages.dev/herramientas/diccionario-datos-factiun.html" }
     ],
     repo: "https://github.com/IMoriana3/Atlas/tree/main/herramientas",
     updated: "2026-11-06",
@@ -1190,7 +1189,7 @@ const PROJECTS = [
       "Ábrelo desde el centro de herramientas de Atlas (Referencia → Diccionario de datos) o con el enlace «En Atlas»; pide la sesión de Cloudflare Access.",
       "Busca por campo, entidad o base; cada fila dice el tipo Notion, si es obligatorio (C/B/A), con qué se relaciona y si lleva historial.",
       "La auditoría de calidad de Atlas aplica estas mismas reglas al catálogo: si un campo cambia aquí, cambia allí.",
-      "La copia de claude.ai es la original con la que se hizo; la de Atlas es la que vale para el equipo."
+      "La versión que vale es la del repo Atlas; se edita allí y se publica con el centro de herramientas."
     ],
     pendientes: [
       { done:true,  text:"Subido al repo Atlas (herramientas/) y publicado con el centro de herramientas." },
@@ -1208,8 +1207,7 @@ const PROJECTS = [
     stack: "HTML + JSON (datos y geometría propios) · instantánea del 30/10/2026 · servido en Atlas tras Cloudflare Access",
     url: "",
     links: [
-      { label: "En Atlas", url: "https://maps-9rd.pages.dev/herramientas/radar-factiun.html" },
-      { label: "En Claude", url: "https://claude.ai/artifact/LveTxSaJqJBW6ruSXdG6Lv" }
+      { label: "Abrir en Atlas", url: "https://maps-9rd.pages.dev/herramientas/radar-factiun.html" }
     ],
     repo: "https://github.com/IMoriana3/Atlas/tree/main/herramientas",
     updated: "2026-11-06",
@@ -2353,7 +2351,7 @@ const PROJECTS = [
     objetivo: "Configura, diagnostica y guarda copias de las TCUs Sunner mediante el gateway Modbus de la NCU. Uso local sin conexión a internet.",
     stack: "PowerShell · Modbus TCP · offline",
     url: "",                                                  // no hay deploy: se ejecuta en el portátil de campo
-    links: [ { label: "Ficha de equipo (maqueta)", url: "https://claude.ai/artifact/UtiZwBbqJTFwBoT3kbQrHk" } ],
+    links: [ { label: "Ficha de equipo (maqueta)", url: "https://maps-9rd.pages.dev/herramientas/ficha-equipo-tcu.html" } ],
     principal: "download",                                   // el ZIP sigue siendo el botón principal; la maqueta, secundario
     repo: "https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox",
     updated: "2026-11-11",
@@ -2371,7 +2369,7 @@ const PROJECTS = [
     // descarga pide sesion de GitHub con acceso al repo.
     release: "IMoriana3/scada",                                      // version y fecha en vivo: ver refrescarReleases()
     uso: [
-      "«Ficha de equipo (maqueta)» abre en Claude el diseño de la pantalla de ficha de NCU, seguidor y estación meteo: cada ajuste en llano con su registro Modbus, cambios pendientes y escritura con copia previa. Es la especificación de lo que falta en la toolbox; no se conecta a nada.",
+      "«Ficha de equipo (maqueta)» abre en Atlas (tras Access) el diseño de la pantalla de ficha de NCU, seguidor y estación meteo: cada ajuste en llano con su registro Modbus, cambios pendientes y escritura con copia previa. Es la especificación de lo que falta en la toolbox; no se conecta a nada.",
       "Descarga el ZIP con el botón Paquete (el repo es privado: pide sesión de GitHub con acceso; todas las versiones están en https://github.com/IMoriana3/scada/tree/releases). El fichero lleva la versión en el nombre (TCU_Toolbox_v12.20.zip) y trae dos carpetas: tcu-toolbox (la toolbox, el descargador de logs de NCU y el Espía Modbus) y tcu-agente (el agente remoto). Copia las dos, juntas, al portátil de campo.",
       "Doble clic en TCU_Toolbox.bat (sin instalar nada). Las entradas \"(auto)\" resuelven solas el puerto de cada TCU.",
       "Las plantas viajan en plantas/<planta>.json (o CSV) — se exportan desde la página IPs de esta misma plataforma, o se regeneran desde el Excel maestro."
