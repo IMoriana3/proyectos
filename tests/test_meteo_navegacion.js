@@ -140,6 +140,16 @@ const PESTANAS=['hoy','clima','riesgos','contexto','medidas','exportar','avanzad
   check('y sus botones no se pueden pulsar',D.bloqueados.every(Boolean),D.bloqueados);
   check('al lado, el botón que lo prepara: analizar años',D.preparar.length===4&&D.preparar.every(([t,h])=>t==='yearsBtn'&&!h),D.preparar);
   check('los formatos técnicos van plegados aparte',D.tecnicos);
+  // A 1440 px: histórico, TMY y PVSyst en una fila, el informe debajo a lo
+  // ancho, y en ninguna tarjeta queda hueco entre el estado y los botones
+  const L=await page.evaluate(()=>{
+    const g=document.querySelector('.dl-grid').getBoundingClientRect();
+    const it=[...document.querySelectorAll('.dl-item')].map(e=>e.getBoundingClientRect());
+    const huecos=[...document.querySelectorAll('.dl-item')].map(e=>Math.round(e.querySelector('.dl-acciones').getBoundingClientRect().top-e.querySelector('.dl-estado').getBoundingClientRect().bottom));
+    return {tops:it.slice(0,3).map(r=>Math.round(r.top)),informe:[Math.round(it[3].top),Math.round(it[3].width),Math.round(g.width)],abajo:Math.round(it[0].bottom),huecos};});
+  check('histórico, TMY y PVSyst comparten fila',new Set(L.tops).size===1,L.tops);
+  check('el informe va debajo, a todo el ancho',L.informe[0]>=L.abajo&&Math.abs(L.informe[1]-L.informe[2])<2,L.informe);
+  check('sin hueco entre el estado y los botones',L.huecos.every(h=>h>=0&&h<=12),L.huecos);
   await page.evaluate(()=>{window.__pulsado=0;document.getElementById('yearsBtn').onclick=()=>{window.__pulsado++;};});
   await page.click('#dlPrepTmy');
   check('«Analizar años» de una descarga pulsa el de arriba',await page.evaluate(()=>window.__pulsado)===1);

@@ -29,18 +29,19 @@ body:not(.con-historico) .requiere-historico{display:none}body.con-historico .av
 .pestanas button[aria-selected="true"]{color:var(--tx);border-bottom-color:var(--a);background:var(--bg);font-weight:600}
 .pestanas button[data-pestana-boton="avanzado"]{margin-left:auto}
 .grid>[data-fuera]{display:none!important}
-.dl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:10px 0}
+.dl-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:10px 0}.dl-grid .dl-informe{grid-column:1/-1}
 .dl-item{background:var(--p2);border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:8px}
 .dl-item p{margin:0;font-size:.8rem;color:var(--mut);line-height:1.45}
 .dl-cab{display:flex;gap:11px;align-items:flex-start}.dl-cab h3{margin:0;font-size:.95rem}
 .dl-ico{width:30px;height:30px;flex:none;fill:none;stroke:var(--a);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .dl-formato{font-size:.7rem;color:var(--mut);letter-spacing:.04em}
-.dl-estado{font-size:.76rem;padding:6px 9px;border-left:3px solid var(--line);background:var(--bg)}
+.dl-estado{margin-top:auto;font-size:.76rem;padding:6px 9px;border-left:3px solid var(--line);background:var(--bg)}
 .dl-estado.ok{border-color:var(--ok);color:var(--tx)}.dl-estado.falta{border-color:var(--a);color:var(--mut)}
-.dl-acciones{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto}.dl-acciones button{width:auto;min-height:40px;padding:0 14px}
+.dl-acciones{display:flex;gap:7px;flex-wrap:wrap}.dl-acciones button{width:auto;min-height:40px;padding:0 14px}
 .dl-acciones button:disabled{opacity:.45;cursor:not-allowed}
 .dl-acciones .dl-preparar{background:var(--a);color:var(--bg);border-color:var(--a);font-weight:600}
 .dl-tecnico summary{cursor:pointer;color:var(--mut);font-size:.78rem;padding:6px 0}.dl-tecnico .actions button{width:auto}
+@media(max-width:1100px){.dl-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dl-grid .dl-item:nth-child(3){grid-column:1/-1}}
 @media(max-width:820px){.dl-grid{grid-template-columns:1fr}}
 .mp-figura{position:relative;margin:6px 10px}.mp-figura img{display:block;width:100%;height:auto;border:1px solid var(--line)}.mp-marca{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--a);border:2px solid #fff;box-shadow:0 0 0 2px var(--p),0 0 10px rgba(240,144,48,.8);pointer-events:none}.mp-lectura{font-size:.78rem;color:var(--mut);padding:6px 10px 0}.mp-lectura b{color:var(--a);font-family:ui-monospace,monospace;font-size:.95rem}.mp-sin{color:var(--mut)}
 .chart.tall{height:430px}.chartgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.chartbox{background:var(--p2);border:1px solid var(--line);padding:7px;min-width:0}.chartbox h3{margin:0 0 6px;color:var(--mut);font-size:.66rem;text-transform:uppercase;letter-spacing:.08em}.viztools{display:flex;gap:7px;align-items:end;flex-wrap:wrap;margin-bottom:8px}.viztools label{min-width:160px;flex:0 1 220px}.vizmetric{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:8px}.vizmetric>div{background:var(--p2);padding:7px;font-size:.67rem;color:var(--mut)}.vizmetric b{display:block;color:var(--a);font:600 .9rem ui-monospace,monospace;margin-top:3px}.split2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tmy-card{display:flex;flex-direction:column}.tmy-card .tmy-table{flex:1;min-height:250px;max-height:none;margin-top:8px}.tmy-card .tmy-table table{height:auto}.external-maps{display:grid;grid-template-columns:1fr 1fr;gap:10px}.external-map-card{background:var(--p2);border:1px solid var(--line);min-width:0}.external-map-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line)}.external-map-head b{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase}.external-map-head span{font-size:.66rem;color:var(--mut)}.external-map{display:block;width:100%;height:520px;border:0;background:#0b1420}.external-map-note{padding:7px 10px;color:var(--mut);font-size:.69rem;line-height:1.4}.op-events{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px}.op-event{border:1px solid var(--line);background:var(--p2);padding:8px;min-width:0}.op-event b{display:block;color:var(--a);font-size:.75rem}.op-event small{display:block;color:var(--mut);font-size:.66rem;margin-top:3px}.contract-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}.contract-grid>div{background:var(--p2);padding:8px;font-size:.66rem;color:var(--mut);min-width:0}.contract-grid b{display:block;color:var(--tx);font:600 .76rem ui-monospace,monospace;margin-top:3px;overflow-wrap:anywhere}.map-tools{display:flex;gap:7px;align-items:end;flex-wrap:wrap;padding:7px 10px;border-bottom:1px solid var(--line)}.map-tools label{min-width:150px;flex:1}.spatial-points{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}.spatial-points span{border:1px solid var(--line);background:var(--p2);padding:4px 6px;font-size:.66rem;color:var(--mut)}
@@ -449,7 +450,7 @@ body:not(.con-historico) .requiere-historico{display:none}body.con-historico .av
         <div class="dl-acciones"><button id="dlHist">Descargar CSV</button><button class="secondary dl-preparar" id="dlPrepHist" data-preparar="yearsBtn">Analizar años</button></div>
       </article>
       <article class="dl-item">
-        <div class="dl-cab"><svg class="dl-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1"/><path d="M3 10h18M8 3v4M16 3v4M8 14h2M12 14h2M16 14h2M8 17h2"/></svg><div><h3>Año meteorológico tipo (TMY)</h3><span class="dl-formato">CSV · 8.760 horas</span></div></div>
+        <div class="dl-cab"><svg class="dl-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1"/><path d="M3 10h18M8 3v4M16 3v4M8 14h2M12 14h2M16 14h2M8 17h2"/></svg><div><h3>Año meteorológico tipo (TMY)</h3><span class="dl-formato">CSV · un año, hora a hora</span></div></div>
         <p>Un año representativo hecho con los meses más típicos del histórico. Es lo que se usa para estimar la producción de un año normal.</p>
         <div class="dl-estado" id="dlEstTmy">—</div>
         <div class="dl-acciones"><button id="dlTmy">Descargar CSV</button><button class="secondary dl-preparar" id="dlPrepTmy" data-preparar="tmyBtn">Construir TMY</button></div>
@@ -460,7 +461,7 @@ body:not(.con-historico) .requiere-historico{display:none}body.con-historico .av
         <div class="dl-estado" id="dlEstPvsyst">—</div>
         <div class="dl-acciones"><button id="dlPvsyst">Descargar para PVSyst</button><button class="secondary dl-preparar" id="dlPrepPvsyst" data-preparar="yearsBtn">Analizar años</button></div>
       </article>
-      <article class="dl-item">
+      <article class="dl-item dl-informe">
         <div class="dl-cab"><svg class="dl-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h7M9 15h7M9 18h4"/></svg><div><h3>Informe meteorológico</h3><span class="dl-formato">Página HTML · se guarda como PDF al imprimir</span></div></div>
         <p>Emplazamiento, fuente y periodo, tabla anual, calidad del dato y las gráficas del clima del sitio, en un documento para compartir.</p>
         <div class="row"><label><span class="k">Título</span><input id="reportTitle" value="Informe meteorológico Factiun"></label><label><span class="k">Incluir TMY</span><select id="reportTmy"><option value="yes">Sí</option><option value="no">No</option></select></label></div>
@@ -761,14 +762,17 @@ $("vizDay").addEventListener("change",renderDayVisual);$("vizDayShortcut").addEv
 function pintaDescargas(){
   if(!$("dlEstHist"))return;
   const per=d=>d&&d.year_start!=null?(d.year_end!=null&&d.year_end!==d.year_start?d.year_start+"–"+d.year_end:String(d.year_start)):"";
-  const horas=d=>(d?.rows?.length||0).toLocaleString("es-ES")+" horas";
+  const miles=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,".");
+  const horas=d=>miles(d?.rows?.length||0)+" horas";
+  // Un TMY es un año entero (8.760 h); si sale con menos, se dice cuántas faltan
+  const horasTmy=d=>{const n=d?.rows?.length||0;return n>=8760?miles(n)+" horas":miles(n)+" de 8.760 horas · faltan "+miles(8760-n);};
   const pon=(est,listo,txtOk,txtFalta,btn,prep,prepBtn,prepTxt)=>{
     $(est).className="dl-estado "+(listo?"ok":"falta");$(est).textContent=listo?"✓ "+txtOk:txtFalta;
     $(btn).disabled=!listo;const p=$(prep);p.hidden=listo;if(prepBtn){p.dataset.preparar=prepBtn;p.textContent=prepTxt;}
   };
   pon("dlEstHist",!!CURRENT,[siteName(),per(CURRENT),horas(CURRENT),CURRENT?.source].filter(Boolean).join(" · "),
       "Falta el histórico: analiza los años elegidos en «Datos históricos».","dlHist","dlPrepHist");
-  pon("dlEstTmy",!!TMY,[horas(TMY),TMY?.source].filter(Boolean).join(" · "),
+  pon("dlEstTmy",!!TMY,[horasTmy(TMY),TMY?.source].filter(Boolean).join(" · "),
       CURRENT?"Falta construirlo con el histórico ya analizado.":"Primero hay que analizar los años; después se construye el TMY.",
       "dlTmy","dlPrepTmy",CURRENT?"tmyBtn":"yearsBtn",CURRENT?"Construir TMY":"Analizar años");
   const pv=PREPARED||TMY||CURRENT;
