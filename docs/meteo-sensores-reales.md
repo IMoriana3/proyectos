@@ -116,14 +116,20 @@ le marca la lógica; con un valor, una alarma puede pillarlo a medio camino.
 
 ### Salidas
 
-Resumen (activaciones, movimientos a posición de stow, días con racha, horas de sol
-bajo alarma), tabla **rango de viento × posición** para pre-stow y para stow,
-activaciones por semana, lista completa con filtro, **CSV** (separador «;», coma
-decimal, hora UTC y hora local de la planta) e **informe** imprimible a PDF, corto y escrito en
-claro: un párrafo con lo que sale, las cifras, las reglas simuladas, en qué posición
-pilla al seguidor, cuándo, lo que la lógica no dice, los datos y un anexo con todas las
-activaciones. Las reglas van como fórmulas (condición, posición objetivo y grados a
-mover, con los valores simulados), no explicadas en prosa.
+Cortas a propósito, para que se lean de un vistazo:
+
+- **Resumen**, una fila por alarma: veces que salta, en cuántas no hay que mover el
+  seguidor, en cuántas sí y cuánto (de día y de noche).
+- **Recuento por racha máxima**, en una línea.
+- **Activaciones por semana**.
+- **Lista completa**, plegada, con filtro; y su **CSV** (separador «;», coma decimal,
+  hora UTC y hora local de la planta).
+- **Informe** de una página, imprimible a PDF: el resumen, la gráfica, las reglas como
+  fórmulas (condición, posición y grados a mover, con los valores simulados) y las
+  notas. No lleva la lista de activaciones ni explica el cálculo en prosa.
+
+Los parámetros de detalle (posiciones, geometría, coordenadas y los dos supuestos)
+van plegados en «Más parámetros».
 
 Ningún resultado de planta se guarda en el repositorio: la simulación corre en el
 navegador sobre las medidas de la sesión y se descarta al cerrarla.
@@ -133,7 +139,7 @@ navegador sobre las medidas de la sesión y se descarta al cerrarla.
 `lib/meteo-wind-logic.js` — módulo puro, sin DOM, sin red y sin importaciones; la
 posición solar se inyecta (`solarPosition` de `lib/meteo-browser.js`).
 
-- `node tests/test_meteo_logica_viento.js` — 29 verificaciones del motor con series
+- `node tests/test_meteo_logica_viento.js` — 30 verificaciones del motor con series
   sintéticas.
 - `node tests/test_meteo_logica_viento_browser.js` — 19 comprobaciones de la tarjeta
   en Chromium con Supabase simulado.

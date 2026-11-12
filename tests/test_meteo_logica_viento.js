@@ -188,33 +188,39 @@ const moduleOf = async name =>
     assert.equal(lines.filter(l=>/DUDOSO/.test(l)).length,2);
     assert.ok(!/inicio_local/.test(windLogicCsv(out)));
   });
-  check("informe: las mismas cifras que el resumen, contado en claro, con anexo completo y nada sin escapar",()=>{
+  check("resumen: por alarma, veces que salta, sin mover, a mover y cuánto",()=>{
+    const out=simulateWindLogic(NOCHES,{plant:"P",site:SITE,solarPosition}),r=W.windLogicSummary(out,out.groups[0]);
+    assert.deepEqual(r.rows.map(x=>[x.label,x.total,x.ok,x.move,x.how]),
+      [["Pre-stow (> 40 km/h)",3,1,2,"2 de noche, 50°"],["Stow (> 60 km/h)",1,1,0,"—"]]);
+    assert.equal(r.bands.prestow,"40–50 km/h: 2 · > 60 km/h: 1");assert.equal(r.bands.stow,"60–65 km/h: 1");
+    assert.equal(r.period,"10/06/2026 – 12/06/2026 · 3 días con dato");
+    assert.deepEqual(r.notes,["El recuento es un mínimo: el registro no guarda todas las lecturas de 1 s."]);
+    const d=simulateWindLogic(DIA,{plant:"P",site:SITE,solarPosition}),rd=W.windLogicSummary(d,d.groups[0]);
+    assert.match(rd.rows[0].how,/^1 de día, \d+(,\d)?°$/);assert.match(rd.rows[1].how,/^2 de día, \d+(,\d)?° de media \(hasta 25°\)$/);
+    const x=simulateWindLogic(OCASO,{plant:"P",site:SITE,solarPosition}),rx=W.windLogicSummary(x,x.groups[0]);
+    assert.match(rx.notes[0],/^La alarma sigue activa al anochecer una noche; en 1 el seguidor está al Oeste y tendría que pasar por horizontal para ir a 55° E\.$/);
+  });
+  check("informe: una página con el resumen, la gráfica, las reglas como fórmulas y las notas; sin lista",()=>{
     const out=simulateWindLogic(NOCHES.map(r=>({...r,plant:"P <b>&"})),{plant:"P <b>&",site:SITE,solarPosition});
-    const h=W.windLogicReportHtml(out,{generatedAt:"2026-11-12T17:00:00Z"}),x=out.groups[0];
+    const h=W.windLogicReportHtml(out,{generatedAt:"2026-11-12T17:00:00Z"});
     assert.match(h,/^<!doctype html>/);assert.ok(h.includes("P &lt;b&gt;&amp;")&&!h.includes("P <b>&"));
-    assert.ok(h.includes("<span>Activaciones de pre-stow</span><b>"+x.prestow.total+"</b>"));
-    assert.ok(h.includes("<span>Movimientos a posición de stow</span><b>2</b>"));
-    assert.ok(h.includes("habría saltado 3 veces y el stow (más de 60 km/h), una vez."));
-    assert.ok(h.includes("En 2 de esas 4 el seguidor ya estaba en posición"));
-    assert.ok(h.includes("2 primeras alarmas de la noche, con 50° de recorrido"));
-    assert.equal((h.split("Anexo: todas las activaciones")[1].match(/<tr/g)||[]).length,1+x.activations.length);
-    for(const s of ["Reglas simuladas","En qué posición pilla al seguidor","Cuándo","Lo que la lógica no dice","Sobre los datos"])assert.ok(h.includes("<h2>"+s+"</h2>"),s);
-    for(const f of ["v &gt; 40 km/h","θ* = sgn(θ) · max(|θ|, 30°)","Δ = max(0, 30° − |θ|)","Δ = 55° − |θ|","v &gt; 40 km/h ∧ noche","θ* = −55° (Este)","t − tᵤ &gt; 30 min","θₜ = atan2("])assert.ok(h.includes(f),f); // las reglas van como fórmulas, con los valores simulados
-    assert.ok(h.includes("posición del seguidor teórica")&&!h.includes("Cómo se ha calculado")); // se dice de dónde sale, sin explicar el cálculo
-    assert.equal((h.match(/<svg /g)||[]).length,3); // dos barras de posición y la gráfica semanal
-    assert.ok(h.includes("11/06/2026 00:00")&&h.includes("hora local de la planta (Europe/Madrid)")); // 22:00 UTC del día 10
-    assert.ok(h.includes("12/11/2026"));
+    assert.ok(h.includes("<tr><td>Pre-stow (&gt; 40 km/h)</td><td>3</td><td>1</td><td>2</td><td>2 de noche, 50°</td></tr>"));
+    assert.ok(h.includes("<tr><td>Stow (&gt; 60 km/h)</td><td>1</td><td>1</td><td>0</td><td>—</td></tr>"));
+    assert.ok(h.includes("Pre-stow: 40–50 km/h: 2 · &gt; 60 km/h: 1. Stow: 60–65 km/h: 1."));
+    assert.equal((h.match(/<svg /g)||[]).length,1);assert.ok(h.includes("<h2>Reglas</h2>")&&h.includes("<h2>Notas</h2>"));
+    for(const f of ["v &gt; 40 km/h","|θ| ≥ 30°","Δ = max(0, 30° − |θ|)","|θ| = 55°, el lado más cercano","Δ = 55° − |θ|","t − tᵤ &gt; 30 min","Δ = 50°, una vez por noche"])assert.ok(h.includes(f),f);
+    assert.ok(!h.includes("Anexo")&&!h.includes("Pre-stow 1</td>")&&!h.includes("Cómo se ha calculado")); // la lista va en el CSV
+    assert.ok(h.includes("10/06/2026 – 12/06/2026 · 3 días con dato")&&h.includes("12/11/2026")&&h.includes("posición teórica del seguidor"));
   });
-  check("informe: las reglas cambian con los parámetros y con las dos opciones",()=>{
-    const out=simulateWindLogic(NOCHES,{plant:"P",site:SITE,solarPosition,options:{prestowKmh:35,stowKmh:50,prestowMinDeg:25,stowDeg:50,maxDeg:60,holdMin:20,noonRule:"follow",duskRule:"hold"}});
+  check("informe: las reglas siguen a los parámetros simulados",()=>{
+    const out=simulateWindLogic(NOCHES,{plant:"P",site:SITE,solarPosition,options:{prestowKmh:35,stowKmh:50,prestowMinDeg:25,stowDeg:50,maxDeg:60,holdMin:20,nightDeg:10}});
     const h=W.windLogicReportHtml(out);
-    for(const f of ["v &gt; 35 km/h","v &gt; 50 km/h","max(|θ|, 25°)","Δ = 50° − |θ|","&gt; 20 min","θ* = sgn(θₛ) · max(|θₛ|, 25°)","|θₛ| ≤ 60°"])assert.ok(h.includes(f),f);
-    assert.ok(/Supuesto: anochecer<\/td><td class='f'>alarma ∧ anochece<\/td><td class='f'>θ\* = θ<\/td>/.test(h));
+    for(const f of ["v &gt; 35 km/h","v &gt; 50 km/h","|θ| ≥ 25°","Δ = 50° − |θ|","t − tᵤ &gt; 20 min","Δ = 40°, una vez por noche","de noche, 10° E"])assert.ok(h.includes(f),f);
   });
-  check("informe sin activaciones: lo dice y no dibuja gráficas vacías",()=>{
+  check("informe sin activaciones: ceros en el resumen y ninguna gráfica vacía",()=>{
     const h=W.windLogicReportHtml(simulateWindLogic(serie("2026-06-10T00:00","2026-06-10T23:59",[]),{plant:"P",site:SITE,solarPosition}));
-    assert.ok(h.includes("habría saltado ninguna vez y el stow (más de 60 km/h), ninguna vez."));
-    assert.ok(!h.includes("<svg ")&&!h.includes("En qué posición pilla al seguidor")&&h.includes("Sin activaciones en el periodo."));
+    assert.ok(h.includes("<td>Pre-stow (&gt; 40 km/h)</td><td>0</td><td>0</td><td>0</td><td>—</td>"));
+    assert.ok(!h.includes("<svg ")&&!h.includes("Por racha máxima"));
   });
   check("la página usa este motor, la solarPosition canónica y solo sensores de viento",()=>{
     const ui=fs.readFileSync(path.join(root,"meteo.html"),"utf8"),sup=fs.readFileSync(path.join(root,"lib/meteo-supabase.js"),"utf8");

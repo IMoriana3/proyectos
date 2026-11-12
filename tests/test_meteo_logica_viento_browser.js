@@ -8,7 +8,7 @@
  *   02/06 07:00 UTC  pre-stow de mañana                     → ya en rango
  *   03/06 04:01 UTC  racha tras dos horas de sensores a cero → dudosa
  * Lo que acredita: medidas cargadas → parámetros de la Cartera → simulación →
- * resumen, tablas, filtro, CSV → cierre de sesión.
+ * resumen, lista plegada, filtro, CSV, informe → cierre de sesión.
  * Lo que NO acredita: el motor (eso es tests/test_meteo_logica_viento.js) ni una
  * cuenta real de Supabase.
  */
@@ -97,7 +97,7 @@ function stub(){
  check('la tarjeta vive en la pestaña Mediciones y, sin medidas, queda plegada como el resto',await page.evaluate(()=>{
    const c=document.getElementById('windLogicCard');
    return !!c&&c.dataset.pestana==='medidas'&&!c.hasAttribute('data-fuera')&&!c.checkVisibility()&&
-     [...document.querySelectorAll('#wlPreBody,#wlStowBody,#wlChart,#wlEvents')].every(e=>!e.checkVisibility())&&document.getElementById('wlRun').disabled;
+     [...document.querySelectorAll('#wlSummary,#wlChart,#wlEvents')].every(e=>!e.checkVisibility())&&document.getElementById('wlRun').disabled;
  }));
 
  await page.fill('#supEmail','test@factiun.example');
@@ -107,19 +107,20 @@ function stub(){
  const pre=await page.evaluate(()=>({lat:+document.getElementById('wlLat').value,lon:+document.getElementById('wlLon').value,
    pitch:+document.getElementById('wlPitch').value,tz:document.getElementById('wlTz').value,
    group:document.getElementById('wlGroup').value}));
- check('con medidas, la tarjeta se despliega',await page.evaluate(()=>document.getElementById('windLogicCard').checkVisibility()&&document.getElementById('wlChart').checkVisibility()));
+ check('con medidas se despliega lo esencial; los parámetros de detalle y la lista quedan plegados',await page.evaluate(()=>document.getElementById('windLogicCard').checkVisibility()&&
+   document.getElementById('wlSummary').checkVisibility()&&document.getElementById('wlPre').checkVisibility()&&!document.getElementById('wlPitch').checkVisibility()&&!document.getElementById('wlEvents').checkVisibility()));
  check('coordenadas, pitch y zona horaria salen de la Cartera',Math.abs(pre.lat-41.576)<0.01&&Math.abs(pre.lon+0.798)<0.01&&pre.pitch===6&&pre.tz==='Europe/Madrid'&&pre.group==='1',pre);
 
+ const resumen=()=>page.evaluate(()=>[...document.querySelectorAll('#wlSummary tr')].map(r=>[...r.children].map(c=>c.textContent.trim())));
  await page.click('#wlRun');
- await page.waitForFunction(()=>document.getElementById('wlKpiPre').textContent.trim()!=='—',null,{timeout:20000});
- check('cinco pre-stow y un stow: el máximo de las dos HSU manda',await txt('wlKpiPre')==='5'&&await txt('wlKpiStow')==='1',
-   [await txt('wlKpiPre'),await txt('wlKpiStow')]);
- check('tres movimientos a stow: uno de día y dos de noche',await txt('wlKpiMoves')==='3'&&(await txt('wlKpiMovesSub'))==='1 de día · 2 de noche',
-   [await txt('wlKpiMoves'),await txt('wlKpiMovesSub')]);
- const total=await page.evaluate(()=>[...document.querySelectorAll('#wlPreBody tr.wl-total td')].map(x=>x.textContent.trim()));
- check('tabla de pre-stow: día en rango 1, día mover 1, noche mover 2, noche en defensa 1',total.join('|')==='Total|5|1|1|2|1',total);
+ await page.waitForFunction(()=>document.querySelectorAll('#wlSummary tr').length===2,null,{timeout:20000});
+ const R=await resumen();
+ check('resumen: cinco pre-stow (dos sin mover, tres a mover) y un stow; el máximo de las dos HSU manda',
+   R[0].slice(0,4).join('|')==='Pre-stow (> 40 km/h)|5|2|3'&&R[1].slice(0,4).join('|')==='Stow (> 60 km/h)|1|0|1',R);
+ check('cuánto: uno de día casi 30°, dos de noche 50°; el stow, 25°',/^1 de día, (29,\d|30)°; 2 de noche, 50°$/.test(R[0][4])&&R[1][4]==='1 de día, 25°',[R[0][4],R[1][4]]);
+ check('recuento por racha máxima en una línea',(await txt('wlBands'))==='Por racha máxima. Pre-stow: 40–50 km/h: 4 · > 60 km/h: 1. Stow: 60–65 km/h: 1.',await txt('wlBands'));
  const rows=await page.evaluate(()=>[...document.querySelectorAll('#wlEvents tr')].map(r=>[...r.children].map(c=>c.textContent.trim())));
- check('lista con las seis activaciones',rows.length===6,rows.length);
+ check('la lista está completa pero plegada, con su recuento en el título',rows.length===6&&(await txt('wlListTitle'))==='Todas las activaciones (6)',[rows.length,await txt('wlListTitle')]);
  const first=rows[0]||[],stow=rows.find(r=>/^Stow/.test(r[0]))||[];
  check('mediodía solar: del horizontal a 30°, y hora local de la planta',
    /^Pre-stow/.test(first[0])&&/14:00/.test(first[1])&&/^30° [EO]$/.test(first[8])&&parseFloat(first[9].replace(',','.'))>29&&first[6]==='Día',first);
@@ -129,10 +130,11 @@ function stub(){
    noche.length===3&&noche[0][7]==='5° E'&&noche[0][8]==='55° E'&&noche[0][9]==='50°'&&noche[1][8]==='se queda'&&noche[1][9]==='0°',noche);
  const dud=await page.evaluate(()=>({n:document.querySelectorAll('#wlEvents tr.wl-dudoso').length,
    notes:document.getElementById('wlNotes').textContent}));
- check('la racha tras los sensores a cero sale como dudosa y se avisa',dud.n===1&&/Sensores a cero/.test(dud.notes)&&/dudosa/.test(dud.notes),dud);
+ check('la racha tras los sensores a cero sale como dudosa y se avisa',dud.n===1&&/Una activación dudosa/.test(dud.notes)&&/sensores a cero/.test(dud.notes),dud);
 
+ await page.click('#wlListTitle');
  await page.selectOption('#wlFilter','stow');
- check('filtro: solo stow',await page.evaluate(()=>document.querySelectorAll('#wlEvents tr').length)===1);
+ check('al abrir la lista se ve, y el filtro deja solo el stow',await page.evaluate(()=>document.getElementById('wlEvents').checkVisibility()&&document.querySelectorAll('#wlEvents tr').length===1));
  await page.selectOption('#wlFilter','');
 
  const [download]=await Promise.all([page.waitForEvent('download',{timeout:15000}),page.click('#wlCsv')]);
@@ -143,21 +145,22 @@ function stub(){
 
  const [informe]=await Promise.all([page.waitForEvent('download',{timeout:15000}),page.click('#wlReport')]);
  const html=fs.readFileSync(await informe.path(),'utf8');
- check('informe: HTML imprimible con resumen, gráficas y las seis activaciones en el anexo',
+ check('informe: una página con el resumen, la gráfica y las reglas; la lista no va',
    informe.suggestedFilename()==='informe_logica_viento_El_Burgo_I.html'&&/^<!doctype html>/.test(html)&&
-   html.includes('<span>Activaciones de pre-stow</span><b>5</b>')&&html.includes('<svg ')&&html.includes('<h2>Cuándo</h2>')&&
-   (html.split('Anexo: todas las activaciones')[1].match(/<tr/g)||[]).length===7&&html.includes('01/06/2026 14:00'),[informe.suggestedFilename(),html.length]);
+   html.includes('<td>Pre-stow (&gt; 40 km/h)</td><td>5</td><td>2</td><td>3</td>')&&(html.match(/<svg /g)||[]).length===1&&
+   html.includes('<h2>Reglas</h2>')&&!html.includes('Anexo'),[informe.suggestedFilename(),html.length]);
 
  await page.fill('#wlStow','70');
  await page.dispatchEvent('#wlStow','change');
  check('cambiar un parámetro avisa de que el resultado es el anterior',/vuelve|Parámetros cambiados/.test(await txt('wlStatus')),await txt('wlStatus'));
  await page.click('#wlRun');
- await page.waitForFunction(()=>document.getElementById('wlKpiStow').textContent.trim()==='0',null,{timeout:20000}).catch(()=>{});
- check('umbral de stow a 70 km/h: ninguna racha lo cruza',await txt('wlKpiStow')==='0'&&await txt('wlKpiPre')==='5',[await txt('wlKpiPre'),await txt('wlKpiStow')]);
+ await page.waitForFunction(()=>/70 km\/h/.test(document.getElementById('wlSummary').textContent),null,{timeout:20000}).catch(()=>{});
+ const R70=await resumen();
+ check('umbral de stow a 70 km/h: ninguna racha lo cruza',R70[1].slice(0,2).join('|')==='Stow (> 70 km/h)|0'&&R70[0][1]==='5',R70);
  await page.fill('#wlPre','80');
  await page.click('#wlRun');
  check('umbrales incoherentes: se dice y no queda un resultado viejo en pantalla',
-   /mayor que el de pre-stow/.test(await txt('wlStatus'))&&await txt('wlKpiPre')==='—',[await txt('wlStatus'),await txt('wlKpiPre')]);
+   /mayor que el de pre-stow/.test(await txt('wlStatus'))&&/Pulsa/.test(await txt('wlSummary')),[await txt('wlStatus'),await txt('wlSummary')]);
 
  if(process.env.CAPTURA){
    await page.fill('#wlPre','40');await page.fill('#wlStow','60');await page.click('#wlRun');
@@ -168,8 +171,8 @@ function stub(){
 
  await page.click('#supLogout');
  await page.waitForFunction(()=>document.getElementById('wlRun').disabled,null,{timeout:15000}).catch(()=>{});
- check('cerrar sesión se lleva la simulación y vuelve a plegar la tarjeta',await txt('wlKpiPre')==='—'&&(await page.evaluate(()=>document.getElementById('wlRun').disabled&&document.getElementById('wlCsv').disabled&&document.getElementById('wlReport').disabled))&&
-   /Pulsa/.test(await txt('wlEvents'))&&!(await page.evaluate(()=>document.getElementById('windLogicCard').checkVisibility())),[await txt('wlKpiPre'),await txt('wlEvents')]);
+ check('cerrar sesión se lleva la simulación y vuelve a plegar la tarjeta',/Pulsa/.test(await txt('wlSummary'))&&(await page.evaluate(()=>document.getElementById('wlRun').disabled&&document.getElementById('wlCsv').disabled&&document.getElementById('wlReport').disabled))&&
+   /Pulsa/.test(await txt('wlEvents'))&&!(await page.evaluate(()=>document.getElementById('windLogicCard').checkVisibility())),[await txt('wlSummary'),await txt('wlEvents')]);
  check('sin errores JS en la tarjeta de lógica de viento',jsErrors.length===0,jsErrors);
 
  await browser.close();
