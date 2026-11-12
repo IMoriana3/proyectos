@@ -184,6 +184,10 @@ const PESTANAS=['hoy','clima','riesgos','contexto','medidas','exportar','avanzad
   check('sin generar, el viento sintético no enseña cifras ni gráfica vacías',!R.cifras&&!R.lienzo,R);
   check('el granizo por latitud sale «SIN CALIBRAR» y lo explica',R.nivel==='SIN CALIBRAR'&&/sin fuente ni calibrar/.test(R.aviso),R);
   check('solo una λ del sitio cuenta como calibrada',R.heur===false&&R.manual===true,R);
+  // Windy en unidades métricas fijas: con «default» las elegía por el idioma
+  // del navegador y en uno en inglés salían °F y nudos
+  const wsrc=new URL(await page.getAttribute('#windyMap','src'));
+  check('Windy pide °C, km/h y mm',wsrc.searchParams.get('metricTemp')==='°C'&&wsrc.searchParams.get('metricWind')==='km/h'&&wsrc.searchParams.get('metricRain')==='mm',wsrc.search);
   check('sin errores de página',errores.length===0,errores);
   await browser.close();
   console.log('\n'+ok+' OK · '+ko+' FAIL');
