@@ -97,6 +97,20 @@ function stub(){
    check('irradiancia sin escala no emite coherencia inventada',/No hay dos sensores comparables/.test(c2),c2.slice(0,240));
    const s2=await page.locator('#sensorStats').textContent();
    check('conserva negativos raw de la WFU',s2.includes('-100.00')||s2.includes('-100,00'),s2.slice(0,260));
+   // Previsión frente a medida: con la previsión archivada simulada (ECMWF y
+   // AROME constantes), la tabla da los estadísticos y la gráfica se pinta
+   await page.locator('#sensorVariable').selectOption('');
+   await page.route('https://historical-forecast-api.open-meteo.com/**',route=>{
+     const u=new URL(route.request().url()),t=[];
+     for(let d=Date.parse(u.searchParams.get('start_date')+'T00:00Z');d<=Date.parse(u.searchParams.get('end_date')+'T23:00Z');d+=36e5)t.push(new Date(d).toISOString().slice(0,16));
+     return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({hourly:{time:t,
+       wind_speed_10m_ecmwf_ifs025:t.map(()=>7),wind_speed_10m_meteofrance_arome_france_hd:t.map(()=>6),wind_speed_10m_knmi_harmonie_arome_europe:t.map(()=>null)}})});
+   });
+   await page.locator('#verifBtn').click();
+   await page.waitForFunction(()=>/horas medidas/.test(document.getElementById('verifStatus').textContent)||/No se ha podido/.test(document.getElementById('verifStatus').textContent),null,{timeout:15000});
+   const vt=await page.locator('#verifTabla').textContent(),vs=await page.locator('#verifStatus').textContent();
+   check('previsión frente a medida: gruesa y fina con sus estadísticos',/ECMWF/.test(vt)&&/AROME HD/.test(vt)&&/m\/s/.test(vt),vt.slice(0,300)+' · '+vs);
+   check('y la gráfica se pinta',await page.evaluate(()=>document.getElementById('verifChart').dataset.drawn==='1'));
    const pwd=await page.locator('#supPassword').inputValue();
    const stored=await page.evaluate(()=>Object.keys(localStorage).map(k=>localStorage.getItem(k)).join('\n'));
    check('la contraseña no persiste en el navegador',!pwd&&!stored.includes('clave-prueba'));

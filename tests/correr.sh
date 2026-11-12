@@ -1036,15 +1036,17 @@ declare -A PISO=(
   [test_meteo_sensores_reales.js]=14
   # Pantalla real en Chromium con autenticación y datos SUPABASE de prueba.
   # 12 controles: acceso, HSU, WFU raw, coherencia, privacidad y cierre.
-  [test_meteo_sensores_browser.js]=12
+  [test_meteo_sensores_browser.js]=15
   # LÓGICA DE VIENTO (pre-stow / stow) simulada sobre las HSU, con posición
-  # TEÓRICA del seguidor: motor puro `lib/meteo-wind-logic.js`. 30 medidas,
+  # TEÓRICA del seguidor: motor puro `lib/meteo-wind-logic.js`. 36 medidas,
   # sin red ni datos de planta: rearme, umbral estricto, máximo por NCU, día
   # y noche, lado más cercano, stow desde pre-stow, mediodía y anochecer con
-  # sus dos opciones, sensores a cero y huecos, resumen, CSV e informe.
+  # sus dos opciones, sensores a cero y huecos, resumen, CSV e informe; y el
+  # lector de histórico sin tope de días (por fecha, solo viento máximo HSU).
   [test_meteo_logica_viento.js]=36
-  # La misma tarjeta en Chromium con Supabase sustituido: 19 medidas. De las
-  # medidas cargadas a resumen, lista plegada, filtro, CSV, informe y cierre.
+  # La misma tarjeta en Chromium con Supabase sustituido: 23 medidas. Arriba
+  # se carga un solo día y la simulación sale del histórico entero; resumen,
+  # lista plegada, filtro, CSV, informe, origen y periodo, y cierre.
   [test_meteo_logica_viento_browser.js]=23
   # RECURSO DEL PAÍS en la tarjeta de meteo (lib/mapas-pais.js), con las
   # láminas sustituidas por fixtures: país por rejilla y no por nombre,
@@ -1104,6 +1106,8 @@ declare -A PISO=(
   [test_meteo_forecast_cache.mjs]=20
   [test_meteo_weathernext_comparison.mjs]=26
   [test_meteo_weathernext_contract.mjs]=21
+  [test_meteo_verificacion.mjs]=16
+  [test_layout_sesion_reset.js]=4
   [test_meteo_weathernext_transport.mjs]=39
 )
 
