@@ -1042,10 +1042,12 @@ declare -A PISO=(
   # marcador en la caja de la ficha, «sobre/bajo la media», punto de miles,
   # sin país, sin índice y cambio rápido de emplazamiento. MEDIDO: 15.
   [test_mapas_pais.js]=15
-  # ORIENTACIÓN EN meteo.html: índice de la página, emplazamiento a la vista,
-  # aviso en lugar de las gráficas vacías. MEDIDO: 15. Sin la medición de la
-  # cabecera al pulsar, dos saltos dejan el título tapado (2 rojos).
-  [test_meteo_navegacion.js]=15
+  # ORIENTACIÓN EN meteo.html: pestañas (toda tarjeta en una, cada pestaña
+  # sólo lo suyo, enlaces a elementos), redibujado al abrir una pestaña,
+  # emplazamiento a la vista y aviso en lugar de las gráficas vacías.
+  # MEDIDO: 23 (era 15 con el índice de anclas). Sin el redibujado al cambiar
+  # de pestaña, el granizo queda a 800 px en un hueco de 656 (1 rojo).
+  [test_meteo_navegacion.js]=23
   # El catálogo de plantas servido como fichero. 14 comprobaciones medidas.
   # Vigila el modo de fallo propio de un fichero generado: QUEDARSE VIEJO. Si la
   # cartera cambia y nadie regenera, las páginas sirven el catálogo de otro día y
