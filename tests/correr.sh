@@ -1036,7 +1036,7 @@ declare -A PISO=(
   [test_meteo_sensores_reales.js]=14
   # Pantalla real en Chromium con autenticación y datos SUPABASE de prueba.
   # 12 controles: acceso, HSU, WFU raw, coherencia, privacidad y cierre.
-  [test_meteo_sensores_browser.js]=12
+  [test_meteo_sensores_browser.js]=15
   # RECURSO DEL PAÍS en la tarjeta de meteo (lib/mapas-pais.js), con las
   # láminas sustituidas por fixtures: país por rejilla y no por nombre,
   # marcador en la caja de la ficha, «sobre/bajo la media», punto de miles,
@@ -1095,6 +1095,7 @@ declare -A PISO=(
   [test_meteo_forecast_cache.mjs]=20
   [test_meteo_weathernext_comparison.mjs]=26
   [test_meteo_weathernext_contract.mjs]=21
+  [test_meteo_verificacion.mjs]=16
   [test_meteo_weathernext_transport.mjs]=39
 )
 
