@@ -1,0 +1,36 @@
+{
+ "pais": "Fiyi",
+ "iso3": "FJI",
+ "iso2": "FJ",
+ "nombre_en": "Fiji",
+ "variable": "irradiancia",
+ "imagen": "FJI_irradiancia.webp",
+ "rejilla": "FJI_irradiancia_rejilla.json",
+ "caja": [
+  0.02249,
+  0.03,
+  0.62222,
+  0.97
+ ],
+ "encuadre": [
+  176.79392,
+  -19.67923,
+  180.3,
+  -15.72305
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 18930,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 0,50°",
+ "umbral": 1800.0,
+ "media": 1817.6761,
+ "p10": 1768.4227,
+ "p50": 1801.6424,
+ "p90": 1896.6934,
+ "p2": 1758.5262,
+ "p98": 1919.3063,
+ "min": 1755.9679,
+ "max": 1985.2562,
+ "sobre_umbral": 0.5141,
+ "pixeles": 118472
+}

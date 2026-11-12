@@ -1,0 +1,36 @@
+{
+ "pais": "Tierras Australes y Antárticas Francesas",
+ "iso3": "ATF",
+ "iso2": "TF",
+ "nombre_en": "French Southern and Antarctic Lands",
+ "variable": "viento",
+ "imagen": "ATF_viento.webp",
+ "rejilla": "ATF_viento_rejilla.json",
+ "caja": [
+  0.02298,
+  0.03,
+  0.614,
+  0.97
+ ],
+ "encuadre": [
+  68.31012,
+  -50.20161,
+  70.86853,
+  -48.14666
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 7280,
+ "fuente": "ERA5 (ECMWF/Copernicus) vía Open-Meteo · 2024",
+ "resolucion": "≈31 km · rejilla 0,25°",
+ "umbral": 7.0,
+ "media": 9.5899,
+ "p10": 8.4616,
+ "p50": 9.524,
+ "p90": 10.7429,
+ "p2": 7.9557,
+ "p98": 12.1739,
+ "min": 7.806,
+ "max": 13.215,
+ "sobre_umbral": 1.0,
+ "pixeles": 257734
+}

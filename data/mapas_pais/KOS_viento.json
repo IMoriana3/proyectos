@@ -1,0 +1,36 @@
+{
+ "pais": "Kosovo",
+ "iso3": "KOS",
+ "iso2": "XK",
+ "nombre_en": "Kosovo",
+ "variable": "viento",
+ "imagen": "KOS_viento.webp",
+ "rejilla": "KOS_viento_rejilla.json",
+ "caja": [
+  0.0241,
+  0.03,
+  0.59506,
+  0.97
+ ],
+ "encuadre": [
+  19.7182,
+  41.36401,
+  22.07931,
+  43.68307
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 10913,
+ "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial",
+ "resolucion": "≈278 m · largo plazo",
+ "umbral": 7.0,
+ "media": 4.7109,
+ "p10": 3.166,
+ "p50": 4.6873,
+ "p90": 6.1748,
+ "p2": 2.5979,
+ "p98": 7.5691,
+ "min": 1.0746,
+ "max": 12.4425,
+ "sobre_umbral": 0.038,
+ "pixeles": 190970
+}

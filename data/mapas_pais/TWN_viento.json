@@ -1,0 +1,36 @@
+{
+ "pais": "República de China",
+ "iso3": "TWN",
+ "iso2": "CN-TW",
+ "nombre_en": "Taiwan",
+ "variable": "viento",
+ "imagen": "TWN_viento.webp",
+ "rejilla": "TWN_viento_rejilla.json",
+ "caja": [
+  0.02161,
+  0.03,
+  0.63692,
+  0.97
+ ],
+ "encuadre": [
+  117.97955,
+  21.36336,
+  122.30538,
+  25.76101
+ ],
+ "unidad": "m/s",
+ "superficie_km2": 36198,
+ "fuente": "ERA5 (ECMWF/Copernicus) vía Open-Meteo · 2024",
+ "resolucion": "≈31 km · rejilla 0,50°",
+ "umbral": 7.0,
+ "media": 3.3327,
+ "p10": 1.6992,
+ "p50": 2.9731,
+ "p90": 5.4389,
+ "p2": 1.1448,
+ "p98": 6.8409,
+ "min": 0.9836,
+ "max": 9.7444,
+ "sobre_umbral": 0.0166,
+ "pixeles": 188684
+}
