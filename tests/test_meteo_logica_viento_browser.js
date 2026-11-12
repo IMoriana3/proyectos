@@ -78,6 +78,18 @@ function stub(){
  const jsErrors=[];
  page.on('pageerror',e=>jsErrors.push(e.message));
  await page.addInitScript(stub);
+ /* Sin esto el arnés depende de NO tener red: con red, la página carga el
+    supabase-js de verdad desde la CDN, que pisa el sustituto, y el inicio de
+    sesión de prueba va contra el Supabase real y falla. Mismo corte que
+    test_meteo_sensores_browser.js: la librería se sirve vacía y nada sale de BASE. */
+ await page.route('**/*',route=>{
+   const u=route.request().url();
+   if(u.includes('cdn.jsdelivr.net/npm/@supabase/supabase-js@'))return route.fulfill({
+     status:200,contentType:'application/javascript',body:'/* Supabase stub inyectado antes */'
+   });
+   if(u.startsWith(BASE+'/'))return route.continue();
+   return route.abort();
+ });
  await page.goto(BASE+'/meteo.html#pestana-medidas',{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>document.querySelector('#plantSel')&&document.querySelector('#plantSel').options.length>1,null,{timeout:20000});
  const txt=async id=>((await page.textContent('#'+id))||'').trim();
