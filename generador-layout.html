@@ -5369,10 +5369,16 @@ function aplicaSesion(st){
   mixPinta();
   draw();
 }
-var _sesT=null;
+var _sesT=null,_sesBorrada=false;
 function autoguarda(){
   if(_sesT)clearTimeout(_sesT);
+  // Tras «empezar de cero» no se vuelve a guardar. Un autoguardado pendiente
+  // (800 ms de espera) seguía vivo durante la recarga y, si la recarga tardaba
+  // más que eso, escribía la sesión otra vez y la página «limpia» la
+  // restauraba. Pasaba a ratos en CI, donde la recarga es lenta.
+  if(_sesBorrada)return;
   _sesT=setTimeout(function(){
+    if(_sesBorrada)return;
     try{var st=estadoSesion();st.guardada=new Date().toISOString();
         localStorage.setItem(SES_KEY,JSON.stringify(st));}catch(e){}
   },800);
@@ -5389,6 +5395,7 @@ function restauraSesion(){
       'Pulsa <b>Generar</b> para recalcular · <a href="#" id="sesReset" style="color:var(--dead)">empezar de cero</a>.';
     var a=document.getElementById('sesReset');
     if(a)a.onclick=function(ev){ev.preventDefault();
+      _sesBorrada=true;if(_sesT){clearTimeout(_sesT);_sesT=null;}
       try{localStorage.removeItem(SES_KEY);}catch(e){}
       location.reload();};
     return true;

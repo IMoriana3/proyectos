@@ -1096,6 +1096,7 @@ declare -A PISO=(
   [test_meteo_weathernext_comparison.mjs]=26
   [test_meteo_weathernext_contract.mjs]=21
   [test_meteo_verificacion.mjs]=16
+  [test_layout_sesion_reset.js]=4
   [test_meteo_weathernext_transport.mjs]=39
 )
 
