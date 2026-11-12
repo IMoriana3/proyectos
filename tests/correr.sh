@@ -1042,10 +1042,10 @@ declare -A PISO=(
   # sin red ni datos de planta: rearme, umbral estricto, máximo por NCU, día
   # y noche, lado más cercano, stow desde pre-stow, mediodía y anochecer con
   # sus dos opciones, sensores a cero y huecos, resumen, CSV e informe.
-  [test_meteo_logica_viento.js]=30
+  [test_meteo_logica_viento.js]=36
   # La misma tarjeta en Chromium con Supabase sustituido: 19 medidas. De las
   # medidas cargadas a resumen, lista plegada, filtro, CSV, informe y cierre.
-  [test_meteo_logica_viento_browser.js]=19
+  [test_meteo_logica_viento_browser.js]=23
   # RECURSO DEL PAÍS en la tarjeta de meteo (lib/mapas-pais.js), con las
   # láminas sustituidas por fixtures: país por rejilla y no por nombre,
   # marcador en la caja de la ficha, «sobre/bajo la media», punto de miles,

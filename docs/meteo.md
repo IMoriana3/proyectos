@@ -435,7 +435,8 @@ El informe HTML incrusta las visualizaciones disponibles como PNG base64. El fic
 La pestaña **Mediciones** analiza las HSU/WFU de nuestras plantas (Supabase o CSV) y,
 desde el 12/11/2026, simula sobre ellas una lógica de alarma de viento **pre-stow /
 stow**: cuántas veces saltaría, en qué posición teórica pillaría al seguidor y cuántos
-grados tendría que mover. Detalle, supuestos y pruebas en
+grados tendría que mover. Con sesión, la simulación toma de la base todo el histórico
+de viento máximo de las HSU, sin tope de fechas. Detalle, supuestos y pruebas en
 [`meteo-sensores-reales.md`](meteo-sensores-reales.md).
 
 ## QA

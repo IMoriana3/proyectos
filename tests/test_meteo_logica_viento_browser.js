@@ -8,7 +8,9 @@
  *   02/06 07:00 UTC  pre-stow de mañana                     → ya en rango
  *   03/06 04:01 UTC  racha tras dos horas de sensores a cero → dudosa
  * Lo que acredita: medidas cargadas → parámetros de la Cartera → simulación →
- * resumen, lista plegada, filtro, CSV, informe → cierre de sesión.
+ * resumen, lista plegada, filtro, CSV, informe → cierre de sesión. Y que la
+ * simulación NO depende del periodo cargado arriba: aquí se carga solo el 04/06
+ * (un día en calma) y la tarjeta pide a la base todo el histórico de viento máximo.
  * Lo que NO acredita: el motor (eso es tests/test_meteo_logica_viento.js) ni una
  * cuenta real de Supabase.
  */
@@ -55,18 +57,23 @@ function stub(){
     },
     from(table){
       if(table!=='telemetria')throw Error('La tarjeta ha consultado '+table);
-      const filter={plant:null,from:null,to:null};
+      const filter={cols:'',plant:null,classes:null,day:null,after:null,from:null,to:null};
+      (window.__consultas=window.__consultas||[]).push(filter);
       return {
-        select(){return this;},
-        eq(k,v){if(k==='planta')filter.plant=v;return this;},
-        in(){return this;},order(){return this;},
+        select(cols){filter.cols=String(cols||'');return this;},
+        eq(k,v){if(k==='planta')filter.plant=v;if(k==='dia')filter.day=v;return this;},
+        in(k,v){if(k==='clase')filter.classes=v;return this;},order(){return this;},
+        gt(k,v){if(k==='dia')filter.after=v;return this;},
         gte(k,v){if(k==='dia')filter.from=v;return this;},
         lte(k,v){if(k==='dia')filter.to=v;return this;},
         limit(){return Promise.resolve({data:[{dia:'2026-06-04'}],error:null});},
         range(a,b){
-          const result=data.filter(x=>(!filter.plant||x.planta===filter.plant)
+          const result=data.filter(x=>(!filter.plant||x.planta===filter.plant)&&(!filter.classes||filter.classes.includes(x.clase))
+            &&(!filter.day||x.dia===filter.day)&&(!filter.after||x.dia>filter.after)
             &&(!filter.from||x.dia>=filter.from)&&(!filter.to||x.dia<=filter.to)).slice(a,b+1);
-          return Promise.resolve({data:result,error:null});
+          // La selección ligera de la lógica de viento: solo el eje de tiempos y el viento máximo.
+          const ligera=/(^|,)vmax:series->v->wind_speed_max(,|$)/.test(filter.cols);
+          return Promise.resolve({data:ligera?result.map(({series,...row})=>({...row,t:series.t,vmax:series.v.wind_speed_max})):result,error:null});
         }
       };
     }
@@ -100,6 +107,9 @@ function stub(){
      [...document.querySelectorAll('#wlSummary,#wlChart,#wlEvents')].every(e=>!e.checkVisibility())&&document.getElementById('wlRun').disabled;
  }));
 
+ /* Arriba se carga un único día, y en calma: lo que salga después lo ha pedido la tarjeta. */
+ await page.fill('#supFrom','2026-06-04');
+ await page.fill('#supTo','2026-06-04');
  await page.fill('#supEmail','test@factiun.example');
  await page.fill('#supPassword','clave-prueba');
  await page.click('#supLogin');
@@ -109,12 +119,19 @@ function stub(){
    group:document.getElementById('wlGroup').value}));
  check('con medidas se despliega lo esencial; los parámetros de detalle y la lista quedan plegados',await page.evaluate(()=>document.getElementById('windLogicCard').checkVisibility()&&
    document.getElementById('wlSummary').checkVisibility()&&document.getElementById('wlPre').checkVisibility()&&!document.getElementById('wlPitch').checkVisibility()&&!document.getElementById('wlEvents').checkVisibility()));
+ check('arriba hay cargado un solo día; la tarjeta propone todo el histórico de la base',await page.evaluate(()=>
+   /2026-06-04 → 2026-06-04/.test(document.getElementById('supStatus').textContent)&&document.getElementById('wlSource').value==='supabase'&&
+   !document.getElementById('wlSource').options[0].disabled&&document.getElementById('wlFrom').value===''&&document.getElementById('wlTo').value===''),await txt('supStatus'));
  check('coordenadas, pitch y zona horaria salen de la Cartera',Math.abs(pre.lat-41.576)<0.01&&Math.abs(pre.lon+0.798)<0.01&&pre.pitch===6&&pre.tz==='Europe/Madrid'&&pre.group==='1',pre);
 
  const resumen=()=>page.evaluate(()=>[...document.querySelectorAll('#wlSummary tr')].map(r=>[...r.children].map(c=>c.textContent.trim())));
  await page.click('#wlRun');
  await page.waitForFunction(()=>document.querySelectorAll('#wlSummary tr').length===2,null,{timeout:20000});
  const R=await resumen();
+ const pedido=await page.evaluate(()=>window.__consultas.filter(q=>/vmax:/.test(q.cols)));
+ check('la simulación pide a la base solo el viento máximo de las HSU, sin fechas ni la serie entera',
+   pedido.length>=1&&pedido.every(q=>!/(^|,)series(,|$)/.test(q.cols)&&/(^|,)t:series->t(,|$)/.test(q.cols)&&JSON.stringify(q.classes)==='["hsu"]'&&q.plant==='El Burgo I'&&!q.from&&!q.to)&&
+   /01\/06\/2026.*04\/06\/2026/.test(await txt('wlStatus'))&&/todo el histórico de la base/.test(await txt('wlStatus')),[pedido,await txt('wlStatus')]);
  check('resumen: cinco pre-stow (dos sin mover, tres a mover) y un stow; el máximo de las dos HSU manda',
    R[0].slice(0,4).join('|')==='Pre-stow (> 40 km/h)|5|2|3'&&R[1].slice(0,4).join('|')==='Stow (> 60 km/h)|1|0|1',R);
  check('cuánto: uno de día casi 30°, dos de noche 50°; el stow, 25°',/^1 de día, (29,\d|30)°; 2 de noche, 50°$/.test(R[0][4])&&R[1][4]==='1 de día, 25°',[R[0][4],R[1][4]]);
@@ -149,6 +166,23 @@ function stub(){
    informe.suggestedFilename()==='informe_logica_viento_El_Burgo_I.html'&&/^<!doctype html>/.test(html)&&
    html.includes('<td>Pre-stow (&gt; 40 km/h)</td><td>5</td><td>2</td><td>3</td>')&&(html.match(/<svg /g)||[]).length===1&&
    html.includes('<h2>Reglas</h2>')&&!html.includes('Anexo'),[informe.suggestedFilename(),html.length]);
+
+ /* El periodo y el origen se eligen en «Más parámetros». */
+ const simular=async()=>{await page.click('#wlRun');await page.waitForFunction(()=>document.querySelectorAll('#wlSummary tr').length===2&&/ · /.test(document.getElementById('wlStatus').textContent),null,{timeout:20000});};
+ await page.click('#windLogicCard details.wl-plegado summary');
+ await page.selectOption('#wlSource','loaded');
+ await simular();
+ const Rc=await resumen();
+ check('con «solo las medidas cargadas» se simula el día de arriba: en calma, ninguna activación',
+   Rc[0][1]==='0'&&Rc[1][1]==='0'&&/medidas cargadas/.test(await txt('wlStatus'))&&/04\/06\/2026/.test(await txt('wlStatus')),[Rc,await txt('wlStatus')]);
+ await page.selectOption('#wlSource','supabase');
+ await page.fill('#wlFrom','2026-06-02');
+ await simular();
+ const Rp=await resumen(),acotada=await page.evaluate(()=>window.__consultas.filter(q=>/vmax:/.test(q.cols)).pop());
+ check('«Desde» acota lo que se pide a la base: desde el 02/06 quedan dos pre-stow',
+   Rp[0].slice(0,4).join('|')==='Pre-stow (> 40 km/h)|2|1|1'&&Rp[1][1]==='0'&&acotada.from==='2026-06-02'&&!acotada.to&&/periodo acotado/.test(await txt('wlStatus')),[Rp,acotada,await txt('wlStatus')]);
+ await page.fill('#wlFrom','');
+ await simular();
 
  await page.fill('#wlStow','70');
  await page.dispatchEvent('#wlStow','change');

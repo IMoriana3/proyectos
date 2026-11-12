@@ -70,11 +70,44 @@ pillaría al seguidor y cuántos grados tendría que mover**.
 Es una **simulación de cómo funcionaría la lógica, no un estudio de cómo funcionó la
 planta**:
 
-- el viento es **medido**: máximo por minuto (`wind_speed_max`) de las HSU cargadas,
-  tomando en cada minuto el mayor de las HSU de una misma NCU;
+- el viento es **medido**: máximo por minuto (`wind_speed_max`) de las HSU, tomando en
+  cada minuto el mayor de las HSU de una misma NCU;
 - la posición del seguidor es **teórica**: seguimiento astronómico de un eje N-S con
   backtracking sobre terreno plano (pitch y ancho de módulo editables), noche en la
   posición de noche. **No se lee ninguna TCU.**
+
+### De dónde sale el viento: todo el histórico, sin tope de fechas
+
+La simulación **no depende del periodo cargado arriba**. En «Más parámetros» se elige:
+
+- **Todo el histórico de la base** (por defecto cuando las medidas vienen de Supabase).
+  La tarjeta pide a `telemetria` únicamente el eje de tiempos y `wind_speed_max` de las
+  filas `hsu` de la planta —`fetchSupabaseWindPeak`, en `lib/meteo-supabase.js`— y las
+  va volcando página a página en 1.440 valores por sensor y día
+  (`createWindSeriesBuilder`). No se convierten en lecturas sueltas, así que **no hay
+  tope de días**: un año o tres se simulan de una vez. «Desde» y «Hasta» son
+  opcionales, para acotar.
+- **Solo las medidas cargadas arriba**: lo que haya en memoria (un CSV, o el periodo
+  cargado de la base).
+
+El cargador general de la sección (`fetchSupabaseMeteo`, todas las magnitudes) conserva
+su tope de 370 días: ese sí monta cada lectura en memoria.
+
+Cómo se recorre la base, y por qué:
+
+- **Por fecha** (`dia` mayor que el último día completo), no por desplazamiento: con
+  `range(offset)` la base vuelve a abrir el JSON de todo lo anterior en cada página.
+  El último día de una página llena se descarta y se vuelve a pedir entero.
+- **80 HSU-día por página.** Medido el 12/11/2026 en la base de Factiun: abrir el JSON
+  de un HSU-día cuesta entre 10 y 30 ms y el rol `authenticated` corta a los 8 s. Si la
+  base corta por tiempo, se repite con media página.
+- Mismas reglas que el lector general: una reimportación sustituye a la anterior y
+  nunca se suma; sin UTC no entra; un escalar es un hueco de esquema.
+
+**Sin contrastar con una sesión real**: la selección parcial del JSON
+(`t:series->t,vmax:series->v->wind_speed_max`) está probada como SQL contra la base,
+pero no a través de la API con un usuario autenticado. Si la API la rechazara, la
+tarjeta pide la serie entera en páginas pequeñas: mismo resultado, más lento.
 
 ### La lógica simulada
 
@@ -128,21 +161,23 @@ Cortas a propósito, para que se lean de un vistazo:
   fórmulas (condición, posición y grados a mover, con los valores simulados) y las
   notas. No lleva la lista de activaciones ni explica el cálculo en prosa.
 
-Los parámetros de detalle (posiciones, geometría, coordenadas y los dos supuestos)
-van plegados en «Más parámetros».
+Los parámetros de detalle (origen y periodo de los datos, posiciones, geometría,
+coordenadas y los dos supuestos) van plegados en «Más parámetros».
 
 Ningún resultado de planta se guarda en el repositorio: la simulación corre en el
-navegador sobre las medidas de la sesión y se descarta al cerrarla.
+navegador sobre el viento de la sesión y se descarta al cerrarla.
 
 ### Motor y pruebas
 
 `lib/meteo-wind-logic.js` — módulo puro, sin DOM, sin red y sin importaciones; la
 posición solar se inyecta (`solarPosition` de `lib/meteo-browser.js`).
 
-- `node tests/test_meteo_logica_viento.js` — 30 verificaciones del motor con series
-  sintéticas.
-- `node tests/test_meteo_logica_viento_browser.js` — 19 comprobaciones de la tarjeta
-  en Chromium con Supabase simulado.
+- `node tests/test_meteo_logica_viento.js` — 36 verificaciones del motor con series
+  sintéticas y del lector de histórico con una base de mentira (450 días sin tope,
+  avance por fecha, un día que llena la página, corte por tiempo, repliegue).
+- `node tests/test_meteo_logica_viento_browser.js` — 23 comprobaciones de la tarjeta
+  en Chromium con Supabase simulado; arriba se carga un solo día en calma y la
+  simulación sale del histórico entero.
 
 Careo externo (no versionado, con medidas reales de una planta): el motor reproduce,
 activación por activación, una simulación independiente hecha en Python con pvlib

@@ -222,12 +222,111 @@ const moduleOf = async name =>
     assert.ok(h.includes("<td>Pre-stow (&gt; 40 km/h)</td><td>0</td><td>0</td><td>0</td><td>—</td>"));
     assert.ok(!h.includes("<svg ")&&!h.includes("Por racha máxima"));
   });
+  /* Filas «un sensor, un día», como las guarda la base: t en segundos y viento máximo en m/s. */
+  const filas=(records,equipo="HSU 230",ncu="1")=>{
+    const by=new Map();
+    for(const r of records){const d=r.t.slice(0,10);if(!by.has(d))by.set(d,{t:[],vmax:[]});
+      by.get(d).t.push((Date.parse(r.t)-Date.parse(d+"T00:00:00Z"))/1000);by.get(d).vmax.push(r.value);}
+    return [...by].map(([dia,x],k)=>({id:k+1,planta:"P",ncu,equipo,clase:"hsu",dia,tz:"UTC",subido:"2026-01-01",t:x.t,vmax:x.vmax}));
+  };
+  check("series desde filas de la base: máximo por NCU y minuto; lo reimportado sustituye, no suma",()=>{
+    const b=W.createWindSeriesBuilder();
+    b.add([{id:1,ncu:"1",equipo:"HSU 230",dia:"2026-06-10",tz:"UTC",subido:"a",t:[0,60,120],vmax:[5,12,null]},
+      {id:2,ncu:"1",equipo:"HSU 231",dia:"2026-06-10",tz:"UTC",subido:"a",t:[0,60],vmax:[6,11]},
+      {id:3,ncu:"1",equipo:"HSU 231",dia:"2026-06-10",tz:"UTC",subido:"b",series:{t:[0,60],v:{wind_speed_max:[7,10]}}}, // reimportado, con la serie entera
+      {id:4,ncu:"2",equipo:"HSU 230",dia:"2026-06-10",tz:"UTC",t:[0],vmax:0},                // escalar: hueco de esquema
+      {id:5,ncu:"2",equipo:"HSU 230",dia:"2026-06-11",tz:"Europe/Madrid",t:[0],vmax:[9]},   // sin UTC
+      {id:6,ncu:"3",equipo:"HSU 230",dia:"2026-06-10",tz:"UTC",t:[0,60],vmax:[9]}]);         // longitudes que no casan
+    const s=b.finish();
+    assert.deepEqual(s.groups.map(g=>g.key),["1"]);assert.deepEqual(s.groups[0].sensors,["HSU 230","HSU 231"]);
+    assert.deepEqual(s.groups[0].minutes.map(m=>m-Date.parse("2026-06-10T00:00:00Z")/60000),[0,1]);
+    assert.ok(near(s.groups[0].kmh[0],25.2,1e-9)&&near(s.groups[0].kmh[1],43.2,1e-9)); // 7 m/s (el 6 quedó sustituido) y 12 m/s
+    assert.deepEqual([s.diagnostics.repeatedUploads,s.diagnostics.scalarPlaceholders,s.diagnostics.withoutUtc,s.diagnostics.invalidSeries,s.diagnostics.missingValues],[1,1,1,1,1]);
+  });
+  check("da lo mismo simular desde las lecturas cargadas que desde las filas de viento máximo",()=>{
+    for(const datos of [DIA,NOCHES,OCASO]){
+      const b=W.createWindSeriesBuilder();b.add(filas(datos));
+      const a=sim(datos),c=simulateWindLogic(null,{plant:"P",site:SITE,solarPosition,series:b.finish()}).groups[0];
+      assert.deepEqual(c.activations,a.activations);assert.deepEqual(c.coverage,a.coverage);assert.deepEqual(c.dusk,a.dusk);
+    }
+  });
+  check("sin tope de periodo: 420 días seguidos se simulan de una vez",()=>{
+    const b=W.createWindSeriesBuilder(),t=Array.from({length:1440},(_,i)=>i*60),d0=Date.parse("2025-06-01T00:00:00Z");
+    for(let d=0;d<420;d++){
+      const vmax=t.map(()=>5);if(d%10===0)vmax[600]=12;                      // una racha de 43 km/h cada diez días, a las 10:00 UTC
+      b.add([{id:d+1,ncu:"1",equipo:"HSU 230",dia:new Date(d0+d*86400000).toISOString().slice(0,10),tz:"UTC",subido:"x",t,vmax}]);
+    }
+    const g=simulateWindLogic(null,{plant:"P",site:SITE,solarPosition,series:b.finish()}).groups[0];
+    assert.equal(g.coverage.days,420);assert.equal(g.coverage.dataMinutes,420*1440);assert.equal(g.prestow.total,42);assert.equal(g.stow.total,0);
+  });
+  const SUP=await moduleOf("meteo-supabase.js");
+  /* Supabase de mentira: registra qué se le pide y sirve páginas de filas HSU-día. */
+  const fakeSb=(rows,{logged=true,failPartial=false,timeoutOver=Infinity}={})=>{
+    const calls=[];
+    return {calls,auth:{async getUser(){return {data:{user:logged?{id:"u"}:null},error:null};}},
+      from(table){const q={table,columns:"",eq:{},classes:null,gt:null,gte:null,lte:null,range:null};calls.push(q);
+        return {select(c){q.columns=c;return this;},eq(k,v){q.eq[k]=v;return this;},in(k,v){q.classes=v;return this;},
+          gt(k,v){q.gt=v;return this;},gte(k,v){q.gte=v;return this;},lte(k,v){q.lte=v;return this;},order(){return this;},
+          async range(a,b){q.range=[a,b];
+            if(failPartial&&q.columns.includes("series->"))return {data:null,error:{message:"failed to parse select parameter"}};
+            if(b-a+1>timeoutOver)return {data:null,error:{code:"57014",message:"canceling statement due to statement timeout"}};
+            return {data:rows.filter(r=>(!q.eq.dia||r.dia===q.eq.dia)&&(!q.gt||r.dia>q.gt)&&(!q.gte||r.dia>=q.gte)&&(!q.lte||r.dia<=q.lte)).slice(a,b+1),error:null};}};}};
+  };
+  const diaN=d=>new Date(Date.parse("2025-06-01T00:00:00Z")+d*86400000).toISOString().slice(0,10);
+  const HIST=[];for(let d=0;d<450;d++)for(const e of ["HSU 230","HSU 231"])HIST.push({id:HIST.length+1,ncu:"1",equipo:e,clase:"hsu",dia:diaN(d),tz:"UTC",t:[0],vmax:[5]});
+  const unaVez=ids=>ids.length===new Set(ids).size;
+  await (async()=>{
+    const sb=fakeSb(HIST),ids=[],progress=[];
+    const out=await SUP.fetchSupabaseWindPeak(sb,{plant:"P",onRows:r=>ids.push(...r.map(x=>x.id)),onProgress:(n,d)=>progress.push([n,d])});
+    check("la base: 450 días de dos HSU sin tope, solo el viento máximo de las HSU y avanzando por fecha",()=>{
+      assert.equal(ids.length,900);assert.ok(unaVez(ids));assert.equal(out.databaseRows,900);
+      assert.equal(out.from,"2025-06-01");assert.equal(out.to,"2026-08-24");assert.equal(out.partialSelect,true);
+      // 80 por página; el último día de cada página llena se vuelve a pedir: 39 días por página
+      assert.equal(sb.calls.length,12);assert.deepEqual(sb.calls.map(c=>c.gt),[null,...Array.from({length:11},(_,k)=>diaN(39*(k+1)-1))]);
+      for(const c of sb.calls){assert.equal(c.table,"telemetria");assert.equal(c.columns,SUP.SUPABASE_WIND_PEAK_SELECT);assert.deepEqual(c.classes,["hsu"]);
+        assert.equal(c.eq.planta,"P");assert.deepEqual(c.range,[0,79]);assert.equal(c.gte,null);assert.equal(c.lte,null);}  // nunca por desplazamiento
+      assert.ok(SUP.SUPABASE_WIND_PEAK_SELECT.includes("vmax:series->v->wind_speed_max")&&!/(^|,)series(,|$)/.test(SUP.SUPABASE_WIND_PEAK_SELECT));
+      assert.deepEqual(progress.at(-1),[900,"2026-08-24"]);
+    });
+    const acotado=fakeSb(HIST);let n=0;
+    await SUP.fetchSupabaseWindPeak(acotado,{plant:"P",from:"2026-01-01",to:"2026-01-10",onRows:r=>{n+=r.length}});
+    const viejo=fakeSb(HIST.slice(0,90),{failPartial:true}),idsViejo=[];
+    const rep=await SUP.fetchSupabaseWindPeak(viejo,{plant:"P",onRows:r=>idsViejo.push(...r.map(x=>x.id))});
+    let sinSesion="",malPeriodo="";
+    try{await SUP.fetchSupabaseWindPeak(fakeSb(HIST,{logged:false}),{plant:"P"});}catch(e){sinSesion=e.message;}
+    try{await SUP.fetchSupabaseWindPeak(fakeSb(HIST),{plant:"P",from:"2026-02-01",to:"2026-01-01"});}catch(e){malPeriodo=e.message;}
+    check("la base: fechas opcionales, sesión obligatoria y repliegue a la serie entera si falla la selección parcial",()=>{
+      assert.equal(n,20);assert.equal(acotado.calls[0].gte,"2026-01-01");assert.equal(acotado.calls[0].lte,"2026-01-10");
+      assert.equal(idsViejo.length,90);assert.ok(unaVez(idsViejo));assert.equal(rep.partialSelect,false);
+      assert.ok(viejo.calls[1].columns.endsWith(",series"));assert.deepEqual(viejo.calls[1].range,[0,39]);
+      assert.match(sinSesion,/iniciar sesión/);assert.match(malPeriodo,/Periodo de fechas inválido/);
+    });
+    /* Un día con más sensores que la página (50 con páginas de 20), entre dos días normales. */
+    const ANCHO=[{id:1,dia:"2026-03-01"},{id:2,dia:"2026-03-01"},...Array.from({length:50},(_,k)=>({id:10+k,dia:"2026-03-02"})),{id:90,dia:"2026-03-03"},{id:91,dia:"2026-03-03"}]
+      .map(r=>({...r,ncu:"1",equipo:"HSU "+r.id,clase:"hsu",tz:"UTC",t:[0],vmax:[5]}));
+    const ancho=fakeSb(ANCHO),idsAncho=[];
+    await SUP.fetchSupabaseWindPeak(ancho,{plant:"P",pageSize:20,onRows:r=>idsAncho.push(...r.map(x=>x.id))});
+    const lenta=fakeSb(HIST.slice(0,400),{timeoutOver:50}),idsLenta=[];
+    await SUP.fetchSupabaseWindPeak(lenta,{plant:"P",onRows:r=>idsLenta.push(...r.map(x=>x.id))});
+    let corta="";
+    const imposible=fakeSb(HIST,{timeoutOver:10});
+    try{await SUP.fetchSupabaseWindPeak(imposible,{plant:"P"});}catch(e){corta=e.message;}
+    check("la base: un día que llena la página no se pierde ni se repite; si corta por tiempo, media página",()=>{
+      assert.deepEqual(idsAncho,ANCHO.map(r=>r.id));
+      assert.ok(ancho.calls.some(c=>c.eq.dia==="2026-03-02"&&c.range[0]===20)&&ancho.calls.some(c=>c.eq.dia==="2026-03-02"&&c.range[0]===40));
+      assert.equal(idsLenta.length,400);assert.ok(unaVez(idsLenta));
+      assert.deepEqual(lenta.calls.slice(0,2).map(c=>c.range[1]+1),[80,40]);assert.ok(lenta.calls.every(c=>c.columns===SUP.SUPABASE_WIND_PEAK_SELECT));
+      assert.match(corta,/statement timeout/);assert.deepEqual(imposible.calls.map(c=>c.range[1]+1),[80,40,20]);
+      assert.ok(imposible.calls.every(c=>c.columns===SUP.SUPABASE_WIND_PEAK_SELECT)); // un corte por tiempo no es motivo para pedir la serie entera
+    });
+  })();
   check("la página usa este motor, la solarPosition canónica y solo sensores de viento",()=>{
     const ui=fs.readFileSync(path.join(root,"meteo.html"),"utf8"),sup=fs.readFileSync(path.join(root,"lib/meteo-supabase.js"),"utf8");
     const motor=fs.readFileSync(path.join(root,"lib/meteo-wind-logic.js"),"utf8");
     assert.ok(ui.includes('from "./lib/meteo-wind-logic.js"'));assert.ok(ui.includes('import {solarPosition} from "./lib/meteo-browser.js"'));
     assert.ok(ui.includes('id="windLogicCard"'));assert.ok(!/^import /m.test(motor));
     assert.ok(!/["']tcu["']/.test(sup),"la tarjeta no debe leer las TCU: la posición es teórica");
+    assert.ok(ui.includes("fetchSupabaseWindPeak(supClient()")&&ui.includes("createWindSeriesBuilder()"));
     assert.ok(ui.indexOf('id="windLogicCard"')>ui.indexOf("Mediciones reales · sensores de nuestras plantas")&&
       ui.indexOf('id="windLogicCard"')<ui.indexOf("Previsión horaria · supervisión meteorológica"));
   });

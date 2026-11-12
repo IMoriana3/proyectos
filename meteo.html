@@ -191,15 +191,18 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
 
   <div class="card wide requiere-medidas" id="windLogicCard">
     <h2>Lógica de viento · simulación pre-stow / stow sobre las HSU</h2>
-    <p class="note">Cuántas veces saltaría cada alarma con el viento que midieron las HSU y cuánto habría que mover el seguidor. La posición del seguidor es teórica, no la de las TCU.</p>
+    <p class="note">Cuántas veces saltaría cada alarma con el viento que midieron las HSU y cuánto habría que mover el seguidor. La posición del seguidor es teórica, no la de las TCU. Con sesión en la base de Factiun se simula todo el histórico de la planta, sin límite de fechas.</p>
     <div class="row4" style="margin-top:8px">
       <label><span class="k">Pre-stow · racha mayor de (km/h)</span><input id="wlPre" type="number" min="1" step="1" value="40"></label>
       <label><span class="k">Stow · racha mayor de (km/h)</span><input id="wlStow" type="number" min="1" step="1" value="60"></label>
       <label><span class="k">Desactivación tras la última alarma (min)</span><input id="wlHold" type="number" min="1" step="1" value="30"></label>
       <label><span class="k">Grupo de sensores</span><select id="wlGroup"><option value="">Carga primero las medidas</option></select></label>
     </div>
-    <details class="wl-plegado"><summary>Más parámetros: posiciones, geometría y supuestos</summary>
+    <details class="wl-plegado"><summary>Más parámetros: periodo, posiciones, geometría y supuestos</summary>
     <div class="row4" style="margin-top:8px">
+      <label><span class="k">Datos de la simulación</span><select id="wlSource"><option value="supabase">Todo el histórico de la base</option><option value="loaded">Solo las medidas cargadas arriba</option></select></label>
+      <label><span class="k">Desde (opcional)</span><input id="wlFrom" type="date"></label>
+      <label><span class="k">Hasta (opcional)</span><input id="wlTo" type="date"></label>
       <label><span class="k">Pre-stow · rango mínimo (° E / O)</span><input id="wlPreMin" type="number" min="0" max="90" step="1" value="30"></label>
       <label><span class="k">Posición de stow (° E / O)</span><input id="wlStowDeg" type="number" min="1" max="90" step="1" value="55"></label>
       <label><span class="k">Posición de noche (° E)</span><input id="wlNight" type="number" min="0" max="90" step="1" value="5"></label>
@@ -215,7 +218,7 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
     </div>
     </details>
     <div class="actions" style="margin-top:8px"><button id="wlRun" disabled>Simular lógica</button><button id="wlCsv" class="secondary" disabled>Descargar activaciones CSV</button><button id="wlReport" class="secondary" disabled>Descargar informe (HTML · PDF)</button></div>
-    <div class="statusline" id="wlStatus">Carga primero las medidas de las HSU (Supabase o CSV). La simulación usa el periodo y la planta elegidos arriba.</div>
+    <div class="statusline" id="wlStatus">Carga primero las medidas de las HSU (Supabase o CSV).</div>
     <div class="tablewrap" style="margin-top:9px"><table class="wl-resumen"><thead><tr><th>Alarma</th><th>Veces que salta</th><th>No hay que mover</th><th>Hay que mover</th><th>Cuánto</th></tr></thead><tbody id="wlSummary"><tr><td colspan="5">Pulsa «Simular lógica».</td></tr></tbody></table></div>
     <p class="note" id="wlBands" hidden></p>
     <ul class="note wl-avisos" id="wlNotes" hidden></ul>
@@ -554,8 +557,8 @@ import {
 } from "./lib/meteo-viz.js";
 import {buildWeatherContract,publishWeatherContract,activeWeatherRef,loadActiveWeatherContract,clearActiveWeatherContract,weatherManifest} from "./lib/weather-contract.js";
 import {parseSensorCsv,analyzeSensorRecords,buildSensorChart,SENSOR_ANALYSIS_VERSION} from "./lib/meteo-sensors.js";
-import {newSupabaseMeteoClient,fetchSupabaseMeteo} from "./lib/meteo-supabase.js";
-import {simulateWindLogic,windLogicCsv,windLogicReportHtml,windLogicWeekly,windLogicSummary} from "./lib/meteo-wind-logic.js";
+import {newSupabaseMeteoClient,fetchSupabaseMeteo,fetchSupabaseWindPeak} from "./lib/meteo-supabase.js";
+import {simulateWindLogic,createWindSeriesBuilder,windLogicCsv,windLogicReportHtml,windLogicWeekly,windLogicSummary} from "./lib/meteo-wind-logic.js";
 import {solarPosition} from "./lib/meteo-browser.js";
 import {fetchCachedWeatherNext} from "./lib/meteo-forecast-cache.js";
 
@@ -1458,7 +1461,7 @@ async function supLogout(){
     $("sensorExport").disabled=true;
     const canvas=$("sensorChart");canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);canvas.dataset.drawn="0";
     $("sensorChartNote").textContent="Sin datos.";
-    WIND_LOGIC_PLANT="";$("wlRun").disabled=true;$("wlGroup").innerHTML='<option value="">Sin datos</option>';
+    WIND_LOGIC_PLANT="";WIND_LOGIC_READY=false;$("wlRun").disabled=true;$("wlGroup").innerHTML='<option value="">Sin datos</option>';
     wlReset("Sin datos: sesión cerrada.");
     sensorStatus("Lecturas descargadas eliminadas de esta sesión.");
     if(FORECAST?.[0]?.source==="weathernext3"&&FORECAST?.[0]?.provenance?.mode==="supabase-forecast-cache"){
@@ -1472,7 +1475,7 @@ async function supLogout(){
 /* ---- Lógica de viento · simulación pre-stow / stow sobre las HSU cargadas ----
    El motor es lib/meteo-wind-logic.js (puro, con su banco). Aquí sólo se leen los
    parámetros, se le pasan las medidas ya cargadas y se pintan sus resultados. */
-let WIND_LOGIC=null,WIND_LOGIC_PLANT="";
+let WIND_LOGIC=null,WIND_LOGIC_PLANT="",WIND_LOGIC_READY=false,WIND_LOGIC_BASE=null;
 const WL_WIND=["wind_peak","wind_gust","wind_speed"];
 const wlNum=(v,d=1)=>v==null||!isFinite(v)?"—":Number(v).toLocaleString("es-ES",{minimumFractionDigits:d,maximumFractionDigits:d});
 const wlInt=v=>v==null||!isFinite(v)?"—":Number(v).toLocaleString("es-ES");
@@ -1513,7 +1516,14 @@ function wlPrepare(){
   for(const r of SENSOR_RECORDS)if(r.plant===plant&&WL_WIND.includes(r.variable))ncus.add(String(r.ncu??""));
   const keys=[...ncus].sort((a,b)=>a.localeCompare(b,"es",{numeric:true}));
   $("wlGroup").innerHTML=keys.length?keys.map(k=>sensorOption(k,k?"NCU "+k:"Planta (sin NCU declarada)")).join(""):'<option value="">Sin medidas de viento</option>';
-  $("wlRun").disabled=!keys.length;
+  WIND_LOGIC_READY=keys.length>0;$("wlRun").disabled=!WIND_LOGIC_READY;
+  // Si las medidas de esta planta vinieron de la base, la simulación puede pedirle todo el
+  // histórico de viento máximo, sin el tope de días del cargador general.
+  const deBase=SENSOR_RECORDS.some(r=>r.plant===plant&&String(r.source||"").startsWith("Supabase · "));
+  $("wlSource").options[0].disabled=!deBase;
+  // La elección del usuario se respeta mientras siga valiendo: sólo se repone al cambiar de planta o de origen.
+  if(plant!==WIND_LOGIC_PLANT||deBase!==WIND_LOGIC_BASE||(!deBase&&$("wlSource").value==="supabase"))$("wlSource").value=deBase?"supabase":"loaded";
+  WIND_LOGIC_BASE=deBase;
   if(plant&&plant!==WIND_LOGIC_PLANT){
     const info=wlPlantInfo(plant);
     if(Number.isFinite(info.lat)&&Number.isFinite(info.lon)){$("wlLat").value=info.lat.toFixed(5);$("wlLon").value=info.lon.toFixed(5);}
@@ -1523,24 +1533,41 @@ function wlPrepare(){
   wlReset(keys.length?"Medidas de viento listas: revisa los parámetros y pulsa «Simular lógica».":
     SENSOR_RECORDS.length?"Las medidas cargadas no traen viento de esta planta.":"Carga primero las medidas de las HSU (Supabase o CSV).");
 }
-function wlRun(){
+async function wlRun(){
+  const plant=$("sensorPlant").value;
   try{
-    const plant=$("sensorPlant").value;if(!plant)throw Error("Carga primero las medidas de una planta.");
+    if(!plant)throw Error("Carga primero las medidas de una planta.");
     const val=id=>$(id).value===""?NaN:Number($(id).value);
-    const a=$("sensorFrom").value?Date.parse($("sensorFrom").value+"T00:00:00Z"):null;
-    const b=$("sensorTo").value?Date.parse($("sensorTo").value+"T00:00:00Z")+86400000:null;
-    if(a!==null&&b!==null&&!(a<b))throw Error("Periodo inválido.");
-    const records=a===null&&b===null?SENSOR_RECORDS:SENSOR_RECORDS.filter(r=>{const t=Date.parse(r.t);return (a===null||t>=a)&&(b===null||t<b);});
+    const from=$("wlFrom").value,to=$("wlTo").value;
+    if(from&&to&&from>to)throw Error("Periodo inválido: «Desde» es posterior a «Hasta».");
+    $("wlRun").disabled=true;
+    let series=null,records=SENSOR_RECORDS;
+    if($("wlSource").value==="supabase"){
+      // Sólo el viento máximo de las HSU, página a página y sin tope de días.
+      const builder=createWindSeriesBuilder();
+      wlStatus("Descargando el viento máximo de las HSU…","work");
+      await fetchSupabaseWindPeak(supClient(),{plant,from,to,onRows:rows=>builder.add(rows),
+        onProgress:(n,dia)=>wlStatus("Descargando el viento máximo de las HSU: "+wlInt(n)+" días de sensor"+(dia?", hasta el "+dia.split("-").reverse().join("/"):"")+"…","work")});
+      series=builder.finish();
+      if(!series.groups.length)throw Error("La base no tiene viento máximo de las HSU de esta planta en ese periodo.");
+      wlStatus("Simulando…","work");
+    }else if(from||to){
+      const a=from?Date.parse(from+"T00:00:00Z"):-Infinity,b=to?Date.parse(to+"T00:00:00Z")+86400000:Infinity;
+      records=SENSOR_RECORDS.filter(r=>{const t=Date.parse(r.t);return t>=a&&t<b;});
+    }
+    if($("sensorPlant").value!==plant)return; // cambió de planta mientras descargaba
     const previous=$("wlGroup").value;
-    WIND_LOGIC=simulateWindLogic(records,{plant,site:{lat:val("wlLat"),lon:val("wlLon"),tz:$("wlTz").value||"UTC"},solarPosition,
+    WIND_LOGIC=simulateWindLogic(records,{plant,series,site:{lat:val("wlLat"),lon:val("wlLon"),tz:$("wlTz").value||"UTC"},solarPosition,
       options:{prestowKmh:val("wlPre"),stowKmh:val("wlStow"),holdMin:val("wlHold"),prestowMinDeg:val("wlPreMin"),stowDeg:val("wlStowDeg"),
         maxDeg:val("wlMax"),nightDeg:val("wlNight"),pitchM:val("wlPitch"),chordM:val("wlChord"),noonRule:$("wlNoon").value,
         duskRule:$("wlDusk").value,speedDegPerMin:$("wlSpeed").value===""?null:Number($("wlSpeed").value)}});
+    WIND_LOGIC.origin=series?(from||to?"histórico de la base, periodo acotado":"todo el histórico de la base"):"medidas cargadas"+(from||to?", periodo acotado":"");
     $("wlGroup").innerHTML=WIND_LOGIC.groups.map(g=>sensorOption(g.key,g.label+" · "+g.sensors.join(", "))).join("");
     if(WIND_LOGIC.groups.some(g=>g.key===previous))$("wlGroup").value=previous;
     $("wlCsv").disabled=!WIND_LOGIC.groups.some(g=>g.activations.length);$("wlReport").disabled=!WIND_LOGIC.groups.length;
     wlRender();
   }catch(e){wlReset("Simulación: "+String(e?.message||e),"bad");}
+  finally{$("wlRun").disabled=!WIND_LOGIC_READY;}
 }
 function wlRenderEvents(){
   const g=wlGroupNow();if(!g)return;
@@ -1573,7 +1600,7 @@ function wlRender(){
   $("wlNotes").innerHTML=sum.notes.map(x=>"<li>"+esc(x)+"</li>").join("");$("wlNotes").hidden=false;
   $("wlListTitle").textContent="Todas las activaciones ("+wlInt(total)+")";
   wlRenderEvents();wlDrawChart();
-  wlStatus(g.label+" · "+g.sensors.join(", ")+" · "+sum.period+" · racha máxima "+wlNum(g.wind.peakKmh)+" km/h"+
+  wlStatus(g.label+" · "+g.sensors.join(", ")+" · "+sum.period+" ("+r.origin+") · racha máxima "+wlNum(g.wind.peakKmh)+" km/h"+
     (r.variable==="wind_peak"?"":" · sin máximo de ráfaga: se usa "+(r.variable==="wind_gust"?"la ráfaga":"la velocidad media"))+".","ok");
 }
 function wlDownloadCsv(){
@@ -1591,9 +1618,8 @@ $("wlReport").onclick=wlDownloadReport;
 $("wlCsv").onclick=wlDownloadCsv;
 $("wlGroup").onchange=()=>{if(WIND_LOGIC)wlRender();};
 $("wlFilter").onchange=wlRenderEvents;
-["wlPre","wlStow","wlHold","wlPreMin","wlStowDeg","wlNight","wlMax","wlPitch","wlChord","wlLat","wlLon","wlNoon","wlDusk","wlSpeed"].forEach(id=>
+["wlPre","wlStow","wlHold","wlPreMin","wlStowDeg","wlNight","wlMax","wlPitch","wlChord","wlLat","wlLon","wlNoon","wlDusk","wlSpeed","wlSource","wlFrom","wlTo"].forEach(id=>
   $(id).addEventListener("change",()=>{if(WIND_LOGIC)wlStatus("Parámetros cambiados: pulsa «Simular lógica» para actualizar los resultados.","work");}));
-["sensorFrom","sensorTo"].forEach(id=>$(id).addEventListener("change",()=>{if(WIND_LOGIC)wlReset("El periodo ha cambiado: vuelve a simular.","work");}));
 
 $("supLogin").onclick=supLogin;
 $("supLogout").onclick=supLogout;
