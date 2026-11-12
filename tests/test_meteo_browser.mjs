@@ -384,6 +384,9 @@ try{
   await page.locator("#yearsBtn").click();
   await page.waitForFunction(()=>document.querySelector("#workStatus")?.textContent.includes("Histórico listo"),{timeout:20000});
   check("visual mensual pinta 12 filas",await page.locator("#vizMonthlyBody tr").count()===12);
+  // Exportar: con histórico, su descarga dice que está lista y se puede pulsar
+  check("descarga del histórico pasa a lista",/dl-estado ok/.test(await page.locator("#dlEstHist").getAttribute("class"))&&!(await page.locator("#dlHist").isDisabled()));
+  check("PVSyst lista con el histórico",!(await page.locator("#dlPvsyst").isDisabled())&&/histórico/.test(await page.locator("#dlEstPvsyst").textContent()));
   check("rosa informa horas con dirección",/horas con dirección/.test(await page.locator("#vizWindRoseNote").innerText()));
 
   async function diversity(id){

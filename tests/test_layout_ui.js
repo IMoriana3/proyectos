@@ -1145,7 +1145,7 @@ const cajaLienzo = async page => {
     await page.inputValue('#prot') === '35' && await page.evaluate(() => EXCL.length === 1));
   // «empezar de cero» borra y recarga limpio
   await page.click('#sesReset');
-  await page.waitForFunction(() => !/restaurada/.test(document.querySelector('#foot').textContent),
+  await page.waitForFunction(() => document.querySelector('#foot') && !/restaurada/.test(document.querySelector('#foot').textContent),
     null, { timeout: 10000 });
   check('«empezar de cero» arranca de verdad de cero',
     await page.inputValue('#prot') === '0' && await page.evaluate(() => EXCL.length === 0));
