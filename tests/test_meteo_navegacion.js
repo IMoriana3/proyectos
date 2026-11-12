@@ -48,9 +48,20 @@ const PESTANAS=['hoy','clima','riesgos','contexto','medidas','exportar','avanzad
   check('toda pieza de la página es de una pestaña o del bloque fijo',
         reparto.every(r=>r.p==='fijo'||PESTANAS.includes(r.p)),reparto.filter(r=>!r.p));
   const de=re=>(reparto.find(r=>re.test(r.h2))||{}).p;
-  check('granizo, nieve y temperaturas extremas viven en Riesgos',
-        de(/Riesgo acumulado de granizo/)==='riesgos'&&de(/Análisis de nieve/)==='riesgos'&&de(/Temperaturas extremas/)==='riesgos',
-        [de(/Riesgo acumulado de granizo/),de(/Análisis de nieve/),de(/Temperaturas extremas/)]);
+  check('granizo, viento sintético, nieve y temperaturas extremas viven en Riesgos',
+        de(/Riesgo de granizo/)==='riesgos'&&de(/Viento sintético/)==='riesgos'&&de(/Análisis de nieve/)==='riesgos'&&de(/Temperaturas extremas/)==='riesgos',
+        [de(/Riesgo de granizo/),de(/Viento sintético/),de(/Análisis de nieve/),de(/Temperaturas extremas/)]);
+  // una tarjeta por riesgo: los mandos, las cifras y la gráfica juntos
+  const unicas=await page.evaluate(()=>{
+    const cards=[...document.querySelectorAll('main .grid>.card')];
+    const de=re=>cards.filter(c=>re.test((c.querySelector('h2')||{}).textContent||''));
+    const g=de(/granizo/i),v=de(/Viento sintético/i);
+    return {granizo:g.length,viento:v.length,
+      gJunto:g.length===1&&!!g[0].querySelector('#hailBtn')&&!!g[0].querySelector('#vizHailCurve')&&!!g[0].querySelector('#hailTier'),
+      vJunto:v.length===1&&!!v[0].querySelector('#windSynthBtn')&&!!v[0].querySelector('#vizWindSynth')&&!!v[0].querySelector('#windP99')};
+  });
+  check('una sola tarjeta de granizo, con su botón, sus cifras y su curva',unicas.granizo===1&&unicas.gJunto,unicas);
+  check('una sola tarjeta de viento sintético, con su botón, sus cifras y su gráfica',unicas.viento===1&&unicas.vJunto,unicas);
   check('la adaptación de sitio y el contrato viven en Avanzado',
         de(/Adaptación de sitio/)==='avanzado'&&de(/Consumidores del mismo contrato/)==='avanzado');
   check('el emplazamiento es fijo',de(/Proyecto \/ emplazamiento/)==='fijo'&&de(/Consultar y preparar datos/)==='fijo');
