@@ -7295,7 +7295,12 @@ function liveInit(){
      sí se reconstruye es todo lo demás —steppers, ángulos, cadenas—, que es
      para lo que se llama a esta función. */
   var corria=!!(LIVE&&LIVE.run);
-  LIVE={t:0, v:+$('lV').value/3.6, dir:+$('lD').value, run:corria, steppers:{}, ang:{}, modos:{}, orden:{},
+  /* La muestra inicial de viento es CONOCIDA al reconstruir el laboratorio.
+     Sembrar el cronómetro con ella evita descartar un ascenso inmediato:
+     en el primer liveTick tras liveInit, simPrev es null y dt=0, así que
+     cronoTick todavía no habrá podido tomar una muestra. */
+  var vientoInicial=+$('lV').value/3.6;
+  LIVE={t:0, v:vientoInicial, dir:+$('lD').value, run:corria, steppers:{}, ang:{}, modos:{}, orden:{},
         ordenEje:{}, minF:+$('lH').value, simPrev:null,
         /* UNA cadena de MEDIDA para toda la planta —el anemómetro es uno— y
            UNA DE ORDEN POR ESTRATEGIA, porque cada TCU recibe la suya. Meter
@@ -7307,7 +7312,7 @@ function liveInit(){
            decisión de abanderar, y no para calcular nada. Ver `cronoTick`. */
         cadMarca:{}, marcaEje:{},
         hailEtaF:+$('lHailEta').value, hailEver:false, hailClearMin:null, hailPlans:{},
-        crono:cronoNuevo()};
+        crono:cronoNuevo(vientoInicial)};
   vivos().forEach(function(S){
     // el límite de mediodía es de las B (abanderan hacia el SOL); en las A el
     // lado lo manda el viento, así que su stepper va con la regla apagada.
@@ -7374,8 +7379,14 @@ function liveInit(){
    abanderar. Cuando esa marca sale por el otro lado, lo que la TCU ejecuta ya
    viene de la decisión. Es exacto en los dos regímenes, vale igual para el
    abanderamiento pleno y el parcial, y no lo puede engañar el sol. */
-function cronoNuevo(){ return {fase:'espera', t0:null, tVe:null, por:{}, prevV:null,
-                               ultima:null}; }
+function cronoNuevo(vInicio){
+  /* Sólo se arma un flanco con un dato real. La referencia es la velocidad
+     ACTUAL del deslizador al crear LIVE, no una espera a un fotograma futuro.
+     Sin dato numérico se mantiene la condición anterior (null), no se inventa
+     una calma que podría producir un flanco falso. */
+  return {fase:'espera', t0:null, tVe:null, por:{},
+          prevV:Number.isFinite(vInicio)?vInicio:null, ultima:null};
+}
 
 function cronoTick(simNow,vTrue,vVisto,T1){
   var C=LIVE.crono; if(!C)return;
