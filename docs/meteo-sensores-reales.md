@@ -168,8 +168,8 @@ Cortas a propósito, para que se lean de un vistazo:
 Con más de una NCU, «Grupo de sensores» ofrece cada NCU y, además, **«Planta entera
 (todas las NCU)»**: en cada minuto manda la racha más alta de cualquier HSU. Sirve si la
 alarma de viento es de planta y no de cada NCU; qué caso es el real depende del control.
-- **Informe** de una página, imprimible a PDF y con aspecto de nota técnica escrita a
-  mano: membrete y fecha, ficha (planta, sensores, periodo), dos frases de resumen,
+- **Informe** de una página, imprimible a PDF y con aspecto de nota escrita a mano: sin
+  membrete, empieza por el título; ficha (planta, sensores, periodo), dos frases de resumen,
   «Tabla 1» con el resumen y el reparto por racha máxima al pie, «Figura 1» con las
   activaciones por semana, «Tabla 2» con las reglas como fórmulas (condición, posición
   y grados a mover, con los valores simulados) y las observaciones. No lleva la lista

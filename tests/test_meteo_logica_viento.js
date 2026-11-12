@@ -229,7 +229,8 @@ const moduleOf = async name =>
     // se lee como una nota escrita: ficha, dos frases de resumen y fecha con todas sus letras
     assert.ok(h.includes("<th>Planta</th><td>P &lt;b&gt;&amp;</td>")&&h.includes("<th>Sensores</th><td>NCU 1: HSU 230</td>")&&h.includes("<th>Periodo</th><td>del 10/06/2026 al 12/06/2026, 3 días con dato</td>"));
     assert.ok(h.includes("Con el viento registrado por las HSU entre el 10/06/2026 y el 12/06/2026, el pre-stow salta 3 veces y el stow, una vez. En 1 de los pre-stow y en 1 de los stow el seguidor ya está en posición y no hay que moverlo."));
-    assert.ok(h.includes("Nota técnica, 12 de noviembre de 2026")&&!/text-transform|letter-spacing/.test(h)&&!h.includes(" · "));
+    assert.ok(h.includes("<span>Factiun, 12 de noviembre de 2026</span>")&&!/text-transform|letter-spacing/.test(h)&&!h.includes(" · "));
+    assert.match(h,/<body><h1>Lógica de viento: simulación de pre-stow y stow en /); // sin membrete: empieza por el título
     for(const f of ["v &gt; 40 km/h","|θ| ≥ 30°","Δ = max(0, 30° − |θ|)","|θ| = 55°, el lado más cercano","Δ = 55° − |θ|","t − tᵤ &gt; 30 min","Δ = 50°, una vez por noche"])assert.ok(h.includes(f),f);
     assert.ok(!h.includes("Anexo")&&!h.includes("Pre-stow 1</td>")&&!h.includes("Cómo se ha calculado")); // la lista va en el CSV
     assert.ok(h.includes("posición teórica del seguidor, no la de las TCU")&&h.includes("La lista completa de activaciones va en el fichero CSV."));

@@ -167,7 +167,7 @@ function stub(){
  check('informe: una página con el resumen, la gráfica y las reglas; la lista no va',
    informe.suggestedFilename()==='informe_logica_viento_El_Burgo_I.html'&&/^<!doctype html>/.test(html)&&
    html.includes('<td>Pre-stow (&gt; 40 km/h)</td><td>5</td><td>2</td><td>3</td>')&&(html.match(/<svg /g)||[]).length===1&&
-   html.includes('<b>Tabla 2.</b> Reglas simuladas.')&&html.includes('Nota técnica, ')&&!html.includes('Anexo'),[informe.suggestedFilename(),html.length]);
+   html.includes('<b>Tabla 2.</b> Reglas simuladas.')&&html.includes('<b>Tabla 1.</b>')&&!html.includes('Anexo'),[informe.suggestedFilename(),html.length]);
 
  /* Con dos NCU en la base hay un tercer grupo: la planta entera, donde cuenta la racha de cualquier HSU. */
  const grupos=await page.evaluate(()=>[...document.getElementById('wlGroup').options].map(o=>o.value+'='+o.textContent));
