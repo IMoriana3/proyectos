@@ -53,7 +53,11 @@ Estas no equivalen a 3.980.278 valores minutales.
   Son las de **Factiun Cartera** (usuario del proyecto, correo y contraseña), no la
   cuenta de GitHub con la que se administra supabase.com: los rótulos y el mensaje de
   contraseña errónea lo dicen así desde el 12/11/2026.
-- Planta, fechas, selección de magnitudes y tolerancia de alineación.
+- Planta, fechas, selección de magnitudes y tolerancia de alineación. Con la sesión
+  iniciada, **«Planta» es un desplegable con las plantas que tienen medidas en la base**:
+  si el proyecto abierto en el Panel no tiene, se dice y se pide elegir una (no se carga
+  otra a escondidas); al elegir se indican las fechas con medidas. El estado de la carga
+  sale bajo «Cargar y comparar»; el de la sesión, en su tarjeta.
 - Lectura paginada con rango por defecto de los últimos siete días disponibles.
 - Datos multi-archivo, deduplicación y exclusión de placeholders.
 - Estadísticas por equipo: mín, máx, media, P95, lagunas, muestras y series.

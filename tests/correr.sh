@@ -1033,11 +1033,13 @@ declare -A PISO=(
   # Análisis de medidas reales: 14 verificaciones reproducibles sin credenciales.
   # El piso cubre RLS simulada, deduplicación diaria, escala WFU raw,
   # comparación de anemómetros, unidades y lagunas de datos.
-  [test_meteo_sensores_reales.js]=14
+  [test_meteo_sensores_reales.js]=16
   # Pantalla real en Chromium con autenticación y datos SUPABASE de prueba.
   # Controles: acceso (y que diga de qué cuenta habla: la de Factiun Cartera),
-  # HSU, WFU raw, coherencia, privacidad y cierre.
-  [test_meteo_sensores_browser.js]=16
+  # «Planta» como desplegable de las plantas con medidas (proyecto sin medidas,
+  # fechas disponibles, sigue al selector), HSU, WFU raw, coherencia,
+  # privacidad y cierre.
+  [test_meteo_sensores_browser.js]=20
   # LÓGICA DE VIENTO (pre-stow / stow) simulada sobre las HSU, con posición
   # TEÓRICA del seguidor: motor puro `lib/meteo-wind-logic.js`. 36 medidas,
   # sin red ni datos de planta: rearme, umbral estricto, máximo por NCU, día
