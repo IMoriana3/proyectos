@@ -1035,8 +1035,9 @@ declare -A PISO=(
   # comparación de anemómetros, unidades y lagunas de datos.
   [test_meteo_sensores_reales.js]=14
   # Pantalla real en Chromium con autenticación y datos SUPABASE de prueba.
-  # 12 controles: acceso, HSU, WFU raw, coherencia, privacidad y cierre.
-  [test_meteo_sensores_browser.js]=15
+  # Controles: acceso (y que diga de qué cuenta habla: la de Factiun Cartera),
+  # HSU, WFU raw, coherencia, privacidad y cierre.
+  [test_meteo_sensores_browser.js]=16
   # LÓGICA DE VIENTO (pre-stow / stow) simulada sobre las HSU, con posición
   # TEÓRICA del seguidor: motor puro `lib/meteo-wind-logic.js`. 36 medidas,
   # sin red ni datos de planta: rearme, umbral estricto, máximo por NCU, día

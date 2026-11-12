@@ -50,6 +50,9 @@ Estas no equivalen a 3.980.278 valores minutales.
 ## Funcionalidades entregadas en rama
 
 - Iniciar sesión con credenciales Supabase existentes; sin contraseñas en código.
+  Son las de **Factiun Cartera** (usuario del proyecto, correo y contraseña), no la
+  cuenta de GitHub con la que se administra supabase.com: los rótulos y el mensaje de
+  contraseña errónea lo dicen así desde el 12/11/2026.
 - Planta, fechas, selección de magnitudes y tolerancia de alineación.
 - Lectura paginada con rango por defecto de los últimos siete días disponibles.
 - Datos multi-archivo, deduplicación y exclusión de placeholders.

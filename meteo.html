@@ -127,11 +127,11 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
   <div class="card span8">
     <h2>A · Base de Factiun · iniciar sesión</h2>
     <div class="row">
-      <label><span class="k">Correo de Factiun</span><input id="supEmail" type="email" autocomplete="username" placeholder="Correo con acceso a Supabase"></label>
-      <label><span class="k">Contraseña</span><input id="supPassword" type="password" autocomplete="current-password" placeholder="Contraseña Supabase"></label>
+      <label><span class="k">Correo de Factiun Cartera</span><input id="supEmail" type="email" autocomplete="username" placeholder="tu@factiun.com"></label>
+      <label><span class="k">Contraseña de Factiun Cartera</span><input id="supPassword" type="password" autocomplete="current-password" placeholder="La misma que en Factiun Cartera"></label>
     </div>
     <div class="actions" style="margin-top:8px"><button id="supLogin">Iniciar sesión</button><button id="supLogout" class="secondary">Cerrar sesión</button></div>
-    <div class="statusline" id="supStatus">Las lecturas son privadas. Es necesario iniciar sesión en Supabase; no se usan claves de servidor.</div>
+    <div class="statusline" id="supStatus">Las lecturas son privadas. Entra con el mismo correo y contraseña que en Factiun Cartera; no es tu cuenta de GitHub ni la de supabase.com.</div>
   </div>
   <div class="card span8">
     <h2>A · Base de Factiun · cargar HSU / WFU</h2>
@@ -1460,7 +1460,7 @@ async function supSessionRestore(){
 async function supLogin(){
   try{
     const email=$("supEmail").value.trim(),password=$("supPassword").value;
-    if(!email||!password)throw Error("Escribe el correo y contraseña con acceso a Supabase.");
+    if(!email||!password)throw Error("Escribe el correo y la contraseña con los que entras en Factiun Cartera.");
     supStatus("Autenticando…","work");
     const {error}=await supClient().auth.signInWithPassword({email,password});
     $("supPassword").value="";
@@ -1468,7 +1468,12 @@ async function supLogin(){
     supStatus("Sesión iniciada.","ok");
     await supLoad();
     await loadNow();
-  }catch(e){$("supPassword").value="";supStatus("Acceso: "+String(e?.message||e),"bad")}
+  }catch(e){
+    $("supPassword").value="";
+    const m=String(e?.message||e);
+    // La base responde en inglés y sin decir de qué cuenta habla: se aclara cuál es.
+    supStatus("Acceso: "+(/invalid login credentials/i.test(m)?"correo o contraseña incorrectos. Son los de Factiun Cartera, no los de GitHub ni los de supabase.com ("+m+").":m),"bad");
+  }
 }
 async function supLoad(){
   try{
