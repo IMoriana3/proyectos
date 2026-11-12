@@ -364,6 +364,63 @@ dentro de un paso y salía como un escalón instantáneo — medido, la misma ra
 cuarto-horario y 10 min a paso minutal. Un año a 1 min son 525.541 pasos y las cuatro estrategias
 más la base se resuelven en unos **4 segundos** en el navegador.
 
+## La exposición · 11/11/2026
+
+Todo lo de arriba mide lo que el abanderamiento **cuesta**. La exposición mide lo que deja **sin
+cubrir**: los minutos en que el viento que **sopla** está por encima del umbral y el eje todavía no
+está en la posición que ese umbral pide. Es la pregunta de quien tiene que aprobar el control, y sale
+en su propia tabla, debajo de la comparativa.
+
+**Cómo se define** (`LOC.exposicion`), sin la máquina de estados y a propósito:
+
+- manda el viento que sopla, no el que la máquina ve. Una racha que la media del anemómetro se come
+  sigue empujando al seguidor;
+- la posición pedida sale de la regla de la estrategia, sin memoria: por encima de T2 —o de T1 en las
+  de un umbral— el límite ±55° del lado que toca; entre T1 y T2, en las de dos umbrales, dentro del
+  sector parcial de ese lado. El lado es el de la máquina: el del viento en las A y el del sol en las
+  B, con el límite de mediodía;
+- y «en posición» es «a menos de la banda muerta del lazo» (1°): el lazo no mueve el eje por una
+  diferencia menor.
+
+**Dos clases, que no son el mismo problema:**
+
+| clase | qué pasa | de qué depende |
+|---|---|---|
+| **en tránsito** | la máquina ya ha ordenado y el eje va de camino | de la velocidad de giro, 0,17 °/s |
+| **sin orden** | sopla por encima del umbral y la máquina sigue en seguimiento: no se ha enterado | de la cadena de latencia; con ella apagada vale 0 |
+
+La tabla da además cuántos de esos minutos fueron por encima de T2, cuántos abanderamientos tuvieron
+algún paso expuesto, el tramo seguido más largo y **el viento máximo que sopló estando expuesto, con
+el ángulo en que pilló al eje y el que debía tener** — que es el par de números que sí puede mirar
+Estructuras.
+
+**No se ve con cualquier paso.** Con el paso por defecto de 15 min el eje recorre de plano a ±55° en
+menos de un paso (son 5,4 min), llega dentro del mismo paso en que el viento cruza y la cuenta sale 0
+por construcción. La ficha lo **dice** en vez de pintar una fila de ceros: hay que simular a 1 min.
+
+**Lo primero que enseña, y no se veía.** En el banco de pruebas —un temporal de cuatro horas a
+79 km/h que pasa por el mediodía solar— las estrategias **B** (cara al sol) cambian de lado cuando el
+sol cruza el meridiano: el eje va de +55° a −55°, **10 minutos pasando por plano con el temporal
+encima**. Es una propiedad del canon que esta ficha porta, que elige el lado en cada paso. El módulo
+compartido `sim/viento.js` —el que usan el simulador de batería, el de planta y `terreno.html`— ya
+**fija el lado al abanderar**, y lo anota como regla del equipo real. O sea que esta ficha y aquel
+módulo no simulan lo mismo, y la exposición es lo que lo deja a la vista.
+
+**Lo que NO es.**
+
+- No es una comprobación de cargas: aquí no hay presiones ni momentos, y un minuto expuesto a
+  41 km/h cuenta igual que uno a 90.
+- El viento del año es el de la fuente meteo. Si es horario interpolado, las rachas reales no están,
+  salvo las que se metan en el laboratorio.
+- La cadena de latencia son cuatro números declarados, no medidos.
+- Solo sale en la corrida del informe con el modelo local. El modo en vivo, el episodio y el motor
+  remoto no la calculan; el pasivo no entra, porque se suelta solo.
+
+**El banco.** `tests/test_viento_exposicion.js`, 44 comprobaciones: la aritmética contra series
+hechas a mano, la corrida sin latencia (todo es tránsito), la corrida con una media de una hora que
+se come una punta entera (aparecen los minutos sin orden), que con la función anulada el resto del
+informe salga idéntico, y la pantalla. Siete mutantes vistos en rojo.
+
 ## Analizar un emplazamiento
 
 Además de comparar estrategias, la ficha contesta «cómo es este sitio de viento». La tarjeta

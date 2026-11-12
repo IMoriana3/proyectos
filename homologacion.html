@@ -170,6 +170,11 @@ h2{font-family:var(--display); font-size:21px; font-weight:600; margin:0;}
 .req .num{font-family:var(--mono); font-size:13px; color:var(--ink-3); padding-top:1px;}
 .req .rq{font-weight:500;}
 .req .hoy{color:var(--ink-2); font-size:13.5px; margin-top:4px;}
+/* lo medido en planta: se distingue por la etiqueta, no por el color */
+.req .med{color:var(--ink-2); font-size:13.5px; margin-top:6px; padding-left:9px; border-left:2px solid var(--ink-3);}
+.tag-medido{display:inline-block; font:600 10.5px var(--mono); letter-spacing:.03em; text-transform:uppercase; color:var(--ink);
+  border:1px solid var(--ink-3); border-radius:5px; padding:0 5px; margin-right:3px; white-space:nowrap;}
+@media (max-width:560px){ .tag-medido{white-space:normal;} }
 .req .tl{font-size:13px;}
 .req .tl a, .req .tl span.t{display:block; margin-bottom:3px;}
 .req .tl span.t{color:var(--ink-2);}
@@ -307,7 +312,7 @@ footer code{font-family:var(--mono); font-size:12.5px; background:var(--chip-bg)
    Para mantenerlo al día se edita SOLO el array `REQS` (y `REVISION`).
    La versión la lee el Panel de aquí: no se copia en la tarjeta.
    ===================================================================== */
-const VER='v0.1.0';
+const VER='v0.1.2';
 const REVISION='2026-11-11';
 
 /* Los cuatro niveles de evidencia, de más a menos. El orden es el de la barra
@@ -330,6 +335,17 @@ const FAM = [
   { k:'pem',          es:'Puesta en marcha y fiabilidad', en:'Commissioning and reliability' }
 ];
 /* Quién puede cerrar cada requisito. */
+/* LO MEDIDO EN PLANTA VA ETIQUETADO, y la etiqueta se escribe una sola vez.
+   Un requisito que cite una cifra medida lleva `med` (la campaña) y `mes`/`men`
+   (lo medido). Así no se confunde con lo simulado ni con lo declarado, y quien
+   lee sabe en qué planta, con qué fuente y en qué fechas. Las cifras son
+   agregados: los logs son privados y no están en este repositorio. */
+const MEDIDAS = {
+  burgo2026: { planta:'El Burgo I', es:'logs de NCU', en:'NCU logs', periodo:'26/05–04/10/2026',
+               nes:'377 alarmas de viento en 18 días, 17.075 activaciones de posición segura en 211 TCU',
+               nen:'377 wind alarms on 18 days, 17,075 safe-position activations on 211 TCUs',
+               prog:'gemelo-digital · tools/logs_ncu/abanderamientos_reales.py' }
+};
 const WHO = [
   { k:'codigo',       es:'Código',                       en:'Code' },
   { k:'campo',        es:'Medida o ensayo',              en:'Field or bench test' },
@@ -368,22 +384,31 @@ const REQS = [
    en:'Wind trigger logic identical to the firmware: levels, timers, gusts and sectors',
    hes:'El simulador corre la estrategia canónica (40/60 km/h, histéresis de 30 min). Los parámetros reales de la HSU no se cargan.',
    hen:'The simulator runs the canonical strategy (40/60 km/h, 30 min hysteresis). The real weather-station parameters are not loaded.',
+   med:'burgo2026',
+   mes:'La bandera se retiene 10 min tras cada alarma, no 30. El viento máximo del minuto anterior a la orden es de 16,0 m/s de mediana (57 km/h). En el 95,4 % de los casos el eje abandera al lado en que ya está (9.432 de 9.882).',
+   men:'Stow is held for 10 min after each alarm, not 30. Peak wind in the minute before the order has a median of 16.0 m/s (57 km/h). In 95.4% of cases the axis stows to the side it is already on (9,432 of 9,882).',
    ces:'Simular con los parámetros leídos de la HSU de cada planta y carear la traza contra un equipo real.',
    cen:'Simulate with the parameters read from each plant’s weather station and cross-check the trace against real hardware.' },
- { n:2, f:'viento', ev:'simulado', w:'campo', t:[['toolbox','SAT'],['viento']],
+ { n:2, f:'viento', ev:'medido', w:'campo', t:[['toolbox','SAT'],['viento']],
    es:'Tiempo a bandera medido: peor caso y dispersión',
    en:'Measured time to stow: worst case and spread',
    hes:'11,1 min calculados (sondeo 15 s, arranque 5 s, 110° a 0,17 °/s). 15 min declarados.',
    hen:'11.1 min calculated (15 s polling, 5 s motor start, 110° at 0.17 °/s). 15 min declared.',
-   ces:'Cronometrar con la Toolbox desde el extremo contrario, en varios seguidores y temperaturas.',
-   cen:'Time it with the Toolbox from the opposite end stop, on several trackers and temperatures.' },
- { n:3, f:'viento', ev:'declarado', w:'campo', t:[['viento'],['trafico']],
+   med:'burgo2026',
+   mes:'De la alarma a la bandera: 196 s de mediana, 426 s en el percentil 95 y 656 s en el 99 (9.112 maniobras de más de 20°). Cruzando el plano, 629 s de mediana. Llegaron a ±1° del objetivo 9.165 de 9.166.',
+   men:'From alarm to stow: median 196 s, 95th percentile 426 s, 99th 656 s (9,112 manoeuvres over 20°). Crossing flat, median 629 s. 9,165 of 9,166 reached ±1° of target.',
+   ces:'Repetir con viento por encima de 21 m/s, en frío y en otra planta: la medida es de un verano.',
+   cen:'Repeat with wind above 21 m/s, in the cold and at another plant: this is one summer.' },
+ { n:3, f:'viento', ev:'medido', w:'campo', t:[['viento'],['trafico']],
    es:'Latencia medida de anemómetro a motor',
    en:'Measured latency from anemometer to motor',
    hes:'La cadena existe en el simulador, con valores declarados por quien simula.',
    hen:'The chain exists in the simulator, with values declared by whoever runs it.',
-   ces:'Medir cada eslabón en un banco con TCU, NCU y HSU reales.',
-   cen:'Measure each link on a bench with a real TCU, NCU and weather station.' },
+   med:'burgo2026',
+   mes:'De la alarma a la petición de la NCU: 13 s de mediana, 29 s en el percentil 95. A los 60 s tiene la orden el 97,2 % de las TCU y a los 120 s el 99,6 % (18.365 pares de TCU y alarma). El 1,8 % de las peticiones falla al primer intento y entra al reintento.',
+   men:'From alarm to NCU request: median 13 s, 95th percentile 29 s. After 60 s 97.2% of TCUs have the order, after 120 s 99.6% (18,365 TCU-alarm pairs). 1.8% of requests fail first time and get through on retry.',
+   ces:'Medir el tramo de anemómetro a alarma, que el registro de eventos no recoge, y afinar por debajo del muestreo del log (12 a 21 s).',
+   cen:'Measure the anemometer-to-alarm link, which the event log does not record, and resolve below the log sampling (12 to 21 s).' },
  { n:4, f:'viento', ev:'simulado', w:'codigo', t:[['viento']],
    es:'Coste anual del stow en el emplazamiento, con varios años',
    en:'Annual energy cost of stow at the site, over several years',
@@ -391,13 +416,16 @@ const REQS = [
    hen:'Cross-check with the canonical engine: POA within −0.23% and identical manoeuvres, with deterministic wind.',
    ces:'Repetir el careo con meteo real y contrastar el recuento con el histórico del SCADA.',
    cen:'Repeat the cross-check with real weather and compare the count against SCADA history.' },
- { n:5, f:'viento', ev:'falta', w:'codigo', t:[],
+ { n:5, f:'viento', ev:'simulado', w:'campo', t:[['viento']],
    es:'Exposición: tiempo con viento sobre umbral sin estar en bandera',
    en:'Exposure: time with wind above threshold while not yet stowed',
-   hes:'No se calcula. Las salidas miden la energía perdida, no el riesgo.',
-   hen:'Not calculated. Outputs measure lost energy, not risk.',
-   ces:'Calcular los minutos de exposición por estrategia y por evento.',
-   cen:'Compute exposure minutes per strategy and per event.' },
+   hes:'Se calcula por estrategia: minutos expuestos, en tránsito y sin orden, peor tramo y viento máximo expuesto. Solo se ve simulando a 1 min.',
+   hen:'Computed per strategy: exposed minutes, in transit and with no order, worst stretch and peak wind while exposed. Only visible when simulating at 1 min.',
+   med:'burgo2026',
+   mes:'Viento máximo con el eje en tránsito: 14,9 m/s de mediana, 18,0 en el percentil 95 y 20,9 de máximo (75 km/h). 450 de 9.882 maniobras cruzaron el plano con la alarma activa.',
+   men:'Peak wind with the axis in transit: median 14.9 m/s, 95th percentile 18.0, maximum 20.9 (75 km/h). 450 of 9,882 manoeuvres crossed flat with the alarm active.',
+   ces:'Repetirla con viento medido de las HSU y con la cadena de latencia medida.',
+   cen:'Repeat it with measured weather-station wind and a measured latency chain.' },
  { n:6, f:'viento', ev:'falta', w:'estructuras', t:[],
    es:'Umbrales y ángulo de defensa ligados al viento de proyecto y al túnel de viento',
    en:'Thresholds and stow angle tied to design wind and wind-tunnel results',
@@ -492,13 +520,16 @@ const REQS = [
    hen:'Full year simulated; the motor curve comes from 13 points of a single TCU.',
    ces:'Usar el ensayo de motor crudo y añadir fin de vida y temperatura mínima.',
    cen:'Use the raw motor test and add end-of-life and minimum-temperature cases.' },
- { n:19, f:'alimentacion', ev:'falta', w:'codigo', t:[],
+ { n:19, f:'alimentacion', ev:'simulado', w:'campo', t:[['bateria']],
    es:'Probabilidad de no poder abanderar por SOC bajo cuando hay viento',
    en:'Probability of being unable to stow due to low SOC during wind',
-   hes:'No se cruza la batería con el viento.',
-   hen:'Battery and wind are not analysed together.',
-   ces:'Cruzar SOC y viento del mismo año en el simulador de batería.',
-   cen:'Cross SOC and wind for the same year in the battery simulator.' },
+   hes:'El simulador de batería cruza las horas de viento con la TCU sin energía, por configuración, por sistema de control y año a año (gemelo-digital#120, sin fusionar).',
+   hen:'The battery simulator crosses wind hours with a TCU out of energy, per configuration, per control system and year by year (gemelo-digital#120, not merged).',
+   med:'burgo2026',
+   mes:'Ninguna TCU empezó a abanderar con menos del 32 % de SOC; la mediana es del 85 %. La maniobra habitual gasta 1,52 Wh de mediana y la que cruza el plano 7,95 Wh (10,1 Wh en el percentil 95), frente a los 9,2 Wh de reserva del modelo.',
+   men:'No TCU started stowing below 32% SOC; the median is 85%. The usual manoeuvre uses a median of 1.52 Wh and one crossing flat 7.95 Wh (10.1 Wh at the 95th percentile), against the model’s 9.2 Wh reserve.',
+   ces:'El caso con la batería agotada no ha ocurrido en planta: repetir con racha en vez de viento medio y con el consumo medido por sentido.',
+   cen:'The flat-battery case has not occurred on site: repeat with gusts instead of mean wind and with the measured per-direction consumption.' },
 
  { n:20, f:'comms', ev:'simulado', w:'campo', t:[['red'],['rf'],['zigbee']],
    es:'Diseño de red y cobertura por planta',
@@ -800,6 +831,13 @@ function pintaFiltros(){
     `<span class="count" id="count"></span>`;
   $('q').addEventListener('input',e=>{ F.q=e.target.value.trim(); pintaLista(); });
 }
+/* La etiqueta de una campaña de medida: nivel · planta · fuente · periodo. */
+function etiquetaMedida(k){ const m=MEDIDAS[k]; if(!m) return '';
+  return (LANG==='es'?'Medido':'Measured')+' · '+m.planta+' · '+(LANG==='es'?m.es:m.en)+' · '+m.periodo; }
+/* El ÚNICO camino por el que una cifra medida en planta llega a la ficha. */
+function medidoHTML(r){ if(!r.med) return '';
+  const m=MEDIDAS[r.med];
+  return `<div class="med"><span class="tag-medido" title="${esc((LANG==='es'?m.nes:m.nen)+' · '+m.prog)}">${esc(etiquetaMedida(r.med))}</span> ${esc(LANG==='es'?r.mes:r.men)}</div>`; }
 function pintaLista(){
   const t=T[LANG], vis=REQS.filter(pasa);
   const c=$('count'); if(c) c.innerHTML=t.shown(vis.length, REQS.length)+
@@ -814,7 +852,7 @@ function pintaLista(){
           : `<span class="t">${t.noTool}</span>`;
         return `<div class="req" id="r-${r.n}" data-ev="${r.ev}">`+
           `<div class="num">${String(r.n).padStart(2,'0')}</div>`+
-          `<div><div class="rq">${esc(L(r))}</div><div class="hoy">${esc(LANG==='es'?r.hes:r.hen)}</div></div>`+
+          `<div><div class="rq">${esc(L(r))}</div><div class="hoy">${esc(LANG==='es'?r.hes:r.hen)}</div>${medidoHTML(r)}</div>`+
           `<div class="tl"><div class="hd">${t.hTool}</div>${tools}</div>`+
           `<div class="ev"><div class="hd">${t.hEv}</div><span class="pill">${dot(e)}${esc(L(e))}</span></div>`+
           `<div class="cl"><div class="hd">${t.hClose}</div>${esc(LANG==='es'?r.ces:r.cen)}<br><span class="who">${esc(L(w))}</span></div>`+

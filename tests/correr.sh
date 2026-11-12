@@ -68,7 +68,7 @@ declare -A PISO=(
   # abajo sean la MISMA cuenta, sacada dos veces: del dato y de lo pintado.
   # Cuatro mutantes vistos en rojo —una cifra que cuenta de menos, un filtro
   # que no filtra, la barra a partes iguales y los filtros impresos—.
-  [test_homologacion.js]=37
+  [test_homologacion.js]=43
   # La cartera del usuario NO la probaba nadie: de los 33 arneses, el único que
   # nombraba `cartera-tabla.html` era `test_pwa.js`, y lo que hacía con ella era
   # listarla en la caché. MEDIDO: un mutante que invierte la migración de fases
@@ -753,6 +753,13 @@ declare -A PISO=(
   # declarados. Un literal repetido no es un oráculo más fuerte, es tres sitios
   # donde envejecer.
   [test_viento_latencia.js]=134
+  # La exposición: 44 MEDIDAS el 2026-11-11. Minutos con el viento que SOPLA
+  # sobre el umbral y el eje fuera de la posición que ese umbral pide. Vigila
+  # que mire el viento que sopla y no el que la máquina ve, que un cero que no
+  # se puede ver (paso de 15 min) no se pinte como un cero, y que lea sin
+  # decidir: con ella anulada el resto del informe sale idéntico. Siete
+  # mutantes vistos en rojo.
+  [test_viento_exposicion.js]=44
   [test_viento_meteo.js]=36
   [test_viento_multi.js]=28
   # LA ORQUESTACIÓN. Los veinte arneses de viento prueban PIEZAS —`theta`,

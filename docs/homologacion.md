@@ -1,6 +1,6 @@
 # Expediente de homologación
 
-*`homologacion.html` — v0.1.0, 2026-11-11. Ficha del Panel; no calcula nada: cuenta.*
+*`homologacion.html` — v0.1.2, 2026-11-11. Ficha del Panel; no calcula nada: cuenta.*
 
 ## Qué contesta
 
@@ -29,7 +29,8 @@ La escala es de **evidencia**, no de calidad de la herramienta. Un simulador
 excelente deja su requisito en «Simulado»: lo que lo sube a «Medido» es un dato del
 producto instalado.
 
-A 11/11/2026: **1 medido, 13 simulados, 10 declarados y 12 sin evidencia**.
+A 11/11/2026: **1 medido, 14 simulados, 10 declarados y 11 sin evidencia**. El requisito 5 —la
+exposición— pasó de «Falta» a «Simulado» con `sim-viento.html` v1.27.
 
 ## Los tres hallazgos
 
@@ -76,6 +77,29 @@ Y los requisitos salen de lo que hoy piden las normas de trackers (IEC 62817 y U
 ciberseguridad (RED, CRA, NIS2). Las fuentes están enlazadas al pie de la ficha. La
 aplicabilidad de RED y CRA al producto la confirma quien lleve cumplimiento.
 
+## Lo medido en planta va etiquetado · v0.1.2
+
+Desde la v0.1.2 hay requisitos con **cifras medidas en una planta**. Salen de los logs
+diarios de las NCU de El Burgo I —377 alarmas de viento en 18 días, 17.075 activaciones de
+posición segura en 211 TCU— contados por `tools/logs_ncu/abanderamientos_reales.py`, en el
+repositorio `gemelo-digital`. Los logs son privados y no están aquí: entran agregados, con
+su `n`.
+
+La regla es que una cifra de planta no se confunda con una simulada ni con una declarada:
+
+- Entra por un solo sitio. El requisito lleva `med` (la campaña, en `MEDIDAS`) y `mes`/`men`
+  (lo medido). Se pinta en una línea aparte, que **empieza por la etiqueta**:
+  `Medido · El Burgo I · logs de NCU · 26/05–04/10/2026`.
+- La etiqueta se compone en `etiquetaMedida`, de la campaña. No se teclea en ningún texto:
+  el banco lo prohíbe, porque una etiqueta escrita a mano es la que se queda vieja.
+- El nivel del requisito no sube solo por tener una línea medida. Los requisitos 2 y 3 pasan
+  a «Medido» porque lo que piden es justo lo que se midió. El 1, el 5 y el 19 llevan dato de
+  planta y siguen en su nivel: la lógica del firmware no está cargada en el simulador, la
+  exposición sale de simulación y el caso con la batería agotada no ha ocurrido en planta.
+
+Lo que esa medida **no** es: una garantía ni un dato de otra planta. Es un verano, con el
+control de Sunner y sin viento por encima de 21 m/s.
+
 ## Cómo se actualiza
 
 Se edita **solo** el array `REQS` de `homologacion.html` y la fecha `REVISION`:
@@ -95,7 +119,7 @@ La versión la declara la ficha (`const VER`) y el Panel la lee de ahí.
 
 ## El banco
 
-`tests/test_homologacion.js`, 37 comprobaciones. Saca los recuentos **dos veces**
+`tests/test_homologacion.js`, 43 comprobaciones. Saca los recuentos **dos veces**
 —del dato, evaluado fuera del navegador, y de lo pintado— y exige que coincidan; y
 comprueba filtros, buscador, idioma, impresión y móvil. Se probó con cuatro mutantes
 (una cifra que cuenta de menos, un filtro que no filtra, una barra a partes iguales y
