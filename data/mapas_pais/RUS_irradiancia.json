@@ -1,0 +1,36 @@
+{
+ "pais": "Rusia",
+ "iso3": "RUS",
+ "iso2": "RU",
+ "nombre_en": "Russia",
+ "variable": "irradiancia",
+ "imagen": "RUS_irradiancia.webp",
+ "rejilla": "RUS_irradiancia_rejilla.json",
+ "caja": [
+  0.01392,
+  0.03,
+  0.76616,
+  0.97
+ ],
+ "encuadre": [
+  15.11427,
+  34.95553,
+  192.21376,
+  85.63238
+ ],
+ "unidad": "kWh/m²·año",
+ "superficie_km2": 16980200,
+ "fuente": "NASA POWER (CERES / MERRA-2) · climatología",
+ "resolucion": "≈50–100 km · rejilla 4,50°",
+ "umbral": 1800.0,
+ "media": 1021.6497,
+ "p10": 829.6252,
+ "p50": 999.3546,
+ "p90": 1278.361,
+ "p2": 765.7218,
+ "p98": 1393.9472,
+ "min": 614.1193,
+ "max": 1472.5082,
+ "sobre_umbral": 0.0,
+ "pixeles": 190183
+}

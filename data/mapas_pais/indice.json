@@ -104,6 +104,10 @@
    "irradiancia": {
     "ficha": "ATF_irradiancia.json",
     "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   },
+   "viento": {
+    "ficha": "ATF_viento.json",
+    "fuente": "ERA5 (ECMWF/Copernicus) vía Open-Meteo · 2024"
    }
   }
  },
@@ -820,6 +824,10 @@
    "viento": {
     "ficha": "FJI_viento.json",
     "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "FJI_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
    }
   }
  },
@@ -1376,6 +1384,10 @@
    "irradiancia": {
     "ficha": "KOS_irradiancia.json",
     "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   },
+   "viento": {
+    "ficha": "KOS_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
    }
   }
  },
@@ -2092,6 +2104,10 @@
    "viento": {
     "ficha": "RUS_viento.json",
     "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
+   },
+   "irradiancia": {
+    "ficha": "RUS_irradiancia.json",
+    "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
    }
   }
  },
@@ -2216,6 +2232,10 @@
    "irradiancia": {
     "ficha": "SOL_irradiancia.json",
     "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   },
+   "viento": {
+    "ficha": "SOL_viento.json",
+    "fuente": "Global Wind Atlas 3 · DTU / Banco Mundial"
    }
   }
  },
@@ -2516,6 +2536,10 @@
    "irradiancia": {
     "ficha": "TWN_irradiancia.json",
     "fuente": "NASA POWER (CERES / MERRA-2) · climatología"
+   },
+   "viento": {
+    "ficha": "TWN_viento.json",
+    "fuente": "ERA5 (ECMWF/Copernicus) vía Open-Meteo · 2024"
    }
   }
  },
