@@ -351,17 +351,6 @@ body:not(.con-historico) .requiere-historico{display:none}body.con-historico .av
     <p class="note" id="vizSnowNote">Open-Meteo es la fuente principal para snowfall/snow_depth.</p>
   </div>
   <div class="card span8">
-    <h2>🧊 Riesgo acumulado de granizo</h2>
-    <canvas id="vizHailCurve" class="chart"></canvas>
-    <p class="note" id="vizHailNote">Se calcula automáticamente para el emplazamiento seleccionado. Banda λ÷2,5 … λ×2,5; riesgo de diseño, no detector operativo.</p>
-  </div>
-
-  <div class="card span8">
-    <h2>💨 Viento sintético · máximo diario</h2>
-    <canvas id="vizWindSynth" class="chart"></canvas>
-    <p class="note">Weibull + AR(1), declarado sintético/no bankable. Líneas T1=40 y T2=60 km/h.</p>
-  </div>
-  <div class="card span8">
     <h2>⚖️ Comparación mensual GHI por fuente</h2>
     <canvas id="vizCompareSources" class="chart"></canvas>
     <p class="note">Se actualiza al ejecutar “Descargar y comparar fuentes”.</p>
@@ -380,19 +369,23 @@ body:not(.con-historico) .requiere-historico{display:none}body.con-historico .av
   </div>
 
   <div class="sectiontitle">Riesgos climáticos</div>
-  <div class="card span5">
-    <h2>Riesgo climatológico de granizo</h2>
+  <div class="card span8">
+    <h2>🧊 Riesgo de granizo</h2>
     <div class="row"><label><span class="k">Vida útil años</span><input id="hailLife" type="number" value="25" min="1" max="60"></label><label><span class="k">λ manual opcional</span><input id="hailLambda" type="number" step="0.01" min="0" placeholder="vacío = climatología"></label></div>
     <p><button id="hailBtn">Evaluar riesgo de diseño</button></p>
     <div class="metricgrid"><div class="metric">Nivel<b id="hailTier">—</b></div><div class="metric">λ/año<b id="hailLamOut">—</b></div><div class="metric">Retorno<b id="hailReturn">—</b></div><div class="metric">P vida útil<b id="hailLifeP">—</b></div></div>
+    <canvas id="vizHailCurve" class="chart" style="margin-top:9px"></canvas>
+    <p class="note" id="vizHailNote">Se calcula automáticamente para el emplazamiento seleccionado. Banda λ÷2,5 … λ×2,5; riesgo de diseño, no detector operativo.</p>
     <div class="statusline" id="hailStatus">Riesgo climatológico de diseño; no detección horaria ni orden de stow.</div>
   </div>
-  <div class="card span5">
-    <h2>Viento sintético · fallback declarado</h2>
+  <div class="card span8">
+    <h2>💨 Viento sintético · año de respaldo declarado</h2>
     <div class="row3"><label><span class="k">Weibull k</span><input id="windK" type="number" step="0.1" value="2.0"></label><label><span class="k">Escala A m/s</span><input id="windA" type="number" step="0.1" value="6.5"></label><label><span class="k">Seed</span><input id="windSeed" type="number" value="42"></label></div>
     <label class="note"><input id="windCyclone" type="checkbox" style="width:auto"> incluir escenario ciclónico sintético</label>
     <p><button id="windSynthBtn">Generar año sintético</button></p>
     <div class="metricgrid"><div class="metric">Media<b id="windMean">—</b></div><div class="metric">P99<b id="windP99">—</b></div><div class="metric">Máx<b id="windMax">—</b></div><div class="metric">Ráfaga máx<b id="windGustMax">—</b></div></div>
+    <canvas id="vizWindSynth" class="chart" style="margin-top:9px"></canvas>
+    <p class="note">Máximo diario del año generado (Weibull + AR(1)), con las líneas T1 = 40 y T2 = 60 km/h.</p>
     <div class="statusline" id="windSynthStatus">Nunca se presenta como medida ni se usa para un informe bankable.</div>
   </div>
   <div class="card span6">

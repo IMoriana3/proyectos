@@ -1045,9 +1045,10 @@ declare -A PISO=(
   # ORIENTACIÓN EN meteo.html: pestañas (toda tarjeta en una, cada pestaña
   # sólo lo suyo, enlaces a elementos), redibujado al abrir una pestaña,
   # emplazamiento a la vista y aviso en lugar de las gráficas vacías.
-  # MEDIDO: 23 (era 15 con el índice de anclas). Sin el redibujado al cambiar
-  # de pestaña, el granizo queda a 800 px en un hueco de 656 (1 rojo).
-  [test_meteo_navegacion.js]=23
+  # MEDIDO: 25 (era 15 con el índice de anclas, 23 antes de unificar las
+  # tarjetas duplicadas de granizo y viento sintético). Sin el redibujado al
+  # cambiar de pestaña, el granizo queda a 800 px en un hueco de 656 (1 rojo).
+  [test_meteo_navegacion.js]=25
   # El catálogo de plantas servido como fichero. 14 comprobaciones medidas.
   # Vigila el modo de fallo propio de un fichero generado: QUEDARSE VIEJO. Si la
   # cartera cambia y nadie regenera, las páginas sirven el catálogo de otro día y
