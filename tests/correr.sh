@@ -772,6 +772,13 @@ declare -A PISO=(
   # única forma de probar un 500 o una respuesta sin muestras.
   [test_viento_orquestacion.js]=90
   [test_viento_pasivo.js]=30
+  # El mapa de país (ganancia del pasivo frente al activo), MEDIDOS el
+  # 2026-11-13: 41 el motor puro y 30 la pestaña en Chromium con Open-Meteo
+  # simulado. Cuatro mutantes vistos en rojo: el signo de la ganancia (2 + 5),
+  # un empaquetado que redondea la meteo guardada (1), dar por bueno un nodo
+  # que llega sin ráfaga (1) y no recalcular al cambiar de estrategia (4).
+  [test_viento_mapa_motor.js]=41
+  [test_viento_mapa.js]=30
   [test_viento_planta.js]=35
   # De la TERCERA pasada: intercambiar los factores de vista del cielo y el
   # suelo en `LOC.poa` —la transposición de la que sale toda la energía— mató
