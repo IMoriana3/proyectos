@@ -371,6 +371,9 @@ try{
   const ventuskySrc=await page.locator("#ventuskyMap").getAttribute("src");
   check("Windy sigue las coordenadas de Helsinki",windySrc?.includes("lat=60.16952")&&windySrc?.includes("lon=24.93545"),windySrc||"");
   check("Ventusky sigue las coordenadas de Helsinki",ventuskySrc?.includes("60.16952%3B24.93545%3B7"),ventuskySrc||"");
+  // meteo.html va en pestañas: lo que está en otra se abre antes de tocarlo
+  const pestana=id=>page.locator(`[data-pestana-boton="${id}"]`).click();
+  await pestana("contexto");
   await page.locator("#windyLayer").selectOption("rain");
   await page.locator("#windyModel").selectOption("gfs");
   check("Windy aplica capa/modelo seleccionados",(await page.locator("#windyMap").getAttribute("src")).includes("overlay=rain")&&(await page.locator("#windyMap").getAttribute("src")).includes("product=gfs"));
@@ -390,6 +393,7 @@ try{
       return set.size;
     });
   }
+  await pestana("avanzado");
   await page.locator("#spatialBtn").click();
   await page.waitForFunction(()=>document.querySelectorAll("#spatialPoints span").length===5,{timeout:15000});
   check("meteo espacial genera cinco puntos",await page.locator("#spatialPoints span").count()===5);
@@ -402,6 +406,7 @@ try{
   check("histograma térmico dibuja canvas real",(await diversity("vizTempHist"))>5);
   check("zoom diario se actualiza",!/—/.test(await page.locator("#vizDayNote").innerText()));
 
+  await pestana("riesgos");
   await page.locator("#hailBtn").click();
   check("curva acumulada de granizo dibuja",(await diversity("vizHailCurve"))>5);
   await page.locator("#windSynthBtn").click();
