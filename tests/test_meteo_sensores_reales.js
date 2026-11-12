@@ -9,7 +9,7 @@ const moduleOf = async name =>
   import("data:text/javascript;base64,"+Buffer.from(fs.readFileSync(path.join(root,"lib",name),"utf8")).toString("base64"));
 (async()=>{
   const {parseSensorCsv,analyzeSensorRecords,buildSensorChart} = await moduleOf("meteo-sensors.js");
-  const {normalizeSupabaseMeteo,fetchSupabaseMeteo} = await moduleOf("meteo-supabase.js");
+  const {normalizeSupabaseMeteo,fetchSupabaseMeteo,fetchSupabasePlants,fetchSupabasePlantRange,matchSupabasePlant} = await moduleOf("meteo-supabase.js");
   let checks=0;
   const check=(name,fn)=>{fn();checks++;console.log("OK   "+name)};
   const A="2026-10-01T00:00:00Z", B="2026-10-01T00:01:00Z", C="2026-10-01T00:02:00Z";
@@ -106,6 +106,39 @@ const moduleOf = async name =>
   const found=await fetchSupabaseMeteo(client([fake]),{plant:"El Burgo I"});
   assert.equal(found.from,"2026-10-02");assert.equal(found.to,"2026-10-08");
   assert.equal(found.records.length,2);checks++;console.log("OK   Supabase login y últimos 7 días");
+  /* Base de mentira con tres plantas: sirve «la siguiente planta» y «el último día». */
+  function base(plantas){
+    const calls=[];
+    return {calls,auth:{getUser:async()=>({data:{user:{id:"test-user"}},error:null})},
+      from(){const q={cols:"",plant:null,after:null,asc:false};calls.push(q);
+        return {select(c){q.cols=c;return this;},eq(k,v){if(k==="planta")q.plant=v;return this;},in(){return this;},order(k,o){if(k==="dia")q.asc=!!o?.ascending;return this;},
+          gt(k,v){if(k==="planta")q.after=v;return this;},gte(){return this;},lte(){return this;},
+          limit(){
+            if(q.cols==="planta"){const n=[...plantas].sort().find(p=>!q.after||p>q.after);return Promise.resolve({data:n?[{planta:n}]:[],error:null});}
+            return Promise.resolve({data:plantas.includes(q.plant)?[{dia:q.asc?"2026-05-26":"2026-10-08"}]:[],error:null});},
+          range(){return Promise.resolve({data:[],error:null});}};}};
+  }
+  const TRES=["San José","El Burgo I","Ayora"];
+  const sb3=base(TRES),lista=await fetchSupabasePlants(sb3);
+  let sinMedidas="";
+  try{await fetchSupabaseMeteo(base(TRES),{plant:"Chile"});}catch(e){sinMedidas=e.message;}
+  const rango=await fetchSupabasePlantRange(base(TRES),"El Burgo I"),sinRango=await fetchSupabasePlantRange(base(TRES),"Chile");
+  check("plantas con medidas: se listan saltando de nombre en nombre, y una planta sin medidas no es un problema de fechas",()=>{
+    assert.deepEqual(lista,["Ayora","El Burgo I","San José"]);
+    assert.deepEqual(sb3.calls.map(c=>c.after),[null,"Ayora","El Burgo I","San José"]);assert.ok(sb3.calls.every(c=>c.cols==="planta"));
+    assert.match(sinMedidas,/La base no tiene medidas de «Chile»/);assert.doesNotMatch(sinMedidas,/fechas/);
+    assert.deepEqual(rango,{from:"2026-05-26",to:"2026-10-08"});assert.equal(sinRango,null);
+  });
+  check("nombre de planta: mayúsculas, tildes y espacios no cuentan; lo parecido solo se sugiere",()=>{
+    assert.deepEqual(matchSupabasePlant("El Burgo I",TRES),{exact:"El Burgo I",near:""});
+    assert.deepEqual(matchSupabasePlant("  el burgo  i ",TRES),{exact:"El Burgo I",near:""});
+    assert.deepEqual(matchSupabasePlant("SAN JOSE",TRES),{exact:"San José",near:""});
+    assert.deepEqual(matchSupabasePlant("PSFV San José",TRES),{exact:"",near:"San José"});   // puede ser otra: no se usa sin preguntar
+    assert.deepEqual(matchSupabasePlant("Ayora I",TRES),{exact:"",near:"Ayora"});
+    assert.deepEqual(matchSupabasePlant("El Burgo II",TRES),{exact:"",near:""});            // «II» no es «I»
+    assert.deepEqual(matchSupabasePlant("Burgo",["El Burgo I","El Burgo II"]),{exact:"",near:""}); // dos candidatas: ninguna
+    assert.deepEqual(matchSupabasePlant("Chile",TRES),{exact:"",near:""});assert.deepEqual(matchSupabasePlant("",TRES),{exact:"",near:""});
+  });
   const ui=fs.readFileSync(path.join(root,"meteo.html"),"utf8");
   check("tarjeta existente conectada y sin service_role",()=>{
     assert.ok(ui.includes('fetchSupabaseMeteo('));

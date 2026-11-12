@@ -120,8 +120,8 @@ function stub(){
  check('con medidas se despliega lo esencial; los parámetros de detalle y la lista quedan plegados',await page.evaluate(()=>document.getElementById('windLogicCard').checkVisibility()&&
    document.getElementById('wlSummary').checkVisibility()&&document.getElementById('wlPre').checkVisibility()&&!document.getElementById('wlPitch').checkVisibility()&&!document.getElementById('wlEvents').checkVisibility()));
  check('arriba hay cargado un solo día; la tarjeta propone todo el histórico de la base',await page.evaluate(()=>
-   /2026-06-04 → 2026-06-04/.test(document.getElementById('supStatus').textContent)&&document.getElementById('wlSource').value==='supabase'&&
-   !document.getElementById('wlSource').options[0].disabled&&document.getElementById('wlFrom').value===''&&document.getElementById('wlTo').value===''),await txt('supStatus'));
+   /2026-06-04 → 2026-06-04/.test(document.getElementById('supLoadStatus').textContent)&&document.getElementById('wlSource').value==='supabase'&&
+   !document.getElementById('wlSource').options[0].disabled&&document.getElementById('wlFrom').value===''&&document.getElementById('wlTo').value===''),await txt('supLoadStatus'));
  check('coordenadas, pitch y zona horaria salen de la Cartera',Math.abs(pre.lat-41.576)<0.01&&Math.abs(pre.lon+0.798)<0.01&&pre.pitch===6&&pre.tz==='Europe/Madrid'&&pre.group==='1',pre);
 
  const resumen=()=>page.evaluate(()=>[...document.querySelectorAll('#wlSummary tr')].map(r=>[...r.children].map(c=>c.textContent.trim())));

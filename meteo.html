@@ -136,13 +136,14 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
   <div class="card span8">
     <h2>A · Base de Factiun · cargar HSU / WFU</h2>
     <div class="row3">
-      <label><span class="k">Planta</span><input id="supPlant" value="El Burgo I" placeholder="Nombre exacto de planta"></label>
-      <label><span class="k">Desde UTC</span><input id="supFrom" type="date"></label>
-      <label><span class="k">Hasta UTC</span><input id="supTo" type="date"></label>
+      <label><span class="k">Planta</span><select id="supPlant"><option value="El Burgo I">El Burgo I</option></select></label>
+      <label><span class="k">Desde (opcional)</span><input id="supFrom" type="date"></label>
+      <label><span class="k">Hasta (opcional)</span><input id="supTo" type="date"></label>
     </div>
     <div class="actions" style="margin-top:8px"><button id="supLoad">Cargar y comparar</button></div>
-    <p class="note">Sin fechas: últimos 7 días disponibles en la base. HSU: velocidad y máximo de viento, dirección y alarmas cuando tengan histórico. WFU: irradiancia medida. Se excluyen ceros de relleno de los campos sin sensor y las importaciones duplicadas.</p>
-    <p class="note">La irradiancia de WFU Meteo 210 se muestra en <b>escala original (raw)</b>, hasta verificar su unidad. No se convierte a W/m² ni a kWh/m² sin calibración. Los registros se consultan con tu cuenta de Supabase, no con fuentes meteo externas.</p>
+    <div class="statusline" id="supLoadStatus">Inicia sesión y pulsa «Cargar y comparar».</div>
+    <p class="note">Con la sesión iniciada, «Planta» lista las que tienen medidas en la base. Sin fechas: últimos 7 días disponibles (fechas en UTC). HSU: velocidad y máximo de viento, dirección y alarmas cuando tengan histórico. WFU: irradiancia medida. Se excluyen ceros de relleno de los campos sin sensor y las importaciones duplicadas.</p>
+    <p class="note">La irradiancia de WFU Meteo 210 se muestra en <b>escala original (raw)</b>, hasta verificar su unidad. No se convierte a W/m² ni a kWh/m² sin calibración. Los registros se consultan con tu usuario de Factiun Cartera, no con fuentes meteo externas.</p>
   </div>
 
   <div class="card span6">
@@ -569,7 +570,7 @@ import {
 import {buildWeatherContract,publishWeatherContract,activeWeatherRef,loadActiveWeatherContract,clearActiveWeatherContract,weatherManifest} from "./lib/weather-contract.js";
 import {parseSensorCsv,analyzeSensorRecords,buildSensorChart,SENSOR_ANALYSIS_VERSION} from "./lib/meteo-sensors.js";
 import {MAGNITUDES as VERIF_MAGNITUDES,horasMedidas,periodoMedidas,urlPrevisionArchivada,leePrevision,verifica,seriesGrafica} from "./lib/meteo-verificacion.js";
-import {newSupabaseMeteoClient,fetchSupabaseMeteo,fetchSupabaseWindPeak} from "./lib/meteo-supabase.js";
+import {newSupabaseMeteoClient,fetchSupabaseMeteo,fetchSupabaseWindPeak,fetchSupabasePlants,fetchSupabasePlantRange,matchSupabasePlant} from "./lib/meteo-supabase.js";
 import {simulateWindLogic,createWindSeriesBuilder,windLogicCsv,windLogicReportHtml,windLogicWeekly,windLogicSummary} from "./lib/meteo-wind-logic.js";
 import {solarPosition} from "./lib/meteo-browser.js";
 import {fetchCachedWeatherNext} from "./lib/meteo-forecast-cache.js";
@@ -582,6 +583,9 @@ $("coreVer").textContent=WORKBENCH_VERSION;
 let PLANTS=[],SITE=null,CURRENT=null,TMY=null,ADAPTED=null,PREPARED=null;
 let SENSOR_RECORDS=[],SENSOR_LAST=null,SENSOR_WARNINGS=null,SENSOR_SOURCES=[];
 let SUPABASE_METEO_CLIENT=null;
+/* Mediciones · «Planta»: SUP_PLANTS son las que tienen medidas en la base (null mientras no
+   se sepa: sin sesión) y SUP_WANTED la que se quiere, que de entrada es el proyecto abierto. */
+let SUP_PLANTS=null,SUP_WANTED="El Burgo I";
 let LAST_COMPARE=null,LAST_HAIL=null,LAST_WIND_SYNTH=null;
 let FORECAST=null,FORECAST72=null,SPATIAL=null,WEATHER_UNCERTAINTY=null,ACTIVE_CONTRACT=null;
 let FORECAST_REFERENCE=null; // Open-Meteo contrast only; never published as the active forecast
@@ -722,6 +726,13 @@ function choosePlant(i,refresh=true){
   hidePlaceResults();
   if(SITE&&Number.isFinite(SITE.lat)&&Number.isFinite(SITE.lon)){$("lat").value=SITE.lat.toFixed(5);$("lon").value=SITE.lon.toFixed(5);}
   renderSiteMeta();saveCfg();doHail();refreshExternalMaps();if(refresh)loadNow();
+  // La casilla «Planta» de Mediciones sigue al selector; si quedaba un error de carga
+  // de la planta anterior, se cambia por lo que toca hacer ahora.
+  if(SITE?.name){
+    SUP_WANTED=SITE.name;
+    const m=supShowPlants();
+    if(refresh&&SUP_PLANTS)supLoadStatus(m.exact?"Planta cambiada a «"+m.exact+"». Pulsa «Cargar y comparar» para leer sus medidas.":supMissing(m),"work");
+  }
 }
 $("plantSel").onchange=()=>{const key=$("plantSel").value;choosePlant(key===""?-1:PLANTS.findIndex(p=>plantKey(p)===key));};
 $("placeQuery").addEventListener("input",()=>{
@@ -1443,6 +1454,11 @@ function exportRealSensorAnalysis(){
   downloadText(JSON.stringify(payload,null,2),"sensores_reales_"+name+".json","application/json;charset=utf-8");
 }
 
+/* El acceso se cuenta en su tarjeta (izquierda) y la carga en la suya (derecha, bajo el botón). */
+function supLoadStatus(msg,kind=""){
+  $("supLoadStatus").textContent=msg;
+  $("supLoadStatus").className="statusline "+kind;
+}
 function supStatus(msg,kind=""){
   $("supStatus").textContent=msg;
   $("supStatus").className="statusline "+kind;
@@ -1454,7 +1470,11 @@ function supClient(){
 async function supSessionRestore(){
   try{
     const {data,error}=await supClient().auth.getUser();
-    if(!error&&data?.user)supStatus("Sesión iniciada. Pulsa «Cargar y comparar» para consultar Supabase.","ok");
+    if(!error&&data?.user){
+      supStatus("Sesión iniciada.","ok");
+      const known=await supPlants(),missing=known&&!$("supPlant").value;
+      supLoadStatus(missing?supMissing(matchSupabasePlant(SUP_WANTED,known)):"Elige planta y pulsa «Cargar y comparar».",missing?"work":"");
+    }
   }catch(e){supStatus("Cliente Supabase no disponible: "+String(e?.message||e),"bad")}
 }
 async function supLogin(){
@@ -1475,20 +1495,60 @@ async function supLogin(){
     supStatus("Acceso: "+(/invalid login credentials/i.test(m)?"correo o contraseña incorrectos. Son los de Factiun Cartera, no los de GitHub ni los de supabase.com ("+m+").":m),"bad");
   }
 }
+/* Pinta el desplegable «Planta». Con la lista de la base, solo se ofrecen plantas con medidas:
+   si la que se quería no está, queda «Elige planta…» y no se carga otra a escondidas. */
+function supShowPlants(){
+  const sel=$("supPlant");
+  if(!SUP_PLANTS){sel.innerHTML=sensorOption(SUP_WANTED,SUP_WANTED);return {exact:SUP_WANTED,near:""};}
+  const m=matchSupabasePlant(SUP_WANTED,SUP_PLANTS);
+  sel.innerHTML=(m.exact?"":'<option value="">Elige planta…</option>')+SUP_PLANTS.map(p=>sensorOption(p,p)).join("");
+  sel.value=m.exact;
+  return m;
+}
+function supMissing(m){
+  return "«"+SUP_WANTED+"» no tiene medidas en la base. Elige una planta de la lista"+(m?.near?" (¿quizá «"+m.near+"»?)":"")+" y pulsa «Cargar y comparar».";
+}
+/* Plantas con medidas en la base. null si no se ha podido saber (sin sesión, o la consulta falla). */
+async function supPlants(){
+  if(SUP_PLANTS)return SUP_PLANTS;
+  try{
+    const list=await fetchSupabasePlants(supClient());
+    if(list.length){SUP_PLANTS=list;supShowPlants();}
+  }catch(e){console.warn(e);}
+  return SUP_PLANTS;
+}
+/* Al elegir planta en el desplegable: de qué fechas hay medidas. */
+async function supPlantPicked(){
+  const plant=$("supPlant").value;if(!plant)return;
+  SUP_WANTED=plant;
+  try{
+    const r=await fetchSupabasePlantRange(supClient(),plant);
+    if($("supPlant").value!==plant)return;
+    const es=d=>d.split("-").reverse().join("/");
+    supLoadStatus(r?"«"+plant+"»: hay medidas del "+es(r.from)+" al "+es(r.to)+". Pulsa «Cargar y comparar»; sin fechas se cargan los últimos 7 días.":
+      "«"+plant+"» no tiene medidas en la base.",r?"":"bad");
+  }catch(e){console.warn(e);}
+}
 async function supLoad(){
   try{
-    const plant=$("supPlant").value.trim();if(!plant)throw Error("Indica la planta.");
-    supStatus("Leyendo histórico real…","work");
+    supLoadStatus("Leyendo histórico real…","work");
+    // «Planta» llega con el nombre del proyecto abierto, que no siempre tiene medidas en la base.
+    const known=await supPlants();
+    const plant=$("supPlant").value.trim();
+    if(!plant){
+      if(known){supLoadStatus(supMissing(matchSupabasePlant(SUP_WANTED,known)),"work");return;}
+      throw Error("Indica la planta.");
+    }
     const out=await fetchSupabaseMeteo(supClient(),{plant,from:$("supFrom").value,to:$("supTo").value,
-      onProgress:n=>supStatus("Leyendo Supabase: "+n+" archivos indexados…","work")});
+      onProgress:n=>supLoadStatus("Leyendo la base: "+n+" archivos indexados…","work")});
     $("supFrom").value=out.from;$("supTo").value=out.to;
-    if(!out.records.length)throw Error("No hay series medidas válidas para el periodo indicado.");
+    if(!out.records.length)throw Error("No hay medidas de «"+plant+"» entre el "+out.from.split("-").reverse().join("/")+" y el "+out.to.split("-").reverse().join("/")+".");
     SENSOR_RECORDS=out.records;SENSOR_LAST=null;
     SENSOR_SOURCES=out.sources.map(x=>x.fuente);SENSOR_WARNINGS=out.diagnostics;
     $("sensorTolerance").value="0"; // Series Supabase a minuto: usar primero coincidencias exactas.
     configureSensorFilters();
     const d=out.diagnostics;
-    supStatus("Supabase · "+plant+" · "+out.from+" → "+out.to+" · "+out.databaseRows+" registros consultados, "+
+    supLoadStatus("Base de Factiun · "+plant+" · "+out.from+" → "+out.to+" · "+out.databaseRows+" registros consultados, "+
       out.sources.length+" únicos · "+d.repeatedUploads+" duplicados descartados · "+
       d.rawCsvRows.toLocaleString("es-ES")+" muestras originales declaradas · "+
       d.minuteSeriesPoints.toLocaleString("es-ES")+" instantes minutales.","ok");
@@ -1496,7 +1556,7 @@ async function supLoad(){
       out.records.length.toLocaleString("es-ES")+" valores por magnitud; sin datos simulados. "+
       (d.negativeIrradiance?d.negativeIrradiance+" valores de irradiancia raw negativos, conservados para revisar. ":"")+
       "Campos escalares sin serie excluidos.",d.invalidSeries||d.withoutUtc?"work":"ok");
-  }catch(e){supStatus("Error Supabase: "+String(e?.message||e),"bad")}
+  }catch(e){supLoadStatus("No se ha podido cargar: "+String(e?.message||e),"bad")}
 }
 async function supLogout(){
   try{
@@ -1515,6 +1575,7 @@ async function supLogout(){
     $("sensorChartNote").textContent="Sin datos.";
     WIND_LOGIC_PLANT="";WIND_LOGIC_READY=false;$("wlRun").disabled=true;$("wlGroup").innerHTML='<option value="">Sin datos</option>';
     wlReset("Sin datos: sesión cerrada.");
+    SUP_PLANTS=null;supShowPlants();supLoadStatus("Inicia sesión y pulsa «Cargar y comparar».");
     sensorStatus("Lecturas descargadas eliminadas de esta sesión.");
     if(FORECAST?.[0]?.source==="weathernext3"&&FORECAST?.[0]?.provenance?.mode==="supabase-forecast-cache"){
       FORECAST=null;FORECAST72=null;ACTIVE_CONTRACT=null;
@@ -1676,6 +1737,7 @@ $("wlFilter").onchange=wlRenderEvents;
 $("supLogin").onclick=supLogin;
 $("supLogout").onclick=supLogout;
 $("supLoad").onclick=supLoad;
+$("supPlant").onchange=supPlantPicked;
 
 $("sensorLoad").onclick=loadRealSensors;
 $("sensorExport").onclick=exportRealSensorAnalysis;
@@ -1761,7 +1823,8 @@ $("wn").onchange=async e=>{
 };
 
 await initPlants();
-if(SITE?.name)$("supPlant").value=SITE.name;
+if(SITE?.name)SUP_WANTED=SITE.name;
+supShowPlants();
 supSessionRestore();
 refreshExternalMaps();renderUncertainty();renderContract(activeWeatherRef());pintaDescargas();
 await loadNow();

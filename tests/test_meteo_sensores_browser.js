@@ -35,14 +35,23 @@ function stub(){
     },
     from(table){
       if(table!=='telemetria')throw Error('La tarjeta ha consultado '+table);
-      const filter={plant:null,from:null,to:null};
+      const filter={cols:'',plant:null,after:null,from:null,to:null,asc:false};
       return {
-        select(){return this;},
+        select(cols){filter.cols=String(cols||'');return this;},
         eq(k,v){if(k==='planta')filter.plant=v;return this;},
-        in(){return this;},order(){return this;},
+        in(){return this;},order(k,o){if(k==='dia')filter.asc=!!(o&&o.ascending);return this;},
+        gt(k,v){if(k==='planta')filter.after=v;return this;},
         gte(k,v){if(k==='dia')filter.from=v;return this;},
         lte(k,v){if(k==='dia')filter.to=v;return this;},
-        limit(){return Promise.resolve({data:[{dia:'2026-10-08'}],error:null});},
+        limit(){
+          // «select planta»: la siguiente planta con medidas; «select dia»: el primer o el último día de esa planta
+          if(filter.cols==='planta'){
+            const next=[...new Set(data.map(x=>x.planta))].sort().find(p=>!filter.after||p>filter.after);
+            return Promise.resolve({data:next?[{planta:next}]:[],error:null});
+          }
+          const days=data.filter(x=>!filter.plant||x.planta===filter.plant).map(x=>x.dia).sort();
+          return Promise.resolve({data:days.length?[{dia:filter.asc?days[0]:days[days.length-1]}]:[],error:null});
+        },
         range(a,b){
           const result=data.filter(x=>(!filter.plant||x.planta===filter.plant)
             &&(!filter.from||x.dia>=filter.from)&&(!filter.to||x.dia<=filter.to)).slice(a,b+1);
@@ -85,10 +94,33 @@ function stub(){
        !/Supabase/.test(document.getElementById('supEmail').placeholder+document.getElementById('supPassword').placeholder)&&
        /correo o contraseña incorrectos\. Son los de Factiun Cartera, no los de GitHub/.test(document.getElementById('supStatus').textContent);
    }),await page.locator('#supStatus').textContent());
+   /* El proyecto abierto en el Panel no siempre tiene medidas en la base. Se abre otro
+      proyecto, se entra, y la página tiene que decirlo y ofrecer las plantas que sí
+      tienen, en vez de culpar a las fechas o cargar otra planta a escondidas. */
+   const elige=sel=>page.evaluate(quiere=>{const s=document.getElementById('plantSel'),
+     o=[...s.options].find(x=>x.value&&(/El Burgo I(\s|$)/.test(x.textContent)===quiere));s.value=o.value;s.dispatchEvent(new Event('change',{bubbles:true}));return o.textContent;},sel);
+   const otro=await elige(false);
    await page.locator('#supPassword').fill('clave-prueba');
    await page.locator('#supLogin').click();
-   await page.waitForFunction(()=>/3 registros consultados/.test(document.getElementById('supStatus').textContent),null,{timeout:25000});
-   const status=await page.locator('#supStatus').textContent();
+   await page.waitForFunction(()=>/no tiene medidas en la base/.test(document.getElementById('supLoadStatus').textContent),null,{timeout:25000});
+   const sinPlanta=await page.locator('#supLoadStatus').textContent();
+   check('proyecto sin medidas: lo dice bajo el botón de cargar, sin hablar de fechas ni cargar otra planta',
+     /no tiene medidas en la base\. Elige una planta de la lista/.test(sinPlanta)&&!/fecha/i.test(sinPlanta)&&
+     /Sesión iniciada/.test(await page.locator('#supStatus').textContent())&&await page.locator('#sensorCount').textContent()==='—',[otro,sinPlanta]);
+   check('«Planta» es un desplegable con las plantas que tienen medidas, sin ninguna elegida',await page.evaluate(()=>{
+     const s=document.getElementById('supPlant');
+     return s.tagName==='SELECT'&&s.value===''&&[...s.options].map(o=>o.textContent).join('|')==='Elige planta…|El Burgo I';}));
+   await page.locator('#supPlant').selectOption('El Burgo I');
+   await page.waitForFunction(()=>/hay medidas del/.test(document.getElementById('supLoadStatus').textContent),null,{timeout:15000});
+   check('al elegir planta dice de qué fechas hay medidas',
+     /«El Burgo I»: hay medidas del 08\/10\/2026 al 08\/10\/2026/.test(await page.locator('#supLoadStatus').textContent()),await page.locator('#supLoadStatus').textContent());
+   await elige(false);await elige(true);
+   check('al elegir el proyecto arriba, «Planta» lo sigue',
+     await page.locator('#supPlant').inputValue()==='El Burgo I'&&/Planta cambiada a «El Burgo I»/.test(await page.locator('#supLoadStatus').textContent()),
+     [await page.locator('#supPlant').inputValue(),await page.locator('#supLoadStatus').textContent()]);
+   await page.locator('#supLoad').click();
+   await page.waitForFunction(()=>/3 registros consultados/.test(document.getElementById('supLoadStatus').textContent),null,{timeout:25000});
+   const status=await page.locator('#supLoadStatus').textContent();
    check('entra y consulta las tres series privadas simuladas',/3 registros consultados/.test(status),status);
    check('identifica la planta y el periodo',await page.locator('#sensorPlant').inputValue()==='El Burgo I'
        &&await page.locator('#supFrom').inputValue()==='2026-10-02'
@@ -122,7 +154,8 @@ function stub(){
    check('la contraseña no persiste en el navegador',!pwd&&!stored.includes('clave-prueba'));
    await page.locator('#supLogout').click();
    check('logout descarta estadísticas privadas',await page.locator('#sensorCount').textContent()==='—'
-     &&/Sesión cerrada/.test(await page.locator('#supStatus').textContent()));
+     &&/Sesión cerrada/.test(await page.locator('#supStatus').textContent())
+     &&/Inicia sesión/.test(await page.locator('#supLoadStatus').textContent()));
    check('sin errores JS en la pantalla de sensores',jsErrors.length===0,jsErrors);
  }finally{await page.close();await browser.close();}
  console.log('PASS '+ok+' comprobaciones');
