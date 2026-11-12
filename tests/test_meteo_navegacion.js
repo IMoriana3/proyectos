@@ -173,6 +173,17 @@ const PESTANAS=['hoy','clima','riesgos','contexto','medidas','exportar','avanzad
     const ctx=c.getContext('2d'),dpr=c.width/600,ambar=y=>{const d=ctx.getImageData(0,Math.round(y*dpr),c.width,1).data;let n=0;for(let k=0;k<d.length;k+=4)if(d[k]>200&&d[k+1]>120&&d[k+1]<170&&d[k+2]<90)n++;return n;};
     const r={cabecera:ambar(10.5)};c.remove();return r;});
   check('la leyenda se pinta en la cabecera, no dentro del gráfico',Lg.cabecera>0,Lg);
+  // Riesgos sin datos: el viento sintético no deja cifras con rayas ni un
+  // lienzo vacío; el granizo por latitud dice que no está calibrado
+  await page.goto(BASE+'/meteo.html#pestana-riesgos',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>/[0-9]/.test(document.getElementById('hailLamOut')?.textContent||''),null,{timeout:15000}).catch(()=>{});
+  const R=await page.evaluate(async()=>{const vis=e=>!!e&&getComputedStyle(e).display!=='none';const m=await import('./lib/meteo-browser.js');
+    return {cifras:vis(document.getElementById('windMean')?.closest('.metricgrid')),lienzo:vis(document.getElementById('vizWindSynth')),
+      nivel:document.getElementById('hailTier').textContent,aviso:document.getElementById('hailStatus').textContent,
+      heur:m.hailRisk(41.6,-0.8).calibrado,manual:m.hailRisk(41.6,-0.8,{lambdaOverride:.02}).calibrado};});
+  check('sin generar, el viento sintético no enseña cifras ni gráfica vacías',!R.cifras&&!R.lienzo,R);
+  check('el granizo por latitud sale «SIN CALIBRAR» y lo explica',R.nivel==='SIN CALIBRAR'&&/sin fuente ni calibrar/.test(R.aviso),R);
+  check('solo una λ del sitio cuenta como calibrada',R.heur===false&&R.manual===true,R);
   check('sin errores de página',errores.length===0,errores);
   await browser.close();
   console.log('\n'+ok+' OK · '+ko+' FAIL');

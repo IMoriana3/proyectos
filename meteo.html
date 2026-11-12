@@ -20,7 +20,7 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
 .sourcestatus{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.sourcechip{border:1px solid var(--line);padding:6px 8px;background:var(--p2);font-size:.68rem;color:var(--mut)}.sourcechip b{display:block;color:var(--tx);font-size:.72rem}.sourcechip.on{border-left:3px solid var(--ok)}.sourcechip.wait{border-left:3px solid var(--a)}
 .chart{display:block;width:100%;height:260px;background:var(--p2);border:1px solid var(--line)}
 .big+.k{margin-bottom:12px}
-body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .requiere-tmy,body.con-tmy .tmy-vacio{display:none}body:not(.con-comparativa) .requiere-comparativa{display:none}body.con-historico .aviso-historico{display:none}
+body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .requiere-tmy,body.con-tmy .tmy-vacio{display:none}body:not(.con-comparativa) .requiere-comparativa{display:none}body:not(.con-viento-sintetico) .requiere-viento-sintetico{display:none}body.con-historico .aviso-historico{display:none}
 .aviso-historico{border-color:var(--a)}.aviso-historico .actions button{width:auto;padding:7px 16px}
 .pagina-barra{flex-basis:100%;display:flex;align-items:center;gap:12px;flex-wrap:wrap}.sitio-actual{font-size:.74rem;color:var(--mut);white-space:nowrap}.sitio-actual b{color:var(--tx)}
 .pestanas{display:flex;gap:2px;flex-wrap:wrap;flex-basis:100%}
@@ -386,7 +386,7 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
   <div class="sectiontitle">Riesgos climáticos</div>
   <div class="card span8">
     <h2>🧊 Riesgo de granizo</h2>
-    <div class="row"><label><span class="k">Vida útil años</span><input id="hailLife" type="number" value="25" min="1" max="60"></label><label><span class="k">λ manual opcional</span><input id="hailLambda" type="number" step="0.01" min="0" placeholder="vacío = climatología"></label></div>
+    <div class="row"><label><span class="k">Vida útil años</span><input id="hailLife" type="number" value="25" min="1" max="60"></label><label><span class="k">λ manual opcional</span><input id="hailLambda" type="number" step="0.01" min="0" placeholder="vacío = estimación sin calibrar"></label></div>
     <p><button id="hailBtn">Evaluar riesgo de diseño</button></p>
     <div class="metricgrid"><div class="metric">Nivel<b id="hailTier">—</b></div><div class="metric">λ/año<b id="hailLamOut">—</b></div><div class="metric">Retorno<b id="hailReturn">—</b></div><div class="metric">P vida útil<b id="hailLifeP">—</b></div></div>
     <canvas id="vizHailCurve" class="chart" style="margin-top:9px"></canvas>
@@ -398,8 +398,8 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
     <div class="row3"><label><span class="k">Weibull k</span><input id="windK" type="number" step="0.1" value="2.0"></label><label><span class="k">Escala A m/s</span><input id="windA" type="number" step="0.1" value="6.5"></label><label><span class="k">Seed</span><input id="windSeed" type="number" value="42"></label></div>
     <label class="note"><input id="windCyclone" type="checkbox" style="width:auto"> incluir escenario ciclónico sintético</label>
     <p><button id="windSynthBtn">Generar año sintético</button></p>
-    <div class="metricgrid"><div class="metric">Media<b id="windMean">—</b></div><div class="metric">P99<b id="windP99">—</b></div><div class="metric">Máx<b id="windMax">—</b></div><div class="metric">Ráfaga máx<b id="windGustMax">—</b></div></div>
-    <canvas id="vizWindSynth" class="chart" style="margin-top:9px"></canvas>
+    <div class="metricgrid requiere-viento-sintetico"><div class="metric">Media<b id="windMean">—</b></div><div class="metric">P99<b id="windP99">—</b></div><div class="metric">Máx<b id="windMax">—</b></div><div class="metric">Ráfaga máx<b id="windGustMax">—</b></div></div>
+    <canvas id="vizWindSynth" class="chart requiere-viento-sintetico" style="margin-top:9px"></canvas>
     <p class="note">Máximo diario del año generado (Weibull + AR(1)), con las líneas T1 = 40 y T2 = 60 km/h.</p>
     <div class="statusline" id="windSynthStatus">Nunca se presenta como medida ni se usa para un informe bankable.</div>
   </div>
@@ -1144,8 +1144,11 @@ function doHail(){
     const lat=+$("lat").value,lon=+$("lon").value;
     if(!Number.isFinite(lat)||!Number.isFinite(lon))throw new Error("Latitud/longitud no válidas.");
     const raw=$("hailLambda").value.trim(),r=hailRisk(lat,lon,{life:+$("hailLife").value,lambdaOverride:raw===""?null:+raw});LAST_HAIL=r;drawHailRisk($("vizHailCurve"),r);
-    $("hailTier").textContent=r.tier.toUpperCase();$("hailLamOut").textContent=fmt(r.lambda_yr,3);$("hailReturn").textContent=isFinite(r.return_period_yr)?fmt(r.return_period_yr,1)+" a":"—";$("hailLifeP").textContent=fmt(r.p_lifetime*100,1)+"%";
-    $("hailStatus").textContent="Fuente: "+r.source+" · banda λ "+fmt(r.lambda_lo,3)+"–"+fmt(r.lambda_hi,3)+" /año";$("hailStatus").className="statusline ok";
+    $("hailTier").textContent=r.calibrado?r.tier.toUpperCase():"SIN CALIBRAR";$("hailLamOut").textContent=fmt(r.lambda_yr,3);$("hailReturn").textContent=isFinite(r.return_period_yr)?fmt(r.return_period_yr,1)+" a":"—";$("hailLifeP").textContent=fmt(r.p_lifetime*100,1)+"%";
+    $("hailStatus").textContent=r.calibrado
+      ?"Fuente: λ del sitio metida a mano · banda λ "+fmt(r.lambda_lo,3)+"–"+fmt(r.lambda_hi,3)+" /año"
+      :"Estimación por latitud sin fuente ni calibrar: no es la probabilidad de que la planta sufra granizo dañino. Para eso, mete en «λ manual» una frecuencia del sitio (aseguradora, ESWD, estudio de granizo).";
+    $("hailStatus").className="statusline "+(r.calibrado?"ok":"work");
     $("vizHailNote").textContent="Emplazamiento "+fmt(lat,4)+", "+fmt(lon,4)+" · λ "+fmt(r.lambda_yr,3)+"/año · banda "+fmt(r.lambda_lo,3)+"–"+fmt(r.lambda_hi,3)+" · riesgo de diseño, no detector operativo.";
   }catch(e){
     $("hailStatus").textContent=e.message;$("hailStatus").className="statusline bad";
@@ -1154,7 +1157,7 @@ function doHail(){
 }
 function doWind(){
   try{
-    const r=syntheticWindYear({year:+$("baseYear").value,k:+$("windK").value,A:+$("windA").value,lat:+$("lat").value,seed:+$("windSeed").value,withCyclone:$("windCyclone").checked,withGust:true});LAST_WIND_SYNTH=r;drawLineChart($("vizWindSynth"),[{label:"Máx diario",values:windDailyMax(r.wind_speed)},{label:"T1 40",values:Array(Math.ceil(r.wind_speed.length/24)).fill(40)},{label:"T2 60",values:Array(Math.ceil(r.wind_speed.length/24)).fill(60)}],{title:"Viento sintético · máximos diarios",yLabel:"km/h",xLabels:MONTHS,height:250,zero:true});
+    const r=syntheticWindYear({year:+$("baseYear").value,k:+$("windK").value,A:+$("windA").value,lat:+$("lat").value,seed:+$("windSeed").value,withCyclone:$("windCyclone").checked,withGust:true});document.body.classList.add("con-viento-sintetico");LAST_WIND_SYNTH=r;drawLineChart($("vizWindSynth"),[{label:"Máx diario",values:windDailyMax(r.wind_speed)},{label:"T1 40",values:Array(Math.ceil(r.wind_speed.length/24)).fill(40)},{label:"T2 60",values:Array(Math.ceil(r.wind_speed.length/24)).fill(60)}],{title:"Viento sintético · máximos diarios",yLabel:"km/h",xLabels:MONTHS,height:250,zero:true});
     $("windMean").textContent=fmt(r.mean_ms,2)+" m/s";$("windP99").textContent=fmt(r.p99_ms,2)+" m/s";$("windMax").textContent=fmt(r.max_ms,2)+" m/s";$("windGustMax").textContent=fmt(r.gust_max_ms,2)+" m/s";$("windSynthStatus").textContent=r.not_modeled;$("windSynthStatus").className="statusline ok";
   }catch(e){$("windSynthStatus").textContent=e.message;$("windSynthStatus").className="statusline bad"}
 }
