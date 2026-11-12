@@ -188,6 +188,17 @@ const PESTANAS=['hoy','clima','riesgos','contexto','medidas','exportar','avanzad
   // del navegador y en uno en inglés salían °F y nudos
   const wsrc=new URL(await page.getAttribute('#windyMap','src'));
   check('Windy pide °C, km/h y mm',wsrc.searchParams.get('metricTemp')==='°C'&&wsrc.searchParams.get('metricWind')==='km/h'&&wsrc.searchParams.get('metricRain')==='mm',wsrc.search);
+  // Mediciones sin medidas: ni gráfica negra, ni tablas «sin datos», ni
+  // cifras con rayas; las dos formas de cargar se nombran A y B
+  await page.goto(BASE+'/meteo.html#pestana-medidas',{waitUntil:'domcontentloaded'});
+  await page.waitForTimeout(500);
+  const M=await page.evaluate(()=>{const vis=e=>!!e&&e.checkVisibility();
+    return {grafica:vis(document.getElementById('sensorChart')?.closest('.card')),stats:vis(document.getElementById('sensorStats')?.closest('.card')),
+      coherencia:vis(document.getElementById('sensorCoherence')?.closest('.card')),cifras:vis(document.getElementById('sensorCount')),
+      ab:[...document.querySelectorAll('[data-pestana="medidas"] h2')].map(h=>h.textContent).filter(t=>/^[AB] · /.test(t)).length,
+      intro:vis(document.querySelector('.medidas-intro'))};});
+  check('sin medidas, los resultados quedan plegados',!M.grafica&&!M.stats&&!M.coherencia&&!M.cifras,M);
+  check('las dos formas de cargar (A base, B fichero) se ven y se explican',M.ab===3&&M.intro,M);
   check('sin errores de página',errores.length===0,errores);
   await browser.close();
   console.log('\n'+ok+' OK · '+ko+' FAIL');
