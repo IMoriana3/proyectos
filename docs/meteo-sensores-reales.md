@@ -163,10 +163,17 @@ Cortas a propósito, para que se lean de un vistazo:
 - **Recuento por racha máxima**, en una línea.
 - **Activaciones por semana**.
 - **Lista completa**, plegada, con filtro; y su **CSV** (separador «;», coma decimal,
-  hora UTC y hora local de la planta).
-- **Informe** de una página, imprimible a PDF: el resumen, la gráfica, las reglas como
-  fórmulas (condición, posición y grados a mover, con los valores simulados) y las
-  notas. No lleva la lista de activaciones ni explica el cálculo en prosa.
+  hora UTC y hora local de la planta), solo del grupo que se está viendo.
+
+Con más de una NCU, «Grupo de sensores» ofrece cada NCU y, además, **«Planta entera
+(todas las NCU)»**: en cada minuto manda la racha más alta de cualquier HSU. Sirve si la
+alarma de viento es de planta y no de cada NCU; qué caso es el real depende del control.
+- **Informe** de una página, imprimible a PDF y con aspecto de nota técnica escrita a
+  mano: membrete y fecha, ficha (planta, sensores, periodo), dos frases de resumen,
+  «Tabla 1» con el resumen y el reparto por racha máxima al pie, «Figura 1» con las
+  activaciones por semana, «Tabla 2» con las reglas como fórmulas (condición, posición
+  y grados a mover, con los valores simulados) y las observaciones. No lleva la lista
+  de activaciones ni explica el cálculo en prosa.
 
 Los parámetros de detalle (origen y periodo de los datos, posiciones, geometría,
 coordenadas y los dos supuestos) van plegados en «Más parámetros».
@@ -179,10 +186,10 @@ navegador sobre el viento de la sesión y se descarta al cerrarla.
 `lib/meteo-wind-logic.js` — módulo puro, sin DOM, sin red y sin importaciones; la
 posición solar se inyecta (`solarPosition` de `lib/meteo-browser.js`).
 
-- `node tests/test_meteo_logica_viento.js` — 36 verificaciones del motor con series
+- `node tests/test_meteo_logica_viento.js` — 37 verificaciones del motor con series
   sintéticas y del lector de histórico con una base de mentira (450 días sin tope,
   avance por fecha, un día que llena la página, corte por tiempo, repliegue).
-- `node tests/test_meteo_logica_viento_browser.js` — 23 comprobaciones de la tarjeta
+- `node tests/test_meteo_logica_viento_browser.js` — 24 comprobaciones de la tarjeta
   en Chromium con Supabase simulado; arriba se carga un solo día en calma y la
   simulación sale del histórico entero.
 
