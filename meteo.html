@@ -188,6 +188,17 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
     <div class="tablewrap"><table><thead><tr><th>Sensores A / B</th><th>Magnitud</th><th>Puntos en común</th><th>Sesgo A−B</th><th>|Δ| media</th><th>Δ relativo</th><th>Correlación</th><th>Contexto</th></tr></thead><tbody id="sensorCoherence"><tr><td colspan="8">Sin medidas comparables.</td></tr></tbody></table></div>
     <p class="note">La diferencia relativa se calcula sobre la magnitud media de ambos sensores; se indica «—» si el denominador es cero. Para detectores de nieve se muestra también la discrepancia entre estados. Sin datos de ubicación/altura/ventana, interpretar las diferencias con cautela.</p>
   </div>
+  <div class="card wide requiere-medidas" id="verifCard">
+    <h2>Previsión frente a medida</h2>
+    <div class="row3">
+      <label><span class="k">Magnitud</span><select id="verifMagnitud"><option value="wind_speed">Viento medio</option><option value="wind_peak">Racha / máximo del intervalo</option></select></label>
+      <div class="actions" style="align-self:end"><button id="verifBtn">Comparar con la previsión</button></div>
+    </div>
+    <div class="tablewrap" style="margin-top:8px"><table><thead><tr><th>Modelo</th><th>Horas comparadas</th><th>Sesgo (prev. − medida)</th><th>Error medio |Δ|</th><th>RMSE</th><th>Correlación</th></tr></thead><tbody id="verifTabla"><tr><td colspan="6">Pulsa «Comparar con la previsión».</td></tr></tbody></table></div>
+    <canvas id="verifChart" class="chart" style="margin-top:9px" aria-label="Previsión frente a medida"></canvas>
+    <div class="statusline" id="verifStatus">Cruza las medidas cargadas con lo que preveían los modelos para esas mismas horas (previsión archivada de Open-Meteo).</div>
+    <p class="note">Gruesa: ECMWF IFS 0,25° (~25 km). Fina: AROME HD (~1,5 km) o, si no cubre el sitio, HARMONIE-AROME Europa (~2 km). Es la previsión de las primeras horas de cada pasada del modelo, no la de varios días antes. El modelo da el viento a 10 m y el anemómetro mide a la altura de su montaje: un sesgo constante es esperable y no indica que el sensor esté mal. Viento medio: media de las muestras en ±30 min de cada hora; racha: máximo de la hora previa. Horas en UTC.</p>
+  </div>
 
   <div class="sectiontitle">Previsión horaria · supervisión meteorológica</div>
   <div class="card span10 requiere-prevision">
@@ -508,6 +519,7 @@ import {
 } from "./lib/meteo-viz.js";
 import {buildWeatherContract,publishWeatherContract,activeWeatherRef,loadActiveWeatherContract,clearActiveWeatherContract,weatherManifest} from "./lib/weather-contract.js";
 import {parseSensorCsv,analyzeSensorRecords,buildSensorChart,SENSOR_ANALYSIS_VERSION} from "./lib/meteo-sensors.js";
+import {MAGNITUDES as VERIF_MAGNITUDES,horasMedidas,periodoMedidas,urlPrevisionArchivada,leePrevision,verifica,seriesGrafica} from "./lib/meteo-verificacion.js";
 import {newSupabaseMeteoClient,fetchSupabaseMeteo} from "./lib/meteo-supabase.js";
 import {fetchCachedWeatherNext} from "./lib/meteo-forecast-cache.js";
 
@@ -808,6 +820,7 @@ window.__meteoRedibujar=()=>{
   try{if(CURRENT?.rows?.length)renderCoreVisuals();else pintaSueltas();}catch(e){console.warn(e);}
   try{renderForecastCharts();}catch(e){console.warn(e);}
   try{renderSensorAnalysis();}catch(e){console.warn(e);}
+  try{if(VERIF_ULTIMA){const v=VERIF_ULTIMA;pintaVerificacion(v.medida,v.prev,v.magnitud,v.plant,v.per);}}catch(e){console.warn(e);}
 };
 let _vizResize=null;window.addEventListener("resize",()=>{clearTimeout(_vizResize);_vizResize=setTimeout(()=>{if(CURRENT)renderCoreVisuals();},150);});
 
@@ -1312,6 +1325,39 @@ function renderSensorAnalysis(){
     $("sensorExport").disabled=r.stats.length===0;
   } catch(e){sensorStatus("Error de análisis: "+String(e?.message||e),"bad");}
 }
+/* Previsión frente a medida: las medidas de la planta elegida contra la
+   previsión archivada de dos modelos (grueso y fino) en las mismas horas. */
+let VERIF_ULTIMA=null;
+async function verificaPrevision(){
+  const st=(t,c="")=>{$("verifStatus").textContent=t;$("verifStatus").className="statusline "+c;};
+  try{
+    const magnitud=$("verifMagnitud").value,plant=$("sensorPlant").value;
+    const medida=horasMedidas(SENSOR_RECORDS,{plant,magnitud});
+    if(!medida.length){st("No hay medidas de "+VERIF_MAGNITUDES[magnitud].etiqueta.toLowerCase()+" en m/s para esta planta.","bad");return;}
+    const per=periodoMedidas(medida),lat=+$("lat").value,lon=+$("lon").value;
+    st("Consultando la previsión archivada del "+per.inicio+" al "+per.fin+"…","work");
+    const res=await fetch(urlPrevisionArchivada({lat,lon,inicio:per.inicio,fin:per.fin,magnitud}));
+    if(!res.ok)throw new Error(res.status===429?"Open-Meteo ha limitado las consultas desde esta conexión (HTTP 429); prueba más tarde":"Open-Meteo HTTP "+res.status);
+    const prev=leePrevision(await res.json(),magnitud);
+    if(!prev.gruesa&&!prev.fina)throw new Error("Open-Meteo no tiene previsión archivada para ese sitio y periodo");
+    pintaVerificacion(medida,prev,magnitud,plant,per);
+  }catch(e){st("No se ha podido comparar: "+String(e?.message||e)+".","bad");}
+}
+function pintaVerificacion(medida,prev,magnitud,plant,per){
+  VERIF_ULTIMA={medida,prev,magnitud,plant,per};
+  const m=VERIF_MAGNITUDES[magnitud],f=(v,d=2)=>v==null?"—":fmt(v,d);
+  const filas=["gruesa","fina"].filter(k=>prev[k]).map(k=>{const v=verifica(medida,prev[k].serie);
+    return '<tr><td>'+esc(prev[k].modelo.nombre)+'</td><td>'+v.n+'</td><td>'+f(v.sesgo)+' m/s</td><td>'+f(v.mae)+' m/s</td><td>'+f(v.rmse)+' m/s</td><td>'+f(v.r,3)+'</td></tr>';});
+  $("verifTabla").innerHTML=filas.join("")||'<tr><td colspan="6">Sin horas en común.</td></tr>';
+  const g=seriesGrafica(medida,prev),dia=t=>t.slice(11,13)==="00"?t.slice(8,10)+"-"+t.slice(5,7):"";
+  const series=[];
+  if(prev.gruesa)series.push({label:"Prev. gruesa",values:g.gruesa,color:"#8C9AAB",width:1.4});
+  if(prev.fina)series.push({label:"Prev. fina",values:g.fina,color:"#68C0D8",width:1.8});
+  series.push({label:"Medida · "+plant,values:g.medida,color:"#F09030",width:1.6});
+  drawLineChart($("verifChart"),series,{title:m.etiqueta+" · "+plant+" · "+per.inicio+" a "+per.fin+" (UTC)",yLabel:m.unidad,xLabels:g.eje.map(dia),height:300,zero:true});
+  const sinFina=prev.fina?"":" El modelo fino no cubre este sitio o periodo; solo se compara el grueso.";
+  $("verifStatus").textContent=medida.length+" horas medidas · previsión archivada de Open-Meteo."+sinFina;$("verifStatus").className="statusline ok";
+}
 async function loadRealSensors(){
   const files=Array.from($("sensorFiles").files||[]);
   if(!files.length){sensorStatus("Selecciona uno o varios CSV de medidas reales.","bad");return;}
@@ -1400,6 +1446,7 @@ async function supLogout(){
       const {error}=await SUPABASE_METEO_CLIENT.auth.signOut();if(error)throw error;
     }
     SENSOR_RECORDS=[];SENSOR_LAST=null;SENSOR_SOURCES=[];SENSOR_WARNINGS=null;document.body.classList.remove("con-medidas");
+    VERIF_ULTIMA=null;$("verifTabla").innerHTML='<tr><td colspan="6">Sin datos: sesión cerrada.</td></tr>';
     $("sensorStats").innerHTML='<tr><td colspan="11">Sin datos: sesión cerrada.</td></tr>';
     $("sensorCoherence").innerHTML='<tr><td colspan="8">Sin datos: sesión cerrada.</td></tr>';
     for(const id of ["sensorCount","sensorSamples","sensorPairs","sensorDuplicated"])$(id).textContent="—";
@@ -1426,7 +1473,7 @@ $("sensorExport").onclick=exportRealSensorAnalysis;
 $("sensorPlant").onchange=updateSensorVariables;
 ["sensorVariable","sensorTolerance","sensorFrom","sensorTo"].forEach(id=>$(id).addEventListener("change",renderSensorAnalysis));
 
-$("nowBtn").onclick=loadNow;$("avisoPrevisionBtn").onclick=loadNow;$("yearsBtn").onclick=analyzeYears;$("tmyBtn").onclick=buildTmy;$("compareBtn").onclick=compare;$("qaBtn").onclick=advancedQa;$("hailBtn").onclick=doHail;$("hailLife").addEventListener("change",doHail);$("hailLambda").addEventListener("change",doHail);$("windSynthBtn").onclick=doWind;$("importBtn").onclick=importFile;$("adaptBtn").onclick=siteAdapt;$("adaptUse").onclick=useAdapted;$("prepBtn").onclick=prep;
+$("nowBtn").onclick=loadNow;$("verifBtn").onclick=verificaPrevision;$("verifMagnitud").onchange=()=>{if(VERIF_ULTIMA)verificaPrevision();};$("avisoPrevisionBtn").onclick=loadNow;$("yearsBtn").onclick=analyzeYears;$("tmyBtn").onclick=buildTmy;$("compareBtn").onclick=compare;$("qaBtn").onclick=advancedQa;$("hailBtn").onclick=doHail;$("hailLife").addEventListener("change",doHail);$("hailLambda").addEventListener("change",doHail);$("windSynthBtn").onclick=doWind;$("importBtn").onclick=importFile;$("adaptBtn").onclick=siteAdapt;$("adaptUse").onclick=useAdapted;$("prepBtn").onclick=prep;
 $("spatialBtn").onclick=runSpatial;
 $("wnVariable").onchange=renderForecastCharts;
 $("wnLead").oninput=renderForecastInstant;
