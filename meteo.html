@@ -529,7 +529,7 @@ function externalMapUrls(lat=+$("lat").value,lon=+$("lon").value){
   const la=Number(lat).toFixed(5),lo=Number(lon).toFixed(5),name=siteName()||"Factiun";
   const windyLayer=$("windyLayer")?.value||"wind",windyModel=$("windyModel")?.value||"ecmwf";
   const ventLayer=$("ventuskyLayer")?.value||"wind-10m";
-  const windy="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=7&overlay="+encodeURIComponent(windyLayer)+"&product="+encodeURIComponent(windyModel)+"&level=surface&lat="+encodeURIComponent(la)+"&lon="+encodeURIComponent(lo)+"&message=true";
+  const windy="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km%2Fh&zoom=7&overlay="+encodeURIComponent(windyLayer)+"&product="+encodeURIComponent(windyModel)+"&level=surface&lat="+encodeURIComponent(la)+"&lon="+encodeURIComponent(lo)+"&message=true";
   const ventusky="https://embed.ventusky.com/?p="+encodeURIComponent(la+";"+lo+";7")+"&l="+encodeURIComponent(ventLayer)+"&w=soft&pin="+encodeURIComponent(la+";"+lo+";dot;"+name);
   return {windy,ventusky,label:la+", "+lo};
 }
