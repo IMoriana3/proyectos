@@ -200,17 +200,40 @@ const moduleOf = async name =>
     const x=simulateWindLogic(OCASO,{plant:"P",site:SITE,solarPosition}),rx=W.windLogicSummary(x,x.groups[0]);
     assert.match(rx.notes[0],/^La alarma sigue activa al anochecer una noche; en 1 el seguidor está al Oeste y tendría que pasar por horizontal para ir a 55° E\.$/);
   });
+  check("planta entera: con dos NCU se añade un grupo donde manda la racha más alta de cualquier HSU",()=>{
+    // NCU 1 pasa de 40 a las 10:00; NCU 2 pasa de 60 a las 10:10 y de 40 a las 16:00
+    const dos=[...serie("2026-06-10T00:00","2026-06-10T23:59",[["2026-06-10T10:00",45]]),
+      ...serie("2026-06-10T00:00","2026-06-10T23:59",[["2026-06-10T10:10",63],["2026-06-10T16:00",44]]).map(r=>({...r,ncu:"2"}))];
+    const out=simulateWindLogic(dos,{plant:"P",site:SITE,solarPosition}),[a,b,p]=out.groups;
+    assert.deepEqual(out.groups.map(g=>g.key),["1","2",W.WIND_LOGIC_PLANT_KEY]);assert.equal(p.label,"Planta entera");assert.deepEqual(p.sensors,["NCU 1","NCU 2"]);
+    assert.deepEqual([a.prestow.total,a.stow.total],[1,0]);assert.deepEqual([b.prestow.total,b.stow.total],[2,1]);
+    assert.deepEqual([p.prestow.total,p.stow.total],[2,1]);          // 10:00 y 10:10 son la misma alarma para la planta
+    assert.equal(at(p,"prestow","2026-06-10T10:00").peakKmh,63);assert.ok(at(p,"stow","2026-06-10T10:10")&&at(p,"prestow","2026-06-10T16:00"));
+    assert.equal(p.coverage.dataMinutes,1440);
+    // una sola NCU: no hay grupo de planta, sería el mismo
+    assert.deepEqual(simulateWindLogic(DIA,{plant:"P",site:SITE,solarPosition}).groups.map(g=>g.key),["1"]);
+    // el CSV de un grupo no arrastra los demás; sin grupo, van todos
+    const filasCsv=k=>windLogicCsv(out,k===undefined?{}:{groupKey:k}).trim().split("\r\n").length-1;
+    assert.deepEqual([filasCsv("1"),filasCsv("2"),filasCsv(W.WIND_LOGIC_PLANT_KEY),filasCsv()],[1,3,3,7]);
+    const h=W.windLogicReportHtml(out,{groupKey:W.WIND_LOGIC_PLANT_KEY});
+    assert.ok(h.includes("<th>Sensores</th><td>Planta entera: NCU 1 y NCU 2</td>"));
+  });
   check("informe: una página con el resumen, la gráfica, las reglas como fórmulas y las notas; sin lista",()=>{
     const out=simulateWindLogic(NOCHES.map(r=>({...r,plant:"P <b>&"})),{plant:"P <b>&",site:SITE,solarPosition});
     const h=W.windLogicReportHtml(out,{generatedAt:"2026-11-12T17:00:00Z"});
     assert.match(h,/^<!doctype html>/);assert.ok(h.includes("P &lt;b&gt;&amp;")&&!h.includes("P <b>&"));
     assert.ok(h.includes("<tr><td>Pre-stow (&gt; 40 km/h)</td><td>3</td><td>1</td><td>2</td><td>2 de noche, 50°</td></tr>"));
     assert.ok(h.includes("<tr><td>Stow (&gt; 60 km/h)</td><td>1</td><td>1</td><td>0</td><td>—</td></tr>"));
-    assert.ok(h.includes("Pre-stow: 40–50 km/h: 2 · &gt; 60 km/h: 1. Stow: 60–65 km/h: 1."));
-    assert.equal((h.match(/<svg /g)||[]).length,1);assert.ok(h.includes("<h2>Reglas</h2>")&&h.includes("<h2>Notas</h2>"));
+    assert.ok(h.includes("Por racha máxima del episodio. Pre-stow: 40–50 km/h, 2; más de 60 km/h, 1. Stow: 60–65 km/h, 1."));
+    assert.equal((h.match(/<svg /g)||[]).length,1);assert.ok(h.includes("<b>Tabla 2.</b> Reglas simuladas.")&&h.includes("<h2>Observaciones</h2>")&&h.includes("<b>Figura 1.</b>"));
+    // se lee como una nota escrita: ficha, dos frases de resumen y fecha con todas sus letras
+    assert.ok(h.includes("<th>Planta</th><td>P &lt;b&gt;&amp;</td>")&&h.includes("<th>Sensores</th><td>NCU 1: HSU 230</td>")&&h.includes("<th>Periodo</th><td>del 10/06/2026 al 12/06/2026, 3 días con dato</td>"));
+    assert.ok(h.includes("Con el viento registrado por las HSU entre el 10/06/2026 y el 12/06/2026, el pre-stow salta 3 veces y el stow, una vez. En 1 de los pre-stow y en 1 de los stow el seguidor ya está en posición y no hay que moverlo."));
+    assert.ok(h.includes("<span>Factiun, 12 de noviembre de 2026</span>")&&!/text-transform|letter-spacing/.test(h)&&!h.includes(" · "));
+    assert.match(h,/<body><h1>Lógica de viento: simulación de pre-stow y stow en /); // sin membrete: empieza por el título
     for(const f of ["v &gt; 40 km/h","|θ| ≥ 30°","Δ = max(0, 30° − |θ|)","|θ| = 55°, el lado más cercano","Δ = 55° − |θ|","t − tᵤ &gt; 30 min","Δ = 50°, una vez por noche"])assert.ok(h.includes(f),f);
     assert.ok(!h.includes("Anexo")&&!h.includes("Pre-stow 1</td>")&&!h.includes("Cómo se ha calculado")); // la lista va en el CSV
-    assert.ok(h.includes("10/06/2026 – 12/06/2026 · 3 días con dato")&&h.includes("12/11/2026")&&h.includes("posición teórica del seguidor"));
+    assert.ok(h.includes("posición teórica del seguidor, no la de las TCU")&&h.includes("La lista completa de activaciones va en el fichero CSV."));
   });
   check("informe: las reglas siguen a los parámetros simulados",()=>{
     const out=simulateWindLogic(NOCHES,{plant:"P",site:SITE,solarPosition,options:{prestowKmh:35,stowKmh:50,prestowMinDeg:25,stowDeg:50,maxDeg:60,holdMin:20,nightDeg:10}});
@@ -220,7 +243,8 @@ const moduleOf = async name =>
   check("informe sin activaciones: ceros en el resumen y ninguna gráfica vacía",()=>{
     const h=W.windLogicReportHtml(simulateWindLogic(serie("2026-06-10T00:00","2026-06-10T23:59",[]),{plant:"P",site:SITE,solarPosition}));
     assert.ok(h.includes("<td>Pre-stow (&gt; 40 km/h)</td><td>0</td><td>0</td><td>0</td><td>—</td>"));
-    assert.ok(!h.includes("<svg ")&&!h.includes("Por racha máxima"));
+    assert.ok(!h.includes("<svg ")&&!h.includes("Por racha máxima")&&!h.includes("Figura 1"));
+    assert.ok(h.includes("ninguna de las dos alarmas llega a saltar."));
   });
   /* Filas «un sensor, un día», como las guarda la base: t en segundos y viento máximo en m/s. */
   const filas=(records,equipo="HSU 230",ncu="1")=>{

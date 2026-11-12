@@ -571,7 +571,7 @@ import {buildWeatherContract,publishWeatherContract,activeWeatherRef,loadActiveW
 import {parseSensorCsv,analyzeSensorRecords,buildSensorChart,SENSOR_ANALYSIS_VERSION} from "./lib/meteo-sensors.js";
 import {MAGNITUDES as VERIF_MAGNITUDES,horasMedidas,periodoMedidas,urlPrevisionArchivada,leePrevision,verifica,seriesGrafica} from "./lib/meteo-verificacion.js";
 import {newSupabaseMeteoClient,fetchSupabaseMeteo,fetchSupabaseWindPeak,fetchSupabasePlants,fetchSupabasePlantRange,matchSupabasePlant} from "./lib/meteo-supabase.js";
-import {simulateWindLogic,createWindSeriesBuilder,windLogicCsv,windLogicReportHtml,windLogicWeekly,windLogicSummary} from "./lib/meteo-wind-logic.js";
+import {simulateWindLogic,createWindSeriesBuilder,windLogicCsv,windLogicReportHtml,windLogicWeekly,windLogicSummary,WIND_LOGIC_PLANT_KEY} from "./lib/meteo-wind-logic.js";
 import {solarPosition} from "./lib/meteo-browser.js";
 import {fetchCachedWeatherNext} from "./lib/meteo-forecast-cache.js";
 
@@ -1628,7 +1628,9 @@ function wlPrepare(){
   const plant=$("sensorPlant").value,ncus=new Set();
   for(const r of SENSOR_RECORDS)if(r.plant===plant&&WL_WIND.includes(r.variable))ncus.add(String(r.ncu??""));
   const keys=[...ncus].sort((a,b)=>a.localeCompare(b,"es",{numeric:true}));
-  $("wlGroup").innerHTML=keys.length?keys.map(k=>sensorOption(k,k?"NCU "+k:"Planta (sin NCU declarada)")).join(""):'<option value="">Sin medidas de viento</option>';
+  // Con más de una NCU se ofrece también la planta entera (manda la racha más alta de cualquier HSU).
+  $("wlGroup").innerHTML=keys.length?keys.map(k=>sensorOption(k,k?"NCU "+k:"Planta (sin NCU declarada)")).join("")+
+    (keys.length>1?sensorOption(WIND_LOGIC_PLANT_KEY,"Planta entera (todas las NCU)"):""):'<option value="">Sin medidas de viento</option>';
   WIND_LOGIC_READY=keys.length>0;$("wlRun").disabled=!WIND_LOGIC_READY;
   // Si las medidas de esta planta vinieron de la base, la simulación puede pedirle todo el
   // histórico de viento máximo, sin el tope de días del cargador general.
@@ -1675,7 +1677,7 @@ async function wlRun(){
         maxDeg:val("wlMax"),nightDeg:val("wlNight"),pitchM:val("wlPitch"),chordM:val("wlChord"),noonRule:$("wlNoon").value,
         duskRule:$("wlDusk").value,speedDegPerMin:$("wlSpeed").value===""?null:Number($("wlSpeed").value)}});
     WIND_LOGIC.origin=series?(from||to?"histórico de la base, periodo acotado":"todo el histórico de la base"):"medidas cargadas"+(from||to?", periodo acotado":"");
-    $("wlGroup").innerHTML=WIND_LOGIC.groups.map(g=>sensorOption(g.key,g.label+" · "+g.sensors.join(", "))).join("");
+    $("wlGroup").innerHTML=WIND_LOGIC.groups.map(g=>sensorOption(g.key,g.key===WIND_LOGIC_PLANT_KEY?"Planta entera (todas las NCU)":g.label+" · "+g.sensors.join(", "))).join("");
     if(WIND_LOGIC.groups.some(g=>g.key===previous))$("wlGroup").value=previous;
     $("wlCsv").disabled=!WIND_LOGIC.groups.some(g=>g.activations.length);$("wlReport").disabled=!WIND_LOGIC.groups.length;
     wlRender();
@@ -1719,7 +1721,8 @@ function wlRender(){
 function wlDownloadCsv(){
   if(!WIND_LOGIC){wlStatus("Sin simulación que descargar.","bad");return;}
   const name=String(WIND_LOGIC.plant||"planta").replace(/[^a-z0-9_-]+/gi,"_");
-  downloadText(windLogicCsv(WIND_LOGIC,{timeZone:WIND_LOGIC.site.timezone}),"logica_viento_"+name+".csv","text/csv;charset=utf-8");
+  // Solo el grupo que se está viendo: la planta entera repite las activaciones de sus NCU.
+  downloadText(windLogicCsv(WIND_LOGIC,{timeZone:WIND_LOGIC.site.timezone,groupKey:wlGroupNow()?.key??null}),"logica_viento_"+name+".csv","text/csv;charset=utf-8");
 }
 function wlDownloadReport(){
   const g=wlGroupNow();if(!WIND_LOGIC||!g){wlStatus("Sin simulación que informar.","bad");return;}

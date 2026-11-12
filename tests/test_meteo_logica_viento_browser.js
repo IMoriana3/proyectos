@@ -44,7 +44,9 @@ function stub(){
     day('2026-06-03','1','HSU 230',5,[[241,12]],[120,240]),
     day('2026-06-03','1','HSU 231',6,[],[120,240]),
     day('2026-06-04','1','HSU 230',7,[]),
-    day('2026-06-04','1','HSU 231',8,[])
+    day('2026-06-04','1','HSU 231',8,[]),
+    // Una segunda NCU, un solo día y con una racha propia: sirve para la planta entera
+    day('2026-06-02','2','HSU 230',9,[[900,12]])
   ];
   window.supabase={createClient:()=>({
     auth:{
@@ -165,7 +167,20 @@ function stub(){
  check('informe: una página con el resumen, la gráfica y las reglas; la lista no va',
    informe.suggestedFilename()==='informe_logica_viento_El_Burgo_I.html'&&/^<!doctype html>/.test(html)&&
    html.includes('<td>Pre-stow (&gt; 40 km/h)</td><td>5</td><td>2</td><td>3</td>')&&(html.match(/<svg /g)||[]).length===1&&
-   html.includes('<h2>Reglas</h2>')&&!html.includes('Anexo'),[informe.suggestedFilename(),html.length]);
+   html.includes('<b>Tabla 2.</b> Reglas simuladas.')&&html.includes('<b>Tabla 1.</b>')&&!html.includes('Anexo'),[informe.suggestedFilename(),html.length]);
+
+ /* Con dos NCU en la base hay un tercer grupo: la planta entera, donde cuenta la racha de cualquier HSU. */
+ const grupos=await page.evaluate(()=>[...document.getElementById('wlGroup').options].map(o=>o.value+'='+o.textContent));
+ await page.selectOption('#wlGroup','*');
+ await page.waitForFunction(()=>/Planta entera/.test(document.getElementById('wlStatus').textContent),null,{timeout:15000});
+ const Rt=await resumen();
+ const [csvPlanta]=await Promise.all([page.waitForEvent('download',{timeout:15000}),page.click('#wlCsv')]);
+ const filasPlanta=fs.readFileSync(await csvPlanta.path(),'utf8').trim().split(/\r?\n/);
+ check('planta entera: grupo aparte que suma la racha de la NCU 2, y su CSV solo lleva ese grupo',
+   grupos.join('|')==='1=NCU 1 · HSU 230, HSU 231|2=NCU 2 · HSU 230|*=Planta entera (todas las NCU)'&&
+   Rt[0].slice(0,2).join('|')==='Pre-stow (> 40 km/h)|6'&&Rt[1][1]==='1'&&filasPlanta.length===8&&filasPlanta.slice(1).every(l=>/^Planta entera;/.test(l)),[grupos,Rt,filasPlanta.length]);
+ await page.selectOption('#wlGroup','1');
+ await page.waitForFunction(()=>/^NCU 1/.test(document.getElementById('wlStatus').textContent),null,{timeout:15000});
 
  /* El periodo y el origen se eligen en «Más parámetros». */
  const simular=async()=>{await page.click('#wlRun');await page.waitForFunction(()=>document.querySelectorAll('#wlSummary tr').length===2&&/ · /.test(document.getElementById('wlStatus').textContent),null,{timeout:20000});};
