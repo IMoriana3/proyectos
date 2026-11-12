@@ -20,7 +20,7 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
 .sourcestatus{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.sourcechip{border:1px solid var(--line);padding:6px 8px;background:var(--p2);font-size:.68rem;color:var(--mut)}.sourcechip b{display:block;color:var(--tx);font-size:.72rem}.sourcechip.on{border-left:3px solid var(--ok)}.sourcechip.wait{border-left:3px solid var(--a)}
 .chart{display:block;width:100%;height:260px;background:var(--p2);border:1px solid var(--line)}
 .big+.k{margin-bottom:12px}
-body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .requiere-tmy,body.con-tmy .tmy-vacio{display:none}body:not(.con-comparativa) .requiere-comparativa{display:none}body:not(.con-viento-sintetico) .requiere-viento-sintetico{display:none}body:not(.con-medidas) .requiere-medidas{display:none}.medidas-intro{margin:0;font-size:.78rem}body.con-historico .aviso-historico{display:none}
+body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .requiere-tmy,body.con-tmy .tmy-vacio{display:none}body:not(.con-comparativa) .requiere-comparativa{display:none}body:not(.con-viento-sintetico) .requiere-viento-sintetico{display:none}body:not(.con-medidas) .requiere-medidas{display:none}body.prevision-fallida .requiere-prevision,body:not(.prevision-fallida) .aviso-prevision{display:none}.medidas-intro{margin:0;font-size:.78rem}body.con-historico .aviso-historico{display:none}
 .aviso-historico{border-color:var(--a)}.aviso-historico .actions button{width:auto;padding:7px 16px}
 .pagina-barra{flex-basis:100%;display:flex;align-items:center;gap:12px;flex-wrap:wrap}.sitio-actual{font-size:.74rem;color:var(--mut);white-space:nowrap}.sitio-actual b{color:var(--tx)}
 .pestanas{display:flex;gap:2px;flex-wrap:wrap;flex-basis:100%}
@@ -100,9 +100,14 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
   </div>
 
   <div class="sectiontitle">Ahora y previsión</div>
-  <div class="card span4"><h2>Régimen solar</h2><div class="big" id="ghi">—</div><div class="k">GHI (global) · W/m²</div><div class="row"><div><div class="k">DNI (directa)</div><div class="v" id="dni">—</div></div><div><div class="k">DHI (difusa)</div><div class="v" id="dhi">—</div></div></div><div class="k" style="margin-top:9px">Probabilidad de cielo cubierto</div><div class="bar"><i id="bo"></i></div><div class="v" id="over">—</div></div>
-  <div class="card span4"><h2>Viento</h2><div class="big" id="wind">—</div><div class="k">m/s a 10 m</div><div class="row"><div><div class="k">Ráfaga</div><div class="v" id="gust">—</div></div><div><div class="k">Dirección</div><div class="v" id="wd">—</div></div></div><div class="k" style="margin-top:9px">Riesgo de poner los seguidores en defensa (stow)</div><div class="bar"><i id="bw"></i></div><div class="v" id="wrisk">—</div></div>
-  <div class="card span4"><h2>Atmósfera</h2><div class="row"><div><div class="k">Temperatura</div><div class="v" id="temp">—</div></div><div><div class="k">Punto rocío</div><div class="v" id="dew">—</div></div><div><div class="k">Precipitación</div><div class="v" id="rain">—</div></div><div><div class="k">Nubosidad</div><div class="v" id="cloud">—</div></div></div><div class="k" style="margin-top:9px">Indicio de tormenta / granizo</div><div class="bar"><i id="bh"></i></div><div class="v" id="hail">—</div></div>
+  <div class="card wide aviso-prevision" id="avisoPrevision" role="alert">
+    <h2>Previsión no disponible</h2>
+    <p class="note" id="avisoPrevisionTxt">No se ha podido cargar la previsión.</p>
+    <div class="actions"><button id="avisoPrevisionBtn">Reintentar</button></div>
+  </div>
+  <div class="card span4 requiere-prevision"><h2>Régimen solar</h2><div class="big" id="ghi">—</div><div class="k">GHI (global) · W/m²</div><div class="row"><div><div class="k">DNI (directa)</div><div class="v" id="dni">—</div></div><div><div class="k">DHI (difusa)</div><div class="v" id="dhi">—</div></div></div><div class="k" style="margin-top:9px">Probabilidad de cielo cubierto</div><div class="bar"><i id="bo"></i></div><div class="v" id="over">—</div></div>
+  <div class="card span4 requiere-prevision"><h2>Viento</h2><div class="big" id="wind">—</div><div class="k">m/s a 10 m</div><div class="row"><div><div class="k">Ráfaga</div><div class="v" id="gust">—</div></div><div><div class="k">Dirección</div><div class="v" id="wd">—</div></div></div><div class="k" style="margin-top:9px">Riesgo de poner los seguidores en defensa (stow)</div><div class="bar"><i id="bw"></i></div><div class="v" id="wrisk">—</div></div>
+  <div class="card span4 requiere-prevision"><h2>Atmósfera</h2><div class="row"><div><div class="k">Temperatura</div><div class="v" id="temp">—</div></div><div><div class="k">Punto rocío</div><div class="v" id="dew">—</div></div><div><div class="k">Precipitación</div><div class="v" id="rain">—</div></div><div><div class="k">Nubosidad</div><div class="v" id="cloud">—</div></div></div><div class="k" style="margin-top:9px">Indicio de tormenta / granizo</div><div class="bar"><i id="bh"></i></div><div class="v" id="hail">—</div></div>
   <div class="card span4">
     <h2>WeatherNext 3 · previsión</h2>
     <p class="note">Consulta la previsión guardada para la planta elegida. Utiliza la misma sesión de Supabase de abajo; no son medidas HSU ni órdenes de STOW.</p>
@@ -244,14 +249,14 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
   </div>
 
   <div class="sectiontitle">Previsión horaria · supervisión meteorológica</div>
-  <div class="card span10">
+  <div class="card span10 requiere-prevision">
     <h2 id="opWindowTitle">Ventana de previsión · 72 h</h2>
     <div class="statusline" id="opHorizonInfo">Sin previsiones cargadas.</div>
     <div class="metricgrid"><div class="metric">Viento máx<b id="opWindMax">—</b></div><div class="metric">Ráfaga máx<b id="opGustMax">—</b></div><div class="metric">T mín<b id="opTempMin">—</b></div><div class="metric">Precipitación<b id="opRainSum">—</b></div></div>
     <div class="op-events" id="opEvents"><div class="op-event"><b>Sin forecast</b><small>Se carga al seleccionar el emplazamiento.</small></div></div>
     <p class="note">Avisos meteorológicos de supervisión. No son órdenes de stow ni sustituyen HSU/SCADA/interlocks. Una variable no disponible no equivale a ausencia de peligro.</p>
   </div>
-  <div class="card span6">
+  <div class="card span6 requiere-prevision">
     <h2>Curva horaria · incertidumbre</h2>
     <label><span class="k">Magnitud</span><select id="wnVariable">
       <option value="wind_ms">Viento a 10 m (m/s)</option>
@@ -1035,6 +1040,7 @@ async function publishForecastContract(){
 }
 async function applyForecast(rows,label="Forecast"){
   if(!rows?.length)throw new Error("forecast sin filas");
+  document.body.classList.remove("prevision-fallida");
   FORECAST_REFERENCE=null;
   $("wnCompareStatus").textContent="Pulsa «Comparar con Open-Meteo» para contrastar las mismas horas UTC.";
   $("wnCompareStatus").className="statusline";
@@ -1125,7 +1131,19 @@ async function loadNow(){
   try{
     const rows=await fetchOpenMeteo({lat,lon,forecastDays:forecastWindowHours()>72?16:3});
     await applyForecast(rows,"Forecast Open-Meteo");
-  }catch(e){status("No se ha podido cargar la previsión ("+e.message+"). Comprueba la conexión y vuelve a pulsar «Ahora y previsión».","bad")}
+  }catch(e){
+    status("No se ha podido cargar la previsión ("+e.message+"). Comprueba la conexión y vuelve a pulsar «Ahora y previsión».","bad");
+    // La pestaña Hoy no se queda con 25 cifras «—» y un «se carga al
+    // seleccionar» que ya no es verdad: dice que falló, por qué, y ofrece reintentar
+    if(!FORECAST?.length){
+      const limite=/429/.test(e.message);
+      $("avisoPrevisionTxt").textContent=(limite
+        ?"Open-Meteo ha limitado las consultas desde esta conexión (HTTP 429). Suele levantarse en una hora; como mucho, al cambiar de día."
+        :/Failed to fetch|NetworkError|Load failed/i.test(e.message)?"No se ha podido conectar con Open-Meteo. Comprueba la conexión a internet."
+        :"No se ha podido cargar ("+e.message+").")+" Sin previsión no hay valores de ahora, avisos de 72 h ni curva horaria.";
+      document.body.classList.add("prevision-fallida");
+    }
+  }
 }
 
 function renderYears(ds){
@@ -1630,7 +1648,7 @@ $("sensorExport").onclick=exportRealSensorAnalysis;
 $("sensorPlant").onchange=updateSensorVariables;
 ["sensorVariable","sensorTolerance","sensorFrom","sensorTo"].forEach(id=>$(id).addEventListener("change",renderSensorAnalysis));
 
-$("nowBtn").onclick=loadNow;$("yearsBtn").onclick=analyzeYears;$("tmyBtn").onclick=buildTmy;$("compareBtn").onclick=compare;$("qaBtn").onclick=advancedQa;$("hailBtn").onclick=doHail;$("hailLife").addEventListener("change",doHail);$("hailLambda").addEventListener("change",doHail);$("windSynthBtn").onclick=doWind;$("importBtn").onclick=importFile;$("adaptBtn").onclick=siteAdapt;$("adaptUse").onclick=useAdapted;$("prepBtn").onclick=prep;
+$("nowBtn").onclick=loadNow;$("avisoPrevisionBtn").onclick=loadNow;$("yearsBtn").onclick=analyzeYears;$("tmyBtn").onclick=buildTmy;$("compareBtn").onclick=compare;$("qaBtn").onclick=advancedQa;$("hailBtn").onclick=doHail;$("hailLife").addEventListener("change",doHail);$("hailLambda").addEventListener("change",doHail);$("windSynthBtn").onclick=doWind;$("importBtn").onclick=importFile;$("adaptBtn").onclick=siteAdapt;$("adaptUse").onclick=useAdapted;$("prepBtn").onclick=prep;
 $("spatialBtn").onclick=runSpatial;
 $("wnVariable").onchange=renderForecastCharts;
 $("wnLead").oninput=renderForecastInstant;

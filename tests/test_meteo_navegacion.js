@@ -199,6 +199,21 @@ const PESTANAS=['hoy','clima','riesgos','contexto','medidas','exportar','avanzad
       intro:vis(document.querySelector('.medidas-intro'))};});
   check('sin medidas, los resultados quedan plegados',!M.grafica&&!M.stats&&!M.coherencia&&!M.cifras,M);
   check('las dos formas de cargar (A base, B fichero) se ven y se explican',M.ab===3&&M.intro,M);
+  // Hoy sin previsión (aquí la red externa está cortada): aviso con el motivo
+  // y «Reintentar», sin las tarjetas de cifras «—»; al reintentar con
+  // previsión, el aviso se va y vuelven las tarjetas
+  await page.goto(BASE+'/meteo.html#pestana-hoy',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.body.classList.contains('prevision-fallida'),null,{timeout:15000}).catch(()=>{});
+  const H=await page.evaluate(()=>({aviso:document.getElementById('avisoPrevision').checkVisibility(),txt:document.getElementById('avisoPrevisionTxt').textContent,
+    rayas:[...document.querySelectorAll('.requiere-prevision')].some(e=>e.checkVisibility())}));
+  check('sin previsión, Hoy lo dice con el motivo y sin cifras «—»',H.aviso&&/conectar con Open-Meteo/.test(H.txt)&&!H.rayas,H);
+  await page.route('https://api.open-meteo.com/**',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({hourly:{
+    time:[new Date(Math.floor(Date.now()/36e5)*36e5).toISOString().slice(0,16)],temperature_2m:[20],dew_point_2m:[10],precipitation:[0],cloud_cover:[25],cloud_cover_low:[10],cloud_cover_mid:[10],cloud_cover_high:[5],
+    wind_speed_10m:[4],wind_direction_10m:[180],wind_gusts_10m:[7],shortwave_radiation:[500],direct_normal_irradiance:[650],diffuse_radiation:[100],surface_pressure:[1010]}})}));
+  await page.click('#avisoPrevisionBtn');
+  await page.waitForFunction(()=>!document.body.classList.contains('prevision-fallida')&&/[0-9]/.test(document.getElementById('wind').textContent),null,{timeout:15000}).catch(()=>{});
+  const H2=await page.evaluate(()=>({aviso:document.getElementById('avisoPrevision').checkVisibility(),viento:document.getElementById('wind').textContent}));
+  check('«Reintentar» carga la previsión y quita el aviso',!H2.aviso&&/[0-9]/.test(H2.viento),H2);
   check('sin errores de página',errores.length===0,errores);
   await browser.close();
   console.log('\n'+ok+' OK · '+ko+' FAIL');
