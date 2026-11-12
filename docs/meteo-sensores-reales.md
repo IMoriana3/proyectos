@@ -60,6 +60,89 @@ Estas no equivalen a 3.980.278 valores minutales.
 - Informe JSON de análisis y CSV local alternativo si no hay sesión Supabase.
 - Mantiene segregados los históricos privados y los modelos meteorológicos.
 
+## Lógica de viento · simulación pre-stow / stow (12/11/2026)
+
+Tarjeta **«Lógica de viento · simulación pre-stow / stow sobre las HSU»**, en la misma
+sección y pestaña (Mediciones). Responde a una pregunta de diseño de control: con el
+viento que midieron las HSU, **cuántas veces saltaría cada alarma, en qué posición
+pillaría al seguidor y cuántos grados tendría que mover**.
+
+Es una **simulación de cómo funcionaría la lógica, no un estudio de cómo funcionó la
+planta**:
+
+- el viento es **medido**: máximo por minuto (`wind_speed_max`) de las HSU cargadas,
+  tomando en cada minuto el mayor de las HSU de una misma NCU;
+- la posición del seguidor es **teórica**: seguimiento astronómico de un eje N-S con
+  backtracking sobre terreno plano (pitch y ancho de módulo editables), noche en la
+  posición de noche. **No se lee ninguna TCU.**
+
+### La lógica simulada
+
+| Parámetro | Valor por defecto |
+|---|---|
+| Pre-stow: racha mayor de | 40 km/h → rango de operación limitado a 30°–55° E/O |
+| Stow: racha mayor de | 60 km/h → 55° E u O, el lado más cercano a la posición del seguidor |
+| Desactivación | 30 min después de la última lectura sobre umbral |
+| Noche | 5° E; cualquier alarma de noche hace un único movimiento a 55° E, sin vuelta |
+| Geometría | pitch 6 m, módulo de 2,382 m en el giro (GCR 0,397), ±55° |
+
+Una **activación** es el salto de la alarma: dura hasta 30 min después de la última
+lectura sobre umbral, y una lectura posterior es otra activación. De cada una se da el
+instante, la racha al cruzar, el pico del evento, la posición inicial, la posición
+objetivo y los grados a mover (0° si ya está en posición).
+
+### Lo que la lógica no define, a la vista
+
+Dos huecos de la especificación se resuelven con un desplegable, no a escondidas:
+
+- **Pre-stow al cruzar el mediodía solar** — «mantiene el lado en el mínimo» (por
+  defecto) o «sigue al sol y cruza por horizontal».
+- **Alarma activa al anochecer** — «va a stow Este» (por defecto: si el seguidor está
+  al Oeste llega cruzando por horizontal con la alarma activa, y la tarjeta cuenta
+  cuántas noches pasa) o «se queda donde está».
+
+La velocidad de giro es opcional: vacía, el seguidor está siempre en la posición que
+le marca la lógica; con un valor, una alarma puede pillarlo a medio camino.
+
+### Calidad del dato
+
+- **Sin dato no hay alarma**: los huecos no se rellenan y se cuentan.
+- **Sensores a cero**: una racha de lecturas exactamente a cero no es calma, es un
+  anemómetro mudo. Se declara, y lo que salte justo después se marca **dudoso** (puede
+  ser la vuelta del dato y no una racha nueva).
+- El log muestrea cada pocos segundos y la lógica habla de lecturas de 1 s: el
+  recuento es un **suelo**.
+- Con datos más espaciados que medio rearme el resultado es orientativo y se avisa.
+
+### Salidas
+
+Resumen (activaciones, movimientos a posición de stow, días con racha, horas de sol
+bajo alarma), tabla **rango de viento × posición** para pre-stow y para stow,
+activaciones por semana, lista completa con filtro, **CSV** (separador «;», coma
+decimal, hora UTC y hora local de la planta) e **informe** imprimible a PDF, corto y escrito en
+claro: un párrafo con lo que sale, las cifras, las reglas simuladas, en qué posición
+pilla al seguidor, cuándo, lo que la lógica no dice, los datos y un anexo con todas las
+activaciones. Las reglas van como fórmulas (condición, posición objetivo y grados a
+mover, con los valores simulados), no explicadas en prosa.
+
+Ningún resultado de planta se guarda en el repositorio: la simulación corre en el
+navegador sobre las medidas de la sesión y se descarta al cerrarla.
+
+### Motor y pruebas
+
+`lib/meteo-wind-logic.js` — módulo puro, sin DOM, sin red y sin importaciones; la
+posición solar se inyecta (`solarPosition` de `lib/meteo-browser.js`).
+
+- `node tests/test_meteo_logica_viento.js` — 29 verificaciones del motor con series
+  sintéticas.
+- `node tests/test_meteo_logica_viento_browser.js` — 19 comprobaciones de la tarjeta
+  en Chromium con Supabase simulado.
+
+Careo externo (no versionado, con medidas reales de una planta): el motor reproduce,
+activación por activación, una simulación independiente hecha en Python con pvlib
+sobre los mismos eventos; la mayor diferencia de ángulo es 0,6°, por el algoritmo de
+posición solar.
+
 ## Seguridad y limitaciones
 
 La RLS vigente de `telemetria` permite `SELECT` a usuarios autenticados.

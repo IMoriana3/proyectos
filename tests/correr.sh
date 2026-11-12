@@ -1037,6 +1037,15 @@ declare -A PISO=(
   # Pantalla real en Chromium con autenticación y datos SUPABASE de prueba.
   # 12 controles: acceso, HSU, WFU raw, coherencia, privacidad y cierre.
   [test_meteo_sensores_browser.js]=12
+  # LÓGICA DE VIENTO (pre-stow / stow) simulada sobre las HSU, con posición
+  # TEÓRICA del seguidor: motor puro `lib/meteo-wind-logic.js`. 29 medidas,
+  # sin red ni datos de planta: rearme, umbral estricto, máximo por NCU, día
+  # y noche, lado más cercano, stow desde pre-stow, mediodía y anochecer con
+  # sus dos opciones, sensores a cero y huecos, CSV, informe y validación.
+  [test_meteo_logica_viento.js]=29
+  # La misma tarjeta en Chromium con Supabase sustituido: 19 medidas. De las
+  # medidas cargadas a resumen, tablas, filtro, CSV, informe y cierre.
+  [test_meteo_logica_viento_browser.js]=19
   # RECURSO DEL PAÍS en la tarjeta de meteo (lib/mapas-pais.js), con las
   # láminas sustituidas por fixtures: país por rejilla y no por nombre,
   # marcador en la caja de la ficha, «sobre/bajo la media», punto de miles,

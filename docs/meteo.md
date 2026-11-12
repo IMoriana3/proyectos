@@ -430,6 +430,14 @@ El informe HTML incrusta las visualizaciones disponibles como PNG base64. El fic
 - curva de granizo y viento sintético;
 - exportación de visuales en el informe.
 
+## Mediciones reales · lógica de viento
+
+La pestaña **Mediciones** analiza las HSU/WFU de nuestras plantas (Supabase o CSV) y,
+desde el 12/11/2026, simula sobre ellas una lógica de alarma de viento **pre-stow /
+stow**: cuántas veces saltaría, en qué posición teórica pillaría al seguidor y cuántos
+grados tendría que mover. Detalle, supuestos y pruebas en
+[`meteo-sensores-reales.md`](meteo-sensores-reales.md).
+
 ## QA
 
 El navegador ejecuta:
