@@ -1118,9 +1118,9 @@ function PICTO(p){
 const FAMILIAS = [
   { k:'diseno', n:'Diseño y oferta', c:'#68C0D8', t:['Diseño de red de comunicaciones','Generador de implantaciones','Comparador de estructuras','Alta de planta','Modelo de propagación RF','Diagnóstico de cobertura Zigbee','Expediente de homologación'] },
   { k:'simulacion', n:'Simulación', c:'#F2C94C', t:['Núcleo de cálculo SolarGPT','Simulador de backtracking','Simulador de radiación difusa','Simulador de abanderamiento','Producción 3D por string','Careo SolarGPT ↔ PVSyst','Simulador de batería','Análisis meteorológico','Gemelo digital de seguidor y control'] },
-  { k:'obra', n:'Obra y puesta en marcha', c:'#F09030', t:['Control de obra','Seguimiento PEM','Visor de levantamiento','Visor de geometría as-built','TCU Toolbox','Ficha de equipo TCU Toolbox','IPs de plantas'] },
+  { k:'obra', n:'Obra y puesta en marcha', c:'#F09030', t:['Control de obra','Seguimiento PEM','Visor de levantamiento','Visor de geometría as-built','TCU Toolbox','IPs de plantas'] },
   { k:'operacion', n:'Operación', c:'#5BBF8A', t:['SCADA','SCADA fija · Victron VRM','Importador de logs de NCU','Medidor de tráfico','Mapa Modbus','Agente Modbus y collector','Simulador de planta equipo a equipo','Instalación cubierta Gorraiz'] },
-  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV','Diccionario de datos FACTIUN','Radar FACTIUN','Globo de plantas'] }
+  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV','Diccionario de datos FACTIUN','Radar FACTIUN'] }
 ];
 const FAMILIA_DE = {}; FAMILIAS.forEach(f=>f.t.forEach(n=>{ FAMILIA_DE[n]=f.k; }));
 function familiaDe(p){ return FAMILIA_DE[p && p.name] || 'otras'; }
@@ -1139,6 +1139,10 @@ const PROJECTS = [
     objetivo: "Mapa mundial de plantas FV sobre suelo con globo y ortofoto: consulta fichas, ubica pendientes y prepara altas directamente en Notion.",
     stack: "Globo 3D · satélite · Cloudflare Pages y Access · Notion (catálogo y edición)",
     url: "https://maps-9rd.pages.dev",
+    links: [
+      { label: "Abrir Atlas", url: "https://maps-9rd.pages.dev" },
+      { label: "Globo de plantas", url: "https://claude.ai/artifact/Sh4pXwsUbkoa65pe3E8FML" }
+    ],
     repo: "",
     updated: "2026-10-23",
     version: "V14 del usuario · V14.2 candidata",
@@ -1150,7 +1154,8 @@ const PROJECTS = [
       "El catálogo debe incluir todas las fichas de Notion, tengan o no GEM phase ID; las que no tienen coordenadas quedan en Pendientes de ubicar.",
       "Al identificar una instalación en la ortofoto, la V14.2 candidata busca primero coincidencias en Notion: vincula la ficha existente o crea una nueva, sin duplicarla.",
       "La ficha muestra emplazamiento físico, municipio, provincia, región/estado y país. «Ir al emplazamiento» usa la ubicación seleccionada, no la de una planta cercana.",
-      "Tipos de estructura: Fija, Fija dos aguas, Marquesina, Seguidor y Mixta. La ubicación visual debe conservar fuente y no sustituir coordenadas topográficas verificadas."
+      "Tipos de estructura: Fija, Fija dos aguas, Marquesina, Seguidor y Mixta. La ubicación visual debe conservar fuente y no sustituir coordenadas topográficas verificadas.",
+      "«Globo de plantas» abre la prueba en Claude: globo 3D con las plantas de la base 14 por país y región (fase, fiabilidad, nº o MW, PPAs año a año) sobre un volcado fechado de Notion; no lee el catálogo en vivo."
     ],
     pendientes: [
       { done:false, text:"Publicar y validar V14.2 en Cloudflare Pages manteniendo Access; no se ha sustituido la V14 del usuario." },
@@ -1159,6 +1164,7 @@ const PROJECTS = [
       { done:false, text:"Conciliar el inventario histórico y comprobar capas, búsquedas y navegación exacta antes de cerrar V14.2." }
     ],
     historial: [
+      { date:"2026-11-09", ver:"Globo de plantas · prueba", note:"Globo 3D construido en Claude sobre un volcado de la base 14 (datos, países y regiones en tres JSON); pendiente de leer el catálogo de Atlas o Supabase y de entrar en el centro de herramientas." },
       { date:"2026-10-23", ver:"V14.2 · candidata", note:"Paquete derivado de V14 con altas desde mapa, vinculación de fichas sin coordenadas y navegación exacta. Pruebas locales y simuladas; falta validar Cloudflare/Notion reales." },
       { date:"2026-10-23", ver:"V14 · base del usuario", note:"Última versión que el usuario reconoce; no afirmar que V14.2 esté desplegada." },
       { date:"2026-10-23", ver:"V9 · referencia histórica", note:"Primera operación de Atlas con Cloudflare Access documentada en la PR original; la versión actual detrás de la URL requiere comprobación autenticada." }
@@ -1223,62 +1229,6 @@ const PROJECTS = [
     historial: [
       { date:"2026-11-06", ver:"Atlas", note:"Exportado del artefacto de Claude al repo Atlas; los JSON se renombraron a radar-factiun-data/-geo." },
       { date:"2026-10-30", ver:"instantánea", note:"Volcado de datos con el que se construyó el radar." }
-    ]
-  },
-  {
-    name: "Ficha de equipo TCU Toolbox",
-    status: "demo",
-    objetivo: "Maqueta de la pantalla «Ficha de equipo» para la TCU Toolbox: NCU, seguidor y estación meteo con cada ajuste dicho en llano, ligado a su registro Modbus, con cambios pendientes y escritura con copia previa. No se conecta a nada.",
-    stack: "HTML estático · maqueta con valores de ejemplo (toolbox v12.15 · El Burgo I) · diseño de la pantalla que falta en la toolbox",
-    url: "",
-    links: [
-      { label: "En Claude", url: "https://claude.ai/artifact/UtiZwBbqJTFwBoT3kbQrHk" }
-    ],
-    repo: "",
-    updated: "2026-10-14",
-    version: "maqueta",
-    docId: "",
-    docUrl: "",
-    download: "",
-    uso: [
-      "Elige NCU, seguidor o estación meteo en el árbol y recorre los menús: cada fila es una variable real del catálogo de la toolbox con su registro (activa «Ver registros»).",
-      "«Cambiar» deja el valor como pendiente; «Escribir en el equipo» enseña dónde iría la confirmación con copia previa y relectura.",
-      "Sirve de especificación para implementar la ficha en la TCU Toolbox (PowerShell); los valores son de ejemplo."
-    ],
-    pendientes: [
-      { done:false, text:"Implementar la ficha en la TCU Toolbox leyendo del gateway Modbus de la NCU con el mismo mapa de registros." },
-      { done:false, text:"Decidir si la maqueta se guarda en el repo scada junto a la toolbox (hoy solo existe en claude.ai)." }
-    ],
-    historial: [
-      { date:"2026-10-14", ver:"maqueta", note:"Pantalla de ficha de equipo diseñada en Claude sobre el catálogo de variables de la toolbox v12.15." }
-    ]
-  },
-  {
-    name: "Globo de plantas",
-    status: "demo",
-    objetivo: "Globo 3D con las plantas de la base 14 por país y región: filtra por fase y fiabilidad, cuenta plantas o MW, entra en cada país y región hasta la planta, y reproduce los PPAs firmados año a año.",
-    stack: "globe.gl · d3 · TopoJSON (países 110m y regiones adm1) · datos.json volcados de Notion 14 · prueba sobre un volcado fechado",
-    url: "",
-    links: [
-      { label: "En Claude", url: "https://claude.ai/artifact/Sh4pXwsUbkoa65pe3E8FML" }
-    ],
-    repo: "",
-    updated: "2026-11-09",
-    version: "prueba",
-    docId: "",
-    docUrl: "",
-    download: "",
-    uso: [
-      "Arrastra para girar; pulsa un país para entrar y una región para ver sus plantas (cada punto, una planta; el tamaño sigue a la potencia).",
-      "Los filtros de fase, fiabilidad y medida (nº o MW) cambian el color del mapa y la lista lateral; «PPAs en el tiempo» anima los contratos por año.",
-      "Las fichas sin país o sin región se cuentan aparte y se avisa en la nota lateral: no desaparecen."
-    ],
-    pendientes: [
-      { done:false, text:"Leer el catálogo de Atlas (o Supabase) en vez del volcado datos.json, para que no caduque." },
-      { done:false, text:"Integrarlo en el centro de herramientas de Atlas junto al mapa de cartera, detrás de Cloudflare Access." }
-    ],
-    historial: [
-      { date:"2026-11-09", ver:"prueba", note:"Globo construido en Claude sobre un volcado de la base 14 (datos, países y regiones en tres JSON)." }
     ]
   },
   {
@@ -2403,6 +2353,8 @@ const PROJECTS = [
     objetivo: "Configura, diagnostica y guarda copias de las TCUs Sunner mediante el gateway Modbus de la NCU. Uso local sin conexión a internet.",
     stack: "PowerShell · Modbus TCP · offline",
     url: "",                                                  // no hay deploy: se ejecuta en el portátil de campo
+    links: [ { label: "Ficha de equipo (maqueta)", url: "https://claude.ai/artifact/UtiZwBbqJTFwBoT3kbQrHk" } ],
+    principal: "download",                                   // el ZIP sigue siendo el botón principal; la maqueta, secundario
     repo: "https://github.com/imoriana3/scada/tree/main/tools/tcu-toolbox",
     updated: "2026-11-11",
     version: "12.20",
@@ -2419,6 +2371,7 @@ const PROJECTS = [
     // descarga pide sesion de GitHub con acceso al repo.
     release: "IMoriana3/scada",                                      // version y fecha en vivo: ver refrescarReleases()
     uso: [
+      "«Ficha de equipo (maqueta)» abre en Claude el diseño de la pantalla de ficha de NCU, seguidor y estación meteo: cada ajuste en llano con su registro Modbus, cambios pendientes y escritura con copia previa. Es la especificación de lo que falta en la toolbox; no se conecta a nada.",
       "Descarga el ZIP con el botón Paquete (el repo es privado: pide sesión de GitHub con acceso; todas las versiones están en https://github.com/IMoriana3/scada/tree/releases). El fichero lleva la versión en el nombre (TCU_Toolbox_v12.20.zip) y trae dos carpetas: tcu-toolbox (la toolbox, el descargador de logs de NCU y el Espía Modbus) y tcu-agente (el agente remoto). Copia las dos, juntas, al portátil de campo.",
       "Doble clic en TCU_Toolbox.bat (sin instalar nada). Las entradas \"(auto)\" resuelven solas el puerto de cada TCU.",
       "Las plantas viajan en plantas/<planta>.json (o CSV) — se exportan desde la página IPs de esta misma plataforma, o se regeneran desde el Excel maestro."
@@ -2932,7 +2885,8 @@ function cardHTML(p){
   const repo = p.repo ? `<a class="btn" href="${esc(p.repo)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Repo</a>` : ``;
   const dl = p.download ? `<a class="btn" href="${esc(p.download)}" onclick="event.stopPropagation()" download><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>Paquete</a>` : ``;
   let sec = [docBtn, repo, dl].filter(Boolean), pri = "";
-  if(abre.length) pri = abre.shift();
+  if(p.principal === "download" && dl){ pri = dl; sec = sec.filter(x => x !== pri); }   // la ficha pide que mande el paquete
+  else if(abre.length) pri = abre.shift();
   else { pri = dl || docBtn || repo; sec = sec.filter(x => x !== pri); }
   if(pri) pri = pri.replace('class="btn', 'class="btn primary');
 /* EL CHIP DE VERSION DICE DE DONDE SALE EL NUMERO. Una tarjeta con `verEnApp`
