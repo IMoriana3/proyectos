@@ -1257,6 +1257,21 @@
               <option value="">Horario (el del dato)</option>
             </select></div>
         </div>
+        <div class="two">
+          <div class="field"><label>Suelta del pasivo (km/h)</label>
+            <input id="mSuelta" type="number" step="5" min="20" max="250" value="90" list="mSueltaRef"></div>
+          <div class="field"><label>Nº de trackers (denominador)</label>
+            <input id="mTrk" type="number" step="1" min="1" value="10"></div>
+        </div>
+        <datalist id="mSueltaRef">
+          <option value="90">defecto del núcleo (sin medir)</option>
+          <option value="110">ensayo ARRAY Colorado, 68 mph</option>
+          <option value="125">ensayo ARRAY Colorado, 78–80 mph</option>
+        </datalist>
+        <p class="nota" style="margin-top:-2px">La suelta es <b>el</b> parámetro que más mueve el mapa y <b>no está medida</b>:
+          sustituye al par de desembrague. Es la misma casilla que la de la pestaña Simulador (cambiar una cambia la otra).
+          Como referencia, en el ensayo de ARRAY en Colorado la fila exterior se soltó con 68, 80 y 78 mph registradas
+          (≈ 109, 129 y 126 km/h), sin decir si ráfaga o media ni a qué altura.</p>
         <div class="field"><label>Escala de color</label>
           <select id="mEsc">
             <option value="" selected>Ajustada al dato</option>
@@ -9887,7 +9902,22 @@ function mFirma(base,opt){
   return JSON.stringify([c,opt]);
 }
 
+/* La suelta y el nº de trackers del mapa SON los de la ficha (`pasV`, `nTrk`):
+   un solo valor por parámetro. La casilla del mapa escribe en la de la ficha
+   y dispara su `change`, así se guarda en la configuración y la ficha se
+   entera; al abrir la pestaña se copia al revés. */
+function mLeeFicha(){$('mSuelta').value=$('pasV').value;$('mTrk').value=$('nTrk').value;}
+function mEscribeFicha(id,dest){
+  var v=+$(id).value;
+  if(!(v>0)){$(id).value=$(dest).value;return;}
+  if(id==='mSuelta')v=Math.max(20,Math.min(250,v));
+  if(id==='mTrk')v=Math.max(1,Math.round(v));
+  $(id).value=v; $(dest).value=v;
+  $(dest).dispatchEvent(new Event('change'));
+}
+
 async function mAbre(){
+  mLeeFicha();
   if(MAPA.indice){mPlanea();return;}
   var MP=window.FactiunMapasPais;
   if(!MP||!MP.paisDe){mMsg('<b style="color:var(--err)">No ha cargado <code>lib/mapas-pais.js</code></b>: sin las láminas de país no hay contorno ni rejilla.');return;}
@@ -10141,7 +10171,7 @@ function mPinta(x,W,H,tema,ppx,pantalla){
     var p=hz.base.passive, n=lista.filter(function(o){return o.g;}).length;
     x.textAlign='right';
     x.fillText('Factiun · sim-viento · rejilla '+MAPA.plan.paso+'° · '+n+' nodos · Open-Meteo (ERA5), '+
-      (hz.opt.rafaga?'ráfaga horaria':'viento medio')+' · suelta '+fmt(p.release_kmh,0)+' km/h, 1 fila de '+
+      (hz.opt.rafaga?'ráfaga horaria':'viento medio')+' · suelta '+fmt(p.release_kmh,0)+' km/h (no medida), 1 fila de '+
       (p.n_trackers*p.filas_por_tracker),W-12,H-8);
   }
   return geo;
@@ -10223,6 +10253,11 @@ $('tabMapa').onclick=function(){gTab('mapa');};
 $('mRun').onclick=mGenera;
 $('mPais').onchange=function(){if(!MAPA.corriendo)mCargaPais();};
 ['mPaso','mYear','mGust','mRef'].forEach(function(i){$(i).addEventListener('change',function(){if(!MAPA.corriendo)mPlanea();});});
+[['mSuelta','pasV'],['mTrk','nTrk']].forEach(function(par){
+  $(par[0]).addEventListener('change',function(){
+    if(MAPA.corriendo){$(par[0]).value=$(par[1]).value;return;}   // a media corrida no se cambia el caso
+    mEscribeFicha(par[0],par[1]); mPlanea();
+  });});
 ['mEsc','mVerNodos'].forEach(function(i){$(i).addEventListener('change',function(){MAPA.rv++;mDibuja();});});
 $('mBorra').onclick=function(){
   if(MAPA.corriendo)return;

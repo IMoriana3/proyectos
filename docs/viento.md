@@ -135,10 +135,20 @@ mapa, y el arnés carea un nodo contra la corrida de la ficha para ese punto.
 |---|---|
 | **Ganancia** | `100 · (POA planta con pasivo − POA planta con activo) / POA planta con activo`. Positiva: el pasivo capta más. |
 | **Activo de referencia** | una de A1/A2/B1/B2, con los umbrales de la pestaña Simulador. |
-| **Pasivo** | el de la ficha: velocidad de suelta, lado y **denominador** (trackers × filas). |
+| **Pasivo** | el de la ficha: velocidad de suelta, lado y **denominador** (trackers × filas). La suelta y el nº de trackers se editan también desde el propio mapa: es la misma casilla que la de la ficha, no una copia. |
 | **Nodos** | rejilla regular de 2°, 1°, 0,75°, 0,5° o 0,25°, en múltiplos del paso desde 0°. Vale el nodo que cae en tierra del país según la rejilla de su lámina (`data/mapas_pais/`). |
 | **Meteo** | Open-Meteo (ERA5), el año elegido, horaria; por defecto dispara con la **ráfaga horaria** de la fuente. |
 | **Paso** | 15 min por defecto (5 min u horario a elegir). |
+
+### La suelta manda, y no está medida
+
+Es el parámetro que más mueve el mapa: en El Burgo, a 40 km/h salen 248 sueltas y 3.677 h; a 90, seis
+y 52. El valor por defecto (90 km/h = 25 m/s) viene de `solargpt_core.wind_stow_passive` y es un
+**sustituto declarado** del par de desembrague, no una medida. Como referencia pública, en el ensayo
+de ARRAY en Colorado la fila exterior se soltó con 68, 80 y 78 mph registradas (≈ 109, 129 y
+126 km/h), sin decir si es ráfaga o media ni a qué altura; y en Wind XP el disparo es por **par**, así
+que depende del ángulo de la fila y de la dirección del viento, cosa que aquí no se modela. El campo
+del mapa trae esos valores como sugerencias, y el PNG pone la suelta usada con «(no medida)».
 
 ### Cómo se lee
 

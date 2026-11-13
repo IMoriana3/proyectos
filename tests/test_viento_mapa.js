@@ -137,6 +137,27 @@ const check = (n, cond, extra) => { if (cond) { ok++; console.log('OK   ' + n); 
         r2.every(g => g) && r2.reduce((s, g) => s + g.ganancia_pct, 0) > r1.reduce((s, o) => s + o.g.ganancia_pct, 0) + 0.5);
   check('el plan cuenta la meteo guardada', new RegExp(plan.n + ' con meteo guardada').test(await page.$eval('#mPlan', e => e.textContent)));
 
+  // ── la suelta, configurable desde el mapa ──
+  check('al abrir el mapa la suelta y los trackers son los de la ficha',
+        await page.evaluate(() => $('mSuelta').value === $('pasV').value && $('mTrk').value === $('nTrk').value));
+  const nPasAntes = r2.reduce((s, g) => s + g.n_pasivo, 0);
+  await page.fill('#mSuelta', '40'); await page.dispatchEvent('#mSuelta', 'change');
+  check('cambiarla en el mapa la cambia en la ficha (un solo valor) y en los supuestos',
+        await page.evaluate(() => $('pasV').value === '40' && /suelta a <b>40 km\/h/.test($('mSup').innerHTML)));
+  await genera();
+  const r5 = await page.evaluate(() => mLista().map(o => o.g));
+  check('y recalcula SIN pedir meteo (' + red.n + ' peticiones)', red.n === 0);
+  check('con suelta baja el pasivo se suelta más y PIERDE (' + nPasAntes + ' → ' + r5.reduce((s, g) => s + g.n_pasivo, 0) + ' sueltas)',
+        r5.reduce((s, g) => s + g.n_pasivo, 0) > nPasAntes && r5.some(g => g.pasivo_pct < 0));
+  check('y la ganancia baja con ella',
+        r5.reduce((s, g) => s + g.ganancia_pct, 0) < r2.reduce((s, g) => s + g.ganancia_pct, 0));
+  check('la exportación lleva la suelta usada', (await page.evaluate(() => mExporta())).configuracion.passive.release_kmh === 40);
+  await page.fill('#mTrk', '2'); await page.dispatchEvent('#mTrk', 'change');
+  check('el nº de trackers también se cambia desde el mapa y llega a la ficha',
+        await page.evaluate(() => $('nTrk').value === '2' && /1 fila de 4 /.test($('mSup').textContent)));
+  await page.fill('#mTrk', '10'); await page.dispatchEvent('#mTrk', 'change');
+  await page.fill('#mSuelta', '90'); await page.dispatchEvent('#mSuelta', 'change');
+
   // ── de un nodo al simulador ──
   const obj = await page.evaluate(() => { const o = mLista()[3], r = $('mLienzo').getBoundingClientRect();
     return { x: r.left + MAPA.geo.X(o.lon), y: r.top + MAPA.geo.Y(o.lat), lat: o.lat, lon: o.lon }; });
