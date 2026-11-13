@@ -161,6 +161,23 @@ del mapa trae esos valores como sugerencias, y el PNG pone la suelta usada con �
   máximo) y **Llevar al Simulador** pone esas coordenadas en la ficha para ver el año entero.
 - La media del país va ponderada por cos(latitud): los nodos equidistan en grados, no en km.
 
+### Mapas calculados en el NAS (0,25°)
+
+Con el plan gratuito de Open-Meteo el navegador no pasa de unos 400 nodos al día. Para el detalle de
+ERA5 (0,25°: España son 886 nodos) el mapa se calcula en lote en el NAS con `tools/mapa_pasivo/`:
+ERA5 bajado de Copernicus (CC-BY 4.0) y **el mismo motor de esta ficha**, que el script carga de
+`sim-viento.html` tal cual. El resultado va a `data/mapas_pais/pasivo/` y la pestaña lo lista en
+**«Mapas calculados en el NAS»**.
+
+- Se carga al instante, con las cuatro estrategias: cambiar A1/A2/B1/B2 lee otra capa del fichero.
+- Lleva **su** configuración (umbrales, suelta, trackers), que la pestaña enseña al cargarlo; tocar
+  país, rejilla o año lo suelta.
+- **Configuración para el NAS (JSON)** descarga lo que hay ahora en la ficha, para calcular un mapa
+  nuevo con eso.
+- `tests/test_mapa_lote.js` carea cada nodo del lote con la corrida de la pestaña: al bit.
+
+Instrucciones en `tools/mapa_pasivo/README.md`.
+
 ### La meteo se guarda
 
 Un año de un punto pesa para Open-Meteo entre 18 y 26 llamadas, y el plan gratuito da 600 por
