@@ -137,9 +137,11 @@ Dos huecos de la especificación se resuelven con un desplegable, no a escondida
 
 - **Pre-stow al cruzar el mediodía solar** — «mantiene el lado en el mínimo» (por
   defecto) o «sigue al sol y cruza por horizontal».
-- **Alarma activa al anochecer** — «va a stow Este» (por defecto: si el seguidor está
-  al Oeste llega cruzando por horizontal con la alarma activa, y la tarjeta cuenta
-  cuántas noches pasa) o «se queda donde está».
+- **Alarma activa al anochecer** — «se queda donde está» (por defecto, confirmado por
+  Posventa el 13/11/2026: el seguidor sigue abanderado en su lado hasta que acabe la
+  alarma; si ya de noche sube a stow, va al stow de ese lado) o «va a stow Este» (si
+  está al Oeste llega cruzando por horizontal con la alarma activa, y la tarjeta cuenta
+  cuántas noches pasa).
 
 La velocidad de giro es opcional: vacía, el seguidor está siempre en la posición que
 le marca la lógica; con un valor, una alarma puede pillarlo a medio camino.
@@ -165,9 +167,29 @@ Cortas a propósito, para que se lean de un vistazo:
 - **Lista completa**, plegada, con filtro; y su **CSV** (separador «;», coma decimal,
   hora UTC y hora local de la planta), solo del grupo que se está viendo.
 
-Con más de una NCU, «Grupo de sensores» ofrece cada NCU y, además, **«Planta entera
-(todas las NCU)»**: en cada minuto manda la racha más alta de cualquier HSU. Sirve si la
-alarma de viento es de planta y no de cada NCU; qué caso es el real depende del control.
+Con más de una NCU, «Grupo de sensores» abre con **«Planta entera (todas las NCU)»**: en
+cada minuto manda la racha más alta de cualquier HSU, así que varias HSU en alarma a la vez
+son una sola activación. Es lo que cuenta para la alarma (confirmado por Posventa el
+13/11/2026). Cada NCU queda como detalle; sus recuentos no se suman.
+
+### Episodios de viento
+
+Con la regla de desactivar 30 min después de la última racha, en una misma ventolera la
+alarma cae y vuelve a saltar. En El Burgo I, de 770 pre-stow, 264 saltan menos de 30 min
+después de que el anterior se desactivara. Por eso el resumen cuenta **episodios**: las
+activaciones del mismo tipo que vuelven a saltar antes de un margen (2 h por defecto, a la
+vista, y sin volver a simular) son un mismo episodio. Al lado siguen las veces que salta la
+alarma, que es lo que haría el control con esa regla. Con margen 0, episodio = activación.
+
+### Gráficas
+
+- **Calendario de alarmas**: cada día de la planta es una columna de 0 a 24 h, con los
+  tramos en pre-stow y en stow, la noche sin sombrear y los días sin dato en gris.
+- **Reloj de 24 h**: parte del tiempo con dato en que cada alarma está activa a cada hora.
+- **Duración y racha máxima**: un punto por episodio de pre-stow; en rojo, los que llegan a stow.
+- **Qué HSU detecta más viento**: porcentaje del tiempo de cada HSU por encima de cada
+  velocidad, sobre su propio periodo.
+- **Cuántos**: episodios por semana, o por mes si el periodo pasa de 30 semanas.
 - **Informe** de una página, imprimible a PDF y con aspecto de nota escrita a mano: sin
   membrete, empieza por el título; ficha (planta, sensores, periodo), dos frases de resumen,
   «Tabla 1» con el resumen y el reparto por racha máxima al pie, «Figura 1» con las
@@ -186,10 +208,10 @@ navegador sobre el viento de la sesión y se descarta al cerrarla.
 `lib/meteo-wind-logic.js` — módulo puro, sin DOM, sin red y sin importaciones; la
 posición solar se inyecta (`solarPosition` de `lib/meteo-browser.js`).
 
-- `node tests/test_meteo_logica_viento.js` — 37 verificaciones del motor con series
+- `node tests/test_meteo_logica_viento.js` — 42 verificaciones del motor con series
   sintéticas y del lector de histórico con una base de mentira (450 días sin tope,
   avance por fecha, un día que llena la página, corte por tiempo, repliegue).
-- `node tests/test_meteo_logica_viento_browser.js` — 24 comprobaciones de la tarjeta
+- `node tests/test_meteo_logica_viento_browser.js` — 27 comprobaciones de la tarjeta
   en Chromium con Supabase simulado; arriba se carga un solo día en calma y la
   simulación sale del histórico entero.
 
