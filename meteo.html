@@ -234,7 +234,7 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
     </details>
     <div class="actions" style="margin-top:8px"><button id="wlRun" disabled>Simular lógica</button><button id="wlCsv" class="secondary" disabled>Descargar activaciones CSV</button><button id="wlReport" class="secondary" disabled>Descargar informe (HTML · PDF)</button></div>
     <div class="statusline" id="wlStatus">Carga primero las medidas de las HSU (Supabase o CSV).</div>
-    <div class="tablewrap" style="margin-top:9px"><table class="wl-resumen"><thead><tr><th>Alarma</th><th>Episodios de viento</th><th>Veces que salta</th><th>No hay que mover</th><th>Hay que mover</th><th>Cuánto</th></tr></thead><tbody id="wlSummary"><tr><td colspan="6">Pulsa «Simular lógica».</td></tr></tbody></table></div>
+    <div class="tablewrap" style="margin-top:9px"><table class="wl-resumen"><thead><tr><th>Alarma</th><th>Episodios de viento</th><th>Veces que salta</th><th>No hay que mover</th><th>Hay que mover</th><th>Cuánto se mueve</th></tr></thead><tbody id="wlSummary"><tr><td colspan="6">Pulsa «Simular lógica».</td></tr></tbody></table></div>
     <p class="note" id="wlBands" hidden></p>
     <ul class="note wl-avisos" id="wlNotes" hidden></ul>
   </div>
@@ -1736,25 +1736,42 @@ function wlRenderEvents(){
   }).join(""):'<tr><td colspan="11">Ninguna activación con este filtro.</td></tr>';
 }
 const WL_RASTER=new WeakMap();   // el calendario de cada grupo se calcula una vez; al redibujar (cambio de tamaño) se reutiliza
+/* Lo que dibujan las gráficas, calculado una vez: lo usan la página y el informe. */
+const wlHsuCorto=x=>(x.ncu?x.ncu+"/":"")+x.name;
+function wlChartData(g){
+  const r=WIND_LOGIC,o=r.options;
+  if(!WL_RASTER.has(g))WL_RASTER.set(g,windLogicRaster(r,g,{solarPosition}));
+  // Cada HSU por separado: las del grupo que se está viendo.
+  const hs=r.sensors.filter(x=>g.key===WIND_LOGIC_PLANT_KEY||r.groups.length===1||x.ncu===g.key);
+  return {c:windLogicCharts(g,{gapMin:o.episodeGapMin,timeZone:r.site.timezone}),ras:WL_RASTER.get(g),hs,
+    curvas:hs.map(x=>({label:wlHsuCorto(x),hist:x.hist,dataMinutes:x.dataMinutes})),
+    marcas:[{v:o.prestowKmh,label:"pre-stow",tipo:"prestow"},{v:o.stowKmh,label:"stow",tipo:"stow"}]};
+}
+/* Las mismas gráficas, en claro y al tamaño del informe, dibujadas en lienzos que no están en la página. */
+function wlReportFigures(g){
+  try{
+    const d=wlChartData(g),o=WIND_LOGIC.options;
+    const fig=(w,h,draw)=>{const cv=document.createElement("canvas");draw(cv,{width:w,height:h,dpr:3,tema:"claro",title:""});return cv.toDataURL("image/png");};
+    return {calendar:fig(690,260,(cv,op)=>drawAlarmCalendar(cv,d.ras,op)),
+      clock:fig(335,225,(cv,op)=>drawAlarmClock(cv,d.ras.clock,op)),
+      scatter:fig(335,225,(cv,op)=>drawEpisodeScatter(cv,d.c.episodes.prestow,{...op,stowKmh:o.stowKmh})),
+      exceedance:fig(690,200,(cv,op)=>drawExceedance(cv,d.curvas,{...op,marks:d.marcas}))};
+  }catch(e){return null;}                                   // sin lienzo, el informe sale con su figura de barras
+}
 function wlDrawChart(){
   const g=wlGroupNow();if(!g||g.coverage.first==null)return;
-  const r=WIND_LOGIC,o=r.options,gap=o.episodeGapMin,c=windLogicCharts(g,{gapMin:gap,timeZone:r.site.timezone}),tl=c.timeline;
+  const r=WIND_LOGIC,o=r.options,gap=o.episodeGapMin,{c,ras,hs,curvas,marcas}=wlChartData(g),tl=c.timeline;
   const que=gap>0?"Episodios":"Activaciones";
   // Calendario: cada día una columna, de 0 a 24 h, con los tramos en alarma y la noche sin sombrear.
-  if(!WL_RASTER.has(g))WL_RASTER.set(g,windLogicRaster(r,g,{solarPosition}));
-  const ras=WL_RASTER.get(g);
   drawAlarmCalendar($("wlCalendar"),ras,{title:"Cuándo está activa cada alarma · "+g.label,height:340});
   $("wlCalendarNote").textContent="Cada columna es un día, en la hora de la planta, de 0 h (arriba) a 24 h (abajo). Naranja: pre-stow activo; rojo: stow activo. "+
     wlInt(ras.days-ras.noData.length)+" días con dato de "+wlInt(ras.days)+".";
   drawAlarmClock($("wlChartHour"),ras.clock,{title:"Parte del tiempo en alarma, por hora",height:270});
   drawEpisodeScatter($("wlChartDur"),c.episodes.prestow,{title:que+": duración y racha máxima",height:270,stowKmh:o.stowKmh});
-  // Cada HSU por separado: las del grupo que se está viendo.
-  const hs=r.sensors.filter(x=>g.key===WIND_LOGIC_PLANT_KEY||r.groups.length===1||x.ncu===g.key),corto=x=>(x.ncu?x.ncu+"/":"")+x.name;
-  drawExceedance($("wlChartHsu"),hs.map(x=>({label:corto(x),hist:x.hist,dataMinutes:x.dataMinutes})),{title:"Tiempo por encima de cada velocidad",height:270,
-    marks:[{v:o.prestowKmh,label:"pre-stow",color:"#F09030"},{v:o.stowKmh,label:"stow",color:"#E84858"}]});
+  drawExceedance($("wlChartHsu"),curvas,{title:"Tiempo por encima de cada velocidad",height:270,marks:marcas});
   $("wlChartsNote").textContent="Reloj: parte del tiempo con dato en que cada alarma está activa a esa hora. Nube: un punto por "+(gap>0?"episodio":"activación")+
     " de pre-stow, en rojo los que llegan a stow; la duración va del primer salto a la última desactivación. Curvas: porcentaje del tiempo de cada HSU por encima de cada velocidad, sobre su propio periodo"+
-    (hs.length?" ("+hs.map(x=>corto(x)+": "+wlInt(x.days)+" días, máxima "+wlNum(x.peakKmh)+" km/h").join("; ")+")":"")+".";
+    (hs.length?" ("+hs.map(x=>wlHsuCorto(x)+": "+wlInt(x.days)+" días, máxima "+wlNum(x.peakKmh)+" km/h").join("; ")+")":"")+".";
   // Y el recuento, por semana o por mes.
   const tope=(...xs)=>{const m=Math.max(1,...xs.flat())/4;return 4*([1,2,3,4,5,10,15,20,25,50,75,100,150,200,250,500,750,1000].find(u=>u>=m)||Math.ceil(m/1000)*1000);};
   const every=Math.max(1,Math.ceil(tl.labels.length/(tl.unit==="mes"?24:14)));
@@ -1785,7 +1802,7 @@ function wlDownloadCsv(){
 function wlDownloadReport(){
   const g=wlGroupNow();if(!WIND_LOGIC||!g){wlStatus("Sin simulación que informar.","bad");return;}
   const name=String(WIND_LOGIC.plant||"planta").replace(/[^a-z0-9_-]+/gi,"_");
-  downloadText(windLogicReportHtml(WIND_LOGIC,{groupKey:g.key}),"informe_logica_viento_"+name+".html","text/html;charset=utf-8");
+  downloadText(windLogicReportHtml(WIND_LOGIC,{groupKey:g.key,figures:wlReportFigures(g)}),"informe_logica_viento_"+name+".html","text/html;charset=utf-8");
 }
 $("wlRun").onclick=wlRun;
 $("wlReport").onclick=wlDownloadReport;

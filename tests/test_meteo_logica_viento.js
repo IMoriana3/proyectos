@@ -109,6 +109,19 @@ const moduleOf = async name =>
     assert.deepEqual([gn.movementsToStow.total,gn.movementsToStow.night,gn.movementsToStow.day],[2,2,0]);
   });
 
+  check("las dos alarmas en el mismo minuto: un solo movimiento, repartido y sin contarlo dos veces",()=>{
+    // de día, casi horizontal: al pre-stow el tramo hasta 30° y al stow los 25° que faltan
+    const d=sim(serie("2026-06-10T00:00","2026-06-10T23:59",[["2026-06-10T12:40",65]])),th=Math.abs(theta("2026-06-10T12:39").theta);
+    const p=at(d,"prestow","2026-06-10T12:40"),s=at(d,"stow","2026-06-10T12:40");
+    assert.ok(th<29,String(th));assert.ok(p&&s&&s.sameMinuteAsPrestow);
+    assert.ok(!p.alreadyOk&&near(p.degrees,30-th,0.2),String(p.degrees));assert.equal(Math.abs(p.target),30);
+    assert.equal(Math.abs(s.posBefore),30);assert.equal(s.degrees,25);assert.ok(near(p.degrees+s.degrees,55-th,0.2));
+    assert.equal(Math.sign(p.target),Math.sign(s.target));
+    // de noche: el pre-stow lo lleva a 55° E y el stow ya no pide nada
+    const n=sim(serie("2026-06-10T12:00","2026-06-11T03:00",[["2026-06-10T22:30",65]])),pn=at(n,"prestow","2026-06-10T22:30"),sn=at(n,"stow","2026-06-10T22:30");
+    assert.equal(pn.degrees,50);assert.ok(sn.alreadyOk);assert.equal(sn.degrees,0);assert.equal(sn.posBefore,-55);
+  });
+
   /* Pre-stow continuo desde antes del mediodía solar hasta la tarde, y stow por la tarde. */
   const mediodia=[];for(let t=ms("2026-06-10T11:30");t<=ms("2026-06-10T14:30");t+=20*60000)mediodia.push([new Date(t).toISOString(),45]);
   const MED=serie("2026-06-10T00:00","2026-06-10T23:59",[...mediodia,["2026-06-10T14:40",65]]);
@@ -201,12 +214,12 @@ const moduleOf = async name =>
   check("resumen: por alarma, veces que salta, sin mover, a mover y cuánto",()=>{
     const out=simulateWindLogic(NOCHES,{plant:"P",site:SITE,solarPosition}),r=W.windLogicSummary(out,out.groups[0]);
     assert.deepEqual(r.rows.map(x=>[x.label,x.total,x.ok,x.move,x.how]),
-      [["Pre-stow (> 40 km/h)",3,1,2,"2 de noche, 50°"],["Stow (> 60 km/h)",1,1,0,"—"]]);
+      [["Pre-stow (> 40 km/h)",3,1,2,"2 de noche: 50°"],["Stow (> 60 km/h)",1,1,0,"—"]]);
     assert.equal(r.bands.prestow,"40–50 km/h: 2 · > 60 km/h: 1");assert.equal(r.bands.stow,"60–65 km/h: 1");
     assert.equal(r.period,"10/06/2026 – 12/06/2026 · 3 días con dato");
     assert.deepEqual(r.notes,["El recuento es un mínimo: el registro no guarda todas las lecturas de 1 s."]);
     const d=simulateWindLogic(DIA,{plant:"P",site:SITE,solarPosition}),rd=W.windLogicSummary(d,d.groups[0]);
-    assert.match(rd.rows[0].how,/^1 de día, \d+(,\d)?°$/);assert.match(rd.rows[1].how,/^2 de día, \d+(,\d)?° de media \(hasta 25°\)$/);
+    assert.match(rd.rows[0].how,/^1 de día: \d+(,\d)?°$/);assert.match(rd.rows[1].how,/^2 de día: \d+(,\d)?° de media, máx\.\s25°$/);
     // Por defecto el seguidor se queda donde está al anochecer con alarma; «va a stow Este» sigue como opción y avisa del cruce
     const x=simulateWindLogic(OCASO,{plant:"P",site:SITE,solarPosition}),rx=W.windLogicSummary(x,x.groups[0]);
     assert.equal(x.options.duskRule,"hold");assert.equal(rx.notes[0],"La alarma sigue activa al anochecer una noche; el seguidor se queda donde está.");
@@ -246,8 +259,8 @@ const moduleOf = async name =>
     const out=simulateWindLogic(NOCHES.map(r=>({...r,plant:"P <b>&"})),{plant:"P <b>&",site:SITE,solarPosition});
     const h=W.windLogicReportHtml(out,{generatedAt:"2026-11-12T17:00:00Z"});
     assert.match(h,/^<!doctype html>/);assert.ok(h.includes("P &lt;b&gt;&amp;")&&!h.includes("P <b>&"));
-    assert.ok(h.includes("<tr><td>Pre-stow (&gt; 40 km/h)</td><td>2</td><td>3</td><td>1</td><td>2</td><td>2 de noche, 50°</td></tr>")); // 2 episodios, 3 activaciones
-    assert.ok(h.includes("<tr><td>Stow (&gt; 60 km/h)</td><td>1</td><td>1</td><td>1</td><td>0</td><td>—</td></tr>"));
+    assert.ok(h.includes("<tr><td>Pre-stow<br><span class=\"umbral\">&gt; 40 km/h</span></td><td>2</td><td>3</td><td>1</td><td>2</td><td>2 de noche: 50°</td></tr>")); // 2 episodios, 3 activaciones
+    assert.ok(h.includes("<tr><td>Stow<br><span class=\"umbral\">&gt; 60 km/h</span></td><td>1</td><td>1</td><td>1</td><td>0</td><td>—</td></tr>"));
     assert.ok(h.includes("Un episodio agrupa las activaciones que vuelven a saltar menos de 2 h después de desactivarse. Activaciones por racha máxima. Pre-stow: 40–50 km/h, 2; más de 60 km/h, 1. Stow: 60–65 km/h, 1."));
     assert.equal((h.match(/<svg /g)||[]).length,1);assert.ok(h.includes("<b>Tabla 2.</b> Reglas simuladas.")&&h.includes("<h2>Observaciones</h2>")&&h.includes("<b>Figura 1.</b>"));
     // se lee como una nota escrita: ficha, dos frases de resumen y fecha con todas sus letras
@@ -343,7 +356,7 @@ const moduleOf = async name =>
   });
   check("informe sin activaciones: ceros en el resumen y ninguna gráfica vacía",()=>{
     const h=W.windLogicReportHtml(simulateWindLogic(serie("2026-06-10T00:00","2026-06-10T23:59",[]),{plant:"P",site:SITE,solarPosition}));
-    assert.ok(h.includes("<td>Pre-stow (&gt; 40 km/h)</td><td>0</td><td>0</td><td>0</td><td>0</td><td>—</td>"));
+    assert.ok(h.includes("<td>Pre-stow<br><span class=\"umbral\">&gt; 40 km/h</span></td><td>0</td><td>0</td><td>0</td><td>0</td><td>—</td>"));
     assert.ok(!h.includes("<svg ")&&!h.includes("Por racha máxima")&&!h.includes("Figura 1"));
     assert.ok(h.includes("ninguna de las dos alarmas llega a saltar."));
   });

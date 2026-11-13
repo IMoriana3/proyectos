@@ -164,7 +164,7 @@ function stub(){
    /01\/06\/2026.*04\/06\/2026/.test(await txt('wlStatus'))&&/todo el histórico de la base/.test(await txt('wlStatus')),[pedido,await txt('wlStatus')]);
  check('resumen: cuatro episodios y cinco pre-stow (dos sin mover, tres a mover) y un stow; el máximo de las dos HSU manda',
    R[0].slice(0,5).join('|')==='Pre-stow (> 40 km/h)|4|5|2|3'&&R[1].slice(0,5).join('|')==='Stow (> 60 km/h)|1|1|0|1',R);
- check('cuánto: uno de día casi 30°, dos de noche 50°; el stow, 25°',/^1 de día, (29,\d|30)°; 2 de noche, 50°$/.test(R[0][5])&&R[1][5]==='1 de día, 25°',[R[0][5],R[1][5]]);
+ check('cuánto: uno de día casi 30°, dos de noche 50°; el stow, 25°',/^1 de día: (29,\d|30)°; 2 de noche: 50°$/.test(R[0][5])&&R[1][5]==='1 de día: 25°',[R[0][5],R[1][5]]);
  check('recuento por racha máxima en una línea',(await txt('wlBands'))==='Un episodio agrupa las activaciones que vuelven a saltar menos de 2 h después de desactivarse. Activaciones por racha máxima. Pre-stow: 40–50 km/h: 4 · > 60 km/h: 1. Stow: 60–65 km/h: 1.',await txt('wlBands'));
  /* Gráficas: cuándo, a qué hora, cuánto duran y qué detecta cada HSU. */
  const graf=await page.evaluate(()=>{
@@ -209,10 +209,21 @@ function stub(){
 
  const [informe]=await Promise.all([page.waitForEvent('download',{timeout:15000}),page.click('#wlReport')]);
  const html=fs.readFileSync(await informe.path(),'utf8');
- check('informe: una página con el resumen, la gráfica y las reglas; la lista no va',
+ check('informe: el resumen, las reglas y las gráficas de la página; la lista no va',
    informe.suggestedFilename()==='informe_logica_viento_El_Burgo_I.html'&&/^<!doctype html>/.test(html)&&
-   html.includes('<td>Pre-stow (&gt; 40 km/h)</td><td>4</td><td>5</td><td>2</td><td>3</td>')&&(html.match(/<svg /g)||[]).length===1&&
+   html.includes('<td>Pre-stow<br><span class="umbral">&gt; 40 km/h</span></td><td>4</td><td>5</td><td>2</td><td>3</td>')&&html.includes('<th>Cuánto se mueve</th>')&&
    html.includes('<b>Tabla 2.</b> Reglas simuladas.')&&html.includes('<b>Tabla 1.</b>')&&!html.includes('Anexo'),[informe.suggestedFilename(),html.length]);
+ // Las cuatro gráficas van como imagen, en tres figuras, y sustituyen a la de barras.
+ const figs=[...html.matchAll(/<img src="data:image\/png;base64,([A-Za-z0-9+\/=]+)" alt="([^"]+)">/g)].map(m=>({alt:m[2],png:Buffer.from(m[1],'base64')}));
+ const dims=figs.map(f=>f.png.readUInt32BE(16)+'x'+f.png.readUInt32BE(20));          // ancho y alto, de la cabecera IHDR
+ check('informe: calendario, reloj, nube y curvas como figuras 1 a 3, al triple de resolución',
+   figs.length===4&&!/<svg /.test(html)&&['<b>Figura 1.</b> Calendario de alarmas','<b>Figura 2.</b> Izquierda','<b>Figura 3.</b> Parte del tiempo en que cada HSU'].every(x=>html.includes(x))&&
+   !html.includes('Figura 4')&&dims.join(' ')==='2070x780 1005x675 1005x675 2070x600',[figs.map(f=>f.alt),dims]);
+ const tema=await page.evaluate(async()=>{
+   const V=await import('./lib/meteo-viz.js'),px=(op)=>{const c=document.createElement('canvas');V.drawAlarmClock(c,{prestow:Array(24).fill(1),stow:Array(24).fill(0)},{width:300,height:200,dpr:1,title:'',...op});
+     return [c.width,c.height,...c.getContext('2d').getImageData(1,1,1,1).data].join(',');};
+   return [px({tema:'claro'}),px({})];});
+ check('las gráficas tienen un tema claro para el informe; el de la página sigue siendo el oscuro',tema[0]==='300,200,255,255,255,255'&&tema[1]==='300,200,16,29,48,255',tema);
 
  /* Con dos NCU en la base hay un tercer grupo: la planta entera, donde cuenta la racha de cualquier HSU. */
  const grupos=await page.evaluate(()=>[...document.getElementById('wlGroup').options].map(o=>o.value+'='+o.textContent));
