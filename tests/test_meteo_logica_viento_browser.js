@@ -109,13 +109,33 @@ function stub(){
      [...document.querySelectorAll('#wlSummary,#wlChart,#wlEvents')].every(e=>!e.checkVisibility())&&document.getElementById('wlRun').disabled;
  }));
 
- /* Arriba se carga un único día, y en calma: lo que salga después lo ha pedido la tarjeta. */
- await page.fill('#supFrom','2026-06-04');
+ /* La lógica de viento no depende de lo que se cargue arriba. Se pide un periodo que el cargador general
+    rechaza (más de 370 días): no entra ninguna medida, y aun así la tarjeta está y simula todo el histórico. */
+ await page.fill('#supFrom','2024-01-01');
  await page.fill('#supTo','2026-06-04');
  await page.fill('#supEmail','test@factiun.example');
  await page.fill('#supPassword','clave-prueba');
  await page.click('#supLogin');
- await page.waitForFunction(()=>!document.getElementById('wlRun').disabled,null,{timeout:20000});
+ await page.waitForFunction(()=>document.getElementById('supLoadStatus').classList.contains('bad')&&!document.getElementById('wlRun').disabled,null,{timeout:20000});
+ const sinCarga=await page.evaluate(()=>({carga:document.getElementById('supLoadStatus').textContent,medidas:document.body.classList.contains('con-medidas'),
+   tarjeta:document.getElementById('windLogicCard').checkVisibility(),boton:document.getElementById('wlRun').checkVisibility(),
+   graficas:document.getElementById('wlCalendar').checkVisibility(),origen:document.getElementById('wlSource').value,
+   grupo:document.getElementById('wlGroup').options[0].textContent,estado:document.getElementById('wlStatus').textContent}));
+ check('sin ninguna medida cargada (periodo rechazado), la tarjeta está y «Simular lógica» se puede pulsar',
+   /Has pedido \d+ días y aquí se cargan como máximo 370/.test(sinCarga.carga)&&!sinCarga.medidas&&sinCarga.tarjeta&&sinCarga.boton&&!sinCarga.graficas&&
+   sinCarga.origen==='supabase'&&sinCarga.grupo==='Se sabrá al simular'&&/se lee de la base todo el histórico de viento de «El Burgo I», sin cargar nada arriba/.test(sinCarga.estado),sinCarga);
+ await page.click('#wlRun');
+ await page.waitForFunction(()=>document.querySelectorAll('#wlSummary tr').length===2&&/todo el histórico de la base/.test(document.getElementById('wlStatus').textContent),null,{timeout:20000});
+ const Rs=await page.evaluate(()=>({filas:[...document.querySelectorAll('#wlSummary tr')].map(tr=>[...tr.children].map(td=>td.textContent)),
+   grupo:document.getElementById('wlGroup').value,graficas:document.getElementById('wlCalendar').checkVisibility(),medidas:document.body.classList.contains('con-medidas')}));
+ check('y simula el histórico entero de la planta elegida en «Planta», sin medidas arriba',
+   Rs.filas[0][2]==='6'&&Rs.filas[1][2]==='1'&&Rs.grupo==='*'&&Rs.graficas&&!Rs.medidas,Rs);
+
+ /* Ahora sí se carga arriba un único día, y en calma: lo que salga después lo ha pedido la tarjeta. */
+ await page.fill('#supFrom','2026-06-04');
+ await page.fill('#supTo','2026-06-04');
+ await page.click('#supLoad');
+ await page.waitForFunction(()=>/2026-06-04 → 2026-06-04/.test(document.getElementById('supLoadStatus').textContent)&&!document.getElementById('wlRun').disabled,null,{timeout:20000});
  const pre=await page.evaluate(()=>({lat:+document.getElementById('wlLat').value,lon:+document.getElementById('wlLon').value,
    pitch:+document.getElementById('wlPitch').value,tz:document.getElementById('wlTz').value,
    group:document.getElementById('wlGroup').value}));

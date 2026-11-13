@@ -20,7 +20,7 @@ table{width:100%;border-collapse:collapse;font-size:.74rem}th,td{padding:6px 7px
 .sourcestatus{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.sourcechip{border:1px solid var(--line);padding:6px 8px;background:var(--p2);font-size:.68rem;color:var(--mut)}.sourcechip b{display:block;color:var(--tx);font-size:.72rem}.sourcechip.on{border-left:3px solid var(--ok)}.sourcechip.wait{border-left:3px solid var(--a)}
 .chart{display:block;width:100%;height:260px;background:var(--p2);border:1px solid var(--line)}
 .big+.k{margin-bottom:12px}
-body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .requiere-tmy,body.con-tmy .tmy-vacio{display:none}body:not(.con-comparativa) .requiere-comparativa{display:none}body:not(.con-viento-sintetico) .requiere-viento-sintetico{display:none}body:not(.con-medidas) .requiere-medidas{display:none}body.prevision-fallida .requiere-prevision,body:not(.prevision-fallida) .aviso-prevision{display:none}.medidas-intro{margin:0;font-size:.78rem}body.con-historico .aviso-historico{display:none}
+body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .requiere-tmy,body.con-tmy .tmy-vacio{display:none}body:not(.con-comparativa) .requiere-comparativa{display:none}body:not(.con-viento-sintetico) .requiere-viento-sintetico{display:none}body:not(.con-medidas) .requiere-medidas{display:none}body.con-base .requiere-medidas.tambien-con-base{display:block}body:not(.con-simulacion) .requiere-simulacion{display:none}body.prevision-fallida .requiere-prevision,body:not(.prevision-fallida) .aviso-prevision{display:none}.medidas-intro{margin:0;font-size:.78rem}body.con-historico .aviso-historico{display:none}
 .aviso-historico{border-color:var(--a)}.aviso-historico .actions button{width:auto;padding:7px 16px}
 .pagina-barra{flex-basis:100%;display:flex;align-items:center;gap:12px;flex-wrap:wrap}.sitio-actual{font-size:.74rem;color:var(--mut);white-space:nowrap}.sitio-actual b{color:var(--tx)}
 .pestanas{display:flex;gap:2px;flex-wrap:wrap;flex-basis:100%}
@@ -201,7 +201,7 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
     <p class="note">Gruesa: ECMWF IFS 0,25° (~25 km). Fina: AROME HD (~1,5 km) o, si no cubre el sitio, HARMONIE-AROME Europa (~2 km). Es la previsión de las primeras horas de cada pasada del modelo, no la de varios días antes. El modelo da el viento a 10 m y el anemómetro mide a la altura de su montaje: un sesgo constante es esperable y no indica que el sensor esté mal. Viento medio: media de las muestras en ±30 min de cada hora; racha: máximo de la hora previa. Horas en UTC.</p>
   </div>
 
-  <div class="card wide requiere-medidas" id="windLogicCard">
+  <div class="card wide requiere-medidas tambien-con-base" id="windLogicCard">
     <h2>Lógica de viento · simulación pre-stow / stow sobre las HSU</h2>
     <p class="note">Cuántas veces saltaría cada alarma con el viento que midieron las HSU y cuánto habría que mover el seguidor. La posición del seguidor es teórica, no la de las TCU. Con sesión en la base de Factiun se simula todo el histórico de la planta, sin límite de fechas. Con varias NCU, «Planta entera» cuenta una sola alarma aunque salte en varias HSU a la vez; los recuentos de cada NCU no se suman.</p>
     <div class="row4" style="margin-top:8px">
@@ -238,12 +238,12 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
     <p class="note" id="wlBands" hidden></p>
     <ul class="note wl-avisos" id="wlNotes" hidden></ul>
   </div>
-  <div class="card wide requiere-medidas">
+  <div class="card wide requiere-simulacion">
     <h2>Calendario de alarmas</h2>
     <canvas id="wlCalendar" class="chart" aria-label="Calendario de alarmas: cada día una columna de 0 a 24 h con los tramos en pre-stow y en stow"></canvas>
     <p class="note" id="wlCalendarNote">Gráfica pendiente de simulación.</p>
   </div>
-  <div class="card wide requiere-medidas">
+  <div class="card wide requiere-simulacion">
     <h2>Alarmas: a qué hora, cuánto duran y qué HSU detecta más viento</h2>
     <div class="chartgrid">
       <div class="chartbox"><h3>A qué hora está activa la alarma</h3><canvas id="wlChartHour" class="chart" aria-label="Reloj de 24 horas: parte del tiempo con cada alarma activa a cada hora"></canvas></div>
@@ -252,12 +252,12 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
     </div>
     <p class="note" id="wlChartsNote">Gráficas pendientes de simulación.</p>
   </div>
-  <div class="card wide requiere-medidas">
+  <div class="card wide requiere-simulacion">
     <h2 id="wlChartTitle">Episodios de viento: cuántos</h2>
     <canvas id="wlChart" class="chart" aria-label="Episodios de pre-stow y stow por semana o por mes"></canvas>
     <p class="note" id="wlChartNote">Gráfica pendiente de simulación.</p>
   </div>
-  <div class="card wide requiere-medidas">
+  <div class="card wide requiere-simulacion">
     <details class="wl-plegado" id="wlList"><summary id="wlListTitle">Todas las activaciones</summary>
     <div class="row3" style="margin-top:8px">
       <label><span class="k">Mostrar</span><select id="wlFilter"><option value="">Todas</option><option value="prestow">Solo pre-stow</option><option value="stow">Solo stow</option><option value="move">Solo las que obligan a mover</option><option value="doubtful">Solo las dudosas</option></select></label>
@@ -603,7 +603,9 @@ let SENSOR_RECORDS=[],SENSOR_LAST=null,SENSOR_WARNINGS=null,SENSOR_SOURCES=[];
 let SUPABASE_METEO_CLIENT=null;
 /* Mediciones · «Planta»: SUP_PLANTS son las que tienen medidas en la base (null mientras no
    se sepa: sin sesión) y SUP_WANTED la que se quiere, que de entrada es el proyecto abierto. */
-let SUP_PLANTS=null,SUP_WANTED="El Burgo I";
+let SUP_PLANTS=null,SUP_WANTED="El Burgo I",SUP_SESSION=false;
+/* Con sesión en la base, la lógica de viento no depende de lo que se cargue en la tarjeta de medidas. */
+function supSession(on){SUP_SESSION=!!on;document.body.classList.toggle("con-base",SUP_SESSION);}
 let LAST_COMPARE=null,LAST_HAIL=null,LAST_WIND_SYNTH=null;
 let FORECAST=null,FORECAST72=null,SPATIAL=null,WEATHER_UNCERTAINTY=null,ACTIVE_CONTRACT=null;
 let FORECAST_REFERENCE=null; // Open-Meteo contrast only; never published as the active forecast
@@ -749,6 +751,7 @@ function choosePlant(i,refresh=true){
   if(SITE?.name){
     SUP_WANTED=SITE.name;
     const m=supShowPlants();
+    if(refresh)wlPrepare();
     if(refresh&&SUP_PLANTS)supLoadStatus(m.exact?"Planta cambiada a «"+m.exact+"». Pulsa «Cargar y comparar» para leer sus medidas.":supMissing(m),"work");
   }
 }
@@ -1489,8 +1492,9 @@ async function supSessionRestore(){
   try{
     const {data,error}=await supClient().auth.getUser();
     if(!error&&data?.user){
-      supStatus("Sesión iniciada.","ok");
+      supStatus("Sesión iniciada.","ok");supSession(true);
       const known=await supPlants(),missing=known&&!$("supPlant").value;
+      wlPrepare();
       supLoadStatus(missing?supMissing(matchSupabasePlant(SUP_WANTED,known)):"Elige planta y pulsa «Cargar y comparar».",missing?"work":"");
     }
   }catch(e){supStatus("Cliente Supabase no disponible: "+String(e?.message||e),"bad")}
@@ -1503,8 +1507,9 @@ async function supLogin(){
     const {error}=await supClient().auth.signInWithPassword({email,password});
     $("supPassword").value="";
     if(error)throw error;
-    supStatus("Sesión iniciada.","ok");
+    supStatus("Sesión iniciada.","ok");supSession(true);
     await supLoad();
+    wlPrepare();                       // aunque la carga de arriba falle, la lógica de viento queda lista
     await loadNow();
   }catch(e){
     $("supPassword").value="";
@@ -1531,13 +1536,13 @@ async function supPlants(){
   if(SUP_PLANTS)return SUP_PLANTS;
   try{
     const list=await fetchSupabasePlants(supClient());
-    if(list.length){SUP_PLANTS=list;supShowPlants();}
+    if(list.length){SUP_PLANTS=list;supShowPlants();wlPrepare();}
   }catch(e){console.warn(e);}
   return SUP_PLANTS;
 }
 /* Al elegir planta en el desplegable: de qué fechas hay medidas. */
 async function supPlantPicked(){
-  const plant=$("supPlant").value;if(!plant)return;
+  const plant=$("supPlant").value;wlPrepare();if(!plant)return;
   SUP_WANTED=plant;
   try{
     const r=await fetchSupabasePlantRange(supClient(),plant);
@@ -1591,7 +1596,8 @@ async function supLogout(){
     $("sensorExport").disabled=true;
     const canvas=$("sensorChart");canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);canvas.dataset.drawn="0";
     $("sensorChartNote").textContent="Sin datos.";
-    WIND_LOGIC_PLANT="";WIND_LOGIC_READY=false;$("wlRun").disabled=true;$("wlGroup").innerHTML='<option value="">Sin datos</option>';
+    supSession(false);
+    WIND_LOGIC_PLANT="";WIND_LOGIC_READY=false;WIND_LOGIC_SOURCE_PICKED=false;$("wlRun").disabled=true;$("wlGroup").innerHTML='<option value="">Sin datos</option>';
     wlReset("Sin datos: sesión cerrada.");
     SUP_PLANTS=null;supShowPlants();supLoadStatus("Inicia sesión y pulsa «Cargar y comparar».");
     sensorStatus("Lecturas descargadas eliminadas de esta sesión.");
@@ -1606,7 +1612,7 @@ async function supLogout(){
 /* ---- Lógica de viento · simulación pre-stow / stow sobre las HSU cargadas ----
    El motor es lib/meteo-wind-logic.js (puro, con su banco). Aquí sólo se leen los
    parámetros, se le pasan las medidas ya cargadas y se pintan sus resultados. */
-let WIND_LOGIC=null,WIND_LOGIC_PLANT="",WIND_LOGIC_READY=false,WIND_LOGIC_BASE=null,WIND_LOGIC_GROUP_PICKED=false;
+let WIND_LOGIC=null,WIND_LOGIC_PLANT="",WIND_LOGIC_READY=false,WIND_LOGIC_SOURCE_PICKED=false,WIND_LOGIC_GROUP_PICKED=false;
 const WL_WIND=["wind_peak","wind_gust","wind_speed"];
 const wlNum=(v,d=1)=>v==null||!isFinite(v)?"—":Number(v).toLocaleString("es-ES",{minimumFractionDigits:d,maximumFractionDigits:d});
 const wlInt=v=>v==null||!isFinite(v)?"—":Number(v).toLocaleString("es-ES");
@@ -1632,7 +1638,7 @@ function wlClock(){
 }
 function wlGroupNow(){return WIND_LOGIC?(WIND_LOGIC.groups.find(g=>g.key===$("wlGroup").value)||WIND_LOGIC.groups[0]||null):null;}
 function wlReset(message,kind=""){
-  WIND_LOGIC=null;
+  WIND_LOGIC=null;document.body.classList.remove("con-simulacion");
   $("wlSummary").innerHTML='<tr><td colspan="6">Pulsa «Simular lógica».</td></tr>';
   $("wlBands").hidden=true;$("wlBands").textContent="";$("wlListTitle").textContent="Todas las activaciones";
   $("wlEvents").innerHTML='<tr><td colspan="11">Pulsa «Simular lógica».</td></tr>';
@@ -1642,36 +1648,45 @@ function wlReset(message,kind=""){
   if(message)wlStatus(message,kind);
 }
 /* Al cargar medidas o cambiar de planta: qué grupos hay y de qué emplazamiento se trata. */
+/* Planta que se simula: con «todo el histórico de la base», la elegida en «Planta» (tarjeta A);
+   con «solo las medidas cargadas», la de las medidas que hay en memoria. */
+function wlPlantNow(){return $("wlSource").value==="supabase"?$("supPlant").value:$("sensorPlant").value;}
 function wlPrepare(){
-  const plant=$("sensorPlant").value,ncus=new Set();
-  for(const r of SENSOR_RECORDS)if(r.plant===plant&&WL_WIND.includes(r.variable))ncus.add(String(r.ncu??""));
-  const keys=[...ncus].sort((a,b)=>a.localeCompare(b,"es",{numeric:true}));
+  const cargada=$("sensorPlant").value,ncus=new Set();
+  for(const r of SENSOR_RECORDS)if(r.plant===cargada&&WL_WIND.includes(r.variable))ncus.add(String(r.ncu??""));
+  const keys=[...ncus].sort((a,b)=>a.localeCompare(b,"es",{numeric:true})),hayCargadas=keys.length>0;
+  // De dónde sale el viento: de la base (basta la sesión; no hace falta cargar nada arriba) o de lo cargado.
+  const src=$("wlSource");
+  src.options[0].disabled=!SUP_SESSION;src.options[1].disabled=!hayCargadas;
+  const vale=v=>v==="supabase"?SUP_SESSION:hayCargadas;
+  if(!WIND_LOGIC_SOURCE_PICKED||!vale(src.value))src.value=SUP_SESSION?"supabase":"loaded";
+  const deBase=src.value==="supabase",plant=wlPlantNow();
+  WIND_LOGIC_READY=deBase?SUP_SESSION&&!!plant:hayCargadas;$("wlRun").disabled=!WIND_LOGIC_READY;
   // Con más de una NCU va primero la planta entera (manda la racha más alta de cualquier HSU): es lo que
-  // cuenta para la alarma. Cada NCU queda como detalle.
-  $("wlGroup").innerHTML=keys.length?(keys.length>1?sensorOption(WIND_LOGIC_PLANT_KEY,"Planta entera (todas las NCU)"):"")+
-    keys.map(k=>sensorOption(k,k?"NCU "+k:"Planta (sin NCU declarada)")).join(""):'<option value="">Sin medidas de viento</option>';
-  if(plant!==WIND_LOGIC_PLANT)WIND_LOGIC_GROUP_PICKED=false;
-  WIND_LOGIC_READY=keys.length>0;$("wlRun").disabled=!WIND_LOGIC_READY;
-  // Si las medidas de esta planta vinieron de la base, la simulación puede pedirle todo el
-  // histórico de viento máximo, sin el tope de días del cargador general.
-  const deBase=SENSOR_RECORDS.some(r=>r.plant===plant&&String(r.source||"").startsWith("Supabase · "));
-  $("wlSource").options[0].disabled=!deBase;
-  // La elección del usuario se respeta mientras siga valiendo: sólo se repone al cambiar de planta o de origen.
-  if(plant!==WIND_LOGIC_PLANT||deBase!==WIND_LOGIC_BASE||(!deBase&&$("wlSource").value==="supabase"))$("wlSource").value=deBase?"supabase":"loaded";
-  WIND_LOGIC_BASE=deBase;
-  if(plant&&plant!==WIND_LOGIC_PLANT){
-    const info=wlPlantInfo(plant);
-    if(Number.isFinite(info.lat)&&Number.isFinite(info.lon)){$("wlLat").value=info.lat.toFixed(5);$("wlLon").value=info.lon.toFixed(5);}
-    if(info.pitch)$("wlPitch").value=String(info.pitch);
-    $("wlTz").value=info.tz;WIND_LOGIC_PLANT=plant;
+  // cuenta para la alarma. Cada NCU queda como detalle. Sin medidas cargadas, los grupos se saben al simular.
+  const mismos=hayCargadas&&(!deBase||cargada===plant);
+  $("wlGroup").innerHTML=mismos?(keys.length>1?sensorOption(WIND_LOGIC_PLANT_KEY,"Planta entera (todas las NCU)"):"")+
+    keys.map(k=>sensorOption(k,k?"NCU "+k:"Planta (sin NCU declarada)")).join(""):
+    '<option value="">'+(WIND_LOGIC_READY?"Se sabrá al simular":"Sin medidas de viento")+'</option>';
+  if(plant!==WIND_LOGIC_PLANT){
+    WIND_LOGIC_GROUP_PICKED=false;
+    if(plant){
+      const info=wlPlantInfo(plant);
+      if(Number.isFinite(info.lat)&&Number.isFinite(info.lon)){$("wlLat").value=info.lat.toFixed(5);$("wlLon").value=info.lon.toFixed(5);}
+      if(info.pitch)$("wlPitch").value=String(info.pitch);
+      $("wlTz").value=info.tz;
+    }
+    WIND_LOGIC_PLANT=plant;
   }
-  wlReset(keys.length?"Medidas de viento listas: revisa los parámetros y pulsa «Simular lógica».":
-    SENSOR_RECORDS.length?"Las medidas cargadas no traen viento de esta planta.":"Carga primero las medidas de las HSU (Supabase o CSV).");
+  wlReset(WIND_LOGIC_READY?(deBase?"Pulsa «Simular lógica»: se lee de la base todo el histórico de viento de «"+plant+"», sin cargar nada arriba.":
+      "Medidas de viento listas: revisa los parámetros y pulsa «Simular lógica»."):
+    SUP_SESSION?(deBase?"Elige una planta en «Planta», en la tarjeta de la base.":"Las medidas cargadas no traen viento de esta planta."):
+    SENSOR_RECORDS.length?"Las medidas cargadas no traen viento de esta planta.":"Inicia sesión en la base de Factiun, o carga un CSV con las medidas de las HSU.");
 }
 async function wlRun(){
-  const plant=$("sensorPlant").value;
+  const plant=wlPlantNow();
   try{
-    if(!plant)throw Error("Carga primero las medidas de una planta.");
+    if(!plant)throw Error("Elige primero una planta.");
     const val=id=>$(id).value===""?NaN:Number($(id).value);
     const from=$("wlFrom").value,to=$("wlTo").value;
     if(from&&to&&from>to)throw Error("Periodo inválido: «Desde» es posterior a «Hasta».");
@@ -1690,7 +1705,7 @@ async function wlRun(){
       const a=from?Date.parse(from+"T00:00:00Z"):-Infinity,b=to?Date.parse(to+"T00:00:00Z")+86400000:Infinity;
       records=SENSOR_RECORDS.filter(r=>{const t=Date.parse(r.t);return t>=a&&t<b;});
     }
-    if($("sensorPlant").value!==plant)return; // cambió de planta mientras descargaba
+    if(wlPlantNow()!==plant)return; // cambió de planta mientras descargaba
     const previous=$("wlGroup").value;
     WIND_LOGIC=simulateWindLogic(records,{plant,series,site:{lat:val("wlLat"),lon:val("wlLon"),tz:$("wlTz").value||"UTC"},solarPosition,
       options:{prestowKmh:val("wlPre"),stowKmh:val("wlStow"),holdMin:val("wlHold"),prestowMinDeg:val("wlPreMin"),stowDeg:val("wlStowDeg"),
@@ -1750,6 +1765,7 @@ function wlDrawChart(){
 }
 function wlRender(){
   const r=WIND_LOGIC,g=wlGroupNow();if(!r||!g)return;
+  document.body.classList.add("con-simulacion");   // las gráficas y la lista solo se ven cuando hay simulación
   const sum=windLogicSummary(r,g),total=g.prestow.total+g.stow.total;
   $("wlSummary").innerHTML=sum.rows.map(x=>"<tr><td>"+esc(x.label)+"</td><td>"+wlInt(x.episodes)+"</td><td>"+wlInt(x.total)+"</td><td>"+wlInt(x.ok)+"</td><td>"+wlInt(x.move)+"</td><td>"+esc(x.how)+"</td></tr>").join("");
   $("wlBands").textContent=total?(sum.episodeRule?sum.episodeRule+" ":"")+"Activaciones por racha máxima. Pre-stow: "+(sum.bands.prestow||"—")+(sum.bands.stow?". Stow: "+sum.bands.stow:"")+".":"";
@@ -1775,6 +1791,7 @@ $("wlRun").onclick=wlRun;
 $("wlReport").onclick=wlDownloadReport;
 $("wlCsv").onclick=wlDownloadCsv;
 $("wlGroup").onchange=()=>{WIND_LOGIC_GROUP_PICKED=true;if(WIND_LOGIC)wlRender();};
+$("wlSource").addEventListener("change",()=>{WIND_LOGIC_SOURCE_PICKED=true;wlPrepare();});
 // El margen para unir episodios solo cambia cómo se cuenta: no hace falta volver a simular.
 $("wlMerge").addEventListener("change",()=>{
   if(!WIND_LOGIC)return;

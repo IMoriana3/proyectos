@@ -1050,7 +1050,7 @@ declare -A PISO=(
   # La misma tarjeta en Chromium con Supabase sustituido: 23 medidas. Arriba
   # se carga un solo día y la simulación sale del histórico entero; resumen,
   # lista plegada, filtro, CSV, informe, origen y periodo, y cierre.
-  [test_meteo_logica_viento_browser.js]=27
+  [test_meteo_logica_viento_browser.js]=29
   # RECURSO DEL PAÍS en la tarjeta de meteo (lib/mapas-pais.js), con las
   # láminas sustituidas por fixtures: país por rejilla y no por nombre,
   # marcador en la caja de la ficha, «sobre/bajo la media», punto de miles,

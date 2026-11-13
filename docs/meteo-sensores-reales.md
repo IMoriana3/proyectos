@@ -85,7 +85,10 @@ planta**:
 
 ### De dónde sale el viento: todo el histórico, sin tope de fechas
 
-La simulación **no depende del periodo cargado arriba**. En «Más parámetros» se elige:
+La simulación **no depende de lo que se cargue arriba**: con la sesión iniciada la tarjeta
+está siempre visible, aunque «Cargar y comparar» no haya cargado nada (por ejemplo, porque
+el periodo pedido pasa de 370 días), y simula la planta elegida en «Planta». Las gráficas
+y la lista aparecen cuando hay simulación. En «Más parámetros» se elige:
 
 - **Todo el histórico de la base** (por defecto cuando las medidas vienen de Supabase).
   La tarjeta pide a `telemetria` únicamente el eje de tiempos y `wind_speed_max` de las
@@ -211,7 +214,7 @@ posición solar se inyecta (`solarPosition` de `lib/meteo-browser.js`).
 - `node tests/test_meteo_logica_viento.js` — 42 verificaciones del motor con series
   sintéticas y del lector de histórico con una base de mentira (450 días sin tope,
   avance por fecha, un día que llena la página, corte por tiempo, repliegue).
-- `node tests/test_meteo_logica_viento_browser.js` — 27 comprobaciones de la tarjeta
+- `node tests/test_meteo_logica_viento_browser.js` — 29 comprobaciones de la tarjeta
   en Chromium con Supabase simulado; arriba se carga un solo día en calma y la
   simulación sale del histórico entero.
 
