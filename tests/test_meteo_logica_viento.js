@@ -293,6 +293,28 @@ const moduleOf = async name =>
     assert.equal(m.unit,"mes");assert.equal(m.labels[0],"sep 25");assert.equal(m.labels.at(-1),"jun 26");assert.equal(m.labels.length,10);
     assert.equal(m.prestow.reduce((a,b)=>a+b,0),30);assert.equal(m.prestow[0],3);
   });
+  check("calendario de alarmas: tramos partidos en la medianoche de la planta, días sin dato, meses, sol y reloj de 24 h",()=>{
+    // tres días con dato (10, 11 y 13 de junio UTC; el 12 falta) y un pre-stow de 21:00 a 23:30 UTC del día 10 = de 23:00 a 01:30 en la planta
+    const datos=[...serie("2026-06-10T00:00","2026-06-11T23:59",[["2026-06-10T21:00",45],["2026-06-10T21:25",46],["2026-06-10T21:50",47],["2026-06-10T22:15",44],["2026-06-10T22:40",45],["2026-06-10T23:00",62]]),
+      ...serie("2026-06-13T00:00","2026-06-13T23:59",[])];
+    const out=simulateWindLogic(datos,{plant:"P",site:SITE,solarPosition}),g=out.groups[0];
+    assert.deepEqual([g.prestow.total,g.stow.total],[1,1]);
+    const r=W.windLogicRaster(out,g,{solarPosition});
+    assert.equal(r.firstDay,"2026-06-10");assert.equal(r.days,5);                    // del 10 (02:00 en la planta) al 14 (01:59)
+    const pre=r.segments.filter(x=>x.type==="prestow"),st=r.segments.filter(x=>x.type==="stow");
+    assert.deepEqual(pre.map(x=>[x.day,x.from,x.to]),[[0,23,24],[1,0,1.5]]);          // partido en la medianoche local
+    assert.deepEqual(st.map(x=>[x.day,x.from,x.to]),[[1,1,1.5]]);                     // 23:00 UTC + 30 min
+    assert.deepEqual(r.noData,[]);                                                    // el 12 de la planta tiene dato hasta las 02:00; el 13 desde las 02:00
+    assert.equal(r.months.length,0);                                                  // ningún día 1 dentro del periodo
+    assert.ok(r.sun.length===5&&r.sun.every(x=>x.rise>5.5&&x.rise<7.5&&x.set>20.5&&x.set<22.5),JSON.stringify(r.sun[0]));   // junio en Zaragoza, hora de verano
+    assert.equal(r.clock.prestow[23],20);assert.equal(r.clock.prestow[0],20);assert.equal(r.clock.prestow[1],10);assert.equal(r.clock.stow[1],10);   // 60, 60 y 30 min sobre 5 días
+    assert.equal(r.clock.prestow[12],0);
+    // un día entero sin dato sí se marca, y los meses llevan su arranque
+    const hueco=[...serie("2026-05-30T00:00","2026-05-30T23:59",[]),...serie("2026-06-02T00:00","2026-06-02T23:59",[["2026-06-02T10:00",45]])];
+    const oh=simulateWindLogic(hueco,{plant:"P",site:SITE,solarPosition}),rh=W.windLogicRaster(oh,oh.groups[0],{solarPosition});
+    assert.deepEqual(rh.noData,[2]);assert.deepEqual(rh.months,[{day:2,label:"jun 26"}]);   // el 1 de junio de la planta no tiene ni una hora de dato
+    assert.equal(W.windLogicRaster(out,null).days,0);
+  });
   check("qué detecta cada HSU: las alarmas que daría sola y cuándo es ella la que dispara la del grupo",()=>{
     // NCU 1: la 230 pasa de 40 a las 10:00 y la 231 a las 10:05 (misma alarma) y a las 16:00 de 60; NCU 2: su 230 a las 10:02
     const base=(sensor,ncu,gusts)=>serie("2026-06-10T00:00","2026-06-10T23:59",gusts).map(r=>({...r,sensor,ncu}));
@@ -300,6 +322,7 @@ const moduleOf = async name =>
     const out=simulateWindLogic(datos,{plant:"P",site:SITE,solarPosition}),[a,b,c]=out.sensors;
     assert.deepEqual(out.sensors.map(x=>x.label),["NCU 1 · HSU 230","NCU 1 · HSU 231","NCU 2 · HSU 230"]);
     assert.deepEqual([a.prestow,a.stow,a.peakKmh,a.minutesOverPrestow,a.days],[1,0,45,1,1]);
+    assert.equal(a.hist[45],1);assert.equal(a.hist[18],1439);assert.equal(a.dataMinutes,1440);   // minutos por km/h, para la curva de excedencia
     assert.deepEqual([b.prestow,b.stow,b.peakKmh,b.minutesOverStow],[2,1,66,1]);assert.deepEqual([c.prestow,c.stow],[1,0]);
     // la planta salta a las 10:00 (dispara la 230 de la NCU 1) y a las 16:00 (la 231): cada alarma tiene quien la dispara
     assert.deepEqual([out.groups[0].prestow.total,out.groups[0].stow.total],[2,1]);

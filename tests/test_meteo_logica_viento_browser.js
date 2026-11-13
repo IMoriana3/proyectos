@@ -149,16 +149,18 @@ function stub(){
  /* Gráficas: cuándo, a qué hora, cuánto duran y qué detecta cada HSU. */
  const graf=await page.evaluate(()=>{
    const pintado=id=>{const c=document.getElementById(id),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i])n++;return n>500;};
-   return {ok:['wlChart','wlChartHour','wlChartDur','wlChartHsu'].map(pintado),titulo:document.getElementById('wlChartTitle').textContent,
-     nota:document.getElementById('wlChartsNote').textContent,visibles:['wlChartHour','wlChartDur','wlChartHsu'].every(id=>document.getElementById(id).checkVisibility())};});
- check('gráficas de episodios: cuándo, hora del día, duración y qué detecta cada HSU',
-   graf.ok.every(Boolean)&&graf.visibles&&graf.titulo==='Episodios de viento: cuándo'&&/Racha máxima: NCU 1 · HSU 230, [\d,]+ km\/h; NCU 1 · HSU 231, [\d,]+ km\/h\./.test(graf.nota),graf);
+   return {ok:['wlCalendar','wlChart','wlChartHour','wlChartDur','wlChartHsu'].map(pintado),titulo:document.getElementById('wlChartTitle').textContent,
+     nota:document.getElementById('wlChartsNote').textContent,cal:document.getElementById('wlCalendarNote').textContent,
+     visibles:['wlCalendar','wlChartHour','wlChartDur','wlChartHsu'].every(id=>document.getElementById(id).checkVisibility())};});
+ check('gráficas: calendario de alarmas, reloj de 24 h, duración y racha, y curvas por HSU',
+   graf.ok.every(Boolean)&&graf.visibles&&graf.titulo==='Episodios de viento: cuántos'&&/5 días con dato de 5\./.test(graf.cal)&&
+   /1\/HSU 230: 4 días, máxima [\d,]+ km\/h; 1\/HSU 231: 4 días, máxima [\d,]+ km\/h/.test(graf.nota),graf);
  /* El margen para unir solo cambia cómo se cuenta: sin él, cada activación es su episodio, y no se vuelve a descargar nada. */
  const antes=await page.evaluate(()=>window.__consultas.filter(q=>/vmax:/.test(q.cols)).length);
  await page.fill('#wlMerge','0');await page.dispatchEvent('#wlMerge','change');
  const R0=await resumen(),tras=await page.evaluate(()=>window.__consultas.filter(q=>/vmax:/.test(q.cols)).length);
  check('margen a 0: episodios = activaciones, sin volver a simular ni descargar',
-   R0[0].slice(1,3).join('|')==='5|5'&&tras===antes&&(await page.evaluate(()=>document.getElementById('wlChartTitle').textContent))==='Activaciones de viento: cuándo'&&
+   R0[0].slice(1,3).join('|')==='5|5'&&tras===antes&&(await page.evaluate(()=>document.getElementById('wlChartTitle').textContent))==='Activaciones de viento: cuántos'&&
    !/episodio agrupa/.test(await txt('wlBands')),[R0,antes,tras]);
  await page.fill('#wlMerge','120');await page.dispatchEvent('#wlMerge','change');
  const rows=await page.evaluate(()=>[...document.querySelectorAll('#wlEvents tr')].map(r=>[...r.children].map(c=>c.textContent.trim())));

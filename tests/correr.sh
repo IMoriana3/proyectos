@@ -1046,7 +1046,7 @@ declare -A PISO=(
   # y noche, lado más cercano, stow desde pre-stow, mediodía y anochecer con
   # sus dos opciones, sensores a cero y huecos, resumen, CSV e informe; y el
   # lector de histórico sin tope de días (por fecha, solo viento máximo HSU).
-  [test_meteo_logica_viento.js]=41
+  [test_meteo_logica_viento.js]=42
   # La misma tarjeta en Chromium con Supabase sustituido: 23 medidas. Arriba
   # se carga un solo día y la simulación sale del histórico entero; resumen,
   # lista plegada, filtro, CSV, informe, origen y periodo, y cierre.

@@ -239,18 +239,23 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
     <ul class="note wl-avisos" id="wlNotes" hidden></ul>
   </div>
   <div class="card wide requiere-medidas">
-    <h2 id="wlChartTitle">Episodios de viento: cuándo</h2>
-    <canvas id="wlChart" class="chart" aria-label="Episodios de pre-stow y stow por semana o por mes"></canvas>
-    <p class="note" id="wlChartNote">Gráfica pendiente de simulación.</p>
+    <h2>Calendario de alarmas</h2>
+    <canvas id="wlCalendar" class="chart" aria-label="Calendario de alarmas: cada día una columna de 0 a 24 h con los tramos en pre-stow y en stow"></canvas>
+    <p class="note" id="wlCalendarNote">Gráfica pendiente de simulación.</p>
   </div>
   <div class="card wide requiere-medidas">
-    <h2>Episodios de viento: a qué hora, cuánto duran y qué HSU los detecta</h2>
+    <h2>Alarmas: a qué hora, cuánto duran y qué HSU detecta más viento</h2>
     <div class="chartgrid">
-      <div class="chartbox"><h3>Hora del día a la que empiezan</h3><canvas id="wlChartHour" class="chart" aria-label="Episodios por hora del día"></canvas></div>
-      <div class="chartbox"><h3>Cuánto duran</h3><canvas id="wlChartDur" class="chart" aria-label="Episodios por duración"></canvas></div>
-      <div class="chartbox"><h3>Qué detecta cada HSU, ella sola</h3><canvas id="wlChartHsu" class="chart" aria-label="Alarmas que daría cada HSU por separado"></canvas></div>
+      <div class="chartbox"><h3>A qué hora está activa la alarma</h3><canvas id="wlChartHour" class="chart" aria-label="Reloj de 24 horas: parte del tiempo con cada alarma activa a cada hora"></canvas></div>
+      <div class="chartbox"><h3>Cuánto dura y hasta dónde llega cada episodio</h3><canvas id="wlChartDur" class="chart" aria-label="Duración y racha máxima de cada episodio"></canvas></div>
+      <div class="chartbox"><h3>Qué HSU detecta más viento</h3><canvas id="wlChartHsu" class="chart" aria-label="Porcentaje del tiempo de cada HSU por encima de cada velocidad"></canvas></div>
     </div>
     <p class="note" id="wlChartsNote">Gráficas pendientes de simulación.</p>
+  </div>
+  <div class="card wide requiere-medidas">
+    <h2 id="wlChartTitle">Episodios de viento: cuántos</h2>
+    <canvas id="wlChart" class="chart" aria-label="Episodios de pre-stow y stow por semana o por mes"></canvas>
+    <p class="note" id="wlChartNote">Gráfica pendiente de simulación.</p>
   </div>
   <div class="card wide requiere-medidas">
     <details class="wl-plegado" id="wlList"><summary id="wlListTitle">Todas las activaciones</summary>
@@ -577,13 +582,14 @@ import {
   VIZ_VERSION,MONTHS,monthlyTable,dailyMeanSeries,dayProfile,peakDay,localDayKey,localHour,
   cockpitMetrics,dailyClimatology,windRoseData,drawWindRose,windSpeedTable,
   temperatureExtremes,drawTemperatureHistogram,coldDaysByMonth,snowSummary,drawLineChart,
-  drawBarChart,drawHailRisk,windDailyMax,comparisonMonthly
+  drawBarChart,drawHailRisk,windDailyMax,comparisonMonthly,
+  drawAlarmCalendar,drawAlarmClock,drawEpisodeScatter,drawExceedance
 } from "./lib/meteo-viz.js";
 import {buildWeatherContract,publishWeatherContract,activeWeatherRef,loadActiveWeatherContract,clearActiveWeatherContract,weatherManifest} from "./lib/weather-contract.js";
 import {parseSensorCsv,analyzeSensorRecords,buildSensorChart,SENSOR_ANALYSIS_VERSION} from "./lib/meteo-sensors.js";
 import {MAGNITUDES as VERIF_MAGNITUDES,horasMedidas,periodoMedidas,urlPrevisionArchivada,leePrevision,verifica,seriesGrafica} from "./lib/meteo-verificacion.js";
 import {newSupabaseMeteoClient,fetchSupabaseMeteo,fetchSupabaseWindPeak,fetchSupabasePlants,fetchSupabasePlantRange,matchSupabasePlant} from "./lib/meteo-supabase.js";
-import {simulateWindLogic,createWindSeriesBuilder,windLogicCsv,windLogicReportHtml,windLogicCharts,windLogicSummary,WIND_LOGIC_PLANT_KEY} from "./lib/meteo-wind-logic.js";
+import {simulateWindLogic,createWindSeriesBuilder,windLogicCsv,windLogicReportHtml,windLogicCharts,windLogicRaster,windLogicSummary,WIND_LOGIC_PLANT_KEY} from "./lib/meteo-wind-logic.js";
 import {solarPosition} from "./lib/meteo-browser.js";
 import {fetchCachedWeatherNext} from "./lib/meteo-forecast-cache.js";
 
@@ -1714,26 +1720,33 @@ function wlRenderEvents(){
       (a.alreadyOk?"0°":wlDeg(a.degrees))+'</td><td>'+esc(nota||"—")+'</td></tr>';
   }).join(""):'<tr><td colspan="11">Ninguna activación con este filtro.</td></tr>';
 }
+const WL_RASTER=new WeakMap();   // el calendario de cada grupo se calcula una vez; al redibujar (cambio de tamaño) se reutiliza
 function wlDrawChart(){
   const g=wlGroupNow();if(!g||g.coverage.first==null)return;
-  const r=WIND_LOGIC,gap=r.options.episodeGapMin,c=windLogicCharts(g,{gapMin:gap,timeZone:r.site.timezone}),tl=c.timeline;
-  const que=gap>0?"Episodios":"Activaciones",dos=(a,b)=>[{label:"Pre-stow",values:a},{label:"Stow",values:b}];
-  // Son recuentos: el eje acaba en un valor que deja las cuatro marcas en números enteros.
+  const r=WIND_LOGIC,o=r.options,gap=o.episodeGapMin,c=windLogicCharts(g,{gapMin:gap,timeZone:r.site.timezone}),tl=c.timeline;
+  const que=gap>0?"Episodios":"Activaciones";
+  // Calendario: cada día una columna, de 0 a 24 h, con los tramos en alarma y la noche sin sombrear.
+  if(!WL_RASTER.has(g))WL_RASTER.set(g,windLogicRaster(r,g,{solarPosition}));
+  const ras=WL_RASTER.get(g);
+  drawAlarmCalendar($("wlCalendar"),ras,{title:"Cuándo está activa cada alarma · "+g.label,height:340});
+  $("wlCalendarNote").textContent="Cada columna es un día, en la hora de la planta, de 0 h (arriba) a 24 h (abajo). Naranja: pre-stow activo; rojo: stow activo. "+
+    wlInt(ras.days-ras.noData.length)+" días con dato de "+wlInt(ras.days)+".";
+  drawAlarmClock($("wlChartHour"),ras.clock,{title:"Parte del tiempo en alarma, por hora",height:270});
+  drawEpisodeScatter($("wlChartDur"),c.episodes.prestow,{title:que+": duración y racha máxima",height:270,stowKmh:o.stowKmh});
+  // Cada HSU por separado: las del grupo que se está viendo.
+  const hs=r.sensors.filter(x=>g.key===WIND_LOGIC_PLANT_KEY||r.groups.length===1||x.ncu===g.key),corto=x=>(x.ncu?x.ncu+"/":"")+x.name;
+  drawExceedance($("wlChartHsu"),hs.map(x=>({label:corto(x),hist:x.hist,dataMinutes:x.dataMinutes})),{title:"Tiempo por encima de cada velocidad",height:270,
+    marks:[{v:o.prestowKmh,label:"pre-stow",color:"#F09030"},{v:o.stowKmh,label:"stow",color:"#E84858"}]});
+  $("wlChartsNote").textContent="Reloj: parte del tiempo con dato en que cada alarma está activa a esa hora. Nube: un punto por "+(gap>0?"episodio":"activación")+
+    " de pre-stow, en rojo los que llegan a stow; la duración va del primer salto a la última desactivación. Curvas: porcentaje del tiempo de cada HSU por encima de cada velocidad, sobre su propio periodo"+
+    (hs.length?" ("+hs.map(x=>corto(x)+": "+wlInt(x.days)+" días, máxima "+wlNum(x.peakKmh)+" km/h").join("; ")+")":"")+".";
+  // Y el recuento, por semana o por mes.
   const tope=(...xs)=>{const m=Math.max(1,...xs.flat())/4;return 4*([1,2,3,4,5,10,15,20,25,50,75,100,150,200,250,500,750,1000].find(u=>u>=m)||Math.ceil(m/1000)*1000);};
   const every=Math.max(1,Math.ceil(tl.labels.length/(tl.unit==="mes"?24:14)));
-  drawBarChart($("wlChart"),dos(tl.prestow,tl.stow),{title:que+" por "+tl.unit+" · "+g.label,yLabel:que.toLowerCase(),labels:tl.labels.map((x,i)=>i%every===0?x:""),height:280,yMax:tope(tl.prestow,tl.stow),centerLabels:true});
-  $("wlChartTitle").textContent=que+" de viento: cuándo";
+  drawBarChart($("wlChart"),[{label:"Pre-stow",values:tl.prestow},{label:"Stow",values:tl.stow}],{title:que+" por "+tl.unit+" · "+g.label,yLabel:que.toLowerCase(),
+    labels:tl.labels.map((x,i)=>i%every===0?x:""),height:230,yMax:tope(tl.prestow,tl.stow),centerLabels:true});
+  $("wlChartTitle").textContent=que+" de viento: cuántos";
   $("wlChartNote").textContent=(tl.unit==="mes"?"Por meses, en la hora de la planta.":"Semanas de lunes a domingo, con la fecha del lunes.")+" Un tramo vacío puede ser un tramo sin viento o sin dato.";
-  drawBarChart($("wlChartHour"),dos(c.hours.prestow,c.hours.stow),{title:que+" según la hora a la que empiezan",yLabel:que.toLowerCase(),labels:c.hours.labels.map((h,i)=>i%3===0?h+" h":""),height:250,yMax:tope(c.hours.prestow,c.hours.stow),centerLabels:true});
-  drawBarChart($("wlChartDur"),dos(c.durations.prestow,c.durations.stow),{title:que+" según lo que duran",yLabel:que.toLowerCase(),labels:c.durations.labels,height:250,yMax:tope(c.durations.prestow,c.durations.stow),centerLabels:true});
-  // Cada HSU por separado: las del grupo que se está viendo.
-  const hs=r.sensors.filter(x=>g.key===WIND_LOGIC_PLANT_KEY||r.groups.length===1||x.ncu===g.key);
-  drawBarChart($("wlChartHsu"),[{label:"Pre-stow",values:hs.map(x=>x.prestow)},{label:"Stow",values:hs.map(x=>x.stow)}],
-    {title:"Alarmas que daría cada HSU ella sola",yLabel:"activaciones",labels:hs.map(x=>(x.ncu?x.ncu+"/":"")+x.name),height:250,yMax:tope(hs.map(x=>x.prestow),hs.map(x=>x.stow)),centerLabels:true});
-  const ref=r.groups[0],esRef=g===ref;
-  $("wlChartsNote").textContent="Horas en la hora de la planta. La duración va del primer salto a la última desactivación del episodio."+
-    (hs.length?" Racha máxima: "+hs.map(x=>x.label+", "+wlNum(x.peakKmh)+" km/h").join("; ")+".":"")+
-    (esRef&&ref.prestow.total&&hs.length>1?" Por encima del umbral en el minuto en que salta el pre-stow: "+hs.map(x=>x.label+", "+wlInt(x.firesPrestow)+" de "+wlInt(ref.prestow.total)).join("; ")+".":"");
 }
 function wlRender(){
   const r=WIND_LOGIC,g=wlGroupNow();if(!r||!g)return;
