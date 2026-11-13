@@ -779,6 +779,9 @@ declare -A PISO=(
   # que llega sin ráfaga (1) y no recalcular al cambiar de estrategia (4).
   [test_viento_mapa_motor.js]=41
   [test_viento_mapa.js]=37
+  # El lote del mapa (tools/mapa_pasivo): 16 MEDIDOS el 2026-11-13. El careo
+  # nodo a nodo lote ↔ pestaña es al bit (40/40 con cuatro estrategias).
+  [test_mapa_lote.js]=16
   [test_viento_planta.js]=35
   # De la TERCERA pasada: intercambiar los factores de vista del cielo y el
   # suelo en `LOC.poa` —la transposición de la que sale toda la energía— mató
