@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "notion_version": "2026-03-11",
+  "data_source_id": "2a4a3db7-3e36-42ba-889a-8b289a99c256",
+  "notion_hub_url": "https://app.notion.com/p/4186931d6436813ab499f73d69e82b04",
+  "properties": {
+    "include": "Incluir en Notion ingeniería",
+    "fronts": "Frentes de ingeniería",
+    "title": "Document",
+    "summary": "Hallazgo documentado",
+    "source_url": "Source URL",
+    "source_id": "Source ID",
+    "published_at": "Fecha publicación fuente",
+    "legacy_document_date": "Document Date",
+    "consulted_at": "Fecha consulta",
+    "contribution_type": "Tipo de aportación técnica",
+    "locator": "Localizador técnico",
+    "relation_statement": "Relación técnica documentada"
+  },
+  "front_labels": {
+    "01 · Modelos y generaciones": "modelos",
+    "02 · Patentes y mecanismos": "patentes",
+    "03 · Personas y equipos de diseño": "personas",
+    "04 · Proveedores reales": "proveedores",
+    "05 · Construcción y montaje": "montaje",
+    "06 · Estrategias de control": "control",
+    "07 · Laboratorios y ensayos públicos": "laboratorios",
+    "08 · Investigación publicada": "investigacion",
+    "09 · Fallos y respuestas": "incidentes",
+    "10 · Señales de desarrollo": "senales"
+  }
+}

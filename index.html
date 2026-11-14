@@ -1016,6 +1016,9 @@ const PICTOS = {
   "Notion ventas":
     '<rect class="f" x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 9v11"/>'
     + '<path class="a" d="M11 16l3-3 2 1.5 3-4"/><path d="M6 6.5h2M11 6.5h7"/>',
+  "Notion ingeniería":
+    '<path class="f" d="M3 4.5c3.5-1.4 6.5-.5 9 1.5 2.5-2 5.5-2.9 9-1.5V19c-3.5-1.4-6.5-.5-9 1.5C9.5 18.5 6.5 17.6 3 19z"/><path d="M12 6v14.5M6 8h3M6 11h3"/>'
+    + '<path class="a" d="m15 10 3 3-3 3"/><circle class="af" cx="18" cy="13" r="1.3"/>',
   "Atlas FACTIUN · Plantas FV":
     '<circle class="f" cx="10.5" cy="13" r="8"/><path d="M2.5 13h16M10.5 5c-2.2 2.2-3.2 5-3.2 8s1 5.8 3.2 8M10.5 5c2.2 2.2 3.2 5 3.2 8s-1 5.8-3.2 8"/>'
     + '<path class="ko" d="M18 2.6a3.7 3.7 0 0 1 3.7 3.7c0 2.8-3.7 6.3-3.7 6.3s-3.7-3.5-3.7-6.3A3.7 3.7 0 0 1 18 2.6z"/>'
@@ -1119,7 +1122,7 @@ function PICTO(p){
 /* LAS FAMILIAS de herramientas. Una herramienta nueva que no esté aquí sale en «Otras» y se ve:
    no se esconde. */
 const FAMILIAS = [
-  { k:'diseno', n:'Diseño y oferta', c:'#68C0D8', t:['Diseño de red de comunicaciones','Generador de implantaciones','Comparador de estructuras','Alta de planta','Modelo de propagación RF','Diagnóstico de cobertura Zigbee','Expediente de homologación'] },
+  { k:'diseno', n:'Diseño y oferta', c:'#68C0D8', t:['Diseño de red de comunicaciones','Generador de implantaciones','Comparador de estructuras','Alta de planta','Modelo de propagación RF','Diagnóstico de cobertura Zigbee','Expediente de homologación','Notion ingeniería'] },
   { k:'simulacion', n:'Simulación', c:'#F2C94C', t:['Núcleo de cálculo SolarGPT','Simulador de backtracking','Simulador de radiación difusa','Simulador de abanderamiento','Producción 3D por string','Careo SolarGPT ↔ PVSyst','Simulador de batería','Análisis meteorológico','Gemelo digital de seguidor y control'] },
   { k:'obra', n:'Obra y puesta en marcha', c:'#F09030', t:['Control de obra','Seguimiento PEM','Visor de levantamiento','Visor de geometría as-built','TCU Toolbox','IPs de plantas'] },
   { k:'operacion', n:'Operación', c:'#5BBF8A', t:['SCADA','SCADA fija · Victron VRM','Importador de logs de NCU','Medidor de tráfico','Mapa Modbus','Agente Modbus y collector','Simulador de planta equipo a equipo','Instalación cubierta Gorraiz'] },
@@ -1168,6 +1171,37 @@ const PROJECTS = [
     ],
     historial: [
       { date:"2026-11-14", ver:"1.0 · candidata", note:"Acceso único a ventas y a proveedores/componentes. Ventas reúne proyectos/permisos, compradores, procesos de compra, transacciones y competencia; proveedores conserva familias, comparación y pendientes. Notion como fuente de datos." }
+    ]
+  },
+  {
+    name: "Notion ingeniería",
+    status: "live",
+    objetivo: "Modelos, patentes, personas y tecnología de trackers: explora diez frentes de fuentes públicas, con fechas, evidencia y relaciones documentadas.",
+    stack: "HTML + JSON público · exportación fechada de Notion · filtros, fichas, tabla, evolución y relaciones",
+    url: "notion-ingenieria.html",
+    links: [
+      { label: "Explorar ingeniería", url: "notion-ingenieria.html" },
+      { label: "Abrir en Notion", url: "https://app.notion.com/p/4186931d6436813ab499f73d69e82b04" }
+    ],
+    repo: "https://github.com/IMoriana3/proyectos",
+    updated: "2026-11-14",
+    version: "1.0.0 · exportación 14/11/2026",
+    docId: "notion-ingenieria",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Busca por fabricante, tecnología, persona o producto. Los diez frentes cubren modelos, patentes, diseño, proveedores, montaje, control, laboratorios, investigación, fallos y señales de desarrollo.",
+      "Cada ficha conserva el hallazgo, su atribución, las fechas conocidas, el localizador y los enlaces de evidencia. Anunciado, comercializado e instalación documentada se muestran por separado.",
+      "Fichas, tabla, evolución y relaciones consultan la misma exportación pública. La cabecera muestra cuándo se generó; Recargar busca la última copia publicada.",
+      "Abrir en Notion lleva al hub y las fichas canónicas. El navegador no utiliza un token ni consulta Notion en vivo."
+    ],
+    pendientes: [
+      { done:true, text:"Diez frentes y una primera selección curada de nueve fichas con diez URLs de evidencia, relacionadas con las bases de Notion." },
+      { done:true, text:"Exportador reproducible, whitelist pública y workflow manual de candidato sin publicar automáticamente." },
+      { done:false, text:"Configurar NOTION_TOKEN en el entorno de exportación si se quiere releer la selección autorizada por API; la interfaz ya usa la copia fechada." }
+    ],
+    historial: [
+      { date:"2026-11-14", ver:"1.0.0", note:"Tarjeta y explorador de inteligencia técnica pública. Nueve fichas cubren diez frentes con fuentes, atribución, fechas y relaciones explícitas; hub nativo Notion enlazado." }
     ]
   },
   {
