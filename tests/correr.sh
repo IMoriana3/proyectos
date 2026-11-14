@@ -382,8 +382,12 @@ declare -A PISO=(
   # podido leerlo» no era un caso que pudiera ocurrir.
   [test_index.js]=28
   [test_integridad.js]=7
-  [test_notion_ingenieria.mjs]=21
-  [test_notion_ingenieria_browser.js]=12
+  # El visor y sus bancos funcionales (21 datos + 12 navegador) se trasladan
+  # a Atlas, propietario de la única pantalla de ingeniería. Aquí se prueba
+  # la ruta de compatibilidad: mapeo de estado y navegación real hacia un
+  # destino interceptado. No es una validación del visor privado de Atlas.
+  [test_notion_ingenieria_alias.mjs]=14
+  [test_notion_ingenieria_alias_browser.js]=8
   [test_layout_search.js]=22
   [test_layout_search_ui.js]=32
   [test_layout.js]=201
