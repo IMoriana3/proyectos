@@ -1013,6 +1013,9 @@ function HUELLA(pl){
    explican junto a `.picto`, en el CSS. Una herramienta nueva sin icono sale con la célula genérica.
    (Los módulos de planta —PLANT_MODULES— no tienen ficha de herramienta, así que tampoco icono.) */
 const PICTOS = {
+  "Notion ventas":
+    '<path class="f" d="M3 5h18v15H3z"/><path d="M3 10h18M10 10v10M14 5V3M7 5V3"/>'
+    + '<path class="a" d="m13 15 2 2 4-4"/>',
   "Atlas FACTIUN · Plantas FV":
     '<circle class="f" cx="10.5" cy="13" r="8"/><path d="M2.5 13h16M10.5 5c-2.2 2.2-3.2 5-3.2 8s1 5.8 3.2 8M10.5 5c2.2 2.2 3.2 5 3.2 8s-1 5.8-3.2 8"/>'
     + '<path class="ko" d="M18 2.6a3.7 3.7 0 0 1 3.7 3.7c0 2.8-3.7 6.3-3.7 6.3s-3.7-3.5-3.7-6.3A3.7 3.7 0 0 1 18 2.6z"/>'
@@ -1120,7 +1123,7 @@ const FAMILIAS = [
   { k:'simulacion', n:'Simulación', c:'#F2C94C', t:['Núcleo de cálculo SolarGPT','Simulador de backtracking','Simulador de radiación difusa','Simulador de abanderamiento','Producción 3D por string','Careo SolarGPT ↔ PVSyst','Simulador de batería','Análisis meteorológico','Gemelo digital de seguidor y control'] },
   { k:'obra', n:'Obra y puesta en marcha', c:'#F09030', t:['Control de obra','Seguimiento PEM','Visor de levantamiento','Visor de geometría as-built','TCU Toolbox','IPs de plantas'] },
   { k:'operacion', n:'Operación', c:'#5BBF8A', t:['SCADA','SCADA fija · Victron VRM','Importador de logs de NCU','Medidor de tráfico','Mapa Modbus','Agente Modbus y collector','Simulador de planta equipo a equipo','Instalación cubierta Gorraiz'] },
-  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV','Diccionario de datos FACTIUN','Radar FACTIUN'] }
+  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV','Notion ventas','Diccionario de datos FACTIUN','Radar FACTIUN'] }
 ];
 const FAMILIA_DE = {}; FAMILIAS.forEach(f=>f.t.forEach(n=>{ FAMILIA_DE[n]=f.k; }));
 function familiaDe(p){ return FAMILIA_DE[p && p.name] || 'otras'; }
@@ -1133,6 +1136,34 @@ document.querySelectorAll('.tabla-link[data-picto]').forEach(a => a.insertAdjace
    PROYECTOS  —  edita SOLO este array para mantener el panel al día.
    ===================================================================== */
 const PROJECTS = [
+  {
+    name: "Notion ventas",
+    status: "build",
+    objetivo: "Proveedores y componentes: explora familias mecánicas y eléctricas, compara referencias y consulta capacidades, alternativas y evidencias.",
+    stack: "Notion · lectura en vivo desde Atlas · acceso privado",
+    url: "https://maps-9rd.pages.dev/herramientas/notion-ventas.html",
+    links: [],
+    repo: "https://github.com/IMoriana3/Atlas/tree/main/herramientas",
+    updated: "2026-11-14",
+    version: "1.0 · preparada",
+    docId: "notion-ventas",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Entra por una familia, busca una referencia o filtra por dominio y estado de investigación.",
+      "Compara hasta cuatro componentes y revisa sus especificaciones, fabricante, canales, logística y condiciones de sustitución.",
+      "Consulta proveedores, capacidades de fabricación, centros, territorios y contactos documentados con su fuente y fecha.",
+      "Los pendientes señalan qué investigar. Una alternativa registrada requiere validar su aplicación antes de sustituir un componente.",
+      "Los precios sólo aparecen cuando se han encontrado publicados. Su ausencia no genera pendientes ni peticiones de oferta."
+    ],
+    pendientes: [
+      { done:true, text:"Ampliar las bases existentes de Notion y los dos radares, conservando sus datos, alcance y horarios." },
+      { done:false, text:"Publicar la interfaz en Atlas y comprobar la lectura con una sesión autorizada." }
+    ],
+    historial: [
+      { date:"2026-11-14", ver:"1.0 · preparada", note:"Familias, comparador técnico, proveedores y pendientes conectados al catálogo de componentes y a Actores 16A. Precios encontrados opcionales." }
+    ]
+  },
   {
     name: "Atlas FACTIUN · Plantas FV",
     status: "build",
