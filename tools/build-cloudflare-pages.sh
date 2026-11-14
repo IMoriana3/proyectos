@@ -82,7 +82,7 @@ HTML
 
 # Comprobación mínima: los HTML esperados existen y ninguna carpeta
 # exclusiva del repositorio acaba sirviéndose como recurso web.
-for required in index.html sim-viento.html cartera-tabla.html generador-layout.html                 comparador-estructuras.html manifest.webmanifest sw.js; do
+for required in index.html sim-viento.html cartera-tabla.html generador-layout.html                 comparador-estructuras.html notion-ingenieria.html assets/notion-ingenieria.css                 lib/notion-ingenieria.mjs lib/notion-ingenieria-core.mjs data/notion-ingenieria.json                 manifest.webmanifest sw.js; do
   [[ -s "$OUT/$required" ]] || { echo "Falta $required en $OUT" >&2; exit 1; }
 done
 for blocked in .github tests tools prompts docs/audit; do
