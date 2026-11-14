@@ -176,13 +176,17 @@
     "fronts": 10,
     "canonical_sources": 9,
     "new_notion_pages": 7,
-    "enriched_existing_pages": 9
+    "enriched_existing_pages": 9,
+    "additional_relationships": 7,
+    "sources_adjusted_for_relationships": 5,
+    "additional_documented_entity_links": 7,
+    "sources_with_additional_links": 5
   },
   "snapshot": {
     "records": 9,
     "distinct_evidence_urls": 10,
     "fronts": 10,
-    "exported_at": "2026-11-14T14:33:08Z"
+    "exported_at": "2026-11-14T14:40:49Z"
   },
   "notion_views": {
     "created": 18,
