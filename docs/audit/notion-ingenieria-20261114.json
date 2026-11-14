@@ -1,0 +1,200 @@
+{
+  "date": "2026-11-14",
+  "hub_url": "https://app.notion.com/p/4186931d6436813ab499f73d69e82b04",
+  "scope": "Public technical intelligence; no internal page bodies exported",
+  "schema": {
+    "bases_modified": 9,
+    "fields_added": 41,
+    "changes": [
+      {
+        "base": "fuentes",
+        "new_fields": [
+          "Frentes de ingeniería",
+          "Tipo de aportación técnica",
+          "Localizador técnico",
+          "Relación técnica documentada",
+          "Incluir en Notion ingeniería"
+        ],
+        "verified": true
+      },
+      {
+        "base": "equipos",
+        "new_fields": [
+          "Generación documentada",
+          "Modelo anterior documentado",
+          "Fecha de presentación",
+          "Situación pública del modelo",
+          "Cambios técnicos publicados",
+          "Personas técnicas documentadas",
+          "Fuentes de evolución 11"
+        ],
+        "verified": true
+      },
+      {
+        "base": "personas",
+        "new_fields": [
+          "Especialidades técnicas",
+          "Contribución técnica documentada",
+          "Productos relacionados 13",
+          "Publicaciones técnicas 11",
+          "Colaboradores técnicos documentados"
+        ],
+        "verified": true
+      },
+      {
+        "base": "patentes",
+        "new_fields": [
+          "Familias citadas",
+          "Dibujos técnicos clave",
+          "Evidencia de relación con producto"
+        ],
+        "verified": true
+      },
+      {
+        "base": "componentes",
+        "new_fields": [
+          "Relación OEM documentada",
+          "Fuentes de uso en equipos",
+          "Proceso de fabricación publicado",
+          "Montaje y mantenimiento publicados"
+        ],
+        "verified": true
+      },
+      {
+        "base": "control",
+        "new_fields": [
+          "Estrategia publicada",
+          "Activación y prioridades publicadas",
+          "Respuesta ante pérdida de señal",
+          "Resultados y límites publicados",
+          "Versión documentada"
+        ],
+        "verified": true
+      },
+      {
+        "base": "ensayos",
+        "new_fields": [
+          "Método de ensayo publicado",
+          "Condiciones del ensayo",
+          "Resultados publicados",
+          "Limitaciones del informe",
+          "Personas técnicas 16E"
+        ],
+        "verified": true
+      },
+      {
+        "base": "eventos",
+        "new_fields": [
+          "Frente técnico",
+          "Respuesta técnica publicada",
+          "Vínculo causal",
+          "Personas técnicas 16E",
+          "Capacidad o tecnología anunciada"
+        ],
+        "verified": true
+      },
+      {
+        "base": "actores",
+        "new_fields": [
+          "Centros y colaboraciones de I+D",
+          "Socios tecnológicos documentados"
+        ],
+        "verified": true
+      }
+    ]
+  },
+  "radars": {
+    "updated": 6,
+    "publication_contract_updated": 5,
+    "new_automations": 0,
+    "manual_runs_triggered": 0,
+    "records": [
+      {
+        "key": "Radar 13",
+        "original_prompt_preserved": true,
+        "schedule_preserved": true,
+        "enabled_preserved": true,
+        "timezone_preserved": true,
+        "title_preserved": true,
+        "publication_clause_present": true,
+        "concurrent_sales_append": false
+      },
+      {
+        "key": "Radar 11",
+        "original_prompt_preserved": true,
+        "schedule_preserved": true,
+        "enabled_preserved": true,
+        "timezone_preserved": true,
+        "title_preserved": true,
+        "publication_clause_present": true,
+        "concurrent_sales_append": false
+      },
+      {
+        "key": "Radar 15",
+        "original_prompt_preserved": true,
+        "schedule_preserved": true,
+        "enabled_preserved": true,
+        "timezone_preserved": true,
+        "title_preserved": true,
+        "publication_clause_present": true,
+        "concurrent_sales_append": false
+      },
+      {
+        "key": "Radar 14",
+        "original_prompt_preserved": true,
+        "schedule_preserved": true,
+        "enabled_preserved": true,
+        "timezone_preserved": true,
+        "title_preserved": true,
+        "publication_clause_present": true,
+        "concurrent_sales_append": false
+      },
+      {
+        "key": "Radar 04",
+        "original_prompt_preserved": true,
+        "schedule_preserved": true,
+        "enabled_preserved": true,
+        "timezone_preserved": true,
+        "title_preserved": true,
+        "publication_clause_present": true,
+        "concurrent_sales_append": false
+      },
+      {
+        "key": "Consolidado",
+        "original_prompt_preserved": true,
+        "schedule_preserved": true,
+        "enabled_preserved": true,
+        "timezone_preserved": true,
+        "title_preserved": true,
+        "publication_clause_present": false,
+        "concurrent_sales_append": true
+      }
+    ]
+  },
+  "research": {
+    "records": 9,
+    "fronts": 10,
+    "canonical_sources": 9,
+    "new_notion_pages": 7,
+    "enriched_existing_pages": 9
+  },
+  "snapshot": {
+    "records": 9,
+    "distinct_evidence_urls": 10,
+    "fronts": 10,
+    "exported_at": "2026-11-14T14:33:08Z"
+  },
+  "notion_views": {
+    "created": 18,
+    "canonical_relations": "Entidad sectorial16 / Products / Variants",
+    "receipt_file": "engineering-notion-views.json (workspace receipt, not a published workspace dump)"
+  },
+  "validation": {
+    "data_export_checks": 21,
+    "panel_integrity_checks": 7,
+    "browser_checks_authored": 12,
+    "browser_local_status": "Not executed: Chromium launch denied by environment (UNIX socket operation not permitted)",
+    "notion_api_status": "Optional exporter implemented; no NOTION_TOKEN configured or live API call claimed",
+    "cloudflare_access_changed": false
+  }
+}
