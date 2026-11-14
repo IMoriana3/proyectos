@@ -382,6 +382,8 @@ declare -A PISO=(
   # podido leerlo» no era un caso que pudiera ocurrir.
   [test_index.js]=28
   [test_integridad.js]=7
+  [test_notion_ingenieria.mjs]=21
+  [test_notion_ingenieria_browser.js]=12
   [test_layout_search.js]=22
   [test_layout_search_ui.js]=32
   [test_layout.js]=201

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="theme-color" content="#0d1420">
+  <title>Notion ingeniería · FACTIUN</title>
+  <meta name="description" content="Modelos, patentes, personas y tecnología de seguidores solares. Inteligencia técnica de fuentes públicas, con fechas y evidencia.">
+  <script>
+    /* Appearance only, as in the Panel: approximate daylight at Ayora.
+       No solar-engineering result is calculated or exposed here. */
+    (()=>{const mode=new URLSearchParams(location.search).get('luz');const now=new Date();const rad=Math.PI/180;const day=(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate())-Date.UTC(now.getUTCFullYear(),0,0))/86400000;const decl=-23.44*Math.cos(2*Math.PI*(day+10)/365)*rad;const hour=now.getUTCHours()+now.getUTCMinutes()/60-1.15985/15;const elevation=Math.asin(Math.sin(39.11821*rad)*Math.sin(decl)+Math.cos(39.11821*rad)*Math.cos(decl)*Math.cos((hour-12)*15*rad))/rad;document.documentElement.dataset.luz=mode==='dia'||mode==='noche'?mode:elevation>=-6?'dia':'noche';})();
+  </script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/fonts/Barlow-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/BarlowCondensed-600-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/notion-ingenieria.css">
+  <script type="module" src="lib/notion-ingenieria.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#results">Saltar a las fichas</a>
+  <header class="masthead">
+    <div class="brand"><a href="index.html" aria-label="Volver al panel FACTIUN">FACTIUN<span class="brand-dot" aria-hidden="true"></span></a><span class="brand-section">INTELIGENCIA TÉCNICA</span></div>
+    <nav class="top-actions" aria-label="Accesos"><span class="edition">ING / 01</span><button class="icon-button" id="light-toggle" title="Cambiar entre luz de día y de noche" aria-label="Cambiar entre luz de día y de noche">◐</button><a class="button secondary notion-link" hidden target="_blank" rel="noopener noreferrer">Abrir en Notion <span aria-hidden="true">↗</span></a></nav>
+  </header>
+
+  <div class="workspace">
+    <aside class="sidebar" aria-label="Frentes de ingeniería">
+      <div class="sidebar-heading"><span class="eyebrow">10 FRENTES DE BÚSQUEDA</span><span class="mini-cross" aria-hidden="true">+</span></div>
+      <nav id="fronts" class="fronts"><button class="front selected" data-front="all" aria-current="true"><span class="front-number">◈</span><span>Todo ingeniería</span></button></nav>
+      <div class="sidebar-note"><span class="status-dot" aria-hidden="true"></span><strong>Conocimiento con origen</strong><p>Cada ficha conserva su fuente, fecha y alcance. Las relaciones se leen en la evidencia.</p><a href="#method" id="method-link">Cómo leer los datos <span aria-hidden="true">↗</span></a></div>
+    </aside>
+
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero-copy"><div class="eyebrow"><span class="orange-line" aria-hidden="true"></span>OBSERVATORIO DE SEGUIDORES SOLARES</div><h1 id="page-title">Notion <em>ingeniería.</em></h1><p class="hero-lead">Qué se está diseñando.<br> Quién lo hace y cómo funciona.</p><p class="hero-description">Explora modelos, mecanismos y personas a partir de fuentes públicas. Sigue cada hallazgo hasta su evidencia.</p></div>
+        <div class="hero-side">
+          <div class="tracker-drawing" aria-hidden="true"><svg viewBox="0 0 370 186" fill="none"><defs><pattern id="blueprint-grid" width="22" height="22" patternUnits="userSpaceOnUse"><path d="M22 0H0V22" stroke="currentColor" stroke-opacity=".08"/></pattern><linearGradient id="module-fill" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#68c0d8" stop-opacity=".16"/><stop offset="1" stop-color="#68c0d8" stop-opacity=".02"/></linearGradient></defs><path d="M0 0h370v186H0z" fill="url(#blueprint-grid)"/><g stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="m49 104 187-66 92 43-187 66z" fill="url(#module-fill)"/><path d="m80 93 92 43m-61-54 92 43m-61-54 92 43m-61-54 92 43m-61-54 92 43M95 125l187-66" opacity=".6"/><path d="m49 104 92 48 187-66v-5m-187 66v5"/><path d="m109 136 127-45M125 132v36m124-79v38m-131 45 16-5m108-36 16-5" opacity=".7"/><path d="m25 153 305-2m-201-4 1 25m120-64v27" stroke-dasharray="3 5" opacity=".22"/></g><g stroke="#f09030" stroke-width="1.5"><circle cx="185" cy="111" r="6"/><path d="m191 109 20-7m-36 17-18 16M180 87a25 25 0 0 1 26 27"/><path d="m201 111 5 4 3-6"/></g><g fill="currentColor" opacity=".45" font-family="monospace" font-size="8"><text x="24" y="24">FIG. 01 / SEGUIMIENTO</text><text x="258" y="174">ESQUEMA ILUSTRATIVO</text></g></svg></div>
+          <div class="export-stamp"><span class="stamp-dot" aria-hidden="true"></span><div><strong id="export-date">Cargando exportación…</strong><span id="export-caption">Selección de fuentes públicas</span></div><button class="icon-button" id="refresh" title="Volver a cargar la exportación publicada" aria-label="Volver a cargar la exportación publicada">↻</button></div>
+        </div>
+      </section>
+
+      <section class="metrics" id="metrics" aria-label="Contenido de esta selección"><div class="metric"><span class="metric-value">—</span><span>fichas documentadas</span></div><div class="metric"><span class="metric-value">—</span><span>enlaces de evidencia</span></div><div class="metric"><span class="metric-value">—</span><span>empresas citadas</span></div><div class="metric"><span class="metric-value">—</span><span>frentes con evidencia</span></div></section>
+
+      <section class="explorer" aria-labelledby="section-title">
+        <div class="explorer-heading"><div><div class="eyebrow" id="section-kicker">BIBLIOTECA TÉCNICA</div><h2 id="section-title">Explorar el conocimiento</h2><p id="section-description">Una selección inicial que crece con cada fuente.</p></div><div class="view-tabs" role="group" aria-label="Presentación de resultados"><button data-view="cards" aria-pressed="true" title="Ver fichas"><span aria-hidden="true">▦</span> Fichas</button><button data-view="table" aria-pressed="false" title="Comparar en tabla"><span aria-hidden="true">☷</span> Tabla</button><button data-view="timeline" aria-pressed="false" title="Ver cronología"><span aria-hidden="true">↗</span> Evolución</button><button data-view="relations" aria-pressed="false" title="Ver relaciones documentadas"><span aria-hidden="true">⌘</span> Relaciones</button></div></div>
+
+        <aside class="patent-catalog" id="patent-catalog" aria-labelledby="patent-catalog-title" hidden>
+          <div><h3 id="patent-catalog-title">Patentes · Radar FACTIUN</h3><p>Explora las familias, componentes, territorios e inventores en el radar existente de Atlas.</p><p class="patent-catalog-note">Debajo se muestran los hallazgos seleccionados para Notion ingeniería.</p></div>
+          <a class="button primary" href="https://maps-9rd.pages.dev/herramientas/radar-factiun#ingenieria" target="_blank" rel="noopener noreferrer">Abrir radar de patentes <span aria-hidden="true">↗</span><span class="sr-only"> (se abre en una pestaña nueva)</span></a>
+        </aside>
+
+        <form class="filters" id="filters" role="search">
+          <div class="search-row"><label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.4 15.4 5 5"/></svg><span class="sr-only">Buscar en las fichas</span><input id="query" name="q" type="search" placeholder="Un modelo, una patente, una persona…" autocomplete="off"><kbd>/</kbd></label><label class="evidence-filter"><span class="sr-only">Tipo de evidencia</span><select id="claim" name="claim"><option value="">Toda la evidencia</option value="fact">Hecho documentado</option><option value="manufacturer_claim">Declaración del fabricante</option><option value="inference">Inferencia</option><option value="unverified">Sin verificar</option></select></label></div>
+          <div class="entity-filters"><label>Empresa<select id="company" name="company"><option value="">Todas las empresas</option></select></label><label>Tecnología<select id="technology" name="technology"><option value="">Todas las tecnologías</option></select></label><label>Persona<select id="person" name="person"><option value="">Todas las personas</option></select></label><label>Producto<select id="product" name="product"><option value="">Todos los productos</option></select></label></div>
+        </form>
+        <div class="result-toolbar"><p id="result-count" role="status" aria-live="polite">Cargando fichas…</p><div><button id="clear-filters" class="text-button" hidden>Limpiar filtros <span aria-hidden="true">×</span></button><label class="sort"><span class="sr-only">Ordenar resultados</span><select id="sort"><option value="consulted">Última consulta</option><option value="event">Fecha del hecho</option><option value="title">Título A–Z</option></select></label></div></div>
+        <div id="results" class="results" tabindex="-1" aria-busy="true"><div class="loading-state"><span class="loader" aria-hidden="true"></span><h3>Preparando las fichas</h3><p>Leyendo la exportación publicada.</p></div></div>
+      </section>
+      <footer class="page-footer"><p>Fuentes públicas · Conocimiento técnico reutilizable</p><p id="footer-date">Las fechas y el alcance se conservan en cada ficha.</p></footer>
+    </main>
+  </div>
+
+  <dialog id="record-dialog" aria-labelledby="dialog-title"><div id="dialog-content"></div><button class="dialog-close icon-button" id="close-dialog" aria-label="Cerrar ficha">×</button></dialog>
+  <dialog id="method-dialog" aria-labelledby="method-title"><button class="dialog-close icon-button" id="close-method" aria-label="Cerrar explicación">×</button><div class="method-body"><div class="eyebrow">CÓMO LEER LOS DATOS</div><h2 id="method-title">La evidencia, a la vista.</h2><p>Esta interfaz muestra una exportación fechada de la selección pública de Notion. La fecha de consulta dice cuándo se revisó una fuente; la fecha del hecho sitúa lo que ocurrió.</p><div class="method-grid"><article><span class="badge fact">Hecho documentado</span><p>Una fuente identifica el documento, evento o relación. El alcance concreto está en la ficha.</p></article><article><span class="badge manufacturer_claim">Declaración del fabricante</span><p>La prestación o capacidad procede del fabricante. Se conserva esa atribución.</p></article><article><span class="badge inference">Inferencia</span><p>Interpretación razonada. Debe indicar qué la sustenta y qué queda por comprobar.</p></article><article><span class="badge unverified">Sin verificar</span><p>Hay una pista identificada, pero falta evidencia suficiente para confirmar la afirmación.</p></article></div><h3>Producto, patente y relación tienen su propio alcance</h3><p>Un anuncio, una oferta comercial y una instalación documentada son estados diferentes. Una patente describe una solución; vincularla a un producto exige su propia evidencia. Las personas aparecen por contribuciones profesionales publicadas, sin inferir su cargo actual.</p><h3>Actualización</h3><p>«Recargar» busca la última exportación publicada. El acceso a Notion abre la base de trabajo, donde se completan las fichas y sus relaciones. Los contadores describen esta selección, sin pretender ser un censo del sector.</p><a class="button primary notion-link" hidden target="_blank" rel="noopener noreferrer">Abrir Notion ↗</a></div></dialog>
+  <noscript><p class="noscript">Activa JavaScript para explorar las fichas. También puedes abrir <a href="data/notion-ingenieria.json">la exportación pública en JSON</a>.</p></noscript>
+  <script src="lib/indice.js" defer></script>
+</body>
+</html>
