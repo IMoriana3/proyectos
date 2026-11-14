@@ -6,16 +6,16 @@ const {EXEC}=require('./pw_navegador.js');
 const BASE=process.env.BASE_URL||'http://localhost:8099';
 const ORIGIN='https://maps-9rd.pages.dev';
 const PATH='/herramientas/radar-factiun';
-const fixture='<!doctype html><html lang="es"><title>Atlas destination fixture</title><main id="atlas-destination">Destino de navegación interceptado; no es el visor de Atlas.</main></html>';
+const fixture='<!doctype html><html lang="es"><meta charset="utf-8"><title>Atlas destination fixture</title><main id="atlas-destination">Destino de navegación interceptado; no es el visor de Atlas.</main></html>';
 let passed=0,failed=0,browser;
 const check=async(name,fn)=>{try{await fn();console.log('OK   '+name);passed++;}catch(e){console.error('FAIL '+name+' — '+e.message);failed++;}};
 async function context(options={}){
   const ctx=await browser.newContext({serviceWorkers:'block',javaScriptEnabled:options.javascript!==false,viewport:{width:390,height:844}}),requests=[];
   await ctx.route('**/*',route=>{
     const url=new URL(route.request().url());requests.push(url.href);
-    if(url.origin===ORIGIN)return route.fulfill({status:200,contentType:'text/html',body:fixture});
+    if(url.origin===ORIGIN)return route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:fixture});
     if(url.origin!==new URL(BASE).origin)return route.abort();
-    if(url.pathname==='/engineering-history-fixture.html')return route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><title>Página anterior</title><h1>Página anterior</h1>'});
+    if(url.pathname==='/engineering-history-fixture.html')return route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:'<!doctype html><meta charset="utf-8"><title>Página anterior</title><h1>Página anterior</h1>'});
     if(options.blockModule&&url.pathname.endsWith('/lib/notion-ingenieria-redirect.mjs'))return route.abort();
     return route.continue();
   });
@@ -46,7 +46,7 @@ async function follow(page,query=''){
     const {ctx,page}=await context();try{const url=await follow(page,'?redirect=https://elsewhere.example&token=example&front=control#direccion');assert.deepEqual([...url.searchParams],[['front','control']]);}finally{await ctx.close();}
   });
   await check('volver atrás regresa a la página anterior sin un bucle de redirección',async()=>{
-    const {ctx,page}=await context();try{await page.goto(BASE+'/engineering-history-fixture.html');await follow(page,'?front=personas');await page.goBack();assert.equal(new URL(page.url()).pathname,'/engineering-history-fixture.html');assert(await page.getByRole('heading',{name:'Página anterior'}).isVisible());}finally{await ctx.close();}
+    const {ctx,page}=await context();try{await page.goto(BASE+'/engineering-history-fixture.html');await follow(page,'?front=personas');await page.goBack();assert.equal(new URL(page.url()).pathname,'/engineering-history-fixture.html');assert(await page.getByRole('heading',{name:'Página anterior'}).isVisible(),'Contenido recibido: '+await page.locator('body').innerText());}finally{await ctx.close();}
   });
   await check('sin JavaScript queda un acceso legible y utilizable en móvil',async()=>{
     const {ctx,page}=await context({javascript:false});try{await page.goto(BASE+'/notion-ingenieria.html');const link=page.getByRole('link',{name:'Abrir Notion ingeniería',exact:true});assert(await link.isVisible());const size=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,width:innerWidth}));assert(size.scroll<=size.width+1);await link.click();await arrived(page);}finally{await ctx.close();}
