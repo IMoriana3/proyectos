@@ -85,7 +85,10 @@ planta**:
 
 ### De dónde sale el viento: todo el histórico, sin tope de fechas
 
-La simulación **no depende del periodo cargado arriba**. En «Más parámetros» se elige:
+La simulación **no depende de lo que se cargue arriba**: con la sesión iniciada la tarjeta
+está siempre visible, aunque «Cargar y comparar» no haya cargado nada (por ejemplo, porque
+el periodo pedido pasa de 370 días), y simula la planta elegida en «Planta». Las gráficas
+y la lista aparecen cuando hay simulación. En «Más parámetros» se elige:
 
 - **Todo el histórico de la base** (por defecto cuando las medidas vienen de Supabase).
   La tarjeta pide a `telemetria` únicamente el eje de tiempos y `wind_speed_max` de las
@@ -131,6 +134,11 @@ lectura sobre umbral, y una lectura posterior es otra activación. De cada una s
 instante, la racha al cruzar, el pico del evento, la posición inicial, la posición
 objetivo y los grados a mover (0° si ya está en posición).
 
+Si las dos alarmas saltan **en el mismo minuto** (la racha pasa de menos de 40 a más de
+60 km/h) el seguidor hace un solo movimiento y se reparte: al pre-stow, el tramo hasta
+su posición (30° de día, 55° E de noche); al stow, el resto. Ninguna de las dos cuenta
+el recorrido de la otra, y los grados de cada fila son los de su fórmula.
+
 ### Lo que la lógica no define, a la vista
 
 Dos huecos de la especificación se resuelven con un desplegable, no a escondidas:
@@ -161,7 +169,9 @@ le marca la lógica; con un valor, una alarma puede pillarlo a medio camino.
 Cortas a propósito, para que se lean de un vistazo:
 
 - **Resumen**, una fila por alarma: veces que salta, en cuántas no hay que mover el
-  seguidor, en cuántas sí y cuánto (de día y de noche).
+  seguidor, en cuántas sí y **cuánto se mueve** (de día y de noche): grados de recorrido,
+  media y máximo — «22,6° de media, máx. 25°» —, nunca una posición. Antes decía «hasta
+  25°» y se leía como si el stow fuese a 25°.
 - **Recuento por racha máxima**, en una línea.
 - **Activaciones por semana**.
 - **Lista completa**, plegada, con filtro; y su **CSV** (separador «;», coma decimal,
@@ -190,12 +200,20 @@ alarma, que es lo que haría el control con esa regla. Con margen 0, episodio = 
 - **Qué HSU detecta más viento**: porcentaje del tiempo de cada HSU por encima de cada
   velocidad, sobre su propio periodo.
 - **Cuántos**: episodios por semana, o por mes si el periodo pasa de 30 semanas.
-- **Informe** de una página, imprimible a PDF y con aspecto de nota escrita a mano: sin
+- **Informe** de dos páginas, imprimible a PDF y con aspecto de nota escrita a mano: sin
   membrete, empieza por el título; ficha (planta, sensores, periodo), dos frases de resumen,
-  «Tabla 1» con el resumen y el reparto por racha máxima al pie, «Figura 1» con las
-  activaciones por semana, «Tabla 2» con las reglas como fórmulas (condición, posición
-  y grados a mover, con los valores simulados) y las observaciones. No lleva la lista
-  de activaciones ni explica el cálculo en prosa.
+  «Tabla 1» con el resumen y el reparto por racha máxima al pie, las gráficas de la página
+  (**«Figura 1»**, el calendario de alarmas; **«Figura 2»**, el reloj de 24 h junto a la nube
+  de duración y racha; **«Figura 3»**, las curvas por HSU), «Tabla 2» con las reglas como
+  fórmulas (condición, posición y grados a mover, con los valores simulados) y las
+  observaciones. No lleva la lista de activaciones ni explica el cálculo en prosa.
+
+Las figuras del informe son las mismas gráficas, vueltas a dibujar en **tema claro**
+(`tema:"claro"` en `lib/meteo-viz.js`: fondo blanco, la letra del informe, la noche en gris
+y los días sin dato rayados) en lienzos fuera de la página, al tamaño con que van impresas
+y al triple de resolución; viajan dentro del HTML como PNG. `windLogicReportHtml` las
+recibe en `figures`; sin ellas (en Node, o si el navegador no deja leer el lienzo) el
+informe lleva la figura de barras de antes.
 
 Los parámetros de detalle (origen y periodo de los datos, posiciones, geometría,
 coordenadas y los dos supuestos) van plegados en «Más parámetros».
@@ -208,10 +226,10 @@ navegador sobre el viento de la sesión y se descarta al cerrarla.
 `lib/meteo-wind-logic.js` — módulo puro, sin DOM, sin red y sin importaciones; la
 posición solar se inyecta (`solarPosition` de `lib/meteo-browser.js`).
 
-- `node tests/test_meteo_logica_viento.js` — 42 verificaciones del motor con series
+- `node tests/test_meteo_logica_viento.js` — 43 verificaciones del motor con series
   sintéticas y del lector de histórico con una base de mentira (450 días sin tope,
   avance por fecha, un día que llena la página, corte por tiempo, repliegue).
-- `node tests/test_meteo_logica_viento_browser.js` — 27 comprobaciones de la tarjeta
+- `node tests/test_meteo_logica_viento_browser.js` — 31 comprobaciones de la tarjeta
   en Chromium con Supabase simulado; arriba se carga un solo día en calma y la
   simulación sale del histórico entero.
 
