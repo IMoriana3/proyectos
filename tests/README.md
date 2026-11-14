@@ -1,5 +1,14 @@
 # Pruebas del panel
 
+## Notion ingeniería: compatibilidad con Atlas (14-11-2026)
+
+La pantalla de ingeniería y sus bancos funcionales se trasladan a Atlas: `tests/radar_ingenieria_core.test.mjs` y `tests/browser_radar_ingenieria.cjs`. El Panel conserva la tarjeta y una redirección, por lo que aquí no se sigue probando el renderer retirado.
+
+- `test_notion_ingenieria_alias.mjs`: 14 comprobaciones de destino fijo, once parámetros, Unicode, longitudes, claves repetidas, descarte de parámetros ajenos y conservación de los nueve IDs de la exportación histórica.
+- `test_notion_ingenieria_alias_browser.js`: 8 recorridos de navegación real, conservación del estado, historial, acceso sin JavaScript, fallo de carga del módulo, ausencia de solicitudes al antiguo visor y apertura desde la tarjeta. **Atlas es un destino interceptado**; este banco no comprueba su autenticación, datos ni renderer.
+
+Los pisos de los nuevos bancos se leen en CI antes de integrar. Los bancos funcionales anteriores de 21 datos y 12 recorridos no se omiten: pasan al repositorio que publica su pantalla. Los demás pisos, gates y triggers permanecen iguales.
+
 Pruebas de integración de `index.html` en un navegador real (Chromium vía Playwright),
 con la API de releases de GitHub simulada.
 
