@@ -214,14 +214,15 @@ alarma, que es lo que haría el control con esa regla. Con margen 0, episodio = 
 - **De dónde viene el viento**: una rosa por HSU, todas a la misma escala, con la parte de
   su tiempo de alarma que el viento llega de cada rumbo y el eje de las filas marcado.
 - **Cuántos**: episodios por semana, o por mes si el periodo pasa de 30 semanas.
-- **Informe** de cuatro páginas, imprimible a PDF. No es una nota académica ni una ficha de
+- **Informe** de cinco páginas, imprimible a PDF. No es una nota académica ni una ficha de
   aplicación: se lee como lo contaría quien ha hecho el estudio.
   - **Cabecera**: el nombre de la planta por título, en grande; debajo, qué es el documento
     y la ficha (sensores, periodo, racha máxima). A la derecha, un **croquis del seguidor**
     de canto con la mesa en seguimiento, en pre-stow y en stow. Sin membrete.
   - **Cada apartado es la pregunta que haría un compañero**, y debajo va la respuesta en
     una frase; luego, la tabla o la figura que la sostiene: «¿Cuántas veces salta cada
-    alarma?», «¿Cuánto trabaja el seguidor al año?», «¿Cuándo salta y cuánto dura?»,
+    alarma?», «¿Cuánto trabaja el seguidor al año?», «¿Cuántas veces descarga la batería, y
+    cuánto dura?», «¿Cuándo salta y cuánto dura?»,
     «¿Hasta dónde llega la racha?», «¿De dónde viene el viento?», «¿Qué ve cada HSU?»,
     «Qué se ha simulado» (las reglas como fórmulas) y «A tener en cuenta» (las notas).
     Las tablas y figuras ya no van numeradas.
@@ -271,15 +272,39 @@ coordenadas y los dos supuestos) van plegados en «Más parámetros».
 Ningún resultado de planta se guarda en el repositorio: la simulación corre en el
 navegador sobre el viento de la sesión y se descarta al cerrarla.
 
+### Batería: descargas por viento
+
+El informe sirve también para dimensionar la batería del seguidor. Una **descarga** es cada
+vez que el motor gira por culpa del viento, ida y vuelta:
+
+- **ida**: de donde está el seguidor a la posición que pide la alarma (pre-stow o stow; de
+  noche, 55° E);
+- **vuelta**: de esa posición al ángulo de seguimiento que toca cuando la alarma se desactiva
+  (o a la posición de noche; tras un stow de noche, la vuelta es la del amanecer).
+
+La ida y la vuelta **no miden lo mismo**: cada giro lleva sus propios grados, sacados de la
+posición simulada minuto a minuto. El motor cuenta un giro en todo salto de posición que el
+seguimiento solo no daría (`group.motor.runs`: instante, grados, ida o vuelta, y si es sin
+sol). Si las dos alarmas saltan en el mismo minuto es un solo giro.
+
+La **duración** de la descarga son los grados entre la velocidad del motor (`motorDegPerSec`,
+0,17 °/s por defecto, la del simulador de viento; se cambia en «Más parámetros»).
+`windLogicInsights(…).battery` da, para ida, vuelta y total: descargas de día y **sin sol**
+(de noche y la vuelta del amanecer, cuando la batería no se está cargando), duración media y
+máxima y minutos de motor; el reparto por duración; la descarga más larga, y la noche y el
+día con más minutos de motor. En la página, la tarjeta «Batería»; en el informe, el apartado
+«¿Cuántas veces descarga la batería, y cuánto dura?», con una nube de un punto por descarga
+(relleno de día, hueco sin sol). No se calcula energía: haría falta el consumo del motor.
+
 ### Motor y pruebas
 
 `lib/meteo-wind-logic.js` — módulo puro, sin DOM, sin red y sin importaciones; la
 posición solar se inyecta (`solarPosition` de `lib/meteo-browser.js`).
 
-- `node tests/test_meteo_logica_viento.js` — 47 verificaciones del motor con series
+- `node tests/test_meteo_logica_viento.js` — 48 verificaciones del motor con series
   sintéticas y del lector de histórico con una base de mentira (450 días sin tope,
   avance por fecha, un día que llena la página, corte por tiempo, repliegue).
-- `node tests/test_meteo_logica_viento_browser.js` — 36 comprobaciones de la tarjeta
+- `node tests/test_meteo_logica_viento_browser.js` — 37 comprobaciones de la tarjeta
   en Chromium con Supabase simulado; arriba se carga un solo día en calma y la
   simulación sale del histórico entero.
 

@@ -260,7 +260,7 @@ const moduleOf = async name =>
     const h=W.windLogicReportHtml(out,{generatedAt:"2026-11-12T17:00:00Z"});
     assert.match(h,/^<!doctype html>/);assert.ok(h.includes("P &lt;b&gt;&amp;")&&!h.includes("P <b>&"));
     // cada apartado es una pregunta, y debajo va la respuesta en una frase
-    assert.deepEqual([...h.matchAll(/<h2>([^<]+)<\/h2>/g)].map(m=>m[1]),["¿Cuántas veces salta cada alarma?","¿Cuánto trabaja el seguidor al año?","¿Cuándo salta y cuánto dura?","¿Hasta dónde llega la racha?","¿Qué ve cada HSU?","Qué se ha simulado","A tener en cuenta"]);
+    assert.deepEqual([...h.matchAll(/<h2>([^<]+)<\/h2>/g)].map(m=>m[1]),["¿Cuántas veces salta cada alarma?","¿Cuánto trabaja el seguidor al año?","¿Cuántas veces descarga la batería, y cuánto dura?","¿Cuándo salta y cuánto dura?","¿Hasta dónde llega la racha?","¿Qué ve cada HSU?","Qué se ha simulado","A tener en cuenta"]);
     assert.ok(h.includes('<h2>¿Cuántas veces salta cada alarma?</h2><p class="respuesta">Con el viento registrado por las HSU entre el 10/06/2026 y el 12/06/2026, hay 2 episodios de pre-stow y un episodio de stow; dentro de ellos la alarma salta 3 y 1 veces. En 1 de los pre-stow y en 1 de los stow el seguidor ya está en posición y no hay que moverlo.</p>'));
     assert.match(h,/<h2>¿Hasta dónde llega la racha\?<\/h2><p class="respuesta">1 de los 2 episodios pasa de 60 km\/h\. La racha más alta, 64,0 km\/h, es del 1[0-2]\/06\/2026\.<\/p>/);
     // el movimiento va en columnas: de día (veces, media, máx.) y de noche (veces, media, máx.)
@@ -532,6 +532,35 @@ const moduleOf = async name =>
     assert.ok(Math.abs(d.pos[k])===55&&Math.abs(d.pos[k-1])<55&&near(d.theta[k],theta("2026-06-21T12:00").theta,0.05));
     assert.equal(i.medianDurationMin,30);assert.deepEqual([i.reachStow,i.episodes],[12,12]);
     assert.equal(W.esDuration(45),"45 min");assert.equal(W.esDuration(130),"2 h 10 min");assert.equal(W.esDuration(1620),"1 d 3 h");
+  });
+  check("batería: cada giro del motor por viento es una descarga; la ida y la vuelta llevan cada una sus grados",()=>{
+    // de día: pre-stow a las 12:40 con la mesa casi plana y stow a las 13:00; de noche, una racha a las 23:00
+    const out=simulateWindLogic(serie("2026-06-10T00:00","2026-06-11T12:00",[["2026-06-10T12:40",45],["2026-06-10T13:00",65],["2026-06-10T23:00",45]]),{plant:"P",site:SITE,solarPosition}),g=out.groups[0];
+    const r=g.motor.runs,hora=x=>new Date(x.t).toISOString().slice(5,16);
+    assert.deepEqual(r.map(x=>[hora(x),x.kind,x.night]),[["06-10T12:40","ida",false],["06-10T13:00","ida",false],["06-10T13:31","vuelta",false],["06-10T23:00","ida",true],["06-11T04:31","vuelta",true]]);
+    // ida a pre-stow: de donde estaba a 30°; ida a stow: los 25° que faltan; vuelta: de 55° al seguimiento de las 13:31, que no es lo mismo
+    assert.ok(near(r[0].degrees,30-Math.abs(theta("2026-06-10T12:39").theta),0.2));assert.equal(r[1].degrees,25);
+    assert.ok(near(r[2].degrees,55-Math.abs(theta("2026-06-10T13:31").theta),0.2));assert.ok(Math.abs(r[2].degrees-(r[0].degrees+r[1].degrees))>5);
+    // de noche va a 55° E desde 5° E; la vuelta es la del amanecer, sin sol, de 55° E al seguimiento
+    assert.equal(r[3].degrees,50);assert.ok(near(r[4].degrees,Math.abs(-55-theta("2026-06-11T04:31").theta),0.2));
+    assert.deepEqual(g.activations.filter(a=>!a.alreadyOk).map(a=>a.degrees),[r[0].degrees,r[1].degrees,r[3].degrees]);   // las idas son los movimientos de las alarmas
+    // duración: grados entre la velocidad del motor (0,17 °/s por defecto)
+    const b=W.windLogicInsights(out,g).battery,min=d=>d/(0.17*60);
+    assert.equal(b.degPerSec,0.17);assert.deepEqual([b.total.n,b.total.day,b.total.night,b.ida.n,b.ida.night,b.vuelta.n,b.vuelta.night],[5,3,2,3,1,2,1]);
+    assert.ok(near(b.total.minutes,r.reduce((t,x)=>t+min(x.degrees),0),1e-9)&&near(b.ida.maxMin,min(50),1e-9)&&near(b.vuelta.meanMin,(min(r[2].degrees)+min(r[4].degrees))/2,1e-9));
+    assert.equal(b.longest.kind,"vuelta");assert.ok(near(b.longest.minutes,min(r[4].degrees),1e-9));
+    assert.deepEqual([b.bins.day,b.bins.night],[[0,0,2,1,0],[0,0,0,1,1]]);assert.equal([...b.bins.day,...b.bins.night].reduce((a,x)=>a+x,0),5);
+    assert.deepEqual([b.worstNight.day,b.worstNight.n],["2026-06-10",2]);assert.ok(near(b.worstNight.minutes,min(50)+min(r[4].degrees),1e-9));   // la noche se nombra por el día en que empieza
+    // otra velocidad, otra duración; y sin viento, ninguna descarga
+    const lento=simulateWindLogic(serie("2026-06-10T00:00","2026-06-11T12:00",[["2026-06-10T23:00",45]]),{plant:"P",site:SITE,solarPosition,options:{motorDegPerSec:0.1}});
+    assert.ok(near(W.windLogicInsights(lento,lento.groups[0]).battery.ida.maxMin,50/6,1e-9));
+    assert.throws(()=>W.windLogicOptions({motorDegPerSec:0}),/velocidad del motor/);
+    const calma=simulateWindLogic(serie("2026-06-10T00:00","2026-06-11T12:00",[]),{plant:"P",site:SITE,solarPosition});
+    assert.deepEqual(calma.groups[0].motor.runs,[]);assert.equal(W.windLogicInsights(calma,calma.groups[0]).battery.total.n,0);
+    // en el informe: su apartado, con ida y vuelta en filas distintas
+    const h=W.windLogicReportHtml(out);
+    assert.match(h,/<h2>¿Cuántas veces descarga la batería, y cuánto dura\?<\/h2><p class="respuesta">El viento pone el motor en marcha [\d.,]+ veces al año, [\d.,]+ de ellas sin sol\. Cada descarga dura \d,\d min de media y la más larga, 5,2 min\./);
+    assert.ok(h.includes("<td><b>Ida, a pre-stow o a stow</b></td>")&&h.includes("<td><b>Vuelta, al seguimiento</b></td>")&&h.includes("Duración: grados entre 0,17 °/s. Si las dos alarmas saltan a la vez es una sola descarga. Sin sol: de noche y la vuelta del amanecer. La noche con más motor, la del 10/06/2026: 2 descargas, 10,1 min."));
   });
   check("resumen en columnas: movimiento de día y de noche, racha por tramos y episodios por mes",()=>{
     const out=simulateWindLogic(NOCHES,{plant:"P",site:SITE,solarPosition}),g=out.groups[0],r=W.windLogicSummary(out,g);

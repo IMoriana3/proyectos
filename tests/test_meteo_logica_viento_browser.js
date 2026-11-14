@@ -171,13 +171,17 @@ function stub(){
  /* Gráficas: cuándo, a qué hora, cuánto duran y qué detecta cada HSU. */
  const graf=await page.evaluate(()=>{
    const pintado=id=>{const c=document.getElementById(id),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i])n++;return n>500;};
-   return {ok:['wlCalendar','wlChart','wlChartHour','wlChartDur','wlChartHsu','wlChartRose','wlChartDetail'].map(pintado),
+   return {ok:['wlCalendar','wlChart','wlChartHour','wlChartDur','wlChartHsu','wlChartRose','wlChartDetail','wlChartBattery'].map(pintado),
+     bat:[...document.querySelectorAll('#wlBattery tr')].map(r=>[...r.children].map(c=>c.textContent.trim())),batNota:document.getElementById('wlBatteryNote').textContent,
      top:[...document.querySelectorAll('#wlTop tr')].map(r=>[...r.children].map(c=>c.textContent.trim())),rosa:document.getElementById('wlRoseNote').textContent,titulo:document.getElementById('wlChartTitle').textContent,
      nota:document.getElementById('wlChartsNote').textContent,cal:document.getElementById('wlCalendarNote').textContent,
      visibles:['wlCalendar','wlChartHour','wlChartDur','wlChartHsu'].every(id=>document.getElementById(id).checkVisibility())};});
  check('gráficas: calendario de alarmas, reloj de 24 h, duración y racha, y curvas por HSU',
    graf.ok.every(Boolean)&&graf.visibles&&graf.titulo==='Episodios de viento: cuántos'&&/5 días con dato de 5\./.test(graf.cal)&&
    /1\/HSU 230: \d+ h\/año sobre pre-stow y [\d,]+ sobre stow, máxima [\d,]+ km\/h; 1\/HSU 231: /.test(graf.nota),graf);
+ check('batería: ida y vuelta en filas distintas, con sus descargas al año y la duración de cada una',
+   graf.bat.length===3&&graf.bat[0][0]==='Ida, a pre-stow o a stow'&&graf.bat[1][0]==='Vuelta, al seguimiento'&&graf.bat[2][0]==='Total'&&graf.bat.every(r=>r.length===7&&/ min$/.test(r[6]))&&
+   graf.bat[0][4]!==graf.bat[1][4]&&/Duración: grados entre 0,17 °\/s\. Si las dos alarmas saltan a la vez es una sola descarga\. Sin sol: de noche y la vuelta del amanecer\./.test(graf.batNota),[graf.bat,graf.batNota.slice(0,200)]);
  check('los de racha más alta, con su dirección y la HSU que la mide; y de dónde viene el viento',
    graf.top.length===4&&graf.top[0][2]==='63,0 km/h'&&graf.top[0][3]==='17,5'&&graf.top[0][4]==='O (270°)'&&graf.top[0][5]==='HSU 231'&&
    /^Rosa: .*En los stow, el viento pilla al seguidor de cara 0 veces, de espalda \(canto alto a barlovento\) 1 y a menos de 30° del eje de las filas 0\.$/.test(graf.rosa),[graf.top,graf.rosa]);
@@ -220,7 +224,7 @@ function stub(){
    informe.suggestedFilename()==='informe_logica_viento_El_Burgo_I.html'&&/^<!doctype html>/.test(html)&&
    /<b>Pre-stow<\/b><br><span class="umbral">&gt; 40 km\/h \(11,1 m\/s\)<\/span><\/div><\/div><\/td><td class='n'>4<\/td><td class='n'>5<\/td><td>2<\/td><td>1<\/td>/.test(html)&&
    html.includes("<th colspan='3' class='grupo'>Hay que mover, de día</th>")&&!html.includes(' · ')&&!/text-transform|letter-spacing/.test(html)&&
-   h2.join('|')==='¿Cuántas veces salta cada alarma?|¿Cuánto trabaja el seguidor al año?|¿Cuándo salta y cuánto dura?|¿Hasta dónde llega la racha?|¿De dónde viene el viento?|¿Qué ve cada HSU?|Qué se ha simulado|A tener en cuenta'&&
+   h2.join('|')==='¿Cuántas veces salta cada alarma?|¿Cuánto trabaja el seguidor al año?|¿Cuántas veces descarga la batería, y cuánto dura?|¿Cuándo salta y cuánto dura?|¿Hasta dónde llega la racha?|¿De dónde viene el viento?|¿Qué ve cada HSU?|Qué se ha simulado|A tener en cuenta'&&
    !html.includes('Anexo'),[informe.suggestedFilename(),html.length,h2]);
  // Lo que lo hace de la casa: el nombre de la planta por título, la letra Barlow incrustada y el croquis del seguidor.
  check('informe: título con la planta, croquis del seguidor y la letra de la casa dentro del fichero',
@@ -231,9 +235,9 @@ function stub(){
  const figs=[...html.matchAll(/<img src="data:image\/png;base64,([A-Za-z0-9+\/=]+)" alt="([^"]+)">/g)].map(m=>({alt:m[2],png:Buffer.from(m[1],'base64')}));
  const dims=figs.map(f=>f.png.readUInt32BE(16)+'x'+f.png.readUInt32BE(20));          // ancho y alto, de la cabecera IHDR
  check('informe: calendario, reloj y nube, el peor episodio, rosas y curvas, al triple de resolución',
-   figs.length===6&&!html.includes('<svg class="barras"')&&figs.map(f=>f.alt).join('|')==='Calendario de alarmas|Alarma activa por hora del día|Duración y racha máxima de cada episodio|El episodio con la racha más alta, minuto a minuto|Dirección del viento en alarma, según cada HSU|Horas al año de cada HSU por encima de cada velocidad'&&
+   figs.length===7&&!html.includes('<svg class="barras"')&&figs.map(f=>f.alt).join('|')==='Cada descarga de batería por viento: cuándo y cuánto dura|Calendario de alarmas|Alarma activa por hora del día|Duración y racha máxima de cada episodio|El episodio con la racha más alta, minuto a minuto|Dirección del viento en alarma, según cada HSU|Horas al año de cada HSU por encima de cada velocidad'&&
    html.includes('<h2>¿De dónde viene el viento?</h2><p class="respuesta">En los stow, el viento pilla al seguidor de cara ninguna vez, de espalda una vez y a menos de 30° del eje de las filas ninguna vez.</p>')&&
-   dims.join(' ')==='2070x522 1005x720 1005x720 2070x780 2070x570 2070x585',[figs.map(f=>f.alt),dims]);
+   dims.join(' ')==='2070x570 2070x522 1005x720 1005x720 2070x780 2070x570 2070x585',[figs.map(f=>f.alt),dims]);
  const letra=await page.evaluate(()=>[document.fonts.check("12px 'Barlow'"),document.fonts.check("600 12px 'Barlow Condensed'"),[...document.fonts].map(f=>f.family.replace(/['"]/g,'')+' '+f.weight).sort().join('|')]);
  check('las figuras se dibujan con la letra de la casa, cargada de assets/fonts',letra[0]&&letra[1]&&letra[2]==='Barlow 400|Barlow 500|Barlow 600|Barlow Condensed 600',letra);
  check('informe: los de racha más alta con su dirección, y cada HSU con sus horas al año',

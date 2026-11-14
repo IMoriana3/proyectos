@@ -229,6 +229,7 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
       <label><span class="k">Pre-stow al cruzar el mediodía solar</span><select id="wlNoon"><option value="hold">Mantiene el lado en el mínimo</option><option value="follow">Sigue al sol y cruza por horizontal</option></select></label>
       <label><span class="k">Alarma activa al anochecer</span><select id="wlDusk"><option value="hold">Se queda donde está</option><option value="east">Va a stow Este</option></select></label>
       <label><span class="k">Velocidad de giro (°/min) · opcional</span><input id="wlSpeed" type="number" min="0" step="0.1" placeholder="vacío: sin tránsitos"></label>
+      <label><span class="k">Velocidad del motor (°/s) · batería</span><input id="wlMotor" type="number" min="0.01" step="0.01" value="0.17"></label>
       <label><span class="k">Horas de la lista</span><input id="wlTz" readonly value="UTC" aria-label="Zona horaria de la lista"></label>
     </div>
     </details>
@@ -254,6 +255,14 @@ body:not(.con-historico) .requiere-historico{display:none}body:not(.con-tmy) .re
       <div class="chartbox"><h3>Qué HSU detecta más viento</h3><canvas id="wlChartHsu" class="chart" aria-label="Porcentaje del tiempo de cada HSU por encima de cada velocidad"></canvas></div>
     </div>
     <p class="note" id="wlChartsNote">Gráficas pendientes de simulación.</p>
+  </div>
+  <div class="card wide requiere-simulacion">
+    <h2>Batería: cada vez que el viento pone el motor en marcha</h2>
+    <div class="tablewrap"><table class="wl-top"><thead>
+      <tr><th rowspan="2">Descargas</th><th colspan="3" class="wl-grupo">Al año</th><th colspan="2" class="wl-grupo">Duración</th><th rowspan="2">Motor al año</th></tr>
+      <tr><th>De día</th><th>Sin sol</th><th>Total</th><th>Media</th><th>Máx.</th></tr></thead><tbody id="wlBattery"><tr><td colspan="7">Pulsa «Simular lógica».</td></tr></tbody></table></div>
+    <p class="note" id="wlBatteryNote"></p>
+    <canvas id="wlChartBattery" class="chart" style="margin-top:8px" aria-label="Cada descarga de batería por viento: cuándo y cuántos minutos gira el motor"></canvas>
   </div>
   <div class="card wide requiere-simulacion">
     <h2>Los episodios con la racha más alta y la dirección del viento</h2>
@@ -594,7 +603,7 @@ import {
   cockpitMetrics,dailyClimatology,windRoseData,drawWindRose,windSpeedTable,
   temperatureExtremes,drawTemperatureHistogram,coldDaysByMonth,snowSummary,drawLineChart,
   drawBarChart,drawHailRisk,windDailyMax,comparisonMonthly,
-  drawAlarmCalendar,drawAlarmClock,drawEpisodeScatter,drawExceedance,drawAlarmRose,drawEpisodeDetail
+  drawAlarmCalendar,drawAlarmClock,drawEpisodeScatter,drawExceedance,drawAlarmRose,drawEpisodeDetail,drawDischarges
 } from "./lib/meteo-viz.js";
 import {buildWeatherContract,publishWeatherContract,activeWeatherRef,loadActiveWeatherContract,clearActiveWeatherContract,weatherManifest} from "./lib/weather-contract.js";
 import {parseSensorCsv,analyzeSensorRecords,buildSensorChart,SENSOR_ANALYSIS_VERSION} from "./lib/meteo-sensors.js";
@@ -1652,6 +1661,7 @@ function wlReset(message,kind=""){
   WIND_LOGIC=null;document.body.classList.remove("con-simulacion");
   $("wlSummary").innerHTML='<tr><td colspan="10">Pulsa «Simular lógica».</td></tr>';
   $("wlTop").innerHTML='<tr><td colspan="6">Pulsa «Simular lógica».</td></tr>';$("wlReturnNote").hidden=true;$("wlAnnual").hidden=true;
+  $("wlBattery").innerHTML='<tr><td colspan="7">Pulsa «Simular lógica».</td></tr>';$("wlBatteryNote").textContent="";
   $("wlBands").hidden=true;$("wlBands").textContent="";$("wlListTitle").textContent="Todas las activaciones";
   $("wlEvents").innerHTML='<tr><td colspan="11">Pulsa «Simular lógica».</td></tr>';
   $("wlNotes").hidden=true;$("wlNotes").innerHTML="";$("wlCsv").disabled=true;$("wlReport").disabled=true;
@@ -1722,7 +1732,7 @@ async function wlRun(){
     WIND_LOGIC=simulateWindLogic(records,{plant,series,site:{lat:val("wlLat"),lon:val("wlLon"),tz:$("wlTz").value||"UTC"},solarPosition,
       options:{prestowKmh:val("wlPre"),stowKmh:val("wlStow"),holdMin:val("wlHold"),prestowMinDeg:val("wlPreMin"),stowDeg:val("wlStowDeg"),
         maxDeg:val("wlMax"),nightDeg:val("wlNight"),pitchM:val("wlPitch"),chordM:val("wlChord"),noonRule:$("wlNoon").value,
-        duskRule:$("wlDusk").value,speedDegPerMin:$("wlSpeed").value===""?null:Number($("wlSpeed").value),
+        duskRule:$("wlDusk").value,speedDegPerMin:$("wlSpeed").value===""?null:Number($("wlSpeed").value),motorDegPerSec:Number($("wlMotor").value)||0.17,
         episodeGapMin:$("wlMerge").value===""?0:val("wlMerge")}});
     WIND_LOGIC.origin=series?(from||to?"histórico de la base, periodo acotado":"todo el histórico de la base"):"medidas cargadas"+(from||to?", periodo acotado":"");
     $("wlGroup").innerHTML=WIND_LOGIC.groups.map(g=>sensorOption(g.key,g.key===WIND_LOGIC_PLANT_KEY?"Planta entera (todas las NCU)":g.label+" · "+g.sensors.join(", "))).join("");
@@ -1793,7 +1803,8 @@ function wlReportFigures(g){
       scatter:fig(335,240,(cv,op)=>drawEpisodeScatter(cv,d.c.episodes.prestow,{...op,stowKmh:o.stowKmh,top:d.top})),
       detail:d.detalle?fig(690,260,(cv,op)=>drawEpisodeDetail(cv,d.detalle,{...op,timeZone:tz})):null,
       rose:d.rosas.length?fig(690,Math.min(190,140+200/d.rosas.length),(cv,op)=>drawAlarmRose(cv,d.rosas,{...op,axisAzimuthDeg:o.axisAzimuthDeg})):null,
-      exceedance:fig(690,195,(cv,op)=>drawExceedance(cv,d.curvas,{...op,marks:d.marcas}))};
+      exceedance:fig(690,195,(cv,op)=>drawExceedance(cv,d.curvas,{...op,marks:d.marcas})),
+      battery:d.ins.battery.runs.length?fig(690,190,(cv,op)=>drawDischarges(cv,d.ins.battery.runs,{...op,from:g.coverage.first,to:g.coverage.last})):null};
   }catch(e){return null;}                                   // sin lienzo, el informe sale con su figura de barras
 }
 function wlDrawChart(){
@@ -1811,6 +1822,15 @@ function wlDrawChart(){
     (gap>0?"episodio":"activación")+" de pre-stow, en rojo los que llegan a stow; con fecha, los de racha más alta. Curvas: horas al año de cada HSU por encima de cada velocidad"+
     (hs.length?" ("+hs.map(x=>wlHsuCorto(x)+": "+wlNum(8766*x.minutesOverPrestow/Math.max(1,x.dataMinutes),0)+" h/año sobre pre-stow y "+wlNum(8766*x.minutesOverStow/Math.max(1,x.dataMinutes),1)+
       " sobre stow, máxima "+wlNum(x.peakKmh)+" km/h").join("; ")+")":"")+".";
+  // Batería: cada giro del motor por viento (ida y vuelta, cada una con sus grados) es una descarga.
+  const bt=ins.battery,alAño=v=>ins.years>0?wlNum(v/ins.years,v/ins.years<10?1:0):"—",mn=v=>v==null?"—":wlNum(v,1)+" min",es=d=>d.split("-").reverse().join("/");
+  const filaB=(n,x)=>"<tr><td>"+n+"</td><td>"+alAño(x.day)+"</td><td>"+alAño(x.night)+"</td><td>"+alAño(x.n)+"</td><td>"+mn(x.meanMin)+"</td><td>"+mn(x.maxMin)+"</td><td>"+alAño(x.minutes)+" min</td></tr>";
+  $("wlBattery").innerHTML=bt.total.n?filaB("Ida, a pre-stow o a stow",bt.ida)+filaB("Vuelta, al seguimiento",bt.vuelta)+filaB("Total",bt.total):'<tr><td colspan="7">El viento no mueve el seguidor en este periodo.</td></tr>';
+  $("wlBatteryNote").textContent=bt.total.n?"Una descarga es cada vez que el motor gira por el viento: la ida a la posición de la alarma y la vuelta al seguimiento, cada una con sus grados. Duración: grados entre "+
+    wlNum(bt.degPerSec,2)+" °/s. Si las dos alarmas saltan a la vez es una sola descarga. Sin sol: de noche y la vuelta del amanecer. Por duración, al año: "+bt.bins.labels.map((l,k)=>l+", "+alAño(bt.bins.day[k]+bt.bins.night[k])).join("; ")+"."+
+    (bt.worstNight?" La noche con más motor, la del "+es(bt.worstNight.day)+": "+wlInt(bt.worstNight.n)+" descargas, "+wlNum(bt.worstNight.minutes,1)+" min.":"")+
+    (bt.worstDay?" El día con más, el "+es(bt.worstDay.day)+": "+wlInt(bt.worstDay.n)+" descargas, "+wlNum(bt.worstDay.minutes,1)+" min.":""):"";
+  drawDischarges($("wlChartBattery"),bt.runs,{title:"Cada descarga: cuándo y cuántos minutos gira el motor",height:250,from:g.coverage.first,to:g.coverage.last});
   // Los de racha más alta, el peor minuto a minuto y de dónde viene el viento.
   $("wlTop").innerHTML=D.top.length?D.top.map(e=>"<tr><td>"+esc(wlClock()(e.t))+"</td><td>"+esc(esDuration(e.durationMin))+"</td><td>"+wlNum(e.peakKmh)+" km/h</td><td>"+wlNum(e.peakKmh/3.6)+
     "</td><td>"+(e.dirDeg==null?"—":esc(windCompass(e.dirDeg))+" ("+wlInt(e.dirDeg)+"°)")+"</td><td>"+esc(e.sensor||"—")+"</td></tr>").join(""):'<tr><td colspan="6">Sin episodios.</td></tr>';
@@ -1875,7 +1895,7 @@ $("wlMerge").addEventListener("change",()=>{
   WIND_LOGIC.options.episodeGapMin=Math.round(v);wlRender();
 });
 $("wlFilter").onchange=wlRenderEvents;
-["wlPre","wlStow","wlHold","wlPreMin","wlStowDeg","wlNight","wlMax","wlPitch","wlChord","wlLat","wlLon","wlNoon","wlDusk","wlSpeed","wlSource","wlFrom","wlTo"].forEach(id=>
+["wlPre","wlStow","wlHold","wlPreMin","wlStowDeg","wlNight","wlMax","wlPitch","wlChord","wlLat","wlLon","wlNoon","wlDusk","wlSpeed","wlMotor","wlSource","wlFrom","wlTo"].forEach(id=>
   $(id).addEventListener("change",()=>{if(WIND_LOGIC)wlStatus("Parámetros cambiados: pulsa «Simular lógica» para actualizar los resultados.","work");}));
 
 $("supLogin").onclick=supLogin;
