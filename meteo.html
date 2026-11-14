@@ -1768,18 +1768,32 @@ function wlChartData(g){
     curvas:hs.map((x,i)=>({label:wlHsuCorto(x),hist:x.hist,dataMinutes:x.dataMinutes,colorIndex:i})),
     marcas:[{v:o.prestowKmh,label:"pre-stow",tipo:"prestow"},{v:o.stowKmh,label:"stow",tipo:"stow"}]};
 }
+/* La letra del informe es la de la casa (Barlow, autoalojada en assets/fonts). Se carga una vez: para que los
+ * lienzos de las figuras la usen y para incrustarla en el HTML, que así se ve igual en cualquier ordenador. */
+let WL_FONTS=null;
+async function wlReportFonts(){
+  if(WL_FONTS)return WL_FONTS;
+  const lista={b400:["Barlow","400","Barlow-400-latin.woff2"],b500:["Barlow","500","Barlow-500-latin.woff2"],b600:["Barlow","600","Barlow-600-latin.woff2"],c600:["Barlow Condensed","600","BarlowCondensed-600-latin.woff2"]},out={};
+  await Promise.all(Object.entries(lista).map(async([k,[family,weight,file]])=>{
+    const res=await fetch("assets/fonts/"+file);if(!res.ok)throw new Error("sin "+file);
+    const buf=await res.arrayBuffer(),face=new FontFace(family,buf,{weight});await face.load();document.fonts.add(face);
+    const u=new Uint8Array(buf);let bin="";for(let i=0;i<u.length;i+=0x8000)bin+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));
+    out[k]="data:font/woff2;base64,"+btoa(bin);
+  }));
+  return WL_FONTS=out;
+}
 /* Las mismas gráficas, en claro y al tamaño del informe, dibujadas en lienzos que no están en la página. */
 function wlReportFigures(g){
   try{
     const d=wlChartData(g),o=WIND_LOGIC.options;
     const fig=(w,h,draw)=>{const cv=document.createElement("canvas");draw(cv,{width:w,height:h,dpr:3,tema:"claro",title:""});return cv.toDataURL("image/png");};
     const años=new Set(d.c.monthly.map(m=>m.y)).size||1,tz=WIND_LOGIC.site.timezone||"UTC";
-    return {calendar:fig(690,62+128*años,(cv,op)=>drawAlarmCalendar(cv,d.ras,{...op,monthly:d.c.monthly})),
+    return {calendar:fig(690,56+118*años,(cv,op)=>drawAlarmCalendar(cv,d.ras,{...op,monthly:d.c.monthly})),
       clock:fig(335,240,(cv,op)=>drawAlarmClock(cv,d.ras.clock,{...op,sun:d.sol})),
       scatter:fig(335,240,(cv,op)=>drawEpisodeScatter(cv,d.c.episodes.prestow,{...op,stowKmh:o.stowKmh,top:d.top})),
       detail:d.detalle?fig(690,260,(cv,op)=>drawEpisodeDetail(cv,d.detalle,{...op,timeZone:tz})):null,
       rose:d.rosas.length?fig(690,Math.min(190,140+200/d.rosas.length),(cv,op)=>drawAlarmRose(cv,d.rosas,{...op,axisAzimuthDeg:o.axisAzimuthDeg})):null,
-      exceedance:fig(690,215,(cv,op)=>drawExceedance(cv,d.curvas,{...op,marks:d.marcas}))};
+      exceedance:fig(690,195,(cv,op)=>drawExceedance(cv,d.curvas,{...op,marks:d.marcas}))};
   }catch(e){return null;}                                   // sin lienzo, el informe sale con su figura de barras
 }
 function wlDrawChart(){
@@ -1842,10 +1856,11 @@ function wlDownloadCsv(){
   // Solo el grupo que se está viendo: la planta entera repite las activaciones de sus NCU.
   downloadText(windLogicCsv(WIND_LOGIC,{timeZone:WIND_LOGIC.site.timezone,groupKey:wlGroupNow()?.key??null}),"logica_viento_"+name+".csv","text/csv;charset=utf-8");
 }
-function wlDownloadReport(){
+async function wlDownloadReport(){
   const g=wlGroupNow();if(!WIND_LOGIC||!g){wlStatus("Sin simulación que informar.","bad");return;}
   const name=String(WIND_LOGIC.plant||"planta").replace(/[^a-z0-9_-]+/gi,"_");
-  downloadText(windLogicReportHtml(WIND_LOGIC,{groupKey:g.key,figures:wlReportFigures(g)}),"informe_logica_viento_"+name+".html","text/html;charset=utf-8");
+  const fonts=await wlReportFonts().catch(()=>null);              // sin la letra de la casa, el informe sale con la del sistema
+  downloadText(windLogicReportHtml(WIND_LOGIC,{groupKey:g.key,figures:wlReportFigures(g),fonts}),"informe_logica_viento_"+name+".html","text/html;charset=utf-8");
 }
 $("wlRun").onclick=wlRun;
 $("wlReport").onclick=wlDownloadReport;

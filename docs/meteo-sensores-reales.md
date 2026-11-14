@@ -214,16 +214,33 @@ alarma, que es lo que haría el control con esa regla. Con margen 0, episodio = 
 - **De dónde viene el viento**: una rosa por HSU, todas a la misma escala, con la parte de
   su tiempo de alarma que el viento llega de cada rumbo y el eje de las filas marcado.
 - **Cuántos**: episodios por semana, o por mes si el periodo pasa de 30 semanas.
-- **Informe** de cuatro páginas, imprimible a PDF y con aspecto de nota escrita a mano: sin
-  membrete, empieza por el título; ficha (planta, sensores, periodo, racha máxima), dos
-  frases de resumen y, por este orden: «Tabla 1», el resumen con el movimiento en columnas;
-  «Figura 1», el calendario; «Tabla 2», el uso por año; «Tabla 3», las veces que salta cada
-  alarma según la racha que alcanza (km/h y m/s); «Figura 2», el reloj junto a la nube;
-  «Tabla 4», los cinco episodios con la racha más alta y la racha esperada; «Figura 3», el
-  peor minuto a minuto; «Figura 4», las rosas; «Figura 5», las curvas; «Tabla 5», cada HSU
-  por separado; «Tabla 6», las reglas como fórmulas; y las observaciones. **El pie de cada
-  figura dice la conclusión**, no solo qué es la gráfica. No lleva la lista de activaciones
-  ni explica el cálculo en prosa.
+- **Informe** de cuatro páginas, imprimible a PDF. No es una nota académica ni una ficha de
+  aplicación: se lee como lo contaría quien ha hecho el estudio.
+  - **Cabecera**: el nombre de la planta por título, en grande; debajo, qué es el documento
+    y la ficha (sensores, periodo, racha máxima). A la derecha, un **croquis del seguidor**
+    de canto con la mesa en seguimiento, en pre-stow y en stow. Sin membrete.
+  - **Cada apartado es la pregunta que haría un compañero**, y debajo va la respuesta en
+    una frase; luego, la tabla o la figura que la sostiene: «¿Cuántas veces salta cada
+    alarma?», «¿Cuánto trabaja el seguidor al año?», «¿Cuándo salta y cuánto dura?»,
+    «¿Hasta dónde llega la racha?», «¿De dónde viene el viento?», «¿Qué ve cada HSU?»,
+    «Qué se ha simulado» (las reglas como fórmulas) y «A tener en cuenta» (las notas).
+    Las tablas y figuras ya no van numeradas.
+  - **Letra de la casa**: Barlow y Barlow Condensed, las del panel (`assets/fonts`, OFL).
+    La página las carga al pedir el informe (`wlReportFonts`), dibuja con ellas las figuras
+    y las incrusta en el HTML (`fonts` en `windLogicReportHtml`), que así se ve igual en
+    cualquier ordenador y sin red. Si no se pueden cargar, sale con la letra del sistema.
+  - **La mesa inclinada** junto al nombre de cada alarma (30° en ámbar, 55° en rojo) es la
+    misma en las tablas, en el croquis y en las gráficas.
+  - Al imprimir, cada pregunta va junta con su respuesta y con lo primero que la sostiene.
+  No lleva la lista de activaciones ni explica el cálculo en prosa. Sigue sin `text-transform`,
+  sin `letter-spacing` y sin puntos medios de separador, que es lo que delata una plantilla.
+
+Las figuras del informe son las mismas gráficas, vueltas a dibujar en **tema claro**
+(`tema:"claro"` en `lib/meteo-viz.js`: fondo blanco, Barlow, la noche en gris y los días sin
+dato rayados) en lienzos fuera de la página, al tamaño con que van impresas y al triple de
+resolución; viajan dentro del HTML como PNG. `windLogicReportHtml` las recibe en `figures`;
+sin ellas (en Node, o si el navegador no deja leer el lienzo) el informe lleva la figura de
+barras de antes.
 
 ### Dirección del viento
 
@@ -248,13 +265,6 @@ mínimo de 10 episodios. Con uno o dos años de datos es una extrapolación, y e
 dice. Con las activaciones de El Burgo I (15/05/2025–12/11/2026) la cola se ajusta bien:
 mediana y percentil 90 del exceso a menos de 1 km/h de los de la exponencial.
 
-Las figuras del informe son las mismas gráficas, vueltas a dibujar en **tema claro**
-(`tema:"claro"` en `lib/meteo-viz.js`: fondo blanco, la letra del informe, la noche en gris
-y los días sin dato rayados) en lienzos fuera de la página, al tamaño con que van impresas
-y al triple de resolución; viajan dentro del HTML como PNG. `windLogicReportHtml` las
-recibe en `figures`; sin ellas (en Node, o si el navegador no deja leer el lienzo) el
-informe lleva la figura de barras de antes.
-
 Los parámetros de detalle (origen y periodo de los datos, posiciones, geometría,
 coordenadas y los dos supuestos) van plegados en «Más parámetros».
 
@@ -269,7 +279,7 @@ posición solar se inyecta (`solarPosition` de `lib/meteo-browser.js`).
 - `node tests/test_meteo_logica_viento.js` — 47 verificaciones del motor con series
   sintéticas y del lector de histórico con una base de mentira (450 días sin tope,
   avance por fecha, un día que llena la página, corte por tiempo, repliegue).
-- `node tests/test_meteo_logica_viento_browser.js` — 34 comprobaciones de la tarjeta
+- `node tests/test_meteo_logica_viento_browser.js` — 36 comprobaciones de la tarjeta
   en Chromium con Supabase simulado; arriba se carga un solo día en calma y la
   simulación sale del histórico entero.
 

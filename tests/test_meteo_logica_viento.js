@@ -249,31 +249,38 @@ const moduleOf = async name =>
     const filasCsv=k=>windLogicCsv(out,k===undefined?{}:{groupKey:k}).trim().split("\r\n").length-1;
     assert.deepEqual([filasCsv("1"),filasCsv("2"),filasCsv(W.WIND_LOGIC_PLANT_KEY),filasCsv()],[1,3,3,7]);
     const h=W.windLogicReportHtml(out);                               // sin elegir grupo, el informe es el de la planta
-    assert.ok(h.includes("<th>Sensores</th><td>todas las HSU de la planta: NCU 1 (HSU 230) y NCU 2 (HSU 230)</td>"));
+    assert.ok(h.includes("<dt>Sensores</dt><dd>todas las HSU de la planta: NCU 1 (HSU 230) y NCU 2 (HSU 230)</dd>"));
     // una NCU con menos periodo: se avisa de que hasta esa fecha cuentan las demás
     const corta=[...serie("2026-06-08T00:00","2026-06-10T23:59",[["2026-06-10T10:00",45]]),...serie("2026-06-10T00:00","2026-06-10T23:59",[]).map(r=>({...r,ncu:"2"}))];
     const oc=simulateWindLogic(corta,{plant:"P",site:SITE,solarPosition});
     assert.ok(W.windLogicSummary(oc,oc.groups[0]).notes.includes("De la NCU 2 solo hay dato desde el 10/06/2026: hasta esa fecha el recuento sale de las demás HSU."));
   });
-  check("informe: una página con el resumen, la gráfica, las reglas como fórmulas y las notas; sin lista",()=>{
+  check("informe: preguntas con su respuesta, el movimiento en columnas, las reglas como fórmulas y las notas; sin lista",()=>{
     const out=simulateWindLogic(NOCHES.map(r=>({...r,plant:"P <b>&"})),{plant:"P <b>&",site:SITE,solarPosition});
     const h=W.windLogicReportHtml(out,{generatedAt:"2026-11-12T17:00:00Z"});
     assert.match(h,/^<!doctype html>/);assert.ok(h.includes("P &lt;b&gt;&amp;")&&!h.includes("P <b>&"));
+    // cada apartado es una pregunta, y debajo va la respuesta en una frase
+    assert.deepEqual([...h.matchAll(/<h2>([^<]+)<\/h2>/g)].map(m=>m[1]),["¿Cuántas veces salta cada alarma?","¿Cuánto trabaja el seguidor al año?","¿Cuándo salta y cuánto dura?","¿Hasta dónde llega la racha?","¿Qué ve cada HSU?","Qué se ha simulado","A tener en cuenta"]);
+    assert.ok(h.includes('<h2>¿Cuántas veces salta cada alarma?</h2><p class="respuesta">Con el viento registrado por las HSU entre el 10/06/2026 y el 12/06/2026, hay 2 episodios de pre-stow y un episodio de stow; dentro de ellos la alarma salta 3 y 1 veces. En 1 de los pre-stow y en 1 de los stow el seguidor ya está en posición y no hay que moverlo.</p>'));
+    assert.match(h,/<h2>¿Hasta dónde llega la racha\?<\/h2><p class="respuesta">1 de los 2 episodios pasa de 60 km\/h\. La racha más alta, 64,0 km\/h, es del 1[0-2]\/06\/2026\.<\/p>/);
     // el movimiento va en columnas: de día (veces, media, máx.) y de noche (veces, media, máx.)
-    assert.ok(h.includes("<tr><td>Pre-stow<br><span class=\"umbral\">&gt; 40 km/h (11,1 m/s)</span></td><td>2</td><td>3</td><td>1</td><td>0</td><td>—</td><td>—</td><td>2</td><td>50°</td><td>50°</td></tr>")); // 2 episodios, 3 activaciones
-    assert.ok(h.includes("<tr><td>Stow<br><span class=\"umbral\">&gt; 60 km/h (16,7 m/s)</span></td><td>1</td><td>1</td><td>1</td><td>0</td><td>—</td><td>—</td><td>0</td><td>—</td><td>—</td></tr>"));
+    assert.match(h,/<b>Pre-stow<\/b><br><span class="umbral">&gt; 40 km\/h \(11,1 m\/s\)<\/span><\/div><\/div><\/td><td class='n'>2<\/td><td class='n'>3<\/td><td>1<\/td><td>0<\/td><td>—<\/td><td>—<\/td><td>2<\/td><td>50°<\/td><td>50°<\/td><\/tr>/); // 2 episodios, 3 activaciones
+    assert.match(h,/<b>Stow<\/b><br><span class="umbral">&gt; 60 km\/h \(16,7 m\/s\)<\/span><\/div><\/div><\/td><td class='n'>1<\/td><td class='n'>1<\/td><td>1<\/td><td>0<\/td><td>—<\/td><td>—<\/td><td>0<\/td><td>—<\/td><td>—<\/td><\/tr>/);
     assert.ok(h.includes("Un episodio agrupa las activaciones que vuelven a saltar menos de 2 h después de desactivarse. Media y máximo, en grados de recorrido."));
     // la racha máxima de cada activación, en columnas y con las dos unidades
-    assert.ok(h.includes("<tr><th>km/h</th><th>40–50</th><th>50–60</th><th>60–65</th><th>65–70</th><th>70–75</th><th>&gt; 75</th></tr><tr class='sub'><th>m/s</th><th>11,1–13,9</th>"));
-    assert.ok(h.includes("<tr><td>Pre-stow</td><td>2</td><td>0</td><td>1</td><td>0</td><td>0</td><td>0</td></tr><tr><td>Stow</td><td></td><td></td><td>1</td><td>0</td><td>0</td><td>0</td></tr>"));
-    assert.ok(h.includes("<b>Tabla 2.</b> Uso por año, con 0,01 años de dato.")&&/<b>Tabla 4\.<\/b> Los dos episodios con la racha más alta\./.test(h)&&h.includes("<b>Tabla 5.</b> Cada HSU por separado."));
-    assert.ok(h.includes("<th>Racha máxima</th><td>")&&/, el 1[0-2]\/06\/2026, en HSU 230<\/td>/.test(h));
-    assert.equal((h.match(/<svg /g)||[]).length,1);assert.ok(h.includes("<b>Tabla 6.</b> Reglas simuladas.")&&h.includes("<h2>Observaciones</h2>")&&h.includes("<b>Figura 1.</b>"));
-    // se lee como una nota escrita: ficha, dos frases de resumen y fecha con todas sus letras
-    assert.ok(h.includes("<th>Planta</th><td>P &lt;b&gt;&amp;</td>")&&h.includes("<th>Sensores</th><td>NCU 1: HSU 230</td>")&&h.includes("<th>Periodo</th><td>del 10/06/2026 al 12/06/2026, 3 días con dato</td>"));
-    assert.ok(h.includes("Con el viento registrado por las HSU entre el 10/06/2026 y el 12/06/2026, hay 2 episodios de pre-stow y un episodio de stow; dentro de ellos la alarma salta 3 y 1 veces. En 1 de los pre-stow y en 1 de los stow el seguidor ya está en posición y no hay que moverlo."));
+    assert.ok(h.includes("<tr><th>Racha máxima, km/h</th><th>40–50</th><th>50–60</th><th>60–65</th><th>65–70</th><th>70–75</th><th>&gt; 75</th></tr><tr class='sub'><th>m/s</th><th>11,1–13,9</th>"));
+    assert.match(h,/<b>Pre-stow<\/b><\/td><td>2<\/td><td>0<\/td><td>1<\/td><td>0<\/td><td>0<\/td><td>0<\/td><\/tr><tr><td><svg[^>]*>.*?<\/svg><b>Stow<\/b><\/td><td><\/td><td><\/td><td>1<\/td><td>0<\/td><td>0<\/td><td>0<\/td><\/tr>/);
+    assert.ok(h.includes('<p class="nota">Con 0,01 años de dato.</p>')&&h.includes("<th>Los dos peores, inicio</th>")&&h.includes("<td><b>NCU 1 HSU 230</b></td>"));
+    assert.match(h,/<dt>Racha máxima<\/dt><dd>64,0 km\/h \(17,8 m\/s\), el 1[0-2]\/06\/2026, en HSU 230<\/dd>/);
+    assert.equal((h.match(/<svg class="barras"/g)||[]).length,1);                 // sin lienzo, la figura de barras
+    // lo que lo hace de la casa: el nombre de la planta por título, la letra Barlow, el croquis del seguidor y la mesa inclinada de cada alarma
+    assert.match(h,/<body><header class="cab"><div><h1>P &lt;b&gt;&amp;<\/h1><p class="sub">Lógica de viento: simulación de pre-stow y stow<\/p>/); // sin membrete: empieza por el título
+    assert.ok(h.includes("<dt>Sensores</dt><dd>NCU 1: HSU 230</dd>")&&h.includes("<dt>Periodo</dt><dd>del 10/06/2026 al 12/06/2026, 3 días con dato</dd>"));
+    assert.ok(h.includes("font-family:'Barlow','Segoe UI'")&&h.includes("font-family:'Barlow Condensed','Arial Narrow'")&&!/Palatino|Georgia/.test(h));
+    assert.ok(h.includes('<svg class="croquis"')&&(h.match(/<svg class="mesa"/g)||[]).length>=6&&!h.includes("@font-face"));   // sin `fonts`, no incrusta ninguna
+    const conLetra=W.windLogicReportHtml(out,{fonts:{b400:"data:font/woff2;base64,AAAA",c600:"data:font/woff2;base64,BBBB",b500:"javascript:alert(1)"}});
+    assert.deepEqual([...conLetra.matchAll(/@font-face\{font-family:'([^']+)';font-weight:(\d+)/g)].map(m=>m[1]+" "+m[2]),["Barlow 400","Barlow Condensed 600"]);
     assert.ok(h.includes("<span>Factiun, 12 de noviembre de 2026</span>")&&!/text-transform|letter-spacing/.test(h)&&!h.includes(" · "));
-    assert.match(h,/<body><h1>Lógica de viento: simulación de pre-stow y stow en /); // sin membrete: empieza por el título
     for(const f of ["v &gt; 40 km/h","|θ| ≥ 30°","Δ = max(0, 30° − |θ|)","|θ| = 55°, el lado más cercano","Δ = 55° − |θ|","t − tᵤ &gt; 30 min","Δ = 50°, una vez por noche"])assert.ok(h.includes(f),f);
     assert.ok(!h.includes("Anexo")&&!h.includes("Pre-stow 1</td>")&&!h.includes("Cómo se ha calculado")); // la lista va en el CSV
     assert.ok(h.includes("posición teórica del seguidor, no la de las TCU")&&h.includes("La lista completa de activaciones va en el fichero CSV."));
@@ -362,8 +369,8 @@ const moduleOf = async name =>
   });
   check("informe sin activaciones: ceros en el resumen y ninguna gráfica vacía",()=>{
     const h=W.windLogicReportHtml(simulateWindLogic(serie("2026-06-10T00:00","2026-06-10T23:59",[]),{plant:"P",site:SITE,solarPosition}));
-    assert.ok(h.includes("<td>Pre-stow<br><span class=\"umbral\">&gt; 40 km/h (11,1 m/s)</span></td><td>0</td><td>0</td><td>0</td><td>0</td><td>—</td><td>—</td><td>0</td><td>—</td><td>—</td>"));
-    assert.ok(!h.includes("<svg ")&&!h.includes("Por racha máxima")&&!h.includes("Figura 1"));
+    assert.match(h,/<b>Pre-stow<\/b><br><span class="umbral">&gt; 40 km\/h \(11,1 m\/s\)<\/span><\/div><\/div><\/td><td class='n'>0<\/td><td class='n'>0<\/td><td>0<\/td><td>0<\/td><td>—<\/td><td>—<\/td><td>0<\/td><td>—<\/td><td>—<\/td>/);
+    assert.ok(!h.includes('<svg class="barras"')&&!h.includes("Por racha máxima")&&!h.includes("<figure>")&&!h.includes("¿Cuándo salta"));
     assert.ok(h.includes("ninguna de las dos alarmas llega a saltar."));
   });
   /* Filas «un sensor, un día», como las guarda la base: t en segundos y viento máximo en m/s. */

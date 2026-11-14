@@ -215,20 +215,30 @@ function stub(){
 
  const [informe]=await Promise.all([page.waitForEvent('download',{timeout:15000}),page.click('#wlReport')]);
  const html=fs.readFileSync(await informe.path(),'utf8');
- check('informe: el resumen, las reglas y las gráficas de la página; la lista no va',
+ const h2=[...html.matchAll(/<h2>([^<]+)<\/h2>/g)].map(m=>m[1]);
+ check('informe: preguntas con su respuesta, el movimiento en columnas y las reglas; la lista no va',
    informe.suggestedFilename()==='informe_logica_viento_El_Burgo_I.html'&&/^<!doctype html>/.test(html)&&
-   html.includes('<td>Pre-stow<br><span class="umbral">&gt; 40 km/h (11,1 m/s)</span></td><td>4</td><td>5</td><td>2</td><td>1</td>')&&html.includes("<th colspan='3' class='grupo'>Hay que mover, de día</th>")&&!html.includes(' · ')&&
-   html.includes('<b>Tabla 6.</b> Reglas simuladas.')&&html.includes('<b>Tabla 1.</b>')&&html.includes('<b>Tabla 2.</b> Uso por año')&&!html.includes('Anexo'),[informe.suggestedFilename(),html.length]);
- // Las gráficas van como imagen, cada una con la conclusión en el pie, y sustituyen a la de barras.
+   /<b>Pre-stow<\/b><br><span class="umbral">&gt; 40 km\/h \(11,1 m\/s\)<\/span><\/div><\/div><\/td><td class='n'>4<\/td><td class='n'>5<\/td><td>2<\/td><td>1<\/td>/.test(html)&&
+   html.includes("<th colspan='3' class='grupo'>Hay que mover, de día</th>")&&!html.includes(' · ')&&!/text-transform|letter-spacing/.test(html)&&
+   h2.join('|')==='¿Cuántas veces salta cada alarma?|¿Cuánto trabaja el seguidor al año?|¿Cuándo salta y cuánto dura?|¿Hasta dónde llega la racha?|¿De dónde viene el viento?|¿Qué ve cada HSU?|Qué se ha simulado|A tener en cuenta'&&
+   !html.includes('Anexo'),[informe.suggestedFilename(),html.length,h2]);
+ // Lo que lo hace de la casa: el nombre de la planta por título, la letra Barlow incrustada y el croquis del seguidor.
+ check('informe: título con la planta, croquis del seguidor y la letra de la casa dentro del fichero',
+   html.includes('<header class="cab"><div><h1>El Burgo I</h1><p class="sub">Lógica de viento: simulación de pre-stow y stow</p>')&&html.includes('<svg class="croquis"')&&
+   [...html.matchAll(/@font-face\{font-family:'([^']+)';font-weight:(\d+);font-style:normal;src:url\(data:font\/woff2;base64,[A-Za-z0-9+\/=]{20000,}\)/g)].map(m=>m[1]+' '+m[2]).join('|')==='Barlow 400|Barlow 500|Barlow 600|Barlow Condensed 600',
+   html.length);
+ // Las gráficas van como imagen, dibujadas con la misma letra, y sustituyen a la de barras.
  const figs=[...html.matchAll(/<img src="data:image\/png;base64,([A-Za-z0-9+\/=]+)" alt="([^"]+)">/g)].map(m=>({alt:m[2],png:Buffer.from(m[1],'base64')}));
  const dims=figs.map(f=>f.png.readUInt32BE(16)+'x'+f.png.readUInt32BE(20));          // ancho y alto, de la cabecera IHDR
- check('informe: calendario, reloj y nube, el peor episodio, rosas y curvas como figuras 1 a 5, al triple de resolución',
-   figs.length===6&&!/<svg /.test(html)&&['<b>Figura 1.</b> Calendario de alarmas: una fila por año','<b>Figura 2.</b> Izquierda','<b>Figura 3.</b> El episodio con la racha más alta, el 01/06/2026',
-     '<b>Figura 4.</b> De dónde viene el viento en alarma, según cada HSU. En los stow, el viento pilla al seguidor de cara ninguna vez, de espalda (canto alto a barlovento) una vez y a menos de 30° del eje de las filas ninguna vez.','<b>Figura 5.</b> Horas al año de cada HSU'].every(x=>html.includes(x))&&
-   !html.includes('Figura 6')&&dims.join(' ')==='2070x570 1005x720 1005x720 2070x780 2070x570 2070x645',[figs.map(f=>f.alt),dims]);
+ check('informe: calendario, reloj y nube, el peor episodio, rosas y curvas, al triple de resolución',
+   figs.length===6&&!html.includes('<svg class="barras"')&&figs.map(f=>f.alt).join('|')==='Calendario de alarmas|Alarma activa por hora del día|Duración y racha máxima de cada episodio|El episodio con la racha más alta, minuto a minuto|Dirección del viento en alarma, según cada HSU|Horas al año de cada HSU por encima de cada velocidad'&&
+   html.includes('<h2>¿De dónde viene el viento?</h2><p class="respuesta">En los stow, el viento pilla al seguidor de cara ninguna vez, de espalda una vez y a menos de 30° del eje de las filas ninguna vez.</p>')&&
+   dims.join(' ')==='2070x522 1005x720 1005x720 2070x780 2070x570 2070x585',[figs.map(f=>f.alt),dims]);
+ const letra=await page.evaluate(()=>[document.fonts.check("12px 'Barlow'"),document.fonts.check("600 12px 'Barlow Condensed'"),[...document.fonts].map(f=>f.family.replace(/['"]/g,'')+' '+f.weight).sort().join('|')]);
+ check('las figuras se dibujan con la letra de la casa, cargada de assets/fonts',letra[0]&&letra[1]&&letra[2]==='Barlow 400|Barlow 500|Barlow 600|Barlow Condensed 600',letra);
  check('informe: los de racha más alta con su dirección, y cada HSU con sus horas al año',
-   /<b>Tabla 4\.<\/b> Los cuatro episodios con la racha más alta\./.test(html)&&html.includes('<td>63,0 km/h</td><td>17,5</td><td>O (270°)</td><td>HSU 231</td>')&&
-   html.includes('<b>Tabla 5.</b> Cada HSU por separado.')&&/<td>NCU 1 HSU 231<\/td><td>4<\/td><td>63,0<\/td><td>17,5<\/td>/.test(html),html.length);
+   html.includes('<th>Los cuatro peores, inicio</th>')&&html.includes("<td class='n'>63,0 km/h</td><td>17,5</td><td>O (270°)</td><td>HSU 231</td>")&&
+   /<td><b>NCU 1 HSU 231<\/b><\/td><td>4<\/td><td class='n'>63,0<\/td><td>17,5<\/td>/.test(html)&&/<h2>¿Qué ve cada HSU\?<\/h2><p class="respuesta">La que más viento ve es NCU 1 HSU 23[01]: /.test(html),html.length);
  const tema=await page.evaluate(async()=>{
    const V=await import('./lib/meteo-viz.js'),px=(op)=>{const c=document.createElement('canvas');V.drawAlarmClock(c,{prestow:Array(24).fill(1),stow:Array(24).fill(0)},{width:300,height:200,dpr:1,title:'',...op});
      return [c.width,c.height,...c.getContext('2d').getImageData(1,1,1,1).data].join(',');};
