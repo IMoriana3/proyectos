@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "exported_at": "2026-11-14T14:33:08Z",
+  "exported_at": "2026-11-14T14:40:49Z",
   "notion_hub_url": "https://app.notion.com/p/4186931d6436813ab499f73d69e82b04",
   "scope": "Inteligencia técnica de fuentes públicas",
   "export_kind": "curated_public_snapshot",
@@ -40,7 +40,7 @@
       ],
       "notion_url": "https://app.notion.com/p/3f16931d6436818aa13bdc399b1bbfea",
       "related_ids": [],
-      "locator": "Título y apartados «SlopeSync: un sistema de seguimiento solar revolucionario» y «Una generación más versátil».",
+      "locator": "Título del comunicado y párrafos que describen SlopeSync, la configuración bifila y las articulaciones cardán.",
       "relation_statement": "Grupo Alonso presenta SlopeSync como cuarta generación de Axial. La fuente atribuye al equipo una arquitectura bifila con articulaciones cardán.",
       "limitations": "El 01/07/2024 es la publicación del comunicado. No establece el día exacto de presentación, el modelo predecesor ni una instalación concreta; la descripción técnica procede del fabricante.",
       "technical_facts": [
@@ -444,7 +444,8 @@
       ],
       "summary": "Valentín y coautores estudian una rotura de tracker mediante inspección y análisis estructural. Atribuyen el daño a galope torsional. La racha cercana de unos 60 km/h no es una medida sobre la fila ni un umbral universal; el fabricante no queda identificado.",
       "companies": [
-        "Universitat Politècnica de Catalunya"
+        "Universitat Politècnica de Catalunya",
+        "Endesa"
       ],
       "people": [
         "David Valentín",
