@@ -55,6 +55,6 @@ Los radares existentes de componentes TCU y fabricantes conservan su búsqueda a
 
 ## Estado de entrega
 
-Versión **1.0 publicada en Atlas el 2026-11-14**: [publicación verificada](https://github.com/IMoriana3/Atlas/actions/runs/43640335779). Las pantallas Ventas y Proveedores y componentes mantienen sus rutas y su alcance. El acceso desde el portal está en publicación mediante una sola tarjeta «Notion ventas».
+Versión **1.0 publicada en Atlas el 2026-11-14**: [publicación verificada](https://github.com/IMoriana3/Atlas/actions/runs/43640335779). Las pantallas Ventas y Proveedores y componentes mantienen sus rutas y su alcance. El portal reúne ambos accesos en una sola tarjeta «Notion ventas».
 
 La comprobación de lectura de datos con una sesión autorizada en producción queda pendiente. Las pruebas locales y de integración no acreditan esa lectura real.
