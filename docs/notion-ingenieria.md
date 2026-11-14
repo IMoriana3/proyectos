@@ -21,6 +21,12 @@ La primera exportación, del 14 de noviembre de 2026, contiene nueve fichas can�
 
 La navegación permite filtrar por frente, empresa, tecnología, persona, producto y tipo de evidencia. La búsqueda ignora tildes y combina los términos. La selección se conserva en la URL, que también puede abrir directamente una ficha.
 
+### Patentes · Radar FACTIUN
+
+El frente **Patentes y mecanismos** incluye el acceso [Abrir radar de patentes](https://maps-9rd.pages.dev/herramientas/radar-factiun#ingenieria). Abre en otra pestaña el visor existente de Atlas para explorar familias, componentes, territorios e inventores.
+
+Debajo aparecen los hallazgos seleccionados para Notion ingeniería. El acceso conserva cada visor y su alcance: no importa datos del Radar, no establece coincidencias entre sus registros y estas fichas, ni añade contenido a los contadores de esta selección.
+
 ## Cuatro formas de leer la selección
 
 - **Fichas:** hallazgo, atribución y temas técnicos. Al abrir una ficha aparecen las fuentes, localizadores, detalles, alcance y acceso a Notion.
