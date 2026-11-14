@@ -1,6 +1,6 @@
 # Notion ventas
 
-La tarjeta reúne dos accesos de FACTIUN: **Ventas** y **Proveedores y componentes**. Ambos consultan las bases actuales de Notion.
+La tarjeta **Notion ventas**, en la familia **Cartera**, abre la investigación comercial de FACTIUN. Consulta las bases actuales de Notion.
 
 ## Ventas
 
@@ -33,28 +33,12 @@ La pantalla de Atlas requiere el acceso habitual. Consulta Notion en el servidor
 
 Las fichas viven en las bases actuales de Notion. Los radares amplían su investigación y escriben allí los nuevos datos con fuente y fecha. El botón de actualización de la pantalla vuelve a consultar esa información; no ejecuta un radar ni modifica fichas.
 
-## Proveedores y componentes
+## Dónde están las compras
 
-[Abrir proveedores y componentes en Atlas](https://maps-9rd.pages.dev/herramientas/notion-ventas.html). Requiere el acceso habitual de Atlas.
-
-Este acceso conserva la ampliación de componentes mecánicos y eléctricos, fabricantes, distribuidores y evidencias de investigación. Consulta las bases existentes de Notion y muestra la fecha de lectura. Si una consulta queda incompleta, indica cuántas fichas se han cargado y permite continuar.
-
-1. Entra por una familia o busca un nombre, fabricante o referencia MPN.
-2. Filtra por dominio y estado de investigación. Abre una ficha para ver especificaciones, revisión, canales, logística, fuentes y fecha de comprobación.
-3. Selecciona hasta cuatro componentes para comparar sus datos registrados. Revisa las condiciones de sustitución y el alcance de homologación de cada aplicación.
-4. Consulta los proveedores para conocer sus capacidades, modelo de fabricación, centros, territorios y contactos documentados.
-5. Revisa los pendientes de investigación para decidir qué documentación pública falta comprobar.
-
-**Una alternativa registrada no acredita compatibilidad.** Comprueba la aplicación, revisión, diferencias y validaciones que constan en la ficha. El estado de investigación «Documentado» describe la información reunida, no una aprobación técnica.
-
-Los datos desconocidos se muestran como pendientes de documentar; no se convierten en ceros ni en conclusiones. Las fuentes y las fichas de Notion permiten revisar el contexto original.
-
-**Los precios son opcionales.** Si se encuentra un precio publicado se conserva el vendedor, importe, moneda, unidad, cantidad, presentación, condiciones, fuente y fecha disponibles. La ausencia de precio no empeora la completitud ni genera solicitudes de oferta.
-
-Los radares existentes de componentes TCU y fabricantes conservan su búsqueda anterior y añaden datos de fabricación, distribución, logística, sustitución y evidencias. Mantienen sus horarios. Sólo registran información disponible; no contactan con proveedores para obtener precios.
+Para buscar componentes, revisar fabricantes y distribuidores o comparar referencias, abre la tarjeta independiente **Notion compras**, también en **Cartera**: [abrir compras en Atlas](https://maps-9rd.pages.dev/herramientas/notion-compras.html).
 
 ## Estado de entrega
 
-Versión **1.0 publicada en Atlas el 2026-11-14**: [publicación verificada](https://github.com/IMoriana3/Atlas/actions/runs/43640335779). Las pantallas Ventas y Proveedores y componentes mantienen sus rutas y su alcance. El portal reúne ambos accesos en una sola tarjeta «Notion ventas».
+La pantalla comercial se publicó en Atlas el **2026-11-14**: [publicación verificada](https://github.com/IMoriana3/Atlas/actions/runs/43640335779). La tarjeta del portal pasa a la versión **1.1** al separar el acceso de Compras; conserva la ruta y el alcance de Ventas.
 
 La comprobación de lectura de datos con una sesión autorizada en producción queda pendiente. Las pruebas locales y de integración no acreditan esa lectura real.
