@@ -91,8 +91,8 @@ el periodo pedido pasa de 370 días), y simula la planta elegida en «Planta». 
 y la lista aparecen cuando hay simulación. En «Más parámetros» se elige:
 
 - **Todo el histórico de la base** (por defecto cuando las medidas vienen de Supabase).
-  La tarjeta pide a `telemetria` únicamente el eje de tiempos y `wind_speed_max` de las
-  filas `hsu` de la planta —`fetchSupabaseWindPeak`, en `lib/meteo-supabase.js`— y las
+  La tarjeta pide a `telemetria` únicamente el eje de tiempos, `wind_speed_max` y
+  `wind_direction` de las filas `hsu` de la planta —`fetchSupabaseWindPeak`, en `lib/meteo-supabase.js`— y las
   va volcando página a página en 1.440 valores por sensor y día
   (`createWindSeriesBuilder`). No se convierten en lecturas sueltas, así que **no hay
   tope de días**: un año o tres se simulan de una vez. «Desde» y «Hasta» son
@@ -168,10 +168,13 @@ le marca la lógica; con un valor, una alarma puede pillarlo a medio camino.
 
 Cortas a propósito, para que se lean de un vistazo:
 
-- **Resumen**, una fila por alarma: veces que salta, en cuántas no hay que mover el
-  seguidor, en cuántas sí y **cuánto se mueve** (de día y de noche): grados de recorrido,
-  media y máximo — «22,6° de media, máx. 25°» —, nunca una posición. Antes decía «hasta
-  25°» y se leía como si el stow fuese a 25°.
+- **Resumen**, una fila por alarma y el movimiento **en columnas**: episodios, veces que
+  salta, en cuántas no hay que mover el seguidor y, de día y de noche por separado, cuántas
+  veces hay que moverlo y la media y el máximo de grados de recorrido (nunca una posición).
+  Junto al umbral, su valor en m/s.
+- **Uso por año** (`windLogicInsights`): episodios, veces que salta, movimientos, grados de
+  recorrido y horas en alarma, divididos entre los años con dato. Es como se dimensiona el
+  accionamiento.
 - **Recuento por racha máxima**, en una línea.
 - **Activaciones por semana**.
 - **Lista completa**, plegada, con filtro; y su **CSV** (separador «;», coma decimal,
@@ -193,20 +196,57 @@ alarma, que es lo que haría el control con esa regla. Con margen 0, episodio = 
 
 ### Gráficas
 
-- **Calendario de alarmas**: cada día de la planta es una columna de 0 a 24 h, con los
-  tramos en pre-stow y en stow, la noche sin sombrear y los días sin dato en gris.
-- **Reloj de 24 h**: parte del tiempo con dato en que cada alarma está activa a cada hora.
-- **Duración y racha máxima**: un punto por episodio de pre-stow; en rojo, los que llegan a stow.
-- **Qué HSU detecta más viento**: porcentaje del tiempo de cada HSU por encima de cada
-  velocidad, sobre su propio periodo.
+- **Calendario de alarmas**: **una fila por año**, con los meses alineados en vertical
+  para que se vea la estación; dentro de cada fila un día es una columna de 0 a 24 h con
+  los tramos en pre-stow y en stow. Encima de cada mes, sus episodios de pre-stow y de stow.
+- **Reloj de 24 h**: parte del tiempo con dato en que cada alarma está activa a cada hora,
+  en dos coronas, **cada una con su escala** (fuera el pre-stow, dentro el stow); el arco
+  exterior es la noche y la leyenda dice la hora punta de cada alarma.
+- **Duración y racha máxima**: un punto por episodio de pre-stow; en rojo, los que llegan a
+  stow. Los cinco de racha más alta llevan su fecha, y a la derecha va la escala en m/s.
+- **Qué HSU detecta más viento**: **horas al año** de cada HSU por encima de cada velocidad
+  (eje logarítmico), con el nombre al final de cada curva y la escala en m/s debajo.
+- **Los de racha más alta**: tabla con inicio, duración, racha (km/h y m/s), dirección y la
+  HSU que la mide; debajo, la **racha esperada** una vez al año y cada 10 y 50 años.
+- **El peor, minuto a minuto**: la racha de cada HSU durante las tres horas anteriores y
+  posteriores a la racha más alta, con los dos umbrales; debajo, en su propio panel y con el
+  mismo eje de tiempo, la posición simulada del seguidor y el seguimiento sin alarma.
+- **De dónde viene el viento**: una rosa por HSU, todas a la misma escala, con la parte de
+  su tiempo de alarma que el viento llega de cada rumbo y el eje de las filas marcado.
 - **Cuántos**: episodios por semana, o por mes si el periodo pasa de 30 semanas.
-- **Informe** de dos páginas, imprimible a PDF y con aspecto de nota escrita a mano: sin
-  membrete, empieza por el título; ficha (planta, sensores, periodo), dos frases de resumen,
-  «Tabla 1» con el resumen y el reparto por racha máxima al pie, las gráficas de la página
-  (**«Figura 1»**, el calendario de alarmas; **«Figura 2»**, el reloj de 24 h junto a la nube
-  de duración y racha; **«Figura 3»**, las curvas por HSU), «Tabla 2» con las reglas como
-  fórmulas (condición, posición y grados a mover, con los valores simulados) y las
-  observaciones. No lleva la lista de activaciones ni explica el cálculo en prosa.
+- **Informe** de cuatro páginas, imprimible a PDF y con aspecto de nota escrita a mano: sin
+  membrete, empieza por el título; ficha (planta, sensores, periodo, racha máxima), dos
+  frases de resumen y, por este orden: «Tabla 1», el resumen con el movimiento en columnas;
+  «Figura 1», el calendario; «Tabla 2», el uso por año; «Tabla 3», las veces que salta cada
+  alarma según la racha que alcanza (km/h y m/s); «Figura 2», el reloj junto a la nube;
+  «Tabla 4», los cinco episodios con la racha más alta y la racha esperada; «Figura 3», el
+  peor minuto a minuto; «Figura 4», las rosas; «Figura 5», las curvas; «Tabla 5», cada HSU
+  por separado; «Tabla 6», las reglas como fórmulas; y las observaciones. **El pie de cada
+  figura dice la conclusión**, no solo qué es la gráfica. No lleva la lista de activaciones
+  ni explica el cálculo en prosa.
+
+### Dirección del viento
+
+Cada HSU da su dirección (`wind_direction`, grados, de dónde viene el viento). De cada
+minuto se guarda la de la lectura más alta. La dirección de una activación es la media
+circular de las lecturas sobre umbral **del sensor que da la racha máxima**: no se mezclan
+sensores. Con ella se dice cómo pilla el viento al seguidor (`windExposure`): **de cara** si
+viene del lado al que mira el módulo, **de espalda** si viene del contrario (canto alto a
+barlovento) y **a lo largo del eje** si viene a menos de 30° de la dirección de las filas.
+
+Las HSU pueden no estar orientadas igual. Para cada una se calcula cuánto difiere su
+dirección de la del sensor del medio, en los minutos en que las dos están sobre el umbral
+de pre-stow; si pasa de 20° sale como observación. **La dirección no se corrige**: en El
+Burgo I las dos HSU de la NCU 1 difieren unos 57° (comprobado contra la base el
+14/11/2026), así que el reparto de cara y de espalda vale lo que valga esa orientación.
+
+### Periodo de retorno
+
+Picos sobre umbral con cola exponencial: `v_T = u + σ·ln(λT)`, con `u` el umbral de stow,
+`σ` el exceso medio de los episodios que lo superan y `λ` cuántos hay al año. Hace falta un
+mínimo de 10 episodios. Con uno o dos años de datos es una extrapolación, y el informe lo
+dice. Con las activaciones de El Burgo I (15/05/2025–12/11/2026) la cola se ajusta bien:
+mediana y percentil 90 del exceso a menos de 1 km/h de los de la exponencial.
 
 Las figuras del informe son las mismas gráficas, vueltas a dibujar en **tema claro**
 (`tema:"claro"` en `lib/meteo-viz.js`: fondo blanco, la letra del informe, la noche en gris
@@ -226,10 +266,10 @@ navegador sobre el viento de la sesión y se descarta al cerrarla.
 `lib/meteo-wind-logic.js` — módulo puro, sin DOM, sin red y sin importaciones; la
 posición solar se inyecta (`solarPosition` de `lib/meteo-browser.js`).
 
-- `node tests/test_meteo_logica_viento.js` — 43 verificaciones del motor con series
+- `node tests/test_meteo_logica_viento.js` — 47 verificaciones del motor con series
   sintéticas y del lector de histórico con una base de mentira (450 días sin tope,
   avance por fecha, un día que llena la página, corte por tiempo, repliegue).
-- `node tests/test_meteo_logica_viento_browser.js` — 31 comprobaciones de la tarjeta
+- `node tests/test_meteo_logica_viento_browser.js` — 34 comprobaciones de la tarjeta
   en Chromium con Supabase simulado; arriba se carga un solo día en calma y la
   simulación sale del histórico entero.
 
