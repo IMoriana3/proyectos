@@ -1141,7 +1141,7 @@ document.querySelectorAll('.tabla-link[data-picto]').forEach(a => a.insertAdjace
 const PROJECTS = [
   {
     name: "Notion ventas",
-    status: "build",
+    status: "live",
     objetivo: "Consulta proyectos, compradores, procesos de compra, transacciones y competencia. Accede también a proveedores y componentes.",
     stack: "Atlas · lectura de Notion · acceso protegido",
     url: "https://maps-9rd.pages.dev/herramientas/notion-ventas-comercial.html",
@@ -1152,7 +1152,7 @@ const PROJECTS = [
     ],
     repo: "https://github.com/IMoriana3/Atlas",
     updated: "2026-11-14",
-    version: "1.0 · candidata",
+    version: "1.0",
     docId: "notion-ventas",
     docUrl: "",
     download: "",
@@ -1167,9 +1167,11 @@ const PROJECTS = [
     ],
     pendientes: [
       { done:true, text:"Ampliar las bases de Notion y los radares para ventas y proveedores, conservando sus datos, alcance y horarios." },
-      { done:false, text:"Publicar las pantallas de ventas y proveedores en Atlas y comprobar la lectura con una sesión autorizada." }
+      { done:true, text:"Publicar las pantallas de ventas y proveedores en Atlas." },
+      { done:false, text:"Comprobar la lectura de datos de Notion con una sesión autorizada en producción." }
     ],
     historial: [
+      { date:"2026-11-14", ver:"1.0", note:"Publicadas en Atlas las pantallas Ventas y Proveedores y componentes, con sus dos accesos en esta tarjeta. La comprobación de lectura con una sesión autorizada queda pendiente." },
       { date:"2026-11-14", ver:"1.0 · candidata", note:"Acceso único a ventas y a proveedores/componentes. Ventas reúne proyectos/permisos, compradores, procesos de compra, transacciones y competencia; proveedores conserva familias, comparación y pendientes. Notion como fuente de datos." }
     ]
   },
