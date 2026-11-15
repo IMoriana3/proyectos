@@ -383,14 +383,6 @@ body.presenta .solo-pres{display:inline-block}
 .ver{font-family:var(--mono);font-size:.72rem;color:var(--muted);letter-spacing:.02em}
 .ver::before{content:"·";color:var(--muted-2);margin-right:8px}
 .ver.pend{color:var(--muted);letter-spacing:0}
-/* EL SELLO DE VERIFICACION. Una pantalla puede estar publicada y aun no tener comprobado lo que
-   decide si te puedes apoyar en ella —que lea los datos reales con una sesion autorizada—. Eso no
-   es un estado de proyecto (no es `build` ni `live`), es una comprobacion pendiente, asi que se
-   dice aparte y SIEMPRE visible: con la tarjeta cerrada tambien. Puntos = sin comprobar. */
-.verif{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;padding:1px 6px;white-space:nowrap;align-self:center}
-.verif.pend{color:var(--fos);border:1px dashed var(--fos)}
-.verif.ok{color:var(--muted-2);border:1px solid var(--line-soft)}
-.tool .dato .verif{margin-left:9px}
 
 .foot{display:flex;align-items:center;gap:10px;padding:10px 18px 16px 20px;flex-wrap:wrap;margin-top:auto}
 .upd{font-family:var(--mono);font-size:.72rem;color:var(--muted);letter-spacing:.02em}
@@ -416,9 +408,7 @@ body.presenta .solo-pres{display:inline-block}
    Todo con `.tool` delante: las fichas de planta comparten `.card`, `.btn` y `.chev`. */
 .tool .card-toggle{display:flex;flex-direction:column;gap:12px;padding:18px 16px 14px 20px}
 .tool .thead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:14px}
-.tool .ico{--ico-bg:var(--panel-2);width:56px;height:56px;display:grid;place-items:center;color:var(--plata);
-  background:var(--ico-bg) repeating-linear-gradient(90deg,rgba(184,195,206,.07) 0 1px,transparent 1px 9px);border:1px solid var(--line-soft)}
-.tool .ico .picto{width:36px;height:36px}
+.tool .ico{display:grid;place-items:center}
 .tool .tit{display:flex;flex-direction:column;gap:4px;min-width:0}
 .tool .status{font-size:.66rem}
 .tool .name{font-size:1.32rem;margin:0;line-height:1.1}
@@ -432,23 +422,47 @@ body.presenta .solo-pres{display:inline-block}
 .tool .card-toggle:hover .chev{color:var(--text);border-color:var(--line)}
 .tool.open .chev{transform:none;color:var(--text)}
 .tool.open .chev svg{transform:rotate(180deg)}
-.tool .obj{font-size:.9rem;min-height:0;margin:0}
+.tool .obj{font-size:.95rem;line-height:1.55;min-height:0;margin:0}
+/* ---------- LA LÍNEA DEL PIE (11-2026) ----------
+   Antes, cada ficha repetía el mismo juego de insignias: una pastilla con el estado en mayúsculas,
+   otra con la versión, otra con la fecha, otra con lo que faltaba por comprobar. Cuatro cajitas para
+   decir una frase. Ahora es esa frase, escrita en una línea: «1.1 · en producción · al día el 15 nov
+   2026 · falta comprobar la lectura de datos». Se lee con la ficha cerrada, que es cuando hace falta. */
+.pie-linea{font-family:var(--mono);font-size:.7rem;line-height:1.5;color:var(--muted-2);
+  padding:0 16px 10px 20px;display:block}
+.pie-linea .est{color:var(--c);font-weight:400}
+.pie-linea .ver,.pie-linea .upd{font-size:inherit;color:inherit;letter-spacing:.02em}
+.pie-linea .ver::before,.pie-linea .ver::after{content:none}
+.pie-linea .sep{color:var(--line);margin:0 6px}
+.verif{font-family:inherit;font-size:inherit}
+.verif.pend{color:var(--fos)}
+.verif.ok{color:var(--muted-2)}
+/* el stack, sin recuadro: es un dato, no una etiqueta que haya que enmarcar */
+.tool .meta .tag{border:0;background:none;padding:0;color:var(--muted-2)}
+/* y los rótulos del detalle dejan de gritar en mayúsculas */
+.tool .detail .dlabel{font-family:var(--sans);font-size:.82rem;font-weight:400;letter-spacing:0;
+  text-transform:none;font-style:italic;color:var(--muted-2)}
 .tool .meta{padding:0 16px 12px 20px}
 .tool .foot{display:block;padding:0 16px 14px 20px}
 .tool .acts{display:flex;align-items:center;flex-wrap:wrap;gap:6px 2px;margin:0;justify-content:flex-start;border-top:1px solid var(--line-soft);padding-top:10px}
-.tool .acts .sec{display:flex;flex-wrap:wrap;align-items:center;gap:0 2px;margin-left:-7px}
-.tool .acts .abre{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-left:auto}
-.tool .acts .btn{font-size:.72rem;letter-spacing:.1em;padding:7px 7px 6px;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap}
-.tool .acts .btn:hover{color:var(--amb);background:transparent;border-bottom-color:var(--amb)}
-.tool .acts .btn.primary{color:var(--amb);border:1px solid var(--amb-dim);background:var(--panel-2);padding:7px 14px}
-.tool .acts .btn.primary:hover{color:var(--on-amb);background:var(--amb);border-color:var(--amb)}
+/* LAS ACCIONES, EN TEXTO (11-2026). Cuatro botones recuadrados e iguales obligaban a leerlos todos
+   para encontrar el que abre la herramienta, y daban a la ficha el aire de formulario. Ahora son
+   texto —lo secundario en gris, a la izquierda— y sólo la acción principal lleva marca: ámbar, con
+   una línea debajo. Sigue siendo la última de la fila, así que en una rejilla todas caen a la misma
+   altura y en el mismo sitio. */
+.tool .acts .sec{display:flex;flex-wrap:wrap;align-items:center;gap:0 18px;margin-left:0}
+.tool .acts .abre{display:flex;flex-wrap:wrap;align-items:center;gap:0 18px;margin-left:auto}
+.tool .acts .btn{font-family:var(--sans);font-size:.84rem;font-weight:400;letter-spacing:0;text-transform:none;
+  padding:5px 0;background:transparent;border:0;border-bottom:1px solid transparent;color:var(--muted);white-space:nowrap}
+.tool .acts .btn:hover{color:var(--text);background:transparent;border-bottom-color:transparent}
+.tool .acts .btn.primary{color:var(--amb);border-bottom-color:var(--amb);background:transparent;padding:5px 0}
+.tool .acts .btn.primary:hover{color:var(--amb);background:transparent;border-bottom-color:var(--text)}
+.tool .acts .btn.off{color:var(--muted-2);border-bottom-color:transparent}
 .tool .acts .btn:focus-visible{outline:1px solid var(--amb);outline-offset:2px}
 /* en el móvil, la célula más pequeña: con 56 px los nombres largos se partían en dos líneas */
 @media (max-width:560px){
   .tool .card-toggle{padding:16px 14px 12px 18px;gap:10px}
   .tool .thead{gap:12px}
-  .tool .ico{width:46px;height:46px}
-  .tool .ico .picto{width:28px;height:28px}
   .tool .name{font-size:1.24rem}
   .tool .foot{padding:0 14px 12px 18px}
   .tool .meta{padding:0 14px 10px 18px}
@@ -464,18 +478,22 @@ body.presenta .solo-pres{display:inline-block}
 [data-fam="obra"]{--t:#D9661A}
 [data-fam="operacion"]{--t:#2E9E62}
 [data-fam="cartera"]{--t:#D63B50}
-.tool .ico,.lado .mini{--ico-bg:var(--t);background:var(--t);color:#FFFFFF;border:0;border-radius:14px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 0 rgba(0,0,0,.08)}
-.tool .ico .picto .a,.lado .mini .picto .a{stroke:#FFFFFF}
-.tool .ico .picto .ad,.lado .mini .picto .ad{stroke:#FFFFFF;fill:#FFFFFF;fill-opacity:.28}
-.tool .ico .picto .af,.lado .mini .picto .af{fill:#FFFFFF}
-.tool .ico .picto .f,.lado .mini .picto .f{fill-opacity:.2}
-.tool .ico .picto .t,.lado .mini .picto .t{opacity:.7}
-/* algo de vida: la ficha se levanta y la célula se inclina, como un seguidor buscando el sol */
+/* ---------- EL ICONO VUELVE A SER UN DIBUJO (11-2026) ----------
+   El azulejo de color con el pictograma en blanco distinguía las familias de un vistazo, pero le
+   daba a cada ficha el aire de icono de aplicación: todas iguales, todas en su cuadradito. El dibujo
+   vuelve a la línea sobre el fondo, plata con el elemento clave en ámbar, que es como se diseñaron
+   los pictogramas y como se leen de verdad como una familia. El color de familia no se pierde: sigue
+   en los filtros, y el estado ya no se adivina por un color, se lee escrito en el pie.
+   `--ico-bg` sigue existiendo porque los recortes de algunos dibujos (`.ko`) pintan con él: ahora es
+   el fondo de la ficha, no un azulejo. */
+.tool .ico,.lado .mini{--ico-bg:var(--panel);background:none;border:0;border-radius:0;box-shadow:none;color:var(--plata)}
+.tool .ico{width:34px;height:34px}
+.tool .ico .picto{width:32px;height:32px}
+.lado .mini{width:22px;height:22px}
+/* algo de vida: la ficha se levanta al pasar por encima. El dibujo ya no se inclina: sin azulejo que
+   lo sujete, girar una línea suelta parecía un fallo de pintado, no un gesto. */
 .tool{transition:transform .18s ease,box-shadow .18s ease,border-color .15s}
 .tool:hover{transform:translateY(-2px);box-shadow:0 12px 26px -16px rgba(14,24,38,.45)}
-.tool .ico{transition:transform .4s cubic-bezier(.3,1.6,.5,1)}
-.tool:hover .ico{transform:rotate(-8deg)}
 .tool.open:hover{transform:none}
 /* la ficha a la que se llega desde la barra lateral, señalada un momento */
 @keyframes resalta{0%{box-shadow:0 0 0 3px var(--t,var(--amb))}100%{box-shadow:0 0 0 3px transparent}}
@@ -591,14 +609,13 @@ body.presenta .solo-pres{display:inline-block}
    que en la columna estrecha del detalle la convertía en un muro de once líneas */
 .kv dd.nota{font-family:var(--sans);font-size:.82rem;line-height:1.45;word-break:normal;overflow-wrap:anywhere;color:var(--muted);padding-top:1px}
 .kv dd.nota.pend{color:var(--fos)}
-/* LAS TARJETAS HERMANAS. Compras, Ventas e Ingenieria se consultan juntas —una oportunidad lleva a
-   su componente y a su proveedor—, y antes habia que buscarlas a mano en la rejilla. */
-.rels{display:flex;flex-wrap:wrap;gap:8px}
-.rel{font-family:var(--mono);font-size:.7rem;color:var(--text);background:var(--panel-2);
-  border:1px solid var(--line-soft);padding:3px 9px;cursor:pointer;transition:color .15s,border-color .15s}
-.rel::before{content:"\2197";color:var(--muted-2);margin-right:6px}
-.rel:hover{color:var(--amb);border-color:var(--amb)}
-.rel:hover::before{color:var(--amb)}
+/* LAS TARJETAS HERMANAS. Compras, Ventas e Ingeniería se consultan juntas —una oportunidad lleva a
+   su componente y a su proveedor—, y antes había que buscarlas a mano en la rejilla. Van en una
+   frase, no en chips: tres pastillas en fila para decir «esto se mira junto a esto» era envoltorio. */
+.prosa{font-size:.88rem;color:var(--muted);line-height:1.5;margin:0}
+.rel{font:inherit;color:var(--amb);background:none;border:0;border-bottom:1px solid rgba(240,144,48,.35);
+  padding:0;cursor:pointer;transition:border-color .15s}
+.rel:hover{border-bottom-color:var(--amb)}
 .rel:focus-visible{outline:2px solid var(--amb);outline-offset:2px}
 .uso{list-style:none}
 .uso li{font-size:.88rem;color:var(--muted);line-height:1.5;padding-left:16px;position:relative;margin-bottom:5px}
@@ -752,9 +769,6 @@ html[data-luz]:not([data-luz="noche"]) ::selection{color:#FFFFFF}
 html[data-luz]:not([data-luz="noche"]) .chip.on,html[data-luz]:not([data-luz="noche"]) .pres[aria-pressed="true"],html[data-luz]:not([data-luz="noche"]) .instmsg button:not(.x){color:#FFFFFF}
 html[data-luz]:not([data-luz="noche"]) .card:hover{border-color:#9FB3C8}
 /* los iconos, de día: tinta oscura sobre la célula clara (la plata de día, #6A7889, los dejaba lavados) */
-/* `:not(:hover)`: sin él, de día esta regla ganaba al relleno naranja del hover y el texto, blanco, se
-   quedaba sobre blanco */
-html[data-luz]:not([data-luz="noche"]) .tool .acts .btn.primary:not(:hover){background:var(--panel)}
 html[data-luz]:not([data-luz="noche"]) .sec-title .tabla-link .picto{color:#3F4D5C}
 html[data-luz]:not([data-luz="noche"]) .md p,html[data-luz]:not([data-luz="noche"]) .md ul,html[data-luz]:not([data-luz="noche"]) .md ol,
 html[data-luz]:not([data-luz="noche"]) .md pre code,html[data-luz]:not([data-luz="noche"]) .md td{color:#2B3746}
@@ -1186,7 +1200,7 @@ const PROJECTS = [
     repo: "https://github.com/IMoriana3/Atlas",
     updated: "2026-11-15",
     version: "1.1",
-    verificacion: { estado:"pendiente", texto:"La pantalla está publicada, pero la lectura de datos de Notion con una sesión autorizada en producción no se ha comprobado. Las pruebas locales y de integración no la acreditan." },
+    verificacion: { estado:"pendiente", resumen:"falta comprobar la lectura de datos en producción", texto:"La pantalla está publicada, pero la lectura de datos de Notion con una sesión autorizada en producción no se ha comprobado. Las pruebas locales y de integración no la acreditan." },
     relacionadas: ["Notion ventas","Notion ingeniería"],
     docId: "notion-compras",
     docUrl: "",
@@ -1221,7 +1235,7 @@ const PROJECTS = [
     repo: "https://github.com/IMoriana3/Atlas",
     updated: "2026-11-15",
     version: "1.1",
-    verificacion: { estado:"pendiente", texto:"La pantalla está publicada, pero la lectura de datos de Notion con una sesión autorizada en producción no se ha comprobado. Las pruebas locales y de integración no la acreditan." },
+    verificacion: { estado:"pendiente", resumen:"falta comprobar la lectura de datos en producción", texto:"La pantalla está publicada, pero la lectura de datos de Notion con una sesión autorizada en producción no se ha comprobado. Las pruebas locales y de integración no la acreditan." },
     relacionadas: ["Notion compras","Notion ingeniería"],
     docId: "notion-ventas",
     docUrl: "",
@@ -1257,8 +1271,8 @@ const PROJECTS = [
     ],
     repo: "https://github.com/IMoriana3/Atlas",
     updated: "2026-11-15",
-    version: "Atlas · ingeniería unificada",
-    verificacion: { estado:"pendiente", texto:"Los bancos de este repositorio comprueban la navegación del alias y el traslado de parámetros contra un destino interceptado: no acreditan la autenticación ni el funcionamiento del visor de Atlas." },
+    version: "ingeniería unificada",
+    verificacion: { estado:"pendiente", resumen:"falta comprobar el visor de Atlas", texto:"Los bancos de este repositorio comprueban la navegación del alias y el traslado de parámetros contra un destino interceptado: no acreditan la autenticación ni el funcionamiento del visor de Atlas." },
     relacionadas: ["Radar FACTIUN","Notion ventas","Notion compras"],
     docId: "notion-ingenieria",
     docUrl: "",
@@ -2941,6 +2955,17 @@ const STATUS = {
   dead:  { label:"Deprecado",     color:"var(--dead)",  rank:4 }
 };
 const ORDER = ["live","build","demo","idle","dead"];
+/* EL ESTADO, ESCRITO. `STATUS[k].label` es el rótulo de los filtros, donde hace de título; dentro de
+   la ficha el estado va en medio de una frase, así que se lee en minúscula y con preposición. */
+const ESTADO_FRASE = { live:"en producción", build:"en desarrollo", demo:"demo o prueba de concepto",
+                       idle:"pausado", dead:"deprecado" };
+const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+/* una fecha se lee «15 nov 2026», no «2026-11-15»: el panel lo escribe una persona para una persona.
+   Lo que no venga en ISO se deja tal cual, que para eso lo escribió alguien a mano. */
+function fechaHumana(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||""));
+  return m ? (+m[3])+" "+MESES[+m[2]-1]+" "+m[1] : (iso||"");
+}
 const state = { q:"", filter:"all", sort:"recent", open:new Set(), familia:"todas" };
 
 const $grid   = document.getElementById("grid");
@@ -3018,11 +3043,15 @@ function detailHTML(p){
   /* El historial va PLEGADO: es el bloque largo y en la ficha abierta tapaba lo que se consulta
      (URL, uso, pendientes). Sigue en el DOM entero, sólo cambia que hay que desplegarlo. */
   const log = (p.historial&&p.historial.length) ? `<details class="dgroup dlog"><summary class="dlabel">Historial · ${p.historial.length}</summary><ul class="log">${p.historial.map(h=>`<li><span class="ld">${esc(h.date)}</span>${h.ver?`<span class="lv">${esc(h.ver)}</span>`:""}<span class="ln">${esc(h.note)}</span></li>`).join("")}</ul></details>` : "";
-  const rel = (p.relacionadas&&p.relacionadas.length)
-    ? `<div class="dgroup"><div class="dlabel">Relacionadas</div><div class="rels">${p.relacionadas
-        .filter(n=>TOOLS.some(t=>t.name===n))
-        .map(n=>`<button type="button" class="rel" data-rel="${esc(n)}">${esc(n)}</button>`).join("")}</div></div>`
-    : "";
+  /* las hermanas, en una frase: «Se consulta junto a X y Z.» Los nombres siguen siendo botones
+     —abren la ficha y la traen a la vista—, pero leídos son parte del texto, no tres pastillas. */
+  const hermanas = (p.relacionadas||[]).filter(n=>TOOLS.some(t=>t.name===n))
+    .map(n=>`<button type="button" class="rel" data-rel="${esc(n)}">${esc(n)}</button>`);
+  const frase = hermanas.length>1
+    ? hermanas.slice(0,-1).join(", ")+" y "+hermanas[hermanas.length-1]
+    : hermanas[0];
+  const rel = hermanas.length
+    ? `<div class="dgroup"><p class="prosa">Se consulta junto a ${frase}.</p></div>` : "";
   const opened = state.open.has(p.name);
   return `<div class="detail" id="${id}" ${opened?"":"hidden"}>${kv}${uso}${pend}${rel}${log}</div>`;
 }
@@ -3050,6 +3079,21 @@ function cardHTML(p){
   else if(abre.length) pri = abre.shift();
   else { pri = dl || docBtn || repo; sec = sec.filter(x => x !== pri); }
   if(pri) pri = pri.replace('class="btn', 'class="btn primary');
+  return `<article class="card tool s-${p.status} ${opened?'open':''}" id="t-${slug(p.name)}" data-fam="${typeof familiaDe==='function'?familiaDe(p):'otras'}" style="--c:${st.color}">
+    <button class="card-toggle" aria-expanded="${opened}" aria-controls="${id}">
+      <div class="thead">
+        <span class="ico">${typeof PICTO==='function' ? PICTO(p) : ''}</span>
+        <div class="tit"><h2 class="name">${esc(p.name)}</h2></div>
+        <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+      </div>
+      <p class="obj">${esc(p.objetivo)}</p>
+    </button>
+    <div class="meta"><span class="tag">${esc(p.stack)}</span></div>
+    <div class="pie-linea">${lineaPie(p)}</div>
+    <div class="foot"><span class="acts"><span class="sec">${sec.join("")}</span><span class="abre">${abre.join("")}${pri}</span></span></div>
+    ${detailHTML(p)}
+  </article>`;
+}
 /* EL CHIP DE VERSION DICE DE DONDE SALE EL NUMERO. Una tarjeta con `verEnApp`
    no guarda el numero, asi que tiene tres estados que NO se pueden pintar
    igual: leyendo, leido, y no he podido leerlo. El tercero es el que importa:
@@ -3071,21 +3115,21 @@ function verifChip(p){
   const v = p.verificacion;
   if(!v || !v.texto) return "";
   const pend = v.estado !== "hecha";
-  return `<span class="verif ${pend?'pend':'ok'}" title="${esc(v.texto)}">${pend?'sin verificar':'verificado'}</span>`;
+  const corto = v.resumen || (pend ? "falta una comprobación" : "comprobado");
+  return `<span class="verif ${pend?'pend':'ok'}" title="${esc(v.texto)}">${esc(corto)}</span>`;
 }
-  return `<article class="card tool s-${p.status} ${opened?'open':''}" id="t-${slug(p.name)}" data-fam="${typeof familiaDe==='function'?familiaDe(p):'otras'}" style="--c:${st.color}">
-    <button class="card-toggle" aria-expanded="${opened}" aria-controls="${id}">
-      <div class="thead">
-        <span class="ico">${typeof PICTO==='function' ? PICTO(p) : ''}</span>
-        <div class="tit"><span class="status"><i class="led"></i>${st.label}</span><h2 class="name">${esc(p.name)}</h2><span class="dato">${verChip(p)}<span class="upd">act. ${esc(p.updated||"—")}</span>${verifChip(p)}</span></div>
-        <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
-      </div>
-      <p class="obj">${esc(p.objetivo)}</p>
-    </button>
-    <div class="meta"><span class="tag">${esc(p.stack)}</span></div>
-    <div class="foot"><span class="acts"><span class="sec">${sec.join("")}</span><span class="abre">${abre.join("")}${pri}</span></span></div>
-    ${detailHTML(p)}
-  </article>`;
+
+/* LA FRASE DEL PIE. Las piezas que existen, separadas por puntos: versión, estado, fecha y, si la
+   ficha lo declara, lo que falta por comprobar. Las que no existen no dejan hueco ni punto suelto. */
+function lineaPie(p){
+  const st = STATUS[p.status] || STATUS.idle;
+  const partes = [
+    verChip(p),
+    `<span class="est">${esc(ESTADO_FRASE[p.status] || st.label.toLowerCase())}</span>`,
+    `<span class="upd">${p.updated ? "al día el "+esc(fechaHumana(p.updated)) : "sin fecha"}</span>`,
+    verifChip(p)
+  ].filter(Boolean);
+  return partes.join('<span class="sep" aria-hidden="true">·</span>');
 }
 function renderGrid(){
   const list = filtered();

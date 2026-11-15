@@ -388,15 +388,17 @@ declare -A PISO=(
   # destino interceptado. No es una validación del visor privado de Atlas.
   [test_notion_ingenieria_alias.mjs]=14
   [test_notion_ingenieria_alias_browser.js]=8
-  # LAS TRES TARJETAS DE NOTION Y EL SELLO DE VERIFICACIÓN. 13 MEDIDAS el
+  # LAS TRES TARJETAS DE NOTION Y LA LÍNEA ESCRITA DEL PIE. 13 MEDIDAS el
   # 2026-11-15. Lo que sujeta es un eje nuevo —`verificacion`, lo que falta por
   # comprobar— que NO es el estado del proyecto: tres pantallas servidas cuya
   # lectura real de datos nadie ha acreditado salían como «Producción» a secas.
-  # El sello tiene que verse con la tarjeta CERRADA, el chip tiene que CONTAR y
-  # FILTRAR, y el acceso a una tarjeta hermana tiene que abrirla aunque un
-  # filtro la esconda. Cuatro mutantes verificados en rojo: sello vacío (4),
-  # sello sólo con la ficha abierta (3), chip contando por estado (1) y acceso
-  # que centra sin abrir (2).
+  # Y sujeta la forma de decirlo: una FRASE en el pie, con estado y fecha
+  # escritos, legible con la ficha CERRADA, en vez del juego de insignias que
+  # tenía. El chip tiene que CONTAR y FILTRAR, y el acceso a una tarjeta
+  # hermana tiene que abrirla aunque un filtro la esconda. Seis mutantes
+  # verificados en rojo: `verifChip` mudo (4), línea sólo con la ficha abierta
+  # (3), fecha en ISO (3), acceso que centra sin abrir (2), chip contando por
+  # estado (1) y estado sin escribir (1).
   [test_tarjetas_notion.js]=13
   [test_layout_search.js]=22
   [test_layout_search_ui.js]=32

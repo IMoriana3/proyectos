@@ -97,8 +97,9 @@ nombre real del destino, «Abrir Notion · Mercado». Ninguno de los dos cambia 
 rótulo, no una versión. `notion-ventas-comercial.html` no declara versión.
 
 **DECISIÓN (2026-11-15)** — La tarjeta de Compras pasa a `1.1`, el número que sirve la pantalla.
-El rótulo de ingeniería se conserva a propósito: esa tarjeta no versiona un paquete propio, abre
-una pantalla de Atlas. Que `notion-ventas-comercial.html` no declare versión es un pendiente de
+Ingeniería conserva un rótulo en vez de un número, porque no versiona un paquete propio: abre una
+pantalla de Atlas. Se queda en «ingeniería unificada»; con la línea escrita del pie, el «Atlas ·»
+de delante repetía tres veces la misma palabra en el mismo renglón. Que `notion-ventas-comercial.html` no declare versión es un pendiente de
 Atlas, anotado aquí y no corregido desde este repositorio.
 
 ## Mejoras añadidas en esta revisión
@@ -120,7 +121,41 @@ Van en `index.html` y son genéricas: cualquier tarjeta puede usarlas.
 4. **Las tres tarjetas juntas en la familia Cartera**, con el enlace a Notion de Compras, el
    rótulo real del de Ventas y la versión de Compras cuadrada con la pantalla.
 
-Caché del armazón: **v208** (publica el cambio de `index.html`).
+Caché del armazón: **v208 → **v209** tras la segunda pasada de interfaz** (publica el cambio de `index.html`).
+
+## La interfaz · segunda pasada (2026-11-15)
+
+**HECHO** — Al ver las tarjetas con el sello puesto, el usuario señaló que la interfaz «es la típica
+que hacéis las IA». Tenía razón y el peor ejemplo era lo recién añadido: una píldora en mayúsculas
+con borde de puntos para decir que faltaba una comprobación, y tres chips en fila para decir que una
+tarjeta se consulta junto a otras. Insignias para todo, cada dato en su cajita.
+
+**DECISIÓN** — Se cambia la ficha de herramienta entera, no sólo las tres de Notion, porque el tic
+era del sistema de tarjetas:
+
+1. **Una frase en vez de cuatro insignias.** Estado, versión, fecha y lo que falta por comprobar se
+   leen en una línea escrita al pie: «1.1 · en producción · al día el 15 nov 2026 · falta comprobar
+   la lectura de datos en producción». El estado va en minúscula y con preposición, porque está en
+   medio de una frase; la fecha, en cristiano (`fechaHumana`). Se lee con la ficha **cerrada**.
+2. **Fuera el azulejo de color del icono.** El pictograma vuelve a ser un dibujo a línea sobre el
+   fondo —plata con el elemento clave en ámbar, como se diseñaron—. El color de familia se conserva
+   en los filtros; el estado ya no se adivina por un color, se lee. También desaparece el giro del
+   icono al pasar por encima: sin azulejo que lo sujetara, parecía un fallo de pintado.
+3. **Las acciones, en texto.** Cuatro botones recuadrados iguales obligaban a leerlos todos para
+   encontrar el que abre la herramienta. Ahora son texto, y sólo la principal lleva marca: ámbar con
+   una línea debajo, en el mismo sitio de siempre.
+4. **Los rótulos dejan de gritar.** `USO / DESPLIEGUE`, `PENDIENTES` y `RELACIONADAS` pasan a
+   cursiva en caja baja; y «Relacionadas» desaparece como rótulo: las hermanas van en una frase,
+   «Se consulta junto a X y Z», con los nombres como enlaces que siguen abriendo su ficha.
+
+**Lo que se pierde, dicho claro:** el color de familia ya no se ve en la rejilla de un vistazo, sólo
+en los filtros, y el estado ya no se reconoce por una pastilla de color sino leyendo tres palabras.
+Es el precio de quitar el cromo; si el color de familia hace falta en la rejilla, el sitio natural es
+la banda del borde, no un azulejo.
+
+Caché del armazón: **v209**. Bancos: `test_tarjetas_notion.js` sube a comprobar que la línea es una
+frase y que no queda insignia de estado en la cabecera; `test_index` cambia tres expectativas de
+fecha (`act. 2026-09-01` → `al día el 1 sep 2026`), que es el mismo dato escrito de otra manera.
 
 ## Lo que queda abierto
 

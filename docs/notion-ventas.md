@@ -46,4 +46,4 @@ La comprobación de lectura de datos con una sesión autorizada en producción q
 ## Revisión 2026-11-15
 
 La revisión de las tres tarjetas Notion y lo que quedó abierto está en
-[`docs/audit/tarjetas-notion-20261115.md`](audit/tarjetas-notion-20261115.md). De ahí sale que el botón de Notion se rotule con el nombre real de su destino, «Mercado · oportunidades y transacciones», y el sello «sin verificar» de la tarjeta, que es esta misma comprobación pendiente dicha donde se ve sin abrir la ficha.
+[`docs/audit/tarjetas-notion-20261115.md`](audit/tarjetas-notion-20261115.md). De ahí sale que el botón de Notion se rotule con el nombre real de su destino, «Mercado · oportunidades y transacciones», y el aviso de la línea del pie de la tarjeta, que es esta misma comprobación pendiente dicha donde se lee sin abrir la ficha.

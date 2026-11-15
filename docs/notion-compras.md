@@ -35,4 +35,4 @@ La comprobación de lectura con una sesión autorizada en producción sigue pend
 ## Revisión 2026-11-15
 
 La revisión de las tres tarjetas Notion y lo que quedó abierto está en
-[`docs/audit/tarjetas-notion-20261115.md`](audit/tarjetas-notion-20261115.md). De ahí salen el enlace propio al hub de componentes en Notion, la versión `1.1` —la que declara la pantalla— y el sello «sin verificar» de la tarjeta, que es esta misma comprobación pendiente dicha donde se ve sin abrir la ficha.
+[`docs/audit/tarjetas-notion-20261115.md`](audit/tarjetas-notion-20261115.md). De ahí salen el enlace propio al hub de componentes en Notion, la versión `1.1` —la que declara la pantalla— y el aviso de la línea del pie de la tarjeta, que es esta misma comprobación pendiente dicha donde se lee sin abrir la ficha.

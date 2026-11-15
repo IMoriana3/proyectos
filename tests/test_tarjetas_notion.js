@@ -1,4 +1,4 @@
-/* LAS TRES TARJETAS DE NOTION Y EL SELLO DE VERIFICACIÓN, en un Chromium de verdad.
+/* LAS TRES TARJETAS DE NOTION Y LA LÍNEA ESCRITA DEL PIE, en un Chromium de verdad.
  *
  * Por qué existe: el panel tenía UN solo eje para decir en qué punto está una pantalla, `status`, y
  * con él se estaba contando media verdad —«Producción» en tres tarjetas cuya lectura real de datos
@@ -6,15 +6,16 @@
  * pantallas están publicadas de verdad): es un eje aparte, `verificacion`, que se pinta con la
  * tarjeta CERRADA. Lo que este banco sujeta es justo lo que se puede ir en silencio:
  *
- *   · que el sello se vea sin abrir nada (si sólo saliera en el detalle, no sirve de nada);
+ *   · que lo que falta se lea sin abrir nada (si sólo saliera en el detalle, no sirve de nada);
+ *   · que esa línea sea una frase —estado y fecha escritos—, no un juego de insignias;
  *   · que el chip «Sin verificar» CUENTE y FILTRE, en vez de decorar;
  *   · que el botón de una tarjeta hermana la abra aunque un filtro la esté escondiendo;
  *   · que los enlaces de Notion de las tres rotulen su destino real.
  *
- * Cuatro mutantes MEDIDOS el 2026-11-15, los cuatro en rojo: `verifChip` devolviendo siempre vacío
- * mata 4 comprobaciones; esconder el sello con la ficha cerrada (`.card:not(.open) .verif`), 3;
- * contar el chip sobre `status` en vez de sobre `verificacion`, 1; y un acceso a la hermana que la
- * centra sin abrirla, 2. Piso del arnés: 13.
+ * Seis mutantes MEDIDOS el 2026-11-15, los seis en rojo: `verifChip` que no dice nunca que falta
+ * algo mata 4 comprobaciones; esconder la línea del pie con la ficha cerrada, 3; la fecha otra vez
+ * en ISO, 3; un acceso a la hermana que la centra sin abrirla, 2; el chip contando por estado, 1; y
+ * el estado sin escribir en la línea, 1. Piso del arnés: 13.
  *
  *   python3 -m http.server 8099       # servir el repo (en otra terminal)
  *   node tests/test_tarjetas_notion.js
@@ -53,11 +54,16 @@ const tarjeta = (page, nombre) =>
         const card = tarjeta(page, nombre);
         assert.equal(await card.count(), 1, 'la tarjeta no está en la rejilla');
         assert.ok(!(await card.evaluate(el => el.classList.contains('open'))), 'la tarjeta nace abierta');
-        const sello = card.locator('.verif');
-        assert.ok(await sello.isVisible(), 'el sello no se ve con la ficha cerrada');
-        assert.equal((await sello.innerText()).trim().toLowerCase(), 'sin verificar');
+        const sello = card.locator('.pie-linea .verif');
+        assert.ok(await sello.isVisible(), 'lo que falta no se lee con la ficha cerrada');
+        assert.match((await sello.innerText()).trim(), /^falta comprobar /, 'el aviso no dice qué falta');
         const motivo = await sello.getAttribute('title');
-        assert.ok(motivo && motivo.length > 40, 'el sello no dice qué falta: ' + JSON.stringify(motivo));
+        assert.ok(motivo && motivo.length > 40, 'el aviso no lleva el motivo entero: ' + JSON.stringify(motivo));
+        // y la línea es una frase, no un juego de insignias: estado y fecha escritos
+        const linea = (await card.locator('.pie-linea').innerText()).replace(/\s+/g, ' ');
+        assert.match(linea, /en producción/, 'el estado no va escrito en la línea: ' + linea);
+        assert.match(linea, /al día el \d{1,2} [a-z]{3} \d{4}/, 'la fecha no se lee en cristiano: ' + linea);
+        assert.equal(await card.locator('.status').count(), 0, 'la insignia de estado sigue en la cabecera');
       } finally { await ctx.close(); }
     });
   }
@@ -95,7 +101,7 @@ const tarjeta = (page, nombre) =>
       const nombres = await page.locator('#grid article.card .name').allInnerTexts();
       assert.ok(nombres.length > 0, 'el filtro deja la rejilla vacía');
       for (const n of TRIO) assert.ok(nombres.includes(n), 'falta ' + n + ' en el filtro');
-      const sellos = await page.locator('#grid article.card .verif.pend').count();
+      const sellos = await page.locator('#grid article.card .pie-linea .verif.pend').count();
       assert.equal(sellos, nombres.length, 'hay tarjetas filtradas sin sello pendiente');
     } finally { await ctx.close(); }
   });
@@ -120,6 +126,8 @@ const tarjeta = (page, nombre) =>
     try {
       const card = tarjeta(page, 'Notion ventas');
       await card.locator('.card-toggle').click();
+      const frase = (await card.locator('.detail .prosa').innerText()).replace(/\s+/g, ' ');
+      assert.match(frase, /^Se consulta junto a .+\.$/, 'las hermanas no van en una frase: ' + frase);
       const rel = card.locator('.detail .rel', { hasText: 'Notion compras' });
       assert.equal(await rel.count(), 1, 'no hay acceso a la hermana');
       await rel.click();
@@ -177,7 +185,7 @@ const tarjeta = (page, nombre) =>
     try {
       const v = await page.evaluate(() => TOOLS.find(p => p.name === 'Notion compras').version);
       assert.equal(v, '1.1');
-      assert.match(await tarjeta(page, 'Notion compras').locator('.ver').innerText(), /1\.1/);
+      assert.match(await tarjeta(page, 'Notion compras').locator('.pie-linea .ver').innerText(), /1\.1/);
     } finally { await ctx.close(); }
   });
 
@@ -187,7 +195,7 @@ const tarjeta = (page, nombre) =>
     try {
       const n = await page.evaluate(() => (TOOLS.find(p => !p.verificacion) || {}).name);
       assert.ok(n, 'todas las tarjetas declaran verificación: el caso no se puede probar');
-      assert.equal(await tarjeta(page, n).locator('.verif').count(), 0);
+      assert.equal(await tarjeta(page, n).locator('.pie-linea .verif').count(), 0);
       await page.locator('#chips .chip', { hasText: 'Sin verificar' }).click();
       assert.equal(await tarjeta(page, n).count(), 0);
     } finally { await ctx.close(); }

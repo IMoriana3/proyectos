@@ -23,4 +23,4 @@ Los bancos de este repositorio verifican el traslado de parámetros y la navegac
 ## Revisión 2026-11-15
 
 La revisión de las tres tarjetas Notion y lo que quedó abierto está en
-[`docs/audit/tarjetas-notion-20261115.md`](audit/tarjetas-notion-20261115.md). De ahí salen el paso de la tarjeta a la familia Cartera, junto a Compras y Ventas, la declaración de que comparte visor con Radar FACTIUN y el sello «sin verificar», que recoge el alcance real de los bancos de este repositorio: navegación del alias, no autenticación ni visor de Atlas.
+[`docs/audit/tarjetas-notion-20261115.md`](audit/tarjetas-notion-20261115.md). De ahí salen el paso de la tarjeta a la familia Cartera, junto a Compras y Ventas, la declaración de que comparte visor con Radar FACTIUN y el aviso de la línea del pie, que recoge el alcance real de los bancos de este repositorio: navegación del alias, no autenticación ni visor de Atlas.
