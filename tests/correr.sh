@@ -388,6 +388,16 @@ declare -A PISO=(
   # destino interceptado. No es una validación del visor privado de Atlas.
   [test_notion_ingenieria_alias.mjs]=14
   [test_notion_ingenieria_alias_browser.js]=8
+  # LAS TRES TARJETAS DE NOTION Y EL SELLO DE VERIFICACIÓN. 13 MEDIDAS el
+  # 2026-11-15. Lo que sujeta es un eje nuevo —`verificacion`, lo que falta por
+  # comprobar— que NO es el estado del proyecto: tres pantallas servidas cuya
+  # lectura real de datos nadie ha acreditado salían como «Producción» a secas.
+  # El sello tiene que verse con la tarjeta CERRADA, el chip tiene que CONTAR y
+  # FILTRAR, y el acceso a una tarjeta hermana tiene que abrirla aunque un
+  # filtro la esconda. Cuatro mutantes verificados en rojo: sello vacío (4),
+  # sello sólo con la ficha abierta (3), chip contando por estado (1) y acceso
+  # que centra sin abrir (2).
+  [test_tarjetas_notion.js]=13
   [test_layout_search.js]=22
   [test_layout_search_ui.js]=32
   [test_layout.js]=201
@@ -428,7 +438,10 @@ declare -A PISO=(
   # VERDE con ese mutante: era falso y el fallo era de mi medición — el arnés
   # revienta y da cero comprobaciones leídas, que el portón sí caza. Queda
   # dicho aquí porque una nota equivocada envejece peor que ninguna.)
-  [test_portada.js]=42
+  # 42 -> 44: la fila de chips tiene dos ejes desde el 2026-11-15 (estado y
+  # verificación) y se carean por separado, para que el chip de verificación no
+  # pueda colarse en la cuenta de estados ni pintar un número que no es el suyo.
+  [test_portada.js]=44
   [test_hero_altura.js]=8
   # El hueco de `sim-solar.html` NO era «no la abre nadie»: `test_buscador.js`
   # sí corre `solarGeom` y `singleaxis` de esta ficha en el navegador —romper

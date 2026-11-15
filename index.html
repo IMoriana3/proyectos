@@ -73,7 +73,16 @@
 <!--    name, status, objetivo, stack, url, repo, updated,         -->
 <!--    version, uso[], pendientes[{done,text}], historial[{...}], -->
 <!--    docId (opcional), download (opcional)                      -->
+<!--    verificacion {estado:'pendiente'|'hecha', texto} (opc.)    -->
+<!--    relacionadas ['Nombre de otra tarjeta', ...] (opcional)    -->
 <!--    status: 'live'|'build'|'demo'|'idle'|'dead'                -->
+<!--                                                               -->
+<!--  ESTADO Y VERIFICACION SON DOS EJES DISTINTOS                 -->
+<!--    `status` dice en que punto esta el proyecto; `verificacion` -->
+<!--    dice que comprobacion sigue pendiente aunque este servido.  -->
+<!--    Una pantalla publicada cuya lectura real de datos no se ha  -->
+<!--    comprobado es 'live' CON el sello 'sin verificar': no se    -->
+<!--    degrada el estado para contar media verdad.                 -->
 <!--                                                               -->
 <!--  ADJUNTAR DOCUMENTACION A UN PROYECTO                        -->
 <!--    1) Dale al proyecto un docId, p.ej.  docId: ""       -->
@@ -374,6 +383,14 @@ body.presenta .solo-pres{display:inline-block}
 .ver{font-family:var(--mono);font-size:.72rem;color:var(--muted);letter-spacing:.02em}
 .ver::before{content:"·";color:var(--muted-2);margin-right:8px}
 .ver.pend{color:var(--muted);letter-spacing:0}
+/* EL SELLO DE VERIFICACION. Una pantalla puede estar publicada y aun no tener comprobado lo que
+   decide si te puedes apoyar en ella —que lea los datos reales con una sesion autorizada—. Eso no
+   es un estado de proyecto (no es `build` ni `live`), es una comprobacion pendiente, asi que se
+   dice aparte y SIEMPRE visible: con la tarjeta cerrada tambien. Puntos = sin comprobar. */
+.verif{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;padding:1px 6px;white-space:nowrap;align-self:center}
+.verif.pend{color:var(--fos);border:1px dashed var(--fos)}
+.verif.ok{color:var(--muted-2);border:1px solid var(--line-soft)}
+.tool .dato .verif{margin-left:9px}
 
 .foot{display:flex;align-items:center;gap:10px;padding:10px 18px 16px 20px;flex-wrap:wrap;margin-top:auto}
 .upd{font-family:var(--mono);font-size:.72rem;color:var(--muted);letter-spacing:.02em}
@@ -569,6 +586,20 @@ body.presenta .solo-pres{display:inline-block}
 .kv dd a{color:var(--amb);text-decoration:none}
 .kv dd a:hover{text-decoration:underline}
 .kv dd.empty{color:var(--muted-2);font-style:italic}
+/* la fila de verificacion es prosa, no una URL: no se parte por caracteres */
+/* la fila de verificación es prosa, no una URL: fuera del mono y de la partición por caracteres,
+   que en la columna estrecha del detalle la convertía en un muro de once líneas */
+.kv dd.nota{font-family:var(--sans);font-size:.82rem;line-height:1.45;word-break:normal;overflow-wrap:anywhere;color:var(--muted);padding-top:1px}
+.kv dd.nota.pend{color:var(--fos)}
+/* LAS TARJETAS HERMANAS. Compras, Ventas e Ingenieria se consultan juntas —una oportunidad lleva a
+   su componente y a su proveedor—, y antes habia que buscarlas a mano en la rejilla. */
+.rels{display:flex;flex-wrap:wrap;gap:8px}
+.rel{font-family:var(--mono);font-size:.7rem;color:var(--text);background:var(--panel-2);
+  border:1px solid var(--line-soft);padding:3px 9px;cursor:pointer;transition:color .15s,border-color .15s}
+.rel::before{content:"\2197";color:var(--muted-2);margin-right:6px}
+.rel:hover{color:var(--amb);border-color:var(--amb)}
+.rel:hover::before{color:var(--amb)}
+.rel:focus-visible{outline:2px solid var(--amb);outline-offset:2px}
 .uso{list-style:none}
 .uso li{font-size:.88rem;color:var(--muted);line-height:1.5;padding-left:16px;position:relative;margin-bottom:5px}
 .uso li::before{content:"›";position:absolute;left:2px;color:var(--amb)}
@@ -1125,11 +1156,11 @@ function PICTO(p){
 /* LAS FAMILIAS de herramientas. Una herramienta nueva que no esté aquí sale en «Otras» y se ve:
    no se esconde. */
 const FAMILIAS = [
-  { k:'diseno', n:'Diseño y oferta', c:'#68C0D8', t:['Diseño de red de comunicaciones','Generador de implantaciones','Comparador de estructuras','Alta de planta','Modelo de propagación RF','Diagnóstico de cobertura Zigbee','Expediente de homologación','Notion ingeniería'] },
+  { k:'diseno', n:'Diseño y oferta', c:'#68C0D8', t:['Diseño de red de comunicaciones','Generador de implantaciones','Comparador de estructuras','Alta de planta','Modelo de propagación RF','Diagnóstico de cobertura Zigbee','Expediente de homologación'] },
   { k:'simulacion', n:'Simulación', c:'#F2C94C', t:['Núcleo de cálculo SolarGPT','Simulador de backtracking','Simulador de radiación difusa','Simulador de abanderamiento','Producción 3D por string','Careo SolarGPT ↔ PVSyst','Simulador de batería','Análisis meteorológico','Gemelo digital de seguidor y control'] },
   { k:'obra', n:'Obra y puesta en marcha', c:'#F09030', t:['Control de obra','Seguimiento PEM','Visor de levantamiento','Visor de geometría as-built','TCU Toolbox','IPs de plantas'] },
   { k:'operacion', n:'Operación', c:'#5BBF8A', t:['SCADA','SCADA fija · Victron VRM','Importador de logs de NCU','Medidor de tráfico','Mapa Modbus','Agente Modbus y collector','Simulador de planta equipo a equipo','Instalación cubierta Gorraiz'] },
-  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV','Notion compras','Notion ventas','Diccionario de datos FACTIUN','Radar FACTIUN'] }
+  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV','Notion compras','Notion ventas','Notion ingeniería','Diccionario de datos FACTIUN','Radar FACTIUN'] }
 ];
 const FAMILIA_DE = {}; FAMILIAS.forEach(f=>f.t.forEach(n=>{ FAMILIA_DE[n]=f.k; }));
 function familiaDe(p){ return FAMILIA_DE[p && p.name] || 'otras'; }
@@ -1149,11 +1180,14 @@ const PROJECTS = [
     stack: "Atlas · lectura de Notion · acceso protegido",
     url: "https://maps-9rd.pages.dev/herramientas/notion-compras.html",
     links: [
-      { label: "Abrir compras", url: "https://maps-9rd.pages.dev/herramientas/notion-compras.html" }
+      { label: "Abrir compras", url: "https://maps-9rd.pages.dev/herramientas/notion-compras.html" },
+      { label: "Abrir Notion · Componentes", url: "https://app.notion.com/p/4186931d643681329d43d60567331758" }
     ],
     repo: "https://github.com/IMoriana3/Atlas",
-    updated: "2026-11-14",
-    version: "1.0",
+    updated: "2026-11-15",
+    version: "1.1",
+    verificacion: { estado:"pendiente", texto:"La pantalla está publicada, pero la lectura de datos de Notion con una sesión autorizada en producción no se ha comprobado. Las pruebas locales y de integración no la acreditan." },
+    relacionadas: ["Notion ventas","Notion ingeniería"],
     docId: "notion-compras",
     docUrl: "",
     download: "",
@@ -1170,6 +1204,7 @@ const PROJECTS = [
       { done:false, text:"Comprobar la lectura de datos de Notion con una sesión autorizada en producción." }
     ],
     historial: [
+      { date:"2026-11-15", ver:"1.1", note:"Revisión de las tres tarjetas Notion (docs/audit/tarjetas-notion-20261115.md): versión cuadrada con la que sirve la pantalla, enlace propio al hub de componentes en Notion, sello de verificación de la lectura en producción y acceso a las tarjetas hermanas." },
       { date:"2026-11-14", ver:"1.0", note:"Acceso propio a Notion compras: componentes, proveedores, logística, comparador y precios públicos opcionales. La tarjeta Notion ventas conserva el trabajo comercial." }
     ]
   },
@@ -1181,11 +1216,13 @@ const PROJECTS = [
     url: "https://maps-9rd.pages.dev/herramientas/notion-ventas-comercial.html",
     links: [
       { label: "Abrir ventas", url: "https://maps-9rd.pages.dev/herramientas/notion-ventas-comercial.html" },
-      { label: "Abrir Notion", url: "https://app.notion.com/p/4186931d643681a8bfbec26f51d94129" }
+      { label: "Abrir Notion · Mercado", url: "https://app.notion.com/p/4186931d643681a8bfbec26f51d94129" }
     ],
     repo: "https://github.com/IMoriana3/Atlas",
-    updated: "2026-11-14",
+    updated: "2026-11-15",
     version: "1.1",
+    verificacion: { estado:"pendiente", texto:"La pantalla está publicada, pero la lectura de datos de Notion con una sesión autorizada en producción no se ha comprobado. Las pruebas locales y de integración no la acreditan." },
+    relacionadas: ["Notion compras","Notion ingeniería"],
     docId: "notion-ventas",
     docUrl: "",
     download: "",
@@ -1202,6 +1239,7 @@ const PROJECTS = [
       { done:false, text:"Comprobar la lectura de datos de Notion con una sesión autorizada en producción." }
     ],
     historial: [
+      { date:"2026-11-15", ver:"1.1", note:"Revisión de las tres tarjetas Notion (docs/audit/tarjetas-notion-20261115.md): el botón de Notion se rotula con el nombre real de su destino, «Mercado · oportunidades y transacciones», y la tarjeta estrena sello de verificación y acceso a las hermanas." },
       { date:"2026-11-14", ver:"1.1", note:"La tarjeta se dedica a ventas. Los componentes, proveedores y la logística tienen su propio acceso en Notion compras, dentro de Cartera." },
       { date:"2026-11-14", ver:"1.0", note:"Publicadas en Atlas las pantallas Ventas y Proveedores y componentes, con sus dos accesos en esta tarjeta. La comprobación de lectura con una sesión autorizada queda pendiente." },
       { date:"2026-11-14", ver:"1.0 · candidata", note:"Acceso único a ventas y a proveedores/componentes. Ventas reúne proyectos/permisos, compradores, procesos de compra, transacciones y competencia; proveedores conserva familias, comparación y pendientes. Notion como fuente de datos." }
@@ -1215,11 +1253,13 @@ const PROJECTS = [
     url: "https://maps-9rd.pages.dev/herramientas/radar-factiun#ingenieria",
     links: [
       { label: "Explorar ingeniería", url: "https://maps-9rd.pages.dev/herramientas/radar-factiun#ingenieria" },
-      { label: "Abrir en Notion", url: "https://app.notion.com/p/4186931d6436813ab499f73d69e82b04" }
+      { label: "Abrir Notion · Hub de ingeniería", url: "https://app.notion.com/p/4186931d6436813ab499f73d69e82b04" }
     ],
     repo: "https://github.com/IMoriana3/Atlas",
-    updated: "2026-11-14",
+    updated: "2026-11-15",
     version: "Atlas · ingeniería unificada",
+    verificacion: { estado:"pendiente", texto:"Los bancos de este repositorio comprueban la navegación del alias y el traslado de parámetros contra un destino interceptado: no acreditan la autenticación ni el funcionamiento del visor de Atlas." },
+    relacionadas: ["Radar FACTIUN","Notion ventas","Notion compras"],
     docId: "notion-ingenieria",
     docUrl: "",
     download: "",
@@ -1233,6 +1273,7 @@ const PROJECTS = [
       { done:true, text:"Pantalla de ingeniería unificada en Atlas; el Panel mantiene la tarjeta y los enlaces de compatibilidad." }
     ],
     historial: [
+      { date:"2026-11-15", ver:"Atlas", note:"Revisión de las tres tarjetas Notion (docs/audit/tarjetas-notion-20261115.md): pasa a la familia Cartera para quedar junto a Compras y Ventas, declara que comparte visor con Radar FACTIUN y estrena sello de verificación con el alcance real de sus bancos." },
       { date:"2026-11-14", ver:"Atlas", note:"El Radar de Atlas reúne la pantalla de ingeniería. El visor anterior del Panel se sustituye por una redirección que conserva fichas y filtros guardados." },
       { date:"2026-11-14", ver:"1.0.0", note:"Tarjeta y explorador de inteligencia técnica pública. Nueve fichas cubren diez frentes con fuentes, atribución, fechas y relaciones explícitas; hub nativo Notion enlazado." }
     ]
@@ -1316,6 +1357,7 @@ const PROJECTS = [
     repo: "https://github.com/IMoriana3/Atlas/tree/main/herramientas",
     updated: "2026-11-06",
     version: "instantánea 30/10/2026",
+    relacionadas: ["Notion ingeniería"],
     docId: "",
     docUrl: "",
     download: "",
@@ -2923,10 +2965,16 @@ function renderGauges(){
     `<button class="gauge ${state.filter===k?'on':''}" style="--c:${STATUS[k].color}" data-k="${k}" title="${STATUS[k].label}"><span class="dot"></span><span class="n">${c[k]}</span></button>`).join("");
   $gauges.querySelectorAll(".gauge").forEach(b=>{ b.onclick = ()=> setFilter(state.filter===b.dataset.k ? "all" : b.dataset.k); });
 }
+/* UNA TARJETA SIN VERIFICAR es la que declara en su propia ficha una comprobación pendiente. No es
+   un estado de proyecto —puede estar servida y en producción—, así que no entra en `ORDER` ni en los
+   recuentos de estado: es un filtro propio, y contesta de un clic a «¿de qué no me puedo fiar aún?». */
+function sinVerificar(p){ return !!(p && p.verificacion && p.verificacion.texto && p.verificacion.estado !== "hecha"); }
 function renderChips(){
   const c = countByStatus();
   const items = [`<button class="chip ${state.filter==='all'?'on':''}" data-k="all">Todos · ${TOOLS.length}</button>`]
     .concat(ORDER.filter(k=>c[k]>0).map(k=>`<button class="chip ${state.filter===k?'on':''}" data-k="${k}">${STATUS[k].label} · ${c[k]}</button>`));
+  const sv = TOOLS.filter(sinVerificar).length;
+  if(sv) items.push(`<button class="chip ${state.filter==='sinverif'?'on':''}" data-k="sinverif" title="Tarjetas con una comprobación pendiente escrita en su propia ficha, estén servidas o no">Sin verificar · ${sv}</button>`);
   $chips.innerHTML = items.join("");
   $chips.querySelectorAll(".chip").forEach(b=> b.onclick = ()=> setFilter(b.dataset.k));
 }
@@ -2936,7 +2984,8 @@ function filtered(){
   const norm = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const q = norm(state.q.trim());
   let list = TOOLS.filter(p=>{
-    if(state.filter!=="all" && p.status!==state.filter) return false;
+    if(state.filter==="sinverif"){ if(!sinVerificar(p)) return false; }
+    else if(state.filter!=="all" && p.status!==state.filter) return false;
     /* la familia (ver `FAMILIAS`, al final): con «todas», que es lo de partida, no filtra nada */
     if(state.familia && state.familia!=="todas" && typeof familiaDe==="function" && familiaDe(p)!==state.familia) return false;
     if(!q) return true;
@@ -2958,14 +3007,24 @@ function detailHTML(p){
   const views = Array.isArray(p.links) && p.links.length
     ? p.links.filter(link => link.label && link.url).map(link => linkRow(esc(link.label), link.url)).join("")
     : linkRow("URL", p.url);
-  const kv = `<dl class="kv">${views}${linkRow("Repo", p.repo)}<dt>Stack</dt><dd>${esc(p.stack)}</dd></dl>`;
+  /* la verificación va en el detalle ENTERA: el sello de la cabecera sólo cabe para decir que falta,
+     no para decir qué falta, y es lo segundo lo que decide si te apoyas en la pantalla o no */
+  const v = p.verificacion;
+  const verif = (v && v.texto)
+    ? `<dt>Verificación</dt><dd class="nota ${v.estado==="hecha"?"":"pend"}">${esc(v.texto)}</dd>` : "";
+  const kv = `<dl class="kv">${views}${linkRow("Repo", p.repo)}<dt>Stack</dt><dd>${esc(p.stack)}</dd>${verif}</dl>`;
   const uso = (p.uso&&p.uso.length) ? `<div class="dgroup"><div class="dlabel">Uso / Despliegue</div><ul class="uso">${p.uso.map(u=>`<li>${esc(u)}</li>`).join("")}</ul></div>` : "";
   const pend = (p.pendientes&&p.pendientes.length) ? `<div class="dgroup"><div class="dlabel">Pendientes</div><ul class="todo">${p.pendientes.map(t=>`<li class="${t.done?'is-done':''}"><span class="box ${t.done?'done':''}">${t.done?'✓':'☐'}</span><span>${esc(t.text)}</span></li>`).join("")}</ul></div>` : "";
   /* El historial va PLEGADO: es el bloque largo y en la ficha abierta tapaba lo que se consulta
      (URL, uso, pendientes). Sigue en el DOM entero, sólo cambia que hay que desplegarlo. */
   const log = (p.historial&&p.historial.length) ? `<details class="dgroup dlog"><summary class="dlabel">Historial · ${p.historial.length}</summary><ul class="log">${p.historial.map(h=>`<li><span class="ld">${esc(h.date)}</span>${h.ver?`<span class="lv">${esc(h.ver)}</span>`:""}<span class="ln">${esc(h.note)}</span></li>`).join("")}</ul></details>` : "";
+  const rel = (p.relacionadas&&p.relacionadas.length)
+    ? `<div class="dgroup"><div class="dlabel">Relacionadas</div><div class="rels">${p.relacionadas
+        .filter(n=>TOOLS.some(t=>t.name===n))
+        .map(n=>`<button type="button" class="rel" data-rel="${esc(n)}">${esc(n)}</button>`).join("")}</div></div>`
+    : "";
   const opened = state.open.has(p.name);
-  return `<div class="detail" id="${id}" ${opened?"":"hidden"}>${kv}${uso}${pend}${log}</div>`;
+  return `<div class="detail" id="${id}" ${opened?"":"hidden"}>${kv}${uso}${pend}${rel}${log}</div>`;
 }
 function cardHTML(p){
   const st = STATUS[p.status] || STATUS.idle;
@@ -3005,11 +3064,20 @@ function verChip(p){
   if(p.verFresca) return `<span class="ver">${esc(p.version)}</span>`;
   return `<span class="ver pend" title="Leida el ${esc(p.verLeida)} en este navegador. Ahora no se ha podido comprobar, asi que puede haberse quedado atras.">${esc(p.version)} (ult.)</span>`;
 }
+/* EL SELLO va en la cabecera, al lado de la versión y la fecha, y NO dentro del detalle: lo que
+   está sin comprobar tiene que verse con la tarjeta cerrada. `estado` sólo distingue si la
+   comprobación está hecha; el texto, que es el que dice QUÉ falta, se lee en el detalle. */
+function verifChip(p){
+  const v = p.verificacion;
+  if(!v || !v.texto) return "";
+  const pend = v.estado !== "hecha";
+  return `<span class="verif ${pend?'pend':'ok'}" title="${esc(v.texto)}">${pend?'sin verificar':'verificado'}</span>`;
+}
   return `<article class="card tool s-${p.status} ${opened?'open':''}" id="t-${slug(p.name)}" data-fam="${typeof familiaDe==='function'?familiaDe(p):'otras'}" style="--c:${st.color}">
     <button class="card-toggle" aria-expanded="${opened}" aria-controls="${id}">
       <div class="thead">
         <span class="ico">${typeof PICTO==='function' ? PICTO(p) : ''}</span>
-        <div class="tit"><span class="status"><i class="led"></i>${st.label}</span><h2 class="name">${esc(p.name)}</h2><span class="dato">${verChip(p)}<span class="upd">act. ${esc(p.updated||"—")}</span></span></div>
+        <div class="tit"><span class="status"><i class="led"></i>${st.label}</span><h2 class="name">${esc(p.name)}</h2><span class="dato">${verChip(p)}<span class="upd">act. ${esc(p.updated||"—")}</span>${verifChip(p)}</span></div>
         <span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
       </div>
       <p class="obj">${esc(p.objetivo)}</p>
@@ -3035,6 +3103,17 @@ function renderGrid(){
   });
   $grid.querySelectorAll(".btn.docs").forEach(b=>{
     b.onclick = (e)=>{ e.stopPropagation(); openDoc(b.dataset.doc, b.dataset.name, b.dataset.status); };
+  });
+  /* la hermana se abre desplegada y se centra. `irAHerramienta` ya sabe quitar los filtros que la
+     estuvieran escondiendo y resaltarla, así que aquí sólo se añade el abrirla. */
+  $grid.querySelectorAll(".rel").forEach(b=>{
+    b.onclick = (e)=>{
+      e.stopPropagation();
+      const n = b.dataset.rel;
+      if(!TOOLS.some(t=>t.name===n)) return;
+      state.open.add(n); renderGrid();
+      if(typeof irAHerramienta === "function") irAHerramienta(n);
+    };
   });
 }
 
