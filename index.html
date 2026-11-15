@@ -1013,6 +1013,9 @@ function HUELLA(pl){
    explican junto a `.picto`, en el CSS. Una herramienta nueva sin icono sale con la célula genérica.
    (Los módulos de planta —PLANT_MODULES— no tienen ficha de herramienta, así que tampoco icono.) */
 const PICTOS = {
+  "Notion compras":
+    '<path class="f" d="m3 7 9-4 9 4v10l-9 4-9-4z"/><path d="m3 7 9 4 9-4M12 11v10"/>'
+    + '<path class="a" d="m8 4.8 9 4v4.5l-3 1.3v-4.5l-9-4"/>',
   "Notion ventas":
     '<rect class="f" x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 9v11"/>'
     + '<path class="a" d="M11 16l3-3 2 1.5 3-4"/><path d="M6 6.5h2M11 6.5h7"/>',
@@ -1126,7 +1129,7 @@ const FAMILIAS = [
   { k:'simulacion', n:'Simulación', c:'#F2C94C', t:['Núcleo de cálculo SolarGPT','Simulador de backtracking','Simulador de radiación difusa','Simulador de abanderamiento','Producción 3D por string','Careo SolarGPT ↔ PVSyst','Simulador de batería','Análisis meteorológico','Gemelo digital de seguidor y control'] },
   { k:'obra', n:'Obra y puesta en marcha', c:'#F09030', t:['Control de obra','Seguimiento PEM','Visor de levantamiento','Visor de geometría as-built','TCU Toolbox','IPs de plantas'] },
   { k:'operacion', n:'Operación', c:'#5BBF8A', t:['SCADA','SCADA fija · Victron VRM','Importador de logs de NCU','Medidor de tráfico','Mapa Modbus','Agente Modbus y collector','Simulador de planta equipo a equipo','Instalación cubierta Gorraiz'] },
-  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV','Notion ventas','Diccionario de datos FACTIUN','Radar FACTIUN'] }
+  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV','Notion compras','Notion ventas','Diccionario de datos FACTIUN','Radar FACTIUN'] }
 ];
 const FAMILIA_DE = {}; FAMILIAS.forEach(f=>f.t.forEach(n=>{ FAMILIA_DE[n]=f.k; }));
 function familiaDe(p){ return FAMILIA_DE[p && p.name] || 'otras'; }
@@ -1140,19 +1143,49 @@ document.querySelectorAll('.tabla-link[data-picto]').forEach(a => a.insertAdjace
    ===================================================================== */
 const PROJECTS = [
   {
-    name: "Notion ventas",
+    name: "Notion compras",
     status: "live",
-    objetivo: "Consulta proyectos, compradores, procesos de compra, transacciones y competencia. Accede también a proveedores y componentes.",
+    objetivo: "Busca componentes mecánicos y eléctricos, revisa proveedores y logística, y compara referencias con sus fuentes.",
     stack: "Atlas · lectura de Notion · acceso protegido",
-    url: "https://maps-9rd.pages.dev/herramientas/notion-ventas-comercial.html",
+    url: "https://maps-9rd.pages.dev/herramientas/notion-compras.html",
     links: [
-      { label: "Abrir ventas", url: "https://maps-9rd.pages.dev/herramientas/notion-ventas-comercial.html" },
-      { label: "Proveedores y componentes", url: "https://maps-9rd.pages.dev/herramientas/notion-ventas.html" },
-      { label: "Abrir Notion", url: "https://app.notion.com/p/4186931d643681a8bfbec26f51d94129" }
+      { label: "Abrir compras", url: "https://maps-9rd.pages.dev/herramientas/notion-compras.html" }
     ],
     repo: "https://github.com/IMoriana3/Atlas",
     updated: "2026-11-14",
     version: "1.0",
+    docId: "notion-compras",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Busca por familia, nombre, fabricante o referencia MPN. Abre la ficha para consultar especificaciones, revisión y fuentes.",
+      "Revisa fabricantes y distribuidores, sus capacidades, centros, canales y territorios documentados.",
+      "Consulta disponibilidad y logística cuando estén documentadas, con su fuente y fecha. Un dato desconocido no equivale a cero.",
+      "Selecciona hasta cuatro componentes para comparar sus datos. Una alternativa registrada necesita comprobar aplicación, revisión y condiciones de sustitución.",
+      "Los precios son opcionales y sólo se registran cuando se encuentran publicados. Su ausencia no genera solicitudes de oferta.",
+      "Los recuentos describen los registros cargados. Revisa las fuentes y los pendientes de investigación antes de tomar una decisión."
+    ],
+    pendientes: [
+      { done:true, text:"Dar a Compras una tarjeta y una guía propias en la familia Cartera." },
+      { done:false, text:"Comprobar la lectura de datos de Notion con una sesión autorizada en producción." }
+    ],
+    historial: [
+      { date:"2026-11-14", ver:"1.0", note:"Acceso propio a Notion compras: componentes, proveedores, logística, comparador y precios públicos opcionales. La tarjeta Notion ventas conserva el trabajo comercial." }
+    ]
+  },
+  {
+    name: "Notion ventas",
+    status: "live",
+    objetivo: "Consulta proyectos y permisos, compradores, procesos de compra, transacciones y competencia por clientes.",
+    stack: "Atlas · lectura de Notion · acceso protegido",
+    url: "https://maps-9rd.pages.dev/herramientas/notion-ventas-comercial.html",
+    links: [
+      { label: "Abrir ventas", url: "https://maps-9rd.pages.dev/herramientas/notion-ventas-comercial.html" },
+      { label: "Abrir Notion", url: "https://app.notion.com/p/4186931d643681a8bfbec26f51d94129" }
+    ],
+    repo: "https://github.com/IMoriana3/Atlas",
+    updated: "2026-11-14",
+    version: "1.1",
     docId: "notion-ventas",
     docUrl: "",
     download: "",
@@ -1161,16 +1194,15 @@ const PROJECTS = [
       "Revisa autorizaciones recientes, permisos con vigencia acreditada y el estado de compra del suministro. Un permiso no demuestra que la compra siga abierta.",
       "Consulta quién compra y decide, cómo admite proveedores cada cuenta y qué requisitos públicos exige.",
       "Relaciona compraventas con las plantas afectadas y adjudicaciones con clientes, proveedores y productos documentados.",
-      "Los recuentos describen los registros cargados. Si quedan páginas por consultar, la pantalla lo indica y permite continuar.",
-      "En Proveedores y componentes, busca familias o referencias y compara hasta cuatro componentes, con capacidades, logística, fuentes y condiciones de sustitución.",
-      "Los precios de componentes son opcionales cuando se encuentran publicados. Su ausencia no genera tareas para solicitarlos."
+      "Los recuentos describen los registros cargados. Si quedan páginas por consultar, la pantalla lo indica y permite continuar."
     ],
     pendientes: [
-      { done:true, text:"Ampliar las bases de Notion y los radares para ventas y proveedores, conservando sus datos, alcance y horarios." },
-      { done:true, text:"Publicar las pantallas de ventas y proveedores en Atlas." },
+      { done:true, text:"Ampliar las bases de Notion y los radares para ventas, conservando sus datos, alcance y horarios." },
+      { done:true, text:"Publicar la pantalla comercial de ventas en Atlas." },
       { done:false, text:"Comprobar la lectura de datos de Notion con una sesión autorizada en producción." }
     ],
     historial: [
+      { date:"2026-11-14", ver:"1.1", note:"La tarjeta se dedica a ventas. Los componentes, proveedores y la logística tienen su propio acceso en Notion compras, dentro de Cartera." },
       { date:"2026-11-14", ver:"1.0", note:"Publicadas en Atlas las pantallas Ventas y Proveedores y componentes, con sus dos accesos en esta tarjeta. La comprobación de lectura con una sesión autorizada queda pendiente." },
       { date:"2026-11-14", ver:"1.0 · candidata", note:"Acceso único a ventas y a proveedores/componentes. Ventas reúne proyectos/permisos, compradores, procesos de compra, transacciones y competencia; proveedores conserva familias, comparación y pendientes. Notion como fuente de datos." }
     ]
