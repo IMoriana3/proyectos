@@ -68,7 +68,7 @@ async function abrir(browser, respuesta) {
     return c && c.querySelector('.ver')?.textContent === v;
   }, nueva, { timeout: 5000 });
   check('version de la release', await card.locator('.ver').textContent(), nueva);
-  check('fecha de la release', await card.locator('.upd').textContent(), 'act. 2026-09-01');
+  check('fecha de la release', await card.locator('.upd').textContent(), 'al día el 1 sep 2026');
   // y queda cacheada para no gastar el limite de la API en cada recarga
   const cache = await page.evaluate(() => localStorage.getItem('rel:IMoriana3/scada'));
   check('la release se cachea', JSON.parse(cache).ver, nueva);
@@ -98,7 +98,7 @@ async function abrir(browser, respuesta) {
   const vMano = await card.locator('.ver').textContent();
   const fMano = await card.locator('.upd').textContent();
   check('sin API, la version no se vacia', vMano.length > 0, 'true');
-  check('sin API, la fecha no se vacia', fMano !== 'act. —', 'true');
+  check('sin API, la fecha no se vacia', fMano !== 'sin fecha' && fMano.length > 0, 'true');
   check('sin API, no cachea nada', await page.evaluate(() => localStorage.getItem('rel:IMoriana3/scada')), 'null');
   await page.close();
 
@@ -255,7 +255,7 @@ async function abrir(browser, respuesta) {
   check('dos enlaces propios visibles, no Abrir genérico',
     await gorraiz.locator('.acts a').filter({hasText:/^(?:SCADA|Informe)/}).count(), 2);
   check('el pictograma original sigue presente', await gorraiz.locator('.picto path').count() > 0, true);
-  check('la ficha refleja la actualización', await gorraiz.locator('.upd').textContent(), 'act. 2026-10-22');
+  check('la ficha refleja la actualización', await gorraiz.locator('.upd').textContent(), 'al día el 22 oct 2026');
   await page.close();
 
   await browser.close();

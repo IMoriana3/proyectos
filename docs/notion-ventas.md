@@ -42,3 +42,8 @@ Para buscar componentes, revisar fabricantes y distribuidores o comparar referen
 La pantalla comercial se publicó en Atlas el **2026-11-14**: [publicación verificada](https://github.com/IMoriana3/Atlas/actions/runs/43640335779). La tarjeta del portal pasa a la versión **1.1** al separar el acceso de Compras; conserva la ruta y el alcance de Ventas.
 
 La comprobación de lectura de datos con una sesión autorizada en producción queda pendiente. Las pruebas locales y de integración no acreditan esa lectura real.
+
+## Revisión 2026-11-15
+
+La revisión de las tres tarjetas Notion y lo que quedó abierto está en
+[`docs/audit/tarjetas-notion-20261115.md`](audit/tarjetas-notion-20261115.md). De ahí sale que el botón de Notion se rotule con el nombre real de su destino, «Mercado · oportunidades y transacciones», y el aviso de la línea del pie de la tarjeta, que es esta misma comprobación pendiente dicha donde se lee sin abrir la ficha.

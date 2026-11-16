@@ -19,3 +19,8 @@ Si JavaScript está desactivado o el módulo de compatibilidad no carga, queda d
 El Panel mantiene la tarjeta, esta documentación y la compatibilidad de los enlaces antiguos. La exportación pública original se conserva como archivo histórico de auditoría, fuera del paquete web; el proceso activo de actualización pertenece a Atlas.
 
 Los bancos de este repositorio verifican el traslado de parámetros y la navegación de la tarjeta y del alias. En las pruebas de navegador, Atlas se sustituye por un destino interceptado: comprueban la navegación, no la autenticación ni el funcionamiento del visor de Atlas. Las pruebas funcionales de datos, filtros, fichas y relaciones se mantienen en Atlas junto a la pantalla que utilizan.
+
+## Revisión 2026-11-15
+
+La revisión de las tres tarjetas Notion y lo que quedó abierto está en
+[`docs/audit/tarjetas-notion-20261115.md`](audit/tarjetas-notion-20261115.md). De ahí salen el paso de la tarjeta a la familia Cartera, junto a Compras y Ventas, la declaración de que comparte visor con Radar FACTIUN y el aviso de la línea del pie, que recoge el alcance real de los bancos de este repositorio: navegación del alias, no autenticación ni visor de Atlas.
