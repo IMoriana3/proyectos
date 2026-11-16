@@ -1058,6 +1058,9 @@ function HUELLA(pl){
    explican junto a `.picto`, en el CSS. Una herramienta nueva sin icono sale con la célula genérica.
    (Los módulos de planta —PLANT_MODULES— no tienen ficha de herramienta, así que tampoco icono.) */
 const PICTOS = {
+  "BI · Evolución":
+    '<path class="f" d="M4 4v16h16"/><path d="M4 20h16M4 4v16"/>'
+    + '<path class="a" d="m7 15 4-4 3 2 5-6"/><circle class="af" cx="19" cy="7" r="1.4"/>',
   "Notion compras":
     '<path class="f" d="m3 7 9-4 9 4v10l-9 4-9-4z"/><path d="m3 7 9 4 9-4M12 11v10"/>'
     + '<path class="a" d="m8 4.8 9 4v4.5l-3 1.3v-4.5l-9-4"/>',
@@ -1174,7 +1177,7 @@ const FAMILIAS = [
   { k:'simulacion', n:'Simulación', c:'#F2C94C', t:['Núcleo de cálculo SolarGPT','Simulador de backtracking','Simulador de radiación difusa','Simulador de abanderamiento','Producción 3D por string','Careo SolarGPT ↔ PVSyst','Simulador de batería','Análisis meteorológico','Gemelo digital de seguidor y control'] },
   { k:'obra', n:'Obra y puesta en marcha', c:'#F09030', t:['Control de obra','Seguimiento PEM','Visor de levantamiento','Visor de geometría as-built','TCU Toolbox','IPs de plantas'] },
   { k:'operacion', n:'Operación', c:'#5BBF8A', t:['SCADA','SCADA fija · Victron VRM','Importador de logs de NCU','Medidor de tráfico','Mapa Modbus','Agente Modbus y collector','Simulador de planta equipo a equipo','Instalación cubierta Gorraiz'] },
-  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV','Notion compras','Notion ventas','Notion ingeniería','Diccionario de datos FACTIUN','Radar FACTIUN'] }
+  { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV','BI · Evolución','Notion compras','Notion ventas','Notion ingeniería','Diccionario de datos FACTIUN','Radar FACTIUN'] }
 ];
 const FAMILIA_DE = {}; FAMILIAS.forEach(f=>f.t.forEach(n=>{ FAMILIA_DE[n]=f.k; }));
 function familiaDe(p){ return FAMILIA_DE[p && p.name] || 'otras'; }
@@ -1187,6 +1190,39 @@ document.querySelectorAll('.tabla-link[data-picto]').forEach(a => a.insertAdjace
    PROYECTOS  —  edita SOLO este array para mantener el panel al día.
    ===================================================================== */
 const PROJECTS = [
+  {
+    name: "BI · Evolución",
+    status: "build",
+    objetivo: "Cómo cambia la cartera comercial día a día: % de permisos vigentes, oportunidades estancadas, qué cambió entre dos fechas y cuánto tarda cada etapa.",
+    stack: "Atlas · cortes diarios de Notion en Supabase · acceso protegido",
+    url: "https://maps-9rd.pages.dev/herramientas/bi-evolucion.html",
+    links: [
+      { label: "Abrir evolución", url: "https://maps-9rd.pages.dev/herramientas/bi-evolucion.html" }
+    ],
+    repo: "https://github.com/IMoriana3/Atlas",
+    updated: "2026-11-16",
+    version: "1.0",
+    verificacion: { estado:"pendiente", resumen:"falta conectar el almacén y tomar el primer corte", texto:"La pantalla y las tablas de Supabase existen, pero Atlas todavía no tiene las variables BI_SUPABASE_URL y BI_SUPABASE_KEY, y la tarea diaria aún no ha tomado ningún corte. Hasta entonces la pantalla dice qué falta en vez de enseñar ceros." },
+    relacionadas: ["Notion ventas","Notion compras"],
+    docId: "bi-evolucion",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Cada día se toma una foto de las bases comerciales de Notion (proyectos, oportunidades, cuentas, operaciones y contratos) y se guarda.",
+      "Arriba, el último corte: % de proyectos con permiso vigente y % de oportunidades estancadas, con su cambio respecto al corte anterior.",
+      "Las dos gráficas enseñan la tendencia. Un día sin base es un hueco, no un 0 %; el eje va siempre de 0 a 100 %.",
+      "«Qué cambió entre dos cortes» compara dos fechas campo a campo: permisos que dejan de estar vigentes, oportunidades que cambian de etapa.",
+      "«Etapas» mide cuánto tarda cada una. Solo cuentan las estancias terminadas; las que siguen abiertas van aparte."
+    ],
+    pendientes: [
+      { done:true, text:"Crear las tablas del almacén en Supabase." },
+      { done:false, text:"Añadir BI_SUPABASE_URL y BI_SUPABASE_KEY en el entorno de Atlas (Cloudflare Pages)." },
+      { done:false, text:"Añadir los secretos de la tarea diaria en GitHub y tomar el primer corte." }
+    ],
+    historial: [
+      { date:"2026-11-16", ver:"1.0", note:"Pantalla de evolución en Atlas sobre los cortes diarios: tendencias, comparación entre fechas y tiempo por etapa. Tablas creadas en Supabase; falta conectar Atlas y tomar el primer corte." }
+    ]
+  },
   {
     name: "Notion compras",
     status: "live",
