@@ -2243,8 +2243,8 @@ const PROJECTS = [
     stack: "HTML/JS local · motor de layout en el navegador (UTM + erosión exacta del setback + knapsack multi-talla) · canvas 2D · careo contra solargpt_core.layout_v2",
     url: "https://imoriana3.github.io/proyectos/generador-layout.html",
     repo: "https://github.com/imoriana3/proyectos",
-    updated: "2026-09-28",
-    version: "1.10.0",
+    updated: "2026-11-16",
+    version: "1.11.0",
     docId: "generador-layout",
     docUrl: "",
     download: "",
@@ -2281,6 +2281,7 @@ const PROJECTS = [
       { done:false, text:"El canal factiun_sizing: el gate ya lo lee; falta que el Comparador lo publique (propuesto en CONTRATO, Puntos abiertos)." }
     ],
     historial: [
+      { date:"2026-11-16", ver:"1.11.0", note:"Exclusiones sugeridas desde OSM: cauces y agua, carreteras, caminos, líneas eléctricas y subestaciones, ferrocarril y edificios dentro de la parcela, cada categoría con el retranqueo que pone quien firma (sin distancias legales por defecto: sin él no se busca). Entran al motor junto con las dibujadas, en naranja, se guardan en la sesión y se quitan solas. Espejo de solargpt_core.osm_exclusions careado contra el core: la consulta a Overpass carácter a carácter y el área que quita cada caso dentro del 1 %." },
       { date:"2026-09-28", ver:"1.10.0", note:"Unifica el piloto X/Y y los barridos en el Optimizar existente: un botón, un criterio y una comparación de azimut, disposición, offsets, módulos, mesas y potencia. Aplicación con precisión completa y rechazo si cambia el proyecto. Aleatorio por defecto; GP sigue experimental." },
       { date:"2026-09-28", ver:"1.9.1", note:"La comparación muestra azimut del eje y de filas, pitch, retranqueo, GCR y origen X/Y de cada resultado. Declara qué cambia, cuánto aumenta la potencia instalada y el reparto de mesas por talla. Los valores se incluyen también en el informe JSON." },
       { date:"2026-09-28", ver:"1.9.0", note:"Piloto de optimización X/Y con aprendizaje por parcela, comparación aleatoria, vista previa, aplicación reproducible e informe de evaluaciones. Experimental; no cambia la generación por defecto." },

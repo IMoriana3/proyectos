@@ -6,6 +6,27 @@
 **Abre y genera**: `generador-layout.html` en este repo, sin levantar nada.
 El motor SolarGPT es opcional y da el número canónico.
 
+## Exclusiones sugeridas desde OSM — v1.11.0
+
+En **Parcela**, abre **🧭 Exclusiones sugeridas desde OSM**, marca las categorías (cauces y
+agua, carreteras, caminos y accesos, líneas eléctricas y subestaciones, ferrocarril,
+edificios) y pon a cada una **su retranqueo en metros**. No hay distancias legales por
+defecto: la servidumbre de un cauce, la línea de edificación de una carretera o el pasillo
+de una línea dependen de la norma, de la vía o de la tensión, y de quien firma; sin
+retranqueo, la ficha no busca y dice cuál falta.
+
+**Buscar en OSM** pide a Overpass lo que hay en la parcela (más un margen igual al mayor
+retranqueo, mínimo 10 m) y lo convierte en exclusiones: las líneas como banda de ancho
+2 × retranqueo y las áreas como su polígono ensanchado. Salen en **naranja**, entran al
+motor junto con las que dibujas, se guardan en la sesión y **Quitar las de OSM** las quita
+sin tocar las tuyas. Es una PROPUESTA: revísala sobre la ortofoto. Datos © OpenStreetMap
+contributors (ODbL).
+
+Lo que no hace: una isla dentro de un embalse se excluye entera (el motor resta anillos
+simples) y un nodo suelto (torre, poste) no entra. Careo: `tests/test_osm_exclusiones.js`
+contra `solargpt_core.osm_exclusions` (consulta idéntica, área que quita cada caso dentro
+del 1 %) y `tests/test_osm_exclusiones_ui.js` con la ficha ejecutada.
+
 ## Un único Optimizar — v1.10.0
 
 En **Implantación**, pulsa **Optimizar**. Abre el buscador existente con la parcela y

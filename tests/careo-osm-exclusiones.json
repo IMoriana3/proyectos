@@ -1,0 +1,379 @@
+{
+ "procedencia": {
+  "generador": "tests/gen_careo_osm_exclusiones.py",
+  "core": "solargpt_core.osm_exclusions",
+  "core_commit": "a2ea1dd36a09d81f71499167dd57f0ec718de5df"
+ },
+ "lat": 41.57634,
+ "lon": -0.79814,
+ "parcela_lonlat": [
+  [
+   -0.79814,
+   41.57634
+  ],
+  [
+   -0.7933366605095798,
+   41.57634
+  ],
+  [
+   -0.7933366605095798,
+   41.57905394970147
+  ],
+  [
+   -0.79814,
+   41.57905394970147
+  ],
+  [
+   -0.79814,
+   41.57634
+  ]
+ ],
+ "overpass": {
+  "elements": [
+   {
+    "type": "way",
+    "id": 1,
+    "tags": {
+     "waterway": "stream"
+    },
+    "geometry": [
+     {
+      "lat": 41.576159070019905,
+      "lon": -0.7957383302547899
+     },
+     {
+      "lat": 41.579234879681565,
+      "lon": -0.7957383302547899
+     }
+    ]
+   },
+   {
+    "type": "way",
+    "id": 2,
+    "tags": {
+     "building": "yes"
+    },
+    "geometry": [
+     {
+      "lat": 41.576701859960195,
+      "lon": -0.797659666050958
+     },
+     {
+      "lat": 41.576701859960195,
+      "lon": -0.7974194990764369
+     },
+     {
+      "lat": 41.576973254930344,
+      "lon": -0.7974194990764369
+     },
+     {
+      "lat": 41.576973254930344,
+      "lon": -0.797659666050958
+     },
+     {
+      "lat": 41.576701859960195,
+      "lon": -0.797659666050958
+     }
+    ]
+   },
+   {
+    "type": "way",
+    "id": 3,
+    "tags": {
+     "highway": "track"
+    },
+    "geometry": [
+     {
+      "lat": 41.57769697485073,
+      "lon": -0.7951379128184874
+     },
+     {
+      "lat": 41.57769697485073,
+      "lon": -0.7939370779458824
+     },
+     {
+      "lat": 41.57860162475122,
+      "lon": -0.7939370779458824
+     },
+     {
+      "lat": 41.57860162475122,
+      "lon": -0.7951379128184874
+     },
+     {
+      "lat": 41.57769697485073,
+      "lon": -0.7951379128184874
+     }
+    ]
+   },
+   {
+    "type": "relation",
+    "id": 9,
+    "tags": {
+     "natural": "water",
+     "type": "multipolygon"
+    },
+    "members": [
+     {
+      "type": "way",
+      "ref": 91,
+      "role": "outer",
+      "geometry": [
+       {
+        "lat": 41.57814929980098,
+        "lon": -0.7969391651273949
+       },
+       {
+        "lat": 41.57814929980098,
+        "lon": -0.7963387476910925
+       },
+       {
+        "lat": 41.57860162475122,
+        "lon": -0.7963387476910925
+       }
+      ]
+     },
+     {
+      "type": "way",
+      "ref": 92,
+      "role": "outer",
+      "geometry": [
+       {
+        "lat": 41.57814929980098,
+        "lon": -0.7969391651273949
+       },
+       {
+        "lat": 41.57860162475122,
+        "lon": -0.7969391651273949
+       },
+       {
+        "lat": 41.57860162475122,
+        "lon": -0.7963387476910925
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "way",
+    "id": 5,
+    "tags": {
+     "power": "line"
+    },
+    "geometry": [
+     {
+      "lat": 41.57887301972137,
+      "lon": -0.7982600834872604
+     },
+     {
+      "lat": 41.57887301972137,
+      "lon": -0.7932165770223194
+     }
+    ]
+   },
+   {
+    "type": "way",
+    "id": 6,
+    "tags": {
+     "railway": "rail"
+    },
+    "geometry": [
+     {
+      "lat": 41.57932534467162,
+      "lon": -0.7982600834872604
+     },
+     {
+      "lat": 41.57932534467162,
+      "lon": -0.7932165770223194
+     }
+    ]
+   },
+   {
+    "type": "way",
+    "id": 7,
+    "tags": {
+     "amenity": "bench"
+    },
+    "geometry": [
+     {
+      "lat": 41.576430464990054,
+      "lon": -0.7980199165127395
+     },
+     {
+      "lat": 41.576439511489056,
+      "lon": -0.7980079081640135
+     }
+    ]
+   }
+  ]
+ },
+ "consulta": {
+  "margen_m": 50.0,
+  "bbox": [
+   41.57589033949368,
+   -0.7987411024997003,
+   41.57950361020779,
+   -0.7927355580098795
+  ],
+  "categorias": [
+   "cauces",
+   "edificios",
+   "lineas_electricas"
+  ],
+  "texto": "[out:json][timeout:90];\n(\n  way[\"waterway\"~\"^(river|stream|canal|ditch|drain|riverbank)$\"](41.57589033949368,-0.7987411024997003,41.57950361020779,-0.7927355580098795);\n  relation[\"waterway\"~\"^(river|stream|canal|ditch|drain|riverbank)$\"](41.57589033949368,-0.7987411024997003,41.57950361020779,-0.7927355580098795);\n  way[\"natural\"~\"^(water)$\"](41.57589033949368,-0.7987411024997003,41.57950361020779,-0.7927355580098795);\n  relation[\"natural\"~\"^(water)$\"](41.57589033949368,-0.7987411024997003,41.57950361020779,-0.7927355580098795);\n  way[\"building\"](41.57589033949368,-0.7987411024997003,41.57950361020779,-0.7927355580098795);\n  relation[\"building\"](41.57589033949368,-0.7987411024997003,41.57950361020779,-0.7927355580098795);\n  way[\"power\"~\"^(line|minor_line|cable|substation)$\"](41.57589033949368,-0.7987411024997003,41.57950361020779,-0.7927355580098795);\n  relation[\"power\"~\"^(line|minor_line|cable|substation)$\"](41.57589033949368,-0.7987411024997003,41.57950361020779,-0.7927355580098795);\n);\nout geom tags;\n"
+ },
+ "consulta_ui": {
+  "margen_m": 10.0,
+  "categorias": [
+   "cauces"
+  ],
+  "texto": "[out:json][timeout:90];\n(\n  way[\"waterway\"~\"^(river|stream|canal|ditch|drain|riverbank)$\"](41.57625006789874,-0.79826022049994,41.57914388180273,-0.7932164400096398);\n  relation[\"waterway\"~\"^(river|stream|canal|ditch|drain|riverbank)$\"](41.57625006789874,-0.79826022049994,41.57914388180273,-0.7932164400096398);\n  way[\"natural\"~\"^(water)$\"](41.57625006789874,-0.79826022049994,41.57914388180273,-0.7932164400096398);\n  relation[\"natural\"~\"^(water)$\"](41.57625006789874,-0.79826022049994,41.57914388180273,-0.7932164400096398);\n);\nout geom tags;\n"
+ },
+ "leidos": [
+  {
+   "ref": "osm:way/1",
+   "category": "cauces",
+   "key": "waterway",
+   "value": "stream",
+   "kind": "line",
+   "n_vertices": 2
+  },
+  {
+   "ref": "osm:way/2",
+   "category": "edificios",
+   "key": "building",
+   "value": "yes",
+   "kind": "area",
+   "n_vertices": 5
+  },
+  {
+   "ref": "osm:way/3",
+   "category": "caminos",
+   "key": "highway",
+   "value": "track",
+   "kind": "line",
+   "n_vertices": 5
+  },
+  {
+   "ref": "osm:relation/9",
+   "category": "cauces",
+   "key": "natural",
+   "value": "water",
+   "kind": "area",
+   "n_vertices": 5
+  },
+  {
+   "ref": "osm:way/5",
+   "category": "lineas_electricas",
+   "key": "power",
+   "value": "line",
+   "kind": "line",
+   "n_vertices": 2
+  },
+  {
+   "ref": "osm:way/6",
+   "category": "ferrocarril",
+   "key": "railway",
+   "value": "rail",
+   "kind": "line",
+   "n_vertices": 2
+  }
+ ],
+ "casos": [
+  {
+   "nombre": "arroyo_y_embalse_b5",
+   "retranqueos": {
+    "cauces": 5.0
+   },
+   "area_m2": 6611.4,
+   "por_categoria": {
+    "cauces": 6611.4
+   },
+   "avisos": []
+  },
+  {
+   "nombre": "edificio_b0",
+   "retranqueos": {
+    "edificios": 0.0
+   },
+   "area_m2": 603.8,
+   "por_categoria": {
+    "edificios": 603.8
+   },
+   "avisos": []
+  },
+  {
+   "nombre": "edificio_b4",
+   "retranqueos": {
+    "edificios": 4.0
+   },
+   "area_m2": 1055.3,
+   "por_categoria": {
+    "edificios": 1055.3
+   },
+   "avisos": []
+  },
+  {
+   "nombre": "camino_en_anillo_b5",
+   "retranqueos": {
+    "caminos": 5.0
+   },
+   "area_m2": 3990.9,
+   "por_categoria": {
+    "caminos": 3990.9
+   },
+   "avisos": []
+  },
+  {
+   "nombre": "tendido_b6",
+   "retranqueos": {
+    "lineas_electricas": 6.0
+   },
+   "area_m2": 4807.0,
+   "por_categoria": {
+    "lineas_electricas": 4807.0
+   },
+   "avisos": []
+  },
+  {
+   "nombre": "via_fuera_b10_no_entra",
+   "retranqueos": {
+    "ferrocarril": 10.0
+   },
+   "area_m2": 0.0,
+   "por_categoria": {
+    "ferrocarril": 0.0
+   },
+   "avisos": []
+  },
+  {
+   "nombre": "via_fuera_b40_entra_10m",
+   "retranqueos": {
+    "ferrocarril": 40.0
+   },
+   "area_m2": 3948.4,
+   "por_categoria": {
+    "ferrocarril": 3948.4
+   },
+   "avisos": []
+  },
+  {
+   "nombre": "todo_junto",
+   "retranqueos": {
+    "cauces": 5.0,
+    "edificios": 4.0,
+    "caminos": 5.0,
+    "lineas_electricas": 6.0,
+    "ferrocarril": 40.0
+   },
+   "area_m2": 20194.4,
+   "por_categoria": {
+    "cauces": 6611.4,
+    "edificios": 1055.3,
+    "caminos": 3990.9,
+    "lineas_electricas": 4807.0,
+    "ferrocarril": 3948.4
+   },
+   "avisos": []
+  }
+ ]
+}
