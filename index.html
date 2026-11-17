@@ -1058,6 +1058,9 @@ function HUELLA(pl){
    explican junto a `.picto`, en el CSS. Una herramienta nueva sin icono sale con la célula genérica.
    (Los módulos de planta —PLANT_MODULES— no tienen ficha de herramienta, así que tampoco icono.) */
 const PICTOS = {
+  "Simulador de apuntamiento · ISS-D60":
+    '<circle class="f" cx="12" cy="12" r="9"/><circle class="a" cx="12" cy="12" r="4.8"/><circle class="af" cx="12" cy="12" r="1.8"/>'
+    + '<path d="M12 1v4M12 19v4M1 12h4M19 12h4"/>',
   "BI · Evolución":
     '<path class="f" d="M4 4v16h16"/><path d="M4 20h16M4 4v16"/>'
     + '<path class="a" d="m7 15 4-4 3 2 5-6"/><circle class="af" cx="19" cy="7" r="1.4"/>',
@@ -1175,7 +1178,7 @@ function PICTO(p){
 const FAMILIAS = [
   { k:'diseno', n:'Diseño y oferta', c:'#68C0D8', t:['Diseño de red de comunicaciones','Generador de implantaciones','Comparador de estructuras','Alta de planta','Modelo de propagación RF','Diagnóstico de cobertura Zigbee','Expediente de homologación'] },
   { k:'simulacion', n:'Simulación', c:'#F2C94C', t:['Núcleo de cálculo SolarGPT','Simulador de backtracking','Simulador de radiación difusa','Simulador de abanderamiento','Producción 3D por string','Careo SolarGPT ↔ PVSyst','Simulador de batería','Análisis meteorológico','Gemelo digital de seguidor y control'] },
-  { k:'obra', n:'Obra y puesta en marcha', c:'#F09030', t:['Control de obra','Seguimiento PEM','Visor de levantamiento','Visor de geometría as-built','TCU Toolbox','IPs de plantas'] },
+  { k:'obra', n:'Obra y puesta en marcha', c:'#F09030', t:['Control de obra','Seguimiento PEM','Visor de levantamiento','Visor de geometría as-built','TCU Toolbox','Simulador de apuntamiento · ISS-D60','IPs de plantas'] },
   { k:'operacion', n:'Operación', c:'#5BBF8A', t:['SCADA','SCADA fija · Victron VRM','Importador de logs de NCU','Medidor de tráfico','Mapa Modbus','Agente Modbus y collector','Simulador de planta equipo a equipo','Instalación cubierta Gorraiz'] },
   { k:'cartera', n:'Cartera', c:'#E84858', t:['Cartera de proyectos','Atlas FACTIUN · Plantas FV','BI · Evolución','Notion compras','Notion ventas','Notion ingeniería','Diccionario de datos FACTIUN','Radar FACTIUN'] }
 ];
@@ -1190,6 +1193,38 @@ document.querySelectorAll('.tabla-link[data-picto]').forEach(a => a.insertAdjace
    PROYECTOS  —  edita SOLO este array para mantener el panel al día.
    ===================================================================== */
 const PROJECTS = [
+  {
+    name: "Simulador de apuntamiento · ISS-D60",
+    status: "build",
+    objetivo: "Audita la precisión de apuntamiento solar con CSV ISS-D60 y seguimiento TCU: DNI, X filtrada, BT, viento/seguridad, límites ±55°, parada +30° y recuperación.",
+    stack: "HTML y JavaScript local · CSV SUNNER/TCU · gráfica de doble eje · exportación auditable · sin servidor de datos",
+    url: "https://imoriana3.github.io/proyectos/sim-apuntamiento.html",
+    repo: "https://github.com/IMoriana3/proyectos",
+    updated: "2026-11-17",
+    version: "0.1",
+    verificacion: { estado:"pendiente", resumen:"pendiente validación de filtros y despliegue", texto:"La versión web permite importar CSV y calcular sobre datos locales. Falta validar en el navegador publicado la sincronización y cada regla de exclusión frente a históricos de planta. El resultado numérico no equivale a homologación." },
+    relacionadas: ["TCU Toolbox","SCADA"],
+    docId: "apuntamiento",
+    docUrl: "",
+    download: "",
+    uso: [
+      "Importa los CSV del sensor ISS-D60 y los históricos de seguimiento de la TCU. Se pueden unir tramos de un mismo ensayo sin subir datos de planta a la web.",
+      "Elige X filtrada (30072) para el apuntamiento según el montaje comprobado; Y queda disponible como medida perpendicular de diagnóstico. Escala nativa 0,01°.",
+      "Filtra radiación >600 W/m², errores de sensor, backtracking, señal de seguridad, target ±55°, parada sostenida a +30° y recuperación hasta alcanzar la consigna.",
+      "Ajusta el desfase temporal entre ambos registros y las tolerancias de recuperación. No se descartan lecturas por tener desviaciones altas.",
+      "Compara la desviación solar con posición real y objetivo en escalas distintas; consulta muestras, media absoluta y P95; exporta el CSV con todos los motivos de exclusión.",
+      "Ningún registro privado va precargado al repositorio público ni se envía a un servidor. La certificación requiere validación del estado y de la orientación del sensor."
+    ],
+    pendientes: [
+      { done:true, text:"Crear simulador web sin logs de planta precargados y tarjeta independiente en el panel." },
+      { done:false, text:"Validar sincronización horaria y todas las exclusiones con los históricos de planta." },
+      { done:false, text:"Comprobar publicación y ejecución en navegador tras integrar la rama." },
+      { done:false, text:"Confirmar con calidad qué intervalos de limitación y recuperación son excluibles contractualmente." }
+    ],
+    historial: [
+      { date:"2026-11-17", ver:"0.1", note:"Simulador autónomo en el navegador, CSV por minuto, X/Y, comparación con Real/Target, filtros auditables y descarga de resultados. Publicación y validación pendientes." }
+    ]
+  },
   {
     name: "BI · Evolución",
     status: "build",
