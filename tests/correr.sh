@@ -59,6 +59,8 @@ PATRON="${1:-}"
 # aquí y el cambio aparece en el diff, que es justo lo que un recuento que
 # nadie fija no consigue.
 declare -A PISO=(
+  # Comprobación visual ISS-D60: el BT de seis minutos se ve antes de la gráfica, en la banda y en tabla.
+  [test_apuntamiento_exclusiones.js]=13
   [test_generador_inclemencias.js]=45
   [test_abanderamiento_evento.js]=60
   [test_buscador.js]=59
