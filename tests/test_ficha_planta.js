@@ -113,12 +113,13 @@ const CARTERA = {
     const vistaLatina = page.locator('.pcard[data-planta="La Latina 2"] .pviews');
     const deshabilitadas = await vistaLatina.locator('span.btn.off').count();
     const activas = await vistaLatina.locator('a.btn').count();
-    check('La Latina habilita Siting geométrico y 2D, pero no 3D/RF/SCADA',
+    check('La Latina habilita Siting oficial y plano 2D, pero no 3D/RF/SCADA',
       deshabilitadas === 3 && activas === 2, { deshabilitadas, activas });
     const enlaces = await vistaLatina.locator('a.btn').evaluateAll(a => a.map(x => x.getAttribute('href')));
-    check('los dos enlaces apuntan al visor de La Latina, no a El Burgo',
+    check('Siting abre la aplicación oficial y 2D su visor de La Latina',
       enlaces.some(x => x.includes('latina-2.html?modo=2d')) &&
-      enlaces.some(x => x.includes('latina-2.html?modo=siting')), enlaces);
+      enlaces.some(x => x.includes('https://siting.pages.dev/?planta=latina')) &&
+      !enlaces.some(x => x.includes('latina-2.html?modo=siting')), enlaces);
     const huella = tarjetaLatina.locator('svg.huella');
     check('la tarjeta muestra los 67 centros de TCU de verdad',
       await huella.count()===1 && await huella.locator('circle').count()===67,
@@ -140,12 +141,10 @@ const CARTERA = {
     check('el visor 2D presenta la distinción entre centros y mesas',
       /PLANO DE CENTROS, NO DE MESAS/.test(await vista2d.locator('#mode-note').textContent()));
     await vista2d.close();
-    const vistaSiting=await browser.newPage();
-    await vistaSiting.goto(BASE+'/latina-2.html?modo=siting');
-    check('el Siting distingue la asignación geométrica de cobertura RF',
-      await vistaSiting.locator('svg#map line.links').count()===67 &&
-      /SITING GEOMÉTRICO, NO RF/.test(await vistaSiting.locator('#mode-note').textContent()));
-    await vistaSiting.close();
+    const html2d=(await (await page.request.get(BASE+'/latina-2.html')).text());
+    check('el visor 2D no contiene enlace al antiguo Siting paralelo',
+      !html2d.includes('href="?modo=siting"') &&
+      html2d.includes('https://siting.pages.dev/?planta=latina'));
 
 
     // ── la ficha ──
