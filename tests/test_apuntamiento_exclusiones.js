@@ -40,6 +40,26 @@ function check(name,cond,detail){
  await page.locator('#bt').uncheck();
  check('sin filtro BT, los 15 minutos quedan admitidos', (await page.locator('#n').innerText()).trim()==='15');
  check('sin filtro BT desaparecen las exclusiones', (await page.locator('#exclusion-bar .exclusion-range').count())===0);
+ const legendNoTcu=await page.locator('#series-legend').innerText();
+ check('sin TCU, la curva naranja se identifica como irradiancia y no target',legendNoTcu.includes('Irradiancia ISS-D60')&&!legendNoTcu.includes('Target TCU'),legendNoTcu);
+ const dnimeta=await page.locator('#irradiancia').evaluate(c=>({min:c.dataset.axisMin,max:Number(c.dataset.axisMax),w:c.width,h:c.height,visible:c.getBoundingClientRect().height>180}));
+ check('gráfica de irradiancia siempre visible, con escala desde cero',dnimeta.min==='0'&&dnimeta.max>=1200&&dnimeta.w>400&&dnimeta.h>180&&dnimeta.visible,dnimeta);
+ const hasOrange=await page.locator('#irradiancia').evaluate(c=>{
+   const g=c.getContext('2d'),d=g.getImageData(0,0,c.width,c.height).data;
+   let count=0;for(let i=0;i<d.length;i+=4){if(d[i]>170&&d[i+1]>70&&d[i+1]<160&&d[i+2]<100)count++}
+   return count;
+ });
+ check('irradiancia aparece dibujada, no sólo declarada en la leyenda',hasOrange>10,hasOrange);
+ const tcu=['datetime;angle;target_angle;backtracking;active_security_position;main_state'];
+ for(let i=8;i<=22;i++)tcu.push('2026-11-10 16:'+String(i).padStart(2,'0')+':15;16.50;16.80;false;0;AUTO');
+ await page.locator('#files').setInputFiles({name:'[NCU-6]_TCU_002_2026-11-10.csv',mimeType:'text/csv',buffer:Buffer.from(tcu.join('\n'),'utf8')});
+ await page.click('#cargar');
+ await page.waitForFunction(()=>document.getElementById('estado')?.textContent.includes('15/15'),{},{timeout:10000});
+ const legendWithTcu=await page.locator('#series-legend').innerText();
+ check('con TCU, la leyenda distingue Real y Target',legendWithTcu.includes('Posición real TCU')&&legendWithTcu.includes('Posición objetivo TCU'),legendWithTcu);
+ const dniWhileTracking=await page.locator('#irradiancia').evaluate(c=>({min:c.dataset.axisMin,max:Number(c.dataset.axisMax),drawn:c.width>0&&c.height>0}));
+ check('al cargar TCU la irradiancia sigue graficada con escala propia',dniWhileTracking.min==='0'&&dniWhileTracking.max>=1200&&dniWhileTracking.drawn,dniWhileTracking);
+ check('la gráfica explica las tres magnitudes y los dos ejes', (await page.locator('#grafica-explicacion').innerText()).includes('Irradiancia en la gráfica inferior'));
  check('la página no produjo errores JavaScript',errors.length===0,errors);
  await browser.close();
  console.log((fail?'FAIL ':'OK   ')+'test_apuntamiento_exclusiones · '+ok+' comprobaciones'+(fail?' · '+fail+' fallos':''));
