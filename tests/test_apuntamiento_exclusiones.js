@@ -20,6 +20,8 @@ function check(name,cond,detail){
  for(let i=8;i<=22;i++){const minute=String(i).padStart(2,'0');data.push('2026-11-10 16:'+minute+':01;0;850;420;100;-30;100;-30;'+(i>=17?1:0));}
  await page.locator('#files').setInputFiles({name:'Log_Sensor_20261110_160800_NCU6_2.csv',mimeType:'text/csv',buffer:Buffer.from(data.join('\n'),'utf8')});
  await page.click('#cargar');
+ // File.text() and CSV parsing are asynchronous: do not inspect a stale placeholder.
+ await page.waitForFunction(()=>document.getElementById('n')?.textContent.trim()==='9',{},{timeout:10000});
  const summary=await page.locator('#exclusion-summary').innerText();
  check('cabecera dice 6 minutos descartados',summary.includes('6 min excluidos'),summary);
  check('BT en cabecera con horas exactas',summary.includes('16:17–16:22'),summary);
