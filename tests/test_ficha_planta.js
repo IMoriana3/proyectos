@@ -103,8 +103,11 @@ const CARTERA = {
     // La Latina 2 ya está en la cartera/tabla IPs y en el alta de Toolbox,
     // pero no debe desaparecer de la sección Plantas ni abrir visores aún sin datos.
     const latina = await tarjeta(page, 'La Latina 2');
-    check('La Latina 2 (24029) aparece como la planta 14',
-      await page.locator('#plants .pcard').count() === 14 && !!latina, latina);
+    const tarjetaLatina = page.locator('.pcard[data-planta="La Latina 2"]');
+    check('La Latina 2 (24029) permanece en Plantas',
+      await page.locator('#plants .pcard').count() >= 14 &&
+      await tarjetaLatina.count() === 1 &&
+      (await tarjetaLatina.locator('.pcode').textContent()).trim() === '24029' && !!latina, latina);
     check('La Latina conserva el estado real Sin comenzar', latina.estado === 'Sin comenzar', latina);
     check('La Latina NO abre SCADA sin PEM', latina.scada === 'APAGADO', latina);
     const vistaLatina = page.locator('.pcard[data-planta="La Latina 2"] .pviews');
