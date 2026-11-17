@@ -113,13 +113,14 @@ const CARTERA = {
     const vistaLatina = page.locator('.pcard[data-planta="La Latina 2"] .pviews');
     const deshabilitadas = await vistaLatina.locator('span.btn.off').count();
     const activas = await vistaLatina.locator('a.btn').count();
-    check('La Latina habilita Siting oficial y plano 2D, pero no 3D/RF/SCADA',
-      deshabilitadas === 3 && activas === 2, { deshabilitadas, activas });
+    check('La Latina habilita Siting, Layout 2D y 3D oficiales, pero no RF ni SCADA',
+      deshabilitadas === 2 && activas === 3, { deshabilitadas, activas });
     const enlaces = await vistaLatina.locator('a.btn').evaluateAll(a => a.map(x => x.getAttribute('href')));
-    check('Siting abre la aplicación oficial y 2D su visor de La Latina',
-      enlaces.some(x => x.includes('latina-2.html?modo=2d')) &&
+    check('La Latina enlaza los tres visores canónicos, sin duplicados',
       enlaces.some(x => x.includes('https://siting.pages.dev/?planta=latina')) &&
-      !enlaces.some(x => x.includes('latina-2.html?modo=siting')), enlaces);
+      enlaces.some(x => x.includes('cobertura-zigbee.imoriana3.workers.dev/plano.html?planta=latina')) &&
+      enlaces.some(x => x.includes('cobertura-zigbee.imoriana3.workers.dev/terreno.html?planta=latina')) &&
+      enlaces.every(x => !x.includes('latina-2.html')), enlaces);
     const huella = tarjetaLatina.locator('svg.huella');
     check('la tarjeta muestra los 67 centros de TCU de verdad',
       await huella.count()===1 && await huella.locator('circle').count()===67,
@@ -134,17 +135,15 @@ const CARTERA = {
     });
     check('fuente única de 67 TCU, CT 35/32 y dos estaciones',
       fuente.n===67 && fuente.ct1===35 && fuente.ct2===32 && fuente.hsu===2, fuente);
-    const vista2d=await browser.newPage();
-    await vista2d.goto(BASE+'/latina-2.html?modo=2d');
-    check('el visor 2D carga 67 centros seleccionables',
-      await vista2d.locator('svg#map circle.tcu').count()===67);
-    check('el visor 2D presenta la distinción entre centros y mesas',
-      /PLANO DE CENTROS, NO DE MESAS/.test(await vista2d.locator('#mode-note').textContent()));
-    await vista2d.close();
     const html2d=(await (await page.request.get(BASE+'/latina-2.html')).text());
-    check('el visor 2D no contiene enlace al antiguo Siting paralelo',
-      !html2d.includes('href="?modo=siting"') &&
-      html2d.includes('https://siting.pages.dev/?planta=latina'));
+    check('la antigua ruta 2D ya es solo redirección, no un visor propio',
+      html2d.includes('location.replace(url)') &&
+      html2d.includes('cobertura-zigbee.imoriana3.workers.dev/plano.html?planta=latina'));
+    check('el alias conserva enlace a Siting real, no Siting paralelo',
+      html2d.includes('https://siting.pages.dev/?planta=latina') &&
+      !html2d.includes('svg id="map"'));
+    check('el alias ofrece también la topografía 3D oficial',
+      html2d.includes('cobertura-zigbee.imoriana3.workers.dev/terreno.html?planta=latina'));
 
 
     // ── la ficha ──
