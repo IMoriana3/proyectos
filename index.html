@@ -2923,14 +2923,15 @@ const PLANTS = [
       cobertura:  COB+"index.html?planta=bagnarelli",
   }},
   /* La Latina 2 (24029): 67 centros TCU, NCU y HSU desde Excel.
-     El Siting oficial vive en siting.pages.dev/?planta=latina y el 2D es un visor REAL DE PUNTOS, no un modelo
+     Siting, Layout 2D y Topografía 3D se enlazan a sus motores oficiales, usando centros reales de TCU, no un modelo
      a escala de las mesas ni un cálculo de cobertura RF. Las dimensiones
      de tracker, recinto y cotas Z siguen pendientes de DWG vectorial.
      SCADA continúa sin vínculo porque la Cartera dice «Sin comenzar».
      El Toolbox v12.20 incluye 24029 desde scada#333. */
   { name:"La Latina 2", code:"24029", pdc:null, loc:"Borgo Piave · Latina · Italia", views:{
       siting:   SITING+"?planta=latina",
-      layout2d: "latina-2.html?modo=2d",
+      layout2d: COB+"plano.html?planta=latina",
+      topo3d:   COB+"terreno.html?planta=latina",
   } },
   /* EN OFERTA, sin firmar: El Naranjo Dicayagua (República Dominicana). No tiene número de proyecto
      porque el número lo da la cartera al adjudicar, así que la tarjeta lleva el distintivo OFERTA
