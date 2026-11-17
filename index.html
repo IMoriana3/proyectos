@@ -1201,7 +1201,7 @@ const PROJECTS = [
     url: "sim-apuntamiento.html",
     repo: "https://github.com/IMoriana3/proyectos",
     updated: "2026-11-17",
-    version: "0.1",
+    version: "0.2",
     verificacion: { estado:"pendiente", resumen:"pendiente validación de filtros y despliegue", texto:"La versión web permite importar CSV y calcular sobre datos locales. Falta validar en el navegador publicado la sincronización y cada regla de exclusión frente a históricos de planta. El resultado numérico no equivale a homologación." },
     relacionadas: ["TCU Toolbox","SCADA"],
     docId: "apuntamiento",
@@ -1213,6 +1213,7 @@ const PROJECTS = [
       "Filtra radiación >600 W/m², errores de sensor, backtracking, señal de seguridad, target ±55°, parada sostenida a +30° y recuperación hasta alcanzar la consigna.",
       "Ajusta el desfase temporal entre ambos registros y las tolerancias de recuperación. No se descartan lecturas por tener desviaciones altas.",
       "Compara la desviación solar con posición real y objetivo en escalas distintas; consulta muestras, media absoluta y P95; exporta el CSV con todos los motivos de exclusión.",
+      "Consulta la cronología de exclusiones: franjas coloreadas, horas de inicio y final, motivo y duración; selección de un tramo y exportación de periodos a CSV.",
       "Ningún registro privado va precargado al repositorio público ni se envía a un servidor. La certificación requiere validación del estado y de la orientación del sensor."
     ],
     pendientes: [
@@ -1222,6 +1223,7 @@ const PROJECTS = [
       { done:false, text:"Confirmar con calidad qué intervalos de limitación y recuperación son excluibles contractualmente." }
     ],
     historial: [
+      { date:"2026-11-17", ver:"0.2", note:"Franjas de exclusión superpuestas en gráfica, tabla cronológica de intervalos por motivo, selección de tramo y exportación CSV independiente; no inventa estados sin TCU." },
       { date:"2026-11-17", ver:"0.1", note:"Simulador autónomo en el navegador, CSV por minuto, X/Y, comparación con Real/Target, filtros auditables y descarga de resultados. Publicación y validación pendientes." }
     ]
   },

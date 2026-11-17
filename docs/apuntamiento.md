@@ -14,7 +14,8 @@ Desde la tarjeta del Panel de proyectos o desde `sim-apuntamiento.html`.
 2. Cargar opcionalmente los históricos `[NCU-N]_TCU_NNN_YYYY-MM-DD.csv` del **mismo** equipo.
 3. Seleccionar seguidor y fecha. Si un CSV no identifica NCU/TCU, asignarlo expresamente: **nunca se infiere a partir de la similitud de curvas**.
 4. Ajustar el desfase **reloj TCU − reloj sensor** antes de confiar en los filtros de posición. La herramienta no convierte automáticamente las fechas a UTC.
-5. Activar/desactivar filtros y examinar media, P95 y muestras. Descargar el CSV de auditoría.
+5. Activar/desactivar filtros y examinar media, P95 y muestras. Los minutos excluidos aparecen como franjas de color en la gráfica y se pueden seleccionar en la tabla de periodos.
+6. Descargar el CSV minutal de auditoría y, por separado, el CSV de intervalos de exclusión (inicio, último minuto, duración, motivo, origen).
 
 ## Magnitudes
 
@@ -33,6 +34,12 @@ Desde la tarjeta del Panel de proyectos o desde `sim-apuntamiento.html`.
 - Parada sostenida: objetivo próximo a **+30°** durante al menos el número de minutos configurado. **Un paso instantáneo por +30° no se excluye por sí solo.**
 - Recuperación: desde el fin de la meseta a +30° hasta encontrar tres minutos consecutivos con `|Real - Target| <= 0,3°` (configurable). Esta heurística es **diagnóstica**, no un criterio contractual acordado.
 - Intervalos externos confirmados de stow: franjas `HH:MM-HH:MM` aportadas a partir de SCADA u otra evidencia. **No se descartan puntos por tener un error elevado.**
+
+## Cronología de exclusiones (v0.2)
+
+La tabla **Periodos de exclusión** identifica, para cada motivo activado, inicio y último minuto excluido, número de muestras y origen (sensor, TCU o intervalo externo). El gráfico superpone franjas de color y permite destacar un tramo haciendo clic en la tabla. **No se asumen intervalos continuos a través de huecos de adquisición**: solo se agrupan minutos consecutivos. Los motivos pueden solaparse y un minuto descartado puede aparecer en varios motivos; el total de minutos excluidos se cuenta una sola vez. La exportación de intervalos conserva esos solapamientos.
+
+Si no hay CSV de seguimiento TCU, únicamente pueden visualizarse los motivos acreditados por el CSV del sensor (DNI, sensor, BT) o franjas externas introducidas expresamente. **No se inventan intervalos de ±55°, +30°, recuperación ni stow de la TCU.** La hora de cada intervalo es la marcada por el CSV del sensor; no garantiza que sea UTC ni hora civil sincronizada.
 
 Los filtros de estado o consigna que dependen de la TCU **no pueden verificarse** cuando falta el histórico o el reloj no está emparejado correctamente. Un `active_security_position = 0` no demuestra ausencia de cualquier otro abanderamiento.
 

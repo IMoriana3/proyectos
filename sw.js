@@ -13,7 +13,7 @@
    - api.github.com y demás orígenes: NI SE TOCAN. Sin red fallan igual que ahora,
      que es lo que el panel ya sabe manejar (mantiene lo escrito a mano).
    Al cambiar CACHE se tira la anterior entera: es la forma de publicar cambios. */
-const CACHE = "factiun-panel-v210";
+const CACHE = "factiun-panel-v211";
 
 /* Rutas relativas al scope (/proyectos/ en Pages, / al servirlo en local). */
 const SHELL = [
@@ -28,6 +28,7 @@ const SHELL = [
   "lib/indice.js",
   "sim-solar.html",
   "sim-viento.html",
+  "sim-apuntamiento.html",
   "comparador-estructuras.html",
   "careo-pvsyst.html",
   "homologacion.html",
