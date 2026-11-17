@@ -73,7 +73,7 @@ let last=null;
 function time(v){let m=String(v||'').match(/^(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)(?::(\d\d))?/);if(m)return Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+(m[6]||0));m=String(v||'').match(/^(\d\d?)\/(\d\d?)\/(\d{4})[ T](\d\d?):(\d\d)(?::(\d\d))?/);return m?Date.UTC(+m[3],+m[2]-1,+m[1],+m[4],+m[5],+(m[6]||0)):NaN}
 function date(ms){return new Date(ms).toISOString().slice(0,10)}
 function fmt(ms){return new Date(ms).toISOString().replace('T',' ').slice(0,16)}
-function num(v){let x=Number(String(v||'').trim().replace(',','.'));return Number.isFinite(x)?x:NaN}
+function num(v){let txt=String(v??'').trim();if(!txt)return NaN;let x=Number(txt.replace(',','.'));return Number.isFinite(x)?x:NaN}
 function signed(x){if(!Number.isFinite(x))return NaN;return x>=32768&&x<=65535?x-65536:x}
 function bool(x){return /^(true|1|yes)$/i.test(String(x||'').trim())}
 function enc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
@@ -94,7 +94,7 @@ async function ingest(){
    let isTracking=p.head.includes('datetime')&&p.head.includes('angle')&&p.head.includes('target_angle'), key=identify(f.name)||ident.get(prefix(f.name))||fallback;
    if(!key){key='SIN_ID_'+(prefix(f.name)||f.name.replace(/\.csv$/i,'').replace(/[^A-Z0-9_]/gi,'_'));unknown.push(f.name)}
    if(isTracking){
-     let arr=tracking.get(key)||[];for(let r of rowsByHeader(p.head,p.rows)){let ms=time(r.datetime);if(!Number.isFinite(ms))continue;arr.push({ms,real:num(r.angle),target:num(r.target_angle),bt:bool(r.backtracking),stow:num(r.active_security_position)!==0,mode:r.main_state||''});countTracks++}
+     let arr=tracking.get(key)||[];for(let r of rowsByHeader(p.head,p.rows)){let ms=time(r.datetime);if(!Number.isFinite(ms))continue;arr.push({ms,real:num(r.angle),target:num(r.target_angle),bt:bool(r.backtracking),stow:Number.isFinite(num(r.active_security_position))&&num(r.active_security_position)!==0,mode:r.main_state||''});countTracks++}
      arr.sort((a,b)=>a.ms-b.ms);tracking.set(key,arr.filter((r,i,a)=>i===0||r.ms!==a[i-1].ms))
    }else{
      if(!p.head.includes('Fecha')||!p.head.includes('X deviation filtered[30072]')){errors.push('Cabecera no reconocida: '+f.name);continue}
@@ -122,7 +122,7 @@ function calc(){
  let events=[];
  for(let i=0;i<rows.length;){if(!rows[i].near30){i++;continue}let j=i;while(j+1<rows.length&&rows[j+1].near30&&rows[j+1].ms-rows[j].ms===60000)j++;if(j-i+1>=c.plateau){for(let k=i;k<=j;k++)rows[k].p30=true;events.push('Parada +30°: '+fmt(rows[i].ms)+' a '+fmt(rows[j].ms));let finish=-1;for(let k=j+1;k<rows.length;k++){if(rows[k].ms-rows[k-1].ms>60000)break;let stable=true;for(let v=k;v<k+c.stable;v++){if(!rows[v]||!rows[v].tr||!(Math.abs(rows[v].real-rows[v].target)<=c.tol)||(v>k&&rows[v].ms-rows[v-1].ms!==60000)){stable=false;break}}if(stable){finish=k;break}}
     if(finish>=0){for(let k=j+1;k<finish;k++)rows[k].recovery=true;if(finish>j+1)events.push('Recuperación: '+fmt(rows[j+1].ms)+' a '+fmt(rows[finish-1].ms))}
-    else if(j+1<rows.length){for(let k=j+1;k<rows.length&&k===j+1||k<rows.length&&rows[k].ms-rows[k-1].ms===60000&&rows[k-1].recovery;k++)rows[k].recovery=true;events.push('Recuperación sin confirmar: desde '+fmt(rows[j+1].ms))}
+    else if(j+1<rows.length){for(let k=j+1;k<rows.length;k++){if(k>j+1&&rows[k].ms-rows[k-1].ms!==60000)break;rows[k].recovery=true;}events.push('Recuperación sin confirmar: desde '+fmt(rows[j+1].ms))}
  }i=j+1}
  let counts={};for(let r of rows){
    let reasons=[];
