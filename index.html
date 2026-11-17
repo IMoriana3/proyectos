@@ -3726,6 +3726,24 @@ function fichaPlanta(pl){
     : `<div class="dfuente">guardado de la última vez que se abrió la Cartera técnica aquí · conéctala arriba para leerla en vivo</div>`;
   return `<div class="dgroup"><div class="dlabel">Ficha de la cartera</div><dl class="kv">${f.join('')}</dl>${fte}${sala}</div>`;
 }
+/* Complemento de campo: datos geométricos declarados del Excel, no un
+ * reemplazo de la ficha comercial ni un segundo registro de las IP. */
+function fichaIngenieriaLaLatina(pl){
+  if(pl.code!=="24029") return "";
+  const d=window.FACTIUN_LATINA_24029;
+  if(!d || d.points.length!==67) return "";
+  const ct1=d.points.filter(p=>p[4]===1).length,ct2=d.points.length-ct1;
+  const ncu=d.stations[0],hsu=d.stations[1];
+  const coord=p=>p.x.toFixed(4)+", "+p.y.toFixed(4);
+  return '<div class="dgroup"><div class="dlabel">Implantación · Excel interno v1</div>'
+   +'<dl class="kv"><dt>Centros TCU</dt><dd>'+d.points.length+' · CT1 '+ct1+' · CT2 '+ct2+'</dd>'
+   +'<dt>NCU + anemómetro</dt><dd>1 · E/N '+coord(ncu)+'</dd>'
+   +'<dt>HSU externa</dt><dd>1 · E/N '+coord(hsu)+' · esclavo 230</dd>'
+   +'<dt>Origen</dt><dd>UTM 33T · datum pendiente de confirmar</dd></dl>'
+   +'<p class="obj" style="margin-top:10px">Solo centros de seguidores: longitud de mesas, parcela y cotas Z pendientes de medir del DWG.</p>'
+   +'<div style="margin-top:10px"><a href="latina-2.html?modo=2d" class="btn primary" target="_blank" rel="noopener">Abrir plano de centros TCU</a></div>'
+   +'</div>';
+}
 /* Fichas de planta abiertas, por nombre: renderPlants() vuelve a pintar al conectar o salir de la
    cartera y antes las cerraba todas. */
 const plantasAbiertas = new Set();
@@ -3751,7 +3769,7 @@ function plantCardHTML(pl){
       <p class="obj ploc" title="${esc(pl.loc||"")}"><span class="plugar">${esc(pl.loc||"")}</span>${chip}</p>
     </button>
     <div class="pviews">${btns}</div>
-    <div class="detail pdetail" ${abierta?"":"hidden"}>${fichaPlanta(pl)}</div>
+    <div class="detail pdetail" ${abierta?"":"hidden"}>${fichaPlanta(pl)}${fichaIngenieriaLaLatina(pl)}</div>
   </article>`;
 }
 /* EL ACCESO, en la cabecera de la sección. Vive en un solo sitio y no en cada tarjeta: es una
