@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FACTIUN · Simulador de apuntamiento ISS-D60</title>
+<style>
+:root{color-scheme:light;--ink:#1c2e3e;--muted:#617387;--bg:#eef3f6;--line:#d8e2e9;--orange:#d5731c;--teal:#197e94;--purple:#862d80;font-family:Barlow,"Segoe UI",Arial,sans-serif;font-size:14px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}header{background:#122b40;color:#f6fafc;padding:19px max(20px,calc((100vw - 1550px)/2));border-bottom:4px solid #f09030;display:flex;justify-content:space-between;align-items:center;gap:15px}header strong{font-size:23px;font-weight:800;letter-spacing:-.6px}header small{display:block;color:#d0dbe4;margin-top:4px;font-size:12px}header a{color:#ffe0b1;text-decoration:none;font-weight:700}main{max-width:1550px;margin:auto;padding:20px;display:grid;grid-template-columns:340px minmax(0,1fr);gap:17px}section,.box{background:white;border:1px solid var(--line);border-radius:13px;padding:18px;box-shadow:0 2px 5px #203c4d0a}.side{align-self:start}h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:16px 0 8px}label{font-size:12px;color:#45596b;font-weight:700;display:block;margin:10px 0 5px}input:not([type=checkbox]),select,textarea{width:100%;padding:9px;background:#fff;border:1px solid #bfcdd8;border-radius:7px;color:#182d3b;font:inherit;font-size:13px}input[type=checkbox]{width:16px;height:16px;accent-color:var(--orange);margin:0;flex-shrink:0}.check{display:flex;align-items:flex-start;gap:8px;margin:10px 0;font-size:13px;font-weight:450;color:#25394a}.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hint{font-size:12px;color:var(--muted);line-height:1.55;margin:8px 0}.sep{height:1px;background:#e1e8ee;margin:18px 0}.buttons{display:flex;gap:8px;flex-wrap:wrap;margin:11px 0}button{background:var(--orange);border:0;color:#fff;border-radius:7px;padding:10px 14px;font-weight:750;cursor:pointer}button.ghost{background:#e7eff5;color:#26485b}button:disabled{opacity:.5;cursor:not-allowed}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}.metric{background:white;border:1px solid var(--line);padding:17px;border-radius:12px;min-width:0}.metric small{color:var(--muted);font-size:12px}.metric b{display:block;margin:7px 0;font-size:27px;letter-spacing:-.6px}.metric em{font-style:normal;color:var(--muted);font-size:11px}.top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px}.warn{padding:12px 13px;background:#fff7e9;color:#71490c;border-left:4px solid #df9635;font-size:12px;line-height:1.5;margin-bottom:10px}.good{color:#207147;font-weight:700}.bad{color:#ab3c2c;font-weight:700}.charts{width:100%;height:435px;display:block;border:1px solid #e2e9ef;border-radius:8px;background:#fff}.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#43586a;margin:12px 0 4px}.legend i{display:inline-block;width:18px;border-top:3px solid;vertical-align:middle;margin-right:5px}.tables{display:grid;grid-template-columns:300px 1fr;gap:14px;margin-top:15px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border-bottom:1px solid #e5edf2;text-align:left;padding:7px}th{color:#567080;font-size:11px}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}.scroll{max-height:320px;overflow:auto}textarea{min-height:65px;resize:vertical;font:12px Consolas,monospace}.title{font-size:16px;font-weight:800}.tag{font-size:11px;color:#415a6a;background:#eaf1f5;border-radius:12px;padding:6px 9px}footer{font-size:11px;color:#617387;line-height:1.55;padding:6px 0 14px}@media(max-width:1100px){main{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,1fr)}.tables{grid-template-columns:1fr}}@media(max-width:580px){header{display:block}.grid,.two{grid-template-columns:1fr}.metric b{font-size:23px}main{padding:10px}section,.box{padding:13px}}
+</style>
+</head>
+<body>
+<header><div><strong>FACTIUN · Simulador de apuntamiento</strong><small>ISS-D60 · análisis de históricos SUNNER y TCU · procesamiento local en el navegador</small></div><nav><a href="index.html#herramientas">← Panel de proyectos</a></nav></header>
+<main>
+<section class="side">
+<h2>Cargar registros</h2>
+<label for="files">CSV del sensor SUNNER y/o seguimiento TCU</label>
+<input id="files" type="file" accept=".csv" multiple>
+<div class="hint">Puedes seleccionar varios CSV, incluidas continuaciones sin cabecera. Los archivos nunca se envían al servidor.</div>
+<label for="asignar">NCU/TCU para archivos sin identificación (opcional)</label>
+<input id="asignar" placeholder="Ej.: NCU6_TCU12">
+<button id="cargar" type="button">Importar archivos</button>
+<div id="upload" class="hint">Sin archivos cargados. Los ensayos son privados y no se precargan en la web pública.</div>
+<div class="sep"></div>
+<label for="dataset">Ensayo</label><select id="dataset"><option value="">Carga primero un CSV de sensor</option></select>
+<label for="axis">Canal</label><select id="axis">
+<option value="xf">X filtrada · 30072 (principal)</option>
+<option value="xr">X sin filtrar · 30074</option>
+<option value="yf">Y filtrada · 30073 (perpendicular)</option>
+<option value="yr">Y sin filtrar · 30075</option></select>
+<div class="two"><div><label for="dni">DNI mínimo (W/m²)</label><input id="dni" type="number" value="600" min="0" max="2000" step="10"></div><div><label for="scale">Escala sensor (°/unidad)</label><input id="scale" type="number" value="0.01" min="0.0001" max="1" step=".001"></div></div>
+<div class="sep"></div><h2>Filtros</h2>
+<label class="check"><input id="okSensor" type="checkbox" checked> Sensor válido (registro 30069 = 0)</label>
+<label class="check"><input id="bt" type="checkbox" checked> Quitar backtracking (sensor y TCU)</label>
+<label class="check"><input id="stow" type="checkbox" checked> Quitar seguridad/stow si TCU lo registra</label>
+<label class="check"><input id="limites" type="checkbox" checked> Quitar consigna fija en ±55°</label>
+<label class="check"><input id="p30" type="checkbox" checked> Quitar parada sostenida a +30°</label>
+<label class="check"><input id="recuperacion" type="checkbox" checked> Quitar recuperación hasta alcanzar consigna</label>
+<label class="check"><input id="requerirTCU" type="checkbox" checked> Excluir minutos sin TCU emparejada si existe histórico</label>
+<div class="two"><div><label for="margen">Margen target (°)</label><input id="margen" type="number" value=".25" min="0" max="3" step=".05"></div><div><label for="minParada">Parada mínima (min)</label><input id="minParada" type="number" value="5" min="2" max="60" step="1"></div></div>
+<div class="two"><div><label for="toleranciaRT">Real/Target (°)</label><input id="toleranciaRT" type="number" value=".3" min=".05" max="5" step=".05"></div><div><label for="estables">Minutos estables</label><input id="estables" type="number" value="3" min="1" max="15" step="1"></div></div>
+<div class="sep"></div><h2>Sincronización de relojes</h2>
+<label for="offset">Histórico TCU − sensor (minutos)</label><input id="offset" type="number" value="0" step=".01" min="-1440" max="1440">
+<label for="tolSec">Tolerancia emparejamiento (segundos)</label><input id="tolSec" type="number" value="90" step="5" min="1" max="600">
+<div class="hint">La comparación usa el desfase relativo de los relojes. No supone que ninguna fecha sea UTC. Ajusta el desfase cotejando transiciones BT.</div>
+<label for="manual">Stow confirmado externamente (hora del sensor, inicio-fin)</label>
+<textarea id="manual" placeholder="14:10-14:45&#10;15:15-15:30"></textarea>
+<div class="hint">Un intervalo por línea. Solo introducir periodos comprobados. No se deducen del error angular.</div>
+<div class="buttons"><button id="reset" class="ghost">Restablecer filtros</button></div>
+</section>
+<div>
+<div class="top"><span id="titulo" class="title">Sin ensayo seleccionado</span><div class="buttons"><button id="csv" class="ghost" disabled>Exportar auditoría CSV</button><button id="png" class="ghost" disabled>Gráfica PNG</button></div></div>
+<div id="avisos"></div>
+<div class="grid"><div class="metric"><small>Minutos admitidos</small><b id="n">—</b><em>Mínimo 360</em></div><div class="metric"><small>Error medio absoluto</small><b id="media">—</b><em>Límite &lt; 1,5°</em></div><div class="metric"><small>P95 absoluto</small><b id="p95">—</b><em>Límite &lt; 2,5°</em></div><div class="metric"><small>Resultado numérico</small><b id="resultado" style="font-size:20px">—</b><em>Provisional hasta verificar estados</em></div></div>
+<div class="box"><div class="top"><span class="title">Desviación y posición real / objetivo</span><span id="estado" class="tag">Sin histórico</span></div>
+<canvas id="grafica" class="charts" aria-label="Desviación angular y posición real/objetivo en escalas independientes"></canvas>
+<div class="legend"><span><i style="border-color:#c8d3dc"></i>Desviación total</span><span><i style="border-color:#862d80"></i>Desviación incluida</span><span><i style="border-color:#197e94"></i>Real TCU</span><span><i style="border-color:#d5731c"></i>Target TCU</span></div>
+<p class="hint">Eje izquierdo: desviación angular del ISS-D60. Eje derecho: grados del seguidor (o radiación si no hay histórico). El gráfico mantiene los puntos excluidos en gris para poder auditarlos.</p></div>
+<div class="tables">
+<div class="box"><h3>Recuento por primer motivo de exclusión</h3><div class="scroll"><table><thead><tr><th>Motivo</th><th class="n">Minutos</th></tr></thead><tbody id="conteo"></tbody></table></div></div>
+<div class="box"><h3>Lecturas cruzadas y eventos</h3><p id="meta" class="hint"></p><div class="scroll"><table><thead><tr><th>Hora sensor</th><th class="n">DNI</th><th class="n">X filt.</th><th class="n">Real</th><th class="n">Target</th><th>Estado</th></tr></thead><tbody id="detalle"></tbody></table></div><p class="hint">Vista de las primeras 120 lecturas. «Exportar auditoría CSV» incluye todas las lecturas y todos los motivos.</p></div>
+</div>
+<footer>Herramienta de análisis y simulación de filtros, no modelo físico del seguidor. La superación numérica de umbrales no certifica automáticamente una prueba IEC 62817. Mantener originales, correspondencia de ejes y justificación externa de cualquier exclusión.</footer>
+</div>
+</main>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const SEN=['Fecha','System info[30069]','Radiation[30070]','Temperature[30071]','X deviation filtered[30072]','Y deviation filtered[30073]','X deviation raw[30074]','Y deviation raw[30075]','BACKTRACKING ACTIVE'];
+const sensors=new Map(),tracking=new Map(),offsets=new Map();
+let last=null;
+function time(v){let m=String(v||'').match(/^(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)(?::(\d\d))?/);if(m)return Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+(m[6]||0));m=String(v||'').match(/^(\d\d?)\/(\d\d?)\/(\d{4})[ T](\d\d?):(\d\d)(?::(\d\d))?/);return m?Date.UTC(+m[3],+m[2]-1,+m[1],+m[4],+m[5],+(m[6]||0)):NaN}
+function date(ms){return new Date(ms).toISOString().slice(0,10)}
+function fmt(ms){return new Date(ms).toISOString().replace('T',' ').slice(0,16)}
+function num(v){let txt=String(v??'').trim();if(!txt)return NaN;let x=Number(txt.replace(',','.'));return Number.isFinite(x)?x:NaN}
+function signed(x){if(!Number.isFinite(x))return NaN;return x>=32768&&x<=65535?x-65536:x}
+function bool(x){return /^(true|1|yes)$/i.test(String(x||'').trim())}
+function enc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function percentile(sorted,p){if(!sorted.length)return NaN;let x=(sorted.length-1)*p,i=Math.floor(x),f=x-i;return sorted[i]+f*(sorted[Math.min(i+1,sorted.length-1)]-sorted[i])}
+function near(ms,arr,tol){if(!arr||!arr.length)return null;let lo=0,hi=arr.length;while(lo<hi){let mi=(lo+hi)>>1;if(arr[mi].ms<ms)lo=mi+1;else hi=mi}let a=lo<arr.length?arr[lo]:null,b=lo>0?arr[lo-1]:null,c=!b?a:(!a?b:Math.abs(a.ms-ms)<Math.abs(b.ms-ms)?a:b);return c&&Math.abs(c.ms-ms)<=tol?c:null}
+function identify(name){let x=name.match(/\[NCU-(\d+)\]_TCU_(\d+)/i)||name.match(/NCU[_-]?(\d+)[_-]?(?:TCU[_-]?)?(\d+)/i);return x?'NCU'+(+x[1])+'_TCU'+(+x[2]):null}
+function prefix(name){let m=name.match(/Log_Sensor_(\d{8}_\d{6})/i);return m?m[1]:null}
+function headerParse(text){let lines=text.replace(/^\ufeff/,'').split(/\r?\n/).filter(s=>s.trim());if(!lines.length)return null;let cols=lines[0].split(';').map(s=>s.trim().replace(/^"|"$/g,''));let known=cols.includes('Fecha')||cols.includes('datetime');return {head:known?cols:SEN,rows:lines.slice(known?1:0)}}
+function rowsByHeader(head,rows){let idx={};head.forEach((n,i)=>idx[n]=i);return rows.map(s=>s.split(';')).map(a=>new Proxy({}, {get(_,k){let j=idx[k];return j===undefined?'':(a[j]||'').trim().replace(/^"|"$/g,'')}}))}
+function selected(){return sensors.get($('dataset').value)}
+async function ingest(){
+ let fs=[...$('files').files];if(!fs.length){$('upload').textContent='Selecciona uno o varios archivos.';return}
+ let ident=new Map(),fallback=$('asignar').value.trim().toUpperCase().replace(/[\s-]+/g,'_');
+ for(let f of fs){let key=identify(f.name),p=prefix(f.name);if(key&&p)ident.set(p,key)}
+ let added=0,unknown=[],errors=[],countTracks=0;
+ for(let f of fs){try{
+   let p=headerParse(await f.text());if(!p)continue;
+   let isTracking=p.head.includes('datetime')&&p.head.includes('angle')&&p.head.includes('target_angle'), key=identify(f.name)||ident.get(prefix(f.name))||fallback;
+   if(!key){key='SIN_ID_'+(prefix(f.name)||f.name.replace(/\.csv$/i,'').replace(/[^A-Z0-9_]/gi,'_'));unknown.push(f.name)}
+   if(isTracking){
+     let arr=tracking.get(key)||[];for(let r of rowsByHeader(p.head,p.rows)){let ms=time(r.datetime);if(!Number.isFinite(ms))continue;arr.push({ms,real:num(r.angle),target:num(r.target_angle),bt:bool(r.backtracking),stow:Number.isFinite(num(r.active_security_position))&&num(r.active_security_position)!==0,mode:r.main_state||''});countTracks++}
+     arr.sort((a,b)=>a.ms-b.ms);tracking.set(key,arr.filter((r,i,a)=>i===0||r.ms!==a[i-1].ms))
+   }else{
+     if(!p.head.includes('Fecha')||!p.head.includes('X deviation filtered[30072]')){errors.push('Cabecera no reconocida: '+f.name);continue}
+     for(let r of rowsByHeader(p.head,p.rows)){
+       let ms=time(r.Fecha);if(!Number.isFinite(ms))continue;
+       let minute=Math.floor(ms/60000)*60000, day=date(ms),id=key+'|'+day;
+       if(!sensors.has(id))sensors.set(id,{id,group:key,day,rows:new Map(),files:new Set()});
+       let d=sensors.get(id);d.files.add(f.name);
+       if(d.rows.has(minute))continue;
+       d.rows.set(minute,{ms:minute,dt:fmt(minute),state:num(r['System info[30069]']),dni:num(r['Radiation[30070]']),xf:signed(num(r['X deviation filtered[30072]'])),yf:signed(num(r['Y deviation filtered[30073]'])),xr:signed(num(r['X deviation raw[30074]'])),yr:signed(num(r['Y deviation raw[30075]'])),sbt:bool(r['BACKTRACKING ACTIVE'])});added++;
+     }
+   }
+ }catch(e){errors.push(f.name+': '+e.message)}}
+ updateSelect();$('upload').textContent='Importados '+added+' minutos de sensor y '+countTracks+' lecturas TCU de '+fs.length+' archivo(s).'+(unknown.length?' Sin identificar: '+unknown.join(', ')+'.':'')+(errors.length?' Errores: '+errors.join('; '):'');
+ $('files').value='';render()
+}
+function updateSelect(){let ds=[...sensors.values()].sort((a,b)=>b.day.localeCompare(a.day)||a.group.localeCompare(b.group)),old=$('dataset').value;$('dataset').innerHTML=ds.length?ds.map(d=>'<option value="'+enc(d.id)+'">'+enc(d.day.split('-').reverse().join('/')+' · '+d.group)+'</option>').join(''):'<option value="">Carga primero un sensor</option>';if(ds.some(d=>d.id===old))$('dataset').value=old;else if(ds.length)$('dataset').value=ds[0].id;setOffset()}
+function setOffset(){let d=selected();if(d)$('offset').value=((offsets.get(d.group)||0)/60).toFixed(3)}
+function cfg(){let v=id=>num($(id).value),c=id=>$(id).checked;return {axis:$('axis').value,scale:v('scale'),dni:v('dni'),ok:c('okSensor'),bt:c('bt'),stow:c('stow'),limits:c('limites'),p30:c('p30'),recover:c('recuperacion'),requireTCU:c('requerirTCU'),margin:v('margen'),plateau:v('minParada'),tol:v('toleranciaRT'),stable:v('estables'),offset:v('offset'),tolms:v('tolSec')*1000}}
+function manualIntervals(day){let ok=[],bad=[];for(let line of $('manual').value.split(/\r?\n/)){line=line.trim();if(!line)continue;let m=line.match(/^(\d{1,2}):(\d\d)\s*[-–]\s*(\d{1,2}):(\d\d)$/);if(!m||+m[1]>23||+m[3]>23||+m[2]>59||+m[4]>59){bad.push(line);continue}let a=time(day+' '+String(+m[1]).padStart(2,'0')+':'+m[2]),b=time(day+' '+String(+m[3]).padStart(2,'0')+':'+m[4]);if(b<=a)bad.push(line);else ok.push([a,b])}return {ok,bad}}
+function calc(){
+ let d=selected();if(!d)return null;let c=cfg(),arr=[...d.rows.values()].sort((a,b)=>a.ms-b.ms),ta=tracking.get(d.group)||[],manual=manualIntervals(d.day);let matched=0,hasTrack=ta.length>0;
+ let rows=arr.map(s=>{let t=near(s.ms+c.offset*60000,ta,c.tolms);if(t)matched++;return {...s,tr:t,real:t?t.real:NaN,target:t?t.target:NaN,tbt:t?t.bt:false,stow:t?t.stow:false,mode:t?t.mode:'',limit:false,near30:false,p30:false,recovery:false,reasons:[],keep:false}});
+ for(let r of rows){r.limit=Number.isFinite(r.target)&&Math.abs(Math.abs(r.target)-55)<=c.margin;r.near30=Number.isFinite(r.target)&&Math.abs(r.target-30)<=c.margin}
+ let events=[];
+ for(let i=0;i<rows.length;){if(!rows[i].near30){i++;continue}let j=i;while(j+1<rows.length&&rows[j+1].near30&&rows[j+1].ms-rows[j].ms===60000)j++;if(j-i+1>=c.plateau){for(let k=i;k<=j;k++)rows[k].p30=true;events.push('Parada +30°: '+fmt(rows[i].ms)+' a '+fmt(rows[j].ms));let finish=-1;for(let k=j+1;k<rows.length;k++){if(rows[k].ms-rows[k-1].ms>60000)break;let stable=true;for(let v=k;v<k+c.stable;v++){if(!rows[v]||!rows[v].tr||!(Math.abs(rows[v].real-rows[v].target)<=c.tol)||(v>k&&rows[v].ms-rows[v-1].ms!==60000)){stable=false;break}}if(stable){finish=k;break}}
+    if(finish>=0){for(let k=j+1;k<finish;k++)rows[k].recovery=true;if(finish>j+1)events.push('Recuperación: '+fmt(rows[j+1].ms)+' a '+fmt(rows[finish-1].ms))}
+    else if(j+1<rows.length){for(let k=j+1;k<rows.length;k++){if(k>j+1&&rows[k].ms-rows[k-1].ms!==60000)break;rows[k].recovery=true;}events.push('Recuperación sin confirmar: desde '+fmt(rows[j+1].ms))}
+ }i=j+1}
+ let counts={};for(let r of rows){
+   let reasons=[];
+   if(!(r.dni>c.dni))reasons.push('DNI ≤ umbral');
+   if(c.ok&&r.state!==0)reasons.push('Sensor no válido');
+   if(c.bt&&(r.sbt||r.tbt))reasons.push('Backtracking');
+   if(c.stow&&r.stow)reasons.push('Seguridad / stow');
+   if(hasTrack&&c.requireTCU&&!r.tr)reasons.push('Sin histórico TCU');
+   if(c.limits&&r.limit)reasons.push('Target ±55°');
+   if(c.p30&&r.p30)reasons.push('Parada +30°');
+   if(c.recover&&r.recovery)reasons.push('Recuperación');
+   if(manual.ok.some(z=>r.ms>=z[0]&&r.ms<z[1]))reasons.push('Stow externo');
+   if(!Number.isFinite(r[c.axis]))reasons.push('Ángulo no válido');
+   r.reasons=reasons;r.keep=reasons.length===0;let k=reasons[0]||'Incluida';counts[k]=(counts[k]||0)+1
+ }
+ let vals=rows.filter(r=>r.keep).map(r=>Math.abs(r[c.axis]*c.scale)).sort((a,b)=>a-b),n=vals.length,mean=n?vals.reduce((a,b)=>a+b,0)/n:NaN,p95=percentile(vals,.95),quality=n>=360&&mean<1.5&&p95<2.5;
+ return {d,c,rows,counts,n,mean,p95,quality,matched,hasTrack,events,manual}
+}
+function textResult(d){const {n,mean,p95,quality}=d;return n<360?'Menos de 360':quality?'Dentro de límites':'Fuera de límites'}
+function render(){
+ let d=calc();last=d;if(!d){$('titulo').textContent='Sin ensayo seleccionado';$('avisos').innerHTML='<div class="warn">Carga los archivos del sensor ISS-D60 y, si están disponibles, los históricos de seguimiento de la misma TCU.</div>';return}
+ $('csv').disabled=false;$('png').disabled=false;let {rows,counts,n,mean,p95,quality,matched,hasTrack,c}=d;
+ $('titulo').textContent=d.d.day.split('-').reverse().join('/')+' · '+d.d.group+' · '+(c.axis.startsWith('x')?'X':'Y')+(c.axis.endsWith('f')?' filtrada':' sin filtrar');
+ $('n').textContent=n.toLocaleString('es-ES');$('media').textContent=Number.isFinite(mean)?mean.toFixed(3).replace('.',',')+'°':'—';$('p95').textContent=Number.isFinite(p95)?p95.toFixed(3).replace('.',',')+'°':'—';$('resultado').textContent=textResult(d);$('resultado').className=quality?'good':'bad';
+ $('estado').textContent=hasTrack?'Histórico TCU: '+matched+'/'+rows.length+' min':'Sin histórico TCU';
+ let warns=[];if(!hasTrack&&(c.stow||c.limits||c.p30||c.recover))warns.push('Sin histórico de posición: no pueden verificarse los filtros de stow, ±55°, +30° ni recuperación. El resultado es solo numérico.');if(hasTrack&&matched<rows.length)warns.push('Hay '+(rows.length-matched)+' minutos sin registro TCU emparejado. Revisa desfase horario y tolerancia.');if(d.manual.bad.length)warns.push('Intervalos manuales incorrectos: '+d.manual.bad.join(', '));if(d.d.group.startsWith('SIN_ID_'))warns.push('Identidad del seguidor no acreditada. Para comparar con su posición, importa también los históricos y asigna su NCU/TCU.');if(n<360)warns.push('No se alcanza el mínimo de 360 muestras.');if(!hasTrack||matched<rows.length)warns.push('No declarar conformidad contractual antes de acreditar los estados operativos y la orientación física del sensor.');if(hasTrack)warns.push('Stow = 0 en la columna de seguridad no acredita por sí solo ausencia de otras maniobras.');
+ $('avisos').innerHTML=warns.map(w=>'<div class="warn">'+enc(w)+'</div>').join('');
+ $('conteo').innerHTML=Object.entries(counts).sort((a,b)=>(a[0]==='Incluida'?-1:1)-(b[0]==='Incluida'?-1:1)||b[1]-a[1]).map(([k,v])=>'<tr><td>'+enc(k)+'</td><td class="n">'+v+'</td></tr>').join('');
+ $('meta').textContent='Minutos de sensor: '+rows.length+' · TCU emparejada: '+matched+' · eventos de parada/recuperación: '+d.events.length+'. '+d.events.slice(0,6).join(' · ');
+ $('detalle').innerHTML=rows.slice(0,120).map(r=>'<tr><td>'+enc(r.dt.slice(11,16))+'</td><td class="n">'+(Number.isFinite(r.dni)?r.dni:'—')+'</td><td class="n">'+(Number.isFinite(r.xf)?(r.xf*c.scale).toFixed(2):'—')+'</td><td class="n">'+(Number.isFinite(r.real)?r.real.toFixed(1):'—')+'</td><td class="n">'+(Number.isFinite(r.target)?r.target.toFixed(1):'—')+'</td><td>'+enc(r.reasons.join(' / ')||'Incluido')+'</td></tr>').join('');
+ draw(d)
+}
+function draw(d){let can=$('grafica'),w=Math.max(500,can.getBoundingClientRect().width),h=435,dp=window.devicePixelRatio||1;can.width=Math.round(w*dp);can.height=Math.round(h*dp);let g=can.getContext('2d');g.scale(dp,dp);g.fillStyle='#fff';g.fillRect(0,0,w,h);
+ let rows=d.rows;if(!rows.length)return;let L=63,R=w-65,T=28,B=h-48,m0=rows[0].ms,m1=rows[rows.length-1].ms||m0+1;let vals=rows.map(r=>r[d.c.axis]*d.c.scale).filter(Number.isFinite),vmin=Math.min(-1,...vals),vmax=Math.max(1,...vals),pad=(vmax-vmin)*.07;vmin-=pad;vmax+=pad;
+ let rightHasTrack=d.matched>0, y2=rows.flatMap(r=>rightHasTrack?[r.real,r.target]:[r.dni]).filter(Number.isFinite),u0=Math.min(...y2),u1=Math.max(...y2);if(!y2.length||u0===u1){u0=(u0||0)-1;u1=(u1||0)+1}let pad2=(u1-u0)*.08;u0-=pad2;u1+=pad2;
+ let xx=r=>L+(r.ms-m0)/(m1-m0)*(R-L), yy=v=>B-(v-vmin)/(vmax-vmin)*(B-T),zz=v=>B-(v-u0)/(u1-u0)*(B-T);
+ g.strokeStyle='#e6edf2';g.fillStyle='#617487';g.font='11px Segoe UI, sans-serif';g.lineWidth=1;
+ for(let i=0;i<=5;i++){let y=T+(B-T)*i/5;g.beginPath();g.moveTo(L,y);g.lineTo(R,y);g.stroke();g.textAlign='right';g.fillText((vmax-(vmax-vmin)*i/5).toFixed(1)+'°',L-8,y+3);g.textAlign='left';g.fillText((u1-(u1-u0)*i/5).toFixed(1)+(rightHasTrack?'°':''),R+7,y+3)}
+ for(let i=0;i<=6;i++){let x=L+(R-L)*i/6,m=m0+(m1-m0)*i/6;g.beginPath();g.moveTo(x,T);g.lineTo(x,B);g.stroke();g.textAlign='center';g.fillText(fmt(m).slice(11,16),x,B+17)}
+ function line(value,color,width,mask,scale){g.strokeStyle=color;g.lineWidth=width;g.beginPath();let open=false;for(let r of rows){let v=value(r);if(mask&&!mask(r)||!Number.isFinite(v)){open=false;continue}let x=xx(r),y=scale(v);if(open)g.lineTo(x,y);else g.moveTo(x,y);open=true}g.stroke()}
+ line(r=>r[d.c.axis]*d.c.scale,'#cbd6df',1.2,null,yy);
+ line(r=>r[d.c.axis]*d.c.scale,'#862d80',2.1,r=>r.keep,yy);
+ if(rightHasTrack){line(r=>r.real,'#197e94',1.7,null,zz);line(r=>r.target,'#d5731c',1.5,null,zz)}else line(r=>r.dni,'#d5731c',1.5,null,zz);
+ g.fillStyle='#294358';g.font='bold 11px Segoe UI, sans-serif';g.textAlign='left';g.fillText('Desviación (°)',L,T-9);g.textAlign='right';g.fillText(rightHasTrack?'Posición Real / Target (°)':'Radiación (W/m²)',R,T-9)
+}
+function download(s,name,type){let b=new Blob([s],{type}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1500)}
+function audit(){if(!last)return;let c=last.c,head=['fecha_sensor','DNI_estimado_Wm2','estado_30069','X_filtrada_deg','Y_filtrada_deg','X_raw_deg','Y_raw_deg','BT_sensor','BT_TCU','stow_TCU','real_deg','target_deg','error_real_target_abs_deg','incluido','motivos_exclusion'],dec=v=>Number.isFinite(v)?v.toFixed(3).replace('.',','):'';let out=[head];for(let r of last.rows)out.push([r.dt,r.dni,r.state,dec(r.xf*c.scale),dec(r.yf*c.scale),dec(r.xr*c.scale),dec(r.yr*c.scale),r.sbt?1:0,r.tbt?1:0,r.stow?1:0,dec(r.real),dec(r.target),dec(Math.abs(r.real-r.target)),r.keep?'SI':'NO',r.reasons.join(' | ')]);let csv=out.map(a=>a.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');download('\ufeff'+csv,'FACTIUN_auditoria_'+last.d.id.replace('|','_')+'.csv','text/csv;charset=utf-8')}
+function reset(){for(let [id,v] of Object.entries({dni:600,scale:.01,margen:.25,minParada:5,toleranciaRT:.3,estables:3,tolSec:90,axis:'xf'}))$(id).value=v;for(let id of ['okSensor','bt','stow','limites','p30','recuperacion','requerirTCU'])$(id).checked=true;$('manual').value='';setOffset();render()}
+$('cargar').addEventListener('click',ingest);$('dataset').addEventListener('change',()=>{setOffset();$('manual').value='';render()});for(let id of ['axis','dni','scale','okSensor','bt','stow','limites','p30','recuperacion','requerirTCU','margen','minParada','toleranciaRT','estables','offset','tolSec','manual'])$(id).addEventListener('input',()=>{let d=selected();if(d&&id==='offset')offsets.set(d.group,num($('offset').value)*60);render()});$('csv').addEventListener('click',audit);$('png').addEventListener('click',()=>{if(!last)return;$('grafica').toBlob(b=>{if(!b)return;let u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='FACTIUN_'+last.d.id.replace('|','_')+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),1500)},'image/png')});$('reset').addEventListener('click',reset);window.addEventListener('resize',()=>{if(last)draw(last)});render()
+})();
+</script>
+<script src="lib/indice.js" defer></script>
+</body></html>
