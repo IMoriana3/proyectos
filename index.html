@@ -2891,6 +2891,15 @@ const PLANTS = [
       topo3d:     COB+"terreno.html?planta=bagnarelli",
       cobertura:  COB+"index.html?planta=bagnarelli",
   }},
+  /* LA LATINA 2 (24029, Borgo Piave, Latina). La planta existe en la Cartera
+     (67 seguidores, estado PEM «Sin comenzar») y su IP/NCU están registradas
+     en la tabla topologia de Supabase. El alta de Toolbox v12.20 está en
+     scada#333, sin fusionar a main todavía.
+     No se enlazan Siting/2D/3D/Cobertura ni SCADA: sus vistas particulares
+     aún no están publicadas o, en SCADA, la PEM no ha comenzado.
+     Al tener views:{} las capacidades core se muestran DESHABILITADAS
+     en vez de abrir El Burgo por fallback con ?planta=latina. */
+  { name:"La Latina 2", code:"24029", pdc:null, loc:"Borgo Piave · Latina · Italia", views:{} },
   /* EN OFERTA, sin firmar: El Naranjo Dicayagua (República Dominicana). No tiene número de proyecto
      porque el número lo da la cartera al adjudicar, así que la tarjeta lleva el distintivo OFERTA
      en su lugar y se ordena al final. Y no es una planta de seguidores: estructura FIJA a 10°
@@ -4151,6 +4160,7 @@ if (haySesionGuardada()) conecta(null, null);
    (Santiago de los Caballeros), que para saber si allí es de día sobra. */
 const SITIO_PLANTA = {
   "El Burgo I":[41.576,-0.798,"Europe/Madrid"], "Fayón":[41.227,0.324,"Europe/Madrid"],
+  "La Latina 2":[41.450808,12.816564,"Europe/Rome"],
   "San José":[-16.596,-71.806,"America/Lima"], "Túnez":[33.879,9.874,"Africa/Tunis"],
   "Ayora":[39.118,-1.160,"Europe/Madrid"], "Bagnarelli":[41.515,15.267,"Europe/Rome"],
   "Benante":[37.376,14.904,"Europe/Rome"], "Panbianco":[37.371,14.891,"Europe/Rome"],
