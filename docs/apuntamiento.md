@@ -35,9 +35,9 @@ Desde la tarjeta del Panel de proyectos o desde `sim-apuntamiento.html`.
 - Recuperación: desde el fin de la meseta a +30° hasta encontrar tres minutos consecutivos con `|Real - Target| <= 0,3°` (configurable). Esta heurística es **diagnóstica**, no un criterio contractual acordado.
 - Intervalos externos confirmados de stow: franjas `HH:MM-HH:MM` aportadas a partir de SCADA u otra evidencia. **No se descartan puntos por tener un error elevado.**
 
-## Cronología de exclusiones (v0.2)
+## Cronología de exclusiones (v0.3)
 
-La tabla **Periodos de exclusión** identifica, para cada motivo activado, inicio y último minuto excluido, número de muestras y origen (sensor, TCU o intervalo externo). El gráfico superpone franjas de color y permite destacar un tramo haciendo clic en la tabla. **No se asumen intervalos continuos a través de huecos de adquisición**: solo se agrupan minutos consecutivos. Los motivos pueden solaparse y un minuto descartado puede aparecer en varios motivos; el total de minutos excluidos se cuenta una sola vez. La exportación de intervalos conserva esos solapamientos.
+La tabla **Periodos de exclusión** identifica, para cada motivo activado, inicio y último minuto excluido, número de muestras y origen (sensor, TCU o intervalo externo). La cabecera indica **versión 0.3**. Los periodos se muestran **también encima del gráfico**: resumen textual con horas de inicio y final, barra temporal y franjas coloreadas de contraste alto dentro de la gráfica. Se puede destacar un tramo haciendo clic en la etiqueta, la barra o la tabla. **No se asumen intervalos continuos a través de huecos de adquisición**: solo se agrupan minutos consecutivos. Los motivos pueden solaparse y un minuto descartado puede aparecer en varios motivos; el total de minutos excluidos se cuenta una sola vez. La exportación de intervalos conserva esos solapamientos.
 
 Si no hay CSV de seguimiento TCU, únicamente pueden visualizarse los motivos acreditados por el CSV del sensor (DNI, sensor, BT) o franjas externas introducidas expresamente. **No se inventan intervalos de ±55°, +30°, recuperación ni stow de la TCU.** La hora de cada intervalo es la marcada por el CSV del sensor; no garantiza que sea UTC ni hora civil sincronizada.
 
@@ -57,3 +57,7 @@ Los CSV se leen mediante la API File del navegador y no se envían al repositori
 - Validar la sincronización contra transiciones de backtracking del histórico real.
 - Revisar con ingeniería el procedimiento contractual de exclusión de límites y transitorios.
 - Añadir una exportación de informe Word FACTIUN al mismo flujo cuando el motor documental esté validado.
+
+## Publicación y versión visible
+
+El repositorio está alojado en GitHub, pero **GitHub Actions `pages` no despliega la aplicación**: únicamente prepara el paquete y comprueba el acceso sin autenticar. El dominio de trabajo es Cloudflare Pages protegido por Access. Comprobar en el panel de Cloudflare el commit de producción y la rama `main`; no considerar una prueba de GitHub en verde como publicación efectiva. La etiqueta `v0.3 · EXCLUSIONES VISIBLES` en la cabecera permite distinguir un navegador/servidor con la versión nueva de uno que sirve una página antigua.
