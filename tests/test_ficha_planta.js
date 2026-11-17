@@ -101,7 +101,7 @@ const CARTERA = {
     check('pero sí enseña que está sin comenzar', paramo.estado === 'Sin comenzar', paramo);
 
     // La Latina 2 ya está en la cartera/tabla IPs y en el alta de Toolbox,
-    // pero no debe desaparecer de la sección Plantas ni abrir visores aún sin datos.
+    // ya no puede dejar la huella vacía ni abrir visores que carezcan de datos.
     const latina = await tarjeta(page, 'La Latina 2');
     const tarjetaLatina = page.locator('.pcard[data-planta="La Latina 2"]');
     check('La Latina 2 (24029) permanece en Plantas',
@@ -113,8 +113,39 @@ const CARTERA = {
     const vistaLatina = page.locator('.pcard[data-planta="La Latina 2"] .pviews');
     const deshabilitadas = await vistaLatina.locator('span.btn.off').count();
     const activas = await vistaLatina.locator('a.btn').count();
-    check('La Latina no inventa cinco vistas inexistentes', deshabilitadas === 5 && activas === 0,
-      { deshabilitadas, activas });
+    check('La Latina habilita Siting geométrico y 2D, pero no 3D/RF/SCADA',
+      deshabilitadas === 3 && activas === 2, { deshabilitadas, activas });
+    const enlaces = await vistaLatina.locator('a.btn').evaluateAll(a => a.map(x => x.getAttribute('href')));
+    check('los dos enlaces apuntan al visor de La Latina, no a El Burgo',
+      enlaces.some(x => x.includes('latina-2.html?modo=2d')) &&
+      enlaces.some(x => x.includes('latina-2.html?modo=siting')), enlaces);
+    const huella = tarjetaLatina.locator('svg.huella');
+    check('la tarjeta muestra los 67 centros de TCU de verdad',
+      await huella.count()===1 && await huella.locator('circle').count()===67,
+      await huella.locator('circle').count());
+    check('NCU y HSU externas aparecen en la huella',
+      await huella.locator('.latina-station').count()===1 &&
+      await huella.locator('.latina-hsu').count()===1);
+    const fuente=await page.evaluate(() => {
+      const d=window.FACTIUN_LATINA_24029;
+      return {n:d.points.length,ct1:d.points.filter(p=>p[4]===1).length,
+        ct2:d.points.filter(p=>p[4]===2).length,hsu:d.stations.length};
+    });
+    check('fuente única de 67 TCU, CT 35/32 y dos estaciones',
+      fuente.n===67 && fuente.ct1===35 && fuente.ct2===32 && fuente.hsu===2, fuente);
+    const vista2d=await browser.newPage();
+    await vista2d.goto(BASE+'/latina-2.html?modo=2d');
+    check('el visor 2D carga 67 centros seleccionables',
+      await vista2d.locator('svg#map circle.tcu').count()===67);
+    check('el visor 2D presenta la distinción entre centros y mesas',
+      /PLANO DE CENTROS, NO DE MESAS/.test(await vista2d.locator('#mode-note').textContent()));
+    await vista2d.close();
+    const vistaSiting=await browser.newPage();
+    await vistaSiting.goto(BASE+'/latina-2.html?modo=siting');
+    check('el Siting distingue la asignación geométrica de cobertura RF',
+      await vistaSiting.locator('svg#map line.links').count()===67 &&
+      /SITING GEOMÉTRICO, NO RF/.test(await vistaSiting.locator('#mode-note').textContent()));
+    await vistaSiting.close();
 
 
     // ── la ficha ──
