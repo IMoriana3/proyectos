@@ -37,6 +37,7 @@ const CARTERA = {
   '24019': { cod:24019, nproy:'24019', nombre:'San José', estado_pem:'En proceso',   pdc:177.984,  trk_total:2289 },
   '24007': { cod:24007, nproy:'24007', nombre:'Fayón',    estado_pem:'En marcha',    pdc:1.25664,  trk_total:24 },
   '25019': { cod:25019, nproy:'25019', nombre:'Paramo',   estado_pem:'Sin comenzar', trk_total:396 },
+  '24029': { cod:24029, nproy:'24029', nombre:'La Latina 2', estado_pem:'Sin comenzar', trk_total:67, ncu_eth:1 },
 };
 
 (async () => {
@@ -98,6 +99,20 @@ const CARTERA = {
     const paramo = await tarjeta(page, 'Páramo');
     check('una planta SIN COMENZAR no gana sala de control', paramo.scada === 'APAGADO', paramo);
     check('pero sí enseña que está sin comenzar', paramo.estado === 'Sin comenzar', paramo);
+
+    // La Latina 2 ya está en la cartera/tabla IPs y en el alta de Toolbox,
+    // pero no debe desaparecer de la sección Plantas ni abrir visores aún sin datos.
+    const latina = await tarjeta(page, 'La Latina 2');
+    check('La Latina 2 (24029) aparece como la planta 14',
+      await page.locator('#plants .pcard').count() === 14 && !!latina, latina);
+    check('La Latina conserva el estado real Sin comenzar', latina.estado === 'Sin comenzar', latina);
+    check('La Latina NO abre SCADA sin PEM', latina.scada === 'APAGADO', latina);
+    const vistaLatina = page.locator('.pcard[data-planta="La Latina 2"] .pviews');
+    const deshabilitadas = await vistaLatina.locator('span.btn.off').count();
+    const activas = await vistaLatina.locator('a.btn').count();
+    check('La Latina no inventa cinco vistas inexistentes', deshabilitadas === 5 && activas === 0,
+      { deshabilitadas, activas });
+
 
     // ── la ficha ──
     /* Se leen los PARES de la lista, no el texto pegado: `textContent` junta el <dt> con su <dd>
