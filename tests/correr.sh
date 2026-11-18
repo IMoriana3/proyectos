@@ -59,6 +59,8 @@ PATRON="${1:-}"
 # aquí y el cambio aparece en el diff, que es justo lo que un recuento que
 # nadie fija no consigue.
 declare -A PISO=(
+  # Verificación visual ISS-D60 de exclusiones e irradiancia con/sin histórico TCU.
+  [test_apuntamiento_exclusiones.js]=19
   [test_generador_inclemencias.js]=45
   [test_abanderamiento_evento.js]=60
   [test_buscador.js]=59
