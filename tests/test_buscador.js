@@ -154,6 +154,35 @@ async function esperaListo(pg) {
   const inf2 = await page.evaluate(() => { $('repCliente').checked = true; const h = LayoutInforme.html(); $('repCliente').checked = false; return h; });
   check('marcado «cliente», cambia el rótulo', inf2.includes('para el cliente') && !inf2.includes('Uso interno de Factiun'));
 
+  // ── NINGUNA MESA PINTADA SE SALE DE LA PARCELA («el optimizador se sale de la parcela»,
+  // 2026-11-18). El motor estaba limpio; el LIENZO anclaba su frame UTM por TRASLACIÓN al
+  // vértice 0 de la parcela, y la convergencia de cuadrícula es un GIRO que una traslación no
+  // absorbe: medido aquí mismo, hasta 0,99 m fuera de la linde. El oráculo corre EN ESTE site
+  // (sintético, con giros grandes y orígenes desplazados) porque es el régimen donde el ancla
+  // rompía: en parcelas pequeñas el error cabe dentro del retranqueo y el check no mediría.
+  const fuera = await page.evaluate(() => {
+    const pip = (pt, P) => { let c = false; for (let u = 0, v = P.length - 1; u < P.length; v = u++) {
+      if ((P[u][1] > pt[1]) !== (P[v][1] > pt[1]) && pt[0] < (P[v][0] - P[u][0]) * (pt[1] - P[u][1]) / (P[v][1] - P[u][1]) + P[u][0]) c = !c; } return c; };
+    const dSeg = (pt, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1e-12;
+      const t = Math.max(0, Math.min(1, ((pt[0] - a[0]) * dx + (pt[1] - a[1]) * dy) / L2));
+      return Math.hypot(a[0] + t * dx - pt[0], a[1] + t * dy - pt[1]); };
+    const fueraMax = () => { const u = ULTIMO; if (!u || !u.valid || !u.r) return 0; let peor = 0;
+      u.r.structures.forEach(st => mesaEnLienzo(st, u.r).forEach(q => {
+        if (!pip(q, PARCELA.pts)) { let d = 1 / 0;
+          for (let i = 0, j = PARCELA.pts.length - 1; i < PARCELA.pts.length; j = i++) d = Math.min(d, dSeg(q, PARCELA.pts[j], PARCELA.pts[i]));
+          peor = Math.max(peor, d); } }));
+      return peor; };
+    let peor = 0;
+    for (let i = 0; i < 20; i++) { PASO(1); peor = Math.max(peor, fueraMax()); }
+    return peor;
+  });
+  // OJO con el veredicto: la primera versión devolvía «true o la distancia» y check() toma
+  // cualquier número no nulo como verdadero — un check que no podía ponerse rojo, cazado por
+  // su propio mutante (el ancla puesta daba 0,88 m… y salía OK). El número SIEMPRE, y la
+  // comparación aquí fuera, donde se lee.
+  check('ninguna mesa pintada se sale de la parcela (frame del lienzo), candidato a candidato',
+    fuera < 0.05, 'peor salida ' + fuera.toFixed(2) + ' m — con el ancla OFF esto medía hasta 0,99 m');
+
   // determinismo: misma URL, mismas 25 → el MISMO mejor
   const page2 = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page2.goto(URL1);
@@ -176,16 +205,17 @@ async function esperaListo(pg) {
     JSON.stringify({ real: e4.real, opciones: e4.opciones, kwp: e4.mejorKwp }));
   const barra2 = await page.evaluate(() => document.getElementById('barra').textContent);
   check('la barra dice que es la parcela real y cuál', barra2.includes('parcela real') && barra2.includes('Prueba'), barra2.slice(0, 80));
-  // el origen UTM del dibujo se RE-MIDE al cambiar de parcela: sin eso las mesas del site
-  // nuevo salían corridas con el origen del anterior cuando conduce PASO() (grabación, banco)
-  check('el origen del dibujo se re-mide en la parcela nueva', await page.evaluate(() => {
-    const antes = ESTADO().off.slice();
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
-    const enBlanco = ESTADO().off[0] === 0;                    // nuevoSite lo resetea…
-    PASO(3);
-    const despues = ESTADO().off;                              // …y el primer candidato lo vuelve a medir
-    return enBlanco && despues[0] !== 0 && (despues[0] !== antes[0] || despues[1] !== antes[1]);
-  }), true);
+  // (aquí vivía «el origen del dibujo se re-mide en la parcela nueva»: vigilaba el ancla OFF
+  //  por TRASLACIÓN del frame UTM. El ancla se retiró con el bug del 2026-11-18 y su oráculo
+  //  vive arriba, en el site sintético — el régimen donde el ancla rompía de verdad. El salto
+  //  de site que este bloque ejercitaba se conserva:)
+  await page.evaluate(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' })); PASO(3); });
+  check('tras cambiar de site, las mesas del nuevo se pintan en SU parcela', await page.evaluate(() => {
+    const u = ULTIMO; if (!u || !u.r) return false;
+    const q = mesaEnLienzo(u.r.structures[0], u.r)[0];
+    const xs = PARCELA.pts.map(p => p[0]), ys = PARCELA.pts.map(p => p[1]);
+    return q[0] >= Math.min(...xs) - 1 && q[0] <= Math.max(...xs) + 1 && q[1] >= Math.min(...ys) - 1 && q[1] <= Math.max(...ys) + 1;
+  }), 'la primera mesa cae fuera de la caja de la parcela nueva');;
   // un JSON sin vallado no cuela
   check('sin `fence` no hay parcela real', (await page.evaluate(() => cargaLayoutReal({ title: 'x' }))) === false);
 

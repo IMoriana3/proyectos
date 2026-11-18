@@ -143,6 +143,16 @@ const BASE={mount:"tracker",table:"1V",mods:[28],modLen:2.382,modWid:1.134,modul
 const ANCLA={lon:-3.7,lat:40.4};
 const M_LON=111320*Math.cos(ANCLA.lat*Math.PI/180),M_LAT=110540;
 const aLonLat=pts=>pts.map(p=>[ANCLA.lon+p[0]/M_LON,ANCLA.lat+p[1]/M_LAT]);
+/* la inversa, para PINTAR: lon/lat → los metros locales de la parcela. Cada
+   parcela lleva LA SUYA (aLocal), porque el frame del encargo tiene su propio
+   centro. El lienzo dibuja TODO por aquí — parcela y mesas en la misma
+   proyección. Antes las mesas se pintaban en el UTM del motor ancladas por
+   TRASLACIÓN al vértice 0 de la parcela: el UTM viene girado por la
+   convergencia de cuadrícula (~0,5° aquí), así que lejos del ancla las mesas
+   se salían de la linde en pantalla hasta un metro por cada ~150 m — «el
+   optimizador se sale de la parcela» (2026-11-18). El motor estaba limpio
+   (medido: 0 mesas fuera en SU frame); mentía solo el dibujo. */
+const anclaLocal=ll=>[(ll[0]-ANCLA.lon)*M_LON,(ll[1]-ANCLA.lat)*M_LAT];
 
 /* ── parcela sintética por semilla: polígono radial con mordidas, 0–2 agujeros ── */
 function parcelaSintetica(rnd){
@@ -158,7 +168,7 @@ function parcelaSintetica(rnd){
   for(let d=0;d<nd;d++){const cx=(rnd()-.5)*R*5,cy=(rnd()-.5)*R*4,r0=40+rnd()*180,m=9,ring=[];
     for(let i=0;i<m;i++){const a=i/m*2*Math.PI;ring.push([cx+Math.cos(a)*r0*(0.6+rnd()*.8),cy+Math.sin(a)*r0*(0.6+rnd()*.8)]);}
     deco.push(ring);}
-  return {pts,holes,deco,nombre:null};
+  return {pts,holes,deco,nombre:null,aLocal:anclaLocal};
 }
 
 /* ── el encargo del Generador: SU parcela y SU mesa, desde localStorage ── */
@@ -173,7 +183,8 @@ function parcelaDeEncargo(cfg){
   const lat0=cfg.coords.reduce((s,p)=>s+p[1],0)/cfg.coords.length;
   const mx=111320*Math.cos(lat0*Math.PI/180),my=110540;
   const am=pts=>pts.map(p=>[(p[0]-lon0)*mx,(p[1]-lat0)*my]);
-  return {pts:am(cfg.coords),holes:(cfg.holes||[]).map(am),deco:[],nombre:"parcela del Generador"};
+  return {pts:am(cfg.coords),holes:(cfg.holes||[]).map(am),deco:[],nombre:"parcela del Generador",
+    aLocal:ll=>[(ll[0]-lon0)*mx,(ll[1]-lat0)*my]};
 }
 
 /* ── parcela REAL: arrastra un <planta>_layout.json (vallado = tramos concatenados) ── */
@@ -184,7 +195,7 @@ function cargaLayoutReal(L){
     const u=anillo[anillo.length-1];if(!u||Math.hypot(u[0]-q[0],u[1]-q[1])>.01)anillo.push(q);}));
   if(anillo.length<3)return false;
   const cx=anillo.reduce((s,p)=>s+p[0],0)/anillo.length,cy=anillo.reduce((s,p)=>s+p[1],0)/anillo.length;
-  REAL={pts:anillo.map(p=>[p[0]-cx,p[1]-cy]),holes:[],deco:[],nombre:L.title||L.plant||"layout"};
+  REAL={pts:anillo.map(p=>[p[0]-cx,p[1]-cy]),holes:[],deco:[],nombre:L.title||L.plant||"layout",aLocal:anclaLocal};
   nuevoSite(true);return true;
 }
 addEventListener("dragover",e=>e.preventDefault());
@@ -270,7 +281,6 @@ function nuevoSite(mismaParcela){
   CFGP=ENCARGO?Object.assign({},ENCARGO)
               :Object.assign({},BASE,{coords:aLonLat(PARCELA.pts),holes:PARCELA.holes.map(aLonLat)});
   OPC=0;MEJOR=null;BASE_REF=null;ULTIMO=null;KWS=[];GAPS=[];DESDE=0;NUBE=[];SERIE=[];
-  OFF=[0,0];   // el origen UTM del dibujo es DE CADA PARCELA: sin esto, tras cambiar de site las mesas salían corridas si conducía PASO()
   HIST={giro:new Array(15).fill(null),vial:new Map()};
   /* Con la parcela del USUARIO (encargo o layout real) la vista es LA DEL
      MAPA: norte arriba, sin giro y sin tumbado — dos partes seguidos de «no
@@ -375,18 +385,28 @@ function dibuja(){
   CX.strokeStyle="rgba(220,227,235,.5)";CX.lineWidth=1.2;CX.stroke();
   PARCELA.holes.forEach(h=>{traza(h,true);CX.fillStyle="rgba(11,20,33,.95)";CX.fill();CX.strokeStyle="rgba(140,154,171,.4)";CX.stroke();});
   const u=VIEW_RESULT==='base'?BASE_REF:(MEJOR||ULTIMO);if(!u||!u.r)return;
-  mideOff(u.r);
-  const loc=q=>[q[0]-OFF[0],q[1]-OFF[1]];
+  const loc=q=>PARCELA.aLocal(u.r.toLonLat(q));
   (u.r.roads||[]).forEach(rd=>{if(rd&&rd.length){traza(rd.map(loc),true);CX.fillStyle="rgba(140,154,171,.10)";CX.fill();}});
   const full=CFGP.mods[0],t=performance.now()/460;
-  u.r.structures.forEach(st=>{const p=st.utm.map(loc),f=Math.min(1,(st.mods||full)/full);
+  u.r.structures.forEach(st=>{const p=mesaEnLienzo(st,u.r),f=Math.min(1,(st.mods||full)/full);
     traza(p,true);
     CX.strokeStyle=f>=1?"rgba(84,240,150,.85)":"hsla("+(120*f)+",85%,60%,.85)";
     CX.lineWidth=f>=1?1.1:1.4;CX.stroke();});
-  (u.r.descartadas||[]).forEach(st=>{if(!st.utm)return;const p=st.utm.map(loc);
+  (u.r.descartadas||[]).forEach(st=>{const p=mesaEnLienzo(st,u.r);if(!p)return;
     traza(p,true);CX.strokeStyle="rgba(239,95,107,"+(0.55+0.35*Math.sin(t))+")";CX.lineWidth=2;CX.stroke();});
   brujula();
 }
+/* UNA función dice dónde cae una mesa en el frame de la parcela, y la usan el
+   lienzo, el plano del informe y el oráculo del banco: tres consumidores que
+   no pueden discrepar. Pinta desde lon/lat con la proyección de la parcela
+   (PARCELA.aLocal) — anclar el UTM del motor por TRASLACIÓN dejaba las mesas
+   fuera de la linde en pantalla, porque la convergencia de cuadrícula es un
+   GIRO (~0,5° aquí: ~1 m de error por cada 150 m desde el ancla). */
+function mesaEnLienzo(st,r){
+  if(st.lonlat)return st.lonlat.map(PARCELA.aLocal);
+  return st.utm?st.utm.map(q=>PARCELA.aLocal(r.toLonLat(q))):null;
+}
+window.mesaEnLienzo=mesaEnLienzo;
 /* Brújula: la vista GIRA despacio, así que el norte no es fijo en pantalla.
    La flecha se deriva de la MISMA proyección que pinta la planta (pV), no de
    VISTA.ang aparte: si alguien toca la proyección, la brújula lo cuenta. */
@@ -403,10 +423,10 @@ function brujula(){
   CX.fillStyle="rgba(220,227,235,.8)";CX.font="600 10px "+getComputedStyle(document.body).getPropertyValue("--mono");
   CX.fillText("N",bx+dx*(R+9)-3,by+dy*(R+9)+3.5);
 }
-/* structures.utm viene en UTM absolutas; el origen local se mide una vez por site */
-let OFF=[0,0];
-function mideOff(r){if(!r||!r.parcel_utm||!r.parcel_utm.length)return;
-  const q=r.parcel_utm[0],p=PARCELA.pts[0];OFF=[q[0]-p[0],q[1]-p[1]];}
+/* (aquí vivió el origen UTM del dibujo, OFF/mideOff: un ancla por TRASLACIÓN
+   del frame UTM del motor al de la parcela. Se retiró al pintar desde lon/lat
+   con PARCELA.aLocal — la traslación no puede absorber el giro de la
+   convergencia UTM, y las mesas se salían de la linde en pantalla.) */
 
 /* ── el panel ── */
 function miniCanvas(c){const d=Math.min(devicePixelRatio||1,2),w=c.clientWidth,h=c.clientHeight||+c.getAttribute("height");
@@ -491,7 +511,6 @@ function vuelta(now){
   if(LAY&&!PAUSA){
     const t0=performance.now();
     do{if(OPC>=+$("searchBudget").value||!candidato()){PAUSA=true;break;}}while(performance.now()-t0<24);   // al menos uno; más si el motor da
-    if(ULTIMO&&ULTIMO.r&&!OFF[0])mideOff(ULTIMO.r);
     if(!QUIETO&&!ENCARGO&&now-ultAvance>12000){REAL=null;nuevoSite();ultAvance=now;}
   }
   if(!VISTA.plano)VISTA.ang+=.0009;
@@ -510,9 +529,9 @@ addEventListener("keydown",e=>{
 });
 
 /* ── ganchos del banco: correr N candidatos en seco y leer el estado ── */
-window.PASO=n=>{for(let i=0;i<n;i++){if(!candidato())break;}if(OPC&&!OFF[0])mideOff(ULTIMO.r);dibuja();panel();barra();if(window.LayoutSearchUI)LayoutSearchUI.render();};
+window.PASO=n=>{for(let i=0;i<n;i++){if(!candidato())break;}dibuja();panel();barra();if(window.LayoutSearchUI)LayoutSearchUI.render();};
 window.ESTADO=()=>({opciones:OPC,mejorKwp:MEJOR?MEJOR.kwp:0,mejorStr:MEJOR?MEJOR.str:0,
-  semilla:SEM.join("-"),site:SITE,real:!!REAL,off:OFF.slice(),encargo:!!ENCARGO,az0:AZ0,
+  semilla:SEM.join("-"),site:SITE,real:!!REAL,encargo:!!ENCARGO,az0:AZ0,
   gira:GIRA,sol:!!SOL,tabla:!!TABLA_F,mejorGiro:MEJOR?MEJOR.giro:null,
   baseKwp:BASE_REF?BASE_REF.kwp:null,baseEner:BASE_REF?BASE_REF.ener:null,
   mejorRend:MEJOR?MEJOR.rend:null,mejorEner:MEJOR?MEJOR.ener:null,
