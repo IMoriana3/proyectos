@@ -92,7 +92,7 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
     <p id="searchChanges"></p>
     <p>Azimuts desde el norte geográfico. X longitudinal a las mesas, Y transversal; antes del centrado del bloque.</p>
     <details><summary>Mesas por talla</summary><table><thead><tr><th>Módulos/mesa</th><th>Referencia</th><th>Propuesta</th></tr></thead><tbody id="searchSizes"></tbody></table></details>
-    <div class="actions"><button id="viewBase">Ver referencia</button><button id="viewBest">Ver propuesta</button><button id="searchApply" class="primary" disabled>Aplicar al generador</button><button id="searchExport">Descargar comparación</button></div>
+    <div class="actions"><button id="viewBase">Ver referencia</button><button id="viewBest">Ver propuesta</button><button id="searchApply" class="primary" disabled>Aplicar al generador</button><button id="searchExport">Descargar comparación</button><button id="searchInforme" disabled title="Estudio imprimible (A4) con el formato del informe de batería del Gemelo: portada, conclusión, comparación, planos y límites declarados">📄 Informe</button><label style="font-size:11px;align-self:center"><input type="checkbox" id="repCliente"> para el cliente<small style="display:block;color:var(--muted)">sin marcar, se rotula «uso interno»</small></label></div>
     <p id="applyStatus"></p>
   </section>
   <details class="telemetry"><summary>Detalle de la búsqueda</summary>
@@ -552,6 +552,7 @@ window.cargaLayoutReal=cargaLayoutReal;
 })();
 </script>
 <script src="lib/layout-search-ui.js"></script>
+<script src="lib/layout-informe.js"></script>
 <!-- el índice de plantas y herramientas, el mismo de la portada (lo pinta lib/indice.js) -->
 <script src="lib/indice.js" defer></script>
 </body>

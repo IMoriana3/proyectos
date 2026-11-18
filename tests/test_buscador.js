@@ -137,10 +137,30 @@ async function esperaListo(pg) {
   check('el velo de error no tapa la página', await page.evaluate(() =>
     getComputedStyle(document.getElementById('aviso')).display === 'none'), 'display ≠ none');
 
+  // ── EL INFORME PARA CLIENTE (formato del estudio de batería del Gemelo) ──────────────────
+  // No recalcula nada: cosecha LayoutSearchUI.report(). Lo que puede mentir es lo que se mide:
+  // que lleve las cifras de ESTA búsqueda, los planos re-dibujados, el límite declarado del
+  // índice y el rótulo interno/cliente.
+  const inf1 = await page.evaluate(() => LayoutInforme.html());
+  check('el informe se construye y es el de ESTA búsqueda',
+    typeof inf1 === 'string' && inf1.includes('Estudio de optimización') && inf1.includes('123456-654321'),
+    inf1 ? inf1.slice(0, 80) : String(inf1));
+  check('y declara el límite del índice: cielo claro, no energía anual',
+    inf1.includes('cielo claro') && inf1.includes('no es una previsión de energía anual'),
+    'falta la declaración de límites');
+  check('con los planos y las gráficas re-dibujados en claro',
+    (inf1.match(/data:image\/png/g) || []).length >= 3, (inf1.match(/data:image\/png/g) || []).length + ' figuras');
+  check('sin marcar «cliente», se rotula uso interno', inf1.includes('Uso interno de Factiun'));
+  const inf2 = await page.evaluate(() => { $('repCliente').checked = true; const h = LayoutInforme.html(); $('repCliente').checked = false; return h; });
+  check('marcado «cliente», cambia el rótulo', inf2.includes('para el cliente') && !inf2.includes('Uso interno de Factiun'));
+
   // determinismo: misma URL, mismas 25 → el MISMO mejor
   const page2 = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page2.goto(URL1);
   await esperaListo(page2);
+  // sin evaluaciones no hay nada que informar: html() es null y el botón está apagado
+  check('sin búsqueda, el informe se niega (null) y su botón está apagado', await page2.evaluate(() =>
+    LayoutInforme.html() === null && $('searchInforme').disabled === true), 'informe de la nada');
   await page2.evaluate(() => PASO(25));
   const e3 = await page2.evaluate(() => ESTADO());
   check('misma semilla → mismo mejor kWp (reproducible)', e3.mejorKwp === e1.mejorKwp, e3.mejorKwp + ' vs ' + e1.mejorKwp);
@@ -265,6 +285,10 @@ async function esperaListo(pg) {
   check('con el eje ya en N-S, la base sigue ganando', Math.abs(eb.mejorEner - eb.baseEner) < 1e-9,
     JSON.stringify({ mejor: eb.mejorEner, base: eb.baseEner, giro: eb.mejorGiro }));
   check('sin mejora, la barra lo dice en redondo', barraB.includes('la base sigue ganando'), barraB.slice(-90));
+  // y el informe da la MISMA conclusión que la barra: la referencia se mantiene. Un informe
+  // que anuncia hallazgo donde la barra dice «sigue ganando» serían dos verdades.
+  check('sin mejora, el informe concluye que la referencia se mantiene', await pageB.evaluate(() =>
+    (LayoutInforme.html() || '').includes('se mantiene como la mejor')), 'conclusión incoherente con la barra');
   await pageB.keyboard.press('a');
   check('y A NO envia nada: aplicarlo empeoraria lo que ya hay',
     (await pageB.evaluate(() => localStorage.getItem('buscador_mejor'))) === null);
