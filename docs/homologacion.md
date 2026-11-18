@@ -30,7 +30,7 @@ excelente deja su requisito en «Simulado»: lo que lo sube a «Medido» es un d
 producto instalado.
 
 A 11/11/2026: **1 medido, 14 simulados, 10 declarados y 11 sin evidencia**. El requisito 5 —la
-exposición— pasó de «Falta» a «Simulado» con `sim-viento.html` v1.27.
+exposición— pasó de «Falta» a «Simulado» con `sim-viento.html` v1.29.
 
 ## Los tres hallazgos
 
