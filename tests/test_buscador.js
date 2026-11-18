@@ -137,10 +137,59 @@ async function esperaListo(pg) {
   check('el velo de error no tapa la página', await page.evaluate(() =>
     getComputedStyle(document.getElementById('aviso')).display === 'none'), 'display ≠ none');
 
+  // ── EL INFORME PARA CLIENTE (formato del estudio de batería del Gemelo) ──────────────────
+  // No recalcula nada: cosecha LayoutSearchUI.report(). Lo que puede mentir es lo que se mide:
+  // que lleve las cifras de ESTA búsqueda, los planos re-dibujados, el límite declarado del
+  // índice y el rótulo interno/cliente.
+  const inf1 = await page.evaluate(() => LayoutInforme.html());
+  check('el informe se construye y es el de ESTA búsqueda',
+    typeof inf1 === 'string' && inf1.includes('Estudio de optimización') && inf1.includes('123456-654321'),
+    inf1 ? inf1.slice(0, 80) : String(inf1));
+  check('y declara el límite del índice: cielo claro, no energía anual',
+    inf1.includes('cielo claro') && inf1.includes('no es una previsión de energía anual'),
+    'falta la declaración de límites');
+  check('con los planos y las gráficas re-dibujados en claro',
+    (inf1.match(/data:image\/png/g) || []).length >= 3, (inf1.match(/data:image\/png/g) || []).length + ' figuras');
+  check('sin marcar «cliente», se rotula uso interno', inf1.includes('Uso interno de Factiun'));
+  const inf2 = await page.evaluate(() => { $('repCliente').checked = true; const h = LayoutInforme.html(); $('repCliente').checked = false; return h; });
+  check('marcado «cliente», cambia el rótulo', inf2.includes('para el cliente') && !inf2.includes('Uso interno de Factiun'));
+
+  // ── NINGUNA MESA PINTADA SE SALE DE LA PARCELA («el optimizador se sale de la parcela»,
+  // 2026-11-18). El motor estaba limpio; el LIENZO anclaba su frame UTM por TRASLACIÓN al
+  // vértice 0 de la parcela, y la convergencia de cuadrícula es un GIRO que una traslación no
+  // absorbe: medido aquí mismo, hasta 0,99 m fuera de la linde. El oráculo corre EN ESTE site
+  // (sintético, con giros grandes y orígenes desplazados) porque es el régimen donde el ancla
+  // rompía: en parcelas pequeñas el error cabe dentro del retranqueo y el check no mediría.
+  const fuera = await page.evaluate(() => {
+    const pip = (pt, P) => { let c = false; for (let u = 0, v = P.length - 1; u < P.length; v = u++) {
+      if ((P[u][1] > pt[1]) !== (P[v][1] > pt[1]) && pt[0] < (P[v][0] - P[u][0]) * (pt[1] - P[u][1]) / (P[v][1] - P[u][1]) + P[u][0]) c = !c; } return c; };
+    const dSeg = (pt, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1e-12;
+      const t = Math.max(0, Math.min(1, ((pt[0] - a[0]) * dx + (pt[1] - a[1]) * dy) / L2));
+      return Math.hypot(a[0] + t * dx - pt[0], a[1] + t * dy - pt[1]); };
+    const fueraMax = () => { const u = ULTIMO; if (!u || !u.valid || !u.r) return 0; let peor = 0;
+      u.r.structures.forEach(st => mesaEnLienzo(st, u.r).forEach(q => {
+        if (!pip(q, PARCELA.pts)) { let d = 1 / 0;
+          for (let i = 0, j = PARCELA.pts.length - 1; i < PARCELA.pts.length; j = i++) d = Math.min(d, dSeg(q, PARCELA.pts[j], PARCELA.pts[i]));
+          peor = Math.max(peor, d); } }));
+      return peor; };
+    let peor = 0;
+    for (let i = 0; i < 20; i++) { PASO(1); peor = Math.max(peor, fueraMax()); }
+    return peor;
+  });
+  // OJO con el veredicto: la primera versión devolvía «true o la distancia» y check() toma
+  // cualquier número no nulo como verdadero — un check que no podía ponerse rojo, cazado por
+  // su propio mutante (el ancla puesta daba 0,88 m… y salía OK). El número SIEMPRE, y la
+  // comparación aquí fuera, donde se lee.
+  check('ninguna mesa pintada se sale de la parcela (frame del lienzo), candidato a candidato',
+    fuera < 0.05, 'peor salida ' + fuera.toFixed(2) + ' m — con el ancla OFF esto medía hasta 0,99 m');
+
   // determinismo: misma URL, mismas 25 → el MISMO mejor
   const page2 = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page2.goto(URL1);
   await esperaListo(page2);
+  // sin evaluaciones no hay nada que informar: html() es null y el botón está apagado
+  check('sin búsqueda, el informe se niega (null) y su botón está apagado', await page2.evaluate(() =>
+    LayoutInforme.html() === null && $('searchInforme').disabled === true), 'informe de la nada');
   await page2.evaluate(() => PASO(25));
   const e3 = await page2.evaluate(() => ESTADO());
   check('misma semilla → mismo mejor kWp (reproducible)', e3.mejorKwp === e1.mejorKwp, e3.mejorKwp + ' vs ' + e1.mejorKwp);
@@ -156,16 +205,17 @@ async function esperaListo(pg) {
     JSON.stringify({ real: e4.real, opciones: e4.opciones, kwp: e4.mejorKwp }));
   const barra2 = await page.evaluate(() => document.getElementById('barra').textContent);
   check('la barra dice que es la parcela real y cuál', barra2.includes('parcela real') && barra2.includes('Prueba'), barra2.slice(0, 80));
-  // el origen UTM del dibujo se RE-MIDE al cambiar de parcela: sin eso las mesas del site
-  // nuevo salían corridas con el origen del anterior cuando conduce PASO() (grabación, banco)
-  check('el origen del dibujo se re-mide en la parcela nueva', await page.evaluate(() => {
-    const antes = ESTADO().off.slice();
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
-    const enBlanco = ESTADO().off[0] === 0;                    // nuevoSite lo resetea…
-    PASO(3);
-    const despues = ESTADO().off;                              // …y el primer candidato lo vuelve a medir
-    return enBlanco && despues[0] !== 0 && (despues[0] !== antes[0] || despues[1] !== antes[1]);
-  }), true);
+  // (aquí vivía «el origen del dibujo se re-mide en la parcela nueva»: vigilaba el ancla OFF
+  //  por TRASLACIÓN del frame UTM. El ancla se retiró con el bug del 2026-11-18 y su oráculo
+  //  vive arriba, en el site sintético — el régimen donde el ancla rompía de verdad. El salto
+  //  de site que este bloque ejercitaba se conserva:)
+  await page.evaluate(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' })); PASO(3); });
+  check('tras cambiar de site, las mesas del nuevo se pintan en SU parcela', await page.evaluate(() => {
+    const u = ULTIMO; if (!u || !u.r) return false;
+    const q = mesaEnLienzo(u.r.structures[0], u.r)[0];
+    const xs = PARCELA.pts.map(p => p[0]), ys = PARCELA.pts.map(p => p[1]);
+    return q[0] >= Math.min(...xs) - 1 && q[0] <= Math.max(...xs) + 1 && q[1] >= Math.min(...ys) - 1 && q[1] <= Math.max(...ys) + 1;
+  }), 'la primera mesa cae fuera de la caja de la parcela nueva');;
   // un JSON sin vallado no cuela
   check('sin `fence` no hay parcela real', (await page.evaluate(() => cargaLayoutReal({ title: 'x' }))) === false);
 
@@ -265,6 +315,10 @@ async function esperaListo(pg) {
   check('con el eje ya en N-S, la base sigue ganando', Math.abs(eb.mejorEner - eb.baseEner) < 1e-9,
     JSON.stringify({ mejor: eb.mejorEner, base: eb.baseEner, giro: eb.mejorGiro }));
   check('sin mejora, la barra lo dice en redondo', barraB.includes('la base sigue ganando'), barraB.slice(-90));
+  // y el informe da la MISMA conclusión que la barra: la referencia se mantiene. Un informe
+  // que anuncia hallazgo donde la barra dice «sigue ganando» serían dos verdades.
+  check('sin mejora, el informe concluye que la referencia se mantiene', await pageB.evaluate(() =>
+    (LayoutInforme.html() || '').includes('se mantiene como la mejor')), 'conclusión incoherente con la barra');
   await pageB.keyboard.press('a');
   check('y A NO envia nada: aplicarlo empeoraria lo que ya hay',
     (await pageB.evaluate(() => localStorage.getItem('buscador_mejor'))) === null);
@@ -369,6 +423,7 @@ async function esperaListo(pg) {
   //    variante de reparto, es apuntar los módulos a otro sitio: no se gira y se dice. ──
   await pageG.evaluate(() => { document.getElementById('mount').value = 'fija';
     if (typeof syncAz === 'function') syncAz();
+    document.getElementById('fixTilt').value = 5;     // un tilt de partida claramente malo, para que haya mejora que encontrar
     document.getElementById('optBtn').click(); });
   const pageF = await ctx.newPage();
   await pageF.goto(BASE + '/buscador-implantacion.html?encargo=1&quieto=1&semilla=7-7');
@@ -378,6 +433,40 @@ async function esperaListo(pg) {
   check('en fija no se gira nada', ef.encargo === true && ef.gira === false && ef.mejorGiro === 0,
     JSON.stringify({ gira: ef.gira, giro: ef.mejorGiro }));
   check('y la barra lo dice', (await pageF.evaluate(() => document.getElementById('barra').textContent)).includes('fija: no se gira'));
+
+  // ── EL TILT DE LA FIJA ES VARIABLE («optimizar también el tilt», 2026-11-18) ────────────
+  // La huella del motor no depende del tilt, así que el criterio es un índice de ENERGÍA:
+  // la física del comparador de estructuras (careada contra el core), extraída en runtime —
+  // transposición Perez de cielo claro en 12 días + SOMBRA entre filas al pitch + cielo
+  // enmascarado —, normalizada al tilt del encargo.
+  await pageF.evaluate(() => PASO(40));
+  const et = await pageF.evaluate(() => ESTADO());
+  check('la tabla de inclinación se construye y la referencia vale 1',
+    et.tablaTilt === true && (await pageF.evaluate(() => Math.abs(FTILT(TILT0) - 1) < 1e-9)),
+    JSON.stringify({ tablaTilt: et.tablaTilt, tilt0: et.tilt0 }));
+  check('se muestrean inclinaciones distintas', (await pageF.evaluate(() =>
+    new Set(TRACE.filter(r => r.tilt != null).map(r => r.tilt)).size)) >= 4, 'menos de 4 tilts distintos');
+  // la SOMBRA está dentro del índice: a tilt alto, la neta sombreada pierde contra la sin
+  // sombra, y la TABLA tiene que salir de la física SOMBREADA (es lo que el mutante vigila)
+  check('el índice lleva la sombra entre filas, y la tabla sale de la física sombreada',
+    await pageF.evaluate(() => {
+      const con = TILT_CORRE(50, false), sin = TILT_CORRE(50, true), ref = TILT_CORRE(TILT0, false);
+      return con != null && con < sin && Math.abs(FTILT(50) - con / ref) < 1e-9;
+    }), 'la tabla no sale de la física sombreada');
+  check('con un tilt de partida malo (5°), el buscador encuentra una inclinación mejor',
+    et.mejorTilt != null && et.mejorTilt > 10 && et.mejorEner > et.baseEner * 1.0005,
+    JSON.stringify({ tilt: et.mejorTilt, mejor: et.mejorEner, base: et.baseEner }));
+  await pageF.keyboard.press('a');
+  const mt = await pageF.evaluate(() => JSON.parse(localStorage.getItem('buscador_mejor') || 'null'));
+  check('A envía la inclinación del mejor', !!mt && Number.isFinite(mt.tilt) && mt.tilt !== 5, JSON.stringify(mt && { tilt: mt.tilt }));
+  await pageG.evaluate(() => window.dispatchEvent(new Event('focus')));
+  check('y el generador la aplica al mando de la fija', await pageG.evaluate(tilt =>
+    +document.getElementById('fixTilt').value === tilt &&
+    document.getElementById('hint').textContent.includes('tilt'), mt ? mt.tilt : -1),
+    await pageG.evaluate(() => document.getElementById('fixTilt').value + ' · ' + document.getElementById('hint').textContent.slice(0, 60)));
+  // la tecla A deja un aviso PEGAJOSO en la barra (9 s): se limpia para que el bloque
+  // siguiente lea la BARRA y no el aviso
+  await pageF.evaluate(() => { AVISO_BARRA = null; });
 
   // ── LA BARRA TIENE QUE PODERSE LEER ─────────────────────────────────────────────────────
   // Se ordena por ENERGÍA, así que la mejor puede llevar MENOS potencia instalada y ganar
