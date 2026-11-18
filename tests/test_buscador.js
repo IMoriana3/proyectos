@@ -216,6 +216,22 @@ async function esperaListo(pg) {
     const xs = PARCELA.pts.map(p => p[0]), ys = PARCELA.pts.map(p => p[1]);
     return q[0] >= Math.min(...xs) - 1 && q[0] <= Math.max(...xs) + 1 && q[1] >= Math.min(...ys) - 1 && q[1] <= Math.max(...ys) + 1;
   }), 'la primera mesa cae fuera de la caja de la parcela nueva');;
+  // ── CRITERIO POTENCIA («debe poder optimizar por energía o por potencia», 2026-11-18) ──
+  // El check vive en TRACKER con giros: ahí el factor solar muerde (≠1) y apagarlo se nota.
+  // En fija sin tabla el factor ya vale 1 y el check no mediría (régimen de riesgo).
+  await page.evaluate(() => {
+    $('searchCrit').value = 'potencia'; $('searchCrit').dispatchEvent(new Event('change'));
+    $('searchRun').click(); PASO(15);
+  });
+  check('bajo criterio POTENCIA, el índice ES la potencia aunque haya giros', await page.evaluate(() =>
+    TRACE.some(r => r.valid && Math.abs(r.panelAz - AZ0) > 5) &&
+    TRACE.every(r => !r.valid || Math.abs(r.score - r.kWp) < 1e-9) &&
+    (!MEJOR || MEJOR.rend === 1)), 'el factor solar se coló en el criterio potencia');
+  check('y el mando del tilt queda apagado, con su motivo en pantalla', await page.evaluate(() =>
+    $('searchTiltMax').disabled === true &&
+    $('objective').textContent.includes('POTENCIA')), 'potencia sin declarar en pantalla');
+  await page.evaluate(() => { $('searchCrit').value = 'energia'; $('searchCrit').dispatchEvent(new Event('change')); });
+
   // un JSON sin vallado no cuela
   check('sin `fence` no hay parcela real', (await page.evaluate(() => cargaLayoutReal({ title: 'x' }))) === false);
 
@@ -467,6 +483,20 @@ async function esperaListo(pg) {
   // la tecla A deja un aviso PEGAJOSO en la barra (9 s): se limpia para que el bloque
   // siguiente lea la BARRA y no el aviso
   await pageF.evaluate(() => { AVISO_BARRA = null; });
+
+  // ── EL TOPE DE INCLINACIÓN («debemos poder limitar el tilt máximo», 2026-11-18) ─────────
+  // Es una restricción ESTRUCTURAL: ninguna variante puede superarla, candidato a candidato.
+  await pageF.evaluate(() => {
+    $('searchTiltMax').value = 20; $('searchTiltMax').dispatchEvent(new Event('change'));
+    $('searchRun').click(); PASO(48);
+  });
+  const tope = await pageF.evaluate(() => ({
+    tilts: [...new Set(TRACE.filter(r => r.tilt != null).map(r => r.tilt))],
+    peor: Math.max(...TRACE.filter(r => r.tilt != null).map(r => r.tilt)),
+    mejorTilt: MEJOR ? MEJOR.tilt : null, distintos: new Set(TRACE.filter(r => r.tilt != null).map(r => r.tilt)).size }));
+  check('con tope 20°, ninguna variante lo supera y se sigue barriendo debajo',
+    tope.peor <= 20 && tope.distintos >= 3 && tope.mejorTilt != null && tope.mejorTilt <= 20,
+    JSON.stringify(tope));
 
   // ── LA BARRA TIENE QUE PODERSE LEER ─────────────────────────────────────────────────────
   // Se ordena por ENERGÍA, así que la mejor puede llevar MENOS potencia instalada y ganar

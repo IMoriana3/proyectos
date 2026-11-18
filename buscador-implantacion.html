@@ -76,6 +76,8 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
     <p id="objective">Mismo motor y un criterio: kWp × factor solar de orientación. Es un índice relativo de cielo claro, no una previsión de energía anual.</p>
     <div class="two"><label>Método<select id="searchMethod"><option value="random">Aleatorio</option><option value="gp">Aprendizaje GP · experimental</option><option value="grid">Barrido de ángulos</option></select></label>
       <label>Evaluaciones<select id="searchBudget"><option value="48" selected>48</option><option value="128">128</option><option value="256">256</option></select></label></div>
+    <div class="two"><label>Criterio<select id="searchCrit" title="Energía pondera cada variante con el factor solar (orientación del eje en tracker, inclinación en fija). Potencia ordena por kWp instalados a secas — ojo: puede premiar llenar la parcela en diagonal, que mete más módulos y produce peor («cómo va a ser esto la mejor opción», 2026-09-08)"><option value="energia">Energía (kWp × factor solar)</option><option value="potencia">Potencia instalada (kWp)</option></select></label>
+      <label>Tilt máx. fija °<input id="searchTiltMax" type="number" value="45" min="5" max="60" step="1" title="Tope ESTRUCTURAL del barrido de inclinación en fija: ninguna propuesta lo supera"></label></div>
     <div id="searchVariables"><label><input id="searchAz" type="checkbox" checked> Azimut del eje (±90°)</label><br>
       <label><input id="searchRows" type="checkbox" checked> Alineado / tresbolillo</label><br>
       <label><input id="searchXY" type="checkbox" checked> Origen X/Y (±medio pitch)</label><br>
@@ -296,8 +298,10 @@ let LAY=null,PARCELA=null,CFGP=null,RND=null,GIRA=true,VIAL_FIJO=0,OFF_BASE="non
 let OPC=0,MEJOR=null,BASE_REF=null,ULTIMO=null,KWS=[],GAPS=[],DESDE=0,HIST={giro:[],vial:new Map()},NUBE=[],SERIE=[];
 let VISTA={ang:0},SAMPLER=null,TRACE=[],SEARCH_ERROR=null,VIEW_RESULT='best',SEARCH_START=0,SEARCH_OPTIONS=null;
 function searchOptions(){return {method:$('searchMethod').value,seed:(SEM[0]*2654435761^SEM[1])>>>0,
+  crit:$('searchCrit').value,
   rotate:GIRA&&!!SOL&&$('searchAz').checked,stagger:$('searchRows').checked,xy:$('searchXY').checked,
-  tilt:!GIRA&&!!FIS2&&$('searchTilt').checked,tilt0:TILT0,
+  tilt:!GIRA&&!!FIS2&&$('searchTilt').checked&&$('searchCrit').value!=='potencia',
+  tilt0:TILT0,tiltMax:+$('searchTiltMax').value,
   from:+$('gridFrom').value,to:+$('gridTo').value,step:+$('gridStep').value};}
 
 function nuevoSite(mismaParcela){
@@ -328,10 +332,12 @@ function nuevoSite(mismaParcela){
   SEARCH_OPTIONS=searchOptions();
   try{SAMPLER=LayoutSearch.sampler(CFGP,SEARCH_OPTIONS);}catch(e){SAMPLER=null;SEARCH_ERROR=e.message;PAUSA=true;}
   $('searchAz').disabled=!GIRA||!SOL;
-  $('searchTilt').disabled=GIRA||!FIS2;
+  $('searchTilt').disabled=GIRA||!FIS2||$('searchCrit').value==='potencia';
   $('searchMethod').querySelector('[value="grid"]').disabled=!GIRA||!SOL;
-  $('objective').textContent=!GIRA?(FIS2&&$('searchTilt').checked?
-    'Montaje fijo: orientación conservada; criterio: kWp × factor de inclinación (cielo claro con sombra entre filas a tu pitch). Índice relativo, no energía anual.':
+  $('objective').textContent=$('searchCrit').value==='potencia'?
+    'Criterio: POTENCIA instalada (kWp), sin factor solar — elegido a propósito. Ojo: puede premiar orientaciones que meten más módulos y producen peor.':
+    !GIRA?(FIS2&&$('searchTilt').checked?
+    'Montaje fijo: orientación conservada; criterio: kWp × factor de inclinación (cielo claro con sombra entre filas a tu pitch, hasta el tope configurado). Índice relativo, no energía anual.':
     'Montaje fijo: orientación conservada; se compara potencia instalada (kWp).'):
     !SOL?'Modelo solar no disponible: azimut bloqueado; se compara potencia instalada (kWp).':
     'Criterio: kWp × factor solar de orientación. Índice relativo de cielo claro; no es una previsión de energía anual.';
@@ -353,7 +359,11 @@ function candidato(){
     construyeTablaF(s.GCR||0.4,(CFGP.decl&&CFGP.decl.max_angle_deg)||55,
       !CFGP.decl||CFGP.decl.backtrack!==false);
   if(!GIRA&&FIS2&&valid&&!TILT_TAB&&SEARCH_OPTIONS&&SEARCH_OPTIONS.tilt)construyeTablaTilt();
-  const rend=GIRA&&SOL?factorF(az-90):(TILT_TAB?fTilt(cfg._tilt!=null?cfg._tilt:TILT0):1),
+  /* criterio POTENCIA: kWp a secas, elegido a propósito (rend=1 en todo). El
+     default sigue siendo energía — ordenar por kWp premiaba llenar en
+     diagonal, v1.7.1 — y por eso la opción lo avisa en su propio selector. */
+  const potencia=!!(SEARCH_OPTIONS&&SEARCH_OPTIONS.crit==='potencia');
+  const rend=potencia?1:GIRA&&SOL?factorF(az-90):(TILT_TAB?fTilt(cfg._tilt!=null?cfg._tilt:TILT0):1),
     ener=valid?kwp*rend:null;
   const xOffsetM=cfg._xOff??s.x_offset_chosen_m??0,yOffsetM=cfg._yOff??s.y_offset_chosen_m??0;
   ULTIMO={r,config:cfg,giro,az,offset,vial,kwp,rend,ener,valid,xOffsetM,yOffsetM,
