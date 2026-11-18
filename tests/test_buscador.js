@@ -423,6 +423,7 @@ async function esperaListo(pg) {
   //    variante de reparto, es apuntar los módulos a otro sitio: no se gira y se dice. ──
   await pageG.evaluate(() => { document.getElementById('mount').value = 'fija';
     if (typeof syncAz === 'function') syncAz();
+    document.getElementById('fixTilt').value = 5;     // un tilt de partida claramente malo, para que haya mejora que encontrar
     document.getElementById('optBtn').click(); });
   const pageF = await ctx.newPage();
   await pageF.goto(BASE + '/buscador-implantacion.html?encargo=1&quieto=1&semilla=7-7');
@@ -432,6 +433,40 @@ async function esperaListo(pg) {
   check('en fija no se gira nada', ef.encargo === true && ef.gira === false && ef.mejorGiro === 0,
     JSON.stringify({ gira: ef.gira, giro: ef.mejorGiro }));
   check('y la barra lo dice', (await pageF.evaluate(() => document.getElementById('barra').textContent)).includes('fija: no se gira'));
+
+  // ── EL TILT DE LA FIJA ES VARIABLE («optimizar también el tilt», 2026-11-18) ────────────
+  // La huella del motor no depende del tilt, así que el criterio es un índice de ENERGÍA:
+  // la física del comparador de estructuras (careada contra el core), extraída en runtime —
+  // transposición Perez de cielo claro en 12 días + SOMBRA entre filas al pitch + cielo
+  // enmascarado —, normalizada al tilt del encargo.
+  await pageF.evaluate(() => PASO(40));
+  const et = await pageF.evaluate(() => ESTADO());
+  check('la tabla de inclinación se construye y la referencia vale 1',
+    et.tablaTilt === true && (await pageF.evaluate(() => Math.abs(FTILT(TILT0) - 1) < 1e-9)),
+    JSON.stringify({ tablaTilt: et.tablaTilt, tilt0: et.tilt0 }));
+  check('se muestrean inclinaciones distintas', (await pageF.evaluate(() =>
+    new Set(TRACE.filter(r => r.tilt != null).map(r => r.tilt)).size)) >= 4, 'menos de 4 tilts distintos');
+  // la SOMBRA está dentro del índice: a tilt alto, la neta sombreada pierde contra la sin
+  // sombra, y la TABLA tiene que salir de la física SOMBREADA (es lo que el mutante vigila)
+  check('el índice lleva la sombra entre filas, y la tabla sale de la física sombreada',
+    await pageF.evaluate(() => {
+      const con = TILT_CORRE(50, false), sin = TILT_CORRE(50, true), ref = TILT_CORRE(TILT0, false);
+      return con != null && con < sin && Math.abs(FTILT(50) - con / ref) < 1e-9;
+    }), 'la tabla no sale de la física sombreada');
+  check('con un tilt de partida malo (5°), el buscador encuentra una inclinación mejor',
+    et.mejorTilt != null && et.mejorTilt > 10 && et.mejorEner > et.baseEner * 1.0005,
+    JSON.stringify({ tilt: et.mejorTilt, mejor: et.mejorEner, base: et.baseEner }));
+  await pageF.keyboard.press('a');
+  const mt = await pageF.evaluate(() => JSON.parse(localStorage.getItem('buscador_mejor') || 'null'));
+  check('A envía la inclinación del mejor', !!mt && Number.isFinite(mt.tilt) && mt.tilt !== 5, JSON.stringify(mt && { tilt: mt.tilt }));
+  await pageG.evaluate(() => window.dispatchEvent(new Event('focus')));
+  check('y el generador la aplica al mando de la fija', await pageG.evaluate(tilt =>
+    +document.getElementById('fixTilt').value === tilt &&
+    document.getElementById('hint').textContent.includes('tilt'), mt ? mt.tilt : -1),
+    await pageG.evaluate(() => document.getElementById('fixTilt').value + ' · ' + document.getElementById('hint').textContent.slice(0, 60)));
+  // la tecla A deja un aviso PEGAJOSO en la barra (9 s): se limpia para que el bloque
+  // siguiente lea la BARRA y no el aviso
+  await pageF.evaluate(() => { AVISO_BARRA = null; });
 
   // ── LA BARRA TIENE QUE PODERSE LEER ─────────────────────────────────────────────────────
   // Se ordena por ENERGÍA, así que la mejor puede llevar MENOS potencia instalada y ganar
