@@ -2927,15 +2927,19 @@ const PLANTS = [
       topo3d:     COB+"terreno.html?planta=bagnarelli",
       cobertura:  COB+"index.html?planta=bagnarelli",
   }},
-  /* La Latina 2 (24029): 67 centros TCU, NCU y HSU desde Excel.
-     El Siting oficial vive en siting.pages.dev/?planta=latina y el 2D es un visor REAL DE PUNTOS, no un modelo
-     a escala de las mesas ni un cálculo de cobertura RF. Las dimensiones
-     de tracker, recinto y cotas Z siguen pendientes de DWG vectorial.
-     SCADA continúa sin vínculo porque la Cartera dice «Sin comenzar».
+  /* La Latina 2 (24029). Desde el 2026-11-18 tiene layout del DWG LO.24.029 en cobertura-zigbee
+     (latina_layout.json: 66 bífilas 1V14 y una monofila, eje a 23,39°, vallado, viales y edificios,
+     cruzado 67/67 con los TCU del Excel), así que abre los MISMOS visores que Bagnarelli: Siting,
+     Layout 2D, Topografía 3D (relieve solo DEM) y Cobertura (mapa, sin malla medida).
+     SCADA: el plano ya está en factiun-cartera (planos/la-latina-2.json), pero NO se escribe el enlace
+     a mano: como cualquier planta, el botón lo abre el estado de la Cartera cuando pase de «Sin
+     comenzar» a «En proceso». El visor de centros del Excel (latina-2.html) sigue en la ficha.
      El Toolbox v12.20 incluye 24029 desde scada#333. */
   { name:"La Latina 2", code:"24029", pdc:null, loc:"Borgo Piave · Latina · Italia", views:{
-      siting:   SITING+"?planta=latina",
-      layout2d: "latina-2.html?modo=2d",
+      siting:     SITING+"?planta=latina",
+      layout2d:   COB+"plano.html?planta=latina",
+      topo3d:     COB+"terreno.html?planta=latina",
+      cobertura:  COB+"index.html?planta=latina",
   } },
   /* EN OFERTA, sin firmar: El Naranjo Dicayagua (República Dominicana). No tiene número de proyecto
      porque el número lo da la cartera al adjudicar, así que la tarjeta lleva el distintivo OFERTA
@@ -3745,9 +3749,10 @@ function fichaIngenieriaLaLatina(pl){
    +'<dt>NCU + anemómetro</dt><dd>1 · E/N '+coord(ncu)+'</dd>'
    +'<dt>HSU externa</dt><dd>1 · E/N '+coord(hsu)+' · esclavo 230</dd>'
    +'<dt>Origen</dt><dd>UTM 33T · datum pendiente de confirmar</dd></dl>'
-   +'<p class="obj" style="margin-top:10px">Solo centros de seguidores: longitud de mesas, parcela y cotas Z pendientes de medir del DWG.</p>'
+   +'<p class="obj" style="margin-top:10px">Centros de TCU del Excel. Las mesas, el vallado y los viales a escala están en el Layout 2D (DWG LO.24.029); el Excel coincide con la referencia PVcase del plano CCTV R0B y el LO difiere hasta 0,6 m a lo largo del eje. Manda el LO (decisión del propietario, 18/11).</p>'
    +'<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">'
-   +'<a href="latina-2.html?modo=2d" class="btn primary" target="_blank" rel="noopener">Plano 2D</a>'
+   +'<a href="'+COB+'plano.html?planta=latina" class="btn primary" target="_blank" rel="noopener">Layout 2D (DWG)</a>'
+   +'<a href="latina-2.html?modo=2d" class="btn" target="_blank" rel="noopener">Centros TCU (Excel)</a>'
    +'<a href="'+CARTERA+'ips.html" class="btn" target="_blank" rel="noopener">Tabla IPs</a>'
    +'<a href="https://github.com/IMoriana3/scada/releases/tag/toolbox-v12.20" class="btn" target="_blank" rel="noopener">Toolbox v12.20</a>'
    +'</div>'
