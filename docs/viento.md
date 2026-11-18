@@ -120,6 +120,74 @@ ve el número más pesimista posible en lugar de un 10 % de aspecto razonable.
   le da sombra sigue en seguimiento). El motor del navegador, como el resto de la ficha, transpone
   sin sombreado entre filas.
 
+## El mapa de país: ganancia del pasivo frente al activo
+
+Pestaña **🗺 Mapa · pasivo vs activo**. Contesta, para un país entero, la pregunta que la tabla de
+resultados contesta para un punto: con el mismo seguidor, los mismos umbrales y el mismo pasivo,
+**cuánta energía más capta la planta soltando la fila de perímetro que abanderando entera**. Es el
+tipo de mapa que ARRAY publica para su Wind XP («Passive Stow Energy Gain»).
+
+**No hay un segundo motor.** Cada nodo es la corrida de «Simular el año» (`LOC.run`) con otras
+coordenadas. El cuerpo de la corrida lo arma una sola función (`cuerpoSim`) para la ficha y para el
+mapa, y el arnés carea un nodo contra la corrida de la ficha para ese punto.
+
+| | |
+|---|---|
+| **Ganancia** | `100 · (POA planta con pasivo − POA planta con activo) / POA planta con activo`. Positiva: el pasivo capta más. |
+| **Activo de referencia** | una de A1/A2/B1/B2, con los umbrales de la pestaña Simulador. |
+| **Pasivo** | el de la ficha: velocidad de suelta, lado y **denominador** (trackers × filas). La suelta y el nº de trackers se editan también desde el propio mapa: es la misma casilla que la de la ficha, no una copia. |
+| **Nodos** | rejilla regular de 2°, 1°, 0,75°, 0,5° o 0,25°, en múltiplos del paso desde 0°. Vale el nodo que cae en tierra del país según la rejilla de su lámina (`data/mapas_pais/`). |
+| **Meteo** | Open-Meteo (ERA5), el año elegido, horaria; por defecto dispara con la **ráfaga horaria** de la fuente. |
+| **Paso** | 15 min por defecto (5 min u horario a elegir). |
+
+### La suelta manda, y no está medida
+
+Es el parámetro que más mueve el mapa: en El Burgo, a 40 km/h salen 248 sueltas y 3.677 h; a 90, seis
+y 52. El valor por defecto (90 km/h = 25 m/s) viene de `solargpt_core.wind_stow_passive` y es un
+**sustituto declarado** del par de desembrague, no una medida. Como referencia pública, en el ensayo
+de ARRAY en Colorado la fila exterior se soltó con 68, 80 y 78 mph registradas (≈ 109, 129 y
+126 km/h), sin decir si es ráfaga o media ni a qué altura; y en Wind XP el disparo es por **par**, así
+que depende del ángulo de la fila y de la dirección del viento, cosa que aquí no se modela. El campo
+del mapa trae esos valores como sugerencias, y el PNG pone la suelta usada con «(no medida)».
+
+### Cómo se lee
+
+- El color va en diez bandas de viridis: oscuro, poca ganancia; amarillo, mucha. Hay una banda
+  aparte para la ganancia **negativa** —el pasivo pierde más que el activo—, que ocurre con plantas
+  pequeñas (la fila suelta pesa mucho) o con una suelta baja.
+- La escala se ajusta al dato o se fija en 0–5 %, que es la del mapa de ARRAY, para ponerlos al
+  lado.
+- Un clic en un nodo da sus números (activo, pasivo, la fila sola, abanderamientos, horas, viento
+  máximo) y **Llevar al Simulador** pone esas coordenadas en la ficha para ver el año entero.
+- La media del país va ponderada por cos(latitud): los nodos equidistan en grados, no en km.
+
+### La meteo se guarda
+
+Un año de un punto pesa para Open-Meteo entre 18 y 26 llamadas, y el plan gratuito da 600 por
+minuto, 5.000 por hora y 10.000 al día: unos **200 nodos por hora** y 400 al día. Por eso:
+
+- se baja un nodo cada 3 s y, si llega un HTTP 429, se espera y se sigue; si el límite es el de la
+  hora o el del día, se para y al volver a pulsar continúa donde lo dejó;
+- la meteo de cada nodo se guarda en el navegador (IndexedDB, `factiun_mapa_meteo`), así que
+  **cambiar umbrales, estrategia, suelta o nº de trackers recalcula el mapa sin pedir nada**;
+- lo guardado vuelve bit a bit como se bajó (se comprueba columna a columna al guardar).
+
+El plan gratuito de Open-Meteo es para uso no comercial.
+
+### Lo que no se modela, dicho
+
+- **El relieve fino.** El reanálisis es de ~25 km: una loma ventosa entre dos nodos no sale. El mapa
+  ordena regiones, no emplazamientos; para un sitio concreto, la ficha con su viento.
+- **La ráfaga es la máxima de la hora**, sostenida sobre los pasos de esa hora. No se sabe cuánto
+  de la hora duró.
+- Todo lo que el caso pasivo ya declara: la suelta es un sustituto de la carga de desembrague, la
+  fila expuesta es siempre la misma, y la POA del navegador no lleva sombreado entre filas — por
+  eso un abanderamiento parcial cara al sol (B2) puede costar muy poco o nada en este motor.
+- El laboratorio de rachas no entra: solo se usa su criterio de ráfaga.
+
+Arneses: `tests/test_viento_mapa_motor.js` (motor puro) y `tests/test_viento_mapa.js` (la pestaña en
+Chromium con Open-Meteo simulado por `tests/meteo_sintetica_mapa.js`).
+
 ## Qué es «un abanderamiento»
 
 Una racha continua fuera de seguimiento. El hold de histéresis cuenta **dentro** del episodio: si el

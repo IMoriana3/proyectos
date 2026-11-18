@@ -95,6 +95,10 @@
     background:var(--bg2);position:sticky;top:0}
   .sitiores .aviso{padding:7px 10px;font-size:.78rem;color:var(--muted)}
   .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  /* los cuatro números del mapa de país */
+  .mk4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+  @media(max-width:980px){.mk4{grid-template-columns:1fr 1fr}}
+  #mLienzo{cursor:crosshair}
   .lab{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
   .lab .field{margin-bottom:0}
   .btn{cursor:pointer;border:1px solid var(--line2);background:var(--bg2);color:var(--tx);border-radius:9px;padding:8px 14px;font:inherit;font-size:.86rem;transition:.15s;width:100%}
@@ -412,6 +416,7 @@
   <button id="tabViento" class="on">⚡ Simulador</button>
   <button id="tabGranizo">⛨ Granizo · lógica</button>
   <button id="tabNieve">❄ Nieve · lógica</button>
+  <button id="tabMapa">🗺 Mapa · pasivo vs activo</button>
 </div>
 
 <div id="panelViento">
@@ -1213,6 +1218,105 @@
   </div>
 </div>
 </div><!-- /panelNieve -->
+
+<!-- ═══════════ MAPA DE PAÍS ═══════════
+     La ganancia del pasivo frente al activo, nodo a nodo. No hay motor propio:
+     cada nodo es `LOC.run`, la corrida de «Simular el año», con otras
+     coordenadas. El país y su contorno salen de las láminas de
+     `data/mapas_pais/` (las de la página de meteo). -->
+<div id="panelMapa" style="display:none">
+<div class="wrap">
+  <div class="cols">
+    <div>
+      <div class="card">
+        <h2>🗺 Mapa de país <span class="sn">pasivo frente a activo</span></h2>
+        <div class="field"><label>País</label><select id="mPais"></select></div>
+        <div class="two">
+          <div class="field"><label>Rejilla</label>
+            <select id="mPaso">
+              <option value="2">2°</option>
+              <option value="1" selected>1°</option>
+              <option value="0.75">0,75°</option>
+              <option value="0.5">0,5°</option>
+              <option value="0.25">0,25°</option>
+            </select></div>
+          <div class="field"><label>Año</label><input id="mYear" type="number" step="1" value="2022"></div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Activo de referencia</label>
+            <select id="mRef">
+              <option value="A1">A1 · al viento · 1 umbral</option>
+              <option value="A2">A2 · al viento · 2 umbrales</option>
+              <option value="B1">B1 · al sol · 1 umbral</option>
+              <option value="B2" selected>B2 · al sol · 2 umbrales</option>
+            </select></div>
+          <div class="field"><label>Paso de cálculo</label>
+            <select id="mStep">
+              <option value="5">5 min</option>
+              <option value="15" selected>15 min</option>
+              <option value="">Horario (el del dato)</option>
+            </select></div>
+        </div>
+        <div class="two">
+          <div class="field"><label>Suelta del pasivo (km/h)</label>
+            <input id="mSuelta" type="number" step="5" min="20" max="250" value="90" list="mSueltaRef"></div>
+          <div class="field"><label>Nº de trackers (denominador)</label>
+            <input id="mTrk" type="number" step="1" min="1" value="10"></div>
+        </div>
+        <datalist id="mSueltaRef">
+          <option value="90">defecto del núcleo (sin medir)</option>
+          <option value="110">ensayo ARRAY Colorado, 68 mph</option>
+          <option value="125">ensayo ARRAY Colorado, 78–80 mph</option>
+        </datalist>
+        <p class="nota" style="margin-top:-2px">La suelta es <b>el</b> parámetro que más mueve el mapa y <b>no está medida</b>:
+          sustituye al par de desembrague. Es la misma casilla que la de la pestaña Simulador (cambiar una cambia la otra).
+          Como referencia, en el ensayo de ARRAY en Colorado la fila exterior se soltó con 68, 80 y 78 mph registradas
+          (≈ 109, 129 y 126 km/h), sin decir si ráfaga o media ni a qué altura.</p>
+        <div class="field"><label>Escala de color</label>
+          <select id="mEsc">
+            <option value="" selected>Ajustada al dato</option>
+            <option value="5">Fija 0–5 % (la del mapa de ARRAY)</option>
+          </select></div>
+        <label class="chk"><input type="checkbox" id="mGust" checked> <span>Disparar con la <b>ráfaga</b> horaria de la fuente</span></label>
+        <label class="chk"><input type="checkbox" id="mVerNodos" checked> <span>Dibujar los nodos</span></label>
+        <div class="ro" id="mPlan" style="margin:8px 0;font-size:.8rem">—</div>
+        <button class="btn acc" id="mRun">Generar el mapa</button>
+        <div class="two" style="margin-top:8px">
+          <button class="btn" id="mPng" disabled>PNG (fondo claro)</button>
+          <button class="btn" id="mJson" disabled>Rejilla JSON</button>
+        </div>
+        <button class="btn small" id="mBorra" style="margin-top:8px">Vaciar la meteo guardada</button>
+        <p class="nota" id="mSup"></p>
+        <p class="nota">Cada nodo es <b>la misma simulación del año</b> de la pestaña Simulador
+          —seguidor, umbrales, pasivo y latencia— cambiando solo las coordenadas. Lo que se toque
+          allí cambia el mapa; la meteo bajada se guarda en este navegador, así que retocar umbrales
+          no vuelve a pedirla.</p>
+        <p class="nota"><b>Ganancia</b> = energía (POA) de la planta con el pasivo frente a la misma
+          planta con el activo de referencia, en %. La pérdida de la fila suelta se reparte entre las
+          filas de la planta declarada en <b>Seguidor</b>: con plantas grandes tiende a cero y la
+          ganancia se acerca a lo que pierde el activo.</p>
+        <p class="nota">El dato es reanálisis horario de Open-Meteo (ERA5) a 10 m, corregido a la
+          altura del seguidor. No ve el relieve fino: una loma ventosa entre dos nodos no sale. El
+          laboratorio de rachas no entra en el mapa. El plan gratuito de Open-Meteo es para uso no
+          comercial y da para unos 200 nodos por hora.</p>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h2>▦ Ganancia del abanderamiento pasivo <span class="sn" id="mCtx">—</span></h2>
+        <div id="mEstado" class="note" style="margin-top:0">Elige país y rejilla y pulsa <b>Generar el mapa</b>.</div>
+        <canvas id="mLienzo" width="1100" height="640"></canvas>
+        <div class="ro" id="mLectura" style="margin-top:8px;font-size:.84rem">Pasa el ratón por un nodo para leerlo; un clic lo fija.</div>
+        <div class="mk4" id="mKpis"></div>
+      </div>
+      <div class="card" id="mTablaCard" style="display:none">
+        <h2>▤ Nodos <span class="sn" id="mTablaHint"></span></h2>
+        <div class="scroll" id="mTabla"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /panelMapa -->
 
 <!-- Librerías LOCALES (sin CDN, offline) y el MODELO REAL del seguidor: `seguidor.js` es
      la fuente única que ya comparten el Gemelo Digital y Cobertura 3D, copiada aquí idéntica
@@ -4798,6 +4902,227 @@ LOC.run=function(cfg,onStep){
   });
 };
 
+/* ═══════════ MAPA DE PAÍS — inicio ═══════════
+   La pregunta de la tabla de resultados, hecha en cada punto de un país: con el
+   mismo seguidor, los mismos umbrales y el mismo pasivo, ¿cuánta energía más
+   capta la planta soltando la fila de perímetro que abanderando entera? Es el
+   mapa que ARRAY publica para su Wind XP («Passive Stow Energy Gain»).
+
+   NO HAY UN SEGUNDO MOTOR. Cada nodo es una corrida de `LOC.run` —la de
+   «Simular el año»— a la que solo se le cambian latitud y longitud. Si el
+   número de un nodo y el de la tabla para ese mismo punto y esa misma
+   configuración no coinciden, el fallo está en este bloque. */
+LOC.MAPA={
+  PASOS:[2,1,0.75,0.5,0.25],
+  /* Open-Meteo gratuito: 600 llamadas/min, 5.000/h y 10.000/día, y el año
+     entero de un punto NO cuenta como una: pesa lugares·(días/14)·(variables/10),
+     entre 18 y 26. A un nodo cada 3 s se va por debajo del tope del minuto. Los
+     de la hora (≈200 nodos) y del día (≈400) no se esquivan esperando segundos:
+     se respetan parando y siguiendo luego, y por eso la meteo bajada se guarda. */
+  ESPERA_S:3,
+  ESPERA_429_S:[65,65,600,600,600,600,600,600],
+  COSTE_NODO:26,
+  MAX_NODOS:4000,
+  /* Por debajo de esto la ganancia es redondeo: el informe publica la POA con
+     tres decimales de kWh/m², que sobre ~2.000 kWh/m² son 5·10⁻⁵ %. */
+  RUIDO_PCT:1e-4,
+  /* viridis en diez bandas, la lectura del mapa de ARRAY: oscuro = poca
+     ganancia, amarillo = mucha. No es piel, es la codificación del dato. */
+  RAMPA:['#440154','#482878','#3e4989','#31688e','#26828e','#1f9e89','#35b779','#6ece58','#b5de2b','#fde725'],
+  BAJO:'#8a2846',      // ganancia NEGATIVA: el pasivo pierde más que el activo
+  COLS:['ghi','dhi','dni','temp','ws','wd','gust'],
+  NAN:-2147483648
+};
+
+/* LOS NODOS: la rejilla regular lat/lon que cae DENTRO del país. Van en
+   múltiplos del paso contados desde 0° —no desde la esquina del país— para que
+   el mismo nodo tenga la misma clave de caché se pida desde el país que se
+   pida. «Dentro» lo dice la rejilla de la lámina de país (la de
+   `lib/mapas-pais.js`), que solo tiene valor en tierra del país.
+   Si con la regla del PUNTO salen menos de cuatro (país pequeño frente al
+   paso) se pasa a la del RECUADRO —vale el nodo cuyo recuadro toca el país— y
+   se devuelve dicho, porque esos nodos pueden caer en el mar o en el vecino. */
+LOC.mapaNodos=function(rej,paso,valorEn){
+  var e=rej.extension, red=function(v){return Math.round(v*1e4)/1e4;};
+  var i0=Math.ceil(e[0]/paso-1e-9)-1, i1=Math.floor(e[1]/paso+1e-9)+1;
+  var j0=Math.ceil(e[2]/paso-1e-9)-1, j1=Math.floor(e[3]/paso+1e-9)+1;
+  var saca=function(dentro){
+    var o=[];
+    for(var j=j0;j<=j1;j++)for(var i=i0;i<=i1;i++){
+      var lat=red(j*paso), lon=red(i*paso);
+      if(dentro(lat,lon))o.push({lat:lat,lon:lon,ix:i-i0,iy:j-j0});
+    }
+    return o;
+  };
+  var punto=function(lat,lon){return valorEn(rej,lat,lon)!=null;};
+  var recuadro=function(lat,lon){
+    for(var a=-2;a<=2;a++)for(var b=-2;b<=2;b++)
+      if(valorEn(rej,lat+a*paso/5,lon+b*paso/5)!=null)return true;
+    return false;
+  };
+  var nodos=saca(punto), regla='punto';
+  if(nodos.length<4){nodos=saca(recuadro);regla='recuadro';}
+  return {nodos:nodos,regla:regla,paso:paso,lon0:red(i0*paso),lat0:red(j0*paso),
+          nx:i1-i0+1,ny:j1-j0+1};
+};
+LOC.mapaClave=function(lat,lon,year){
+  return (+lat).toFixed(4)+','+(+lon).toFixed(4)+','+year;
+};
+
+/* El cuerpo de la corrida de UN nodo. Parte del cuerpo de la ficha y cambia lo
+   que es del mapa y nada más: el sitio, el año, UNA estrategia activa (la de
+   referencia) y la meteo ya bajada. Del laboratorio de rachas solo entra el
+   interruptor de ráfaga: inyectar la misma tormenta en doscientos sitios no es
+   un mapa del viento del país. */
+LOC.mapaCuerpo=function(base,nodo,opt,M){
+  var c={},k; for(k in base)c[k]=base[k];
+  c.lat=nodo.lat; c.lon=nodo.lon; c.name=null;
+  c.year=opt.year; c.year1=opt.year;
+  c.source='openmeteo'; c.meteo_mode='canon';
+  c.strategies=[opt.ref];
+  c.resample_minutes=opt.step||null;
+  c.wind_scenario=opt.rafaga?{base:'meteo',use_gust:true}:null;
+  c.timeline=null; c.top_events=1; c.include_trace=false;
+  c.meteoPre=M;
+  return c;
+};
+
+/* LA GANANCIA, y de dónde sale cada cifra. Es la energía de la PLANTA con el
+   pasivo frente a la misma planta con el activo de referencia, en % de la del
+   activo: «cuánta más capta». Positiva = el pasivo capta más. Las dos POA son
+   las que publica el informe, así que el mapa no lleva una cuenta aparte. */
+LOC.mapaGanancia=function(rep,ref){
+  var A=rep&&rep.cases&&rep.cases[ref], P=rep&&rep.cases&&rep.cases.PASIVO;
+  if(!A||!P||!(A.poa_kwh_m2>0))return null;
+  var W=rep.wind||{}, sc=W.scenario||{};
+  return {
+    ganancia_pct:100*(P.poa_kwh_m2-A.poa_kwh_m2)/A.poa_kwh_m2,
+    activo_pct:A.poa_delta_pct, pasivo_pct:P.poa_delta_pct,
+    fila_pct:P.passive?P.passive.row_poa_delta_pct:null,
+    base_kwh_m2:rep.baseline.poa_kwh_m2,
+    n_activo:A.n_events, h_activo:A.hours_engaged, h_activo_sol:A.hours_stow_daylight,
+    n_pasivo:P.n_events, h_pasivo:P.hours_engaged,
+    viento_max_kmh:(W.max_ms!=null?Math.round(W.max_ms*36)/10:null),
+    h_sobre_t1:W.hours_over_t1, rafaga:sc.gust_origen||null
+  };
+};
+
+/* LA METEO DE UN NODO, EMPAQUETADA PARA GUARDARSE. Un año horario en Float64
+   son ~0,5 MB por nodo; con doscientos nodos la caché no cabría con holgura.
+   Open-Meteo sirve con uno o dos decimales, así que cada columna se guarda en
+   centésimas enteras SI Y SOLO SI eso la reproduce exacta (se comprueba valor
+   a valor); la que no, viaja en Float64 tal cual. Lo que vuelve de la caché es
+   bit a bit lo que se bajó, y TODAS las corridas —recién bajada o guardada—
+   pasan por empaquetar y desempaquetar: no hay dos caminos que comparar. */
+LOC.mapaEmpaqueta=function(M){
+  var n=M.t.length, t0=M.t[0].getTime(), dt=n>1?M.t[1].getTime()-t0:3600e3, regular=true, i;
+  for(i=0;i<n;i++)if(M.t[i].getTime()!==t0+i*dt){regular=false;break;}
+  var P={v:1,n:n,t0:t0,dt:dt,source:M.source,tiene_rafaga:!!M.tiene_rafaga,cols:{}};
+  if(!regular){P.t=new Float64Array(n);for(i=0;i<n;i++)P.t[i]=M.t[i].getTime();}
+  LOC.MAPA.COLS.forEach(function(c){
+    var a=M[c]; if(!a)return;
+    var exacto=true, q=new Int32Array(n);
+    for(var k=0;k<n;k++){
+      var v=a[k];
+      if(v!==v){q[k]=LOC.MAPA.NAN;continue;}
+      var r=Math.round(v*100);
+      if(r/100!==v||Math.abs(r)>2e9){exacto=false;break;}
+      q[k]=r;
+    }
+    P.cols[c]=exacto?{e:100,q:q}:{e:0,q:Float64Array.from(a)};
+  });
+  return P;
+};
+LOC.mapaDesempaqueta=function(P){
+  var n=P.n, M={t:new Array(n),source:P.source,tiene_rafaga:!!P.tiene_rafaga}, i;
+  for(i=0;i<n;i++)M.t[i]=new Date(P.t?P.t[i]:P.t0+i*P.dt);
+  for(var c in P.cols){
+    var col=P.cols[c], a=new Float64Array(n);
+    if(col.e){for(i=0;i<n;i++)a[i]=(col.q[i]===LOC.MAPA.NAN)?NaN:col.q[i]/col.e;}
+    else a.set(col.q);
+    M[c]=a;
+  }
+  return M;
+};
+
+/* SOLO PARA PINTAR. La rejilla de nodos tiene huecos —el mar, el vecino, lo
+   que aún no se ha calculado— y la costa cae entre nodos. Se extiende el dato
+   hacia fuera unas pocas celdas (media de los vecinos que sí tienen) para que
+   la interpolación llegue al borde del país. Los nodos no se tocan: lo que se
+   lee al pasar el ratón y lo que se exporta es lo calculado, no esto. */
+LOC.mapaRellena=function(G,nx,ny,pasadas){
+  var A=Float64Array.from(G);
+  for(var p=0;p<pasadas;p++){
+    var B=Float64Array.from(A), cambio=false;
+    for(var y=0;y<ny;y++)for(var x=0;x<nx;x++){
+      if(A[y*nx+x]===A[y*nx+x])continue;
+      var s=0,w=0;
+      for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++){
+        if(!dx&&!dy)continue;
+        var xx=x+dx,yy=y+dy; if(xx<0||yy<0||xx>=nx||yy>=ny)continue;
+        var v=A[yy*nx+xx]; if(v!==v)continue;
+        var k=(dx&&dy)?0.7071:1; s+=k*v; w+=k;
+      }
+      if(w>0){B[y*nx+x]=s/w;cambio=true;}
+    }
+    A=B; if(!cambio)break;
+  }
+  return A;
+};
+/* Bilineal sobre la rejilla (fx, fy en celdas). Con alguna esquina sin dato
+   se reparte entre las que lo tienen; sin ninguna, NaN — y el píxel se pinta
+   como «sin dato», no con un color inventado. */
+LOC.mapaInterp=function(F,nx,ny,fx,fy){
+  var x0=Math.floor(fx), y0=Math.floor(fy), u=fx-x0, v=fy-y0, s=0, w=0, k, q;
+  var g=function(x,y){return (x<0||y<0||x>=nx||y>=ny)?NaN:F[y*nx+x];};
+  q=g(x0,y0);     k=(1-u)*(1-v); if(q===q){s+=k*q;w+=k;}
+  q=g(x0+1,y0);   k=u*(1-v);     if(q===q){s+=k*q;w+=k;}
+  q=g(x0,y0+1);   k=(1-u)*v;     if(q===q){s+=k*q;w+=k;}
+  q=g(x0+1,y0+1); k=u*v;         if(q===q){s+=k*q;w+=k;}
+  return w>1e-9?s/w:NaN;
+};
+
+/* La escala: diez bandas desde 0. `fija` es el tope pedido (5 = el del mapa de
+   ARRAY, para poner uno al lado del otro); sin él sale del máximo del dato,
+   redondeado a la familia 1/2/5 para que cada banda sea un número que se lee. */
+LOC.mapaEscala=function(vals,fija){
+  var m=0,i;
+  if(fija>0)m=fija;
+  else{
+    for(i=0;i<vals.length;i++)if(vals[i]===vals[i]&&vals[i]>m)m=vals[i];
+    if(!(m>0))m=1;
+  }
+  var bruto=m/10, mag=Math.pow(10,Math.floor(Math.log10(bruto)+1e-9)), r=bruto/mag;
+  var paso=fija>0?bruto:(r<=1.0000001?1:r<=2.0000001?2:r<=5.0000001?5:10)*mag;
+  var dec=paso>=1?0:Math.ceil(-Math.log10(paso)-1e-9);
+  return {max:paso*10,paso:paso,dec:dec};
+};
+/* Banda de un valor: −1 si el pasivo pierde MÁS que el activo, 0…9 en la
+   rampa (lo que pasa del tope se queda en la última), null sin dato. */
+LOC.mapaBanda=function(v,esc){
+  if(!(v===v)||v==null)return null;
+  if(v<-LOC.MAPA.RUIDO_PCT)return -1;
+  return Math.max(0,Math.min(9,Math.floor(v/esc.paso+1e-9)));
+};
+
+/* El resumen del país. La media va ponderada por cos(latitud): los nodos son
+   equidistantes en grados, no en kilómetros, y sin el peso el norte —celdas
+   más estrechas— contaría de más. */
+LOC.mapaResumen=function(lista){
+  var v=[],sw=0,sg=0,sa=0,sp=0;
+  lista.forEach(function(o){
+    if(!o.g||o.g.ganancia_pct==null)return;
+    var w=Math.cos(o.lat*Math.PI/180);
+    v.push(o.g.ganancia_pct); sw+=w; sg+=w*o.g.ganancia_pct;
+    sa+=w*o.g.activo_pct; sp+=w*o.g.pasivo_pct;
+  });
+  if(!v.length)return null;
+  v.sort(function(a,b){return a-b;});
+  return {n:v.length,min:v[0],p50:v[Math.floor(v.length/2)],max:v[v.length-1],
+          media:sg/sw,activo:sa/sw,pasivo:sp/sw};
+};
+/* ═══════════ MAPA DE PAÍS — fin ═══════════ */
+
 /* ===================== EMPLAZAMIENTOS ===================== */
 /* Las plantas de la cartera llegan por localStorage compartido (`factiun_plantas`, lo siembra
    cartera-tabla.html). Los presets de abajo son el respaldo: coordenadas de los layouts reales,
@@ -5220,18 +5545,18 @@ async function careo(){
 }
 
 /* ===================== SIMULACIÓN ===================== */
-async function run(){
-  var out=$('out');
-  var usaMotor=($('calc').value==='engine');
-  if(usaMotor&&!ENGINE){ out.innerHTML=engineOffMsg(); return; }
-  var sts=strategies();
-  if(!sts.length){out.innerHTML='<p class="note">Marca al menos una estrategia.</p>';return;}
-  saveCfg();
-  var src=$('source').value, cielo=(src==='clearsky');
-  var esHSU=(src==='hsu'||src==='hsuscada');
-  if(src==='hsu'&&!HSU){ out.innerHTML='<div class="engmsg"><b>Falta el fichero de la HSU.</b> '+
-      'Elige un CSV con fecha, viento y —si lo tiene— dirección. No sale del navegador.</div>'; return; }
-  var body={
+/* EL CUERPO DE LA CORRIDA, EN UN SOLO SITIO. Lo arma «Simular el año» y lo
+   reutiliza el mapa de país, que corre esto mismo en cada nodo: si cada uno
+   leyera las casillas por su cuenta, el día que se añada un parámetro el mapa
+   seguiría simulando sin él y nada lo diría. */
+function cuerpoPasivo(){
+  return {enabled:true, n_trackers:nTrk(), filas_por_tracker:filasTrk(),
+          release_kmh:+$('pasV').value, side_deg:+$('pasL').value,
+          side_mode:$('pasModo').value};
+}
+function cuerpoSim(sts,src){
+  var cielo=(src==='clearsky');
+  return {
     lat:+$('lat').value, lon:+$('lon').value, year:+$('year').value, year1:+$('year1').value,
     meteo_mode:cielo?'clearsky':'canon', source:cielo?'openmeteo':src,
     name:(SITIO?SITIO.n:null),
@@ -5242,10 +5567,7 @@ async function run(){
     partial_stow_min_abs_deg:+$('pmin').value,
     destow_hold_minutes:+$('hold').value, partial_park_minutes:+$('park').value,
     noon_limit_deg:+$('noon').value,
-    passive:($('pas').checked?{enabled:true, n_trackers:nTrk(),
-             filas_por_tracker:filasTrk(),
-             release_kmh:+$('pasV').value, side_deg:+$('pasL').value,
-             side_mode:$('pasModo').value}:null),
+    passive:($('pas').checked?cuerpoPasivo():null),
     wind_height_m:(+$('wh').value>0?+$('wh').value:null),
     resample_minutes:($('step').value?+$('step').value:null),
     slew_deg_s:LOC.SLEW, deadband_deg:LOC.DEADBAND,
@@ -5260,6 +5582,20 @@ async function run(){
     timeline:{hours:16, max_steps:16*60+1},
     top_events:12, include_trace:true
   };
+}
+
+async function run(){
+  var out=$('out');
+  var usaMotor=($('calc').value==='engine');
+  if(usaMotor&&!ENGINE){ out.innerHTML=engineOffMsg(); return; }
+  var sts=strategies();
+  if(!sts.length){out.innerHTML='<p class="note">Marca al menos una estrategia.</p>';return;}
+  saveCfg();
+  var src=$('source').value, cielo=(src==='clearsky');
+  var esHSU=(src==='hsu'||src==='hsuscada');
+  if(src==='hsu'&&!HSU){ out.innerHTML='<div class="engmsg"><b>Falta el fichero de la HSU.</b> '+
+      'Elige un CSV con fecha, viento y —si lo tiene— dirección. No sale del navegador.</div>'; return; }
+  var body=cuerpoSim(sts,src);
   ['run','runM'].forEach(function(b){$(b).disabled=true;$(b).textContent='Simulando…';});
   out.innerHTML='<p class="note">'+(usaMotor
     ? 'El motor está bajando el año y simulando '+sts.length+' estrategias más la línea base.'
@@ -9368,11 +9704,14 @@ function gTab(cual) {
   $('panelViento').style.display = (cual === 'viento') ? '' : 'none';
   $('panelGranizo').style.display = (cual === 'granizo') ? '' : 'none';
   $('panelNieve').style.display = (cual === 'nieve') ? '' : 'none';
+  $('panelMapa').style.display = (cual === 'mapa') ? '' : 'none';
   $('tabViento').className = (cual === 'viento') ? 'on' : '';
   $('tabGranizo').className = (cual === 'granizo') ? 'on' : '';
   $('tabNieve').className = (cual === 'nieve') ? 'on' : '';
+  $('tabMapa').className = (cual === 'mapa') ? 'on' : '';
   if (cual === 'granizo') { if (!GJULIO) gArranca(); gTnecPinta(); xPinta(); }
   if (cual === 'nieve') nPinta();
+  if (cual === 'mapa') mAbre();
 }
 $('tabViento').onclick = function () { gTab('viento'); };
 $('tabGranizo').onclick = function () { gTab('granizo'); };
@@ -9484,6 +9823,460 @@ async function gArranca() {
   }
 }
 
+/* ===================== MAPA DE PAÍS · la pestaña =====================
+   El motor está en el bloque «MAPA DE PAÍS» de LOC; aquí va lo que toca el
+   DOM, la red y la caché. La meteo de cada nodo se guarda en IndexedDB
+   (`factiun_mapa_meteo`), fuera de localStorage porque un país son decenas de
+   megas. Sin IndexedDB se guarda en memoria y dura lo que la pestaña. */
+var MAPA={indice:null,pais:null,ficha:null,rej:null,mask:null,plan:null,res:{},fallos:{},
+          firma:null,hecho:null,corriendo:false,parar:false,rv:0,bitmap:null,geo:null,
+          fijo:null,sobre:null,guardadas:{}};
+var MDB={db:null,mem:{},abierto:false};
+var MTEMA={
+  oscuro:{fondo:'#101722',mar:'#101722',tx:'#eaf4ff',tx2:'#9bb0c6',borde:[234,244,255],sindato:[34,46,62],nodo:'rgba(234,244,255,.75)'},
+  claro:{fondo:'#ffffff',mar:'#e9edf2',tx:'#0b2440',tx2:'#51647a',borde:[11,36,64],sindato:[203,211,221],nodo:'rgba(11,36,64,.7)'}
+};
+
+function mDbAbre(){
+  if(MDB.abierto)return Promise.resolve(MDB.db);
+  return new Promise(function(ok){
+    var fin=function(db){MDB.abierto=true;MDB.db=db;ok(db);};
+    try{
+      var r=indexedDB.open('factiun_mapa_meteo',1);
+      r.onupgradeneeded=function(){r.result.createObjectStore('meteo');};
+      r.onsuccess=function(){fin(r.result);};
+      r.onerror=function(){fin(null);}; r.onblocked=function(){fin(null);};
+    }catch(e){fin(null);}
+  });
+}
+function mDbOp(modo,fn){
+  return mDbAbre().then(function(db){
+    if(!db)return null;
+    return new Promise(function(ok){
+      try{var q=fn(db.transaction('meteo',modo).objectStore('meteo'));
+        q.onsuccess=function(){ok(q.result===undefined?null:q.result);};
+        q.onerror=function(){ok(null);};
+      }catch(e){ok(null);}
+    });
+  });
+}
+function mDbLee(k){
+  if(MDB.mem[k])return Promise.resolve(MDB.mem[k]);
+  return mDbOp('readonly',function(s){return s.get(k);});
+}
+/* Si el disco no lo admite (cuota, modo privado) se queda en memoria: la
+   corrida sigue y lo único que se pierde es que sobreviva a cerrar la pestaña. */
+function mDbGuarda(k,v){
+  return mDbOp('readwrite',function(s){return s.put(v,k);}).then(function(r){
+    if(r==null)MDB.mem[k]=v;
+    MAPA.guardadas[k]=v.tiene_rafaga?2:1;
+  });
+}
+function mDbVacia(){
+  MDB.mem={}; MAPA.guardadas={};
+  return mDbOp('readwrite',function(s){return s.clear();});
+}
+/* Qué nodos tienen ya meteo, sin leerla: solo las claves. Lo que no se sabe
+   por la clave —si aquella bajada traía ráfaga— se comprueba al usarla. */
+function mDbClaves(){
+  return mDbOp('readonly',function(s){return s.getAllKeys();}).then(function(a){
+    (a||[]).concat(Object.keys(MDB.mem)).forEach(function(k){if(!MAPA.guardadas[k])MAPA.guardadas[k]=1;});
+  });
+}
+
+function mMsg(html){$('mEstado').innerHTML=html;}
+function mOpt(){
+  return {year:+$('mYear').value, ref:$('mRef').value,
+          step:($('mStep').value?+$('mStep').value:null), rafaga:$('mGust').checked};
+}
+/* El cuerpo base es el de la ficha, con el pasivo SIEMPRE: el mapa es la
+   comparación con él, así que la casilla de la otra pestaña no lo apaga. */
+function mBase(ref){
+  var b=cuerpoSim([ref],'openmeteo');
+  b.passive=cuerpoPasivo();
+  b.wind_scenario=null;
+  return b;
+}
+function mFirma(base,opt){
+  var c={},k; for(k in base)if(k!=='lat'&&k!=='lon'&&k!=='name'&&k!=='year'&&k!=='year1')c[k]=base[k];
+  return JSON.stringify([c,opt]);
+}
+
+/* La suelta y el nº de trackers del mapa SON los de la ficha (`pasV`, `nTrk`):
+   un solo valor por parámetro. La casilla del mapa escribe en la de la ficha
+   y dispara su `change`, así se guarda en la configuración y la ficha se
+   entera; al abrir la pestaña se copia al revés. */
+function mLeeFicha(){$('mSuelta').value=$('pasV').value;$('mTrk').value=$('nTrk').value;}
+function mEscribeFicha(id,dest){
+  var v=+$(id).value;
+  if(!(v>0)){$(id).value=$(dest).value;return;}
+  if(id==='mSuelta')v=Math.max(20,Math.min(250,v));
+  if(id==='mTrk')v=Math.max(1,Math.round(v));
+  $(id).value=v; $(dest).value=v;
+  $(dest).dispatchEvent(new Event('change'));
+}
+
+async function mAbre(){
+  mLeeFicha();
+  if(MAPA.indice){mPlanea();return;}
+  var MP=window.FactiunMapasPais;
+  if(!MP||!MP.paisDe){mMsg('<b style="color:var(--err)">No ha cargado <code>lib/mapas-pais.js</code></b>: sin las láminas de país no hay contorno ni rejilla.');return;}
+  $('mYear').value=$('year').value||2022;
+  try{MAPA.indice=await MP.json('data/mapas_pais/indice.json');}
+  catch(e){mMsg('<b style="color:var(--err)">No se han podido leer las láminas de país</b> ('+esc(e.message)+').');return;}
+  var lista=Object.keys(MAPA.indice).map(function(k){return MAPA.indice[k];})
+    .sort(function(a,b){return String(a.nombre).localeCompare(String(b.nombre),'es');});
+  $('mPais').innerHTML=lista.map(function(e){return '<option value="'+esc(e.iso3)+'">'+esc(e.nombre)+'</option>';}).join('');
+  var mio=null;
+  try{mio=await MP.paisDe(MAPA.indice,+$('lat').value,+$('lon').value);}catch(e){}
+  $('mPais').value=(mio&&mio.iso3)||(MAPA.indice.ESP?'ESP':lista[0].iso3);
+  await mDbClaves();
+  await mCargaPais();
+}
+async function mCargaPais(){
+  var MP=window.FactiunMapasPais, e=MAPA.indice[$('mPais').value];
+  if(!e)return;
+  var meta=e.variables&&(e.variables.viento||e.variables.irradiancia);
+  try{
+    var ficha=await MP.json('data/mapas_pais/'+meta.ficha);
+    var rej=await MP.json('data/mapas_pais/'+ficha.rejilla);
+    var R=rej.filas,C=rej.columnas,m=new Uint8Array(R*C);
+    for(var f=0;f<R;f++)for(var c=0;c<C;c++)if(rej.valores[f]&&rej.valores[f][c]!=null)m[f*C+c]=1;
+    MAPA.pais=e; MAPA.ficha=ficha; MAPA.rej=rej; MAPA.mask=m; MAPA.fijo=null; MAPA.sobre=null;
+  }catch(err){mMsg('<b style="color:var(--err)">No se ha podido leer la lámina de '+esc(e.nombre)+'</b> ('+esc(err.message)+').');return;}
+  mPlanea();
+}
+/* El plan: cuántos nodos, cuántos tienen ya meteo y cuánto queda por bajar.
+   Se rehace al cambiar país, rejilla o año; no toca lo ya calculado. */
+function mPlanea(){
+  if(!MAPA.rej)return;
+  var paso=+$('mPaso').value, opt=mOpt();
+  MAPA.plan=LOC.mapaNodos(MAPA.rej,paso,window.FactiunMapasPais.valorEn);
+  var n=MAPA.plan.nodos.length, hay=0;
+  MAPA.plan.nodos.forEach(function(o){if(MAPA.guardadas[LOC.mapaClave(o.lat,o.lon,opt.year)])hay++;});
+  var faltan=n-hay, min=faltan*(LOC.MAPA.ESPERA_S+1.5)/60, t='';
+  if(!n)t='<b>Ningún nodo cae dentro del país con esta rejilla.</b> Baja el paso.';
+  else{
+    t='<b>'+n+' nodos</b> · '+hay+' con meteo guardada · '+faltan+' por bajar';
+    if(faltan>0)t+=' (≈ '+(faltan>190?fmt(faltan/200,1)+' h, por el límite horario de Open-Meteo'
+                                     :fmt(Math.max(1,min),0)+' min')+')';
+    if(MAPA.plan.regla==='recuadro')t+='<br>País pequeño para esta rejilla: valen los nodos cuyo recuadro lo toca, aunque el punto caiga fuera.';
+    if(n>LOC.MAPA.MAX_NODOS)t+='<br><b style="color:var(--warn)">Son demasiados para el navegador</b>: sube el paso.';
+  }
+  $('mPlan').innerHTML=t;
+  mSupuestos(); MAPA.rv++; mDibuja();
+  if(MAPA.hecho)mResumen();
+}
+function mSupuestos(){
+  var b=mBase($('mRef').value), p=b.passive, filas=p.n_trackers*p.filas_por_tracker;
+  $('mSup').innerHTML='Ahora mismo: activo <b>'+esc($('mRef').value)+'</b> a '+fmt(b.threshold_1_kmh,0)+
+    ($('mRef').value[1]==='2'?' / '+fmt(b.threshold_2_kmh,0):'')+' km/h · pasivo: suelta a <b>'+
+    fmt(p.release_kmh,0)+' km/h</b>, 1 fila de '+filas+' ('+fmt(100/filas,2)+' % del campo) · seguidor ±'+
+    fmt(b.tracker.max_angle_deg,0)+'°, GCR '+fmt(b.tracker.gcr,2)+' · viento a '+fmt(b.wind_height_m||10,1)+' m.';
+}
+
+/* Espera que se puede cortar con «Parar», con la cuenta a la vista. */
+function mEspera(seg,texto){
+  return new Promise(function(ok){
+    var fin=Date.now()+seg*1000;
+    (function tic(){
+      var q=fin-Date.now();
+      if(MAPA.parar||q<=0){ok();return;}
+      if(texto)mMsg(texto(Math.ceil(q/1000)));
+      setTimeout(tic,Math.min(250,q));
+    })();
+  });
+}
+/* La meteo de un nodo: de la caché si está y sirve; si no, de la red.
+   Devuelve {P, red}. Lanza si la red falla: quien llama decide si espera. */
+async function mMeteo(nodo,opt){
+  var k=LOC.mapaClave(nodo.lat,nodo.lon,opt.year), P=await mDbLee(k);
+  if(P&&(!opt.rafaga||(P.tiene_rafaga&&P.cols.gust)))return {P:P,red:false};
+  var M=await LOC.fetchYear(nodo.lat,nodo.lon,opt.year,opt.year);
+  /* `fetchYear` reintenta SIN ráfaga si la petición falla, para que la ficha
+     no se caiga por una variable. Aquí eso es una trampa: un corte de un
+     segundo dejaría ese nodo con viento medio entre vecinos con ráfaga, y en
+     el mapa se leería como un sitio tranquilo. ERA5 la sirve siempre; si no
+     ha venido, la bajada no vale y se repite. */
+  if(opt.rafaga&&(M.rafaga_no_servida||!M.tiene_rafaga))
+    throw new Error('la fuente no ha servido la ráfaga de este nodo');
+  P=LOC.mapaEmpaqueta(M);
+  await mDbGuarda(k,P);
+  return {P:P,red:true};
+}
+
+async function mGenera(){
+  if(MAPA.corriendo){MAPA.parar=true;return;}
+  if(!MAPA.plan||!MAPA.plan.nodos.length)return;
+  if(MAPA.plan.nodos.length>LOC.MAPA.MAX_NODOS)return;
+  var opt=mOpt(), base=mBase(opt.ref), firma=mFirma(base,opt);
+  if(firma!==MAPA.firma){MAPA.res={};MAPA.firma=firma;}
+  MAPA.fallos={}; MAPA.hecho={opt:opt,base:base,pais:MAPA.pais.nombre,iso3:MAPA.pais.iso3};
+  MAPA.corriendo=true; MAPA.parar=false; $('mRun').textContent='Parar';
+  /* Primero los nodos cercanos al emplazamiento de la ficha: el mapa se va
+     llenando desde donde se está mirando. */
+  var la=+$('lat').value, lo=+$('lon').value;
+  var orden=MAPA.plan.nodos.slice().sort(function(a,b){
+    return (Math.pow(a.lat-la,2)+Math.pow(a.lon-lo,2))-(Math.pow(b.lat-la,2)+Math.pow(b.lon-lo,2));});
+  var n=orden.length, hechos=0, red=0, cache=0, intento=0, tPinta=0, cortado=null;
+  for(var i=0;i<n&&!MAPA.parar;i++){
+    var nodo=orden[i], k=LOC.mapaClave(nodo.lat,nodo.lon,opt.year);
+    if(MAPA.res[k]){hechos++;continue;}
+    try{
+      var R=await mMeteo(nodo,opt);
+      var rep=await LOC.run(LOC.mapaCuerpo(base,nodo,opt,LOC.mapaDesempaqueta(R.P)));
+      var g=LOC.mapaGanancia(rep,opt.ref);
+      if(!g)throw new Error('la corrida no ha devuelto los dos casos');
+      MAPA.res[k]=g; hechos++; intento=0; if(R.red)red++; else cache++;
+      MAPA.rv++;
+      if(R.red||Date.now()-tPinta>400){
+        mMsg('Nodo <b>'+hechos+' de '+n+'</b> · '+cache+' de la meteo guardada · '+red+' bajados ahora');
+        mDibuja(); tPinta=Date.now();
+        await new Promise(function(ok){setTimeout(ok,0);});
+      }
+      if(R.red&&i<n-1)await mEspera(LOC.MAPA.ESPERA_S);
+    }catch(e){
+      var m=String(e&&e.message||e), limite=/HTTP 429/.test(m), sinRaf=/no ha servido la ráfaga/.test(m);
+      if((limite||sinRaf)&&intento<LOC.MAPA.ESPERA_429_S.length){
+        var s=LOC.MAPA.ESPERA_429_S[intento++];
+        await mEspera(s,function(q){
+          return (limite?'<b>Open-Meteo ha llegado a su límite de peticiones</b> (HTTP 429).'
+                        :'<b>Un nodo ha llegado sin ráfaga</b> (corte de la fuente).')+
+            ' Lo bajado está guardado. Reintento en <b>'+(q>90?fmt(q/60,0)+' min':q+' s')+'</b> · '+hechos+' de '+n+' nodos.';});
+        i--; continue;
+      }
+      if(limite){cortado='Open-Meteo sigue sin admitir peticiones (límite de la hora o del día). '+
+        'Lo bajado está guardado: vuelve a pulsar <b>Generar el mapa</b> más tarde y sigue donde lo dejó.';break;}
+      MAPA.fallos[k]=m; intento=0;
+    }
+  }
+  MAPA.corriendo=false; $('mRun').textContent='Generar el mapa';
+  var nf=Object.keys(MAPA.fallos).length, parado=MAPA.parar; MAPA.parar=false;
+  mPlanea();
+  mMsg(cortado?'<b style="color:var(--warn)">En pausa.</b> '+cortado+' Van '+hechos+' de '+n+' nodos.'
+     : parado?'Parado en '+hechos+' de '+n+' nodos. <b>Generar el mapa</b> sigue donde lo dejó.'
+     : '<b>'+hechos+' de '+n+' nodos</b> calculados · '+cache+' con meteo guardada · '+red+' bajados'+
+       (nf?' · <b style="color:var(--warn)">'+nf+' sin dato</b> ('+esc(MAPA.fallos[Object.keys(MAPA.fallos)[0]])+
+           '): vuelve a pulsar para reintentarlos':'')+'.');
+  mResumen();
+}
+
+/* ── el dibujo ── */
+function mLista(){
+  if(!MAPA.plan||!MAPA.hecho)return [];
+  var y=MAPA.hecho.opt.year;
+  return MAPA.plan.nodos.map(function(o){
+    return {lat:o.lat,lon:o.lon,ix:o.ix,iy:o.iy,g:MAPA.res[LOC.mapaClave(o.lat,o.lon,y)]||null,
+            fallo:MAPA.fallos[LOC.mapaClave(o.lat,o.lon,y)]||null};});
+}
+function mEscalaAhora(lista){
+  return LOC.mapaEscala(lista.map(function(o){return o.g?o.g.ganancia_pct:NaN;}),+$('mEsc').value||0);
+}
+function mGeo(W,H){
+  var e=MAPA.rej.extension,l0=e[0],l1=e[1],b0=e[2],b1=e[3];
+  var kx=Math.cos((b0+b1)/2*LOC.D2R), mt=64, mb=108, ml=16, mr=16;
+  var s=Math.min((W-ml-mr)/((l1-l0)*kx),(H-mt-mb)/(b1-b0));
+  var mw=(l1-l0)*kx*s, mh=(b1-b0)*s, x0=ml+(W-ml-mr-mw)/2, y0=mt+(H-mt-mb-mh)/2;
+  return {x0:x0,y0:y0,mw:mw,mh:mh,l0:l0,l1:l1,b0:b0,b1:b1,
+    X:function(lon){return x0+(lon-l0)/(l1-l0)*mw;}, Y:function(lat){return y0+(b1-lat)/(b1-b0)*mh;}};
+}
+function mRgb(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+/* El relleno, píxel a píxel: tierra del país según la rejilla de la lámina
+   (suavizada, para que la costa no salga en escalera), valor interpolado entre
+   nodos y color de su banda. El contorno sale del propio relleno. */
+function mRaster(geo,ppx,tema,lista,escala){
+  var w=Math.max(2,Math.round(geo.mw*ppx)), h=Math.max(2,Math.round(geo.mh*ppx));
+  var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  var x=cv.getContext('2d'), img=x.createImageData(w,h), D=img.data;
+  var R=MAPA.rej.filas, C=MAPA.rej.columnas, mk=MAPA.mask, P=MAPA.plan;
+  var G=new Float64Array(P.nx*P.ny).fill(NaN);
+  lista.forEach(function(o){if(o.g)G[o.iy*P.nx+o.ix]=o.g.ganancia_pct;});
+  var F=LOC.mapaRellena(G,P.nx,P.ny,3);
+  var rampa=LOC.MAPA.RAMPA.map(mRgb), bajo=mRgb(LOC.MAPA.BAJO), tierra=new Uint8Array(w*h);
+  var m=function(r,c){return (r<0||c<0||r>=R||c>=C)?0:mk[r*C+c];};
+  var px,py,i;
+  for(py=0;py<h;py++){
+    var lat=geo.b1-(py+0.5)/h*(geo.b1-geo.b0), fr=(py+0.5)/h*R-0.5, r0=Math.floor(fr), v=fr-r0;
+    var fy=(lat-P.lat0)/P.paso;
+    for(px=0;px<w;px++){
+      var fc=(px+0.5)/w*C-0.5, c0=Math.floor(fc), u=fc-c0;
+      var t=m(r0,c0)*(1-u)*(1-v)+m(r0,c0+1)*u*(1-v)+m(r0+1,c0)*(1-u)*v+m(r0+1,c0+1)*u*v;
+      if(t<0.5)continue;
+      i=py*w+px; tierra[i]=1;
+      var lon=geo.l0+(px+0.5)/w*(geo.l1-geo.l0);
+      var b=LOC.mapaBanda(LOC.mapaInterp(F,P.nx,P.ny,(lon-P.lon0)/P.paso,fy),escala);
+      var col=(b==null)?tema.sindato:(b<0?bajo:rampa[b]);
+      D[4*i]=col[0];D[4*i+1]=col[1];D[4*i+2]=col[2];D[4*i+3]=255;
+    }
+  }
+  var d=Math.max(1,Math.round(ppx*0.6)), bo=tema.borde;
+  var es=function(xx,yy){return xx>=0&&yy>=0&&xx<w&&yy<h&&tierra[yy*w+xx];};
+  for(py=0;py<h;py++)for(px=0;px<w;px++){
+    i=py*w+px; if(!tierra[i])continue;
+    if(es(px-d,py)&&es(px+d,py)&&es(px,py-d)&&es(px,py+d))continue;
+    D[4*i]=bo[0];D[4*i+1]=bo[1];D[4*i+2]=bo[2];
+  }
+  x.putImageData(img,0,0);
+  return cv;
+}
+function mPinta(x,W,H,tema,ppx,pantalla){
+  x.fillStyle=tema.fondo; x.fillRect(0,0,W,H);
+  if(!MAPA.rej||!MAPA.plan)return null;
+  var geo=mGeo(W,H), lista=mLista(), escala=mEscalaAhora(lista), hz=MAPA.hecho;
+  x.fillStyle=tema.mar; x.fillRect(geo.x0-8,geo.y0-8,geo.mw+16,geo.mh+16);
+  var bm=(pantalla&&MAPA.bitmap&&MAPA.bitmap.rv===MAPA.rv&&MAPA.bitmap.W===W)?MAPA.bitmap.cv:null;
+  if(!bm){bm=mRaster(geo,ppx,tema,lista,escala); if(pantalla)MAPA.bitmap={rv:MAPA.rv,W:W,cv:bm};}
+  x.drawImage(bm,geo.x0,geo.y0,geo.mw,geo.mh);
+  if($('mVerNodos').checked){
+    var r=Math.max(1.3,Math.min(3,geo.mw/MAPA.plan.nx/9));
+    (lista.length?lista:MAPA.plan.nodos).forEach(function(o){
+      x.beginPath(); x.arc(geo.X(o.lon),geo.Y(o.lat),r,0,6.2832);
+      if(o.fallo){x.fillStyle='#f87272';x.fill();}
+      else if(o.g){x.fillStyle=tema.nodo;x.fill();}
+      else{x.strokeStyle=tema.nodo;x.lineWidth=0.8;x.stroke();}
+    });
+  }
+  // el emplazamiento de la ficha, si cae en el encuadre
+  var la=+$('lat').value, lo=+$('lon').value;
+  if(lo>=geo.l0&&lo<=geo.l1&&la>=geo.b0&&la<=geo.b1){
+    var X=geo.X(lo),Y=geo.Y(la);
+    x.strokeStyle=tema.fondo;x.lineWidth=4;x.beginPath();x.moveTo(X-7,Y);x.lineTo(X+7,Y);x.moveTo(X,Y-7);x.lineTo(X,Y+7);x.stroke();
+    x.strokeStyle='#f09030';x.lineWidth=2;x.beginPath();x.moveTo(X-7,Y);x.lineTo(X+7,Y);x.moveTo(X,Y-7);x.lineTo(X,Y+7);x.stroke();
+  }
+  var sel=pantalla?(MAPA.fijo||MAPA.sobre):null;
+  if(sel){x.strokeStyle=tema.tx;x.lineWidth=2;x.beginPath();x.arc(geo.X(sel.lon),geo.Y(sel.lat),7,0,6.2832);x.stroke();}
+  // rótulos
+  var mono='"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace', sans='system-ui,-apple-system,"Segoe UI",sans-serif';
+  x.textBaseline='alphabetic'; x.textAlign='left';
+  x.fillStyle=tema.tx; x.font='700 17px '+sans;
+  x.fillText('GANANCIA DEL ABANDERAMIENTO PASIVO',16,28);
+  x.fillStyle=tema.tx2; x.font='12.5px '+sans;
+  var ref=hz?hz.opt.ref:$('mRef').value, bb=hz?hz.base:mBase(ref), yy=hz?hz.opt.year:+$('mYear').value;
+  x.fillText(MAPA.pais.nombre+' · viento histórico '+yy+' · frente al activo '+ref+' ('+fmt(bb.threshold_1_kmh,0)+
+    (ref[1]==='2'?'/'+fmt(bb.threshold_2_kmh,0):'')+' km/h)',16,47);
+  // leyenda
+  var lw=Math.min(520,W-120), lx=(W-lw)/2, ly=H-78, lh=15, bw=lw/10, k;
+  for(k=0;k<10;k++){x.fillStyle=LOC.MAPA.RAMPA[k];x.fillRect(lx+k*bw,ly,bw+0.5,lh);}
+  x.fillStyle=LOC.MAPA.BAJO; x.beginPath();x.moveTo(lx-2,ly);x.lineTo(lx-2,ly+lh);x.lineTo(lx-18,ly+lh/2);x.fill();
+  x.fillStyle=LOC.MAPA.RAMPA[9]; x.beginPath();x.moveTo(lx+lw+2,ly);x.lineTo(lx+lw+2,ly+lh);x.lineTo(lx+lw+18,ly+lh/2);x.fill();
+  x.fillStyle=tema.tx2; x.font='11px '+mono; x.textAlign='center';
+  for(k=0;k<=10;k+=2)x.fillText(fmt(k*escala.paso,escala.dec)+' %',lx+k*bw,ly+lh+14);
+  x.fillText('Ganancia del pasivo (%)',lx+lw/2,ly+lh+31);
+  x.font='600 10.5px '+sans; x.fillStyle=tema.tx;
+  x.textAlign='left';  x.fillText('MENOS GANANCIA',lx,ly-7);
+  x.textAlign='right'; x.fillText('MÁS ENERGÍA ANUAL CAPTADA FRENTE AL ACTIVO',lx+lw,ly-7);
+  x.textAlign='right'; x.font='10px '+mono; x.fillStyle=tema.tx2;
+  x.fillText('el pasivo pierde más',lx-24,ly+lh/2+3.5);
+  if(hz){
+    var p=hz.base.passive, n=lista.filter(function(o){return o.g;}).length;
+    x.textAlign='right';
+    x.fillText('Factiun · sim-viento · rejilla '+MAPA.plan.paso+'° · '+n+' nodos · Open-Meteo (ERA5), '+
+      (hz.opt.rafaga?'ráfaga horaria':'viento medio')+' · suelta '+fmt(p.release_kmh,0)+' km/h (no medida), 1 fila de '+
+      (p.n_trackers*p.filas_por_tracker),W-12,H-8);
+  }
+  return geo;
+}
+function mDibuja(){
+  var cv=$('mLienzo'); if(!cv||$('panelMapa').style.display==='none')return;
+  var P=prep2d(cv);
+  MAPA.geo=mPinta(P.x,P.W,P.H,MTEMA.oscuro,Math.min(2,window.devicePixelRatio||1),true);
+  var hay=mLista().some(function(o){return o.g;});
+  $('mPng').disabled=!hay; $('mJson').disabled=!hay;
+  $('mCtx').textContent=MAPA.pais?(MAPA.pais.nombre+(MAPA.hecho?' · '+MAPA.hecho.opt.year+' · '+MAPA.hecho.opt.ref:'')):'—';
+}
+function mSigno(v,d){return (v>0?'+':'')+fmt(v,d);}
+function mLee(){
+  var o=MAPA.fijo||MAPA.sobre, e=$('mLectura');
+  if(!o){e.innerHTML='Pasa el ratón por un nodo para leerlo; un clic lo fija.';return;}
+  var pos=fmt(Math.abs(o.lat),2)+'° '+(o.lat>=0?'N':'S')+' · '+fmt(Math.abs(o.lon),2)+'° '+(o.lon>=0?'E':'O');
+  if(!o.g){e.innerHTML='<b>'+pos+'</b> · '+(o.fallo?'sin dato: '+esc(o.fallo):'todavía sin calcular');return;}
+  var g=o.g, ref=MAPA.hecho.opt.ref;
+  e.innerHTML='<b>'+pos+'</b> · ganancia <b>'+mSigno(g.ganancia_pct,3)+' %</b> · activo '+esc(ref)+' '+
+    mSigno(g.activo_pct,3)+' % ('+g.n_activo+' abanderamientos, '+fmt(g.h_activo,0)+' h) · pasivo '+
+    mSigno(g.pasivo_pct,3)+' % (la fila sola '+mSigno(g.fila_pct,2)+' %, '+g.n_pasivo+' sueltas) · viento máx '+
+    fmt(g.viento_max_kmh,0)+' km/h'+(MAPA.fijo?' · <button class="btn small" id="mLleva">Llevar al Simulador</button>':'');
+  if($('mLleva'))$('mLleva').onclick=function(){
+    eligeSitio({n:'Nodo '+fmt(o.lat,2)+', '+fmt(o.lon,2),lat:o.lat,lon:o.lon});
+    gTab('viento');
+  };
+}
+function mNodoEn(ev){
+  if(!MAPA.geo||!MAPA.hecho)return null;
+  var r=$('mLienzo').getBoundingClientRect(), X=ev.clientX-r.left, Y=ev.clientY-r.top, mejor=null, dm=18*18;
+  mLista().forEach(function(o){
+    var d=Math.pow(MAPA.geo.X(o.lon)-X,2)+Math.pow(MAPA.geo.Y(o.lat)-Y,2);
+    if(d<dm){dm=d;mejor=o;}
+  });
+  return mejor;
+}
+function mResumen(){
+  var lista=mLista(), S=LOC.mapaResumen(lista), K=$('mKpis');
+  if(!S){K.innerHTML='';$('mTablaCard').style.display='none';return;}
+  var ro=function(k,v){return '<div class="ro"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>';};
+  K.innerHTML=ro('Ganancia media del país',mSigno(S.media,2)+' %')+
+    ro('Mediana · mín · máx',mSigno(S.p50,2)+' <small>· '+mSigno(S.min,2)+' · '+mSigno(S.max,2)+' %</small>')+
+    ro('Activo '+esc(MAPA.hecho.opt.ref)+', media',mSigno(S.activo,2)+' %')+
+    ro('Pasivo, media',mSigno(S.pasivo,3)+' %');
+  var top=lista.filter(function(o){return o.g;}).sort(function(a,b){return b.g.ganancia_pct-a.g.ganancia_pct;});
+  var h='<table><thead><tr><th>Nodo</th><th>Ganancia %</th><th>Activo %</th><th>Pasivo %</th>'+
+    '<th>Abanderamientos</th><th>Horas</th><th>Viento máx km/h</th></tr></thead><tbody>';
+  top.slice(0,20).forEach(function(o){var g=o.g;
+    h+='<tr><td>'+fmt(o.lat,2)+', '+fmt(o.lon,2)+'</td><td>'+mSigno(g.ganancia_pct,3)+'</td><td>'+mSigno(g.activo_pct,3)+
+       '</td><td>'+mSigno(g.pasivo_pct,3)+'</td><td>'+g.n_activo+'</td><td>'+fmt(g.h_activo,0)+'</td><td>'+fmt(g.viento_max_kmh,0)+'</td></tr>';});
+  $('mTabla').innerHTML=h+'</tbody></table>';
+  $('mTablaHint').textContent=Math.min(20,top.length)+' de '+top.length+' · de mayor a menor ganancia';
+  $('mTablaCard').style.display='';
+}
+/* La rejilla, en el formato de las láminas de país (`*_rejilla.json`): filas
+   de norte a sur, entero = valor × escala, null sin dato. Lleva dentro con qué
+   se calculó, porque un mapa de ganancia sin sus umbrales no dice nada. */
+function mExporta(){
+  var P=MAPA.plan, hz=MAPA.hecho, lista=mLista(), E=1000, filas=[];
+  for(var f=0;f<P.ny;f++)filas.push(new Array(P.nx).fill(null));
+  lista.forEach(function(o){if(o.g)filas[P.ny-1-o.iy][o.ix]=Math.round(o.g.ganancia_pct*E);});
+  var b={};for(var k in hz.base)if(['lat','lon','name','year','year1','strategies','timeline','meteoPre'].indexOf(k)<0)b[k]=hz.base[k];
+  return {variable:'ganancia_pasivo',unidad:'%',escala:E,pais:hz.pais,iso3:hz.iso3,
+    extension:[P.lon0-P.paso/2,P.lon0+(P.nx-0.5)*P.paso,P.lat0-P.paso/2,P.lat0+(P.ny-0.5)*P.paso],
+    filas:P.ny,columnas:P.nx,valores:filas,paso_deg:P.paso,regla_nodos:P.regla,
+    definicion:'100·(POA planta con pasivo − POA planta con activo)/POA planta con activo',
+    fuente:'Open-Meteo (ERA5) · '+(hz.opt.rafaga?'ráfaga horaria':'viento medio'),
+    opciones:hz.opt,configuracion:b,resumen:LOC.mapaResumen(lista),
+    nodos:lista.filter(function(o){return o.g;}).map(function(o){return Object.assign({lat:o.lat,lon:o.lon},o.g);})};
+}
+function mBaja(nombre,blob){
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nombre;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
+}
+function mNombre(ext){var hz=MAPA.hecho;return 'ganancia-pasivo_'+hz.iso3+'_'+hz.opt.year+'_'+hz.opt.ref+'_'+MAPA.plan.paso+'deg.'+ext;}
+
+$('tabMapa').onclick=function(){gTab('mapa');};
+$('mRun').onclick=mGenera;
+$('mPais').onchange=function(){if(!MAPA.corriendo)mCargaPais();};
+['mPaso','mYear','mGust','mRef'].forEach(function(i){$(i).addEventListener('change',function(){if(!MAPA.corriendo)mPlanea();});});
+[['mSuelta','pasV'],['mTrk','nTrk']].forEach(function(par){
+  $(par[0]).addEventListener('change',function(){
+    if(MAPA.corriendo){$(par[0]).value=$(par[1]).value;return;}   // a media corrida no se cambia el caso
+    mEscribeFicha(par[0],par[1]); mPlanea();
+  });});
+['mEsc','mVerNodos'].forEach(function(i){$(i).addEventListener('change',function(){MAPA.rv++;mDibuja();});});
+$('mBorra').onclick=function(){
+  if(MAPA.corriendo)return;
+  mDbVacia().then(function(){mPlanea();mMsg('Meteo guardada vaciada. Lo ya calculado sigue en pantalla.');});
+};
+$('mJson').onclick=function(){mBaja(mNombre('json'),new Blob([JSON.stringify(mExporta())],{type:'application/json'}));};
+$('mPng').onclick=function(){
+  var cv=document.createElement('canvas'), W=1600, H=1000, k=2;
+  cv.width=W*k; cv.height=H*k; var x=cv.getContext('2d'); x.setTransform(k,0,0,k,0,0);
+  mPinta(x,W,H,MTEMA.claro,k,false);
+  cv.toBlob(function(b){mBaja(mNombre('png'),b);},'image/png');
+};
+$('mLienzo').addEventListener('mousemove',function(ev){
+  var o=mNodoEn(ev); if(o===MAPA.sobre||(o&&MAPA.sobre&&o.lat===MAPA.sobre.lat&&o.lon===MAPA.sobre.lon))return;
+  MAPA.sobre=o; if(!MAPA.fijo){mLee();mDibuja();}
+});
+$('mLienzo').addEventListener('click',function(ev){MAPA.fijo=mNodoEn(ev);mLee();mDibuja();});
+window.addEventListener('resize',function(){if(MAPA.rej){MAPA.rv++;mDibuja();}});
+
 fillRosa(); fillPresets(); loadCfg(); meteoTag(); loadPlants();
 fijaTZ(SITIO&&SITIO.tz,+$('lon').value); renderGusts();
 /* La escena se monta AL ABRIR, no al terminar de simular: era la pega — el
@@ -9499,5 +10292,7 @@ detectEngine().then(loadPresets);
 </script>
 <!-- el índice de plantas y herramientas, el mismo de la portada (lo pinta lib/indice.js) -->
 <script src="lib/indice.js" defer></script>
+<!-- las láminas de país: el contorno y la rejilla del mapa de ganancia del pasivo -->
+<script src="lib/mapas-pais.js" defer></script>
 </body>
 </html>
