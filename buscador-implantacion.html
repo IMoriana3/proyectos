@@ -91,6 +91,7 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
   </section>
   <section class="tarj" id="comparison">
     <table aria-label="Comparación de implantaciones"><thead><tr><th>Resultado</th><th>Referencia</th><th>Propuesta</th></tr></thead><tbody id="searchMetrics"></tbody></table>
+    <p id="anualNota" hidden style="font-size:11px;color:var(--muted)">Energía anual de <b>cielo claro</b> (año entero, 8760 h, misma física del comparador; sin meteo del sitio: cota optimista). Energía = kWp × POA × PR, con PR <input id="searchPR" type="number" step="0.01" min="0.5" max="1" value="0.80" style="width:3.6em"> declarado. Informa también bajo criterio potencia; no cambia el orden de la búsqueda.</p>
     <p id="searchGain"></p>
     <table aria-label="Parámetros de implantación"><thead><tr><th>Parámetro</th><th>Referencia</th><th>Propuesta</th></tr></thead><tbody id="searchDesign"></tbody></table>
     <p id="searchChanges"></p>
@@ -114,7 +115,7 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
 
 <script src="lib/layout-search.js"></script>
 <script>
-/* Único optimizador de implantaciones, v1.14.0.
+/* Único optimizador de implantaciones, v1.15.0.
    Reutiliza los bloques canónicos del generador y sim-solar; no copia física.
    Referencia exacta primero; aleatorio y GP comparten candidatos y criterio.
    Barrido angular, azimut/disposición/X/Y y comparación viven en esta página.
@@ -271,6 +272,69 @@ function fFija(azDeg,tl){
   return TILT_CTX.cache.get(k);
 }
 function fTilt(tl){return TILT_CTX?fFija(TILT_CTX.az0,tl):1;}
+/* ── ENERGÍA ANUAL EN EL PANEL («deberíamos sacar la energía anual… aún cuando
+   optimicemos potencia», 2026-11-18). El factor del panel es un índice RELATIVO
+   sobre 12 días típicos; publicar kWh exige el año entero: la MISMA física
+   (FIS2) corre el cielo claro de 8760 h SOLO en las dos configuraciones
+   finales —referencia y mejor—, nunca por candidato (30× el coste para un
+   orden que el índice ya da). POA en kWh/m²·año; energía = kWp × POA × PR
+   (MWh), con el PR declarado y editable en pantalla. Cielo claro sin meteo
+   del sitio = COTA OPTIMISTA, y el rótulo lo dice. Se publica TAMBIÉN bajo
+   criterio potencia: informa, no ordena. */
+let ANUAL={M:null,cache:new Map(),cola:[],corriendo:false};
+function prAnual(){const v=+($('searchPR')&&$('searchPR').value);return v>=0.5&&v<=1?v:0.8;}
+function anualPoa(q){
+  const c=CFGP.coords,lat=c.reduce((s,p)=>s+p[1],0)/c.length,lon=c.reduce((s,p)=>s+p[0],0)/c.length;
+  const alb=(CFGP.decl&&Number.isFinite(CFGP.decl.albedo))?CFGP.decl.albedo:0.2;
+  if(q.tracker){
+    /* en tracker el GCR de los stats del motor ES apertura/pitch: se reusa tal cual */
+    const gcr=q.gcr||0.4,pitch=q.pitch||CFGP.pitch,G={gcr,pitch,altoColector:gcr*pitch};
+    const sp=FIS2.spec(!CFGP.decl||CFGP.decl.backtrack!==false?'tracker_hsat':'tracker_hsat_nobt');
+    const desv=((q.az-90+90)%180+180)%180-90;          // el eje es una recta: pliegue a ±90°
+    return FIS2.corre(sp,ANUAL.M,{lat,lon,albedo:alb,maxang:(CFGP.decl&&CFGP.decl.max_angle_deg)||55,
+      desvEje:desv,pend:0,pendAz:null,geomDe:()=>G}).neta;
+  }
+  const nT=parseInt(CFGP.table,10)||1,alto=nT*CFGP.modLen+(nT-1)*(CFGP.gapModules||0);
+  const G={gcr:alto/CFGP.pitch,pitch:CFGP.pitch,altoColector:alto};
+  return FIS2.corre(FIS2.spec('fija_proyecto'),ANUAL.M,{lat,lon,albedo:alb,tilt:q.tilt,
+    desvFija:q.az-FIS2.azEquador(lat),pend:0,pendAz:null,geomDe:()=>G},q.tilt).neta;
+}
+function anualEncola(key,q){
+  if(ANUAL.cola.some(e=>e.key===key))return;
+  ANUAL.cola.push({key,q});
+  if(ANUAL.corriendo)return;
+  ANUAL.corriendo=true;
+  const mia=ANUAL;                     // si nuevoSite() resetea, esta cola muere sola
+  const paso=()=>{
+    if(mia!==ANUAL){mia.corriendo=false;return;}
+    const e=ANUAL.cola.shift();
+    if(!e){ANUAL.corriendo=false;return;}
+    try{ANUAL.cache.set(e.key,anualPoa(e.q));}catch(err){ANUAL.cache.set(e.key,null);}
+    if(window.LayoutSearchUI)LayoutSearchUI.render();
+    setTimeout(paso,0);
+  };
+  if(ANUAL.M)setTimeout(paso,0);
+  else{
+    const c=CFGP.coords,lat=c.reduce((s,p)=>s+p[1],0)/c.length,lon=c.reduce((s,p)=>s+p[0],0)/c.length;
+    FIS2.clearsky(lat,lon,2026).then(o=>{if(mia===ANUAL){ANUAL.M=o;setTimeout(paso,0);}else mia.corriendo=false;});
+  }
+}
+/* d = item de describe() de la UI ({panelAz,tilt,kWp,gcr,pitch}). Devuelve
+   {poa,mwh}, la cadena 'calculando' mientras corre, o null si no puede. */
+window.ANUAL_DE=function(d){
+  if(!FIS2||!CFGP||!CFGP.coords||!d||!Number.isFinite(d.kWp))return null;
+  const az=Math.round(((((d.panelAz!=null?d.panelAz:(GIRA?90:180))%360)+360)%360)*4)/4;
+  const tilt=GIRA?null:Math.round(d.tilt!=null?d.tilt:TILT0);
+  const key=(GIRA?'T':'F')+az+'|'+(tilt==null?'-':tilt)+'|'+Math.round((GIRA?(d.gcr||0):0)*1000);
+  if(ANUAL.cache.has(key)){
+    const poa=ANUAL.cache.get(key);
+    if(poa==null)return null;
+    return {poa,mwh:d.kWp*poa*prAnual()/1000};
+  }
+  anualEncola(key,{tracker:GIRA,az,tilt,gcr:d.gcr,pitch:d.pitch});
+  return 'calculando';
+};
+window.PR_ANUAL=prAnual;
 function construyeTablaF(gcr,maxAngle,backtrack){
   const c=CFGP.coords,lat=c.reduce((s,p)=>s+p[1],0)/c.length,lon=c.reduce((s,p)=>s+p[0],0)/c.length;
   /* el año en 12 días (el 15 de cada mes) a paso de 15 min: la RAZÓN entre orientaciones se
@@ -319,6 +383,7 @@ function nuevoSite(mismaParcela){
   if(!mismaParcela){SITE++;ENCARGO=null;}                        // N sale del encargo: vuelven los sintéticos
   const rp=rngDe(SEM[0]+SITE*7919,SEM[1]);                       // la parcela sale del site…
   PARCELA=ENCARGO?parcelaDeEncargo(ENCARGO):(REAL||parcelaSintetica(rp));
+  ANUAL={M:null,cache:new Map(),cola:[],corriendo:false};   // el anual es DE ESTA parcela y mesa
   RND=rngDe(SEM[0]+SITE*104729,SEM[1]);     // …y la búsqueda, de su propia rama
   AZ0=ENCARGO&&Number.isFinite(ENCARGO.panelAz)?ENCARGO.panelAz:90;                         // el giro ±90° se SUMA al azimut del encargo
   /* GIRA = tracker. La fija TAMBIÉN puede girar desde v1.14.0 («se debe poder
@@ -611,6 +676,8 @@ window.ESTADO=()=>({opciones:OPC,mejorKwp:MEJOR?MEJOR.kwp:0,mejorStr:MEJOR?MEJOR
 window.FACTOR=factorF;
 window.FTILT=fTilt;
 window.FFIJA=fFija;
+/* sonda del banco: la POA anual de una configuración, con ANUAL.M ya puesto */
+window.ANUAL_CORRE=q=>anualPoa(q);
 /* sonda del banco: la POA neta a un tilt, con o sin sombra entre filas */
 window.TILT_CORRE=(tl,sinSombra)=>{if(!TILT_CTX)return null;
   const sp=sinSombra?Object.assign({},TILT_CTX.spec,{sinSombra:true}):TILT_CTX.spec;
@@ -651,7 +718,7 @@ window.cargaLayoutReal=cargaLayoutReal;
       "Desde <code>file://</code> el navegador bloquea esa lectura.";
     return;
   }
-  const PAGE_VER='1.14.0';
+  const PAGE_VER='1.15.0';
   const libVer=window.LayoutSearch&&LayoutSearch.LIB_VER;
   if(libVer!==PAGE_VER)
     pon('⚠ Versiones mezcladas por caché: página v'+PAGE_VER+' con módulos v'+(libVer||'antigua')+
