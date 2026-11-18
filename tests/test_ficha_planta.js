@@ -100,8 +100,9 @@ const CARTERA = {
     check('una planta SIN COMENZAR no gana sala de control', paramo.scada === 'APAGADO', paramo);
     check('pero sí enseña que está sin comenzar', paramo.estado === 'Sin comenzar', paramo);
 
-    // La Latina 2 ya está en la cartera/tabla IPs y en el alta de Toolbox,
-    // ya no puede dejar la huella vacía ni abrir visores que carezcan de datos.
+    // La Latina 2 ya está en la cartera/tabla IPs y en el alta de Toolbox, y desde el 2026-11-18
+    // tiene layout del DWG en cobertura-zigbee: abre los mismos visores que Bagnarelli. El SCADA
+    // sigue la regla de todas: lo abre el estado de la Cartera, y está «Sin comenzar».
     const latina = await tarjeta(page, 'La Latina 2');
     const tarjetaLatina = page.locator('.pcard[data-planta="La Latina 2"]');
     check('La Latina 2 (24029) permanece en Plantas',
@@ -113,13 +114,15 @@ const CARTERA = {
     const vistaLatina = page.locator('.pcard[data-planta="La Latina 2"] .pviews');
     const deshabilitadas = await vistaLatina.locator('span.btn.off').count();
     const activas = await vistaLatina.locator('a.btn').count();
-    check('La Latina habilita Siting oficial y plano 2D, pero no 3D/RF/SCADA',
-      deshabilitadas === 3 && activas === 2, { deshabilitadas, activas });
+    check('La Latina habilita Siting, Layout 2D, 3D y Cobertura; SCADA apagado',
+      deshabilitadas === 1 && activas === 4, { deshabilitadas, activas });
     const enlaces = await vistaLatina.locator('a.btn').evaluateAll(a => a.map(x => x.getAttribute('href')));
-    check('Siting abre la aplicación oficial y 2D su visor de La Latina',
-      enlaces.some(x => x.includes('latina-2.html?modo=2d')) &&
-      enlaces.some(x => x.includes('https://siting.pages.dev/?planta=latina')) &&
-      !enlaces.some(x => x.includes('latina-2.html?modo=siting')), enlaces);
+    check('las cuatro vistas van a ?planta=latina de sus aplicaciones, ninguna a El Burgo',
+      enlaces.some(x => x === 'https://siting.pages.dev/?planta=latina') &&
+      enlaces.some(x => /cobertura-zigbee\.imoriana3\.workers\.dev\/plano\.html\?planta=latina$/.test(x)) &&
+      enlaces.some(x => /cobertura-zigbee\.imoriana3\.workers\.dev\/terreno\.html\?planta=latina$/.test(x)) &&
+      enlaces.some(x => /cobertura-zigbee\.imoriana3\.workers\.dev\/index\.html\?planta=latina$/.test(x)) &&
+      !enlaces.some(x => /elburgo|latina-2\.html\?modo=siting/.test(x)), enlaces);
     const huella = tarjetaLatina.locator('svg.huella');
     check('la tarjeta muestra los 67 centros de TCU de verdad',
       await huella.count()===1 && await huella.locator('circle').count()===67,
