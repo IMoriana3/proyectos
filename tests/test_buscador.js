@@ -230,6 +230,9 @@ async function esperaListo(pg) {
   check('y el mando del tilt queda apagado, con su motivo en pantalla', await page.evaluate(() =>
     $('searchTiltMax').disabled === true &&
     $('objective').textContent.includes('POTENCIA')), 'potencia sin declarar en pantalla');
+  check('la nota de variables dice POR QUÉ el tilt está apagado y cómo encenderlo', await page.evaluate(() =>
+    !$('varWhy').hidden && $('varWhy').textContent.includes('POTENCIA') && $('varWhy').textContent.includes('Energía')),
+    'casilla apagada sin su porqué en pantalla');
   await page.evaluate(() => { $('searchCrit').value = 'energia'; $('searchCrit').dispatchEvent(new Event('change')); });
 
   // un JSON sin vallado no cuela
@@ -449,6 +452,8 @@ async function esperaListo(pg) {
   check('en fija no se gira nada', ef.encargo === true && ef.gira === false && ef.mejorGiro === 0,
     JSON.stringify({ gira: ef.gira, giro: ef.mejorGiro }));
   check('y la barra lo dice', (await pageF.evaluate(() => document.getElementById('barra').textContent)).includes('fija: no se gira'));
+  check('y la nota de variables dice por qué el azimut no se busca en fija', await pageF.evaluate(() =>
+    !$('varWhy').hidden && $('varWhy').textContent.includes('fija')), 'azimut apagado sin su porqué');
 
   // ── EL TILT DE LA FIJA ES VARIABLE («optimizar también el tilt», 2026-11-18) ────────────
   // La huella del motor no depende del tilt, así que el criterio es un índice de ENERGÍA:

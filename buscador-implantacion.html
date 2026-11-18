@@ -82,6 +82,7 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
       <label><input id="searchRows" type="checkbox" checked> Alineado / tresbolillo</label><br>
       <label><input id="searchXY" type="checkbox" checked> Origen X/Y (±medio pitch)</label><br>
       <label><input id="searchTilt" type="checkbox" checked> Inclinación de la fija (5–45°)</label></div>
+    <p id="varWhy" hidden style="font-size:11px;color:var(--warn)"></p>
     <div class="three" id="searchGrid" hidden><label>Desde °<input id="gridFrom" type="number" value="90" step="any"></label><label>Hasta ° (excl.)<input id="gridTo" type="number" value="270" step="any"></label><label>Paso °<input id="gridStep" type="number" value="5" min="0.1" step="any"></label></div>
     <p id="methodNote">Primero se evalúa la referencia. Se conservan pitch, tallas, retranqueo, exclusiones y viales.</p>
     <div class="actions"><button id="searchRun" class="primary">Buscar</button><button id="searchPause">Pausar</button></div>
@@ -113,7 +114,7 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
 
 <script src="lib/layout-search.js"></script>
 <script>
-/* Único optimizador de implantaciones, v1.12.0.
+/* Único optimizador de implantaciones, v1.13.1.
    Reutiliza los bloques canónicos del generador y sim-solar; no copia física.
    Referencia exacta primero; aleatorio y GP comparten candidatos y criterio.
    Barrido angular, azimut/disposición/X/Y y comparación viven en esta página.
