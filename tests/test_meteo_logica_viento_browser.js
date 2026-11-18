@@ -75,7 +75,7 @@ function stub(){
             &&(!filter.from||x.dia>=filter.from)&&(!filter.to||x.dia<=filter.to)).slice(a,b+1);
           // La selección ligera de la lógica de viento: solo el eje de tiempos y el viento máximo.
           const ligera=/(^|,)vmax:series->v->wind_speed_max(,|$)/.test(filter.cols);
-          return Promise.resolve({data:ligera?result.map(({series,...row})=>({...row,t:series.t,vmax:series.v.wind_speed_max})):result,error:null});
+          return Promise.resolve({data:ligera?result.map(({series,...row})=>({...row,t:series.t,vmax:series.v.wind_speed_max,...(/vdir:series->v->wind_direction/.test(filter.cols)?{vdir:series.v.wind_direction}:{})})):result,error:null});
         }
       };
     }
@@ -109,13 +109,33 @@ function stub(){
      [...document.querySelectorAll('#wlSummary,#wlChart,#wlEvents')].every(e=>!e.checkVisibility())&&document.getElementById('wlRun').disabled;
  }));
 
- /* Arriba se carga un único día, y en calma: lo que salga después lo ha pedido la tarjeta. */
- await page.fill('#supFrom','2026-06-04');
+ /* La lógica de viento no depende de lo que se cargue arriba. Se pide un periodo que el cargador general
+    rechaza (más de 370 días): no entra ninguna medida, y aun así la tarjeta está y simula todo el histórico. */
+ await page.fill('#supFrom','2024-01-01');
  await page.fill('#supTo','2026-06-04');
  await page.fill('#supEmail','test@factiun.example');
  await page.fill('#supPassword','clave-prueba');
  await page.click('#supLogin');
- await page.waitForFunction(()=>!document.getElementById('wlRun').disabled,null,{timeout:20000});
+ await page.waitForFunction(()=>document.getElementById('supLoadStatus').classList.contains('bad')&&!document.getElementById('wlRun').disabled,null,{timeout:20000});
+ const sinCarga=await page.evaluate(()=>({carga:document.getElementById('supLoadStatus').textContent,medidas:document.body.classList.contains('con-medidas'),
+   tarjeta:document.getElementById('windLogicCard').checkVisibility(),boton:document.getElementById('wlRun').checkVisibility(),
+   graficas:document.getElementById('wlCalendar').checkVisibility(),origen:document.getElementById('wlSource').value,
+   grupo:document.getElementById('wlGroup').options[0].textContent,estado:document.getElementById('wlStatus').textContent}));
+ check('sin ninguna medida cargada (periodo rechazado), la tarjeta está y «Simular lógica» se puede pulsar',
+   /Has pedido \d+ días y aquí se cargan como máximo 370/.test(sinCarga.carga)&&!sinCarga.medidas&&sinCarga.tarjeta&&sinCarga.boton&&!sinCarga.graficas&&
+   sinCarga.origen==='supabase'&&sinCarga.grupo==='Se sabrá al simular'&&/se lee de la base todo el histórico de viento de «El Burgo I», sin cargar nada arriba/.test(sinCarga.estado),sinCarga);
+ await page.click('#wlRun');
+ await page.waitForFunction(()=>document.querySelectorAll('#wlSummary tr').length===2&&/todo el histórico de la base/.test(document.getElementById('wlStatus').textContent),null,{timeout:20000});
+ const Rs=await page.evaluate(()=>({filas:[...document.querySelectorAll('#wlSummary tr')].map(tr=>[...tr.children].map(td=>td.textContent)),
+   grupo:document.getElementById('wlGroup').value,graficas:document.getElementById('wlCalendar').checkVisibility(),medidas:document.body.classList.contains('con-medidas')}));
+ check('y simula el histórico entero de la planta elegida en «Planta», sin medidas arriba',
+   Rs.filas[0][2]==='6'&&Rs.filas[1][2]==='1'&&Rs.grupo==='*'&&Rs.graficas&&!Rs.medidas,Rs);
+
+ /* Ahora sí se carga arriba un único día, y en calma: lo que salga después lo ha pedido la tarjeta. */
+ await page.fill('#supFrom','2026-06-04');
+ await page.fill('#supTo','2026-06-04');
+ await page.click('#supLoad');
+ await page.waitForFunction(()=>/2026-06-04 → 2026-06-04/.test(document.getElementById('supLoadStatus').textContent)&&!document.getElementById('wlRun').disabled,null,{timeout:20000});
  const pre=await page.evaluate(()=>({lat:+document.getElementById('wlLat').value,lon:+document.getElementById('wlLon').value,
    pitch:+document.getElementById('wlPitch').value,tz:document.getElementById('wlTz').value,
    group:document.getElementById('wlGroup').value}));
@@ -129,15 +149,50 @@ function stub(){
  const resumen=()=>page.evaluate(()=>[...document.querySelectorAll('#wlSummary tr')].map(r=>[...r.children].map(c=>c.textContent.trim())));
  await page.click('#wlRun');
  await page.waitForFunction(()=>document.querySelectorAll('#wlSummary tr').length===2,null,{timeout:20000});
+ /* Con dos NCU en la base, lo que sale sin tocar nada es la planta entera: es lo que cuenta para la alarma. */
+ const porDefecto=await page.evaluate(()=>({valor:document.getElementById('wlGroup').value,opciones:[...document.getElementById('wlGroup').options].map(o=>o.value+'='+o.textContent)}));
+ const Rd=await resumen();
+ check('con varias NCU, por defecto sale la planta entera; cada NCU queda como detalle',
+   porDefecto.valor==='*'&&porDefecto.opciones.join('|')==='*=Planta entera (todas las NCU)|1=NCU 1 · HSU 230, HSU 231|2=NCU 2 · HSU 230'&&
+   Rd[0][0]==='Pre-stow (> 40 km/h) 11,1 m/s'&&Rd[0][2]==='6'&&/Planta entera/.test(await txt('wlStatus')),[porDefecto,Rd]);
+ await page.selectOption('#wlGroup','1');
+ await page.waitForFunction(()=>/^NCU 1/.test(document.getElementById('wlStatus').textContent),null,{timeout:15000});
  const R=await resumen();
  const pedido=await page.evaluate(()=>window.__consultas.filter(q=>/vmax:/.test(q.cols)));
  check('la simulación pide a la base solo el viento máximo de las HSU, sin fechas ni la serie entera',
    pedido.length>=1&&pedido.every(q=>!/(^|,)series(,|$)/.test(q.cols)&&/(^|,)t:series->t(,|$)/.test(q.cols)&&JSON.stringify(q.classes)==='["hsu"]'&&q.plant==='El Burgo I'&&!q.from&&!q.to)&&
    /01\/06\/2026.*04\/06\/2026/.test(await txt('wlStatus'))&&/todo el histórico de la base/.test(await txt('wlStatus')),[pedido,await txt('wlStatus')]);
- check('resumen: cinco pre-stow (dos sin mover, tres a mover) y un stow; el máximo de las dos HSU manda',
-   R[0].slice(0,4).join('|')==='Pre-stow (> 40 km/h)|5|2|3'&&R[1].slice(0,4).join('|')==='Stow (> 60 km/h)|1|0|1',R);
- check('cuánto: uno de día casi 30°, dos de noche 50°; el stow, 25°',/^1 de día, (29,\d|30)°; 2 de noche, 50°$/.test(R[0][4])&&R[1][4]==='1 de día, 25°',[R[0][4],R[1][4]]);
- check('recuento por racha máxima en una línea',(await txt('wlBands'))==='Por racha máxima. Pre-stow: 40–50 km/h: 4 · > 60 km/h: 1. Stow: 60–65 km/h: 1.',await txt('wlBands'));
+ check('resumen: cuatro episodios y cinco pre-stow (dos sin mover, tres a mover) y un stow; el máximo de las dos HSU manda',
+   R[0].slice(0,4).join('|')==='Pre-stow (> 40 km/h) 11,1 m/s|4|5|2'&&+R[0][4]+ +R[0][7]===3&&R[1].slice(0,5).join('|')==='Stow (> 60 km/h) 16,7 m/s|1|1|0|1',R);
+ check('cuánto se mueve, en columnas: uno de día casi 30°, dos de noche 50°; el stow, 25° de día',/^1\|(29,\d|30)°\|(29,\d|30)°\|2\|50°\|50°$/.test(R[0].slice(4).join('|'))&&R[1].slice(4).join('|')==='1|25°|25°|0|—|—',[R[0].slice(4),R[1].slice(4)]);
+ const anual=await txt('wlAnnual');
+ check('uso por año: episodios, movimientos, recorrido y horas en alarma',/^Por año \(0,01 años con dato\)\. Pre-stow: [\d.]+ episodios, [\d.]+ movimientos, [\d.]+° de recorrido y [\d.]+ h en alarma\. Stow: /.test(anual),anual);
+ check('recuento por racha máxima en una línea',(await txt('wlBands'))==='Un episodio agrupa las activaciones que vuelven a saltar menos de 2 h después de desactivarse. Activaciones por racha máxima. Pre-stow: 40–50 km/h: 4 · > 60 km/h: 1. Stow: 60–65 km/h: 1.',await txt('wlBands'));
+ /* Gráficas: cuándo, a qué hora, cuánto duran y qué detecta cada HSU. */
+ const graf=await page.evaluate(()=>{
+   const pintado=id=>{const c=document.getElementById(id),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i])n++;return n>500;};
+   return {ok:['wlCalendar','wlChart','wlChartHour','wlChartDur','wlChartHsu','wlChartRose','wlChartDetail','wlChartBattery'].map(pintado),
+     bat:[...document.querySelectorAll('#wlBattery tr')].map(r=>[...r.children].map(c=>c.textContent.trim())),batNota:document.getElementById('wlBatteryNote').textContent,
+     top:[...document.querySelectorAll('#wlTop tr')].map(r=>[...r.children].map(c=>c.textContent.trim())),rosa:document.getElementById('wlRoseNote').textContent,titulo:document.getElementById('wlChartTitle').textContent,
+     nota:document.getElementById('wlChartsNote').textContent,cal:document.getElementById('wlCalendarNote').textContent,
+     visibles:['wlCalendar','wlChartHour','wlChartDur','wlChartHsu'].every(id=>document.getElementById(id).checkVisibility())};});
+ check('gráficas: calendario de alarmas, reloj de 24 h, duración y racha, y curvas por HSU',
+   graf.ok.every(Boolean)&&graf.visibles&&graf.titulo==='Episodios de viento: cuántos'&&/5 días con dato de 5\./.test(graf.cal)&&
+   /1\/HSU 230: \d+ h\/año sobre pre-stow y [\d,]+ sobre stow, máxima [\d,]+ km\/h; 1\/HSU 231: /.test(graf.nota),graf);
+ check('batería: ida y vuelta en filas distintas, con sus descargas al año y la duración de cada una',
+   graf.bat.length===3&&graf.bat[0][0]==='Ida, a pre-stow o a stow'&&graf.bat[1][0]==='Vuelta, al seguimiento'&&graf.bat[2][0]==='Total'&&graf.bat.every(r=>r.length===7&&/ min$/.test(r[6]))&&
+   graf.bat[0][4]!==graf.bat[1][4]&&/Duración: grados entre 0,17 °\/s\. Si las dos alarmas saltan a la vez es una sola descarga\. Sin sol: de noche y la vuelta del amanecer\./.test(graf.batNota),[graf.bat,graf.batNota.slice(0,200)]);
+ check('los de racha más alta, con su dirección y la HSU que la mide; y de dónde viene el viento',
+   graf.top.length===4&&graf.top[0][2]==='63,0 km/h'&&graf.top[0][3]==='17,5'&&graf.top[0][4]==='O (270°)'&&graf.top[0][5]==='HSU 231'&&
+   /^Rosa: .*En los stow, el viento pilla al seguidor de cara 0 veces, de espalda \(canto alto a barlovento\) 1 y a menos de 30° del eje de las filas 0\.$/.test(graf.rosa),[graf.top,graf.rosa]);
+ /* El margen para unir solo cambia cómo se cuenta: sin él, cada activación es su episodio, y no se vuelve a descargar nada. */
+ const antes=await page.evaluate(()=>window.__consultas.filter(q=>/vmax:/.test(q.cols)).length);
+ await page.fill('#wlMerge','0');await page.dispatchEvent('#wlMerge','change');
+ const R0=await resumen(),tras=await page.evaluate(()=>window.__consultas.filter(q=>/vmax:/.test(q.cols)).length);
+ check('margen a 0: episodios = activaciones, sin volver a simular ni descargar',
+   R0[0].slice(1,3).join('|')==='5|5'&&tras===antes&&(await page.evaluate(()=>document.getElementById('wlChartTitle').textContent))==='Activaciones de viento: cuántos'&&
+   !/episodio agrupa/.test(await txt('wlBands')),[R0,antes,tras]);
+ await page.fill('#wlMerge','120');await page.dispatchEvent('#wlMerge','change');
  const rows=await page.evaluate(()=>[...document.querySelectorAll('#wlEvents tr')].map(r=>[...r.children].map(c=>c.textContent.trim())));
  check('la lista está completa pero plegada, con su recuento en el título',rows.length===6&&(await txt('wlListTitle'))==='Todas las activaciones (6)',[rows.length,await txt('wlListTitle')]);
  const first=rows[0]||[],stow=rows.find(r=>/^Stow/.test(r[0]))||[];
@@ -160,14 +215,39 @@ function stub(){
  const csv=fs.readFileSync(await download.path(),'utf8').replace(/^﻿/,'').trim().split(/\r?\n/);
  check('CSV: cabecera, seis filas, hora local y la dudosa anotada',
    download.suggestedFilename()==='logica_viento_El_Burgo_I.csv'&&csv.length===7&&/inicio_local/.test(csv[0])&&
-   csv.filter(l=>/DUDOSO/.test(l)).length===1&&/;pre-stow;1;;2026-06-01 12:00;2026-06-01 14:00;/.test(csv[1]),[download.suggestedFilename(),csv.length,csv[1]]);
+   csv.filter(l=>/DUDOSO/.test(l)).length===1&&/;pre-stow;1;;1;2026-06-01 12:00;2026-06-01 14:00;/.test(csv[1]),[download.suggestedFilename(),csv.length,csv[1]]);
 
  const [informe]=await Promise.all([page.waitForEvent('download',{timeout:15000}),page.click('#wlReport')]);
  const html=fs.readFileSync(await informe.path(),'utf8');
- check('informe: una página con el resumen, la gráfica y las reglas; la lista no va',
+ const h2=[...html.matchAll(/<h2>([^<]+)<\/h2>/g)].map(m=>m[1]);
+ check('informe: preguntas con su respuesta, el movimiento en columnas y las reglas; la lista no va',
    informe.suggestedFilename()==='informe_logica_viento_El_Burgo_I.html'&&/^<!doctype html>/.test(html)&&
-   html.includes('<td>Pre-stow (&gt; 40 km/h)</td><td>5</td><td>2</td><td>3</td>')&&(html.match(/<svg /g)||[]).length===1&&
-   html.includes('<b>Tabla 2.</b> Reglas simuladas.')&&html.includes('<b>Tabla 1.</b>')&&!html.includes('Anexo'),[informe.suggestedFilename(),html.length]);
+   /<b>Pre-stow<\/b><br><span class="umbral">&gt; 40 km\/h \(11,1 m\/s\)<\/span><\/div><\/div><\/td><td class='n'>4<\/td><td class='n'>5<\/td><td>2<\/td><td>1<\/td>/.test(html)&&
+   html.includes("<th colspan='3' class='grupo'>Hay que mover, de día</th>")&&!html.includes(' · ')&&!/text-transform|letter-spacing/.test(html)&&
+   h2.join('|')==='¿Cuántas veces salta cada alarma?|¿Cuánto trabaja el seguidor al año?|¿Cuántas veces descarga la batería, y cuánto dura?|¿Cuándo salta y cuánto dura?|¿Hasta dónde llega la racha?|¿De dónde viene el viento?|¿Qué ve cada HSU?|Qué se ha simulado|A tener en cuenta'&&
+   !html.includes('Anexo'),[informe.suggestedFilename(),html.length,h2]);
+ // Lo que lo hace de la casa: el nombre de la planta por título, la letra Barlow incrustada y el croquis del seguidor.
+ check('informe: título con la planta, croquis del seguidor y la letra de la casa dentro del fichero',
+   html.includes('<header class="cab"><div><h1>El Burgo I</h1><p class="sub">Lógica de viento: simulación de pre-stow y stow</p>')&&html.includes('<svg class="croquis"')&&
+   [...html.matchAll(/@font-face\{font-family:'([^']+)';font-weight:(\d+);font-style:normal;src:url\(data:font\/woff2;base64,[A-Za-z0-9+\/=]{20000,}\)/g)].map(m=>m[1]+' '+m[2]).join('|')==='Barlow 400|Barlow 500|Barlow 600|Barlow Condensed 600',
+   html.length);
+ // Las gráficas van como imagen, dibujadas con la misma letra, y sustituyen a la de barras.
+ const figs=[...html.matchAll(/<img src="data:image\/png;base64,([A-Za-z0-9+\/=]+)" alt="([^"]+)">/g)].map(m=>({alt:m[2],png:Buffer.from(m[1],'base64')}));
+ const dims=figs.map(f=>f.png.readUInt32BE(16)+'x'+f.png.readUInt32BE(20));          // ancho y alto, de la cabecera IHDR
+ check('informe: calendario, reloj y nube, el peor episodio, rosas y curvas, al triple de resolución',
+   figs.length===7&&!html.includes('<svg class="barras"')&&figs.map(f=>f.alt).join('|')==='Cada descarga de batería por viento: cuándo y cuánto dura|Calendario de alarmas|Alarma activa por hora del día|Duración y racha máxima de cada episodio|El episodio con la racha más alta, minuto a minuto|Dirección del viento en alarma, según cada HSU|Horas al año de cada HSU por encima de cada velocidad'&&
+   html.includes('<h2>¿De dónde viene el viento?</h2><p class="respuesta">En los stow, el viento pilla al seguidor de cara ninguna vez, de espalda una vez y a menos de 30° del eje de las filas ninguna vez.</p>')&&
+   dims.join(' ')==='2070x570 2070x522 1005x720 1005x720 2070x780 2070x570 2070x585',[figs.map(f=>f.alt),dims]);
+ const letra=await page.evaluate(()=>[document.fonts.check("12px 'Barlow'"),document.fonts.check("600 12px 'Barlow Condensed'"),[...document.fonts].map(f=>f.family.replace(/['"]/g,'')+' '+f.weight).sort().join('|')]);
+ check('las figuras se dibujan con la letra de la casa, cargada de assets/fonts',letra[0]&&letra[1]&&letra[2]==='Barlow 400|Barlow 500|Barlow 600|Barlow Condensed 600',letra);
+ check('informe: los de racha más alta con su dirección, y cada HSU con sus horas al año',
+   html.includes('<th>Los cuatro peores, inicio</th>')&&html.includes("<td class='n'>63,0 km/h</td><td>17,5</td><td>O (270°)</td><td>HSU 231</td>")&&
+   /<td><b>NCU 1 HSU 231<\/b><\/td><td>4<\/td><td class='n'>63,0<\/td><td>17,5<\/td>/.test(html)&&/<h2>¿Qué ve cada HSU\?<\/h2><p class="respuesta">La que más viento ve es NCU 1 HSU 23[01]: /.test(html),html.length);
+ const tema=await page.evaluate(async()=>{
+   const V=await import('./lib/meteo-viz.js'),px=(op)=>{const c=document.createElement('canvas');V.drawAlarmClock(c,{prestow:Array(24).fill(1),stow:Array(24).fill(0)},{width:300,height:200,dpr:1,title:'',...op});
+     return [c.width,c.height,...c.getContext('2d').getImageData(1,1,1,1).data].join(',');};
+   return [px({tema:'claro'}),px({})];});
+ check('las gráficas tienen un tema claro para el informe; el de la página sigue siendo el oscuro',tema[0]==='300,200,255,255,255,255'&&tema[1]==='300,200,16,29,48,255',tema);
 
  /* Con dos NCU en la base hay un tercer grupo: la planta entera, donde cuenta la racha de cualquier HSU. */
  const grupos=await page.evaluate(()=>[...document.getElementById('wlGroup').options].map(o=>o.value+'='+o.textContent));
@@ -177,8 +257,8 @@ function stub(){
  const [csvPlanta]=await Promise.all([page.waitForEvent('download',{timeout:15000}),page.click('#wlCsv')]);
  const filasPlanta=fs.readFileSync(await csvPlanta.path(),'utf8').trim().split(/\r?\n/);
  check('planta entera: grupo aparte que suma la racha de la NCU 2, y su CSV solo lleva ese grupo',
-   grupos.join('|')==='1=NCU 1 · HSU 230, HSU 231|2=NCU 2 · HSU 230|*=Planta entera (todas las NCU)'&&
-   Rt[0].slice(0,2).join('|')==='Pre-stow (> 40 km/h)|6'&&Rt[1][1]==='1'&&filasPlanta.length===8&&filasPlanta.slice(1).every(l=>/^Planta entera;/.test(l)),[grupos,Rt,filasPlanta.length]);
+   grupos[0]==='*=Planta entera (todas las NCU)'&&
+   Rt[0][2]==='6'&&Rt[1][2]==='1'&&filasPlanta.length===8&&filasPlanta.slice(1).every(l=>/^Planta entera;/.test(l)),[grupos,Rt,filasPlanta.length]);
  await page.selectOption('#wlGroup','1');
  await page.waitForFunction(()=>/^NCU 1/.test(document.getElementById('wlStatus').textContent),null,{timeout:15000});
 
@@ -195,7 +275,7 @@ function stub(){
  await simular();
  const Rp=await resumen(),acotada=await page.evaluate(()=>window.__consultas.filter(q=>/vmax:/.test(q.cols)).pop());
  check('«Desde» acota lo que se pide a la base: desde el 02/06 quedan dos pre-stow',
-   Rp[0].slice(0,4).join('|')==='Pre-stow (> 40 km/h)|2|1|1'&&Rp[1][1]==='0'&&acotada.from==='2026-06-02'&&!acotada.to&&/periodo acotado/.test(await txt('wlStatus')),[Rp,acotada,await txt('wlStatus')]);
+   Rp[0].slice(2,4).join('|')==='2|1'&&Rp[0][7]==='1'&&Rp[1][2]==='0'&&acotada.from==='2026-06-02'&&!acotada.to&&/periodo acotado/.test(await txt('wlStatus')),[Rp,acotada,await txt('wlStatus')]);
  await page.fill('#wlFrom','');
  await simular();
 
@@ -205,7 +285,7 @@ function stub(){
  await page.click('#wlRun');
  await page.waitForFunction(()=>/70 km\/h/.test(document.getElementById('wlSummary').textContent),null,{timeout:20000}).catch(()=>{});
  const R70=await resumen();
- check('umbral de stow a 70 km/h: ninguna racha lo cruza',R70[1].slice(0,2).join('|')==='Stow (> 70 km/h)|0'&&R70[0][1]==='5',R70);
+ check('umbral de stow a 70 km/h: ninguna racha lo cruza',R70[1].slice(0,3).join('|')==='Stow (> 70 km/h) 19,4 m/s|0|0'&&R70[0][2]==='5',R70);
  await page.fill('#wlPre','80');
  await page.click('#wlRun');
  check('umbrales incoherentes: se dice y no queda un resultado viejo en pantalla',

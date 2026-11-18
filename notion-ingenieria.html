@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Notion ingeniería · FACTIUN</title>
+  <link rel="canonical" href="https://maps-9rd.pages.dev/herramientas/radar-factiun#ingenieria">
+  <style>
+    :root{color-scheme:light dark}*{box-sizing:border-box}body{margin:0;padding:32px;font:16px/1.6 system-ui,sans-serif}main{max-width:520px;margin:12vh auto}h1{font-size:26px;line-height:1.2}a{color:inherit;text-underline-offset:4px}a:focus-visible{outline:2px solid currentColor;outline-offset:6px}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Abriendo Notion ingeniería…</h1>
+    <p>La pantalla de ingeniería está en el Radar de Atlas.</p>
+    <p><a id="open-engineering" href="https://maps-9rd.pages.dev/herramientas/radar-factiun#ingenieria">Abrir Notion ingeniería</a></p>
+  </main>
+  <script type="module">
+    import {engineeringTarget} from './lib/notion-ingenieria-redirect.mjs';
+    const target = engineeringTarget(location.href);
+    document.getElementById('open-engineering').href = target;
+    location.replace(target);
+  </script>
+</body>
+</html>

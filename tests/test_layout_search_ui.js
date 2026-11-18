@@ -83,7 +83,12 @@ let ok=0;function check(n,v){assert.ok(v,n);ok++;console.log('OK   '+n);}
   check('ninguna geometría inválida puede aplicarse',await page.evaluate(()=>!MEJOR)&&await page.isDisabled('#searchApply'));
   check('sin resultados válidos no se inventan ganancias ni ángulos',(await row('panelAz')).slice(1).join('|')==='—|—'&&/Sin dos resultados válidos/.test(await page.textContent('#searchGain')));
   await page.evaluate(c=>{ENCARGO=Object.assign({},c,{mount:'fija',panelAz:201.25,pitch:6});nuevoSite(true);PASO(12);},cfg);
-  check('en fija se conserva el azimut de paneles y no se inventa un eje',await page.evaluate(()=>TRACE.every(t=>t.panelAz===201.25))&&await page.locator('#searchDesign tr[data-key="axisAz"]').count()===0);
+  // (v1.14.0, «se debe poder orientar las fijas con otro azimuth»: aquí se afirmaba que en
+  //  fija el azimut se CONSERVABA. La regla cambió a propósito — el índice f(azimut, tilt)
+  //  cobra girar — y lo que sigue siendo verdad es que la fija no inventa un EJE.)
+  check('en fija el azimut de paneles se busca (la referencia entra tal cual) y no se inventa un eje',
+    await page.evaluate(()=>TRACE[0].panelAz===201.25&&new Set(TRACE.map(t=>t.panelAz)).size>1)&&
+    await page.locator('#searchDesign tr[data-key="axisAz"]').count()===0);
   await page.evaluate(c=>{ENCARGO=c;SOL=null;nuevoSite(true);PASO(12);},cfg);
   check('sin modelo solar se bloquea girar y se declara el criterio disponible',await page.isDisabled('#searchAz')&&await page.evaluate(()=>TRACE.every(t=>t.panelAz===AZ0))&&/azimut bloqueado/.test(await page.textContent('#objective')));
   await gen.evaluate(()=>{PARCELAS.push({ext:PARCEL,holes:[]});$('optBtn').click();});

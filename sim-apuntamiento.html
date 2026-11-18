@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FACTIUN · Simulador de apuntamiento ISS-D60</title>
+<style>
+:root{color-scheme:light;--ink:#1c2e3e;--muted:#617387;--bg:#eef3f6;--line:#d8e2e9;--orange:#d5731c;--teal:#197e94;--purple:#862d80;font-family:Barlow,"Segoe UI",Arial,sans-serif;font-size:14px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}header{background:#122b40;color:#f6fafc;padding:19px max(20px,calc((100vw - 1550px)/2));border-bottom:4px solid #f09030;display:flex;justify-content:space-between;align-items:center;gap:15px}header strong{font-size:23px;font-weight:800;letter-spacing:-.6px}header small{display:block;color:#d0dbe4;margin-top:4px;font-size:12px}header a{color:#ffe0b1;text-decoration:none;font-weight:700}main{max-width:1550px;margin:auto;padding:20px;display:grid;grid-template-columns:340px minmax(0,1fr);gap:17px}section,.box{background:white;border:1px solid var(--line);border-radius:13px;padding:18px;box-shadow:0 2px 5px #203c4d0a}.side{align-self:start}h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:16px 0 8px}label{font-size:12px;color:#45596b;font-weight:700;display:block;margin:10px 0 5px}input:not([type=checkbox]),select,textarea{width:100%;padding:9px;background:#fff;border:1px solid #bfcdd8;border-radius:7px;color:#182d3b;font:inherit;font-size:13px}input[type=checkbox]{width:16px;height:16px;accent-color:var(--orange);margin:0;flex-shrink:0}.check{display:flex;align-items:flex-start;gap:8px;margin:10px 0;font-size:13px;font-weight:450;color:#25394a}.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hint{font-size:12px;color:var(--muted);line-height:1.55;margin:8px 0}.sep{height:1px;background:#e1e8ee;margin:18px 0}.buttons{display:flex;gap:8px;flex-wrap:wrap;margin:11px 0}button{background:var(--orange);border:0;color:#fff;border-radius:7px;padding:10px 14px;font-weight:750;cursor:pointer}button.ghost{background:#e7eff5;color:#26485b}button:disabled{opacity:.5;cursor:not-allowed}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}.metric{background:white;border:1px solid var(--line);padding:17px;border-radius:12px;min-width:0}.metric small{color:var(--muted);font-size:12px}.metric b{display:block;margin:7px 0;font-size:27px;letter-spacing:-.6px}.metric em{font-style:normal;color:var(--muted);font-size:11px}.top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px}.warn{padding:12px 13px;background:#fff7e9;color:#71490c;border-left:4px solid #df9635;font-size:12px;line-height:1.5;margin-bottom:10px}.good{color:#207147;font-weight:700}.bad{color:#ab3c2c;font-weight:700}.charts{width:100%;height:435px;display:block;border:1px solid #e2e9ef;border-radius:8px;background:#fff}.charts-dni{height:194px;margin-top:6px}.chart-subtitle{font-size:13px;font-weight:800;color:#365269;margin:17px 0 6px}.chart-unit-note{font-size:11px;color:#617387;margin:5px 0 8px}.period-box{margin-top:14px}.period-scroll{max-height:355px}.period-scroll table{min-width:630px}.period-scroll tr[data-key]{cursor:pointer}.period-scroll tr[data-key]:hover,.period-scroll tr.selected{background:#f0f5f9}.exclusion-legend{display:flex;gap:6px 12px;flex-wrap:wrap;padding:9px 0 0;color:#4c6070;font-size:11px}.exclusion-legend span{display:inline-flex;align-items:center;gap:5px}.exclusion-legend i,.period-swatch{display:inline-block;width:10px;height:10px;border-radius:2px;flex:none}.period-swatch{margin-right:6px}.period-note{color:#586d7d;font-size:12px;line-height:1.5;margin:8px 0}.period-active{background:#e8f4f7;border-left:3px solid #26809a;padding:7px 10px;border-radius:4px;font-size:12px;min-height:22px}.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#43586a;margin:12px 0 4px}.legend i{display:inline-block;width:18px;border-top:3px solid;vertical-align:middle;margin-right:5px}.tables{display:grid;grid-template-columns:300px 1fr;gap:14px;margin-top:15px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border-bottom:1px solid #e5edf2;text-align:left;padding:7px}th{color:#567080;font-size:11px}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}.scroll{max-height:320px;overflow:auto}textarea{min-height:65px;resize:vertical;font:12px Consolas,monospace}.title{font-size:16px;font-weight:800}.tag{font-size:11px;color:#415a6a;background:#eaf1f5;border-radius:12px;padding:6px 9px}footer{font-size:11px;color:#617387;line-height:1.55;padding:6px 0 14px}@media(max-width:1100px){main{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,1fr)}.tables{grid-template-columns:1fr}}@media(max-width:580px){header{display:block}.grid,.two{grid-template-columns:1fr}.metric b{font-size:23px}main{padding:10px}section,.box{padding:13px}}
+
+.app-version{display:inline-block;margin-left:12px;border:1px solid #f09030;color:#ffe1b1;font-size:11px;font-weight:800;padding:4px 8px;border-radius:5px;letter-spacing:.05em}
+.exclusion-summary{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 10px;min-height:38px;padding:8px 10px;background:#fff5e7;border:1px solid #f0cf9e;border-left:4px solid #d5731c;border-radius:6px}
+.exclusion-summary b{font-size:12px;white-space:nowrap}
+.exclusion-summary .no-track{font-size:11px;color:#744f22}
+.exclusion-pill{border:1px solid #cfdce5;border-left:5px solid #777;background:#fff;color:#1c2e3e;line-height:1.3;border-radius:6px;font-weight:700;font-size:12px;padding:6px 9px;cursor:pointer}
+.exclusion-pill:hover,.exclusion-pill.selected{background:#e8f4f7;outline:2px solid #3a8297;outline-offset:1px}
+.exclusion-bar{height:26px;margin:5px 65px 8px 63px;position:relative;border-radius:4px;border:1px solid #ccdbe5;background:repeating-linear-gradient(90deg,#f4f7f9,#f4f7f9 19px,#e8eef2 20px);overflow:visible}
+.exclusion-bar:before{content:"EXCLUSIONES";position:absolute;top:-17px;left:0;font-size:10px;font-weight:800;color:#5b6e7d;letter-spacing:.06em}
+.exclusion-range{position:absolute;top:0;bottom:0;min-width:5px;opacity:.8;border-radius:2px;cursor:pointer}
+.exclusion-range:hover,.exclusion-range.selected{opacity:1;outline:2px solid #1e3f57;outline-offset:1px;z-index:2}
+.exclusion-summary .hint-inline{font-size:11px;color:#536c7c}
+@media(max-width:630px){.exclusion-bar{margin-left:40px;margin-right:45px}.app-version{margin-left:0;margin-top:4px}}
+</style>
+</head>
+<body>
+<header><div><strong>FACTIUN · Simulador de apuntamiento</strong><span class="app-version">v0.3 · EXCLUSIONES VISIBLES</span><small>ISS-D60 · análisis de históricos SUNNER y TCU · procesamiento local en el navegador</small></div><nav><a href="index.html#herramientas">← Panel de proyectos</a></nav></header>
+<main>
+<section class="side">
+<h2>Cargar registros</h2>
+<label for="files">CSV del sensor SUNNER y/o seguimiento TCU</label>
+<input id="files" type="file" accept=".csv" multiple>
+<div class="hint">Puedes seleccionar varios CSV, incluidas continuaciones sin cabecera. Los archivos nunca se envían al servidor.</div>
+<label for="asignar">NCU/TCU para archivos sin identificación (opcional)</label>
+<input id="asignar" placeholder="Ej.: NCU6_TCU12">
+<button id="cargar" type="button">Importar archivos</button>
+<div id="upload" class="hint">Sin archivos cargados. Los ensayos son privados y no se precargan en la web pública.</div>
+<div class="sep"></div>
+<label for="dataset">Ensayo</label><select id="dataset"><option value="">Carga primero un CSV de sensor</option></select>
+<label for="axis">Canal</label><select id="axis">
+<option value="xf">X filtrada · 30072 (principal)</option>
+<option value="xr">X sin filtrar · 30074</option>
+<option value="yf">Y filtrada · 30073 (perpendicular)</option>
+<option value="yr">Y sin filtrar · 30075</option></select>
+<div class="two"><div><label for="dni">DNI mínimo (W/m²)</label><input id="dni" type="number" value="600" min="0" max="2000" step="10"></div><div><label for="scale">Escala sensor (°/unidad)</label><input id="scale" type="number" value="0.01" min="0.0001" max="1" step=".001"></div></div>
+<div class="sep"></div><h2>Filtros</h2>
+<label class="check"><input id="okSensor" type="checkbox" checked> Sensor válido (registro 30069 = 0)</label>
+<label class="check"><input id="bt" type="checkbox" checked> Quitar backtracking (sensor y TCU)</label>
+<label class="check"><input id="stow" type="checkbox" checked> Quitar seguridad/stow si TCU lo registra</label>
+<label class="check"><input id="limites" type="checkbox" checked> Quitar consigna fija en ±55°</label>
+<label class="check"><input id="p30" type="checkbox" checked> Quitar parada sostenida a +30°</label>
+<label class="check"><input id="recuperacion" type="checkbox" checked> Quitar recuperación hasta alcanzar consigna</label>
+<label class="check"><input id="requerirTCU" type="checkbox" checked> Excluir minutos sin TCU emparejada si existe histórico</label>
+<div class="two"><div><label for="margen">Margen target (°)</label><input id="margen" type="number" value=".25" min="0" max="3" step=".05"></div><div><label for="minParada">Parada mínima (min)</label><input id="minParada" type="number" value="5" min="2" max="60" step="1"></div></div>
+<div class="two"><div><label for="toleranciaRT">Real/Target (°)</label><input id="toleranciaRT" type="number" value=".3" min=".05" max="5" step=".05"></div><div><label for="estables">Minutos estables</label><input id="estables" type="number" value="3" min="1" max="15" step="1"></div></div>
+<div class="sep"></div><h2>Sincronización de relojes</h2>
+<label for="offset">Histórico TCU − sensor (minutos)</label><input id="offset" type="number" value="0" step=".01" min="-1440" max="1440">
+<label for="tolSec">Tolerancia emparejamiento (segundos)</label><input id="tolSec" type="number" value="90" step="5" min="1" max="600">
+<div class="hint">La comparación usa el desfase relativo de los relojes. No supone que ninguna fecha sea UTC. Ajusta el desfase cotejando transiciones BT.</div>
+<label for="manual">Stow confirmado externamente (hora del sensor, inicio-fin)</label>
+<textarea id="manual" placeholder="14:10-14:45&#10;15:15-15:30"></textarea>
+<div class="hint">Un intervalo por línea. Solo introducir periodos comprobados. No se deducen del error angular.</div>
+<div class="buttons"><button id="reset" class="ghost">Restablecer filtros</button></div>
+</section>
+<div>
+<div class="top"><span id="titulo" class="title">Sin ensayo seleccionado</span><div class="buttons"><button id="csv" class="ghost" disabled>Exportar auditoría CSV</button><button id="png" class="ghost" disabled>Gráfica PNG</button></div></div>
+<div id="avisos"></div>
+<div class="grid"><div class="metric"><small>Minutos admitidos</small><b id="n">—</b><em>Mínimo 360</em></div><div class="metric"><small>Error medio absoluto</small><b id="media">—</b><em>Límite &lt; 1,5°</em></div><div class="metric"><small>P95 absoluto</small><b id="p95">—</b><em>Límite &lt; 2,5°</em></div><div class="metric"><small>Resultado numérico</small><b id="resultado" style="font-size:20px">—</b><em>Provisional hasta verificar estados</em></div></div>
+<div class="box"><div class="top"><span class="title" id="graficaTitulo">Desviación y posición real / objetivo</span><span id="estado" class="tag">Sin histórico</span></div>
+<div id="exclusion-summary" class="exclusion-summary" aria-live="polite"><b>Exclusiones: sin registro cargado</b></div>
+<div id="exclusion-bar" class="exclusion-bar" role="group" aria-label="Línea temporal de intervalos excluidos"></div>
+<canvas id="grafica" class="charts" aria-label="Desviación angular y posición real/objetivo en escalas independientes"></canvas>
+<div class="legend" id="series-legend"><span><i style="border-color:#c8d3dc"></i>Desviación total</span><span><i style="border-color:#862d80"></i>Desviación incluida</span><span><i style="border-color:#d5731c"></i>Irradiancia · 30070 (W/m²)</span></div><div class="exclusion-legend" id="leyenda-exclusiones" aria-label="Motivos de exclusión"></div><p id="grafica-info" class="period-active" aria-live="polite">Selecciona un tramo de la tabla para destacarlo en la gráfica.</p>
+<p id="grafica-explicacion" class="hint">Eje izquierdo: desviación angular ISS-D60 (°). Eje derecho: irradiancia instantánea estimada (W/m²), no posición TCU. Las franjas coloreadas identifican intervalos excluidos; los motivos pueden solaparse.</p><div class="chart-subtitle">Irradiancia ISS-D60 · Registro 30070</div><canvas id="irradiancia" class="charts charts-dni" aria-label="Irradiancia instantánea estimada por el ISS-D60 en vatios por metro cuadrado, escala de cero a 1200"></canvas><p class="chart-unit-note">Escala independiente desde 0 W/m². Línea discontinua: umbral de selección DNI. La medición del ISS-D60 es una estimación de radiación directa, no energía acumulada.</p></div>
+<div class="box period-box"><div class="top"><span class="title">Periodos de exclusión · cronología</span><button id="exportPeriodos" class="ghost" disabled>Exportar periodos CSV</button></div><p id="periodos-info" class="period-note">Carga un ensayo para visualizar los tramos descartados.</p><div class="scroll period-scroll"><table><thead><tr><th>Motivo</th><th>Desde</th><th>Último minuto</th><th class="n">Minutos</th><th>Origen</th></tr></thead><tbody id="periodos"></tbody></table></div><p class="hint">Los periodos se muestran en hora del sensor; fin = último minuto excluido. Si concurren varias causas, el mismo minuto aparece en varios motivos, pero solo se descarta una vez.</p></div>
+<div class="tables">
+<div class="box"><h3>Recuento por primer motivo de exclusión</h3><div class="scroll"><table><thead><tr><th>Motivo</th><th class="n">Minutos</th></tr></thead><tbody id="conteo"></tbody></table></div></div>
+<div class="box"><h3>Lecturas cruzadas y eventos</h3><p id="meta" class="hint"></p><div class="scroll"><table><thead><tr><th>Hora sensor</th><th class="n">DNI</th><th class="n">X filt.</th><th class="n">Real</th><th class="n">Target</th><th>Estado</th></tr></thead><tbody id="detalle"></tbody></table></div><p class="hint">Vista de las primeras 120 lecturas. «Exportar auditoría CSV» incluye todas las lecturas y todos los motivos.</p></div>
+</div>
+<footer>Herramienta de análisis y simulación de filtros, no modelo físico del seguidor. La superación numérica de umbrales no certifica automáticamente una prueba IEC 62817. Mantener originales, correspondencia de ejes y justificación externa de cualquier exclusión.</footer>
+</div>
+</main>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const SEN=['Fecha','System info[30069]','Radiation[30070]','Temperature[30071]','X deviation filtered[30072]','Y deviation filtered[30073]','X deviation raw[30074]','Y deviation raw[30075]','BACKTRACKING ACTIVE'];
+const sensors=new Map(),tracking=new Map(),offsets=new Map();
+let last=null,activePeriodKey=null;
+const VERSION="0.3";
+const EX_COLORS={"Backtracking":"#cb812b","Seguridad / stow":"#d35255","Target ±55°":"#9056ba","Parada +30°":"#087e92","Recuperación":"#4095af","Stow externo":"#e26770","DNI ≤ umbral":"#8797a4","Sensor no válido":"#8d647d","Sin histórico TCU":"#66758c","Ángulo no válido":"#b16a59"};
+const EX_SOURCE={"Backtracking":"Sensor / TCU","Seguridad / stow":"TCU","Target ±55°":"Target TCU","Parada +30°":"Target TCU","Recuperación":"Real/Target TCU","Stow externo":"Intervalo confirmado","DNI ≤ umbral":"Sensor 30070","Sensor no válido":"Sensor 30069","Sin histórico TCU":"Sin cruce","Ángulo no válido":"Sensor"};
+function colorReason(s){return EX_COLORS[s]||"#667787"}
+function exclusionPeriods(rows){const byReason=new Map();for(const r of rows){for(const reason of new Set(r.reasons)){if(!byReason.has(reason))byReason.set(reason,[]);byReason.get(reason).push(r.ms)}}const out=[];for(const [reason,times] of byReason){times.sort((a,b)=>a-b);let start=null,prev=null,count=0;function flush(){if(start===null)return;const p={reason,start,end:prev+60000,last:prev,minutes:count,source:EX_SOURCE[reason]||"Sin clasificar"};p.key=reason+"|"+start+"|"+p.end;out.push(p)}for(const ms of times){if(start===null){start=prev=ms;count=1;continue}if(ms===prev+60000){prev=ms;count++}else{flush();start=prev=ms;count=1}}flush()}return out.sort((a,b)=>a.start-b.start||a.reason.localeCompare(b.reason))}
+function time(v){let m=String(v||'').match(/^(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)(?::(\d\d))?/);if(m)return Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+(m[6]||0));m=String(v||'').match(/^(\d\d?)\/(\d\d?)\/(\d{4})[ T](\d\d?):(\d\d)(?::(\d\d))?/);return m?Date.UTC(+m[3],+m[2]-1,+m[1],+m[4],+m[5],+(m[6]||0)):NaN}
+function date(ms){return new Date(ms).toISOString().slice(0,10)}
+function fmt(ms){return new Date(ms).toISOString().replace('T',' ').slice(0,16)}
+function num(v){let txt=String(v??'').trim();if(!txt)return NaN;let x=Number(txt.replace(',','.'));return Number.isFinite(x)?x:NaN}
+function signed(x){if(!Number.isFinite(x))return NaN;return x>=32768&&x<=65535?x-65536:x}
+function bool(x){return /^(true|1|yes)$/i.test(String(x||'').trim())}
+function enc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function percentile(sorted,p){if(!sorted.length)return NaN;let x=(sorted.length-1)*p,i=Math.floor(x),f=x-i;return sorted[i]+f*(sorted[Math.min(i+1,sorted.length-1)]-sorted[i])}
+function near(ms,arr,tol){if(!arr||!arr.length)return null;let lo=0,hi=arr.length;while(lo<hi){let mi=(lo+hi)>>1;if(arr[mi].ms<ms)lo=mi+1;else hi=mi}let a=lo<arr.length?arr[lo]:null,b=lo>0?arr[lo-1]:null,c=!b?a:(!a?b:Math.abs(a.ms-ms)<Math.abs(b.ms-ms)?a:b);return c&&Math.abs(c.ms-ms)<=tol?c:null}
+function identify(name){let x=name.match(/\[NCU-(\d+)\]_TCU_(\d+)/i)||name.match(/NCU[_-]?(\d+)[_-]?(?:TCU[_-]?)?(\d+)/i);return x?'NCU'+(+x[1])+'_TCU'+(+x[2]):null}
+function prefix(name){let m=name.match(/Log_Sensor_(\d{8}_\d{6})/i);return m?m[1]:null}
+function headerParse(text){let lines=text.replace(/^\ufeff/,'').split(/\r?\n/).filter(s=>s.trim());if(!lines.length)return null;let cols=lines[0].split(';').map(s=>s.trim().replace(/^"|"$/g,''));let known=cols.includes('Fecha')||cols.includes('datetime');return {head:known?cols:SEN,rows:lines.slice(known?1:0)}}
+function rowsByHeader(head,rows){let idx={};head.forEach((n,i)=>idx[n]=i);return rows.map(s=>s.split(';')).map(a=>new Proxy({}, {get(_,k){let j=idx[k];return j===undefined?'':(a[j]||'').trim().replace(/^"|"$/g,'')}}))}
+function selected(){return sensors.get($('dataset').value)}
+async function ingest(){
+ let fs=[...$('files').files];if(!fs.length){$('upload').textContent='Selecciona uno o varios archivos.';return}
+ let ident=new Map(),fallback=$('asignar').value.trim().toUpperCase().replace(/[\s-]+/g,'_');
+ for(let f of fs){let key=identify(f.name),p=prefix(f.name);if(key&&p)ident.set(p,key)}
+ let added=0,unknown=[],errors=[],countTracks=0;
+ for(let f of fs){try{
+   let p=headerParse(await f.text());if(!p)continue;
+   let isTracking=p.head.includes('datetime')&&p.head.includes('angle')&&p.head.includes('target_angle'), key=identify(f.name)||ident.get(prefix(f.name))||fallback;
+   if(!key){key='SIN_ID_'+(prefix(f.name)||f.name.replace(/\.csv$/i,'').replace(/[^A-Z0-9_]/gi,'_'));unknown.push(f.name)}
+   if(isTracking){
+     let arr=tracking.get(key)||[];for(let r of rowsByHeader(p.head,p.rows)){let ms=time(r.datetime);if(!Number.isFinite(ms))continue;arr.push({ms,real:num(r.angle),target:num(r.target_angle),bt:bool(r.backtracking),stow:Number.isFinite(num(r.active_security_position))&&num(r.active_security_position)!==0,mode:r.main_state||''});countTracks++}
+     arr.sort((a,b)=>a.ms-b.ms);tracking.set(key,arr.filter((r,i,a)=>i===0||r.ms!==a[i-1].ms))
+   }else{
+     if(!p.head.includes('Fecha')||!p.head.includes('X deviation filtered[30072]')){errors.push('Cabecera no reconocida: '+f.name);continue}
+     for(let r of rowsByHeader(p.head,p.rows)){
+       let ms=time(r.Fecha);if(!Number.isFinite(ms))continue;
+       let minute=Math.floor(ms/60000)*60000, day=date(ms),id=key+'|'+day;
+       if(!sensors.has(id))sensors.set(id,{id,group:key,day,rows:new Map(),files:new Set()});
+       let d=sensors.get(id);d.files.add(f.name);
+       if(d.rows.has(minute))continue;
+       d.rows.set(minute,{ms:minute,dt:fmt(minute),state:num(r['System info[30069]']),dni:num(r['Radiation[30070]']),xf:signed(num(r['X deviation filtered[30072]'])),yf:signed(num(r['Y deviation filtered[30073]'])),xr:signed(num(r['X deviation raw[30074]'])),yr:signed(num(r['Y deviation raw[30075]'])),sbt:bool(r['BACKTRACKING ACTIVE'])});added++;
+     }
+   }
+ }catch(e){errors.push(f.name+': '+e.message)}}
+ updateSelect();$('upload').textContent='Importados '+added+' minutos de sensor y '+countTracks+' lecturas TCU de '+fs.length+' archivo(s).'+(unknown.length?' Sin identificar: '+unknown.join(', ')+'.':'')+(errors.length?' Errores: '+errors.join('; '):'');
+ $('files').value='';render()
+}
+function updateSelect(){let ds=[...sensors.values()].sort((a,b)=>b.day.localeCompare(a.day)||a.group.localeCompare(b.group)),old=$('dataset').value;$('dataset').innerHTML=ds.length?ds.map(d=>'<option value="'+enc(d.id)+'">'+enc(d.day.split('-').reverse().join('/')+' · '+d.group)+'</option>').join(''):'<option value="">Carga primero un sensor</option>';if(ds.some(d=>d.id===old))$('dataset').value=old;else if(ds.length)$('dataset').value=ds[0].id;setOffset()}
+function setOffset(){let d=selected();if(d)$('offset').value=((offsets.get(d.group)||0)/60).toFixed(3)}
+function cfg(){let v=id=>num($(id).value),c=id=>$(id).checked;return {axis:$('axis').value,scale:v('scale'),dni:v('dni'),ok:c('okSensor'),bt:c('bt'),stow:c('stow'),limits:c('limites'),p30:c('p30'),recover:c('recuperacion'),requireTCU:c('requerirTCU'),margin:v('margen'),plateau:v('minParada'),tol:v('toleranciaRT'),stable:v('estables'),offset:v('offset'),tolms:v('tolSec')*1000}}
+function manualIntervals(day){let ok=[],bad=[];for(let line of $('manual').value.split(/\r?\n/)){line=line.trim();if(!line)continue;let m=line.match(/^(\d{1,2}):(\d\d)\s*[-–]\s*(\d{1,2}):(\d\d)$/);if(!m||+m[1]>23||+m[3]>23||+m[2]>59||+m[4]>59){bad.push(line);continue}let a=time(day+' '+String(+m[1]).padStart(2,'0')+':'+m[2]),b=time(day+' '+String(+m[3]).padStart(2,'0')+':'+m[4]);if(b<=a)bad.push(line);else ok.push([a,b])}return {ok,bad}}
+function calc(){
+ let d=selected();if(!d)return null;let c=cfg(),arr=[...d.rows.values()].sort((a,b)=>a.ms-b.ms),ta=tracking.get(d.group)||[],manual=manualIntervals(d.day);let matched=0,hasTrack=ta.length>0;
+ let rows=arr.map(s=>{let t=near(s.ms+c.offset*60000,ta,c.tolms);if(t)matched++;return {...s,tr:t,real:t?t.real:NaN,target:t?t.target:NaN,tbt:t?t.bt:false,stow:t?t.stow:false,mode:t?t.mode:'',limit:false,near30:false,p30:false,recovery:false,reasons:[],keep:false}});
+ for(let r of rows){r.limit=Number.isFinite(r.target)&&Math.abs(Math.abs(r.target)-55)<=c.margin;r.near30=Number.isFinite(r.target)&&Math.abs(r.target-30)<=c.margin}
+ let events=[];
+ for(let i=0;i<rows.length;){if(!rows[i].near30){i++;continue}let j=i;while(j+1<rows.length&&rows[j+1].near30&&rows[j+1].ms-rows[j].ms===60000)j++;if(j-i+1>=c.plateau){for(let k=i;k<=j;k++)rows[k].p30=true;events.push('Parada +30°: '+fmt(rows[i].ms)+' a '+fmt(rows[j].ms));let finish=-1;for(let k=j+1;k<rows.length;k++){if(rows[k].ms-rows[k-1].ms>60000)break;let stable=true;for(let v=k;v<k+c.stable;v++){if(!rows[v]||!rows[v].tr||!(Math.abs(rows[v].real-rows[v].target)<=c.tol)||(v>k&&rows[v].ms-rows[v-1].ms!==60000)){stable=false;break}}if(stable){finish=k;break}}
+    if(finish>=0){for(let k=j+1;k<finish;k++)rows[k].recovery=true;if(finish>j+1)events.push('Recuperación: '+fmt(rows[j+1].ms)+' a '+fmt(rows[finish-1].ms))}
+    else if(j+1<rows.length){for(let k=j+1;k<rows.length;k++){if(k>j+1&&rows[k].ms-rows[k-1].ms!==60000)break;rows[k].recovery=true;}events.push('Recuperación sin confirmar: desde '+fmt(rows[j+1].ms))}
+ }i=j+1}
+ let counts={};for(let r of rows){
+   let reasons=[];
+   if(!(r.dni>c.dni))reasons.push('DNI ≤ umbral');
+   if(c.ok&&r.state!==0)reasons.push('Sensor no válido');
+   if(c.bt&&(r.sbt||r.tbt))reasons.push('Backtracking');
+   if(c.stow&&r.stow)reasons.push('Seguridad / stow');
+   if(hasTrack&&c.requireTCU&&!r.tr)reasons.push('Sin histórico TCU');
+   if(c.limits&&r.limit)reasons.push('Target ±55°');
+   if(c.p30&&r.p30)reasons.push('Parada +30°');
+   if(c.recover&&r.recovery)reasons.push('Recuperación');
+   if(manual.ok.some(z=>r.ms>=z[0]&&r.ms<z[1]))reasons.push('Stow externo');
+   if(!Number.isFinite(r[c.axis]))reasons.push('Ángulo no válido');
+   r.reasons=reasons;r.keep=reasons.length===0;let k=reasons[0]||'Incluida';counts[k]=(counts[k]||0)+1
+ }
+ let vals=rows.filter(r=>r.keep).map(r=>Math.abs(r[c.axis]*c.scale)).sort((a,b)=>a-b),n=vals.length,mean=n?vals.reduce((a,b)=>a+b,0)/n:NaN,p95=percentile(vals,.95),quality=n>=360&&mean<1.5&&p95<2.5;
+ return {d,c,rows,counts,n,mean,p95,quality,matched,hasTrack,events,manual,periods:exclusionPeriods(rows)}
+}
+function textResult(d){const {n,mean,p95,quality}=d;return n<360?'Menos de 360':quality?'Dentro de límites':'Fuera de límites'}
+function render(){
+ let d=calc();last=d;if(!d){$('titulo').textContent='Sin ensayo seleccionado';$('avisos').innerHTML='<div class="warn">Carga los archivos del sensor ISS-D60 y, si están disponibles, los históricos de seguimiento de la misma TCU.</div>';return}
+ $('csv').disabled=false;$('png').disabled=false;$('exportPeriodos').disabled=d.periods.length===0;let {rows,counts,n,mean,p95,quality,matched,hasTrack,c}=d;
+ $('titulo').textContent=d.d.day.split('-').reverse().join('/')+' · '+d.d.group+' · '+(c.axis.startsWith('x')?'X':'Y')+(c.axis.endsWith('f')?' filtrada':' sin filtrar');
+ $('n').textContent=n.toLocaleString('es-ES');$('media').textContent=Number.isFinite(mean)?mean.toFixed(3).replace('.',',')+'°':'—';$('p95').textContent=Number.isFinite(p95)?p95.toFixed(3).replace('.',',')+'°':'—';$('resultado').textContent=textResult(d);$('resultado').className=quality?'good':'bad';
+ $('estado').textContent=hasTrack?'Histórico TCU: '+matched+'/'+rows.length+' min':'Sin histórico TCU';
+ $('graficaTitulo').textContent=matched?'Desviación y posición real / objetivo':'Desviación X/Y e irradiancia';
+ $('series-legend').innerHTML='<span><i style="border-color:#c8d3dc"></i>Desviación total</span><span><i style="border-color:#862d80"></i>Desviación incluida</span>'+(matched?'<span><i style="border-color:#197e94"></i>Posición real TCU</span><span><i style="border-color:#d5731c"></i>Posición objetivo TCU</span>':'<span><i style="border-color:#d5731c"></i>Irradiancia ISS-D60 · 30070 (W/m²)</span>');
+ $('grafica-explicacion').textContent=matched?'Eje izquierdo: desviación angular ISS-D60 (°). Eje derecho: inclinación real y consigna TCU (°). Irradiancia en la gráfica inferior, con su escala propia. Las franjas sombreadas son exclusiones.':'Eje izquierdo: desviación angular ISS-D60 (°). Eje derecho: irradiancia instantánea estimada (W/m²). No hay histórico de seguimiento: la línea naranja NO es el target TCU. Las franjas sombreadas son exclusiones.';
+ let warns=[];if(!hasTrack&&(c.stow||c.limits||c.p30||c.recover))warns.push('Sin histórico de posición: no pueden verificarse los filtros de stow, ±55°, +30° ni recuperación. El resultado es solo numérico.');if(hasTrack&&matched<rows.length)warns.push('Hay '+(rows.length-matched)+' minutos sin registro TCU emparejado. Revisa desfase horario y tolerancia.');if(d.manual.bad.length)warns.push('Intervalos manuales incorrectos: '+d.manual.bad.join(', '));if(d.d.group.startsWith('SIN_ID_'))warns.push('Identidad del seguidor no acreditada. Para comparar con su posición, importa también los históricos y asigna su NCU/TCU.');if(n<360)warns.push('No se alcanza el mínimo de 360 muestras.');if(!hasTrack||matched<rows.length)warns.push('No declarar conformidad contractual antes de acreditar los estados operativos y la orientación física del sensor.');if(hasTrack)warns.push('Stow = 0 en la columna de seguridad no acredita por sí solo ausencia de otras maniobras.');
+ $('avisos').innerHTML=warns.map(w=>'<div class="warn">'+enc(w)+'</div>').join('');
+ $('conteo').innerHTML=Object.entries(counts).sort((a,b)=>(a[0]==='Incluida'?-1:1)-(b[0]==='Incluida'?-1:1)||b[1]-a[1]).map(([k,v])=>'<tr><td>'+enc(k)+'</td><td class="n">'+v+'</td></tr>').join('');
+ const discarded=rows.length-n;
+ const timelineReasons=[...new Set(d.periods.map(p=>p.reason))];
+ const maxButtons=7;
+ const visiblePeriods=d.periods.slice(0,maxButtons);
+ let pill='<b>'+discarded+' min excluidos · '+d.periods.length+' periodos</b>';
+ pill+=visiblePeriods.map(p=>'<button type="button" class="exclusion-pill'+(activePeriodKey===p.key?' selected':'')+'" data-key="'+enc(p.key)+'" style="border-left-color:'+colorReason(p.reason)+'" title="'+enc(p.source)+'">'+enc(p.reason)+' · '+fmt(p.start).slice(11,16)+'–'+fmt(p.last).slice(11,16)+' ('+p.minutes+' min)</button>').join('');
+ if(d.periods.length>maxButtons)pill+='<span class="hint-inline">+'+(d.periods.length-maxButtons)+' tramos en la tabla inferior</span>';
+ if(!hasTrack)pill+='<span class="no-track">Sin histórico TCU: ±55°, +30° y recuperación sin comprobar</span>';
+ if(!d.periods.length)pill='<b>Sin periodos excluidos con estos filtros</b>';
+ $('exclusion-summary').innerHTML=pill;
+ const low=rows.length?rows[0].ms:0,high=rows.length?rows[rows.length-1].ms+60000:low+60000,span=Math.max(60000,high-low);
+ $('exclusion-bar').innerHTML=d.periods.map(p=>{
+ const x=Math.max(0,Math.min(100,100*(p.start-low)/span)),end=Math.max(x,Math.min(100,100*(p.end-low)/span));
+ return '<div class="exclusion-range'+(activePeriodKey===p.key?' selected':'')+'" role="button" tabindex="0" data-key="'+enc(p.key)+'" title="'+enc(p.reason)+' · '+fmt(p.start).slice(11,16)+'–'+fmt(p.last).slice(11,16)+' ('+p.minutes+' min)" style="background:'+colorReason(p.reason)+';left:'+x.toFixed(3)+'%;width:'+Math.max(0.4,end-x).toFixed(3)+'%"></div>'
+ }).join('');
+ const uniqueReasons=[...new Set(d.periods.map(p=>p.reason))];
+ $('leyenda-exclusiones').innerHTML=uniqueReasons.length?uniqueReasons.map(reason=>'<span><i style="background:'+colorReason(reason)+'"></i>'+enc(reason)+'</span>').join(''):'<span>No hay exclusiones con los filtros actuales.</span>';
+ $('periodos-info').textContent=d.periods.length?discarded+' minutos excluidos en '+d.periods.length+' tramos por motivo. '+(hasTrack?'TCU asociadas: '+matched+'/'+rows.length+' minutos.':'Sin histórico TCU: no es posible identificar franjas ±55°, +30° ni recuperación.'):'No existen periodos excluidos para esta configuración.';
+ $('periodos').innerHTML=d.periods.map((p,i)=>'<tr data-key="'+enc(p.key)+'" class="'+(activePeriodKey===p.key?'selected':'')+'"><td><span class="period-swatch" style="background:'+colorReason(p.reason)+'"></span>'+enc(p.reason)+'</td><td>'+enc(fmt(p.start).slice(11,16))+'</td><td>'+enc(fmt(p.last).slice(11,16))+'</td><td class="n">'+p.minutes+'</td><td>'+enc(p.source)+'</td></tr>').join('')||'<tr><td colspan="5">Sin intervalos excluidos</td></tr>';
+ if(!d.periods.some(p=>p.key===activePeriodKey)){activePeriodKey=null;$('grafica-info').textContent='Selecciona un tramo de la tabla para destacarlo en la gráfica.'}else{let p=d.periods.find(p=>p.key===activePeriodKey);$('grafica-info').textContent=p.reason+' · '+fmt(p.start).slice(11,16)+'–'+fmt(p.last).slice(11,16)+' · '+p.minutes+' minutos · origen: '+p.source}
+ $('meta').textContent='Minutos de sensor: '+rows.length+' · TCU emparejada: '+matched+' · eventos de parada/recuperación: '+d.events.length+'. '+d.events.slice(0,6).join(' · ');
+ $('detalle').innerHTML=rows.slice(0,120).map(r=>'<tr><td>'+enc(r.dt.slice(11,16))+'</td><td class="n">'+(Number.isFinite(r.dni)?r.dni:'—')+'</td><td class="n">'+(Number.isFinite(r.xf)?(r.xf*c.scale).toFixed(2):'—')+'</td><td class="n">'+(Number.isFinite(r.real)?r.real.toFixed(1):'—')+'</td><td class="n">'+(Number.isFinite(r.target)?r.target.toFixed(1):'—')+'</td><td>'+enc(r.reasons.join(' / ')||'Incluido')+'</td></tr>').join('');
+ draw(d);drawIrradiancia(d)
+}
+function draw(d){let can=$('grafica'),w=Math.max(500,can.getBoundingClientRect().width),h=435,dp=window.devicePixelRatio||1;can.width=Math.round(w*dp);can.height=Math.round(h*dp);let g=can.getContext('2d');g.scale(dp,dp);g.fillStyle='#fff';g.fillRect(0,0,w,h);
+ let rows=d.rows;if(!rows.length)return;let L=63,R=w-65,T=28,B=h-48,m0=rows[0].ms,m1=rows[rows.length-1].ms||m0+1;let vals=rows.map(r=>r[d.c.axis]*d.c.scale).filter(Number.isFinite),vmin=Math.min(-1,...vals),vmax=Math.max(1,...vals),pad=(vmax-vmin)*.07;vmin-=pad;vmax+=pad;
+ let rightHasTrack=d.matched>0, y2=rows.flatMap(r=>rightHasTrack?[r.real,r.target]:[r.dni]).filter(Number.isFinite);let u0=0,u1=1200;if(rightHasTrack){u0=Math.min(...y2);u1=Math.max(...y2);if(!y2.length||u0===u1){u0=(u0||0)-1;u1=(u1||0)+1}const pad2=(u1-u0)*.08;u0-=pad2;u1+=pad2;}else{u0=0;u1=Math.max(1200,Math.ceil(Math.max(0,...y2)/100)*100)}
+ let xx=r=>L+(r.ms-m0)/(m1-m0)*(R-L), yy=v=>B-(v-vmin)/(vmax-vmin)*(B-T),zz=v=>B-(v-u0)/(u1-u0)*(B-T);
+ const periodLeft=ms=>Math.max(L,Math.min(R,L+(ms-m0)/(m1-m0)*(R-L)));
+ const categories=[...new Set(d.periods.map(p=>p.reason))],lane=new Map(categories.map((reason,i)=>[reason,i]));
+ g.save();g.beginPath();g.rect(L,T,R-L,B-T);g.clip();
+ for(const p of d.periods){
+   const x0=periodLeft(p.start),x1=periodLeft(p.end),ww=Math.max(2,x1-x0);
+   g.globalAlpha=.25;g.fillStyle=colorReason(p.reason);g.fillRect(x0,T,ww,B-T);
+   g.globalAlpha=.95;g.fillRect(x0,T+3+(lane.get(p.reason)%8)*7,ww,6);
+   g.globalAlpha=.8;g.fillRect(x0,B-7,ww,7);
+ }
+ g.globalAlpha=1;g.restore();
+ g.strokeStyle='#e6edf2';g.fillStyle='#617487';g.font='11px Segoe UI, sans-serif';g.lineWidth=1;
+ for(let i=0;i<=5;i++){let y=T+(B-T)*i/5;g.beginPath();g.moveTo(L,y);g.lineTo(R,y);g.stroke();g.textAlign='right';g.fillText((vmax-(vmax-vmin)*i/5).toFixed(1)+'°',L-8,y+3);g.textAlign='left';g.fillText((u1-(u1-u0)*i/5).toFixed(1)+(rightHasTrack?'°':''),R+7,y+3)}
+ for(let i=0;i<=6;i++){let x=L+(R-L)*i/6,m=m0+(m1-m0)*i/6;g.beginPath();g.moveTo(x,T);g.lineTo(x,B);g.stroke();g.textAlign='center';g.fillText(fmt(m).slice(11,16),x,B+17)}
+ function line(value,color,width,mask,scale){g.strokeStyle=color;g.lineWidth=width;g.beginPath();let open=false;for(let r of rows){let v=value(r);if(mask&&!mask(r)||!Number.isFinite(v)){open=false;continue}let x=xx(r),y=scale(v);if(open)g.lineTo(x,y);else g.moveTo(x,y);open=true}g.stroke()}
+ line(r=>r[d.c.axis]*d.c.scale,'#cbd6df',1.2,null,yy);
+ line(r=>r[d.c.axis]*d.c.scale,'#862d80',2.1,r=>r.keep,yy);
+ if(rightHasTrack){line(r=>r.real,'#197e94',1.7,null,zz);line(r=>r.target,'#d5731c',1.5,null,zz)}else line(r=>r.dni,'#d5731c',1.5,null,zz);
+ const picked=d.periods.find(p=>p.key===activePeriodKey);
+ if(picked){const x0=periodLeft(picked.start),x1=periodLeft(picked.end);g.strokeStyle=colorReason(picked.reason);g.lineWidth=2;g.strokeRect(x0,T,Math.max(2,x1-x0),B-T);g.fillStyle=colorReason(picked.reason);g.font='bold 11px Segoe UI, sans-serif';g.textAlign=x0>R-175?'right':'left';g.fillText(picked.reason+' '+fmt(picked.start).slice(11,16),x0>R-175?x0-4:x0+4,T+18)}
+ g.fillStyle='#294358';g.font='bold 11px Segoe UI, sans-serif';g.textAlign='left';g.fillText('Desviación (°)',L,T-9);g.textAlign='right';g.fillText(rightHasTrack?'Posición Real / Target (°)':'Irradiancia ISS-D60 (W/m²)',R,T-9)
+}
+function drawIrradiancia(d){
+ const can=$('irradiancia'),w=Math.max(440,can.getBoundingClientRect().width),h=194,dp=window.devicePixelRatio||1;
+ can.width=Math.round(w*dp);can.height=Math.round(h*dp);
+ const g=can.getContext('2d');g.scale(dp,dp);g.fillStyle='#fff';g.fillRect(0,0,w,h);
+ const rows=d.rows;if(!rows.length)return;
+ const L=63,R=w-65,T=19,B=h-37;
+ const begin=rows[0].ms,end=rows[rows.length-1].ms||begin+1;
+ const maxVal=Math.max(1200,Math.ceil(Math.max(0,...rows.map(r=>Number.isFinite(r.dni)?r.dni:0))/100)*100);
+ const x=ms=>L+(ms-begin)/(end-begin)*(R-L),y=v=>B-v/maxVal*(B-T);
+ g.strokeStyle='#e7eef3';g.fillStyle='#566b7d';g.lineWidth=1;g.font='11px Segoe UI, sans-serif';
+ for(let i=0;i<=4;i++){let v=maxVal*i/4,yy=y(v);g.beginPath();g.moveTo(L,yy);g.lineTo(R,yy);g.stroke();g.textAlign='right';g.fillText(Math.round(v)+'',L-8,yy+3)}
+ for(let i=0;i<=6;i++){let ms=begin+i*(end-begin)/6;g.textAlign='center';g.fillText(fmt(ms).slice(11,16),x(ms),B+17)}
+ g.save();g.beginPath();g.rect(L,T,R-L,B-T);g.clip();
+ const threshold=d.c.dni;
+ if(Number.isFinite(threshold)&&threshold>0&&threshold<maxVal){
+   g.strokeStyle='#a56a28';g.lineWidth=1.4;g.setLineDash([5,4]);g.beginPath();g.moveTo(L,y(threshold));g.lineTo(R,y(threshold));g.stroke();g.setLineDash([]);
+ }
+ const plot=(key,color,width)=>{g.strokeStyle=color;g.lineWidth=width;g.beginPath();let active=false,last=0;for(let r of rows){let v=r[key];if(!Number.isFinite(v)||active&&r.ms-last>90000){active=false;if(!Number.isFinite(v))continue}if(active)g.lineTo(x(r.ms),y(v));else g.moveTo(x(r.ms),y(v));active=true;last=r.ms}g.stroke()};
+ plot('dni','#d5731c',2.2);
+ g.globalAlpha=.16;g.fillStyle='#d5731c'; // irradiance remains a line; area is deliberately not filled
+ g.globalAlpha=1;g.restore();
+ g.fillStyle='#294358';g.font='bold 11px Segoe UI, sans-serif';g.textAlign='left';g.fillText('Irradiancia estimada (W/m²)',L,T-5);
+ g.textAlign='right';g.fillText('0–'+maxVal+' W/m²',R,T-5);
+ can.dataset.axisMin='0';can.dataset.axisMax=String(maxVal);
+}
+function download(s,name,type){let b=new Blob([s],{type}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1500)}
+function audit(){if(!last)return;let c=last.c,head=['fecha_sensor','DNI_estimado_Wm2','estado_30069','X_filtrada_deg','Y_filtrada_deg','X_raw_deg','Y_raw_deg','BT_sensor','BT_TCU','stow_TCU','real_deg','target_deg','error_real_target_abs_deg','incluido','motivos_exclusion'],dec=v=>Number.isFinite(v)?v.toFixed(3).replace('.',','):'';let out=[head];for(let r of last.rows)out.push([r.dt,r.dni,r.state,dec(r.xf*c.scale),dec(r.yf*c.scale),dec(r.xr*c.scale),dec(r.yr*c.scale),r.sbt?1:0,r.tbt?1:0,r.stow?1:0,dec(r.real),dec(r.target),dec(Math.abs(r.real-r.target)),r.keep?'SI':'NO',r.reasons.join(' | ')]);let csv=out.map(a=>a.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');download('\ufeff'+csv,'FACTIUN_auditoria_'+last.d.id.replace('|','_')+'.csv','text/csv;charset=utf-8')}
+function auditPeriods(){if(!last)return;const h=['fecha','equipo','motivo','inicio_hora_sensor','ultimo_minuto_excluido','minutos','origen','nota'];const o=[h];for(const p of last.periods)o.push([last.d.day,last.d.group,p.reason,fmt(p.start),fmt(p.last),p.minutes,p.source,'El mismo minuto puede figurar en varios motivos']);const csv=o.map(a=>a.map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');download('\ufeff'+csv,'FACTIUN_periodos_exclusion_'+last.d.id.replace('|','_')+'.csv','text/csv;charset=utf-8')}
+function reset(){for(let [id,v] of Object.entries({dni:600,scale:.01,margen:.25,minParada:5,toleranciaRT:.3,estables:3,tolSec:90,axis:'xf'}))$(id).value=v;for(let id of ['okSensor','bt','stow','limites','p30','recuperacion','requerirTCU'])$(id).checked=true;$('manual').value='';setOffset();render()}
+function focusExclusion(key){if(!last)return;activePeriodKey=key;render();$('grafica').scrollIntoView({behavior:'smooth',block:'center'})}
+$('periodos').addEventListener('click',e=>{const row=e.target.closest('tr[data-key]');if(row)focusExclusion(row.dataset.key)});
+$('exclusion-summary').addEventListener('click',e=>{const pill=e.target.closest('[data-key]');if(pill)focusExclusion(pill.dataset.key)});
+$('exclusion-bar').addEventListener('click',e=>{const el=e.target.closest('[data-key]');if(el)focusExclusion(el.dataset.key)});
+$('exclusion-bar').addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const el=e.target.closest('[data-key]');if(el){e.preventDefault();focusExclusion(el.dataset.key)}});
+$('exportPeriodos').addEventListener('click',auditPeriods);
+$('cargar').addEventListener('click',ingest);$('dataset').addEventListener('change',()=>{setOffset();$('manual').value='';render()});for(let id of ['axis','dni','scale','okSensor','bt','stow','limites','p30','recuperacion','requerirTCU','margen','minParada','toleranciaRT','estables','offset','tolSec','manual'])$(id).addEventListener('input',()=>{let d=selected();if(d&&id==='offset')offsets.set(d.group,num($('offset').value)*60);render()});$('csv').addEventListener('click',audit);$('png').addEventListener('click',()=>{if(!last)return;$('grafica').toBlob(b=>{if(!b)return;let u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='FACTIUN_'+last.d.id.replace('|','_')+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(u),1500)},'image/png')});$('reset').addEventListener('click',reset);window.addEventListener('resize',()=>{if(last){draw(last);drawIrradiancia(last)}});render()
+})();
+</script>
+<script src="lib/indice.js" defer></script>
+</body></html>

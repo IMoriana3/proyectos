@@ -59,6 +59,8 @@ PATRON="${1:-}"
 # aquí y el cambio aparece en el diff, que es justo lo que un recuento que
 # nadie fija no consigue.
 declare -A PISO=(
+  # Verificación visual ISS-D60 de exclusiones e irradiancia con/sin histórico TCU.
+  [test_apuntamiento_exclusiones.js]=19
   [test_generador_inclemencias.js]=45
   [test_abanderamiento_evento.js]=60
   [test_buscador.js]=59
@@ -382,6 +384,24 @@ declare -A PISO=(
   # podido leerlo» no era un caso que pudiera ocurrir.
   [test_index.js]=28
   [test_integridad.js]=7
+  # El visor y sus bancos funcionales (21 datos + 12 navegador) se trasladan
+  # a Atlas, propietario de la única pantalla de ingeniería. Aquí se prueba
+  # la ruta de compatibilidad: mapeo de estado y navegación real hacia un
+  # destino interceptado. No es una validación del visor privado de Atlas.
+  [test_notion_ingenieria_alias.mjs]=14
+  [test_notion_ingenieria_alias_browser.js]=8
+  # LAS TRES TARJETAS DE NOTION Y LA LÍNEA ESCRITA DEL PIE. 13 MEDIDAS el
+  # 2026-11-15. Lo que sujeta es un eje nuevo —`verificacion`, lo que falta por
+  # comprobar— que NO es el estado del proyecto: tres pantallas servidas cuya
+  # lectura real de datos nadie ha acreditado salían como «Producción» a secas.
+  # Y sujeta la forma de decirlo: una FRASE en el pie, con estado y fecha
+  # escritos, legible con la ficha CERRADA, en vez del juego de insignias que
+  # tenía. El chip tiene que CONTAR y FILTRAR, y el acceso a una tarjeta
+  # hermana tiene que abrirla aunque un filtro la esconda. Seis mutantes
+  # verificados en rojo: `verifChip` mudo (4), línea sólo con la ficha abierta
+  # (3), fecha en ISO (3), acceso que centra sin abrir (2), chip contando por
+  # estado (1) y estado sin escribir (1).
+  [test_tarjetas_notion.js]=13
   [test_layout_search.js]=22
   [test_layout_search_ui.js]=32
   [test_layout.js]=201
@@ -422,7 +442,10 @@ declare -A PISO=(
   # VERDE con ese mutante: era falso y el fallo era de mi medición — el arnés
   # revienta y da cero comprobaciones leídas, que el portón sí caza. Queda
   # dicho aquí porque una nota equivocada envejece peor que ninguna.)
-  [test_portada.js]=42
+  # 42 -> 44: la fila de chips tiene dos ejes desde el 2026-11-15 (estado y
+  # verificación) y se carean por separado, para que el chip de verificación no
+  # pueda colarse en la cuenta de estados ni pintar un número que no es el suyo.
+  [test_portada.js]=44
   [test_hero_altura.js]=8
   # El hueco de `sim-solar.html` NO era «no la abre nadie»: `test_buscador.js`
   # sí corre `solarGeom` y `singleaxis` de esta ficha en el navegador —romper
@@ -1056,11 +1079,11 @@ declare -A PISO=(
   # y noche, lado más cercano, stow desde pre-stow, mediodía y anochecer con
   # sus dos opciones, sensores a cero y huecos, resumen, CSV e informe; y el
   # lector de histórico sin tope de días (por fecha, solo viento máximo HSU).
-  [test_meteo_logica_viento.js]=37
+  [test_meteo_logica_viento.js]=48
   # La misma tarjeta en Chromium con Supabase sustituido: 23 medidas. Arriba
   # se carga un solo día y la simulación sale del histórico entero; resumen,
   # lista plegada, filtro, CSV, informe, origen y periodo, y cierre.
-  [test_meteo_logica_viento_browser.js]=24
+  [test_meteo_logica_viento_browser.js]=37
   # RECURSO DEL PAÍS en la tarjeta de meteo (lib/mapas-pais.js), con las
   # láminas sustituidas por fixtures: país por rejilla y no por nombre,
   # marcador en la caja de la ficha, «sobre/bajo la media», punto de miles,
