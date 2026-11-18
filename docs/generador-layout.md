@@ -6,7 +6,7 @@
 **Abre y genera**: `generador-layout.html` en este repo, sin levantar nada.
 El motor SolarGPT es opcional y da el número canónico.
 
-## Exclusiones sugeridas desde OSM — v1.11.0
+## Exclusiones sugeridas desde OSM — v1.13.0
 
 En **Parcela**, abre **🧭 Exclusiones sugeridas desde OSM**, marca las categorías (cauces y
 agua, carreteras, caminos y accesos, líneas eléctricas y subestaciones, ferrocarril,
