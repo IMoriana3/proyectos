@@ -76,10 +76,13 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
     <p id="objective">Mismo motor y un criterio: kWp × factor solar de orientación. Es un índice relativo de cielo claro, no una previsión de energía anual.</p>
     <div class="two"><label>Método<select id="searchMethod"><option value="random">Aleatorio</option><option value="gp">Aprendizaje GP · experimental</option><option value="grid">Barrido de ángulos</option></select></label>
       <label>Evaluaciones<select id="searchBudget"><option value="48" selected>48</option><option value="128">128</option><option value="256">256</option></select></label></div>
-    <div id="searchVariables"><label><input id="searchAz" type="checkbox" checked> Azimut del eje (±90°)</label><br>
+    <div class="two"><label>Criterio<select id="searchCrit" title="Energía pondera cada variante con el factor solar (orientación del eje en tracker, inclinación en fija). Potencia ordena por kWp instalados a secas — ojo: puede premiar llenar la parcela en diagonal, que mete más módulos y produce peor («cómo va a ser esto la mejor opción», 2026-09-08)"><option value="energia">Energía (kWp × factor solar)</option><option value="potencia">Potencia instalada (kWp)</option></select></label>
+      <label>Tilt máx. fija °<input id="searchTiltMax" type="number" value="45" min="5" max="60" step="1" title="Tope ESTRUCTURAL del barrido de inclinación en fija: ninguna propuesta lo supera"></label></div>
+    <div id="searchVariables"><label><input id="searchAz" type="checkbox" checked> Azimut (±90°) — eje en tracker, paneles en fija</label><br>
       <label><input id="searchRows" type="checkbox" checked> Alineado / tresbolillo</label><br>
       <label><input id="searchXY" type="checkbox" checked> Origen X/Y (±medio pitch)</label><br>
       <label><input id="searchTilt" type="checkbox" checked> Inclinación de la fija (5–45°)</label></div>
+    <p id="varWhy" hidden style="font-size:11px;color:var(--warn)"></p>
     <div class="three" id="searchGrid" hidden><label>Desde °<input id="gridFrom" type="number" value="90" step="any"></label><label>Hasta ° (excl.)<input id="gridTo" type="number" value="270" step="any"></label><label>Paso °<input id="gridStep" type="number" value="5" min="0.1" step="any"></label></div>
     <p id="methodNote">Primero se evalúa la referencia. Se conservan pitch, tallas, retranqueo, exclusiones y viales.</p>
     <div class="actions"><button id="searchRun" class="primary">Buscar</button><button id="searchPause">Pausar</button></div>
@@ -111,7 +114,7 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
 
 <script src="lib/layout-search.js"></script>
 <script>
-/* Único optimizador de implantaciones, v1.12.0.
+/* Único optimizador de implantaciones, v1.14.0.
    Reutiliza los bloques canónicos del generador y sim-solar; no copia física.
    Referencia exacta primero; aleatorio y GP comparten candidatos y criterio.
    Barrido angular, azimut/disposición/X/Y y comparación viven en esta página.
@@ -245,20 +248,29 @@ function construyeTablaTilt(){
   const spec=FIS2.spec('fija_proyecto');
   const nT=parseInt(CFGP.table,10)||1,alto=nT*CFGP.modLen+(nT-1)*(CFGP.gapModules||0);
   const G={gcr:alto/CFGP.pitch,pitch:CFGP.pitch,altoColector:alto};
+  const az0=Number.isFinite(CFGP.panelAz)?CFGP.panelAz:180;
   const cfgF={lat,lon,albedo:(CFGP.decl&&Number.isFinite(CFGP.decl.albedo))?CFGP.decl.albedo:0.2,
-    tilt:TILT0,desvFija:(Number.isFinite(CFGP.panelAz)?CFGP.panelAz:180)-FIS2.azEquador(lat),
+    tilt:TILT0,desvFija:az0-FIS2.azEquador(lat),
     pend:0,pendAz:null,geomDe:()=>G};   // sin terreno aquí: pendiente 0, declarado
   const M=FIS2.clearskyCorto(lat,lon,2026);
-  TILT_CTX={spec,cfgF,M};
-  const ref=FIS2.corre(spec,M,cfgF,TILT0).neta||1,t=new Map();
-  for(let tl=0;tl<=60;tl++)t.set(tl,FIS2.corre(spec,M,cfgF,tl).neta/ref);
-  TILT_TAB=t;
+  TILT_CTX={spec,cfgF,M,az0,cache:new Map()};
+  TILT_CTX.ref=FIS2.corre(spec,M,cfgF,TILT0).neta||1;
+  TILT_TAB=true;   // índice listo (el valor vive en la caché de fFija)
 }
-function fTilt(tl){
-  if(!TILT_TAB)return 1;
-  const a=Math.max(0,Math.min(60,tl)),lo=Math.floor(a),hi=Math.min(60,lo+1),f=a-lo;
-  return (TILT_TAB.get(lo)??1)*(1-f)+(TILT_TAB.get(hi)??1)*f;
+/* el índice de la fija, en DOS ejes: azimut de paneles e inclinación. La misma
+   física del comparador cobra la desviación del sur (desvFija) y la sombra
+   entre filas al tilt — normalizado al encargo: (az0, tilt0) vale 1. */
+function fFija(azDeg,tl){
+  if(!TILT_CTX)return 1;
+  const az=((azDeg%360)+360)%360,t=Math.max(0,Math.min(60,Math.round(tl)));
+  const k=Math.round(az)+'|'+t;
+  if(!TILT_CTX.cache.has(k)){
+    const cf=Object.assign({},TILT_CTX.cfgF,{desvFija:az-FIS2.azEquador(TILT_CTX.cfgF.lat)});
+    TILT_CTX.cache.set(k,FIS2.corre(TILT_CTX.spec,TILT_CTX.M,cf,t).neta/TILT_CTX.ref);
+  }
+  return TILT_CTX.cache.get(k);
 }
+function fTilt(tl){return TILT_CTX?fFija(TILT_CTX.az0,tl):1;}
 function construyeTablaF(gcr,maxAngle,backtrack){
   const c=CFGP.coords,lat=c.reduce((s,p)=>s+p[1],0)/c.length,lon=c.reduce((s,p)=>s+p[0],0)/c.length;
   /* el año en 12 días (el 15 de cada mes) a paso de 15 min: la RAZÓN entre orientaciones se
@@ -296,8 +308,11 @@ let LAY=null,PARCELA=null,CFGP=null,RND=null,GIRA=true,VIAL_FIJO=0,OFF_BASE="non
 let OPC=0,MEJOR=null,BASE_REF=null,ULTIMO=null,KWS=[],GAPS=[],DESDE=0,HIST={giro:[],vial:new Map()},NUBE=[],SERIE=[];
 let VISTA={ang:0},SAMPLER=null,TRACE=[],SEARCH_ERROR=null,VIEW_RESULT='best',SEARCH_START=0,SEARCH_OPTIONS=null;
 function searchOptions(){return {method:$('searchMethod').value,seed:(SEM[0]*2654435761^SEM[1])>>>0,
-  rotate:GIRA&&!!SOL&&$('searchAz').checked,stagger:$('searchRows').checked,xy:$('searchXY').checked,
-  tilt:!GIRA&&!!FIS2&&$('searchTilt').checked,tilt0:TILT0,
+  crit:$('searchCrit').value,
+  rotate:$('searchAz').checked&&(GIRA?!!SOL:(!!FIS2||$('searchCrit').value==='potencia')),
+  stagger:$('searchRows').checked,xy:$('searchXY').checked,
+  tilt:!GIRA&&!!FIS2&&$('searchTilt').checked,
+  tilt0:TILT0,tiltMax:+$('searchTiltMax').value,
   from:+$('gridFrom').value,to:+$('gridTo').value,step:+$('gridStep').value};}
 
 function nuevoSite(mismaParcela){
@@ -306,7 +321,12 @@ function nuevoSite(mismaParcela){
   PARCELA=ENCARGO?parcelaDeEncargo(ENCARGO):(REAL||parcelaSintetica(rp));
   RND=rngDe(SEM[0]+SITE*104729,SEM[1]);     // …y la búsqueda, de su propia rama
   AZ0=ENCARGO&&Number.isFinite(ENCARGO.panelAz)?ENCARGO.panelAz:90;                         // el giro ±90° se SUMA al azimut del encargo
-  GIRA=!(ENCARGO&&["fija","fixed"].includes(ENCARGO.mount));                       // en fija el azimut es el de los paneles: no se gira
+  /* GIRA = tracker. La fija TAMBIÉN puede girar desde v1.14.0 («se debe poder
+     orientar las fijas con otro azimuth»): la regla de septiembre nació cuando
+     el criterio era kWp a secas y girar era reorientar los paneles sin que
+     nada lo cobrara; ahora el índice f(azimut, tilt) lo cobra, y bajo potencia
+     es packing puro declarado. El azimut de la fija es el de los PANELES. */
+  GIRA=!(ENCARGO&&["fija","fixed"].includes(ENCARGO.mount));
   VIAL_FIJO=ENCARGO?(+ENCARGO.roadNsEvery||0):0;                 // restricción de obra, no variable
   OFF_BASE=(ENCARGO&&ENCARGO.rowOffset)||"none";
   TABLA_F=null;GCR_F=0;                                          // el rendimiento es de ESTE sitio (su latitud)
@@ -327,11 +347,13 @@ function nuevoSite(mismaParcela){
   CFGP.panelAz=AZ0;CFGP.rowOffset=OFF_BASE;
   SEARCH_OPTIONS=searchOptions();
   try{SAMPLER=LayoutSearch.sampler(CFGP,SEARCH_OPTIONS);}catch(e){SAMPLER=null;SEARCH_ERROR=e.message;PAUSA=true;}
-  $('searchAz').disabled=!GIRA||!SOL;
+  $('searchAz').disabled=GIRA?!SOL:(!FIS2&&$('searchCrit').value!=='potencia');
   $('searchTilt').disabled=GIRA||!FIS2;
-  $('searchMethod').querySelector('[value="grid"]').disabled=!GIRA||!SOL;
-  $('objective').textContent=!GIRA?(FIS2&&$('searchTilt').checked?
-    'Montaje fijo: orientación conservada; criterio: kWp × factor de inclinación (cielo claro con sombra entre filas a tu pitch). Índice relativo, no energía anual.':
+  $('searchMethod').querySelector('[value="grid"]').disabled=GIRA?!SOL:(!FIS2&&$('searchCrit').value!=='potencia');
+  $('objective').textContent=$('searchCrit').value==='potencia'?
+    'Criterio: POTENCIA instalada (kWp) — elegido a propósito; a igualdad de kWp desempata el mejor factor solar. Ojo: puede premiar orientaciones que meten más módulos y producen peor.':
+    !GIRA?(FIS2&&$('searchTilt').checked?
+    'Montaje fijo: orientación conservada; criterio: kWp × factor de inclinación (cielo claro con sombra entre filas a tu pitch, hasta el tope configurado). Índice relativo, no energía anual.':
     'Montaje fijo: orientación conservada; se compara potencia instalada (kWp).'):
     !SOL?'Modelo solar no disponible: azimut bloqueado; se compara potencia instalada (kWp).':
     'Criterio: kWp × factor solar de orientación. Índice relativo de cielo claro; no es una previsión de energía anual.';
@@ -352,12 +374,18 @@ function candidato(){
   if(GIRA&&SOL&&valid&&!TABLA_F)
     construyeTablaF(s.GCR||0.4,(CFGP.decl&&CFGP.decl.max_angle_deg)||55,
       !CFGP.decl||CFGP.decl.backtrack!==false);
-  if(!GIRA&&FIS2&&valid&&!TILT_TAB&&SEARCH_OPTIONS&&SEARCH_OPTIONS.tilt)construyeTablaTilt();
-  const rend=GIRA&&SOL?factorF(az-90):(TILT_TAB?fTilt(cfg._tilt!=null?cfg._tilt:TILT0):1),
-    ener=valid?kwp*rend:null;
+  if(!GIRA&&FIS2&&valid&&!TILT_TAB&&SEARCH_OPTIONS&&(SEARCH_OPTIONS.tilt||SEARCH_OPTIONS.rotate))construyeTablaTilt();
+  /* criterio POTENCIA: el ORDEN es kWp a secas, elegido a propósito. El factor
+     se calcula igual cuando hay índice, pero solo DESEMPATA (a igualdad de
+     kWp gana la variante con mejor factor solar — declarado en pantalla):
+     sin esto, «tilt variable con potencia» elegiría un tilt al azar entre
+     empates, que es fabricar una preferencia. */
+  const potencia=!!(SEARCH_OPTIONS&&SEARCH_OPTIONS.crit==='potencia');
+  const rendF=GIRA&&SOL?factorF(az-90):(TILT_TAB?fFija(az,cfg._tilt!=null?cfg._tilt:TILT0):1);
+  const rend=potencia?1:rendF,ener=valid?kwp*rend:null;
   const xOffsetM=cfg._xOff??s.x_offset_chosen_m??0,yOffsetM=cfg._yOff??s.y_offset_chosen_m??0;
-  ULTIMO={r,config:cfg,giro,az,offset,vial,kwp,rend,ener,valid,xOffsetM,yOffsetM,
-    tilt:(!GIRA&&TILT_TAB)?(cfg._tilt!=null?cfg._tilt:TILT0):null,
+  ULTIMO={r,config:cfg,giro,az,offset,vial,kwp,rend,rendF,ener,valid,xOffsetM,yOffsetM,
+    tilt:(!GIRA&&TILT_TAB&&SEARCH_OPTIONS&&SEARCH_OPTIONS.tilt)?(cfg._tilt!=null?cfg._tilt:TILT0):null,
     str:s.strings||0,util:s.usable_fill||0,iteration:OPC};
   if(OPC===0)BASE_REF=ULTIMO;
   SAMPLER.observe(r,ener);
@@ -370,7 +398,8 @@ function candidato(){
   const b=Math.max(0,Math.min(14,Math.floor((giro+90)/12)));
   if(HIST.giro[b]==null||ener>HIST.giro[b])HIST.giro[b]=ener;
   if(NUBE.length<4000)NUBE.push([giro,vial+(offset==='half'?.45:0),ener]);
-  if(!MEJOR||ener>MEJOR.ener+1e-8){
+  if(!MEJOR||ener>MEJOR.ener+1e-8||
+     (potencia&&Math.abs(ener-MEJOR.ener)<=1e-8&&rendF>(MEJOR.rendF||0)+1e-9)){
     GAPS.push(OPC-DESDE);DESDE=OPC;if(GAPS.length>12)GAPS.shift();MEJOR=ULTIMO;
   }
   SERIE.push([OPC,MEJOR.ener,MEJOR.util]);if(SERIE.length>900)SERIE.splice(0,SERIE.length-900);
@@ -539,7 +568,7 @@ function barra(){
     (MEJOR?" · mejor <b>"+fmtK(MEJOR.kwp)+"</b> × <b>"+(MEJOR.rend*100).toFixed(1)+"%</b> rend."+
       (MEJOR.rend<0.985?" <span class=r>(eje "+(MEJOR.az-90).toFixed(0)+"°, no N-S)</span>":"")+
       " · "+mejora():"")+
-    (GIRA?"":" · <b>fija: no se gira</b> (el azimut es el de los paneles)")+
+    (GIRA?"":" · <b>fija</b>: azimut de PANELES"+(SEARCH_OPTIONS&&SEARCH_OPTIONS.rotate?" (girarlo reorienta los módulos; el criterio lo cobra)":""))+
     (ULTIMO&&ULTIMO.r&&ULTIMO.r.descartadas&&ULTIMO.r.descartadas.length?" · <span class=r>"+ULTIMO.r.descartadas.length+" descartadas en rojo</span>":"")+
     (ENCARGO?"":" · mesa 1V·28×630 Wp bifila · pitch 6")+
     " · <b>Espacio</b> pausa · <b>N</b> site · <b>R</b> semilla · <b>C</b> limpia · <b>H</b> panel · arrastra un layout.json";
@@ -573,13 +602,15 @@ addEventListener("keydown",e=>{
 window.PASO=n=>{for(let i=0;i<n;i++){if(!candidato())break;}dibuja();panel();barra();if(window.LayoutSearchUI)LayoutSearchUI.render();};
 window.ESTADO=()=>({opciones:OPC,mejorKwp:MEJOR?MEJOR.kwp:0,mejorStr:MEJOR?MEJOR.str:0,
   semilla:SEM.join("-"),site:SITE,real:!!REAL,encargo:!!ENCARGO,az0:AZ0,
-  gira:GIRA,sol:!!SOL,tabla:!!TABLA_F,tablaTilt:!!TILT_TAB,tilt0:TILT0,
+  gira:GIRA,rota:!!(SEARCH_OPTIONS&&SEARCH_OPTIONS.rotate),sol:!!SOL,tabla:!!TABLA_F,tablaTilt:!!TILT_TAB,tilt0:TILT0,
+  mejorRendF:MEJOR?(MEJOR.rendF??null):null,
   mejorTilt:MEJOR?MEJOR.tilt:null,mejorGiro:MEJOR?MEJOR.giro:null,
   baseKwp:BASE_REF?BASE_REF.kwp:null,baseEner:BASE_REF?BASE_REF.ener:null,
   mejorRend:MEJOR?MEJOR.rend:null,mejorEner:MEJOR?MEJOR.ener:null,
   descartadas:ULTIMO&&ULTIMO.r&&ULTIMO.r.descartadas?ULTIMO.r.descartadas.length:0});
 window.FACTOR=factorF;
 window.FTILT=fTilt;
+window.FFIJA=fFija;
 /* sonda del banco: la POA neta a un tilt, con o sin sombra entre filas */
 window.TILT_CORRE=(tl,sinSombra)=>{if(!TILT_CTX)return null;
   const sp=sinSombra?Object.assign({},TILT_CTX.spec,{sinSombra:true}):TILT_CTX.spec;
@@ -620,6 +651,11 @@ window.cargaLayoutReal=cargaLayoutReal;
       "Desde <code>file://</code> el navegador bloquea esa lectura.";
     return;
   }
+  const PAGE_VER='1.14.0';
+  const libVer=window.LayoutSearch&&LayoutSearch.LIB_VER;
+  if(libVer!==PAGE_VER)
+    pon('⚠ Versiones mezcladas por caché: página v'+PAGE_VER+' con módulos v'+(libVer||'antigua')+
+        '. Recarga forzada (Ctrl+Mayús+R) — hasta entonces, mandos como el tope de tilt pueden no aplicar.',60000);
   nuevoSite(true);
   requestAnimationFrame(vuelta);
 })();
