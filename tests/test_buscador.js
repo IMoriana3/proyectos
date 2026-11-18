@@ -570,6 +570,92 @@ async function esperaListo(pg) {
     (await pageV.evaluate(() => document.getElementById('barra').textContent)).slice(0, 90));
   await pageV.close();
 
+  // ── LA ENERGÍA ANUAL EN EL PANEL («deberíamos sacar la energía anual… aún cuando
+  //    optimicemos potencia», 2026-11-18) ──────────────────────────────────────────────────
+  // El factor es un índice RELATIVO sobre 12 días; el panel publica además POA anual
+  // (kWh/m²·año, cielo claro de 8760 h con la MISMA física) y energía (MWh = kWp×POA×PR,
+  // PR declarado y editable). Solo en las dos configuraciones finales, nunca por candidato.
+  // pageF sigue bajo criterio POTENCIA del bloque anterior: las filas tienen que estar.
+  const anF = await pageF.evaluate(async () => {
+    LayoutSearchUI.render();
+    for (let i = 0; i < 600; i++) {
+      const r = LayoutSearchUI.report();
+      if (r.anual && r.anual.reference && r.anual.proposal) return r;
+      await new Promise(res => setTimeout(res, 50));
+    }
+    return LayoutSearchUI.report();
+  });
+  check('bajo POTENCIA el panel también publica el anual (referencia y propuesta)',
+    !!(anF.anual && anF.anual.reference && anF.anual.proposal &&
+       anF.options && anF.options.crit === 'potencia'),
+    JSON.stringify(anF.anual));
+  // el AÑO ENTERO, no los 12 días del índice: la POA anual de cielo claro a media latitud
+  // va por los miles de kWh/m²; la muestra corta (288 h) daría ~65 y este check lo caza
+  check('la POA es ANUAL (magnitud de 8760 h, no de 12 días)',
+    anF.anual.reference.poa_kwh_m2 > 800 && anF.anual.reference.poa_kwh_m2 < 4000,
+    anF.anual.reference.poa_kwh_m2);
+  check('y las filas están en la tabla de resultados, con la nota del PR visible',
+    await pageF.evaluate(() => $('searchMetrics').textContent.includes('POA anual') &&
+      $('searchMetrics').textContent.includes('Energía anual') && !$('anualNota').hidden));
+  // energía = kWp × POA × PR (MWh), con el PR del mando — la aritmética, no una fe
+  const arit = await pageF.evaluate(() => {
+    const r = LayoutSearchUI.report(), d = r.comparison.proposal, an = r.anual.proposal;
+    return { mwh: an.mwh, esperado: d.kWp * an.poa_kwh_m2 * (+$('searchPR').value) / 1000 };
+  });
+  check('la energía es kWp × POA × PR declarado', Math.abs(arit.mwh - arit.esperado) < 1e-6,
+    JSON.stringify(arit));
+  // el PR es un mando, no una constante enterrada: a mitad de PR, mitad de MWh (la POA
+  // está cacheada: cambiarlo NO relanza física ni ensucia las opciones de búsqueda)
+  const prMitad = await pageF.evaluate(() => {
+    const opcionesAntes = JSON.stringify(searchOptions());
+    const antes = LayoutSearchUI.report().anual.proposal.mwh;
+    $('searchPR').value = '0.50'; $('searchPR').dispatchEvent(new Event('input'));
+    const despues = LayoutSearchUI.report().anual.proposal.mwh;
+    $('searchPR').value = '0.80'; $('searchPR').dispatchEvent(new Event('input'));
+    return { antes, despues, opcionesIgual: JSON.stringify(searchOptions()) === opcionesAntes };
+  });
+  check('el PR reescala la energía linealmente y no es una variable de la búsqueda',
+    Math.abs(prMitad.despues - prMitad.antes * 0.5 / 0.8) < 1e-6 && prMitad.opcionesIgual,
+    JSON.stringify(prMitad));
+  // la MISMA física que el índice: girar la fija se cobra TAMBIÉN en el anual, y la razón
+  // anual entre tilts tiene que parecerse al índice de 12 días (muestras distintas: tolerancia)
+  const fisF = await pageF.evaluate(async () => {
+    const c = CFGP.coords, lat = c.reduce((s, p) => s + p[1], 0) / c.length,
+      lon = c.reduce((s, p) => s + p[0], 0) / c.length;
+    if (!ANUAL.M) ANUAL.M = await FIS2.clearsky(lat, lon, 2026);
+    const az0 = Number.isFinite(CFGP.panelAz) ? CFGP.panelAz : 180;
+    const sur = ANUAL_CORRE({ az: az0, tilt: 25 }), girada = ANUAL_CORRE({ az: az0 + 45, tilt: 25 });
+    const razonAnual = ANUAL_CORRE({ az: az0, tilt: 40 }) / sur, indice = FFIJA(az0, 40) / FFIJA(az0, 25);
+    return { sur, girada, razonAnual, indice };
+  });
+  check('girar los paneles se cobra también en el anual (f(±45°) < f(sur))',
+    fisF.girada < fisF.sur - 1e-6, JSON.stringify(fisF));
+  check('la razón anual entre tilts cuadra con el índice de 12 días (±6 %)',
+    Math.abs(fisF.razonAnual / fisF.indice - 1) < 0.06,
+    JSON.stringify({ anual: fisF.razonAnual, indice: fisF.indice }));
+  // y en TRACKER igual: el anual existe, es de año entero, y desviar el eje se cobra
+  const anT = await page.evaluate(async () => {
+    LayoutSearchUI.render();
+    let r = null;
+    for (let i = 0; i < 600; i++) {
+      r = LayoutSearchUI.report();
+      if (r.anual && r.anual.reference && r.anual.proposal) break;
+      await new Promise(res => setTimeout(res, 50));
+    }
+    const c = CFGP.coords, lat = c.reduce((s, p) => s + p[1], 0) / c.length,
+      lon = c.reduce((s, p) => s + p[0], 0) / c.length;
+    if (!ANUAL.M) ANUAL.M = await FIS2.clearsky(lat, lon, 2026);
+    const g = LayoutSearchUI.report().comparison.reference.gcr || 0.4;
+    return { anual: r.anual, ns: ANUAL_CORRE({ tracker: true, az: 90, gcr: g }),
+             desv: ANUAL_CORRE({ tracker: true, az: 135, gcr: g }) };
+  });
+  check('en tracker el anual también se publica, con magnitud de año entero',
+    !!(anT.anual && anT.anual.reference && anT.anual.proposal) &&
+    anT.anual.reference.poa_kwh_m2 > 800 && anT.anual.reference.poa_kwh_m2 < 4000,
+    JSON.stringify(anT.anual));
+  check('y desviar el eje del tracker se cobra en el anual', anT.desv < anT.ns - 1e-6,
+    JSON.stringify({ ns: anT.ns, desv: anT.desv }));
+
   // ── LA BARRA TIENE QUE PODERSE LEER ─────────────────────────────────────────────────────
   // Se ordena por ENERGÍA, así que la mejor puede llevar MENOS potencia instalada y ganar
   // igual subiendo el rendimiento. Con «base 6,14 MWp · mejor 6,06 MWp · +1,5 %» eso parece
