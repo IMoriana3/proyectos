@@ -37,6 +37,7 @@ const CARTERA = {
   '24019': { cod:24019, nproy:'24019', nombre:'San José', estado_pem:'En proceso',   pdc:177.984,  trk_total:2289 },
   '24007': { cod:24007, nproy:'24007', nombre:'Fayón',    estado_pem:'En marcha',    pdc:1.25664,  trk_total:24 },
   '25019': { cod:25019, nproy:'25019', nombre:'Paramo',   estado_pem:'Sin comenzar', trk_total:396 },
+  '24029': { cod:24029, nproy:'24029', nombre:'La Latina 2', estado_pem:'Sin comenzar', trk_total:67, ncu_eth:1 },
 };
 
 (async () => {
@@ -98,6 +99,53 @@ const CARTERA = {
     const paramo = await tarjeta(page, 'Páramo');
     check('una planta SIN COMENZAR no gana sala de control', paramo.scada === 'APAGADO', paramo);
     check('pero sí enseña que está sin comenzar', paramo.estado === 'Sin comenzar', paramo);
+
+    // La Latina 2 ya está en la cartera/tabla IPs y en el alta de Toolbox,
+    // ya no puede dejar la huella vacía ni abrir visores que carezcan de datos.
+    const latina = await tarjeta(page, 'La Latina 2');
+    const tarjetaLatina = page.locator('.pcard[data-planta="La Latina 2"]');
+    check('La Latina 2 (24029) permanece en Plantas',
+      await page.locator('#plants .pcard').count() >= 14 &&
+      await tarjetaLatina.count() === 1 &&
+      (await tarjetaLatina.locator('.pcode').textContent()).trim() === '24029' && !!latina, latina);
+    check('La Latina conserva el estado real Sin comenzar', latina.estado === 'Sin comenzar', latina);
+    check('La Latina NO abre SCADA sin PEM', latina.scada === 'APAGADO', latina);
+    const vistaLatina = page.locator('.pcard[data-planta="La Latina 2"] .pviews');
+    const deshabilitadas = await vistaLatina.locator('span.btn.off').count();
+    const activas = await vistaLatina.locator('a.btn').count();
+    check('La Latina habilita Siting oficial y plano 2D, pero no 3D/RF/SCADA',
+      deshabilitadas === 3 && activas === 2, { deshabilitadas, activas });
+    const enlaces = await vistaLatina.locator('a.btn').evaluateAll(a => a.map(x => x.getAttribute('href')));
+    check('Siting abre la aplicación oficial y 2D su visor de La Latina',
+      enlaces.some(x => x.includes('latina-2.html?modo=2d')) &&
+      enlaces.some(x => x.includes('https://siting.pages.dev/?planta=latina')) &&
+      !enlaces.some(x => x.includes('latina-2.html?modo=siting')), enlaces);
+    const huella = tarjetaLatina.locator('svg.huella');
+    check('la tarjeta muestra los 67 centros de TCU de verdad',
+      await huella.count()===1 && await huella.locator('circle').count()===67,
+      await huella.locator('circle').count());
+    check('NCU y HSU externas aparecen en la huella',
+      await huella.locator('.latina-station').count()===1 &&
+      await huella.locator('.latina-hsu').count()===1);
+    const fuente=await page.evaluate(() => {
+      const d=window.FACTIUN_LATINA_24029;
+      return {n:d.points.length,ct1:d.points.filter(p=>p[4]===1).length,
+        ct2:d.points.filter(p=>p[4]===2).length,hsu:d.stations.length};
+    });
+    check('fuente única de 67 TCU, CT 35/32 y dos estaciones',
+      fuente.n===67 && fuente.ct1===35 && fuente.ct2===32 && fuente.hsu===2, fuente);
+    const vista2d=await browser.newPage();
+    await vista2d.goto(BASE+'/latina-2.html?modo=2d');
+    check('el visor 2D carga 67 centros seleccionables',
+      await vista2d.locator('svg#map circle.tcu').count()===67);
+    check('el visor 2D presenta la distinción entre centros y mesas',
+      /PLANO DE CENTROS, NO DE MESAS/.test(await vista2d.locator('#mode-note').textContent()));
+    await vista2d.close();
+    const html2d=(await (await page.request.get(BASE+'/latina-2.html')).text());
+    check('el visor 2D no contiene enlace al antiguo Siting paralelo',
+      !html2d.includes('href="?modo=siting"') &&
+      html2d.includes('https://siting.pages.dev/?planta=latina'));
+
 
     // ── la ficha ──
     /* Se leen los PARES de la lista, no el texto pegado: `textContent` junta el <dt> con su <dd>
