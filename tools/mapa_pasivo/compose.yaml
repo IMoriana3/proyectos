@@ -1,0 +1,19 @@
+# Container Manager (Synology) → Proyecto → Crear → «Crear docker-compose.yml» → pegar esto.
+# Corre una vez y se para; lo que va haciendo sale en el «Registro» del contenedor.
+services:
+  mapa-pasivo:
+    image: node:22-bookworm          # trae git y python3; el resto lo instala lanzar.sh
+    container_name: mapa-pasivo
+    restart: "no"
+    mem_limit: 2g
+    environment:
+      PAISES: "ESP"                  # uno o varios, separados por espacios: "ESP PRT"
+      ANIOS: "2022"                  # uno o varios: "2021 2022 2023"
+      PASO: "0.25"                   # 0.25, 0.5, 0.75, 1 o 2
+      RAMA: "main"                   # hasta que se fusione el PR del lote: claude/mapa-pasivo-lote
+      CDSAPI_KEY: ""                 # la clave de Copernicus (ver README)
+      GH_TOKEN: ""                   # opcional: token de GitHub para subir los mapas con un PR
+    volumes:
+      - /volume1/docker/mapa-pasivo:/datos
+    command: >
+      bash -c "curl -fsSL https://raw.githubusercontent.com/IMoriana3/proyectos/$${RAMA}/tools/mapa_pasivo/lanzar.sh -o /tmp/lanzar.sh && bash /tmp/lanzar.sh"

@@ -1,0 +1,47 @@
+{
+ "formato": "factiun-mapa-pasivo-config",
+ "v": 1,
+ "refs": [
+  "A1",
+  "A2",
+  "B1",
+  "B2"
+ ],
+ "opciones": {
+  "step": 15,
+  "rafaga": true
+ },
+ "configuracion": {
+  "tracker": {
+   "max_angle_deg": 55,
+   "gcr": 0.397,
+   "pitch_m": 6,
+   "axis_azimuth_deg": 0,
+   "backtrack": true
+  },
+  "threshold_1_kmh": 40,
+  "threshold_2_kmh": 60,
+  "partial_stow_min_abs_deg": 30,
+  "destow_hold_minutes": 30,
+  "partial_park_minutes": 30,
+  "noon_limit_deg": 10,
+  "passive": {
+   "enabled": true,
+   "n_trackers": 10,
+   "filas_por_tracker": 2,
+   "release_kmh": 90,
+   "side_deg": -55,
+   "side_mode": "fijo"
+  },
+  "wind_height_m": 4,
+  "slew_deg_s": 0.17,
+  "deadband_deg": 1,
+  "latencia": {
+   "ventana_s": 0,
+   "muestreo_s": 0,
+   "sondeo_s": 0,
+   "arranque_s": 0
+  }
+ },
+ "nota": "Configuración por defecto de la ficha (B2, paso 15 min, con ráfaga, suelta 90 km/h). Para usar la tuya: botón «Configuración para el NAS» de la pestaña Mapa y deja el fichero como config.json en la carpeta del NAS."
+}
