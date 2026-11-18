@@ -123,7 +123,9 @@ function stub({ modo: m, filas }) {
   {
     const { page, errs, cdn } = await panel({ sinStub: true });
     check('sin sesión, el Panel no se trae la librería de la cartera', cdn.length === 0, cdn);
-    check('y las tarjetas están ahí igual', (await page.locator('.pcard').count()) === 13, await page.locator('.pcard').count());
+    const cartas = await page.locator('.pcard').count(), declaradas = await page.evaluate(() => PLANTS.length);
+    check('sin sesión se pintan TODAS las plantas declaradas (mínimo 14)',
+      cartas===declaradas && declaradas>=14, {cartas,declaradas});
     check('con el botón para conectarla', /Conectar la cartera/.test(await acceso(page)), await acceso(page));
     const b = await tarjeta(page, 'El Burgo');
     check('y sin inventarse ningún estado', b.estado === null, b);
@@ -201,7 +203,9 @@ function stub({ modo: m, filas }) {
     await entra(page, 'quien@factiun.com', 'secreta');
     const txt = await acceso(page);
     check(nombre, patron.test(txt), txt);
-    check('  · y el Panel sigue con sus 13 tarjetas', (await page.locator('.pcard').count()) === 13);
+    const cartas = await page.locator('.pcard').count(), declaradas = await page.evaluate(() => PLANTS.length);
+    check('  · y el Panel conserva todas sus tarjetas, mínimo 14',
+      cartas===declaradas && declaradas>=14, {cartas,declaradas});
     check('  · sin errores de JS', errs.length === 0, errs);
     await page.close();
   }

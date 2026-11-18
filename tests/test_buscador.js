@@ -137,10 +137,59 @@ async function esperaListo(pg) {
   check('el velo de error no tapa la página', await page.evaluate(() =>
     getComputedStyle(document.getElementById('aviso')).display === 'none'), 'display ≠ none');
 
+  // ── EL INFORME PARA CLIENTE (formato del estudio de batería del Gemelo) ──────────────────
+  // No recalcula nada: cosecha LayoutSearchUI.report(). Lo que puede mentir es lo que se mide:
+  // que lleve las cifras de ESTA búsqueda, los planos re-dibujados, el límite declarado del
+  // índice y el rótulo interno/cliente.
+  const inf1 = await page.evaluate(() => LayoutInforme.html());
+  check('el informe se construye y es el de ESTA búsqueda',
+    typeof inf1 === 'string' && inf1.includes('Estudio de optimización') && inf1.includes('123456-654321'),
+    inf1 ? inf1.slice(0, 80) : String(inf1));
+  check('y declara el límite del índice: cielo claro, no energía anual',
+    inf1.includes('cielo claro') && inf1.includes('no es una previsión de energía anual'),
+    'falta la declaración de límites');
+  check('con los planos y las gráficas re-dibujados en claro',
+    (inf1.match(/data:image\/png/g) || []).length >= 3, (inf1.match(/data:image\/png/g) || []).length + ' figuras');
+  check('sin marcar «cliente», se rotula uso interno', inf1.includes('Uso interno de Factiun'));
+  const inf2 = await page.evaluate(() => { $('repCliente').checked = true; const h = LayoutInforme.html(); $('repCliente').checked = false; return h; });
+  check('marcado «cliente», cambia el rótulo', inf2.includes('para el cliente') && !inf2.includes('Uso interno de Factiun'));
+
+  // ── NINGUNA MESA PINTADA SE SALE DE LA PARCELA («el optimizador se sale de la parcela»,
+  // 2026-11-18). El motor estaba limpio; el LIENZO anclaba su frame UTM por TRASLACIÓN al
+  // vértice 0 de la parcela, y la convergencia de cuadrícula es un GIRO que una traslación no
+  // absorbe: medido aquí mismo, hasta 0,99 m fuera de la linde. El oráculo corre EN ESTE site
+  // (sintético, con giros grandes y orígenes desplazados) porque es el régimen donde el ancla
+  // rompía: en parcelas pequeñas el error cabe dentro del retranqueo y el check no mediría.
+  const fuera = await page.evaluate(() => {
+    const pip = (pt, P) => { let c = false; for (let u = 0, v = P.length - 1; u < P.length; v = u++) {
+      if ((P[u][1] > pt[1]) !== (P[v][1] > pt[1]) && pt[0] < (P[v][0] - P[u][0]) * (pt[1] - P[u][1]) / (P[v][1] - P[u][1]) + P[u][0]) c = !c; } return c; };
+    const dSeg = (pt, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1e-12;
+      const t = Math.max(0, Math.min(1, ((pt[0] - a[0]) * dx + (pt[1] - a[1]) * dy) / L2));
+      return Math.hypot(a[0] + t * dx - pt[0], a[1] + t * dy - pt[1]); };
+    const fueraMax = () => { const u = ULTIMO; if (!u || !u.valid || !u.r) return 0; let peor = 0;
+      u.r.structures.forEach(st => mesaEnLienzo(st, u.r).forEach(q => {
+        if (!pip(q, PARCELA.pts)) { let d = 1 / 0;
+          for (let i = 0, j = PARCELA.pts.length - 1; i < PARCELA.pts.length; j = i++) d = Math.min(d, dSeg(q, PARCELA.pts[j], PARCELA.pts[i]));
+          peor = Math.max(peor, d); } }));
+      return peor; };
+    let peor = 0;
+    for (let i = 0; i < 20; i++) { PASO(1); peor = Math.max(peor, fueraMax()); }
+    return peor;
+  });
+  // OJO con el veredicto: la primera versión devolvía «true o la distancia» y check() toma
+  // cualquier número no nulo como verdadero — un check que no podía ponerse rojo, cazado por
+  // su propio mutante (el ancla puesta daba 0,88 m… y salía OK). El número SIEMPRE, y la
+  // comparación aquí fuera, donde se lee.
+  check('ninguna mesa pintada se sale de la parcela (frame del lienzo), candidato a candidato',
+    fuera < 0.05, 'peor salida ' + fuera.toFixed(2) + ' m — con el ancla OFF esto medía hasta 0,99 m');
+
   // determinismo: misma URL, mismas 25 → el MISMO mejor
   const page2 = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page2.goto(URL1);
   await esperaListo(page2);
+  // sin evaluaciones no hay nada que informar: html() es null y el botón está apagado
+  check('sin búsqueda, el informe se niega (null) y su botón está apagado', await page2.evaluate(() =>
+    LayoutInforme.html() === null && $('searchInforme').disabled === true), 'informe de la nada');
   await page2.evaluate(() => PASO(25));
   const e3 = await page2.evaluate(() => ESTADO());
   check('misma semilla → mismo mejor kWp (reproducible)', e3.mejorKwp === e1.mejorKwp, e3.mejorKwp + ' vs ' + e1.mejorKwp);
@@ -156,16 +205,35 @@ async function esperaListo(pg) {
     JSON.stringify({ real: e4.real, opciones: e4.opciones, kwp: e4.mejorKwp }));
   const barra2 = await page.evaluate(() => document.getElementById('barra').textContent);
   check('la barra dice que es la parcela real y cuál', barra2.includes('parcela real') && barra2.includes('Prueba'), barra2.slice(0, 80));
-  // el origen UTM del dibujo se RE-MIDE al cambiar de parcela: sin eso las mesas del site
-  // nuevo salían corridas con el origen del anterior cuando conduce PASO() (grabación, banco)
-  check('el origen del dibujo se re-mide en la parcela nueva', await page.evaluate(() => {
-    const antes = ESTADO().off.slice();
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
-    const enBlanco = ESTADO().off[0] === 0;                    // nuevoSite lo resetea…
-    PASO(3);
-    const despues = ESTADO().off;                              // …y el primer candidato lo vuelve a medir
-    return enBlanco && despues[0] !== 0 && (despues[0] !== antes[0] || despues[1] !== antes[1]);
-  }), true);
+  // (aquí vivía «el origen del dibujo se re-mide en la parcela nueva»: vigilaba el ancla OFF
+  //  por TRASLACIÓN del frame UTM. El ancla se retiró con el bug del 2026-11-18 y su oráculo
+  //  vive arriba, en el site sintético — el régimen donde el ancla rompía de verdad. El salto
+  //  de site que este bloque ejercitaba se conserva:)
+  await page.evaluate(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' })); PASO(3); });
+  check('tras cambiar de site, las mesas del nuevo se pintan en SU parcela', await page.evaluate(() => {
+    const u = ULTIMO; if (!u || !u.r) return false;
+    const q = mesaEnLienzo(u.r.structures[0], u.r)[0];
+    const xs = PARCELA.pts.map(p => p[0]), ys = PARCELA.pts.map(p => p[1]);
+    return q[0] >= Math.min(...xs) - 1 && q[0] <= Math.max(...xs) + 1 && q[1] >= Math.min(...ys) - 1 && q[1] <= Math.max(...ys) + 1;
+  }), 'la primera mesa cae fuera de la caja de la parcela nueva');;
+  // ── CRITERIO POTENCIA («debe poder optimizar por energía o por potencia», 2026-11-18) ──
+  // El check vive en TRACKER con giros: ahí el factor solar muerde (≠1) y apagarlo se nota.
+  // En fija sin tabla el factor ya vale 1 y el check no mediría (régimen de riesgo).
+  await page.evaluate(() => {
+    $('searchCrit').value = 'potencia'; $('searchCrit').dispatchEvent(new Event('change'));
+    $('searchRun').click(); PASO(15);
+  });
+  check('bajo criterio POTENCIA, el índice ES la potencia aunque haya giros', await page.evaluate(() =>
+    TRACE.some(r => r.valid && Math.abs(r.panelAz - AZ0) > 5) &&
+    TRACE.every(r => !r.valid || Math.abs(r.score - r.kWp) < 1e-9) &&
+    (!MEJOR || MEJOR.rend === 1)), 'el factor solar se coló en el criterio potencia');
+  check('y el mando del tilt queda apagado, con su motivo en pantalla', await page.evaluate(() =>
+    $('searchTiltMax').disabled === true &&
+    $('objective').textContent.includes('POTENCIA')), 'potencia sin declarar en pantalla');
+  check('en tracker no queda casilla apagada sin porqué (nota oculta)', await page.evaluate(() =>
+    $('varWhy').hidden === true), await page.evaluate(() => $('varWhy').textContent));
+  await page.evaluate(() => { $('searchCrit').value = 'energia'; $('searchCrit').dispatchEvent(new Event('change')); });
+
   // un JSON sin vallado no cuela
   check('sin `fence` no hay parcela real', (await page.evaluate(() => cargaLayoutReal({ title: 'x' }))) === false);
 
@@ -265,6 +333,10 @@ async function esperaListo(pg) {
   check('con el eje ya en N-S, la base sigue ganando', Math.abs(eb.mejorEner - eb.baseEner) < 1e-9,
     JSON.stringify({ mejor: eb.mejorEner, base: eb.baseEner, giro: eb.mejorGiro }));
   check('sin mejora, la barra lo dice en redondo', barraB.includes('la base sigue ganando'), barraB.slice(-90));
+  // y el informe da la MISMA conclusión que la barra: la referencia se mantiene. Un informe
+  // que anuncia hallazgo donde la barra dice «sigue ganando» serían dos verdades.
+  check('sin mejora, el informe concluye que la referencia se mantiene', await pageB.evaluate(() =>
+    (LayoutInforme.html() || '').includes('se mantiene como la mejor')), 'conclusión incoherente con la barra');
   await pageB.keyboard.press('a');
   check('y A NO envia nada: aplicarlo empeoraria lo que ya hay',
     (await pageB.evaluate(() => localStorage.getItem('buscador_mejor'))) === null);
@@ -369,15 +441,220 @@ async function esperaListo(pg) {
   //    variante de reparto, es apuntar los módulos a otro sitio: no se gira y se dice. ──
   await pageG.evaluate(() => { document.getElementById('mount').value = 'fija';
     if (typeof syncAz === 'function') syncAz();
+    document.getElementById('fixTilt').value = 5;     // un tilt de partida claramente malo, para que haya mejora que encontrar
     document.getElementById('optBtn').click(); });
   const pageF = await ctx.newPage();
   await pageF.goto(BASE + '/buscador-implantacion.html?encargo=1&quieto=1&semilla=7-7');
   await esperaListo(pageF);
   await pageF.evaluate(() => PASO(8));
   const ef = await pageF.evaluate(() => ESTADO());
-  check('en fija no se gira nada', ef.encargo === true && ef.gira === false && ef.mejorGiro === 0,
-    JSON.stringify({ gira: ef.gira, giro: ef.mejorGiro }));
-  check('y la barra lo dice', (await pageF.evaluate(() => document.getElementById('barra').textContent)).includes('fija: no se gira'));
+  // (v1.14.0, «se debe poder orientar las fijas con otro azimuth»: aquí vivía
+  //  «en fija no se gira nada». La regla cambió A PROPÓSITO: la fija gira y el
+  //  índice f(azimut, tilt) lo cobra.)
+  // OJO con el oráculo: la primera versión exigía «gana el sur» y falló con razón — a tilt
+  // bajo el azimut casi no castiga (panel casi plano) y girar puede empaquetar más de lo que
+  // pierde. Lo que se exige es COHERENCIA: el mejor es el que maximiza kWp × f(az, tilt).
+  check('en fija el azimut TAMBIÉN se busca (de paneles), y el mejor es coherente con el índice',
+    ef.encargo === true && ef.gira === false && ef.rota === true && (await pageF.evaluate(() =>
+      MEJOR && Math.abs(MEJOR.ener - MEJOR.kwp * FFIJA(MEJOR.az, MEJOR.tilt != null ? MEJOR.tilt : TILT0)) < 1e-6)),
+    JSON.stringify({ gira: ef.gira, rota: ef.rota, giro: ef.mejorGiro }));
+  check('y la barra dice que el azimut de la fija es el de PANELES',
+    (await pageF.evaluate(() => document.getElementById('barra').textContent)).includes('azimut de PANELES'));
+  check('con la física cargada, no queda casilla apagada sin porqué (nota oculta)', await pageF.evaluate(() =>
+    $('varWhy').hidden === true), await pageF.evaluate(() => $('varWhy').textContent));
+
+  // ── EL TILT DE LA FIJA ES VARIABLE («optimizar también el tilt», 2026-11-18) ────────────
+  // La huella del motor no depende del tilt, así que el criterio es un índice de ENERGÍA:
+  // la física del comparador de estructuras (careada contra el core), extraída en runtime —
+  // transposición Perez de cielo claro en 12 días + SOMBRA entre filas al pitch + cielo
+  // enmascarado —, normalizada al tilt del encargo.
+  await pageF.evaluate(() => PASO(40));
+  const et = await pageF.evaluate(() => ESTADO());
+  check('la tabla de inclinación se construye y la referencia vale 1',
+    et.tablaTilt === true && (await pageF.evaluate(() => Math.abs(FTILT(TILT0) - 1) < 1e-9)),
+    JSON.stringify({ tablaTilt: et.tablaTilt, tilt0: et.tilt0 }));
+  check('se muestrean inclinaciones distintas', (await pageF.evaluate(() =>
+    new Set(TRACE.filter(r => r.tilt != null).map(r => r.tilt)).size)) >= 4, 'menos de 4 tilts distintos');
+  // la SOMBRA está dentro del índice: a tilt alto, la neta sombreada pierde contra la sin
+  // sombra, y la TABLA tiene que salir de la física SOMBREADA (es lo que el mutante vigila)
+  check('el índice lleva la sombra entre filas, y la tabla sale de la física sombreada',
+    await pageF.evaluate(() => {
+      const con = TILT_CORRE(50, false), sin = TILT_CORRE(50, true), ref = TILT_CORRE(TILT0, false);
+      return con != null && con < sin && Math.abs(FTILT(50) - con / ref) < 1e-9;
+    }), 'la tabla no sale de la física sombreada');
+  check('con un tilt de partida malo (5°), el buscador encuentra una inclinación mejor',
+    et.mejorTilt != null && et.mejorTilt > 10 && et.mejorEner > et.baseEner * 1.0005,
+    JSON.stringify({ tilt: et.mejorTilt, mejor: et.mejorEner, base: et.baseEner }));
+  await pageF.keyboard.press('a');
+  const mt = await pageF.evaluate(() => JSON.parse(localStorage.getItem('buscador_mejor') || 'null'));
+  check('A envía la inclinación del mejor', !!mt && Number.isFinite(mt.tilt) && mt.tilt !== 5, JSON.stringify(mt && { tilt: mt.tilt }));
+  await pageG.evaluate(() => window.dispatchEvent(new Event('focus')));
+  check('y el generador la aplica al mando de la fija', await pageG.evaluate(tilt =>
+    +document.getElementById('fixTilt').value === tilt &&
+    document.getElementById('hint').textContent.includes('tilt'), mt ? mt.tilt : -1),
+    await pageG.evaluate(() => document.getElementById('fixTilt').value + ' · ' + document.getElementById('hint').textContent.slice(0, 60)));
+  // la tecla A deja un aviso PEGAJOSO en la barra (9 s): se limpia para que el bloque
+  // siguiente lea la BARRA y no el aviso
+  await pageF.evaluate(() => { AVISO_BARRA = null; });
+
+  // ── EL TOPE DE INCLINACIÓN («debemos poder limitar el tilt máximo», 2026-11-18) ─────────
+  // Es una restricción ESTRUCTURAL: ninguna variante puede superarla, candidato a candidato.
+  await pageF.evaluate(() => {
+    $('searchTiltMax').value = 20; $('searchTiltMax').dispatchEvent(new Event('change'));
+    $('searchRun').click(); PASO(48);
+  });
+  const tope = await pageF.evaluate(() => ({
+    tilts: [...new Set(TRACE.filter(r => r.tilt != null).map(r => r.tilt))],
+    peor: Math.max(...TRACE.filter(r => r.tilt != null).map(r => r.tilt)),
+    mejorTilt: MEJOR ? MEJOR.tilt : null, distintos: new Set(TRACE.filter(r => r.tilt != null).map(r => r.tilt)).size }));
+  check('con tope 20°, ninguna variante lo supera y se sigue barriendo debajo',
+    tope.peor <= 20 && tope.distintos >= 3 && tope.mejorTilt != null && tope.mejorTilt <= 20,
+    JSON.stringify(tope));
+  // girar la fija SE COBRA: la misma física, con la desviación del sur dentro
+  check('girar los paneles de la fija se cobra en el factor (f(sur)=1, f(±45°)<1)', await pageF.evaluate(() => {
+    const az0 = Number.isFinite(CFGP.panelAz) ? CFGP.panelAz : 180;
+    return Math.abs(FFIJA(az0, TILT0) - 1) < 1e-9 && FFIJA(az0 + 45, TILT0) < 1 - 1e-6 && FFIJA(az0 - 45, TILT0) < 1 - 1e-6;
+  }), 'la desviación del sur sale gratis');
+  check('y se muestrean azimuts distintos en fija', (await pageF.evaluate(() =>
+    new Set(TRACE.map(r => r.panelAz)).size)) >= 3, 'la fija no está girando');
+
+  // ── CRITERIO POTENCIA EN FIJA: tilt marcable, y el DESEMPATE es el factor ──────────────
+  // El tilt no cambia ni un módulo (medido: 8.932 a 15° y a 40°), así que ordenar por kWp
+  // dejaría el tilt al azar entre empates. La semántica declarada: kWp manda; a igualdad,
+  // gana el mejor factor solar.
+  await pageF.evaluate(() => {
+    $('searchCrit').value = 'potencia'; $('searchCrit').dispatchEvent(new Event('change'));
+    // X/Y apagado A PROPÓSITO: con el origen variando, el máximo de kWp puede ser único y
+    // entonces no hay empate que desempatar — el mutante del desempate sobrevivió ahí y lo
+    // enseñó (corolario del fixture sin efecto). Sin X/Y, tilts distintos comparten kWp y
+    // el desempate DECIDE.
+    $('searchXY').checked = false; $('searchXY').dispatchEvent(new Event('change'));
+    $('searchAz').checked = false; $('searchAz').dispatchEvent(new Event('change'));
+    $('searchRun').click(); PASO(60);
+  });
+  const pot = await pageF.evaluate(() => ({
+    tiltOn: !$('searchTilt').disabled && $('searchTilt').checked, tablaTilt: ESTADO().tablaTilt,
+    rend: MEJOR ? MEJOR.rend : null, enerEsKwp: MEJOR ? Math.abs(MEJOR.ener - MEJOR.kwp) < 1e-9 : false,
+    nEmpates: TRACE.filter(r => r.valid && MEJOR && Math.abs(r.kWp - MEJOR.kwp) < 1e-9).length,
+    empateLimpio: (() => { if (!MEJOR) return false;
+      return !TRACE.some(r => r.valid && Math.abs(r.kWp - MEJOR.kwp) < 1e-9 && r.tilt != null &&
+        FFIJA(r.panelAz, r.tilt) > (MEJOR.rendF || 0) + 1e-9); })(),
+    nota: !$('varWhy').hidden && $('varWhy').textContent.includes('desempata') }));
+  check('bajo POTENCIA en fija, el tilt se puede marcar y el orden sigue siendo kWp',
+    pot.tiltOn && pot.tablaTilt && pot.rend === 1 && pot.enerEsKwp, JSON.stringify(pot));
+  // nEmpates ≥ 3 exige que el régimen EXISTA: sin empates el desempate no vigila nada y su
+  // mutante sobrevive diciendo la verdad (pasó dos veces antes de fijar el régimen)
+  check('a igualdad de kWp, el mejor lleva el MEJOR factor solar (desempate declarado)',
+    pot.nEmpates >= 3 && pot.empateLimpio && pot.nota,
+    JSON.stringify({ empates: pot.nEmpates, limpio: pot.empateLimpio, nota: pot.nota }));
+  await pageF.evaluate(() => { $('searchXY').checked = true; $('searchXY').dispatchEvent(new Event('change'));
+    $('searchAz').checked = true; $('searchAz').dispatchEvent(new Event('change')); });
+
+  // ── EL APRETÓN DE VERSIONES página↔libs («tope 30 y me propone 40», 2026-11-18) ─────────
+  // La caché mezclada sirvió la página nueva con la lib VIEJA (sin tope de tilt) y el mando
+  // no aplicaba. Se reproduce el mecanismo de verdad: una pestaña donde lib/layout-search.js
+  // llega sin LIB_VER (como una versión antigua) tiene que AVISAR en la barra.
+  const pageV = await ctx.newPage();
+  await pageV.route('**/lib/layout-search.js', async route => {
+    const r = await route.fetch(); const body = (await r.text())
+      .replace(/var LIB_VER\s*=\s*'[^']*';[^\n]*/, '').replace(/LIB_VER:LIB_VER,/, '');
+    route.fulfill({ response: r, body });
+  });
+  await pageV.goto(BASE + '/buscador-implantacion.html?quieto=1&semilla=3-3');
+  // esperar a la PARCELA, no solo al motor: el apretón corre tras cargar las tres físicas,
+  // y leer la barra antes es leer el «cargando el motor…» del arranque (pasó a la primera)
+  await esperaListo(pageV);
+  check('con la lib vieja (sin versión), la página AVISA de caché mezclada y da la receta',
+    await pageV.evaluate(() => document.getElementById('barra').textContent.includes('Versiones mezcladas') &&
+      document.getElementById('barra').textContent.includes('Recarga')),
+    (await pageV.evaluate(() => document.getElementById('barra').textContent)).slice(0, 90));
+  await pageV.close();
+
+  // ── LA ENERGÍA ANUAL EN EL PANEL («deberíamos sacar la energía anual… aún cuando
+  //    optimicemos potencia», 2026-11-18) ──────────────────────────────────────────────────
+  // El factor es un índice RELATIVO sobre 12 días; el panel publica además POA anual
+  // (kWh/m²·año, cielo claro de 8760 h con la MISMA física) y energía (MWh = kWp×POA×PR,
+  // PR declarado y editable). Solo en las dos configuraciones finales, nunca por candidato.
+  // pageF sigue bajo criterio POTENCIA del bloque anterior: las filas tienen que estar.
+  const anF = await pageF.evaluate(async () => {
+    LayoutSearchUI.render();
+    for (let i = 0; i < 600; i++) {
+      const r = LayoutSearchUI.report();
+      if (r.anual && r.anual.reference && r.anual.proposal) return r;
+      await new Promise(res => setTimeout(res, 50));
+    }
+    return LayoutSearchUI.report();
+  });
+  check('bajo POTENCIA el panel también publica el anual (referencia y propuesta)',
+    !!(anF.anual && anF.anual.reference && anF.anual.proposal &&
+       anF.options && anF.options.crit === 'potencia'),
+    JSON.stringify(anF.anual));
+  // el AÑO ENTERO, no los 12 días del índice: la POA anual de cielo claro a media latitud
+  // va por los miles de kWh/m²; la muestra corta (288 h) daría ~65 y este check lo caza
+  check('la POA es ANUAL (magnitud de 8760 h, no de 12 días)',
+    anF.anual.reference.poa_kwh_m2 > 800 && anF.anual.reference.poa_kwh_m2 < 4000,
+    anF.anual.reference.poa_kwh_m2);
+  check('y las filas están en la tabla de resultados, con la nota del PR visible',
+    await pageF.evaluate(() => $('searchMetrics').textContent.includes('POA anual') &&
+      $('searchMetrics').textContent.includes('Energía anual') && !$('anualNota').hidden));
+  // energía = kWp × POA × PR (MWh), con el PR del mando — la aritmética, no una fe
+  const arit = await pageF.evaluate(() => {
+    const r = LayoutSearchUI.report(), d = r.comparison.proposal, an = r.anual.proposal;
+    return { mwh: an.mwh, esperado: d.kWp * an.poa_kwh_m2 * (+$('searchPR').value) / 1000 };
+  });
+  check('la energía es kWp × POA × PR declarado', Math.abs(arit.mwh - arit.esperado) < 1e-6,
+    JSON.stringify(arit));
+  // el PR es un mando, no una constante enterrada: a mitad de PR, mitad de MWh (la POA
+  // está cacheada: cambiarlo NO relanza física ni ensucia las opciones de búsqueda)
+  const prMitad = await pageF.evaluate(() => {
+    const opcionesAntes = JSON.stringify(searchOptions());
+    const antes = LayoutSearchUI.report().anual.proposal.mwh;
+    $('searchPR').value = '0.50'; $('searchPR').dispatchEvent(new Event('input'));
+    const despues = LayoutSearchUI.report().anual.proposal.mwh;
+    $('searchPR').value = '0.80'; $('searchPR').dispatchEvent(new Event('input'));
+    return { antes, despues, opcionesIgual: JSON.stringify(searchOptions()) === opcionesAntes };
+  });
+  check('el PR reescala la energía linealmente y no es una variable de la búsqueda',
+    Math.abs(prMitad.despues - prMitad.antes * 0.5 / 0.8) < 1e-6 && prMitad.opcionesIgual,
+    JSON.stringify(prMitad));
+  // la MISMA física que el índice: girar la fija se cobra TAMBIÉN en el anual, y la razón
+  // anual entre tilts tiene que parecerse al índice de 12 días (muestras distintas: tolerancia)
+  const fisF = await pageF.evaluate(async () => {
+    const c = CFGP.coords, lat = c.reduce((s, p) => s + p[1], 0) / c.length,
+      lon = c.reduce((s, p) => s + p[0], 0) / c.length;
+    if (!ANUAL.M) ANUAL.M = await FIS2.clearsky(lat, lon, 2026);
+    const az0 = Number.isFinite(CFGP.panelAz) ? CFGP.panelAz : 180;
+    const sur = ANUAL_CORRE({ az: az0, tilt: 25 }), girada = ANUAL_CORRE({ az: az0 + 45, tilt: 25 });
+    const razonAnual = ANUAL_CORRE({ az: az0, tilt: 40 }) / sur, indice = FFIJA(az0, 40) / FFIJA(az0, 25);
+    return { sur, girada, razonAnual, indice };
+  });
+  check('girar los paneles se cobra también en el anual (f(±45°) < f(sur))',
+    fisF.girada < fisF.sur - 1e-6, JSON.stringify(fisF));
+  check('la razón anual entre tilts cuadra con el índice de 12 días (±6 %)',
+    Math.abs(fisF.razonAnual / fisF.indice - 1) < 0.06,
+    JSON.stringify({ anual: fisF.razonAnual, indice: fisF.indice }));
+  // y en TRACKER igual: el anual existe, es de año entero, y desviar el eje se cobra
+  const anT = await page.evaluate(async () => {
+    LayoutSearchUI.render();
+    let r = null;
+    for (let i = 0; i < 600; i++) {
+      r = LayoutSearchUI.report();
+      if (r.anual && r.anual.reference && r.anual.proposal) break;
+      await new Promise(res => setTimeout(res, 50));
+    }
+    const c = CFGP.coords, lat = c.reduce((s, p) => s + p[1], 0) / c.length,
+      lon = c.reduce((s, p) => s + p[0], 0) / c.length;
+    if (!ANUAL.M) ANUAL.M = await FIS2.clearsky(lat, lon, 2026);
+    const g = LayoutSearchUI.report().comparison.reference.gcr || 0.4;
+    return { anual: r.anual, ns: ANUAL_CORRE({ tracker: true, az: 90, gcr: g }),
+             desv: ANUAL_CORRE({ tracker: true, az: 135, gcr: g }) };
+  });
+  check('en tracker el anual también se publica, con magnitud de año entero',
+    !!(anT.anual && anT.anual.reference && anT.anual.proposal) &&
+    anT.anual.reference.poa_kwh_m2 > 800 && anT.anual.reference.poa_kwh_m2 < 4000,
+    JSON.stringify(anT.anual));
+  check('y desviar el eje del tracker se cobra en el anual', anT.desv < anT.ns - 1e-6,
+    JSON.stringify({ ns: anT.ns, desv: anT.desv }));
 
   // ── LA BARRA TIENE QUE PODERSE LEER ─────────────────────────────────────────────────────
   // Se ordena por ENERGÍA, así que la mejor puede llevar MENOS potencia instalada y ganar
