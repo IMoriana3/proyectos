@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>La Latina 2 · plano de centros TCU — Factiun</title>
+<link rel="icon" href="favicon.svg">
+<style>
+:root{--bg:#0e1826;--panel:#16243a;--hi:#1c304a;--line:#385171;--text:#e9f1fa;--muted:#abc0d5;--amber:#f09030;--blue:#68c0d8;--warn:#f4ca80}
+*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:var(--bg);color:var(--text);font-family:Barlow,system-ui,Arial,sans-serif}
+body{padding:0 0 32px}a{color:#9acfe5}button,input,select{font:inherit}
+header{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:17px max(20px,3vw);border-bottom:1px solid var(--line);background:#121f31}
+.back{text-decoration:none;font-weight:600}.tag{font:600 12px ui-monospace,monospace;color:var(--amber);letter-spacing:.06em}
+main{max-width:1480px;margin:0 auto;padding:24px 22px;display:grid;gap:18px}
+h1{font-size:clamp(24px,3vw,34px);margin:3px 0 4px;font-weight:650}h2{font-size:18px;margin:0 0 10px}
+.sub{color:var(--muted);margin:0;font-size:14px}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.kpi{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:13px 15px}
+.kpi strong{display:block;font-size:25px;letter-spacing:.02em;font-weight:650}.kpi span{font-size:12px;color:var(--muted)}
+.warning{background:#25283a;border:1px solid #755939;border-left:4px solid var(--warn);padding:12px 15px;border-radius:6px;color:#f2e4d1;line-height:1.45;font-size:13px}
+.warning strong{color:#f9cd87}.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tabs a{border:1px solid var(--line);color:var(--muted);background:var(--panel);text-decoration:none;padding:8px 14px;border-radius:7px;font-size:14px}
+.tabs a.active{border-color:var(--amber);color:#fff;background:#383044}
+.tools{display:flex;gap:12px;align-items:end;flex-wrap:wrap;background:var(--panel);padding:12px 14px;border:1px solid var(--line);border-radius:8px}
+.tools label{display:grid;gap:4px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.tools label.toggle{display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);margin-bottom:7px}
+.tools input:not([type=checkbox]),.tools select{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px 9px;color:var(--text);min-width:120px}
+.tools button{background:transparent;border:1px solid var(--line);color:var(--text);padding:8px 11px;border-radius:5px;cursor:pointer}
+.tools button:hover,.tabs a:hover{background:var(--hi)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;min-height:590px}
+.map-box{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:linear-gradient(#142438,#101c2c)}
+.map-box svg{display:block;width:100%;height:100%;min-height:570px;touch-action:none;cursor:grab}
+.map-box svg.dragging{cursor:grabbing}
+.map-box .foot{position:absolute;left:15px;bottom:11px;pointer-events:none;color:#d5e3f4;font:11px ui-monospace,monospace;background:#0e1826d8;padding:5px 8px;border:1px solid #344e68;border-radius:4px}
+.map-box .corner{position:absolute;left:16px;top:13px;pointer-events:none;color:#9ebad3;font:11px ui-monospace,monospace;background:#0e1826c9;padding:6px 9px;border-radius:4px}
+.side{display:flex;flex-direction:column;gap:12px}
+.side section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
+.side dt{font-size:12px;color:var(--muted);margin-top:13px}.side dd{margin:3px 0;font:14px ui-monospace,monospace;overflow-wrap:anywhere}
+.side p{font-size:13px;color:var(--muted);line-height:1.5;margin:0 0 11px}
+.legend{display:grid;gap:8px}.legend span{display:flex;align-items:center;gap:8px;font-size:13px;color:#d4e0ed}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--amber)}.dot.blue{background:var(--blue)}.dot.square{background:#fff;border-radius:2px}.dot.diamond{background:#aee2d3;border-radius:1px;transform:rotate(45deg)}
+#field-empty{color:var(--muted);font-size:13px}
+#map .grid{stroke:#31465f;stroke-width:1}#map .grid-label{font:11px ui-monospace,monospace;fill:#6e8cab}
+#map .links{stroke:#55708e;stroke-width:1.4;opacity:.28;pointer-events:none}
+#map .hull{stroke:#d6b26b;stroke-width:1.7;stroke-dasharray:5 7;fill:#f0903012;pointer-events:none}
+#map .tcu{stroke:#0b1726;stroke-width:1.5;cursor:pointer;transition:r .15s}
+#map .tcu:hover{stroke:#fff;stroke-width:2.3}#map .tcu.sel{stroke:#fff;stroke-width:3}
+#map .station{stroke:#061421;stroke-width:2;cursor:pointer}#map .station:hover{stroke:#fff}
+#map .label{font:12px ui-monospace,monospace;fill:#e3ecf5;pointer-events:none}
+#map .axis{font:13px ui-monospace,monospace;fill:#b1c3d3}#map .scale{stroke:#d6e3f0;stroke-width:2}
+footer{font-size:12px;color:var(--muted)}
+@media(max-width:1000px){.layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}.kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:610px){main{padding:15px 11px}.layout{min-height:unset}.side{display:flex}.kpis{grid-template-columns:repeat(2,1fr)}.map-box svg{min-height:420px}.tools{gap:8px}.tools label{font-size:10px}}
+</style>
+</head>
+<body>
+<header><a class="back" href="index.html">← Panel de proyectos</a><span class="tag">FACTIUN · 24029 · DATOS DECLARADOS</span></header>
+<main>
+<div><div class="tag">IMPLANTACIÓN · BORGO PIAVE / LATINA / ITALIA</div><h1 id="title">La Latina 2 · Plano 2D</h1><p class="sub">Geometría de centros de TCU y posiciones NCU/HSU procedentes de la plantilla de ingeniería.</p></div>
+<div class="kpis"><div class="kpi"><strong>67</strong><span>Centros TCU</span></div><div class="kpi"><strong>1</strong><span>NCU + HSU integrada</span></div><div class="kpi"><strong>1</strong><span>HSU externa</span></div><div class="kpi"><strong>2</strong><span>CT</span></div><div class="kpi"><strong>10</strong><span>Grupos</span></div></div>
+<div class="warning"><strong id="mode-note">PLANO DE CENTROS, NO DE MESAS.</strong> Las posiciones proceden del Excel de La Latina 2. No se ha verificado vectorialmente el DWG: no se representan longitud ni anchura de seguidores, lindero parcelario o topografía Z. La red dibujada muestra asignación/distancias geométricas, no cobertura RF ni telemetría real.</div>
+<nav class="tabs" aria-label="Vistas"><a href="?modo=2d" id="tab2d">Plano 2D · puntos</a><a href="https://siting.pages.dev/?planta=latina" target="_blank" rel="noopener" id="tabSiting">Abrir Siting oficial ↗</a></nav>
+<div class="tools">
+<label>CT <select id="ct"><option value="all">Ambos CT</option><option value="1">CT 1 · 35 TCU</option><option value="2">CT 2 · 32 TCU</option></select></label>
+<label>Grupo <select id="group"><option value="all">Todos los grupos</option></select></label>
+<label>Buscar TCU o ID <input id="search" type="search" placeholder="Ej. 42 / 1C-07" autocomplete="off"></label>
+<label class="toggle"><input id="links" type="checkbox"> Enlaces geométricos NCU–TCU</label>
+<label class="toggle"><input id="hull" type="checkbox"> Envolvente de centros (NO parcela)</label>
+<label class="toggle"><input id="numbers" type="checkbox"> Números de TCU</label>
+<button id="fit" type="button">Ajustar</button>
+</div>
+<div class="layout">
+  <div class="map-box"><div class="corner">UTM · Zona 33T · datum por confirmar · Norte ↑</div><svg id="map" viewBox="0 0 1000 700" role="img" aria-label="Mapa de 67 posiciones de TCU y estaciones NCU/HSU"><title>La Latina 2 · 67 centros de TCU de Excel</title></svg><div class="foot">Rueda: zoom · Arrastrar: mover · Clic: detalles · Escala en metros</div></div>
+  <aside class="side">
+    <section><h2>Equipo seleccionado</h2><div id="detail"><p>Selecciona una TCU, la NCU o la HSU externa en el plano.</p></div></section>
+    <section><h2>Capas y procedencia</h2><div class="legend"><span><i class="dot"></i> CT 1 · 35 TCU</span><span><i class="dot blue"></i> CT 2 · 32 TCU</span><span><i class="dot square"></i> NCU-1 + HSU integrada</span><span><i class="dot diamond"></i> HSU-2 externa</span></div><p style="margin-top:16px">El contorno discontinuo, cuando se activa, es la envolvente convexa de centros. No es la superficie catastral ni un límite de implantación.</p><p>Fuente: Excel interno v1 · hojas TCU, NCU y HSU. Sin cotas de levantamiento validadas.</p></section>
+    <section><h2>Comprobación geométrica</h2><div id="stats"><p>Calculando distancias...</p></div><p>Los resultados son distancias en planta. No prueban RSSI, visibilidad radioeléctrica ni latencia de alarma.</p></section>
+  </aside>
+</div>
+<footer>La Latina 2 · Fuente única de esta vista y del croquis de la portada: <code>data/latina-24029.js</code> · 67 centros medidos en plantilla, sin escala de mesas inventada.</footer>
+</main>
+<script src="data/latina-24029.js"></script>
+<script>
+(function () {
+"use strict";
+const D = window.FACTIUN_LATINA_24029;
+if (!D || D.points.length !== 67) {
+ document.querySelector(".layout").textContent = "Datos de la planta no disponibles o incompletos.";
+ return;
+}
+const $ = id => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg", svg=$("map");
+const qs = new URLSearchParams(location.search);
+if(qs.get("modo")==="siting"){ location.replace("https://siting.pages.dev/?planta=latina"); return; }
+const mode="2d";
+$("title").textContent = "La Latina 2 · "+(mode==="siting"?"Siting geométrico":"Plano 2D");
+$("mode-note").textContent = mode==="siting" ? "SITING GEOMÉTRICO, NO RF." : "PLANO DE CENTROS, NO DE MESAS.";
+$("tab"+(mode==="siting"?"Siting":"2d")).classList.add("active");
+$("links").checked = mode==="siting";
+for(let i=1;i<=10;i++){const o=document.createElement("option");o.value=String(i);o.textContent="Grupo "+i;$("group").append(o);}
+const pts=D.points.map(p=>({slave:p[0],name:p[1],x:p[2],y:p[3],ct:p[4],group:p[5]}));
+const stations=D.stations;
+const NCU=stations[0];
+const extent=[...pts,...stations];
+const xMin=Math.min(...extent.map(p=>p.x)),xMax=Math.max(...extent.map(p=>p.x));
+const yMin=Math.min(...extent.map(p=>p.y)),yMax=Math.max(...extent.map(p=>p.y));
+const W=1000,H=700, top=85, left=105, usableW=790, usableH=515;
+const ratio=Math.min(usableW/(xMax-xMin),usableH/(yMax-yMin));
+const toX=x=>left+(x-xMin)*ratio+(usableW-(xMax-xMin)*ratio)/2;
+const toY=y=>top+(yMax-y)*ratio+(usableH-(yMax-yMin)*ratio)/2;
+let view={x:0,y:0,w:W,h:H}, dragging=null,selected=null;
+const f4=n=>Number(n).toFixed(4).replace(".",",");
+function elt(type,attrs,parent){
+ const el=document.createElementNS(NS,type);
+ Object.entries(attrs||{}).forEach(([k,v])=>el.setAttribute(k,String(v)));
+ (parent||svg).appendChild(el);return el;
+}
+function tlabel(parent,s){const n=elt("title",{},parent);n.textContent=s;return n;}
+function vec(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+function convex(list){
+ const a=list.map(p=>[p.x,p.y]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+ const cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+ const lo=[],hi=[];
+ for(const p of a){while(lo.length>1 && cross(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p);}
+ for(const p of a.slice().reverse()){while(hi.length>1 && cross(hi[hi.length-2],hi[hi.length-1],p)<=0)hi.pop();hi.push(p);}
+ return lo.slice(0,-1).concat(hi.slice(0,-1));
+}
+function render(){
+ while(svg.lastChild)svg.lastChild.remove();
+ const gGrid=elt("g"),gHull=elt("g"),gLines=elt("g"),gPoints=elt("g"),gStations=elt("g");
+ // retícula UTM de 25 metros: la malla sólo es una referencia de escala
+ for(let x=Math.ceil(xMin/25)*25;x<=xMax;x+=25){
+   const X=toX(x);
+   elt("line",{x1:X,y1:top-23,x2:X,y2:H-65,class:"grid"},gGrid);
+   const txt=elt("text",{x:X+2,y:H-45,class:"grid-label"},gGrid);txt.textContent=String(x);
+ }
+ for(let y=Math.ceil(yMin/25)*25;y<=yMax;y+=25){
+   const Y=toY(y);
+   elt("line",{x1:65,y1:Y,x2:W-35,y2:Y,class:"grid"},gGrid);
+   const txt=elt("text",{x:10,y:Y-4,class:"grid-label"},gGrid);txt.textContent=String(y);
+ }
+ const dx=50*ratio;
+ elt("path",{d:"M75 651 H"+(75+dx)+" M75 647 V655 M"+(75+dx)+" 647 V655",class:"scale"},gGrid);
+ const sc=elt("text",{x:80+dx,y:656,class:"axis"},gGrid);sc.textContent="50 m";
+ const a=elt("text",{x:935,y:55,class:"axis"},gGrid);a.textContent="N ↑";
+ const filter=pts.filter(p=>($("ct").value==="all"||p.ct===+$("ct").value)&&($("group").value==="all"||p.group===+$("group").value));
+ if($("hull").checked && filter.length>2){
+  const poly=convex(filter);elt("polygon",{points:poly.map(p=>toX(p[0])+","+toY(p[1])).join(" "),class:"hull"},gHull);
+ }
+ if($("links").checked) for(const p of filter) elt("line",{x1:toX(NCU.x),y1:toY(NCU.y),x2:toX(p.x),y2:toY(p.y),class:"links"},gLines);
+ const query=$("search").value.toLowerCase().trim();
+ for(const p of filter){
+  const matches=!query || String(p.slave)===query || p.name.toLowerCase().includes(query);
+  const c=elt("circle",{cx:toX(p.x),cy:toY(p.y),r:matches?5.1:3.5,
+    fill:p.ct===1?"#f09030":"#68c0d8",opacity:matches?"1":".22",
+    class:"tcu"+(selected&&selected.slave===p.slave?" sel":""),
+    "data-tcu":p.slave,tabindex:0,role:"button","aria-label":"TCU "+p.slave+" "+p.name},gPoints);
+  tlabel(c,"TCU "+p.slave+" · "+p.name+" · CT "+p.ct+" · Grupo "+p.group);
+  c.addEventListener("click",ev=>{ev.stopPropagation();select(p);});
+  c.addEventListener("keydown",ev=>{if(ev.key==="Enter"){ev.preventDefault();select(p);}});
+  if($("numbers").checked){
+   const t=elt("text",{x:toX(p.x)+7,y:toY(p.y)-7,class:"label"},gPoints);t.textContent=String(p.slave);
+  }
+ }
+ const nc=elt("rect",{x:toX(NCU.x)-7,y:toY(NCU.y)-7,width:14,height:14,fill:"#ffffff",class:"station","aria-label":"NCU 1"},gStations);
+ tlabel(nc,"NCU-1 + HSU integrada");nc.addEventListener("click",()=>select(NCU));
+ const hsu=stations[1],hx=toX(hsu.x),hy=toY(hsu.y);
+ const sh=elt("polygon",{points:hx+","+(hy-9)+","+(hx+9)+","+hy+","+hx+","+(hy+9)+","+(hx-9)+","+hy,fill:"#aee2d3",class:"station","aria-label":"HSU 2 externa"},gStations);
+ tlabel(sh,"HSU-2 externa · esclavo 230");sh.addEventListener("click",()=>select(hsu));
+ for(const st of stations){
+  const l=elt("text",{x:toX(st.x)+11,y:toY(st.y)-12,class:"label"},gStations);l.textContent=st.id;
+ }
+ $("stats").textContent="";
+ const d=pts.map(p=>vec(p,NCU)).sort((a,b)=>a-b);
+ const t1=document.createElement("p");t1.textContent="NCU–TCU · mínimo "+d[0].toFixed(1)+" m · mediana "+d[33].toFixed(1)+" m · máximo "+d[66].toFixed(1)+" m.";
+ const t2=document.createElement("p");t2.textContent="NCU–HSU externa: "+vec(NCU,hsu).toFixed(1)+" m.";
+ const t3=document.createElement("p");t3.textContent="Mostradas "+filter.length+" de 67 TCU, todas asociadas al GW1 según Excel.";
+ $("stats").append(t1,t2,t3);
+}
+function select(p){
+ selected=p;const o=$("detail");o.textContent="";
+ const title=document.createElement("h2");title.textContent=p.slave ? "TCU "+p.slave+" · "+p.name:p.id;o.appendChild(title);
+ const entries=p.slave ?
+  [["CT",p.ct],["Grupo",p.group],["NCU","1"],["Gateway","1"],["Esclavo Modbus",p.slave],["Distancia geométrica NCU",vec(p,NCU).toFixed(2)+" m"],["Este UTM",f4(p.x)+" m"],["Norte UTM",f4(p.y)+" m"]] :
+  [["Tipo",p.label],["Este UTM",f4(p.x)+" m"],["Norte UTM",f4(p.y)+" m"],["Sensor de nieve",p.snow?"Sí (declarado)":"No (declarado)"]];
+ const dl=document.createElement("dl");for(const [k,v] of entries){const dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=k;dd.textContent=String(v);dl.append(dt,dd);}o.append(dl);
+ const foot=document.createElement("p");foot.style.marginTop="15px";foot.textContent="Fuente Excel. Datum UTM por confirmar. No hay lectura del equipo.";o.append(foot);
+ render();
+}
+for(const id of ["ct","group","search","links","hull","numbers"])$(id).addEventListener(id==="search"?"input":"change",render);
+function setView(){svg.setAttribute("viewBox",[view.x,view.y,view.w,view.h].join(" "));}
+$("fit").addEventListener("click",()=>{view={x:0,y:0,w:W,h:H};setView();});
+svg.addEventListener("wheel",ev=>{
+ ev.preventDefault();
+ const r=svg.getBoundingClientRect(),sx=(ev.clientX-r.left)/r.width,sy=(ev.clientY-r.top)/r.height;
+ const f=ev.deltaY>0?1.18:0.85;if(view.w*f>W*4||view.w*f<W*.22)return;
+ view.x+=(view.w-view.w*f)*sx;view.y+=(view.h-view.h*f)*sy;view.w*=f;view.h*=f;setView();
+},{passive:false});
+svg.addEventListener("pointerdown",ev=>{if(ev.target.closest&&ev.target.closest(".tcu,.station"))return;dragging={x:ev.clientX,y:ev.clientY,vx:view.x,vy:view.y};svg.classList.add("dragging");svg.setPointerCapture(ev.pointerId);});
+svg.addEventListener("pointermove",ev=>{
+ if(!dragging)return;const r=svg.getBoundingClientRect();
+ view.x=dragging.vx-(ev.clientX-dragging.x)*view.w/r.width;
+ view.y=dragging.vy-(ev.clientY-dragging.y)*view.h/r.height;setView();
+});
+svg.addEventListener("pointerup",()=>{dragging=null;svg.classList.remove("dragging");});
+svg.addEventListener("pointercancel",()=>{dragging=null;svg.classList.remove("dragging");});
+render();
+})();
+</script>
+</body>
+</html>

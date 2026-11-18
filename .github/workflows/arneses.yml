@@ -197,3 +197,28 @@ jobs:
         run: |
           node tests/test_meteo_sensores_reales.js
           node tests/test_meteo_sensores_browser.js
+
+  # Ensayo de interfaz rápido y con datos sintéticos: el BT de seis minutos
+  # tiene que verse encima y dentro de la gráfica, no solo contarse.
+  apuntamiento-exclusiones:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: dependencias
+        run: npm install --no-save --no-audit --no-fund playwright@1.62.1
+      - name: instalar Chromium
+        run: npx playwright install chromium
+      - name: servir simulador
+        run: |
+          python3 -m http.server 8099 --bind 127.0.0.1 >/dev/null 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:8099/sim-apuntamiento.html && break
+            sleep 1
+          done
+          curl -sf -o /dev/null http://localhost:8099/sim-apuntamiento.html
+      - name: comprobar periodos y franjas visibles
+        run: node tests/test_apuntamiento_exclusiones.js

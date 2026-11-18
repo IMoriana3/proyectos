@@ -76,9 +76,13 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
     <p id="objective">Mismo motor y un criterio: kWp × factor solar de orientación. Es un índice relativo de cielo claro, no una previsión de energía anual.</p>
     <div class="two"><label>Método<select id="searchMethod"><option value="random">Aleatorio</option><option value="gp">Aprendizaje GP · experimental</option><option value="grid">Barrido de ángulos</option></select></label>
       <label>Evaluaciones<select id="searchBudget"><option value="48" selected>48</option><option value="128">128</option><option value="256">256</option></select></label></div>
-    <div id="searchVariables"><label><input id="searchAz" type="checkbox" checked> Azimut del eje (±90°)</label><br>
+    <div class="two"><label>Criterio<select id="searchCrit" title="Energía pondera cada variante con el factor solar (orientación del eje en tracker, inclinación en fija). Potencia ordena por kWp instalados a secas — ojo: puede premiar llenar la parcela en diagonal, que mete más módulos y produce peor («cómo va a ser esto la mejor opción», 2026-09-08)"><option value="energia">Energía (kWp × factor solar)</option><option value="potencia">Potencia instalada (kWp)</option></select></label>
+      <label>Tilt máx. fija °<input id="searchTiltMax" type="number" value="45" min="5" max="60" step="1" title="Tope ESTRUCTURAL del barrido de inclinación en fija: ninguna propuesta lo supera"></label></div>
+    <div id="searchVariables"><label><input id="searchAz" type="checkbox" checked> Azimut (±90°) — eje en tracker, paneles en fija</label><br>
       <label><input id="searchRows" type="checkbox" checked> Alineado / tresbolillo</label><br>
-      <label><input id="searchXY" type="checkbox" checked> Origen X/Y (±medio pitch)</label></div>
+      <label><input id="searchXY" type="checkbox" checked> Origen X/Y (±medio pitch)</label><br>
+      <label><input id="searchTilt" type="checkbox" checked> Inclinación de la fija (5–45°)</label></div>
+    <p id="varWhy" hidden style="font-size:11px;color:var(--warn)"></p>
     <div class="three" id="searchGrid" hidden><label>Desde °<input id="gridFrom" type="number" value="90" step="any"></label><label>Hasta ° (excl.)<input id="gridTo" type="number" value="270" step="any"></label><label>Paso °<input id="gridStep" type="number" value="5" min="0.1" step="any"></label></div>
     <p id="methodNote">Primero se evalúa la referencia. Se conservan pitch, tallas, retranqueo, exclusiones y viales.</p>
     <div class="actions"><button id="searchRun" class="primary">Buscar</button><button id="searchPause">Pausar</button></div>
@@ -87,12 +91,13 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
   </section>
   <section class="tarj" id="comparison">
     <table aria-label="Comparación de implantaciones"><thead><tr><th>Resultado</th><th>Referencia</th><th>Propuesta</th></tr></thead><tbody id="searchMetrics"></tbody></table>
+    <p id="anualNota" hidden style="font-size:11px;color:var(--muted)">Energía anual de <b>cielo claro</b> (año entero, 8760 h, misma física del comparador; sin meteo del sitio: cota optimista). Energía = kWp × POA × PR, con PR <input id="searchPR" type="number" step="0.01" min="0.5" max="1" value="0.80" style="width:3.6em"> declarado. Informa también bajo criterio potencia; no cambia el orden de la búsqueda.</p>
     <p id="searchGain"></p>
     <table aria-label="Parámetros de implantación"><thead><tr><th>Parámetro</th><th>Referencia</th><th>Propuesta</th></tr></thead><tbody id="searchDesign"></tbody></table>
     <p id="searchChanges"></p>
     <p>Azimuts desde el norte geográfico. X longitudinal a las mesas, Y transversal; antes del centrado del bloque.</p>
     <details><summary>Mesas por talla</summary><table><thead><tr><th>Módulos/mesa</th><th>Referencia</th><th>Propuesta</th></tr></thead><tbody id="searchSizes"></tbody></table></details>
-    <div class="actions"><button id="viewBase">Ver referencia</button><button id="viewBest">Ver propuesta</button><button id="searchApply" class="primary" disabled>Aplicar al generador</button><button id="searchExport">Descargar comparación</button></div>
+    <div class="actions"><button id="viewBase">Ver referencia</button><button id="viewBest">Ver propuesta</button><button id="searchApply" class="primary" disabled>Aplicar al generador</button><button id="searchExport">Descargar comparación</button><button id="searchInforme" disabled title="Estudio imprimible (A4) con el formato del informe de batería del Gemelo: portada, conclusión, comparación, planos y límites declarados">📄 Informe</button><label style="font-size:11px;align-self:center"><input type="checkbox" id="repCliente"> para el cliente<small style="display:block;color:var(--muted)">sin marcar, se rotula «uso interno»</small></label></div>
     <p id="applyStatus"></p>
   </section>
   <details class="telemetry"><summary>Detalle de la búsqueda</summary>
@@ -110,7 +115,7 @@ html,body{height:100%;background:var(--void);color:var(--text);font-family:var(-
 
 <script src="lib/layout-search.js"></script>
 <script>
-/* Único optimizador de implantaciones, v1.10.0.
+/* Único optimizador de implantaciones, v1.15.0.
    Reutiliza los bloques canónicos del generador y sim-solar; no copia física.
    Referencia exacta primero; aleatorio y GP comparten candidatos y criterio.
    Barrido angular, azimut/disposición/X/Y y comparación viven en esta página.
@@ -143,6 +148,16 @@ const BASE={mount:"tracker",table:"1V",mods:[28],modLen:2.382,modWid:1.134,modul
 const ANCLA={lon:-3.7,lat:40.4};
 const M_LON=111320*Math.cos(ANCLA.lat*Math.PI/180),M_LAT=110540;
 const aLonLat=pts=>pts.map(p=>[ANCLA.lon+p[0]/M_LON,ANCLA.lat+p[1]/M_LAT]);
+/* la inversa, para PINTAR: lon/lat → los metros locales de la parcela. Cada
+   parcela lleva LA SUYA (aLocal), porque el frame del encargo tiene su propio
+   centro. El lienzo dibuja TODO por aquí — parcela y mesas en la misma
+   proyección. Antes las mesas se pintaban en el UTM del motor ancladas por
+   TRASLACIÓN al vértice 0 de la parcela: el UTM viene girado por la
+   convergencia de cuadrícula (~0,5° aquí), así que lejos del ancla las mesas
+   se salían de la linde en pantalla hasta un metro por cada ~150 m — «el
+   optimizador se sale de la parcela» (2026-11-18). El motor estaba limpio
+   (medido: 0 mesas fuera en SU frame); mentía solo el dibujo. */
+const anclaLocal=ll=>[(ll[0]-ANCLA.lon)*M_LON,(ll[1]-ANCLA.lat)*M_LAT];
 
 /* ── parcela sintética por semilla: polígono radial con mordidas, 0–2 agujeros ── */
 function parcelaSintetica(rnd){
@@ -158,7 +173,7 @@ function parcelaSintetica(rnd){
   for(let d=0;d<nd;d++){const cx=(rnd()-.5)*R*5,cy=(rnd()-.5)*R*4,r0=40+rnd()*180,m=9,ring=[];
     for(let i=0;i<m;i++){const a=i/m*2*Math.PI;ring.push([cx+Math.cos(a)*r0*(0.6+rnd()*.8),cy+Math.sin(a)*r0*(0.6+rnd()*.8)]);}
     deco.push(ring);}
-  return {pts,holes,deco,nombre:null};
+  return {pts,holes,deco,nombre:null,aLocal:anclaLocal};
 }
 
 /* ── el encargo del Generador: SU parcela y SU mesa, desde localStorage ── */
@@ -173,7 +188,8 @@ function parcelaDeEncargo(cfg){
   const lat0=cfg.coords.reduce((s,p)=>s+p[1],0)/cfg.coords.length;
   const mx=111320*Math.cos(lat0*Math.PI/180),my=110540;
   const am=pts=>pts.map(p=>[(p[0]-lon0)*mx,(p[1]-lat0)*my]);
-  return {pts:am(cfg.coords),holes:(cfg.holes||[]).map(am),deco:[],nombre:"parcela del Generador"};
+  return {pts:am(cfg.coords),holes:(cfg.holes||[]).map(am),deco:[],nombre:"parcela del Generador",
+    aLocal:ll=>[(ll[0]-lon0)*mx,(ll[1]-lat0)*my]};
 }
 
 /* ── parcela REAL: arrastra un <planta>_layout.json (vallado = tramos concatenados) ── */
@@ -184,7 +200,7 @@ function cargaLayoutReal(L){
     const u=anillo[anillo.length-1];if(!u||Math.hypot(u[0]-q[0],u[1]-q[1])>.01)anillo.push(q);}));
   if(anillo.length<3)return false;
   const cx=anillo.reduce((s,p)=>s+p[0],0)/anillo.length,cy=anillo.reduce((s,p)=>s+p[1],0)/anillo.length;
-  REAL={pts:anillo.map(p=>[p[0]-cx,p[1]-cy]),holes:[],deco:[],nombre:L.title||L.plant||"layout"};
+  REAL={pts:anillo.map(p=>[p[0]-cx,p[1]-cy]),holes:[],deco:[],nombre:L.title||L.plant||"layout",aLocal:anclaLocal};
   nuevoSite(true);return true;
 }
 addEventListener("dragover",e=>e.preventDefault());
@@ -217,6 +233,108 @@ addEventListener("drop",e=>{e.preventDefault();const fi=e.dataTransfer.files[0];
    rotarlo no es una variante de reparto sino apuntar los módulos a otro sitio. Se dice y se
    buscan disposición y origen X/Y. */
 let SOL=null,TABLA_F=null,GCR_F=0;
+/* ── FACTOR DE INCLINACIÓN EN FIJA («optimizar también el tilt», 2026-11-18) ──
+   La huella del motor NO depende del tilt (`fixed_tilt_deg` viaja en `decl`,
+   declarado y no consumido por la colocación), así que variar la inclinación
+   con un criterio de kWp sería ruido: necesita su índice de ENERGÍA. Sale de
+   la FÍSICA PURA del comparador de estructuras —extraída en runtime, como el
+   motor y el modelo solar; careada contra solargpt_core.structure_compare—:
+   transposición Perez de cielo claro sobre 12 días típicos, SOMBRA entre
+   filas al pitch del proyecto y cielo enmascarado por la vecina. Normalizado
+   a la inclinación del ENCARGO (la referencia vale 1). Mismo trato honesto
+   que el factor del tracker: índice RELATIVO, no una previsión de energía. */
+let FIS2=null,TILT_TAB=null,TILT0=25,TILT_CTX=null;
+function construyeTablaTilt(){
+  const c=CFGP.coords,lat=c.reduce((s,p)=>s+p[1],0)/c.length,lon=c.reduce((s,p)=>s+p[0],0)/c.length;
+  const spec=FIS2.spec('fija_proyecto');
+  const nT=parseInt(CFGP.table,10)||1,alto=nT*CFGP.modLen+(nT-1)*(CFGP.gapModules||0);
+  const G={gcr:alto/CFGP.pitch,pitch:CFGP.pitch,altoColector:alto};
+  const az0=Number.isFinite(CFGP.panelAz)?CFGP.panelAz:180;
+  const cfgF={lat,lon,albedo:(CFGP.decl&&Number.isFinite(CFGP.decl.albedo))?CFGP.decl.albedo:0.2,
+    tilt:TILT0,desvFija:az0-FIS2.azEquador(lat),
+    pend:0,pendAz:null,geomDe:()=>G};   // sin terreno aquí: pendiente 0, declarado
+  const M=FIS2.clearskyCorto(lat,lon,2026);
+  TILT_CTX={spec,cfgF,M,az0,cache:new Map()};
+  TILT_CTX.ref=FIS2.corre(spec,M,cfgF,TILT0).neta||1;
+  TILT_TAB=true;   // índice listo (el valor vive en la caché de fFija)
+}
+/* el índice de la fija, en DOS ejes: azimut de paneles e inclinación. La misma
+   física del comparador cobra la desviación del sur (desvFija) y la sombra
+   entre filas al tilt — normalizado al encargo: (az0, tilt0) vale 1. */
+function fFija(azDeg,tl){
+  if(!TILT_CTX)return 1;
+  const az=((azDeg%360)+360)%360,t=Math.max(0,Math.min(60,Math.round(tl)));
+  const k=Math.round(az)+'|'+t;
+  if(!TILT_CTX.cache.has(k)){
+    const cf=Object.assign({},TILT_CTX.cfgF,{desvFija:az-FIS2.azEquador(TILT_CTX.cfgF.lat)});
+    TILT_CTX.cache.set(k,FIS2.corre(TILT_CTX.spec,TILT_CTX.M,cf,t).neta/TILT_CTX.ref);
+  }
+  return TILT_CTX.cache.get(k);
+}
+function fTilt(tl){return TILT_CTX?fFija(TILT_CTX.az0,tl):1;}
+/* ── ENERGÍA ANUAL EN EL PANEL («deberíamos sacar la energía anual… aún cuando
+   optimicemos potencia», 2026-11-18). El factor del panel es un índice RELATIVO
+   sobre 12 días típicos; publicar kWh exige el año entero: la MISMA física
+   (FIS2) corre el cielo claro de 8760 h SOLO en las dos configuraciones
+   finales —referencia y mejor—, nunca por candidato (30× el coste para un
+   orden que el índice ya da). POA en kWh/m²·año; energía = kWp × POA × PR
+   (MWh), con el PR declarado y editable en pantalla. Cielo claro sin meteo
+   del sitio = COTA OPTIMISTA, y el rótulo lo dice. Se publica TAMBIÉN bajo
+   criterio potencia: informa, no ordena. */
+let ANUAL={M:null,cache:new Map(),cola:[],corriendo:false};
+function prAnual(){const v=+($('searchPR')&&$('searchPR').value);return v>=0.5&&v<=1?v:0.8;}
+function anualPoa(q){
+  const c=CFGP.coords,lat=c.reduce((s,p)=>s+p[1],0)/c.length,lon=c.reduce((s,p)=>s+p[0],0)/c.length;
+  const alb=(CFGP.decl&&Number.isFinite(CFGP.decl.albedo))?CFGP.decl.albedo:0.2;
+  if(q.tracker){
+    /* en tracker el GCR de los stats del motor ES apertura/pitch: se reusa tal cual */
+    const gcr=q.gcr||0.4,pitch=q.pitch||CFGP.pitch,G={gcr,pitch,altoColector:gcr*pitch};
+    const sp=FIS2.spec(!CFGP.decl||CFGP.decl.backtrack!==false?'tracker_hsat':'tracker_hsat_nobt');
+    const desv=((q.az-90+90)%180+180)%180-90;          // el eje es una recta: pliegue a ±90°
+    return FIS2.corre(sp,ANUAL.M,{lat,lon,albedo:alb,maxang:(CFGP.decl&&CFGP.decl.max_angle_deg)||55,
+      desvEje:desv,pend:0,pendAz:null,geomDe:()=>G}).neta;
+  }
+  const nT=parseInt(CFGP.table,10)||1,alto=nT*CFGP.modLen+(nT-1)*(CFGP.gapModules||0);
+  const G={gcr:alto/CFGP.pitch,pitch:CFGP.pitch,altoColector:alto};
+  return FIS2.corre(FIS2.spec('fija_proyecto'),ANUAL.M,{lat,lon,albedo:alb,tilt:q.tilt,
+    desvFija:q.az-FIS2.azEquador(lat),pend:0,pendAz:null,geomDe:()=>G},q.tilt).neta;
+}
+function anualEncola(key,q){
+  if(ANUAL.cola.some(e=>e.key===key))return;
+  ANUAL.cola.push({key,q});
+  if(ANUAL.corriendo)return;
+  ANUAL.corriendo=true;
+  const mia=ANUAL;                     // si nuevoSite() resetea, esta cola muere sola
+  const paso=()=>{
+    if(mia!==ANUAL){mia.corriendo=false;return;}
+    const e=ANUAL.cola.shift();
+    if(!e){ANUAL.corriendo=false;return;}
+    try{ANUAL.cache.set(e.key,anualPoa(e.q));}catch(err){ANUAL.cache.set(e.key,null);}
+    if(window.LayoutSearchUI)LayoutSearchUI.render();
+    setTimeout(paso,0);
+  };
+  if(ANUAL.M)setTimeout(paso,0);
+  else{
+    const c=CFGP.coords,lat=c.reduce((s,p)=>s+p[1],0)/c.length,lon=c.reduce((s,p)=>s+p[0],0)/c.length;
+    FIS2.clearsky(lat,lon,2026).then(o=>{if(mia===ANUAL){ANUAL.M=o;setTimeout(paso,0);}else mia.corriendo=false;});
+  }
+}
+/* d = item de describe() de la UI ({panelAz,tilt,kWp,gcr,pitch}). Devuelve
+   {poa,mwh}, la cadena 'calculando' mientras corre, o null si no puede. */
+window.ANUAL_DE=function(d){
+  if(!FIS2||!CFGP||!CFGP.coords||!d||!Number.isFinite(d.kWp))return null;
+  const az=Math.round(((((d.panelAz!=null?d.panelAz:(GIRA?90:180))%360)+360)%360)*4)/4;
+  const tilt=GIRA?null:Math.round(d.tilt!=null?d.tilt:TILT0);
+  const key=(GIRA?'T':'F')+az+'|'+(tilt==null?'-':tilt)+'|'+Math.round((GIRA?(d.gcr||0):0)*1000);
+  if(ANUAL.cache.has(key)){
+    const poa=ANUAL.cache.get(key);
+    if(poa==null)return null;
+    return {poa,mwh:d.kWp*poa*prAnual()/1000};
+  }
+  anualEncola(key,{tracker:GIRA,az,tilt,gcr:d.gcr,pitch:d.pitch});
+  return 'calculando';
+};
+window.PR_ANUAL=prAnual;
 function construyeTablaF(gcr,maxAngle,backtrack){
   const c=CFGP.coords,lat=c.reduce((s,p)=>s+p[1],0)/c.length,lon=c.reduce((s,p)=>s+p[0],0)/c.length;
   /* el año en 12 días (el 15 de cada mes) a paso de 15 min: la RAZÓN entre orientaciones se
@@ -254,23 +372,34 @@ let LAY=null,PARCELA=null,CFGP=null,RND=null,GIRA=true,VIAL_FIJO=0,OFF_BASE="non
 let OPC=0,MEJOR=null,BASE_REF=null,ULTIMO=null,KWS=[],GAPS=[],DESDE=0,HIST={giro:[],vial:new Map()},NUBE=[],SERIE=[];
 let VISTA={ang:0},SAMPLER=null,TRACE=[],SEARCH_ERROR=null,VIEW_RESULT='best',SEARCH_START=0,SEARCH_OPTIONS=null;
 function searchOptions(){return {method:$('searchMethod').value,seed:(SEM[0]*2654435761^SEM[1])>>>0,
-  rotate:GIRA&&!!SOL&&$('searchAz').checked,stagger:$('searchRows').checked,xy:$('searchXY').checked,
+  crit:$('searchCrit').value,
+  rotate:$('searchAz').checked&&(GIRA?!!SOL:(!!FIS2||$('searchCrit').value==='potencia')),
+  stagger:$('searchRows').checked,xy:$('searchXY').checked,
+  tilt:!GIRA&&!!FIS2&&$('searchTilt').checked,
+  tilt0:TILT0,tiltMax:+$('searchTiltMax').value,
   from:+$('gridFrom').value,to:+$('gridTo').value,step:+$('gridStep').value};}
 
 function nuevoSite(mismaParcela){
   if(!mismaParcela){SITE++;ENCARGO=null;}                        // N sale del encargo: vuelven los sintéticos
   const rp=rngDe(SEM[0]+SITE*7919,SEM[1]);                       // la parcela sale del site…
   PARCELA=ENCARGO?parcelaDeEncargo(ENCARGO):(REAL||parcelaSintetica(rp));
+  ANUAL={M:null,cache:new Map(),cola:[],corriendo:false};   // el anual es DE ESTA parcela y mesa
   RND=rngDe(SEM[0]+SITE*104729,SEM[1]);     // …y la búsqueda, de su propia rama
   AZ0=ENCARGO&&Number.isFinite(ENCARGO.panelAz)?ENCARGO.panelAz:90;                         // el giro ±90° se SUMA al azimut del encargo
-  GIRA=!(ENCARGO&&["fija","fixed"].includes(ENCARGO.mount));                       // en fija el azimut es el de los paneles: no se gira
+  /* GIRA = tracker. La fija TAMBIÉN puede girar desde v1.14.0 («se debe poder
+     orientar las fijas con otro azimuth»): la regla de septiembre nació cuando
+     el criterio era kWp a secas y girar era reorientar los paneles sin que
+     nada lo cobrara; ahora el índice f(azimut, tilt) lo cobra, y bajo potencia
+     es packing puro declarado. El azimut de la fija es el de los PANELES. */
+  GIRA=!(ENCARGO&&["fija","fixed"].includes(ENCARGO.mount));
   VIAL_FIJO=ENCARGO?(+ENCARGO.roadNsEvery||0):0;                 // restricción de obra, no variable
   OFF_BASE=(ENCARGO&&ENCARGO.rowOffset)||"none";
   TABLA_F=null;GCR_F=0;                                          // el rendimiento es de ESTE sitio (su latitud)
+  TILT_TAB=null;TILT_CTX=null;
+  TILT0=(ENCARGO&&ENCARGO.decl&&Number.isFinite(ENCARGO.decl.fixed_tilt_deg))?ENCARGO.decl.fixed_tilt_deg:25;
   CFGP=ENCARGO?Object.assign({},ENCARGO)
               :Object.assign({},BASE,{coords:aLonLat(PARCELA.pts),holes:PARCELA.holes.map(aLonLat)});
   OPC=0;MEJOR=null;BASE_REF=null;ULTIMO=null;KWS=[];GAPS=[];DESDE=0;NUBE=[];SERIE=[];
-  OFF=[0,0];   // el origen UTM del dibujo es DE CADA PARCELA: sin esto, tras cambiar de site las mesas salían corridas si conducía PASO()
   HIST={giro:new Array(15).fill(null),vial:new Map()};
   /* Con la parcela del USUARIO (encargo o layout real) la vista es LA DEL
      MAPA: norte arriba, sin giro y sin tumbado — dos partes seguidos de «no
@@ -283,9 +412,14 @@ function nuevoSite(mismaParcela){
   CFGP.panelAz=AZ0;CFGP.rowOffset=OFF_BASE;
   SEARCH_OPTIONS=searchOptions();
   try{SAMPLER=LayoutSearch.sampler(CFGP,SEARCH_OPTIONS);}catch(e){SAMPLER=null;SEARCH_ERROR=e.message;PAUSA=true;}
-  $('searchAz').disabled=!GIRA||!SOL;
-  $('searchMethod').querySelector('[value="grid"]').disabled=!GIRA||!SOL;
-  $('objective').textContent=!GIRA?'Montaje fijo: orientación conservada; se compara potencia instalada (kWp).':
+  $('searchAz').disabled=GIRA?!SOL:(!FIS2&&$('searchCrit').value!=='potencia');
+  $('searchTilt').disabled=GIRA||!FIS2;
+  $('searchMethod').querySelector('[value="grid"]').disabled=GIRA?!SOL:(!FIS2&&$('searchCrit').value!=='potencia');
+  $('objective').textContent=$('searchCrit').value==='potencia'?
+    'Criterio: POTENCIA instalada (kWp) — elegido a propósito; a igualdad de kWp desempata el mejor factor solar. Ojo: puede premiar orientaciones que meten más módulos y producen peor.':
+    !GIRA?(FIS2&&$('searchTilt').checked?
+    'Montaje fijo: orientación conservada; criterio: kWp × factor de inclinación (cielo claro con sombra entre filas a tu pitch, hasta el tope configurado). Índice relativo, no energía anual.':
+    'Montaje fijo: orientación conservada; se compara potencia instalada (kWp).'):
     !SOL?'Modelo solar no disponible: azimut bloqueado; se compara potencia instalada (kWp).':
     'Criterio: kWp × factor solar de orientación. Índice relativo de cielo claro; no es una previsión de energía anual.';
   $('applyStatus').textContent='';
@@ -305,14 +439,23 @@ function candidato(){
   if(GIRA&&SOL&&valid&&!TABLA_F)
     construyeTablaF(s.GCR||0.4,(CFGP.decl&&CFGP.decl.max_angle_deg)||55,
       !CFGP.decl||CFGP.decl.backtrack!==false);
-  const rend=GIRA&&SOL?factorF(az-90):1,ener=valid?kwp*rend:null;
+  if(!GIRA&&FIS2&&valid&&!TILT_TAB&&SEARCH_OPTIONS&&(SEARCH_OPTIONS.tilt||SEARCH_OPTIONS.rotate))construyeTablaTilt();
+  /* criterio POTENCIA: el ORDEN es kWp a secas, elegido a propósito. El factor
+     se calcula igual cuando hay índice, pero solo DESEMPATA (a igualdad de
+     kWp gana la variante con mejor factor solar — declarado en pantalla):
+     sin esto, «tilt variable con potencia» elegiría un tilt al azar entre
+     empates, que es fabricar una preferencia. */
+  const potencia=!!(SEARCH_OPTIONS&&SEARCH_OPTIONS.crit==='potencia');
+  const rendF=GIRA&&SOL?factorF(az-90):(TILT_TAB?fFija(az,cfg._tilt!=null?cfg._tilt:TILT0):1);
+  const rend=potencia?1:rendF,ener=valid?kwp*rend:null;
   const xOffsetM=cfg._xOff??s.x_offset_chosen_m??0,yOffsetM=cfg._yOff??s.y_offset_chosen_m??0;
-  ULTIMO={r,config:cfg,giro,az,offset,vial,kwp,rend,ener,valid,xOffsetM,yOffsetM,
+  ULTIMO={r,config:cfg,giro,az,offset,vial,kwp,rend,rendF,ener,valid,xOffsetM,yOffsetM,
+    tilt:(!GIRA&&TILT_TAB&&SEARCH_OPTIONS&&SEARCH_OPTIONS.tilt)?(cfg._tilt!=null?cfg._tilt:TILT0):null,
     str:s.strings||0,util:s.usable_fill||0,iteration:OPC};
   if(OPC===0)BASE_REF=ULTIMO;
   SAMPLER.observe(r,ener);
   TRACE.push({iteration:OPC++,stage:trial.stage,valid,score:ener,kWp:kwp,modules:s.modules||0,
-    panelAz:az,rowOffset:offset,xOffsetM,yOffsetM,ms:performance.now()-t0,
+    panelAz:az,rowOffset:offset,xOffsetM,yOffsetM,tilt:ULTIMO.tilt,ms:performance.now()-t0,
     predictionBeforeEvaluation:trial.prediction,error:valid?null:(error||'Geometría no válida según el motor')});
   if(!valid)return true;
   const kv="v"+vial;if(!HIST.vial.has(kv)||ener>HIST.vial.get(kv))HIST.vial.set(kv,ener);
@@ -320,7 +463,8 @@ function candidato(){
   const b=Math.max(0,Math.min(14,Math.floor((giro+90)/12)));
   if(HIST.giro[b]==null||ener>HIST.giro[b])HIST.giro[b]=ener;
   if(NUBE.length<4000)NUBE.push([giro,vial+(offset==='half'?.45:0),ener]);
-  if(!MEJOR||ener>MEJOR.ener+1e-8){
+  if(!MEJOR||ener>MEJOR.ener+1e-8||
+     (potencia&&Math.abs(ener-MEJOR.ener)<=1e-8&&rendF>(MEJOR.rendF||0)+1e-9)){
     GAPS.push(OPC-DESDE);DESDE=OPC;if(GAPS.length>12)GAPS.shift();MEJOR=ULTIMO;
   }
   SERIE.push([OPC,MEJOR.ener,MEJOR.util]);if(SERIE.length>900)SERIE.splice(0,SERIE.length-900);
@@ -336,7 +480,8 @@ function aplicaMejor(){
   }
   localStorage.setItem('buscador_mejor',JSON.stringify({encargoId:ENCARGO_ID,panelAz:MEJOR.az,
     giro:MEJOR.giro,axis:MEJOR.az-90,rend:MEJOR.rend,rowOffset:MEJOR.offset,roadNsEvery:VIAL_FIJO,
-    xOffsetM:MEJOR.xOffsetM,yOffsetM:MEJOR.yOffsetM,kwp:MEJOR.kwp,str:MEJOR.str,fecha:Date.now()}));
+    xOffsetM:MEJOR.xOffsetM,yOffsetM:MEJOR.yOffsetM,kwp:MEJOR.kwp,str:MEJOR.str,
+    tilt:(MEJOR.tilt!=null?MEJOR.tilt:undefined),fecha:Date.now()}));
   $('applyStatus').textContent='Propuesta enviada. Vuelve al generador y pulsa Generar para materializarla.';
   pon($('applyStatus').textContent,9000);
 }
@@ -375,18 +520,28 @@ function dibuja(){
   CX.strokeStyle="rgba(220,227,235,.5)";CX.lineWidth=1.2;CX.stroke();
   PARCELA.holes.forEach(h=>{traza(h,true);CX.fillStyle="rgba(11,20,33,.95)";CX.fill();CX.strokeStyle="rgba(140,154,171,.4)";CX.stroke();});
   const u=VIEW_RESULT==='base'?BASE_REF:(MEJOR||ULTIMO);if(!u||!u.r)return;
-  mideOff(u.r);
-  const loc=q=>[q[0]-OFF[0],q[1]-OFF[1]];
+  const loc=q=>PARCELA.aLocal(u.r.toLonLat(q));
   (u.r.roads||[]).forEach(rd=>{if(rd&&rd.length){traza(rd.map(loc),true);CX.fillStyle="rgba(140,154,171,.10)";CX.fill();}});
   const full=CFGP.mods[0],t=performance.now()/460;
-  u.r.structures.forEach(st=>{const p=st.utm.map(loc),f=Math.min(1,(st.mods||full)/full);
+  u.r.structures.forEach(st=>{const p=mesaEnLienzo(st,u.r),f=Math.min(1,(st.mods||full)/full);
     traza(p,true);
     CX.strokeStyle=f>=1?"rgba(84,240,150,.85)":"hsla("+(120*f)+",85%,60%,.85)";
     CX.lineWidth=f>=1?1.1:1.4;CX.stroke();});
-  (u.r.descartadas||[]).forEach(st=>{if(!st.utm)return;const p=st.utm.map(loc);
+  (u.r.descartadas||[]).forEach(st=>{const p=mesaEnLienzo(st,u.r);if(!p)return;
     traza(p,true);CX.strokeStyle="rgba(239,95,107,"+(0.55+0.35*Math.sin(t))+")";CX.lineWidth=2;CX.stroke();});
   brujula();
 }
+/* UNA función dice dónde cae una mesa en el frame de la parcela, y la usan el
+   lienzo, el plano del informe y el oráculo del banco: tres consumidores que
+   no pueden discrepar. Pinta desde lon/lat con la proyección de la parcela
+   (PARCELA.aLocal) — anclar el UTM del motor por TRASLACIÓN dejaba las mesas
+   fuera de la linde en pantalla, porque la convergencia de cuadrícula es un
+   GIRO (~0,5° aquí: ~1 m de error por cada 150 m desde el ancla). */
+function mesaEnLienzo(st,r){
+  if(st.lonlat)return st.lonlat.map(PARCELA.aLocal);
+  return st.utm?st.utm.map(q=>PARCELA.aLocal(r.toLonLat(q))):null;
+}
+window.mesaEnLienzo=mesaEnLienzo;
 /* Brújula: la vista GIRA despacio, así que el norte no es fijo en pantalla.
    La flecha se deriva de la MISMA proyección que pinta la planta (pV), no de
    VISTA.ang aparte: si alguien toca la proyección, la brújula lo cuenta. */
@@ -403,10 +558,10 @@ function brujula(){
   CX.fillStyle="rgba(220,227,235,.8)";CX.font="600 10px "+getComputedStyle(document.body).getPropertyValue("--mono");
   CX.fillText("N",bx+dx*(R+9)-3,by+dy*(R+9)+3.5);
 }
-/* structures.utm viene en UTM absolutas; el origen local se mide una vez por site */
-let OFF=[0,0];
-function mideOff(r){if(!r||!r.parcel_utm||!r.parcel_utm.length)return;
-  const q=r.parcel_utm[0],p=PARCELA.pts[0];OFF=[q[0]-p[0],q[1]-p[1]];}
+/* (aquí vivió el origen UTM del dibujo, OFF/mideOff: un ancla por TRASLACIÓN
+   del frame UTM del motor al de la parcela. Se retiró al pintar desde lon/lat
+   con PARCELA.aLocal — la traslación no puede absorber el giro de la
+   convergencia UTM, y las mesas se salían de la linde en pantalla.) */
 
 /* ── el panel ── */
 function miniCanvas(c){const d=Math.min(devicePixelRatio||1,2),w=c.clientWidth,h=c.clientHeight||+c.getAttribute("height");
@@ -478,7 +633,7 @@ function barra(){
     (MEJOR?" · mejor <b>"+fmtK(MEJOR.kwp)+"</b> × <b>"+(MEJOR.rend*100).toFixed(1)+"%</b> rend."+
       (MEJOR.rend<0.985?" <span class=r>(eje "+(MEJOR.az-90).toFixed(0)+"°, no N-S)</span>":"")+
       " · "+mejora():"")+
-    (GIRA?"":" · <b>fija: no se gira</b> (el azimut es el de los paneles)")+
+    (GIRA?"":" · <b>fija</b>: azimut de PANELES"+(SEARCH_OPTIONS&&SEARCH_OPTIONS.rotate?" (girarlo reorienta los módulos; el criterio lo cobra)":""))+
     (ULTIMO&&ULTIMO.r&&ULTIMO.r.descartadas&&ULTIMO.r.descartadas.length?" · <span class=r>"+ULTIMO.r.descartadas.length+" descartadas en rojo</span>":"")+
     (ENCARGO?"":" · mesa 1V·28×630 Wp bifila · pitch 6")+
     " · <b>Espacio</b> pausa · <b>N</b> site · <b>R</b> semilla · <b>C</b> limpia · <b>H</b> panel · arrastra un layout.json";
@@ -491,7 +646,6 @@ function vuelta(now){
   if(LAY&&!PAUSA){
     const t0=performance.now();
     do{if(OPC>=+$("searchBudget").value||!candidato()){PAUSA=true;break;}}while(performance.now()-t0<24);   // al menos uno; más si el motor da
-    if(ULTIMO&&ULTIMO.r&&!OFF[0])mideOff(ULTIMO.r);
     if(!QUIETO&&!ENCARGO&&now-ultAvance>12000){REAL=null;nuevoSite();ultAvance=now;}
   }
   if(!VISTA.plano)VISTA.ang+=.0009;
@@ -510,14 +664,24 @@ addEventListener("keydown",e=>{
 });
 
 /* ── ganchos del banco: correr N candidatos en seco y leer el estado ── */
-window.PASO=n=>{for(let i=0;i<n;i++){if(!candidato())break;}if(OPC&&!OFF[0])mideOff(ULTIMO.r);dibuja();panel();barra();if(window.LayoutSearchUI)LayoutSearchUI.render();};
+window.PASO=n=>{for(let i=0;i<n;i++){if(!candidato())break;}dibuja();panel();barra();if(window.LayoutSearchUI)LayoutSearchUI.render();};
 window.ESTADO=()=>({opciones:OPC,mejorKwp:MEJOR?MEJOR.kwp:0,mejorStr:MEJOR?MEJOR.str:0,
-  semilla:SEM.join("-"),site:SITE,real:!!REAL,off:OFF.slice(),encargo:!!ENCARGO,az0:AZ0,
-  gira:GIRA,sol:!!SOL,tabla:!!TABLA_F,mejorGiro:MEJOR?MEJOR.giro:null,
+  semilla:SEM.join("-"),site:SITE,real:!!REAL,encargo:!!ENCARGO,az0:AZ0,
+  gira:GIRA,rota:!!(SEARCH_OPTIONS&&SEARCH_OPTIONS.rotate),sol:!!SOL,tabla:!!TABLA_F,tablaTilt:!!TILT_TAB,tilt0:TILT0,
+  mejorRendF:MEJOR?(MEJOR.rendF??null):null,
+  mejorTilt:MEJOR?MEJOR.tilt:null,mejorGiro:MEJOR?MEJOR.giro:null,
   baseKwp:BASE_REF?BASE_REF.kwp:null,baseEner:BASE_REF?BASE_REF.ener:null,
   mejorRend:MEJOR?MEJOR.rend:null,mejorEner:MEJOR?MEJOR.ener:null,
   descartadas:ULTIMO&&ULTIMO.r&&ULTIMO.r.descartadas?ULTIMO.r.descartadas.length:0});
 window.FACTOR=factorF;
+window.FTILT=fTilt;
+window.FFIJA=fFija;
+/* sonda del banco: la POA anual de una configuración, con ANUAL.M ya puesto */
+window.ANUAL_CORRE=q=>anualPoa(q);
+/* sonda del banco: la POA neta a un tilt, con o sin sombra entre filas */
+window.TILT_CORRE=(tl,sinSombra)=>{if(!TILT_CTX)return null;
+  const sp=sinSombra?Object.assign({},TILT_CTX.spec,{sinSombra:true}):TILT_CTX.spec;
+  return FIS2.corre(sp,TILT_CTX.M,TILT_CTX.cfgF,tl).neta;};
 window.cargaLayoutReal=cargaLayoutReal;
 
 /* ── arranque: el motor DE VERDAD, extraído del generador con el regex del banco ── */
@@ -539,6 +703,13 @@ window.cargaLayoutReal=cargaLayoutReal;
       if(a&&b){(new Function(a[1]+b[1]+";window.__SOL={solarGeom:solarGeom,singleaxis:singleaxis};"))();
         SOL=window.__SOL;}
     }catch(e){SOL=null;}
+    /* y la FÍSICA PURA del comparador de estructuras, para el factor de
+       inclinación en fija: el mismo camino de extracción, sin segundo motor */
+    try{
+      const hf=await (await fetch("comparador-estructuras.html")).text();
+      const f=hf.match(/FÍSICA PURA — inicio ═+[\s\S]*?\*\/([\s\S]*?)\/\* ═+ FÍSICA PURA — fin/);
+      if(f){(new Function(f[1]+";window.__FIS=FIS;"))();FIS2=window.__FIS;}
+    }catch(e){FIS2=null;}
   }catch(e){
     $("aviso").hidden=false;
     $("avisoTxt").innerHTML="<b>No puedo cargar el motor de layout.</b><br>"+e.message+
@@ -547,11 +718,17 @@ window.cargaLayoutReal=cargaLayoutReal;
       "Desde <code>file://</code> el navegador bloquea esa lectura.";
     return;
   }
+  const PAGE_VER='1.15.0';
+  const libVer=window.LayoutSearch&&LayoutSearch.LIB_VER;
+  if(libVer!==PAGE_VER)
+    pon('⚠ Versiones mezcladas por caché: página v'+PAGE_VER+' con módulos v'+(libVer||'antigua')+
+        '. Recarga forzada (Ctrl+Mayús+R) — hasta entonces, mandos como el tope de tilt pueden no aplicar.',60000);
   nuevoSite(true);
   requestAnimationFrame(vuelta);
 })();
 </script>
 <script src="lib/layout-search-ui.js"></script>
+<script src="lib/layout-informe.js"></script>
 <!-- el índice de plantas y herramientas, el mismo de la portada (lo pinta lib/indice.js) -->
 <script src="lib/indice.js" defer></script>
 </body>

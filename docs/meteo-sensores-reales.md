@@ -85,11 +85,14 @@ planta**:
 
 ### De dónde sale el viento: todo el histórico, sin tope de fechas
 
-La simulación **no depende del periodo cargado arriba**. En «Más parámetros» se elige:
+La simulación **no depende de lo que se cargue arriba**: con la sesión iniciada la tarjeta
+está siempre visible, aunque «Cargar y comparar» no haya cargado nada (por ejemplo, porque
+el periodo pedido pasa de 370 días), y simula la planta elegida en «Planta». Las gráficas
+y la lista aparecen cuando hay simulación. En «Más parámetros» se elige:
 
 - **Todo el histórico de la base** (por defecto cuando las medidas vienen de Supabase).
-  La tarjeta pide a `telemetria` únicamente el eje de tiempos y `wind_speed_max` de las
-  filas `hsu` de la planta —`fetchSupabaseWindPeak`, en `lib/meteo-supabase.js`— y las
+  La tarjeta pide a `telemetria` únicamente el eje de tiempos, `wind_speed_max` y
+  `wind_direction` de las filas `hsu` de la planta —`fetchSupabaseWindPeak`, en `lib/meteo-supabase.js`— y las
   va volcando página a página en 1.440 valores por sensor y día
   (`createWindSeriesBuilder`). No se convierten en lecturas sueltas, así que **no hay
   tope de días**: un año o tres se simulan de una vez. «Desde» y «Hasta» son
@@ -131,15 +134,22 @@ lectura sobre umbral, y una lectura posterior es otra activación. De cada una s
 instante, la racha al cruzar, el pico del evento, la posición inicial, la posición
 objetivo y los grados a mover (0° si ya está en posición).
 
+Si las dos alarmas saltan **en el mismo minuto** (la racha pasa de menos de 40 a más de
+60 km/h) el seguidor hace un solo movimiento y se reparte: al pre-stow, el tramo hasta
+su posición (30° de día, 55° E de noche); al stow, el resto. Ninguna de las dos cuenta
+el recorrido de la otra, y los grados de cada fila son los de su fórmula.
+
 ### Lo que la lógica no define, a la vista
 
 Dos huecos de la especificación se resuelven con un desplegable, no a escondidas:
 
 - **Pre-stow al cruzar el mediodía solar** — «mantiene el lado en el mínimo» (por
   defecto) o «sigue al sol y cruza por horizontal».
-- **Alarma activa al anochecer** — «va a stow Este» (por defecto: si el seguidor está
-  al Oeste llega cruzando por horizontal con la alarma activa, y la tarjeta cuenta
-  cuántas noches pasa) o «se queda donde está».
+- **Alarma activa al anochecer** — «se queda donde está» (por defecto, confirmado por
+  Posventa el 13/11/2026: el seguidor sigue abanderado en su lado hasta que acabe la
+  alarma; si ya de noche sube a stow, va al stow de ese lado) o «va a stow Este» (si
+  está al Oeste llega cruzando por horizontal con la alarma activa, y la tarjeta cuenta
+  cuántas noches pasa).
 
 La velocidad de giro es opcional: vacía, el seguidor está siempre en la posición que
 le marca la lógica; con un valor, una alarma puede pillarlo a medio camino.
@@ -158,22 +168,103 @@ le marca la lógica; con un valor, una alarma puede pillarlo a medio camino.
 
 Cortas a propósito, para que se lean de un vistazo:
 
-- **Resumen**, una fila por alarma: veces que salta, en cuántas no hay que mover el
-  seguidor, en cuántas sí y cuánto (de día y de noche).
+- **Resumen**, una fila por alarma y el movimiento **en columnas**: episodios, veces que
+  salta, en cuántas no hay que mover el seguidor y, de día y de noche por separado, cuántas
+  veces hay que moverlo y la media y el máximo de grados de recorrido (nunca una posición).
+  Junto al umbral, su valor en m/s.
+- **Uso por año** (`windLogicInsights`): episodios, veces que salta, movimientos, grados de
+  recorrido y horas en alarma, divididos entre los años con dato. Es como se dimensiona el
+  accionamiento.
 - **Recuento por racha máxima**, en una línea.
 - **Activaciones por semana**.
 - **Lista completa**, plegada, con filtro; y su **CSV** (separador «;», coma decimal,
   hora UTC y hora local de la planta), solo del grupo que se está viendo.
 
-Con más de una NCU, «Grupo de sensores» ofrece cada NCU y, además, **«Planta entera
-(todas las NCU)»**: en cada minuto manda la racha más alta de cualquier HSU. Sirve si la
-alarma de viento es de planta y no de cada NCU; qué caso es el real depende del control.
-- **Informe** de una página, imprimible a PDF y con aspecto de nota escrita a mano: sin
-  membrete, empieza por el título; ficha (planta, sensores, periodo), dos frases de resumen,
-  «Tabla 1» con el resumen y el reparto por racha máxima al pie, «Figura 1» con las
-  activaciones por semana, «Tabla 2» con las reglas como fórmulas (condición, posición
-  y grados a mover, con los valores simulados) y las observaciones. No lleva la lista
-  de activaciones ni explica el cálculo en prosa.
+Con más de una NCU, «Grupo de sensores» abre con **«Planta entera (todas las NCU)»**: en
+cada minuto manda la racha más alta de cualquier HSU, así que varias HSU en alarma a la vez
+son una sola activación. Es lo que cuenta para la alarma (confirmado por Posventa el
+13/11/2026). Cada NCU queda como detalle; sus recuentos no se suman.
+
+### Episodios de viento
+
+Con la regla de desactivar 30 min después de la última racha, en una misma ventolera la
+alarma cae y vuelve a saltar. En El Burgo I, de 770 pre-stow, 264 saltan menos de 30 min
+después de que el anterior se desactivara. Por eso el resumen cuenta **episodios**: las
+activaciones del mismo tipo que vuelven a saltar antes de un margen (2 h por defecto, a la
+vista, y sin volver a simular) son un mismo episodio. Al lado siguen las veces que salta la
+alarma, que es lo que haría el control con esa regla. Con margen 0, episodio = activación.
+
+### Gráficas
+
+- **Calendario de alarmas**: **una fila por año**, con los meses alineados en vertical
+  para que se vea la estación; dentro de cada fila un día es una columna de 0 a 24 h con
+  los tramos en pre-stow y en stow. Encima de cada mes, sus episodios de pre-stow y de stow.
+- **Reloj de 24 h**: parte del tiempo con dato en que cada alarma está activa a cada hora,
+  en dos coronas, **cada una con su escala** (fuera el pre-stow, dentro el stow); el arco
+  exterior es la noche y la leyenda dice la hora punta de cada alarma.
+- **Duración y racha máxima**: un punto por episodio de pre-stow; en rojo, los que llegan a
+  stow. Los cinco de racha más alta llevan su fecha, y a la derecha va la escala en m/s.
+- **Qué HSU detecta más viento**: **horas al año** de cada HSU por encima de cada velocidad
+  (eje logarítmico), con el nombre al final de cada curva y la escala en m/s debajo.
+- **Los de racha más alta**: tabla con inicio, duración, racha (km/h y m/s), dirección y la
+  HSU que la mide; debajo, la **racha esperada** una vez al año y cada 10 y 50 años.
+- **El peor, minuto a minuto**: la racha de cada HSU durante las tres horas anteriores y
+  posteriores a la racha más alta, con los dos umbrales; debajo, en su propio panel y con el
+  mismo eje de tiempo, la posición simulada del seguidor y el seguimiento sin alarma.
+- **De dónde viene el viento**: una rosa por HSU, todas a la misma escala, con la parte de
+  su tiempo de alarma que el viento llega de cada rumbo y el eje de las filas marcado.
+- **Cuántos**: episodios por semana, o por mes si el periodo pasa de 30 semanas.
+- **Informe** de cinco páginas, imprimible a PDF. No es una nota académica ni una ficha de
+  aplicación: se lee como lo contaría quien ha hecho el estudio.
+  - **Cabecera**: el nombre de la planta por título, en grande; debajo, qué es el documento
+    y la ficha (sensores, periodo, racha máxima). A la derecha, un **croquis del seguidor**
+    de canto con la mesa en seguimiento, en pre-stow y en stow. Sin membrete.
+  - **Cada apartado es la pregunta que haría un compañero**, y debajo va la respuesta en
+    una frase; luego, la tabla o la figura que la sostiene: «¿Cuántas veces salta cada
+    alarma?», «¿Cuánto trabaja el seguidor al año?», «¿Cuántas veces descarga la batería, y
+    cuánto dura?», «¿Cuándo salta y cuánto dura?»,
+    «¿Hasta dónde llega la racha?», «¿De dónde viene el viento?», «¿Qué ve cada HSU?»,
+    «Qué se ha simulado» (las reglas como fórmulas) y «A tener en cuenta» (las notas).
+    Las tablas y figuras ya no van numeradas.
+  - **Letra de la casa**: Barlow y Barlow Condensed, las del panel (`assets/fonts`, OFL).
+    La página las carga al pedir el informe (`wlReportFonts`), dibuja con ellas las figuras
+    y las incrusta en el HTML (`fonts` en `windLogicReportHtml`), que así se ve igual en
+    cualquier ordenador y sin red. Si no se pueden cargar, sale con la letra del sistema.
+  - **La mesa inclinada** junto al nombre de cada alarma (30° en ámbar, 55° en rojo) es la
+    misma en las tablas, en el croquis y en las gráficas.
+  - Al imprimir, cada pregunta va junta con su respuesta y con lo primero que la sostiene.
+  No lleva la lista de activaciones ni explica el cálculo en prosa. Sigue sin `text-transform`,
+  sin `letter-spacing` y sin puntos medios de separador, que es lo que delata una plantilla.
+
+Las figuras del informe son las mismas gráficas, vueltas a dibujar en **tema claro**
+(`tema:"claro"` en `lib/meteo-viz.js`: fondo blanco, Barlow, la noche en gris y los días sin
+dato rayados) en lienzos fuera de la página, al tamaño con que van impresas y al triple de
+resolución; viajan dentro del HTML como PNG. `windLogicReportHtml` las recibe en `figures`;
+sin ellas (en Node, o si el navegador no deja leer el lienzo) el informe lleva la figura de
+barras de antes.
+
+### Dirección del viento
+
+Cada HSU da su dirección (`wind_direction`, grados, de dónde viene el viento). De cada
+minuto se guarda la de la lectura más alta. La dirección de una activación es la media
+circular de las lecturas sobre umbral **del sensor que da la racha máxima**: no se mezclan
+sensores. Con ella se dice cómo pilla el viento al seguidor (`windExposure`): **de cara** si
+viene del lado al que mira el módulo, **de espalda** si viene del contrario (canto alto a
+barlovento) y **a lo largo del eje** si viene a menos de 30° de la dirección de las filas.
+
+Las HSU pueden no estar orientadas igual. Para cada una se calcula cuánto difiere su
+dirección de la del sensor del medio, en los minutos en que las dos están sobre el umbral
+de pre-stow; si pasa de 20° sale como observación. **La dirección no se corrige**: en El
+Burgo I las dos HSU de la NCU 1 difieren unos 57° (comprobado contra la base el
+14/11/2026), así que el reparto de cara y de espalda vale lo que valga esa orientación.
+
+### Periodo de retorno
+
+Picos sobre umbral con cola exponencial: `v_T = u + σ·ln(λT)`, con `u` el umbral de stow,
+`σ` el exceso medio de los episodios que lo superan y `λ` cuántos hay al año. Hace falta un
+mínimo de 10 episodios. Con uno o dos años de datos es una extrapolación, y el informe lo
+dice. Con las activaciones de El Burgo I (15/05/2025–12/11/2026) la cola se ajusta bien:
+mediana y percentil 90 del exceso a menos de 1 km/h de los de la exponencial.
 
 Los parámetros de detalle (origen y periodo de los datos, posiciones, geometría,
 coordenadas y los dos supuestos) van plegados en «Más parámetros».
@@ -181,15 +272,39 @@ coordenadas y los dos supuestos) van plegados en «Más parámetros».
 Ningún resultado de planta se guarda en el repositorio: la simulación corre en el
 navegador sobre el viento de la sesión y se descarta al cerrarla.
 
+### Batería: descargas por viento
+
+El informe sirve también para dimensionar la batería del seguidor. Una **descarga** es cada
+vez que el motor gira por culpa del viento, ida y vuelta:
+
+- **ida**: de donde está el seguidor a la posición que pide la alarma (pre-stow o stow; de
+  noche, 55° E);
+- **vuelta**: de esa posición al ángulo de seguimiento que toca cuando la alarma se desactiva
+  (o a la posición de noche; tras un stow de noche, la vuelta es la del amanecer).
+
+La ida y la vuelta **no miden lo mismo**: cada giro lleva sus propios grados, sacados de la
+posición simulada minuto a minuto. El motor cuenta un giro en todo salto de posición que el
+seguimiento solo no daría (`group.motor.runs`: instante, grados, ida o vuelta, y si es sin
+sol). Si las dos alarmas saltan en el mismo minuto es un solo giro.
+
+La **duración** de la descarga son los grados entre la velocidad del motor (`motorDegPerSec`,
+0,17 °/s por defecto, la del simulador de viento; se cambia en «Más parámetros»).
+`windLogicInsights(…).battery` da, para ida, vuelta y total: descargas de día y **sin sol**
+(de noche y la vuelta del amanecer, cuando la batería no se está cargando), duración media y
+máxima y minutos de motor; el reparto por duración; la descarga más larga, y la noche y el
+día con más minutos de motor. En la página, la tarjeta «Batería»; en el informe, el apartado
+«¿Cuántas veces descarga la batería, y cuánto dura?», con una nube de un punto por descarga
+(relleno de día, hueco sin sol). No se calcula energía: haría falta el consumo del motor.
+
 ### Motor y pruebas
 
 `lib/meteo-wind-logic.js` — módulo puro, sin DOM, sin red y sin importaciones; la
 posición solar se inyecta (`solarPosition` de `lib/meteo-browser.js`).
 
-- `node tests/test_meteo_logica_viento.js` — 37 verificaciones del motor con series
+- `node tests/test_meteo_logica_viento.js` — 48 verificaciones del motor con series
   sintéticas y del lector de histórico con una base de mentira (450 días sin tope,
   avance por fecha, un día que llena la página, corte por tiempo, repliegue).
-- `node tests/test_meteo_logica_viento_browser.js` — 24 comprobaciones de la tarjeta
+- `node tests/test_meteo_logica_viento_browser.js` — 37 comprobaciones de la tarjeta
   en Chromium con Supabase simulado; arriba se carga un solo día en calma y la
   simulación sale del histórico entero.
 

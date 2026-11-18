@@ -13,12 +13,14 @@
    - api.github.com y demás orígenes: NI SE TOCAN. Sin red fallan igual que ahora,
      que es lo que el panel ya sabe manejar (mantiene lo escrito a mano).
    Al cambiar CACHE se tira la anterior entera: es la forma de publicar cambios. */
-const CACHE = "factiun-panel-v200";
+const CACHE = "factiun-panel-v220";
 
 /* Rutas relativas al scope (/proyectos/ en Pages, / al servirlo en local). */
 const SHELL = [
   "./",
   "index.html",
+  "latina-2.html",
+  "data/latina-24029.js",
   "cartera-tabla.html",
   "layout.html",
   "generador-layout.html",
@@ -28,9 +30,12 @@ const SHELL = [
   "lib/indice.js",
   "sim-solar.html",
   "sim-viento.html",
+  "sim-apuntamiento.html",
   "comparador-estructuras.html",
   "careo-pvsyst.html",
   "homologacion.html",
+  "notion-ingenieria.html",
+  "lib/notion-ingenieria-redirect.mjs",
   "demo-viento.json",
   "manifest.webmanifest",
   "favicon.svg",
@@ -91,7 +96,7 @@ const esHTML = req => req.mode === "navigate" ||
 /* Contenido que se reescribe al publicar: tiene que ir a la red primero o el
    usuario ve lo de ayer sin saberlo. */
 const esContenido = url => /\/docs\/[^/]+\.md$/.test(url.pathname) ||
-  /\.json$/.test(url.pathname);
+  /\.json$/.test(url.pathname) || /\/data\/latina-24029\.js$/.test(url.pathname);
 
 async function redPrimero(e, navegacion) {
   const c = await caches.open(CACHE);

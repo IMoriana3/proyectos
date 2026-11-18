@@ -204,9 +204,20 @@ check('y sigue teniendo su respaldo escrito a mano (`pdc` por planta)',
   const chips = await pageSin.evaluate(() => Array.from(document.querySelectorAll('#chips .chip')).map(b => b.textContent.trim()));
   check('el chip «Todos» dice el total de herramientas',
         chips.length > 0 && chips[0].indexOf('· ' + cuenta.n) >= 0, chips[0]);
+  // La fila de chips tiene DOS ejes desde el 2026-11-15: los estados (`status`) y, al final, la
+  // verificación —lo que una tarjeta declara sin comprobar aunque esté servida—. Son cuentas
+  // distintas a propósito, así que se carean por separado: si el chip de verificación se colase en
+  // la cuenta de estados, la portada diría que hay un estado que no existe.
+  const sinVerif = await pageSin.evaluate(() => TOOLS.filter(p => p.verificacion && p.verificacion.texto && p.verificacion.estado !== 'hecha').length);
+  const deEstado = chips.filter(t => !/^Sin verificar/.test(t));
+  const deVerif  = chips.filter(t =>  /^Sin verificar/.test(t));
   check('y hay un chip por cada estado con proyectos',
-        chips.length === 1 + cuenta.orden.filter(k => cuenta.c[k] > 0).length,
-        chips.length + ' chips · ' + JSON.stringify(cuenta.c));
+        deEstado.length === 1 + cuenta.orden.filter(k => cuenta.c[k] > 0).length,
+        deEstado.length + ' chips de estado · ' + JSON.stringify(cuenta.c));
+  check('el chip de verificación sale solo si alguna tarjeta declara algo sin comprobar',
+        deVerif.length === (sinVerif > 0 ? 1 : 0), deVerif.length + ' chips · ' + sinVerif + ' declaradas');
+  check('y dice cuántas son, sin mezclarse con la cuenta de estados',
+        sinVerif === 0 || deVerif[0].indexOf('· ' + sinVerif) >= 0, (deVerif[0] || '-') + ' vs ' + sinVerif);
 
   // ══════════════════════════════════════════════════════════════════
   //  4) EL FILTRO Y LA BÚSQUEDA

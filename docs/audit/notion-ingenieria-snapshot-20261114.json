@@ -1,0 +1,573 @@
+{
+  "schema_version": 1,
+  "exported_at": "2026-11-14T14:40:49Z",
+  "notion_hub_url": "https://app.notion.com/p/4186931d6436813ab499f73d69e82b04",
+  "scope": "Inteligencia técnica de fuentes públicas",
+  "export_kind": "curated_public_snapshot",
+  "records": [
+    {
+      "id": "axial-slopesync-generation-2024",
+      "title": "SlopeSync: cuarta generación articulada de Axial",
+      "fronts": [
+        "modelos"
+      ],
+      "summary": "Grupo Alonso presentó SlopeSync como cuarta generación de trackers Axial: dos filas y articulaciones cardán que permiten pendientes diferentes entre tramos. El comunicado acredita presentación; no acredita por sí solo una instalación.",
+      "companies": [
+        "Axial Sistemas Solares, S.L.",
+        "Grupo Alonso"
+      ],
+      "people": [],
+      "products": [
+        "AxialTracker SlopeSync"
+      ],
+      "technologies": [
+        "Cardán",
+        "Bifila",
+        "Adaptación al terreno"
+      ],
+      "event_date": null,
+      "consulted_at": "2026-11-14",
+      "claim_type": "manufacturer_claim",
+      "market_stage": "announced",
+      "sources": [
+        {
+          "title": "Presentación de SlopeSync en Intersolar Europe",
+          "url": "https://grupo-alonso.com/axial-presenta-su-cuarta-generacion-de-trackers-slopesync-en-intersolar-europe/",
+          "publisher": "Grupo Alonso",
+          "published_at": "2024-07-01",
+          "locator": ""
+        }
+      ],
+      "notion_url": "https://app.notion.com/p/3f16931d6436818aa13bdc399b1bbfea",
+      "related_ids": [],
+      "locator": "Título del comunicado y párrafos que describen SlopeSync, la configuración bifila y las articulaciones cardán.",
+      "relation_statement": "Grupo Alonso presenta SlopeSync como cuarta generación de Axial. La fuente atribuye al equipo una arquitectura bifila con articulaciones cardán.",
+      "limitations": "El 01/07/2024 es la publicación del comunicado. No establece el día exacto de presentación, el modelo predecesor ni una instalación concreta; la descripción técnica procede del fabricante.",
+      "technical_facts": [
+        {
+          "label": "Generación",
+          "value": "Cuarta, según el comunicado de Grupo Alonso de 01/07/2024."
+        },
+        {
+          "label": "Transmisión",
+          "value": "Dos filas; articulaciones cardán que permiten pendientes distintas entre segmentos del tubo de torsión manteniendo la rotación."
+        }
+      ]
+    },
+    {
+      "id": "nextpower-rail-coupling-us12794401",
+      "title": "Nextpower: clip elástico de acoplamiento de carriles",
+      "fronts": [
+        "patentes"
+      ],
+      "summary": "La publicación oficial US12794401B2 identifica un acoplamiento por clip entre carril de soporte y carril de módulo. La reivindicación 1 describe dedos y salientes elásticos que limitan el movimiento del clip; no prueba uso comercial.",
+      "companies": [
+        "Nextpower LLC"
+      ],
+      "people": [
+        "Abhimanyu Sable",
+        "Phani Kumar",
+        "Michael Starr"
+      ],
+      "products": [],
+      "technologies": [
+        "Fijaciones de módulos",
+        "Clip elástico"
+      ],
+      "event_date": "2026-11-10",
+      "consulted_at": "2026-11-14",
+      "claim_type": "fact",
+      "market_stage": "not_applicable",
+      "sources": [
+        {
+          "title": "US12794401B2 · Solar module rail couplings for solar tracker",
+          "url": "https://patentsgazette.uspto.gov/week45/OG/html/1552-2/US12794401-20261110.html",
+          "publisher": "USPTO",
+          "published_at": "2026-11-10",
+          "locator": ""
+        }
+      ],
+      "notion_url": "https://app.notion.com/p/4186931d6436813ba936ee35e0be7e37?pvs=204",
+      "related_ids": [],
+      "locator": "Official Gazette, cabecera y reivindicación 1; publicación de 10/11/2026.",
+      "relation_statement": "Nextpower LLC consta como solicitante y asignataria; Abhimanyu Sable, Phani Kumar y Michael Starr constan como inventores.",
+      "limitations": "Esta extracción no revisa las 20 reivindicaciones, el expediente completo ni el estado jurídico posterior. Inventoría no acredita empleo; la patente no acredita incorporación a un producto comercial.",
+      "technical_facts": [
+        {
+          "label": "Documento",
+          "value": "US12794401B2; se publican la reivindicación 1 y el total de 20 reivindicaciones."
+        },
+        {
+          "label": "Mecanismo",
+          "value": "Clip con dedos y salientes elásticos que limitan su desplazamiento entre carril de soporte y carril de módulo."
+        }
+      ],
+      "relations": [
+        {
+          "from": "Abhimanyu Sable",
+          "to": "US12794401B2",
+          "label": "Inventor registrado",
+          "source_url": "https://patentsgazette.uspto.gov/week45/OG/html/1552-2/US12794401-20261110.html"
+        },
+        {
+          "from": "Phani Kumar",
+          "to": "US12794401B2",
+          "label": "Inventor registrado",
+          "source_url": "https://patentsgazette.uspto.gov/week45/OG/html/1552-2/US12794401-20261110.html"
+        },
+        {
+          "from": "Michael Starr",
+          "to": "US12794401B2",
+          "label": "Inventor registrado",
+          "source_url": "https://patentsgazette.uspto.gov/week45/OG/html/1552-2/US12794401-20261110.html"
+        },
+        {
+          "from": "Nextpower LLC",
+          "to": "US12794401B2",
+          "label": "Asignataria publicada",
+          "source_url": "https://patentsgazette.uspto.gov/week45/OG/html/1552-2/US12794401-20261110.html"
+        }
+      ]
+    },
+    {
+      "id": "linak-teknosys-la36-use",
+      "title": "LINAK LA36: uso documentado por Teknosys en Akyurt",
+      "fronts": [
+        "proveedores"
+      ],
+      "summary": "LINAK publica que Teknosys eligió el actuador LA36 para la planta con seguimiento de 7 MW de Akyurt. Es una relación de suministro declarada por el proveedor; no identifica número de pieza, revisión ni cantidades.",
+      "companies": [
+        "LINAK A/S",
+        "Teknosys"
+      ],
+      "people": [
+        "Sinan Sağlam"
+      ],
+      "products": [
+        "LINAK LA36"
+      ],
+      "technologies": [
+        "Actuador lineal",
+        "Seguimiento solar"
+      ],
+      "event_date": null,
+      "consulted_at": "2026-11-14",
+      "claim_type": "manufacturer_claim",
+      "market_stage": "installed",
+      "sources": [
+        {
+          "title": "TEKNOSYS increases efficiency with actuator solution in solar power plants",
+          "url": "https://www.linak.com/case-stories/teknosys-increases-efficiency-with-actuator-solution-in-solar-power",
+          "publisher": "LINAK",
+          "published_at": null,
+          "locator": ""
+        }
+      ],
+      "notion_url": "https://app.notion.com/p/4186931d643681b4b6b3f36f68504658?pvs=204",
+      "related_ids": [],
+      "locator": "Párrafo de selección de LA36 tras el análisis conjunto y descripción de la planta de 7 MW.",
+      "relation_statement": "LINAK declara que Teknosys seleccionó LA36 para la planta con seguimiento de Akyurt. Sinan Sağlam aparece como interlocutor de Teknosys en el caso.",
+      "limitations": "Caso publicado por el proveedor sin fecha editorial visible, P/N, revisión ni cantidad de unidades. No trasladar prestaciones del catálogo actual a los equipos históricos. Las referencias turcas preservadas en Notion contienen valores de variante distintos.",
+      "technical_facts": [
+        {
+          "label": "Aplicación",
+          "value": "Planta solar con seguimiento de 7 MW en Akyurt, según el caso de LINAK."
+        },
+        {
+          "label": "Componente seleccionado",
+          "value": "Actuador lineal LINAK LA36; la protección IP66 se cita como criterio de selección."
+        }
+      ],
+      "relations": [
+        {
+          "from": "LINAK",
+          "to": "Teknosys",
+          "label": "Proveedor de LA36 declarado para Akyurt",
+          "source_url": "https://www.linak.com/case-stories/teknosys-increases-efficiency-with-actuator-solution-in-solar-power"
+        }
+      ]
+    },
+    {
+      "id": "linak-la36-mounting-revf",
+      "title": "LA36: montaje y control en el manual revisión F",
+      "fronts": [
+        "montaje",
+        "control"
+      ],
+      "summary": "El manual LIT-73-02-021 F, fechado 2024-02, documenta montaje con pasadores paralelos y carga axial. En variantes con controlador integrado, describe limitación de corriente y detección de bloqueo mediante realimentación Hall.",
+      "companies": [
+        "LINAK A/S"
+      ],
+      "people": [],
+      "products": [
+        "LINAK LA36"
+      ],
+      "technologies": [
+        "Montaje de actuadores",
+        "Articulaciones"
+      ],
+      "event_date": null,
+      "consulted_at": "2026-11-14",
+      "claim_type": "manufacturer_claim",
+      "market_stage": "commercial",
+      "sources": [
+        {
+          "title": "LA36 User Manual · LIT-73-02-021 F",
+          "url": "https://cdn.linak.com/-/media/files/user-manual-source/en/techline-la36-actuator-user-manual-eng.pdf",
+          "publisher": "LINAK",
+          "published_at": "2024-02",
+          "locator": ""
+        }
+      ],
+      "notion_url": "https://app.notion.com/p/4186931d64368109ad08fe679edb441d?pvs=204",
+      "related_ids": [],
+      "locator": "Páginas 19–20: montaje; página 24: algoritmo de limitación de corriente; página 65: revisión y fecha editorial.",
+      "relation_statement": "Manual del fabricante para LA36; las instrucciones de control extraídas corresponden a variantes con Integrated Controller. No identifica la variante instalada por Teknosys.",
+      "limitations": "Las condiciones dependen de la variante y plataforma electrónica. No se fija aquí un umbral universal de corriente, un tiempo de corte ni compatibilidad de cualquier SKU. Esta revisión habla de humedad; no se ha sustituido por una recomendación específica solar tomada de otro índice.",
+      "technical_facts": [
+        {
+          "label": "Revisión",
+          "value": "LIT-73-02-021 F · 2024-02; precisión mensual conservada."
+        },
+        {
+          "label": "Montaje",
+          "value": "Pasadores paralelos y carga alineada con el eje; recomendación de motor arriba y cables abajo en aplicaciones con humedad."
+        },
+        {
+          "label": "Ojo del vástago",
+          "value": "Página 20: asiento inicial a 2 Nm y giro hacia fuera de hasta 180°; en aplicaciones a tracción el ojo no debe poder girar."
+        },
+        {
+          "label": "Control integrado",
+          "value": "Página 24: reduce velocidad al superar el límite de corriente; detecta bloqueo mediante cambios de señal Hall y corta el puente H si no aparecen en el intervalo configurado; un pequeño retroceso descarga el par."
+        }
+      ]
+    },
+    {
+      "id": "terrasmart-helix-control-us12771284",
+      "title": "Terrasmart: detección de torsión mediante dos ángulos",
+      "fronts": [
+        "control",
+        "patentes"
+      ],
+      "summary": "La reivindicación 1 de US12771284B2 compara ángulos de dos puntos de una misma fila y pasa el motor a estado inoperativo si la desviación supera un valor prefijado. No equivale a un ángulo de stow ni demuestra instalación.",
+      "companies": [
+        "Terrasmart, Inc."
+      ],
+      "people": [
+        "Ben Urbanek",
+        "Coel Schumacher",
+        "David Compaan"
+      ],
+      "products": [],
+      "technologies": [
+        "Torsión diferencial",
+        "Sensores angulares",
+        "Parada del motor"
+      ],
+      "event_date": "2026-10-20",
+      "consulted_at": "2026-11-14",
+      "claim_type": "fact",
+      "market_stage": "not_applicable",
+      "sources": [
+        {
+          "title": "US12771284B2 · Active helix prevention",
+          "url": "https://patentsgazette.uspto.gov/week42/OG/html/1551-3/US12771284-20261020.html",
+          "publisher": "USPTO",
+          "published_at": "2026-10-20",
+          "locator": ""
+        }
+      ],
+      "notion_url": "https://app.notion.com/p/4186931d6436819caa06f76beac8ec1d?pvs=204",
+      "related_ids": [],
+      "locator": "Official Gazette, cabecera y reivindicación 1 de 20/10/2026.",
+      "relation_statement": "Terrasmart, Inc. figura como solicitante y asignataria. Ben Urbanek, Coel Schumacher y David Compaan figuran como inventores.",
+      "limitations": "La reivindicación no fija un ángulo de stow, tiempo de reacción ni par de frenado universal. Publicación de patente, sin instalación comercial acreditada ni comprobación del estado jurídico posterior.",
+      "technical_facts": [
+        {
+          "label": "Entradas",
+          "value": "Dos sensores de ángulo situados en puntos separados de la misma fila."
+        },
+        {
+          "label": "Respuesta reivindicada",
+          "value": "Comparación de ángulos; paso del motor a estado inoperativo cuando la desviación excede un valor predeterminado."
+        }
+      ],
+      "relations": [
+        {
+          "from": "Terrasmart, Inc.",
+          "to": "US12771284B2",
+          "label": "Asignataria publicada",
+          "source_url": "https://patentsgazette.uspto.gov/week42/OG/html/1551-3/US12771284-20261020.html"
+        }
+      ]
+    },
+    {
+      "id": "dnv-skyline-design-review",
+      "title": "SkyLine: revisión de DNV y contactos técnicos publicados",
+      "fronts": [
+        "personas",
+        "laboratorios"
+      ],
+      "summary": "DNV describe la revisión de informes de túnel de viento, cargas, componentes, uniones, materiales y manuales de SkyLine. La página identifica a Graham Slack como contacto técnico y cita a Pedro Magalhães en un testimonio de Arctech; no identifica a los autores del informe.",
+      "companies": [
+        "DNV",
+        "Arctech Solar"
+      ],
+      "people": [
+        "Graham Slack",
+        "Pedro Magalhães"
+      ],
+      "products": [
+        "Arctech SkyLine"
+      ],
+      "technologies": [
+        "Revisión estructural",
+        "Túnel de viento",
+        "Cargas"
+      ],
+      "event_date": null,
+      "consulted_at": "2026-11-14",
+      "claim_type": "fact",
+      "market_stage": "not_applicable",
+      "sources": [
+        {
+          "title": "Revisión de la base de diseño estructural de SkyLine",
+          "url": "https://www.dnv.com/cases/compliance-review-of-the-structural-design-basis-for-arctech-solar-s-skyline-tracker-200900/",
+          "publisher": "DNV",
+          "published_at": null,
+          "locator": ""
+        }
+      ],
+      "notion_url": "https://app.notion.com/p/4186931d643681c195facc48c7cb57d9?pvs=204",
+      "related_ids": [],
+      "locator": "Sección «DNV’s solution», bloque de contacto y testimonio de Arctech.",
+      "relation_statement": "DNV declara haber revisado la base de diseño de Arctech SkyLine. Graham Slack es contacto institucional de la página; Pedro Magalhães aparece como Director Global Engineering and R&D de Arctech en un testimonio histórico.",
+      "limitations": "Es un caso web del servicio, no el informe completo ni un certificado descargable. No publica fecha, configuración detallada ni valores de ensayo. Los cargos de la página no prueban vigencia laboral actual, empleador legal ni autoría del informe.",
+      "technical_facts": [
+        {
+          "label": "Alcance publicado",
+          "value": "Revisión de documentación de túnel de viento, dinámica, cargas y combinaciones, componentes, conexiones, materiales y manuales."
+        },
+        {
+          "label": "Contacto técnico",
+          "value": "Graham Slack · Senior Principal Engineer – Renewables, tal como figura en la página de DNV."
+        },
+        {
+          "label": "Testimonio",
+          "value": "Pedro Magalhães · Director Global Engineering and R&D de Arctech, atribución histórica de la página."
+        }
+      ],
+      "relations": [
+        {
+          "from": "DNV",
+          "to": "Arctech SkyLine",
+          "label": "Revisión de la base de diseño declarada",
+          "source_url": "https://www.dnv.com/cases/compliance-review-of-the-structural-design-basis-for-arctech-solar-s-skyline-tracker-200900/"
+        },
+        {
+          "from": "Graham Slack",
+          "to": "Caso DNV SkyLine",
+          "label": "Contacto técnico publicado",
+          "source_url": "https://www.dnv.com/cases/compliance-review-of-the-structural-design-basis-for-arctech-solar-s-skyline-tracker-200900/"
+        },
+        {
+          "from": "Pedro Magalhães",
+          "to": "Caso DNV SkyLine",
+          "label": "Testimonio atribuido por DNV",
+          "source_url": "https://www.dnv.com/cases/compliance-review-of-the-structural-design-basis-for-arctech-solar-s-skyline-tracker-200900/"
+        }
+      ]
+    },
+    {
+      "id": "nrel-tracker-loss-method-2022",
+      "title": "Pérdidas por fallos de seguimiento: método publicado",
+      "fronts": [
+        "investigacion"
+      ],
+      "summary": "Anderson, Downs, Aneja y Muller publican dos métodos de detección y una estimación de pérdidas mediante series de producción. El resumen informa MBE −2,3 % y RMSE 6 % en una validación preliminar; no son resultados de FACTIUN.",
+      "companies": [
+        "NREL",
+        "Cypress Creek Renewables",
+        "FTC Solar"
+      ],
+      "people": [
+        "Kevin Anderson",
+        "Christopher Downs",
+        "Saurabh Aneja",
+        "Matthew Muller"
+      ],
+      "products": [],
+      "technologies": [
+        "Diagnóstico",
+        "Series temporales",
+        "Pérdidas"
+      ],
+      "event_date": null,
+      "consulted_at": "2026-11-14",
+      "claim_type": "fact",
+      "market_stage": "not_applicable",
+      "sources": [
+        {
+          "title": "A Method for Estimating Time-Series PV Production Loss From Solar Tracking Failures",
+          "url": "https://research-hub.nlr.gov/en/publications/a-method-for-estimating-time-series-pv-production-loss-from-solar-2/",
+          "publisher": "NREL / National Laboratory of the Rockies",
+          "published_at": "2022",
+          "locator": ""
+        }
+      ],
+      "notion_url": "https://app.notion.com/p/4106931d643681a89aedc8c3e7de2466",
+      "related_ids": [],
+      "locator": "Registro institucional: autores, resumen y referencia IEEE Journal of Photovoltaics 12(1), 119–126; DOI 10.1109/JPHOTOV.2021.3123872.",
+      "relation_statement": "Kevin Anderson, Christopher Downs, Saurabh P. Aneja y Matthew Muller son coautores del artículo de 2022. Las entidades indicadas son contexto institucional de la publicación, no prueba de empleo actual.",
+      "limitations": "Extracción del resumen y metadatos institucionales. Son resultados del estudio, no validación interna ni valores garantizados para una planta. Afiliación publicada no equivale a empleo actual.",
+      "technical_facts": [
+        {
+          "label": "Método",
+          "value": "Dos métodos para detectar fallos de seguimiento y una estimación de las pérdidas mediante series temporales de producción."
+        },
+        {
+          "label": "Validación preliminar",
+          "value": "El resumen informa sesgo medio MBE −2,3 % y RMSE 6 % para la estimación de pérdidas."
+        },
+        {
+          "label": "Detección",
+          "value": "Reducción de error de tipo I entre 0 y 17 %, dependiente de las condiciones meteorológicas; no es una ganancia de producción."
+        }
+      ]
+    },
+    {
+      "id": "upc-torsional-galloping-failure-2022",
+      "title": "Fallo documentado: galope torsional con fila a 0°",
+      "fronts": [
+        "incidentes"
+      ],
+      "summary": "Valentín y coautores estudian una rotura de tracker mediante inspección y análisis estructural. Atribuyen el daño a galope torsional. La racha cercana de unos 60 km/h no es una medida sobre la fila ni un umbral universal; el fabricante no queda identificado.",
+      "companies": [
+        "Universitat Politècnica de Catalunya",
+        "Endesa"
+      ],
+      "people": [
+        "David Valentín",
+        "Carme Valero",
+        "Mònica Egusquiza",
+        "Alexandre Presas"
+      ],
+      "products": [],
+      "technologies": [
+        "Galope torsional",
+        "Fallo estructural"
+      ],
+      "event_date": null,
+      "consulted_at": "2026-11-14",
+      "claim_type": "fact",
+      "market_stage": "not_applicable",
+      "sources": [
+        {
+          "title": "Failure investigation of a solar tracker due to wind-induced torsional galloping",
+          "url": "https://doi.org/10.1016/j.engfailanal.2022.106137",
+          "publisher": "Engineering Failure Analysis / autores UPC",
+          "published_at": "2022-02-17",
+          "locator": ""
+        },
+        {
+          "title": "Texto completo depositado por UPC",
+          "url": "https://upcommons.upc.edu/server/api/core/bitstreams/797ee7d0-1e4a-45fe-86d5-58979dceb613/content",
+          "publisher": "Universitat Politècnica de Catalunya",
+          "published_at": "2022-02-17",
+          "locator": ""
+        }
+      ],
+      "notion_url": "https://app.notion.com/p/40f6931d643681c4a020ef8ab401b0d6",
+      "related_ids": [],
+      "locator": "Primera página: fecha editorial; descripción del incidente y análisis estructural; conclusiones; agradecimientos.",
+      "relation_statement": "Los autores de CDIF–UPC atribuyen el fallo a galope torsional. Agradecen a Endesa el acceso al tracker y su geometría; esa mención no identifica fabricante, propietario ni EPC.",
+      "limitations": "El fabricante y el día del siniestro no quedan acreditados. La velocidad meteorológica del caso no constituye umbral universal de fallo ni condición de diseño reutilizable.",
+      "technical_facts": [
+        {
+          "label": "Condición descrita",
+          "value": "Fila en posición horizontal, 0°, durante el caso investigado."
+        },
+        {
+          "label": "Viento de referencia",
+          "value": "Racha de aproximadamente 60 km/h en una estación meteorológica cercana, no una medición sobre la fila."
+        },
+        {
+          "label": "Método",
+          "value": "Investigación del daño y análisis estructural; atribución del mecanismo a galope torsional."
+        },
+        {
+          "label": "Publicación",
+          "value": "Disponible en línea el 17/02/2022; no es la fecha del fallo."
+        }
+      ],
+      "relations": [
+        {
+          "from": "Endesa",
+          "to": "Estudio UPC de galope torsional",
+          "label": "Acceso al tracker y geometría agradecidos por los autores",
+          "source_url": "https://upcommons.upc.edu/server/api/core/bitstreams/797ee7d0-1e4a-45fe-86d5-58979dceb613/content"
+        }
+      ]
+    },
+    {
+      "id": "nextpower-origami-acquisition-2025",
+      "title": "Origami: adquisición de tecnología de marcos de acero",
+      "fronts": [
+        "senales"
+      ],
+      "summary": "El 10-Q de Nextracker documenta la adquisición del 100 % de Origami el 8 de septiembre de 2025. La tecnología declarada es el perfilado de marcos de acero para módulos solares; no prueba incorporación a un modelo concreto de tracker.",
+      "companies": [
+        "Nextracker Inc.",
+        "Origami Solar, Inc."
+      ],
+      "people": [],
+      "products": [],
+      "technologies": [
+        "Marcos de acero",
+        "Perfilado",
+        "Adquisición tecnológica"
+      ],
+      "event_date": "2025-09-08",
+      "consulted_at": "2026-11-14",
+      "claim_type": "fact",
+      "market_stage": "not_applicable",
+      "sources": [
+        {
+          "title": "Nextracker 10-Q, periodo terminado 26/09/2025, nota 11",
+          "url": "https://www.sec.gov/Archives/edgar/data/1852131/000185213125000064/nxt-20250926.htm",
+          "publisher": "SEC / Nextracker",
+          "published_at": null,
+          "locator": ""
+        }
+      ],
+      "notion_url": "https://app.notion.com/p/4186931d643681a6af20c038dd1df442?pvs=204",
+      "related_ids": [],
+      "locator": "10-Q del periodo terminado el 26/09/2025: nota 11 «Business acquisitions», página 18, y apartado correspondiente del MD&A.",
+      "relation_statement": "Nextracker informa que adquirió el 100 % de Origami Solar, Inc. el 08/09/2025. La tecnología descrita es el perfilado de marcos de acero para módulos solares.",
+      "limitations": "Se conserva el nombre histórico Nextracker del filing. No se identifica sociedad compradora inmediata ni un tracker concreto que incorpore estos marcos. La fecha del periodo contable no es la fecha de presentación del filing.",
+      "technical_facts": [
+        {
+          "label": "Operación",
+          "value": "Adquisición del 100 % de Origami Solar, Inc. el 08/09/2025."
+        },
+        {
+          "label": "Tecnología",
+          "value": "Marcos de acero conformados por perfilado para módulos fotovoltaicos."
+        },
+        {
+          "label": "Beneficio declarado",
+          "value": "La compañía vincula la tecnología a mejorar la instalación y prestaciones; la nota no aporta validación independiente de esas ventajas."
+        }
+      ],
+      "relations": [
+        {
+          "from": "Nextracker",
+          "to": "Origami Solar, Inc.",
+          "label": "Adquisición del 100 % comunicada en el 10-Q",
+          "source_url": "https://www.sec.gov/Archives/edgar/data/1852131/000185213125000064/nxt-20250926.htm"
+        }
+      ]
+    }
+  ]
+}
