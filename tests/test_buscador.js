@@ -230,6 +230,8 @@ async function esperaListo(pg) {
   check('y el mando del tilt queda apagado, con su motivo en pantalla', await page.evaluate(() =>
     $('searchTiltMax').disabled === true &&
     $('objective').textContent.includes('POTENCIA')), 'potencia sin declarar en pantalla');
+  check('en tracker no queda casilla apagada sin porqué (nota oculta)', await page.evaluate(() =>
+    $('varWhy').hidden === true), await page.evaluate(() => $('varWhy').textContent));
   await page.evaluate(() => { $('searchCrit').value = 'energia'; $('searchCrit').dispatchEvent(new Event('change')); });
 
   // un JSON sin vallado no cuela
@@ -446,9 +448,20 @@ async function esperaListo(pg) {
   await esperaListo(pageF);
   await pageF.evaluate(() => PASO(8));
   const ef = await pageF.evaluate(() => ESTADO());
-  check('en fija no se gira nada', ef.encargo === true && ef.gira === false && ef.mejorGiro === 0,
-    JSON.stringify({ gira: ef.gira, giro: ef.mejorGiro }));
-  check('y la barra lo dice', (await pageF.evaluate(() => document.getElementById('barra').textContent)).includes('fija: no se gira'));
+  // (v1.14.0, «se debe poder orientar las fijas con otro azimuth»: aquí vivía
+  //  «en fija no se gira nada». La regla cambió A PROPÓSITO: la fija gira y el
+  //  índice f(azimut, tilt) lo cobra.)
+  // OJO con el oráculo: la primera versión exigía «gana el sur» y falló con razón — a tilt
+  // bajo el azimut casi no castiga (panel casi plano) y girar puede empaquetar más de lo que
+  // pierde. Lo que se exige es COHERENCIA: el mejor es el que maximiza kWp × f(az, tilt).
+  check('en fija el azimut TAMBIÉN se busca (de paneles), y el mejor es coherente con el índice',
+    ef.encargo === true && ef.gira === false && ef.rota === true && (await pageF.evaluate(() =>
+      MEJOR && Math.abs(MEJOR.ener - MEJOR.kwp * FFIJA(MEJOR.az, MEJOR.tilt != null ? MEJOR.tilt : TILT0)) < 1e-6)),
+    JSON.stringify({ gira: ef.gira, rota: ef.rota, giro: ef.mejorGiro }));
+  check('y la barra dice que el azimut de la fija es el de PANELES',
+    (await pageF.evaluate(() => document.getElementById('barra').textContent)).includes('azimut de PANELES'));
+  check('con la física cargada, no queda casilla apagada sin porqué (nota oculta)', await pageF.evaluate(() =>
+    $('varWhy').hidden === true), await pageF.evaluate(() => $('varWhy').textContent));
 
   // ── EL TILT DE LA FIJA ES VARIABLE («optimizar también el tilt», 2026-11-18) ────────────
   // La huella del motor no depende del tilt, así que el criterio es un índice de ENERGÍA:
@@ -497,6 +510,65 @@ async function esperaListo(pg) {
   check('con tope 20°, ninguna variante lo supera y se sigue barriendo debajo',
     tope.peor <= 20 && tope.distintos >= 3 && tope.mejorTilt != null && tope.mejorTilt <= 20,
     JSON.stringify(tope));
+  // girar la fija SE COBRA: la misma física, con la desviación del sur dentro
+  check('girar los paneles de la fija se cobra en el factor (f(sur)=1, f(±45°)<1)', await pageF.evaluate(() => {
+    const az0 = Number.isFinite(CFGP.panelAz) ? CFGP.panelAz : 180;
+    return Math.abs(FFIJA(az0, TILT0) - 1) < 1e-9 && FFIJA(az0 + 45, TILT0) < 1 - 1e-6 && FFIJA(az0 - 45, TILT0) < 1 - 1e-6;
+  }), 'la desviación del sur sale gratis');
+  check('y se muestrean azimuts distintos en fija', (await pageF.evaluate(() =>
+    new Set(TRACE.map(r => r.panelAz)).size)) >= 3, 'la fija no está girando');
+
+  // ── CRITERIO POTENCIA EN FIJA: tilt marcable, y el DESEMPATE es el factor ──────────────
+  // El tilt no cambia ni un módulo (medido: 8.932 a 15° y a 40°), así que ordenar por kWp
+  // dejaría el tilt al azar entre empates. La semántica declarada: kWp manda; a igualdad,
+  // gana el mejor factor solar.
+  await pageF.evaluate(() => {
+    $('searchCrit').value = 'potencia'; $('searchCrit').dispatchEvent(new Event('change'));
+    // X/Y apagado A PROPÓSITO: con el origen variando, el máximo de kWp puede ser único y
+    // entonces no hay empate que desempatar — el mutante del desempate sobrevivió ahí y lo
+    // enseñó (corolario del fixture sin efecto). Sin X/Y, tilts distintos comparten kWp y
+    // el desempate DECIDE.
+    $('searchXY').checked = false; $('searchXY').dispatchEvent(new Event('change'));
+    $('searchAz').checked = false; $('searchAz').dispatchEvent(new Event('change'));
+    $('searchRun').click(); PASO(60);
+  });
+  const pot = await pageF.evaluate(() => ({
+    tiltOn: !$('searchTilt').disabled && $('searchTilt').checked, tablaTilt: ESTADO().tablaTilt,
+    rend: MEJOR ? MEJOR.rend : null, enerEsKwp: MEJOR ? Math.abs(MEJOR.ener - MEJOR.kwp) < 1e-9 : false,
+    nEmpates: TRACE.filter(r => r.valid && MEJOR && Math.abs(r.kWp - MEJOR.kwp) < 1e-9).length,
+    empateLimpio: (() => { if (!MEJOR) return false;
+      return !TRACE.some(r => r.valid && Math.abs(r.kWp - MEJOR.kwp) < 1e-9 && r.tilt != null &&
+        FFIJA(r.panelAz, r.tilt) > (MEJOR.rendF || 0) + 1e-9); })(),
+    nota: !$('varWhy').hidden && $('varWhy').textContent.includes('desempata') }));
+  check('bajo POTENCIA en fija, el tilt se puede marcar y el orden sigue siendo kWp',
+    pot.tiltOn && pot.tablaTilt && pot.rend === 1 && pot.enerEsKwp, JSON.stringify(pot));
+  // nEmpates ≥ 3 exige que el régimen EXISTA: sin empates el desempate no vigila nada y su
+  // mutante sobrevive diciendo la verdad (pasó dos veces antes de fijar el régimen)
+  check('a igualdad de kWp, el mejor lleva el MEJOR factor solar (desempate declarado)',
+    pot.nEmpates >= 3 && pot.empateLimpio && pot.nota,
+    JSON.stringify({ empates: pot.nEmpates, limpio: pot.empateLimpio, nota: pot.nota }));
+  await pageF.evaluate(() => { $('searchXY').checked = true; $('searchXY').dispatchEvent(new Event('change'));
+    $('searchAz').checked = true; $('searchAz').dispatchEvent(new Event('change')); });
+
+  // ── EL APRETÓN DE VERSIONES página↔libs («tope 30 y me propone 40», 2026-11-18) ─────────
+  // La caché mezclada sirvió la página nueva con la lib VIEJA (sin tope de tilt) y el mando
+  // no aplicaba. Se reproduce el mecanismo de verdad: una pestaña donde lib/layout-search.js
+  // llega sin LIB_VER (como una versión antigua) tiene que AVISAR en la barra.
+  const pageV = await ctx.newPage();
+  await pageV.route('**/lib/layout-search.js', async route => {
+    const r = await route.fetch(); const body = (await r.text())
+      .replace(/var LIB_VER\s*=\s*'[^']*';[^\n]*/, '').replace(/LIB_VER:LIB_VER,/, '');
+    route.fulfill({ response: r, body });
+  });
+  await pageV.goto(BASE + '/buscador-implantacion.html?quieto=1&semilla=3-3');
+  // esperar a la PARCELA, no solo al motor: el apretón corre tras cargar las tres físicas,
+  // y leer la barra antes es leer el «cargando el motor…» del arranque (pasó a la primera)
+  await esperaListo(pageV);
+  check('con la lib vieja (sin versión), la página AVISA de caché mezclada y da la receta',
+    await pageV.evaluate(() => document.getElementById('barra').textContent.includes('Versiones mezcladas') &&
+      document.getElementById('barra').textContent.includes('Recarga')),
+    (await pageV.evaluate(() => document.getElementById('barra').textContent)).slice(0, 90));
+  await pageV.close();
 
   // ── LA BARRA TIENE QUE PODERSE LEER ─────────────────────────────────────────────────────
   // Se ordena por ENERGÍA, así que la mejor puede llevar MENOS potencia instalada y ganar
