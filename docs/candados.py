@@ -13,6 +13,37 @@ encima: ¿el fichero que el candado nombra sigue teniendo el sha que declara?
 
   python3 docs/candados.py            # sobre los repos declarados en repos.sh
   python3 docs/candados.py --raiz DIR
+  python3 docs/candados.py --sin-censo # solo los careos, sin el censo de copias
+
+
+Y LA OTRA MITAD: LAS COPIAS QUE NINGÚN CANDADO NOMBRA
+------------------------------------------------------
+Lo de arriba carea las copias DECLARADAS. Pero un candado sólo mira donde se le
+dice que mire, y el parque de copias es mayor que la lista. Medido el
+2026-11-19: `seguidor.js` existe CINCO veces y el único careado era el del
+canon. Las otras cuatro —gemelo-digital, cobertura-zigbee, cobertura-rf-fv,
+proyectos— nadie las miraba, y eran TRES contenidos distintos:
+
+    44.097 B  SolarGPTfull/viewers/lib/seguidor.js   <- el fijado
+    44.491 B  gemelo-digital/seguidor.js             <- «copia sincronizada» según el propio candado
+    44.491 B  proyectos/seguidor.js
+    47.995 B  cobertura-zigbee/seguidor.js
+    47.995 B  cobertura-rf-fv/seguidor.js
+
+Y las tres declaran `VERSION = '0.4.23'`. La versión MIENTE, que es la deriva
+silenciosa con su mejor disfraz: si el número coincide, nadie va a mirar los
+bytes.
+
+Así que el censo busca, por nombre de fichero, TODAS las copias que hay bajo la
+raíz, y dice cuáles no nombra ningún candado. Una copia no nombrada que además
+DIFIERE del fijado es rojo: se ha mirado y está mal. Una no nombrada idéntica
+hoy no es rojo —hoy cuadra— pero se LISTA, porque mañana puede no cuadrar y no
+hay nada que lo vaya a decir.
+
+El censo NO decide quién va por delante. En `seguidor.js` el superconjunto es
+el de cobertura-zigbee, no el fijado: «sincronizar» copiando el candado encima
+borraría código vivo. Qué copia promover es decisión humana; esto sólo deja de
+esconder que hay varias.
 
 rc = 0  todas las copias fijadas cuadran
 rc = 1  al menos una NO cuadra: el candado está rancio
@@ -93,6 +124,28 @@ def resuelve(lock: pathlib.Path, ruta: str) -> pathlib.Path | None:
     return None
 
 
+def censo(raiz: pathlib.Path, declaradas: dict[pathlib.Path, str]) -> list[tuple]:
+    """Copias que ningún candado nombra, por nombre de fichero.
+
+    `declaradas` es {ruta_resuelta: sha_declarado}. Se buscan bajo la raíz todas
+    las copias que se llamen igual que alguna declarada y se devuelve la lista
+    de las que no están en ella, con su sha y si coincide con el fijado.
+    """
+    porNombre: dict[str, str] = {}
+    for f, sha in declaradas.items():
+        porNombre.setdefault(f.name, sha)
+
+    fuera = []
+    for nombre, sha_fijado in sorted(porNombre.items()):
+        for cand in sorted(raiz.glob("*/**/" + nombre)):
+            if "node_modules" in str(cand) or cand in declaradas:
+                continue
+            real = hashlib.sha256(cand.read_bytes()).hexdigest()
+            fuera.append((str(cand).replace(str(raiz) + "/", ""),
+                          nombre, real == sha_fijado, real))
+    return fuera
+
+
 def main() -> int:
     raiz = pathlib.Path("/home/user")
     if "--raiz" in sys.argv:
@@ -106,6 +159,7 @@ def main() -> int:
         return 2
 
     rancios, sin_fichero, desconocidos, careadas = [], [], [], 0
+    declaradas: dict[pathlib.Path, str] = {}        # para el censo de abajo
     for lk in locks:
         corto = str(lk).replace(str(raiz) + "/", "")
         try:
@@ -125,6 +179,7 @@ def main() -> int:
                 print("  ✗  %-58s NO existe: %s" % (corto, ruta))
                 continue
             real = hashlib.sha256(f.read_bytes()).hexdigest()
+            declaradas[f.resolve()] = sha
             careadas += 1
             if real == sha:
                 print("  ✔  %-58s %s" % (corto, ruta))
@@ -133,9 +188,25 @@ def main() -> int:
                 print("  ✗  RANCIO %-51s %s" % (corto, ruta))
                 print("         declara %s… y el fichero es %s…" % (sha[:12], real[:12]))
 
+    # ── EL CENSO ────────────────────────────────────────────────────────────
+    # Va DESPUÉS de los careos porque necesita saber qué rutas están declaradas,
+    # y ANTES del veredicto porque una copia no nombrada que difiere es un
+    # hallazgo, no una nota al pie.
+    huerfanas = [] if "--sin-censo" in sys.argv else censo(raiz, declaradas)
+    divergentes = [h for h in huerfanas if not h[2]]
+    if huerfanas:
+        print()
+        print("CENSO de copias que NINGÚN candado nombra:")
+        for ruta, nombre, igual, real in huerfanas:
+            print("  %s  %-58s %s" % ("=" if igual else "≠", ruta,
+                                      "idéntica al fijado" if igual
+                                      else "DIFIERE (" + real[:12] + "…)"))
+
     print()
     print("alcance: %d candados · %d formatos reconocidos · %d copias careadas"
-          % (len(locks), len(FORMATOS), careadas))
+          % (len(locks), len(FORMATOS), careadas)
+          + ("" if "--sin-censo" in sys.argv else
+             " · %d copias sin candado (%d divergentes)" % (len(huerfanas), len(divergentes))))
 
     if desconocidos:
         print()
@@ -153,15 +224,23 @@ def main() -> int:
     # Es el mismo defecto que `copiaQueFalta` de factiun-cartera tuvo esta
     # misma mañana, cometido otra vez al escribir esto. Lo cazó su propio
     # control negativo, que es para lo que están.
-    if rancios or sin_fichero:
+    if rancios or sin_fichero or divergentes:
         print()
-        print("ROJO · %d copia(s) fuera de su candado:" % (len(rancios) + len(sin_fichero)))
+        print("ROJO · %d copia(s) fuera de su candado:"
+              % (len(rancios) + len(sin_fichero) + len(divergentes)))
+        for ruta, nombre, _igual, real in divergentes:
+            print("    %s: NINGÚN candado la nombra y DIFIERE del fijado (%s…)" % (ruta, real[:12]))
         for c, r, dice, es in rancios:
             print("    %s → %s: declara %s… y es %s…" % (c, r, dice, es))
         for c, r in sin_fichero:
             print("    %s → %s: el fichero no está" % (c, r))
         print("    Si la copia cambió a propósito, actualiza su candado EN EL MISMO")
         print("    commit. Si no, alguien la tocó sin pasar por su careo.")
+        if divergentes:
+            print("    Para las que ningún candado nombra: NO las sobrescribas sin mirar")
+            print("    quién va por delante. En seguidor.js el superconjunto es el de")
+            print("    cobertura-zigbee, no el fijado. Promover una copia es decisión")
+            print("    humana; lo que esto arregla es que dejen de ser invisibles.")
         return 1
     if not careadas:
         print()
