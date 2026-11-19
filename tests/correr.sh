@@ -405,6 +405,12 @@ declare -A PISO=(
   [test_layout_search.js]=22
   [test_layout_search_ui.js]=32
   [test_layout.js]=201
+  # Exclusiones sugeridas desde OSM, careadas contra el core (2026-11-16):
+  # 25 medidos (consulta, 6 leídos, errores sin retranqueo, 8 áreas).
+  [test_osm_exclusiones.js]=25
+  # La ficha EJECUTADA con Overpass interceptado: 12 medidos (incluye la
+  # consecuencia: con las de OSM ninguna mesa pisa el arroyo; sin ellas, sí).
+  [test_osm_exclusiones_ui.js]=12
   [test_layout_ui.js]=182
   # LOS LIENZOS A LA DENSIDAD DE LA PANTALLA. Un `<canvas>` con el búfer más
   # pequeño de lo que ocupa lo AMPLÍA el navegador: letra y trazo gordos y

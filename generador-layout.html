@@ -194,7 +194,7 @@ canvas.panning{cursor:grabbing}
        nueva o la cacheada. Se espeja de la ficha (index.html, docId
        generador-layout) y test_integridad.js exige que las dos coincidan —
        un rótulo que puede desviarse de la verdad es peor que no tenerlo. -->
-  <span class="sub">Distribuye mesas y seguidores en tu parcela · <b id="verBadge">v1.15.0</b></span>
+  <span class="sub">Distribuye mesas y seguidores en tu parcela · <b id="verBadge">v1.16.0</b></span>
   <div class="engine" id="engine" title="Clic: fijar la URL del motor SolarGPT (p. ej. el túnel de Colab)"><span class="led"></span><span id="engineTxt">motor…</span></div>
   <span class="brand">Factiun</span>
 </header>
@@ -269,6 +269,21 @@ canvas.panning{cursor:grabbing}
         <div class="field" style="margin-bottom:0"><label>Buffer de línea (m)</label><input id="lineBuf" type="number" step="0.5" value="5"></div>
         <div class="field" style="margin-bottom:0"><button class="btn ghost small" id="exclClear" style="padding:8px 10px">🗑️ Quitar exclusiones</button></div>
       </div>
+      <details id="osmxPanel" style="margin-top:8px">
+        <summary>🧭 Exclusiones sugeridas desde OSM</summary>
+        <p class="note" style="margin-top:4px">Trae de OpenStreetMap lo que hay dentro de la parcela y lo ensancha con el retranqueo que pongas <b>tú</b> en cada categoría. No hay distancias legales por defecto: la servidumbre de un cauce, la línea de edificación de una carretera o el pasillo de una línea dependen de la norma y de quien firma. Es una PROPUESTA: revísala sobre la ortofoto. © OpenStreetMap contributors (ODbL).</p>
+          <div class="two" style="align-items:center;margin-bottom:4px"><label style="margin:0"><input type="checkbox" id="osmx_cauces"> Cauces y agua</label><input id="osmxb_cauces" type="number" step="0.5" min="0" placeholder="retranqueo (m), sin valor por defecto"></div>
+          <div class="two" style="align-items:center;margin-bottom:4px"><label style="margin:0"><input type="checkbox" id="osmx_carreteras"> Carreteras</label><input id="osmxb_carreteras" type="number" step="0.5" min="0" placeholder="retranqueo (m), sin valor por defecto"></div>
+          <div class="two" style="align-items:center;margin-bottom:4px"><label style="margin:0"><input type="checkbox" id="osmx_caminos"> Caminos y accesos</label><input id="osmxb_caminos" type="number" step="0.5" min="0" placeholder="retranqueo (m), sin valor por defecto"></div>
+          <div class="two" style="align-items:center;margin-bottom:4px"><label style="margin:0"><input type="checkbox" id="osmx_lineas_electricas"> Líneas eléctricas y subestaciones</label><input id="osmxb_lineas_electricas" type="number" step="0.5" min="0" placeholder="retranqueo (m), sin valor por defecto"></div>
+          <div class="two" style="align-items:center;margin-bottom:4px"><label style="margin:0"><input type="checkbox" id="osmx_ferrocarril"> Ferrocarril</label><input id="osmxb_ferrocarril" type="number" step="0.5" min="0" placeholder="retranqueo (m), sin valor por defecto"></div>
+          <div class="two" style="align-items:center;margin-bottom:4px"><label style="margin:0"><input type="checkbox" id="osmx_edificios"> Edificios</label><input id="osmxb_edificios" type="number" step="0.5" min="0" placeholder="retranqueo (m), sin valor por defecto"></div>
+        <div class="btnrow" style="margin-top:6px">
+          <button class="btn ghost small" id="osmxBuscar">🔎 Buscar en OSM</button>
+          <button class="btn ghost small" id="osmxQuitar">🗑️ Quitar las de OSM</button>
+        </div>
+        <p class="note" id="osmxRes" style="margin-top:4px">—</p>
+      </details>
       <div class="two" style="margin-top:8px;align-items:end">
         <div class="field" style="margin-bottom:0"><label>Nombre de la parcela</label><input id="parcelName" type="text" value="Parcela 1"></div>
         <div class="field" style="margin-bottom:0"><button class="btn ghost small" id="parcelAdd" style="padding:8px 10px">➕ Añadir parcela</button></div>
@@ -1830,6 +1845,217 @@ if (typeof module !== "undefined" && module.exports) module.exports = LAY;
 </script>
 
 <script>
+/* ═══════════════════ OSM · EXCLUSIONES SUGERIDAS — inicio ═══════════════════
+   Espejo de `solargpt_core/osm_exclusions.py` (SolarGPTfull, 2026-11-16,
+   «Haz todo»): la misma consulta a Overpass, las mismas categorías y el mismo
+   cosido de anillos partidos. tests/test_osm_exclusiones.js lo carea contra
+   el core con el golden de tests/gen_careo_osm_exclusiones.py: la consulta y
+   lo leído, idénticos; el área que quita cada exclusión, dentro del 1 %.
+
+   NO HAY DISTANCIAS LEGALES POR DEFECTO. La servidumbre de un cauce, la línea
+   de edificación de una carretera o el pasillo de una línea eléctrica
+   dependen de la norma, de la vía o de la tensión, y de quien firma: una
+   categoría marcada sin su retranqueo es un error que la nombra, no un número
+   inventado.
+
+   Cómo entra al motor: las LÍNEAS (cauces, carreteras, caminos, tendidos,
+   vías) como exclusión lineal {pts, buf} con buf = el retranqueo; las ÁREAS
+   (edificios, láminas de agua, subestaciones) como anillo y, si hay
+   retranqueo, además su contorno como línea con ese buf: la unión de las dos
+   es el área ensanchada b, lo mismo que el `buffer(b)` de Shapely en el core.
+   Una isla dentro de un embalse se excluye entera: el motor resta anillos
+   simples (declarado). Un nodo suelto (torre, poste) no entra.
+
+   Datos de OpenStreetMap (ODbL): © OpenStreetMap contributors. */
+var OSMX = (function () {
+  var CATEGORIAS = {
+    cauces: { rotulo: 'Cauces y agua', sel: [
+      ['waterway', '^(river|stream|canal|ditch|drain|riverbank)$'],
+      ['natural', '^(water)$']] },
+    carreteras: { rotulo: 'Carreteras', sel: [
+      ['highway', '^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link)$']] },
+    caminos: { rotulo: 'Caminos y accesos', sel: [['highway', '^(track|service)$']] },
+    lineas_electricas: { rotulo: 'Líneas eléctricas y subestaciones', sel: [
+      ['power', '^(line|minor_line|cable|substation)$']] },
+    ferrocarril: { rotulo: 'Ferrocarril', sel: [
+      ['railway', '^(rail|light_rail|narrow_gauge|subway|tram)$']] },
+    edificios: { rotulo: 'Edificios', sel: [['building', '.']] }
+  };
+  // El orden de las categorías DECIDE cuando una etiqueta casa con dos: es el
+  // del diccionario del core, y el careo lo comprueba.
+  var ORDEN = ['cauces', 'carreteras', 'caminos', 'lineas_electricas', 'ferrocarril', 'edificios'];
+  var AREA_FORZADA = { 'natural=water': 1, 'waterway=riverbank': 1, 'power=substation': 1 };
+  var ESPEJOS = ['https://overpass-api.de/api/interpreter',
+                 'https://overpass.kumi.systems/api/interpreter',
+                 'https://overpass.private.coffee/api/interpreter'];
+  var ATRIBUCION = '© OpenStreetMap contributors (ODbL)';
+
+  function categoria(tags) {
+    for (var i = 0; i < ORDEN.length; i++) {
+      var sel = CATEGORIAS[ORDEN[i]].sel;
+      for (var j = 0; j < sel.length; j++) {
+        var v = tags[sel[j][0]];
+        if (v != null && new RegExp(sel[j][1]).test(String(v)))
+          return { categoria: ORDEN[i], key: sel[j][0], value: String(v) };
+      }
+    }
+    return null;
+  }
+
+  function consulta(bbox, cats, timeout) {
+    var bb = bbox[0] + ',' + bbox[1] + ',' + bbox[2] + ',' + bbox[3];
+    var partes = [];
+    cats.forEach(function (c) {
+      if (!CATEGORIAS[c]) throw new Error('categoría desconocida: ' + c);
+      CATEGORIAS[c].sel.forEach(function (kr) {
+        var sel = kr[1] === '.' ? '["' + kr[0] + '"]' : '["' + kr[0] + '"~"' + kr[1] + '"]';
+        partes.push('  way' + sel + '(' + bb + ');');
+        partes.push('  relation' + sel + '(' + bb + ');');
+      });
+    });
+    return '[out:json][timeout:' + Math.floor(timeout || 90) + '];\n(\n' + partes.join('\n') +
+      '\n);\nout geom tags;\n';
+  }
+
+  // Cose los ways de un anillo partido por sus extremos (dando la vuelta al
+  // que va al revés). Lo que no cierra se CUENTA. Port de
+  // pv_datasets/osm.py:assemble_multipolygon_rings (7 decimales, como OSM).
+  function clave(p) { return Math.round(p[0] * 1e7) + ',' + Math.round(p[1] * 1e7); }
+  function coseAnillos(miembros) {
+    var out = { outer: [], inner: [], n_unclosed: 0, fragments: { outer: [], inner: [] } };
+    var pend = { outer: [], inner: [] };
+    miembros.forEach(function (m) {
+      var rol = m[0] === 'inner' ? 'inner' : 'outer', pts = m[1];
+      if (pts.length < 2) return;
+      if (pts.length >= 4 && clave(pts[0]) === clave(pts[pts.length - 1])) out[rol].push(pts);
+      else pend[rol].push(pts);
+    });
+    ['outer', 'inner'].forEach(function (rol) {
+      var ways = pend[rol];
+      while (ways.length) {
+        var cad = ways.shift().slice(), cerrado = false;
+        for (;;) {
+          if (cad.length >= 4 && clave(cad[0]) === clave(cad[cad.length - 1])) { cerrado = true; break; }
+          var fin = clave(cad[cad.length - 1]), unido = false;
+          for (var i = 0; i < ways.length; i++) {
+            var w = ways[i];
+            if (clave(w[0]) === fin) { cad = cad.concat(w.slice(1)); ways.splice(i, 1); unido = true; break; }
+            if (clave(w[w.length - 1]) === fin) { cad = cad.concat(w.slice().reverse().slice(1)); ways.splice(i, 1); unido = true; break; }
+          }
+          if (!unido) break;
+        }
+        if (cerrado) out[rol].push(cad); else { out.n_unclosed++; out.fragments[rol].push(cad); }
+      }
+    });
+    return out;
+  }
+
+  function puntos(geom) {
+    return (geom || []).filter(function (g) { return g && g.lon != null && g.lat != null; })
+      .map(function (g) { return [+g.lon, +g.lat]; });
+  }
+
+  // JSON de Overpass (`out geom`) → elementos con categoría y forma.
+  function parsea(raw) {
+    var out = [];
+    ((raw && raw.elements) || []).forEach(function (el) {
+      var tags = el.tags || {}, c = categoria(tags);
+      if (!c) return;
+      var ref = 'osm:' + el.type + '/' + el.id;
+      if (el.type === 'relation') {
+        var miembros = [];
+        (el.members || []).forEach(function (m) {
+          var pts = puntos(m.geometry);
+          if (pts.length >= 2) miembros.push([m.role, pts]);
+        });
+        var asm = coseAnillos(miembros);
+        if (asm.outer.length) out.push({ category: c.categoria, key: c.key, value: c.value,
+          kind: 'area', rings: asm.outer, inner: asm.inner, ref: ref });
+        return;
+      }
+      var pts = puntos(el.geometry);
+      if (pts.length < 2) return;
+      var cerrado = pts.length >= 4 && pts[0][0] === pts[pts.length - 1][0] &&
+        pts[0][1] === pts[pts.length - 1][1];
+      var esArea = cerrado && (c.categoria === 'edificios' || AREA_FORZADA[c.key + '=' + c.value] ||
+        tags.area === 'yes');
+      out.push({ category: c.categoria, key: c.key, value: c.value,
+        kind: esArea ? 'area' : 'line', coords: pts, ref: ref });
+    });
+    return out;
+  }
+
+  // Bbox (s, w, n, e) de la parcela ampliado `margen` metros: un cauce que pasa
+  // a 20 m de la linde mete su retranqueo dentro.
+  function bboxConMargen(parcela, margen) {
+    var lons = parcela.map(function (p) { return p[0]; }), lats = parcela.map(function (p) { return p[1]; });
+    var latm = lats.reduce(function (a, b) { return a + b; }, 0) / lats.length;
+    var dlat = margen / 111195.0;
+    var dlon = margen / (111195.0 * Math.max(0.01, Math.cos(latm * Math.PI / 180)));
+    return [Math.min.apply(null, lats) - dlat, Math.min.apply(null, lons) - dlon,
+            Math.max.apply(null, lats) + dlat, Math.max.apply(null, lons) + dlon];
+  }
+
+  // Elementos + retranqueos → exclusiones del motor. Sin retranqueo, error.
+  function aExclusiones(elementos, retranqueos) {
+    var faltan = [], cats = Object.keys(retranqueos);
+    cats.forEach(function (c) {
+      if (!CATEGORIAS[c]) throw new Error('categoría desconocida: ' + c);
+      var b = retranqueos[c];
+      if (b === null || b === undefined || b === '' || !isFinite(+b)) faltan.push(CATEGORIAS[c].rotulo);
+    });
+    if (faltan.length) throw new Error('falta el retranqueo (m) de: ' + faltan.join(', ') +
+      ' — no hay distancia legal por defecto: la pone el proyectista');
+    var areas = [], lineas = [], avisos = [], n = {};
+    cats.forEach(function (c) { n[c] = 0; });
+    elementos.forEach(function (f) {
+      if (!(f.category in retranqueos)) return;
+      var b = +retranqueos[f.category];
+      n[f.category]++;
+      if (f.kind === 'line') {
+        if (b > 0) lineas.push({ pts: f.coords, buf: b, cat: f.category, ref: f.ref });
+        return;
+      }
+      (f.rings || [f.coords]).forEach(function (r) {
+        areas.push(r);
+        if (b > 0) lineas.push({ pts: r, buf: b, cat: f.category, ref: f.ref });
+      });
+    });
+    cats.forEach(function (c) {
+      if (+retranqueos[c] <= 0 && elementos.some(function (f) { return f.category === c && f.kind === 'line'; }))
+        avisos.push(CATEGORIAS[c].rotulo + ': con retranqueo 0 m una LÍNEA no excluye nada (no tiene anchura en OSM)');
+    });
+    return { areas: areas, lineas: lineas, avisos: avisos, n_por_categoria: n };
+  }
+
+  // Overpass con salto de espejo ante red, 429 o 5xx (navegador).
+  function pide(texto, fetchFn) {
+    var f = fetchFn || (typeof fetch !== 'undefined' ? fetch : null), i = 0, ultimo = null;
+    function intenta() {
+      if (i >= ESPEJOS.length) return Promise.reject(new Error('Overpass agotó ' + ESPEJOS.length +
+        ' espejos. Último error: ' + ultimo));
+      var ep = ESPEJOS[i++];
+      return f(ep, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                     body: 'data=' + encodeURIComponent(texto) })
+        .then(function (r) {
+          if (r.status === 429 || r.status === 502 || r.status === 503 || r.status === 504) {
+            ultimo = ep + ': HTTP ' + r.status; return intenta(); }
+          if (r.status !== 200) throw new Error('Overpass HTTP ' + r.status);
+          return r.json();
+        }, function (e) { ultimo = ep + ': ' + e; return intenta(); });
+    }
+    return intenta();
+  }
+
+  return { CATEGORIAS: CATEGORIAS, ORDEN: ORDEN, ESPEJOS: ESPEJOS, ATRIBUCION: ATRIBUCION,
+           categoria: categoria, consulta: consulta, coseAnillos: coseAnillos, parsea: parsea,
+           bboxConMargen: bboxConMargen, aExclusiones: aExclusiones, pide: pide };
+})();
+if (typeof module !== "undefined" && module.exports) module.exports = OSMX;
+/* ═══════════════════ OSM · EXCLUSIONES SUGERIDAS — fin ═══════════════════ */
+</script>
+
+<script>
 "use strict";
 function $(id){return document.getElementById(id);}
 var RES=null, PARCEL=null, HOLES=[], DRAW=null;
@@ -1840,6 +2066,10 @@ var RES=null, PARCEL=null, HOLES=[], DRAW=null;
    igual que el `excl_utm` del core. Meterlas en el mismo saco daría un área
    útil distinta de la del cuaderno. */
 var EXCL=[], EXCL_LINEAS=[];
+/* Exclusiones SUGERIDAS por OSM (2026-11-16): aparte de las dibujadas, para
+   poder quitarlas solas y para que el dibujo las distinga (naranja). Entran
+   al motor junto con las tuyas (readCfg). */
+var OSMX_EST={areas:[],lineas:[],meta:null};
 
 /* ═════════════════ BUSCADOR DE EMPLAZAMIENTO ═════════════════
    Mismo componente que `sim-viento.html` (#148), y por las mismas razones: aquí
@@ -2087,7 +2317,7 @@ function tagParcel(){
   var utm=PARCEL.map(function(c){var z=LAY.utmZone(c[0]);return LAY.utmFwd(c[0],c[1],z,c[1]<0);});
   var ha=Math.abs(LAY.ringArea(utm))/1e4;
   var hh=HOLES.reduce(function(a,h){var u=h.map(function(c){var z=LAY.utmZone(c[0]);return LAY.utmFwd(c[0],c[1],z,c[1]<0);});return a+Math.abs(LAY.ringArea(u))/1e4;},0);
-  var nEx=HOLES.length+EXCL.length+EXCL_LINEAS.length;
+  var nEx=HOLES.length+EXCL.length+EXCL_LINEAS.length+OSMX_EST.areas.length+OSMX_EST.lineas.length;
   // En modo dibujo, sin nada dibujado, la parcela vigente sigue siendo el
   // rectángulo por cotas: decir «4 vértices · 27,17 ha» a secas justo debajo de
   // «Dibujar parcela» se lee como que ya la has dibujado tú.
@@ -2424,6 +2654,37 @@ $('exclStart').onclick=function(){empiezaDibujo('exclusion');};
 $('lineStart').onclick=function(){empiezaDibujo('linea');};
 $('drawClear').onclick=function(){DRAW=[];PARCEL=null;drawing=false;pintaBotonesDibujo();draw();tagParcel();autoguarda();};
 $('exclClear').onclick=function(){EXCL=[];EXCL_LINEAS=[];tagParcel();draw();autoguarda();};
+/* Exclusiones sugeridas desde OSM (2026-11-16). El retranqueo lo pone quien
+   firma: una categoría marcada sin él no busca nada y se dice cuál falta. */
+function osmxPedidas(){
+  var r={};
+  OSMX.ORDEN.forEach(function(c){
+    if($('osmx_'+c).checked){var v=$('osmxb_'+c).value; r[c]=(v===''?null:+v);}
+  });
+  return r;
+}
+$('osmxBuscar').onclick=function(){
+  var res=$('osmxRes');
+  if(!PARCEL||PARCEL.length<3){res.textContent='Define antes la parcela.';return;}
+  var ped=osmxPedidas(), cats=Object.keys(ped);
+  if(!cats.length){res.textContent='Marca al menos una categoría.';return;}
+  var faltan=cats.filter(function(c){return ped[c]===null||!isFinite(ped[c]);});
+  if(faltan.length){res.textContent='Pon el retranqueo de: '+faltan.map(function(c){return OSMX.CATEGORIAS[c].rotulo;}).join(', ')+
+    ' — no hay distancia legal por defecto.';return;}
+  var margen=Math.max.apply(null,[10].concat(cats.map(function(c){return ped[c];})));
+  var q=OSMX.consulta(OSMX.bboxConMargen(PARCEL,margen),cats,90);
+  res.textContent='Consultando Overpass…';
+  OSMX.pide(q).then(function(raw){
+    var els=OSMX.parsea(raw), ex=OSMX.aExclusiones(els,ped);
+    OSMX_EST={areas:ex.areas,lineas:ex.lineas,
+      meta:{cuando:new Date().toISOString(),retranqueos:ped,n:ex.n_por_categoria,osm_base:(raw&&raw.osm3s&&raw.osm3s.timestamp_osm_base)||null}};
+    var partes=cats.map(function(c){return OSMX.CATEGORIAS[c].rotulo+': '+(ex.n_por_categoria[c]||0)+' (retranqueo '+ped[c]+' m)';});
+    res.textContent=partes.join(' · ')+(ex.avisos.length?(' · ⚠️ '+ex.avisos.join(' · ')):'')+
+      ' · dato OSM del '+((OSMX_EST.meta.osm_base)||'¿?')+' · '+OSMX.ATRIBUCION+'. Pulsa Generar.';
+    tagParcel();draw();autoguarda();
+  }).catch(function(e){res.textContent='OSM no disponible: '+e.message;});
+};
+$('osmxQuitar').onclick=function(){OSMX_EST={areas:[],lineas:[],meta:null};$('osmxRes').textContent='—';tagParcel();draw();autoguarda();};
 /* ── 🪄 VARITA: detectar el contorno de un campo en la ORTOFOTO ──
    Detección VISUAL, no catastral: flood-fill por similitud de color desde el
    clic, sobre un offscreen donde se pintan SOLO las teselas (sin velo, mesas
@@ -2867,6 +3128,18 @@ function drawLayout(RES){
     ctx.stroke();
     ctx.strokeStyle='#D0594F';ctx.lineWidth=1.4;ctx.setLineDash([5,3]);ctx.stroke();ctx.setLineDash([]);
     ctx.lineCap='butt';
+  });
+  // Las SUGERIDAS por OSM, en naranja: se distinguen de las tuyas y se quitan
+  // solas con «Quitar las de OSM».
+  OSMX_EST.areas.forEach(function(h){ring(h,'rgba(230,126,34,.30)','#E67E22',1.2);});
+  OSMX_EST.lineas.forEach(function(L){
+    if(!L.pts||L.pts.length<2)return;
+    var mLon=111320*Math.cos(L.pts[0][1]*Math.PI/180);
+    var anchoPx=Math.abs(px(L.pts[0][0]+(L.buf/mLon),L.pts[0][1])[0]-px(L.pts[0][0],L.pts[0][1])[0])*2;
+    ctx.strokeStyle='rgba(230,126,34,.30)';ctx.lineWidth=Math.max(anchoPx,1);ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();
+    for(var i=0;i<L.pts.length;i++){var q=px(L.pts[i][0],L.pts[i][1]);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]);}
+    ctx.stroke();ctx.lineCap='butt';
   });
   if(RES){
     RES.roads.forEach(function(rd){ring(rd.lonlat,'rgba(246,166,35,.55)','rgba(246,166,35,.9)',0.8);});
@@ -3872,7 +4145,8 @@ function readCfg(){
   var mods=$('mods').value.split(',').map(function(s){return parseInt(s.trim(),10);}).filter(function(v){return v>0;});
   if(!mods.length)mods=[28];
   return {
-    coords:PARCEL, holes:HOLES, exclusions:EXCL, exclLines:EXCL_LINEAS,
+    coords:PARCEL, holes:HOLES,
+    exclusions:EXCL.concat(OSMX_EST.areas), exclLines:EXCL_LINEAS.concat(OSMX_EST.lineas),
     exclTopo:celdasExcluidas(), mdtFracTh:0.35,
     forceComplete:$('forceComplete').checked,
     mount:$('mount').value,
@@ -5337,7 +5611,7 @@ function estadoSesion(){
   SES_CAMPOS.forEach(function(id){var el=$(id);if(el)st.campos[id]=el.value;});
   SES_CHECKS.forEach(function(id){var el=$(id);if(el)st.checks[id]=el.checked;});
   st.sitio=SITIO; st.parcel=PARCEL; st.holes=HOLES; st.parcelas=PARCELAS;
-  st.excl=EXCL; st.exclLineas=EXCL_LINEAS; st.dem=DEM; st.draw=DRAW;
+  st.excl=EXCL; st.exclLineas=EXCL_LINEAS; st.osmx=OSMX_EST; st.dem=DEM; st.draw=DRAW;
   // las ZONAS del reparto tambien son sesion (2026-08-28, «las zonas de
   // fija por que no salen»): sin esto el reparto desaparecia al recargar
   st.mixZonas=MIX_ZONAS; st.mixProp=MIX_PROP;
@@ -5357,6 +5631,7 @@ function aplicaSesion(st){
   SES_CHECKS.forEach(function(id){var el=$(id);if(el&&st.checks&&st.checks[id]!=null)el.checked=st.checks[id];});
   SITIO=st.sitio||null; PARCEL=st.parcel||null; HOLES=st.holes||[];
   PARCELAS=st.parcelas||[]; EXCL=st.excl||[]; EXCL_LINEAS=st.exclLineas||[];
+  OSMX_EST=st.osmx||{areas:[],lineas:[],meta:null};
   DEM=st.dem||null; DRAW=st.draw||null;
   MIX_ZONAS=st.mixZonas||[]; MIX_PROP=st.mixProp||null;
   if(st.view){VIEW.cx=st.view.cx;VIEW.cy=st.view.cy;VIEW.z=st.view.z;}
